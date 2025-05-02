@@ -771,6 +771,18 @@ enum class AssignConvertType {
   Incompatible
 };
 
+/// The scope in which to find allocation functions.
+enum class AllocationFunctionScope {
+  /// Only look for allocation functions in the global scope.
+  Global,
+  /// Only look for allocation functions in the scope of the
+  /// allocated class.
+  Class,
+  /// Look for allocation functions in both the global scope
+  /// and in the scope of the allocated class.
+  Both
+};
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -8371,18 +8383,6 @@ public:
   /// in a new-expression.
   bool CheckAllocatedType(QualType AllocType, SourceLocation Loc,
                           SourceRange R);
-
-  /// The scope in which to find allocation functions.
-  enum AllocationFunctionScope {
-    /// Only look for allocation functions in the global scope.
-    AFS_Global,
-    /// Only look for allocation functions in the scope of the
-    /// allocated class.
-    AFS_Class,
-    /// Look for allocation functions in both the global scope
-    /// and in the scope of the allocated class.
-    AFS_Both
-  };
 
   /// Finds the overloads of operator new and delete that are appropriate
   /// for the allocation.
