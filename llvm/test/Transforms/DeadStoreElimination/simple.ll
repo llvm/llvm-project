@@ -322,7 +322,6 @@ define void @malloc_address_only_escape() {
 ; CHECK-LABEL: @malloc_address_only_escape(
 ; CHECK-NEXT:    [[M:%.*]] = call ptr @malloc(i64 24)
 ; CHECK-NEXT:    call void @use.ptr(ptr captures(address) [[M]])
-; CHECK-NEXT:    store i8 0, ptr [[M]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %m = call ptr @malloc(i64 24)
