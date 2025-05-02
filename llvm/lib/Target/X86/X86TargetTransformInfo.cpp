@@ -4767,8 +4767,8 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
 InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                                TTI::TargetCostKind CostKind,
-                                               unsigned Index, Value *Op0,
-                                               Value *Op1) const {
+                                               unsigned Index, const Value *Op0,
+                                               const Value *Op1) const {
   static const CostTblEntry SLMCostTbl[] = {
      { ISD::EXTRACT_VECTOR_ELT,       MVT::i8,      4 },
      { ISD::EXTRACT_VECTOR_ELT,       MVT::i16,     4 },
