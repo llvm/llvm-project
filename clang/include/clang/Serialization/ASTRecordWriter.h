@@ -182,6 +182,10 @@ public:
     Record->push_back(Value);
   }
 
+  void writeUnsignedOrNone(UnsignedOrNone Value) {
+    Record->push_back(Value.toInternalRepresentation());
+  }
+
   /// Emit an integral value.
   void AddAPInt(const llvm::APInt &Value) {
     writeAPInt(Value);

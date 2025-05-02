@@ -1047,7 +1047,7 @@ protected:
         continue;
 
       Status error;
-      lldb::addr_t arg_addr = OptionArgParser::ToAddress(
+      lldb::addr_t arg_addr = OptionArgParser::ToRawAddress(
           &exe_ctx, arg_str, LLDB_INVALID_ADDRESS, &error);
       if (arg_addr == 0 || arg_addr == LLDB_INVALID_ADDRESS || error.Fail()) {
         result.AppendErrorWithFormatv(
@@ -1112,7 +1112,7 @@ public:
       : CommandObjectMultiword(
             interpreter, "tagged-pointer",
             "Commands for operating on Objective-C tagged pointers.",
-            "class-table <subcommand> [<subcommand-options>]") {
+            "tagged-pointer <subcommand> [<subcommand-options>]") {
     LoadSubCommand(
         "info",
         CommandObjectSP(

@@ -1057,6 +1057,14 @@ llvm.func @gep(%ptr: !llvm.ptr, %idx: i64,
   llvm.getelementptr %ptr[%idx, 1, 0] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<(i32, struct<(i32, f32)>)>
   // CHECK: = getelementptr inbounds { [10 x float] }, ptr %{{.*}}, i64 %{{.*}}, i32 0, i64 %{{.*}}
   llvm.getelementptr inbounds %ptr2[%idx, 0, %idx] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
+  // CHECK: = getelementptr inbounds nuw { [10 x float] }, ptr %{{.*}}, i64 %{{.*}}, i32 0, i64 %{{.*}}
+  llvm.getelementptr inbounds | nuw %ptr2[%idx, 0, %idx] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
+  // CHECK: = getelementptr nusw { [10 x float] }, ptr %{{.*}}, i64 %{{.*}}, i32 0, i64 %{{.*}}
+  llvm.getelementptr nusw %ptr2[%idx, 0, %idx] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
+  // CHECK: = getelementptr nusw nuw { [10 x float] }, ptr %{{.*}}, i64 %{{.*}}, i32 0, i64 %{{.*}}
+  llvm.getelementptr nusw | nuw %ptr2[%idx, 0, %idx] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
+  // CHECK: = getelementptr nuw { [10 x float] }, ptr %{{.*}}, i64 %{{.*}}, i32 0, i64 %{{.*}}
+  llvm.getelementptr nuw %ptr2[%idx, 0, %idx] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
   llvm.return
 }
 
@@ -2493,11 +2501,11 @@ llvm.mlir.global linkonce @partially_zeroinit_aggregate() : !llvm.struct<(i32, i
 llvm.func @zeroinit_complex_local_aggregate() {
   // CHECK: %[[#VAR:]] = alloca [1000 x { i32, [3 x { double, <4 x ptr>, [2 x ptr] }], [6 x ptr] }], i64 1, align 32
   %0 = llvm.mlir.constant(1 : i64) : i64
-  %1 = llvm.alloca %0 x !llvm.array<1000 x !llvm.struct<(i32, !llvm.array<3 x !llvm.struct<(f64, !llvm.vec<4 x ptr>, !llvm.array<2 x ptr>)>>, !llvm.array<6 x ptr>)>> : (i64) -> !llvm.ptr
+  %1 = llvm.alloca %0 x !llvm.array<1000 x !llvm.struct<(i32, !llvm.array<3 x !llvm.struct<(f64, vector<4 x !llvm.ptr>, !llvm.array<2 x ptr>)>>, !llvm.array<6 x ptr>)>> : (i64) -> !llvm.ptr
 
   // CHECK: store [1000 x { i32, [3 x { double, <4 x ptr>, [2 x ptr] }], [6 x ptr] }] zeroinitializer, ptr %[[#VAR]], align 32
-  %2 = llvm.mlir.zero : !llvm.array<1000 x !llvm.struct<(i32, !llvm.array<3 x !llvm.struct<(f64, !llvm.vec<4 x ptr>, !llvm.array<2 x ptr>)>>, !llvm.array<6 x ptr>)>>
-  llvm.store %2, %1 : !llvm.array<1000 x !llvm.struct<(i32, !llvm.array<3 x !llvm.struct<(f64, !llvm.vec<4 x ptr>, !llvm.array<2 x ptr>)>>, !llvm.array<6 x ptr>)>>, !llvm.ptr
+  %2 = llvm.mlir.zero : !llvm.array<1000 x !llvm.struct<(i32, !llvm.array<3 x !llvm.struct<(f64, vector<4 x !llvm.ptr>, !llvm.array<2 x ptr>)>>, !llvm.array<6 x ptr>)>>
+  llvm.store %2, %1 : !llvm.array<1000 x !llvm.struct<(i32, !llvm.array<3 x !llvm.struct<(f64, vector<4 x !llvm.ptr>, !llvm.array<2 x ptr>)>>, !llvm.array<6 x ptr>)>>, !llvm.ptr
 
   llvm.return
 }
@@ -2556,6 +2564,24 @@ llvm.func @convergent() attributes { convergent } {
 
 // CHECK: #[[ATTRS]]
 // CHECK-SAME: convergent
+
+// -----
+
+// CHECK-LABEL: define void @function_entry_instrument_test()
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @function_entry_instrument_test() attributes {instrument_function_entry = "__cyg_profile_func_enter"}  {
+  llvm.return
+}
+// CHECK: attributes #[[ATTRS]] = { "instrument-function-entry"="__cyg_profile_func_enter" }
+
+// -----
+
+// CHECK-LABEL: define void @function_exit_instrument_test()
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @function_exit_instrument_test() attributes {instrument_function_exit = "__cyg_profile_func_exit"}  {
+  llvm.return
+}
+// CHECK: attributes #[[ATTRS]] = { "instrument-function-exit"="__cyg_profile_func_exit" }
 
 // -----
 
@@ -2649,6 +2675,19 @@ llvm.func @always_inline_call() {
 // CHECK: #[[ATTRS]]
 // CHECK-SAME: alwaysinline
 
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @inline_hint_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @inline_hint_call() {
+  llvm.call @f() {inline_hint} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: inlinehint
 
 // -----
 
@@ -2796,11 +2835,11 @@ llvm.func @call_intrin_with_opbundle(%arg0 : !llvm.ptr) {
 // -----
 
 module {
-  llvm.module_flags [#llvm.mlir.module_flag<error, "wchar_size", 4>,
-                     #llvm.mlir.module_flag<min, "PIC Level", 2>,
-                     #llvm.mlir.module_flag<max, "PIE Level", 2>,
-                     #llvm.mlir.module_flag<max, "uwtable", 2>,
-                     #llvm.mlir.module_flag<max, "frame-pointer", 1>]
+  llvm.module_flags [#llvm.mlir.module_flag<error, "wchar_size", 4 : i32>,
+                     #llvm.mlir.module_flag<min, "PIC Level", 2 : i32>,
+                     #llvm.mlir.module_flag<max, "PIE Level", 2 : i32>,
+                     #llvm.mlir.module_flag<max, "uwtable", 2 : i32>,
+                     #llvm.mlir.module_flag<max, "frame-pointer", 1 : i32>]
 }
 
 // CHECK: !llvm.module.flags = !{![[#WCHAR:]], ![[#PIC:]], ![[#PIE:]], ![[#UWTABLE:]], ![[#FrameP:]], ![[#DBG:]]}
@@ -2817,11 +2856,38 @@ module {
 // Verifies that the debug info version is not added twice, if it's already present initially.
 
 module {
-  llvm.module_flags [#llvm.mlir.module_flag<warning, "Debug Info Version", 3>]
+  llvm.module_flags [#llvm.mlir.module_flag<warning, "Debug Info Version", 3 : i32>]
 }
 
 // CHECK: !llvm.module.flags = !{![[#DBG:]]}
 // CHECK: ![[#DBG]] = !{i32 2, !"Debug Info Version", i32 3}
+
+// -----
+
+llvm.module_flags [#llvm.mlir.module_flag<append, "CG Profile", [
+  #llvm.cgprofile_entry<from = @from, to = @to, count = 222>,
+  #llvm.cgprofile_entry<from = @from, count = 222>,
+  #llvm.cgprofile_entry<from = @to, to = @from, count = 222>
+]>]
+llvm.func @from(i32)
+llvm.func @to()
+
+// CHECK: !llvm.module.flags = !{![[#CGPROF:]], ![[#DBG:]]}
+
+// CHECK: ![[#CGPROF]] = !{i32 5, !"CG Profile", ![[#LIST:]]}
+// CHECK: ![[#LIST]] = distinct !{![[#ENTRY_A:]], ![[#ENTRY_B:]], ![[#ENTRY_C:]]}
+// CHECK: ![[#ENTRY_A]] = !{ptr @from, ptr @to, i64 222}
+// CHECK: ![[#ENTRY_B]] = !{ptr @from, null, i64 222}
+// CHECK: ![[#ENTRY_C]] = !{ptr @to, ptr @from, i64 222}
+// CHECK: ![[#DBG]] = !{i32 2, !"Debug Info Version", i32 3}
+
+// -----
+
+module attributes {llvm.dependent_libraries = ["foo", "bar"]} {}
+
+// CHECK: !llvm.dependent-libraries =  !{![[#LIBFOO:]], ![[#LIBBAR:]]}
+// CHECK: ![[#LIBFOO]] = !{!"foo"}
+// CHECK: ![[#LIBBAR]] = !{!"bar"}
 
 // -----
 

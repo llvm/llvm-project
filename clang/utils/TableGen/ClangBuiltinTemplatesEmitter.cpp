@@ -124,7 +124,7 @@ ParseTemplateParameterList(ParserState &PS,
   }
 
   bool First = true;
-  for (auto e : Params) {
+  for (const auto &e : Params) {
     if (First) {
       First = false;
       Code << e;

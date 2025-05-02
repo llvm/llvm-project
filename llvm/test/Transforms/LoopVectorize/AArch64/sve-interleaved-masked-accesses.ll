@@ -116,7 +116,7 @@ define dso_local void @masked_strided1(ptr noalias nocapture readonly %p, ptr no
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP17:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; PREDICATED_TAIL_FOLDING-NEXT:    br i1 [[TMP17]], label [[VECTOR_BODY]], label [[MIDDLE_BLOCK:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ; PREDICATED_TAIL_FOLDING:       middle.block:
-; PREDICATED_TAIL_FOLDING-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; PREDICATED_TAIL_FOLDING-NEXT:    br label [[FOR_END:%.*]]
 ; PREDICATED_TAIL_FOLDING:       scalar.ph:
 ;
 entry:
@@ -247,7 +247,7 @@ define dso_local void @masked_strided2(ptr noalias nocapture readnone %p, ptr no
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP14:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; PREDICATED_TAIL_FOLDING-NEXT:    br i1 [[TMP14]], label [[VECTOR_BODY]], label [[MIDDLE_BLOCK:%.*]], !llvm.loop [[LOOP4:![0-9]+]]
 ; PREDICATED_TAIL_FOLDING:       middle.block:
-; PREDICATED_TAIL_FOLDING-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; PREDICATED_TAIL_FOLDING-NEXT:    br label [[FOR_END:%.*]]
 ; PREDICATED_TAIL_FOLDING:       scalar.ph:
 ;
 entry:
@@ -382,7 +382,7 @@ define dso_local void @masked_strided3(ptr noalias nocapture readnone %p, ptr no
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP16:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; PREDICATED_TAIL_FOLDING-NEXT:    br i1 [[TMP16]], label [[VECTOR_BODY]], label [[MIDDLE_BLOCK:%.*]], !llvm.loop [[LOOP6:![0-9]+]]
 ; PREDICATED_TAIL_FOLDING:       middle.block:
-; PREDICATED_TAIL_FOLDING-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; PREDICATED_TAIL_FOLDING-NEXT:    br label [[FOR_END:%.*]]
 ; PREDICATED_TAIL_FOLDING:       scalar.ph:
 ;
 entry:
@@ -563,7 +563,7 @@ define dso_local void @masked_strided_factor4(ptr noalias nocapture readonly %p,
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP23:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; PREDICATED_TAIL_FOLDING-NEXT:    br i1 [[TMP23]], label [[VECTOR_BODY]], label [[MIDDLE_BLOCK:%.*]], !llvm.loop [[LOOP8:![0-9]+]]
 ; PREDICATED_TAIL_FOLDING:       middle.block:
-; PREDICATED_TAIL_FOLDING-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; PREDICATED_TAIL_FOLDING-NEXT:    br label [[FOR_END:%.*]]
 ; PREDICATED_TAIL_FOLDING:       scalar.ph:
 ;
 entry:

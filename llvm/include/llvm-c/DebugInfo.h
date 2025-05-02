@@ -173,7 +173,6 @@ enum {
   LLVMDISubrangeMetadataKind,
   LLVMDIEnumeratorMetadataKind,
   LLVMDIBasicTypeMetadataKind,
-  LLVMDIFixedPointTypeMetadataKind,
   LLVMDIDerivedTypeMetadataKind,
   LLVMDICompositeTypeMetadataKind,
   LLVMDISubroutineTypeMetadataKind,
@@ -199,6 +198,7 @@ enum {
   LLVMDIArgListMetadataKind,
   LLVMDIAssignIDMetadataKind,
   LLVMDISubrangeTypeMetadataKind,
+  LLVMDIFixedPointTypeMetadataKind,
 };
 typedef unsigned LLVMMetadataKind;
 
@@ -628,6 +628,19 @@ LLVMMetadataRef LLVMDIBuilderCreateEnumerator(LLVMDIBuilderRef Builder,
                                               const char *Name, size_t NameLen,
                                               int64_t Value,
                                               LLVMBool IsUnsigned);
+
+/**
+ * Create debugging information entry for an enumerator of arbitrary precision.
+ * @param Builder        The DIBuilder.
+ * @param Name           Enumerator name.
+ * @param NameLen        Length of enumerator name.
+ * @param SizeInBits     Number of bits of the value.
+ * @param Words          The words that make up the value.
+ * @param IsUnsigned     True if the value is unsigned.
+ */
+LLVMMetadataRef LLVMDIBuilderCreateEnumeratorOfArbitraryPrecision(
+    LLVMDIBuilderRef Builder, const char *Name, size_t NameLen,
+    uint64_t SizeInBits, const uint64_t Words[], LLVMBool IsUnsigned);
 
 /**
  * Create debugging information entry for an enumeration.

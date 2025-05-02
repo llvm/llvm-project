@@ -158,6 +158,32 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
   return true;
 }
 
+static void parseDoConcurrentMapping(Fortran::frontend::CodeGenOptions &opts,
+                                     llvm::opt::ArgList &args,
+                                     clang::DiagnosticsEngine &diags) {
+  llvm::opt::Arg *arg =
+      args.getLastArg(clang::driver::options::OPT_fdo_concurrent_to_openmp_EQ);
+  if (!arg)
+    return;
+
+  using DoConcurrentMappingKind =
+      Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind;
+  std::optional<DoConcurrentMappingKind> val =
+      llvm::StringSwitch<std::optional<DoConcurrentMappingKind>>(
+          arg->getValue())
+          .Case("none", DoConcurrentMappingKind::DCMK_None)
+          .Case("host", DoConcurrentMappingKind::DCMK_Host)
+          .Case("device", DoConcurrentMappingKind::DCMK_Device)
+          .Default(std::nullopt);
+
+  if (!val.has_value()) {
+    diags.Report(clang::diag::err_drv_invalid_value)
+        << arg->getAsString(args) << arg->getValue();
+  }
+
+  opts.setDoConcurrentMapping(val.value());
+}
+
 static bool parseVectorLibArg(Fortran::frontend::CodeGenOptions &opts,
                               llvm::opt::ArgList &args,
                               clang::DiagnosticsEngine &diags) {
@@ -433,6 +459,8 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::driver::options::OPT_funderscoring, false)) {
     opts.Underscoring = 0;
   }
+
+  parseDoConcurrentMapping(opts, args, diags);
 }
 
 /// Parses all target input arguments and populates the target
@@ -1080,8 +1108,8 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   unsigned numErrorsBefore = diags.getNumErrors();
   llvm::Triple t(res.getTargetOpts().triple);
 
-  // By default OpenMP is set to 1.1 version
-  res.getLangOpts().OpenMPVersion = 11;
+  // By default OpenMP is set to 3.1 version
+  res.getLangOpts().OpenMPVersion = 31;
   res.getFrontendOpts().features.Enable(
       Fortran::common::LanguageFeature::OpenMP);
   if (int Version = getLastArgIntValue(
@@ -1447,6 +1475,19 @@ bool CompilerInvocation::createFromArgs(
   if (!args.hasFlag(clang::driver::options::OPT_frealloc_lhs,
                     clang::driver::options::OPT_fno_realloc_lhs, true))
     invoc.loweringOpts.setReallocateLHS(false);
+
+  invoc.loweringOpts.setRepackArrays(
+      args.hasFlag(clang::driver::options::OPT_frepack_arrays,
+                   clang::driver::options::OPT_fno_repack_arrays,
+                   /*default=*/false));
+  invoc.loweringOpts.setStackRepackArrays(
+      args.hasFlag(clang::driver::options::OPT_fstack_repack_arrays,
+                   clang::driver::options::OPT_fno_stack_repack_arrays,
+                   /*default=*/false));
+  if (auto *arg = args.getLastArg(
+          clang::driver::options::OPT_frepack_arrays_contiguity_EQ))
+    invoc.loweringOpts.setRepackArraysWhole(arg->getValue() ==
+                                            llvm::StringRef{"whole"});
 
   success &= parseFrontendArgs(invoc.getFrontendOpts(), args, diags);
   parseTargetArgs(invoc.getTargetOpts(), args);

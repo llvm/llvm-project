@@ -110,9 +110,11 @@ public:
   static bool classof(const Binary *v) { return v->isTapiUniversal(); }
 
 private:
+  /// Attributes of a library that is inlined into a single TBD file.
   struct Library {
-    StringRef InstallName;
-    MachO::Architecture Arch;
+    const StringRef InstallName;
+    const MachO::Architecture Arch;
+    const std::optional<size_t> DocumentIdx;
   };
 
   std::unique_ptr<MachO::InterfaceFile> ParsedFile;

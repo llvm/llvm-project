@@ -10,7 +10,7 @@ void l0() {
   }
 }
 
-// CIR: cir.func @l0
+// CIR: cir.func @_Z2l0v
 // CIR:   cir.scope {
 // CIR:     cir.for : cond {
 // CIR:       %[[TRUE:.*]] = cir.const #true
@@ -24,7 +24,7 @@ void l0() {
 // CIR:   cir.return
 // CIR: }
 
-// LLVM: define void @l0()
+// LLVM: define void @_Z2l0v()
 // LLVM:   br label %[[LABEL1:.*]]
 // LLVM: [[LABEL1]]:
 // LLVM:   br label %[[LABEL2:.*]]
@@ -50,7 +50,7 @@ void l1() {
   }
 }
 
-// CIR:      cir.func @l1
+// CIR:      cir.func @_Z2l1v
 // CIR-NEXT:   cir.scope {
 // CIR-NEXT:     %[[I:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
 // CIR-NEXT:     %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
@@ -67,7 +67,7 @@ void l1() {
 // CIR-NEXT:   cir.return
 // CIR-NEXT: }
 
-// LLVM: define void @l1()
+// LLVM: define void @_Z2l1v()
 // LLVM:   %[[I:.*]] = alloca i32, i64 1, align 4
 // LLVM:   br label %[[LABEL1:.*]]
 // LLVM: [[LABEL1]]:
@@ -98,7 +98,7 @@ void l2() {
   }
 }
 
-// CIR:      cir.func @l2
+// CIR:      cir.func @_Z2l2v
 // CIR-NEXT:   cir.scope {
 // CIR-NEXT:     cir.for : cond {
 // CIR-NEXT:       %[[TRUE:.*]] = cir.const #true
@@ -117,7 +117,7 @@ void l2() {
 // CIR-NEXT:   cir.return
 // CIR-NEXT: }
 
-// LLVM: define void @l2()
+// LLVM: define void @_Z2l2v()
 // LLVM:   %[[I:.*]] = alloca i32, i64 1, align 4
 // LLVM:   br label %[[LABEL1:.*]]
 // LLVM: [[LABEL1]]:
@@ -148,7 +148,7 @@ void l3() {
     int i = 0;
 }
 
-// CIR:      cir.func @l3
+// CIR:      cir.func @_Z2l3v
 // CIR-NEXT:   cir.scope {
 // CIR-NEXT:     %[[I:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
 // CIR-NEXT:     cir.for : cond {
@@ -165,7 +165,7 @@ void l3() {
 // CIR-NEXT:   cir.return
 // CIR-NEXT: }
 
-// LLVM: define void @l3()
+// LLVM: define void @_Z2l3v()
 // LLVM:   %[[I:.*]] = alloca i32, i64 1, align 4
 // LLVM:   br label %[[LABEL1:.*]]
 // LLVM: [[LABEL1]]:
@@ -195,7 +195,7 @@ void test_do_while_false() {
   } while (0);
 }
 
-// CIR: cir.func @test_do_while_false()
+// CIR: cir.func @_Z19test_do_while_falsev()
 // CIR-NEXT:   cir.scope {
 // CIR-NEXT:     cir.do {
 // CIR-NEXT:       cir.yield
@@ -204,7 +204,7 @@ void test_do_while_false() {
 // CIR-NEXT:       %[[FALSE:.*]] = cir.cast(int_to_bool, %[[ZERO]] : !s32i), !cir.bool
 // CIR-NEXT:       cir.condition(%[[FALSE]])
 
-// LLVM: define void @test_do_while_false()
+// LLVM: define void @_Z19test_do_while_falsev()
 // LLVM:   br label %[[LABEL1:.*]]
 // LLVM: [[LABEL1]]:
 // LLVM:   br label %[[LABEL3:.*]]
@@ -231,7 +231,7 @@ void test_empty_while_true() {
   }
 }
 
-// CIR: cir.func @test_empty_while_true()
+// CIR: cir.func @_Z21test_empty_while_truev()
 // CIR-NEXT:   cir.scope {
 // CIR-NEXT:     cir.while {
 // CIR-NEXT:       %[[TRUE:.*]] = cir.const #true
@@ -242,7 +242,7 @@ void test_empty_while_true() {
 // CIR-NEXT:       }
 // CIR-NEXT:       cir.yield
 
-// LLVM: define void @test_empty_while_true()
+// LLVM: define void @_Z21test_empty_while_truev()
 // LLVM:   br label %[[LABEL1:.*]]
 // LLVM: [[LABEL1]]:
 // LLVM:   br label %[[LABEL2:.*]]
@@ -264,4 +264,126 @@ void test_empty_while_true() {
 // OGCG: entry:
 // OGCG:   br label %[[WHILE_BODY:.*]]
 // OGCG: [[WHILE_BODY]]:
+// OGCG:   ret void
+
+void unreachable_after_continue() {
+  for (;;) {
+    continue;
+    int x = 1;
+  }
+}
+
+// CIR: cir.func @_Z26unreachable_after_continuev()
+// CIR:   cir.scope {
+// CIR:     cir.for : cond {
+// CIR:       %[[TRUE:.*]] = cir.const #true
+// CIR:       cir.condition(%[[TRUE]])
+// CIR:     } body {
+// CIR:       cir.scope {
+// CIR:         %[[X:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init] {alignment = 4 : i64}
+// CIR:         cir.continue
+// CIR:       ^bb1:  // no predecessors
+// CIR:         %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CIR:         cir.store %[[ONE]], %[[X]] : !s32i, !cir.ptr<!s32i>
+// CIR:         cir.yield
+// CIR:       }
+// CIR:       cir.yield
+// CIR:     } step {
+// CIR:       cir.yield
+// CIR:     }
+// CIR:   }
+// CIR:   cir.return
+// CIR: }
+
+// LLVM: define void @_Z26unreachable_after_continuev()
+// LLVM:   %[[X:.*]] = alloca i32, i64 1, align 4
+// LLVM:   br label %[[LABEL1:.*]]
+// LLVM: [[LABEL1]]:
+// LLVM:   br label %[[LABEL2:.*]]
+// LLVM: [[LABEL2]]:
+// LLVM:   br i1 true, label %[[LABEL3:.*]], label %[[LABEL8:.*]]
+// LLVM: [[LABEL3]]:
+// LLVM:   br label %[[LABEL4:.*]]
+// LLVM: [[LABEL4]]:
+// LLVM:   br label %[[LABEL7:.*]]
+// LLVM: [[LABEL5:.*]]:
+// LLVM-SAME: ; No predecessors!
+// LLVM:   store i32 1, ptr %[[X]], align 4
+// LLVM:   br label %[[LABEL6:.*]]
+// LLVM: [[LABEL6]]:
+// LLVM:   br label %[[LABEL7:.*]]
+// LLVM: [[LABEL7]]:
+// LLVM:   br label %[[LABEL2]]
+// LLVM: [[LABEL8]]:
+// LLVM:   br label %[[LABEL9:]]
+// LLVM: [[LABEL9]]:
+// LLVM:   ret void
+
+// OGCG: define{{.*}} void @_Z26unreachable_after_continuev()
+// OGCG: entry:
+// OGCG:   %[[X:.*]] = alloca i32, align 4
+// OGCG:   br label %[[FOR_COND:.*]]
+// OGCG: [[FOR_COND]]:
+// OGCG:   br label %[[FOR_COND]]
+
+void unreachable_after_break() {
+  for (;;) {
+    break;
+    int x = 1;
+  }
+}
+
+// CIR: cir.func @_Z23unreachable_after_breakv()
+// CIR:   cir.scope {
+// CIR:     cir.for : cond {
+// CIR:       %[[TRUE:.*]] = cir.const #true
+// CIR:       cir.condition(%[[TRUE]])
+// CIR:     } body {
+// CIR:       cir.scope {
+// CIR:         %[[X:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init] {alignment = 4 : i64}
+// CIR:         cir.break
+// CIR:       ^bb1:  // no predecessors
+// CIR:         %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CIR:         cir.store %[[ONE]], %[[X]] : !s32i, !cir.ptr<!s32i>
+// CIR:         cir.yield
+// CIR:       }
+// CIR:       cir.yield
+// CIR:     } step {
+// CIR:       cir.yield
+// CIR:     }
+// CIR:   }
+// CIR:   cir.return
+// CIR: }
+
+// LLVM: define void @_Z23unreachable_after_breakv()
+// LLVM:   %[[X:.*]] = alloca i32, i64 1, align 4
+// LLVM:   br label %[[LABEL1:.*]]
+// LLVM: [[LABEL1]]:
+// LLVM:   br label %[[LABEL2:.*]]
+// LLVM: [[LABEL2]]:
+// LLVM:   br i1 true, label %[[LABEL3:.*]], label %[[LABEL8:.*]]
+// LLVM: [[LABEL3]]:
+// LLVM:   br label %[[LABEL4:.*]]
+// LLVM: [[LABEL4]]:
+// LLVM:   br label %[[LABEL8]]
+// LLVM: [[LABEL5:.*]]:
+// LLVM-SAME: ; No predecessors!
+// LLVM:   store i32 1, ptr %[[X]], align 4
+// LLVM:   br label %[[LABEL6:.*]]
+// LLVM: [[LABEL6]]:
+// LLVM:   br label %[[LABEL7:.*]]
+// LLVM: [[LABEL7]]:
+// LLVM:   br label %[[LABEL2]]
+// LLVM: [[LABEL8]]:
+// LLVM:   br label %[[LABEL9:]]
+// LLVM: [[LABEL9]]:
+// LLVM:   ret void
+
+// OGCG: define{{.*}} void @_Z23unreachable_after_breakv()
+// OGCG: entry:
+// OGCG:   %[[X:.*]] = alloca i32, align 4
+// OGCG:   br label %[[FOR_COND:.*]]
+// OGCG: [[FOR_COND]]:
+// OGCG:   br label %[[FOR_END:.*]]
+// OGCG: [[FOR_END]]:
 // OGCG:   ret void

@@ -77,16 +77,18 @@ SubstTemplateTemplateParmStorage::getParameter() const {
 }
 
 void SubstTemplateTemplateParmStorage::Profile(llvm::FoldingSetNodeID &ID) {
-  Profile(ID, Replacement, getAssociatedDecl(), getIndex(), getPackIndex());
+  Profile(ID, Replacement, getAssociatedDecl(), getIndex(), getPackIndex(),
+          getFinal());
 }
 
 void SubstTemplateTemplateParmStorage::Profile(
     llvm::FoldingSetNodeID &ID, TemplateName Replacement, Decl *AssociatedDecl,
-    unsigned Index, std::optional<unsigned> PackIndex) {
+    unsigned Index, UnsignedOrNone PackIndex, bool Final) {
   Replacement.Profile(ID);
   ID.AddPointer(AssociatedDecl);
   ID.AddInteger(Index);
-  ID.AddInteger(PackIndex ? *PackIndex + 1 : 0);
+  ID.AddInteger(PackIndex.toInternalRepresentation());
+  ID.AddBoolean(Final);
 }
 
 SubstTemplateTemplateParmPackStorage::SubstTemplateTemplateParmPackStorage(
@@ -408,9 +410,9 @@ bool TemplateName::containsUnexpandedParameterPack() const {
 
 void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
                          Qualified Qual) const {
-  auto handleAnonymousTTP = [](TemplateDecl *TD, raw_ostream &OS) {
+  auto handleAnonymousTTP = [&](TemplateDecl *TD, raw_ostream &OS) {
     if (TemplateTemplateParmDecl *TTP = dyn_cast<TemplateTemplateParmDecl>(TD);
-        TTP && TTP->getIdentifier() == nullptr) {
+        TTP && (Policy.PrintAsCanonical || TTP->getIdentifier() == nullptr)) {
       OS << "template-parameter-" << TTP->getDepth() << "-" << TTP->getIndex();
       return true;
     }
@@ -428,6 +430,8 @@ void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
     // names more often than to export them, thus using the original name is
     // most useful in this case.
     TemplateDecl *Template = getAsTemplateDecl();
+    if (Policy.PrintAsCanonical)
+      Template = cast<TemplateDecl>(Template->getCanonicalDecl());
     if (handleAnonymousTTP(Template, OS))
       return;
     if (Qual == Qualified::None)
@@ -435,6 +439,10 @@ void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
     else
       Template->printQualifiedName(OS, Policy);
   } else if (QualifiedTemplateName *QTN = getAsQualifiedTemplateName()) {
+    if (Policy.PrintAsCanonical) {
+      QTN->getUnderlyingTemplate().print(OS, Policy, Qual);
+      return;
+    }
     if (NestedNameSpecifier *NNS = QTN->getQualifier();
         Qual != Qualified::None && NNS)
       NNS->print(OS, Policy);

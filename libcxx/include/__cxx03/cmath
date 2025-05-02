@@ -324,7 +324,6 @@ constexpr long double lerp(long double a, long double b, long double t) noexcept
 #include <__cxx03/limits>
 #include <__cxx03/version>
 
-#include <__cxx03/__math/special_functions.h>
 #include <__cxx03/math.h>
 
 #ifndef _LIBCPP___CXX03_MATH_H

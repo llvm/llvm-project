@@ -1198,13 +1198,8 @@ class TemplateTypeParmDecl final : public TypeDecl,
   /// type constraint.
   bool TypeConstraintInitialized : 1;
 
-  /// Whether this type template parameter is an "expanded"
-  /// parameter pack, meaning that its type is a pack expansion and we
-  /// already know the set of types that expansion expands to.
-  bool ExpandedParameterPack : 1;
-
-  /// The number of type parameters in an expanded parameter pack.
-  unsigned NumExpanded = 0;
+  /// The number of type parameters in an expanded parameter pack, if any.
+  UnsignedOrNone NumExpanded = std::nullopt;
 
   /// The default template argument, if any.
   using DefArgStorage =
@@ -1213,19 +1208,17 @@ class TemplateTypeParmDecl final : public TypeDecl,
 
   TemplateTypeParmDecl(DeclContext *DC, SourceLocation KeyLoc,
                        SourceLocation IdLoc, IdentifierInfo *Id, bool Typename,
-                       bool HasTypeConstraint,
-                       std::optional<unsigned> NumExpanded)
+                       bool HasTypeConstraint, UnsignedOrNone NumExpanded)
       : TypeDecl(TemplateTypeParm, DC, IdLoc, Id, KeyLoc), Typename(Typename),
         HasTypeConstraint(HasTypeConstraint), TypeConstraintInitialized(false),
-        ExpandedParameterPack(NumExpanded),
-        NumExpanded(NumExpanded.value_or(0)) {}
+        NumExpanded(NumExpanded) {}
 
 public:
   static TemplateTypeParmDecl *
   Create(const ASTContext &C, DeclContext *DC, SourceLocation KeyLoc,
          SourceLocation NameLoc, unsigned D, unsigned P, IdentifierInfo *Id,
          bool Typename, bool ParameterPack, bool HasTypeConstraint = false,
-         std::optional<unsigned> NumExpanded = std::nullopt);
+         UnsignedOrNone NumExpanded = std::nullopt);
   static TemplateTypeParmDecl *CreateDeserialized(const ASTContext &C,
                                                   GlobalDeclID ID);
   static TemplateTypeParmDecl *CreateDeserialized(const ASTContext &C,
@@ -1327,13 +1320,8 @@ public:
   /// expanded parameter pack. For example, instantiating
   /// \c X<int, unsigned int> results in \c Convertibles being an expanded
   /// parameter pack of size 2 (use getNumExpansionTypes() to get this number).
-  bool isExpandedParameterPack() const { return ExpandedParameterPack; }
-
-  /// Retrieves the number of parameters in an expanded parameter pack.
-  unsigned getNumExpansionParameters() const {
-    assert(ExpandedParameterPack && "Not an expansion parameter pack");
-    return NumExpanded;
-  }
+  /// Retrieves the number of parameters in an expanded parameter pack, if any.
+  UnsignedOrNone getNumExpansionParameters() const { return NumExpanded; }
 
   /// Returns the type constraint associated with this template parameter (if
   /// any).
@@ -1344,7 +1332,7 @@ public:
 
   void setTypeConstraint(ConceptReference *CR,
                          Expr *ImmediatelyDeclaredConstraint,
-                         int ArgumentPackSubstitutionIndex);
+                         UnsignedOrNone ArgPackSubstIndex);
 
   /// Determine whether this template parameter has a type-constraint.
   bool hasTypeConstraint() const {
@@ -1360,7 +1348,7 @@ public:
       llvm::SmallVectorImpl<AssociatedConstraint> &AC) const {
     if (HasTypeConstraint)
       AC.emplace_back(getTypeConstraint()->getImmediatelyDeclaredConstraint(),
-                      getTypeConstraint()->getArgumentPackSubstitutionIndex());
+                      getTypeConstraint()->getArgPackSubstIndex());
   }
 
   SourceRange getSourceRange() const override LLVM_READONLY;
@@ -3379,10 +3367,10 @@ inline TemplateDecl *getAsTypeTemplateDecl(Decl *D) {
 ///
 /// In \c A<int,int>::B, \c NTs and \c TTs have expanded pack size 2, and \c Us
 /// is not a pack expansion, so returns an empty Optional.
-inline std::optional<unsigned> getExpandedPackSize(const NamedDecl *Param) {
+inline UnsignedOrNone getExpandedPackSize(const NamedDecl *Param) {
   if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(Param)) {
-    if (TTP->isExpandedParameterPack())
-      return TTP->getNumExpansionParameters();
+    if (UnsignedOrNone Num = TTP->getNumExpansionParameters())
+      return Num;
   }
 
   if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {

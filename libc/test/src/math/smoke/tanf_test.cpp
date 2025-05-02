@@ -20,6 +20,9 @@ using LlvmLibcTanfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 TEST_F(LlvmLibcTanfTest, SpecialNumbers) {
   LIBC_NAMESPACE::libc_errno = 0;
 
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::tanf(sNaN), FE_INVALID);
+  EXPECT_MATH_ERRNO(0);
+
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::tanf(aNaN));
   EXPECT_MATH_ERRNO(0);
 

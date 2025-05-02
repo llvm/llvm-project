@@ -99,8 +99,8 @@ void StandaloneEmptyCheck::check(const MatchFinder::MatchResult &Result) {
   if (Result.Nodes.getNodeAs<Expr>("parent"))
     return;
 
-  const auto PParentStmtExpr = Result.Nodes.getNodeAs<Expr>("stexpr");
-  const auto ParentCompStmt = Result.Nodes.getNodeAs<CompoundStmt>("parent");
+  const auto *PParentStmtExpr = Result.Nodes.getNodeAs<Expr>("stexpr");
+  const auto *ParentCompStmt = Result.Nodes.getNodeAs<CompoundStmt>("parent");
   const auto *ParentCond = getCondition(Result.Nodes, "parent");
   const auto *ParentReturnStmt = Result.Nodes.getNodeAs<ReturnStmt>("parent");
 

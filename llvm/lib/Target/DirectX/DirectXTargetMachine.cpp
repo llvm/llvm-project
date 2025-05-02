@@ -12,8 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "DirectXTargetMachine.h"
+#include "DXILCBufferAccess.h"
 #include "DXILDataScalarization.h"
 #include "DXILFlattenArrays.h"
+#include "DXILForwardHandleAccesses.h"
 #include "DXILIntrinsicExpansion.h"
 #include "DXILLegalizePass.h"
 #include "DXILOpLowering.h"
@@ -64,6 +66,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeDirectXTarget() {
   initializeShaderFlagsAnalysisWrapperPass(*PR);
   initializeRootSignatureAnalysisWrapperPass(*PR);
   initializeDXILFinalizeLinkageLegacyPass(*PR);
+  initializeDXILPrettyPrinterLegacyPass(*PR);
+  initializeDXILForwardHandleAccessesLegacyPass(*PR);
+  initializeDXILCBufferAccessLegacyPass(*PR);
 }
 
 class DXILTargetObjectFile : public TargetLoweringObjectFile {
@@ -93,15 +98,17 @@ public:
 
   FunctionPass *createTargetRegisterAllocator(bool) override { return nullptr; }
   void addCodeGenPrepare() override {
-    addPass(createDXILFinalizeLinkageLegacyPass());
     addPass(createDXILIntrinsicExpansionLegacyPass());
+    addPass(createDXILCBufferAccessLegacyPass());
     addPass(createDXILDataScalarizationLegacyPass());
     addPass(createDXILFlattenArraysLegacyPass());
     addPass(createDXILResourceAccessLegacyPass());
     ScalarizerPassOptions DxilScalarOptions;
     DxilScalarOptions.ScalarizeLoadStore = true;
     addPass(createScalarizerPass(DxilScalarOptions));
+    addPass(createDXILForwardHandleAccessesLegacyPass());
     addPass(createDXILLegalizeLegacyPass());
+    addPass(createDXILFinalizeLinkageLegacyPass());
     addPass(createDXILTranslateMetadataLegacyPass());
     addPass(createDXILOpLoweringLegacyPass());
     addPass(createDXILPrepareModulePass());
@@ -183,7 +190,7 @@ DirectXTargetMachine::getSubtargetImpl(const Function &) const {
 
 TargetTransformInfo
 DirectXTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(DirectXTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<DirectXTTIImpl>(this, F));
 }
 
 DirectXTargetLowering::DirectXTargetLowering(const DirectXTargetMachine &TM,

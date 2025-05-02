@@ -16,6 +16,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/MDBuilder.h"
@@ -270,13 +271,65 @@ static void convertLinkerOptionsOp(ArrayAttr options,
   linkerMDNode->addOperand(listMDNode);
 }
 
+static llvm::Metadata *
+convertModuleFlagValue(StringRef key, ArrayAttr arrayAttr,
+                       llvm::IRBuilderBase &builder,
+                       LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::LLVMContext &context = builder.getContext();
+  llvm::MDBuilder mdb(context);
+  SmallVector<llvm::Metadata *> nodes;
+
+  if (key == LLVMDialect::getModuleFlagKeyCGProfileName()) {
+    for (auto entry : arrayAttr.getAsRange<ModuleFlagCGProfileEntryAttr>()) {
+      llvm::Metadata *fromMetadata =
+          entry.getFrom()
+              ? llvm::ValueAsMetadata::get(moduleTranslation.lookupFunction(
+                    entry.getFrom().getValue()))
+              : nullptr;
+      llvm::Metadata *toMetadata =
+          entry.getTo()
+              ? llvm::ValueAsMetadata::get(
+                    moduleTranslation.lookupFunction(entry.getTo().getValue()))
+              : nullptr;
+
+      llvm::Metadata *vals[] = {
+          fromMetadata, toMetadata,
+          mdb.createConstant(llvm::ConstantInt::get(
+              llvm::Type::getInt64Ty(context), entry.getCount()))};
+      nodes.push_back(llvm::MDNode::get(context, vals));
+    }
+    return llvm::MDTuple::getDistinct(context, nodes);
+  }
+  return nullptr;
+}
+
 static void convertModuleFlagsOp(ArrayAttr flags, llvm::IRBuilderBase &builder,
                                  LLVM::ModuleTranslation &moduleTranslation) {
   llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
-  for (auto flagAttr : flags.getAsRange<ModuleFlagAttr>())
+  for (auto flagAttr : flags.getAsRange<ModuleFlagAttr>()) {
+    llvm::Metadata *valueMetadata =
+        llvm::TypeSwitch<Attribute, llvm::Metadata *>(flagAttr.getValue())
+            .Case<StringAttr>([&](auto strAttr) {
+              return llvm::MDString::get(builder.getContext(),
+                                         strAttr.getValue());
+            })
+            .Case<IntegerAttr>([&](auto intAttr) {
+              return llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+                  llvm::Type::getInt32Ty(builder.getContext()),
+                  intAttr.getInt()));
+            })
+            .Case<ArrayAttr>([&](auto arrayAttr) {
+              return convertModuleFlagValue(flagAttr.getKey().getValue(),
+                                            arrayAttr, builder,
+                                            moduleTranslation);
+            })
+            .Default([](auto) { return nullptr; });
+
+    assert(valueMetadata && "expected valid metadata");
     llvmModule->addModuleFlag(
         convertModFlagBehaviorToLLVM(flagAttr.getBehavior()),
-        flagAttr.getKey().getValue(), flagAttr.getValue());
+        flagAttr.getKey().getValue(), valueMetadata);
+  }
 }
 
 static LogicalResult
@@ -323,6 +376,8 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
       call->addFnAttr(llvm::Attribute::NoInline);
     if (callOp.getAlwaysInlineAttr())
       call->addFnAttr(llvm::Attribute::AlwaysInline);
+    if (callOp.getInlineHintAttr())
+      call->addFnAttr(llvm::Attribute::InlineHint);
 
     if (failed(convertParameterAndResultAttrs(callOp, call, moduleTranslation)))
       return failure();
@@ -503,6 +558,15 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     moduleTranslation.mapBranch(&opInst, switchInst);
     return success();
   }
+  if (auto indBrOp = dyn_cast<LLVM::IndirectBrOp>(opInst)) {
+    llvm::IndirectBrInst *indBr = builder.CreateIndirectBr(
+        moduleTranslation.lookupValue(indBrOp.getAddr()),
+        indBrOp->getNumSuccessors());
+    for (auto *succ : indBrOp.getSuccessors())
+      indBr->addDestination(moduleTranslation.lookupBlock(succ));
+    moduleTranslation.mapBranch(&opInst, indBr);
+    return success();
+  }
 
   // Emit addressof.  We need to look up the global value referenced by the
   // operation and store it in the MLIR-to-LLVM value mapping.  This does not
@@ -552,6 +616,59 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     moduleTranslation.mapValue(
         dsoLocalEquivalentOp.getResult(),
         llvm::DSOLocalEquivalent::get(cast<llvm::GlobalValue>(llvmValue)));
+    return success();
+  }
+
+  // Emit blockaddress. We first need to find the LLVM block referenced by this
+  // operation and then create a LLVM block address for it.
+  if (auto blockAddressOp = dyn_cast<LLVM::BlockAddressOp>(opInst)) {
+    // getBlockTagOp() walks a function to search for block labels. Check
+    // whether it's in cache first.
+    BlockAddressAttr blockAddressAttr = blockAddressOp.getBlockAddr();
+    BlockTagOp blockTagOp = moduleTranslation.lookupBlockTag(blockAddressAttr);
+    if (!blockTagOp) {
+      blockTagOp = blockAddressOp.getBlockTagOp();
+      moduleTranslation.mapBlockTag(blockAddressAttr, blockTagOp);
+    }
+
+    llvm::Value *llvmValue = nullptr;
+    StringRef fnName = blockAddressAttr.getFunction().getValue();
+    if (llvm::BasicBlock *llvmBlock =
+            moduleTranslation.lookupBlock(blockTagOp->getBlock())) {
+      llvm::Function *llvmFn = moduleTranslation.lookupFunction(fnName);
+      llvmValue = llvm::BlockAddress::get(llvmFn, llvmBlock);
+    } else {
+      // The matching LLVM block is not yet emitted, a placeholder is created
+      // in its place. When the LLVM block is emitted later in translation,
+      // the llvmValue is replaced with the actual llvm::BlockAddress.
+      // A GlobalVariable is chosen as placeholder because in general LLVM
+      // constants are uniqued and are not proper for RAUW, since that could
+      // harm unrelated uses of the constant.
+      llvmValue = new llvm::GlobalVariable(
+          *moduleTranslation.getLLVMModule(),
+          llvm::PointerType::getUnqual(moduleTranslation.getLLVMContext()),
+          /*isConstant=*/true, llvm::GlobalValue::LinkageTypes::ExternalLinkage,
+          /*Initializer=*/nullptr,
+          Twine("__mlir_block_address_")
+              .concat(Twine(fnName))
+              .concat(Twine((uint64_t)blockAddressOp.getOperation())));
+      moduleTranslation.mapUnresolvedBlockAddress(blockAddressOp, llvmValue);
+    }
+
+    moduleTranslation.mapValue(blockAddressOp.getResult(), llvmValue);
+    return success();
+  }
+
+  // Emit block label. If this label is seen before BlockAddressOp is
+  // translated, go ahead and already map it.
+  if (auto blockTagOp = dyn_cast<LLVM::BlockTagOp>(opInst)) {
+    auto funcOp = blockTagOp->getParentOfType<LLVMFuncOp>();
+    BlockAddressAttr blockAddressAttr = BlockAddressAttr::get(
+        &moduleTranslation.getContext(),
+        FlatSymbolRefAttr::get(&moduleTranslation.getContext(),
+                               funcOp.getName()),
+        blockTagOp.getTag());
+    moduleTranslation.mapBlockTag(blockAddressAttr, blockTagOp);
     return success();
   }
 

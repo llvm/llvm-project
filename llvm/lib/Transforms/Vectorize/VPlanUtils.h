@@ -45,8 +45,7 @@ inline bool isUniformAfterVectorization(const VPValue *VPV) {
     return true;
   if (auto *Rep = dyn_cast<VPReplicateRecipe>(VPV))
     return Rep->isUniform();
-  if (isa<VPWidenGEPRecipe, VPDerivedIVRecipe, VPScalarCastRecipe,
-          VPBlendRecipe>(VPV))
+  if (isa<VPWidenGEPRecipe, VPDerivedIVRecipe, VPBlendRecipe>(VPV))
     return all_of(VPV->getDefiningRecipe()->operands(),
                   isUniformAfterVectorization);
   if (auto *VPI = dyn_cast<VPInstruction>(VPV))
@@ -91,9 +90,10 @@ public:
     NewBlock->setParent(BlockPtr->getParent());
     SmallVector<VPBlockBase *> Succs(BlockPtr->successors());
     for (VPBlockBase *Succ : Succs) {
-      disconnectBlocks(BlockPtr, Succ);
-      connectBlocks(NewBlock, Succ);
+      Succ->replacePredecessor(BlockPtr, NewBlock);
+      NewBlock->appendSuccessor(Succ);
     }
+    BlockPtr->clearSuccessors();
     connectBlocks(BlockPtr, NewBlock);
   }
 
@@ -107,9 +107,10 @@ public:
            "Can't insert new block with predecessors or successors.");
     NewBlock->setParent(BlockPtr->getParent());
     for (VPBlockBase *Pred : to_vector(BlockPtr->predecessors())) {
-      disconnectBlocks(Pred, BlockPtr);
-      connectBlocks(Pred, NewBlock);
+      Pred->replaceSuccessor(BlockPtr, NewBlock);
+      NewBlock->appendPredecessor(Pred);
     }
+    BlockPtr->clearPredecessors();
     connectBlocks(NewBlock, BlockPtr);
   }
 

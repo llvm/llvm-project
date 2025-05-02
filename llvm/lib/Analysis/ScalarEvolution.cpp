@@ -116,6 +116,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
@@ -349,11 +350,9 @@ void SCEV::print(raw_ostream &OS) const {
     default:
       llvm_unreachable("There are no other nary expression types.");
     }
-    OS << "(";
-    ListSeparator LS(OpStr);
-    for (const SCEV *Op : NAry->operands())
-      OS << LS << *Op;
-    OS << ")";
+    OS << "("
+       << llvm::interleaved(llvm::make_pointee_range(NAry->operands()), OpStr)
+       << ")";
     switch (NAry->getSCEVType()) {
     case scAddExpr:
     case scMulExpr:
@@ -7841,7 +7840,7 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
               unsigned GCD = std::min(MulZeros, TZ);
               APInt DivAmt = APInt::getOneBitSet(BitWidth, TZ - GCD);
               SmallVector<const SCEV*, 4> MulOps;
-              MulOps.push_back(getConstant(OpC->getAPInt().lshr(GCD)));
+              MulOps.push_back(getConstant(OpC->getAPInt().ashr(GCD)));
               append_range(MulOps, LHSMul->operands().drop_front());
               auto *NewMul = getMulExpr(MulOps, LHSMul->getNoWrapFlags());
               ShiftedLHS = getUDivExpr(NewMul, getConstant(DivAmt));
@@ -8253,14 +8252,14 @@ unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L) {
     unsigned Multiple = getSmallConstantTripMultiple(L, ExitingBB);
     if (!Res)
       Res = Multiple;
-    Res = (unsigned)std::gcd(*Res, Multiple);
+    Res = std::gcd(*Res, Multiple);
   }
   return Res.value_or(1);
 }
 
 unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L,
                                                        const SCEV *ExitCount) {
-  if (ExitCount == getCouldNotCompute())
+  if (isa<SCEVCouldNotCompute>(ExitCount))
     return 1;
 
   // Get the trip count
@@ -8270,8 +8269,8 @@ unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L,
   // If a trip multiple is huge (>=2^32), the trip count is still divisible by
   // the greatest power of 2 divisor less than 2^32.
   return Multiple.getActiveBits() > 32
-             ? 1U << std::min((unsigned)31, Multiple.countTrailingZeros())
-             : (unsigned)Multiple.zextOrTrunc(32).getZExtValue();
+             ? 1U << std::min(31U, Multiple.countTrailingZeros())
+             : (unsigned)Multiple.getZExtValue();
 }
 
 /// Returns the largest constant divisor of the trip count of this loop as a
@@ -8503,10 +8502,8 @@ void ScalarEvolution::forgetLoop(const Loop *L) {
     }
 
     auto LoopUsersItr = LoopUsers.find(CurrL);
-    if (LoopUsersItr != LoopUsers.end()) {
-      ToForget.insert(ToForget.end(), LoopUsersItr->second.begin(),
-                LoopUsersItr->second.end());
-    }
+    if (LoopUsersItr != LoopUsers.end())
+      llvm::append_range(ToForget, LoopUsersItr->second);
 
     // Drop information about expressions based on loop-header PHIs.
     PushLoopPHIs(CurrL, Worklist, Visited);
@@ -11622,7 +11619,7 @@ bool ScalarEvolution::isBasicBlockEntryGuardedByCond(const BasicBlock *BB,
   // to prove non-equality and non-strict comparison separately.
   CmpPredicate NonStrictPredicate = ICmpInst::getNonStrictCmpPredicate(Pred);
   const bool ProvingStrictComparison =
-      (Pred != static_cast<CmpInst::Predicate>(NonStrictPredicate));
+      Pred != NonStrictPredicate.dropSameSign();
   bool ProvedNonStrictComparison = false;
   bool ProvedNonEquality = false;
 
@@ -11791,8 +11788,9 @@ bool ScalarEvolution::isImpliedCond(CmpPredicate Pred, const SCEV *LHS,
                                           MaxValue)) {
         const SCEV *TruncFoundLHS = getTruncateExpr(FoundLHS, NarrowType);
         const SCEV *TruncFoundRHS = getTruncateExpr(FoundRHS, NarrowType);
-        if (isImpliedCondBalancedTypes(Pred, LHS, RHS, FoundPred, TruncFoundLHS,
-                                       TruncFoundRHS, CtxI))
+        // We cannot preserve samesign after truncation.
+        if (isImpliedCondBalancedTypes(Pred, LHS, RHS, FoundPred.dropSameSign(),
+                                       TruncFoundLHS, TruncFoundRHS, CtxI))
           return true;
       }
     }
@@ -11849,15 +11847,13 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
   }
 
   // Check whether the found predicate is the same as the desired predicate.
-  // FIXME: use CmpPredicate::getMatching here.
-  if (FoundPred == static_cast<CmpInst::Predicate>(Pred))
-    return isImpliedCondOperands(Pred, LHS, RHS, FoundLHS, FoundRHS, CtxI);
+  if (auto P = CmpPredicate::getMatching(FoundPred, Pred))
+    return isImpliedCondOperands(*P, LHS, RHS, FoundLHS, FoundRHS, CtxI);
 
   // Check whether swapping the found predicate makes it the same as the
   // desired predicate.
-  // FIXME: use CmpPredicate::getMatching here.
-  if (ICmpInst::getSwappedCmpPredicate(FoundPred) ==
-      static_cast<CmpInst::Predicate>(Pred)) {
+  if (auto P = CmpPredicate::getMatching(
+          ICmpInst::getSwappedCmpPredicate(FoundPred), Pred)) {
     // We can write the implication
     // 0.  LHS Pred      RHS  <-   FoundLHS SwapPred  FoundRHS
     // using one of the following ways:
@@ -11868,22 +11864,23 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
     // Forms 1. and 2. require swapping the operands of one condition. Don't
     // do this if it would break canonical constant/addrec ordering.
     if (!isa<SCEVConstant>(RHS) && !isa<SCEVAddRecExpr>(LHS))
-      return isImpliedCondOperands(FoundPred, RHS, LHS, FoundLHS, FoundRHS,
-                                   CtxI);
+      return isImpliedCondOperands(ICmpInst::getSwappedCmpPredicate(*P), RHS,
+                                   LHS, FoundLHS, FoundRHS, CtxI);
     if (!isa<SCEVConstant>(FoundRHS) && !isa<SCEVAddRecExpr>(FoundLHS))
-      return isImpliedCondOperands(Pred, LHS, RHS, FoundRHS, FoundLHS, CtxI);
+      return isImpliedCondOperands(*P, LHS, RHS, FoundRHS, FoundLHS, CtxI);
 
     // There's no clear preference between forms 3. and 4., try both.  Avoid
     // forming getNotSCEV of pointer values as the resulting subtract is
     // not legal.
     if (!LHS->getType()->isPointerTy() && !RHS->getType()->isPointerTy() &&
-        isImpliedCondOperands(FoundPred, getNotSCEV(LHS), getNotSCEV(RHS),
-                              FoundLHS, FoundRHS, CtxI))
+        isImpliedCondOperands(ICmpInst::getSwappedCmpPredicate(*P),
+                              getNotSCEV(LHS), getNotSCEV(RHS), FoundLHS,
+                              FoundRHS, CtxI))
       return true;
 
     if (!FoundLHS->getType()->isPointerTy() &&
         !FoundRHS->getType()->isPointerTy() &&
-        isImpliedCondOperands(Pred, LHS, RHS, getNotSCEV(FoundLHS),
+        isImpliedCondOperands(*P, LHS, RHS, getNotSCEV(FoundLHS),
                               getNotSCEV(FoundRHS), CtxI))
       return true;
 
@@ -12559,14 +12556,16 @@ bool ScalarEvolution::isImpliedViaOperations(CmpPredicate Pred, const SCEV *LHS,
     return false;
 
   // We only want to work with GT comparison so far.
-  if (Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_SLT) {
+  if (ICmpInst::isLT(Pred)) {
     Pred = ICmpInst::getSwappedCmpPredicate(Pred);
     std::swap(LHS, RHS);
     std::swap(FoundLHS, FoundRHS);
   }
 
+  CmpInst::Predicate P = Pred.getPreferredSignedPredicate();
+
   // For unsigned, try to reduce it to corresponding signed comparison.
-  if (Pred == ICmpInst::ICMP_UGT)
+  if (P == ICmpInst::ICMP_UGT)
     // We can replace unsigned predicate with its signed counterpart if all
     // involved values are non-negative.
     // TODO: We could have better support for unsigned.
@@ -12579,10 +12578,10 @@ bool ScalarEvolution::isImpliedViaOperations(CmpPredicate Pred, const SCEV *LHS,
                                 FoundRHS) &&
           isImpliedCondOperands(ICmpInst::ICMP_SGT, RHS, MinusOne, FoundLHS,
                                 FoundRHS))
-        Pred = ICmpInst::ICMP_SGT;
+        P = ICmpInst::ICMP_SGT;
     }
 
-  if (Pred != ICmpInst::ICMP_SGT)
+  if (P != ICmpInst::ICMP_SGT)
     return false;
 
   auto GetOpFromSExt = [&](const SCEV *S) {
@@ -14685,9 +14684,7 @@ INITIALIZE_PASS_END(ScalarEvolutionWrapperPass, "scalar-evolution",
 
 char ScalarEvolutionWrapperPass::ID = 0;
 
-ScalarEvolutionWrapperPass::ScalarEvolutionWrapperPass() : FunctionPass(ID) {
-  initializeScalarEvolutionWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+ScalarEvolutionWrapperPass::ScalarEvolutionWrapperPass() : FunctionPass(ID) {}
 
 bool ScalarEvolutionWrapperPass::runOnFunction(Function &F) {
   SE.reset(new ScalarEvolution(
@@ -14968,6 +14965,10 @@ bool SCEVWrapPredicate::implies(const SCEVPredicate *N,
   const SCEV *Start = AR->getStart();
   const SCEV *OpStart = Op->AR->getStart();
   if (Start->getType()->isPointerTy() != OpStart->getType()->isPointerTy())
+    return false;
+
+  // Reject pointers to different address spaces.
+  if (Start->getType()->isPointerTy() && Start->getType() != OpStart->getType())
     return false;
 
   const SCEV *Step = AR->getStepRecurrence(SE);

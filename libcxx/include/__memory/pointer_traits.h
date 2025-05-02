@@ -146,10 +146,10 @@ public:
 };
 
 template <class _Ptr>
-struct _LIBCPP_TEMPLATE_VIS pointer_traits : __pointer_traits_impl<_Ptr> {};
+struct pointer_traits : __pointer_traits_impl<_Ptr> {};
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS pointer_traits<_Tp*> {
+struct pointer_traits<_Tp*> {
   typedef _Tp* pointer;
   typedef _Tp element_type;
   typedef ptrdiff_t difference_type;

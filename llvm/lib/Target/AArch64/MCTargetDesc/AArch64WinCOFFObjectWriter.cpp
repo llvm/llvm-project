@@ -61,8 +61,7 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
     FixupKind = FK_PCRel_4;
   }
 
-  auto Modifier = Target.isAbsolute() ? MCSymbolRefExpr::VK_None
-                                      : Target.getSymA()->getKind();
+  auto Spec = Target.getSpecifier();
   const MCExpr *Expr = Fixup.getValue();
 
   if (const AArch64MCExpr *A64E = dyn_cast<AArch64MCExpr>(Expr)) {
@@ -87,7 +86,7 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
                                           A64E->getSpecifierName() +
                                           " unsupported on COFF targets");
     } else {
-      const MCFixupKindInfo &Info = MAB.getFixupKindInfo(Fixup.getKind());
+      MCFixupKindInfo Info = MAB.getFixupKindInfo(Fixup.getKind());
       Ctx.reportError(Fixup.getLoc(), Twine("relocation type ") + Info.Name +
                                           " unsupported on COFF targets");
     }
@@ -98,7 +97,7 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
     return COFF::IMAGE_REL_ARM64_REL32;
 
   case FK_Data_4:
-    switch (Modifier) {
+    switch (Spec) {
     default:
       return COFF::IMAGE_REL_ARM64_ADDR32;
     case MCSymbolRefExpr::VK_COFF_IMGREL32:
