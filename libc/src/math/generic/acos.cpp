@@ -40,7 +40,7 @@ LLVM_LIBC_FUNCTION(double, acos, (double x)) {
 #else
       // Force the evaluation and prevent constant propagation so that it
       // is rounded correctly for FE_UPWARD rounding mode.
-      return PI_OVER_TWO.hi + (PI_OVER_TWO.lo + xbits.abs().get_val());
+      return fputil::multiply_add(xbits.abs().get_val(), 0.75, PI_OVER_TWO.hi);
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
     }
 
@@ -118,8 +118,7 @@ LLVM_LIBC_FUNCTION(double, acos, (double x)) {
     if (x_abs == 1.0) {
       // x = 1, acos(x) = 0,
       // x = -1, acos(x) = pi
-      return x == 1.0 ? 0.0
-                      : fputil::multiply_add(x_sign, PI.hi, x_sign * PI.lo);
+      return x == 1.0 ? 0.0 : fputil::multiply_add(-x_sign, PI.hi, PI.lo);
     }
     // |x| > 1, return NaN.
     if (xbits.is_finite()) {
