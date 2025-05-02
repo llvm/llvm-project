@@ -9292,23 +9292,23 @@ TreeTransform<Derived>::TransformMSDependentExistsStmt(
   SS.Adopt(QualifierLoc);
   bool Dependent = false;
   switch (getSema().CheckMicrosoftIfExistsSymbol(/*S=*/nullptr, SS, NameInfo)) {
-  case Sema::IER_Exists:
+  case IfExistsResult::Exists:
     if (S->isIfExists())
       break;
 
     return new (getSema().Context) NullStmt(S->getKeywordLoc());
 
-  case Sema::IER_DoesNotExist:
+  case IfExistsResult::DoesNotExist:
     if (S->isIfNotExists())
       break;
 
     return new (getSema().Context) NullStmt(S->getKeywordLoc());
 
-  case Sema::IER_Dependent:
+  case IfExistsResult::Dependent:
     Dependent = true;
     break;
 
-  case Sema::IER_Error:
+  case IfExistsResult::Error:
     return StmtError();
   }
 

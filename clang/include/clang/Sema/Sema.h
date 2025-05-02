@@ -783,6 +783,22 @@ enum class AllocationFunctionScope {
   Both
 };
 
+/// Describes the result of an "if-exists" condition check.
+enum class IfExistsResult {
+  /// The symbol exists.
+  Exists,
+
+  /// The symbol does not exist.
+  DoesNotExist,
+
+  /// The name is a dependent name, so the results will differ
+  /// from one instantiation to the next.
+  Dependent,
+
+  /// An error occurred.
+  Error
+};
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -8666,22 +8682,6 @@ public:
                : CorrectDelayedTyposInExpr(ER.get(), InitDecl,
                                            RecoverUncorrectedTypos, Filter);
   }
-
-  /// Describes the result of an "if-exists" condition check.
-  enum IfExistsResult {
-    /// The symbol exists.
-    IER_Exists,
-
-    /// The symbol does not exist.
-    IER_DoesNotExist,
-
-    /// The name is a dependent name, so the results will differ
-    /// from one instantiation to the next.
-    IER_Dependent,
-
-    /// An error occurred.
-    IER_Error
-  };
 
   IfExistsResult
   CheckMicrosoftIfExistsSymbol(Scope *S, CXXScopeSpec &SS,
