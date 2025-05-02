@@ -55,7 +55,7 @@ static void rewriteFuncWithReturnType(Function &OldF, Value *NewRetValue) {
   BasicBlock *NewRetBlock = NewRetI ? NewRetI->getParent() : &EntryBB;
 
   BasicBlock::iterator NewValIt =
-      NewRetI ? NewRetI->getIterator() : EntryBB.end();
+      NewRetI ? std::next(NewRetI->getIterator()) : EntryBB.begin();
 
   Type *OldRetTy = OldFuncTy->getReturnType();
 
@@ -73,28 +73,16 @@ static void rewriteFuncWithReturnType(Function &OldF, Value *NewRetValue) {
     }
   }
 
-  // Now prune any CFG edges we have to deal with.
-  //
-  // Use KeepOneInputPHIs in case the instruction we are using for the return is
-  // that phi.
-  // TODO: Could avoid this with fancier iterator management.
-  for (BasicBlock *Succ : successors(NewRetBlock))
-    Succ->removePredecessor(NewRetBlock, /*KeepOneInputPHIs=*/true);
+  // If we're returning an instruction, split the basic block so we can let
+  // simpleSimplifyCFG cleanup the successors.
+  BasicBlock *TailBB = NewRetBlock->splitBasicBlock(NewValIt);
 
-  // Now delete the tail of this block, in reverse to delete uses before defs.
-  for (Instruction &I : make_early_inc_range(
-           make_range(NewRetBlock->rbegin(), NewValIt.getReverse()))) {
-    Value *Replacement = getDefaultValue(I.getType());
-    I.replaceAllUsesWith(Replacement);
-    I.eraseFromParent();
-  }
-
+  // Replace the unconditional branch splitBasicBlock created
+  NewRetBlock->getTerminator()->eraseFromParent();
   ReturnInst::Create(Ctx, NewRetValue, NewRetBlock);
 
-  // TODO: We may be eliminating blocks that were originally unreachable. We
-  // probably ought to only be pruning blocks that became dead directly as a
-  // result of our pruning here.
-  EliminateUnreachableBlocks(OldF);
+  // Now prune any CFG edges we have to deal with.
+  simpleSimplifyCFG(OldF, {TailBB}, /*FoldBlockIntoPredecessor=*/false);
 
   // Drop the incompatible attributes before we copy over to the new function.
   if (OldRetTy != NewRetTy) {
@@ -196,20 +184,6 @@ static bool shouldReplaceNonVoidReturnValue(const BasicBlock &BB,
   return true;
 }
 
-static bool canHandleSuccessors(const BasicBlock &BB) {
-  // TODO: Handle invoke and other exotic terminators
-  if (!isa<ReturnInst, UnreachableInst, BranchInst, SwitchInst>(
-          BB.getTerminator()))
-    return false;
-
-  for (const BasicBlock *Succ : successors(&BB)) {
-    if (!Succ->canSplitPredecessors())
-      return false;
-  }
-
-  return true;
-}
-
 static bool shouldForwardValueToReturn(const BasicBlock &BB, const Value *V,
                                        Type *RetTy) {
   if (!isReallyValidReturnType(V->getType()))
@@ -228,10 +202,9 @@ static bool tryForwardingInstructionsToReturn(
   Type *RetTy = F.getReturnType();
 
   for (BasicBlock &BB : F) {
-    if (!canHandleSuccessors(BB))
-      continue;
-
-    for (Instruction &I : BB) {
+    // Skip the terminator, we can't insert a second terminator to return its
+    // value.
+    for (Instruction &I : make_range(BB.begin(), std::prev(BB.end()))) {
       if (shouldForwardValueToReturn(BB, &I, RetTy) && !O.shouldKeep()) {
         FuncsToReplace.emplace_back(&F, &I);
         return true;
