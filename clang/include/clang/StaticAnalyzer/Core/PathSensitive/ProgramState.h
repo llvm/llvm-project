@@ -527,11 +527,10 @@ private:
   std::vector<ProgramState *> freeStates;
 
 public:
-  ProgramStateManager(ASTContext &Ctx,
-                 StoreManagerCreator CreateStoreManager,
-                 ConstraintManagerCreator CreateConstraintManager,
-                 std::array<llvm::BumpPtrAllocator, 7> &Allocators,
-                 ExprEngine *expreng);
+  ProgramStateManager(ASTContext &Ctx, StoreManagerCreator CreateStoreManager,
+                      ConstraintManagerCreator CreateConstraintManager,
+                      std::array<llvm::BumpPtrAllocator, 7> &Allocators,
+                      ExprEngine *expreng);
 
   ~ProgramStateManager();
 

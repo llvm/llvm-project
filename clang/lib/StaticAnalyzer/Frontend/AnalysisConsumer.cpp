@@ -755,7 +755,8 @@ void AnalysisConsumer::RunPathSensitiveChecks(Decl *D,
   std::array<llvm::BumpPtrAllocator, 7> ProgramStateManagerAllocators;
   llvm::BumpPtrAllocator BlockCounterFactoryAllocator;
 
-  ExprEngine Eng(CTU, *Mgr, VisitedCallees, &FunctionSummaries, IMode, ProgramStateManagerAllocators, BlockCounterFactoryAllocator);
+  ExprEngine Eng(CTU, *Mgr, VisitedCallees, &FunctionSummaries, IMode,
+                 ProgramStateManagerAllocators, BlockCounterFactoryAllocator);
 
   // Execute the worklist algorithm.
   llvm::TimeRecord ExprEngineStartTime;

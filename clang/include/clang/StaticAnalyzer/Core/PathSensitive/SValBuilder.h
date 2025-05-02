@@ -411,10 +411,11 @@ public:
                                const StackFrameContext *SFC);
 };
 
-SValBuilder* createSimpleSValBuilder(llvm::BumpPtrAllocator &BasicValueFactoryAllocator,
-                                     llvm::BumpPtrAllocator &SymbolManagerAllocator,
-                                     llvm::BumpPtrAllocator &MemRegionManagerAllocator,
-                                     ASTContext &context, ProgramStateManager &stateMgr);
+SValBuilder *
+createSimpleSValBuilder(llvm::BumpPtrAllocator &BasicValueFactoryAllocator,
+                        llvm::BumpPtrAllocator &SymbolManagerAllocator,
+                        llvm::BumpPtrAllocator &MemRegionManagerAllocator,
+                        ASTContext &context, ProgramStateManager &stateMgr);
 
 } // namespace ento
 

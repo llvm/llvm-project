@@ -136,8 +136,7 @@ private:
 
 public:
   /// Construct a CoreEngine object to analyze the provided CFG.
-  CoreEngine(ExprEngine &exprengine,
-             FunctionSummariesTy *FS,
+  CoreEngine(ExprEngine &exprengine, FunctionSummariesTy *FS,
              AnalyzerOptions &Opts,
              llvm::BumpPtrAllocator &BlockCounterFactoryAllocator);
 

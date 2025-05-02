@@ -68,10 +68,8 @@ public:
                     llvm::BumpPtrAllocator &SymbolManagerAllocator,
                     llvm::BumpPtrAllocator &MemRegionManagerAllocator,
                     ASTContext &context, ProgramStateManager &stateMgr)
-      : SValBuilder(BasicValueFactoryAllocator,
-                    SymbolManagerAllocator,
-                    MemRegionManagerAllocator,
-                    context, stateMgr) {}
+      : SValBuilder(BasicValueFactoryAllocator, SymbolManagerAllocator,
+                    MemRegionManagerAllocator, context, stateMgr) {}
   ~SimpleSValBuilder() override {}
 
   SVal evalBinOpNN(ProgramStateRef state, BinaryOperator::Opcode op,
@@ -103,14 +101,14 @@ public:
 };
 } // end anonymous namespace
 
-SValBuilder *ento::createSimpleSValBuilder(llvm::BumpPtrAllocator &BasicValueFactoryAllocator,
-                                           llvm::BumpPtrAllocator &SymbolManagerAllocator,
-                                           llvm::BumpPtrAllocator &MemRegionManagerAllocator,
-                                           ASTContext &context, ProgramStateManager &stateMgr) {
+SValBuilder *ento::createSimpleSValBuilder(
+    llvm::BumpPtrAllocator &BasicValueFactoryAllocator,
+    llvm::BumpPtrAllocator &SymbolManagerAllocator,
+    llvm::BumpPtrAllocator &MemRegionManagerAllocator, ASTContext &context,
+    ProgramStateManager &stateMgr) {
   return new SimpleSValBuilder(BasicValueFactoryAllocator,
                                SymbolManagerAllocator,
-                               MemRegionManagerAllocator,
-                               context, stateMgr);
+                               MemRegionManagerAllocator, context, stateMgr);
 }
 
 // Checks if the negation the value and flipping sign preserve

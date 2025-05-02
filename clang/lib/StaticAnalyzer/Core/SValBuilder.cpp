@@ -52,13 +52,12 @@ void SValBuilder::anchor() {}
 SValBuilder::SValBuilder(llvm::BumpPtrAllocator &BasicValueFactoryAllocator,
                          llvm::BumpPtrAllocator &SymbolManagerAllocator,
                          llvm::BumpPtrAllocator &MemRegionManagerAllocator,
-                         ASTContext &context,
-                         ProgramStateManager &stateMgr)
+                         ASTContext &context, ProgramStateManager &stateMgr)
     : Context(context), BasicVals(context, BasicValueFactoryAllocator),
       SymMgr(context, BasicVals, SymbolManagerAllocator),
-      MemMgr(context, MemRegionManagerAllocator),
-      StateMgr(stateMgr),
-      AnOpts(stateMgr.getOwningEngine().getAnalysisManager().getAnalyzerOptions()),
+      MemMgr(context, MemRegionManagerAllocator), StateMgr(stateMgr),
+      AnOpts(
+          stateMgr.getOwningEngine().getAnalysisManager().getAnalyzerOptions()),
       ArrayIndexTy(context.LongLongTy),
       ArrayIndexWidth(context.getTypeSize(ArrayIndexTy)) {}
 

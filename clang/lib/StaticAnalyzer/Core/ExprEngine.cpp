@@ -219,17 +219,18 @@ REGISTER_TRAIT_WITH_PROGRAMSTATE(PendingArrayDestruction,
 
 static const char* TagProviderName = "ExprEngine";
 
-ExprEngine::ExprEngine(cross_tu::CrossTranslationUnitContext &CTU,
-                       AnalysisManager &mgr, SetOfConstDecls *VisitedCalleesIn,
-                       FunctionSummariesTy *FS, InliningModes HowToInlineIn,
-                       std::array<llvm::BumpPtrAllocator, 7> &ProgramStateAllocators,
-                       llvm::BumpPtrAllocator& BlockCounterFactoryAllocator)
+ExprEngine::ExprEngine(
+    cross_tu::CrossTranslationUnitContext &CTU, AnalysisManager &mgr,
+    SetOfConstDecls *VisitedCalleesIn, FunctionSummariesTy *FS,
+    InliningModes HowToInlineIn,
+    std::array<llvm::BumpPtrAllocator, 7> &ProgramStateAllocators,
+    llvm::BumpPtrAllocator &BlockCounterFactoryAllocator)
     : CTU(CTU), IsCTUEnabled(mgr.getAnalyzerOptions().IsNaiveCTUEnabled),
       AMgr(mgr), AnalysisDeclContexts(mgr.getAnalysisDeclContextManager()),
       Engine(*this, FS, mgr.getAnalyzerOptions(), BlockCounterFactoryAllocator),
-             G(Engine.getGraph()),
-      StateMgr(getContext(), mgr.getStoreManagerCreator(), mgr.getConstraintManagerCreator(),
-               ProgramStateAllocators, this),
+      G(Engine.getGraph()),
+      StateMgr(getContext(), mgr.getStoreManagerCreator(),
+               mgr.getConstraintManagerCreator(), ProgramStateAllocators, this),
       SymMgr(StateMgr.getSymbolManager()), MRMgr(StateMgr.getRegionManager()),
       svalBuilder(StateMgr.getSValBuilder()), ObjCNoRet(mgr.getASTContext()),
       BR(mgr, *this), VisitedCallees(VisitedCalleesIn),
