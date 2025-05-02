@@ -2082,13 +2082,8 @@ bool SPIRVGlobalRegistry::hasBlockDecoration(SPIRVType *Type) const {
     if (Use.getOpcode() != SPIRV::OpDecorate)
       continue;
 
-    llvm::dbgs() << "Found decoration: ";
-    Use.dump();
-
     if (Use.getOperand(1).getImm() == SPIRV::Decoration::Block)
       return true;
-
-    llvm::dbgs() << "Not a block decoration.\n";
   }
   return false;
 }
