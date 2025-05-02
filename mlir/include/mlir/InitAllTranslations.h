@@ -14,8 +14,6 @@
 #ifndef MLIR_INITALLTRANSLATIONS_H
 #define MLIR_INITALLTRANSLATIONS_H
 
-#include "mlir/Target/IRDLToCpp/TranslationRegistration.h"
-
 namespace mlir {
 
 void registerFromLLVMIRTranslation();
@@ -35,7 +33,6 @@ inline void registerAllTranslations() {
   static bool initOnce = []() {
     registerFromLLVMIRTranslation();
     registerFromSPIRVTranslation();
-    registerIRDLToCppTranslation();
     registerToCppTranslation();
     registerToLLVMIRTranslation();
     registerToSPIRVTranslation();
