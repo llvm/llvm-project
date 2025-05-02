@@ -5546,7 +5546,7 @@ static CapturedStmt *buildLoopVarFunc(Sema &Actions, QualType LoopVarTy,
   // it in every iteration, capture it by value before it is modified.
   VarDecl *StartVar = cast<VarDecl>(StartExpr->getDecl());
   bool Invalid = Actions.tryCaptureVariable(StartVar, {},
-                                            TryCaptureKind::ExplicitByVal, {});
+                                            Sema::TryCapture_ExplicitByVal, {});
   (void)Invalid;
   assert(!Invalid && "Expecting capture-by-value to work.");
 
