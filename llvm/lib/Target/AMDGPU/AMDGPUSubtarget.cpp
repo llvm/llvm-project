@@ -191,17 +191,25 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getEffectiveWavesPerEU(
       getOccupancyWithWorkGroupSizes(LDSBytes, FlatWorkGroupSizes).second};
   Default.first = std::min(Default.first, Default.second);
 
-  // Make sure requested minimum is less than requested maximum.
+  if (RequestedWavesPerEU.first) {
+    // Requested minimum must not violate subtarget's specifications.
+    if (RequestedWavesPerEU.first < Default.first)
+      return Default;
+    // Requested maximum must be no lesser than minimum.
+    if (RequestedWavesPerEU.second &&
+        RequestedWavesPerEU.first > RequestedWavesPerEU.second)
+      return Default;
+  }
+  // Requested maximum must not violate subtarget's specifications.
   if (RequestedWavesPerEU.second &&
-      RequestedWavesPerEU.first > RequestedWavesPerEU.second)
-    return Default;
-
-  // Make sure requested values do not violate subtarget's specifications and
-  // are compatible with values implied by minimum/maximum flat workgroup sizes.
-  if (RequestedWavesPerEU.first < Default.first ||
       RequestedWavesPerEU.second > Default.second)
     return Default;
 
+  // Replace unspecified bounds in the request with the default bounds.
+  if (!RequestedWavesPerEU.first)
+    RequestedWavesPerEU.first = Default.first;
+  if (!RequestedWavesPerEU.second)
+    RequestedWavesPerEU.second = Default.second;
   return RequestedWavesPerEU;
 }
 
@@ -220,7 +228,7 @@ std::pair<unsigned, unsigned>
 AMDGPUSubtarget::getWavesPerEU(std::pair<unsigned, unsigned> FlatWorkGroupSizes,
                                unsigned LDSBytes, const Function &F) const {
   // Default minimum/maximum number of waves per execution unit.
-  std::pair<unsigned, unsigned> Default(1, getMaxWavesPerEU());
+  std::pair<unsigned, unsigned> Default(0, 0);
 
   // Requested minimum/maximum number of waves per execution unit.
   std::pair<unsigned, unsigned> Requested =

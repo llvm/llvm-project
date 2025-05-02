@@ -200,3 +200,41 @@ entry:
   ret void
 }
 attributes #10 = {"amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="2,2"}
+
+; At most 2 waves per execution unit.
+; CHECK-LABEL: {{^}}empty_at_most_2:
+; CHECK: SGPRBlocks: 12
+; CHECK: VGPRBlocks: 21
+; CHECK: NumSGPRsForWavesPerEU: 102
+; CHECK: NumVGPRsForWavesPerEU: 85
+define amdgpu_kernel void @empty_at_most_2() #11 {
+entry:
+  ret void
+}
+attributes #11 = {"amdgpu-waves-per-eu"="0,2"}
+
+; Exactly 1024 workitems (limits occupancy to 8) and at least 5 waves per execution unit.
+; "amdgpu-waves-per-eu"="5,0" should have the same effect as "amdgpu-waves-per-eu"="5".
+; CHECK-LABEL: {{^}}empty_workitems_exactly_1024_waves_at_least_5:
+; CHECK: SGPRBlocks: 8
+; CHECK: VGPRBlocks: 7
+; CHECK: NumSGPRsForWavesPerEU: 65
+; CHECK: NumVGPRsForWavesPerEU: 29
+define amdgpu_kernel void @empty_workitems_exactly_1024_waves_at_least_5() #12 {
+entry:
+  ret void
+}
+attributes #12 = {"amdgpu-waves-per-eu"="5,0" "amdgpu-flat-work-group-size"="1024,1024"}
+
+; Unrestricted number of waves per execution unit.
+; "amdgpu-waves-per-eu"="0,0" should have the same effect as not providing the attribute.
+; CHECK-LABEL: {{^}}empty_default_waves:
+; CHECK: SGPRBlocks: 0
+; CHECK: VGPRBlocks: 0
+; CHECK: NumSGPRsForWavesPerEU: 1
+; CHECK: NumVGPRsForWavesPerEU: 1
+define amdgpu_kernel void @empty_default_waves() #13 {
+entry:
+  ret void
+}
+attributes #13 = {"amdgpu-waves-per-eu"="0,0"}
