@@ -7236,7 +7236,8 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
     // to destruct.
     if (E->getType().hasNonTrivialToPrimitiveDestructCUnion())
       checkNonTrivialCUnion(E->getType(), E->getExprLoc(),
-                            NTCUC_CompoundLiteral, NTCUK_Destruct);
+                            NonTrivialCUnionContext::CompoundLiteral,
+                            NTCUK_Destruct);
 
     // Diagnose jumps that enter or exit the lifetime of the compound literal.
     if (literalType.isDestructedType()) {
@@ -15041,7 +15042,7 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
 
       if (LHS.get()->getType().hasNonTrivialToPrimitiveCopyCUnion())
         checkNonTrivialCUnion(LHS.get()->getType(), LHS.get()->getExprLoc(),
-                              NTCUC_Assignment, NTCUK_Copy);
+                              NonTrivialCUnionContext::Assignment, NTCUK_Copy);
     }
     RecordModifiableNonNullParam(*this, LHS.get());
     break;
@@ -16531,8 +16532,9 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
 
   if (RetTy.hasNonTrivialToPrimitiveDestructCUnion() ||
       RetTy.hasNonTrivialToPrimitiveCopyCUnion())
-    checkNonTrivialCUnion(RetTy, BD->getCaretLocation(), NTCUC_FunctionReturn,
-                          NTCUK_Destruct|NTCUK_Copy);
+    checkNonTrivialCUnion(RetTy, BD->getCaretLocation(),
+                          NonTrivialCUnionContext::FunctionReturn,
+                          NTCUK_Destruct | NTCUK_Copy);
 
   PopDeclContext();
 
@@ -19807,8 +19809,8 @@ ExprResult Sema::CheckLValueToRValueConversionOperand(Expr *E) {
       (E->getType().hasNonTrivialToPrimitiveDestructCUnion() ||
        E->getType().hasNonTrivialToPrimitiveCopyCUnion()))
     checkNonTrivialCUnion(E->getType(), E->getExprLoc(),
-                          Sema::NTCUC_LValueToRValueVolatile,
-                          NTCUK_Destruct|NTCUK_Copy);
+                          NonTrivialCUnionContext::LValueToRValueVolatile,
+                          NTCUK_Destruct | NTCUK_Copy);
 
   // C++2a [basic.def.odr]p4:
   //   [...] an expression of non-volatile-qualified non-class type to which
