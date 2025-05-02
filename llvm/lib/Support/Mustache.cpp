@@ -707,7 +707,6 @@ void ASTNode::renderSectionLambdas(const json::Value &Contexts,
   Parser P = Parser(LambdaStr);
   AstPtr LambdaNode = P.parse(Partials, Lambdas, SectionLambdas, Escapes);
   LambdaNode->render(Contexts, OS);
-  return;
 }
 
 void Template::render(const json::Value &Data, llvm::raw_ostream &OS) {
