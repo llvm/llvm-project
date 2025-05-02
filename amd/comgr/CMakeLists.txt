@@ -123,6 +123,12 @@ else()
         ${LLVM_EXTERNAL_LLD_SOURCE_DIR}/include
         ${LLVM_BINARY_DIR}/tools/lld/include)
   endif()
+
+  if (LLVM_EXTERNAL_SPIRV_LLVM_TRANSLATOR_SOURCE_DIR)
+    target_include_directories(amd_comgr
+      PRIVATE
+        ${LLVM_EXTERNAL_SPIRV_LLVM_TRANSLATOR_SOURCE_DIR}/include)
+  endif()
 endif()
 
 target_include_directories(amd_comgr
@@ -187,6 +193,9 @@ if(${COMGR_DISABLE_SPIRV})
   message("-- Comgr SPIRV Disabled")
 else()
   message("-- Comgr SPIRV Enabled")
+  target_include_directories(amd_comgr
+      PRIVATE
+        "${LLVM_INCLUDE_DIRS}/LLVMSPIRVLib")
 endif()
 
 
