@@ -13,18 +13,86 @@ using namespace llvm::hlsl::rootsig;
 
 namespace {
 
-TEST(HLSLRootSignatureTest, DescriptorTablesDump) {
-  // Default clause
+TEST(HLSLRootSignatureTest, DescriptorCBVClauseDump) {
   DescriptorTableClause Clause;
   Clause.Type = ClauseType::CBuffer;
   Clause.Reg = { RegisterType::BReg, 0 };
+  Clause.setDefaultFlags();
 
   std::string Out;
   llvm::raw_string_ostream OS(Out);
   Clause.dump(OS);
   OS.flush();
 
-  EXPECT_EQ(Out, "Clause!");
+  std::string Expected =
+    "CBV(b0, numDescriptors = 1, space = 0, "
+    "offset = DESCRIPTOR_TABLE_OFFSET_APPEND, "
+    "flags = DataStaticWhileSetAtExecute)";
+  EXPECT_EQ(Out, Expected);
+}
+
+TEST(HLSLRootSignatureTest, DescriptorSRVClauseDump) {
+  DescriptorTableClause Clause;
+  Clause.Type = ClauseType::SRV;
+  Clause.Reg = { RegisterType::TReg, 0 };
+  Clause.NumDescriptors = 2;
+  Clause.Space = 42;
+  Clause.Offset = 3;
+  Clause.Flags = DescriptorRangeFlags::None;
+
+  std::string Out;
+  llvm::raw_string_ostream OS(Out);
+  Clause.dump(OS);
+  OS.flush();
+
+  std::string Expected =
+    "SRV(t0, numDescriptors = 2, space = 42, offset = 3, flags = None)";
+  EXPECT_EQ(Out, Expected);
+}
+
+
+TEST(HLSLRootSignatureTest, DescriptorUAVClauseDump) {
+  DescriptorTableClause Clause;
+  Clause.Type = ClauseType::UAV;
+  Clause.Reg = { RegisterType::UReg, 0 };
+  Clause.NumDescriptors = 2;
+  Clause.Space = 42;
+  Clause.Offset = 3;
+  Clause.Flags = DescriptorRangeFlags::ValidFlags;
+
+  std::string Out;
+  llvm::raw_string_ostream OS(Out);
+  Clause.dump(OS);
+  OS.flush();
+
+  std::string Expected =
+    "UAV(u0, numDescriptors = 2, space = 42, offset = 3, flags = "
+    "DescriptorsVolatile | "
+    "DataVolatile | "
+    "DataStaticWhileSetAtExecute | "
+    "DataStatic | "
+    "DescriptorsStaticKeepingBufferBoundsChecks)";
+  EXPECT_EQ(Out, Expected);
+}
+
+TEST(HLSLRootSignatureTest, DescriptorSamplerClauseDump) {
+  DescriptorTableClause Clause;
+  Clause.Type = ClauseType::Sampler;
+  Clause.Reg = { RegisterType::SReg, 0 };
+  Clause.NumDescriptors = 2;
+  Clause.Space = 42;
+  Clause.Offset = 3;
+  Clause.Flags = DescriptorRangeFlags::ValidSamplerFlags;
+
+  std::string Out;
+  llvm::raw_string_ostream OS(Out);
+  Clause.dump(OS);
+  OS.flush();
+
+  std::string Expected =
+    "Sampler(s0, numDescriptors = 2, space = 42, offset = 3, "
+    "flags = DescriptorsVolatile)";
+  EXPECT_EQ(Out, Expected);
 }
 
 } // namespace

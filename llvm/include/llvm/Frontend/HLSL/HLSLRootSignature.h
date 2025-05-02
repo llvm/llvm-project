@@ -53,6 +53,8 @@ enum class RegisterType { BReg, TReg, UReg, SReg };
 struct Register {
   RegisterType ViewType;
   uint32_t Number;
+
+  void dump(raw_ostream &OS) const;
 };
 
 // Models the end of a descriptor table and stores its visibility
