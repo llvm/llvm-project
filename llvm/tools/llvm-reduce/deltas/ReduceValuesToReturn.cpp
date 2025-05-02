@@ -48,10 +48,12 @@ static void rewriteFuncWithReturnType(Function &OldF, Value *NewRetValue) {
       FunctionType::get(NewRetTy, OldFuncTy->params(), OldFuncTy->isVarArg());
 
   LLVMContext &Ctx = OldF.getContext();
-  Instruction *NewRetI = cast<Instruction>(NewRetValue);
-  BasicBlock *NewRetBlock = NewRetI->getParent();
+  BasicBlock &EntryBB = OldF.getEntryBlock();
+  Instruction *NewRetI = dyn_cast<Instruction>(NewRetValue);
+  BasicBlock *NewRetBlock = NewRetI ? NewRetI->getParent() : &EntryBB;
 
-  BasicBlock::iterator NewValIt = NewRetI->getIterator();
+  BasicBlock::iterator NewValIt =
+      NewRetI ? NewRetI->getIterator() : EntryBB.end();
 
   // Hack up any return values in other blocks, we can't leave them as ret void.
   if (OldFuncTy->getReturnType()->isVoidTy()) {
@@ -221,6 +223,40 @@ static bool tryForwardingInstructionsToReturn(
   }
 
   return false;
+}
+
+static bool tryForwardingArgumentsToReturn(
+    Function &F, Oracle &O,
+    std::vector<std::pair<Function *, Value *>> &FuncsToReplace) {
+
+  Type *RetTy = F.getReturnType();
+  BasicBlock &EntryBB = F.getEntryBlock();
+
+  for (Argument &A : F.args()) {
+    if (shouldForwardValueToReturn(EntryBB, &A, RetTy) && !O.shouldKeep()) {
+      FuncsToReplace.emplace_back(&F, &A);
+      return true;
+    }
+  }
+
+  return false;
+}
+
+void llvm::reduceArgumentsToReturnDeltaPass(Oracle &O,
+                                            ReducerWorkItem &WorkItem) {
+  Module &Program = WorkItem.getModule();
+
+  // We're going to chaotically hack on the other users of the function in other
+  // functions, so we need to collect a worklist of returns to replace.
+  std::vector<std::pair<Function *, Value *>> FuncsToReplace;
+
+  for (Function &F : Program.functions()) {
+    if (!F.isDeclaration() && canUseNonVoidReturnType(F))
+      tryForwardingArgumentsToReturn(F, O, FuncsToReplace);
+  }
+
+  for (auto [F, NewRetVal] : FuncsToReplace)
+    rewriteFuncWithReturnType(*F, NewRetVal);
 }
 
 void llvm::reduceInstructionsToReturnDeltaPass(Oracle &O,
