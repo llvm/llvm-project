@@ -13,6 +13,8 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 
 #include "DynamicLoaderGDBRemoteGPU.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemote.h"
@@ -58,7 +60,8 @@ bool DynamicLoaderGDBRemoteGPU::HandleStopReasonDynammicLoader() {
 }
 
 void DynamicLoaderGDBRemoteGPU::LoadModules(bool full) {
-  
+  Log *log = GetLog(LLDBLog::DynamicLoader);
+
   ProcessGDBRemote *gdb_process = static_cast<ProcessGDBRemote *>(m_process);
   ModuleList loaded_module_list;
   GPUDynamicLoaderArgs args;
@@ -66,12 +69,16 @@ void DynamicLoaderGDBRemoteGPU::LoadModules(bool full) {
   Target &target = m_process->GetTarget();
   std::optional<GPUDynamicLoaderResponse> response =
       gdb_process->GetGDBRemote().GetGPUDynamicLoaderLibraryInfos(args);
-  if (!response)
+  if (!response) {
+    LLDB_LOG(log, "Failed to get dynamic loading info from GDB server");
     return;
+  }
   for (const GPUDynamicLoaderLibraryInfo &info : response->library_infos) {
     std::shared_ptr<DataBufferHeap> data_sp;
     // Read the object file from memory if requested.
     if (info.native_memory_address && info.native_memory_size) {
+      LLDB_LOG(log, "Reading \"{0}\" from memory at {1:x}", info.pathname, 
+               *info.native_memory_address);
       data_sp = std::make_shared<DataBufferHeap>(*info.native_memory_size, 0);
       Status error;
       // TODO: we are assuming we can read the memory from the GPU process
@@ -79,8 +86,11 @@ void DynamicLoaderGDBRemoteGPU::LoadModules(bool full) {
       const size_t bytes_read = m_process->ReadMemory(
           *info.native_memory_address, data_sp->GetBytes(), 
           data_sp->GetByteSize(), error);
-      if (bytes_read != *info.native_memory_size)
+      if (bytes_read != *info.native_memory_size) {
+        LLDB_LOG(log, "Failed to read \"{0}\" from memory at {1:x}: {2}", 
+                 info.pathname, *info.native_memory_address, error);
         data_sp.reset();
+      }
     }
     // Extract the UUID if available.
     UUID uuid;
@@ -96,11 +106,16 @@ void DynamicLoaderGDBRemoteGPU::LoadModules(bool full) {
     ModuleSP module_sp = target.GetOrCreateModule(module_spec, 
                                                   /*notify=*/true);
     if (module_sp) {
+      LLDB_LOG(log, "Created module for \"{0}\": {1:x}", 
+               info.pathname, module_sp.get());
       bool changed = false;
-      if (info.load_address)
+      if (info.load_address) {
+        LLDB_LOG(log, "Setting load address for module \"{0}\" to {1:x}", 
+                 info.pathname, *info.load_address);
+
         module_sp->SetLoadAddress(target, *info.load_address, 
                                   /*value_is_offset=*/true , changed);
-      else if (!info.loaded_sections.empty()) {    
+      } else if (!info.loaded_sections.empty()) {    
         
         // Set the load address of the module to the first loaded section.
         bool warn_multiple = true;
@@ -121,14 +136,23 @@ void DynamicLoaderGDBRemoteGPU::LoadModules(bool full) {
             if (!section_sp)
               break;
           }
-          if (section_sp)
+          if (section_sp) {
+            LLDB_LOG(log, "Loading module \"{0}\" section \"{1} to {2:x}", 
+                     info.pathname, section_sp->GetName(), sect.load_address);
             changed = target.SetSectionLoadAddress(section_sp, 
                                                    sect.load_address, 
                                                    warn_multiple);
+          } else {
+            LLDB_LOG(log, "Failed to find section \"{0}\"", 
+                     section_sp->GetName());
+          }
         }
       }
-      if (changed)
+      if (changed) {
+        LLDB_LOG(log, "Module \"{0}\" was loaded, notifying target", 
+                 info.pathname);
         loaded_module_list.AppendIfNeeded(module_sp);            
+      }
     }
   }
   target.ModulesDidLoad(loaded_module_list);

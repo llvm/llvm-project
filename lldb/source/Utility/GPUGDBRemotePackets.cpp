@@ -175,6 +175,7 @@ return json::Value(
 Object{{"pathname", data.pathname}, 
        {"uuid", data.uuid_str},
        {"load", data.load},
+       {"load_address", data.load_address},
        {"native_memory_address", data.native_memory_address},
        {"native_memory_size", data.native_memory_size},
        {"file_offset", data.file_offset},
