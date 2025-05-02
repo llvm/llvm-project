@@ -22,7 +22,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Utils/ValueMapper.h"
 
 using namespace llvm;
 
@@ -126,16 +125,13 @@ static void rewriteFuncWithReturnType(Function &OldF, Value *NewRetValue) {
   OldF.replaceAllUsesWith(NewF);
 
   // Preserve the parameters of OldF.
-  ValueToValueMapTy VMap;
   for (auto Z : zip_first(OldF.args(), NewF->args())) {
     Argument &OldArg = std::get<0>(Z);
     Argument &NewArg = std::get<1>(Z);
 
+    OldArg.replaceAllUsesWith(&NewArg);
     NewArg.setName(OldArg.getName()); // Copy the name over...
-    VMap[&OldArg] = &NewArg;          // Add mapping to VMap
   }
-
-  RemapFunction(*NewF, VMap, RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
 
   OldF.eraseFromParent();
 }
