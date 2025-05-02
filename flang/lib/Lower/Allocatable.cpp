@@ -773,7 +773,7 @@ private:
     mlir::Value errmsg = errMsgExpr ? errorManager.errMsgAddr : nullptr;
     mlir::Value stream =
         streamExpr
-            ? fir::getBase(converter.genExprAddr(loc, *streamExpr, stmtCtx))
+            ? fir::getBase(converter.genExprValue(loc, *streamExpr, stmtCtx))
             : nullptr;
     mlir::Value pinned =
         pinnedExpr

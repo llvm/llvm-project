@@ -132,7 +132,7 @@ static inline RT_API_ATTRS std::size_t AllocateResult(Descriptor &result,
   for (int j{0}; j < rank; ++j) {
     result.GetDimension(j).SetBounds(1, extent[j]);
   }
-  if (int stat{result.Allocate(kNoAsyncObject)}) {
+  if (int stat{result.Allocate(kNoAsyncId)}) {
     terminator.Crash(
         "%s: Could not allocate memory for result (stat=%d)", function, stat);
   }
@@ -157,7 +157,7 @@ static inline RT_API_ATTRS std::size_t AllocateBesselResult(Descriptor &result,
   for (int j{0}; j < rank; ++j) {
     result.GetDimension(j).SetBounds(1, extent[j]);
   }
-  if (int stat{result.Allocate(kNoAsyncObject)}) {
+  if (int stat{result.Allocate(kNoAsyncId)}) {
     terminator.Crash(
         "%s: Could not allocate memory for result (stat=%d)", function, stat);
   }
