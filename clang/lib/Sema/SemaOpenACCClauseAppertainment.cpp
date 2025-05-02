@@ -34,8 +34,7 @@ class AccClauseSet {
   }
 
 public:
-  constexpr AccClauseSet(
-      const std::initializer_list<OpenACCClauseKind> &Clauses)
+  constexpr AccClauseSet(std::initializer_list<OpenACCClauseKind> Clauses)
       : Data(0) {
     for (OpenACCClauseKind C : Clauses)
       setBit(C);
