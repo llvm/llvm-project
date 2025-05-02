@@ -60,6 +60,9 @@ inline bool isUniformAfterVectorization(const VPValue *VPV) {
 
   if (auto *Rep = dyn_cast<VPReplicateRecipe>(VPV)) {
     const VPRegionBlock *RegionOfR = Rep->getParent()->getParent();
+    // Don't consider recipes in replicate regions as uniform yet; their first
+    // lane cannot be accessed when executing the replicate region for other
+    // lanes.
     if (RegionOfR && RegionOfR->isReplicator())
       return false;
     return Rep->isUniform() ||
