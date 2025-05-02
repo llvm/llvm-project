@@ -61,8 +61,8 @@ public:
                      FileManager *FileMgr,
                      std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                      DiagnosticConsumer *DiagConsumer) override {
-    CompilerInstance Compiler(std::move(PCHContainerOps));
-    Compiler.setInvocation(std::move(Invocation));
+    CompilerInstance Compiler(std::move(Invocation),
+                              std::move(PCHContainerOps));
     Compiler.setFileManager(FileMgr);
 
     Compiler.createDiagnostics(FileMgr->getVirtualFileSystem(), DiagConsumer,
