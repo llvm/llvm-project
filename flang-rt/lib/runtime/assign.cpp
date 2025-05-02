@@ -99,7 +99,7 @@ static RT_API_ATTRS int AllocateAssignmentLHS(
     toDim.SetByteStride(stride);
     stride *= toDim.Extent();
   }
-  int result{ReturnError(terminator, to.Allocate(kNoAsyncId))};
+  int result{ReturnError(terminator, to.Allocate(kNoAsyncObject))};
   if (result == StatOk && derived && !derived->noInitializationNeeded()) {
     result = ReturnError(terminator, Initialize(to, *derived, terminator));
   }
@@ -277,7 +277,7 @@ RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
       // entity, otherwise, the Deallocate() below will not
       // free the descriptor memory.
       newFrom.raw().attribute = CFI_attribute_allocatable;
-      auto stat{ReturnError(terminator, newFrom.Allocate(kNoAsyncId))};
+      auto stat{ReturnError(terminator, newFrom.Allocate(kNoAsyncObject))};
       if (stat == StatOk) {
         if (HasDynamicComponent(from)) {
           // If 'from' has allocatable/automatic component, we cannot
