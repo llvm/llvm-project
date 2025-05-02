@@ -6,23 +6,34 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ELF_RISCV_NONSTANDARD_RELOC
-#error "ELF_RISCV_NONSTANDARD_RELOC must be defined"
+// This file defines information about RISC-V's nonstandard relocation codes.
+// This can be used when parsing relocations, or when printing them, to provide
+// better information.
+//
+// Unlike the mappings provided in RISCV.def via `ELF_RELOC`, these are not
+// expected to be 1:1 mappings - multiple vendors may reuse relocation IDs.
+
+// For ease of use, `ELF_RISCV_NONSTANDARD_RELOC_ALL` invokes the macros for
+// each vendor.
+
+#ifdef ELF_RISCV_NONSTANDARD_RELOC_ALL
+#define ELF_RISCV_NONSTANDARD_RELOC_QUALCOMM(NAME, ID) ELF_RISCV_NONSTANDARD_RELOC_ALL(NAME, ID)
 #endif
 
-// ELF_RISCV_NONSTANDARD_RELOC(VENDOR, NAME, ID) defines information about
-// nonstandard relocation codes. This can be used when parsing relocations, or
-// when printing them, to provide better information.
-//
-// VENDOR should be the symbol name expected in the associated `R_RISCV_VENDOR`
-// relocation. NAME and ID work like `ELF_RELOC` but the mapping is not expected
-// to be 1:1.
-//
-// The mapping in RISCV.def is 1:1, and should be used when the only information
-// available is the relocation enum value.
+// For each Vendor identifier, VENDOR, as associated with an `R_RISCV_VENDOR`,
+// the `ELF_RISCV_NONSTANDARD_RELOC_<VENDOR>(NAME, ID)` macro defines the
+// relocations available for that vendor identifier.
 
-// Qualcomm Nonstandard Relocations
-ELF_RISCV_NONSTANDARD_RELOC(QUALCOMM, R_RISCV_QC_ABS20_U,    192)
-ELF_RISCV_NONSTANDARD_RELOC(QUALCOMM, R_RISCV_QC_E_BRANCH,   193)
-ELF_RISCV_NONSTANDARD_RELOC(QUALCOMM, R_RISCV_QC_E_32,       194)
-ELF_RISCV_NONSTANDARD_RELOC(QUALCOMM, R_RISCV_QC_E_JUMP_PLT, 195)
+// QUALCOMM Nonstandard Relocations
+#ifndef ELF_RISCV_NONSTANDARD_RELOC_QUALCOMM
+#define ELF_RISCV_NONSTANDARD_RELOC_QUALCOMM(_NAME, _ID)
+#endif
+
+ELF_RISCV_NONSTANDARD_RELOC_QUALCOMM(R_RISCV_QC_ABS20_U,    192)
+ELF_RISCV_NONSTANDARD_RELOC_QUALCOMM(R_RISCV_QC_E_BRANCH,   193)
+ELF_RISCV_NONSTANDARD_RELOC_QUALCOMM(R_RISCV_QC_E_32,       194)
+ELF_RISCV_NONSTANDARD_RELOC_QUALCOMM(R_RISCV_QC_E_JUMP_PLT, 195)
+
+#ifdef ELF_RISCV_NONSTANDARD_RELOC_ALL
+#undef ELF_RISCV_NONSTANDARD_RELOC_QUALCOMM
+#endif
