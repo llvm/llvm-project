@@ -58,6 +58,30 @@ struct GenericKernelTy;
 struct GenericDeviceTy;
 struct RecordReplayTy;
 
+enum class ErrorCode {
+#define OFFLOAD_ERRC(Name, _, Value) Name = Value,
+#include "OffloadErrcodes.inc"
+#undef OFFLOAD_ERRC
+};
+
+class OffloadErrorCategory : public std::error_category {
+  const char *name() const noexcept override { return "Offload Error"; }
+  std::string message(int ev) const override {
+    switch (static_cast<ErrorCode>(ev)) {
+#define OFFLOAD_ERRC(Name, Desc, Value)                                        \
+  case ErrorCode::Name:                                                        \
+    return #Desc;
+#include "OffloadErrcodes.inc"
+#undef OFFLOAD_ERRC
+    }
+  }
+};
+
+inline std::error_code make_error_code(ErrorCode EC) {
+  static OffloadErrorCategory Cat{};
+  return {static_cast<int>(EC), Cat};
+}
+
 /// Class that wraps the __tgt_async_info to simply its usage. In case the
 /// object is constructed without a valid __tgt_async_info, the object will use
 /// an internal one and will synchronize the current thread with the pending
@@ -1382,7 +1406,13 @@ static inline Error success() { return Error::success(); }
 /// Create a string error.
 template <typename... ArgsTy>
 static Error error(const char *ErrFmt, ArgsTy... Args) {
-  return createStringError(inconvertibleErrorCode(), ErrFmt, Args...);
+  return createStringError(ErrorCode::UNKNOWN, ErrFmt, Args...);
+}
+
+/// Create a string error.
+template <typename... ArgsTy>
+static Error error(ErrorCode Code, const char *ErrFmt, ArgsTy... Args) {
+  return createStringError(Code, ErrFmt, Args...);
 }
 
 /// Check the plugin-specific error code and return an error or success
@@ -1592,5 +1622,11 @@ protected:
 } // namespace target
 } // namespace omp
 } // namespace llvm
+
+namespace std {
+template <>
+struct is_error_code_enum<llvm::omp::target::plugin::ErrorCode>
+    : std::true_type {};
+} // namespace std
 
 #endif // OPENMP_LIBOMPTARGET_PLUGINS_COMMON_PLUGININTERFACE_H

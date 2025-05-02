@@ -152,9 +152,10 @@ class Function : APIObject {
         AddHandleChecksToReturns<params, returns_with_def>.returns_out>.returns_out;
 }
 
-class Etor<string Name, string Desc> {
+class Etor<string Name, string Desc, int Value=-1> {
   string name = Name;
   string desc = Desc;
+  int value = Value;
   string tagged_type;
 }
 
