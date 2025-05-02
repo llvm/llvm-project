@@ -118,7 +118,7 @@ static RT_API_ATTRS void Compare(Descriptor &result, const Descriptor &x,
   for (int j{0}; j < rank; ++j) {
     result.GetDimension(j).SetBounds(1, ub[j]);
   }
-  if (result.Allocate(kNoAsyncObject) != CFI_SUCCESS) {
+  if (result.Allocate(kNoAsyncId) != CFI_SUCCESS) {
     terminator.Crash("Compare: could not allocate storage for result");
   }
   std::size_t xChars{x.ElementBytes() >> shift<CHAR>};
@@ -173,7 +173,7 @@ static RT_API_ATTRS void AdjustLRHelper(Descriptor &result,
   for (int j{0}; j < rank; ++j) {
     result.GetDimension(j).SetBounds(1, ub[j]);
   }
-  if (result.Allocate(kNoAsyncObject) != CFI_SUCCESS) {
+  if (result.Allocate(kNoAsyncId) != CFI_SUCCESS) {
     terminator.Crash("ADJUSTL/R: could not allocate storage for result");
   }
   for (SubscriptValue resultAt{0}; elements-- > 0;
@@ -227,7 +227,7 @@ static RT_API_ATTRS void LenTrim(Descriptor &result, const Descriptor &string,
   for (int j{0}; j < rank; ++j) {
     result.GetDimension(j).SetBounds(1, ub[j]);
   }
-  if (result.Allocate(kNoAsyncObject) != CFI_SUCCESS) {
+  if (result.Allocate(kNoAsyncId) != CFI_SUCCESS) {
     terminator.Crash("LEN_TRIM: could not allocate storage for result");
   }
   std::size_t stringElementChars{string.ElementBytes() >> shift<CHAR>};
@@ -427,7 +427,7 @@ static RT_API_ATTRS void GeneralCharFunc(Descriptor &result,
   for (int j{0}; j < rank; ++j) {
     result.GetDimension(j).SetBounds(1, ub[j]);
   }
-  if (result.Allocate(kNoAsyncObject) != CFI_SUCCESS) {
+  if (result.Allocate(kNoAsyncId) != CFI_SUCCESS) {
     terminator.Crash("SCAN/VERIFY: could not allocate storage for result");
   }
   std::size_t stringElementChars{string.ElementBytes() >> shift<CHAR>};
@@ -530,8 +530,7 @@ static RT_API_ATTRS void MaxMinHelper(Descriptor &accumulator,
     for (int j{0}; j < rank; ++j) {
       accumulator.GetDimension(j).SetBounds(1, ub[j]);
     }
-    RUNTIME_CHECK(
-        terminator, accumulator.Allocate(kNoAsyncObject) == CFI_SUCCESS);
+    RUNTIME_CHECK(terminator, accumulator.Allocate(kNoAsyncId) == CFI_SUCCESS);
   }
   for (CHAR *result{accumulator.OffsetElement<CHAR>()}; elements-- > 0;
        accumData += accumChars, result += chars, x.IncrementSubscripts(xAt)) {
@@ -607,7 +606,7 @@ void RTDEF(CharacterConcatenate)(Descriptor &accumulator,
   for (int j{0}; j < rank; ++j) {
     accumulator.GetDimension(j).SetBounds(1, ub[j]);
   }
-  if (accumulator.Allocate(kNoAsyncObject) != CFI_SUCCESS) {
+  if (accumulator.Allocate(kNoAsyncId) != CFI_SUCCESS) {
     terminator.Crash(
         "CharacterConcatenate: could not allocate storage for result");
   }
@@ -630,8 +629,7 @@ void RTDEF(CharacterConcatenateScalar1)(
   accumulator.set_base_addr(nullptr);
   std::size_t oldLen{accumulator.ElementBytes()};
   accumulator.raw().elem_len += chars;
-  RUNTIME_CHECK(
-      terminator, accumulator.Allocate(kNoAsyncObject) == CFI_SUCCESS);
+  RUNTIME_CHECK(terminator, accumulator.Allocate(kNoAsyncId) == CFI_SUCCESS);
   std::memcpy(accumulator.OffsetElement<char>(oldLen), from, chars);
   FreeMemory(old);
 }
@@ -833,7 +831,7 @@ void RTDEF(Repeat)(Descriptor &result, const Descriptor &string,
   std::size_t origBytes{string.ElementBytes()};
   result.Establish(string.type(), origBytes * ncopies, nullptr, 0, nullptr,
       CFI_attribute_allocatable);
-  if (result.Allocate(kNoAsyncObject) != CFI_SUCCESS) {
+  if (result.Allocate(kNoAsyncId) != CFI_SUCCESS) {
     terminator.Crash("REPEAT could not allocate storage for result");
   }
   const char *from{string.OffsetElement()};
@@ -867,7 +865,7 @@ void RTDEF(Trim)(Descriptor &result, const Descriptor &string,
   }
   result.Establish(string.type(), resultBytes, nullptr, 0, nullptr,
       CFI_attribute_allocatable);
-  RUNTIME_CHECK(terminator, result.Allocate(kNoAsyncObject) == CFI_SUCCESS);
+  RUNTIME_CHECK(terminator, result.Allocate(kNoAsyncId) == CFI_SUCCESS);
   std::memcpy(result.OffsetElement(), string.OffsetElement(), resultBytes);
 }
 
