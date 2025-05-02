@@ -18,6 +18,8 @@
 
 #include "Delta.h"
 #include "Utils.h"
+#include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/Debug.h"
@@ -55,8 +57,10 @@ static void rewriteFuncWithReturnType(Function &OldF, Value *NewRetValue) {
   BasicBlock::iterator NewValIt =
       NewRetI ? NewRetI->getIterator() : EntryBB.end();
 
-  // Hack up any return values in other blocks, we can't leave them as ret void.
-  if (OldFuncTy->getReturnType()->isVoidTy()) {
+  Type *OldRetTy = OldFuncTy->getReturnType();
+
+  // Hack up any return values in other blocks, we can't leave them as returning OldRetTy.
+  if (OldRetTy != NewRetTy) {
     for (BasicBlock &OtherRetBB : OldF) {
       if (&OtherRetBB != NewRetBlock) {
         auto *OrigRI = dyn_cast<ReturnInst>(OtherRetBB.getTerminator());
@@ -91,6 +95,18 @@ static void rewriteFuncWithReturnType(Function &OldF, Value *NewRetValue) {
   // probably ought to only be pruning blocks that became dead directly as a
   // result of our pruning here.
   EliminateUnreachableBlocks(OldF);
+
+  // Drop the incompatible attributes before we copy over to the new function.
+  if (OldRetTy != NewRetTy) {
+    AttributeList AL = OldF.getAttributes();
+    AttributeMask IncompatibleAttrs =
+        AttributeFuncs::typeIncompatible(NewRetTy, AL.getRetAttrs());
+    OldF.removeRetAttrs(IncompatibleAttrs);
+  }
+
+  // Now we need to remove any returned attributes from parameters.
+  for (Argument &A : OldF.args())
+    OldF.removeParamAttr(A.getArgNo(), Attribute::Returned);
 
   Function *NewF =
       Function::Create(NewFuncTy, OldF.getLinkage(), OldF.getAddressSpace(), "",
@@ -161,7 +177,9 @@ static bool canReplaceFuncUsers(const Function &F, Type *NewRetTy) {
     if (CB->getType() == NewRetTy)
       continue;
 
-    LLVM_DEBUG(dbgs() << "Cannot replace callsite with wrong type: " << *CB
+    // TODO: If all callsites have no uses, we could mutate the type of all the
+    // callsites. This will complicate the visit and rewrite ordering though.
+    LLVM_DEBUG(dbgs() << "Cannot replace used callsite with wrong type: " << *CB
                       << '\n');
     return false;
   }
@@ -197,8 +215,7 @@ static bool shouldForwardValueToReturn(const BasicBlock &BB, const Value *V,
   if (!isReallyValidReturnType(V->getType()))
     return false;
 
-  return (RetTy->isVoidTy() ||
-          (RetTy == V->getType() && shouldReplaceNonVoidReturnValue(BB, V))) &&
+  return (RetTy->isVoidTy() || shouldReplaceNonVoidReturnValue(BB, V)) &&
          canReplaceFuncUsers(*BB.getParent(), V->getType());
 }
 
