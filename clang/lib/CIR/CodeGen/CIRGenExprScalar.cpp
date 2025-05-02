@@ -21,6 +21,7 @@
 #include "mlir/IR/Value.h"
 
 #include <cassert>
+#include <utility>
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -115,6 +116,8 @@ public:
     return {};
   }
 
+  mlir::Value VisitParenExpr(ParenExpr *pe) { return Visit(pe->getSubExpr()); }
+
   /// Emits the address of the l-value, then loads and returns the result.
   mlir::Value emitLoadOfLValue(const Expr *e) {
     LValue lv = cgf.emitLValue(e);
@@ -135,7 +138,7 @@ public:
   mlir::Value VisitIntegerLiteral(const IntegerLiteral *e) {
     mlir::Type type = cgf.convertType(e->getType());
     return builder.create<cir::ConstantOp>(
-        cgf.getLoc(e->getExprLoc()), type,
+        cgf.getLoc(e->getExprLoc()),
         builder.getAttr<cir::IntAttr>(type, e->getValue()));
   }
 
@@ -144,15 +147,12 @@ public:
     assert(mlir::isa<cir::CIRFPTypeInterface>(type) &&
            "expect floating-point type");
     return builder.create<cir::ConstantOp>(
-        cgf.getLoc(e->getExprLoc()), type,
+        cgf.getLoc(e->getExprLoc()),
         builder.getAttr<cir::FPAttr>(type, e->getValue()));
   }
 
   mlir::Value VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *e) {
-    mlir::Type type = cgf.convertType(e->getType());
-    return builder.create<cir::ConstantOp>(
-        cgf.getLoc(e->getExprLoc()), type,
-        builder.getCIRBoolAttr(e->getValue()));
+    return builder.getBool(e->getValue(), cgf.getLoc(e->getExprLoc()));
   }
 
   mlir::Value VisitCastExpr(CastExpr *e);
@@ -167,6 +167,8 @@ public:
     // Just load the lvalue formed by the subscript expression.
     return emitLoadOfLValue(e);
   }
+
+  mlir::Value VisitMemberExpr(MemberExpr *e);
 
   mlir::Value VisitExplicitCastExpr(ExplicitCastExpr *e) {
     return VisitCastExpr(e);
@@ -212,9 +214,7 @@ public:
 
     if (llvm::isa<MemberPointerType>(srcType)) {
       cgf.getCIRGenModule().errorNYI(loc, "member pointer to bool conversion");
-      mlir::Type boolType = builder.getBoolTy();
-      return builder.create<cir::ConstantOp>(loc, boolType,
-                                             builder.getCIRBoolAttr(false));
+      return builder.getFalse(loc);
     }
 
     if (srcType->isIntegerType())
@@ -351,9 +351,7 @@ public:
     // An interesting aspect of this is that increment is always true.
     // Decrement does not have this property.
     if (isInc && type->isBooleanType()) {
-      value = builder.create<cir::ConstantOp>(cgf.getLoc(e->getExprLoc()),
-                                              cgf.convertType(type),
-                                              builder.getCIRBoolAttr(true));
+      value = builder.getTrue(cgf.getLoc(e->getExprLoc()));
     } else if (type->isIntegerType()) {
       QualType promotedType;
       bool canPerformLossyDemotionCheck = false;
@@ -390,9 +388,26 @@ public:
         // NOTE(CIR): clang calls CreateAdd but folds this to a unary op
         value = emitUnaryOp(e, kind, input, /*nsw=*/false);
       }
-    } else if (isa<PointerType>(type)) {
-      cgf.cgm.errorNYI(e->getSourceRange(), "Unary inc/dec pointer");
-      return {};
+    } else if (const PointerType *ptr = type->getAs<PointerType>()) {
+      QualType type = ptr->getPointeeType();
+      if (cgf.getContext().getAsVariableArrayType(type)) {
+        // VLA types don't have constant size.
+        cgf.cgm.errorNYI(e->getSourceRange(), "Pointer arithmetic on VLA");
+        return {};
+      } else if (type->isFunctionType()) {
+        // Arithmetic on function pointers (!) is just +-1.
+        cgf.cgm.errorNYI(e->getSourceRange(),
+                         "Pointer arithmetic on function pointer");
+        return {};
+      } else {
+        // For everything else, we can just do a simple increment.
+        mlir::Location loc = cgf.getLoc(e->getSourceRange());
+        CIRGenBuilderTy &builder = cgf.getBuilder();
+        int amount = (isInc ? 1 : -1);
+        mlir::Value amt = builder.getSInt32(amount, loc);
+        assert(!cir::MissingFeatures::sanitizers());
+        value = builder.createPtrStride(loc, value, amt);
+      }
     } else if (type->isVectorType()) {
       cgf.cgm.errorNYI(e->getSourceRange(), "Unary inc/dec vector");
       return {};
@@ -818,6 +833,65 @@ public:
   VISITCOMP(EQ)
   VISITCOMP(NE)
 #undef VISITCOMP
+
+  mlir::Value VisitBinAssign(const BinaryOperator *e) {
+    const bool ignore = std::exchange(ignoreResultAssign, false);
+
+    mlir::Value rhs;
+    LValue lhs;
+
+    switch (e->getLHS()->getType().getObjCLifetime()) {
+    case Qualifiers::OCL_Strong:
+    case Qualifiers::OCL_Autoreleasing:
+    case Qualifiers::OCL_ExplicitNone:
+    case Qualifiers::OCL_Weak:
+      assert(!cir::MissingFeatures::objCLifetime());
+      break;
+    case Qualifiers::OCL_None:
+      // __block variables need to have the rhs evaluated first, plus this
+      // should improve codegen just a little.
+      rhs = Visit(e->getRHS());
+      assert(!cir::MissingFeatures::sanitizers());
+      // TODO(cir): This needs to be emitCheckedLValue() once we support
+      // sanitizers
+      lhs = cgf.emitLValue(e->getLHS());
+
+      // Store the value into the LHS. Bit-fields are handled specially because
+      // the result is altered by the store, i.e., [C99 6.5.16p1]
+      // 'An assignment expression has the value of the left operand after the
+      // assignment...'.
+      if (lhs.isBitField()) {
+        rhs = cgf.emitStoreThroughBitfieldLValue(RValue::get(rhs), lhs);
+      } else {
+        cgf.emitNullabilityCheck(lhs, rhs, e->getExprLoc());
+        CIRGenFunction::SourceLocRAIIObject loc{
+            cgf, cgf.getLoc(e->getSourceRange())};
+        cgf.emitStoreThroughLValue(RValue::get(rhs), lhs);
+      }
+    }
+
+    // If the result is clearly ignored, return now.
+    if (ignore)
+      return nullptr;
+
+    // The result of an assignment in C is the assigned r-value.
+    if (!cgf.getLangOpts().CPlusPlus)
+      return rhs;
+
+    // If the lvalue is non-volatile, return the computed value of the
+    // assignment.
+    if (!lhs.isVolatile())
+      return rhs;
+
+    // Otherwise, reload the value.
+    return emitLoadOfLValue(lhs, e->getExprLoc());
+  }
+
+  mlir::Value VisitBinComma(const BinaryOperator *e) {
+    cgf.emitIgnoredExpr(e->getLHS());
+    // NOTE: We don't need to EnsureInsertPoint() like LLVM codegen.
+    return Visit(e->getRHS());
+  }
 };
 
 LValue ScalarExprEmitter::emitCompoundAssignLValue(
@@ -953,6 +1027,55 @@ mlir::Value ScalarExprEmitter::emitCompoundAssign(
 
 } // namespace
 
+LValue
+CIRGenFunction::emitCompoundAssignmentLValue(const CompoundAssignOperator *e) {
+  ScalarExprEmitter emitter(*this, builder);
+  mlir::Value result;
+  switch (e->getOpcode()) {
+#define COMPOUND_OP(Op)                                                        \
+  case BO_##Op##Assign:                                                        \
+    return emitter.emitCompoundAssignLValue(e, &ScalarExprEmitter::emit##Op,   \
+                                            result)
+    COMPOUND_OP(Mul);
+    COMPOUND_OP(Div);
+    COMPOUND_OP(Rem);
+    COMPOUND_OP(Add);
+    COMPOUND_OP(Sub);
+    COMPOUND_OP(Shl);
+    COMPOUND_OP(Shr);
+    COMPOUND_OP(And);
+    COMPOUND_OP(Xor);
+    COMPOUND_OP(Or);
+#undef COMPOUND_OP
+
+  case BO_PtrMemD:
+  case BO_PtrMemI:
+  case BO_Mul:
+  case BO_Div:
+  case BO_Rem:
+  case BO_Add:
+  case BO_Sub:
+  case BO_Shl:
+  case BO_Shr:
+  case BO_LT:
+  case BO_GT:
+  case BO_LE:
+  case BO_GE:
+  case BO_EQ:
+  case BO_NE:
+  case BO_Cmp:
+  case BO_And:
+  case BO_Xor:
+  case BO_Or:
+  case BO_LAnd:
+  case BO_LOr:
+  case BO_Assign:
+  case BO_Comma:
+    llvm_unreachable("Not valid compound assignment operators");
+  }
+  llvm_unreachable("Unhandled compound assignment operator");
+}
+
 /// Emit the computation of the specified expression of scalar type.
 mlir::Value CIRGenFunction::emitScalarExpr(const Expr *e) {
   assert(e && hasScalarEvaluationKind(e->getType()) &&
@@ -1046,8 +1169,78 @@ getUnwidenedIntegerType(const ASTContext &astContext, const Expr *e) {
 static mlir::Value emitPointerArithmetic(CIRGenFunction &cgf,
                                          const BinOpInfo &op,
                                          bool isSubtraction) {
-  cgf.cgm.errorNYI(op.loc, "pointer arithmetic");
-  return {};
+  // Must have binary (not unary) expr here.  Unary pointer
+  // increment/decrement doesn't use this path.
+  const BinaryOperator *expr = cast<BinaryOperator>(op.e);
+
+  mlir::Value pointer = op.lhs;
+  Expr *pointerOperand = expr->getLHS();
+  mlir::Value index = op.rhs;
+  Expr *indexOperand = expr->getRHS();
+
+  // In the case of subtraction, the FE has ensured that the LHS is always the
+  // pointer. However, addition can have the pointer on either side. We will
+  // always have a pointer operand and an integer operand, so if the LHS wasn't
+  // a pointer, we need to swap our values.
+  if (!isSubtraction && !mlir::isa<cir::PointerType>(pointer.getType())) {
+    std::swap(pointer, index);
+    std::swap(pointerOperand, indexOperand);
+  }
+  assert(mlir::isa<cir::PointerType>(pointer.getType()) &&
+         "Need a pointer operand");
+  assert(mlir::isa<cir::IntType>(index.getType()) && "Need an integer operand");
+
+  // Some versions of glibc and gcc use idioms (particularly in their malloc
+  // routines) that add a pointer-sized integer (known to be a pointer value)
+  // to a null pointer in order to cast the value back to an integer or as
+  // part of a pointer alignment algorithm.  This is undefined behavior, but
+  // we'd like to be able to compile programs that use it.
+  //
+  // Normally, we'd generate a GEP with a null-pointer base here in response
+  // to that code, but it's also UB to dereference a pointer created that
+  // way.  Instead (as an acknowledged hack to tolerate the idiom) we will
+  // generate a direct cast of the integer value to a pointer.
+  //
+  // The idiom (p = nullptr + N) is not met if any of the following are true:
+  //
+  //   The operation is subtraction.
+  //   The index is not pointer-sized.
+  //   The pointer type is not byte-sized.
+  //
+  if (BinaryOperator::isNullPointerArithmeticExtension(
+          cgf.getContext(), op.opcode, expr->getLHS(), expr->getRHS()))
+    return cgf.getBuilder().createIntToPtr(index, pointer.getType());
+
+  // Differently from LLVM codegen, ABI bits for index sizes is handled during
+  // LLVM lowering.
+
+  // If this is subtraction, negate the index.
+  if (isSubtraction)
+    index = cgf.getBuilder().createNeg(index);
+
+  assert(!cir::MissingFeatures::sanitizers());
+
+  const PointerType *pointerType =
+      pointerOperand->getType()->getAs<PointerType>();
+  if (!pointerType) {
+    cgf.cgm.errorNYI("Objective-C:pointer arithmetic with non-pointer type");
+    return nullptr;
+  }
+
+  QualType elementType = pointerType->getPointeeType();
+  if (cgf.getContext().getAsVariableArrayType(elementType)) {
+    cgf.cgm.errorNYI("variable array type");
+    return nullptr;
+  }
+
+  if (elementType->isVoidType() || elementType->isFunctionType()) {
+    cgf.cgm.errorNYI("void* or function pointer arithmetic");
+    return nullptr;
+  }
+
+  assert(!cir::MissingFeatures::sanitizers());
+  return cgf.getBuilder().create<cir::PtrStrideOp>(
+      cgf.getLoc(op.e->getExprLoc()), pointer.getType(), pointer, index);
 }
 
 mlir::Value ScalarExprEmitter::emitMul(const BinOpInfo &ops) {
@@ -1248,8 +1441,7 @@ mlir::Value ScalarExprEmitter::emitShl(const BinOpInfo &ops) {
            mlir::isa<cir::IntType>(ops.lhs.getType()))
     cgf.cgm.errorNYI("sanitizers");
 
-  cgf.cgm.errorNYI("shift ops");
-  return {};
+  return builder.createShiftLeft(cgf.getLoc(ops.loc), ops.lhs, ops.rhs);
 }
 
 mlir::Value ScalarExprEmitter::emitShr(const BinOpInfo &ops) {
@@ -1273,8 +1465,7 @@ mlir::Value ScalarExprEmitter::emitShr(const BinOpInfo &ops) {
 
   // Note that we don't need to distinguish unsigned treatment at this
   // point since it will be handled later by LLVM lowering.
-  cgf.cgm.errorNYI("shift ops");
-  return {};
+  return builder.createShiftRight(cgf.getLoc(ops.loc), ops.lhs, ops.rhs);
 }
 
 mlir::Value ScalarExprEmitter::emitAnd(const BinOpInfo &ops) {
@@ -1376,6 +1567,9 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     return v;
   }
 
+  case CK_ArrayToPointerDecay:
+    return cgf.emitArrayToPointerDecay(subExpr).getPointer();
+
   case CK_NullToPointer: {
     if (mustVisitNullValue(subExpr))
       cgf.emitIgnoredExpr(subExpr);
@@ -1459,15 +1653,25 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
 }
 
 mlir::Value ScalarExprEmitter::VisitCallExpr(const CallExpr *e) {
-  if (e->getCallReturnType(cgf.getContext())->isReferenceType()) {
-    cgf.getCIRGenModule().errorNYI(
-        e->getSourceRange(), "call to function with non-void return type");
-    return {};
-  }
+  if (e->getCallReturnType(cgf.getContext())->isReferenceType())
+    return emitLoadOfLValue(e);
 
   auto v = cgf.emitCallExpr(e).getScalarVal();
   assert(!cir::MissingFeatures::emitLValueAlignmentAssumption());
   return v;
+}
+
+mlir::Value ScalarExprEmitter::VisitMemberExpr(MemberExpr *e) {
+  // TODO(cir): The classic codegen calls tryEmitAsConstant() here. Folding
+  // constants sound like work for MLIR optimizers, but we'll keep an assertion
+  // for now.
+  assert(!cir::MissingFeatures::tryEmitAsConstant());
+  Expr::EvalResult result;
+  if (e->EvaluateAsInt(result, cgf.getContext(), Expr::SE_AllowSideEffects)) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "Constant interger member expr");
+    // Fall through to emit this as a non-constant access.
+  }
+  return emitLoadOfLValue(e);
 }
 
 mlir::Value CIRGenFunction::emitScalarConversion(mlir::Value src,

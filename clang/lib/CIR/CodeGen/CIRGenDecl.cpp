@@ -90,8 +90,13 @@ void CIRGenFunction::emitAutoVarInit(
   // If this local has an initializer, emit it now.
   const Expr *init = d.getInit();
 
-  if (!type.isPODType(getContext())) {
-    cgm.errorNYI(d.getSourceRange(), "emitAutoVarInit: non-POD type");
+  // Initialize the variable here if it doesn't have a initializer and it is a
+  // C struct that is non-trivial to initialize or an array containing such a
+  // struct.
+  if (!init && type.isNonTrivialToPrimitiveDefaultInitialize() ==
+                   QualType::PDIK_Struct) {
+    cgm.errorNYI(d.getSourceRange(),
+                 "emitAutoVarInit: non-trivial to default initialize");
     return;
   }
 
@@ -240,7 +245,10 @@ void CIRGenFunction::emitExprAsInit(const Expr *init, const ValueDecl *d,
   QualType type = d->getType();
 
   if (type->isReferenceType()) {
-    cgm.errorNYI(init->getSourceRange(), "emitExprAsInit: reference type");
+    RValue rvalue = emitReferenceBindingToExpr(init);
+    if (capturedByInit)
+      cgm.errorNYI(init->getSourceRange(), "emitExprAsInit: captured by init");
+    emitStoreThroughLValue(rvalue, lvalue);
     return;
   }
   switch (CIRGenFunction::getEvaluationKind(type)) {
@@ -260,6 +268,14 @@ void CIRGenFunction::emitExprAsInit(const Expr *init, const ValueDecl *d,
 
 void CIRGenFunction::emitDecl(const Decl &d) {
   switch (d.getKind()) {
+  case Decl::LinkageSpec:
+  case Decl::Namespace:
+    llvm_unreachable("Declaration should not be in declstmts!");
+
+  case Decl::Record: // struct/union/class X;
+  case Decl::UsingDirective: // using namespace X; [C++]
+    assert(!cir::MissingFeatures::generateDebugInfo());
+    return;
   case Decl::Var: {
     const VarDecl &vd = cast<VarDecl>(d);
     assert(vd.isLocalVarDecl() &&
@@ -273,7 +289,25 @@ void CIRGenFunction::emitDecl(const Decl &d) {
   case Decl::OpenACCRoutine:
     emitOpenACCRoutine(cast<OpenACCRoutineDecl>(d));
     return;
-  default:
-    cgm.errorNYI(d.getSourceRange(), "emitDecl: unhandled decl type");
+  case Decl::Typedef:     // typedef int X;
+  case Decl::TypeAlias: { // using X = int; [C++0x]
+    QualType ty = cast<TypedefNameDecl>(d).getUnderlyingType();
+    assert(!cir::MissingFeatures::generateDebugInfo());
+    if (ty->isVariablyModifiedType())
+      cgm.errorNYI(d.getSourceRange(), "emitDecl: variably modified type");
+    return;
   }
+  default:
+    cgm.errorNYI(d.getSourceRange(),
+                 std::string("emitDecl: unhandled decl type: ") +
+                     d.getDeclKindName());
+  }
+}
+
+void CIRGenFunction::emitNullabilityCheck(LValue lhs, mlir::Value rhs,
+                                          SourceLocation loc) {
+  if (!sanOpts.has(SanitizerKind::NullabilityAssign))
+    return;
+
+  assert(!cir::MissingFeatures::sanitizers());
 }

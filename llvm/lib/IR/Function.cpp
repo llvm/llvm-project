@@ -514,8 +514,15 @@ Function::Function(FunctionType *Ty, LinkageTypes Linkage, unsigned AddrSpace,
   // Ensure intrinsics have the right parameter attributes.
   // Note, the IntID field will have been set in Value::setName if this function
   // name is a valid intrinsic ID.
-  if (IntID)
-    setAttributes(Intrinsic::getAttributes(getContext(), IntID));
+  if (IntID) {
+    // Don't set the attributes if the intrinsic signature is invalid. This
+    // case will either be auto-upgraded or fail verification.
+    SmallVector<Type *> OverloadTys;
+    if (!Intrinsic::getIntrinsicSignature(IntID, Ty, OverloadTys))
+      return;
+
+    setAttributes(Intrinsic::getAttributes(getContext(), IntID, Ty));
+  }
 }
 
 Function::~Function() {
@@ -959,9 +966,6 @@ bool Function::hasAddressTaken(const User **PutOffender,
                                bool IgnoreCastedDirectCall) const {
   for (const Use &U : uses()) {
     const User *FU = U.getUser();
-    if (isa<BlockAddress>(FU))
-      continue;
-
     if (IgnoreCallbackUses) {
       AbstractCallSite ACS(&U);
       if (ACS && ACS.isCallbackCall())
@@ -1026,12 +1030,7 @@ bool Function::isDefTriviallyDead() const {
       !hasAvailableExternallyLinkage())
     return false;
 
-  // Check if the function is used by anything other than a blockaddress.
-  for (const User *U : users())
-    if (!isa<BlockAddress>(U))
-      return false;
-
-  return true;
+  return use_empty();
 }
 
 /// callsFunctionThatReturnsTwice - Return true if the function has a call to

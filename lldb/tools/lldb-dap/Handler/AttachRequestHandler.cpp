@@ -9,6 +9,7 @@
 #include "DAP.h"
 #include "EventHelper.h"
 #include "JSONUtils.h"
+#include "LLDBUtils.h"
 #include "RequestHandler.h"
 #include "lldb/API/SBListener.h"
 #include "llvm/Support/FileSystem.h"
@@ -43,10 +44,8 @@ namespace lldb_dap {
 //     acknowledgement, so no body field is required."
 //   }]
 // }
-
 void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
   dap.is_attach = true;
-  dap.last_launch_or_attach_request = request;
   llvm::json::Object response;
   lldb::SBError error;
   FillResponse(request, response);
@@ -65,6 +64,7 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
   attach_info.SetWaitForLaunch(wait_for, false /*async*/);
   dap.configuration.initCommands = GetStrings(arguments, "initCommands");
   dap.configuration.preRunCommands = GetStrings(arguments, "preRunCommands");
+  dap.configuration.postRunCommands = GetStrings(arguments, "postRunCommands");
   dap.configuration.stopCommands = GetStrings(arguments, "stopCommands");
   dap.configuration.exitCommands = GetStrings(arguments, "exitCommands");
   dap.configuration.terminateCommands =
@@ -76,7 +76,6 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
   dap.stop_at_entry = core_file.empty()
                           ? GetBoolean(arguments, "stopOnEntry").value_or(false)
                           : true;
-  dap.configuration.postRunCommands = GetStrings(arguments, "postRunCommands");
   const llvm::StringRef debuggerRoot =
       GetString(arguments, "debuggerRoot").value_or("");
   dap.configuration.enableAutoVariableSummaries =
@@ -87,6 +86,9 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
       GetBoolean(arguments, "displayExtendedBacktrace").value_or(false);
   dap.configuration.commandEscapePrefix =
       GetString(arguments, "commandEscapePrefix").value_or("`");
+  dap.configuration.program = GetString(arguments, "program");
+  dap.configuration.targetTriple = GetString(arguments, "targetTriple");
+  dap.configuration.platformName = GetString(arguments, "platformName");
   dap.SetFrameFormat(GetString(arguments, "customFrameFormat").value_or(""));
   dap.SetThreadFormat(GetString(arguments, "customThreadFormat").value_or(""));
 
@@ -110,7 +112,7 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
   SetSourceMapFromArguments(*arguments);
 
   lldb::SBError status;
-  dap.SetTarget(dap.CreateTargetFromArguments(*arguments, status));
+  dap.SetTarget(dap.CreateTarget(status));
   if (status.Fail()) {
     response["success"] = llvm::json::Value(false);
     EmplaceSafeString(response, "message", status.GetCString());
@@ -137,9 +139,11 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
   }
   if (attachCommands.empty()) {
     // No "attachCommands", just attach normally.
+
     // Disable async events so the attach will be successful when we return from
     // the launch call and the launch will happen synchronously
-    dap.debugger.SetAsync(false);
+    ScopeSyncMode scope_sync_mode(dap.debugger);
+
     if (core_file.empty()) {
       if ((pid != LLDB_INVALID_PROCESS_ID) &&
           (gdb_remote_port != invalid_port)) {
@@ -160,10 +164,9 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
         // Attach by process name or id.
         dap.target.Attach(attach_info, error);
       }
-    } else
+    } else {
       dap.target.LoadCore(core_file.data(), error);
-    // Reenable async events
-    dap.debugger.SetAsync(true);
+    }
   } else {
     // We have "attachCommands" that are a set of commands that are expected
     // to execute the commands after which a process should be created. If there
@@ -180,7 +183,7 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
 
     // Make sure the process is attached and stopped before proceeding as the
     // the launch commands are not run using the synchronous mode.
-    error = dap.WaitForProcessToStop(timeout_seconds);
+    error = dap.WaitForProcessToStop(std::chrono::seconds(timeout_seconds));
   }
 
   if (error.Success() && core_file.empty()) {

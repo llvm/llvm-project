@@ -85,10 +85,10 @@ def c_lui_imm : RISCVOp,
   let OperandType = "OPERAND_CLUI_IMM";
   let MCOperandPredicate = [{
     int64_t Imm;
-    if (MCOp.evaluateAsConstantImm(Imm))
-      return (Imm != 0) && (isUInt<5>(Imm) ||
-             (Imm >= 0xfffe0 && Imm <= 0xfffff));
-    return MCOp.isBareSymbolRef();
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return (Imm != 0) && (isUInt<5>(Imm) ||
+           (Imm >= 0xfffe0 && Imm <= 0xfffff));
   }];
 }
 
@@ -142,8 +142,8 @@ def bare_simm9_lsb0 : Operand<OtherVT>,
                       ImmLeaf<XLenVT, [{return isShiftedInt<8, 1>(Imm);}]> {
   let ParserMatchClass = BareSImmNLsb0AsmOperand<9>;
   let PrintMethod = "printBranchOperand";
-  let EncoderMethod = "getImmOpValueAsr1";
-  let DecoderMethod = "decodeSImmOperandAndLsl1<9>";
+  let EncoderMethod = "getImmOpValueAsrN<1>";
+  let DecoderMethod = "decodeSImmOperandAndLslN<9, 1>";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
@@ -206,8 +206,8 @@ def bare_simm12_lsb0 : Operand<OtherVT>,
                        ImmLeaf<XLenVT, [{return isShiftedInt<11, 1>(Imm);}]> {
   let ParserMatchClass = BareSImmNLsb0AsmOperand<12>;
   let PrintMethod = "printBranchOperand";
-  let EncoderMethod = "getImmOpValueAsr1";
-  let DecoderMethod = "decodeSImmOperandAndLsl1<12>";
+  let EncoderMethod = "getImmOpValueAsrN<1>";
+  let DecoderMethod = "decodeSImmOperandAndLslN<12, 1>";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))

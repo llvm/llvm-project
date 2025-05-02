@@ -72,11 +72,18 @@ struct MissingFeatures {
   static bool opFuncDsolocal() { return false; }
   static bool opFuncLinkage() { return false; }
   static bool opFuncVisibility() { return false; }
+  static bool opFuncNoProto() { return false; }
 
   // CallOp handling
   static bool opCallBuiltinFunc() { return false; }
   static bool opCallPseudoDtor() { return false; }
-  static bool opCallArgs() { return false; }
+  static bool opCallAggregateArgs() { return false; }
+  static bool opCallPaddingArgs() { return false; }
+  static bool opCallABIExtendArg() { return false; }
+  static bool opCallABIIndirectArg() { return false; }
+  static bool opCallWidenArg() { return false; }
+  static bool opCallBitcastArg() { return false; }
+  static bool opCallImplicitObjectSizeArgs() { return false; }
   static bool opCallReturn() { return false; }
   static bool opCallArgEvaluationOrder() { return false; }
   static bool opCallCallConv() { return false; }
@@ -90,6 +97,11 @@ struct MissingFeatures {
   static bool opCallAttrs() { return false; }
   static bool opCallSurroundingTry() { return false; }
   static bool opCallASTAttr() { return false; }
+  static bool opCallVariadic() { return false; }
+  static bool opCallObjCMethod() { return false; }
+  static bool opCallExtParameterInfo() { return false; }
+  static bool opCallCIRGenFuncInfoParamInfo() { return false; }
+  static bool opCallCIRGenFuncInfoExtParamInfo() { return false; }
 
   // ScopeOp handling
   static bool opScopeCleanupRegion() { return false; }
@@ -101,8 +113,19 @@ struct MissingFeatures {
   static bool mayHaveIntegerOverflow() { return false; }
   static bool shouldReverseUnaryCondOnBoolExpr() { return false; }
 
+  // RecordType
+  static bool recursiveRecordLayout() { return false; }
+  static bool skippedLayout() { return false; }
+  static bool astRecordDeclAttr() { return false; }
+  static bool cxxSupport() { return false; }
+  static bool recordZeroInit() { return false; }
+  static bool zeroSizeRecordMembers() { return false; }
+
   // Misc
   static bool cxxABI() { return false; }
+  static bool cirgenABIInfo() { return false; }
+  static bool cirgenTargetInfo() { return false; }
+  static bool abiArgInfo() { return false; }
   static bool tryEmitAsConstant() { return false; }
   static bool constructABIArgDirectExtend() { return false; }
   static bool opGlobalViewAttr() { return false; }
@@ -121,6 +144,8 @@ struct MissingFeatures {
   static bool fpConstraints() { return false; }
   static bool sanitizers() { return false; }
   static bool addHeapAllocSiteMetadata() { return false; }
+  static bool targetCIRGenInfoArch() { return false; }
+  static bool targetCIRGenInfoOS() { return false; }
   static bool targetCodeGenInfoGetNullPointer() { return false; }
   static bool loopInfoStack() { return false; }
   static bool requiresCleanups() { return false; }
@@ -138,11 +163,19 @@ struct MissingFeatures {
   static bool weakRefReference() { return false; }
   static bool hip() { return false; }
   static bool setObjCGCLValueClass() { return false; }
-  static bool mangledNames() { return false; }
   static bool setDLLStorageClass() { return false; }
   static bool openMP() { return false; }
   static bool emitCheckedInBoundsGEP() { return false; }
   static bool preservedAccessIndexRegion() { return false; }
+  static bool bitfields() { return false; }
+  static bool msabi() { return false; }
+  static bool typeChecks() { return false; }
+  static bool lambdaFieldToName() { return false; }
+  static bool targetSpecificCXXABI() { return false; }
+  static bool moduleNameHash() { return false; }
+  static bool setDSOLocal() { return false; }
+  static bool foldCaseStmt() { return false; }
+  static bool constantFoldSwitchStatement() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
