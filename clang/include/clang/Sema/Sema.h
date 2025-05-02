@@ -619,6 +619,25 @@ enum class OffsetOfKind {
   Macro,
 };
 
+/// Describes the kind of merge to perform for availability
+/// attributes (including "deprecated", "unavailable", and "availability").
+enum class AvailabilityMergeKind {
+  /// Don't merge availability attributes at all.
+  None,
+  /// Merge availability attributes for a redeclaration, which requires
+  /// an exact match.
+  Redeclaration,
+  /// Merge availability attributes for an override, which requires
+  /// an exact match or a weakening of constraints.
+  Override,
+  /// Merge availability attributes for an implementation of
+  /// a protocol requirement.
+  ProtocolImplementation,
+  /// Merge availability attributes for an implementation of
+  /// an optional protocol requirement.
+  OptionalProtocolImplementation
+};
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -4176,28 +4195,10 @@ public:
                                 TypeSourceInfo *TInfo);
   bool isIncompatibleTypedef(const TypeDecl *Old, TypedefNameDecl *New);
 
-  /// Describes the kind of merge to perform for availability
-  /// attributes (including "deprecated", "unavailable", and "availability").
-  enum AvailabilityMergeKind {
-    /// Don't merge availability attributes at all.
-    AMK_None,
-    /// Merge availability attributes for a redeclaration, which requires
-    /// an exact match.
-    AMK_Redeclaration,
-    /// Merge availability attributes for an override, which requires
-    /// an exact match or a weakening of constraints.
-    AMK_Override,
-    /// Merge availability attributes for an implementation of
-    /// a protocol requirement.
-    AMK_ProtocolImplementation,
-    /// Merge availability attributes for an implementation of
-    /// an optional protocol requirement.
-    AMK_OptionalProtocolImplementation
-  };
-
   /// mergeDeclAttributes - Copy attributes from the Old decl to the New one.
-  void mergeDeclAttributes(NamedDecl *New, Decl *Old,
-                           AvailabilityMergeKind AMK = AMK_Redeclaration);
+  void mergeDeclAttributes(
+      NamedDecl *New, Decl *Old,
+      AvailabilityMergeKind AMK = AvailabilityMergeKind::Redeclaration);
 
   /// MergeTypedefNameDecl - We just parsed a typedef 'New' which has the
   /// same name and scope as a previous declaration 'Old'.  Figure out
