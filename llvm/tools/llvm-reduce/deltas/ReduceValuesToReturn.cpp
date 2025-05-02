@@ -130,7 +130,7 @@ static void rewriteFuncWithReturnType(Function &OldF, Value *NewRetValue) {
     Argument &NewArg = std::get<1>(Z);
 
     OldArg.replaceAllUsesWith(&NewArg);
-    NewArg.setName(OldArg.getName()); // Copy the name over...
+    NewArg.takeName(&OldArg);
   }
 
   OldF.eraseFromParent();
