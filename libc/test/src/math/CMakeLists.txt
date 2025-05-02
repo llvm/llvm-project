@@ -2281,6 +2281,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  acos_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    acos_test.cpp
+  DEPENDS
+    libc.src.math.acos
+)
+
+add_fp_unittest(
   acosf16_test
   NEED_MPFR
   SUITE

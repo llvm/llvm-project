@@ -25,6 +25,8 @@ namespace {
 using DoubleDouble = fputil::DoubleDouble;
 using Float128 = fputil::DyadicFloat<128>;
 
+constexpr DoubleDouble PI = {0x1.1a62633145c07p-53, 0x1.921fb54442d18p1};
+
 constexpr DoubleDouble PI_OVER_TWO = {0x1.1a62633145c07p-54,
                                       0x1.921fb54442d18p0};
 
@@ -547,6 +549,9 @@ constexpr Float128 ASIN_COEFFS_F128[17][16] = {
 
 constexpr Float128 PI_OVER_TWO_F128 = {
     Sign::POS, -127, 0xc90fdaa2'2168c234'c4c6628b'80dc1cd1_u128};
+
+constexpr Float128 PI_F128 = {Sign::POS, -126,
+                              0xc90fdaa2'2168c234'c4c6628b'80dc1cd1_u128};
 
 LIBC_INLINE Float128 asin_eval(const Float128 &u, unsigned idx) {
   return fputil::polyeval(u, ASIN_COEFFS_F128[idx][0], ASIN_COEFFS_F128[idx][1],
