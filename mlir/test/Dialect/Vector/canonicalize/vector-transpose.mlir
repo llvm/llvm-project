@@ -248,3 +248,36 @@ func.func @negative_transpose_of_shape_cast(%arg : vector<6xi8>) -> vector<2x3xi
   %1 = vector.transpose %0, [1, 0] : vector<3x2xi8> to vector<2x3xi8>
   return %1 : vector<2x3xi8>
 }
+
+// -----
+
+// Test of transpose folding
+//  CHECK-LABEL: transpose_1D_identity
+//   CHECK-SAME:   [[ARG:%.*]]: vector<4xf32>
+//   CHECK-NEXT:   return [[ARG]]
+func.func @transpose_1D_identity(%arg : vector<4xf32>) -> vector<4xf32> {
+  %0 = vector.transpose %arg, [0] : vector<4xf32> to vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// -----
+
+// Test of transpose folding
+// CHECK-LABEL: transpose_2D_identity
+//  CHECK-SAME:    [[ARG:%.*]]: vector<4x3xf32>
+//  CHECK-NEXT:    return [[ARG]]
+func.func @transpose_2D_identity(%arg : vector<4x3xf32>) -> vector<4x3xf32> {
+  %0 = vector.transpose %arg, [0, 1] : vector<4x3xf32> to vector<4x3xf32>
+  return %0 : vector<4x3xf32>
+}
+
+// -----
+
+// Test of transpose folding
+// CHECK-LABEL: transpose_shape_and_order_preserving
+//  CHECK-SAME:    [[ARG:%.*]]: vector<6x1x1x4xi8>
+//  CHECK-NEXT:    return [[ARG]]
+func.func @transpose_shape_and_order_preserving(%arg : vector<6x1x1x4xi8>) -> vector<6x1x1x4xi8> {
+  %0 = vector.transpose %arg, [0, 2, 1, 3] : vector<6x1x1x4xi8> to vector<6x1x1x4xi8>
+  return %0 : vector<6x1x1x4xi8>
+}
