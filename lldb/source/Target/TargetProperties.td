@@ -299,9 +299,6 @@ let Definition = "process" in {
     DefaultEnumValue<"eFollowParent">,
     EnumValues<"OptionEnumValues(g_follow_fork_mode_values)">,
     Desc<"Debugger's behavior upon fork or vfork.">;
-  def TrackMemoryCacheChanges: Property<"track-memory-cache-changes", "Boolean">,
-    DefaultTrue,
-    Desc<"If true, memory cache modifications (which happen often during expressions evaluation) will bump process state ID (and invalidate all synthetic children). Disabling this option helps to avoid synthetic children reevaluation when pretty printers heavily use expressions. The downside of disabled setting is that convenience variables won't reevaluate synthetic children automatically.">;
 }
 
 let Definition = "platform" in {
