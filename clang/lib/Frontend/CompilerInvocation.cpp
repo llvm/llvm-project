@@ -2206,6 +2206,11 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
             : llvm::codegenoptions::DebugTemplateNamesKind::Mangled);
   }
 
+  if (!Opts.ProfileInstrumentUsePath.empty()) {
+    auto FS = createBaseFS(FSOpts, FEOpts, CASOpts, Diags, nullptr);
+    setPGOUseInstrumentor(Opts, Opts.ProfileInstrumentUsePath, *FS, Diags);
+  }
+
   if (const Arg *A = Args.getLastArg(OPT_ftime_report, OPT_ftime_report_EQ,
                                      OPT_ftime_report_json)) {
     Opts.TimePasses = true;
