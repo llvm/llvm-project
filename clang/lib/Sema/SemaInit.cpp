@@ -261,8 +261,22 @@ static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
           << Str->getSourceRange();
     else if (StrLength - 1 == ArrayLen) {
       // If the entity being initialized has the nonstring attribute, then
-      // silence the "missing nonstring" diagnostic.
-      if (const ValueDecl *D = Entity.getDecl();
+      // silence the "missing nonstring" diagnostic. If there's no entity,
+      // check whether we're initializing an array of arrays; if so, walk the
+      // parents to find an entity.
+      auto FindCorrectEntity =
+          [](const InitializedEntity *Entity) -> const ValueDecl * {
+        while (Entity) {
+          if (const ValueDecl *VD = Entity->getDecl())
+            return VD;
+          if (!Entity->getType()->isArrayType())
+            return nullptr;
+          Entity = Entity->getParent();
+        }
+
+        return nullptr;
+      };
+      if (const ValueDecl *D = FindCorrectEntity(&Entity);
           !D || !D->hasAttr<NonStringAttr>())
         S.Diag(
             Str->getBeginLoc(),
