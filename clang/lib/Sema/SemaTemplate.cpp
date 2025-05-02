@@ -514,9 +514,9 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
     FilterCCC.WantExpressionKeywords = false;
     FilterCCC.WantRemainingKeywords = false;
     FilterCCC.WantCXXNamedCasts = true;
-    if (TypoCorrection Corrected =
-            CorrectTypo(Found.getLookupNameInfo(), Found.getLookupKind(), S,
-                        &SS, FilterCCC, CTK_ErrorRecovery, LookupCtx)) {
+    if (TypoCorrection Corrected = CorrectTypo(
+            Found.getLookupNameInfo(), Found.getLookupKind(), S, &SS, FilterCCC,
+            CorrectTypoKind::ErrorRecovery, LookupCtx)) {
       if (auto *ND = Corrected.getFoundDecl())
         Found.addDecl(ND);
       FilterAcceptableTemplateNames(Found);
@@ -686,8 +686,9 @@ void Sema::diagnoseExprIntendedAsTemplateName(Scope *S, ExprResult TemplateName,
 
   DeclarationName Name = NameInfo.getName();
   TemplateCandidateFilter CCC(*this);
-  if (TypoCorrection Corrected = CorrectTypo(NameInfo, LookupKind, S, &SS, CCC,
-                                             CTK_ErrorRecovery, LookupCtx)) {
+  if (TypoCorrection Corrected =
+          CorrectTypo(NameInfo, LookupKind, S, &SS, CCC,
+                      CorrectTypoKind::ErrorRecovery, LookupCtx)) {
     auto *ND = Corrected.getFoundDecl();
     if (ND)
       ND = getAsTemplateNameDecl(ND);
@@ -3735,7 +3736,7 @@ bool Sema::resolveAssumedTemplateNameAsType(Scope *S, TemplateName &Name,
 
   TypoCorrection Corrected =
       CorrectTypo(R.getLookupNameInfo(), R.getLookupKind(), S, nullptr,
-                  FilterCCC, CTK_ErrorRecovery);
+                  FilterCCC, CorrectTypoKind::ErrorRecovery);
   if (Corrected && Corrected.getFoundDecl()) {
     diagnoseTypo(Corrected, PDiag(diag::err_no_template_suggest)
                                 << ATN->getDeclName());

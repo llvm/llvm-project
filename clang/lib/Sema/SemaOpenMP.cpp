@@ -3074,7 +3074,7 @@ ExprResult SemaOpenMP::ActOnOpenMPIdExpression(Scope *CurScope,
     VarDeclFilterCCC CCC(SemaRef);
     if (TypoCorrection Corrected =
             SemaRef.CorrectTypo(Id, Sema::LookupOrdinaryName, CurScope, nullptr,
-                                CCC, Sema::CTK_ErrorRecovery)) {
+                                CCC, CorrectTypoKind::ErrorRecovery)) {
       SemaRef.diagnoseTypo(
           Corrected,
           SemaRef.PDiag(Lookup.empty() ? diag::err_undeclared_var_use_suggest
@@ -22893,7 +22893,7 @@ NamedDecl *SemaOpenMP::lookupOpenMPDeclareTargetName(
     VarOrFuncDeclFilterCCC CCC(SemaRef);
     if (TypoCorrection Corrected =
             SemaRef.CorrectTypo(Id, Sema::LookupOrdinaryName, CurScope, nullptr,
-                                CCC, Sema::CTK_ErrorRecovery)) {
+                                CCC, CorrectTypoKind::ErrorRecovery)) {
       SemaRef.diagnoseTypo(Corrected,
                            SemaRef.PDiag(diag::err_undeclared_var_use_suggest)
                                << Id.getName());

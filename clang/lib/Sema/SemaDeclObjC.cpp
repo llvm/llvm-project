@@ -565,7 +565,7 @@ void SemaObjC::ActOnSuperClassOfClassInterface(
     ObjCInterfaceValidatorCCC CCC(IDecl);
     if (TypoCorrection Corrected = SemaRef.CorrectTypo(
             DeclarationNameInfo(SuperName, SuperLoc), Sema::LookupOrdinaryName,
-            SemaRef.TUScope, nullptr, CCC, Sema::CTK_ErrorRecovery)) {
+            SemaRef.TUScope, nullptr, CCC, CorrectTypoKind::ErrorRecovery)) {
       SemaRef.diagnoseTypo(Corrected, PDiag(diag::err_undef_superclass_suggest)
                                           << SuperName << ClassName);
       PrevDecl = Corrected.getCorrectionDeclAs<ObjCInterfaceDecl>();
@@ -1320,7 +1320,7 @@ void SemaObjC::FindProtocolDeclaration(bool WarnOnDeclarations,
       TypoCorrection Corrected = SemaRef.CorrectTypo(
           DeclarationNameInfo(Pair.getIdentifierInfo(), Pair.getLoc()),
           Sema::LookupObjCProtocolName, SemaRef.TUScope, nullptr, CCC,
-          Sema::CTK_ErrorRecovery);
+          CorrectTypoKind::ErrorRecovery);
       if ((PDecl = Corrected.getCorrectionDeclAs<ObjCProtocolDecl>()))
         SemaRef.diagnoseTypo(Corrected,
                              PDiag(diag::err_undeclared_protocol_suggest)
@@ -1701,7 +1701,7 @@ void SemaObjC::actOnObjCTypeArgsOrProtocolQualifiers(
     ObjCTypeArgOrProtocolValidatorCCC CCC(Context, lookupKind);
     TypoCorrection corrected = SemaRef.CorrectTypo(
         DeclarationNameInfo(identifiers[i], identifierLocs[i]), lookupKind, S,
-        nullptr, CCC, Sema::CTK_ErrorRecovery);
+        nullptr, CCC, CorrectTypoKind::ErrorRecovery);
     if (corrected) {
       // Did we find a protocol?
       if (auto proto = corrected.getCorrectionDeclAs<ObjCProtocolDecl>()) {
@@ -2005,7 +2005,7 @@ ObjCImplementationDecl *SemaObjC::ActOnStartClassImplementation(
     ObjCInterfaceValidatorCCC CCC{};
     TypoCorrection Corrected = SemaRef.CorrectTypo(
         DeclarationNameInfo(ClassName, ClassLoc), Sema::LookupOrdinaryName,
-        SemaRef.TUScope, nullptr, CCC, Sema::CTK_NonError);
+        SemaRef.TUScope, nullptr, CCC, CorrectTypoKind::NonError);
     if (Corrected.getCorrectionDeclAs<ObjCInterfaceDecl>()) {
       // Suggest the (potentially) correct interface name. Don't provide a
       // code-modification hint or use the typo name for recovery, because
@@ -5439,7 +5439,7 @@ ObjCInterfaceDecl *SemaObjC::getObjCInterfaceDecl(const IdentifierInfo *&Id,
     DeclFilterCCC<ObjCInterfaceDecl> CCC{};
     if (TypoCorrection C = SemaRef.CorrectTypo(
             DeclarationNameInfo(Id, IdLoc), Sema::LookupOrdinaryName,
-            SemaRef.TUScope, nullptr, CCC, Sema::CTK_ErrorRecovery)) {
+            SemaRef.TUScope, nullptr, CCC, CorrectTypoKind::ErrorRecovery)) {
       SemaRef.diagnoseTypo(C, PDiag(diag::err_undef_interface_suggest) << Id);
       IDecl = C.getCorrectionDeclAs<ObjCInterfaceDecl>();
       Id = IDecl->getIdentifier();
