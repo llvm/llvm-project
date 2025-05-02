@@ -15,6 +15,7 @@
 #define LLVM_FRONTEND_HLSL_HLSLROOTSIGNATURE_H
 
 #include "llvm/Support/DXILABI.h"
+#include "llvm/Support/raw_ostream.h"
 #include <variant>
 
 namespace llvm {
@@ -86,6 +87,8 @@ struct DescriptorTableClause {
       break;
     }
   }
+
+  void dump(raw_ostream &OS) const;
 };
 
 // Models RootElement : DescriptorTable | DescriptorTableClause
