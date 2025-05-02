@@ -29,3 +29,19 @@ void switch_func(int i) {
     break;
   }
 }
+
+// Statement expressions are a bit strange in that they seem to allow for
+// jumping past initialization without being diagnosed, even in C++. Perhaps
+// this should change?
+void f(void) {
+  ({
+    goto ouch;
+    int i = 12;
+  });
+
+  for (int i = ({ goto ouch; int x = 10; x;}); i < 0; ++i) {
+  }
+
+ouch:
+  ;
+}
