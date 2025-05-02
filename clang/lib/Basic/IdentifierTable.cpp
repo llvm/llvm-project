@@ -251,22 +251,8 @@ static KeywordStatus getKeywordStatus(const LangOptions &LangOpts,
 }
 
 static bool IsKeywordInCpp(unsigned Flags) {
-  while (Flags != 0) {
-    unsigned CurFlag = Flags & ~(Flags - 1);
-    Flags = Flags & ~CurFlag;
-    switch (static_cast<TokenKey>(CurFlag)) {
-    case KEYCXX:
-    case KEYCXX11:
-    case KEYCXX20:
-    case BOOLSUPPORT:
-    case WCHARSUPPORT:
-    case CHAR8SUPPORT:
-      return true;
-    default:
-      break; // Go to the next flag, try again.
-    }
-  }
-  return false;
+  return (Flags & (KEYCXX | KEYCXX11 | KEYCXX20 | BOOLSUPPORT | WCHARSUPPORT |
+                   CHAR8SUPPORT)) != 0;
 }
 
 static void MarkIdentifierAsKeywordInCpp(IdentifierTable &Table,
