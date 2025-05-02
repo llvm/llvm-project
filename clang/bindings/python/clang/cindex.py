@@ -2980,11 +2980,7 @@ class CompletionString(ClangObject):
 
     @property
     def briefComment(self):
-        if conf.function_exists("clang_getCompletionBriefComment"):
-            return _CXString.from_result(
-                conf.lib.clang_getCompletionBriefComment(self.obj)
-            )
-        return ""
+        return _CXString.from_result(conf.lib.clang_getCompletionBriefComment(self.obj))
 
     def __repr__(self):
         return (
@@ -4263,14 +4259,6 @@ class Config:
             raise LibclangError(msg)
 
         return library
-
-    def function_exists(self, name: str) -> bool:
-        try:
-            getattr(self.lib, name)
-        except AttributeError:
-            return False
-
-        return True
 
 
 conf = Config()
