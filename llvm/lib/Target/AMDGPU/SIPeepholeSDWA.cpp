@@ -1084,8 +1084,10 @@ void SIPeepholeSDWA::convertVcndmaskToVOP2(MachineInstr &MI,
       *TII->getNamedOperand(MI, AMDGPU::OpName::src2);
   Register CarryReg = CarryIn.getReg();
   MachineInstr *CarryDef = MRI->getVRegDef(CarryReg);
-  if (!CarryDef)
+  if (!CarryDef) {
+    LLVM_DEBUG(dbgs() << "Missing carry-in operand definition\n");
     return;
+  }
 
   // Make sure VCC or its subregs are dead before MI.
   MCRegister Vcc = TRI->getVCC();
@@ -1093,7 +1095,7 @@ void SIPeepholeSDWA::convertVcndmaskToVOP2(MachineInstr &MI,
   MachineBasicBlock::LivenessQueryResult Liveness =
       MBB.computeRegisterLiveness(TRI, Vcc, MI);
   if (Liveness != MachineBasicBlock::LQR_Dead) {
-    LLVM_DEBUG(dbgs() << "VCC not known to be dead before instruction.\n");
+    LLVM_DEBUG(dbgs() << "VCC not known to be dead before instruction\n");
     return;
   }
 
