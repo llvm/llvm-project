@@ -667,16 +667,30 @@ GetExistentialSyntheticChildren(TypeSystemSwiftTypeRef &ts,
       llvm::dyn_cast<swift::reflection::ProtocolCompositionTypeRef>(tr);
   if (!protocol_composition_tr)
     return children;
-  if (ti && (llvm::isa<swift::reflection::ReferenceTypeInfo>(ti) ||
-             llvm::isa<swift::reflection::RecordTypeInfo>(ti))) {
+  if (!ti)
+    return children;
+  auto *rti = llvm::dyn_cast<swift::reflection::RecordTypeInfo>(ti);
+  if (rti || llvm::isa<swift::reflection::ReferenceTypeInfo>(ti)) {
     TypeSystemSwiftTypeRefSP ts_sp = ts.GetTypeSystemSwiftTypeRef();
     children.push_back({"object", [=]() {
                           if (auto *super_class_tr =
                                   protocol_composition_tr->getSuperclass())
                             return GetTypeFromTypeRef(*ts_sp, super_class_tr);
                           else
-                            return ts_sp->GetRawPointerType();
-    }});
+                            return rti ? ts_sp->GetBuiltinUnknownObjectType()
+                                       : ts_sp->GetBuiltinRawPointerType();
+                        }});
+    // We replaced "object" with a more specific type.
+    if (rti) {
+      auto &fields = rti->getFields();
+      for (unsigned i = 1; i < fields.size(); ++i) {
+        TypeSystemSwiftTypeRefSP ts_sp = ts.GetTypeSystemSwiftTypeRef();
+        auto *type_ref = fields[i].TR;
+        children.push_back({fields[i].Name, [=]() {
+                              return GetTypeFromTypeRef(*ts_sp, type_ref);
+                            }});
+      }
+    }
   }
   if (ti && llvm::isa<swift::reflection::RecordTypeInfo>(ti)) {
     auto &fields =

@@ -8623,10 +8623,6 @@ std::string SwiftASTContext::GetSwiftName(const clang::Decl *clang_decl,
   return {};
 }
 
-CompilerType SwiftASTContext::GetBuiltinRawPointerType() {
-  return GetTypeFromMangledTypename(ConstString("$sBpD"));
-}
-
 CompilerType
 SwiftASTContext::ConvertClangTypeToSwiftType(CompilerType clang_type) {
   auto ts = GetTypeSystemSwiftTypeRef();

@@ -20,7 +20,9 @@ class TestSwiftUnknownSelf(lldbtest.TestBase):
 
     def check_class(self, var_self, weak):
         self.expect("v self", substrs=["hello", "world"])
-        lldbutil.check_variable(self, var_self, num_children=2)
+        # FIXME: This is inconsistent. If self is Optional, an extra
+        #        indirection is needed.
+        lldbutil.check_variable(self, var_self, num_children=2 if weak else 1)
         m_base_string = var_self.GetChildMemberWithName("base_string")
         m_string = var_self.GetChildMemberWithName("string")
         # FIXME: This is inconsistent. If self is Optional, an extra
