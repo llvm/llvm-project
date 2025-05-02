@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -x c++ -triple s390x-ibm-zos -fsyntax-only -verify %s
 
-int i = 4;
+extern int i;
 #pragma export(:: // expected-warning {{expected identifier in '#pragma export' - ignored}}
 #pragma export(::) // expected-warning {{expected identifier in '#pragma export' - ignored}}
 #pragma export(::i)
