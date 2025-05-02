@@ -347,7 +347,8 @@ static llvm::Metadata *convertModuleFlagProfileSummaryAttr(
   }
 
   SmallVector<llvm::Metadata *> detailedEntries;
-  for (auto detailedEntry : summaryAttr.getDetailedSummary()) {
+  for (ModuleFlagProfileSummaryDetailedAttr detailedEntry :
+       summaryAttr.getDetailedSummary()) {
     SmallVector<llvm::Metadata *> tupleNodes{
         mdb.createConstant(llvm::ConstantInt::get(
             llvm::Type::getInt64Ty(context), detailedEntry.getCutOff())),
@@ -385,7 +386,7 @@ static void convertModuleFlagsOp(ArrayAttr flags, llvm::IRBuilderBase &builder,
                                             arrayAttr, builder,
                                             moduleTranslation);
             })
-            .Case<ModuleFlagProfileSummaryAttr>([&](auto summaryAttr) {
+            .Case([&](ModuleFlagProfileSummaryAttr summaryAttr) {
               return convertModuleFlagProfileSummaryAttr(
                   flagAttr.getKey().getValue(), summaryAttr, builder,
                   moduleTranslation);

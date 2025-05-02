@@ -46,5 +46,3 @@ module {
 // CHECK-SAME:        <cut_off = 10000, min_count = 86427, num_counts = 1>,
 // CHECK-SAME:        <cut_off = 100000, min_count = 86427, num_counts = 1>
 // CHECK-SAME: >>]
-
-llvm.module_flags []
