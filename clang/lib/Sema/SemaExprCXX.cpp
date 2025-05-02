@@ -2060,10 +2060,10 @@ Sema::ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal,
                                                 CCEK_ArrayBound)
                  .get();
           } else {
-            Array.NumElts =
-                VerifyIntegerConstantExpression(
-                    NumElts, nullptr, diag::err_new_array_nonconst, AllowFold)
-                    .get();
+            Array.NumElts = VerifyIntegerConstantExpression(
+                                NumElts, nullptr, diag::err_new_array_nonconst,
+                                AllowFoldKind::Allow)
+                                .get();
           }
           if (!Array.NumElts)
             return ExprError();

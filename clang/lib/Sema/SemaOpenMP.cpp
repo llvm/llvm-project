@@ -6909,7 +6909,7 @@ SemaOpenMP::DeclGroupPtrTy SemaOpenMP::ActOnOpenMPDeclareSimdDirective(
       if (NewStep)
         NewStep = SemaRef
                       .VerifyIntegerConstantExpression(
-                          NewStep, /*FIXME*/ Sema::AllowFold)
+                          NewStep, /*FIXME*/ AllowFoldKind::Allow)
                       .get();
     }
     NewSteps.push_back(NewStep);
@@ -15866,10 +15866,11 @@ ExprResult SemaOpenMP::VerifyPositiveIntegerConstantInClause(
       }
     } Diagnoser;
     ICE = SemaRef.VerifyIntegerConstantExpression(E, &Result, Diagnoser,
-                                                  Sema::AllowFold);
+                                                  AllowFoldKind::Allow);
   } else {
-    ICE = SemaRef.VerifyIntegerConstantExpression(E, &Result,
-                                                  /*FIXME*/ Sema::AllowFold);
+    ICE =
+        SemaRef.VerifyIntegerConstantExpression(E, &Result,
+                                                /*FIXME*/ AllowFoldKind::Allow);
   }
   if (ICE.isInvalid())
     return ExprError();
@@ -16470,7 +16471,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPPermutationClause(ArrayRef<Expr *> PermExprs,
 
     llvm::APSInt PermVal;
     ExprResult PermEvalExpr = SemaRef.VerifyIntegerConstantExpression(
-        PermExpr, &PermVal, Sema::AllowFold);
+        PermExpr, &PermVal, AllowFoldKind::Allow);
     bool IsValid = PermEvalExpr.isUsable();
     if (IsValid)
       PermExpr = PermEvalExpr.get();
