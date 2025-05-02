@@ -17198,27 +17198,27 @@ static bool isClassCompatTagKind(TagTypeKind Tag)
          Tag == TagTypeKind::Interface;
 }
 
-Sema::NonTagKind Sema::getNonTagTypeDeclKind(const Decl *PrevDecl,
-                                             TagTypeKind TTK) {
+NonTagKind Sema::getNonTagTypeDeclKind(const Decl *PrevDecl, TagTypeKind TTK) {
   if (isa<TypedefDecl>(PrevDecl))
-    return NTK_Typedef;
+    return NonTagKind::Typedef;
   else if (isa<TypeAliasDecl>(PrevDecl))
-    return NTK_TypeAlias;
+    return NonTagKind::TypeAlias;
   else if (isa<ClassTemplateDecl>(PrevDecl))
-    return NTK_Template;
+    return NonTagKind::Template;
   else if (isa<TypeAliasTemplateDecl>(PrevDecl))
-    return NTK_TypeAliasTemplate;
+    return NonTagKind::TypeAliasTemplate;
   else if (isa<TemplateTemplateParmDecl>(PrevDecl))
-    return NTK_TemplateTemplateArgument;
+    return NonTagKind::TemplateTemplateArgument;
   switch (TTK) {
   case TagTypeKind::Struct:
   case TagTypeKind::Interface:
   case TagTypeKind::Class:
-    return getLangOpts().CPlusPlus ? NTK_NonClass : NTK_NonStruct;
+    return getLangOpts().CPlusPlus ? NonTagKind::NonClass
+                                   : NonTagKind::NonStruct;
   case TagTypeKind::Union:
-    return NTK_NonUnion;
+    return NonTagKind::NonUnion;
   case TagTypeKind::Enum:
-    return NTK_NonEnum;
+    return NonTagKind::NonEnum;
   }
   llvm_unreachable("invalid TTK");
 }
