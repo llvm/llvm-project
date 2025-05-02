@@ -3520,8 +3520,7 @@ static llvm::Value *tryEmitFusedAutoreleaseOfResult(CodeGenFunction &CGF,
   // Look for:
   //   %generator = call i8* @objc_retain(i8* %originalResult)
   // or
-  //   %generator = call i8* @objc_retainAutoreleasedReturnValue(i8*
-  //   %originalResult)
+  //   %generator = call i8* @objc_retainAutoreleasedReturnValue(i8* %originalResult)
   llvm::CallInst *call = dyn_cast<llvm::CallInst>(generator);
   if (!call)
     return nullptr;
@@ -3997,7 +3996,7 @@ void CodeGenFunction::EmitFunctionEpilog(const CGFunctionInfo &FI,
         RV = SI->getValueOperand();
         SI->eraseFromParent();
 
-        // Otherwise, we have to do a simple load.
+      // Otherwise, we have to do a simple load.
       } else {
         RV = Builder.CreateLoad(ReturnValue);
       }
