@@ -91,21 +91,28 @@ def ErrorCode : Enum {
 
     // Universal errors
     Etor<"UNKNOWN", "Unknown or internal error">,
+    Etor<"HOST_IO", "I/O error on host">,
+    Etor<"INVALID_BINARY", "A provided binary image is malformed">,
     Etor<"INVALID_NULL_POINTER", "A pointer argument is null when it should not be">,
     Etor<"INVALID_ARGUMENT", "An argument is invalid">,
+    Etor<"NOT_FOUND", "Requested object was not found in the binary image">,
     Etor<"OUT_OF_RESOURCES", "Out of resources">,
-    Etor<"UNSUPPORTED", "generic error code for unsupported features and enums">,
     Etor<"INVALID_SIZE", "invalid size or dimensions (e.g., must not be zero, or is out of bounds)">,
     Etor<"INVALID_ENUMERATION", "enumerator argument is not valid">,
-    Etor<"INVALID_KERNEL_NAME", "Named kernel not found in the program binary">,
+    Etor<"HOST_TOOL_NOT_FOUND", "A required binary (linker, etc.) was not found on the host">,
+    Etor<"INVALID_VALUE", "Invalid Value">,
+    Etor<"UNIMPLEMENTED", "Generic error code for features currently unimplemented by the device/backend">,
+    Etor<"UNSUPPORTED", "Generic error code for features unsupported by the device/backend">,
+    Etor<"ASSEMBLE_FAILURE", "Assembler failure while processing binary image">,
+    Etor<"LINK_FAILURE", "Linker failure while processing binary image">,
+    Etor<"BACKEND_FAILURE", "The plugin backend is in an invalid or unsupported state">,
 
     // Handle related errors - only makes sense for liboffload
-    Etor<"INVALID_VALUE", "Invalid Value">,
+    Etor<"INVALID_NULL_HANDLE", "A handle argument is null when it should not be">,
     Etor<"INVALID_PLATFORM", "Invalid platform">,
     Etor<"INVALID_DEVICE", "Invalid device">,
     Etor<"INVALID_QUEUE", "Invalid queue">,
     Etor<"INVALID_EVENT", "Invalid event">,
-    Etor<"INVALID_NULL_HANDLE", "handle argument is not valid">
   ];
 }
 

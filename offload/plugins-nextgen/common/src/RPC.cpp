@@ -176,6 +176,7 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
       TARGET_ALLOC_HOST);
   if (!RPCBuffer)
     return plugin::Plugin::error(
+        error::ErrorCode::UNKNOWN,
         "Failed to initialize RPC server for device %d", Device.getDeviceId());
 
   // Get the address of the RPC client from the device.

@@ -33,6 +33,8 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Program.h"
 
+using namespace error;
+
 namespace llvm {
 namespace omp {
 namespace target {
@@ -134,7 +136,8 @@ struct CUDAKernelTy : public GenericKernelTy {
 
     // Check that the function pointer is valid.
     if (!Func)
-      return Plugin::error("Invalid function for kernel %s", getName());
+      return Plugin::error(ErrorCode::INVALID_BINARY,
+                           "Invalid function for kernel %s", getName());
 
     int MaxThreads;
     Res = cuFuncGetAttribute(&MaxThreads,
@@ -175,7 +178,8 @@ struct CUDAStreamRef final : public GenericDeviceResourceRef {
   /// before calling to this function.
   Error create(GenericDeviceTy &Device) override {
     if (Stream)
-      return Plugin::error("Creating an existing stream");
+      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                           "Creating an existing stream");
 
     CUresult Res = cuStreamCreate(&Stream, CU_STREAM_NON_BLOCKING);
     if (auto Err = Plugin::check(Res, "Error in cuStreamCreate: %s"))
@@ -188,7 +192,8 @@ struct CUDAStreamRef final : public GenericDeviceResourceRef {
   /// must be to a valid stream before calling to this function.
   Error destroy(GenericDeviceTy &Device) override {
     if (!Stream)
-      return Plugin::error("Destroying an invalid stream");
+      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                           "Destroying an invalid stream");
 
     CUresult Res = cuStreamDestroy(Stream);
     if (auto Err = Plugin::check(Res, "Error in cuStreamDestroy: %s"))
@@ -222,7 +227,8 @@ struct CUDAEventRef final : public GenericDeviceResourceRef {
   /// before calling to this function.
   Error create(GenericDeviceTy &Device) override {
     if (Event)
-      return Plugin::error("Creating an existing event");
+      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                           "Creating an existing event");
 
     CUresult Res = cuEventCreate(&Event, CU_EVENT_DEFAULT);
     if (auto Err = Plugin::check(Res, "Error in cuEventCreate: %s"))
@@ -235,7 +241,8 @@ struct CUDAEventRef final : public GenericDeviceResourceRef {
   /// must be to a valid event before calling to this function.
   Error destroy(GenericDeviceTy &Device) override {
     if (!Event)
-      return Plugin::error("Destroying an invalid event");
+      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                           "Destroying an invalid event");
 
     CUresult Res = cuEventDestroy(Event);
     if (auto Err = Plugin::check(Res, "Error in cuEventDestroy: %s"))
@@ -419,7 +426,8 @@ struct CUDADeviceTy : public GenericDeviceTy {
     std::error_code EC = sys::fs::createTemporaryFile("nvptx-pre-link-jit", "s",
                                                       PTXInputFilePath);
     if (EC)
-      return Plugin::error("Failed to create temporary file for ptxas");
+      return Plugin::error(ErrorCode::HOST_IO,
+                           "Failed to create temporary file for ptxas");
 
     // Write the file's contents to the output file.
     Expected<std::unique_ptr<FileOutputBuffer>> OutputOrErr =
@@ -435,12 +443,14 @@ struct CUDADeviceTy : public GenericDeviceTy {
     EC = sys::fs::createTemporaryFile("nvptx-post-link-jit", "cubin",
                                       PTXOutputFilePath);
     if (EC)
-      return Plugin::error("Failed to create temporary file for ptxas");
+      return Plugin::error(ErrorCode::HOST_IO,
+                           "Failed to create temporary file for ptxas");
 
     // Try to find `ptxas` in the path to compile the PTX to a binary.
     const auto ErrorOrPath = sys::findProgramByName("ptxas");
     if (!ErrorOrPath)
-      return Plugin::error("Failed to find 'ptxas' on the PATH.");
+      return Plugin::error(ErrorCode::HOST_TOOL_NOT_FOUND,
+                           "Failed to find 'ptxas' on the PATH.");
 
     std::string Arch = getComputeUnitKind();
     StringRef Args[] = {*ErrorOrPath,
@@ -455,17 +465,21 @@ struct CUDADeviceTy : public GenericDeviceTy {
     std::string ErrMsg;
     if (sys::ExecuteAndWait(*ErrorOrPath, Args, std::nullopt, {}, 0, 0,
                             &ErrMsg))
-      return Plugin::error("Running 'ptxas' failed: %s\n", ErrMsg.c_str());
+      return Plugin::error(ErrorCode::ASSEMBLE_FAILURE,
+                           "Running 'ptxas' failed: %s\n", ErrMsg.c_str());
 
     auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(PTXOutputFilePath.data());
     if (!BufferOrErr)
-      return Plugin::error("Failed to open temporary file for ptxas");
+      return Plugin::error(ErrorCode::HOST_IO,
+                           "Failed to open temporary file for ptxas");
 
     // Clean up the temporary files afterwards.
     if (sys::fs::remove(PTXOutputFilePath))
-      return Plugin::error("Failed to remove temporary file for ptxas");
+      return Plugin::error(ErrorCode::HOST_IO,
+                           "Failed to remove temporary file for ptxas");
     if (sys::fs::remove(PTXInputFilePath))
-      return Plugin::error("Failed to remove temporary file for ptxas");
+      return Plugin::error(ErrorCode::HOST_IO,
+                           "Failed to remove temporary file for ptxas");
 
     return std::move(*BufferOrErr);
   }
@@ -475,7 +489,8 @@ struct CUDADeviceTy : public GenericDeviceTy {
     // Allocate and construct the CUDA kernel.
     CUDAKernelTy *CUDAKernel = Plugin.allocate<CUDAKernelTy>();
     if (!CUDAKernel)
-      return Plugin::error("Failed to allocate memory for CUDA kernel");
+      return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
+                           "Failed to allocate memory for CUDA kernel");
 
     new (CUDAKernel) CUDAKernelTy(Name);
 
@@ -658,11 +673,13 @@ struct CUDADeviceTy : public GenericDeviceTy {
     size_t Size = *RSize;
 
     if (Size == 0)
-      return Plugin::error("Memory Map Size must be larger than 0");
+      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                           "Memory Map Size must be larger than 0");
 
     // Check if we have already mapped this address
     if (IHandle != DeviceMMaps.end())
-      return Plugin::error("Address already memory mapped");
+      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                           "Address already memory mapped");
 
     CUmemAllocationProp Prop = {};
     size_t Granularity = 0;
@@ -675,6 +692,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
     if (Size >= Free) {
       *Addr = nullptr;
       return Plugin::error(
+          ErrorCode::OUT_OF_RESOURCES,
           "Cannot map memory size larger than the available device memory");
     }
 
@@ -690,7 +708,8 @@ struct CUDADeviceTy : public GenericDeviceTy {
       return Err;
 
     if (Granularity == 0)
-      return Plugin::error("Wrong device Page size");
+      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                           "Wrong device Page size");
 
     // Ceil to page size.
     Size = utils::roundUp(Size, Granularity);
@@ -732,11 +751,13 @@ struct CUDADeviceTy : public GenericDeviceTy {
     auto IHandle = DeviceMMaps.find(DVAddr);
     // Mapping does not exist
     if (IHandle == DeviceMMaps.end()) {
-      return Plugin::error("Addr is not MemoryMapped");
+      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                           "Addr is not MemoryMapped");
     }
 
     if (IHandle == DeviceMMaps.end())
-      return Plugin::error("Addr is not MemoryMapped");
+      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                           "Addr is not MemoryMapped");
 
     CUmemGenericAllocationHandle &AllocHandle = IHandle->second;
 
@@ -1156,7 +1177,8 @@ private:
 
       uint16_t Priority;
       if (NameOrErr->rsplit('_').second.getAsInteger(10, Priority))
-        return Plugin::error("Invalid priority for constructor or destructor");
+        return Plugin::error(ErrorCode::INVALID_BINARY,
+                             "Invalid priority for constructor or destructor");
 
       Funcs.emplace_back(*NameOrErr, Priority);
     }
@@ -1169,7 +1191,8 @@ private:
     void *Buffer =
         allocate(Funcs.size() * sizeof(void *), nullptr, TARGET_ALLOC_DEVICE);
     if (!Buffer)
-      return Plugin::error("Failed to allocate memory for global buffer");
+      return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
+                           "Failed to allocate memory for global buffer");
 
     auto *GlobalPtrStart = reinterpret_cast<uintptr_t *>(Buffer);
     auto *GlobalPtrStop = reinterpret_cast<uintptr_t *>(Buffer) + Funcs.size();
@@ -1217,7 +1240,8 @@ private:
     AsyncInfoWrapper.finalize(Err);
 
     if (free(Buffer, TARGET_ALLOC_DEVICE) != OFFLOAD_SUCCESS)
-      return Plugin::error("Failed to free memory for global buffer");
+      return Plugin::error(ErrorCode::UNKNOWN,
+                           "Failed to free memory for global buffer");
 
     return Err;
   }
@@ -1316,6 +1340,7 @@ public:
 
     if (CUSize != DeviceGlobal.getSize())
       return Plugin::error(
+          ErrorCode::INVALID_BINARY,
           "Failed to load global '%s' due to size mismatch (%zu != %zu)",
           GlobalName, CUSize, (size_t)DeviceGlobal.getSize());
 
@@ -1501,8 +1526,9 @@ static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
   if (Ret != CUDA_SUCCESS)
     REPORT("Unrecognized " GETNAME(TARGET_NAME) " error code %d\n", Code);
 
-  return createStringError<ArgsTy..., const char *>(inconvertibleErrorCode(),
-                                                    ErrFmt, Args..., Desc);
+  // TODO: Create a map for CUDA error codes to Offload error codes
+  return createStringError<ArgsTy..., const char *>(ErrorCode::UNKNOWN, ErrFmt,
+                                                    Args..., Desc);
 }
 
 } // namespace plugin

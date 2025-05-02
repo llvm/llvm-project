@@ -75,6 +75,8 @@
 #include "hsa/hsa_ext_amd.h"
 #endif
 
+using namespace error;
+
 namespace llvm {
 namespace omp {
 namespace target {
@@ -167,7 +169,8 @@ Error asyncMemCopy(bool UseMultipleSdmaEngines, void *Dst, hsa_agent_t DstAgent,
 // This solution is probably not the best
 #if !(HSA_AMD_INTERFACE_VERSION_MAJOR >= 1 &&                                  \
       HSA_AMD_INTERFACE_VERSION_MINOR >= 2)
-  return Plugin::error("Async copy on selected SDMA requires ROCm 5.7");
+  return Plugin::error(ErrorCode::UNSUPPORTED,
+                       "Async copy on selected SDMA requires ROCm 5.7");
 #else
   static std::atomic<int> SdmaEngine{1};
 
@@ -237,7 +240,8 @@ struct AMDGPUResourceRef : public GenericDeviceResourceRef {
   /// reference must be to a valid resource before calling to this function.
   Error destroy(GenericDeviceTy &Device) override {
     if (!Resource)
-      return Plugin::error("Destroying an invalid resource");
+      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                           "Destroying an invalid resource");
 
     if (auto Err = Resource->deinit())
       return Err;
@@ -335,7 +339,8 @@ struct AMDGPUMemoryPoolTy {
       // The agent is not allowed to access the memory pool in any case. Do not
       // continue because otherwise it result in undefined behavior.
       if (Access == HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED)
-        return Plugin::error("An agent is not allowed to access a memory pool");
+        return Plugin::error(ErrorCode::INVALID_VALUE,
+                             "An agent is not allowed to access a memory pool");
     }
 #endif
 
@@ -416,7 +421,8 @@ struct AMDGPUMemoryManagerTy : public DeviceAllocatorTy {
 
     *PtrStorage = MemoryManager->allocate(Size, nullptr);
     if (*PtrStorage == nullptr)
-      return Plugin::error("Failure to allocate from AMDGPU memory manager");
+      return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
+                           "Failure to allocate from AMDGPU memory manager");
 
     return Plugin::success();
   }
@@ -426,7 +432,8 @@ struct AMDGPUMemoryManagerTy : public DeviceAllocatorTy {
     assert(Ptr && "Invalid pointer");
 
     if (MemoryManager->free(Ptr))
-      return Plugin::error("Failure to deallocate from AMDGPU memory manager");
+      return Plugin::error(ErrorCode::UNKNOWN,
+                           "Failure to deallocate from AMDGPU memory manager");
 
     return Plugin::success();
   }
@@ -540,7 +547,8 @@ struct AMDGPUKernelTy : public GenericKernelTy {
 
     // Make sure it is a kernel symbol.
     if (SymbolType != HSA_SYMBOL_KIND_KERNEL)
-      return Plugin::error("Symbol %s is not a kernel function");
+      return Plugin::error(ErrorCode::INVALID_BINARY,
+                           "Symbol %s is not a kernel function");
 
     // TODO: Read the kernel descriptor for the max threads per block. May be
     // read from the image.
@@ -1115,7 +1123,8 @@ private:
   /// Use a barrier packet with two input signals.
   Error waitOnStreamOperation(AMDGPUStreamTy &OtherStream, uint32_t Slot) {
     if (Queue == nullptr)
-      return Plugin::error("Target queue was nullptr");
+      return Plugin::error(ErrorCode::INVALID_NULL_POINTER,
+                           "Target queue was nullptr");
 
     /// The signal that we must wait from the other stream.
     AMDGPUSignalTy *OtherSignal = OtherStream.Slots[Slot].Signal;
@@ -1236,7 +1245,8 @@ public:
                          uint32_t GroupSize, uint64_t StackSize,
                          AMDGPUMemoryManagerTy &MemoryManager) {
     if (Queue == nullptr)
-      return Plugin::error("Target queue was nullptr");
+      return Plugin::error(ErrorCode::INVALID_NULL_POINTER,
+                           "Target queue was nullptr");
 
     // Retrieve an available signal for the operation's output.
     AMDGPUSignalTy *OutputSignal = nullptr;
@@ -1553,7 +1563,8 @@ struct AMDGPUEventTy {
     std::lock_guard<std::mutex> Lock(Mutex);
 
     if (!RecordedStream)
-      return Plugin::error("Event does not have any recorded stream");
+      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                           "Event does not have any recorded stream");
 
     // Synchronizing the same stream. Do nothing.
     if (RecordedStream == &Stream)
@@ -1942,7 +1953,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     else if (WavefrontSize == 64)
       GridValues = getAMDGPUGridValues<64>();
     else
-      return Plugin::error("Unexpected AMDGPU wavefront %d", WavefrontSize);
+      return Plugin::error(ErrorCode::UNSUPPORTED,
+                           "Unexpected AMDGPU wavefront %d", WavefrontSize);
 
     // Get maximum number of workitems per workgroup.
     uint16_t WorkgroupMaxDim[3];
@@ -1958,7 +1970,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     GridValues.GV_Max_Teams = GridMaxDim.x / GridValues.GV_Max_WG_Size;
     if (GridValues.GV_Max_Teams == 0)
-      return Plugin::error("Maximum number of teams cannot be zero");
+      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                           "Maximum number of teams cannot be zero");
 
     // Compute the default number of teams.
     uint32_t ComputeUnits = 0;
@@ -2071,7 +2084,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     std::error_code EC = sys::fs::createTemporaryFile("amdgpu-pre-link-jit",
                                                       "o", LinkerInputFilePath);
     if (EC)
-      return Plugin::error("Failed to create temporary file for linker");
+      return Plugin::error(ErrorCode::HOST_IO,
+                           "Failed to create temporary file for linker");
 
     // Write the file's contents to the output file.
     Expected<std::unique_ptr<FileOutputBuffer>> OutputOrErr =
@@ -2087,11 +2101,12 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     EC = sys::fs::createTemporaryFile("amdgpu-pre-link-jit", "so",
                                       LinkerOutputFilePath);
     if (EC)
-      return Plugin::error("Failed to create temporary file for linker");
+      return Plugin::error(ErrorCode::HOST_IO,
+                           "Failed to create temporary file for linker");
 
     const auto &ErrorOrPath = sys::findProgramByName("lld");
     if (!ErrorOrPath)
-      return createStringError(inconvertibleErrorCode(),
+      return createStringError(ErrorCode::HOST_TOOL_NOT_FOUND,
                                "Failed to find `lld` on the PATH.");
 
     std::string LLDPath = ErrorOrPath.get();
@@ -2112,18 +2127,22 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     std::string Error;
     int RC = sys::ExecuteAndWait(LLDPath, Args, std::nullopt, {}, 0, 0, &Error);
     if (RC)
-      return Plugin::error("Linking optimized bitcode failed: %s",
+      return Plugin::error(ErrorCode::LINK_FAILURE,
+                           "Linking optimized bitcode failed: %s",
                            Error.c_str());
 
     auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(LinkerOutputFilePath);
     if (!BufferOrErr)
-      return Plugin::error("Failed to open temporary file for lld");
+      return Plugin::error(ErrorCode::HOST_IO,
+                           "Failed to open temporary file for lld");
 
     // Clean up the temporary files afterwards.
     if (sys::fs::remove(LinkerOutputFilePath))
-      return Plugin::error("Failed to remove temporary output file for lld");
+      return Plugin::error(ErrorCode::HOST_IO,
+                           "Failed to remove temporary output file for lld");
     if (sys::fs::remove(LinkerInputFilePath))
-      return Plugin::error("Failed to remove temporary input file for lld");
+      return Plugin::error(ErrorCode::HOST_IO,
+                           "Failed to remove temporary input file for lld");
 
     return std::move(*BufferOrErr);
   }
@@ -2139,7 +2158,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     // Allocate and construct the AMDGPU kernel.
     AMDGPUKernelTy *AMDGPUKernel = Plugin.allocate<AMDGPUKernelTy>();
     if (!AMDGPUKernel)
-      return Plugin::error("Failed to allocate memory for AMDGPU kernel");
+      return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
+                           "Failed to allocate memory for AMDGPU kernel");
 
     new (AMDGPUKernel) AMDGPUKernelTy(Name);
 
@@ -2529,7 +2549,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
   /// Synchronize the current thread with the event.
   Error syncEventImpl(void *EventPtr) override {
-    return Plugin::error("Synchronize event not implemented");
+    return Plugin::error(ErrorCode::UNIMPLEMENTED,
+                         "Synchronize event not implemented");
   }
 
   /// Print information about the device.
@@ -2777,7 +2798,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         return Plugin::check(Status, "Error in getting device memory size: %s");
       }
     }
-    return Plugin::error("getDeviceMemorySize:: no global pool");
+    return Plugin::error(ErrorCode::UNSUPPORTED,
+                         "getDeviceMemorySize:: no global pool");
   }
 
   /// AMDGPU-specific function to get device attributes.
@@ -2981,7 +3003,8 @@ Error AMDGPUDeviceImageTy::loadExecutable(const AMDGPUDeviceTy &Device) {
     return Err;
 
   if (Result)
-    return Plugin::error("Loaded HSA executable does not validate");
+    return Plugin::error(ErrorCode::INVALID_BINARY,
+                         "Loaded HSA executable does not validate");
 
   Status = hsa_code_object_reader_destroy(Reader);
   if (auto Err =
@@ -3016,7 +3039,8 @@ AMDGPUDeviceImageTy::findDeviceSymbol(GenericDeviceTy &Device,
 template <typename ResourceTy>
 Error AMDGPUResourceRef<ResourceTy>::create(GenericDeviceTy &Device) {
   if (Resource)
-    return Plugin::error("Creating an existing resource");
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "Creating an existing resource");
 
   AMDGPUDeviceTy &AMDGPUDevice = static_cast<AMDGPUDeviceTy &>(Device);
 
@@ -3072,6 +3096,7 @@ struct AMDGPUGlobalHandlerTy final : public GenericGlobalHandlerTy {
     // Check the size of the symbol.
     if (SymbolSize != DeviceGlobal.getSize())
       return Plugin::error(
+          ErrorCode::INVALID_BINARY,
           "Failed to load global '%s' due to size mismatch (%zu != %zu)",
           DeviceGlobal.getName().data(), SymbolSize,
           (size_t)DeviceGlobal.getSize());
@@ -3151,7 +3176,7 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     // There are kernel agents but there is no host agent. That should be
     // treated as an error.
     if (HostAgents.empty())
-      return Plugin::error("No AMDGPU host agents");
+      return Plugin::error(ErrorCode::BACKEND_FAILURE, "No AMDGPU host agents");
 
     // Initialize the host device using host agents.
     HostDevice = allocate<AMDHostDeviceTy>();
@@ -3341,7 +3366,8 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                  AsyncInfoWrapperTy &AsyncInfoWrapper) const {
   if (ArgsSize != LaunchParams.Size &&
       ArgsSize != LaunchParams.Size + getImplicitArgsSize())
-    return Plugin::error("Mismatch of kernel arguments size");
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "Mismatch of kernel arguments size");
 
   AMDGPUPluginTy &AMDGPUPlugin =
       static_cast<AMDGPUPluginTy &>(GenericDevice.Plugin);
@@ -3461,8 +3487,18 @@ static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
   if (Ret != HSA_STATUS_SUCCESS)
     REPORT("Unrecognized " GETNAME(TARGET_NAME) " error code %d\n", Code);
 
-  return createStringError<ArgsTy..., const char *>(inconvertibleErrorCode(),
-                                                    ErrFmt, Args..., Desc);
+  // TODO: Add more entries to this switch
+  ErrorCode OffloadErrCode;
+  switch (ResultCode) {
+  case HSA_STATUS_ERROR_INVALID_SYMBOL_NAME:
+    OffloadErrCode = ErrorCode::NOT_FOUND;
+    break;
+  default:
+    OffloadErrCode = ErrorCode::UNKNOWN;
+  }
+
+  return createStringError<ArgsTy..., const char *>(OffloadErrCode, ErrFmt,
+                                                    Args..., Desc);
 }
 
 void *AMDGPUMemoryManagerTy::allocate(size_t Size, void *HstPtr,
