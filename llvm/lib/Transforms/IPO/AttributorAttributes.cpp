@@ -626,8 +626,7 @@ static void followUsesInContext(AAType &AA, Attributor &A,
     if (const Instruction *UserI = dyn_cast<Instruction>(U->getUser())) {
       bool Found = Explorer.findInContextOf(UserI, EIt, EEnd);
       if (Found && AA.followUseInMBEC(A, U, UserI, State))
-        for (const Use &Us : UserI->uses())
-          Uses.insert(&Us);
+        Uses.insert_range(llvm::make_pointer_range(UserI->uses()));
     }
   }
 }
