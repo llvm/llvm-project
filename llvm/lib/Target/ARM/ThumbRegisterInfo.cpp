@@ -196,7 +196,7 @@ static void emitThumbRegPlusImmInReg(
       }
       // If there's no use or def of CPSR then it may be live if it's a
       // live-out value.
-      auto liveOutIsCpsr = [](auto &Out) { return Out.PhysReg == ARM::CPSR; };
+      auto liveOutIsCpsr = [](auto &Out) { return Out == ARM::CPSR; };
       if (!LiveCpsr && !CpsrWrite)
         LiveCpsr = any_of(MBB.liveouts(), liveOutIsCpsr);
 

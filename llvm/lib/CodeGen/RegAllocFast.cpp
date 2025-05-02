@@ -687,8 +687,7 @@ void RegAllocFastImpl::reloadAtBegin(MachineBasicBlock &MBB) {
   if (LiveVirtRegs.empty())
     return;
 
-  for (MachineBasicBlock::RegisterMaskPair P : MBB.liveins()) {
-    MCRegister Reg = P.PhysReg;
+  for (MCRegister Reg : MBB.liveins()) {
     // Set state to live-in. This possibly overrides mappings to virtual
     // registers but we don't care anymore at this point.
     setPhysRegState(Reg, regLiveIn);
@@ -1781,7 +1780,7 @@ void RegAllocFastImpl::allocateBasicBlock(MachineBasicBlock &MBB) {
   assert(LiveVirtRegs.empty() && "Mapping not cleared from last block?");
 
   for (const auto &LiveReg : MBB.liveouts())
-    setPhysRegState(LiveReg.PhysReg, regPreAssigned);
+    setPhysRegState(LiveReg, regPreAssigned);
 
   Coalesced.clear();
 

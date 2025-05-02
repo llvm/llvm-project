@@ -401,12 +401,7 @@ void BranchFolder::replaceTailWithBranchTo(MachineBasicBlock::iterator OldInst,
     // Merging the tails may have switched some undef operand to non-undef ones.
     // Add IMPLICIT_DEFS into OldMBB as necessary to have a definition of the
     // register.
-    for (MachineBasicBlock::RegisterMaskPair P : NewDest.liveins()) {
-      // We computed the liveins with computeLiveIn earlier and should only see
-      // full registers:
-      assert(P.LaneMask == LaneBitmask::getAll() &&
-             "Can only handle full register.");
-      MCRegister Reg = P.PhysReg;
+    for (MCRegister Reg : NewDest.liveins()) {
       if (!LiveRegs.available(*MRI, Reg))
         continue;
       DebugLoc DL;

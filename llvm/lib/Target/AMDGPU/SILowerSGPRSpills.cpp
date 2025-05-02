@@ -240,7 +240,6 @@ static void updateLiveness(MachineFunction &MF, ArrayRef<CalleeSavedInfo> CSI) {
 
   for (const CalleeSavedInfo &CSIReg : CSI)
     EntryBB.addLiveIn(CSIReg.getReg());
-  EntryBB.sortUniqueLiveIns();
 }
 
 bool SILowerSGPRSpills::spillCalleeSavedRegs(
