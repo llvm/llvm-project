@@ -2344,6 +2344,8 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
 #endif /* LLPC_BUILD_NPI */
       case OffloadArch::AMDGCNSPIRV:
       case OffloadArch::Generic:
+      case OffloadArch::GRANITERAPIDS:
+      case OffloadArch::BMG_G21:
       case OffloadArch::UNUSED:
       case OffloadArch::UNKNOWN:
         break;

@@ -97,6 +97,10 @@ static const OffloadArchToStringMap ArchNames[] = {
     GFX(130E), // gfx130E
 #endif /* LLPC_BUILD_NPI */
     {OffloadArch::AMDGCNSPIRV, "amdgcnspirv", "compute_amdgcn"},
+    // Intel CPUs
+    {OffloadArch::GRANITERAPIDS, "graniterapids", ""},
+    // Intel GPUS
+    {OffloadArch::BMG_G21, "bmg_g21", ""},
     {OffloadArch::Generic, "generic", ""},
     // clang-format on
 };

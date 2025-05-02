@@ -444,6 +444,9 @@ TARGET_BUILTIN(__builtin_amdgcn_smfmac_f32_32x32x32_fp8_fp8, "V16fV2iV4iV16fiIiI
 
 TARGET_BUILTIN(__builtin_amdgcn_cvt_f32_bf8, "fiIi", "nc", "fp8-conversion-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_f32_fp8, "fiIi", "nc", "fp8-conversion-insts")
+#if LLPC_BUILD_NPI
+TARGET_BUILTIN(__builtin_amdgcn_cvt_f32_fp8_e5m3, "fiIi", "nc", "fp8e5m3-insts")
+#endif /* LLPC_BUILD_NPI */
 TARGET_BUILTIN(__builtin_amdgcn_cvt_pk_f32_bf8, "V2fiIb", "nc", "fp8-conversion-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_pk_f32_fp8, "V2fiIb", "nc", "fp8-conversion-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_pk_bf8_f32, "iffiIb", "nc", "fp8-conversion-insts")
