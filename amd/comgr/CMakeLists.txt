@@ -228,7 +228,8 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     "/wd4624" #[[Suppress 'derived class' : destructor could not be generated because a base class destructor is inaccessible]]
     "/wd4267" #[[Suppress 'var' : conversion from 'size_t' to 'type', possible loss of data]]
     "/wd4291" #[[Suppress 'declaration' : no matching operator delete found; memory will not be freed if initialization throws an exception]]
-    "/wd4146" #[[Suppress 'unary minus operator applied to unsigned type, result still unsigned]])
+    "/wd4146" #[[Suppress 'unary minus operator applied to unsigned type, result still unsigned]]
+    "/Zc:preprocessor" #[[Enable standards conforming preprocessor - https://learn.microsoft.com/en-us/cpp/build/reference/zc-preprocessor]])
   list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS _HAS_EXCEPTIONS=0)
 endif()
 
