@@ -110,6 +110,8 @@ def AtomicBinOpUSubCond : LLVM_EnumAttrCase<"usub_cond",
                                             "usub_cond", "USubCond", 17>;
 def AtomicBinOpUSubSat : LLVM_EnumAttrCase<"usub_sat",
                                            "usub_sat", "USubSat", 18>;
+def AtomicBinOpFMaximum : LLVM_EnumAttrCase<"fmaximum", "fmaximum", "FMaximum", 19>;
+def AtomicBinOpFMinimum : LLVM_EnumAttrCase<"fminimum", "fminimum", "FMinimum", 20>;
 
 // A sentinel value that has no MLIR counterpart.
 def AtomicBadBinOp : LLVM_EnumAttrCase<"", "", "BAD_BINOP", 0>;
@@ -122,7 +124,8 @@ def AtomicBinOp : LLVM_EnumAttr<
      AtomicBinOpNand, AtomicBinOpOr, AtomicBinOpXor, AtomicBinOpMax,
      AtomicBinOpMin, AtomicBinOpUMax, AtomicBinOpUMin, AtomicBinOpFAdd,
      AtomicBinOpFSub, AtomicBinOpFMax, AtomicBinOpFMin, AtomicBinOpUIncWrap,
-     AtomicBinOpUDecWrap, AtomicBinOpUSubCond, AtomicBinOpUSubSat],
+     AtomicBinOpUDecWrap, AtomicBinOpUSubCond, AtomicBinOpUSubSat,
+     AtomicBinOpFMaximum, AtomicBinOpFMinimum],
     [AtomicBadBinOp]> {
   let cppNamespace = "::mlir::LLVM";
 }
@@ -874,6 +877,34 @@ def UWTableKindEnum : LLVM_EnumAttr<
     "LLVM Unwind Behavior",
     [UWTableKindNone, UWTableKindSync, UWTableKindAsync]> {
   let cppNamespace = "::mlir::LLVM::uwtable";
+}
+
+//===----------------------------------------------------------------------===//
+// GEPNoWrapFlags
+//===----------------------------------------------------------------------===//
+
+// These values must match llvm::GEPNoWrapFlags ones.
+// See llvm/include/llvm/IR/GEPNoWrapFlags.h.
+// Since inbounds implies nusw, create an inboundsFlag that represents the
+// concept of raw inbounds with no nusw implication and the actual inbounds
+// literal will be captured as the combination of inboundsFlag and nusw.
+
+def GEPNone : I32BitEnumCaseNone<"none">;
+def GEPInboundsFlag : I32BitEnumCaseBit<"inboundsFlag", 0, "inbounds_flag">;
+def GEPNusw : I32BitEnumCaseBit<"nusw", 1>;
+def GEPNuw : I32BitEnumCaseBit<"nuw", 2>;
+def GEPInbounds : BitEnumCaseGroup<"inbounds", [GEPInboundsFlag, GEPNusw]>;
+
+def GEPNoWrapFlags : I32BitEnum<
+    "GEPNoWrapFlags",
+    "::mlir::LLVM::GEPNoWrapFlags",
+    [GEPNone, GEPInboundsFlag, GEPNusw, GEPNuw, GEPInbounds]> {
+  let cppNamespace = "::mlir::LLVM";
+  let printBitEnumPrimaryGroups = 1;
+}
+
+def GEPNoWrapFlagsProp : EnumProp<GEPNoWrapFlags> {
+  let defaultValue = interfaceType # "::none";
 }
 
 #endif // LLVMIR_ENUMS
