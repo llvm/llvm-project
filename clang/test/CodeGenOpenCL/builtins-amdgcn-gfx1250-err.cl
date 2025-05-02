@@ -155,3 +155,8 @@ void test_prefetch(generic void *fptr, global void *gptr, int cpol) {
   __builtin_amdgcn_flat_prefetch(fptr, cpol); // expected-error {{'__builtin_amdgcn_flat_prefetch' must be a constant integer}}
   __builtin_amdgcn_global_prefetch(gptr, cpol); // expected-error {{'__builtin_amdgcn_global_prefetch' must be a constant integer}}
 }
+
+void test_cvt_f32_fp8_e5m3(global int* out, int a)
+{
+  *out = __builtin_amdgcn_cvt_f32_fp8_e5m3(a, a); // expected-error {{'__builtin_amdgcn_cvt_f32_fp8_e5m3' must be a constant integer}}
+}
