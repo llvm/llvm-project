@@ -120,33 +120,6 @@ static int64_t computeRemainingYears(int64_t daysPerYears,
   return years;
 }
 
-char *get_env_var(const char *input) {
-  char **env_ptr = reinterpret_cast<char **>(LIBC_NAMESPACE::app.env_ptr);
-
-  if (input == nullptr || env_ptr == nullptr)
-    return nullptr;
-
-  LIBC_NAMESPACE::cpp::string_view env_var_name(input);
-  if (env_var_name.size() == 0)
-    return nullptr;
-
-  for (char **env = env_ptr; *env != nullptr; ++env) {
-    LIBC_NAMESPACE::cpp::string_view cur(*env);
-    if (!cur.starts_with(env_var_name))
-      continue;
-
-    if (cur[env_var_name.size()] != '=')
-      continue;
-
-    // Remove the name and the equals sign.
-    cur.remove_prefix(env_var_name.size() + 1);
-    // We know that data is null terminated, so this is safe.
-    return const_cast<char *>(cur.data());
-  }
-
-  return nullptr;
-}
-
 // First, divide "total_seconds" by the number of seconds in a day to get the
 // number of days since Jan 1 1970. The remainder will be used to calculate the
 // number of Hours, Minutes and Seconds.
