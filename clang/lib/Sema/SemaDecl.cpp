@@ -18606,7 +18606,8 @@ ExprResult Sema::VerifyBitField(SourceLocation FieldLoc,
     return BitWidth;
 
   llvm::APSInt Value;
-  ExprResult ICE = VerifyIntegerConstantExpression(BitWidth, &Value, AllowFold);
+  ExprResult ICE =
+      VerifyIntegerConstantExpression(BitWidth, &Value, AllowFoldKind::Allow);
   if (ICE.isInvalid())
     return ICE;
   BitWidth = ICE.get();
@@ -19849,9 +19850,9 @@ EnumConstantDecl *Sema::CheckEnumConstant(EnumDecl *Enum,
         else
           Val = Converted.get();
       } else if (!Val->isValueDependent() &&
-                 !(Val =
-                       VerifyIntegerConstantExpression(Val, &EnumVal, AllowFold)
-                           .get())) {
+                 !(Val = VerifyIntegerConstantExpression(Val, &EnumVal,
+                                                         AllowFoldKind::Allow)
+                             .get())) {
         // C99 6.7.2.2p2: Make sure we have an integer constant expression.
       } else {
         if (Enum->isComplete()) {

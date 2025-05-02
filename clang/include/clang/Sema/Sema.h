@@ -648,6 +648,11 @@ enum class TrivialABIHandling {
 
 enum class TryCaptureKind { Implicit, ExplicitByVal, ExplicitByRef };
 
+enum class AllowFoldKind {
+  No,
+  Allow,
+};
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -7424,25 +7429,23 @@ public:
     virtual ~VerifyICEDiagnoser() {}
   };
 
-  enum AllowFoldKind {
-    NoFold,
-    AllowFold,
-  };
-
   /// VerifyIntegerConstantExpression - Verifies that an expression is an ICE,
   /// and reports the appropriate diagnostics. Returns false on success.
   /// Can optionally return the value of the expression.
-  ExprResult VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
-                                             VerifyICEDiagnoser &Diagnoser,
-                                             AllowFoldKind CanFold = NoFold);
-  ExprResult VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
-                                             unsigned DiagID,
-                                             AllowFoldKind CanFold = NoFold);
-  ExprResult VerifyIntegerConstantExpression(Expr *E,
-                                             llvm::APSInt *Result = nullptr,
-                                             AllowFoldKind CanFold = NoFold);
-  ExprResult VerifyIntegerConstantExpression(Expr *E,
-                                             AllowFoldKind CanFold = NoFold) {
+  ExprResult
+  VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
+                                  VerifyICEDiagnoser &Diagnoser,
+                                  AllowFoldKind CanFold = AllowFoldKind::No);
+  ExprResult
+  VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
+                                  unsigned DiagID,
+                                  AllowFoldKind CanFold = AllowFoldKind::No);
+  ExprResult
+  VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result = nullptr,
+                                  AllowFoldKind CanFold = AllowFoldKind::No);
+  ExprResult
+  VerifyIntegerConstantExpression(Expr *E,
+                                  AllowFoldKind CanFold = AllowFoldKind::No) {
     return VerifyIntegerConstantExpression(E, nullptr, CanFold);
   }
 

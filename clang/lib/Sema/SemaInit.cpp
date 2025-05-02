@@ -3510,7 +3510,7 @@ CheckArrayDesignatorExpr(Sema &S, Expr *Index, llvm::APSInt &Value) {
 
   // Make sure this is an integer constant expression.
   ExprResult Result =
-      S.VerifyIntegerConstantExpression(Index, &Value, Sema::AllowFold);
+      S.VerifyIntegerConstantExpression(Index, &Value, AllowFoldKind::Allow);
   if (Result.isInvalid())
     return Result;
 
