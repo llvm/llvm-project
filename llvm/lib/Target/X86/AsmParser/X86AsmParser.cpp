@@ -25,6 +25,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
+#include "llvm/MC/MCParser/MCMasmParser.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -32,6 +33,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSymbolCOFF.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -1199,6 +1201,10 @@ private:
 
   void MatchFPUWaitAlias(SMLoc IDLoc, X86Operand &Op, OperandVector &Operands,
                          MCStreamer &Out, bool MatchingInlineAsm);
+
+  void MatchMASMFarCallToNear(SMLoc IDLoc, X86Operand &Op,
+                              OperandVector &Operands, MCStreamer &Out,
+                              bool MatchingInlineAsm);
 
   bool ErrorMissingFeature(SMLoc IDLoc, const FeatureBitset &MissingFeatures,
                            bool MatchingInlineAsm);
@@ -2738,11 +2744,11 @@ bool X86AsmParser::parseIntelOperand(OperandVector &Operands, StringRef Name) {
   if ((BaseReg || IndexReg || RegNo || DefaultBaseReg))
     Operands.push_back(X86Operand::CreateMem(
         getPointerWidth(), RegNo, Disp, BaseReg, IndexReg, Scale, Start, End,
-        Size, DefaultBaseReg, /*SymName=*/StringRef(), /*OpDecl=*/nullptr,
+        Size, DefaultBaseReg, /*SymName=*/SM.getSymName(), /*OpDecl=*/nullptr,
         /*FrontendSize=*/0, /*UseUpRegs=*/false, MaybeDirectBranchDest));
   else
     Operands.push_back(X86Operand::CreateMem(
-        getPointerWidth(), Disp, Start, End, Size, /*SymName=*/StringRef(),
+        getPointerWidth(), Disp, Start, End, Size, /*SymName=*/SM.getSymName(),
         /*OpDecl=*/nullptr, /*FrontendSize=*/0, /*UseUpRegs=*/false,
         MaybeDirectBranchDest));
   return false;
@@ -3440,6 +3446,14 @@ bool X86AsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
     }
   }
 
+  if (Parser.isParsingMasm() && !is64BitMode()) {
+    // MASM implicitly converts "ret" to "retf" in far procedures; this is
+    // reflected in the default return type in the MCContext.
+    if (PatchedName == "ret" &&
+        cast<MCMasmParser>(getParser()).getDefaultRetIsFar())
+      PatchedName = "retf";
+  }
+
   // Determine whether this is an instruction prefix.
   // FIXME:
   // Enhance prefixes integrity robustness. for example, following forms
@@ -4128,6 +4142,11 @@ bool X86AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   // First, handle aliases that expand to multiple instructions.
   MatchFPUWaitAlias(IDLoc, static_cast<X86Operand &>(*Operands[0]), Operands,
                     Out, MatchingInlineAsm);
+  if (getParser().isParsingMasm() && !is64BitMode()) {
+    MatchMASMFarCallToNear(IDLoc, static_cast<X86Operand &>(*Operands[0]),
+                           Operands, Out, MatchingInlineAsm);
+  }
+
   unsigned Prefixes = getPrefixes(Operands);
 
   MCInst Inst;
@@ -4186,6 +4205,37 @@ void X86AsmParser::MatchFPUWaitAlias(SMLoc IDLoc, X86Operand &Op,
     if (!MatchingInlineAsm)
       emitInstruction(Inst, Operands, Out);
     Operands[0] = X86Operand::CreateToken(Repl, IDLoc);
+  }
+}
+
+void X86AsmParser::MatchMASMFarCallToNear(SMLoc IDLoc, X86Operand &Op,
+                                          OperandVector &Operands,
+                                          MCStreamer &Out,
+                                          bool MatchingInlineAsm) {
+  // FIXME: This should be replaced with a real .td file alias mechanism.
+  // Also, MatchInstructionImpl should actually *do* the EmitInstruction
+  // call.
+  if (Op.getToken() != "call")
+    return;
+  // This is a call instruction...
+
+  X86Operand &Operand = static_cast<X86Operand &>(*Operands[1]);
+  MCSymbol *Sym = getContext().lookupSymbol(Operand.getSymName());
+  if (Sym == nullptr || !Sym->isInSection() || !Sym->isCOFF() ||
+      !dyn_cast<MCSymbolCOFF>(Sym)->isFarProc())
+    return;
+  // Sym is a reference to a far proc in a code section....
+
+  if (Out.getCurrentSectionOnly() == &Sym->getSection()) {
+    // This is a call to a symbol declared as a far proc, and will be emitted as
+    // a near call... so we need to explicitly push the code section register
+    // before the call.
+    MCInst Inst;
+    Inst.setOpcode(X86::PUSH32r);
+    Inst.addOperand(MCOperand::createReg(MCRegister(X86::CS)));
+    Inst.setLoc(IDLoc);
+    if (!MatchingInlineAsm)
+      emitInstruction(Inst, Operands, Out);
   }
 }
 

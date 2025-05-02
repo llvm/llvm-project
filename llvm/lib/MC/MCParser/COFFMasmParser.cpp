@@ -12,7 +12,9 @@
 #include "llvm/MC/MCAsmMacro.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
+#include "llvm/MC/MCParser/MCMasmParser.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCStreamer.h"
@@ -41,6 +43,7 @@ class COFFMasmParser : public MCAsmParserExtension {
                           StringRef COMDATSymName, COFF::COMDATType Type,
                           Align Alignment);
 
+  bool parseDirectiveModel(StringRef, SMLoc);
   bool parseDirectiveProc(StringRef, SMLoc);
   bool parseDirectiveEndProc(StringRef, SMLoc);
   bool parseDirectiveSegment(StringRef, SMLoc);
@@ -167,7 +170,7 @@ class COFFMasmParser : public MCAsmParserExtension {
     // .exit
     // .fardata
     // .fardata?
-    addDirectiveHandler<&COFFMasmParser::IgnoreDirective>(".model");
+    addDirectiveHandler<&COFFMasmParser::parseDirectiveModel>(".model");
     // .stack
     // .startup
 
@@ -201,8 +204,13 @@ class COFFMasmParser : public MCAsmParserExtension {
   }
 
   /// Stack of active procedure definitions.
-  SmallVector<StringRef, 1> CurrentProcedures;
-  SmallVector<bool, 1> CurrentProceduresFramed;
+  enum ProcDistance { PROC_DISTANCE_NEAR = 0, PROC_DISTANCE_FAR = 1 };
+  struct ProcInfo {
+    StringRef Name;
+    ProcDistance Distance = PROC_DISTANCE_NEAR;
+    bool IsFramed = false;
+  };
+  SmallVector<ProcInfo, 1> CurrentProcedures;
 
 public:
   COFFMasmParser() = default;
@@ -435,48 +443,75 @@ bool COFFMasmParser::parseDirectiveOption(StringRef Directive, SMLoc Loc) {
   return false;
 }
 
+/// parseDirectiveModel
+///  ::= ".model" "flat"
+bool COFFMasmParser::parseDirectiveModel(StringRef Directive, SMLoc Loc) {
+  if (!getLexer().is(AsmToken::Identifier))
+    return TokError("expected identifier in directive");
+
+  StringRef ModelType = getTok().getIdentifier();
+  if (!ModelType.equals_insensitive("flat")) {
+    return TokError(
+        "expected 'flat' for memory model; no other models supported");
+  }
+
+  // Ignore; no action necessary.
+  Lex();
+  return false;
+}
+
 /// parseDirectiveProc
 /// TODO(epastor): Implement parameters and other attributes.
-///  ::= label "proc" [[distance]]
+///  ::= label "proc" [[distance]] [[frame]]
 ///          statements
 ///      label "endproc"
 bool COFFMasmParser::parseDirectiveProc(StringRef Directive, SMLoc Loc) {
   if (!getStreamer().getCurrentFragment())
     return Error(getTok().getLoc(), "expected section directive");
 
-  StringRef Label;
-  if (getParser().parseIdentifier(Label))
+  ProcInfo Proc;
+  if (getParser().parseIdentifier(Proc.Name))
     return Error(Loc, "expected identifier for procedure");
-  if (getLexer().is(AsmToken::Identifier)) {
+  while (getLexer().is(AsmToken::Identifier)) {
     StringRef nextVal = getTok().getString();
     SMLoc nextLoc = getTok().getLoc();
     if (nextVal.equals_insensitive("far")) {
-      // TODO(epastor): Handle far procedure definitions.
       Lex();
-      return Error(nextLoc, "far procedure definitions not yet supported");
-    } else if (nextVal.equals_insensitive("near")) {
-      Lex();
+      Proc.Distance = PROC_DISTANCE_FAR;
       nextVal = getTok().getString();
       nextLoc = getTok().getLoc();
+    } else if (nextVal.equals_insensitive("near")) {
+      Lex();
+      Proc.Distance = PROC_DISTANCE_NEAR;
+      nextVal = getTok().getString();
+      nextLoc = getTok().getLoc();
+    } else if (nextVal.equals_insensitive("frame")) {
+      Lex();
+      Proc.IsFramed = true;
+      nextVal = getTok().getString();
+      nextLoc = getTok().getLoc();
+    } else {
+      break;
     }
   }
-  MCSymbolCOFF *Sym = cast<MCSymbolCOFF>(getContext().getOrCreateSymbol(Label));
+  MCSymbolCOFF *Sym =
+      cast<MCSymbolCOFF>(getContext().getOrCreateSymbol(Proc.Name));
 
   // Define symbol as simple external function
   Sym->setExternal(true);
   Sym->setType(COFF::IMAGE_SYM_DTYPE_FUNCTION << COFF::SCT_COMPLEX_TYPE_SHIFT);
+  if (Proc.Distance == PROC_DISTANCE_FAR)
+    Sym->setIsFarProc();
 
-  bool Framed = false;
-  if (getLexer().is(AsmToken::Identifier) &&
-      getTok().getString().equals_insensitive("frame")) {
-    Lex();
-    Framed = true;
+  cast<MCMasmParser>(getParser())
+      .setDefaultRetIsFar(Proc.Distance == PROC_DISTANCE_FAR);
+
+  if (Proc.IsFramed) {
     getStreamer().emitWinCFIStartProc(Sym, Loc);
   }
   getStreamer().emitLabel(Sym, Loc);
 
-  CurrentProcedures.push_back(Label);
-  CurrentProceduresFramed.push_back(Framed);
+  CurrentProcedures.push_back(std::move(Proc));
   return false;
 }
 bool COFFMasmParser::parseDirectiveEndProc(StringRef Directive, SMLoc Loc) {
@@ -487,15 +522,18 @@ bool COFFMasmParser::parseDirectiveEndProc(StringRef Directive, SMLoc Loc) {
 
   if (CurrentProcedures.empty())
     return Error(Loc, "endp outside of procedure block");
-  else if (!CurrentProcedures.back().equals_insensitive(Label))
+  else if (!CurrentProcedures.back().Name.equals_insensitive(Label))
     return Error(LabelLoc, "endp does not match current procedure '" +
-                               CurrentProcedures.back() + "'");
+                               CurrentProcedures.back().Name + "'");
 
-  if (CurrentProceduresFramed.back()) {
+  if (CurrentProcedures.back().IsFramed) {
     getStreamer().emitWinCFIEndProc(Loc);
   }
   CurrentProcedures.pop_back();
-  CurrentProceduresFramed.pop_back();
+  cast<MCMasmParser>(getParser())
+      .setDefaultRetIsFar(!CurrentProcedures.empty() &&
+                          CurrentProcedures.back().Distance ==
+                              PROC_DISTANCE_FAR);
   return false;
 }
 
