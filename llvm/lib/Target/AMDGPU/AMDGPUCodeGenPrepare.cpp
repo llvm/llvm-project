@@ -2130,6 +2130,11 @@ static bool isPtrKnownNeverNull(const Value *V, const DataLayout &DL,
   if (const auto *Arg = dyn_cast<Argument>(V); Arg && Arg->hasNonNullAttr())
     return true;
 
+  // Check nonnull loads.
+  if (const auto *Load = dyn_cast<LoadInst>(V);
+      Load && Load->hasMetadata(LLVMContext::MD_nonnull))
+    return true;
+
   // getUnderlyingObject may have looked through another addrspacecast, although
   // the optimizable situations most likely folded out by now.
   if (AS != cast<PointerType>(V->getType())->getAddressSpace())
