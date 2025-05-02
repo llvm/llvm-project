@@ -799,6 +799,11 @@ enum class IfExistsResult {
   Error
 };
 
+enum class CorrectTypoKind {
+  NonError,     // CorrectTypo used in a non error recovery situation.
+  ErrorRecovery // CorrectTypo used in normal error recovery.
+};
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -9592,11 +9597,6 @@ public:
                           bool IncludeGlobalScope = true,
                           bool IncludeDependentBases = false,
                           bool LoadExternal = true);
-
-  enum CorrectTypoKind {
-    CTK_NonError,     // CorrectTypo used in a non error recovery situation.
-    CTK_ErrorRecovery // CorrectTypo used in normal error recovery.
-  };
 
   /// Try to "correct" a typo in the source code by finding
   /// visible declarations whose names are similar to the name that was
