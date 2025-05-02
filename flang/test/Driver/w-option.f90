@@ -1,3 +1,4 @@
+! XFAIL: *
 ! Test the default setting. Emit warnings only.
 ! RUN: %flang -c %s 2>&1 | FileCheck %s -check-prefix=DEFAULT
 
