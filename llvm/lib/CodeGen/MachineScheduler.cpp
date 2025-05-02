@@ -3514,7 +3514,7 @@ void GenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
     RegionPolicy.OnlyTopDown = false;
   }
 
-  this->BotIdx = NumRegionInstrs - 1;
+  BotIdx = NumRegionInstrs - 1;
   this->NumRegionInstrs = NumRegionInstrs;
 }
 
@@ -3997,6 +3997,7 @@ SUnit *GenericScheduler::pickNode(bool &IsTopNode) {
     if (SU->NodeNum == TopIdx++)
       ++NumInstrsInSourceOrderPreRA;
   } else {
+    assert(BotIdx < NumRegionInstrs && "out of bounds");
     if (SU->NodeNum == BotIdx--)
       ++NumInstrsInSourceOrderPreRA;
   }
@@ -4350,6 +4351,7 @@ SUnit *PostGenericScheduler::pickNode(bool &IsTopNode) {
     if (SU->NodeNum == TopIdx++)
       ++NumInstrsInSourceOrderPostRA;
   } else {
+    assert(BotIdx < NumRegionInstrs && "out of bounds");
     if (SU->NodeNum == BotIdx--)
       ++NumInstrsInSourceOrderPostRA;
   }
