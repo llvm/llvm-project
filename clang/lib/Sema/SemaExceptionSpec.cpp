@@ -89,7 +89,7 @@ ExprResult Sema::ActOnNoexceptSpec(Expr *NoexceptExpr,
 
   llvm::APSInt Result;
   ExprResult Converted = CheckConvertedConstantExpression(
-      NoexceptExpr, Context.BoolTy, Result, CCEK_Noexcept);
+      NoexceptExpr, Context.BoolTy, Result, CCEKind::Noexcept);
 
   if (Converted.isInvalid()) {
     EST = EST_NoexceptFalse;

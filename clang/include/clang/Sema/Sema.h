@@ -818,6 +818,22 @@ enum class OverloadKind {
   NonFunction
 };
 
+/// Contexts in which a converted constant expression is required.
+enum class CCEKind {
+  CaseValue,     ///< Expression in a case label.
+  Enumerator,    ///< Enumerator value with fixed underlying type.
+  TemplateArg,   ///< Value of a non-type template parameter.
+  TempArgStrict, ///< As above, but applies strict template checking
+                 ///< rules.
+  ArrayBound,    ///< Array bound in array declarator or new-expression.
+  ExplicitBool,  ///< Condition in an explicit(bool) specifier.
+  Noexcept,      ///< Condition in a noexcept(bool) specifier.
+  StaticAssertMessageSize, ///< Call to size() in a static assert
+                           ///< message.
+  StaticAssertMessageData, ///< Call to data() in a static assert
+                           ///< message.
+};
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -10217,22 +10233,6 @@ public:
   /// conversion of the expression From to an Objective-C pointer type.
   /// Returns a valid but null ExprResult if no conversion sequence exists.
   ExprResult PerformContextuallyConvertToObjCPointer(Expr *From);
-
-  /// Contexts in which a converted constant expression is required.
-  enum CCEKind {
-    CCEK_CaseValue,     ///< Expression in a case label.
-    CCEK_Enumerator,    ///< Enumerator value with fixed underlying type.
-    CCEK_TemplateArg,   ///< Value of a non-type template parameter.
-    CCEK_TempArgStrict, ///< As above, but applies strict template checking
-                        ///< rules.
-    CCEK_ArrayBound,    ///< Array bound in array declarator or new-expression.
-    CCEK_ExplicitBool,  ///< Condition in an explicit(bool) specifier.
-    CCEK_Noexcept,      ///< Condition in a noexcept(bool) specifier.
-    CCEK_StaticAssertMessageSize, ///< Call to size() in a static assert
-                                  ///< message.
-    CCEK_StaticAssertMessageData, ///< Call to data() in a static assert
-                                  ///< message.
-  };
 
   ExprResult BuildConvertedConstantExpression(Expr *From, QualType T,
                                               CCEKind CCE,

@@ -6962,7 +6962,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     if (IsConvertedConstantExpression) {
       ArgResult = BuildConvertedConstantExpression(
           DeductionArg, ParamType,
-          StrictCheck ? CCEK_TempArgStrict : CCEK_TemplateArg, Param);
+          StrictCheck ? CCEKind::TempArgStrict : CCEKind::TemplateArg, Param);
       assert(!ArgResult.isUnset());
       if (ArgResult.isInvalid()) {
         NoteTemplateParameterLocation(*Param);
@@ -6984,7 +6984,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
 
     APValue PreNarrowingValue;
     ArgResult = EvaluateConvertedConstantExpression(
-        ArgResult.get(), ParamType, Value, CCEK_TemplateArg, /*RequireInt=*/
+        ArgResult.get(), ParamType, Value, CCEKind::TemplateArg, /*RequireInt=*/
         false, PreNarrowingValue);
     if (ArgResult.isInvalid())
       return ExprError();
@@ -7083,7 +7083,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
       //        template-parameter; or
       llvm::APSInt Value;
       ExprResult ArgResult = CheckConvertedConstantExpression(
-          DeductionArg, ParamType, Value, CCEK_TemplateArg);
+          DeductionArg, ParamType, Value, CCEKind::TemplateArg);
       if (ArgResult.isInvalid())
         return ExprError();
       setDeductionArg(ArgResult.get());
