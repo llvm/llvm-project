@@ -38,64 +38,71 @@ class PtrMatchingDataFormatterTestCase(TestBase):
 
         # By default, --pointer-match-depth is 1.
         self.runCmd('type summary add --cascade true -s "MyInt" "Int"')
-        self.expect("frame variable", patterns=[
-            r".* i = MyInt\n",
-            r".* i_p = 0x.* MyInt\n",
-            r".* i_pp = 0x[0-9a-f]+\n",
-            r".* i_ppp = 0x[0-9a-f]+\n",
-            r".* f = MyInt\n",
-            r".* f_p = 0x[0-9a-f]+ MyInt\n",
-            r".* f_pp = 0x[0-9a-f]+\n",
-            r".* f_ppp = 0x[0-9a-f]+\n",
-            r".* fp = 0x[0-9a-f]+ MyInt\n",
-            r".* fp_p = 0x[0-9a-f]+\n",
-            r".* fp_pp = 0x[0-9a-f]+\n",
-            r".* b = MyInt\n",
-            r".* b_p = 0x[0-9a-f]+ MyInt\n",
-            r".* b_pp = 0x[0-9a-f]+\n",
-            r".* bp = 0x[0-9a-f]+ MyInt\n",
-            r".* bp_p = 0x[0-9a-f]+\n",
-            r".* bp_pp = 0x[0-9a-f]+\n",
+        self.expect(
+            "frame variable",
+            patterns=[
+                r".* i = MyInt\n",
+                r".* i_p = 0x.* MyInt\n",
+                r".* i_pp = 0x[0-9a-f]+\n",
+                r".* i_ppp = 0x[0-9a-f]+\n",
+                r".* f = MyInt\n",
+                r".* f_p = 0x[0-9a-f]+ MyInt\n",
+                r".* f_pp = 0x[0-9a-f]+\n",
+                r".* f_ppp = 0x[0-9a-f]+\n",
+                r".* fp = 0x[0-9a-f]+ MyInt\n",
+                r".* fp_p = 0x[0-9a-f]+\n",
+                r".* fp_pp = 0x[0-9a-f]+\n",
+                r".* b = MyInt\n",
+                r".* b_p = 0x[0-9a-f]+ MyInt\n",
+                r".* b_pp = 0x[0-9a-f]+\n",
+                r".* bp = 0x[0-9a-f]+ MyInt\n",
+                r".* bp_p = 0x[0-9a-f]+\n",
+                r".* bp_pp = 0x[0-9a-f]+\n",
         ])
 
         self.runCmd('type summary delete "Int"')
         self.runCmd(
             'type summary add --cascade true --pointer-match-depth 2 -s "MyInt" "Int"')
-        self.expect("frame variable", patterns=[
-            r".* i = MyInt\n",
-            r".* i_p = 0x.* MyInt\n",
-            r".* i_pp = 0x[0-9a-f]+ MyInt\n",
-            r".* i_ppp = 0x[0-9a-f]+\n",
-            r".* f = MyInt\n",
-            r".* f_p = 0x[0-9a-f]+ MyInt\n",
-            r".* f_pp = 0x[0-9a-f]+ MyInt\n",
-            r".* f_ppp = 0x[0-9a-f]+\n",
-            r".* fp = 0x[0-9a-f]+ MyInt\n",
-            r".* fp_p = 0x[0-9a-f]+ MyInt\n",
-            r".* fp_pp = 0x[0-9a-f]+\n",
-            r".* b = MyInt\n",
-            r".* b_p = 0x[0-9a-f]+ MyInt\n",
-            r".* b_pp = 0x[0-9a-f]+ MyInt\n",
-            r".* bp = 0x[0-9a-f]+ MyInt\n",
-            r".* bp_p = 0x[0-9a-f]+ MyInt\n",
-            r".* bp_pp = 0x[0-9a-f]+\n",
+        self.expect(
+            "frame variable",
+            patterns=[
+                r".* i = MyInt\n",
+                r".* i_p = 0x.* MyInt\n",
+                r".* i_pp = 0x[0-9a-f]+ MyInt\n",
+                r".* i_ppp = 0x[0-9a-f]+\n",
+                r".* f = MyInt\n",
+                r".* f_p = 0x[0-9a-f]+ MyInt\n",
+                r".* f_pp = 0x[0-9a-f]+ MyInt\n",
+                r".* f_ppp = 0x[0-9a-f]+\n",
+                r".* fp = 0x[0-9a-f]+ MyInt\n",
+                r".* fp_p = 0x[0-9a-f]+ MyInt\n",
+                r".* fp_pp = 0x[0-9a-f]+\n",
+                r".* b = MyInt\n",
+                r".* b_p = 0x[0-9a-f]+ MyInt\n",
+                r".* b_pp = 0x[0-9a-f]+ MyInt\n",
+                r".* bp = 0x[0-9a-f]+ MyInt\n",
+                r".* bp_p = 0x[0-9a-f]+ MyInt\n",
+                r".* bp_pp = 0x[0-9a-f]+\n",
         ])
 
         self.runCmd('type summary delete "Int"')
         self.runCmd(
-            'type summary add --cascade true --pointer-match-depth 2 -s "MyFoo" "Foo"')
-        self.expect("frame variable", patterns=[
-            r".* f = MyFoo\n",
-            r".* f_p = 0x[0-9a-f]+ MyFoo\n",
-            r".* f_pp = 0x[0-9a-f]+ MyFoo\n",
-            r".* f_ppp = 0x[0-9a-f]+\n",
-            r".* fp = 0x[0-9a-f]+\n",
-            r".* fp_p = 0x[0-9a-f]+\n",
-            r".* fp_pp = 0x[0-9a-f]+\n",
-            r".* b = MyFoo\n",
-            r".* b_p = 0x[0-9a-f]+ MyFoo\n",
-            r".* b_pp = 0x[0-9a-f]+ MyFoo\n",
-            r".* bp = 0x[0-9a-f]+ MyFoo\n",
-            r".* bp_p = 0x[0-9a-f]+ MyFoo\n",
-            r".* bp_pp = 0x[0-9a-f]+\n",
+            'type summary add --cascade true --pointer-match-depth 2 -s "MyFoo" "Foo"'
+        )
+        self.expect(
+            "frame variable",
+            patterns=[
+                r".* f = MyFoo\n",
+                r".* f_p = 0x[0-9a-f]+ MyFoo\n",
+                r".* f_pp = 0x[0-9a-f]+ MyFoo\n",
+                r".* f_ppp = 0x[0-9a-f]+\n",
+                r".* fp = 0x[0-9a-f]+\n",
+                r".* fp_p = 0x[0-9a-f]+\n",
+                r".* fp_pp = 0x[0-9a-f]+\n",
+                r".* b = MyFoo\n",
+                r".* b_p = 0x[0-9a-f]+ MyFoo\n",
+                r".* b_pp = 0x[0-9a-f]+ MyFoo\n",
+                r".* bp = 0x[0-9a-f]+ MyFoo\n",
+                r".* bp_p = 0x[0-9a-f]+ MyFoo\n",
+                r".* bp_pp = 0x[0-9a-f]+\n",
         ])

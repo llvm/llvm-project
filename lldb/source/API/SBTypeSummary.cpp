@@ -232,7 +232,7 @@ const char *SBTypeSummary::GetData() {
 
 uint32_t SBTypeSummary::GetPtrMatchDepth() {
   LLDB_INSTRUMENT_VA(this);
-  
+
   if (!IsValid())
     return 0;
   return m_opaque_sp->GetPtrMatchDepth();
