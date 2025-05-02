@@ -5418,6 +5418,15 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
     return !S.RequireCompleteType(
         Loc, ArgTy, diag::err_incomplete_type_used_in_type_trait_expr);
 
+  // has_unique_object_representations<T>
+  // remove_all_extents_t<T> shall be a complete type or cv void (LWG4113).
+  case UTT_HasUniqueObjectRepresentations:
+    ArgTy = QualType(ArgTy->getBaseElementTypeUnsafe(), 0);
+    if (ArgTy->isVoidType())
+      return true;
+    return !S.RequireCompleteType(
+        Loc, ArgTy, diag::err_incomplete_type_used_in_type_trait_expr);
+
   // C++1z [meta.unary.prop]:
   //   remove_all_extents_t<T> shall be a complete type or cv void.
   case UTT_IsTrivial:
@@ -5445,13 +5454,8 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_HasTrivialCopy:
   case UTT_HasTrivialDestructor:
   case UTT_HasVirtualDestructor:
-  // has_unique_object_representations<T> when T is an array is defined in terms
-  // of has_unique_object_representations<remove_all_extents_t<T>>, so the base
-  // type needs to be complete even if the type is an incomplete array type.
-  case UTT_HasUniqueObjectRepresentations:
     ArgTy = QualType(ArgTy->getBaseElementTypeUnsafe(), 0);
     [[fallthrough]];
-
   // C++1z [meta.unary.prop]:
   //   T shall be a complete type, cv void, or an array of unknown bound.
   case UTT_IsDestructible:
