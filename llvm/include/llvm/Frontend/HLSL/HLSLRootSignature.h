@@ -61,6 +61,8 @@ struct Register {
 struct DescriptorTable {
   ShaderVisibility Visibility = ShaderVisibility::All;
   uint32_t NumClauses = 0; // The number of clauses in the table
+
+  void dump(raw_ostream &OS) const;
 };
 
 static const uint32_t NumDescriptorsUnbounded = 0xffffffff;

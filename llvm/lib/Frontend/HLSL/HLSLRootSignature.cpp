@@ -39,6 +39,42 @@ void Register::dump(raw_ostream &OS) const {
   OS << Number;
 }
 
+static void dumpVisibility(raw_ostream &OS, ShaderVisibility Visibility) {
+  switch (Visibility) {
+    case ShaderVisibility::All:
+      OS << "All";
+      break;
+    case ShaderVisibility::Vertex:
+      OS << "Vertex";
+      break;
+    case ShaderVisibility::Hull:
+      OS << "Hull";
+      break;
+    case ShaderVisibility::Domain:
+      OS << "Domain";
+      break;
+    case ShaderVisibility::Geometry:
+      OS << "Geometry";
+      break;
+    case ShaderVisibility::Pixel:
+      OS << "Pixel";
+      break;
+    case ShaderVisibility::Amplification:
+      OS << "Amplification";
+      break;
+    case ShaderVisibility::Mesh:
+      OS << "Mesh";
+      break;
+  }
+}
+
+void DescriptorTable::dump(raw_ostream &OS) const {
+  OS << "DescriptorTable(numClauses = " << NumClauses;
+  OS << ", visibility = ";
+  dumpVisibility(OS, Visibility);
+  OS << ")";
+}
+
 static void dumpClauseType(raw_ostream& OS, ClauseType Type) {
   switch (Type) {
   case ClauseType::CBuffer:

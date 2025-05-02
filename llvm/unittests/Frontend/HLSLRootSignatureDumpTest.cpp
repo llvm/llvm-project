@@ -95,4 +95,19 @@ TEST(HLSLRootSignatureTest, DescriptorSamplerClauseDump) {
   EXPECT_EQ(Out, Expected);
 }
 
+TEST(HLSLRootSignatureTest, DescriptorTableDump) {
+  DescriptorTable Table;
+  Table.NumClauses = 4;
+  Table.Visibility = ShaderVisibility::Geometry;
+
+  std::string Out;
+  llvm::raw_string_ostream OS(Out);
+  Table.dump(OS);
+  OS.flush();
+
+  std::string Expected =
+    "DescriptorTable(numClauses = 4, visibility = Geometry)";
+  EXPECT_EQ(Out, Expected);
+}
+
 } // namespace
