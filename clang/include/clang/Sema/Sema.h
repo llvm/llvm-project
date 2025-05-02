@@ -595,6 +595,20 @@ enum class PointerAuthDiscArgKind {
   Extra,
 };
 
+/// Common ways to introduce type names without a tag for use in diagnostics.
+/// Keep in sync with err_tag_reference_non_tag.
+enum class NonTagKind {
+  NonStruct,
+  NonClass,
+  NonUnion,
+  NonEnum,
+  Typedef,
+  TypeAlias,
+  Template,
+  TypeAliasTemplate,
+  TemplateTemplateArgument,
+};
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -3974,20 +3988,6 @@ public:
   /// }
   Decl *BuildMicrosoftCAnonymousStruct(Scope *S, DeclSpec &DS,
                                        RecordDecl *Record);
-
-  /// Common ways to introduce type names without a tag for use in diagnostics.
-  /// Keep in sync with err_tag_reference_non_tag.
-  enum NonTagKind {
-    NTK_NonStruct,
-    NTK_NonClass,
-    NTK_NonUnion,
-    NTK_NonEnum,
-    NTK_Typedef,
-    NTK_TypeAlias,
-    NTK_Template,
-    NTK_TypeAliasTemplate,
-    NTK_TemplateTemplateArgument,
-  };
 
   /// Given a non-tag type declaration, returns an enum useful for indicating
   /// what kind of non-tag type this is.
