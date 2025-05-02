@@ -8369,10 +8369,10 @@ static void HandlePtrAuthQualifier(ASTContext &Ctx, QualType &T,
   bool IsInvalid = false;
   unsigned IsAddressDiscriminated, ExtraDiscriminator;
   IsInvalid |= !S.checkPointerAuthDiscriminatorArg(IsAddressDiscriminatedArg,
-                                                   Sema::PADAK_AddrDiscPtrAuth,
+                                                   PointerAuthDiscArgKind::Addr,
                                                    IsAddressDiscriminated);
   IsInvalid |= !S.checkPointerAuthDiscriminatorArg(
-      ExtraDiscriminatorArg, Sema::PADAK_ExtraDiscPtrAuth, ExtraDiscriminator);
+      ExtraDiscriminatorArg, PointerAuthDiscArgKind::Extra, ExtraDiscriminator);
 
   if (IsInvalid) {
     Attr.setInvalid();

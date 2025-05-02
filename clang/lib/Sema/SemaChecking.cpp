@@ -1569,11 +1569,11 @@ bool Sema::checkPointerAuthDiscriminatorArg(Expr *Arg,
   bool IsAddrDiscArg = false;
 
   switch (Kind) {
-  case PADAK_AddrDiscPtrAuth:
+  case PointerAuthDiscArgKind::Addr:
     Max = 1;
     IsAddrDiscArg = true;
     break;
-  case PADAK_ExtraDiscPtrAuth:
+  case PointerAuthDiscArgKind::Extra:
     Max = PointerAuthQualifier::MaxDiscriminator;
     break;
   };
