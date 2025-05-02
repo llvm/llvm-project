@@ -53,6 +53,14 @@ void LLDBBaseTelemetryInfo::serialize(Serializer &serializer) const {
     serializer.write("end_time", ToNanosec(end_time.value()));
 }
 
+void ClientInfo::serialize(Serializer &serializer) const {
+  LLDBBaseTelemetryInfo::serialize(serializer);
+  serializer.write("client_data", client_data);
+  serializer.write("client_name", client_name);
+  if (error_msg.has_value())
+    serializer.write("error_msg", error_msg.value());
+}
+
 void CommandInfo::serialize(Serializer &serializer) const {
   LLDBBaseTelemetryInfo::serialize(serializer);
 
@@ -112,6 +120,63 @@ llvm::Error TelemetryManager::preDispatch(TelemetryInfo *entry) {
   return llvm::Error::success();
 }
 
+void TelemetryManager::DispatchClientTelemetry(
+    const lldb_private::StructuredDataImpl &entry, Debugger *debugger) {
+  if (!m_config->enable_client_telemetry)
+    return;
+
+  ClientInfo client_info;
+  client_info.debugger = debugger;
+  if (entry.GetObjectSP()->GetType() != lldb::eStructuredDataTypeDictionary) {
+    LLDB_LOG(GetLog(LLDBLog::Object), "Expected Dictionary type but got {0}.",
+             entry.GetObjectSP()->GetType());
+    return;
+  }
+
+  auto *dict = entry.GetObjectSP()->GetAsDictionary();
+
+  llvm::StringRef client_name;
+  if (dict->GetValueForKeyAsString("client_name", client_name))
+    client_info.client_name = client_name.str();
+  else
+    LLDB_LOG(GetLog(LLDBLog::Object),
+             "Cannot determine client_name from client-telemetry entry");
+
+  llvm::StringRef client_data;
+  if (dict->GetValueForKeyAsString("client_data", client_data))
+    client_info.client_data = client_data.str();
+  else
+    LLDB_LOG(GetLog(LLDBLog::Object),
+             "Cannot determine client_data from client-telemetry entry");
+
+  int64_t start_time;
+  if (dict->GetValueForKeyAsInteger("start_time", start_time)) {
+    client_info.start_time +=
+        std::chrono::nanoseconds(static_cast<size_t>(start_time));
+  } else {
+    LLDB_LOG(GetLog(LLDBLog::Object),
+             "Cannot determine start-time from client-telemetry entry");
+  }
+
+  int64_t end_time;
+  if (dict->GetValueForKeyAsInteger("end_time", end_time)) {
+    SteadyTimePoint epoch;
+    client_info.end_time =
+        epoch + std::chrono::nanoseconds(static_cast<size_t>(end_time));
+  } else {
+    LLDB_LOG(GetLog(LLDBLog::Object),
+             "Cannot determine end-time from client-telemetry entry");
+  }
+
+  llvm::StringRef error_msg;
+  if (dict->GetValueForKeyAsString("error", error_msg))
+    client_info.error_msg = error_msg.str();
+
+  if (llvm::Error er = dispatch(&client_info))
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Object), std::move(er),
+                   "Failed to dispatch client telemetry");
+}
+
 class NoOpTelemetryManager : public TelemetryManager {
 public:
   llvm::Error preDispatch(llvm::telemetry::TelemetryInfo *entry) override {
@@ -121,10 +186,16 @@ public:
 
   explicit NoOpTelemetryManager()
       : TelemetryManager(std::make_unique<LLDBConfig>(
-            /*EnableTelemetry*/ false, /*DetailedCommand*/ false)) {}
+            /*EnableTelemetry=*/false, /*DetailedCommand=*/false,
+            /*ClientTelemery=*/false)) {}
 
   virtual llvm::StringRef GetInstanceName() const override {
     return "NoOpTelemetryManager";
+  }
+
+  void DispatchClientTelemetry(const lldb_private::StructuredDataImpl &entry,
+                               Debugger *debugger) override {
+    // Does nothing.
   }
 
   llvm::Error dispatch(llvm::telemetry::TelemetryInfo *entry) override {

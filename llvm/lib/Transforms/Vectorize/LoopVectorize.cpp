@@ -482,15 +482,14 @@ public:
                       const TargetTransformInfo *TTI, AssumptionCache *AC,
                       OptimizationRemarkEmitter *ORE, ElementCount VecWidth,
                       ElementCount MinProfitableTripCount,
-                      unsigned UnrollFactor, LoopVectorizationLegality *LVL,
-                      LoopVectorizationCostModel *CM, BlockFrequencyInfo *BFI,
-                      ProfileSummaryInfo *PSI, GeneratedRTChecks &RTChecks,
-                      VPlan &Plan)
+                      unsigned UnrollFactor, LoopVectorizationCostModel *CM,
+                      BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
+                      GeneratedRTChecks &RTChecks, VPlan &Plan)
       : OrigLoop(OrigLoop), PSE(PSE), LI(LI), DT(DT), TLI(TLI), TTI(TTI),
         AC(AC), ORE(ORE), VF(VecWidth),
         MinProfitableTripCount(MinProfitableTripCount), UF(UnrollFactor),
-        Builder(PSE.getSE()->getContext()), Legal(LVL), Cost(CM), BFI(BFI),
-        PSI(PSI), RTChecks(RTChecks), Plan(Plan),
+        Builder(PSE.getSE()->getContext()), Cost(CM), BFI(BFI), PSI(PSI),
+        RTChecks(RTChecks), Plan(Plan),
         VectorPHVPB(Plan.getEntry()->getSingleSuccessor()) {}
 
   virtual ~InnerLoopVectorizer() = default;
@@ -630,9 +629,6 @@ protected:
   /// Trip count of the widened loop (TripCount - TripCount % (VF*UF))
   Value *VectorTripCount = nullptr;
 
-  /// The legality analysis.
-  LoopVectorizationLegality *Legal;
-
   /// The profitablity analysis.
   LoopVectorizationCostModel *Cost;
 
@@ -699,12 +695,11 @@ public:
       DominatorTree *DT, const TargetLibraryInfo *TLI,
       const TargetTransformInfo *TTI, AssumptionCache *AC,
       OptimizationRemarkEmitter *ORE, EpilogueLoopVectorizationInfo &EPI,
-      LoopVectorizationLegality *LVL, llvm::LoopVectorizationCostModel *CM,
-      BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
-      GeneratedRTChecks &Checks, VPlan &Plan)
+      LoopVectorizationCostModel *CM, BlockFrequencyInfo *BFI,
+      ProfileSummaryInfo *PSI, GeneratedRTChecks &Checks, VPlan &Plan)
       : InnerLoopVectorizer(OrigLoop, PSE, LI, DT, TLI, TTI, AC, ORE,
-                            EPI.MainLoopVF, EPI.MainLoopVF, EPI.MainLoopUF, LVL,
-                            CM, BFI, PSI, Checks, Plan),
+                            EPI.MainLoopVF, EPI.MainLoopVF, EPI.MainLoopUF, CM,
+                            BFI, PSI, Checks, Plan),
         EPI(EPI) {}
 
   // Override this function to handle the more complex control flow around the
@@ -737,11 +732,10 @@ public:
       DominatorTree *DT, const TargetLibraryInfo *TLI,
       const TargetTransformInfo *TTI, AssumptionCache *AC,
       OptimizationRemarkEmitter *ORE, EpilogueLoopVectorizationInfo &EPI,
-      LoopVectorizationLegality *LVL, llvm::LoopVectorizationCostModel *CM,
-      BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
-      GeneratedRTChecks &Check, VPlan &Plan)
+      LoopVectorizationCostModel *CM, BlockFrequencyInfo *BFI,
+      ProfileSummaryInfo *PSI, GeneratedRTChecks &Check, VPlan &Plan)
       : InnerLoopAndEpilogueVectorizer(OrigLoop, PSE, LI, DT, TLI, TTI, AC, ORE,
-                                       EPI, LVL, CM, BFI, PSI, Check, Plan) {}
+                                       EPI, CM, BFI, PSI, Check, Plan) {}
   /// Implements the interface for creating a vectorized skeleton using the
   /// *main loop* strategy (ie the first pass of vplan execution).
   BasicBlock *createEpilogueVectorizedLoopSkeleton() final;
@@ -765,11 +759,10 @@ public:
       DominatorTree *DT, const TargetLibraryInfo *TLI,
       const TargetTransformInfo *TTI, AssumptionCache *AC,
       OptimizationRemarkEmitter *ORE, EpilogueLoopVectorizationInfo &EPI,
-      LoopVectorizationLegality *LVL, llvm::LoopVectorizationCostModel *CM,
-      BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
-      GeneratedRTChecks &Checks, VPlan &Plan)
+      LoopVectorizationCostModel *CM, BlockFrequencyInfo *BFI,
+      ProfileSummaryInfo *PSI, GeneratedRTChecks &Checks, VPlan &Plan)
       : InnerLoopAndEpilogueVectorizer(OrigLoop, PSE, LI, DT, TLI, TTI, AC, ORE,
-                                       EPI, LVL, CM, BFI, PSI, Checks, Plan) {
+                                       EPI, CM, BFI, PSI, Checks, Plan) {
     TripCount = EPI.TripCount;
   }
   /// Implements the interface for creating a vectorized skeleton using the
@@ -2741,8 +2734,8 @@ struct CSEDenseMapInfo {
 
   static unsigned getHashValue(const Instruction *I) {
     assert(canHandle(I) && "Unknown instruction!");
-    return hash_combine(I->getOpcode(), hash_combine_range(I->value_op_begin(),
-                                                           I->value_op_end()));
+    return hash_combine(I->getOpcode(),
+                        hash_combine_range(I->operand_values()));
   }
 
   static bool isEqual(const Instruction *LHS, const Instruction *RHS) {
@@ -7623,8 +7616,17 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       // comparing against the legacy cost isn't desirable.
       if (isa<VPPartialReductionRecipe>(&R))
         return true;
-      if (Instruction *UI = GetInstructionForCost(&R))
+      if (Instruction *UI = GetInstructionForCost(&R)) {
+        // If we adjusted the predicate of the recipe, the cost in the legacy
+        // cost model may be different.
+        if (auto *WidenCmp = dyn_cast<VPWidenRecipe>(&R)) {
+          if ((WidenCmp->getOpcode() == Instruction::ICmp ||
+               WidenCmp->getOpcode() == Instruction::FCmp) &&
+              WidenCmp->getPredicate() != cast<CmpInst>(UI)->getPredicate())
+            return true;
+        }
         SeenInstrs.insert(UI);
+      }
     }
   }
 
@@ -7902,7 +7904,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // Only use noalias metadata when using memory checks guaranteeing no overlap
   // across all iterations.
-  const LoopAccessInfo *LAI = ILV.Legal->getLAI();
+  const LoopAccessInfo *LAI = Legal->getLAI();
   std::unique_ptr<LoopVersioning> LVer = nullptr;
   if (LAI && !LAI->getRuntimePointerChecking()->getChecks().empty() &&
       !LAI->getRuntimePointerChecking()->getDiffChecks()) {
@@ -8432,7 +8434,7 @@ void VPRecipeBuilder::createBlockInMask(BasicBlock *BB) {
   VPValue *BlockMask = nullptr;
   // This is the block mask. We OR all unique incoming edges.
   for (auto *Predecessor :
-       SetVector<BasicBlock *>(pred_begin(BB), pred_end(BB))) {
+       SetVector<BasicBlock *>(llvm::from_range, predecessors(BB))) {
     VPValue *EdgeMask = createEdgeMask(Predecessor, BB);
     if (!EdgeMask) { // Mask of predecessor is all-one so mask of block is too.
       BlockMaskCache[BB] = EdgeMask;
@@ -8747,7 +8749,7 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
           Plan.getOrAddLiveIn(ConstantInt::get(I->getType(), 1u, false));
       auto *SafeRHS = Builder.createSelect(Mask, Ops[1], One, I->getDebugLoc());
       Ops[1] = SafeRHS;
-      return new VPWidenRecipe(*I, make_range(Ops.begin(), Ops.end()));
+      return new VPWidenRecipe(*I, Ops);
     }
     [[fallthrough]];
   }
@@ -8793,7 +8795,7 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
       // For other binops, the legacy cost model only checks the second operand.
       NewOps[1] = GetConstantViaSCEV(NewOps[1]);
     }
-    return new VPWidenRecipe(*I, make_range(NewOps.begin(), NewOps.end()));
+    return new VPWidenRecipe(*I, NewOps);
   }
   case Instruction::ExtractValue: {
     SmallVector<VPValue *> NewOps(Operands);
@@ -8802,7 +8804,7 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
     assert(EVI->getNumIndices() == 1 && "Expected one extractvalue index");
     unsigned Idx = EVI->getIndices()[0];
     NewOps.push_back(Plan.getOrAddLiveIn(ConstantInt::get(I32Ty, Idx, false)));
-    return new VPWidenRecipe(*I, make_range(NewOps.begin(), NewOps.end()));
+    return new VPWidenRecipe(*I, NewOps);
   }
   };
 }
@@ -8826,9 +8828,7 @@ VPRecipeBuilder::tryToWidenHistogram(const HistogramInfo *HI,
   if (Legal->isMaskRequired(HI->Store))
     HGramOps.push_back(getBlockInMask(HI->Store->getParent()));
 
-  return new VPHistogramRecipe(Opcode,
-                               make_range(HGramOps.begin(), HGramOps.end()),
-                               HI->Store->getDebugLoc());
+  return new VPHistogramRecipe(Opcode, HGramOps, HI->Store->getDebugLoc());
 }
 
 VPReplicateRecipe *
@@ -8889,8 +8889,7 @@ VPRecipeBuilder::handleReplication(Instruction *I, ArrayRef<VPValue *> Operands,
   assert((Range.Start.isScalar() || !IsUniform || !IsPredicated ||
           (Range.Start.isScalable() && isa<IntrinsicInst>(I))) &&
          "Should not predicate a uniform recipe");
-  auto *Recipe = new VPReplicateRecipe(
-      I, make_range(Operands.begin(), Operands.end()), IsUniform, BlockInMask);
+  auto *Recipe = new VPReplicateRecipe(I, Operands, IsUniform, BlockInMask);
   return Recipe;
 }
 
@@ -9079,12 +9078,10 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(
     return nullptr;
 
   if (auto *GEP = dyn_cast<GetElementPtrInst>(Instr))
-    return new VPWidenGEPRecipe(GEP,
-                                make_range(Operands.begin(), Operands.end()));
+    return new VPWidenGEPRecipe(GEP, Operands);
 
   if (auto *SI = dyn_cast<SelectInst>(Instr)) {
-    return new VPWidenSelectRecipe(
-        *SI, make_range(Operands.begin(), Operands.end()));
+    return new VPWidenSelectRecipe(*SI, Operands);
   }
 
   if (auto *CI = dyn_cast<CastInst>(Instr)) {
@@ -9115,22 +9112,23 @@ VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
     SmallVector<VPValue *, 2> Ops;
     Ops.push_back(Plan.getOrAddLiveIn(Zero));
     Ops.push_back(BinOp);
-    BinOp = new VPWidenRecipe(*Reduction, make_range(Ops.begin(), Ops.end()));
+    BinOp = new VPWidenRecipe(*Reduction, Ops);
     Builder.insert(BinOp->getDefiningRecipe());
     ReductionOpcode = Instruction::Add;
   }
 
+  VPValue *Cond = nullptr;
   if (CM.blockNeedsPredicationForAnyReason(Reduction->getParent())) {
     assert((ReductionOpcode == Instruction::Add ||
             ReductionOpcode == Instruction::Sub) &&
            "Expected an ADD or SUB operation for predicated partial "
            "reductions (because the neutral element in the mask is zero)!");
-    VPValue *Mask = getBlockInMask(Reduction->getParent());
+    Cond = getBlockInMask(Reduction->getParent());
     VPValue *Zero =
         Plan.getOrAddLiveIn(ConstantInt::get(Reduction->getType(), 0));
-    BinOp = Builder.createSelect(Mask, BinOp, Zero, Reduction->getDebugLoc());
+    BinOp = Builder.createSelect(Cond, BinOp, Zero, Reduction->getDebugLoc());
   }
-  return new VPPartialReductionRecipe(ReductionOpcode, BinOp, Accumulator,
+  return new VPPartialReductionRecipe(ReductionOpcode, Accumulator, BinOp, Cond,
                                       ScaleFactor, Reduction);
 }
 
@@ -9455,9 +9453,10 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
           Range);
   DenseMap<VPBlockBase *, BasicBlock *> VPB2IRBB;
   auto Plan = VPlanTransforms::buildPlainCFG(OrigLoop, *LI, VPB2IRBB);
-  VPlanTransforms::createLoopRegions(*Plan, Legal->getWidestInductionType(),
-                                     PSE, RequiresScalarEpilogueCheck,
-                                     CM.foldTailByMasking(), OrigLoop);
+  VPlanTransforms::prepareForVectorization(
+      *Plan, Legal->getWidestInductionType(), PSE, RequiresScalarEpilogueCheck,
+      CM.foldTailByMasking(), OrigLoop);
+  VPlanTransforms::createLoopRegions(*Plan);
 
   // Don't use getDecisionAndClampRange here, because we don't know the UF
   // so this function is better to be conservative, rather than to split
@@ -9531,14 +9530,6 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   VPBasicBlock::iterator MBIP = MiddleVPBB->getFirstNonPhi();
   VPBlockBase *PrevVPBB = nullptr;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
-    // Handle VPBBs down to the latch.
-    if (VPBB == LoopRegion->getExiting()) {
-      assert(!VPB2IRBB.contains(VPBB) &&
-             "the latch block shouldn't have a corresponding IRBB");
-      VPBlockUtils::connectBlocks(PrevVPBB, VPBB);
-      break;
-    }
-
     // Create mask based on the IR BB corresponding to VPBB.
     // TODO: Predicate directly based on VPlan.
     Builder.setInsertPoint(VPBB, VPBB->begin());
@@ -9755,11 +9746,19 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
 
   DenseMap<VPBlockBase *, BasicBlock *> VPB2IRBB;
   auto Plan = VPlanTransforms::buildPlainCFG(OrigLoop, *LI, VPB2IRBB);
-  VPlanTransforms::createLoopRegions(*Plan, Legal->getWidestInductionType(),
-                                     PSE, true, false, OrigLoop);
+  VPlanTransforms::prepareForVectorization(
+      *Plan, Legal->getWidestInductionType(), PSE, true, false, OrigLoop);
+  VPlanTransforms::createLoopRegions(*Plan);
 
   for (ElementCount VF : Range)
     Plan->addVF(VF);
+
+  // Tail folding is not supported for outer loops, so the induction increment
+  // is guaranteed to not wrap.
+  bool HasNUW = true;
+  addCanonicalIVRecipes(
+      *Plan, Legal->getWidestInductionType(), HasNUW,
+      getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()));
 
   if (!VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
           Plan,
@@ -9768,12 +9767,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
           },
           *PSE.getSE(), *TLI))
     return nullptr;
-
-  // Tail folding is not supported for outer loops, so the induction increment
-  // is guaranteed to not wrap.
-  bool HasNUW = true;
-  addCanonicalIVRecipes(*Plan, Legal->getWidestInductionType(), HasNUW,
-                        DebugLoc());
 
   // Collect mapping of IR header phis to header phi recipes, to be used in
   // addScalarResumePhis.
@@ -9939,14 +9932,18 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       // ensure that it comes after all of it's inputs, including CondOp.
       // Delete CurrentLink as it will be invalid if its operand is replaced
       // with a reduction defined at the bottom of the block in the next link.
-      LinkVPBB->appendRecipe(RedRecipe);
+      if (LinkVPBB->getNumSuccessors() == 0)
+        RedRecipe->insertBefore(&*std::prev(std::prev(LinkVPBB->end())));
+      else
+        LinkVPBB->appendRecipe(RedRecipe);
+
       CurrentLink->replaceAllUsesWith(RedRecipe);
       ToDelete.push_back(CurrentLink);
       PreviousLink = RedRecipe;
     }
   }
   VPBasicBlock *LatchVPBB = VectorLoopRegion->getExitingBasicBlock();
-  Builder.setInsertPoint(&*LatchVPBB->begin());
+  Builder.setInsertPoint(&*std::prev(std::prev(LatchVPBB->end())));
   VPBasicBlock::iterator IP = MiddleVPBB->getFirstNonPhi();
   for (VPRecipeBase &R :
        Plan->getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
@@ -9966,8 +9963,6 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     if (!PhiR->isInLoop() && CM.foldTailByMasking() &&
         !isa<VPPartialReductionRecipe>(OrigExitingVPV->getDefiningRecipe())) {
       VPValue *Cond = RecipeBuilder.getBlockInMask(OrigLoop->getHeader());
-      assert(OrigExitingVPV->getDefiningRecipe()->getParent() != LatchVPBB &&
-             "reduction recipe must be defined before latch");
       Type *PhiTy = PhiR->getOperand(0)->getLiveInIRValue()->getType();
       std::optional<FastMathFlags> FMFs =
           PhiTy->isFloatingPointTy()
@@ -10260,7 +10255,7 @@ static bool processLoopInVPlanNativePath(
     GeneratedRTChecks Checks(PSE, DT, LI, TTI, F->getDataLayout(),
                              AddBranchWeights, CM.CostKind);
     InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, VF.Width,
-                           VF.Width, 1, LVL, &CM, BFI, PSI, Checks, BestPlan);
+                           VF.Width, 1, &CM, BFI, PSI, Checks, BestPlan);
     LLVM_DEBUG(dbgs() << "Vectorizing outer loop in \""
                       << L->getHeader()->getParent()->getName() << "\"\n");
     LVP.executePlan(VF.Width, 1, BestPlan, LB, DT, false);
@@ -11028,7 +11023,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       VPlan &BestPlan = LVP.getPlanFor(VF.Width);
       InnerLoopVectorizer Unroller(
           L, PSE, LI, DT, TLI, TTI, AC, ORE, ElementCount::getFixed(1),
-          ElementCount::getFixed(1), IC, &LVL, &CM, BFI, PSI, Checks, BestPlan);
+          ElementCount::getFixed(1), IC, &CM, BFI, PSI, Checks, BestPlan);
 
       LVP.executePlan(VF.Width, IC, BestPlan, Unroller, DT, false);
 
@@ -11057,7 +11052,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         EpilogueLoopVectorizationInfo EPI(VF.Width, IC, EpilogueVF.Width, 1,
                                           BestEpiPlan);
         EpilogueVectorizerMainLoop MainILV(L, PSE, LI, DT, TLI, TTI, AC, ORE,
-                                           EPI, &LVL, &CM, BFI, PSI, Checks,
+                                           EPI, &CM, BFI, PSI, Checks,
                                            *BestMainPlan);
         auto ExpandedSCEVs = LVP.executePlan(EPI.MainLoopVF, EPI.MainLoopUF,
                                              *BestMainPlan, MainILV, DT, false);
@@ -11068,7 +11063,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         EPI.MainLoopVF = EPI.EpilogueVF;
         EPI.MainLoopUF = EPI.EpilogueUF;
         EpilogueVectorizerEpilogueLoop EpilogILV(L, PSE, LI, DT, TLI, TTI, AC,
-                                                 ORE, EPI, &LVL, &CM, BFI, PSI,
+                                                 ORE, EPI, &CM, BFI, PSI,
                                                  Checks, BestEpiPlan);
         EpilogILV.setTripCount(MainILV.getTripCount());
         preparePlanForEpilogueVectorLoop(BestEpiPlan, L, ExpandedSCEVs, EPI);
@@ -11095,8 +11090,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
           DisableRuntimeUnroll = true;
       } else {
         InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, VF.Width,
-                               VF.MinProfitableTripCount, IC, &LVL, &CM, BFI,
-                               PSI, Checks, BestPlan);
+                               VF.MinProfitableTripCount, IC, &CM, BFI, PSI,
+                               Checks, BestPlan);
         LVP.executePlan(VF.Width, IC, BestPlan, LB, DT, false);
         ++LoopsVectorized;
 

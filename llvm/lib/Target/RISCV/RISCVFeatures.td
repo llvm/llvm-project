@@ -1257,6 +1257,14 @@ def HasVendorXSfcease
       AssemblerPredicate<(all_of FeatureVendorXSfcease),
                          "'XSfcease' (SiFive sf.cease Instruction)">;
 
+def FeatureVendorXSfmclic
+    : RISCVExperimentalExtension<0, 1,
+                                 "SiFive CLIC Machine-mode CSRs">;
+
+def FeatureVendorXSfsclic
+    : RISCVExperimentalExtension<0, 1,
+                                 "SiFive CLIC Supervisor-mode CSRs">;
+
 // Core-V Extensions
 
 def FeatureVendorXCVelw
@@ -1499,6 +1507,15 @@ def HasVendorXRivosVizip
     : Predicate<"Subtarget->hasVendorXRivosVizip()">,
       AssemblerPredicate<(all_of FeatureVendorXRivosVizip),
                          "'XRivosVizip' (Rivos Vector Register Zips)">;
+
+// Andes Extension(s)
+
+def FeatureVendorXAndesPerf
+    : RISCVExtension<5, 0, "Andes Performance Extension">;
+def HasVendorXAndesPerf
+    : Predicate<"Subtarget->hasVendorXAndesPerf()">,
+      AssemblerPredicate<(all_of FeatureVendorXAndesPerf),
+                         "'XAndesPerf' (Andes Performance Extension)">;
 
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions

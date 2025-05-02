@@ -841,6 +841,12 @@ DebuggerSP Debugger::CreateInstance(lldb::LogOutputCallback log_callback,
   return debugger_sp;
 }
 
+void Debugger::DispatchClientTelemetry(
+    const lldb_private::StructuredDataImpl &entry) {
+  lldb_private::telemetry::TelemetryManager::GetInstance()
+      ->DispatchClientTelemetry(entry, this);
+}
+
 void Debugger::HandleDestroyCallback() {
   const lldb::user_id_t user_id = GetID();
   // Invoke and remove all the callbacks in an FIFO order. Callbacks which are
@@ -2025,6 +2031,9 @@ void Debugger::CancelForwardEvents(const ListenerSP &listener_sp) {
 }
 
 bool Debugger::StatuslineSupported() {
+// We have trouble with the contol codes on Windows, see
+// https://github.com/llvm/llvm-project/issues/134846.
+#ifndef _WIN32
   if (GetShowStatusline()) {
     if (lldb::LockableStreamFileSP stream_sp = GetOutputStreamSP()) {
       File &file = stream_sp->GetUnlockedFile();
@@ -2032,6 +2041,7 @@ bool Debugger::StatuslineSupported() {
              file.GetIsTerminalWithColors();
     }
   }
+#endif
   return false;
 }
 

@@ -133,8 +133,10 @@
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/MachineSink.h"
 #include "llvm/CodeGen/MachineTraceMetrics.h"
+#include "llvm/CodeGen/MachineUniformityAnalysis.h"
 #include "llvm/CodeGen/MachineVerifier.h"
 #include "llvm/CodeGen/OptimizePHIs.h"
+#include "llvm/CodeGen/PEI.h"
 #include "llvm/CodeGen/PHIElimination.h"
 #include "llvm/CodeGen/PatchableFunction.h"
 #include "llvm/CodeGen/PeepholeOptimizer.h"
@@ -156,6 +158,7 @@
 #include "llvm/CodeGen/SanitizerBinaryMetadata.h"
 #include "llvm/CodeGen/SelectOptimize.h"
 #include "llvm/CodeGen/ShadowStackGCLowering.h"
+#include "llvm/CodeGen/ShrinkWrap.h"
 #include "llvm/CodeGen/SjLjEHPrepare.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/SpillPlacement.h"
@@ -1502,6 +1505,19 @@ Expected<bool> parseMachineBlockPlacementPassOptions(StringRef Params) {
           inconvertibleErrorCode());
   }
   return AllowTailMerge;
+}
+
+Expected<bool> parseVirtRegRewriterPassOptions(StringRef Params) {
+  bool ClearVirtRegs = true;
+  if (!Params.empty()) {
+    ClearVirtRegs = !Params.consume_front("no-");
+    if (Params != "clear-vregs")
+      return make_error<StringError>(
+          formatv("invalid VirtRegRewriter pass parameter '{0}' ", Params)
+              .str(),
+          inconvertibleErrorCode());
+  }
+  return ClearVirtRegs;
 }
 
 } // namespace

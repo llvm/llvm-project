@@ -769,22 +769,10 @@ define <16 x i8> @combine_lshr_pshufb(<4 x i32> %a0) {
 ; SSE-NEXT:    pshufb {{.*#+}} xmm0 = zero,zero,zero,xmm0[3,5,6,7,4,10,11],zero,xmm0[9,14,15],zero,zero
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: combine_lshr_pshufb:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = zero,zero,zero,xmm0[3,5,6,7,4,10,11],zero,xmm0[9,14,15],zero,zero
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: combine_lshr_pshufb:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpsrlvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,2,3,0,5,6,7,4,9,10,11,8,12,13,14,15]
-; AVX2-NEXT:    retq
-;
-; AVX512F-LABEL: combine_lshr_pshufb:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpsrlvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,2,3,0,5,6,7,4,9,10,11,8,12,13,14,15]
-; AVX512F-NEXT:    retq
+; AVX-LABEL: combine_lshr_pshufb:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = zero,zero,zero,xmm0[3,5,6,7,4,10,11],zero,xmm0[9,14,15],zero,zero
+; AVX-NEXT:    retq
   %shr = lshr <4 x i32> %a0, <i32 24, i32 0, i32 8, i32 16>
   %bc = bitcast <4 x i32> %shr to <16 x i8>
   %shuffle = shufflevector <16 x i8> %bc, <16 x i8> poison, <16 x i32> <i32 1, i32 2, i32 3, i32 0, i32 5, i32 6, i32 7, i32 4, i32 9, i32 10, i32 11, i32 8, i32 12, i32 13, i32 14, i32 15>
@@ -817,14 +805,12 @@ define <16 x i8> @combine_shl_pshufb(<4 x i32> %a0) {
 ;
 ; AVX2-LABEL: combine_shl_pshufb:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,2,3,0,5,6,7,4,9,10,11,8,12,13,14,15]
+; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,2,3,0,4,5,6],zero,zero,xmm0[8,9],zero,zero,zero,xmm0[12,13]
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: combine_shl_pshufb:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,2,3,0,5,6,7,4,9,10,11,8,12,13,14,15]
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,2,3,0,4,5,6],zero,zero,xmm0[8,9],zero,zero,zero,xmm0[12,13]
 ; AVX512F-NEXT:    retq
   %shr = shl <4 x i32> %a0, <i32 0, i32 8, i32 16, i32 16>
   %bc = bitcast <4 x i32> %shr to <16 x i8>

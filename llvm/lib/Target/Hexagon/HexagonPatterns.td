@@ -2258,8 +2258,8 @@ let AddedComplexity = 20 in {
 
   defm: Loadxi_pat<atomic_load_azext_8 ,  i32, anyimm0, L2_loadrub_io>;
   defm: Loadxi_pat<atomic_load_azext_16,  i32, anyimm1, L2_loadruh_io>;
-  defm: Loadxi_pat<atomic_load_32,  i32, anyimm2, L2_loadri_io>;
-  defm: Loadxi_pat<atomic_load_64,  i64, anyimm3, L2_loadrd_io>;
+  defm: Loadxi_pat<atomic_load_nonext_32,  i32, anyimm2, L2_loadri_io>;
+  defm: Loadxi_pat<atomic_load_nonext_64,  i64, anyimm3, L2_loadrd_io>;
 }
 
 let AddedComplexity = 30 in {
@@ -2420,8 +2420,8 @@ let AddedComplexity  = 60 in {
 
   def: Loada_pat<atomic_load_azext_8,   i32, anyimm0, PS_loadrubabs>;
   def: Loada_pat<atomic_load_azext_16,  i32, anyimm1, PS_loadruhabs>;
-  def: Loada_pat<atomic_load_32,  i32, anyimm2, PS_loadriabs>;
-  def: Loada_pat<atomic_load_64,  i64, anyimm3, PS_loadrdabs>;
+  def: Loada_pat<atomic_load_nonext_32,  i32, anyimm2, PS_loadriabs>;
+  def: Loada_pat<atomic_load_nonext_64,  i64, anyimm3, PS_loadrdabs>;
 }
 
 let AddedComplexity  = 30 in {
@@ -2465,8 +2465,8 @@ let AddedComplexity  = 100 in {
 
   def: Loada_pat<atomic_load_azext_8,   i32, addrgp,  L2_loadrubgp>;
   def: Loada_pat<atomic_load_azext_16,  i32, addrgp,  L2_loadruhgp>;
-  def: Loada_pat<atomic_load_32,  i32, addrgp,  L2_loadrigp>;
-  def: Loada_pat<atomic_load_64,  i64, addrgp,  L2_loadrdgp>;
+  def: Loada_pat<atomic_load_nonext_32,  i32, addrgp,  L2_loadrigp>;
+  def: Loada_pat<atomic_load_nonext_64,  i64, addrgp,  L2_loadrdgp>;
 }
 
 let AddedComplexity  = 70 in {

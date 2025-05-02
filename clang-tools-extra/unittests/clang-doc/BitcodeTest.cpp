@@ -25,7 +25,7 @@ template <typename T> static std::string writeInfo(T &I) {
   return Buffer.str().str();
 }
 
-std::string writeInfo(Info *I) {
+static std::string writeInfo(Info *I) {
   switch (I->IT) {
   case InfoType::IT_namespace:
     return writeInfo(*static_cast<NamespaceInfo *>(I));
@@ -42,8 +42,8 @@ std::string writeInfo(Info *I) {
   }
 }
 
-std::vector<std::unique_ptr<Info>> readInfo(StringRef Bitcode,
-                                            size_t NumInfos) {
+static std::vector<std::unique_ptr<Info>> readInfo(StringRef Bitcode,
+                                                   size_t NumInfos) {
   llvm::BitstreamCursor Stream(Bitcode);
   doc::ClangDocBitcodeReader Reader(Stream);
   auto Infos = Reader.readBitcode();
@@ -77,8 +77,8 @@ TEST(BitcodeTest, emitRecordInfoBitcode) {
   I.Name = "r";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
-  I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
+  I.DefLoc = Location(10, 10, "test.cpp");
+  I.Loc.emplace_back(12, 12, "test.cpp");
 
   I.Members.emplace_back(TypeInfo("int"), "X", AccessSpecifier::AS_private);
   I.TagType = TagTypeKind::Class;
@@ -119,8 +119,8 @@ TEST(BitcodeTest, emitFunctionInfoBitcode) {
   I.Name = "f";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
-  I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
+  I.DefLoc = Location(10, 10, "test.cpp");
+  I.Loc.emplace_back(12, 12, "test.cpp");
 
   I.ReturnType = TypeInfo("void");
   I.Params.emplace_back(TypeInfo("int"), "P");
@@ -139,8 +139,8 @@ TEST(BitcodeTest, emitMethodInfoBitcode) {
   I.Name = "f";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
-  I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
+  I.DefLoc = Location(10, 10, "test.cpp");
+  I.Loc.emplace_back(12, 12, "test.cpp");
 
   I.ReturnType = TypeInfo("void");
   I.Params.emplace_back(TypeInfo("int"), "P");
@@ -161,8 +161,8 @@ TEST(BitcodeTest, emitEnumInfoBitcode) {
   I.Name = "e";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
-  I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
+  I.DefLoc = Location(10, 10, "test.cpp");
+  I.Loc.emplace_back(12, 12, "test.cpp");
 
   I.Members.emplace_back("X");
   I.Scoped = true;
@@ -179,7 +179,7 @@ TEST(BitcodeTest, emitTypedefInfoBitcode) {
   I.Name = "MyInt";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
+  I.DefLoc = Location(10, 10, "test.cpp");
   I.Underlying = TypeInfo("unsigned");
   I.IsUsing = true;
 
@@ -216,7 +216,7 @@ TEST(SerializeTest, emitInfoWithCommentBitcode) {
   FunctionInfo F;
   F.Name = "F";
   F.ReturnType = TypeInfo("void");
-  F.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
+  F.DefLoc = Location(0, 0, "test.cpp");
   F.Params.emplace_back(TypeInfo("int"), "I");
 
   CommentInfo Top;

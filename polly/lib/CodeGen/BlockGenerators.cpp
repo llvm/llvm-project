@@ -87,7 +87,7 @@ Value *BlockGenerator::trySynthesizeNewValue(ScopStmt &Stmt, Value *Old,
          "Only instructions can be insert points for SCEVExpander");
   Value *Expanded = expandCodeFor(
       S, SE, Builder.GetInsertBlock()->getParent(), *GenSE, DL, "polly", Scev,
-      Old->getType(), &*IP, &VTV, &LTS, StartBlock->getSinglePredecessor());
+      Old->getType(), IP, &VTV, &LTS, StartBlock->getSinglePredecessor());
 
   BBMap[Old] = Expanded;
   return Expanded;
@@ -411,7 +411,7 @@ void BlockGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
 
 BasicBlock *BlockGenerator::splitBB(BasicBlock *BB) {
   BasicBlock *CopyBB = SplitBlock(Builder.GetInsertBlock(),
-                                  &*Builder.GetInsertPoint(), GenDT, GenLI);
+                                  Builder.GetInsertPoint(), GenDT, GenLI);
   CopyBB->setName("polly.stmt." + BB->getName());
   return CopyBB;
 }
@@ -622,7 +622,7 @@ void BlockGenerator::generateConditionalExecution(
 
   // Generate the conditional block.
   DomTreeUpdater DTU(GenDT, DomTreeUpdater::UpdateStrategy::Eager);
-  SplitBlockAndInsertIfThen(Cond, &*Builder.GetInsertPoint(), false, nullptr,
+  SplitBlockAndInsertIfThen(Cond, Builder.GetInsertPoint(), false, nullptr,
                             &DTU, GenLI);
   BranchInst *Branch = cast<BranchInst>(HeadBlock->getTerminator());
   BasicBlock *ThenBlock = Branch->getSuccessor(0);
@@ -1069,8 +1069,8 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
   // Create a dedicated entry for the region where we can reload all demoted
   // inputs.
   BasicBlock *EntryBB = R->getEntry();
-  BasicBlock *EntryBBCopy = SplitBlock(
-      Builder.GetInsertBlock(), &*Builder.GetInsertPoint(), GenDT, GenLI);
+  BasicBlock *EntryBBCopy = SplitBlock(Builder.GetInsertBlock(),
+                                       Builder.GetInsertPoint(), GenDT, GenLI);
   EntryBBCopy->setName("polly.stmt." + EntryBB->getName() + ".entry");
   Builder.SetInsertPoint(EntryBBCopy, EntryBBCopy->begin());
 
@@ -1136,7 +1136,7 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
 
   // Now create a new dedicated region exit block and add it to the region map.
   BasicBlock *ExitBBCopy = SplitBlock(Builder.GetInsertBlock(),
-                                      &*Builder.GetInsertPoint(), GenDT, GenLI);
+                                      Builder.GetInsertPoint(), GenDT, GenLI);
   ExitBBCopy->setName("polly.stmt." + R->getExit()->getName() + ".exit");
   StartBlockMap[R->getExit()] = ExitBBCopy;
   EndBlockMap[R->getExit()] = ExitBBCopy;

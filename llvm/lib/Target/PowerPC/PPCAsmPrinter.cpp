@@ -3139,9 +3139,8 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
     if (Aliasee->hasCommonLinkage()) {
       report_fatal_error("Aliases to common variables are not allowed on AIX:"
                          "\n\tAlias attribute for " +
-                             Alias.getGlobalIdentifier() +
-                             " is invalid because " + Aliasee->getName() +
-                             " is common.",
+                             Alias.getName() + " is invalid because " +
+                             Aliasee->getName() + " is common.",
                          false);
     }
 

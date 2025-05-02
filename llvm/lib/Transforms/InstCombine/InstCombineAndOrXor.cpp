@@ -1869,6 +1869,10 @@ Instruction *InstCombinerImpl::foldCastedBitwiseLogic(BinaryOperator &I) {
 
     // Do the logic op in the intermediate width, then widen more.
     Value *NarrowLogic = Builder.CreateBinOp(LogicOpc, X, Y, I.getName());
+    auto *Disjoint = dyn_cast<PossiblyDisjointInst>(&I);
+    auto *NewDisjoint = dyn_cast<PossiblyDisjointInst>(NarrowLogic);
+    if (Disjoint && NewDisjoint)
+      NewDisjoint->setIsDisjoint(Disjoint->isDisjoint());
     return CastInst::Create(CastOpcode, NarrowLogic, DestTy);
   }
 

@@ -203,8 +203,7 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_rootn(__CLC_GENTYPE x,
   __CLC_BIT_INTN x_is_ninf = ix == (__CLC_INTN)NINFBITPATT_SP32;
   __CLC_BIT_INTN x_is_pinf = ix == (__CLC_INTN)PINFBITPATT_SP32;
 
-  ret = (!xpos & (inty == 2)) ? __CLC_AS_INTN((__CLC_GENTYPE)__CLC_GENTYPE_NAN)
-                              : ret;
+  ret = (!xpos & (inty == 2)) ? __CLC_AS_INTN(__CLC_GENTYPE_NAN) : ret;
   __CLC_INTN xinf =
       xpos ? (__CLC_INTN)PINFBITPATT_SP32 : (__CLC_INTN)NINFBITPATT_SP32;
   ret = ((ax == 0) & !ypos & (inty == 1)) ? xinf : ret;
@@ -217,7 +216,7 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_rootn(__CLC_GENTYPE x,
   ret = (x_is_pinf & !ypos) ? 0 : ret;
   ret = (x_is_pinf & ypos) ? PINFBITPATT_SP32 : ret;
   ret = ax > PINFBITPATT_SP32 ? ix : ret;
-  ret = ny == 0 ? __CLC_AS_INTN((__CLC_GENTYPE)__CLC_GENTYPE_NAN) : ret;
+  ret = ny == 0 ? __CLC_AS_INTN(__CLC_GENTYPE_NAN) : ret;
 
   return __CLC_AS_GENTYPE(ret);
 }
@@ -371,8 +370,7 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_rootn(__CLC_GENTYPE x,
   // Now all the edge cases
   __CLC_BIT_INTN x_is_ninf = ux == (__CLC_LONGN)NINFBITPATT_DP64;
   __CLC_BIT_INTN x_is_pinf = ux == (__CLC_LONGN)PINFBITPATT_DP64;
-  ret = (!xpos & (inty == 2)) ? __CLC_AS_LONGN((__CLC_GENTYPE)__CLC_GENTYPE_NAN)
-                              : ret;
+  ret = (!xpos & (inty == 2)) ? __CLC_AS_LONGN(__CLC_GENTYPE_NAN) : ret;
   __CLC_LONGN xinf =
       xpos ? (__CLC_LONGN)PINFBITPATT_DP64 : (__CLC_LONGN)NINFBITPATT_DP64;
   ret = ((ax == 0L) & !ypos & (inty == 1)) ? xinf : ret;
@@ -387,9 +385,7 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_rootn(__CLC_GENTYPE x,
   ret = (x_is_pinf & !ypos) ? 0L : ret;
   ret = (x_is_pinf & ypos) ? (__CLC_LONGN)PINFBITPATT_DP64 : ret;
   ret = ax > (__CLC_LONGN)PINFBITPATT_DP64 ? ux : ret;
-  ret = __CLC_CONVERT_LONGN(ny == 0)
-            ? __CLC_AS_LONGN((__CLC_GENTYPE)__CLC_GENTYPE_NAN)
-            : ret;
+  ret = __CLC_CONVERT_LONGN(ny == 0) ? __CLC_AS_LONGN(__CLC_GENTYPE_NAN) : ret;
   return __CLC_AS_GENTYPE(ret);
 }
 

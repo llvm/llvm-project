@@ -766,13 +766,14 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(Op, MVT::v8bf16, Expand);
   }
 
-  // For bf16, fpextend is custom lowered to be optionally expanded into shifts.
-  setOperationAction(ISD::FP_EXTEND, MVT::f32, Custom);
+  // fpextend from f16 or bf16 to f32 is legal
+  setOperationAction(ISD::FP_EXTEND, MVT::f32, Legal);
+  setOperationAction(ISD::FP_EXTEND, MVT::v4f32, Legal);
+  setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Legal);
+  setOperationAction(ISD::STRICT_FP_EXTEND, MVT::v4f32, Legal);
+  // fpextend from bf16 to f64 needs to be split into two fpextends
   setOperationAction(ISD::FP_EXTEND, MVT::f64, Custom);
-  setOperationAction(ISD::FP_EXTEND, MVT::v4f32, Custom);
-  setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Custom);
   setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Custom);
-  setOperationAction(ISD::STRICT_FP_EXTEND, MVT::v4f32, Custom);
 
   auto LegalizeNarrowFP = [this](MVT ScalarVT) {
     for (auto Op : {
@@ -843,11 +844,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationPromotedToType(ISD::FRINT,      V4Narrow, MVT::v4f32);
     setOperationPromotedToType(ISD::FNEARBYINT, V4Narrow, MVT::v4f32);
     setOperationPromotedToType(ISD::FCANONICALIZE, V4Narrow, MVT::v4f32);
+    setOperationPromotedToType(ISD::SETCC,         V4Narrow, MVT::v4f32);
 
     setOperationAction(ISD::FABS,        V4Narrow, Legal);
-    setOperationAction(ISD::FNEG, 	 V4Narrow, Legal);
+    setOperationAction(ISD::FNEG,        V4Narrow, Legal);
     setOperationAction(ISD::FMA,         V4Narrow, Expand);
-    setOperationAction(ISD::SETCC,       V4Narrow, Custom);
     setOperationAction(ISD::BR_CC,       V4Narrow, Expand);
     setOperationAction(ISD::SELECT,      V4Narrow, Expand);
     setOperationAction(ISD::SELECT_CC,   V4Narrow, Expand);
@@ -855,6 +856,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FSQRT,       V4Narrow, Expand);
 
     auto V8Narrow = MVT::getVectorVT(ScalarVT, 8);
+    setOperationPromotedToType(ISD::FCANONICALIZE, V8Narrow, MVT::v8f32);
+    setOperationPromotedToType(ISD::SETCC,         V8Narrow, MVT::v8f32);
+
     setOperationAction(ISD::FABS,        V8Narrow, Legal);
     setOperationAction(ISD::FADD,        V8Narrow, Legal);
     setOperationAction(ISD::FCEIL,       V8Narrow, Legal);
@@ -864,19 +868,17 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FMA,         V8Narrow, Expand);
     setOperationAction(ISD::FMUL,        V8Narrow, Legal);
     setOperationAction(ISD::FNEARBYINT,  V8Narrow, Legal);
-    setOperationAction(ISD::FNEG, 	 V8Narrow, Legal);
+    setOperationAction(ISD::FNEG,        V8Narrow, Legal);
     setOperationAction(ISD::FROUND,      V8Narrow, Legal);
     setOperationAction(ISD::FROUNDEVEN,  V8Narrow, Legal);
     setOperationAction(ISD::FRINT,       V8Narrow, Legal);
     setOperationAction(ISD::FSQRT,       V8Narrow, Expand);
     setOperationAction(ISD::FSUB,        V8Narrow, Legal);
     setOperationAction(ISD::FTRUNC,      V8Narrow, Legal);
-    setOperationAction(ISD::SETCC,       V8Narrow, Expand);
     setOperationAction(ISD::BR_CC,       V8Narrow, Expand);
     setOperationAction(ISD::SELECT,      V8Narrow, Expand);
     setOperationAction(ISD::SELECT_CC,   V8Narrow, Expand);
     setOperationAction(ISD::FP_EXTEND,   V8Narrow, Expand);
-    setOperationPromotedToType(ISD::FCANONICALIZE, V8Narrow, MVT::v8f32);
   };
 
   if (!Subtarget->hasFullFP16()) {
@@ -1001,6 +1003,16 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ATOMIC_LOAD_FMIN, MVT::f32, LibCall);
     setOperationAction(ISD::ATOMIC_LOAD_FMIN, MVT::f64, LibCall);
     setOperationAction(ISD::ATOMIC_LOAD_FMIN, MVT::bf16, LibCall);
+
+    setOperationAction(ISD::ATOMIC_LOAD_FMAXIMUM, MVT::f16, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FMAXIMUM, MVT::f32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FMAXIMUM, MVT::f64, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FMAXIMUM, MVT::bf16, LibCall);
+
+    setOperationAction(ISD::ATOMIC_LOAD_FMINIMUM, MVT::f16, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FMINIMUM, MVT::f32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FMINIMUM, MVT::f64, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FMINIMUM, MVT::bf16, LibCall);
   }
 
   if (Subtarget->hasLSE128()) {
@@ -4545,33 +4557,6 @@ SDValue AArch64TargetLowering::LowerFP_EXTEND(SDValue Op,
     if (Op0VT == MVT::bf16)
       return DAG.getNode(ISD::FP_EXTEND, SDLoc(Op), VT,
                          DAG.getNode(ISD::FP_EXTEND, SDLoc(Op), MVT::f32, Op0));
-    return SDValue();
-  }
-
-  if (VT.getScalarType() == MVT::f32) {
-    // FP16->FP32 extends are legal for v32 and v4f32.
-    if (Op0VT.getScalarType() == MVT::f16)
-      return Op;
-    if (Op0VT.getScalarType() == MVT::bf16) {
-      SDLoc DL(Op);
-      EVT IVT = VT.changeTypeToInteger();
-      if (!Op0VT.isVector()) {
-        Op0 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4bf16, Op0);
-        IVT = MVT::v4i32;
-      }
-
-      EVT Op0IVT = Op0.getValueType().changeTypeToInteger();
-      SDValue Ext =
-          DAG.getNode(ISD::ANY_EXTEND, DL, IVT, DAG.getBitcast(Op0IVT, Op0));
-      SDValue Shift =
-          DAG.getNode(ISD::SHL, DL, IVT, Ext, DAG.getConstant(16, DL, IVT));
-      if (!Op0VT.isVector())
-        Shift = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, Shift,
-                            DAG.getConstant(0, DL, MVT::i64));
-      Shift = DAG.getBitcast(VT, Shift);
-      return IsStrict ? DAG.getMergeValues({Shift, Op.getOperand(0)}, DL)
-                      : Shift;
-    }
     return SDValue();
   }
 
@@ -15882,6 +15867,12 @@ SDValue AArch64TargetLowering::LowerVSETCC(SDValue Op,
   if (LHS.getValueType().getVectorElementType().isInteger())
     return Op;
 
+  assert(((!Subtarget->hasFullFP16() &&
+           LHS.getValueType().getVectorElementType() != MVT::f16) ||
+          LHS.getValueType().getVectorElementType() != MVT::bf16 ||
+          LHS.getValueType().getVectorElementType() != MVT::f128) &&
+         "Unexpected type!");
+
   // Lower isnan(x) | isnan(never-nan) to x != x.
   // Lower !isnan(x) & !isnan(never-nan) to x == x.
   if (CC == ISD::SETUO || CC == ISD::SETO) {
@@ -15899,26 +15890,6 @@ SDValue AArch64TargetLowering::LowerVSETCC(SDValue Op,
       CC = CC == ISD::SETUO ? ISD::SETUNE : ISD::SETOEQ;
     }
   }
-
-  const bool FullFP16 = DAG.getSubtarget<AArch64Subtarget>().hasFullFP16();
-
-  // Make v4f16 (only) fcmp operations utilise vector instructions
-  // v8f16 support will be a litle more complicated
-  if ((!FullFP16 && LHS.getValueType().getVectorElementType() == MVT::f16) ||
-      LHS.getValueType().getVectorElementType() == MVT::bf16) {
-    if (LHS.getValueType().getVectorNumElements() == 4) {
-      LHS = DAG.getNode(ISD::FP_EXTEND, dl, MVT::v4f32, LHS);
-      RHS = DAG.getNode(ISD::FP_EXTEND, dl, MVT::v4f32, RHS);
-      SDValue NewSetcc = DAG.getSetCC(dl, MVT::v4i16, LHS, RHS, CC);
-      DAG.ReplaceAllUsesWith(Op, NewSetcc);
-      CmpVT = MVT::v4i32;
-    } else
-      return SDValue();
-  }
-
-  assert((!FullFP16 && LHS.getValueType().getVectorElementType() != MVT::f16) ||
-         LHS.getValueType().getVectorElementType() != MVT::bf16 ||
-         LHS.getValueType().getVectorElementType() != MVT::f128);
 
   // Unfortunately, the mapping of LLVM FP CC's onto AArch64 CC's isn't totally
   // clean.  Some of them require two branches to implement.
@@ -18421,10 +18392,10 @@ AArch64TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
 
   EVT VT = N->getValueType(0);
 
-  // For scalable and fixed types, mark them as cheap so we can handle it much
-  // later. This allows us to handle larger than legal types.
-  if (VT.isScalableVector() ||
-      (VT.isFixedLengthVector() && Subtarget->useSVEForFixedLengthVectors()))
+  // If SVE is available, we can generate
+  //  sdiv(x,y) -> ptrue + asrd          , where 'y' is positive pow-2 divisor.
+  //  sdiv(x,y) -> ptrue + asrd + subr   , where 'y' is negative pow-2 divisor.
+  if (VT.isVector() && Subtarget->isSVEorStreamingSVEAvailable())
     return SDValue(N, 0);
 
   // fold (sdiv X, pow2)
@@ -27991,7 +27962,9 @@ AArch64TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   // If LSFE available, use atomic FP instructions in preference to expansion
   if (Subtarget->hasLSFE() && (AI->getOperation() == AtomicRMWInst::FAdd ||
                                AI->getOperation() == AtomicRMWInst::FMax ||
-                               AI->getOperation() == AtomicRMWInst::FMin))
+                               AI->getOperation() == AtomicRMWInst::FMin ||
+                               AI->getOperation() == AtomicRMWInst::FMaximum ||
+                               AI->getOperation() == AtomicRMWInst::FMinimum))
     return AtomicExpansionKind::None;
 
   // Nand is not supported in LSE.
