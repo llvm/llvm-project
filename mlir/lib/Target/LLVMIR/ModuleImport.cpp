@@ -1909,7 +1909,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
       FlatSymbolRefAttr callee = nullptr;
       // If `indirectCallVal` is available emit an indirect call, otherwise use
       // the callee name. Build an indirect call by passing an empty `callee`
-      // operand and insert into `operands` to include the indirect call target
+      // operand and insert into `operands` to include the indirect call target.
       if (indirectCallVal)
         operands->insert(operands->begin(), indirectCallVal);
       else
@@ -1919,8 +1919,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
       if (failed(convertCallAttributes(callInst, callOp)))
         return failure();
 
-      // Handle parameter and result attributes. Don't bother if there's a
-      // type mismatch.
+      // Handle parameter and result attributes unless it's an indirect call.
       if (!indirectCallVal)
         convertParameterAttributes(callInst, callOp, builder);
       return callOp.getOperation();
@@ -1994,9 +1993,9 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
       return failure();
 
     FlatSymbolRefAttr calleeName = nullptr;
-    // If no cast is needed, use the original callee name. Otherwise patch
-    // operands to include the indirect call target. Build indirect call by
-    // passing using a nullptr `callee`.
+    // If `indirectCallVal` is available emit an indirect call, otherwise use
+    // the callee name. Build an indirect call by passing an empty `callee`
+    // operand and insert into `operands` to include the indirect call target.
     if (!indirectCallVal)
       calleeName = convertCalleeName(invokeInst);
     else
@@ -2012,8 +2011,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
     if (failed(convertInvokeAttributes(invokeInst, invokeOp)))
       return failure();
 
-    // Handle parameter and result attributes. Don't bother if there's a
-    // type mismatch.
+    // Handle parameter and result attributes unless it's an indirect call.
     if (!indirectCallVal)
       convertParameterAttributes(invokeInst, invokeOp, builder);
 
