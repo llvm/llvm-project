@@ -33,10 +33,20 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/CommandLine.h"
 
 namespace {
 #include "flang/Optimizer/Dialect/CanonicalizationPatterns.inc"
 } // namespace
+
+static llvm::cl::opt<bool> clUseStrictVolatileVerification(
+    "strict-fir-volatile-verifier", llvm::cl::init(false),
+    llvm::cl::desc(
+        "use stricter verifier for FIR operations with volatile types"));
+
+bool fir::useStrictVolatileVerification() {
+  return clUseStrictVolatileVerification;
+}
 
 static void propagateAttributes(mlir::Operation *fromOp,
                                 mlir::Operation *toOp) {
@@ -1535,11 +1545,14 @@ llvm::LogicalResult fir::ConvertOp::verify() {
   // represent volatility.
   const bool toLLVMPointer = mlir::isa<mlir::LLVM::LLVMPointerType>(outType);
   const bool toInteger = fir::isa_integer(outType);
-  if (fir::isa_volatile_type(inType) != fir::isa_volatile_type(outType) &&
-      !toLLVMPointer && !toInteger)
-    return emitOpError("cannot convert between volatile and non-volatile "
-                       "types, use fir.volatile_cast instead ")
-           << inType << " / " << outType;
+  if (fir::useStrictVolatileVerification()) {
+    if (fir::isa_volatile_type(inType) != fir::isa_volatile_type(outType) &&
+        !toLLVMPointer && !toInteger) {
+      return emitOpError("cannot convert between volatile and non-volatile "
+                         "types, use fir.volatile_cast instead ")
+             << inType << " / " << outType;
+    }
+  }
   if (canBeConverted(inType, outType))
     return mlir::success();
   return emitOpError("invalid type conversion")
@@ -1841,6 +1854,10 @@ llvm::LogicalResult fir::TypeInfoOp::verify() {
 static llvm::LogicalResult
 verifyEmboxOpVolatilityInvariants(mlir::Type memrefType,
                                   mlir::Type resultType) {
+
+  if (!fir::useStrictVolatileVerification())
+    return mlir::success();
+
   mlir::Type boxElementType =
       llvm::TypeSwitch<mlir::Type, mlir::Type>(resultType)
           .Case<fir::BoxType, fir::ClassType>(
