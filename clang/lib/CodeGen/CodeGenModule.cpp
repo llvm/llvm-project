@@ -5356,21 +5356,6 @@ void CodeGenModule::EmitExternalDeclaration(const DeclaratorDecl *D) {
     EmitExternalFunctionDeclaration(FD);
 }
 
-void CodeGenModule::EmitPragmaExport(const Decl *D) {
-  StringRef MangledName;
-  if (auto FD = dyn_cast<FunctionDecl>(D))
-    MangledName = getMangledName(GlobalDecl(FD));
-  else if (auto VD = dyn_cast<VarDecl>(D))
-    MangledName = getMangledName(GlobalDecl(VD));
-  else
-    assert(0 && "Unsupported pragma export Decl type");
-
-  if (llvm::GlobalValue *GV = GetGlobalValue(MangledName)) {
-    GV->setVisibility(llvm::GlobalValue::DefaultVisibility);
-    GV->setDSOLocal(false);
-  }
-}
-
 CharUnits CodeGenModule::GetTargetTypeStoreSize(llvm::Type *Ty) const {
   return Context.toCharUnitsFromBits(
       getDataLayout().getTypeStoreSizeInBits(Ty));

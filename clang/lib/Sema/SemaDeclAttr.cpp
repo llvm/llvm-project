@@ -2679,6 +2679,15 @@ static void handleExternalSourceSymbolAttr(Sema &S, Decl *D,
       S.Context, AL, Language, DefinedIn, IsGeneratedDeclaration, USR));
 }
 
+void Sema::mergeVisibilityType(Decl *D, SourceLocation Loc,
+                               VisibilityAttr::VisibilityType Value) {
+  if (VisibilityAttr *Attr = D->getAttr<VisibilityAttr>()) {
+    if (Attr->getVisibility() != Value)
+      Diag(Loc, diag::err_mismatched_visibility);
+  } else
+    D->addAttr(VisibilityAttr::CreateImplicit(Context, Value));
+}
+
 template <class T>
 static T *mergeVisibilityAttr(Sema &S, Decl *D, const AttributeCommonInfo &CI,
                               typename T::VisibilityType value) {

@@ -1332,8 +1332,8 @@ static QualType getCanonicalParamType(ASTContext &C, QualType T) {
   return C.getCanonicalParamType(T);
 }
 
-static bool typeListMatches(ASTContext &Context, FunctionDecl *FD,
-                            const clang::Sema::SymbolLabel &Label) {
+bool Sema::typeListMatchesSymbolLabel(FunctionDecl *FD,
+                                      const clang::Sema::SymbolLabel &Label) {
   assert(Label.TypeList.has_value());
   if (FD->getNumParams() != Label.TypeList->size()) {
     return false;
@@ -1397,7 +1397,7 @@ FunctionDecl *Sema::tryFunctionLookUpInPragma(NestedNameSpecifier *NestedName,
 }
 
 NamedDecl *
-Sema::trySymbolLookUpInPragma(NestedNameSpecifier *NestedName,
+Sema::trySymbolLookupInPragma(NestedNameSpecifier *NestedName,
                               const clang::Sema::SymbolLabel &Label) {
 
   assert(!NestedName->getPrefix() ||
@@ -1430,7 +1430,7 @@ Sema::trySymbolLookUpInPragma(NestedNameSpecifier *NestedName,
         // All function parameters must match if specified in pragma otherwise,
         // we accept a function found by lookup only if it's the only one.
         if ((Label.TypeList.has_value() &&
-             typeListMatches(Context, FD, Label)) ||
+             typeListMatchesSymbolLabel(FD, Label)) ||
             (!Label.TypeList.has_value() && LRes.isSingleResult()))
           return FD;
       }
@@ -1471,7 +1471,7 @@ Sema::trySymbolLookUpInPragma(NestedNameSpecifier *NestedName,
   for (LookupResult::iterator I = Result.begin(); I != Result.end(); ++I) {
     NamedDecl *ND = (*I)->getUnderlyingDecl();
     FunctionDecl *FD = dyn_cast<FunctionDecl>(ND);
-    if (FD && typeListMatches(Context, FD, Label)) {
+    if (FD && typeListMatchesSymbolLabel(FD, Label)) {
       return FD;
     }
   }
@@ -1486,16 +1486,34 @@ void Sema::ActOnPragmaExport(NestedNameSpecifier *NestedId,
   Label.NameLoc = NameLoc;
   Label.CVQual = CVQual;
   Label.TypeList = std::move(TypeList);
+  Label.NestedNameId = NestedId;
+  Label.Used = false;
 
-  auto I = PendingExportNames.find(NestedId);
-  if (I == PendingExportNames.end()) {
-    std::pair<SymbolNames::iterator, bool> IB = PendingExportNames.insert(
-        std::pair<NestedNameSpecifier *, PendingSymbolOverloads>(
-            NestedId, PendingSymbolOverloads()));
-    assert(IB.second);
-    I = IB.first;
+  NamedDecl *PrevDecl = trySymbolLookupInPragma(NestedId, Label);
+  if (PrevDecl && (isa<FunctionDecl>(PrevDecl) || isa<VarDecl>(PrevDecl))) {
+    if (PrevDecl->hasExternalFormalLinkage()) {
+      if (auto *FD = dyn_cast<FunctionDecl>(PrevDecl)) {
+        if (FD->hasBody())
+          Diag(NameLoc, diag::warn_pragma_not_applied_to_defined_symbol)
+              << "export";
+        else
+          mergeVisibilityType(PrevDecl, NameLoc, VisibilityAttr::Default);
+      } else {
+        auto *VD = dyn_cast<VarDecl>(PrevDecl);
+        assert(VD);
+        if (VD->hasDefinition() == VarDecl::Definition)
+          Diag(NameLoc, diag::warn_pragma_not_applied_to_defined_symbol)
+              << "export";
+        else
+          mergeVisibilityType(PrevDecl, NameLoc, VisibilityAttr::Default);
+      }
+    } else
+      Diag(NameLoc, diag::warn_pragma_not_applied) << "export" << PrevDecl;
+    Label.Used = true;
   }
-  I->second.push_back(Label);
+  if (!Label.Used) {
+    PendingExportedNames[NestedId->getAsIdentifier()].push_back(Label);
+  }
 }
 
 typedef std::vector<std::pair<unsigned, SourceLocation> > VisStack;

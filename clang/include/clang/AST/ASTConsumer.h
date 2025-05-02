@@ -108,9 +108,6 @@ public:
   /// completed.
   virtual void CompleteExternalDeclaration(DeclaratorDecl *D) {}
 
-  /// CompletePragmaExport - complete #pragma export statements.
-  virtual void CompletePragmaExport(Decl *D) {}
-
   /// Callback invoked when an MSInheritanceAttr has been attached to a
   /// CXXRecordDecl.
   virtual void AssignInheritanceModel(CXXRecordDecl *RD) {}

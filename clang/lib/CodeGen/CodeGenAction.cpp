@@ -342,10 +342,6 @@ void BackendConsumer::CompleteExternalDeclaration(DeclaratorDecl *D) {
   Gen->CompleteExternalDeclaration(D);
 }
 
-void BackendConsumer::CompletePragmaExport(Decl *D) {
-  Gen->CompletePragmaExport(D);
-}
-
 void BackendConsumer::AssignInheritanceModel(CXXRecordDecl *RD) {
   Gen->AssignInheritanceModel(RD);
 }

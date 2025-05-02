@@ -1423,24 +1423,10 @@ void Sema::ActOnEndOfTranslationUnit() {
   }
 
   // Visit all pending #pragma export.
-  for (auto &Iter : PendingExportNames) {
-    NestedNameSpecifier *Name = Iter.first;
-    PendingSymbolOverloads &Overloads = Iter.second;
-    for (auto &I : Overloads) {
-      if (auto *D = trySymbolLookUpInPragma(Name, I)) {
-        if (D->hasExternalFormalLinkage()) {
-          if (D->isCXXClassMember()) {
-            D->addAttr(VisibilityAttr::CreateImplicit(
-                Context,
-                (VisibilityAttr::VisibilityType) /*DefaultVisibility*/ 0));
-          } else
-            Consumer.CompletePragmaExport(D);
-        } else
-          Diag(I.NameLoc, diag::warn_pragma_not_applied) << "export" << D;
-      } else
-        Diag(I.NameLoc, diag::warn_failed_to_resolve_pragma) << "export";
-    }
-  }
+  for (auto &Iter : PendingExportedNames)
+    for (auto &Exported : Iter.second)
+      if (!Exported.Used)
+        Diag(Exported.NameLoc, diag::warn_failed_to_resolve_pragma) << "export";
 
   if (LangOpts.HLSL)
     HLSL().ActOnEndOfTranslationUnit(getASTContext().getTranslationUnitDecl());

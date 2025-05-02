@@ -5145,18 +5145,8 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
   assert(EllipsisLoc.isInvalid() &&
          "Friend ellipsis but not friend-specified?");
 
-  if (DS.isExportSpecified()) {
-    VisibilityAttr *existingAttr = TagD->getAttr<VisibilityAttr>();
-    if (existingAttr) {
-      VisibilityAttr::VisibilityType existingValue =
-          existingAttr->getVisibility();
-      if (existingValue != VisibilityAttr::Default)
-        Diag(DS.getExportSpecLoc(), diag::err_mismatched_visibility);
-    } else {
-      Tag->addAttr(
-          VisibilityAttr::CreateImplicit(Context, VisibilityAttr::Default));
-    }
-  }
+  if (DS.isExportSpecified())
+    mergeVisibilityType(Tag, DS.getExportSpecLoc(), VisibilityAttr::Default);
 
   // Track whether this decl-specifier declares anything.
   bool DeclaresAnything = true;
@@ -6498,18 +6488,8 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
   if (!New)
     return nullptr;
 
-  if (D.IsExport()) {
-    VisibilityAttr *existingAttr = New->getAttr<VisibilityAttr>();
-    if (existingAttr) {
-      VisibilityAttr::VisibilityType existingValue =
-          existingAttr->getVisibility();
-      if (existingValue != VisibilityAttr::Default)
-        Diag(D.getExportLoc(), diag::err_mismatched_visibility);
-    } else
-      // Add VisibilityAttr::Default since the default could be hidden, etc.
-      New->addAttr(
-          VisibilityAttr::CreateImplicit(Context, VisibilityAttr::Default));
-  }
+  if (D.IsExport())
+    mergeVisibilityType(New, D.getExportLoc(), VisibilityAttr::Default);
 
   // If this has an identifier and is not a function template specialization,
   // add it to the scope stack.
@@ -7511,6 +7491,108 @@ static void emitReadOnlyPlacementAttrWarning(Sema &S, const VarDecl *VD) {
   }
 }
 
+// Checks if the given label matches the named declaration.
+static bool isNamedDeclSameAsLabel(Sema *S, NamedDecl *D,
+                                   Sema::SymbolLabel &Label) {
+  const DeclContext *Ctx = D->getDeclContext();
+
+  // Check the name.
+  NestedNameSpecifier *NS = Label.NestedNameId;
+  if (NS->getAsIdentifier()->getName() != D->getIdentifier()->getName())
+    return false;
+  NS = NS->getPrefix();
+
+  if (NS) {
+    // For ObjC methods and properties, look through categories and use the
+    // interface as context.
+    if (auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
+      if (auto *ID = MD->getClassInterface())
+        Ctx = ID;
+    } else if (auto *PD = dyn_cast<ObjCPropertyDecl>(D)) {
+      if (auto *MD = PD->getGetterMethodDecl())
+        if (auto *ID = MD->getClassInterface())
+          Ctx = ID;
+    } else if (auto *ID = dyn_cast<ObjCIvarDecl>(D)) {
+      if (auto *CI = ID->getContainingInterface())
+        Ctx = CI;
+    }
+
+    // Check named contexts.
+    if (Ctx->isFunctionOrMethod())
+      return false;
+
+    DeclarationName NameInScope = D->getDeclName();
+    for (; NS && Ctx; Ctx = Ctx->getParent()) {
+      // Suppress anonymous namespace.
+      if (isa<NamespaceDecl>(Ctx) &&
+          cast<NamespaceDecl>(Ctx)->isAnonymousNamespace())
+        continue;
+
+      // Suppress inline namespace if it doesn't make the result ambiguous.
+      if (Ctx->isInlineNamespace() && NameInScope &&
+          cast<NamespaceDecl>(Ctx)->isRedundantInlineQualifierFor(NameInScope))
+        continue;
+
+      // Skip non-named contexts such as linkage specifications and ExportDecls.
+      const NamedDecl *ND = dyn_cast<NamedDecl>(Ctx);
+      if (!ND)
+        continue;
+
+      // Fail if the sequence of nested name identifiers is shorter.
+      if (!NS)
+        return false;
+
+      // Fail if the names are not equal.
+      if (NS->getAsIdentifier()->getName() != ND->getIdentifier()->getName())
+        return false;
+
+      NameInScope = ND->getDeclName();
+      NS = NS->getPrefix();
+    }
+
+    // Fail if the sequence of nested name identifiers is longer.
+    // It makes sure that both lists have the same length.
+    if (NS)
+      return false;
+  }
+
+  if (isa<VarDecl>(D) && !Label.TypeList.has_value())
+    return true;
+  if (FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
+    // All function parameters match if specified in pragma.
+    if (Label.TypeList.has_value())
+      return S->typeListMatchesSymbolLabel(FD, Label);
+    // There might be overloaded functions. However, with the available
+    // information it cn only be concluded that the functions are the same.
+    return true;
+  }
+
+  return false;
+}
+
+void Sema::ProcessPragmaExport(DeclaratorDecl *NewD) {
+  if (PendingExportedNames.empty())
+    return;
+  IdentifierInfo *IdentName = NewD->getIdentifier();
+  if (IdentName == nullptr)
+    return;
+  auto PendingName = PendingExportedNames.find(IdentName);
+  if (PendingName != PendingExportedNames.end()) {
+    for (auto I = PendingName->second.begin(), E = PendingName->second.end();
+         I != E; ++I) {
+      auto &Label = *I;
+      if (!Label.Used && isNamedDeclSameAsLabel(this, NewD, Label)) {
+        Label.Used = true;
+        if (NewD->hasExternalFormalLinkage())
+          mergeVisibilityType(NewD, Label.NameLoc, VisibilityAttr::Default);
+        else
+          Diag(Label.NameLoc, diag::warn_pragma_not_applied)
+              << "export" << NewD;
+      }
+    }
+  }
+}
+
 // Checks if VD is declared at global scope or with C language linkage.
 static bool isMainVar(DeclarationName Name, VarDecl *VD) {
   return Name.getAsIdentifierInfo() &&
@@ -8205,6 +8287,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     CheckShadow(NewVD, ShadowedDecl, Previous);
 
   ProcessPragmaWeak(S, NewVD);
+  ProcessPragmaExport(NewVD);
 
   if (D.IsExport() && !NewVD->hasExternalFormalLinkage())
     Diag(D.getIdentifierLoc(), diag::err_cannot_be_exported);
@@ -10852,6 +10935,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   }
 
   ProcessPragmaWeak(S, NewFD);
+  ProcessPragmaExport(NewFD);
 
   if (D.IsExport() && !NewFD->hasExternalFormalLinkage())
     Diag(D.getIdentifierLoc(), diag::err_cannot_be_exported);

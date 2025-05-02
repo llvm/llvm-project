@@ -1186,6 +1186,9 @@ def warn_pragma_not_applied : Warning<
   "#pragma %0 is applicable to symbols with external linkage only; "
   "not applied to %1">,
   InGroup<IgnoredPragmas>;
+def warn_pragma_not_applied_to_defined_symbol : Warning<
+  "#pragma %0 can only applied before a symbol is defined">,
+  InGroup<IgnoredPragmas>;
 def err_pragma_loop_invalid_argument_type : Error<
   "invalid argument of type %0; expected an integer type">;
 def err_pragma_loop_compatibility : Error<

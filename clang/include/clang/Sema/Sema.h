@@ -1957,23 +1957,27 @@ public:
   /// the function must match if HasTypeList is true.
   struct SymbolLabel {
     std::optional<SmallVector<QualType, 4>> TypeList;
-    StringRef MappedName;
     SourceLocation NameLoc;
     bool HasTypeList;
     Qualifiers CVQual;
+    NestedNameSpecifier
+        *NestedNameId; // Nested name identifier for type lookup.
+    bool Used;
   };
 
-  typedef SmallVector<SymbolLabel, 1> PendingSymbolOverloads;
-  typedef llvm::DenseMap<NestedNameSpecifier *, PendingSymbolOverloads>
-      SymbolNames;
-  SymbolNames PendingExportNames;
+  typedef SmallVector<SymbolLabel, 1> PendingPragmaExportOverloads;
+  llvm::DenseMap<IdentifierInfo *, PendingPragmaExportOverloads>
+      PendingExportedNames;
+
+  bool typeListMatchesSymbolLabel(FunctionDecl *FD,
+                                  const clang::Sema::SymbolLabel &Label);
 
   FunctionDecl *tryFunctionLookUpInPragma(NestedNameSpecifier *NestedName,
                                           SourceLocation NameLoc);
 
-  /// trySymbolLookUp try to look up a decl matching the nested specifier
-  /// with optional type list.
-  NamedDecl *trySymbolLookUpInPragma(NestedNameSpecifier *NestedName,
+  /// trySymbolLookupInPragma try to look up a decl matching the nested
+  //  specifier with optional type list.
+  NamedDecl *trySymbolLookupInPragma(NestedNameSpecifier *NestedName,
                                      const clang::Sema::SymbolLabel &Label);
 
   /// ActonPragmaExport - called on well-formed '\#pragma export'.
@@ -3627,6 +3631,9 @@ public:
   /// a C++0x [dcl.typedef]p2 alias-declaration: 'using T = A;'.
   NamedDecl *ActOnTypedefNameDecl(Scope *S, DeclContext *DC, TypedefNameDecl *D,
                                   LookupResult &Previous, bool &Redeclaration);
+
+  void ProcessPragmaExport(DeclaratorDecl *newDecl);
+
   NamedDecl *ActOnVariableDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                                      TypeSourceInfo *TInfo,
                                      LookupResult &Previous,
@@ -4646,6 +4653,8 @@ public:
                           TypeVisibilityAttr::VisibilityType Vis);
   VisibilityAttr *mergeVisibilityAttr(Decl *D, const AttributeCommonInfo &CI,
                                       VisibilityAttr::VisibilityType Vis);
+  void mergeVisibilityType(Decl *D, SourceLocation Loc,
+                           VisibilityAttr::VisibilityType Type);
   SectionAttr *mergeSectionAttr(Decl *D, const AttributeCommonInfo &CI,
                                 StringRef Name);
 
