@@ -24,6 +24,8 @@ namespace detail {
 struct RecordTypeStorage;
 } // namespace detail
 
+bool isValidFundamentalIntWidth(unsigned width);
+
 bool isAnyFloatingPointType(mlir::Type t);
 bool isFPOrFPVectorTy(mlir::Type);
 
@@ -32,6 +34,12 @@ bool isFPOrFPVectorTy(mlir::Type);
 //===----------------------------------------------------------------------===//
 // CIR Dialect Tablegen'd Types
 //===----------------------------------------------------------------------===//
+
+namespace cir {
+
+#include "clang/CIR/Dialect/IR/CIRTypeConstraints.h.inc"
+
+} // namespace cir
 
 #define GET_TYPEDEF_CLASSES
 #include "clang/CIR/Dialect/IR/CIROpsTypes.h.inc"
