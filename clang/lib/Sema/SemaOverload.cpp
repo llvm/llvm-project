@@ -2510,23 +2510,24 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     return false;
 
   ExprResult ER = ExprResult{From};
-  Sema::AssignConvertType Conv =
+  AssignConvertType Conv =
       S.CheckSingleAssignmentConstraints(ToType, ER,
                                          /*Diagnose=*/false,
                                          /*DiagnoseCFAudited=*/false,
                                          /*ConvertRHS=*/false);
   ImplicitConversionKind SecondConv;
   switch (Conv) {
-  case Sema::Compatible:
-  case Sema::CompatibleVoidPtrToNonVoidPtr: // __attribute__((overloadable))
+  case AssignConvertType::Compatible:
+  case AssignConvertType::
+      CompatibleVoidPtrToNonVoidPtr: // __attribute__((overloadable))
     SecondConv = ICK_C_Only_Conversion;
     break;
   // For our purposes, discarding qualifiers is just as bad as using an
   // incompatible pointer. Note that an IncompatiblePointer conversion can drop
   // qualifiers, as well.
-  case Sema::CompatiblePointerDiscardsQualifiers:
-  case Sema::IncompatiblePointer:
-  case Sema::IncompatiblePointerSign:
+  case AssignConvertType::CompatiblePointerDiscardsQualifiers:
+  case AssignConvertType::IncompatiblePointer:
+  case AssignConvertType::IncompatiblePointerSign:
     SecondConv = ICK_Incompatible_Pointer_Conversion;
     break;
   default:
