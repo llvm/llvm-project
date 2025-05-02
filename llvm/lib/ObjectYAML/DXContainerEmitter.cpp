@@ -293,7 +293,6 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
 
           if (RS.Version == 1) {
             dxbc::RST0::v0::RootDescriptor Descriptor;
-            auto DescriptorYaml = std::get<DXContainerYAML::RootDescriptorYaml>(Param.Data);
             Descriptor.RegisterSpace = DescriptorYaml.RegisterSpace;
             Descriptor.ShaderRegister = DescriptorYaml.ShaderRegister;
             RS.ParametersContainer.addParameter(Header, Descriptor);
