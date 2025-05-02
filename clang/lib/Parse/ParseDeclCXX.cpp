@@ -5369,19 +5369,12 @@ void Parser::ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
             1); // offset 1 for '"'
     // Invoke the root signature parser to construct the in-memory constructs
     hlsl::RootSignatureLexer Lexer(Signature, SignatureLoc);
-    SmallVector<llvm::hlsl::rootsig::RootElement> Elements;
-    hlsl::RootSignatureParser Parser(Elements, Lexer, PP);
+    SmallVector<llvm::hlsl::rootsig::RootElement> RootElements;
+    hlsl::RootSignatureParser Parser(RootElements, Lexer, PP);
     if (Parser.parse()) {
       T.consumeClose();
       return;
     }
-
-    // Allocate the root elements onto ASTContext
-    unsigned N = Elements.size();
-    auto RootElements = MutableArrayRef<llvm::hlsl::rootsig::RootElement>(
-        ::new (Actions.getASTContext()) llvm::hlsl::rootsig::RootElement[N], N);
-    for (unsigned I = 0; I < N; ++I)
-      RootElements[I] = Elements[I];
 
     // Create the Root Signature
     auto *SignatureDecl = HLSLRootSignatureDecl::Create(
