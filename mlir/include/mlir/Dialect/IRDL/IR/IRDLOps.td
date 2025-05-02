@@ -91,7 +91,6 @@ def IRDL_TypeOp : IRDL_Op<"type",
   let regions = (region SizedRegion<1>:$body);
   let assemblyFormat =
     "$sym_name attr-dict-with-keyword custom<SingleBlockRegion>($body)";
-  let hasVerifier = 1;
 }
 
 def IRDL_AttributeOp : IRDL_Op<"attribute",
@@ -127,8 +126,6 @@ def IRDL_AttributeOp : IRDL_Op<"attribute",
   let regions = (region SizedRegion<1>:$body);
   let assemblyFormat =
     "$sym_name attr-dict-with-keyword custom<SingleBlockRegion>($body)";
-
-  let hasVerifier = 1;
 }
 
 def IRDL_ParametersOp : IRDL_Op<"parameters",
@@ -205,7 +202,6 @@ def IRDL_OperationOp : IRDL_Op<"operation",
   let assemblyFormat =
     "$sym_name attr-dict-with-keyword custom<SingleBlockRegion>($body)";
   let hasRegionVerifier = true;
-  let hasVerifier = 1;
 }
 
 def IRDL_OperandsOp : IRDL_Op<"operands", [HasParent<"OperationOp">]> {
