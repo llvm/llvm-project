@@ -4196,10 +4196,14 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Detach &x) {
-  // OpenMP 5.0: 2.10.1 Task construct restrictions
-  CheckAllowedClause(llvm::omp::Clause::OMPC_detach);
-  // OpenMP 5.2: 12.5.2 Detach clause restrictions
   unsigned version{context_.langOptions().OpenMPVersion};
+  if (version >= 52) {
+    SetContextClauseInfo(llvm::omp::Clause::OMPC_detach);
+  } else {
+    // OpenMP 5.0: 2.10.1 Task construct restrictions
+    CheckAllowedClause(llvm::omp::Clause::OMPC_detach);
+  }
+  // OpenMP 5.2: 12.5.2 Detach clause restrictions
   if (version >= 52) {
     CheckVarIsNotPartOfAnotherVar(GetContext().clauseSource, x.v.v, "DETACH");
   }
