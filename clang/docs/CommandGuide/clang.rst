@@ -262,9 +262,10 @@ Language Selection and Mode Options
 .. option:: -ffreestanding
 
  Indicate that the file should be compiled for a freestanding, not a hosted,
- environment. Note that it is assumed that a freestanding environment will
- additionally provide `memcpy`, `memmove`, `memset` and `memcmp`
- implementations, as these are needed for efficient codegen for many programs.
+ environment. Note that a freestanding build still requires linking against a C
+ Standard Library which supports the freestanding interfaces for the specified
+ language mode and target environment. This includes functions like `memcpy`,
+ `memmove`, and `memset`.
 
 .. option:: -fno-builtin
 

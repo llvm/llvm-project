@@ -818,6 +818,7 @@ static bool isAllocationWithHotColdVariant(const Function *Callee,
 
 struct AllocMatchInfo {
   uint64_t TotalSize = 0;
+  size_t NumFramesMatched = 0;
   AllocationType AllocType = AllocationType::None;
   bool Matched = false;
 };
@@ -954,7 +955,7 @@ undriftMemProfRecord(const DenseMap<uint64_t, LocToLocMap> &UndriftMaps,
     UndriftCallStack(AS.CallStack);
 
   for (auto &CS : MemProfRec.CallSites)
-    UndriftCallStack(CS);
+    UndriftCallStack(CS.Frames);
 }
 
 static void
@@ -972,7 +973,7 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
   // 'unique-internal-linkage-names' can make MemProf work better for local
   // linkage function.
   auto FuncName = F.getName();
-  auto FuncGUID = Function::getGUID(FuncName);
+  auto FuncGUID = Function::getGUIDAssumingExternalLinkage(FuncName);
   std::optional<memprof::MemProfRecord> MemProfRec;
   auto Err = MemProfReader->getMemProfRecord(FuncGUID).moveInto(MemProfRec);
   if (Err) {
@@ -1048,15 +1049,16 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
     // Need to record all frames from leaf up to and including this function,
     // as any of these may or may not have been inlined at this point.
     unsigned Idx = 0;
-    for (auto &StackFrame : CS) {
+    for (auto &StackFrame : CS.Frames) {
       uint64_t StackId = computeStackId(StackFrame);
-      LocHashToCallSites[StackId].insert(ArrayRef<Frame>(CS).drop_front(Idx++));
+      LocHashToCallSites[StackId].insert(
+          ArrayRef<Frame>(CS.Frames).drop_front(Idx++));
       ProfileHasColumns |= StackFrame.Column;
       // Once we find this function, we can stop recording.
       if (StackFrame.Function == FuncGUID)
         break;
     }
-    assert(Idx <= CS.size() && CS[Idx - 1].Function == FuncGUID);
+    assert(Idx <= CS.Frames.size() && CS.Frames[Idx - 1].Function == FuncGUID);
   }
 
   auto GetOffset = [](const DILocation *DIL) {
@@ -1097,7 +1099,7 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
         StringRef Name = DIL->getScope()->getSubprogram()->getLinkageName();
         if (Name.empty())
           Name = DIL->getScope()->getSubprogram()->getName();
-        auto CalleeGUID = Function::getGUID(Name);
+        auto CalleeGUID = Function::getGUIDAssumingExternalLinkage(Name);
         auto StackId = computeStackId(CalleeGUID, GetOffset(DIL),
                                       ProfileHasColumns ? DIL->getColumn() : 0);
         // Check if we have found the profile's leaf frame. If yes, collect
@@ -1151,7 +1153,8 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
             if (ClPrintMemProfMatchInfo) {
               assert(FullStackId != 0);
               FullStackIdToAllocMatchInfo[FullStackId] = {
-                  AllocInfo->Info.getTotalSize(), AllocType, /*Matched=*/true};
+                  AllocInfo->Info.getTotalSize(), InlinedCallStack.size(),
+                  AllocType, /*Matched=*/true};
             }
           }
         }
@@ -1284,7 +1287,7 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
       errs() << "MemProf " << getAllocTypeAttributeString(Info.AllocType)
              << " context with id " << Id << " has total profiled size "
              << Info.TotalSize << (Info.Matched ? " is" : " not")
-             << " matched\n";
+             << " matched with " << Info.NumFramesMatched << " frames\n";
 
     for (const auto &CallStack : MatchedCallSites) {
       errs() << "MemProf callsite match for inline call stack";

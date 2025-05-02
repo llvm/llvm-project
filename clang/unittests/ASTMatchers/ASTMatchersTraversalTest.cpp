@@ -226,11 +226,11 @@ TEST(HasDeclaration, HasDeclarationOfEnumType) {
 }
 
 TEST(HasDeclaration, HasGetDeclTraitTest) {
-  static_assert(internal::has_getDecl<TypedefType>::value,
+  static_assert(internal::has_getDecl<TypedefType>,
                 "Expected TypedefType to have a getDecl.");
-  static_assert(internal::has_getDecl<RecordType>::value,
+  static_assert(internal::has_getDecl<RecordType>,
                 "Expected RecordType to have a getDecl.");
-  static_assert(!internal::has_getDecl<TemplateSpecializationType>::value,
+  static_assert(!internal::has_getDecl<TemplateSpecializationType>,
                 "Expected TemplateSpecializationType to *not* have a getDecl.");
 }
 
@@ -5760,10 +5760,10 @@ TEST(ElaboratedTypeNarrowing, namesType) {
 
 TEST(NNS, BindsNestedNameSpecifiers) {
   EXPECT_TRUE(matchAndVerifyResultTrue(
-    "namespace ns { struct E { struct B {}; }; } ns::E::B b;",
-    nestedNameSpecifier(specifiesType(asString("struct ns::E"))).bind("nns"),
-    std::make_unique<VerifyIdIsBoundTo<NestedNameSpecifier>>(
-      "nns", "ns::struct E::")));
+      "namespace ns { struct E { struct B {}; }; } ns::E::B b;",
+      nestedNameSpecifier(specifiesType(asString("struct ns::E"))).bind("nns"),
+      std::make_unique<VerifyIdIsBoundTo<NestedNameSpecifier>>("nns",
+                                                               "ns::E::")));
 }
 
 TEST(NNS, BindsNestedNameSpecifierLocs) {

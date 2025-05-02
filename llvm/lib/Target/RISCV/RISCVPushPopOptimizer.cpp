@@ -69,16 +69,6 @@ static unsigned getPopRetOpcode(unsigned PopOpcode, bool IsReturnZero) {
   }
 }
 
-// Check if POP instruction was inserted into the MBB and return iterator to it.
-static MachineBasicBlock::iterator containsPop(MachineBasicBlock &MBB) {
-  for (MachineBasicBlock::iterator MBBI = MBB.begin(); MBBI != MBB.end();
-       MBBI = next_nodbg(MBBI, MBB.end()))
-    if (MBBI->getFlag(MachineInstr::FrameDestroy) && isPop(MBBI->getOpcode()))
-      return MBBI;
-
-  return MBB.end();
-}
-
 bool RISCVPushPopOpt::usePopRet(MachineBasicBlock::iterator &MBBI,
                                 MachineBasicBlock::iterator &NextI,
                                 bool IsReturnZero) {
@@ -150,19 +140,28 @@ bool RISCVPushPopOpt::runOnMachineFunction(MachineFunction &Fn) {
 
   TII = Subtarget->getInstrInfo();
   TRI = Subtarget->getRegisterInfo();
+
   // Resize the modified and used register unit trackers.  We do this once
   // per function and then clear the register units each time we determine
   // correct return value for the POP.
   ModifiedRegUnits.init(*TRI);
   UsedRegUnits.init(*TRI);
+
   bool Modified = false;
   for (auto &MBB : Fn) {
-    MachineBasicBlock::iterator MBBI = containsPop(MBB);
-    MachineBasicBlock::iterator NextI = next_nodbg(MBBI, MBB.end());
-    if (MBBI != MBB.end() && NextI != MBB.end() &&
-        NextI->getOpcode() == RISCV::PseudoRET)
-      Modified |= usePopRet(MBBI, NextI, adjustRetVal(MBBI));
+    // RET should be the only terminator.
+    auto RetMBBI = MBB.getFirstTerminator();
+    if (RetMBBI == MBB.end() || RetMBBI->getOpcode() != RISCV::PseudoRET ||
+        RetMBBI == MBB.begin())
+      continue;
+
+    // The previous instruction should be a POP.
+    auto PopMBBI = prev_nodbg(RetMBBI, MBB.begin());
+    if (isPop(PopMBBI->getOpcode()) &&
+        PopMBBI->getFlag(MachineInstr::FrameDestroy))
+      Modified |= usePopRet(PopMBBI, RetMBBI, adjustRetVal(PopMBBI));
   }
+
   return Modified;
 }
 

@@ -14,7 +14,7 @@
 using namespace LIBC_NAMESPACE;
 
 static void test_add_simple() {
-  uint32_t num_additions =
+  uint64_t num_additions =
       10 + 10 * gpu::get_thread_id() + 10 * gpu::get_block_id();
   uint64_t cnt = 0;
   for (uint32_t i = 0; i < num_additions; ++i) {

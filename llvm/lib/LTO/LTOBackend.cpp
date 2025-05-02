@@ -221,8 +221,13 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
   else
     CodeModel = M.getCodeModel();
 
+  TargetOptions TargetOpts = Conf.Options;
+  if (TargetOpts.MCOptions.ABIName.empty()) {
+    TargetOpts.MCOptions.ABIName = M.getTargetABIFromMD();
+  }
+
   std::unique_ptr<TargetMachine> TM(TheTarget->createTargetMachine(
-      TheTriple.str(), Conf.CPU, Features.getString(), Conf.Options, RelocModel,
+      TheTriple, Conf.CPU, Features.getString(), TargetOpts, RelocModel,
       CodeModel, Conf.CGOptLevel));
 
   assert(TM && "Failed to create target machine");
@@ -455,6 +460,9 @@ static void codegen(const Config &Conf, TargetMachine *TM,
 
   if (DwoOut)
     DwoOut->keep();
+
+  if (Error Err = Stream->commit())
+    report_fatal_error(std::move(Err));
 }
 
 static void splitCodeGen(const Config &C, TargetMachine *TM,

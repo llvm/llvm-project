@@ -48,9 +48,9 @@ contains
 
     ! CHECK: %[[ccoor:.*]] = fir.coordinate_of %[[tmp]], c : (!fir.ref<!fir.type<_QMm_struct_ctorTt_char_scalar{x:f32,c:!fir.char<1,3>}>>) -> !fir.ref<!fir.char<1,3>>
     ! CHECK: %[[cst:.*]] = fir.address_of(@_QQ{{.*}}) : !fir.ref<!fir.char<1,3>>
-    ! CHECK-DAG: %[[ccast:.*]] = fir.convert %[[ccoor]] : (!fir.ref<!fir.char<1,3>>) -> !fir.ref<i8>
-    ! CHECK-DAG: %[[cstcast:.*]] = fir.convert %[[cst]] : (!fir.ref<!fir.char<1,3>>) -> !fir.ref<i8>
-    ! CHECK: fir.call @llvm.memmove.p0.p0.i64(%[[ccast]], %[[cstcast]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+    ! CHECK-DAG: %[[ccast:.*]] = fir.convert %[[ccoor]] : (!fir.ref<!fir.char<1,3>>) -> !llvm.ptr
+    ! CHECK-DAG: %[[cstcast:.*]] = fir.convert %[[cst]] : (!fir.ref<!fir.char<1,3>>) -> !llvm.ptr
+    ! CHECK: "llvm.intr.memmove"(%[[ccast]], %[[cstcast]], %{{.*}}) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
     real :: x
     call print_char_scalar(t_char_scalar(x=x, c="abc"))
   end subroutine
@@ -105,10 +105,9 @@ contains
   ! CHECK: %[[VAL_26:.*]] = arith.constant 1 : i64
   ! CHECK: %[[VAL_27:.*]] = fir.convert %[[VAL_25]] : (index) -> i64
   ! CHECK: %[[VAL_28:.*]] = arith.muli %[[VAL_26]], %[[VAL_27]] : i64
-  ! CHECK: %[[VAL_29:.*]] = arith.constant false
-  ! CHECK: %[[VAL_30:.*]] = fir.convert %[[VAL_24]] : (!fir.ref<!fir.char<1,3>>) -> !fir.ref<i8>
-  ! CHECK: %[[VAL_31:.*]] = fir.convert %[[char_temp]] : (!fir.ref<!fir.char<1,3>>) -> !fir.ref<i8>
-  ! CHECK: fir.call @llvm.memmove.p0.p0.i64(%[[VAL_30]], %[[VAL_31]], %[[VAL_28]], %[[VAL_29]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK: %[[VAL_30:.*]] = fir.convert %[[VAL_24]] : (!fir.ref<!fir.char<1,3>>) -> !llvm.ptr
+  ! CHECK: %[[VAL_31:.*]] = fir.convert %[[char_temp]] : (!fir.ref<!fir.char<1,3>>) -> !llvm.ptr
+  ! CHECK: "llvm.intr.memmove"(%[[VAL_30]], %[[VAL_31]], %[[VAL_28]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
   ! CHECK: %[[VAL_32:.*]] = fir.array_amend %[[VAL_22]], %[[VAL_24]] : (!fir.array<5x!fir.char<1,3>>, !fir.ref<!fir.char<1,3>>) -> !fir.array<5x!fir.char<1,3>>
   ! CHECK: fir.result %[[VAL_32]] : !fir.array<5x!fir.char<1,3>>
   ! CHECK: }
@@ -287,10 +286,9 @@ end
 ! CHECK:         %[[VAL_14:.*]] = arith.constant 1 : i64
 ! CHECK:         %[[VAL_15:.*]] = fir.convert %[[VAL_13]] : (index) -> i64
 ! CHECK:         %[[VAL_16:.*]] = arith.muli %[[VAL_14]], %[[VAL_15]] : i64
-! CHECK:         %[[VAL_17:.*]] = arith.constant false
-! CHECK:         %[[VAL_18:.*]] = fir.convert %[[VAL_12]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-! CHECK:         %[[VAL_19:.*]] = fir.convert %[[VAL_10]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-! CHECK:         fir.call @llvm.memmove.p0.p0.i64(%[[VAL_18]], %[[VAL_19]], %[[VAL_16]], %[[VAL_17]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+! CHECK:         %[[VAL_18:.*]] = fir.convert %[[VAL_12]] : (!fir.ref<!fir.char<1,5>>) -> !llvm.ptr
+! CHECK:         %[[VAL_19:.*]] = fir.convert %[[VAL_10]] : (!fir.ref<!fir.char<1,5>>) -> !llvm.ptr
+! CHECK:         "llvm.intr.memmove"(%[[VAL_18]], %[[VAL_19]], %[[VAL_16]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
 ! CHECK:         %[[VAL_21:.*]] = fir.coordinate_of %[[VAL_0]], mask : (!fir.ref<!fir.type<_QFtest_parent_component2Tmid{z:!fir.char<1,5>,mask:!fir.logical<4>}>>) -> !fir.ref<!fir.logical<4>>
 ! CHECK:         %[[VAL_22:.*]] = arith.constant true
 ! CHECK:         %[[VAL_23:.*]] = fir.convert %[[VAL_22]] : (i1) -> !fir.logical<4>

@@ -3351,6 +3351,9 @@ struct StmtFunctionStmt {
 // !DIR$ name[=value] [, name[=value]]...    = can be :
 // !DIR$ UNROLL [N]
 // !DIR$ UNROLL_AND_JAM [N]
+// !DIR$ NOVECTOR
+// !DIR$ NOUNROLL
+// !DIR$ NOUNROLL_AND_JAM
 // !DIR$ <anything else>
 struct CompilerDirective {
   UNION_CLASS_BOILERPLATE(CompilerDirective);
@@ -3376,10 +3379,14 @@ struct CompilerDirective {
   struct UnrollAndJam {
     WRAPPER_CLASS_BOILERPLATE(UnrollAndJam, std::optional<std::uint64_t>);
   };
+  EMPTY_CLASS(NoVector);
+  EMPTY_CLASS(NoUnroll);
+  EMPTY_CLASS(NoUnrollAndJam);
   EMPTY_CLASS(Unrecognized);
   CharBlock source;
   std::variant<std::list<IgnoreTKR>, LoopCount, std::list<AssumeAligned>,
-      VectorAlways, std::list<NameValue>, Unroll, UnrollAndJam, Unrecognized>
+      VectorAlways, std::list<NameValue>, Unroll, UnrollAndJam, Unrecognized,
+      NoVector, NoUnroll, NoUnrollAndJam>
       u;
 };
 
@@ -3464,6 +3471,19 @@ WRAPPER_CLASS(PauseStmt, std::optional<StopCode>);
 struct OmpClause;
 struct OmpDirectiveSpecification;
 
+struct OmpDirectiveName {
+  // No boilerplates: this class should be copyable, movable, etc.
+  constexpr OmpDirectiveName() = default;
+  constexpr OmpDirectiveName(const OmpDirectiveName &) = default;
+  // Construct from an already parsed text. Use Verbatim for this because
+  // Verbatim's source corresponds to an actual source location.
+  // This allows "construct<OmpDirectiveName>(Verbatim("<name>"))".
+  OmpDirectiveName(const Verbatim &name);
+  using WrapperTrait = std::true_type;
+  CharBlock source;
+  llvm::omp::Directive v{llvm::omp::Directive::OMPD_unknown};
+};
+
 // 2.1 Directives or clauses may accept a list or extended-list.
 //     A list item is a variable, array section or common block name (enclosed
 //     in slashes). An extended list item is a list item or a procedure Name.
@@ -3543,6 +3563,11 @@ struct OmpArgument {
   std::variant<OmpLocator, // {variable, extended, locator}-list-item
       OmpMapperSpecifier, OmpReductionSpecifier>
       u;
+};
+
+struct OmpArgumentList {
+  WRAPPER_CLASS_BOILERPLATE(OmpArgumentList, std::list<OmpArgument>);
+  CharBlock source;
 };
 } // namespace arguments
 
@@ -3794,9 +3819,7 @@ struct OmpDeviceModifier {
 // [*] The IF clause is allowed on CANCEL in OpenMP 4.5, but only without
 // the directive-name-modifier. For the sake of uniformity CANCEL can be
 // considered a valid value in 4.5 as well.
-struct OmpDirectiveNameModifier {
-  WRAPPER_CLASS_BOILERPLATE(OmpDirectiveNameModifier, llvm::omp::Directive);
-};
+using OmpDirectiveNameModifier = OmpDirectiveName;
 
 // Ref: [5.1:205-209], [5.2:166-168]
 //
@@ -3811,6 +3834,33 @@ struct OmpDirectiveNameModifier {
 struct OmpExpectation {
   ENUM_CLASS(Value, Present);
   WRAPPER_CLASS_BOILERPLATE(OmpExpectation, Value);
+};
+
+// REF: [5.1:217-220], [5.2:293-294]
+//
+// OmpInteropRuntimeIdentifier ->                   // since 5.2
+// CharLiteralConstant || ScalarIntConstantExpr
+struct OmpInteropRuntimeIdentifier {
+  UNION_CLASS_BOILERPLATE(OmpInteropRuntimeIdentifier);
+  std::variant<CharLiteralConstant, ScalarIntConstantExpr> u;
+};
+
+// REF: [5.1:217-220], [5.2:293-294]
+//
+// OmpInteropPreference ->                          // since 5.2
+// ([OmpRuntimeIdentifier, ...])
+struct OmpInteropPreference {
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpInteropPreference, std::list<OmpInteropRuntimeIdentifier>);
+};
+
+// REF: [5.1:217-220], [5.2:293-294]
+//
+// InteropType -> target || targetsync              // since 5.2
+// There can be at most only two interop-type.
+struct OmpInteropType {
+  ENUM_CLASS(Value, Target, TargetSync)
+  WRAPPER_CLASS_BOILERPLATE(OmpInteropType, Value);
 };
 
 // Ref: [5.0:47-49], [5.1:49-51], [5.2:67-69]
@@ -4021,7 +4071,7 @@ struct OmpAtClause {
 //    SEQ_CST | ACQ_REL | RELAXED |                 // since 5.0
 //    ACQUIRE | RELEASE                             // since 5.2
 struct OmpAtomicDefaultMemOrderClause {
-  using MemoryOrder = common::OmpAtomicDefaultMemOrderType;
+  using MemoryOrder = common::OmpMemoryOrderType;
   WRAPPER_CLASS_BOILERPLATE(OmpAtomicDefaultMemOrderClause, MemoryOrder);
 };
 
@@ -4034,6 +4084,12 @@ struct OmpAtomicDefaultMemOrderClause {
 struct OmpBindClause {
   ENUM_CLASS(Binding, Parallel, Teams, Thread)
   WRAPPER_CLASS_BOILERPLATE(OmpBindClause, Binding);
+};
+
+// Artificial clause to represent a cancellable construct.
+struct OmpCancellationConstructTypeClause {
+  TUPLE_CLASS_BOILERPLATE(OmpCancellationConstructTypeClause);
+  std::tuple<OmpDirectiveName, std::optional<ScalarLogicalExpr>> t;
 };
 
 // Ref: [5.2:214]
@@ -4186,9 +4242,8 @@ struct OmpDeviceTypeClause {
 // OMP 5.2 15.8.3 extended-atomic, fail-clause ->
 //    FAIL(memory-order)
 struct OmpFailClause {
-  WRAPPER_CLASS_BOILERPLATE(
-      OmpFailClause, common::Indirection<OmpMemoryOrderClause>);
-  CharBlock source;
+  using MemoryOrder = common::OmpMemoryOrderType;
+  WRAPPER_CLASS_BOILERPLATE(OmpFailClause, MemoryOrder);
 };
 
 // Ref: [4.5:107-109], [5.0:176-180], [5.1:205-210], [5.2:167-168]
@@ -4214,6 +4269,11 @@ struct OmpGrainsizeClause {
   TUPLE_CLASS_BOILERPLATE(OmpGrainsizeClause);
   MODIFIER_BOILERPLATE(OmpPrescriptiveness);
   std::tuple<MODIFIERS(), ScalarIntExpr> t;
+};
+
+// Ref: [5.0:234-242], [5.1:266-275], [5.2:299], [6.0:472-473]
+struct OmpHintClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpHintClause, ScalarIntConstantExpr);
 };
 
 // Ref: [5.2: 214]
@@ -4252,12 +4312,10 @@ struct OmpInitializerProc {
   TUPLE_CLASS_BOILERPLATE(OmpInitializerProc);
   std::tuple<ProcedureDesignator, std::list<ActualArgSpec>> t;
 };
-WRAPPER_CLASS(OmpInitializerExpr, Expr);
-
 // Initialization for declare reduction construct
 struct OmpInitializerClause {
   UNION_CLASS_BOILERPLATE(OmpInitializerClause);
-  std::variant<OmpInitializerProc, OmpInitializerExpr> u;
+  std::variant<OmpInitializerProc, AssignmentStmt> u;
 };
 
 // Ref: [4.5:199-201], [5.0:288-290], [5.1:321-322], [5.2:115-117]
@@ -4443,6 +4501,11 @@ struct OmpToClause {
 
 // Ref: [5.0:254-255], [5.1:287-288], [5.2:321-322]
 //
+// In ATOMIC construct
+// update-clause ->
+//    UPDATE                                        // Since 4.5
+//
+// In DEPOBJ construct
 // update-clause ->
 //    UPDATE(dependence-type)                       // since 5.0, until 5.1
 // update-clause ->
@@ -4465,6 +4528,25 @@ struct OmpWhenClause {
       std::optional<common::Indirection<OmpDirectiveSpecification>>>
       t;
 };
+
+// REF: [5.1:217-220], [5.2:293-294]
+//
+// init-clause -> INIT ([interop-modifier,] [interop-type,]
+//                              interop-type: interop-var)
+// interop-modifier: prefer_type(preference-list)
+// interop-type: target, targetsync
+// interop-var: Ompobject
+// There can be at most only two interop-type.
+struct OmpInitClause {
+  TUPLE_CLASS_BOILERPLATE(OmpInitClause);
+  MODIFIER_BOILERPLATE(OmpInteropPreference, OmpInteropType);
+  std::tuple<MODIFIERS(), OmpObject> t;
+};
+
+// REF: [5.1:217-220], [5.2:294]
+//
+// 14.1.3 use-clause -> USE (interop-var)
+WRAPPER_CLASS(OmpUseClause, OmpObject);
 
 // OpenMP Clauses
 struct OmpClause {
@@ -4491,10 +4573,17 @@ struct OmpClauseList {
 // --- Directives and constructs
 
 struct OmpDirectiveSpecification {
-  CharBlock source;
+  ENUM_CLASS(Flags, None, DeprecatedSyntax);
   TUPLE_CLASS_BOILERPLATE(OmpDirectiveSpecification);
-  std::tuple<llvm::omp::Directive, std::optional<std::list<OmpArgument>>,
-      std::optional<OmpClauseList>>
+  llvm::omp::Directive DirId() const { //
+    return std::get<OmpDirectiveName>(t).v;
+  }
+  const OmpArgumentList &Arguments() const;
+  const OmpClauseList &Clauses() const;
+
+  CharBlock source;
+  std::tuple<OmpDirectiveName, std::optional<OmpArgumentList>,
+      std::optional<OmpClauseList>, Flags>
       t;
 };
 
@@ -4737,10 +4826,10 @@ struct OpenMPAllocatorsConstruct {
 
 // 2.17.7 Atomic construct/2.17.8 Flush construct [OpenMP 5.0]
 //        memory-order-clause -> acq_rel
-//                               release
 //                               acquire
-//                               seq_cst
+//                               release
 //                               relaxed
+//                               seq_cst
 struct OmpMemoryOrderClause {
   WRAPPER_CLASS_BOILERPLATE(OmpMemoryOrderClause, OmpClause);
   CharBlock source;
@@ -4752,7 +4841,7 @@ struct OmpMemoryOrderClause {
 struct OmpAtomicClause {
   UNION_CLASS_BOILERPLATE(OmpAtomicClause);
   CharBlock source;
-  std::variant<OmpMemoryOrderClause, OmpFailClause, OmpClause> u;
+  std::variant<OmpMemoryOrderClause, OmpFailClause, OmpHintClause> u;
 };
 
 // atomic-clause-list -> [atomic-clause, [atomic-clause], ...]
@@ -4842,26 +4931,17 @@ struct OmpLoopDirective {
   CharBlock source;
 };
 
-// 2.14.1 construct-type-clause -> PARALLEL | SECTIONS | DO | TASKGROUP
-struct OmpCancelType {
-  ENUM_CLASS(Type, Parallel, Sections, Do, Taskgroup)
-  WRAPPER_CLASS_BOILERPLATE(OmpCancelType, Type);
-  CharBlock source;
-};
-
 // 2.14.2 cancellation-point -> CANCELLATION POINT construct-type-clause
 struct OpenMPCancellationPointConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPCancellationPointConstruct);
+  WRAPPER_CLASS_BOILERPLATE(
+      OpenMPCancellationPointConstruct, OmpDirectiveSpecification);
   CharBlock source;
-  std::tuple<Verbatim, OmpCancelType> t;
 };
 
 // 2.14.1 cancel -> CANCEL construct-type-clause [ [,] if-clause]
 struct OpenMPCancelConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPCancelConstruct);
-  WRAPPER_CLASS(If, ScalarLogicalExpr);
+  WRAPPER_CLASS_BOILERPLATE(OpenMPCancelConstruct, OmpDirectiveSpecification);
   CharBlock source;
-  std::tuple<Verbatim, OmpCancelType, std::optional<If>> t;
 };
 
 // Ref: [5.0:254-255], [5.1:287-288], [5.2:322-323]
@@ -4871,9 +4951,8 @@ struct OpenMPCancelConstruct {
 //                  destroy-clause |
 //                  update-clause
 struct OpenMPDepobjConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPDepobjConstruct);
+  WRAPPER_CLASS_BOILERPLATE(OpenMPDepobjConstruct, OmpDirectiveSpecification);
   CharBlock source;
-  std::tuple<Verbatim, OmpObject, OmpClause> t;
 };
 
 // Ref: [5.2: 200-201]
@@ -4914,22 +4993,22 @@ struct OpenMPDispatchConstruct {
 //    ACQ_REL | RELEASE | ACQUIRE |                 // since 5.0
 //    SEQ_CST                                       // since 5.1
 struct OpenMPFlushConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPFlushConstruct);
+  WRAPPER_CLASS_BOILERPLATE(OpenMPFlushConstruct, OmpDirectiveSpecification);
   CharBlock source;
-  std::tuple<Verbatim, std::optional<OmpObjectList>,
-      std::optional<OmpClauseList>, /*TrailingClauses=*/bool>
-      t;
 };
 
-struct OmpSimpleStandaloneDirective {
-  WRAPPER_CLASS_BOILERPLATE(OmpSimpleStandaloneDirective, llvm::omp::Directive);
+// Ref: [5.1:217-220], [5.2:291-292]
+//
+// interop -> INTEROP clause[ [ [,] clause]...]
+struct OpenMPInteropConstruct {
+  WRAPPER_CLASS_BOILERPLATE(OpenMPInteropConstruct, OmpDirectiveSpecification);
   CharBlock source;
 };
 
 struct OpenMPSimpleStandaloneConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPSimpleStandaloneConstruct);
+  WRAPPER_CLASS_BOILERPLATE(
+      OpenMPSimpleStandaloneConstruct, OmpDirectiveSpecification);
   CharBlock source;
-  std::tuple<OmpSimpleStandaloneDirective, OmpClauseList> t;
 };
 
 struct OpenMPStandaloneConstruct {
@@ -4937,7 +5016,7 @@ struct OpenMPStandaloneConstruct {
   CharBlock source;
   std::variant<OpenMPSimpleStandaloneConstruct, OpenMPFlushConstruct,
       OpenMPCancelConstruct, OpenMPCancellationPointConstruct,
-      OpenMPDepobjConstruct, OmpMetadirectiveDirective>
+      OpenMPDepobjConstruct, OmpMetadirectiveDirective, OpenMPInteropConstruct>
       u;
 };
 
@@ -5174,21 +5253,23 @@ EMPTY_CLASS(AccEndAtomic);
 // ACC ATOMIC READ
 struct AccAtomicRead {
   TUPLE_CLASS_BOILERPLATE(AccAtomicRead);
-  std::tuple<Verbatim, Statement<AssignmentStmt>, std::optional<AccEndAtomic>>
+  std::tuple<Verbatim, AccClauseList, Statement<AssignmentStmt>,
+      std::optional<AccEndAtomic>>
       t;
 };
 
 // ACC ATOMIC WRITE
 struct AccAtomicWrite {
   TUPLE_CLASS_BOILERPLATE(AccAtomicWrite);
-  std::tuple<Verbatim, Statement<AssignmentStmt>, std::optional<AccEndAtomic>>
+  std::tuple<Verbatim, AccClauseList, Statement<AssignmentStmt>,
+      std::optional<AccEndAtomic>>
       t;
 };
 
 // ACC ATOMIC UPDATE
 struct AccAtomicUpdate {
   TUPLE_CLASS_BOILERPLATE(AccAtomicUpdate);
-  std::tuple<std::optional<Verbatim>, Statement<AssignmentStmt>,
+  std::tuple<std::optional<Verbatim>, AccClauseList, Statement<AssignmentStmt>,
       std::optional<AccEndAtomic>>
       t;
 };
@@ -5198,7 +5279,7 @@ struct AccAtomicCapture {
   TUPLE_CLASS_BOILERPLATE(AccAtomicCapture);
   WRAPPER_CLASS(Stmt1, Statement<AssignmentStmt>);
   WRAPPER_CLASS(Stmt2, Statement<AssignmentStmt>);
-  std::tuple<Verbatim, Stmt1, Stmt2, AccEndAtomic> t;
+  std::tuple<Verbatim, AccClauseList, Stmt1, Stmt2, AccEndAtomic> t;
 };
 
 struct OpenACCAtomicConstruct {

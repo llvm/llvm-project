@@ -26,7 +26,6 @@ S<i> V; // #cwg1801-S-i
 // cxx98-14-error@-1 {{non-type template argument does not refer to any declaration}}
 //   cxx98-14-note@#cwg1801-S {{template parameter is declared here}}
 // cxx17-error@#cwg1801-S-i {{non-type template argument refers to subobject '.i'}}
-//   cxx17-note@#cwg1801-S {{template parameter is declared here}}
 } // namespace cwg1801
 
 namespace cwg1802 { // cwg1802: 3.1
@@ -421,25 +420,25 @@ class C {
 
   template<class T>
   friend struct A<T>::B;
-  // expected-warning@-1 {{dependent nested name specifier 'A<T>::' for friend class declaration is not supported; turning off access control for 'C'}}
+  // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'C'}}
 
   template<class T>
   friend void A<T>::f();
-  // expected-warning@-1 {{dependent nested name specifier 'A<T>::' for friend class declaration is not supported; turning off access control for 'C'}}
+  // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'C'}}
 
   // FIXME: this is ill-formed, because A<T>​::​D does not end with a simple-template-id
   template<class T>
   friend void A<T>::D::g();
-  // expected-warning@-1 {{dependent nested name specifier 'A<T>::D::' for friend class declaration is not supported; turning off access control for 'C'}}
+  // expected-warning@-1 {{dependent nested name specifier 'A<T>::D' for friend class declaration is not supported; turning off access control for 'C'}}
 
   template<class T>
   friend int *A<T*>::h();
-  // expected-warning@-1 {{dependent nested name specifier 'A<T *>::' for friend class declaration is not supported; turning off access control for 'C'}}
+  // expected-warning@-1 {{dependent nested name specifier 'A<T *>' for friend class declaration is not supported; turning off access control for 'C'}}
 
   template<class T>
   template<T U>
   friend T A<T>::i();
-  // expected-warning@-1 {{dependent nested name specifier 'A<T>::' for friend class declaration is not supported; turning off access control for 'C'}}
+  // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'C'}}
 };
 
 C c;

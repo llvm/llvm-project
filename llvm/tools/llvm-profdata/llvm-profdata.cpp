@@ -130,7 +130,7 @@ static cl::opt<std::string> DebugInfoFilename(
     cl::sub(ShowSubcommand), cl::sub(MergeSubcommand));
 static cl::opt<std::string>
     BinaryFilename("binary-file", cl::init(""),
-                   cl::desc("For merge, use the provided unstripped bianry to "
+                   cl::desc("For merge, use the provided unstripped binary to "
                             "correlate the raw profile."),
                    cl::sub(MergeSubcommand));
 static cl::list<std::string> DebugFileDirectory(
@@ -336,7 +336,8 @@ static cl::opt<memprof::IndexedVersion> MemProfVersionRequested(
     cl::desc("Specify the version of the memprof format to use"),
     cl::init(memprof::Version3),
     cl::values(clEnumValN(memprof::Version2, "2", "version 2"),
-               clEnumValN(memprof::Version3, "3", "version 3")));
+               clEnumValN(memprof::Version3, "3", "version 3"),
+               clEnumValN(memprof::Version4, "4", "version 4")));
 
 static cl::opt<bool> MemProfFullSchema(
     "memprof-full-schema", cl::Hidden, cl::sub(MergeSubcommand),

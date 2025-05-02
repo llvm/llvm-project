@@ -23,8 +23,7 @@ contains
   subroutine local
     !CHECK: %[[x:.*]]  = fir.alloca !fir.type<_QMtest_dinitTt{i:i32}> {bindc_name = "x", uniq_name = "_QMtest_dinitFlocalEx"}
     !CHECK: %[[ADDR:.*]] = fir.address_of(@_QQ_QMtest_dinitTt.DerivedInit) : !fir.ref<!fir.type<_QMtest_dinitTt{i:i32}>>
-    !CHECK: %[[LOAD:.*]] = fir.load %[[ADDR]] : !fir.ref<!fir.type<_QMtest_dinitTt{i:i32}>>
-    !CHECK: fir.store %[[LOAD]] to %[[x]] : !fir.ref<!fir.type<_QMtest_dinitTt{i:i32}>>
+    !CHECK: fir.copy %[[ADDR]] to %[[x]] no_overlap : !fir.ref<!fir.type<_QMtest_dinitTt{i:i32}>>, !fir.ref<!fir.type<_QMtest_dinitTt{i:i32}>>
     type(t) :: x
     print *, x%i
   end subroutine 
@@ -47,8 +46,7 @@ contains
   subroutine local_alloc_comp
     !CHECK: %[[x:.*]] = fir.alloca !fir.type<_QMtest_dinitTt_alloc_comp{i:!fir.box<!fir.heap<!fir.array<?xf32>>>}> {bindc_name = "x", uniq_name = "_QMtest_dinitFlocal_alloc_compEx"}
     !CHECK: %[[ADDR:.*]] = fir.address_of(@_QQ_QMtest_dinitTt_alloc_comp.DerivedInit) : !fir.ref<!fir.type<_QMtest_dinitTt_alloc_comp{i:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
-    !CHECK: %[[LOAD:.*]] = fir.load %[[ADDR]] : !fir.ref<!fir.type<_QMtest_dinitTt_alloc_comp{i:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
-    !CHECK: fir.store %[[LOAD]] to %[[x]] : !fir.ref<!fir.type<_QMtest_dinitTt_alloc_comp{i:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
+    !CHECK: fir.copy %[[ADDR]] to %[[x]] no_overlap : !fir.ref<!fir.type<_QMtest_dinitTt_alloc_comp{i:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>, !fir.ref<!fir.type<_QMtest_dinitTt_alloc_comp{i:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
     type(t_alloc_comp) :: x
   end subroutine 
 
@@ -57,8 +55,7 @@ contains
   function result()
     !CHECK: %[[x:.*]] = fir.alloca !fir.type<_QMtest_dinitTt{i:i32}> {bindc_name = "result", uniq_name = "_QMtest_dinitFresultEresult"}
     !CHECK: %[[ADDR:.*]] = fir.address_of(@_QQ_QMtest_dinitTt.DerivedInit) : !fir.ref<!fir.type<_QMtest_dinitTt{i:i32}>>
-    !CHECK: %[[LOAD:.*]] = fir.load %[[ADDR]] : !fir.ref<!fir.type<_QMtest_dinitTt{i:i32}>>
-    !CHECK: fir.store %[[LOAD]] to %[[x]] : !fir.ref<!fir.type<_QMtest_dinitTt{i:i32}>>
+    !CHECK: fir.copy %[[ADDR]] to %[[x]] no_overlap : !fir.ref<!fir.type<_QMtest_dinitTt{i:i32}>>, !fir.ref<!fir.type<_QMtest_dinitTt{i:i32}>>
     type(t) :: result
   end function
 
@@ -67,8 +64,7 @@ contains
   ! CHECK-SAME: %[[x:.*]]: !fir.ref<!fir.type<_QMtest_dinitTt{i:i32}>>
   subroutine intent_out(x)
     !CHECK: %[[ADDR:.*]] = fir.address_of(@_QQ_QMtest_dinitTt.DerivedInit) : !fir.ref<!fir.type<_QMtest_dinitTt{i:i32}>>
-    !CHECK: %[[LOAD:.*]] = fir.load %[[ADDR]] : !fir.ref<!fir.type<_QMtest_dinitTt{i:i32}>>
-    !CHECK: fir.store %[[LOAD]] to %[[x]] : !fir.ref<!fir.type<_QMtest_dinitTt{i:i32}>>
+    !CHECK: fir.copy %[[ADDR]] to %[[x]] no_overlap : !fir.ref<!fir.type<_QMtest_dinitTt{i:i32}>>, !fir.ref<!fir.type<_QMtest_dinitTt{i:i32}>>
     type(t), intent(out) :: x
   end subroutine
 
@@ -95,8 +91,7 @@ contains
     ! CHECK: %[[xcoor:.*]] = fir.coordinate_of %[[equiv]], %c0{{.*}} : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
     ! CHECK: %[[x:.*]] = fir.convert %[[xcoor]] : (!fir.ref<i8>) -> !fir.ptr<!fir.type<_QMtest_dinitTtseq{i:i32}>>
     ! CHECK: %[[ADDR:.*]] = fir.address_of(@_QQ_QMtest_dinitTtseq.DerivedInit) : !fir.ref<!fir.type<_QMtest_dinitTtseq{i:i32}>>
-    ! CHECK: %[[LOAD:.*]] = fir.load %[[ADDR]] : !fir.ref<!fir.type<_QMtest_dinitTtseq{i:i32}>>
-    ! CHECK: fir.store %[[LOAD]] to %[[x]] : !fir.ptr<!fir.type<_QMtest_dinitTtseq{i:i32}>>
+    ! CHECK: fir.copy %[[ADDR]] to %[[x]] no_overlap : !fir.ref<!fir.type<_QMtest_dinitTtseq{i:i32}>>, !fir.ptr<!fir.type<_QMtest_dinitTtseq{i:i32}>>
     equivalence (x, zi)
     print *, i
   end subroutine
@@ -113,15 +108,13 @@ contains
     ! CHECK: %[[xcoor:.*]] = fir.coordinate_of %[[equiv]], %c0{{.*}} : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
     ! CHECK: %[[x:.*]] = fir.convert %[[xcoor]] : (!fir.ref<i8>) -> !fir.ptr<!fir.type<_QMtest_dinitTtseq{i:i32}>>
     ! CHECK: %[[ADDR:.*]] = fir.address_of(@_QQ_QMtest_dinitTtseq.DerivedInit) : !fir.ref<!fir.type<_QMtest_dinitTtseq{i:i32}>>
-    ! CHECK: %[[LOAD:.*]] = fir.load %[[ADDR]] : !fir.ref<!fir.type<_QMtest_dinitTtseq{i:i32}>>
-    ! CHECK: fir.store %[[LOAD]] to %[[x]] : !fir.ptr<!fir.type<_QMtest_dinitTtseq{i:i32}>>
+    ! CHECK: fir.copy %[[ADDR]] to %[[x]] no_overlap : !fir.ref<!fir.type<_QMtest_dinitTtseq{i:i32}>>, !fir.ptr<!fir.type<_QMtest_dinitTtseq{i:i32}>>
 
   
     ! CHECK: %[[ycoor:.*]] = fir.coordinate_of %[[equiv]], %c0{{.*}} : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
     ! CHECK: %[[y:.*]] = fir.convert %[[ycoor]] : (!fir.ref<i8>) -> !fir.ptr<!fir.type<_QMtest_dinitTtseq{i:i32}>>
     ! CHECK: %[[ADDR:.*]] = fir.address_of(@_QQ_QMtest_dinitTtseq.DerivedInit) : !fir.ref<!fir.type<_QMtest_dinitTtseq{i:i32}>>
-    ! CHECK: %[[LOAD:.*]] = fir.load %[[ADDR]] : !fir.ref<!fir.type<_QMtest_dinitTtseq{i:i32}>>
-    ! CHECK: fir.store %[[LOAD]] to %[[y]] : !fir.ptr<!fir.type<_QMtest_dinitTtseq{i:i32}>>
+    ! CHECK: fir.copy %[[ADDR]] to %[[y]] no_overlap : !fir.ref<!fir.type<_QMtest_dinitTtseq{i:i32}>>, !fir.ptr<!fir.type<_QMtest_dinitTtseq{i:i32}>>
     equivalence (x, y)
     print *, y%i
   end subroutine

@@ -50,9 +50,7 @@ struct BPFMISimplifyPatchable : public MachineFunctionPass {
   const BPFInstrInfo *TII;
   MachineFunction *MF;
 
-  BPFMISimplifyPatchable() : MachineFunctionPass(ID) {
-    initializeBPFMISimplifyPatchablePass(*PassRegistry::getPassRegistry());
-  }
+  BPFMISimplifyPatchable() : MachineFunctionPass(ID) {}
 
 private:
   std::set<MachineInstr *> SkipInsts;

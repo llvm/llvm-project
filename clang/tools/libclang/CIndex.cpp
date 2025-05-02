@@ -872,7 +872,7 @@ bool CursorVisitor::VisitFunctionDecl(FunctionDecl *ND) {
     // FIXME: Attributes?
   }
 
-  if (auto *E = ND->getTrailingRequiresClause()) {
+  if (auto *E = ND->getTrailingRequiresClause().ConstraintExpr) {
     if (Visit(E))
       return true;
   }
@@ -1457,7 +1457,6 @@ bool CursorVisitor::VisitNestedNameSpecifier(NestedNameSpecifier *NNS,
     break;
   }
 
-  case NestedNameSpecifier::TypeSpecWithTemplate:
   case NestedNameSpecifier::Global:
   case NestedNameSpecifier::Identifier:
   case NestedNameSpecifier::Super:
@@ -1492,7 +1491,6 @@ bool CursorVisitor::VisitNestedNameSpecifierLoc(
       break;
 
     case NestedNameSpecifier::TypeSpec:
-    case NestedNameSpecifier::TypeSpecWithTemplate:
       if (Visit(Q.getTypeLoc()))
         return true;
 
@@ -2536,6 +2534,8 @@ void OMPClauseEnqueue::VisitOMPDynamicAllocatorsClause(
 void OMPClauseEnqueue::VisitOMPAtomicDefaultMemOrderClause(
     const OMPAtomicDefaultMemOrderClause *) {}
 
+void OMPClauseEnqueue::VisitOMPSelfMapsClause(const OMPSelfMapsClause *) {}
+
 void OMPClauseEnqueue::VisitOMPAtClause(const OMPAtClause *) {}
 
 void OMPClauseEnqueue::VisitOMPSeverityClause(const OMPSeverityClause *) {}
@@ -2974,6 +2974,9 @@ void OpenACCClauseEnqueue::VisitIndependentClause(
     const OpenACCIndependentClause &C) {}
 void OpenACCClauseEnqueue::VisitSeqClause(const OpenACCSeqClause &C) {}
 void OpenACCClauseEnqueue::VisitNoHostClause(const OpenACCNoHostClause &C) {}
+void OpenACCClauseEnqueue::VisitBindClause(const OpenACCBindClause &C) {
+  assert(false && "TODO ERICH");
+}
 void OpenACCClauseEnqueue::VisitFinalizeClause(const OpenACCFinalizeClause &C) {
 }
 void OpenACCClauseEnqueue::VisitIfPresentClause(
@@ -3716,6 +3719,8 @@ void EnqueueVisitor::VisitOpenACCUpdateConstruct(
 void EnqueueVisitor::VisitOpenACCAtomicConstruct(
     const OpenACCAtomicConstruct *C) {
   EnqueueChildren(C);
+  for (auto *Clause : C->clauses())
+    EnqueueChildren(Clause);
 }
 
 void EnqueueVisitor::VisitAnnotateAttr(const AnnotateAttr *A) {
@@ -4220,7 +4225,7 @@ enum CXErrorCode clang_createTranslationUnit2(CXIndex CIdx,
 
   CIndexer *CXXIdx = static_cast<CIndexer *>(CIdx);
   FileSystemOptions FileSystemOpts;
-  auto HSOpts = std::make_shared<HeaderSearchOptions>();
+  HeaderSearchOptions HSOpts;
 
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
       CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
@@ -5165,7 +5170,7 @@ int clang_File_isEqual(CXFile file1, CXFile file2) {
 
   FileEntryRef FEnt1 = *cxfile::getFileEntryRef(file1);
   FileEntryRef FEnt2 = *cxfile::getFileEntryRef(file2);
-  return FEnt1.getUniqueID() == FEnt2.getUniqueID();
+  return FEnt1 == FEnt2;
 }
 
 CXString clang_File_tryGetRealPathName(CXFile SFile) {

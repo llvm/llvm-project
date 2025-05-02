@@ -35,9 +35,9 @@ entry:
   %1 = load i32, ptr addrspace(1) %arrayidx1
   %2 = load i32, ptr addrspace(1) %arrayidx2
   %3 = load i32, ptr addrspace(1) %arrayidx3
-  %src1.0 = insertelement <2 x i32> undef, i32 %0, i64 0
+  %src1.0 = insertelement <2 x i32> poison, i32 %0, i64 0
   %src1 = insertelement <2 x i32> %src1.0, i32 %1, i64 1
-  %src2.0 = insertelement <4 x i32> undef, i32 %2, i64 0
+  %src2.0 = insertelement <4 x i32> poison, i32 %2, i64 0
   %src2.1 = insertelement <4 x i32> %src2.0, i32 %3, i64 1
   %src2.2 = insertelement <4 x i32> %src2.1, i32 %3, i64 2
   %src2 = insertelement <4 x i32> %src2.2, i32 %3, i64 3

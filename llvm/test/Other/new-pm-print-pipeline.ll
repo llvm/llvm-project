@@ -120,3 +120,6 @@
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='speculative-execution<only-if-divergent-target>' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-36
 ; CHECK-36: function(speculative-execution<only-if-divergent-target>)
+
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='module(asan<>,asan<kernel;use-after-scope>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-37
+; CHECK-37: asan<>,asan<kernel;use-after-scope>

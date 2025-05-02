@@ -406,9 +406,7 @@ public:
 
     const MachineOperand &MOInsertedReg = CopyLike.getOperand(CurrentSrcIdx);
     Src.Reg = MOInsertedReg.getReg();
-    // If we have to compose sub-register indices, bail out.
-    if ((Src.SubReg = MOInsertedReg.getSubReg()))
-      return false;
+    Src.SubReg = MOInsertedReg.getSubReg();
 
     // We want to track something that is compatible with the related
     // partial definition.

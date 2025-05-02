@@ -57,6 +57,10 @@ struct NoTTIImpl : TargetTransformInfoImplCRTPBase<NoTTIImpl> {
 };
 } // namespace
 
+TargetTransformInfo::TargetTransformInfo(
+    std::unique_ptr<const TargetTransformInfoImplBase> Impl)
+    : TTIImpl(std::move(Impl)) {}
+
 bool HardwareLoopInfo::canAnalyze(LoopInfo &LI) {
   // If the loop has irreducible control flow, it can not be converted to
   // Hardware loop.
@@ -199,7 +203,7 @@ bool HardwareLoopInfo::isHardwareLoopCandidate(ScalarEvolution &SE,
 }
 
 TargetTransformInfo::TargetTransformInfo(const DataLayout &DL)
-    : TTIImpl(new Model<NoTTIImpl>(NoTTIImpl(DL))) {}
+    : TTIImpl(std::make_unique<NoTTIImpl>(DL)) {}
 
 TargetTransformInfo::~TargetTransformInfo() = default;
 
@@ -462,14 +466,14 @@ TargetTransformInfo::getPreferredAddressingMode(const Loop *L,
   return TTIImpl->getPreferredAddressingMode(L, SE);
 }
 
-bool TargetTransformInfo::isLegalMaskedStore(Type *DataType,
-                                             Align Alignment) const {
-  return TTIImpl->isLegalMaskedStore(DataType, Alignment);
+bool TargetTransformInfo::isLegalMaskedStore(Type *DataType, Align Alignment,
+                                             unsigned AddressSpace) const {
+  return TTIImpl->isLegalMaskedStore(DataType, Alignment, AddressSpace);
 }
 
-bool TargetTransformInfo::isLegalMaskedLoad(Type *DataType,
-                                            Align Alignment) const {
-  return TTIImpl->isLegalMaskedLoad(DataType, Alignment);
+bool TargetTransformInfo::isLegalMaskedLoad(Type *DataType, Align Alignment,
+                                            unsigned AddressSpace) const {
+  return TTIImpl->isLegalMaskedLoad(DataType, Alignment, AddressSpace);
 }
 
 bool TargetTransformInfo::isLegalNTStore(Type *DataType,
@@ -626,9 +630,10 @@ bool TargetTransformInfo::isTargetIntrinsicWithStructReturnOverloadAtField(
 
 InstructionCost TargetTransformInfo::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-    TTI::TargetCostKind CostKind, ArrayRef<Value *> VL) const {
+    TTI::TargetCostKind CostKind, bool ForPoisonSrc,
+    ArrayRef<Value *> VL) const {
   return TTIImpl->getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
-                                           CostKind, VL);
+                                           CostKind, ForPoisonSrc, VL);
 }
 
 InstructionCost TargetTransformInfo::getOperandsScalarizationOverhead(
@@ -759,8 +764,9 @@ unsigned TargetTransformInfo::getNumberOfRegisters(unsigned ClassID) const {
   return TTIImpl->getNumberOfRegisters(ClassID);
 }
 
-bool TargetTransformInfo::hasConditionalLoadStoreForType(Type *Ty) const {
-  return TTIImpl->hasConditionalLoadStoreForType(Ty);
+bool TargetTransformInfo::hasConditionalLoadStoreForType(Type *Ty,
+                                                         bool IsStore) const {
+  return TTIImpl->hasConditionalLoadStoreForType(Ty, IsStore);
 }
 
 unsigned TargetTransformInfo::getRegisterClassForType(bool Vector,
@@ -918,7 +924,7 @@ TargetTransformInfo::getOperandInfo(const Value *V) {
   } else if (const auto *CDS = dyn_cast<ConstantDataSequential>(V)) {
     OpInfo = OK_NonUniformConstantValue;
     bool AllPow2 = true, AllNegPow2 = true;
-    for (unsigned I = 0, E = CDS->getNumElements(); I != E; ++I) {
+    for (uint64_t I = 0, E = CDS->getNumElements(); I != E; ++I) {
       if (auto *CI = dyn_cast<ConstantInt>(CDS->getElementAsConstant(I))) {
         AllPow2 &= CI->getValue().isPowerOf2();
         AllNegPow2 &= CI->getValue().isNegatedPowerOf2();
@@ -1048,9 +1054,10 @@ InstructionCost TargetTransformInfo::getCastInstrCost(
 }
 
 InstructionCost TargetTransformInfo::getExtractWithExtendCost(
-    unsigned Opcode, Type *Dst, VectorType *VecTy, unsigned Index) const {
+    unsigned Opcode, Type *Dst, VectorType *VecTy, unsigned Index,
+    TTI::TargetCostKind CostKind) const {
   InstructionCost Cost =
-      TTIImpl->getExtractWithExtendCost(Opcode, Dst, VecTy, Index);
+      TTIImpl->getExtractWithExtendCost(Opcode, Dst, VecTy, Index, CostKind);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
@@ -1078,7 +1085,7 @@ InstructionCost TargetTransformInfo::getCmpSelInstrCost(
 
 InstructionCost TargetTransformInfo::getVectorInstrCost(
     unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
-    Value *Op0, Value *Op1) const {
+    const Value *Op0, const Value *Op1) const {
   assert((Opcode == Instruction::InsertElement ||
           Opcode == Instruction::ExtractElement) &&
          "Expecting Opcode to be insertelement/extractelement.");
@@ -1251,7 +1258,7 @@ InstructionCost TargetTransformInfo::getMinMaxReductionCost(
 
 InstructionCost TargetTransformInfo::getExtendedReductionCost(
     unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *Ty,
-    FastMathFlags FMF, TTI::TargetCostKind CostKind) const {
+    std::optional<FastMathFlags> FMF, TTI::TargetCostKind CostKind) const {
   return TTIImpl->getExtendedReductionCost(Opcode, IsUnsigned, ResTy, Ty, FMF,
                                            CostKind);
 }
@@ -1379,9 +1386,13 @@ bool TargetTransformInfo::preferFixedOverScalableIfEqualCost() const {
   return TTIImpl->preferFixedOverScalableIfEqualCost();
 }
 
-bool TargetTransformInfo::preferInLoopReduction(unsigned Opcode,
+bool TargetTransformInfo::preferInLoopReduction(RecurKind Kind,
                                                 Type *Ty) const {
-  return TTIImpl->preferInLoopReduction(Opcode, Ty);
+  return TTIImpl->preferInLoopReduction(Kind, Ty);
+}
+
+bool TargetTransformInfo::preferAlternateOpcodeVectorization() const {
+  return TTIImpl->preferAlternateOpcodeVectorization();
 }
 
 bool TargetTransformInfo::preferPredicatedReductionSelect(unsigned Opcode,
@@ -1466,7 +1477,7 @@ void TargetTransformInfo::collectKernelLaunchBounds(
   return TTIImpl->collectKernelLaunchBounds(F, LB);
 }
 
-TargetTransformInfo::Concept::~Concept() = default;
+TargetTransformInfoImplBase::~TargetTransformInfoImplBase() = default;
 
 TargetIRAnalysis::TargetIRAnalysis() : TTICallback(&getDefaultTTI) {}
 
@@ -1494,17 +1505,11 @@ char TargetTransformInfoWrapperPass::ID = 0;
 void TargetTransformInfoWrapperPass::anchor() {}
 
 TargetTransformInfoWrapperPass::TargetTransformInfoWrapperPass()
-    : ImmutablePass(ID) {
-  initializeTargetTransformInfoWrapperPassPass(
-      *PassRegistry::getPassRegistry());
-}
+    : ImmutablePass(ID) {}
 
 TargetTransformInfoWrapperPass::TargetTransformInfoWrapperPass(
     TargetIRAnalysis TIRA)
-    : ImmutablePass(ID), TIRA(std::move(TIRA)) {
-  initializeTargetTransformInfoWrapperPassPass(
-      *PassRegistry::getPassRegistry());
-}
+    : ImmutablePass(ID), TIRA(std::move(TIRA)) {}
 
 TargetTransformInfo &TargetTransformInfoWrapperPass::getTTI(const Function &F) {
   FunctionAnalysisManager DummyFAM;

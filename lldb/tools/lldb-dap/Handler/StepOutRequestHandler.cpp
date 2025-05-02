@@ -8,62 +8,36 @@
 
 #include "DAP.h"
 #include "EventHelper.h"
-#include "JSONUtils.h"
+#include "Protocol/ProtocolRequests.h"
 #include "RequestHandler.h"
+#include "llvm/Support/Error.h"
+
+using namespace llvm;
+using namespace lldb_dap::protocol;
 
 namespace lldb_dap {
 
-// "StepOutRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "StepOut request; value of command field is 'stepOut'. The
-//     request starts the debuggee to run again for one step. The debug adapter
-//     first sends the StepOutResponse and then a StoppedEvent (event type
-//     'step') after the step has completed.", "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "stepOut" ]
-//       },
-//       "arguments": {
-//         "$ref": "#/definitions/StepOutArguments"
-//       }
-//     },
-//     "required": [ "command", "arguments"  ]
-//   }]
-// },
-// "StepOutArguments": {
-//   "type": "object",
-//   "description": "Arguments for 'stepOut' request.",
-//   "properties": {
-//     "threadId": {
-//       "type": "integer",
-//       "description": "Execute 'stepOut' for this thread."
-//     }
-//   },
-//   "required": [ "threadId" ]
-// },
-// "StepOutResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//     "type": "object",
-//     "description": "Response to 'stepOut' request. This is just an
-//     acknowledgement, so no body field is required."
-//   }]
-// }
-void StepOutRequestHandler::operator()(
-    const llvm::json::Object &request) const {
-  llvm::json::Object response;
-  FillResponse(request, response);
-  const auto *arguments = request.getObject("arguments");
-  lldb::SBThread thread = dap.GetLLDBThread(*arguments);
-  if (thread.IsValid()) {
-    // Remember the thread ID that caused the resume so we can set the
-    // "threadCausedFocus" boolean value in the "stopped" events.
-    dap.focus_tid = thread.GetThreadID();
-    thread.StepOut();
-  } else {
-    response["success"] = llvm::json::Value(false);
-  }
-  dap.SendJSON(llvm::json::Value(std::move(response)));
+/// The request resumes the given thread to step out (return) from a
+/// function/method and allows all other threads to run freely by resuming
+/// them.
+///
+/// If the debug adapter supports single thread execution (see capability
+/// `supportsSingleThreadExecutionRequests`), setting the `singleThread`
+/// argument to true prevents other suspended threads from resuming.
+///
+/// The debug adapter first sends the response and then a `stopped` event (with
+/// reason `step`) after the step has completed."
+Error StepOutRequestHandler::Run(const StepOutArguments &arguments) const {
+  lldb::SBThread thread = dap.GetLLDBThread(arguments.threadId);
+  if (!thread.IsValid())
+    return make_error<DAPError>("invalid thread");
+
+  // Remember the thread ID that caused the resume so we can set the
+  // "threadCausedFocus" boolean value in the "stopped" events.
+  dap.focus_tid = thread.GetThreadID();
+  thread.StepOut();
+
+  return Error::success();
 }
 
 } // namespace lldb_dap

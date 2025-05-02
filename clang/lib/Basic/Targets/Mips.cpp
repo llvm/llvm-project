@@ -47,6 +47,8 @@ bool MipsTargetInfo::processorSupportsGPR64() const {
       .Case("mips64r6", true)
       .Case("octeon", true)
       .Case("octeon+", true)
+      .Case("i6400", true)
+      .Case("i6500", true)
       .Default(false);
 }
 
@@ -54,7 +56,7 @@ static constexpr llvm::StringLiteral ValidCPUNames[] = {
     {"mips1"},  {"mips2"},    {"mips3"},    {"mips4"},    {"mips5"},
     {"mips32"}, {"mips32r2"}, {"mips32r3"}, {"mips32r5"}, {"mips32r6"},
     {"mips64"}, {"mips64r2"}, {"mips64r3"}, {"mips64r5"}, {"mips64r6"},
-    {"octeon"}, {"octeon+"}, {"p5600"}};
+    {"octeon"}, {"octeon+"},  {"p5600"},    {"i6400"},    {"i6500"}};
 
 bool MipsTargetInfo::isValidCPUName(StringRef Name) const {
   return llvm::is_contained(ValidCPUNames, Name);
@@ -67,12 +69,12 @@ void MipsTargetInfo::fillValidCPUList(
 
 unsigned MipsTargetInfo::getISARev() const {
   return llvm::StringSwitch<unsigned>(getCPU())
-             .Cases("mips32", "mips64", 1)
-             .Cases("mips32r2", "mips64r2", "octeon", "octeon+", 2)
-             .Cases("mips32r3", "mips64r3", 3)
-             .Cases("mips32r5", "mips64r5", 5)
-             .Cases("mips32r6", "mips64r6", 6)
-             .Default(0);
+      .Cases("mips32", "mips64", 1)
+      .Cases("mips32r2", "mips64r2", "octeon", "octeon+", 2)
+      .Cases("mips32r3", "mips64r3", 3)
+      .Cases("mips32r5", "mips64r5", "p5600", 5)
+      .Cases("mips32r6", "mips64r6", 6)
+      .Default(0);
 }
 
 void MipsTargetInfo::getTargetDefines(const LangOptions &Opts,

@@ -78,7 +78,7 @@ loop:                                             ; preds = %Flow, %start
   br i1 %2, label %endif1, label %Flow
 
 Flow1:                                            ; preds = %endif2, %endif1
-  %3 = phi i32 [ %v5, %endif2 ], [ undef, %endif1 ]
+  %3 = phi i32 [ %v5, %endif2 ], [ poison, %endif1 ]
   %4 = phi i1 [ false, %endif2 ], [ true, %endif1 ]
   br label %Flow
 
@@ -107,7 +107,7 @@ endif1:                                           ; preds = %loop
   br i1 %5, label %endif2, label %Flow1
 
 Flow:                                             ; preds = %Flow1, %loop
-  %6 = phi i32 [ %3, %Flow1 ], [ undef, %loop ]
+  %6 = phi i32 [ %3, %Flow1 ], [ poison, %loop ]
   %7 = phi i1 [ %4, %Flow1 ], [ true, %loop ]
   %8 = phi i1 [ false, %Flow1 ], [ true, %loop ]
   br i1 %7, label %Flow2, label %loop

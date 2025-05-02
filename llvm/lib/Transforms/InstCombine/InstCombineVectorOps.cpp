@@ -1111,7 +1111,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
   // For each predecessor, what is the source aggregate,
   // from which all the elements were originally extracted from?
   // Note that we want for the map to have stable iteration order!
-  SmallDenseMap<BasicBlock *, Value *, 4> SourceAggregates;
+  SmallMapVector<BasicBlock *, Value *, 4> SourceAggregates;
   bool FoundSrcAgg = false;
   for (BasicBlock *Pred : Preds) {
     std::pair<decltype(SourceAggregates)::iterator, bool> IV =
@@ -3029,10 +3029,18 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     SmallVector<BitCastInst *, 8> BCs;
     DenseMap<Type *, Value *> NewBCs;
     for (User *U : SVI.users())
-      if (BitCastInst *BC = dyn_cast<BitCastInst>(U))
-        if (!BC->use_empty())
-          // Only visit bitcasts that weren't previously handled.
-          BCs.push_back(BC);
+      if (BitCastInst *BC = dyn_cast<BitCastInst>(U)) {
+        // Only visit bitcasts that weren't previously handled.
+        if (BC->use_empty())
+          continue;
+        // Prefer to combine bitcasts of bitcasts before attempting this fold.
+        if (BC->hasOneUse()) {
+          auto *BC2 = dyn_cast<BitCastInst>(BC->user_back());
+          if (BC2 && isEliminableCastPair(BC, BC2))
+            continue;
+        }
+        BCs.push_back(BC);
+      }
     for (BitCastInst *BC : BCs) {
       unsigned BegIdx = Mask.front();
       Type *TgtTy = BC->getDestTy();

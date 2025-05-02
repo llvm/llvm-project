@@ -60,7 +60,7 @@ public:
   bool isVariable() const { return !isValue(); }
   bool isMutableBox() const { return hlfir::isBoxAddressType(getType()); }
   bool isProcedurePointer() const {
-    return fir::isBoxProcAddressType(getType());
+    return hlfir::isFortranProcedurePointerType(getType());
   }
   bool isBoxAddressOrValue() const {
     return hlfir::isBoxAddressOrValueType(getType());

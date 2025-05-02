@@ -291,7 +291,7 @@ end subroutine
 !CHECK: omp.loop_nest (%[[ARG:.*]]) : i32 = (%[[CONST_LB]]) to (%[[CONST_UB]]) inclusive step (%[[CONST_STEP]]) {
 !CHECK: %[[X_DECLARE:.*]]:2 = hlfir.declare %[[X_ALLOCA]] {{.*}}
 !CHECK: %[[LOOP_VAR_DECLARE:.*]]:2 = hlfir.declare %[[LOOP_VAR_ALLOCA]] {{.*}}
-!CHECK: hlfir.assign %[[ARG]] to %[[LOOP_VAR_DECLARE]]#1 : i32, !fir.ref<i32>
+!CHECK: hlfir.assign %[[ARG]] to %[[LOOP_VAR_DECLARE]]#0 : i32, !fir.ref<i32>
 !CHECK: %[[LOADED_X:.*]] = fir.load %[[X_DECLARE]]#0 : !fir.ref<i32>
 !CHECK: %[[CONST:.*]] = arith.constant 1 : i32
 !CHECK: %[[RESULT:.*]] = arith.addi %[[LOADED_X]], %[[CONST]] : i32
@@ -324,7 +324,7 @@ end subroutine
 ! CHECK: omp.wsloop private(@{{.*}} %{{.*}} -> %[[LOOP_VAR:.*]] : !fir.ref<i32>) {
 !CHECK: omp.loop_nest (%[[ARG:.*]]) : i32 = (%[[CONST_LB]]) to (%[[CONST_UB]]) inclusive step (%[[CONST_STEP]]) {
 !CHECK: %[[LOOP_VAR_DECLARE:.*]]:2 = hlfir.declare %[[LOOP_VAR]] {{.*}}
-!CHECK: hlfir.assign %[[ARG]] to %[[LOOP_VAR_DECLARE]]#1 : i32, !fir.ref<i32>
+!CHECK: hlfir.assign %[[ARG]] to %[[LOOP_VAR_DECLARE]]#0 : i32, !fir.ref<i32>
 !CHECK: %[[LOADED_X:.*]] = fir.load %[[X_VAR_DECLARE]]#0 : !fir.ref<i32>
 !CHECK: %[[CONST:.*]] = arith.constant 1 : i32
 !CHECK: %[[ADD:.*]] = arith.addi %[[LOADED_X]], %[[CONST]] : i32

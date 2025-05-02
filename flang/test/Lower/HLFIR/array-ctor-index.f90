@@ -47,7 +47,7 @@ end function test1
 ! CHECK:           hlfir.destroy %[[VAL_32]] : !hlfir.expr<4xi8>
 ! CHECK:           hlfir.destroy %[[VAL_33:.*]] : !hlfir.expr<4xi64>
 ! CHECK:           hlfir.destroy %[[VAL_34:.*]] : !hlfir.expr<4xi64>
-! CHECK:           %[[VAL_35:.*]] = fir.load %[[VAL_5]]#1 : !fir.ref<!fir.array<4xi8>>
+! CHECK:           %[[VAL_35:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.array<4xi8>>
 ! CHECK:           return %[[VAL_35]] : !fir.array<4xi8>
 ! CHECK:         }
 
@@ -97,7 +97,7 @@ end function test2
 ! CHECK:           hlfir.destroy %[[VAL_32]] : !hlfir.expr<4xi16>
 ! CHECK:           hlfir.destroy %[[VAL_33:.*]] : !hlfir.expr<4xi64>
 ! CHECK:           hlfir.destroy %[[VAL_34:.*]] : !hlfir.expr<4xi64>
-! CHECK:           %[[VAL_35:.*]] = fir.load %[[VAL_5]]#1 : !fir.ref<!fir.array<4xi16>>
+! CHECK:           %[[VAL_35:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.array<4xi16>>
 ! CHECK:           return %[[VAL_35]] : !fir.array<4xi16>
 ! CHECK:         }
 
@@ -147,7 +147,7 @@ end function test3
 ! CHECK:           hlfir.destroy %[[VAL_32]] : !hlfir.expr<4xi32>
 ! CHECK:           hlfir.destroy %[[VAL_33:.*]] : !hlfir.expr<4xi64>
 ! CHECK:           hlfir.destroy %[[VAL_34:.*]] : !hlfir.expr<4xi64>
-! CHECK:           %[[VAL_35:.*]] = fir.load %[[VAL_5]]#1 : !fir.ref<!fir.array<4xi32>>
+! CHECK:           %[[VAL_35:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.array<4xi32>>
 ! CHECK:           return %[[VAL_35]] : !fir.array<4xi32>
 ! CHECK:         }
 
@@ -189,6 +189,6 @@ end function test4
 ! CHECK:           hlfir.assign %[[VAL_26:.*]] to %[[VAL_5]]#0 : !hlfir.expr<4xi64>, !fir.ref<!fir.array<4xi64>>
 ! CHECK:           hlfir.destroy %[[VAL_26]] : !hlfir.expr<4xi64>
 ! CHECK:           hlfir.destroy %[[VAL_27:.*]] : !hlfir.expr<4xi64>
-! CHECK:           %[[VAL_28:.*]] = fir.load %[[VAL_5]]#1 : !fir.ref<!fir.array<4xi64>>
+! CHECK:           %[[VAL_28:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.array<4xi64>>
 ! CHECK:           return %[[VAL_28]] : !fir.array<4xi64>
 ! CHECK:         }
