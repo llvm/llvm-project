@@ -397,40 +397,39 @@ public:
     //   they are available before lowering any function that may use them.
     bool hasMainProgram = false;
     const Fortran::semantics::Symbol *globalOmpRequiresSymbol = nullptr;
-    for (Fortran::lower::pft::Program::Units &u : pft.getUnits()) {
-      Fortran::common::visit(
-          Fortran::common::visitors{
-              [&](Fortran::lower::pft::FunctionLikeUnit &f) {
-                if (f.isMainProgram())
-                  hasMainProgram = true;
-                createGlobalOutsideOfFunctionLowering(
-                    [&]() { declareFunction(f); });
-                if (!globalOmpRequiresSymbol)
-                  globalOmpRequiresSymbol = f.getScope().symbol();
-              },
-              [&](Fortran::lower::pft::ModuleLikeUnit &m) {
-                lowerModuleDeclScope(m);
-                createGlobalOutsideOfFunctionLowering([&]() {
+    createBuilderOutsideOfFuncOpAndDo([&]() {
+      for (Fortran::lower::pft::Program::Units &u : pft.getUnits()) {
+        Fortran::common::visit(
+            Fortran::common::visitors{
+                [&](Fortran::lower::pft::FunctionLikeUnit &f) {
+                  if (f.isMainProgram())
+                    hasMainProgram = true;
+                  declareFunction(f);
+                  if (!globalOmpRequiresSymbol)
+                    globalOmpRequiresSymbol = f.getScope().symbol();
+                },
+                [&](Fortran::lower::pft::ModuleLikeUnit &m) {
+                  lowerModuleDeclScope(m);
                   for (Fortran::lower::pft::ContainedUnit &unit :
                        m.containedUnitList)
                     if (auto *f =
                             std::get_if<Fortran::lower::pft::FunctionLikeUnit>(
                                 &unit))
                       declareFunction(*f);
-                });
-              },
-              [&](Fortran::lower::pft::BlockDataUnit &b) {
-                if (!globalOmpRequiresSymbol)
-                  globalOmpRequiresSymbol = b.symTab.symbol();
-              },
-              [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {},
-              [&](Fortran::lower::pft::OpenACCDirectiveUnit &d) {},
-          },
-          u);
-    }
+                },
+                [&](Fortran::lower::pft::BlockDataUnit &b) {
+                  if (!globalOmpRequiresSymbol)
+                    globalOmpRequiresSymbol = b.symTab.symbol();
+                },
+                [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {},
+                [&](Fortran::lower::pft::OpenACCDirectiveUnit &d) {},
+            },
+            u);
+      }
+    });
 
     // Create definitions of intrinsic module constants.
-    createGlobalOutsideOfFunctionLowering(
+    createBuilderOutsideOfFuncOpAndDo(
         [&]() { createIntrinsicModuleDefinitions(pft); });
 
     // Primary translation pass.
@@ -449,12 +448,12 @@ public:
     // Once all the code has been translated, create global runtime type info
     // data structures for the derived types that have been processed, as well
     // as fir.type_info operations for the dispatch tables.
-    createGlobalOutsideOfFunctionLowering(
+    createBuilderOutsideOfFuncOpAndDo(
         [&]() { typeInfoConverter.createTypeInfo(*this); });
 
     // Generate the `main` entry point if necessary
     if (hasMainProgram)
-      createGlobalOutsideOfFunctionLowering([&]() {
+      createBuilderOutsideOfFuncOpAndDo([&]() {
         fir::runtime::genMain(*builder, toLocation(),
                               bridge.getEnvironmentDefaults(),
                               getFoldingContext().languageFeatures().IsEnabled(
@@ -5885,7 +5884,7 @@ private:
   /// always positioned inside a region block when creating globals, the easiest
   /// way to comply is to create a dummy function and to throw it away
   /// afterwards.
-  void createGlobalOutsideOfFunctionLowering(
+  void createBuilderOutsideOfFuncOpAndDo(
       const std::function<void()> &createGlobals) {
     // FIXME: get rid of the bogus function context and instantiate the
     // globals directly into the module.
@@ -5913,7 +5912,7 @@ private:
 
   /// Instantiate the data from a BLOCK DATA unit.
   void lowerBlockData(Fortran::lower::pft::BlockDataUnit &bdunit) {
-    createGlobalOutsideOfFunctionLowering([&]() {
+    createBuilderOutsideOfFuncOpAndDo([&]() {
       Fortran::lower::AggregateStoreMap fakeMap;
       for (const auto &[_, sym] : bdunit.symTab) {
         if (sym->has<Fortran::semantics::ObjectEntityDetails>()) {
@@ -5927,7 +5926,7 @@ private:
   /// Create fir::Global for all the common blocks that appear in the program.
   void
   lowerCommonBlocks(const Fortran::semantics::CommonBlockList &commonBlocks) {
-    createGlobalOutsideOfFunctionLowering(
+    createBuilderOutsideOfFuncOpAndDo(
         [&]() { Fortran::lower::defineCommonBlocks(*this, commonBlocks); });
   }
 
@@ -5997,36 +5996,34 @@ private:
   /// declarative construct.
   void lowerModuleDeclScope(Fortran::lower::pft::ModuleLikeUnit &mod) {
     setCurrentPosition(mod.getStartingSourceLoc());
-    createGlobalOutsideOfFunctionLowering([&]() {
-      auto &scopeVariableListMap =
-          Fortran::lower::pft::getScopeVariableListMap(mod);
-      for (const auto &var : Fortran::lower::pft::getScopeVariableList(
-               mod.getScope(), scopeVariableListMap)) {
+    auto &scopeVariableListMap =
+        Fortran::lower::pft::getScopeVariableListMap(mod);
+    for (const auto &var : Fortran::lower::pft::getScopeVariableList(
+             mod.getScope(), scopeVariableListMap)) {
 
-        // Only define the variables owned by this module.
-        const Fortran::semantics::Scope *owningScope = var.getOwningScope();
-        if (owningScope && mod.getScope() != *owningScope)
+      // Only define the variables owned by this module.
+      const Fortran::semantics::Scope *owningScope = var.getOwningScope();
+      if (owningScope && mod.getScope() != *owningScope)
+        continue;
+
+      // Very special case: The value of numeric_storage_size depends on
+      // compilation options and therefore its value is not yet known when
+      // building the builtins runtime. Instead, the parameter is folding a
+      // __numeric_storage_size() expression which is loaded into the user
+      // program. For the iso_fortran_env object file, omit the symbol as it
+      // is never used.
+      if (var.hasSymbol()) {
+        const Fortran::semantics::Symbol &sym = var.getSymbol();
+        const Fortran::semantics::Scope &owner = sym.owner();
+        if (sym.name() == "numeric_storage_size" && owner.IsModule() &&
+            DEREF(owner.symbol()).name() == "iso_fortran_env")
           continue;
-
-        // Very special case: The value of numeric_storage_size depends on
-        // compilation options and therefore its value is not yet known when
-        // building the builtins runtime. Instead, the parameter is folding a
-        // __numeric_storage_size() expression which is loaded into the user
-        // program. For the iso_fortran_env object file, omit the symbol as it
-        // is never used.
-        if (var.hasSymbol()) {
-          const Fortran::semantics::Symbol &sym = var.getSymbol();
-          const Fortran::semantics::Scope &owner = sym.owner();
-          if (sym.name() == "numeric_storage_size" && owner.IsModule() &&
-              DEREF(owner.symbol()).name() == "iso_fortran_env")
-            continue;
-        }
-
-        Fortran::lower::defineModuleVariable(*this, var);
       }
+
+      Fortran::lower::defineModuleVariable(*this, var);
+    }
       for (auto &eval : mod.evaluationList)
         genFIR(eval);
-    });
   }
 
   /// Lower functions contained in a module.
