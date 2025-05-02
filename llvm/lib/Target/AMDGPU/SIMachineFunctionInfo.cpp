@@ -364,7 +364,6 @@ void SIMachineFunctionInfo::shiftWwmVGPRsToLowestRange(
 
     for (MachineBasicBlock &MBB : MF) {
       MBB.removeLiveIn(Reg);
-      MBB.sortUniqueLiveIns();
     }
 
     Reg = NewReg;
@@ -411,7 +410,6 @@ bool SIMachineFunctionInfo::allocatePhysicalVGPRForSGPRSpills(
     reserveWWMRegister(LaneVGPR);
     for (MachineBasicBlock &MBB : MF) {
       MBB.addLiveIn(LaneVGPR);
-      MBB.sortUniqueLiveIns();
     }
     SpillPhysVGPRs.push_back(LaneVGPR);
   } else {

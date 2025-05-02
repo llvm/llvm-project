@@ -56,7 +56,6 @@ MachineBasicBlock::MachineBasicBlock(MachineFunction &MF, const BasicBlock *B)
   Insts.Parent = this;
   if (B)
     IrrLoopHeaderWeight = B->getIrrLoopHeaderWeight();
-  LiveInRegUnits.resize(MF.getSubtarget().getRegisterInfo()->getNumRegUnits());
 }
 
 MachineBasicBlock::~MachineBasicBlock() = default;
@@ -428,10 +427,8 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS.indent(2) << "liveins: ";
 
     ListSeparator LS;
-    for (const auto &LI : liveins()) {
-      OS << LS << printReg(LI.PhysReg, TRI);
-      if (!LI.LaneMask.all())
-        OS << ":0x" << PrintLaneMask(LI.LaneMask);
+    for (const MCRegister Reg : liveins()) {
+      OS << LS << printReg(Reg, TRI);
     }
     HasLineAttributes = true;
   }
@@ -599,76 +596,67 @@ void MachineBasicBlock::printAsOperand(raw_ostream &OS,
   printName(OS, 0);
 }
 
-void MachineBasicBlock::addLiveInRegUnit(MCRegister Reg, LaneBitmask LaneMask) {
+void MachineBasicBlock::addLiveIn(MCRegister PhysReg, LaneBitmask LaneMask) {
+  assert(PhysReg.isPhysical() && "live-in should be a physical register");
   const TargetRegisterInfo *TRI = getParent()->getSubtarget().getRegisterInfo();
-  for (MCRegUnitMaskIterator Unit(Reg, TRI); Unit.isValid(); ++Unit) {
-    LaneBitmask UnitMask = (*Unit).second;
-    if ((UnitMask & LaneMask).any())
-      LiveInRegUnits.set((*Unit).first);
+  for (MCRegUnitMaskIterator U(PhysReg, TRI); U.isValid(); ++U) {
+    LaneBitmask Mask = (*U).second;
+    MCRegUnit Unit = (*U).first;
+    if ((Mask & LaneMask).any())
+      for (MCRegUnitRootIterator RootReg(Unit, TRI); RootReg.isValid();
+           ++RootReg)
+        LiveIns.insert(*RootReg);
   }
 }
 
 void MachineBasicBlock::removeLiveIn(MCRegister Reg, LaneBitmask LaneMask) {
-  LiveInVector::iterator I = find_if(
-      LiveIns, [Reg](const RegisterMaskPair &LI) { return LI.PhysReg == Reg; });
-  if (I == LiveIns.end())
-    return;
-
-  I->LaneMask &= ~LaneMask;
-  if (I->LaneMask.none()) {
-    LiveIns.erase(I);
-    removeLiveInRegUnit(I->PhysReg);
+  assert(Reg.isPhysical() && "live-in should be a physical register");
+  const TargetRegisterInfo *TRI = getParent()->getSubtarget().getRegisterInfo();
+  for (MCRegUnitMaskIterator U(Reg, TRI); U.isValid(); ++U) {
+    LaneBitmask Mask = (*U).second;
+    MCRegUnit Unit = (*U).first;
+    if ((Mask & LaneMask).any())
+      for (MCRegUnitRootIterator RootReg(Unit, TRI); RootReg.isValid();
+           ++RootReg)
+        LiveIns.erase(*RootReg);
   }
 }
 
 MachineBasicBlock::livein_iterator
 MachineBasicBlock::removeLiveIn(MachineBasicBlock::livein_iterator I) {
-  // Get non-const version of iterator.
-  LiveInVector::iterator LI = LiveIns.begin() + (I - LiveIns.begin());
-  removeLiveInRegUnit(LI->PhysReg);
-  return LiveIns.erase(LI);
-}
+  if (I == LiveIns.end())
+    return I;
 
-void MachineBasicBlock::removeLiveInRegUnit(MCRegister Reg) {
-  const TargetRegisterInfo *TRI = getParent()->getSubtarget().getRegisterInfo();
-  for (MCRegUnit Unit : TRI->regunits(Reg))
-    LiveInRegUnits.reset(Unit);
+  DenseSet<MCRegister>::iterator start = LiveIns.begin();
+  while (start != I)
+    start++;
+  MachineBasicBlock::livein_iterator next = start;
+  LiveIns.erase(start);
+  return next++;
 }
 
 bool MachineBasicBlock::isLiveIn(MCRegister Reg, LaneBitmask LaneMask) const {
+  if (!Reg.isPhysical())
+    return false;
+
   const TargetRegisterInfo *TRI = getParent()->getSubtarget().getRegisterInfo();
-  for (MCRegUnitMaskIterator Unit(Reg, TRI); Unit.isValid(); ++Unit) {
-    LaneBitmask UnitMask = (*Unit).second;
-    if ((UnitMask & LaneMask).any() && LiveInRegUnits.test((*Unit).first))
-      return true;
+  for (MCRegUnitMaskIterator U(Reg, TRI); U.isValid(); ++U) {
+    LaneBitmask Mask = (*U).second;
+    MCRegUnit Unit = (*U).first;
+    if ((Mask & LaneMask).any()) {
+      for (MCRegUnitRootIterator RootReg(Unit, TRI); RootReg.isValid();
+           ++RootReg)
+        if (LiveIns.count(*RootReg))
+          return true;
+    }
   }
   return false;
-}
-
-void MachineBasicBlock::sortUniqueLiveIns() {
-  llvm::sort(LiveIns,
-             [](const RegisterMaskPair &LI0, const RegisterMaskPair &LI1) {
-               return LI0.PhysReg < LI1.PhysReg;
-             });
-  // Liveins are sorted by physreg now we can merge their lanemasks.
-  LiveInVector::const_iterator I = LiveIns.begin();
-  LiveInVector::const_iterator J;
-  LiveInVector::iterator Out = LiveIns.begin();
-  for (; I != LiveIns.end(); ++Out, I = J) {
-    MCRegister PhysReg = I->PhysReg;
-    LaneBitmask LaneMask = I->LaneMask;
-    for (J = std::next(I); J != LiveIns.end() && J->PhysReg == PhysReg; ++J)
-      LaneMask |= J->LaneMask;
-    Out->PhysReg = PhysReg;
-    Out->LaneMask = LaneMask;
-  }
-  LiveIns.erase(Out, LiveIns.end());
 }
 
 Register
 MachineBasicBlock::addLiveIn(MCRegister PhysReg, const TargetRegisterClass *RC) {
   assert(getParent() && "MBB must be inserted in function");
-  assert(PhysReg.isPhysical() && "Expected physreg");
+  assert(PhysReg && "Expected physreg");
   assert(RC && "Register class is required");
   assert((isEHPad() || this == &getParent()->front()) &&
          "Only the entry block and landing pads can have physreg live ins");
@@ -1705,8 +1693,8 @@ MachineBasicBlock::computeRegisterLiveness(const TargetRegisterInfo *TRI,
   // no successor has it live in.
   if (I == end()) {
     for (MachineBasicBlock *S : successors()) {
-      for (const MachineBasicBlock::RegisterMaskPair &LI : S->liveins()) {
-        if (TRI->regsOverlap(LI.PhysReg, Reg))
+      for (const MCRegister LI : S->liveins()) {
+        if (TRI->regsOverlap(LI, Reg))
           return LQR_Live;
       }
     }
@@ -1764,8 +1752,8 @@ MachineBasicBlock::computeRegisterLiveness(const TargetRegisterInfo *TRI,
   // Did we get to the start of the block?
   if (I == begin()) {
     // If so, the register's state is definitely defined by the live-in state.
-    for (const MachineBasicBlock::RegisterMaskPair &LI : liveins())
-      if (TRI->regsOverlap(LI.PhysReg, Reg))
+    for (const MCRegister LI : liveins())
+      if (TRI->regsOverlap(LI, Reg))
         return LQR_Live;
 
     return LQR_Dead;
@@ -1791,14 +1779,11 @@ MachineBasicBlock::getEndClobberMask(const TargetRegisterInfo *TRI) const {
 
 void MachineBasicBlock::clearLiveIns() {
   LiveIns.clear();
-  LiveInRegUnits.reset();
 }
 
-void MachineBasicBlock::clearLiveIns(
-    std::vector<RegisterMaskPair> &OldLiveIns) {
+void MachineBasicBlock::clearLiveIns(DenseSet<MCRegister> &OldLiveIns) {
   assert(OldLiveIns.empty() && "Vector must be empty");
-  std::swap(LiveIns, OldLiveIns);
-  LiveInRegUnits.reset();
+  LiveIns.swap(OldLiveIns);
 }
 
 MachineBasicBlock::livein_iterator MachineBasicBlock::livein_begin() const {

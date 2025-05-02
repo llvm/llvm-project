@@ -66,10 +66,6 @@ static auto HasOpcode = [](unsigned Opcode) {
   return Property(&MachineInstr::getOpcode, Eq(Opcode));
 };
 
-static auto LiveReg = [](unsigned Reg) {
-  return Field(&MachineBasicBlock::RegisterMaskPair::PhysReg, Eq(Reg));
-};
-
 TEST_F(X86SnippetRepetitorTest, Duplicate) {
   TestCommon(Benchmark::Duplicate);
   // Duplicating creates a single basic block that repeats the instructions.
@@ -101,12 +97,11 @@ TEST_F(X86SnippetRepetitorTest, Loop) {
                           HasOpcode(X86::NOOP), HasOpcode(X86::NOOP),
                           HasOpcode(X86::NOOP), HasOpcode(X86::ADD64ri8),
                           HasOpcode(X86::JCC_1)));
-  EXPECT_THAT(
-      LoopBlock.liveins(),
-      UnorderedElementsAre(
-          LiveReg(X86::EAX),
-          LiveReg(State.getExegesisTarget().getDefaultLoopCounterRegister(
-              State.getTargetMachine().getTargetTriple()))));
+  EXPECT_THAT(LoopBlock.liveins(),
+              UnorderedElementsAre(
+                  MCRegister(X86::EAX),
+                  State.getExegesisTarget().getDefaultLoopCounterRegister(
+                      State.getTargetMachine().getTargetTriple())));
   EXPECT_THAT(MF->getBlockNumbered(2)->instrs(),
               ElementsAre(HasOpcode(X86::RET64)));
 }

@@ -234,17 +234,8 @@ HexagonBlockRanges::RegisterSet HexagonBlockRanges::getLiveIns(
   RegisterSet LiveIns;
   RegisterSet Tmp;
 
-  for (auto I : B.liveins()) {
-    MCSubRegIndexIterator S(I.PhysReg, &TRI);
-    if (I.LaneMask.all() || (I.LaneMask.any() && !S.isValid())) {
-      Tmp.insert({I.PhysReg, 0});
-      continue;
-    }
-    for (; S.isValid(); ++S) {
-      unsigned SI = S.getSubRegIndex();
-      if ((I.LaneMask & TRI.getSubRegIndexLaneMask(SI)).any())
-        Tmp.insert({S.getSubReg(), 0});
-    }
+  for (auto Reg : B.liveins()) {
+    Tmp.insert({Reg, 0});
   }
 
   for (auto R : Tmp) {

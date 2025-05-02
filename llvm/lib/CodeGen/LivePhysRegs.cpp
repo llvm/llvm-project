@@ -153,21 +153,8 @@ bool LivePhysRegs::available(const MachineRegisterInfo &MRI,
 
 /// Add live-in registers of basic block \p MBB to \p LiveRegs.
 void LivePhysRegs::addBlockLiveIns(const MachineBasicBlock &MBB) {
-  for (const auto &LI : MBB.liveins()) {
-    MCRegister Reg = LI.PhysReg;
-    LaneBitmask Mask = LI.LaneMask;
-    MCSubRegIndexIterator S(Reg, TRI);
-    assert(Mask.any() && "Invalid livein mask");
-    if (Mask.all() || !S.isValid()) {
-      addReg(Reg);
-      continue;
-    }
-    for (; S.isValid(); ++S) {
-      unsigned SI = S.getSubRegIndex();
-      if ((Mask & TRI->getSubRegIndexLaneMask(SI)).any())
-        addReg(S.getSubReg());
-    }
-  }
+  for (const MCRegister Reg : MBB.liveins())
+    addReg(Reg);
 }
 
 /// Adds all callee saved registers to \p LiveRegs.

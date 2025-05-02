@@ -177,9 +177,7 @@ static unsigned findDeadCallerSavedReg(MachineBasicBlock &MBB,
 
 static bool isRegLiveIn(MachineBasicBlock &MBB, unsigned Reg) {
   return llvm::any_of(MBB.liveins(),
-                      [Reg](MachineBasicBlock::RegisterMaskPair RegMask) {
-                        return RegMask.PhysReg == Reg;
-                      });
+                      [Reg](MCRegister RegVal) { return RegVal == Reg; });
 }
 
 uint64_t

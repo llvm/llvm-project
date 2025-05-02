@@ -869,8 +869,8 @@ void Liveness::computeLiveIns() {
     // Dump the liveness map
     for (MachineBasicBlock &B : MF) {
       std::vector<RegisterRef> LV;
-      for (const MachineBasicBlock::RegisterMaskPair &LI : B.liveins())
-        LV.push_back(RegisterRef(LI.PhysReg, LI.LaneMask));
+      for (const MCRegister LI : B.liveins())
+        LV.push_back(RegisterRef(LI));
       llvm::sort(LV, std::less<RegisterRef>(PRI));
       dbgs() << printMBBReference(B) << "\t rec = {";
       for (auto I : LV)
@@ -894,14 +894,14 @@ void Liveness::resetLiveIns() {
   for (auto &B : DFG.getMF()) {
     // Remove all live-ins.
     std::vector<MCRegister> T;
-    for (const MachineBasicBlock::RegisterMaskPair &LI : B.liveins())
-      T.push_back(LI.PhysReg);
+    for (const MCRegister LI : B.liveins())
+      T.push_back(LI);
     for (auto I : T)
       B.removeLiveIn(I);
     // Add the newly computed live-ins.
     const RegisterAggr &LiveIns = LiveMap[&B];
     for (RegisterRef R : LiveIns.refs())
-      B.addLiveIn({MCPhysReg(R.Reg), R.Mask});
+      B.addLiveIn({MCPhysReg(R.Reg)});
   }
 }
 
@@ -912,18 +912,8 @@ void Liveness::resetKills() {
 
 void Liveness::resetKills(MachineBasicBlock *B) {
   auto CopyLiveIns = [this](MachineBasicBlock *B, BitVector &LV) -> void {
-    for (auto I : B->liveins()) {
-      MCSubRegIndexIterator S(I.PhysReg, &TRI);
-      if (!S.isValid()) {
-        LV.set(I.PhysReg.id());
-        continue;
-      }
-      do {
-        LaneBitmask M = TRI.getSubRegIndexLaneMask(S.getSubRegIndex());
-        if ((M & I.LaneMask).any())
-          LV.set(S.getSubReg());
-        ++S;
-      } while (S.isValid());
+    for (auto Reg : B->liveins()) {
+      LV.set(Reg);
     }
   };
 

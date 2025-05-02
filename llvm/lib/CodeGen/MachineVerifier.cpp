@@ -155,10 +155,14 @@ struct MachineVerifier {
   SlotIndex lastIndex;
 
   // Add Reg and any sub-registers to RV
-  void addRegWithSubRegs(RegVector &RV, Register Reg) {
+  void addRegUnitRoots(RegVector &RV, Register Reg) {
     RV.push_back(Reg);
-    if (Reg.isPhysical())
-      append_range(RV, TRI->subregs(Reg.asMCReg()));
+    if (Reg.isPhysical()) {
+      for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
+        for (MCRegUnitRootIterator RootReg(Unit, TRI); RootReg.isValid();
+             ++RootReg)
+          RV.push_back(*RootReg);
+    }
   }
 
   struct BBInfo {
@@ -736,13 +740,13 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
     // If this block has allocatable physical registers live-in, check that
     // it is an entry block or landing pad.
     for (const auto &LI : MBB->liveins()) {
-      if (isAllocatable(LI.PhysReg) && !MBB->isEHPad() &&
+      if (isAllocatable(LI) && !MBB->isEHPad() &&
           MBB->getIterator() != MBB->getParent()->begin() &&
           !MBB->isInlineAsmBrIndirectTarget()) {
         report("MBB has allocatable live-in, but isn't entry, landing-pad, or "
                "inlineasm-br-indirect-target.",
                MBB);
-        report_context(LI.PhysReg);
+        report_context(LI);
       }
     }
   }
@@ -903,18 +907,25 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
   regsLive.clear();
   if (MRI->tracksLiveness()) {
     for (const auto &LI : MBB->liveins()) {
-      if (!LI.PhysReg.isPhysical()) {
+      if (!LI.isPhysical()) {
         report("MBB live-in list contains non-physical register", MBB);
         continue;
       }
-      regsLive.insert_range(TRI->subregs_inclusive(LI.PhysReg));
+      for (MCRegUnit Unit : TRI->regunits(LI))
+        for (MCRegUnitRootIterator RootReg(Unit, TRI); RootReg.isValid();
+             ++RootReg)
+          regsLive.insert(*RootReg);
     }
   }
 
   const MachineFrameInfo &MFI = MF->getFrameInfo();
   BitVector PR = MFI.getPristineRegs(*MF);
-  for (unsigned I : PR.set_bits())
-    regsLive.insert_range(TRI->subregs_inclusive(I));
+  for (unsigned I : PR.set_bits()) {
+    for (MCRegUnit Unit : TRI->regunits(I))
+      for (MCRegUnitRootIterator RootReg(Unit, TRI); RootReg.isValid();
+           ++RootReg)
+        regsLive.insert(*RootReg);
+  }
 
   regsKilled.clear();
   regsDefined.clear();
@@ -2964,7 +2975,7 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
   // Both use and def operands can read a register.
   if (MO->readsReg()) {
     if (MO->isKill())
-      addRegWithSubRegs(regsKilled, Reg);
+      addRegUnitRoots(regsKilled, Reg);
 
     // Check that LiveVars knows this kill (unless we are inside a bundle, in
     // which case we have already checked that LiveVars knows any kills on the
@@ -3037,13 +3048,13 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
         bool Bad = !isReserved(Reg);
         // We are fine if just any subregister has a defined value.
         if (Bad) {
-
-          for (const MCPhysReg &SubReg : TRI->subregs(Reg)) {
-            if (regsLive.count(SubReg)) {
-              Bad = false;
-              break;
-            }
-          }
+          for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
+            for (MCRegUnitRootIterator RootReg(Unit, TRI); RootReg.isValid();
+                 ++RootReg)
+              if (regsLive.count(*RootReg)) {
+                Bad = false;
+                break;
+              }
         }
         // If there is an additional implicit-use of a super register we stop
         // here. By definition we are fine if the super register is not
@@ -3086,9 +3097,9 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
     // Register defined.
     // TODO: verify that earlyclobber ops are not used.
     if (MO->isDead())
-      addRegWithSubRegs(regsDead, Reg);
+      addRegUnitRoots(regsDead, Reg);
     else
-      addRegWithSubRegs(regsDefined, Reg);
+      addRegUnitRoots(regsDefined, Reg);
 
     // Verify SSA form.
     if (MRI->isSSA() && Reg.isVirtual() &&
@@ -3468,8 +3479,7 @@ void MachineVerifier::visitMachineFunctionAfter() {
   // reserved, which could mean a condition code register for instance.
   if (MRI->tracksLiveness())
     for (const auto &MBB : *MF)
-      for (MachineBasicBlock::RegisterMaskPair P : MBB.liveins()) {
-        MCRegister LiveInReg = P.PhysReg;
+      for (MCRegister LiveInReg : MBB.liveins()) {
         bool hasAliases = MCRegAliasIterator(LiveInReg, TRI, false).isValid();
         if (hasAliases || isAllocatable(LiveInReg) || isReserved(LiveInReg))
           continue;

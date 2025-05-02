@@ -581,11 +581,10 @@ bool BranchRelaxation::fixupUnconditionalBranch(MachineInstr &MI) {
 
     // Add live outs.
     for (const MachineBasicBlock *Succ : MBB->successors()) {
-      for (const MachineBasicBlock::RegisterMaskPair &LiveIn : Succ->liveins())
+      for (const MCRegister LiveIn : Succ->liveins())
         BranchBB->addLiveIn(LiveIn);
     }
 
-    BranchBB->sortUniqueLiveIns();
     BranchBB->addSuccessor(DestBB);
     MBB->replaceSuccessor(DestBB, BranchBB);
     if (TrampolineInsertionPoint == MBB)

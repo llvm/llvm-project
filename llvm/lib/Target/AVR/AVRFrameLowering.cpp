@@ -261,7 +261,7 @@ bool AVRFrameLowering::spillCalleeSavedRegisters(
     // add it to the livein list.
     if (IsNotLiveIn)
       for (const auto &LiveIn : MBB.liveins())
-        if (STI.getRegisterInfo()->isSubRegister(LiveIn.PhysReg, Reg)) {
+        if (STI.getRegisterInfo()->isSubRegister(LiveIn, Reg)) {
           IsNotLiveIn = false;
           MBB.addLiveIn(Reg);
           break;

@@ -915,8 +915,8 @@ void DataFlowGraph::build(const Config &config) {
   for (std::pair<MCRegister, Register> P : MRI.liveins())
     LiveIns.insert(RegisterRef(P.first));
   if (MRI.tracksLiveness()) {
-    for (auto I : EntryB.liveins())
-      LiveIns.insert(RegisterRef(I.PhysReg, I.LaneMask));
+    for (auto Reg : EntryB.liveins())
+      LiveIns.insert(RegisterRef(Reg));
   }
 
   // Add function-entry phi nodes for the live-in registers.

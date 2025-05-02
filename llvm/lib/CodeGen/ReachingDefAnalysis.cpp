@@ -81,7 +81,7 @@ void ReachingDefAnalysis::enterBasicBlock(MachineBasicBlock *MBB) {
   // This is the entry block.
   if (MBB->pred_empty()) {
     for (const auto &LI : MBB->liveins()) {
-      for (MCRegUnit Unit : TRI->regunits(LI.PhysReg)) {
+      for (MCRegUnit Unit : TRI->regunits(LI)) {
         // Treat function live-ins as if they were defined just before the first
         // instruction.  Usually, function arguments are set up immediately
         // before the call.

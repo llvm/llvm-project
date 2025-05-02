@@ -728,11 +728,12 @@ void printMBB(raw_ostream &OS, MFPrintState &State,
   if (!MBB.livein_empty()) {
     const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
     OS.indent(2) << "liveins: ";
-    ListSeparator LS;
-    for (const auto &LI : MBB.liveins_dbg()) {
-      OS << LS << printReg(LI.PhysReg, &TRI);
-      if (!LI.LaneMask.all())
-        OS << ":0x" << PrintLaneMask(LI.LaneMask);
+    bool First = true;
+    for (const Register Reg : MBB.liveins_dbg()) {
+      if (!First)
+        OS << ", ";
+      First = false;
+      OS << printReg(Reg, &TRI);
     }
     OS << "\n";
     HasLineAttributes = true;

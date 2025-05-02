@@ -440,11 +440,6 @@ void VirtRegRewriter::addMBBLiveIns() {
       }
     }
   }
-
-  // Sort and unique MBB LiveIns as we've not checked if SubReg/PhysReg were in
-  // each MBB's LiveIns set before calling addLiveIn on them.
-  for (MachineBasicBlock &MBB : *MF)
-    MBB.sortUniqueLiveIns();
 }
 
 /// Returns true if the given machine operand \p MO only reads undefined lanes.

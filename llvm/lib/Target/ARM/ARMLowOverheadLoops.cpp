@@ -1014,17 +1014,17 @@ bool LowOverheadLoop::ValidateLiveOuts() {
   assert(ML.getNumBlocks() == 1 && "Expected single block loop!");
   assert(ExitBlocks.size() == 1 && "Expected a single exit block");
   MachineBasicBlock *ExitBB = ExitBlocks.front();
-  for (const MachineBasicBlock::RegisterMaskPair &RegMask : ExitBB->liveins()) {
+  for (const MCRegister Reg : ExitBB->liveins()) {
     // TODO: Instead of blocking predication, we could move the vctp to the exit
     // block and calculate it's operand there in or the preheader.
-    if (RegMask.PhysReg == ARM::VPR) {
+    if (Reg == ARM::VPR) {
       LLVM_DEBUG(dbgs() << "  VPR is live in to the exit block.");
       return false;
     }
     // Check Q-regs that are live in the exit blocks. We don't collect scalars
     // because they won't be affected by lane predication.
-    if (QPRs->contains(RegMask.PhysReg))
-      if (auto *MI = RDA.getLocalLiveOutMIDef(Header, RegMask.PhysReg))
+    if (QPRs->contains(Reg))
+      if (auto *MI = RDA.getLocalLiveOutMIDef(Header, Reg))
         LiveOutMIs.insert(MI);
   }
 

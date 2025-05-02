@@ -104,7 +104,7 @@ public:
         Loop.MBB->addLiveIn(LoopCounter);
         for (MCRegister Reg : Filler.getRegistersSetUp())
           Loop.MBB->addLiveIn(Reg);
-        for (const auto &LiveIn : Entry.MBB->liveins())
+        for (const MCRegister LiveIn : Entry.MBB->liveins())
           Loop.MBB->addLiveIn(LiveIn);
       }
       for (auto _ : seq(LoopUnrollFactor)) {

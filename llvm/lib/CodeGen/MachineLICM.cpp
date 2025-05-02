@@ -625,8 +625,8 @@ void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop) {
     // FIXME: That means a reload that're reused in successor block(s) will not
     // be LICM'ed.
     for (const auto &LI : BB->liveins()) {
-      for (MCRegUnit Unit : TRI->regunits(LI.PhysReg))
-        RUDefs.set(Unit);
+      for (MCRegUnitIterator RUI(LI, TRI); RUI.isValid(); ++RUI)
+        RUDefs.set(*RUI);
     }
 
     // Funclet entry blocks will clobber all registers
