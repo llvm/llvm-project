@@ -1291,13 +1291,13 @@ StringRef CppEmitter::getOrCreateInductionVarName(Value val) {
 
     int64_t identifier = 'i' + loopNestingLevel;
 
-    if (identifier >= 'i' && identifier <= 'z') {
+    if (identifier >= 'i' && identifier <= 't') {
       valueMapper.insert(val,
                          formatv("{0}_{1}", (char)identifier, ++valueCount));
     } else {
       // If running out of letters, continue with zX
       valueMapper.insert(
-          val, formatv("z{0}_{1}", identifier - 'z' - 1, ++valueCount));
+          val, formatv("u{0}_{1}", identifier - 't' - 1, ++valueCount));
     }
   }
   return *valueMapper.begin(val);
