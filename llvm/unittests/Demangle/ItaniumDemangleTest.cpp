@@ -234,8 +234,8 @@ INSTANTIATE_TEST_SUITE_P(DemangleInvalidTests, DemangleInvalidTestFixture,
 
 struct FPLiteralCase {
   const char *mangled;
-  // There are four possible demanglings of a given float.
-  std::string expecting[4];
+  // There are multiple possible demanglings of a given float.
+  std::string expecting[5];
 };
 
 struct DemangleFPLiteralTestFixture
@@ -245,6 +245,7 @@ FPLiteralCase g_fp_literal_cases[] = {
     // clang-format off
     {"_ZN5test01gIfEEvRAszplcvT__ELf40a00000E_c",
      {
+         "void test0::g<float>(char (&) [sizeof ((float)() + 0x1.4000000000000p+2f)])",
          "void test0::g<float>(char (&) [sizeof ((float)() + 0x1.4p+2f)])",
          "void test0::g<float>(char (&) [sizeof ((float)() + 0x2.8p+1f)])",
          "void test0::g<float>(char (&) [sizeof ((float)() + 0x5p+0f)])",
@@ -252,6 +253,7 @@ FPLiteralCase g_fp_literal_cases[] = {
      }},
     {"_ZN5test01hIfEEvRAszplcvT__ELd4014000000000000E_c",
      {
+         "void test0::h<float>(char (&) [sizeof ((float)() + 0x1.4000000000000p+2)])",
          "void test0::h<float>(char (&) [sizeof ((float)() + 0x1.4p+2)])",
          "void test0::h<float>(char (&) [sizeof ((float)() + 0x2.8p+1)])",
          "void test0::h<float>(char (&) [sizeof ((float)() + 0x5p+0)])",
@@ -260,6 +262,7 @@ FPLiteralCase g_fp_literal_cases[] = {
 #if LDBL_FP80
     {"_ZN5test01hIfEEvRAcvjplstT_Le4001a000000000000000E_c",
      {
+         "void test0::h<float>(char (&) [(unsigned int)(sizeof (float) + 0x1.4p+2L)])",
          "void test0::h<float>(char (&) [(unsigned int)(sizeof (float) + 0x1.4p+2L)])",
          "void test0::h<float>(char (&) [(unsigned int)(sizeof (float) + 0x2.8p+1L)])",
          "void test0::h<float>(char (&) [(unsigned int)(sizeof (float) + 0x5p+0L)])",
