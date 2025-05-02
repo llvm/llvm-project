@@ -89,10 +89,8 @@ void write_global_bool4(vbool4_t v) { global_bool4 = v; }
 #if __riscv_v_fixed_vlen >= 256
 // CHECK-256-LABEL: @write_global_bool32(
 // CHECK-256-NEXT:  entry:
-// CHECK-256-NEXT:    [[SAVED_VALUE:%.*]] = alloca <vscale x 2 x i1>, align 1
-// CHECK-256-NEXT:    store <vscale x 2 x i1> [[V:%.*]], ptr [[SAVED_VALUE]], align 1, !tbaa [[TBAA9:![0-9]+]]
-// CHECK-256-NEXT:    [[TMP0:%.*]] = load <1 x i8>, ptr [[SAVED_VALUE]], align 1, !tbaa [[TBAA6]]
-// CHECK-256-NEXT:    store <1 x i8> [[TMP0]], ptr @global_bool32, align 1, !tbaa [[TBAA6]]
+// CHECK-256-NEXT:    [[TMP0:%.*]] = tail call <8 x i1> @llvm.vector.extract.v8i1.nxv2i1(<vscale x 2 x i1> [[V:%.*]], i64 0)
+// CHECK-256-NEXT:    store <8 x i1> [[TMP0]], ptr @global_bool32, align 1, !tbaa [[TBAA6]]
 // CHECK-256-NEXT:    ret void
 //
 void write_global_bool32(vbool32_t v) { global_bool32 = v; }
@@ -151,10 +149,8 @@ vbool4_t read_global_bool4() { return global_bool4; }
 #if __riscv_v_fixed_vlen >= 256
 // CHECK-256-LABEL: @read_global_bool32(
 // CHECK-256-NEXT:  entry:
-// CHECK-256-NEXT:    [[SAVED_VALUE:%.*]] = alloca <1 x i8>, align 1
-// CHECK-256-NEXT:    [[TMP0:%.*]] = load <1 x i8>, ptr @global_bool32, align 1, !tbaa [[TBAA6]]
-// CHECK-256-NEXT:    store <1 x i8> [[TMP0]], ptr [[SAVED_VALUE]], align 1, !tbaa [[TBAA6]]
-// CHECK-256-NEXT:    [[TMP1:%.*]] = load <vscale x 2 x i1>, ptr [[SAVED_VALUE]], align 1, !tbaa [[TBAA6]]
+// CHECK-256-NEXT:    [[TMP0:%.*]] = load <8 x i1>, ptr @global_bool32, align 1, !tbaa [[TBAA6]]
+// CHECK-256-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i1> @llvm.vector.insert.nxv2i1.v8i1(<vscale x 2 x i1> poison, <8 x i1> [[TMP0]], i64 0)
 // CHECK-256-NEXT:    ret <vscale x 2 x i1> [[TMP1]]
 //
 vbool32_t read_global_bool32() { return global_bool32; }

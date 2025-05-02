@@ -55,12 +55,11 @@ DEFINE_STRUCT(bool64)
 
 // CHECK-128-LABEL: @read_bool32(
 // CHECK-128-NEXT:  entry:
-// CHECK-128-NEXT:    [[SAVED_VALUE:%.*]] = alloca <1 x i8>, align 1
 // CHECK-128-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr [[S:%.*]], i64 1
-// CHECK-128-NEXT:    [[TMP0:%.*]] = load <1 x i8>, ptr [[Y]], align 1, !tbaa [[TBAA6:![0-9]+]]
-// CHECK-128-NEXT:    store <1 x i8> [[TMP0]], ptr [[SAVED_VALUE]], align 1, !tbaa [[TBAA6]]
-// CHECK-128-NEXT:    [[TMP1:%.*]] = load <vscale x 2 x i1>, ptr [[SAVED_VALUE]], align 1, !tbaa [[TBAA6]]
-// CHECK-128-NEXT:    ret <vscale x 2 x i1> [[TMP1]]
+// CHECK-128-NEXT:    [[TMP0:%.*]] = load <8 x i1>, ptr [[Y]], align 1, !tbaa [[TBAA6:![0-9]+]]
+// CHECK-128-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i1> [[TMP0]], <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+// CHECK-128-NEXT:    [[TMP2:%.*]] = tail call <vscale x 2 x i1> @llvm.vector.insert.nxv2i1.v4i1(<vscale x 2 x i1> poison, <4 x i1> [[TMP1]], i64 0)
+// CHECK-128-NEXT:    ret <vscale x 2 x i1> [[TMP2]]
 //
 vbool32_t read_bool32(struct struct_bool32 *s) {
   return s->y[0];
@@ -68,11 +67,10 @@ vbool32_t read_bool32(struct struct_bool32 *s) {
 
 // CHECK-128-LABEL: @write_bool32(
 // CHECK-128-NEXT:  entry:
-// CHECK-128-NEXT:    [[SAVED_VALUE:%.*]] = alloca <vscale x 2 x i1>, align 1
-// CHECK-128-NEXT:    store <vscale x 2 x i1> [[X:%.*]], ptr [[SAVED_VALUE]], align 1, !tbaa [[TBAA9:![0-9]+]]
-// CHECK-128-NEXT:    [[TMP0:%.*]] = load <1 x i8>, ptr [[SAVED_VALUE]], align 1, !tbaa [[TBAA6]]
+// CHECK-128-NEXT:    [[TMP0:%.*]] = tail call <4 x i1> @llvm.vector.extract.v4i1.nxv2i1(<vscale x 2 x i1> [[X:%.*]], i64 0)
+// CHECK-128-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i1> [[TMP0]], <4 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 // CHECK-128-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr [[S:%.*]], i64 1
-// CHECK-128-NEXT:    store <1 x i8> [[TMP0]], ptr [[Y]], align 1, !tbaa [[TBAA6]]
+// CHECK-128-NEXT:    store <8 x i1> [[TMP1]], ptr [[Y]], align 1, !tbaa [[TBAA6]]
 // CHECK-128-NEXT:    ret void
 //
 void write_bool32(struct struct_bool32 *s, vbool32_t x) {
@@ -81,12 +79,11 @@ void write_bool32(struct struct_bool32 *s, vbool32_t x) {
 
 // CHECK-128-LABEL: @read_bool64(
 // CHECK-128-NEXT:  entry:
-// CHECK-128-NEXT:    [[SAVED_VALUE:%.*]] = alloca <1 x i8>, align 1
 // CHECK-128-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr [[S:%.*]], i64 1
-// CHECK-128-NEXT:    [[TMP0:%.*]] = load <1 x i8>, ptr [[Y]], align 1, !tbaa [[TBAA6]]
-// CHECK-128-NEXT:    store <1 x i8> [[TMP0]], ptr [[SAVED_VALUE]], align 1, !tbaa [[TBAA6]]
-// CHECK-128-NEXT:    [[TMP1:%.*]] = load <vscale x 1 x i1>, ptr [[SAVED_VALUE]], align 1, !tbaa [[TBAA6]]
-// CHECK-128-NEXT:    ret <vscale x 1 x i1> [[TMP1]]
+// CHECK-128-NEXT:    [[TMP0:%.*]] = load <8 x i1>, ptr [[Y]], align 1, !tbaa [[TBAA6]]
+// CHECK-128-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i1> [[TMP0]], <8 x i1> poison, <2 x i32> <i32 0, i32 1>
+// CHECK-128-NEXT:    [[TMP2:%.*]] = tail call <vscale x 1 x i1> @llvm.vector.insert.nxv1i1.v2i1(<vscale x 1 x i1> poison, <2 x i1> [[TMP1]], i64 0)
+// CHECK-128-NEXT:    ret <vscale x 1 x i1> [[TMP2]]
 //
 vbool64_t read_bool64(struct struct_bool64 *s) {
   return s->y[0];
@@ -94,11 +91,10 @@ vbool64_t read_bool64(struct struct_bool64 *s) {
 
 // CHECK-128-LABEL: @write_bool64(
 // CHECK-128-NEXT:  entry:
-// CHECK-128-NEXT:    [[SAVED_VALUE:%.*]] = alloca <vscale x 1 x i1>, align 1
-// CHECK-128-NEXT:    store <vscale x 1 x i1> [[X:%.*]], ptr [[SAVED_VALUE]], align 1, !tbaa [[TBAA11:![0-9]+]]
-// CHECK-128-NEXT:    [[TMP0:%.*]] = load <1 x i8>, ptr [[SAVED_VALUE]], align 1, !tbaa [[TBAA6]]
+// CHECK-128-NEXT:    [[TMP0:%.*]] = tail call <2 x i1> @llvm.vector.extract.v2i1.nxv1i1(<vscale x 1 x i1> [[X:%.*]], i64 0)
+// CHECK-128-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i1> [[TMP0]], <2 x i1> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 // CHECK-128-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr [[S:%.*]], i64 1
-// CHECK-128-NEXT:    store <1 x i8> [[TMP0]], ptr [[Y]], align 1, !tbaa [[TBAA6]]
+// CHECK-128-NEXT:    store <8 x i1> [[TMP1]], ptr [[Y]], align 1, !tbaa [[TBAA6]]
 // CHECK-128-NEXT:    ret void
 //
 void write_bool64(struct struct_bool64 *s, vbool64_t x) {

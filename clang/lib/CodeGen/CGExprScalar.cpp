@@ -2493,6 +2493,35 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
             Result = Builder.CreateBitCast(Result, DstTy);
           return Result;
         }
+
+        // If we are casting a fixed i8 vector to a scalable i1 predicate
+        // vector, and we weren't able to handle it above, try using what we
+        // know about vscale to insert a fixed i1 vector into the scalable
+        // vector.
+        if (ScalableDstTy->getElementType()->isIntegerTy(1) &&
+            FixedSrcTy->getElementType()->isIntegerTy(8)) {
+          std::optional<std::pair<unsigned, unsigned>> VScaleRange =
+              CGF.getContext().getTargetInfo().getVScaleRange(CGF.getLangOpts(),
+                                                              false);
+          if (VScaleRange && VScaleRange->first == VScaleRange->second &&
+              VScaleRange->first <= FixedSrcTy->getNumElements() * 8) {
+            unsigned VScale = VScaleRange->first;
+            llvm::Type *WideFixedTy =
+                llvm::FixedVectorType::get(ScalableDstTy->getElementType(),
+                                           FixedSrcTy->getNumElements() * 8);
+            Src = Builder.CreateBitCast(Src, WideFixedTy);
+            llvm::Type *FixedTy = llvm::FixedVectorType::get(
+                ScalableDstTy->getElementType(),
+                ScalableDstTy->getElementCount().getKnownMinValue() * VScale);
+            // If the fixed i8 vector is larger than the i1 vector, we need to
+            // extract.
+            if (FixedTy != WideFixedTy)
+              Src = Builder.CreateExtractVector(FixedTy, Src, uint64_t(0));
+            return Builder.CreateInsertVector(
+                ScalableDstTy, llvm::PoisonValue::get(ScalableDstTy), Src,
+                uint64_t(0));
+          }
+        }
       }
     }
 
@@ -2514,6 +2543,35 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
         if (ScalableSrcTy->getElementType() == FixedDstTy->getElementType())
           return Builder.CreateExtractVector(DstTy, Src, uint64_t(0),
                                              "cast.fixed");
+
+        // If we are casting a scalable i1 predicate vector to a fixed i8
+        // vector, and we weren't able to handle it above, try using what we
+        // know about vscale to extract a fixed i1 vector from the scalable
+        // vector.
+        if (ScalableSrcTy->getElementType()->isIntegerTy(1) &&
+            FixedDstTy->getElementType()->isIntegerTy(8)) {
+          std::optional<std::pair<unsigned, unsigned>> VScaleRange =
+              CGF.getContext().getTargetInfo().getVScaleRange(CGF.getLangOpts(),
+                                                              false);
+          if (VScaleRange && VScaleRange->first == VScaleRange->second &&
+              VScaleRange->first <= FixedDstTy->getNumElements() * 8) {
+            unsigned VScale = VScaleRange->first;
+            llvm::Type *FixedTy = llvm::FixedVectorType::get(
+                ScalableSrcTy->getElementType(),
+                ScalableSrcTy->getElementCount().getKnownMinValue() * VScale);
+            Src = Builder.CreateExtractVector(FixedTy, Src, uint64_t(0));
+            llvm::Type *WideFixedTy =
+                llvm::FixedVectorType::get(ScalableSrcTy->getElementType(),
+                                           FixedDstTy->getNumElements() * 8);
+            // If the fixed i8 vector is larger than the i1 vector, we need to
+            // widen the i1 vector.
+            if (FixedTy != WideFixedTy)
+              Src = Builder.CreateInsertVector(
+                  WideFixedTy, llvm::PoisonValue::get(WideFixedTy), Src,
+                  uint64_t(0));
+            return Builder.CreateBitCast(Src, FixedDstTy);
+          }
+        }
       }
     }
 
