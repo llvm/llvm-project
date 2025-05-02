@@ -13,7 +13,7 @@ void f(
     int _, // #cwg3005-first-param
     int _)
     // expected-error@-1 {{redefinition of parameter '_'}}
-    //   expected-note@#cwg3005-first-param {{previous declaration is here}}
+    //   expected-note@#cwg3005-first-param {{previous definition is here}}
 {
     int _;
     // expected-error@-1 {{redefinition of '_'}}
