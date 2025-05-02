@@ -1621,8 +1621,9 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
     //   initial value of the object, including unnamed members, is
     //   that of the expression.
     ExprResult ExprRes = expr;
-    if (SemaRef.CheckSingleAssignmentConstraints(
-            ElemType, ExprRes, !VerifyOnly) != Sema::Incompatible) {
+    if (SemaRef.CheckSingleAssignmentConstraints(ElemType, ExprRes,
+                                                 !VerifyOnly) !=
+        AssignConvertType::Incompatible) {
       if (ExprRes.isInvalid())
         hadError = true;
       else {
@@ -8364,9 +8365,9 @@ ExprResult InitializationSequence::Perform(Sema &S,
       // Save off the initial CurInit in case we need to emit a diagnostic
       ExprResult InitialCurInit = Init;
       ExprResult Result = Init;
-      Sema::AssignConvertType ConvTy =
-        S.CheckSingleAssignmentConstraints(Step->Type, Result, true,
-            Entity.getKind() == InitializedEntity::EK_Parameter_CF_Audited);
+      AssignConvertType ConvTy = S.CheckSingleAssignmentConstraints(
+          Step->Type, Result, true,
+          Entity.getKind() == InitializedEntity::EK_Parameter_CF_Audited);
       if (Result.isInvalid())
         return ExprError();
       CurInit = Result;
@@ -8375,8 +8376,8 @@ ExprResult InitializationSequence::Perform(Sema &S,
       ExprResult CurInitExprRes = CurInit;
       if (!S.IsAssignConvertCompatible(ConvTy) && Entity.isParameterKind() &&
           S.CheckTransparentUnionArgumentConstraints(
-              Step->Type, CurInitExprRes) == Sema::Compatible)
-        ConvTy = Sema::Compatible;
+              Step->Type, CurInitExprRes) == AssignConvertType::Compatible)
+        ConvTy = AssignConvertType::Compatible;
       if (CurInitExprRes.isInvalid())
         return ExprError();
       CurInit = CurInitExprRes;
