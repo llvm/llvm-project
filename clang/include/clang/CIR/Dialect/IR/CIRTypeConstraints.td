@@ -110,4 +110,35 @@ def CIR_AnyFundamentalSIntType
     let cppFunctionName = "isFundamentalSIntType";
 }
 
+//===----------------------------------------------------------------------===//
+// Float Type predicates
+//===----------------------------------------------------------------------===//
+
+def CIR_AnySingleType : CIR_TypeBase<"::cir::SingleType", "single float type">;
+def CIR_AnyFP32Type : TypeAlias<CIR_AnySingleType>;
+
+def CIR_AnyDoubleType : CIR_TypeBase<"::cir::DoubleType", "double float type">;
+def CIR_AnyFP64Type : TypeAlias<CIR_AnyDoubleType>;
+
+def CIR_AnyFP16Type : CIR_TypeBase<"::cir::FP16Type", "f16 type">;
+def CIR_AnyBFloat16Type : CIR_TypeBase<"::cir::BF16Type", "bf16 type">;
+def CIR_AnyFP80Type : CIR_TypeBase<"::cir::FP80Type", "f80 type">;
+def CIR_AnyFP128Type : CIR_TypeBase<"::cir::FP128Type", "f128 type">;
+def CIR_AnyLongDoubleType : CIR_TypeBase<"::cir::LongDoubleType",
+    "long double type">;
+
+def CIR_AnyFloatType : AnyTypeOf<[
+    CIR_AnySingleType, CIR_AnyDoubleType, CIR_AnyFP16Type,
+    CIR_AnyBFloat16Type, CIR_AnyFP80Type, CIR_AnyFP128Type,
+    CIR_AnyLongDoubleType
+]> {
+    let cppFunctionName = "isAnyFloatingPointType";
+}
+
+def CIR_AnyIntOrFloatType : AnyTypeOf<[CIR_AnyFloatType, CIR_AnyIntType],
+    "integer or floating point type"
+> {
+    let cppFunctionName = "isAnyIntegerOrFloatingPointType";
+}
+
 #endif // CLANG_CIR_DIALECT_IR_CIRTYPECONSTRAINTS_TD
