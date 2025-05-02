@@ -1071,7 +1071,7 @@ void SIPeepholeSDWA::pseudoOpConvertToVOP2(MachineInstr &MI,
 /// applied if \p MI can be shrunk to VOP2 and if VCC can be proven to
 /// be dead before \p MI.
 void SIPeepholeSDWA::convertVcndmaskToVOP2(MachineInstr &MI,
-                                          const GCNSubtarget &ST) const {
+                                           const GCNSubtarget &ST) const {
   assert(MI.getOpcode() == AMDGPU::V_CNDMASK_B32_e64);
 
   LLVM_DEBUG(dbgs() << "Attempting VOP2 conversion: " << MI);
