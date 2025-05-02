@@ -72,11 +72,18 @@ struct MissingFeatures {
   static bool opFuncDsolocal() { return false; }
   static bool opFuncLinkage() { return false; }
   static bool opFuncVisibility() { return false; }
+  static bool opFuncNoProto() { return false; }
 
   // CallOp handling
   static bool opCallBuiltinFunc() { return false; }
   static bool opCallPseudoDtor() { return false; }
-  static bool opCallArgs() { return false; }
+  static bool opCallAggregateArgs() { return false; }
+  static bool opCallPaddingArgs() { return false; }
+  static bool opCallABIExtendArg() { return false; }
+  static bool opCallABIIndirectArg() { return false; }
+  static bool opCallWidenArg() { return false; }
+  static bool opCallBitcastArg() { return false; }
+  static bool opCallImplicitObjectSizeArgs() { return false; }
   static bool opCallReturn() { return false; }
   static bool opCallArgEvaluationOrder() { return false; }
   static bool opCallCallConv() { return false; }
@@ -90,6 +97,11 @@ struct MissingFeatures {
   static bool opCallAttrs() { return false; }
   static bool opCallSurroundingTry() { return false; }
   static bool opCallASTAttr() { return false; }
+  static bool opCallVariadic() { return false; }
+  static bool opCallObjCMethod() { return false; }
+  static bool opCallExtParameterInfo() { return false; }
+  static bool opCallCIRGenFuncInfoParamInfo() { return false; }
+  static bool opCallCIRGenFuncInfoExtParamInfo() { return false; }
 
   // ScopeOp handling
   static bool opScopeCleanupRegion() { return false; }
@@ -156,6 +168,7 @@ struct MissingFeatures {
   static bool emitCheckedInBoundsGEP() { return false; }
   static bool preservedAccessIndexRegion() { return false; }
   static bool bitfields() { return false; }
+  static bool msabi() { return false; }
   static bool typeChecks() { return false; }
   static bool lambdaFieldToName() { return false; }
   static bool targetSpecificCXXABI() { return false; }
