@@ -12,19 +12,22 @@
 // With the cache enabled, test that we write one file to the cache
 // RUN: export AMD_COMGR_CACHE=1
 // RUN: export AMD_COMGR_CACHE_DIR=%t.cache
-// RUN: unbundle %t.compressed-bundle.bc hip-amdgcn-amd-amdhsa-unknown-gfx900 %t.cache_1.bc
+// RUN: unbundle %t.compressed-bundle.bc hip-amdgcn-amd-amdhsa-unknown-gfx900 \
+// RUN:    %t.cache_1.bc
 // RUN: llvm-dis %t.cache_1.bc -o - | FileCheck --check-prefixes=BOTH,GFX9 %s
 // RUN: COUNT=$(ls "%t.cache" | wc -l)
 // RUN: [ 2 -eq $COUNT ]
 //
 // If there is a re-run, the cache contents remain the same
-// RUN: unbundle %t.compressed-bundle.bc hip-amdgcn-amd-amdhsa-unknown-gfx900 %t.cache_2.bc
+// RUN: unbundle %t.compressed-bundle.bc hip-amdgcn-amd-amdhsa-unknown-gfx900 \
+// RUN:    %t.cache_2.bc
 // RUN: llvm-dis %t.cache_2.bc -o - | FileCheck --check-prefixes=BOTH,GFX9 %s
 // RUN: COUNT=$(ls "%t.cache" | wc -l)
 // RUN: [ 2 -eq $COUNT ]
 //
 // A run with different input options results in new contents in the cache
-// RUN: unbundle %t.compressed-bundle.bc hip-amdgcn-amd-amdhsa-unknown-gfx1030 %t.cache_3.bc
+// RUN: unbundle %t.compressed-bundle.bc hip-amdgcn-amd-amdhsa-unknown-gfx1030 \
+// RUN:    %t.cache_3.bc
 // RUN: llvm-dis %t.cache_3.bc -o - | FileCheck --check-prefixes=BOTH,GFX10 %s
 // RUN: COUNT=$(ls "%t.cache" | wc -l)
 // RUN: [ 3 -eq $COUNT ]
