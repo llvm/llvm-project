@@ -3184,6 +3184,11 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
                 std::get<parser::OmpClause::Private>(dataEnvClause->u)};
             checkVarAppearsInDataEnvClause(pClause.v, "PRIVATE");
           } else if (auto *dataEnvClause{
+                         FindClause(llvm::omp::Clause::OMPC_shared)}) {
+            const auto &sClause{
+                std::get<parser::OmpClause::Shared>(dataEnvClause->u)};
+            checkVarAppearsInDataEnvClause(sClause.v, "SHARED");
+          } else if (auto *dataEnvClause{
                          FindClause(llvm::omp::Clause::OMPC_firstprivate)}) {
             const auto &fpClause{
                 std::get<parser::OmpClause::Firstprivate>(dataEnvClause->u)};
