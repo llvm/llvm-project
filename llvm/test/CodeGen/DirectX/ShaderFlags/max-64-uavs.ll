@@ -55,13 +55,13 @@ define void @test() "hlsl.export" {
 }
 
 !llvm.module.flags = !{!0}
+!dx.valver = !{!1}
 !0 = !{i32 1, !"dx.resmayalias", i32 1}
+!1 = !{i32 1, i32 8}
 
 ; DXC: - Name:            SFI0
 ; DXC-NEXT:     Size:            8
 ; DXC-NEXT:     Flags:
-; DXC-NOT:   {{[A-Za-z]+: +true}}
-; DXC:              Max64UAVs:         true
-; DXC-NOT:   {{[A-Za-z]+: +true}}
+; DXC:       Max64UAVs:         true
 ; DXC:       NextUnusedBit:   false
 ; DXC: ...

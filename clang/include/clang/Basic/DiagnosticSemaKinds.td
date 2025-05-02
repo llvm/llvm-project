@@ -496,6 +496,10 @@ def warn_unused_lambda_capture: Warning<"lambda capture %0 is not "
   "%select{used|required to be captured for this use}1">,
   InGroup<UnusedLambdaCapture>, DefaultIgnore;
 
+def warn_decl_hidden_in_cpp : Warning<
+  "%select{struct|union|enum}0 defined within a struct or union is not visible "
+  "in C++">, InGroup<HiddenCppDecl>, DefaultIgnore;
+
 def warn_reserved_extern_symbol: Warning<
   "identifier %0 is reserved because %select{"
   "<ERROR>|" // ReservedIdentifierStatus::NotReserved
@@ -3800,6 +3804,9 @@ def err_attribute_weakref_without_alias : Error<
   "weakref declaration of %0 must also have an alias attribute">;
 def err_alias_not_supported_on_darwin : Error <
   "aliases are not supported on darwin">;
+def warn_attribute_non_character_array : Warning<
+  "%0%select{ attribute|}1 only applies to fields or variables of character "
+  "array type; type is %2">, InGroup<IgnoredAttributes>;
 def warn_attribute_wrong_decl_type_str : Warning<
   "%0%select{ attribute|}1 only applies to %2">, InGroup<IgnoredAttributes>;
 def err_attribute_wrong_decl_type_str : Error<
@@ -4310,7 +4317,10 @@ def warn_impcast_string_literal_to_bool : Warning<
   InGroup<StringConversion>, DefaultIgnore;
 def warn_impcast_different_enum_types : Warning<
   "implicit conversion from enumeration type %0 to different enumeration type "
-  "%1">, InGroup<EnumConversion>;
+  "%1">, InGroup<ImplicitEnumEnumCast>;
+def warn_impcast_int_to_enum : Warning<
+  "implicit conversion from %0 to enumeration type %1 is invalid in C++">,
+  InGroup<ImplicitIntToEnumCast>, DefaultIgnore;
 def warn_impcast_bool_to_null_pointer : Warning<
     "initialization of pointer of type %0 to null from a constant boolean "
     "expression">, InGroup<BoolConversion>;
@@ -6397,6 +6407,15 @@ def err_initializer_string_for_char_array_too_long : Error<
 def ext_initializer_string_for_char_array_too_long : ExtWarn<
   "initializer-string for char array is too long">,
   InGroup<ExcessInitializers>;
+def warn_initializer_string_for_char_array_too_long_no_nonstring : Warning<
+  "initializer-string for character array is too long, array size is %0 but "
+  "initializer has size %1 (including the null terminating character); did you "
+  "mean to use the 'nonstring' attribute?">,
+  InGroup<InitStringTooLongMissingNonString>, DefaultIgnore;
+def warn_initializer_string_for_char_array_too_long_for_cpp : Warning<
+  "initializer-string for character array is too long for C++, array size is "
+  "%0 but initializer has size %1 (including the null terminating character)">,
+  InGroup<InitStringTooLongForCpp>, DefaultIgnore;
 def warn_missing_field_initializers : Warning<
   "missing field %0 initializer">,
   InGroup<MissingFieldInitializers>, DefaultIgnore;
@@ -6542,11 +6561,17 @@ def ext_goto_into_protected_scope : ExtWarn<
 def warn_cxx98_compat_goto_into_protected_scope : Warning<
   "jump from this goto statement to its label is incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
+def warn_cpp_compat_goto_into_protected_scope : Warning<
+  "jump from this goto statement to its label is incompatible with C++">,
+  InGroup<JumpBypassesInit>, DefaultIgnore;
 def err_switch_into_protected_scope : Error<
   "cannot jump from switch statement to this case label">;
 def warn_cxx98_compat_switch_into_protected_scope : Warning<
   "jump from switch statement to this case label is incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
+def warn_cpp_compat_switch_into_protected_scope : Warning<
+  "jump from switch statement to this case label is incompatible with C++">,
+  InGroup<JumpBypassesInit>, DefaultIgnore;
 def err_indirect_goto_without_addrlabel : Error<
   "indirect goto in function with no address-of-label expressions">;
 def err_indirect_goto_in_protected_scope : Error<
@@ -6554,6 +6579,10 @@ def err_indirect_goto_in_protected_scope : Error<
 def warn_cxx98_compat_indirect_goto_in_protected_scope : Warning<
   "jump from this %select{indirect|asm}0 goto statement to one of its possible targets "
   "is incompatible with C++98">, InGroup<CXX98Compat>, DefaultIgnore;
+def warn_cpp_compat_indirect_goto_in_protected_scope : Warning<
+  "jump from this %select{indirect|asm}0 goto statement to one of its possible "
+  "targets is incompatible with C++">,
+  InGroup<JumpBypassesInit>, DefaultIgnore;
 def note_indirect_goto_target : Note<
   "possible target of %select{indirect|asm}0 goto statement">;
 def note_protected_by_variable_init : Note<
@@ -7185,6 +7214,11 @@ def warn_consecutive_comparison : Warning<
   "chained comparison 'X %0 Y %1 Z' does not behave the same as a mathematical expression">,
   InGroup<Parentheses>, DefaultError;
 
+def warn_comparison_in_fold_expression : Warning<
+  "comparison in fold expression would evaluate to '(X %0 Y) %0 Z' "
+  "which does not behave the same as a mathematical expression">,
+  InGroup<Parentheses>, DefaultError;
+
 def warn_enum_constant_in_bool_context : Warning<
   "converting the enum constant to a boolean">,
   InGroup<IntInBoolContext>, DefaultIgnore;
@@ -7436,6 +7470,9 @@ def err_tentative_def_incomplete_type : Error<
 def warn_tentative_incomplete_array : Warning<
   "tentative array definition assumed to have one element">,
   InGroup<DiagGroup<"tentative-definition-array">>;
+def warn_cxx_compat_tentative_definition : Warning<
+  "duplicate declaration of %0 is invalid in C++">,
+  InGroup<TentativeDefnCompat>, DefaultIgnore;
 def err_typecheck_incomplete_array_needs_initializer : Error<
   "definition of variable with array type needs an explicit size "
   "or an initializer">;
@@ -8199,14 +8236,20 @@ def err_address_space_qualified_delete : Error<
 
 def note_default_init_const_member : Note<
   "member %0 declared 'const' here">;
+def warn_default_init_const_field : Warning<
+  "default initialization of an object of type %0 with const member is "
+  "incompatible with C++">, InGroup<DefaultConstInitField>, DefaultIgnore;
 def warn_default_init_const : Warning<
-  "default initialization of an object of type %0%select{| with const member}1 "
-  "is incompatible with C++">,
-  InGroup<DefaultConstInit>, DefaultIgnore;
+  "default initialization of an object of type %0 is incompatible with C++">,
+  InGroup<DefaultConstInitVar>, DefaultIgnore;
+def warn_default_init_const_field_unsafe : Warning<
+  "default initialization of an object of type %0 with const member leaves the "
+  "object uninitialized and is incompatible with C++">,
+  InGroup<DefaultConstInitFieldUnsafe>;
 def warn_default_init_const_unsafe : Warning<
-  "default initialization of an object of type %0%select{| with const member}1 "
-  "leaves the object uninitialized and is incompatible with C++">,
-  InGroup<DefaultConstInitUnsafe>;
+  "default initialization of an object of type %0 leaves the object "
+  "uninitialized and is incompatible with C++">,
+  InGroup<DefaultConstInitVarUnsafe>;
 def err_default_init_const : Error<
   "default initialization of an object of const type %0"
   "%select{| without a user-provided default constructor}1">;
