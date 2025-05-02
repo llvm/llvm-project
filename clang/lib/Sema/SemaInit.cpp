@@ -6627,7 +6627,11 @@ void InitializationSequence::InitializeFrom(Sema &S,
               Var->getStorageDuration() == SD_Thread)
             DiagID = diag::warn_default_init_const_field;
 
-          S.Diag(Var->getLocation(), DiagID) << Var->getType();
+          bool EmitCppCompat = !S.Diags.isIgnored(
+              diag::warn_cxx_compat_hack_fake_diagnostic_do_not_emit,
+              Var->getLocation());
+
+          S.Diag(Var->getLocation(), DiagID) << Var->getType() << EmitCppCompat;
           S.Diag(FD->getLocation(), diag::note_default_init_const_member) << FD;
         }
       }

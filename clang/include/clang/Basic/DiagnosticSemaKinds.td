@@ -6541,6 +6541,16 @@ def warn_missing_braces : Warning<
   "suggest braces around initialization of subobject">,
   InGroup<MissingBraces>, DefaultIgnore;
 
+// This diagnostic exists only to determine whether -Wc++-compat was explicitly
+// enabled. This allows us to tell the difference between when a diagnostic was
+// enabled by default, was enabled because its subgroup was enabled, or enabled
+// because the -Wc++-compat superset was enabled, generally for purposes of
+// deciding whether to emit "and is incompatible with C++" on diagnostics which
+// are useful in C alone as well as for compatibility checks.
+def warn_cxx_compat_hack_fake_diagnostic_do_not_emit : Warning<
+  "if you see this diagnostic, a Clang developer has made a mistake">,
+  InGroup<CXXCompat>, DefaultIgnore;
+
 def err_redefinition_of_label : Error<"redefinition of label %0">;
 def err_undeclared_label_use : Error<"use of undeclared label %0">;
 def err_goto_ms_asm_label : Error<
@@ -8244,11 +8254,11 @@ def warn_default_init_const : Warning<
   InGroup<DefaultConstInitVar>, DefaultIgnore;
 def warn_default_init_const_field_unsafe : Warning<
   "default initialization of an object of type %0 with const member leaves the "
-  "object uninitialized and is incompatible with C++">,
+  "object uninitialized%select{| and is incompatible with C++}1">,
   InGroup<DefaultConstInitFieldUnsafe>;
 def warn_default_init_const_unsafe : Warning<
   "default initialization of an object of type %0 leaves the object "
-  "uninitialized and is incompatible with C++">,
+  "uninitialized%select{| and is incompatible with C++}1">,
   InGroup<DefaultConstInitVarUnsafe>;
 def err_default_init_const : Error<
   "default initialization of an object of const type %0"

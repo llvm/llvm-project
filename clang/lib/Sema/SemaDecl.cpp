@@ -14369,7 +14369,12 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
       if (Var->getStorageDuration() == SD_Static ||
           Var->getStorageDuration() == SD_Thread)
         DiagID = diag::warn_default_init_const;
-      Diag(Var->getLocation(), DiagID) << Type;
+
+      bool EmitCppCompat = !Diags.isIgnored(
+          diag::warn_cxx_compat_hack_fake_diagnostic_do_not_emit,
+          Var->getLocation());
+
+      Diag(Var->getLocation(), DiagID) << Type << EmitCppCompat;
     }
 
     // Check for jumps past the implicit initializer.  C++0x
