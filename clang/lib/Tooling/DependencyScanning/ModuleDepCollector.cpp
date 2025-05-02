@@ -209,20 +209,21 @@ void ModuleDepCollector::addOutputPaths(CowCompilerInvocation &CI,
 void dependencies::resetBenignCodeGenOptions(frontend::ActionKind ProgramAction,
                                              const LangOptions &LangOpts,
                                              CodeGenOptions &CGOpts) {
-  // TODO: Figure out better way to set options to their default value.
+  // For actions that produce modules or PCHs, reset options that could leak build-specific data.
   if (ProgramAction == frontend::GenerateModule) {
-    CGOpts.MainFileName.clear();
-    CGOpts.DwarfDebugFlags.clear();
+    CGOpts.MainFileName = {};
+    CGOpts.DwarfDebugFlags = {};
   }
+
   if (ProgramAction == frontend::GeneratePCH ||
       (ProgramAction == frontend::GenerateModule && !LangOpts.ModulesCodegen)) {
-    CGOpts.DebugCompilationDir.clear();
-    CGOpts.CoverageCompilationDir.clear();
-    CGOpts.CoverageDataFile.clear();
-    CGOpts.CoverageNotesFile.clear();
-    CGOpts.ProfileInstrumentUsePath.clear();
-    CGOpts.SampleProfileFile.clear();
-    CGOpts.ProfileRemappingFile.clear();
+    CGOpts.DebugCompilationDir = {};
+    CGOpts.CoverageCompilationDir = {};
+    CGOpts.CoverageDataFile = {};
+    CGOpts.CoverageNotesFile = {};
+    CGOpts.ProfileInstrumentUsePath = {};
+    CGOpts.SampleProfileFile = {};
+    CGOpts.ProfileRemappingFile = {};
   }
 }
 
