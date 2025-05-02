@@ -108,8 +108,6 @@ char *ctime(const time_t *Timer);
 
 void f4(const time_t *Timer) {
   ctime(Timer);
-  // CHECK-MESSAGES-WITH-ANNEX-K:           :[[@LINE-1]]:3: warning: function 'ctime' is not bounds-checking and non-reentrant; 'ctime_s' should be used instead
-  // CHECK-MESSAGES-WITH-ANNEX-K-CERT-ONLY: :[[@LINE-2]]:3: warning: function 'ctime' is not bounds-checking and non-reentrant; 'ctime_s' should be used instead
   // no-warning WITHOUT-ANNEX-K
 }
 
@@ -155,8 +153,6 @@ void fOptional() {
 typedef int errno_t;
 typedef size_t rsize_t;
 errno_t asctime_s(char *S, rsize_t Maxsize, const struct tm *TimePtr);
-errno_t ctime_s(char *S, rsize_t Maxsize, const time_t *Timep);
-errno_t localtime_s(const time_t *Timep, rsize_t Maxsize, const struct tm *TimePtr);
 errno_t strcat_s(char *S1, rsize_t S1Max, const char *S2);
 
 void fUsingSafeFunctions(const struct tm *Time, FILE *F, time_t *Timep) {
@@ -164,14 +160,6 @@ void fUsingSafeFunctions(const struct tm *Time, FILE *F, time_t *Timep) {
 
   // no-warning, safe function from annex K is used
   if (asctime_s(Buf, BUFSIZ, Time) != 0)
-    return;
-
-  // no-warning, safe function from annex K is used
-  if (ctime_s(Buf, BUFSIZ, Time) != 0)
-    return;
-
-  // no-warning, safe function from annex K is used
-  if (localtime_s(Timep, BUFSIZ, Time) != 0)
     return;
 
   // no-warning, safe function from annex K is used

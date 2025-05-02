@@ -3542,16 +3542,6 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                                 .ArgConstraint(NotNull(ArgNo(0)))
                                 .ArgConstraint(NotNull(ArgNo(1))));
 
-    // struct tm *localtime_s(const time_t *restrict timer,
-    //                        struct tm *restrict result);
-    addToFunctionSummaryMap(
-        "localtime_s",
-        Signature(ArgTypes{ConstTime_tPtrRestrictTy, StructTmPtrRestrictTy},
-                  RetType{StructTmPtrTy}),
-        Summary(NoEvalCall)
-            .ArgConstraint(NotNull(ArgNo(0)))
-            .ArgConstraint(NotNull(ArgNo(1))));
-
     // char *asctime_r(const struct tm *restrict tm, char *restrict buf);
     addToFunctionSummaryMap(
         "asctime_r",
@@ -3573,20 +3563,6 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             .ArgConstraint(BufferSize(
                 /*Buffer=*/ArgNo(1),
                 /*MinBufSize=*/BVF.getValue(26, IntTy))));
-
-    // char *ctime_s(char *buf, rsize_t buf_size, const time_t *timep);
-    addToFunctionSummaryMap(
-        "ctime_s",
-        Signature(ArgTypes{CharPtrTy,
-                           BufferSize(ArgNo(0), BVF.getValue(26, IntTy)),
-                           ConstTime_tPtrTy},
-                  RetType{CharPtrTy}),
-        Summary(NoEvalCall)
-            .ArgConstraint(NotNull(ArgNo(0)))
-            .ArgConstraint(BufferSize(
-                /*Buffer=*/ArgNo(0),
-                /*MinBufSize=*/BVF.getValue(26, IntTy))));
-    .ArgConstraint(NotNull(ArgNo(2)))
 
         // struct tm *gmtime_r(const time_t *restrict timer,
         //                     struct tm *restrict result);
