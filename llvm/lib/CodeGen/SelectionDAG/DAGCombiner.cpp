@@ -25158,7 +25158,6 @@ static SDValue narrowExtractedVectorBinOp(EVT VT, SDValue Src, unsigned Index,
                                                  LegalOperations))
     return V;
 
-
   // We are looking for an optionally bitcasted wide vector binary operator
   // feeding an extract subvector.
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
