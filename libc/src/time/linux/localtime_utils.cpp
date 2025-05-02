@@ -19,7 +19,7 @@ void release_file(ErrorOr<File *> error_or_file) {
   error_or_file.value()->close();
 }
 
-ErrorOr<File *> acquire_file(char& filename) {
+ErrorOr<File *> acquire_file(char &filename) {
   while (1) {
     if (file_usage == 0) {
       file_usage = 1;
@@ -30,7 +30,7 @@ ErrorOr<File *> acquire_file(char& filename) {
   return LIBC_NAMESPACE::openfile(filename, "rb");
 }
 
-timezone::tzset& get_localtime(struct tm& tm) {
+timezone::tzset &get_localtime(struct tm &tm) {
   (void)tm;
   return nullptr;
 }

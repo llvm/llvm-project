@@ -13,7 +13,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace timezone {
 
-tzset& get_tzset(File& file) {
+tzset &get_tzset(File &file) {
   static tzset result;
   (void)file;
 
