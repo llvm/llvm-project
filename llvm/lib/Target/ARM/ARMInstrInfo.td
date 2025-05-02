@@ -421,7 +421,7 @@ def imm16_31 : ImmLeaf<i32, [{
 
 // sext_16_node predicate - True if the SDNode is sign-extended 16 or more bits.
 def sext_16_node : PatLeaf<(i32 GPR:$a), [{
-  return CurDAG->ComputeNumSignBits(SDValue(N,0)) >= 17;
+  return CurDAG->ComputeNumSignBits(Op) >= 17;
 }]>;
 
 def sext_bottom_16 : PatFrag<(ops node:$a),
@@ -451,14 +451,14 @@ def lo16AllZero : PatLeaf<(i32 imm), [{
 
 // top16Zero - answer true if the upper 16 bits of $src are 0, false otherwise
 def top16Zero: PatLeaf<(i32 GPR:$src), [{
-  return !SDValue(N,0)->getValueType(0).isVector() &&
-         CurDAG->MaskedValueIsZero(SDValue(N,0), APInt::getHighBitsSet(32, 16));
+  return !Op.getValueType().isVector() &&
+         CurDAG->MaskedValueIsZero(Op, APInt::getHighBitsSet(32, 16));
   }]>;
 
 // topbitsallzero - Return true if all bits except the lowest bit are known zero
 def topbitsallzero32 : PatLeaf<(i32 GPRwithZR:$src), [{
-  return SDValue(N,0)->getValueType(0) == MVT::i32 &&
-         CurDAG->MaskedValueIsZero(SDValue(N,0), APInt::getHighBitsSet(32, 31));
+  return Op.getValueType() == MVT::i32 &&
+         CurDAG->MaskedValueIsZero(Op, APInt::getHighBitsSet(32, 31));
   }]>;
 
 class BinOpFrag<dag res> : PatFrag<(ops node:$LHS, node:$RHS), res>;

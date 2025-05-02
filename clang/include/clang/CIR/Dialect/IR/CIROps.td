@@ -610,9 +610,9 @@ def ConditionOp : CIR_Op<"condition", [
 //===----------------------------------------------------------------------===//
 
 def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
-                               ParentOneOf<["IfOp", "ScopeOp", "SwitchOp",
-                                            "WhileOp", "ForOp", "CaseOp",
-                                            "DoWhileOp"]>]> {
+                               ParentOneOf<["CaseOp", "DoWhileOp", "ForOp",
+                                            "IfOp", "ScopeOp", "SwitchOp",
+                                            "TernaryOp", "WhileOp"]>]> {
   let summary = "Represents the default branching behaviour of a region";
   let description = [{
     The `cir.yield` operation terminates regions on different CIR operations,
@@ -1463,6 +1463,63 @@ def SelectOp : CIR_Op<"select", [Pure,
 }
 
 //===----------------------------------------------------------------------===//
+// TernaryOp
+//===----------------------------------------------------------------------===//
+
+def TernaryOp : CIR_Op<"ternary",
+      [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+       RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments]> {
+  let summary = "The `cond ? a : b` C/C++ ternary operation";
+  let description = [{
+    The `cir.ternary` operation represents C/C++ ternary, much like a `select`
+    operation. The first argument is a `cir.bool` condition to evaluate, followed
+    by two regions to execute (true or false). This is different from `cir.if`
+    since each region is one block sized and the `cir.yield` closing the block
+    scope should have one argument.
+
+    `cir.ternary` also represents the GNU binary conditional operator ?: which
+    reuses the parent operation for both the condition and the true branch to
+    evaluate it only once.
+
+    Example:
+
+    ```mlir
+    // cond = a && b;
+
+    %x = cir.ternary (%cond, true_region {
+      ...
+      cir.yield %a : i32
+    }, false_region {
+      ...
+      cir.yield %b : i32
+    }) -> i32
+    ```
+  }];
+  let arguments = (ins CIR_BoolType:$cond);
+  let regions = (region AnyRegion:$trueRegion,
+                        AnyRegion:$falseRegion);
+  let results = (outs Optional<CIR_AnyType>:$result);
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$cond,
+      "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$trueBuilder,
+      "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$falseBuilder)
+      >
+  ];
+
+  // All constraints already verified elsewhere.
+  let hasVerifier = 0;
+
+  let assemblyFormat = [{
+    `(` $cond `,`
+      `true` $trueRegion `,`
+      `false` $falseRegion
+    `)` `:` functional-type(operands, results) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // GlobalOp
 //===----------------------------------------------------------------------===//
 
@@ -1712,6 +1769,13 @@ def FuncOp : CIR_Op<"func", [
        return getFunctionType().getReturnTypes();
     }
 
+    // TODO(cir): this should be an operand attribute, but for now we just hard-
+    // wire this as a function. Will later add a $no_proto argument to this op.
+    bool getNoProto() {
+      assert(!cir::MissingFeatures::opFuncNoProto());
+      return false;
+    }
+
     //===------------------------------------------------------------------===//
     // SymbolOpInterface Methods
     //===------------------------------------------------------------------===//
@@ -1732,6 +1796,41 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
          !listconcat(extra_traits,
                      [DeclareOpInterfaceMethods<CIRCallOpInterface>,
                       DeclareOpInterfaceMethods<SymbolUserOpInterface>])> {
+  let extraClassDeclaration = [{
+    /// Get the argument operands to the called function.
+    mlir::OperandRange getArgOperands() {
+      return getArgs();
+    }
+
+    mlir::MutableOperandRange getArgOperandsMutable() {
+      return getArgsMutable();
+    }
+
+    /// Return the callee of this operation
+    mlir::CallInterfaceCallable getCallableForCallee() {
+      return (*this)->getAttrOfType<mlir::SymbolRefAttr>("callee");
+    }
+
+    /// Set the callee for this operation.
+    void setCalleeFromCallable(::mlir::CallInterfaceCallable callee) {
+      (*this)->setAttr(getCalleeAttrName(),
+                       mlir::cast<mlir::SymbolRefAttr>(callee));
+    }
+
+    mlir::ArrayAttr getArgAttrsAttr() { return {}; }
+    ::mlir::ArrayAttr getResAttrsAttr() { return {}; }
+
+    void setResAttrsAttr(::mlir::ArrayAttr attrs) {}
+    void setArgAttrsAttr(::mlir::ArrayAttr attrs) {}
+
+    ::mlir::Attribute removeArgAttrsAttr() { return {}; }
+    ::mlir::Attribute removeResAttrsAttr() { return {}; }
+
+    void setArg(unsigned index, mlir::Value value) {
+      setOperand(index, value);
+    }
+  }];
+
   let hasCustomAssemblyFormat = 1;
   let skipDefaultBuilders = 1;
   let hasVerifier = 0;
@@ -1741,7 +1840,8 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
   // the upstreaming process moves on. The verifiers is also missing for now,
   // will add in the future.
 
-  dag commonArgs = (ins FlatSymbolRefAttr:$callee);
+  dag commonArgs = (ins FlatSymbolRefAttr:$callee,
+                        Variadic<CIR_AnyType>:$args);
 }
 
 def CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
@@ -1762,7 +1862,9 @@ def CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
   let arguments = commonArgs;
 
   let builders = [OpBuilder<(ins "mlir::SymbolRefAttr":$callee,
-                                 "mlir::Type":$resType), [{
+                                 "mlir::Type":$resType,
+                                 "mlir::ValueRange":$operands), [{
+      $_state.addOperands(operands);
       $_state.addAttribute("callee", callee);
       if (resType && !isa<VoidType>(resType))
         $_state.addTypes(resType);

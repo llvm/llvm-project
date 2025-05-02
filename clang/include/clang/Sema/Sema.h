@@ -220,11 +220,6 @@ enum class AssignmentAction {
   Casting,
   Passing_CFAudited
 };
-inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
-                                             const AssignmentAction &AA) {
-  DB << llvm::to_underlying(AA);
-  return DB;
-}
 
 namespace threadSafety {
 class BeforeSet;
@@ -508,6 +503,147 @@ enum class FormatStringType {
   OSLog,
   Syslog,
   Unknown
+};
+
+// Used for emitting the right warning by DefaultVariadicArgumentPromotion
+enum class VariadicCallType {
+  Function,
+  Block,
+  Method,
+  Constructor,
+  DoesNotApply
+};
+
+enum class BuiltinCountedByRefKind {
+  Assignment,
+  Initializer,
+  FunctionArg,
+  ReturnArg,
+  ArraySubscript,
+  BinaryExpr,
+};
+
+// Contexts where using non-trivial C union types can be disallowed. This is
+// passed to err_non_trivial_c_union_in_invalid_context.
+enum class NonTrivialCUnionContext {
+  // Function parameter.
+  FunctionParam,
+  // Function return.
+  FunctionReturn,
+  // Default-initialized object.
+  DefaultInitializedObject,
+  // Variable with automatic storage duration.
+  AutoVar,
+  // Initializer expression that might copy from another object.
+  CopyInit,
+  // Assignment.
+  Assignment,
+  // Compound literal.
+  CompoundLiteral,
+  // Block capture.
+  BlockCapture,
+  // lvalue-to-rvalue conversion of volatile type.
+  LValueToRValueVolatile,
+};
+
+/// Describes the result of the name lookup and resolution performed
+/// by \c Sema::ClassifyName().
+enum class NameClassificationKind {
+  /// This name is not a type or template in this context, but might be
+  /// something else.
+  Unknown,
+  /// Classification failed; an error has been produced.
+  Error,
+  /// The name has been typo-corrected to a keyword.
+  Keyword,
+  /// The name was classified as a type.
+  Type,
+  /// The name was classified as a specific non-type, non-template
+  /// declaration. ActOnNameClassifiedAsNonType should be called to
+  /// convert the declaration to an expression.
+  NonType,
+  /// The name was classified as an ADL-only function name.
+  /// ActOnNameClassifiedAsUndeclaredNonType should be called to convert the
+  /// result to an expression.
+  UndeclaredNonType,
+  /// The name denotes a member of a dependent type that could not be
+  /// resolved. ActOnNameClassifiedAsDependentNonType should be called to
+  /// convert the result to an expression.
+  DependentNonType,
+  /// The name was classified as an overload set, and an expression
+  /// representing that overload set has been formed.
+  /// ActOnNameClassifiedAsOverloadSet should be called to form a suitable
+  /// expression referencing the overload set.
+  OverloadSet,
+  /// The name was classified as a template whose specializations are types.
+  TypeTemplate,
+  /// The name was classified as a variable template name.
+  VarTemplate,
+  /// The name was classified as a function template name.
+  FunctionTemplate,
+  /// The name was classified as an ADL-only function template name.
+  UndeclaredTemplate,
+  /// The name was classified as a concept name.
+  Concept,
+};
+
+enum class PointerAuthDiscArgKind {
+  // Address discrimination argument of __ptrauth.
+  Addr,
+
+  // Extra discriminator argument of __ptrauth.
+  Extra,
+};
+
+/// Common ways to introduce type names without a tag for use in diagnostics.
+/// Keep in sync with err_tag_reference_non_tag.
+enum class NonTagKind {
+  NonStruct,
+  NonClass,
+  NonUnion,
+  NonEnum,
+  Typedef,
+  TypeAlias,
+  Template,
+  TypeAliasTemplate,
+  TemplateTemplateArgument,
+};
+
+enum class OffsetOfKind {
+  // Not parsing a type within __builtin_offsetof.
+  Outside,
+  // Parsing a type within __builtin_offsetof.
+  Builtin,
+  // Parsing a type within macro "offsetof", defined in __buitin_offsetof
+  // To improve our diagnostic message.
+  Macro,
+};
+
+/// Describes the kind of merge to perform for availability
+/// attributes (including "deprecated", "unavailable", and "availability").
+enum class AvailabilityMergeKind {
+  /// Don't merge availability attributes at all.
+  None,
+  /// Merge availability attributes for a redeclaration, which requires
+  /// an exact match.
+  Redeclaration,
+  /// Merge availability attributes for an override, which requires
+  /// an exact match or a weakening of constraints.
+  Override,
+  /// Merge availability attributes for an implementation of
+  /// a protocol requirement.
+  ProtocolImplementation,
+  /// Merge availability attributes for an implementation of
+  /// an optional protocol requirement.
+  OptionalProtocolImplementation
+};
+
+enum class TrivialABIHandling {
+  /// The triviality of a method unaffected by "trivial_abi".
+  IgnoreTrivialABI,
+
+  /// The triviality of a method affected by "trivial_abi".
+  ConsiderTrivialABI
 };
 
 /// Sema - This implements semantic analysis and AST building for C.
@@ -2381,15 +2517,6 @@ public:
   void DiagnoseSelfMove(const Expr *LHSExpr, const Expr *RHSExpr,
                         SourceLocation OpLoc);
 
-  // Used for emitting the right warning by DefaultVariadicArgumentPromotion
-  enum VariadicCallType {
-    VariadicFunction,
-    VariadicBlock,
-    VariadicMethod,
-    VariadicConstructor,
-    VariadicDoesNotApply
-  };
-
   bool IsLayoutCompatible(QualType T1, QualType T2) const;
   bool IsPointerInterconvertibleBaseOf(const TypeSourceInfo *Base,
                                        const TypeSourceInfo *Derived);
@@ -2635,15 +2762,6 @@ private:
   bool PrepareBuiltinReduceMathOneArgCall(CallExpr *TheCall);
 
   bool BuiltinNonDeterministicValue(CallExpr *TheCall);
-
-  enum BuiltinCountedByRefKind {
-    AssignmentKind,
-    InitializerKind,
-    FunctionArgKind,
-    ReturnArgKind,
-    ArraySubscriptKind,
-    BinaryExprKind,
-  };
 
   bool CheckInvalidBuiltinCountedByRef(const Expr *E,
                                        BuiltinCountedByRefKind K);
@@ -3290,47 +3408,6 @@ public:
                                       SourceLocation NameLoc,
                                       bool IsTemplateTypeArg);
 
-  /// Describes the result of the name lookup and resolution performed
-  /// by \c ClassifyName().
-  enum NameClassificationKind {
-    /// This name is not a type or template in this context, but might be
-    /// something else.
-    NC_Unknown,
-    /// Classification failed; an error has been produced.
-    NC_Error,
-    /// The name has been typo-corrected to a keyword.
-    NC_Keyword,
-    /// The name was classified as a type.
-    NC_Type,
-    /// The name was classified as a specific non-type, non-template
-    /// declaration. ActOnNameClassifiedAsNonType should be called to
-    /// convert the declaration to an expression.
-    NC_NonType,
-    /// The name was classified as an ADL-only function name.
-    /// ActOnNameClassifiedAsUndeclaredNonType should be called to convert the
-    /// result to an expression.
-    NC_UndeclaredNonType,
-    /// The name denotes a member of a dependent type that could not be
-    /// resolved. ActOnNameClassifiedAsDependentNonType should be called to
-    /// convert the result to an expression.
-    NC_DependentNonType,
-    /// The name was classified as an overload set, and an expression
-    /// representing that overload set has been formed.
-    /// ActOnNameClassifiedAsOverloadSet should be called to form a suitable
-    /// expression referencing the overload set.
-    NC_OverloadSet,
-    /// The name was classified as a template whose specializations are types.
-    NC_TypeTemplate,
-    /// The name was classified as a variable template name.
-    NC_VarTemplate,
-    /// The name was classified as a function template name.
-    NC_FunctionTemplate,
-    /// The name was classified as an ADL-only function template name.
-    NC_UndeclaredTemplate,
-    /// The name was classified as a concept name.
-    NC_Concept,
-  };
-
   class NameClassification {
     NameClassificationKind Kind;
     union {
@@ -3343,62 +3420,66 @@ public:
     explicit NameClassification(NameClassificationKind Kind) : Kind(Kind) {}
 
   public:
-    NameClassification(ParsedType Type) : Kind(NC_Type), Type(Type) {}
+    NameClassification(ParsedType Type)
+        : Kind(NameClassificationKind::Type), Type(Type) {}
 
-    NameClassification(const IdentifierInfo *Keyword) : Kind(NC_Keyword) {}
+    NameClassification(const IdentifierInfo *Keyword)
+        : Kind(NameClassificationKind::Keyword) {}
 
-    static NameClassification Error() { return NameClassification(NC_Error); }
+    static NameClassification Error() {
+      return NameClassification(NameClassificationKind::Error);
+    }
 
     static NameClassification Unknown() {
-      return NameClassification(NC_Unknown);
+      return NameClassification(NameClassificationKind::Unknown);
     }
 
     static NameClassification OverloadSet(ExprResult E) {
-      NameClassification Result(NC_OverloadSet);
+      NameClassification Result(NameClassificationKind::OverloadSet);
       Result.Expr = E;
       return Result;
     }
 
     static NameClassification NonType(NamedDecl *D) {
-      NameClassification Result(NC_NonType);
+      NameClassification Result(NameClassificationKind::NonType);
       Result.NonTypeDecl = D;
       return Result;
     }
 
     static NameClassification UndeclaredNonType() {
-      return NameClassification(NC_UndeclaredNonType);
+      return NameClassification(NameClassificationKind::UndeclaredNonType);
     }
 
     static NameClassification DependentNonType() {
-      return NameClassification(NC_DependentNonType);
+      return NameClassification(NameClassificationKind::DependentNonType);
     }
 
     static NameClassification TypeTemplate(TemplateName Name) {
-      NameClassification Result(NC_TypeTemplate);
+      NameClassification Result(NameClassificationKind::TypeTemplate);
       Result.Template = Name;
       return Result;
     }
 
     static NameClassification VarTemplate(TemplateName Name) {
-      NameClassification Result(NC_VarTemplate);
+      NameClassification Result(NameClassificationKind::VarTemplate);
       Result.Template = Name;
       return Result;
     }
 
     static NameClassification FunctionTemplate(TemplateName Name) {
-      NameClassification Result(NC_FunctionTemplate);
+      NameClassification Result(NameClassificationKind::FunctionTemplate);
       Result.Template = Name;
       return Result;
     }
 
     static NameClassification Concept(TemplateName Name) {
-      NameClassification Result(NC_Concept);
+      NameClassification Result(NameClassificationKind::Concept);
       Result.Template = Name;
       return Result;
     }
 
     static NameClassification UndeclaredTemplate(TemplateName Name) {
-      NameClassification Result(NC_UndeclaredTemplate);
+      NameClassification Result(NameClassificationKind::UndeclaredTemplate);
       Result.Template = Name;
       return Result;
     }
@@ -3406,38 +3487,40 @@ public:
     NameClassificationKind getKind() const { return Kind; }
 
     ExprResult getExpression() const {
-      assert(Kind == NC_OverloadSet);
+      assert(Kind == NameClassificationKind::OverloadSet);
       return Expr;
     }
 
     ParsedType getType() const {
-      assert(Kind == NC_Type);
+      assert(Kind == NameClassificationKind::Type);
       return Type;
     }
 
     NamedDecl *getNonTypeDecl() const {
-      assert(Kind == NC_NonType);
+      assert(Kind == NameClassificationKind::NonType);
       return NonTypeDecl;
     }
 
     TemplateName getTemplateName() const {
-      assert(Kind == NC_TypeTemplate || Kind == NC_FunctionTemplate ||
-             Kind == NC_VarTemplate || Kind == NC_Concept ||
-             Kind == NC_UndeclaredTemplate);
+      assert(Kind == NameClassificationKind::TypeTemplate ||
+             Kind == NameClassificationKind::FunctionTemplate ||
+             Kind == NameClassificationKind::VarTemplate ||
+             Kind == NameClassificationKind::Concept ||
+             Kind == NameClassificationKind::UndeclaredTemplate);
       return Template;
     }
 
     TemplateNameKind getTemplateNameKind() const {
       switch (Kind) {
-      case NC_TypeTemplate:
+      case NameClassificationKind::TypeTemplate:
         return TNK_Type_template;
-      case NC_FunctionTemplate:
+      case NameClassificationKind::FunctionTemplate:
         return TNK_Function_template;
-      case NC_VarTemplate:
+      case NameClassificationKind::VarTemplate:
         return TNK_Var_template;
-      case NC_Concept:
+      case NameClassificationKind::Concept:
         return TNK_Concept_template;
-      case NC_UndeclaredTemplate:
+      case NameClassificationKind::UndeclaredTemplate:
         return TNK_Undeclared_template;
       default:
         llvm_unreachable("unsupported name classification.");
@@ -3578,14 +3661,6 @@ public:
   bool checkPointerAuthEnabled(SourceLocation Loc, SourceRange Range);
 
   bool checkConstantPointerAuthKey(Expr *keyExpr, unsigned &key);
-
-  enum PointerAuthDiscArgKind {
-    // Address discrimination argument of __ptrauth.
-    PADAK_AddrDiscPtrAuth,
-
-    // Extra discriminator argument of __ptrauth.
-    PADAK_ExtraDiscPtrAuth,
-  };
 
   bool checkPointerAuthDiscriminatorArg(Expr *Arg, PointerAuthDiscArgKind Kind,
                                         unsigned &IntVal);
@@ -3748,29 +3823,6 @@ public:
                               SourceLocation NameLoc,
                               const IdentifierInfo *Name, QualType T,
                               TypeSourceInfo *TSInfo, StorageClass SC);
-
-  // Contexts where using non-trivial C union types can be disallowed. This is
-  // passed to err_non_trivial_c_union_in_invalid_context.
-  enum NonTrivialCUnionContext {
-    // Function parameter.
-    NTCUC_FunctionParam,
-    // Function return.
-    NTCUC_FunctionReturn,
-    // Default-initialized object.
-    NTCUC_DefaultInitializedObject,
-    // Variable with automatic storage duration.
-    NTCUC_AutoVar,
-    // Initializer expression that might copy from another object.
-    NTCUC_CopyInit,
-    // Assignment.
-    NTCUC_Assignment,
-    // Compound literal.
-    NTCUC_CompoundLiteral,
-    // Block capture.
-    NTCUC_BlockCapture,
-    // lvalue-to-rvalue conversion of volatile type.
-    NTCUC_LValueToRValueVolatile,
-  };
 
   /// Emit diagnostics if the initializer or any of its explicit or
   /// implicitly-generated subexpressions require copying or
@@ -3974,20 +4026,6 @@ public:
   Decl *BuildMicrosoftCAnonymousStruct(Scope *S, DeclSpec &DS,
                                        RecordDecl *Record);
 
-  /// Common ways to introduce type names without a tag for use in diagnostics.
-  /// Keep in sync with err_tag_reference_non_tag.
-  enum NonTagKind {
-    NTK_NonStruct,
-    NTK_NonClass,
-    NTK_NonUnion,
-    NTK_NonEnum,
-    NTK_Typedef,
-    NTK_TypeAlias,
-    NTK_Template,
-    NTK_TypeAliasTemplate,
-    NTK_TemplateTemplateArgument,
-  };
-
   /// Given a non-tag type declaration, returns an enum useful for indicating
   /// what kind of non-tag type this is.
   NonTagKind getNonTagTypeDeclKind(const Decl *D, TagTypeKind TTK);
@@ -3999,16 +4037,6 @@ public:
   bool isAcceptableTagRedeclaration(const TagDecl *Previous, TagTypeKind NewTag,
                                     bool isDefinition, SourceLocation NewTagLoc,
                                     const IdentifierInfo *Name);
-
-  enum OffsetOfKind {
-    // Not parsing a type within __builtin_offsetof.
-    OOK_Outside,
-    // Parsing a type within __builtin_offsetof.
-    OOK_Builtin,
-    // Parsing a type within macro "offsetof", defined in __buitin_offsetof
-    // To improve our diagnostic message.
-    OOK_Macro,
-  };
 
   /// This is invoked when we see 'struct foo' or 'struct {'.  In the
   /// former case, Name will be non-null.  In the later case, Name will be null.
@@ -4175,28 +4203,10 @@ public:
                                 TypeSourceInfo *TInfo);
   bool isIncompatibleTypedef(const TypeDecl *Old, TypedefNameDecl *New);
 
-  /// Describes the kind of merge to perform for availability
-  /// attributes (including "deprecated", "unavailable", and "availability").
-  enum AvailabilityMergeKind {
-    /// Don't merge availability attributes at all.
-    AMK_None,
-    /// Merge availability attributes for a redeclaration, which requires
-    /// an exact match.
-    AMK_Redeclaration,
-    /// Merge availability attributes for an override, which requires
-    /// an exact match or a weakening of constraints.
-    AMK_Override,
-    /// Merge availability attributes for an implementation of
-    /// a protocol requirement.
-    AMK_ProtocolImplementation,
-    /// Merge availability attributes for an implementation of
-    /// an optional protocol requirement.
-    AMK_OptionalProtocolImplementation
-  };
-
   /// mergeDeclAttributes - Copy attributes from the Old decl to the New one.
-  void mergeDeclAttributes(NamedDecl *New, Decl *Old,
-                           AvailabilityMergeKind AMK = AMK_Redeclaration);
+  void mergeDeclAttributes(
+      NamedDecl *New, Decl *Old,
+      AvailabilityMergeKind AMK = AvailabilityMergeKind::Redeclaration);
 
   /// MergeTypedefNameDecl - We just parsed a typedef 'New' which has the
   /// same name and scope as a previous declaration 'Old'.  Figure out
@@ -6049,20 +6059,13 @@ public:
   void DiagnoseNontrivial(const CXXRecordDecl *Record,
                           CXXSpecialMemberKind CSM);
 
-  enum TrivialABIHandling {
-    /// The triviality of a method unaffected by "trivial_abi".
-    TAH_IgnoreTrivialABI,
-
-    /// The triviality of a method affected by "trivial_abi".
-    TAH_ConsiderTrivialABI
-  };
-
   /// Determine whether a defaulted or deleted special member function is
   /// trivial, as specified in C++11 [class.ctor]p5, C++11 [class.copy]p12,
   /// C++11 [class.copy]p25, and C++11 [class.dtor]p5.
-  bool SpecialMemberIsTrivial(CXXMethodDecl *MD, CXXSpecialMemberKind CSM,
-                              TrivialABIHandling TAH = TAH_IgnoreTrivialABI,
-                              bool Diagnose = false);
+  bool SpecialMemberIsTrivial(
+      CXXMethodDecl *MD, CXXSpecialMemberKind CSM,
+      TrivialABIHandling TAH = TrivialABIHandling::IgnoreTrivialABI,
+      bool Diagnose = false);
 
   /// For a defaulted function, the kind of defaulted function that it is.
   class DefaultedFunctionKind {
@@ -7214,13 +7217,15 @@ public:
   ExprResult ActOnBinOp(Scope *S, SourceLocation TokLoc, tok::TokenKind Kind,
                         Expr *LHSExpr, Expr *RHSExpr);
   ExprResult BuildBinOp(Scope *S, SourceLocation OpLoc, BinaryOperatorKind Opc,
-                        Expr *LHSExpr, Expr *RHSExpr);
+                        Expr *LHSExpr, Expr *RHSExpr,
+                        bool ForFoldExpression = false);
 
   /// CreateBuiltinBinOp - Creates a new built-in binary operation with
   /// operator @p Opc at location @c TokLoc. This routine only supports
   /// built-in operations; ActOnBinOp handles overloaded operators.
   ExprResult CreateBuiltinBinOp(SourceLocation OpLoc, BinaryOperatorKind Opc,
-                                Expr *LHSExpr, Expr *RHSExpr);
+                                Expr *LHSExpr, Expr *RHSExpr,
+                                bool ForFoldExpression = false);
   void LookupBinOp(Scope *S, SourceLocation OpLoc, BinaryOperatorKind Opc,
                    UnresolvedSetImpl &Functions);
 
@@ -7739,13 +7744,12 @@ public:
 
   /// GatherArgumentsForCall - Collector argument expressions for various
   /// form of call prototypes.
-  bool GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
-                              const FunctionProtoType *Proto,
-                              unsigned FirstParam, ArrayRef<Expr *> Args,
-                              SmallVectorImpl<Expr *> &AllArgs,
-                              VariadicCallType CallType = VariadicDoesNotApply,
-                              bool AllowExplicit = false,
-                              bool IsListInitialization = false);
+  bool GatherArgumentsForCall(
+      SourceLocation CallLoc, FunctionDecl *FDecl,
+      const FunctionProtoType *Proto, unsigned FirstParam,
+      ArrayRef<Expr *> Args, SmallVectorImpl<Expr *> &AllArgs,
+      VariadicCallType CallType = VariadicCallType::DoesNotApply,
+      bool AllowExplicit = false, bool IsListInitialization = false);
 
   // DefaultVariadicArgumentPromotion - Like DefaultArgumentPromotion, but
   // will create a runtime trap if the resulting type is not a POD type.
@@ -15465,12 +15469,6 @@ void Sema::PragmaStack<Sema::AlignPackInfo>::Act(SourceLocation PragmaLocation,
                                                  PragmaMsStackAction Action,
                                                  llvm::StringRef StackSlotLabel,
                                                  AlignPackInfo Value);
-
-inline const StreamingDiagnostic &
-operator<<(const StreamingDiagnostic &DB, Sema::StringEvaluationContext Ctx) {
-  DB << llvm::to_underlying(Ctx);
-  return DB;
-}
 
 } // end namespace clang
 

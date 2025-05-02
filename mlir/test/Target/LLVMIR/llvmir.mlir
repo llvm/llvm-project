@@ -1057,6 +1057,14 @@ llvm.func @gep(%ptr: !llvm.ptr, %idx: i64,
   llvm.getelementptr %ptr[%idx, 1, 0] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<(i32, struct<(i32, f32)>)>
   // CHECK: = getelementptr inbounds { [10 x float] }, ptr %{{.*}}, i64 %{{.*}}, i32 0, i64 %{{.*}}
   llvm.getelementptr inbounds %ptr2[%idx, 0, %idx] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
+  // CHECK: = getelementptr inbounds nuw { [10 x float] }, ptr %{{.*}}, i64 %{{.*}}, i32 0, i64 %{{.*}}
+  llvm.getelementptr inbounds | nuw %ptr2[%idx, 0, %idx] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
+  // CHECK: = getelementptr nusw { [10 x float] }, ptr %{{.*}}, i64 %{{.*}}, i32 0, i64 %{{.*}}
+  llvm.getelementptr nusw %ptr2[%idx, 0, %idx] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
+  // CHECK: = getelementptr nusw nuw { [10 x float] }, ptr %{{.*}}, i64 %{{.*}}, i32 0, i64 %{{.*}}
+  llvm.getelementptr nusw | nuw %ptr2[%idx, 0, %idx] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
+  // CHECK: = getelementptr nuw { [10 x float] }, ptr %{{.*}}, i64 %{{.*}}, i32 0, i64 %{{.*}}
+  llvm.getelementptr nuw %ptr2[%idx, 0, %idx] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
   llvm.return
 }
 
@@ -1547,11 +1555,19 @@ llvm.func @atomicrmw(
   %21 = llvm.atomicrmw fmax %f16_vec_ptr, %f16_vec monotonic : !llvm.ptr, vector<2xf16>
   // CHECK: atomicrmw fmin ptr %{{.*}}, <2 x half> %{{.*}} monotonic
   %22 = llvm.atomicrmw fmin %f16_vec_ptr, %f16_vec monotonic : !llvm.ptr, vector<2xf16>
+  // CHECK: atomicrmw fmaximum ptr %{{.*}}, float %{{.*}} monotonic
+  %23 = llvm.atomicrmw fmaximum %f32_ptr, %f32 monotonic : !llvm.ptr, f32
+  // CHECK: atomicrmw fminimum ptr %{{.*}}, float %{{.*}} monotonic
+  %24 = llvm.atomicrmw fminimum %f32_ptr, %f32 monotonic : !llvm.ptr, f32
+  // CHECK: atomicrmw fmaximum ptr %{{.*}}, <2 x half> %{{.*}} monotonic
+  %25 = llvm.atomicrmw fmaximum %f16_vec_ptr, %f16_vec monotonic : !llvm.ptr, vector<2xf16>
+  // CHECK: atomicrmw fminimum ptr %{{.*}}, <2 x half> %{{.*}} monotonic
+  %26 = llvm.atomicrmw fminimum %f16_vec_ptr, %f16_vec monotonic : !llvm.ptr, vector<2xf16>
 
   // CHECK: atomicrmw volatile
   // CHECK-SAME:  syncscope("singlethread")
   // CHECK-SAME:  align 8
-  %23 = llvm.atomicrmw volatile udec_wrap %i32_ptr, %i32 syncscope("singlethread") monotonic {alignment = 8 : i64} : !llvm.ptr, i32
+  %27 = llvm.atomicrmw volatile udec_wrap %i32_ptr, %i32 syncscope("singlethread") monotonic {alignment = 8 : i64} : !llvm.ptr, i32
   llvm.return
 }
 
@@ -2556,6 +2572,24 @@ llvm.func @convergent() attributes { convergent } {
 
 // CHECK: #[[ATTRS]]
 // CHECK-SAME: convergent
+
+// -----
+
+// CHECK-LABEL: define void @function_entry_instrument_test()
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @function_entry_instrument_test() attributes {instrument_function_entry = "__cyg_profile_func_enter"}  {
+  llvm.return
+}
+// CHECK: attributes #[[ATTRS]] = { "instrument-function-entry"="__cyg_profile_func_enter" }
+
+// -----
+
+// CHECK-LABEL: define void @function_exit_instrument_test()
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @function_exit_instrument_test() attributes {instrument_function_exit = "__cyg_profile_func_exit"}  {
+  llvm.return
+}
+// CHECK: attributes #[[ATTRS]] = { "instrument-function-exit"="__cyg_profile_func_exit" }
 
 // -----
 

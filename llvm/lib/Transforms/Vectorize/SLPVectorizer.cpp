@@ -5738,26 +5738,8 @@ getScalarizationOverhead(const TargetTransformInfo &TTI, Type *ScalarTy,
     }
     return Cost;
   }
-  APInt NewDemandedElts = DemandedElts;
-  InstructionCost Cost = 0;
-  if (!ForPoisonSrc && Insert) {
-    // Handle insert into non-poison vector.
-    // TODO: Need to teach getScalarizationOverhead about insert elements into
-    // non-poison input vector to better handle such cases. Currently, it is
-    // very conservative and may "pessimize" the vectorization.
-    for (unsigned I : seq(DemandedElts.getBitWidth())) {
-      if (!DemandedElts[I])
-        continue;
-      Cost += TTI.getVectorInstrCost(Instruction::InsertElement, Ty, CostKind,
-                                     I, Constant::getNullValue(Ty),
-                                     VL.empty() ? nullptr : VL[I]);
-    }
-    NewDemandedElts.clearAllBits();
-  } else if (!NewDemandedElts.isZero()) {
-    Cost += TTI.getScalarizationOverhead(Ty, NewDemandedElts, Insert, Extract,
-                                         CostKind, VL);
-  }
-  return Cost;
+  return TTI.getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
+                                      CostKind, ForPoisonSrc, VL);
 }
 
 /// This is similar to TargetTransformInfo::getVectorInstrCost, but if ScalarTy
@@ -24087,10 +24069,23 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
             const auto *V1 = dyn_cast<Instruction>(E1->getVectorOperand());
             const auto *V2 = dyn_cast<Instruction>(E2->getVectorOperand());
             if (V1 != V2) {
-              if (!V1 || !V2)
-                continue;
-              if (V1->getParent() != V2->getParent())
-                continue;
+              if (V1 && !V2)
+                return true;
+              if (!V1 && V2)
+                return false;
+              DomTreeNodeBase<BasicBlock> *NodeI1 =
+                  DT->getNode(V1->getParent());
+              DomTreeNodeBase<BasicBlock> *NodeI2 =
+                  DT->getNode(V2->getParent());
+              if (!NodeI1)
+                return NodeI2 != nullptr;
+              if (!NodeI2)
+                return false;
+              assert((NodeI1 == NodeI2) ==
+                         (NodeI1->getDFSNumIn() == NodeI2->getDFSNumIn()) &&
+                     "Different nodes should have different DFS numbers");
+              if (NodeI1 != NodeI2)
+                return NodeI1->getDFSNumIn() < NodeI2->getDFSNumIn();
               return V1->comesBefore(V2);
             }
             // If we have the same vector operand, try to sort by constant

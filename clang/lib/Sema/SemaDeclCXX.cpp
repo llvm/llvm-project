@@ -647,7 +647,7 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
       ParmVarDecl *NewParam = New->getParamDecl(New->getMinRequiredArguments());
       assert(NewParam->hasDefaultArg());
       Diag(NewParam->getLocation(), diag::err_default_arg_makes_ctor_special)
-          << NewParam->getDefaultArgRange() << llvm::to_underlying(NewSM);
+          << NewParam->getDefaultArgRange() << NewSM;
       Diag(Old->getLocation(), diag::note_previous_declaration);
     }
   }
@@ -6978,7 +6978,7 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
           (F->getType().isConstQualified() && F->getType()->isScalarType())) {
         if (!Complained) {
           Diag(Record->getLocation(), diag::warn_no_constructor_for_refconst)
-              << llvm::to_underlying(Record->getTagKind()) << Record;
+              << Record->getTagKind() << Record;
           Complained = true;
         }
 
@@ -7138,7 +7138,8 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
         Record->finishedDefaultedOrDeletedMember(M);
         M->setTrivialForCall(
             HasTrivialABI ||
-            SpecialMemberIsTrivial(M, CSM, TAH_ConsiderTrivialABI));
+            SpecialMemberIsTrivial(M, CSM,
+                                   TrivialABIHandling::ConsiderTrivialABI));
         Record->setTrivialForCallFlags(M);
       }
     }
@@ -7774,14 +7775,14 @@ bool Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
     // default argument is classified as a default constructor, and assignment
     // operations and destructors can't have default arguments.
     Diag(MD->getLocation(), diag::err_defaulted_special_member_params)
-        << llvm::to_underlying(CSM) << MD->getSourceRange();
+        << CSM << MD->getSourceRange();
     HadError = true;
   } else if (MD->isVariadic()) {
     if (DeleteOnTypeMismatch)
       ShouldDeleteForTypeMismatch = true;
     else {
       Diag(MD->getLocation(), diag::err_defaulted_special_member_variadic)
-          << llvm::to_underlying(CSM) << MD->getSourceRange();
+          << CSM << MD->getSourceRange();
       HadError = true;
     }
   }
@@ -7868,7 +7869,7 @@ bool Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
       else {
         Diag(MD->getLocation(),
              diag::err_defaulted_special_member_volatile_param)
-            << llvm::to_underlying(CSM);
+            << CSM;
         HadError = true;
       }
     }
@@ -7929,12 +7930,12 @@ bool Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
         if (!MD->isConsteval() && RD->getNumVBases()) {
           Diag(MD->getBeginLoc(),
                diag::err_incorrect_defaulted_constexpr_with_vb)
-              << llvm::to_underlying(CSM);
+              << CSM;
           for (const auto &I : RD->vbases())
             Diag(I.getBeginLoc(), diag::note_constexpr_virtual_base_here);
         } else {
           Diag(MD->getBeginLoc(), diag::err_incorrect_defaulted_constexpr)
-              << llvm::to_underlying(CSM) << MD->isConsteval();
+              << CSM << MD->isConsteval();
         }
         HadError = true;
         // FIXME: Explain why the special member can't be constexpr.
@@ -7967,11 +7968,9 @@ bool Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
     if (First) {
       SetDeclDeleted(MD, MD->getLocation());
       if (!inTemplateInstantiation() && !HadError) {
-        Diag(MD->getLocation(), diag::warn_defaulted_method_deleted)
-            << llvm::to_underlying(CSM);
+        Diag(MD->getLocation(), diag::warn_defaulted_method_deleted) << CSM;
         if (ShouldDeleteForTypeMismatch) {
-          Diag(MD->getLocation(), diag::note_deleted_type_mismatch)
-              << llvm::to_underlying(CSM);
+          Diag(MD->getLocation(), diag::note_deleted_type_mismatch) << CSM;
         } else if (ShouldDeleteSpecialMember(MD, CSM, nullptr,
                                              /*Diagnose*/ true) &&
                    DefaultLoc.isValid()) {
@@ -7982,14 +7981,13 @@ bool Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
       if (ShouldDeleteForTypeMismatch && !HadError) {
         Diag(MD->getLocation(),
              diag::warn_cxx17_compat_defaulted_method_type_mismatch)
-            << llvm::to_underlying(CSM);
+            << CSM;
       }
     } else {
       // C++11 [dcl.fct.def.default]p4:
       //   [For a] user-provided explicitly-defaulted function [...] if such a
       //   function is implicitly defined as deleted, the program is ill-formed.
-      Diag(MD->getLocation(), diag::err_out_of_line_default_deletes)
-          << llvm::to_underlying(CSM);
+      Diag(MD->getLocation(), diag::err_out_of_line_default_deletes) << CSM;
       assert(!ShouldDeleteForTypeMismatch && "deleted non-first decl");
       ShouldDeleteSpecialMember(MD, CSM, nullptr, /*Diagnose*/true);
       HadError = true;
@@ -9555,16 +9553,15 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
     if (Field) {
       S.Diag(Field->getLocation(),
              diag::note_deleted_special_member_class_subobject)
-          << llvm::to_underlying(getEffectiveCSM()) << MD->getParent()
-          << /*IsField*/ true << Field << DiagKind << IsDtorCallInCtor
-          << /*IsObjCPtr*/ false;
+          << getEffectiveCSM() << MD->getParent() << /*IsField*/ true << Field
+          << DiagKind << IsDtorCallInCtor << /*IsObjCPtr*/ false;
     } else {
       CXXBaseSpecifier *Base = cast<CXXBaseSpecifier *>(Subobj);
       S.Diag(Base->getBeginLoc(),
              diag::note_deleted_special_member_class_subobject)
-          << llvm::to_underlying(getEffectiveCSM()) << MD->getParent()
-          << /*IsField*/ false << Base->getType() << DiagKind
-          << IsDtorCallInCtor << /*IsObjCPtr*/ false;
+          << getEffectiveCSM() << MD->getParent() << /*IsField*/ false
+          << Base->getType() << DiagKind << IsDtorCallInCtor
+          << /*IsObjCPtr*/ false;
     }
 
     if (DiagKind == 1)
@@ -9633,9 +9630,8 @@ bool SpecialMemberDeletionInfo::shouldDeleteForVariantObjCPtrMember(
   if (Diagnose) {
     auto *ParentClass = cast<CXXRecordDecl>(FD->getParent());
     S.Diag(FD->getLocation(), diag::note_deleted_special_member_class_subobject)
-        << llvm::to_underlying(getEffectiveCSM()) << ParentClass
-        << /*IsField*/ true << FD << 4 << /*IsDtorCallInCtor*/ false
-        << /*IsObjCPtr*/ true;
+        << getEffectiveCSM() << ParentClass << /*IsField*/ true << FD << 4
+        << /*IsDtorCallInCtor*/ false << /*IsObjCPtr*/ true;
   }
 
   return true;
@@ -9658,8 +9654,8 @@ bool SpecialMemberDeletionInfo::shouldDeleteForVariantPtrAuthMember(
   if (Diagnose) {
     auto *ParentClass = cast<CXXRecordDecl>(FD->getParent());
     S.Diag(FD->getLocation(), diag::note_deleted_special_member_class_subobject)
-        << llvm::to_underlying(getEffectiveCSM()) << ParentClass
-        << /*IsField*/ true << FD << 4 << /*IsDtorCallInCtor*/ false << 2;
+        << getEffectiveCSM() << ParentClass << /*IsField*/ true << FD << 4
+        << /*IsDtorCallInCtor*/ false << 2;
   }
 
   return true;
@@ -9684,9 +9680,9 @@ bool SpecialMemberDeletionInfo::shouldDeleteForBase(CXXBaseSpecifier *Base) {
     if (BaseCtor->isDeleted() && Diagnose) {
       S.Diag(Base->getBeginLoc(),
              diag::note_deleted_special_member_class_subobject)
-          << llvm::to_underlying(getEffectiveCSM()) << MD->getParent()
-          << /*IsField*/ false << Base->getType() << /*Deleted*/ 1
-          << /*IsDtorCallInCtor*/ false << /*IsObjCPtr*/ false;
+          << getEffectiveCSM() << MD->getParent() << /*IsField*/ false
+          << Base->getType() << /*Deleted*/ 1 << /*IsDtorCallInCtor*/ false
+          << /*IsObjCPtr*/ false;
       S.NoteDeletedFunction(BaseCtor);
     }
     return BaseCtor->isDeleted();
@@ -10002,8 +9998,7 @@ void Sema::DiagnoseDeletedDefaultedFunction(FunctionDecl *FD) {
 /// determine whether the special member is trivial.
 static bool findTrivialSpecialMember(Sema &S, CXXRecordDecl *RD,
                                      CXXSpecialMemberKind CSM, unsigned Quals,
-                                     bool ConstRHS,
-                                     Sema::TrivialABIHandling TAH,
+                                     bool ConstRHS, TrivialABIHandling TAH,
                                      CXXMethodDecl **Selected) {
   if (Selected)
     *Selected = nullptr;
@@ -10046,7 +10041,7 @@ static bool findTrivialSpecialMember(Sema &S, CXXRecordDecl *RD,
     //   A destructor is trivial if:
     //    - all the direct [subobjects] have trivial destructors
     if (RD->hasTrivialDestructor() ||
-        (TAH == Sema::TAH_ConsiderTrivialABI &&
+        (TAH == TrivialABIHandling::ConsiderTrivialABI &&
          RD->hasTrivialDestructorForCall()))
       return true;
 
@@ -10063,7 +10058,7 @@ static bool findTrivialSpecialMember(Sema &S, CXXRecordDecl *RD,
     //   A copy constructor is trivial if:
     //    - the constructor selected to copy each direct [subobject] is trivial
     if (RD->hasTrivialCopyConstructor() ||
-        (TAH == Sema::TAH_ConsiderTrivialABI &&
+        (TAH == TrivialABIHandling::ConsiderTrivialABI &&
          RD->hasTrivialCopyConstructorForCall())) {
       if (Quals == Qualifiers::Const)
         // We must either select the trivial copy constructor or reach an
@@ -10118,7 +10113,7 @@ static bool findTrivialSpecialMember(Sema &S, CXXRecordDecl *RD,
     if (Selected)
       *Selected = SMOR.getMethod();
 
-    if (TAH == Sema::TAH_ConsiderTrivialABI &&
+    if (TAH == TrivialABIHandling::ConsiderTrivialABI &&
         (CSM == CXXSpecialMemberKind::CopyConstructor ||
          CSM == CXXSpecialMemberKind::MoveConstructor))
       return SMOR.getMethod()->isTrivialForCall();
@@ -10160,8 +10155,7 @@ static bool checkTrivialSubobjectCall(Sema &S, SourceLocation SubobjLoc,
                                       QualType SubType, bool ConstRHS,
                                       CXXSpecialMemberKind CSM,
                                       TrivialSubobjectKind Kind,
-                                      Sema::TrivialABIHandling TAH,
-                                      bool Diagnose) {
+                                      TrivialABIHandling TAH, bool Diagnose) {
   CXXRecordDecl *SubRD = SubType->getAsCXXRecordDecl();
   if (!SubRD)
     return true;
@@ -10182,25 +10176,24 @@ static bool checkTrivialSubobjectCall(Sema &S, SourceLocation SubobjLoc,
         S.Diag(CD->getLocation(), diag::note_user_declared_ctor);
     } else if (!Selected)
       S.Diag(SubobjLoc, diag::note_nontrivial_no_copy)
-          << Kind << SubType.getUnqualifiedType() << llvm::to_underlying(CSM)
-          << SubType;
+          << Kind << SubType.getUnqualifiedType() << CSM << SubType;
     else if (Selected->isUserProvided()) {
       if (Kind == TSK_CompleteObject)
         S.Diag(Selected->getLocation(), diag::note_nontrivial_user_provided)
-            << Kind << SubType.getUnqualifiedType() << llvm::to_underlying(CSM);
+            << Kind << SubType.getUnqualifiedType() << CSM;
       else {
         S.Diag(SubobjLoc, diag::note_nontrivial_user_provided)
-            << Kind << SubType.getUnqualifiedType() << llvm::to_underlying(CSM);
+            << Kind << SubType.getUnqualifiedType() << CSM;
         S.Diag(Selected->getLocation(), diag::note_declared_at);
       }
     } else {
       if (Kind != TSK_CompleteObject)
         S.Diag(SubobjLoc, diag::note_nontrivial_subobject)
-            << Kind << SubType.getUnqualifiedType() << llvm::to_underlying(CSM);
+            << Kind << SubType.getUnqualifiedType() << CSM;
 
       // Explain why the defaulted or deleted special member isn't trivial.
-      S.SpecialMemberIsTrivial(Selected, CSM, Sema::TAH_IgnoreTrivialABI,
-                               Diagnose);
+      S.SpecialMemberIsTrivial(Selected, CSM,
+                               TrivialABIHandling::IgnoreTrivialABI, Diagnose);
     }
   }
 
@@ -10211,8 +10204,7 @@ static bool checkTrivialSubobjectCall(Sema &S, SourceLocation SubobjLoc,
 /// trivial.
 static bool checkTrivialClassMembers(Sema &S, CXXRecordDecl *RD,
                                      CXXSpecialMemberKind CSM, bool ConstArg,
-                                     Sema::TrivialABIHandling TAH,
-                                     bool Diagnose) {
+                                     TrivialABIHandling TAH, bool Diagnose) {
   for (const auto *FI : RD->fields()) {
     if (FI->isInvalidDecl() || FI->isUnnamedBitField())
       continue;
@@ -10266,8 +10258,9 @@ void Sema::DiagnoseNontrivial(const CXXRecordDecl *RD,
   bool ConstArg = (CSM == CXXSpecialMemberKind::CopyConstructor ||
                    CSM == CXXSpecialMemberKind::CopyAssignment);
   checkTrivialSubobjectCall(*this, RD->getLocation(), Ty, ConstArg, CSM,
-                            TSK_CompleteObject, TAH_IgnoreTrivialABI,
-                            /*Diagnose*/true);
+                            TSK_CompleteObject,
+                            TrivialABIHandling::IgnoreTrivialABI,
+                            /*Diagnose*/ true);
 }
 
 bool Sema::SpecialMemberIsTrivial(CXXMethodDecl *MD, CXXSpecialMemberKind CSM,
@@ -11471,7 +11464,7 @@ Decl *Sema::ActOnConversionDeclarator(CXXConversionDecl *Conversion) {
     if (ConvType->isUndeducedAutoType()) {
       Diag(Conversion->getTypeSpecStartLoc(), diag::err_auto_not_allowed)
           << getReturnTypeLoc(Conversion).getSourceRange()
-          << llvm::to_underlying(ConvType->castAs<AutoType>()->getKeyword())
+          << ConvType->castAs<AutoType>()->getKeyword()
           << /* in declaration of conversion function template= */ 24;
     }
 
@@ -15912,7 +15905,7 @@ CXXConstructorDecl *Sema::DeclareImplicitCopyConstructor(
       (ClassDecl->needsOverloadResolutionForCopyConstructor()
            ? SpecialMemberIsTrivial(CopyConstructor,
                                     CXXSpecialMemberKind::CopyConstructor,
-                                    TAH_ConsiderTrivialABI)
+                                    TrivialABIHandling::ConsiderTrivialABI)
            : ClassDecl->hasTrivialCopyConstructorForCall()));
 
   // Note that we have declared this constructor.
@@ -16050,7 +16043,7 @@ CXXConstructorDecl *Sema::DeclareImplicitMoveConstructor(
       (ClassDecl->needsOverloadResolutionForMoveConstructor()
            ? SpecialMemberIsTrivial(MoveConstructor,
                                     CXXSpecialMemberKind::MoveConstructor,
-                                    TAH_ConsiderTrivialABI)
+                                    TrivialABIHandling::ConsiderTrivialABI)
            : ClassDecl->hasTrivialMoveConstructorForCall()));
 
   // Note that we have declared this constructor.
@@ -16425,8 +16418,9 @@ bool Sema::CompleteConstructorCall(CXXConstructorDecl *Constructor,
   else
     ConvertedArgs.reserve(NumArgs);
 
-  VariadicCallType CallType =
-    Proto->isVariadic() ? VariadicConstructor : VariadicDoesNotApply;
+  VariadicCallType CallType = Proto->isVariadic()
+                                  ? VariadicCallType::Constructor
+                                  : VariadicCallType::DoesNotApply;
   SmallVector<Expr *, 8> AllArgs;
   bool Invalid = GatherArgumentsForCall(
       Loc, Constructor, Proto, 0, llvm::ArrayRef(Args, NumArgs), AllArgs,
@@ -18005,7 +17999,8 @@ DeclResult Sema::ActOnTemplatedFriendTag(
                       /*ScopedEnumUsesClassTag=*/false,
                       /*UnderlyingType=*/TypeResult(),
                       /*IsTypeSpecifier=*/false,
-                      /*IsTemplateParamOrArg=*/false, /*OOK=*/OOK_Outside);
+                      /*IsTemplateParamOrArg=*/false,
+                      /*OOK=*/OffsetOfKind::Outside);
     }
 
     ElaboratedTypeKeyword Keyword
