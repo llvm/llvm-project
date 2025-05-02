@@ -521,7 +521,7 @@ Sema::ActOnCaseExpr(SourceLocation CaseLoc, ExprResult Val) {
       // constant expression of the promoted type of the switch condition.
       llvm::APSInt TempVal;
       return CheckConvertedConstantExpression(E, CondType, TempVal,
-                                              CCEK_CaseValue);
+                                              CCEKind::CaseValue);
     }
 
     ExprResult ER = E;

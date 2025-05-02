@@ -1229,7 +1229,7 @@ ExprResult Sema::BuildPackIndexingExpr(Expr *PackExpression,
     llvm::APSInt Value(Context.getIntWidth(Context.getSizeType()));
 
     ExprResult Res = CheckConvertedConstantExpression(
-        IndexExpr, Context.getSizeType(), Value, CCEK_ArrayBound);
+        IndexExpr, Context.getSizeType(), Value, CCEKind::ArrayBound);
     if (!Res.isUsable())
       return ExprError();
     Index = Value.getExtValue();

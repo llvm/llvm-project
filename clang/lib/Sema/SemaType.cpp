@@ -1993,7 +1993,7 @@ static ExprResult checkArraySize(Sema &S, Expr *&ArraySize,
     // the converted constant expression rules (to properly convert the source)
     // when the source expression is of class type.
     return S.CheckConvertedConstantExpression(
-        ArraySize, S.Context.getSizeType(), SizeVal, Sema::CCEK_ArrayBound);
+        ArraySize, S.Context.getSizeType(), SizeVal, CCEKind::ArrayBound);
   }
 
   // If the size is an ICE, it certainly isn't a VLA. If we're in a GNU mode
@@ -9763,7 +9763,7 @@ QualType Sema::BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
       !IndexExpr->isTypeDependent()) {
     llvm::APSInt Value(Context.getIntWidth(Context.getSizeType()));
     ExprResult Res = CheckConvertedConstantExpression(
-        IndexExpr, Context.getSizeType(), Value, CCEK_ArrayBound);
+        IndexExpr, Context.getSizeType(), Value, CCEKind::ArrayBound);
     if (!Res.isUsable())
       return QualType();
     IndexExpr = Res.get();

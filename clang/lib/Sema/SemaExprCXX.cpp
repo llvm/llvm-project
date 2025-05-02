@@ -2055,10 +2055,10 @@ Sema::ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal,
             //   shall be a converted constant expression (5.19) of type std::size_t
             //   and shall evaluate to a strictly positive value.
             llvm::APSInt Value(Context.getIntWidth(Context.getSizeType()));
-            Array.NumElts
-             = CheckConvertedConstantExpression(NumElts, Context.getSizeType(), Value,
-                                                CCEK_ArrayBound)
-                 .get();
+            Array.NumElts =
+                CheckConvertedConstantExpression(NumElts, Context.getSizeType(),
+                                                 Value, CCEKind::ArrayBound)
+                    .get();
           } else {
             Array.NumElts = VerifyIntegerConstantExpression(
                                 NumElts, nullptr, diag::err_new_array_nonconst,

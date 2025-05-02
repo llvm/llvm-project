@@ -19844,9 +19844,8 @@ EnumConstantDecl *Sema::CheckEnumConstant(EnumDecl *Enum,
         // constant-expression in the enumerator-definition shall be a converted
         // constant expression of the underlying type.
         EltTy = Enum->getIntegerType();
-        ExprResult Converted =
-          CheckConvertedConstantExpression(Val, EltTy, EnumVal,
-                                           CCEK_Enumerator);
+        ExprResult Converted = CheckConvertedConstantExpression(
+            Val, EltTy, EnumVal, CCEKind::Enumerator);
         if (Converted.isInvalid())
           Val = nullptr;
         else
