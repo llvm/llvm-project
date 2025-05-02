@@ -492,7 +492,6 @@ def OMPC_ThreadLimit : Clause<"thread_limit"> {
   let flangClass = "ScalarIntExpr";
 }
 def OMPC_ThreadPrivate : Clause<"threadprivate"> {
-  let alternativeName = "threadprivate or thread local";
   let isImplicit = true;
 }
 def OMPC_Threads : Clause<"threads"> {

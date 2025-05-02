@@ -286,12 +286,7 @@ static void generateGetName(ArrayRef<const Record *> Records, raw_ostream &OS,
   OS << "  switch (Kind) {\n";
   for (const BaseRecord Rec : Records) {
     OS << "    case " << Prefix << Rec.getFormattedName() << ":\n";
-    OS << "      return \"";
-    if (Rec.getAlternativeName().empty())
-      OS << Rec.getName();
-    else
-      OS << Rec.getAlternativeName();
-    OS << "\";\n";
+    OS << "      return \"" << Rec.getName() << "\";\n";
   }
   OS << "  }\n"; // switch
   OS << "  llvm_unreachable(\"Invalid " << DirLang.getName() << " " << Enum
