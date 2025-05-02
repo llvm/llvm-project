@@ -1103,10 +1103,10 @@ void SIPeepholeSDWA::convertToImplicitVcc(MachineInstr &MI,
   if (CarryDef->isCompare() && TII->isVOP3(*CarryDef) &&
       MRI->hasOneUse(CarryIn.getReg()))
     CarryDef->substituteRegister(CarryIn.getReg(), Vcc, 0, *TRI);
-  else
-    BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(AMDGPU::COPY))
-        .addReg(Vcc, RegState::Define)
+  else {
+    BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(AMDGPU::COPY), Vcc)
         .add(CarryIn);
+     }
 
   auto Converted = BuildMI(MBB, MI, MI.getDebugLoc(),
                            TII->get(AMDGPU::getVOPe32(MI.getOpcode())))
