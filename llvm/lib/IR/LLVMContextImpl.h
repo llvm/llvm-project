@@ -1695,8 +1695,7 @@ public:
 
   StringMap<std::unique_ptr<ConstantDataSequential>> CDSConstants;
 
-  DenseMap<std::pair<const Function *, const BasicBlock *>, BlockAddress *>
-      BlockAddresses;
+  DenseMap<const BasicBlock *, BlockAddress *> BlockAddresses;
 
   DenseMap<const GlobalValue *, DSOLocalEquivalent *> DSOLocalEquivalents;
 
