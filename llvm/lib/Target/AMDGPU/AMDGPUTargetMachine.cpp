@@ -2168,7 +2168,8 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
 
   addPass(GCNPreRALongBranchRegPass());
 
-  addPass(RAGreedyPass({onlyAllocateSGPRs, "sgpr"}));
+  addRegAllocPassOrOpt(
+      addPass, []() { return RAGreedyPass({onlyAllocateSGPRs, "sgpr"}); });
 
   // Commit allocated register changes. This is mostly necessary because too
   // many things rely on the use lists of the physical registers, such as the
@@ -2188,21 +2189,20 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
   addPass(SIPreAllocateWWMRegsPass());
 
   // For allocating other wwm register operands.
-  // addRegAlloc<RAGreedyPass>(addPass, RegAllocPhase::WWM);
-  addPass(RAGreedyPass({onlyAllocateWWMRegs, "wwm"}));
+  addRegAllocPassOrOpt(
+      addPass, []() { return RAGreedyPass({onlyAllocateWWMRegs, "wwm"}); });
   addPass(SILowerWWMCopiesPass());
   addPass(VirtRegRewriterPass(false));
   addPass(AMDGPUReserveWWMRegsPass());
 
   // For allocating per-thread VGPRs.
-  // addRegAlloc<RAGreedyPass>(addPass, RegAllocPhase::VGPR);
-  addPass(RAGreedyPass({onlyAllocateVGPRs, "vgpr"}));
-
+  addRegAllocPassOrOpt(
+      addPass, []() { return RAGreedyPass({onlyAllocateVGPRs, "vgpr"}); });
 
   addPreRewrite(addPass);
   addPass(VirtRegRewriterPass(true));
 
-  // TODO: addPass(AMDGPUMarkLastScratchLoadPass());
+  addPass(AMDGPUMarkLastScratchLoadPass());
   return Error::success();
 }
 
@@ -2251,47 +2251,6 @@ void AMDGPUCodeGenPassBuilder::addPreEmitPass(AddMachinePass &addPass) const {
   }
 
   addPass(BranchRelaxationPass());
-}
-Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
-    AddMachinePass &addPass) const {
-  addPass(GCNPreRALongBranchRegPass());
-
-  addRegAllocPassOrOpt(
-      addPass, []() { return RAGreedyPass({onlyAllocateSGPRs, "sgpr"}); });
-
-  // Commit allocated register changes. This is mostly necessary because too
-  // many things rely on the use lists of the physical registers, such as the
-  // verifier. This is only necessary with allocators which use LiveIntervals,
-  // since FastRegAlloc does the replacements itself.
-  // TODO: addPass(VirtRegRewriterPass(false));
-
-  // At this point, the sgpr-regalloc has been done and it is good to have the
-  // stack slot coloring to try to optimize the SGPR spill stack indices before
-  // attempting the custom SGPR spill lowering.
-  addPass(StackSlotColoringPass());
-
-  // Equivalent of PEI for SGPRs.
-  addPass(SILowerSGPRSpillsPass());
-
-  // To Allocate wwm registers used in whole quad mode operations (for shaders).
-  addPass(SIPreAllocateWWMRegsPass());
-
-  // For allocating other wwm register operands.
-  addRegAllocPassOrOpt(
-      addPass, []() { return RAGreedyPass({onlyAllocateWWMRegs, "wwm"}); });
-  addPass(SILowerWWMCopiesPass());
-  addPass(VirtRegRewriterPass(false));
-  addPass(AMDGPUReserveWWMRegsPass());
-
-  // For allocating per-thread VGPRs.
-  addRegAllocPassOrOpt(
-      addPass, []() { return RAGreedyPass({onlyAllocateVGPRs, "vgpr"}); });
-
-  // TODO: addPreRewrite();
-  addPass(VirtRegRewriterPass(false));
-
-  // TODO: addPass(AMDGPUMarkLastScratchLoadPass());
-  return Error::success();
 }
 
 bool AMDGPUCodeGenPassBuilder::isPassEnabled(const cl::opt<bool> &Opt,

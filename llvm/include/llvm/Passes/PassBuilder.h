@@ -994,6 +994,8 @@ Expected<bool> parseMachineSinkingPassOptions(StringRef Params,
                                               const PassBuilder &);
 Expected<bool> parseMachineBlockPlacementPassOptions(StringRef Params,
                                                      const PassBuilder &);
+Expected<bool> parseVirtRegRewriterPassOptions(StringRef Params,
+                                               const PassBuilder &);
 }
 
 #endif

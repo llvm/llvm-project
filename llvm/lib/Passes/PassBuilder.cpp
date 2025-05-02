@@ -1465,8 +1465,8 @@ llvm::parseMachineBlockPlacementPassOptions(StringRef Params,
   return AllowTailMerge;
 }
 
-Expected<bool> llvm::parseVirtRegRewriterPassOptions(const PassBuilder &PB,
-                                                     StringRef Params) {
+Expected<bool> llvm::parseVirtRegRewriterPassOptions(StringRef Params,
+                                                     const PassBuilder &) {
   bool ClearVirtRegs = true;
   if (!Params.empty()) {
     ClearVirtRegs = !Params.consume_front("no-");
