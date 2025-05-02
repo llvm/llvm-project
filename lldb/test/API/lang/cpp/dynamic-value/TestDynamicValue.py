@@ -266,3 +266,15 @@ class DynamicValueTestCase(TestBase):
         contained_b_static_addr = int(contained_b_static.GetValue(), 16)
 
         self.assertLess(contained_b_addr, contained_b_static_addr)
+
+    @no_debug_info_test
+    def test_from_forward_decl(self):
+        """Test fetching C++ dynamic values forward-declared types. It's
+        imperative that this is a separate test so that we don't end up parsing
+        a definition of A from somewhere else."""
+        self.build()
+        lldbutil.run_to_name_breakpoint(self, "take_A")
+        self.expect(
+            "frame var -d run-target --ptr-depth=1 --show-types a",
+            substrs=["(B *) a", "m_b_value = 10"],
+        )
