@@ -29522,19 +29522,18 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
   auto Acc = Op.getOperand(0);
   auto LHS = Op.getOperand(1);
   auto RHS = Op.getOperand(2);
-
   auto ResultVT = Op.getValueType();
-
   assert(ResultVT == MVT::nxv2i64 && LHS.getValueType() == MVT::nxv16i8);
 
-  auto NewAcc = DAG.getConstant(0, DL, MVT::nxv4i32);
-  auto DotNode =
-      DAG.getNode(Op.getOpcode(), DL, MVT::nxv4i32, NewAcc, LHS, RHS);
+  EVT InputVT = MVT::nxv4i32;
+  SDValue DotNode = DAG.getNode(Op.getOpcode(), DL, InputVT,
+                                DAG.getConstant(0, DL, InputVT), LHS, RHS);
 
-  auto Lo = DAG.getNode(AArch64ISD::UUNPKLO, DL, ResultVT, DotNode);
-  auto Hi = DAG.getNode(AArch64ISD::UUNPKHI, DL, ResultVT, DotNode);
-  auto Extended = DAG.getNode(ISD::ADD, DL, ResultVT, Lo, Hi);
-  return DAG.getNode(ISD::ADD, DL, ResultVT, Acc, Extended);
+  bool IsUnsigned = Op.getOpcode() == ISD::PARTIAL_REDUCE_UMLA;
+  unsigned LoOpcode = IsUnsigned ? AArch64ISD::UADDWB : AArch64ISD::SADDWB;
+  unsigned HiOpcode = IsUnsigned ? AArch64ISD::UADDWT : AArch64ISD::SADDWT;
+  SDValue Lo = DAG.getNode(LoOpcode, DL, ResultVT, Acc, DotNode);
+  return DAG.getNode(HiOpcode, DL, ResultVT, Lo, DotNode);
 }
 
 SDValue

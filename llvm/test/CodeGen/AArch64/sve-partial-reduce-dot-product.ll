@@ -200,10 +200,8 @@ define <vscale x 4 x i64> @udot_8to64(<vscale x 4 x i64> %acc, <vscale x 16 x i8
 ; CHECK-NEWLOWERING:       // %bb.0: // %entry
 ; CHECK-NEWLOWERING-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-NEWLOWERING-NEXT:    udot z4.s, z2.b, z3.b
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z2.d, z4.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z3.d, z4.s
-; CHECK-NEWLOWERING-NEXT:    add z2.d, z3.d, z2.d
-; CHECK-NEWLOWERING-NEXT:    add z0.d, z0.d, z2.d
+; CHECK-NEWLOWERING-NEXT:    uaddwb z0.d, z0.d, z4.s
+; CHECK-NEWLOWERING-NEXT:    uaddwt z0.d, z0.d, z4.s
 ; CHECK-NEWLOWERING-NEXT:    ret
 entry:
   %a.wide = zext <vscale x 16 x i8> %a to <vscale x 16 x i64>
@@ -229,10 +227,8 @@ define <vscale x 4 x i64> @sdot_8to64(<vscale x 4 x i64> %acc, <vscale x 16 x i8
 ; CHECK-NEWLOWERING:       // %bb.0: // %entry
 ; CHECK-NEWLOWERING-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-NEWLOWERING-NEXT:    sdot z4.s, z2.b, z3.b
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z2.d, z4.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z3.d, z4.s
-; CHECK-NEWLOWERING-NEXT:    add z2.d, z3.d, z2.d
-; CHECK-NEWLOWERING-NEXT:    add z0.d, z0.d, z2.d
+; CHECK-NEWLOWERING-NEXT:    saddwb z0.d, z0.d, z4.s
+; CHECK-NEWLOWERING-NEXT:    saddwt z0.d, z0.d, z4.s
 ; CHECK-NEWLOWERING-NEXT:    ret
 entry:
   %a.wide = sext <vscale x 16 x i8> %a to <vscale x 16 x i64>
