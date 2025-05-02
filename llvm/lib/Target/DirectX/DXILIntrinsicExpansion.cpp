@@ -357,7 +357,7 @@ static Value *expandNormalizeIntrinsic(CallInst *Orig) {
     if (auto *constantFP = dyn_cast<ConstantFP>(X)) {
       const APFloat &fpVal = constantFP->getValueAPF();
       if (fpVal.isZero())
-        reportFatalUsageError"Invalid input scalar: length is zero");
+        reportFatalUsageError("Invalid input scalar: length is zero");
     }
     return Builder.CreateFDiv(X, X);
   }
