@@ -25,6 +25,10 @@
 #include <optional>
 using namespace llvm;
 
+namespace llvm {
+extern cl::opt<bool> PickMergedSourceLocations;
+} // namespace llvm
+
 namespace {
 
 TEST(ContextAndReplaceableUsesTest, FromContext) {
@@ -1443,6 +1447,25 @@ TEST_F(DILocationTest, Merge) {
     // Test the other argument order for good measure.
     auto *M2 = DILocation::getMergedLocation(A2, B);
     EXPECT_EQ(M1, M2);
+  }
+
+  {
+    // If PickMergedSourceLocation is enabled, when one source location is null
+    // we should return the valid location.
+    PickMergedSourceLocations = true;
+    auto *A = DILocation::get(Context, 2, 7, N);
+    auto *M1 = DILocation::getMergedLocation(A, nullptr);
+    ASSERT_NE(nullptr, M1);
+    EXPECT_EQ(2u, M1->getLine());
+    EXPECT_EQ(7u, M1->getColumn());
+    EXPECT_EQ(N, M1->getScope());
+
+    auto *M2 = DILocation::getMergedLocation(nullptr, A);
+    ASSERT_NE(nullptr, M2);
+    EXPECT_EQ(2u, M2->getLine());
+    EXPECT_EQ(7u, M2->getColumn());
+    EXPECT_EQ(N, M2->getScope());
+    PickMergedSourceLocations = false;
   }
 }
 
