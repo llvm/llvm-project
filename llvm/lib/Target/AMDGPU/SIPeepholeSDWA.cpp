@@ -62,7 +62,7 @@ private:
   std::unique_ptr<SDWAOperand> matchSDWAOperand(MachineInstr &MI);
   void pseudoOpConvertToVOP2(MachineInstr &MI,
                              const GCNSubtarget &ST) const;
-  void convertToImplicitVcc(MachineInstr &MI, const GCNSubtarget &ST) const;
+  void convertVcndmaskToVOP2(MachineInstr &MI, const GCNSubtarget &ST) const;
   MachineInstr *createSDWAVersion(MachineInstr &MI);
   bool convertToSDWA(MachineInstr &MI, const SDWAOperandsVector &SDWAOperands);
   void legalizeScalarOperands(MachineInstr &MI, const GCNSubtarget &ST) const;
@@ -1070,7 +1070,7 @@ void SIPeepholeSDWA::pseudoOpConvertToVOP2(MachineInstr &MI,
 /// copies from the carry-in to VCC.  The conversion will only be
 /// applied if \p MI can be shrunk to VOP2 and if VCC can be proven to
 /// be dead before \p MI.
-void SIPeepholeSDWA::convertToImplicitVcc(MachineInstr &MI,
+void SIPeepholeSDWA::convertVcndmaskToVOP2(MachineInstr &MI,
                                           const GCNSubtarget &ST) const {
   assert(MI.getOpcode() == AMDGPU::V_CNDMASK_B32_e64);
 
@@ -1082,21 +1082,20 @@ void SIPeepholeSDWA::convertToImplicitVcc(MachineInstr &MI,
 
   const MachineOperand &CarryIn =
       *TII->getNamedOperand(MI, AMDGPU::OpName::src2);
+  Register CarryReg = CarryIn.getReg();
+  MachineInstr *CarryDef = MRI->getVRegDef(CarryReg);
+  if (!CarryDef)
+    return;
 
   // Make sure VCC or its subregs are dead before MI.
-  MachineBasicBlock &MBB = *MI.getParent();
   MCRegister Vcc = TRI->getVCC();
+  MachineBasicBlock &MBB = *MI.getParent();
   MachineBasicBlock::LivenessQueryResult Liveness =
       MBB.computeRegisterLiveness(TRI, Vcc, MI);
   if (Liveness != MachineBasicBlock::LQR_Dead) {
     LLVM_DEBUG(dbgs() << "VCC not known to be dead before instruction.\n");
     return;
   }
-
-  Register CarryReg = CarryIn.getReg();
-  MachineInstr *CarryDef = MRI->getVRegDef(CarryReg);
-  if (!CarryDef)
-    return;
 
   // Change destination of compare instruction to VCC
   // or copy to VCC if carry-in is not a compare inst.
@@ -1453,7 +1452,7 @@ bool SIPeepholeSDWA::run(MachineFunction &MF) {
           pseudoOpConvertToVOP2(*PotentialMI, ST);
           break;
         case AMDGPU::V_CNDMASK_B32_e64:
-          convertToImplicitVcc(*PotentialMI, ST);
+          convertVcndmaskToVOP2(*PotentialMI, ST);
           break;
         };
       }
