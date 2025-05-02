@@ -48,6 +48,16 @@ public:
       return TTI::PSK_Software; // Arbitrary bit-width INT is not core SPIR-V.
     return TTI::PSK_FastHardware;
   }
+
+  unsigned getFlatAddressSpace() const {
+    if (ST->isVulkanEnv())
+      return 0;
+    // FIXME: Clang has 2 distinct address space maps. One where
+    // default=4=Generic, and one with default=0=Function. This depends on the
+    // environment. For OpenCL, we don't need to run the InferAddrSpace pass, so
+    // we can return -1, but we might want to fix this.
+    return -1;
+  }
 };
 
 } // namespace llvm

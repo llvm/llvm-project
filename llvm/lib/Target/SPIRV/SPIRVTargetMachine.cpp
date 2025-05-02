@@ -196,7 +196,7 @@ void SPIRVPassConfig::addIRPasses() {
     // address space casts that can be removed.
     // If an address space cast is not removed while targeting Vulkan, lowering
     // will fail during MIR lowering.
-    addPass(createInferAddressSpacesPass(/* AddressSpace= */ 0));
+    addPass(createInferAddressSpacesPass());
 
     // 1.  Simplify loop for subsequent transformations. After this steps, loops
     // have the following properties:
