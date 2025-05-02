@@ -111,7 +111,6 @@ public:
   void SetOSPluginReportsAllThreads(bool does_report);
   bool GetSteppingRunsAllThreads() const;
   FollowForkMode GetFollowForkMode() const;
-  bool TrackMemoryCacheChanges() const;
 
 protected:
   Process *m_process; // Can be nullptr for global ProcessProperties
@@ -311,18 +310,6 @@ public:
     if (stop_id == m_last_natural_stop_id)
       return m_last_natural_stop_event;
     return lldb::EventSP();
-  }
-
-  void Dump(Stream &stream) const {
-    stream.Format("ProcessModID:\n"
-                  "  m_stop_id: {0}\n  m_last_natural_stop_id: {1}\n"
-                  "  m_resume_id: {2}\n  m_memory_id: {3}\n"
-                  "  m_last_user_expression_resume: {4}\n"
-                  "  m_running_user_expression: {5}\n"
-                  "  m_running_utility_function: {6}\n",
-                  m_stop_id, m_last_natural_stop_id, m_resume_id, m_memory_id,
-                  m_last_user_expression_resume, m_running_user_expression,
-                  m_running_utility_function);
   }
 
 private:

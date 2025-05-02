@@ -250,6 +250,32 @@ static KeywordStatus getKeywordStatus(const LangOptions &LangOpts,
   return CurStatus;
 }
 
+static bool IsKeywordInCpp(unsigned Flags) {
+  while (Flags != 0) {
+    unsigned CurFlag = Flags & ~(Flags - 1);
+    Flags = Flags & ~CurFlag;
+    switch (static_cast<TokenKey>(CurFlag)) {
+    case KEYCXX:
+    case KEYCXX11:
+    case KEYCXX20:
+    case BOOLSUPPORT:
+    case WCHARSUPPORT:
+    case CHAR8SUPPORT:
+      return true;
+    default:
+      break; // Go to the next flag, try again.
+    }
+  }
+  return false;
+}
+
+static void MarkIdentifierAsKeywordInCpp(IdentifierTable &Table,
+                                         StringRef Name) {
+  IdentifierInfo &II = Table.get(Name, tok::identifier);
+  II.setIsKeywordInCPlusPlus();
+  II.setHandleIdentifierCase();
+}
+
 /// AddKeyword - This method is used to associate a token ID with specific
 /// identifiers because they are language keywords.  This causes the lexer to
 /// automatically map matching identifiers to specialized token codes.
@@ -258,8 +284,18 @@ static void AddKeyword(StringRef Keyword,
                        const LangOptions &LangOpts, IdentifierTable &Table) {
   KeywordStatus AddResult = getKeywordStatus(LangOpts, Flags);
 
-  // Don't add this keyword if disabled in this language.
-  if (AddResult == KS_Disabled) return;
+  // Don't add this keyword if disabled in this language and isn't otherwise
+  // special.
+  if (AddResult == KS_Disabled) {
+    // We do not consider any identifiers to be C++ keywords when in
+    // Objective-C because @ effectively introduces a custom grammar where C++
+    // keywords can be used (and similar for selectors). We could enable this
+    // for Objective-C, but it would require more logic to ensure we do not
+    // issue compatibility diagnostics in these cases.
+    if (!LangOpts.ObjC && IsKeywordInCpp(Flags))
+      MarkIdentifierAsKeywordInCpp(Table, Keyword);
+    return;
+  }
 
   IdentifierInfo &Info =
       Table.get(Keyword, AddResult == KS_Future ? tok::identifier : TokenCode);
@@ -304,9 +340,11 @@ void IdentifierTable::AddKeywords(const LangOptions &LangOpts) {
 #define ALIAS(NAME, TOK, FLAGS) \
   AddKeyword(StringRef(NAME), tok::kw_ ## TOK,  \
              FLAGS, LangOpts, *this);
-#define CXX_KEYWORD_OPERATOR(NAME, ALIAS) \
-  if (LangOpts.CXXOperatorNames)          \
-    AddCXXOperatorKeyword(StringRef(#NAME), tok::ALIAS, *this);
+#define CXX_KEYWORD_OPERATOR(NAME, ALIAS)                                      \
+  if (LangOpts.CXXOperatorNames)                                               \
+    AddCXXOperatorKeyword(StringRef(#NAME), tok::ALIAS, *this);                \
+  else                                                                         \
+    MarkIdentifierAsKeywordInCpp(*this, StringRef(#NAME));
 #define OBJC_AT_KEYWORD(NAME)  \
   if (LangOpts.ObjC)           \
     AddObjCKeyword(StringRef(#NAME), tok::objc_##NAME, *this);
