@@ -1364,6 +1364,35 @@ def GPU_ShuffleOp : GPU_Op<
   ];
 }
 
+def GPU_RotateOp : GPU_Op<
+    "rotate", [Pure, AllTypesMatch<["value", "rotateResult"]>]>,
+    Arguments<(ins AnyIntegerOrFloatOr1DVector:$value, I32:$offset, I32:$width)>,
+    Results<(outs AnyIntegerOrFloatOr1DVector:$rotateResult)> {
+  let summary = "Rotate values within a subgroup.";
+  let description = [{
+    The "rotate" op moves values to a across lanes circularly (a.k.a.,
+    invocations, work items) within the same subgroup. The `width` argument
+    specifies the number of lanes that participate in the rotation, and must
+    be uniform across all lanes. Further, the first `width` lanes of the
+    subgroup must be active.
+
+    Example:
+
+    ```mlir
+    %cst1 = arith.constant 1 : i32
+    %width = arith.constant 16 : i32
+    %1 = gpu.rotate %0, %cst1, %width : f32
+    ```
+
+    For lane 0 < `k` < 16, return the value from lane `(k - 1) % width`.
+    For lane k == 0, return the value from lane 15.
+  }];
+
+  let assemblyFormat = [{
+    $value `,` $offset `,` $width attr-dict `:` type($value)
+  }];
+}
+
 def GPU_BarrierOp : GPU_Op<"barrier"> {
   let summary = "Synchronizes all work items of a workgroup.";
   let description = [{
@@ -1916,6 +1945,79 @@ def GPU_SubgroupMmaConstantMatrixOp : GPU_Op<"subgroup_mma_constant_matrix",
 
   let assemblyFormat = [{
     $value attr-dict `:` type($res)
+  }];
+}
+
+def GPU_SubgroupMmaExtractOp : GPU_Op<"subgroup_mma_extract",
+    [Pure,
+     TypesMatchWith<"value type matches element type of mma_matrix",
+                    "matrix", "res",
+                    "::llvm::cast<gpu::MMAMatrixType>($_self).getElementType()">]>{
+
+  let summary = "Extract a value from GPU warp by invocation and indices";
+
+  let description = [{
+    The `gpu.subgroup_mma_extract` operation extracts a value from `!gpu.mma_matrix`
+    by the invocation in a subgroup.
+
+    This operation takes `!gpu.mma_matrix` as its first operand. It is the source
+    matrix across a subgroup. The op returns a scalar value stored in the invocation
+    in the subgroup. If there are multiple values packed in an invocation, use
+    `indices` to specify the element to extract.
+
+    Example:
+
+    ```mlir
+    %c0 = arith.constant 0 : index
+    %val = gpu.subgroup_mma_extract %m[%c0] : !gpu.mma_matrix<16x16xf32, "AOp"> -> f32
+    ```
+  }];
+
+  let arguments = (ins GPU_MMAMatrix:$matrix, Variadic<Index>:$indices);
+
+  let results = (outs AnyIntegerOrFloat:$res);
+
+  let assemblyFormat = [{
+    $matrix`[`$indices`]` attr-dict `:` type($matrix) `->` type($res)
+  }];
+}
+
+def GPU_SubgroupMmaInsertOp : GPU_Op<"subgroup_mma_insert",
+    [Pure,
+     TypesMatchWith<"value type matches element type of mma_matrix",
+                    "matrix", "value",
+                    "::llvm::cast<gpu::MMAMatrixType>($_self).getElementType()"> ]>{
+
+  let summary = "Insert a value into GPU warp by invocation and indices";
+
+  let description = [{
+    The `gpu.subgroup_mma_insert` operation inserts a value to `!gpu.mma_matrix`
+    by the invocation in a subgroup.
+
+    This operation takes scalar value as its first operand and `!gpu.mma_matrix`
+    as its second operand. It is the matrix across a subgroup. The op inserts the
+    scalar value stored in the invocation in the subgroup to the matrix. If there
+    are multiple values packed in an invocation, use `indices` to specify the
+    location to insert in the packing.
+
+    The op returns `!gpu.mma_matrix` with the updated value.
+
+    Example:
+
+    ```mlir
+    %c0 = arith.constant 0 : index
+    %s0 = gpu.subgroup_mma_insert %val, %m[%c0] : f16, !gpu.mma_matrix<16x16xf16, "COp">
+            -> !gpu.mma_matrix<16x16xf16, "COp">
+    ```
+  }];
+
+  let arguments = (ins AnyIntegerOrFloat:$value, GPU_MMAMatrix:$matrix,
+                       Variadic<Index>:$indices);
+
+  let results = (outs GPU_MMAMatrix:$res);
+
+  let assemblyFormat = [{
+    $value`,` $matrix`[`$indices`]` attr-dict `:` type($value)`,` type($matrix) `->` type($res)
   }];
 }
 
