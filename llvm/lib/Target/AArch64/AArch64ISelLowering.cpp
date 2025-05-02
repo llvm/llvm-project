@@ -766,13 +766,14 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(Op, MVT::v8bf16, Expand);
   }
 
-  // For bf16, fpextend is custom lowered to be optionally expanded into shifts.
-  setOperationAction(ISD::FP_EXTEND, MVT::f32, Custom);
+  // fpextend from f16 or bf16 to f32 is legal
+  setOperationAction(ISD::FP_EXTEND, MVT::f32, Legal);
+  setOperationAction(ISD::FP_EXTEND, MVT::v4f32, Legal);
+  setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Legal);
+  setOperationAction(ISD::STRICT_FP_EXTEND, MVT::v4f32, Legal);
+  // fpextend from bf16 to f64 needs to be split into two fpextends
   setOperationAction(ISD::FP_EXTEND, MVT::f64, Custom);
-  setOperationAction(ISD::FP_EXTEND, MVT::v4f32, Custom);
-  setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Custom);
   setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Custom);
-  setOperationAction(ISD::STRICT_FP_EXTEND, MVT::v4f32, Custom);
 
   auto LegalizeNarrowFP = [this](MVT ScalarVT) {
     for (auto Op : {
@@ -4556,33 +4557,6 @@ SDValue AArch64TargetLowering::LowerFP_EXTEND(SDValue Op,
     if (Op0VT == MVT::bf16)
       return DAG.getNode(ISD::FP_EXTEND, SDLoc(Op), VT,
                          DAG.getNode(ISD::FP_EXTEND, SDLoc(Op), MVT::f32, Op0));
-    return SDValue();
-  }
-
-  if (VT.getScalarType() == MVT::f32) {
-    // FP16->FP32 extends are legal for v32 and v4f32.
-    if (Op0VT.getScalarType() == MVT::f16)
-      return Op;
-    if (Op0VT.getScalarType() == MVT::bf16) {
-      SDLoc DL(Op);
-      EVT IVT = VT.changeTypeToInteger();
-      if (!Op0VT.isVector()) {
-        Op0 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4bf16, Op0);
-        IVT = MVT::v4i32;
-      }
-
-      EVT Op0IVT = Op0.getValueType().changeTypeToInteger();
-      SDValue Ext =
-          DAG.getNode(ISD::ANY_EXTEND, DL, IVT, DAG.getBitcast(Op0IVT, Op0));
-      SDValue Shift =
-          DAG.getNode(ISD::SHL, DL, IVT, Ext, DAG.getConstant(16, DL, IVT));
-      if (!Op0VT.isVector())
-        Shift = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, Shift,
-                            DAG.getConstant(0, DL, MVT::i64));
-      Shift = DAG.getBitcast(VT, Shift);
-      return IsStrict ? DAG.getMergeValues({Shift, Op.getOperand(0)}, DL)
-                      : Shift;
-    }
     return SDValue();
   }
 

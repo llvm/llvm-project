@@ -8513,6 +8513,26 @@ def : InstAlias<"uxtl2 $dst.2d, $src1.4s",
                 (USHLLv4i32_shift V128:$dst, V128:$src1, 0)>;
 }
 
+// fpextend from bf16 to f32 is just a shift left by 16
+let Predicates = [HasNEON] in {
+def : Pat<(f32 (any_fpextend (bf16 FPR16:$Rn))),
+          (f32 (EXTRACT_SUBREG
+            (v4i32 (SHLLv4i16 (v4i16 (SUBREG_TO_REG (i64 0), (bf16 FPR16:$Rn), hsub)))),
+            ssub))>;
+def : Pat<(v4f32 (any_fpextend (v4bf16 V64:$Rn))),
+          (SHLLv4i16 V64:$Rn)>;
+def : Pat<(v4f32 (any_fpextend (extract_high_v8bf16 (v8bf16 V128:$Rn)))),
+          (SHLLv8i16 V128:$Rn)>;
+}
+// Fallback pattern for when we don't have NEON
+def : Pat<(f32 (any_fpextend (bf16 FPR16:$Rn))),
+          (f32 (COPY_TO_REGCLASS
+            (i32 (UBFMWri (COPY_TO_REGCLASS
+                            (f32 (SUBREG_TO_REG (i32 0), (bf16 FPR16:$Rn), hsub)),
+                            GPR32),
+                          (i64 16), (i64 15))),
+            FPR32))>;
+
 def abs_f16 :
   OutPatFrag<(ops node:$Rn),
              (EXTRACT_SUBREG (f32 (COPY_TO_REGCLASS
