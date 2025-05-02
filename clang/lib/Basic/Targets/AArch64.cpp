@@ -800,8 +800,11 @@ AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts,
     return std::pair<unsigned, unsigned>(
         LangOpts.VScaleMin ? LangOpts.VScaleMin : 1, LangOpts.VScaleMax);
 
-  if (hasFeature("sve") || (IsArmStreamingFunction && hasFeature("sme")) ||
-      (FeatureMap && FeatureMap->lookup("sve")))
+  if (hasFeature("sve") || (FeatureMap && (FeatureMap->lookup("sve"))))
+    return std::pair<unsigned, unsigned>(1, 16);
+
+  if (IsArmStreamingFunction &&
+      (hasFeature("sme") || (FeatureMap && (FeatureMap->lookup("sme")))))
     return std::pair<unsigned, unsigned>(1, 16);
 
   return std::nullopt;
