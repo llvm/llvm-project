@@ -2913,7 +2913,7 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
         if (TypoCorrection Corrected = SemaRef.CorrectTypo(
                 DeclarationNameInfo(FieldName, D->getFieldLoc()),
                 Sema::LookupMemberName, /*Scope=*/nullptr, /*SS=*/nullptr, CCC,
-                Sema::CTK_ErrorRecovery, RD)) {
+                CorrectTypoKind::ErrorRecovery, RD)) {
           SemaRef.diagnoseTypo(
               Corrected,
               SemaRef.PDiag(diag::err_field_designator_unknown_suggest)

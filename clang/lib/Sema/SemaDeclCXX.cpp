@@ -4521,8 +4521,9 @@ Sema::BuildMemInitializer(Decl *ConstructorD,
       TypoCorrection Corr;
       MemInitializerValidatorCCC CCC(ClassDecl);
       if (R.empty() && BaseType.isNull() &&
-          (Corr = CorrectTypo(R.getLookupNameInfo(), R.getLookupKind(), S, &SS,
-                              CCC, CTK_ErrorRecovery, ClassDecl))) {
+          (Corr =
+               CorrectTypo(R.getLookupNameInfo(), R.getLookupKind(), S, &SS,
+                           CCC, CorrectTypoKind::ErrorRecovery, ClassDecl))) {
         if (FieldDecl *Member = Corr.getCorrectionDeclAs<FieldDecl>()) {
           // We have found a non-static data member with a similar
           // name to what was typed; complain and initialize that
@@ -12399,7 +12400,7 @@ static bool TryNamespaceTypoCorrection(Sema &S, LookupResult &R, Scope *Sc,
   NamespaceValidatorCCC CCC{};
   if (TypoCorrection Corrected =
           S.CorrectTypo(R.getLookupNameInfo(), R.getLookupKind(), Sc, &SS, CCC,
-                        Sema::CTK_ErrorRecovery)) {
+                        CorrectTypoKind::ErrorRecovery)) {
     // Generally we find it is confusing more than helpful to diagnose the
     // invisible namespace.
     // See https://github.com/llvm/llvm-project/issues/73893.
@@ -13193,7 +13194,7 @@ NamedDecl *Sema::BuildUsingDeclaration(
                           dyn_cast<CXXRecordDecl>(CurContext));
     if (TypoCorrection Corrected =
             CorrectTypo(R.getLookupNameInfo(), R.getLookupKind(), S, &SS, CCC,
-                        CTK_ErrorRecovery)) {
+                        CorrectTypoKind::ErrorRecovery)) {
       // We reject candidates where DroppedSpecifier == true, hence the
       // literal '0' below.
       diagnoseTypo(Corrected, PDiag(diag::err_no_member_suggest)

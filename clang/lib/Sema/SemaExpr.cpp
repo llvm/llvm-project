@@ -2546,12 +2546,12 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
           emitEmptyLookupTypoDiagnostic(TC, *this, SS, Name, NameRange,
                                         diagnostic, diagnostic_suggest);
         },
-        nullptr, CTK_ErrorRecovery, LookupCtx);
+        nullptr, CorrectTypoKind::ErrorRecovery, LookupCtx);
     if (*Out)
       return true;
-  } else if (S && (Corrected =
-                       CorrectTypo(R.getLookupNameInfo(), R.getLookupKind(), S,
-                                   &SS, CCC, CTK_ErrorRecovery, LookupCtx))) {
+  } else if (S && (Corrected = CorrectTypo(
+                       R.getLookupNameInfo(), R.getLookupKind(), S, &SS, CCC,
+                       CorrectTypoKind::ErrorRecovery, LookupCtx))) {
     std::string CorrectedStr(Corrected.getAsString(getLangOpts()));
     bool DroppedSpecifier =
         Corrected.WillReplaceSpecifier() && Name.getAsString() == CorrectedStr;
@@ -5829,7 +5829,7 @@ static TypoCorrection TryTypoCorrectionForCall(Sema &S, Expr *Fn,
   if (TypoCorrection Corrected = S.CorrectTypo(
           DeclarationNameInfo(FuncName, NameLoc), Sema::LookupOrdinaryName,
           S.getScopeForContext(S.CurContext), nullptr, CCC,
-          Sema::CTK_ErrorRecovery)) {
+          CorrectTypoKind::ErrorRecovery)) {
     if (NamedDecl *ND = Corrected.getFoundDecl()) {
       if (Corrected.isOverloaded()) {
         OverloadCandidateSet OCS(NameLoc, OverloadCandidateSet::CSK_Normal);
