@@ -804,6 +804,20 @@ enum class CorrectTypoKind {
   ErrorRecovery // CorrectTypo used in normal error recovery.
 };
 
+enum class OverloadKind {
+  /// This is a legitimate overload: the existing declarations are
+  /// functions or function templates with different signatures.
+  Overload,
+
+  /// This is not an overload because the signature exactly matches
+  /// an existing declaration.
+  Match,
+
+  /// This is not an overload because the lookup results contain a
+  /// non-function.
+  NonFunction
+};
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -9987,28 +10001,14 @@ public:
   /// if Sema is already doing so, which would cause infinite recursions.
   bool IsBuildingRecoveryCallExpr;
 
-  enum OverloadKind {
-    /// This is a legitimate overload: the existing declarations are
-    /// functions or function templates with different signatures.
-    Ovl_Overload,
-
-    /// This is not an overload because the signature exactly matches
-    /// an existing declaration.
-    Ovl_Match,
-
-    /// This is not an overload because the lookup results contain a
-    /// non-function.
-    Ovl_NonFunction
-  };
-
   /// Determine whether the given New declaration is an overload of the
-  /// declarations in Old. This routine returns Ovl_Match or Ovl_NonFunction if
-  /// New and Old cannot be overloaded, e.g., if New has the same signature as
-  /// some function in Old (C++ 1.3.10) or if the Old declarations aren't
-  /// functions (or function templates) at all. When it does return Ovl_Match or
-  /// Ovl_NonFunction, MatchedDecl will point to the decl that New cannot be
-  /// overloaded with. This decl may be a UsingShadowDecl on top of the
-  /// underlying declaration.
+  /// declarations in Old. This routine returns OverloadKind::Match or
+  /// OverloadKind::NonFunction if New and Old cannot be overloaded, e.g., if
+  /// New has the same signature as some function in Old (C++ 1.3.10) or if the
+  /// Old declarations aren't functions (or function templates) at all. When it
+  /// does return OverloadKind::Match or OverloadKind::NonFunction, MatchedDecl
+  /// will point to the decl that New cannot be overloaded with. This decl may
+  /// be a UsingShadowDecl on top of the underlying declaration.
   ///
   /// Example: Given the following input:
   ///
@@ -10021,14 +10021,15 @@ public:
   ///
   /// When we process #2, Old contains only the FunctionDecl for #1. By
   /// comparing the parameter types, we see that #1 and #2 are overloaded (since
-  /// they have different signatures), so this routine returns Ovl_Overload;
-  /// MatchedDecl is unchanged.
+  /// they have different signatures), so this routine returns
+  /// OverloadKind::Overload; MatchedDecl is unchanged.
   ///
   /// When we process #3, Old is an overload set containing #1 and #2. We
   /// compare the signatures of #3 to #1 (they're overloaded, so we do nothing)
   /// and then #3 to #2. Since the signatures of #3 and #2 are identical (return
   /// types of functions are not part of the signature), IsOverload returns
-  /// Ovl_Match and MatchedDecl will be set to point to the FunctionDecl for #2.
+  /// OverloadKind::Match and MatchedDecl will be set to point to the
+  /// FunctionDecl for #2.
   ///
   /// 'NewIsUsingShadowDecl' indicates that 'New' is being introduced into a
   /// class by a using declaration. The rules for whether to hide shadow

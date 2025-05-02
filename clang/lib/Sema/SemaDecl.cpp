@@ -12032,15 +12032,15 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
       MayNeedOverloadableChecks = true;
       switch (CheckOverload(S, NewFD, Previous, OldDecl,
                             /*NewIsUsingDecl*/ false)) {
-      case Ovl_Match:
+      case OverloadKind::Match:
         Redeclaration = true;
         break;
 
-      case Ovl_NonFunction:
+      case OverloadKind::NonFunction:
         Redeclaration = true;
         break;
 
-      case Ovl_Overload:
+      case OverloadKind::Overload:
         Redeclaration = false;
         break;
       }
