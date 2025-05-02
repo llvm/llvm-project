@@ -1327,33 +1327,42 @@ func.func @test_if_tensor_list_size(%arg0 : tensor<i1>) {
   %0 = "tosa.const"() {values = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>
   // expected-error@+1 {{'tosa.cond_if' op failed level check for MAX_TENSOR_LIST_SIZE: inputs}}
   %1 = "tosa.cond_if"(%arg0,   // condition
-                  %0, %0, %0, %0, %0, %0, %0, %0,
-                  %0, %0, %0, %0, %0, %0, %0, %0,
-                  %0, %0, %0, %0, %0, %0, %0, %0,
-                  %0, %0, %0, %0, %0, %0, %0, %0,
-                  %0, %0, %0, %0, %0, %0, %0, %0,
-                  %0, %0, %0, %0, %0, %0, %0, %0,
-                  %0, %0, %0, %0, %0, %0, %0, %0,
-                  %0, %0, %0, %0, %0, %0, %0, %0,
-                  %0) ({
-  ^bb0(%arg3: tensor<1xi32>):
-    "tosa.yield"(%arg3) : (tensor<1xi32>) -> ()
+                  %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
+                  %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
+                  %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
+                  %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
+                  %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
+                  %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
+                  %0, %0, %0, %0, %0) ({
+  ^bb0(%00: tensor<1xi32>, %01: tensor<1xi32>, %02: tensor<1xi32>, %03: tensor<1xi32>, %04: tensor<1xi32>, %05: tensor<1xi32>, %06: tensor<1xi32>, %07: tensor<1xi32>, %08: tensor<1xi32>, %09: tensor<1xi32>,
+       %10: tensor<1xi32>, %11: tensor<1xi32>, %12: tensor<1xi32>, %13: tensor<1xi32>, %14: tensor<1xi32>, %15: tensor<1xi32>, %16: tensor<1xi32>, %17: tensor<1xi32>, %18: tensor<1xi32>, %19: tensor<1xi32>,
+       %20: tensor<1xi32>, %21: tensor<1xi32>, %22: tensor<1xi32>, %23: tensor<1xi32>, %24: tensor<1xi32>, %25: tensor<1xi32>, %26: tensor<1xi32>, %27: tensor<1xi32>, %28: tensor<1xi32>, %29: tensor<1xi32>,
+       %30: tensor<1xi32>, %31: tensor<1xi32>, %32: tensor<1xi32>, %33: tensor<1xi32>, %34: tensor<1xi32>, %35: tensor<1xi32>, %36: tensor<1xi32>, %37: tensor<1xi32>, %38: tensor<1xi32>, %39: tensor<1xi32>,
+       %40: tensor<1xi32>, %41: tensor<1xi32>, %42: tensor<1xi32>, %43: tensor<1xi32>, %44: tensor<1xi32>, %45: tensor<1xi32>, %46: tensor<1xi32>, %47: tensor<1xi32>, %48: tensor<1xi32>, %49: tensor<1xi32>,
+       %50: tensor<1xi32>, %51: tensor<1xi32>, %52: tensor<1xi32>, %53: tensor<1xi32>, %54: tensor<1xi32>, %55: tensor<1xi32>, %56: tensor<1xi32>, %57: tensor<1xi32>, %58: tensor<1xi32>, %59: tensor<1xi32>,
+       %60: tensor<1xi32>, %61: tensor<1xi32>, %62: tensor<1xi32>, %63: tensor<1xi32>, %64: tensor<1xi32>
+   ):
+    "tosa.yield"(%64) : (tensor<1xi32>) -> ()
   },  {
-  ^bb0(%arg3: tensor<1xi32>):
-    "tosa.yield"(%arg3) : (tensor<1xi32>) -> ()
+  ^bb0(%00: tensor<1xi32>, %01: tensor<1xi32>, %02: tensor<1xi32>, %03: tensor<1xi32>, %04: tensor<1xi32>, %05: tensor<1xi32>, %06: tensor<1xi32>, %07: tensor<1xi32>, %08: tensor<1xi32>, %09: tensor<1xi32>,
+       %10: tensor<1xi32>, %11: tensor<1xi32>, %12: tensor<1xi32>, %13: tensor<1xi32>, %14: tensor<1xi32>, %15: tensor<1xi32>, %16: tensor<1xi32>, %17: tensor<1xi32>, %18: tensor<1xi32>, %19: tensor<1xi32>,
+       %20: tensor<1xi32>, %21: tensor<1xi32>, %22: tensor<1xi32>, %23: tensor<1xi32>, %24: tensor<1xi32>, %25: tensor<1xi32>, %26: tensor<1xi32>, %27: tensor<1xi32>, %28: tensor<1xi32>, %29: tensor<1xi32>,
+       %30: tensor<1xi32>, %31: tensor<1xi32>, %32: tensor<1xi32>, %33: tensor<1xi32>, %34: tensor<1xi32>, %35: tensor<1xi32>, %36: tensor<1xi32>, %37: tensor<1xi32>, %38: tensor<1xi32>, %39: tensor<1xi32>,
+       %40: tensor<1xi32>, %41: tensor<1xi32>, %42: tensor<1xi32>, %43: tensor<1xi32>, %44: tensor<1xi32>, %45: tensor<1xi32>, %46: tensor<1xi32>, %47: tensor<1xi32>, %48: tensor<1xi32>, %49: tensor<1xi32>,
+       %50: tensor<1xi32>, %51: tensor<1xi32>, %52: tensor<1xi32>, %53: tensor<1xi32>, %54: tensor<1xi32>, %55: tensor<1xi32>, %56: tensor<1xi32>, %57: tensor<1xi32>, %58: tensor<1xi32>, %59: tensor<1xi32>,
+       %60: tensor<1xi32>, %61: tensor<1xi32>, %62: tensor<1xi32>, %63: tensor<1xi32>, %64: tensor<1xi32>
+   ):
+    "tosa.yield"(%01) : (tensor<1xi32>) -> ()
   }) : (
-                    tensor<i1>,
-                    tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
-                    tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
-                    tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
-                    tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
-                    tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
-                    tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
-                    tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
-                    tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
-                    tensor<1xi32>
-                  ) -> tensor<1xi32>
-
+       tensor<i1>,
+       tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
+       tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
+       tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
+       tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
+       tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
+       tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
+       tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>
+     ) -> tensor<1xi32>
   return
 }
 
@@ -1361,27 +1370,54 @@ func.func @test_if_tensor_list_size(%arg0 : tensor<i1>) {
 
 // CHECK-LABEL: test_if_tensor_list_size_outputs
 func.func @test_if_tensor_list_size_outputs(%arg0 : tensor<i1>) {
-  %0 = "tosa.const"() {values = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>
+  %cst_0 = "tosa.const"() {values = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>
 
   // expected-error@+1 {{'tosa.cond_if' op failed level check for MAX_TENSOR_LIST_SIZE: outputs}}
-  %r:65 = "tosa.cond_if"(%arg0) ({
-  ^bb0(%arg3: tensor<1xi32>):
-    "tosa.yield"(%arg3) : (tensor<1xi32>) -> ()
+  %r:65 = "tosa.cond_if"(%arg0, %cst_0) ({
+  ^bb0(%0: tensor<1xi32>):
+    "tosa.yield"(%0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
+                 %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
+                 %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
+                 %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
+                 %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
+                 %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
+                 %0, %0, %0, %0, %0
+                ) : (
+      tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
+      tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
+      tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
+      tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
+      tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
+      tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
+      tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>
+    ) -> ()
   },  {
-  ^bb0(%arg3: tensor<1xi32>):
-    "tosa.yield"(%arg3) : (tensor<1xi32>) -> ()
-  }) : (tensor<i1>) -> (
-                    tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
-                    tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
-                    tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
-                    tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
-                    tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
-                    tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
-                    tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
-                    tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
-                    tensor<1xi32>
-                  )
-
+  ^bb0(%0: tensor<1xi32>):
+    "tosa.yield"(%0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
+                 %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
+                 %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
+                 %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
+                 %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
+                 %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
+                 %0, %0, %0, %0, %0
+                ) : (
+      tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
+      tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
+      tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
+      tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
+      tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
+      tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
+      tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>
+    ) -> ()
+  }) : (tensor<i1>, tensor<1xi32>) -> (
+      tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
+      tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
+      tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
+      tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
+      tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
+      tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
+      tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>
+    )
   return
 }
 
@@ -1391,25 +1427,57 @@ func.func @test_if_tensor_list_size_outputs(%arg0 : tensor<i1>) {
 func.func @test_while_tensor_list_size(%arg0: tensor<1x1x1x1x1x1x1xf32>, %arg1: tensor<1xi32>) {
   %0 = "tosa.const"() {values = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>
   // expected-error@+1 {{'tosa.while_loop' op failed level check for MAX_TENSOR_LIST_SIZE: inputs}}
-  %1:2 = "tosa.while_loop"(%0, %arg0,
-                  %0, %0, %0, %0, %0, %0, %0, %0,
-                  %0, %0, %0, %0, %0, %0, %0, %0,
-                  %0, %0, %0, %0, %0, %0, %0, %0,
-                  %0, %0, %0, %0, %0, %0, %0, %0,
-                  %0, %0, %0, %0, %0, %0, %0, %0,
-                  %0, %0, %0, %0, %0, %0, %0, %0,
-                  %0, %0, %0, %0, %0, %0, %0, %0,
-                  %0, %0, %0, %0, %0, %0, %0
+  %1:65 = "tosa.while_loop"(%0, %arg0,
+                  %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
+                  %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
+                  %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
+                  %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
+                  %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
+                  %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
+                  %0, %0, %0
   ) ({
-  ^bb0(%arg3: tensor<1xi32>, %arg4: tensor<1x1x1x1x1x1x1xf32>):
+  ^bb0(%arg3: tensor<1xi32>, %arg4: tensor<1x1x1x1x1x1x1xf32>,
+       %00: tensor<1xi32>, %01: tensor<1xi32>, %02: tensor<1xi32>, %03: tensor<1xi32>, %04: tensor<1xi32>, %05: tensor<1xi32>, %06: tensor<1xi32>, %07: tensor<1xi32>, %08: tensor<1xi32>, %09: tensor<1xi32>,
+       %10: tensor<1xi32>, %11: tensor<1xi32>, %12: tensor<1xi32>, %13: tensor<1xi32>, %14: tensor<1xi32>, %15: tensor<1xi32>, %16: tensor<1xi32>, %17: tensor<1xi32>, %18: tensor<1xi32>, %19: tensor<1xi32>,
+       %20: tensor<1xi32>, %21: tensor<1xi32>, %22: tensor<1xi32>, %23: tensor<1xi32>, %24: tensor<1xi32>, %25: tensor<1xi32>, %26: tensor<1xi32>, %27: tensor<1xi32>, %28: tensor<1xi32>, %29: tensor<1xi32>,
+       %30: tensor<1xi32>, %31: tensor<1xi32>, %32: tensor<1xi32>, %33: tensor<1xi32>, %34: tensor<1xi32>, %35: tensor<1xi32>, %36: tensor<1xi32>, %37: tensor<1xi32>, %38: tensor<1xi32>, %39: tensor<1xi32>,
+       %40: tensor<1xi32>, %41: tensor<1xi32>, %42: tensor<1xi32>, %43: tensor<1xi32>, %44: tensor<1xi32>, %45: tensor<1xi32>, %46: tensor<1xi32>, %47: tensor<1xi32>, %48: tensor<1xi32>, %49: tensor<1xi32>,
+       %50: tensor<1xi32>, %51: tensor<1xi32>, %52: tensor<1xi32>, %53: tensor<1xi32>, %54: tensor<1xi32>, %55: tensor<1xi32>, %56: tensor<1xi32>, %57: tensor<1xi32>, %58: tensor<1xi32>, %59: tensor<1xi32>,
+       %60: tensor<1xi32>, %61: tensor<1xi32>, %62: tensor<1xi32>
+  ):
     %2 = "tosa.greater_equal"(%arg3, %arg1) : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi1>
     %3 = "tosa.logical_not"(%2) : (tensor<1xi1>) -> tensor<1xi1>
     "tosa.yield"(%3) : (tensor<1xi1>) -> ()
   },  {
-  ^bb0(%arg3: tensor<i32>, %arg4: tensor<1x1x1x1x1x1x1xf32>):
-    %2 = "tosa.const"() {values = dense<1> : tensor<i32>} : () -> tensor<i32>
-    %3 = "tosa.add"(%arg3, %2) : (tensor<i32>, tensor<i32>) -> tensor<i32>
-    "tosa.yield"(%3, %arg4) : (tensor<i32>, tensor<1x1x1x1x1x1x1xf32>) -> ()
+  ^bb0(%arg3: tensor<1xi32>, %arg4: tensor<1x1x1x1x1x1x1xf32>,
+       %00: tensor<1xi32>, %01: tensor<1xi32>, %02: tensor<1xi32>, %03: tensor<1xi32>, %04: tensor<1xi32>, %05: tensor<1xi32>, %06: tensor<1xi32>, %07: tensor<1xi32>, %08: tensor<1xi32>, %09: tensor<1xi32>,
+       %10: tensor<1xi32>, %11: tensor<1xi32>, %12: tensor<1xi32>, %13: tensor<1xi32>, %14: tensor<1xi32>, %15: tensor<1xi32>, %16: tensor<1xi32>, %17: tensor<1xi32>, %18: tensor<1xi32>, %19: tensor<1xi32>,
+       %20: tensor<1xi32>, %21: tensor<1xi32>, %22: tensor<1xi32>, %23: tensor<1xi32>, %24: tensor<1xi32>, %25: tensor<1xi32>, %26: tensor<1xi32>, %27: tensor<1xi32>, %28: tensor<1xi32>, %29: tensor<1xi32>,
+       %30: tensor<1xi32>, %31: tensor<1xi32>, %32: tensor<1xi32>, %33: tensor<1xi32>, %34: tensor<1xi32>, %35: tensor<1xi32>, %36: tensor<1xi32>, %37: tensor<1xi32>, %38: tensor<1xi32>, %39: tensor<1xi32>,
+       %40: tensor<1xi32>, %41: tensor<1xi32>, %42: tensor<1xi32>, %43: tensor<1xi32>, %44: tensor<1xi32>, %45: tensor<1xi32>, %46: tensor<1xi32>, %47: tensor<1xi32>, %48: tensor<1xi32>, %49: tensor<1xi32>,
+       %50: tensor<1xi32>, %51: tensor<1xi32>, %52: tensor<1xi32>, %53: tensor<1xi32>, %54: tensor<1xi32>, %55: tensor<1xi32>, %56: tensor<1xi32>, %57: tensor<1xi32>, %58: tensor<1xi32>, %59: tensor<1xi32>,
+       %60: tensor<1xi32>, %61: tensor<1xi32>, %62: tensor<1xi32>
+  ):
+    %2 = "tosa.const"() {values = dense<1> : tensor<1xi32>} : () -> tensor<1xi32>
+    %3 = "tosa.add"(%arg3, %2) : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
+    "tosa.yield"(%3, %arg4,
+                 %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
+                 %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
+                 %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
+                 %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
+                 %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
+                 %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
+                 %0, %0, %0
+                ) : (
+      tensor<1xi32>, tensor<1x1x1x1x1x1x1xf32>,
+      tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
+      tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
+      tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
+      tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
+      tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
+      tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
+      tensor<1xi32>, tensor<1xi32>, tensor<1xi32>
+    ) -> ()
   }) : (tensor<1xi32>, tensor<1x1x1x1x1x1x1xf32>,
                     tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
                     tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
@@ -1419,28 +1487,7 @@ func.func @test_while_tensor_list_size(%arg0: tensor<1x1x1x1x1x1x1xf32>, %arg1: 
                     tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
                     tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
                     tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>
-  ) -> (tensor<i32>, tensor<1x1x1x1x1x1x1xf32>)
-
-  return
-}
-
-// -----
-
-// CHECK-LABEL: test_while_tensor_list_size_outputs
-func.func @test_while_tensor_list_size_outputs(%arg0: tensor<1x1x1x1x1x1x1xf32>, %arg1: tensor<1xi32>) {
-  %0 = "tosa.const"() {values = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>
-  // expected-error@+1 {{'tosa.while_loop' op failed level check for MAX_TENSOR_LIST_SIZE: outputs}}
-  %1:65 = "tosa.while_loop"(%0, %arg0) ({
-  ^bb0(%arg3: tensor<1xi32>, %arg4: tensor<1x1x1x1x1x1x1xf32>):
-    %2 = "tosa.greater_equal"(%arg3, %arg1) : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi1>
-    %3 = "tosa.logical_not"(%2) : (tensor<1xi1>) -> tensor<1xi1>
-    "tosa.yield"(%3) : (tensor<1xi1>) -> ()
-  },  {
-  ^bb0(%arg3: tensor<i32>, %arg4: tensor<1x1x1x1x1x1x1xf32>):
-    %2 = "tosa.const"() {values = dense<1> : tensor<i32>} : () -> tensor<i32>
-    %3 = "tosa.add"(%arg3, %2) : (tensor<i32>, tensor<i32>) -> tensor<i32>
-    "tosa.yield"(%3, %arg4) : (tensor<i32>, tensor<1x1x1x1x1x1x1xf32>) -> ()
-  }) : (tensor<1xi32>, tensor<1x1x1x1x1x1x1xf32>) -> ( tensor<i32>, tensor<1x1x1x1x1x1x1xf32>,
+  ) -> (tensor<1xi32>, tensor<1x1x1x1x1x1x1xf32>,
                     tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
                     tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
                     tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
@@ -1453,3 +1500,101 @@ func.func @test_while_tensor_list_size_outputs(%arg0: tensor<1x1x1x1x1x1x1xf32>,
 
   return
 }
+
+// -----
+
+func.func @test_cond_if_max_nested_depth(%arg0: tensor<f32>, %arg1: tensor<f32>, %arg2: tensor<i1>, %arg3: tensor<i1>) -> tensor<f32> {
+  %0 = tosa.cond_if %arg2 -> (tensor<f32>) {
+    %1 = tosa.cond_if %arg3 -> (tensor<f32>) {
+      %2 = tosa.cond_if %arg2 -> (tensor<f32>) {
+        %3 = tosa.cond_if %arg3 -> (tensor<f32>) {
+          %4 = tosa.cond_if %arg2 -> (tensor<f32>) {
+            // expected-error@+1 {{'tosa.cond_if' op failed level check: 6 >= MAX_NESTING}}
+            %5 = tosa.cond_if %arg3 -> (tensor<f32>) {
+              %res = tosa.sub %arg0, %arg1 : (tensor<f32>, tensor<f32>) -> tensor<f32>
+              tosa.yield %res : tensor<f32>
+            } else {
+              tosa.yield %arg0 : tensor<f32>
+            }
+            tosa.yield %5 : tensor<f32>
+          } else {
+            tosa.yield %arg0 : tensor<f32>
+          }
+          tosa.yield %4 : tensor<f32>
+        } else {
+          tosa.yield %arg0 : tensor<f32>
+        }
+        tosa.yield %3 : tensor<f32>
+      } else {
+        tosa.yield %arg0 : tensor<f32>
+      }
+      tosa.yield %2 : tensor<f32>
+    } else {
+      tosa.yield %arg0 : tensor<f32>
+    }
+    tosa.yield %1 : tensor<f32>
+  } else {
+    %res = tosa.sub %arg0, %arg1 : (tensor<f32>, tensor<f32>) -> tensor<f32>
+    tosa.yield %res : tensor<f32>
+  }
+  return %0 : tensor<f32>
+}
+
+// -----
+
+func.func @test_while_loop_max_nested_depth(%arg0: tensor<i32>) {
+  %init_0 = "tosa.const"() {values = dense<0> : tensor<i32>} : () -> tensor<i32>
+  %cst_1 = "tosa.const"() {values = dense<1> : tensor<i32>} : () -> tensor<i32>
+
+  %1:2 = tosa.while_loop (%arg2 = %init_0, %arg3 = %arg0) : (tensor<i32>, tensor<i32>) -> (tensor<i32>, tensor<i32>) {
+    %2 = tosa.greater_equal %arg3, %arg2 : (tensor<i32>, tensor<i32>) -> tensor<i1>
+    tosa.yield %2 : tensor<i1>
+  } do {
+  ^bb0(%arg2: tensor<i32>, %arg2b: tensor<i32>):
+    %1:2 = tosa.while_loop (%arg4 = %init_0, %arg5 = %arg0) : (tensor<i32>, tensor<i32>) -> (tensor<i32>, tensor<i32>) {
+      %2 = tosa.greater_equal %arg5, %arg4 : (tensor<i32>, tensor<i32>) -> tensor<i1>
+      tosa.yield %2 : tensor<i1>
+    } do {
+    ^bb0(%arg4: tensor<i32>, %arg4b: tensor<i32>):
+      %1:2 = tosa.while_loop (%arg6 = %init_0, %arg7 = %arg0) : (tensor<i32>, tensor<i32>) -> (tensor<i32>, tensor<i32>) {
+        %2 = tosa.greater_equal %arg7, %arg6 : (tensor<i32>, tensor<i32>) -> tensor<i1>
+        tosa.yield %2 : tensor<i1>
+      } do {
+      ^bb0(%arg6: tensor<i32>, %arg6b: tensor<i32>):
+        %1:2 = tosa.while_loop (%arg8 = %init_0, %arg9 = %arg0) : (tensor<i32>, tensor<i32>) -> (tensor<i32>, tensor<i32>) {
+          %2 = tosa.greater_equal %arg9, %arg8 : (tensor<i32>, tensor<i32>) -> tensor<i1>
+          tosa.yield %2 : tensor<i1>
+        } do {
+        ^bb0(%arg8: tensor<i32>, %arg8b: tensor<i32>):
+          %1:2 = tosa.while_loop (%arg10 = %init_0, %arg11 = %arg0) : (tensor<i32>, tensor<i32>) -> (tensor<i32>, tensor<i32>) {
+            %2 = tosa.greater_equal %arg11, %arg10 : (tensor<i32>, tensor<i32>) -> tensor<i1>
+            tosa.yield %2 : tensor<i1>
+          } do {
+          ^bb0(%arg10: tensor<i32>, %arg10b: tensor<i32>):
+            // expected-error@+1 {{'tosa.while_loop' op failed level check: 6 >= MAX_NESTING}}
+            %1:2 = tosa.while_loop (%arg12 = %init_0, %arg13 = %arg0) : (tensor<i32>, tensor<i32>) -> (tensor<i32>, tensor<i32>) {
+              %2 = tosa.greater_equal %arg13, %arg12 : (tensor<i32>, tensor<i32>) -> tensor<i1>
+              tosa.yield %2 : tensor<i1>
+            } do {
+            ^bb0(%arg12: tensor<i32>, %arg12b: tensor<i32>):
+              %3 = tosa.add %arg12, %cst_1 : (tensor<i32>, tensor<i32>) -> tensor<i32>
+              tosa.yield %arg2, %3: tensor<i32>, tensor<i32>
+            }
+            %3 = tosa.add %arg10, %cst_1 : (tensor<i32>, tensor<i32>) -> tensor<i32>
+            tosa.yield %arg2, %3: tensor<i32>, tensor<i32>
+          }
+          %3 = tosa.add %arg8, %cst_1 : (tensor<i32>, tensor<i32>) -> tensor<i32>
+          tosa.yield %arg2, %3: tensor<i32>, tensor<i32>
+        }
+        %3 = tosa.add %arg6, %cst_1 : (tensor<i32>, tensor<i32>) -> tensor<i32>
+        tosa.yield %arg2, %3: tensor<i32>, tensor<i32>
+      }
+      %3 = tosa.add %arg4, %cst_1 : (tensor<i32>, tensor<i32>) -> tensor<i32>
+      tosa.yield %arg2, %3: tensor<i32>, tensor<i32>
+    }
+    %3 = tosa.add %arg2, %cst_1 : (tensor<i32>, tensor<i32>) -> tensor<i32>
+    tosa.yield %arg2, %3: tensor<i32>, tensor<i32>
+  }
+  return
+}
+

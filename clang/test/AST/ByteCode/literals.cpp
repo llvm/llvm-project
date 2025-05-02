@@ -1373,6 +1373,14 @@ namespace VolatileReads {
                                                   // both-note {{read of volatile object 'n1'}}
   constexpr int m2b = const_cast<const int&>(n2); // both-error {{constant expression}} \
                                                   // both-note {{read of volatile object 'n2'}}
+
+  struct S {
+    constexpr S(int=0) : i(1) {}
+    int i;
+  };
+  constexpr volatile S vs; // both-note {{here}}
+  static_assert(const_cast<int&>(vs.i), ""); // both-error {{constant expression}} \
+                                             // both-note {{read of volatile object 'vs'}}
 }
 #if __cplusplus >= 201703L
 namespace {

@@ -2388,18 +2388,20 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
       CheckFailed("'vscale_range' maximum must be power-of-two value", V);
   }
 
-  if (Attrs.hasFnAttr("frame-pointer")) {
-    StringRef FP = Attrs.getFnAttr("frame-pointer").getValueAsString();
+  if (Attribute FPAttr = Attrs.getFnAttr("frame-pointer"); FPAttr.isValid()) {
+    StringRef FP = FPAttr.getValueAsString();
     if (FP != "all" && FP != "non-leaf" && FP != "none" && FP != "reserved")
       CheckFailed("invalid value for 'frame-pointer' attribute: " + FP, V);
   }
 
   // Check EVEX512 feature.
-  if (MaxParameterWidth >= 512 && Attrs.hasFnAttr("target-features") &&
-      TT.isX86()) {
-    StringRef TF = Attrs.getFnAttr("target-features").getValueAsString();
-    Check(!TF.contains("+avx512f") || !TF.contains("-evex512"),
-          "512-bit vector arguments require 'evex512' for AVX512", V);
+  if (TT.isX86() && MaxParameterWidth >= 512) {
+    Attribute TargetFeaturesAttr = Attrs.getFnAttr("target-features");
+    if (TargetFeaturesAttr.isValid()) {
+      StringRef TF = TargetFeaturesAttr.getValueAsString();
+      Check(!TF.contains("+avx512f") || !TF.contains("-evex512"),
+            "512-bit vector arguments require 'evex512' for AVX512", V);
+    }
   }
 
   checkUnsignedBaseTenFuncAttr(Attrs, "patchable-function-prefix", V);
@@ -2859,6 +2861,9 @@ void Verifier::visitFunction(const Function &F) {
   Check(!Attrs.hasAttrSomewhere(Attribute::ElementType),
         "Attribute 'elementtype' can only be applied to a callsite.", &F);
 
+  Check(!Attrs.hasFnAttr("aarch64_zt0_undef"),
+        "Attribute 'aarch64_zt0_undef' can only be applied to a callsite.");
+
   if (Attrs.hasFnAttr(Attribute::Naked))
     for (const Argument &Arg : F.args())
       Check(Arg.use_empty(), "cannot use argument of naked function", &Arg);
@@ -2931,8 +2936,6 @@ void Verifier::visitFunction(const Function &F) {
           FT->getParamType(i));
     Check(Arg.getType()->isFirstClassType(),
           "Function arguments must have first-class types!", &Arg);
-    Check(!Arg.getType()->isLabelTy(),
-          "Function argument cannot be of label type!", &Arg, &F);
     if (!IsIntrinsic) {
       Check(!Arg.getType()->isMetadataTy(),
             "Function takes metadata but isn't an intrinsic", &Arg, &F);
@@ -4390,6 +4393,11 @@ void Verifier::visitAllocaInst(AllocaInst &AI) {
     Check(!AI.isArrayAllocation(),
           "swifterror alloca must not be array allocation", &AI);
     verifySwiftErrorValue(&AI);
+  }
+
+  if (TT.isAMDGPU()) {
+    Check(AI.getAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS,
+          "alloca on amdgpu must be in addrspace(5)", &AI);
   }
 
   visitInstruction(AI);

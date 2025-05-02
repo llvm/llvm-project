@@ -23,6 +23,17 @@ namespace rootsig {
 
 // Definition of the various enumerations and flags
 
+enum class DescriptorRangeFlags : unsigned {
+  None = 0,
+  DescriptorsVolatile = 0x1,
+  DataVolatile = 0x2,
+  DataStaticWhileSetAtExecute = 0x4,
+  DataStatic = 0x8,
+  DescriptorsStaticKeepingBufferBoundsChecks = 0x10000,
+  ValidFlags = 0x1000f,
+  ValidSamplerFlags = DescriptorsVolatile,
+};
+
 enum class ShaderVisibility {
   All = 0,
   Vertex = 1,
@@ -49,12 +60,32 @@ struct DescriptorTable {
   uint32_t NumClauses = 0; // The number of clauses in the table
 };
 
+static const uint32_t NumDescriptorsUnbounded = 0xffffffff;
+static const uint32_t DescriptorTableOffsetAppend = 0xffffffff;
 // Models DTClause : CBV | SRV | UAV | Sampler, by collecting like parameters
 using ClauseType = llvm::dxil::ResourceClass;
 struct DescriptorTableClause {
   ClauseType Type;
   Register Reg;
+  uint32_t NumDescriptors = 1;
   uint32_t Space = 0;
+  uint32_t Offset = DescriptorTableOffsetAppend;
+  DescriptorRangeFlags Flags;
+
+  void setDefaultFlags() {
+    switch (Type) {
+    case ClauseType::CBuffer:
+    case ClauseType::SRV:
+      Flags = DescriptorRangeFlags::DataStaticWhileSetAtExecute;
+      break;
+    case ClauseType::UAV:
+      Flags = DescriptorRangeFlags::DataVolatile;
+      break;
+    case ClauseType::Sampler:
+      Flags = DescriptorRangeFlags::None;
+      break;
+    }
+  }
 };
 
 // Models RootElement : DescriptorTable | DescriptorTableClause

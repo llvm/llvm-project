@@ -6,7 +6,8 @@ define <32 x i8> @widen_shuffle_mask_v32i8_to_v16i16(<32 x i8> %a, <32 x i8> %b)
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI0_0)
 ; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI0_0)
-; CHECK-NEXT:    xvshuf.b $xr0, $xr1, $xr0, $xr2
+; CHECK-NEXT:    xvshuf.h $xr2, $xr1, $xr0
+; CHECK-NEXT:    xvori.b $xr0, $xr2, 0
 ; CHECK-NEXT:    ret
     %r = shufflevector <32 x i8> %a, <32 x i8> %b, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 32, i32 33, i32 34, i32 35, i32 24, i32 25, i32 26, i32 27, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 60, i32 61, i32 30, i32 31>
     ret <32 x i8> %r
@@ -17,7 +18,8 @@ define <32 x i8> @widen_shuffle_mask_v32i8_to_v8i32(<32 x i8> %a, <32 x i8> %b) 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI1_0)
 ; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI1_0)
-; CHECK-NEXT:    xvshuf.b $xr0, $xr1, $xr0, $xr2
+; CHECK-NEXT:    xvshuf.w $xr2, $xr1, $xr0
+; CHECK-NEXT:    xvori.b $xr0, $xr2, 0
 ; CHECK-NEXT:    ret
     %r = shufflevector <32 x i8> %a, <32 x i8> %b, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 32, i32 33, i32 34, i32 35, i32 24, i32 25, i32 26, i32 27, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 60, i32 61, i32 62, i32 63>
     ret <32 x i8> %r
@@ -28,7 +30,8 @@ define <32 x i8> @widen_shuffle_mask_v32i8_to_v4i64(<32 x i8> %a, <32 x i8> %b) 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI2_0)
 ; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI2_0)
-; CHECK-NEXT:    xvshuf.b $xr0, $xr1, $xr0, $xr2
+; CHECK-NEXT:    xvshuf.d $xr2, $xr1, $xr0
+; CHECK-NEXT:    xvori.b $xr0, $xr2, 0
 ; CHECK-NEXT:    ret
     %r = shufflevector <32 x i8> %a, <32 x i8> %b, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55>
     ret <32 x i8> %r
@@ -39,7 +42,7 @@ define <16 x i16> @widen_shuffle_mask_v16i16_to_v8i32(<16 x i16> %a, <16 x i16> 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
 ; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI3_0)
-; CHECK-NEXT:    xvshuf.h $xr2, $xr1, $xr0
+; CHECK-NEXT:    xvshuf.w $xr2, $xr1, $xr0
 ; CHECK-NEXT:    xvori.b $xr0, $xr2, 0
 ; CHECK-NEXT:    ret
     %r = shufflevector <16 x i16> %a, <16 x i16> %b, <16 x i32> <i32 0, i32 1, i32 6, i32 7, i32 16, i32 17, i32 2, i32 3, i32 10, i32 11, i32 12, i32 13, i32 24, i32 25, i32 26, i32 27>
@@ -51,7 +54,7 @@ define <16 x i16> @widen_shuffle_mask_v16i16_to_v4i64(<16 x i16> %a, <16 x i16> 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI4_0)
 ; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI4_0)
-; CHECK-NEXT:    xvshuf.h $xr2, $xr1, $xr0
+; CHECK-NEXT:    xvshuf.d $xr2, $xr1, $xr0
 ; CHECK-NEXT:    xvori.b $xr0, $xr2, 0
 ; CHECK-NEXT:    ret
     %r = shufflevector <16 x i16> %a, <16 x i16> %b, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 20, i32 21, i32 22, i32 23, i32 12, i32 13, i32 14, i32 15, i32 28, i32 29, i32 30, i32 31>
@@ -63,7 +66,7 @@ define <8 x i32> @widen_shuffle_mask_v8i32_to_v4i64(<8 x i32> %a, <8 x i32> %b) 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_0)
 ; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI5_0)
-; CHECK-NEXT:    xvshuf.w $xr2, $xr1, $xr0
+; CHECK-NEXT:    xvshuf.d $xr2, $xr1, $xr0
 ; CHECK-NEXT:    xvori.b $xr0, $xr2, 0
 ; CHECK-NEXT:    ret
     %r = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 14, i32 15, i32 6, i32 7>
@@ -73,9 +76,7 @@ define <8 x i32> @widen_shuffle_mask_v8i32_to_v4i64(<8 x i32> %a, <8 x i32> %b) 
 define <32 x i8> @widen_shuffle_mask_v32i8_to_xvpackev_h(<32 x i8> %a, <32 x i8> %b) {
 ; CHECK-LABEL: widen_shuffle_mask_v32i8_to_xvpackev_h:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI6_0)
-; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI6_0)
-; CHECK-NEXT:    xvshuf.b $xr0, $xr1, $xr0, $xr2
+; CHECK-NEXT:    xvpackev.h $xr0, $xr1, $xr0
 ; CHECK-NEXT:    ret
     %r = shufflevector <32 x i8> %a, <32 x i8> %b, <32 x i32> <i32 0, i32 1, i32 32, i32 33, i32 4, i32 5, i32 36, i32 37, i32 8, i32 9, i32 40, i32 41, i32 12, i32 13, i32 44, i32 45, i32 16, i32 17, i32 48, i32 49, i32 20, i32 21, i32 52, i32 53, i32 24, i32 25, i32 56, i32 57, i32 28, i32 29, i32 60, i32 61>
     ret <32 x i8> %r
@@ -84,9 +85,7 @@ define <32 x i8> @widen_shuffle_mask_v32i8_to_xvpackev_h(<32 x i8> %a, <32 x i8>
 define <32 x i8> @widen_shuffle_mask_v32i8_to_xvpackod_h(<32 x i8> %a, <32 x i8> %b) {
 ; CHECK-LABEL: widen_shuffle_mask_v32i8_to_xvpackod_h:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI7_0)
-; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI7_0)
-; CHECK-NEXT:    xvshuf.b $xr0, $xr1, $xr0, $xr2
+; CHECK-NEXT:    xvpackod.h $xr0, $xr1, $xr0
 ; CHECK-NEXT:    ret
     %r = shufflevector <32 x i8> %a, <32 x i8> %b, <32 x i32> <i32 2, i32 3, i32 34, i32 35, i32 6, i32 7, i32 38, i32 39, i32 10, i32 11, i32 42, i32 43, i32 14, i32 15, i32 46, i32 47, i32 18, i32 19, i32 50, i32 51, i32 22, i32 23, i32 54, i32 55, i32 26, i32 27, i32 58, i32 59, i32 30, i32 31, i32 62, i32 63>
     ret <32 x i8> %r
@@ -95,9 +94,7 @@ define <32 x i8> @widen_shuffle_mask_v32i8_to_xvpackod_h(<32 x i8> %a, <32 x i8>
 define <32 x i8> @widen_shuffle_mask_v32i8_to_xvpickev_h(<32 x i8> %a, <32 x i8> %b) {
 ; CHECK-LABEL: widen_shuffle_mask_v32i8_to_xvpickev_h:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI8_0)
-; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI8_0)
-; CHECK-NEXT:    xvshuf.b $xr0, $xr1, $xr0, $xr2
+; CHECK-NEXT:    xvpickev.h $xr0, $xr1, $xr0
 ; CHECK-NEXT:    ret
     %r = shufflevector <32 x i8> %a, <32 x i8> %b, <32 x i32> <i32 0, i32 1, i32 4, i32 5, i32 8, i32 9, i32 12, i32 13, i32 32, i32 33, i32 36, i32 37, i32 40, i32 41, i32 44, i32 45, i32 16, i32 17, i32 20, i32 21, i32 24, i32 25, i32 28, i32 29, i32 48, i32 49, i32 52, i32 53, i32 56, i32 57, i32 60, i32 61>
     ret <32 x i8> %r
@@ -106,9 +103,7 @@ define <32 x i8> @widen_shuffle_mask_v32i8_to_xvpickev_h(<32 x i8> %a, <32 x i8>
 define <32 x i8> @widen_shuffle_mask_v32i8_to_xvpickod_h(<32 x i8> %a, <32 x i8> %b) {
 ; CHECK-LABEL: widen_shuffle_mask_v32i8_to_xvpickod_h:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI9_0)
-; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI9_0)
-; CHECK-NEXT:    xvshuf.b $xr0, $xr1, $xr0, $xr2
+; CHECK-NEXT:    xvpickod.h $xr0, $xr1, $xr0
 ; CHECK-NEXT:    ret
     %r = shufflevector <32 x i8> %a, <32 x i8> %b, <32 x i32> <i32 2, i32 3, i32 6, i32 7, i32 10, i32 11, i32 14, i32 15, i32 34, i32 35, i32 38, i32 39, i32 42, i32 43, i32 46, i32 47, i32 18, i32 19, i32 22, i32 23, i32 26, i32 27, i32 30, i32 31, i32 50, i32 51, i32 54, i32 55, i32 58, i32 59, i32 62, i32 63>
     ret <32 x i8> %r
@@ -117,9 +112,7 @@ define <32 x i8> @widen_shuffle_mask_v32i8_to_xvpickod_h(<32 x i8> %a, <32 x i8>
 define <32 x i8> @widen_shuffle_mask_v32i8_to_xvilvl_h(<32 x i8> %a, <32 x i8> %b) {
 ; CHECK-LABEL: widen_shuffle_mask_v32i8_to_xvilvl_h:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI10_0)
-; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI10_0)
-; CHECK-NEXT:    xvshuf.b $xr0, $xr1, $xr0, $xr2
+; CHECK-NEXT:    xvilvl.h $xr0, $xr1, $xr0
 ; CHECK-NEXT:    ret
     %r = shufflevector <32 x i8> %a, <32 x i8> %b, <32 x i32> <i32 0, i32 1, i32 32, i32 33, i32 2, i32 3, i32 34, i32 35, i32 4, i32 5, i32 36, i32 37, i32 6, i32 7, i32 38, i32 39, i32 16, i32 17, i32 48, i32 49, i32 18, i32 19, i32 50, i32 51, i32 20, i32 21, i32 52, i32 53, i32 22, i32 23, i32 54, i32 55>
     ret <32 x i8> %r
@@ -128,9 +121,7 @@ define <32 x i8> @widen_shuffle_mask_v32i8_to_xvilvl_h(<32 x i8> %a, <32 x i8> %
 define <32 x i8> @widen_shuffle_mask_v32i8_to_xvilvh_h(<32 x i8> %a, <32 x i8> %b) {
 ; CHECK-LABEL: widen_shuffle_mask_v32i8_to_xvilvh_h:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI11_0)
-; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI11_0)
-; CHECK-NEXT:    xvshuf.b $xr0, $xr1, $xr0, $xr2
+; CHECK-NEXT:    xvilvh.h $xr0, $xr1, $xr0
 ; CHECK-NEXT:    ret
     %r = shufflevector <32 x i8> %a, <32 x i8> %b, <32 x i32> <i32 8, i32 9, i32 40, i32 41, i32 10, i32 11, i32 42, i32 43, i32 12, i32 13, i32 44, i32 45, i32 14, i32 15, i32 46, i32 47, i32 24, i32 25, i32 56, i32 57, i32 26, i32 27, i32 58, i32 59, i32 28, i32 29, i32 60, i32 61, i32 30, i32 31, i32 62, i32 63>
     ret <32 x i8> %r

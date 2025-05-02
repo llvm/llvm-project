@@ -84,6 +84,7 @@ Block *DynamicAllocator::allocate(const Descriptor *D, unsigned EvalID,
   ID->IsFieldMutable = false;
   ID->IsConst = false;
   ID->IsInitialized = false;
+  ID->IsVolatile = false;
 
   B->IsDynamic = true;
 

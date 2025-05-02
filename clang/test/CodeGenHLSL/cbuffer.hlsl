@@ -133,11 +133,11 @@ struct D {
 
 // CHECK: @CBStructs.cb = global target("dx.CBuffer", target("dx.Layout", %__cblayout_CBStructs,
 // CHECK-SAME: 246, 0, 16, 32, 64, 144, 238, 240))
-// CHECK: @a = external addrspace(2) global target("dx.Layout", %A, 8, 0), align 8
-// CHECK: @b = external addrspace(2) global target("dx.Layout", %B, 14, 0, 8), align 8
-// CHECK: @c = external addrspace(2) global target("dx.Layout", %C, 24, 0, 16), align 8
-// CHECK: @array_of_A = external addrspace(2) global [5 x target("dx.Layout", %A, 8, 0)], align 8
-// CHECK: @d = external addrspace(2) global target("dx.Layout", %__cblayout_D, 94, 0), align 8
+// CHECK: @a = external addrspace(2) global target("dx.Layout", %A, 8, 0), align 1
+// CHECK: @b = external addrspace(2) global target("dx.Layout", %B, 14, 0, 8), align 1
+// CHECK: @c = external addrspace(2) global target("dx.Layout", %C, 24, 0, 16), align 1
+// CHECK: @array_of_A = external addrspace(2) global [5 x target("dx.Layout", %A, 8, 0)], align 1
+// CHECK: @d = external addrspace(2) global target("dx.Layout", %__cblayout_D, 94, 0), align 1
 // CHECK: @e = external addrspace(2) global half, align 2
 // CHECK: @f = external addrspace(2) global <3 x i16>, align 8
 
@@ -173,10 +173,10 @@ cbuffer CBClasses {
 
 // CHECK: @CBClasses.cb = global target("dx.CBuffer", target("dx.Layout", %__cblayout_CBClasses,
 // CHECK-SAME: 260, 0, 16, 32, 112))
-// CHECK: @k = external addrspace(2) global target("dx.Layout", %K, 4, 0), align 4
-// CHECK: @l = external addrspace(2) global target("dx.Layout", %L, 8, 0, 4), align 4
-// CHECK: @m = external addrspace(2) global target("dx.Layout", %M, 68, 0), align 4
-// CHECK: @ka = external addrspace(2) global [10 x target("dx.Layout", %K, 4, 0)], align 4
+// CHECK: @k = external addrspace(2) global target("dx.Layout", %K, 4, 0), align 1
+// CHECK: @l = external addrspace(2) global target("dx.Layout", %L, 8, 0, 4), align 1
+// CHECK: @m = external addrspace(2) global target("dx.Layout", %M, 68, 0), align 1
+// CHECK: @ka = external addrspace(2) global [10 x target("dx.Layout", %K, 4, 0)], align 1
 
 struct Test {
     float a, b;
@@ -184,13 +184,13 @@ struct Test {
 
 // CHECK: @CBMix.cb = global target("dx.CBuffer", target("dx.Layout", %__cblayout_CBMix,
 // CHECK-SAME: 170, 0, 24, 32, 120, 128, 136, 144, 152, 160, 168))
-// CHECK: @test = external addrspace(2) global [2 x target("dx.Layout", %Test, 8, 0, 4)], align 4
+// CHECK: @test = external addrspace(2) global [2 x target("dx.Layout", %Test, 8, 0, 4)], align 1
 // CHECK: @f1 = external addrspace(2) global float, align 4
 // CHECK: @f2 = external addrspace(2) global [3 x [2 x <2 x float>]], align 8
 // CHECK: @f3 = external addrspace(2) global float, align 4
-// CHECK: @f4 = external addrspace(2) global target("dx.Layout", %anon, 4, 0), align 4
+// CHECK: @f4 = external addrspace(2) global target("dx.Layout", %anon, 4, 0), align 1
 // CHECK: @f5 = external addrspace(2) global double, align 8
-// CHECK: @f6 = external addrspace(2) global target("dx.Layout", %anon.0, 8, 0), align 8
+// CHECK: @f6 = external addrspace(2) global target("dx.Layout", %anon.0, 8, 0), align 1
 // CHECK: @f7 = external addrspace(2) global float, align 4
 // CHECK: @f8 = external addrspace(2) global <1 x double>, align 8
 // CHECK: @f9 = external addrspace(2) global i16, align 2
@@ -266,13 +266,13 @@ cbuffer CB_C {
   double D4;
 }
 
-// CHECK: define internal void @_init_resource_CBScalars.cb()
+// CHECK: define internal void @_init_buffer_CBScalars.cb()
 // CHECK-NEXT: entry:
 // CHECK-NEXT: %[[HANDLE1:.*]] = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CBScalars, 56, 0, 8, 16, 24, 32, 36, 40, 48))
 // CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.CBuffer_tdx.Layout_s___cblayout_CBScalarss_56_0_8_16_24_32_36_40_48tt(i32 5, i32 1, i32 1, i32 0, i1 false)
 // CHECK-NEXT: store target("dx.CBuffer", target("dx.Layout", %__cblayout_CBScalars, 56, 0, 8, 16, 24, 32, 36, 40, 48)) %CBScalars.cb_h, ptr @CBScalars.cb, align 4
 
-// CHECK: define internal void @_init_resource_CBArrays.cb()
+// CHECK: define internal void @_init_buffer_CBArrays.cb()
 // CHECK-NEXT: entry:
 // CHECK-NEXT: %[[HANDLE2:.*]] = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CBArrays, 708, 0, 48, 112, 176, 224, 608, 624, 656))
 // CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.CBuffer_tdx.Layout_s___cblayout_CBArrayss_708_0_48_112_176_224_608_624_656tt(i32 0, i32 2, i32 1, i32 0, i1 false)
@@ -287,8 +287,8 @@ void main() {
 
 // CHECK: define internal void @_GLOBAL__sub_I_cbuffer.hlsl()
 // CHECK-NEXT: entry:
-// CHECK-NEXT: call void @_init_resource_CBScalars.cb()
-// CHECK-NEXT: call void @_init_resource_CBArrays.cb()
+// CHECK-NEXT: call void @_init_buffer_CBScalars.cb()
+// CHECK-NEXT: call void @_init_buffer_CBArrays.cb()
 
 // CHECK: !hlsl.cbs = !{![[CBSCALARS:[0-9]+]], ![[CBVECTORS:[0-9]+]], ![[CBARRAYS:[0-9]+]], ![[CBTYPEDEFARRAY:[0-9]+]], ![[CBSTRUCTS:[0-9]+]], ![[CBCLASSES:[0-9]+]],
 // CHECK-SAME: ![[CBMIX:[0-9]+]], ![[CB_A:[0-9]+]], ![[CB_B:[0-9]+]], ![[CB_C:[0-9]+]]}

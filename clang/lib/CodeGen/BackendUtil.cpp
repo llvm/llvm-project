@@ -304,7 +304,7 @@ getCodeModel(const CodeGenOptions &CodeGenOpts) {
                            .Case("kernel", llvm::CodeModel::Kernel)
                            .Case("medium", llvm::CodeModel::Medium)
                            .Case("large", llvm::CodeModel::Large)
-                           .Case("default", ~1u)
+                           .Cases("default", "", ~1u)
                            .Default(~0u);
   assert(CodeModel != ~0u && "invalid code model!");
   if (CodeModel == ~1u)
@@ -617,7 +617,8 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
     return;
   TM.reset(TheTarget->createTargetMachine(Triple, TargetOpts.CPU, FeaturesStr,
                                           Options, RM, CM, OptLevel));
-  TM->setLargeDataThreshold(CodeGenOpts.LargeDataThreshold);
+  if (TM)
+    TM->setLargeDataThreshold(CodeGenOpts.LargeDataThreshold);
 }
 
 bool EmitAssemblyHelper::AddEmitPasses(legacy::PassManager &CodeGenPasses,
@@ -962,7 +963,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
           CodeGenOpts.DIBugsReportFilePath);
     Debugify.registerCallbacks(PIC, MAM);
 
-#if ENABLE_DEBUGLOC_COVERAGE_TRACKING
+#if LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING
     // If we're using debug location coverage tracking, mark all the
     // instructions coming out of the frontend without a DebugLoc as being
     // compiler-generated, to prevent both those instructions and new

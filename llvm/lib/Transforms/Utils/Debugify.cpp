@@ -292,7 +292,7 @@ bool llvm::stripDebugifyMetadata(Module &M) {
 
 bool hasLoc(const Instruction &I) {
   const DILocation *Loc = I.getDebugLoc().get();
-#if ENABLE_DEBUGLOC_COVERAGE_TRACKING
+#if LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING
   DebugLocKind Kind = I.getDebugLoc().getKind();
   return Loc || Kind != DebugLocKind::Normal;
 #else

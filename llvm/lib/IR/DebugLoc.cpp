@@ -11,11 +11,11 @@
 #include "llvm/IR/DebugInfo.h"
 using namespace llvm;
 
-#if ENABLE_DEBUGLOC_COVERAGE_TRACKING
+#if LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING
 DILocAndCoverageTracking::DILocAndCoverageTracking(const DILocation *L)
     : TrackingMDNodeRef(const_cast<DILocation *>(L)),
       Kind(DebugLocKind::Normal) {}
-#endif // ENABLE_DEBUGLOC_COVERAGE_TRACKING
+#endif // LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING
 
 //===----------------------------------------------------------------------===//
 // DebugLoc Implementation

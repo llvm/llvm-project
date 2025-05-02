@@ -1508,6 +1508,7 @@
 {'is_defined': True, 'name': '__ZNSt3__117bad_function_callD0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__117bad_function_callD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__117bad_function_callD2Ev', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNKSt3__117bad_function_call4whatEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__117iostream_categoryEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__117moneypunct_bynameIcLb0EE4initEPKc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__117moneypunct_bynameIcLb1EE4initEPKc', 'type': 'FUNC'}
