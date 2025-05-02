@@ -5697,7 +5697,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
 
   if (Tok.is(tok::l_brace) && TUK == TagUseKind::Definition) {
     Decl *D = SkipBody.CheckSameAsPrevious ? SkipBody.New : TagDecl;
-    ParseEnumBody(StartLoc, D);
+    ParseEnumBody(StartLoc, D, &SkipBody);
     if (SkipBody.CheckSameAsPrevious &&
         !Actions.ActOnDuplicateDefinition(getCurScope(), TagDecl, SkipBody)) {
       DS.SetTypeSpecError();
@@ -5722,7 +5722,8 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
 ///       enumeration-constant:
 ///         identifier
 ///
-void Parser::ParseEnumBody(SourceLocation StartLoc, Decl *EnumDecl) {
+void Parser::ParseEnumBody(SourceLocation StartLoc, Decl *EnumDecl,
+                           SkipBodyInfo *SkipBody) {
   // Enter the scope of the enum body and start the definition.
   ParseScope EnumScope(this, Scope::DeclScope | Scope::EnumScope);
   Actions.ActOnTagStartDefinition(getCurScope(), EnumDecl);
@@ -5780,7 +5781,7 @@ void Parser::ParseEnumBody(SourceLocation StartLoc, Decl *EnumDecl) {
     // Install the enumerator constant into EnumDecl.
     Decl *EnumConstDecl = Actions.ActOnEnumConstant(
         getCurScope(), EnumDecl, LastEnumConstDecl, IdentLoc, Ident, attrs,
-        EqualLoc, AssignedVal.get());
+        EqualLoc, AssignedVal.get(), SkipBody);
     EnumAvailabilityDiags.back().done();
 
     EnumConstantDecls.push_back(EnumConstDecl);

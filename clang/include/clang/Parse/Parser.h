@@ -2579,7 +2579,8 @@ private:
   void ParseEnumSpecifier(SourceLocation TagLoc, DeclSpec &DS,
                           const ParsedTemplateInfo &TemplateInfo,
                           AccessSpecifier AS, DeclSpecContext DSC);
-  void ParseEnumBody(SourceLocation StartLoc, Decl *TagDecl);
+  void ParseEnumBody(SourceLocation StartLoc, Decl *TagDecl,
+                     SkipBodyInfo *SkipBody = nullptr);
   void ParseStructUnionBody(SourceLocation StartLoc, DeclSpec::TST TagType,
                             RecordDecl *TagDecl);
 

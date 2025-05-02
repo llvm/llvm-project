@@ -4346,7 +4346,8 @@ public:
   Decl *ActOnEnumConstant(Scope *S, Decl *EnumDecl, Decl *LastEnumConstant,
                           SourceLocation IdLoc, IdentifierInfo *Id,
                           const ParsedAttributesView &Attrs,
-                          SourceLocation EqualLoc, Expr *Val);
+                          SourceLocation EqualLoc, Expr *Val,
+                          SkipBodyInfo *SkipBody = nullptr);
   void ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
                      Decl *EnumDecl, ArrayRef<Decl *> Elements, Scope *S,
                      const ParsedAttributesView &Attr);
