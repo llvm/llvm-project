@@ -4209,10 +4209,6 @@ SDValue AMDGPUTargetLowering::performSrlCombine(SDNode *N,
     }
   }
 
-  // If the shift is exact, the shifted out bits matter.
-  if (N->getFlags().hasExact())
-    return SDValue();
-
   if (VT.getScalarType() != MVT::i64)
     return SDValue();
 

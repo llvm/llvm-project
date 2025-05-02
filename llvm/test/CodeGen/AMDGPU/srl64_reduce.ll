@@ -45,9 +45,9 @@ define i64 @srl_exact_metadata(i64 %arg0, ptr %arg1.ptr) {
 ; CHECK-LABEL: srl_exact_metadata:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_load_dword v2, v[2:3]
+; CHECK-NEXT:    flat_load_dword v0, v[2:3]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_lshrrev_b64 v[0:1], v2, v[0:1]
+; CHECK-NEXT:    v_lshrrev_b32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %shift.amt = load i64, ptr %arg1.ptr, !range !0, !noundef !{}
@@ -121,8 +121,10 @@ define <2 x i64> @srl_exact_v2_metadata(<2 x i64> %arg0, ptr %arg1.ptr) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_lshrrev_b64 v[0:1], v4, v[0:1]
-; CHECK-NEXT:    v_lshrrev_b64 v[2:3], v6, v[2:3]
+; CHECK-NEXT:    v_lshrrev_b32_e32 v0, v4, v1
+; CHECK-NEXT:    v_lshrrev_b32_e32 v2, v6, v3
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v3, 0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %shift.amt = load <2 x i64>, ptr %arg1.ptr, !range !0, !noundef !{}
   %srl = lshr exact <2 x i64> %arg0, %shift.amt
