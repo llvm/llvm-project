@@ -96,6 +96,55 @@ DXContainerYAML::RootSignatureYamlDesc::create(
        llvm::to_underlying(dxbc::RootDescriptorFlag::Val)) > 0;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
       }
+    } else if (auto *TDV = dyn_cast<object::DirectX::DescriptorTableView<
+                   dxbc::RST0::v0::DescriptorRange>>(&ParamView)) {
+      llvm::Expected<
+          object::DirectX::DescriptorTable<dxbc::RST0::v0::DescriptorRange>>
+          TableOrErr = TDV->read();
+      if (Error E = TableOrErr.takeError())
+        return std::move(E);
+      auto Table = *TableOrErr;
+      NewP.Table.NumRanges = Table.NumRanges;
+      NewP.Table.RangesOffset = Table.RangesOffset;
+
+      for (const auto &R : Table) {
+        DescriptorRangeYaml NewR;
+
+        NewR.OffsetInDescriptorsFromTableStart =
+            R.OffsetInDescriptorsFromTableStart;
+        NewR.NumDescriptors = R.NumDescriptors;
+        NewR.BaseShaderRegister = R.BaseShaderRegister;
+        NewR.RegisterSpace = R.RegisterSpace;
+        NewR.RangeType = R.RangeType;
+
+        NewP.Table.Ranges.push_back(NewR);
+      }
+    } else if (auto *TDV = dyn_cast<object::DirectX::DescriptorTableView<
+                   dxbc::RST0::v1::DescriptorRange>>(&ParamView)) {
+      llvm::Expected<
+          object::DirectX::DescriptorTable<dxbc::RST0::v1::DescriptorRange>>
+          TableOrErr = TDV->read();
+      if (Error E = TableOrErr.takeError())
+        return std::move(E);
+      auto Table = *TableOrErr;
+      NewP.Table.NumRanges = Table.NumRanges;
+      NewP.Table.RangesOffset = Table.RangesOffset;
+
+      for (const auto &R : Table) {
+        DescriptorRangeYaml NewR;
+
+        NewR.OffsetInDescriptorsFromTableStart =
+            R.OffsetInDescriptorsFromTableStart;
+        NewR.NumDescriptors = R.NumDescriptors;
+        NewR.BaseShaderRegister = R.BaseShaderRegister;
+        NewR.RegisterSpace = R.RegisterSpace;
+        NewR.RangeType = R.RangeType;
+#define DESCRIPTOR_RANGE_FLAG(Num, Val)                                        \
+  NewR.Val =                                                                   \
+      (R.Flags & llvm::to_underlying(dxbc::DescriptorRangeFlag::Val)) > 0;
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+        NewP.Table.Ranges.push_back(NewR);
+      }
     }
 
     RootSigDesc.Parameters.push_back(NewP);

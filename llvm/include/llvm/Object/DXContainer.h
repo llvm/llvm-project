@@ -19,11 +19,10 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/Error.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/TargetParser/Triple.h"
-#include <array>
-#include <cstddef>
 #include <variant>
 
 namespace llvm {
@@ -169,6 +168,43 @@ struct RootDescriptorView : RootParameterView {
     return readParameter<dxbc::RST0::v1::RootDescriptor>();
   }
 };
+template <typename T> struct DescriptorTable {
+  uint32_t Version;
+  uint32_t NumRanges;
+  uint32_t RangesOffset;
+  ViewArray<T> Ranges;
+
+  typename ViewArray<T>::iterator begin() const { return Ranges.begin(); }
+
+typename ViewArray<T>::iterator end() const { return Ranges.end(); }
+};
+
+template <typename T> struct DescriptorTableView : RootParameterView {
+  using TemplateType = T;
+
+  static bool classof(const RootParameterView *V) {
+    return (V->Header.ParameterType ==
+            llvm::to_underlying(dxbc::RootParameterType::DescriptorTable));
+  }
+
+  // Define a type alias to access the template parameter from inside classof
+  llvm::Expected<DescriptorTable<T>> read() {
+    const char *Current = ParamData.begin();
+    DescriptorTable<T> Table;
+
+    Table.NumRanges =
+        support::endian::read<uint32_t, llvm::endianness::little>(Current);
+    Current += sizeof(uint32_t);
+
+    Table.RangesOffset =
+        support::endian::read<uint32_t, llvm::endianness::little>(Current);
+    Current += sizeof(uint32_t);
+
+    Table.Ranges.Data =
+        ParamData.substr(2 * sizeof(uint32_t), Table.NumRanges * sizeof(T));
+    return Table;
+  }
+};
 
 static Error parseFailed(const Twine &Msg) {
   return make_error<GenericBinaryError>(Msg.str(), object_error::parse_failed);
@@ -220,6 +256,18 @@ public:
         DataSize = sizeof(dxbc::RST0::v0::RootDescriptor);
       else
         DataSize = sizeof(dxbc::RST0::v1::RootDescriptor);
+      break;
+    case dxbc::RootParameterType::DescriptorTable:
+      uint32_t NumRanges =
+          support::endian::read<uint32_t, llvm::endianness::little>(
+              PartData.begin() + Header.ParameterOffset);
+      if (Version == 1)
+        DataSize = sizeof(dxbc::RST0::v0::DescriptorRange) * NumRanges +
+                   2 * sizeof(uint32_t);
+      else
+        DataSize = sizeof(dxbc::RST0::v1::DescriptorRange) * NumRanges +
+                   2 * sizeof(uint32_t);
+      break;
       break;
     }
     size_t EndOfSectionByte = getNumStaticSamplers() == 0
