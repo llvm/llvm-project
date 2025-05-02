@@ -30,6 +30,9 @@ Streams:
         Data Size:       0x400
         Content :        ''
       - Start of Memory Range: 0x5000
-        Data Size:       0x2000
+        Data Size:       0x500
+        Content :        ''
+      - Start of Memory Range: 0x5500
+        Data Size:       0x500
         Content :        ''
 ...
