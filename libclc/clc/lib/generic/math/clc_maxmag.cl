@@ -6,9 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/math/clc_minmag.h>
+#include <clc/clc_convert.h>
+#include <clc/internal/clc.h>
+#include <clc/math/clc_fabs.h>
+#include <clc/math/clc_fmax.h>
+#include <clc/relational/clc_isequal.h>
+#include <clc/relational/clc_isgreater.h>
+#include <clc/relational/clc_isnan.h>
+#include <clc/relational/clc_select.h>
 
-#define FUNCTION minmag
-#define __CLC_BODY <clc/shared/binary_def.inc>
+#define __CLC_BODY <clc_maxmag.inc>
 #include <clc/math/gentype.inc>
