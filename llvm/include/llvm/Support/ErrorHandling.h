@@ -81,7 +81,8 @@ namespace llvm {
 
 /// Report a fatal error that does not indicate a bug in LLVM, in contexts
 /// where a more sophisticated error reporting mechanism (such as Error/Expected
-/// or DiagnosticInfo) is not supported.
+/// or DiagnosticInfo) is currently not supported, and would be too involved to
+/// introduce at the moment.
 ///
 /// Examples where this function should be used instead of
 /// reportFatalInternalError() include invalid inputs or options, but also
