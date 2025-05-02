@@ -90,8 +90,100 @@ public:
   }
 
   mlir::Attribute VisitCastExpr(CastExpr *e, QualType destType) {
-    cgm.errorNYI(e->getBeginLoc(), "ConstExprEmitter::VisitCastExpr");
-    return {};
+    if (const auto *ece = dyn_cast<ExplicitCastExpr>(e))
+      cgm.errorNYI(e->getBeginLoc(),
+                   "ConstExprEmitter::VisitCastExpr explicit cast");
+    Expr *subExpr = e->getSubExpr();
+
+    switch (e->getCastKind()) {
+    case CK_ToUnion:
+    case CK_AddressSpaceConversion:
+    case CK_ReinterpretMemberPointer:
+    case CK_DerivedToBaseMemberPointer:
+    case CK_BaseToDerivedMemberPointer:
+      cgm.errorNYI(e->getBeginLoc(), "ConstExprEmitter::VisitCastExpr");
+      return {};
+
+    case CK_LValueToRValue:
+    case CK_AtomicToNonAtomic:
+    case CK_NonAtomicToAtomic:
+    case CK_NoOp:
+    case CK_ConstructorConversion:
+      return Visit(subExpr, destType);
+
+    case CK_IntToOCLSampler:
+      llvm_unreachable("global sampler variables are not generated");
+
+    case CK_Dependent:
+      llvm_unreachable("saw dependent cast!");
+
+    case CK_BuiltinFnToFnPtr:
+      llvm_unreachable("builtin functions are handled elsewhere");
+
+    // These will never be supported.
+    case CK_ObjCObjectLValueCast:
+    case CK_ARCProduceObject:
+    case CK_ARCConsumeObject:
+    case CK_ARCReclaimReturnedObject:
+    case CK_ARCExtendBlockObject:
+    case CK_CopyAndAutoreleaseBlockObject:
+      return {};
+
+    // These don't need to be handled here because Evaluate knows how to
+    // evaluate them in the cases where they can be folded.
+    case CK_BitCast:
+    case CK_ToVoid:
+    case CK_Dynamic:
+    case CK_LValueBitCast:
+    case CK_LValueToRValueBitCast:
+    case CK_NullToMemberPointer:
+    case CK_UserDefinedConversion:
+    case CK_CPointerToObjCPointerCast:
+    case CK_BlockPointerToObjCPointerCast:
+    case CK_AnyPointerToBlockPointerCast:
+    case CK_ArrayToPointerDecay:
+    case CK_FunctionToPointerDecay:
+    case CK_BaseToDerived:
+    case CK_DerivedToBase:
+    case CK_UncheckedDerivedToBase:
+    case CK_MemberPointerToBoolean:
+    case CK_VectorSplat:
+    case CK_FloatingRealToComplex:
+    case CK_FloatingComplexToReal:
+    case CK_FloatingComplexToBoolean:
+    case CK_FloatingComplexCast:
+    case CK_FloatingComplexToIntegralComplex:
+    case CK_IntegralRealToComplex:
+    case CK_IntegralComplexToReal:
+    case CK_IntegralComplexToBoolean:
+    case CK_IntegralComplexCast:
+    case CK_IntegralComplexToFloatingComplex:
+    case CK_PointerToIntegral:
+    case CK_PointerToBoolean:
+    case CK_NullToPointer:
+    case CK_IntegralCast:
+    case CK_BooleanToSignedIntegral:
+    case CK_IntegralToPointer:
+    case CK_IntegralToBoolean:
+    case CK_IntegralToFloating:
+    case CK_FloatingToIntegral:
+    case CK_FloatingToBoolean:
+    case CK_FloatingCast:
+    case CK_FloatingToFixedPoint:
+    case CK_FixedPointToFloating:
+    case CK_FixedPointCast:
+    case CK_FixedPointToBoolean:
+    case CK_FixedPointToIntegral:
+    case CK_IntegralToFixedPoint:
+    case CK_ZeroToOCLOpaqueType:
+    case CK_MatrixCast:
+    case CK_HLSLArrayRValue:
+    case CK_HLSLVectorTruncation:
+    case CK_HLSLElementwiseCast:
+    case CK_HLSLAggregateSplatCast:
+      return {};
+    }
+    llvm_unreachable("Invalid CastKind");
   }
 
   mlir::Attribute VisitCXXDefaultInitExpr(CXXDefaultInitExpr *die, QualType t) {
@@ -118,7 +210,28 @@ public:
   }
 
   mlir::Attribute VisitInitListExpr(InitListExpr *ile, QualType t) {
-    cgm.errorNYI(ile->getBeginLoc(), "ConstExprEmitter::VisitInitListExpr");
+    if (ile->isTransparent())
+      return Visit(ile->getInit(0), t);
+
+    if (ile->getType()->isArrayType()) {
+      // If we return null here, the non-constant initializer will take care of
+      // it, but we would prefer to handle it here.
+      assert(!cir::MissingFeatures::constEmitterArrayILE());
+      return {};
+    }
+
+    if (ile->getType()->isRecordType()) {
+      cgm.errorNYI(ile->getBeginLoc(), "ConstExprEmitter: record ILE");
+      return {};
+    }
+
+    if (ile->getType()->isVectorType()) {
+      // If we return null here, the non-constant initializer will take care of
+      // it, but we would prefer to handle it here.
+      assert(!cir::MissingFeatures::constEmitterVectorILE());
+      return {};
+    }
+
     return {};
   }
 
@@ -218,10 +331,31 @@ emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
 //                             ConstantEmitter
 //===----------------------------------------------------------------------===//
 
+mlir::Attribute ConstantEmitter::tryEmitForInitializer(const VarDecl &d) {
+  initializeNonAbstract();
+  return markIfFailed(tryEmitPrivateForVarInit(d));
+}
+
+void ConstantEmitter::finalize(cir::GlobalOp gv) {
+  assert(initializedNonAbstract &&
+         "finalizing emitter that was used for abstract emission?");
+  assert(!finalized && "finalizing emitter multiple times");
+  assert(!gv.isDeclaration());
+#ifndef NDEBUG
+  // Note that we might also be Failed.
+  finalized = true;
+#endif // NDEBUG
+}
+
 mlir::Attribute
 ConstantEmitter::tryEmitAbstractForInitializer(const VarDecl &d) {
   AbstractStateRAII state(*this, true);
   return tryEmitPrivateForVarInit(d);
+}
+
+ConstantEmitter::~ConstantEmitter() {
+  assert((!initializedNonAbstract || finalized || failed) &&
+         "not finalized after being initialized for non-abstract emission");
 }
 
 mlir::Attribute ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &d) {
