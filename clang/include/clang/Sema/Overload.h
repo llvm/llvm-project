@@ -360,6 +360,13 @@ class Sema;
     LLVM_PREFERRED_TYPE(bool)
     unsigned ObjCLifetimeConversionBinding : 1;
 
+    /// Whether the source expression was originally a single element
+    /// braced-init-list. Such a conversion is not a perfect match,
+    /// as we prefer a std::list_initializer constructor over an exact match
+    /// constructor.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned FromBracedInitList : 1;
+
     /// FromType - The type that this conversion is converting
     /// from. This is an opaque pointer that can be translated into a
     /// QualType.
@@ -412,6 +419,12 @@ class Sema;
     bool isPerfect(const ASTContext &C) const {
       if (!isIdentityConversion())
         return false;
+
+      // We might prefer a std::initializer constructor,
+      // so this sequence cannot be perfect
+      if (FromBracedInitList)
+        return false;
+
       // If we are not performing a reference binding, we can skip comparing
       // the types, which has a noticeable performance impact.
       if (!ReferenceBinding) {
