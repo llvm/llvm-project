@@ -38,12 +38,14 @@ def TestFuseAndYieldOp : Op<Transform_Dialect, "test.fuse_and_yield",
     (ins TransformHandleTypeInterface:$target,
         DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_sizes,
         DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_interchange,
+        DefaultValuedOptionalAttr<BoolArrayAttr, "{}">:$divisibility_hint,
         DefaultValuedAttr<BoolAttr, "false">:$use_forall);
   let results = (outs TransformHandleTypeInterface:$transfomed,
       Variadic<TransformHandleTypeInterface>:$loops);
 
   let assemblyFormat = [{
     $target ($tile_sizes^)? (`interchange` $tile_interchange^)?
+    (`divisibility_hint` `=` $divisibility_hint^)?
     (`use_forall` $use_forall^)? attr-dict 
     `:` functional-type(operands, results)
   }];
@@ -91,12 +93,14 @@ def TestTileUsingForallOp : Op<Transform_Dialect, "test.tile_using_forall",
   let arguments = (ins TransformHandleTypeInterface:$target,
                    DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_sizes,
                    DefaultValuedOptionalAttr<I64ArrayAttr, "{}">:$interchange,
+                   DefaultValuedOptionalAttr<BoolArrayAttr, "{}">:$divisibility_hint,
                    OptionalAttr<DeviceMappingArrayAttr>:$mapping);
   let results = (outs TransformHandleTypeInterface:$tiled_op,
                       Variadic<TransformHandleTypeInterface>:$loops);
 
   let assemblyFormat = [{
     $target ($tile_sizes^)? (`interchange` `=` $interchange^)?
+    (`divisibility_hint` `=` $divisibility_hint^)?
     (`mapping` `=` $mapping^)?
     attr-dict `:` functional-type(operands, results)
   }];
@@ -114,12 +118,14 @@ def TestFuseUsingForallOp : Op<Transform_Dialect, "test.fuse_using_forall",
   let arguments = (ins TransformHandleTypeInterface:$root_op,
                    DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_sizes,
                    DefaultValuedOptionalAttr<I64ArrayAttr, "{}">:$interchange,
+                   DefaultValuedOptionalAttr<BoolArrayAttr, "{}">:$divisibility_hint,
                    OptionalAttr<DeviceMappingArrayAttr>:$mapping);
   let results = (outs TransformHandleTypeInterface:$tiled_ops,
                       Variadic<TransformHandleTypeInterface>:$loops);
 
   let assemblyFormat = [{
     $root_op ($tile_sizes^)? (`interchange` $interchange^)?
+    (`divisibility_hint` `=` $divisibility_hint^)?
     (`mapping` `=` $mapping^)?
     attr-dict `:` functional-type(operands, results)
   }];

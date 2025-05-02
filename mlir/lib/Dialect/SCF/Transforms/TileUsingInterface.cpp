@@ -248,7 +248,8 @@ static std::tuple<SmallVector<OpFoldResult>, SmallVector<OpFoldResult>>
 getTileOffsetAndSizes(RewriterBase &rewriter, Location loc, ValueRange ivs,
                       ArrayRef<Range> iterationDomain,
                       ArrayRef<OpFoldResult> tileSizes,
-                      ArrayRef<OpFoldResult> numThreads) {
+                      ArrayRef<OpFoldResult> numThreads,
+                      ArrayRef<bool> divisibilityHint) {
   SmallVector<OpFoldResult> offsets, sizes;
   int materializedLoopNum = 0;
 
@@ -260,8 +261,8 @@ getTileOffsetAndSizes(RewriterBase &rewriter, Location loc, ValueRange ivs,
     offsetExpr = d0 + d1 * s0;
     residualTileSizeExpr = s1 - (d0 + d1 * s0);
 
-    for (auto [nt, tileSize, loopRange] :
-         llvm::zip_equal(numThreads, tileSizes, iterationDomain)) {
+    for (auto [nt, tileSize, loopRange, divHint] : llvm::zip_equal(
+             numThreads, tileSizes, iterationDomain, divisibilityHint)) {
 
       // Non-tiled cases, set the offset and size to the
       // `loopRange.offset/size`.
@@ -280,7 +281,7 @@ getTileOffsetAndSizes(RewriterBase &rewriter, Location loc, ValueRange ivs,
           {loopRange.offset, nt, tileSize, loopRange.size});
 
       OpFoldResult size = tileSize;
-      if (!isConstantIntValue(residualTileSize, 0)) {
+      if (!isConstantIntValue(residualTileSize, 0) && !divHint) {
         OpFoldResult sizeMinusOffsetPerThread =
             affine::makeComposedFoldedAffineApply(rewriter, loc, s0 - d0,
                                                   {offset, loopRange.size});
@@ -299,7 +300,8 @@ getTileOffsetAndSizes(RewriterBase &rewriter, Location loc, ValueRange ivs,
       // `nonNegativeTileSize = affine.max(0, tileSize)`.
       // This `max` can be avoided if
       //  `offset + tileSize * (numThreads - 1) < (ub - lb)`
-      if (!canOmitTileOffsetInBoundsCheck(tileSize, nt, loopRange.size)) {
+      if (!canOmitTileOffsetInBoundsCheck(tileSize, nt, loopRange.size) &&
+          !divHint) {
         AffineMap maxMap =
             AffineMap::getMultiDimIdentityMap(2, rewriter.getContext());
         size = affine::makeComposedFoldedAffineMax(
@@ -311,8 +313,8 @@ getTileOffsetAndSizes(RewriterBase &rewriter, Location loc, ValueRange ivs,
     }
     return {offsets, sizes};
   } else {
-    for (auto [tileSize, loopRange] :
-         llvm::zip_equal(tileSizes, iterationDomain)) {
+    for (auto [tileSize, loopRange, divHint] :
+         llvm::zip_equal(tileSizes, iterationDomain, divisibilityHint)) {
 
       // Non-tiled cases, set the offset and size to the
       // `loopRange.offset/size`.
@@ -325,8 +327,9 @@ getTileOffsetAndSizes(RewriterBase &rewriter, Location loc, ValueRange ivs,
       Value iv = ivs[materializedLoopNum++];
       OpFoldResult offset = getAsOpFoldResult(iv);
       offsets.push_back(offset);
-      OpFoldResult size =
-          getBoundedTileSize(rewriter, loc, loopRange, offset, tileSize);
+      OpFoldResult size = divHint ? tileSize
+                                  : getBoundedTileSize(rewriter, loc, loopRange,
+                                                       offset, tileSize);
       sizes.push_back(size);
     }
     return {offsets, sizes};
@@ -950,6 +953,11 @@ mlir::scf::tileUsingSCF(RewriterBase &rewriter, TilingInterface op,
   std::tie(tileSizes, numThreads) =
       getUserTileSizesAndNumThreads(rewriter, op, iterationDomain, options);
 
+  // 2a. Pad the divisibility hints to the domain rank.
+  SmallVector<bool> divisibilityHint = options.divisibilityHint;
+  divisibilityHint.append(iterationDomain.size() - divisibilityHint.size(),
+                          false);
+
   // Check if it is safe to tile. This is hold over from previous iterations
   // of tile to for-all. Consider dropping it.
   if (options.loopType == scf::SCFTilingOptions::LoopType::ForallOp) {
@@ -982,8 +990,9 @@ mlir::scf::tileUsingSCF(RewriterBase &rewriter, TilingInterface op,
       -> LogicalResult {
     // 4a. Compute the `offsets` and `sizes` to use for tiling.
     SmallVector<OpFoldResult> offsets, sizes;
-    std::tie(offsets, sizes) = getTileOffsetAndSizes(
-        rewriter, loc, ivs, iterationDomain, tileSizes, numThreads);
+    std::tie(offsets, sizes) =
+        getTileOffsetAndSizes(rewriter, loc, ivs, iterationDomain, tileSizes,
+                              numThreads, divisibilityHint);
 
     // 4b. If interchange was provided, apply inverse of the interchange
     //     to get back the offsets/sizes in the order to be specified.
