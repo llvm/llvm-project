@@ -6212,11 +6212,10 @@ static bool CheckConvertedConstantConversions(Sema &S,
 /// converted constant expression of type T, perform the conversion but
 /// does not evaluate the expression
 static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
-                                                   QualType T,
-                                                   Sema::CCEKind CCE,
+                                                   QualType T, CCEKind CCE,
                                                    NamedDecl *Dest,
                                                    APValue &PreNarrowingValue) {
-  assert((S.getLangOpts().CPlusPlus11 || CCE == Sema::CCEK_TempArgStrict) &&
+  assert((S.getLangOpts().CPlusPlus11 || CCE == CCEKind::TempArgStrict) &&
          "converted constant expression outside C++11 or TTP matching");
 
   if (checkPlaceholderForOverload(S, From))
@@ -6228,7 +6227,7 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
   //  expression is a constant expression and the implicit conversion
   //  sequence contains only [... list of conversions ...].
   ImplicitConversionSequence ICS =
-      (CCE == Sema::CCEK_ExplicitBool || CCE == Sema::CCEK_Noexcept)
+      (CCE == CCEKind::ExplicitBool || CCE == CCEKind::Noexcept)
           ? TryContextuallyConvertToBool(S, From)
           : TryCopyInitialization(S, From, T,
                                   /*SuppressUserConversions=*/false,
@@ -6287,7 +6286,7 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
   // class type.
   ExprResult Result;
   bool IsTemplateArgument =
-      CCE == Sema::CCEK_TemplateArg || CCE == Sema::CCEK_TempArgStrict;
+      CCE == CCEKind::TemplateArg || CCE == CCEKind::TempArgStrict;
   if (T->isRecordType()) {
     assert(IsTemplateArgument &&
            "unexpected class type converted constant expr");
@@ -6322,7 +6321,7 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
     break;
 
   case NK_Constant_Narrowing:
-    if (CCE == Sema::CCEK_ArrayBound &&
+    if (CCE == CCEKind::ArrayBound &&
         PreNarrowingType->isIntegralOrEnumerationType() &&
         PreNarrowingValue.isInt()) {
       // Don't diagnose array bound narrowing here; we produce more precise
@@ -6340,7 +6339,7 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
     // value-dependent so we can't tell whether it's actually narrowing.
     // For matching the parameters of a TTP, the conversion is ill-formed
     // if it may narrow.
-    if (CCE != Sema::CCEK_TempArgStrict)
+    if (CCE != CCEKind::TempArgStrict)
       break;
     [[fallthrough]];
   case NK_Type_Narrowing:
@@ -6361,8 +6360,7 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
 /// the converted expression, per C++11 [expr.const]p3.
 static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
                                                    QualType T, APValue &Value,
-                                                   Sema::CCEKind CCE,
-                                                   bool RequireInt,
+                                                   CCEKind CCE, bool RequireInt,
                                                    NamedDecl *Dest) {
 
   APValue PreNarrowingValue;
@@ -6406,7 +6404,7 @@ ExprResult Sema::CheckConvertedConstantExpression(Expr *From, QualType T,
 
 ExprResult
 Sema::EvaluateConvertedConstantExpression(Expr *E, QualType T, APValue &Value,
-                                          Sema::CCEKind CCE, bool RequireInt,
+                                          CCEKind CCE, bool RequireInt,
                                           const APValue &PreNarrowingValue) {
 
   ExprResult Result = E;
@@ -6415,12 +6413,12 @@ Sema::EvaluateConvertedConstantExpression(Expr *E, QualType T, APValue &Value,
   Expr::EvalResult Eval;
   Eval.Diag = &Notes;
 
-  assert(CCE != Sema::CCEK_TempArgStrict && "unnexpected CCE Kind");
+  assert(CCE != CCEKind::TempArgStrict && "unnexpected CCE Kind");
 
   ConstantExprKind Kind;
-  if (CCE == Sema::CCEK_TemplateArg && T->isRecordType())
+  if (CCE == CCEKind::TemplateArg && T->isRecordType())
     Kind = ConstantExprKind::ClassTemplateArgument;
-  else if (CCE == Sema::CCEK_TemplateArg)
+  else if (CCE == CCEKind::TemplateArg)
     Kind = ConstantExprKind::NonClassTemplateArgument;
   else
     Kind = ConstantExprKind::Normal;
