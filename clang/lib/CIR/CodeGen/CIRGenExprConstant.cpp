@@ -96,10 +96,6 @@ public:
     Expr *subExpr = e->getSubExpr();
 
     switch (e->getCastKind()) {
-    case CK_HLSLArrayRValue:
-    case CK_HLSLVectorTruncation:
-    case CK_HLSLElementwiseCast:
-    case CK_HLSLAggregateSplatCast:
     case CK_ToUnion:
     case CK_AddressSpaceConversion:
     case CK_ReinterpretMemberPointer:
@@ -181,6 +177,10 @@ public:
     case CK_IntegralToFixedPoint:
     case CK_ZeroToOCLOpaqueType:
     case CK_MatrixCast:
+    case CK_HLSLArrayRValue:
+    case CK_HLSLVectorTruncation:
+    case CK_HLSLElementwiseCast:
+    case CK_HLSLAggregateSplatCast:
       return {};
     }
     llvm_unreachable("Invalid CastKind");
@@ -220,8 +220,10 @@ public:
       return {};
     }
 
-    if (ile->getType()->isRecordType())
+    if (ile->getType()->isRecordType()) {
       cgm.errorNYI(ile->getBeginLoc(), "ConstExprEmitter: record ILE");
+      return {};
+    }
 
     if (ile->getType()->isVectorType()) {
       // If we return null here, the non-constant initializer will take care of
@@ -339,9 +341,10 @@ void ConstantEmitter::finalize(cir::GlobalOp gv) {
          "finalizing emitter that was used for abstract emission?");
   assert(!finalized && "finalizing emitter multiple times");
   assert(!gv.isDeclaration());
-
+#ifndef NDEBUG
   // Note that we might also be Failed.
   finalized = true;
+#endif // NDEBUG
 }
 
 mlir::Attribute

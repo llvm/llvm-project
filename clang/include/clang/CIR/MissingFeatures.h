@@ -169,6 +169,7 @@ struct MissingFeatures {
   static bool maybeHandleStaticInExternC() { return false; }
   static bool constEmitterArrayILE() { return false; }
   static bool constEmitterVectorILE() { return false; }
+  static bool needsGlobalCtorDtor() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }

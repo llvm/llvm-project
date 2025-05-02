@@ -31,6 +31,9 @@ public:
 private:
   bool abstract = false;
 
+#ifndef NDEBUG
+  // Variables used for asserting state consistency.
+
   /// Whether non-abstract components of the emitter have been initialized.
   bool initializedNonAbstract = false;
 
@@ -39,6 +42,7 @@ private:
 
   /// Whether the constant-emission failed.
   bool failed = false;
+#endif // NDEBUG
 
   /// Whether we're in a constant context.
   bool inConstantContext = false;
@@ -101,6 +105,7 @@ public:
   mlir::Attribute tryEmitPrivateForMemory(const APValue &value, QualType t);
 
 private:
+#ifndef NDEBUG
   void initializeNonAbstract() {
     assert(!initializedNonAbstract);
     initializedNonAbstract = true;
@@ -111,6 +116,10 @@ private:
       failed = true;
     return init;
   }
+#else
+  void initializeNonAbstract() {}
+  mlir::Attribute markIfFailed(mlir::Attribute init) { return init; }
+#endif // NDEBUG
 
   class AbstractStateRAII {
     ConstantEmitter &emitter;

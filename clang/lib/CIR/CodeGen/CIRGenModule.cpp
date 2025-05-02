@@ -412,6 +412,23 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
     return;
   }
 
+  // Whether the definition of the variable is available externally.
+  // If yes, we shouldn't emit the GloablCtor and GlobalDtor for the variable
+  // since this is the job for its original source.
+  bool isDefinitionAvailableExternally =
+      astContext.GetGVALinkageForVariable(vd) == GVA_AvailableExternally;
+  assert(!cir::MissingFeatures::needsGlobalCtorDtor());
+
+  // It is useless to emit the definition for an available_externally variable
+  // which can't be marked as const.
+  if (isDefinitionAvailableExternally &&
+      (!vd->hasConstantInitialization() ||
+       // TODO: Update this when we have interface to check constexpr
+       // destructor.
+       vd->needsDestruction(astContext) ||
+       !vd->getType().isConstantStorage(astContext, true, true)))
+    return;
+
   mlir::Attribute init;
   const VarDecl *initDecl;
   const Expr *initExpr = vd->getAnyInitializer(initDecl);
@@ -437,7 +454,7 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
     init = builder.getZeroInitAttr(convertType(vd->getType()));
   } else {
     emitter.emplace(*this);
-    auto initializer = emitter->tryEmitForInitializer(*initDecl);
+    mlir::Attribute initializer = emitter->tryEmitForInitializer(*initDecl);
     if (!initializer) {
       QualType qt = initExpr->getType();
       if (vd->getType()->isReferenceType())
