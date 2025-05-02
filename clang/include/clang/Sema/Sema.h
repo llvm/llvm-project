@@ -808,6 +808,16 @@ enum class ArithConvKind {
   CompAssign,
 };
 
+// Used for determining in which context a type is allowed to be passed to a
+// vararg function.
+enum class VarArgKind {
+  Valid,
+  ValidInCXX11,
+  Undefined,
+  MSVCUndefined,
+  Invalid
+};
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -8067,16 +8077,6 @@ public:
   VariadicCallType getVariadicCallType(FunctionDecl *FDecl,
                                        const FunctionProtoType *Proto,
                                        Expr *Fn);
-
-  // Used for determining in which context a type is allowed to be passed to a
-  // vararg function.
-  enum VarArgKind {
-    VAK_Valid,
-    VAK_ValidInCXX11,
-    VAK_Undefined,
-    VAK_MSVCUndefined,
-    VAK_Invalid
-  };
 
   /// Determine the degree of POD-ness for an expression.
   /// Incomplete types are considered POD, since this check can be performed
