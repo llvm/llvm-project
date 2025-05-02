@@ -262,7 +262,7 @@ FPLiteralCase g_fp_literal_cases[] = {
 #if LDBL_FP80
     {"_ZN5test01hIfEEvRAcvjplstT_Le4001a000000000000000E_c",
      {
-         "void test0::h<float>(char (&) [(unsigned int)(sizeof (float) + 0x1.4p+2L)])",
+         "void test0::h<float>(char (&) [(unsigned int)(sizeof (float) + 0x1.4000000000000p+2L)])",
          "void test0::h<float>(char (&) [(unsigned int)(sizeof (float) + 0x1.4p+2L)])",
          "void test0::h<float>(char (&) [(unsigned int)(sizeof (float) + 0x2.8p+1L)])",
          "void test0::h<float>(char (&) [(unsigned int)(sizeof (float) + 0x5p+0L)])",
