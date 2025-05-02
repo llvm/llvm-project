@@ -426,12 +426,10 @@ def BcstToPackedF32Op : AVX_Op<"bcst_to_f32.packed", [MemoryEffects<[MemRead]>,
     Example:
     ```mlir
     %dst = x86vector.avx.bcst_to_f32.packed %a : memref<1xbf16> -> vector<8xf32>
-    ```
-    ```mlir
     %dst = x86vector.avx.bcst_to_f32.packed %a : memref<1xf16> -> vector<8xf32>
     ```
   }];
-  let arguments = (ins AnyMemRef:$a);
+  let arguments = (ins MemRefOf<[BF16, F16]>:$a);
   let results = (outs VectorOfLengthAndType<[4, 8], [F32]>:$dst);
   let assemblyFormat =
     "$a  attr-dict`:` type($a)`->` type($dst)";
@@ -439,7 +437,7 @@ def BcstToPackedF32Op : AVX_Op<"bcst_to_f32.packed", [MemoryEffects<[MemRead]>,
   let extraClassDefinition = [{
     std::string $cppClass::getIntrinsicName() {
       auto elementType =
-        (cast<MemRefType>(getA().getType())).getElementType();
+        getA().getType().getElementType();
       std::string intr = "llvm.x86.";
       if (elementType.isBF16())
         intr += "vbcstnebf162ps";
@@ -453,7 +451,7 @@ def BcstToPackedF32Op : AVX_Op<"bcst_to_f32.packed", [MemoryEffects<[MemRead]>,
     }
   }];
 
-    let extraClassDeclaration = [{
+  let extraClassDeclaration = [{
         SmallVector<Value> getIntrinsicOperands(::mlir::RewriterBase&, const LLVMTypeConverter&);
   }];
 
@@ -476,12 +474,10 @@ def CvtPackedEvenIndexedToF32Op : AVX_Op<"cvt.packed.even.indexed_to_f32", [Memo
     Example:
     ```mlir
     %dst = x86vector.avx.cvt.packed.even.indexed_to_f32 %a : memref<16xbf16> -> vector<8xf32>
-    ```
-    ```mlir
     %dst = x86vector.avx.cvt.packed.even.indexed_to_f32 %a : memref<16xf16> -> vector<8xf32>
     ```
   }];
-  let arguments = (ins AnyMemRef:$a);
+  let arguments = (ins MemRefOf<[BF16, F16]>:$a);
   let results = (outs VectorOfLengthAndType<[4, 8], [F32]>:$dst);
   let assemblyFormat =
     "$a  attr-dict`:` type($a)`->` type($dst)";
@@ -489,7 +485,7 @@ def CvtPackedEvenIndexedToF32Op : AVX_Op<"cvt.packed.even.indexed_to_f32", [Memo
   let extraClassDefinition = [{
     std::string $cppClass::getIntrinsicName() {
       auto elementType =
-        (cast<MemRefType>(getA().getType())).getElementType();
+        getA().getType().getElementType();
       std::string intr = "llvm.x86.";
       if (elementType.isBF16())
         intr += "vcvtneebf162ps";
@@ -521,12 +517,10 @@ def CvtPackedOddIndexedToF32Op : AVX_Op<"cvt.packed.odd.indexed_to_f32", [Memory
     Example:
     ```mlir
     %dst = x86vector.avx.cvt.packed.odd.indexed_to_f32 %a : memref<16xbf16> -> vector<8xf32>
-    ```
-    ```mlir
     %dst = x86vector.avx.cvt.packed.odd.indexed_to_f32 %a : memref<16xf16> -> vector<8xf32>
     ```
   }];
-  let arguments = (ins AnyMemRef:$a);
+  let arguments = (ins MemRefOf<[BF16, F16]>:$a);
   let results = (outs VectorOfLengthAndType<[4, 8], [F32]>:$dst);
   let assemblyFormat =
     "$a  attr-dict`:` type($a)`->` type($dst)";
@@ -534,7 +528,7 @@ def CvtPackedOddIndexedToF32Op : AVX_Op<"cvt.packed.odd.indexed_to_f32", [Memory
   let extraClassDefinition = [{
     std::string $cppClass::getIntrinsicName() {
       auto elementType =
-        (cast<MemRefType>(getA().getType())).getElementType();
+        getA().getType().getElementType();
       std::string intr = "llvm.x86.";
       if (elementType.isBF16())
         intr += "vcvtneobf162ps";
