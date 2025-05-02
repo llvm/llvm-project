@@ -1339,6 +1339,33 @@ LogicalResult cir::GetMemberOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// VecCreateOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::VecCreateOp::verify() {
+  // Verify that the number of arguments matches the number of elements in the
+  // vector, and that the type of all the arguments matches the type of the
+  // elements in the vector.
+  const VectorType vecTy = getResult().getType();
+  if (getElements().size() != vecTy.getSize()) {
+    return emitOpError() << "operand count of " << getElements().size()
+                         << " doesn't match vector type " << vecTy
+                         << " element count of " << vecTy.getSize();
+  }
+
+  const mlir::Type elementType = vecTy.getElementType();
+  for (const mlir::Value element : getElements()) {
+    if (element.getType() != elementType) {
+      return emitOpError() << "operand type " << element.getType()
+                           << " doesn't match vector element type "
+                           << elementType;
+    }
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 
