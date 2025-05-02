@@ -152,9 +152,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
     lldbValueObject
     lldbVersion
     ${LLDB_ALL_PLUGINS}
-## BEGIN SWIFT
-    ${SWIFT_ALL_LIBS}
-## END SWIFT
+    swiftCore
   LINK_COMPONENTS
     Support
 
