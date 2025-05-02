@@ -1501,7 +1501,8 @@ static void addPreloadKernArgHint(Function &F, TargetMachine &TM) {
 }
 
 static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
-                    AMDGPUAttributorOptions Options) {
+                    AMDGPUAttributorOptions Options,
+                    ThinOrFullLTOPhase LTOPhase) {
   SetVector<Function *> Functions;
   for (Function &F : M) {
     if (!F.isIntrinsic())
@@ -1536,9 +1537,13 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
 
   Attributor A(Functions, InfoCache, AC);
 
-  LLVM_DEBUG(dbgs() << "[AMDGPUAttributor] Module " << M.getName() << " is "
-                    << (AC.IsClosedWorldModule ? "" : "not ")
-                    << "assumed to be a closed world.\n");
+  LLVM_DEBUG({
+    StringRef LTOPhaseStr = to_string(LTOPhase);
+    dbgs() << "[AMDGPUAttributor] Running at phase " << LTOPhaseStr << '\n'
+           << "[AMDGPUAttributor] Module " << M.getName() << " is "
+           << (AC.IsClosedWorldModule ? "" : "not ")
+           << "assumed to be a closed world.\n";
+  });
 
   for (auto *F : Functions) {
     A.getOrCreateAAFor<AAAMDAttributes>(IRPosition::function(*F));
@@ -1595,7 +1600,8 @@ public:
 
   bool runOnModule(Module &M) override {
     AnalysisGetter AG(this);
-    return runImpl(M, AG, *TM, /*Options=*/{});
+    return runImpl(M, AG, *TM, /*Options=*/{},
+                   /*LTOPhase=*/ThinOrFullLTOPhase::None);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -1616,8 +1622,8 @@ PreservedAnalyses llvm::AMDGPUAttributorPass::run(Module &M,
   AnalysisGetter AG(FAM);
 
   // TODO: Probably preserves CFG
-  return runImpl(M, AG, TM, Options) ? PreservedAnalyses::none()
-                                     : PreservedAnalyses::all();
+  return runImpl(M, AG, TM, Options, LTOPhase) ? PreservedAnalyses::none()
+                                               : PreservedAnalyses::all();
 }
 
 char AMDGPUAttributorLegacy::ID = 0;
