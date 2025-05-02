@@ -364,10 +364,11 @@ private:
   /// variadic functions. For indirect calls, it converts the function type
   /// associated with the call instruction. When the call and the callee are not
   /// compatible (or when nested type conversions failed), emit a warning but
-  /// attempt translation using a bitcast and an indirect call (in order
-  /// represent valid and verified LLVM IR).
+  /// attempt translation using an indirect call (in order to represent valid
+  /// and verified LLVM IR). The `indirectCallVal` is updated to hold the
+  /// address for the indirect call.
   FailureOr<LLVMFunctionType> convertFunctionType(llvm::CallBase *callInst,
-                                                  Value &castResult);
+                                                  Value &indirectCallVal);
   /// Returns the callee name, or an empty symbol if the call is not direct.
   FlatSymbolRefAttr convertCalleeName(llvm::CallBase *callInst);
   /// Converts the parameter and result attributes attached to `func` and adds

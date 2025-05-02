@@ -1748,7 +1748,9 @@ checkFunctionTypeCompatibility(LLVMFunctionType callType,
 }
 
 FailureOr<LLVMFunctionType>
-ModuleImport::convertFunctionType(llvm::CallBase *callInst, Value &castResult) {
+ModuleImport::convertFunctionType(llvm::CallBase *callInst,
+                                  Value &indirectCallVal) {
+  indirectCallVal = nullptr;
   auto castOrFailure = [](Type convertedType) -> FailureOr<LLVMFunctionType> {
     auto funcTy = dyn_cast_or_null<LLVMFunctionType>(convertedType);
     if (!funcTy)
@@ -1772,12 +1774,12 @@ ModuleImport::convertFunctionType(llvm::CallBase *callInst, Value &castResult) {
     return failure();
 
   // Compare the types, if they are not compatible, avoid illegal call/invoke
-  // operations by casting to the callsite type and issuing an indirect call.
-  // LLVM IR currently supports this usage.
+  // operations by issuing an indirect call. Note that LLVM IR currently
+  // supports this usage.
   if (failed(checkFunctionTypeCompatibility(*callType, *calleeType))) {
     Location loc = translateLoc(callInst->getDebugLoc());
     FlatSymbolRefAttr calleeSym = convertCalleeName(callInst);
-    castResult = builder.create<LLVM::AddressOfOp>(
+    indirectCallVal = builder.create<LLVM::AddressOfOp>(
         loc, LLVM::LLVMPointerType::get(context), calleeSym);
     emitWarning(loc) << "incompatible call and callee types: " << *callType
                      << " and " << *calleeType;
@@ -1898,20 +1900,20 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
                 /*operand_attrs=*/nullptr)
             .getOperation();
       }
-      Value castResult;
+      Value indirectCallVal;
       FailureOr<LLVMFunctionType> funcTy =
-          convertFunctionType(callInst, castResult);
+          convertFunctionType(callInst, indirectCallVal);
       if (failed(funcTy))
         return failure();
 
       FlatSymbolRefAttr callee = nullptr;
-      // If no cast is needed, use the original callee name. Otherwise patch
-      // operands to include the indirect call target. Build indirect call by
-      // passing using a nullptr `callee`.
-      if (!castResult)
-        callee = convertCalleeName(callInst);
+      // If `indirectCallVal` is available emit an indirect call, otherwise use
+      // the callee name. Build an indirect call by passing an empty `callee`
+      // operand and insert into `operands` to include the indirect call target
+      if (indirectCallVal)
+        operands->insert(operands->begin(), indirectCallVal);
       else
-        operands->insert(operands->begin(), castResult);
+        callee = convertCalleeName(callInst);
       CallOp callOp = builder.create<CallOp>(loc, *funcTy, callee, *operands);
 
       if (failed(convertCallAttributes(callInst, callOp)))
@@ -1919,7 +1921,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
 
       // Handle parameter and result attributes. Don't bother if there's a
       // type mismatch.
-      if (!castResult)
+      if (!indirectCallVal)
         convertParameterAttributes(callInst, callOp, builder);
       return callOp.getOperation();
     }();
@@ -1985,9 +1987,9 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
                                  unwindArgs)))
       return failure();
 
-    Value castResult;
+    Value indirectCallVal;
     FailureOr<LLVMFunctionType> funcTy =
-        convertFunctionType(invokeInst, castResult);
+        convertFunctionType(invokeInst, indirectCallVal);
     if (failed(funcTy))
       return failure();
 
@@ -1995,10 +1997,10 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
     // If no cast is needed, use the original callee name. Otherwise patch
     // operands to include the indirect call target. Build indirect call by
     // passing using a nullptr `callee`.
-    if (!castResult)
+    if (!indirectCallVal)
       calleeName = convertCalleeName(invokeInst);
     else
-      operands->insert(operands->begin(), castResult);
+      operands->insert(operands->begin(), indirectCallVal);
 
     // Create the invoke operation. Normal destination block arguments will be
     // added later on to handle the case in which the operation result is
@@ -2012,7 +2014,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
 
     // Handle parameter and result attributes. Don't bother if there's a
     // type mismatch.
-    if (!castResult)
+    if (!indirectCallVal)
       convertParameterAttributes(invokeInst, invokeOp, builder);
 
     if (!invokeInst->getType()->isVoidTy())
