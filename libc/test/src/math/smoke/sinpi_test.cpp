@@ -47,5 +47,5 @@ TEST_F(LlvmLibcSinpiTest, Integers) {
   ASSERT_FP_EQ(
       -1.0,
       LIBC_NAMESPACE::sinpi(
-          4499003037990983.5
+			    4499003037990983.5));
 }
