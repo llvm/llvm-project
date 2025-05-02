@@ -3163,40 +3163,37 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
         const auto &detach{
             std::get<parser::OmpClause::Detach>(detachClause->u)};
         if (const auto *name{parser::Unwrap<parser::Name>(detach.v.v)}) {
-          if (name->symbol) {
-            Symbol *eventHandleSym{name->symbol};
-            auto checkVarAppearsInDataEnvClause = [&](const parser::
-                                                          OmpObjectList &objs,
-                                                      std::string clause) {
-              for (const auto &obj : objs.v) {
-                if (const parser::Name *
-                    objName{parser::Unwrap<parser::Name>(obj)}) {
-                  if (&objName->symbol->GetUltimate() == eventHandleSym) {
-                    context_.Say(GetContext().clauseSource,
-                        "A variable: `%s` that appears in a DETACH clause cannot appear on %s clause on the same construct"_err_en_US,
-                        objName->source, clause);
-                  }
+          Symbol *eventHandleSym{name->symbol};
+          auto checkVarAppearsInDataEnvClause = [&](const parser::OmpObjectList
+                                                        &objs,
+                                                    std::string clause) {
+            for (const auto &obj : objs.v) {
+              if (const parser::Name *objName{
+                      parser::Unwrap<parser::Name>(obj)}) {
+                if (&objName->symbol->GetUltimate() == eventHandleSym) {
+                  context_.Say(GetContext().clauseSource,
+                      "A variable: `%s` that appears in a DETACH clause cannot appear on %s clause on the same construct"_err_en_US,
+                      objName->source, clause);
                 }
               }
-            };
-            if (auto *dataEnvClause{
-                    FindClause(llvm::omp::Clause::OMPC_private)}) {
-              const auto &pClause{
-                  std::get<parser::OmpClause::Private>(dataEnvClause->u)};
-              checkVarAppearsInDataEnvClause(pClause.v, "PRIVATE");
-            } else if (auto *dataEnvClause{
-                           FindClause(llvm::omp::Clause::OMPC_firstprivate)}) {
-              const auto &fpClause{
-                  std::get<parser::OmpClause::Firstprivate>(dataEnvClause->u)};
-              checkVarAppearsInDataEnvClause(fpClause.v, "FIRSTPRIVATE");
-            } else if (auto *dataEnvClause{
-                           FindClause(llvm::omp::Clause::OMPC_in_reduction)}) {
-              const auto &irClause{
-                  std::get<parser::OmpClause::InReduction>(dataEnvClause->u)};
-              checkVarAppearsInDataEnvClause(
-                  std::get<parser::OmpObjectList>(irClause.v.t),
-                  "IN_REDUCTION");
             }
+          };
+          if (auto *dataEnvClause{
+                  FindClause(llvm::omp::Clause::OMPC_private)}) {
+            const auto &pClause{
+                std::get<parser::OmpClause::Private>(dataEnvClause->u)};
+            checkVarAppearsInDataEnvClause(pClause.v, "PRIVATE");
+          } else if (auto *dataEnvClause{
+                         FindClause(llvm::omp::Clause::OMPC_firstprivate)}) {
+            const auto &fpClause{
+                std::get<parser::OmpClause::Firstprivate>(dataEnvClause->u)};
+            checkVarAppearsInDataEnvClause(fpClause.v, "FIRSTPRIVATE");
+          } else if (auto *dataEnvClause{
+                         FindClause(llvm::omp::Clause::OMPC_in_reduction)}) {
+            const auto &irClause{
+                std::get<parser::OmpClause::InReduction>(dataEnvClause->u)};
+            checkVarAppearsInDataEnvClause(
+                std::get<parser::OmpObjectList>(irClause.v.t), "IN_REDUCTION");
           }
         }
       }
@@ -4208,17 +4205,15 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Detach &x) {
   }
 
   if (const auto *name{parser::Unwrap<parser::Name>(x.v.v)}) {
-    if (name->symbol) {
-      if (version >= 52 && IsPointer(*name->symbol)) {
-        context_.Say(GetContext().clauseSource,
-            "The event-handle: `%s` must not have the POINTER attribute"_err_en_US,
-            name->ToString());
-      }
-      if (!name->symbol->GetType()->IsNumeric(TypeCategory::Integer)) {
-        context_.Say(GetContext().clauseSource,
-            "The event-handle: `%s` must be of type integer(kind=omp_event_handle_kind)"_err_en_US,
-            name->ToString());
-      }
+    if (version >= 52 && IsPointer(*name->symbol)) {
+      context_.Say(GetContext().clauseSource,
+          "The event-handle: `%s` must not have the POINTER attribute"_err_en_US,
+          name->ToString());
+    }
+    if (!name->symbol->GetType()->IsNumeric(TypeCategory::Integer)) {
+      context_.Say(GetContext().clauseSource,
+          "The event-handle: `%s` must be of type integer(kind=omp_event_handle_kind)"_err_en_US,
+          name->ToString());
     }
   }
 }
