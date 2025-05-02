@@ -39,7 +39,7 @@ end
 subroutine f03
   integer :: x
 
-  !ERROR: Unable to identify capture statement: in ATOMIC UPDATE operation with CAPTURE the source value in the capture statement should be a variable (with the same type as the target)
+  !ERROR: In ATOMIC UPDATE operation with CAPTURE neither statement could be the capture
   !$omp atomic update capture
   x = x + 1
   x = x + 2
@@ -50,7 +50,7 @@ subroutine f04
   integer :: x, v
 
   !$omp atomic update capture
-  !WARNING: In ATOMIC UPDATE operation with CAPTURE either statement could be the capture and the update, assuming the first one is the capture statement
+  !WARNING: In ATOMIC UPDATE operation with CAPTURE either statement could be the update and the capture, assuming the first one is the capture statement
   v = x
   x = v
   !$omp end atomic
@@ -60,8 +60,8 @@ subroutine f05
   integer :: x, v, z
 
   !$omp atomic update capture
+  !ERROR: In ATOMIC UPDATE operation with CAPTURE the right-hand side of the capture assignment should read z
   v = x
-  !ERROR: In ATOMIC UPDATE operation with CAPTURE the update statement should assign to x
   z = x + 1
   !$omp end atomic
 end
@@ -70,8 +70,8 @@ subroutine f06
   integer :: x, v, z
 
   !$omp atomic update capture
-  !ERROR: In ATOMIC UPDATE operation with CAPTURE the update statement should assign to x
   z = x + 1
+  !ERROR: In ATOMIC UPDATE operation with CAPTURE the right-hand side of the capture assignment should read z
   v = x
   !$omp end atomic
 end

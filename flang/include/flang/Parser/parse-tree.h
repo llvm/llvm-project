@@ -4859,7 +4859,7 @@ struct OpenMPAtomicConstruct {
 
     struct Op {
       int what;
-      TypedExpr expr;
+      AssignmentStmt::TypedAssignment assign;
     };
     TypedExpr atom, cond;
     Op op0, op1;

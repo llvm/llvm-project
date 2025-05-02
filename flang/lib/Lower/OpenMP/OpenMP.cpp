@@ -2673,21 +2673,46 @@ getAtomicMemoryOrder(lower::AbstractConverter &converter,
 static mlir::Operation * //
 genAtomicRead(lower::AbstractConverter &converter, mlir::Location loc,
               lower::StatementContext &stmtCtx, mlir::Value atomAddr,
-              const semantics::SomeExpr &atom, const semantics::SomeExpr &expr,
-              mlir::IntegerAttr hint,
+              const semantics::SomeExpr &atom,
+              const evaluate::Assignment &assign, mlir::IntegerAttr hint,
               mlir::omp::ClauseMemoryOrderKindAttr memOrder,
+              fir::FirOpBuilder::InsertPoint preAt,
               fir::FirOpBuilder::InsertPoint atomicAt,
-              fir::FirOpBuilder::InsertPoint prepareAt) {
+              fir::FirOpBuilder::InsertPoint postAt) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   fir::FirOpBuilder::InsertPoint saved = builder.saveInsertionPoint();
-  builder.restoreInsertionPoint(prepareAt);
+  builder.restoreInsertionPoint(preAt);
 
-  mlir::Value toAddr = fir::getBase(converter.genExprAddr(expr, stmtCtx, &loc));
+  mlir::Value storeAddr =
+      fir::getBase(converter.genExprAddr(assign.lhs, stmtCtx, &loc));
   mlir::Type atomType = fir::unwrapRefType(atomAddr.getType());
+  mlir::Type storeType = fir::unwrapRefType(storeAddr.getType());
+
+  mlir::Value toAddr = [&]() {
+    if (atomType == storeType)
+      return storeAddr;
+    return builder.createTemporary(loc, atomType, ".tmp.atomval");
+  }();
 
   builder.restoreInsertionPoint(atomicAt);
   mlir::Operation *op = builder.create<mlir::omp::AtomicReadOp>(
       loc, atomAddr, toAddr, mlir::TypeAttr::get(atomType), hint, memOrder);
+
+  if (atomType != storeType) {
+    lower::ExprToValueMap overrides;
+    // The READ operation could be a part of UPDATE CAPTURE, so make sure
+    // we don't emit extra code into the body of the atomic op.
+    builder.restoreInsertionPoint(postAt);
+    mlir::Value load = builder.create<fir::LoadOp>(loc, toAddr);
+    overrides.try_emplace(&atom, load);
+
+    converter.overrideExprValues(&overrides);
+    mlir::Value value =
+        fir::getBase(converter.genExprValue(assign.rhs, stmtCtx, &loc));
+    converter.resetExprOverrides();
+
+    builder.create<fir::StoreOp>(loc, value, storeAddr);
+  }
   builder.restoreInsertionPoint(saved);
   return op;
 }
@@ -2695,16 +2720,18 @@ genAtomicRead(lower::AbstractConverter &converter, mlir::Location loc,
 static mlir::Operation * //
 genAtomicWrite(lower::AbstractConverter &converter, mlir::Location loc,
                lower::StatementContext &stmtCtx, mlir::Value atomAddr,
-               const semantics::SomeExpr &atom, const semantics::SomeExpr &expr,
-               mlir::IntegerAttr hint,
+               const semantics::SomeExpr &atom,
+               const evaluate::Assignment &assign, mlir::IntegerAttr hint,
                mlir::omp::ClauseMemoryOrderKindAttr memOrder,
+               fir::FirOpBuilder::InsertPoint preAt,
                fir::FirOpBuilder::InsertPoint atomicAt,
-               fir::FirOpBuilder::InsertPoint prepareAt) {
+               fir::FirOpBuilder::InsertPoint postAt) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   fir::FirOpBuilder::InsertPoint saved = builder.saveInsertionPoint();
-  builder.restoreInsertionPoint(prepareAt);
+  builder.restoreInsertionPoint(preAt);
 
-  mlir::Value value = fir::getBase(converter.genExprValue(expr, stmtCtx, &loc));
+  mlir::Value value =
+      fir::getBase(converter.genExprValue(assign.rhs, stmtCtx, &loc));
   mlir::Type atomType = fir::unwrapRefType(atomAddr.getType());
   mlir::Value converted = builder.createConvert(loc, atomType, value);
 
@@ -2719,19 +2746,20 @@ static mlir::Operation *
 genAtomicUpdate(lower::AbstractConverter &converter, mlir::Location loc,
                 lower::StatementContext &stmtCtx, mlir::Value atomAddr,
                 const semantics::SomeExpr &atom,
-                const semantics::SomeExpr &expr, mlir::IntegerAttr hint,
+                const evaluate::Assignment &assign, mlir::IntegerAttr hint,
                 mlir::omp::ClauseMemoryOrderKindAttr memOrder,
+                fir::FirOpBuilder::InsertPoint preAt,
                 fir::FirOpBuilder::InsertPoint atomicAt,
-                fir::FirOpBuilder::InsertPoint prepareAt) {
+                fir::FirOpBuilder::InsertPoint postAt) {
   lower::ExprToValueMap overrides;
   lower::StatementContext naCtx;
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   fir::FirOpBuilder::InsertPoint saved = builder.saveInsertionPoint();
-  builder.restoreInsertionPoint(prepareAt);
+  builder.restoreInsertionPoint(preAt);
 
   mlir::Type atomType = fir::unwrapRefType(atomAddr.getType());
 
-  std::vector<SomeExpr> args{semantics::GetOpenMPTopLevelArguments(expr)};
+  std::vector<SomeExpr> args{semantics::GetOpenMPTopLevelArguments(assign.rhs)};
   assert(!args.empty() && "Update operation without arguments");
   for (auto &arg : args) {
     if (!semantics::IsSameOrResizeOf(arg, atom)) {
@@ -2751,7 +2779,7 @@ genAtomicUpdate(lower::AbstractConverter &converter, mlir::Location loc,
 
   converter.overrideExprValues(&overrides);
   mlir::Value updated =
-      fir::getBase(converter.genExprValue(expr, stmtCtx, &loc));
+      fir::getBase(converter.genExprValue(assign.rhs, stmtCtx, &loc));
   mlir::Value converted = builder.createConvert(loc, atomType, updated);
   builder.create<mlir::omp::YieldOp>(loc, converted);
   converter.resetExprOverrides();
@@ -2764,20 +2792,21 @@ static mlir::Operation *
 genAtomicOperation(lower::AbstractConverter &converter, mlir::Location loc,
                    lower::StatementContext &stmtCtx, int action,
                    mlir::Value atomAddr, const semantics::SomeExpr &atom,
-                   const semantics::SomeExpr &expr, mlir::IntegerAttr hint,
+                   const evaluate::Assignment &assign, mlir::IntegerAttr hint,
                    mlir::omp::ClauseMemoryOrderKindAttr memOrder,
+                   fir::FirOpBuilder::InsertPoint preAt,
                    fir::FirOpBuilder::InsertPoint atomicAt,
-                   fir::FirOpBuilder::InsertPoint prepareAt) {
+                   fir::FirOpBuilder::InsertPoint postAt) {
   switch (action) {
   case parser::OpenMPAtomicConstruct::Analysis::Read:
-    return genAtomicRead(converter, loc, stmtCtx, atomAddr, atom, expr, hint,
-                         memOrder, atomicAt, prepareAt);
+    return genAtomicRead(converter, loc, stmtCtx, atomAddr, atom, assign, hint,
+                         memOrder, preAt, atomicAt, postAt);
   case parser::OpenMPAtomicConstruct::Analysis::Write:
-    return genAtomicWrite(converter, loc, stmtCtx, atomAddr, atom, expr, hint,
-                          memOrder, atomicAt, prepareAt);
+    return genAtomicWrite(converter, loc, stmtCtx, atomAddr, atom, assign, hint,
+                          memOrder, preAt, atomicAt, postAt);
   case parser::OpenMPAtomicConstruct::Analysis::Update:
-    return genAtomicUpdate(converter, loc, stmtCtx, atomAddr, atom, expr, hint,
-                           memOrder, atomicAt, prepareAt);
+    return genAtomicUpdate(converter, loc, stmtCtx, atomAddr, atom, assign,
+                           hint, memOrder, preAt, atomicAt, postAt);
   default:
     return nullptr;
   }
@@ -3724,6 +3753,15 @@ dumpAnalysis(const parser::OpenMPAtomicConstruct::Analysis &analysis) {
     }
     return "<null>"s;
   };
+  auto assignStr = [&](const parser::AssignmentStmt::TypedAssignment &assign) {
+    if (auto *maybe = assign.get(); maybe && maybe->v) {
+      std::string str;
+      llvm::raw_string_ostream os(str);
+      maybe->v->AsFortran(os);
+      return str;
+    }
+    return "<null>"s;
+  };
 
   const SomeExpr &atom = *analysis.atom.get()->v;
 
@@ -3732,11 +3770,11 @@ dumpAnalysis(const parser::OpenMPAtomicConstruct::Analysis &analysis) {
   llvm::errs() << "  cond: " << exprStr(analysis.cond) << "\n";
   llvm::errs() << "  op0 {\n";
   llvm::errs() << "    what: " << whatStr(analysis.op0.what) << "\n";
-  llvm::errs() << "    expr: " << exprStr(analysis.op0.expr) << "\n";
+  llvm::errs() << "    assign: " << assignStr(analysis.op0.assign) << "\n";
   llvm::errs() << "  }\n";
   llvm::errs() << "  op1 {\n";
   llvm::errs() << "    what: " << whatStr(analysis.op1.what) << "\n";
-  llvm::errs() << "    expr: " << exprStr(analysis.op1.expr) << "\n";
+  llvm::errs() << "    assign: " << assignStr(analysis.op1.assign) << "\n";
   llvm::errs() << "  }\n";
   llvm::errs() << "}\n";
 }
@@ -3745,8 +3783,8 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OpenMPAtomicConstruct &construct) {
-  auto get = [](const parser::TypedExpr &expr) -> const semantics::SomeExpr * {
-    if (auto *maybe = expr.get(); maybe && maybe->v) {
+  auto get = [](auto &&typedWrapper) -> decltype(&*typedWrapper.get()->v) {
+    if (auto *maybe = typedWrapper.get(); maybe && maybe->v) {
       return &*maybe->v;
     } else {
       return nullptr;
@@ -3774,8 +3812,8 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
     int action0 = analysis.op0.what & analysis.Action;
     int action1 = analysis.op1.what & analysis.Action;
     mlir::Operation *captureOp = nullptr;
-    fir::FirOpBuilder::InsertPoint atomicAt;
-    fir::FirOpBuilder::InsertPoint prepareAt = builder.saveInsertionPoint();
+    fir::FirOpBuilder::InsertPoint preAt = builder.saveInsertionPoint();
+    fir::FirOpBuilder::InsertPoint atomicAt, postAt;
 
     if (construct.IsCapture()) {
       // Capturing operation.
@@ -3784,7 +3822,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
       captureOp =
           builder.create<mlir::omp::AtomicCaptureOp>(loc, hint, memOrder);
       // Set the non-atomic insertion point to before the atomic.capture.
-      prepareAt = getInsertionPointBefore(captureOp);
+      preAt = getInsertionPointBefore(captureOp);
 
       mlir::Block *block = builder.createBlock(&captureOp->getRegion(0));
       builder.setInsertionPointToEnd(block);
@@ -3792,6 +3830,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
       // atomic.capture.
       mlir::Operation *term = builder.create<mlir::omp::TerminatorOp>(loc);
       atomicAt = getInsertionPointBefore(term);
+      postAt = getInsertionPointAfter(captureOp);
       hint = nullptr;
       memOrder = nullptr;
     } else {
@@ -3799,20 +3838,20 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
       assert(action0 != analysis.None && action1 == analysis.None &&
              "Expexcing single action");
       assert(!(analysis.op0.what & analysis.Condition));
-      atomicAt = prepareAt;
+      postAt = atomicAt = preAt;
     }
 
     mlir::Operation *firstOp = genAtomicOperation(
         converter, loc, stmtCtx, analysis.op0.what, atomAddr, atom,
-        *get(analysis.op0.expr), hint, memOrder, atomicAt, prepareAt);
+        *get(analysis.op0.assign), hint, memOrder, preAt, atomicAt, postAt);
     assert(firstOp && "Should have created an atomic operation");
     atomicAt = getInsertionPointAfter(firstOp);
 
     mlir::Operation *secondOp = nullptr;
     if (analysis.op1.what != analysis.None) {
       secondOp = genAtomicOperation(converter, loc, stmtCtx, analysis.op1.what,
-                                    atomAddr, atom, *get(analysis.op1.expr),
-                                    hint, memOrder, atomicAt, prepareAt);
+                                    atomAddr, atom, *get(analysis.op1.assign),
+                                    hint, memOrder, preAt, atomicAt, postAt);
     }
 
     if (secondOp) {

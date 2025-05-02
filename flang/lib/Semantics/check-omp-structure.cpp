@@ -86,9 +86,13 @@ static const parser::ArrayElement *GetArrayElementFromObj(
   return nullptr;
 }
 
-static bool IsVarOrFunctionRef(const SomeExpr &expr) {
-  return evaluate::UnwrapProcedureRef(expr) != nullptr ||
-      evaluate::IsVariable(expr);
+static bool IsVarOrFunctionRef(const MaybeExpr &expr) {
+  if (expr) {
+    return evaluate::UnwrapProcedureRef(*expr) != nullptr ||
+        evaluate::IsVariable(*expr);
+  } else {
+    return false;
+  }
 }
 
 static std::optional<SomeExpr> GetEvaluateExpr(const parser::Expr &parserExpr) {
@@ -2838,6 +2842,12 @@ static std::pair<parser::CharBlock, parser::CharBlock> SplitAssignmentSource(
 
 namespace atomic {
 
+template <typename V> static void MoveAppend(V &accum, V &&other) {
+  for (auto &&s : other) {
+    accum.push_back(std::move(s));
+  }
+}
+
 enum class Operator {
   Unk,
   // Operators that are officially allowed in the update operation
@@ -3137,16 +3147,108 @@ struct DesignatorCollector : public evaluate::Traverse<DesignatorCollector,
   template <typename... Rs> //
   Result Combine(Result &&result, Rs &&...results) const {
     Result v(std::move(result));
-    (Append(v, std::move(results)), ...);
+    (MoveAppend(v, std::move(results)), ...);
+    return v;
+  }
+};
+
+struct ConvertCollector
+    : public evaluate::Traverse<ConvertCollector,
+          std::pair<MaybeExpr, std::vector<evaluate::DynamicType>>, false> {
+  using Result = std::pair<MaybeExpr, std::vector<evaluate::DynamicType>>;
+  using Base = evaluate::Traverse<ConvertCollector, Result, false>;
+  ConvertCollector() : Base(*this) {}
+
+  Result Default() const { return {}; }
+
+  using Base::operator();
+
+  template <typename T> //
+  Result operator()(const evaluate::Designator<T> &x) const {
+    auto copy{x};
+    return {AsGenericExpr(std::move(copy)), {}};
+  }
+
+  template <typename T> //
+  Result operator()(const evaluate::FunctionRef<T> &x) const {
+    auto copy{x};
+    return {AsGenericExpr(std::move(copy)), {}};
+  }
+
+  template <typename T> //
+  Result operator()(const evaluate::Constant<T> &x) const {
+    auto copy{x};
+    return {AsGenericExpr(std::move(copy)), {}};
+  }
+
+  template <typename D, typename R, typename... Os>
+  Result operator()(const evaluate::Operation<D, R, Os...> &x) const {
+    if constexpr (std::is_same_v<D, evaluate::Parentheses<R>>) {
+      // Ignore top-level parentheses.
+      return (*this)(x.template operand<0>());
+    } else if constexpr (is_convert_v<D>) {
+      // Convert should always have a typed result, so it should be safe to
+      // dereference x.GetType().
+      return Combine(
+          {std::nullopt, {*x.GetType()}}, (*this)(x.template operand<0>()));
+    } else {
+      auto copy{x.derived()};
+      return {evaluate::AsGenericExpr(std::move(copy)), {}};
+    }
+  }
+
+  template <typename... Rs> //
+  Result Combine(Result &&result, Rs &&...results) const {
+    Result v(std::move(result));
+    auto setValue{[](MaybeExpr &x, MaybeExpr &&y) {
+      assert((!x.has_value() || !y.has_value()) && "Multiple designators");
+      if (!x.has_value()) {
+        x = std::move(y);
+      }
+    }};
+    (setValue(v.first, std::move(results).first), ...);
+    (MoveAppend(v.second, std::move(results).second), ...);
     return v;
   }
 
 private:
-  static void Append(Result &acc, Result &&data) {
-    for (auto &&s : data) {
-      acc.push_back(std::move(s));
-    }
+  template <typename T> //
+  struct is_convert {
+    static constexpr bool value{false};
+  };
+  template <typename T, common::TypeCategory C> //
+  struct is_convert<evaluate::Convert<T, C>> {
+    static constexpr bool value{true};
+  };
+  template <int K> //
+  struct is_convert<evaluate::ComplexComponent<K>> {
+    // Conversion from complex to real.
+    static constexpr bool value{true};
+  };
+  template <typename T> //
+  static constexpr bool is_convert_v = is_convert<T>::value;
+};
+
+struct VariableFinder : public evaluate::AnyTraverse<VariableFinder> {
+  using Base = evaluate::AnyTraverse<VariableFinder>;
+  VariableFinder(const SomeExpr &v) : Base(*this), var(v) {}
+
+  using Base::operator();
+
+  template <typename T>
+  bool operator()(const evaluate::Designator<T> &x) const {
+    auto copy{x};
+    return evaluate::AsGenericExpr(std::move(copy)) == var;
   }
+
+  template <typename T>
+  bool operator()(const evaluate::FunctionRef<T> &x) const {
+    auto copy{x};
+    return evaluate::AsGenericExpr(std::move(copy)) == var;
+  }
+
+private:
+  const SomeExpr &var;
 };
 } // namespace atomic
 
@@ -3265,6 +3367,22 @@ static bool IsMaybeAtomicWrite(const evaluate::Assignment &assign) {
   return HasStorageOverlap(assign.lhs, assign.rhs) == nullptr;
 }
 
+static MaybeExpr GetConvertInput(const SomeExpr &x) {
+  // This returns SomeExpr(x) when x is a designator/functionref/constant.
+  return atomic::ConvertCollector{}(x).first;
+}
+
+static bool IsSameOrConvertOf(const SomeExpr &expr, const SomeExpr &x) {
+  // Check if expr is same as x, or a sequence of Convert operations on x.
+  if (expr == x) {
+    return true;
+  } else if (auto maybe{GetConvertInput(expr)}) {
+    return *maybe == x;
+  } else {
+    return false;
+  }
+}
+
 bool IsSameOrResizeOf(const SomeExpr &expr, const SomeExpr &x) {
   // Both expr and x have the form of SomeType(SomeKind(...)[1]).
   // Check if expr is
@@ -3282,6 +3400,10 @@ bool IsSameOrResizeOf(const SomeExpr &expr, const SomeExpr &x) {
   }
 }
 
+bool IsSubexpressionOf(const SomeExpr &sub, const SomeExpr &super) {
+  return atomic::VariableFinder{sub}(super);
+}
+
 static void SetExpr(parser::TypedExpr &expr, MaybeExpr value) {
   if (value) {
     expr.Reset(new evaluate::GenericExprWrapper(std::move(value)),
@@ -3289,11 +3411,20 @@ static void SetExpr(parser::TypedExpr &expr, MaybeExpr value) {
   }
 }
 
+static void SetAssignment(parser::AssignmentStmt::TypedAssignment &assign,
+    std::optional<evaluate::Assignment> value) {
+  if (value) {
+    assign.Reset(new evaluate::GenericAssignmentWrapper(std::move(value)),
+        evaluate::GenericAssignmentWrapper::Deleter);
+  }
+}
+
 static parser::OpenMPAtomicConstruct::Analysis::Op MakeAtomicAnalysisOp(
-    int what, const MaybeExpr &maybeExpr = std::nullopt) {
+    int what,
+    const std::optional<evaluate::Assignment> &maybeAssign = std::nullopt) {
   parser::OpenMPAtomicConstruct::Analysis::Op operation;
   operation.what = what;
-  SetExpr(operation.expr, maybeExpr);
+  SetAssignment(operation.assign, maybeAssign);
   return operation;
 }
 
@@ -3316,7 +3447,7 @@ static parser::OpenMPAtomicConstruct::Analysis MakeAtomicAnalysis(
   //   };
   //   struct Op {
   //     int what;
-  //     TypedExpr expr;
+  //     TypedAssignment assign;
   //   };
   //   TypedExpr atom, cond;
   //   Op op0, op1;
@@ -3337,6 +3468,16 @@ void OmpStructureChecker::CheckStorageOverlap(const SomeExpr &base,
     context_.Say(source,
         "Within atomic operation %s and %s access the same storage"_warn_en_US,
         base.AsFortran(), expr->AsFortran());
+  }
+}
+
+void OmpStructureChecker::ErrorShouldBeVariable(
+    const MaybeExpr &expr, parser::CharBlock source) {
+  if (expr) {
+    context_.Say(source, "Atomic expression %s should be a variable"_err_en_US,
+        expr->AsFortran());
+  } else {
+    context_.Say(source, "Atomic expression should be a variable"_err_en_US);
   }
 }
 
@@ -3383,9 +3524,9 @@ OmpStructureChecker::CheckUpdateCapture(
   //
   // The two allowed cases are:
   //   x = ...      atomic-var = ...
-  //   ... = x      capture-var = atomic-var
+  //   ... = x      capture-var = atomic-var (with optional converts)
   // or
-  //   ... = x      capture-var = atomic-var
+  //   ... = x      capture-var = atomic-var (with optional converts)
   //   x = ...      atomic-var = ...
   //
   // The case of 'a = b; b = a' is ambiguous, so pick the first one as capture
@@ -3394,6 +3535,8 @@ OmpStructureChecker::CheckUpdateCapture(
   //
   // If the two statements don't fit these criteria, return a pair of default-
   // constructed values.
+  using ReturnTy = std::pair<const parser::ExecutionPartConstruct *,
+      const parser::ExecutionPartConstruct *>;
 
   SourcedActionStmt act1{GetActionStmt(ec1)};
   SourcedActionStmt act2{GetActionStmt(ec2)};
@@ -3409,86 +3552,155 @@ OmpStructureChecker::CheckUpdateCapture(
 
   auto isUpdateCapture{
       [](const evaluate::Assignment &u, const evaluate::Assignment &c) {
-        return u.lhs == c.rhs;
+        return IsSameOrConvertOf(c.rhs, u.lhs);
       }};
 
   // Do some checks that narrow down the possible choices for the update
   // and the capture statements. This will help to emit better diagnostics.
-  bool couldBeCapture1 = IsVarOrFunctionRef(as1.rhs);
-  bool couldBeCapture2 = IsVarOrFunctionRef(as2.rhs);
+  // 1. An assignment could be an update (cbu) if the left-hand side is a
+  //    subexpression of the right-hand side.
+  // 2. An assignment could be a capture (cbc) if the right-hand side is
+  //    a variable (or a function ref), with potential type conversions.
+  bool cbu1{IsSubexpressionOf(as1.lhs, as1.rhs)};
+  bool cbu2{IsSubexpressionOf(as2.lhs, as2.rhs)};
+  bool cbc1{IsVarOrFunctionRef(GetConvertInput(as1.rhs))};
+  bool cbc2{IsVarOrFunctionRef(GetConvertInput(as2.rhs))};
 
-  if (couldBeCapture1) {
-    if (couldBeCapture2) {
-      if (isUpdateCapture(as2, as1)) {
-        if (isUpdateCapture(as1, as2)) {
-          // If both statements could be captures and both could be updates,
-          // emit a warning about the ambiguity.
-          context_.Say(act1.source,
-              "In ATOMIC UPDATE operation with CAPTURE either statement could be the capture and the update, assuming the first one is the capture statement"_warn_en_US);
-        }
-        return std::make_pair(/*Update=*/ec2, /*Capture=*/ec1);
-      } else if (isUpdateCapture(as1, as2)) {
-        return std::make_pair(/*Update=*/ec1, /*Capture=*/ec2);
-      } else {
-        context_.Say(source,
-            "In ATOMIC UPDATE operation with CAPTURE the update statement should assign to %s or %s"_err_en_US,
-            as1.rhs.AsFortran(), as2.rhs.AsFortran());
-      }
-    } else { // !couldBeCapture2
-      if (isUpdateCapture(as2, as1)) {
-        return std::make_pair(/*Update=*/ec2, /*Capture=*/ec1);
-      } else {
-        context_.Say(act2.source,
-            "In ATOMIC UPDATE operation with CAPTURE the update statement should assign to %s"_err_en_US,
-            as1.rhs.AsFortran());
-      }
-    }
-  } else { // !couldBeCapture1
-    if (couldBeCapture2) {
+  //     |cbu1 cbu2|
+  // det |cbc1 cbc2| = cbu1*cbc2 - cbu2*cbc1
+  int det{int(cbu1) * int(cbc2) - int(cbu2) * int(cbc1)};
+
+  auto errorCaptureShouldRead{[&](const parser::CharBlock &source,
+                                  const std::string &expr) {
+    context_.Say(source,
+        "In ATOMIC UPDATE operation with CAPTURE the right-hand side of the capture assignment should read %s"_err_en_US,
+        expr);
+  }};
+
+  auto errorNeitherWorks{[&]() {
+    context_.Say(source,
+        "In ATOMIC UPDATE operation with CAPTURE neither statement could be the update or the capture"_err_en_US);
+  }};
+
+  auto makeSelectionFromDet{[&](int det) -> ReturnTy {
+    // If det != 0, then the checks unambiguously suggest a specific
+    // categorization.
+    // If det == 0, then this function should be called only if the
+    // checks haven't ruled out any possibility, i.e. when both assigments
+    // could still be either updates or captures.
+    if (det > 0) {
+      // as1 is update, as2 is capture
       if (isUpdateCapture(as1, as2)) {
         return std::make_pair(/*Update=*/ec1, /*Capture=*/ec2);
       } else {
-        context_.Say(act1.source,
-            "In ATOMIC UPDATE operation with CAPTURE the update statement should assign to %s"_err_en_US,
-            as2.rhs.AsFortran());
+        errorCaptureShouldRead(act2.source, as1.lhs.AsFortran());
+        return std::make_pair(nullptr, nullptr);
+      }
+    } else if (det < 0) {
+      // as2 is update, as1 is capture
+      if (isUpdateCapture(as2, as1)) {
+        return std::make_pair(/*Update=*/ec2, /*Capture=*/ec1);
+      } else {
+        errorCaptureShouldRead(act1.source, as2.lhs.AsFortran());
+        return std::make_pair(nullptr, nullptr);
       }
     } else {
-      context_.Say(source,
-          "Unable to identify capture statement: in ATOMIC UPDATE operation with CAPTURE the source value in the capture statement should be a variable (with the same type as the target)"_err_en_US);
+      bool updateFirst{isUpdateCapture(as1, as2)};
+      bool captureFirst{isUpdateCapture(as2, as1)};
+      if (updateFirst && captureFirst) {
+        // If both assignment could be the update and both could be the
+        // capture, emit a warning about the ambiguity.
+        context_.Say(act1.source,
+            "In ATOMIC UPDATE operation with CAPTURE either statement could be the update and the capture, assuming the first one is the capture statement"_warn_en_US);
+        return std::make_pair(/*Update=*/ec2, /*Capture=*/ec1);
+      }
+      if (updateFirst != captureFirst) {
+        const parser::ExecutionPartConstruct *upd{updateFirst ? ec1 : ec2};
+        const parser::ExecutionPartConstruct *cap{captureFirst ? ec1 : ec2};
+        return std::make_pair(upd, cap);
+      }
+      assert(!updateFirst && !captureFirst);
+      errorNeitherWorks();
+      return std::make_pair(nullptr, nullptr);
     }
+  }};
+
+  if (det != 0 || (cbu1 && cbu2 && cbc1 && cbc2)) {
+    return makeSelectionFromDet(det);
+  }
+  assert(det == 0 && "Prior checks should have covered det != 0");
+
+  // If neither of the statements is an RMW update, it could still be a
+  // "write" update. Pretty much any assignment can be a write update, so
+  // recompute det with cbu1 = cbu2 = true.
+  if (int writeDet{int(cbc2) - int(cbc1)}; writeDet || (cbc1 && cbc2)) {
+    return makeSelectionFromDet(writeDet);
   }
 
-  return std::make_pair(nullptr, nullptr);
+  // It's only errors from here on.
+
+  if (!cbu1 && !cbu2 && !cbc1 && !cbc2) {
+    errorNeitherWorks();
+    return std::make_pair(nullptr, nullptr);
+  }
+
+  // The remaining cases are that
+  // - no candidate for update, or for capture,
+  // - one of the assigments cannot be anything.
+
+  if (!cbu1 && !cbu2) {
+    context_.Say(source,
+        "In ATOMIC UPDATE operation with CAPTURE neither statement could be the update"_err_en_US);
+    return std::make_pair(nullptr, nullptr);
+  } else if (!cbc1 && !cbc2) {
+    context_.Say(source,
+        "In ATOMIC UPDATE operation with CAPTURE neither statement could be the capture"_err_en_US);
+    return std::make_pair(nullptr, nullptr);
+  }
+
+  if ((!cbu1 && !cbc1) || (!cbu2 && !cbc2)) {
+    auto &src = (!cbu1 && !cbc1) ? act1.source : act2.source;
+    context_.Say(src,
+        "In ATOMIC UPDATE operation with CAPTURE the statement could be neither the update nor the capture"_err_en_US);
+    return std::make_pair(nullptr, nullptr);
+  }
+
+  // All cases should have been covered.
+  llvm_unreachable("Unchecked condition");
 }
 
 void OmpStructureChecker::CheckAtomicCaptureAssignment(
     const evaluate::Assignment &capture, const SomeExpr &atom,
     parser::CharBlock source) {
-  const SomeExpr &cap{capture.lhs};
   auto [lsrc, rsrc]{SplitAssignmentSource(source)};
+  const SomeExpr &cap{capture.lhs};
 
   if (!IsVarOrFunctionRef(atom)) {
-    context_.Say(rsrc, "Atomic expression %s should be a variable"_err_en_US,
-        atom.AsFortran());
+    ErrorShouldBeVariable(atom, rsrc);
   } else {
     CheckAtomicVariable(atom, rsrc);
-    // This part should have been checked prior to callig this function.
-    assert(capture.rhs == atom && "This canont be a capture assignment");
+    // This part should have been checked prior to calling this function.
+    assert(*GetConvertInput(capture.rhs) == atom &&
+        "This canont be a capture assignment");
     CheckStorageOverlap(atom, {cap}, source);
   }
 }
 
 void OmpStructureChecker::CheckAtomicReadAssignment(
     const evaluate::Assignment &read, parser::CharBlock source) {
-  const SomeExpr &atom{read.rhs};
   auto [lsrc, rsrc]{SplitAssignmentSource(source)};
 
-  if (!IsVarOrFunctionRef(atom)) {
-    context_.Say(rsrc, "Atomic expression %s should be a variable"_err_en_US,
-        atom.AsFortran());
+  if (auto maybe{GetConvertInput(read.rhs)}) {
+    const SomeExpr &atom{*maybe};
+
+    if (!IsVarOrFunctionRef(atom)) {
+      ErrorShouldBeVariable(atom, rsrc);
+    } else {
+      CheckAtomicVariable(atom, rsrc);
+      CheckStorageOverlap(atom, {read.lhs}, source);
+    }
   } else {
-    CheckAtomicVariable(atom, rsrc);
-    CheckStorageOverlap(atom, {read.lhs}, source);
+    ErrorShouldBeVariable(read.rhs, rsrc);
   }
 }
 
@@ -3499,12 +3711,11 @@ void OmpStructureChecker::CheckAtomicWriteAssignment(
   // one of the following forms:
   //   x = expr
   //   x => expr
-  const SomeExpr &atom{write.lhs};
   auto [lsrc, rsrc]{SplitAssignmentSource(source)};
+  const SomeExpr &atom{write.lhs};
 
   if (!IsVarOrFunctionRef(atom)) {
-    context_.Say(lsrc, "Atomic expression %s should be a variable"_err_en_US,
-        atom.AsFortran());
+    ErrorShouldBeVariable(atom, rsrc);
   } else {
     CheckAtomicVariable(atom, lsrc);
     CheckStorageOverlap(atom, {write.rhs}, source);
@@ -3521,12 +3732,11 @@ void OmpStructureChecker::CheckAtomicUpdateAssignment(
   //   x = intrinsic-procedure-name (x)
   //   x = intrinsic-procedure-name (x, expr-list)
   //   x = intrinsic-procedure-name (expr-list, x)
-  const SomeExpr &atom{update.lhs};
   auto [lsrc, rsrc]{SplitAssignmentSource(source)};
+  const SomeExpr &atom{update.lhs};
 
   if (!IsVarOrFunctionRef(atom)) {
-    context_.Say(lsrc, "Atomic expression %s should be a variable"_err_en_US,
-        atom.AsFortran());
+    ErrorShouldBeVariable(atom, rsrc);
     // Skip other checks.
     return;
   }
@@ -3605,12 +3815,11 @@ void OmpStructureChecker::CheckAtomicUpdateAssignment(
 void OmpStructureChecker::CheckAtomicConditionalUpdateAssignment(
     const SomeExpr &cond, parser::CharBlock condSource,
     const evaluate::Assignment &assign, parser::CharBlock assignSource) {
-  const SomeExpr &atom{assign.lhs};
   auto [alsrc, arsrc]{SplitAssignmentSource(assignSource)};
+  const SomeExpr &atom{assign.lhs};
 
   if (!IsVarOrFunctionRef(atom)) {
-    context_.Say(alsrc, "Atomic expression %s should be a variable"_err_en_US,
-        atom.AsFortran());
+    ErrorShouldBeVariable(atom, arsrc);
     // Skip other checks.
     return;
   }
@@ -3702,7 +3911,7 @@ void OmpStructureChecker::CheckAtomicUpdateOnly(
 
       using Analysis = parser::OpenMPAtomicConstruct::Analysis;
       x.analysis = MakeAtomicAnalysis(atom, std::nullopt,
-          MakeAtomicAnalysisOp(Analysis::Update, maybeUpdate->rhs),
+          MakeAtomicAnalysisOp(Analysis::Update, maybeUpdate),
           MakeAtomicAnalysisOp(Analysis::None));
     } else {
       context_.Say(
@@ -3786,7 +3995,7 @@ void OmpStructureChecker::CheckAtomicConditionalUpdate(
 
   using Analysis = parser::OpenMPAtomicConstruct::Analysis;
   x.analysis = MakeAtomicAnalysis(assign.lhs, update.cond,
-      MakeAtomicAnalysisOp(Analysis::Update | Analysis::IfTrue, assign.rhs),
+      MakeAtomicAnalysisOp(Analysis::Update | Analysis::IfTrue, assign),
       MakeAtomicAnalysisOp(Analysis::None));
 }
 
@@ -3839,12 +4048,12 @@ void OmpStructureChecker::CheckAtomicUpdateCapture(
 
   if (GetActionStmt(&body.front()).stmt == uact.stmt) {
     x.analysis = MakeAtomicAnalysis(atom, std::nullopt,
-        MakeAtomicAnalysisOp(action, update.rhs),
-        MakeAtomicAnalysisOp(Analysis::Read, capture.lhs));
+        MakeAtomicAnalysisOp(action, update),
+        MakeAtomicAnalysisOp(Analysis::Read, capture));
   } else {
     x.analysis = MakeAtomicAnalysis(atom, std::nullopt,
-        MakeAtomicAnalysisOp(Analysis::Read, capture.lhs),
-        MakeAtomicAnalysisOp(action, update.rhs));
+        MakeAtomicAnalysisOp(Analysis::Read, capture),
+        MakeAtomicAnalysisOp(action, update));
   }
 }
 
@@ -3988,12 +4197,12 @@ void OmpStructureChecker::CheckAtomicConditionalUpdateCapture(
 
   if (captureFirst) {
     x.analysis = MakeAtomicAnalysis(updAssign.lhs, update.cond,
-        MakeAtomicAnalysisOp(Analysis::Read | captureWhen, capAssign.lhs),
-        MakeAtomicAnalysisOp(Analysis::Write | updateWhen, updAssign.rhs));
+        MakeAtomicAnalysisOp(Analysis::Read | captureWhen, capAssign),
+        MakeAtomicAnalysisOp(Analysis::Write | updateWhen, updAssign));
   } else {
     x.analysis = MakeAtomicAnalysis(updAssign.lhs, update.cond,
-        MakeAtomicAnalysisOp(Analysis::Write | updateWhen, updAssign.rhs),
-        MakeAtomicAnalysisOp(Analysis::Read | captureWhen, capAssign.lhs));
+        MakeAtomicAnalysisOp(Analysis::Write | updateWhen, updAssign),
+        MakeAtomicAnalysisOp(Analysis::Read | captureWhen, capAssign));
   }
 }
 
@@ -4019,13 +4228,15 @@ void OmpStructureChecker::CheckAtomicRead(
   if (body.size() == 1) {
     SourcedActionStmt action{GetActionStmt(&body.front())};
     if (auto maybeRead{GetEvaluateAssignment(action.stmt)}) {
-      const SomeExpr &atom{maybeRead->rhs};
       CheckAtomicReadAssignment(*maybeRead, action.source);
 
-      using Analysis = parser::OpenMPAtomicConstruct::Analysis;
-      x.analysis = MakeAtomicAnalysis(atom, std::nullopt,
-          MakeAtomicAnalysisOp(Analysis::Read, maybeRead->lhs),
-          MakeAtomicAnalysisOp(Analysis::None));
+      if (auto maybe{GetConvertInput(maybeRead->rhs)}) {
+        const SomeExpr &atom{*maybe};
+        using Analysis = parser::OpenMPAtomicConstruct::Analysis;
+        x.analysis = MakeAtomicAnalysis(atom, std::nullopt,
+            MakeAtomicAnalysisOp(Analysis::Read, maybeRead),
+            MakeAtomicAnalysisOp(Analysis::None));
+      }
     } else {
       context_.Say(
           x.source, "ATOMIC READ operation should be an assignment"_err_en_US);
@@ -4058,7 +4269,7 @@ void OmpStructureChecker::CheckAtomicWrite(
 
       using Analysis = parser::OpenMPAtomicConstruct::Analysis;
       x.analysis = MakeAtomicAnalysis(atom, std::nullopt,
-          MakeAtomicAnalysisOp(Analysis::Write, maybeWrite->rhs),
+          MakeAtomicAnalysisOp(Analysis::Write, maybeWrite),
           MakeAtomicAnalysisOp(Analysis::None));
     } else {
       context_.Say(

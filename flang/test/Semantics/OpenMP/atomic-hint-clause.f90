@@ -25,7 +25,7 @@ program sample
     
     !ERROR: The synchronization hint is not valid
     !$omp atomic hint(7) capture
-    !WARNING: In ATOMIC UPDATE operation with CAPTURE either statement could be the capture and the update, assuming the first one is the capture statement
+    !WARNING: In ATOMIC UPDATE operation with CAPTURE either statement could be the update and the capture, assuming the first one is the capture statement
         y = x
         x = y
     !$omp end atomic

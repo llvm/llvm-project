@@ -97,50 +97,50 @@ program sample
     !$omp end atomic
 
     !$omp atomic capture
+    !ERROR: In ATOMIC UPDATE operation with CAPTURE the right-hand side of the capture assignment should read b
         v = x
-    !ERROR: In ATOMIC UPDATE operation with CAPTURE the update statement should assign to x
         b = b + 1
     !$omp end atomic
 
     !$omp atomic capture
+    !ERROR: In ATOMIC UPDATE operation with CAPTURE the right-hand side of the capture assignment should read b
         v = x
-    !ERROR: In ATOMIC UPDATE operation with CAPTURE the update statement should assign to x
         b = 10
     !$omp end atomic
 
-    !ERROR: Unable to identify capture statement: in ATOMIC UPDATE operation with CAPTURE the source value in the capture statement should be a variable (with the same type as the target)
     !$omp atomic capture
         x = x + 10
+    !ERROR: In ATOMIC UPDATE operation with CAPTURE the right-hand side of the capture assignment should read x
         v = b
     !$omp end atomic
 
-    !ERROR: Unable to identify capture statement: in ATOMIC UPDATE operation with CAPTURE the source value in the capture statement should be a variable (with the same type as the target)
+    !ERROR: In ATOMIC UPDATE operation with CAPTURE neither statement could be the update or the capture
     !$omp atomic capture
         v = 1
         x = 4
     !$omp end atomic
 
     !$omp atomic capture
+    !ERROR: In ATOMIC UPDATE operation with CAPTURE the right-hand side of the capture assignment should read z%m
         x = z%y
-    !ERROR: In ATOMIC UPDATE operation with CAPTURE the update statement should assign to z%y
         z%m = z%m + 1.0
     !$omp end atomic
 
     !$omp atomic capture
-    !ERROR: In ATOMIC UPDATE operation with CAPTURE the update statement should assign to z%y
         z%m = z%m + 1.0
+    !ERROR: In ATOMIC UPDATE operation with CAPTURE the right-hand side of the capture assignment should read z%m
         x = z%y
     !$omp end atomic
 
     !$omp atomic capture
+    !ERROR: In ATOMIC UPDATE operation with CAPTURE the right-hand side of the capture assignment should read y(1_8)
         x = y(2)
-    !ERROR: In ATOMIC UPDATE operation with CAPTURE the update statement should assign to y(2_8)
         y(1) = y(1) + 1
     !$omp end atomic
 
     !$omp atomic capture
-    !ERROR: In ATOMIC UPDATE operation with CAPTURE the update statement should assign to y(2_8)
         y(1) = y(1) + 1
+    !ERROR: In ATOMIC UPDATE operation with CAPTURE the right-hand side of the capture assignment should read y(1_8)
         x = y(2)
     !$omp end atomic
 
