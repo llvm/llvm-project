@@ -1605,7 +1605,7 @@ void OmpStructureChecker::Leave(const parser::OpenMPThreadprivate &c) {
   const auto &dir{std::get<parser::Verbatim>(c.t)};
   const auto &objectList{std::get<parser::OmpObjectList>(c.t)};
   CheckSymbolNames(dir.source, objectList);
-  CheckIsVarPartOfAnotherVar(dir.source, objectList);
+  CheckVarIsNotPartOfAnotherVar(dir.source, objectList);
   CheckThreadprivateOrDeclareTargetVar(objectList);
   dirContext_.pop_back();
 }
@@ -1736,7 +1736,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPDeclarativeAllocate &x) {
   for (const auto &clause : clauseList.v) {
     CheckAlignValue(clause);
   }
-  CheckIsVarPartOfAnotherVar(dir.source, objectList);
+  CheckVarIsNotPartOfAnotherVar(dir.source, objectList);
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPDeclarativeAllocate &x) {
@@ -1902,7 +1902,7 @@ void OmpStructureChecker::Leave(const parser::OpenMPDeclareTargetConstruct &x) {
   if (const auto *objectList{parser::Unwrap<parser::OmpObjectList>(spec.u)}) {
     deviceConstructFound_ = true;
     CheckSymbolNames(dir.source, *objectList);
-    CheckIsVarPartOfAnotherVar(dir.source, *objectList);
+    CheckVarIsNotPartOfAnotherVar(dir.source, *objectList);
     CheckThreadprivateOrDeclareTargetVar(*objectList);
   } else if (const auto *clauseList{
                  parser::Unwrap<parser::OmpClauseList>(spec.u)}) {
@@ -1915,18 +1915,18 @@ void OmpStructureChecker::Leave(const parser::OpenMPDeclareTargetConstruct &x) {
                 toClauseFound = true;
                 auto &objList{std::get<parser::OmpObjectList>(toClause.v.t)};
                 CheckSymbolNames(dir.source, objList);
-                CheckIsVarPartOfAnotherVar(dir.source, objList);
+                CheckVarIsNotPartOfAnotherVar(dir.source, objList);
                 CheckThreadprivateOrDeclareTargetVar(objList);
               },
               [&](const parser::OmpClause::Link &linkClause) {
                 CheckSymbolNames(dir.source, linkClause.v);
-                CheckIsVarPartOfAnotherVar(dir.source, linkClause.v);
+                CheckVarIsNotPartOfAnotherVar(dir.source, linkClause.v);
                 CheckThreadprivateOrDeclareTargetVar(linkClause.v);
               },
               [&](const parser::OmpClause::Enter &enterClause) {
                 enterClauseFound = true;
                 CheckSymbolNames(dir.source, enterClause.v);
-                CheckIsVarPartOfAnotherVar(dir.source, enterClause.v);
+                CheckVarIsNotPartOfAnotherVar(dir.source, enterClause.v);
                 CheckThreadprivateOrDeclareTargetVar(enterClause.v);
               },
               [&](const parser::OmpClause::DeviceType &deviceTypeClause) {
@@ -2009,7 +2009,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPExecutableAllocate &x) {
     CheckAlignValue(clause);
   }
   if (objectList) {
-    CheckIsVarPartOfAnotherVar(dir.source, *objectList);
+    CheckVarIsNotPartOfAnotherVar(dir.source, *objectList);
   }
 }
 
@@ -2029,7 +2029,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPAllocatorsConstruct &x) {
   for (const auto &clause : clauseList.v) {
     if (const auto *allocClause{
             parser::Unwrap<parser::OmpClause::Allocate>(clause)}) {
-      CheckIsVarPartOfAnotherVar(
+      CheckVarIsNotPartOfAnotherVar(
           dir.source, std::get<parser::OmpObjectList>(allocClause->v.t));
     }
   }
@@ -3791,14 +3791,14 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Ordered &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Shared &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_shared);
-  CheckIsVarPartOfAnotherVar(GetContext().clauseSource, x.v, "SHARED");
+  CheckVarIsNotPartOfAnotherVar(GetContext().clauseSource, x.v, "SHARED");
   CheckCrayPointee(x.v, "SHARED");
 }
 void OmpStructureChecker::Enter(const parser::OmpClause::Private &x) {
   SymbolSourceMap symbols;
   GetSymbolsInObjectList(x.v, symbols);
   CheckAllowedClause(llvm::omp::Clause::OMPC_private);
-  CheckIsVarPartOfAnotherVar(GetContext().clauseSource, x.v, "PRIVATE");
+  CheckVarIsNotPartOfAnotherVar(GetContext().clauseSource, x.v, "PRIVATE");
   CheckIntentInPointer(symbols, llvm::omp::Clause::OMPC_private);
   CheckCrayPointee(x.v, "PRIVATE");
 }
@@ -3827,15 +3827,15 @@ bool OmpStructureChecker::IsDataRefTypeParamInquiry(
   return dataRefIsTypeParamInquiry;
 }
 
-void OmpStructureChecker::CheckIsVarPartOfAnotherVar(
+void OmpStructureChecker::CheckVarIsNotPartOfAnotherVar(
     const parser::CharBlock &source, const parser::OmpObjectList &objList,
     llvm::StringRef clause) {
   for (const auto &ompObject : objList.v) {
-    CheckIsVarPartOfAnotherVar(source, ompObject, clause);
+    CheckVarIsNotPartOfAnotherVar(source, ompObject, clause);
   }
 }
 
-void OmpStructureChecker::CheckIsVarPartOfAnotherVar(
+void OmpStructureChecker::CheckVarIsNotPartOfAnotherVar(
     const parser::CharBlock &source, const parser::OmpObject &ompObject,
     llvm::StringRef clause) {
   common::visit(
@@ -3875,7 +3875,7 @@ void OmpStructureChecker::CheckIsVarPartOfAnotherVar(
 void OmpStructureChecker::Enter(const parser::OmpClause::Firstprivate &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_firstprivate);
 
-  CheckIsVarPartOfAnotherVar(GetContext().clauseSource, x.v, "FIRSTPRIVATE");
+  CheckVarIsNotPartOfAnotherVar(GetContext().clauseSource, x.v, "FIRSTPRIVATE");
   CheckCrayPointee(x.v, "FIRSTPRIVATE");
   CheckIsLoopIvPartOfClause(llvmOmpClause::OMPC_firstprivate, x.v);
 
@@ -4204,7 +4204,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Detach &x) {
   // OpenMP 5.2: 12.5.2 Detach clause restrictions
   unsigned version{context_.langOptions().OpenMPVersion};
   if (version >= 52) {
-    CheckIsVarPartOfAnotherVar(GetContext().clauseSource, x.v.v, "DETACH");
+    CheckVarIsNotPartOfAnotherVar(GetContext().clauseSource, x.v.v, "DETACH");
   }
 
   if (const auto *name{parser::Unwrap<parser::Name>(x.v.v)}) {
@@ -4571,7 +4571,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Lastprivate &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_lastprivate);
 
   const auto &objectList{std::get<parser::OmpObjectList>(x.v.t)};
-  CheckIsVarPartOfAnotherVar(
+  CheckVarIsNotPartOfAnotherVar(
       GetContext().clauseSource, objectList, "LASTPRIVATE");
   CheckCrayPointee(objectList, "LASTPRIVATE");
 
