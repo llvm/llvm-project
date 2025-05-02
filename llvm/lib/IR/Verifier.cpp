@@ -835,6 +835,8 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
           "Global variable initializer type does not match global "
           "variable type!",
           &GV);
+    Check(GV.getInitializer()->getType()->isSized(),
+          "Global variable initializer must be sized", &GV);
     // If the global has common linkage, it must have a zero initializer and
     // cannot be constant.
     if (GV.hasCommonLinkage()) {
