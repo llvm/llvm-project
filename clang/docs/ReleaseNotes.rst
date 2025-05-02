@@ -624,7 +624,7 @@ Bug Fixes to C++ Support
 - Fix a crash when checking the template template parameters of a dependent lambda appearing in an alias declaration.
   (#GH136432), (#GH137014), (#GH138018)
 - Fixed an assertion when trying to constant-fold various builtins when the argument
-  refered to a reference to an incomplete type. (#GH129397)
+  referred to a reference to an incomplete type. (#GH129397)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
