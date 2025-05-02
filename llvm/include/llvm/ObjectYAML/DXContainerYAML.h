@@ -113,12 +113,8 @@ struct DescriptorTableYaml {
   SmallVector<DescriptorRangeYaml> Ranges;
 };
 
-
-using ParameterData = std::variant<
-RootConstantsYaml,
-RootDescriptorYaml,
-DescriptorTableYaml
->;
+using ParameterData =
+    std::variant<RootConstantsYaml, RootDescriptorYaml, DescriptorTableYaml>;
 
 struct RootParameterYamlDesc {
   uint32_t Type;
@@ -127,9 +123,7 @@ struct RootParameterYamlDesc {
   ParameterData Data;
 
   RootParameterYamlDesc(){};
-  RootParameterYamlDesc(uint32_t T) : Type(T) {
-   
-  }
+  RootParameterYamlDesc(uint32_t T) : Type(T) {}
 };
 
 struct RootSignatureYamlDesc {

@@ -280,16 +280,20 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
         auto Header = dxbc::RootParameterHeader{Param.Type, Param.Visibility,
                                                 Param.Offset};
 
-        if(std::holds_alternative<DXContainerYAML::RootConstantsYaml>(Param.Data)){
-          auto ConstantYaml = std::get<DXContainerYAML::RootConstantsYaml>(Param.Data);
+        if (std::holds_alternative<DXContainerYAML::RootConstantsYaml>(
+                Param.Data)) {
+          auto ConstantYaml =
+              std::get<DXContainerYAML::RootConstantsYaml>(Param.Data);
 
           dxbc::RootConstants Constants;
           Constants.Num32BitValues = ConstantYaml.Num32BitValues;
           Constants.RegisterSpace = ConstantYaml.RegisterSpace;
           Constants.ShaderRegister = ConstantYaml.ShaderRegister;
           RS.ParametersContainer.addParameter(Header, Constants);
-        } else if (std::holds_alternative<DXContainerYAML::RootDescriptorYaml>(Param.Data)){
-          auto DescriptorYaml = std::get<DXContainerYAML::RootDescriptorYaml>(Param.Data);
+        } else if (std::holds_alternative<DXContainerYAML::RootDescriptorYaml>(
+                       Param.Data)) {
+          auto DescriptorYaml =
+              std::get<DXContainerYAML::RootDescriptorYaml>(Param.Data);
 
           if (RS.Version == 1) {
             dxbc::RST0::v0::RootDescriptor Descriptor;
@@ -301,11 +305,13 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
             Descriptor.RegisterSpace = DescriptorYaml.RegisterSpace;
             Descriptor.ShaderRegister = DescriptorYaml.ShaderRegister;
             Descriptor.Flags = DescriptorYaml.getEncodedFlags();
-          RS.ParametersContainer.addParameter(Header, Descriptor);
+            RS.ParametersContainer.addParameter(Header, Descriptor);
           }
-        }else if (std::holds_alternative<DXContainerYAML::DescriptorTableYaml>(Param.Data)) {
+        } else if (std::holds_alternative<DXContainerYAML::DescriptorTableYaml>(
+                       Param.Data)) {
           mcdxbc::DescriptorTable Table;
-          auto TableYaml = std::get<DXContainerYAML::DescriptorTableYaml>(Param.Data);
+          auto TableYaml =
+              std::get<DXContainerYAML::DescriptorTableYaml>(Param.Data);
 
           for (const auto &R : TableYaml.Ranges) {
             if (RS.Version == 1) {

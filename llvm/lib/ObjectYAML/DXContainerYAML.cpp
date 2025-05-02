@@ -93,7 +93,7 @@ DXContainerYAML::RootSignatureYamlDesc::create(
       YamlDescriptor.RegisterSpace = Descriptor.RegisterSpace;
       if (Version > 1) {
 #define ROOT_DESCRIPTOR_FLAG(Num, Val)                                         \
-  YamlDescriptor.Val =                                                        \
+  YamlDescriptor.Val =                                                         \
       (Descriptor.Flags &                                                      \
        llvm::to_underlying(dxbc::RootDescriptorFlag::Val)) > 0;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
@@ -403,24 +403,24 @@ void MappingTraits<llvm::DXContainerYAML::RootParameterYamlDesc>::mapping(
   switch (P.Type) {
   case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit): {
     DXContainerYAML::RootConstantsYaml Constants;
-    if(IO.outputting())
+    if (IO.outputting())
       Constants = std::get<DXContainerYAML::RootConstantsYaml>(P.Data);
     IO.mapRequired("Constants", Constants);
     P.Data = Constants;
   } break;
   case llvm::to_underlying(dxbc::RootParameterType::CBV):
   case llvm::to_underlying(dxbc::RootParameterType::SRV):
-  case llvm::to_underlying(dxbc::RootParameterType::UAV):{
+  case llvm::to_underlying(dxbc::RootParameterType::UAV): {
     DXContainerYAML::RootDescriptorYaml Descriptor;
-    if(IO.outputting())
+    if (IO.outputting())
       Descriptor = std::get<DXContainerYAML::RootDescriptorYaml>(P.Data);
     IO.mapRequired("Descriptor", Descriptor);
     P.Data = Descriptor;
   } break;
   case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
     DXContainerYAML::DescriptorTableYaml Table;
-    if(IO.outputting())
-    Table = std::get<DXContainerYAML::DescriptorTableYaml>(P.Data);
+    if (IO.outputting())
+      Table = std::get<DXContainerYAML::DescriptorTableYaml>(P.Data);
     IO.mapRequired("Table", Table);
     P.Data = Table;
   } break;
