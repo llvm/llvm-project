@@ -9849,7 +9849,6 @@ AssignConvertType Sema::CheckSingleAssignmentConstraints(QualType LHSType,
         }
       }
 
-
       if (ConvertRHS)
         RHS = ImpCastExprToType(RHS.get(), LHSType, Kind, VK_PRValue, &Path);
     }
