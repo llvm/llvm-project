@@ -45,7 +45,9 @@ LLVM_LIBC_FUNCTION(double, sinpi, (double x)) {
   if (LIBC_UNLIKELY(x_abs == 0U))
     return x;
  // When |x| > 2^51, x is an Integer or Nan
- if (x_abs >= 0x59000000) {
+  if (x_abs >= 0x4320000000000000) {
+   if (x_abs < 0x4330000000000000)
+     return (x_abs & 0x1) ? -1.0 : 1.0;
    // |x| >= 2^52
    if (x_abs >= 0x4330000000000000) { 
     if (xbits.is_nan())
