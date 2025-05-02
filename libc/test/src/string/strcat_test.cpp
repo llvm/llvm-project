@@ -37,11 +37,11 @@ TEST(LlvmLibcStrCatTest, NonEmptyDest) {
   ASSERT_STREQ(dest, "xyzabc");
 }
 
-#ifdef LIBC_TARGET_OS_IS_LINUX
+#if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
 
 TEST(LlvmLibcStrCatTest, CrashOnNullPtr) {
   ASSERT_DEATH([]() { LIBC_NAMESPACE::strcat(nullptr, nullptr); },
-               WITH_SIGNAL(SIGILL));
+               WITH_SIGNAL(SIGTRAP));
 }
 
 #endif // defined(LIBC_TARGET_OS_IS_LINUX)
