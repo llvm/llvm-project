@@ -638,6 +638,14 @@ enum class AvailabilityMergeKind {
   OptionalProtocolImplementation
 };
 
+enum class TrivialABIHandling {
+  /// The triviality of a method unaffected by "trivial_abi".
+  IgnoreTrivialABI,
+
+  /// The triviality of a method affected by "trivial_abi".
+  ConsiderTrivialABI
+};
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -6051,20 +6059,13 @@ public:
   void DiagnoseNontrivial(const CXXRecordDecl *Record,
                           CXXSpecialMemberKind CSM);
 
-  enum TrivialABIHandling {
-    /// The triviality of a method unaffected by "trivial_abi".
-    TAH_IgnoreTrivialABI,
-
-    /// The triviality of a method affected by "trivial_abi".
-    TAH_ConsiderTrivialABI
-  };
-
   /// Determine whether a defaulted or deleted special member function is
   /// trivial, as specified in C++11 [class.ctor]p5, C++11 [class.copy]p12,
   /// C++11 [class.copy]p25, and C++11 [class.dtor]p5.
-  bool SpecialMemberIsTrivial(CXXMethodDecl *MD, CXXSpecialMemberKind CSM,
-                              TrivialABIHandling TAH = TAH_IgnoreTrivialABI,
-                              bool Diagnose = false);
+  bool SpecialMemberIsTrivial(
+      CXXMethodDecl *MD, CXXSpecialMemberKind CSM,
+      TrivialABIHandling TAH = TrivialABIHandling::IgnoreTrivialABI,
+      bool Diagnose = false);
 
   /// For a defaulted function, the kind of defaulted function that it is.
   class DefaultedFunctionKind {
