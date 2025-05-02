@@ -1022,8 +1022,7 @@ void Sema::checkVariadicArgument(const Expr *E, VariadicCallType CT) {
   case VAK_ValidInCXX11:
     DiagRuntimeBehavior(
         E->getBeginLoc(), nullptr,
-        PDiag(diag::warn_cxx98_compat_pass_non_pod_arg_to_vararg)
-            << Ty << llvm::to_underlying(CT));
+        PDiag(diag::warn_cxx98_compat_pass_non_pod_arg_to_vararg) << Ty << CT);
     [[fallthrough]];
   case VAK_Valid:
     if (Ty->isRecordType()) {
@@ -1031,8 +1030,7 @@ void Sema::checkVariadicArgument(const Expr *E, VariadicCallType CT) {
       // 'c_str' member function, the user probably meant to call that.
       DiagRuntimeBehavior(E->getBeginLoc(), nullptr,
                           PDiag(diag::warn_pass_class_arg_to_vararg)
-                              << Ty << llvm::to_underlying(CT)
-                              << hasCStrMethod(E) << ".c_str()");
+                              << Ty << CT << hasCStrMethod(E) << ".c_str()");
     }
     break;
 
@@ -1040,22 +1038,21 @@ void Sema::checkVariadicArgument(const Expr *E, VariadicCallType CT) {
   case VAK_MSVCUndefined:
     DiagRuntimeBehavior(E->getBeginLoc(), nullptr,
                         PDiag(diag::warn_cannot_pass_non_pod_arg_to_vararg)
-                            << getLangOpts().CPlusPlus11 << Ty
-                            << llvm::to_underlying(CT));
+                            << getLangOpts().CPlusPlus11 << Ty << CT);
     break;
 
   case VAK_Invalid:
     if (Ty.isDestructedType() == QualType::DK_nontrivial_c_struct)
       Diag(E->getBeginLoc(),
            diag::err_cannot_pass_non_trivial_c_struct_to_vararg)
-          << Ty << llvm::to_underlying(CT);
+          << Ty << CT;
     else if (Ty->isObjCObjectType())
       DiagRuntimeBehavior(E->getBeginLoc(), nullptr,
                           PDiag(diag::err_cannot_pass_objc_interface_to_vararg)
-                              << Ty << llvm::to_underlying(CT));
+                              << Ty << CT);
     else
       Diag(E->getBeginLoc(), diag::err_cannot_pass_to_vararg)
-          << isa<InitListExpr>(E) << Ty << llvm::to_underlying(CT);
+          << isa<InitListExpr>(E) << Ty << CT;
     break;
   }
 }
@@ -7239,7 +7236,8 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
     // to destruct.
     if (E->getType().hasNonTrivialToPrimitiveDestructCUnion())
       checkNonTrivialCUnion(E->getType(), E->getExprLoc(),
-                            NTCUC_CompoundLiteral, NTCUK_Destruct);
+                            NonTrivialCUnionContext::CompoundLiteral,
+                            NTCUK_Destruct);
 
     // Diagnose jumps that enter or exit the lifetime of the compound literal.
     if (literalType.isDestructedType()) {
@@ -14950,8 +14948,8 @@ static bool needsConversionOfHalfVec(bool OpRequiresConversion, ASTContext &Ctx,
 }
 
 ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
-                                    BinaryOperatorKind Opc,
-                                    Expr *LHSExpr, Expr *RHSExpr) {
+                                    BinaryOperatorKind Opc, Expr *LHSExpr,
+                                    Expr *RHSExpr, bool ForFoldExpression) {
   if (getLangOpts().CPlusPlus11 && isa<InitListExpr>(RHSExpr)) {
     // The syntax only allows initializer lists on the RHS of assignment,
     // so we don't need to worry about accepting invalid code for
@@ -15044,7 +15042,7 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
 
       if (LHS.get()->getType().hasNonTrivialToPrimitiveCopyCUnion())
         checkNonTrivialCUnion(LHS.get()->getType(), LHS.get()->getExprLoc(),
-                              NTCUC_Assignment, NTCUK_Copy);
+                              NonTrivialCUnionContext::Assignment, NTCUK_Copy);
     }
     RecordModifiableNonNullParam(*this, LHS.get());
     break;
@@ -15082,7 +15080,7 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
     ResultTy = CheckCompareOperands(LHS, RHS, OpLoc, Opc);
 
     if (const auto *BI = dyn_cast<BinaryOperator>(LHSExpr);
-        BI && BI->isComparisonOp())
+        !ForFoldExpression && BI && BI->isComparisonOp())
       Diag(OpLoc, diag::warn_consecutive_comparison)
           << BI->getOpcodeStr() << BinaryOperator::getOpcodeStr(Opc);
 
@@ -15493,8 +15491,8 @@ static ExprResult BuildOverloadedBinOp(Sema &S, Scope *Sc, SourceLocation OpLoc,
 }
 
 ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
-                            BinaryOperatorKind Opc,
-                            Expr *LHSExpr, Expr *RHSExpr) {
+                            BinaryOperatorKind Opc, Expr *LHSExpr,
+                            Expr *RHSExpr, bool ForFoldExpression) {
   ExprResult LHS, RHS;
   std::tie(LHS, RHS) = CorrectDelayedTyposInBinOp(*this, Opc, LHSExpr, RHSExpr);
   if (!LHS.isUsable() || !RHS.isUsable())
@@ -15568,7 +15566,8 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
            LHSExpr->getType()->isOverloadableType()))
         return BuildOverloadedBinOp(*this, S, OpLoc, Opc, LHSExpr, RHSExpr);
 
-      return CreateBuiltinBinOp(OpLoc, Opc, LHSExpr, RHSExpr);
+      return CreateBuiltinBinOp(OpLoc, Opc, LHSExpr, RHSExpr,
+                                ForFoldExpression);
     }
 
     // Don't resolve overloads if the other type is overloadable.
@@ -15632,7 +15631,7 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
   }
 
   // Build a built-in binary operation.
-  return CreateBuiltinBinOp(OpLoc, Opc, LHSExpr, RHSExpr);
+  return CreateBuiltinBinOp(OpLoc, Opc, LHSExpr, RHSExpr, ForFoldExpression);
 }
 
 static bool isOverflowingIntegerType(ASTContext &Ctx, QualType T) {
@@ -16533,8 +16532,9 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
 
   if (RetTy.hasNonTrivialToPrimitiveDestructCUnion() ||
       RetTy.hasNonTrivialToPrimitiveCopyCUnion())
-    checkNonTrivialCUnion(RetTy, BD->getCaretLocation(), NTCUC_FunctionReturn,
-                          NTCUK_Destruct|NTCUK_Copy);
+    checkNonTrivialCUnion(RetTy, BD->getCaretLocation(),
+                          NonTrivialCUnionContext::FunctionReturn,
+                          NTCUK_Destruct | NTCUK_Copy);
 
   PopDeclContext();
 
@@ -18539,7 +18539,7 @@ MarkVarDeclODRUsed(ValueDecl *V, SourceLocation Loc, Sema &SemaRef,
   QualType CaptureType, DeclRefType;
   if (SemaRef.LangOpts.OpenMP)
     SemaRef.OpenMP().tryCaptureOpenMPLambdas(V);
-  SemaRef.tryCaptureVariable(V, Loc, Sema::TryCapture_Implicit,
+  SemaRef.tryCaptureVariable(V, Loc, TryCaptureKind::Implicit,
                              /*EllipsisLoc*/ SourceLocation(),
                              /*BuildAndDiagnose*/ true, CaptureType,
                              DeclRefType, FunctionScopeIndexToStopAt);
@@ -18557,8 +18557,7 @@ MarkVarDeclODRUsed(ValueDecl *V, SourceLocation Loc, Sema &SemaRef,
       // through shadow variables therefore it is not diagnosed.
       if (SemaRef.LangOpts.CUDAIsDevice && !SemaRef.LangOpts.HIPStdPar) {
         SemaRef.targetDiag(Loc, diag::err_ref_bad_target)
-            << /*host*/ 2 << /*variable*/ 1 << Var
-            << llvm::to_underlying(UserTarget);
+            << /*host*/ 2 << /*variable*/ 1 << Var << UserTarget;
         SemaRef.targetDiag(Var->getLocation(),
                            Var->getType().isConstQualified()
                                ? diag::note_cuda_const_var_unpromoted
@@ -18845,12 +18844,12 @@ static bool captureInBlock(BlockScopeInfo *BSI, ValueDecl *Var,
 static bool captureInCapturedRegion(
     CapturedRegionScopeInfo *RSI, ValueDecl *Var, SourceLocation Loc,
     const bool BuildAndDiagnose, QualType &CaptureType, QualType &DeclRefType,
-    const bool RefersToCapturedVariable, Sema::TryCaptureKind Kind,
-    bool IsTopScope, Sema &S, bool Invalid) {
+    const bool RefersToCapturedVariable, TryCaptureKind Kind, bool IsTopScope,
+    Sema &S, bool Invalid) {
   // By default, capture variables by reference.
   bool ByRef = true;
-  if (IsTopScope && Kind != Sema::TryCapture_Implicit) {
-    ByRef = (Kind == Sema::TryCapture_ExplicitByRef);
+  if (IsTopScope && Kind != TryCaptureKind::Implicit) {
+    ByRef = (Kind == TryCaptureKind::ExplicitByRef);
   } else if (S.getLangOpts().OpenMP && RSI->CapRegionKind == CR_OpenMP) {
     // Using an LValue reference type is consistent with Lambdas (see below).
     if (S.OpenMP().isOpenMPCapturedDecl(Var)) {
@@ -18886,13 +18885,13 @@ static bool captureInLambda(LambdaScopeInfo *LSI, ValueDecl *Var,
                             SourceLocation Loc, const bool BuildAndDiagnose,
                             QualType &CaptureType, QualType &DeclRefType,
                             const bool RefersToCapturedVariable,
-                            const Sema::TryCaptureKind Kind,
+                            const TryCaptureKind Kind,
                             SourceLocation EllipsisLoc, const bool IsTopScope,
                             Sema &S, bool Invalid) {
   // Determine whether we are capturing by reference or by value.
   bool ByRef = false;
-  if (IsTopScope && Kind != Sema::TryCapture_Implicit) {
-    ByRef = (Kind == Sema::TryCapture_ExplicitByRef);
+  if (IsTopScope && Kind != TryCaptureKind::Implicit) {
+    ByRef = (Kind == TryCaptureKind::ExplicitByRef);
   } else {
     ByRef = (LSI->ImpCaptureStyle == LambdaScopeInfo::ImpCap_LambdaByref);
   }
@@ -19170,7 +19169,7 @@ bool Sema::tryCaptureVariable(
   CaptureType = Var->getType();
   DeclRefType = CaptureType.getNonReferenceType();
   bool Nested = false;
-  bool Explicit = (Kind != TryCapture_Implicit);
+  bool Explicit = (Kind != TryCaptureKind::Implicit);
   unsigned FunctionScopesIndex = MaxFunctionScopesIndex;
   do {
 
@@ -19412,9 +19411,9 @@ bool Sema::tryCaptureVariable(ValueDecl *Var, SourceLocation Loc,
 bool Sema::NeedToCaptureVariable(ValueDecl *Var, SourceLocation Loc) {
   QualType CaptureType;
   QualType DeclRefType;
-  return !tryCaptureVariable(Var, Loc, TryCapture_Implicit, SourceLocation(),
-                             /*BuildAndDiagnose=*/false, CaptureType,
-                             DeclRefType, nullptr);
+  return !tryCaptureVariable(
+      Var, Loc, TryCaptureKind::Implicit, SourceLocation(),
+      /*BuildAndDiagnose=*/false, CaptureType, DeclRefType, nullptr);
 }
 
 QualType Sema::getCapturedDeclRefType(ValueDecl *Var, SourceLocation Loc) {
@@ -19424,9 +19423,9 @@ QualType Sema::getCapturedDeclRefType(ValueDecl *Var, SourceLocation Loc) {
   QualType DeclRefType;
 
   // Determine whether we can capture this variable.
-  if (tryCaptureVariable(Var, Loc, TryCapture_Implicit, SourceLocation(),
-                         /*BuildAndDiagnose=*/false, CaptureType,
-                         DeclRefType, nullptr))
+  if (tryCaptureVariable(Var, Loc, TryCaptureKind::Implicit, SourceLocation(),
+                         /*BuildAndDiagnose=*/false, CaptureType, DeclRefType,
+                         nullptr))
     return QualType();
 
   return DeclRefType;
@@ -19810,8 +19809,8 @@ ExprResult Sema::CheckLValueToRValueConversionOperand(Expr *E) {
       (E->getType().hasNonTrivialToPrimitiveDestructCUnion() ||
        E->getType().hasNonTrivialToPrimitiveCopyCUnion()))
     checkNonTrivialCUnion(E->getType(), E->getExprLoc(),
-                          Sema::NTCUC_LValueToRValueVolatile,
-                          NTCUK_Destruct|NTCUK_Copy);
+                          NonTrivialCUnionContext::LValueToRValueVolatile,
+                          NTCUK_Destruct | NTCUK_Copy);
 
   // C++2a [basic.def.odr]p4:
   //   [...] an expression of non-volatile-qualified non-class type to which
@@ -20083,7 +20082,7 @@ static void DoMarkBindingDeclReferenced(Sema &SemaRef, SourceLocation Loc,
   OdrUseContext OdrUse = isOdrUseContext(SemaRef);
   if (OdrUse == OdrUseContext::Used) {
     QualType CaptureType, DeclRefType;
-    SemaRef.tryCaptureVariable(BD, Loc, Sema::TryCapture_Implicit,
+    SemaRef.tryCaptureVariable(BD, Loc, TryCaptureKind::Implicit,
                                /*EllipsisLoc*/ SourceLocation(),
                                /*BuildAndDiagnose*/ true, CaptureType,
                                DeclRefType,

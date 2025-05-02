@@ -67,20 +67,18 @@
 using namespace clang;
 
 CompilerInstance::CompilerInstance(
+    std::shared_ptr<CompilerInvocation> Invocation,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     ModuleCache *ModCache)
     : ModuleLoader(/*BuildingModule=*/ModCache),
-      Invocation(new CompilerInvocation()),
+      Invocation(std::move(Invocation)),
       ModCache(ModCache ? ModCache : createCrossProcessModuleCache()),
-      ThePCHContainerOperations(std::move(PCHContainerOps)) {}
+      ThePCHContainerOperations(std::move(PCHContainerOps)) {
+  assert(this->Invocation && "Invocation must not be null");
+}
 
 CompilerInstance::~CompilerInstance() {
   assert(OutputFiles.empty() && "Still output files in flight?");
-}
-
-void CompilerInstance::setInvocation(
-    std::shared_ptr<CompilerInvocation> Value) {
-  Invocation = std::move(Value);
 }
 
 bool CompilerInstance::shouldBuildGlobalModuleIndex() const {
@@ -1210,11 +1208,10 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
   // CompilerInstance::CompilerInstance is responsible for finalizing the
   // buffers to prevent use-after-frees.
   auto InstancePtr = std::make_unique<CompilerInstance>(
-      getPCHContainerOperations(), &getModuleCache());
+      std::move(Invocation), getPCHContainerOperations(), &getModuleCache());
   auto &Instance = *InstancePtr;
 
-  auto &Inv = *Invocation;
-  Instance.setInvocation(std::move(Invocation));
+  auto &Inv = Instance.getInvocation();
 
   if (ThreadSafeConfig) {
     Instance.createFileManager(ThreadSafeConfig->getVFS());

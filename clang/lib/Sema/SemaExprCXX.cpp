@@ -865,7 +865,7 @@ ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
   // Exceptions aren't allowed in CUDA device code.
   if (getLangOpts().CUDA)
     CUDA().DiagIfDeviceCode(OpLoc, diag::err_cuda_device_exceptions)
-        << "throw" << llvm::to_underlying(CUDA().CurrentTarget());
+        << "throw" << CUDA().CurrentTarget();
 
   if (getCurScope() && getCurScope()->isOpenMPSimdDirectiveScope())
     Diag(OpLoc, diag::err_omp_simd_region_cannot_use_stmt) << "throw";
@@ -9119,16 +9119,16 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
       // error would get diagnosed when the lambda becomes capture ready.
       QualType CaptureType, DeclRefType;
       SourceLocation ExprLoc = VarExpr->getExprLoc();
-      if (S.tryCaptureVariable(Var, ExprLoc, S.TryCapture_Implicit,
-                          /*EllipsisLoc*/ SourceLocation(),
-                          /*BuildAndDiagnose*/false, CaptureType,
-                          DeclRefType, nullptr)) {
+      if (S.tryCaptureVariable(Var, ExprLoc, TryCaptureKind::Implicit,
+                               /*EllipsisLoc*/ SourceLocation(),
+                               /*BuildAndDiagnose*/ false, CaptureType,
+                               DeclRefType, nullptr)) {
         // We will never be able to capture this variable, and we need
         // to be able to in any and all instantiations, so diagnose it.
-        S.tryCaptureVariable(Var, ExprLoc, S.TryCapture_Implicit,
-                          /*EllipsisLoc*/ SourceLocation(),
-                          /*BuildAndDiagnose*/true, CaptureType,
-                          DeclRefType, nullptr);
+        S.tryCaptureVariable(Var, ExprLoc, TryCaptureKind::Implicit,
+                             /*EllipsisLoc*/ SourceLocation(),
+                             /*BuildAndDiagnose*/ true, CaptureType,
+                             DeclRefType, nullptr);
       }
     }
   });

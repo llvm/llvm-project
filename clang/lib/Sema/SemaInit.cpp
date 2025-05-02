@@ -6607,12 +6607,12 @@ void InitializationSequence::InitializeFrom(Sema &S,
       // initializer present.
       if (!Initializer) {
         if (const FieldDecl *FD = getConstField(Rec)) {
-          unsigned DiagID = diag::warn_default_init_const_unsafe;
+          unsigned DiagID = diag::warn_default_init_const_field_unsafe;
           if (Var->getStorageDuration() == SD_Static ||
               Var->getStorageDuration() == SD_Thread)
-            DiagID = diag::warn_default_init_const;
+            DiagID = diag::warn_default_init_const_field;
 
-          S.Diag(Var->getLocation(), DiagID) << Var->getType() << /*member*/ 1;
+          S.Diag(Var->getLocation(), DiagID) << Var->getType();
           S.Diag(FD->getLocation(), diag::note_default_init_const_member) << FD;
         }
       }
@@ -9233,8 +9233,7 @@ bool InitializationSequence::Diagnose(Sema &S,
         // implicit.
         if (S.isImplicitlyDeleted(Best->Function))
           S.Diag(Kind.getLocation(), diag::err_ovl_deleted_special_init)
-              << llvm::to_underlying(
-                     S.getSpecialMember(cast<CXXMethodDecl>(Best->Function)))
+              << S.getSpecialMember(cast<CXXMethodDecl>(Best->Function))
               << DestType << ArgsRange;
         else {
           StringLiteral *Msg = Best->Function->getDeletedMessage();

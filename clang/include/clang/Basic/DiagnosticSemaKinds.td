@@ -7204,6 +7204,11 @@ def warn_consecutive_comparison : Warning<
   "chained comparison 'X %0 Y %1 Z' does not behave the same as a mathematical expression">,
   InGroup<Parentheses>, DefaultError;
 
+def warn_comparison_in_fold_expression : Warning<
+  "comparison in fold expression would evaluate to '(X %0 Y) %0 Z' "
+  "which does not behave the same as a mathematical expression">,
+  InGroup<Parentheses>, DefaultError;
+
 def warn_enum_constant_in_bool_context : Warning<
   "converting the enum constant to a boolean">,
   InGroup<IntInBoolContext>, DefaultIgnore;
@@ -7455,6 +7460,9 @@ def err_tentative_def_incomplete_type : Error<
 def warn_tentative_incomplete_array : Warning<
   "tentative array definition assumed to have one element">,
   InGroup<DiagGroup<"tentative-definition-array">>;
+def warn_cxx_compat_tentative_definition : Warning<
+  "duplicate declaration of %0 is invalid in C++">,
+  InGroup<TentativeDefnCompat>, DefaultIgnore;
 def err_typecheck_incomplete_array_needs_initializer : Error<
   "definition of variable with array type needs an explicit size "
   "or an initializer">;
@@ -8218,14 +8226,20 @@ def err_address_space_qualified_delete : Error<
 
 def note_default_init_const_member : Note<
   "member %0 declared 'const' here">;
+def warn_default_init_const_field : Warning<
+  "default initialization of an object of type %0 with const member is "
+  "incompatible with C++">, InGroup<DefaultConstInitField>, DefaultIgnore;
 def warn_default_init_const : Warning<
-  "default initialization of an object of type %0%select{| with const member}1 "
-  "is incompatible with C++">,
-  InGroup<DefaultConstInit>, DefaultIgnore;
+  "default initialization of an object of type %0 is incompatible with C++">,
+  InGroup<DefaultConstInitVar>, DefaultIgnore;
+def warn_default_init_const_field_unsafe : Warning<
+  "default initialization of an object of type %0 with const member leaves the "
+  "object uninitialized and is incompatible with C++">,
+  InGroup<DefaultConstInitFieldUnsafe>;
 def warn_default_init_const_unsafe : Warning<
-  "default initialization of an object of type %0%select{| with const member}1 "
-  "leaves the object uninitialized and is incompatible with C++">,
-  InGroup<DefaultConstInitUnsafe>;
+  "default initialization of an object of type %0 leaves the object "
+  "uninitialized and is incompatible with C++">,
+  InGroup<DefaultConstInitVarUnsafe>;
 def err_default_init_const : Error<
   "default initialization of an object of const type %0"
   "%select{| without a user-provided default constructor}1">;

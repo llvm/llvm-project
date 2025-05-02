@@ -121,9 +121,12 @@ public:
   /// LLVM zeroinitializer.
   bool isZeroInitializable(clang::QualType ty);
 
-  const CIRGenFunctionInfo &arrangeFreeFunctionCall(const FunctionType *fnType);
+  const CIRGenFunctionInfo &arrangeFreeFunctionCall(const CallArgList &args,
+                                                    const FunctionType *fnType);
 
-  const CIRGenFunctionInfo &arrangeCIRFunctionInfo(CanQualType returnType);
+  const CIRGenFunctionInfo &
+  arrangeCIRFunctionInfo(CanQualType returnType,
+                         llvm::ArrayRef<clang::CanQualType> argTypes);
 };
 
 } // namespace clang::CIRGen

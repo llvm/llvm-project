@@ -2298,7 +2298,7 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
       (ASM != ArraySizeModifier::Normal || Quals != 0)) {
     Diag(Loc, getLangOpts().CPlusPlus ? diag::err_c99_array_usage_cxx
                                       : diag::ext_c99_array_usage)
-        << llvm::to_underlying(ASM);
+        << ASM;
   }
 
   // OpenCL v2.0 s6.12.5 - Arrays of blocks are not supported.
@@ -2560,8 +2560,8 @@ bool Sema::CheckFunctionReturnType(QualType T, SourceLocation Loc) {
 
   if (T.hasNonTrivialToPrimitiveDestructCUnion() ||
       T.hasNonTrivialToPrimitiveCopyCUnion())
-    checkNonTrivialCUnion(T, Loc, NTCUC_FunctionReturn,
-                          NTCUK_Destruct|NTCUK_Copy);
+    checkNonTrivialCUnion(T, Loc, NonTrivialCUnionContext::FunctionReturn,
+                          NTCUK_Destruct | NTCUK_Copy);
 
   // C++2a [dcl.fct]p12:
   //   A volatile-qualified return type is deprecated
@@ -8369,10 +8369,10 @@ static void HandlePtrAuthQualifier(ASTContext &Ctx, QualType &T,
   bool IsInvalid = false;
   unsigned IsAddressDiscriminated, ExtraDiscriminator;
   IsInvalid |= !S.checkPointerAuthDiscriminatorArg(IsAddressDiscriminatedArg,
-                                                   Sema::PADAK_AddrDiscPtrAuth,
+                                                   PointerAuthDiscArgKind::Addr,
                                                    IsAddressDiscriminated);
   IsInvalid |= !S.checkPointerAuthDiscriminatorArg(
-      ExtraDiscriminatorArg, Sema::PADAK_ExtraDiscPtrAuth, ExtraDiscriminator);
+      ExtraDiscriminatorArg, PointerAuthDiscArgKind::Extra, ExtraDiscriminator);
 
   if (IsInvalid) {
     Attr.setInvalid();
@@ -9585,7 +9585,7 @@ bool Sema::RequireLiteralType(SourceLocation Loc, QualType T,
           << RD;
       if (!Dtor->isUserProvided())
         SpecialMemberIsTrivial(Dtor, CXXSpecialMemberKind::Destructor,
-                               TAH_IgnoreTrivialABI,
+                               TrivialABIHandling::IgnoreTrivialABI,
                                /*Diagnose*/ true);
     }
   }

@@ -220,11 +220,6 @@ enum class AssignmentAction {
   Casting,
   Passing_CFAudited
 };
-inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
-                                             const AssignmentAction &AA) {
-  DB << llvm::to_underlying(AA);
-  return DB;
-}
 
 namespace threadSafety {
 class BeforeSet;
@@ -528,6 +523,29 @@ enum class BuiltinCountedByRefKind {
   BinaryExpr,
 };
 
+// Contexts where using non-trivial C union types can be disallowed. This is
+// passed to err_non_trivial_c_union_in_invalid_context.
+enum class NonTrivialCUnionContext {
+  // Function parameter.
+  FunctionParam,
+  // Function return.
+  FunctionReturn,
+  // Default-initialized object.
+  DefaultInitializedObject,
+  // Variable with automatic storage duration.
+  AutoVar,
+  // Initializer expression that might copy from another object.
+  CopyInit,
+  // Assignment.
+  Assignment,
+  // Compound literal.
+  CompoundLiteral,
+  // Block capture.
+  BlockCapture,
+  // lvalue-to-rvalue conversion of volatile type.
+  LValueToRValueVolatile,
+};
+
 /// Describes the result of the name lookup and resolution performed
 /// by \c Sema::ClassifyName().
 enum class NameClassificationKind {
@@ -568,6 +586,67 @@ enum class NameClassificationKind {
   /// The name was classified as a concept name.
   Concept,
 };
+
+enum class PointerAuthDiscArgKind {
+  // Address discrimination argument of __ptrauth.
+  Addr,
+
+  // Extra discriminator argument of __ptrauth.
+  Extra,
+};
+
+/// Common ways to introduce type names without a tag for use in diagnostics.
+/// Keep in sync with err_tag_reference_non_tag.
+enum class NonTagKind {
+  NonStruct,
+  NonClass,
+  NonUnion,
+  NonEnum,
+  Typedef,
+  TypeAlias,
+  Template,
+  TypeAliasTemplate,
+  TemplateTemplateArgument,
+};
+
+enum class OffsetOfKind {
+  // Not parsing a type within __builtin_offsetof.
+  Outside,
+  // Parsing a type within __builtin_offsetof.
+  Builtin,
+  // Parsing a type within macro "offsetof", defined in __buitin_offsetof
+  // To improve our diagnostic message.
+  Macro,
+};
+
+/// Describes the kind of merge to perform for availability
+/// attributes (including "deprecated", "unavailable", and "availability").
+enum class AvailabilityMergeKind {
+  /// Don't merge availability attributes at all.
+  None,
+  /// Merge availability attributes for a redeclaration, which requires
+  /// an exact match.
+  Redeclaration,
+  /// Merge availability attributes for an override, which requires
+  /// an exact match or a weakening of constraints.
+  Override,
+  /// Merge availability attributes for an implementation of
+  /// a protocol requirement.
+  ProtocolImplementation,
+  /// Merge availability attributes for an implementation of
+  /// an optional protocol requirement.
+  OptionalProtocolImplementation
+};
+
+enum class TrivialABIHandling {
+  /// The triviality of a method unaffected by "trivial_abi".
+  IgnoreTrivialABI,
+
+  /// The triviality of a method affected by "trivial_abi".
+  ConsiderTrivialABI
+};
+
+enum class TryCaptureKind { Implicit, ExplicitByVal, ExplicitByRef };
 
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
@@ -3585,14 +3664,6 @@ public:
 
   bool checkConstantPointerAuthKey(Expr *keyExpr, unsigned &key);
 
-  enum PointerAuthDiscArgKind {
-    // Address discrimination argument of __ptrauth.
-    PADAK_AddrDiscPtrAuth,
-
-    // Extra discriminator argument of __ptrauth.
-    PADAK_ExtraDiscPtrAuth,
-  };
-
   bool checkPointerAuthDiscriminatorArg(Expr *Arg, PointerAuthDiscArgKind Kind,
                                         unsigned &IntVal);
 
@@ -3754,29 +3825,6 @@ public:
                               SourceLocation NameLoc,
                               const IdentifierInfo *Name, QualType T,
                               TypeSourceInfo *TSInfo, StorageClass SC);
-
-  // Contexts where using non-trivial C union types can be disallowed. This is
-  // passed to err_non_trivial_c_union_in_invalid_context.
-  enum NonTrivialCUnionContext {
-    // Function parameter.
-    NTCUC_FunctionParam,
-    // Function return.
-    NTCUC_FunctionReturn,
-    // Default-initialized object.
-    NTCUC_DefaultInitializedObject,
-    // Variable with automatic storage duration.
-    NTCUC_AutoVar,
-    // Initializer expression that might copy from another object.
-    NTCUC_CopyInit,
-    // Assignment.
-    NTCUC_Assignment,
-    // Compound literal.
-    NTCUC_CompoundLiteral,
-    // Block capture.
-    NTCUC_BlockCapture,
-    // lvalue-to-rvalue conversion of volatile type.
-    NTCUC_LValueToRValueVolatile,
-  };
 
   /// Emit diagnostics if the initializer or any of its explicit or
   /// implicitly-generated subexpressions require copying or
@@ -3980,20 +4028,6 @@ public:
   Decl *BuildMicrosoftCAnonymousStruct(Scope *S, DeclSpec &DS,
                                        RecordDecl *Record);
 
-  /// Common ways to introduce type names without a tag for use in diagnostics.
-  /// Keep in sync with err_tag_reference_non_tag.
-  enum NonTagKind {
-    NTK_NonStruct,
-    NTK_NonClass,
-    NTK_NonUnion,
-    NTK_NonEnum,
-    NTK_Typedef,
-    NTK_TypeAlias,
-    NTK_Template,
-    NTK_TypeAliasTemplate,
-    NTK_TemplateTemplateArgument,
-  };
-
   /// Given a non-tag type declaration, returns an enum useful for indicating
   /// what kind of non-tag type this is.
   NonTagKind getNonTagTypeDeclKind(const Decl *D, TagTypeKind TTK);
@@ -4005,16 +4039,6 @@ public:
   bool isAcceptableTagRedeclaration(const TagDecl *Previous, TagTypeKind NewTag,
                                     bool isDefinition, SourceLocation NewTagLoc,
                                     const IdentifierInfo *Name);
-
-  enum OffsetOfKind {
-    // Not parsing a type within __builtin_offsetof.
-    OOK_Outside,
-    // Parsing a type within __builtin_offsetof.
-    OOK_Builtin,
-    // Parsing a type within macro "offsetof", defined in __buitin_offsetof
-    // To improve our diagnostic message.
-    OOK_Macro,
-  };
 
   /// This is invoked when we see 'struct foo' or 'struct {'.  In the
   /// former case, Name will be non-null.  In the later case, Name will be null.
@@ -4181,28 +4205,10 @@ public:
                                 TypeSourceInfo *TInfo);
   bool isIncompatibleTypedef(const TypeDecl *Old, TypedefNameDecl *New);
 
-  /// Describes the kind of merge to perform for availability
-  /// attributes (including "deprecated", "unavailable", and "availability").
-  enum AvailabilityMergeKind {
-    /// Don't merge availability attributes at all.
-    AMK_None,
-    /// Merge availability attributes for a redeclaration, which requires
-    /// an exact match.
-    AMK_Redeclaration,
-    /// Merge availability attributes for an override, which requires
-    /// an exact match or a weakening of constraints.
-    AMK_Override,
-    /// Merge availability attributes for an implementation of
-    /// a protocol requirement.
-    AMK_ProtocolImplementation,
-    /// Merge availability attributes for an implementation of
-    /// an optional protocol requirement.
-    AMK_OptionalProtocolImplementation
-  };
-
   /// mergeDeclAttributes - Copy attributes from the Old decl to the New one.
-  void mergeDeclAttributes(NamedDecl *New, Decl *Old,
-                           AvailabilityMergeKind AMK = AMK_Redeclaration);
+  void mergeDeclAttributes(
+      NamedDecl *New, Decl *Old,
+      AvailabilityMergeKind AMK = AvailabilityMergeKind::Redeclaration);
 
   /// MergeTypedefNameDecl - We just parsed a typedef 'New' which has the
   /// same name and scope as a previous declaration 'Old'.  Figure out
@@ -6055,20 +6061,13 @@ public:
   void DiagnoseNontrivial(const CXXRecordDecl *Record,
                           CXXSpecialMemberKind CSM);
 
-  enum TrivialABIHandling {
-    /// The triviality of a method unaffected by "trivial_abi".
-    TAH_IgnoreTrivialABI,
-
-    /// The triviality of a method affected by "trivial_abi".
-    TAH_ConsiderTrivialABI
-  };
-
   /// Determine whether a defaulted or deleted special member function is
   /// trivial, as specified in C++11 [class.ctor]p5, C++11 [class.copy]p12,
   /// C++11 [class.copy]p25, and C++11 [class.dtor]p5.
-  bool SpecialMemberIsTrivial(CXXMethodDecl *MD, CXXSpecialMemberKind CSM,
-                              TrivialABIHandling TAH = TAH_IgnoreTrivialABI,
-                              bool Diagnose = false);
+  bool SpecialMemberIsTrivial(
+      CXXMethodDecl *MD, CXXSpecialMemberKind CSM,
+      TrivialABIHandling TAH = TrivialABIHandling::IgnoreTrivialABI,
+      bool Diagnose = false);
 
   /// For a defaulted function, the kind of defaulted function that it is.
   class DefaultedFunctionKind {
@@ -6779,12 +6778,6 @@ public:
   ExprResult CheckLValueToRValueConversionOperand(Expr *E);
   void CleanupVarDeclMarking();
 
-  enum TryCaptureKind {
-    TryCapture_Implicit,
-    TryCapture_ExplicitByVal,
-    TryCapture_ExplicitByRef
-  };
-
   /// Try to capture the given variable.
   ///
   /// \param Var The variable to capture.
@@ -6826,7 +6819,7 @@ public:
 
   /// Try to capture the given variable.
   bool tryCaptureVariable(ValueDecl *Var, SourceLocation Loc,
-                          TryCaptureKind Kind = TryCapture_Implicit,
+                          TryCaptureKind Kind = TryCaptureKind::Implicit,
                           SourceLocation EllipsisLoc = SourceLocation());
 
   /// Checks if the variable must be captured.
@@ -7220,13 +7213,15 @@ public:
   ExprResult ActOnBinOp(Scope *S, SourceLocation TokLoc, tok::TokenKind Kind,
                         Expr *LHSExpr, Expr *RHSExpr);
   ExprResult BuildBinOp(Scope *S, SourceLocation OpLoc, BinaryOperatorKind Opc,
-                        Expr *LHSExpr, Expr *RHSExpr);
+                        Expr *LHSExpr, Expr *RHSExpr,
+                        bool ForFoldExpression = false);
 
   /// CreateBuiltinBinOp - Creates a new built-in binary operation with
   /// operator @p Opc at location @c TokLoc. This routine only supports
   /// built-in operations; ActOnBinOp handles overloaded operators.
   ExprResult CreateBuiltinBinOp(SourceLocation OpLoc, BinaryOperatorKind Opc,
-                                Expr *LHSExpr, Expr *RHSExpr);
+                                Expr *LHSExpr, Expr *RHSExpr,
+                                bool ForFoldExpression = false);
   void LookupBinOp(Scope *S, SourceLocation OpLoc, BinaryOperatorKind Opc,
                    UnresolvedSetImpl &Functions);
 
@@ -15470,12 +15465,6 @@ void Sema::PragmaStack<Sema::AlignPackInfo>::Act(SourceLocation PragmaLocation,
                                                  PragmaMsStackAction Action,
                                                  llvm::StringRef StackSlotLabel,
                                                  AlignPackInfo Value);
-
-inline const StreamingDiagnostic &
-operator<<(const StreamingDiagnostic &DB, Sema::StringEvaluationContext Ctx) {
-  DB << llvm::to_underlying(Ctx);
-  return DB;
-}
 
 } // end namespace clang
 
