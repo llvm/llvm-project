@@ -14,7 +14,7 @@ Parts:
     Size:            200
     RootSignature:
       Version: 2
-      NumRootParameters: 4
+      NumRootParameters: 3
       RootParametersOffset: 24
       NumStaticSamplers: 0
       StaticSamplersOffset: 60
@@ -37,16 +37,15 @@ Parts:
           ShaderRegister: 31
           RegisterSpace: 32
           DATA_STATIC_WHILE_SET_AT_EXECUTE: true
-      - ParameterType:   0
-        ShaderVisibility: 3
+      - ParameterType: 0 # SRV
+        ShaderVisibility: 3 # Domain
         Table:
-          NumRanges:       1
-          RangesOffset:    116
+          NumRanges: 1
           Ranges:
-            - RangeType:       0
-              NumDescriptors:  41
+            - RangeType: 0
+              NumDescriptors: 41
               BaseShaderRegister: 42
-              RegisterSpace:   43
+              RegisterSpace: 43
               OffsetInDescriptorsFromTableStart: -1
               DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS: true
       AllowInputAssemblerInputLayout: true
