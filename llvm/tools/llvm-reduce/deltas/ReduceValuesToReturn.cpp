@@ -20,8 +20,9 @@
 #include "Utils.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 
 using namespace llvm;
 
@@ -121,6 +122,9 @@ static void rewriteFuncWithReturnType(Function &OldF, Value *NewRetValue) {
     }
   }
 
+  NewF->splice(NewF->begin(), &OldF);
+  OldF.replaceAllUsesWith(NewF);
+
   // Preserve the parameters of OldF.
   ValueToValueMapTy VMap;
   for (auto Z : zip_first(OldF.args(), NewF->args())) {
@@ -131,11 +135,8 @@ static void rewriteFuncWithReturnType(Function &OldF, Value *NewRetValue) {
     VMap[&OldArg] = &NewArg;          // Add mapping to VMap
   }
 
-  SmallVector<ReturnInst *, 8> Returns; // Ignore returns cloned.
-  CloneFunctionInto(NewF, &OldF, VMap,
-                    CloneFunctionChangeType::LocalChangesOnly, Returns, "",
-                    /*CodeInfo=*/nullptr);
-  OldF.replaceAllUsesWith(NewF);
+  RemapFunction(*NewF, VMap, RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+
   OldF.eraseFromParent();
 }
 
