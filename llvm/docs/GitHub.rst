@@ -268,10 +268,8 @@ Your options are as follows:
    re-target your branch `feature_2` to `main`. For more complex stacks, you can
    perform this step using the web interface.
 
-   This approach requires
-   `Commit Access <https://llvm.org/docs/DeveloperPolicy.html#obtaining-commit-access>`_.
-   However, if you are involved with a Stacked PR, there's a good chance you'll
-   be granted access.
+   This approach requires commit access. See how to obtain it
+   `here <https://llvm.org/docs/DeveloperPolicy.html#obtaining-commit-access>`_.
 
 #. Two PRs with a dependency note
 
