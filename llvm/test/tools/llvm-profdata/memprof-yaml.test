@@ -2,7 +2,7 @@
 ; COM: The text format only supports the latest version.
 ; RUN: llvm-profdata merge --memprof-version=4 %t/memprof-in.yaml -o %t/memprof-out.indexed
 ; RUN: llvm-profdata show --memory %t/memprof-out.indexed > %t/memprof-out.yaml
-; RUN: diff --ignore-space-change %t/memprof-in.yaml %t/memprof-out.yaml
+; RUN: diff -b %t/memprof-in.yaml %t/memprof-out.yaml
 
 ; Verify that the YAML output is identical to the YAML input.
 ;--- memprof-in.yaml
