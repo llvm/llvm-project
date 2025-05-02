@@ -49,7 +49,7 @@ public:
 
   lldb_private::ThreadCollection::collection GetThreadsToSave() const;
 
-  uint64_t GetCurrentSizeInBytes(Status &error);
+  llvm::Expected<uint64_t> GetCurrentSizeInBytes();
 
   void Clear();
 

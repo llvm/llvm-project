@@ -119,8 +119,8 @@ public:
   ///   an empty collection will be returned.
   SBThreadCollection GetThreadsToSave() const;
 
-  /// Get the current total number of bytes the core is expected to be but not
-  /// including the overhead of the core file format. Requires a Process and
+  /// Get the current total number of bytes the core is expected to have
+  /// excluding the overhead of the core file format. Requires a Process and
   /// Style to be specified.
   ///
   /// \note

@@ -145,20 +145,20 @@ SaveCoreOptions::GetThreadsToSave() const {
   return thread_collection;
 }
 
-uint64_t SaveCoreOptions::GetCurrentSizeInBytes(Status &error) {
-  if (!m_process_sp) {
-    error = Status::FromErrorString("Requires a process to be set.");
-    return 0;
-  }
+llvm::Expected<uint64_t> SaveCoreOptions::GetCurrentSizeInBytes() {
+  Status error;
+  if (!m_process_sp)
+    return Status::FromErrorString("Requires a process to be set.").takeError();
+
 
   error = EnsureValidConfiguration(m_process_sp);
   if (error.Fail())
-    return 0;
+    return error.takeError();
 
   CoreFileMemoryRanges ranges;
   error = m_process_sp->CalculateCoreFileSaveRanges(*this, ranges);
   if (error.Fail())
-    return 0;
+    return error.takeError();
 
   uint64_t total_in_bytes = 0;
   for (auto &core_range : ranges)
