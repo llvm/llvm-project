@@ -128,17 +128,15 @@ static mlir::LogicalResult convertOpToCall(OpTy op,
                            mlir::IntegerType::get(op.getContext(), 1)));
     if (op.getSource()) {
       mlir::Value stream =
-          op.getStream()
-              ? op.getStream()
-              : builder.createIntegerConstant(loc, fTy.getInput(2), -1);
+          op.getStream() ? op.getStream()
+                         : builder.createNullConstant(loc, fTy.getInput(2));
       args = fir::runtime::createArguments(
           builder, loc, fTy, op.getBox(), op.getSource(), stream, pinned,
           hasStat, errmsg, sourceFile, sourceLine);
     } else {
       mlir::Value stream =
-          op.getStream()
-              ? op.getStream()
-              : builder.createIntegerConstant(loc, fTy.getInput(1), -1);
+          op.getStream() ? op.getStream()
+                         : builder.createNullConstant(loc, fTy.getInput(1));
       args = fir::runtime::createArguments(builder, loc, fTy, op.getBox(),
                                            stream, pinned, hasStat, errmsg,
                                            sourceFile, sourceLine);
