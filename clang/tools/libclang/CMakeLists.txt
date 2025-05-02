@@ -158,7 +158,7 @@ if(ENABLE_STATIC)
 endif()
 
 if(ENABLE_SHARED)
-  if(WIN32)
+  if(WIN32 OR CYGWIN)
     set_target_properties(libclang
       PROPERTIES
       VERSION ${LIBCLANG_LIBRARY_VERSION}
