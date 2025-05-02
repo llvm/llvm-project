@@ -35,6 +35,7 @@
 #include "UseDefaultMemberInitCheck.h"
 #include "UseDesignatedInitializersCheck.h"
 #include "UseEmplaceCheck.h"
+#include "UseEnumClassCheck.h"
 #include "UseEqualsDefaultCheck.h"
 #include "UseEqualsDeleteCheck.h"
 #include "UseIntegerSignComparisonCheck.h"
@@ -110,6 +111,7 @@ public:
     CheckFactories.registerCheck<UseDefaultMemberInitCheck>(
         "modernize-use-default-member-init");
     CheckFactories.registerCheck<UseEmplaceCheck>("modernize-use-emplace");
+    CheckFactories.registerCheck<UseEnumClassCheck>("modernize-use-enum-class");
     CheckFactories.registerCheck<UseEqualsDefaultCheck>(
         "modernize-use-equals-default");
     CheckFactories.registerCheck<UseEqualsDeleteCheck>(

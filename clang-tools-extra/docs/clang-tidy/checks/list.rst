@@ -303,6 +303,7 @@ Clang-Tidy Checks
    :doc:`modernize-use-default-member-init <modernize/use-default-member-init>`, "Yes"
    :doc:`modernize-use-designated-initializers <modernize/use-designated-initializers>`, "Yes"
    :doc:`modernize-use-emplace <modernize/use-emplace>`, "Yes"
+   :doc:`modernize-use-enum-class <modernize/use-enum-class>`, "Yes"
    :doc:`modernize-use-equals-default <modernize/use-equals-default>`, "Yes"
    :doc:`modernize-use-equals-delete <modernize/use-equals-delete>`, "Yes"
    :doc:`modernize-use-integer-sign-comparison <modernize/use-integer-sign-comparison>`, "Yes"
