@@ -45,3 +45,16 @@ void f(void) {
 ouch:
   ;
 }
+
+void indirect(int n) {
+DirectJump:
+  ;
+
+  void *Table[] = {&&DirectJump, &&Later};
+  goto *Table[n]; // c-warning {{jump from this indirect goto statement to one of its possible targets is incompatible with C++}} \
+                     cxx-error {{cannot jump from this indirect goto statement to one of its possible targets}}
+
+  int x = 12;     // both-note {{jump bypasses variable initialization}}
+Later:            // both-note {{possible target of indirect goto statement}}
+  ;
+}
