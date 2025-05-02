@@ -50,7 +50,6 @@ std::optional<MCFixupKind> RISCVAsmBackend::getFixupKind(StringRef Name) const {
 #undef ELF_RELOC
 #define ELF_RISCV_NONSTANDARD_RELOC_ALL(NAME, ID) .Case(#NAME, ID)
 #include "llvm/BinaryFormat/ELFRelocs/RISCV_nonstandard.def"
-#undef ELF_RISCV_NONSTANDARD_RELOC_ALL
                .Case("BFD_RELOC_NONE", ELF::R_RISCV_NONE)
                .Case("BFD_RELOC_32", ELF::R_RISCV_32)
                .Case("BFD_RELOC_64", ELF::R_RISCV_64)

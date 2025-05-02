@@ -702,7 +702,6 @@ enum {
 #include "ELFRelocs/RISCV.def"
 #define ELF_RISCV_NONSTANDARD_RELOC_ALL(name, value) name = value,
 #include "ELFRelocs/RISCV_nonstandard.def"
-#undef ELF_RISCV_NONSTANDARD_RELOC_ALL
 };
 
 enum {
