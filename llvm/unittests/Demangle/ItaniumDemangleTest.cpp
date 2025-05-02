@@ -149,6 +149,11 @@ TEST_P(DemangleTestFixture, Demangle_Valid) {
 INSTANTIATE_TEST_SUITE_P(DemangleValidTests, DemangleTestFixture,
                          ::testing::ValuesIn(g_demangle_test_cases));
 
+// Is long double fp80?  (Only x87 extended double has 64-bit mantissa)
+#define LDBL_FP80 (__LDBL_MANT_DIG__ == 64)
+// Is long double fp128?
+#define LDBL_FP128 (__LDBL_MANT_DIG__ == 113)
+
 struct DemangleInvalidTestFixture
     : public ::testing::TestWithParam<const char *> {};
 
@@ -226,11 +231,6 @@ TEST_P(DemangleInvalidTestFixture, Demangle_Invalid) {
 
 INSTANTIATE_TEST_SUITE_P(DemangleInvalidTests, DemangleInvalidTestFixture,
                          ::testing::ValuesIn(g_demangle_invalid_test_cases));
-
-// Is long double fp80?  (Only x87 extended double has 64-bit mantissa)
-#define LDBL_FP80 (__LDBL_MANT_DIG__ == 64)
-// Is long double fp128?
-#define LDBL_FP128 (__LDBL_MANT_DIG__ == 113)
 
 struct FPLiteralCase {
   const char *mangled;
