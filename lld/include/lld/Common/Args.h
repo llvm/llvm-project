@@ -15,9 +15,13 @@
 #include <vector>
 
 namespace llvm {
+class StringSaver;
 namespace opt {
+class Arg;
 class InputArgList;
-}
+class OptSpecifier;
+class OptTable;
+} // namespace opt
 } // namespace llvm
 
 namespace lld {
@@ -39,6 +43,11 @@ uint64_t getZOptionValue(llvm::opt::InputArgList &args, int id, StringRef key,
 std::vector<StringRef> getLines(MemoryBufferRef mb);
 
 StringRef getFilenameWithoutExe(StringRef path);
+
+StringRef getOptionSpellingLikeArg(llvm::opt::OptTable &optTable,
+                                   llvm::opt::OptSpecifier opt,
+                                   llvm::opt::Arg *arg,
+                                   llvm::StringSaver &saver);
 
 } // namespace args
 } // namespace lld

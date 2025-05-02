@@ -95,7 +95,7 @@ public:
 
   // Schedule a input file for reading.
   void enqueuePath(StringRef path, bool wholeArchive = false,
-                   std::optional<std::shared_future<CmdLineArchive *>>
+                   std::optional<std::shared_ptr<CmdLineArchive *>>
                        inCmdLineArchive = std::nullopt);
 
   void pullArm64ECIcallHelper();
@@ -175,7 +175,7 @@ private:
 
   std::set<std::string> visitedLibs;
 
-  void addBuffer(std::unique_ptr<MemoryBuffer> mb, bool wholeArchive,
+  void addBuffer(std::unique_ptr<MemoryBuffer> mb, bool wholeArchive = false,
                  CmdLineArchive *inCmdLineArchive = nullptr);
   void addArchiveBuffer(MemoryBufferRef mbref, StringRef symName,
                         StringRef parentName, uint64_t offsetInArchive);

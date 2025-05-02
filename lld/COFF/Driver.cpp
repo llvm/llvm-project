@@ -250,18 +250,23 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
 
   MemoryBufferRef mbref = takeBuffer(std::move(mb));
 
+  auto maybePrintWarning = [&](StringRef type, StringRef message) {
+    if (inCmdLineArchive)
+      Warn(ctx) << type << " file provided between "
+                << inCmdLineArchive->startLibArg << "/"
+                << inCmdLineArchive->endLibArg << " " << message;
+  };
+
   // File type is detected by contents, not by file extension.
   switch (identify_magic(mbref.getBuffer())) {
   case file_magic::windows_resource:
-    assert(!inCmdLineArchive &&
-           "Cannot specify a RES file inside a --start-lib/--end-lib group.");
+    maybePrintWarning(".res", "will not be lazy");
     resources.push_back(mbref);
     break;
   case file_magic::archive:
     // FIXME: We could later support --start-lib/--end-lib groups, to allow for
     // "extending" an existing archive/LIB.
-    assert(!inCmdLineArchive &&
-           "Cannot specify a LIB file inside a --start-lib/--end-lib group.");
+    maybePrintWarning(".lib/.a", "has no effect");
     if (wholeArchive) {
       std::unique_ptr<Archive> file =
           CHECK(Archive::create(mbref), filename + ": failed to parse archive");
@@ -283,8 +288,7 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
     addFile(ObjFile::create(ctx, mbref), inCmdLineArchive);
     break;
   case file_magic::pdb:
-    assert(!inCmdLineArchive &&
-           "Cannot specify a PDB file inside a --start-lib/--end-lib group.");
+    maybePrintWarning(".pdb", "will not be lazy");
     addFile(make<PDBInputFile>(ctx, mbref));
     break;
   case file_magic::coff_cl_gl_object:
@@ -293,9 +297,7 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
     break;
   case file_magic::pecoff_executable:
     if (ctx.config.mingw) {
-      assert(
-          !inCmdLineArchive &&
-          "Cannot specify a PE/EXE file inside a --start-lib/--end-lib group.");
+      maybePrintWarning(".dll", "will not be lazy");
       addFile(make<DLLFile>(ctx.symtab, mbref));
       break;
     }
@@ -314,7 +316,7 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
 
 void LinkerDriver::enqueuePath(
     StringRef path, bool wholeArchive,
-    std::optional<std::shared_future<CmdLineArchive *>> inCmdLineArchive) {
+    std::optional<std::shared_ptr<CmdLineArchive *>> inCmdLineArchive) {
   auto future = std::make_shared<std::future<MBErrPair>>(
       createFutureForFile(std::string(path)));
   std::string pathStr = std::string(path);
@@ -354,8 +356,7 @@ void LinkerDriver::enqueuePath(
         Err(ctx) << msg << "; did you mean '" << nearest << "'";
     } else
       ctx.driver.addBuffer(std::move(mb), wholeArchive,
-                           inCmdLineArchive ? inCmdLineArchive->get()
-                                            : nullptr);
+                           inCmdLineArchive ? **inCmdLineArchive : nullptr);
   });
 }
 
@@ -2172,19 +2173,38 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     return false;
   };
 
+  // Store start_lib/end_lib arguments in order to render dignostics in the
+  // same way the flags are written on the command line.
+  llvm::opt::Arg *startLibArg = nullptr;
+  llvm::opt::Arg *endLibArg = nullptr;
+  auto endLibSpelling = [&]() {
+    return endLibArg ? endLibArg->getSpelling()
+                     : lld::args::getOptionSpellingLikeArg(
+                           ctx.optTable, OPT_end_lib, startLibArg, ctx.saver);
+  };
+
   // Create a list of input files. These can be given as OPT_INPUT options
   // and OPT_wholearchive_file options, and we also need to track OPT_start_lib
   // and OPT_end_lib.
   {
     llvm::TimeTraceScope timeScope2("Parse & queue inputs");
-    std::optional<std::shared_future<CmdLineArchive *>> inCmdLineArchive;
+    std::optional<std::shared_ptr<CmdLineArchive *>> inCmdLineArchive;
+    auto close = [&]() {
+      enqueueTask([=]() {
+        assert(inCmdLineArchive);
+        if (CmdLineArchive *a = **inCmdLineArchive)
+          a->maybeParse();
+      });
+    };
+
     for (auto *arg : args) {
       switch (arg->getOption().getID()) {
       case OPT_end_lib:
         if (!inCmdLineArchive) {
           Err(ctx) << "stray " << arg->getSpelling();
         } else {
-          enqueueTask([=]() { inCmdLineArchive->get()->maybeParse(); });
+          endLibArg = arg;
+          close();
           inCmdLineArchive = std::nullopt;
         }
         break;
@@ -2192,15 +2212,16 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
         if (inCmdLineArchive) {
           Err(ctx) << "nested " << arg->getSpelling();
         } else {
-          auto a = std::make_shared<std::promise<CmdLineArchive *>>();
-          inCmdLineArchive = a->get_future().share();
-          enqueueTask([&, a]() {
+          startLibArg = arg;
+          inCmdLineArchive = std::make_shared<CmdLineArchive *>();
+          enqueueTask([&, inCmdLineArchive, startLibArg, endLibArg]() {
             // In is important to create a fake archive here so that we
             // remember its placement on the command-line. This will be
             // later needed to resolve symbols in the archive order required
             // by the MSVC specification.
-            a->set_value(make<CmdLineArchive>(
-                ctx.symtab, MemoryBufferRef({}, "<cmdline-lib>")));
+            **inCmdLineArchive = make<CmdLineArchive>(
+                ctx.symtab, MemoryBufferRef({}, "<cmdline-lib>"),
+                startLibArg->getSpelling(), endLibSpelling());
           });
         }
         break;
@@ -2218,8 +2239,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       }
     }
     if (inCmdLineArchive) {
-      Warn(ctx) << "--start-lib with no --end-lib";
-      enqueueTask([=]() { inCmdLineArchive->get()->maybeParse(); });
+      StringRef startLib = startLibArg->getSpelling();
+      Warn(ctx) << startLib << " without " << endLibSpelling()
+                << "\nNOTE: all files provided after " << startLib
+                << " were lazy.";
+      close();
     }
   }
 
@@ -2740,7 +2764,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // /manifestdependency: enables /manifest unless an explicit /manifest:no is
   // also passed.
   if (config->manifest == Configuration::Embed)
-    addBuffer(createManifestRes(), false);
+    addBuffer(createManifestRes());
   else if (config->manifest == Configuration::SideBySide ||
            (config->manifest == Configuration::Default &&
             !config->manifestDependencies.empty()))

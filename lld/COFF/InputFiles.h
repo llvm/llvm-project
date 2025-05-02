@@ -139,16 +139,21 @@ private:
   llvm::DenseSet<uint64_t> seen;
 };
 
-// A synthetic --start-lib/--end-lib archive.
+// A synthetic -start-lib/-end-lib archive.
 class CmdLineArchive : public InputFile {
 public:
-  explicit CmdLineArchive(SymbolTable &s, MemoryBufferRef m)
-      : InputFile(s, CmdLineArchiveKind, m) {}
+  explicit CmdLineArchive(SymbolTable &s, MemoryBufferRef m, StringRef startLib,
+                          StringRef endLib)
+      : InputFile(s, CmdLineArchiveKind, m), startLibArg(startLib),
+        endLibArg(endLib) {}
   static bool classof(const InputFile *f) {
     return f->kind() == CmdLineArchiveKind;
   }
   void parse() override;
   void addInputFile(InputFile *f);
+
+  StringRef startLibArg;
+  StringRef endLibArg;
 
 private:
   std::vector<InputFile *> files;
