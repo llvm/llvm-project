@@ -925,7 +925,7 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
     std::vector<Address> addresses;
 
     ConstString current_name =
-          current_symbol->GetMangled().GetName(Mangled::ePreferMangled);
+        current_symbol->GetMangled().GetName(Mangled::ePreferMangled);
     if (current_symbol->IsTrampoline()) {
 
       if (current_name) {
@@ -946,8 +946,8 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
         }
 
         SymbolContextList reexported_symbols;
-        images.FindSymbolsWithNameAndType(
-            current_name, eSymbolTypeReExported, reexported_symbols);
+        images.FindSymbolsWithNameAndType(current_name, eSymbolTypeReExported,
+                                          reexported_symbols);
         for (const SymbolContext &context : reexported_symbols) {
           if (context.symbol) {
             Symbol *actual_symbol =
@@ -1003,7 +1003,7 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
         }
       }
     }
-    
+
     if (addresses.size() > 0) {
       // First check whether any of the addresses point to Indirect symbols,
       // and if they do, resolve them:
@@ -1031,15 +1031,15 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
     }
     // One more case we have to consider is "branch islands".  These are regular
     // TEXT symbols but their names end in .island.  They are to allow arm64
-    // code to branch further than the size of the address slot allows.  We 
+    // code to branch further than the size of the address slot allows.  We
     // just need to single-instruction step in that case.
     if (!thread_plan_sp && current_name.GetStringRef().ends_with(".island")) {
-      thread_plan_sp = std::make_shared<ThreadPlanStepInstruction>(thread,
-          /* step_over= */ false, /* stop_others */ false, eVoteNoOpinion, 
+      thread_plan_sp = std::make_shared<ThreadPlanStepInstruction>(
+          thread,
+          /* step_over= */ false, /* stop_others */ false, eVoteNoOpinion,
           eVoteNoOpinion);
-      LLDB_LOG(log,
-                      "Stepping one instruction over branch island: '{0}'.",
-                      current_name);
+      LLDB_LOG(log, "Stepping one instruction over branch island: '{0}'.",
+               current_name);
     }
   } else {
     LLDB_LOGF(log, "Could not find symbol for step through.");

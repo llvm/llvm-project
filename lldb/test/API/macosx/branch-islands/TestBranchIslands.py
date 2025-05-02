@@ -8,6 +8,7 @@ import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 
+
 class TestBranchIslandStepping(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -26,7 +27,7 @@ class TestBranchIslandStepping(TestBase):
         # Make sure that we did manage to generate a branch island for foo:
         syms = target.FindSymbols("foo.island", lldb.eSymbolTypeCode)
         self.assertEqual(len(syms), 1, "We did generate an island for foo")
-        
+
         thread.StepInto()
         stop_frame = thread.frames[0]
         self.assertIn("foo", stop_frame.name, "Stepped into foo")
