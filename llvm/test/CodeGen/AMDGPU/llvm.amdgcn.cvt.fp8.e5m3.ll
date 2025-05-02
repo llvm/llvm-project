@@ -4,6 +4,7 @@
 
 declare i32 @llvm.amdgcn.cvt.pk.fp8.f32.e5m3(float, float, i32, i1)
 declare i32 @llvm.amdgcn.cvt.sr.fp8.f32.e5m3(float, i32, i32, i32)
+declare float @llvm.amdgcn.cvt.f32.fp8.e5m3(i32, i32)
 
 define i32 @test_cvt_pk_fp8_f32_word0(float %x, float %y, i32 %old) {
 ; GFX1250-LABEL: test_cvt_pk_fp8_f32_word0:
@@ -127,4 +128,48 @@ define amdgpu_cs void @test_cvt_sr_fp8_f32_byte1_dpp(i32 %a, i32 %r, i32 %old, p
   %ret = tail call i32 @llvm.amdgcn.cvt.sr.fp8.f32.e5m3(float %tmp1, i32 %r, i32 %old, i32 1)
   store i32 %ret, ptr addrspace(1) %out
   ret void
+}
+
+define float @test_cvt_f32_fp8_e5m3_byte0(i32 %a) {
+; GFX1250-LABEL: test_cvt_f32_fp8_e5m3_byte0:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_cvt_f32_fp8_e64 v0, v0 clamp
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %ret = tail call float @llvm.amdgcn.cvt.f32.fp8.e5m3(i32 %a, i32 0)
+  ret float %ret
+}
+
+define float @test_cvt_f32_fp8_e5m3_byte1(i32 %a) {
+; GFX1250-LABEL: test_cvt_f32_fp8_e5m3_byte1:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_cvt_f32_fp8_e64 v0, v0 byte_sel:1 clamp
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %ret = tail call float @llvm.amdgcn.cvt.f32.fp8.e5m3(i32 %a, i32 1)
+  ret float %ret
+}
+
+define float @test_cvt_f32_fp8_e5m3_byte2(i32 %a) {
+; GFX1250-LABEL: test_cvt_f32_fp8_e5m3_byte2:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_cvt_f32_fp8_e64 v0, v0 byte_sel:2 clamp
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %ret = tail call float @llvm.amdgcn.cvt.f32.fp8.e5m3(i32 %a, i32 2)
+  ret float %ret
+}
+
+define float @test_cvt_f32_fp8_e5m3_byte3(i32 %a) {
+; GFX1250-LABEL: test_cvt_f32_fp8_e5m3_byte3:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_cvt_f32_fp8_e64 v0, v0 byte_sel:3 clamp
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %ret = tail call float @llvm.amdgcn.cvt.f32.fp8.e5m3(i32 %a, i32 3)
+  ret float %ret
 }

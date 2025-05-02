@@ -682,6 +682,18 @@ v_cvt_f16_fp8 v150, v2 quad_perm:[1,2,3,0] row_mask:0xf bank_mask:0xf
 // GFX1250: v_cvt_f16_fp8_e64_dpp v150, v2 quad_perm:[1,2,3,0] row_mask:0xf bank_mask:0xf ; encoding: [0x96,0x00,0xf7,0xd5,0xfa,0x00,0x00,0x00,0x02,0x39,0x00,0xff]
 // GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
 
+v_cvt_f32_fp8 v1, v3 clamp quad_perm:[3,2,1,0]
+// GFX1250: v_cvt_f32_fp8_e64_dpp v1, v3 clamp quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0x01,0x80,0xec,0xd5,0xfa,0x00,0x00,0x00,0x03,0x1b,0x00,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_cvt_f32_fp8 v1, v3 byte_sel:1 clamp quad_perm:[3,2,1,0]
+// GFX1250: v_cvt_f32_fp8_e64_dpp v1, v3 byte_sel:1 clamp quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0x01,0x90,0xec,0xd5,0xfa,0x00,0x00,0x00,0x03,0x1b,0x00,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+v_cvt_f32_fp8 v1, v3 byte_sel:2 clamp quad_perm:[3,2,1,0]
+// GFX1250: v_cvt_f32_fp8_e64_dpp v1, v3 byte_sel:2 clamp quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0x01,0x88,0xec,0xd5,0xfa,0x00,0x00,0x00,0x03,0x1b,0x00,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
 v_sat_pk4_i4_i8 v150, v2 quad_perm:[1,2,3,0] row_mask:0xf bank_mask:0xf
 // GFX1250: v_sat_pk4_i4_i8_e64_dpp v150, v2 quad_perm:[1,2,3,0] row_mask:0xf bank_mask:0xf ; encoding: [0x96,0x00,0xf3,0xd5,0xfa,0x00,0x00,0x00,0x02,0x39,0x00,0xff]
 // GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
