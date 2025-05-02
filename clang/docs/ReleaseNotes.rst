@@ -281,7 +281,7 @@ New Compiler Flags
   The feature has `existed <https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#running-the-instrumented-program>`_)
   for a while and this is just a user facing option.
 
-- New option ``-ftime-report-json`` added which outputs the same timing data as `-ftime-report` but formatted as JSON.
+- New option ``-ftime-report-json`` added which outputs the same timing data as ``-ftime-report`` but formatted as JSON.
 
 Deprecated Compiler Flags
 -------------------------
