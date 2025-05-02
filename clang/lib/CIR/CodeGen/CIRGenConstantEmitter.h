@@ -57,7 +57,7 @@ public:
 
   ~ConstantEmitter();
 
-  /// Try to emit the initiaizer of the given declaration as an abstract
+  /// Try to emit the initializer of the given declaration as an abstract
   /// constant.  If this succeeds, the emission must be finalized.
   mlir::Attribute tryEmitForInitializer(const VarDecl &d);
 
