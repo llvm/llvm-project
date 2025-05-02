@@ -1,4 +1,4 @@
-name: LLVM CI Checks
+name: CI Checks
 
 permissions:
   contents: read
