@@ -3842,23 +3842,18 @@ void OmpStructureChecker::CheckVarIsNotPartOfAnotherVar(
                     std::get_if<parser::DataRef>(&designator.u)}) {
               if (IsDataRefTypeParamInquiry(dataRef)) {
                 context_.Say(source,
-                    "A type parameter inquiry cannot appear on the %s "
-                    "directive"_err_en_US,
+                    "A type parameter inquiry cannot appear on the %s directive"_err_en_US,
                     ContextDirectiveAsFortran());
               } else if (parser::Unwrap<parser::StructureComponent>(
                              ompObject) ||
                   parser::Unwrap<parser::ArrayElement>(ompObject)) {
                 if (llvm::omp::nonPartialVarSet.test(GetContext().directive)) {
                   context_.Say(source,
-                      "A variable that is part of another variable (as an "
-                      "array or structure element) cannot appear on the %s "
-                      "directive"_err_en_US,
+                      "A variable that is part of another variable (as an array or structure element) cannot appear on the %s directive"_err_en_US,
                       ContextDirectiveAsFortran());
                 } else {
                   context_.Say(source,
-                      "A variable that is part of another variable (as an "
-                      "array or structure element) cannot appear in a "
-                      "%s clause"_err_en_US,
+                      "A variable that is part of another variable (as an array or structure element) cannot appear in a %s clause"_err_en_US,
                       clause.data());
                 }
               }
