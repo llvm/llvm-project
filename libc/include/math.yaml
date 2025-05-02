@@ -2446,6 +2446,12 @@ functions:
     return_type: double
     arguments:
       - type: double
+  - name: sinpif
+    standards:
+      - stdc
+    return_type: float
+    arguments:
+      - type: float
   - name: sinpif16
     standards:
       - stdc

@@ -121,7 +121,6 @@ add_fp_unittest(
     libc.src.math.sinpi
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
-    libc.src.math.generic.range_reduction_double_nofma
 )
 
 add_fp_unittest(

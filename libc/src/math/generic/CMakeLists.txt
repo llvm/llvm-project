@@ -499,7 +499,6 @@ add_entrypoint_object(
     sinpi.cpp
   HDRS
     ../sinpi.h
-    range_reduction_double_fma.h
   DEPENDS
     .range_reduction_double
     .sincos_eval

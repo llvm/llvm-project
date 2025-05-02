@@ -11,8 +11,6 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/math/pow.h"
-// #include "src/__support/FPUtil/multiply_add.h"
-// #include "src/math/generic/range_reduction_double_common.h"
 #include <iostream>
 
 namespace LIBC_NAMESPACE_DECL {
