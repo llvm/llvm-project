@@ -163,8 +163,16 @@ def InitStringTooLongMissingNonString :
 def InitStringTooLongForCpp :
   DiagGroup<"c++-unterminated-string-initialization">;
 def HiddenCppDecl : DiagGroup<"c++-hidden-decl">;
-def DefaultConstInitUnsafe : DiagGroup<"default-const-init-unsafe">;
-def DefaultConstInit : DiagGroup<"default-const-init", [DefaultConstInitUnsafe]>;
+def DefaultConstInitFieldUnsafe : DiagGroup<"default-const-init-field-unsafe">;
+def DefaultConstInitVarUnsafe : DiagGroup<"default-const-init-var-unsafe">;
+def DefaultConstInitUnsafe : DiagGroup<"default-const-init-unsafe",
+                                       [DefaultConstInitFieldUnsafe,
+                                        DefaultConstInitVarUnsafe]>;
+def DefaultConstInitField : DiagGroup<"default-const-init-field">;
+def DefaultConstInitVar : DiagGroup<"default-const-init-var">;
+def DefaultConstInit : DiagGroup<"default-const-init",
+                                 [DefaultConstInitField, DefaultConstInitVar,
+                                  DefaultConstInitUnsafe]>;
 def ImplicitVoidPtrCast : DiagGroup<"implicit-void-ptr-cast">;
 def ImplicitIntToEnumCast : DiagGroup<"implicit-int-enum-cast",
                                       [ImplicitEnumEnumCast]>;
