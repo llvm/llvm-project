@@ -314,7 +314,7 @@ static void ContractNodes(std::unique_ptr<Matcher> &InputMatcherPtr,
   MatcherPtr = &(MatcherPtr->get()->getNextPtr());
 
   // If we reached the end of the chain, we're done.
-  if (!MatcherPtr->get())
+  if (!*MatcherPtr)
     return;
   }
 }
