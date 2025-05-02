@@ -75,66 +75,75 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
   }];
   let cppNamespace = "::mlir";
 
-  let methods = [InterfaceMethod<
-                     /*desc=*/[{
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/[{
         Return the `in_bounds` attribute name.
       }],
-                     /*retTy=*/"::mlir::StringRef",
-                     /*methodName=*/"getInBoundsAttrName",
-                     /*args=*/(ins)>,
-                 InterfaceMethod<
-                     /*desc=*/[{
+      /*retTy=*/"::mlir::StringRef",
+      /*methodName=*/"getInBoundsAttrName",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
         Return the `permutation_map` attribute name.
       }],
-                     /*retTy=*/"::mlir::StringRef",
-                     /*methodName=*/"getPermutationMapAttrName",
-                     /*args=*/(ins)>,
-                 InterfaceMethod<
-                     /*desc=*/[{
+      /*retTy=*/"::mlir::StringRef",
+      /*methodName=*/"getPermutationMapAttrName",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
         Return the optional in_bounds attribute that specifies for each vector
         dimension whether it is in-bounds or not. (Broadcast dimensions are
         always in-bounds).
       }],
-                     /*retTy=*/"::mlir::ArrayAttr",
-                     /*methodName=*/"getInBounds",
-                     /*args=*/(ins)>,
-                 InterfaceMethod<
-                     /*desc=*/[{
+      /*retTy=*/"::mlir::ArrayAttr",
+      /*methodName=*/"getInBounds",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
         Return the memref or ranked tensor operand that this operation operates
         on. In case of a "read" operation, that's the source from which the
         operation reads. In case of a "write" operation, that's the destination
         into which the operation writes.
+        TODO: Change name of operand, which is not accurate for xfer_write.
       }],
-                     /*retTy=*/"::mlir::Value",
-                     /*methodName=*/"getBase",
-                     /*args=*/(ins)>,
-                 InterfaceMethod<
-                     /*desc=*/[{
+      /*retTy=*/"::mlir::Value",
+      /*methodName=*/"getBase",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
         Return the vector that this operation operates on. In case of a "read",
         that's the vector OpResult. In case of a "write", that's the vector
         operand value that is written by the op.
       }],
-                     /*retTy=*/"::mlir::Value",
-                     /*methodName=*/"getVector",
-                     /*args=*/(ins)>,
-                 InterfaceMethod<
-                     /*desc=*/[{
+      /*retTy=*/"::mlir::Value",
+      /*methodName=*/"getVector",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
         Return the type of the vector that this operation operates on.
       }],
-                     /*retTy=*/"::mlir::VectorType",
-                     /*methodName=*/"getVectorType",
-                     /*args=*/(ins)>,
-                 InterfaceMethod<
-                     /*desc=*/[{
+      /*retTy=*/"::mlir::VectorType",
+      /*methodName=*/"getVectorType",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
         Return the indices that specify the starting offsets into the source
         operand. The starting offsets are guaranteed to be in-bounds.
       }],
-                     /*retTy=*/"::mlir::OperandRange",
-                     /*methodName=*/"getIndices",
-                     /*args=*/(ins)>,
+      /*retTy=*/"::mlir::OperandRange",
+      /*methodName=*/"getIndices",
+      /*args=*/(ins)
+    >,
 
-                 InterfaceMethod<
-                     /*desc=*/[{
+    InterfaceMethod<
+      /*desc=*/[{
         Return the permutation map that describes the mapping of vector
         dimensions to source dimensions, as well as broadcast dimensions.
 
@@ -153,17 +162,20 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
             : memref<?x?xvector<4x3xf32>>, vector<1x1x4x3xf32>
         ```
       }],
-                     /*retTy=*/"::mlir::AffineMap",
-                     /*methodName=*/"getPermutationMap",
-                     /*args=*/(ins)>,
-                 InterfaceMethod<
-                     /*desc=*/[{
+      /*retTy=*/"::mlir::AffineMap",
+      /*methodName=*/"getPermutationMap",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
         Return the mask operand if the op has a mask. Otherwise, return an
         empty value.
       }],
-                     /*retTy=*/"Value",
-                     /*methodName=*/"getMask",
-                     /*args=*/(ins)>];
+      /*retTy=*/"Value",
+      /*methodName=*/"getMask",
+      /*args=*/(ins)
+    >
+  ];
 
   let extraSharedClassDeclaration = [{
     /// Return a vector of all in_bounds values as booleans (one per vector
@@ -173,6 +185,12 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
       for (int64_t i = 0, e = $_op.getTransferRank(); i < e; ++i)
         inBounds.push_back($_op.isDimInBounds(i));
       return inBounds;
+    }
+
+    /// Wrapper for getBase, which replaced getSource.
+    [[deprecated("Use getBase instead!")]]
+    ::mlir::Value getSource() {
+        return $_op.getBase();
     }
 
     /// Return the number of leading shaped dimensions (of the "source" operand)

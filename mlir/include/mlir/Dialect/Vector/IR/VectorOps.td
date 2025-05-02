@@ -1263,20 +1263,23 @@ def Vector_ExtractStridedSliceOp :
 
 // TODO: Tighten semantics so that masks and inbounds can't be used
 // simultaneously within the same transfer op.
-def Vector_TransferReadOp
-    : Vector_Op<"transfer_read",
-                [DeclareOpInterfaceMethods<VectorTransferOpInterface>,
-                 DeclareOpInterfaceMethods<
-                     VectorUnrollOpInterface, ["getShapeForUnroll"]>,
-                 DeclareOpInterfaceMethods<MaskableOpInterface>,
-                 DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
-                 DeclareOpInterfaceMethods<ConditionallySpeculatable>,
-                 AttrSizedOperandSegments, DestinationStyleOpInterface]>,
-      Arguments<(ins AnyShaped:$base, Variadic<Index>:$indices,
-          AffineMapAttr:$permutation_map, AnyType:$padding,
-          Optional<VectorOfNonZeroRankOf<[I1]>>:$mask,
-          BoolArrayAttr:$in_bounds)>,
-      Results<(outs AnyVectorOfAnyRank:$vector)> {
+def Vector_TransferReadOp :
+  Vector_Op<"transfer_read", [
+      DeclareOpInterfaceMethods<VectorTransferOpInterface>,
+      DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+      DeclareOpInterfaceMethods<MaskableOpInterface>,
+      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+      DeclareOpInterfaceMethods<ConditionallySpeculatable>,
+      AttrSizedOperandSegments,
+      DestinationStyleOpInterface
+    ]>,
+    Arguments<(ins AnyShaped:$base,
+                   Variadic<Index>:$indices,
+                   AffineMapAttr:$permutation_map,
+                   AnyType:$padding,
+                   Optional<VectorOfNonZeroRankOf<[I1]>>:$mask,
+                   BoolArrayAttr:$in_bounds)>,
+    Results<(outs AnyVectorOfAnyRank:$vector)> {
 
   let summary = "Reads a supervector from memory into an SSA vector value.";
 
@@ -1465,25 +1468,30 @@ def Vector_TransferReadOp
   }];
 
   let builders = [
-      /// 1. Builder that sets padding to zero and an empty mask (variant with
-      /// attrs).
-      OpBuilder<(ins "VectorType":$vectorType, "Value":$base,
-          "ValueRange":$indices, "AffineMapAttr":$permutationMapAttr,
-          "ArrayAttr":$inBoundsAttr)>,
-      /// 2. Builder that sets padding to zero and an empty mask (variant
-      /// without attrs).
-      OpBuilder<(ins "VectorType":$vectorType, "Value":$base,
-          "ValueRange":$indices, "AffineMap":$permutationMap,
-          CArg<"std::optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>,
-      /// 3. Builder that sets permutation map to 'getMinorIdentityMap'.
-      OpBuilder<(ins "VectorType":$vectorType, "Value":$base,
-          "ValueRange":$indices, "Value":$padding,
-          CArg<"std::optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>,
-      /// 4. Builder that sets padding to zero and permutation map to
-      /// 'getMinorIdentityMap'.
-      OpBuilder<(ins "VectorType":$vectorType, "Value":$base,
-          "ValueRange":$indices,
-          CArg<"std::optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>,
+    /// 1. Builder that sets padding to zero and an empty mask (variant with attrs).
+    OpBuilder<(ins "VectorType":$vectorType,
+                   "Value":$source,
+                   "ValueRange":$indices,
+                   "AffineMapAttr":$permutationMapAttr,
+                   "ArrayAttr":$inBoundsAttr)>,
+    /// 2. Builder that sets padding to zero and an empty mask (variant without attrs).
+    OpBuilder<(ins "VectorType":$vectorType,
+                   "Value":$source,
+                   "ValueRange":$indices,
+                   "AffineMap":$permutationMap,
+                   CArg<"std::optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>,
+    /// 3. Builder that sets permutation map to 'getMinorIdentityMap'.
+    OpBuilder<(ins "VectorType":$vectorType,
+                   "Value":$source,
+                   "ValueRange":$indices,
+                   "Value":$padding,
+                   CArg<"std::optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>,
+    /// 4. Builder that sets padding to zero and permutation map to
+    /// 'getMinorIdentityMap'.
+    OpBuilder<(ins "VectorType":$vectorType,
+                   "Value":$source,
+                   "ValueRange":$indices,
+                   CArg<"std::optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>,
   ];
 
   let extraClassDeclaration = [{
@@ -1503,20 +1511,23 @@ def Vector_TransferReadOp
 
 // TODO: Tighten semantics so that masks and inbounds can't be used
 // simultaneously within the same transfer op.
-def Vector_TransferWriteOp
-    : Vector_Op<"transfer_write",
-                [DeclareOpInterfaceMethods<VectorTransferOpInterface>,
-                 DeclareOpInterfaceMethods<
-                     VectorUnrollOpInterface, ["getShapeForUnroll"]>,
-                 DeclareOpInterfaceMethods<MaskableOpInterface>,
-                 DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
-                 DeclareOpInterfaceMethods<ConditionallySpeculatable>,
-                 AttrSizedOperandSegments, DestinationStyleOpInterface]>,
-      Arguments<(ins AnyVectorOfAnyRank:$valueToStore, AnyShaped:$base,
-          Variadic<Index>:$indices, AffineMapAttr:$permutation_map,
-          Optional<VectorOfNonZeroRankOf<[I1]>>:$mask,
-          BoolArrayAttr:$in_bounds)>,
-      Results<(outs Optional<AnyRankedTensor>:$result)> {
+def Vector_TransferWriteOp :
+  Vector_Op<"transfer_write", [
+      DeclareOpInterfaceMethods<VectorTransferOpInterface>,
+      DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+      DeclareOpInterfaceMethods<MaskableOpInterface>,
+      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+      DeclareOpInterfaceMethods<ConditionallySpeculatable>,
+      AttrSizedOperandSegments,
+      DestinationStyleOpInterface
+  ]>,
+    Arguments<(ins AnyVectorOfAnyRank:$valueToStore,
+                   AnyShaped:$base,
+                   Variadic<Index>:$indices,
+                   AffineMapAttr:$permutation_map,
+                   Optional<VectorOfNonZeroRankOf<[I1]>>:$mask,
+                   BoolArrayAttr:$in_bounds)>,
+    Results<(outs Optional<AnyRankedTensor>:$result)> {
 
   let summary = "The vector.transfer_write op writes a supervector to memory.";
 
