@@ -1,7 +1,7 @@
 {
   "name": "lldb-dap",
   "displayName": "LLDB DAP",
-  "version": "0.2.11",
+  "version": "0.2.13",
   "publisher": "llvm-vs-code-extensions",
   "homepage": "https://lldb.llvm.org",
   "description": "Debugging with LLDB in Visual Studio Code",
@@ -14,6 +14,7 @@
   "bugs": {
     "url": "https://github.com/llvm/llvm-project/issues"
   },
+  "icon": "llvm-logo.png",
   "keywords": [
     "C",
     "C++",
@@ -72,9 +73,8 @@
       "title": "lldb-dap",
       "properties": {
         "lldb-dap.executable-path": {
-          "scope": "resource",
-          "type": "string",
           "scope": "machine-overridable",
+          "type": "string",
           "description": "The path to the lldb-dap binary, e.g. /usr/local/bin/lldb-dap"
         },
         "lldb-dap.arguments": {
@@ -87,7 +87,7 @@
           "description": "The list of additional arguments used to launch the debug adapter executable."
         },
         "lldb-dap.log-path": {
-          "scope": "resource",
+          "scope": "machine-overridable",
           "type": "string",
           "description": "The log path for lldb-dap (if any)"
         },

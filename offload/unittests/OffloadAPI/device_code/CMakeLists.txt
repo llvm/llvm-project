@@ -62,6 +62,6 @@ endif()
 add_offload_test_device_code(foo.c foo)
 add_offload_test_device_code(bar.c bar)
 
-add_custom_target(LibomptUnitTestsDeviceBins DEPENDS ${BIN_PATHS})
+add_custom_target(OffloadUnitTestsDeviceBins DEPENDS ${BIN_PATHS})
 
 set(OFFLOAD_TEST_DEVICE_CODE_PATH ${CMAKE_CURRENT_BINARY_DIR} PARENT_SCOPE)

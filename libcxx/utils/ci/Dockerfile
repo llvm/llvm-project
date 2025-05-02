@@ -44,6 +44,12 @@
 ARG BASE_IMAGE
 FROM $BASE_IMAGE AS builder-base
 
+# Changing this file causes a rebuild of the image in a GitHub action.
+# However, it does not cause the CI runners to switch to that image
+# automatically, that must be done by updating the SHA in the Github workflow
+# file. The date uses the ISO format YYYY-MM-DD.
+RUN echo "Last forced update executed on 2025-04-28."
+
 # Make sure apt-get doesn't try to prompt for stuff like our time zone, etc.
 ENV DEBIAN_FRONTEND=noninteractive
 

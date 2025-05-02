@@ -941,6 +941,7 @@ public:
                                            const APInt &DemandedElts,
                                            bool Insert, bool Extract,
                                            TTI::TargetCostKind CostKind,
+                                           bool ForPoisonSrc = true,
                                            ArrayRef<Value *> VL = {}) const;
 
   /// Estimate the overhead of scalarizing an instructions unique
@@ -1454,8 +1455,9 @@ public:
   /// vectorizer passes.
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      TTI::TargetCostKind CostKind,
-                                     unsigned Index = -1, Value *Op0 = nullptr,
-                                     Value *Op1 = nullptr) const;
+                                     unsigned Index = -1,
+                                     const Value *Op0 = nullptr,
+                                     const Value *Op1 = nullptr) const;
 
   /// \return The expected cost of vector Insert and Extract.
   /// Use -1 to indicate that there is no information on the index value.
