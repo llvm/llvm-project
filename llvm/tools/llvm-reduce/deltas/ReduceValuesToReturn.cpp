@@ -74,7 +74,7 @@ static void rewriteFuncWithReturnType(Function &OldF, Value *NewRetValue) {
   }
 
   // If we're returning an instruction, split the basic block so we can let
-  // EliminateUnreachableBlocks cleanup the successors.
+  // simpleSimplifyCFG cleanup the successors.
   BasicBlock *TailBB = NewRetBlock->splitBasicBlock(NewValIt);
 
   // Replace the unconditional branch splitBasicBlock created
