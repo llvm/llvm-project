@@ -80,12 +80,10 @@ def CIR_IntType : CIR_Type<"Int", "int",
 // FloatType
 //===----------------------------------------------------------------------===//
 
-class CIR_FloatType<string name, string mnemonic>
-    : CIR_Type<name, mnemonic,
-          [
-            DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
-            DeclareTypeInterfaceMethods<CIRFPTypeInterface>,
-          ]> {}
+class CIR_FloatType<string name, string mnemonic> : CIR_Type<name, mnemonic, [
+  DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+  DeclareTypeInterfaceMethods<CIRFPTypeInterface>
+]>;
 
 def CIR_Single : CIR_FloatType<"Single", "float"> {
   let summary = "CIR single-precision 32-bit float type";
@@ -155,20 +153,13 @@ def CIR_LongDouble : CIR_FloatType<"LongDouble", "long_double"> {
     format are all in use.
   }];
 
-  let parameters = (ins "mlir::Type":$underlying);
+  let parameters = (ins AnyTypeOf<[CIR_Double, CIR_FP80, CIR_FP128],
+    "expects !cir.double, !cir.fp80 or !cir.fp128">:$underlying);
 
   let assemblyFormat = [{
     `<` $underlying `>`
   }];
-
-  let genVerifyDecl = 1;
 }
-
-// Constraints
-
-def CIR_AnyFloat: AnyTypeOf<[CIR_Single, CIR_Double, CIR_FP80, CIR_FP128,
-                             CIR_LongDouble, CIR_FP16, CIR_BFloat16]>;
-def CIR_AnyIntOrFloat: AnyTypeOf<[CIR_AnyFloat, CIR_IntType]>;
 
 //===----------------------------------------------------------------------===//
 // PointerType
@@ -518,7 +509,7 @@ def CIRRecordType : Type<
 
 def CIR_AnyType : AnyTypeOf<[
   CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_IntType,
-  CIR_AnyFloat, CIR_PointerType, CIR_FuncType, CIR_RecordType
+  CIR_AnyFloatType, CIR_PointerType, CIR_FuncType, CIR_RecordType
 ]>;
 
 #endif // MLIR_CIR_DIALECT_CIR_TYPES
