@@ -13,7 +13,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-  double sinpi(double x);
+double sinpi(double x);
 
 } // namespace LIBC_NAMESPACE_DECL
 

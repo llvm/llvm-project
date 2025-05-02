@@ -1,24 +1,24 @@
 #include "src/math/sinpi.h"
+#include "range_reduction_double_nofma.h"
 #include "sincos_eval.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/multiply_add.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/FPUtil/double_double.h"
 #include "src/__support/FPUtil/generic/mul.h"
+#include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
+#include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/math/pow.h"
-#include "range_reduction_double_nofma.h"
-//#include "src/__support/FPUtil/multiply_add.h"
-//#include "src/math/generic/range_reduction_double_common.h"
+// #include "src/__support/FPUtil/multiply_add.h"
+// #include "src/math/generic/range_reduction_double_common.h"
 #include <iostream>
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(double, sinpi, (double x)) {
-  // Given x * pi = y - (k * (pi/128)) 
+  // Given x * pi = y - (k * (pi/128))
   // find y and k such that
   // y = x * pi - (k * pi/128) = x * pi - kpi/128
   // k = round(x, 128)
@@ -29,38 +29,39 @@ LLVM_LIBC_FUNCTION(double, sinpi, (double x)) {
   FPBits xbits(x);
 
   double k = fputil::nearest_integer(x * 128);
-  int  k_int = static_cast<int>(k);
+  int k_int = static_cast<int>(k);
 
   std::cout << "k" << k << std::endl;
 
-  double yk = x - k/128;
+  double yk = x - k / 128;
 
-  DoubleDouble yy = fputil::exact_mult(yk, 3.141592653589793115997963468544185161590576171875);
-  yy.lo = fputil::multiply_add(yk, 1.2246467991473532071737640294583966046256921246776e-16, yy.lo);
+  DoubleDouble yy = fputil::exact_mult(
+      yk, 3.141592653589793115997963468544185161590576171875);
+  yy.lo = fputil::multiply_add(
+      yk, 1.2246467991473532071737640294583966046256921246776e-16, yy.lo);
 
   uint64_t abs_u = xbits.uintval();
 
   uint64_t x_abs = abs_u & 0xFFFFFFFFFFFFFFFF;
-  
+
   if (LIBC_UNLIKELY(x_abs == 0U))
     return x;
- // When |x| > 2^51, x is an Integer or Nan
+  // When |x| > 2^51, x is an Integer or Nan
   if (x_abs >= 0x4320000000000000) {
-   if (x_abs < 0x4330000000000000)
-     return (x_abs & 0x1) ? -1.0 : 1.0;
-   // |x| >= 2^52
-   if (x_abs >= 0x4330000000000000) { 
-    if (xbits.is_nan())
-      return x;
-    if (xbits.is_inf()) {
-      fputil::set_errno_if_required(EDOM);
-      fputil::raise_except_if_required(FE_INVALID);
-      return FPBits::quiet_nan().get_val();
+    if (x_abs < 0x4330000000000000)
+      return (x_abs & 0x1) ? -1.0 : 1.0;
+    // |x| >= 2^52
+    if (x_abs >= 0x4330000000000000) {
+      if (xbits.is_nan())
+        return x;
+      if (xbits.is_inf()) {
+        fputil::set_errno_if_required(EDOM);
+        fputil::raise_except_if_required(FE_INVALID);
+        return FPBits::quiet_nan().get_val();
+      }
     }
-   }
-   return FPBits::zero(xbits.sign()).get_val();
+    return FPBits::zero(xbits.sign()).get_val();
   }
-  
 
   DoubleDouble sin_y, cos_y;
 
@@ -91,12 +92,13 @@ LLVM_LIBC_FUNCTION(double, sinpi, (double x)) {
 
   rr.lo += sin_y_cos_k.lo + cos_y_sin_k.lo;
 
-  std::cout << "rrlo2: " << rr.lo << std::endl;  
+  std::cout << "rrlo2: " << rr.lo << std::endl;
   std::cout << "cos_y_sin_k:" << cos_y_sin_k.hi << std::endl;
   std::cout << "siny*cosk.lo:" << sin_y_cos_k.lo << std::endl;
-  std::cout << "rrhi + rrlo + sink.hi " << rr.hi + rr.lo + sin_k.hi + sin_k.lo << std::endl;
+  std::cout << "rrhi + rrlo + sink.hi " << rr.hi + rr.lo + sin_k.hi + sin_k.lo
+            << std::endl;
   std::cout << "rrhi + rrlo " << rr.hi + rr.lo << std::endl;
 
   return rr.hi + rr.lo;
- }
-} // namespace LIBC_NAMESPACE_DE
+}
+} // namespace LIBC_NAMESPACE_DECL

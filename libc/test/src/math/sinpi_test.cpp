@@ -49,7 +49,6 @@ TEST_F(LlvmLibcSinpiTest, InDoubleRange) {
 
       ++count;
 
-
       if (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Sinpi, x, result,
                                              2.0, rounding_mode)) {
         ++fails;
@@ -71,7 +70,6 @@ TEST_F(LlvmLibcSinpiTest, InDoubleRange) {
       tlog << "   Max ULPs is at most: " << static_cast<uint64_t>(tol) << ".\n";
       EXPECT_MPFR_MATCH(mpfr::Operation::Sinpi, mx, mr, 2.0, rounding_mode);
     }
-
   };
   tlog << " Test Rounding To Nearest...\n";
   test(mpfr::RoundingMode::Nearest);
