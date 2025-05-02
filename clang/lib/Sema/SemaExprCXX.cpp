@@ -7191,7 +7191,7 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
         Context.hasSameType(LHSType, RHSType)
             ? Context.getCommonSugaredType(LHSType, RHSType)
             : UsualArithmeticConversions(LHS, RHS, QuestionLoc,
-                                         ACK_Conditional);
+                                         ArithConvKind::Conditional);
 
     if (ResultElementTy->isEnumeralType()) {
       Diag(QuestionLoc, diag::err_conditional_vector_operand_type)
@@ -7263,8 +7263,9 @@ QualType Sema::CheckSizelessVectorConditionalTypes(ExprResult &Cond,
     }
     ResultType = LHSType;
   } else if (LHSBT || RHSBT) {
-    ResultType = CheckSizelessVectorOperands(
-        LHS, RHS, QuestionLoc, /*IsCompAssign*/ false, ACK_Conditional);
+    ResultType = CheckSizelessVectorOperands(LHS, RHS, QuestionLoc,
+                                             /*IsCompAssign*/ false,
+                                             ArithConvKind::Conditional);
     if (ResultType.isNull())
       return QualType();
   } else {
@@ -7276,8 +7277,8 @@ QualType Sema::CheckSizelessVectorConditionalTypes(ExprResult &Cond,
     if (Context.hasSameType(LHSType, RHSType))
       ResultElementTy = LHSType;
     else
-      ResultElementTy =
-          UsualArithmeticConversions(LHS, RHS, QuestionLoc, ACK_Conditional);
+      ResultElementTy = UsualArithmeticConversions(LHS, RHS, QuestionLoc,
+                                                   ArithConvKind::Conditional);
 
     if (ResultElementTy->isEnumeralType()) {
       Diag(QuestionLoc, diag::err_conditional_vector_operand_type)
@@ -7565,8 +7566,8 @@ QualType Sema::CXXCheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
   //      the usual arithmetic conversions are performed to bring them to a
   //      common type, and the result is of that type.
   if (LTy->isArithmeticType() && RTy->isArithmeticType()) {
-    QualType ResTy =
-        UsualArithmeticConversions(LHS, RHS, QuestionLoc, ACK_Conditional);
+    QualType ResTy = UsualArithmeticConversions(LHS, RHS, QuestionLoc,
+                                                ArithConvKind::Conditional);
     if (LHS.isInvalid() || RHS.isInvalid())
       return QualType();
     if (ResTy.isNull()) {

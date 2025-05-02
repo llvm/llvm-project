@@ -653,6 +653,20 @@ enum class AllowFoldKind {
   Allow,
 };
 
+/// Context in which we're performing a usual arithmetic conversion.
+enum class ArithConvKind {
+  /// An arithmetic operation.
+  Arithmetic,
+  /// A bitwise operation.
+  BitwiseOp,
+  /// A comparison.
+  Comparison,
+  /// A conditional (?:) operator.
+  Conditional,
+  /// A compound assignment expression.
+  CompAssign,
+};
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -7582,20 +7596,6 @@ public:
                                       SourceLocation Loc,
                                       BinaryOperatorKind Opc);
 
-  /// Context in which we're performing a usual arithmetic conversion.
-  enum ArithConvKind {
-    /// An arithmetic operation.
-    ACK_Arithmetic,
-    /// A bitwise operation.
-    ACK_BitwiseOp,
-    /// A comparison.
-    ACK_Comparison,
-    /// A conditional (?:) operator.
-    ACK_Conditional,
-    /// A compound assignment expression.
-    ACK_CompAssign,
-  };
-
   // type checking for sizeless vector binary operators.
   QualType CheckSizelessVectorOperands(ExprResult &LHS, ExprResult &RHS,
                                        SourceLocation Loc, bool IsCompAssign,
@@ -7758,7 +7758,7 @@ public:
   // Check that the usual arithmetic conversions can be performed on this pair
   // of expressions that might be of enumeration type.
   void checkEnumArithmeticConversions(Expr *LHS, Expr *RHS, SourceLocation Loc,
-                                      Sema::ArithConvKind ACK);
+                                      ArithConvKind ACK);
 
   // UsualArithmeticConversions - performs the UsualUnaryConversions on it's
   // operands and then handles various conversions that are common to binary
