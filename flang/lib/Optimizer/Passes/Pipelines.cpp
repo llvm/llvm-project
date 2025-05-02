@@ -349,7 +349,8 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
     framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::None;
 
   pm.addPass(fir::createFunctionAttr(
-      {framePointerKind, config.NoInfsFPMath, config.NoNaNsFPMath,
+      {framePointerKind, config.InstrumentFunctionEntry,
+       config.InstrumentFunctionExit, config.NoInfsFPMath, config.NoNaNsFPMath,
        config.ApproxFuncFPMath, config.NoSignedZerosFPMath, config.UnsafeFPMath,
        ""}));
 
