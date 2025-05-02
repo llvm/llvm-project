@@ -554,6 +554,8 @@ static Attribute convertCGProfileModuleFlagValue(ModuleOp mlirModule,
   return ArrayAttr::get(mlirModule->getContext(), cgProfile);
 }
 
+/// Extract a two element `MDTuple` from a `MDOperand`. Emit a warning in case
+/// something else is found.
 static llvm::MDTuple *getTwoElementMDTuple(ModuleOp mlirModule,
                                            const llvm::Module *llvmModule,
                                            const llvm::MDOperand &md) {
@@ -564,6 +566,9 @@ static llvm::MDTuple *getTwoElementMDTuple(ModuleOp mlirModule,
   return tupleEntry;
 }
 
+/// Extract a constant metadata value from a two element tuple (<key, value>).
+/// Return nullptr if requirements are not met. A warning is emitted if the
+/// `matchKey` is different from the tuple's key.
 static llvm::ConstantAsMetadata *getConstantMDFromKeyValueTuple(
     ModuleOp mlirModule, const llvm::Module *llvmModule,
     const llvm::MDOperand &md, StringRef matchKey, bool optional = false) {
@@ -582,6 +587,9 @@ static llvm::ConstantAsMetadata *getConstantMDFromKeyValueTuple(
   return dyn_cast<llvm::ConstantAsMetadata>(tupleEntry->getOperand(1));
 }
 
+/// Extract an integer value from a two element tuple (<key, value>).
+/// Fail if requirements are not met. A warning is emitted if the
+/// found value isn't a LLVM constant integer.
 static FailureOr<uint64_t>
 convertInt64FromKeyValueTuple(ModuleOp mlirModule,
                               const llvm::Module *llvmModule,
