@@ -29,7 +29,7 @@ typedef struct {
 
   // additional fields
   int64_t offsets;
-  size_t *size;
+  size_t& size;
 } ttinfo;
 
 typedef struct {
@@ -39,18 +39,18 @@ typedef struct {
   uint64_t tzh_timecnt;
   uint64_t tzh_typecnt;
   uint64_t tzh_charcnt;
-  ttinfo *ttinfo;
+  ttinfo& ttinfo;
 
   // additional fields
-  int64_t *tzh_timecnt_transitions;
-  int64_t *tzh_timecnt_indices;
+  int64_t& tzh_timecnt_transitions;
+  int64_t& tzh_timecnt_indices;
   size_t tzh_timecnt_number_transitions;
-  int64_t *tz;
+  int64_t& tz;
   int8_t global_offset;
   int8_t global_isdst;
 } tzset;
 
-tzset *get_tzset(::FILE *file);
+tzset& get_tzset(::FILE& file);
 
 } // namespace timezone
 } // namespace LIBC_NAMESPACE_DECL
