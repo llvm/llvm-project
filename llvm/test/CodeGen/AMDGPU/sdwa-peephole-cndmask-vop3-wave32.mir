@@ -150,8 +150,6 @@ body:             |
 ---
 name: missing-carry-def
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: sreg_32_xm0_xexec }
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -165,7 +163,7 @@ body:             |
     ; CHECK-NEXT: $vgpr0 = COPY [[V_CNDMASK_B32_e64_]]
     ; CHECK-NEXT: SI_RETURN implicit $vgpr0
     %1:vgpr_32 = IMPLICIT_DEF
-    %2:vgpr_32 = V_LSHRREV_B32_e64 16, undef %1, implicit $exec
+    %2:vgpr_32 = V_LSHRREV_B32_e64 16, undef %1:sreg_32_xm0_xexec, implicit $exec
     %3:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, %2, undef %0, implicit $exec
     $vgpr0 = COPY %3
     SI_RETURN implicit $vgpr0
