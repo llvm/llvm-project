@@ -1867,6 +1867,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     // Other pairs will default to 'Expand'.
     setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv8i16, Legal);
     setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv16i8, Legal);
+
+    setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv16i8, Custom);
   }
 
   // Handle operations that are only available in non-streaming SVE mode.
@@ -7767,6 +7769,9 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerFLDEXP(Op, DAG);
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
     return LowerVECTOR_HISTOGRAM(Op, DAG);
+  case ISD::PARTIAL_REDUCE_SMLA:
+  case ISD::PARTIAL_REDUCE_UMLA:
+    return LowerPARTIAL_REDUCE_MLA(Op, DAG);
   }
 }
 
@@ -29507,6 +29512,29 @@ SDValue AArch64TargetLowering::LowerVECTOR_HISTOGRAM(SDValue Op,
   SDValue Scatter = DAG.getMaskedScatter(DAG.getVTList(MVT::Other), MemVT, DL,
                                          ScatterOps, SMMO, IndexType, ExtTrunc);
   return Scatter;
+}
+
+SDValue
+AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+
+  auto Acc = Op.getOperand(0);
+  auto LHS = Op.getOperand(1);
+  auto RHS = Op.getOperand(2);
+
+  auto ResultVT = Op.getValueType();
+
+  assert(ResultVT == MVT::nxv2i64 && LHS.getValueType() == MVT::nxv16i8);
+
+  auto NewAcc = DAG.getConstant(0, DL, MVT::nxv4i32);
+  auto DotNode =
+      DAG.getNode(Op.getOpcode(), DL, MVT::nxv4i32, NewAcc, LHS, RHS);
+
+  auto Lo = DAG.getNode(AArch64ISD::UUNPKLO, DL, ResultVT, DotNode);
+  auto Hi = DAG.getNode(AArch64ISD::UUNPKHI, DL, ResultVT, DotNode);
+  auto Extended = DAG.getNode(ISD::ADD, DL, ResultVT, Lo, Hi);
+  return DAG.getNode(ISD::ADD, DL, ResultVT, Acc, Extended);
 }
 
 SDValue
