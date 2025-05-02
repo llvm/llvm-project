@@ -86,6 +86,23 @@ enum class ThinOrFullLTOPhase {
   FullLTOPostLink
 };
 
+#ifndef NDEBUG
+constexpr const char *to_string(ThinOrFullLTOPhase Phase) {
+  switch (Phase) {
+  case ThinOrFullLTOPhase::None:
+    return "None";
+  case ThinOrFullLTOPhase::ThinLTOPreLink:
+    return "ThinLTOPreLink";
+  case ThinOrFullLTOPhase::ThinLTOPostLink:
+    return "ThinLTOPostLink";
+  case ThinOrFullLTOPhase::FullLTOPreLink:
+    return "FullLTOPreLink";
+  case ThinOrFullLTOPhase::FullLTOPostLink:
+    return "FullLTOPostLink";
+  }
+}
+#endif
+
 //===----------------------------------------------------------------------===//
 /// Pass interface - Implemented by all 'passes'.  Subclass this if you are an
 /// interprocedural optimization or you do not fit into any of the more
