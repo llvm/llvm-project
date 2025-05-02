@@ -18000,7 +18000,8 @@ DeclResult Sema::ActOnTemplatedFriendTag(
                       /*ScopedEnumUsesClassTag=*/false,
                       /*UnderlyingType=*/TypeResult(),
                       /*IsTypeSpecifier=*/false,
-                      /*IsTemplateParamOrArg=*/false, /*OOK=*/OOK_Outside);
+                      /*IsTemplateParamOrArg=*/false,
+                      /*OOK=*/OffsetOfKind::Outside);
     }
 
     ElaboratedTypeKeyword Keyword

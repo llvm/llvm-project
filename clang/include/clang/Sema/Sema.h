@@ -609,6 +609,16 @@ enum class NonTagKind {
   TemplateTemplateArgument,
 };
 
+enum class OffsetOfKind {
+  // Not parsing a type within __builtin_offsetof.
+  Outside,
+  // Parsing a type within __builtin_offsetof.
+  Builtin,
+  // Parsing a type within macro "offsetof", defined in __buitin_offsetof
+  // To improve our diagnostic message.
+  Macro,
+};
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -4000,16 +4010,6 @@ public:
   bool isAcceptableTagRedeclaration(const TagDecl *Previous, TagTypeKind NewTag,
                                     bool isDefinition, SourceLocation NewTagLoc,
                                     const IdentifierInfo *Name);
-
-  enum OffsetOfKind {
-    // Not parsing a type within __builtin_offsetof.
-    OOK_Outside,
-    // Parsing a type within __builtin_offsetof.
-    OOK_Builtin,
-    // Parsing a type within macro "offsetof", defined in __buitin_offsetof
-    // To improve our diagnostic message.
-    OOK_Macro,
-  };
 
   /// This is invoked when we see 'struct foo' or 'struct {'.  In the
   /// former case, Name will be non-null.  In the later case, Name will be null.

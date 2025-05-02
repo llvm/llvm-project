@@ -18240,10 +18240,10 @@ CreateNewDecl:
   }
 
   // Only C23 and later allow defining new types in 'offsetof()'.
-  if (OOK != OOK_Outside && TUK == TagUseKind::Definition &&
+  if (OOK != OffsetOfKind::Outside && TUK == TagUseKind::Definition &&
       !getLangOpts().CPlusPlus && !getLangOpts().C23)
     Diag(New->getLocation(), diag::ext_type_defined_in_offsetof)
-        << (OOK == OOK_Macro) << New->getSourceRange();
+        << (OOK == OffsetOfKind::Macro) << New->getSourceRange();
 
   // C++11 [dcl.type]p3:
   //   A type-specifier-seq shall not define a class or enumeration [...].
