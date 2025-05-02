@@ -2334,66 +2334,8 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::GFX1201:
       case OffloadArch::AMDGCNSPIRV:
       case OffloadArch::Generic:
-<<<<<<< HEAD
-      case OffloadArch::SKYLAKEAVX512:
-      case OffloadArch::COREAVX2:
-      case OffloadArch::COREI7AVX:
-      case OffloadArch::COREI7:
-      case OffloadArch::WESTMERE:
-      case OffloadArch::SANDYBRIDGE:
-      case OffloadArch::IVYBRIDGE:
-      case OffloadArch::BROADWELL:
-      case OffloadArch::COFFEELAKE:
-      case OffloadArch::ALDERLAKE:
-      case OffloadArch::SKYLAKE:
-      case OffloadArch::SKX:
-      case OffloadArch::CASCADELAKE:
-      case OffloadArch::ICELAKECLIENT:
-      case OffloadArch::ICELAKESERVER:
-      case OffloadArch::SAPPHIRERAPIDS:
-      case OffloadArch::GRANITERAPIDS:
-      case OffloadArch::BDW:
-      case OffloadArch::SKL:
-      case OffloadArch::KBL:
-      case OffloadArch::CFL:
-      case OffloadArch::APL:
-      case OffloadArch::BXT:
-      case OffloadArch::GLK:
-      case OffloadArch::WHL:
-      case OffloadArch::AML:
-      case OffloadArch::CML:
-      case OffloadArch::ICLLP:
-      case OffloadArch::ICL:
-      case OffloadArch::EHL:
-      case OffloadArch::JSL:
-      case OffloadArch::TGLLP:
-      case OffloadArch::TGL:
-      case OffloadArch::RKL:
-      case OffloadArch::ADL_S:
-      case OffloadArch::RPL_S:
-      case OffloadArch::ADL_P:
-      case OffloadArch::ADL_N:
-      case OffloadArch::DG1:
-      case OffloadArch::ACM_G10:
-      case OffloadArch::DG2_G10:
-      case OffloadArch::ACM_G11:
-      case OffloadArch::DG2_G11:
-      case OffloadArch::ACM_G12:
-      case OffloadArch::DG2_G12:
-      case OffloadArch::PVC:
-      case OffloadArch::PVC_VG:
-      case OffloadArch::MTL_U:
-      case OffloadArch::MTL_S:
-      case OffloadArch::ARL_U:
-      case OffloadArch::ARL_S:
-      case OffloadArch::MTL_H:
-      case OffloadArch::ARL_H:
-      case OffloadArch::BMG_G21:
-      case OffloadArch::LNL_M:
-=======
       case OffloadArch::GRANITERAPIDS:
       case OffloadArch::BMG_G21:
->>>>>>> llvm/main
       case OffloadArch::UNUSED:
       case OffloadArch::UNKNOWN:
         break;
