@@ -1830,7 +1830,7 @@ public:
   /// Returns the type/is-signed info for the root node in the graph without
   /// casting.
   std::optional<std::pair<Type *, bool>> getRootNodeTypeWithNoCast() const {
-    const TreeEntry &Root = *VectorizableTree.front().get();
+    const TreeEntry &Root = *VectorizableTree.front();
     if (Root.State != TreeEntry::Vectorize || Root.isAltShuffle() ||
         !Root.Scalars.front()->getType()->isIntegerTy())
       return std::nullopt;
@@ -7507,7 +7507,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
         assert(Data.first->CombinedEntriesWithIndices.size() == 2 &&
                "Expected exactly 2 entries.");
         for (const auto &P : Data.first->CombinedEntriesWithIndices) {
-          TreeEntry &OpTE = *VectorizableTree[P.first].get();
+          TreeEntry &OpTE = *VectorizableTree[P.first];
           OrdersType Order = OpTE.ReorderIndices;
           if (Order.empty() || !OpTE.ReuseShuffleIndices.empty()) {
             if (!OpTE.isGather() && OpTE.ReuseShuffleIndices.empty())
@@ -17464,13 +17464,13 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
            "Expected exactly 2 combined entries.");
     setInsertPointAfterBundle(E);
     TreeEntry &OpTE1 =
-        *VectorizableTree[E->CombinedEntriesWithIndices.front().first].get();
+        *VectorizableTree[E->CombinedEntriesWithIndices.front().first];
     assert(OpTE1.isSame(
                ArrayRef(E->Scalars).take_front(OpTE1.getVectorFactor())) &&
            "Expected same first part of scalars.");
     Value *Op1 = vectorizeTree(&OpTE1);
     TreeEntry &OpTE2 =
-        *VectorizableTree[E->CombinedEntriesWithIndices.back().first].get();
+        *VectorizableTree[E->CombinedEntriesWithIndices.back().first];
     assert(
         OpTE2.isSame(ArrayRef(E->Scalars).take_back(OpTE2.getVectorFactor())) &&
         "Expected same second part of scalars.");
@@ -19325,9 +19325,8 @@ BoUpSLP::BlockScheduling::buildBundle(ArrayRef<Value *> VL) {
         .first->getSecond()
         .push_back(BundlePtr.get());
   }
-  assert(BundlePtr.get() && *BundlePtr.get() &&
-         "Failed to find schedule bundle");
-  return *BundlePtr.get();
+  assert(BundlePtr && *BundlePtr && "Failed to find schedule bundle");
+  return *BundlePtr;
 }
 
 // Groups the instructions to a bundle (which is then a single scheduling entity)
