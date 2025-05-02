@@ -13,6 +13,7 @@
 #include "SystemZRegisterInfo.h"
 #include "SystemZSubtarget.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
@@ -584,7 +585,7 @@ void SystemZELFFrameLowering::emitPrologue(MachineFunction &MF,
 
     // Reload return address from 8 bytes above stack pointer.
     BuildMI(MBB, MBBI, DL, ZII->get(SystemZ::LG))
-        .addReg(SystemZ::R14D)
+        .addReg(SystemZ::R14D, RegState::Define)
         .addReg(SystemZ::R15D)
         .addImm(8)
         .addReg(0);
