@@ -23999,7 +23999,7 @@ static bool isMultipleOfN(const Value *V, const DataLayout &DL, unsigned N) {
 /// TODO: We probably can loosen the dependency on matching extractvalue when
 /// dealing with factor of 2 (extractvalue is still required for most of other
 /// factors though).
-bool RISCVTargetLowering::lowerDeinterleavedVPLoad(
+bool RISCVTargetLowering::lowerInterleavedVPLoad(
     VPIntrinsic *Load, Value *Mask,
     ArrayRef<Value *> DeinterleaveResults) const {
   assert(Mask && "Expect a valid mask");

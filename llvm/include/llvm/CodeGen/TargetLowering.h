@@ -3210,15 +3210,14 @@ public:
     return false;
   }
 
-  /// Lower a deinterleaved load to target specific intrinsics. Return
+  /// Lower an interleaved load to target specific intrinsics. Return
   /// true on success.
   ///
   /// \p Load is a vp.load instruction.
   /// \p Mask is a mask value
   /// \p DeinterleaveRes is a list of deinterleaved results.
-  virtual bool
-  lowerDeinterleavedVPLoad(VPIntrinsic *Load, Value *Mask,
-                           ArrayRef<Value *> DeinterleaveRes) const {
+  virtual bool lowerInterleavedVPLoad(VPIntrinsic *Load, Value *Mask,
+                                      ArrayRef<Value *> DeinterleaveRes) const {
     return false;
   }
 
