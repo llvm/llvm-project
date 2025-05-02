@@ -246,6 +246,7 @@ void StandardConversionSequence::setAsIdentityConversion() {
   BindsToRvalue = false;
   BindsImplicitObjectArgumentWithoutRefQualifier = false;
   ObjCLifetimeConversionBinding = false;
+  FromBracedInitList = false;
   CopyConstructor = nullptr;
 }
 
@@ -1692,12 +1693,14 @@ TryUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
       //   has a single element of type cv U, where U is X or a class derived
       //   from X, the implicit conversion sequence has Exact Match rank if U is
       //   X, or Conversion rank if U is derived from X.
+      bool FromListInit = false;
       if (const auto *InitList = dyn_cast<InitListExpr>(From);
           InitList && InitList->getNumInits() == 1 &&
           !S.isInitListConstructor(Constructor)) {
         const Expr *SingleInit = InitList->getInit(0);
         FromType = SingleInit->getType();
         FromLoc = SingleInit->getBeginLoc();
+        FromListInit = true;
       } else {
         FromType = From->getType();
         FromLoc = From->getBeginLoc();
@@ -1715,6 +1718,7 @@ TryUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
         ICS.Standard.setAsIdentityConversion();
         ICS.Standard.setFromType(FromType);
         ICS.Standard.setAllToTypes(ToType);
+        ICS.Standard.FromBracedInitList = FromListInit;
         ICS.Standard.CopyConstructor = Constructor;
         ICS.Standard.FoundCopyConstructor = Found;
         if (ToCanon != FromCanon)
@@ -4062,6 +4066,7 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
       if (isa<InitListExpr>(From)) {
         // Initializer lists don't have conversions as such.
         User.Before.setAsIdentityConversion();
+        User.Before.FromBracedInitList = true;
       } else {
         if (Best->Conversions[0].isEllipsis())
           User.EllipsisConversion = true;
@@ -5276,6 +5281,7 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
     ICS.Standard.BindsImplicitObjectArgumentWithoutRefQualifier = false;
     ICS.Standard.ObjCLifetimeConversionBinding =
         (RefConv & Sema::ReferenceConversions::ObjCLifetime) != 0;
+    ICS.Standard.FromBracedInitList = false;
     ICS.Standard.CopyConstructor = nullptr;
     ICS.Standard.DeprecatedStringLiteralToCharPtr = false;
   };
@@ -5474,6 +5480,7 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
     ICS.UserDefined.After.BindsToRvalue = !LValRefType;
     ICS.UserDefined.After.BindsImplicitObjectArgumentWithoutRefQualifier = false;
     ICS.UserDefined.After.ObjCLifetimeConversionBinding = false;
+    ICS.UserDefined.After.FromBracedInitList = false;
   }
 
   return ICS;
@@ -5760,6 +5767,8 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
       SCS.BindsToFunctionLvalue = false;
       SCS.BindsImplicitObjectArgumentWithoutRefQualifier = false;
       SCS.ObjCLifetimeConversionBinding = false;
+      SCS.FromBracedInitList = false;
+
     } else
       Result.setBad(BadConversionSequence::lvalue_ref_to_rvalue,
                     From, ToType);
@@ -5777,10 +5786,13 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
     // single integer.
     unsigned NumInits = From->getNumInits();
     if (NumInits == 1 && !isa<InitListExpr>(From->getInit(0)) &&
-        !isa<EmbedExpr>(From->getInit(0)))
+        !isa<EmbedExpr>(From->getInit(0))) {
       Result = TryCopyInitialization(
           S, From->getInit(0), ToType, SuppressUserConversions,
           InOverloadResolution, AllowObjCWritebackConversion);
+      if (Result.isStandard())
+        Result.Standard.FromBracedInitList = true;
+    }
     //    - if the initializer list has no elements, the implicit conversion
     //      sequence is the identity conversion.
     else if (NumInits == 0) {
@@ -5993,6 +6005,7 @@ static ImplicitConversionSequence TryObjectArgumentInitialization(
   ICS.Standard.IsLvalueReference = Method->getRefQualifier() != RQ_RValue;
   ICS.Standard.BindsToFunctionLvalue = false;
   ICS.Standard.BindsToRvalue = FromClassification.isRValue();
+  ICS.Standard.FromBracedInitList = false;
   ICS.Standard.BindsImplicitObjectArgumentWithoutRefQualifier
     = (Method->getRefQualifier() == RQ_None);
   return ICS;
