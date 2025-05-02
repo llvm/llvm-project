@@ -1956,6 +1956,165 @@ bb.1:
   ret void
 }
 
+define amdgpu_ps void @scc_use_after_kill_inst(float inreg %x, i32 inreg %y) #0 {
+; SI-LABEL: scc_use_after_kill_inst:
+; SI:       ; %bb.0: ; %bb
+; SI-NEXT:    v_add_f32_e64 v1, s0, 1.0
+; SI-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v1
+; SI-NEXT:    s_mov_b64 s[2:3], exec
+; SI-NEXT:    s_cmp_lg_u32 s1, 0
+; SI-NEXT:    v_cndmask_b32_e64 v0, 0, -1.0, vcc
+; SI-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v1
+; SI-NEXT:    s_andn2_b64 s[2:3], s[2:3], vcc
+; SI-NEXT:    s_cbranch_scc0 .LBB17_6
+; SI-NEXT:  ; %bb.1: ; %bb
+; SI-NEXT:    s_andn2_b64 exec, exec, vcc
+; SI-NEXT:    s_cbranch_scc0 .LBB17_3
+; SI-NEXT:  ; %bb.2: ; %bb8
+; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    v_mov_b32_e32 v0, 8
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v0, 4.0
+; SI-NEXT:  .LBB17_3: ; %phibb
+; SI-NEXT:    v_cmp_eq_f32_e32 vcc, 0, v0
+; SI-NEXT:    s_cbranch_vccz .LBB17_5
+; SI-NEXT:  ; %bb.4: ; %bb10
+; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    v_mov_b32_e32 v0, 9
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:  .LBB17_5: ; %end
+; SI-NEXT:    s_endpgm
+; SI-NEXT:  .LBB17_6:
+; SI-NEXT:    s_mov_b64 exec, 0
+; SI-NEXT:    exp null off, off, off, off done vm
+; SI-NEXT:    s_endpgm
+;
+; GFX10-WAVE64-LABEL: scc_use_after_kill_inst:
+; GFX10-WAVE64:       ; %bb.0: ; %bb
+; GFX10-WAVE64-NEXT:    v_add_f32_e64 v1, s0, 1.0
+; GFX10-WAVE64-NEXT:    s_mov_b64 s[2:3], exec
+; GFX10-WAVE64-NEXT:    s_cmp_lg_u32 s1, 0
+; GFX10-WAVE64-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v1
+; GFX10-WAVE64-NEXT:    v_cndmask_b32_e64 v0, 0, -1.0, vcc
+; GFX10-WAVE64-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v1
+; GFX10-WAVE64-NEXT:    s_andn2_b64 s[2:3], s[2:3], vcc
+; GFX10-WAVE64-NEXT:    s_cbranch_scc0 .LBB17_6
+; GFX10-WAVE64-NEXT:  ; %bb.1: ; %bb
+; GFX10-WAVE64-NEXT:    s_andn2_b64 exec, exec, vcc
+; GFX10-WAVE64-NEXT:    s_cbranch_scc0 .LBB17_3
+; GFX10-WAVE64-NEXT:  ; %bb.2: ; %bb8
+; GFX10-WAVE64-NEXT:    v_mov_b32_e32 v1, 8
+; GFX10-WAVE64-NEXT:    v_mov_b32_e32 v0, 4.0
+; GFX10-WAVE64-NEXT:    global_store_dword v[0:1], v1, off
+; GFX10-WAVE64-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-WAVE64-NEXT:  .LBB17_3: ; %phibb
+; GFX10-WAVE64-NEXT:    v_cmp_eq_f32_e32 vcc, 0, v0
+; GFX10-WAVE64-NEXT:    s_cbranch_vccz .LBB17_5
+; GFX10-WAVE64-NEXT:  ; %bb.4: ; %bb10
+; GFX10-WAVE64-NEXT:    v_mov_b32_e32 v0, 9
+; GFX10-WAVE64-NEXT:    global_store_dword v[0:1], v0, off
+; GFX10-WAVE64-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-WAVE64-NEXT:  .LBB17_5: ; %end
+; GFX10-WAVE64-NEXT:    s_endpgm
+; GFX10-WAVE64-NEXT:  .LBB17_6:
+; GFX10-WAVE64-NEXT:    s_mov_b64 exec, 0
+; GFX10-WAVE64-NEXT:    exp null off, off, off, off done vm
+; GFX10-WAVE64-NEXT:    s_endpgm
+;
+; GFX10-WAVE32-LABEL: scc_use_after_kill_inst:
+; GFX10-WAVE32:       ; %bb.0: ; %bb
+; GFX10-WAVE32-NEXT:    v_add_f32_e64 v1, s0, 1.0
+; GFX10-WAVE32-NEXT:    s_mov_b32 s2, exec_lo
+; GFX10-WAVE32-NEXT:    s_cmp_lg_u32 s1, 0
+; GFX10-WAVE32-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 0, v1
+; GFX10-WAVE32-NEXT:    v_cndmask_b32_e64 v0, 0, -1.0, vcc_lo
+; GFX10-WAVE32-NEXT:    v_cmp_nlt_f32_e32 vcc_lo, 0, v1
+; GFX10-WAVE32-NEXT:    s_andn2_b32 s2, s2, vcc_lo
+; GFX10-WAVE32-NEXT:    s_cbranch_scc0 .LBB17_6
+; GFX10-WAVE32-NEXT:  ; %bb.1: ; %bb
+; GFX10-WAVE32-NEXT:    s_andn2_b32 exec_lo, exec_lo, vcc_lo
+; GFX10-WAVE32-NEXT:    s_cbranch_scc0 .LBB17_3
+; GFX10-WAVE32-NEXT:  ; %bb.2: ; %bb8
+; GFX10-WAVE32-NEXT:    v_mov_b32_e32 v1, 8
+; GFX10-WAVE32-NEXT:    v_mov_b32_e32 v0, 4.0
+; GFX10-WAVE32-NEXT:    global_store_dword v[0:1], v1, off
+; GFX10-WAVE32-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-WAVE32-NEXT:  .LBB17_3: ; %phibb
+; GFX10-WAVE32-NEXT:    v_cmp_eq_f32_e32 vcc_lo, 0, v0
+; GFX10-WAVE32-NEXT:    s_cbranch_vccz .LBB17_5
+; GFX10-WAVE32-NEXT:  ; %bb.4: ; %bb10
+; GFX10-WAVE32-NEXT:    v_mov_b32_e32 v0, 9
+; GFX10-WAVE32-NEXT:    global_store_dword v[0:1], v0, off
+; GFX10-WAVE32-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-WAVE32-NEXT:  .LBB17_5: ; %end
+; GFX10-WAVE32-NEXT:    s_endpgm
+; GFX10-WAVE32-NEXT:  .LBB17_6:
+; GFX10-WAVE32-NEXT:    s_mov_b32 exec_lo, 0
+; GFX10-WAVE32-NEXT:    exp null off, off, off, off done vm
+; GFX10-WAVE32-NEXT:    s_endpgm
+;
+; GFX11-LABEL: scc_use_after_kill_inst:
+; GFX11:       ; %bb.0: ; %bb
+; GFX11-NEXT:    v_add_f32_e64 v1, s0, 1.0
+; GFX11-NEXT:    s_mov_b64 s[2:3], exec
+; GFX11-NEXT:    s_cmp_lg_u32 s1, 0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v1
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, -1.0, vcc
+; GFX11-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v1
+; GFX11-NEXT:    s_and_not1_b64 s[2:3], s[2:3], vcc
+; GFX11-NEXT:    s_cbranch_scc0 .LBB17_6
+; GFX11-NEXT:  ; %bb.1: ; %bb
+; GFX11-NEXT:    s_and_not1_b64 exec, exec, vcc
+; GFX11-NEXT:    s_cbranch_scc0 .LBB17_3
+; GFX11-NEXT:  ; %bb.2: ; %bb8
+; GFX11-NEXT:    v_mov_b32_e32 v1, 8
+; GFX11-NEXT:    v_mov_b32_e32 v0, 4.0
+; GFX11-NEXT:    global_store_b32 v[0:1], v1, off dlc
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:  .LBB17_3: ; %phibb
+; GFX11-NEXT:    v_cmp_eq_f32_e32 vcc, 0, v0
+; GFX11-NEXT:    s_cbranch_vccz .LBB17_5
+; GFX11-NEXT:  ; %bb.4: ; %bb10
+; GFX11-NEXT:    v_mov_b32_e32 v0, 9
+; GFX11-NEXT:    global_store_b32 v[0:1], v0, off dlc
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:  .LBB17_5: ; %end
+; GFX11-NEXT:    s_endpgm
+; GFX11-NEXT:  .LBB17_6:
+; GFX11-NEXT:    s_mov_b64 exec, 0
+; GFX11-NEXT:    exp mrt0 off, off, off, off done
+; GFX11-NEXT:    s_endpgm
+bb:
+  %tmp = fadd float %x, 1.000000e+00
+  %tmp1 = fcmp olt float 0.000000e+00, %tmp
+  %tmp2 = select i1 %tmp1, float -1.000000e+00, float 0.000000e+00
+  %cmp.tmp2 = fcmp olt float %tmp2, 0.000000e+00
+  %uniform.cond = icmp eq i32 %y, 0
+  call void @llvm.amdgcn.kill(i1 %cmp.tmp2)
+  br i1 %uniform.cond, label %phibb, label %bb8
+
+phibb:                                            ; preds = %bb8, %bb
+  %tmp5 = phi float [ %tmp2, %bb ], [ 4.000000e+00, %bb8 ]
+  %tmp6 = fcmp oeq float %tmp5, 0.000000e+00
+  br i1 %tmp6, label %bb10, label %end
+
+bb8:                                              ; preds = %bb
+  store volatile i32 8, ptr addrspace(1) poison, align 4
+  br label %phibb
+
+bb10:                                             ; preds = %phibb
+  store volatile i32 9, ptr addrspace(1) poison, align 4
+  br label %end
+
+end:                                              ; preds = %bb10, %phibb
+  ret void
+}
+
 declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, float, i1 immarg, i1 immarg) #3
 declare float @llvm.amdgcn.image.sample.l.2darray.f32.f32(i32 immarg, float, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #1
 declare <4 x float> @llvm.amdgcn.image.sample.c.1d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1

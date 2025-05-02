@@ -43,7 +43,7 @@ void Heatmap::registerAddressRange(uint64_t StartAddress, uint64_t EndAddress,
   }
 
   for (uint64_t Bucket = StartAddress / BucketSize;
-       Bucket < EndAddress / BucketSize; ++Bucket)
+       Bucket <= EndAddress / BucketSize; ++Bucket)
     Map[Bucket] += Count;
 }
 

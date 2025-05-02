@@ -392,9 +392,20 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
 
   Tokens = annotate("return s.operator int *();");
   ASSERT_EQ(Tokens.size(), 10u) << Tokens;
-  EXPECT_TOKEN(Tokens[3], tok::kw_operator, TT_FunctionDeclarationName);
+  // Not TT_FunctionDeclarationName.
+  EXPECT_TOKEN(Tokens[3], tok::kw_operator, TT_Unknown);
   EXPECT_TOKEN(Tokens[5], tok::star, TT_PointerOrReference);
-  EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_FunctionDeclarationLParen);
+  // Not TT_FunctionDeclarationLParen.
+  EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_Unknown);
+
+  Tokens = annotate("B &b = x.operator B &();");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[8], tok::amp, TT_PointerOrReference);
+
+  Tokens = annotate("int8_t *a = MacroCall(int8_t, width * height * length);");
+  ASSERT_EQ(Tokens.size(), 16u) << Tokens;
+  EXPECT_TOKEN(Tokens[9], tok::star, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[11], tok::star, TT_BinaryOperator);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {
@@ -3097,6 +3108,27 @@ TEST_F(TokenAnnotatorTest, CSharpNullableTypes) {
   Tokens = annotate("cond ? cond2 ? : id1 : id2", Style);
   ASSERT_EQ(Tokens.size(), 9u) << Tokens;
   EXPECT_TOKEN(Tokens[1], tok::question, TT_ConditionalExpr);
+}
+
+TEST_F(TokenAnnotatorTest, CSharpGenericTypeConstraint) {
+  auto Tokens = annotate("namespace A {\n"
+                         "  delegate T MyDelegate<T>()\n"
+                         "      where T : new();\n"
+                         "}",
+                         getGoogleStyle(FormatStyle::LK_CSharp));
+  ASSERT_EQ(Tokens.size(), 20u) << Tokens;
+  EXPECT_TOKEN(Tokens[18], tok::r_brace, TT_NamespaceRBrace);
+}
+
+TEST_F(TokenAnnotatorTest, CSharpNewModifier) {
+  auto Tokens = annotate("new public class NestedC {\n"
+                         "  public int x = 100;\n"
+                         "}",
+                         getGoogleStyle(FormatStyle::LK_CSharp));
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::identifier, TT_ClassHeadName);
+  EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_ClassLBrace);
+  EXPECT_TOKEN(Tokens[11], tok::r_brace, TT_ClassRBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsLabels) {

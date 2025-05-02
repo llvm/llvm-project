@@ -13,6 +13,7 @@
 
 #include "llvm-c/DebugInfo.h"
 #include "LLVMContextImpl.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -1297,6 +1298,15 @@ LLVMMetadataRef LLVMDIBuilderCreateEnumerator(LLVMDIBuilderRef Builder,
                                               LLVMBool IsUnsigned) {
   return wrap(unwrap(Builder)->createEnumerator({Name, NameLen}, Value,
                                                 IsUnsigned != 0));
+}
+
+LLVMMetadataRef LLVMDIBuilderCreateEnumeratorOfArbitraryPrecision(
+    LLVMDIBuilderRef Builder, const char *Name, size_t NameLen,
+    uint64_t SizeInBits, const uint64_t Words[], LLVMBool IsUnsigned) {
+  uint64_t NumWords = (SizeInBits + 63) / 64;
+  return wrap(unwrap(Builder)->createEnumerator(
+      {Name, NameLen},
+      APSInt(APInt(SizeInBits, ArrayRef(Words, NumWords)), IsUnsigned != 0)));
 }
 
 LLVMMetadataRef LLVMDIBuilderCreateEnumerationType(

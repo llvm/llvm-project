@@ -134,7 +134,7 @@ public:
       LocNoCount = LocNoVec.size();
       if (LocNoCount > 0) {
         LocNos = std::make_unique<unsigned[]>(LocNoCount);
-        std::copy(LocNoVec.begin(), LocNoVec.end(), loc_nos_begin());
+        llvm::copy(LocNoVec, loc_nos_begin());
       }
     } else {
       LLVM_DEBUG(dbgs() << "Found debug value with 64+ unique machine "

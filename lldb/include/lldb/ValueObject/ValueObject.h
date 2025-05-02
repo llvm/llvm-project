@@ -498,7 +498,7 @@ public:
   virtual lldb::ValueObjectSP GetChildMemberWithName(llvm::StringRef name,
                                                      bool can_create = true);
 
-  virtual size_t GetIndexOfChildWithName(llvm::StringRef name);
+  virtual llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name);
 
   llvm::Expected<uint32_t> GetNumChildren(uint32_t max = UINT32_MAX);
   /// Like \c GetNumChildren but returns 0 on error.  You probably

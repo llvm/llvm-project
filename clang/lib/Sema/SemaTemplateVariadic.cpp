@@ -498,7 +498,7 @@ bool Sema::DiagnoseUnexpandedParameterPackInRequiresExpr(RequiresExpr *RE) {
   // We only care about unexpanded references to the RequiresExpr's own
   // parameter packs.
   auto Parms = RE->getLocalParameters();
-  llvm::SmallPtrSet<NamedDecl*, 8> ParmSet(Parms.begin(), Parms.end());
+  llvm::SmallPtrSet<NamedDecl *, 8> ParmSet(llvm::from_range, Parms);
   SmallVector<UnexpandedParameterPack, 2> UnexpandedParms;
   for (auto Parm : Unexpanded)
     if (ParmSet.contains(Parm.first.dyn_cast<NamedDecl *>()))
@@ -1149,12 +1149,12 @@ ExprResult Sema::ActOnSizeofParameterPackExpr(Scope *S,
 
   NamedDecl *ParameterPack = nullptr;
   switch (R.getResultKind()) {
-  case LookupResult::Found:
+  case LookupResultKind::Found:
     ParameterPack = R.getFoundDecl();
     break;
 
-  case LookupResult::NotFound:
-  case LookupResult::NotFoundInCurrentInstantiation: {
+  case LookupResultKind::NotFound:
+  case LookupResultKind::NotFoundInCurrentInstantiation: {
     ParameterPackValidatorCCC CCC{};
     if (TypoCorrection Corrected =
             CorrectTypo(R.getLookupNameInfo(), R.getLookupKind(), S, nullptr,
@@ -1166,11 +1166,11 @@ ExprResult Sema::ActOnSizeofParameterPackExpr(Scope *S,
     }
     break;
   }
-  case LookupResult::FoundOverloaded:
-  case LookupResult::FoundUnresolvedValue:
+  case LookupResultKind::FoundOverloaded:
+  case LookupResultKind::FoundUnresolvedValue:
     break;
 
-  case LookupResult::Ambiguous:
+  case LookupResultKind::Ambiguous:
     DiagnoseAmbiguousLookup(R);
     return ExprError();
   }
