@@ -36,7 +36,6 @@
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
-#include "llvm/MC/MCParser/MCMasmParser.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -66,7 +65,6 @@
 #include <memory>
 #include <optional>
 #include <sstream>
-#include <stdbool.h>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -375,7 +373,7 @@ FieldInitializer &FieldInitializer::operator=(FieldInitializer &&Initializer) {
 /// The concrete assembly parser instance.
 // Note that this is a full MCAsmParser, not an MCAsmParserExtension!
 // It's a peer of AsmParser, not of COFFAsmParser, WasmAsmParser, etc.
-class MasmParser : public MCMasmParser {
+class MasmParser : public MCAsmParser {
 private:
   SourceMgr::DiagHandlerTy SavedDiagHandler;
   void *SavedDiagContext;
@@ -450,9 +448,6 @@ private:
   /// Are we parsing ms-style inline assembly?
   bool ParsingMSInlineAsm = false;
 
-  /// Is the current default `ret` instruction far?
-  bool DefaultRetIsFar = false;
-
   // Current <...> expression depth.
   unsigned AngleBracketDepth = 0U;
 
@@ -477,14 +472,6 @@ public:
   void addAliasForDirective(StringRef Directive, StringRef Alias) override {
     DirectiveKindMap[Directive] = DirectiveKindMap[Alias];
   }
-
-  /// @name MCMasmParser Interface
-  /// {
-
-  bool getDefaultRetIsFar() const override { return DefaultRetIsFar; }
-  void setDefaultRetIsFar(bool IsFar) override { DefaultRetIsFar = IsFar; }
-
-  /// }
 
   /// @name MCAsmParser Interface
   /// {
@@ -516,6 +503,8 @@ public:
     Lexer.setLexMasmIntegers(V);
   }
   bool isParsingMSInlineAsm() override { return ParsingMSInlineAsm; }
+
+  bool isParsingMasm() const override { return true; }
 
   bool defineMacro(StringRef Name, StringRef Value) override;
 
