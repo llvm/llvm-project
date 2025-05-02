@@ -226,7 +226,7 @@ void Parser::ConsumeExtraSemi(ExtraSemiKind Kind, DeclSpec::TST TST) {
 
   if (Kind != ExtraSemiKind::AfterMemberFunctionDefinition || HadMultipleSemis)
     Diag(StartLoc, diag::ext_extra_semi)
-        << llvm::to_underlying(Kind)
+        << Kind
         << DeclSpec::getSpecifierName(
                TST, Actions.getASTContext().getPrintingPolicy())
         << FixItHint::CreateRemoval(SourceRange(StartLoc, EndLoc));
@@ -2436,21 +2436,21 @@ bool Parser::ParseMicrosoftIfExistsCondition(IfExistsCondition& Result) {
   switch (Actions.CheckMicrosoftIfExistsSymbol(getCurScope(), Result.KeywordLoc,
                                                Result.IsIfExists, Result.SS,
                                                Result.Name)) {
-  case Sema::IER_Exists:
+  case IfExistsResult::Exists:
     Result.Behavior =
         Result.IsIfExists ? IfExistsBehavior::Parse : IfExistsBehavior::Skip;
     break;
 
-  case Sema::IER_DoesNotExist:
+  case IfExistsResult::DoesNotExist:
     Result.Behavior =
         !Result.IsIfExists ? IfExistsBehavior::Parse : IfExistsBehavior::Skip;
     break;
 
-  case Sema::IER_Dependent:
+  case IfExistsResult::Dependent:
     Result.Behavior = IfExistsBehavior::Dependent;
     break;
 
-  case Sema::IER_Error:
+  case IfExistsResult::Error:
     return true;
   }
 

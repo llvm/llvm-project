@@ -2830,6 +2830,9 @@ Status Process::LoadCore() {
           "Did not get stopped event after loading the core file.");
     }
     RestoreProcessEvents();
+    // Since we hijacked the event stream, we will have we won't have run the
+    // stop hooks.  Make sure we do that here:
+    GetTarget().RunStopHooks(/* at_initial_stop= */ true);
   }
   return error;
 }
@@ -3200,6 +3203,9 @@ void Process::CompleteAttach() {
                         : "<none>");
     }
   }
+  // Since we hijacked the event stream, we will have we won't have run the
+  // stop hooks.  Make sure we do that here:
+  GetTarget().RunStopHooks(/* at_initial_stop= */ true);
 }
 
 Status Process::ConnectRemote(llvm::StringRef remote_url) {

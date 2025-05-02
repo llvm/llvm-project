@@ -157,6 +157,7 @@ def C99Compat : DiagGroup<"c99-compat">;
 def C23Compat : DiagGroup<"c23-compat">;
 def : DiagGroup<"c2x-compat", [C23Compat]>;
 
+def CppKeywordInC : DiagGroup<"c++-keyword">;
 def DuplicateDeclSpecifier : DiagGroup<"duplicate-decl-specifier">;
 def InitStringTooLongMissingNonString :
   DiagGroup<"unterminated-string-initialization">;
@@ -180,7 +181,7 @@ def JumpBypassesInit : DiagGroup<"jump-bypasses-init">;
 def TentativeDefnCompat : DiagGroup<"tentative-definition-compat">;
 def CXXCompat: DiagGroup<"c++-compat", [ImplicitVoidPtrCast, DefaultConstInit,
                                         ImplicitIntToEnumCast, HiddenCppDecl,
-                                        InitStringTooLongForCpp,
+                                        InitStringTooLongForCpp, CppKeywordInC,
                                         TentativeDefnCompat, JumpBypassesInit,
                                         DuplicateDeclSpecifier]>;
 

@@ -521,12 +521,12 @@ Sema::ActOnCaseExpr(SourceLocation CaseLoc, ExprResult Val) {
       // constant expression of the promoted type of the switch condition.
       llvm::APSInt TempVal;
       return CheckConvertedConstantExpression(E, CondType, TempVal,
-                                              CCEK_CaseValue);
+                                              CCEKind::CaseValue);
     }
 
     ExprResult ER = E;
     if (!E->isValueDependent())
-      ER = VerifyIntegerConstantExpression(E, AllowFold);
+      ER = VerifyIntegerConstantExpression(E, AllowFoldKind::Allow);
     if (!ER.isInvalid())
       ER = DefaultLvalueConversion(ER.get());
     if (!ER.isInvalid())
@@ -4318,7 +4318,7 @@ StmtResult Sema::ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
   // Exceptions aren't allowed in CUDA device code.
   if (getLangOpts().CUDA)
     CUDA().DiagIfDeviceCode(TryLoc, diag::err_cuda_device_exceptions)
-        << "try" << llvm::to_underlying(CUDA().CurrentTarget());
+        << "try" << CUDA().CurrentTarget();
 
   if (getCurScope() && getCurScope()->isOpenMPSimdDirectiveScope())
     Diag(TryLoc, diag::err_omp_simd_region_cannot_use_stmt) << "try";

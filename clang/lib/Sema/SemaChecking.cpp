@@ -1569,11 +1569,11 @@ bool Sema::checkPointerAuthDiscriminatorArg(Expr *Arg,
   bool IsAddrDiscArg = false;
 
   switch (Kind) {
-  case PADAK_AddrDiscPtrAuth:
+  case PointerAuthDiscArgKind::Addr:
     Max = 1;
     IsAddrDiscArg = true;
     break;
-  case PADAK_ExtraDiscPtrAuth:
+  case PointerAuthDiscArgKind::Extra:
     Max = PointerAuthQualifier::MaxDiscriminator;
     break;
   };
@@ -5060,7 +5060,7 @@ bool Sema::BuiltinUnorderedCompare(CallExpr *TheCall, unsigned BuiltinID) {
   // Do standard promotions between the two arguments, returning their common
   // type.
   QualType Res = UsualArithmeticConversions(
-      OrigArg0, OrigArg1, TheCall->getExprLoc(), ACK_Comparison);
+      OrigArg0, OrigArg1, TheCall->getExprLoc(), ArithConvKind::Comparison);
   if (OrigArg0.isInvalid() || OrigArg1.isInvalid())
     return true;
 
@@ -8306,8 +8306,8 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
     // arguments here.
     bool EmitTypeMismatch = false;
     switch (S.isValidVarArgType(ExprTy)) {
-    case Sema::VAK_Valid:
-    case Sema::VAK_ValidInCXX11: {
+    case VarArgKind::Valid:
+    case VarArgKind::ValidInCXX11: {
       unsigned Diag;
       switch (Match) {
       case ArgType::Match:
@@ -8332,15 +8332,14 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
           E->getBeginLoc(), /*IsStringLocation*/ false, CSR);
       break;
     }
-    case Sema::VAK_Undefined:
-    case Sema::VAK_MSVCUndefined:
+    case VarArgKind::Undefined:
+    case VarArgKind::MSVCUndefined:
       if (CallType == VariadicCallType::DoesNotApply) {
         EmitTypeMismatch = true;
       } else {
         EmitFormatDiagnostic(
             S.PDiag(diag::warn_non_pod_vararg_with_format_string)
-                << S.getLangOpts().CPlusPlus11 << ExprTy
-                << llvm::to_underlying(CallType)
+                << S.getLangOpts().CPlusPlus11 << ExprTy << CallType
                 << AT.getRepresentativeTypeName(S.Context) << CSR
                 << E->getSourceRange(),
             E->getBeginLoc(), /*IsStringLocation*/ false, CSR);
@@ -8348,14 +8347,13 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
       }
       break;
 
-    case Sema::VAK_Invalid:
+    case VarArgKind::Invalid:
       if (CallType == VariadicCallType::DoesNotApply)
         EmitTypeMismatch = true;
       else if (ExprTy->isObjCObjectType())
         EmitFormatDiagnostic(
             S.PDiag(diag::err_cannot_pass_objc_interface_to_vararg_format)
-                << S.getLangOpts().CPlusPlus11 << ExprTy
-                << llvm::to_underlying(CallType)
+                << S.getLangOpts().CPlusPlus11 << ExprTy << CallType
                 << AT.getRepresentativeTypeName(S.Context) << CSR
                 << E->getSourceRange(),
             E->getBeginLoc(), /*IsStringLocation*/ false, CSR);
@@ -8363,7 +8361,7 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
         // FIXME: If this is an initializer list, suggest removing the braces
         // or inserting a cast to the target type.
         S.Diag(E->getBeginLoc(), diag::err_cannot_pass_to_vararg_format)
-            << isa<InitListExpr>(E) << ExprTy << llvm::to_underlying(CallType)
+            << isa<InitListExpr>(E) << ExprTy << CallType
             << AT.getRepresentativeTypeName(S.Context) << E->getSourceRange();
       break;
     }
