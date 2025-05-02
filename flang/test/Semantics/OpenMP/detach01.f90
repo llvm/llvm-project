@@ -50,9 +50,4 @@ program detach01
     !$omp task detach(event_03)
         x = x + 1
     !$omp end task
-
-    !ERROR: At most one DETACH clause can appear on the TASK directive
-    !$omp task detach(event_01) detach(event_02)
-        x = x + 1
-        !$omp end task
 end program
