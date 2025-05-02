@@ -80,8 +80,8 @@ namespace llvm {
 [[noreturn]] void reportFatalInternalError(const Twine &reason);
 
 /// Report a fatal error that does not indicate a bug in LLVM, in contexts
-/// where a more sophisticated error reporting mechanism (such as Error/Expected
-/// or DiagnosticInfo) is currently not supported, and would be too involved to
+/// where a proper error reporting mechanism (such as Error/Expected or
+/// DiagnosticInfo) is currently not supported, and would be too involved to
 /// introduce at the moment.
 ///
 /// Examples where this function should be used instead of
