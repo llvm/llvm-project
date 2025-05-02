@@ -221,17 +221,26 @@ EXTERN int omp_target_is_accessible(const void *Ptr, size_t Size,
     return true;
   }
 
-  // The device number must refer to a valid device
+  // the device number must refer to a valid device
   auto DeviceOrErr = PM->getDevice(DeviceNum);
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
-  // For OpenMP 5.1 the routine checks whether a host pointer is accessible from
+  // TODO: Add check for openmp version compatability
+
+  // for OpenMP 5.1 the routine checks whether a host pointer is accessible from
   // the device this requires for the device to support unified shared memory
   if (DeviceOrErr->supportsUnifiedMemory()) {
     DP("Device %d supports unified memory, returning true\n", DeviceNum);
     return true;
   }
+
+  // TODO: Provide stubs & implementation to check whether a pointer is
+  // accessible from a given device using hsa_amd_pointer_info for AMDGPU
+  // implementation for OpenMP 6.x the specification is required to return true
+  // if the accessibility of the pointer can be determined otherwise it's
+  // allowed to return false the specification will be clarified from the
+  // current wording
 
   // functionality to check whether a device pointer is accessible from a device
   // (OpenMP 6.0) from the host might not be possible
