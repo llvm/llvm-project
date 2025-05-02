@@ -56,7 +56,7 @@
 // CHECK-NEXT:     ExceptionData {
 // CHECK-NEXT:       FunctionLength: 172
 // CHECK:            Prologue [
-// CHECK-NEXT:         0xe712c3            ; str p6, [sp, #3, mul vl]
+// CHECK-NEXT:         0xe716c3            ; str p6, [sp, #3, mul vl]
 // CHECK-NEXT:         0xe703c5            ; str z11, [sp, #5, mul vl]
 // CHECK-NEXT:         0xdf05              ; addvl sp, #-5
 // CHECK-NEXT:         0xe76983            ; stp q9, q10, [sp, #-64]!

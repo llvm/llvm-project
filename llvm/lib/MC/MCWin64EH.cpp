@@ -669,7 +669,7 @@ static void ARM64EmitUnwindCode(MCStreamer &streamer,
     assert(inst.Offset < 256);
     b = 0xE7;
     streamer.emitInt8(b);
-    reg = inst.Register - 4;
+    reg = inst.Register;
     b = ((inst.Offset & 0xC0) >> 1) | 0x10 | reg;
     streamer.emitInt8(b);
     b = 0xC0 | (inst.Offset & 0x3F);

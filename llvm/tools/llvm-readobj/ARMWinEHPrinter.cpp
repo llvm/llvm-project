@@ -991,7 +991,7 @@ bool Decoder::opcode_save_zreg(const uint8_t *OC, unsigned &Offset,
 
 bool Decoder::opcode_save_preg(const uint8_t *OC, unsigned &Offset,
                                unsigned Length, bool Prologue) {
-  uint32_t Reg = (OC[Offset + 1] & 0x0F) + 4;
+  uint32_t Reg = (OC[Offset + 1] & 0x0F);
   uint32_t Off = ((OC[Offset + 1] & 0x60) << 1) | (OC[Offset + 2] & 0x3F);
   SW.startLine() << format(
       "0x%02x%02x%02x            ; %s p%u, [sp, #%u, mul vl]\n", OC[Offset],
