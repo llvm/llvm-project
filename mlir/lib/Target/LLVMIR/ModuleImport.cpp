@@ -570,7 +570,7 @@ static llvm::ConstantAsMetadata *getConstantMDFromKeyValueTuple(
   llvm::MDTuple *tupleEntry = getTwoElementMDTuple(mlirModule, llvmModule, md);
   if (!tupleEntry)
     return nullptr;
-  llvm::MDString *keyMD = dyn_cast<llvm::MDString>(tupleEntry->getOperand(0));
+  auto *keyMD = dyn_cast<llvm::MDString>(tupleEntry->getOperand(0));
   if (!keyMD || keyMD->getString() != matchKey) {
     if (!optional)
       emitWarning(mlirModule.getLoc())
@@ -582,24 +582,22 @@ static llvm::ConstantAsMetadata *getConstantMDFromKeyValueTuple(
   return dyn_cast<llvm::ConstantAsMetadata>(tupleEntry->getOperand(1));
 }
 
-static bool convertInt64FromKeyValueTuple(ModuleOp mlirModule,
-                                          const llvm::Module *llvmModule,
-                                          const llvm::MDOperand &md,
-                                          StringRef matchKey, uint64_t &val) {
+static FailureOr<uint64_t>
+convertInt64FromKeyValueTuple(ModuleOp mlirModule,
+                              const llvm::Module *llvmModule,
+                              const llvm::MDOperand &md, StringRef matchKey) {
   auto *valMD =
       getConstantMDFromKeyValueTuple(mlirModule, llvmModule, md, matchKey);
   if (!valMD)
-    return false;
+    return failure();
 
-  if (auto *cstInt = dyn_cast<llvm::ConstantInt>(valMD->getValue())) {
-    val = cstInt->getZExtValue();
-    return true;
-  }
+  if (auto *cstInt = dyn_cast<llvm::ConstantInt>(valMD->getValue()))
+    return cstInt->getZExtValue();
 
   emitWarning(mlirModule.getLoc())
       << "expected integer metadata value for key '" << matchKey
       << "': " << diagMD(md, llvmModule);
-  return false;
+  return failure();
 }
 
 static std::optional<ProfileSummaryFormatKind>
@@ -631,20 +629,20 @@ convertProfileSummaryFormat(ModuleOp mlirModule, const llvm::Module *llvmModule,
   return fmtKind;
 }
 
-static bool convertProfileSummaryDetailed(
-    ModuleOp mlirModule, const llvm::Module *llvmModule,
-    const llvm::MDOperand &summaryMD,
-    SmallVectorImpl<ModuleFlagProfileSummaryDetailedAttr> &detailedSummary) {
+static FailureOr<SmallVector<ModuleFlagProfileSummaryDetailedAttr>>
+convertProfileSummaryDetailed(ModuleOp mlirModule,
+                              const llvm::Module *llvmModule,
+                              const llvm::MDOperand &summaryMD) {
   auto *tupleEntry = getTwoElementMDTuple(mlirModule, llvmModule, summaryMD);
   if (!tupleEntry)
-    return false;
+    return failure();
 
   llvm::MDString *keyMD = dyn_cast<llvm::MDString>(tupleEntry->getOperand(0));
   if (!keyMD || keyMD->getString() != "DetailedSummary") {
     emitWarning(mlirModule.getLoc())
         << "expected 'DetailedSummary' key: "
         << diagMD(tupleEntry->getOperand(0), llvmModule);
-    return false;
+    return failure();
   }
 
   llvm::MDTuple *entriesMD = dyn_cast<llvm::MDTuple>(tupleEntry->getOperand(1));
@@ -652,16 +650,17 @@ static bool convertProfileSummaryDetailed(
     emitWarning(mlirModule.getLoc())
         << "expected tuple value for 'DetailedSummary' key: "
         << diagMD(tupleEntry->getOperand(1), llvmModule);
-    return false;
+    return failure();
   }
 
+  SmallVector<ModuleFlagProfileSummaryDetailedAttr> detailedSummary;
   for (auto &&entry : entriesMD->operands()) {
     llvm::MDTuple *entryMD = dyn_cast<llvm::MDTuple>(entry);
     if (!entryMD || entryMD->getNumOperands() != 3) {
       emitWarning(mlirModule.getLoc())
           << "'DetailedSummary' entry expects 3 operands: "
           << diagMD(entry, llvmModule);
-      return false;
+      return failure();
     }
     llvm::ConstantAsMetadata *op0 =
         dyn_cast<llvm::ConstantAsMetadata>(entryMD->getOperand(0));
@@ -674,7 +673,7 @@ static bool convertProfileSummaryDetailed(
       emitWarning(mlirModule.getLoc())
           << "expected only integer entries in 'DetailedSummary': "
           << diagMD(entry, llvmModule);
-      return false;
+      return failure();
     }
 
     auto detaildSummaryEntry = ModuleFlagProfileSummaryDetailedAttr::get(
@@ -684,7 +683,7 @@ static bool convertProfileSummaryDetailed(
         cast<llvm::ConstantInt>(op2->getValue())->getZExtValue());
     detailedSummary.push_back(detaildSummaryEntry);
   }
-  return true;
+  return detailedSummary;
 }
 
 static Attribute
@@ -722,9 +721,9 @@ convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
       return success();
     if (checkOptionalPosition(md, matchKey).failed())
       return failure();
-    uint64_t tmpVal = 0;
-    if (!convertInt64FromKeyValueTuple(mlirModule, llvmModule, md, matchKey,
-                                       tmpVal))
+    FailureOr<uint64_t> tmpVal =
+        convertInt64FromKeyValueTuple(mlirModule, llvmModule, md, matchKey);
+    if (failed(tmpVal))
       return failure();
     val = tmpVal;
     return success();
@@ -757,31 +756,36 @@ convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
   if (!format.has_value())
     return nullptr;
 
-  uint64_t totalCount = 0, maxCount = 0, maxInternalCount = 0,
-           maxFunctionCount = 0, numCounts = 0, numFunctions = 0;
-  if (!convertInt64FromKeyValueTuple(mlirModule, llvmModule,
-                                     mdTuple->getOperand(summayIdx++),
-                                     "TotalCount", totalCount))
+  FailureOr<uint64_t> totalCount = convertInt64FromKeyValueTuple(
+      mlirModule, llvmModule, mdTuple->getOperand(summayIdx++), "TotalCount");
+  if (failed(totalCount))
     return nullptr;
-  if (!convertInt64FromKeyValueTuple(mlirModule, llvmModule,
-                                     mdTuple->getOperand(summayIdx++),
-                                     "MaxCount", maxCount))
+
+  FailureOr<uint64_t> maxCount = convertInt64FromKeyValueTuple(
+      mlirModule, llvmModule, mdTuple->getOperand(summayIdx++), "MaxCount");
+  if (failed(maxCount))
     return nullptr;
-  if (!convertInt64FromKeyValueTuple(mlirModule, llvmModule,
-                                     mdTuple->getOperand(summayIdx++),
-                                     "MaxInternalCount", maxInternalCount))
+
+  FailureOr<uint64_t> maxInternalCount = convertInt64FromKeyValueTuple(
+      mlirModule, llvmModule, mdTuple->getOperand(summayIdx++),
+      "MaxInternalCount");
+  if (failed(maxInternalCount))
     return nullptr;
-  if (!convertInt64FromKeyValueTuple(mlirModule, llvmModule,
-                                     mdTuple->getOperand(summayIdx++),
-                                     "MaxFunctionCount", maxFunctionCount))
+
+  FailureOr<uint64_t> maxFunctionCount = convertInt64FromKeyValueTuple(
+      mlirModule, llvmModule, mdTuple->getOperand(summayIdx++),
+      "MaxFunctionCount");
+  if (failed(maxFunctionCount))
     return nullptr;
-  if (!convertInt64FromKeyValueTuple(mlirModule, llvmModule,
-                                     mdTuple->getOperand(summayIdx++),
-                                     "NumCounts", numCounts))
+
+  FailureOr<uint64_t> numCounts = convertInt64FromKeyValueTuple(
+      mlirModule, llvmModule, mdTuple->getOperand(summayIdx++), "NumCounts");
+  if (failed(numCounts))
     return nullptr;
-  if (!convertInt64FromKeyValueTuple(mlirModule, llvmModule,
-                                     mdTuple->getOperand(summayIdx++),
-                                     "NumFunctions", numFunctions))
+
+  FailureOr<uint64_t> numFunctions = convertInt64FromKeyValueTuple(
+      mlirModule, llvmModule, mdTuple->getOperand(summayIdx++), "NumFunctions");
+  if (failed(numFunctions))
     return nullptr;
 
   // Handle optional keys.
@@ -802,16 +806,17 @@ convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
     summayIdx++;
 
   // Handle detailed summary.
-  SmallVector<ModuleFlagProfileSummaryDetailedAttr> detailed;
-  if (!convertProfileSummaryDetailed(mlirModule, llvmModule,
-                                     mdTuple->getOperand(summayIdx), detailed))
+  FailureOr<SmallVector<ModuleFlagProfileSummaryDetailedAttr>> detailed =
+      convertProfileSummaryDetailed(mlirModule, llvmModule,
+                                    mdTuple->getOperand(summayIdx));
+  if (failed(detailed))
     return nullptr;
 
   // Build the final profile summary attribute.
   return ModuleFlagProfileSummaryAttr::get(
-      mlirModule->getContext(), *format, totalCount, maxCount, maxInternalCount,
-      maxFunctionCount, numCounts, numFunctions, isPartialProfile,
-      partialProfileRatio ? partialProfileRatio : nullptr, detailed);
+      mlirModule->getContext(), *format, *totalCount, *maxCount,
+      *maxInternalCount, *maxFunctionCount, *numCounts, *numFunctions,
+      isPartialProfile, partialProfileRatio, *detailed);
 }
 
 /// Invoke specific handlers for each known module flag value, returns nullptr
