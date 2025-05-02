@@ -550,26 +550,6 @@ LongDoubleType::getABIAlignment(const mlir::DataLayout &dataLayout,
       .getABIAlignment(dataLayout, params);
 }
 
-LogicalResult
-LongDoubleType::verify(function_ref<InFlightDiagnostic()> emitError,
-                       mlir::Type underlying) {
-  if (!mlir::isa<DoubleType, FP80Type, FP128Type>(underlying)) {
-    emitError() << "invalid underlying type for long double";
-    return failure();
-  }
-
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
-// Floating-point type helpers
-//===----------------------------------------------------------------------===//
-
-bool cir::isAnyFloatingPointType(mlir::Type t) {
-  return isa<cir::SingleType, cir::DoubleType, cir::LongDoubleType,
-             cir::FP80Type, cir::BF16Type, cir::FP16Type, cir::FP128Type>(t);
-}
-
 //===----------------------------------------------------------------------===//
 // Floating-point and Float-point Vector type helpers
 //===----------------------------------------------------------------------===//
