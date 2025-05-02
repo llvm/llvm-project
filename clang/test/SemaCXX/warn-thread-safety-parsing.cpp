@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Wthread-safety %s
-// RUN: %clang_cc1 -fsyntax-only -verify -Wthread-safety -std=c++98 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -Wthread-safety -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -I%S/Inputs -verify -Wthread-safety %s
+// RUN: %clang_cc1 -fsyntax-only -I%S/Inputs -verify -Wthread-safety -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -I%S/Inputs -verify -Wthread-safety -std=c++11 %s
+
+#include <warn-thread-safety-parsing.h>
 
 #define LOCKABLE            __attribute__ ((lockable))
 #define SCOPED_LOCKABLE     __attribute__ ((scoped_lockable))
