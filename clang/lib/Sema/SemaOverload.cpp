@@ -12355,7 +12355,7 @@ static void DiagnoseBadTarget(Sema &S, OverloadCandidate *Cand) {
   S.Diag(Callee->getLocation(), diag::note_ovl_candidate_bad_target)
       << (unsigned)FnKindPair.first << (unsigned)ocs_non_template
       << FnDesc /* Ignored */
-      << llvm::to_underlying(CalleeTarget) << llvm::to_underlying(CallerTarget);
+      << CalleeTarget << CallerTarget;
 
   // This could be an implicit constructor for which we could not infer the
   // target due to a collsion. Diagnose that case.
@@ -15528,8 +15528,7 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
         DefaultedFunctionKind DFK = getDefaultedFunctionKind(DeletedFD);
         if (DFK.isSpecialMember()) {
           Diag(OpLoc, diag::err_ovl_deleted_special_oper)
-              << Args[0]->getType()
-              << llvm::to_underlying(DFK.asSpecialMember());
+              << Args[0]->getType() << DFK.asSpecialMember();
         } else {
           assert(DFK.isComparison());
           Diag(OpLoc, diag::err_ovl_deleted_comparison)

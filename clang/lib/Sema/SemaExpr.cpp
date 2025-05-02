@@ -1473,8 +1473,7 @@ void Sema::checkVariadicArgument(const Expr *E, VariadicCallType CT) {
   case VAK_ValidInCXX11:
     DiagRuntimeBehavior(
         E->getBeginLoc(), nullptr,
-        PDiag(diag::warn_cxx98_compat_pass_non_pod_arg_to_vararg)
-            << Ty << llvm::to_underlying(CT));
+        PDiag(diag::warn_cxx98_compat_pass_non_pod_arg_to_vararg) << Ty << CT);
     [[fallthrough]];
   case VAK_Valid:
     if (Ty->isRecordType()) {
@@ -1482,8 +1481,7 @@ void Sema::checkVariadicArgument(const Expr *E, VariadicCallType CT) {
       // 'c_str' member function, the user probably meant to call that.
       DiagRuntimeBehavior(E->getBeginLoc(), nullptr,
                           PDiag(diag::warn_pass_class_arg_to_vararg)
-                              << Ty << llvm::to_underlying(CT)
-                              << hasCStrMethod(E) << ".c_str()");
+                              << Ty << CT << hasCStrMethod(E) << ".c_str()");
     }
     break;
 
@@ -1491,22 +1489,21 @@ void Sema::checkVariadicArgument(const Expr *E, VariadicCallType CT) {
   case VAK_MSVCUndefined:
     DiagRuntimeBehavior(E->getBeginLoc(), nullptr,
                         PDiag(diag::warn_cannot_pass_non_pod_arg_to_vararg)
-                            << getLangOpts().CPlusPlus11 << Ty
-                            << llvm::to_underlying(CT));
+                            << getLangOpts().CPlusPlus11 << Ty << CT);
     break;
 
   case VAK_Invalid:
     if (Ty.isDestructedType() == QualType::DK_nontrivial_c_struct)
       Diag(E->getBeginLoc(),
            diag::err_cannot_pass_non_trivial_c_struct_to_vararg)
-          << Ty << llvm::to_underlying(CT);
+          << Ty << CT;
     else if (Ty->isObjCObjectType())
       DiagRuntimeBehavior(E->getBeginLoc(), nullptr,
                           PDiag(diag::err_cannot_pass_objc_interface_to_vararg)
-                              << Ty << llvm::to_underlying(CT));
+                              << Ty << CT);
     else
       Diag(E->getBeginLoc(), diag::err_cannot_pass_to_vararg)
-          << isa<InitListExpr>(E) << Ty << llvm::to_underlying(CT);
+          << isa<InitListExpr>(E) << Ty << CT;
     break;
   }
 }
@@ -22687,8 +22684,7 @@ MarkVarDeclODRUsed(ValueDecl *V, SourceLocation Loc, Sema &SemaRef,
       // through shadow variables therefore it is not diagnosed.
       if (SemaRef.LangOpts.CUDAIsDevice && !SemaRef.LangOpts.HIPStdPar) {
         SemaRef.targetDiag(Loc, diag::err_ref_bad_target)
-            << /*host*/ 2 << /*variable*/ 1 << Var
-            << llvm::to_underlying(UserTarget);
+            << /*host*/ 2 << /*variable*/ 1 << Var << UserTarget;
         SemaRef.targetDiag(Var->getLocation(),
                            Var->getType().isConstQualified()
                                ? diag::note_cuda_const_var_unpromoted
