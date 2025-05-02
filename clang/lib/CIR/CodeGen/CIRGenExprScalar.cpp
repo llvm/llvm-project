@@ -1610,14 +1610,10 @@ mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *e) {
 
     // Zero-initialize any remaining values.
     if (numInitElements < vectorType.getSize()) {
-      mlir::TypedAttr zeroInitAttr =
-          cgf.getBuilder().getZeroInitAttr(vectorType.getElementType());
-      cir::ConstantOp zeroValue = cgf.getBuilder().getConstant(
-          cgf.getLoc(e->getSourceRange()), zeroInitAttr);
-
-      for (uint64_t i = numInitElements; i < vectorType.getSize(); ++i) {
-        elements.push_back(zeroValue);
-      }
+      const mlir::Value zeroValue = cgf.getBuilder().getNullValue(
+          vectorType.getElementType(), cgf.getLoc(e->getSourceRange()));
+      std::fill_n(std::back_inserter(elements),
+                  vectorType.getSize() - numInitElements, zeroValue);
     }
 
     return cgf.getBuilder().create<cir::VecCreateOp>(
