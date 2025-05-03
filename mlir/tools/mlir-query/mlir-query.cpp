@@ -43,6 +43,9 @@ int main(int argc, char **argv) {
   matcherRegistry.registerMatcher(
       "getDefinitions",
       query::matcher::m_GetDefinitions<query::matcher::DynMatcher>);
+  matcherRegistry.registerMatcher(
+      "getAllDefinitions",
+      query::matcher::m_GetAllDefinitions<query::matcher::DynMatcher>);
   matcherRegistry.registerMatcher("hasOpAttrName",
                                   static_cast<HasOpAttrName *>(m_Attr));
   matcherRegistry.registerMatcher("hasOpName", static_cast<HasOpName *>(m_Op));

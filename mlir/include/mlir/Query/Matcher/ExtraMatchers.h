@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file provides matchers that depend on Query.
+// This file provides matchers for MLIRQuery with more involved pattern-matching
+// logic.
 //
 //===----------------------------------------------------------------------===//
 
@@ -80,46 +81,43 @@ bool BackwardSliceMatcher<Matcher>::matches(
     BackwardSliceOptions &options, int64_t maxDepth) {
   backwardSlice.clear();
   llvm::DenseMap<Operation *, int64_t> opDepths;
-  // The starting point is the root op; therefore, we set its depth to 0.
+  // Initializing the root op with a depth of 0
   opDepths[rootOp] = 0;
   options.filter = [&](Operation *subOp) {
-    // If the subOp's depth exceeds maxDepth, we stop further slicing for this
-    // branch.
-    if (opDepths[subOp] > maxDepth)
+    // If the subOp hasn't been recorded in opDepths, it is deeper than
+    // maxDepth.
+    if (!opDepths.contains(subOp))
       return false;
     // Examine subOp's operands to compute depths of their defining operations.
     for (auto operand : subOp->getOperands()) {
+      int64_t newDepth = opDepths[subOp] + 1;
+      // If the newDepth is greater than maxDepth, further computation can be
+      // skipped.
+      if (newDepth > maxDepth)
+        continue;
+
       if (auto definingOp = operand.getDefiningOp()) {
-        // Set the defining operation's depth to one level greater than
-        // subOp's depth.
-        int64_t newDepth = opDepths[subOp] + 1;
-        if (!opDepths.contains(definingOp)) {
+        // Registers the minimum depth
+        if (!opDepths.contains(definingOp) || newDepth < opDepths[definingOp])
           opDepths[definingOp] = newDepth;
-        } else {
-          opDepths[definingOp] = std::min(opDepths[definingOp], newDepth);
-        }
-        return !(opDepths[subOp] > maxDepth);
       } else {
         auto blockArgument = cast<BlockArgument>(operand);
         Operation *parentOp = blockArgument.getOwner()->getParentOp();
         if (!parentOp)
           continue;
-        int64_t newDepth = opDepths[subOp] + 1;
-        if (!opDepths.contains(parentOp)) {
+
+        if (!opDepths.contains(parentOp) || newDepth < opDepths[parentOp])
           opDepths[parentOp] = newDepth;
-        } else {
-          opDepths[parentOp] = std::min(opDepths[parentOp], newDepth);
-        }
-        return !(opDepths[parentOp] > maxDepth);
       }
     }
     return true;
   };
   getBackwardSlice(rootOp, &backwardSlice, options);
-  return true;
+  return options.inclusive ? backwardSlice.size() > 1
+                           : backwardSlice.size() >= 1;
 }
 
-// Matches transitive defs of a top-level operation up to N levels.
+/// Matches transitive defs of a top-level operation up to N levels.
 template <typename Matcher>
 inline BackwardSliceMatcher<Matcher>
 m_GetDefinitions(Matcher innerMatcher, int64_t maxDepth, bool inclusive,
@@ -128,6 +126,15 @@ m_GetDefinitions(Matcher innerMatcher, int64_t maxDepth, bool inclusive,
   return BackwardSliceMatcher<Matcher>(std::move(innerMatcher), maxDepth,
                                        inclusive, omitBlockArguments,
                                        omitUsesFromAbove);
+}
+
+/// Matches all transitive defs of a top-level operation up to N levels
+template <typename Matcher>
+inline BackwardSliceMatcher<Matcher> m_GetAllDefinitions(Matcher innerMatcher,
+                                                         int64_t maxDepth) {
+  assert(maxDepth >= 0 && "maxDepth must be non-negative");
+  return BackwardSliceMatcher<Matcher>(std::move(innerMatcher), maxDepth, true,
+                                       false, false);
 }
 
 } // namespace mlir::query::matcher
