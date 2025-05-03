@@ -72,8 +72,9 @@ protected:
     PredicatedScalarEvolution PSE(*SE, *L);
     DenseMap<VPBlockBase *, BasicBlock *> VPB2IRBB;
     auto Plan = VPlanTransforms::buildPlainCFG(L, *LI, VPB2IRBB);
-    VPlanTransforms::createLoopRegions(*Plan, IntegerType::get(*Ctx, 64), PSE,
-                                       true, false, L);
+    VPlanTransforms::prepareForVectorization(*Plan, IntegerType::get(*Ctx, 64),
+                                             PSE, true, false, L);
+    VPlanTransforms::createLoopRegions(*Plan);
     return Plan;
   }
 };
