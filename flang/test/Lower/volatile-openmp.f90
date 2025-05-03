@@ -1,7 +1,6 @@
-! RUN: bbc -fopenmp %s -o - | FileCheck %s
+! RUN: bbc --strict-fir-volatile-verifier -fopenmp %s -o - | FileCheck %s
 ! new test
 ! XFAIL: *
-
 type t
     integer, pointer :: array(:)
 end type

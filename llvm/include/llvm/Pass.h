@@ -88,6 +88,10 @@ enum class ThinOrFullLTOPhase {
   CustomLTOPostLink
 };
 
+#ifndef NDEBUG
+const char *to_string(ThinOrFullLTOPhase Phase);
+#endif
+
 //===----------------------------------------------------------------------===//
 /// Pass interface - Implemented by all 'passes'.  Subclass this if you are an
 /// interprocedural optimization or you do not fit into any of the more

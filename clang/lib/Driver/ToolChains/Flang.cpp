@@ -130,7 +130,8 @@ void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
                    options::OPT_funderscoring, options::OPT_fno_underscoring,
                    options::OPT_foffload_global_filtering,
                    options::OPT_fno_offload_global_filtering,
-                   options::OPT_funsigned, options::OPT_fno_unsigned});
+                   options::OPT_funsigned, options::OPT_fno_unsigned,
+                   options::OPT_finstrument_functions});
 
   if (Args.hasArg(options::OPT_fopenacc)) {
      const Driver &D = getToolChain().getDriver();
