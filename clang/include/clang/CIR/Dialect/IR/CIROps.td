@@ -1988,6 +1988,12 @@ def VecExtractOp : CIR_Op<"vec.extract", [Pure,
   let description = [{
     The `cir.vec.extract` operation extracts the element at the given index
     from a vector object.
+
+    ```mlir
+    %tmp = cir.load %vec : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+    %idx = cir.const #cir.int<1> : !s32i
+    %element = cir.vec.extract %tmp[%idx : !s32i] : !cir.vector<4 x !s32i>
+    ```
   }];
 
   let arguments = (ins CIR_VectorType:$vec, CIR_AnyFundamentalIntType:$index);
@@ -1996,8 +2002,6 @@ def VecExtractOp : CIR_Op<"vec.extract", [Pure,
   let assemblyFormat = [{
     $vec `[` $index `:` type($index) `]` attr-dict `:` qualified(type($vec))
   }];
-
-  let hasVerifier = 0;
 }
 
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD
