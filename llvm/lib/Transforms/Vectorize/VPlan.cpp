@@ -216,10 +216,10 @@ VPBasicBlock::iterator VPBasicBlock::getFirstNonPhi() {
 
 VPTransformState::VPTransformState(const TargetTransformInfo *TTI,
                                    ElementCount VF, LoopInfo *LI,
-                                   DominatorTree *DT, IRBuilderBase &Builder,
-                                   InnerLoopVectorizer *ILV, VPlan *Plan,
+                                   DominatorTree *DT, AssumptionCache *AC,
+                                   IRBuilderBase &Builder, VPlan *Plan,
                                    Loop *CurrentParentLoop, Type *CanonicalIVTy)
-    : TTI(TTI), VF(VF), CFG(DT), LI(LI), Builder(Builder), ILV(ILV), Plan(Plan),
+    : TTI(TTI), VF(VF), CFG(DT), LI(LI), AC(AC), Builder(Builder), Plan(Plan),
       CurrentParentLoop(CurrentParentLoop), LVer(nullptr),
       TypeAnalysis(CanonicalIVTy), VPDT(*Plan) {}
 
