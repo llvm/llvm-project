@@ -1968,7 +1968,7 @@ void ModuleMapLoader::handleExportDecl(const modulemap::ExportDecl &ED) {
 }
 
 void ModuleMapLoader::handleExportAsDecl(const modulemap::ExportAsDecl &EAD) {
-  auto ModName = EAD.Id.front();
+  const auto &ModName = EAD.Id.front();
 
   if (!ActiveModule->ExportAsModule.empty()) {
     if (ActiveModule->ExportAsModule == ModName.first) {
