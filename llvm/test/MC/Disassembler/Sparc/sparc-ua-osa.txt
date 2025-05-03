@@ -1,0 +1,6 @@
+# RUN: llvm-mc --disassemble %s -triple=sparcv9-unknown-linux -mattr=+ua2005 | FileCheck %s
+
+## UA 2005 instructions.
+
+# CHECK: allclean
+0x85,0x88,0x00,0x00
