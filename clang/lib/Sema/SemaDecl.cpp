@@ -2925,7 +2925,7 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
             AMK == AvailabilityMergeKind::ProtocolImplementation ||
             AMK == AvailabilityMergeKind::OptionalProtocolImplementation))
     NewAttr = nullptr;
-  else if (isa<SwiftPrivateAttr>(Attr) && AMK == Sema::AMK_Override)
+  else if (isa<SwiftPrivateAttr>(Attr) && AMK == AvailabilityMergeKind::Override)
     NewAttr = nullptr;
   else if (const auto *UA = dyn_cast<UuidAttr>(Attr))
     NewAttr = S.mergeUuidAttr(D, *UA, UA->getGuid(), UA->getGuidDecl());

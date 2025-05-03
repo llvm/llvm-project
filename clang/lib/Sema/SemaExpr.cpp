@@ -2045,7 +2045,7 @@ QualType Sema::UsualArithmeticConversions(ExprResult &LHS, ExprResult &RHS,
   // BoundsSafety: "pointer" op "pointer" -> cast it to raw pointer.
   auto *LPTy = LHSType->getAs<PointerType>();
   auto *RPTy = RHSType->getAs<PointerType>();
-  if (ACK != ACK_Conditional && LPTy && RPTy &&
+  if (ACK != ArithConvKind::Conditional && LPTy && RPTy &&
       (!LPTy->hasRawPointerLayout() || !RPTy->hasRawPointerLayout())) {
     if (!LPTy->hasRawPointerLayout())
       LHS = ImpCastExprToType(LHS.get(),
