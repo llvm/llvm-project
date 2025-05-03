@@ -1167,23 +1167,22 @@ public:
 };
 
 /// Helper type to provide functions to access incoming values and blocks for
-/// phi-like recipes. RecipeTy must be a sub-class of VPRecipeBase.
-template <typename RecipeTy> class VPPhiAccessors {
+/// phi-like recipes.
+class VPPhiAccessors {
+protected:
   /// Return a VPRecipeBase* to the current object.
-  const VPRecipeBase *getAsRecipe() const {
-    return static_cast<const RecipeTy *>(this);
-  }
+  virtual const VPRecipeBase *getAsRecipe() const = 0;
 
 public:
+  virtual ~VPPhiAccessors() = default;
+
   /// Returns the incoming VPValue with index \p Idx.
   VPValue *getIncomingValue(unsigned Idx) const {
     return getAsRecipe()->getOperand(Idx);
   }
 
   /// Returns the incoming block with index \p Idx.
-  const VPBasicBlock *getIncomingBlock(unsigned Idx) const {
-    return getAsRecipe()->getParent()->getCFGPredecessor(Idx);
-  }
+  const VPBasicBlock *getIncomingBlock(unsigned Idx) const;
 
   unsigned getNumIncomingValues() const {
     return getAsRecipe()->getNumOperands();
@@ -1993,10 +1992,12 @@ public:
 /// recipe is placed in an entry block to a (non-replicate) region, it must have
 /// exactly 2 incoming values, the first from the predecessor of the region and
 /// the second from the exiting block of the region.
-class VPWidenPHIRecipe : public VPSingleDefRecipe,
-                         public VPPhiAccessors<VPWidenPHIRecipe> {
+class VPWidenPHIRecipe : public VPSingleDefRecipe, public VPPhiAccessors {
   /// Name to use for the generated IR instruction for the widened phi.
   std::string Name;
+
+protected:
+  const VPRecipeBase *getAsRecipe() const override { return this; }
 
 public:
   /// Create a new VPWidenPHIRecipe for \p Phi with start value \p Start and
@@ -3362,6 +3363,11 @@ private:
   /// VPBasicBlock, and return it. Update the CFGState accordingly.
   BasicBlock *createEmptyBasicBlock(VPTransformState &State);
 };
+
+inline const VPBasicBlock *
+VPPhiAccessors::getIncomingBlock(unsigned Idx) const {
+  return getAsRecipe()->getParent()->getCFGPredecessor(Idx);
+}
 
 /// A special type of VPBasicBlock that wraps an existing IR basic block.
 /// Recipes of the block get added before the first non-phi instruction in the
