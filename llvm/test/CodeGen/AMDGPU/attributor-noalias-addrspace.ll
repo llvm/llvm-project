@@ -292,6 +292,205 @@ bb.2.end:
   %atomicrmw.umin = atomicrmw volatile umin ptr %ptr2, i32 22 syncscope("singlethread") monotonic, align 4
   ret void
 }
+
+define amdgpu_kernel void @no_alias_addr_space_select_cmpxchg_flat(ptr %c, i1 %cond1, i1 %cond2, i32 %val, i32 %offset) #0 {
+; CHECK-LABEL: define amdgpu_kernel void @no_alias_addr_space_select_cmpxchg_flat(
+; CHECK-SAME: ptr [[C:%.*]], i1 [[COND1:%.*]], i1 [[COND2:%.*]], i32 [[VAL:%.*]], i32 [[OFFSET:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[LPTR:%.*]] = alloca i32, align 4, addrspace(5)
+; CHECK-NEXT:    [[B:%.*]] = addrspacecast ptr addrspace(5) [[LPTR]] to ptr
+; CHECK-NEXT:    [[ADD_A:%.*]] = getelementptr inbounds i8, ptr addrspacecast (ptr addrspace(1) @gptr to ptr), i32 [[OFFSET]]
+; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[COND1]], ptr [[ADD_A]], ptr [[B]]
+; CHECK-NEXT:    [[PTR2:%.*]] = select i1 [[COND2]], ptr [[PTR]], ptr [[C]]
+; CHECK-NEXT:    [[CMPXCHG_0:%.*]] = cmpxchg ptr [[PTR2]], i32 0, i32 4 monotonic monotonic, align 4
+; CHECK-NEXT:    [[CMPXCHG_1:%.*]] = cmpxchg ptr [[PTR2]], i32 0, i32 5 acq_rel monotonic, align 4
+; CHECK-NEXT:    [[CMPXCHG_2:%.*]] = cmpxchg ptr [[PTR2]], i32 0, i32 6 acquire monotonic, align 4
+; CHECK-NEXT:    [[CMPXCHG_3:%.*]] = cmpxchg ptr [[PTR2]], i32 0, i32 7 release monotonic, align 4
+; CHECK-NEXT:    [[CMPXCHG_4:%.*]] = cmpxchg ptr [[PTR2]], i32 0, i32 8 seq_cst monotonic, align 4
+; CHECK-NEXT:    [[CMPXCHG_5:%.*]] = cmpxchg weak ptr [[PTR2]], i32 0, i32 9 seq_cst monotonic, align 4
+; CHECK-NEXT:    [[CMPXCHG_6:%.*]] = cmpxchg volatile ptr [[PTR2]], i32 0, i32 10 seq_cst monotonic, align 4
+; CHECK-NEXT:    [[CMPXCHG_7:%.*]] = cmpxchg weak volatile ptr [[PTR2]], i32 0, i32 11 syncscope("singlethread") seq_cst monotonic, align 4
+; CHECK-NEXT:    ret void
+;
+  %lptr = alloca i32, align 4, addrspace(5)
+  %a = addrspacecast ptr addrspace(1) @gptr to ptr
+  %b = addrspacecast ptr addrspace(5) %lptr to ptr
+  %add_a = getelementptr inbounds i8, ptr %a, i32 %offset
+  %ptr = select i1 %cond1, ptr %add_a, ptr %b
+  %ptr2 = select i1 %cond2, ptr %ptr, ptr %c
+  %cmpxchg.0 = cmpxchg ptr %ptr2, i32 0, i32 4 monotonic monotonic, align 4
+  %cmpxchg.1 = cmpxchg ptr %ptr2, i32 0, i32 5 acq_rel monotonic, align 4
+  %cmpxchg.2 = cmpxchg ptr %ptr2, i32 0, i32 6 acquire monotonic, align 4
+  %cmpxchg.3 = cmpxchg ptr %ptr2, i32 0, i32 7 release monotonic, align 4
+  %cmpxchg.4 = cmpxchg ptr %ptr2, i32 0, i32 8 seq_cst monotonic, align 4
+  %cmpxchg.5 = cmpxchg weak ptr %ptr2, i32 0, i32 9 seq_cst monotonic, align 4
+  %cmpxchg.6 = cmpxchg volatile ptr %ptr2, i32 0, i32 10 seq_cst monotonic, align 4
+  %cmpxchg.7 = cmpxchg weak volatile ptr %ptr2, i32 0, i32 11 syncscope("singlethread") seq_cst monotonic, align 4
+  ret void
+}
+
+define amdgpu_kernel void @no_alias_addr_space_branch_cmpxchg_flat(ptr %c, i1 %cond1, i1 %cond2, i32 %val, i32 %offset) #0 {
+; CHECK-LABEL: define amdgpu_kernel void @no_alias_addr_space_branch_cmpxchg_flat(
+; CHECK-SAME: ptr [[C:%.*]], i1 [[COND1:%.*]], i1 [[COND2:%.*]], i32 [[VAL:%.*]], i32 [[OFFSET:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    br i1 [[COND1]], label %[[BB_1_TRUE:.*]], label %[[BB_1_FALSE:.*]]
+; CHECK:       [[BB_1_TRUE]]:
+; CHECK-NEXT:    [[A:%.*]] = addrspacecast ptr addrspace(1) @gptr to ptr
+; CHECK-NEXT:    br label %[[BB_1_END:.*]]
+; CHECK:       [[BB_1_FALSE]]:
+; CHECK-NEXT:    [[LPTR:%.*]] = alloca i32, align 4, addrspace(5)
+; CHECK-NEXT:    [[B:%.*]] = addrspacecast ptr addrspace(5) [[LPTR]] to ptr
+; CHECK-NEXT:    br label %[[BB_1_END]]
+; CHECK:       [[BB_1_END]]:
+; CHECK-NEXT:    [[PTR1:%.*]] = phi ptr [ [[A]], %[[BB_1_TRUE]] ], [ [[B]], %[[BB_1_FALSE]] ]
+; CHECK-NEXT:    br i1 [[COND2]], label %[[BB_2_TRUE:.*]], label %[[BB_2_END:.*]]
+; CHECK:       [[BB_2_TRUE]]:
+; CHECK-NEXT:    br label %[[BB_2_END]]
+; CHECK:       [[BB_2_END]]:
+; CHECK-NEXT:    [[PTR2:%.*]] = phi ptr [ [[PTR1]], %[[BB_1_END]] ], [ [[C]], %[[BB_2_TRUE]] ]
+; CHECK-NEXT:    [[CMPXCHG_0:%.*]] = cmpxchg ptr [[PTR2]], i32 0, i32 4 monotonic monotonic, align 4
+; CHECK-NEXT:    [[CMPXCHG_1:%.*]] = cmpxchg ptr [[PTR2]], i32 0, i32 5 acq_rel monotonic, align 4
+; CHECK-NEXT:    [[CMPXCHG_2:%.*]] = cmpxchg ptr [[PTR2]], i32 0, i32 6 acquire monotonic, align 4
+; CHECK-NEXT:    [[CMPXCHG_3:%.*]] = cmpxchg ptr [[PTR2]], i32 0, i32 7 release monotonic, align 4
+; CHECK-NEXT:    [[CMPXCHG_4:%.*]] = cmpxchg ptr [[PTR2]], i32 0, i32 8 seq_cst monotonic, align 4
+; CHECK-NEXT:    [[CMPXCHG_5:%.*]] = cmpxchg weak ptr [[PTR2]], i32 0, i32 9 seq_cst monotonic, align 4
+; CHECK-NEXT:    [[CMPXCHG_6:%.*]] = cmpxchg volatile ptr [[PTR2]], i32 0, i32 10 seq_cst monotonic, align 4
+; CHECK-NEXT:    [[CMPXCHG_7:%.*]] = cmpxchg weak volatile ptr [[PTR2]], i32 0, i32 11 syncscope("singlethread") seq_cst monotonic, align 4
+; CHECK-NEXT:    ret void
+;
+  br i1 %cond1, label %bb.1.true, label %bb.1.false
+bb.1.true:
+  %a = addrspacecast ptr addrspace(1) @gptr to ptr
+  br label %bb.1.end
+
+bb.1.false:
+  %lptr = alloca i32, align 4, addrspace(5)
+  %b = addrspacecast ptr addrspace(5) %lptr to ptr
+  br label %bb.1.end
+
+bb.1.end:
+  %ptr1 = phi ptr [ %a, %bb.1.true ], [ %b, %bb.1.false ]
+  br i1 %cond2, label %bb.2.true, label %bb.2.end
+
+bb.2.true:
+  br label %bb.2.end
+
+bb.2.end:
+  %ptr2 = phi ptr [ %ptr1, %bb.1.end ], [ %c, %bb.2.true ]
+  %cmpxchg.0 = cmpxchg ptr %ptr2, i32 0, i32 4 monotonic monotonic, align 4
+  %cmpxchg.1 = cmpxchg ptr %ptr2, i32 0, i32 5 acq_rel monotonic, align 4
+  %cmpxchg.2 = cmpxchg ptr %ptr2, i32 0, i32 6 acquire monotonic, align 4
+  %cmpxchg.3 = cmpxchg ptr %ptr2, i32 0, i32 7 release monotonic, align 4
+  %cmpxchg.4 = cmpxchg ptr %ptr2, i32 0, i32 8 seq_cst monotonic, align 4
+  %cmpxchg.5 = cmpxchg weak ptr %ptr2, i32 0, i32 9 seq_cst monotonic, align 4
+  %cmpxchg.6 = cmpxchg volatile ptr %ptr2, i32 0, i32 10 seq_cst monotonic, align 4
+  %cmpxchg.7 = cmpxchg weak volatile ptr %ptr2, i32 0, i32 11 syncscope("singlethread") seq_cst monotonic, align 4
+  ret void
+}
+
+define amdgpu_kernel void @no_alias_addr_space_select_atomicrmw_flat(ptr %c, i1 %cond1, i1 %cond2, i32 %val, i32 %offset) #0 {
+; CHECK-LABEL: define amdgpu_kernel void @no_alias_addr_space_select_atomicrmw_flat(
+; CHECK-SAME: ptr [[C:%.*]], i1 [[COND1:%.*]], i1 [[COND2:%.*]], i32 [[VAL:%.*]], i32 [[OFFSET:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[LPTR:%.*]] = alloca i32, align 4, addrspace(5)
+; CHECK-NEXT:    [[B:%.*]] = addrspacecast ptr addrspace(5) [[LPTR]] to ptr
+; CHECK-NEXT:    [[ADD_A:%.*]] = getelementptr inbounds i8, ptr addrspacecast (ptr addrspace(1) @gptr to ptr), i32 [[OFFSET]]
+; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[COND1]], ptr [[ADD_A]], ptr [[B]]
+; CHECK-NEXT:    [[PTR2:%.*]] = select i1 [[COND2]], ptr [[PTR]], ptr [[C]]
+; CHECK-NEXT:    [[ATOMICRMW_XCHG:%.*]] = atomicrmw xchg ptr [[PTR2]], i32 12 monotonic, align 4
+; CHECK-NEXT:    [[ATOMICRMW_ADD:%.*]] = atomicrmw add ptr [[PTR2]], i32 13 monotonic, align 4
+; CHECK-NEXT:    [[ATOMICRMW_SUB:%.*]] = atomicrmw sub ptr [[PTR2]], i32 14 monotonic, align 4
+; CHECK-NEXT:    [[ATOMICRMW_AND:%.*]] = atomicrmw and ptr [[PTR2]], i32 15 monotonic, align 4
+; CHECK-NEXT:    [[ATOMICRMW_NAND:%.*]] = atomicrmw nand ptr [[PTR2]], i32 16 monotonic, align 4
+; CHECK-NEXT:    [[ATOMICRMW_OR:%.*]] = atomicrmw or ptr [[PTR2]], i32 17 monotonic, align 4
+; CHECK-NEXT:    [[ATOMICRMW_XOR:%.*]] = atomicrmw xor ptr [[PTR2]], i32 18 monotonic, align 4
+; CHECK-NEXT:    [[ATOMICRMW_MAX:%.*]] = atomicrmw max ptr [[PTR2]], i32 19 monotonic, align 4
+; CHECK-NEXT:    [[ATOMICRMW_MIN:%.*]] = atomicrmw volatile min ptr [[PTR2]], i32 20 monotonic, align 4
+; CHECK-NEXT:    [[ATOMICRMW_UMAX:%.*]] = atomicrmw umax ptr [[PTR2]], i32 21 syncscope("singlethread") monotonic, align 4
+; CHECK-NEXT:    [[ATOMICRMW_UMIN:%.*]] = atomicrmw volatile umin ptr [[PTR2]], i32 22 syncscope("singlethread") monotonic, align 4
+; CHECK-NEXT:    ret void
+;
+  %lptr = alloca i32, align 4, addrspace(5)
+  %a = addrspacecast ptr addrspace(1) @gptr to ptr
+  %b = addrspacecast ptr addrspace(5) %lptr to ptr
+  %add_a = getelementptr inbounds i8, ptr %a, i32 %offset
+  %ptr = select i1 %cond1, ptr %add_a, ptr %b
+  %ptr2 = select i1 %cond2, ptr %ptr, ptr %c
+  %atomicrmw.xchg = atomicrmw xchg ptr %ptr2, i32 12 monotonic, align 4
+  %atomicrmw.add = atomicrmw add ptr %ptr2, i32 13 monotonic, align 4
+  %atomicrmw.sub = atomicrmw sub ptr %ptr2, i32 14 monotonic, align 4
+  %atomicrmw.and = atomicrmw and ptr %ptr2, i32 15 monotonic, align 4
+  %atomicrmw.nand = atomicrmw nand ptr %ptr2, i32 16 monotonic, align 4
+  %atomicrmw.or = atomicrmw or ptr %ptr2, i32 17 monotonic, align 4
+  %atomicrmw.xor = atomicrmw xor ptr %ptr2, i32 18 monotonic, align 4
+  %atomicrmw.max = atomicrmw max ptr %ptr2, i32 19 monotonic, align 4
+  %atomicrmw.min = atomicrmw volatile min ptr %ptr2, i32 20 monotonic, align 4
+  %atomicrmw.umax = atomicrmw umax ptr %ptr2, i32 21 syncscope("singlethread") monotonic, align 4
+  %atomicrmw.umin = atomicrmw volatile umin ptr %ptr2, i32 22 syncscope("singlethread") monotonic, align 4
+  ret void
+}
+
+define amdgpu_kernel void @no_alias_addr_space_branch_atomicrmw_flat(ptr %c, i1 %cond1, i1 %cond2, i32 %val, i32 %offset) #0 {
+; CHECK-LABEL: define amdgpu_kernel void @no_alias_addr_space_branch_atomicrmw_flat(
+; CHECK-SAME: ptr [[C:%.*]], i1 [[COND1:%.*]], i1 [[COND2:%.*]], i32 [[VAL:%.*]], i32 [[OFFSET:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    br i1 [[COND1]], label %[[BB_1_TRUE:.*]], label %[[BB_1_FALSE:.*]]
+; CHECK:       [[BB_1_TRUE]]:
+; CHECK-NEXT:    [[A:%.*]] = addrspacecast ptr addrspace(1) @gptr to ptr
+; CHECK-NEXT:    br label %[[BB_1_END:.*]]
+; CHECK:       [[BB_1_FALSE]]:
+; CHECK-NEXT:    [[LPTR:%.*]] = alloca i32, align 4, addrspace(5)
+; CHECK-NEXT:    [[B:%.*]] = addrspacecast ptr addrspace(5) [[LPTR]] to ptr
+; CHECK-NEXT:    br label %[[BB_1_END]]
+; CHECK:       [[BB_1_END]]:
+; CHECK-NEXT:    [[PTR1:%.*]] = phi ptr [ [[A]], %[[BB_1_TRUE]] ], [ [[B]], %[[BB_1_FALSE]] ]
+; CHECK-NEXT:    br i1 [[COND2]], label %[[BB_2_TRUE:.*]], label %[[BB_2_END:.*]]
+; CHECK:       [[BB_2_TRUE]]:
+; CHECK-NEXT:    br label %[[BB_2_END]]
+; CHECK:       [[BB_2_END]]:
+; CHECK-NEXT:    [[PTR2:%.*]] = phi ptr [ [[PTR1]], %[[BB_1_END]] ], [ [[C]], %[[BB_2_TRUE]] ]
+; CHECK-NEXT:    [[ATOMICRMW_XCHG:%.*]] = atomicrmw xchg ptr [[PTR2]], i32 12 monotonic, align 4
+; CHECK-NEXT:    [[ATOMICRMW_ADD:%.*]] = atomicrmw add ptr [[PTR2]], i32 13 monotonic, align 4
+; CHECK-NEXT:    [[ATOMICRMW_SUB:%.*]] = atomicrmw sub ptr [[PTR2]], i32 14 monotonic, align 4
+; CHECK-NEXT:    [[ATOMICRMW_AND:%.*]] = atomicrmw and ptr [[PTR2]], i32 15 monotonic, align 4
+; CHECK-NEXT:    [[ATOMICRMW_NAND:%.*]] = atomicrmw nand ptr [[PTR2]], i32 16 monotonic, align 4
+; CHECK-NEXT:    [[ATOMICRMW_OR:%.*]] = atomicrmw or ptr [[PTR2]], i32 17 monotonic, align 4
+; CHECK-NEXT:    [[ATOMICRMW_XOR:%.*]] = atomicrmw xor ptr [[PTR2]], i32 18 monotonic, align 4
+; CHECK-NEXT:    [[ATOMICRMW_MAX:%.*]] = atomicrmw max ptr [[PTR2]], i32 19 monotonic, align 4
+; CHECK-NEXT:    [[ATOMICRMW_MIN:%.*]] = atomicrmw volatile min ptr [[PTR2]], i32 20 monotonic, align 4
+; CHECK-NEXT:    [[ATOMICRMW_UMAX:%.*]] = atomicrmw umax ptr [[PTR2]], i32 21 syncscope("singlethread") monotonic, align 4
+; CHECK-NEXT:    [[ATOMICRMW_UMIN:%.*]] = atomicrmw volatile umin ptr [[PTR2]], i32 22 syncscope("singlethread") monotonic, align 4
+; CHECK-NEXT:    ret void
+;
+  br i1 %cond1, label %bb.1.true, label %bb.1.false
+bb.1.true:
+  %a = addrspacecast ptr addrspace(1) @gptr to ptr
+  br label %bb.1.end
+
+bb.1.false:
+  %lptr = alloca i32, align 4, addrspace(5)
+  %b = addrspacecast ptr addrspace(5) %lptr to ptr
+  br label %bb.1.end
+
+bb.1.end:
+  %ptr1 = phi ptr [ %a, %bb.1.true ], [ %b, %bb.1.false ]
+  br i1 %cond2, label %bb.2.true, label %bb.2.end
+
+bb.2.true:
+  br label %bb.2.end
+
+bb.2.end:
+  %ptr2 = phi ptr [ %ptr1, %bb.1.end ], [ %c, %bb.2.true ]
+  %atomicrmw.xchg = atomicrmw xchg ptr %ptr2, i32 12 monotonic, align 4
+  %atomicrmw.add = atomicrmw add ptr %ptr2, i32 13 monotonic, align 4
+  %atomicrmw.sub = atomicrmw sub ptr %ptr2, i32 14 monotonic, align 4
+  %atomicrmw.and = atomicrmw and ptr %ptr2, i32 15 monotonic, align 4
+  %atomicrmw.nand = atomicrmw nand ptr %ptr2, i32 16 monotonic, align 4
+  %atomicrmw.or = atomicrmw or ptr %ptr2, i32 17 monotonic, align 4
+  %atomicrmw.xor = atomicrmw xor ptr %ptr2, i32 18 monotonic, align 4
+  %atomicrmw.max = atomicrmw max ptr %ptr2, i32 19 monotonic, align 4
+  %atomicrmw.min = atomicrmw volatile min ptr %ptr2, i32 20 monotonic, align 4
+  %atomicrmw.umax = atomicrmw umax ptr %ptr2, i32 21 syncscope("singlethread") monotonic, align 4
+  %atomicrmw.umin = atomicrmw volatile umin ptr %ptr2, i32 22 syncscope("singlethread") monotonic, align 4
+  ret void
+}
+
 ;.
 ; CHECK: [[META0]] = !{i32 2, i32 3, i32 4, i32 5, i32 6, i32 10}
 ; CHECK: [[META1]] = !{i32 1, i32 5, i32 6, i32 7, i32 8, i32 10}

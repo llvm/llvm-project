@@ -12792,13 +12792,13 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
            "Associated value is not a pointer");
 
     if (!A.getInfoCache().getFlatAddressSpace().has_value()) {
-      resetASRanges();
+      resetASRanges(A);
       indicatePessimisticFixpoint();
       return;
     }
 
     unsigned FlatAS = A.getInfoCache().getFlatAddressSpace().value();
-    resetASRanges();
+    resetASRanges(A);
     removeAS(FlatAS);
 
     unsigned AS = getAssociatedType()->getPointerAddressSpace();
@@ -12841,7 +12841,7 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
     auto *AUO = A.getOrCreateAAFor<AAUnderlyingObjects>(getIRPosition(), this,
                                                         DepClassTy::REQUIRED);
     if (!AUO->forallUnderlyingObjects(CheckAddressSpace)) {
-      resetASRanges();
+      resetASRanges(A);
       return indicatePessimisticFixpoint();
     }
 
@@ -12907,7 +12907,7 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
     raw_string_ostream OS(Str);
     OS << "noaliasaddrspace(";
     for (auto range : ASRanges)
-      OS << ' ' << "[" << range.first << "," << range.second << ")";
+      OS << ' ' << '[' << range.first << ',' << range.second << ')';
     OS << " )";
     return OS.str();
   }
@@ -12938,9 +12938,9 @@ private:
     }
   }
 
-  void resetASRanges() {
+  void resetASRanges(Attributor &A) {
     ASRanges.clear();
-    ASRanges.push_back(std::pair(0, MaxAddrSpace));
+    ASRanges.push_back(std::pair(0, A.getInfoCache().getMaxAddrSpace() + 1));
   }
 };
 

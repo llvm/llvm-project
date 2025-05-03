@@ -239,6 +239,10 @@ public:
     return ST.getMaxWavesPerEU();
   }
 
+  unsigned getMaxAddrSpace() const override {
+    return AMDGPUAS::MAX_AMDGPU_ADDRESS;
+  }
+
 private:
   /// Check if the ConstantExpr \p CE uses an addrspacecast from private or
   /// local to flat. These casts may require the queue pointer.
@@ -1401,30 +1405,19 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
     }
 
     for (auto &I : instructions(F)) {
+      Value *Ptr = nullptr;
       if (auto *LI = dyn_cast<LoadInst>(&I)) {
-        Value &Ptr = *(LI->getPointerOperand());
-        A.getOrCreateAAFor<AAAddressSpace>(IRPosition::value(Ptr));
-        const_cast<AANoAliasAddrSpace *>(
-            A.getOrCreateAAFor<AANoAliasAddrSpace>(IRPosition::value(Ptr)))
-            ->setMaxAddrSpace(AMDGPUAS::MAX_AMDGPU_ADDRESS);
+        Ptr = LI->getPointerOperand();
       } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
-        Value &Ptr = *(SI->getPointerOperand());
-        A.getOrCreateAAFor<AAAddressSpace>(IRPosition::value(Ptr));
-        const_cast<AANoAliasAddrSpace *>(
-            A.getOrCreateAAFor<AANoAliasAddrSpace>(IRPosition::value(Ptr)))
-            ->setMaxAddrSpace(AMDGPUAS::MAX_AMDGPU_ADDRESS);
+        Ptr = SI->getPointerOperand();
       } else if (auto *RMW = dyn_cast<AtomicRMWInst>(&I)) {
-        Value &Ptr = *(RMW->getPointerOperand());
-        A.getOrCreateAAFor<AAAddressSpace>(IRPosition::value(Ptr));
-        const_cast<AANoAliasAddrSpace *>(
-            A.getOrCreateAAFor<AANoAliasAddrSpace>(IRPosition::value(Ptr)))
-            ->setMaxAddrSpace(AMDGPUAS::MAX_AMDGPU_ADDRESS);
+        Ptr = RMW->getPointerOperand();
       } else if (auto *CmpX = dyn_cast<AtomicCmpXchgInst>(&I)) {
-        Value &Ptr = *(CmpX->getPointerOperand());
-        A.getOrCreateAAFor<AAAddressSpace>(IRPosition::value(Ptr));
-        const_cast<AANoAliasAddrSpace *>(
-            A.getOrCreateAAFor<AANoAliasAddrSpace>(IRPosition::value(Ptr)))
-            ->setMaxAddrSpace(AMDGPUAS::MAX_AMDGPU_ADDRESS);
+        Ptr = CmpX->getPointerOperand();
+      }
+      if (Ptr) {
+        A.getOrCreateAAFor<AAAddressSpace>(IRPosition::value(*Ptr));
+        A.getOrCreateAAFor<AANoAliasAddrSpace>(IRPosition::value(*Ptr));
       }
     }
   }

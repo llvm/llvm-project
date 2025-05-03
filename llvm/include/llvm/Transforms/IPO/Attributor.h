@@ -1349,6 +1349,8 @@ struct InformationCache {
   /// Return the flat address space if the associated target has.
   std::optional<unsigned> getFlatAddressSpace() const;
 
+  virtual unsigned getMaxAddrSpace() const { return ~(0); }
+
 private:
   struct FunctionInfo {
     ~FunctionInfo();
@@ -6367,25 +6369,11 @@ struct AANoAliasAddrSpace
     return (AA->getIdAddr() == &ID);
   }
 
-  void setMaxAddrSpace(unsigned MaxAS) {
-    MaxAddrSpace = MaxAS;
-    for (auto it = ASRanges.begin(); it != ASRanges.end();) {
-      if (it->first > MaxAS) {
-        it = ASRanges.erase(it);
-      } else if (it->second > MaxAS + 1) {
-        it->second = MaxAS + 1;
-      } else {
-        it++;
-      }
-    }
-  }
-
   /// Unique ID (due to the unique address)
   static const char ID;
 
 protected:
   SmallVector<std::pair<unsigned, unsigned>> ASRanges;
-  unsigned MaxAddrSpace = ~0;
 };
 
 struct AAAllocationInfo : public StateWrapper<BooleanState, AbstractAttribute> {
