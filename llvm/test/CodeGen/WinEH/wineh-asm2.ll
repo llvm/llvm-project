@@ -22,7 +22,8 @@ define dso_local i32 @test1(i32 %argc) local_unnamed_addr personality ptr @__Cxx
 ; CHECK-NEXT:    [[TMP0:%.*]] = catchswitch within none [label %catch] unwind to caller
 ; CHECK:       [[CATCH:.*:]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = catchpad within [[TMP0]] [ptr @"??_R0H@8", i32 0, ptr null]
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    call void asm "", ""()
+; CHECK-NEXT:    catchret from [[TMP1]] to label %[[RETURN]]
 ; CHECK:       [[RETURN]]:
 ; CHECK-NEXT:    ret i32 0
 ;
