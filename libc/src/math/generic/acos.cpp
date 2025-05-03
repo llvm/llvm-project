@@ -217,7 +217,7 @@ LLVM_LIBC_FUNCTION(double, acos, (double x)) {
   // Ziv's accuracy test.
 
   double r_upper = r_hi + (r_lo + err);
-  double r_lower = r_hi + (r_lo + err);
+  double r_lower = r_hi + (r_lo - err);
 
   if (LIBC_LIKELY(r_upper == r_lower))
     return r_upper;
