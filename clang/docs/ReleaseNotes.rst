@@ -110,6 +110,8 @@ C++2c Feature Support
 - Implemented `P0963R3 Structured binding declaration as a condition <https://wg21.link/P0963R3>`_.
 
 - Implemented `P2719R4 Type-aware allocation and deallocation functions <https://wg21.link/P2719>`_.
+  This is enabled by default when targeting C++2c, and can be enabled or disabled by
+  the ``-fcxx-type-aware-allocators`` and ``-fno-cxx-type-aware-allocators`` options.
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^

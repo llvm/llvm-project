@@ -9956,6 +9956,9 @@ def warn_cxx26_type_aware_allocators : Warning<
 def err_type_aware_allocator_missing_matching_operator : Error<
   "declaration of type aware %0 in %1 must have matching type aware %2"
 >;
+def err_type_aware_allocators_disabled
+    : Error<"type aware %0 declared but type aware allocator support is "
+            "disabled. Pass -fcxx-type-aware-allocators to enable it">;
 def note_unmatched_type_aware_allocator_declared : Note<
   "unmatched type aware %0 declared here">;
 def err_mismatching_type_aware_cleanup_deallocator : Error<

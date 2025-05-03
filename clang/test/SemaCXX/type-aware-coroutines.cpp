@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s -std=c++26 -fcoroutines -fexceptions -Wall -Wpedantic
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s -std=c++26 -fcoroutines                                -fexceptions -Wall -Wpedantic
+// Type aware allocators disabled
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify=no_type_aware %s -std=c++26 -fcoroutines -fno-cxx-type-aware-allocators -fexceptions -Wall -Wpedantic
 
 
 #include "Inputs/std-coroutine.h"
@@ -16,9 +18,13 @@ struct Allocator {};
 struct resumable {
   struct promise_type {
     void *operator new(std::type_identity<promise_type>, std::size_t sz, std::align_val_t, int); // #resumable_tan1
+    // no_type_aware-error@-1 {{type aware 'operator new' declared but type aware allocator support is disabled. Pass -fcxx-type-aware-allocators to enable it}}
     void *operator new(std::type_identity<promise_type>, std::size_t sz, std::align_val_t, float); // #resumable_tan2
+    // no_type_aware-error@-1 {{type aware 'operator new' declared but type aware allocator support is disabled. Pass -fcxx-type-aware-allocators to enable it}}
     void operator delete(std::type_identity<promise_type>, void *, std::size_t sz, std::align_val_t); // #resumable_tad1
+    // no_type_aware-error@-1 {{type aware 'operator delete' declared but type aware allocator support is disabled. Pass -fcxx-type-aware-allocators to enable it}}
     template <typename T> void operator delete(std::type_identity<T>, void *, std::size_t sz, std::align_val_t) = delete; // #resumable_tad2
+    // no_type_aware-error@-1 {{type aware 'operator delete' declared but type aware allocator support is disabled. Pass -fcxx-type-aware-allocators to enable it}}
 
     resumable get_return_object() { return {}; }
     auto initial_suspend() { return std::suspend_always(); }
@@ -32,7 +38,9 @@ struct resumable {
 struct resumable2 {
   struct promise_type {
     template <typename... Args> void *operator new(std::type_identity<promise_type>, std::size_t sz, std::align_val_t, Args...); // #resumable2_tan1
+    // no_type_aware-error@-1 {{type aware 'operator new' declared but type aware allocator support is disabled. Pass -fcxx-type-aware-allocators to enable it}}
     void operator delete(std::type_identity<promise_type>, void *, std::size_t sz, std::align_val_t); // #resumable2_tad2
+    // no_type_aware-error@-1 {{type aware 'operator delete' declared but type aware allocator support is disabled. Pass -fcxx-type-aware-allocators to enable it}}
 
     resumable2 get_return_object() { return {}; }
     auto initial_suspend() { return std::suspend_always(); }
@@ -50,6 +58,7 @@ struct resumable3 {
   // expected-note@#resumable3_tan {{unmatched type aware 'operator new' declared here}}
     void *operator new(std::size_t sz, float);
     void *operator new(std::type_identity<promise_type>, std::size_t sz, std::align_val_t, float); // #resumable3_tan
+    // no_type_aware-error@-1 {{type aware 'operator new' declared but type aware allocator support is disabled. Pass -fcxx-type-aware-allocators to enable it}}
     void operator delete(void *);
 
     resumable3 get_return_object() { return {}; }
@@ -66,6 +75,7 @@ struct resumable4 {
     // expected-note@#resumable4_tad {{unmatched type aware 'operator delete' declared here}}
     void *operator new(std::size_t sz, float);
     template <typename T> void operator delete(std::type_identity<T>, void *, std::size_t, std::align_val_t); // #resumable4_tad
+    // no_type_aware-error@-1 {{type aware 'operator delete' declared but type aware allocator support is disabled. Pass -fcxx-type-aware-allocators to enable it}}
 
     resumable4 get_return_object() { return {}; }
     auto initial_suspend() { return std::suspend_always(); }
@@ -82,6 +92,7 @@ struct resumable5 {
     void *operator new(std::size_t sz, float);
     void operator delete(void *);
     template <typename T> void operator delete(std::type_identity<T>, void *, std::size_t, std::align_val_t); // #resumable5_tad
+    // no_type_aware-error@-1 {{type aware 'operator delete' declared but type aware allocator support is disabled. Pass -fcxx-type-aware-allocators to enable it}}
 
     resumable5 get_return_object() { return {}; }
     auto initial_suspend() { return std::suspend_always(); }
@@ -97,6 +108,7 @@ resumable f1(int) {
   // expected-note@-2 {{type aware 'operator new' will not be used for coroutine allocation}}
   // expected-note@#resumable_tan1 {{type aware 'operator new' declared here}}
   // expected-note@#resumable_tan2 {{type aware 'operator new' declared here}}
+  // no_type_aware-error@-5 {{'operator new' provided by 'std::coroutine_traits<resumable, int>::promise_type' (aka 'resumable::promise_type') is not usable with the function signature of 'f1'}}
   co_return;
 }
 
@@ -105,6 +117,7 @@ resumable f2(float) {
   // expected-note@-2 {{type aware 'operator new' will not be used for coroutine allocation}}
   // expected-note@#resumable_tan1 {{type aware 'operator new' declared here}}
   // expected-note@#resumable_tan2 {{type aware 'operator new' declared here}}
+  // no_type_aware-error@-5 {{'operator new' provided by 'std::coroutine_traits<resumable, float>::promise_type' (aka 'resumable::promise_type') is not usable with the function signature of 'f2'}}
   co_return;
 }
 
@@ -112,6 +125,7 @@ resumable2 f3(int, float, const char*, Allocator) {
   // expected-error@-1 {{'operator new' provided by 'std::coroutine_traits<resumable2, int, float, const char *, Allocator>::promise_type' (aka 'resumable2::promise_type') is not usable with the function signature of 'f3'}}
   // expected-note@-2 {{type aware 'operator new' will not be used for coroutine allocation}}
   // expected-note@#resumable2_tan1 {{type aware 'operator new' declared here}}
+  // no_type_aware-error@-4 {{'operator new' provided by 'std::coroutine_traits<resumable2, int, float, const char *, Allocator>::promise_type' (aka 'resumable2::promise_type') is not usable with the function signature of 'f3'}}
   co_yield 1;
   co_return;
 }
@@ -121,6 +135,7 @@ resumable f4(int n = 10) {
   // expected-note@-2 {{type aware 'operator new' will not be used for coroutine allocation}}
   // expected-note@#resumable_tan1 {{type aware 'operator new' declared here}}
   // expected-note@#resumable_tan2 {{type aware 'operator new' declared here}}
+  // no_type_aware-error@-5 {{'operator new' provided by 'std::coroutine_traits<resumable, int>::promise_type' (aka 'resumable::promise_type') is not usable with the function signature of 'f4'}}
   for (int i = 0; i < n; i++)
     co_yield i;
 }
@@ -135,6 +150,8 @@ resumable4 f6(float) {
   // expected-warning@-2 {{type aware 'operator delete' will not be used for coroutine allocation}}
   // expected-note@#resumable4_tad {{type aware 'operator delete' declared here}}
   // expected-note@#resumable4_tad {{member 'operator delete' declared here}}
+  // no_type_aware-error@-5 {{no suitable member 'operator delete' in 'promise_type'}}
+  // no_type_aware-note@#resumable4_tad {{member 'operator delete' declared here}}
   co_return;
 }
 

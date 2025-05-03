@@ -3539,6 +3539,12 @@ def : Separate<["-"], "fnew-alignment">, Alias<fnew_alignment_EQ>;
 def : Flag<["-"], "faligned-new">, Alias<faligned_allocation>;
 def : Flag<["-"], "fno-aligned-new">, Alias<fno_aligned_allocation>;
 def faligned_new_EQ : Joined<["-"], "faligned-new=">;
+defm cxx_type_aware_allocators
+    : BoolFOption<"cxx-type-aware-allocators",
+                  LangOpts<"CXXTypeAwareAllocators">, Default<cpp26.KeyPath>,
+                  PosFlag<SetTrue, [], [],
+                          "Enable support for C++26's type aware allocators">,
+                  NegFlag<SetFalse>, BothFlags<[], [ClangOption, CC1Option]>>;
 
 def fobjc_legacy_dispatch : Flag<["-"], "fobjc-legacy-dispatch">, Group<f_Group>;
 def fobjc_new_property : Flag<["-"], "fobjc-new-property">, Group<clang_ignored_f_Group>;

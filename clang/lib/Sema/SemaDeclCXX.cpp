@@ -7326,47 +7326,50 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
       checkCUDADeviceBuiltinTextureClassTemplate(*this, Record);
   }
 
-  llvm::SmallDenseMap<OverloadedOperatorKind,
-                      llvm::SmallVector<const FunctionDecl *, 2>, 4>
-      TypeAwareDecls{{OO_New, {}},
-                     {OO_Array_New, {}},
-                     {OO_Delete, {}},
-                     {OO_Array_New, {}}};
-  for (auto *D : Record->decls()) {
-    const FunctionDecl *FnDecl = D->getAsFunction();
-    if (!FnDecl || !FnDecl->isTypeAwareOperatorNewOrDelete())
-      continue;
-    assert(FnDecl->getDeclName().isAnyOperatorNewOrDelete());
-    TypeAwareDecls[FnDecl->getOverloadedOperator()].push_back(FnDecl);
+  if (getLangOpts().CXXTypeAwareAllocators) {
+    llvm::SmallDenseMap<OverloadedOperatorKind,
+                        llvm::SmallVector<const FunctionDecl *, 2>, 4>
+        TypeAwareDecls{{OO_New, {}},
+                       {OO_Array_New, {}},
+                       {OO_Delete, {}},
+                       {OO_Array_New, {}}};
+    for (auto *D : Record->decls()) {
+      const FunctionDecl *FnDecl = D->getAsFunction();
+      if (!FnDecl || !FnDecl->isTypeAwareOperatorNewOrDelete())
+        continue;
+      assert(FnDecl->getDeclName().isAnyOperatorNewOrDelete());
+      TypeAwareDecls[FnDecl->getOverloadedOperator()].push_back(FnDecl);
+    }
+
+    auto CheckMismatchedTypeAwareAllocators =
+        [this, &TypeAwareDecls, Record](OverloadedOperatorKind NewKind,
+                                        OverloadedOperatorKind DeleteKind) {
+          auto &NewDecls = TypeAwareDecls[NewKind];
+          auto &DeleteDecls = TypeAwareDecls[DeleteKind];
+          if (NewDecls.empty() == DeleteDecls.empty())
+            return;
+          DeclarationName FoundOperator =
+              Context.DeclarationNames.getCXXOperatorName(
+                  NewDecls.empty() ? DeleteKind : NewKind);
+          DeclarationName MissingOperator =
+              Context.DeclarationNames.getCXXOperatorName(
+                  NewDecls.empty() ? NewKind : DeleteKind);
+          Diag(Record->getLocation(),
+               diag::err_type_aware_allocator_missing_matching_operator)
+              << FoundOperator << Context.getRecordType(Record)
+              << MissingOperator;
+          for (auto MD : NewDecls)
+            Diag(MD->getLocation(),
+                 diag::note_unmatched_type_aware_allocator_declared)
+                << MD;
+          for (auto MD : DeleteDecls)
+            Diag(MD->getLocation(),
+                 diag::note_unmatched_type_aware_allocator_declared)
+                << MD;
+        };
+    CheckMismatchedTypeAwareAllocators(OO_New, OO_Delete);
+    CheckMismatchedTypeAwareAllocators(OO_Array_New, OO_Array_Delete);
   }
-  auto CheckMismatchedTypeAwareAllocators =
-      [this, &TypeAwareDecls, Record](OverloadedOperatorKind NewKind,
-                                      OverloadedOperatorKind DeleteKind) {
-        auto &NewDecls = TypeAwareDecls[NewKind];
-        auto &DeleteDecls = TypeAwareDecls[DeleteKind];
-        if (NewDecls.empty() == DeleteDecls.empty())
-          return;
-        DeclarationName FoundOperator =
-            Context.DeclarationNames.getCXXOperatorName(
-                NewDecls.empty() ? DeleteKind : NewKind);
-        DeclarationName MissingOperator =
-            Context.DeclarationNames.getCXXOperatorName(
-                NewDecls.empty() ? NewKind : DeleteKind);
-        Diag(Record->getLocation(),
-             diag::err_type_aware_allocator_missing_matching_operator)
-            << FoundOperator << Context.getRecordType(Record)
-            << MissingOperator;
-        for (auto MD : NewDecls)
-          Diag(MD->getLocation(),
-               diag::note_unmatched_type_aware_allocator_declared)
-              << MD;
-        for (auto MD : DeleteDecls)
-          Diag(MD->getLocation(),
-               diag::note_unmatched_type_aware_allocator_declared)
-              << MD;
-      };
-  CheckMismatchedTypeAwareAllocators(OO_New, OO_Delete);
-  CheckMismatchedTypeAwareAllocators(OO_Array_New, OO_Array_Delete);
 }
 
 /// Look up the special member function that would be called by a special
@@ -16439,7 +16442,8 @@ bool Sema::CompleteConstructorCall(CXXConstructorDecl *Constructor,
 
 TypeAwareAllocationMode Sema::ShouldUseTypeAwareOperatorNewOrDelete() const {
   bool SeenTypedOperators = Context.hasSeenTypeAwareOperatorNewOrDelete();
-  return typeAwareAllocationModeFromBool(SeenTypedOperators);
+  return typeAwareAllocationModeFromBool(getLangOpts().CXXTypeAwareAllocators &&
+                                         SeenTypedOperators);
 }
 
 FunctionDecl *
@@ -16587,6 +16591,11 @@ static inline bool CheckOperatorNewDeleteTypes(
   unsigned MinimumMandatoryArgumentCount = 1;
   unsigned SizeParameterIndex = 0;
   if (IsPotentiallyTypeAware) {
+    if (!SemaRef.getLangOpts().CXXTypeAwareAllocators)
+      return SemaRef.Diag(FnDecl->getLocation(),
+                          diag::err_type_aware_allocators_disabled)
+             << FnDecl->getDeclName();
+
     // We don't emit this diagnosis for template instantiations as we will
     // have already emitted it for the original template declaration.
     if (!FnDecl->isTemplateInstantiation()) {
@@ -16699,7 +16708,7 @@ static inline bool CheckOperatorNewDeleteTypes(
     return true;
 
   FnDecl->setIsTypeAwareOperatorNewOrDelete();
-  return MalformedTypeIdentity;
+  return MalformedTypeIdentity || !SemaRef.getLangOpts().CXXTypeAwareAllocators;
 }
 
 static bool CheckOperatorNewDeclaration(Sema &SemaRef, FunctionDecl *FnDecl) {
@@ -16746,6 +16755,10 @@ CheckOperatorDeleteDeclaration(Sema &SemaRef, FunctionDecl *FnDecl) {
   // pile of incorrect parameter type errors.
   if (MD && IsPotentiallyTypeAwareOperatorNewOrDelete(
                 SemaRef, MD, /*WasMalformed=*/nullptr)) {
+    if (!SemaRef.getLangOpts().CXXTypeAwareAllocators)
+      return SemaRef.Diag(FnDecl->getLocation(),
+                          diag::err_type_aware_allocators_disabled)
+             << FnDecl->getDeclName();
     QualType AddressParamType =
         SemaRef.Context.getCanonicalType(MD->getParamDecl(1)->getType());
     if (AddressParamType != SemaRef.Context.VoidPtrTy &&

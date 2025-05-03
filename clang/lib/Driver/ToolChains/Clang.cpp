@@ -7516,6 +7516,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.addLastArg(CmdArgs, options::OPT_fsized_deallocation,
                   options::OPT_fno_sized_deallocation);
 
+  // -fcxx-type-aware-allocators is on by default in C++26 onwards and otherwise
+  // off by default.
+  Args.addLastArg(CmdArgs, options::OPT_fcxx_type_aware_allocators,
+                  options::OPT_fno_cxx_type_aware_allocators);
+
   // -faligned-allocation is on by default in C++17 onwards and otherwise off
   // by default.
   if (Arg *A = Args.getLastArg(options::OPT_faligned_allocation,
