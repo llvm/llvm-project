@@ -787,8 +787,6 @@ enum class TrivialABIHandling {
   ConsiderTrivialABI
 };
 
-enum TryCaptureKind { Implicit, ExplicitByVal, ExplicitByRef };
-
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -7107,6 +7105,12 @@ public:
   ExprResult CheckLValueToRValueConversionOperand(Expr *E);
   void CleanupVarDeclMarking();
 
+  enum TryCaptureKind {
+    TryCapture_Implicit,
+    TryCapture_ExplicitByVal,
+    TryCapture_ExplicitByRef
+  };
+
   /// Try to capture the given variable.
   ///
   /// \param Var The variable to capture.
@@ -7148,7 +7152,7 @@ public:
 
   /// Try to capture the given variable.
   bool tryCaptureVariable(ValueDecl *Var, SourceLocation Loc,
-                          TryCaptureKind Kind = TryCaptureKind::Implicit,
+                          TryCaptureKind Kind = TryCapture_Implicit,
                           SourceLocation EllipsisLoc = SourceLocation());
 
   /// Checks if the variable must be captured.
