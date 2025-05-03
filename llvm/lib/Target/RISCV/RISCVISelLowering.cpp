@@ -6965,8 +6965,6 @@ static unsigned getRISCVVLOp(SDValue Op) {
 #undef VP_CASE
 }
 
-
-
 static bool isPromotedOpNeedingSplit(SDValue Op,
                                      const RISCVSubtarget &Subtarget) {
   if (Op.getValueType() == MVT::nxv32f16 &&
@@ -12565,7 +12563,7 @@ SDValue RISCVTargetLowering::lowerFixedLengthVectorSelectToRVV(
 SDValue RISCVTargetLowering::lowerToScalableOp(SDValue Op,
                                                SelectionDAG &DAG) const {
   const auto &TSInfo =
-       static_cast<const RISCVSelectionDAGInfo &>(DAG.getSelectionDAGInfo());
+      static_cast<const RISCVSelectionDAGInfo &>(DAG.getSelectionDAGInfo());
 
   unsigned NewOpc = getRISCVVLOp(Op);
   bool HasPassthruOp = TSInfo.hasPassthruOp(NewOpc);
@@ -12621,7 +12619,7 @@ SDValue RISCVTargetLowering::lowerToScalableOp(SDValue Op,
 //   types.
 SDValue RISCVTargetLowering::lowerVPOp(SDValue Op, SelectionDAG &DAG) const {
   const auto &TSInfo =
-       static_cast<const RISCVSelectionDAGInfo &>(DAG.getSelectionDAGInfo());
+      static_cast<const RISCVSelectionDAGInfo &>(DAG.getSelectionDAGInfo());
 
   unsigned RISCVISDOpc = getRISCVVLOp(Op);
   bool HasPassthruOp = TSInfo.hasPassthruOp(RISCVISDOpc);
@@ -18376,7 +18374,7 @@ static SDValue combineToVWMACC(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   const auto &TSInfo =
-       static_cast<const RISCVSelectionDAGInfo &>(DAG.getSelectionDAGInfo());
+      static_cast<const RISCVSelectionDAGInfo &>(DAG.getSelectionDAGInfo());
   unsigned Opc = TSInfo.getMAccOpcode(MulOp.getOpcode());
 
   SDLoc DL(N);

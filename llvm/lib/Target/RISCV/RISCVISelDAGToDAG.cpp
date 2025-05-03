@@ -11,12 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVISelDAGToDAG.h"
-#include "RISCVSelectionDAGInfo.h"
 #include "MCTargetDesc/RISCVBaseInfo.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "MCTargetDesc/RISCVMatInt.h"
 #include "RISCVISelLowering.h"
 #include "RISCVInstrInfo.h"
+#include "RISCVSelectionDAGInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/Support/Alignment.h"
