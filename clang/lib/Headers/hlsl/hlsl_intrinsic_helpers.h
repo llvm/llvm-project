@@ -134,6 +134,10 @@ template <typename T> constexpr T faceforward_impl(T N, T I, T Ng) {
 #endif
 }
 
+template <typename T> constexpr T ldexp_impl(T X, T Exp) {
+  return exp2(Exp) * X;
+}
+
 } // namespace __detail
 } // namespace hlsl
 
