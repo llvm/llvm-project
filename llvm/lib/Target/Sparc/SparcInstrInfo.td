@@ -51,6 +51,10 @@ def HasVIS3 : Predicate<"Subtarget->isVIS3()">,
 def HasUA2005 : Predicate<"Subtarget->isUA2005()">,
                 AssemblerPredicate<(all_of FeatureUA2005)>;
 
+// HasUA2007 - This is true when the target processor has UA 2007 extensions.
+def HasUA2007 : Predicate<"Subtarget->isUA2007()">,
+                AssemblerPredicate<(all_of FeatureUA2007)>;
+
 // HasHardQuad - This is true when the target processor supports quad floating
 // point instructions.
 def HasHardQuad : Predicate<"Subtarget->hasHardQuad()">;
