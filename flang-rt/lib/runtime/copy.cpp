@@ -171,8 +171,8 @@ RT_API_ATTRS void CopyElement(const Descriptor &to, const SubscriptValue toAt[],
                 *reinterpret_cast<Descriptor *>(toPtr + component->offset())};
             if (toDesc.raw().base_addr != nullptr) {
               toDesc.set_base_addr(nullptr);
-              RUNTIME_CHECK(terminator,
-                  toDesc.Allocate(/*asyncObject=*/nullptr) == CFI_SUCCESS);
+              RUNTIME_CHECK(
+                  terminator, toDesc.Allocate(/*asyncId=*/-1) == CFI_SUCCESS);
               const Descriptor &fromDesc{*reinterpret_cast<const Descriptor *>(
                   fromPtr + component->offset())};
               copyStack.emplace(toDesc, fromDesc);
