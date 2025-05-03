@@ -1038,8 +1038,9 @@ def funnel_shift_or_shift_to_funnel_shift_left: GICombineRule<
   (defs root:$root), 
   (match (G_FSHL $out1, $x, $z, $y),
          (G_SHL $out2, $x, $y),
-         (G_OR $root, $out1, $out2)),
-  (apply (G_FSHL $root, $x, $z, $y))
+         (G_OR $root, $out1, $out2),
+         [{ return MRI.hasOneUse(${out2}.getReg()); }]),
+  (apply (GIReplaceReg $root, $out1))
 >;
 
 // Transform: fshr z, x, y | srl x, y -> fshr z, x, y
@@ -1047,8 +1048,9 @@ def funnel_shift_or_shift_to_funnel_shift_right: GICombineRule<
   (defs root:$root), 
   (match (G_FSHR $out1, $z, $x, $y),
          (G_LSHR $out2, $x, $y),
-         (G_OR $root, $out1, $out2)),
-  (apply (G_FSHR $root, $z, $x, $y))
+         (G_OR $root, $out1, $out2),
+         [{ return MRI.hasOneUse(${out2}.getReg()); }]),
+  (apply (GIReplaceReg $root, $out1))
 >;
 
 def rotate_out_of_range : GICombineRule<
@@ -1123,9 +1125,9 @@ def funnel_shift_combines : GICombineGroup<[funnel_shift_from_or_shift,
                                             funnel_shift_to_rotate,
                                             funnel_shift_right_zero,
                                             funnel_shift_left_zero,
-                                            funnel_shift_overshift,
-                                            funnel_shift_or_shift_to_funnel_shift_left,
-                                            funnel_shift_or_shift_to_funnel_shift_right]>;
+                                            funnel_shift_overshift]>;
+                                            //funnel_shift_or_shift_to_funnel_shift_left,
+                                            //funnel_shift_or_shift_to_funnel_shift_right]>;
 
 def bitfield_extract_from_sext_inreg : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),
