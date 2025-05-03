@@ -1,4 +1,4 @@
-// RUN: /opt/homebrew/opt/llvm/bin/clang -cc1 -std=c++1y %s -verify
+// RUN: %clang_cc1 -std=c++1y %s -verify
 
 const char *has_no_member = [x("hello")] {}.x; // expected-error {{no member named 'x'}}
 
@@ -43,7 +43,7 @@ void void_fn();
 int overload_fn();
 int overload_fn(int);
 
-auto bad_init_1 = [a()] {}; // expected-error {{expected expression}}
+auto bad_init_1 = [a()] {}; // expected-error {{expected expression}} expected-error {{invalid initializer type for lambda capture}}
 auto bad_init_2 = [a(1, 2)] {}; // expected-error {{initializer for lambda capture 'a' contains multiple expressions}}
 auto bad_init_3 = [&a(void_fn())] {}; // expected-error {{cannot form a reference to 'void'}}
 auto bad_init_4 = [a(void_fn())] {}; // expected-error {{has incomplete type 'void'}}
