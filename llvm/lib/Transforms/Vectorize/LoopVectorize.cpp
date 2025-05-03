@@ -2883,7 +2883,7 @@ void InnerLoopVectorizer::fixNonInductionPHIs(VPTransformState &State) {
       PHINode *NewPhi = cast<PHINode>(State.get(VPPhi));
       // Make sure the builder has a valid insert point.
       Builder.SetInsertPoint(NewPhi);
-      for (unsigned Idx = 0; Idx < VPPhi->getNumIncomingValues(); ++Idx) {
+      for (unsigned Idx = 0; Idx < VPPhi->getNumIncoming(); ++Idx) {
         VPValue *Inc = VPPhi->getIncomingValue(Idx);
         const VPBasicBlock *VPBB = VPPhi->getIncomingBlock(Idx);
         NewPhi->addIncoming(State.get(Inc), State.CFG.VPBB2IRBB[VPBB]);

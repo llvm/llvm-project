@@ -1184,9 +1184,8 @@ public:
   /// Returns the incoming block with index \p Idx.
   const VPBasicBlock *getIncomingBlock(unsigned Idx) const;
 
-  unsigned getNumIncomingValues() const {
-    return getAsRecipe()->getNumOperands();
-  }
+  /// Returns the number of incoming values, also number of incoming blocks.
+  unsigned getNumIncoming() const { return getAsRecipe()->getNumOperands(); }
 };
 
 /// An overlay for VPIRInstructions wrapping PHI nodes enabling convenient use
