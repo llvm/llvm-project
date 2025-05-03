@@ -1108,7 +1108,8 @@ bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
   } else if (isa<BinaryOperator>(I)) {
     ScalarOpCost = TTI.getArithmeticInstrCost(Opcode, ScalarTy, CostKind);
     VectorOpCost = TTI.getArithmeticInstrCost(Opcode, VecTy, CostKind);
-  } else if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+  } else {
+    auto *II = cast<IntrinsicInst>(&I);
     IntrinsicCostAttributes ScalarICA(
         II->getIntrinsicID(), ScalarTy,
         SmallVector<Type *>(II->arg_size(), ScalarTy));
@@ -1117,8 +1118,7 @@ bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
         II->getIntrinsicID(), VecTy,
         SmallVector<Type *>(II->arg_size(), VecTy));
     VectorOpCost = TTI.getIntrinsicInstrCost(VectorICA, CostKind);
-  } else
-    llvm_unreachable("Unexpected instrucion type");
+  }
 
   // Get cost estimate for the insert element. This cost will factor into
   // both sequences.
@@ -1154,10 +1154,9 @@ bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
     Scalar = Builder.CreateCmp(Pred, V0, V1);
   else if (isa<BinaryOperator>(I))
     Scalar = Builder.CreateBinOp((Instruction::BinaryOps)Opcode, V0, V1);
-  else if (auto *II = dyn_cast<IntrinsicInst>(&I))
-    Scalar = Builder.CreateIntrinsic(ScalarTy, II->getIntrinsicID(), {V0, V1});
   else
-    llvm_unreachable("Unexpected instruction type");
+    Scalar = Builder.CreateIntrinsic(
+        ScalarTy, cast<IntrinsicInst>(I).getIntrinsicID(), {V0, V1});
 
   Scalar->setName(I.getName() + ".scalar");
 
@@ -1172,11 +1171,9 @@ bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
     NewVecC = Builder.CreateCmp(Pred, VecC0, VecC1);
   else if (isa<BinaryOperator>(I))
     NewVecC = Builder.CreateBinOp((Instruction::BinaryOps)Opcode, VecC0, VecC1);
-  else if (auto *II = dyn_cast<IntrinsicInst>(&I))
-    NewVecC =
-        Builder.CreateIntrinsic(VecTy, II->getIntrinsicID(), {VecC0, VecC1});
   else
-    llvm_unreachable("Unexpected instruction type");
+    NewVecC = Builder.CreateIntrinsic(
+        VecTy, cast<IntrinsicInst>(I).getIntrinsicID(), {VecC0, VecC1});
   Value *Insert = Builder.CreateInsertElement(NewVecC, Scalar, Index);
   replaceValue(I, *Insert);
   return true;
