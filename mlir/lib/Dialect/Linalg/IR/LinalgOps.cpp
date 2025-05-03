@@ -3683,6 +3683,11 @@ void MatmulOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
 
 /// Returns true if the given bcastMap map is a valid broadcast map. A valid
 /// broadcast map must include K dimension.
+/// TODO: Strict inclusion of K dimension in the broadcast map is not
+/// necessary for both input matrices simultaneously. We can relax this
+/// condition to have K dimension for one input matrix map and infer the K
+/// dimension for other input matrix map from the one already having K
+/// dimension.
 bool MatmulOp::isValidLhsRhsBroadcastMap(AffineMap bcastMap) {
   assert(bcastMap.getNumResults() == 1 && "Expected single result dim expr.");
   AffineExpr expr = bcastMap.getResult(0);
@@ -3987,6 +3992,11 @@ bool BatchMatmulOp::hasUserDefinedMaps() {
 
 /// Returns true if the given bcastMap map is a valid broadcast map. A valid
 /// broadcast map must include K dimension.
+/// TODO: Strict inclusion of K dimension in the broadcast map is not
+/// necessary for both input matrices simultaneously. We can relax this
+/// condition to have K dimension for one input matrix map and infer the K
+/// dimension for other input matrix map from the one already having K
+/// dimension.
 bool BatchMatmulOp::isValidLhsRhsBroadcastMap(AffineMap bcastMap, bool isLHS) {
   assert(bcastMap.getNumResults() < 3 &&
          "Expected less than 3 result dim expr.");
@@ -5454,6 +5464,11 @@ bool BatchReduceMatmulOp::hasUserDefinedMaps() {
 
 /// Returns true if the given bcastMap map is a valid broadcast map. A valid
 /// broadcast map must include K dimension.
+/// TODO: Strict inclusion of K dimension in the broadcast map is not
+/// necessary for both input matrices simultaneously. We can relax this
+/// condition to have K dimension for one input matrix map and infer the K
+/// dimension for other input matrix map from the one already having K
+/// dimension.
 bool BatchReduceMatmulOp::isValidLhsRhsBroadcastMap(AffineMap bcastMap,
                                                     bool isLHS) {
   assert(bcastMap.getNumResults() < 3 &&
