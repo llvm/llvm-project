@@ -1125,9 +1125,9 @@ def funnel_shift_combines : GICombineGroup<[funnel_shift_from_or_shift,
                                             funnel_shift_to_rotate,
                                             funnel_shift_right_zero,
                                             funnel_shift_left_zero,
-                                            funnel_shift_overshift]>;
-                                            //funnel_shift_or_shift_to_funnel_shift_left,
-                                            //funnel_shift_or_shift_to_funnel_shift_right]>;
+                                            funnel_shift_overshift,
+                                            funnel_shift_or_shift_to_funnel_shift_left,
+                                            funnel_shift_or_shift_to_funnel_shift_right]>;
 
 def bitfield_extract_from_sext_inreg : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),
