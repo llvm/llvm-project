@@ -12772,11 +12772,13 @@ static bool determineEndOffset(EvalInfo &Info, SourceLocation ExprLoc,
   bool DetermineForCompleteObject = refersToCompleteObject(LVal);
 
   auto CheckedHandleSizeof = [&](QualType Ty, CharUnits &Result) {
-    if (Ty.isNull() || Ty->isIncompleteType() || Ty->isFunctionType())
+    if (Ty.isNull())
       return false;
 
-    if (Ty->isReferenceType())
-      Ty = Ty.getNonReferenceType();
+    Ty = Ty.getNonReferenceType();
+
+    if (Ty->isIncompleteType() || Ty->isFunctionType())
+      return false;
 
     return HandleSizeof(Info, ExprLoc, Ty, Result);
   };

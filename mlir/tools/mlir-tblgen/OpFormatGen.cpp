@@ -882,7 +882,7 @@ static void genElementParserStorage(FormatElement *element, const Operator &op,
     }
 
   } else if (auto *custom = dyn_cast<CustomDirective>(element)) {
-    for (FormatElement *paramElement : custom->getArguments())
+    for (FormatElement *paramElement : custom->getElements())
       genElementParserStorage(paramElement, op, body);
 
   } else if (isa<OperandsDirective>(element)) {
@@ -1037,7 +1037,7 @@ static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body,
   // * Add a local variable for optional operands and types. This provides a
   //   better API to the user defined parser methods.
   // * Set the location of operand variables.
-  for (FormatElement *param : dir->getArguments()) {
+  for (FormatElement *param : dir->getElements()) {
     if (auto *operand = dyn_cast<OperandVariable>(param)) {
       auto *var = operand->getVar();
       body << "    " << var->name
@@ -1089,7 +1089,7 @@ static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body,
   }
 
   body << "    auto odsResult = parse" << dir->getName() << "(parser";
-  for (FormatElement *param : dir->getArguments()) {
+  for (FormatElement *param : dir->getElements()) {
     body << ", ";
     genCustomParameterParser(param, body);
   }
@@ -1103,7 +1103,7 @@ static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body,
   }
 
   // After parsing, add handling for any of the optional constructs.
-  for (FormatElement *param : dir->getArguments()) {
+  for (FormatElement *param : dir->getElements()) {
     if (auto *attr = dyn_cast<AttributeVariable>(param)) {
       const NamedAttribute *var = attr->getVar();
       if (var->attr.isOptional() || var->attr.hasDefaultValue())
@@ -2215,7 +2215,7 @@ static void genCustomDirectiveParameterPrinter(FormatElement *element,
 static void genCustomDirectivePrinter(CustomDirective *customDir,
                                       const Operator &op, MethodBody &body) {
   body << "  print" << customDir->getName() << "(_odsPrinter, *this";
-  for (FormatElement *param : customDir->getArguments()) {
+  for (FormatElement *param : customDir->getElements()) {
     body << ", ";
     genCustomDirectiveParameterPrinter(param, op, body);
   }
@@ -2359,7 +2359,7 @@ static void genOptionalGroupPrinterAnchor(FormatElement *anchor,
       .Case([&](CustomDirective *ele) {
         body << '(';
         llvm::interleave(
-            ele->getArguments(), body,
+            ele->getElements(), body,
             [&](FormatElement *child) {
               body << '(';
               genOptionalGroupPrinterAnchor(child, op, body);
@@ -2375,7 +2375,7 @@ void collect(FormatElement *element,
   TypeSwitch<FormatElement *>(element)
       .Case([&](VariableElement *var) { variables.emplace_back(var); })
       .Case([&](CustomDirective *ele) {
-        for (FormatElement *arg : ele->getArguments())
+        for (FormatElement *arg : ele->getElements())
           collect(arg, variables);
       })
       .Case([&](OptionalElement *ele) {
@@ -3774,7 +3774,7 @@ LogicalResult OpFormatParser::verifyOptionalGroupElement(SMLoc loc,
           return success();
         // Verify each child as being valid in an optional group. They are all
         // potential anchors if the custom directive was marked as one.
-        for (FormatElement *child : ele->getArguments()) {
+        for (FormatElement *child : ele->getElements()) {
           if (isa<RefDirective>(child))
             continue;
           if (failed(verifyOptionalGroupElement(loc, child, /*isAnchor=*/true)))

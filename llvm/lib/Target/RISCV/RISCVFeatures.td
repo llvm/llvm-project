@@ -1508,6 +1508,15 @@ def HasVendorXRivosVizip
       AssemblerPredicate<(all_of FeatureVendorXRivosVizip),
                          "'XRivosVizip' (Rivos Vector Register Zips)">;
 
+// Andes Extension(s)
+
+def FeatureVendorXAndesPerf
+    : RISCVExtension<5, 0, "Andes Performance Extension">;
+def HasVendorXAndesPerf
+    : Predicate<"Subtarget->hasVendorXAndesPerf()">,
+      AssemblerPredicate<(all_of FeatureVendorXAndesPerf),
+                         "'XAndesPerf' (Andes Performance Extension)">;
+
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions
 //===----------------------------------------------------------------------===//

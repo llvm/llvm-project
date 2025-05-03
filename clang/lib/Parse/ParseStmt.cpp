@@ -216,7 +216,7 @@ Retry:
       // Try to limit which sets of keywords should be included in typo
       // correction based on what the next token is.
       StatementFilterCCC CCC(Next);
-      if (TryAnnotateName(&CCC) == ANK_Error) {
+      if (TryAnnotateName(&CCC) == AnnotatedNameKind::Error) {
         // Handle errors here by skipping up to the next semicolon or '}', and
         // eat the semicolon if that's what stopped us.
         SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch);
@@ -526,10 +526,14 @@ Retry:
     return ParsePragmaLoopHint(Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs);
 
   case tok::annot_pragma_dump:
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
     HandlePragmaDump();
     return StmtEmpty();
 
   case tok::annot_pragma_attribute:
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
     HandlePragmaAttribute();
     return StmtEmpty();
   }
@@ -2825,7 +2829,7 @@ void Parser::ParseMicrosoftIfExistsStatement(StmtVector &Stmts) {
   // This is not the same behavior as Visual C++, which don't treat this as a
   // compound statement, but for Clang's type checking we can't have anything
   // inside these braces escaping to the surrounding code.
-  if (Result.Behavior == IEB_Dependent) {
+  if (Result.Behavior == IfExistsBehavior::Dependent) {
     if (!Tok.is(tok::l_brace)) {
       Diag(Tok, diag::err_expected) << tok::l_brace;
       return;
@@ -2852,14 +2856,14 @@ void Parser::ParseMicrosoftIfExistsStatement(StmtVector &Stmts) {
   }
 
   switch (Result.Behavior) {
-  case IEB_Parse:
+  case IfExistsBehavior::Parse:
     // Parse the statements below.
     break;
 
-  case IEB_Dependent:
+  case IfExistsBehavior::Dependent:
     llvm_unreachable("Dependent case handled above");
 
-  case IEB_Skip:
+  case IfExistsBehavior::Skip:
     Braces.skipToEnd();
     return;
   }

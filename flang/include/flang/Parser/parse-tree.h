@@ -4501,6 +4501,11 @@ struct OmpToClause {
 
 // Ref: [5.0:254-255], [5.1:287-288], [5.2:321-322]
 //
+// In ATOMIC construct
+// update-clause ->
+//    UPDATE                                        // Since 4.5
+//
+// In DEPOBJ construct
 // update-clause ->
 //    UPDATE(dependence-type)                       // since 5.0, until 5.1
 // update-clause ->

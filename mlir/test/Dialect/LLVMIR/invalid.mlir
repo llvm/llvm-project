@@ -1819,3 +1819,11 @@ llvm.func @t1() -> !llvm.ptr {
 ^bb1:
   llvm.return %0 : !llvm.ptr
 }
+
+// -----
+
+llvm.func @gep_inbounds_flag_usage(%ptr: !llvm.ptr, %idx: i64) {
+  // expected-error@+1 {{'inbounds_flag' cannot be used directly}}
+  llvm.getelementptr inbounds_flag %ptr[%idx, 0, %idx] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
+  llvm.return
+}

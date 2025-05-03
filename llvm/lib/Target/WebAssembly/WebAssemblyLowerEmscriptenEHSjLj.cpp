@@ -436,7 +436,7 @@ static std::string getSignature(FunctionType *FTy) {
   erase_if(Sig, isSpace);
   // When s2wasm parses .s file, a comma means the end of an argument. So a
   // mangled function name can contain any character but a comma.
-  std::replace(Sig.begin(), Sig.end(), ',', '.');
+  llvm::replace(Sig, ',', '.');
   return Sig;
 }
 

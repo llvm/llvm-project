@@ -241,31 +241,29 @@ struct MemberTypeInfo : public FieldTypeInfo {
 };
 
 struct Location {
-  Location(int LineNumber = 0, StringRef Filename = StringRef(),
-           bool IsFileInRootDir = false)
-      : LineNumber(LineNumber), Filename(Filename),
-        IsFileInRootDir(IsFileInRootDir) {}
+  Location(int StartLineNumber = 0, int EndLineNumber = 0,
+           StringRef Filename = StringRef(), bool IsFileInRootDir = false)
+      : StartLineNumber(StartLineNumber), EndLineNumber(EndLineNumber),
+        Filename(Filename), IsFileInRootDir(IsFileInRootDir) {}
 
   bool operator==(const Location &Other) const {
-    return std::tie(LineNumber, Filename) ==
-           std::tie(Other.LineNumber, Other.Filename);
+    return std::tie(StartLineNumber, EndLineNumber, Filename) ==
+           std::tie(Other.StartLineNumber, Other.EndLineNumber, Other.Filename);
   }
 
-  bool operator!=(const Location &Other) const {
-    return std::tie(LineNumber, Filename) !=
-           std::tie(Other.LineNumber, Other.Filename);
-  }
+  bool operator!=(const Location &Other) const { return !(*this == Other); }
 
   // This operator is used to sort a vector of Locations.
   // No specific order (attributes more important than others) is required. Any
   // sort is enough, the order is only needed to call std::unique after sorting
   // the vector.
   bool operator<(const Location &Other) const {
-    return std::tie(LineNumber, Filename) <
-           std::tie(Other.LineNumber, Other.Filename);
+    return std::tie(StartLineNumber, EndLineNumber, Filename) <
+           std::tie(Other.StartLineNumber, Other.EndLineNumber, Other.Filename);
   }
 
-  int LineNumber = 0;           // Line number of this Location.
+  int StartLineNumber = 0; // Line number of this Location.
+  int EndLineNumber = 0;
   SmallString<32> Filename;     // File for this Location.
   bool IsFileInRootDir = false; // Indicates if file is inside root directory
 };

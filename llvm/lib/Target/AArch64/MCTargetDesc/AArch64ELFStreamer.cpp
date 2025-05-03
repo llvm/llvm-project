@@ -150,6 +150,15 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
   void emitARM64WinCFISaveAnyRegQPX(unsigned Reg, int Offset) override {
     OS << "\t.seh_save_any_reg_px\tq" << Reg << ", " << Offset << "\n";
   }
+  void emitARM64WinCFIAllocZ(int Offset) override {
+    OS << "\t.seh_allocz\t" << Offset << "\n";
+  }
+  void emitARM64WinCFISaveZReg(unsigned Reg, int Offset) override {
+    OS << "\t.seh_save_zreg\tz" << Reg << ", " << Offset << "\n";
+  }
+  void emitARM64WinCFISavePReg(unsigned Reg, int Offset) override {
+    OS << "\t.seh_save_preg\tp" << Reg << ", " << Offset << "\n";
+  }
 
   void emitAttribute(StringRef VendorName, unsigned Tag, unsigned Value,
                      std::string String) override {

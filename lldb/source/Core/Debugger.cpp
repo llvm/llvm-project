@@ -2031,6 +2031,9 @@ void Debugger::CancelForwardEvents(const ListenerSP &listener_sp) {
 }
 
 bool Debugger::StatuslineSupported() {
+// We have trouble with the contol codes on Windows, see
+// https://github.com/llvm/llvm-project/issues/134846.
+#ifndef _WIN32
   if (GetShowStatusline()) {
     if (lldb::LockableStreamFileSP stream_sp = GetOutputStreamSP()) {
       File &file = stream_sp->GetUnlockedFile();
@@ -2038,6 +2041,7 @@ bool Debugger::StatuslineSupported() {
              file.GetIsTerminalWithColors();
     }
   }
+#endif
   return false;
 }
 

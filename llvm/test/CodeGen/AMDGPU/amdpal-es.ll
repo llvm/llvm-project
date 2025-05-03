@@ -7,7 +7,7 @@
 ; GCN-NEXT: amdpal.pipelines:
 ; GCN-NEXT:   - .hardware_stages:
 ; GCN-NEXT:       .es:
-; GCN-NEXT:         .entry_point:    _amdgpu_es
+; GCN-NEXT:         .entry_point:    _amdgpu_es_main
 ; GCN-NEXT:         .entry_point_symbol:    es_amdpal
 ; GCN-NEXT:         .scratch_memory_size: 0
 ; GCN:     .registers:

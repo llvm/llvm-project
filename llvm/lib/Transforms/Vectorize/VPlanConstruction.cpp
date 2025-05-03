@@ -386,33 +386,54 @@ std::unique_ptr<VPlan> VPlanTransforms::buildPlainCFG(
 /// Checks if \p HeaderVPB is a loop header block in the plain CFG; that is, it
 /// has exactly 2 predecessors (preheader and latch), where the block
 /// dominates the latch and the preheader dominates the block. If it is a
-/// header block return true, making sure the preheader appears first and
-/// the latch second. Otherwise return false.
-static bool canonicalHeader(VPBlockBase *HeaderVPB,
-                            const VPDominatorTree &VPDT) {
+/// header block return true and canonicalize the predecessors of the header
+/// (making sure the preheader appears first and the latch second) and the
+/// successors of the latch (making sure the loop exit comes first). Otherwise
+/// return false.
+static bool canonicalHeaderAndLatch(VPBlockBase *HeaderVPB,
+                                    const VPDominatorTree &VPDT) {
   ArrayRef<VPBlockBase *> Preds = HeaderVPB->getPredecessors();
   if (Preds.size() != 2)
     return false;
 
   auto *PreheaderVPBB = Preds[0];
   auto *LatchVPBB = Preds[1];
-  if (VPDT.dominates(PreheaderVPBB, HeaderVPB) &&
-      VPDT.dominates(HeaderVPB, LatchVPBB))
-    return true;
+  if (!VPDT.dominates(PreheaderVPBB, HeaderVPB) ||
+      !VPDT.dominates(HeaderVPB, LatchVPBB)) {
+    std::swap(PreheaderVPBB, LatchVPBB);
 
-  std::swap(PreheaderVPBB, LatchVPBB);
+    if (!VPDT.dominates(PreheaderVPBB, HeaderVPB) ||
+        !VPDT.dominates(HeaderVPB, LatchVPBB))
+      return false;
 
-  if (VPDT.dominates(PreheaderVPBB, HeaderVPB) &&
-      VPDT.dominates(HeaderVPB, LatchVPBB)) {
-    // Canonicalize predecessors of header so that preheader is first and latch
-    // second.
+    // Canonicalize predecessors of header so that preheader is first and
+    // latch second.
     HeaderVPB->swapPredecessors();
     for (VPRecipeBase &R : cast<VPBasicBlock>(HeaderVPB)->phis())
       R.swapOperands();
-    return true;
   }
 
-  return false;
+  // The two successors of conditional branch match the condition, with the
+  // first successor corresponding to true and the second to false. We
+  // canonicalize the successors of the latch when introducing the region, such
+  // that the latch exits the region when its condition is true; invert the
+  // original condition if the original CFG branches to the header on true.
+  // Note that the exit edge is not yet connected for top-level loops.
+  if (LatchVPBB->getSingleSuccessor() ||
+      LatchVPBB->getSuccessors()[0] != HeaderVPB)
+    return true;
+
+  assert(LatchVPBB->getNumSuccessors() == 2 && "Must have 2 successors");
+  auto *Term = cast<VPBasicBlock>(LatchVPBB)->getTerminator();
+  assert(cast<VPInstruction>(Term)->getOpcode() ==
+             VPInstruction::BranchOnCond &&
+         "terminator must be a BranchOnCond");
+  auto *Not = new VPInstruction(VPInstruction::Not, {Term->getOperand(0)});
+  Not->insertBefore(Term);
+  Term->setOperand(0, Not);
+  LatchVPBB->swapSuccessors();
+
+  return true;
 }
 
 /// Create a new VPRegionBlock for the loop starting at \p HeaderVPB.
@@ -440,19 +461,23 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
     VPBlockUtils::connectBlocks(R, Succ);
 }
 
-void VPlanTransforms::createLoopRegions(VPlan &Plan, Type *InductionTy,
-                                        PredicatedScalarEvolution &PSE,
-                                        bool RequiresScalarEpilogueCheck,
-                                        bool TailFolded, Loop *TheLoop) {
+void VPlanTransforms::prepareForVectorization(VPlan &Plan, Type *InductionTy,
+                                              PredicatedScalarEvolution &PSE,
+                                              bool RequiresScalarEpilogueCheck,
+                                              bool TailFolded, Loop *TheLoop) {
   VPDominatorTree VPDT;
   VPDT.recalculate(Plan);
-  for (VPBlockBase *HeaderVPB : vp_depth_first_shallow(Plan.getEntry()))
-    if (canonicalHeader(HeaderVPB, VPDT))
-      createLoopRegion(Plan, HeaderVPB);
 
-  VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
-  TopRegion->setName("vector loop");
-  TopRegion->getEntryBasicBlock()->setName("vector.body");
+  VPBlockBase *HeaderVPB = Plan.getEntry()->getSingleSuccessor();
+  canonicalHeaderAndLatch(HeaderVPB, VPDT);
+  VPBlockBase *LatchVPB = HeaderVPB->getPredecessors()[1];
+
+  VPBasicBlock *VecPreheader = Plan.createVPBasicBlock("vector.ph");
+  VPBlockUtils::insertBlockAfter(VecPreheader, Plan.getEntry());
+
+  VPBasicBlock *MiddleVPBB = Plan.createVPBasicBlock("middle.block");
+  VPBlockUtils::connectBlocks(LatchVPB, MiddleVPBB);
+  LatchVPB->swapSuccessors();
 
   // Create SCEV and VPValue for the trip count.
   // We use the symbolic max backedge-taken-count, which works also when
@@ -465,11 +490,6 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan, Type *InductionTy,
                                                        InductionTy, TheLoop);
   Plan.setTripCount(
       vputils::getOrCreateVPValueForSCEVExpr(Plan, TripCount, SE));
-
-  VPBasicBlock *VecPreheader = Plan.createVPBasicBlock("vector.ph");
-  VPBlockUtils::insertBlockAfter(VecPreheader, Plan.getEntry());
-  VPBasicBlock *MiddleVPBB = Plan.createVPBasicBlock("middle.block");
-  VPBlockUtils::insertBlockAfter(MiddleVPBB, TopRegion);
 
   VPBasicBlock *ScalarPH = Plan.createVPBasicBlock("scalar.ph");
   VPBlockUtils::connectBlocks(ScalarPH, Plan.getScalarHeader());
@@ -495,10 +515,10 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan, Type *InductionTy,
     return;
   }
 
+  // The connection order corresponds to the operands of the conditional branch.
   BasicBlock *IRExitBlock = TheLoop->getUniqueLatchExitBlock();
   auto *VPExitBlock = Plan.getExitBlock(IRExitBlock);
-  // The connection order corresponds to the operands of the conditional branch.
-  VPBlockUtils::insertBlockAfter(VPExitBlock, MiddleVPBB);
+  VPBlockUtils::connectBlocks(MiddleVPBB, VPExitBlock);
   VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
 
   auto *ScalarLatchTerm = TheLoop->getLoopLatch()->getTerminator();
@@ -516,4 +536,16 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan, Type *InductionTy,
                                ScalarLatchTerm->getDebugLoc(), "cmp.n");
   Builder.createNaryOp(VPInstruction::BranchOnCond, {Cmp},
                        ScalarLatchTerm->getDebugLoc());
+}
+
+void VPlanTransforms::createLoopRegions(VPlan &Plan) {
+  VPDominatorTree VPDT;
+  VPDT.recalculate(Plan);
+  for (VPBlockBase *HeaderVPB : vp_depth_first_shallow(Plan.getEntry()))
+    if (canonicalHeaderAndLatch(HeaderVPB, VPDT))
+      createLoopRegion(Plan, HeaderVPB);
+
+  VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
+  TopRegion->setName("vector loop");
+  TopRegion->getEntryBasicBlock()->setName("vector.body");
 }

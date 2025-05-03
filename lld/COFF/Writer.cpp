@@ -215,6 +215,7 @@ private:
   void appendImportThunks();
   void locateImportTables();
   void createExportTable();
+  void mergeSection(const std::map<StringRef, StringRef>::value_type &p);
   void mergeSections();
   void sortECChunks();
   void appendECImportTables();
@@ -239,6 +240,7 @@ private:
   void createRuntimePseudoRelocs();
   void createECChunks();
   void insertCtorDtorSymbols();
+  void insertBssDataStartEndSymbols();
   void markSymbolsWithRelocations(ObjFile *file, SymbolRVASet &usedSymbols);
   void createGuardCFTables();
   void markSymbolsForRVATable(ObjFile *file,
@@ -314,6 +316,7 @@ private:
 
   OutputSection *textSec;
   OutputSection *hexpthkSec;
+  OutputSection *bssSec;
   OutputSection *rdataSec;
   OutputSection *buildidSec;
   OutputSection *dataSec;
@@ -1076,7 +1079,7 @@ void Writer::createSections() {
   textSec = createSection(".text", code | r | x);
   if (isArm64EC(ctx.config.machine))
     hexpthkSec = createSection(".hexpthk", code | r | x);
-  createSection(".bss", bss | r | w);
+  bssSec = createSection(".bss", bss | r | w);
   rdataSec = createSection(".rdata", data | r);
   buildidSec = createSection(".buildid", data | r);
   dataSec = createSection(".data", data | r | w);
@@ -1259,8 +1262,10 @@ void Writer::createMiscChunks() {
   if (config->autoImport)
     createRuntimePseudoRelocs();
 
-  if (config->mingw)
+  if (config->mingw) {
     insertCtorDtorSymbols();
+    insertBssDataStartEndSymbols();
+  }
 }
 
 // Create .idata section for the DLL-imported symbol table.
@@ -1566,6 +1571,30 @@ void Writer::createSymbolAndStringTable() {
   fileSize = alignTo(fileOff, ctx.config.fileAlign);
 }
 
+void Writer::mergeSection(const std::map<StringRef, StringRef>::value_type &p) {
+  StringRef toName = p.second;
+  if (p.first == toName)
+    return;
+  StringSet<> names;
+  while (true) {
+    if (!names.insert(toName).second)
+      Fatal(ctx) << "/merge: cycle found for section '" << p.first << "'";
+    auto i = ctx.config.merge.find(toName);
+    if (i == ctx.config.merge.end())
+      break;
+    toName = i->second;
+  }
+  OutputSection *from = findSection(p.first);
+  OutputSection *to = findSection(toName);
+  if (!from)
+    return;
+  if (!to) {
+    from->name = toName;
+    return;
+  }
+  to->merge(from);
+}
+
 void Writer::mergeSections() {
   llvm::TimeTraceScope timeScope("Merge sections");
   if (!pdataSec->chunks.empty()) {
@@ -1594,28 +1623,16 @@ void Writer::mergeSections() {
   }
 
   for (auto &p : ctx.config.merge) {
-    StringRef toName = p.second;
-    if (p.first == toName)
-      continue;
-    StringSet<> names;
-    while (true) {
-      if (!names.insert(toName).second)
-        Fatal(ctx) << "/merge: cycle found for section '" << p.first << "'";
-      auto i = ctx.config.merge.find(toName);
-      if (i == ctx.config.merge.end())
-        break;
-      toName = i->second;
-    }
-    OutputSection *from = findSection(p.first);
-    OutputSection *to = findSection(toName);
-    if (!from)
-      continue;
-    if (!to) {
-      from->name = toName;
-      continue;
-    }
-    to->merge(from);
+    if (p.first != ".bss")
+      mergeSection(p);
   }
+
+  // Because .bss contains all zeros, it should be merged at the end of
+  // whatever section it is being merged into (usually .data) so that the image
+  // need not actually contain all of the zeros.
+  auto it = ctx.config.merge.find(".bss");
+  if (it != ctx.config.merge.end())
+    mergeSection(*it);
 }
 
 // EC targets may have chunks of various architectures mixed together at this
@@ -2365,6 +2382,31 @@ void Writer::insertCtorDtorSymbols() {
   if (ctx.hybridSymtab) {
     ctorsSec->splitECChunks();
     dtorsSec->splitECChunks();
+  }
+}
+
+// MinGW (really, Cygwin) specific.
+// The Cygwin startup code uses __data_start__ __data_end__ __bss_start__
+// and __bss_end__ to know what to copy during fork emulation.
+void Writer::insertBssDataStartEndSymbols() {
+  if (!dataSec->chunks.empty()) {
+    Symbol *dataStartSym = ctx.symtab.find("__data_start__");
+    Symbol *dataEndSym = ctx.symtab.find("__data_end__");
+    Chunk *endChunk = dataSec->chunks.back();
+    replaceSymbol<DefinedSynthetic>(dataStartSym, dataStartSym->getName(),
+                                    dataSec->chunks.front());
+    replaceSymbol<DefinedSynthetic>(dataEndSym, dataEndSym->getName(), endChunk,
+                                    endChunk->getSize());
+  }
+
+  if (!bssSec->chunks.empty()) {
+    Symbol *bssStartSym = ctx.symtab.find("__bss_start__");
+    Symbol *bssEndSym = ctx.symtab.find("__bss_end__");
+    Chunk *endChunk = bssSec->chunks.back();
+    replaceSymbol<DefinedSynthetic>(bssStartSym, bssStartSym->getName(),
+                                    bssSec->chunks.front());
+    replaceSymbol<DefinedSynthetic>(bssEndSym, bssEndSym->getName(), endChunk,
+                                    endChunk->getSize());
   }
 }
 

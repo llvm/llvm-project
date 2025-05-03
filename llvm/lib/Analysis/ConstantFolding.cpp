@@ -1123,7 +1123,8 @@ ConstantFoldConstantImpl(const Constant *C, const DataLayout &DL,
 
 } // end anonymous namespace
 
-Constant *llvm::ConstantFoldInstruction(Instruction *I, const DataLayout &DL,
+Constant *llvm::ConstantFoldInstruction(const Instruction *I,
+                                        const DataLayout &DL,
                                         const TargetLibraryInfo *TLI) {
   // Handle PHI nodes quickly here...
   if (auto *PN = dyn_cast<PHINode>(I)) {
@@ -1156,7 +1157,7 @@ Constant *llvm::ConstantFoldInstruction(Instruction *I, const DataLayout &DL,
 
   // Scan the operand list, checking to see if they are all constants, if so,
   // hand off to ConstantFoldInstOperandsImpl.
-  if (!all_of(I->operands(), [](Use &U) { return isa<Constant>(U); }))
+  if (!all_of(I->operands(), [](const Use &U) { return isa<Constant>(U); }))
     return nullptr;
 
   SmallDenseMap<Constant *, Constant *> FoldedOps;
@@ -1177,7 +1178,7 @@ Constant *llvm::ConstantFoldConstant(const Constant *C, const DataLayout &DL,
   return ConstantFoldConstantImpl(C, DL, TLI, FoldedOps);
 }
 
-Constant *llvm::ConstantFoldInstOperands(Instruction *I,
+Constant *llvm::ConstantFoldInstOperands(const Instruction *I,
                                          ArrayRef<Constant *> Ops,
                                          const DataLayout &DL,
                                          const TargetLibraryInfo *TLI,

@@ -9,66 +9,80 @@
 #include <OffloadAPI.h>
 
 #include "../common/Fixtures.hpp"
-#include "olPlatformInfo.hpp"
 
-struct olGetPlatformInfoTest
-    : OffloadPlatformTest,
-      ::testing::WithParamInterface<ol_platform_info_t> {};
+using olGetPlatformInfoTest = OffloadPlatformTest;
+OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olGetPlatformInfoTest);
 
-INSTANTIATE_TEST_SUITE_P(
-    olGetPlatformInfo, olGetPlatformInfoTest,
-    ::testing::ValuesIn(PlatformQueries),
-    [](const ::testing::TestParamInfo<ol_platform_info_t> &info) {
-      std::stringstream ss;
-      ss << info.param;
-      return ss.str();
-    });
-
-TEST_P(olGetPlatformInfoTest, Success) {
+TEST_P(olGetPlatformInfoTest, SuccessName) {
   size_t Size = 0;
-  ol_platform_info_t InfoType = GetParam();
-
-  ASSERT_SUCCESS(olGetPlatformInfoSize(Platform, InfoType, &Size));
-  std::vector<char> InfoData(Size);
-  ASSERT_SUCCESS(olGetPlatformInfo(Platform, InfoType, Size, InfoData.data()));
-
-  // Info types with a dynamic size are all char[] so we can verify the returned
-  // string is the expected size.
-  auto ExpectedSize = PlatformInfoSizeMap.find(InfoType);
-  if (ExpectedSize == PlatformInfoSizeMap.end()) {
-    ASSERT_EQ(Size, strlen(InfoData.data()) + 1);
-  }
+  ASSERT_SUCCESS(olGetPlatformInfoSize(Platform, OL_PLATFORM_INFO_NAME, &Size));
+  ASSERT_GT(Size, 0ul);
+  std::vector<char> Name;
+  Name.resize(Size);
+  ASSERT_SUCCESS(
+      olGetPlatformInfo(Platform, OL_PLATFORM_INFO_NAME, Size, Name.data()));
+  ASSERT_EQ(std::strlen(Name.data()), Size - 1);
 }
 
-TEST_F(olGetPlatformInfoTest, InvalidNullHandle) {
+TEST_P(olGetPlatformInfoTest, SuccessVendorName) {
+  size_t Size = 0;
+  ASSERT_SUCCESS(
+      olGetPlatformInfoSize(Platform, OL_PLATFORM_INFO_VENDOR_NAME, &Size));
+  ASSERT_GT(Size, 0ul);
+  std::vector<char> VendorName;
+  VendorName.resize(Size);
+  ASSERT_SUCCESS(olGetPlatformInfo(Platform, OL_PLATFORM_INFO_VENDOR_NAME, Size,
+                                   VendorName.data()));
+  ASSERT_EQ(std::strlen(VendorName.data()), Size - 1);
+}
+
+TEST_P(olGetPlatformInfoTest, SuccessVersion) {
+  size_t Size = 0;
+  ASSERT_SUCCESS(
+      olGetPlatformInfoSize(Platform, OL_PLATFORM_INFO_VERSION, &Size));
+  ASSERT_GT(Size, 0ul);
+  std::vector<char> Version;
+  Version.resize(Size);
+  ASSERT_SUCCESS(olGetPlatformInfo(Platform, OL_PLATFORM_INFO_VERSION, Size,
+                                   Version.data()));
+  ASSERT_EQ(std::strlen(Version.data()), Size - 1);
+}
+
+TEST_P(olGetPlatformInfoTest, SuccessBackend) {
+  ol_platform_backend_t Backend;
+  ASSERT_SUCCESS(olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND,
+                                   sizeof(ol_platform_backend_t), &Backend));
+}
+
+TEST_P(olGetPlatformInfoTest, InvalidNullHandle) {
   ol_platform_backend_t Backend;
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,
                olGetPlatformInfo(nullptr, OL_PLATFORM_INFO_BACKEND,
                                  sizeof(Backend), &Backend));
 }
 
-TEST_F(olGetPlatformInfoTest, InvalidPlatformInfoEnumeration) {
+TEST_P(olGetPlatformInfoTest, InvalidPlatformInfoEnumeration) {
   ol_platform_backend_t Backend;
   ASSERT_ERROR(OL_ERRC_INVALID_ENUMERATION,
                olGetPlatformInfo(Platform, OL_PLATFORM_INFO_FORCE_UINT32,
                                  sizeof(Backend), &Backend));
 }
 
-TEST_F(olGetPlatformInfoTest, InvalidSizeZero) {
+TEST_P(olGetPlatformInfoTest, InvalidSizeZero) {
   ol_platform_backend_t Backend;
   ASSERT_ERROR(
       OL_ERRC_INVALID_SIZE,
       olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND, 0, &Backend));
 }
 
-TEST_F(olGetPlatformInfoTest, InvalidSizeSmall) {
+TEST_P(olGetPlatformInfoTest, InvalidSizeSmall) {
   ol_platform_backend_t Backend;
   ASSERT_ERROR(OL_ERRC_INVALID_SIZE,
                olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND,
                                  sizeof(Backend) - 1, &Backend));
 }
 
-TEST_F(olGetPlatformInfoTest, InvalidNullPointerPropValue) {
+TEST_P(olGetPlatformInfoTest, InvalidNullPointerPropValue) {
   ol_platform_backend_t Backend;
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
                olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND,

@@ -23,45 +23,45 @@ constexpr const static unsigned kBitsInByte = 8;
 // GenericSpaceAttr
 //===----------------------------------------------------------------------===//
 
-LogicalResult GenericSpaceAttr::isValidLoad(
+bool GenericSpaceAttr::isValidLoad(
     Type type, ptr::AtomicOrdering ordering, IntegerAttr alignment,
     function_ref<InFlightDiagnostic()> emitError) const {
-  return success();
+  return true;
 }
 
-LogicalResult GenericSpaceAttr::isValidStore(
+bool GenericSpaceAttr::isValidStore(
     Type type, ptr::AtomicOrdering ordering, IntegerAttr alignment,
     function_ref<InFlightDiagnostic()> emitError) const {
-  return success();
+  return true;
 }
 
-LogicalResult GenericSpaceAttr::isValidAtomicOp(
+bool GenericSpaceAttr::isValidAtomicOp(
     ptr::AtomicBinOp op, Type type, ptr::AtomicOrdering ordering,
     IntegerAttr alignment, function_ref<InFlightDiagnostic()> emitError) const {
-  return success();
+  return true;
 }
 
-LogicalResult GenericSpaceAttr::isValidAtomicXchg(
+bool GenericSpaceAttr::isValidAtomicXchg(
     Type type, ptr::AtomicOrdering successOrdering,
     ptr::AtomicOrdering failureOrdering, IntegerAttr alignment,
     function_ref<InFlightDiagnostic()> emitError) const {
-  return success();
+  return true;
 }
 
-LogicalResult GenericSpaceAttr::isValidAddrSpaceCast(
+bool GenericSpaceAttr::isValidAddrSpaceCast(
     Type tgt, Type src, function_ref<InFlightDiagnostic()> emitError) const {
   // TODO: update this method once the `addrspace_cast` op is added to the
   // dialect.
   assert(false && "unimplemented, see TODO in the source.");
-  return failure();
+  return false;
 }
 
-LogicalResult GenericSpaceAttr::isValidPtrIntCast(
+bool GenericSpaceAttr::isValidPtrIntCast(
     Type intLikeTy, Type ptrLikeTy,
     function_ref<InFlightDiagnostic()> emitError) const {
   // TODO: update this method once the int-cast ops are added to the dialect.
   assert(false && "unimplemented, see TODO in the source.");
-  return failure();
+  return false;
 }
 
 //===----------------------------------------------------------------------===//

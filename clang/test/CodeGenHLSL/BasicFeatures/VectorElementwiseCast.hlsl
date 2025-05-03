@@ -28,12 +28,12 @@ struct S {
 
 // vector flat cast from struct
 // CHECK-LABEL: define void {{.*}}call3
-// CHECK: [[s:%.*]] = alloca %struct.S, align 4
+// CHECK: [[s:%.*]] = alloca %struct.S, align 1
 // CHECK-NEXT: [[A:%.*]] = alloca <2 x i32>, align 8
-// CHECK-NEXT: [[Tmp:%.*]] = alloca %struct.S, align 4
+// CHECK-NEXT: [[Tmp:%.*]] = alloca %struct.S, align 1
 // CHECK-NEXT: [[Tmp2:%.*]] = alloca <2 x i32>, align 8
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[s]], ptr align 4 {{.*}}, i32 8, i1 false)
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp]], ptr align 4 [[s]], i32 8, i1 false)
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[s]], ptr align 1 {{.*}}, i32 8, i1 false)
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[Tmp]], ptr align 1 [[s]], i32 8, i1 false)
 // CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds %struct.S, ptr [[Tmp]], i32 0, i32 0
 // CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds %struct.S, ptr [[Tmp]], i32 0, i32 1
 // CHECK-NEXT: [[B:%.*]] = load <2 x i32>, ptr [[Tmp2]], align 8
@@ -66,11 +66,11 @@ export void call4() {
 
 // truncate struct to scalar
 // CHECK-LABEL: define void {{.*}}call5
-// CHECK: [[s:%.*]] = alloca %struct.S, align 4
+// CHECK: [[s:%.*]] = alloca %struct.S, align 1
 // CHECK-NEXT: [[A:%.*]] = alloca i32, align 4
-// CHECK-NEXT: [[Tmp:%.*]] = alloca %struct.S, align 4
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[s]], ptr align 4 {{.*}}, i32 8, i1 false)
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp]], ptr align 4 [[s]], i32 8, i1 false)
+// CHECK-NEXT: [[Tmp:%.*]] = alloca %struct.S, align 1
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[s]], ptr align 1 {{.*}}, i32 8, i1 false)
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[Tmp]], ptr align 1 [[s]], i32 8, i1 false)
 // CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds %struct.S, ptr [[Tmp]], i32 0, i32 0
 // CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds %struct.S, ptr [[Tmp]], i32 0, i32 1
 // CHECK-NEXT: [[L:%.*]] = load i32, ptr [[G1]], align 4

@@ -14,7 +14,6 @@
 
 #include <clc/integer/gentype24.inc>
 
-#undef __CLC_BODY
 #undef __CLC_FUNCTION
 
 #endif // __CLC_INTEGER_CLC_MAD24_H__

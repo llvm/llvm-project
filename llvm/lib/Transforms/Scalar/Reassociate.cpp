@@ -1052,7 +1052,7 @@ static BinaryOperator *ConvertShiftToMul(Instruction *Shl) {
   // bitwidth - 1.
   bool NSW = cast<BinaryOperator>(Shl)->hasNoSignedWrap();
   bool NUW = cast<BinaryOperator>(Shl)->hasNoUnsignedWrap();
-  unsigned BitWidth = Shl->getType()->getIntegerBitWidth();
+  unsigned BitWidth = Shl->getType()->getScalarSizeInBits();
   if (NSW && (NUW || SA->getValue().ult(BitWidth - 1)))
     Mul->setHasNoSignedWrap(true);
   Mul->setHasNoUnsignedWrap(NUW);

@@ -357,10 +357,10 @@ public:
   /// @}
 
   /// The reason why the value of a statement is not discarded, if any.
-  enum StmtDiscardKind {
-    SDK_Discarded,
-    SDK_NotDiscarded,
-    SDK_StmtExprResult,
+  enum class StmtDiscardKind {
+    Discarded,
+    NotDiscarded,
+    StmtExprResult,
   };
 
   /// Transform the given statement.
@@ -372,7 +372,8 @@ public:
   /// other mechanism.
   ///
   /// \returns the transformed statement.
-  StmtResult TransformStmt(Stmt *S, StmtDiscardKind SDK = SDK_Discarded);
+  StmtResult TransformStmt(Stmt *S,
+                           StmtDiscardKind SDK = StmtDiscardKind::Discarded);
 
   /// Transform the given statement.
   ///
@@ -1193,21 +1194,21 @@ public:
     TagDecl *Tag = nullptr;
     SemaRef.LookupQualifiedName(Result, DC);
     switch (Result.getResultKind()) {
-      case LookupResult::NotFound:
-      case LookupResult::NotFoundInCurrentInstantiation:
-        break;
+    case LookupResultKind::NotFound:
+    case LookupResultKind::NotFoundInCurrentInstantiation:
+      break;
 
-      case LookupResult::Found:
-        Tag = Result.getAsSingle<TagDecl>();
-        break;
+    case LookupResultKind::Found:
+      Tag = Result.getAsSingle<TagDecl>();
+      break;
 
-      case LookupResult::FoundOverloaded:
-      case LookupResult::FoundUnresolvedValue:
-        llvm_unreachable("Tag lookup cannot find non-tags");
+    case LookupResultKind::FoundOverloaded:
+    case LookupResultKind::FoundUnresolvedValue:
+      llvm_unreachable("Tag lookup cannot find non-tags");
 
-      case LookupResult::Ambiguous:
-        // Let the LookupResult structure handle ambiguities.
-        return QualType();
+    case LookupResultKind::Ambiguous:
+      // Let the LookupResult structure handle ambiguities.
+      return QualType();
     }
 
     if (!Tag) {
@@ -1216,20 +1217,19 @@ public:
       LookupResult Result(SemaRef, Id, IdLoc, Sema::LookupTagName);
       SemaRef.LookupQualifiedName(Result, DC);
       switch (Result.getResultKind()) {
-        case LookupResult::Found:
-        case LookupResult::FoundOverloaded:
-        case LookupResult::FoundUnresolvedValue: {
-          NamedDecl *SomeDecl = Result.getRepresentativeDecl();
-          Sema::NonTagKind NTK = SemaRef.getNonTagTypeDeclKind(SomeDecl, Kind);
-          SemaRef.Diag(IdLoc, diag::err_tag_reference_non_tag)
-              << SomeDecl << NTK << llvm::to_underlying(Kind);
-          SemaRef.Diag(SomeDecl->getLocation(), diag::note_declared_at);
-          break;
-        }
+      case LookupResultKind::Found:
+      case LookupResultKind::FoundOverloaded:
+      case LookupResultKind::FoundUnresolvedValue: {
+        NamedDecl *SomeDecl = Result.getRepresentativeDecl();
+        NonTagKind NTK = SemaRef.getNonTagTypeDeclKind(SomeDecl, Kind);
+        SemaRef.Diag(IdLoc, diag::err_tag_reference_non_tag)
+            << SomeDecl << NTK << Kind;
+        SemaRef.Diag(SomeDecl->getLocation(), diag::note_declared_at);
+        break;
+      }
         default:
           SemaRef.Diag(IdLoc, diag::err_not_tag_in_scope)
-              << llvm::to_underlying(Kind) << Id << DC
-              << QualifierLoc.getSourceRange();
+              << Kind << Id << DC << QualifierLoc.getSourceRange();
           break;
       }
       return QualType();
@@ -2967,10 +2967,11 @@ public:
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
-  ExprResult RebuildBinaryOperator(SourceLocation OpLoc,
-                                         BinaryOperatorKind Opc,
-                                         Expr *LHS, Expr *RHS) {
-    return getSema().BuildBinOp(/*Scope=*/nullptr, OpLoc, Opc, LHS, RHS);
+  ExprResult RebuildBinaryOperator(SourceLocation OpLoc, BinaryOperatorKind Opc,
+                                   Expr *LHS, Expr *RHS,
+                                   bool ForFoldExpression = false) {
+    return getSema().BuildBinOp(/*Scope=*/nullptr, OpLoc, Opc, LHS, RHS,
+                                ForFoldExpression);
   }
 
   /// Build a new rewritten operator expression.
@@ -4292,9 +4293,9 @@ StmtResult TreeTransform<Derived>::TransformStmt(Stmt *S, StmtDiscardKind SDK) {
     {
       ExprResult E = getDerived().TransformExpr(cast<Expr>(S));
 
-      if (SDK == SDK_StmtExprResult)
+      if (SDK == StmtDiscardKind::StmtExprResult)
         E = getSema().ActOnStmtExprResult(E);
-      return getSema().ActOnExprStmt(E, SDK == SDK_Discarded);
+      return getSema().ActOnExprStmt(E, SDK == StmtDiscardKind::Discarded);
     }
   }
 
@@ -7508,9 +7509,8 @@ TreeTransform<Derived>::TransformElaboratedType(TypeLocBuilder &TLB,
               Template.getAsTemplateDecl())) {
         SemaRef.Diag(TL.getNamedTypeLoc().getBeginLoc(),
                      diag::err_tag_reference_non_tag)
-            << TAT << Sema::NTK_TypeAliasTemplate
-            << llvm::to_underlying(
-                   ElaboratedType::getTagTypeKindForKeyword(T->getKeyword()));
+            << TAT << NonTagKind::TypeAliasTemplate
+            << ElaboratedType::getTagTypeKindForKeyword(T->getKeyword());
         SemaRef.Diag(TAT->getLocation(), diag::note_declared_at);
       }
     }
@@ -8086,7 +8086,8 @@ TreeTransform<Derived>::TransformCompoundStmt(CompoundStmt *S,
   SmallVector<Stmt*, 8> Statements;
   for (auto *B : S->body()) {
     StmtResult Result = getDerived().TransformStmt(
-        B, IsStmtExpr && B == ExprResult ? SDK_StmtExprResult : SDK_Discarded);
+        B, IsStmtExpr && B == ExprResult ? StmtDiscardKind::StmtExprResult
+                                         : StmtDiscardKind::Discarded);
 
     if (Result.isInvalid()) {
       // Immediately fail if this was a DeclStmt, since it's very
@@ -9067,8 +9068,8 @@ StmtResult
 TreeTransform<Derived>::TransformObjCForCollectionStmt(
                                                   ObjCForCollectionStmt *S) {
   // Transform the element statement.
-  StmtResult Element =
-      getDerived().TransformStmt(S->getElement(), SDK_NotDiscarded);
+  StmtResult Element = getDerived().TransformStmt(
+      S->getElement(), StmtDiscardKind::NotDiscarded);
   if (Element.isInvalid())
     return StmtError();
 
@@ -9291,23 +9292,23 @@ TreeTransform<Derived>::TransformMSDependentExistsStmt(
   SS.Adopt(QualifierLoc);
   bool Dependent = false;
   switch (getSema().CheckMicrosoftIfExistsSymbol(/*S=*/nullptr, SS, NameInfo)) {
-  case Sema::IER_Exists:
+  case IfExistsResult::Exists:
     if (S->isIfExists())
       break;
 
     return new (getSema().Context) NullStmt(S->getKeywordLoc());
 
-  case Sema::IER_DoesNotExist:
+  case IfExistsResult::DoesNotExist:
     if (S->isIfNotExists())
       break;
 
     return new (getSema().Context) NullStmt(S->getKeywordLoc());
 
-  case Sema::IER_Dependent:
+  case IfExistsResult::Dependent:
     Dependent = true;
     break;
 
-  case Sema::IER_Error:
+  case IfExistsResult::Error:
     return StmtError();
   }
 
@@ -15576,11 +15577,10 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     assert(C->capturesVariable() && "unexpected kind of lambda capture");
 
     // Determine the capture kind for Sema.
-    Sema::TryCaptureKind Kind
-      = C->isImplicit()? Sema::TryCapture_Implicit
-                       : C->getCaptureKind() == LCK_ByCopy
-                           ? Sema::TryCapture_ExplicitByVal
-                           : Sema::TryCapture_ExplicitByRef;
+    TryCaptureKind Kind = C->isImplicit() ? TryCaptureKind::Implicit
+                          : C->getCaptureKind() == LCK_ByCopy
+                              ? TryCaptureKind::ExplicitByVal
+                              : TryCaptureKind::ExplicitByRef;
     SourceLocation EllipsisLoc;
     if (C->isPackExpansion()) {
       UnexpandedParameterPack Unexpanded(C->getCapturedVar(), C->getLocation());
@@ -16408,6 +16408,7 @@ TreeTransform<Derived>::TransformCXXFoldExpr(CXXFoldExpr *E) {
       return true;
   }
 
+  bool WarnedOnComparison = false;
   for (unsigned I = 0; I != *NumExpansions; ++I) {
     Sema::ArgPackSubstIndexRAII SubstIndex(
         getSema(), LeftFold ? I : *NumExpansions - I - 1);
@@ -16435,7 +16436,17 @@ TreeTransform<Derived>::TransformCXXFoldExpr(CXXFoldExpr *E) {
             Functions, LHS, RHS);
       } else {
         Result = getDerived().RebuildBinaryOperator(E->getEllipsisLoc(),
-                                                    E->getOperator(), LHS, RHS);
+                                                    E->getOperator(), LHS, RHS,
+                                                    /*ForFoldExpresion=*/true);
+        if (!WarnedOnComparison && Result.isUsable()) {
+          if (auto *BO = dyn_cast<BinaryOperator>(Result.get());
+              BO && BO->isComparisonOp()) {
+            WarnedOnComparison = true;
+            SemaRef.Diag(BO->getBeginLoc(),
+                         diag::warn_comparison_in_fold_expression)
+                << BO->getOpcodeStr();
+          }
+        }
       }
     } else
       Result = Out;

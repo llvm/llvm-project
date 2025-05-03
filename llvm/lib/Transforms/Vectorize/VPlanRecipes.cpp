@@ -287,12 +287,12 @@ InstructionCost
 VPPartialReductionRecipe::computeCost(ElementCount VF,
                                       VPCostContext &Ctx) const {
   std::optional<unsigned> Opcode = std::nullopt;
-  VPValue *BinOp = getOperand(0);
+  VPValue *BinOp = getOperand(1);
 
   // If the partial reduction is predicated, a select will be operand 0 rather
   // than the binary op
   using namespace llvm::VPlanPatternMatch;
-  if (match(getOperand(0), m_Select(m_VPValue(), m_VPValue(), m_VPValue())))
+  if (match(getOperand(1), m_Select(m_VPValue(), m_VPValue(), m_VPValue())))
     BinOp = BinOp->getDefiningRecipe()->getOperand(1);
 
   // If BinOp is a negation, use the side effect of match to assign the actual
@@ -337,8 +337,8 @@ void VPPartialReductionRecipe::execute(VPTransformState &State) {
   assert(getOpcode() == Instruction::Add &&
          "Unhandled partial reduction opcode");
 
-  Value *BinOpVal = State.get(getOperand(0));
-  Value *PhiVal = State.get(getOperand(1));
+  Value *BinOpVal = State.get(getOperand(1));
+  Value *PhiVal = State.get(getOperand(0));
   assert(PhiVal && BinOpVal && "Phi and Mul must be set");
 
   Type *RetTy = PhiVal->getType();
@@ -1333,15 +1333,6 @@ InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
   for (const auto &[Idx, Op] : enumerate(operands())) {
     auto *V = Op->getUnderlyingValue();
     if (!V) {
-      // Push all the VP Intrinsic's ops into the Argments even if is nullptr.
-      // Some VP Intrinsic's cost will assert the number of parameters.
-      // Mainly appears in the following two scenarios:
-      // 1. EVL Op is nullptr
-      // 2. The Argmunt of the VP Intrinsic is also the VP Intrinsic
-      if (VPIntrinsic::isVPIntrinsic(VectorIntrinsicID)) {
-        Arguments.push_back(V);
-        continue;
-      }
       if (auto *UI = dyn_cast_or_null<CallBase>(getUnderlyingValue())) {
         Arguments.push_back(UI->getArgOperand(Idx));
         continue;
@@ -1373,10 +1364,11 @@ StringRef VPWidenIntrinsicRecipe::getIntrinsicName() const {
 
 bool VPWidenIntrinsicRecipe::onlyFirstLaneUsed(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
-  // Vector predication intrinsics only demand the the first lane the last
-  // operand (the EVL operand).
-  return VPIntrinsic::isVPIntrinsic(VectorIntrinsicID) &&
-         Op == getOperand(getNumOperands() - 1);
+  return all_of(enumerate(operands()), [this, &Op](const auto &X) {
+    auto [Idx, V] = X;
+    return V != Op || isVectorIntrinsicWithScalarOpAtArg(getVectorIntrinsicID(),
+                                                         Idx, nullptr);
+  });
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

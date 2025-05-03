@@ -514,9 +514,9 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
     FilterCCC.WantExpressionKeywords = false;
     FilterCCC.WantRemainingKeywords = false;
     FilterCCC.WantCXXNamedCasts = true;
-    if (TypoCorrection Corrected =
-            CorrectTypo(Found.getLookupNameInfo(), Found.getLookupKind(), S,
-                        &SS, FilterCCC, CTK_ErrorRecovery, LookupCtx)) {
+    if (TypoCorrection Corrected = CorrectTypo(
+            Found.getLookupNameInfo(), Found.getLookupKind(), S, &SS, FilterCCC,
+            CorrectTypoKind::ErrorRecovery, LookupCtx)) {
       if (auto *ND = Corrected.getFoundDecl())
         Found.addDecl(ND);
       FilterAcceptableTemplateNames(Found);
@@ -686,8 +686,9 @@ void Sema::diagnoseExprIntendedAsTemplateName(Scope *S, ExprResult TemplateName,
 
   DeclarationName Name = NameInfo.getName();
   TemplateCandidateFilter CCC(*this);
-  if (TypoCorrection Corrected = CorrectTypo(NameInfo, LookupKind, S, &SS, CCC,
-                                             CTK_ErrorRecovery, LookupCtx)) {
+  if (TypoCorrection Corrected =
+          CorrectTypo(NameInfo, LookupKind, S, &SS, CCC,
+                      CorrectTypoKind::ErrorRecovery, LookupCtx)) {
     auto *ND = Corrected.getFoundDecl();
     if (ND)
       ND = getAsTemplateNameDecl(ND);
@@ -2116,6 +2117,8 @@ DeclResult Sema::CheckClassTemplate(
   // Add alignment attributes if necessary; these attributes are checked when
   // the ASTContext lays out the structure.
   if (TUK == TagUseKind::Definition && (!SkipBody || !SkipBody->ShouldSkip)) {
+    if (LangOpts.HLSL)
+      NewClass->addAttr(PackedAttr::CreateImplicit(Context));
     AddAlignmentAttributesForRecord(NewClass);
     AddMsStructLayoutForRecord(NewClass);
   }
@@ -3733,7 +3736,7 @@ bool Sema::resolveAssumedTemplateNameAsType(Scope *S, TemplateName &Name,
 
   TypoCorrection Corrected =
       CorrectTypo(R.getLookupNameInfo(), R.getLookupKind(), S, nullptr,
-                  FilterCCC, CTK_ErrorRecovery);
+                  FilterCCC, CorrectTypoKind::ErrorRecovery);
   if (Corrected && Corrected.getFoundDecl()) {
     diagnoseTypo(Corrected, PDiag(diag::err_no_template_suggest)
                                 << ATN->getDeclName());
@@ -3909,7 +3912,7 @@ TypeResult Sema::ActOnTagTemplateIdType(TagUseKind TUK,
     //   resolves to an alias template specialization, the
     //   elaborated-type-specifier is ill-formed.
     Diag(TemplateLoc, diag::err_tag_reference_non_tag)
-        << TAT << NTK_TypeAliasTemplate << llvm::to_underlying(TagKind);
+        << TAT << NonTagKind::TypeAliasTemplate << TagKind;
     Diag(TAT->getLocation(), diag::note_declared_at);
   }
 
@@ -6959,7 +6962,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     if (IsConvertedConstantExpression) {
       ArgResult = BuildConvertedConstantExpression(
           DeductionArg, ParamType,
-          StrictCheck ? CCEK_TempArgStrict : CCEK_TemplateArg, Param);
+          StrictCheck ? CCEKind::TempArgStrict : CCEKind::TemplateArg, Param);
       assert(!ArgResult.isUnset());
       if (ArgResult.isInvalid()) {
         NoteTemplateParameterLocation(*Param);
@@ -6981,7 +6984,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
 
     APValue PreNarrowingValue;
     ArgResult = EvaluateConvertedConstantExpression(
-        ArgResult.get(), ParamType, Value, CCEK_TemplateArg, /*RequireInt=*/
+        ArgResult.get(), ParamType, Value, CCEKind::TemplateArg, /*RequireInt=*/
         false, PreNarrowingValue);
     if (ArgResult.isInvalid())
       return ExprError();
@@ -7080,7 +7083,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
       //        template-parameter; or
       llvm::APSInt Value;
       ExprResult ArgResult = CheckConvertedConstantExpression(
-          DeductionArg, ParamType, Value, CCEK_TemplateArg);
+          DeductionArg, ParamType, Value, CCEKind::TemplateArg);
       if (ArgResult.isInvalid())
         return ExprError();
       setDeductionArg(ArgResult.get());
@@ -8655,6 +8658,8 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
   // Add alignment attributes if necessary; these attributes are checked when
   // the ASTContext lays out the structure.
   if (TUK == TagUseKind::Definition && (!SkipBody || !SkipBody->ShouldSkip)) {
+    if (LangOpts.HLSL)
+      Specialization->addAttr(PackedAttr::CreateImplicit(Context));
     AddAlignmentAttributesForRecord(Specialization);
     AddMsStructLayoutForRecord(Specialization);
   }
@@ -9775,8 +9780,7 @@ DeclResult Sema::ActOnExplicitInstantiation(
 
   if (!ClassTemplate) {
     NonTagKind NTK = getNonTagTypeDeclKind(TD, Kind);
-    Diag(TemplateNameLoc, diag::err_tag_reference_non_tag)
-        << TD << NTK << llvm::to_underlying(Kind);
+    Diag(TemplateNameLoc, diag::err_tag_reference_non_tag) << TD << NTK << Kind;
     Diag(TD->getLocation(), diag::note_previous_use);
     return true;
   }
@@ -10067,7 +10071,7 @@ Sema::ActOnExplicitInstantiation(Scope *S, SourceLocation ExternLoc,
                Attr, AS_none, /*ModulePrivateLoc=*/SourceLocation(),
                MultiTemplateParamsArg(), Owned, IsDependent, SourceLocation(),
                false, TypeResult(), /*IsTypeSpecifier*/ false,
-               /*IsTemplateParamOrArg*/ false, /*OOK=*/OOK_Outside)
+               /*IsTemplateParamOrArg*/ false, /*OOK=*/OffsetOfKind::Outside)
           .get();
   assert(!IsDependent && "explicit instantiation of dependent name not yet handled");
 
@@ -10639,8 +10643,7 @@ TypeResult Sema::ActOnDependentTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
 
   if (TUK == TagUseKind::Declaration || TUK == TagUseKind::Definition) {
     Diag(NameLoc, diag::err_dependent_tag_decl)
-        << (TUK == TagUseKind::Definition) << llvm::to_underlying(Kind)
-        << SS.getRange();
+        << (TUK == TagUseKind::Definition) << Kind << SS.getRange();
     return true;
   }
 
@@ -10889,7 +10892,7 @@ Sema::CheckTypenameType(ElaboratedTypeKeyword Keyword,
   unsigned DiagID = 0;
   Decl *Referenced = nullptr;
   switch (Result.getResultKind()) {
-  case LookupResult::NotFound: {
+  case LookupResultKind::NotFound: {
     // If we're looking up 'type' within a template named 'enable_if', produce
     // a more specific diagnostic.
     SourceRange CondRange;
@@ -10921,7 +10924,7 @@ Sema::CheckTypenameType(ElaboratedTypeKeyword Keyword,
     break;
   }
 
-  case LookupResult::FoundUnresolvedValue: {
+  case LookupResultKind::FoundUnresolvedValue: {
     // We found a using declaration that is a value. Most likely, the using
     // declaration itself is meant to have the 'typename' keyword.
     SourceRange FullRange(KeywordLoc.isValid() ? KeywordLoc : SS.getBeginLoc(),
@@ -10935,17 +10938,17 @@ Sema::CheckTypenameType(ElaboratedTypeKeyword Keyword,
         << FixItHint::CreateInsertion(Loc, "typename ");
     }
   }
-  // Fall through to create a dependent typename type, from which we can recover
-  // better.
-  [[fallthrough]];
+    // Fall through to create a dependent typename type, from which we can
+    // recover better.
+    [[fallthrough]];
 
-  case LookupResult::NotFoundInCurrentInstantiation:
+  case LookupResultKind::NotFoundInCurrentInstantiation:
     // Okay, it's a member of an unknown instantiation.
     return Context.getDependentNameType(Keyword,
                                         QualifierLoc.getNestedNameSpecifier(),
                                         &II);
 
-  case LookupResult::Found:
+  case LookupResultKind::Found:
     if (TypeDecl *Type = dyn_cast<TypeDecl>(Result.getFoundDecl())) {
       // C++ [class.qual]p2:
       //   In a lookup in which function names are not ignored and the
@@ -11003,13 +11006,13 @@ Sema::CheckTypenameType(ElaboratedTypeKeyword Keyword,
     Referenced = Result.getFoundDecl();
     break;
 
-  case LookupResult::FoundOverloaded:
+  case LookupResultKind::FoundOverloaded:
     DiagID = Ctx ? diag::err_typename_nested_not_type
                  : diag::err_typename_not_type;
     Referenced = *Result.begin();
     break;
 
-  case LookupResult::Ambiguous:
+  case LookupResultKind::Ambiguous:
     return QualType();
   }
 

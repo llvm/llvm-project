@@ -13,7 +13,13 @@
 #include <gtest/gtest.h>
 
 namespace TestEnvironment {
-ol_device_handle_t getDevice();
+
+struct Device {
+  ol_device_handle_t Handle;
+  std::string Name;
+};
+
+const std::vector<Device> &getDevices();
 ol_device_handle_t getHostDevice();
 bool loadDeviceBinary(const std::string &BinaryName, ol_device_handle_t Device,
                       std::unique_ptr<llvm::MemoryBuffer> &BinaryOut);
