@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++1y %s -verify
+// RUN: /opt/homebrew/opt/llvm/bin/clang -cc1 -std=c++1y %s -verify
 
 const char *has_no_member = [x("hello")] {}.x; // expected-error {{no member named 'x'}}
 
