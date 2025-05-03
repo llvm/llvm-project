@@ -612,8 +612,7 @@ Expected<std::optional<int>> CompileJobCache::replayCachedResult(
     const llvm::cas::CASID &CacheKey, cas::CompileJobCacheResult &CachedResult,
     SmallVectorImpl<char> &DiagText, bool WriteOutputAsCASID,
     std::optional<llvm::cas::CASID> *OutMCOutputID) {
-  CompilerInstance Clang;
-  Clang.setInvocation(std::move(Invok));
+  CompilerInstance Clang(std::move(Invok));
   llvm::raw_svector_ostream DiagOS(DiagText);
   Clang.createDiagnostics(
       *llvm::vfs::getRealFileSystem(),
