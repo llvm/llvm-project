@@ -2111,7 +2111,7 @@ template <class ELFT> bool RelrSection<ELFT>::updateAllocSize(Ctx &ctx) {
   std::unique_ptr<uint64_t[]> offsets(new uint64_t[relocs.size()]);
   for (auto [i, r] : llvm::enumerate(relocs))
     offsets[i] = r.getOffset();
-  llvm::sort(offsets.get(), offsets.get() + relocs.size());
+  llvm::parallelSort(offsets.get(), offsets.get() + relocs.size());
 
   // For each leading relocation, find following ones that can be folded
   // as a bitmap and fold them.
