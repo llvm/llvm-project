@@ -1,4 +1,4 @@
-// RUN: /opt/homebrew/opt/llvm/bin/clang -cc1 -internal-isystem %S/../../build/lib/clang/20/include -nostdsysteminc -fsyntax-only -std=c++20 -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++20 -verify %s
 
 namespace GH85667 {
 
@@ -16,10 +16,8 @@ template <class = void> void f() {
   }(1, 2) == 3);
 
   []<class... Is>(Is... x) {
-    return ([](auto y = Is()) { return y + 1; }() + ...); // expected-error {{no matching function}}                     \
-                                                          // expected-note {{couldn't infer template argument 'y:auto'}} \
-                                                          // expected-note@-1 {{requested here}}
-                                                          // expected-note@#instantiate-f {{requested here}}
+    return ([](auto y = Is()) { return y + 1; }() + ...); // expected-error@15 {{pack expansion does not contain any unexpanded parameter packs}} \
+                                                          // expected-error@16 {{invalid operands to binary expression ('void' and 'int')}}
   }(1);
 
   []<class... Is>() {
@@ -92,7 +90,7 @@ template <class = void> void f() {
 #endif
 }
 
-template void f(); // #instantiate-f
+template void f(); // #instantiate-f expected-note@93 {{in instantiation of function template specialization 'GH85667::f<void>' requested here}}
 
 } // namespace GH85667
 
@@ -115,7 +113,8 @@ int Cartesian1(auto x, auto y) {
 int Cartesian2(auto x, auto y) {
   return apply(
       [&](auto... xs) {
-        return (apply([zs = xs](auto... ys) { return (ys + ...); }, y) + ...);
+        return (apply([zs = xs](auto... ys) { return (ys + ...); }, y) + ...); // expected-error@103 {{cannot initialize return object of type 'int' with an rvalue of type 'void'}} \
+        // expected-note@114 {{in instantiation of function template specialization 'GH99877::apply<(lambda at /Users/saicharan/Desktop/llvm-project/clang/test/SemaCXX/fold_lambda_with_variadics.cpp:115:7)>' requested here}}
       },
       x);
 }
@@ -137,7 +136,7 @@ template <int... x> int Cartesian3(auto y) {
                  y) +
            ...);
     // - non-type template parameters,
-    return (apply([]<int = xs>(auto... ys) { return (ys + ...); }, y) + ...);
+    return (apply([]<int = xs>(auto... ys) { return (ys + ...); }, y) + ...); // expected-error@116 {{pack expansion does not contain any unexpanded parameter packs}}
   }(Ints<x...>());
 }
 
@@ -170,7 +169,7 @@ void foo() {
   auto x = tuple({1, 2, 3});
   auto y = tuple({4, 5, 6});
   Cartesian1(x, y);
-  Cartesian2(x, y);
+  Cartesian2(x, y); // expected-note@172 {{in instantiation of function template specialization 'GH99877::Cartesian2<GH99877::tuple, GH99877::tuple>' requested here}}
   Cartesian3<1, 2, 3>(y);
   Cartesian4<1, 2, 3>(y);
 #if 0
