@@ -2385,12 +2385,16 @@ public:
   /// potential availability violations.
   sema::FunctionScopeInfo *getCurFunctionAvailabilityContext();
 
-  void DiagnoseAvailabilityOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
-                                  const ObjCInterfaceDecl *UnknownObjCClass,
-                                  bool ObjCPropertyAccess,
-                                  bool AvoidPartialAvailabilityChecks = false,
-                                  ObjCInterfaceDecl *ClassReceiver = nullptr);
+  void DiagnoseAvailabilityOfDecl(
+      NamedDecl *D, ArrayRef<SourceLocation> Locs,
+      const ObjCInterfaceDecl *UnknownObjCClass = nullptr,
+      bool ObjCPropertyAccess = false,
+      bool AvoidPartialAvailabilityChecks = false,
+      ObjCInterfaceDecl *ClassReceiver = nullptr);
 
+  std::pair<AvailabilityResult, const NamedDecl *>
+  ShouldDiagnoseAvailabilityOfDecl(const NamedDecl *D, std::string *Message,
+                                   ObjCInterfaceDecl *ClassReceiver);
   ///@}
 
   //
