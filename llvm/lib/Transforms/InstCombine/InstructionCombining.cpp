@@ -3300,16 +3300,14 @@ static bool isAllocSiteRemovable(Instruction *AI,
           continue;
         }
 
-        if (getFreedOperand(cast<CallBase>(I), &TLI) == PI &&
+        if (Family && getFreedOperand(cast<CallBase>(I), &TLI) == PI &&
             getAllocationFamily(I, &TLI) == Family) {
-          assert(Family);
           Users.emplace_back(I);
           continue;
         }
 
-        if (getReallocatedOperand(cast<CallBase>(I)) == PI &&
+        if (Family && getReallocatedOperand(cast<CallBase>(I)) == PI &&
             getAllocationFamily(I, &TLI) == Family) {
-          assert(Family);
           Users.emplace_back(I);
           Worklist.push_back(I);
           continue;
