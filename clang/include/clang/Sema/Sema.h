@@ -818,6 +818,174 @@ enum class VarArgKind {
   Invalid
 };
 
+/// AssignConvertType - All of the 'assignment' semantic checks return this
+/// enum to indicate whether the assignment was allowed.  These checks are
+/// done for simple assignments, as well as initialization, return from
+/// function, argument passing, etc.  The query is phrased in terms of a
+/// source and destination type.
+enum class AssignConvertType {
+  /// Compatible - the types are compatible according to the standard.
+  Compatible,
+
+  /// CompatibleVoidPtrToNonVoidPtr - The types are compatible in C because
+  /// a void * can implicitly convert to another pointer type, which we
+  /// differentiate for better diagnostic behavior.
+  CompatibleVoidPtrToNonVoidPtr,
+
+  /// PointerToInt - The assignment converts a pointer to an int, which we
+  /// accept as an extension.
+  PointerToInt,
+
+  /// IntToPointer - The assignment converts an int to a pointer, which we
+  /// accept as an extension.
+  IntToPointer,
+
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  /// IncompatibleIntToSafePointer - The assignment converts an int to a
+  /// -fbounds-safety safe pointer, which is not permitted by -fbounds-safety.
+  IncompatibleIntToSafePointer,
+
+  /// IncompatibleUnsafeToSafePointer - The assignment converts an unsafe
+  /// pointer to a safe pointer (single or counted_by), which -fbounds-safety
+  /// doesn't allow.
+  IncompatibleUnsafeToSafePointer,
+
+  /// IncompatibleUnsafeToIndexablePointer - The assignment converts an unsafe
+  /// pointer to an indexable pointer (indexable or bidi_indexable),
+  /// which -fbounds-safety doesn't allow and may not know how to create an
+  /// upper
+  /// bound for.
+  IncompatibleUnsafeToIndexablePointer,
+
+  // FIXME: Turn it into an error (rdar://85587619)
+  /// IncompleteSingleToIndexablePointer - The assignment converts an single
+  /// pointer with opaque element type to an indexable pointer, for which
+  /// -fbounds-safety
+  /// doesn't know how to create an upper bound.
+  IncompleteSingleToIndexablePointer,
+
+  // CompatibleSingleToIndexablePointer - The assignment converts a single
+  // pointer to an explicitly indexable pointer. This is allowed but is likely
+  // a mistake.
+  CompatibleSingleToExplicitIndexablePointer,
+
+  /// IncompatibleStringLiteralToValueTerminatedPointer - The assignment of a
+  /// string literal to value-terminated pointer with a terminator different
+  /// than NUL.
+  IncompatibleStringLiteralToValueTerminatedPointer,
+
+  /// IncompatibleValueTerminatedTerminators - The assignment is between
+  /// value terminated pointers with incompatible terminators.
+  IncompatibleValueTerminatedTerminators,
+
+  /// IncompatibleValueTerminatedToNonValueTerminatedPointer - The assignment
+  /// of a value-terminated pointer to a non-value-terminated pointer.
+  /// BoundsSafety doesn't allow it, __terminated_by_to_indexable() should be
+  /// used instead.
+  IncompatibleValueTerminatedToNonValueTerminatedPointer,
+
+  /// IncompatibleNonValueTerminatedToValueTerminatedPointer - The assignment
+  /// of a non-value-terminated pointer to a value-terminated pointer.
+  /// BoundsSafety doesn't allow it, __unsafe_terminated_by_from_wide() should
+  /// be used instead.
+  IncompatibleNonValueTerminatedToValueTerminatedPointer,
+
+  /// IncompatibleNestedValueTerminatedToNonValueTerminatedPointer - The
+  /// assignment is between two nested pointer types, where at a nested
+  /// level the source is value-terminated type, but the destination isn't.
+  IncompatibleNestedValueTerminatedToNonValueTerminatedPointer,
+
+  /// IncompatibleNestedNonValueTerminatedToValueTerminatedPointer - The
+  /// assignment is between two nested pointer types, where at a nested
+  /// level the destination is value-terminated type, but the source isn't.
+  IncompatibleNestedNonValueTerminatedToValueTerminatedPointer,
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
+  /// FunctionVoidPointer - The assignment is between a function pointer and
+  /// void*, which the standard doesn't allow, but we accept as an extension.
+  FunctionVoidPointer,
+
+  /// IncompatiblePointer - The assignment is between two pointers types that
+  /// are not compatible, but we accept them as an extension.
+  IncompatiblePointer,
+
+  /// IncompatibleFunctionPointer - The assignment is between two function
+  /// pointers types that are not compatible, but we accept them as an
+  /// extension.
+  IncompatibleFunctionPointer,
+
+  /// IncompatibleFunctionPointerStrict - The assignment is between two
+  /// function pointer types that are not identical, but are compatible,
+  /// unless compiled with -fsanitize=cfi, in which case the type mismatch
+  /// may trip an indirect call runtime check.
+  IncompatibleFunctionPointerStrict,
+
+  /// IncompatiblePointerSign - The assignment is between two pointers types
+  /// which point to integers which have a different sign, but are otherwise
+  /// identical. This is a subset of the above, but broken out because it's by
+  /// far the most common case of incompatible pointers.
+  IncompatiblePointerSign,
+
+  /// CompatiblePointerDiscardsQualifiers - The assignment discards
+  /// c/v/r qualifiers, which we accept as an extension.
+  CompatiblePointerDiscardsQualifiers,
+
+  /// IncompatiblePointerDiscardsQualifiers - The assignment
+  /// discards qualifiers that we don't permit to be discarded,
+  /// like address spaces.
+  IncompatiblePointerDiscardsQualifiers,
+
+  /// IncompatibleNestedPointerAddressSpaceMismatch - The assignment
+  /// changes address spaces in nested pointer types which is not allowed.
+  /// For instance, converting __private int ** to __generic int ** is
+  /// illegal even though __private could be converted to __generic.
+  IncompatibleNestedPointerAddressSpaceMismatch,
+
+  /// IncompatibleNestedPointerQualifiers - The assignment is between two
+  /// nested pointer types, and the qualifiers other than the first two
+  /// levels differ e.g. char ** -> const char **, but we accept them as an
+  /// extension.
+  IncompatibleNestedPointerQualifiers,
+
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  /// IncompatibleNestedBoundsSafetyPointerAttributes - The assignment is
+  /// between two nested pointer types with different -fbounds-safety pointer
+  /// attributes.
+  IncompatibleNestedBoundsSafetyPointerAttributes,
+
+  /// IncompatibleBoundsSafetyFunctionPointer - The assignment is
+  /// between two function pointer types with incompatible -fbounds-safety
+  /// pointer
+  /// attributes.
+  IncompatibleBoundsSafetyFunctionPointer,
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
+  /// IncompatibleVectors - The assignment is between two vector types that
+  /// have the same size, which we accept as an extension.
+  IncompatibleVectors,
+
+  /// IntToBlockPointer - The assignment converts an int to a block
+  /// pointer. We disallow this.
+  IntToBlockPointer,
+
+  /// IncompatibleBlockPointer - The assignment is between two block
+  /// pointers types that are not compatible.
+  IncompatibleBlockPointer,
+
+  /// IncompatibleObjCQualifiedId - The assignment is between a qualified
+  /// id type and something else (that is incompatible with it). For example,
+  /// "id <XXX>" = "Foo *", where "Foo *" doesn't implement the XXX protocol.
+  IncompatibleObjCQualifiedId,
+
+  /// IncompatibleObjCWeakRef - Assigning a weak-unavailable object to an
+  /// object with __weak qualifier.
+  IncompatibleObjCWeakRef,
+
+  /// Incompatible - We reject this conversion outright, it is invalid to
+  /// represent it in the AST.
+  Incompatible
+};
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -8114,172 +8282,6 @@ public:
   QualType UsualArithmeticConversions(ExprResult &LHS, ExprResult &RHS,
                                       SourceLocation Loc, ArithConvKind ACK);
 
-  /// AssignConvertType - All of the 'assignment' semantic checks return this
-  /// enum to indicate whether the assignment was allowed.  These checks are
-  /// done for simple assignments, as well as initialization, return from
-  /// function, argument passing, etc.  The query is phrased in terms of a
-  /// source and destination type.
-  enum AssignConvertType {
-    /// Compatible - the types are compatible according to the standard.
-    Compatible,
-
-    /// CompatibleVoidPtrToNonVoidPtr - The types are compatible in C because
-    /// a void * can implicitly convert to another pointer type, which we
-    /// differentiate for better diagnostic behavior.
-    CompatibleVoidPtrToNonVoidPtr,
-
-    /// PointerToInt - The assignment converts a pointer to an int, which we
-    /// accept as an extension.
-    PointerToInt,
-
-    /// IntToPointer - The assignment converts an int to a pointer, which we
-    /// accept as an extension.
-    IntToPointer,
-
-    /* TO_UPSTREAM(BoundsSafety) ON */
-    /// IncompatibleIntToSafePointer - The assignment converts an int to a
-    /// -fbounds-safety safe pointer, which is not permitted by -fbounds-safety.
-    IncompatibleIntToSafePointer,
-
-    /// IncompatibleUnsafeToSafePointer - The assignment converts an unsafe
-    /// pointer to a safe pointer (single or counted_by), which -fbounds-safety
-    /// doesn't allow.
-    IncompatibleUnsafeToSafePointer,
-
-    /// IncompatibleUnsafeToIndexablePointer - The assignment converts an unsafe
-    /// pointer to an indexable pointer (indexable or bidi_indexable),
-    /// which -fbounds-safety doesn't allow and may not know how to create an upper
-    /// bound for.
-    IncompatibleUnsafeToIndexablePointer,
-
-    // FIXME: Turn it into an error (rdar://85587619)
-    /// IncompleteSingleToIndexablePointer - The assignment converts an single
-    /// pointer with opaque element type to an indexable pointer, for which
-    /// -fbounds-safety
-    /// doesn't know how to create an upper bound.
-    IncompleteSingleToIndexablePointer,
-
-    // CompatibleSingleToIndexablePointer - The assignment converts a single
-    // pointer to an explicitly indexable pointer. This is allowed but is likely
-    // a mistake.
-    CompatibleSingleToExplicitIndexablePointer,
-
-    /// IncompatibleStringLiteralToValueTerminatedPointer - The assignment of a
-    /// string literal to value-terminated pointer with a terminator different
-    /// than NUL.
-    IncompatibleStringLiteralToValueTerminatedPointer,
-
-    /// IncompatibleValueTerminatedTerminators - The assignment is between
-    /// value terminated pointers with incompatible terminators.
-    IncompatibleValueTerminatedTerminators,
-
-    /// IncompatibleValueTerminatedToNonValueTerminatedPointer - The assignment
-    /// of a value-terminated pointer to a non-value-terminated pointer.
-    /// BoundsSafety doesn't allow it, __terminated_by_to_indexable() should be
-    /// used instead.
-    IncompatibleValueTerminatedToNonValueTerminatedPointer,
-
-    /// IncompatibleNonValueTerminatedToValueTerminatedPointer - The assignment
-    /// of a non-value-terminated pointer to a value-terminated pointer.
-    /// BoundsSafety doesn't allow it, __unsafe_terminated_by_from_wide() should
-    /// be used instead.
-    IncompatibleNonValueTerminatedToValueTerminatedPointer,
-
-    /// IncompatibleNestedValueTerminatedToNonValueTerminatedPointer - The
-    /// assignment is between two nested pointer types, where at a nested
-    /// level the source is value-terminated type, but the destination isn't.
-    IncompatibleNestedValueTerminatedToNonValueTerminatedPointer,
-
-    /// IncompatibleNestedNonValueTerminatedToValueTerminatedPointer - The
-    /// assignment is between two nested pointer types, where at a nested
-    /// level the destination is value-terminated type, but the source isn't.
-    IncompatibleNestedNonValueTerminatedToValueTerminatedPointer,
-    /* TO_UPSTREAM(BoundsSafety) OFF */
-
-    /// FunctionVoidPointer - The assignment is between a function pointer and
-    /// void*, which the standard doesn't allow, but we accept as an extension.
-    FunctionVoidPointer,
-
-    /// IncompatiblePointer - The assignment is between two pointers types that
-    /// are not compatible, but we accept them as an extension.
-    IncompatiblePointer,
-
-    /// IncompatibleFunctionPointer - The assignment is between two function
-    /// pointers types that are not compatible, but we accept them as an
-    /// extension.
-    IncompatibleFunctionPointer,
-
-    /// IncompatibleFunctionPointerStrict - The assignment is between two
-    /// function pointer types that are not identical, but are compatible,
-    /// unless compiled with -fsanitize=cfi, in which case the type mismatch
-    /// may trip an indirect call runtime check.
-    IncompatibleFunctionPointerStrict,
-
-    /// IncompatiblePointerSign - The assignment is between two pointers types
-    /// which point to integers which have a different sign, but are otherwise
-    /// identical. This is a subset of the above, but broken out because it's by
-    /// far the most common case of incompatible pointers.
-    IncompatiblePointerSign,
-
-    /// CompatiblePointerDiscardsQualifiers - The assignment discards
-    /// c/v/r qualifiers, which we accept as an extension.
-    CompatiblePointerDiscardsQualifiers,
-
-    /// IncompatiblePointerDiscardsQualifiers - The assignment
-    /// discards qualifiers that we don't permit to be discarded,
-    /// like address spaces.
-    IncompatiblePointerDiscardsQualifiers,
-
-    /// IncompatibleNestedPointerAddressSpaceMismatch - The assignment
-    /// changes address spaces in nested pointer types which is not allowed.
-    /// For instance, converting __private int ** to __generic int ** is
-    /// illegal even though __private could be converted to __generic.
-    IncompatibleNestedPointerAddressSpaceMismatch,
-
-    /// IncompatibleNestedPointerQualifiers - The assignment is between two
-    /// nested pointer types, and the qualifiers other than the first two
-    /// levels differ e.g. char ** -> const char **, but we accept them as an
-    /// extension.
-    IncompatibleNestedPointerQualifiers,
-
-    /* TO_UPSTREAM(BoundsSafety) ON */
-    /// IncompatibleNestedBoundsSafetyPointerAttributes - The assignment is
-    /// between two nested pointer types with different -fbounds-safety pointer
-    /// attributes.
-    IncompatibleNestedBoundsSafetyPointerAttributes,
-
-    /// IncompatibleBoundsSafetyFunctionPointer - The assignment is
-    /// between two function pointer types with incompatible -fbounds-safety pointer
-    /// attributes.
-    IncompatibleBoundsSafetyFunctionPointer,
-    /* TO_UPSTREAM(BoundsSafety) OFF */
-
-    /// IncompatibleVectors - The assignment is between two vector types that
-    /// have the same size, which we accept as an extension.
-    IncompatibleVectors,
-
-    /// IntToBlockPointer - The assignment converts an int to a block
-    /// pointer. We disallow this.
-    IntToBlockPointer,
-
-    /// IncompatibleBlockPointer - The assignment is between two block
-    /// pointers types that are not compatible.
-    IncompatibleBlockPointer,
-
-    /// IncompatibleObjCQualifiedId - The assignment is between a qualified
-    /// id type and something else (that is incompatible with it). For example,
-    /// "id <XXX>" = "Foo *", where "Foo *" doesn't implement the XXX protocol.
-    IncompatibleObjCQualifiedId,
-
-    /// IncompatibleObjCWeakRef - Assigning a weak-unavailable object to an
-    /// object with __weak qualifier.
-    IncompatibleObjCWeakRef,
-
-    /// Incompatible - We reject this conversion outright, it is invalid to
-    /// represent it in the AST.
-    Incompatible
-  };
-
   /* TO_UPSTREAM(BoundsSafety) ON*/
   /// @brief Check whether it's ABI safe to convert between two types that would
   /// otherwise be forbidden by -fbounds-safety. Returns false if \c ConvTy ...
@@ -8347,9 +8349,9 @@ public:
     switch (ConvTy) {
     default:
       return false;
-    case Compatible:
-    case CompatiblePointerDiscardsQualifiers:
-    case CompatibleVoidPtrToNonVoidPtr:
+    case AssignConvertType::Compatible:
+    case AssignConvertType::CompatiblePointerDiscardsQualifiers:
+    case AssignConvertType::CompatibleVoidPtrToNonVoidPtr:
       return true;
     }
     llvm_unreachable("impossible");
@@ -8417,8 +8419,8 @@ public:
   void DiagnoseSingleToWideLosingBounds(QualType LHSType, QualType RHSType,
                                        const Expr *RHSExp);
   bool DiagnoseDynamicCountVarZeroInit(VarDecl *VD);
-  Sema::AssignConvertType
-  CheckValueTerminatedAssignmentConstraints(QualType LHSType, Expr *RHSExpr);
+  AssignConvertType CheckValueTerminatedAssignmentConstraints(QualType LHSType,
+                                                              Expr *RHSExpr);
   /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   /// the following "Check" methods will return a valid/converted QualType

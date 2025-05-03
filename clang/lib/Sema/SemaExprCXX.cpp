@@ -4621,11 +4621,13 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     llvm_unreachable("bad conversion");
 
   case ImplicitConversionSequence::BadConversion:
-    Sema::AssignConvertType ConvTy =
+    AssignConvertType ConvTy =
         CheckAssignmentConstraints(From->getExprLoc(), ToType, From->getType());
     bool Diagnosed = DiagnoseAssignmentResult(
-        ConvTy == Compatible ? Incompatible : ConvTy, From->getExprLoc(),
-        ToType, From->getType(), From, Action);
+        ConvTy == AssignConvertType::Compatible
+            ? AssignConvertType::Incompatible
+            : ConvTy,
+        From->getExprLoc(), ToType, From->getType(), From, Action);
     assert(Diagnosed && "failed to diagnose bad conversion"); (void)Diagnosed;
     return ExprError();
   }
@@ -5133,13 +5135,13 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
 
   case ICK_TransparentUnionConversion: {
     ExprResult FromRes = From;
-    Sema::AssignConvertType ConvTy =
-      CheckTransparentUnionArgumentConstraints(ToType, FromRes);
+    AssignConvertType ConvTy =
+        CheckTransparentUnionArgumentConstraints(ToType, FromRes);
     if (FromRes.isInvalid())
       return ExprError();
     From = FromRes.get();
-    assert ((ConvTy == Sema::Compatible) &&
-            "Improper transparent union conversion");
+    assert((ConvTy == AssignConvertType::Compatible) &&
+           "Improper transparent union conversion");
     (void)ConvTy;
     break;
   }

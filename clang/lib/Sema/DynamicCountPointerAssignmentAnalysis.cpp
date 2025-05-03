@@ -461,7 +461,7 @@ private:
                                              SourceLocation());
     CastKind CK = CastKind::CK_NoOp;
     auto ConversionType = S.CheckAssignmentConstraints(Ty, Zero, CK, true);
-    if (ConversionType == Sema::AssignConvertType::Incompatible) {
+    if (ConversionType == AssignConvertType::Incompatible) {
       // `CK` is not set for this return value so bail out.
       return ExprError();
     }

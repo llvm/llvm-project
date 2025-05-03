@@ -214,23 +214,25 @@ namespace {
         unsigned DiagKind = 0;
         bool isInvalid = false;
         // The type error may be nested, so any pointer can result in VT errors
-        Sema::AssignConvertType ConvertTy =
+        AssignConvertType ConvertTy =
             Self.CheckValueTerminatedAssignmentConstraints(DestType,
                                                            SrcExpr.get());
         switch (ConvertTy) {
         default:
-          assert(ConvertTy == Sema::Compatible);
+          assert(ConvertTy == AssignConvertType::Compatible);
           break;
-        case Sema::IncompatibleStringLiteralToValueTerminatedPointer:
+        case AssignConvertType::
+            IncompatibleStringLiteralToValueTerminatedPointer:
           DiagKind =
               diag::err_bounds_safety_incompatible_string_literal_to_terminated_by;
           isInvalid = true;
           break;
-        case Sema::IncompatibleValueTerminatedTerminators:
+        case AssignConvertType::IncompatibleValueTerminatedTerminators:
           DiagKind = diag::err_bounds_safety_incompatible_terminated_by_terminators;
           isInvalid = true;
           break;
-        case Sema::IncompatibleValueTerminatedToNonValueTerminatedPointer: {
+        case AssignConvertType::
+            IncompatibleValueTerminatedToNonValueTerminatedPointer: {
           const auto *SrcPointerType = SrcType->getAs<ValueTerminatedType>();
           IsSrcNullTerm =
               SrcPointerType->getTerminatorValue(Self.Context).isZero();
@@ -239,7 +241,8 @@ namespace {
           isInvalid = true;
           break;
         }
-        case Sema::IncompatibleNonValueTerminatedToValueTerminatedPointer: {
+        case AssignConvertType::
+            IncompatibleNonValueTerminatedToValueTerminatedPointer: {
           const auto *DstPointerType = DestType->getAs<ValueTerminatedType>();
           IsDstNullTerm =
               DstPointerType->getTerminatorValue(Self.Context).isZero();
@@ -256,12 +259,14 @@ namespace {
           }
           break;
         }
-        case Sema::IncompatibleNestedValueTerminatedToNonValueTerminatedPointer:
+        case AssignConvertType::
+            IncompatibleNestedValueTerminatedToNonValueTerminatedPointer:
           DiagKind = diag::
               err_bounds_safety_incompatible_terminated_by_to_non_terminated_by_mismatch;
           isInvalid = true;
           break;
-        case Sema::IncompatibleNestedNonValueTerminatedToValueTerminatedPointer:
+        case AssignConvertType::
+            IncompatibleNestedNonValueTerminatedToValueTerminatedPointer:
           if (Self.getLangOpts().BoundsSafetyRelaxedSystemHeaders) {
             DiagKind = diag::
                 warn_bounds_safety_incompatible_non_terminated_by_to_terminated_by_mismatch;

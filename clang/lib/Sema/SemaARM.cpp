@@ -766,7 +766,7 @@ bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
     if (HasConstPtr)
       EltTy = EltTy.withConst();
     QualType LHSTy = getASTContext().getPointerType(EltTy);
-    Sema::AssignConvertType ConvTy;
+    AssignConvertType ConvTy;
     /* TO_UPSTREAM(BoundsSafety) ON*/
     ConvTy = SemaRef.CheckSingleAssignmentConstraints(
         LHSTy, RHS, /*Diagnose=*/true, /*DiagnoseCFA=*/false,
