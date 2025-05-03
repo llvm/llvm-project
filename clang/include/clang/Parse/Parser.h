@@ -158,23 +158,21 @@ class Parser : public CodeCompletionHandler {
   // Table of Contents
   // -----------------
   // 1. Parsing (Parser.cpp)
-  // 2. Parser Entry Point (ParseAST.cpp)
-  // 3. C++ Class Inline Methods (ParseCXXInlineMethods.cpp)
-  // 4. Declarations (ParseDecl.cpp)
-  // 5. C++ Declarations (ParseDeclCXX.cpp)
-  // 6. Expressions (ParseExpr.cpp)
-  // 7. C++ Expressions (ParseExprCXX.cpp)
-  // 8. HLSL Constructs (ParseHLSL.cpp)
-  // 9. HLSL Root Signature (ParseHLSLRootSignature.cpp)
-  // 10. Initializers (ParseInit.cpp)
-  // 11. Objective-C Constructs (ParseObjc.cpp)
-  // 12. OpenACC Constructs (ParseOpenACC.cpp)
-  // 13. OpenMP Constructs (ParseOpenMP.cpp)
-  // 14. Pragmas (ParsePragma.cpp)
-  // 15. Statements (ParseStmt.cpp)
-  // 16. `inline asm` Statement (ParseStmtAsm.cpp)
-  // 17. C++ Templates (ParseTemplate.cpp)
-  // 18. Tentative Parsing (ParseTentative.cpp)
+  // 2. C++ Class Inline Methods (ParseCXXInlineMethods.cpp)
+  // 3. Declarations (ParseDecl.cpp)
+  // 4. C++ Declarations (ParseDeclCXX.cpp)
+  // 5. Expressions (ParseExpr.cpp)
+  // 6. C++ Expressions (ParseExprCXX.cpp)
+  // 7. HLSL Constructs (ParseHLSL.cpp)
+  // 8. Initializers (ParseInit.cpp)
+  // 9. Objective-C Constructs (ParseObjc.cpp)
+  // 10. OpenACC Constructs (ParseOpenACC.cpp)
+  // 11. OpenMP Constructs (ParseOpenMP.cpp)
+  // 12. Pragmas (ParsePragma.cpp)
+  // 13. Statements (ParseStmt.cpp)
+  // 14. `inline asm` Statement (ParseStmtAsm.cpp)
+  // 15. C++ Templates (ParseTemplate.cpp)
+  // 16. Tentative Parsing (ParseTentative.cpp)
 
   /// \name Parsing
   /// Implementations are in Parser.cpp
@@ -1083,32 +1081,11 @@ class Parser : public CodeCompletionHandler {
   //
   //
 
-  /// \name Parser Entry Point
-  /// Implementations are in ParseAST.cpp
-  ///@{
-
-  public:
-
-  private:
-
-  ///@}
-
-  //
-  //
-  // -------------------------------------------------------------------------
-  //
-  //
-
   /// \name C++ Class Inline Methods
   /// Implementations are in ParseCXXInlineMethods.cpp
   ///@{
 
-  public:
-
   private:
-
-  //===--------------------------------------------------------------------===//
-  // Lexing and parsing of C++ inline methods.
 
   struct ParsingClass;
 
@@ -2760,8 +2737,6 @@ class Parser : public CodeCompletionHandler {
   /// \name C++ Declarations
   /// Implementations are in ParseDeclCXX.cpp
   ///@{
-
-  public:
 
   private:
 
@@ -4982,8 +4957,6 @@ class Parser : public CodeCompletionHandler {
   /// Implementations are in ParseHLSL.cpp
   ///@{
 
-  public:
-
   private:
 
   bool MaybeParseHLSLAnnotations(Declarator &D,
@@ -5019,27 +4992,9 @@ class Parser : public CodeCompletionHandler {
   //
   //
 
-  /// \name HLSL Root Signature
-  /// Implementations are in ParseHLSLRootSignature.cpp
-  ///@{
-
-  public:
-
-  private:
-
-  ///@}
-
-  //
-  //
-  // -------------------------------------------------------------------------
-  //
-  //
-
   /// \name Initializers
   /// Implementations are in ParseInit.cpp
   ///@{
-
-  public:
 
   private:
 
@@ -6068,11 +6023,9 @@ class Parser : public CodeCompletionHandler {
   /// Implementations are in ParseOpenMP.cpp
   ///@{
 
-  public:
+  private:
 
   friend class ParsingOpenMPDirectiveRAII;
-
-  private:
 
   /// Parsing OpenMP directive mode.
   bool OpenMPDirectiveParsing = false;
@@ -6715,8 +6668,6 @@ public:
   /// \name Pragmas
   /// Implementations are in ParsePragma.cpp
   ///@{
-
-  public:
 
   private:
 
@@ -7986,8 +7937,6 @@ public:
   /// \name Tentative Parsing
   /// Implementations are in ParseTentative.cpp
   ///@{
-
-  public:
 
   private:
 
