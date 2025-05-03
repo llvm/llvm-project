@@ -90,9 +90,10 @@ public:
   }
 
   mlir::Attribute VisitCastExpr(CastExpr *e, QualType destType) {
-    if (const auto *ece = dyn_cast<ExplicitCastExpr>(e))
+    if (isa<ExplicitCastExpr>(e))
       cgm.errorNYI(e->getBeginLoc(),
                    "ConstExprEmitter::VisitCastExpr explicit cast");
+
     Expr *subExpr = e->getSubExpr();
 
     switch (e->getCastKind()) {
