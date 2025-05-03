@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++20 -verify %s
+// RUN: /opt/homebrew/opt/llvm/bin/clang -cc1 -internal-isystem %S/../../build/lib/clang/20/include -nostdsysteminc -fsyntax-only -std=c++20 -verify %s
 
 namespace GH85667 {
 
