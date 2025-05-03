@@ -133,6 +133,13 @@ D d;
 
 // CHECK:   cir.global external @d = #cir.int<0> : !s32i
 
+enum E {
+  D_one = -1
+};
+enum E e;
+
+// CHECK:   cir.global external @e = #cir.int<0> : !s32i
+
 void ref_arg(int &x) {
   int y = x;
   x = 3;

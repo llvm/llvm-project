@@ -279,3 +279,10 @@ enum C c;
 
 // CIR:   cir.global external @c = #cir.int<0> : !s32i
 
+enum D {
+  D_one = -1
+};
+enum D d;
+
+// CIR:   cir.global external @d = #cir.int<0> : !s32i
+
