@@ -204,11 +204,13 @@ void CallingConvEmitter::emitAction(const Record *Action, indent Indent,
 
     if (Action->isSubClassOf("CCIfType")) {
       const ListInit *VTs = Action->getValueAsListInit("VTs");
-      ListSeparator LS(" ||\n    " + std::string(Indent.NumIndents, ' '));
-      for (const Init *I : VTs->getValues()) {
-        const Record *VT = cast<DefInit>(I)->getDef();
-        O << LS << "LocVT == " << getEnumName(getValueType(VT));
+      for (unsigned I = 0, E = VTs->size(); I != E; ++I) {
+        const Record *VT = VTs->getElementAsRecord(I);
+        if (I != 0)
+          O << " ||\n    " << Indent;
+        O << "LocVT == " << getEnumName(getValueType(VT));
       }
+
     } else if (Action->isSubClassOf("CCIf")) {
       O << Action->getValueAsString("Predicate");
     } else {
