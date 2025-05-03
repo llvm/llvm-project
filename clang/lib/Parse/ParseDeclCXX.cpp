@@ -2802,7 +2802,7 @@ void Parser::MaybeParseAndDiagnoseDeclSpecAfterCXX11VirtSpecifierSeq(
   // GNU-style and C++11 attributes are not allowed here, but they will be
   // handled by the caller.  Diagnose everything else.
   ParseTypeQualifierListOpt(
-      DS, AR_NoAttributesParsed, false,
+      DS, AR_NoAttributesParsed, /*AtomicOrPtrauthAllowed=*/false,
       /*IdentifierRequired=*/false, llvm::function_ref<void()>([&]() {
         Actions.CodeCompletion().CodeCompleteFunctionQualifiers(DS, D, &VS);
       }));
