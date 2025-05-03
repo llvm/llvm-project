@@ -59,73 +59,93 @@ import tempfile
 # to do nothing.
 shutil.copystat = lambda *args, **kwargs: 0
 
-parser = argparse.ArgumentParser(prog = 'benchmark_change.py')
-parser.add_argument('--base-commit', required=True)
-parser.add_argument('--test-commit', required=True)
-parser.add_argument('--test-case', required=True)
-parser.add_argument('--num-iterations', type=int, required=True)
-parser.add_argument('--num-binary-variants', type=int, required=True)
-parser.add_argument('--output-dir', required=True)
-parser.add_argument('--ldflags', required=False)
+parser = argparse.ArgumentParser(prog="benchmark_change.py")
+parser.add_argument("--base-commit", required=True)
+parser.add_argument("--test-commit", required=True)
+parser.add_argument("--test-case", required=True)
+parser.add_argument("--num-iterations", type=int, required=True)
+parser.add_argument("--num-binary-variants", type=int, required=True)
+parser.add_argument("--output-dir", required=True)
+parser.add_argument("--ldflags", required=False)
 args = parser.parse_args()
 
 test_dir = tempfile.mkdtemp()
-print(f'Using {test_dir} as temporary directory')
+print(f"Using {test_dir} as temporary directory")
 
 os.makedirs(args.output_dir)
-print(f'Using {args.output_dir} as output directory')
+print(f"Using {args.output_dir} as output directory")
+
 
 def extract_link_command(target):
-  # We assume that the last command printed by "ninja -t commands" containing a
-  # "-o" flag is the link command (we need to check for -o because subsequent
-  # commands create symlinks for ld.lld and so on). This is true for CMake and
-  # gn.
-  link_command = None
-  for line in subprocess.Popen(['ninja', '-t', 'commands', target],
-                               stdout=subprocess.PIPE).stdout.readlines():
-    commands = line.decode('utf-8').split('&&')
-    for command in commands:
-      if ' -o ' in command:
-        link_command = command.strip()
-  return link_command
+    # We assume that the last command printed by "ninja -t commands" containing a
+    # "-o" flag is the link command (we need to check for -o because subsequent
+    # commands create symlinks for ld.lld and so on). This is true for CMake and
+    # gn.
+    link_command = None
+    for line in subprocess.Popen(
+        ["ninja", "-t", "commands", target], stdout=subprocess.PIPE
+    ).stdout.readlines():
+        commands = line.decode("utf-8").split("&&")
+        for command in commands:
+            if " -o " in command:
+                link_command = command.strip()
+    return link_command
+
 
 def generate_binary_variants(case_name):
-  subprocess.run(['ninja', 'lld'])
-  link_command = extract_link_command('lld')
+    subprocess.run(["ninja", "lld"])
+    link_command = extract_link_command("lld")
 
-  for i in range(0, args.num_binary_variants):
-    print(f'Generating binary variant {i} for {case_name} case')
-    command = f'{link_command} -o {test_dir}/lld-{case_name}{i} -Wl,--randomize-section-padding={i}'
-    subprocess.run(command, check=True, shell=True)
+    for i in range(0, args.num_binary_variants):
+        print(f"Generating binary variant {i} for {case_name} case")
+        command = f"{link_command} -o {test_dir}/lld-{case_name}{i} -Wl,--randomize-section-padding={i}"
+        subprocess.run(command, check=True, shell=True)
+
 
 # Make sure that there are no local changes.
-subprocess.run(['git', 'diff', '--exit-code', 'HEAD'], check=True)
+subprocess.run(["git", "diff", "--exit-code", "HEAD"], check=True)
 
 # Resolve the base and test commit, since if they are relative to HEAD we will
 # check out the wrong commit below.
-resolved_base_commit = subprocess.check_output(['git', 'rev-parse', args.base_commit]).strip()
-resolved_test_commit = subprocess.check_output(['git', 'rev-parse', args.test_commit]).strip()
+resolved_base_commit = subprocess.check_output(
+    ["git", "rev-parse", args.base_commit]
+).strip()
+resolved_test_commit = subprocess.check_output(
+    ["git", "rev-parse", args.test_commit]
+).strip()
 
 test_case_dir = os.path.dirname(args.test_case)
 test_case_respfile = os.path.basename(args.test_case)
 
-test_dir_test_case_dir = f'{test_dir}/testcase'
+test_dir_test_case_dir = f"{test_dir}/testcase"
 shutil.copytree(test_case_dir, test_dir_test_case_dir)
 
-subprocess.run(['git', 'checkout', resolved_base_commit], check=True)
-generate_binary_variants('base')
+subprocess.run(["git", "checkout", resolved_base_commit], check=True)
+generate_binary_variants("base")
 
-subprocess.run(['git', 'checkout', resolved_test_commit], check=True)
-generate_binary_variants('test')
+subprocess.run(["git", "checkout", resolved_test_commit], check=True)
+generate_binary_variants("test")
+
 
 def hyperfine_link_command(case_name):
-  return f'../lld-{case_name}$(({{iter}}%{args.num_binary_variants})) -flavor ld.lld @{test_case_respfile} {args.ldflags or ""}'
+    return f'../lld-{case_name}$(({{iter}}%{args.num_binary_variants})) -flavor ld.lld @{test_case_respfile} {args.ldflags or ""}'
 
-results_csv = f'{args.output_dir}/results.csv'
-subprocess.run(['hyperfine', '--export-csv', os.path.abspath(results_csv),
-                '-P', 'iter', '0', str(args.num_iterations - 1),
-                hyperfine_link_command('base'),
-                hyperfine_link_command('test')],
-               check=True, cwd=test_dir_test_case_dir)
+
+results_csv = f"{args.output_dir}/results.csv"
+subprocess.run(
+    [
+        "hyperfine",
+        "--export-csv",
+        os.path.abspath(results_csv),
+        "-P",
+        "iter",
+        "0",
+        str(args.num_iterations - 1),
+        hyperfine_link_command("base"),
+        hyperfine_link_command("test"),
+    ],
+    check=True,
+    cwd=test_dir_test_case_dir,
+)
 
 shutil.rmtree(test_dir)
