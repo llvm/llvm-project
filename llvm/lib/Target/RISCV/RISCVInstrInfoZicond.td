@@ -15,8 +15,8 @@
 // RISC-V specific DAG Nodes.
 //===----------------------------------------------------------------------===//
 
-def riscv_czero_eqz : SDNode<"RISCVISD::CZERO_EQZ", SDTIntBinOp>;
-def riscv_czero_nez : SDNode<"RISCVISD::CZERO_NEZ", SDTIntBinOp>;
+def riscv_czero_eqz : RVSDNode<"CZERO_EQZ", SDTIntBinOp>;
+def riscv_czero_nez : RVSDNode<"CZERO_NEZ", SDTIntBinOp>;
 
 //===----------------------------------------------------------------------===//
 // Instructions

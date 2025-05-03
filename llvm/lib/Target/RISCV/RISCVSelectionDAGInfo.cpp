@@ -7,18 +7,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVSelectionDAGInfo.h"
-#include "RISCVISelLowering.h"
+
+#define GET_SDNODE_DESC
+#include "RISCVGenSDNodeInfo.inc"
 
 using namespace llvm;
 
+RISCVSelectionDAGInfo::RISCVSelectionDAGInfo() : SelectionDAGGenTargetInfo(RISCVGenSDNodeInfo) {}
+
 RISCVSelectionDAGInfo::~RISCVSelectionDAGInfo() = default;
 
-bool RISCVSelectionDAGInfo::isTargetMemoryOpcode(unsigned Opcode) const {
-  return Opcode >= RISCVISD::FIRST_MEMORY_OPCODE &&
-         Opcode <= RISCVISD::LAST_MEMORY_OPCODE;
-}
-
-bool RISCVSelectionDAGInfo::isTargetStrictFPOpcode(unsigned Opcode) const {
-  return Opcode >= RISCVISD::FIRST_STRICTFP_OPCODE &&
-         Opcode <= RISCVISD::LAST_STRICTFP_OPCODE;
+void RISCVSelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG, const SDNode *N) const {
+  switch (N->getOpcode()) {
+  case RISCVISD::PROBED_ALLOCA:
+    // FIXME: Current examples do not match the SDTypeProfile.
+    // They get "invalid number of results; expected 2, got 1"
+    return;
+  }
+  SelectionDAGGenTargetInfo::verifyTargetNode(DAG, N);
 }

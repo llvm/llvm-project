@@ -21,11 +21,11 @@ def SDT_RISCVFMV_X_EXTH
     : SDTypeProfile<1, 1, [SDTCisVT<0, XLenVT>, SDTCisFP<1>]>;
 
 def riscv_fmv_h_x
-    : SDNode<"RISCVISD::FMV_H_X", SDT_RISCVFMV_H_X>;
+    : RVSDNode<"FMV_H_X", SDT_RISCVFMV_H_X>;
 def riscv_fmv_x_anyexth
-    : SDNode<"RISCVISD::FMV_X_ANYEXTH", SDT_RISCVFMV_X_EXTH>;
+    : RVSDNode<"FMV_X_ANYEXTH", SDT_RISCVFMV_X_EXTH>;
 def riscv_fmv_x_signexth
-    : SDNode<"RISCVISD::FMV_X_SIGNEXTH", SDT_RISCVFMV_X_EXTH>;
+    : RVSDNode<"FMV_X_SIGNEXTH", SDT_RISCVFMV_X_EXTH>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.

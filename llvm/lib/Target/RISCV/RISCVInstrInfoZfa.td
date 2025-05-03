@@ -18,7 +18,7 @@
 def SDT_RISCVFLI
     : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisVT<1, XLenVT>]>;
 
-def riscv_fli : SDNode<"RISCVISD::FLI", SDT_RISCVFLI>;
+def riscv_fli : RVSDNode<"FLI", SDT_RISCVFLI>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.

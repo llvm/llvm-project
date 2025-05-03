@@ -14,6 +14,15 @@
 // RISC-V specific DAG Nodes.
 //===----------------------------------------------------------------------===//
 
+class RVSDNode<string opcode, SDTypeProfile type_profile,
+                list<SDNodeProperty> properties = []>
+    : SDNode<"RISCVISD::" # opcode, type_profile, properties> {
+  bit HasPassthruOp = false;
+  bit HasMaskOp = false;
+  let TSFlags{0} = HasPassthruOp;
+  let TSFlags{1} = HasMaskOp;
+}
+
 // Target-independent type requirements, but with target-specific formats.
 def SDT_CallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>,
                                        SDTCisVT<1, i32>]>;
@@ -54,58 +63,79 @@ def callseq_end   : SDNode<"ISD::CALLSEQ_END", SDT_CallSeqEnd,
                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
 // Target-dependent nodes.
-def riscv_call      : SDNode<"RISCVISD::CALL", SDT_RISCVCall,
-                             [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
-                              SDNPVariadic]>;
-def riscv_sw_guarded_call : SDNode<"RISCVISD::SW_GUARDED_CALL", SDT_RISCVCall,
-                                   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
-                                    SDNPVariadic]>;
-def riscv_ret_glue  : SDNode<"RISCVISD::RET_GLUE", SDTNone,
-                             [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
-def riscv_sret_glue : SDNode<"RISCVISD::SRET_GLUE", SDTNone,
-                             [SDNPHasChain, SDNPOptInGlue]>;
-def riscv_mret_glue : SDNode<"RISCVISD::MRET_GLUE", SDTNone,
-                             [SDNPHasChain, SDNPOptInGlue]>;
-def riscv_mileaveret_glue : SDNode<"RISCVISD::QC_C_MILEAVERET_GLUE", SDTNone,
-                                   [SDNPHasChain, SDNPOptInGlue]>;
-def riscv_selectcc  : SDNode<"RISCVISD::SELECT_CC", SDT_RISCVSelectCC>;
-def riscv_brcc      : SDNode<"RISCVISD::BR_CC", SDT_RISCVBrCC,
-                             [SDNPHasChain]>;
-def riscv_tail      : SDNode<"RISCVISD::TAIL", SDT_RISCVCall,
-                             [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
-                              SDNPVariadic]>;
-def riscv_sw_guarded_tail : SDNode<"RISCVISD::SW_GUARDED_TAIL", SDT_RISCVCall,
-                                   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
-                                    SDNPVariadic]>;
-def riscv_sw_guarded_brind : SDNode<"RISCVISD::SW_GUARDED_BRIND",
-                                    SDTBrind, [SDNPHasChain]>;
-def riscv_sllw      : SDNode<"RISCVISD::SLLW", SDT_RISCVIntBinOpW>;
-def riscv_sraw      : SDNode<"RISCVISD::SRAW", SDT_RISCVIntBinOpW>;
-def riscv_srlw      : SDNode<"RISCVISD::SRLW", SDT_RISCVIntBinOpW>;
-def riscv_read_csr  : SDNode<"RISCVISD::READ_CSR", SDT_RISCVReadCSR,
-                             [SDNPHasChain]>;
-def riscv_write_csr : SDNode<"RISCVISD::WRITE_CSR", SDT_RISCVWriteCSR,
-                             [SDNPHasChain]>;
-def riscv_swap_csr  : SDNode<"RISCVISD::SWAP_CSR", SDT_RISCVSwapCSR,
-                             [SDNPHasChain]>;
+def riscv_call      : RVSDNode<"CALL", SDT_RISCVCall,
+                               [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                                SDNPVariadic]>;
+def riscv_sw_guarded_call : RVSDNode<"SW_GUARDED_CALL", SDT_RISCVCall,
+                                     [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                                      SDNPVariadic]>;
+def riscv_ret_glue  : RVSDNode<"RET_GLUE", SDTNone,
+                               [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+def riscv_sret_glue : RVSDNode<"SRET_GLUE", SDTNone,
+                               [SDNPHasChain, SDNPOptInGlue]>;
+def riscv_mret_glue : RVSDNode<"MRET_GLUE", SDTNone,
+                               [SDNPHasChain, SDNPOptInGlue]>;
+def riscv_mileaveret_glue : RVSDNode<"QC_C_MILEAVERET_GLUE", SDTNone,
+                                     [SDNPHasChain, SDNPOptInGlue]>;
+def riscv_selectcc  : RVSDNode<"SELECT_CC", SDT_RISCVSelectCC>;
+def riscv_brcc      : RVSDNode<"BR_CC", SDT_RISCVBrCC,
+                               [SDNPHasChain]>;
+def riscv_tail      : RVSDNode<"TAIL", SDT_RISCVCall,
+                               [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                                SDNPVariadic]>;
+def riscv_sw_guarded_tail : RVSDNode<"SW_GUARDED_TAIL", SDT_RISCVCall,
+                                     [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                                      SDNPVariadic]>;
+def riscv_sw_guarded_brind : RVSDNode<"SW_GUARDED_BRIND",
+                                      SDTBrind, [SDNPHasChain]>;
+def riscv_sllw      : RVSDNode<"SLLW", SDT_RISCVIntBinOpW>;
+def riscv_sraw      : RVSDNode<"SRAW", SDT_RISCVIntBinOpW>;
+def riscv_srlw      : RVSDNode<"SRLW", SDT_RISCVIntBinOpW>;
+def riscv_read_csr  : RVSDNode<"READ_CSR", SDT_RISCVReadCSR,
+                               [SDNPHasChain]>;
+def riscv_write_csr : RVSDNode<"WRITE_CSR", SDT_RISCVWriteCSR,
+                               [SDNPHasChain]>;
+def riscv_swap_csr  : RVSDNode<"SWAP_CSR", SDT_RISCVSwapCSR,
+                               [SDNPHasChain]>;
 
-def riscv_read_counter_wide : SDNode<"RISCVISD::READ_COUNTER_WIDE",
-                                     SDT_RISCVReadCounterWide,
-                                     [SDNPHasChain, SDNPSideEffect]>;
+def riscv_read_counter_wide : RVSDNode<"READ_COUNTER_WIDE",
+                                       SDT_RISCVReadCounterWide,
+                                       [SDNPHasChain, SDNPSideEffect]>;
 
-def riscv_add_lo : SDNode<"RISCVISD::ADD_LO", SDTIntBinOp>;
-def riscv_hi : SDNode<"RISCVISD::HI", SDTIntUnaryOp>;
-def riscv_lla : SDNode<"RISCVISD::LLA", SDTIntUnaryOp>;
-def riscv_add_tprel : SDNode<"RISCVISD::ADD_TPREL",
-                             SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>,
-                                                  SDTCisSameAs<0, 2>,
-                                                  SDTCisSameAs<0, 3>,
-                                                  SDTCisInt<0>]>>;
+def riscv_add_lo : RVSDNode<"ADD_LO", SDTIntBinOp>;
+def riscv_hi : RVSDNode<"HI", SDTIntUnaryOp>;
+def riscv_lla : RVSDNode<"LLA", SDTIntUnaryOp>;
+def riscv_add_tprel : RVSDNode<"ADD_TPREL",
+                               SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>,
+                                                    SDTCisSameAs<0, 2>,
+                                                    SDTCisSameAs<0, 3>,
+                                                    SDTCisInt<0>]>>;
 
-def riscv_probed_alloca : SDNode<"RISCVISD::PROBED_ALLOCA",
-                                 SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
-                                                      SDTCisVT<0, i32>]>,
-                                 [SDNPHasChain, SDNPMayStore]>;
+def riscv_probed_alloca : RVSDNode<"PROBED_ALLOCA",
+                                   SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
+                                                        SDTCisVT<0, i32>]>,
+                                   [SDNPHasChain, SDNPMayStore]>;
+
+
+defvar GPRPairVT = untyped;
+
+/// Turn a pair of `i<xlen>`s into an even-odd register pair (`untyped`).
+/// - Output: `untyped` even-odd register pair
+/// - Input 0: `i<xlen>` low-order bits, for even register.
+/// - Input 1: `i<xlen>` high-order bits, for odd register.
+def riscv_build_gpr_pair : RVSDNode<"BuildGPRPair",
+                                    SDTypeProfile<1, 2, [SDTCisVT<0, GPRPairVT>,
+                                                         SDTCisVT<1, XLenVT>,
+                                                         SDTCisVT<2, XLenVT>]>>;
+
+/// Turn an even-odd register pair (`untyped`) into a pair of `i<xlen>`s.
+/// - Output 0: `i<xlen>` low-order bits, from even register.
+/// - Output 1: `i<xlen>` high-order bits, from odd register.
+/// - Input: `untyped` even-odd register pair
+def riscv_split_gpr_pair : RVSDNode<"SplitGPRPair", 
+                                    SDTypeProfile<2, 1, [SDTCisVT<0, XLenVT>,
+                                                         SDTCisVT<1, XLenVT>,
+                                                         SDTCisVT<2, GPRPairVT>]>>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.

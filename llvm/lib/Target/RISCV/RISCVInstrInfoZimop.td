@@ -32,10 +32,10 @@ class RVInstRMoprr<bits<4> imm4, bits<3> imm3, bits<3> funct3, RISCVOpcode opcod
   let Inst{25} = imm4{0};
 }
 
-def riscv_mopr  : SDNode<"RISCVISD::MOPR",
+def riscv_mopr  : RVSDNode<"MOPR",
                          SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisSameAs<0, 1>,
                                               SDTCisSameAs<0, 2>]>>;
-def riscv_moprr : SDNode<"RISCVISD::MOPRR",
+def riscv_moprr : RVSDNode<"MOPRR",
                          SDTypeProfile<1, 3, [SDTCisInt<0>, SDTCisSameAs<0, 1>,
                                               SDTCisSameAs<0, 2>,
                                               SDTCisSameAs<0, 3>]>>;

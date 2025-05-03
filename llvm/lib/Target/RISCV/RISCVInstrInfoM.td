@@ -15,10 +15,10 @@
 // RISC-V specific DAG Nodes.
 //===----------------------------------------------------------------------===//
 
-def riscv_mulhsu : SDNode<"RISCVISD::MULHSU", SDTIntBinOp>;
-def riscv_divw  : SDNode<"RISCVISD::DIVW",  SDT_RISCVIntBinOpW>;
-def riscv_divuw : SDNode<"RISCVISD::DIVUW", SDT_RISCVIntBinOpW>;
-def riscv_remuw : SDNode<"RISCVISD::REMUW", SDT_RISCVIntBinOpW>;
+def riscv_mulhsu : RVSDNode<"MULHSU", SDTIntBinOp>;
+def riscv_divw  : RVSDNode<"DIVW",  SDT_RISCVIntBinOpW>;
+def riscv_divuw : RVSDNode<"DIVUW", SDT_RISCVIntBinOpW>;
+def riscv_remuw : RVSDNode<"REMUW", SDT_RISCVIntBinOpW>;
 
 //===----------------------------------------------------------------------===//
 // Instructions
