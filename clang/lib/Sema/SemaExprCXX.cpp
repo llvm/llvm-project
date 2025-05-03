@@ -2431,7 +2431,8 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   if (CheckArgsForPlaceholders(PlacementArgs))
     return ExprError();
 
-  AllocationFunctionScope Scope = UseGlobal ? AFS_Global : AFS_Both;
+  AllocationFunctionScope Scope = UseGlobal ? AllocationFunctionScope::Global
+                                            : AllocationFunctionScope::Both;
   SourceRange AllocationParameterRange = Range;
   if (PlacementLParen.isValid() && PlacementRParen.isValid())
     AllocationParameterRange = SourceRange(PlacementLParen, PlacementRParen);
@@ -2906,9 +2907,11 @@ bool Sema::FindAllocationFunctions(
     FunctionDecl *&OperatorDelete, bool Diagnose) {
   // --- Choosing an allocation function ---
   // C++ 5.3.4p8 - 14 & 18
-  // 1) If looking in AFS_Global scope for allocation functions, only look in
-  //    the global scope. Else, if AFS_Class, only look in the scope of the
-  //    allocated class. If AFS_Both, look in both.
+  // 1) If looking in AllocationFunctionScope::Global scope for allocation
+  // functions, only look in
+  //    the global scope. Else, if AllocationFunctionScope::Class, only look in
+  //    the scope of the allocated class. If AllocationFunctionScope::Both, look
+  //    in both.
   // 2) If an array size is given, look for operator new[], else look for
   //   operator new.
   // 3) The first argument is always size_t. Append the arguments from the
@@ -2981,7 +2984,8 @@ bool Sema::FindAllocationFunctions(
     //   function's name is looked up in the global scope. Otherwise, if the
     //   allocated type is a class type T or array thereof, the allocation
     //   function's name is looked up in the scope of T.
-    if (AllocElemType->isRecordType() && NewScope != AFS_Global)
+    if (AllocElemType->isRecordType() &&
+        NewScope != AllocationFunctionScope::Global)
       LookupQualifiedName(R, AllocElemType->getAsCXXRecordDecl());
 
     // We can see ambiguity here if the allocation function is found in
@@ -2993,7 +2997,7 @@ bool Sema::FindAllocationFunctions(
     //   a class type, the allocation function's name is looked up in the
     //   global scope.
     if (R.empty()) {
-      if (NewScope == AFS_Class)
+      if (NewScope == AllocationFunctionScope::Class)
         return true;
 
       LookupQualifiedName(R, Context.getTranslationUnitDecl());
@@ -3043,7 +3047,8 @@ bool Sema::FindAllocationFunctions(
   //   the allocated type is not a class type or array thereof, the
   //   deallocation function's name is looked up in the global scope.
   LookupResult FoundDelete(*this, DeleteName, StartLoc, LookupOrdinaryName);
-  if (AllocElemType->isRecordType() && DeleteScope != AFS_Global) {
+  if (AllocElemType->isRecordType() &&
+      DeleteScope != AllocationFunctionScope::Global) {
     auto *RD =
         cast<CXXRecordDecl>(AllocElemType->castAs<RecordType>()->getDecl());
     LookupQualifiedName(FoundDelete, RD);
@@ -3086,7 +3091,7 @@ bool Sema::FindAllocationFunctions(
   if (FoundDelete.empty()) {
     FoundDelete.clear(LookupOrdinaryName);
 
-    if (DeleteScope == AFS_Class)
+    if (DeleteScope == AllocationFunctionScope::Class)
       return true;
 
     DeclareGlobalNewDelete();
