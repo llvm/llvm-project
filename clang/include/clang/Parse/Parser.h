@@ -211,12 +211,14 @@ public:
 
   /// Parse the first top-level declaration in a translation unit.
   ///
+  /// \verbatim
   ///   translation-unit:
   /// [C]     external-declaration
   /// [C]     translation-unit external-declaration
   /// [C++]   top-level-declaration-seq[opt]
   /// [C++20] global-module-fragment[opt] module-declaration
   ///                 top-level-declaration-seq[opt] private-module-fragment[opt]
+  /// \endverbatim
   ///
   /// Note that in C, it is an error if there is no first declaration.
   bool ParseFirstTopLevelDecl(DeclGroupPtrTy &Result,
@@ -225,9 +227,11 @@ public:
   /// ParseTopLevelDecl - Parse one top-level declaration, return whatever the
   /// action tells us to.  This returns true if the EOF was encountered.
   ///
+  /// \verbatim
   ///   top-level-declaration:
   ///           declaration
   /// [C++20]   module-import-declaration
+  /// \endverbatim
   bool ParseTopLevelDecl(DeclGroupPtrTy &Result,
                          Sema::ModuleImportState &ImportState);
   bool ParseTopLevelDecl() {
@@ -859,6 +863,7 @@ private:
   /// The `Attrs` that are passed in are C++11 attributes and appertain to the
   /// declaration.
   ///
+  /// \verbatim
   ///       external-declaration: [C99 6.9], declaration: [C++ dcl.dcl]
   ///         function-definition
   ///         declaration
@@ -882,6 +887,7 @@ private:
   /// [C++0x/GNU] 'extern' 'template' declaration
   ///
   /// [C++20] module-import-declaration
+  /// \endverbatim
   ///
   DeclGroupPtrTy ParseExternalDeclaration(ParsedAttributes &DeclAttrs,
                                           ParsedAttributes &DeclSpecAttrs,
@@ -904,6 +910,7 @@ private:
   /// TemplateParams, if non-NULL, provides the template parameters when we're
   /// parsing a C++ template-declaration.
   ///
+  /// \verbatim
   ///       function-definition: [C99 6.9.1]
   ///         decl-specs      declarator declaration-list[opt] compound-statement
   /// [C90] function-definition: [C99 6.7.1] - implicit int result
@@ -914,6 +921,7 @@ private:
   /// [!C99]  init-declarator-list ';'                   [TODO: warn in c99 mode]
   /// [OMP]   threadprivate-directive
   /// [OMP]   allocate-directive                         [TODO]
+  /// \endverbatim
   ///
   DeclGroupPtrTy ParseDeclOrFunctionDefInternal(ParsedAttributes &Attrs,
                                                 ParsedAttributes &DeclSpecAttrs,
@@ -929,6 +937,7 @@ private:
   /// Declarator is well formed.  If this is a K&R-style function, read the
   /// parameters declaration-list, then start the compound-statement.
   ///
+  /// \verbatim
   ///       function-definition: [C99 6.9.1]
   ///         decl-specs      declarator declaration-list[opt] compound-statement
   /// [C90] function-definition: [C99 6.7.1] - implicit int result
@@ -938,6 +947,7 @@ private:
   ///         function-body
   /// [C++] function-definition: [C++ 8.4]
   ///         decl-specifier-seq[opt] declarator function-try-block
+  /// \endverbatim
   ///
   Decl *ParseFunctionDefinition(
       ParsingDeclarator &D,
@@ -950,8 +960,10 @@ private:
 
   /// ParseSimpleAsm
   ///
+  /// \verbatim
   /// [GNU] simple-asm-expr:
   ///         'asm' '(' asm-string-literal ')'
+  /// \endverbatim
   ///
   /// EndLoc is filled with the location of the last token of the simple-asm.
   ExprResult ParseSimpleAsm(bool ForAsmLabel, SourceLocation *EndLoc);
@@ -962,8 +974,10 @@ private:
   /// asm label as opposed to an asm statement, because such a construct does
   /// not behave well.
   ///
+  /// \verbatim
   /// [GNU] asm-string-literal:
   ///         string-literal
+  /// \endverbatim
   ///
   ExprResult ParseAsmStringLiteral(bool ForAsmLabel);
 
@@ -996,6 +1010,7 @@ private:
   /// Parse a declaration beginning with the 'module' keyword or C++20
   /// context-sensitive keyword (optionally preceded by 'export').
   ///
+  /// \verbatim
   ///   module-declaration:   [C++20]
   ///     'export'[opt] 'module' module-name attribute-specifier-seq[opt] ';'
   ///
@@ -1006,12 +1021,14 @@ private:
   ///            attribute-specifier-seq[opt] ';'
   ///   private-module-fragment: [C++2a]
   ///     'module' ':' 'private' ';' top-level-declaration-seq[opt]
+  /// \endverbatim
   DeclGroupPtrTy ParseModuleDecl(Sema::ModuleImportState &ImportState);
 
   /// Parse a module import declaration. This is essentially the same for
   /// Objective-C and C++20 except for the leading '@' (in ObjC) and the
   /// trailing optional attributes (in C++).
   ///
+  /// \verbatim
   /// [ObjC]  @import declaration:
   ///           '@' 'import' module-name ';'
   /// [ModTS] module-import-declaration:
@@ -1023,6 +1040,7 @@ private:
   ///                   attribute-specifier-seq[opt] ';'
   ///           'export'[opt] 'import' header-name
   ///                   attribute-specifier-seq[opt] ';'
+  /// \endverbatim
   Decl *ParseModuleImport(SourceLocation AtLoc,
                           Sema::ModuleImportState &ImportState);
 
@@ -1043,10 +1061,12 @@ private:
   /// Parse a C++ / Objective-C module name (both forms use the same
   /// grammar).
   ///
+  /// \verbatim
   ///         module-name:
   ///           module-name-qualifier[opt] identifier
   ///         module-name-qualifier:
   ///           module-name-qualifier[opt] identifier '.'
+  /// \endverbatim
   bool ParseModuleName(SourceLocation UseLoc,
                        SmallVectorImpl<IdentifierLoc> &Path, bool IsImport);
 
@@ -1356,8 +1376,10 @@ public:
   void SkipMalformedDecl();
 
   /// ParseTypeName
+  /// \verbatim
   ///       type-name: [C99 6.7.6]
   ///         specifier-qualifier-list abstract-declarator[opt]
+  /// \endverbatim
   ///
   /// Called type-id in C++.
   TypeResult
@@ -1683,6 +1705,7 @@ private:
   /// 'Context' should be a DeclaratorContext value.  This returns the
   /// location of the semicolon in DeclEnd.
   ///
+  /// \verbatim
   ///       declaration: [C99 6.7]
   ///         block-declaration ->
   ///           simple-declaration
@@ -1693,6 +1716,7 @@ private:
   /// [C++]   using-declaration
   /// [C++11/C11] static_assert-declaration
   ///         others... [FIXME]
+  /// \endverbatim
   ///
   DeclGroupPtrTy ParseDeclaration(DeclaratorContext Context,
                                   SourceLocation &DeclEnd,
@@ -1700,6 +1724,7 @@ private:
                                   ParsedAttributes &DeclSpecAttrs,
                                   SourceLocation *DeclSpecStart = nullptr);
 
+  /// \verbatim
   ///       simple-declaration: [C99 6.7: declaration] [C++ 7p1: dcl.dcl]
   ///         declaration-specifiers init-declarator-list[opt] ';'
   /// [C++11] attribute-specifier-seq decl-specifier-seq[opt]
@@ -1710,6 +1735,7 @@ private:
   ///
   ///       for-range-declaration: [C++11 6.5p1: stmt.ranged]
   ///         attribute-specifier-seq[opt] type-specifier-seq declarator
+  /// \endverbatim
   ///
   /// If RequireSemi is false, this does not check for a ';' at the end of the
   /// declaration.  If it is true, it checks for and eats it.
@@ -1746,6 +1772,7 @@ private:
   /// (including any attributes or initializer, among other things) and
   /// finalizes the declaration.
   ///
+  /// \verbatim
   ///       init-declarator: [C99 6.7]
   ///         declarator
   ///         declarator '=' initializer
@@ -1759,6 +1786,7 @@ private:
   /// [C++0x] '=' 'default'                                                [TODO]
   /// [C++0x] '=' 'delete'
   /// [C++0x] braced-init-list
+  /// \endverbatim
   ///
   /// According to the standard grammar, =default and =delete are function
   /// definitions, but that definitely doesn't fit with the parser here.
@@ -1805,6 +1833,7 @@ private:
   }
 
   /// ParseDeclarationSpecifiers
+  /// \verbatim
   ///       declaration-specifiers: [C99 6.7]
   ///         storage-class-specifier declaration-specifiers[opt]
   ///         type-specifier declaration-specifiers[opt]
@@ -1831,6 +1860,7 @@ private:
   /// [OpenCL] '__kernel'
   ///       'friend': [C++ dcl.friend]
   ///       'constexpr': [C++0x dcl.constexpr]
+  /// \endverbatim
   void
   ParseDeclarationSpecifiers(DeclSpec &DS, ParsedTemplateInfo &TemplateInfo,
                              AccessSpecifier AS, DeclSpecContext DSC,
@@ -1855,10 +1885,12 @@ private:
   }
 
   /// ParseSpecifierQualifierList
+  /// \verbatim
   ///        specifier-qualifier-list:
   ///          type-specifier specifier-qualifier-list[opt]
   ///          type-qualifier specifier-qualifier-list[opt]
   /// [GNU]    attributes     specifier-qualifier-list[opt]
+  /// \endverbatim
   ///
   void ParseSpecifierQualifierList(
       DeclSpec &DS, ImplicitTypenameContext AllowImplicitTypename,
@@ -1866,6 +1898,7 @@ private:
       DeclSpecContext DSC = DeclSpecContext::DSC_normal);
 
   /// ParseEnumSpecifier
+  /// \verbatim
   ///       enum-specifier: [C99 6.7.2.2]
   ///         'enum' identifier[opt] '{' enumerator-list '}'
   ///[C99/C++]'enum' identifier[opt] '{' enumerator-list ',' '}'
@@ -1894,12 +1927,14 @@ private:
   ///
   /// [C++] elaborated-type-specifier:
   /// [C++]   'enum' nested-name-specifier[opt] identifier
+  /// \endverbatim
   ///
   void ParseEnumSpecifier(SourceLocation TagLoc, DeclSpec &DS,
                           const ParsedTemplateInfo &TemplateInfo,
                           AccessSpecifier AS, DeclSpecContext DSC);
 
   /// ParseEnumBody - Parse a {} enclosed enumerator-list.
+  /// \verbatim
   ///       enumerator-list:
   ///         enumerator
   ///         enumerator-list ',' enumerator
@@ -1908,11 +1943,13 @@ private:
   ///         enumeration-constant attributes[opt] '=' constant-expression
   ///       enumeration-constant:
   ///         identifier
+  /// \endverbatim
   ///
   void ParseEnumBody(SourceLocation StartLoc, Decl *TagDecl,
                      SkipBodyInfo *SkipBody = nullptr);
 
   /// ParseStructUnionBody
+  /// \verbatim
   ///       struct-contents:
   ///         struct-declaration-list
   /// [EXT]   empty
@@ -1921,6 +1958,7 @@ private:
   ///         struct-declaration
   ///         struct-declaration-list struct-declaration
   /// [OBC]   '@' 'defs' '(' class-name ')'
+  /// \endverbatim
   ///
   void ParseStructUnionBody(SourceLocation StartLoc, DeclSpec::TST TagType,
                             RecordDecl *TagDecl);
@@ -1931,6 +1969,7 @@ private:
   /// Note that a struct declaration refers to a declaration in a struct,
   /// not to the declaration of a struct.
   ///
+  /// \verbatim
   ///       struct-declaration:
   /// [C23]   attributes-specifier-seq[opt]
   ///           specifier-qualifier-list struct-declarator-list
@@ -1945,6 +1984,7 @@ private:
   /// [GNU]   declarator attributes[opt]
   ///         declarator[opt] ':' constant-expression
   /// [GNU]   declarator[opt] ':' constant-expression attributes[opt]
+  /// \endverbatim
   ///
   void ParseStructDeclaration(
       ParsingDeclSpec &DS,
@@ -2097,8 +2137,10 @@ private:
   /// There are some attribute parse orderings that should not be allowed in
   /// arbitrary order. e.g.,
   ///
+  /// \verbatim
   ///   [[]] __attribute__(()) int i; // OK
   ///   __attribute__(()) [[]] int i; // Not OK
+  /// \endverbatim
   ///
   /// Such situations should use the specific attribute parsing functionality.
   void ParseAttributes(unsigned WhichAttrKinds, ParsedAttributes &Attrs,
@@ -2135,6 +2177,7 @@ private:
 
   /// ParseSingleGNUAttribute - Parse a single GNU attribute.
   ///
+  /// \verbatim
   /// [GNU]  attrib:
   ///          empty
   ///          attrib-name
@@ -2147,12 +2190,14 @@ private:
   ///          typespec
   ///          typequal
   ///          storageclass
+  /// \endverbatim
   bool ParseSingleGNUAttribute(ParsedAttributes &Attrs, SourceLocation &EndLoc,
                                LateParsedAttrList *LateAttrs = nullptr,
                                Declarator *D = nullptr);
 
   /// ParseGNUAttributes - Parse a non-empty attributes list.
   ///
+  /// \verbatim
   /// [GNU] attributes:
   ///         attribute
   ///         attributes attribute
@@ -2176,6 +2221,7 @@ private:
   ///          typespec
   ///          typequal
   ///          storageclass
+  /// \endverbatim
   ///
   /// Whether an attribute takes an 'identifier' is determined by the
   /// attrib-name. GCC's behavior here is not worth imitating:
@@ -2245,12 +2291,14 @@ private:
     return false;
   }
 
+  /// \verbatim
   /// [MS] decl-specifier:
   ///             __declspec ( extended-decl-modifier-seq )
   ///
   /// [MS] extended-decl-modifier-seq:
   ///             extended-decl-modifier[opt]
   ///             extended-decl-modifier extended-decl-modifier-seq
+  /// \endverbatim
   void ParseMicrosoftDeclSpecs(ParsedAttributes &Attrs);
   bool ParseMicrosoftDeclSpecArgs(IdentifierInfo *AttrName,
                                   SourceLocation AttrNameLoc,
@@ -2270,16 +2318,19 @@ private:
 
   /// Parse a version number.
   ///
+  /// \verbatim
   /// version:
   ///   simple-integer
   ///   simple-integer '.' simple-integer
   ///   simple-integer '_' simple-integer
   ///   simple-integer '.' simple-integer '.' simple-integer
   ///   simple-integer '_' simple-integer '_' simple-integer
+  /// \endverbatim
   VersionTuple ParseVersionTuple(SourceRange &Range);
 
   /// Parse the contents of the "availability" attribute.
   ///
+  /// \verbatim
   /// availability-attribute:
   ///   'availability' '(' platform ',' opt-strict version-arg-list,
   ///                      opt-replacement, opt-message')'
@@ -2303,6 +2354,7 @@ private:
   ///   'replacement' '=' <string>
   /// opt-message:
   ///   'message' '=' <string>
+  /// \endverbatim
   void ParseAvailabilityAttribute(IdentifierInfo &Availability,
                                   SourceLocation AvailabilityLoc,
                                   ParsedAttributes &attrs,
@@ -2313,6 +2365,7 @@ private:
 
   /// Parse the contents of the "external_source_symbol" attribute.
   ///
+  /// \verbatim
   /// external-source-symbol-attribute:
   ///   'external_source_symbol' '(' keyword-arg-list ')'
   ///
@@ -2325,6 +2378,7 @@ private:
   ///   'defined_in' '=' <string>
   ///   'USR' '=' <string>
   ///   'generated_declaration'
+  /// \endverbatim
   void ParseExternalSourceSymbolAttribute(IdentifierInfo &ExternalSourceSymbol,
                                           SourceLocation Loc,
                                           ParsedAttributes &Attrs,
@@ -2334,6 +2388,7 @@ private:
                                           ParsedAttr::Form Form);
 
   /// Parse the contents of the "objc_bridge_related" attribute.
+  /// \verbatim
   /// objc_bridge_related '(' related_class ',' opt-class_method ',' opt-instance_method ')'
   /// related_class:
   ///     Identifier
@@ -2343,6 +2398,7 @@ private:
   ///
   /// opt-instance_method:
   ///     Identifier | <empty>
+  /// \endverbatim
   ///
   void ParseObjCBridgeRelatedAttribute(IdentifierInfo &ObjCBridgeRelated,
                                        SourceLocation ObjCBridgeRelatedLoc,
@@ -2378,12 +2434,15 @@ private:
   void DistributeCLateParsedAttrs(Decl *Dcl, LateParsedAttrList *LateAttrs);
 
   /// Bounds attributes (e.g., counted_by):
+  /// \verbatim
   ///   AttrName '(' expression ')'
+  /// \endverbatim
   void ParseBoundsAttribute(IdentifierInfo &AttrName,
                             SourceLocation AttrNameLoc, ParsedAttributes &Attrs,
                             IdentifierInfo *ScopeName, SourceLocation ScopeLoc,
                             ParsedAttr::Form Form);
 
+  /// \verbatim
   /// [GNU]   typeof-specifier:
   ///           typeof ( expressions )
   ///           typeof ( type-name )
@@ -2395,20 +2454,25 @@ private:
   ///         typeof-specifier-argument:
   ///           expression
   ///           type-name
+  /// \endverbatim
   ///
   void ParseTypeofSpecifier(DeclSpec &DS);
 
+  /// \verbatim
   /// [C11]   atomic-specifier:
   ///           _Atomic ( type-name )
+  /// \endverbatim
   ///
   void ParseAtomicSpecifier(DeclSpec &DS);
 
   /// ParseAlignArgument - Parse the argument to an alignment-specifier.
   ///
+  /// \verbatim
   /// [C11]   type-id
   /// [C11]   constant-expression
   /// [C++0x] type-id ...[opt]
   /// [C++0x] assignment-expression ...[opt]
+  /// \endverbatim
   ExprResult ParseAlignArgument(StringRef KWName, SourceLocation Start,
                                 SourceLocation &EllipsisLoc, bool &IsType,
                                 ParsedType &Ty);
@@ -2416,19 +2480,23 @@ private:
   /// ParseAlignmentSpecifier - Parse an alignment-specifier, and add the
   /// attribute to Attrs.
   ///
+  /// \verbatim
   /// alignment-specifier:
   /// [C11]   '_Alignas' '(' type-id ')'
   /// [C11]   '_Alignas' '(' constant-expression ')'
   /// [C++11] 'alignas' '(' type-id ...[opt] ')'
   /// [C++11] 'alignas' '(' assignment-expression ...[opt] ')'
+  /// \endverbatim
   void ParseAlignmentSpecifier(ParsedAttributes &Attrs,
                                SourceLocation *endLoc = nullptr);
   ExprResult ParseExtIntegerArgument();
 
+  /// \verbatim
   /// type-qualifier:
   ///    ('__ptrauth') '(' constant-expression
   ///                   (',' constant-expression)[opt]
   ///                   (',' constant-expression)[opt] ')'
+  /// \endverbatim
   void ParsePtrauthQualifier(ParsedAttributes &Attrs);
 
   /// DeclaratorScopeObj - RAII object used in Parser::ParseDirectDeclarator to
@@ -2479,6 +2547,7 @@ private:
   /// be made to TryParseDeclarator and MightBeDeclarator, and possibly to
   /// isConstructorDeclarator.
   ///
+  /// \verbatim
   ///       declarator: [C99 6.7.5] [C++ 8p4, dcl.decl]
   /// [C]     pointer[opt] direct-declarator
   /// [C++]   direct-declarator
@@ -2495,6 +2564,7 @@ private:
   /// [GNU]   '&' restrict[opt] attributes[opt]
   /// [GNU?]  '&&' restrict[opt] attributes[opt]
   ///         '::'[opt] nested-name-specifier '*' cv-qualifier-seq[opt]
+  /// \endverbatim
   void ParseDeclaratorInternal(Declarator &D,
                                DirectDeclParseFunction DirectDeclParser);
 
@@ -2511,6 +2581,7 @@ private:
   };
 
   /// ParseTypeQualifierListOpt
+  /// \verbatim
   ///          type-qualifier-list: [C99 6.7.5]
   ///            type-qualifier
   /// [vendor]   attributes
@@ -2520,6 +2591,7 @@ private:
   ///              [ only if AttrReqs & AR_VendorAttributesParsed ]
   /// [C++0x]    attribute-specifier[opt] is allowed before cv-qualifier-seq
   ///              [ only if AttReqs & AR_CXX11AttributesParsed ]
+  /// \endverbatim
   /// Note: vendor can be GNU, MS, etc and can be explicitly controlled via
   /// AttrRequirements bitmask values.
   void ParseTypeQualifierListOpt(
@@ -2529,6 +2601,7 @@ private:
           std::nullopt);
 
   /// ParseDirectDeclarator
+  /// \verbatim
   ///       direct-declarator: [C99 6.7.5]
   /// [C99]   identifier
   ///         '(' declarator ')'
@@ -2571,6 +2644,7 @@ private:
   ///
   ///       simple-declaration:
   ///         <decl-spec> '[' identifier-list ']' brace-or-equal-initializer ';'
+  /// \endverbatim
   ///
   /// Note, any additional constructs added here may need corresponding changes
   /// in isConstructorDeclarator.
@@ -2583,6 +2657,7 @@ private:
   /// parameter parens in an abstract-declarator, we call
   /// ParseFunctionDeclarator.
   ///
+  /// \verbatim
   ///       direct-declarator:
   ///         '(' declarator ')'
   /// [GNU]   '(' attributes declarator ')'
@@ -2590,6 +2665,7 @@ private:
   ///         direct-declarator '(' identifier-list[opt] ')'
   /// [GNU]   direct-declarator '(' parameter-forward-declarations
   ///                    parameter-type-list[opt] ')'
+  /// \endverbatim
   ///
   void ParseParenDeclarator(Declarator &D);
 
@@ -2610,9 +2686,11 @@ private:
   /// (C++11) trailing-return-type[opt] and (C++2a) the trailing
   /// requires-clause.
   ///
+  /// \verbatim
   /// [C++11] exception-specification:
   ///           dynamic-exception-specification
   ///           noexcept-specification
+  /// \endverbatim
   ///
   void ParseFunctionDeclarator(Declarator &D, ParsedAttributes &FirstArgAttrs,
                                BalancedDelimiterTracker &Tracker,
@@ -2639,9 +2717,11 @@ private:
   ///
   /// After returning, ParamInfo will hold the parsed parameters.
   ///
+  /// \verbatim
   ///       identifier-list: [C99 6.7.5]
   ///         identifier
   ///         identifier-list ',' identifier
+  /// \endverbatim
   ///
   void ParseFunctionDeclaratorIdentifierList(
       Declarator &D, SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo);
@@ -2667,6 +2747,7 @@ private:
   /// After returning, ParamInfo will hold the parsed parameters. EllipsisLoc
   /// will be the location of the ellipsis, if any was parsed.
   ///
+  /// \verbatim
   ///       parameter-type-list: [C99 6.7.5]
   ///         parameter-list
   ///         parameter-list ',' '...'
@@ -2687,12 +2768,14 @@ private:
   /// [GNU]   declaration-specifiers abstract-declarator[opt] attributes
   /// [C++11] attribute-specifier-seq parameter-declaration
   /// [C++2b] attribute-specifier-seq 'this' parameter-declaration
+  /// \endverbatim
   ///
   void ParseParameterDeclarationClause(
       DeclaratorContext DeclaratorContext, ParsedAttributes &attrs,
       SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
       SourceLocation &EllipsisLoc, bool IsACXXFunctionDeclaration = false);
 
+  /// \verbatim
   /// [C90]   direct-declarator '[' constant-expression[opt] ']'
   /// [C99]   direct-declarator '[' type-qual-list[opt] assignment-expr[opt] ']'
   /// [C99]   direct-declarator '[' 'static' type-qual-list[opt] assign-expr ']'
@@ -2700,6 +2783,7 @@ private:
   /// [C99]   direct-declarator '[' type-qual-list[opt] '*' ']'
   /// [C++11] direct-declarator '[' constant-expression[opt] ']'
   ///                           attribute-specifier-seq[opt]
+  /// \endverbatim
   void ParseBracketDeclarator(Declarator &D);
 
   /// Diagnose brackets before an identifier.
@@ -2801,6 +2885,7 @@ private:
 
   /// Parse a C++ exception-specification if present (C++0x [except.spec]).
   ///
+  /// \verbatim
   ///       exception-specification:
   ///         dynamic-exception-specification
   ///         noexcept-specification
@@ -2808,6 +2893,7 @@ private:
   ///       noexcept-specification:
   ///         'noexcept'
   ///         'noexcept' '(' constant-expression ')'
+  /// \endverbatim
   ExceptionSpecificationType tryParseExceptionSpecification(
       bool Delayed, SourceRange &SpecificationRange,
       SmallVectorImpl<ParsedType> &DynamicExceptions,
@@ -2818,6 +2904,7 @@ private:
   /// dynamic-exception-specification (C++ [except.spec]).
   /// EndLoc is filled with the location of the last token of the specification.
   ///
+  /// \verbatim
   ///       dynamic-exception-specification:
   ///         'throw' '(' type-id-list [opt] ')'
   /// [MS]    'throw' '(' '...' ')'
@@ -2825,6 +2912,7 @@ private:
   ///       type-id-list:
   ///         type-id ... [opt]
   ///         type-id-list ',' type-id ... [opt]
+  /// \endverbatim
   ///
   ExceptionSpecificationType
   ParseDynamicExceptionSpecification(SourceRange &SpecificationRange,
@@ -2877,6 +2965,7 @@ private:
 
   /// Parse a C++11 or C23 attribute-specifier.
   ///
+  /// \verbatim
   /// [C++11] attribute-specifier:
   ///         '[' '[' attribute-list ']' ']'
   ///         alignment-specifier
@@ -2899,6 +2988,7 @@ private:
   ///
   /// [C++11] attribute-namespace:
   ///         identifier
+  /// \endverbatim
   void ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
                                             CachedTokens &OpenMPTokens,
                                             SourceLocation *EndLoc = nullptr);
@@ -2911,14 +3001,17 @@ private:
 
   /// ParseCXX11Attributes - Parse a C++11 or C23 attribute-specifier-seq.
   ///
+  /// \verbatim
   /// attribute-specifier-seq:
   ///       attribute-specifier-seq[opt] attribute-specifier
+  /// \endverbatim
   void ParseCXX11Attributes(ParsedAttributes &attrs);
 
   /// ParseCXX11AttributeArgs -- Parse a C++11 attribute-argument-clause.
   /// Parses a C++11 (or C23)-style attribute argument list. Returns true
   /// if this results in adding an attribute to the ParsedAttributes list.
   ///
+  /// \verbatim
   /// [C++11] attribute-argument-clause:
   ///         '(' balanced-token-seq ')'
   ///
@@ -2931,6 +3024,7 @@ private:
   ///         '[' balanced-token-seq ']'
   ///         '{' balanced-token-seq '}'
   ///         any token but '(', ')', '[', ']', '{', or '}'
+  /// \endverbatim
   bool ParseCXX11AttributeArgs(IdentifierInfo *AttrName,
                                SourceLocation AttrNameLoc,
                                ParsedAttributes &Attrs, SourceLocation *EndLoc,
@@ -2966,12 +3060,14 @@ private:
 
   /// ParseMicrosoftAttributes - Parse Microsoft attributes [Attr]
   ///
+  /// \verbatim
   /// [MS] ms-attribute:
   ///             '[' token-seq ']'
   ///
   /// [MS] ms-attribute-seq:
   ///             ms-attribute[opt]
   ///             ms-attribute ms-attribute-seq
+  /// \endverbatim
   void ParseMicrosoftAttributes(ParsedAttributes &Attrs);
 
   void ParseMicrosoftInheritanceClassAttributes(ParsedAttributes &attrs);
@@ -2979,8 +3075,10 @@ private:
 
   /// ParseDecltypeSpecifier - Parse a C++11 decltype specifier.
   ///
+  /// \verbatim
   /// 'decltype' ( expression )
   /// 'decltype' ( 'auto' )      [C++1y]
+  /// \endverbatim
   ///
   SourceLocation ParseDecltypeSpecifier(DeclSpec &DS);
   void AnnotateExistingDecltypeSpecifier(const DeclSpec &DS,
@@ -2990,10 +3088,12 @@ private:
   /// isCXX11VirtSpecifier - Determine whether the given token is a C++11
   /// virt-specifier.
   ///
+  /// \verbatim
   ///       virt-specifier:
   ///         override
   ///         final
   ///         __final
+  /// \endverbatim
   VirtSpecifiers::Specifier isCXX11VirtSpecifier(const Token &Tok) const;
   VirtSpecifiers::Specifier isCXX11VirtSpecifier() const {
     return isCXX11VirtSpecifier(Tok);
@@ -3001,9 +3101,11 @@ private:
 
   /// ParseOptionalCXX11VirtSpecifierSeq - Parse a virt-specifier-seq.
   ///
+  /// \verbatim
   ///       virt-specifier-seq:
   ///         virt-specifier
   ///         virt-specifier-seq virt-specifier
+  /// \endverbatim
   void ParseOptionalCXX11VirtSpecifierSeq(VirtSpecifiers &VS, bool IsInterface,
                                           SourceLocation FriendLoc);
 
@@ -3024,6 +3126,7 @@ private:
   /// This may either be a top level namespace or a block-level namespace alias.
   /// If there was an inline keyword, it has already been parsed.
   ///
+  /// \verbatim
   ///       namespace-definition: [C++: namespace.def]
   ///         named-namespace-definition
   ///         unnamed-namespace-definition
@@ -3046,6 +3149,7 @@ private:
   ///
   ///       namespace-alias-definition:  [C++ 7.3.2: namespace.alias]
   ///         'namespace' identifier '=' qualified-namespace-specifier ';'
+  /// \endverbatim
   ///
   DeclGroupPtrTy ParseNamespace(DeclaratorContext Context,
                                 SourceLocation &DeclEnd,
@@ -3068,25 +3172,31 @@ private:
   /// ParseLinkage - We know that the current token is a string_literal
   /// and just before that, that extern was seen.
   ///
+  /// \verbatim
   ///       linkage-specification: [C++ 7.5p2: dcl.link]
   ///         'extern' string-literal '{' declaration-seq[opt] '}'
   ///         'extern' string-literal declaration
+  /// \endverbatim
   ///
   Decl *ParseLinkage(ParsingDeclSpec &DS, DeclaratorContext Context);
 
   /// Parse a standard C++ Modules export-declaration.
   ///
+  /// \verbatim
   ///       export-declaration:
   ///         'export' declaration
   ///         'export' '{' declaration-seq[opt] '}'
+  /// \endverbatim
   ///
   /// HLSL: Parse export function declaration.
   ///
+  /// \verbatim
   ///      export-function-declaration:
   ///         'export' function-declaration
   ///
   ///      export-declaration-group:
   ///         'export' '{' function-declaration-seq[opt] '}'
+  /// \endverbatim
   ///
   Decl *ParseExportDeclaration();
 
@@ -3099,12 +3209,14 @@ private:
   /// ParseUsingDirective - Parse C++ using-directive, assumes
   /// that current token is 'namespace' and 'using' was already parsed.
   ///
+  /// \verbatim
   ///       using-directive: [C++ 7.3.p4: namespace.udir]
   ///        'using' 'namespace' ::[opt] nested-name-specifier[opt]
   ///                 namespace-name ;
   /// [GNU] using-directive:
   ///        'using' 'namespace' ::[opt] nested-name-specifier[opt]
   ///                 namespace-name attributes[opt] ;
+  /// \endverbatim
   ///
   Decl *ParseUsingDirective(DeclaratorContext Context, SourceLocation UsingLoc,
                             SourceLocation &DeclEnd, ParsedAttributes &attrs);
@@ -3124,14 +3236,17 @@ private:
 
   /// Parse a using-declarator (or the identifier in a C++11 alias-declaration).
   ///
+  /// \verbatim
   ///     using-declarator:
   ///       'typename'[opt] nested-name-specifier unqualified-id
+  /// \endverbatim
   ///
   bool ParseUsingDeclarator(DeclaratorContext Context, UsingDeclarator &D);
 
   /// ParseUsingDeclaration - Parse C++ using-declaration or alias-declaration.
   /// Assumes that 'using' was already seen.
   ///
+  /// \verbatim
   ///     using-declaration: [C++ 7.3.p3: namespace.udecl]
   ///       'using' using-declarator-list[opt] ;
   ///
@@ -3152,6 +3267,7 @@ private:
   ///
   ///     elaborated-enum-specifier:
   ///       'enum' nested-name-specifier[opt] identifier
+  /// \endverbatim
   DeclGroupPtrTy ParseUsingDeclaration(DeclaratorContext Context,
                                        const ParsedTemplateInfo &TemplateInfo,
                                        SourceLocation UsingLoc,
@@ -3166,11 +3282,13 @@ private:
   /// ParseStaticAssertDeclaration - Parse C++0x or C11
   /// static_assert-declaration.
   ///
+  /// \verbatim
   /// [C++0x] static_assert-declaration:
   ///           static_assert ( constant-expression  ,  string-literal  ) ;
   ///
   /// [C11]   static_assert-declaration:
   ///           _Static_assert ( constant-expression  ,  string-literal  ) ;
+  /// \endverbatim
   ///
   Decl *ParseStaticAssertDeclaration(SourceLocation &DeclEnd);
 
@@ -3194,6 +3312,7 @@ private:
   /// until we reach the start of a definition or see a token that
   /// cannot start a definition.
   ///
+  /// \verbatim
   ///       class-specifier: [C++ class]
   ///         class-head '{' member-specification[opt] '}'
   ///         class-head '{' member-specification[opt] '}' attributes[opt]
@@ -3229,6 +3348,7 @@ private:
   ///       struct-or-union:
   ///         'struct'
   ///         'union'
+  /// \endverbatim
   void ParseClassSpecifier(tok::TokenKind TagTokKind, SourceLocation TagLoc,
                            DeclSpec &DS, ParsedTemplateInfo &TemplateInfo,
                            AccessSpecifier AS, bool EnteringContext,
@@ -3239,9 +3359,11 @@ private:
 
   /// ParseCXXMemberSpecification - Parse the class definition.
   ///
+  /// \verbatim
   ///       member-specification:
   ///         member-declaration member-specification[opt]
   ///         access-specifier ':' member-specification[opt]
+  /// \endverbatim
   ///
   void ParseCXXMemberSpecification(SourceLocation StartLoc,
                                    SourceLocation AttrFixitLoc,
@@ -3254,6 +3376,7 @@ private:
   ///
   /// This does not check for a pure-specifier; that's handled elsewhere.
   ///
+  /// \verbatim
   ///   brace-or-equal-initializer:
   ///     '=' initializer-expression
   ///     braced-init-list
@@ -3265,6 +3388,7 @@ private:
   ///   defaulted/deleted function-definition:
   ///     '=' 'default'
   ///     '=' 'delete'
+  /// \endverbatim
   ///
   /// Prior to C++0x, the assignment-expression in an initializer-clause must
   /// be a constant-expression.
@@ -3286,6 +3410,7 @@ private:
 
   /// ParseCXXClassMemberDeclaration - Parse a C++ class member declaration.
   ///
+  /// \verbatim
   ///       member-declaration:
   ///         decl-specifier-seq[opt] member-declarator-list[opt] ';'
   ///         function-definition ';'[opt]
@@ -3333,6 +3458,7 @@ private:
   ///         simple-type-specifier
   ///         elaborated-type-specifier
   ///         typename-specifier
+  /// \endverbatim
   ///
   DeclGroupPtrTy ParseCXXClassMemberDeclaration(
       AccessSpecifier AS, ParsedAttributes &Attr,
@@ -3358,12 +3484,14 @@ private:
   /// };
   /// @endcode
   ///
+  /// \verbatim
   /// [C++]  ctor-initializer:
   ///          ':' mem-initializer-list
   ///
   /// [C++]  mem-initializer-list:
   ///          mem-initializer ...[opt]
   ///          mem-initializer ...[opt] , mem-initializer-list
+  /// \endverbatim
   void ParseConstructorInitializer(Decl *ConstructorDecl);
 
   /// ParseMemInitializer - Parse a C++ member initializer, which is
@@ -3371,6 +3499,7 @@ private:
   /// member or base class (C++ [class.base.init]). See
   /// ParseConstructorInitializer for an example.
   ///
+  /// \verbatim
   /// [C++] mem-initializer:
   ///         mem-initializer-id '(' expression-list[opt] ')'
   /// [C++0x] mem-initializer-id braced-init-list
@@ -3378,6 +3507,7 @@ private:
   /// [C++] mem-initializer-id:
   ///         '::'[opt] nested-name-specifier[opt] class-name
   ///         identifier
+  /// \endverbatim
   MemInitResult ParseMemInitializer(Decl *ConstructorDecl);
 
   /// If the given declarator has any parts for which parsing has to be
@@ -3396,6 +3526,7 @@ private:
   /// class. The result is either a type or null, depending on whether a type
   /// name was found.
   ///
+  /// \verbatim
   ///       base-type-specifier: [C++11 class.derived]
   ///         class-or-decltype
   ///       class-or-decltype: [C++11 class.derived]
@@ -3404,21 +3535,26 @@ private:
   ///       class-name: [C++ class.name]
   ///         identifier
   ///         simple-template-id
+  /// \endverbatim
   ///
   /// In C++98, instead of base-type-specifier, we have:
   ///
+  /// \verbatim
   ///         ::[opt] nested-name-specifier[opt] class-name
+  /// \endverbatim
   TypeResult ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
                                     SourceLocation &EndLocation);
 
   /// ParseBaseClause - Parse the base-clause of a C++ class [C++
   /// class.derived].
   ///
+  /// \verbatim
   ///       base-clause : [C++ class.derived]
   ///         ':' base-specifier-list
   ///       base-specifier-list:
   ///         base-specifier '...'[opt]
   ///         base-specifier-list ',' base-specifier '...'[opt]
+  /// \endverbatim
   void ParseBaseClause(Decl *ClassDecl);
 
   /// ParseBaseSpecifier - Parse a C++ base-specifier. A base-specifier is
@@ -3426,21 +3562,25 @@ private:
   ///    class foo : public bar, virtual private baz {
   /// 'public bar' and 'virtual private baz' are each base-specifiers.
   ///
+  /// \verbatim
   ///       base-specifier: [C++ class.derived]
   ///         attribute-specifier-seq[opt] base-type-specifier
   ///         attribute-specifier-seq[opt] 'virtual' access-specifier[opt]
   ///                 base-type-specifier
   ///         attribute-specifier-seq[opt] access-specifier 'virtual'[opt]
   ///                 base-type-specifier
+  /// \endverbatim
   BaseResult ParseBaseSpecifier(Decl *ClassDecl);
 
   /// getAccessSpecifierIfPresent - Determine whether the next token is
   /// a C++ access-specifier.
   ///
+  /// \verbatim
   ///       access-specifier: [C++ class.derived]
   ///         'private'
   ///         'protected'
   ///         'public'
+  /// \endverbatim
   AccessSpecifier getAccessSpecifierIfPresent() const;
 
   ///@}
@@ -3605,7 +3745,7 @@ public:
   /// \verbatim
   ///       primary-expression: [C99 6.5.1]
   ///         string-literal
-  /// \verbatim
+  /// \endverbatim
   ExprResult ParseStringLiteralExpression(bool AllowUserDefinedLiteral = false);
   ExprResult ParseUnevaluatedStringLiteralExpression();
 
@@ -4184,14 +4324,18 @@ private:
 
   /// Parse availability query specification.
   ///
+  /// \verbatim
   ///  availability-spec:
   ///     '*'
   ///     identifier version-tuple
+  /// \endverbatim
   std::optional<AvailabilitySpec> ParseAvailabilitySpec();
   ExprResult ParseAvailabilityCheckExpr(SourceLocation StartLoc);
 
   /// Tries to parse cast part of OpenMP array shaping operation:
-  /// '[' expression ']' { '[' expression ']' } ')'.
+  /// \verbatim
+  /// '[' expression ']' { '[' expression ']' } ')'
+  /// \endverbatim
   bool tryParseOpenMPArrayShapingCastPart();
 
   ExprResult ParseBuiltinPtrauthTypeDiscriminator();
@@ -4212,7 +4356,7 @@ public:
   /// Parse a C++ unqualified-id (or a C identifier), which describes the
   /// name of an entity.
   ///
-  /// \code
+  /// \verbatim
   ///       unqualified-id: [C++ expr.prim.general]
   ///         identifier
   ///         operator-function-id
@@ -4220,8 +4364,7 @@ public:
   /// [C++0x] literal-operator-id [TODO]
   ///         ~ class-name
   ///         template-id
-  ///
-  /// \endcode
+  /// \endverbatim
   ///
   /// \param SS The nested-name-specifier that preceded this unqualified-id. If
   /// non-empty, then we are parsing the unqualified-id of a qualified-id.
@@ -4277,6 +4420,7 @@ private:
 
   /// ParseCXXIdExpression - Handle id-expression.
   ///
+  /// \verbatim
   ///       id-expression:
   ///         unqualified-id
   ///         qualified-id
@@ -4292,6 +4436,7 @@ private:
   ///
   ///   '::' conversion-function-id
   ///   '::' '~' class-name
+  /// \endverbatim
   ///
   /// This may cause a slight inconsistency on diagnostics:
   ///
@@ -4305,9 +4450,11 @@ private:
   ///
   /// We simplify the parser a bit and make it work like:
   ///
+  /// \verbatim
   ///       qualified-id:
   ///         '::'[opt] nested-name-specifier 'template'[opt] unqualified-id
   ///         '::' unqualified-id
+  /// \endverbatim
   ///
   /// That way Sema can handle and report similar errors for namespaces and the
   /// global scope.
@@ -4334,6 +4481,7 @@ private:
   /// may be preceded by '::'). Note that this routine will not parse ::new or
   /// ::delete; it will just leave them in the token stream.
   ///
+  /// \verbatim
   ///       '::'[opt] nested-name-specifier
   ///       '::'
   ///
@@ -4342,6 +4490,7 @@ private:
   ///         namespace-name '::'
   ///         nested-name-specifier identifier '::'
   ///         nested-name-specifier 'template'[opt] simple-template-id '::'
+  /// \endverbatim
   ///
   ///
   /// \param SS the scope specifier that will be set to the parsed
@@ -4404,6 +4553,7 @@ private:
 
   /// ParseLambdaExpression - Parse a C++11 lambda expression.
   ///
+  /// \verbatim
   ///       lambda-expression:
   ///         lambda-introducer lambda-declarator compound-statement
   ///         lambda-introducer '<' template-parameter-list '>'
@@ -4446,6 +4596,7 @@ private:
   ///       lambda-specifiers:
   ///         decl-specifier-seq[opt] noexcept-specifier[opt]
   ///             attribute-specifier-seq[opt] trailing-return-type[opt]
+  /// \endverbatim
   ///
   ExprResult ParseLambdaExpression();
 
@@ -4478,11 +4629,13 @@ private:
   /// ParseCXXCasts - This handles the various ways to cast expressions to
   /// another type.
   ///
+  /// \verbatim
   ///       postfix-expression: [C++ 5.2p1]
   ///         'dynamic_cast' '<' type-name '>' '(' expression ')'
   ///         'static_cast' '<' type-name '>' '(' expression ')'
   ///         'reinterpret_cast' '<' type-name '>' '(' expression ')'
   ///         'const_cast' '<' type-name '>' '(' expression ')'
+  /// \endverbatim
   ///
   /// C++ for OpenCL s2.3.1 adds:
   ///         'addrspace_cast' '<' type-name '>' '(' expression ')'
@@ -4496,9 +4649,11 @@ private:
 
   /// ParseCXXTypeid - This handles the C++ typeid expression.
   ///
+  /// \verbatim
   ///       postfix-expression: [C++ 5.2p1]
   ///         'typeid' '(' expression ')'
   ///         'typeid' '(' type-id ')'
+  /// \endverbatim
   ///
   ExprResult ParseCXXTypeid();
 
@@ -4507,8 +4662,10 @@ private:
 
   /// ParseCXXUuidof - This handles the Microsoft C++ __uuidof expression.
   ///
+  /// \verbatim
   ///         '__uuidof' '(' expression ')'
   ///         '__uuidof' '(' type-id ')'
+  /// \endverbatim
   ///
   ExprResult ParseCXXUuidof();
 
@@ -4519,6 +4676,7 @@ private:
   /// . or -> operator, and nested-name-specifier have already been
   /// parsed. We're handling this fragment of the grammar:
   ///
+  /// \verbatim
   ///       postfix-expression: [C++2a expr.post]
   ///         postfix-expression . template[opt] id-expression
   ///         postfix-expression -> template[opt] id-expression
@@ -4542,6 +4700,7 @@ private:
   ///         ~ type-name
   ///         ~ decltype-specifier
   ///         [...]
+  /// \endverbatim
   ///
   /// ... where the all but the last component of the nested-name-specifier
   /// has already been parsed, and the base expression is not of a non-dependent
@@ -4565,8 +4724,10 @@ private:
 
   /// ParseThrowExpression - This handles the C++ throw expression.
   ///
+  /// \verbatim
   ///       throw-expression: [C++ 15]
   ///         'throw' assignment-expression[opt]
+  /// \endverbatim
   ExprResult ParseThrowExpression();
 
   //===--------------------------------------------------------------------===//
@@ -4574,9 +4735,11 @@ private:
 
   /// ParseCXXBoolLiteral - This handles the C++ Boolean literals.
   ///
+  /// \verbatim
   ///       boolean-literal: [C++ 2.13.5]
   ///         'true'
   ///         'false'
+  /// \endverbatim
   ExprResult ParseCXXBoolLiteral();
 
   //===--------------------------------------------------------------------===//
@@ -4588,11 +4751,13 @@ private:
   /// or creation of a value-initialized type ("int()").
   /// See [C++ 5.2.3].
   ///
+  /// \verbatim
   ///       postfix-expression: [C++ 5.2p1]
   ///         simple-type-specifier '(' expression-list[opt] ')'
   /// [C++0x] simple-type-specifier braced-init-list
   ///         typename-specifier '(' expression-list[opt] ')'
   /// [C++0x] typename-specifier braced-init-list
+  /// \endverbatim
   ///
   /// In C++1z onwards, the type specifier can also be a template-name.
   ExprResult ParseCXXTypeConstructExpression(const DeclSpec &DS);
@@ -4601,6 +4766,7 @@ private:
   /// This should only be called when the current token is known to be part of
   /// simple-type-specifier.
   ///
+  /// \verbatim
   ///       simple-type-specifier:
   ///         '::'[opt] nested-name-specifier[opt] type-name
   ///         '::'[opt] nested-name-specifier 'template' simple-template-id [TODO]
@@ -4622,6 +4788,7 @@ private:
   ///         class-name
   ///         enum-name
   ///         typedef-name
+  /// \endverbatim
   ///
   void ParseCXXSimpleTypeSpecifier(DeclSpec &DS);
 
@@ -4633,8 +4800,10 @@ private:
   /// emits diagnostics if this is not a type-specifier-seq, false
   /// otherwise.
   ///
+  /// \verbatim
   ///   type-specifier-seq: [C++ 8.1]
   ///     type-specifier type-specifier-seq[opt]
+  /// \endverbatim
   ///
   bool ParseCXXTypeSpecifierSeq(
       DeclSpec &DS, DeclaratorContext Context = DeclaratorContext::TypeName);
@@ -4645,12 +4814,14 @@ private:
   /// ParseExpressionListOrTypeId - Parse either an expression-list or a
   /// type-id. This ambiguity appears in the syntax of the C++ new operator.
   ///
+  /// \verbatim
   ///        new-expression:
   ///                   '::'[opt] 'new' new-placement[opt] '(' type-id ')'
   ///                                     new-initializer[opt]
   ///
   ///        new-placement:
   ///                   '(' expression-list ')'
+  /// \endverbatim
   ///
   bool ParseExpressionListOrTypeId(SmallVectorImpl<Expr *> &Exprs,
                                    Declarator &D);
@@ -4658,9 +4829,11 @@ private:
   /// ParseDirectNewDeclarator - Parses a direct-new-declarator. Intended to be
   /// passed to ParseDeclaratorInternal.
   ///
+  /// \verbatim
   ///        direct-new-declarator:
   ///                   '[' expression[opt] ']'
   ///                   direct-new-declarator '[' constant-expression ']'
+  /// \endverbatim
   ///
   void ParseDirectNewDeclarator(Declarator &D);
 
@@ -4672,6 +4845,7 @@ private:
   /// "Start" is its location.  Otherwise, "Start" is the location of the 'new'
   /// token.
   ///
+  /// \verbatim
   ///        new-expression:
   ///                   '::'[opt] 'new' new-placement[opt] new-type-id
   ///                                     new-initializer[opt]
@@ -4692,6 +4866,7 @@ private:
   ///        new-initializer:
   ///                   '(' expression-list[opt] ')'
   /// [C++0x]           braced-init-list
+  /// \endverbatim
   ///
   ExprResult ParseCXXNewExpression(bool UseGlobal, SourceLocation Start);
 
@@ -4703,9 +4878,11 @@ private:
   /// true and "Start" is its location.  Otherwise, "Start" is the location of
   /// the 'delete' token.
   ///
+  /// \verbatim
   ///        delete-expression:
   ///                   '::'[opt] 'delete' cast-expression
   ///                   '::'[opt] 'delete' '[' ']' cast-expression
+  /// \endverbatim
   ExprResult ParseCXXDeleteExpression(bool UseGlobal, SourceLocation Start);
 
   //===--------------------------------------------------------------------===//
@@ -4713,6 +4890,7 @@ private:
 
   /// ParseCXXCondition - if/switch/while condition expression.
   ///
+  /// \verbatim
   ///       condition:
   ///         expression
   ///         type-specifier-seq declarator '=' assignment-expression
@@ -4722,6 +4900,7 @@ private:
   ///             brace-or-equal-initializer
   /// [GNU]   type-specifier-seq declarator simple-asm-expr[opt] attributes[opt]
   ///             '=' assignment-expression
+  /// \endverbatim
   ///
   /// In C++1z, a condition may in some contexts be preceded by an
   /// optional init-statement. This function will parse that too.
@@ -4757,8 +4936,10 @@ private:
 
   /// Parse the C++ Coroutines co_yield expression.
   ///
+  /// \verbatim
   ///       co_yield-expression:
   ///         'co_yield' assignment-expression[opt]
+  /// \endverbatim
   ExprResult ParseCoyieldExpression();
 
   //===--------------------------------------------------------------------===//
@@ -4770,6 +4951,7 @@ private:
   ///     on template arguments. A requirement is one that can be checked by
   ///     name lookup (6.4) or by checking properties of types and expressions.
   ///
+  /// \verbatim
   ///     requires-expression:
   ///         'requires' requirement-parameter-list[opt] requirement-body
   ///
@@ -4788,6 +4970,7 @@ private:
   ///         type-requirement
   ///         compound-requirement
   ///         nested-requirement
+  /// \endverbatim
   ExprResult ParseRequiresExpression();
 
   /// isTypeIdInParens - Assumes that a '(' was parsed and now we want to know
@@ -4853,7 +5036,7 @@ private:
   /// This routine is responsible only for parsing the operator-function-id or
   /// conversion-function-id; it does not handle template arguments in any way.
   ///
-  /// \code
+  /// \verbatim
   ///       operator-function-id: [C++ 13.5]
   ///         'operator' operator
   ///
@@ -4873,7 +5056,7 @@ private:
   ///
   ///       conversion-declarator:
   ///         ptr-operator conversion-declarator[opt]
-  /// \endcode
+  /// \endverbatim
   ///
   /// \param SS The nested-name-specifier that preceded this unqualified-id. If
   /// non-empty, then we are parsing the unqualified-id of a qualified-id.
@@ -4896,6 +5079,7 @@ private:
   /// Parse the built-in type-trait pseudo-functions that allow
   /// implementation of the TR1/C++11 type traits templates.
   ///
+  /// \verbatim
   ///       primary-expression:
   ///          unary-type-trait '(' type-id ')'
   ///          binary-type-trait '(' type-id ',' type-id ')'
@@ -4903,6 +5087,7 @@ private:
   ///
   ///       type-id-seq:
   ///          type-id ...[opt] type-id-seq[opt]
+  /// \endverbatim
   ///
   ExprResult ParseTypeTrait();
 
@@ -4912,17 +5097,21 @@ private:
   /// ParseArrayTypeTrait - Parse the built-in array type-trait
   /// pseudo-functions.
   ///
+  /// \verbatim
   ///       primary-expression:
   /// [Embarcadero]     '__array_rank' '(' type-id ')'
   /// [Embarcadero]     '__array_extent' '(' type-id ',' expression ')'
+  /// \endverbatim
   ///
   ExprResult ParseArrayTypeTrait();
 
   /// ParseExpressionTrait - Parse built-in expression-trait
   /// pseudo-functions like __is_lvalue_expr( xxx ).
   ///
+  /// \verbatim
   ///       primary-expression:
   /// [Embarcadero]     expression-trait '(' expression ')'
+  /// \endverbatim
   ///
   ExprResult ParseExpressionTrait();
 
@@ -4981,9 +5170,11 @@ private:
   // C99 6.7.8: Initialization.
 
   /// ParseInitializer
+  /// \verbatim
   ///       initializer: [C99 6.7.8]
   ///         assignment-expression
   ///         '{' ...
+  /// \endverbatim
   ExprResult ParseInitializer() {
     if (Tok.isNot(tok::l_brace))
       return ParseAssignmentExpression();
@@ -4998,6 +5189,7 @@ private:
   /// ParseBraceInitializer - Called when parsing an initializer that has a
   /// leading open brace.
   ///
+  /// \verbatim
   ///       initializer: [C99 6.7.8]
   ///         '{' initializer-list '}'
   ///         '{' initializer-list ',' '}'
@@ -5006,6 +5198,7 @@ private:
   ///       initializer-list:
   ///         designation[opt] initializer ...[opt]
   ///         initializer-list ',' designation[opt] initializer ...[opt]
+  /// \endverbatim
   ///
   ExprResult ParseBraceInitializer();
 
@@ -5019,6 +5212,7 @@ private:
   ///
   /// C99:
   ///
+  /// \verbatim
   ///       designation:
   ///         designator-list '='
   /// [GNU]   array-designator
@@ -5035,9 +5229,11 @@ private:
   ///       array-designator:
   ///         '[' constant-expression ']'
   /// [GNU]   '[' constant-expression '...' constant-expression ']'
+  /// \endverbatim
   ///
   /// C++20:
   ///
+  /// \verbatim
   ///       designated-initializer-list:
   ///         designated-initializer-clause
   ///         designated-initializer-list ',' designated-initializer-clause
@@ -5047,6 +5243,7 @@ private:
   ///
   ///       designator:
   ///         '.' identifier
+  /// \endverbatim
   ///
   /// We allow the C99 syntax extensions in C++20, but do not allow the C++20
   /// extension (a braced-init-list after the designator with no '=') in C99.
@@ -5160,6 +5357,7 @@ private:
 
   /// ParseObjCAtDirectives - Handle parts of the external-declaration
   /// production:
+  /// \verbatim
   ///       external-declaration: [C99 6.9]
   /// [OBJC]  objc-class-definition
   /// [OBJC]  objc-class-declaration
@@ -5167,19 +5365,23 @@ private:
   /// [OBJC]  objc-protocol-definition
   /// [OBJC]  objc-method-definition
   /// [OBJC]  '@' 'end'
+  /// \endverbatim
   DeclGroupPtrTy ParseObjCAtDirectives(ParsedAttributes &DeclAttrs,
                                        ParsedAttributes &DeclSpecAttrs);
 
   ///
+  /// \verbatim
   /// objc-class-declaration:
   ///    '@' 'class' objc-class-forward-decl (',' objc-class-forward-decl)* ';'
   ///
   /// objc-class-forward-decl:
   ///   identifier objc-type-parameter-list[opt]
+  /// \endverbatim
   ///
   DeclGroupPtrTy ParseObjCAtClassDeclaration(SourceLocation atLoc);
 
   ///
+  /// \verbatim
   ///   objc-interface:
   ///     objc-class-interface-attributes[opt] objc-class-interface
   ///     objc-category-interface
@@ -5207,6 +5409,7 @@ private:
   ///     __attribute__((unavailable))
   ///     __attribute__((objc_exception)) - used by NSException on 64-bit
   ///     __attribute__((objc_root_class))
+  /// \endverbatim
   ///
   Decl *ParseObjCAtInterfaceDeclaration(SourceLocation AtLoc,
                                         ParsedAttributes &prefixAttrs);
@@ -5221,6 +5424,7 @@ private:
   /// the locations of the protocol identifiers for a list of protocol
   /// references.
   ///
+  /// \verbatim
   ///   objc-type-parameter-list:
   ///     '<' objc-type-parameter (',' objc-type-parameter)* '>'
   ///
@@ -5233,6 +5437,7 @@ private:
   ///   objc-type-parameter-variance:
   ///     '__covariant'
   ///     '__contravariant'
+  /// \endverbatim
   ///
   /// \param lAngleLoc The location of the starting '<'.
   ///
@@ -5252,6 +5457,7 @@ private:
                                         SmallVectorImpl<Decl *> &AllIvarDecls,
                                         bool RBraceMissing);
 
+  /// \verbatim
   ///   objc-class-instance-variables:
   ///     '{' objc-instance-variable-decl-list[opt] '}'
   ///
@@ -5272,13 +5478,16 @@ private:
   ///
   ///   objc-instance-variable-decl:
   ///     struct-declaration
+  /// \endverbatim
   ///
   void ParseObjCClassInstanceVariables(ObjCContainerDecl *interfaceDecl,
                                        tok::ObjCKeywordKind visibility,
                                        SourceLocation atLoc);
 
+  /// \verbatim
   ///   objc-protocol-refs:
   ///     '<' identifier-list '>'
+  /// \endverbatim
   ///
   bool ParseObjCProtocolReferences(
       SmallVectorImpl<Decl *> &P, SmallVectorImpl<SourceLocation> &PLocs,
@@ -5289,8 +5498,10 @@ private:
   /// Objective-C object or object pointer type, which may be either
   /// type arguments or protocol qualifiers.
   ///
+  /// \verbatim
   ///   objc-type-arguments:
   ///     '<' type-name '...'[opt] (',' type-name '...'[opt])* '>'
+  /// \endverbatim
   ///
   void parseObjCTypeArgsOrProtocolQualifiers(
       ParsedType baseType, SourceLocation &typeArgsLAngleLoc,
@@ -5320,6 +5531,7 @@ private:
                                                     bool consumeLastToken,
                                                     SourceLocation &endLoc);
 
+  /// \verbatim
   ///   objc-interface-decl-list:
   ///     empty
   ///     objc-interface-decl-list objc-property-decl [OBJC2]
@@ -5331,9 +5543,11 @@ private:
   ///   objc-method-requirement: [OBJC2]
   ///     @required
   ///     @optional
+  /// \endverbatim
   ///
   void ParseObjCInterfaceDeclList(tok::ObjCKeywordKind contextKey, Decl *CDecl);
 
+  /// \verbatim
   ///   objc-protocol-declaration:
   ///     objc-protocol-definition
   ///     objc-protocol-forward-reference
@@ -5346,6 +5560,7 @@ private:
   ///
   ///   objc-protocol-forward-reference:
   ///     \@protocol identifier-list ';'
+  /// \endverbatim
   ///
   ///   "\@protocol identifier ;" should be resolved as "\@protocol
   ///   identifier-list ;": objc-interface-decl-list may not start with a
@@ -5379,6 +5594,7 @@ private:
   /// for later parsing.
   void StashAwayMethodOrFunctionBodyTokens(Decl *MDecl);
 
+  /// \verbatim
   ///   objc-implementation:
   ///     objc-class-implementation-prologue
   ///     objc-category-implementation-prologue
@@ -5389,15 +5605,19 @@ private:
   ///
   ///   objc-category-implementation-prologue:
   ///     @implementation identifier ( identifier )
+  /// \endverbatim
   DeclGroupPtrTy ParseObjCAtImplementationDeclaration(SourceLocation AtLoc,
                                                       ParsedAttributes &Attrs);
   DeclGroupPtrTy ParseObjCAtEndDeclaration(SourceRange atEnd);
 
+  /// \verbatim
   ///   compatibility-alias-decl:
   ///     @compatibility_alias alias-name  class-name ';'
+  /// \endverbatim
   ///
   Decl *ParseObjCAtAliasDeclaration(SourceLocation atLoc);
 
+  /// \verbatim
   ///   property-synthesis:
   ///     @synthesize property-ivar-list ';'
   ///
@@ -5408,18 +5628,22 @@ private:
   ///   property-ivar:
   ///     identifier
   ///     identifier '=' identifier
+  /// \endverbatim
   ///
   Decl *ParseObjCPropertySynthesize(SourceLocation atLoc);
 
+  /// \verbatim
   ///   property-dynamic:
   ///     @dynamic  property-list
   ///
   ///   property-list:
   ///     identifier
   ///     property-list ',' identifier
+  /// \endverbatim
   ///
   Decl *ParseObjCPropertyDynamic(SourceLocation atLoc);
 
+  /// \verbatim
   ///   objc-selector:
   ///     identifier
   ///     one of
@@ -5427,22 +5651,28 @@ private:
   ///       break continue return goto asm sizeof typeof __alignof
   ///       unsigned long const short volatile signed restrict _Complex
   ///       in out inout bycopy byref oneway int char float double void _Bool
+  /// \endverbatim
   ///
   IdentifierInfo *ParseObjCSelectorPiece(SourceLocation &MethodLocation);
 
   IdentifierInfo *ObjCTypeQuals[llvm::to_underlying(ObjCTypeQual::NumQuals)];
 
+  /// \verbatim
   ///  objc-for-collection-in: 'in'
+  /// \endverbatim
   ///
   bool isTokIdentifier_in() const;
 
+  /// \verbatim
   ///   objc-type-name:
   ///     '(' objc-type-qualifiers[opt] type-name ')'
   ///     '(' objc-type-qualifiers[opt] ')'
+  /// \endverbatim
   ///
   ParsedType ParseObjCTypeName(ObjCDeclSpec &DS, DeclaratorContext Ctx,
                                ParsedAttributes *ParamAttrs);
 
+  /// \verbatim
   ///   objc-method-proto:
   ///     objc-instance-method objc-method-decl objc-method-attributes[opt]
   ///     objc-class-method objc-method-decl objc-method-attributes[opt]
@@ -5452,11 +5682,13 @@ private:
   ///
   ///   objc-method-attributes:         [OBJC2]
   ///     __attribute__((deprecated))
+  /// \endverbatim
   ///
   Decl *ParseObjCMethodPrototype(
       tok::ObjCKeywordKind MethodImplKind = tok::objc_not_keyword,
       bool MethodDefinition = true);
 
+  /// \verbatim
   ///   objc-method-decl:
   ///     objc-selector
   ///     objc-keyword-selector objc-parmlist[opt]
@@ -5484,6 +5716,7 @@ private:
   ///
   ///   objc-keyword-attributes:         [OBJC2]
   ///     __attribute__((unused))
+  /// \endverbatim
   ///
   Decl *ParseObjCMethodDecl(
       SourceLocation mLoc, tok::TokenKind mType,
@@ -5492,6 +5725,7 @@ private:
 
   ///   Parse property attribute declarations.
   ///
+  /// \verbatim
   ///   property-attr-decl: '(' property-attrlist ')'
   ///   property-attrlist:
   ///     property-attribute
@@ -5515,10 +5749,13 @@ private:
   ///     null_unspecified
   ///     null_resettable
   ///     class
+  /// \endverbatim
   ///
   void ParseObjCPropertyAttribute(ObjCDeclSpec &DS);
 
+  /// \verbatim
   ///   objc-method-def: objc-method-proto ';'[opt] '{' body '}'
+  /// \endverbatim
   ///
   Decl *ParseObjCMethodDefinition();
 
@@ -5528,42 +5765,56 @@ private:
   ExprResult ParseObjCStringLiteral(SourceLocation AtLoc);
 
   /// ParseObjCCharacterLiteral -
+  /// \verbatim
   /// objc-scalar-literal : '@' character-literal
   ///                        ;
+  /// \endverbatim
   ExprResult ParseObjCCharacterLiteral(SourceLocation AtLoc);
 
   /// ParseObjCNumericLiteral -
+  /// \verbatim
   /// objc-scalar-literal : '@' scalar-literal
   ///                        ;
   /// scalar-literal : | numeric-constant			/* any numeric constant. */
   ///                    ;
+  /// \endverbatim
   ExprResult ParseObjCNumericLiteral(SourceLocation AtLoc);
 
   /// ParseObjCBooleanLiteral -
+  /// \verbatim
   /// objc-scalar-literal : '@' boolean-keyword
   ///                        ;
   /// boolean-keyword: 'true' | 'false' | '__objc_yes' | '__objc_no'
   ///                        ;
+  /// \endverbatim
   ExprResult ParseObjCBooleanLiteral(SourceLocation AtLoc, bool ArgValue);
 
   ExprResult ParseObjCArrayLiteral(SourceLocation AtLoc);
   ExprResult ParseObjCDictionaryLiteral(SourceLocation AtLoc);
 
   /// ParseObjCBoxedExpr -
+  /// \verbatim
   /// objc-box-expression:
   ///       @( assignment-expression )
+  /// \endverbatim
   ExprResult ParseObjCBoxedExpr(SourceLocation AtLoc);
 
+  /// \verbatim
   ///    objc-encode-expression:
   ///      \@encode ( type-name )
+  /// \endverbatim
   ExprResult ParseObjCEncodeExpression(SourceLocation AtLoc);
 
+  /// \verbatim
   ///     objc-selector-expression
   ///       @selector '(' '('[opt] objc-keyword-selector ')'[opt] ')'
+  /// \endverbatim
   ExprResult ParseObjCSelectorExpression(SourceLocation AtLoc);
 
+  /// \verbatim
   ///     objc-protocol-expression
   ///       \@protocol ( protocol-name )
+  /// \endverbatim
   ExprResult ParseObjCProtocolExpression(SourceLocation AtLoc);
 
   /// Determine whether the parser is currently referring to a an
@@ -5573,6 +5824,7 @@ private:
   /// expressions.
   bool isSimpleObjCMessageExpression();
 
+  /// \verbatim
   ///   objc-message-expr:
   ///     '[' objc-receiver objc-message-args ']'
   ///
@@ -5581,6 +5833,7 @@ private:
   ///     expression
   ///     class-name
   ///     type-name
+  /// \endverbatim
   ///
   ExprResult ParseObjCMessageExpression();
 
@@ -5604,6 +5857,7 @@ private:
   /// \param ReceiverExpr If this is an instance message, the expression
   /// used to compute the receiver object.
   ///
+  /// \verbatim
   ///   objc-message-args:
   ///     objc-selector
   ///     objc-keywordarg-list
@@ -5621,6 +5875,7 @@ private:
   ///   nonempty-expr-list:
   ///     assignment-expression
   ///     nonempty-expr-list , assignment-expression
+  /// \endverbatim
   ///
   ExprResult ParseObjCMessageExpressionBody(SourceLocation LBracloc,
                                             SourceLocation SuperLoc,
@@ -5644,11 +5899,13 @@ private:
   /// analysis, in which case the arguments do not have valid
   /// values. Otherwise, returns false for a successful parse.
   ///
+  /// \verbatim
   ///   objc-receiver: [C++]
   ///     'super' [not parsed here]
   ///     expression
   ///     simple-type-specifier
   ///     typename-specifier
+  /// \endverbatim
   bool ParseObjCXXMessageReceiver(bool &IsExpr, void *&TypeOrExpr);
 
   //===--------------------------------------------------------------------===//
@@ -5659,6 +5916,7 @@ private:
   StmtResult ParseObjCAtStatement(SourceLocation atLoc,
                                   ParsedStmtContext StmtCtx);
 
+  /// \verbatim
   ///  objc-try-catch-statement:
   ///    @try compound-statement objc-catch-list[opt]
   ///    @try compound-statement objc-catch-list[opt] @finally compound-statement
@@ -5669,21 +5927,28 @@ private:
   ///  catch-parameter-declaration:
   ///     parameter-declaration
   ///     '...' [OBJC2]
+  /// \endverbatim
   ///
   StmtResult ParseObjCTryStmt(SourceLocation atLoc);
 
+  /// \verbatim
   ///  objc-throw-statement:
   ///    throw expression[opt];
+  /// \endverbatim
   ///
   StmtResult ParseObjCThrowStmt(SourceLocation atLoc);
 
+  /// \verbatim
   /// objc-synchronized-statement:
   ///   @synchronized '(' expression ')' compound-statement
+  /// \endverbatim
   ///
   StmtResult ParseObjCSynchronizedStmt(SourceLocation atLoc);
 
+  /// \verbatim
   /// objc-autoreleasepool-statement:
   ///   @autoreleasepool compound-statement
+  /// \endverbatim
   ///
   StmtResult ParseObjCAutoreleasePoolStmt(SourceLocation atLoc);
 
@@ -5691,6 +5956,7 @@ private:
   /// qualifier list and builds their bitmask representation in the input
   /// argument.
   ///
+  /// \verbatim
   ///   objc-type-qualifiers:
   ///     objc-type-qualifier
   ///     objc-type-qualifiers objc-type-qualifier
@@ -5705,6 +5971,7 @@ private:
   ///     'nonnull'
   ///     'nullable'
   ///     'null_unspecified'
+  /// \endverbatim
   ///
   void ParseObjCTypeQualifierList(ObjCDeclSpec &DS, DeclaratorContext Context);
 
@@ -5884,7 +6151,9 @@ private:
   /// OpenACC 3.3, section 2.16:
   /// In this section and throughout the specification, the term wait-argument
   /// means:
+  /// \verbatim
   /// [ devnum : int-expr : ] [ queues : ] async-argument-list
+  /// \endverbatim
   OpenACCWaitParseInfo ParseOpenACCWaitArgument(SourceLocation Loc,
                                                 bool IsDirective);
 
@@ -5956,9 +6225,11 @@ private:
   /// OpenACC 3.3 Section 2.9:
   ///
   /// where gang-arg is one of:
+  /// \verbatim
   /// [num:]int-expr
   /// dim:int-expr
   /// static:size-expr
+  /// \endverbatim
   bool ParseOpenACCGangArgList(SourceLocation GangLoc,
                                llvm::SmallVectorImpl<OpenACCGangKind> &GKs,
                                llvm::SmallVectorImpl<Expr *> &IntExprs);
@@ -6039,20 +6310,26 @@ private:
 
   /// Parses an OpenMP context selector.
   ///
+  /// \verbatim
   /// <trait-selector-name> ['('[<trait-score>] <trait-property> [, <t-p>]* ')']
+  /// \endverbatim
   void parseOMPContextSelector(OMPTraitSelector &TISelector,
                                llvm::omp::TraitSet Set,
                                llvm::StringMap<SourceLocation> &SeenSelectors);
 
   /// Parses an OpenMP context selector set.
   ///
+  /// \verbatim
   /// <trait-set-selector-name> '=' '{' <trait-selector> [, <trait-selector>]* '}'
+  /// \endverbatim
   void parseOMPContextSelectorSet(OMPTraitSet &TISet,
                                   llvm::StringMap<SourceLocation> &SeenSets);
 
   /// Parse OpenMP context selectors:
   ///
+  /// \verbatim
   /// <trait-set-selector> [, <trait-set-selector>]*
+  /// \endverbatim
   bool parseOMPContextSelectors(SourceLocation Loc, OMPTraitInfo &TI);
 
   /// Parse an 'append_args' clause for '#pragma omp declare variant'.
@@ -6073,6 +6350,7 @@ private:
   /// `omp assumes` or `omp begin/end assumes` <clause> [[,]<clause>]...
   /// where
   ///
+  /// \verbatim
   ///   clause:
   ///     'ext_IMPL_DEFINED'
   ///     'absent' '(' directive-name [, directive-name]* ')'
@@ -6082,6 +6360,7 @@ private:
   ///     'no_openmp_routines'
   ///     'no_openmp_constructs' (OpenMP 6.0)
   ///     'no_parallelism'
+  /// \endverbatim
   ///
   void ParseOpenMPAssumesDirective(OpenMPDirectiveKind DKind,
                                    SourceLocation Loc);
@@ -6091,6 +6370,7 @@ private:
 
   /// Parses clauses for directive.
   ///
+  /// \verbatim
   /// <clause> [clause[ [,] clause] ... ]
   ///
   ///  clauses: for error directive
@@ -6098,6 +6378,7 @@ private:
   ///     'severity' '(' fatal | warning ')'
   ///     'message' '(' msg-string ')'
   /// ....
+  /// \endverbatim
   ///
   /// \param DKind Kind of current directive.
   /// \param clauses for current directive.
@@ -6130,6 +6411,7 @@ private:
 
   /// Parses declarative OpenMP directives.
   ///
+  /// \verbatim
   ///       threadprivate-directive:
   ///         annot_pragma_openmp 'threadprivate' simple-variable-list
   ///         annot_pragma_openmp_end
@@ -6163,6 +6445,7 @@ private:
   ///         annot_pragma_openmp 'begin assumes' <clause> [[[,] <clause>] ... ]
   ///         annot_pragma_openmp 'end assumes'
   ///         annot_pragma_openmp_end
+  /// \endverbatim
   ///
   DeclGroupPtrTy ParseOpenMPDeclarativeDirectiveWithExtDecl(
       AccessSpecifier &AS, ParsedAttributes &Attrs, bool Delayed = false,
@@ -6171,11 +6454,13 @@ private:
 
   /// Parse 'omp declare reduction' construct.
   ///
+  /// \verbatim
   ///       declare-reduction-directive:
   ///        annot_pragma_openmp 'declare' 'reduction'
   ///        '(' <reduction_id> ':' <type> {',' <type>} ':' <expression> ')'
   ///        ['initializer' '(' ('omp_priv' '=' <expression>)|<function_call> ')']
   ///        annot_pragma_openmp_end
+  /// \endverbatim
   /// <reduction_id> is either a base language identifier or one of the
   /// following operators: '+', '-', '*', '&', '|', '^', '&&' and '||'.
   ///
@@ -6187,10 +6472,12 @@ private:
 
   /// Parses 'omp declare mapper' directive.
   ///
+  /// \verbatim
   ///       declare-mapper-directive:
   ///         annot_pragma_openmp 'declare' 'mapper' '(' [<mapper-identifier> ':']
   ///         <type> <var> ')' [<clause>[[,] <clause>] ... ]
   ///         annot_pragma_openmp_end
+  /// \endverbatim
   /// <mapper-identifier> and <var> are base language identifiers.
   ///
   DeclGroupPtrTy ParseOpenMPDeclareMapperDirective(AccessSpecifier AS);
@@ -6202,8 +6489,10 @@ private:
 
   /// Parses simple list of variables.
   ///
+  /// \verbatim
   ///   simple-variable-list:
   ///         '(' id-expression {, id-expression} ')'
+  /// \endverbatim
   ///
   /// \param Kind Kind of the directive.
   /// \param Callback Callback function to be called for the list elements.
@@ -6218,6 +6507,7 @@ private:
 
   /// Parses declarative or executable directive.
   ///
+  /// \verbatim
   ///       threadprivate-directive:
   ///         annot_pragma_openmp 'threadprivate' simple-variable-list
   ///         annot_pragma_openmp_end
@@ -6256,6 +6546,7 @@ private:
   ///         teams distribute parallel for simd' | 'target teams distribute
   ///         simd' | 'masked' | 'parallel masked' {clause}
   ///         annot_pragma_openmp_end
+  /// \endverbatim
   ///
   ///
   /// \param StmtCtx The context in which we're parsing the directive.
@@ -6289,6 +6580,7 @@ private:
 
   /// Parses clause of kind \a CKind for directive of a kind \a Kind.
   ///
+  /// \verbatim
   ///    clause:
   ///       if-clause | final-clause | num_threads-clause | safelen-clause |
   ///       default-clause | private-clause | firstprivate-clause |
@@ -6306,6 +6598,7 @@ private:
   ///       | release-clause | relaxed-clause | depobj-clause | destroy-clause |
   ///       detach-clause | inclusive-clause | exclusive-clause |
   ///       uses_allocators-clause | use_device_addr-clause | has_device_addr
+  /// \endverbatim
   ///
   /// \param DKind Kind of current directive.
   /// \param CKind Kind of current clause.
@@ -6322,6 +6615,7 @@ private:
   /// 'thread_limit', 'simdlen', 'priority', 'grainsize', 'num_tasks', 'hint' or
   /// 'detach'.
   ///
+  /// \verbatim
   ///    final-clause:
   ///      'final' '(' expression ')'
   ///
@@ -6360,7 +6654,7 @@ private:
   ///
   ///    holds-clause
   ///      'holds' '(' expression ')'
-  ///
+  /// \endverbatim
   ///
   /// \param Kind Kind of current clause.
   /// \param ParseOnly true to skip the clause's semantic actions and return
@@ -6369,6 +6663,7 @@ private:
   OMPClause *ParseOpenMPSingleExprClause(OpenMPClauseKind Kind, bool ParseOnly);
   /// Parses simple clause like 'default' or 'proc_bind' of a kind \a Kind.
   ///
+  /// \verbatim
   ///    default-clause:
   ///         'default' '(' 'none' | 'shared' | 'private' | 'firstprivate' ')'
   ///
@@ -6381,6 +6676,7 @@ private:
   ///    update-clause:
   ///         'update' '(' 'in' | 'out' | 'inout' | 'mutexinoutset' |
   ///         'inoutset' ')'
+  /// \endverbatim
   ///
   /// \param Kind Kind of current clause.
   /// \param ParseOnly true to skip the clause's semantic actions and return
@@ -6399,6 +6695,7 @@ private:
   /// Parses clause with a single expression and an additional argument
   /// of a kind \a Kind like 'schedule' or 'dist_schedule'.
   ///
+  /// \verbatim
   ///    schedule-clause:
   ///      'schedule' '(' [ modifier [ ',' modifier ] ':' ] kind [',' expression ]
   ///      ')'
@@ -6411,6 +6708,7 @@ private:
   ///
   ///    device-clause:
   ///      'device' '(' [ device-modifier ':' ] expression ')'
+  /// \endverbatim
   ///
   /// \param DKind Directive kind.
   /// \param Kind Kind of current clause.
@@ -6429,6 +6727,7 @@ private:
 
   /// Parses clause without any additional arguments like 'ordered'.
   ///
+  /// \verbatim
   ///    ordered-clause:
   ///         'ordered'
   ///
@@ -6452,6 +6751,7 @@ private:
   ///
   ///    nogroup-clause:
   ///         'nogroup'
+  /// \endverbatim
   ///
   /// \param Kind Kind of current clause.
   /// \param ParseOnly true to skip the clause's semantic actions and return
@@ -6464,6 +6764,7 @@ private:
   /// 'shared', 'copyin', 'copyprivate', 'flush', 'reduction', 'task_reduction',
   /// 'in_reduction', 'nontemporal', 'exclusive' or 'inclusive'.
   ///
+  /// \verbatim
   ///    private-clause:
   ///       'private' '(' list ')'
   ///    firstprivate-clause:
@@ -6515,6 +6816,7 @@ private:
   ///       'inclusive' '(' list ')'
   ///    exclusive-clause:
   ///       'exclusive' '(' list ')'
+  /// \endverbatim
   ///
   /// For 'linear' clause linear-list may have the following forms:
   ///  list
@@ -6547,13 +6849,17 @@ private:
 
   /// Parses simple expression in parens for single-expression clauses of OpenMP
   /// constructs.
+  /// \verbatim
   /// <iterators> = 'iterator' '(' { [ <iterator-type> ] identifier =
   /// <range-specification> }+ ')'
+  /// \endverbatim
   ExprResult ParseOpenMPIteratorsExpr();
 
   /// Parses allocators and traits in the context of the uses_allocator clause.
   /// Expected format:
+  /// \verbatim
   /// '(' { <allocator> [ '(' <allocator_traits> ')' ] }+ ')'
+  /// \endverbatim
   OMPClause *ParseOpenMPUsesAllocatorClause(OpenMPDirectiveKind DKind);
 
   /// Parses the 'interop' parts of the 'append_args' and 'init' clauses.
@@ -6561,6 +6867,7 @@ private:
 
   /// Parses clause with an interop variable of kind \a Kind.
   ///
+  /// \verbatim
   /// init-clause:
   ///   init([interop-modifier, ]interop-type[[, interop-type] ... ]:interop-var)
   ///
@@ -6581,6 +6888,7 @@ private:
   ///
   /// interop-type:
   ///   target | targetsync
+  /// \endverbatim
   ///
   /// \param Kind Kind of current clause.
   /// \param ParseOnly true to skip the clause's semantic actions and return
@@ -6854,6 +7162,7 @@ public:
                  ParsedStmtContext StmtCtx = ParsedStmtContext::SubStmt);
 
   /// ParseStatementOrDeclaration - Read 'statement' or 'declaration'.
+  /// \verbatim
   ///       StatementOrDeclaration:
   ///         statement
   ///         declaration
@@ -6901,6 +7210,7 @@ public:
   /// [OBC] objc-throw-statement:
   /// [OBC]   '@' 'throw' expression ';'
   /// [OBC]   '@' 'throw' ';'
+  /// \endverbatim
   ///
   StmtResult
   ParseStatementOrDeclaration(StmtVector &Stmts, ParsedStmtContext StmtCtx,
@@ -6916,28 +7226,34 @@ public:
 
   /// ParseLabeledStatement - We have an identifier and a ':' after it.
   ///
+  /// \verbatim
   ///       label:
   ///         identifier ':'
   /// [GNU]   identifier ':' attributes[opt]
   ///
   ///       labeled-statement:
   ///         label statement
+  /// \endverbatim
   ///
   StmtResult ParseLabeledStatement(ParsedAttributes &Attrs,
                                    ParsedStmtContext StmtCtx);
 
   /// ParseCaseStatement
+  /// \verbatim
   ///       labeled-statement:
   ///         'case' constant-expression ':' statement
   /// [GNU]   'case' constant-expression '...' constant-expression ':' statement
+  /// \endverbatim
   ///
   StmtResult ParseCaseStatement(ParsedStmtContext StmtCtx,
                                 bool MissingCase = false,
                                 ExprResult Expr = ExprResult());
 
   /// ParseDefaultStatement
+  /// \verbatim
   ///       labeled-statement:
   ///         'default' ':' statement
+  /// \endverbatim
   /// Note that this does not parse the 'statement' at the end.
   ///
   StmtResult ParseDefaultStatement(ParsedStmtContext StmtCtx);
@@ -6946,6 +7262,7 @@ public:
 
   /// ParseCompoundStatement - Parse a "{}" block.
   ///
+  /// \verbatim
   ///       compound-statement: [C99 6.8.2]
   ///         { block-item-list[opt] }
   /// [GNU]   { label-declarations block-item-list } [TODO]
@@ -6965,6 +7282,7 @@ public:
   ///
   /// [GNU] label-declaration:
   /// [GNU]   '__label__' identifier-list ';'
+  /// \endverbatim
   ///
   StmtResult ParseCompoundStatement(bool isStmtExpr, unsigned ScopeFlags);
 
@@ -6986,9 +7304,11 @@ public:
   StmtResult ParseCompoundStatementBody(bool isStmtExpr = false);
 
   /// ParseParenExprOrCondition:
+  /// \verbatim
   /// [C  ]     '(' expression ')'
   /// [C++]     '(' condition ')'
   /// [C++1z]   '(' init-statement[opt] condition ')'
+  /// \endverbatim
   ///
   /// This function parses and performs error recovery on the specified
   /// condition or expression (depending on whether we're in C++ or C mode).
@@ -7006,6 +7326,7 @@ public:
                                  SourceLocation &RParenLoc);
 
   /// ParseIfStatement
+  /// \verbatim
   ///       if-statement: [C99 6.8.4.1]
   ///         'if' '(' expression ')' statement
   ///         'if' '(' expression ')' statement 'else' statement
@@ -7013,28 +7334,36 @@ public:
   /// [C++]   'if' '(' condition ')' statement 'else' statement
   /// [C++23] 'if' '!' [opt] consteval compound-statement
   /// [C++23] 'if' '!' [opt] consteval compound-statement 'else' statement
+  /// \endverbatim
   ///
   StmtResult ParseIfStatement(SourceLocation *TrailingElseLoc);
 
   /// ParseSwitchStatement
+  /// \verbatim
   ///       switch-statement:
   ///         'switch' '(' expression ')' statement
   /// [C++]   'switch' '(' condition ')' statement
+  /// \endverbatim
   StmtResult ParseSwitchStatement(SourceLocation *TrailingElseLoc);
 
   /// ParseWhileStatement
+  /// \verbatim
   ///       while-statement: [C99 6.8.5.1]
   ///         'while' '(' expression ')' statement
   /// [C++]   'while' '(' condition ')' statement
+  /// \endverbatim
   StmtResult ParseWhileStatement(SourceLocation *TrailingElseLoc);
 
   /// ParseDoStatement
+  /// \verbatim
   ///       do-statement: [C99 6.8.5.2]
   ///         'do' statement 'while' '(' expression ')' ';'
+  /// \endverbatim
   /// Note: this lets the caller parse the end ';'.
   StmtResult ParseDoStatement();
 
   /// ParseForStatement
+  /// \verbatim
   ///       for-statement: [C99 6.8.5.3]
   ///         'for' '(' expr[opt] ';' expr[opt] ';' expr[opt] ')' statement
   ///         'for' '(' declaration expr[opt] ';' expr[opt] ')' statement
@@ -7057,39 +7386,48 @@ public:
   /// [C++0x] for-range-initializer:
   /// [C++0x]   expression
   /// [C++0x]   braced-init-list            [TODO]
+  /// \endverbatim
   StmtResult ParseForStatement(SourceLocation *TrailingElseLoc);
 
   /// ParseGotoStatement
+  /// \verbatim
   ///       jump-statement:
   ///         'goto' identifier ';'
   /// [GNU]   'goto' '*' expression ';'
+  /// \endverbatim
   ///
   /// Note: this lets the caller parse the end ';'.
   ///
   StmtResult ParseGotoStatement();
 
   /// ParseContinueStatement
+  /// \verbatim
   ///       jump-statement:
   ///         'continue' ';'
+  /// \endverbatim
   ///
   /// Note: this lets the caller parse the end ';'.
   ///
   StmtResult ParseContinueStatement();
 
   /// ParseBreakStatement
+  /// \verbatim
   ///       jump-statement:
   ///         'break' ';'
+  /// \endverbatim
   ///
   /// Note: this lets the caller parse the end ';'.
   ///
   StmtResult ParseBreakStatement();
 
   /// ParseReturnStatement
+  /// \verbatim
   ///       jump-statement:
   ///         'return' expression[opt] ';'
   ///         'return' braced-init-list ';'
   ///         'co_return' expression[opt] ';'
   ///         'co_return' braced-init-list ';'
+  /// \endverbatim
   StmtResult ParseReturnStatement();
 
   StmtResult ParsePragmaLoopHint(StmtVector &Stmts, ParsedStmtContext StmtCtx,
@@ -7103,14 +7441,17 @@ public:
 
   /// ParseCXXTryBlock - Parse a C++ try-block.
   ///
+  /// \verbatim
   ///       try-block:
   ///         'try' compound-statement handler-seq
+  /// \endverbatim
   ///
   StmtResult ParseCXXTryBlock();
 
   /// ParseCXXTryBlockCommon - Parse the common part of try-block and
   /// function-try-block.
   ///
+  /// \verbatim
   ///       try-block:
   ///         'try' compound-statement handler-seq
   ///
@@ -7123,12 +7464,14 @@ public:
   ///       [Borland] try-block:
   ///         'try' compound-statement seh-except-block
   ///         'try' compound-statement seh-finally-block
+  /// \endverbatim
   ///
   StmtResult ParseCXXTryBlockCommon(SourceLocation TryLoc, bool FnTry = false);
 
   /// ParseCXXCatchBlock - Parse a C++ catch block, called handler in the
   /// standard
   ///
+  /// \verbatim
   ///   handler:
   ///     'catch' '(' exception-declaration ')' compound-statement
   ///
@@ -7136,6 +7479,7 @@ public:
   ///     attribute-specifier-seq[opt] type-specifier-seq declarator
   ///     attribute-specifier-seq[opt] type-specifier-seq abstract-declarator[opt]
   ///     '...'
+  /// \endverbatim
   ///
   StmtResult ParseCXXCatchBlock(bool FnCatch = false);
 
@@ -7144,26 +7488,32 @@ public:
 
   /// ParseSEHTryBlockCommon
   ///
+  /// \verbatim
   /// seh-try-block:
   ///   '__try' compound-statement seh-handler
   ///
   /// seh-handler:
   ///   seh-except-block
   ///   seh-finally-block
+  /// \endverbatim
   ///
   StmtResult ParseSEHTryBlock();
 
   /// ParseSEHExceptBlock - Handle __except
   ///
+  /// \verbatim
   /// seh-except-block:
   ///   '__except' '(' seh-filter-expression ')' compound-statement
+  /// \endverbatim
   ///
   StmtResult ParseSEHExceptBlock(SourceLocation Loc);
 
   /// ParseSEHFinallyBlock - Handle __finally
   ///
+  /// \verbatim
   /// seh-finally-block:
   ///   '__finally' compound-statement
+  /// \endverbatim
   ///
   StmtResult ParseSEHFinallyBlock(SourceLocation Loc);
 
@@ -7173,8 +7523,10 @@ public:
 
   /// ParseFunctionTryBlock - Parse a C++ function-try-block.
   ///
+  /// \verbatim
   ///       function-try-block:
   ///         'try' ctor-initializer[opt] compound-statement handler-seq
+  /// \endverbatim
   ///
   Decl *ParseFunctionTryBlock(Decl *Decl, ParseScope &BodyScope);
 
@@ -7232,6 +7584,7 @@ public:
 
 private:
   /// ParseAsmStatement - Parse a GNU extended asm statement.
+  /// \verbatim
   ///       asm-statement:
   ///         gnu-asm-statement
   ///         ms-asm-statement
@@ -7249,12 +7602,14 @@ private:
   /// [GNU] asm-clobbers:
   ///         asm-string-literal
   ///         asm-clobbers ',' asm-string-literal
+  /// \endverbatim 
   ///
   StmtResult ParseAsmStatement(bool &msAsm);
 
   /// ParseMicrosoftAsmStatement. When -fms-extensions/-fasm-blocks is enabled,
   /// this routine is called to collect the tokens for an MS asm statement.
   ///
+  /// \verbatim
   /// [MS]  ms-asm-statement:
   ///         ms-asm-block
   ///         ms-asm-block ms-asm-statement
@@ -7266,12 +7621,14 @@ private:
   /// [MS]  ms-asm-instruction-block
   ///         ms-asm-line
   ///         ms-asm-line '\n' ms-asm-instruction-block
+  /// \endverbatim
   ///
   StmtResult ParseMicrosoftAsmStatement(SourceLocation AsmLoc);
 
   /// ParseAsmOperands - Parse the asm-operands production as used by
   /// asm-statement, assuming the leading ':' token was eaten.
   ///
+  /// \verbatim
   /// [GNU] asm-operands:
   ///         asm-operand
   ///         asm-operands ',' asm-operand
@@ -7279,8 +7636,8 @@ private:
   /// [GNU] asm-operand:
   ///         asm-string-literal '(' expression ')'
   ///         '[' identifier ']' asm-string-literal '(' expression ')'
+  /// \endverbatim
   ///
-  //
   // FIXME: Avoid unnecessary std::string trashing.
   bool ParseAsmOperandsOpt(SmallVectorImpl<IdentifierInfo *> &Names,
                            SmallVectorImpl<Expr *> &Constraints,
@@ -7310,6 +7667,7 @@ private:
   GNUAsmQualifiers::AQ getGNUAsmQualifier(const Token &Tok) const;
 
   /// parseGNUAsmQualifierListOpt - Parse a GNU extended asm qualifier list.
+  /// \verbatim
   ///       asm-qualifier:
   ///         volatile
   ///         inline
@@ -7318,6 +7676,7 @@ private:
   ///       asm-qualifier-list:
   ///         asm-qualifier
   ///         asm-qualifier-list asm-qualifier
+  /// \endverbatim
   bool parseGNUAsmQualifierListOpt(GNUAsmQualifiers &AQ);
 
   ///@}
@@ -7587,6 +7946,7 @@ private:
   /// of the template headers together and let semantic analysis sort
   /// the declarations from the explicit specializations.
   ///
+  /// \verbatim
   ///       template-declaration: [C++ temp]
   ///         'export'[opt] 'template' '<' template-parameter-list '>' declaration
   ///
@@ -7601,6 +7961,7 @@ private:
   ///
   ///       explicit-specialization: [ C++ temp.expl.spec]
   ///         'template' '<' '>' declaration
+  /// \endverbatim
   DeclGroupPtrTy ParseTemplateDeclarationOrSpecialization(
       DeclaratorContext Context, SourceLocation &DeclEnd,
       ParsedAttributes &AccessAttrs, AccessSpecifier AS);
@@ -7642,9 +8003,11 @@ private:
   /// will try to put the token stream in a reasonable position (closing
   /// a statement, etc.) and return false.
   ///
+  /// \verbatim
   ///       template-parameter-list:    [C++ temp]
   ///         template-parameter
   ///         template-parameter-list ',' template-parameter
+  /// \endverbatim
   bool ParseTemplateParameterList(unsigned Depth,
                                   SmallVectorImpl<NamedDecl *> &TemplateParams);
 
@@ -7656,6 +8019,7 @@ private:
 
   /// ParseTemplateParameter - Parse a template-parameter (C++ [temp.param]).
   ///
+  /// \verbatim
   ///       template-parameter: [C++ temp.param]
   ///         type-parameter
   ///         parameter-declaration
@@ -7673,6 +8037,7 @@ private:
   ///       type-parameter-key:
   ///         class
   ///         typename
+  /// \endverbatim
   ///
   NamedDecl *ParseTemplateParameter(unsigned Depth, unsigned Position);
 
@@ -7680,16 +8045,19 @@ private:
   /// Other kinds of template parameters are parsed in
   /// ParseTemplateTemplateParameter and ParseNonTypeTemplateParameter.
   ///
+  /// \verbatim
   ///       type-parameter:     [C++ temp.param]
   ///         'class' ...[opt][C++0x] identifier[opt]
   ///         'class' identifier[opt] '=' type-id
   ///         'typename' ...[opt][C++0x] identifier[opt]
   ///         'typename' identifier[opt] '=' type-id
+  /// \endverbatim
   NamedDecl *ParseTypeParameter(unsigned Depth, unsigned Position);
 
   /// ParseTemplateTemplateParameter - Handle the parsing of template
   /// template parameters.
   ///
+  /// \verbatim
   ///       type-parameter:    [C++ temp.param]
   ///         template-head type-parameter-key ...[opt] identifier[opt]
   ///         template-head type-parameter-key identifier[opt] = id-expression
@@ -7699,14 +8067,17 @@ private:
   ///       template-head:     [C++2a]
   ///         'template' '<' template-parameter-list '>'
   ///             requires-clause[opt]
+  /// \endverbatim
   NamedDecl *ParseTemplateTemplateParameter(unsigned Depth, unsigned Position);
 
   /// ParseNonTypeTemplateParameter - Handle the parsing of non-type
   /// template parameters (e.g., in "template<int Size> class array;").
   ///
+  /// \verbatim
   ///       template-parameter:
   ///         ...
   ///         parameter-declaration
+  /// \endverbatim
   NamedDecl *ParseNonTypeTemplateParameter(unsigned Depth, unsigned Position);
 
   /// Check whether the current token is a template-id annotation denoting a
@@ -7715,10 +8086,12 @@ private:
 
   /// Try parsing a type-constraint at the current location.
   ///
+  /// \verbatim
   ///     type-constraint:
   ///       nested-name-specifier[opt] concept-name
   ///       nested-name-specifier[opt] concept-name
   ///           '<' template-argument-list[opt] '>'[opt]
+  /// \endverbatim
   ///
   /// \returns true if an error occurred, and false otherwise.
   bool TryAnnotateTypeConstraint();
@@ -7839,9 +8212,11 @@ private:
   /// ParseTemplateArgumentList - Parse a C++ template-argument-list
   /// (C++ [temp.names]). Returns true if there was an error.
   ///
+  /// \verbatim
   ///       template-argument-list: [C++ 14.2]
   ///         template-argument
   ///         template-argument-list ',' template-argument
+  /// \endverbatim
   ///
   /// \param Template is only used for code completion, and may be null.
   bool ParseTemplateArgumentList(TemplateArgList &TemplateArgs,
@@ -7852,19 +8227,23 @@ private:
 
   /// ParseTemplateArgument - Parse a C++ template argument (C++ [temp.names]).
   ///
+  /// \verbatim
   ///       template-argument: [C++ 14.2]
   ///         constant-expression
   ///         type-id
   ///         id-expression
   ///         braced-init-list  [C++26, DR]
+  /// \endverbatim
   ///
   ParsedTemplateArgument ParseTemplateArgument();
 
   /// Parse a C++ explicit template instantiation
   /// (C++ [temp.explicit]).
   ///
+  /// \verbatim
   ///       explicit-instantiation:
   ///         'extern' [opt] 'template' declaration
+  /// \endverbatim
   ///
   /// Note that the 'extern' is a GNU extension and C++11 feature.
   DeclGroupPtrTy ParseExplicitInstantiation(DeclaratorContext Context,
@@ -7967,6 +8346,7 @@ private:
   /// between a declaration or an expression statement, when parsing function
   /// bodies. Returns true for declaration, false for expression.
   ///
+  /// \verbatim
   ///         declaration-statement:
   ///           block-declaration
   ///
@@ -7992,6 +8372,7 @@ private:
   ///         using-directive:
   ///           'using' 'namespace' '::'[opt] nested-name-specifier[opt]
   ///                 namespace-name ';'
+  /// \endverbatim
   ///
   bool isCXXDeclarationStatement(bool DisambiguatingWithExpression = false);
 
@@ -8001,17 +8382,21 @@ private:
   /// the function returns true to let the declaration parsing code handle it.
   /// Returns false if the statement is disambiguated as expression.
   ///
+  /// \verbatim
   /// simple-declaration:
   ///   decl-specifier-seq init-declarator-list[opt] ';'
   ///   decl-specifier-seq ref-qualifier[opt] '[' identifier-list ']'
   ///                      brace-or-equal-initializer ';'    [C++17]
+  /// \endverbatim
   ///
   /// (if AllowForRangeDecl specified)
   /// for ( for-range-declaration : for-range-initializer ) statement
   ///
+  /// \verbatim
   /// for-range-declaration:
   ///    decl-specifier-seq declarator
   ///    decl-specifier-seq ref-qualifier[opt] '[' identifier-list ']'
+  /// \endverbatim
   ///
   /// In any of the above cases there can be a preceding
   /// attribute-specifier-seq, but the caller is expected to handle that.
@@ -8045,6 +8430,7 @@ private:
   /// simple-declaration in an init-statement, and an expression for
   /// a condition of a if/switch statement.
   ///
+  /// \verbatim
   ///       condition:
   ///         expression
   ///         type-specifier-seq declarator '=' assignment-expression
@@ -8054,6 +8440,7 @@ private:
   ///             '=' assignment-expression
   ///       simple-declaration:
   ///         decl-specifier-seq init-declarator-list[opt] ';'
+  /// \endverbatim
   ///
   /// Note that, unlike isCXXSimpleDeclaration, we must disambiguate all the way
   /// to the ';' to disambiguate cases like 'int(x))' (an expression) from
@@ -8077,8 +8464,10 @@ private:
   /// If during the disambiguation process a parsing error is encountered,
   /// the function returns true to let the declaration parsing code handle it.
   ///
+  /// \verbatim
   /// type-id:
   ///   type-specifier-seq abstract-declarator[opt]
+  /// \endverbatim
   ///
   bool isCXXTypeId(TentativeCXXTypeIdContext Context, bool &isAmbiguous);
 
@@ -8119,6 +8508,7 @@ private:
   ///   * When parsing X::Y (with no 'typename') where X is dependent
   ///   * When parsing X<Y> where X is undeclared
   ///
+  /// \verbatim
   ///         decl-specifier:
   ///           storage-class-specifier
   ///           type-specifier
@@ -8213,6 +8603,7 @@ private:
   ///           'const'
   ///           'volatile'
   /// [GNU]     restrict
+  /// \endverbatim
   ///
   TPResult
   isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
@@ -8247,6 +8638,7 @@ private:
   // that more tentative parsing is necessary for disambiguation.
   // They all consume tokens, so backtracking should be used after calling them.
 
+  /// \verbatim
   /// simple-declaration:
   ///   decl-specifier-seq init-declarator-list[opt] ';'
   ///
@@ -8254,12 +8646,15 @@ private:
   /// for ( for-range-declaration : for-range-initializer ) statement
   /// for-range-declaration:
   ///    attribute-specifier-seqopt type-specifier-seq declarator
+  /// \endverbatim
   ///
   TPResult TryParseSimpleDeclaration(bool AllowForRangeDecl);
 
+  /// \verbatim
   /// [GNU] typeof-specifier:
   ///         'typeof' '(' expressions ')'
   ///         'typeof' '(' type-name ')'
+  /// \endverbatim
   ///
   TPResult TryParseTypeofSpecifier();
 
@@ -8269,6 +8664,7 @@ private:
 
   TPResult TryParsePtrOperatorSeq();
 
+  /// \verbatim
   ///         operator-function-id:
   ///           'operator' operator
   ///
@@ -8287,11 +8683,13 @@ private:
   ///         literal-operator-id:
   ///           'operator' string-literal identifier
   ///           'operator' user-defined-string-literal
+  /// \endverbatim
   TPResult TryParseOperatorId();
 
   /// Tentatively parse an init-declarator-list in order to disambiguate it from
   /// an expression.
   ///
+  /// \verbatim
   ///       init-declarator-list:
   ///         init-declarator
   ///         init-declarator-list ',' init-declarator
@@ -8315,9 +8713,11 @@ private:
   ///       braced-init-list:
   ///         '{' initializer-list ','[opt] '}'
   ///         '{' '}'
+  /// \endverbatim
   ///
   TPResult TryParseInitDeclaratorList(bool MayHaveTrailingReturnType = false);
 
+  /// \verbatim
   ///         declarator:
   ///           direct-declarator
   ///           ptr-operator declarator
@@ -8370,11 +8770,13 @@ private:
   ///           '~' class-name                                              [TODO]
   ///           '~' decltype-specifier                                      [TODO]
   ///           template-id                                                 [TODO]
+  /// \endverbatim
   ///
   TPResult TryParseDeclarator(bool mayBeAbstract, bool mayHaveIdentifier = true,
                               bool mayHaveDirectInit = false,
                               bool mayHaveTrailingReturnType = false);
 
+  /// \verbatim
   /// parameter-declaration-clause:
   ///   parameter-declaration-list[opt] '...'[opt]
   ///   parameter-declaration-list ',' '...'
@@ -8391,6 +8793,7 @@ private:
   ///     attributes[opt]
   ///   attribute-specifier-seq[opt] decl-specifier-seq abstract-declarator[opt]
   ///     attributes[opt] '=' assignment-expression
+  /// \endverbatim
   ///
   TPResult TryParseParameterDeclarationClause(
       bool *InvalidAsDeclaration = nullptr, bool VersusTemplateArg = false,
@@ -8402,11 +8805,13 @@ private:
   /// fully parsed the function declarator, it will return TPResult::Ambiguous,
   /// otherwise it will return either False() or Error().
   ///
+  /// \verbatim
   /// '(' parameter-declaration-clause ')' cv-qualifier-seq[opt]
   ///         exception-specification[opt]
   ///
   /// exception-specification:
   ///   'throw' '(' type-id-list[opt] ')'
+  /// \endverbatim
   ///
   TPResult TryParseFunctionDeclarator(bool MayHaveTrailingReturnType = false);
 
@@ -8416,7 +8821,9 @@ private:
   // a function declaration.
   bool NameAfterArrowIsNonType();
 
+  /// \verbatim
   /// '[' constant-expression[opt] ']'
+  /// \endverbatim
   ///
   TPResult TryParseBracketDeclarator();
 
@@ -8446,6 +8853,7 @@ private:
   ///
   /// C++11 [dcl.attr.grammar]:
   ///
+  /// \verbatim
   ///     attribute-specifier:
   ///         '[' '[' attribute-list ']' ']'
   ///         alignment-specifier
@@ -8465,6 +8873,7 @@ private:
   ///
   ///     attribute-argument-clause:
   ///         '(' balanced-token-seq ')'
+  /// \endverbatim
   CXX11AttributeKind
   isCXX11AttributeSpecifier(bool Disambiguate = false,
                             bool OuterMightBeMessageSend = false);
