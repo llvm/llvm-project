@@ -508,15 +508,6 @@ public:
   // Return true if any runtime check is added.
   bool areSafetyChecksAdded() { return AddedSafetyChecks; }
 
-  /// A helper function to scalarize a single Instruction in the innermost loop.
-  /// Generates a sequence of scalar instances for each lane between \p MinLane
-  /// and \p MaxLane, times each part between \p MinPart and \p MaxPart,
-  /// inclusive. Uses the VPValue operands from \p RepRecipe instead of \p
-  /// Instr's operands.
-  void scalarizeInstruction(const Instruction *Instr,
-                            VPReplicateRecipe *RepRecipe, const VPLane &Lane,
-                            VPTransformState &State);
-
   /// Fix the non-induction PHIs in \p Plan.
   void fixNonInductionPHIs(VPTransformState &State);
 
@@ -2321,10 +2312,12 @@ static bool useMaskedInterleavedAccesses(const TargetTransformInfo &TTI) {
   return TTI.enableMaskedInterleavedAccessVectorization();
 }
 
-void InnerLoopVectorizer::scalarizeInstruction(const Instruction *Instr,
-                                               VPReplicateRecipe *RepRecipe,
-                                               const VPLane &Lane,
-                                               VPTransformState &State) {
+/// A helper function to scalarize a single Instruction in the innermost loop.
+/// Generates a sequence of scalar instances for lane \p Lane. Uses the VPValue
+/// operands from \p RepRecipe instead of \p Instr's operands.
+static void scalarizeInstruction(const Instruction *Instr,
+                                 VPReplicateRecipe *RepRecipe,
+                                 const VPLane &Lane, VPTransformState &State) {
   assert((!Instr->getType()->isAggregateType() ||
           canVectorizeTy(Instr->getType())) &&
          "Expected vectorizable or non-aggregate type.");
@@ -2366,7 +2359,7 @@ void InnerLoopVectorizer::scalarizeInstruction(const Instruction *Instr,
 
   // If we just cloned a new assumption, add it the assumption cache.
   if (auto *II = dyn_cast<AssumeInst>(Cloned))
-    AC->registerAssumption(II);
+    State.AC->registerAssumption(II);
 
   assert(
       (RepRecipe->getParent()->getParent() ||
@@ -7863,7 +7856,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
                                             *Legal->getWidestInductionType());
 
   // Perform the actual loop transformation.
-  VPTransformState State(&TTI, BestVF, LI, DT, ILV.Builder, &ILV, &BestVPlan,
+  VPTransformState State(&TTI, BestVF, LI, DT, ILV.AC, ILV.Builder, &BestVPlan,
                          OrigLoop->getParentLoop(),
                          Legal->getWidestInductionType());
 
@@ -10094,7 +10087,7 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
     assert((State.VF.isScalar() || !isUniform()) &&
            "uniform recipe shouldn't be predicated");
     assert(!State.VF.isScalable() && "Can't scalarize a scalable vector");
-    State.ILV->scalarizeInstruction(UI, this, *State.Lane, State);
+    scalarizeInstruction(UI, this, *State.Lane, State);
     // Insert scalar instance packing it into a vector.
     if (State.VF.isVector() && shouldPack()) {
       // If we're constructing lane 0, initialize to start from poison.
@@ -10111,7 +10104,7 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
 
   if (IsUniform) {
     // Uniform within VL means we need to generate lane 0.
-    State.ILV->scalarizeInstruction(UI, this, VPLane(0), State);
+    scalarizeInstruction(UI, this, VPLane(0), State);
     return;
   }
 
@@ -10120,7 +10113,7 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
   if (isa<StoreInst>(UI) &&
       vputils::isUniformAfterVectorization(getOperand(1))) {
     auto Lane = VPLane::getLastLaneForVF(State.VF);
-    State.ILV->scalarizeInstruction(UI, this, VPLane(Lane), State);
+    scalarizeInstruction(UI, this, VPLane(Lane), State);
     return;
   }
 
@@ -10128,7 +10121,7 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
   assert(!State.VF.isScalable() && "Can't scalarize a scalable vector");
   const unsigned EndLane = State.VF.getKnownMinValue();
   for (unsigned Lane = 0; Lane < EndLane; ++Lane)
-    State.ILV->scalarizeInstruction(UI, this, VPLane(Lane), State);
+    scalarizeInstruction(UI, this, VPLane(Lane), State);
 }
 
 // Determine how to lower the scalar epilogue, which depends on 1) optimising
