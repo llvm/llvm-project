@@ -704,11 +704,6 @@ void Parser::resetPragmaHandlers() {
   }
 }
 
-/// Handle the annotation token produced for #pragma unused(...)
-///
-/// Each annot_pragma_unused is followed by the argument token so e.g.
-/// "#pragma unused(x,y)" becomes:
-/// annot_pragma_unused 'x' annot_pragma_unused 'y'
 void Parser::HandlePragmaUnused() {
   assert(Tok.is(tok::annot_pragma_unused));
   SourceLocation UnusedLoc = ConsumeAnnotationToken();
@@ -1226,7 +1221,6 @@ bool Parser::HandlePragmaMSSegment(StringRef PragmaName,
   return true;
 }
 
-// #pragma init_seg({ compiler | lib | user | "section-name" [, func-name]} )
 bool Parser::HandlePragmaMSInitSeg(StringRef PragmaName,
                                    SourceLocation PragmaLocation) {
   if (getTargetInfo().getTriple().getEnvironment() != llvm::Triple::MSVC) {
@@ -1288,9 +1282,6 @@ bool Parser::HandlePragmaMSInitSeg(StringRef PragmaName,
   return true;
 }
 
-// #pragma strict_gs_check(pop)
-// #pragma strict_gs_check(push, "on" | "off")
-// #pragma strict_gs_check("on" | "off")
 bool Parser::HandlePragmaMSStrictGuardStackCheck(
     StringRef PragmaName, SourceLocation PragmaLocation) {
   if (ExpectAndConsume(tok::l_paren, diag::warn_pragma_expected_lparen,
@@ -3857,7 +3848,6 @@ bool Parser::HandlePragmaMSFunction(StringRef PragmaName,
   return true;
 }
 
-// #pragma optimize("gsty", on|off)
 bool Parser::HandlePragmaMSOptimize(StringRef PragmaName,
                                     SourceLocation PragmaLocation) {
   Token FirstTok = Tok;
