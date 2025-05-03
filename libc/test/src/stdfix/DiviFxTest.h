@@ -8,8 +8,8 @@
 
 #include "test/UnitTest/Test.h"
 
-#include "src/__support/fixed_point/fx_rep.h"
 #include "src/__support/fixed_point/divifx.h"
+#include "src/__support/fixed_point/fx_rep.h"
 
 template <typename T, typename XType>
 class DiviFxTest : public LIBC_NAMESPACE::testing::Test {
@@ -33,8 +33,8 @@ public:
 };
 
 #define LIST_DIVIFX_TESTS(Name, T, XType, func)                                \
-  using LlvmLibcDivifx##Name##Test = DiviFxTest<T, XType>;                       \
-  TEST_F(LlvmLibcDivifx##Name##Test, SpecialNumbers) {                           \
+  using LlvmLibcDivifx##Name##Test = DiviFxTest<T, XType>;                     \
+  TEST_F(LlvmLibcDivifx##Name##Test, SpecialNumbers) {                         \
     testSpecialNumbers(&func);                                                 \
   }                                                                            \
   static_assert(true, "Require semicolon.")

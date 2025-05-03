@@ -23,7 +23,7 @@
 #include "src/__support/macros/attributes.h"        // LIBC_INLINE
 #include "src/__support/macros/config.h" // LIBC_NAMESPACE_DECL, LIBC_COMPILER_HAS_FIXED_POINT
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
-#include "src/__support/uint128.h" // UInt128, Int128 (optional)
+#include "src/__support/uint128.h"             // UInt128, Int128 (optional)
 
 #include "fx_rep.h" // FXRep for type info (FRACTION_LEN, StorageType)
 
@@ -37,17 +37,15 @@ namespace internal {
 // --- Helper type traits for selecting intermediate calculation types ---
 
 template <typename IntType, int FractionalBits>
-using SelectDivIntermediateSigned =
-    cpp::conditional_t<
-        (sizeof(IntType) * 8 - 1 + FractionalBits <= 64), int64_t,
+using SelectDivIntermediateSigned = cpp::conditional_t<
+    (sizeof(IntType) * 8 - 1 + FractionalBits <= 64), int64_t,
 #ifdef LIBC_INTERNAL_HAS_INT128
-        cpp::conditional_t<(sizeof(IntType) * 8 - 1 + FractionalBits <= 128),
-                           Int128,
-                           void>
+    cpp::conditional_t<(sizeof(IntType) * 8 - 1 + FractionalBits <= 128),
+                       Int128, void>
 #else
-        void
+    void
 #endif
-        >;
+    >;
 
 template <typename IntType, int FractionalBits>
 using SelectDivIntermediateUnsigned = cpp::conditional_t<
@@ -62,13 +60,12 @@ using SelectDivIntermediateUnsigned = cpp::conditional_t<
 
 // --- Core implementation template ---
 
-
 template <typename IntType, typename FxType>
 LIBC_INLINE IntType divifx_impl(IntType i, FxType fx) {
   // Get metadata about the fixed-point type using FXRep helper
   using FX = FXRep<FxType>;
   using StorageType = typename FX::StorageType;
-  constexpr int F = FX::FRACTION_LEN;        // Number of fractional bits
+  constexpr int F = FX::FRACTION_LEN;       // Number of fractional bits
   constexpr bool FxIsSigned = FX::SIGN_LEN; // Is the fx type signed?
 
   // Extract the raw integer bits from the fixed-point divisor
@@ -76,7 +73,6 @@ LIBC_INLINE IntType divifx_impl(IntType i, FxType fx) {
 
   volatile StorageType check_raw_fx = raw_fx;
   if (LIBC_UNLIKELY(check_raw_fx == 0)) {
-
   }
 
   // Select appropriately sized intermediate types for the calculation

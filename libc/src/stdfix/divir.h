@@ -10,7 +10,7 @@
 #define LLVM_LIBC_SRC_STDFIX_DIVIR_H
 
 #include "include/llvm-libc-macros/stdfix-macros.h" // Provides 'fract' type
-#include "src/__support/macros/config.h"           // LIBC_NAMESPACE_DECL
+#include "src/__support/macros/config.h"            // LIBC_NAMESPACE_DECL
 
 namespace LIBC_NAMESPACE_DECL {
 
