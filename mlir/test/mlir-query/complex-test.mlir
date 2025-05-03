@@ -1,4 +1,4 @@
-// RUN: mlir-query %s -c "m getDefinitions(hasOpName(\"arith.addf\"),2,true,false,false)" | FileCheck %s
+// RUN: mlir-query %s -c "m getAllDefinitions(hasOpName(\"arith.addf\"),2)" | FileCheck %s
 
 #map = affine_map<(d0, d1) -> (d0, d1)>
 func.func @slice_use_from_above(%arg0: tensor<5x5xf32>, %arg1: tensor<5x5xf32>) {
