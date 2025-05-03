@@ -654,8 +654,8 @@ uint32_t Symtab::GetNameIndexes(ConstString symbol_name,
   if (count)
     return count;
   // Synthetic symbol names are not added to the name indexes, but they start
-  // with a prefix and end with the symbol file address. This allows users to find
-  // these symbols without having to add them to the name indexes. These
+  // with a prefix and end with the symbol file address. This allows users to
+  // find these symbols without having to add them to the name indexes. These
   // queries will not happen very often since the names don't mean anything, so
   // performance is not paramount in this case.
   llvm::StringRef name = symbol_name.GetStringRef();
