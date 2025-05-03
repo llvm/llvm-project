@@ -1222,8 +1222,6 @@ void DAP::SetConfiguration(const protocol::Configuration &config,
 }
 
 void DAP::SetFrameFormat(llvm::StringRef format) {
-  if (format.empty())
-    return;
   lldb::SBError error;
   frame_format = lldb::SBFormat(format.str().c_str(), error);
   if (error.Fail()) {
@@ -1236,8 +1234,6 @@ void DAP::SetFrameFormat(llvm::StringRef format) {
 }
 
 void DAP::SetThreadFormat(llvm::StringRef format) {
-  if (format.empty())
-    return;
   lldb::SBError error;
   thread_format = lldb::SBFormat(format.str().c_str(), error);
   if (error.Fail()) {
