@@ -207,12 +207,25 @@ void sw6(int a) {
 
 // CIR: cir.func @_Z3sw6i
 // CIR: cir.switch (%1 : !s32i) {
-// CIR-NEXT: cir.case(anyof, [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i]) {
-// CIR-NEXT:   cir.break
+// CIR-NEXT: cir.case(equal, [#cir.int<0> : !s32i]) {
+// CIR-NEXT:     cir.yield
 // CIR-NEXT: }
-// CIR-NEXT: cir.case(anyof, [#cir.int<3> : !s32i, #cir.int<4> : !s32i, #cir.int<5> : !s32i]) {
-// CIR-NEXT:   cir.break
+// CIR-NEXT: cir.case(equal, [#cir.int<1> : !s32i]) {
+// CIR-NEXT:     cir.yield
 // CIR-NEXT: }
+// CIR-NEXT: cir.case(equal, [#cir.int<2> : !s32i]) {
+// CIR-NEXT:     cir.break
+// CIR-NEXT: }
+// CIR-NEXT: cir.case(equal, [#cir.int<3> : !s32i]) {
+// CIR-NEXT:     cir.yield
+// CIR-NEXT: }
+// CIR-NEXT: cir.case(equal, [#cir.int<4> : !s32i]) {
+// CIR-NEXT:     cir.yield
+// CIR-NEXT: }
+// CIR-NEXT: cir.case(equal, [#cir.int<5> : !s32i]) {
+// CIR-NEXT:     cir.break
+// CIR-NEXT: }
+
 
 // OGCG: define dso_local void @_Z3sw6i
 // OGCG: entry:
@@ -248,13 +261,24 @@ void sw7(int a) {
 }
 
 // CIR: cir.func @_Z3sw7i
-// CIR: cir.case(anyof, [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i]) {
-// CIR-NEXT:   cir.yield
+// CIR: cir.case(equal, [#cir.int<0> : !s32i]) {
+// CIR-NEXT:     cir.yield
 // CIR-NEXT: }
-// CIR-NEXT: cir.case(anyof, [#cir.int<3> : !s32i, #cir.int<4> : !s32i, #cir.int<5> : !s32i]) {
-// CIR-NEXT:   cir.break
+// CIR-NEXT: cir.case(equal, [#cir.int<1> : !s32i]) {
+// CIR-NEXT:     cir.yield
 // CIR-NEXT: }
-
+// CIR-NEXT: cir.case(equal, [#cir.int<2> : !s32i]) {
+// CIR-NEXT:     cir.yield
+// CIR-NEXT: }
+// CIR-NEXT: cir.case(equal, [#cir.int<3> : !s32i]) {
+// CIR-NEXT:     cir.yield
+// CIR-NEXT: }
+// CIR-NEXT: cir.case(equal, [#cir.int<4> : !s32i]) {
+// CIR-NEXT:     cir.yield
+// CIR-NEXT: }
+// CIR-NEXT: cir.case(equal, [#cir.int<5> : !s32i]) {
+// CIR-NEXT:     cir.break
+// CIR-NEXT: }
 
 // OGCG: define dso_local void @_Z3sw7i
 // OGCG: entry:
@@ -419,13 +443,19 @@ void sw11(int a) {
 //CIR:      cir.case(equal, [#cir.int<3> : !s32i]) {
 //CIR-NEXT:   cir.break
 //CIR-NEXT: }
-//CIR-NEXT: cir.case(anyof, [#cir.int<4> : !s32i, #cir.int<5> : !s32i]) {
+//CIR-NEXT: cir.case(equal, [#cir.int<4> : !s32i]) {
+//CIR-NEXT:   cir.yield
+//CIR-NEXT: }
+//CIR-NEXT: cir.case(equal, [#cir.int<5> : !s32i]) {
 //CIR-NEXT:   cir.yield
 //CIR-NEXT: }
 //CIR-NEXT: cir.case(default, []) {
 //CIR-NEXT:   cir.yield
 //CIR-NEXT: }
-//CIR-NEXT: cir.case(anyof, [#cir.int<6> : !s32i, #cir.int<7> : !s32i]) {
+//CIR-NEXT: cir.case(equal, [#cir.int<6> : !s32i]) {
+//CIR-NEXT:   cir.yield
+//CIR-NEXT: }
+//CIR-NEXT: cir.case(equal, [#cir.int<7> : !s32i]) {
 //CIR-NEXT:   cir.break
 //CIR-NEXT: }
 
@@ -525,6 +555,114 @@ void sw13(int a, int b) {
 // OGCG: [[EPILOG]]:
 // OGCG:   br label %[[EPILOG2]]
 // OGCG: [[EPILOG2]]:
+// OGCG:   ret void
+
+void sw14(int x) {
+  switch (x) {
+    case 1:
+    case 2:
+    case 3 ... 6:
+    case 7:
+      break;
+    default:
+      break;
+  }
+}
+
+// CIR:      cir.func @_Z4sw14i
+// CIR:      cir.switch
+// CIR-NEXT: cir.case(equal, [#cir.int<1> : !s32i]) {
+// CIR-NEXT:   cir.yield
+// CIR-NEXT: }
+// CIR-NEXT: cir.case(equal, [#cir.int<2> : !s32i]) {
+// CIR-NEXT:   cir.yield
+// CIR-NEXT: }
+// CIR-NEXT: cir.case(range, [#cir.int<3> : !s32i, #cir.int<6> : !s32i]) {
+// CIR-NEXT:   cir.yield
+// CIR-NEXT: }
+// CIR-NEXT: cir.case(equal, [#cir.int<7> : !s32i]) {
+// CIR-NEXT:   cir.break
+// CIR-NEXT: }
+// CIR-NEXT: cir.case(default, []) {
+// CIR-NEXT:   cir.break
+// CIR-NEXT: }
+
+// OGCG: define dso_local void @_Z4sw14i
+// OGCG: entry:
+// OGCG:   %[[X_ADDR:.*]] = alloca i32, align 4
+// OGCG:   store i32 %x, ptr %[[X_ADDR]], align 4
+// OGCG:   %[[X_VAL:.*]] = load i32, ptr %[[X_ADDR]], align 4
+
+// OGCG:   switch i32 %[[X_VAL]], label %[[DEFAULT:.*]] [
+// OGCG-DAG:     i32 1, label %[[BB1:.*]]
+// OGCG-DAG:     i32 2, label %[[BB1]]
+// OGCG-DAG:     i32 3, label %[[BB2:.*]]
+// OGCG-DAG:     i32 4, label %[[BB2]]
+// OGCG-DAG:     i32 5, label %[[BB2]]
+// OGCG-DAG:     i32 6, label %[[BB2]]
+// OGCG-DAG:     i32 7, label %[[BB3:.*]]
+// OGCG:   ]
+// OGCG: [[BB1]]:
+// OGCG:   br label %[[BB2]]
+// OGCG: [[BB2]]:
+// OGCG:   br label %[[BB3]]
+// OGCG: [[BB3]]:
+// OGCG:   br label %[[EPILOG:.*]]
+// OGCG: [[DEFAULT]]:
+// OGCG:   br label %[[EPILOG]]
+// OGCG: [[EPILOG]]:
+// OGCG:   ret void
+
+void sw15(int x) {
+  int y;
+  switch (x) {
+    case 1:
+    case 2:
+      y = 0;
+    case 3:
+      break;
+    default:
+      break;
+  }
+}
+
+// CIR:      cir.func @_Z4sw15i
+// CIR:      %[[Y:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["y"]
+// CIR:      cir.switch
+// CIR-NEXT: cir.case(equal, [#cir.int<1> : !s32i]) {
+// CIR-NEXT:   cir.yield
+// CIR-NEXT: }
+// CIR-NEXT: cir.case(equal, [#cir.int<2> : !s32i]) {
+// CIR-NEXT:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+// CIR-NEXT:   cir.store %[[ZERO]], %[[Y]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:   cir.yield
+// CIR-NEXT: }
+// CIR-NEXT: cir.case(equal, [#cir.int<3> : !s32i]) {
+// CIR-NEXT:   cir.break
+// CIR-NEXT: }
+// CIR-NEXT: cir.case(default, []) {
+// CIR-NEXT:   cir.break
+// CIR-NEXT: }
+
+// OGCG: define dso_local void @_Z4sw15i
+// OGCG: entry:
+// OGCG:   %[[X_ADDR:.*]] = alloca i32, align 4
+// OGCG:   %[[Y:.*]] = alloca i32, align 4
+// OGCG:   store i32 %x, ptr %[[X_ADDR]], align 4
+// OGCG:   %[[X_VAL:.*]] = load i32, ptr %[[X_ADDR]], align 4
+// OGCG:   switch i32 %[[X_VAL]], label %[[DEFAULT:.*]] [
+// OGCG-DAG:     i32 1, label %[[BB0:.*]]
+// OGCG-DAG:     i32 2, label %[[BB0]]
+// OGCG-DAG:     i32 3, label %[[BB1:.*]]
+// OGCG:   ]
+// OGCG: [[BB0]]:
+// OGCG:   store i32 0, ptr %[[Y]], align 4
+// OGCG:   br label %[[BB1]]
+// OGCG: [[BB1]]:
+// OGCG:   br label %[[EPILOG:.*]]
+// OGCG: [[DEFAULT]]:
+// OGCG:   br label %[[EPILOG]]
+// OGCG: [[EPILOG]]:
 // OGCG:   ret void
 
 int nested_switch(int a) {

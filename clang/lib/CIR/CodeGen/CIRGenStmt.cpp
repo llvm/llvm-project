@@ -429,52 +429,6 @@ mlir::LogicalResult CIRGenFunction::emitBreakStmt(const clang::BreakStmt &s) {
   return mlir::success();
 }
 
-const CaseStmt *CIRGenFunction::foldCaseStmt(const clang::CaseStmt &s,
-                                             mlir::Type condType,
-                                             mlir::ArrayAttr &value,
-                                             cir::CaseOpKind &kind) {
-  const CaseStmt *caseStmt = &s;
-  const CaseStmt *lastCase = &s;
-  SmallVector<mlir::Attribute, 4> caseEltValueListAttr;
-
-  // Fold cascading cases whenever possible to simplify codegen a bit.
-  while (caseStmt) {
-    lastCase = caseStmt;
-
-    auto intVal = caseStmt->getLHS()->EvaluateKnownConstInt(getContext());
-
-    if (auto *rhs = caseStmt->getRHS()) {
-      auto endVal = rhs->EvaluateKnownConstInt(getContext());
-      SmallVector<mlir::Attribute, 4> rangeCaseAttr = {
-          cir::IntAttr::get(condType, intVal),
-          cir::IntAttr::get(condType, endVal)};
-      value = builder.getArrayAttr(rangeCaseAttr);
-      kind = cir::CaseOpKind::Range;
-
-      // We may not be able to fold rangaes. Due to we can't present range case
-      // with other trivial cases now.
-      return caseStmt;
-    }
-
-    caseEltValueListAttr.push_back(cir::IntAttr::get(condType, intVal));
-
-    caseStmt = dyn_cast_or_null<CaseStmt>(caseStmt->getSubStmt());
-
-    // Break early if we found ranges. We can't fold ranges due to the same
-    // reason above.
-    if (caseStmt && caseStmt->getRHS())
-      break;
-  }
-
-  if (!caseEltValueListAttr.empty()) {
-    value = builder.getArrayAttr(caseEltValueListAttr);
-    kind = caseEltValueListAttr.size() > 1 ? cir::CaseOpKind::Anyof
-                                           : cir::CaseOpKind::Equal;
-  }
-
-  return lastCase;
-}
-
 template <typename T>
 mlir::LogicalResult
 CIRGenFunction::emitCaseDefaultCascade(const T *stmt, mlir::Type condType,
@@ -502,7 +456,8 @@ CIRGenFunction::emitCaseDefaultCascade(const T *stmt, mlir::Type condType,
     if (isa<DefaultStmt>(sub) && isa<CaseStmt>(stmt)) {
       subStmtKind = SubStmtKind::Default;
       builder.createYield(loc);
-    } else if (isa<CaseStmt>(sub) && isa<DefaultStmt>(stmt)) {
+    } else if ((isa<CaseStmt>(sub) && isa<DefaultStmt>(stmt)) ||
+               (isa<CaseStmt>(sub) && isa<CaseStmt>(stmt))) {
       subStmtKind = SubStmtKind::Case;
       builder.createYield(loc);
     } else {
@@ -564,8 +519,32 @@ mlir::LogicalResult CIRGenFunction::emitCaseStmt(const CaseStmt &s,
                                                  bool buildingTopLevelCase) {
   cir::CaseOpKind kind;
   mlir::ArrayAttr value;
-  const CaseStmt *caseStmt = foldCaseStmt(s, condType, value, kind);
-  return emitCaseDefaultCascade(caseStmt, condType, value, kind,
+
+  SmallVector<mlir::Attribute, 1> caseEltValueListAttr;
+  llvm::APSInt intVal = s.getLHS()->EvaluateKnownConstInt(getContext());
+
+  // If the case statement has an RHS value, it is representing a GNU
+  // case range statement, where LHS is the beginning of the range
+  // and RHS is the end of the range.
+  if (const Expr *rhs = s.getRHS()) {
+
+    llvm::APSInt endVal = rhs->EvaluateKnownConstInt(getContext());
+    SmallVector<mlir::Attribute, 4> rangeCaseAttr = {
+        cir::IntAttr::get(condType, intVal),
+        cir::IntAttr::get(condType, endVal)};
+    value = builder.getArrayAttr(rangeCaseAttr);
+    kind = cir::CaseOpKind::Range;
+
+    // We don't currently fold case range statements with other case statements.
+    // TODO(cir): Add this capability.
+    assert(!cir::MissingFeatures::foldRangeCase());
+  } else {
+    caseEltValueListAttr.push_back(cir::IntAttr::get(condType, intVal));
+    value = builder.getArrayAttr(caseEltValueListAttr);
+    kind = cir::CaseOpKind::Equal;
+  }
+
+  return emitCaseDefaultCascade(&s, condType, value, kind,
                                 buildingTopLevelCase);
 }
 
