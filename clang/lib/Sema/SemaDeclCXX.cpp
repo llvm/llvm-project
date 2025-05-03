@@ -14012,7 +14012,7 @@ void SpecialMemberExceptionSpecInfo::visitSubobjectCall(
 bool Sema::tryResolveExplicitSpecifier(ExplicitSpecifier &ExplicitSpec) {
   llvm::APSInt Result;
   ExprResult Converted = CheckConvertedConstantExpression(
-      ExplicitSpec.getExpr(), Context.BoolTy, Result, CCEK_ExplicitBool);
+      ExplicitSpec.getExpr(), Context.BoolTy, Result, CCEKind::ExplicitBool);
   ExplicitSpec.setExpr(Converted.get());
   if (Converted.isUsable() && !Converted.get()->isValueDependent()) {
     ExplicitSpec.setKind(Result.getBoolValue()
@@ -17773,7 +17773,7 @@ static bool EvaluateAsStringImpl(Sema &SemaRef, Expr *Message,
       SizeE.isInvalid()
           ? ExprError()
           : SemaRef.BuildConvertedConstantExpression(
-                SizeE.get(), SizeT, Sema::CCEK_StaticAssertMessageSize);
+                SizeE.get(), SizeT, CCEKind::StaticAssertMessageSize);
   if (EvaluatedSize.isInvalid()) {
     SemaRef.Diag(Loc, diag::err_user_defined_msg_invalid_mem_fn_ret_ty)
         << EvalContext << /*size*/ 0;
@@ -17784,7 +17784,7 @@ static bool EvaluateAsStringImpl(Sema &SemaRef, Expr *Message,
       DataE.isInvalid()
           ? ExprError()
           : SemaRef.BuildConvertedConstantExpression(
-                DataE.get(), ConstCharPtr, Sema::CCEK_StaticAssertMessageData);
+                DataE.get(), ConstCharPtr, CCEKind::StaticAssertMessageData);
   if (EvaluatedData.isInvalid()) {
     SemaRef.Diag(Loc, diag::err_user_defined_msg_invalid_mem_fn_ret_ty)
         << EvalContext << /*data*/ 1;
