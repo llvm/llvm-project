@@ -36,6 +36,8 @@ struct MissingFeatures {
   static bool opGlobalConstant() { return false; }
   static bool opGlobalAlignment() { return false; }
   static bool opGlobalWeakRef() { return false; }
+  static bool opGlobalLinkage() { return false; }
+  static bool opGlobalSetVisitibility() { return false; }
 
   static bool supportIFuncAttr() { return false; }
   static bool supportVisibility() { return false; }
@@ -176,6 +178,11 @@ struct MissingFeatures {
   static bool setDSOLocal() { return false; }
   static bool foldCaseStmt() { return false; }
   static bool constantFoldSwitchStatement() { return false; }
+  static bool cudaSupport() { return false; }
+  static bool maybeHandleStaticInExternC() { return false; }
+  static bool constEmitterArrayILE() { return false; }
+  static bool constEmitterVectorILE() { return false; }
+  static bool needsGlobalCtorDtor() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
