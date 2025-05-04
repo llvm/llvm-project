@@ -74,6 +74,7 @@ entry:
 define i1 @proveEqualityForStrip(ptr %a) {
 ; CHECK-LABEL: define i1 @proveEqualityForStrip(
 ; CHECK-SAME: ptr [[A:%.*]]) {
+; CHECK-NEXT:    [[B1:%.*]] = call ptr @llvm.strip.invariant.group.p0(ptr [[A]])
 ; CHECK-NEXT:    ret i1 true
 ;
   %b1 = call ptr @llvm.strip.invariant.group.p0(ptr %a)
