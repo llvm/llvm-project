@@ -336,14 +336,14 @@ private:
   template <class _This, class _Operation, class _BuiltinOp>
   _LIBCPP_HIDE_FROM_ABI static _Tp
   __rmw_op(_This&& __self, _Tp __operand, memory_order __m, _Operation __operation, _BuiltinOp __builtin_op) {
-    if constexpr (__has_rmw_builtin<_Tp>()) {
+    if constexpr (std::__has_rmw_builtin<_Tp>()) {
       return __builtin_op(std::addressof(std::forward<_This>(__self).__a_), __operand, __m);
     } else {
       _Tp __old = __self.load(memory_order_relaxed);
       _Tp __new = __operation(__old, __operand);
       while (!__self.compare_exchange_weak(__old, __new, __m, memory_order_relaxed)) {
 #  ifdef _LIBCPP_COMPILER_CLANG_BASED
-        if constexpr (__is_fp80_long_double<_Tp>()) {
+        if constexpr (std::__is_fp80_long_double<_Tp>()) {
           // https://github.com/llvm/llvm-project/issues/47978
           // clang bug: __old is not updated on failure for atomic<long double>::compare_exchange_weak
           // Note __old = __self.load(memory_order_relaxed) will not work

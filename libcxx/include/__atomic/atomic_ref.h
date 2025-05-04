@@ -323,7 +323,7 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
   atomic_ref& operator=(const atomic_ref&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI _Tp fetch_add(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
-    if constexpr (__has_rmw_builtin<_Tp>()) {
+    if constexpr (std::__has_rmw_builtin<_Tp>()) {
       return __atomic_fetch_add(this->__ptr_, __arg, std::__to_gcc_order(__order));
     } else {
       _Tp __old = this->load(memory_order_relaxed);
@@ -335,7 +335,7 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
     }
   }
   _LIBCPP_HIDE_FROM_ABI _Tp fetch_sub(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
-    if constexpr (__has_rmw_builtin<_Tp>()) {
+    if constexpr (std::__has_rmw_builtin<_Tp>()) {
       return __atomic_fetch_sub(this->__ptr_, __arg, std::__to_gcc_order(__order));
     } else {
       _Tp __old = this->load(memory_order_relaxed);
