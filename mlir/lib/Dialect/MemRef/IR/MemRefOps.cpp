@@ -2482,6 +2482,37 @@ MemRefType CollapseShapeOp::computeCollapsedType(
                          srcType.getMemorySpace());
 }
 
+// This method handles groups of dimensions where at least one dimension is dynamic.
+// For each such group, it computes the combined size by multiplying all the sizes
+// of the dimensions in that group. These computed sizes are then used to describe
+// the resulting shape after collapsing.
+LogicalResult CollapseShapeOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &reifiedResultShapes) {
+  SmallVector<ReassociationIndices, 4> reassociationArray =
+      getReassociationIndices();
+  Value source = getSrc();
+  Location loc = getLoc();
+  SmallVector<Value> dynamicValues;
+  auto resultShape = cast<ShapedType>(getResultType()).getShape();
+  auto sourceShape = cast<MemRefType>(source.getType()).getShape();
+  for (auto group : reassociationArray) {
+    if (!llvm::any_of(group, [&](int64_t dim) {
+          return ShapedType::isDynamic(sourceShape[dim]);
+        }))
+      continue;
+    Value resultVal = builder.create<memref::DimOp>(loc, source, group[0]);
+    for (auto dim : llvm::drop_begin(group)) {
+      Value nextVal = builder.create<memref::DimOp>(loc, source, dim);
+      resultVal = builder.create<arith::MulIOp>(loc, resultVal, nextVal);
+    }
+
+    dynamicValues.push_back(resultVal);
+  }
+
+  reifiedResultShapes = {getMixedValues(resultShape, dynamicValues, builder)};
+  return success();
+}
+
 void CollapseShapeOp::build(OpBuilder &b, OperationState &result, Value src,
                             ArrayRef<ReassociationIndices> reassociation,
                             ArrayRef<NamedAttribute> attrs) {
