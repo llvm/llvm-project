@@ -135,9 +135,9 @@ SparcMCExpr::Specifier SparcMCExpr::parseSpecifier(StringRef name) {
       .Default(VK_None);
 }
 
-Sparc::Fixups SparcMCExpr::getFixupKind(SparcMCExpr::Specifier S) {
+uint16_t SparcMCExpr::getFixupKind() const {
   // clang-format off
-  switch (S) {
+  switch (specifier) {
   default: llvm_unreachable("Unhandled SparcMCExpr::Specifier");
   case VK_LO:            return Sparc::fixup_sparc_lo10;
   case VK_HI:            return Sparc::fixup_sparc_hi22;
@@ -149,30 +149,30 @@ Sparc::Fixups SparcMCExpr::getFixupKind(SparcMCExpr::Specifier S) {
   case VK_LM:            return Sparc::fixup_sparc_lm;
   case VK_PC22:          return Sparc::fixup_sparc_pc22;
   case VK_PC10:          return Sparc::fixup_sparc_pc10;
-  case VK_GOT22:         return Sparc::fixup_sparc_got22;
-  case VK_GOT10:         return Sparc::fixup_sparc_got10;
-  case VK_GOT13:         return Sparc::fixup_sparc_got13;
+  case VK_GOT22:         return ELF::R_SPARC_GOT22;
+  case VK_GOT10:         return ELF::R_SPARC_GOT10;
+  case VK_GOT13:         return ELF::R_SPARC_GOT13;
   case VK_13:            return Sparc::fixup_sparc_13;
   case VK_WPLT30:        return Sparc::fixup_sparc_wplt30;
   case VK_WDISP30:       return Sparc::fixup_sparc_call30;
-  case VK_TLS_GD_HI22:   return Sparc::fixup_sparc_tls_gd_hi22;
-  case VK_TLS_GD_LO10:   return Sparc::fixup_sparc_tls_gd_lo10;
-  case VK_TLS_GD_ADD:    return Sparc::fixup_sparc_tls_gd_add;
-  case VK_TLS_GD_CALL:   return Sparc::fixup_sparc_tls_gd_call;
-  case VK_TLS_LDM_HI22:  return Sparc::fixup_sparc_tls_ldm_hi22;
-  case VK_TLS_LDM_LO10:  return Sparc::fixup_sparc_tls_ldm_lo10;
-  case VK_TLS_LDM_ADD:   return Sparc::fixup_sparc_tls_ldm_add;
-  case VK_TLS_LDM_CALL:  return Sparc::fixup_sparc_tls_ldm_call;
-  case VK_TLS_LDO_HIX22: return Sparc::fixup_sparc_tls_ldo_hix22;
-  case VK_TLS_LDO_LOX10: return Sparc::fixup_sparc_tls_ldo_lox10;
-  case VK_TLS_LDO_ADD:   return Sparc::fixup_sparc_tls_ldo_add;
-  case VK_TLS_IE_HI22:   return Sparc::fixup_sparc_tls_ie_hi22;
-  case VK_TLS_IE_LO10:   return Sparc::fixup_sparc_tls_ie_lo10;
-  case VK_TLS_IE_LD:     return Sparc::fixup_sparc_tls_ie_ld;
-  case VK_TLS_IE_LDX:    return Sparc::fixup_sparc_tls_ie_ldx;
-  case VK_TLS_IE_ADD:    return Sparc::fixup_sparc_tls_ie_add;
-  case VK_TLS_LE_HIX22:  return Sparc::fixup_sparc_tls_le_hix22;
-  case VK_TLS_LE_LOX10:  return Sparc::fixup_sparc_tls_le_lox10;
+  case VK_TLS_GD_HI22:   return ELF::R_SPARC_TLS_GD_HI22;
+  case VK_TLS_GD_LO10:   return ELF::R_SPARC_TLS_GD_LO10;
+  case VK_TLS_GD_ADD:    return ELF::R_SPARC_TLS_GD_ADD;
+  case VK_TLS_GD_CALL:   return ELF::R_SPARC_TLS_GD_CALL;
+  case VK_TLS_LDM_HI22:  return ELF::R_SPARC_TLS_LDM_HI22;
+  case VK_TLS_LDM_LO10:  return ELF::R_SPARC_TLS_LDM_LO10;
+  case VK_TLS_LDM_ADD:   return ELF::R_SPARC_TLS_LDM_ADD;
+  case VK_TLS_LDM_CALL:  return ELF::R_SPARC_TLS_LDM_CALL;
+  case VK_TLS_LDO_HIX22: return ELF::R_SPARC_TLS_LDO_HIX22;
+  case VK_TLS_LDO_LOX10: return ELF::R_SPARC_TLS_LDO_LOX10;
+  case VK_TLS_LDO_ADD:   return ELF::R_SPARC_TLS_LDO_ADD;
+  case VK_TLS_IE_HI22:   return ELF::R_SPARC_TLS_IE_HI22;
+  case VK_TLS_IE_LO10:   return ELF::R_SPARC_TLS_IE_LO10;
+  case VK_TLS_IE_LD:     return ELF::R_SPARC_TLS_IE_LD;
+  case VK_TLS_IE_LDX:    return ELF::R_SPARC_TLS_IE_LDX;
+  case VK_TLS_IE_ADD:    return ELF::R_SPARC_TLS_IE_ADD;
+  case VK_TLS_LE_HIX22:  return ELF::R_SPARC_TLS_LE_HIX22;
+  case VK_TLS_LE_LOX10:  return ELF::R_SPARC_TLS_LE_LOX10;
   case VK_HIX22:         return Sparc::fixup_sparc_hix22;
   case VK_LOX10:         return Sparc::fixup_sparc_lox10;
   case VK_GOTDATA_HIX22: return Sparc::fixup_sparc_gotdata_hix22;
