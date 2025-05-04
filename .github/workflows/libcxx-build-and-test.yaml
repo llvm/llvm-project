@@ -155,6 +155,8 @@ jobs:
           machine: libcxx-self-hosted-linux
         - config: 'generic-asan'
           machine: libcxx-self-hosted-linux
+        - config: 'generic-cfisan'
+          machine: libcxx-self-hosted-linux
         - config: 'generic-tsan'
           machine: libcxx-self-hosted-linux
         - config: 'generic-ubsan'
