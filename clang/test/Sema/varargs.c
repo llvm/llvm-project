@@ -1,5 +1,8 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -triple i386-pc-unknown
+// RUN: %clang_cc1 -fsyntax-only -verify %s -triple i386-mingw32
 // RUN: %clang_cc1 -fsyntax-only -verify %s -triple x86_64-apple-darwin9
+// RUN: %clang_cc1 -fsyntax-only -verify %s -triple x86_64-mingw64
+// RUN: %clang_cc1 -fsyntax-only -verify %s -triple x86_64-uefi
 // RUN: %clang_cc1 -fsyntax-only -fms-compatibility -DMS -verify %s -triple x86_64-pc-win32
 
 void f1(int a)
