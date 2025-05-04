@@ -105,8 +105,7 @@ void StackLayout::layoutObject(StackObject &Obj) {
   }
 
   // Split starting and ending regions if necessary.
-  for (unsigned i = 0; i < Regions.size(); ++i) {
-    StackRegion &R = Regions[i];
+  for (StackRegion &R : Regions) {
     if (Start > R.Start && Start < R.End) {
       StackRegion R0 = R;
       R.Start = R0.End = Start;
