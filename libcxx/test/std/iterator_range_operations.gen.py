@@ -6,10 +6,6 @@
 #
 # ===----------------------------------------------------------------------===##
 
-# Test that headers are not tripped up by the surrounding code defining various
-# alphabetic macros. Also ensure that we don't swallow the definition of user
-# provided macros (in other words, ensure that we push/pop correctly everywhere).
-
 # In addition to being available via inclusion of the <iterator> header,
 # the function templates in [iterator.range] are available when any of the following
 # headers are included: <array>, <deque>, <flat_map>, <flat_set>, <forward_list>,
