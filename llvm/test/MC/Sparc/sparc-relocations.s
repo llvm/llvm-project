@@ -23,6 +23,7 @@
         ! CHECK-OBJ-NEXT: 0x{{[0-9,A-F]+}} R_SPARC_GOTDATA_OP sym
         ! CHECK-OBJ-NEXT: }
 
+        call a
         ! CHECK: call foo     ! encoding: [0b01AAAAAA,A,A,A]
         call foo
 
