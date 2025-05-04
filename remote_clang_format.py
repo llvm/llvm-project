@@ -47,11 +47,12 @@ def display_changes(before, after):
     The actual corrected code will be printed in green.
     """
     print("\n===================================")
-    print("            BEFORE FORMATTING      ")
+    print(colored("            BEFORE FORMATTING      ", 'yellow', attrs=['bold']))
     print("===================================")
-    print(before)
+    print(colored(before, 'red'))  # Display original code in red
+
     print("\n===================================")
-    print("            AFTER FORMATTING      ")
+    print(colored("            AFTER FORMATTING      ", 'yellow', attrs=['bold']))
     print("===================================")
     
     diff = difflib.unified_diff(before.splitlines(), after.splitlines(), lineterm='')
@@ -60,8 +61,10 @@ def display_changes(before, after):
     for line in diff:
         if line.startswith("+"):  # Lines that were added or corrected
             print(colored(line, 'green'))  # Print the corrected lines in green
+        elif line.startswith("-"):  # Lines that were removed or incorrect
+            print(colored(line, 'red'))  # Print the removed lines in red
         else:
-            print(line)
+            print(line)  # Print unchanged lines
 
 # Main function to load configuration, fetch diff, and run clang-format-diff.py
 def main():
