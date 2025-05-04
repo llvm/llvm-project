@@ -50,6 +50,8 @@ struct FunctionPathAndClusterInfo {
   // the edge a -> b (a is not cloned). The index of the path in this vector
   // determines the `UniqueBBID::CloneID` of the cloned blocks in that path.
   SmallVector<SmallVector<unsigned>> ClonePaths;
+  // Node count of the func CFG, record for staleness check
+  unsigned NodeCount;
 };
 
 // Provides DenseMapInfo for UniqueBBID.
@@ -93,6 +95,9 @@ public:
   // function.
   std::pair<bool, SmallVector<BBClusterInfo>>
   getClusterInfoForFunction(StringRef FuncName) const;
+
+  // Returns the cfg node count of the CFG for the given function.
+  unsigned getCfgNodeNumForFunction(StringRef FuncName) const;
 
   // Returns the path clonings for the given function.
   SmallVector<SmallVector<unsigned>>
@@ -200,6 +205,8 @@ public:
 
   std::pair<bool, SmallVector<BBClusterInfo>>
   getClusterInfoForFunction(StringRef FuncName) const;
+
+  unsigned getCfgNodeNumForFunction(StringRef FuncName) const;
 
   SmallVector<SmallVector<unsigned>>
   getClonePathsForFunction(StringRef FuncName) const;
