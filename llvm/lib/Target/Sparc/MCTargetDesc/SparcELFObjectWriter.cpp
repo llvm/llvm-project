@@ -87,14 +87,16 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
     case FK_Data_2:                  return ELF::R_SPARC_DISP16;
     case FK_Data_4:                  return ELF::R_SPARC_DISP32;
     case FK_Data_8:                  return ELF::R_SPARC_DISP64;
-    case Sparc::fixup_sparc_call30:  return ELF::R_SPARC_WDISP30;
+    case Sparc::fixup_sparc_call30:
+      if (Ctx.getObjectFileInfo()->isPositionIndependent())
+        return ELF::R_SPARC_WPLT30;
+      return ELF::R_SPARC_WDISP30;
     case Sparc::fixup_sparc_br22:    return ELF::R_SPARC_WDISP22;
     case Sparc::fixup_sparc_br19:    return ELF::R_SPARC_WDISP19;
     case Sparc::fixup_sparc_br16:
       return ELF::R_SPARC_WDISP16;
     case Sparc::fixup_sparc_pc22:    return ELF::R_SPARC_PC22;
     case Sparc::fixup_sparc_pc10:    return ELF::R_SPARC_PC10;
-    case Sparc::fixup_sparc_wplt30:  return ELF::R_SPARC_WPLT30;
     }
   }
 

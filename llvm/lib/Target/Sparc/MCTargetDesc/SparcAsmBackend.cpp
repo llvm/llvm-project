@@ -31,7 +31,6 @@ static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {
   case FK_Data_8:
     return Value;
 
-  case Sparc::fixup_sparc_wplt30:
   case Sparc::fixup_sparc_call30:
     return (Value >> 2) & 0x3fffffff;
 
@@ -150,7 +149,6 @@ namespace {
         { "fixup_sparc_lm",        10,     22,  0 },
         { "fixup_sparc_pc22",      10,     22,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_pc10",      22,     10,  MCFixupKindInfo::FKF_IsPCRel },
-        { "fixup_sparc_wplt30",     2,     30,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_hix22",         10, 22,  0 },
         { "fixup_sparc_lox10",         19, 13,  0 },
       };
@@ -172,7 +170,6 @@ namespace {
         { "fixup_sparc_lm",         0,     22,  0 },
         { "fixup_sparc_pc22",       0,     22,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_pc10",       0,     10,  MCFixupKindInfo::FKF_IsPCRel },
-        { "fixup_sparc_wplt30",      0,     30,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_hix22",          0, 22,  0 },
         { "fixup_sparc_lox10",          0, 13,  0 },
       };
