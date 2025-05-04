@@ -23,6 +23,7 @@
 #include "AMDGPUIGroupLP.h"
 #include "AMDGPUISelDAGToDAG.h"
 #include "AMDGPUMacroFusion.h"
+#include "AMDGPUMarkSGPRHazardRegs.h"
 #include "AMDGPUPerfHintAnalysis.h"
 #include "AMDGPUPreloadKernArgProlog.h"
 #include "AMDGPURemoveIncompatibleFunctions.h"
@@ -565,6 +566,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeGCNRegPressurePrinterPass(*PR);
   initializeAMDGPUPreloadKernArgPrologLegacyPass(*PR);
   initializeAMDGPUWaitSGPRHazardsLegacyPass(*PR);
+  initializeAMDGPUMarkSGPRHazardRegsLegacyPass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -1636,6 +1638,7 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
 
   addPass(&GCNPreRALongBranchRegID);
 
+  addPass(&AMDGPUMarkSGPRHazardRegsLegacyID);
   addPass(createSGPRAllocPass(true));
 
   // Commit allocated register changes. This is mostly necessary because too
