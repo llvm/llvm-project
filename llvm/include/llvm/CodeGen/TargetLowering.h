@@ -2023,6 +2023,11 @@ public:
     return LLT();
   }
 
+  bool useIntScalarMemOps(const AttributeList &FuncAttributes) const {
+    return useSoftFloat() ||
+           FuncAttributes.hasFnAttr(Attribute::NoImplicitFloat);
+  }
+
   /// Returns true if it's safe to use load / store of the specified type to
   /// expand memcpy / memset inline.
   ///
