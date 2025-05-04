@@ -6588,6 +6588,25 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     835584U,     // <u,u,u,u>: Cost 0 copy LHS
     0};
 
+enum {
+  OP_COPY = 0, // Copy, used for things like <u,u,u,3> to say it is <0,1,2,3>
+  OP_VREV,
+  OP_VDUP0,
+  OP_VDUP1,
+  OP_VDUP2,
+  OP_VDUP3,
+  OP_VEXT1,
+  OP_VEXT2,
+  OP_VEXT3,
+  OP_VUZPL,  // VUZP, left result
+  OP_VUZPR,  // VUZP, right result
+  OP_VZIPL,  // VZIP, left result
+  OP_VZIPR,  // VZIP, right result
+  OP_VTRNL,  // VTRN, left result
+  OP_VTRNR,  // VTRN, right result
+  OP_MOVLANE // Move lane. RHSID is the lane to move into
+};
+
 inline unsigned getPerfectShuffleCost(llvm::ArrayRef<int> M) {
   assert(M.size() == 4 && "Expected a 4 entry perfect shuffle");
 
@@ -6721,6 +6740,109 @@ inline bool isREVMask(ArrayRef<int> M, unsigned EltSize, unsigned NumElts,
   }
 
   return true;
+}
+
+/// Generate perfect shuffles, shared between SDAG and GISel.
+
+/// GeneratePerfectShuffle - Given an entry in the perfect-shuffle table, emit
+/// the specified operations to build the shuffle. ID is the perfect-shuffle
+/// ID, V1 and V2 are the original shuffle inputs. PFEntry is the Perfect
+/// shuffle table entry and LHS/RHS are the immediate inputs for this stage of
+/// the shuffle. The implementations is shared between SDAG and GISel.
+template <class Val, class Ty, typename ExtInsFn64, typename ExtInsFn32,
+          typename ValFn, typename ValImmFn, typename ValValFn,
+          typename ValValFn2>
+inline Val generatePerfectShuffle(unsigned ID, Val V1, Val V2, unsigned PFEntry,
+                                  Val LHS, Val RHS,
+                                  ExtInsFn64 BuildExtractInsert64,
+                                  ExtInsFn32 BuildExtractInsert32,
+                                  ValFn BuildRev, ValImmFn BuildDup,
+                                  ValValFn BuildExt, ValValFn2 BuildZip) {
+  unsigned OpNum = (PFEntry >> 26) & 0x0F;
+  unsigned LHSID = (PFEntry >> 13) & ((1 << 13) - 1);
+  unsigned RHSID = (PFEntry >> 0) & ((1 << 13) - 1);
+
+  if (OpNum == OP_COPY) {
+    if (LHSID == (1 * 9 + 2) * 9 + 3)
+      return LHS;
+    assert(LHSID == ((4 * 9 + 5) * 9 + 6) * 9 + 7 && "Illegal OP_COPY!");
+    return RHS;
+  }
+
+  if (OpNum == OP_MOVLANE) {
+    // Decompose a PerfectShuffle ID to get the Mask for lane Elt
+    auto getPFIDLane = [](unsigned ID, int Elt) -> int {
+      assert(Elt < 4 && "Expected Perfect Lanes to be less than 4");
+      Elt = 3 - Elt;
+      while (Elt > 0) {
+        ID /= 9;
+        Elt--;
+      }
+      return (ID % 9 == 8) ? -1 : ID % 9;
+    };
+
+    // For OP_MOVLANE shuffles, the RHSID represents the lane to move into. We
+    // get the lane to move from the PFID, which is always from the
+    // original vectors (V1 or V2).
+    Val OpLHS = generatePerfectShuffle<Val, Ty>(
+        LHSID, V1, V2, PerfectShuffleTable[LHSID], LHS, RHS,
+        BuildExtractInsert64, BuildExtractInsert32, BuildRev, BuildDup,
+        BuildExt, BuildZip);
+    assert(RHSID < 8 && "Expected a lane index for RHSID!");
+    unsigned ExtLane = 0;
+    Val Input;
+
+    // OP_MOVLANE are either D movs (if bit 0x4 is set) or S movs. D movs
+    // convert into a higher type.
+    if (RHSID & 0x4) {
+      int MaskElt = getPFIDLane(ID, (RHSID & 0x01) << 1) >> 1;
+      if (MaskElt == -1)
+        MaskElt = (getPFIDLane(ID, ((RHSID & 0x01) << 1) + 1) - 1) >> 1;
+      assert(MaskElt >= 0 && "Didn't expect an undef movlane index!");
+      ExtLane = MaskElt < 2 ? MaskElt : (MaskElt - 2);
+      Input = MaskElt < 2 ? V1 : V2;
+      return BuildExtractInsert64(Input, ExtLane, OpLHS, RHSID & 0x3);
+    }
+    int MaskElt = getPFIDLane(ID, RHSID);
+    assert(MaskElt >= 0 && "Didn't expect an undef movlane index!");
+    ExtLane = MaskElt < 4 ? MaskElt : (MaskElt - 4);
+    Input = MaskElt < 4 ? V1 : V2;
+    return BuildExtractInsert32(Input, ExtLane, OpLHS, RHSID & 0x3);
+  }
+
+  Val OpLHS, OpRHS;
+  OpLHS = generatePerfectShuffle<Val, Ty>(
+      LHSID, V1, V2, PerfectShuffleTable[LHSID], LHS, RHS, BuildExtractInsert64,
+      BuildExtractInsert32, BuildRev, BuildDup, BuildExt, BuildZip);
+  OpRHS = generatePerfectShuffle<Val, Ty>(
+      RHSID, V1, V2, PerfectShuffleTable[RHSID], LHS, RHS, BuildExtractInsert64,
+      BuildExtractInsert32, BuildRev, BuildDup, BuildExt, BuildZip);
+
+  switch (OpNum) {
+  default:
+    llvm_unreachable("Unknown shuffle opcode!");
+  case OP_VREV:
+    // VREV divides the vector in half and swaps within the half.
+    return BuildRev(OpLHS);
+  case OP_VDUP0:
+  case OP_VDUP1:
+  case OP_VDUP2:
+  case OP_VDUP3:
+    return BuildDup(OpLHS, OpNum - OP_VDUP0);
+  case OP_VEXT1:
+  case OP_VEXT2:
+  case OP_VEXT3: {
+    unsigned Imm = OpNum - OP_VEXT1 + 1;
+    return BuildExt(OpLHS, OpRHS, Imm);
+  }
+  case OP_VUZPL:
+  case OP_VUZPR:
+  case OP_VZIPL:
+  case OP_VZIPR:
+  case OP_VTRNL:
+  case OP_VTRNR:
+    return BuildZip(OpNum, OpLHS, OpRHS);
+  }
 }
 
 } // namespace llvm

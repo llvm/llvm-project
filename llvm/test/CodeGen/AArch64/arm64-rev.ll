@@ -498,10 +498,9 @@ define void @float_vrev64(ptr nocapture %source, ptr nocapture %dest) nounwind n
 ; CHECK-GI-LABEL: float_vrev64:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    movi d0, #0000000000000000
-; CHECK-GI-NEXT:    adrp x8, .LCPI36_0
 ; CHECK-GI-NEXT:    ldr q1, [x0]
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI36_0]
-; CHECK-GI-NEXT:    tbl.16b v0, { v0, v1 }, v2
+; CHECK-GI-NEXT:    dup.4s v0, v0[0]
+; CHECK-GI-NEXT:    mov.s v0[1], v1[3]
 ; CHECK-GI-NEXT:    str q0, [x1, #176]
 ; CHECK-GI-NEXT:    ret
 entry:
