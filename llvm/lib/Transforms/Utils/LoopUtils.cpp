@@ -444,6 +444,16 @@ TransformationMode llvm::hasLICMVersioningTransformation(const Loop *L) {
   return TM_Unspecified;
 }
 
+TransformationMode llvm::hasInterchangeTransformation(const Loop *L) {
+  if (getBooleanLoopAttribute(L, "llvm.loop.interchange.enable"))
+    return TM_ForcedByUser;
+
+  if (hasDisableAllTransformsHint(L))
+    return TM_Disable;
+
+  return TM_Unspecified;
+}
+
 /// Does a BFS from a given node to all of its children inside a given loop.
 /// The returned vector of basic blocks includes the starting point.
 SmallVector<BasicBlock *, 16> llvm::collectChildrenInLoop(DominatorTree *DT,
