@@ -2635,6 +2635,10 @@ public:
                           {R->getChainOp(), Ext->getOperand(0)}, R->getCondOp(),
                           R->isOrdered(), Ext->getDebugLoc()),
         ExtOp(Ext->getOpcode()), ResultTy(Ext->getResultType()) {
+    assert((ExtOp == Instruction::CastOps::ZExt ||
+            ExtOp == Instruction::CastOps::SExt) &&
+           "VPExtendedReductionRecipe only support zext and sext.");
+
     // Not all WidenCastRecipes contain nneg flag. Need to transfer flags from
     // the original recipe to prevent setting wrong flags.
     transferFlags(*Ext);
@@ -2643,9 +2647,7 @@ public:
   ~VPExtendedReductionRecipe() override = default;
 
   VPExtendedReductionRecipe *clone() override {
-    auto *Copy = new VPExtendedReductionRecipe(this);
-    Copy->transferFlags(*this);
-    return Copy;
+    return new VPExtendedReductionRecipe(this);
   }
 
   VP_CLASSOF_IMPL(VPDef::VPExtendedReductionSC);
@@ -2715,6 +2717,9 @@ public:
                Instruction::Add &&
            "The reduction instruction in MulAccumulateteReductionRecipe must "
            "be Add");
+    assert((ExtOp == Instruction::CastOps::ZExt ||
+            ExtOp == Instruction::CastOps::SExt) &&
+           "VPMulAccumulateReductionRecipe only support zext and sext.");
     // Only set the non-negative flag if the original recipe contains.
     if (Ext0->hasNonNegFlag())
       IsNonNeg = Ext0->isNonNeg();
