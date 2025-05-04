@@ -485,6 +485,28 @@ struct VPlanTransforms {
   /// are only valid for a subset of VFs in Range, Range.End is updated.
   static void createPartialReductions(VPlan &Plan, VPCostContext &CostCtx,
                                       VFRange &Range);
+  /// Try to convert flattened control flow into a conditional vector basic
+  /// block. If there are no active bits in the mask, it will skip all masked
+  /// operations. This transformation will collect all masked operations
+  /// bottom-up from the masked stores and put all masked operations in a new
+  /// vector basic block. The original vector.loop will be split and the newly
+  /// created basic block will be inserted in between.
+  ///
+  ///
+  ///      [ ] <-- vector.loop
+  ///      ^  |    %any.active.mask = any-of(%Mask)
+  ///     /   |    Branch-On-Count %any.active.mask, 0
+  ///    /    |\
+  ///   |  (T)| \ (F)
+  ///   |     |  v
+  ///   |     |  [ ] <-- vector.if.bb (masked operations)
+  ///   |     |    |
+  ///   |     |    v
+  ///   |     +-->[ ] <-- vector.loop.split
+  ///   |         |  |
+  ///   +---------+  v
+  ///               [ ] <-- middle.block
+  static void optimizeConditionalVPBB(VPlan &Plan);
 };
 
 } // namespace llvm
