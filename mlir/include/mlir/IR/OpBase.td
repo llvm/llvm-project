@@ -556,19 +556,29 @@ class AllShapesMatch<list<string> names> :
 class AllTypesMatch<list<string> names> :
     AllMatchSameOperatorTrait<names, "$_self.getType()", "type">;
 
+// A type constraint that denotes `transform(unpack(lhs.getTypes())) == rhs.getType()`.
+// An optional comparator function may be provided that changes the above form
+// into: `comparator(transform(unpack(lhs.getTypes())), rhs.getType())`.
+class InferTypesFrom<string summary, list<string> lhsArg, string rhsArg,
+                     string transform, 
+                     string comparator = "std::equal_to<>()">
+  : PredOpTrait<summary, CPred<
+    comparator # "(" #
+    !foldl(transform, !range(lhsArg), acc, i, !subst("$arg" # i, "$" # lhsArg[i] # ".getType()", acc)) #
+    ", $" # rhsArg # ".getType()" # ")">> {
+  list<string> args = lhsArg;
+  string target = rhsArg;
+  string transformer = transform;
+}
+
 // A type constraint that denotes `transform(lhs.getType()) == rhs.getType()`.
 // An optional comparator function may be provided that changes the above form
 // into: `comparator(transform(lhs.getType()), rhs.getType())`.
 class TypesMatchWith<string summary, string lhsArg, string rhsArg,
-                     string transform, string comparator = "std::equal_to<>()">
-  : PredOpTrait<summary, CPred<
-      comparator # "(" #
-      !subst("$_self", "$" # lhsArg # ".getType()", transform) #
-      ", $" # rhsArg # ".getType())">> {
-  string lhs = lhsArg;
-  string rhs = rhsArg;
-  string transformer = transform;
-}
+                     string transform, string comparator = "std::equal_to<>()"> 
+  : InferTypesFrom<summary, [lhsArg], rhsArg, 
+                   !subst("$_self", "$arg0", transform), 
+                   comparator>;
 
 // The same as TypesMatchWith but if either `lhsArg` or `rhsArg` are optional
 // and not present returns success.
