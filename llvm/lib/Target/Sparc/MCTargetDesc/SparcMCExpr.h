@@ -85,7 +85,7 @@ public:
 
   Specifier getSpecifier() const { return specifier; }
   const MCExpr *getSubExpr() const { return Expr; }
-  Sparc::Fixups getFixupKind() const { return getFixupKind(specifier); }
+  uint16_t getFixupKind() const;
 
   /// @}
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
@@ -102,7 +102,6 @@ public:
 
   static Specifier parseSpecifier(StringRef name);
   static bool printSpecifier(raw_ostream &OS, Specifier Kind);
-  static Sparc::Fixups getFixupKind(Specifier Kind);
 };
 
 } // end namespace llvm.
