@@ -24,7 +24,7 @@ body:             |
     ; CHECK-NEXT: renamable $v8 = PseudoVLE64_V_M1 undef renamable $v8, [[COPY1]], 1, 6 /* e64 */, 2 /* tu, ma */, implicit $vl, implicit $vtype :: (load unknown-size, align 8)
     ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 8, 208 /* e32, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: renamable $v9 = PseudoVLE32_V_M1 undef renamable $v9, [[COPY]], 8, 5 /* e32 */, 2 /* tu, ma */, implicit $vl, implicit $vtype :: (load unknown-size, align 4)
-    ; CHECK-NEXT: INLINEASM &"# use $0 $1 $2 $3", 1 /* sideeffect attdialect */, 3997705 /* reguse:VR */, killed renamable $v10, 3997705 /* reguse:VR */, killed renamable $v11, 3997705 /* reguse:VR */, killed renamable $v8, 3997705 /* reguse:VR */, killed renamable $v9
+    ; CHECK-NEXT: INLINEASM &"# use $0 $1 $2 $3", 1 /* sideeffect attdialect */, 4194313 /* reguse:VR */, killed renamable $v10, 4194313 /* reguse:VR */, killed renamable $v11, 4194313 /* reguse:VR */, killed renamable $v8, 4194313 /* reguse:VR */, killed renamable $v9
     ; CHECK-NEXT: PseudoRET
     %3:gpr = COPY $x12
     %2:gpr = COPY $x11
@@ -34,7 +34,7 @@ body:             |
     renamable $v11 = PseudoVMV_S_X undef renamable $v11, %1, 8, 5 /* e32 */
     renamable $v8 = PseudoVLE64_V_M1 undef renamable $v8, %2, 1, 6 /* e64 */, 2 /* tu, ma */ :: (load unknown-size, align 8)
     renamable $v9 = PseudoVLE32_V_M1 undef renamable $v9, %3, 8, 5 /* e32 */, 2 /* tu, ma */ :: (load unknown-size, align 4)
-    INLINEASM &"# use $0 $1 $2 $3", 1 /* sideeffect attdialect */, 3997705 /* reguse:VR */, killed renamable $v10, 3997705 /* reguse:VR */, killed renamable $v11, 3997705 /* reguse:VR */, killed renamable $v8, 3997705 /* reguse:VR */, killed renamable $v9
+    INLINEASM &"# use $0 $1 $2 $3", 1 /* sideeffect attdialect */, 4194313 /* reguse:VR */, killed renamable $v10, 4194313 /* reguse:VR */, killed renamable $v11, 4194313 /* reguse:VR */, killed renamable $v8, 4194313 /* reguse:VR */, killed renamable $v9
     PseudoRET
 
 ...

@@ -180,6 +180,8 @@ Changes to the RISC-V Backend
 * Adds Support for SiFive CLIC interrupt attributes, which automate writing CLIC
   interrupt handlers without using inline assembly.
 * Adds assembler support for the Andes `XAndesperf` (Andes Performance extension).
+* Adds experimental assembler support for the SiFive Xsfmm* Attached Matrix
+  Extensions.
 
 Changes to the WebAssembly Backend
 ----------------------------------
