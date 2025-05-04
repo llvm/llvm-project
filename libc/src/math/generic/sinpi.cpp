@@ -48,22 +48,19 @@ LLVM_LIBC_FUNCTION(double, sinpi, (double x)) {
   if (LIBC_UNLIKELY(x_abs == 0U))
     return x;
   // When |x| > 2^51, x is an Integer or Nan/Inf
-  if (x_abs >= 0x4320000000000000) {
+  if (x_abs > 0x4320000000000000) {
+    // |x| < 2^52
     if (x_abs < 0x4330000000000000)
       return (x_abs & 0x1) ? -1.0 : 1.0;
-    // |x| >= 2^52
-    if (x_abs >= 0x4330000000000000) {
-      if (xbits.is_nan())
-        return x;
-      if (xbits.is_inf()) {
-        fputil::set_errno_if_required(EDOM);
-        fputil::raise_except_if_required(FE_INVALID);
-        return FPBits::quiet_nan().get_val();
+    if (xbits.is_nan())
+      return x;
+    if (xbits.is_inf()) {
+      fputil::set_errno_if_required(EDOM);
+      fputil::raise_except_if_required(FE_INVALID);
+      return FPBits::quiet_nan().get_val();
       }
-    }
     return FPBits::zero(xbits.sign()).get_val();
   }
-
   DoubleDouble sin_y, cos_y;
 
   [[maybe_unused]] double err = generic::sincos_eval(yy, sin_y, cos_y);
