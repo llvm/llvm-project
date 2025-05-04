@@ -479,7 +479,6 @@ void AArch64TargetELFStreamer::finish() {
     }
     if (Syms.size() != NumSyms) {
       SmallVector<const MCSymbol *, 0> NewSyms;
-      DenseMap<MCSection *, size_t> Cnt;
       Syms.truncate(NumSyms);
       // Find the last symbol index for each candidate section.
       for (auto [I, Sym] : llvm::enumerate(Syms)) {
