@@ -20,6 +20,7 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DerivedUser.h"
+#include "llvm/IR/GCStrategy.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
@@ -844,14 +845,11 @@ bool Value::canBeFreed() const {
   // which is why we need the explicit opt in on a per collector basis.
   if (!F->hasGC())
     return true;
-  
-  const auto &GCName = F->getGC();
-  if (GCName == "statepoint-example") {
+
+  const auto &GCStrategy = getGCStrategy(F->getGC());
+  if (GCStrategy->useStatepoints()) {
     auto *PT = cast<PointerType>(this->getType());
-    if (PT->getAddressSpace() != 1)
-      // For the sake of this example GC, we arbitrarily pick addrspace(1) as
-      // our GC managed heap.  This must match the same check in
-      // RewriteStatepointsForGC (and probably needs better factored.)
+    if (GCStrategy->isGCManagedPointer(PT) == false)
       return true;
 
     // It is cheaper to scan for a declaration than to scan for a use in this
