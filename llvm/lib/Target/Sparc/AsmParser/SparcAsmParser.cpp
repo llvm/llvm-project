@@ -1480,8 +1480,6 @@ SparcAsmParser::parseSparcAsmOperand(std::unique_ptr<SparcOperand> &Op,
     if (getParser().parseExpression(EVal, E))
       break;
 
-    if (isCall && getContext().getObjectFileInfo()->isPositionIndependent())
-      EVal = SparcMCExpr::create(SparcMCExpr::VK_WPLT30, EVal, getContext());
     Op = SparcOperand::CreateImm(EVal, S, E);
     break;
   }
