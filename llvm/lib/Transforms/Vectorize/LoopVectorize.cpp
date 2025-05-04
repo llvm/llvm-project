@@ -5969,6 +5969,15 @@ LoopVectorizationCostModel::getReductionPatternCost(Instruction *I,
   if (match(RetI, m_OneUse(m_Mul(m_Value(), m_Value()))) &&
       RetI->user_back()->getOpcode() == Instruction::Add) {
     RetI = RetI->user_back();
+  } else if (match(RetI, m_OneUse(m_Mul(m_Value(), m_Value()))) &&
+             ((match(I, m_ZExt(m_Value())) &&
+               match(RetI->user_back(), m_OneUse(m_ZExt(m_Value())))) ||
+              (match(I, m_SExt(m_Value())) &&
+               match(RetI->user_back(), m_OneUse(m_SExt(m_Value()))))) &&
+             RetI->user_back()->user_back()->getOpcode() == Instruction::Add) {
+    // This looks through ext(mul(ext, ext)), making sure that the extensions
+    // are the same sign.
+    RetI = RetI->user_back()->user_back();
   }
 
   // Test if the found instruction is a reduction, and if not return an invalid
@@ -7463,7 +7472,7 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
     // Also include the operands of instructions in the chain, as the cost-model
     // may mark extends as free.
     //
-    // For ARM, some of the instruction can folded into the reducion
+    // For ARM, some of the instructions can be folded into the reduction
     // instruction. So we need to mark all folded instructions free.
     // For example: We can fold reduce(mul(ext(A), ext(B))) into one
     // instruction.
@@ -7471,6 +7480,10 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
       for (Value *Op : ChainOp->operands()) {
         if (auto *I = dyn_cast<Instruction>(Op)) {
           ChainOpsAndOperands.insert(I);
+          if (IsZExtOrSExt(I->getOpcode())) {
+            ChainOpsAndOperands.insert(I);
+            I = dyn_cast<Instruction>(I->getOperand(0));
+          }
           if (I->getOpcode() == Instruction::Mul) {
             auto *Ext0 = dyn_cast<Instruction>(I->getOperand(0));
             auto *Ext1 = dyn_cast<Instruction>(I->getOperand(1));
