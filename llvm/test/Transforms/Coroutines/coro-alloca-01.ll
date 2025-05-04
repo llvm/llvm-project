@@ -42,7 +42,7 @@ suspend:
 ; CHECK-LABEL: @f(
 ; CHECK:         %x.reload.addr = getelementptr inbounds %f.Frame, ptr %hdl, i32 0, i32 2
 ; CHECK:         %y.reload.addr = getelementptr inbounds %f.Frame, ptr %hdl, i32 0, i32 3
-; CHECK:         %alias_phi = phi ptr [ %y.reload.addr, %merge.from.flag_false ], [ %x.reload.addr, %entry ]
+; CHECK:         %alias_phi = select i1 %n, ptr %x.reload.addr, ptr %y.reload.addr
 ; CHECK:         %alias_phi.spill.addr = getelementptr inbounds %f.Frame, ptr %hdl, i32 0, i32 4
 ; CHECK:         store ptr %alias_phi, ptr %alias_phi.spill.addr, align 8
 
