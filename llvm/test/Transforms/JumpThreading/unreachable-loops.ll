@@ -191,11 +191,8 @@ define i32 @constant_phi_leads_to_self_reference(ptr %ptr) {
 ; CHECK-LABEL: @constant_phi_leads_to_self_reference(
 ; CHECK-NEXT:    [[A9:%.*]] = alloca i1, align 1
 ; CHECK-NEXT:    br label [[F6:%.*]]
-; CHECK:       T3:
+; CHECK:       BB5.thread:
 ; CHECK-NEXT:    br label [[BB5:%.*]]
-; CHECK:       BB5:
-; CHECK-NEXT:    [[L10:%.*]] = load i1, ptr [[A9]], align 1
-; CHECK-NEXT:    br i1 [[L10]], label [[BB6:%.*]], label [[F6]]
 ; CHECK:       BB6:
 ; CHECK-NEXT:    [[LGV3:%.*]] = load i1, ptr [[PTR:%.*]], align 1
 ; CHECK-NEXT:    [[C4:%.*]] = icmp sle i1 [[C4]], true
@@ -204,7 +201,8 @@ define i32 @constant_phi_leads_to_self_reference(ptr %ptr) {
 ; CHECK:       F6:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       F7:
-; CHECK-NEXT:    br label [[BB5]]
+; CHECK-NEXT:    [[L10_PR:%.*]] = load i1, ptr [[A9]], align 1
+; CHECK-NEXT:    br i1 [[L10_PR]], label [[BB5]], label [[F6]]
 ;
   %A9 = alloca i1, align 1
   br i1 false, label %BB4, label %F6

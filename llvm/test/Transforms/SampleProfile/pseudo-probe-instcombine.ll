@@ -106,6 +106,56 @@ define i32 @load(ptr nocapture %a, ptr nocapture %b) {
   ret i32 %5
 }
 
+;; Check the load is deleted.
+define i32 @load_not_pseudo(ptr noalias %arg, ptr noalias %arg1) {
+; CHECK-LABEL: @load_not_pseudo(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    store i32 1, ptr [[ARG1:%.*]], align 4
+; CHECK-NEXT:    store i32 1, ptr [[ARG2:%.*]], align 4
+; CHECK-NEXT:    ret i32 1
+;
+bb:
+  store i32 1, ptr %arg, align 4
+  store i32 1, ptr %arg1, align 4
+  %i = load i32, ptr %arg, align 4
+  ret i32 %i
+}
+
+;; Check the load is deleted.
+define i32 @load_not_pseudo_2(ptr noalias %arg, ptr noalias %arg1) {
+; CHECK-LABEL: @load_not_pseudo_2(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    store i32 1, ptr [[ARG:%.*]], align 4
+; CHECK-NEXT:    [[ARG1_1:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG1:%.*]], i64 4
+; CHECK-NEXT:    store i32 1, ptr [[ARG1_1]], align 4
+; CHECK-NEXT:    ret i32 1
+;
+bb:
+  store i32 1, ptr %arg, align 4
+  %arg1_1 = getelementptr inbounds i32, ptr %arg1, i32 1
+  store i32 1, ptr %arg1_1, align 4
+  %i = load i32, ptr %arg, align 4
+  ret i32 %i
+}
+
+;; Check the load is not deleted.
+define i32 @load_not_pseudo_3(ptr noalias %arg, ptr noalias %arg1, ptr noalias %arg2) {
+; CHECK-LABEL: @load_not_pseudo_3(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    store i32 1, ptr [[ARG:%.*]], align 4
+; CHECK-NEXT:    store i32 1, ptr [[ARG1:%.*]], align 4
+; CHECK-NEXT:    store i32 1, ptr [[ARG2:%.*]], align 4
+; CHECK-NEXT:    [[I:%.*]] = load i32, ptr [[ARG]], align 4
+; CHECK-NEXT:    ret i32 [[I]]
+;
+bb:
+  store i32 1, ptr %arg, align 4
+  store i32 1, ptr %arg1, align 4
+  store i32 1, ptr %arg2, align 4
+  %i = load i32, ptr %arg, align 4
+  ret i32 %i
+}
+
 ;; Check the first store is deleted.
 define void @dse(ptr %p) {
 ; CHECK-LABEL: @dse(
