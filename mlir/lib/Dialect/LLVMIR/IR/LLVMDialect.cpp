@@ -673,29 +673,29 @@ static void destructureIndices(Type currType, ArrayRef<GEPArg> indices,
 
 void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
                   Type elementType, Value basePtr, ArrayRef<GEPArg> indices,
-                  bool inbounds, ArrayRef<NamedAttribute> attributes) {
+                  GEPNoWrapFlags noWrapFlags,
+                  ArrayRef<NamedAttribute> attributes) {
   SmallVector<int32_t> rawConstantIndices;
   SmallVector<Value> dynamicIndices;
   destructureIndices(elementType, indices, rawConstantIndices, dynamicIndices);
 
   result.addTypes(resultType);
   result.addAttributes(attributes);
-  result.addAttribute(getRawConstantIndicesAttrName(result.name),
-                      builder.getDenseI32ArrayAttr(rawConstantIndices));
-  if (inbounds) {
-    result.addAttribute(getInboundsAttrName(result.name),
-                        builder.getUnitAttr());
-  }
-  result.addAttribute(kElemTypeAttrName, TypeAttr::get(elementType));
+  result.getOrAddProperties<Properties>().rawConstantIndices =
+      builder.getDenseI32ArrayAttr(rawConstantIndices);
+  result.getOrAddProperties<Properties>().noWrapFlags = noWrapFlags;
+  result.getOrAddProperties<Properties>().elem_type =
+      TypeAttr::get(elementType);
   result.addOperands(basePtr);
   result.addOperands(dynamicIndices);
 }
 
 void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
                   Type elementType, Value basePtr, ValueRange indices,
-                  bool inbounds, ArrayRef<NamedAttribute> attributes) {
+                  GEPNoWrapFlags noWrapFlags,
+                  ArrayRef<NamedAttribute> attributes) {
   build(builder, result, resultType, elementType, basePtr,
-        SmallVector<GEPArg>(indices), inbounds, attributes);
+        SmallVector<GEPArg>(indices), noWrapFlags, attributes);
 }
 
 static ParseResult
@@ -793,6 +793,9 @@ LogicalResult LLVM::GEPOp::verify() {
       getDynamicIndices().size())
     return emitOpError("expected as many dynamic indices as specified in '")
            << getRawConstantIndicesAttrName().getValue() << "'";
+
+  if (getNoWrapFlags() == GEPNoWrapFlags::inboundsFlag)
+    return emitOpError("'inbounds_flag' cannot be used directly.");
 
   return verifyStructIndices(getElemType(), getIndices(),
                              [&] { return emitOpError(); });
@@ -3282,7 +3285,9 @@ void AtomicRMWOp::build(OpBuilder &builder, OperationState &state,
 LogicalResult AtomicRMWOp::verify() {
   auto valType = getVal().getType();
   if (getBinOp() == AtomicBinOp::fadd || getBinOp() == AtomicBinOp::fsub ||
-      getBinOp() == AtomicBinOp::fmin || getBinOp() == AtomicBinOp::fmax) {
+      getBinOp() == AtomicBinOp::fmin || getBinOp() == AtomicBinOp::fmax ||
+      getBinOp() == AtomicBinOp::fminimum ||
+      getBinOp() == AtomicBinOp::fmaximum) {
     if (isCompatibleVectorType(valType)) {
       if (isScalableVectorType(valType))
         return emitOpError("expected LLVM IR fixed vector type");
