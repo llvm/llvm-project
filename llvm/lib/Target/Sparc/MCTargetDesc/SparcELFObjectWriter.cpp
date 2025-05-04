@@ -9,8 +9,10 @@
 #include "MCTargetDesc/SparcFixupKinds.h"
 #include "MCTargetDesc/SparcMCExpr.h"
 #include "MCTargetDesc/SparcMCTargetDesc.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -110,7 +112,11 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
   case FK_Data_8:                return ((Fixup.getOffset() % 8)
                                          ? ELF::R_SPARC_UA64
                                          : ELF::R_SPARC_64);
-  case Sparc::fixup_sparc_13:    return ELF::R_SPARC_13;
+  case Sparc::fixup_sparc_13:
+    if (Ctx.getObjectFileInfo()->isPositionIndependent())
+      return ELF::R_SPARC_GOT13;
+    return ELF::R_SPARC_13;
+
   case Sparc::fixup_sparc_hi22:  return ELF::R_SPARC_HI22;
   case Sparc::fixup_sparc_lo10:  return ELF::R_SPARC_LO10;
   case Sparc::fixup_sparc_h44:   return ELF::R_SPARC_H44;

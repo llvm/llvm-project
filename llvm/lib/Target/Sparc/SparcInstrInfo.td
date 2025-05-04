@@ -145,6 +145,12 @@ def SparcMEMriAsmOperand : AsmOperandClass {
   let ParserMethod = "parseMEMOperand";
 }
 
+def simm13Op : Operand<iPTR> {
+  let OperandType = "OPERAND_IMMEDIATE";
+  let DecoderMethod = "DecodeSIMM13";
+  let EncoderMethod = "getSImm13OpValue";
+}
+
 def MEMrr : Operand<iPTR> {
   let PrintMethod = "printMemOperand";
   let MIOperandInfo = (ops ptr_rc, ptr_rc);
@@ -152,7 +158,7 @@ def MEMrr : Operand<iPTR> {
 }
 def MEMri : Operand<iPTR> {
   let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops ptr_rc, i32imm);
+  let MIOperandInfo = (ops ptr_rc, simm13Op);
   let ParserMatchClass = SparcMEMriAsmOperand;
 }
 
@@ -232,12 +238,6 @@ def calltarget : Operand<i32> {
   let EncoderMethod = "getCallTargetOpValue";
   let DecoderMethod = "DecodeCall";
   let ParserMatchClass = SparcCallTargetAsmOperand;
-}
-
-def simm13Op : Operand<iPTR> {
-  let OperandType = "OPERAND_IMMEDIATE";
-  let DecoderMethod = "DecodeSIMM13";
-  let EncoderMethod = "getSImm13OpValue";
 }
 
 // Operand for printing out a condition code.
