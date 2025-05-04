@@ -1192,7 +1192,6 @@ bool AArch64RegisterInfo::getRegAllocationHints(
         // operands. Look for a valid starting register for the group.
         for (unsigned I = 0; I < StridedOrder.size(); ++I) {
           MCPhysReg Reg = StridedOrder[I];
-          SmallVector<MCPhysReg> Regs;
 
           // If the FORM_TRANSPOSE nodes use the ZPRMul classes, the starting
           // register of the first load should be a multiple of 2 or 4.
