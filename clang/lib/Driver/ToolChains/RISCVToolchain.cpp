@@ -40,6 +40,9 @@ bool RISCVToolChain::hasGCCToolchain(const Driver &D,
   if (Args.getLastArg(options::OPT_gcc_toolchain))
     return true;
 
+  if (Args.getLastArg(options::OPT_gcc_install_dir_EQ))
+    return true;
+
   SmallString<128> GCCDir;
   llvm::sys::path::append(GCCDir, D.Dir, "..", D.getTargetTriple(),
                           "lib/crt0.o");
