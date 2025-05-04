@@ -1114,8 +1114,8 @@ void IRTranslator::emitBitTestHeader(SwitchCG::BitTestBlock &B,
     MaskTy = LLT::scalar(PtrTy.getSizeInBits());
   else {
     // Ensure that the type will fit the mask value.
-    for (unsigned I = 0, E = B.Cases.size(); I != E; ++I) {
-      if (!isUIntN(SwitchOpTy.getSizeInBits(), B.Cases[I].Mask)) {
+    for (const SwitchCG::BitTestCase &Case : B.Cases) {
+      if (!isUIntN(SwitchOpTy.getSizeInBits(), Case.Mask)) {
         // Switch table case range are encoded into series of masks.
         // Just use pointer type, it's guaranteed to fit.
         MaskTy = LLT::scalar(PtrTy.getSizeInBits());
@@ -3597,9 +3597,8 @@ void IRTranslator::translateDbgDeclareRecord(Value *Address, bool HasArgList,
   // A dbg.declare describes the address of a source variable, so lower it
   // into an indirect DBG_VALUE.
   MIRBuilder.setDebugLoc(DL);
-  MIRBuilder.buildIndirectDbgValue(getOrCreateVReg(*Address),
-                                   Variable, Expression);
-  return;
+  MIRBuilder.buildIndirectDbgValue(getOrCreateVReg(*Address), Variable,
+                                   Expression);
 }
 
 void IRTranslator::translateDbgInfo(const Instruction &Inst,
