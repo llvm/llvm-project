@@ -1892,8 +1892,6 @@ static Value *getStepVector(Value *Val, Value *Step,
          "Induction Step must be an integer or FP");
   assert(Step->getType() == STy && "Step has wrong type");
 
-  SmallVector<Constant *, 8> Indices;
-
   // Create a vector of consecutive numbers from zero to VF.
   VectorType *InitVecValVTy = ValVTy;
   if (STy->isFloatingPointTy()) {
