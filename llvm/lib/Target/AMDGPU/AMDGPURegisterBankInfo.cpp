@@ -1135,7 +1135,6 @@ bool AMDGPURegisterBankInfo::applyMappingLoad(
   if (LoadSize <= MaxNonSmrdLoadSize)
     return false;
 
-  SmallVector<Register, 16> DefRegs(OpdMapper.getVRegs(0));
   SmallVector<Register, 1> SrcRegs(OpdMapper.getVRegs(1));
 
   if (SrcRegs.empty())
