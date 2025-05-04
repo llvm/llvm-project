@@ -350,6 +350,10 @@ static cl::opt<bool> PreferPredicatedReductionSelect(
     cl::desc(
         "Prefer predicating a reduction operation over an after loop select."));
 
+static cl::opt<bool> PreferControlFlow(
+    "prefer-control-flow", cl::init(false), cl::Hidden,
+    cl::desc("Generate control flow inside the vector region."));
+
 cl::opt<bool> llvm::EnableVPlanNativePath(
     "enable-vplan-native-path", cl::Hidden,
     cl::desc("Enable VPlan-native vectorization path with "
@@ -4250,6 +4254,10 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
           }
           case VPInstruction::ExplicitVectorLength:
             C += VPI->cost(VF, CostCtx);
+            break;
+          case VPInstruction::AnyOf:
+            if (!VPI->getUnderlyingValue())
+              C += VPI->cost(VF, CostCtx);
             break;
           default:
             break;
@@ -8296,6 +8304,8 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       VPlanTransforms::runPass(VPlanTransforms::truncateToMinimalBitwidths,
                                *Plan, CM.getMinimalBitwidths());
       VPlanTransforms::runPass(VPlanTransforms::optimize, *Plan);
+      if (PreferControlFlow || TTI.preferControlFlow())
+        VPlanTransforms::optimizeConditionalVPBB(*Plan);
       // TODO: try to put it close to addActiveLaneMask().
       if (CM.foldTailWithEVL())
         VPlanTransforms::runPass(VPlanTransforms::addExplicitVectorLength,
