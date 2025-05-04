@@ -1322,12 +1322,7 @@ ParseStatus SparcAsmParser::parseCallTarget(OperandVector &Operands) {
   if (getParser().parseExpression(DestValue))
     return ParseStatus::NoMatch;
 
-  bool IsPic = getContext().getObjectFileInfo()->isPositionIndependent();
-  SparcMCExpr::Specifier Kind =
-      IsPic ? SparcMCExpr::VK_WPLT30 : SparcMCExpr::VK_WDISP30;
-
-  const MCExpr *DestExpr = SparcMCExpr::create(Kind, DestValue, getContext());
-  Operands.push_back(SparcOperand::CreateImm(DestExpr, S, E));
+  Operands.push_back(SparcOperand::CreateImm(DestValue, S, E));
   return ParseStatus::Success;
 }
 

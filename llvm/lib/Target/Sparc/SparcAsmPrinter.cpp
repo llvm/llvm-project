@@ -84,7 +84,7 @@ static MCOperand createSparcMCOperand(SparcMCExpr::Specifier Kind,
 }
 static MCOperand createPCXCallOP(MCSymbol *Label,
                                  MCContext &OutContext) {
-  return createSparcMCOperand(SparcMCExpr::VK_WDISP30, Label, OutContext);
+  return MCOperand::createExpr(MCSymbolRefExpr::create(Label, OutContext));
 }
 
 static MCOperand createPCXRelExprOp(SparcMCExpr::Specifier Kind,
