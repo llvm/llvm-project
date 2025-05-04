@@ -37,37 +37,37 @@ using namespace llvm;
 #define DEBUG_TYPE "asm-printer"
 
 namespace {
-  class SparcAsmPrinter : public AsmPrinter {
-    SparcTargetStreamer &getTargetStreamer() {
-      return static_cast<SparcTargetStreamer &>(
-          *OutStreamer->getTargetStreamer());
-    }
-  public:
-    explicit SparcAsmPrinter(TargetMachine &TM,
-                             std::unique_ptr<MCStreamer> Streamer)
-        : AsmPrinter(TM, std::move(Streamer)) {}
+class SparcAsmPrinter : public AsmPrinter {
+  SparcTargetStreamer &getTargetStreamer() {
+    return static_cast<SparcTargetStreamer &>(
+        *OutStreamer->getTargetStreamer());
+  }
 
-    StringRef getPassName() const override { return "Sparc Assembly Printer"; }
+public:
+  explicit SparcAsmPrinter(TargetMachine &TM,
+                           std::unique_ptr<MCStreamer> Streamer)
+      : AsmPrinter(TM, std::move(Streamer)) {}
 
-    void printOperand(const MachineInstr *MI, int opNum, raw_ostream &OS);
-    void printMemOperand(const MachineInstr *MI, int opNum, raw_ostream &OS);
+  StringRef getPassName() const override { return "Sparc Assembly Printer"; }
 
-    void emitFunctionBodyStart() override;
-    void emitInstruction(const MachineInstr *MI) override;
+  void printOperand(const MachineInstr *MI, int opNum, raw_ostream &OS);
+  void printMemOperand(const MachineInstr *MI, int opNum, raw_ostream &OS);
 
-    static const char *getRegisterName(MCRegister Reg) {
-      return SparcInstPrinter::getRegisterName(Reg);
-    }
+  void emitFunctionBodyStart() override;
+  void emitInstruction(const MachineInstr *MI) override;
 
-    bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                         const char *ExtraCode, raw_ostream &O) override;
-    bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
-                               const char *ExtraCode, raw_ostream &O) override;
+  static const char *getRegisterName(MCRegister Reg) {
+    return SparcInstPrinter::getRegisterName(Reg);
+  }
 
-    void LowerGETPCXAndEmitMCInsts(const MachineInstr *MI,
-                                   const MCSubtargetInfo &STI);
+  bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
+                       const char *ExtraCode, raw_ostream &O) override;
+  bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
+                             const char *ExtraCode, raw_ostream &O) override;
 
-  };
+  void LowerGETPCXAndEmitMCInsts(const MachineInstr *MI,
+                                 const MCSubtargetInfo &STI);
+};
 } // end of anonymous namespace
 
 static MCOperand createSparcMCOperand(SparcMCExpr::Specifier Kind,
