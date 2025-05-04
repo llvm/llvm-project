@@ -20,10 +20,10 @@
 // CHECK-LD-SPARC32-SAME: "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD: "-z" "ignore" "-latomic" "-z" "record"
 // CHECK-GLD: "--as-needed" "-latomic" "--no-as-needed"
+// CHECK-LD-SPARC32-SAME: "-lgcc"
 // CHECK-LD: "-z" "ignore" "-lgcc_s" "-z" "record"
 // CHECK-GLD: "--as-needed" "-lgcc_s" "--no-as-needed"
 // CHECK-LD-SPARC32-SAME: "-lc"
-// CHECK-LD-SPARC32-SAME: "-lgcc"
 // CHECK-LD-SPARC32-SAME: "[[SYSROOT]]/usr/gcc/4.8/lib/gcc/sparc-sun-solaris2.11/4.8.2{{/|\\\\}}crtend.o"
 // CHECK-LD-SPARC32-SAME: "[[SYSROOT]]/usr/lib{{/|\\\\}}crtn.o"
 
@@ -42,9 +42,9 @@
 // CHECK-LD-SPARC64-SAME: "-L[[SYSROOT]]/usr/gcc/4.8/lib/gcc/sparc-sun-solaris2.11/4.8.2/../../../sparcv9"
 // CHECK-LD-SPARC64-SAME: "-L[[SYSROOT]]/usr/lib/sparcv9"
 // CHECK-LD-SPARC64-NOT:  "-latomic"
+// CHECK-LD-SPARC64-SAME: "-lgcc"
 // CHECK-LD-SPARC64-SAME: "-lgcc_s"
 // CHECK-LD-SPARC64-SAME: "-lc"
-// CHECK-LD-SPARC64-SAME: "-lgcc"
 // CHECK-LD-SPARC64-SAME: "[[SYSROOT]]/usr/gcc/4.8/lib/gcc/sparc-sun-solaris2.11/4.8.2/sparcv9{{/|\\\\}}crtend.o"
 // CHECK-LD-SPARC64-SAME: "[[SYSROOT]]/usr/lib/sparcv9{{/|\\\\}}crtn.o"
 
@@ -63,9 +63,9 @@
 // CHECK-LD-X32-SAME: "-L[[SYSROOT]]/usr/gcc/4.9/lib/gcc/i386-pc-solaris2.11/4.9.4/../../.."
 // CHECK-LD-X32-SAME: "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD-X32-NOT:  "-latomic"
+// CHECK-LD-X32-SAME: "-lgcc"
 // CHECK-LD-X32-SAME: "-lgcc_s"
 // CHECK-LD-X32-SAME: "-lc"
-// CHECK-LD-X32-SAME: "-lgcc"
 // CHECK-LD-X32-SAME: "[[SYSROOT]]/usr/gcc/4.9/lib/gcc/i386-pc-solaris2.11/4.9.4{{/|\\\\}}crtend.o"
 // CHECK-LD-X32-SAME: "[[SYSROOT]]/usr/lib{{/|\\\\}}crtn.o"
 
@@ -85,9 +85,9 @@
 // CHECK-LD-X64-SAME: "-L[[SYSROOT]]/usr/gcc/4.9/lib/gcc/i386-pc-solaris2.11/4.9.4/../../../amd64"
 // CHECK-LD-X64-SAME: "-L[[SYSROOT]]/usr/lib/amd64"
 // CHECK-LD-X64-NOT:  "-latomic"
+// CHECK-LD-X64-SAME: "-lgcc"
 // CHECK-LD-X64-SAME: "-lgcc_s"
 // CHECK-LD-X64-SAME: "-lc"
-// CHECK-LD-X64-SAME: "-lgcc"
 // CHECK-LD-X64-SAME: "[[SYSROOT]]/usr/gcc/4.9/lib/gcc/i386-pc-solaris2.11/4.9.4/amd64{{/|\\\\}}crtend.o"
 // CHECK-LD-X64-SAME: "[[SYSROOT]]/usr/lib/amd64{{/|\\\\}}crtn.o"
 
@@ -100,6 +100,15 @@
 // CHECK-SPARC32-SHARED-SAME: "-lgcc_s"
 // CHECK-SPARC32-SHARED-SAME: "-lc"
 // CHECK-SPARC32-SHARED-NOT: "-lgcc"
+
+/// Check that -static-libgcc is supported.
+// RUN: %clang -### %s --target=sparc-sun-solaris2.11 \
+// RUN:     -static-libgcc \
+// RUN:     --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
+// RUN:   | FileCheck --check-prefixes=CHECK-STATIC-LIBGCC %s
+// CHECK-STATIC-LIBGCC-NOT: warning: argument unused during compilation: '-static-libgcc'
+// CHECK-STATIC-LIBGCC: "-lgcc" "-lgcc_eh"
+// CHECK-STATIC-LIBGCC-NOT: "-lgcc_s"
 
 // Check that libm is only linked with clang++.
 // RUN: %clang -### %s --target=sparc-sun-solaris2.11 \
