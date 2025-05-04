@@ -569,7 +569,7 @@ public:
 
     // Constants of the "same type" don't always actually have the same
     // type; I don't know why.  Just white-list them.
-    if (isa<ConstantPointerNull>(L) || isa<UndefValue>(L) || isa<ConstantAggregateZero>(L))
+    if (isa<ConstantPointerNull, UndefValue, ConstantAggregateZero>(L))
       return true;
 
     // Block addresses only match if we've already encountered the
