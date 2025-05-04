@@ -3575,41 +3575,6 @@ static Value *foldOrOfInversions(BinaryOperator &I,
   return nullptr;
 }
 
-// Optimize patterns where an OR operation combines a select-based zero check
-// with its condition value. This handles both scalar and vector types.
-//
-// Given:
-//   (X == 0 ? Y : 0) | X  -->  X == 0 ? Y : X
-//   X | (X == 0 ? Y : 0)  -->  X == 0 ? Y : X
-//
-// Also handles cases where X might be wrapped in zero/sign extensions.
-static Instruction *foldOrOfSelectZero(BinaryOperator &BO, Value *Op0,
-                                       Value *Op1) {
-  CmpPredicate Pred;
-  Value *X, *Y;
-
-  // Check both operand orders to handle commutative OR
-  for (Value *SelVal : {Op0, Op1}) {
-    // The other operand in the OR operation (potentially X or extended X)
-    Value *Other = (SelVal == Op0) ? Op1 : Op0;
-
-    // Attempt to match the select pattern:
-    // select(icmp eq X, 0), Y, 0
-    // Where X might be:
-    // - Original value
-    // - Zero extended value (zext)
-    // - Sign extended value (sext)
-    if (match(SelVal, m_Select(m_c_ICmp(Pred, m_Value(X), m_Zero()), m_Value(Y),
-                               m_Zero())) &&
-        Pred == ICmpInst::ICMP_EQ &&
-        match(Other, m_ZExtOrSExtOrSelf(m_Specific(X)))) {
-      return SelectInst::Create(cast<SelectInst>(SelVal)->getCondition(), Y,
-                                Other);
-    }
-  }
-  return nullptr;
-}
-
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
 // here. We should standardize that construct where it is needed or choose some
 // other way to ensure that commutated variants of patterns are not missed.
@@ -3692,11 +3657,15 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
                                    /*NSW=*/true, /*NUW=*/true))
       return R;
   }
-  
+
   // (X == 0 ? Y : 0) | X -> X == 0 ? Y : X
   // X | (X == 0 ? Y : 0) -> X == 0 ? Y : X
-  if (Instruction *R = foldOrOfSelectZero(I, Op0, Op1))
-    return R;
+  for (Value *Op : {Op0, Op1}) {
+    if (auto *SI = dyn_cast<SelectInst>(Op)) {
+      if (auto *R = FoldOpIntoSelect(I, SI, /* FoldWithMultiUse */ false))
+        return R;
+    }
+  }
 
   Value *X, *Y;
   const APInt *CV;
@@ -5078,3 +5047,4 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
 
   return nullptr;
 }
+

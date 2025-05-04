@@ -1714,6 +1714,36 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
     }
   }
 
+  // Optimize patterns where an OR operation combines a select-based zero check
+  // with its condition value. This handles both scalar and vector types.
+  //
+  // Given:
+  //   (X == 0 ? Y : 0) | X  -->  X == 0 ? Y : X
+  //   X | (X == 0 ? Y : 0)  -->  X == 0 ? Y : X
+  //
+  // Also handles cases where X might be wrapped in zero/sign extensions.
+  if (Op.getOpcode() == Instruction::Or) {
+    // Check both operand orders to handle commutative OR
+    // The other operand in the OR operation (potentially X or extended X)
+    Value *Other = Op.getOperand(0) == SI ? Op.getOperand(1) : Op.getOperand(0);
+
+    CmpPredicate Pred;
+    Value *X, *Y;
+    // Attempt to match the select pattern:
+    // select(icmp eq X, 0), Y, 0
+    // Where X might be:
+    // - Original value
+    // - Zero extended value (zext)
+    // - Sign extended value (sext)
+    if (match(SI, m_Select(m_ICmp(Pred, m_Value(X), m_Zero()), m_Value(Y),
+                                    m_Zero())) &&
+              Pred == ICmpInst::ICMP_EQ &&
+              match(Other, m_ZExtOrSExtOrSelf(m_Specific(X)))) {
+      return SelectInst::Create(SI->getCondition(), Y,
+                                        Other);
+    }
+  }
+
   // Make sure that one of the select arms folds successfully.
   Value *NewTV = simplifyOperationIntoSelectOperand(Op, SI, /*IsTrueArm=*/true);
   Value *NewFV =
@@ -5791,3 +5821,4 @@ void llvm::initializeInstCombine(PassRegistry &Registry) {
 FunctionPass *llvm::createInstructionCombiningPass() {
   return new InstructionCombiningPass();
 }
+
