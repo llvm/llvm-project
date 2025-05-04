@@ -1480,18 +1480,8 @@ SparcAsmParser::parseSparcAsmOperand(std::unique_ptr<SparcOperand> &Op,
     if (getParser().parseExpression(EVal, E))
       break;
 
-    int64_t Res;
-    if (!EVal->evaluateAsAbsolute(Res)) {
-      SparcMCExpr::Specifier Kind = SparcMCExpr::VK_13;
-
-      if (getContext().getObjectFileInfo()->isPositionIndependent()) {
-        if (isCall)
-          Kind = SparcMCExpr::VK_WPLT30;
-        else
-          Kind = SparcMCExpr::VK_GOT13;
-      }
-      EVal = SparcMCExpr::create(Kind, EVal, getContext());
-    }
+    if (isCall && getContext().getObjectFileInfo()->isPositionIndependent())
+      EVal = SparcMCExpr::create(SparcMCExpr::VK_WPLT30, EVal, getContext());
     Op = SparcOperand::CreateImm(EVal, S, E);
     break;
   }
