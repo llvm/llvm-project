@@ -98,6 +98,7 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
     }
   }
 
+  // clang-format off
   switch(Fixup.getTargetKind()) {
   default:
     llvm_unreachable("Unimplemented fixup -> relocation");
@@ -127,10 +128,8 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
   case Sparc::fixup_sparc_lm:    return ELF::R_SPARC_LM22;
   case Sparc::fixup_sparc_hix22:         return ELF::R_SPARC_HIX22;
   case Sparc::fixup_sparc_lox10:         return ELF::R_SPARC_LOX10;
-  case Sparc::fixup_sparc_gotdata_hix22: return ELF::R_SPARC_GOTDATA_HIX22;
-  case Sparc::fixup_sparc_gotdata_lox10: return ELF::R_SPARC_GOTDATA_LOX10;
-  case Sparc::fixup_sparc_gotdata_op:    return ELF::R_SPARC_GOTDATA_OP;
   }
+  // clang-format on
 
   return ELF::R_SPARC_NONE;
 }

@@ -63,8 +63,8 @@ sethi %lm(sym), %l0
 # ASM-NEXT: ldx [%l7+%l1], %l2, %gdop(sym)
 # OBJDUMP: R_SPARC_HIX22 sym
 # OBJDUMP: R_SPARC_LOX10 sym
-# OBJDUMP: R_SPARC_GOTDATA_HIX22 sym
-# OBJDUMP: R_SPARC_GOTDATA_LOX10 sym
+# OBJDUMP: R_SPARC_GOTDATA_OP_HIX22 sym
+# OBJDUMP: R_SPARC_GOTDATA_OP_LOX10 sym
 # OBJDUMP: R_SPARC_GOTDATA_OP sym
 sethi %hix(sym), %g1
 xor %g1, %lox(sym), %g1
