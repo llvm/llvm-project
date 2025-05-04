@@ -1,0 +1,14 @@
+
+project:
+  name: blazie2004
+  owner: blazie2004
+  repo: llvm-project-checks
+  pr_number: 2  # Change this as needed
+scripts:
+  run:
+    - check_remote_class_check.py
+    - check_remote_llvmheader.py
+    - check_remote_naming_conventions.py
+    - check_remote_pr_format.py
+    - check_remote_tidy_format.py
+  skip:
