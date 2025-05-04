@@ -315,6 +315,18 @@ let usesCustomInserter = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses 
   }
 }
 
+let usesCustomInserter = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC] in {
+  def WAVE_REDUCE_WRT_DIVERGENT_MASK_UMIN_PSEUDO_U32 : VPseudoInstSI <(outs VGPR_32:$vdst),
+    (ins VSrc_b32: $src, VSrc_b32: $mask, VSrc_b32:$strategy),
+    [(set i32:$vdst, (int_amdgcn_wave_reduce_wrt_divergent_mask_umin i32:$src, i32:$mask, i32:$strategy))]> {
+  }
+
+  def WAVE_REDUCE_WRT_DIVERGENT_MASK_UMAX_PSEUDO_U32 : VPseudoInstSI <(outs VGPR_32:$vdst),
+    (ins VSrc_b32: $src, VSrc_b32: $mask, VSrc_b32:$strategy),
+    [(set i32:$vdst, (int_amdgcn_wave_reduce_wrt_divergent_mask_umax i32:$src, i32:$mask, i32:$strategy))]> {
+  }
+}
+
 let usesCustomInserter = 1, Defs = [VCC] in {
 def V_ADD_U64_PSEUDO : VPseudoInstSI <
   (outs VReg_64:$vdst), (ins VSrc_b64:$src0, VSrc_b64:$src1),
