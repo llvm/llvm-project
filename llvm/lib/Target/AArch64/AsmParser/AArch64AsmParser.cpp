@@ -7201,6 +7201,7 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
   }
   FeatureBitset Features = ComputeAvailableFeatures(STI.getFeatureBits());
   setAvailableFeatures(Features);
+
   getTargetStreamer().emitDirectiveArch(Name);
   return false;
 }
