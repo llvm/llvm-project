@@ -7974,7 +7974,6 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   assert(Chain.getOpcode() == ISD::EntryToken && "Unexpected Chain value");
   SDValue Glue = Chain.getValue(1);
 
-  SmallVector<SDValue, 16> ArgValues;
   unsigned ExtraArgLocs = 0;
   for (unsigned i = 0, e = Ins.size(); i != e; ++i) {
     CCValAssign &VA = ArgLocs[i - ExtraArgLocs];
@@ -18253,7 +18252,6 @@ static SDValue performVecReduceAddCombine(SDNode *N, SelectionDAG &DAG,
     return VecReduceAdd16;
 
   // Generate the remainder Dot operation that is multiple of 8.
-  SmallVector<SDValue, 4> SDotVec8;
   SDValue Zeros = DAG.getConstant(0, DL, MVT::v2i32);
   SDValue Vec8Op0 =
       DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v8i8, A.getOperand(0),

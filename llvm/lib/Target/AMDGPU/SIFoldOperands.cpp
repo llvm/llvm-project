@@ -1629,7 +1629,6 @@ bool SIFoldOperandsImpl::foldCopyToAGPRRegSequence(MachineInstr *CopyMI) const {
 
   MachineInstrBuilder B(*MBB.getParent(), CopyMI);
   DenseMap<TargetInstrInfo::RegSubRegPair, Register> VGPRCopies;
-  SmallSetVector<TargetInstrInfo::RegSubRegPair, 32> SeenInputs;
 
   const TargetRegisterClass *UseRC =
       MRI->getRegClass(CopyMI->getOperand(1).getReg());
