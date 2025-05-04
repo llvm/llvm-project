@@ -15,7 +15,7 @@
 ## Also check that we don't have redundant EH_Frame symbols (regression test)
 # RUN: cat %t/objdump %t/map | FileCheck %s --implicit-check-not _hello_world \
 # RUN:   --implicit-check-not EH_Frame
-# RUN: FileCheck %s --check-prefix=MAPFILE < %t/test.time-trace
+# RUN: FileCheck %s --check-prefix=MAPFILE < %t/test.time-trace.json
 
 # CHECK:       Sections:
 # CHECK-NEXT:  Idx  Name         Size     VMA               Type

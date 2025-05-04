@@ -64,6 +64,8 @@ Breaking changes
   in the same segment by default. Pass ``--xosegment`` to lld in order to get
   the old behavior back.
 
+* The default extension for time trace files is now ``.time-trace.json``.
+
 COFF Improvements
 -----------------
 
