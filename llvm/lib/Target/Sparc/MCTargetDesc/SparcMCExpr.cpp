@@ -80,9 +80,9 @@ StringRef SparcMCExpr::getSpecifierName(SparcMCExpr::Specifier S) {
   case VK_TLS_LE_LOX10:  return "tle_lox10";
   case VK_HIX22:         return "hix";
   case VK_LOX10:         return "lox";
-  case VK_GOTDATA_HIX22: return "gdop_hix22";
-  case VK_GOTDATA_LOX10: return "gdop_lox10";
-  case VK_GOTDATA_OP:    return "gdop";
+  case VK_GOTDATA_OP_HIX22: return "gdop_hix22";
+  case VK_GOTDATA_OP_LOX10: return "gdop_lox10";
+  case VK_GOTDATA_OP:       return "gdop";
   }
   // clang-format on
   llvm_unreachable("Unhandled SparcMCExpr::Specifier");
@@ -126,8 +126,8 @@ SparcMCExpr::Specifier SparcMCExpr::parseSpecifier(StringRef name) {
       .Case("tle_lox10", VK_TLS_LE_LOX10)
       .Case("hix", VK_HIX22)
       .Case("lox", VK_LOX10)
-      .Case("gdop_hix22", VK_GOTDATA_HIX22)
-      .Case("gdop_lox10", VK_GOTDATA_LOX10)
+      .Case("gdop_hix22", VK_GOTDATA_OP_HIX22)
+      .Case("gdop_lox10", VK_GOTDATA_OP_LOX10)
       .Case("gdop", VK_GOTDATA_OP)
       .Default(VK_None);
 }
@@ -172,9 +172,9 @@ uint16_t SparcMCExpr::getFixupKind() const {
   case VK_TLS_LE_LOX10:  return ELF::R_SPARC_TLS_LE_LOX10;
   case VK_HIX22:         return Sparc::fixup_sparc_hix22;
   case VK_LOX10:         return Sparc::fixup_sparc_lox10;
-  case VK_GOTDATA_HIX22: return Sparc::fixup_sparc_gotdata_hix22;
-  case VK_GOTDATA_LOX10: return Sparc::fixup_sparc_gotdata_lox10;
-  case VK_GOTDATA_OP:    return Sparc::fixup_sparc_gotdata_op;
+  case VK_GOTDATA_OP_HIX22: return ELF::R_SPARC_GOTDATA_OP_HIX22;
+  case VK_GOTDATA_OP_LOX10: return ELF::R_SPARC_GOTDATA_OP_LOX10;
+  case VK_GOTDATA_OP:       return ELF::R_SPARC_GOTDATA_OP;
   }
   // clang-format on
 }
