@@ -347,6 +347,29 @@ struct VPlanTransforms {
   static void
   addBranchWeightToMiddleTerminator(VPlan &Plan, ElementCount VF,
                                     std::optional<unsigned> VScaleForTuning);
+
+  /// Try to convet flatten control flow to the conditional vector basic block.
+  /// If no active bits in the mask, will skip all the masked operations.
+  /// This transformation will collect all masked operations bottom-up from the
+  /// masked stores and put all of masked operations in a new vector basic
+  /// block. This original vector.loop will be split and the new created basic
+  /// block will inserted in between.
+  ///
+  /// After transformation the vplan will looks like.
+  /// vector.loop:
+  ///   ...
+  ///   %any.active.mask = any-of(%Mask)
+  ///   Branch-On-Count %any.active.mask, 0
+  /// successors vector.loop.split, vector.if.bb
+  ///
+  /// vector.if.bb:
+  ///   (Masked operations)
+  /// successors vector.loop.split
+  ///
+  /// vector.loop.split:
+  ///   ...
+  /// successors middle.block, vector.loop
+  static void optimizeConditionalVPBB(VPlan &Plan);
 };
 
 } // namespace llvm
