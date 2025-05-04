@@ -6,10 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include <numeric>
+
+using std::optional;
 
 namespace mlir {
 namespace xegpu {
@@ -27,6 +31,71 @@ void XeGPUDialect::initialize() {
 #define GET_ATTRDEF_LIST
 #include <mlir/Dialect/XeGPU/IR/XeGPUAttrs.cpp.inc>
       >();
+}
+
+// Checks if the given shape can be evenly distributed based on the layout
+// and data factors provided by the LayoutAttr.
+bool XeGPUDialect::isEvenlyDistributable(llvm::ArrayRef<int64_t> shape,
+                                         xegpu::LayoutAttr attr) {
+  assert(attr && "Layout attribute is missing.");
+
+  // Checks whether the given shape can be evenly distributed using the
+  // specified layout and data attributes. If successful, it returns the work
+  // size for each compute unit; otherwise, it returns `std::nullopt`. The work
+  // size per compute unit is calculated as follows:
+  //   - If `data` is null: newShape[i] = shape[i] / layout[i]
+  //   - If `data` is not null: newShape[i] = data[i]
+  // When round-robin distribution (`rr`) is enabled, `shape[i]` can be
+  // smaller than `layout[i] * data[i]`, allowing multiple compute units to
+  // share the data.
+  auto tryDistribute = [&](llvm::ArrayRef<int64_t> shape,
+                           DenseI32ArrayAttr layout, DenseI32ArrayAttr data,
+                           bool rr = true) -> optional<SmallVector<int64_t>> {
+    llvm::SmallVector<int64_t> newShape(shape);
+    if (layout) {
+      auto vec = llvm::to_vector_of<int64_t>(layout.asArrayRef());
+      if (vec.size() != shape.size())
+        return std::nullopt;
+      auto ratio = computeShapeRatio(shape, vec);
+      if (!ratio.has_value())
+        return std::nullopt;
+      newShape = ratio.value();
+    }
+
+    if (data) {
+      auto vec = llvm::to_vector_of<int64_t>(data.asArrayRef());
+      if (vec.size() != shape.size())
+        return std::nullopt;
+      auto ratio = computeShapeRatio(newShape, vec);
+      if (!ratio.has_value() && rr)
+        ratio = computeShapeRatio(vec, newShape);
+      if (!ratio.has_value())
+        return std::nullopt;
+
+      // if data is not null, we always return it for next phase.
+      newShape = vec;
+    }
+    return newShape;
+  };
+
+  // check the sgLayout and sgData
+  auto maybeSgShape =
+      tryDistribute(shape, attr.getSgLayout(), attr.getSgData());
+  if (!maybeSgShape)
+    return false;
+  auto sgShape = maybeSgShape.value();
+
+  // check InstData, it neither have layout nor need round-robin
+  auto maybeInstShape =
+      tryDistribute(sgShape, nullptr, attr.getInstData(), false);
+  if (!maybeInstShape)
+    return false;
+  auto instShape = maybeInstShape.value();
+
+  // check LaneLayout and LaneData
+  auto maybeLaneShape =
+      tryDistribute(instShape, attr.getLaneLayout(), attr.getLaneData(), false);
+  return maybeLaneShape.has_value();
 }
 
 //===----------------------------------------------------------------------===//
@@ -240,7 +309,7 @@ LogicalResult TensorDescType::verify(
     llvm::ArrayRef<int64_t> shape, mlir::Type elementType,
     mlir::Attribute encoding, mlir::Attribute layout) {
   size_t rank = shape.size();
-  // Low-pressure types are packed in 32-bit units.
+  // Low-precision types are packed in 32-bit units.
   int32_t packingFactor = 32 / elementType.getIntOrFloatBitWidth();
   if (rank != 1 && rank != 2)
     return emitError() << "expected 1D or 2D tensor";
@@ -267,23 +336,21 @@ LogicalResult TensorDescType::verify(
     }
   }
 
-  if (auto blockAttr =
-          mlir::dyn_cast_if_present<BlockTensorDescAttr>(encoding)) {
+  auto blockAttr = mlir::dyn_cast_if_present<BlockTensorDescAttr>(encoding);
+  if (blockAttr) {
     MemorySpaceAttr memorySpaceAttr = blockAttr.getMemorySpace();
     if (rank == 2 && memorySpaceAttr &&
         memorySpaceAttr.getValue() == MemorySpace::SLM)
       return emitError() << "SLM is not supported for 2D block tensor";
   }
 
-  if (auto layoutAttr = llvm::dyn_cast_if_present<LayoutAttr>(layout)) {
-
+  auto layoutAttr = llvm::dyn_cast_if_present<LayoutAttr>(layout);
+  if (layoutAttr) {
     if (rank != (size_t)layoutAttr.getRank())
       return emitError() << "expected layout rank to match tensor rank";
 
-    ArrayRef<int32_t> laneLayout = layoutAttr.getLaneLayout().asArrayRef();
-    ArrayRef<int32_t> laneData = layoutAttr.getLaneData().asArrayRef();
-
-    if (scatterAttr) {
+    auto laneData = layoutAttr.getLaneData();
+    if (scatterAttr && laneData) {
       // Validate subgroup mapping rules for scattered tensors.
       // A work-item's slice of the tensor with shape [sg_size] or
       // [sg_size, chunk_size] will be [1] or [1, 32/element_ty_bit_width]
@@ -293,91 +360,20 @@ LogicalResult TensorDescType::verify(
       if (rank > 1 && laneData[0] != 1)
         return emitError()
                << "cannot map over non-contiguous scattered row elements";
-      if (laneData.back() != packingFactor)
+      if (laneData[rank - 1] != packingFactor)
         return emitError() << "work item data mapping must match the number of "
                               "contiguous elements";
     }
 
-    for (size_t i = 0; i < shape.size(); ++i) {
-      uint32_t numElemPerWi = laneLayout[i] * laneData[i];
-      if (shape[i] < numElemPerWi || shape[i] % numElemPerWi != 0)
-        return emitError() << "cannot distribute " << shape[i] << " over "
-                           << laneLayout[i] << " work items with "
-                           << laneData[i] << " elements each";
+    if (!XeGPUDialect::isEvenlyDistributable(shape, layoutAttr)) {
+      std::string shapeStr;
+      llvm::raw_string_ostream stream(shapeStr);
+      llvm::interleaveComma(shape, stream);
+      return emitError() << "cannot distribute [" << shapeStr << "] using "
+                         << layoutAttr;
     }
   }
-
   return success();
-}
-
-// If tensor descriptor has a layout attribute it is used in SIMT mode.
-// In this mode, the distributed vector shape is determined as follows:
-// Definitions:
-//        lane_data_size = lane_data[0] × lane_data[1]
-//        subgroup_size = lane_layout[0] × lane_layout[1]
-//        distribution_unit_size = subgroup_size × lane_data_size
-// ---------------------------------------------------------------------
-// Case 1: Regular loads/stores.
-// ---------------------------------------------------------------------
-// Distributed vector shape must be:
-//        [chunk_size / lane_data_size, lane_data_size]
-// If the tensor descriptor shape is 1D, first dimension is ignored (set to 1).
-//        [lane_data_size]
-// ---------------------------------------------------------------------
-// Case 2: Block loads/stores
-// ---------------------------------------------------------------------
-// Additional definitions:
-//        tensor_size = tensor_desc[0] * .. * tensor_desc[r-1] * array_length
-//        n_distribution_units = tensor_size / distribution_unit_size
-// Given above definitions, the following conditions must be met:
-//        * tensor_desc[0] % (lane_layout[0] × lane_data[0]) == 0
-//        * tensor_desc[1] % (lane_layout[1] × lane_data[1]) == 0
-// Distributed vector shape must be:
-//        [n_distribution_units, lane_data_size]
-FailureOr<VectorType> TensorDescType::getDistributedVectorType() {
-  auto layout = llvm::dyn_cast_if_present<LayoutAttr>(getLayout());
-  // If no layout is provided, tensor desc is not used in SIMT mode.
-  if (!layout)
-    return failure();
-
-  SmallVector<int64_t> laneData(layout.getLaneData().asArrayRef());
-  SmallVector<int64_t> laneLayout(layout.getLaneLayout().asArrayRef());
-  auto tdescShape = getShape();
-
-  auto laneDataSize = 1, sgSize = 1;
-  for (auto [laneDim, laneDataDim] : llvm::zip_equal(laneLayout, laneData)) {
-    laneDataSize *= laneDataDim;
-    sgSize *= laneDim;
-  }
-
-  // Case 1: regular loads/stores
-  auto scatterAttr = getEncodingAsScatterTensorDescAttr();
-  if (scatterAttr) {
-    auto chunkSize = scatterAttr.getChunkSize().getInt();
-    // Verify if the first dimension of the tensor descriptor shape is
-    // distributable.
-    assert(tdescShape[0] % (laneLayout[0]) == 0 &&
-           "tensor descriptor shape is not distributable");
-    if (chunkSize > 1)
-      return VectorType::get({chunkSize / laneDataSize, laneDataSize},
-                             getElementType());
-    return VectorType::get({laneDataSize}, getElementType());
-  }
-
-  // Case 2: block loads/stores
-  // Check if the tensor descriptor shape is distributable.
-  int64_t tensorSize = 1;
-  for (auto [tdescDim, laneDim, laneDataDim] :
-       llvm::zip_equal(tdescShape, laneLayout, laneData)) {
-    assert((tdescDim % (laneDim * laneDataDim) == 0) &&
-           "tensor descriptor shape is not distributable");
-    tensorSize *= tdescDim;
-  }
-  // tensorSize must be adjusted for array_length.
-  tensorSize *= getArrayLength();
-
-  return VectorType::get({tensorSize / (sgSize * laneDataSize), laneDataSize},
-                         getElementType());
 }
 
 } // namespace xegpu

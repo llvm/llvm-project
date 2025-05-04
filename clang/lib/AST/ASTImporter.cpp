@@ -2482,8 +2482,9 @@ bool ASTNodeImporter::IsStructuralMatch(Decl *From, Decl *To, bool Complain,
   }
 
   StructuralEquivalenceContext Ctx(
-      Importer.getFromContext(), Importer.getToContext(),
-      Importer.getNonEquivalentDecls(), getStructuralEquivalenceKind(Importer),
+      Importer.getToContext().getLangOpts(), Importer.getFromContext(),
+      Importer.getToContext(), Importer.getNonEquivalentDecls(),
+      getStructuralEquivalenceKind(Importer),
       /*StrictTypeSpelling=*/false, Complain, /*ErrorOnTagTypeMismatch=*/false,
       IgnoreTemplateParmDepth);
   return Ctx.IsEquivalent(From, To);
@@ -4341,7 +4342,8 @@ static bool IsEquivalentFriend(ASTImporter &Importer, FriendDecl *FD1,
 
   ASTImporter::NonEquivalentDeclSet NonEquivalentDecls;
   StructuralEquivalenceContext Ctx(
-      FD1->getASTContext(), FD2->getASTContext(), NonEquivalentDecls,
+      Importer.getToContext().getLangOpts(), FD1->getASTContext(),
+      FD2->getASTContext(), NonEquivalentDecls,
       StructuralEquivalenceKind::Default,
       /* StrictTypeSpelling = */ false, /* Complain = */ false);
   return Ctx.IsEquivalent(FD1, FD2);
@@ -9425,34 +9427,6 @@ Expected<Attr *> ASTImporter::Import(const Attr *FromAttr) {
                   From->args_size());
     break;
   }
-  case attr::AssertExclusiveLock: {
-    const auto *From = cast<AssertExclusiveLockAttr>(FromAttr);
-    AI.importAttr(From,
-                  AI.importArrayArg(From->args(), From->args_size()).value(),
-                  From->args_size());
-    break;
-  }
-  case attr::AssertSharedLock: {
-    const auto *From = cast<AssertSharedLockAttr>(FromAttr);
-    AI.importAttr(From,
-                  AI.importArrayArg(From->args(), From->args_size()).value(),
-                  From->args_size());
-    break;
-  }
-  case attr::ExclusiveTrylockFunction: {
-    const auto *From = cast<ExclusiveTrylockFunctionAttr>(FromAttr);
-    AI.importAttr(From, AI.importArg(From->getSuccessValue()).value(),
-                  AI.importArrayArg(From->args(), From->args_size()).value(),
-                  From->args_size());
-    break;
-  }
-  case attr::SharedTrylockFunction: {
-    const auto *From = cast<SharedTrylockFunctionAttr>(FromAttr);
-    AI.importAttr(From, AI.importArg(From->getSuccessValue()).value(),
-                  AI.importArrayArg(From->args(), From->args_size()).value(),
-                  From->args_size());
-    break;
-  }
   case attr::LockReturned: {
     const auto *From = cast<LockReturnedAttr>(FromAttr);
     AI.importAttr(From, AI.importArg(From->getArg()).value());
@@ -10568,8 +10542,8 @@ bool ASTImporter::IsStructurallyEquivalent(QualType From, QualType To,
     }
   }
 
-  StructuralEquivalenceContext Ctx(FromContext, ToContext, NonEquivalentDecls,
-                                   getStructuralEquivalenceKind(*this), false,
-                                   Complain);
+  StructuralEquivalenceContext Ctx(
+      getToContext().getLangOpts(), FromContext, ToContext, NonEquivalentDecls,
+      getStructuralEquivalenceKind(*this), false, Complain);
   return Ctx.IsEquivalent(From, To);
 }

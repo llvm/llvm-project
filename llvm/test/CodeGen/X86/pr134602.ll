@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-- | FileCheck %s --check-prefix=X86
 ; RUN: llc < %s -mtriple=x86_64-- | FileCheck %s --check-prefix=X64
 
-; FIXME: incorrect vector codegen due to bad handling of splats of binops containing undefs
+; Test for incorrect vector codegen due to bad handling of splats of binops containing undefs
 define i32 @PR134602(i16 %a0) {
 ; X86-LABEL: PR134602:
 ; X86:       # %bb.0:
@@ -14,7 +14,16 @@ define i32 @PR134602(i16 %a0) {
 ;
 ; X64-LABEL: PR134602:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    movzwl %di, %eax
+; X64-NEXT:    movd %eax, %xmm0
+; X64-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; X64-NEXT:    paddw %xmm0, %xmm1
+; X64-NEXT:    movdqa %xmm1, %xmm0
+; X64-NEXT:    psrld $16, %xmm0
+; X64-NEXT:    paddw %xmm1, %xmm0
+; X64-NEXT:    movd %xmm0, %eax
+; X64-NEXT:    cwtl
 ; X64-NEXT:    retq
   %splat= insertelement <4 x i16> zeroinitializer, i16 %a0, i64 0
   %mul = mul <4 x i16> %splat, <i16 1, i16 1, i16 0, i16 0>

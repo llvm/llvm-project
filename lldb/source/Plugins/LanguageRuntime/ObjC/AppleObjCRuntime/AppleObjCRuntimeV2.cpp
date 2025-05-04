@@ -1112,7 +1112,7 @@ public:
       : CommandObjectMultiword(
             interpreter, "tagged-pointer",
             "Commands for operating on Objective-C tagged pointers.",
-            "class-table <subcommand> [<subcommand-options>]") {
+            "tagged-pointer <subcommand> [<subcommand-options>]") {
     LoadSubCommand(
         "info",
         CommandObjectSP(

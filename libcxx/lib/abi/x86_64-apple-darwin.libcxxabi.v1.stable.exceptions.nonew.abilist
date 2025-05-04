@@ -5,7 +5,6 @@
 {'is_defined': False, 'name': '__ZNKSt20bad_array_new_length4whatEv', 'type': 'U'}
 {'is_defined': False, 'name': '__ZNKSt8bad_cast4whatEv', 'type': 'U'}
 {'is_defined': False, 'name': '__ZNKSt9bad_alloc4whatEv', 'type': 'U'}
-{'is_defined': False, 'name': '__ZNKSt9exception4whatEv', 'type': 'U'}
 {'is_defined': False, 'name': '__ZNSt10bad_typeidC1Ev', 'type': 'U'}
 {'is_defined': False, 'name': '__ZNSt10bad_typeidC2Ev', 'type': 'U'}
 {'is_defined': False, 'name': '__ZNSt10bad_typeidD0Ev', 'type': 'U'}
@@ -1508,6 +1507,7 @@
 {'is_defined': True, 'name': '__ZNSt3__117bad_function_callD0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__117bad_function_callD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__117bad_function_callD2Ev', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNKSt3__117bad_function_call4whatEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__117iostream_categoryEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__117moneypunct_bynameIcLb0EE4initEPKc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__117moneypunct_bynameIcLb1EE4initEPKc', 'type': 'FUNC'}

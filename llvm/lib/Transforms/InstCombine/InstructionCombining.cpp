@@ -2500,9 +2500,8 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
       return nullptr;
 
     GEPNoWrapFlags NW = getMergedGEPNoWrapFlags(*Src, *cast<GEPOperator>(&GEP));
-    SmallVector<Value *> Indices;
-    append_range(Indices, drop_end(Src->indices(),
-                                   Src->getNumIndices() - NumVarIndices));
+    SmallVector<Value *> Indices(
+        drop_end(Src->indices(), Src->getNumIndices() - NumVarIndices));
     for (const APInt &Idx : drop_begin(ConstIndices, !IsFirstType)) {
       Indices.push_back(ConstantInt::get(GEP.getContext(), Idx));
       // Even if the total offset is inbounds, we may end up representing it
@@ -3301,16 +3300,14 @@ static bool isAllocSiteRemovable(Instruction *AI,
           continue;
         }
 
-        if (getFreedOperand(cast<CallBase>(I), &TLI) == PI &&
+        if (Family && getFreedOperand(cast<CallBase>(I), &TLI) == PI &&
             getAllocationFamily(I, &TLI) == Family) {
-          assert(Family);
           Users.emplace_back(I);
           continue;
         }
 
-        if (getReallocatedOperand(cast<CallBase>(I)) == PI &&
+        if (Family && getReallocatedOperand(cast<CallBase>(I)) == PI &&
             getAllocationFamily(I, &TLI) == Family) {
-          assert(Family);
           Users.emplace_back(I);
           Worklist.push_back(I);
           continue;

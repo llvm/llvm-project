@@ -925,6 +925,9 @@ namespace {
       Qualifiers Qual = F->getType().getQualifiers();
       if (Qual.hasVolatile() || Qual.hasObjCLifetime())
         return false;
+      if (PointerAuthQualifier Q = F->getType().getPointerAuth();
+          Q && Q.isAddressDiscriminated())
+        return false;
       return true;
     }
 
@@ -2892,7 +2895,8 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
   }
 
   if (CGM.getCodeGenOpts().SanitizeTrap.has(M)) {
-    EmitTrapCheck(TypeTest, SanitizerHandler::CFICheckFail);
+    bool NoMerge = !CGM.getCodeGenOpts().SanitizeMergeHandlers.has(M);
+    EmitTrapCheck(TypeTest, SanitizerHandler::CFICheckFail, NoMerge);
     return;
   }
 

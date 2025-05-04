@@ -17,7 +17,7 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_atanpi(__CLC_GENTYPE x) {
 
   __CLC_GENTYPE xbypi = MATH_DIVIDE(x, pi);
   __CLC_GENTYPE shalf =
-      __CLC_AS_GENTYPE(sx | __CLC_AS_UINTN((__CLC_GENTYPE)__CLC_FP_LIT(0.5)));
+      __CLC_AS_GENTYPE(sx | __CLC_AS_UINTN(__CLC_FP_LIT(0.5)));
 
   __CLC_GENTYPE v = __CLC_AS_GENTYPE(aux);
 

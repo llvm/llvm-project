@@ -17,6 +17,7 @@ typedef const struct CF_BRIDGED_TYPE(NSString) __CFString * CFStringRef;
 typedef const struct CF_BRIDGED_TYPE(NSArray) __CFArray * CFArrayRef;
 typedef struct CF_BRIDGED_MUTABLE_TYPE(NSMutableArray) __CFArray * CFMutableArrayRef;
 typedef struct CF_BRIDGED_MUTABLE_TYPE(CFRunLoopRef) __CFRunLoop * CFRunLoopRef;
+typedef struct CF_BRIDGED_TYPE(id) CGImage *CGImageRef;
 
 #define NS_RETURNS_RETAINED __attribute__((ns_returns_retained))
 #define CF_CONSUMED __attribute__((cf_consumed))
@@ -60,7 +61,7 @@ typedef struct CF_BRIDGED_TYPE(id) __CVBuffer *CVBufferRef;
 typedef CVBufferRef CVImageBufferRef;
 typedef CVImageBufferRef CVPixelBufferRef;
 typedef signed int CVReturn;
-CVReturn CVPixelBufferCreateWithIOSurface(CFAllocatorRef allocator, IOSurfaceRef surface, CFDictionaryRef pixelBufferAttributes, CVPixelBufferRef * pixelBufferOut);
+CVReturn CVPixelBufferCreateWithIOSurface(CFAllocatorRef allocator, IOSurfaceRef surface, CFDictionaryRef pixelBufferAttributes, CF_RETURNS_RETAINED CVPixelBufferRef * pixelBufferOut);
 
 CFRunLoopRef CFRunLoopGetCurrent(void);
 CFRunLoopRef CFRunLoopGetMain(void);
@@ -68,6 +69,12 @@ extern CFTypeRef CFRetain(CFTypeRef cf);
 extern void CFRelease(CFTypeRef cf);
 #define CFSTR(cStr) ((CFStringRef) __builtin___CFStringMakeConstantString ("" cStr ""))
 extern Class NSClassFromString(NSString *aClassName);
+
+#if __has_feature(objc_arc)
+id CFBridgingRelease(CFTypeRef X) {
+    return (__bridge_transfer id)X;
+}
+#endif
 
 __attribute__((objc_root_class))
 @interface NSObject
@@ -129,11 +136,13 @@ __attribute__((objc_root_class))
 
 @interface NSNumber : NSValue
 - (char)charValue;
+- (int)intValue;
 - (id)initWithInt:(int)value;
 + (NSNumber *)numberWithInt:(int)value;
 @end
 
 @interface SomeObj : NSObject
+- (instancetype)_init;
 - (SomeObj *)mutableCopy;
 - (SomeObj *)copyWithValue:(int)value;
 - (void)doWork;
@@ -149,6 +158,10 @@ __attribute__((objc_root_class))
 namespace WTF {
 
 void WTFCrash(void);
+
+#if __has_feature(objc_arc)
+#define RetainPtr RetainPtrArc
+#endif
 
 template<typename T> class RetainPtr;
 template<typename T> RetainPtr<T> adoptNS(T*);
@@ -216,11 +229,7 @@ template <typename T> struct RetainPtr {
   PtrType get() const { return t; }
   PtrType operator->() const { return t; }
   T &operator*() const { return *t; }
-  RetainPtr &operator=(PtrType t) {
-    RetainPtr o(t);
-    swap(o);
-    return *this;
-  }
+  RetainPtr &operator=(PtrType t);
   PtrType leakRef()
   {
     PtrType s = t;

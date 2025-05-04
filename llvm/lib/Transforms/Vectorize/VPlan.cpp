@@ -216,10 +216,10 @@ VPBasicBlock::iterator VPBasicBlock::getFirstNonPhi() {
 
 VPTransformState::VPTransformState(const TargetTransformInfo *TTI,
                                    ElementCount VF, LoopInfo *LI,
-                                   DominatorTree *DT, IRBuilderBase &Builder,
-                                   InnerLoopVectorizer *ILV, VPlan *Plan,
+                                   DominatorTree *DT, AssumptionCache *AC,
+                                   IRBuilderBase &Builder, VPlan *Plan,
                                    Loop *CurrentParentLoop, Type *CanonicalIVTy)
-    : TTI(TTI), VF(VF), CFG(DT), LI(LI), Builder(Builder), ILV(ILV), Plan(Plan),
+    : TTI(TTI), VF(VF), CFG(DT), LI(LI), AC(AC), Builder(Builder), Plan(Plan),
       CurrentParentLoop(CurrentParentLoop), LVer(nullptr),
       TypeAnalysis(CanonicalIVTy), VPDT(*Plan) {}
 
@@ -361,17 +361,6 @@ void VPTransformState::addNewMetadata(Instruction *To,
   // metadata.
   if (LVer && isa<LoadInst, StoreInst>(Orig))
     LVer->annotateInstWithNoAlias(To, Orig);
-}
-
-void VPTransformState::addMetadata(Value *To, Instruction *From) {
-  // No source instruction to transfer metadata from?
-  if (!From)
-    return;
-
-  if (Instruction *ToI = dyn_cast<Instruction>(To)) {
-    propagateMetadata(ToI, From);
-    addNewMetadata(ToI, From);
-  }
 }
 
 void VPTransformState::setDebugLocFrom(DebugLoc DL) {
@@ -858,7 +847,7 @@ VPlan::VPlan(Loop *L) {
   ScalarHeader = createVPIRBasicBlock(L->getHeader());
 
   SmallVector<BasicBlock *> IRExitBlocks;
-  L->getExitBlocks(IRExitBlocks);
+  L->getUniqueExitBlocks(IRExitBlocks);
   for (BasicBlock *EB : IRExitBlocks)
     ExitBlocks.push_back(createVPIRBasicBlock(EB));
 }
