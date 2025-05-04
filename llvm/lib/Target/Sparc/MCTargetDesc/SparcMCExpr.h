@@ -37,7 +37,6 @@ public:
     VK_GOT22,
     VK_GOT10,
     VK_GOT13,
-    VK_13,
     VK_WPLT30,
     VK_WDISP30,
     VK_R_DISP32,
