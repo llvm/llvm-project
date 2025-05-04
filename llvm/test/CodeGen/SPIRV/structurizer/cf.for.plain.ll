@@ -5,12 +5,14 @@ target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:
 target triple = "spirv-unknown-vulkan1.3-compute"
 
 ; CHECK-DAG: OpName %[[#process:]] "_Z7processv"
-; CHECK-DAG: OpName %[[#val:]] "val"
-; CHECK-DAG: OpName %[[#i:]] "i"
+; CHECK-DAG: OpName %[[#val:]] "_Z7processv.local"
+; CHECK-DAG: OpName %[[#i:]] "_Z7processv.local.1"
 
-; CHECK-DAG: %[[#int_ty:]] = OpTypeInt 32 0
-; CHECK-DAG: %[[#int_pfty:]] = OpTypePointer Function %[[#int_ty]]
-; CHECK-DAG: %[[#false:]] = OpConstantFalse
+; CHECK-DAG:   %[[#int_ty:]] = OpTypeInt 32 0
+; CHECK-DAG: %[[#int_ppty:]] = OpTypePointer Private %[[#int_ty]]
+; CHECK-DAG:    %[[#false:]] = OpConstantFalse
+; CHECK-DAG:       %[[#val]] = OpVariable %[[#int_ppty]] Private
+; CHECK-DAG:         %[[#i]] = OpVariable %[[#int_ppty]] Private
 
 
 ; CHECK: %[[#process]] = OpFunction %[[#]] DontInline %[[#]]
@@ -18,8 +20,6 @@ define spir_func noundef i32 @_Z7processv() #0 {
 entry:
   %0 = call token @llvm.experimental.convergence.entry()
 
-  ; CHECK-DAG: %[[#val]] = OpVariable %[[#int_pfty]] Function
-  ; CHECK-DAG:   %[[#i]] = OpVariable %[[#int_pfty]] Function
   %val = alloca i32, align 4
   %i = alloca i32, align 4
   store i32 0, ptr %val, align 4

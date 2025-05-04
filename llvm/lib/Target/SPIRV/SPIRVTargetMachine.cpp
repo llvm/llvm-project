@@ -31,6 +31,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/Scalar/Reg2Mem.h"
 #include "llvm/Transforms/Utils.h"
 #include <optional>
@@ -189,6 +190,7 @@ TargetPassConfig *SPIRVTargetMachine::createPassConfig(PassManagerBase &PM) {
 void SPIRVPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
 
+  // Structurizer is only running if targeting graphical SPIR-V.
   if (TM.getSubtargetImpl()->isVulkanEnv()) {
     // 1.  Simplify loop for subsequent transformations. After this steps, loops
     // have the following properties:
@@ -212,6 +214,12 @@ void SPIRVPassConfig::addIRPasses() {
     // 5. Reduce the amount of variables required by pushing some operations
     // back to virtual registers.
     addPass(createPromoteMemoryToRegisterPass());
+  }
+
+  // Graphical SPIR-V has a specific set of storage classes which requires IR
+  // fixup.
+  if (TM.getSubtargetImpl()->isVulkanEnv()) {
+    addPass(createSPIRVFixAddressSpacePass());
   }
 
   addPass(createSPIRVRegularizerPass());

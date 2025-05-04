@@ -26,8 +26,8 @@ entry:
 }
 
 
-; CHECK-DAG:             OpName %[[#reg_0:]] "cond.reg2mem"
-; CHECK-DAG:             OpName %[[#reg_1:]] "cond9.reg2mem"
+; CHECK-DAG:             OpName %[[#reg_0:]] "main.local.5"
+; CHECK-DAG:             OpName %[[#reg_1:]] "main.local.4"
 
 define internal spir_func void @main() #0 {
 ; CHECK:                  OpSelectionMerge %[[#cond1_merge:]] None
