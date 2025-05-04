@@ -10,24 +10,35 @@
 
 import sys
 
-sys.path.append(sys.argv[1])
-from generate_feature_test_macro_components import FeatureTestMacros
+import unittest
+
+UTILS = sys.argv[1]
+TEST_DATA = sys.argv[2]
+del sys.argv[1:3]
+
+sys.path.append(UTILS)
+from generate_feature_test_macro_components import FeatureTestMacros, Metadata
 
 
-def test(output, expected):
-    assert output == expected, f"expected\n{expected}\n\noutput\n{output}"
+class Test(unittest.TestCase):
+    def setUp(self):
+        self.ftm = FeatureTestMacros(TEST_DATA, ["charconv"])
+        self.maxDiff = None  # This causes the diff to be printed when the test fails
+
+    def test_implementation(self):
+        self.assertEqual(
+            sorted(self.ftm.standard_library_headers),
+            [
+                "algorithm",
+                "any",
+                "barrier",
+                "charconv",
+                "format",
+                "numeric",
+                "variant",
+            ],
+        )
 
 
-ftm = FeatureTestMacros(sys.argv[2])
-test(
-    sorted(ftm.standard_library_headers),
-    [
-        "algorithm",
-        "any",
-        "barrier",
-        "charconv",
-        "format",
-        "numeric",
-        "variant",
-    ],
-)
+if __name__ == "__main__":
+    unittest.main()

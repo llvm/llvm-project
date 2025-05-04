@@ -23,7 +23,7 @@ from generate_feature_test_macro_components import FeatureTestMacros
 
 class Test(unittest.TestCase):
     def setUp(self):
-        self.ftm = FeatureTestMacros(TEST_DATA)
+        self.ftm = FeatureTestMacros(TEST_DATA, ["charconv"])
         self.maxDiff = None  # This causes the diff to be printed when the test fails
 
         self.expected = dict(
@@ -299,7 +299,7 @@ class Test(unittest.TestCase):
 
 // clang-format off
 
-#if __has_include(<charconv>)
+#if !defined(_WIN32) && __has_include(<charconv>)
 #  include <charconv>
 #endif
 #include "test_macros.h"

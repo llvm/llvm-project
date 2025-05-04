@@ -2110,8 +2110,12 @@ ftm_header_test_file_include_unconditional = """\
 #include <{header}>\
 """
 
+# On Windows the Windows SDK is on the include path, that means the MSVC STL
+# headers can be found as well, tricking __has_include into thinking that
+# libc++ provides the header. This means the test is also not executed when
+# using this test with MSVC and MSVC STL.
 ftm_header_test_file_include_conditional = """\
-#if __has_include(<{header}>)
+#if !defined(_WIN32) && __has_include(<{header}>)
 #  include <{header}>
 #endif\
 """
@@ -2264,11 +2268,20 @@ class FeatureTestMacros:
 
     # The JSON data structure.
     __data = None
+    # The headers not available in libc++.
+    #
+    # This could be detected based on FTM status, however that gives some odd
+    # results. For example, at the moment __cpp_lib_constexpr_cmath is not
+    # implemented, which flags `<cstdlib>` as not implemented. The availablilty
+    # of headers in maintained for the C++ Standard Libarary modules.
+    __unavailable_headers = None
 
-    def __init__(self, filename: str):
+    def __init__(self, filename: str, not_implemented_headers: List[str]):
         """Initializes the class with the JSON data in the file 'filename'."""
         with open(filename) as f:
             self.__data = json.load(f)
+
+        self.__unavailable_headers = set(not_implemented_headers)
 
     @functools.cached_property
     def std_dialects(self) -> List[Std]:
@@ -2320,32 +2333,6 @@ class FeatureTestMacros:
         """
 
         return get_ftms(self.__data, self.std_dialects, True)
-
-    @functools.cached_property
-    def implemented_standard_library_headers(self) -> Set[str]:
-        """Returns a list of headers that contain at least one paper implemented in libc++.
-
-        When a paper is implemented it means the associated header(s) should exist.
-        """
-
-        result = set()
-        for feature in self.__data:
-            for std in self.std_dialects:
-                if std in feature["values"].keys():
-                    values = feature["values"][std]
-                    assert len(values) > 0, f"{feature['name']}[{std}] has no entries"
-                    for value in values:
-                        papers = list(values[value])
-                        assert (
-                            len(papers) > 0
-                        ), f"{feature['name']}[{std}][{value}] has no entries"
-                        for paper in papers:
-                            if paper["implemented"]:
-                                for header in self.ftm_metadata[feature["name"]].headers:
-                                    result.add(header)
-                                break
-
-        return result
 
 
     def is_implemented(self, ftm: Ftm, std: Std) -> bool:
@@ -2523,9 +2510,9 @@ class FeatureTestMacros:
             lit_markup=self.generate_lit_markup(header),
             header=header,
             include=(
-                ftm_header_test_file_include_unconditional.format(header=header)
-                if header in self.implemented_standard_library_headers
-                else ftm_header_test_file_include_conditional.format(header=header)
+                ftm_header_test_file_include_conditional.format(header=header)
+                if header in self.__unavailable_headers
+                else ftm_header_test_file_include_unconditional.format(header=header)
             ),
             data=
             # FTM block before the first Standard that introduced them.
@@ -2583,7 +2570,7 @@ def main():
         ftm = FeatureTestMacros(
             os.path.join(
                 source_root, "test", "libcxx", "feature_test_macro", "test_data.json"
-            )
+            ), headers_not_available
         )
         version_header_path = os.path.join(include_path, "version")
         with open(version_header_path, "w", newline="\n") as f:
