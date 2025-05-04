@@ -58,7 +58,7 @@ public:
   static bool classof(const Instruction *) { return true; }
   static bool classof(const ConstantExpr *) { return true; }
   static bool classof(const Value *V) {
-    return isa<Instruction>(V) || isa<ConstantExpr>(V);
+    return isa<Instruction, ConstantExpr>(V);
   }
 
   /// Return true if this operator has flags which may cause this operator

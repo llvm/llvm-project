@@ -268,7 +268,7 @@ public:
   // The next level delegation for `CallBase` is slightly more complex in order
   // to support visiting cases where the call is also a terminator.
   RetTy visitCallBase(CallBase &I) {
-    if (isa<InvokeInst>(I) || isa<CallBrInst>(I))
+    if (isa<InvokeInst, CallBrInst>(I))
       return static_cast<SubClass *>(this)->visitTerminator(I);
 
     DELEGATE(Instruction);

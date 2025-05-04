@@ -100,8 +100,8 @@ bool Constant::isNullValue() const {
 
   // constant zero is zero for aggregates, cpnull is null for pointers, none for
   // tokens.
-  return isa<ConstantAggregateZero>(this) || isa<ConstantPointerNull>(this) ||
-         isa<ConstantTokenNone>(this) || isa<ConstantTargetNone>(this);
+  return isa<ConstantAggregateZero, ConstantPointerNull, ConstantTokenNone,
+             ConstantTargetNone>(this);
 }
 
 bool Constant::isAllOnesValue() const {
@@ -358,7 +358,7 @@ bool Constant::containsUndefElement() const {
 }
 
 bool Constant::containsConstantExpression() const {
-  if (isa<ConstantInt>(this) || isa<ConstantFP>(this))
+  if (isa<ConstantInt, ConstantFP>(this))
     return false;
 
   if (auto *VTy = dyn_cast<FixedVectorType>(getType())) {
@@ -845,7 +845,7 @@ bool Constant::isManifestConstant() const {
     return false;
   if (isa<ConstantData>(this))
     return true;
-  if (isa<ConstantAggregate>(this) || isa<ConstantExpr>(this)) {
+  if (isa<ConstantAggregate, ConstantExpr>(this)) {
     for (const Value *Op : operand_values())
       if (!cast<Constant>(Op)->isManifestConstant())
         return false;
@@ -1142,13 +1142,13 @@ Constant *ConstantAggregateZero::getStructElement(unsigned Elt) const {
 }
 
 Constant *ConstantAggregateZero::getElementValue(Constant *C) const {
-  if (isa<ArrayType>(getType()) || isa<VectorType>(getType()))
+  if (isa<ArrayType, VectorType>(getType()))
     return getSequentialElement();
   return getStructElement(cast<ConstantInt>(C)->getZExtValue());
 }
 
 Constant *ConstantAggregateZero::getElementValue(unsigned Idx) const {
-  if (isa<ArrayType>(getType()) || isa<VectorType>(getType()))
+  if (isa<ArrayType, VectorType>(getType()))
     return getSequentialElement();
   return getStructElement(Idx);
 }
@@ -1177,13 +1177,13 @@ UndefValue *UndefValue::getStructElement(unsigned Elt) const {
 }
 
 UndefValue *UndefValue::getElementValue(Constant *C) const {
-  if (isa<ArrayType>(getType()) || isa<VectorType>(getType()))
+  if (isa<ArrayType, VectorType>(getType()))
     return getSequentialElement();
   return getStructElement(cast<ConstantInt>(C)->getZExtValue());
 }
 
 UndefValue *UndefValue::getElementValue(unsigned Idx) const {
-  if (isa<ArrayType>(getType()) || isa<VectorType>(getType()))
+  if (isa<ArrayType, VectorType>(getType()))
     return getSequentialElement();
   return getStructElement(Idx);
 }
@@ -1212,13 +1212,13 @@ PoisonValue *PoisonValue::getStructElement(unsigned Elt) const {
 }
 
 PoisonValue *PoisonValue::getElementValue(Constant *C) const {
-  if (isa<ArrayType>(getType()) || isa<VectorType>(getType()))
+  if (isa<ArrayType, VectorType>(getType()))
     return getSequentialElement();
   return getStructElement(cast<ConstantInt>(C)->getZExtValue());
 }
 
 PoisonValue *PoisonValue::getElementValue(unsigned Idx) const {
-  if (isa<ArrayType>(getType()) || isa<VectorType>(getType()))
+  if (isa<ArrayType, VectorType>(getType()))
     return getSequentialElement();
   return getStructElement(Idx);
 }
@@ -1485,7 +1485,7 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
 
     // If this splat is compatible with ConstantDataVector, use it instead of
     // ConstantVector.
-    if ((isa<ConstantFP>(V) || isa<ConstantInt>(V)) &&
+    if ((isa<ConstantFP, ConstantInt>(V)) &&
         ConstantDataSequential::isElementTypeCompatible(V->getType()))
       return ConstantDataVector::getSplat(EC.getKnownMinValue(), V);
 

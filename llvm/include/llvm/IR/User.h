@@ -354,9 +354,7 @@ public:
   bool replaceUsesOfWith(Value *From, Value *To);
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Value *V) {
-    return isa<Instruction>(V) || isa<Constant>(V);
-  }
+  static bool classof(const Value *V) { return isa<Instruction, Constant>(V); }
 };
 
 // Either Use objects, or a Use pointer can be prepended to User.

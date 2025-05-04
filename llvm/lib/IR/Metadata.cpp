@@ -479,7 +479,7 @@ ReplaceableMetadataImpl *ReplaceableMetadataImpl::getIfExists(Metadata &MD) {
 bool ReplaceableMetadataImpl::isReplaceable(const Metadata &MD) {
   if (auto *N = dyn_cast<MDNode>(&MD))
     return !N->isResolved() || N->isAlwaysReplaceable();
-  return isa<ValueAsMetadata>(&MD) || isa<DIArgList>(&MD);
+  return isa<ValueAsMetadata, DIArgList>(MD);
 }
 
 static DISubprogram *getLocalFunctionMetadata(Value *V) {
@@ -505,7 +505,7 @@ ValueAsMetadata *ValueAsMetadata::get(Value *V) {
   auto &Context = V->getContext();
   auto *&Entry = Context.pImpl->ValuesAsMetadata[V];
   if (!Entry) {
-    assert((isa<Constant>(V) || isa<Argument>(V) || isa<Instruction>(V)) &&
+    assert((isa<Constant, Argument, Instruction>(V)) &&
            "Expected constant or function-local value");
     assert(!V->IsUsedByMD && "Expected this to be the only metadata use");
     V->IsUsedByMD = true;
@@ -1550,7 +1550,7 @@ void Value::getAllMetadata(
 }
 
 void Value::setMetadata(unsigned KindID, MDNode *Node) {
-  assert(isa<Instruction>(this) || isa<GlobalObject>(this));
+  assert((isa<Instruction, GlobalObject>(this)));
 
   // Handle the case when we're adding/updating metadata on a value.
   if (Node) {
@@ -1584,9 +1584,8 @@ void Value::setMetadata(StringRef Kind, MDNode *Node) {
 }
 
 void Value::addMetadata(unsigned KindID, MDNode &MD) {
-  assert(isa<Instruction>(this) || isa<GlobalObject>(this));
-  if (!HasMetadata)
-    HasMetadata = true;
+  assert((isa<Instruction, GlobalObject>(this)));
+  HasMetadata = true;
   getContext().pImpl->ValueMetadata[this].insert(KindID, MD);
 }
 

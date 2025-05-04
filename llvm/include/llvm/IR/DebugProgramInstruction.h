@@ -467,8 +467,7 @@ public:
   /// replaceVariableLocationOp and addVariableLocationOps should be used where
   /// possible to avoid creating invalid state.
   void setRawLocation(Metadata *NewLocation) {
-    assert((isa<ValueAsMetadata>(NewLocation) || isa<DIArgList>(NewLocation) ||
-            isa<MDNode>(NewLocation)) &&
+    assert((isa<ValueAsMetadata, DIArgList, MDNode>(NewLocation)) &&
            "Location for a DbgVariableRecord must be either ValueAsMetadata or "
            "DIArgList");
     resetDebugValue(0, NewLocation);

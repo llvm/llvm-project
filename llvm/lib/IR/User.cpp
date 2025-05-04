@@ -22,6 +22,7 @@ bool User::replaceUsesOfWith(Value *From, Value *To) {
   bool Changed = false;
   if (From == To) return Changed;   // Duh what?
 
+  // Allow GlobalValue explicitly, since its a subclass of Constant.
   assert((!isa<Constant>(this) || isa<GlobalValue>(this)) &&
          "Cannot call User::replaceUsesOfWith on a constant!");
 
