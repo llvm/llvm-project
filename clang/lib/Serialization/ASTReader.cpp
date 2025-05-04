@@ -8646,9 +8646,8 @@ ASTReader::getLoadedSpecializationsLookupTables(const Decl *D, bool IsPartial) {
 
 bool ASTReader::haveUnloadedSpecializations(const Decl *D) const {
   assert(D->isCanonicalDecl());
-  return (PartialSpecializationsLookups.find(D) !=
-          PartialSpecializationsLookups.end()) ||
-         (SpecializationsLookups.find(D) != SpecializationsLookups.end());
+  return PartialSpecializationsLookups.contains(D) ||
+         SpecializationsLookups.contains(D);
 }
 
 /// Under non-PCH compilation the consumer receives the objc methods
