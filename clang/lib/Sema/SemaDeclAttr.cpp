@@ -851,7 +851,6 @@ static void handleDiagnoseIfAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 
   StringRef WarningGroup;
-  SmallVector<StringRef, 2> Options;
   if (AL.getNumArgs() > 3) {
     if (!S.checkStringLiteralArgumentAttr(AL, 3, WarningGroup))
       return;

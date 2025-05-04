@@ -3955,8 +3955,6 @@ void CodeGenFunction::EmitCfiCheckFail() {
       {CFITCK_UnrelatedCast, SanitizerKind::SO_CFIUnrelatedCast},
       {CFITCK_ICall, SanitizerKind::SO_CFIICall}};
 
-  SmallVector<std::pair<llvm::Value *, SanitizerKind::SanitizerOrdinal>, 5>
-      Checks;
   for (auto CheckKindOrdinalPair : CheckKinds) {
     int Kind = CheckKindOrdinalPair.first;
     SanitizerKind::SanitizerOrdinal Ordinal = CheckKindOrdinalPair.second;

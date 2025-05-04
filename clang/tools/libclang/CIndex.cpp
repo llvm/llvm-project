@@ -4689,7 +4689,6 @@ static const ExprEvalResult *evaluateExpr(Expr *expr, CXCursor C) {
   if (ER.Val.isFloat()) {
     llvm::SmallVector<char, 100> Buffer;
     ER.Val.getFloat().toString(Buffer);
-    std::string floatStr(Buffer.data(), Buffer.size());
     result->EvalType = CXEval_Float;
     bool ignored;
     llvm::APFloat apFloat = ER.Val.getFloat();

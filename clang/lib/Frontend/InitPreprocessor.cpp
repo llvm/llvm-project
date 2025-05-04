@@ -974,7 +974,6 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
 
     if (LangOpts.ObjCRuntime.getKind() == ObjCRuntime::GNUstep) {
       auto version = LangOpts.ObjCRuntime.getVersion();
-      std::string versionString = "1";
       // Don't rely on the tuple argument, because we can be asked to target
       // later ABIs than we actually support, so clamp these values to those
       // currently supported

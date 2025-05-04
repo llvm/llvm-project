@@ -1949,7 +1949,6 @@ RValue CodeGenFunction::emitBuiltinOSLogFormat(const CallExpr &E) {
   analyze_os_log::OSLogBufferLayout Layout;
   analyze_os_log::computeOSLogBufferLayout(Ctx, &E, Layout);
   Address BufAddr = EmitPointerWithAlignment(E.getArg(0));
-  llvm::SmallVector<llvm::Value *, 4> RetainableOperands;
 
   // Ignore argument 1, the format string. It is not currently used.
   CallArgList Args;
