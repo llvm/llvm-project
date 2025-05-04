@@ -113,8 +113,8 @@ int Cartesian1(auto x, auto y) {
 int Cartesian2(auto x, auto y) {
   return apply(
       [&](auto... xs) {
-        return (apply([zs = xs](auto... ys) { return (ys + ...); }, y) + ...); // expected-error@103 {{cannot initialize return object of type 'int' with an rvalue of type 'void'}} \
-        // expected-note@114 {{in instantiation of function template specialization 'GH99877::apply<(lambda at /Users/saicharan/Desktop/llvm-project/clang/test/SemaCXX/fold_lambda_with_variadics.cpp:115:7)>' requested here}}
+        return (apply([zs = xs](auto... ys) { return (ys + ...); }, y) + ...); // expected-error@103 {{cannot initialize return object of type 'int' with an rvalue of type 'void'}}
+        // expected-note@114 {{in instantiation of function template specialization 'GH99877::apply}}
       },
       x);
 }
