@@ -30,11 +30,17 @@ void __msan_init();
 SANITIZER_INTERFACE_ATTRIBUTE
 void __msan_warning();
 
+SANITIZER_INTERFACE_ATTRIBUTE
+void __msan_warning_instname(char *instname);
+
 // Print a warning and die.
 // Instrumentation inserts calls to this function when building in "fast" mode
 // (i.e. -mllvm -msan-keep-going)
 SANITIZER_INTERFACE_ATTRIBUTE __attribute__((noreturn))
 void __msan_warning_noreturn();
+
+SANITIZER_INTERFACE_ATTRIBUTE __attribute__((noreturn)) void
+__msan_warning_noreturn_instname(char *instname);
 
 using __sanitizer::uptr;
 using __sanitizer::sptr;
@@ -49,8 +55,13 @@ using __sanitizer::u8;
 // Versions of the above which take Origin as a parameter
 SANITIZER_INTERFACE_ATTRIBUTE
 void __msan_warning_with_origin(u32 origin);
+SANITIZER_INTERFACE_ATTRIBUTE
+void __msan_warning_with_origin_instname(u32 origin, char *instname);
+
 SANITIZER_INTERFACE_ATTRIBUTE __attribute__((noreturn)) void
 __msan_warning_with_origin_noreturn(u32 origin);
+SANITIZER_INTERFACE_ATTRIBUTE __attribute__((noreturn)) void
+__msan_warning_with_origin_noreturn_instname(u32 origin, char *instname);
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __msan_maybe_warning_1(u8 s, u32 o);
@@ -60,6 +71,15 @@ SANITIZER_INTERFACE_ATTRIBUTE
 void __msan_maybe_warning_4(u32 s, u32 o);
 SANITIZER_INTERFACE_ATTRIBUTE
 void __msan_maybe_warning_8(u64 s, u32 o);
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __msan_maybe_warning_1_instname(u8 s, u32 o, char *instname);
+SANITIZER_INTERFACE_ATTRIBUTE
+void __msan_maybe_warning_2_instname(u16 s, u32 o, char *instname);
+SANITIZER_INTERFACE_ATTRIBUTE
+void __msan_maybe_warning_4_instname(u32 s, u32 o, char *instname);
+SANITIZER_INTERFACE_ATTRIBUTE
+void __msan_maybe_warning_8_instname(u64 s, u32 o, char *instname);
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __msan_maybe_store_origin_1(u8 s, void *p, u32 o);
