@@ -73,8 +73,15 @@ static void testZstdCompression(StringRef Input, int Level) {
   SmallVector<uint8_t, 0> Uncompressed;
   zstd::compress(arrayRefFromStringRef(Input), Compressed, Level);
 
+  // Check that getDecompressedSize returns the size of the original buffer.
+  size_t DecompressedSize;
+  Error E = zstd::getDecompressedSize(Compressed, DecompressedSize);
+  EXPECT_FALSE(std::move(E));
+
+  EXPECT_EQ(DecompressedSize, Input.size());
+
   // Check that uncompressed buffer is the same as original.
-  Error E = zstd::decompress(Compressed, Uncompressed, Input.size());
+  E = zstd::decompress(Compressed, Uncompressed, Input.size());
   EXPECT_FALSE(std::move(E));
   EXPECT_EQ(Input, toStringRef(Uncompressed));
 
