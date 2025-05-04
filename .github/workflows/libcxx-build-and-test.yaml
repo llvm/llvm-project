@@ -72,6 +72,12 @@ jobs:
             **/CMakeError.log
             **/CMakeOutput.log
             **/crash_diagnostics/*
+      - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
+        if: success() && matrix.config == 'generic-cxx26'
+        with:
+          name: libcxx-install
+          path: |
+            build/generic-cxx26/install/**
   stage2:
     if: github.repository_owner == 'llvm'
     runs-on: libcxx-self-hosted-linux
