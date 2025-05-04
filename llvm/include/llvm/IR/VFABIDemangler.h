@@ -49,6 +49,10 @@ enum class VFISAKind {
   AVX,          // x86 AVX
   AVX2,         // x86 AVX2
   AVX512,       // x86 AVX512
+  RVVM1,        // RISC-V Vector Extension LMUL=1
+  RVVM2,        // RISC-V Vector Extension LMUL=2
+  RVVM4,        // RISC-V Vector Extension LMUL=4
+  RVVM8,        // RISC-V Vector Extension LMUL=8
   LLVM,         // LLVM internal ISA for functions that are not
   // attached to an existing ABI via name mangling.
   Unknown // Unknown ISA

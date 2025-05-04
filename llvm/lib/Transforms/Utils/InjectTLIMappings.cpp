@@ -110,11 +110,11 @@ static void addMappingsFromTLI(const TargetLibraryInfo &TLI, CallInst &CI) {
   TLI.getWidestVF(ScalarName, WidestFixedVF, WidestScalableVF);
 
   for (bool Predicated : {false, true}) {
-    for (ElementCount VF = ElementCount::getFixed(2);
+    for (ElementCount VF = ElementCount::getFixed(1);
          ElementCount::isKnownLE(VF, WidestFixedVF); VF *= 2)
       AddVariantDecl(VF, Predicated);
 
-    for (ElementCount VF = ElementCount::getScalable(2);
+    for (ElementCount VF = ElementCount::getScalable(1);
          ElementCount::isKnownLE(VF, WidestScalableVF); VF *= 2)
       AddVariantDecl(VF, Predicated);
   }
