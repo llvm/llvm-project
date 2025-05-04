@@ -129,3 +129,87 @@ entry:
   %fneg = fneg <4 x double> %mul
   ret <4 x double> %fneg
 }
+
+define <4 x float> @vec_fhadds(<4 x float> %a, <4 x float> %b) nounwind {
+; CHECK-LABEL: vec_fhadds:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    fhadds %f1, %f9, %f0
+; CHECK-NEXT:    fhadds %f3, %f11, %f1
+; CHECK-NEXT:    fhadds %f5, %f13, %f2
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    fhadds %f7, %f15, %f3
+entry:
+  %add = fadd <4 x float> %a, %b
+  %div = fmul <4 x float> %add, <float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01>
+  ret <4 x float> %div
+}
+
+define <4 x double> @vec_fhaddd(<4 x double> %a, <4 x double> %b) nounwind {
+; CHECK-LABEL: vec_fhaddd:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    fhaddd %f0, %f8, %f0
+; CHECK-NEXT:    fhaddd %f2, %f10, %f2
+; CHECK-NEXT:    fhaddd %f4, %f12, %f4
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    fhaddd %f6, %f14, %f6
+entry:
+  %add = fadd <4 x double> %a, %b
+  %div = fmul <4 x double> %add, <double 5.000000e-01, double 5.000000e-01, double 5.000000e-01, double 5.000000e-01>
+  ret <4 x double> %div
+}
+
+define <4 x float> @vec_fhsubs(<4 x float> %a, <4 x float> %b) nounwind {
+; CHECK-LABEL: vec_fhsubs:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    fhsubs %f1, %f9, %f0
+; CHECK-NEXT:    fhsubs %f3, %f11, %f1
+; CHECK-NEXT:    fhsubs %f5, %f13, %f2
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    fhsubs %f7, %f15, %f3
+entry:
+  %sub = fsub <4 x float> %a, %b
+  %div = fmul <4 x float> %sub, <float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01>
+  ret <4 x float> %div
+}
+
+define <4 x double> @vec_fhsubd(<4 x double> %a, <4 x double> %b) nounwind {
+; CHECK-LABEL: vec_fhsubd:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    fhsubd %f0, %f8, %f0
+; CHECK-NEXT:    fhsubd %f2, %f10, %f2
+; CHECK-NEXT:    fhsubd %f4, %f12, %f4
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    fhsubd %f6, %f14, %f6
+entry:
+  %sub = fsub <4 x double> %a, %b
+  %div = fmul <4 x double> %sub, <double 5.000000e-01, double 5.000000e-01, double 5.000000e-01, double 5.000000e-01>
+  ret <4 x double> %div
+}
+
+define <4 x float> @vec_fnhadds(<4 x float> %a, <4 x float> %b) nounwind {
+; CHECK-LABEL: vec_fnhadds:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    fnhadds %f1, %f9, %f0
+; CHECK-NEXT:    fnhadds %f3, %f11, %f1
+; CHECK-NEXT:    fnhadds %f5, %f13, %f2
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    fnhadds %f7, %f15, %f3
+entry:
+  %add.i = fadd <4 x float> %a, %b
+  %fneg = fmul <4 x float> %add.i, <float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01>
+  ret <4 x float> %fneg
+}
+
+define <4 x double> @vec_fnhaddd(<4 x double> %a, <4 x double> %b) nounwind {
+; CHECK-LABEL: vec_fnhaddd:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    fnhaddd %f0, %f8, %f0
+; CHECK-NEXT:    fnhaddd %f2, %f10, %f2
+; CHECK-NEXT:    fnhaddd %f4, %f12, %f4
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    fnhaddd %f6, %f14, %f6
+entry:
+  %add.i = fadd <4 x double> %a, %b
+  %fneg = fmul <4 x double> %add.i, <double -5.000000e-01, double -5.000000e-01, double -5.000000e-01, double -5.000000e-01>
+  ret <4 x double> %fneg
+}
