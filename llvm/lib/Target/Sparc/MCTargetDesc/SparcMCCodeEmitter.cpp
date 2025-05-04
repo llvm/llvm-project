@@ -163,10 +163,7 @@ SparcMCCodeEmitter::getSImm13OpValue(const MCInst &MI, unsigned OpNo,
     Fixups.push_back(MCFixup::create(0, Expr, SExpr->getFixupKind()));
     return 0;
   }
-  uint16_t Kind = Sparc::fixup_sparc_13;
-  if (Ctx.getObjectFileInfo()->isPositionIndependent())
-    Kind = ELF::R_SPARC_GOT13;
-  Fixups.push_back(MCFixup::create(0, Expr, Kind));
+  Fixups.push_back(MCFixup::create(0, Expr, Sparc::fixup_sparc_13));
   return 0;
 }
 
