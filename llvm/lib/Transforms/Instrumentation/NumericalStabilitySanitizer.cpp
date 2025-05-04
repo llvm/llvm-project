@@ -2040,8 +2040,6 @@ bool NumericalStabilitySanitizer::sanitizeFunction(
   // the module constructor.
   if (F.getName() == kNsanModuleCtorName)
     return false;
-  SmallVector<Instruction *, 8> AllLoadsAndStores;
-  SmallVector<Instruction *, 8> LocalLoadsAndStores;
 
   // The instrumentation maintains:
   //  - for each IR value `v` of floating-point (or vector floating-point) type
