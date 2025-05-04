@@ -2329,10 +2329,12 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
       // Here we expect to see some function declaration.
       if (AS == AS_none) {
         assert(TagType == DeclSpec::TST_unspecified);
-        ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
-        MaybeParseCXX11Attributes(Attrs);
+        ParsedAttributes DeclSpecAttrs(AttrFactory);
+        while (MaybeParseCXX11Attributes(Attrs) ||
+                MaybeParseGNUAttributes(DeclSpecAttrs))
+          ;
         ParsingDeclSpec PDS(*this);
-        Ptr = ParseExternalDeclaration(Attrs, EmptyDeclSpecAttrs, &PDS);
+        Ptr = ParseExternalDeclaration(Attrs, DeclSpecAttrs, &PDS);
       } else {
         Ptr =
             ParseCXXClassMemberDeclarationWithPragmas(AS, Attrs, TagType, Tag);

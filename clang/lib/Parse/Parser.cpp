@@ -769,17 +769,7 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
     break;
   }
 
-  ParsedAttributes DeclAttrs(AttrFactory);
-  ParsedAttributes DeclSpecAttrs(AttrFactory);
-  // GNU attributes are applied to the declaration specification while the
-  // standard attributes are applied to the declaration.  We parse the two
-  // attribute sets into different containters so we can apply them during
-  // the regular parsing process.
-  while (MaybeParseCXX11Attributes(DeclAttrs) ||
-         MaybeParseGNUAttributes(DeclSpecAttrs))
-    ;
-
-  Result = ParseExternalDeclaration(DeclAttrs, DeclSpecAttrs);
+  Result = ParseExternalDeclarationWithAttrs();
   // An empty Result might mean a line with ';' or some parsing error, ignore
   // it.
   if (Result) {
@@ -1101,6 +1091,17 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
   // This routine returns a DeclGroup, if the thing we parsed only contains a
   // single decl, convert it now.
   return Actions.ConvertDeclToDeclGroup(SingleDecl);
+}
+
+/// Parse CXX11 and GNU attributes and passes them to `ParseExternalDeclaration`
+Parser::DeclGroupPtrTy
+Parser::ParseExternalDeclarationWithAttrs(ParsingDeclSpec *DS) {
+  ParsedAttributes DeclAttrs(AttrFactory);
+  ParsedAttributes DeclSpecAttrs(AttrFactory);
+  while (MaybeParseCXX11Attributes(DeclAttrs) ||
+          MaybeParseGNUAttributes(DeclSpecAttrs))
+    ;
+  return ParseExternalDeclaration(DeclAttrs, DeclSpecAttrs, DS);
 }
 
 /// Determine whether the current token, if it occurs after a
@@ -2484,10 +2485,7 @@ void Parser::ParseMicrosoftIfExistsExternalDeclaration() {
   // Parse the declarations.
   // FIXME: Support module import within __if_exists?
   while (Tok.isNot(tok::r_brace) && !isEofOrEom()) {
-    ParsedAttributes Attrs(AttrFactory);
-    MaybeParseCXX11Attributes(Attrs);
-    ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
-    DeclGroupPtrTy Result = ParseExternalDeclaration(Attrs, EmptyDeclSpecAttrs);
+    DeclGroupPtrTy Result = ParseExternalDeclarationWithAttrs();
     if (Result && !getCurScope()->getParent())
       Actions.getASTConsumer().HandleTopLevelDecl(Result.get());
   }

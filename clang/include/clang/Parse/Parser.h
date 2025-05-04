@@ -1757,6 +1757,8 @@ private:
   DeclGroupPtrTy ParseExternalDeclaration(ParsedAttributes &DeclAttrs,
                                           ParsedAttributes &DeclSpecAttrs,
                                           ParsingDeclSpec *DS = nullptr);
+  DeclGroupPtrTy ParseExternalDeclarationWithAttrs(
+                                                 ParsingDeclSpec *DS = nullptr);
   bool isDeclarationAfterDeclarator();
   bool isStartOfFunctionDefinition(const ParsingDeclarator &Declarator);
   DeclGroupPtrTy ParseDeclarationOrFunctionDefinition(
