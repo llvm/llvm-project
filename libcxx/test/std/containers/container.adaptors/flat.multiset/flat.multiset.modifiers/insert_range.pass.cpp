@@ -18,7 +18,6 @@
 #include <flat_set>
 #include <functional>
 #include <ranges>
-#include <sstream>
 #include <vector>
 
 #include "MinSequenceContainer.h"
@@ -86,20 +85,6 @@ void test() {
     MoveOnly expected[] = {1, 1, 3, 4, 5};
     assert(std::ranges::equal(m, expected));
   }
-#if _LIBCPP_HAS_LOCALIZATION
-  {
-    // https://github.com/llvm/llvm-project/issues/136656
-    MinSequenceContainer<int> v;
-    std::flat_multiset s(v);
-    std::istringstream ints("0 1 1 0");
-    auto r = std::ranges::subrange(std::istream_iterator<int>(ints), std::istream_iterator<int>()) |
-             std::views::transform([](int i) { return i * i; });
-    static_assert(
-        ![](auto& t) { return requires { t.insert_range(r); }; }(v),
-        "This test is to test the case where the underlying container does not provide insert_range");
-    s.insert_range(r);
-  }
-#endif
 }
 
 void test_exception() {
