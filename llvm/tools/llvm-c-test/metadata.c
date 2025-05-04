@@ -80,7 +80,7 @@ int llvm_is_a_value_as_metadata(void) {
   LLVMContextRef Context = LLVMGetModuleContext(M);
 
   {
-    LLVMValueRef Int = LLVMConstInt(LLVMInt32Type(), 0, 0);
+    LLVMValueRef Int = LLVMConstInt(LLVMInt32TypeInContext(Context), 0, 0);
     LLVMValueRef NodeMD = LLVMMDNode(&Int, 1);
     assert(LLVMIsAValueAsMetadata(NodeMD) == NodeMD);
     (void)NodeMD;
