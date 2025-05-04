@@ -11,6 +11,7 @@
 
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
+include "mlir/IR/OpAsmInterface.td"
 include "mlir/Dialect/MLProgram/IR/MLProgramBase.td"
 
 // Base class for MLProgram dialect attributes.
@@ -23,7 +24,7 @@ class MLProgram_Attr<string name, list<Trait> traits = []>
 // ExternAttr
 //===----------------------------------------------------------------------===//
 
-def MLProgram_ExternAttr : MLProgram_Attr<"Extern", [TypedAttrInterface]> {
+def MLProgram_ExternAttr : MLProgram_Attr<"Extern", [TypedAttrInterface, OpAsmAttrInterface]> {
   let summary = "Value used for a global signalling external resolution";
   let description = [{
   When used as the value for a GlobalOp, this indicates that the actual
@@ -40,6 +41,17 @@ def MLProgram_ExternAttr : MLProgram_Attr<"Extern", [TypedAttrInterface]> {
   let parameters = (ins AttributeSelfTypeParameter<"">:$type);
   let mnemonic = "extern";
   let assemblyFormat = "";
+
+  let extraClassDeclaration = [{
+    //===------------------------------------------------------------------===//
+    // OpAsmAttrInterface Methods
+    //===------------------------------------------------------------------===//
+
+    ::mlir::OpAsmAliasResult getAlias(::llvm::raw_ostream &os) const {
+      os << "}] # mnemonic # [{";
+      return ::mlir::OpAsmAliasResult::OverridableAlias;
+    }
+  }];
 }
 
 #endif // MLPROGRAM_ATTRIBUTES
