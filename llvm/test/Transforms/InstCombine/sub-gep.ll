@@ -214,9 +214,11 @@ define i64 @test_nuw_two_gep_missing_nuw_on_one_gep(ptr %base, i64 %idx, i64 %id
 
 define i64 @test_inbounds_nuw_multi_index(ptr %base, i64 %idx, i64 %idx2) {
 ; CHECK-LABEL: @test_inbounds_nuw_multi_index(
-; CHECK-NEXT:    [[P2_IDX:%.*]] = shl nsw i64 [[IDX:%.*]], 3
-; CHECK-NEXT:    [[P2_IDX1:%.*]] = shl nsw i64 [[IDX2:%.*]], 2
-; CHECK-NEXT:    [[P2_OFFS:%.*]] = add nsw i64 [[P2_IDX]], [[P2_IDX1]]
+; CHECK-NEXT:    [[P2_SPLIT:%.*]] = getelementptr inbounds [0 x [2 x i32]], ptr [[BASE:%.*]], i64 0, i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds [2 x i32], ptr [[P2_SPLIT]], i64 0, i64 [[IDX2:%.*]]
+; CHECK-NEXT:    [[I1:%.*]] = ptrtoint ptr [[BASE]] to i64
+; CHECK-NEXT:    [[I2:%.*]] = ptrtoint ptr [[P2]] to i64
+; CHECK-NEXT:    [[P2_OFFS:%.*]] = sub nuw i64 [[I2]], [[I1]]
 ; CHECK-NEXT:    ret i64 [[P2_OFFS]]
 ;
   %p2 = getelementptr inbounds [0 x [2 x i32]], ptr %base, i64 0, i64 %idx, i64 %idx2
