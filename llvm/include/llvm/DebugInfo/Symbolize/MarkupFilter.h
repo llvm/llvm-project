@@ -109,6 +109,9 @@ private:
   void printRawElement(const MarkupNode &Element);
   void printValue(Twine Value);
 
+  void symbolizeFailure(const MarkupNode &Node, const Module *Mod,
+                        Error SymbolizeError);
+
   std::optional<Module> parseModule(const MarkupNode &Element) const;
   std::optional<MMap> parseMMap(const MarkupNode &Element) const;
 
