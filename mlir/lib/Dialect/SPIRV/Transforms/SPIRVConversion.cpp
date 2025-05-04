@@ -778,7 +778,8 @@ getOrInsertBuiltinVariable(Block &body, Location loc, spirv::BuiltIn builtin,
   }
   case spirv::BuiltIn::SubgroupId:
   case spirv::BuiltIn::NumSubgroups:
-  case spirv::BuiltIn::SubgroupSize: {
+  case spirv::BuiltIn::SubgroupSize:
+  case spirv::BuiltIn::SubgroupLocalInvocationId: {
     auto ptrType =
         spirv::PointerType::get(integerType, spirv::StorageClass::Input);
     std::string name = getBuiltinVarName(builtin, prefix, suffix);
