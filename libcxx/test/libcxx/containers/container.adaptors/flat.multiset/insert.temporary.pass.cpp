@@ -15,6 +15,8 @@
 #include <flat_set>
 
 #include <cassert>
+#include <utility>
+#include <vector>
 
 #include "../flat_helpers.h"
 #include "test_macros.h"
