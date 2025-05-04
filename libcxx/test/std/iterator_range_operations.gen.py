@@ -24,8 +24,28 @@ from libcxx.header_information import (
     Header,
 )
 
-headers = list(map(Header,["array", "deque", "flat_map", "flat_set", "forward_list", "list", "map", 
-           "regex", "set", "span", "string", "string_view", "unordered_map", "unordered_set", "vector"]))
+headers = list(
+    map(
+        Header,
+        [
+            "array",
+            "deque",
+            "flat_map",
+            "flat_set",
+            "forward_list",
+            "list",
+            "map",
+            "regex",
+            "set",
+            "span",
+            "string",
+            "string_view",
+            "unordered_map",
+            "unordered_set",
+            "vector",
+        ],
+    )
+)
 
 for header in headers:
     print(
