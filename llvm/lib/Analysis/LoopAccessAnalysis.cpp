@@ -1426,9 +1426,6 @@ void AccessAnalysis::processMemAccesses() {
 
           // Create sets of pointers connected by a shared alias set and
           // underlying object.
-          typedef SmallVector<const Value *, 16> ValueVector;
-          ValueVector TempObjects;
-
           SmallVector<const Value *, 16> &UOs = UnderlyingObjects[Ptr];
           UOs = {};
           ::getUnderlyingObjects(Ptr, UOs, LI);
