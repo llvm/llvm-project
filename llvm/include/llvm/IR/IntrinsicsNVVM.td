@@ -141,6 +141,9 @@ def llvm_shared_cluster_ptr_ty : LLVMQualPointerType<7>;  // (shared_cluster)ptr
 
 defvar WARP_SIZE = 32;
 
+// Note: the maximum grid size in the x-dimension is the lower value of 65535
+// on sm_20. We conservatively use the larger value here as it required for
+// sm_30+ and also correct for sm_20.
 defvar MAX_GRID_SIZE_X = 0x7fffffff;
 defvar MAX_GRID_SIZE_Y = 0xffff;
 defvar MAX_GRID_SIZE_Z = 0xffff;
@@ -4768,6 +4771,7 @@ class PTXReadSRegIntrinsic_r32<string name,
 
 multiclass PTXReadSRegIntrinsic_v4i32<string regname,
                                       list<list<IntrinsicProperty>> properties = [[], [], [], []]> {
+  assert !eq(!size(properties), 4), "properties must be a list of 4 lists";
 // FIXME: Do we need the 128-bit integer type version?
 //    def _r64   : Intrinsic<[llvm_i128_ty],   [], [IntrNoMem, IntrSpeculatable]>;
 
@@ -4781,6 +4785,7 @@ multiclass PTXReadSRegIntrinsic_v4i32<string regname,
 // Same, but without automatic clang builtins. It will be used for
 // registers that require particular GPU or PTX version.
 multiclass PTXReadSRegIntrinsicNB_v4i32<list<list<IntrinsicProperty>> properties = [[], [], [], []]> {
+  assert !eq(!size(properties), 4), "properties must be a list of 4 lists";
   defvar suffixes = ["_x", "_y", "_z", "_w"];
   foreach i = !range(suffixes) in
     def suffixes[i] : PTXReadSRegIntrinsicNB_r32<properties[i]>;
