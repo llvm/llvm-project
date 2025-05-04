@@ -220,7 +220,7 @@ AliasingValueList AllocTensorOp::getAliasingValues(OpOperand &opOperand,
   return {};
 }
 
-FailureOr<BaseMemRefType>
+FailureOr<bufferization::BufferLikeType>
 AllocTensorOp::getBufferType(Value value, const BufferizationOptions &options,
                              SmallVector<Value> &invocationStack) {
   assert(value == getResult() && "invalid value");
@@ -235,13 +235,15 @@ AllocTensorOp::getBufferType(Value value, const BufferizationOptions &options,
     if (failed(copyBufferType))
       return failure();
     memorySpace = copyBufferType->getMemorySpace();
-  } else if (auto ms = options.defaultMemorySpaceFn(getType())) {
+  } else if (auto ms = options.defaultMemorySpaceFn(
+                 mlir::cast<TensorLikeType>(getType()))) {
     memorySpace = *ms;
   } else {
     return getOperation()->emitError("could not infer memory space");
   }
 
-  return getMemRefTypeWithStaticIdentityLayout(getType(), memorySpace);
+  return mlir::cast<BufferLikeType>(
+      getMemRefTypeWithStaticIdentityLayout(getType(), memorySpace));
 }
 
 LogicalResult AllocTensorOp::verify() {
@@ -585,7 +587,7 @@ MaterializeInDestinationOp::bufferize(RewriterBase &rewriter,
       return failure();
     buffer = *maybeBuffer;
   } else {
-    assert(isa<BaseMemRefType>(getDest().getType()) && "expected memref type");
+    assert(isa<BufferLikeType>(getDest().getType()) && "expected buffer type");
     buffer = getDest();
   }
   auto srcBuffer = getBuffer(rewriter, getSource(), options);
@@ -632,7 +634,7 @@ Value MaterializeInDestinationOp::buildSubsetExtraction(OpBuilder &builder,
     return {};
 
   // Build a bufferization.to_tensor op.
-  assert(isa<BaseMemRefType>(getDest().getType()) && "expected memref type");
+  assert(isa<BufferLikeType>(getDest().getType()) && "expected buffer type");
   assert(getRestrict() &&
          "expected that ops with memrefs dest have 'restrict'");
   setRestrict(false);
@@ -667,22 +669,22 @@ bool MaterializeInDestinationOp::operatesOnDisjointSubset(
 }
 
 LogicalResult MaterializeInDestinationOp::verify() {
-  if (!isa<TensorType, BaseMemRefType>(getDest().getType()))
-    return emitOpError("'dest' must be a tensor or a memref");
+  if (!isa<TensorType, BufferLikeType>(getDest().getType()))
+    return emitOpError("'dest' must be a tensor or a buffer");
   if (auto destType = dyn_cast<TensorType>(getDest().getType())) {
     if (getOperation()->getNumResults() != 1)
       return emitOpError("tensor 'dest' implies exactly one tensor result");
     if (destType != getResult().getType())
       return emitOpError("result and 'dest' types must match");
   }
-  if (isa<BaseMemRefType>(getDest().getType()) &&
+  if (isa<BufferLikeType>(getDest().getType()) &&
       getOperation()->getNumResults() != 0)
-    return emitOpError("memref 'dest' implies zero results");
-  if (getRestrict() && !isa<BaseMemRefType>(getDest().getType()))
-    return emitOpError("'restrict' is valid only for memref destinations");
-  if (getWritable() != isa<BaseMemRefType>(getDest().getType()))
+    return emitOpError("buffer 'dest' implies zero results");
+  if (getRestrict() && !isa<BufferLikeType>(getDest().getType()))
+    return emitOpError("'restrict' is valid only for buffer destinations");
+  if (getWritable() != isa<BufferLikeType>(getDest().getType()))
     return emitOpError("'writable' must be specified if and only if the "
-                       "destination is of memref type");
+                       "destination is of buffer type");
   TensorType srcType = getSource().getType();
   ShapedType destType = cast<ShapedType>(getDest().getType());
   if (srcType.hasRank() != destType.hasRank())
@@ -724,7 +726,7 @@ MutableOperandRange MaterializeInDestinationOp::getDpsInitsMutable() {
 void MaterializeInDestinationOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
-  if (isa<BaseMemRefType>(getDest().getType()))
+  if (isa<BufferLikeType>(getDest().getType()))
     effects.emplace_back(MemoryEffects::Write::get(), &getDestMutable(),
                          SideEffects::DefaultResource::get());
 }

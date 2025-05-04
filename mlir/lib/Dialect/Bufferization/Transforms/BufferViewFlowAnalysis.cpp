@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Bufferization/Transforms/BufferViewFlowAnalysis.h"
 
 #include "mlir/Dialect/Bufferization/IR/BufferViewFlowOpInterface.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
@@ -93,11 +94,11 @@ void BufferViewFlowAnalysis::build(Operation *op) {
   // given op as terminals.
   auto populateTerminalValues = [&](Operation *op) {
     for (Value v : op->getResults())
-      if (isa<BaseMemRefType>(v.getType()))
+      if (isa<BufferLikeType>(v.getType()))
         this->terminals.insert(v);
     for (Region &r : op->getRegions())
       for (BlockArgument v : r.getArguments())
-        if (isa<BaseMemRefType>(v.getType()))
+        if (isa<BufferLikeType>(v.getType()))
           this->terminals.insert(v);
   };
 
@@ -108,12 +109,12 @@ void BufferViewFlowAnalysis::build(Operation *op) {
     if (auto bufferViewFlowOp = dyn_cast<BufferViewFlowOpInterface>(op)) {
       bufferViewFlowOp.populateDependencies(registerDependencies);
       for (Value v : op->getResults())
-        if (isa<BaseMemRefType>(v.getType()) &&
+        if (isa<BufferLikeType>(v.getType()) &&
             bufferViewFlowOp.mayBeTerminalBuffer(v))
           this->terminals.insert(v);
       for (Region &r : op->getRegions())
         for (BlockArgument v : r.getArguments())
-          if (isa<BaseMemRefType>(v.getType()) &&
+          if (isa<BufferLikeType>(v.getType()) &&
               bufferViewFlowOp.mayBeTerminalBuffer(v))
             this->terminals.insert(v);
       return WalkResult::advance();
@@ -201,7 +202,7 @@ void BufferViewFlowAnalysis::build(Operation *op) {
 }
 
 bool BufferViewFlowAnalysis::mayBeTerminalBuffer(Value value) const {
-  assert(isa<BaseMemRefType>(value.getType()) && "expected memref");
+  assert(isa<BufferLikeType>(value.getType()) && "expected memref");
   return terminals.contains(value);
 }
 
@@ -240,8 +241,8 @@ static Value getViewBase(Value value) {
 BufferOriginAnalysis::BufferOriginAnalysis(Operation *op) : analysis(op) {}
 
 std::optional<bool> BufferOriginAnalysis::isSameAllocation(Value v1, Value v2) {
-  assert(isa<BaseMemRefType>(v1.getType()) && "expected buffer");
-  assert(isa<BaseMemRefType>(v2.getType()) && "expected buffer");
+  assert(isa<BufferLikeType>(v1.getType()) && "expected buffer");
+  assert(isa<BufferLikeType>(v2.getType()) && "expected buffer");
 
   // Skip over all view-like ops.
   v1 = getViewBase(v1);
@@ -275,7 +276,7 @@ std::optional<bool> BufferOriginAnalysis::isSameAllocation(Value v1, Value v2) {
                                       bool &allAllocs,
                                       bool &allAllocsOrFuncEntryArgs) {
     for (Value v : origin) {
-      if (isa<BaseMemRefType>(v.getType()) && analysis.mayBeTerminalBuffer(v)) {
+      if (isa<BufferLikeType>(v.getType()) && analysis.mayBeTerminalBuffer(v)) {
         terminal.insert(v);
         allAllocs &= hasAllocateSideEffect(v);
         allAllocsOrFuncEntryArgs &=

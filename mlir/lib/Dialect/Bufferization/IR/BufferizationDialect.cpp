@@ -62,7 +62,11 @@ struct BuiltinTensorExternalModel
 template <typename MemRef>
 struct BuiltinMemRefExternalModel
     : BufferLikeType::ExternalModel<BuiltinMemRefExternalModel<MemRef>,
-                                    MemRef> {};
+                                    MemRef> {
+  mlir::Attribute getMemorySpace(mlir::Type type) const {
+    return mlir::cast<MemRef>(type).getMemorySpace();
+  }
+};
 } // namespace
 
 //===----------------------------------------------------------------------===//

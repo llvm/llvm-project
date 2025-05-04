@@ -32,7 +32,7 @@ template <typename ConcreteModel, typename ConcreteOp>
 struct OpWithUnstructuredControlFlowBufferizableOpInterfaceExternalModel
     : public BufferizableOpInterface::ExternalModel<ConcreteModel, ConcreteOp> {
 
-  FailureOr<BaseMemRefType>
+  FailureOr<BufferLikeType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
                 SmallVector<Value> &invocationStack) const {
     // Note: The user may want to override this function for OpResults in
@@ -46,7 +46,7 @@ struct OpWithUnstructuredControlFlowBufferizableOpInterfaceExternalModel
     // operand types of all forwarded values. If these are all the same type,
     // take that type. Otherwise, take only the memory space and fall back to a
     // buffer type with a fully dynamic layout map.
-    BaseMemRefType bufferType;
+    BufferLikeType bufferType;
     auto tensorType = cast<TensorType>(value.getType());
     for (OpOperand *opOperand :
          detail::getCallerOpOperands(cast<BlockArgument>(value))) {
@@ -59,13 +59,13 @@ struct OpWithUnstructuredControlFlowBufferizableOpInterfaceExternalModel
         continue;
 
       // Compute the bufferized type of the forwarded operand.
-      BaseMemRefType callerType;
-      if (auto memrefType =
-              dyn_cast<BaseMemRefType>(opOperand->get().getType())) {
+      BufferLikeType callerType;
+      if (auto bufferLikeType =
+              dyn_cast<BufferLikeType>(opOperand->get().getType())) {
         // The operand was already bufferized. Take its type directly.
-        callerType = memrefType;
+        callerType = bufferLikeType;
       } else {
-        FailureOr<BaseMemRefType> maybeCallerType =
+        FailureOr<BufferLikeType> maybeCallerType =
             bufferization::getBufferType(opOperand->get(), options,
                                          invocationStack);
         if (failed(maybeCallerType))
@@ -86,14 +86,20 @@ struct OpWithUnstructuredControlFlowBufferizableOpInterfaceExternalModel
         // of the earlier forwarded operands, fall back to a buffer type with a
         // fully dynamic layout map.
 #ifndef NDEBUG
+      assert(mlir::isa<BaseMemRefType>(bufferType) &&
+             mlir::isa<BaseMemRefType>(callerType) && "expected memrefs");
+      auto memrefType = mlir::cast<BaseMemRefType>(bufferType);
+      auto callerMemrefType = mlir::cast<BaseMemRefType>(callerType);
+
       if (auto rankedTensorType = dyn_cast<RankedTensorType>(tensorType)) {
-        assert(bufferType.hasRank() && callerType.hasRank() &&
+        assert(memrefType.hasRank() && callerMemrefType.hasRank() &&
                "expected ranked memrefs");
-        assert(llvm::all_equal({bufferType.getShape(), callerType.getShape(),
-                                rankedTensorType.getShape()}) &&
-               "expected same shape");
+        assert(
+            llvm::all_equal({memrefType.getShape(), callerMemrefType.getShape(),
+                             rankedTensorType.getShape()}) &&
+            "expected same shape");
       } else {
-        assert(!bufferType.hasRank() && !callerType.hasRank() &&
+        assert(!memrefType.hasRank() && !callerMemrefType.hasRank() &&
                "expected unranked memrefs");
       }
 #endif // NDEBUG
@@ -102,8 +108,9 @@ struct OpWithUnstructuredControlFlowBufferizableOpInterfaceExternalModel
         return op->emitOpError("incoming operands of block argument have "
                                "inconsistent memory spaces");
 
-      bufferType = getMemRefTypeWithFullyDynamicLayout(
-          tensorType, bufferType.getMemorySpace());
+      bufferType =
+          mlir::cast<BufferLikeType>(getMemRefTypeWithFullyDynamicLayout(
+              tensorType, bufferType.getMemorySpace()));
     }
 
     if (!bufferType)
