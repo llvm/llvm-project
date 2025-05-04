@@ -539,16 +539,6 @@ static bool areNonOverlapSameBaseLoadAndStore(const Value *LoadPtr,
   return LoadRange.intersectWith(StoreRange).isEmptySet();
 }
 
-static bool maybeAvailableLoadStore(Instruction *Inst) {
-  switch (Inst->getOpcode()) {
-  case Instruction::Load:
-  case Instruction::Store:
-    return true;
-  default:
-    return isa<MemSetInst>(Inst);
-  }
-}
-
 static Value *getAvailableLoadStore(Instruction *Inst, const Value *Ptr,
                                     Type *AccessTy, bool AtLeastAtomic,
                                     const DataLayout &DL, bool *IsLoadCSE) {
@@ -663,7 +653,7 @@ Value *llvm::findAvailablePtrLoadStore(
       ++(*NumScanedInst);
 
     // Don't scan huge blocks.
-    if (maybeAvailableLoadStore(Inst) && MaxInstsToScan-- == 0)
+    if (MaxInstsToScan-- == 0)
       return nullptr;
 
     --ScanFrom;
@@ -744,7 +734,7 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA,
     if (Inst.isDebugOrPseudoInst())
       continue;
 
-    if (maybeAvailableLoadStore(&Inst) && MaxInstsToScan-- == 0)
+    if (MaxInstsToScan-- == 0)
       return nullptr;
 
     Available = getAvailableLoadStore(&Inst, StrippedPtr, AccessTy,
