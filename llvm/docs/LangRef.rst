@@ -2932,9 +2932,8 @@ the behavior is undefined, unless one of the following exceptions applies:
   must be a null pointer, otherwise the behavior is undefined.
 
 * ``dereferenceable(<n>)`` operand bundles only guarantee the pointer is
-    dereferenceable at the point of the assumption. The pointer may not be
-    dereferenceable at later pointers, e.g. because it could have been
-    freed.
+  dereferenceable at the point of the assumption. The pointer may not be
+  dereferenceable at later pointers, e.g. because it could have been freed.
 
 In addition to allowing operand bundles encoding function and parameter
 attributes, an assume operand bundle my also encode a ``separate_storage``
@@ -20295,6 +20294,9 @@ More update operation types may be added in the future.
 
     declare void @llvm.experimental.vector.histogram.add.v8p0.i32(<8 x ptr> %ptrs, i32 %inc, <8 x i1> %mask)
     declare void @llvm.experimental.vector.histogram.add.nxv2p0.i64(<vscale x 2 x ptr> %ptrs, i64 %inc, <vscale x 2 x i1> %mask)
+    declare void @llvm.experimental.vector.histogram.uadd.sat.v8p0.i32(<8 x ptr> %ptrs, i32 %inc, <8 x i1> %mask)
+    declare void @llvm.experimental.vector.histogram.umax.v8p0.i32(<8 x ptr> %ptrs, i32 %val, <8 x i1> %mask)
+    declare void @llvm.experimental.vector.histogram.umin.v8p0.i32(<8 x ptr> %ptrs, i32 %val, <8 x i1> %mask)
 
 Arguments:
 """"""""""
