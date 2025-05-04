@@ -1736,11 +1736,10 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
     // - Zero extended value (zext)
     // - Sign extended value (sext)
     if (match(SI, m_Select(m_ICmp(Pred, m_Value(X), m_Zero()), m_Value(Y),
-                                    m_Zero())) &&
-              Pred == ICmpInst::ICMP_EQ &&
-              match(Other, m_ZExtOrSExtOrSelf(m_Specific(X)))) {
-      return SelectInst::Create(SI->getCondition(), Y,
-                                        Other);
+                           m_Zero())) &&
+        Pred == ICmpInst::ICMP_EQ &&
+        match(Other, m_ZExtOrSExtOrSelf(m_Specific(X)))) {
+      return SelectInst::Create(SI->getCondition(), Y, Other);
     }
   }
 
@@ -5821,4 +5820,3 @@ void llvm::initializeInstCombine(PassRegistry &Registry) {
 FunctionPass *llvm::createInstructionCombiningPass() {
   return new InstructionCombiningPass();
 }
-

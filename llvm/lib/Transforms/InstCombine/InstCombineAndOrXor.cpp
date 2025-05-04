@@ -5047,4 +5047,3 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
 
   return nullptr;
 }
-
