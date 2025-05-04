@@ -2471,7 +2471,6 @@ static void AddMatches(const Definition *def, const llvm::StringRef &prefix,
   const size_t n = def->num_children;
   if (n > 0) {
     for (size_t i = 0; i < n; ++i) {
-      std::string match = prefix.str();
       if (match_prefix.empty())
         matches.AppendString(MakeMatch(prefix, def->children[i].name));
       else if (strncmp(def->children[i].name, match_prefix.data(),
