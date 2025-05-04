@@ -400,6 +400,65 @@ static void updateBranchWeights(BranchInst &PreHeaderBI, BranchInst &LoopBI,
   }
 }
 
+// Check if duplicating the header to the preheader will fold all duplicated
+// instructions, terminating with an unconditional jump. So No code duplication
+// would be necessary.
+static bool canRotateWithoutDuplication(Loop *L, llvm::LoopInfo *LI,
+                                        llvm::SimplifyQuery SQ) {
+  BasicBlock *OrigHeader = L->getHeader();
+  BasicBlock *OrigPreheader = L->getLoopPreheader();
+
+  BranchInst *T = dyn_cast<BranchInst>(OrigHeader->getTerminator());
+  assert(T && T->isConditional() && "Header Terminator should be conditional!");
+
+  // a value map to holds the values incoming from preheader
+  ValueToValueMapTy ValueMap;
+
+  // iterate over non-debug instructions and check which ones fold
+  for (Instruction &Inst : OrigHeader->instructionsWithoutDebug()) {
+    // For PHI nodes, the values in the cloned header are the values in the
+    // preheader
+    if (PHINode *PN = dyn_cast<PHINode>(&Inst)) {
+      InsertNewValueIntoMap(ValueMap, PN,
+                            PN->getIncomingValueForBlock(OrigPreheader));
+      continue;
+    }
+    if (Inst.mayHaveSideEffects())
+      return false;
+
+    Instruction *C = Inst.clone();
+    C->insertBefore(&Inst);
+
+    // Eagerly remap the operands of the instruction.
+    RemapInstruction(C, ValueMap,
+                     RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+
+    // if we hit the terminator, return whether it folds
+    if (static_cast<BranchInst *>(&Inst) == T) {
+      if (isa<ConstantInt>(dyn_cast<BranchInst>(C)->getCondition())) {
+        LLVM_DEBUG(dbgs() << "Loop Rotation: bypassing header threshold "
+                             "because the header folds\n");
+        C->eraseFromParent();
+        return true;
+      } else {
+        LLVM_DEBUG(
+            dbgs() << "Loop Rotation: skipping. Header threshold exceeded "
+                      "and header doesn't fold\n");
+        C->eraseFromParent();
+        return false;
+      }
+    }
+
+    // other instructions, evaluate if possible
+    Value *V = simplifyInstruction(C, SQ);
+    if (V)
+      InsertNewValueIntoMap(ValueMap, &Inst, V);
+    C->eraseFromParent();
+  }
+
+  llvm_unreachable("OrigHeader didn't contain terminal branch!");
+}
+
 /// Rotate loop LP. Return true if the loop is rotated.
 ///
 /// \param SimplifiedLatch is true if the latch was just folded into the final
@@ -472,7 +531,8 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
                    L->dump());
         return Rotated;
       }
-      if (Metrics.NumInsts > MaxHeaderSize) {
+      if (Metrics.NumInsts > MaxHeaderSize &&
+          !canRotateWithoutDuplication(L, LI, SQ)) {
         LLVM_DEBUG(dbgs() << "LoopRotation: NOT rotating - contains "
                           << Metrics.NumInsts
                           << " instructions, which is more than the threshold ("
