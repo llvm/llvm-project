@@ -14,6 +14,7 @@
 #include "CGCXXABI.h"
 #include "CGCleanup.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/RecordLayout.h"
 
 using namespace clang;
 using namespace CodeGen;
