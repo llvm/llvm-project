@@ -65,8 +65,7 @@ define void @iv_known_non_negative_constant_trip_count_no_nsw_flag(i8 %N) {
 ; CHECK-NEXT:    call void @use(i1 [[F_1]])
 ; CHECK-NEXT:    [[F_2:%.*]] = icmp sle i8 [[N]], [[IV]]
 ; CHECK-NEXT:    call void @use(i1 [[F_2]])
-; CHECK-NEXT:    [[C_0:%.*]] = icmp ugt i8 [[IV]], 2
-; CHECK-NEXT:    call void @use(i1 [[C_0]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i8 [[IV]], 1
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit.1:

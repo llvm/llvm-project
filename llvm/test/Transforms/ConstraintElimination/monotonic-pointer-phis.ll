@@ -996,9 +996,8 @@ define void @test_monotonic_ptr_iv_inc_1_loop_exits_on_ne(ptr %start, i16 %len) 
 ; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i32, ptr [[PTR_IV]], i16 1
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[C_2:%.*]] = icmp uge ptr [[PTR_IV]], [[START]]
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ult ptr [[PTR_IV]], [[UPPER]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_2]], [[C_3]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 true, [[C_3]]
 ; CHECK-NEXT:    call void @use.i1(i1 [[AND]])
 ; CHECK-NEXT:    ret void
 ;
@@ -1083,4 +1082,3 @@ loop.latch:
 exit:
   ret void
 }
-
