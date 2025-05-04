@@ -497,6 +497,8 @@ Improvements to Clang's diagnostics
 - ``-Wreserved-identifier`` now fires on reserved parameter names in a function
   declaration which is not a definition.
 
+- Clang now suggests a fix-it to correct ``template`` in a template-template parameter with a missing ``<`` to ``typename``
+
 Improvements to Clang's time-trace
 ----------------------------------
 
