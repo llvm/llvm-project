@@ -37,7 +37,6 @@ static_library("LLVMSparcCodeGen") {
     "SparcISelDAGToDAG.cpp",
     "SparcISelLowering.cpp",
     "SparcInstrInfo.cpp",
-    "SparcMCInstLower.cpp",
     "SparcMachineFunctionInfo.cpp",
     "SparcRegisterInfo.cpp",
     "SparcSubtarget.cpp",
