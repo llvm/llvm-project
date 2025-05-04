@@ -101,7 +101,7 @@ public:
   }
 
   static Specifier parseSpecifier(StringRef name);
-  static bool printSpecifier(raw_ostream &OS, Specifier Kind);
+  static StringRef getSpecifierName(Specifier S);
 };
 
 } // end namespace llvm.
