@@ -1423,7 +1423,7 @@ private:
         Tok->setType(TT_BitFieldColon);
       } else if (Contexts.size() == 1 &&
                  !Line.First->isOneOf(tok::kw_enum, tok::kw_case,
-                                      tok::kw_default)) {
+                                      tok::kw_default, tok::kw_typedef)) {
         FormatToken *Prev = Tok->getPreviousNonComment();
         if (!Prev)
           break;

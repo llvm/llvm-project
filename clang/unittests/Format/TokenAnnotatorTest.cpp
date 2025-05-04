@@ -3666,7 +3666,7 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
                     getGoogleStyle(FormatStyle::LK_JavaScript));
   ASSERT_EQ(Tokens.size(), 12u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::identifier, TT_ClassHeadName);
-  EXPECT_TOKEN(Tokens[4], tok::identifier, TT_Unknown); // Not TT_StartOfName
+  EXPECT_TOKEN(Tokens[4], tok::identifier, TT_Unknown); // Not TT_StartOfName.
   EXPECT_TOKEN(Tokens[8], tok::l_brace, TT_ClassLBrace);
   EXPECT_BRACE_KIND(Tokens[8], BK_Block);
   EXPECT_TOKEN(Tokens[9], tok::r_brace, TT_ClassRBrace);
@@ -3833,7 +3833,7 @@ TEST_F(TokenAnnotatorTest, CppOnlyKeywordInC) {
   ASSERT_EQ(Tokens.size(), 8u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::identifier, TT_Unknown); // Not tok::kw_new
   EXPECT_TOKEN(Tokens[4], tok::amp, TT_BinaryOperator);
-  EXPECT_TOKEN(Tokens[3], tok::identifier, TT_Unknown); // Not TT_StartOfName
+  EXPECT_TOKEN(Tokens[3], tok::identifier, TT_Unknown); // Not TT_StartOfName.
 }
 
 TEST_F(TokenAnnotatorTest, FunctionTryBlock) {
@@ -3947,7 +3947,7 @@ TEST_F(TokenAnnotatorTest, VariableTemplate) {
   EXPECT_TOKEN(Tokens[4], tok::identifier, TT_VariableTemplate);
   EXPECT_TOKEN(Tokens[5], tok::less, TT_TemplateOpener);
   EXPECT_TOKEN(Tokens[7], tok::greater, TT_TemplateCloser);
-  EXPECT_TOKEN(Tokens[8], tok::r_paren, TT_Unknown); // Not TT_CastRParen
+  EXPECT_TOKEN(Tokens[8], tok::r_paren, TT_Unknown); // Not TT_CastRParen.
   EXPECT_TOKEN(Tokens[9], tok::plus, TT_BinaryOperator);
 }
 
@@ -4031,6 +4031,12 @@ TEST_F(TokenAnnotatorTest, UserDefinedLiteral) {
   auto Tokens = annotate("auto dollars = 2_$;");
   ASSERT_EQ(Tokens.size(), 6u) << Tokens;
   EXPECT_EQ(Tokens[3]->TokenText, "2_$");
+}
+
+TEST_F(TokenAnnotatorTest, EnumColonInTypedef) {
+  auto Tokens = annotate("typedef enum : int {} foo;");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::colon, TT_Unknown); // Not TT_InheritanceColon.
 }
 
 } // namespace
