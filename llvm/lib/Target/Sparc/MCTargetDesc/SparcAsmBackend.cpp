@@ -54,7 +54,6 @@ static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {
     return (~Value >> 10) & 0x3fffff;
 
   case Sparc::fixup_sparc_pc22:
-  case Sparc::fixup_sparc_got22:
   case Sparc::fixup_sparc_tls_gd_hi22:
   case Sparc::fixup_sparc_tls_ldm_hi22:
   case Sparc::fixup_sparc_tls_ie_hi22:
@@ -62,7 +61,6 @@ static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {
   case Sparc::fixup_sparc_lm:
     return (Value >> 10) & 0x3fffff;
 
-  case Sparc::fixup_sparc_got13:
   case Sparc::fixup_sparc_13:
     return Value & 0x1fff;
 
@@ -70,7 +68,6 @@ static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {
     return (Value & 0x3ff) | 0x1c00;
 
   case Sparc::fixup_sparc_pc10:
-  case Sparc::fixup_sparc_got10:
   case Sparc::fixup_sparc_tls_gd_lo10:
   case Sparc::fixup_sparc_tls_ldm_lo10:
   case Sparc::fixup_sparc_tls_ie_lo10:
@@ -178,9 +175,6 @@ namespace {
         { "fixup_sparc_lm",        10,     22,  0 },
         { "fixup_sparc_pc22",      10,     22,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_pc10",      22,     10,  MCFixupKindInfo::FKF_IsPCRel },
-        { "fixup_sparc_got22",     10,     22,  0 },
-        { "fixup_sparc_got10",     22,     10,  0 },
-        { "fixup_sparc_got13",     19,     13,  0 },
         { "fixup_sparc_wplt30",     2,     30,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_tls_gd_hi22",   10, 22,  0 },
         { "fixup_sparc_tls_gd_lo10",   22, 10,  0 },
@@ -224,9 +218,6 @@ namespace {
         { "fixup_sparc_lm",         0,     22,  0 },
         { "fixup_sparc_pc22",       0,     22,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_pc10",       0,     10,  MCFixupKindInfo::FKF_IsPCRel },
-        { "fixup_sparc_got22",      0,     22,  0 },
-        { "fixup_sparc_got10",      0,     10,  0 },
-        { "fixup_sparc_got13",      0,     13,  0 },
         { "fixup_sparc_wplt30",      0,     30,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_tls_gd_hi22",    0, 22,  0 },
         { "fixup_sparc_tls_gd_lo10",    0, 10,  0 },

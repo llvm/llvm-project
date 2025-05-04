@@ -15,6 +15,7 @@
 #include "SparcMCTargetDesc.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
@@ -128,8 +129,7 @@ getMachineOpValue(const MCInst &MI, const MCOperand &MO,
   assert(MO.isExpr());
   const MCExpr *Expr = MO.getExpr();
   if (const SparcMCExpr *SExpr = dyn_cast<SparcMCExpr>(Expr)) {
-    MCFixupKind Kind = (MCFixupKind)SExpr->getFixupKind();
-    Fixups.push_back(MCFixup::create(0, Expr, Kind));
+    Fixups.push_back(MCFixup::create(0, Expr, SExpr->getFixupKind()));
     return 0;
   }
 
@@ -159,15 +159,13 @@ SparcMCCodeEmitter::getSImm13OpValue(const MCInst &MI, unsigned OpNo,
   if (const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Expr))
     return CE->getValue();
 
-  MCFixupKind Kind;
   if (const SparcMCExpr *SExpr = dyn_cast<SparcMCExpr>(Expr)) {
-    Kind = MCFixupKind(SExpr->getFixupKind());
-  } else {
-    bool IsPic = Ctx.getObjectFileInfo()->isPositionIndependent();
-    Kind = IsPic ? MCFixupKind(Sparc::fixup_sparc_got13)
-                 : MCFixupKind(Sparc::fixup_sparc_13);
+    Fixups.push_back(MCFixup::create(0, Expr, SExpr->getFixupKind()));
+    return 0;
   }
-
+  uint16_t Kind = Sparc::fixup_sparc_13;
+  if (Ctx.getObjectFileInfo()->isPositionIndependent())
+    Kind = ELF::R_SPARC_GOT13;
   Fixups.push_back(MCFixup::create(0, Expr, Kind));
   return 0;
 }
@@ -194,8 +192,7 @@ getCallTargetOpValue(const MCInst &MI, unsigned OpNo,
     return 0;
   }
 
-  MCFixupKind Kind = MCFixupKind(SExpr->getFixupKind());
-  Fixups.push_back(MCFixup::create(0, Expr, Kind));
+  Fixups.push_back(MCFixup::create(0, Expr, SExpr->getFixupKind()));
   return 0;
 }
 
