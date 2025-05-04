@@ -250,23 +250,22 @@ class StmtComparer {
     return E1->isExact() == E2->isExact() && E1->getValue() == E2->getValue();
   }
 
-  bool IsStmtEquivalent(const GenericSelectionExpr *E1,
-                        const GenericSelectionExpr *E2) {
-    for (auto Pair : zip_longest(E1->getAssocTypeSourceInfos(),
-                                 E2->getAssocTypeSourceInfos())) {
-      std::optional<TypeSourceInfo *> Child1 = std::get<0>(Pair);
-      std::optional<TypeSourceInfo *> Child2 = std::get<1>(Pair);
-      // Skip this case if there are a different number of associated types.
-      if (!Child1 || !Child2)
-        return false;
+  bool  IsStmtEquivalent  ( const GenericSelectionExpr *E1, 
+    const GenericSelectionExpr *E2 ) {
+for ( auto Pair : zip_longest( E1->getAssocTypeSourceInfos(), 
+            E2->getAssocTypeSourceInfos() ) ) {
+std::optional<TypeSourceInfo *>  Child1  =  std::get<0>( Pair );
+std::optional<TypeSourceInfo *>  Child2  =  std::get<1>( Pair );
+// Skip this case if there are a different number of associated types.
+if ( !Child1  ||  !Child2 )  return  false;
 
-      if (!IsStructurallyEquivalent(Context, (*Child1)->getType(),
-                                    (*Child2)->getType()))
-        return false;
-    }
+if ( !IsStructurallyEquivalent( Context, ( *Child1 )->getType(),
+              ( *Child2 )->getType() ) )  return  false;
+}
 
-    return true;
-  }
+return  true;
+}
+
 
   bool IsStmtEquivalent(const ImplicitCastExpr *CastE1,
                         const ImplicitCastExpr *CastE2) {
