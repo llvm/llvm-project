@@ -321,12 +321,11 @@ void RenameIndependentSubregs::computeMainRangesFixFlags(
       // Search for "PHI" value numbers in the subranges. We must find a live
       // value in each predecessor block, add an IMPLICIT_DEF where it is
       // missing.
-      for (unsigned I = 0; I < SR.valnos.size(); ++I) {
-        const VNInfo &VNI = *SR.valnos[I];
-        if (VNI.isUnused() || !VNI.isPHIDef())
+      for (const VNInfo *VNI : SR.valnos) {
+        if (VNI->isUnused() || !VNI->isPHIDef())
           continue;
 
-        SlotIndex Def = VNI.def;
+        SlotIndex Def = VNI->def;
         MachineBasicBlock &MBB = *Indexes.getMBBFromIndex(Def);
         for (MachineBasicBlock *PredMBB : MBB.predecessors()) {
           SlotIndex PredEnd = Indexes.getMBBEndIdx(PredMBB);

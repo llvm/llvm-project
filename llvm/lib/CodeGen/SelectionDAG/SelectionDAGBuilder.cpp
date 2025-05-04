@@ -3161,8 +3161,8 @@ void SelectionDAGBuilder::visitBitTestHeader(BitTestBlock &B,
   if (!TLI.isTypeLegal(VT)) {
     UsePtrType = true;
   } else {
-    for (unsigned i = 0, e = B.Cases.size(); i != e; ++i)
-      if (!isUIntN(VT.getSizeInBits(), B.Cases[i].Mask)) {
+    for (const BitTestCase &Case : B.Cases)
+      if (!isUIntN(VT.getSizeInBits(), Case.Mask)) {
         // Switch table case range are encoded into series of masks.
         // Just use pointer type, it's guaranteed to fit.
         UsePtrType = true;

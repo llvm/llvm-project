@@ -5500,9 +5500,8 @@ LegalizerHelper::fewerElementsBitcast(MachineInstr &MI, unsigned int TypeIdx,
 
   // Build new smaller bitcast instructions
   // Not supporting Leftover types for now but will have to
-  for (unsigned i = 0; i < SrcVRegs.size(); i++)
-    BitcastVRegs.push_back(
-        MIRBuilder.buildBitcast(NarrowTy, SrcVRegs[i]).getReg(0));
+  for (Register Reg : SrcVRegs)
+    BitcastVRegs.push_back(MIRBuilder.buildBitcast(NarrowTy, Reg).getReg(0));
 
   MIRBuilder.buildMergeLikeInstr(DstReg, BitcastVRegs);
   MI.eraseFromParent();
@@ -7383,9 +7382,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerTRUNC(MachineInstr &MI) {
       InterTy = SplitSrcTy.changeElementSize(DstTy.getScalarSizeInBits() * 2);
     else
       InterTy = SplitSrcTy.changeElementSize(DstTy.getScalarSizeInBits());
-    for (unsigned I = 0; I < SplitSrcs.size(); ++I) {
-      SplitSrcs[I] = MIRBuilder.buildTrunc(InterTy, SplitSrcs[I]).getReg(0);
-    }
+    for (Register &Src : SplitSrcs)
+      Src = MIRBuilder.buildTrunc(InterTy, Src).getReg(0);
 
     // Combine the new truncates into one vector
     auto Merge = MIRBuilder.buildMergeLikeInstr(
