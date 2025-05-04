@@ -92,7 +92,7 @@ define void @test_alloca() sanitize_hwaddress {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 48
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = ashr i64 [[TMP2]], 3
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.read_register.i64(metadata [[META1:![0-9]+]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.read_register.i64(metadata [[META2:![0-9]+]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = call ptr @llvm.frameaddress.p0(i32 0)
 ; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP5]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl i64 [[TMP6]], 44
@@ -112,23 +112,26 @@ define void @test_alloca() sanitize_hwaddress {
 ; CHECK-NEXT:    [[X:%.*]] = alloca { i32, [12 x i8] }, align 16
 ; CHECK-NEXT:    [[TMP17:%.*]] = xor i64 [[TMP3]], 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = ptrtoint ptr [[X]] to i64
-; CHECK-NEXT:    [[TMP19:%.*]] = and i64 [[TMP18]], 72057594037927935
-; CHECK-NEXT:    [[TMP20:%.*]] = shl i64 [[TMP17]], 56
-; CHECK-NEXT:    [[TMP21:%.*]] = or i64 [[TMP19]], [[TMP20]]
-; CHECK-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP21]] to ptr
-; CHECK-NEXT:    [[TMP22:%.*]] = trunc i64 [[TMP17]] to i8
-; CHECK-NEXT:    [[TMP23:%.*]] = ptrtoint ptr [[X]] to i64
-; CHECK-NEXT:    [[TMP24:%.*]] = and i64 [[TMP23]], 72057594037927935
-; CHECK-NEXT:    [[TMP25:%.*]] = lshr i64 [[TMP24]], 4
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[TMP16]], i64 [[TMP25]]
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP26]], i8 [[TMP22]], i64 1, i1 false)
+; CHECK-NEXT:    [[TMP19:%.*]] = shl i64 [[TMP18]], 8
+; CHECK-NEXT:    [[TMP20:%.*]] = ashr i64 [[TMP19]], 8
+; CHECK-NEXT:    [[TMP21:%.*]] = shl i64 [[TMP17]], 56
+; CHECK-NEXT:    [[TMP22:%.*]] = or i64 [[TMP20]], [[TMP21]]
+; CHECK-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP22]] to ptr
+; CHECK-NEXT:    [[TMP23:%.*]] = trunc i64 [[TMP17]] to i8
+; CHECK-NEXT:    [[TMP24:%.*]] = ptrtoint ptr [[X]] to i64
+; CHECK-NEXT:    [[TMP25:%.*]] = shl i64 [[TMP24]], 8
+; CHECK-NEXT:    [[TMP26:%.*]] = ashr i64 [[TMP25]], 8
+; CHECK-NEXT:    [[TMP27:%.*]] = ashr i64 [[TMP26]], 4
+; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i8, ptr [[TMP16]], i64 [[TMP27]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP28]], i8 [[TMP23]], i64 1, i1 false)
 ; CHECK-NEXT:    call void @use(ptr [[X_HWASAN]])
-; CHECK-NEXT:    [[TMP27:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
-; CHECK-NEXT:    [[TMP28:%.*]] = ptrtoint ptr [[X]] to i64
-; CHECK-NEXT:    [[TMP29:%.*]] = and i64 [[TMP28]], 72057594037927935
-; CHECK-NEXT:    [[TMP30:%.*]] = lshr i64 [[TMP29]], 4
-; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr i8, ptr [[TMP16]], i64 [[TMP30]]
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP31]], i8 [[TMP27]], i64 1, i1 false)
+; CHECK-NEXT:    [[TMP29:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
+; CHECK-NEXT:    [[TMP30:%.*]] = ptrtoint ptr [[X]] to i64
+; CHECK-NEXT:    [[TMP31:%.*]] = shl i64 [[TMP30]], 8
+; CHECK-NEXT:    [[TMP32:%.*]] = ashr i64 [[TMP31]], 8
+; CHECK-NEXT:    [[TMP33:%.*]] = ashr i64 [[TMP32]], 4
+; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr i8, ptr [[TMP16]], i64 [[TMP33]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP34]], i8 [[TMP29]], i64 1, i1 false)
 ; CHECK-NEXT:    ret void
 ;
 ; NOIFUNC-TLS-HISTORY-LABEL: define void @test_alloca
@@ -138,7 +141,7 @@ define void @test_alloca() sanitize_hwaddress {
 ; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 48
 ; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 8
 ; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP3:%.*]] = ashr i64 [[TMP2]], 3
-; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP4:%.*]] = call i64 @llvm.read_register.i64(metadata [[META1:![0-9]+]])
+; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP4:%.*]] = call i64 @llvm.read_register.i64(metadata [[META2:![0-9]+]])
 ; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP5:%.*]] = call ptr @llvm.frameaddress.p0(i32 0)
 ; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP5]] to i64
 ; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP7:%.*]] = shl i64 [[TMP6]], 44
@@ -158,23 +161,26 @@ define void @test_alloca() sanitize_hwaddress {
 ; NOIFUNC-TLS-HISTORY-NEXT:    [[X:%.*]] = alloca { i32, [12 x i8] }, align 16
 ; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP17:%.*]] = xor i64 [[TMP3]], 0
 ; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP18:%.*]] = ptrtoint ptr [[X]] to i64
-; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP19:%.*]] = and i64 [[TMP18]], 72057594037927935
-; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP20:%.*]] = shl i64 [[TMP17]], 56
-; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP21:%.*]] = or i64 [[TMP19]], [[TMP20]]
-; NOIFUNC-TLS-HISTORY-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP21]] to ptr
-; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP22:%.*]] = trunc i64 [[TMP17]] to i8
-; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP23:%.*]] = ptrtoint ptr [[X]] to i64
-; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP24:%.*]] = and i64 [[TMP23]], 72057594037927935
-; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP25:%.*]] = lshr i64 [[TMP24]], 4
-; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[TMP16]], i64 [[TMP25]]
-; NOIFUNC-TLS-HISTORY-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP26]], i8 [[TMP22]], i64 1, i1 false)
+; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP19:%.*]] = shl i64 [[TMP18]], 8
+; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP20:%.*]] = ashr i64 [[TMP19]], 8
+; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP21:%.*]] = shl i64 [[TMP17]], 56
+; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP22:%.*]] = or i64 [[TMP20]], [[TMP21]]
+; NOIFUNC-TLS-HISTORY-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP22]] to ptr
+; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP23:%.*]] = trunc i64 [[TMP17]] to i8
+; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP24:%.*]] = ptrtoint ptr [[X]] to i64
+; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP25:%.*]] = shl i64 [[TMP24]], 8
+; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP26:%.*]] = ashr i64 [[TMP25]], 8
+; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP27:%.*]] = ashr i64 [[TMP26]], 4
+; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP28:%.*]] = getelementptr i8, ptr [[TMP16]], i64 [[TMP27]]
+; NOIFUNC-TLS-HISTORY-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP28]], i8 [[TMP23]], i64 1, i1 false)
 ; NOIFUNC-TLS-HISTORY-NEXT:    call void @use(ptr [[X_HWASAN]])
-; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP27:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
-; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP28:%.*]] = ptrtoint ptr [[X]] to i64
-; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP29:%.*]] = and i64 [[TMP28]], 72057594037927935
-; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP30:%.*]] = lshr i64 [[TMP29]], 4
-; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP31:%.*]] = getelementptr i8, ptr [[TMP16]], i64 [[TMP30]]
-; NOIFUNC-TLS-HISTORY-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP31]], i8 [[TMP27]], i64 1, i1 false)
+; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP29:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
+; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP30:%.*]] = ptrtoint ptr [[X]] to i64
+; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP31:%.*]] = shl i64 [[TMP30]], 8
+; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP32:%.*]] = ashr i64 [[TMP31]], 8
+; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP33:%.*]] = ashr i64 [[TMP32]], 4
+; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP34:%.*]] = getelementptr i8, ptr [[TMP16]], i64 [[TMP33]]
+; NOIFUNC-TLS-HISTORY-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP34]], i8 [[TMP29]], i64 1, i1 false)
 ; NOIFUNC-TLS-HISTORY-NEXT:    ret void
 ;
 ; NOIFUNC-TLS-NOHISTORY-LABEL: define void @test_alloca
@@ -189,23 +195,26 @@ define void @test_alloca() sanitize_hwaddress {
 ; NOIFUNC-TLS-NOHISTORY-NEXT:    [[X:%.*]] = alloca { i32, [12 x i8] }, align 16
 ; NOIFUNC-TLS-NOHISTORY-NEXT:    [[TMP3:%.*]] = xor i64 [[HWASAN_STACK_BASE_TAG]], 0
 ; NOIFUNC-TLS-NOHISTORY-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[X]] to i64
-; NOIFUNC-TLS-NOHISTORY-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 72057594037927935
-; NOIFUNC-TLS-NOHISTORY-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP3]], 56
-; NOIFUNC-TLS-NOHISTORY-NEXT:    [[TMP7:%.*]] = or i64 [[TMP5]], [[TMP6]]
-; NOIFUNC-TLS-NOHISTORY-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP7]] to ptr
-; NOIFUNC-TLS-NOHISTORY-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP3]] to i8
-; NOIFUNC-TLS-NOHISTORY-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[X]] to i64
-; NOIFUNC-TLS-NOHISTORY-NEXT:    [[TMP10:%.*]] = and i64 [[TMP9]], 72057594037927935
-; NOIFUNC-TLS-NOHISTORY-NEXT:    [[TMP11:%.*]] = lshr i64 [[TMP10]], 4
-; NOIFUNC-TLS-NOHISTORY-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP11]]
-; NOIFUNC-TLS-NOHISTORY-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP12]], i8 [[TMP8]], i64 1, i1 false)
+; NOIFUNC-TLS-NOHISTORY-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP4]], 8
+; NOIFUNC-TLS-NOHISTORY-NEXT:    [[TMP6:%.*]] = ashr i64 [[TMP5]], 8
+; NOIFUNC-TLS-NOHISTORY-NEXT:    [[TMP7:%.*]] = shl i64 [[TMP3]], 56
+; NOIFUNC-TLS-NOHISTORY-NEXT:    [[TMP8:%.*]] = or i64 [[TMP6]], [[TMP7]]
+; NOIFUNC-TLS-NOHISTORY-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP8]] to ptr
+; NOIFUNC-TLS-NOHISTORY-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP3]] to i8
+; NOIFUNC-TLS-NOHISTORY-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[X]] to i64
+; NOIFUNC-TLS-NOHISTORY-NEXT:    [[TMP11:%.*]] = shl i64 [[TMP10]], 8
+; NOIFUNC-TLS-NOHISTORY-NEXT:    [[TMP12:%.*]] = ashr i64 [[TMP11]], 8
+; NOIFUNC-TLS-NOHISTORY-NEXT:    [[TMP13:%.*]] = ashr i64 [[TMP12]], 4
+; NOIFUNC-TLS-NOHISTORY-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP13]]
+; NOIFUNC-TLS-NOHISTORY-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP14]], i8 [[TMP9]], i64 1, i1 false)
 ; NOIFUNC-TLS-NOHISTORY-NEXT:    call void @use(ptr [[X_HWASAN]])
-; NOIFUNC-TLS-NOHISTORY-NEXT:    [[TMP13:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
-; NOIFUNC-TLS-NOHISTORY-NEXT:    [[TMP14:%.*]] = ptrtoint ptr [[X]] to i64
-; NOIFUNC-TLS-NOHISTORY-NEXT:    [[TMP15:%.*]] = and i64 [[TMP14]], 72057594037927935
-; NOIFUNC-TLS-NOHISTORY-NEXT:    [[TMP16:%.*]] = lshr i64 [[TMP15]], 4
-; NOIFUNC-TLS-NOHISTORY-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP16]]
-; NOIFUNC-TLS-NOHISTORY-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP17]], i8 [[TMP13]], i64 1, i1 false)
+; NOIFUNC-TLS-NOHISTORY-NEXT:    [[TMP15:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
+; NOIFUNC-TLS-NOHISTORY-NEXT:    [[TMP16:%.*]] = ptrtoint ptr [[X]] to i64
+; NOIFUNC-TLS-NOHISTORY-NEXT:    [[TMP17:%.*]] = shl i64 [[TMP16]], 8
+; NOIFUNC-TLS-NOHISTORY-NEXT:    [[TMP18:%.*]] = ashr i64 [[TMP17]], 8
+; NOIFUNC-TLS-NOHISTORY-NEXT:    [[TMP19:%.*]] = ashr i64 [[TMP18]], 4
+; NOIFUNC-TLS-NOHISTORY-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP19]]
+; NOIFUNC-TLS-NOHISTORY-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP20]], i8 [[TMP15]], i64 1, i1 false)
 ; NOIFUNC-TLS-NOHISTORY-NEXT:    ret void
 ;
 ; NOIFUNC-NOTLS-LABEL: define void @test_alloca
@@ -220,23 +229,26 @@ define void @test_alloca() sanitize_hwaddress {
 ; NOIFUNC-NOTLS-NEXT:    [[X:%.*]] = alloca { i32, [12 x i8] }, align 16
 ; NOIFUNC-NOTLS-NEXT:    [[TMP4:%.*]] = xor i64 [[HWASAN_STACK_BASE_TAG]], 0
 ; NOIFUNC-NOTLS-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[X]] to i64
-; NOIFUNC-NOTLS-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], 72057594037927935
-; NOIFUNC-NOTLS-NEXT:    [[TMP7:%.*]] = shl i64 [[TMP4]], 56
-; NOIFUNC-NOTLS-NEXT:    [[TMP8:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; NOIFUNC-NOTLS-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP8]] to ptr
-; NOIFUNC-NOTLS-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP4]] to i8
-; NOIFUNC-NOTLS-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[X]] to i64
-; NOIFUNC-NOTLS-NEXT:    [[TMP11:%.*]] = and i64 [[TMP10]], 72057594037927935
-; NOIFUNC-NOTLS-NEXT:    [[TMP12:%.*]] = lshr i64 [[TMP11]], 4
-; NOIFUNC-NOTLS-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP0]], i64 [[TMP12]]
-; NOIFUNC-NOTLS-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP13]], i8 [[TMP9]], i64 1, i1 false)
+; NOIFUNC-NOTLS-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP5]], 8
+; NOIFUNC-NOTLS-NEXT:    [[TMP7:%.*]] = ashr i64 [[TMP6]], 8
+; NOIFUNC-NOTLS-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP4]], 56
+; NOIFUNC-NOTLS-NEXT:    [[TMP9:%.*]] = or i64 [[TMP7]], [[TMP8]]
+; NOIFUNC-NOTLS-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP9]] to ptr
+; NOIFUNC-NOTLS-NEXT:    [[TMP10:%.*]] = trunc i64 [[TMP4]] to i8
+; NOIFUNC-NOTLS-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[X]] to i64
+; NOIFUNC-NOTLS-NEXT:    [[TMP12:%.*]] = shl i64 [[TMP11]], 8
+; NOIFUNC-NOTLS-NEXT:    [[TMP13:%.*]] = ashr i64 [[TMP12]], 8
+; NOIFUNC-NOTLS-NEXT:    [[TMP14:%.*]] = ashr i64 [[TMP13]], 4
+; NOIFUNC-NOTLS-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP0]], i64 [[TMP14]]
+; NOIFUNC-NOTLS-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP15]], i8 [[TMP10]], i64 1, i1 false)
 ; NOIFUNC-NOTLS-NEXT:    call void @use(ptr [[X_HWASAN]])
-; NOIFUNC-NOTLS-NEXT:    [[TMP14:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
-; NOIFUNC-NOTLS-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[X]] to i64
-; NOIFUNC-NOTLS-NEXT:    [[TMP16:%.*]] = and i64 [[TMP15]], 72057594037927935
-; NOIFUNC-NOTLS-NEXT:    [[TMP17:%.*]] = lshr i64 [[TMP16]], 4
-; NOIFUNC-NOTLS-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[TMP0]], i64 [[TMP17]]
-; NOIFUNC-NOTLS-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP18]], i8 [[TMP14]], i64 1, i1 false)
+; NOIFUNC-NOTLS-NEXT:    [[TMP16:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
+; NOIFUNC-NOTLS-NEXT:    [[TMP17:%.*]] = ptrtoint ptr [[X]] to i64
+; NOIFUNC-NOTLS-NEXT:    [[TMP18:%.*]] = shl i64 [[TMP17]], 8
+; NOIFUNC-NOTLS-NEXT:    [[TMP19:%.*]] = ashr i64 [[TMP18]], 8
+; NOIFUNC-NOTLS-NEXT:    [[TMP20:%.*]] = ashr i64 [[TMP19]], 4
+; NOIFUNC-NOTLS-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[TMP0]], i64 [[TMP20]]
+; NOIFUNC-NOTLS-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP21]], i8 [[TMP16]], i64 1, i1 false)
 ; NOIFUNC-NOTLS-NEXT:    ret void
 ;
 ; IFUNC-NOTLS-LABEL: define void @test_alloca
@@ -251,23 +263,26 @@ define void @test_alloca() sanitize_hwaddress {
 ; IFUNC-NOTLS-NEXT:    [[X:%.*]] = alloca { i32, [12 x i8] }, align 16
 ; IFUNC-NOTLS-NEXT:    [[TMP3:%.*]] = xor i64 [[HWASAN_STACK_BASE_TAG]], 0
 ; IFUNC-NOTLS-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[X]] to i64
-; IFUNC-NOTLS-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 72057594037927935
-; IFUNC-NOTLS-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP3]], 56
-; IFUNC-NOTLS-NEXT:    [[TMP7:%.*]] = or i64 [[TMP5]], [[TMP6]]
-; IFUNC-NOTLS-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP7]] to ptr
-; IFUNC-NOTLS-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP3]] to i8
-; IFUNC-NOTLS-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[X]] to i64
-; IFUNC-NOTLS-NEXT:    [[TMP10:%.*]] = and i64 [[TMP9]], 72057594037927935
-; IFUNC-NOTLS-NEXT:    [[TMP11:%.*]] = lshr i64 [[TMP10]], 4
-; IFUNC-NOTLS-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP11]]
-; IFUNC-NOTLS-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP12]], i8 [[TMP8]], i64 1, i1 false)
+; IFUNC-NOTLS-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP4]], 8
+; IFUNC-NOTLS-NEXT:    [[TMP6:%.*]] = ashr i64 [[TMP5]], 8
+; IFUNC-NOTLS-NEXT:    [[TMP7:%.*]] = shl i64 [[TMP3]], 56
+; IFUNC-NOTLS-NEXT:    [[TMP8:%.*]] = or i64 [[TMP6]], [[TMP7]]
+; IFUNC-NOTLS-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP8]] to ptr
+; IFUNC-NOTLS-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP3]] to i8
+; IFUNC-NOTLS-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[X]] to i64
+; IFUNC-NOTLS-NEXT:    [[TMP11:%.*]] = shl i64 [[TMP10]], 8
+; IFUNC-NOTLS-NEXT:    [[TMP12:%.*]] = ashr i64 [[TMP11]], 8
+; IFUNC-NOTLS-NEXT:    [[TMP13:%.*]] = ashr i64 [[TMP12]], 4
+; IFUNC-NOTLS-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP13]]
+; IFUNC-NOTLS-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP14]], i8 [[TMP9]], i64 1, i1 false)
 ; IFUNC-NOTLS-NEXT:    call void @use(ptr [[X_HWASAN]])
-; IFUNC-NOTLS-NEXT:    [[TMP13:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
-; IFUNC-NOTLS-NEXT:    [[TMP14:%.*]] = ptrtoint ptr [[X]] to i64
-; IFUNC-NOTLS-NEXT:    [[TMP15:%.*]] = and i64 [[TMP14]], 72057594037927935
-; IFUNC-NOTLS-NEXT:    [[TMP16:%.*]] = lshr i64 [[TMP15]], 4
-; IFUNC-NOTLS-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP16]]
-; IFUNC-NOTLS-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP17]], i8 [[TMP13]], i64 1, i1 false)
+; IFUNC-NOTLS-NEXT:    [[TMP15:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
+; IFUNC-NOTLS-NEXT:    [[TMP16:%.*]] = ptrtoint ptr [[X]] to i64
+; IFUNC-NOTLS-NEXT:    [[TMP17:%.*]] = shl i64 [[TMP16]], 8
+; IFUNC-NOTLS-NEXT:    [[TMP18:%.*]] = ashr i64 [[TMP17]], 8
+; IFUNC-NOTLS-NEXT:    [[TMP19:%.*]] = ashr i64 [[TMP18]], 4
+; IFUNC-NOTLS-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP19]]
+; IFUNC-NOTLS-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP20]], i8 [[TMP15]], i64 1, i1 false)
 ; IFUNC-NOTLS-NEXT:    ret void
 ;
 ; FUCHSIA-LABEL: define void @test_alloca
@@ -276,7 +291,7 @@ define void @test_alloca() sanitize_hwaddress {
 ; FUCHSIA-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
 ; FUCHSIA-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
 ; FUCHSIA-NEXT:    [[TMP1:%.*]] = ashr i64 [[TMP0]], 3
-; FUCHSIA-NEXT:    [[TMP2:%.*]] = call i64 @llvm.read_register.i64(metadata [[META1:![0-9]+]])
+; FUCHSIA-NEXT:    [[TMP2:%.*]] = call i64 @llvm.read_register.i64(metadata [[META2:![0-9]+]])
 ; FUCHSIA-NEXT:    [[TMP3:%.*]] = call ptr @llvm.frameaddress.p0(i32 0)
 ; FUCHSIA-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[TMP3]] to i64
 ; FUCHSIA-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP4]], 44
@@ -293,33 +308,36 @@ define void @test_alloca() sanitize_hwaddress {
 ; FUCHSIA-NEXT:    [[X:%.*]] = alloca { i32, [12 x i8] }, align 16
 ; FUCHSIA-NEXT:    [[TMP13:%.*]] = xor i64 [[TMP1]], 0
 ; FUCHSIA-NEXT:    [[TMP14:%.*]] = ptrtoint ptr [[X]] to i64
-; FUCHSIA-NEXT:    [[TMP15:%.*]] = and i64 [[TMP14]], 72057594037927935
-; FUCHSIA-NEXT:    [[TMP16:%.*]] = shl i64 [[TMP13]], 56
-; FUCHSIA-NEXT:    [[TMP17:%.*]] = or i64 [[TMP15]], [[TMP16]]
-; FUCHSIA-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP17]] to ptr
-; FUCHSIA-NEXT:    [[TMP18:%.*]] = trunc i64 [[TMP13]] to i8
-; FUCHSIA-NEXT:    [[TMP19:%.*]] = ptrtoint ptr [[X]] to i64
-; FUCHSIA-NEXT:    [[TMP20:%.*]] = and i64 [[TMP19]], 72057594037927935
-; FUCHSIA-NEXT:    [[TMP21:%.*]] = lshr i64 [[TMP20]], 4
-; FUCHSIA-NEXT:    [[TMP22:%.*]] = inttoptr i64 [[TMP21]] to ptr
-; FUCHSIA-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[TMP22]], i32 0
-; FUCHSIA-NEXT:    store i8 4, ptr [[TMP23]], align 1
-; FUCHSIA-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[X]], i32 15
-; FUCHSIA-NEXT:    store i8 [[TMP18]], ptr [[TMP24]], align 1
+; FUCHSIA-NEXT:    [[TMP15:%.*]] = shl i64 [[TMP14]], 8
+; FUCHSIA-NEXT:    [[TMP16:%.*]] = ashr i64 [[TMP15]], 8
+; FUCHSIA-NEXT:    [[TMP17:%.*]] = shl i64 [[TMP13]], 56
+; FUCHSIA-NEXT:    [[TMP18:%.*]] = or i64 [[TMP16]], [[TMP17]]
+; FUCHSIA-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP18]] to ptr
+; FUCHSIA-NEXT:    [[TMP19:%.*]] = trunc i64 [[TMP13]] to i8
+; FUCHSIA-NEXT:    [[TMP20:%.*]] = ptrtoint ptr [[X]] to i64
+; FUCHSIA-NEXT:    [[TMP21:%.*]] = shl i64 [[TMP20]], 8
+; FUCHSIA-NEXT:    [[TMP22:%.*]] = ashr i64 [[TMP21]], 8
+; FUCHSIA-NEXT:    [[TMP23:%.*]] = ashr i64 [[TMP22]], 4
+; FUCHSIA-NEXT:    [[TMP24:%.*]] = inttoptr i64 [[TMP23]] to ptr
+; FUCHSIA-NEXT:    [[TMP25:%.*]] = getelementptr i8, ptr [[TMP24]], i32 0
+; FUCHSIA-NEXT:    store i8 4, ptr [[TMP25]], align 1
+; FUCHSIA-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[X]], i32 15
+; FUCHSIA-NEXT:    store i8 [[TMP19]], ptr [[TMP26]], align 1
 ; FUCHSIA-NEXT:    call void @use(ptr [[X_HWASAN]])
-; FUCHSIA-NEXT:    [[TMP25:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
-; FUCHSIA-NEXT:    [[TMP26:%.*]] = ptrtoint ptr [[X]] to i64
-; FUCHSIA-NEXT:    [[TMP27:%.*]] = and i64 [[TMP26]], 72057594037927935
-; FUCHSIA-NEXT:    [[TMP28:%.*]] = lshr i64 [[TMP27]], 4
-; FUCHSIA-NEXT:    [[TMP29:%.*]] = inttoptr i64 [[TMP28]] to ptr
-; FUCHSIA-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP29]], i8 [[TMP25]], i64 1, i1 false)
+; FUCHSIA-NEXT:    [[TMP27:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
+; FUCHSIA-NEXT:    [[TMP28:%.*]] = ptrtoint ptr [[X]] to i64
+; FUCHSIA-NEXT:    [[TMP29:%.*]] = shl i64 [[TMP28]], 8
+; FUCHSIA-NEXT:    [[TMP30:%.*]] = ashr i64 [[TMP29]], 8
+; FUCHSIA-NEXT:    [[TMP31:%.*]] = ashr i64 [[TMP30]], 4
+; FUCHSIA-NEXT:    [[TMP32:%.*]] = inttoptr i64 [[TMP31]] to ptr
+; FUCHSIA-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP32]], i8 [[TMP27]], i64 1, i1 false)
 ; FUCHSIA-NEXT:    ret void
 ;
 ; FUCHSIA-LIBCALL-LABEL: define void @test_alloca
 ; FUCHSIA-LIBCALL-SAME: () #[[ATTR0]] personality ptr @__hwasan_personality_thunk {
 ; FUCHSIA-LIBCALL-NEXT:  entry:
 ; FUCHSIA-LIBCALL-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
-; FUCHSIA-LIBCALL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.read_register.i64(metadata [[META1:![0-9]+]])
+; FUCHSIA-LIBCALL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.read_register.i64(metadata [[META2:![0-9]+]])
 ; FUCHSIA-LIBCALL-NEXT:    [[TMP1:%.*]] = call ptr @llvm.frameaddress.p0(i32 0)
 ; FUCHSIA-LIBCALL-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP1]] to i64
 ; FUCHSIA-LIBCALL-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 44
@@ -331,26 +349,29 @@ define void @test_alloca() sanitize_hwaddress {
 ; FUCHSIA-LIBCALL-NEXT:    [[X:%.*]] = alloca { i32, [12 x i8] }, align 16
 ; FUCHSIA-LIBCALL-NEXT:    [[TMP6:%.*]] = xor i64 [[HWASAN_STACK_BASE_TAG]], 0
 ; FUCHSIA-LIBCALL-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[X]] to i64
-; FUCHSIA-LIBCALL-NEXT:    [[TMP8:%.*]] = and i64 [[TMP7]], 72057594037927935
-; FUCHSIA-LIBCALL-NEXT:    [[TMP9:%.*]] = shl i64 [[TMP6]], 56
-; FUCHSIA-LIBCALL-NEXT:    [[TMP10:%.*]] = or i64 [[TMP8]], [[TMP9]]
-; FUCHSIA-LIBCALL-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP10]] to ptr
-; FUCHSIA-LIBCALL-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP6]] to i8
-; FUCHSIA-LIBCALL-NEXT:    [[TMP12:%.*]] = ptrtoint ptr [[X]] to i64
-; FUCHSIA-LIBCALL-NEXT:    [[TMP13:%.*]] = and i64 [[TMP12]], 72057594037927935
-; FUCHSIA-LIBCALL-NEXT:    [[TMP14:%.*]] = lshr i64 [[TMP13]], 4
-; FUCHSIA-LIBCALL-NEXT:    [[TMP15:%.*]] = inttoptr i64 [[TMP14]] to ptr
-; FUCHSIA-LIBCALL-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP15]], i32 0
-; FUCHSIA-LIBCALL-NEXT:    store i8 4, ptr [[TMP16]], align 1
-; FUCHSIA-LIBCALL-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[X]], i32 15
-; FUCHSIA-LIBCALL-NEXT:    store i8 [[TMP11]], ptr [[TMP17]], align 1
+; FUCHSIA-LIBCALL-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP7]], 8
+; FUCHSIA-LIBCALL-NEXT:    [[TMP9:%.*]] = ashr i64 [[TMP8]], 8
+; FUCHSIA-LIBCALL-NEXT:    [[TMP10:%.*]] = shl i64 [[TMP6]], 56
+; FUCHSIA-LIBCALL-NEXT:    [[TMP11:%.*]] = or i64 [[TMP9]], [[TMP10]]
+; FUCHSIA-LIBCALL-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP11]] to ptr
+; FUCHSIA-LIBCALL-NEXT:    [[TMP12:%.*]] = trunc i64 [[TMP6]] to i8
+; FUCHSIA-LIBCALL-NEXT:    [[TMP13:%.*]] = ptrtoint ptr [[X]] to i64
+; FUCHSIA-LIBCALL-NEXT:    [[TMP14:%.*]] = shl i64 [[TMP13]], 8
+; FUCHSIA-LIBCALL-NEXT:    [[TMP15:%.*]] = ashr i64 [[TMP14]], 8
+; FUCHSIA-LIBCALL-NEXT:    [[TMP16:%.*]] = ashr i64 [[TMP15]], 4
+; FUCHSIA-LIBCALL-NEXT:    [[TMP17:%.*]] = inttoptr i64 [[TMP16]] to ptr
+; FUCHSIA-LIBCALL-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[TMP17]], i32 0
+; FUCHSIA-LIBCALL-NEXT:    store i8 4, ptr [[TMP18]], align 1
+; FUCHSIA-LIBCALL-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[X]], i32 15
+; FUCHSIA-LIBCALL-NEXT:    store i8 [[TMP12]], ptr [[TMP19]], align 1
 ; FUCHSIA-LIBCALL-NEXT:    call void @use(ptr [[X_HWASAN]])
-; FUCHSIA-LIBCALL-NEXT:    [[TMP18:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
-; FUCHSIA-LIBCALL-NEXT:    [[TMP19:%.*]] = ptrtoint ptr [[X]] to i64
-; FUCHSIA-LIBCALL-NEXT:    [[TMP20:%.*]] = and i64 [[TMP19]], 72057594037927935
-; FUCHSIA-LIBCALL-NEXT:    [[TMP21:%.*]] = lshr i64 [[TMP20]], 4
-; FUCHSIA-LIBCALL-NEXT:    [[TMP22:%.*]] = inttoptr i64 [[TMP21]] to ptr
-; FUCHSIA-LIBCALL-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP22]], i8 [[TMP18]], i64 1, i1 false)
+; FUCHSIA-LIBCALL-NEXT:    [[TMP20:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
+; FUCHSIA-LIBCALL-NEXT:    [[TMP21:%.*]] = ptrtoint ptr [[X]] to i64
+; FUCHSIA-LIBCALL-NEXT:    [[TMP22:%.*]] = shl i64 [[TMP21]], 8
+; FUCHSIA-LIBCALL-NEXT:    [[TMP23:%.*]] = ashr i64 [[TMP22]], 8
+; FUCHSIA-LIBCALL-NEXT:    [[TMP24:%.*]] = ashr i64 [[TMP23]], 4
+; FUCHSIA-LIBCALL-NEXT:    [[TMP25:%.*]] = inttoptr i64 [[TMP24]] to ptr
+; FUCHSIA-LIBCALL-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP25]], i8 [[TMP20]], i64 1, i1 false)
 ; FUCHSIA-LIBCALL-NEXT:    ret void
 ;
 entry:
