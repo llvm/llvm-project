@@ -66,7 +66,8 @@
 ; OSABI-PAL-ELF: amdpal.pipelines:
 ; OSABI-PAL-ELF:   - .hardware_stages:
 ; OSABI-PAL-ELF:       .cs:
-; OSABI-PAL-ELF:         .entry_point:    elf_notes
+; OSABI-PAL-ELF:         .entry_point:    _amdgpu_cs_main
+; OSABI-PAL-ELF:         .entry_point_symbol:    elf_notes
 ; OSABI-PAL-ELF:         .scratch_memory_size: 0
 ; OSABI-PAL-ELF:         .sgpr_count:     96
 ; OSABI-PAL-ELF:         .vgpr_count:     1

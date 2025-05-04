@@ -127,3 +127,75 @@ define i32 @switch_dup_default(i32 %0, i32 %1, i32 %2, i32 %3) {
   %9 = phi i32 [ %3, %5 ], [ %2, %6 ], [ %2, %7 ]
   ret i32 %9
 }
+
+define i32 @switch_dup_exit(i32 %val) {
+; SIMPLIFY-CFG-LABEL: define i32 @switch_dup_exit(
+; SIMPLIFY-CFG-SAME: i32 [[VAL:%.*]]) {
+; SIMPLIFY-CFG-NEXT:  [[ENTRY:.*]]:
+; SIMPLIFY-CFG-NEXT:    switch i32 [[VAL]], label %[[DEFAULT:.*]] [
+; SIMPLIFY-CFG-NEXT:      i32 1, label %[[EXIT:.*]]
+; SIMPLIFY-CFG-NEXT:      i32 11, label %[[EXIT]]
+; SIMPLIFY-CFG-NEXT:      i32 22, label %[[BB1:.*]]
+; SIMPLIFY-CFG-NEXT:    ]
+; SIMPLIFY-CFG:       [[BB1]]:
+; SIMPLIFY-CFG-NEXT:    br label %[[EXIT]]
+; SIMPLIFY-CFG:       [[DEFAULT]]:
+; SIMPLIFY-CFG-NEXT:    br label %[[EXIT]]
+; SIMPLIFY-CFG:       [[EXIT]]:
+; SIMPLIFY-CFG-NEXT:    [[RET:%.*]] = phi i32 [ 0, %[[DEFAULT]] ], [ 3, %[[BB1]] ], [ 1, %[[ENTRY]] ], [ 1, %[[ENTRY]] ]
+; SIMPLIFY-CFG-NEXT:    ret i32 [[RET]]
+;
+entry:
+  switch i32 %val, label %default [
+  i32 1, label %exit
+  i32 11, label %exit
+  i32 22, label %bb1
+  i32 15, label %bb2
+  i32 0, label %bb2
+  ]
+
+bb1:
+  br label %exit
+
+bb2:
+  br label %exit
+
+default:
+  br label %exit
+
+exit:
+  %ret = phi i32 [ 0, %default ], [ 0, %bb2 ], [ 3, %bb1 ], [ 1, %entry ], [ 1, %entry ]
+  ret i32 %ret
+}
+
+define i64 @switch_dup_exit_2(i32 %val) {
+; SIMPLIFY-CFG-LABEL: define i64 @switch_dup_exit_2(
+; SIMPLIFY-CFG-SAME: i32 [[VAL:%.*]]) {
+; SIMPLIFY-CFG-NEXT:  [[ENTRY:.*:]]
+; SIMPLIFY-CFG-NEXT:    [[SWITCH_SELECTCMP_CASE1:%.*]] = icmp eq i32 [[VAL]], 1
+; SIMPLIFY-CFG-NEXT:    [[SWITCH_SELECTCMP_CASE2:%.*]] = icmp eq i32 [[VAL]], 11
+; SIMPLIFY-CFG-NEXT:    [[SWITCH_SELECTCMP:%.*]] = or i1 [[SWITCH_SELECTCMP_CASE1]], [[SWITCH_SELECTCMP_CASE2]]
+; SIMPLIFY-CFG-NEXT:    [[RET:%.*]] = select i1 [[SWITCH_SELECTCMP]], i64 1, i64 0
+; SIMPLIFY-CFG-NEXT:    ret i64 [[RET]]
+;
+entry:
+  switch i32 %val, label %default [
+  i32 1, label %bb2
+  i32 11, label %exit
+  i32 13, label %bb1
+  i32 0, label %bb1
+  ]
+
+bb1:
+  br label %exit
+
+bb2:
+  br label %exit
+
+default:
+  br label %exit
+
+exit:
+  %ret = phi i64 [ 0, %default ], [ 0, %bb1 ], [ 1, %entry ], [ 1, %bb2 ]
+  ret i64 %ret
+}

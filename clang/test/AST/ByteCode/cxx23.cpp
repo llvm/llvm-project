@@ -263,7 +263,7 @@ namespace AnonUnionDtor {
   template <class T>
   struct opt
   {
-    union { // all20-note {{is not literal}}
+    union {
       char c;
       T data;
     };
@@ -279,7 +279,7 @@ namespace AnonUnionDtor {
   };
 
   consteval void foo() {
-    opt<A> a; // all20-error {{variable of non-literal type}}
+    opt<A> a;
   }
 
   void bar() { foo(); }
@@ -303,4 +303,22 @@ namespace NonLiteralDtorInParam {
     constexpr auto D = F2(L); // all23-error {{must be initialized by a constant expression}} \
                               // expected23-note {{non-constexpr function '~NonLiteral' cannot be used in a constant expression}}
   }
+}
+
+namespace ZeroSizedArray {
+  struct S {
+    constexpr ~S() {
+    }
+  };
+  constexpr int foo() {
+    S s[0];
+    return 1;
+  }
+  static_assert(foo() == 1);
+}
+namespace VoidCast {
+  constexpr int a = 12;
+  constexpr const int *b = &a;
+  constexpr int *f = (int*)(void*)b; // all-error {{must be initialized by a constant expression}} \
+                                     // all-note {{cast from 'void *' is not allowed in a constant expression}}
 }

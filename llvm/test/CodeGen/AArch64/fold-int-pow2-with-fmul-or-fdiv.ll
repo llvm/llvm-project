@@ -224,7 +224,6 @@ define double @fmul_pow_mul_max_pow2(i16 %cnt) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #2 // =0x2
 ; CHECK-NEXT:    mov w9, #1 // =0x1
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    fmov d1, #3.00000000
 ; CHECK-NEXT:    lsl w8, w8, w0
 ; CHECK-NEXT:    lsl w9, w9, w0
@@ -263,10 +262,13 @@ define <2 x float> @fmul_pow_shl_cnt_vec_fail_expensive_cast(<2 x i64> %cnt) nou
 ; CHECK-NEON-NEXT:    mov w8, #2 // =0x2
 ; CHECK-NEON-NEXT:    dup v1.2d, x8
 ; CHECK-NEON-NEXT:    ushl v0.2d, v1.2d, v0.2d
-; CHECK-NEON-NEXT:    fmov v1.2s, #15.00000000
-; CHECK-NEON-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NEON-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-NEON-NEXT:    fmul v0.2s, v0.2s, v1.2s
+; CHECK-NEON-NEXT:    mov x8, v0.d[1]
+; CHECK-NEON-NEXT:    fmov x9, d0
+; CHECK-NEON-NEXT:    ucvtf s1, x9
+; CHECK-NEON-NEXT:    ucvtf s0, x8
+; CHECK-NEON-NEXT:    mov v1.s[1], v0.s[0]
+; CHECK-NEON-NEXT:    fmov v0.2s, #15.00000000
+; CHECK-NEON-NEXT:    fmul v0.2s, v1.2s, v0.2s
 ; CHECK-NEON-NEXT:    ret
 ;
 ; CHECK-NO-NEON-LABEL: fmul_pow_shl_cnt_vec_fail_expensive_cast:
@@ -433,7 +435,6 @@ define double @fmul_pow_shl_cnt_safe(i16 %cnt) nounwind {
 ; CHECK-LABEL: fmul_pow_shl_cnt_safe:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    lsl w8, w8, w0
 ; CHECK-NEXT:    and w8, w8, #0xffff
 ; CHECK-NEXT:    ucvtf d0, w8

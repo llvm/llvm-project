@@ -28,7 +28,7 @@
 #include <utility>
 
 namespace mlir {
-#define GEN_PASS_DEF_ASYNCPARALLELFOR
+#define GEN_PASS_DEF_ASYNCPARALLELFORPASS
 #include "mlir/Dialect/Async/Passes.h.inc"
 } // namespace mlir
 
@@ -99,15 +99,8 @@ namespace {
 //   }
 //
 struct AsyncParallelForPass
-    : public impl::AsyncParallelForBase<AsyncParallelForPass> {
-  AsyncParallelForPass() = default;
-
-  AsyncParallelForPass(bool asyncDispatch, int32_t numWorkerThreads,
-                       int32_t minTaskSize) {
-    this->asyncDispatch = asyncDispatch;
-    this->numWorkerThreads = numWorkerThreads;
-    this->minTaskSize = minTaskSize;
-  }
+    : public impl::AsyncParallelForPassBase<AsyncParallelForPass> {
+  using Base::Base;
 
   void runOnOperation() override;
 };
@@ -931,19 +924,8 @@ void AsyncParallelForPass::runOnOperation() {
       [&](ImplicitLocOpBuilder builder, scf::ParallelOp op) {
         return builder.create<arith::ConstantIndexOp>(minTaskSize);
       });
-  if (failed(applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
+  if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
     signalPassFailure();
-}
-
-std::unique_ptr<Pass> mlir::createAsyncParallelForPass() {
-  return std::make_unique<AsyncParallelForPass>();
-}
-
-std::unique_ptr<Pass> mlir::createAsyncParallelForPass(bool asyncDispatch,
-                                                       int32_t numWorkerThreads,
-                                                       int32_t minTaskSize) {
-  return std::make_unique<AsyncParallelForPass>(asyncDispatch, numWorkerThreads,
-                                                minTaskSize);
 }
 
 void mlir::async::populateAsyncParallelForPatterns(

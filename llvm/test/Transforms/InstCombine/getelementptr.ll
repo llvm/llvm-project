@@ -64,7 +64,7 @@ define ptr @test4(ptr %I) {
 define void @test5(i8 %B) {
         ; This should be turned into a constexpr instead of being an instruction
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    store i8 [[B:%.*]], ptr getelementptr inbounds (i8, ptr @Global, i64 4), align 1
+; CHECK-NEXT:    store i8 [[B:%.*]], ptr getelementptr inbounds nuw (i8, ptr @Global, i64 4), align 1
 ; CHECK-NEXT:    ret void
 ;
   %A = getelementptr [10 x i8], ptr @Global, i64 0, i64 4
@@ -75,7 +75,7 @@ define void @test5(i8 %B) {
 define void @test5_as1(i8 %B) {
         ; This should be turned into a constexpr instead of being an instruction
 ; CHECK-LABEL: @test5_as1(
-; CHECK-NEXT:    store i8 [[B:%.*]], ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @Global_as1, i16 4), align 1
+; CHECK-NEXT:    store i8 [[B:%.*]], ptr addrspace(1) getelementptr inbounds nuw (i8, ptr addrspace(1) @Global_as1, i16 4), align 1
 ; CHECK-NEXT:    ret void
 ;
   %A = getelementptr [10 x i8], ptr addrspace(1) @Global_as1, i16 0, i16 4
@@ -103,7 +103,7 @@ define void @test_evaluate_gep_nested_as_ptrs(ptr addrspace(2) %B) {
 
 define void @test_evaluate_gep_as_ptrs_array(ptr addrspace(2) %B) {
 ; CHECK-LABEL: @test_evaluate_gep_as_ptrs_array(
-; CHECK-NEXT:    store ptr addrspace(2) [[B:%.*]], ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @arst, i16 8), align 4
+; CHECK-NEXT:    store ptr addrspace(2) [[B:%.*]], ptr addrspace(1) getelementptr inbounds nuw (i8, ptr addrspace(1) @arst, i16 8), align 4
 ; CHECK-NEXT:    ret void
 ;
 
@@ -115,7 +115,7 @@ define void @test_evaluate_gep_as_ptrs_array(ptr addrspace(2) %B) {
 ; This should be turned into a constexpr instead of being an instruction
 define void @test_overaligned_vec(i8 %B) {
 ; CHECK-LABEL: @test_overaligned_vec(
-; CHECK-NEXT:    store i8 [[B:%.*]], ptr getelementptr inbounds (i8, ptr @Global, i64 2), align 1
+; CHECK-NEXT:    store i8 [[B:%.*]], ptr getelementptr inbounds nuw (i8, ptr @Global, i64 2), align 1
 ; CHECK-NEXT:    ret void
 ;
   %A = getelementptr <2 x half>, ptr @Global, i64 0, i64 1
@@ -422,7 +422,7 @@ define ptr @test_index_canon_nusw_nuw(ptr %X, i32 %Idx) {
 
 define ptr @test_index_canon_const_expr_inbounds() {
 ; CHECK-LABEL: @test_index_canon_const_expr_inbounds(
-; CHECK-NEXT:    ret ptr getelementptr inbounds (i8, ptr @Global, i64 123)
+; CHECK-NEXT:    ret ptr getelementptr inbounds nuw (i8, ptr @Global, i64 123)
 ;
   ret ptr getelementptr inbounds (i8, ptr @Global, i32 123)
 }
@@ -443,7 +443,7 @@ define ptr @test_const_gep_gep_nuw() {
 
 define ptr @test_const_gep_gep_nusw_no_overflow() {
 ; CHECK-LABEL: @test_const_gep_gep_nusw_no_overflow(
-; CHECK-NEXT:    ret ptr getelementptr nusw (i8, ptr @Global, i64 246)
+; CHECK-NEXT:    ret ptr getelementptr nusw nuw (i8, ptr @Global, i64 246)
 ;
   ret ptr getelementptr nusw (i8, ptr getelementptr nusw (i8, ptr @Global, i64 123), i64 123)
 }
@@ -598,7 +598,7 @@ define i32 @test21() {
 
 define i1 @test22() {
 ; CHECK-LABEL: @test22(
-; CHECK-NEXT:    [[C:%.*]] = icmp ult ptr getelementptr inbounds (i8, ptr @A, i64 4), getelementptr (i8, ptr @B, i64 8)
+; CHECK-NEXT:    [[C:%.*]] = icmp ult ptr getelementptr inbounds nuw (i8, ptr @A, i64 4), getelementptr (i8, ptr @B, i64 8)
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %C = icmp ult ptr getelementptr (i32, ptr @A, i64 1),
@@ -686,7 +686,7 @@ define i32 @test28() nounwind  {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ORIENTATIONS:%.*]] = alloca [1 x [1 x %struct.x]], align 8
 ; CHECK-NEXT:    [[T3:%.*]] = call i32 @puts(ptr noundef nonnull dereferenceable(1) @.str) #[[ATTR0]]
-; CHECK-NEXT:    [[T45:%.*]] = getelementptr inbounds i8, ptr [[ORIENTATIONS]], i64 1
+; CHECK-NEXT:    [[T45:%.*]] = getelementptr inbounds nuw i8, ptr [[ORIENTATIONS]], i64 1
 ; CHECK-NEXT:    br label [[BB10:%.*]]
 ; CHECK:       bb10:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[BB10]] ]
@@ -796,9 +796,9 @@ define ptr @test32(ptr %v) {
 ; CHECK-LABEL: @test32(
 ; CHECK-NEXT:    [[A:%.*]] = alloca [4 x ptr], align 16
 ; CHECK-NEXT:    store ptr null, ptr [[A]], align 8
-; CHECK-NEXT:    [[D:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 8
+; CHECK-NEXT:    [[D:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 8
 ; CHECK-NEXT:    store ptr [[V:%.*]], ptr [[D]], align 8
-; CHECK-NEXT:    [[F:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 16
+; CHECK-NEXT:    [[F:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 16
 ; CHECK-NEXT:    [[G:%.*]] = load ptr, ptr [[F]], align 8
 ; CHECK-NEXT:    ret ptr [[G]]
 ;
@@ -890,7 +890,7 @@ entry:
 
 define i32 @test35() nounwind {
 ; CHECK-LABEL: @test35(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @"\01LC8", ptr nonnull getelementptr inbounds (i8, ptr @s, i64 8)) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @"\01LC8", ptr nonnull getelementptr inbounds nuw (i8, ptr @s, i64 8)) #[[ATTR0]]
 ; CHECK-NEXT:    ret i32 0
 ;
   call i32 (ptr, ...) @printf(ptr @"\01LC8",
@@ -935,7 +935,7 @@ declare void @pr10322_f3(ptr)
 define void @pr10322_f1(ptr %foo) {
 ; CHECK-LABEL: @pr10322_f1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i8, ptr [[FOO:%.*]], i64 16
+; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw i8, ptr [[FOO:%.*]], i64 16
 ; CHECK-NEXT:    call void @pr10322_f2(ptr nonnull [[ARRAYIDX8]]) #[[ATTR0]]
 ; CHECK-NEXT:    call void @pr10322_f3(ptr nonnull [[ARRAYIDX8]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret void
@@ -975,7 +975,7 @@ declare void @three_gep_h(ptr)
 
 define void @test39(ptr %arg, i8 %arg1) nounwind {
 ; CHECK-LABEL: @test39(
-; CHECK-NEXT:    [[T:%.*]] = getelementptr inbounds i8, ptr [[ARG:%.*]], i64 16
+; CHECK-NEXT:    [[T:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG:%.*]], i64 16
 ; CHECK-NEXT:    [[T2:%.*]] = load ptr, ptr [[T]], align 8
 ; CHECK-NEXT:    [[T4:%.*]] = getelementptr inbounds i8, ptr [[T2]], i64 -8
 ; CHECK-NEXT:    store i8 [[ARG1:%.*]], ptr [[T4]], align 8
@@ -1326,42 +1326,6 @@ define ptr @PR45084_extra_use(i1 %cond, ptr %p) {
   ret ptr %sel
 }
 
-define ptr @gep_null_inbounds(i64 %idx) {
-; CHECK-LABEL: @gep_null_inbounds(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr null, i64 [[IDX:%.*]]
-; CHECK-NEXT:    ret ptr [[GEP]]
-;
-  %gep = getelementptr inbounds i8, ptr null, i64 %idx
-  ret ptr %gep
-}
-
-define ptr @gep_null_not_inbounds(i64 %idx) {
-; CHECK-LABEL: @gep_null_not_inbounds(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr null, i64 [[IDX:%.*]]
-; CHECK-NEXT:    ret ptr [[GEP]]
-;
-  %gep = getelementptr i8, ptr null, i64 %idx
-  ret ptr %gep
-}
-
-define ptr @gep_null_defined(i64 %idx) null_pointer_is_valid {
-; CHECK-LABEL: @gep_null_defined(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr null, i64 [[IDX:%.*]]
-; CHECK-NEXT:    ret ptr [[GEP]]
-;
-  %gep = getelementptr inbounds i8, ptr null, i64 %idx
-  ret ptr %gep
-}
-
-define ptr @gep_null_inbounds_different_type(i64 %idx1, i64 %idx2) {
-; CHECK-LABEL: @gep_null_inbounds_different_type(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [0 x i8], ptr null, i64 0, i64 [[IDX2:%.*]]
-; CHECK-NEXT:    ret ptr [[GEP]]
-;
-  %gep = getelementptr inbounds [0 x i8], ptr null, i64 %idx1, i64 %idx2
-  ret ptr %gep
-}
-
 define ptr @D98588(ptr %c1, i64 %offset) {
 ; CHECK-LABEL: @D98588(
 ; CHECK-NEXT:    [[C2_NEXT_IDX:%.*]] = shl nsw i64 [[OFFSET:%.*]], 3
@@ -1439,14 +1403,14 @@ define ptr @gep_of_gep_multiuse_var_and_var(ptr %p, i64 %idx, i64 %idx2) {
 
 define ptr @const_gep_global_di_i8_smaller() {
 ; CHECK-LABEL: @const_gep_global_di_i8_smaller(
-; CHECK-NEXT:    ret ptr getelementptr inbounds (i8, ptr @g_i32_di, i64 3)
+; CHECK-NEXT:    ret ptr getelementptr inbounds nuw (i8, ptr @g_i32_di, i64 3)
 ;
   ret ptr getelementptr (i8, ptr @g_i32_di, i64 3)
 }
 
 define ptr @const_gep_global_di_i8_exact() {
 ; CHECK-LABEL: @const_gep_global_di_i8_exact(
-; CHECK-NEXT:    ret ptr getelementptr inbounds (i8, ptr @g_i32_di, i64 4)
+; CHECK-NEXT:    ret ptr getelementptr inbounds nuw (i8, ptr @g_i32_di, i64 4)
 ;
   ret ptr getelementptr (i8, ptr @g_i32_di, i64 4)
 }
@@ -1467,14 +1431,14 @@ define ptr @const_gep_global_di_i64_larger() {
 
 define ptr @const_gep_global_e_smaller() {
 ; CHECK-LABEL: @const_gep_global_e_smaller(
-; CHECK-NEXT:    ret ptr getelementptr inbounds (i8, ptr @g_i32_e, i64 3)
+; CHECK-NEXT:    ret ptr getelementptr inbounds nuw (i8, ptr @g_i32_e, i64 3)
 ;
   ret ptr getelementptr (i8, ptr @g_i32_e, i64 3)
 }
 
 define ptr @const_gep_global_e_exact() {
 ; CHECK-LABEL: @const_gep_global_e_exact(
-; CHECK-NEXT:    ret ptr getelementptr inbounds (i8, ptr @g_i32_e, i64 4)
+; CHECK-NEXT:    ret ptr getelementptr inbounds nuw (i8, ptr @g_i32_e, i64 4)
 ;
   ret ptr getelementptr (i8, ptr @g_i32_e, i64 4)
 }
@@ -1517,7 +1481,7 @@ define ptr @const_gep_0xi8_global() {
 define ptr @const_gep_chain(ptr %p, i64 %a) {
 ; CHECK-LABEL: @const_gep_chain(
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[A:%.*]]
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 6
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds nuw i8, ptr [[P1]], i64 6
 ; CHECK-NEXT:    ret ptr [[P4]]
 ;
   %p1 = getelementptr inbounds i8, ptr %p, i64 %a
@@ -2018,6 +1982,5 @@ define ptr @gep_merge_nusw_const(ptr %p, i64 %idx, i64 %idx2) {
   %gep = getelementptr nusw i8, ptr %gep1, i64 4
   ret ptr %gep
 }
-
 
 !0 = !{!"branch_weights", i32 2, i32 10}

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_TYPEINDEX
-#define _LIBCPP_TYPEINDEX
+#ifndef _LIBCPP___CXX03_TYPEINDEX
+#define _LIBCPP___CXX03_TYPEINDEX
 
 /*
 
@@ -49,9 +49,6 @@ struct hash<type_index>
 #include <__cxx03/__functional/unary_function.h>
 #include <__cxx03/typeinfo>
 #include <__cxx03/version>
-
-// standard-mandated includes
-#include <__cxx03/compare>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -103,4 +100,4 @@ _LIBCPP_END_NAMESPACE_STD
 #  include <__cxx03/utility>
 #endif
 
-#endif // _LIBCPP_TYPEINDEX
+#endif // _LIBCPP___CXX03_TYPEINDEX

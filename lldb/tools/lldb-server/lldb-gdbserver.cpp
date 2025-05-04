@@ -167,27 +167,35 @@ void handle_launch(GDBRemoteCommunicationServerLLGS &gdb_server,
   }
 }
 
-Status writeSocketIdToPipe(Pipe &port_pipe, llvm::StringRef socket_id) {
-  size_t bytes_written = 0;
-  // Write the port number as a C string with the NULL terminator.
-  return port_pipe.Write(socket_id.data(), socket_id.size() + 1, bytes_written);
+static Status writeSocketIdToPipe(Pipe &port_pipe,
+                                  const std::string &socket_id) {
+  // NB: Include the nul character at the end.
+  llvm::StringRef buf(socket_id.data(), socket_id.size() + 1);
+  while (!buf.empty()) {
+    if (llvm::Expected<size_t> written =
+            port_pipe.Write(buf.data(), buf.size()))
+      buf = buf.drop_front(*written);
+    else
+      return Status::FromError(written.takeError());
+  }
+  return Status();
 }
 
 Status writeSocketIdToPipe(const char *const named_pipe_path,
                            llvm::StringRef socket_id) {
   Pipe port_name_pipe;
   // Wait for 10 seconds for pipe to be opened.
-  auto error = port_name_pipe.OpenAsWriterWithTimeout(named_pipe_path, false,
-                                                      std::chrono::seconds{10});
-  if (error.Fail())
-    return error;
-  return writeSocketIdToPipe(port_name_pipe, socket_id);
+  if (llvm::Error err = port_name_pipe.OpenAsWriter(named_pipe_path, false,
+                                                    std::chrono::seconds{10}))
+    return Status::FromError(std::move(err));
+
+  return writeSocketIdToPipe(port_name_pipe, socket_id.str());
 }
 
 Status writeSocketIdToPipe(lldb::pipe_t unnamed_pipe,
                            llvm::StringRef socket_id) {
   Pipe port_pipe{LLDB_INVALID_PIPE, unnamed_pipe};
-  return writeSocketIdToPipe(port_pipe, socket_id);
+  return writeSocketIdToPipe(port_pipe, socket_id.str());
 }
 
 void ConnectToRemote(MainLoop &mainloop,
@@ -210,9 +218,8 @@ void ConnectToRemote(MainLoop &mainloop,
                                     error.AsCString());
       exit(-1);
     }
-    connection_up =
-        std::unique_ptr<Connection>(new ConnectionFileDescriptor(new TCPSocket(
-            sockfd, /*should_close=*/true, /*child_processes_inherit=*/false)));
+    connection_up = std::unique_ptr<Connection>(new ConnectionFileDescriptor(
+        new TCPSocket(sockfd, /*should_close=*/true)));
 #else
     url = llvm::formatv("fd://{0}", connection_fd).str();
 
@@ -292,12 +299,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  constexpr llvm::StringLiteral NAME##_init[] = VALUE;                         \
-  constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                          \
-      NAME##_init, std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "LLGSOptions.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "LLGSOptions.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -307,7 +315,8 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class LLGSOptTable : public opt::GenericOptTable {
 public:
-  LLGSOptTable() : opt::GenericOptTable(InfoTable) {}
+  LLGSOptTable()
+      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
 
   void PrintHelp(llvm::StringRef Name) {
     std::string Usage =

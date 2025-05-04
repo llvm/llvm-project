@@ -1,4 +1,4 @@
-# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64 -run-pass none -o - %s | FileCheck %s
 # This test ensures that the MIR parser parses heap alloc markers correctly.
 
 --- |
@@ -7,7 +7,7 @@
   define i32 @test(i32 %x) nounwind {
   entry:
     call ptr @f(i32 %x), !heapallocsite !2
-    ret i32 undef
+    ret i32 poison
   }
 
   !llvm.dbg.cu = !{!0}

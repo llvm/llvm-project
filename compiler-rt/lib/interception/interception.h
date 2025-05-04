@@ -19,7 +19,7 @@
 
 #if !SANITIZER_LINUX && !SANITIZER_FREEBSD && !SANITIZER_APPLE &&    \
     !SANITIZER_NETBSD && !SANITIZER_WINDOWS && !SANITIZER_FUCHSIA && \
-    !SANITIZER_SOLARIS
+    !SANITIZER_SOLARIS && !SANITIZER_HAIKU
 #  error "Interception doesn't work on this operating system."
 #endif
 
@@ -37,7 +37,7 @@
 #endif
 
 #define SIZE_T __sanitizer::usize
-#define SSIZE_T __sanitizer::sptr
+#define SSIZE_T __sanitizer::ssize
 typedef __sanitizer::sptr    PTRDIFF_T;
 typedef __sanitizer::s64     INTMAX_T;
 typedef __sanitizer::u64     UINTMAX_T;
@@ -368,7 +368,7 @@ inline void DoesNotSupportStaticLinking() {}
 #define INCLUDED_FROM_INTERCEPTION_LIB
 
 #if SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD || \
-    SANITIZER_SOLARIS
+    SANITIZER_SOLARIS || SANITIZER_HAIKU
 
 # include "interception_linux.h"
 # define INTERCEPT_FUNCTION(func) INTERCEPT_FUNCTION_LINUX_OR_FREEBSD(func)

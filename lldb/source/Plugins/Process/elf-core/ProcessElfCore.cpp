@@ -286,6 +286,14 @@ void ProcessElfCore::UpdateBuildIdForNTFileEntries() {
   }
 }
 
+UUID ProcessElfCore::FindModuleUUID(const llvm::StringRef path) {
+  // Returns the gnu uuid from matched NT_FILE entry
+  for (NT_FILE_Entry &entry : m_nt_file_entries)
+    if (path == entry.path && entry.uuid.IsValid())
+      return entry.uuid;
+  return UUID();
+}
+
 lldb_private::DynamicLoader *ProcessElfCore::GetDynamicLoader() {
   if (m_dyld_up.get() == nullptr)
     m_dyld_up.reset(DynamicLoader::FindPlugin(
@@ -1023,6 +1031,8 @@ UUID ProcessElfCore::FindBuidIdInCoreMemory(lldb::addr_t address) {
 
   std::vector<uint8_t> ph_bytes;
   ph_bytes.resize(elf_header.e_phentsize);
+  lldb::addr_t base_addr = 0;
+  bool found_first_load_segment = false;
   for (unsigned int i = 0; i < elf_header.e_phnum; ++i) {
     byte_read = ReadMemory(ph_addr + i * elf_header.e_phentsize,
                            ph_bytes.data(), elf_header.e_phentsize, error);
@@ -1033,6 +1043,11 @@ UUID ProcessElfCore::FindBuidIdInCoreMemory(lldb::addr_t address) {
     offset = 0;
     elf::ELFProgramHeader program_header;
     program_header.Parse(program_header_data, &offset);
+    if (program_header.p_type == llvm::ELF::PT_LOAD &&
+        !found_first_load_segment) {
+      base_addr = program_header.p_vaddr;
+      found_first_load_segment = true;
+    }
     if (program_header.p_type != llvm::ELF::PT_NOTE)
       continue;
 
@@ -1041,7 +1056,7 @@ UUID ProcessElfCore::FindBuidIdInCoreMemory(lldb::addr_t address) {
 
     // We need to slide the address of the p_vaddr as these values don't get
     // relocated in memory.
-    const lldb::addr_t vaddr = program_header.p_vaddr + address;
+    const lldb::addr_t vaddr = program_header.p_vaddr + address - base_addr;
     byte_read =
         ReadMemory(vaddr, note_bytes.data(), program_header.p_memsz, error);
     if (byte_read != program_header.p_memsz)

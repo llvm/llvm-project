@@ -51,12 +51,12 @@ sw.epilog:                                        ; preds = %sw.bb3, %sw.default
   ret i32 %5
 }
 ; CHECK-LABEL: test_jump_table:
-; CHECK-NOT:       bl .L0$pb
+; CHECK-NOT:       bcl 20, 31, .L0$pb
 
 ; CHECK:       addis [[REG1:[0-9]+]], 2, .LC[[TOCNUM:[0-9]+]]@toc@ha
 ; CHECK:       ld [[REG2:[0-9]+]], .LC[[TOCNUM]]@toc@l([[REG1]])
-; CHECK:       lwax [[REG3:[0-9]+]], {{[0-9]+}}, [[REG2]]
-; CHECK-NEXT:  add  [[REG4:[0-9]+]], [[REG3]], [[REG2]]
+; CHECK:       lwax [[REG3:[0-9]+]], [[REG2]], {{[0-9]+}}
+; CHECK-NEXT:  add  [[REG4:[0-9]+]], [[REG2]], [[REG3]]
 ; CHECK-NEXT:  mtctr [[REG4]]
 ; CHECK-NEXT:  bctr
 
@@ -64,14 +64,14 @@ sw.epilog:                                        ; preds = %sw.bb3, %sw.default
 ; CHECK-NEXT: .long	.LBB0_{{[0-9]+}}-.LJTI0_0
 
 ; LARGE-LABEL: test_jump_table:
-; LARGE:       bl .L0$pb
+; LARGE:       bcl 20, 31, .L0$pb
 ; LARGE-NEXT:  .L0$pb:
 ; LARGE:       mflr [[REGBASE:[0-9]+]]
 
 ; LARGE:       addis [[REG1:[0-9]+]], 2, .LC[[TOCNUM:[0-9]+]]@toc@ha
 ; LARGE:       ld [[REG2:[0-9]+]], .LC[[TOCNUM]]@toc@l([[REG1]])
-; LARGE:       lwax [[REG3:[0-9]+]], {{[0-9]+}}, [[REG2]]
-; LARGE-NEXT:  add  [[REG4:[0-9]+]], [[REG3]], [[REGBASE]]
+; LARGE:       lwax [[REG3:[0-9]+]], [[REG2]], {{[0-9]+}}
+; LARGE-NEXT:  add  [[REG4:[0-9]+]], [[REGBASE]], [[REG3]]
 ; LARGE-NEXT:  mtctr [[REG4]]
 ; LARGE-NEXT:  bctr
 

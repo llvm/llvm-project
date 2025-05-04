@@ -257,7 +257,7 @@ LLVMSymbolizer::findSymbolCommon(const T &ModuleSpecifier, StringRef Symbol,
     if (LineInfo.FileName != DILineInfo::BadString) {
       if (Opts.Demangle)
         LineInfo.FunctionName = DemangleName(LineInfo.FunctionName, Info);
-      Result.push_back(LineInfo);
+      Result.push_back(std::move(LineInfo));
     }
   }
 
@@ -747,13 +747,13 @@ StringRef demanglePE32ExternCFunc(StringRef SymbolName) {
 } // end anonymous namespace
 
 std::string
-LLVMSymbolizer::DemangleName(const std::string &Name,
+LLVMSymbolizer::DemangleName(StringRef Name,
                              const SymbolizableModule *DbiModuleDescriptor) {
   std::string Result;
   if (nonMicrosoftDemangle(Name, Result))
     return Result;
 
-  if (!Name.empty() && Name.front() == '?') {
+  if (Name.starts_with('?')) {
     // Only do MSVC C++ demangling on symbols starting with '?'.
     int status = 0;
     char *DemangledName = microsoftDemangle(
@@ -761,7 +761,7 @@ LLVMSymbolizer::DemangleName(const std::string &Name,
         MSDemangleFlags(MSDF_NoAccessSpecifier | MSDF_NoCallingConvention |
                         MSDF_NoMemberType | MSDF_NoReturnType));
     if (status != 0)
-      return Name;
+      return std::string{Name};
     Result = DemangledName;
     free(DemangledName);
     return Result;
@@ -775,7 +775,7 @@ LLVMSymbolizer::DemangleName(const std::string &Name,
       return Result;
     return DemangledCName;
   }
-  return Name;
+  return std::string{Name};
 }
 
 void LLVMSymbolizer::recordAccess(CachedBinary &Bin) {

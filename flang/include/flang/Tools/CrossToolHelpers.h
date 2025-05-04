@@ -13,9 +13,9 @@
 #ifndef FORTRAN_TOOLS_CROSS_TOOL_HELPERS_H
 #define FORTRAN_TOOLS_CROSS_TOOL_HELPERS_H
 
-#include "flang/Common/LangOptions.h"
-#include "flang/Common/MathOptionsBase.h"
 #include "flang/Frontend/CodeGenOptions.h"
+#include "flang/Support/LangOptions.h"
+#include "flang/Support/MathOptionsBase.h"
 #include <cstdint>
 
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -102,13 +102,17 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
     UnsafeFPMath = mathOpts.getAssociativeMath() &&
         mathOpts.getReciprocalMath() && NoSignedZerosFPMath &&
         ApproxFuncFPMath && mathOpts.getFPContractEnabled();
+    if (opts.InstrumentFunctions) {
+      InstrumentFunctionEntry = "__cyg_profile_func_enter";
+      InstrumentFunctionExit = "__cyg_profile_func_exit";
+    }
   }
 
   llvm::OptimizationLevel OptLevel; ///< optimisation level
   bool StackArrays = false; ///< convert memory allocations to alloca.
   bool Underscoring = true; ///< add underscores to function names.
   bool LoopVersioning = false; ///< Run the version loop pass.
-  bool AliasAnalysis = false; ///< Add TBAA tags to generated LLVMIR
+  bool AliasAnalysis = false; ///< Add TBAA tags to generated LLVMIR.
   llvm::codegenoptions::DebugInfoKind DebugInfo =
       llvm::codegenoptions::NoDebugInfo; ///< Debug info generation.
   llvm::FramePointerKind FramePointerKind =
@@ -122,8 +126,14 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
   bool NoSignedZerosFPMath =
       false; ///< Set no-signed-zeros-fp-math attribute for functions.
   bool UnsafeFPMath = false; ///< Set unsafe-fp-math attribute for functions.
-  bool NSWOnLoopVarInc = false; ///< Add nsw flag to loop variable increments.
+  bool NSWOnLoopVarInc = true; ///< Add nsw flag to loop variable increments.
   bool EnableOpenMP = false; ///< Enable OpenMP lowering.
+  std::string InstrumentFunctionEntry =
+      ""; ///< Name of the instrument-function that is called on each
+          ///< function-entry
+  std::string InstrumentFunctionExit =
+      ""; ///< Name of the instrument-function that is called on each
+          ///< function-exit
 };
 
 struct OffloadModuleOpts {
@@ -165,7 +175,7 @@ struct OffloadModuleOpts {
   bool OpenMPIsTargetDevice = false;
   bool OpenMPIsGPU = false;
   bool OpenMPForceUSM = false;
-  uint32_t OpenMPVersion = 11;
+  uint32_t OpenMPVersion = 31;
   std::string OMPHostIRFile = {};
   std::vector<llvm::Triple> OMPTargetTriples = {};
   bool NoGPULib = false;
@@ -174,7 +184,7 @@ struct OffloadModuleOpts {
 //  Shares assinging of the OpenMP OffloadModuleInterface and its assorted
 //  attributes accross Flang tools (bbc/flang)
 [[maybe_unused]] static void setOffloadModuleInterfaceAttributes(
-    mlir::ModuleOp &module, OffloadModuleOpts Opts) {
+    mlir::ModuleOp module, OffloadModuleOpts Opts) {
   // Should be registered by the OpenMPDialect
   if (auto offloadMod = llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(
           module.getOperation())) {
@@ -198,7 +208,7 @@ struct OffloadModuleOpts {
 }
 
 [[maybe_unused]] static void setOpenMPVersionAttribute(
-    mlir::ModuleOp &module, int64_t version) {
+    mlir::ModuleOp module, int64_t version) {
   module.getOperation()->setAttr(
       mlir::StringAttr::get(module.getContext(), llvm::Twine{"omp.version"}),
       mlir::omp::VersionAttr::get(module.getContext(), version));

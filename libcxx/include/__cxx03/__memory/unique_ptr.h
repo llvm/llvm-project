@@ -7,12 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_UNIQUE_PTR_H
-#define _LIBCPP___MEMORY_UNIQUE_PTR_H
+#ifndef _LIBCPP___CXX03___MEMORY_UNIQUE_PTR_H
+#define _LIBCPP___CXX03___MEMORY_UNIQUE_PTR_H
 
-#include <__cxx03/__compare/compare_three_way.h>
-#include <__cxx03/__compare/compare_three_way_result.h>
-#include <__cxx03/__compare/three_way_comparable.h>
 #include <__cxx03/__config>
 #include <__cxx03/__functional/hash.h>
 #include <__cxx03/__functional/operations.h>
@@ -690,4 +687,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___MEMORY_UNIQUE_PTR_H
+#endif // _LIBCPP___CXX03___MEMORY_UNIQUE_PTR_H

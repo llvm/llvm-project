@@ -8,7 +8,7 @@
 
 #include "Inputs/cuda.h"
 
-typedef __attribute__(( ext_vector_type(4) )) float float4;
+typedef __attribute__(( ext_vector_type(4) )) float floatvec4;
 
 // COMMON-LABEL: @_Z11spscalardiv
 // COMMON: fdiv{{.*}},
@@ -22,7 +22,7 @@ __device__ float spscalardiv(float a, float b) {
 // COMMON: fdiv{{.*}},
 // NCRDIV: !fpmath ![[MD]]
 // CRDIV-NOT: !fpmath
-__device__ float4 spvectordiv(float4 a, float4 b) {
+__device__ floatvec4 spvectordiv(floatvec4 a, floatvec4 b) {
   return a / b;
 }
 

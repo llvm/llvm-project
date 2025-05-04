@@ -4,7 +4,8 @@ Clang Maintainers
 
 This file is a list of the
 `maintainers <https://llvm.org/docs/DeveloperPolicy.html#maintainers>`_ for
-Clang.
+Clang. The list of current Clang Area Team members can be found
+`here <https://github.com/llvm/llvm-project/blob/main/clang/AreaTeamMembers.txt>`_.
 
 .. contents::
    :depth: 2
@@ -136,6 +137,7 @@ Clang static analyzer
 
 | Balázs Benics
 | benicsbalazs\@gmail.com (email), steakhal (Phabricator), steakhal (GitHub)
+| balazs.benics\@sonarsource.com (email), balazs-benics-sonarsource (GitHub)
 
 Compiler options
 ~~~~~~~~~~~~~~~~
@@ -157,6 +159,11 @@ OpenBSD driver
 | Brad Smith
 | brad\@comstyle.com (email), brad (Phabricator), brad0 (GitHub)
 
+Offloading driver
+~~~~~~~~~~~~~~~~~
+| Joseph Huber
+| joseph.huber\@amd.com (email), jhuber6 (GitHub)
+
 
 Driver parts not covered by someone else
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -174,6 +181,15 @@ Thread Safety Analysis
 ~~~~~~~~~~~~~~~~~~~~~~
 | Aaron Puchert
 | aaron.puchert\@sap.com (email), aaronpuchert (GitHub), aaronpuchert (Discourse)
+
+
+Function Effect Analysis
+~~~~~~~~~~~~~~~~~~~~~~~~
+| Doug Wyatt
+| dwyatt\@apple.com (email), dougsonos (GitHub), dougsonos (Discourse)
+
+| Sirraide
+| aeternalmail\@gmail.com (email), Sirraide (GitHub), Ætérnal (Discord), Sirraide (Discourse)
 
 
 Tools
@@ -311,8 +327,8 @@ OpenMP conformance
 
 OpenCL conformance
 ~~~~~~~~~~~~~~~~~~
-| Anastasia Stulova
-| anastasia\@compiler-experts.com (email), Anastasia (Phabricator), AnastasiaStulova (GitHub)
+| Sven van Haastregt
+| sven.vanhaastregt\@arm.com (email), svenvh (GitHub)
 
 
 OpenACC
@@ -356,6 +372,7 @@ Emeritus Lead Maintainers
 
 Inactive component maintainers
 ------------------------------
+| Anastasia Stulova (stulovaa\@gmail.com) -- OpenCL, C++ for OpenCL
 | Chandler Carruth (chandlerc\@gmail.com, chandlerc\@google.com) -- CMake, library layering
 | Devin Coughlin (dcoughlin\@apple.com) -- Clang static analyzer
 | Manuel Klimek (klimek\@google.com (email), klimek (Phabricator), r4nt (GitHub)) -- Tooling, AST matchers

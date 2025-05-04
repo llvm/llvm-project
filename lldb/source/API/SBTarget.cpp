@@ -7,10 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBTarget.h"
-#include "lldb/Utility/Instrumentation.h"
-#include "lldb/Utility/LLDBLog.h"
-#include "lldb/lldb-public.h"
-
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBEnvironment.h"
@@ -20,6 +16,7 @@
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBModule.h"
 #include "lldb/API/SBModuleSpec.h"
+#include "lldb/API/SBMutex.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBSourceManager.h"
 #include "lldb/API/SBStream.h"
@@ -58,11 +55,14 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/ValueObject/ValueObjectList.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
+#include "lldb/lldb-public.h"
 
 #include "Commands/CommandObjectBreakpoint.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -1342,7 +1342,8 @@ lldb::SBWatchpoint SBTarget::WatchAddress(lldb::addr_t addr, size_t size,
 
   SBWatchpointOptions options;
   options.SetWatchpointTypeRead(read);
-  options.SetWatchpointTypeWrite(eWatchpointWriteTypeOnModify);
+  if (modify)
+    options.SetWatchpointTypeWrite(eWatchpointWriteTypeOnModify);
   return WatchpointCreateByAddress(addr, size, options, error);
 }
 
@@ -2020,9 +2021,9 @@ lldb::SBInstructionList SBTarget::ReadInstructions(lldb::SBAddress base_addr,
                                 error, force_live_memory, &load_addr);
       const bool data_from_file = load_addr == LLDB_INVALID_ADDRESS;
       sb_instructions.SetDisassembler(Disassembler::DisassembleBytes(
-          target_sp->GetArchitecture(), nullptr, target_sp->GetDisassemblyCPU(),
-          target_sp->GetDisassemblyFeatures(), flavor_string, *addr_ptr,
-          data.GetBytes(), bytes_read, count, data_from_file));
+          target_sp->GetArchitecture(), nullptr, flavor_string,
+          target_sp->GetDisassemblyCPU(), target_sp->GetDisassemblyFeatures(),
+          *addr_ptr, data.GetBytes(), bytes_read, count, data_from_file));
     }
   }
 
@@ -2437,4 +2438,12 @@ lldb::SBTrace SBTarget::CreateTrace(lldb::SBError &error) {
     error.SetErrorString("missing target");
   }
   return SBTrace();
+}
+
+lldb::SBMutex SBTarget::GetAPIMutex() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (TargetSP target_sp = GetSP())
+    return lldb::SBMutex(target_sp);
+  return lldb::SBMutex();
 }

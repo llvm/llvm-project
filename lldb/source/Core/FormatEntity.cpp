@@ -122,7 +122,16 @@ constexpr Definition g_function_child_entries[] = {
     Definition("pc-offset", EntryType::FunctionPCOffset),
     Definition("initial-function", EntryType::FunctionInitial),
     Definition("changed", EntryType::FunctionChanged),
-    Definition("is-optimized", EntryType::FunctionIsOptimized)};
+    Definition("is-optimized", EntryType::FunctionIsOptimized),
+    Definition("scope", EntryType::FunctionScope),
+    Definition("basename", EntryType::FunctionBasename),
+    Definition("template-arguments", EntryType::FunctionTemplateArguments),
+    Definition("formatted-arguments", EntryType::FunctionFormattedArguments),
+    Definition("return-left", EntryType::FunctionReturnLeft),
+    Definition("return-right", EntryType::FunctionReturnRight),
+    Definition("qualifiers", EntryType::FunctionQualifiers),
+    Definition("suffix", EntryType::FunctionSuffix),
+};
 
 constexpr Definition g_line_child_entries[] = {
     Entry::DefinitionWithChildren("file", EntryType::LineEntryFile,
@@ -162,7 +171,13 @@ constexpr Definition g_thread_child_entries[] = {
     Definition("completed-expression", EntryType::ThreadCompletedExpression)};
 
 constexpr Definition g_target_child_entries[] = {
-    Definition("arch", EntryType::TargetArch)};
+    Definition("arch", EntryType::TargetArch),
+    Entry::DefinitionWithChildren("file", EntryType::TargetFile,
+                                  g_file_child_entries)};
+
+constexpr Definition g_progress_child_entries[] = {
+    Definition("count", EntryType::ProgressCount),
+    Definition("message", EntryType::ProgressMessage)};
 
 #define _TO_STR2(_val) #_val
 #define _TO_STR(_val) _TO_STR2(_val)
@@ -257,7 +272,11 @@ constexpr Definition g_top_level_entries[] = {
     Entry::DefinitionWithChildren("target", EntryType::Invalid,
                                   g_target_child_entries),
     Entry::DefinitionWithChildren("var", EntryType::Variable,
-                                  g_var_child_entries, true)};
+                                  g_var_child_entries, true),
+    Entry::DefinitionWithChildren("progress", EntryType::Invalid,
+                                  g_progress_child_entries),
+    Definition("separator", EntryType::Separator),
+};
 
 constexpr Definition g_root = Entry::DefinitionWithChildren(
     "<root>", EntryType::Root, g_top_level_entries);
@@ -322,6 +341,7 @@ const char *FormatEntity::Entry::TypeToCString(Type t) {
     ENUM_TO_CSTR(ScriptThread);
     ENUM_TO_CSTR(ThreadInfo);
     ENUM_TO_CSTR(TargetArch);
+    ENUM_TO_CSTR(TargetFile);
     ENUM_TO_CSTR(ScriptTarget);
     ENUM_TO_CSTR(ModuleFile);
     ENUM_TO_CSTR(File);
@@ -342,6 +362,14 @@ const char *FormatEntity::Entry::TypeToCString(Type t) {
     ENUM_TO_CSTR(FunctionNameWithArgs);
     ENUM_TO_CSTR(FunctionNameNoArgs);
     ENUM_TO_CSTR(FunctionMangledName);
+    ENUM_TO_CSTR(FunctionScope);
+    ENUM_TO_CSTR(FunctionBasename);
+    ENUM_TO_CSTR(FunctionTemplateArguments);
+    ENUM_TO_CSTR(FunctionFormattedArguments);
+    ENUM_TO_CSTR(FunctionReturnLeft);
+    ENUM_TO_CSTR(FunctionReturnRight);
+    ENUM_TO_CSTR(FunctionQualifiers);
+    ENUM_TO_CSTR(FunctionSuffix);
     ENUM_TO_CSTR(FunctionAddrOffset);
     ENUM_TO_CSTR(FunctionAddrOffsetConcrete);
     ENUM_TO_CSTR(FunctionLineOffset);
@@ -355,6 +383,9 @@ const char *FormatEntity::Entry::TypeToCString(Type t) {
     ENUM_TO_CSTR(LineEntryStartAddress);
     ENUM_TO_CSTR(LineEntryEndAddress);
     ENUM_TO_CSTR(CurrentPCArrow);
+    ENUM_TO_CSTR(ProgressCount);
+    ENUM_TO_CSTR(ProgressMessage);
+    ENUM_TO_CSTR(Separator);
   }
   return "???";
 }
@@ -412,7 +443,7 @@ static bool DumpAddressAndContent(Stream &s, const SymbolContext *sc,
   Target *target = Target::GetTargetFromContexts(exe_ctx, sc);
 
   addr_t vaddr = LLDB_INVALID_ADDRESS;
-  if (target && !target->GetSectionLoadList().IsEmpty())
+  if (target && target->HasLoadedSections())
     vaddr = addr.GetLoadAddress(target);
   if (vaddr == LLDB_INVALID_ADDRESS)
     vaddr = addr.GetFileAddress();
@@ -447,7 +478,7 @@ static bool DumpAddressOffsetFromFunction(Stream &s, const SymbolContext *sc,
 
     if (sc) {
       if (sc->function) {
-        func_addr = sc->function->GetAddressRange().GetBaseAddress();
+        func_addr = sc->function->GetAddress();
         if (sc->block && !concrete_only) {
           // Check to make sure we aren't in an inline function. If we are, use
           // the inline block range that contains "format_addr" since blocks
@@ -465,7 +496,7 @@ static bool DumpAddressOffsetFromFunction(Stream &s, const SymbolContext *sc,
     if (func_addr.IsValid()) {
       const char *addr_offset_padding = no_padding ? "" : " ";
 
-      if (func_addr.GetSection() == format_addr.GetSection()) {
+      if (func_addr.GetModule() == format_addr.GetModule()) {
         addr_t func_file_addr = func_addr.GetFileAddress();
         addr_t addr_file_addr = format_addr.GetFileAddress();
         if (addr_file_addr > func_file_addr ||
@@ -1135,17 +1166,106 @@ static void PrettyPrintFunctionNameWithArgs(Stream &out_stream,
     out_stream.PutChar(')');
 }
 
-static void FormatInlinedBlock(Stream &out_stream, Block *block) {
-  if (!block)
-    return;
-  Block *inline_block = block->GetContainingInlinedBlock();
-  if (inline_block) {
-    if (const InlineFunctionInfo *inline_info =
-            inline_block->GetInlinedFunctionInfo()) {
-      out_stream.PutCString(" [inlined] ");
-      inline_info->GetName().Dump(&out_stream);
-    }
+static VariableListSP GetFunctionVariableList(const SymbolContext &sc) {
+  assert(sc.function);
+
+  if (sc.block)
+    if (Block *inline_block = sc.block->GetContainingInlinedBlock())
+      return inline_block->GetBlockVariableList(true);
+
+  return sc.function->GetBlock(true).GetBlockVariableList(true);
+}
+
+static bool PrintFunctionNameWithArgs(Stream &s,
+                                      const ExecutionContext *exe_ctx,
+                                      const SymbolContext &sc) {
+  assert(sc.function);
+
+  ExecutionContextScope *exe_scope =
+      exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
+
+  const char *cstr = sc.GetPossiblyInlinedFunctionName()
+                         .GetName(Mangled::ePreferDemangled)
+                         .AsCString();
+  if (!cstr)
+    return false;
+
+  VariableList args;
+  if (auto variable_list_sp = GetFunctionVariableList(sc))
+    variable_list_sp->AppendVariablesWithScope(eValueTypeVariableArgument,
+                                               args);
+
+  if (args.GetSize() > 0) {
+    PrettyPrintFunctionNameWithArgs(s, cstr, exe_scope, args);
+  } else {
+    s.PutCString(cstr);
   }
+
+  return true;
+}
+
+static bool HandleFunctionNameWithArgs(Stream &s,
+                                       const ExecutionContext *exe_ctx,
+                                       const SymbolContext &sc) {
+  Language *language_plugin = nullptr;
+  bool language_plugin_handled = false;
+  StreamString ss;
+  if (sc.function)
+    language_plugin = Language::FindPlugin(sc.function->GetLanguage());
+  else if (sc.symbol)
+    language_plugin = Language::FindPlugin(sc.symbol->GetLanguage());
+
+  if (language_plugin)
+    language_plugin_handled = language_plugin->GetFunctionDisplayName(
+        sc, exe_ctx, Language::FunctionNameRepresentation::eNameWithArgs, ss);
+
+  if (language_plugin_handled) {
+    s << ss.GetString();
+    return true;
+  }
+
+  if (sc.function)
+    return PrintFunctionNameWithArgs(s, exe_ctx, sc);
+
+  if (!sc.symbol)
+    return false;
+
+  const char *cstr = sc.symbol->GetName().AsCString(nullptr);
+  if (!cstr)
+    return false;
+
+  s.PutCString(cstr);
+
+  return true;
+}
+
+static bool FormatFunctionNameForLanguage(Stream &s,
+                                          const ExecutionContext *exe_ctx,
+                                          const SymbolContext *sc) {
+  assert(sc);
+
+  Language *language_plugin = nullptr;
+  if (sc->function)
+    language_plugin = Language::FindPlugin(sc->function->GetLanguage());
+  else if (sc->symbol)
+    language_plugin = Language::FindPlugin(sc->symbol->GetLanguage());
+
+  if (!language_plugin)
+    return false;
+
+  const auto *format = language_plugin->GetFunctionNameFormat();
+  if (!format)
+    return false;
+
+  StreamString name_stream;
+  const bool success =
+      FormatEntity::Format(*format, name_stream, sc, exe_ctx, /*addr=*/nullptr,
+                           /*valobj=*/nullptr, /*function_changed=*/false,
+                           /*initial_function=*/false);
+  if (success)
+    s << name_stream.GetString();
+
+  return success;
 }
 
 bool FormatEntity::FormatStringRef(const llvm::StringRef &format_str, Stream &s,
@@ -1156,23 +1276,6 @@ bool FormatEntity::FormatStringRef(const llvm::StringRef &format_str, Stream &s,
                                    bool initial_function) {
   if (!format_str.empty()) {
     FormatEntity::Entry root;
-    Status error = FormatEntity::Parse(format_str, root);
-    if (error.Success()) {
-      return FormatEntity::Format(root, s, sc, exe_ctx, addr, valobj,
-                                  function_changed, initial_function);
-    }
-  }
-  return false;
-}
-
-bool FormatEntity::FormatCString(const char *format, Stream &s,
-                                 const SymbolContext *sc,
-                                 const ExecutionContext *exe_ctx,
-                                 const Address *addr, ValueObject *valobj,
-                                 bool function_changed, bool initial_function) {
-  if (format && format[0]) {
-    FormatEntity::Entry root;
-    llvm::StringRef format_str(format);
     Status error = FormatEntity::Parse(format_str, root);
     if (error.Success()) {
       return FormatEntity::Format(root, s, sc, exe_ctx, addr, valobj,
@@ -1195,12 +1298,10 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
                                   // FormatEntity::Entry::Definition encoding
     return false;
   case Entry::Type::EscapeCode:
-    if (exe_ctx) {
-      if (Target *target = exe_ctx->GetTargetPtr()) {
-        Debugger &debugger = target->GetDebugger();
-        if (debugger.GetUseColor()) {
-          s.PutCString(entry.string);
-        }
+    if (Target *target = Target::GetTargetFromContexts(exe_ctx, sc)) {
+      Debugger &debugger = target->GetDebugger();
+      if (debugger.GetUseColor()) {
+        s.PutCString(entry.string);
       }
     }
     // Always return true, so colors being disabled is transparent.
@@ -1469,6 +1570,17 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     }
     return false;
 
+  case Entry::Type::TargetFile:
+    if (exe_ctx) {
+      if (Target *target = exe_ctx->GetTargetPtr()) {
+        if (Module *exe_module = target->GetExecutableModulePointer()) {
+          if (DumpFile(s, exe_module->GetFileSpec(), (FileKind)entry.number))
+            return true;
+        }
+      }
+    }
+    return false;
+
   case Entry::Type::ScriptTarget:
     if (exe_ctx) {
       Target *target = exe_ctx->GetTargetPtr();
@@ -1640,26 +1752,23 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
 
     if (language_plugin)
       language_plugin_handled = language_plugin->GetFunctionDisplayName(
-          sc, exe_ctx, Language::FunctionNameRepresentation::eName, ss);
+          *sc, exe_ctx, Language::FunctionNameRepresentation::eName, ss);
 
     if (language_plugin_handled) {
       s << ss.GetString();
       return true;
-    } else {
-      const char *name = nullptr;
-      if (sc->function)
-        name = sc->function->GetName().AsCString(nullptr);
-      else if (sc->symbol)
-        name = sc->symbol->GetName().AsCString(nullptr);
-
-      if (name) {
-        s.PutCString(name);
-        FormatInlinedBlock(s, sc->block);
-        return true;
-      }
     }
+
+    const char *name = sc->GetPossiblyInlinedFunctionName()
+                           .GetName(Mangled::NamePreference::ePreferDemangled)
+                           .AsCString();
+    if (!name)
+      return false;
+
+    s.PutCString(name);
+
+    return true;
   }
-    return false;
 
   case Entry::Type::FunctionNameNoArgs: {
     if (!sc)
@@ -1675,117 +1784,68 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
 
     if (language_plugin)
       language_plugin_handled = language_plugin->GetFunctionDisplayName(
-          sc, exe_ctx, Language::FunctionNameRepresentation::eNameWithNoArgs,
+          *sc, exe_ctx, Language::FunctionNameRepresentation::eNameWithNoArgs,
           ss);
 
     if (language_plugin_handled) {
       s << ss.GetString();
       return true;
-    } else {
-      ConstString name;
-      if (sc->function)
-        name = sc->function->GetNameNoArguments();
-      else if (sc->symbol)
-        name = sc->symbol->GetNameNoArguments();
-      if (name) {
-        s.PutCString(name.GetCString());
-        FormatInlinedBlock(s, sc->block);
-        return true;
-      }
     }
-  }
-    return false;
 
-  case Entry::Type::FunctionNameWithArgs: {
-    if (!sc)
+    const char *name =
+        sc->GetPossiblyInlinedFunctionName()
+            .GetName(Mangled::NamePreference::ePreferDemangledWithoutArguments)
+            .AsCString();
+    if (!name)
       return false;
 
+    s.PutCString(name);
+
+    return true;
+  }
+
+  case Entry::Type::FunctionScope:
+  case Entry::Type::FunctionBasename:
+  case Entry::Type::FunctionTemplateArguments:
+  case Entry::Type::FunctionFormattedArguments:
+  case Entry::Type::FunctionReturnRight:
+  case Entry::Type::FunctionReturnLeft:
+  case Entry::Type::FunctionSuffix:
+  case Entry::Type::FunctionQualifiers: {
     Language *language_plugin = nullptr;
-    bool language_plugin_handled = false;
-    StreamString ss;
     if (sc->function)
       language_plugin = Language::FindPlugin(sc->function->GetLanguage());
     else if (sc->symbol)
       language_plugin = Language::FindPlugin(sc->symbol->GetLanguage());
 
-    if (language_plugin)
-      language_plugin_handled = language_plugin->GetFunctionDisplayName(
-          sc, exe_ctx, Language::FunctionNameRepresentation::eNameWithArgs, ss);
+    if (!language_plugin)
+      return false;
 
-    if (language_plugin_handled) {
-      s << ss.GetString();
-      return true;
-    } else {
-      // Print the function name with arguments in it
-      if (sc->function) {
-        ExecutionContextScope *exe_scope =
-            exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
-        const char *cstr = sc->function->GetName().AsCString(nullptr);
-        if (cstr) {
-          const InlineFunctionInfo *inline_info = nullptr;
-          VariableListSP variable_list_sp;
-          bool get_function_vars = true;
-          if (sc->block) {
-            Block *inline_block = sc->block->GetContainingInlinedBlock();
-
-            if (inline_block) {
-              get_function_vars = false;
-              inline_info = inline_block->GetInlinedFunctionInfo();
-              if (inline_info)
-                variable_list_sp = inline_block->GetBlockVariableList(true);
-            }
-          }
-
-          if (get_function_vars) {
-            variable_list_sp =
-                sc->function->GetBlock(true).GetBlockVariableList(true);
-          }
-
-          if (inline_info) {
-            s.PutCString(cstr);
-            s.PutCString(" [inlined] ");
-            cstr = inline_info->GetName().GetCString();
-          }
-
-          VariableList args;
-          if (variable_list_sp)
-            variable_list_sp->AppendVariablesWithScope(
-                eValueTypeVariableArgument, args);
-          if (args.GetSize() > 0) {
-            PrettyPrintFunctionNameWithArgs(s, cstr, exe_scope, args);
-          } else {
-            s.PutCString(cstr);
-          }
-          return true;
-        }
-      } else if (sc->symbol) {
-        const char *cstr = sc->symbol->GetName().AsCString(nullptr);
-        if (cstr) {
-          s.PutCString(cstr);
-          return true;
-        }
-      }
-    }
+    return language_plugin->HandleFrameFormatVariable(*sc, exe_ctx, entry.type,
+                                                      s);
   }
-    return false;
 
+  case Entry::Type::FunctionNameWithArgs: {
+    if (!sc)
+      return false;
+
+    if (FormatFunctionNameForLanguage(s, exe_ctx, sc))
+      return true;
+
+    return HandleFunctionNameWithArgs(s, exe_ctx, *sc);
+  }
   case Entry::Type::FunctionMangledName: {
     if (!sc)
       return false;
 
-    const char *name = nullptr;
-    if (sc->symbol)
-      name =
-          sc->symbol->GetMangled().GetName(Mangled::ePreferMangled).AsCString();
-    else if (sc->function)
-      name = sc->function->GetMangled()
-                 .GetName(Mangled::ePreferMangled)
-                 .AsCString();
-
+    const char *name = sc->GetPossiblyInlinedFunctionName()
+                           .GetName(Mangled::NamePreference::ePreferMangled)
+                           .AsCString();
     if (!name)
       return false;
+
     s.PutCString(name);
-    FormatInlinedBlock(s, sc->block);
+
     return true;
   }
   case Entry::Type::FunctionAddrOffset:
@@ -1898,7 +1958,35 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
       return true;
     }
     return false;
+
+  case Entry::Type::ProgressCount:
+    if (Target *target = Target::GetTargetFromContexts(exe_ctx, sc)) {
+      if (auto progress = target->GetDebugger().GetCurrentProgressReport()) {
+        if (progress->total != UINT64_MAX) {
+          s.Format("[{0:N}/{1:N}]", progress->completed, progress->total);
+          return true;
+        }
+      }
+    }
+    return false;
+
+  case Entry::Type::ProgressMessage:
+    if (Target *target = Target::GetTargetFromContexts(exe_ctx, sc)) {
+      if (auto progress = target->GetDebugger().GetCurrentProgressReport()) {
+        s.PutCString(progress->message);
+        return true;
+      }
+    }
+    return false;
+
+  case Entry::Type::Separator:
+    if (Target *target = Target::GetTargetFromContexts(exe_ctx, sc)) {
+      s << target->GetDebugger().GetSeparator();
+      return true;
+    }
+    return false;
   }
+
   return false;
 }
 

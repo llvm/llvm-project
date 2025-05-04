@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_SET_INTERSECTION_H
-#define _LIBCPP___ALGORITHM_SET_INTERSECTION_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_SET_INTERSECTION_H
+#define _LIBCPP___CXX03___ALGORITHM_SET_INTERSECTION_H
 
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__algorithm/comp_ref_type.h>
@@ -18,7 +18,6 @@
 #include <__cxx03/__iterator/iterator_traits.h>
 #include <__cxx03/__iterator/next.h>
 #include <__cxx03/__type_traits/is_same.h>
-#include <__cxx03/__utility/exchange.h>
 #include <__cxx03/__utility/move.h>
 #include <__cxx03/__utility/swap.h>
 
@@ -214,4 +213,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_SET_INTERSECTION_H
+#endif // _LIBCPP___CXX03___ALGORITHM_SET_INTERSECTION_H

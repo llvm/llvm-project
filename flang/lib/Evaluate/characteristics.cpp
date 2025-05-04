@@ -227,15 +227,13 @@ void TypeAndShape::AcquireAttrs(const semantics::Symbol &symbol) {
   } else if (semantics::IsAssumedSizeArray(symbol)) {
     attrs_.set(Attr::AssumedSize);
   }
+  if (int corank{GetCorank(symbol)}; corank > 0) {
+    corank_ = corank;
+  }
   if (const auto *object{
-          symbol.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
-    corank_ = object->coshape().Rank();
-    if (object->IsAssumedRank()) {
-      attrs_.set(Attr::AssumedRank);
-    }
-    if (object->IsCoarray()) {
-      attrs_.set(Attr::Coarray);
-    }
+          symbol.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()};
+      object && object->IsAssumedRank()) {
+    attrs_.set(Attr::AssumedRank);
   }
 }
 
@@ -372,7 +370,8 @@ bool DummyDataObject::IsCompatibleWith(const DummyDataObject &actual,
   if (!attrs.test(Attr::Value) &&
       !common::AreCompatibleCUDADataAttrs(cudaDataAttr, actual.cudaDataAttr,
           ignoreTKR, warning,
-          /*allowUnifiedMatchingRule=*/false)) {
+          /*allowUnifiedMatchingRule=*/false,
+          /*=isHostDeviceProcedure*/ false)) {
     if (whyNot) {
       *whyNot = "incompatible CUDA data attributes";
     }
@@ -440,9 +439,9 @@ bool DummyDataObject::CanBePassedViaImplicitInterface(
     return false; // 15.4.2.2(3)(a)
   } else if ((type.attrs() &
                  TypeAndShape::Attrs{TypeAndShape::Attr::AssumedShape,
-                     TypeAndShape::Attr::AssumedRank,
-                     TypeAndShape::Attr::Coarray})
-                 .any()) {
+                     TypeAndShape::Attr::AssumedRank})
+                 .any() ||
+      type.corank() > 0) {
     if (whyNot) {
       *whyNot = "a dummy argument is assumed-shape, assumed-rank, or a coarray";
     }
@@ -472,14 +471,15 @@ bool DummyDataObject::CanBePassedViaImplicitInterface(
 }
 
 bool DummyDataObject::IsPassedByDescriptor(bool isBindC) const {
-  constexpr TypeAndShape::Attrs shapeRequiringBox = {
+  constexpr TypeAndShape::Attrs shapeRequiringBox{
       TypeAndShape::Attr::AssumedShape, TypeAndShape::Attr::DeferredShape,
-      TypeAndShape::Attr::AssumedRank, TypeAndShape::Attr::Coarray};
+      TypeAndShape::Attr::AssumedRank};
   if ((attrs & Attrs{Attr::Allocatable, Attr::Pointer}).any()) {
     return true;
   } else if ((type.attrs() & shapeRequiringBox).any()) {
-    // Need to pass shape/coshape info in a descriptor.
-    return true;
+    return true; // pass shape in descriptor
+  } else if (type.corank() > 0) {
+    return true; // pass coshape in descriptor
   } else if (type.type().IsPolymorphic() && !type.type().IsAssumedType()) {
     // Need to pass dynamic type info in a descriptor.
     return true;
@@ -1777,7 +1777,8 @@ bool DistinguishUtils::Distinguishable(
     return true;
   } else if (!common::AreCompatibleCUDADataAttrs(x.cudaDataAttr, y.cudaDataAttr,
                  x.ignoreTKR | y.ignoreTKR, nullptr,
-                 /*allowUnifiedMatchingRule=*/false)) {
+                 /*allowUnifiedMatchingRule=*/false,
+                 /*=isHostDeviceProcedure*/ false)) {
     return true;
   } else if (features_.IsEnabled(
                  common::LanguageFeature::DistinguishableSpecifics) &&

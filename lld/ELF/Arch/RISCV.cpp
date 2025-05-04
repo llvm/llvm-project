@@ -50,10 +50,12 @@ public:
 
 } // end anonymous namespace
 
-// These are internal relocation numbers for GP relaxation. They aren't part
+// These are internal relocation numbers for GP/X0 relaxation. They aren't part
 // of the psABI spec.
 #define INTERNAL_R_RISCV_GPREL_I 256
 #define INTERNAL_R_RISCV_GPREL_S 257
+#define INTERNAL_R_RISCV_X0REL_I 258
+#define INTERNAL_R_RISCV_X0REL_S 259
 
 const uint64_t dtpOffset = 0x800;
 
@@ -70,6 +72,7 @@ enum Op {
 };
 
 enum Reg {
+  X_X0 = 0,
   X_RA = 1,
   X_GP = 3,
   X_TP = 4,
@@ -156,14 +159,13 @@ uint32_t RISCV::calcEFlags() const {
       target |= EF_RISCV_RVC;
 
     if ((eflags & EF_RISCV_FLOAT_ABI) != (target & EF_RISCV_FLOAT_ABI))
-      ErrAlways(ctx) << f
-                     << ": cannot link object files with different "
-                        "floating-point ABI from "
-                     << ctx.objectFiles[0];
+      Err(ctx) << f
+               << ": cannot link object files with different "
+                  "floating-point ABI from "
+               << ctx.objectFiles[0];
 
     if ((eflags & EF_RISCV_RVE) != (target & EF_RISCV_RVE))
-      ErrAlways(ctx)
-          << f << ": cannot link object files with different EF_RISCV_RVE";
+      Err(ctx) << f << ": cannot link object files with different EF_RISCV_RVE";
   }
 
   return target;
@@ -268,7 +270,6 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
   case R_RISCV_HI20:
   case R_RISCV_LO12_I:
   case R_RISCV_LO12_S:
-  case R_RISCV_RVC_LUI:
     return R_ABS;
   case R_RISCV_ADD8:
   case R_RISCV_ADD16:
@@ -283,7 +284,7 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
   case R_RISCV_SUB16:
   case R_RISCV_SUB32:
   case R_RISCV_SUB64:
-    return R_RISCV_ADD;
+    return RE_RISCV_ADD;
   case R_RISCV_JAL:
   case R_RISCV_BRANCH:
   case R_RISCV_PCREL_HI20:
@@ -300,7 +301,7 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
     return R_GOT_PC;
   case R_RISCV_PCREL_LO12_I:
   case R_RISCV_PCREL_LO12_S:
-    return R_RISCV_PC_INDIRECT;
+    return RE_RISCV_PC_INDIRECT;
   case R_RISCV_TLSDESC_HI20:
   case R_RISCV_TLSDESC_LOAD_LO12:
   case R_RISCV_TLSDESC_ADD_LO12:
@@ -322,7 +323,7 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
     return ctx.arg.relax ? R_RELAX_HINT : R_NONE;
   case R_RISCV_SET_ULEB128:
   case R_RISCV_SUB_ULEB128:
-    return R_RISCV_LEB128;
+    return RE_RISCV_LEB128;
   default:
     Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
              << ") against symbol " << &s;
@@ -371,19 +372,6 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     insn |= imm11 | imm4 | imm9_8 | imm10 | imm6 | imm7 | imm3_1 | imm5;
 
     write16le(loc, insn);
-    return;
-  }
-
-  case R_RISCV_RVC_LUI: {
-    int64_t imm = SignExtend64(val + 0x800, bits) >> 12;
-    checkInt(ctx, loc, imm, 6, rel);
-    if (imm == 0) { // `c.lui rd, 0` is illegal, convert to `c.li rd, 0`
-      write16le(loc, (read16le(loc) & 0x0F83) | 0x4000);
-    } else {
-      uint16_t imm17 = extractBits(val + 0x800, 17, 17) << 12;
-      uint16_t imm16_12 = extractBits(val + 0x800, 16, 12) << 2;
-      write16le(loc, (read16le(loc) & 0xEF83) | imm17 | imm16_12);
-    }
     return;
   }
 
@@ -459,6 +447,18 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     uint64_t hi = (val + 0x800) >> 12;
     uint64_t lo = val - (hi << 12);
     write32le(loc, setLO12_S(read32le(loc), lo));
+    return;
+  }
+
+  case INTERNAL_R_RISCV_X0REL_I:
+  case INTERNAL_R_RISCV_X0REL_S: {
+    checkInt(ctx, loc, val, 12, rel);
+    uint32_t insn = (read32le(loc) & ~(31 << 15)) | (X_X0 << 15);
+    if (rel.type == INTERNAL_R_RISCV_X0REL_I)
+      insn = setLO12_I(insn, val);
+    else
+      insn = setLO12_S(insn, val);
+    write32le(loc, insn);
     return;
   }
 
@@ -651,7 +651,7 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
       else
         tlsdescToIe(ctx, loc, rel, val);
       continue;
-    case R_RISCV_LEB128:
+    case RE_RISCV_LEB128:
       if (i + 1 < size) {
         const Relocation &rel1 = relocs[i + 1];
         if (rel.type == R_RISCV_SET_ULEB128 &&
@@ -659,9 +659,9 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
           auto val = rel.sym->getVA(ctx, rel.addend) -
                      rel1.sym->getVA(ctx, rel1.addend);
           if (overwriteULEB128(loc, val) >= 0x80)
-            Err(ctx) << sec.getLocation(rel.offset) << ": ULEB128 value "
-                     << Twine(val) << " exceeds available space; references '"
-                     << rel.sym << "'";
+            Err(ctx) << sec.getLocation(rel.offset) << ": ULEB128 value " << val
+                     << " exceeds available space; references '" << rel.sym
+                     << "'";
           ++i;
           continue;
         }
@@ -787,6 +787,25 @@ static void relaxTlsLe(Ctx &ctx, const InputSection &sec, size_t i,
 
 static void relaxHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
                           uint64_t loc, Relocation &r, uint32_t &remove) {
+
+  // Fold into use of x0+offset
+  if (isInt<12>(r.sym->getVA(ctx, r.addend))) {
+    switch (r.type) {
+    case R_RISCV_HI20:
+      // Remove lui rd, %hi20(x).
+      sec.relaxAux->relocTypes[i] = R_RISCV_RELAX;
+      remove = 4;
+      break;
+    case R_RISCV_LO12_I:
+      sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_X0REL_I;
+      break;
+    case R_RISCV_LO12_S:
+      sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_X0REL_S;
+      break;
+    }
+    return;
+  }
+
   const Defined *gp = ctx.sym.riscvGlobalPointer;
   if (!gp)
     return;
@@ -833,10 +852,10 @@ static bool relax(Ctx &ctx, InputSection &sec) {
       if (LLVM_UNLIKELY(static_cast<int32_t>(remove) < 0)) {
         Err(ctx) << getErrorLoc(ctx, (const uint8_t *)loc)
                  << "insufficient padding bytes for " << r.type << ": "
-                 << Twine(r.addend)
+                 << r.addend
                  << " bytes available "
                     "for requested alignment of "
-                 << Twine(align) << " bytes";
+                 << align << " bytes";
         remove = 0;
       }
       break;
@@ -900,7 +919,7 @@ static bool relax(Ctx &ctx, InputSection &sec) {
   }
   // Inform assignAddresses that the size has changed.
   if (!isUInt<32>(delta))
-    Fatal(ctx) << "section size decrease is too large: " << Twine(delta);
+    Err(ctx) << "section size decrease is too large: " << delta;
   sec.bytesDropped = delta;
   return changed;
 }
@@ -933,7 +952,7 @@ bool RISCV::relaxOnce(int pass) const {
 
 void RISCV::finalizeRelax(int passes) const {
   llvm::TimeTraceScope timeScope("Finalize RISC-V relaxation");
-  Log(ctx) << "relaxation passes: " << Twine(passes);
+  Log(ctx) << "relaxation passes: " << passes;
   SmallVector<InputSection *, 0> storage;
   for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
@@ -989,6 +1008,8 @@ void RISCV::finalizeRelax(int passes) const {
           switch (newType) {
           case INTERNAL_R_RISCV_GPREL_I:
           case INTERNAL_R_RISCV_GPREL_S:
+          case INTERNAL_R_RISCV_X0REL_I:
+          case INTERNAL_R_RISCV_X0REL_S:
             break;
           case R_RISCV_RELAX:
             // Used by relaxTlsLe to indicate the relocation is ignored.
@@ -1045,7 +1066,7 @@ namespace {
 class RISCVAttributesSection final : public SyntheticSection {
 public:
   RISCVAttributesSection(Ctx &ctx)
-      : SyntheticSection(ctx, 0, SHT_RISCV_ATTRIBUTES, 1, ".riscv.attributes") {
+      : SyntheticSection(ctx, ".riscv.attributes", SHT_RISCV_ATTRIBUTES, 0, 1) {
   }
 
   size_t getSize() const override { return size; }
@@ -1096,10 +1117,9 @@ static void mergeAtomic(Ctx &ctx, DenseMap<unsigned, unsigned>::iterator it,
 
   auto reportAbiError = [&]() {
     Err(ctx) << "atomic abi mismatch for " << oldSection->name << "\n>>> "
-             << oldSection
-             << ": atomic_abi=" << Twine(static_cast<unsigned>(oldTag))
+             << oldSection << ": atomic_abi=" << static_cast<unsigned>(oldTag)
              << "\n>>> " << newSection
-             << ": atomic_abi=" << Twine(static_cast<unsigned>(newTag));
+             << ": atomic_abi=" << static_cast<unsigned>(newTag);
   };
 
   auto reportUnknownAbiError = [&](const InputSectionBase *section,
@@ -1112,7 +1132,7 @@ static void mergeAtomic(Ctx &ctx, DenseMap<unsigned, unsigned>::iterator it,
       return;
     };
     Err(ctx) << "unknown atomic abi for " << section->name << "\n>>> "
-             << section << ": atomic_abi=" << Twine(static_cast<unsigned>(tag));
+             << section << ": atomic_abi=" << static_cast<unsigned>(tag);
   };
   switch (oldTag) {
   case RISCVAtomicAbiTag::UNKNOWN:

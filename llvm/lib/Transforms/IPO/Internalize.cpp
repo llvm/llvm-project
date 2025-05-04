@@ -132,7 +132,6 @@ bool InternalizePass::shouldPreserveGV(const GlobalValue &GV) {
 
 bool InternalizePass::maybeInternalize(
     GlobalValue &GV, DenseMap<const Comdat *, ComdatInfo> &ComdatMap) {
-  SmallString<0> ComdatName;
   if (Comdat *C = GV.getComdat()) {
     // For GlobalAlias, C is the aliasee object's comdat which may have been
     // redirected. So ComdatMap may not contain C.
@@ -228,13 +227,17 @@ bool InternalizePass::internalizeModule(Module &M) {
   // FIXME: We should probably add this (and the __stack_chk_guard) via some
   // type of call-back in CodeGen.
   AlwaysPreserved.insert("__stack_chk_fail");
-  if (Triple(M.getTargetTriple()).isOSAIX())
+  if (M.getTargetTriple().isOSAIX())
     AlwaysPreserved.insert("__ssp_canary_word");
   else
     AlwaysPreserved.insert("__stack_chk_guard");
 
+  // Preserve the RPC interface for GPU host callbacks when internalizing.
+  if (M.getTargetTriple().isNVPTX())
+    AlwaysPreserved.insert("__llvm_rpc_client");
+
   // Mark all functions not in the api as internal.
-  IsWasm = Triple(M.getTargetTriple()).isOSBinFormatWasm();
+  IsWasm = M.getTargetTriple().isOSBinFormatWasm();
   for (Function &I : M) {
     if (!maybeInternalize(I, ComdatMap))
       continue;

@@ -237,15 +237,8 @@ protected:
   /// If closure returns \ref IterationAction::Continue, iteration
   /// continues. Otherwise, iteration terminates.
   void
-  ForEachSymbolFile(std::function<IterationAction(SymbolFileDWARF *)> closure) {
-    for (uint32_t oso_idx = 0, num_oso_idxs = m_compile_unit_infos.size();
-         oso_idx < num_oso_idxs; ++oso_idx) {
-      if (SymbolFileDWARF *oso_dwarf = GetSymbolFileByOSOIndex(oso_idx)) {
-        if (closure(oso_dwarf) == IterationAction::Stop)
-          return;
-      }
-    }
-  }
+  ForEachSymbolFile(std::string description,
+                    std::function<IterationAction(SymbolFileDWARF &)> closure);
 
   CompileUnitInfo *GetCompileUnitInfoForSymbolWithIndex(uint32_t symbol_idx,
                                                         uint32_t *oso_idx_ptr);
@@ -279,8 +272,6 @@ protected:
 
   DWARFDIE FindDefinitionDIE(const DWARFDIE &die);
 
-  bool Supports_DW_AT_APPLE_objc_complete_type(SymbolFileDWARF *skip_dwarf_oso);
-
   lldb::TypeSP FindCompleteObjCDefinitionTypeForDIE(
       const DWARFDIE &die, ConstString type_name, bool must_be_implementation);
 
@@ -291,6 +282,10 @@ protected:
 
   UniqueDWARFASTTypeMap &GetUniqueDWARFASTTypeMap() {
     return m_unique_ast_type_map;
+  }
+
+  llvm::DenseMap<const DWARFDebugInfoEntry *, Type *> &GetDIEToType() {
+    return m_die_to_type;
   }
 
   // OSOEntry
@@ -331,7 +326,8 @@ protected:
   llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef>
       m_forward_decl_compiler_type_to_die;
   UniqueDWARFASTTypeMap m_unique_ast_type_map;
-  LazyBool m_supports_DW_AT_APPLE_objc_complete_type;
+  llvm::DenseMap<const DWARFDebugInfoEntry *, Type *> m_die_to_type;
+
   DebugMap m_debug_map;
 
   // When an object file from the debug map gets parsed in

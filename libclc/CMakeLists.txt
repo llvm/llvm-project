@@ -20,22 +20,19 @@ include( GNUInstallDirs )
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   amdgcn-amdhsa/lib/SOURCES;
   amdgcn/lib/SOURCES;
-  amdgcn-mesa3d/lib/SOURCES;
   amdgpu/lib/SOURCES;
   clspv/lib/SOURCES;
-  clspv64/lib/SOURCES;
   generic/lib/SOURCES;
-  ptx/lib/SOURCES;
   ptx-nvidiacl/lib/SOURCES;
   r600/lib/SOURCES;
   spirv/lib/SOURCES;
-  spirv64/lib/SOURCES;
   # CLC internal libraries
   clc/lib/generic/SOURCES;
+  clc/lib/amdgcn/SOURCES;
+  clc/lib/amdgpu/SOURCES;
   clc/lib/clspv/SOURCES;
-  clc/lib/clspv64/SOURCES;
+  clc/lib/r600/SOURCES;
   clc/lib/spirv/SOURCES;
-  clc/lib/spirv64/SOURCES;
 )
 
 set( LIBCLC_MIN_LLVM 3.9.0 )
@@ -114,7 +111,7 @@ endforeach()
 if( TARGET llvm-spirv )
   get_host_tool_path( llvm-spirv LLVM_SPIRV llvm-spirv_exe llvm-spirv_target )
 else()
-  find_program( LLVM_SPIRV llvm-spirv PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH )
+  find_program( LLVM_SPIRV llvm-spirv HINTS ${LLVM_TOOLS_BINARY_DIR} )
   set( llvm-spirv_exe "${LLVM_SPIRV}" )
   set( llvm-spirv_target )
 endif()
@@ -215,7 +212,7 @@ set( cayman_aliases aruba )
 set( tahiti_aliases pitcairn verde oland hainan bonaire kabini kaveri hawaii
   mullins tonga tongapro iceland carrizo fiji stoney polaris10 polaris11
   gfx602 gfx705 gfx805
-  gfx900 gfx902 gfx904 gfx906 gfx908 gfx909 gfx90a gfx90c gfx940 gfx941 gfx942
+  gfx900 gfx902 gfx904 gfx906 gfx908 gfx909 gfx90a gfx90c gfx942 gfx950
   gfx1010 gfx1011 gfx1012 gfx1013
   gfx1030 gfx1031 gfx1032 gfx1033 gfx1034 gfx1035 gfx1036
   gfx1100 gfx1101 gfx1102 gfx1103
@@ -226,7 +223,6 @@ set( tahiti_aliases pitcairn verde oland hainan bonaire kabini kaveri hawaii
 # pkg-config file
 configure_file( libclc.pc.in libclc.pc @ONLY )
 install( FILES ${CMAKE_CURRENT_BINARY_DIR}/libclc.pc DESTINATION "${CMAKE_INSTALL_DATADIR}/pkgconfig" )
-install( DIRECTORY generic/include/clc DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}" )
 
 if( ENABLE_RUNTIME_SUBNORMAL )
   foreach( file IN ITEMS subnormal_use_default subnormal_disable )
@@ -247,15 +243,63 @@ add_custom_command(
   OUTPUT convert.cl
   COMMAND ${Python3_EXECUTABLE} ${script_loc} > convert.cl
   DEPENDS ${script_loc} )
-add_custom_target( "generate_convert.cl" DEPENDS convert.cl )
-set_target_properties( "generate_convert.cl" PROPERTIES FOLDER "libclc/Sourcegenning" )
+add_custom_target( generate-convert.cl DEPENDS convert.cl )
+set_target_properties( generate-convert.cl PROPERTIES FOLDER "libclc/Sourcegenning" )
 
 add_custom_command(
-  OUTPUT clspv-convert.cl
-  COMMAND ${Python3_EXECUTABLE} ${script_loc} --clspv > clspv-convert.cl
+  OUTPUT clc-convert.cl
+  COMMAND ${Python3_EXECUTABLE} ${script_loc} --clc > clc-convert.cl
   DEPENDS ${script_loc} )
-add_custom_target( "clspv-generate_convert.cl" DEPENDS clspv-convert.cl )
-set_target_properties( "clspv-generate_convert.cl" PROPERTIES FOLDER "libclc/Sourcegenning" )
+add_custom_target( generate-clc-convert.cl DEPENDS clc-convert.cl )
+set_target_properties( generate-clc-convert.cl PROPERTIES FOLDER "libclc/Sourcegenning" )
+
+if ( clspv-- IN_LIST LIBCLC_TARGETS_TO_BUILD OR clspv64-- IN_LIST LIBCLC_TARGETS_TO_BUILD )
+  add_custom_command(
+    OUTPUT clspv-convert.cl
+    COMMAND ${Python3_EXECUTABLE} ${script_loc} --clspv > clspv-convert.cl
+    DEPENDS ${script_loc} )
+  add_custom_target( generate-clspv-convert.cl DEPENDS clspv-convert.cl )
+  set_target_properties( generate-clspv-convert.cl PROPERTIES FOLDER "libclc/Sourcegenning" )
+endif()
+
+set_source_files_properties(
+  # CLC builtins
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_cos.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_divide.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_exp10.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_exp2.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_exp.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_log10.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_log2.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_log.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_powr.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_recip.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_rsqrt.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_sin.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_sqrt.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_tan.cl
+  # Target-specific CLC builtins
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/amdgpu/math/clc_native_exp2.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/amdgpu/math/clc_native_exp.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/amdgpu/math/clc_native_log10.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/r600/math/clc_native_rsqrt.cl
+  # OpenCL builtins
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_cos.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_divide.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_exp.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_exp10.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_exp2.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_log.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_log10.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_log2.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_powr.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_recip.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_rsqrt.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_sin.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_sqrt.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_tan.cl
+  PROPERTIES COMPILE_OPTIONS -fapprox-func
+)
 
 enable_testing()
 
@@ -266,30 +310,51 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
   list( GET TRIPLE 1 VENDOR )
   list( GET TRIPLE 2 OS )
 
-  set( dirs )
-
-  if ( NOT ${ARCH} STREQUAL spirv AND NOT ${ARCH} STREQUAL spirv64 AND
-       NOT ${ARCH} STREQUAL clspv AND NOT ${ARCH} STREQUAL clspv64)
-    LIST( APPEND dirs generic )
-  endif()
+  set( opencl_dirs )
 
   if( ${ARCH} STREQUAL r600 OR ${ARCH} STREQUAL amdgcn )
-    list( APPEND dirs amdgpu )
+    list( APPEND opencl_dirs amdgpu )
   endif()
 
-  # nvptx is special
+  # Some targets' directories alias others
   if( ${ARCH} STREQUAL nvptx OR ${ARCH} STREQUAL nvptx64 )
     set( DARCH ptx )
+  elseif( ${ARCH} STREQUAL clspv OR ${ARCH} STREQUAL clspv64 )
+    set( DARCH clspv )
+  elseif( ${ARCH} STREQUAL spirv OR ${ARCH} STREQUAL spirv64 )
+    set( DARCH spirv )
+  elseif( ${ARCH} STREQUAL amdgcn-mesa3d )
+    set( DARCH amdgcn-amdhsa )
   else()
     set( DARCH ${ARCH} )
   endif()
 
+  # Append a variety of target- and triple-based directories to search,
+  # increasing in specificity.
+  list( APPEND opencl_dirs ${DARCH} ${DARCH}-${OS} ${DARCH}-${VENDOR}-${OS} )
+
+  # The 'generic' directory contains all of the generic implementations of the
+  # builtins. It is included first so it has the lowest search priority,
+  # allowing targets to override builtins based on file names found later in
+  # the list of search directories.
+  # CLC builds all builtins for all targets, so unconditionally prepend the
+  # 'generic' directory.
+  set( clc_dirs generic ${opencl_dirs} )
+  # Some OpenCL targets don't build all builtins, in which case they don't want
+  # the 'generic' directory. Otherwise, prepend the 'generic' directory.
+  if ( NOT ARCH STREQUAL spirv AND NOT ARCH STREQUAL spirv64 AND
+       NOT ARCH STREQUAL clspv AND NOT ARCH STREQUAL clspv64)
+    list( PREPEND opencl_dirs generic )
+  endif()
+
   set( clc_lib_files )
+  set( clc_gen_files clc-convert.cl )
+
   libclc_configure_lib_source(
     clc_lib_files
     CLC_INTERNAL
     LIB_ROOT_DIR clc
-    DIRS ${dirs} ${DARCH} ${DARCH}-${OS} ${DARCH}-${VENDOR}-${OS}
+    DIRS ${clc_dirs}
   )
 
   set( opencl_lib_files )
@@ -298,15 +363,17 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
   if( NOT ARCH STREQUAL spirv AND NOT ARCH STREQUAL spirv64 )
     if( ARCH STREQUAL clspv OR ARCH STREQUAL clspv64 )
       list( APPEND opencl_gen_files clspv-convert.cl )
-    elseif ( NOT ENABLE_RUNTIME_SUBNORMAL )
+    else()
       list( APPEND opencl_gen_files convert.cl )
-      list( APPEND opencl_lib_files generic/lib/subnormal_use_default.ll )
+      if ( NOT ENABLE_RUNTIME_SUBNORMAL )
+        list( APPEND opencl_lib_files generic/lib/subnormal_use_default.ll )
+      endif()
     endif()
   endif()
 
   libclc_configure_lib_source(
     opencl_lib_files
-    DIRS ${dirs} ${DARCH} ${DARCH}-${OS} ${DARCH}-${VENDOR}-${OS}
+    DIRS ${opencl_dirs}
   )
 
   foreach( d ${${t}_devices} )
@@ -344,29 +411,32 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     set( LIBCLC_ARCH_OBJFILE_DIR "${LIBCLC_OBJFILE_DIR}/${arch_suffix}" )
     file( MAKE_DIRECTORY ${LIBCLC_ARCH_OBJFILE_DIR} )
 
+    # Build for OpenCL 3.0 independently of the target or device.
+    list( APPEND build_flags -cl-std=CL3.0 )
+
     string( TOUPPER "CLC_${MACRO_ARCH}" CLC_TARGET_DEFINE )
 
     list( APPEND build_flags
-      -D__CLC_INTERNAL
       -D${CLC_TARGET_DEFINE}
       # All libclc builtin libraries see CLC headers
       -I${CMAKE_CURRENT_SOURCE_DIR}/clc/include
-      # FIXME: Fix libclc to not require disabling this noisy warning
-      -Wno-bitwise-conditional-parentheses
     )
 
     if( NOT "${cpu}" STREQUAL "" )
       list( APPEND build_flags -mcpu=${cpu} )
     endif()
 
+    set( clc_build_flags ${build_flags} -DCLC_INTERNAL )
+
     add_libclc_builtin_set(
       CLC_INTERNAL
       ARCH ${ARCH}
       ARCH_SUFFIX clc-${arch_suffix}
       TRIPLE ${clang_triple}
-      COMPILE_FLAGS ${build_flags}
+      COMPILE_FLAGS ${clc_build_flags}
       OPT_FLAGS ${opt_flags}
       LIB_FILES ${clc_lib_files}
+      GEN_FILES ${clc_gen_files}
     )
 
     list( APPEND build_flags
@@ -383,7 +453,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       GEN_FILES ${opencl_gen_files}
       ALIASES ${${d}_aliases}
       # Link in the CLC builtins and internalize their symbols
-      INTERNAL_LINK_DEPENDENCIES $<TARGET_PROPERTY:builtins.link.clc-${arch_suffix},TARGET_FILE>
+      INTERNAL_LINK_DEPENDENCIES builtins.link.clc-${arch_suffix}
     )
   endforeach( d )
 endforeach( t )

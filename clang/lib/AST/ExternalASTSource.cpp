@@ -38,6 +38,10 @@ ExternalASTSource::hasExternalDefinitions(const Decl *D) {
   return EK_ReplyHazy;
 }
 
+bool ExternalASTSource::wasThisDeclarationADefinition(const FunctionDecl *FD) {
+  return false;
+}
+
 void ExternalASTSource::FindFileRegionDecls(FileID File, unsigned Offset,
                                             unsigned Length,
                                             SmallVectorImpl<Decl *> &Decls) {}
@@ -90,9 +94,18 @@ ExternalASTSource::GetExternalCXXBaseSpecifiers(uint64_t Offset) {
   return nullptr;
 }
 
-bool
-ExternalASTSource::FindExternalVisibleDeclsByName(const DeclContext *DC,
-                                                  DeclarationName Name) {
+bool ExternalASTSource::FindExternalVisibleDeclsByName(
+    const DeclContext *DC, DeclarationName Name,
+    const DeclContext *OriginalDC) {
+  return false;
+}
+
+bool ExternalASTSource::LoadExternalSpecializations(const Decl *D, bool) {
+  return false;
+}
+
+bool ExternalASTSource::LoadExternalSpecializations(
+    const Decl *D, ArrayRef<TemplateArgument>) {
   return false;
 }
 

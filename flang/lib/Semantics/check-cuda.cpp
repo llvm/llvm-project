@@ -82,6 +82,14 @@ struct DeviceExprChecker
           }
         }
       }
+      const Symbol &ultimate{sym->GetUltimate()};
+      const Scope &scope{ultimate.owner()};
+      const Symbol *mod{scope.IsModule() ? scope.symbol() : nullptr};
+      // Allow ieee_arithmetic module functions to be called on the device.
+      // TODO: Check for unsupported ieee_arithmetic on the device.
+      if (mod && mod->name() == "ieee_arithmetic") {
+        return {};
+      }
     } else if (x.GetSpecificIntrinsic()) {
       // TODO(CUDA): Check for unsupported intrinsics here
       return {};
@@ -110,10 +118,13 @@ struct FindHostArray
     if (const auto *details{
             symbol.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
       if (details->IsArray() &&
+          !symbol.attrs().test(Fortran::semantics::Attr::PARAMETER) &&
           (!details->cudaDataAttr() ||
               (details->cudaDataAttr() &&
                   *details->cudaDataAttr() != common::CUDADataAttr::Device &&
+                  *details->cudaDataAttr() != common::CUDADataAttr::Constant &&
                   *details->cudaDataAttr() != common::CUDADataAttr::Managed &&
+                  *details->cudaDataAttr() != common::CUDADataAttr::Shared &&
                   *details->cudaDataAttr() != common::CUDADataAttr::Unified))) {
         return &symbol;
       }
@@ -250,6 +261,9 @@ public:
           subp->cudaSubprogramAttrs().value_or(
               common::CUDASubprogramAttrs::Host) !=
               common::CUDASubprogramAttrs::Host) {
+        isHostDevice = subp->cudaSubprogramAttrs() &&
+            subp->cudaSubprogramAttrs() ==
+                common::CUDASubprogramAttrs::HostDevice;
         Check(body);
       }
     }
@@ -299,6 +313,14 @@ private:
             [&](const common::Indirection<parser::IfConstruct> &x) {
               Check(x.value());
             },
+            [&](const common::Indirection<parser::CaseConstruct> &x) {
+              const auto &caseList{
+                  std::get<std::list<parser::CaseConstruct::Case>>(
+                      x.value().t)};
+              for (const parser::CaseConstruct::Case &c : caseList) {
+                Check(std::get<parser::Block>(c.t));
+              }
+            },
             [&](const auto &x) {
               if (auto source{parser::GetSource(x)}) {
                 context_.Say(*source,
@@ -338,15 +360,33 @@ private:
   }
   template <typename A>
   void ErrorIfHostSymbol(const A &expr, parser::CharBlock source) {
+    if (isHostDevice)
+      return;
     if (const Symbol * hostArray{FindHostArray{}(expr)}) {
       context_.Say(source,
-          "Host array '%s' cannot be present in CUF kernel"_err_en_US,
+          "Host array '%s' cannot be present in device context"_err_en_US,
           hostArray->name());
+    }
+  }
+  void ErrorInCUFKernel(parser::CharBlock source) {
+    if (IsCUFKernelDo) {
+      context_.Say(
+          source, "Statement may not appear in cuf kernel code"_err_en_US);
     }
   }
   void Check(const parser::ActionStmt &stmt, const parser::CharBlock &source) {
     common::visit(
         common::visitors{
+            [&](const common::Indirection<parser::CycleStmt> &) {
+              ErrorInCUFKernel(source);
+            },
+            [&](const common::Indirection<parser::ExitStmt> &) {
+              ErrorInCUFKernel(source);
+            },
+            [&](const common::Indirection<parser::GotoStmt> &) {
+              ErrorInCUFKernel(source);
+            },
+            [&](const common::Indirection<parser::StopStmt> &) { return; },
             [&](const common::Indirection<parser::PrintStmt> &) {},
             [&](const common::Indirection<parser::WriteStmt> &x) {
               if (x.value().format) { // Formatted write to '*' or '6'
@@ -387,13 +427,10 @@ private:
               Check(x.value());
             },
             [&](const common::Indirection<parser::AssignmentStmt> &x) {
-              if (IsCUFKernelDo) {
-                const evaluate::Assignment *assign{
-                    semantics::GetAssignment(x.value())};
-                if (assign) {
-                  ErrorIfHostSymbol(assign->lhs, source);
-                  ErrorIfHostSymbol(assign->rhs, source);
-                }
+              if (const evaluate::Assignment *
+                  assign{semantics::GetAssignment(x.value())}) {
+                ErrorIfHostSymbol(assign->lhs, source);
+                ErrorIfHostSymbol(assign->rhs, source);
               }
               if (auto msg{ActionStmtChecker<IsCUFKernelDo>::WhyNotOk(x)}) {
                 context_.Say(source, std::move(*msg));
@@ -470,6 +507,7 @@ private:
   }
 
   SemanticsContext &context_;
+  bool isHostDevice{false};
 };
 
 void CUDAChecker::Enter(const parser::SubroutineSubprogram &x) {
@@ -496,10 +534,26 @@ void CUDAChecker::Enter(const parser::SeparateModuleSubprogram &x) {
 
 static int DoConstructTightNesting(
     const parser::DoConstruct *doConstruct, const parser::Block *&innerBlock) {
-  if (!doConstruct || !doConstruct->IsDoNormal()) {
+  if (!doConstruct ||
+      (!doConstruct->IsDoNormal() && !doConstruct->IsDoConcurrent())) {
     return 0;
   }
   innerBlock = &std::get<parser::Block>(doConstruct->t);
+  if (doConstruct->IsDoConcurrent()) {
+    const auto &loopControl = doConstruct->GetLoopControl();
+    if (loopControl) {
+      if (const auto *concurrentControl{
+              std::get_if<parser::LoopControl::Concurrent>(&loopControl->u)}) {
+        const auto &concurrentHeader =
+            std::get<Fortran::parser::ConcurrentHeader>(concurrentControl->t);
+        const auto &controls =
+            std::get<std::list<Fortran::parser::ConcurrentControl>>(
+                concurrentHeader.t);
+        return controls.size();
+      }
+    }
+    return 0;
+  }
   if (innerBlock->size() == 1) {
     if (const auto *execConstruct{
             std::get_if<parser::ExecutableConstruct>(&innerBlock->front().u)}) {
@@ -529,7 +583,8 @@ static void CheckReduce(
         case parser::ReductionOperator::Operator::Multiply:
         case parser::ReductionOperator::Operator::Max:
         case parser::ReductionOperator::Operator::Min:
-          isOk = cat == TypeCategory::Integer || cat == TypeCategory::Real;
+          isOk = cat == TypeCategory::Integer || cat == TypeCategory::Real ||
+              cat == TypeCategory::Complex;
           break;
         case parser::ReductionOperator::Operator::Iand:
         case parser::ReductionOperator::Operator::Ior:
@@ -572,9 +627,14 @@ void CUDAChecker::Enter(const parser::CUFKernelDoConstruct &x) {
       std::get<std::optional<parser::DoConstruct>>(x.t))};
   const parser::Block *innerBlock{nullptr};
   if (DoConstructTightNesting(doConstruct, innerBlock) < depth) {
-    context_.Say(source,
-        "!$CUF KERNEL DO (%jd) must be followed by a DO construct with tightly nested outer levels of counted DO loops"_err_en_US,
-        std::intmax_t{depth});
+    if (doConstruct && doConstruct->IsDoConcurrent())
+      context_.Say(source,
+          "!$CUF KERNEL DO (%jd) must be followed by a DO CONCURRENT construct with at least %jd indices"_err_en_US,
+          std::intmax_t{depth}, std::intmax_t{depth});
+    else
+      context_.Say(source,
+          "!$CUF KERNEL DO (%jd) must be followed by a DO construct with tightly nested outer levels of counted DO loops"_err_en_US,
+          std::intmax_t{depth});
   }
   if (innerBlock) {
     DeviceContextChecker<true>{context_}.Check(*innerBlock);

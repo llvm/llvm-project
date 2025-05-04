@@ -83,6 +83,10 @@ class LldbGdbServerTestCase(
         context = self.expect_gdbremote_sequence()
         self.assertIsNotNone(context)
 
+    # Sometimes fails:
+    # regex '^\$QC([0-9a-fA-F]+)#' failed to match against content '$E45#ae'
+    # See https://github.com/llvm/llvm-project/issues/138085.
+    @skipIfWindows
     def test_first_launch_stop_reply_thread_matches_first_qC(self):
         self.build()
         procs = self.prep_debug_monitor_and_inferior()
@@ -106,6 +110,8 @@ class LldbGdbServerTestCase(
         context = self.expect_gdbremote_sequence()
         self.assertEqual(context.get("thread_id_QC"), context.get("thread_id_?"))
 
+    # This test is flaky on Windows. Sometimes returns 'Exception 0x80000003'.
+    @skipIf(oslist=["windows"], bugnumber="github.com/llvm/llvm-project/issues/138085")
     def test_attach_commandline_continue_app_exits(self):
         self.build()
         self.set_inferior_startup_attach()
@@ -128,135 +134,6 @@ class LldbGdbServerTestCase(
         # running.
         self.assertFalse(
             lldbgdbserverutils.process_is_running(procs["inferior"].pid, False)
-        )
-
-    def test_qRegisterInfo_returns_one_valid_result(self):
-        self.build()
-        self.prep_debug_monitor_and_inferior()
-        self.test_sequence.add_log_lines(
-            [
-                "read packet: $qRegisterInfo0#00",
-                {
-                    "direction": "send",
-                    "regex": r"^\$(.+);#[0-9A-Fa-f]{2}",
-                    "capture": {1: "reginfo_0"},
-                },
-            ],
-            True,
-        )
-
-        # Run the stream
-        context = self.expect_gdbremote_sequence()
-        self.assertIsNotNone(context)
-
-        reg_info_packet = context.get("reginfo_0")
-        self.assertIsNotNone(reg_info_packet)
-        self.assert_valid_reg_info(
-            lldbgdbserverutils.parse_reg_info_response(reg_info_packet)
-        )
-
-    def test_qRegisterInfo_returns_all_valid_results(self):
-        self.build()
-        self.prep_debug_monitor_and_inferior()
-        self.add_register_info_collection_packets()
-
-        # Run the stream.
-        context = self.expect_gdbremote_sequence()
-        self.assertIsNotNone(context)
-
-        # Validate that each register info returned validates.
-        for reg_info in self.parse_register_info_packets(context):
-            self.assert_valid_reg_info(reg_info)
-
-    def test_qRegisterInfo_contains_required_generics_debugserver(self):
-        self.build()
-        self.prep_debug_monitor_and_inferior()
-        self.add_register_info_collection_packets()
-
-        # Run the packet stream.
-        context = self.expect_gdbremote_sequence()
-        self.assertIsNotNone(context)
-
-        # Gather register info entries.
-        reg_infos = self.parse_register_info_packets(context)
-
-        # Collect all generic registers found.
-        generic_regs = {
-            reg_info["generic"]: 1 for reg_info in reg_infos if "generic" in reg_info
-        }
-
-        # Ensure we have a program counter register.
-        self.assertIn("pc", generic_regs)
-
-        # Ensure we have a frame pointer register. PPC64le's FP is the same as SP
-        if self.getArchitecture() != "powerpc64le":
-            self.assertIn("fp", generic_regs)
-
-        # Ensure we have a stack pointer register.
-        self.assertIn("sp", generic_regs)
-
-        # Ensure we have a flags register.
-        self.assertIn("flags", generic_regs)
-
-    def test_qRegisterInfo_contains_at_least_one_register_set(self):
-        self.build()
-        self.prep_debug_monitor_and_inferior()
-        self.add_register_info_collection_packets()
-
-        # Run the packet stream.
-        context = self.expect_gdbremote_sequence()
-        self.assertIsNotNone(context)
-
-        # Gather register info entries.
-        reg_infos = self.parse_register_info_packets(context)
-
-        # Collect all register sets found.
-        register_sets = {
-            reg_info["set"]: 1 for reg_info in reg_infos if "set" in reg_info
-        }
-        self.assertGreaterEqual(len(register_sets), 1)
-
-    def targetHasAVX(self):
-        triple = self.dbg.GetSelectedPlatform().GetTriple()
-
-        # TODO other platforms, please implement this function
-        if not re.match(".*-.*-linux", triple):
-            return True
-
-        # Need to do something different for non-Linux/Android targets
-        if lldb.remote_platform:
-            self.runCmd('platform get-file "/proc/cpuinfo" "cpuinfo"')
-            cpuinfo_path = "cpuinfo"
-            self.addTearDownHook(lambda: os.unlink("cpuinfo"))
-        else:
-            cpuinfo_path = "/proc/cpuinfo"
-
-        f = open(cpuinfo_path, "r")
-        cpuinfo = f.read()
-        f.close()
-        return " avx " in cpuinfo
-
-    @expectedFailureAll(oslist=["windows"])  # no avx for now.
-    @skipIf(archs=no_match(["amd64", "i386", "x86_64"]))
-    @add_test_categories(["llgs"])
-    def test_qRegisterInfo_contains_avx_registers(self):
-        self.build()
-        self.prep_debug_monitor_and_inferior()
-        self.add_register_info_collection_packets()
-
-        # Run the packet stream.
-        context = self.expect_gdbremote_sequence()
-        self.assertIsNotNone(context)
-
-        # Gather register info entries.
-        reg_infos = self.parse_register_info_packets(context)
-
-        # Collect all generics found.
-        register_sets = {
-            reg_info["set"]: 1 for reg_info in reg_infos if "set" in reg_info
-        }
-        self.assertEqual(
-            self.targetHasAVX(), "Advanced Vector Extensions" in register_sets
         )
 
     def qThreadInfo_contains_thread(self):
@@ -428,6 +305,8 @@ class LldbGdbServerTestCase(
             self.assertIsNotNone(context.get("thread_id"))
             self.assertEqual(int(context.get("thread_id"), 16), thread)
 
+    # This test is flaky on Windows. Sometimes returns '$E37#af'.
+    @skipIf(oslist=["windows"], bugnumber="github.com/llvm/llvm-project/issues/138085")
     @skipIf(compiler="clang", compiler_version=["<", "11.0"])
     def test_Hg_switches_to_3_threads_launch(self):
         self.build()
@@ -679,210 +558,6 @@ class LldbGdbServerTestCase(
         read_contents = seven.unhexlify(context.get("read_contents"))
         self.assertEqual(read_contents, MEMORY_CONTENTS)
 
-    def test_qMemoryRegionInfo_is_supported(self):
-        self.build()
-        self.set_inferior_startup_launch()
-        # Start up the inferior.
-        procs = self.prep_debug_monitor_and_inferior()
-
-        # Ask if it supports $qMemoryRegionInfo.
-        self.test_sequence.add_log_lines(
-            ["read packet: $qMemoryRegionInfo#00", "send packet: $OK#00"], True
-        )
-        self.expect_gdbremote_sequence()
-
-    @skipIfWindows  # No pty support to test any inferior output
-    def test_qMemoryRegionInfo_reports_code_address_as_executable(self):
-        self.build()
-        self.set_inferior_startup_launch()
-
-        # Start up the inferior.
-        procs = self.prep_debug_monitor_and_inferior(
-            inferior_args=["get-code-address-hex:hello", "sleep:5"]
-        )
-
-        # Run the process
-        self.test_sequence.add_log_lines(
-            [
-                # Start running after initial stop.
-                "read packet: $c#63",
-                # Match output line that prints the memory address of the message buffer within the inferior.
-                # Note we require launch-only testing so we can get inferior otuput.
-                {
-                    "type": "output_match",
-                    "regex": self.maybe_strict_output_regex(
-                        r"code address: 0x([0-9a-fA-F]+)\r\n"
-                    ),
-                    "capture": {1: "code_address"},
-                },
-                # Now stop the inferior.
-                "read packet: {}".format(chr(3)),
-                # And wait for the stop notification.
-                {
-                    "direction": "send",
-                    "regex": r"^\$T([0-9a-fA-F]{2})thread:([0-9a-fA-F]+);",
-                    "capture": {1: "stop_signo", 2: "stop_thread_id"},
-                },
-            ],
-            True,
-        )
-
-        # Run the packet stream.
-        context = self.expect_gdbremote_sequence()
-        self.assertIsNotNone(context)
-
-        # Grab the code address.
-        self.assertIsNotNone(context.get("code_address"))
-        code_address = int(context.get("code_address"), 16)
-
-        # Grab memory region info from the inferior.
-        self.reset_test_sequence()
-        self.add_query_memory_region_packets(code_address)
-
-        # Run the packet stream.
-        context = self.expect_gdbremote_sequence()
-        self.assertIsNotNone(context)
-        mem_region_dict = self.parse_memory_region_packet(context)
-
-        # Ensure there are no errors reported.
-        self.assertNotIn("error", mem_region_dict)
-
-        # Ensure code address is readable and executable.
-        self.assertIn("permissions", mem_region_dict)
-        self.assertIn("r", mem_region_dict["permissions"])
-        self.assertIn("x", mem_region_dict["permissions"])
-
-        # Ensure the start address and size encompass the address we queried.
-        self.assert_address_within_memory_region(code_address, mem_region_dict)
-
-    @skipIfWindows  # No pty support to test any inferior output
-    def test_qMemoryRegionInfo_reports_stack_address_as_rw(self):
-        self.build()
-        self.set_inferior_startup_launch()
-
-        # Start up the inferior.
-        procs = self.prep_debug_monitor_and_inferior(
-            inferior_args=["get-stack-address-hex:", "sleep:5"]
-        )
-
-        # Run the process
-        self.test_sequence.add_log_lines(
-            [
-                # Start running after initial stop.
-                "read packet: $c#63",
-                # Match output line that prints the memory address of the message buffer within the inferior.
-                # Note we require launch-only testing so we can get inferior otuput.
-                {
-                    "type": "output_match",
-                    "regex": self.maybe_strict_output_regex(
-                        r"stack address: 0x([0-9a-fA-F]+)\r\n"
-                    ),
-                    "capture": {1: "stack_address"},
-                },
-                # Now stop the inferior.
-                "read packet: {}".format(chr(3)),
-                # And wait for the stop notification.
-                {
-                    "direction": "send",
-                    "regex": r"^\$T([0-9a-fA-F]{2})thread:([0-9a-fA-F]+);",
-                    "capture": {1: "stop_signo", 2: "stop_thread_id"},
-                },
-            ],
-            True,
-        )
-
-        # Run the packet stream.
-        context = self.expect_gdbremote_sequence()
-        self.assertIsNotNone(context)
-
-        # Grab the address.
-        self.assertIsNotNone(context.get("stack_address"))
-        stack_address = int(context.get("stack_address"), 16)
-
-        # Grab memory region info from the inferior.
-        self.reset_test_sequence()
-        self.add_query_memory_region_packets(stack_address)
-
-        # Run the packet stream.
-        context = self.expect_gdbremote_sequence()
-        self.assertIsNotNone(context)
-        mem_region_dict = self.parse_memory_region_packet(context)
-
-        # Ensure there are no errors reported.
-        self.assertNotIn("error", mem_region_dict)
-
-        # Ensure address is readable and executable.
-        self.assertIn("permissions", mem_region_dict)
-        self.assertIn("r", mem_region_dict["permissions"])
-        self.assertIn("w", mem_region_dict["permissions"])
-
-        # Ensure the start address and size encompass the address we queried.
-        self.assert_address_within_memory_region(stack_address, mem_region_dict)
-
-    @skipIfWindows  # No pty support to test any inferior output
-    def test_qMemoryRegionInfo_reports_heap_address_as_rw(self):
-        self.build()
-        self.set_inferior_startup_launch()
-
-        # Start up the inferior.
-        procs = self.prep_debug_monitor_and_inferior(
-            inferior_args=["get-heap-address-hex:", "sleep:5"]
-        )
-
-        # Run the process
-        self.test_sequence.add_log_lines(
-            [
-                # Start running after initial stop.
-                "read packet: $c#63",
-                # Match output line that prints the memory address of the message buffer within the inferior.
-                # Note we require launch-only testing so we can get inferior otuput.
-                {
-                    "type": "output_match",
-                    "regex": self.maybe_strict_output_regex(
-                        r"heap address: 0x([0-9a-fA-F]+)\r\n"
-                    ),
-                    "capture": {1: "heap_address"},
-                },
-                # Now stop the inferior.
-                "read packet: {}".format(chr(3)),
-                # And wait for the stop notification.
-                {
-                    "direction": "send",
-                    "regex": r"^\$T([0-9a-fA-F]{2})thread:([0-9a-fA-F]+);",
-                    "capture": {1: "stop_signo", 2: "stop_thread_id"},
-                },
-            ],
-            True,
-        )
-
-        # Run the packet stream.
-        context = self.expect_gdbremote_sequence()
-        self.assertIsNotNone(context)
-
-        # Grab the address.
-        self.assertIsNotNone(context.get("heap_address"))
-        heap_address = int(context.get("heap_address"), 16)
-
-        # Grab memory region info from the inferior.
-        self.reset_test_sequence()
-        self.add_query_memory_region_packets(heap_address)
-
-        # Run the packet stream.
-        context = self.expect_gdbremote_sequence()
-        self.assertIsNotNone(context)
-        mem_region_dict = self.parse_memory_region_packet(context)
-
-        # Ensure there are no errors reported.
-        self.assertNotIn("error", mem_region_dict)
-
-        # Ensure address is readable and executable.
-        self.assertIn("permissions", mem_region_dict)
-        self.assertIn("r", mem_region_dict["permissions"])
-        self.assertIn("w", mem_region_dict["permissions"])
-
-        # Ensure the start address and size encompass the address we queried.
-        self.assert_address_within_memory_region(heap_address, mem_region_dict)
-
     def breakpoint_set_and_remove_work(self, want_hardware):
         # Start up the inferior.
         procs = self.prep_debug_monitor_and_inferior(
@@ -1054,98 +729,6 @@ class LldbGdbServerTestCase(
             self.build()
         self.set_inferior_startup_launch()
         self.breakpoint_set_and_remove_work(want_hardware=True)
-
-    def get_qSupported_dict(self, features=[]):
-        self.build()
-        self.set_inferior_startup_launch()
-
-        # Start up the stub and start/prep the inferior.
-        procs = self.prep_debug_monitor_and_inferior()
-        self.add_qSupported_packets(features)
-
-        # Run the packet stream.
-        context = self.expect_gdbremote_sequence()
-        self.assertIsNotNone(context)
-
-        # Retrieve the qSupported features.
-        return self.parse_qSupported_response(context)
-
-    def test_qSupported_returns_known_stub_features(self):
-        supported_dict = self.get_qSupported_dict()
-        self.assertIsNotNone(supported_dict)
-        self.assertGreater(len(supported_dict), 0)
-
-    def test_qSupported_auvx(self):
-        expected = (
-            "+"
-            if lldbplatformutil.getPlatform() in ["freebsd", "linux", "netbsd"]
-            else "-"
-        )
-        supported_dict = self.get_qSupported_dict()
-        self.assertEqual(supported_dict.get("qXfer:auxv:read", "-"), expected)
-
-    def test_qSupported_libraries_svr4(self):
-        expected = (
-            "+"
-            if lldbplatformutil.getPlatform() in ["freebsd", "linux", "netbsd"]
-            else "-"
-        )
-        supported_dict = self.get_qSupported_dict()
-        self.assertEqual(supported_dict.get("qXfer:libraries-svr4:read", "-"), expected)
-
-    def test_qSupported_siginfo_read(self):
-        expected = (
-            "+" if lldbplatformutil.getPlatform() in ["freebsd", "linux"] else "-"
-        )
-        supported_dict = self.get_qSupported_dict()
-        self.assertEqual(supported_dict.get("qXfer:siginfo:read", "-"), expected)
-
-    def test_qSupported_QPassSignals(self):
-        expected = (
-            "+"
-            if lldbplatformutil.getPlatform() in ["freebsd", "linux", "netbsd"]
-            else "-"
-        )
-        supported_dict = self.get_qSupported_dict()
-        self.assertEqual(supported_dict.get("QPassSignals", "-"), expected)
-
-    @add_test_categories(["fork"])
-    def test_qSupported_fork_events(self):
-        supported_dict = self.get_qSupported_dict(["multiprocess+", "fork-events+"])
-        self.assertEqual(supported_dict.get("multiprocess", "-"), "+")
-        self.assertEqual(supported_dict.get("fork-events", "-"), "+")
-        self.assertEqual(supported_dict.get("vfork-events", "-"), "-")
-
-    @add_test_categories(["fork"])
-    def test_qSupported_fork_events_without_multiprocess(self):
-        supported_dict = self.get_qSupported_dict(["fork-events+"])
-        self.assertEqual(supported_dict.get("multiprocess", "-"), "-")
-        self.assertEqual(supported_dict.get("fork-events", "-"), "-")
-        self.assertEqual(supported_dict.get("vfork-events", "-"), "-")
-
-    @add_test_categories(["fork"])
-    def test_qSupported_vfork_events(self):
-        supported_dict = self.get_qSupported_dict(["multiprocess+", "vfork-events+"])
-        self.assertEqual(supported_dict.get("multiprocess", "-"), "+")
-        self.assertEqual(supported_dict.get("fork-events", "-"), "-")
-        self.assertEqual(supported_dict.get("vfork-events", "-"), "+")
-
-    @add_test_categories(["fork"])
-    def test_qSupported_vfork_events_without_multiprocess(self):
-        supported_dict = self.get_qSupported_dict(["vfork-events+"])
-        self.assertEqual(supported_dict.get("multiprocess", "-"), "-")
-        self.assertEqual(supported_dict.get("fork-events", "-"), "-")
-        self.assertEqual(supported_dict.get("vfork-events", "-"), "-")
-
-    # We need to be able to self.runCmd to get cpuinfo,
-    # which is not possible when using a remote platform.
-    @skipIfRemote
-    def test_qSupported_memory_tagging(self):
-        supported_dict = self.get_qSupported_dict()
-        self.assertEqual(
-            supported_dict.get("memory-tagging", "-"),
-            "+" if self.isAArch64MTE() else "-",
-        )
 
     @skipIfWindows  # No pty support to test any inferior output
     def test_written_M_content_reads_back_correctly(self):

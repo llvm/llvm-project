@@ -426,12 +426,12 @@ define amdgpu_kernel void @call(ptr addrspace(8) inreg %tmp14, i32 inreg %arg) {
 ; GFX9-O3-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX9-O3-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX9-O3-NEXT:    s_mov_b64 s[0:1], s[24:25]
-; GFX9-O3-NEXT:    v_mov_b32_e32 v31, v3
-; GFX9-O3-NEXT:    s_mov_b64 s[2:3], s[26:27]
-; GFX9-O3-NEXT:    v_mov_b32_e32 v0, v6
 ; GFX9-O3-NEXT:    s_getpc_b64 s[22:23]
 ; GFX9-O3-NEXT:    s_add_u32 s22, s22, called@rel32@lo+4
 ; GFX9-O3-NEXT:    s_addc_u32 s23, s23, called@rel32@hi+12
+; GFX9-O3-NEXT:    v_mov_b32_e32 v31, v3
+; GFX9-O3-NEXT:    s_mov_b64 s[2:3], s[26:27]
+; GFX9-O3-NEXT:    v_mov_b32_e32 v0, v6
 ; GFX9-O3-NEXT:    s_swappc_b64 s[30:31], s[22:23]
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v3, v0
 ; GFX9-O3-NEXT:    v_add_u32_e32 v3, v3, v6
@@ -1278,12 +1278,12 @@ define amdgpu_kernel void @strict_wwm_call(ptr addrspace(8) inreg %tmp14, i32 in
 ; GFX9-O3-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX9-O3-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX9-O3-NEXT:    s_mov_b64 s[0:1], s[24:25]
-; GFX9-O3-NEXT:    v_mov_b32_e32 v31, v3
-; GFX9-O3-NEXT:    s_mov_b64 s[2:3], s[26:27]
-; GFX9-O3-NEXT:    v_mov_b32_e32 v0, v6
 ; GFX9-O3-NEXT:    s_getpc_b64 s[22:23]
 ; GFX9-O3-NEXT:    s_add_u32 s22, s22, strict_wwm_called@rel32@lo+4
 ; GFX9-O3-NEXT:    s_addc_u32 s23, s23, strict_wwm_called@rel32@hi+12
+; GFX9-O3-NEXT:    v_mov_b32_e32 v31, v3
+; GFX9-O3-NEXT:    s_mov_b64 s[2:3], s[26:27]
+; GFX9-O3-NEXT:    v_mov_b32_e32 v0, v6
 ; GFX9-O3-NEXT:    s_swappc_b64 s[30:31], s[22:23]
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v3, v0
 ; GFX9-O3-NEXT:    v_add_u32_e32 v3, v3, v6
@@ -1723,5 +1723,3 @@ declare void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float>, ptr addrspace(
 declare <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32>, i32, i32)
 declare <4 x i32> @llvm.amdgcn.s.buffer.load.v4i32(<4 x i32>, i32, i32)
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

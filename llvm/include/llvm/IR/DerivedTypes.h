@@ -228,6 +228,8 @@ class StructType : public Type {
     SCDB_NotContainsScalableVector = 32,
     SCDB_ContainsNonGlobalTargetExtType = 64,
     SCDB_NotContainsNonGlobalTargetExtType = 128,
+    SCDB_ContainsNonLocalTargetExtType = 64,
+    SCDB_NotContainsNonLocalTargetExtType = 128,
   };
 
   /// For a named struct that actually has a name, this is a pointer to the
@@ -301,6 +303,12 @@ public:
   bool
   containsNonGlobalTargetExtType(SmallPtrSetImpl<const Type *> &Visited) const;
   using Type::containsNonGlobalTargetExtType;
+
+  /// Return true if this type is or contains a target extension type that
+  /// disallows being used as a local.
+  bool
+  containsNonLocalTargetExtType(SmallPtrSetImpl<const Type *> &Visited) const;
+  using Type::containsNonLocalTargetExtType;
 
   /// Returns true if this struct contains homogeneous scalable vector types.
   /// Note that the definition of homogeneous scalable vector type is not
@@ -528,6 +536,15 @@ public:
                            EltCnt.divideCoefficientBy(2));
   }
 
+  static VectorType *getOneNthElementsVectorType(VectorType *VTy,
+                                                 unsigned Denominator) {
+    auto EltCnt = VTy->getElementCount();
+    assert(EltCnt.isKnownMultipleOf(Denominator) &&
+           "Cannot take one-nth of a vector");
+    return VectorType::get(VTy->getScalarType(),
+                           EltCnt.divideCoefficientBy(Denominator));
+  }
+
   /// This static method returns a VectorType with twice as many elements as the
   /// input type and the same element type.
   static VectorType *getDoubleElementsVectorType(VectorType *VTy) {
@@ -668,6 +685,8 @@ public:
 
   /// This constructs a pointer to an object of the specified type in a numbered
   /// address space.
+  [[deprecated("PointerType::get with pointee type is pending removal. Use "
+               "Context overload.")]]
   static PointerType *get(Type *ElementType, unsigned AddressSpace);
   /// This constructs an opaque pointer to an object in a numbered address
   /// space.
@@ -675,8 +694,13 @@ public:
 
   /// This constructs a pointer to an object of the specified type in the
   /// default address space (address space zero).
+  [[deprecated("PointerType::getUnqual with pointee type is pending removal. "
+               "Use Context overload.")]]
   static PointerType *getUnqual(Type *ElementType) {
-    return PointerType::get(ElementType, 0);
+    assert(ElementType && "Can't get a pointer to <null> type!");
+    assert(isValidElementType(ElementType) &&
+           "Invalid type for pointer element!");
+    return PointerType::getUnqual(ElementType->getContext());
   }
 
   /// This constructs an opaque pointer to an object in the
@@ -798,6 +822,9 @@ public:
     HasZeroInit = 1U << 0,
     /// This type may be used as the value type of a global variable.
     CanBeGlobal = 1U << 1,
+    /// This type may be allocated on the stack, either as the allocated type
+    /// of an alloca instruction or as a byval function parameter.
+    CanBeLocal = 1U << 2,
   };
 
   /// Returns true if the target extension type contains the given property.

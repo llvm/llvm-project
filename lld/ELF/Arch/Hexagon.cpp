@@ -68,7 +68,7 @@ uint32_t Hexagon::calcEFlags() const {
     if (!ret || eflags > *ret)
       ret = eflags;
   }
-  return ret.value_or(/* Default Arch Rev: */ 0x60);
+  return ret.value_or(/* Default Arch Rev: */ EF_HEXAGON_MACH_V68);
 }
 
 static uint32_t applyMask(uint32_t mask, uint32_t data) {
@@ -199,7 +199,7 @@ static uint32_t findMaskR6(Ctx &ctx, uint32_t insn) {
       return i.relocMask;
 
   Err(ctx) << "unrecognized instruction for 6_X relocation: 0x"
-           << utohexstr(insn);
+           << utohexstr(insn, true);
   return 0;
 }
 

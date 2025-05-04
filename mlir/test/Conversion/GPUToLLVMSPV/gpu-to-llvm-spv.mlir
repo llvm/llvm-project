@@ -1,6 +1,8 @@
-// RUN: mlir-opt -pass-pipeline="builtin.module(gpu.module(convert-gpu-to-llvm-spv))" -split-input-file -verify-diagnostics %s \
+// RUN: mlir-opt -pass-pipeline="builtin.module(gpu.module(convert-gpu-to-llvm-spv{use-64bit-index=true}))" -split-input-file -verify-diagnostics %s \
 // RUN: | FileCheck --check-prefixes=CHECK-64,CHECK %s
-// RUN: mlir-opt -pass-pipeline="builtin.module(gpu.module(convert-gpu-to-llvm-spv{index-bitwidth=32}))" -split-input-file -verify-diagnostics %s \
+// RUN: mlir-opt -pass-pipeline="builtin.module(gpu.module(convert-gpu-to-llvm-spv))" -split-input-file -verify-diagnostics %s \
+// RUN: | FileCheck --check-prefixes=CHECK-32,CHECK %s
+// RUN: mlir-opt -pass-pipeline="builtin.module(gpu.module(convert-gpu-to-llvm-spv{use-64bit-index=false}))" -split-input-file -verify-diagnostics %s \
 // RUN: | FileCheck --check-prefixes=CHECK-32,CHECK %s
 
 gpu.module @builtins {
@@ -227,84 +229,9 @@ gpu.module @barriers {
 
 // -----
 
-// Check `gpu.shuffle` conversion with default subgroup size.
-
-gpu.module @shuffles {
-  // CHECK:           llvm.func spir_funccc @_Z22sub_group_shuffle_downdj(f64, i32) -> f64 attributes {
-  // CHECK-SAME-DAG:  no_unwind
-  // CHECK-SAME-DAG:  convergent
-  // CHECK-SAME-DAG:  will_return
-  // CHECK-NOT:       memory_effects = #llvm.memory_effects
-  // CHECK-SAME:      }
-  // CHECK:           llvm.func spir_funccc @_Z20sub_group_shuffle_upfj(f32, i32) -> f32 attributes {
-  // CHECK-SAME-DAG:  no_unwind
-  // CHECK-SAME-DAG:  convergent
-  // CHECK-SAME-DAG:  will_return
-  // CHECK-NOT:       memory_effects = #llvm.memory_effects
-  // CHECK-SAME:      }
-  // CHECK:           llvm.func spir_funccc @_Z21sub_group_shuffle_xorlj(i64, i32) -> i64 attributes {
-  // CHECK-SAME-DAG:  no_unwind
-  // CHECK-SAME-DAG:  convergent
-  // CHECK-SAME-DAG:  will_return
-  // CHECK-NOT:       memory_effects = #llvm.memory_effects
-  // CHECK-SAME:      }
-  // CHECK:           llvm.func spir_funccc @_Z17sub_group_shuffleij(i32, i32) -> i32 attributes {
-  // CHECK-SAME-DAG:  no_unwind
-  // CHECK-SAME-DAG:  convergent
-  // CHECK-SAME-DAG:  will_return
-  // CHECK-NOT:       memory_effects = #llvm.memory_effects
-  // CHECK-SAME:      }
-
-  // CHECK-LABEL: gpu_shuffles
-  // CHECK-SAME:              (%[[VAL_0:.*]]: i32, %[[VAL_1:.*]]: i32, %[[VAL_2:.*]]: i64, %[[VAL_3:.*]]: i32, %[[VAL_4:.*]]: f32, %[[VAL_5:.*]]: i32, %[[VAL_6:.*]]: f64, %[[VAL_7:.*]]: i32)
-  func.func @gpu_shuffles(%val0: i32, %id: i32,
-                          %val1: i64, %mask: i32,
-                          %val2: f32, %delta_up: i32,
-                          %val3: f64, %delta_down: i32) {
-    %width = arith.constant 32 : i32
-    // CHECK:         llvm.call spir_funccc @_Z17sub_group_shuffleij(%[[VAL_0]], %[[VAL_1]]) {
-    // CHECK-SAME-DAG:  no_unwind
-    // CHECK-SAME-DAG:  convergent
-    // CHECK-SAME-DAG:  will_return
-    // CHECK-NOT:       memory_effects = #llvm.memory_effects
-    // CHECK-SAME:    } : (i32, i32) -> i32
-    // CHECK:         llvm.mlir.constant(true) : i1
-    // CHECK:         llvm.call spir_funccc @_Z21sub_group_shuffle_xorlj(%[[VAL_2]], %[[VAL_3]]) {
-    // CHECK-SAME-DAG:  no_unwind
-    // CHECK-SAME-DAG:  convergent
-    // CHECK-SAME-DAG:  will_return
-    // CHECK-NOT:       memory_effects = #llvm.memory_effects
-    // CHECK-SAME:    } : (i64, i32) -> i64
-    // CHECK:         llvm.mlir.constant(true) : i1
-    // CHECK:         llvm.call spir_funccc @_Z20sub_group_shuffle_upfj(%[[VAL_4]], %[[VAL_5]]) {
-    // CHECK-SAME-DAG:  no_unwind
-    // CHECK-SAME-DAG:  convergent
-    // CHECK-SAME-DAG:  will_return
-    // CHECK-NOT:       memory_effects= #llvm.memory_effects
-    // CHECK-SAME:    } : (f32, i32) -> f32
-    // CHECK:         llvm.mlir.constant(true) : i1
-    // CHECK:         llvm.call spir_funccc @_Z22sub_group_shuffle_downdj(%[[VAL_6]], %[[VAL_7]]) {
-    // CHECK-SAME-DAG:  no_unwind
-    // CHECK-SAME-DAG:  convergent
-    // CHECK-SAME-DAG:  will_return
-    // CHECK-NOT:       memory_effects= #llvm.memory_effects
-    // CHECK-SAME:    } : (f64, i32) -> f64
-    // CHECK:         llvm.mlir.constant(true) : i1
-    %shuffleResult0, %valid0 = gpu.shuffle idx %val0, %id, %width : i32
-    %shuffleResult1, %valid1 = gpu.shuffle xor %val1, %mask, %width : i64
-    %shuffleResult2, %valid2 = gpu.shuffle up %val2, %delta_up, %width : f32
-    %shuffleResult3, %valid3 = gpu.shuffle down %val3, %delta_down, %width : f64
-    return
-  }
-}
-
-// -----
-
 // Check `gpu.shuffle` conversion with explicit subgroup size.
 
-gpu.module @shuffles attributes {
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.4, [Kernel, Addresses, GroupNonUniformShuffle, Int64], []>, #spirv.resource_limits<subgroup_size = 16>>
-} {
+gpu.module @shuffles {
   // CHECK:           llvm.func spir_funccc @_Z22sub_group_shuffle_downdj(f64, i32) -> f64 attributes {
   // CHECK-SAME-DAG:  no_unwind
   // CHECK-SAME-DAG:  convergent
@@ -352,15 +279,18 @@ gpu.module @shuffles attributes {
   // CHECK-SAME:              (%[[I8_VAL:.*]]: i8, %[[I16_VAL:.*]]: i16,
   // CHECK-SAME:               %[[I32_VAL:.*]]: i32, %[[I64_VAL:.*]]: i64,
   // CHECK-SAME:               %[[F16_VAL:.*]]: f16, %[[F32_VAL:.*]]: f32,
-  // CHECK-SAME:               %[[F64_VAL:.*]]: f64,  %[[OFFSET:.*]]: i32) {
-  func.func @gpu_shuffles(%i8_val: i8,
+  // CHECK-SAME:               %[[F64_VAL:.*]]: f64, %[[BF16_VAL:.*]]: bf16,
+  // CHECK-SAME:               %[[I1_VAL:.*]]: i1, %[[OFFSET:.*]]: i32)
+  llvm.func @gpu_shuffles(%i8_val: i8,
                           %i16_val: i16,
                           %i32_val: i32,
                           %i64_val: i64,
                           %f16_val: f16,
                           %f32_val: f32,
                           %f64_val: f64,
-                          %offset: i32) {
+                          %bf16_val: bf16,
+                          %i1_val: i1,
+                          %offset: i32) attributes {intel_reqd_sub_group_size = 16 : i32} {
     %width = arith.constant 16 : i32
     // CHECK:         llvm.call spir_funccc @_Z17sub_group_shufflecj(%[[I8_VAL]], %[[OFFSET]])
     // CHECK:         llvm.mlir.constant(true) : i1
@@ -376,6 +306,14 @@ gpu.module @shuffles attributes {
     // CHECK:         llvm.mlir.constant(true) : i1
     // CHECK:         llvm.call spir_funccc @_Z22sub_group_shuffle_downdj(%[[F64_VAL]], %[[OFFSET]])
     // CHECK:         llvm.mlir.constant(true) : i1
+    // CHECK:         %[[BF16_INBC:.*]] = llvm.bitcast %[[BF16_VAL]] : bf16 to i16
+    // CHECK:         %[[BF16_CALL:.*]] = llvm.call spir_funccc @_Z22sub_group_shuffle_downsj(%[[BF16_INBC]], %[[OFFSET]])
+    // CHECK:         llvm.bitcast %[[BF16_CALL]] : i16 to bf16
+    // CHECK:         llvm.mlir.constant(true) : i1
+    // CHECK:         %[[I1_ZEXT:.*]] = llvm.zext %[[I1_VAL]] : i1 to i8
+    // CHECK:         %[[I1_CALL:.*]] = llvm.call spir_funccc @_Z21sub_group_shuffle_xorcj(%18, %arg9)
+    // CHECK:         llvm.trunc %[[I1_CALL:.*]] : i8 to i1
+    // CHECK:         llvm.mlir.constant(true) : i1
     %shuffleResult0, %valid0 = gpu.shuffle idx %i8_val, %offset, %width : i8
     %shuffleResult1, %valid1 = gpu.shuffle xor %i16_val, %offset, %width : i16
     %shuffleResult2, %valid2 = gpu.shuffle idx %i32_val, %offset, %width : i32
@@ -383,7 +321,9 @@ gpu.module @shuffles attributes {
     %shuffleResult4, %valid4 = gpu.shuffle up %f16_val, %offset, %width : f16
     %shuffleResult5, %valid5 = gpu.shuffle up %f32_val, %offset, %width : f32
     %shuffleResult6, %valid6 = gpu.shuffle down %f64_val, %offset, %width : f64
-    return
+    %shuffleResult7, %valid7 = gpu.shuffle down %bf16_val, %offset, %width : bf16
+    %shuffleResult8, %valid8 = gpu.shuffle xor %i1_val, %offset, %width : i1
+    llvm.return
   }
 }
 
@@ -392,11 +332,11 @@ gpu.module @shuffles attributes {
 // Cannot convert due to shuffle width and target subgroup size mismatch
 
 gpu.module @shuffles_mismatch {
-  func.func @gpu_shuffles(%val: i32, %id: i32) {
+  llvm.func @gpu_shuffles(%val: i32, %id: i32) attributes {intel_reqd_sub_group_size = 32 : i32} {
     %width = arith.constant 16 : i32
     // expected-error@below {{failed to legalize operation 'gpu.shuffle' that was explicitly marked illegal}}
     %shuffleResult, %valid = gpu.shuffle idx %val, %id, %width : i32
-    return
+    llvm.return
   }
 }
 
@@ -405,10 +345,10 @@ gpu.module @shuffles_mismatch {
 // Cannot convert due to variable shuffle width
 
 gpu.module @shuffles_mismatch {
-  func.func @gpu_shuffles(%val: i32, %id: i32, %width: i32) {
+  llvm.func @gpu_shuffles(%val: i32, %id: i32, %width: i32) attributes {intel_reqd_sub_group_size = 32 : i32} {
     // expected-error@below {{failed to legalize operation 'gpu.shuffle' that was explicitly marked illegal}}
     %shuffleResult, %valid = gpu.shuffle idx %val, %id, %width : i32
-    return
+    llvm.return
   }
 }
 
@@ -417,11 +357,11 @@ gpu.module @shuffles_mismatch {
 // Cannot convert due to value type not being supported by the conversion
 
 gpu.module @not_supported_lowering {
-  func.func @gpu_shuffles(%val: i1, %id: i32) {
+  llvm.func @gpu_shuffles(%val: f128, %id: i32) attributes {intel_reqd_sub_group_size = 32 : i32} {
     %width = arith.constant 32 : i32
     // expected-error@below {{failed to legalize operation 'gpu.shuffle' that was explicitly marked illegal}}
-    %shuffleResult, %valid = gpu.shuffle xor %val, %id, %width : i1
-    return
+    %shuffleResult, %valid = gpu.shuffle xor %val, %id, %width : f128
+    llvm.return
   }
 }
 
@@ -475,8 +415,8 @@ gpu.module @kernels {
 
 // MemRef descriptor built from allocated pointer
 
-// CHECK-64:        %[[VAL_4:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
-// CHECK-32:        %[[VAL_4:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, ptr, i32, array<1 x i32>, array<1 x i32>)>
+// CHECK-64:        %[[VAL_4:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+// CHECK-32:        %[[VAL_4:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i32, array<1 x i32>, array<1 x i32>)>
 
 // CHECK:           %[[VAL_5:.*]] = llvm.insertvalue %[[VAL_3]], %[[VAL_4]][0]
 // CHECK:           llvm.insertvalue %[[VAL_3]], %[[VAL_5]][1]
@@ -486,8 +426,8 @@ gpu.module @kernels {
 // CHECK:           %[[VAL_14:.*]] = llvm.mlir.constant(16 : i64) : i64
 // CHECK:           %[[VAL_15:.*]] = llvm.alloca %[[VAL_14]] x i16 : (i64) -> !llvm.ptr
 
-// CHECK-64:        %[[VAL_16:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
-// CHECK-32:        %[[VAL_16:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, ptr, i32, array<1 x i32>, array<1 x i32>)>
+// CHECK-64:        %[[VAL_16:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+// CHECK-32:        %[[VAL_16:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i32, array<1 x i32>, array<1 x i32>)>
 
 // CHECK:           %[[VAL_17:.*]] = llvm.insertvalue %[[VAL_15]], %[[VAL_16]][0]
 // CHECK:           llvm.insertvalue %[[VAL_15]], %[[VAL_17]][1]
@@ -505,16 +445,16 @@ gpu.module @kernels {
 
 // MemRef descriptor built from new argument
 
-// CHECK-64:        %[[VAL_31:.*]] = llvm.mlir.undef : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
-// CHECK-32:        %[[VAL_31:.*]] = llvm.mlir.undef : !llvm.struct<(ptr<3>, ptr<3>, i32, array<1 x i32>, array<1 x i32>)>
+// CHECK-64:        %[[VAL_31:.*]] = llvm.mlir.poison : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+// CHECK-32:        %[[VAL_31:.*]] = llvm.mlir.poison : !llvm.struct<(ptr<3>, ptr<3>, i32, array<1 x i32>, array<1 x i32>)>
 
 // CHECK:           %[[VAL_32:.*]] = llvm.insertvalue %[[VAL_29]], %[[VAL_31]][0]
 // CHECK:           llvm.insertvalue %[[VAL_29]], %[[VAL_32]][1]
 
 // Same as above
 
-// CHECK-64:        %[[VAL_41:.*]] = llvm.mlir.undef : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
-// CHECK-32:        %[[VAL_41:.*]] = llvm.mlir.undef : !llvm.struct<(ptr<3>, ptr<3>, i32, array<1 x i32>, array<1 x i32>)>
+// CHECK-64:        %[[VAL_41:.*]] = llvm.mlir.poison : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+// CHECK-32:        %[[VAL_41:.*]] = llvm.mlir.poison : !llvm.struct<(ptr<3>, ptr<3>, i32, array<1 x i32>, array<1 x i32>)>
 
 // CHECK:           %[[VAL_42:.*]] = llvm.insertvalue %[[VAL_30]], %[[VAL_41]][0]
 // CHECK:           llvm.insertvalue %[[VAL_30]], %[[VAL_42]][1]
@@ -586,7 +526,7 @@ gpu.module @kernels {
     gpu.return
   }
 // CHECK-LABEL:   func.func @no_address_spaces_callee(
-// CHECK-SAME:                                             [[ARG0:%.*]]: memref<2x2xf32, 1> 
+// CHECK-SAME:                                             [[ARG0:%.*]]: memref<2x2xf32, 1>
 // CHECK-SAME:                                             [[ARG1:%.*]]: memref<4xf32, 1>
 // CHECK:         [[C0:%.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:         [[I0:%.*]] = llvm.call spir_funccc @_Z12get_group_idj([[C0]]) {

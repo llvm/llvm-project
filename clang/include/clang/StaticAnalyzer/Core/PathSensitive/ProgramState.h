@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the state of the program along the analysisa path.
+// This file defines the state of the program along the analysis path.
 //
 //===----------------------------------------------------------------------===//
 
@@ -70,7 +70,6 @@ template <typename T> struct ProgramStateTrait {
 ///  values will never change.
 class ProgramState : public llvm::FoldingSetNode {
 public:
-  typedef llvm::ImmutableSet<llvm::APSInt*>                IntSetTy;
   typedef llvm::ImmutableMap<void*, void*>                 GenericDataMap;
 
 private:
@@ -127,6 +126,7 @@ private:
   /// makeWithStore - Return a ProgramState with the same values as the current
   ///  state with the exception of using the specified Store.
   ProgramStateRef makeWithStore(const StoreRef &store) const;
+  ProgramStateRef makeWithStore(const BindResult &BindRes) const;
 
   void setStore(const StoreRef &storeRef);
 
@@ -160,7 +160,6 @@ public:
   /// Return the store associated with this state.  The store
   ///  is a mapping from locations to values.
   Store getStore() const { return store; }
-
 
   /// getGDM - Return the generic data map associated with this state.
   GenericDataMap getGDM() const { return GDM; }
@@ -382,7 +381,7 @@ public:
   /// Returns UnknownVal() if none found.
   SVal getSVal(Loc LV, QualType T = QualType()) const;
 
-  /// Returns the "raw" SVal bound to LV before any value simplfication.
+  /// Returns the "raw" SVal bound to LV before any value simplification.
   SVal getRawSVal(Loc LV, QualType T= QualType()) const;
 
   /// Return the value bound to the specified location.
@@ -487,6 +486,7 @@ private:
   friend void ProgramStateRetain(const ProgramState *state);
   friend void ProgramStateRelease(const ProgramState *state);
 
+  SVal desugarReference(SVal Val) const;
   SVal wrapSymbolicRegion(SVal Base) const;
 };
 

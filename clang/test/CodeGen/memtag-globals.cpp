@@ -10,6 +10,7 @@
 // RUN:   FileCheck %s --check-prefix=IGNORELIST
 
 int global;
+int __attribute__((__section__("my_section"))) section_global;
 int __attribute__((no_sanitize("memtag"))) attributed_global;
 int __attribute__((disable_sanitizer_instrumentation)) disable_instrumentation_global;
 int ignorelisted_global;
@@ -24,6 +25,9 @@ void func() {
 // CHECK: @{{.*}}extra_global{{.*}} ={{.*}} sanitize_memtag
 // CHECK: @{{.*}}global{{.*}} ={{.*}} sanitize_memtag
 
+// This DOES NOT mean we are instrumenting the section global,
+// but we are ignoring it in AsmPrinter rather than in clang.
+// CHECK:     @{{.*}}section_global{{.*}} ={{.*}} sanitize_memtag
 // CHECK:     @{{.*}}attributed_global{{.*}} =
 // CHECK-NOT: sanitize_memtag
 // CHECK:     @{{.*}}disable_instrumentation_global{{.*}} =

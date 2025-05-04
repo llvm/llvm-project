@@ -93,6 +93,12 @@ namespace llvm {
   Value *emitStrLen(Value *Ptr, IRBuilderBase &B, const DataLayout &DL,
                     const TargetLibraryInfo *TLI);
 
+  /// Emit a call to the wcslen function to the builder, for the specified
+  /// pointer. Ptr is required to be some pointer type, and the return value has
+  /// 'size_t' type.
+  Value *emitWcsLen(Value *Ptr, IRBuilderBase &B, const DataLayout &DL,
+                    const TargetLibraryInfo *TLI);
+
   /// Emit a call to the strdup function to the builder, for the specified
   /// pointer. Ptr is required to be some pointer type, and the return value has
   /// 'i8*' type.

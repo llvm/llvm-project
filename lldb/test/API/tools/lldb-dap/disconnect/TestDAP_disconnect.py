@@ -52,7 +52,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         before the file is created, and as the process is not terminated upon disconnection,
         the file is created anyway.
         """
-        self.build_and_create_debug_adaptor()
+        self.build_and_create_debug_adapter()
         program = self.getBuildArtifact("a.out")
 
         # Use a file as a synchronization point between test and inferior.

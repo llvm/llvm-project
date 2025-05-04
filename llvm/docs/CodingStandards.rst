@@ -177,7 +177,7 @@ the file. The standard header looks like this:
 
 .. code-block:: c++
 
-  //===-- llvm/Instruction.h - Instruction class definition -------*- C++ -*-===//
+  //===----------------------------------------------------------------------===//
   //
   // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
   // See https://llvm.org/LICENSE.txt for license information.
@@ -191,17 +191,7 @@ the file. The standard header looks like this:
   ///
   //===----------------------------------------------------------------------===//
 
-A few things to note about this particular format: The "``-*- C++ -*-``" string
-on the first line is there to tell Emacs that the source file is a C++ file, not
-a C file (Emacs assumes ``.h`` files are C files by default).
-
-.. note::
-
-    This tag is not necessary in ``.cpp`` files.  The name of the file is also
-    on the first line, along with a very short description of the purpose of the
-    file.
-
-The next section in the file is a concise note that defines the license that the
+The first section in the file is a concise note that defines the license that the
 file is released under.  This makes it perfectly clear what terms the source
 code can be distributed under and should not be modified in any way.
 
@@ -1589,17 +1579,24 @@ clarification.
 
 .. _static:
 
-Anonymous Namespaces
-^^^^^^^^^^^^^^^^^^^^
+Restrict Visibility
+^^^^^^^^^^^^^^^^^^^
 
-After talking about namespaces in general, you may be wondering about anonymous
-namespaces in particular.  Anonymous namespaces are a great language feature
-that tells the C++ compiler that the contents of the namespace are only visible
-within the current translation unit, allowing more aggressive optimization and
-eliminating the possibility of symbol name collisions.  Anonymous namespaces are
-to C++ as "static" is to C functions and global variables.  While "``static``"
-is available in C++, anonymous namespaces are more general: they can make entire
-classes private to a file.
+Functions and variables should have the most restricted visibility possible.
+For class members, that means using appropriate ``private``, ``protected``, or
+``public`` keyword to restrict their access. For non-member functions, variables,
+and classes, that means restricting visibility to a single ``.cpp`` file if it's
+not referenced outside that file.
+
+Visibility of file-scope non-member variables and functions can be restricted to
+the current translation unit by using either the ``static`` keyword or an anonymous
+namespace. Anonymous namespaces are a great language feature that tells the C++
+compiler that the contents of the namespace are only visible within the current
+translation unit, allowing more aggressive optimization and eliminating the
+possibility of symbol name collisions.  Anonymous namespaces are to C++ as
+``static`` is to C functions and global variables.  While ``static`` is available
+in C++, anonymous namespaces are more general: they can make entire classes
+private to a file.
 
 The problem with anonymous namespaces is that they naturally want to encourage
 indentation of their body, and they reduce locality of reference: if you see a

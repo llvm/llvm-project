@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/Spiller.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -64,6 +65,7 @@ void RegAllocBase::init(VirtRegMap &vrm, LiveIntervals &lis,
   Matrix = &mat;
   MRI->freezeReservedRegs();
   RegClassInfo.runOnMachineFunction(vrm.getMachineFunction());
+  FailedVRegs.clear();
 }
 
 // Visit all the live registers. If they are already assigned to a physical
@@ -123,21 +125,10 @@ void RegAllocBase::allocatePhysRegs() {
       }
 
       const TargetRegisterClass *RC = MRI->getRegClass(VirtReg->reg());
-      ArrayRef<MCPhysReg> AllocOrder = RegClassInfo.getOrder(RC);
-      if (AllocOrder.empty())
-        report_fatal_error("no registers from class available to allocate");
-      else if (MI && MI->isInlineAsm()) {
-        MI->emitError("inline assembly requires more registers than available");
-      } else if (MI) {
-        LLVMContext &Context =
-            MI->getParent()->getParent()->getFunction().getContext();
-        Context.emitError("ran out of registers during register allocation");
-      } else {
-        report_fatal_error("ran out of registers during register allocation");
-      }
+      AvailablePhysReg = getErrorAssignment(*RC, MI);
 
       // Keep going after reporting the error.
-      VRM->assignVirt2Phys(VirtReg->reg(), AllocOrder.front());
+      cleanupFailedVReg(VirtReg->reg(), AvailablePhysReg, SplitVRegs);
     } else if (AvailablePhysReg)
       Matrix->assign(*VirtReg, AvailablePhysReg);
 
@@ -171,6 +162,37 @@ void RegAllocBase::postOptimization() {
   DeadRemats.clear();
 }
 
+void RegAllocBase::cleanupFailedVReg(Register FailedReg, MCRegister PhysReg,
+                                     SmallVectorImpl<Register> &SplitRegs) {
+  // We still should produce valid IR. Kill all the uses and reduce the live
+  // ranges so that we don't think it's possible to introduce kill flags later
+  // which will fail the verifier.
+  for (MachineOperand &MO : MRI->reg_operands(FailedReg)) {
+    if (MO.readsReg())
+      MO.setIsUndef(true);
+  }
+
+  if (!MRI->isReserved(PhysReg)) {
+    // Physical liveness for any aliasing registers is now unreliable, so delete
+    // the uses.
+    for (MCRegAliasIterator Aliases(PhysReg, TRI, true); Aliases.isValid();
+         ++Aliases) {
+      for (MachineOperand &MO : MRI->reg_operands(*Aliases)) {
+        if (MO.readsReg()) {
+          MO.setIsUndef(true);
+          LIS->removeAllRegUnitsForPhysReg(MO.getReg());
+        }
+      }
+    }
+  }
+
+  // Directly perform the rewrite, and do not leave it to VirtRegRewriter as
+  // usual. This avoids trying to manage illegal overlapping assignments in
+  // LiveRegMatrix.
+  MRI->replaceRegWith(FailedReg, PhysReg);
+  LIS->removeInterval(FailedReg);
+}
+
 void RegAllocBase::enqueue(const LiveInterval *LI) {
   const Register Reg = LI->reg();
 
@@ -186,4 +208,49 @@ void RegAllocBase::enqueue(const LiveInterval *LI) {
     LLVM_DEBUG(dbgs() << "Not enqueueing " << printReg(Reg, TRI)
                       << " in skipped register class\n");
   }
+}
+
+MCPhysReg RegAllocBase::getErrorAssignment(const TargetRegisterClass &RC,
+                                           const MachineInstr *CtxMI) {
+  MachineFunction &MF = VRM->getMachineFunction();
+
+  // Avoid printing the error for every single instance of the register. It
+  // would be better if this were per register class.
+  bool EmitError = !MF.getProperties().hasProperty(
+      MachineFunctionProperties::Property::FailedRegAlloc);
+  if (EmitError)
+    MF.getProperties().set(MachineFunctionProperties::Property::FailedRegAlloc);
+
+  const Function &Fn = MF.getFunction();
+  LLVMContext &Context = Fn.getContext();
+
+  ArrayRef<MCPhysReg> AllocOrder = RegClassInfo.getOrder(&RC);
+  if (AllocOrder.empty()) {
+    // If the allocation order is empty, it likely means all registers in the
+    // class are reserved. We still to need to pick something, so look at the
+    // underlying class.
+    ArrayRef<MCPhysReg> RawRegs = RC.getRegisters();
+
+    if (EmitError) {
+      Context.diagnose(DiagnosticInfoRegAllocFailure(
+          "no registers from class available to allocate", Fn,
+          CtxMI ? CtxMI->getDebugLoc() : DiagnosticLocation()));
+    }
+
+    assert(!RawRegs.empty() && "register classes cannot have no registers");
+    return RawRegs.front();
+  }
+
+  if (EmitError) {
+    if (CtxMI && CtxMI->isInlineAsm()) {
+      CtxMI->emitInlineAsmError(
+          "inline assembly requires more registers than available");
+    } else {
+      Context.diagnose(DiagnosticInfoRegAllocFailure(
+          "ran out of registers during register allocation", Fn,
+          CtxMI ? CtxMI->getDebugLoc() : DiagnosticLocation()));
+    }
+  }
+
+  return AllocOrder.front();
 }

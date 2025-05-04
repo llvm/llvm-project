@@ -232,8 +232,8 @@ end subroutine ac2
 ! CHECK:           %[[C0:.*]] = arith.constant 0 : index
 ! CHECK:           %[[CMPI:.*]] = arith.cmpi sgt, %[[VAL_80]], %[[C0]] : index
 ! CHECK:           %[[SELECT:.*]] = arith.select %[[CMPI]], %[[VAL_80]], %[[C0]] : index
-! CHECK:           %[[VAL_81:.*]] = llvm.intr.stacksave : !llvm.ptr
 ! CHECK:           %[[VAL_82:.*]] = fir.shape %[[SELECT]] : (index) -> !fir.shape<1>
+! CHECK:           %[[VAL_81:.*]] = llvm.intr.stacksave : !llvm.ptr
 ! CHECK:           %[[VAL_83:.*]] = fir.convert %[[VAL_74]] : (!fir.box<!fir.array<1xi32>>) -> !fir.box<!fir.array<?xi32>>
 ! CHECK:           %[[VAL_84:.*]] = fir.call @_QFac2Pfunc(%[[VAL_83]]) {{.*}}: (!fir.box<!fir.array<?xi32>>) -> !fir.array<3xi32>
 ! CHECK:           fir.save_result %[[VAL_84]] to %[[VAL_2]](%[[VAL_82]]) : !fir.array<3xi32>, !fir.ref<!fir.array<3xi32>>, !fir.shape<1>

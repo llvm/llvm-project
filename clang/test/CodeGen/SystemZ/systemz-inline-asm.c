@@ -106,6 +106,14 @@ void test_M(void) {
 // CHECK: call void asm sideeffect "#FOO $0", "M"(i32 2147483647)
 }
 
+_Float16 test_f16(_Float16 a) {
+  _Float16 f;
+  asm("ler %0, %1" : "=f" (f) : "f" (a));
+  return f;
+// CHECK-LABEL: define{{.*}} half @test_f16(half noundef %a)
+// CHECK: call half asm "ler $0, $1", "=f,f"(half %a)
+}
+
 float test_f32(float f, float g) {
   asm("aebr %0, %2" : "=f" (f) : "0" (f), "f" (g));
   return f;
@@ -123,7 +131,7 @@ double test_f64(double f, double g) {
 long double test_f128(long double f, long double g) {
   asm("axbr %0, %2" : "=f" (f) : "0" (f), "f" (g));
   return f;
-// CHECK: define{{.*}} void @test_f128(ptr dead_on_unwind noalias nocapture writable writeonly sret(fp128) align 8 initializes((0, 16)) [[DEST:%.*]], ptr nocapture noundef readonly %0, ptr nocapture noundef readonly %1)
+// CHECK: define{{.*}} void @test_f128(ptr dead_on_unwind noalias writable writeonly sret(fp128) align 8 captures(none) initializes((0, 16)) [[DEST:%.*]], ptr noundef readonly captures(none) %0, ptr noundef readonly captures(none) %1)
 // CHECK: %f = load fp128, ptr %0
 // CHECK: %g = load fp128, ptr %1
 // CHECK: [[RESULT:%.*]] = tail call fp128 asm "axbr $0, $2", "=f,0,f"(fp128 %f, fp128 %g)

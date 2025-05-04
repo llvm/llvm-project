@@ -139,7 +139,7 @@ public:
     return visitor_(x.base());
   }
   Result operator()(const Triplet &x) const {
-    return Combine(x.lower(), x.upper(), x.stride());
+    return Combine(x.GetLower(), x.GetUpper(), x.GetStride());
   }
   Result operator()(const Subscript &x) const { return visitor_(x.u); }
   Result operator()(const ArrayRef &x) const {
@@ -151,15 +151,12 @@ public:
   }
   Result operator()(const DataRef &x) const { return visitor_(x.u); }
   Result operator()(const Substring &x) const {
-    return Combine(x.parent(), x.lower(), x.upper());
+    return Combine(x.parent(), x.GetLower(), x.GetUpper());
   }
   Result operator()(const ComplexPart &x) const {
     return visitor_(x.complex());
   }
   template <typename T> Result operator()(const Designator<T> &x) const {
-    return visitor_(x.u);
-  }
-  template <typename T> Result operator()(const Variable<T> &x) const {
     return visitor_(x.u);
   }
   Result operator()(const DescriptorInquiry &x) const {
@@ -230,13 +227,14 @@ public:
   }
 
   // Operations and wrappers
-  template <typename D, typename R, typename O>
-  Result operator()(const Operation<D, R, O> &op) const {
-    return visitor_(op.left());
-  }
-  template <typename D, typename R, typename LO, typename RO>
-  Result operator()(const Operation<D, R, LO, RO> &op) const {
-    return Combine(op.left(), op.right());
+  // Have a single operator() for all Operations.
+  template <typename D, typename R, typename... Os>
+  Result operator()(const Operation<D, R, Os...> &op) const {
+    if constexpr (sizeof...(Os) == 1) {
+      return visitor_(op.left());
+    } else {
+      return CombineOperands(op, std::index_sequence_for<Os...>{});
+    }
   }
   Result operator()(const Relational<SomeType> &x) const {
     return visitor_(x.u);
@@ -270,6 +268,13 @@ private:
 
   template <typename A> Result CombineContents(const A &x) const {
     return CombineRange(x.begin(), x.end());
+  }
+
+  template <typename D, typename R, typename... Os, size_t... Is>
+  Result CombineOperands(
+      const Operation<D, R, Os...> &op, std::index_sequence<Is...>) const {
+    static_assert(sizeof...(Os) > 1 && "Expecting multiple operands");
+    return Combine(op.template operand<Is>()...);
   }
 
   template <typename A, typename... Bs>

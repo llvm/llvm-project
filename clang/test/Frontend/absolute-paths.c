@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -I %S/Inputs/SystemHeaderPrefix/.. %s 2>&1 | FileCheck -DROOT_ABSOLUTE=%s -check-prefix=NORMAL -check-prefix=CHECK %s
-// RUN: %clang_cc1 -fsyntax-only -I %S/Inputs/SystemHeaderPrefix/.. -fdiagnostics-absolute-paths %s 2>&1 | FileCheck -DROOT_ABSOLUTE=%s -check-prefix=ABSOLUTE -check-prefix=CHECK %s
+// RUN: %clang_cc1 -Wno-error=return-type -fsyntax-only -I %S/Inputs/SystemHeaderPrefix/.. %s 2>&1 | FileCheck -DROOT_ABSOLUTE=%s -check-prefix=NORMAL -check-prefix=CHECK %s
+// RUN: %clang_cc1 -Wno-error=return-type -fsyntax-only -I %S/Inputs/SystemHeaderPrefix/.. -fdiagnostics-absolute-paths %s 2>&1 | FileCheck -DROOT_ABSOLUTE=%s -check-prefix=ABSOLUTE -check-prefix=CHECK %s
 
 #include "absolute-paths-import.h"
 // NORMAL: In file included from {{.*}}absolute-paths.c:4:

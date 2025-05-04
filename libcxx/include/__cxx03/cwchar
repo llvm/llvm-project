@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CWCHAR
-#define _LIBCPP_CWCHAR
+#ifndef _LIBCPP___CXX03_CWCHAR
+#define _LIBCPP___CXX03_CWCHAR
 
 /*
     cwchar synopsis
@@ -112,7 +112,7 @@ size_t wcsrtombs(char* restrict dst, const wchar_t** restrict src, size_t len,
 
 #include <__cxx03/wchar.h>
 
-#ifndef _LIBCPP_WCHAR_H
+#ifndef _LIBCPP___CXX03_WCHAR_H
 #   error <cwchar> tried including <wchar.h> but didn't find libc++'s <wchar.h> header. \
           This usually means that your header search paths are not configured properly. \
           The header search paths should contain the C++ Standard Library headers before \
@@ -258,4 +258,4 @@ _LIBCPP_END_NAMESPACE_STD
 #  include <__cxx03/cstddef>
 #endif
 
-#endif // _LIBCPP_CWCHAR
+#endif // _LIBCPP___CXX03_CWCHAR

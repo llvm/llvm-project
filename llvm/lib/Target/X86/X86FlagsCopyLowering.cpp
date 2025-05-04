@@ -66,10 +66,12 @@ STATISTIC(NumTestsInserted, "Number of test instructions inserted");
 STATISTIC(NumAddsInserted, "Number of adds instructions inserted");
 STATISTIC(NumNFsConvertedTo, "Number of NF instructions converted to");
 
+extern cl::opt<bool> X86EnableAPXForRelocation;
+
 namespace {
 
 // Convenient array type for storing registers associated with each condition.
-using CondRegArray = std::array<unsigned, X86::LAST_VALID_COND + 1>;
+using CondRegArray = std::array<Register, X86::LAST_VALID_COND + 1>;
 
 class X86FlagsCopyLoweringPass : public MachineFunctionPass {
 public:
@@ -96,11 +98,11 @@ private:
   Register promoteCondToReg(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator TestPos,
                             const DebugLoc &TestLoc, X86::CondCode Cond);
-  std::pair<unsigned, bool> getCondOrInverseInReg(
+  std::pair<Register, bool> getCondOrInverseInReg(
       MachineBasicBlock &TestMBB, MachineBasicBlock::iterator TestPos,
       const DebugLoc &TestLoc, X86::CondCode Cond, CondRegArray &CondRegs);
   void insertTest(MachineBasicBlock &MBB, MachineBasicBlock::iterator Pos,
-                  const DebugLoc &Loc, unsigned Reg);
+                  const DebugLoc &Loc, Register Reg);
 
   void rewriteSetCC(MachineBasicBlock &MBB, MachineBasicBlock::iterator Pos,
                     const DebugLoc &Loc, MachineInstr &MI,
@@ -242,7 +244,15 @@ static EFLAGSClobber getClobberType(const MachineInstr &MI) {
       MI.findRegisterDefOperand(X86::EFLAGS, /*TRI=*/nullptr);
   if (!FlagDef)
     return NoClobber;
-  if (FlagDef->isDead() && X86::getNFVariant(MI.getOpcode()))
+
+  // For the instructions are ADDrm/ADDmr with relocation, we'll skip the
+  // optimization for replacing non-NF with NF. This is to keep backward
+  // compatiblity with old version of linkers without APX relocation type
+  // support on Linux OS.
+  bool IsWithReloc =
+      X86EnableAPXForRelocation ? false : isAddMemInstrWithRelocation(MI);
+
+  if (FlagDef->isDead() && X86::getNFVariant(MI.getOpcode()) && !IsWithReloc)
     return EvitableClobber;
 
   return InevitableClobber;
@@ -277,8 +287,7 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
   if (MDTWrapper) {
     MDT = &MDTWrapper->getDomTree();
   } else {
-    OwnedMDT = std::make_unique<MachineDominatorTree>();
-    OwnedMDT->getBase().recalculate(MF);
+    OwnedMDT = std::make_unique<MachineDominatorTree>(MF);
     MDT = OwnedMDT.get();
   }
 
@@ -616,7 +625,7 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
           MRI->replaceRegWith(MI.getOperand(0).getReg(),
                               CopyDefI.getOperand(0).getReg());
           MI.eraseFromParent();
-        } else if (X86::isSETCC(Opc)) {
+        } else if (X86::isSETCC(Opc) || X86::isSETZUCC(Opc)) {
           rewriteSetCC(*TestMBB, TestPos, TestLoc, MI, CondRegs);
         } else if (isArithmeticOp(Opc)) {
           rewriteArithmetic(*TestMBB, TestPos, TestLoc, MI, CondRegs);
@@ -745,11 +754,11 @@ Register X86FlagsCopyLoweringPass::promoteCondToReg(
   return Reg;
 }
 
-std::pair<unsigned, bool> X86FlagsCopyLoweringPass::getCondOrInverseInReg(
+std::pair<Register, bool> X86FlagsCopyLoweringPass::getCondOrInverseInReg(
     MachineBasicBlock &TestMBB, MachineBasicBlock::iterator TestPos,
     const DebugLoc &TestLoc, X86::CondCode Cond, CondRegArray &CondRegs) {
-  unsigned &CondReg = CondRegs[Cond];
-  unsigned &InvCondReg = CondRegs[X86::GetOppositeBranchCondition(Cond)];
+  Register &CondReg = CondRegs[Cond];
+  Register &InvCondReg = CondRegs[X86::GetOppositeBranchCondition(Cond)];
   if (!CondReg && !InvCondReg)
     CondReg = promoteCondToReg(TestMBB, TestPos, TestLoc, Cond);
 
@@ -761,7 +770,7 @@ std::pair<unsigned, bool> X86FlagsCopyLoweringPass::getCondOrInverseInReg(
 
 void X86FlagsCopyLoweringPass::insertTest(MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator Pos,
-                                          const DebugLoc &Loc, unsigned Reg) {
+                                          const DebugLoc &Loc, Register Reg) {
   auto TestI =
       BuildMI(MBB, Pos, Loc, TII->get(X86::TEST8rr)).addReg(Reg).addReg(Reg);
   (void)TestI;
@@ -778,9 +787,32 @@ void X86FlagsCopyLoweringPass::rewriteSetCC(MachineBasicBlock &MBB,
   // Note that we can't usefully rewrite this to the inverse without complex
   // analysis of the users of the setCC. Largely we rely on duplicates which
   // could have been avoided already being avoided here.
-  unsigned &CondReg = CondRegs[Cond];
+  Register &CondReg = CondRegs[Cond];
   if (!CondReg)
     CondReg = promoteCondToReg(MBB, Pos, Loc, Cond);
+
+  if (X86::isSETZUCC(MI.getOpcode())) {
+    // SETZUCC is generated for register only for now.
+    assert(!MI.mayStore() && "Cannot handle memory variants");
+    assert(MI.getOperand(0).isReg() &&
+           "Cannot have a non-register defined operand to SETZUcc!");
+    Register OldReg = MI.getOperand(0).getReg();
+    // Drop Kill flags on the old register before replacing. CondReg may have
+    // a longer live range.
+    MRI->clearKillFlags(OldReg);
+    for (auto &Use : MRI->use_instructions(OldReg)) {
+      assert(Use.getOpcode() == X86::INSERT_SUBREG &&
+             "SETZUCC should be only used by INSERT_SUBREG");
+      Use.getOperand(2).setReg(CondReg);
+      // Recover MOV32r0 before INSERT_SUBREG, which removed by SETZUCC.
+      Register ZeroReg = MRI->createVirtualRegister(&X86::GR32RegClass);
+      BuildMI(*Use.getParent(), &Use, Use.getDebugLoc(), TII->get(X86::MOV32r0),
+              ZeroReg);
+      Use.getOperand(1).setReg(ZeroReg);
+    }
+    MI.eraseFromParent();
+    return;
+  }
 
   // Rewriting a register def is trivial: we just replace the register and
   // remove the setcc.
@@ -821,7 +853,7 @@ void X86FlagsCopyLoweringPass::rewriteArithmetic(
   // Now get a register that contains the value of the flag input to the
   // arithmetic. We require exactly this flag to simplify the arithmetic
   // required to materialize it back into the flag.
-  unsigned &CondReg = CondRegs[Cond];
+  Register &CondReg = CondRegs[Cond];
   if (!CondReg)
     CondReg = promoteCondToReg(MBB, Pos, Loc, Cond);
 
@@ -895,7 +927,7 @@ void X86FlagsCopyLoweringPass::rewriteMI(MachineBasicBlock &MBB,
     IsImplicitCC = true;
   }
   assert(CC != X86::COND_INVALID && "Unknown EFLAG user!");
-  unsigned CondReg;
+  Register CondReg;
   bool Inverted;
   std::tie(CondReg, Inverted) =
       getCondOrInverseInReg(MBB, Pos, Loc, CC, CondRegs);

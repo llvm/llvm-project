@@ -79,7 +79,8 @@ public:
 protected:
   GlobalValue(Type *Ty, ValueTy VTy, AllocInfo AllocInfo, LinkageTypes Linkage,
               const Twine &Name, unsigned AddressSpace)
-      : Constant(PointerType::get(Ty, AddressSpace), VTy, AllocInfo),
+      : Constant(PointerType::get(Ty->getContext(), AddressSpace), VTy,
+                 AllocInfo),
         ValueType(Ty), Visibility(DefaultVisibility),
         UnnamedAddrVal(unsigned(UnnamedAddr::None)),
         DllStorageClass(DefaultStorageClass), ThreadLocal(NotThreadLocal),
@@ -569,6 +570,11 @@ public:
     return Name;
   }
 
+  /// Declare a type to represent a global unique identifier for a global value.
+  /// This is a 64 bits hash that is used by PGO and ThinLTO to have a compact
+  /// unique way to identify a symbol.
+  using GUID = uint64_t;
+
   /// Return the modified name for a global value suitable to be
   /// used as the key for a global lookup (e.g. profile or ThinLTO).
   /// The value's original name is \c Name and has linkage of type
@@ -577,22 +583,22 @@ public:
                                          GlobalValue::LinkageTypes Linkage,
                                          StringRef FileName);
 
+private:
   /// Return the modified name for this global value suitable to be
   /// used as the key for a global lookup (e.g. profile or ThinLTO).
   std::string getGlobalIdentifier() const;
 
-  /// Declare a type to represent a global unique identifier for a global value.
-  /// This is a 64 bits hash that is used by PGO and ThinLTO to have a compact
-  /// unique way to identify a symbol.
-  using GUID = uint64_t;
+public:
+  /// Return a 64-bit global unique ID constructed from the name of a global
+  /// symbol. Since this call doesn't supply the linkage or defining filename,
+  /// the GUID computation will assume that the global has external linkage.
+  static GUID getGUIDAssumingExternalLinkage(StringRef GlobalName);
 
   /// Return a 64-bit global unique ID constructed from global value name
   /// (i.e. returned by getGlobalIdentifier()).
-  static GUID getGUID(StringRef GlobalName);
-
-  /// Return a 64-bit global unique ID constructed from global value name
-  /// (i.e. returned by getGlobalIdentifier()).
-  GUID getGUID() const { return getGUID(getGlobalIdentifier()); }
+  GUID getGUID() const {
+    return getGUIDAssumingExternalLinkage(getGlobalIdentifier());
+  }
 
   /// @name Materialization
   /// Materialization is used to construct functions only as they're needed.

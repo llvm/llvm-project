@@ -1,6 +1,11 @@
 ! Test for correct forwarding of fast-math flags from the compiler driver to the
 ! frontend driver
 
+! Check warning message for Ofast deprecation
+! RUN: %flang -Ofast -### %s -o %t 2>&1 | FileCheck %s
+! CHECK: warning: argument '-Ofast' is deprecated; use '-O3 -ffast-math -fstack-arrays' for the same behavior, or '-O3
+! -fstack-arrays' to enable only conforming optimizations [-Wdeprecated-ofast]
+
 ! -Ofast => -ffast-math -O3 -fstack-arrays
 ! RUN: %flang -Ofast -fsyntax-only -### %s -o %t 2>&1 \
 ! RUN:     | FileCheck --check-prefix=CHECK-OFAST %s

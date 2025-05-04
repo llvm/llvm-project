@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -hlfir=false -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 
 ! CHECK-LABEL: func @_QPcompare1(
@@ -134,97 +134,183 @@ function char_array()
 entry char_array_entry(c)
 end
 
-! CHECK-LABEL: func @_QPdd1()
 subroutine dd1
-  ! CHECK: %[[kk:[0-9]*]] = fir.alloca i32 {bindc_name = "kk", uniq_name = "_QFdd1Ekk"}
-  ! CHECK: br ^bb1
-  ! CHECK: ^bb1:  // pred: ^bb0
-  ! CHECK: %[[ten:.*]] = arith.constant 10 : i32
-  ! CHECK: fir.store %[[ten:.*]] to %[[kk]] : !fir.ref<i32>
-  ! CHECK: br ^bb2
-  ! CHECK: ^bb2:  // pred: ^bb1
-  ! CHECK: %[[twenty:.*]] = arith.constant 20 : i32
-  ! CHECK: fir.store %[[twenty:.*]] to %[[kk]] : !fir.ref<i32>
-  ! CHECK: br ^bb3
-  ! CHECK: ^bb3:  // pred: ^bb2
-  ! CHECK: return
+! CHECK-LABEL:   func.func @_QPdd1() {
+! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "kk", uniq_name = "_QFdd1Ekk"}
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFdd1Ekk"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           cf.br ^bb1
+! CHECK:         ^bb1:
+! CHECK:           %[[VAL_2:.*]] = arith.constant 10 : i32
+! CHECK:           hlfir.assign %[[VAL_2]] to %[[VAL_1]]#0 : i32, !fir.ref<i32>
+! CHECK:           cf.br ^bb2
+! CHECK:         ^bb2:
+! CHECK:           %[[VAL_3:.*]] = arith.constant 20 : i32
+! CHECK:           hlfir.assign %[[VAL_3]] to %[[VAL_1]]#0 : i32, !fir.ref<i32>
+! CHECK:           cf.br ^bb3
+! CHECK:         ^bb3:
+! CHECK:           return
+! CHECK:         }
   kk = 10
 
-  ! CHECK-LABEL: func @_QPdd2()
-  ! CHECK: %[[kk:[0-9]*]] = fir.alloca i32 {bindc_name = "kk", uniq_name = "_QFdd1Ekk"}
-  ! CHECK: br ^bb1
-  ! CHECK: ^bb1:  // pred: ^bb0
-  ! CHECK: %[[twenty:.*]] = arith.constant 20 : i32
-  ! CHECK: fir.store %[[twenty:.*]] to %[[kk]] : !fir.ref<i32>
-  ! CHECK: br ^bb2
-  ! CHECK: ^bb2:  // pred: ^bb1
-  ! CHECK: return
   entry dd2
+! CHECK-LABEL:   func.func @_QPdd2() {
+! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "kk", uniq_name = "_QFdd1Ekk"}
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFdd1Ekk"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           cf.br ^bb1
+! CHECK:         ^bb1:
+! CHECK:           %[[VAL_2:.*]] = arith.constant 20 : i32
+! CHECK:           hlfir.assign %[[VAL_2]] to %[[VAL_1]]#0 : i32, !fir.ref<i32>
+! CHECK:           cf.br ^bb2
+! CHECK:         ^bb2:
+! CHECK:           return
+! CHECK:         }
   kk = 20
   return
 
-  ! CHECK-LABEL: func @_QPdd3
-  ! CHECK: %[[dd3:[0-9]*]] = fir.alloca index {bindc_name = "dd3"}
-  ! CHECK: %[[kk:[0-9]*]] = fir.alloca i32 {bindc_name = "kk", uniq_name = "_QFdd1Ekk"}
-  ! CHECK: %[[zero:.*]] = arith.constant 0 : index
-  ! CHECK: fir.store %[[zero:.*]] to %[[dd3]] : !fir.ref<index>
-  ! CHECK: br ^bb1
-  ! CHECK: ^bb1:  // pred: ^bb0
-  ! CHECK: %[[thirty:.*]] = arith.constant 30 : i32
-  ! CHECK: fir.store %[[thirty:.*]] to %[[kk:[0-9]*]] : !fir.ref<i32>
-  ! CHECK: br ^bb2
-  ! CHECK: ^bb2:  // pred: ^bb1
-  ! CHECK: %[[altret:[0-9]*]] = fir.load %[[dd3]] : !fir.ref<index>
-  ! CHECK: return %[[altret:[0-9]*]] : index
   entry dd3(*)
+! CHECK-LABEL:   func.func @_QPdd3() -> index {
+! CHECK:           %[[VAL_0:.*]] = fir.alloca index {bindc_name = "dd3"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca i32 {bindc_name = "kk", uniq_name = "_QFdd1Ekk"}
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFdd1Ekk"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
+! CHECK:           fir.store %[[VAL_3]] to %[[VAL_0]] : !fir.ref<index>
+! CHECK:           cf.br ^bb1
+! CHECK:         ^bb1:
+! CHECK:           %[[VAL_4:.*]] = arith.constant 30 : i32
+! CHECK:           hlfir.assign %[[VAL_4]] to %[[VAL_2]]#0 : i32, !fir.ref<i32>
+! CHECK:           cf.br ^bb2
+! CHECK:         ^bb2:
+! CHECK:           %[[VAL_5:.*]] = fir.load %[[VAL_0]] : !fir.ref<index>
+! CHECK:           return %[[VAL_5]] : index
+! CHECK:         }
   kk = 30
 end
 
-! CHECK-LABEL: func @_QPashapec(
 subroutine ashapec(asc)
-  ! CHECK: %[[asx:[0-9]*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>
-  ! CHECK: %[[asi:[0-9]*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
-  ! CHECK: %[[zeroi:[0-9]*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
-  ! CHECK: %[[shapei:[0-9]*]] = fir.shape %c0{{.*}} : (index) -> !fir.shape<1>
-  ! CHECK: %[[boxi:[0-9]*]] = fir.embox %[[zeroi]](%[[shapei]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
-  ! CHECK: fir.store %[[boxi]] to %[[asi]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-  ! CHECK: %[[zerox:[0-9]*]] = fir.zero_bits !fir.heap<!fir.array<?xcomplex<f32>>>
-  ! CHECK: %[[shapex:[0-9]*]] = fir.shape %c0{{.*}} : (index) -> !fir.shape<1>
-  ! CHECK: %[[boxx:[0-9].*]] = fir.embox %[[zerox]](%[[shapex]]) : (!fir.heap<!fir.array<?xcomplex<f32>>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>
-  ! CHECK: fir.store %[[boxx]] to %[[asx]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>>
   character asc(:)
   integer asi(:)
   complex asx(:)
   asc = '?'
   return
-! CHECK-LABEL: func @_QPashapei(
+! CHECK-LABEL:   func.func @_QPashapec(
+! CHECK-SAME:                          %[[VAL_0:.*]]: !fir.box<!fir.array<?x!fir.char<1>>> {fir.bindc_name = "asc"}) {
+! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>
+! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
+! CHECK:           %[[VAL_3:.*]] = fir.dummy_scope : !fir.dscope
+! CHECK:           %[[VAL_4:.*]] = arith.constant 1 : index
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_4]] dummy_scope %[[VAL_3]] {uniq_name = "_QFashapecEasc"} : (!fir.box<!fir.array<?x!fir.char<1>>>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1>>>, !fir.box<!fir.array<?x!fir.char<1>>>)
+! CHECK:           %[[VAL_6:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
+! CHECK:           %[[VAL_7:.*]] = arith.constant 0 : index
+! CHECK:           %[[VAL_8:.*]] = fir.shape %[[VAL_7]] : (index) -> !fir.shape<1>
+! CHECK:           %[[VAL_9:.*]] = fir.embox %[[VAL_6]](%[[VAL_8]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
+! CHECK:           fir.store %[[VAL_9]] to %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:           %[[VAL_10:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:           %[[VAL_11:.*]] = arith.constant 0 : index
+! CHECK:           %[[VAL_12:.*]]:3 = fir.box_dims %[[VAL_10]], %[[VAL_11]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
+! CHECK:           %[[VAL_13:.*]] = fir.box_addr %[[VAL_10]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+! CHECK:           %[[VAL_14:.*]] = fir.shape_shift %[[VAL_12]]#0, %[[VAL_12]]#1 : (index, index) -> !fir.shapeshift<1>
+! CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_13]](%[[VAL_14]]) {uniq_name = "_QFashapecEasi"} : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
+! CHECK:           %[[VAL_16:.*]] = fir.zero_bits !fir.heap<!fir.array<?xcomplex<f32>>>
+! CHECK:           %[[VAL_17:.*]] = arith.constant 0 : index
+! CHECK:           %[[VAL_18:.*]] = fir.shape %[[VAL_17]] : (index) -> !fir.shape<1>
+! CHECK:           %[[VAL_19:.*]] = fir.embox %[[VAL_16]](%[[VAL_18]]) : (!fir.heap<!fir.array<?xcomplex<f32>>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>
+! CHECK:           fir.store %[[VAL_19]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>>
+! CHECK:           %[[VAL_20:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>>
+! CHECK:           %[[VAL_21:.*]] = arith.constant 0 : index
+! CHECK:           %[[VAL_22:.*]]:3 = fir.box_dims %[[VAL_20]], %[[VAL_21]] : (!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>, index) -> (index, index, index)
+! CHECK:           %[[VAL_23:.*]] = fir.box_addr %[[VAL_20]] : (!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>) -> !fir.heap<!fir.array<?xcomplex<f32>>>
+! CHECK:           %[[VAL_24:.*]] = fir.shape_shift %[[VAL_22]]#0, %[[VAL_22]]#1 : (index, index) -> !fir.shapeshift<1>
+! CHECK:           %[[VAL_25:.*]]:2 = hlfir.declare %[[VAL_23]](%[[VAL_24]]) {uniq_name = "_QFashapecEasx"} : (!fir.heap<!fir.array<?xcomplex<f32>>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.heap<!fir.array<?xcomplex<f32>>>)
+! CHECK:           cf.br ^bb1
+! CHECK:         ^bb1:
+! CHECK:           %[[VAL_26:.*]] = fir.address_of(@_QQclX3F) : !fir.ref<!fir.char<1>>
+! CHECK:           %[[VAL_27:.*]] = arith.constant 1 : index
+! CHECK:           %[[VAL_28:.*]]:2 = hlfir.declare %[[VAL_26]] typeparams %[[VAL_27]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX3F"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
+! CHECK:           hlfir.assign %[[VAL_28]]#0 to %[[VAL_5]]#0 : !fir.ref<!fir.char<1>>, !fir.box<!fir.array<?x!fir.char<1>>>
+! CHECK:           cf.br ^bb2
+! CHECK:         ^bb2:
+! CHECK:           return
+! CHECK:         }
+
 entry ashapei(asi)
-  ! CHECK: %[[asx:[0-9]*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>
-  ! CHECK: %[[asc:[0-9]*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1>>>>
-  ! CHECK: %[[zeroc:[0-9]*]] = fir.zero_bits !fir.heap<!fir.array<?x!fir.char<1>>>
-  ! CHECK: %[[shapec:[0-9]*]] = fir.shape %c0{{.*}} : (index) -> !fir.shape<1>
-  ! CHECK: %[[boxc:[0-9]*]] = fir.embox %[[zeroc]](%[[shapec]]) : (!fir.heap<!fir.array<?x!fir.char<1>>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?x!fir.char<1>>>>
-  ! CHECK: fir.store %[[boxc]] to %[[asc]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1>>>>>
-  ! CHECK: %[[zerox:[0-9]*]] = fir.zero_bits !fir.heap<!fir.array<?xcomplex<f32>>>
-  ! CHECK: %[[shapex:[0-9]*]] = fir.shape %c0{{.*}} : (index) -> !fir.shape<1>
-  ! CHECK: %[[boxx:[0-9].*]] = fir.embox %[[zerox]](%[[shapex]]) : (!fir.heap<!fir.array<?xcomplex<f32>>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>
-  ! CHECK: fir.store %[[boxx]] to %[[asx]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>>
   asi = 3
   return
-! CHECK-LABEL: func @_QPashapex(
+! CHECK-LABEL:   func.func @_QPashapei(
+! CHECK-SAME:                          %[[VAL_0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "asi"}) {
+! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>
+! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1>>>>
+! CHECK:           %[[VAL_3:.*]] = fir.dummy_scope : !fir.dscope
+! CHECK:           %[[VAL_4:.*]] = fir.zero_bits !fir.heap<!fir.array<?x!fir.char<1>>>
+! CHECK:           %[[VAL_5:.*]] = arith.constant 0 : index
+! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
+! CHECK:           %[[VAL_7:.*]] = fir.embox %[[VAL_4]](%[[VAL_6]]) : (!fir.heap<!fir.array<?x!fir.char<1>>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?x!fir.char<1>>>>
+! CHECK:           fir.store %[[VAL_7]] to %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1>>>>>
+! CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1>>>>>
+! CHECK:           %[[VAL_9:.*]] = arith.constant 0 : index
+! CHECK:           %[[VAL_10:.*]]:3 = fir.box_dims %[[VAL_8]], %[[VAL_9]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1>>>>, index) -> (index, index, index)
+! CHECK:           %[[VAL_11:.*]] = fir.box_elesize %[[VAL_8]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1>>>>) -> index
+! CHECK:           %[[VAL_12:.*]] = fir.box_addr %[[VAL_8]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1>>>>) -> !fir.heap<!fir.array<?x!fir.char<1>>>
+! CHECK:           %[[VAL_13:.*]] = fir.shape_shift %[[VAL_10]]#0, %[[VAL_10]]#1 : (index, index) -> !fir.shapeshift<1>
+! CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_12]](%[[VAL_13]]) typeparams %[[VAL_11]] {uniq_name = "_QFashapecEasc"} : (!fir.heap<!fir.array<?x!fir.char<1>>>, !fir.shapeshift<1>, index) -> (!fir.box<!fir.array<?x!fir.char<1>>>, !fir.heap<!fir.array<?x!fir.char<1>>>)
+! CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_3]] {uniq_name = "_QFashapecEasi"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+! CHECK:           %[[VAL_16:.*]] = fir.zero_bits !fir.heap<!fir.array<?xcomplex<f32>>>
+! CHECK:           %[[VAL_17:.*]] = arith.constant 0 : index
+! CHECK:           %[[VAL_18:.*]] = fir.shape %[[VAL_17]] : (index) -> !fir.shape<1>
+! CHECK:           %[[VAL_19:.*]] = fir.embox %[[VAL_16]](%[[VAL_18]]) : (!fir.heap<!fir.array<?xcomplex<f32>>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>
+! CHECK:           fir.store %[[VAL_19]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>>
+! CHECK:           %[[VAL_20:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>>
+! CHECK:           %[[VAL_21:.*]] = arith.constant 0 : index
+! CHECK:           %[[VAL_22:.*]]:3 = fir.box_dims %[[VAL_20]], %[[VAL_21]] : (!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>, index) -> (index, index, index)
+! CHECK:           %[[VAL_23:.*]] = fir.box_addr %[[VAL_20]] : (!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>) -> !fir.heap<!fir.array<?xcomplex<f32>>>
+! CHECK:           %[[VAL_24:.*]] = fir.shape_shift %[[VAL_22]]#0, %[[VAL_22]]#1 : (index, index) -> !fir.shapeshift<1>
+! CHECK:           %[[VAL_25:.*]]:2 = hlfir.declare %[[VAL_23]](%[[VAL_24]]) {uniq_name = "_QFashapecEasx"} : (!fir.heap<!fir.array<?xcomplex<f32>>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.heap<!fir.array<?xcomplex<f32>>>)
+! CHECK:           cf.br ^bb1
+! CHECK:         ^bb1:
+! CHECK:           %[[VAL_26:.*]] = arith.constant 3 : i32
+! CHECK:           hlfir.assign %[[VAL_26]] to %[[VAL_15]]#0 : i32, !fir.box<!fir.array<?xi32>>
+! CHECK:           cf.br ^bb2
+! CHECK:         ^bb2:
+! CHECK:           return
+! CHECK:         }
 entry ashapex(asx)
-  ! CHECK: %[[asi:[0-9]*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
-  ! CHECK: %[[asc:[0-9]*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1>>>>
-  ! CHECK: %[[zeroc:[0-9]*]] = fir.zero_bits !fir.heap<!fir.array<?x!fir.char<1>>>
-  ! CHECK: %[[shapec:[0-9]*]] = fir.shape %c0{{.*}} : (index) -> !fir.shape<1>
-  ! CHECK: %[[boxc:[0-9]*]] = fir.embox %[[zeroc]](%[[shapec]]) : (!fir.heap<!fir.array<?x!fir.char<1>>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?x!fir.char<1>>>>
-  ! CHECK: fir.store %[[boxc]] to %[[asc]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1>>>>>
-  ! CHECK: %[[zeroi:[0-9]*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
-  ! CHECK: %[[shapei:[0-9]*]] = fir.shape %c0{{.*}} : (index) -> !fir.shape<1>
-  ! CHECK: %[[boxi:[0-9].*]] = fir.embox %[[zeroi]](%[[shapei]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
-  ! CHECK: fir.store %[[boxi]] to %[[asi]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   asx = (2.0,-2.0)
 end
+! CHECK-LABEL:   func.func @_QPashapex(
+! CHECK-SAME:                          %[[VAL_0:.*]]: !fir.box<!fir.array<?xcomplex<f32>>> {fir.bindc_name = "asx"}) {
+! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
+! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1>>>>
+! CHECK:           %[[VAL_3:.*]] = fir.dummy_scope : !fir.dscope
+! CHECK:           %[[VAL_4:.*]] = fir.zero_bits !fir.heap<!fir.array<?x!fir.char<1>>>
+! CHECK:           %[[VAL_5:.*]] = arith.constant 0 : index
+! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
+! CHECK:           %[[VAL_7:.*]] = fir.embox %[[VAL_4]](%[[VAL_6]]) : (!fir.heap<!fir.array<?x!fir.char<1>>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?x!fir.char<1>>>>
+! CHECK:           fir.store %[[VAL_7]] to %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1>>>>>
+! CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1>>>>>
+! CHECK:           %[[VAL_9:.*]] = arith.constant 0 : index
+! CHECK:           %[[VAL_10:.*]]:3 = fir.box_dims %[[VAL_8]], %[[VAL_9]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1>>>>, index) -> (index, index, index)
+! CHECK:           %[[VAL_11:.*]] = fir.box_elesize %[[VAL_8]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1>>>>) -> index
+! CHECK:           %[[VAL_12:.*]] = fir.box_addr %[[VAL_8]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1>>>>) -> !fir.heap<!fir.array<?x!fir.char<1>>>
+! CHECK:           %[[VAL_13:.*]] = fir.shape_shift %[[VAL_10]]#0, %[[VAL_10]]#1 : (index, index) -> !fir.shapeshift<1>
+! CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_12]](%[[VAL_13]]) typeparams %[[VAL_11]] {uniq_name = "_QFashapecEasc"} : (!fir.heap<!fir.array<?x!fir.char<1>>>, !fir.shapeshift<1>, index) -> (!fir.box<!fir.array<?x!fir.char<1>>>, !fir.heap<!fir.array<?x!fir.char<1>>>)
+! CHECK:           %[[VAL_15:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
+! CHECK:           %[[VAL_16:.*]] = arith.constant 0 : index
+! CHECK:           %[[VAL_17:.*]] = fir.shape %[[VAL_16]] : (index) -> !fir.shape<1>
+! CHECK:           %[[VAL_18:.*]] = fir.embox %[[VAL_15]](%[[VAL_17]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
+! CHECK:           fir.store %[[VAL_18]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:           %[[VAL_19:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:           %[[VAL_20:.*]] = arith.constant 0 : index
+! CHECK:           %[[VAL_21:.*]]:3 = fir.box_dims %[[VAL_19]], %[[VAL_20]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
+! CHECK:           %[[VAL_22:.*]] = fir.box_addr %[[VAL_19]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+! CHECK:           %[[VAL_23:.*]] = fir.shape_shift %[[VAL_21]]#0, %[[VAL_21]]#1 : (index, index) -> !fir.shapeshift<1>
+! CHECK:           %[[VAL_24:.*]]:2 = hlfir.declare %[[VAL_22]](%[[VAL_23]]) {uniq_name = "_QFashapecEasi"} : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
+! CHECK:           %[[VAL_25:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_3]] {uniq_name = "_QFashapecEasx"} : (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.dscope) -> (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.box<!fir.array<?xcomplex<f32>>>)
+! CHECK:           cf.br ^bb1
+! CHECK:         ^bb1:
+! CHECK:           hlfir.assign %{{.*}} to %[[VAL_25]]#0 : complex<f32>, !fir.box<!fir.array<?xcomplex<f32>>>
+! CHECK:           cf.br ^bb2
+! CHECK:         ^bb2:
+! CHECK:           return
+! CHECK:         }
 
 ! CHECK-LABEL: func @_QPlevel3a(
 subroutine level3a(a, b, m)
@@ -248,190 +334,167 @@ entry level3b(x, y, n)
   if (n /= 3) goto 1
 end
 
-! CHECK-LABEL: @_QPf1
-! CHECK-SAME: %[[V_0:.*]]: !fir.ref<!fir.char<1,5>>
 function f1(n1) result(res1)
-  ! CHECK:   %[[V_1:[0-9]+]] = fir.alloca i32 {bindc_name = "n2", uniq_name = "_QFf1En2"}
-  ! CHECK:   %[[V_2:[0-9]+]] = fir.alloca tuple<!fir.boxchar<1>, !fir.boxchar<1>>
-  ! CHECK:   %[[V_3:[0-9]+]] = fir.coordinate_of %[[V_2]], %c0{{.*}}_i32 : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
-  ! CHECK:   %[[V_4:[0-9]+]] = fir.emboxchar %[[V_0]], %c5{{.*}} : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
-  ! CHECK:   fir.store %[[V_4]] to %[[V_3]] : !fir.ref<!fir.boxchar<1>>
-  ! CHECK:   %[[V_5:[0-9]+]] = fir.coordinate_of %[[V_2]], %c1{{.*}}_i32 : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
-  ! CHECK:   %[[V_6:[0-9]+]] = fir.emboxchar %[[V_0]], %c5{{.*}} : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
-  ! CHECK:   fir.store %[[V_6]] to %[[V_5]] : !fir.ref<!fir.boxchar<1>>
-  ! CHECK:   br ^bb1
-  ! CHECK: ^bb1:  // pred: ^bb0
-  ! CHECK:   %[[V_7:[0-9]+]] = fir.address_of(@_QQclX6120612061) : !fir.ref<!fir.char<1,5>>
-  ! CHECK:   %[[V_10:[0-9]+]] = fir.convert %c5{{.*}} : (index) -> i64
-  ! CHECK:   %[[V_11:[0-9]+]] = arith.muli %c1{{.*}}_i64, %[[V_10]] : i64
-  ! CHECK:   %[[V_12:[0-9]+]] = fir.convert %[[V_0]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-  ! CHECK:   %[[V_13:[0-9]+]] = fir.convert %[[V_7]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-  ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_12]], %[[V_13]], %[[V_11]], %false{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
-  ! CHECK:   %[[V_17:[0-9]+]] = fir.load %arg2 : !fir.ref<i32>
-  ! CHECK:   %[[V_18:[0-9]+]] = arith.cmpi eq, %[[V_17]], %c1{{.*}} : i32
-  ! CHECK:   cond_br %[[V_18]], ^bb2, ^bb3
-  ! CHECK: ^bb2:  // pred: ^bb1
-  ! CHECK:   br ^bb6
-  ! CHECK: ^bb3:  // pred: ^bb1
-  ! CHECK:   fir.call @_QFf1Ps2(%[[V_2]]) {{.*}}: (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>) -> ()
-  ! CHECK:   %[[V_19:[0-9]+]] = fir.load %[[V_1]] : !fir.ref<i32>
-  ! CHECK:   %[[V_20:[0-9]+]] = arith.cmpi eq, %[[V_19]], %c2{{.*}}_i32 : i32
-  ! CHECK:   cond_br %[[V_20]], ^bb4, ^bb5
-  ! CHECK: ^bb4:  // pred: ^bb3
-  ! CHECK:   cf.br ^bb6
-  ! CHECK: ^bb5:  // pred: ^bb3
-  ! CHECK:   %[[V_21:[0-9]+]] = fir.address_of(@_QQclX4320432043) : !fir.ref<!fir.char<1,5>>
-  ! CHECK:   %[[V_24:[0-9]+]] = fir.convert %c5{{.*}} : (index) -> i64
-  ! CHECK:   %[[V_25:[0-9]+]] = arith.muli %c1{{.*}}, %[[V_24]] : i64
-  ! CHECK:   %[[V_26:[0-9]+]] = fir.convert %[[V_0]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-  ! CHECK:   %[[V_27:[0-9]+]] = fir.convert %[[V_21]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-  ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_26]], %[[V_27]], %[[V_25]], %false{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
-  ! CHECK:   fir.call @_QFf1Ps3(%[[V_2]]) {{.*}}: (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>) -> ()
-  ! CHECK:   br ^bb6
-  ! CHECK: ^bb6:  //  3 preds: ^bb2, ^bb4, ^bb5
-  ! CHECK:   %[[V_31:[0-9]+]] = fir.emboxchar %[[V_0]], %c5{{.*}} : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
-  ! CHECK:   return %[[V_31]] : !fir.boxchar<1>
-  ! CHECK: }
   character(5) res1, f2, f3
   res1 = 'a a a'
   if (n1 == 1) return
+! CHECK-LABEL:   func.func @_QPf1(
+! CHECK-SAME:                     %[[VAL_0:.*]]: !fir.ref<!fir.char<1,5>>,
+! CHECK-SAME:                     %[[VAL_1:.*]]: index,
+! CHECK-SAME:                     %[[VAL_2:.*]]: !fir.ref<i32> {fir.bindc_name = "n1"}) -> !fir.boxchar<1> {
+! CHECK:           %[[VAL_3:.*]] = fir.dummy_scope : !fir.dscope
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %[[VAL_3]] {uniq_name = "_QFf1En1"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_5:.*]] = fir.alloca i32 {bindc_name = "n2", uniq_name = "_QFf1En2"}
+! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] {uniq_name = "_QFf1En2"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_7:.*]] = arith.constant 5 : index
+! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_7]] {uniq_name = "_QFf1Eres1"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
+! CHECK:           %[[VAL_9:.*]] = arith.constant 5 : index
+! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_9]] {fortran_attrs = #fir.var_attrs<internal_assoc>, uniq_name = "_QFf1Ef2"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
+! CHECK:           %[[VAL_11:.*]] = arith.constant 5 : index
+! CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_11]] {fortran_attrs = #fir.var_attrs<internal_assoc>, uniq_name = "_QFf1Ef3"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
+! CHECK:           %[[VAL_13:.*]] = fir.alloca tuple<!fir.boxchar<1>, !fir.boxchar<1>>
+! CHECK:           %[[VAL_14:.*]] = arith.constant 0 : i32
+! CHECK:           %[[VAL_15:.*]] = fir.coordinate_of %[[VAL_13]], %[[VAL_14]] : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
+! CHECK:           %[[VAL_16:.*]] = fir.emboxchar %[[VAL_10]]#0, %[[VAL_9]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
+! CHECK:           fir.store %[[VAL_16]] to %[[VAL_15]] : !fir.ref<!fir.boxchar<1>>
+! CHECK:           %[[VAL_17:.*]] = arith.constant 1 : i32
+! CHECK:           %[[VAL_18:.*]] = fir.coordinate_of %[[VAL_13]], %[[VAL_17]] : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
+! CHECK:           %[[VAL_19:.*]] = fir.emboxchar %[[VAL_12]]#0, %[[VAL_11]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
+! CHECK:           fir.store %[[VAL_19]] to %[[VAL_18]] : !fir.ref<!fir.boxchar<1>>
+! CHECK:           cf.br ^bb1
+! CHECK:         ^bb1:
+! CHECK:           hlfir.assign %{{.*}}#0 to %[[VAL_8]]#0 : !fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>
+! CHECK:           %[[VAL_23:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<i32>
+! CHECK:           %[[VAL_24:.*]] = arith.constant 1 : i32
+! CHECK:           %[[VAL_25:.*]] = arith.cmpi eq, %[[VAL_23]], %[[VAL_24]] : i32
+! CHECK:           cf.cond_br %[[VAL_25]], ^bb2, ^bb3
+! CHECK:         ^bb2:
+! CHECK:           cf.br ^bb6
+! CHECK:         ^bb3:
+! CHECK:           fir.call @_QFf1Ps2(
+! CHECK:           cf.cond_br %{{.*}}, ^bb4, ^bb5
+! CHECK:         ^bb4:
+! CHECK:           cf.br ^bb6
+! CHECK:         ^bb5:
+! CHECK:           fir.call @_QFf1Ps3(
+! CHECK:           cf.br ^bb6
+! CHECK:         ^bb6:
+! CHECK:           %[[VAL_32:.*]] = fir.emboxchar %[[VAL_8]]#0, %[[VAL_7]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
+! CHECK:           return %[[VAL_32]] : !fir.boxchar<1>
+! CHECK:         }
 
-! CHECK-LABEL: @_QPf2
-! CHECK-SAME: %[[V_0:.*]]: !fir.ref<!fir.char<1,5>>
 entry f2(n2)
-  ! CHECK:   %[[V_1:[0-9]+]] = fir.alloca i32 {bindc_name = "n1", uniq_name = "_QFf1En1"}
-  ! CHECK:   %[[V_2:[0-9]+]] = fir.alloca tuple<!fir.boxchar<1>, !fir.boxchar<1>>
-  ! CHECK:   %[[V_3:[0-9]+]] = fir.coordinate_of %[[V_2]], %c0{{.*}}_i32 : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
-  ! CHECK:   %[[V_4:[0-9]+]] = fir.emboxchar %[[V_0]], %c5{{.*}} : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
-  ! CHECK:   fir.store %[[V_4]] to %[[V_3]] : !fir.ref<!fir.boxchar<1>>
-  ! CHECK:   %[[V_5:[0-9]+]] = fir.coordinate_of %[[V_2]], %c1{{.*}}_i32 : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
-  ! CHECK:   %[[V_6:[0-9]+]] = fir.emboxchar %[[V_0]], %c5{{.*}} : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
-  ! CHECK:   fir.store %[[V_6]] to %[[V_5]] : !fir.ref<!fir.boxchar<1>>
-  ! CHECK:   br ^bb1
-  ! CHECK: ^bb1:  // pred: ^bb0
-  ! CHECK:   fir.call @_QFf1Ps2(%[[V_2]]) {{.*}}: (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>) -> ()
-  ! CHECK:   %[[V_7:[0-9]+]] = fir.load %arg2 : !fir.ref<i32>
-  ! CHECK:   %[[V_8:[0-9]+]] = arith.cmpi eq, %[[V_7]], %c2{{.*}}_i32 : i32
-  ! CHECK:   cond_br %[[V_8]], ^bb2, ^bb3
-  ! CHECK: ^bb2:  // pred: ^bb1
-  ! CHECK:   br ^bb4
-  ! CHECK: ^bb3:  // pred: ^bb1
-  ! CHECK:   %[[V_9:[0-9]+]] = fir.address_of(@_QQclX4320432043) : !fir.ref<!fir.char<1,5>>
-  ! CHECK:   %[[V_12:[0-9]+]] = fir.convert %c5{{.*}} : (index) -> i64
-  ! CHECK:   %[[V_13:[0-9]+]] = arith.muli %c1{{.*}}, %[[V_12]] : i64
-  ! CHECK:   %[[V_14:[0-9]+]] = fir.convert %[[V_0]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-  ! CHECK:   %[[V_15:[0-9]+]] = fir.convert %[[V_9]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-  ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_14]], %[[V_15]], %[[V_13]], %false{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
-  ! CHECK:   fir.call @_QFf1Ps3(%[[V_2]]) {{.*}}: (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>) -> ()
-  ! CHECK:   br ^bb4
-  ! CHECK: ^bb4:  // 2 preds: ^bb2, ^bb3
-  ! CHECK:   %[[V_19:[0-9]+]] = fir.emboxchar %[[V_0]], %c5{{.*}} : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
-  ! CHECK:   return %[[V_19]] : !fir.boxchar<1>
-  ! CHECK: }
+! CHECK-LABEL:   func.func @_QPf2(
+! CHECK-SAME:                     %[[VAL_0:.*]]: !fir.ref<!fir.char<1,5>>,
+! CHECK-SAME:                     %[[VAL_1:.*]]: index,
+! CHECK-SAME:                     %[[VAL_2:.*]]: !fir.ref<i32> {fir.bindc_name = "n2"}) -> !fir.boxchar<1> {
+! CHECK:           %[[VAL_3:.*]] = fir.dummy_scope : !fir.dscope
+! CHECK:           %[[VAL_4:.*]] = fir.alloca i32 {bindc_name = "n1", uniq_name = "_QFf1En1"}
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFf1En1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %[[VAL_3]] {uniq_name = "_QFf1En2"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_7:.*]] = arith.constant 5 : index
+! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_7]] {uniq_name = "_QFf1Eres1"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
+! CHECK:           %[[VAL_9:.*]] = arith.constant 5 : index
+! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_9]] {fortran_attrs = #fir.var_attrs<internal_assoc>, uniq_name = "_QFf1Ef2"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
+! CHECK:           %[[VAL_11:.*]] = arith.constant 5 : index
+! CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_11]] {fortran_attrs = #fir.var_attrs<internal_assoc>, uniq_name = "_QFf1Ef3"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
+! CHECK:           %[[VAL_13:.*]] = fir.alloca tuple<!fir.boxchar<1>, !fir.boxchar<1>>
+! CHECK:           %[[VAL_14:.*]] = arith.constant 0 : i32
+! CHECK:           %[[VAL_15:.*]] = fir.coordinate_of %[[VAL_13]], %[[VAL_14]] : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
+! CHECK:           %[[VAL_16:.*]] = fir.emboxchar %[[VAL_10]]#0, %[[VAL_9]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
+! CHECK:           fir.store %[[VAL_16]] to %[[VAL_15]] : !fir.ref<!fir.boxchar<1>>
+! CHECK:           %[[VAL_17:.*]] = arith.constant 1 : i32
+! CHECK:           %[[VAL_18:.*]] = fir.coordinate_of %[[VAL_13]], %[[VAL_17]] : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
+! CHECK:           %[[VAL_19:.*]] = fir.emboxchar %[[VAL_12]]#0, %[[VAL_11]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
+! CHECK:           fir.store %[[VAL_19]] to %[[VAL_18]] : !fir.ref<!fir.boxchar<1>>
+! CHECK:           cf.br ^bb1
+! CHECK:         ^bb1:
+! CHECK:           fir.call @_QFf1Ps2(%
+! CHECK:           cf.cond_br %{{.*}}, ^bb2, ^bb3
+! CHECK:         ^bb2:
+! CHECK:           cf.br ^bb4
+! CHECK:         ^bb3:
+! CHECK:           fir.call @_QFf1Ps3(
+! CHECK:           cf.br ^bb4
+! CHECK:         ^bb4:
+! CHECK:           %[[VAL_26:.*]] = fir.emboxchar %[[VAL_10]]#0, %[[VAL_9]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
+! CHECK:           return %[[VAL_26]] : !fir.boxchar<1>
+! CHECK:         }
   call s2
   if (n2 == 2) return
 
-! CHECK-LABEL: @_QPf3
-! CHECK-SAME: %[[V_0:.*]]: !fir.ref<!fir.char<1,5>>
 entry f3
-  ! CHECK:   %[[V_1:[0-9]+]] = fir.alloca i32 {bindc_name = "n1", uniq_name = "_QFf1En1"}
-  ! CHECK:   %[[V_2:[0-9]+]] = fir.alloca i32 {bindc_name = "n2", uniq_name = "_QFf1En2"}
-  ! CHECK:   %[[V_3:[0-9]+]] = fir.alloca tuple<!fir.boxchar<1>, !fir.boxchar<1>>
-  ! CHECK:   %[[V_4:[0-9]+]] = fir.coordinate_of %[[V_3]], %c0{{.*}}_i32 : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
-  ! CHECK:   %[[V_5:[0-9]+]] = fir.emboxchar %[[V_0]], %c5{{.*}} : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
-  ! CHECK:   fir.store %[[V_5]] to %[[V_4]] : !fir.ref<!fir.boxchar<1>>
-  ! CHECK:   %[[V_6:[0-9]+]] = fir.coordinate_of %[[V_3]], %c1{{.*}}_i32 : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
-  ! CHECK:   %[[V_7:[0-9]+]] = fir.emboxchar %[[V_0]], %c5{{.*}} : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
-  ! CHECK:   fir.store %[[V_7]] to %[[V_6]] : !fir.ref<!fir.boxchar<1>>
-  ! CHECK:   br ^bb1
-  ! CHECK: ^bb1:  // pred: ^bb0
-  ! CHECK:   %[[V_8:[0-9]+]] = fir.address_of(@_QQclX4320432043) : !fir.ref<!fir.char<1,5>>
-  ! CHECK:   %[[V_11:[0-9]+]] = fir.convert %c5{{.*}} : (index) -> i64
-  ! CHECK:   %[[V_12:[0-9]+]] = arith.muli %c1{{.*}}_i64, %[[V_11]] : i64
-  ! CHECK:   %[[V_13:[0-9]+]] = fir.convert %[[V_0]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-  ! CHECK:   %[[V_14:[0-9]+]] = fir.convert %[[V_8]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-  ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_13]], %[[V_14]], %[[V_12]], %false{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
-  ! CHECK:   fir.call @_QFf1Ps3(%[[V_3]]) {{.*}}: (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>) -> ()
-  ! CHECK:   br ^bb2
-  ! CHECK: ^bb2:  // pred: ^bb1
-  ! CHECK:   %[[V_18:[0-9]+]] = fir.emboxchar %[[V_0]], %c5{{.*}} : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
-  ! CHECK:   return %[[V_18]] : !fir.boxchar<1>
-  ! CHECK: }
+! CHECK-LABEL:   func.func @_QPf3(
+! CHECK-SAME:                     %[[VAL_0:.*]]: !fir.ref<!fir.char<1,5>>,
+! CHECK-SAME:                     %[[VAL_1:.*]]: index) -> !fir.boxchar<1> {
+! CHECK:           %[[VAL_2:.*]] = fir.alloca i32 {bindc_name = "n1", uniq_name = "_QFf1En1"}
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFf1En1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_4:.*]] = fir.alloca i32 {bindc_name = "n2", uniq_name = "_QFf1En2"}
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFf1En2"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_6:.*]] = arith.constant 5 : index
+! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_6]] {uniq_name = "_QFf1Eres1"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
+! CHECK:           %[[VAL_8:.*]] = arith.constant 5 : index
+! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_8]] {fortran_attrs = #fir.var_attrs<internal_assoc>, uniq_name = "_QFf1Ef2"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
+! CHECK:           %[[VAL_10:.*]] = arith.constant 5 : index
+! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_10]] {fortran_attrs = #fir.var_attrs<internal_assoc>, uniq_name = "_QFf1Ef3"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
+! CHECK:           %[[VAL_12:.*]] = fir.alloca tuple<!fir.boxchar<1>, !fir.boxchar<1>>
+! CHECK:           %[[VAL_13:.*]] = arith.constant 0 : i32
+! CHECK:           %[[VAL_14:.*]] = fir.coordinate_of %[[VAL_12]], %[[VAL_13]] : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
+! CHECK:           %[[VAL_15:.*]] = fir.emboxchar %[[VAL_9]]#0, %[[VAL_8]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
+! CHECK:           fir.store %[[VAL_15]] to %[[VAL_14]] : !fir.ref<!fir.boxchar<1>>
+! CHECK:           %[[VAL_16:.*]] = arith.constant 1 : i32
+! CHECK:           %[[VAL_17:.*]] = fir.coordinate_of %[[VAL_12]], %[[VAL_16]] : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
+! CHECK:           %[[VAL_18:.*]] = fir.emboxchar %[[VAL_11]]#0, %[[VAL_10]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
+! CHECK:           fir.store %[[VAL_18]] to %[[VAL_17]] : !fir.ref<!fir.boxchar<1>>
+! CHECK:           cf.br ^bb1
+! CHECK:         ^bb1:
+! CHECK:           fir.call @_QFf1Ps3(
+! CHECK:           cf.br ^bb2
+! CHECK:         ^bb2:
+! CHECK:           %[[VAL_22:.*]] = fir.emboxchar %[[VAL_11]]#0, %[[VAL_10]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
+! CHECK:           return %[[VAL_22]] : !fir.boxchar<1>
+! CHECK:         }
   f3 = "C C C"
   call s3
 contains
-  ! CHECK-LABEL: @_QFf1Ps2
   subroutine s2
-    ! CHECK:   %[[V_0:[0-9]+]] = fir.coordinate_of %arg0, %c0{{.*}}_i32 : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
-    ! CHECK:   %[[V_1:[0-9]+]] = fir.load %[[V_0]] : !fir.ref<!fir.boxchar<1>>
-    ! CHECK:   %[[V_2:[0-9]+]]:2 = fir.unboxchar %[[V_1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-    ! CHECK:   %[[V_3:[0-9]+]] = fir.address_of(@_QQclX6220622062) : !fir.ref<!fir.char<1,5>>
-    ! CHECK:   %[[V_4:[0-9]+]] = arith.cmpi slt, %[[V_2]]#1, %c5{{.*}} : index
-    ! CHECK:   %[[V_5:[0-9]+]] = arith.select %[[V_4]], %[[V_2]]#1, %c5{{.*}} : index
-    ! CHECK:   %[[V_6:[0-9]+]] = fir.convert %[[V_5]] : (index) -> i64
-    ! CHECK:   %[[V_7:[0-9]+]] = arith.muli %c1{{.*}}_i64, %[[V_6]] : i64
-    ! CHECK:   %[[V_8:[0-9]+]] = fir.convert %[[V_2]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-    ! CHECK:   %[[V_9:[0-9]+]] = fir.convert %[[V_3]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-    ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_8]], %[[V_9]], %[[V_7]], %false{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
-    ! CHECK:   %[[V_10:[0-9]+]] = arith.subi %[[V_2]]#1, %c1{{.*}} : index
-    ! CHECK:   %[[V_11:[0-9]+]] = fir.undefined !fir.char<1>
-    ! CHECK:   %[[V_12:[0-9]+]] = fir.insert_value %[[V_11]], %c32{{.*}}_i8, [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
-    ! CHECK:   fir.do_loop %arg1 = %[[V_5]] to %[[V_10]] step %c1{{.*}} {
-    ! CHECK:     %[[V_13:[0-9]+]] = fir.convert %[[V_2]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
-    ! CHECK:     %[[V_14:[0-9]+]] = fir.coordinate_of %[[V_13]], %arg1 : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
-    ! CHECK:     fir.store %[[V_12]] to %[[V_14]] : !fir.ref<!fir.char<1>>
-    ! CHECK:   }
-    ! CHECK:   return
-    ! CHECK: }
     f2 = 'b b b'
   end
 
-  ! CHECK-LABEL: @_QFf1Ps3
   subroutine s3
-    ! CHECK:   %[[V_0:[0-9]+]] = fir.coordinate_of %arg0, %c1{{.*}}_i32 : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
-    ! CHECK:   %[[V_1:[0-9]+]] = fir.load %[[V_0]] : !fir.ref<!fir.boxchar<1>>
-    ! CHECK:   %[[V_2:[0-9]+]]:2 = fir.unboxchar %[[V_1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-    ! CHECK:   %[[V_3:[0-9]+]] = fir.address_of(@_QQclX6320632063) : !fir.ref<!fir.char<1,5>>
-    ! CHECK:   %[[V_4:[0-9]+]] = arith.cmpi slt, %[[V_2]]#1, %c5{{.*}} : index
-    ! CHECK:   %[[V_5:[0-9]+]] = arith.select %[[V_4]], %[[V_2]]#1, %c5{{.*}} : index
-    ! CHECK:   %[[V_6:[0-9]+]] = fir.convert %[[V_5]] : (index) -> i64
-    ! CHECK:   %[[V_7:[0-9]+]] = arith.muli %c1{{.*}}_i64, %[[V_6]] : i64
-    ! CHECK:   %[[V_8:[0-9]+]] = fir.convert %[[V_2]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-    ! CHECK:   %[[V_9:[0-9]+]] = fir.convert %[[V_3]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-    ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_8]], %[[V_9]], %[[V_7]], %false{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
-    ! CHECK:   %[[V_10:[0-9]+]] = arith.subi %[[V_2]]#1, %c1{{.*}} : index
-    ! CHECK:   %[[V_11:[0-9]+]] = fir.undefined !fir.char<1>
-    ! CHECK:   %[[V_12:[0-9]+]] = fir.insert_value %[[V_11]], %c32{{.*}}_i8, [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
-    ! CHECK:   fir.do_loop %arg1 = %[[V_5]] to %[[V_10]] step %c1{{.*}} {
-    ! CHECK:     %[[V_13:[0-9]+]] = fir.convert %[[V_2]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
-    ! CHECK:     %[[V_14:[0-9]+]] = fir.coordinate_of %[[V_13]], %arg1 : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
-    ! CHECK:     fir.store %[[V_12]] to %[[V_14]] : !fir.ref<!fir.char<1>>
-    ! CHECK:   }
-    ! CHECK:   return
-    ! CHECK: }
     f3 = 'c c c'
   end
 end
 
-! CHECK-LABEL: func @_QPassumed_size() {
 subroutine assumed_size()
   real :: x(*)
-! CHECK:  %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>>
-! CHECK:  %[[VAL_1:.*]] = fir.zero_bits !fir.heap<!fir.array<?xf32>>
-! CHECK:  %[[VAL_2:.*]] = arith.constant 0 : index
-! CHECK:  %[[VAL_3:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
-! CHECK:  %[[VAL_4:.*]] = fir.embox %[[VAL_1]](%[[VAL_3]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
-! CHECK:  fir.store %[[VAL_4]] to %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-! CHECK:  br ^bb1
-! CHECK:  ^bb1:
-! CHECK:  return
-! CHECK:  }
+! CHECK-LABEL:   func.func @_QPassumed_size() {
+! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>>
+! CHECK:           %[[VAL_1:.*]] = fir.zero_bits !fir.heap<!fir.array<?xf32>>
+! CHECK:           %[[VAL_2:.*]] = arith.constant 0 : index
+! CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
+! CHECK:           %[[VAL_4:.*]] = fir.embox %[[VAL_1]](%[[VAL_3]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+! CHECK:           fir.store %[[VAL_4]] to %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+! CHECK:           %[[VAL_5:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+! CHECK:           %[[VAL_6:.*]] = arith.constant 0 : index
+! CHECK:           %[[VAL_7:.*]]:3 = fir.box_dims %[[VAL_5]], %[[VAL_6]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
+! CHECK:           %[[VAL_8:.*]] = fir.box_addr %[[VAL_5]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
+! CHECK:           %[[VAL_9:.*]] = fir.shape_shift %[[VAL_7]]#0, %[[VAL_7]]#1 : (index, index) -> !fir.shapeshift<1>
+! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_8]](%[[VAL_9]]) {uniq_name = "_QFassumed_sizeEx"} : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.heap<!fir.array<?xf32>>)
+! CHECK:           cf.br ^bb1
+! CHECK:         ^bb1:
+! CHECK:           return
+! CHECK:         }
 
-! CHECK-LABEL: func @_QPentry_with_assumed_size(
   entry entry_with_assumed_size(x)
-! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
-! CHECK:  br ^bb1
-! CHECK:  ^bb1:
-! CHECK:  return
-! CHECK:  }
 end subroutine
+! CHECK-LABEL:   func.func @_QPentry_with_assumed_size(
+! CHECK-SAME:                                          %[[VAL_0:.*]]: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
+! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
+! CHECK:           %[[VAL_2:.*]] = arith.constant -1 : index
+! CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_3]]) dummy_scope %[[VAL_1]] {uniq_name = "_QFassumed_sizeEx"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
+! CHECK:           cf.br ^bb1
+! CHECK:         ^bb1:
+! CHECK:           return
+! CHECK:         }

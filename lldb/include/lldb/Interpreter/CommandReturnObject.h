@@ -14,6 +14,7 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StreamTee.h"
 #include "lldb/Utility/StructuredData.h"
+#include "lldb/ValueObject/ValueObjectList.h"
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/StringRef.h"
@@ -31,10 +32,16 @@ public:
 
   ~CommandReturnObject() = default;
 
-  /// Format any inline diagnostics with an indentation of \c indent.
-  std::string GetInlineDiagnosticString(unsigned indent);
+  /// Get the command as the user typed it. Empty string if commands were run on
+  /// behalf of lldb.
+  const std::string &GetCommand() const { return m_command; }
 
-  llvm::StringRef GetOutputString() {
+  void SetCommand(std::string command) { m_command = std::move(command); }
+
+  /// Format any inline diagnostics with an indentation of \c indent.
+  std::string GetInlineDiagnosticString(unsigned indent) const;
+
+  llvm::StringRef GetOutputString() const {
     lldb::StreamSP stream_sp(m_out_stream.GetStreamAtIndex(eStreamStringIndex));
     if (stream_sp)
       return std::static_pointer_cast<StreamString>(stream_sp)->GetString();
@@ -46,7 +53,7 @@ public:
   /// If \c with_diagnostics is true, all diagnostics are also
   /// rendered into the string. Otherwise the expectation is that they
   /// are fetched with \ref GetInlineDiagnosticString().
-  std::string GetErrorString(bool with_diagnostics = true);
+  std::string GetErrorString(bool with_diagnostics = true) const;
   StructuredData::ObjectSP GetErrorData();
 
   Stream &GetOutputStream() {
@@ -95,11 +102,11 @@ public:
     m_err_stream.SetStreamAtIndex(eImmediateStreamIndex, stream_sp);
   }
 
-  lldb::StreamSP GetImmediateOutputStream() {
+  lldb::StreamSP GetImmediateOutputStream() const {
     return m_out_stream.GetStreamAtIndex(eImmediateStreamIndex);
   }
 
-  lldb::StreamSP GetImmediateErrorStream() {
+  lldb::StreamSP GetImmediateErrorStream() const {
     return m_err_stream.GetStreamAtIndex(eImmediateStreamIndex);
   }
 
@@ -128,7 +135,7 @@ public:
       __attribute__((format(printf, 2, 3)));
 
   template <typename... Args>
-  void AppendMessageWithFormatv(const char *format, Args &&... args) {
+  void AppendMessageWithFormatv(const char *format, Args &&...args) {
     AppendMessage(llvm::formatv(format, std::forward<Args>(args)...).str());
   }
 
@@ -138,12 +145,12 @@ public:
   }
 
   template <typename... Args>
-  void AppendWarningWithFormatv(const char *format, Args &&... args) {
+  void AppendWarningWithFormatv(const char *format, Args &&...args) {
     AppendWarning(llvm::formatv(format, std::forward<Args>(args)...).str());
   }
 
   template <typename... Args>
-  void AppendErrorWithFormatv(const char *format, Args &&... args) {
+  void AppendErrorWithFormatv(const char *format, Args &&...args) {
     AppendError(llvm::formatv(format, std::forward<Args>(args)...).str());
   }
 
@@ -158,6 +165,10 @@ public:
   std::optional<uint16_t> GetDiagnosticIndent() const {
     return m_diagnostic_indent;
   }
+
+  const ValueObjectList &GetValueObjectList() const { return m_value_objects; }
+
+  ValueObjectList &GetValueObjectList() { return m_value_objects; }
 
   lldb::ReturnStatus GetStatus() const;
 
@@ -182,12 +193,17 @@ public:
 private:
   enum { eStreamStringIndex = 0, eImmediateStreamIndex = 1 };
 
+  std::string m_command;
+
   StreamTee m_out_stream;
   StreamTee m_err_stream;
   std::vector<DiagnosticDetail> m_diagnostics;
   std::optional<uint16_t> m_diagnostic_indent;
 
   lldb::ReturnStatus m_status = lldb::eReturnStatusStarted;
+
+  /// An optionally empty list of values produced by this command.
+  ValueObjectList m_value_objects;
 
   bool m_did_change_process_state = false;
   bool m_suppress_immediate_output = false;

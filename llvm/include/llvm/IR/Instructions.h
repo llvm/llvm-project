@@ -24,6 +24,7 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/CmpPredicate.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GEPNoWrapFlags.h"
@@ -750,6 +751,14 @@ public:
     /// \p minnum matches the behavior of \p llvm.minnum.*.
     FMin,
 
+    /// *p = maximum(old, v)
+    /// \p maximum matches the behavior of \p llvm.maximum.*.
+    FMaximum,
+
+    /// *p = minimum(old, v)
+    /// \p minimum matches the behavior of \p llvm.minimum.*.
+    FMinimum,
+
     /// Increment one up to a maximum value.
     /// *p = (old u>= v) ? 0 : (old + 1)
     UIncWrap,
@@ -811,6 +820,8 @@ public:
     case AtomicRMWInst::FSub:
     case AtomicRMWInst::FMax:
     case AtomicRMWInst::FMin:
+    case AtomicRMWInst::FMaximum:
+    case AtomicRMWInst::FMinimum:
       return true;
     default:
       return false;
@@ -1203,6 +1214,45 @@ public:
 #endif
   }
 
+  /// @returns the predicate along with samesign information.
+  CmpPredicate getCmpPredicate() const {
+    return {getPredicate(), hasSameSign()};
+  }
+
+  /// @returns the inverse predicate along with samesign information: static
+  /// variant.
+  static CmpPredicate getInverseCmpPredicate(CmpPredicate Pred) {
+    return {getInversePredicate(Pred), Pred.hasSameSign()};
+  }
+
+  /// @returns the inverse predicate along with samesign information.
+  CmpPredicate getInverseCmpPredicate() const {
+    return getInverseCmpPredicate(getCmpPredicate());
+  }
+
+  /// @returns the swapped predicate along with samesign information: static
+  /// variant.
+  static CmpPredicate getSwappedCmpPredicate(CmpPredicate Pred) {
+    return {getSwappedPredicate(Pred), Pred.hasSameSign()};
+  }
+
+  /// @returns the swapped predicate along with samesign information.
+  CmpPredicate getSwappedCmpPredicate() const {
+    return getSwappedCmpPredicate(getCmpPredicate());
+  }
+
+  /// @returns the non-strict predicate along with samesign information: static
+  /// variant.
+  static CmpPredicate getNonStrictCmpPredicate(CmpPredicate Pred) {
+    return {getNonStrictPredicate(Pred), Pred.hasSameSign()};
+  }
+
+  /// For example, SGT -> SGE, SLT -> SLE, ULT -> ULE, UGT -> UGE.
+  /// @returns the non-strict predicate along with samesign information.
+  Predicate getNonStrictCmpPredicate() const {
+    return getNonStrictCmpPredicate(getCmpPredicate());
+  }
+
   /// For example, EQ->EQ, SLE->SLE, UGT->SGT, etc.
   /// @returns the predicate that would be the result if the operand were
   /// regarded as signed.
@@ -1212,7 +1262,7 @@ public:
   }
 
   /// Return the signed version of the predicate: static variant.
-  static Predicate getSignedPredicate(Predicate pred);
+  static Predicate getSignedPredicate(Predicate Pred);
 
   /// For example, EQ->EQ, SLE->ULE, UGT->UGT, etc.
   /// @returns the predicate that would be the result if the operand were
@@ -1223,19 +1273,25 @@ public:
   }
 
   /// Return the unsigned version of the predicate: static variant.
-  static Predicate getUnsignedPredicate(Predicate pred);
+  static Predicate getUnsignedPredicate(Predicate Pred);
 
-  /// For example, SLT->ULT, ULT->SLT, SLE->ULE, ULE->SLE, EQ->Failed assert
+  /// For example, SLT->ULT, ULT->SLT, SLE->ULE, ULE->SLE, EQ->EQ
   /// @returns the unsigned version of the signed predicate pred or
   ///          the signed version of the signed predicate pred.
-  static Predicate getFlippedSignednessPredicate(Predicate pred);
+  /// Static variant.
+  static Predicate getFlippedSignednessPredicate(Predicate Pred);
 
-  /// For example, SLT->ULT, ULT->SLT, SLE->ULE, ULE->SLE, EQ->Failed assert
+  /// For example, SLT->ULT, ULT->SLT, SLE->ULE, ULE->SLE, EQ->EQ
   /// @returns the unsigned version of the signed predicate pred or
   ///          the signed version of the signed predicate pred.
   Predicate getFlippedSignednessPredicate() const {
     return getFlippedSignednessPredicate(getPredicate());
   }
+
+  /// Determine if Pred1 implies Pred2 is true, false, or if nothing can be
+  /// inferred about the implication, when two compares have matching operands.
+  static std::optional<bool> isImpliedByMatchingCmp(CmpPredicate Pred1,
+                                                    CmpPredicate Pred2);
 
   void setSameSign(bool B = true) {
     SubclassOptionalData = (SubclassOptionalData & ~SameSign) | (B * SameSign);
@@ -3320,7 +3376,7 @@ public:
 
   /// Returns true if the default branch must result in immediate undefined
   /// behavior, false otherwise.
-  bool defaultDestUndefined() const {
+  bool defaultDestUnreachable() const {
     return isa<UnreachableInst>(getDefaultDest()->getFirstNonPHIOrDbg());
   }
 
@@ -4450,6 +4506,9 @@ public:
   static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
+
+  // Whether to do target lowering in SelectionDAG.
+  bool shouldLowerToTrap(bool TrapUnreachable, bool NoTrapAfterNoreturn) const;
 
 private:
   BasicBlock *getSuccessor(unsigned idx) const {

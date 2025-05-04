@@ -654,7 +654,7 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
 
   // Further check the number of arguments to see if they match.
   // TODO: Check calling convention matches too
-  if (!FInfo.isCompatibleSignature(CI->getFunctionType()))
+  if (!FInfo.isCompatibleSignature(*Callee->getParent(), CI->getFunctionType()))
     return false;
 
   LLVM_DEBUG(dbgs() << "AMDIC: try folding " << *CI << '\n');
@@ -1361,6 +1361,11 @@ bool AMDGPULibCalls::fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B,
   bool const isSin = fInfo.getId() == AMDGPULibFunc::EI_SIN;
 
   Value *CArgVal = FPOp->getOperand(0);
+
+  // TODO: Constant fold the call
+  if (isa<ConstantData>(CArgVal))
+    return false;
+
   CallInst *CI = cast<CallInst>(FPOp);
 
   Function *F = B.GetInsertBlock()->getParent();

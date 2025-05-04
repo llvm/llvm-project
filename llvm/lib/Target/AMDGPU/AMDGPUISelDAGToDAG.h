@@ -86,6 +86,7 @@ public:
 
 protected:
   void SelectBuildVector(SDNode *N, unsigned RegClassID);
+  void SelectVectorShuffle(SDNode *N);
 
 private:
   std::pair<SDValue, SDValue> foldFrameIndex(SDValue N) const;
@@ -242,6 +243,9 @@ private:
                                 SDValue &SrcMods) const;
   bool SelectVOP3PMadMixMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
 
+  bool SelectBITOP3(SDValue In, SDValue &Src0, SDValue &Src1, SDValue &Src2,
+                   SDValue &Tbl) const;
+
   SDValue getHi16Elt(SDValue In) const;
 
   SDValue getMaterializedScalarImm32(int64_t Val, const SDLoc &DL) const;
@@ -263,7 +267,7 @@ private:
   void SelectFMAD_FMA(SDNode *N);
   void SelectFP_EXTEND(SDNode *N);
   void SelectDSAppendConsume(SDNode *N, unsigned IntrID);
-  void SelectDSBvhStackIntrinsic(SDNode *N);
+  void SelectDSBvhStackIntrinsic(SDNode *N, unsigned IntrID);
   void SelectDS_GWS(SDNode *N, unsigned IntrID);
   void SelectInterpP1F16(SDNode *N);
   void SelectINTRINSIC_W_CHAIN(SDNode *N);

@@ -1,6 +1,6 @@
 ! REQUIRES: openmp_runtime
 
-! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags %openmp_module_flag -fopenmp-version=50
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags %openmp_module_flag -fopenmp-version=51
 use omp_lib
 ! Check OpenMP clause validity for the following directives:
 !
@@ -221,7 +221,15 @@ use omp_lib
 
   !ERROR: Clause LINEAR is not allowed if clause ORDERED appears on the DO directive
   !ERROR: The parameter of the ORDERED clause must be a constant positive integer expression
+  !ERROR: 'b' appears in more than one data-sharing clause on the same OpenMP directive
   !$omp do ordered(1-1) private(b) linear(b) linear(a)
+  do i = 1, N
+     a = 3.14
+  enddo
+
+  !ERROR: Clause LINEAR is not allowed if clause ORDERED appears on the DO directive
+  !ERROR: The parameter of the ORDERED clause must be a constant positive integer expression
+  !$omp do ordered(1-1) linear(a)
   do i = 1, N
      a = 3.14
   enddo
@@ -241,7 +249,7 @@ use omp_lib
   enddo
   !$omp end parallel do simd
 
-  !ERROR: Unmatched directive name modifier TARGET on the IF clause
+  !ERROR: TARGET is not a constituent of the PARALLEL DO directive
   !$omp parallel do if(target:a>1.)
   do i = 1, N
   enddo
@@ -322,11 +330,12 @@ use omp_lib
   !$omp parallel
   b = 1
   !ERROR: LASTPRIVATE clause is not allowed on the SINGLE directive
-  !ERROR: NOWAIT clause is not allowed on the OMP SINGLE directive, use it on OMP END SINGLE directive 
+  !ERROR: NOWAIT clause must not be used with COPYPRIVATE clause on the SINGLE directive
   !$omp single private(a) lastprivate(c) nowait
   a = 3.14
-  !ERROR: Clause NOWAIT is not allowed if clause COPYPRIVATE appears on the END SINGLE directive
   !ERROR: COPYPRIVATE variable 'a' may not appear on a PRIVATE or FIRSTPRIVATE clause on a SINGLE construct
+  !ERROR: At most one NOWAIT clause can appear on the SINGLE directive
+  !ERROR: At most one NOWAIT clause can appear on the SINGLE directive
   !ERROR: At most one NOWAIT clause can appear on the END SINGLE directive
   !$omp end single copyprivate(a) nowait nowait
   c = 2
@@ -343,7 +352,6 @@ use omp_lib
   a = 1.0
   !ERROR: COPYPRIVATE clause is not allowed on the END WORKSHARE directive
   !$omp end workshare nowait copyprivate(a)
-  !ERROR: NOWAIT clause is not allowed on the OMP WORKSHARE directive, use it on OMP END WORKSHARE directive 
   !$omp workshare nowait
   !$omp end workshare
   !$omp end parallel
@@ -376,7 +384,7 @@ use omp_lib
      a = 3.14
   enddo
 
-  !ERROR: The parameter of the ALIGNED clause must be a constant positive integer expression
+  !ERROR: The alignment value should be a constant positive integer
   !$omp simd aligned(cpt:-2)
   do i = 1, N
      a = 3.14
@@ -412,7 +420,6 @@ use omp_lib
   !$omp parallel
   !ERROR: No ORDERED clause with a parameter can be specified on the DO SIMD directive
   !ERROR: NOGROUP clause is not allowed on the DO SIMD directive
-  !ERROR: NOWAIT clause is not allowed on the OMP DO SIMD directive, use it on OMP END DO SIMD directive 
   !$omp do simd ordered(2) NOGROUP nowait
   do i = 1, N
      do j = 1, N
@@ -507,7 +514,6 @@ use omp_lib
   !$omp flush acquire
   !ERROR: If memory-order-clause is RELEASE, ACQUIRE, or ACQ_REL, list items must not be specified on the FLUSH directive
   !$omp flush release (c)
-  !ERROR: SEQ_CST clause is not allowed on the FLUSH directive
   !$omp flush seq_cst
   !ERROR: RELAXED clause is not allowed on the FLUSH directive
   !$omp flush relaxed
@@ -533,7 +539,7 @@ use omp_lib
   a = 1.
   !$omp end task
 
-  !ERROR: Unmatched directive name modifier TASKLOOP on the IF clause
+  !ERROR: TASKLOOP is not a constituent of the TASK directive
   !$omp task private(a) if(taskloop:a.eq.1)
   a = 1.
   !$omp end task
@@ -573,7 +579,7 @@ use omp_lib
 
   allocate(allc)
   !ERROR: The parameter of the SIMDLEN clause must be a constant positive integer expression
-  !ERROR: The parameter of the ALIGNED clause must be a constant positive integer expression
+  !ERROR: The alignment value should be a constant positive integer
   !$omp taskloop simd simdlen(-1) aligned(allc:-2)
   do i = 1, N
      allc = 3.14

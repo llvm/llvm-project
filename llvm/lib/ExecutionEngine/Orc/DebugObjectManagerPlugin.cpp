@@ -149,9 +149,9 @@ protected:
 
   JITLinkMemoryManager &MemMgr;
   const JITLinkDylib *JD = nullptr;
+  ExecutionSession &ES;
 
 private:
-  ExecutionSession &ES;
   DebugObjectFlags Flags;
   FinalizedAlloc Alloc;
 };
@@ -234,7 +234,7 @@ static bool isDwarfSection(StringRef SectionName) {
 
 std::unique_ptr<WritableMemoryBuffer>
 ELFDebugObject::CopyBuffer(MemoryBufferRef Buffer, Error &Err) {
-  ErrorAsOutParameter _(&Err);
+  ErrorAsOutParameter _(Err);
   size_t Size = Buffer.getBufferSize();
   StringRef Name = Buffer.getBufferIdentifier();
   if (auto Copy = WritableMemoryBuffer::getNewUninitMemBuffer(Size, Name)) {
@@ -332,7 +332,8 @@ Expected<SimpleSegmentAlloc> ELFDebugObject::finalizeWorkingMemory() {
 
   // Allocate working memory for debug object in read-only segment.
   auto Alloc = SimpleSegmentAlloc::Create(
-      MemMgr, JD, {{MemProt::Read, {Size, Align(PageSize)}}});
+      MemMgr, ES.getSymbolStringPool(), ES.getTargetTriple(), JD,
+      {{MemProt::Read, {Size, Align(PageSize)}}});
   if (!Alloc)
     return Alloc;
 
@@ -474,8 +475,9 @@ Error DebugObjectManagerPlugin::notifyEmitted(
         FinalizePromise.set_value(MR.withResourceKeyDo([&](ResourceKey K) {
           assert(PendingObjs.count(&MR) && "We still hold PendingObjsLock");
           std::lock_guard<std::mutex> Lock(RegisteredObjsLock);
-          RegisteredObjs[K].push_back(std::move(PendingObjs[&MR]));
-          PendingObjs.erase(&MR);
+          auto It = PendingObjs.find(&MR);
+          RegisteredObjs[K].push_back(std::move(It->second));
+          PendingObjs.erase(It);
         }));
       });
 

@@ -102,18 +102,7 @@ static cl::opt<bool> ExpandConstantExprs(
     cl::desc(
         "Expand constant expressions to instructions for testing purposes"));
 
-/// Load bitcode directly into RemoveDIs format (use debug records instead
-/// of debug intrinsics). UNSET is treated as FALSE, so the default action
-/// is to do nothing. Individual tools can override this to incrementally add
-/// support for the RemoveDIs format.
-cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat(
-    "load-bitcode-into-experimental-debuginfo-iterators", cl::Hidden,
-    cl::desc("Load bitcode directly into the new debug info format (regardless "
-             "of input format)"));
 extern cl::opt<bool> UseNewDbgInfoFormat;
-extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
-extern bool WriteNewDbgInfoFormatToBitcode;
-extern cl::opt<bool> WriteNewDbgInfoFormat;
 
 namespace {
 
@@ -987,6 +976,10 @@ class ModuleSummaryIndexBitcodeReader : public BitcodeReaderBase {
   /// ids from the lists in the callsite and alloc entries to the index.
   std::vector<uint64_t> StackIds;
 
+  /// Linearized radix tree of allocation contexts. See the description above
+  /// the CallStackRadixTreeBuilder class in ProfileData/MemProf.h for format.
+  std::vector<uint64_t> RadixArray;
+
 public:
   ModuleSummaryIndexBitcodeReader(
       BitstreamCursor Stream, StringRef Strtab, ModuleSummaryIndex &TheIndex,
@@ -1013,6 +1006,8 @@ private:
                                        TypeIdCompatibleVtableInfo &TypeId);
   std::vector<FunctionSummary::ParamAccess>
   parseParamAccesses(ArrayRef<uint64_t> Record);
+  SmallVector<unsigned> parseAllocInfoContext(ArrayRef<uint64_t> Record,
+                                              unsigned &I);
 
   template <bool AllowNullValueInfo = false>
   std::pair<ValueInfo, GlobalValue::GUID>
@@ -1361,6 +1356,10 @@ static AtomicRMWInst::BinOp getDecodedRMWOperation(unsigned Val) {
   case bitc::RMW_FSUB: return AtomicRMWInst::FSub;
   case bitc::RMW_FMAX: return AtomicRMWInst::FMax;
   case bitc::RMW_FMIN: return AtomicRMWInst::FMin;
+  case bitc::RMW_FMAXIMUM:
+    return AtomicRMWInst::FMaximum;
+  case bitc::RMW_FMINIMUM:
+    return AtomicRMWInst::FMinimum;
   case bitc::RMW_UINC_WRAP:
     return AtomicRMWInst::UIncWrap;
   case bitc::RMW_UDEC_WRAP:
@@ -1654,18 +1653,45 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
               FwdBBs[BBID] = BasicBlock::Create(Context);
             BB = FwdBBs[BBID];
           }
-          C = BlockAddress::get(Fn, BB);
+          C = BlockAddress::get(Fn->getType(), BB);
           break;
         }
-        case BitcodeConstant::ConstantStructOpcode:
-          C = ConstantStruct::get(cast<StructType>(BC->getType()), ConstOps);
+        case BitcodeConstant::ConstantStructOpcode: {
+          auto *ST = cast<StructType>(BC->getType());
+          if (ST->getNumElements() != ConstOps.size())
+            return error("Invalid number of elements in struct initializer");
+
+          for (const auto [Ty, Op] : zip(ST->elements(), ConstOps))
+            if (Op->getType() != Ty)
+              return error("Incorrect type in struct initializer");
+
+          C = ConstantStruct::get(ST, ConstOps);
           break;
-        case BitcodeConstant::ConstantArrayOpcode:
-          C = ConstantArray::get(cast<ArrayType>(BC->getType()), ConstOps);
+        }
+        case BitcodeConstant::ConstantArrayOpcode: {
+          auto *AT = cast<ArrayType>(BC->getType());
+          if (AT->getNumElements() != ConstOps.size())
+            return error("Invalid number of elements in array initializer");
+
+          for (Constant *Op : ConstOps)
+            if (Op->getType() != AT->getElementType())
+              return error("Incorrect type in array initializer");
+
+          C = ConstantArray::get(AT, ConstOps);
           break;
-        case BitcodeConstant::ConstantVectorOpcode:
+        }
+        case BitcodeConstant::ConstantVectorOpcode: {
+          auto *VT = cast<FixedVectorType>(BC->getType());
+          if (VT->getNumElements() != ConstOps.size())
+            return error("Invalid number of elements in vector initializer");
+
+          for (Constant *Op : ConstOps)
+            if (Op->getType() != VT->getElementType())
+              return error("Incorrect type in vector initializer");
+
           C = ConstantVector::get(ConstOps);
           break;
+        }
         case Instruction::GetElementPtr:
           C = ConstantExpr::getGetElementPtr(
               BC->SrcElemTy, ConstOps[0], ArrayRef(ConstOps).drop_front(),
@@ -1832,7 +1858,7 @@ static uint64_t getRawAttributeMask(Attribute::AttrKind Val) {
   case Attribute::StackProtect:    return 1 << 14;
   case Attribute::StackProtectReq: return 1 << 15;
   case Attribute::Alignment:       return 31 << 16;
-  case Attribute::NoCapture:       return 1 << 21;
+  // 1ULL << 21 is NoCapture, which is upgraded separately.
   case Attribute::NoRedZone:       return 1 << 22;
   case Attribute::NoImplicitFloat: return 1 << 23;
   case Attribute::Naked:           return 1 << 24;
@@ -1904,8 +1930,7 @@ static void addRawAttributeValue(AttrBuilder &B, uint64_t Val) {
 }
 
 /// This fills an AttrBuilder object with the LLVM attributes that have
-/// been decoded from the given integer. This function must stay in sync with
-/// 'encodeLLVMAttributesForBitcode'.
+/// been decoded from the given integer.
 static void decodeLLVMAttributesForBitcode(AttrBuilder &B,
                                            uint64_t EncodedAttrs,
                                            uint64_t AttrIdx) {
@@ -1951,6 +1976,12 @@ static void decodeLLVMAttributesForBitcode(AttrBuilder &B,
     }
     if (ME != MemoryEffects::unknown())
       B.addMemoryAttr(ME);
+  }
+
+  // Upgrade nocapture to captures(none).
+  if (Attrs & (1ULL << 21)) {
+    Attrs &= ~(1ULL << 21);
+    B.addCapturesAttr(CaptureInfo::none());
   }
 
   addRawAttributeValue(B, Attrs);
@@ -2065,8 +2096,6 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::NoBuiltin;
   case bitc::ATTR_KIND_NO_CALLBACK:
     return Attribute::NoCallback;
-  case bitc::ATTR_KIND_NO_CAPTURE:
-    return Attribute::NoCapture;
   case bitc::ATTR_KIND_NO_DIVERGENCE_SOURCE:
     return Attribute::NoDivergenceSource;
   case bitc::ATTR_KIND_NO_DUPLICATE:
@@ -2159,6 +2188,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::SanitizeHWAddress;
   case bitc::ATTR_KIND_SANITIZE_THREAD:
     return Attribute::SanitizeThread;
+  case bitc::ATTR_KIND_SANITIZE_TYPE:
+    return Attribute::SanitizeType;
   case bitc::ATTR_KIND_SANITIZE_MEMORY:
     return Attribute::SanitizeMemory;
   case bitc::ATTR_KIND_SANITIZE_NUMERICAL_STABILITY:
@@ -2215,6 +2246,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::CoroElideSafe;
   case bitc::ATTR_KIND_NO_EXT:
     return Attribute::NoExt;
+  case bitc::ATTR_KIND_CAPTURES:
+    return Attribute::Captures;
   }
 }
 
@@ -2312,6 +2345,11 @@ Error BitcodeReader::parseAttributeGroupBlock() {
               upgradeOldMemoryAttribute(ME, EncodedKind))
             continue;
 
+          if (EncodedKind == bitc::ATTR_KIND_NO_CAPTURE) {
+            B.addCapturesAttr(CaptureInfo::none());
+            continue;
+          }
+
           if (Error Err = parseAttrKind(EncodedKind, &Kind))
             return Err;
 
@@ -2352,8 +2390,29 @@ Error BitcodeReader::parseAttributeGroupBlock() {
             B.addUWTableAttr(UWTableKind(Record[++i]));
           else if (Kind == Attribute::AllocKind)
             B.addAllocKindAttr(static_cast<AllocFnKind>(Record[++i]));
-          else if (Kind == Attribute::Memory)
-            B.addMemoryAttr(MemoryEffects::createFromIntValue(Record[++i]));
+          else if (Kind == Attribute::Memory) {
+            uint64_t EncodedME = Record[++i];
+            const uint8_t Version = (EncodedME >> 56);
+            if (Version == 0) {
+              // Errno memory location was previously encompassed into default
+              // memory. Ensure this is taken into account while reconstructing
+              // the memory attribute prior to its introduction.
+              ModRefInfo ArgMem = ModRefInfo((EncodedME >> 0) & 3);
+              ModRefInfo InaccessibleMem = ModRefInfo((EncodedME >> 2) & 3);
+              ModRefInfo OtherMem = ModRefInfo((EncodedME >> 4) & 3);
+              auto ME = MemoryEffects::inaccessibleMemOnly(InaccessibleMem) |
+                        MemoryEffects::argMemOnly(ArgMem) |
+                        MemoryEffects::errnoMemOnly(OtherMem) |
+                        MemoryEffects::otherMemOnly(OtherMem);
+              B.addMemoryAttr(ME);
+            } else {
+              // Construct the memory attribute directly from the encoded base
+              // on newer versions.
+              B.addMemoryAttr(MemoryEffects::createFromIntValue(
+                  EncodedME & 0x00FFFFFFFFFFFFFFULL));
+            }
+          } else if (Kind == Attribute::Captures)
+            B.addCapturesAttr(CaptureInfo::createFromIntValue(Record[++i]));
           else if (Kind == Attribute::NoFPClass)
             B.addNoFPClassAttr(
                 static_cast<FPClassTest>(Record[++i] & fcAllFlags));
@@ -2559,7 +2618,7 @@ Error BitcodeReader::parseTypeTableBody() {
           !PointerType::isValidElementType(ResultTy))
         return error("Invalid type");
       ContainedIDs.push_back(Record[0]);
-      ResultTy = PointerType::get(ResultTy, AddressSpace);
+      ResultTy = PointerType::get(ResultTy->getContext(), AddressSpace);
       break;
     }
     case bitc::TYPE_CODE_OPAQUE_POINTER: { // OPAQUE_POINTER: [addrspace]
@@ -3273,10 +3332,8 @@ Error BitcodeReader::parseConstants() {
       if (Record.empty())
         return error("Invalid aggregate record");
 
-      unsigned Size = Record.size();
       SmallVector<unsigned, 16> Elts;
-      for (unsigned i = 0; i != Size; ++i)
-        Elts.push_back(Record[i]);
+      llvm::append_range(Elts, Record);
 
       if (isa<StructType>(CurTy)) {
         V = BitcodeConstant::create(
@@ -3899,11 +3956,7 @@ Error BitcodeReader::globalCleanup() {
   for (Function &F : *TheModule) {
     MDLoader->upgradeDebugIntrinsics(F);
     Function *NewFn;
-    // If PreserveInputDbgFormat=true, then we don't know whether we want
-    // intrinsics or records, and we won't perform any conversions in either
-    // case, so don't upgrade intrinsics to records.
-    if (UpgradeIntrinsicFunction(
-            &F, NewFn, PreserveInputDbgFormat != cl::boolOrDefault::BOU_TRUE))
+    if (UpgradeIntrinsicFunction(&F, NewFn))
       UpgradedIntrinsics[&F] = NewFn;
     // Look for functions that rely on old function attribute behavior.
     UpgradeFunctionAttributes(F);
@@ -4428,14 +4481,9 @@ Error BitcodeReader::parseGlobalIndirectSymbolRecord(
 Error BitcodeReader::parseModule(uint64_t ResumeBit,
                                  bool ShouldLazyLoadMetadata,
                                  ParserCallbacks Callbacks) {
-  // Load directly into RemoveDIs format if LoadBitcodeIntoNewDbgInfoFormat
-  // has been set to true and we aren't attempting to preserve the existing
-  // format in the bitcode (default action: load into the old debug format).
-  if (PreserveInputDbgFormat != cl::boolOrDefault::BOU_TRUE) {
-    TheModule->IsNewDbgInfoFormat =
-        UseNewDbgInfoFormat &&
-        LoadBitcodeIntoNewDbgInfoFormat != cl::boolOrDefault::BOU_FALSE;
-  }
+  // In preparation for the deletion of debug-intrinsics, don't allow module
+  // loading to escape intrinsics being autoupgraded to debug records.
+  TheModule->IsNewDbgInfoFormat = UseNewDbgInfoFormat;
 
   this->ValueTypeCallback = std::move(Callbacks.ValueType);
   if (ResumeBit) {
@@ -4464,12 +4512,12 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
 
     // Auto-upgrade the layout string
     TentativeDataLayoutStr = llvm::UpgradeDataLayoutString(
-        TentativeDataLayoutStr, TheModule->getTargetTriple());
+        TentativeDataLayoutStr, TheModule->getTargetTriple().str());
 
     // Apply override
     if (Callbacks.DataLayout) {
       if (auto LayoutOverride = (*Callbacks.DataLayout)(
-              TheModule->getTargetTriple(), TentativeDataLayoutStr))
+              TheModule->getTargetTriple().str(), TentativeDataLayoutStr))
         TentativeDataLayoutStr = *LayoutOverride;
     }
 
@@ -4653,7 +4701,7 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
       std::string S;
       if (convertToString(Record, 0, S))
         return error("Invalid record");
-      TheModule->setTargetTriple(S);
+      TheModule->setTargetTriple(Triple(S));
       break;
     }
     case bitc::MODULE_CODE_DATALAYOUT: {  // DATALAYOUT: [strchr x N]
@@ -5163,6 +5211,11 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
             cast<TruncInst>(I)->setHasNoUnsignedWrap(true);
           if (Record[OpNum] & (1 << bitc::TIO_NO_SIGNED_WRAP))
             cast<TruncInst>(I)->setHasNoSignedWrap(true);
+        }
+        if (isa<FPMathOperator>(I)) {
+          FastMathFlags FMF = getDecodedFastMathFlags(Record[OpNum]);
+          if (FMF.any())
+            I->setFastMathFlags(FMF);
         }
       }
 
@@ -6948,39 +7001,9 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
   F->setIsMaterializable(false);
 
   // All parsed Functions should load into the debug info format dictated by the
-  // Module, unless we're attempting to preserve the input debug info format.
+  // Module.
   if (SeenDebugIntrinsic && SeenDebugRecord)
     return error("Mixed debug intrinsics and debug records in bitcode module!");
-  if (PreserveInputDbgFormat == cl::boolOrDefault::BOU_TRUE) {
-    bool SeenAnyDebugInfo = SeenDebugIntrinsic || SeenDebugRecord;
-    bool NewDbgInfoFormatDesired =
-        SeenAnyDebugInfo ? SeenDebugRecord : F->getParent()->IsNewDbgInfoFormat;
-    if (SeenAnyDebugInfo) {
-      UseNewDbgInfoFormat = SeenDebugRecord;
-      WriteNewDbgInfoFormatToBitcode = SeenDebugRecord;
-      WriteNewDbgInfoFormat = SeenDebugRecord;
-    }
-    // If the module's debug info format doesn't match the observed input
-    // format, then set its format now; we don't need to call the conversion
-    // function because there must be no existing intrinsics to convert.
-    // Otherwise, just set the format on this function now.
-    if (NewDbgInfoFormatDesired != F->getParent()->IsNewDbgInfoFormat)
-      F->getParent()->setNewDbgInfoFormatFlag(NewDbgInfoFormatDesired);
-    else
-      F->setNewDbgInfoFormatFlag(NewDbgInfoFormatDesired);
-  } else {
-    // If we aren't preserving formats, we use the Module flag to get our
-    // desired format instead of reading flags, in case we are lazy-loading and
-    // the format of the module has been changed since it was set by the flags.
-    // We only need to convert debug info here if we have debug records but
-    // desire the intrinsic format; everything else is a no-op or handled by the
-    // autoupgrader.
-    bool ModuleIsNewDbgInfoFormat = F->getParent()->IsNewDbgInfoFormat;
-    if (ModuleIsNewDbgInfoFormat || !SeenDebugRecord)
-      F->setNewDbgInfoFormatFlag(ModuleIsNewDbgInfoFormat);
-    else
-      F->setIsNewDbgInfoFormat(ModuleIsNewDbgInfoFormat);
-  }
 
   if (StripDebugInfo)
     stripDebugInfo(*F);
@@ -7104,6 +7127,8 @@ Error BitcodeReader::materializeModule() {
 
   UpgradeModuleFlags(*TheModule);
 
+  UpgradeNVVMAnnotations(*TheModule);
+
   UpgradeARCRuntime(*TheModule);
 
   return Error::success();
@@ -7145,10 +7170,10 @@ void ModuleSummaryIndexBitcodeReader::setValueGUID(
     StringRef SourceFileName) {
   std::string GlobalId =
       GlobalValue::getGlobalIdentifier(ValueName, Linkage, SourceFileName);
-  auto ValueGUID = GlobalValue::getGUID(GlobalId);
+  auto ValueGUID = GlobalValue::getGUIDAssumingExternalLinkage(GlobalId);
   auto OriginalNameID = ValueGUID;
   if (GlobalValue::isLocalLinkage(Linkage))
-    OriginalNameID = GlobalValue::getGUID(ValueName);
+    OriginalNameID = GlobalValue::getGUIDAssumingExternalLinkage(ValueName);
   if (PrintSummaryGUIDs)
     dbgs() << "GUID " << ValueGUID << "(" << OriginalNameID << ") is "
            << ValueName << "\n";
@@ -7542,6 +7567,48 @@ void ModuleSummaryIndexBitcodeReader::parseTypeIdCompatibleVtableSummaryRecord(
 
   while (Slot < Record.size())
     parseTypeIdCompatibleVtableInfo(Record, Slot, TypeId);
+}
+
+SmallVector<unsigned> ModuleSummaryIndexBitcodeReader::parseAllocInfoContext(
+    ArrayRef<uint64_t> Record, unsigned &I) {
+  SmallVector<unsigned> StackIdList;
+  // For backwards compatibility with old format before radix tree was
+  // used, simply see if we found a radix tree array record (and thus if
+  // the RadixArray is non-empty).
+  if (RadixArray.empty()) {
+    unsigned NumStackEntries = Record[I++];
+    assert(Record.size() - I >= NumStackEntries);
+    StackIdList.reserve(NumStackEntries);
+    for (unsigned J = 0; J < NumStackEntries; J++) {
+      assert(Record[I] < StackIds.size());
+      StackIdList.push_back(
+          TheIndex.addOrGetStackIdIndex(StackIds[Record[I++]]));
+    }
+  } else {
+    unsigned RadixIndex = Record[I++];
+    // See the comments above CallStackRadixTreeBuilder in ProfileData/MemProf.h
+    // for a detailed description of the radix tree array format. Briefly, the
+    // first entry will be the number of frames, any negative values are the
+    // negative of the offset of the next frame, and otherwise the frames are in
+    // increasing linear order.
+    assert(RadixIndex < RadixArray.size());
+    unsigned NumStackIds = RadixArray[RadixIndex++];
+    StackIdList.reserve(NumStackIds);
+    while (NumStackIds--) {
+      assert(RadixIndex < RadixArray.size());
+      unsigned Elem = RadixArray[RadixIndex];
+      if (static_cast<std::make_signed_t<unsigned>>(Elem) < 0) {
+        RadixIndex = RadixIndex - Elem;
+        assert(RadixIndex < RadixArray.size());
+        Elem = RadixArray[RadixIndex];
+        // We shouldn't encounter a second offset in a row.
+        assert(static_cast<std::make_signed_t<unsigned>>(Elem) >= 0);
+      }
+      RadixIndex++;
+      StackIdList.push_back(TheIndex.addOrGetStackIdIndex(StackIds[Elem]));
+    }
+  }
+  return StackIdList;
 }
 
 static void setSpecialRefs(SmallVectorImpl<ValueInfo> &Refs, unsigned ROCnt,
@@ -7960,20 +8027,18 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       break;
 
     case bitc::FS_CFI_FUNCTION_DEFS: {
-      std::set<std::string, std::less<>> &CfiFunctionDefs =
-          TheIndex.cfiFunctionDefs();
+      auto &CfiFunctionDefs = TheIndex.cfiFunctionDefs();
       for (unsigned I = 0; I != Record.size(); I += 2)
-        CfiFunctionDefs.insert(
-            {Strtab.data() + Record[I], static_cast<size_t>(Record[I + 1])});
+        CfiFunctionDefs.emplace(Strtab.data() + Record[I],
+                                static_cast<size_t>(Record[I + 1]));
       break;
     }
 
     case bitc::FS_CFI_FUNCTION_DECLS: {
-      std::set<std::string, std::less<>> &CfiFunctionDecls =
-          TheIndex.cfiFunctionDecls();
+      auto &CfiFunctionDecls = TheIndex.cfiFunctionDecls();
       for (unsigned I = 0; I != Record.size(); I += 2)
-        CfiFunctionDecls.insert(
-            {Strtab.data() + Record[I], static_cast<size_t>(Record[I + 1])});
+        CfiFunctionDecls.emplace(Strtab.data() + Record[I],
+                                 static_cast<size_t>(Record[I + 1]));
       break;
     }
 
@@ -8010,12 +8075,17 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       break;
     }
 
+    case bitc::FS_CONTEXT_RADIX_TREE_ARRAY: { // [n x entry]
+      RadixArray = ArrayRef<uint64_t>(Record);
+      break;
+    }
+
     case bitc::FS_PERMODULE_CALLSITE_INFO: {
       unsigned ValueID = Record[0];
       SmallVector<unsigned> StackIdList;
-      for (auto R = Record.begin() + 1; R != Record.end(); R++) {
-        assert(*R < StackIds.size());
-        StackIdList.push_back(TheIndex.addOrGetStackIdIndex(StackIds[*R]));
+      for (uint64_t R : drop_begin(Record)) {
+        assert(R < StackIds.size());
+        StackIdList.push_back(TheIndex.addOrGetStackIdIndex(StackIds[R]));
       }
       ValueInfo VI = std::get<0>(getValueInfoFromValueId(ValueID));
       PendingCallsites.push_back(CallsiteInfo({VI, std::move(StackIdList)}));
@@ -8065,14 +8135,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
              (Version < 10 && I < Record.size())) {
         assert(Record.size() - I >= 2);
         AllocationType AllocType = (AllocationType)Record[I++];
-        unsigned NumStackEntries = Record[I++];
-        assert(Record.size() - I >= NumStackEntries);
-        SmallVector<unsigned> StackIdList;
-        for (unsigned J = 0; J < NumStackEntries; J++) {
-          assert(Record[I] < StackIds.size());
-          StackIdList.push_back(
-              TheIndex.addOrGetStackIdIndex(StackIds[Record[I++]]));
-        }
+        auto StackIdList = parseAllocInfoContext(Record, I);
         MIBs.push_back(MIBInfo(AllocType, std::move(StackIdList)));
       }
       // We either have nothing left or at least NumMIBs context size info
@@ -8123,14 +8186,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       while (MIBsRead++ < NumMIBs) {
         assert(Record.size() - I >= 2);
         AllocationType AllocType = (AllocationType)Record[I++];
-        unsigned NumStackEntries = Record[I++];
-        assert(Record.size() - I >= NumStackEntries);
-        SmallVector<unsigned> StackIdList;
-        for (unsigned J = 0; J < NumStackEntries; J++) {
-          assert(Record[I] < StackIds.size());
-          StackIdList.push_back(
-              TheIndex.addOrGetStackIdIndex(StackIds[Record[I++]]));
-        }
+        auto StackIdList = parseAllocInfoContext(Record, I);
         MIBs.push_back(MIBInfo(AllocType, std::move(StackIdList)));
       }
       assert(Record.size() - I >= NumVersions);
