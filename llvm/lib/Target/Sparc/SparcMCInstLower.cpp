@@ -56,10 +56,9 @@ static MCOperand LowerSymbolOperand(const MachineInstr *MI,
     break;
   }
 
-  const MCSymbolRefExpr *MCSym = MCSymbolRefExpr::create(Symbol,
-                                                         AP.OutContext);
-  const SparcMCExpr *expr = SparcMCExpr::create(Kind, MCSym,
-                                                AP.OutContext);
+  const MCExpr *expr = MCSymbolRefExpr::create(Symbol, AP.OutContext);
+  if (Kind)
+    expr = SparcMCExpr::create(Kind, expr, AP.OutContext);
   return MCOperand::createExpr(expr);
 }
 
