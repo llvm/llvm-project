@@ -43,8 +43,6 @@ class TargetSchedModel {
   // Resource units per cycle. Latency normalization factor.
   unsigned ResourceLCM = 0;
 
-  unsigned computeInstrLatency(const MCSchedClassDesc &SCDesc) const;
-
 public:
   TargetSchedModel() : SchedModel(MCSchedModel::Default) {}
 
@@ -189,6 +187,7 @@ public:
                                bool UseDefaultDefLatency = true) const;
   unsigned computeInstrLatency(const MCInst &Inst) const;
   unsigned computeInstrLatency(unsigned Opcode) const;
+  unsigned computeInstrLatency(const MCSchedClassDesc &SCDesc) const;
 
 
   /// Output dependency latency of a pair of defs of the same register.
