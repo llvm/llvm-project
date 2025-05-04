@@ -3983,7 +3983,7 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
           //   phase of [over.match.list] when the initializer list has exactly
           //   one element that is itself an initializer list, [...] and the
           //   conversion is to X or reference to cv X, user-defined conversion
-          //   sequences are not cnosidered.
+          //   sequences are not considered.
           if (SuppressUserConversions && ListInitializing) {
             SuppressUserConversions =
                 NumArgs == 1 && isa<InitListExpr>(Args[0]) &&
@@ -14765,6 +14765,12 @@ ExprResult Sema::CreateUnresolvedLookupExpr(CXXRecordDecl *NamingClass,
 ExprResult Sema::BuildCXXMemberCallExpr(Expr *E, NamedDecl *FoundDecl,
                                         CXXConversionDecl *Method,
                                         bool HadMultipleCandidates) {
+  // FoundDecl can be the TemplateDecl of Method. Don't retain a template in
+  // the FoundDecl as it impedes TransformMemberExpr.
+  // We go a bit further here: if there's no difference in UnderlyingDecl,
+  // then using FoundDecl vs Method shouldn't make a difference either.
+  if (FoundDecl->getUnderlyingDecl() == FoundDecl)
+    FoundDecl = Method;
   // Convert the expression to match the conversion function's implicit object
   // parameter.
   ExprResult Exp;
