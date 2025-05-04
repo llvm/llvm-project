@@ -890,6 +890,7 @@ module std [system] {
     module check_memory_order     { header "__atomic/check_memory_order.h" }
     module contention_t           { header "__atomic/contention_t.h" }
     module fence                  { header "__atomic/fence.h" }
+    module floating_point_helper  { header "__atomic/floating_point_helper.h" }
     module is_always_lock_free    { header "__atomic/is_always_lock_free.h" }
     module kill_dependency        { header "__atomic/kill_dependency.h" }
     module memory_order           { header "__atomic/memory_order.h" }

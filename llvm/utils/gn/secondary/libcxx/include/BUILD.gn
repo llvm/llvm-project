@@ -283,6 +283,7 @@ if (current_toolchain == default_toolchain) {
       "__atomic/check_memory_order.h",
       "__atomic/contention_t.h",
       "__atomic/fence.h",
+      "__atomic/floating_point_helper.h",
       "__atomic/is_always_lock_free.h",
       "__atomic/kill_dependency.h",
       "__atomic/memory_order.h",
