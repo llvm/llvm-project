@@ -152,7 +152,7 @@ public:
   VPInstruction *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
                               Instruction *Inst = nullptr,
                               const Twine &Name = "") {
-    DebugLoc DL;
+    DebugLoc DL = DebugLoc::getUnknown();
     if (Inst)
       DL = Inst->getDebugLoc();
     VPInstruction *NewVPInst = createInstruction(Opcode, Operands, DL, Name);
@@ -166,7 +166,7 @@ public:
   VPInstruction *createNaryOp(unsigned Opcode,
                               std::initializer_list<VPValue *> Operands,
                               std::optional<FastMathFlags> FMFs = {},
-                              DebugLoc DL = {}, const Twine &Name = "") {
+                              DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "") {
     if (FMFs)
       return tryInsertInstruction(
           new VPInstruction(Opcode, Operands, *FMFs, DL, Name));
@@ -187,22 +187,22 @@ public:
   VPInstruction *createOverflowingOp(unsigned Opcode,
                                      std::initializer_list<VPValue *> Operands,
                                      VPRecipeWithIRFlags::WrapFlagsTy WrapFlags,
-                                     DebugLoc DL = {}, const Twine &Name = "") {
+                                     DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "") {
     return tryInsertInstruction(
         new VPInstruction(Opcode, Operands, WrapFlags, DL, Name));
   }
 
-  VPValue *createNot(VPValue *Operand, DebugLoc DL = {},
+  VPValue *createNot(VPValue *Operand, DebugLoc DL = DebugLoc::getUnknown(),
                      const Twine &Name = "") {
     return createInstruction(VPInstruction::Not, {Operand}, DL, Name);
   }
 
-  VPValue *createAnd(VPValue *LHS, VPValue *RHS, DebugLoc DL = {},
+  VPValue *createAnd(VPValue *LHS, VPValue *RHS, DebugLoc DL = DebugLoc::getUnknown(),
                      const Twine &Name = "") {
     return createInstruction(Instruction::BinaryOps::And, {LHS, RHS}, DL, Name);
   }
 
-  VPValue *createOr(VPValue *LHS, VPValue *RHS, DebugLoc DL = {},
+  VPValue *createOr(VPValue *LHS, VPValue *RHS, DebugLoc DL = DebugLoc::getUnknown(),
                     const Twine &Name = "") {
 
     return tryInsertInstruction(new VPInstruction(
@@ -210,14 +210,14 @@ public:
         VPRecipeWithIRFlags::DisjointFlagsTy(false), DL, Name));
   }
 
-  VPValue *createLogicalAnd(VPValue *LHS, VPValue *RHS, DebugLoc DL = {},
+  VPValue *createLogicalAnd(VPValue *LHS, VPValue *RHS, DebugLoc DL = DebugLoc::getUnknown(),
                             const Twine &Name = "") {
     return tryInsertInstruction(
         new VPInstruction(VPInstruction::LogicalAnd, {LHS, RHS}, DL, Name));
   }
 
   VPValue *createSelect(VPValue *Cond, VPValue *TrueVal, VPValue *FalseVal,
-                        DebugLoc DL = {}, const Twine &Name = "",
+                        DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "",
                         std::optional<FastMathFlags> FMFs = std::nullopt) {
     auto *Select =
         FMFs ? new VPInstruction(Instruction::Select, {Cond, TrueVal, FalseVal},
@@ -231,19 +231,19 @@ public:
   /// and \p B.
   /// TODO: add createFCmp when needed.
   VPValue *createICmp(CmpInst::Predicate Pred, VPValue *A, VPValue *B,
-                      DebugLoc DL = {}, const Twine &Name = "") {
+                      DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "") {
     assert(Pred >= CmpInst::FIRST_ICMP_PREDICATE &&
            Pred <= CmpInst::LAST_ICMP_PREDICATE && "invalid predicate");
     return tryInsertInstruction(
         new VPInstruction(Instruction::ICmp, Pred, A, B, DL, Name));
   }
 
-  VPInstruction *createPtrAdd(VPValue *Ptr, VPValue *Offset, DebugLoc DL = {},
+  VPInstruction *createPtrAdd(VPValue *Ptr, VPValue *Offset, DebugLoc DL = DebugLoc::getUnknown(),
                               const Twine &Name = "") {
     return tryInsertInstruction(
         new VPInstruction(Ptr, Offset, GEPNoWrapFlags::none(), DL, Name));
   }
-  VPValue *createInBoundsPtrAdd(VPValue *Ptr, VPValue *Offset, DebugLoc DL = {},
+  VPValue *createInBoundsPtrAdd(VPValue *Ptr, VPValue *Offset, DebugLoc DL = DebugLoc::getUnknown(),
                                 const Twine &Name = "") {
     return tryInsertInstruction(
         new VPInstruction(Ptr, Offset, GEPNoWrapFlags::inBounds(), DL, Name));

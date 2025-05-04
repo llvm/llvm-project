@@ -1720,7 +1720,7 @@ public:
 class VPHeaderPHIRecipe : public VPSingleDefRecipe {
 protected:
   VPHeaderPHIRecipe(unsigned char VPDefID, Instruction *UnderlyingInstr,
-                    VPValue *Start, DebugLoc DL = {})
+                    VPValue *Start, DebugLoc DL = DebugLoc::getUnknown())
       : VPSingleDefRecipe(VPDefID, ArrayRef<VPValue *>({Start}), UnderlyingInstr, DL) {
   }
 

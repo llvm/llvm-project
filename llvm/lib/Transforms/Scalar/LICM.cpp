@@ -1724,7 +1724,7 @@ static bool sink(Instruction &I, LoopInfo *LI, DominatorTree *DT,
     Instruction *New = sinkThroughTriviallyReplaceablePHI(
         PN, &I, LI, SunkCopies, SafetyInfo, CurLoop, MSSAU);
     // As we sink the instruction out of the BB, drop its debug location.
-    New->dropLocation();
+    New->setDebugLoc(DebugLoc::getDropped());
     PN->replaceAllUsesWith(New);
     eraseInstruction(*PN, *SafetyInfo, MSSAU);
     Changed = true;
@@ -2249,7 +2249,7 @@ bool llvm::promoteLoopAccessesToScalars(
     if (SawUnorderedAtomic)
       PreheaderLoad->setOrdering(AtomicOrdering::Unordered);
     PreheaderLoad->setAlignment(Alignment);
-    PreheaderLoad->setDebugLoc(DebugLoc());
+    PreheaderLoad->dropLocation();
     if (AATags && LoadIsGuaranteedToExecute)
       PreheaderLoad->setAAMetadata(AATags);
 
@@ -2802,6 +2802,7 @@ static bool hoistMulAddAssociation(Instruction &I, Loop &L,
     auto *NewBO =
         BinaryOperator::Create(Ins->getOpcode(), LHS, RHS,
                                Ins->getName() + ".reass", Ins->getIterator());
+    NewBO->setDebugLoc(DebugLoc::getDropped());
     NewBO->copyIRFlags(Ins);
     if (VariantOp == Ins)
       VariantOp = NewBO;
@@ -2858,6 +2859,7 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
 
   auto *NewBO = BinaryOperator::Create(
       Opcode, LV, Inv, BO->getName() + ".reass", BO->getIterator());
+  NewBO->setDebugLoc(DebugLoc::getDropped());
 
   // Copy NUW for ADDs if both instructions have it.
   if (Opcode == Instruction::Add && BO->hasNoUnsignedWrap() &&
