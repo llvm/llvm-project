@@ -399,7 +399,7 @@ define amdgpu_kernel void @select_add_lhs_const_i16(i1 %cond) {
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_bitcmp1_b32 s0, 0
 ; GCN-NEXT:    s_movk_i32 s0, 0x80
-; GCN-NEXT:    s_cselect_b32 s0, s0, 0x83
+; GCN-NEXT:    s_cmovk_i32 s0, 0x83
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    flat_store_short v[0:1], v0
 ; GCN-NEXT:    s_endpgm
