@@ -439,9 +439,7 @@ public:
 
   // Returns true if the value already has a shadow (including if the value is a
   // constant). If true, calling getShadow() is valid.
-  bool hasShadow(Value *V) const {
-    return isa<Constant>(V) || (Map.find(V) != Map.end());
-  }
+  bool hasShadow(Value *V) const { return isa<Constant>(V) || Map.contains(V); }
 
   // Returns the shadow value for a given value. Asserts that the value has
   // a shadow value. Lazily creates shadows for constant values.
