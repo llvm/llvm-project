@@ -20,7 +20,7 @@ define i32 @foo(i1 %z) {
 ; CHECK-NEXT:    br label [[FOR_INC7_1]]
 ; CHECK:       for.inc7.1:
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[A]], ptr align 4 [[SCEVGEP]], i64 4, i1 false)
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[SCEVGEP]], align 4
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
 entry:

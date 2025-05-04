@@ -14,6 +14,7 @@
 #ifndef LLVM_TRANSFORMS_SCALAR_MEMCPYOPTIMIZER_H
 #define LLVM_TRANSFORMS_SCALAR_MEMCPYOPTIMIZER_H
 
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/PassManager.h"
 
@@ -64,21 +65,28 @@ public:
 private:
   // Helper functions
   bool processStore(StoreInst *SI, BasicBlock::iterator &BBI);
+  bool processLoad(LoadInst *LI, BasicBlock::iterator &BBI,
+                   SmallVectorImpl<Instruction *> &NewInsts);
   bool processStoreOfLoad(StoreInst *SI, LoadInst *LI, const DataLayout &DL,
                           BasicBlock::iterator &BBI);
   bool processMemSet(MemSetInst *SI, BasicBlock::iterator &BBI);
-  bool processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI);
+  bool processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI,
+                     SmallVectorImpl<Instruction *> &NewInsts);
   bool processMemMove(MemMoveInst *M, BasicBlock::iterator &BBI);
   bool performCallSlotOptzn(Instruction *cpyLoad, Instruction *cpyStore,
                             Value *cpyDst, Value *cpySrc, TypeSize cpyLen,
                             Align cpyAlign, BatchAAResults &BAA,
                             std::function<CallInst *()> GetC);
   bool processMemCpyMemCpyDependence(MemCpyInst *M, MemCpyInst *MDep,
-                                     BatchAAResults &BAA);
+                                     BatchAAResults &BAA,
+                                     SmallVectorImpl<Instruction *> &NewInsts);
   bool processMemSetMemCpyDependence(MemCpyInst *MemCpy, MemSetInst *MemSet,
                                      BatchAAResults &BAA);
   bool performMemCpyToMemSetOptzn(MemCpyInst *MemCpy, MemSetInst *MemSet,
                                   BatchAAResults &BAA);
+  bool findNewSrc(MemCpyInst *MDep, Instruction *UseInstr, BatchAAResults &BAA,
+                  Value *&NewSrc, MaybeAlign &NewAlign,
+                  SmallVectorImpl<Instruction *> &NewInsts);
   bool processByValArgument(CallBase &CB, unsigned ArgNo);
   bool processImmutArgument(CallBase &CB, unsigned ArgNo);
   Instruction *tryMergingIntoMemset(Instruction *I, Value *StartPtr,
@@ -90,7 +98,7 @@ private:
   bool isMemMoveMemSetDependency(MemMoveInst *M);
 
   void eraseInstruction(Instruction *I);
-  bool iterateOnFunction(Function &F);
+  bool iterateOnFunction(Function &F, SmallVectorImpl<Instruction *> &NewInsts);
 };
 
 } // end namespace llvm

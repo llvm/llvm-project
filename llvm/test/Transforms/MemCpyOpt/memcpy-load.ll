@@ -6,7 +6,7 @@ define i24 @forward_load(ptr %src) {
 ; CHECK-SAME: ptr [[SRC:%.*]]) {
 ; CHECK-NEXT:    [[DEST:%.*]] = alloca [3 x i8], align 1
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DEST]], ptr [[SRC]], i64 3, i1 false)
-; CHECK-NEXT:    [[VAL1:%.*]] = load i24, ptr [[DEST]], align 4
+; CHECK-NEXT:    [[VAL1:%.*]] = load i24, ptr [[SRC]], align 4
 ; CHECK-NEXT:    ret i24 [[VAL1]]
 ;
   %dest = alloca [3 x i8]
@@ -20,7 +20,7 @@ define i16 @forward_load_2(ptr %src) {
 ; CHECK-SAME: ptr [[SRC:%.*]]) {
 ; CHECK-NEXT:    [[DEST:%.*]] = alloca [3 x i8], align 1
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DEST]], ptr [[SRC]], i64 2, i1 false)
-; CHECK-NEXT:    [[VAL1:%.*]] = load i16, ptr [[DEST]], align 2
+; CHECK-NEXT:    [[VAL1:%.*]] = load i16, ptr [[SRC]], align 2
 ; CHECK-NEXT:    ret i16 [[VAL1]]
 ;
   %dest = alloca [3 x i8]
@@ -35,7 +35,8 @@ define i32 @forward_load_padding(ptr %src) {
 ; CHECK-NEXT:    [[DEST:%.*]] = alloca { i8, i32 }, align 8
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DEST]], ptr [[SRC]], i64 8, i1 false)
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[DEST]], i64 4
-; CHECK-NEXT:    [[VAL1:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 4
+; CHECK-NEXT:    [[VAL1:%.*]] = load i32, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    ret i32 [[VAL1]]
 ;
   %dest = alloca { i8, i32 }

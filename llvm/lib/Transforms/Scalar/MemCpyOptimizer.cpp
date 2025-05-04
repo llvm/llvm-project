@@ -74,6 +74,7 @@ STATISTIC(NumMoveToCpy, "Number of memmoves converted to memcpy");
 STATISTIC(NumCpyToSet, "Number of memcpys converted to memset");
 STATISTIC(NumCallSlot, "Number of call slot optimizations performed");
 STATISTIC(NumStackMove, "Number of stack-move optimizations performed");
+STATISTIC(NumLoadInstr, "Number of load instruction optimizations performed");
 
 namespace {
 
@@ -739,6 +740,145 @@ bool MemCpyOptPass::processStoreOfLoad(StoreInst *SI, LoadInst *LI,
   return false;
 }
 
+bool MemCpyOptPass::findNewSrc(MemCpyInst *MDep, Instruction *UseInstr,
+                               BatchAAResults &BAA, Value *&NewSrc,
+                               MaybeAlign &NewAlign,
+                               SmallVectorImpl<Instruction *> &NewInsts) {
+  auto *MemCpy = dyn_cast<MemCpyInst>(UseInstr);
+  auto *LoadI = dyn_cast<LoadInst>(UseInstr);
+  MemoryLocation UseLoc;
+  Value *OldSrc;
+  if (MemCpy) {
+    UseLoc = MemoryLocation::getForSource(MemCpy);
+    OldSrc = MemCpy->getSource();
+  } else if (LoadI) {
+    UseLoc = MemoryLocation::get(LoadI);
+    OldSrc = LoadI->getPointerOperand();
+  } else
+    return false;
+  uint64_t UseLen = 0;
+  if (UseLoc.Size.hasValue())
+    UseLen = UseLoc.Size.getValue().getKnownMinValue();
+  // If dep instruction is reading from our current input, then it is a noop
+  // transfer and substituting the input won't change this instruction. Just
+  // ignore the input and let someone else zap MDep. This handles cases like:
+  //    memcpy(a <- a)
+  //    memcpy(b <- a)
+  if (OldSrc == MDep->getSource())
+    return false;
+
+  // We can only optimize non-volatile memcpy's.
+  if (MDep->isVolatile())
+    return false;
+
+  int64_t MForwardOffset = 0;
+  const DataLayout &DL = MDep->getDataLayout();
+  // We can only transforms memcpy's where the dest of one is the source of the
+  // other, or they have an offset in a range.
+  if (OldSrc != MDep->getDest()) {
+    std::optional<int64_t> Offset =
+        OldSrc->getPointerOffsetFrom(MDep->getDest(), DL);
+    if (!Offset || *Offset < 0)
+      return false;
+    MForwardOffset = *Offset;
+  }
+
+  // The length of the memcpy's must be the same, or the preceding one
+  // must be larger than the following one.
+  if (MForwardOffset != 0 || LoadI ||
+      (MemCpy && MDep->getLength() != MemCpy->getLength())) {
+    auto *MDepLen = dyn_cast<ConstantInt>(MDep->getLength());
+    if (UseLen == 0 || !MDepLen ||
+        MDepLen->getZExtValue() < UseLen + MForwardOffset)
+      return false;
+  }
+  IRBuilder<> Builder(UseInstr);
+  NewSrc = MDep->getSource();
+  NewAlign = MDep->getSourceAlign();
+  // We just need to calculate the actual size of the copy.
+  auto MCopyLoc =
+      MemoryLocation::getForSource(MDep).getWithNewSize(UseLoc.Size);
+
+  // When the forwarding offset is greater than 0, we transform
+  //    memcpy(d1 <- s1)
+  //    memcpy(d2 <- d1+o)
+  // to
+  //    memcpy(d2 <- s1+o)
+  if (MForwardOffset > 0) {
+    // The copy destination of `M` maybe can serve as the source of copying.
+    if (MemCpy && (MForwardOffset == MemCpy->getRawDest()->getPointerOffsetFrom(
+                                         MDep->getRawSource(), DL))) {
+      NewSrc = cast<MemCpyInst>(UseInstr)->getDest();
+    } else {
+      NewSrc = Builder.CreateInBoundsPtrAdd(NewSrc,
+                                            Builder.getInt64(MForwardOffset));
+      if (Instruction *NewI = dyn_cast<Instruction>(NewSrc))
+        NewInsts.push_back(NewI);
+    }
+    // We need to update `MCopyLoc` if an offset exists.
+    MCopyLoc = MCopyLoc.getWithNewPtr(NewSrc);
+    if (NewAlign)
+      NewAlign = commonAlignment(*NewAlign, MForwardOffset);
+  }
+
+  // Avoid infinite loops
+  if (BAA.isMustAlias(OldSrc, NewSrc))
+    return false;
+  // Verify that the copied-from memory doesn't change in between the two
+  // transfers.  For example, in:
+  //    memcpy(a <- b)
+  //    *b = 42;
+  //    memcpy(c <- a)
+  // It would be invalid to transform the second memcpy into memcpy(c <- b).
+  //
+  // TODO: If the code between M and MDep is transparent to the destination "c",
+  // then we could still perform the xform by moving M up to the first memcpy.
+  if (writtenBetween(MSSA, BAA, MCopyLoc, MSSA->getMemoryAccess(MDep),
+                     MSSA->getMemoryAccess(UseInstr)))
+    return false;
+  return true;
+}
+
+/// Perform simplification of load's. If we have memcpy A which copies X to Y,
+/// and load instruction B which loads from Y, then we can rewrite B to be a
+/// load instruction loads from X. This allows later passes to remove the memcpy
+/// A or identify the source of the load instruction.
+bool MemCpyOptPass::processLoad(LoadInst *LI, BasicBlock::iterator &BBI,
+                                SmallVectorImpl<Instruction *> &NewInsts) {
+  if (!LI->isSimple())
+    return false;
+  MemoryUseOrDef *MA = MSSA->getMemoryAccess(LI);
+  if (!MA)
+    return false;
+  BatchAAResults BAA(*AA, EEA);
+
+  MemoryAccess *AnyClobber = MA->getDefiningAccess();
+  const MemoryAccess *DestClobber =
+      MSSA->getWalker()->getClobberingMemoryAccess(
+          AnyClobber, MemoryLocation::get(LI), BAA);
+  MemCpyInst *MDep = nullptr;
+  if (auto *MD = dyn_cast<MemoryDef>(DestClobber))
+    if (Instruction *MI = MD->getMemoryInst())
+      MDep = dyn_cast<MemCpyInst>(MI);
+
+  if (!MDep)
+    return false;
+
+  Value *NewSrc;
+  MaybeAlign NewAlign;
+  if (!findNewSrc(MDep, LI, BAA, NewSrc, NewAlign, NewInsts))
+    return false;
+  IRBuilder<> Builder(LI);
+  Instruction *NewLI =
+      Builder.CreateAlignedLoad(LI->getType(), NewSrc, NewAlign, LI->getName());
+  auto *NewAccess = MSSAU->createMemoryAccessAfter(NewLI, nullptr, MA);
+  MSSAU->insertUse(cast<MemoryUse>(NewAccess), /*RenameUses=*/true);
+  LI->replaceAllUsesWith(NewLI);
+  eraseInstruction(LI);
+  ++NumLoadInstr;
+  return true;
+}
+
 bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
   if (!SI->isSimple())
     return false;
@@ -1101,101 +1241,18 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
 
 /// We've found that the (upward scanning) memory dependence of memcpy 'M' is
 /// the memcpy 'MDep'. Try to simplify M to copy from MDep's input if we can.
-bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
-                                                  MemCpyInst *MDep,
-                                                  BatchAAResults &BAA) {
-  // If dep instruction is reading from our current input, then it is a noop
-  // transfer and substituting the input won't change this instruction. Just
-  // ignore the input and let someone else zap MDep. This handles cases like:
-  //    memcpy(a <- a)
-  //    memcpy(b <- a)
-  if (M->getSource() == MDep->getSource())
+bool MemCpyOptPass::processMemCpyMemCpyDependence(
+    MemCpyInst *M, MemCpyInst *MDep, BatchAAResults &BAA,
+    SmallVectorImpl<Instruction *> &NewInsts) {
+  Value *NewSrc;
+  MaybeAlign NewAlign;
+  if (!findNewSrc(MDep, M, BAA, NewSrc, NewAlign, NewInsts))
     return false;
-
-  // We can only optimize non-volatile memcpy's.
-  if (MDep->isVolatile())
-    return false;
-
-  int64_t MForwardOffset = 0;
-  const DataLayout &DL = M->getModule()->getDataLayout();
-  // We can only transforms memcpy's where the dest of one is the source of the
-  // other, or they have an offset in a range.
-  if (M->getSource() != MDep->getDest()) {
-    std::optional<int64_t> Offset =
-        M->getSource()->getPointerOffsetFrom(MDep->getDest(), DL);
-    if (!Offset || *Offset < 0)
-      return false;
-    MForwardOffset = *Offset;
-  }
-
-  // The length of the memcpy's must be the same, or the preceding one
-  // must be larger than the following one.
-  if (MForwardOffset != 0 || MDep->getLength() != M->getLength()) {
-    auto *MDepLen = dyn_cast<ConstantInt>(MDep->getLength());
-    auto *MLen = dyn_cast<ConstantInt>(M->getLength());
-    if (!MDepLen || !MLen ||
-        MDepLen->getZExtValue() < MLen->getZExtValue() + MForwardOffset)
-      return false;
-  }
 
   IRBuilder<> Builder(M);
-  auto *CopySource = MDep->getSource();
-  Instruction *NewCopySource = nullptr;
-  auto CleanupOnRet = llvm::make_scope_exit([&] {
-    if (NewCopySource && NewCopySource->use_empty())
-      // Safety: It's safe here because we will only allocate more instructions
-      // after finishing all BatchAA queries, but we have to be careful if we
-      // want to do something like this in another place. Then we'd probably
-      // have to delay instruction removal until all transforms on an
-      // instruction finished.
-      eraseInstruction(NewCopySource);
-  });
-  MaybeAlign CopySourceAlign = MDep->getSourceAlign();
-  // We just need to calculate the actual size of the copy.
-  auto MCopyLoc = MemoryLocation::getForSource(MDep).getWithNewSize(
-      MemoryLocation::getForSource(M).Size);
-
-  // When the forwarding offset is greater than 0, we transform
-  //    memcpy(d1 <- s1)
-  //    memcpy(d2 <- d1+o)
-  // to
-  //    memcpy(d2 <- s1+o)
-  if (MForwardOffset > 0) {
-    // The copy destination of `M` maybe can serve as the source of copying.
-    std::optional<int64_t> MDestOffset =
-        M->getRawDest()->getPointerOffsetFrom(MDep->getRawSource(), DL);
-    if (MDestOffset == MForwardOffset)
-      CopySource = M->getDest();
-    else {
-      CopySource = Builder.CreateInBoundsPtrAdd(
-          CopySource, Builder.getInt64(MForwardOffset));
-      NewCopySource = dyn_cast<Instruction>(CopySource);
-    }
-    // We need to update `MCopyLoc` if an offset exists.
-    MCopyLoc = MCopyLoc.getWithNewPtr(CopySource);
-    if (CopySourceAlign)
-      CopySourceAlign = commonAlignment(*CopySourceAlign, MForwardOffset);
-  }
-
-  // Avoid infinite loops
-  if (BAA.isMustAlias(M->getSource(), CopySource))
-    return false;
-
-  // Verify that the copied-from memory doesn't change in between the two
-  // transfers.  For example, in:
-  //    memcpy(a <- b)
-  //    *b = 42;
-  //    memcpy(c <- a)
-  // It would be invalid to transform the second memcpy into memcpy(c <- b).
-  //
-  // TODO: If the code between M and MDep is transparent to the destination "c",
-  // then we could still perform the xform by moving M up to the first memcpy.
-  if (writtenBetween(MSSA, BAA, MCopyLoc, MSSA->getMemoryAccess(MDep),
-                     MSSA->getMemoryAccess(M)))
-    return false;
 
   // No need to create `memcpy(a <- a)`.
-  if (BAA.isMustAlias(M->getDest(), CopySource)) {
+  if (BAA.isMustAlias(M->getDest(), NewSrc)) {
     // Remove the instruction we're replacing.
     eraseInstruction(M);
     ++NumMemCpyInstr;
@@ -1226,20 +1283,18 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
   // example we could be moving from movaps -> movq on x86.
   Instruction *NewM;
   if (UseMemMove)
-    NewM =
-        Builder.CreateMemMove(M->getDest(), M->getDestAlign(), CopySource,
-                              CopySourceAlign, M->getLength(), M->isVolatile());
+    NewM = Builder.CreateMemMove(M->getDest(), M->getDestAlign(), NewSrc,
+                                 NewAlign, M->getLength(), M->isVolatile());
   else if (isa<MemCpyInlineInst>(M)) {
     // llvm.memcpy may be promoted to llvm.memcpy.inline, but the converse is
     // never allowed since that would allow the latter to be lowered as a call
     // to an external function.
-    NewM = Builder.CreateMemCpyInline(M->getDest(), M->getDestAlign(),
-                                      CopySource, CopySourceAlign,
-                                      M->getLength(), M->isVolatile());
-  } else
     NewM =
-        Builder.CreateMemCpy(M->getDest(), M->getDestAlign(), CopySource,
-                             CopySourceAlign, M->getLength(), M->isVolatile());
+        Builder.CreateMemCpyInline(M->getDest(), M->getDestAlign(), NewSrc,
+                                   NewAlign, M->getLength(), M->isVolatile());
+  } else
+    NewM = Builder.CreateMemCpy(M->getDest(), M->getDestAlign(), NewSrc,
+                                NewAlign, M->getLength(), M->isVolatile());
   NewM->copyMetadata(*M, LLVMContext::MD_DIAssignID);
 
   assert(isa<MemoryDef>(MSSA->getMemoryAccess(M)));
@@ -1703,7 +1758,8 @@ static bool isZeroSize(Value *Size) {
 /// B to be a memcpy from X to Z (or potentially a memmove, depending on
 /// circumstances). This allows later passes to remove the first memcpy
 /// altogether.
-bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
+bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI,
+                                  SmallVectorImpl<Instruction *> &NewInsts) {
   // We can only optimize non-volatile memcpy's.
   if (M->isVolatile())
     return false;
@@ -1791,7 +1847,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
         }
       }
       if (auto *MDep = dyn_cast<MemCpyInst>(MI))
-        if (processMemCpyMemCpyDependence(M, MDep, BAA))
+        if (processMemCpyMemCpyDependence(M, MDep, BAA, NewInsts))
           return true;
       if (auto *MDep = dyn_cast<MemSetInst>(MI)) {
         if (performMemCpyToMemSetOptzn(M, MDep, BAA)) {
@@ -2096,7 +2152,8 @@ bool MemCpyOptPass::processImmutArgument(CallBase &CB, unsigned ArgNo) {
 }
 
 /// Executes one iteration of MemCpyOptPass.
-bool MemCpyOptPass::iterateOnFunction(Function &F) {
+bool MemCpyOptPass::iterateOnFunction(
+    Function &F, SmallVectorImpl<Instruction *> &NewInsts) {
   bool MadeChange = false;
 
   // Walk all instruction in the function.
@@ -2114,12 +2171,14 @@ bool MemCpyOptPass::iterateOnFunction(Function &F) {
 
       bool RepeatInstruction = false;
 
-      if (auto *SI = dyn_cast<StoreInst>(I))
+      if (auto *LI = dyn_cast<LoadInst>(I))
+        MadeChange |= processLoad(LI, BI, NewInsts);
+      else if (auto *SI = dyn_cast<StoreInst>(I))
         MadeChange |= processStore(SI, BI);
       else if (auto *M = dyn_cast<MemSetInst>(I))
         RepeatInstruction = processMemSet(M, BI);
       else if (auto *M = dyn_cast<MemCpyInst>(I))
-        RepeatInstruction = processMemCpy(M, BI);
+        RepeatInstruction = processMemCpy(M, BI, NewInsts);
       else if (auto *M = dyn_cast<MemMoveInst>(I))
         RepeatInstruction = processMemMove(M, BI);
       else if (auto *CB = dyn_cast<CallBase>(I)) {
@@ -2176,11 +2235,17 @@ bool MemCpyOptPass::runImpl(Function &F, TargetLibraryInfo *TLI_,
   MSSAU = &MSSAU_;
   EarliestEscapeAnalysis EEA_(*DT);
   EEA = &EEA_;
+  SmallVector<Instruction *, 4> NewInsts;
 
   while (true) {
-    if (!iterateOnFunction(F))
+    if (!iterateOnFunction(F, NewInsts))
       break;
     MadeChange = true;
+  }
+
+  for (auto *I : NewInsts) {
+    if (I->use_empty())
+      eraseInstruction(I);
   }
 
   if (VerifyMemorySSA)

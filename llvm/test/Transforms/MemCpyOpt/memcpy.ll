@@ -229,10 +229,8 @@ define void @test4_write_between(ptr %P) {
 
 define i8 @test4_read_between(ptr %P) {
 ; CHECK-LABEL: @test4_read_between(
-; CHECK-NEXT:    [[A1:%.*]] = alloca [[TMP1:%.*]], align 8
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[A1]], ptr align 4 [[P:%.*]], i64 8, i1 false)
-; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[A1]], align 1
-; CHECK-NEXT:    call void @test4a(ptr byval(i8) align 1 [[P]])
+; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[A1:%.*]], align 4
+; CHECK-NEXT:    call void @test4a(ptr byval(i8) align 1 [[A1]])
 ; CHECK-NEXT:    ret i8 [[X]]
 ;
   %a1 = alloca %1

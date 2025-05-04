@@ -13,13 +13,13 @@ define i1 @main(ptr %i2) {
 ; CHECK-NEXT:    store i8 2, ptr [[I4]], align 1
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 3, ptr nonnull [[I1]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(3) [[I1]], ptr noundef nonnull align 1 dereferenceable(3) [[I2]], i64 3, i1 false)
-; CHECK-NEXT:    [[I51:%.*]] = load i8, ptr [[I1]], align 1
+; CHECK-NEXT:    [[I51:%.*]] = load i8, ptr [[I2]], align 1
 ; CHECK-NEXT:    [[I6:%.*]] = icmp eq i8 [[I51]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[I1]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[I2]], i64 1
 ; CHECK-NEXT:    [[I82:%.*]] = load i8, ptr [[TMP1]], align 1
 ; CHECK-NEXT:    [[I9:%.*]] = icmp eq i8 [[I82]], 1
 ; CHECK-NEXT:    [[I10:%.*]] = select i1 [[I6]], i1 [[I9]], i1 false
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[I1]], i64 2
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[I2]], i64 2
 ; CHECK-NEXT:    [[I123:%.*]] = load i8, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[I13:%.*]] = icmp eq i8 [[I123]], 2
 ; CHECK-NEXT:    [[I14:%.*]] = select i1 [[I10]], i1 [[I13]], i1 false
