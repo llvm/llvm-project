@@ -29,7 +29,7 @@ if not diff_text.strip():
 # === Run clang-tidy-diff.py on diff from stdin ===
 print("🧼 Running clang-tidy-diff.py on PR diff...")
 # Adjust if clang-tidy-diff.py is in a different path
-clang_tidy_diff_path = "clang-tidy-diff.py"
+clang_tidy_diff_path = "./clang-tidy-diff.py"
 result = subprocess.run(
     ["python3", clang_tidy_diff_path, "-p1"],
     input=diff_text,
