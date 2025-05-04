@@ -92,7 +92,7 @@ struct sequence_wrapper
             return;
         seq[at] = value;
 
-        //Producing serveral red herrings
+        //Producing several red herrings
         for (std::size_t i = at + 1; i < seq.size(); i += 1 + TestUtils::HashBits(i, 5))
             seq[i] = value;
     }
