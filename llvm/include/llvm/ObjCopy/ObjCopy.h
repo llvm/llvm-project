@@ -10,6 +10,8 @@
 #define LLVM_OBJCOPY_OBJCOPY_H
 
 #include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include <memory>
 
 namespace llvm {
 class raw_ostream;
@@ -27,7 +29,8 @@ class MultiFormatConfig;
 /// Writes a result in a file specified by \p Config.OutputFilename.
 /// \returns any Error encountered whilst performing the operation.
 Error executeObjcopyOnArchive(const MultiFormatConfig &Config,
-                              const object::Archive &Ar);
+                              const object::Archive &Ar,
+                              std::unique_ptr<MemoryBuffer> Buffer);
 
 /// Applies the transformations described by \p Config to \p In and writes
 /// the result into \p Out. This function does the dispatch based on the

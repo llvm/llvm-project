@@ -176,7 +176,9 @@ static Error executeObjcopy(ConfigManager &ConfigMgr) {
 
     if (Archive *Ar = dyn_cast<Archive>(BinaryHolder.getBinary())) {
       // Handle Archive.
-      if (Error E = executeObjcopyOnArchive(ConfigMgr, *Ar))
+      auto [Binary, MemBuf] = BinaryHolder.takeBinary();
+      Ar = dyn_cast<Archive>(Binary.get());
+      if (Error E = executeObjcopyOnArchive(ConfigMgr, *Ar, std::move(MemBuf)))
         return E;
     } else {
       // Handle llvm::object::Binary.
