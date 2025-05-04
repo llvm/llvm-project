@@ -307,8 +307,8 @@ void SparcAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
   const MachineOperand &MO = MI->getOperand (opNum);
   SparcMCExpr::Specifier TF = (SparcMCExpr::Specifier)MO.getTargetFlags();
 
-  bool CloseParen = SparcMCExpr::printSpecifier(O, TF);
-
+  StringRef Spec = SparcMCExpr::getSpecifierName(TF);
+  O << Spec;
   switch (MO.getType()) {
   case MachineOperand::MO_Register:
     O << "%" << StringRef(getRegisterName(MO.getReg())).lower();
@@ -339,7 +339,8 @@ void SparcAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
   default:
     llvm_unreachable("<unknown operand type>");
   }
-  if (CloseParen) O << ")";
+  if (!Spec.empty())
+    O << ")";
 }
 
 void SparcAsmPrinter::printMemOperand(const MachineInstr *MI, int opNum,
