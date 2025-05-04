@@ -16,7 +16,7 @@ void fn1() {
 
   for (;;) { // expected-note{{Loop condition is true.  Entering loop body}}
              // expected-note@-1{{Loop condition is true.  Entering loop body}}
-             // expected-note@-2{{Value assigned to 'b'}}
+             // expected-note@-2{{Value assigned to 'b' (invalidation as part of widen-loops made this symbolic here)}}
              // no crash during bug report construction
 
     g = !b;     // expected-note{{Assuming 'b' is null}}

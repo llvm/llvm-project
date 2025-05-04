@@ -1113,6 +1113,11 @@ const ProgramPointTag *ExprEngine::cleanupNodeTag() {
   return &cleanupTag;
 }
 
+const ProgramPointTag *ExprEngine::loopWideningNodeTag() {
+  static SimpleProgramPointTag loopWideningTag(TagProviderName, "Widen Loop");
+  return &loopWideningTag;
+}
+
 void ExprEngine::ProcessStmt(const Stmt *currStmt, ExplodedNode *Pred) {
   // Reclaim any unnecessary nodes in the ExplodedGraph.
   G.reclaimRecentlyAllocatedNodes();
@@ -2560,7 +2565,7 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
     const LocationContext *LCtx = Pred->getLocationContext();
     ProgramStateRef WidenedState =
         getWidenedLoopState(Pred->getState(), LCtx, BlockCount, Term);
-    nodeBuilder.generateNode(WidenedState, Pred);
+    nodeBuilder.generateNode(WidenedState, Pred, loopWideningNodeTag());
     return;
   }
 
