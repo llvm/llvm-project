@@ -223,8 +223,8 @@ clang_getCompletionParent(CXCompletionString completion_string,
   CodeCompletionString *CCStr = (CodeCompletionString *)completion_string;
   if (!CCStr)
     return cxstring::createNull();
-  
-  return cxstring::createRef(CCStr->getParentContextName());
+
+  return cxstring::createDup(CCStr->getParentContextName());
 }
 
 CXString

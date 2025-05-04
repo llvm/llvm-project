@@ -77,19 +77,6 @@ CXString createDup(const char *String) {
   return Str;
 }
 
-CXString createRef(StringRef String) {
-  if (!String.data())
-    return createNull();
-
-  // If the string is empty, it might point to a position in another string
-  // while having zero length. Make sure we don't create a reference to the
-  // larger string.
-  if (String.empty())
-    return createEmpty();
-
-  return createDup(String);
-}
-
 CXString createDup(StringRef String) {
   CXString Result;
   char *Spelling = static_cast<char *>(llvm::safe_malloc(String.size() + 1));
