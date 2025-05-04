@@ -5228,8 +5228,8 @@ MachOObjectFile::getDyldChainedFixupTargets() const {
       auto RawValue = getArray<uint64_t, 2>(*this, ImportPtr);
 
       LibOrdinal = getEncodedOrdinal<uint16_t>(RawValue[0] & 0xFFFF);
-      NameOffset = (RawValue[0] >> 16) & 1;
-      WeakImport = RawValue[0] >> 17;
+      WeakImport = (RawValue[0] >> 16) & 1;
+      NameOffset = RawValue[0] >> 32;
       Addend = RawValue[1];
     } else {
       llvm_unreachable("Import format should have been checked");
