@@ -65,6 +65,7 @@ class VPReplicateRecipe;
 class VPlanSlp;
 class Value;
 class LoopVectorizationCostModel;
+class LoopVersioning;
 
 struct VPCostContext;
 
@@ -1236,13 +1237,17 @@ struct VPIRPhi : public VPIRInstruction {
 class VPIRMetadata {
   SmallVector<std::pair<unsigned, MDNode *>> Metadata;
 
-protected:
-  VPIRMetadata(Instruction &I) { getMetadataToPropagate(&I, Metadata); }
-
 public:
   VPIRMetadata() {}
-  VPIRMetadata(ArrayRef<std::pair<unsigned, MDNode *>> Metadata)
-      : Metadata(Metadata) {}
+
+  /// Adds metatadata that can be preserved from the original instruction
+  /// \p I.
+  VPIRMetadata(Instruction &I) { getMetadataToPropagate(&I, Metadata); }
+
+  /// Adds metatadata that can be preserved from the original instruction
+  /// \p I and noalias metadata guaranteed by runtime checks using \p LVer.
+  VPIRMetadata(Instruction &I, LoopVersioning *LVer);
+
   VPIRMetadata(const VPIRMetadata &Other) : Metadata(Other.Metadata) {}
 
   /// Add all metadata to \p I.

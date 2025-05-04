@@ -219,8 +219,8 @@ VPTransformState::VPTransformState(const TargetTransformInfo *TTI,
                                    DominatorTree *DT, AssumptionCache *AC,
                                    IRBuilderBase &Builder, VPlan *Plan,
                                    Loop *CurrentParentLoop, Type *CanonicalIVTy)
-    : TTI(TTI), VF(VF), CFG(DT), LI(LI), Builder(Builder), ILV(ILV), Plan(Plan),
-      CurrentParentLoop(CurrentParentLoop), LVer(nullptr), TypeAnalysis(CanonicalIVTy),
+    : TTI(TTI), VF(VF), CFG(DT), LI(LI), Builder(Builder), Plan(Plan),
+      CurrentParentLoop(CurrentParentLoop), TypeAnalysis(CanonicalIVTy),
       VPDT(*Plan) {}
 
 Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {

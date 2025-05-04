@@ -82,15 +82,13 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
           ::getMetadataToPropagate(Inst, Metadata);
           NewRecipe = new VPWidenLoadRecipe(
               *Load, Ingredient.getOperand(0), nullptr /*Mask*/,
-              false /*Consecutive*/, false /*Reverse*/, {Metadata},
+              false /*Consecutive*/, false /*Reverse*/, VPIRMetadata(*Load),
               Ingredient.getDebugLoc());
         } else if (StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
-          SmallVector<std::pair<unsigned, MDNode *>> Metadata;
-          ::getMetadataToPropagate(Inst, Metadata);
           NewRecipe = new VPWidenStoreRecipe(
               *Store, Ingredient.getOperand(1), Ingredient.getOperand(0),
               nullptr /*Mask*/, false /*Consecutive*/, false /*Reverse*/,
-              {Metadata}, Ingredient.getDebugLoc());
+              VPIRMetadata(*Store), Ingredient.getDebugLoc());
         } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
           NewRecipe = new VPWidenGEPRecipe(GEP, Ingredient.operands());
         } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
@@ -183,13 +181,13 @@ static bool sinkScalarOperands(VPlan &Plan) {
       if (ScalarVFOnly)
         continue;
       VPSingleDefRecipe *Clone;
-      if (isa<VPReplicateRecipe>(SinkCandidate)) {
+      if (auto *SinkCandidateRepR =
+              dyn_cast<VPReplicateRecipe>(SinkCandidate)) {
         // TODO: Handle converting to uniform recipes as separate transform,
         // then cloning should be sufficient here.
         Instruction *I = SinkCandidate->getUnderlyingInstr();
         Clone = new VPReplicateRecipe(I, SinkCandidate->operands(), true,
-                                      /*Mask*/ nullptr,
-                                      *cast<VPReplicateRecipe>(SinkCandidate));
+                                      /*Mask*/ nullptr, *SinkCandidateRepR);
         // TODO: add ".cloned" suffix to name of Clone's VPValue.
       } else {
         Clone = SinkCandidate->clone();
@@ -2787,10 +2785,11 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     if (auto *LoadGroup = dyn_cast<VPInterleaveRecipe>(R)) {
       // Narrow interleave group to wide load, as transformed VPlan will only
       // process one original iteration.
+      auto &LI =
+          *cast<LoadInst>(LoadGroup->getInterleaveGroup()->getInsertPos());
       auto *L = new VPWidenLoadRecipe(
-          *cast<LoadInst>(LoadGroup->getInterleaveGroup()->getInsertPos()),
-          LoadGroup->getAddr(), LoadGroup->getMask(), /*Consecutive=*/true,
-          /*Reverse=*/false, {}, LoadGroup->getDebugLoc());
+          LI, LoadGroup->getAddr(), LoadGroup->getMask(), /*Consecutive=*/true,
+          /*Reverse=*/false, VPIRMetadata(LI), LoadGroup->getDebugLoc());
       L->insertBefore(LoadGroup);
       return L;
     }

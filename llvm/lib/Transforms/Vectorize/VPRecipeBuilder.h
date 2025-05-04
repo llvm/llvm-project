@@ -160,7 +160,7 @@ public:
                   LoopVectorizationLegality *Legal,
                   LoopVectorizationCostModel &CM,
                   PredicatedScalarEvolution &PSE, VPBuilder &Builder,
-                  LoopVersioning *LVer = nullptr)
+                  LoopVersioning *LVer)
       : Plan(Plan), OrigLoop(OrigLoop), TLI(TLI), TTI(TTI), Legal(Legal),
         CM(CM), PSE(PSE), Builder(Builder), LVer(LVer) {}
 
@@ -238,10 +238,6 @@ public:
     }
     return Plan.getOrAddLiveIn(V);
   }
-
-  /// Returns the metatadata that can be preserved from the original instruction
-  /// \p I, including noalias metadata guaranteed by runtime checks.
-  VPIRMetadata getRecipeMetadata(Instruction *I) const;
 };
 } // end namespace llvm
 

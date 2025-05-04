@@ -8448,14 +8448,14 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
     Builder.insert(VectorPtr);
     Ptr = VectorPtr;
   }
-  auto Metadata = getRecipeMetadata(I);
   if (LoadInst *Load = dyn_cast<LoadInst>(I))
     return new VPWidenLoadRecipe(*Load, Ptr, Mask, Consecutive, Reverse,
-                                 Metadata, I->getDebugLoc());
+                                 VPIRMetadata(*Load, LVer), I->getDebugLoc());
 
   StoreInst *Store = cast<StoreInst>(I);
   return new VPWidenStoreRecipe(*Store, Ptr, Operands[0], Mask, Consecutive,
-                                Reverse, Metadata, I->getDebugLoc());
+                                Reverse, VPIRMetadata(*Store, LVer),
+                                I->getDebugLoc());
 }
 
 /// Creates a VPWidenIntOrFpInductionRecpipe for \p Phi. If needed, it will also
@@ -8829,7 +8829,7 @@ VPRecipeBuilder::handleReplication(Instruction *I, ArrayRef<VPValue *> Operands,
           (Range.Start.isScalable() && isa<IntrinsicInst>(I))) &&
          "Should not predicate a uniform recipe");
   auto *Recipe = new VPReplicateRecipe(I, Operands, IsUniform, BlockInMask,
-                                       getRecipeMetadata(I));
+                                       VPIRMetadata(*I, LVer));
   return Recipe;
 }
 
@@ -8948,20 +8948,6 @@ bool VPRecipeBuilder::getScaledReductions(
   }
 
   return false;
-}
-
-VPIRMetadata VPRecipeBuilder::getRecipeMetadata(Instruction *I) const {
-  SmallVector<std::pair<unsigned, MDNode *>> Metadata;
-  ::getMetadataToPropagate(I, Metadata);
-  if (!LVer || !isa<LoadInst, StoreInst>(I))
-    return {};
-
-  const auto &[AliasScopeMD, NoAliasMD] = LVer->getNoAliasMetadataFor(I);
-  if (AliasScopeMD)
-    Metadata.emplace_back(LLVMContext::MD_alias_scope, AliasScopeMD);
-  if (NoAliasMD)
-    Metadata.emplace_back(LLVMContext::MD_noalias, NoAliasMD);
-  return {Metadata};
 }
 
 VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(
@@ -9528,9 +9514,9 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range,
           Legal->isInvariantAddressOfReduction(SI->getPointerOperand())) {
         // Only create recipe for the final invariant store of the reduction.
         if (Legal->isInvariantStoreOfReduction(SI)) {
-          auto *Recipe = new VPReplicateRecipe(
-              SI, R.operands(), true /* IsUniform */, nullptr /*Mask*/,
-              RecipeBuilder.getRecipeMetadata(SI));
+          auto *Recipe =
+              new VPReplicateRecipe(SI, R.operands(), true /* IsUniform */,
+                                    nullptr /*Mask*/, VPIRMetadata(*SI, LVer));
           Recipe->insertBefore(*MiddleVPBB, MBIP);
         }
         R.eraseFromParent();
@@ -9712,7 +9698,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
   // Collect mapping of IR header phis to header phi recipes, to be used in
   // addScalarResumePhis.
   VPRecipeBuilder RecipeBuilder(*Plan, OrigLoop, TLI, &TTI, Legal, CM, PSE,
-                                Builder);
+                                Builder, nullptr);
   for (auto &R : Plan->getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
     if (isa<VPCanonicalIVPHIRecipe>(&R))
       continue;
