@@ -125,6 +125,7 @@ template <typename A> bool IsCoarray(const A &x) { return GetCorank(x) > 0; }
 
 // Generalizing packagers: these take operations and expressions of more
 // specific types and wrap them in Expr<> containers of more abstract types.
+
 template <typename A> common::IfNoLvalue<Expr<ResultType<A>>, A> AsExpr(A &&x) {
   return Expr<ResultType<A>>{std::move(x)};
 }
