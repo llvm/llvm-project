@@ -101,8 +101,7 @@ class SparcAsmParser : public MCTargetAsmParser {
 
   ParseStatus parseOperand(OperandVector &Operands, StringRef Name);
 
-  ParseStatus parseSparcAsmOperand(std::unique_ptr<SparcOperand> &Operand,
-                                   bool isCall = false);
+  ParseStatus parseSparcAsmOperand(std::unique_ptr<SparcOperand> &Operand);
 
   ParseStatus parseBranchModifiers(OperandVector &Operands);
 
@@ -1430,7 +1429,7 @@ ParseStatus SparcAsmParser::parseOperand(OperandVector &Operands,
 
   std::unique_ptr<SparcOperand> Op;
 
-  Res = parseSparcAsmOperand(Op, (Mnemonic == "call"));
+  Res = parseSparcAsmOperand(Op);
   if (!Res.isSuccess() || !Op)
     return ParseStatus::Failure;
 
@@ -1441,8 +1440,7 @@ ParseStatus SparcAsmParser::parseOperand(OperandVector &Operands,
 }
 
 ParseStatus
-SparcAsmParser::parseSparcAsmOperand(std::unique_ptr<SparcOperand> &Op,
-                                     bool isCall) {
+SparcAsmParser::parseSparcAsmOperand(std::unique_ptr<SparcOperand> &Op) {
   SMLoc S = Parser.getTok().getLoc();
   SMLoc E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
   const MCExpr *EVal;
