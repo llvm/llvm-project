@@ -891,20 +891,7 @@ auto GetShapeHelper::operator()(const ArrayRef &arrayRef) const -> Result {
 }
 
 auto GetShapeHelper::operator()(const CoarrayRef &coarrayRef) const -> Result {
-  NamedEntity base{coarrayRef.GetBase()};
-  if (coarrayRef.subscript().empty()) {
-    return (*this)(base);
-  } else {
-    Shape shape;
-    int dimension{0};
-    for (const Subscript &ss : coarrayRef.subscript()) {
-      if (ss.Rank() > 0) {
-        shape.emplace_back(GetExtent(ss, base, dimension));
-      }
-      ++dimension;
-    }
-    return shape;
-  }
+  return (*this)(coarrayRef.base());
 }
 
 auto GetShapeHelper::operator()(const Substring &substring) const -> Result {

@@ -946,10 +946,7 @@ public:
       return std::nullopt;
     }
   }
-  Result operator()(const CoarrayRef &x) const {
-    int rank{0};
-    return CheckSubscripts(x.subscript(), rank).has_value();
-  }
+  Result operator()(const CoarrayRef &x) const { return (*this)(x.base()); }
   Result operator()(const Component &x) const {
     if (x.base().Rank() == 0) {
       return (*this)(x.GetLastSymbol());
