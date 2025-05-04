@@ -564,7 +564,7 @@ function test_llvmCore() {
     if [ ${MAKE} = 'ninja' ]; then
       # Ninja doesn't have a documented "keep-going-forever" mode, we need to
       # set a limit on how many jobs can fail before we give up.
-      KeepGoing="-k 100"
+      KeepGoing="-k 100000"
     fi
 
     cd $ObjDir
