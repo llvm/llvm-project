@@ -54,9 +54,6 @@ static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {
     return (~Value >> 10) & 0x3fffff;
 
   case Sparc::fixup_sparc_pc22:
-  case Sparc::fixup_sparc_tls_gd_hi22:
-  case Sparc::fixup_sparc_tls_ldm_hi22:
-  case Sparc::fixup_sparc_tls_ie_hi22:
   case Sparc::fixup_sparc_hi22:
   case Sparc::fixup_sparc_lm:
     return (Value >> 10) & 0x3fffff;
@@ -68,9 +65,6 @@ static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {
     return (Value & 0x3ff) | 0x1c00;
 
   case Sparc::fixup_sparc_pc10:
-  case Sparc::fixup_sparc_tls_gd_lo10:
-  case Sparc::fixup_sparc_tls_ldm_lo10:
-  case Sparc::fixup_sparc_tls_ie_lo10:
   case Sparc::fixup_sparc_lo10:
     return Value & 0x3ff;
 
@@ -89,21 +83,6 @@ static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {
   case Sparc::fixup_sparc_hm:
     return (Value >> 32) & 0x3ff;
 
-  case Sparc::fixup_sparc_tls_ldo_hix22:
-  case Sparc::fixup_sparc_tls_le_hix22:
-  case Sparc::fixup_sparc_tls_ldo_lox10:
-  case Sparc::fixup_sparc_tls_le_lox10:
-    assert(Value == 0 && "Sparc TLS relocs expect zero Value");
-    return 0;
-
-  case Sparc::fixup_sparc_tls_gd_add:
-  case Sparc::fixup_sparc_tls_gd_call:
-  case Sparc::fixup_sparc_tls_ldm_add:
-  case Sparc::fixup_sparc_tls_ldm_call:
-  case Sparc::fixup_sparc_tls_ldo_add:
-  case Sparc::fixup_sparc_tls_ie_ld:
-  case Sparc::fixup_sparc_tls_ie_ldx:
-  case Sparc::fixup_sparc_tls_ie_add:
   case Sparc::fixup_sparc_gotdata_lox10:
   case Sparc::fixup_sparc_gotdata_hix22:
   case Sparc::fixup_sparc_gotdata_op:
@@ -176,24 +155,6 @@ namespace {
         { "fixup_sparc_pc22",      10,     22,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_pc10",      22,     10,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_wplt30",     2,     30,  MCFixupKindInfo::FKF_IsPCRel },
-        { "fixup_sparc_tls_gd_hi22",   10, 22,  0 },
-        { "fixup_sparc_tls_gd_lo10",   22, 10,  0 },
-        { "fixup_sparc_tls_gd_add",     0,  0,  0 },
-        { "fixup_sparc_tls_gd_call",    0,  0,  0 },
-        { "fixup_sparc_tls_ldm_hi22",  10, 22,  0 },
-        { "fixup_sparc_tls_ldm_lo10",  22, 10,  0 },
-        { "fixup_sparc_tls_ldm_add",    0,  0,  0 },
-        { "fixup_sparc_tls_ldm_call",   0,  0,  0 },
-        { "fixup_sparc_tls_ldo_hix22", 10, 22,  0 },
-        { "fixup_sparc_tls_ldo_lox10", 22, 10,  0 },
-        { "fixup_sparc_tls_ldo_add",    0,  0,  0 },
-        { "fixup_sparc_tls_ie_hi22",   10, 22,  0 },
-        { "fixup_sparc_tls_ie_lo10",   22, 10,  0 },
-        { "fixup_sparc_tls_ie_ld",      0,  0,  0 },
-        { "fixup_sparc_tls_ie_ldx",     0,  0,  0 },
-        { "fixup_sparc_tls_ie_add",     0,  0,  0 },
-        { "fixup_sparc_tls_le_hix22",   0,  0,  0 },
-        { "fixup_sparc_tls_le_lox10",   0,  0,  0 },
         { "fixup_sparc_hix22",         10, 22,  0 },
         { "fixup_sparc_lox10",         19, 13,  0 },
         { "fixup_sparc_gotdata_hix22",  0,  0,  0 },
@@ -219,24 +180,6 @@ namespace {
         { "fixup_sparc_pc22",       0,     22,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_pc10",       0,     10,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_wplt30",      0,     30,  MCFixupKindInfo::FKF_IsPCRel },
-        { "fixup_sparc_tls_gd_hi22",    0, 22,  0 },
-        { "fixup_sparc_tls_gd_lo10",    0, 10,  0 },
-        { "fixup_sparc_tls_gd_add",     0,  0,  0 },
-        { "fixup_sparc_tls_gd_call",    0,  0,  0 },
-        { "fixup_sparc_tls_ldm_hi22",   0, 22,  0 },
-        { "fixup_sparc_tls_ldm_lo10",   0, 10,  0 },
-        { "fixup_sparc_tls_ldm_add",    0,  0,  0 },
-        { "fixup_sparc_tls_ldm_call",   0,  0,  0 },
-        { "fixup_sparc_tls_ldo_hix22",  0, 22,  0 },
-        { "fixup_sparc_tls_ldo_lox10",  0, 10,  0 },
-        { "fixup_sparc_tls_ldo_add",    0,  0,  0 },
-        { "fixup_sparc_tls_ie_hi22",    0, 22,  0 },
-        { "fixup_sparc_tls_ie_lo10",    0, 10,  0 },
-        { "fixup_sparc_tls_ie_ld",      0,  0,  0 },
-        { "fixup_sparc_tls_ie_ldx",     0,  0,  0 },
-        { "fixup_sparc_tls_ie_add",     0,  0,  0 },
-        { "fixup_sparc_tls_le_hix22",   0,  0,  0 },
-        { "fixup_sparc_tls_le_lox10",   0,  0,  0 },
         { "fixup_sparc_hix22",          0, 22,  0 },
         { "fixup_sparc_lox10",          0, 13,  0 },
         { "fixup_sparc_gotdata_hix22",  0,  0,  0 },
@@ -270,25 +213,6 @@ namespace {
       case Sparc::fixup_sparc_wplt30:
         if (Target.getAddSym()->isTemporary())
           return false;
-        [[fallthrough]];
-      case Sparc::fixup_sparc_tls_gd_hi22:
-      case Sparc::fixup_sparc_tls_gd_lo10:
-      case Sparc::fixup_sparc_tls_gd_add:
-      case Sparc::fixup_sparc_tls_gd_call:
-      case Sparc::fixup_sparc_tls_ldm_hi22:
-      case Sparc::fixup_sparc_tls_ldm_lo10:
-      case Sparc::fixup_sparc_tls_ldm_add:
-      case Sparc::fixup_sparc_tls_ldm_call:
-      case Sparc::fixup_sparc_tls_ldo_hix22:
-      case Sparc::fixup_sparc_tls_ldo_lox10:
-      case Sparc::fixup_sparc_tls_ldo_add:
-      case Sparc::fixup_sparc_tls_ie_hi22:
-      case Sparc::fixup_sparc_tls_ie_lo10:
-      case Sparc::fixup_sparc_tls_ie_ld:
-      case Sparc::fixup_sparc_tls_ie_ldx:
-      case Sparc::fixup_sparc_tls_ie_add:
-      case Sparc::fixup_sparc_tls_le_hix22:
-      case Sparc::fixup_sparc_tls_le_lox10:
         return true;
       }
     }
