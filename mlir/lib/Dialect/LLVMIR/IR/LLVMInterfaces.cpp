@@ -58,7 +58,15 @@ mlir::LLVM::detail::verifyAliasAnalysisOpInterface(Operation *op) {
   ArrayAttr tags = iface.getTBAATagsOrNull();
   if (!tags)
     return success();
+  if (tags.size() > 0) {
+    if (mlir::isa<TBAATagAttr>(tags[0])) {
+      return isArrayOf<TBAATagAttr>(op, tags);
+    }
 
+    if (mlir::isa<TBAAAccessTagAttr>(tags[0])) {
+      return isArrayOf<TBAAAccessTagAttr>(op, tags);
+    }
+  }
   return isArrayOf<TBAATagAttr>(op, tags);
 }
 
