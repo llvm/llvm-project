@@ -977,6 +977,14 @@ def Annotate : InheritableParamOrStmtAttr {
   let Documentation = [Undocumented];
 }
 
+def AnnotateDecl : Attr {
+  let Spellings = [CXX11<"clang", "annotate_decl">, C23<"clang", "annotate_decl">];
+  let Args = [StringArgument<"Annotation">, VariadicExprArgument<"Args">];
+  let HasCustomParsing = 1;
+  let AcceptsExprPack = 1;
+  let Documentation = [AnnotateDeclDocs];
+}
+
 def AnnotateType : TypeAttr {
   let Spellings = [CXX11<"clang", "annotate_type">, C23<"clang", "annotate_type">];
   let Args = [StringArgument<"Annotation">, VariadicExprArgument<"Args">];
