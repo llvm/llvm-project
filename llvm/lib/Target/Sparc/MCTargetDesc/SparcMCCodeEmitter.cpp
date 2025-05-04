@@ -178,9 +178,7 @@ getCallTargetOpValue(const MCInst &MI, unsigned OpNo,
   }
 
   const MCOperand &MO = MI.getOperand(OpNo);
-  const MCExpr *Expr = MO.getExpr();
-  auto *SExpr = cast<SparcMCExpr>(Expr);
-  Fixups.push_back(MCFixup::create(0, Expr, SExpr->getFixupKind()));
+  Fixups.push_back(MCFixup::create(0, MO.getExpr(), Sparc::fixup_sparc_call30));
   return 0;
 }
 
