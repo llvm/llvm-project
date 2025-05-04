@@ -39,7 +39,6 @@
 #include "llvm/CodeGen/MachineSizeOpts.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -90,10 +89,13 @@ namespace {
 
   /// BranchFolderPass - Wrap branch folder in a machine function pass.
 class BranchFolderLegacy : public MachineFunctionPass {
+  bool EnableTailMerge;
+
 public:
   static char ID;
 
-  explicit BranchFolderLegacy() : MachineFunctionPass(ID) {}
+  explicit BranchFolderLegacy(bool EnableTailMerge = true)
+      : MachineFunctionPass(ID), EnableTailMerge(EnableTailMerge) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -101,7 +103,6 @@ public:
     AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
     AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
-    AU.addRequired<TargetPassConfig>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -123,9 +124,6 @@ INITIALIZE_PASS(BranchFolderLegacy, DEBUG_TYPE, "Control Flow Optimizer", false,
 PreservedAnalyses BranchFolderPass::run(MachineFunction &MF,
                                         MachineFunctionAnalysisManager &MFAM) {
   MFPropsModifier _(*this, MF);
-  bool EnableTailMerge =
-      !MF.getTarget().requiresStructuredCFG() && this->EnableTailMerge;
-
   auto &MBPI = MFAM.getResult<MachineBranchProbabilityAnalysis>(MF);
   auto *PSI = MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
                   .getCachedResult<ProfileSummaryAnalysis>(
@@ -144,15 +142,17 @@ PreservedAnalyses BranchFolderPass::run(MachineFunction &MF,
   return getMachineFunctionPassPreservedAnalyses();
 }
 
+void BranchFolderPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  OS << MapClassName2PassName(name());
+  if (EnableTailMerge)
+    OS << "<enable-tail-merge>";
+}
+
 bool BranchFolderLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  TargetPassConfig *PassConfig = &getAnalysis<TargetPassConfig>();
-  // TailMerge can create jump into if branches that make CFG irreducible for
-  // HW that requires structurized CFG.
-  bool EnableTailMerge = !MF.getTarget().requiresStructuredCFG() &&
-                         PassConfig->getEnableTailMerge();
   MBFIWrapper MBBFreqInfo(
       getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI());
   BranchFolder Folder(
@@ -2079,4 +2079,8 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
 
   ++NumHoist;
   return true;
+}
+
+MachineFunctionPass *llvm::createBranchFolderPass(bool EnableTailMerge = true) {
+  return new BranchFolderLegacy(EnableTailMerge);
 }
