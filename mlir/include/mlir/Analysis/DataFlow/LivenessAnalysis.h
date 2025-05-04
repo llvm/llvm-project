@@ -23,7 +23,7 @@
 #ifndef MLIR_ANALYSIS_DATAFLOW_LIVENESSANALYSIS_H
 #define MLIR_ANALYSIS_DATAFLOW_LIVENESSANALYSIS_H
 
-#include <mlir/Analysis/DataFlow/SparseAnalysis.h>
+#include "mlir/Analysis/DataFlow/SparseAnalysis.h"
 #include <optional>
 
 namespace mlir::dataflow {
