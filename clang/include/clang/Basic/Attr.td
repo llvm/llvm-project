@@ -812,6 +812,13 @@ def AbiTag : Attr {
   let Documentation = [AbiTagsDocs];
 }
 
+def StructorName : Attr {
+    let Spellings = [Clang<"structor_name">];
+    let Args = [StringArgument<"Name">];
+    let Subjects = SubjectList<[Function], ErrorDiag>;
+    let Documentation = [StructorNameDocs];
+}
+
 def AddressSpace : TypeAttr {
   let Spellings = [Clang<"address_space">];
   let Args = [IntArgument<"AddressSpace">];
