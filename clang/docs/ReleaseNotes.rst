@@ -644,6 +644,10 @@ Bug Fixes to C++ Support
 - Fixed an assertion when trying to constant-fold various builtins when the argument
   referred to a reference to an incomplete type. (#GH129397)
 
+- Emit an error when the same identifier appears with both internal and
+  external linkage in a translation unit Fixes:
+  (`#54215 <https://github.com/llvm/llvm-project/issues/54215>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed type checking when a statement expression ends in an l-value of atomic type. (#GH106576)
