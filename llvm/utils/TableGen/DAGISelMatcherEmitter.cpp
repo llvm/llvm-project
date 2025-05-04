@@ -22,6 +22,7 @@
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/ScopedPrinter.h" // for llvm::to_string
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -213,13 +214,6 @@ private:
   }
 };
 } // end anonymous namespace.
-
-static std::string GetPatFromTreePatternNode(const TreePatternNode &N) {
-  std::string str;
-  raw_string_ostream Stream(str);
-  Stream << N;
-  return str;
-}
 
 static unsigned GetVBRSize(unsigned Val) {
   if (Val <= 127)
@@ -941,10 +935,8 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       if (const MorphNodeToMatcher *SNT = dyn_cast<MorphNodeToMatcher>(N)) {
         NumCoveredBytes = 3;
         OS << "OPC_Coverage, ";
-        std::string src =
-            GetPatFromTreePatternNode(SNT->getPattern().getSrcPattern());
-        std::string dst =
-            GetPatFromTreePatternNode(SNT->getPattern().getDstPattern());
+        std::string src = to_string(SNT->getPattern().getSrcPattern());
+        std::string dst = to_string(SNT->getPattern().getDstPattern());
         const Record *PatRecord = SNT->getPattern().getSrcRecord();
         std::string include_src = getIncludePath(PatRecord);
         unsigned Offset =
@@ -1054,10 +1046,8 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
     if (InstrumentCoverage) {
       NumCoveredBytes = 3;
       OS << "OPC_Coverage, ";
-      std::string src =
-          GetPatFromTreePatternNode(CM->getPattern().getSrcPattern());
-      std::string dst =
-          GetPatFromTreePatternNode(CM->getPattern().getDstPattern());
+      std::string src = to_string(CM->getPattern().getSrcPattern());
+      std::string dst = to_string(CM->getPattern().getDstPattern());
       const Record *PatRecord = CM->getPattern().getSrcRecord();
       std::string include_src = getIncludePath(PatRecord);
       unsigned Offset =
