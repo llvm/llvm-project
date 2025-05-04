@@ -56,7 +56,6 @@ StringRef SparcMCExpr::getSpecifierName(SparcMCExpr::Specifier S) {
   case VK_GOT22:         return "hi";
   case VK_GOT10:         return "lo";
   case VK_GOT13:         return {};
-  case VK_13:            return {};
   case VK_WDISP30:       return {};
   case VK_WPLT30:        return {};
   case VK_R_DISP32:      return "r_disp32";
@@ -149,7 +148,6 @@ uint16_t SparcMCExpr::getFixupKind() const {
   case VK_GOT22:         return ELF::R_SPARC_GOT22;
   case VK_GOT10:         return ELF::R_SPARC_GOT10;
   case VK_GOT13:         return ELF::R_SPARC_GOT13;
-  case VK_13:            return Sparc::fixup_sparc_13;
   case VK_WPLT30:        return Sparc::fixup_sparc_wplt30;
   case VK_WDISP30:       return Sparc::fixup_sparc_call30;
   case VK_TLS_GD_HI22:   return ELF::R_SPARC_TLS_GD_HI22;
