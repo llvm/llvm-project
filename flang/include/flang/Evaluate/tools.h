@@ -386,11 +386,11 @@ std::optional<DataRef> ExtractDataRef(
 std::optional<DataRef> ExtractDataRef(const ActualArgument &,
     bool intoSubstring = false, bool intoComplexPart = false);
 
-// Predicate: is an expression is an array element reference?
-template <typename T>
-bool IsArrayElement(const Expr<T> &expr, bool intoSubstring = true,
-    bool skipComponents = false) {
-  if (auto dataRef{ExtractDataRef(expr, intoSubstring)}) {
+// Predicate: is an expression or designator an array element reference?
+template <typename A>
+const Symbol *IsArrayElement(
+    const A &x, bool intoSubstring = true, bool skipComponents = false) {
+  if (auto dataRef{ExtractDataRef(x, intoSubstring)}) {
     const DataRef *ref{&*dataRef};
     if (skipComponents) {
       while (const Component * component{std::get_if<Component>(&ref->u)}) {
@@ -398,13 +398,13 @@ bool IsArrayElement(const Expr<T> &expr, bool intoSubstring = true,
       }
     }
     if (const auto *coarrayRef{std::get_if<CoarrayRef>(&ref->u)}) {
-      return !coarrayRef->subscript().empty();
-    } else {
-      return std::holds_alternative<ArrayRef>(ref->u);
+      return coarrayRef->subscript().empty() ? nullptr
+                                             : &coarrayRef->GetLastSymbol();
+    } else if (const auto *arrayRef{std::get_if<ArrayRef>(&ref->u)}) {
+      return &arrayRef->GetLastSymbol();
     }
-  } else {
-    return false;
   }
+  return nullptr;
 }
 
 template <typename A>
