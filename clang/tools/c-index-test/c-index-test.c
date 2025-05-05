@@ -1224,7 +1224,7 @@ static CXString createCXString(const char *CS) {
 static CXString duplicateCXString(const char *CS) {
   CXString Str;
   Str.data = strdup(CS);
-  Str.private_flags = 1; // CXS_Malloc
+  Str.private_flags = 1; /* CXS_Malloc */
   return Str;
 }
 
