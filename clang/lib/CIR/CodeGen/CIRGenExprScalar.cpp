@@ -1684,11 +1684,6 @@ mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *e) {
     return {};
   }
 
-  if (numInitElements == 0) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "InitListExpr with 0 init elements");
-    return {};
-  }
-
   if (e->getType()->isVectorType()) {
     const auto vectorType =
         mlir::cast<cir::VectorType>(cgf.convertType(e->getType()));
@@ -1708,6 +1703,12 @@ mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *e) {
 
     return cgf.getBuilder().create<cir::VecCreateOp>(
         cgf.getLoc(e->getSourceRange()), vectorType, elements);
+  }
+
+  if (numInitElements == 0) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "InitListExpr Non VectorType with 0 init elements");
+    return {};
   }
 
   return Visit(e->getInit(0));
