@@ -385,6 +385,8 @@ related warnings within the method body.
 - Clang now disallows the use of attributes applied before an
   ``extern template`` declaration (#GH79893).
 
+- Clang now diagnoses unknown attribute namespaces.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
