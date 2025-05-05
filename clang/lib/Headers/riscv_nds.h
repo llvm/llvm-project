@@ -14,6 +14,32 @@
 extern "C" {
 #endif
 
+#if defined(__riscv_xandesperf)
+
+#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__))
+
+static __inline__ long __DEFAULT_FN_ATTRS __riscv_nds_ffb(unsigned long a,
+                                                          unsigned long b) {
+  return __builtin_riscv_nds_ffb(a, b);
+}
+
+static __inline__ long __DEFAULT_FN_ATTRS __riscv_nds_ffzmism(unsigned long a,
+                                                              unsigned long b) {
+  return __builtin_riscv_nds_ffzmism(a, b);
+}
+
+static __inline__ long __DEFAULT_FN_ATTRS __riscv_nds_ffmism(unsigned long a,
+                                                             unsigned long b) {
+  return __builtin_riscv_nds_ffmism(a, b);
+}
+
+static __inline__ long __DEFAULT_FN_ATTRS __riscv_nds_flmism(unsigned long a,
+                                                             unsigned long b) {
+  return __builtin_riscv_nds_flmism(a, b);
+}
+
+#endif // defined(__riscv_xandesperf)
+
 #if defined(__riscv_xandesbfhcvt)
 
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__))

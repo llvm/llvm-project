@@ -413,6 +413,24 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     ID = Intrinsic::riscv_cv_alu_subuRN;
     break;
 
+  // XAndesPerf
+  case RISCV::BI__builtin_riscv_nds_ffb:
+    IntrinsicTypes = {ResultType};
+    ID = Intrinsic::riscv_nds_ffb;
+    break;
+  case RISCV::BI__builtin_riscv_nds_ffzmism:
+    IntrinsicTypes = {ResultType};
+    ID = Intrinsic::riscv_nds_ffzmism;
+    break;
+  case RISCV::BI__builtin_riscv_nds_ffmism:
+    IntrinsicTypes = {ResultType};
+    ID = Intrinsic::riscv_nds_ffmism;
+    break;
+  case RISCV::BI__builtin_riscv_nds_flmism:
+    IntrinsicTypes = {ResultType};
+    ID = Intrinsic::riscv_nds_flmism;
+    break;
+
   // XAndesBFHCvt
   case RISCV::BI__builtin_riscv_nds_fcvt_s_bf16:
     return Builder.CreateFPExt(Ops[0], FloatTy);

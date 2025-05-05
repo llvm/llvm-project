@@ -19,6 +19,15 @@ class RISCVXAndesBuiltin<string prototype, string features = ""> : TargetBuiltin
 
 let Attributes = [NoThrow, Const] in {
 //===----------------------------------------------------------------------===//
+// XAndesPerf extension.
+//===----------------------------------------------------------------------===//
+
+def ffb     : RISCVXAndesBuiltin<"long int(unsigned long int, unsigned long int)", "xandesperf">;
+def ffzmism : RISCVXAndesBuiltin<"long int(unsigned long int, unsigned long int)", "xandesperf">;
+def ffmism  : RISCVXAndesBuiltin<"long int(unsigned long int, unsigned long int)", "xandesperf">;
+def flmism  : RISCVXAndesBuiltin<"long int(unsigned long int, unsigned long int)", "xandesperf">;
+
+//===----------------------------------------------------------------------===//
 // XAndesBFHCvt extension.
 //===----------------------------------------------------------------------===//
 
