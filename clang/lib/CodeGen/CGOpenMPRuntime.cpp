@@ -4903,7 +4903,6 @@ void CGOpenMPRuntime::emitPrivateReduction(
     CodeGenFunction &CGF, SourceLocation Loc, ArrayRef<const Expr *> Privates,
     ArrayRef<const Expr *> LHSExprs, ArrayRef<const Expr *> RHSExprs,
     ArrayRef<const Expr *> ReductionOps) {
-
   if (LHSExprs.empty() || Privates.empty() || ReductionOps.empty())
     return;
 
@@ -4914,13 +4913,16 @@ void CGOpenMPRuntime::emitPrivateReduction(
   QualType PrivateType = Privates[0]->getType();
   llvm::Type *LLVMType = CGF.ConvertTypeForMem(PrivateType);
 
-  llvm::Constant *InitVal = llvm::Constant::getNullValue(LLVMType);
-  const Expr *InitExpr = nullptr;
-  if (const auto *DRE = dyn_cast<DeclRefExpr>(Privates[0])) {
-    if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
-      InitExpr = VD->getInit();
-      if (InitExpr && !PrivateType->isAggregateType()) {
-        if (InitExpr->isConstantInitializer(CGF.getContext(), false)) {
+  llvm::Constant *InitVal = nullptr;
+  const OMPDeclareReductionDecl *UDR = getReductionInit(ReductionOps[0]);
+
+  if (!UDR) {
+    InitVal = llvm::Constant::getNullValue(LLVMType);
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(Privates[0])) {
+      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+        const Expr *InitExpr = VD->getInit();
+        if (InitExpr && !PrivateType->isAggregateType() &&
+            !PrivateType->isAnyComplexType()) {
           Expr::EvalResult Result;
           if (InitExpr->EvaluateAsRValue(Result, CGF.getContext())) {
             APValue &InitValue = Result.Val;
@@ -4928,11 +4930,11 @@ void CGOpenMPRuntime::emitPrivateReduction(
               InitVal = llvm::ConstantInt::get(LLVMType, InitValue.getInt());
             }
           }
-        } else {
-          InitVal = llvm::Constant::getNullValue(LLVMType);
         }
       }
     }
+  } else {
+    InitVal = llvm::Constant::getNullValue(LLVMType);
   }
 
   // Create an internal shared variable
@@ -4964,108 +4966,121 @@ void CGOpenMPRuntime::emitPrivateReduction(
   CGF.Builder.CreateCondBr(IsWorker, InitBB, InitEndBB);
 
   CGF.EmitBlock(InitBB);
-  if (InitExpr) {
-    RValue RV = CGF.EmitAnyExpr(InitExpr);
-    if (RV.isAggregate()) {
-      CGF.Builder.CreateMemCpy(SharedResult, RV.getAggregateAddress(),
-                               llvm::ConstantInt::get(CGF.IntPtrTy, 4),
-                               /*IsVolatile=*/false);
-    } else {
-      CGF.Builder.CreateStore(RV.getScalarVal(), SharedResult);
-    }
+  if (UDR) {
+    Address OrigAddr = Address::invalid();
+    emitInitWithReductionInitializer(CGF, UDR, ReductionOps[0], SharedResult,
+                                     OrigAddr, PrivateType);
+
   } else {
-    if (PrivateType->isAggregateType()) {
-      CGF.Builder.CreateMemSet(SharedResult,
-                               llvm::ConstantInt::get(CGM.Int8Ty, 0),
-                               llvm::ConstantInt::get(CGF.IntPtrTy, 4),
-                               /*IsVolatile=*/false);
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(Privates[0])) {
+      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+        const Expr *InitExpr = VD->getInit();
+        if (InitExpr && (PrivateType->isAggregateType() ||
+                         PrivateType->isAnyComplexType())) {
+          CGF.EmitAnyExprToMem(InitExpr, SharedResult,
+                               PrivateType.getQualifiers(),
+                               /*IsInitializer=*/true);
+        } else if (!InitVal->isNullValue()) {
+          CGF.EmitStoreOfScalar(InitVal,
+                                CGF.MakeAddrLValue(SharedResult, PrivateType));
+        } else {
+          CGF.EmitNullInitialization(SharedResult, PrivateType);
+        }
+      } else {
+        CGF.EmitNullInitialization(SharedResult, PrivateType);
+      }
     } else {
-      CGF.Builder.CreateStore(InitVal, SharedResult);
+      CGF.EmitNullInitialization(SharedResult, PrivateType);
     }
   }
+
   CGF.Builder.CreateBr(InitEndBB);
-
   CGF.EmitBlock(InitEndBB);
-
   CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
                           CGM.getModule(), OMPRTL___kmpc_barrier),
                       BarrierArgs);
-
   for (unsigned I :
        llvm::seq<unsigned>(std::min(ReductionOps.size(), LHSExprs.size()))) {
-    const Expr *ReductionClauseExpr = ReductionOps[I]->IgnoreParenCasts();
-    if (const auto *Cleanup = dyn_cast<ExprWithCleanups>(ReductionClauseExpr))
-      ReductionClauseExpr = Cleanup->getSubExpr()->IgnoreParenCasts();
-    const Expr *AssignRHS = nullptr;
-    const Expr *AssignLHS = nullptr;
 
-    if (const auto *BinOp = dyn_cast<BinaryOperator>(ReductionClauseExpr)) {
-      if (BinOp->getOpcode() == BO_Assign) {
-        AssignLHS = BinOp->getLHS();
-        AssignRHS = BinOp->getRHS();
-      }
-    } else if (const auto *OpCall =
-                   dyn_cast<CXXOperatorCallExpr>(ReductionClauseExpr)) {
-      if (OpCall->getOperator() == OO_Equal) {
-        AssignLHS = OpCall->getArg(0);
-        AssignRHS = OpCall->getArg(1);
-      }
-    }
-
-    if (!AssignRHS || !AssignLHS) {
-      continue;
-    }
-
-    const Expr *ReductionCombinerExpr = AssignRHS->IgnoreParenImpCasts();
-    if (const auto *MTE =
-            dyn_cast<MaterializeTemporaryExpr>(ReductionCombinerExpr)) {
-      ReductionCombinerExpr = MTE->getSubExpr()->IgnoreParenImpCasts();
-    }
-
-    BinaryOperatorKind BO = BO_Assign;
+    const Expr *ReductionOp = ReductionOps[I];
     LValue SharedLV = CGF.MakeAddrLValue(SharedResult, PrivateType);
     LValue LHSLV = CGF.EmitLValue(LHSExprs[I]);
-    RValue PrivateRV = CGF.EmitLoadOfLValue(LHSLV, Loc);
-    if (const auto *BinOp = dyn_cast<BinaryOperator>(ReductionCombinerExpr)) {
-      BO = BinOp->getOpcode();
-      auto UpdateOp = [&](RValue OldVal) {
-        if (BO == BO_Mul) {
-          llvm::Value *OldScalar = OldVal.getScalarVal();
-          llvm::Value *PrivateScalar = PrivateRV.getScalarVal();
-          llvm::Value *Result = CGF.Builder.CreateMul(OldScalar, PrivateScalar);
-          return RValue::get(Result);
-        } else {
-          OpaqueValueExpr OVE(BinOp->getLHS()->getExprLoc(),
-                              BinOp->getLHS()->getType(),
-                              ExprValueKind::VK_PRValue);
-          CodeGenFunction::OpaqueValueMapping OldValMapping(CGF, &OVE, OldVal);
-          return CGF.EmitAnyExpr(BinOp->getRHS());
-        }
-      };
-
-      (void)CGF.EmitOMPAtomicSimpleUpdateExpr(
-          SharedLV, PrivateRV, BO, true,
-          llvm::AtomicOrdering::SequentiallyConsistent, Loc, UpdateOp);
-    } else if (const auto *OpCall = dyn_cast<CallExpr>(ReductionClauseExpr)) {
+    // If UDR
+    const OMPDeclareReductionDecl *CurrentUDR =
+        getReductionInit(ReductionOps[I]);
+    if (CurrentUDR) {
       auto ReductionGen = [&](CodeGenFunction &CGF, PrePostActionTy &Action) {
         Action.Enter(CGF);
-        CharUnits Alignment = CGF.getContext().getTypeAlignInChars(PrivateType);
-        Address TempResult =
-            CGF.CreateMemTemp(PrivateType, "reduction.temp.result");
-        ReturnValueSlot RVS(TempResult, /*IsVolatile=*/false);
-        RValue ResultRV = CGF.EmitCallExpr(OpCall, RVS, nullptr);
-        if (ResultRV.isAggregate()) {
-          CGF.Builder.CreateMemCpy(SharedResult, ResultRV.getAggregateAddress(),
-                                   llvm::ConstantInt::get(CGF.IntPtrTy, 4),
-                                   Alignment.getQuantity());
-        } else {
-          CGF.Builder.CreateStore(ResultRV.getScalarVal(),
-                                  SharedLV.getAddress(),
-                                  /*IsVolatile=*/false);
+        std::pair<llvm::Function *, llvm::Function *> ReductionFnPair =
+            getUserDefinedReduction(CurrentUDR);
+        llvm::Function *CombinerFn = ReductionFnPair.first;
+        if (const auto *CE = dyn_cast<CallExpr>(ReductionOp)) {
+          if (CE && CombinerFn) {
+            const auto *CE = cast<CallExpr>(ReductionOps[I]);
+            const auto *OutDRE = cast<DeclRefExpr>(
+                cast<UnaryOperator>(CE->getArg(0)->IgnoreParenImpCasts())
+                    ->getSubExpr());
+            const auto *InDRE = cast<DeclRefExpr>(
+                cast<UnaryOperator>(CE->getArg(1)->IgnoreParenImpCasts())
+                    ->getSubExpr());
+            CodeGenFunction::OMPPrivateScope LocalScope(CGF);
+            LocalScope.addPrivate(cast<VarDecl>(OutDRE->getDecl()),
+                                  SharedLV.getAddress());
+            LocalScope.addPrivate(cast<VarDecl>(InDRE->getDecl()),
+                                  LHSLV.getAddress());
+            (void)LocalScope.Privatize();
+            emitReductionCombiner(CGF, ReductionOp);
+          }
         }
       };
       std::string CriticalName = getName({"reduction_critical"});
       emitCriticalRegion(CGF, CriticalName, ReductionGen, Loc);
+    } else {
+      // Built-in Operator Combination
+      const Expr *ReductionClauseExpr = ReductionOp->IgnoreParenCasts();
+      if (const auto *Cleanup = dyn_cast<ExprWithCleanups>(ReductionClauseExpr))
+        ReductionClauseExpr = Cleanup->getSubExpr()->IgnoreParenCasts();
+      const Expr *AssignRHS = nullptr;
+      if (const auto *BinOp = dyn_cast<BinaryOperator>(ReductionClauseExpr)) {
+        if (BinOp->getOpcode() == BO_Assign)
+          AssignRHS = BinOp->getRHS();
+      } else if (const auto *OpCall =
+                     dyn_cast<CXXOperatorCallExpr>(ReductionClauseExpr)) {
+        if (OpCall->getOperator() == OO_Equal)
+          AssignRHS = OpCall->getArg(1);
+      }
+      if (!AssignRHS)
+        continue;
+      const Expr *ReductionCombinerExpr = AssignRHS->IgnoreParenImpCasts();
+      if (const auto *MTE =
+              dyn_cast<MaterializeTemporaryExpr>(ReductionCombinerExpr))
+        ReductionCombinerExpr = MTE->getSubExpr()->IgnoreParenImpCasts();
+
+      BinaryOperatorKind BO = BO_Assign;
+      RValue PrivateRV = CGF.EmitLoadOfLValue(LHSLV, Loc);
+      if (const auto *BinOp = dyn_cast<BinaryOperator>(ReductionCombinerExpr)) {
+        BO = BinOp->getOpcode();
+        auto UpdateOp = [&](RValue OldVal) {
+          if (BO == BO_Mul) {
+            llvm::Value *OldScalar = OldVal.getScalarVal();
+            llvm::Value *PrivateScalar = PrivateRV.getScalarVal();
+            llvm::Value *Result =
+                CGF.Builder.CreateMul(OldScalar, PrivateScalar);
+            return RValue::get(Result);
+          } else {
+            OpaqueValueExpr OVE(BinOp->getLHS()->getExprLoc(),
+                                BinOp->getLHS()->getType(),
+                                ExprValueKind::VK_PRValue);
+            CodeGenFunction::OpaqueValueMapping OldValMapping(CGF, &OVE,
+                                                              OldVal);
+            return CGF.EmitAnyExpr(BinOp->getRHS());
+          }
+        };
+
+        (void)CGF.EmitOMPAtomicSimpleUpdateExpr(
+            SharedLV, PrivateRV, BO, true,
+            llvm::AtomicOrdering::SequentiallyConsistent, Loc, UpdateOp);
+      }
     }
   }
   // Final barrier
@@ -5074,12 +5089,25 @@ void CGOpenMPRuntime::emitPrivateReduction(
                       BarrierArgs);
 
   // Broadcast final result
-  llvm::Value *FinalResult = CGF.Builder.CreateLoad(SharedResult);
+  bool IsAggregate = PrivateType->isAggregateType();
+  llvm::Value *FinalResultVal = nullptr;
+  LValue SharedLV = CGF.MakeAddrLValue(SharedResult, PrivateType);
+  Address FinalResultAddr = Address::invalid();
+  if (IsAggregate) {
+    FinalResultAddr = SharedResult;
+  } else {
+    FinalResultVal = CGF.EmitLoadOfScalar(SharedLV, Loc);
+  }
 
-  // Update private variables with final result
   for (unsigned I : llvm::seq<unsigned>(Privates.size())) {
-    LValue LHSLV = CGF.EmitLValue(LHSExprs[I]);
-    CGF.Builder.CreateStore(FinalResult, LHSLV.getAddress());
+    LValue TargetLHSLV = CGF.EmitLValue(LHSExprs[I]);
+    if (IsAggregate) {
+      CGF.EmitAggregateCopy(TargetLHSLV,
+                            CGF.MakeAddrLValue(FinalResultAddr, PrivateType),
+                            PrivateType, AggValueSlot::DoesNotOverlap, false);
+    } else {
+      CGF.EmitStoreOfScalar(FinalResultVal, TargetLHSLV);
+    }
   }
 
   // Final synchronization
@@ -5087,6 +5115,7 @@ void CGOpenMPRuntime::emitPrivateReduction(
                           CGM.getModule(), OMPRTL___kmpc_barrier),
                       BarrierArgs);
 }
+
 void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
                                     ArrayRef<const Expr *> Privates,
                                     ArrayRef<const Expr *> LHSExprs,
