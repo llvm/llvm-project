@@ -489,12 +489,9 @@ def EmitC_ExpressionOp : EmitC_Op<"expression",
         auto applyOp = dyn_cast<emitc::ApplyOp>(op);
         if (applyOp)
           return applyOp.getApplicableOperator() == "*";
-        // Any operation using variables is assumed to have a side effect of
-        // reading memory mutable by emitc::assign ops.
-        return llvm::any_of(op.getOperands(), [](Value operand) {
-          Operation *def = operand.getDefiningOp();
-          return def && isa<emitc::VariableOp>(def);
-        });
+        // Any load operation is assumed to read from memory and thus perform
+        // a side effect.
+        return isa<emitc::LoadOp>(op);
       };
       return llvm::any_of(getRegion().front().without_terminator(), predicate);
     };
@@ -927,7 +924,7 @@ def EmitC_LogicalOrOp : EmitC_BinaryOp<"logical_or", [CExpression]> {
   let assemblyFormat = "operands attr-dict `:` type(operands)";
 }
 
-def EmitC_LoadOp : EmitC_Op<"load", [
+def EmitC_LoadOp : EmitC_Op<"load", [CExpression,
   TypesMatchWith<"result type matches value type of 'operand'",
                   "operand", "result",
                   "::llvm::cast<LValueType>($_self).getValueType()">

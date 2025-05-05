@@ -12,7 +12,7 @@ entry:
 
 ; CHECK-LABEL: test1(
 ; CHECK: setp.eq.s32  %p1, %r1, 1;
-; CHECK: selp.u32     %[[R:.+]], 1, 0, %p1;
+; CHECK: selp.b32     %[[R:.+]], 1, 0, %p1;
 ; CHECK: st.param.b32 [func_retval0], %[[R]];
 
 declare i32 @llvm.nvvm.read.ptx.sreg.tid.x()

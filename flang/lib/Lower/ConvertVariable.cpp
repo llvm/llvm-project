@@ -1040,6 +1040,21 @@ static bool needsRepack(Fortran::lower::AbstractConverter &converter,
   return true;
 }
 
+static mlir::ArrayAttr
+getSafeRepackAttrs(Fortran::lower::AbstractConverter &converter) {
+  llvm::SmallVector<mlir::Attribute> attrs;
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  const auto &langFeatures = converter.getFoldingContext().languageFeatures();
+  if (langFeatures.IsEnabled(Fortran::common::LanguageFeature::OpenACC))
+    attrs.push_back(
+        fir::OpenACCSafeTempArrayCopyAttr::get(builder.getContext()));
+  if (langFeatures.IsEnabled(Fortran::common::LanguageFeature::OpenMP))
+    attrs.push_back(
+        fir::OpenMPSafeTempArrayCopyAttr::get(builder.getContext()));
+
+  return attrs.empty() ? mlir::ArrayAttr{} : builder.getArrayAttr(attrs);
+}
+
 /// Instantiate a local variable. Precondition: Each variable will be visited
 /// such that if its properties depend on other variables, the variables upon
 /// which its properties depend will already have been visited.
@@ -1109,15 +1124,15 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
       });
     }
   } else if (var.hasSymbol() && needsRepack(converter, var.getSymbol())) {
-    auto *builder = &converter.getFirOpBuilder();
+    auto *converterPtr = &converter;
     mlir::Location loc = converter.getCurrentLocation();
     auto *sym = &var.getSymbol();
     std::optional<fir::FortranVariableOpInterface> varDef =
         symMap.lookupVariableDefinition(*sym);
     assert(varDef && "cannot find defining operation for an array that needs "
                      "to be repacked");
-    converter.getFctCtx().attachCleanup([builder, loc, varDef, sym]() {
-      Fortran::lower::genUnpackArray(*builder, loc, *varDef, *sym);
+    converter.getFctCtx().attachCleanup([converterPtr, loc, varDef, sym]() {
+      Fortran::lower::genUnpackArray(*converterPtr, loc, *varDef, *sym);
     });
   }
 }
@@ -2648,7 +2663,7 @@ Fortran::lower::genPackArray(Fortran::lower::AbstractConverter &converter,
       /*max_size=*/mlir::IntegerAttr{},
       /*max_element_size=*/mlir::IntegerAttr{},
       /*min_stride=*/mlir::IntegerAttr{}, fir::PackArrayHeuristics::None,
-      elidedLenParams);
+      elidedLenParams, getSafeRepackAttrs(converter));
 
   mlir::Value newBase = packOp.getResult();
   return exv.match(
@@ -2663,10 +2678,10 @@ Fortran::lower::genPackArray(Fortran::lower::AbstractConverter &converter,
       });
 }
 
-void Fortran::lower::genUnpackArray(fir::FirOpBuilder &builder,
-                                    mlir::Location loc,
-                                    fir::FortranVariableOpInterface def,
-                                    const Fortran::semantics::Symbol &sym) {
+void Fortran::lower::genUnpackArray(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    fir::FortranVariableOpInterface def,
+    const Fortran::semantics::Symbol &sym) {
   // Subtle: rely on the fact that the memref of the defining
   // hlfir.declare is a result of fir.pack_array.
   // Alternatively, we can track the pack operation for a symbol
@@ -2681,5 +2696,7 @@ void Fortran::lower::genUnpackArray(fir::FirOpBuilder &builder,
   bool stackAlloc = packOp.getStack();
   // Avoid copy-out for 'intent(in)' variables.
   bool noCopy = Fortran::semantics::IsIntentIn(sym);
-  builder.create<fir::UnpackArrayOp>(loc, temp, original, stackAlloc, noCopy);
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  builder.create<fir::UnpackArrayOp>(loc, temp, original, stackAlloc, noCopy,
+                                     getSafeRepackAttrs(converter));
 }

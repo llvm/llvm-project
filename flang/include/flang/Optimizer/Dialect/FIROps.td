@@ -23,6 +23,7 @@ include "flang/Optimizer/Dialect/FIRTypes.td"
 include "flang/Optimizer/Dialect/FIRAttr.td"
 include "flang/Optimizer/Dialect/FortranVariableInterface.td"
 include "flang/Optimizer/Dialect/FirAliasTagOpInterface.td"
+include "flang/Optimizer/Dialect/SafeTempArrayCopyAttrInterface.td"
 include "mlir/IR/BuiltinAttributes.td"
 
 // Base class for FIR operations.
@@ -304,7 +305,7 @@ def fir_LoadOp : fir_OneResultOp<"load", [FirAliasTagOpInterface,
   }];
 
   let arguments = (ins AnyReferenceLike:$memref,
-                  OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa);
+      OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa, UnitAttr:$nontemporal);
 
   let builders = [OpBuilder<(ins "mlir::Value":$refVal)>,
                   OpBuilder<(ins "mlir::Type":$resTy, "mlir::Value":$refVal)>];
@@ -336,9 +337,8 @@ def fir_StoreOp : fir_Op<"store", [FirAliasTagOpInterface,
     `%p`, is undefined or null.
   }];
 
-  let arguments = (ins AnyType:$value,
-                   AnyReferenceLike:$memref,
-                   OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa);
+  let arguments = (ins AnyType:$value, AnyReferenceLike:$memref,
+      OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa, UnitAttr:$nontemporal);
 
   let builders = [OpBuilder<(ins "mlir::Value":$value, "mlir::Value":$memref)>];
 
@@ -2755,7 +2755,7 @@ def fir_AddrOfOp : fir_OneResultOp<"address_of", [NoMemoryEffect]> {
   let assemblyFormat = "`(` $symbol `)` attr-dict `:` type($resTy)";
 }
 
-def fir_VolatileCastOp : fir_SimpleOneResultOp<"volatile_cast", [NoMemoryEffect]> {
+def fir_VolatileCastOp : fir_SimpleOneResultOp<"volatile_cast", [Pure]> {
   let summary = "cast between volatile and non-volatile types";
   let description = [{
     Cast between volatile and non-volatile types. The types must be otherwise
@@ -3378,6 +3378,14 @@ def fir_PackArrayOp
           that is eligible for repacking.
       - heuristics attribute specifies conditions when the array repacking
         may be optimized.
+      - is_safe is an optional non-empty array of SafeTempArrayCopyAttr
+        attributes. Each attribute implements SafeTempArrayCopyAttrInterface
+        that is used to generate a dynamic predicate value identifying
+        whether the creation of the temporary array copy is safe.
+        For example, if omp.fortran_safe_temp_array_copy attribute
+        is attached, its implementation may generate special code
+        to check if fir.pack_array may be executed by multiple
+        threads, and disallow repacking in this case.
   }];
 
   let arguments = (ins AnyBoxedArray:$array, UnitAttr:$stack,
@@ -3386,7 +3394,8 @@ def fir_PackArrayOp
       OptionalAttr<UI64Attr>:$min_stride,
       DefaultValuedAttr<fir_PackArrayHeuristicsAttr,
                         "::fir::PackArrayHeuristics::None">:$heuristics,
-      Variadic<AnyIntegerType>:$typeparams);
+      Variadic<AnyIntegerType>:$typeparams,
+      OptionalAttr<NonEmptySafeTempArrayCopyArrayAttr>:$is_safe);
 
   let results = (outs AnyBoxedArray:$result);
   let assemblyFormat = [{
@@ -3395,7 +3404,7 @@ def fir_PackArrayOp
     (`no_copy` $no_copy^)?
     (`constraints` custom<PackArrayConstraints>($max_size, $max_element_size, $min_stride)^)?
     (`heuristics` $heuristics^)?
-    (`typeparams` $typeparams^)?
+    (`typeparams` $typeparams^)? (`is_safe` $is_safe^)?
     attr-dict `:` functional-type(operands, results)
   }];
 
@@ -3420,15 +3429,26 @@ def fir_UnpackArrayOp
         was allocated.
       - no_copy attribute indicates that the temporary array
         is not copied into the original temporary array.
+      - is_safe is an optional non-empty array of SafeTempArrayCopyAttr
+        attributes. Each attribute implements SafeTempArrayCopyAttrInterface
+        that is used to generate extra code before any copy-out or
+        deallocation of the temporary happens.
+        For example, if acc.fortran_safe_temp_array_copy attribute
+        is attached, its implementation may generate special code
+        to check if the temporary has been transferred to OpenACC device
+        data environment, and issue a runtime error that the temporary
+        is present on the device while it is about to be deallocated
+        on the host.
   }];
 
   let arguments = (ins AnyBoxedArray:$temp, AnyBoxedArray:$original,
-      UnitAttr:$stack, UnitAttr:$no_copy);
+      UnitAttr:$stack, UnitAttr:$no_copy,
+      OptionalAttr<NonEmptySafeTempArrayCopyArrayAttr>:$is_safe);
 
   let assemblyFormat = [{
     $temp `to` $original
     (`stack` $stack^):(`heap`)?
-    (`no_copy` $no_copy^)?
+    (`no_copy` $no_copy^)? (`is_safe` $is_safe^)?
     attr-dict `:` type($original)
   }];
 

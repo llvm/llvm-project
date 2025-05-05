@@ -164,3 +164,20 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
             console_output,
             "Exit status does not contain message 'exited with status'",
         )
+
+    def test_diagnositcs(self):
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+
+        core = self.getBuildArtifact("minidump.core")
+        self.yaml2obj("minidump.yaml", core)
+        self.dap_server.request_evaluate(
+            f"target create --core  {core}", context="repl"
+        )
+
+        output = self.get_important()
+        self.assertIn(
+            "warning: unable to retrieve process ID from minidump file",
+            output,
+            "diagnostic found in important output",
+        )

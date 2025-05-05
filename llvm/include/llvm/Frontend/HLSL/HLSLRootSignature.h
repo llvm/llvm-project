@@ -21,17 +21,71 @@ namespace llvm {
 namespace hlsl {
 namespace rootsig {
 
+// Definition of the various enumerations and flags
+
+enum class DescriptorRangeFlags : unsigned {
+  None = 0,
+  DescriptorsVolatile = 0x1,
+  DataVolatile = 0x2,
+  DataStaticWhileSetAtExecute = 0x4,
+  DataStatic = 0x8,
+  DescriptorsStaticKeepingBufferBoundsChecks = 0x10000,
+  ValidFlags = 0x1000f,
+  ValidSamplerFlags = DescriptorsVolatile,
+};
+
+enum class ShaderVisibility {
+  All = 0,
+  Vertex = 1,
+  Hull = 2,
+  Domain = 3,
+  Geometry = 4,
+  Pixel = 5,
+  Amplification = 6,
+  Mesh = 7,
+};
+
 // Definitions of the in-memory data layout structures
+
+// Models the different registers: bReg | tReg | uReg | sReg
+enum class RegisterType { BReg, TReg, UReg, SReg };
+struct Register {
+  RegisterType ViewType;
+  uint32_t Number;
+};
 
 // Models the end of a descriptor table and stores its visibility
 struct DescriptorTable {
+  ShaderVisibility Visibility = ShaderVisibility::All;
   uint32_t NumClauses = 0; // The number of clauses in the table
 };
 
+static const uint32_t NumDescriptorsUnbounded = 0xffffffff;
+static const uint32_t DescriptorTableOffsetAppend = 0xffffffff;
 // Models DTClause : CBV | SRV | UAV | Sampler, by collecting like parameters
 using ClauseType = llvm::dxil::ResourceClass;
 struct DescriptorTableClause {
   ClauseType Type;
+  Register Reg;
+  uint32_t NumDescriptors = 1;
+  uint32_t Space = 0;
+  uint32_t Offset = DescriptorTableOffsetAppend;
+  DescriptorRangeFlags Flags;
+
+  void setDefaultFlags() {
+    switch (Type) {
+    case ClauseType::CBuffer:
+    case ClauseType::SRV:
+      Flags = DescriptorRangeFlags::DataStaticWhileSetAtExecute;
+      break;
+    case ClauseType::UAV:
+      Flags = DescriptorRangeFlags::DataVolatile;
+      break;
+    case ClauseType::Sampler:
+      Flags = DescriptorRangeFlags::None;
+      break;
+    }
+  }
 };
 
 // Models RootElement : DescriptorTable | DescriptorTableClause

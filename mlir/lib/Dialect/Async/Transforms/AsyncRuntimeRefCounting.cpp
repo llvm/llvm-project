@@ -23,8 +23,8 @@
 #include "llvm/ADT/SmallSet.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_ASYNCRUNTIMEREFCOUNTING
-#define GEN_PASS_DEF_ASYNCRUNTIMEPOLICYBASEDREFCOUNTING
+#define GEN_PASS_DEF_ASYNCRUNTIMEREFCOUNTINGPASS
+#define GEN_PASS_DEF_ASYNCRUNTIMEPOLICYBASEDREFCOUNTINGPASS
 #include "mlir/Dialect/Async/Passes.h.inc"
 } // namespace mlir
 
@@ -109,7 +109,8 @@ static LogicalResult walkReferenceCountedValues(
 namespace {
 
 class AsyncRuntimeRefCountingPass
-    : public impl::AsyncRuntimeRefCountingBase<AsyncRuntimeRefCountingPass> {
+    : public impl::AsyncRuntimeRefCountingPassBase<
+          AsyncRuntimeRefCountingPass> {
 public:
   AsyncRuntimeRefCountingPass() = default;
   void runOnOperation() override;
@@ -468,7 +469,7 @@ void AsyncRuntimeRefCountingPass::runOnOperation() {
 namespace {
 
 class AsyncRuntimePolicyBasedRefCountingPass
-    : public impl::AsyncRuntimePolicyBasedRefCountingBase<
+    : public impl::AsyncRuntimePolicyBasedRefCountingPassBase<
           AsyncRuntimePolicyBasedRefCountingPass> {
 public:
   AsyncRuntimePolicyBasedRefCountingPass() { initializeDefaultPolicy(); }
@@ -552,14 +553,4 @@ void AsyncRuntimePolicyBasedRefCountingPass::runOnOperation() {
   auto functor = [&](Value value) { return addRefCounting(value); };
   if (failed(walkReferenceCountedValues(getOperation(), functor)))
     signalPassFailure();
-}
-
-//----------------------------------------------------------------------------//
-
-std::unique_ptr<Pass> mlir::createAsyncRuntimeRefCountingPass() {
-  return std::make_unique<AsyncRuntimeRefCountingPass>();
-}
-
-std::unique_ptr<Pass> mlir::createAsyncRuntimePolicyBasedRefCountingPass() {
-  return std::make_unique<AsyncRuntimePolicyBasedRefCountingPass>();
 }

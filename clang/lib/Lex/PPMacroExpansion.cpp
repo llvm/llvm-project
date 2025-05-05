@@ -2089,6 +2089,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
   CreateString(OS.str(), Tok, Tok.getLocation(), Tok.getLocation());
   Tok.setFlagValue(Token::StartOfLine, IsAtStartOfLine);
   Tok.setFlagValue(Token::LeadingSpace, HasLeadingSpace);
+  Tok.clearFlag(Token::NeedsCleaning);
 }
 
 void Preprocessor::markMacroAsUsed(MacroInfo *MI) {

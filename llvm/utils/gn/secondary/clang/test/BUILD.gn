@@ -44,6 +44,9 @@ write_lit_config("lit_site_cfg") {
   output = clang_lit_site_cfg_file
   dir = get_path_info(output, "dir")
   extra_values = [
+    "BUILD_SHARED_LIBS=0",
+    "LLVM_LINK_LLVM_DYLIB=0",
+    "CLANG_LINK_CLANG_DYLIB=0",
     "LLVM_WITH_Z3=0",
     "CLANG_BUILD_EXAMPLES=0",
     "CLANG_BUILT_STANDALONE=0",

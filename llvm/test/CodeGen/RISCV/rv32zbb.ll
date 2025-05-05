@@ -61,14 +61,17 @@ declare i64 @llvm.ctlz.i64(i64, i1)
 define i64 @ctlz_i64(i64 %a) nounwind {
 ; RV32I-LABEL: ctlz_i64:
 ; RV32I:       # %bb.0:
+; RV32I-NEXT:    or a2, a0, a1
+; RV32I-NEXT:    beqz a2, .LBB1_3
+; RV32I-NEXT:  # %bb.1: # %cond.false
 ; RV32I-NEXT:    lui a2, 349525
 ; RV32I-NEXT:    lui a3, 209715
 ; RV32I-NEXT:    lui a5, 61681
 ; RV32I-NEXT:    addi a4, a2, 1365
 ; RV32I-NEXT:    addi a3, a3, 819
 ; RV32I-NEXT:    addi a2, a5, -241
-; RV32I-NEXT:    bnez a1, .LBB1_2
-; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    bnez a1, .LBB1_4
+; RV32I-NEXT:  # %bb.2: # %cond.false
 ; RV32I-NEXT:    srli a1, a0, 1
 ; RV32I-NEXT:    or a0, a0, a1
 ; RV32I-NEXT:    srli a1, a0, 2
@@ -98,7 +101,11 @@ define i64 @ctlz_i64(i64 %a) nounwind {
 ; RV32I-NEXT:    addi a0, a0, 32
 ; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    ret
-; RV32I-NEXT:  .LBB1_2:
+; RV32I-NEXT:  .LBB1_3:
+; RV32I-NEXT:    li a1, 0
+; RV32I-NEXT:    li a0, 64
+; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB1_4:
 ; RV32I-NEXT:    srli a0, a1, 1
 ; RV32I-NEXT:    or a0, a1, a0
 ; RV32I-NEXT:    srli a1, a0, 2
@@ -190,39 +197,42 @@ define i64 @cttz_i64(i64 %a) nounwind {
 ; RV32I-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s2, a1
-; RV32I-NEXT:    mv s0, a0
-; RV32I-NEXT:    neg a0, a0
-; RV32I-NEXT:    and a0, s0, a0
-; RV32I-NEXT:    lui a1, 30667
-; RV32I-NEXT:    addi s3, a1, 1329
-; RV32I-NEXT:    mv a1, s3
+; RV32I-NEXT:    mv s0, a1
+; RV32I-NEXT:    or a1, a0, a1
+; RV32I-NEXT:    beqz a1, .LBB3_3
+; RV32I-NEXT:  # %bb.1: # %cond.false
+; RV32I-NEXT:    neg a1, a0
+; RV32I-NEXT:    and a1, a0, a1
+; RV32I-NEXT:    lui a2, 30667
+; RV32I-NEXT:    addi s2, a2, 1329
+; RV32I-NEXT:    mv s4, a0
+; RV32I-NEXT:    mv a0, a1
+; RV32I-NEXT:    mv a1, s2
 ; RV32I-NEXT:    call __mulsi3
 ; RV32I-NEXT:    mv s1, a0
-; RV32I-NEXT:    lui s4, %hi(.LCPI3_0)
-; RV32I-NEXT:    addi s4, s4, %lo(.LCPI3_0)
-; RV32I-NEXT:    neg a0, s2
-; RV32I-NEXT:    and a0, s2, a0
-; RV32I-NEXT:    mv a1, s3
+; RV32I-NEXT:    lui s3, %hi(.LCPI3_0)
+; RV32I-NEXT:    addi s3, s3, %lo(.LCPI3_0)
+; RV32I-NEXT:    neg a0, s0
+; RV32I-NEXT:    and a0, s0, a0
+; RV32I-NEXT:    mv a1, s2
 ; RV32I-NEXT:    call __mulsi3
-; RV32I-NEXT:    bnez s2, .LBB3_3
-; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    li a0, 32
-; RV32I-NEXT:    beqz s0, .LBB3_4
-; RV32I-NEXT:  .LBB3_2:
-; RV32I-NEXT:    srli s1, s1, 27
-; RV32I-NEXT:    add s1, s4, s1
-; RV32I-NEXT:    lbu a0, 0(s1)
+; RV32I-NEXT:    bnez s4, .LBB3_4
+; RV32I-NEXT:  # %bb.2: # %cond.false
+; RV32I-NEXT:    srli a0, a0, 27
+; RV32I-NEXT:    add a0, s3, a0
+; RV32I-NEXT:    lbu a0, 0(a0)
+; RV32I-NEXT:    addi a0, a0, 32
 ; RV32I-NEXT:    j .LBB3_5
 ; RV32I-NEXT:  .LBB3_3:
-; RV32I-NEXT:    srli a0, a0, 27
-; RV32I-NEXT:    add a0, s4, a0
-; RV32I-NEXT:    lbu a0, 0(a0)
-; RV32I-NEXT:    bnez s0, .LBB3_2
+; RV32I-NEXT:    li a0, 64
+; RV32I-NEXT:    j .LBB3_6
 ; RV32I-NEXT:  .LBB3_4:
-; RV32I-NEXT:    addi a0, a0, 32
-; RV32I-NEXT:  .LBB3_5:
+; RV32I-NEXT:    srli s1, s1, 27
+; RV32I-NEXT:    add s1, s3, s1
+; RV32I-NEXT:    lbu a0, 0(s1)
+; RV32I-NEXT:  .LBB3_5: # %cond.false
 ; RV32I-NEXT:    li a1, 0
+; RV32I-NEXT:  .LBB3_6: # %cond.end
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -416,9 +426,9 @@ define <2 x i1> @ctpop_v2i32_ult_two(<2 x i32> %a) nounwind {
 ; RV32I-LABEL: ctpop_v2i32_ult_two:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi a2, a0, -1
+; RV32I-NEXT:    addi a3, a1, -1
+; RV32I-NEXT:    and a1, a1, a3
 ; RV32I-NEXT:    and a0, a0, a2
-; RV32I-NEXT:    addi a2, a1, -1
-; RV32I-NEXT:    and a1, a1, a2
 ; RV32I-NEXT:    seqz a0, a0
 ; RV32I-NEXT:    seqz a1, a1
 ; RV32I-NEXT:    ret
@@ -439,9 +449,9 @@ define <2 x i1> @ctpop_v2i32_ugt_one(<2 x i32> %a) nounwind {
 ; RV32I-LABEL: ctpop_v2i32_ugt_one:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi a2, a0, -1
+; RV32I-NEXT:    addi a3, a1, -1
+; RV32I-NEXT:    and a1, a1, a3
 ; RV32I-NEXT:    and a0, a0, a2
-; RV32I-NEXT:    addi a2, a1, -1
-; RV32I-NEXT:    and a1, a1, a2
 ; RV32I-NEXT:    snez a0, a0
 ; RV32I-NEXT:    snez a1, a1
 ; RV32I-NEXT:    ret
@@ -464,11 +474,11 @@ define <2 x i1> @ctpop_v2i32_eq_one(<2 x i32> %a) nounwind {
 ; RV32I-LABEL: ctpop_v2i32_eq_one:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi a2, a0, -1
+; RV32I-NEXT:    addi a3, a1, -1
+; RV32I-NEXT:    xor a1, a1, a3
 ; RV32I-NEXT:    xor a0, a0, a2
 ; RV32I-NEXT:    sltu a0, a2, a0
-; RV32I-NEXT:    addi a2, a1, -1
-; RV32I-NEXT:    xor a1, a1, a2
-; RV32I-NEXT:    sltu a1, a2, a1
+; RV32I-NEXT:    sltu a1, a3, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: ctpop_v2i32_eq_one:
@@ -489,11 +499,11 @@ define <2 x i1> @ctpop_v2i32_ne_one(<2 x i32> %a) nounwind {
 ; RV32I-LABEL: ctpop_v2i32_ne_one:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi a2, a0, -1
+; RV32I-NEXT:    addi a3, a1, -1
+; RV32I-NEXT:    xor a1, a1, a3
 ; RV32I-NEXT:    xor a0, a0, a2
 ; RV32I-NEXT:    sltu a0, a2, a0
-; RV32I-NEXT:    addi a2, a1, -1
-; RV32I-NEXT:    xor a1, a1, a2
-; RV32I-NEXT:    sltu a1, a2, a1
+; RV32I-NEXT:    sltu a1, a3, a1
 ; RV32I-NEXT:    xori a0, a0, 1
 ; RV32I-NEXT:    xori a1, a1, 1
 ; RV32I-NEXT:    ret
@@ -571,12 +581,12 @@ define i64 @ctpop_i64(i64 %a) nounwind {
 define i1 @ctpop_i64_ugt_two(i64 %a) nounwind {
 ; RV32I-LABEL: ctpop_i64_ugt_two:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi a2, a0, -1
-; RV32I-NEXT:    and a2, a0, a2
-; RV32I-NEXT:    seqz a0, a0
-; RV32I-NEXT:    sub a0, a1, a0
-; RV32I-NEXT:    and a0, a1, a0
-; RV32I-NEXT:    or a0, a2, a0
+; RV32I-NEXT:    seqz a2, a0
+; RV32I-NEXT:    addi a3, a0, -1
+; RV32I-NEXT:    sub a2, a1, a2
+; RV32I-NEXT:    and a0, a0, a3
+; RV32I-NEXT:    and a1, a1, a2
+; RV32I-NEXT:    or a0, a0, a1
 ; RV32I-NEXT:    seqz a0, a0
 ; RV32I-NEXT:    ret
 ;
@@ -595,12 +605,12 @@ define i1 @ctpop_i64_ugt_two(i64 %a) nounwind {
 define i1 @ctpop_i64_ugt_one(i64 %a) nounwind {
 ; RV32I-LABEL: ctpop_i64_ugt_one:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi a2, a0, -1
-; RV32I-NEXT:    and a2, a0, a2
-; RV32I-NEXT:    seqz a0, a0
-; RV32I-NEXT:    sub a0, a1, a0
-; RV32I-NEXT:    and a0, a1, a0
-; RV32I-NEXT:    or a0, a2, a0
+; RV32I-NEXT:    seqz a2, a0
+; RV32I-NEXT:    addi a3, a0, -1
+; RV32I-NEXT:    sub a2, a1, a2
+; RV32I-NEXT:    and a0, a0, a3
+; RV32I-NEXT:    and a1, a1, a2
+; RV32I-NEXT:    or a0, a0, a1
 ; RV32I-NEXT:    snez a0, a0
 ; RV32I-NEXT:    ret
 ;
@@ -785,20 +795,20 @@ define <2 x i1> @ctpop_v2i64_ult_two(<2 x i64> %a) nounwind {
 ; RV32I-LABEL: ctpop_v2i64_ult_two:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lw a1, 0(a0)
-; RV32I-NEXT:    lw a2, 4(a0)
-; RV32I-NEXT:    lw a3, 8(a0)
+; RV32I-NEXT:    lw a2, 8(a0)
+; RV32I-NEXT:    lw a3, 4(a0)
 ; RV32I-NEXT:    lw a0, 12(a0)
-; RV32I-NEXT:    addi a4, a1, -1
-; RV32I-NEXT:    and a4, a1, a4
-; RV32I-NEXT:    seqz a1, a1
-; RV32I-NEXT:    sub a1, a2, a1
-; RV32I-NEXT:    and a1, a2, a1
-; RV32I-NEXT:    addi a2, a3, -1
-; RV32I-NEXT:    and a2, a3, a2
-; RV32I-NEXT:    seqz a3, a3
-; RV32I-NEXT:    sub a3, a0, a3
-; RV32I-NEXT:    and a0, a0, a3
-; RV32I-NEXT:    or a1, a4, a1
+; RV32I-NEXT:    seqz a4, a1
+; RV32I-NEXT:    seqz a5, a2
+; RV32I-NEXT:    addi a6, a1, -1
+; RV32I-NEXT:    addi a7, a2, -1
+; RV32I-NEXT:    sub a4, a3, a4
+; RV32I-NEXT:    sub a5, a0, a5
+; RV32I-NEXT:    and a2, a2, a7
+; RV32I-NEXT:    and a1, a1, a6
+; RV32I-NEXT:    and a0, a0, a5
+; RV32I-NEXT:    and a3, a3, a4
+; RV32I-NEXT:    or a1, a1, a3
 ; RV32I-NEXT:    or a2, a2, a0
 ; RV32I-NEXT:    seqz a0, a1
 ; RV32I-NEXT:    seqz a1, a2
@@ -828,20 +838,20 @@ define <2 x i1> @ctpop_v2i64_ugt_one(<2 x i64> %a) nounwind {
 ; RV32I-LABEL: ctpop_v2i64_ugt_one:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lw a1, 0(a0)
-; RV32I-NEXT:    lw a2, 4(a0)
-; RV32I-NEXT:    lw a3, 8(a0)
+; RV32I-NEXT:    lw a2, 8(a0)
+; RV32I-NEXT:    lw a3, 4(a0)
 ; RV32I-NEXT:    lw a0, 12(a0)
-; RV32I-NEXT:    addi a4, a1, -1
-; RV32I-NEXT:    and a4, a1, a4
-; RV32I-NEXT:    seqz a1, a1
-; RV32I-NEXT:    sub a1, a2, a1
-; RV32I-NEXT:    and a1, a2, a1
-; RV32I-NEXT:    addi a2, a3, -1
-; RV32I-NEXT:    and a2, a3, a2
-; RV32I-NEXT:    seqz a3, a3
-; RV32I-NEXT:    sub a3, a0, a3
-; RV32I-NEXT:    and a0, a0, a3
-; RV32I-NEXT:    or a1, a4, a1
+; RV32I-NEXT:    seqz a4, a1
+; RV32I-NEXT:    seqz a5, a2
+; RV32I-NEXT:    addi a6, a1, -1
+; RV32I-NEXT:    addi a7, a2, -1
+; RV32I-NEXT:    sub a4, a3, a4
+; RV32I-NEXT:    sub a5, a0, a5
+; RV32I-NEXT:    and a2, a2, a7
+; RV32I-NEXT:    and a1, a1, a6
+; RV32I-NEXT:    and a0, a0, a5
+; RV32I-NEXT:    and a3, a3, a4
+; RV32I-NEXT:    or a1, a1, a3
 ; RV32I-NEXT:    or a2, a2, a0
 ; RV32I-NEXT:    snez a0, a1
 ; RV32I-NEXT:    snez a1, a2
@@ -1481,15 +1491,23 @@ entry:
 }
 
 define i8 @sub_if_uge_i8(i8 %x, i8 %y) {
-; CHECK-LABEL: sub_if_uge_i8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    zext.b a2, a1
-; CHECK-NEXT:    zext.b a3, a0
-; CHECK-NEXT:    sltu a2, a3, a2
-; CHECK-NEXT:    addi a2, a2, -1
-; CHECK-NEXT:    and a1, a2, a1
-; CHECK-NEXT:    sub a0, a0, a1
-; CHECK-NEXT:    ret
+; RV32I-LABEL: sub_if_uge_i8:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    zext.b a2, a1
+; RV32I-NEXT:    zext.b a3, a0
+; RV32I-NEXT:    sltu a2, a3, a2
+; RV32I-NEXT:    addi a2, a2, -1
+; RV32I-NEXT:    and a1, a2, a1
+; RV32I-NEXT:    sub a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-LABEL: sub_if_uge_i8:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    zext.b a2, a0
+; RV32ZBB-NEXT:    sub a0, a0, a1
+; RV32ZBB-NEXT:    zext.b a0, a0
+; RV32ZBB-NEXT:    minu a0, a2, a0
+; RV32ZBB-NEXT:    ret
   %cmp = icmp ult i8 %x, %y
   %select = select i1 %cmp, i8 0, i8 %y
   %sub = sub nuw i8 %x, %select
@@ -1511,12 +1529,10 @@ define i16 @sub_if_uge_i16(i16 %x, i16 %y) {
 ;
 ; RV32ZBB-LABEL: sub_if_uge_i16:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    zext.h a2, a1
-; RV32ZBB-NEXT:    zext.h a3, a0
-; RV32ZBB-NEXT:    sltu a2, a3, a2
-; RV32ZBB-NEXT:    addi a2, a2, -1
-; RV32ZBB-NEXT:    and a1, a2, a1
+; RV32ZBB-NEXT:    zext.h a2, a0
 ; RV32ZBB-NEXT:    sub a0, a0, a1
+; RV32ZBB-NEXT:    zext.h a0, a0
+; RV32ZBB-NEXT:    minu a0, a2, a0
 ; RV32ZBB-NEXT:    ret
   %cmp = icmp ult i16 %x, %y
   %select = select i1 %cmp, i16 0, i16 %y
@@ -1525,13 +1541,19 @@ define i16 @sub_if_uge_i16(i16 %x, i16 %y) {
 }
 
 define i32 @sub_if_uge_i32(i32 %x, i32 %y) {
-; CHECK-LABEL: sub_if_uge_i32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    sltu a2, a0, a1
-; CHECK-NEXT:    addi a2, a2, -1
-; CHECK-NEXT:    and a1, a2, a1
-; CHECK-NEXT:    sub a0, a0, a1
-; CHECK-NEXT:    ret
+; RV32I-LABEL: sub_if_uge_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    sltu a2, a0, a1
+; RV32I-NEXT:    addi a2, a2, -1
+; RV32I-NEXT:    and a1, a2, a1
+; RV32I-NEXT:    sub a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-LABEL: sub_if_uge_i32:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    sub a1, a0, a1
+; RV32ZBB-NEXT:    minu a0, a0, a1
+; RV32ZBB-NEXT:    ret
   %cmp = icmp ult i32 %x, %y
   %select = select i1 %cmp, i32 0, i32 %y
   %sub = sub nuw i32 %x, %select
@@ -1643,25 +1665,255 @@ define i32 @sub_if_uge_multiuse_select_i32(i32 %x, i32 %y) {
 }
 
 define i32 @sub_if_uge_multiuse_cmp_i32(i32 %x, i32 %y) {
-; CHECK-LABEL: sub_if_uge_multiuse_cmp_i32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    sltu a2, a0, a1
-; CHECK-NEXT:    addi a2, a2, -1
-; CHECK-NEXT:    and a2, a2, a1
-; CHECK-NEXT:    sub a2, a0, a2
-; CHECK-NEXT:    bltu a0, a1, .LBB55_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    li a0, 4
-; CHECK-NEXT:    sll a0, a2, a0
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB55_2:
-; CHECK-NEXT:    li a0, 2
-; CHECK-NEXT:    sll a0, a2, a0
-; CHECK-NEXT:    ret
+; RV32I-LABEL: sub_if_uge_multiuse_cmp_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    sltu a2, a0, a1
+; RV32I-NEXT:    addi a2, a2, -1
+; RV32I-NEXT:    and a2, a2, a1
+; RV32I-NEXT:    sub a2, a0, a2
+; RV32I-NEXT:    bltu a0, a1, .LBB55_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    li a0, 4
+; RV32I-NEXT:    sll a0, a2, a0
+; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB55_2:
+; RV32I-NEXT:    li a0, 2
+; RV32I-NEXT:    sll a0, a2, a0
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-LABEL: sub_if_uge_multiuse_cmp_i32:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    sub a2, a0, a1
+; RV32ZBB-NEXT:    minu a2, a0, a2
+; RV32ZBB-NEXT:    bltu a0, a1, .LBB55_2
+; RV32ZBB-NEXT:  # %bb.1:
+; RV32ZBB-NEXT:    li a0, 4
+; RV32ZBB-NEXT:    sll a0, a2, a0
+; RV32ZBB-NEXT:    ret
+; RV32ZBB-NEXT:  .LBB55_2:
+; RV32ZBB-NEXT:    li a0, 2
+; RV32ZBB-NEXT:    sll a0, a2, a0
+; RV32ZBB-NEXT:    ret
   %cmp = icmp ult i32 %x, %y
   %select = select i1 %cmp, i32 0, i32 %y
   %sub = sub nuw i32 %x, %select
   %select2 = select i1 %cmp, i32 2, i32 4
   %shl = shl i32 %sub, %select2
   ret i32 %shl
+}
+
+define i32 @sub_if_uge_multiuse_cmp_store_i32(i32 %x, i32 %y, ptr %z) {
+; RV32I-LABEL: sub_if_uge_multiuse_cmp_store_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    sltu a3, a0, a1
+; RV32I-NEXT:    xori a4, a3, 1
+; RV32I-NEXT:    addi a3, a3, -1
+; RV32I-NEXT:    and a1, a3, a1
+; RV32I-NEXT:    sub a0, a0, a1
+; RV32I-NEXT:    sw a4, 0(a2)
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-LABEL: sub_if_uge_multiuse_cmp_store_i32:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    sltu a3, a0, a1
+; RV32ZBB-NEXT:    sub a1, a0, a1
+; RV32ZBB-NEXT:    xori a3, a3, 1
+; RV32ZBB-NEXT:    minu a0, a0, a1
+; RV32ZBB-NEXT:    sw a3, 0(a2)
+; RV32ZBB-NEXT:    ret
+  %cmp = icmp uge i32 %x, %y
+  %conv = zext i1 %cmp to i32
+  store i32 %conv, ptr %z, align 4
+  %select = select i1 %cmp, i32 %y, i32 0
+  %sub = sub nuw i32 %x, %select
+  ret i32 %sub
+}
+
+define i8 @sub_if_uge_C_i8(i8 zeroext %x) {
+; RV32I-LABEL: sub_if_uge_C_i8:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    sltiu a1, a0, 13
+; RV32I-NEXT:    addi a1, a1, -1
+; RV32I-NEXT:    andi a1, a1, -13
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-LABEL: sub_if_uge_C_i8:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    addi a1, a0, -13
+; RV32ZBB-NEXT:    zext.b a1, a1
+; RV32ZBB-NEXT:    minu a0, a1, a0
+; RV32ZBB-NEXT:    ret
+  %cmp = icmp ugt i8 %x, 12
+  %sub = add i8 %x, -13
+  %conv4 = select i1 %cmp, i8 %sub, i8 %x
+  ret i8 %conv4
+}
+
+define i16 @sub_if_uge_C_i16(i16 zeroext %x) {
+; RV32I-LABEL: sub_if_uge_C_i16:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    sltiu a1, a0, 251
+; RV32I-NEXT:    addi a1, a1, -1
+; RV32I-NEXT:    andi a1, a1, -251
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-LABEL: sub_if_uge_C_i16:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    addi a1, a0, -251
+; RV32ZBB-NEXT:    zext.h a1, a1
+; RV32ZBB-NEXT:    minu a0, a1, a0
+; RV32ZBB-NEXT:    ret
+  %cmp = icmp ugt i16 %x, 250
+  %sub = add i16 %x, -251
+  %conv4 = select i1 %cmp, i16 %sub, i16 %x
+  ret i16 %conv4
+}
+
+define i32 @sub_if_uge_C_i32(i32 signext %x) {
+; RV32I-LABEL: sub_if_uge_C_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a1, 16
+; RV32I-NEXT:    lui a2, 1048560
+; RV32I-NEXT:    addi a1, a1, -16
+; RV32I-NEXT:    sltu a1, a1, a0
+; RV32I-NEXT:    neg a1, a1
+; RV32I-NEXT:    addi a2, a2, 15
+; RV32I-NEXT:    and a1, a1, a2
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-LABEL: sub_if_uge_C_i32:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    lui a1, 1048560
+; RV32ZBB-NEXT:    addi a1, a1, 15
+; RV32ZBB-NEXT:    add a1, a0, a1
+; RV32ZBB-NEXT:    minu a0, a1, a0
+; RV32ZBB-NEXT:    ret
+  %cmp = icmp ugt i32 %x, 65520
+  %sub = add i32 %x, -65521
+  %cond = select i1 %cmp, i32 %sub, i32 %x
+  ret i32 %cond
+}
+
+define i64 @sub_if_uge_C_i64(i64 %x) {
+; CHECK-LABEL: sub_if_uge_C_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 1
+; CHECK-NEXT:    beq a1, a2, .LBB60_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    sltiu a2, a1, 2
+; CHECK-NEXT:    xori a2, a2, 1
+; CHECK-NEXT:    j .LBB60_3
+; CHECK-NEXT:  .LBB60_2:
+; CHECK-NEXT:    lui a2, 172127
+; CHECK-NEXT:    addi a2, a2, 511
+; CHECK-NEXT:    sltu a2, a2, a0
+; CHECK-NEXT:  .LBB60_3:
+; CHECK-NEXT:    neg a2, a2
+; CHECK-NEXT:    andi a3, a2, -2
+; CHECK-NEXT:    add a1, a1, a3
+; CHECK-NEXT:    lui a3, 876449
+; CHECK-NEXT:    addi a3, a3, -512
+; CHECK-NEXT:    and a2, a2, a3
+; CHECK-NEXT:    add a2, a0, a2
+; CHECK-NEXT:    sltu a0, a2, a0
+; CHECK-NEXT:    add a1, a1, a0
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    ret
+  %cmp = icmp ugt i64 %x, 4999999999
+  %sub = add i64 %x, -5000000000
+  %cond = select i1 %cmp, i64 %sub, i64 %x
+  ret i64 %cond
+}
+
+define i32 @sub_if_uge_C_multiuse_cmp_i32(i32 signext %x, ptr %z) {
+; RV32I-LABEL: sub_if_uge_C_multiuse_cmp_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a2, 16
+; RV32I-NEXT:    lui a3, 1048560
+; RV32I-NEXT:    addi a2, a2, -16
+; RV32I-NEXT:    sltu a2, a2, a0
+; RV32I-NEXT:    neg a4, a2
+; RV32I-NEXT:    addi a3, a3, 15
+; RV32I-NEXT:    and a3, a4, a3
+; RV32I-NEXT:    add a0, a0, a3
+; RV32I-NEXT:    sw a2, 0(a1)
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-LABEL: sub_if_uge_C_multiuse_cmp_i32:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    lui a2, 16
+; RV32ZBB-NEXT:    lui a3, 1048560
+; RV32ZBB-NEXT:    addi a2, a2, -16
+; RV32ZBB-NEXT:    addi a3, a3, 15
+; RV32ZBB-NEXT:    sltu a2, a2, a0
+; RV32ZBB-NEXT:    add a3, a0, a3
+; RV32ZBB-NEXT:    minu a0, a3, a0
+; RV32ZBB-NEXT:    sw a2, 0(a1)
+; RV32ZBB-NEXT:    ret
+  %cmp = icmp ugt i32 %x, 65520
+  %conv = zext i1 %cmp to i32
+  store i32 %conv, ptr %z, align 4
+  %sub = add i32 %x, -65521
+  %cond = select i1 %cmp, i32 %sub, i32 %x
+  ret i32 %cond
+}
+
+define i32 @sub_if_uge_C_multiuse_sub_i32(i32 signext %x, ptr %z) {
+; RV32I-LABEL: sub_if_uge_C_multiuse_sub_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a2, 1048560
+; RV32I-NEXT:    lui a3, 16
+; RV32I-NEXT:    addi a2, a2, 15
+; RV32I-NEXT:    add a2, a0, a2
+; RV32I-NEXT:    addi a3, a3, -16
+; RV32I-NEXT:    sw a2, 0(a1)
+; RV32I-NEXT:    bltu a3, a0, .LBB62_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    mv a2, a0
+; RV32I-NEXT:  .LBB62_2:
+; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-LABEL: sub_if_uge_C_multiuse_sub_i32:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    lui a2, 1048560
+; RV32ZBB-NEXT:    addi a2, a2, 15
+; RV32ZBB-NEXT:    add a2, a0, a2
+; RV32ZBB-NEXT:    minu a0, a2, a0
+; RV32ZBB-NEXT:    sw a2, 0(a1)
+; RV32ZBB-NEXT:    ret
+  %sub = add i32 %x, -65521
+  store i32 %sub, ptr %z, align 4
+  %cmp = icmp ugt i32 %x, 65520
+  %cond = select i1 %cmp, i32 %sub, i32 %x
+  ret i32 %cond
+}
+
+define i32 @sub_if_uge_C_swapped_i32(i32 %x) {
+; RV32I-LABEL: sub_if_uge_C_swapped_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a1, 16
+; RV32I-NEXT:    lui a2, 1048560
+; RV32I-NEXT:    addi a1, a1, -15
+; RV32I-NEXT:    sltu a1, a0, a1
+; RV32I-NEXT:    addi a1, a1, -1
+; RV32I-NEXT:    addi a2, a2, 15
+; RV32I-NEXT:    and a1, a1, a2
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-LABEL: sub_if_uge_C_swapped_i32:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    lui a1, 1048560
+; RV32ZBB-NEXT:    addi a1, a1, 15
+; RV32ZBB-NEXT:    add a1, a0, a1
+; RV32ZBB-NEXT:    minu a0, a0, a1
+; RV32ZBB-NEXT:    ret
+  %cmp = icmp ult i32 %x, 65521
+  %sub = add i32 %x, -65521
+  %cond = select i1 %cmp, i32 %x, i32 %sub
+  ret i32 %cond
 }
