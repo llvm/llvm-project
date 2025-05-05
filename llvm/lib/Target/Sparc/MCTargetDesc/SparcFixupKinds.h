@@ -13,6 +13,7 @@
 
 namespace llvm {
   namespace Sparc {
+  // clang-format off
     enum Fixups {
       // fixup_sparc_call30 - 30-bit PC relative relocation for call
       fixup_sparc_call30 = FirstTargetFixupKind,
@@ -62,25 +63,16 @@ namespace llvm {
       /// fixup_sparc_pc10 - 10-bit fixup corresponding to %pc10(foo)
       fixup_sparc_pc10,
 
-      /// fixup_sparc_wplt30
-      fixup_sparc_wplt30,
-
       /// 22-bit fixup corresponding to %hix(foo)
       fixup_sparc_hix22,
       /// 13-bit fixup corresponding to %lox(foo)
       fixup_sparc_lox10,
 
-      /// 22-bit fixup corresponding to %gdop_hix22(foo)
-      fixup_sparc_gotdata_hix22,
-      /// 13-bit fixup corresponding to %gdop_lox10(foo)
-      fixup_sparc_gotdata_lox10,
-      /// 32-bit fixup corresponding to %gdop(foo)
-      fixup_sparc_gotdata_op,
-
       // Marker
       LastTargetFixupKind,
       NumTargetFixupKinds = LastTargetFixupKind - FirstTargetFixupKind
     };
+  // clang-format on
   }
 }
 

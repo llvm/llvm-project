@@ -31,7 +31,6 @@ static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {
   case FK_Data_8:
     return Value;
 
-  case Sparc::fixup_sparc_wplt30:
   case Sparc::fixup_sparc_call30:
     return (Value >> 2) & 0x3fffffff;
 
@@ -82,11 +81,6 @@ static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {
 
   case Sparc::fixup_sparc_hm:
     return (Value >> 32) & 0x3ff;
-
-  case Sparc::fixup_sparc_gotdata_lox10:
-  case Sparc::fixup_sparc_gotdata_hix22:
-  case Sparc::fixup_sparc_gotdata_op:
-    return 0;
   }
 }
 
@@ -137,6 +131,7 @@ namespace {
     }
 
     MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override {
+      // clang-format off
       const static MCFixupKindInfo InfosBE[Sparc::NumTargetFixupKinds] = {
         // name                    offset bits  flags
         { "fixup_sparc_call30",     2,     30,  MCFixupKindInfo::FKF_IsPCRel },
@@ -154,12 +149,8 @@ namespace {
         { "fixup_sparc_lm",        10,     22,  0 },
         { "fixup_sparc_pc22",      10,     22,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_pc10",      22,     10,  MCFixupKindInfo::FKF_IsPCRel },
-        { "fixup_sparc_wplt30",     2,     30,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_hix22",         10, 22,  0 },
         { "fixup_sparc_lox10",         19, 13,  0 },
-        { "fixup_sparc_gotdata_hix22",  0,  0,  0 },
-        { "fixup_sparc_gotdata_lox10",  0,  0,  0 },
-        { "fixup_sparc_gotdata_op",     0,  0,  0 },
       };
 
       const static MCFixupKindInfo InfosLE[Sparc::NumTargetFixupKinds] = {
@@ -179,13 +170,10 @@ namespace {
         { "fixup_sparc_lm",         0,     22,  0 },
         { "fixup_sparc_pc22",       0,     22,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_pc10",       0,     10,  MCFixupKindInfo::FKF_IsPCRel },
-        { "fixup_sparc_wplt30",      0,     30,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_hix22",          0, 22,  0 },
         { "fixup_sparc_lox10",          0, 13,  0 },
-        { "fixup_sparc_gotdata_hix22",  0,  0,  0 },
-        { "fixup_sparc_gotdata_lox10",  0,  0,  0 },
-        { "fixup_sparc_gotdata_op",     0,  0,  0 },
       };
+      // clang-format on
 
       // Fixup kinds from .reloc directive are like R_SPARC_NONE. They do
       // not require any extra processing.

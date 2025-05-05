@@ -37,9 +37,6 @@ public:
     VK_GOT22,
     VK_GOT10,
     VK_GOT13,
-    VK_13,
-    VK_WPLT30,
-    VK_WDISP30,
     VK_R_DISP32,
     VK_TLS_GD_HI22,
     VK_TLS_GD_LO10,
@@ -61,8 +58,8 @@ public:
     VK_TLS_LE_LOX10,
     VK_HIX22,
     VK_LOX10,
-    VK_GOTDATA_HIX22,
-    VK_GOTDATA_LOX10,
+    VK_GOTDATA_OP_HIX22,
+    VK_GOTDATA_OP_LOX10,
     VK_GOTDATA_OP,
   };
 
@@ -101,7 +98,7 @@ public:
   }
 
   static Specifier parseSpecifier(StringRef name);
-  static bool printSpecifier(raw_ostream &OS, Specifier Kind);
+  static StringRef getSpecifierName(Specifier S);
 };
 
 } // end namespace llvm.

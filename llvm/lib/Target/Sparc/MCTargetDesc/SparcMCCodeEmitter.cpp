@@ -163,10 +163,7 @@ SparcMCCodeEmitter::getSImm13OpValue(const MCInst &MI, unsigned OpNo,
     Fixups.push_back(MCFixup::create(0, Expr, SExpr->getFixupKind()));
     return 0;
   }
-  uint16_t Kind = Sparc::fixup_sparc_13;
-  if (Ctx.getObjectFileInfo()->isPositionIndependent())
-    Kind = ELF::R_SPARC_GOT13;
-  Fixups.push_back(MCFixup::create(0, Expr, Kind));
+  Fixups.push_back(MCFixup::create(0, Expr, Sparc::fixup_sparc_13));
   return 0;
 }
 
@@ -174,25 +171,14 @@ unsigned SparcMCCodeEmitter::
 getCallTargetOpValue(const MCInst &MI, unsigned OpNo,
                      SmallVectorImpl<MCFixup> &Fixups,
                      const MCSubtargetInfo &STI) const {
-  const MCOperand &MO = MI.getOperand(OpNo);
-  const MCExpr *Expr = MO.getExpr();
-  const SparcMCExpr *SExpr = dyn_cast<SparcMCExpr>(Expr);
-
   if (MI.getOpcode() == SP::TLS_CALL) {
     // No fixups for __tls_get_addr. Will emit for fixups for tls_symbol in
     // encodeInstruction.
-#ifndef NDEBUG
-    // Verify that the callee is actually __tls_get_addr.
-    assert(SExpr && SExpr->getSubExpr()->getKind() == MCExpr::SymbolRef &&
-           "Unexpected expression in TLS_CALL");
-    const MCSymbolRefExpr *SymExpr = cast<MCSymbolRefExpr>(SExpr->getSubExpr());
-    assert(SymExpr->getSymbol().getName() == "__tls_get_addr" &&
-           "Unexpected function for TLS_CALL");
-#endif
     return 0;
   }
 
-  Fixups.push_back(MCFixup::create(0, Expr, SExpr->getFixupKind()));
+  const MCOperand &MO = MI.getOperand(OpNo);
+  Fixups.push_back(MCFixup::create(0, MO.getExpr(), Sparc::fixup_sparc_call30));
   return 0;
 }
 

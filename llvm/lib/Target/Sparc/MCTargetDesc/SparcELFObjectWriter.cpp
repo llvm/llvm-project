@@ -9,8 +9,10 @@
 #include "MCTargetDesc/SparcFixupKinds.h"
 #include "MCTargetDesc/SparcMCExpr.h"
 #include "MCTargetDesc/SparcMCTargetDesc.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -85,17 +87,20 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
     case FK_Data_2:                  return ELF::R_SPARC_DISP16;
     case FK_Data_4:                  return ELF::R_SPARC_DISP32;
     case FK_Data_8:                  return ELF::R_SPARC_DISP64;
-    case Sparc::fixup_sparc_call30:  return ELF::R_SPARC_WDISP30;
+    case Sparc::fixup_sparc_call30:
+      if (Ctx.getObjectFileInfo()->isPositionIndependent())
+        return ELF::R_SPARC_WPLT30;
+      return ELF::R_SPARC_WDISP30;
     case Sparc::fixup_sparc_br22:    return ELF::R_SPARC_WDISP22;
     case Sparc::fixup_sparc_br19:    return ELF::R_SPARC_WDISP19;
     case Sparc::fixup_sparc_br16:
       return ELF::R_SPARC_WDISP16;
     case Sparc::fixup_sparc_pc22:    return ELF::R_SPARC_PC22;
     case Sparc::fixup_sparc_pc10:    return ELF::R_SPARC_PC10;
-    case Sparc::fixup_sparc_wplt30:  return ELF::R_SPARC_WPLT30;
     }
   }
 
+  // clang-format off
   switch(Fixup.getTargetKind()) {
   default:
     llvm_unreachable("Unimplemented fixup -> relocation");
@@ -110,7 +115,11 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
   case FK_Data_8:                return ((Fixup.getOffset() % 8)
                                          ? ELF::R_SPARC_UA64
                                          : ELF::R_SPARC_64);
-  case Sparc::fixup_sparc_13:    return ELF::R_SPARC_13;
+  case Sparc::fixup_sparc_13:
+    if (Ctx.getObjectFileInfo()->isPositionIndependent())
+      return ELF::R_SPARC_GOT13;
+    return ELF::R_SPARC_13;
+
   case Sparc::fixup_sparc_hi22:  return ELF::R_SPARC_HI22;
   case Sparc::fixup_sparc_lo10:  return ELF::R_SPARC_LO10;
   case Sparc::fixup_sparc_h44:   return ELF::R_SPARC_H44;
@@ -121,10 +130,8 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
   case Sparc::fixup_sparc_lm:    return ELF::R_SPARC_LM22;
   case Sparc::fixup_sparc_hix22:         return ELF::R_SPARC_HIX22;
   case Sparc::fixup_sparc_lox10:         return ELF::R_SPARC_LOX10;
-  case Sparc::fixup_sparc_gotdata_hix22: return ELF::R_SPARC_GOTDATA_HIX22;
-  case Sparc::fixup_sparc_gotdata_lox10: return ELF::R_SPARC_GOTDATA_LOX10;
-  case Sparc::fixup_sparc_gotdata_op:    return ELF::R_SPARC_GOTDATA_OP;
   }
+  // clang-format on
 
   return ELF::R_SPARC_NONE;
 }
