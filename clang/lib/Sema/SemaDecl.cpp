@@ -18348,7 +18348,10 @@ CreateNewDecl:
 
   // If we're declaring or defining a tag in function prototype scope in C,
   // note that this type can only be used within the function and add it to
-  // the list of decls to inject into the function definition scope.
+  // the list of decls to inject into the function definition scope. However,
+  // in C23 and later, while the type is only visible within the function, the
+  // function can be called with a compatible type defined in the same TU, so
+  // we silence the diagnostic in C23 and up. This matches the behavior of GCC.
   if ((Name || Kind == TagTypeKind::Enum) &&
       getNonFieldDeclScope(S)->isFunctionPrototypeScope()) {
     if (getLangOpts().CPlusPlus) {
@@ -18362,7 +18365,10 @@ CreateNewDecl:
       if (TUK == TagUseKind::Declaration)
         Invalid = true;
     } else if (!PrevDecl) {
-      Diag(Loc, diag::warn_decl_in_param_list) << Context.getTagDeclType(New);
+      // In C23 mode, if the declaration is complete, we do not want to
+      // diagnose.
+      if (!getLangOpts().C23 || TUK != TagUseKind::Definition)
+        Diag(Loc, diag::warn_decl_in_param_list) << Context.getTagDeclType(New);
     }
   }
 

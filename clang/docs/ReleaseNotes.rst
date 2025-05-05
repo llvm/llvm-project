@@ -255,7 +255,10 @@ C23 Feature Support
 - Implemented `WG14 N3037 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3037.pdf>`_
   which allows tag types to be redefined within the same translation unit so
   long as both definitions are structurally equivalent (same tag types, same
-  tag names, same tag members, etc).
+  tag names, same tag members, etc). As a result of this paper, ``-Wvisibility``
+  is no longer diagnosed in C23 if the parameter is a complete tag type (it
+  does still fire when the parameter is an incomplete tag type as that cannot
+  be completed).
 - Fixed a failed assertion with an invalid parameter to the ``#embed``
   directive. Fixes #GH126940.
 
