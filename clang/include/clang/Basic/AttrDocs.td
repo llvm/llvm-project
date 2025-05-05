@@ -8519,6 +8519,7 @@ Those builtins can be declared using the `[[vk::ext_builtin_input]]` attribute
 like follows:
 
 .. code-block:: c++
+
   [[vk::ext_builtin_input(/* WorkgroupId */ 26)]]
   static const uint3 groupid;
 
