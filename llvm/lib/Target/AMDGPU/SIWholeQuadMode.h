@@ -21,6 +21,7 @@ public:
     return MachineFunctionProperties().set(
         MachineFunctionProperties::Property::IsSSA);
   }
+  static bool isRequired() { return true; }
 };
 } // namespace llvm
 
