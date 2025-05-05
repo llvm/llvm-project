@@ -188,13 +188,12 @@ void BaseRequestHandler::Run(const Request &request) {
     return;
   }
 
-  lldb::SBMutex lock = dap.GetAPIMutex();
-  std::lock_guard<lldb::SBMutex> guard(lock);
-
   // FIXME: After all the requests have migrated from LegacyRequestHandler >
   // RequestHandler<> we should be able to move this into
   // RequestHandler<>::operator().
+  lock.lock();
   operator()(request);
+  lock.unlock();
 
   // FIXME: After all the requests have migrated from LegacyRequestHandler >
   // RequestHandler<> we should be able to check `debugger.InterruptRequest` and
@@ -250,11 +249,17 @@ llvm::Error BaseRequestHandler::LaunchProcess(
     if (error.Fail())
       return llvm::make_error<DAPError>(error.GetCString());
   } else {
-    // Set the launch info so that run commands can access the configured
-    // launch details.
-    dap.target.SetLaunchInfo(launch_info);
-    if (llvm::Error err = dap.RunLaunchCommands(launchCommands))
-      return err;
+    {
+      std::lock_guard<std::mutex> guard(dap.first_stop_mutex);
+      dap.first_stop_state = DAP::FirstStopState::PendingStopEvent;
+
+      // Set the launch info so that run commands can access the configured
+      // launch details.
+      dap.target.SetLaunchInfo(launch_info);
+      if (llvm::Error err = dap.RunLaunchCommands(launchCommands))
+        return err;
+    }
+    dap.first_stop_cv.notify_all();
 
     // The custom commands might have created a new target so we should use the
     // selected target after these commands are run.

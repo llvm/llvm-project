@@ -189,6 +189,17 @@ struct DAP {
   // the old process here so we can detect this case and keep running.
   lldb::pid_t restarting_process_id;
   bool configuration_done_sent;
+
+  enum class FirstStopState {
+    NoStopEvent,
+    PendingStopEvent,
+    IgnoredStopEvent,
+  };
+  std::mutex first_stop_mutex;
+  std::condition_variable first_stop_cv;
+  FirstStopState first_stop_state;
+
+  bool ignore_next_stop;
   llvm::StringMap<std::unique_ptr<BaseRequestHandler>> request_handlers;
   bool waiting_for_run_in_terminal;
   ProgressEventReporter progress_event_reporter;

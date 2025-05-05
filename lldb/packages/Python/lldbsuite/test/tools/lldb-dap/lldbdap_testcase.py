@@ -103,7 +103,7 @@ class DAPTestCaseBase(TestBase):
                     match_desc = "breakpoint %s." % (breakpoint_id)
                     if match_desc in description:
                         return
-        self.assertTrue(False, "breakpoint not hit")
+        self.assertTrue(False, f"breakpoint not hit: stopped_events={stopped_events}")
 
     def verify_stop_exception_info(self, expected_description, timeout=timeoutval):
         """Wait for the process we are debugging to stop, and verify the stop

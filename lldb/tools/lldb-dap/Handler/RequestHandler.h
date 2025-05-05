@@ -37,7 +37,8 @@ struct DAP;
 /// the RequestHandler template subclass instead.
 class BaseRequestHandler {
 public:
-  BaseRequestHandler(DAP &dap) : dap(dap) {}
+  BaseRequestHandler(DAP &dap)
+      : dap(dap), mutex(dap.GetAPIMutex()), lock(mutex, std::defer_lock) {}
 
   /// BaseRequestHandler are not copyable.
   /// @{
@@ -80,6 +81,8 @@ protected:
   /// @}
 
   DAP &dap;
+  lldb::SBMutex mutex;
+  mutable std::unique_lock<lldb::SBMutex> lock;
 };
 
 /// FIXME: Migrate callers to typed RequestHandler for improved type handling.
