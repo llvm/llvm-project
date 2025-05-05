@@ -93,6 +93,9 @@ public:
   virtual void emitARM64WinCFISaveAnyRegDPX(unsigned Reg, int Offset) {}
   virtual void emitARM64WinCFISaveAnyRegQX(unsigned Reg, int Offset) {}
   virtual void emitARM64WinCFISaveAnyRegQPX(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFIAllocZ(int Offset) {}
+  virtual void emitARM64WinCFISaveZReg(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISavePReg(unsigned Reg, int Offset) {}
 
   /// Build attributes implementation
   virtual void
@@ -182,6 +185,9 @@ public:
   void emitARM64WinCFISaveAnyRegDPX(unsigned Reg, int Offset) override;
   void emitARM64WinCFISaveAnyRegQX(unsigned Reg, int Offset) override;
   void emitARM64WinCFISaveAnyRegQPX(unsigned Reg, int Offset) override;
+  void emitARM64WinCFIAllocZ(int Offset) override;
+  void emitARM64WinCFISaveZReg(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISavePReg(unsigned Reg, int Offset) override;
 
 private:
   void emitARM64WinUnwindCode(unsigned UnwindCode, int Reg, int Offset);

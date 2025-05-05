@@ -176,7 +176,7 @@ private:
 /// and should be eventually converted into -analyzer-config flags. New analyzer
 /// options should not be implemented as frontend flags. Frontend flags still
 /// make sense for things that do not affect the actual analysis.
-class AnalyzerOptions : public RefCountedBase<AnalyzerOptions> {
+class AnalyzerOptions {
 public:
   using ConfigTable = llvm::StringMap<std::string>;
 
@@ -415,8 +415,6 @@ public:
             ShouldDisplayCheckerNameForText};
   }
 };
-
-using AnalyzerOptionsRef = IntrusiveRefCntPtr<AnalyzerOptions>;
 
 //===----------------------------------------------------------------------===//
 // We'll use AnalyzerOptions in the frontend, but we can't link the frontend

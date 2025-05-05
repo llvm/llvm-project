@@ -28,4 +28,19 @@ cir.func @f4() -> !s32i {
 // CHECK-NEXT:   cir.return %[[#x]] : !s32i
 // CHECK-NEXT: }
 
+cir.func @f5(!s32i, !s32i) -> !s32i
+cir.func @f6() -> !s32i {
+  %0 = cir.const #cir.int<1> : !s32i
+  %1 = cir.const #cir.int<2> : !s32i
+  %2 = cir.call @f5(%0, %1) : (!s32i, !s32i) -> !s32i
+  cir.return %2 : !s32i
+}
+
+// CHECK:      cir.func @f6() -> !s32i {
+// CHECK-NEXT:   %[[#a:]] = cir.const #cir.int<1> : !s32i
+// CHECK-NEXT:   %[[#b:]] = cir.const #cir.int<2> : !s32i
+// CHECK-NEXT:   %[[#c:]] = cir.call @f5(%[[#a]], %[[#b]]) : (!s32i, !s32i) -> !s32i
+// CHECK-NEXT:   cir.return %[[#c]] : !s32i
+// CHECK-NEXT: }
+
 }
