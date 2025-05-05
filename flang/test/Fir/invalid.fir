@@ -1196,7 +1196,7 @@ func.func @dc_0d() {
 
 func.func @dc_invalid_parent(%arg0: index, %arg1: index) {
   // expected-error@+1 {{'fir.do_concurrent.loop' op expects parent op 'fir.do_concurrent'}}
-  "fir.do_concurrent.loop"(%arg0, %arg1) <{operandSegmentSizes = array<i32: 1, 1, 0, 0>}> ({
+  "fir.do_concurrent.loop"(%arg0, %arg1) <{operandSegmentSizes = array<i32: 1, 1, 0, 0, 0>}> ({
   ^bb0(%arg2: index):
      %tmp = "fir.alloca"() <{in_type = i32, operandSegmentSizes = array<i32: 0, 0>}> : () -> !fir.ref<i32>
   }) : (index, index) -> ()
@@ -1208,7 +1208,7 @@ func.func @dc_invalid_parent(%arg0: index, %arg1: index) {
 func.func @dc_invalid_control(%arg0: index, %arg1: index) {
   // expected-error@+2 {{'fir.do_concurrent.loop' op different number of tuple elements for lowerBound, upperBound or step}}
   fir.do_concurrent {
-    "fir.do_concurrent.loop"(%arg0, %arg1) <{operandSegmentSizes = array<i32: 1, 1, 0, 0>}> ({
+    "fir.do_concurrent.loop"(%arg0, %arg1) <{operandSegmentSizes = array<i32: 1, 1, 0, 0, 0>}> ({
     ^bb0(%arg2: index):
       %tmp = "fir.alloca"() <{in_type = i32, operandSegmentSizes = array<i32: 0, 0>}> : () -> !fir.ref<i32>
     }) : (index, index) -> ()
@@ -1221,7 +1221,7 @@ func.func @dc_invalid_control(%arg0: index, %arg1: index) {
 func.func @dc_invalid_ind_var(%arg0: index, %arg1: index) {
   // expected-error@+2 {{'fir.do_concurrent.loop' op expects the same number of induction variables: 2 as bound and step values: 1}}
   fir.do_concurrent {
-    "fir.do_concurrent.loop"(%arg0, %arg1, %arg0) <{operandSegmentSizes = array<i32: 1, 1, 1, 0>}> ({
+    "fir.do_concurrent.loop"(%arg0, %arg1, %arg0) <{operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>}> ({
     ^bb0(%arg3: index, %arg4: index):
       %tmp = "fir.alloca"() <{in_type = i32, operandSegmentSizes = array<i32: 0, 0>}> : () -> !fir.ref<i32>
     }) : (index, index, index) -> ()
@@ -1234,7 +1234,7 @@ func.func @dc_invalid_ind_var(%arg0: index, %arg1: index) {
 func.func @dc_invalid_ind_var_type(%arg0: index, %arg1: index) {
   // expected-error@+2 {{'fir.do_concurrent.loop' op expects arguments for the induction variable to be of index type}}
   fir.do_concurrent {
-    "fir.do_concurrent.loop"(%arg0, %arg1, %arg0) <{operandSegmentSizes = array<i32: 1, 1, 1, 0>}> ({
+    "fir.do_concurrent.loop"(%arg0, %arg1, %arg0) <{operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>}> ({
     ^bb0(%arg3: i32):
       %tmp = "fir.alloca"() <{in_type = i32, operandSegmentSizes = array<i32: 0, 0>}> : () -> !fir.ref<i32>
     }) : (index, index, index) -> ()
@@ -1248,7 +1248,7 @@ func.func @dc_invalid_reduction(%arg0: index, %arg1: index) {
   %sum = fir.alloca i32
   // expected-error@+2 {{'fir.do_concurrent.loop' op mismatch in number of reduction variables and reduction attributes}}
   fir.do_concurrent {
-    "fir.do_concurrent.loop"(%arg0, %arg1, %arg0, %sum) <{operandSegmentSizes = array<i32: 1, 1, 1, 1>}> ({
+    "fir.do_concurrent.loop"(%arg0, %arg1, %arg0, %sum) <{operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>}> ({
     ^bb0(%arg3: index):
       %tmp = "fir.alloca"() <{in_type = i32, operandSegmentSizes = array<i32: 0, 0>}> : () -> !fir.ref<i32>
     }) : (index, index, index, !fir.ref<i32>) -> ()
