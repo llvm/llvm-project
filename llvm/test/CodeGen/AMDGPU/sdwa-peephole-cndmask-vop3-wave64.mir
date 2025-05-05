@@ -13,8 +13,9 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; CHECK-NEXT: $vcc = V_CMP_EQ_U32_e64 undef [[DEF]], 1, implicit $exec
+    ; CHECK-NEXT: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 undef [[DEF]], 1, implicit $exec
     ; CHECK-NEXT: [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 16, undef [[DEF1]], implicit $exec
+    ; CHECK-NEXT: $vcc = COPY killed [[V_CMP_EQ_U32_e64_]]
     ; CHECK-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     ; CHECK-NEXT: [[V_CNDMASK_B32_sdwa:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_sdwa 0, [[V_MOV_B32_e32_]], 0, undef [[DEF1]], 0, 6, 0, 6, 5, implicit $vcc, implicit $exec
     ; CHECK-NEXT: $vgpr0 = COPY [[V_CNDMASK_B32_sdwa]]
@@ -40,8 +41,9 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:sreg_32_xm0_xexec = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; CHECK-NEXT: $vcc = V_CMP_CLASS_F32_e64 2, undef [[DEF]], 1, implicit $exec
+    ; CHECK-NEXT: [[V_CMP_CLASS_F32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_CLASS_F32_e64 2, undef [[DEF]], 1, implicit $exec
     ; CHECK-NEXT: [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 16, undef [[DEF1]], implicit $exec
+    ; CHECK-NEXT: $vcc = COPY killed [[V_CMP_CLASS_F32_e64_]]
     ; CHECK-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     ; CHECK-NEXT: [[V_CNDMASK_B32_sdwa:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_sdwa 0, [[V_MOV_B32_e32_]], 0, undef [[DEF1]], 0, 6, 0, 6, 5, implicit $vcc, implicit $exec
     ; CHECK-NEXT: $vgpr0 = COPY [[V_CNDMASK_B32_sdwa]]

@@ -1065,11 +1065,9 @@ void SIPeepholeSDWA::pseudoOpConvertToVOP2(MachineInstr &MI,
 
 /// Try to convert an \p MI in VOP3 which takes an src2 carry-in
 /// operand into the corresponding VOP2 form which expects the
-/// argument in VCC. To this end, either try to change the definition
-/// of the carry-in operand to write to VCC or add an instruction that
-/// copies from the carry-in to VCC.  The conversion will only be
-/// applied if \p MI can be shrunk to VOP2 and if VCC can be proven to
-/// be dead before \p MI.
+/// argument in VCC. To this end, add an copy from the carry-in to
+/// VCC.  The conversion will only be applied if \p MI can be shrunk
+/// to VOP2 and if VCC can be proven to be dead before \p MI.
 void SIPeepholeSDWA::convertVcndmaskToVOP2(MachineInstr &MI,
                                            const GCNSubtarget &ST) const {
   assert(MI.getOpcode() == AMDGPU::V_CNDMASK_B32_e64);
@@ -1099,16 +1097,7 @@ void SIPeepholeSDWA::convertVcndmaskToVOP2(MachineInstr &MI,
     return;
   }
 
-  // Change destination of compare instruction to VCC
-  // or copy to VCC if carry-in is not a compare inst.
-  if (TII->isVOP3(*CarryDef) &&
-      TII->isVOPC(AMDGPU::getVOPe32(CarryDef->getOpcode())) &&
-      MRI->hasOneUse(CarryIn.getReg()))
-    CarryDef->substituteRegister(CarryIn.getReg(), Vcc, 0, *TRI);
-  else {
-    BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(AMDGPU::COPY), Vcc)
-        .add(CarryIn);
-  }
+  BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(AMDGPU::COPY), Vcc).add(CarryIn);
 
   auto Converted = BuildMI(MBB, MI, MI.getDebugLoc(),
                            TII->get(AMDGPU::getVOPe32(MI.getOpcode())))

@@ -1503,13 +1503,13 @@ define amdgpu_kernel void @v_cttz_i32_sel_ne_bitwidth(ptr addrspace(1) noalias %
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, 0xff
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    global_load_ubyte v1, v0, s[2:3]
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-GISEL-NEXT:    v_or_b32_e32 v2, 0x100, v1
+; GFX9-GISEL-NEXT:    v_or_b32_e32 v3, 0x100, v1
 ; GFX9-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
-; GFX9-GISEL-NEXT:    v_ffbl_b32_e32 v1, v2
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, 0xff
+; GFX9-GISEL-NEXT:    v_ffbl_b32_e32 v1, v3
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_sdwa v1, v1, v2, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX9-GISEL-NEXT:    global_store_byte v0, v1, s[0:1]
 ; GFX9-GISEL-NEXT:    s_endpgm
@@ -1604,6 +1604,7 @@ define amdgpu_kernel void @v_cttz_i32_sel_ne_bitwidth(ptr addrspace(1) noalias %
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v3, 0xffff
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    global_load_ubyte v1, v0, s[2:3]
 ; GFX9-GISEL-NEXT:    global_load_ubyte v2, v0, s[2:3] offset:1
@@ -1612,8 +1613,7 @@ define amdgpu_kernel void @v_cttz_i32_sel_ne_bitwidth(ptr addrspace(1) noalias %
 ; GFX9-GISEL-NEXT:    v_or_b32_e32 v2, 0x10000, v1
 ; GFX9-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
 ; GFX9-GISEL-NEXT:    v_ffbl_b32_e32 v1, v2
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, 0xffff
-; GFX9-GISEL-NEXT:    v_cndmask_b32_sdwa v1, v1, v2, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX9-GISEL-NEXT:    v_cndmask_b32_sdwa v1, v1, v3, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX9-GISEL-NEXT:    global_store_short v0, v1, s[0:1]
 ; GFX9-GISEL-NEXT:    s_endpgm
   %val = load i16, ptr addrspace(1) %arrayidx, align 1
