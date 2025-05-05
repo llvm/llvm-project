@@ -205,7 +205,7 @@ C Language Changes
   ``-Wunterminated-string-initialization``. However, this diagnostic is not
   silenced by the ``nonstring`` attribute as these initializations are always
   incompatible with C++.
-- Added ``-Wjump-bypasses-init``, which is off by default and grouped under
+- Added ``-Wjump-misses-init``, which is off by default and grouped under
   ``-Wc++-compat``. It diagnoses when a jump (``goto`` to its label, ``switch``
   to its ``case``) will bypass the initialization of a local variable, which is
   invalid in C++.
@@ -241,6 +241,7 @@ C2y Feature Support
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
+- Clang now accepts ``-std=iso9899:2024`` as an alias for C23.
 - Added ``__builtin_c23_va_start()`` for compatibility with GCC and to enable
   better diagnostic behavior for the ``va_start()`` macro in C23 and later.
   This also updates the definition of ``va_start()`` in ``<stdarg.h>`` to use
@@ -254,7 +255,10 @@ C23 Feature Support
 - Implemented `WG14 N3037 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3037.pdf>`_
   which allows tag types to be redefined within the same translation unit so
   long as both definitions are structurally equivalent (same tag types, same
-  tag names, same tag members, etc).
+  tag names, same tag members, etc). As a result of this paper, ``-Wvisibility``
+  is no longer diagnosed in C23 if the parameter is a complete tag type (it
+  does still fire when the parameter is an incomplete tag type as that cannot
+  be completed).
 - Fixed a failed assertion with an invalid parameter to the ``#embed``
   directive. Fixes #GH126940.
 
@@ -550,7 +554,9 @@ Bug Fixes in This Version
 - Fixed visibility calculation for template functions. (#GH103477)
 - Fixed a bug where an attribute before a ``pragma clang attribute`` or
   ``pragma clang __debug`` would cause an assertion. Instead, this now diagnoses
-  the invalid attribute location appropriately.  (#GH137861)
+  the invalid attribute location appropriately. (#GH137861)
+- Fixed a crash when a malformed ``_Pragma`` directive appears as part of an 
+  ``#include`` directive. (#GH138094)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -798,6 +804,10 @@ libclang
 
 - Fixed a buffer overflow in ``CXString`` implementation. The fix may result in
   increased memory allocation.
+
+- Deprecate ``clang_Cursor_GetBinaryOpcode`` and ``clang_Cursor_getBinaryOpcodeStr``
+  implementations, which are duplicates of ``clang_getCursorBinaryOperatorKind``
+  and ``clang_getBinaryOperatorKindSpelling`` respectively.
 
 Code Completion
 ---------------
