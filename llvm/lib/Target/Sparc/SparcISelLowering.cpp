@@ -2614,7 +2614,6 @@ static SDValue LowerSINT_TO_FP(SDValue Op, SelectionDAG &DAG,
 static SDValue LowerFP_TO_UINT(SDValue Op, SelectionDAG &DAG,
                                const SparcTargetLowering &TLI,
                                bool hasHardQuad) {
-  SDLoc dl(Op);
   EVT VT = Op.getValueType();
 
   // Expand if it does not involve f128 or the target has support for
@@ -2635,7 +2634,6 @@ static SDValue LowerFP_TO_UINT(SDValue Op, SelectionDAG &DAG,
 static SDValue LowerUINT_TO_FP(SDValue Op, SelectionDAG &DAG,
                                const SparcTargetLowering &TLI,
                                bool hasHardQuad) {
-  SDLoc dl(Op);
   EVT OpVT = Op.getOperand(0).getValueType();
   assert(OpVT == MVT::i32 || OpVT == MVT::i64);
 
@@ -3158,7 +3156,6 @@ static SDValue LowerATOMIC_LOAD_STORE(SDValue Op, SelectionDAG &DAG) {
 SDValue SparcTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                      SelectionDAG &DAG) const {
   unsigned IntNo = Op.getConstantOperandVal(0);
-  SDLoc dl(Op);
   switch (IntNo) {
   default: return SDValue();    // Don't custom lower most intrinsics.
   case Intrinsic::thread_pointer: {
