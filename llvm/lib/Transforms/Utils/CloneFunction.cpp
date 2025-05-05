@@ -59,17 +59,28 @@ MetadataPredicate createIdentityMDPredicate(const Function &F,
     return [](const Metadata *MD) { return false; };
 
   DISubprogram *SPClonedWithinModule = F.getSubprogram();
+
+  // Don't clone inlined subprograms.
+  auto ShouldKeep = [SPClonedWithinModule](const DISubprogram *SP) -> bool {
+    return SP != SPClonedWithinModule;
+  };
+
   return [=](const Metadata *MD) {
     // Avoid cloning types, compile units, and (other) subprograms.
     if (isa<DICompileUnit>(MD) || isa<DIType>(MD))
       return true;
 
     if (auto *SP = dyn_cast<DISubprogram>(MD))
-      return SP != SPClonedWithinModule;
+      return ShouldKeep(SP);
 
     // If a subprogram isn't going to be cloned skip its lexical blocks as well.
     if (auto *LScope = dyn_cast<DILocalScope>(MD))
-      return LScope->getSubprogram() != SPClonedWithinModule;
+      return ShouldKeep(LScope->getSubprogram());
+
+    // Avoid cloning local variables of subprograms that won't be cloned.
+    if (auto *DV = dyn_cast<DILocalVariable>(MD))
+      if (auto *S = dyn_cast_or_null<DILocalScope>(DV->getScope()))
+        return ShouldKeep(S->getSubprogram());
 
     return false;
   };
