@@ -313,7 +313,7 @@ target datalayout = "e-m-i64:64"
 ; // -----
 
 ; CHECK:      <unknown>
-; CHECK-SAME: incompatible call and callee types: '!llvm.func<void (i64)>' and '!llvm.func<void (ptr)>'
+; CHECK-SAME: warning: incompatible call and callee types: '!llvm.func<void (i64)>' and '!llvm.func<void (ptr)>'
 define void @incompatible_call_and_callee_types() {
   call void @callee(i64 0)
   ret void
@@ -324,7 +324,7 @@ declare void @callee(ptr)
 ; // -----
 
 ; CHECK:      <unknown>
-; CHECK-SAME: incompatible call and callee types: '!llvm.func<void ()>' and '!llvm.func<i32 ()>'
+; CHECK-SAME: warning: incompatible call and callee types: '!llvm.func<void ()>' and '!llvm.func<i32 ()>'
 define void @f() personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @g() to label %bb1 unwind label %bb2
