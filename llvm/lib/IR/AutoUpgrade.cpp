@@ -4614,6 +4614,9 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
         Ret = Builder.CreateInsertVector(RetTy, Ret, V, I * MinElts);
       }
       NewCall = dyn_cast<CallInst>(Ret);
+    } else {
+      DefaultCase();
+      return;
     }
     break;
   }
@@ -5117,11 +5120,9 @@ bool llvm::UpgradeDebugInfo(Module &M) {
     if (!BrokenDebugInfo)
       // Everything is ok.
       return false;
-    else {
-      // Diagnose malformed debug info.
-      DiagnosticInfoIgnoringInvalidDebugMetadata Diag(M);
-      M.getContext().diagnose(Diag);
-    }
+    // Diagnose malformed debug info.
+    DiagnosticInfoIgnoringInvalidDebugMetadata Diag(M);
+    M.getContext().diagnose(Diag);
   }
   bool Modified = StripDebugInfo(M);
   if (Modified && Version != DEBUG_METADATA_VERSION) {
