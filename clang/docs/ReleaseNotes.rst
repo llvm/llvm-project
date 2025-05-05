@@ -799,6 +799,10 @@ libclang
 - Fixed a buffer overflow in ``CXString`` implementation. The fix may result in
   increased memory allocation.
 
+- Deprecate ``clang_Cursor_GetBinaryOpcode`` and ``clang_Cursor_getBinaryOpcodeStr``
+  implementations, which are duplicates of ``clang_getCursorBinaryOperatorKind``
+  and ``clang_getBinaryOperatorKindSpelling`` respectively.
+
 Code Completion
 ---------------
 
