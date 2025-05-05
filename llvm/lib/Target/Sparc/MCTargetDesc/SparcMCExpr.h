@@ -21,35 +21,20 @@ namespace llvm {
 
 class StringRef;
 class SparcMCExpr : public MCTargetExpr {
-public:
-  enum Specifier {
-    VK_None,
-    VK_LO = 200, // larger than any relocation type
-    VK_HI,
-  };
-
 private:
-  const Specifier specifier;
+  const uint16_t specifier;
   const MCExpr *Expr;
 
-  explicit SparcMCExpr(Specifier S, const MCExpr *Expr)
+  explicit SparcMCExpr(uint16_t S, const MCExpr *Expr)
       : specifier(S), Expr(Expr) {}
 
 public:
-  /// @name Construction
-  /// @{
-
   static const SparcMCExpr *create(uint16_t S, const MCExpr *Expr,
                                    MCContext &Ctx);
-  /// @}
-  /// @name Accessors
-  /// @{
-
-  Specifier getSpecifier() const { return specifier; }
+  uint16_t getSpecifier() const { return specifier; }
   const MCExpr *getSubExpr() const { return Expr; }
   uint16_t getFixupKind() const;
 
-  /// @}
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
   bool evaluateAsRelocatableImpl(MCValue &Res,
                                  const MCAssembler *Asm) const override;
@@ -62,8 +47,8 @@ public:
     return E->getKind() == MCExpr::Target;
   }
 
-  static Specifier parseSpecifier(StringRef name);
-  static StringRef getSpecifierName(Specifier S);
+  static uint16_t parseSpecifier(StringRef name);
+  static StringRef getSpecifierName(uint16_t S);
 };
 
 } // end namespace llvm.
