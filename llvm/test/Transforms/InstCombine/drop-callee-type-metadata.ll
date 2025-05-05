@@ -1,7 +1,7 @@
 ;; Test if the callee_type metadata is dropped when it is attached
 ;; to a direct function call during instcombine.
 
-; RUN: opt < %s -passes="instcombine" -disable-verify -S | FileCheck %s
+; RUN: opt -passes="instcombine" -S < %s | FileCheck %s
 
 define i32 @_Z3barv() local_unnamed_addr !type !3 {
 entry:

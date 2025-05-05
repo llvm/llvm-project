@@ -1,7 +1,7 @@
 ;; Test if the callee_type metadata is dropped when it is
 ;; is mapped to a direct function call from an indirect call during inlining.
 
-; RUN: opt < %s -passes="inline" -disable-verify -S | FileCheck %s
+; RUN: opt -passes="inline" -S < %s | FileCheck %s
 
 define i32 @_Z13call_indirectPFicEc(ptr %func, i8 %x) local_unnamed_addr !type !0 {
 entry:
