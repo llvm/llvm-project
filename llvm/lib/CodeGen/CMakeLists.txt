@@ -228,6 +228,7 @@ add_llvm_component_library(LLVMCodeGen
   StackProtector.cpp
   StackSlotColoring.cpp
   StaticDataSplitter.cpp
+  StaticDataAnnotator.cpp
   SwiftErrorValueTracking.cpp
   SwitchLoweringUtils.cpp
   TailDuplication.cpp

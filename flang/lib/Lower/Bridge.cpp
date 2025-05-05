@@ -948,13 +948,20 @@ public:
       std::function<void(const Fortran::semantics::Symbol &, bool)>
           insertSymbols = [&](const Fortran::semantics::Symbol &oriSymbol,
                               bool collectSymbol) {
-            if (collectSymbol && oriSymbol.test(flag))
+            if (collectSymbol && oriSymbol.test(flag)) {
               symbolSet.insert(&oriSymbol);
-            else if (checkHostAssociatedSymbols)
+            } else if (const auto *commonDetails =
+                           oriSymbol.detailsIf<
+                               Fortran::semantics::CommonBlockDetails>()) {
+              for (const auto &mem : commonDetails->objects())
+                if (collectSymbol && mem->test(flag))
+                  symbolSet.insert(&(*mem).GetUltimate());
+            } else if (checkHostAssociatedSymbols) {
               if (const auto *details{
                       oriSymbol
                           .detailsIf<Fortran::semantics::HostAssocDetails>()})
                 insertSymbols(details->symbol(), true);
+            }
           };
       insertSymbols(sym, collectSymbols);
     };
@@ -1748,7 +1755,8 @@ private:
           // tags all result variables with one of the largest types to allow
           // them to share the same storage. Convert this to the actual type.
           if (resultRef.getType() != resultRefType)
-            resultRef = builder->createConvert(loc, resultRefType, resultRef);
+            resultRef = builder->createConvertWithVolatileCast(
+                loc, resultRefType, resultRef);
           return builder->create<fir::LoadOp>(loc, resultRef);
         });
     genExitRoutine(false, resultVal);
@@ -2261,6 +2269,23 @@ private:
                 uja = genLoopUnrollAndJamAttr(u.v);
                 has_attrs = true;
               },
+              [&](const Fortran::parser::CompilerDirective::NoVector &u) {
+                mlir::BoolAttr trueAttr =
+                    mlir::BoolAttr::get(builder->getContext(), true);
+                va = mlir::LLVM::LoopVectorizeAttr::get(builder->getContext(),
+                                                        /*disable=*/trueAttr,
+                                                        {}, {}, {}, {}, {}, {});
+                has_attrs = true;
+              },
+              [&](const Fortran::parser::CompilerDirective::NoUnroll &u) {
+                ua = genLoopUnrollAttr(/*unrollingFactor=*/0);
+                has_attrs = true;
+              },
+              [&](const Fortran::parser::CompilerDirective::NoUnrollAndJam &u) {
+                uja = genLoopUnrollAndJamAttr(/*unrollingFactor=*/0);
+                has_attrs = true;
+              },
+
               [&](const auto &) {}},
           dir->u);
     }
@@ -2925,6 +2950,15 @@ private:
             [&](const Fortran::parser::CompilerDirective::UnrollAndJam &) {
               attachDirectiveToLoop(dir, &eval);
             },
+            [&](const Fortran::parser::CompilerDirective::NoVector &) {
+              attachDirectiveToLoop(dir, &eval);
+            },
+            [&](const Fortran::parser::CompilerDirective::NoUnroll &) {
+              attachDirectiveToLoop(dir, &eval);
+            },
+            [&](const Fortran::parser::CompilerDirective::NoUnrollAndJam &) {
+              attachDirectiveToLoop(dir, &eval);
+            },
             [&](const auto &) {}},
         dir.u);
   }
@@ -3064,7 +3098,7 @@ private:
 
     llvm::SmallVector<mlir::Value> gridValues;
     llvm::SmallVector<mlir::Value> blockValues;
-    mlir::Value streamValue;
+    mlir::Value streamAddr;
 
     if (launchConfig) {
       const std::list<Fortran::parser::CUFKernelDoConstruct::StarOrExpr> &grid =
@@ -3097,10 +3131,8 @@ private:
       }
 
       if (stream)
-        streamValue = builder->createConvert(
-            loc, builder->getI32Type(),
-            fir::getBase(
-                genExprValue(*Fortran::semantics::GetExpr(*stream), stmtCtx)));
+        streamAddr = fir::getBase(
+            genExprAddr(*Fortran::semantics::GetExpr(*stream), stmtCtx));
     }
 
     const auto &outerDoConstruct =
@@ -3176,13 +3208,11 @@ private:
           builder->restoreInsertionPoint(insPt);
         }
 
-        // Create the hlfir.declare operation using the symbol's name
-        auto declareOp = builder->create<hlfir::DeclareOp>(
-            loc, ivValue, toStringRef(name.symbol->name()));
-        ivValue = declareOp.getResult(0);
-
         // Bind the symbol to the declared variable
         bindSymbol(*name.symbol, ivValue);
+        Fortran::lower::SymbolBox hsb = localSymbols.lookupSymbol(*name.symbol);
+        fir::ExtendedValue extIvValue = symBoxToExtendedValue(hsb);
+        ivValue = fir::getBase(extIvValue);
         ivValues.push_back(ivValue);
         ivTypes.push_back(idxTy);
         ivLocs.push_back(loc);
@@ -3236,7 +3266,7 @@ private:
     }
 
     auto op = builder->create<cuf::KernelOp>(
-        loc, gridValues, blockValues, streamValue, lbs, ubs, steps, n,
+        loc, gridValues, blockValues, streamAddr, lbs, ubs, steps, n,
         mlir::ValueRange(reduceOperands), builder->getArrayAttr(reduceAttrs));
     builder->createBlock(&op.getRegion(), op.getRegion().end(), ivTypes,
                          ivLocs);
@@ -3703,10 +3733,11 @@ private:
           builder->createMinusOneInteger(loc, builder->getIndexType())};
       mlir::Value baseAddr =
           hlfir::genVariableRawAddress(loc, *builder, selector);
+      const bool isVolatile = fir::isa_volatile_type(selector.getType());
       mlir::Type eleType =
           fir::unwrapSequenceType(fir::unwrapRefType(baseAddr.getType()));
-      mlir::Type rank1Type =
-          fir::ReferenceType::get(builder->getVarLenSeqTy(eleType, 1));
+      mlir::Type rank1Type = fir::ReferenceType::get(
+          builder->getVarLenSeqTy(eleType, 1), isVolatile);
       baseAddr = builder->createConvert(loc, rank1Type, baseAddr);
       if (selector.isCharacter()) {
         mlir::Value len = hlfir::genCharLength(loc, *builder, selector);
@@ -3726,7 +3757,8 @@ private:
           mlir::cast<fir::BaseBoxType>(fir::unwrapRefType(selector.getType()));
       mlir::Type newBoxType = boxTy.getBoxTypeWithNewShape(rank);
       if (fir::isa_ref_type(selector.getType()))
-        newBoxType = fir::ReferenceType::get(newBoxType);
+        newBoxType = fir::ReferenceType::get(
+            newBoxType, fir::isa_volatile_type(selector.getType()));
       // Give rank info to value via cast, and get rid of the box if not needed
       // (simple scalars, contiguous arrays... This is done by
       // translateVariableToExtendedValue).
@@ -5462,8 +5494,9 @@ private:
         // return, PassBy::AddressAndLength should be retired.
         mlir::Location loc = toLocation();
         fir::factory::CharacterExprHelper charHelp{*builder, loc};
-        mlir::Value box =
-            charHelp.createEmboxChar(arg.firArgument, arg.firLength);
+        mlir::Value casted =
+            builder->createVolatileCast(loc, false, arg.firArgument);
+        mlir::Value box = charHelp.createEmboxChar(casted, arg.firLength);
         mapBlockArgToDummyOrResult(arg.entity->get(), box, isResult);
       } else {
         if (arg.entity.has_value()) {
@@ -5477,7 +5510,10 @@ private:
     for (const Fortran::lower::CalleeInterface::PassedEntity &arg :
          callee.getPassedArguments())
       mapPassedEntity(arg);
-    if (lowerToHighLevelFIR() && !callee.getPassedArguments().empty()) {
+
+    // Always generate fir.dummy_scope even if there are no arguments.
+    // It is currently used to create proper TBAA forest.
+    if (lowerToHighLevelFIR()) {
       mlir::Value scopeOp = builder->create<fir::DummyScopeOp>(toLocation());
       setDummyArgsScope(scopeOp);
     }
@@ -5967,10 +6003,27 @@ private:
           Fortran::lower::pft::getScopeVariableListMap(mod);
       for (const auto &var : Fortran::lower::pft::getScopeVariableList(
                mod.getScope(), scopeVariableListMap)) {
+
         // Only define the variables owned by this module.
         const Fortran::semantics::Scope *owningScope = var.getOwningScope();
-        if (!owningScope || mod.getScope() == *owningScope)
-          Fortran::lower::defineModuleVariable(*this, var);
+        if (owningScope && mod.getScope() != *owningScope)
+          continue;
+
+        // Very special case: The value of numeric_storage_size depends on
+        // compilation options and therefore its value is not yet known when
+        // building the builtins runtime. Instead, the parameter is folding a
+        // __numeric_storage_size() expression which is loaded into the user
+        // program. For the iso_fortran_env object file, omit the symbol as it
+        // is never used.
+        if (var.hasSymbol()) {
+          const Fortran::semantics::Symbol &sym = var.getSymbol();
+          const Fortran::semantics::Scope &owner = sym.owner();
+          if (sym.name() == "numeric_storage_size" && owner.IsModule() &&
+              DEREF(owner.symbol()).name() == "iso_fortran_env")
+            continue;
+        }
+
+        Fortran::lower::defineModuleVariable(*this, var);
       }
       for (auto &eval : mod.evaluationList)
         genFIR(eval);

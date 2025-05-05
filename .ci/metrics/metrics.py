@@ -21,7 +21,7 @@ SCRAPE_INTERVAL_SECONDS = 5 * 60
 # Lists the Github workflows we want to track. Maps the Github job name to
 # the metric name prefix in grafana.
 # This metric name is also used as a key in the job->name map.
-GITHUB_WORKFLOW_TO_TRACK = {"LLVM Premerge Checks": "github_llvm_premerge_checks"}
+GITHUB_WORKFLOW_TO_TRACK = {"CI Checks": "github_llvm_premerge_checks"}
 
 # Lists the Github jobs to track for a given workflow. The key is the stable
 # name (metric name) of the workflow (see GITHUB_WORKFLOW_TO_TRACK).
@@ -29,8 +29,8 @@ GITHUB_WORKFLOW_TO_TRACK = {"LLVM Premerge Checks": "github_llvm_premerge_checks
 # name.
 GITHUB_JOB_TO_TRACK = {
     "github_llvm_premerge_checks": {
-        "Linux Premerge Checks (Test Only - Please Ignore Results)": "premerge_linux",
-        "Windows Premerge Checks (Test Only - Please Ignore Results)": "premerge_windows",
+        "Build and Test Linux (Test Only - Please Ignore Results)": "premerge_linux",
+        "Build and Test Windows (Test Only - Please Ignore Results)": "premerge_windows",
     }
 }
 
@@ -43,7 +43,7 @@ GITHUB_JOB_TO_TRACK = {
 # This means we essentially have a list of workflows sorted by creation date,
 # and that's all we can deduce from it. So for each iteration, we'll blindly
 # process the last N workflows.
-GITHUB_WORKFLOWS_MAX_PROCESS_COUNT = 1000
+GITHUB_WORKFLOWS_MAX_PROCESS_COUNT = 2000
 # Second reason for the cut: reaching a workflow older than X.
 # This means we will miss long-tails (exceptional jobs running for more than
 # X hours), but that's also the case with the count cutoff above.
@@ -215,25 +215,14 @@ def buildkite_get_metrics(
             if job["name"] not in BUILDKITE_WORKFLOW_TO_TRACK:
                 continue
 
+            # Don't count canceled jobs.
+            if job["canceled_at"]:
+                continue
+
             created_at = dateutil.parser.isoparse(job["created_at"])
-            scheduled_at = (
-                created_at
-                if job["scheduled_at"] is None
-                else dateutil.parser.isoparse(job["scheduled_at"])
-            )
-            started_at = (
-                scheduled_at
-                if job["started_at"] is None
-                else dateutil.parser.isoparse(job["started_at"])
-            )
-            if job["canceled_at"] is None:
-                finished_at = (
-                    started_at
-                    if job["finished_at"] is None
-                    else dateutil.parser.isoparse(job["finished_at"])
-                )
-            else:
-                finished_at = dateutil.parser.isoparse(job["canceled_at"])
+            scheduled_at = dateutil.parser.isoparse(job["scheduled_at"])
+            started_at = dateutil.parser.isoparse(job["started_at"])
+            finished_at = dateutil.parser.isoparse(job["finished_at"])
 
             job_name = BUILDKITE_WORKFLOW_TO_TRACK[job["name"]]
             queue_time = (started_at - scheduled_at).seconds
@@ -292,6 +281,13 @@ def github_get_metrics(
     workflow_metrics = []
     queued_count = collections.Counter()
     running_count = collections.Counter()
+
+    # Initialize all the counters to 0 so we report 0 when no job is queued
+    # or running.
+    for wf_name, wf_metric_name in GITHUB_WORKFLOW_TO_TRACK.items():
+        for job_name, job_metric_name in GITHUB_JOB_TO_TRACK[wf_metric_name].items():
+            queued_count[wf_metric_name + "_" + job_metric_name] = 0
+            running_count[wf_metric_name + "_" + job_metric_name] = 0
 
     # The list of workflows this iteration will process.
     # MaxSize = GITHUB_WORKFLOWS_MAX_PROCESS_COUNT

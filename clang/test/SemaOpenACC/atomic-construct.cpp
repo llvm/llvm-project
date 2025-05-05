@@ -47,8 +47,29 @@ Struct &operator-(Struct&, Struct&);
 
 Struct S1, S2;
 
+struct NotCondition{} NC;
+
 template<typename T>
 T &getRValue();
+
+void IfClause(int x, int v) {
+  // expected-error@+1{{OpenACC 'seq' clause is not valid on 'atomic' directive}}
+#pragma acc atomic read seq
+  x = v;
+
+  // expected-error@+1{{expected '('}}
+#pragma acc atomic read if
+  x = v;
+
+  // expected-error@+1{{value of type 'struct NotCondition' is not contextually convertible to 'bool'}}
+#pragma acc atomic read if(NC)
+  x = v;
+
+  // expected-error@+2{{OpenACC 'if' clause cannot appear more than once on a 'atomic' directive}}
+  // expected-note@+1{{previous 'if' clause is here}}
+#pragma acc atomic read if(x) if (v)
+  x = v;
+}
 
 template<typename T>
 void AtomicReadTemplate(T LHS, T RHS) {

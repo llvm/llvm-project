@@ -26,8 +26,7 @@ class MCSymbol;
 class MCValue;
 class raw_ostream;
 class StringRef;
-
-using SectionAddrMap = DenseMap<const MCSection *, uint64_t>;
+class MCSymbolRefExpr;
 
 /// Base class for the full range of assembler expressions which are
 /// needed for parsing.
@@ -53,7 +52,7 @@ private:
   SMLoc Loc;
 
   bool evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm,
-                          const SectionAddrMap *Addrs, bool InSet) const;
+                          bool InSet) const;
 
 protected:
   explicit MCExpr(ExprKind Kind, SMLoc Loc, unsigned SubclassData = 0)
@@ -63,8 +62,7 @@ protected:
   }
 
   bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                 const MCFixup *Fixup,
-                                 const SectionAddrMap *Addrs, bool InSet) const;
+                                 bool InSet) const;
 
   unsigned getSubclassData() const { return SubclassData; }
 
@@ -83,7 +81,7 @@ public:
   /// @{
 
   void print(raw_ostream &OS, const MCAsmInfo *MAI,
-             bool InParens = false) const;
+             int SurroundingPrec = 0) const;
   void dump() const;
 
   /// Returns whether the given symbol is used anywhere in the expression or
@@ -98,8 +96,6 @@ public:
   ///
   /// \param Res - The absolute value, if evaluation succeeds.
   /// \return - True on success.
-  bool evaluateAsAbsolute(int64_t &Res, const MCAssembler &Asm,
-                          const SectionAddrMap &Addrs) const;
   bool evaluateAsAbsolute(int64_t &Res) const;
   bool evaluateAsAbsolute(int64_t &Res, const MCAssembler &Asm) const;
   bool evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm) const;
@@ -114,10 +110,8 @@ public:
   ///
   /// \param Res - The relocatable value, if evaluation succeeds.
   /// \param Asm - The assembler object to use for evaluating values.
-  /// \param Fixup - The Fixup object if available.
   /// \return - True on success.
-  bool evaluateAsRelocatable(MCValue &Res, const MCAssembler *Asm,
-                             const MCFixup *Fixup) const;
+  bool evaluateAsRelocatable(MCValue &Res, const MCAssembler *Asm) const;
 
   /// Try to evaluate the expression to the form (a - b + constant) where
   /// neither a nor b are variables.
@@ -133,6 +127,9 @@ public:
   MCFragment *findAssociatedFragment() const;
 
   /// @}
+
+  static bool evaluateSymbolicAdd(const MCAssembler *, bool, const MCValue &,
+                                  const MCValue &, MCValue &);
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const MCExpr &E) {
@@ -199,111 +196,17 @@ public:
   enum VariantKind : uint16_t {
     VK_None,
 
-    VK_GOT,
-    VK_GOTENT,
-    VK_GOTOFF,
-    VK_GOTREL,
-    VK_PCREL,
-    VK_GOTPCREL,
-    VK_GOTPCREL_NORELAX,
-    VK_GOTTPOFF,
-    VK_INDNTPOFF,
-    VK_NTPOFF,
-    VK_GOTNTPOFF,
-    VK_PLT,
-    VK_TLSGD,
-    VK_TLSLD,
-    VK_TLSLDM,
-    VK_TPOFF,
-    VK_DTPOFF,
-    VK_TLSCALL, // symbol(tlscall)
-    VK_TLSDESC, // symbol(tlsdesc)
-    VK_TLVP,    // Mach-O thread local variable relocations
-    VK_TLVPPAGE,
-    VK_TLVPPAGEOFF,
-    VK_PAGE,
-    VK_PAGEOFF,
-    VK_GOTPAGE,
-    VK_GOTPAGEOFF,
     VK_SECREL,
-    VK_SIZE,    // symbol@SIZE
     VK_WEAKREF, // The link between the symbols in .weakref foo, bar
-    VK_FUNCDESC,
-    VK_GOTFUNCDESC,
-    VK_GOTOFFFUNCDESC,
-    VK_TLSGD_FDPIC,
-    VK_TLSLDM_FDPIC,
-    VK_GOTTPOFF_FDPIC,
-
-    VK_X86_ABS8,
-    VK_X86_PLTOFF,
-
-    VK_ARM_NONE,
-    VK_ARM_GOT_PREL,
-    VK_ARM_TARGET1,
-    VK_ARM_TARGET2,
-    VK_ARM_PREL31,
-    VK_ARM_SBREL,  // symbol(sbrel)
-    VK_ARM_TLSLDO, // symbol(tlsldo)
-    VK_ARM_TLSDESCSEQ,
-
-    VK_AVR_NONE,
-    VK_AVR_LO8,
-    VK_AVR_HI8,
-    VK_AVR_HLO8,
-    VK_AVR_DIFF8,
-    VK_AVR_DIFF16,
-    VK_AVR_DIFF32,
-    VK_AVR_PM,
 
     VK_COFF_IMGREL32, // symbol@imgrel (image-relative)
 
-    VK_Hexagon_LO16,
-    VK_Hexagon_HI16,
-    VK_Hexagon_GPREL,
-    VK_Hexagon_GD_GOT,
-    VK_Hexagon_LD_GOT,
-    VK_Hexagon_GD_PLT,
-    VK_Hexagon_LD_PLT,
-    VK_Hexagon_IE,
-    VK_Hexagon_IE_GOT,
-
-    VK_WASM_TYPEINDEX, // Reference to a symbol's type (signature)
-    VK_WASM_TLSREL,    // Memory address relative to __tls_base
-    VK_WASM_MBREL,     // Memory address relative to __memory_base
-    VK_WASM_TBREL,     // Table index relative to __table_base
-    VK_WASM_GOT_TLS,   // Wasm global index of TLS symbol.
-    VK_WASM_FUNCINDEX, // Wasm function index.
-
-    VK_AMDGPU_GOTPCREL32_LO, // symbol@gotpcrel32@lo
-    VK_AMDGPU_GOTPCREL32_HI, // symbol@gotpcrel32@hi
-    VK_AMDGPU_REL32_LO,      // symbol@rel32@lo
-    VK_AMDGPU_REL32_HI,      // symbol@rel32@hi
-    VK_AMDGPU_REL64,         // symbol@rel64
-    VK_AMDGPU_ABS32_LO,      // symbol@abs32@lo
-    VK_AMDGPU_ABS32_HI,      // symbol@abs32@hi
-
-    VK_TPREL,
-    VK_DTPREL
+    FirstTargetSpecifier,
   };
 
 private:
   /// The symbol being referenced.
   const MCSymbol *Symbol;
-
-  // Subclass data stores VariantKind in bits 0..15 and HasSubsectionsViaSymbols
-  // in bit 16.
-  static const unsigned VariantKindBits = 16;
-  static const unsigned VariantKindMask = (1 << VariantKindBits) - 1;
-
-  // FIXME: Remove this bit.
-  static const unsigned HasSubsectionsViaSymbolsBit = 1 << VariantKindBits;
-
-  static unsigned encodeSubclassData(VariantKind Kind,
-                                     bool HasSubsectionsViaSymbols) {
-    return (unsigned)Kind |
-           (HasSubsectionsViaSymbols ? HasSubsectionsViaSymbolsBit : 0);
-  }
 
   explicit MCSymbolRefExpr(const MCSymbol *Symbol, VariantKind Kind,
                            const MCAsmInfo *MAI, SMLoc Loc = SMLoc());
@@ -319,6 +222,10 @@ public:
 
   static const MCSymbolRefExpr *create(const MCSymbol *Symbol, VariantKind Kind,
                                        MCContext &Ctx, SMLoc Loc = SMLoc());
+  static const MCSymbolRefExpr *create(const MCSymbol *Symbol, uint16_t Kind,
+                                       MCContext &Ctx, SMLoc Loc = SMLoc()) {
+    return MCSymbolRefExpr::create(Symbol, VariantKind(Kind), Ctx, Loc);
+  }
 
   /// @}
   /// \name Accessors
@@ -326,13 +233,11 @@ public:
 
   const MCSymbol &getSymbol() const { return *Symbol; }
 
-  VariantKind getKind() const {
-    return (VariantKind)(getSubclassData() & VariantKindMask);
-  }
-
-  bool hasSubsectionsViaSymbols() const {
-    return (getSubclassData() & HasSubsectionsViaSymbolsBit) != 0;
-  }
+  // Some targets encode the relocation specifier within SymA using
+  // MCSymbolRefExpr::SubclassData, which is copied to MCValue::Specifier,
+  // though this method is now deprecated.
+  VariantKind getKind() const { return VariantKind(getSubclassData()); }
+  uint16_t getSpecifier() const { return getSubclassData(); }
 
   /// @}
 
@@ -573,8 +478,8 @@ protected:
 
 public:
   virtual void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const = 0;
-  virtual bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                         const MCFixup *Fixup) const = 0;
+  virtual bool evaluateAsRelocatableImpl(MCValue &Res,
+                                         const MCAssembler *Asm) const = 0;
   // allow Target Expressions to be checked for equality
   virtual bool isEqualTo(const MCExpr *x) const { return false; }
   virtual bool isSymbolUsedInExpression(const MCSymbol *Sym) const {
@@ -585,8 +490,6 @@ public:
   virtual bool inlineAssignedExpr() const { return false; }
   virtual void visitUsedExpr(MCStreamer& Streamer) const = 0;
   virtual MCFragment *findAssociatedFragment() const = 0;
-
-  virtual void fixELFSymbolsInTLSFixups(MCAssembler &) const = 0;
 
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;

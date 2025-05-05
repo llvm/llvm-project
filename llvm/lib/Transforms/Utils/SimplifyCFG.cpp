@@ -120,11 +120,13 @@ static cl::opt<bool>
     HoistCommon("simplifycfg-hoist-common", cl::Hidden, cl::init(true),
                 cl::desc("Hoist common instructions up to the parent block"));
 
-static cl::opt<bool> HoistLoadsStoresWithCondFaulting(
-    "simplifycfg-hoist-loads-stores-with-cond-faulting", cl::Hidden,
-    cl::init(true),
-    cl::desc("Hoist loads/stores if the target supports "
-             "conditional faulting"));
+static cl::opt<bool> HoistLoadsWithCondFaulting(
+    "simplifycfg-hoist-loads-with-cond-faulting", cl::Hidden, cl::init(true),
+    cl::desc("Hoist loads if the target supports conditional faulting"));
+
+static cl::opt<bool> HoistStoresWithCondFaulting(
+    "simplifycfg-hoist-stores-with-cond-faulting", cl::Hidden, cl::init(true),
+    cl::desc("Hoist stores if the target supports conditional faulting"));
 
 static cl::opt<unsigned> HoistLoadsStoresWithCondFaultingThreshold(
     "hoist-loads-stores-with-cond-faulting-threshold", cl::Hidden, cl::init(6),
@@ -365,7 +367,7 @@ safeToMergeTerminators(Instruction *SI1, Instruction *SI2,
   BasicBlock *SI1BB = SI1->getParent();
   BasicBlock *SI2BB = SI2->getParent();
 
-  SmallPtrSet<BasicBlock *, 16> SI1Succs(succ_begin(SI1BB), succ_end(SI1BB));
+  SmallPtrSet<BasicBlock *, 16> SI1Succs(llvm::from_range, successors(SI1BB));
   bool Fail = false;
   for (BasicBlock *Succ : successors(SI2BB)) {
     if (!SI1Succs.count(Succ))
@@ -974,8 +976,8 @@ bool SimplifyCFGOpt::simplifyEqualityComparisonWithOnlyPredecessor(
     SwitchInstProfUpdateWrapper SI = *cast<SwitchInst>(TI);
     // Okay, TI has cases that are statically dead, prune them away.
     SmallPtrSet<Constant *, 16> DeadCases;
-    for (unsigned i = 0, e = PredCases.size(); i != e; ++i)
-      DeadCases.insert(PredCases[i].Value);
+    for (const ValueEqualityComparisonCase &Case : PredCases)
+      DeadCases.insert(Case.Value);
 
     LLVM_DEBUG(dbgs() << "Threading pred instr: " << *Pred->getTerminator()
                       << "Through successor TI: " << *TI);
@@ -1305,14 +1307,14 @@ bool SimplifyCFGOpt::performValueComparisonIntoPredecessorFolding(
 
     // Okay, now we know which constants were sent to BB from the
     // predecessor.  Figure out where they will all go now.
-    for (unsigned i = 0, e = BBCases.size(); i != e; ++i)
-      if (PTIHandled.count(BBCases[i].Value)) {
+    for (const ValueEqualityComparisonCase &Case : BBCases)
+      if (PTIHandled.count(Case.Value)) {
         // If this is one we are capable of getting...
         if (PredHasWeights || SuccHasWeights)
-          Weights.push_back(WeightsForHandled[BBCases[i].Value]);
-        PredCases.push_back(BBCases[i]);
-        ++NewSuccessors[BBCases[i].Dest];
-        PTIHandled.erase(BBCases[i].Value); // This constant is taken care of
+          Weights.push_back(WeightsForHandled[Case.Value]);
+        PredCases.push_back(Case);
+        ++NewSuccessors[Case.Dest];
+        PTIHandled.erase(Case.Value); // This constant is taken care of
       }
 
     // If there are any constants vectored to BB that TI doesn't handle,
@@ -1330,7 +1332,7 @@ bool SimplifyCFGOpt::performValueComparisonIntoPredecessorFolding(
   // successors.
   SmallPtrSet<BasicBlock *, 2> SuccsOfPred;
   if (DTU) {
-    SuccsOfPred = {succ_begin(Pred), succ_end(Pred)};
+    SuccsOfPred = {llvm::from_range, successors(Pred)};
     Updates.reserve(Updates.size() + NewSuccessors.size());
   }
   for (const std::pair<BasicBlock *, int /*Num*/> &NewSuccessor :
@@ -1682,22 +1684,22 @@ static bool areIdenticalUpToCommutativity(const Instruction *I1,
 static void hoistConditionalLoadsStores(
     BranchInst *BI,
     SmallVectorImpl<Instruction *> &SpeculatedConditionalLoadsStores,
-    std::optional<bool> Invert) {
+    std::optional<bool> Invert, Instruction *Sel) {
   auto &Context = BI->getParent()->getContext();
   auto *VCondTy = FixedVectorType::get(Type::getInt1Ty(Context), 1);
   auto *Cond = BI->getOperand(0);
   // Construct the condition if needed.
   BasicBlock *BB = BI->getParent();
-  IRBuilder<> Builder(
-      Invert.has_value() ? SpeculatedConditionalLoadsStores.back() : BI);
   Value *Mask = nullptr;
   Value *MaskFalse = nullptr;
   Value *MaskTrue = nullptr;
   if (Invert.has_value()) {
+    IRBuilder<> Builder(Sel ? Sel : SpeculatedConditionalLoadsStores.back());
     Mask = Builder.CreateBitCast(
         *Invert ? Builder.CreateXor(Cond, ConstantInt::getTrue(Context)) : Cond,
         VCondTy);
   } else {
+    IRBuilder<> Builder(BI);
     MaskFalse = Builder.CreateBitCast(
         Builder.CreateXor(Cond, ConstantInt::getTrue(Context)), VCondTy);
     MaskTrue = Builder.CreateBitCast(Cond, VCondTy);
@@ -1723,13 +1725,20 @@ static void hoistConditionalLoadsStores(
       PHINode *PN = nullptr;
       Value *PassThru = nullptr;
       if (Invert.has_value())
-        for (User *U : I->users())
+        for (User *U : I->users()) {
           if ((PN = dyn_cast<PHINode>(U))) {
             PassThru = Builder.CreateBitCast(
                 PeekThroughBitcasts(PN->getIncomingValueForBlock(BB)),
                 FixedVectorType::get(Ty, 1));
-            break;
+          } else if (auto *Ins = cast<Instruction>(U);
+                     Sel && Ins->getParent() == BB) {
+            // This happens when store or/and a speculative instruction between
+            // load and store were hoisted to the BB. Make sure the masked load
+            // inserted before its use.
+            // We assume there's one of such use.
+            Builder.SetInsertPoint(Ins);
           }
+        }
       MaskedLoadStore = Builder.CreateMaskedLoad(
           FixedVectorType::get(Ty, 1), Op0, LI->getAlign(), Mask, PassThru);
       Value *NewLoadStore = Builder.CreateBitCast(MaskedLoadStore, Ty);
@@ -1768,19 +1777,21 @@ static void hoistConditionalLoadsStores(
 static bool isSafeCheapLoadStore(const Instruction *I,
                                  const TargetTransformInfo &TTI) {
   // Not handle volatile or atomic.
+  bool IsStore = false;
   if (auto *L = dyn_cast<LoadInst>(I)) {
-    if (!L->isSimple())
+    if (!L->isSimple() || !HoistLoadsWithCondFaulting)
       return false;
   } else if (auto *S = dyn_cast<StoreInst>(I)) {
-    if (!S->isSimple())
+    if (!S->isSimple() || !HoistStoresWithCondFaulting)
       return false;
+    IsStore = true;
   } else
     return false;
 
   // llvm.masked.load/store use i32 for alignment while load/store use i64.
   // That's why we have the alignment limitation.
   // FIXME: Update the prototype of the intrinsics?
-  return TTI.hasConditionalLoadStoreForType(getLoadStoreType(I)) &&
+  return TTI.hasConditionalLoadStoreForType(getLoadStoreType(I), IsStore) &&
          getLoadStoreAlignment(I) < Value::MaximumAlignment;
 }
 
@@ -2444,7 +2455,7 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
          canSinkInstructions(*LRI, PHIOperands)) {
     LLVM_DEBUG(dbgs() << "SINK: instruction can be sunk: " << *(*LRI)[0]
                       << "\n");
-    InstructionsToSink.insert((*LRI).begin(), (*LRI).end());
+    InstructionsToSink.insert_range(*LRI);
     ++ScanIdx;
     --LRI;
   }
@@ -2514,7 +2525,7 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
             dbgs() << "SINK: stopping here, too many PHIs would be created!\n");
         break;
       }
-      InstructionsProfitableToSink.insert((*LRI).begin(), (*LRI).end());
+      InstructionsProfitableToSink.insert_range(*LRI);
       --LRI;
       ++Idx;
     }
@@ -2710,7 +2721,7 @@ bool CompatibleSets::shouldBelongToSameSet(ArrayRef<InvokeInst *> Invokes) {
 
     // In the normal destination, the incoming values for these two `invoke`s
     // must be compatible.
-    SmallPtrSet<Value *, 16> EquivalenceSet(Invokes.begin(), Invokes.end());
+    SmallPtrSet<Value *, 16> EquivalenceSet(llvm::from_range, Invokes);
     if (!incomingValuesAreCompatible(
             NormalBB, {Invokes[0]->getParent(), Invokes[1]->getParent()},
             &EquivalenceSet))
@@ -3083,7 +3094,8 @@ static bool validateAndCostRequiredSelects(BasicBlock *BB, BasicBlock *ThenBB,
     if (ThenV == OrigV)
       continue;
 
-    Cost += TTI.getCmpSelInstrCost(Instruction::Select, PN.getType(), nullptr,
+    Cost += TTI.getCmpSelInstrCost(Instruction::Select, PN.getType(),
+                                   CmpInst::makeCmpResultType(PN.getType()),
                                    CmpInst::BAD_ICMP_PREDICATE, CostKind);
 
     // Don't convert to selects if we could remove undefined behavior instead.
@@ -3212,8 +3224,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   SmallVector<Instruction *, 4> SpeculatedDbgIntrinsics;
 
   unsigned SpeculatedInstructions = 0;
-  bool HoistLoadsStores = HoistLoadsStoresWithCondFaulting &&
-                          Options.HoistLoadsStoresWithCondFaulting;
+  bool HoistLoadsStores = Options.HoistLoadsStoresWithCondFaulting;
   SmallVector<Instruction *, 2> SpeculatedConditionalLoadsStores;
   Value *SpeculatedStoreValue = nullptr;
   StoreInst *SpeculatedStore = nullptr;
@@ -3308,6 +3319,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   // If we get here, we can hoist the instruction and if-convert.
   LLVM_DEBUG(dbgs() << "SPECULATIVELY EXECUTING BB" << *ThenBB << "\n";);
 
+  Instruction *Sel = nullptr;
   // Insert a select of the value of the speculated store.
   if (SpeculatedStoreValue) {
     IRBuilder<NoFolder> Builder(BI);
@@ -3318,6 +3330,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
       std::swap(TrueV, FalseV);
     Value *S = Builder.CreateSelect(
         BrCond, TrueV, FalseV, "spec.store.select", BI);
+    Sel = cast<Instruction>(S);
     SpeculatedStore->setOperand(0, S);
     SpeculatedStore->applyMergedLocation(BI->getDebugLoc(),
                                          SpeculatedStore->getDebugLoc());
@@ -3379,7 +3392,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   // In "RemoveDIs" non-instr debug-info mode, drop DbgVariableRecords attached
   // to these instructions, in the same way that dbg.value intrinsics are
   // dropped at the end of this block.
-  for (auto &It : make_range(ThenBB->begin(), ThenBB->end()))
+  for (auto &It : *ThenBB)
     for (DbgRecord &DR : make_early_inc_range(It.getDbgRecordRange()))
       // Drop all records except assign-kind DbgVariableRecords (dbg.assign
       // equivalent).
@@ -3390,7 +3403,8 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
              std::prev(ThenBB->end()));
 
   if (!SpeculatedConditionalLoadsStores.empty())
-    hoistConditionalLoadsStores(BI, SpeculatedConditionalLoadsStores, Invert);
+    hoistConditionalLoadsStores(BI, SpeculatedConditionalLoadsStores, Invert,
+                                Sel);
 
   // Insert selects and rewrite the PHI operands.
   IRBuilder<NoFolder> Builder(BI);
@@ -4074,9 +4088,7 @@ bool llvm::foldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
 
   Instruction *Cond = dyn_cast<Instruction>(BI->getCondition());
 
-  if (!Cond ||
-      (!isa<CmpInst>(Cond) && !isa<BinaryOperator>(Cond) &&
-       !isa<SelectInst>(Cond)) ||
+  if (!Cond || !isa<CmpInst, BinaryOperator, SelectInst, TruncInst>(Cond) ||
       Cond->getParent() != BB || !Cond->hasOneUse())
     return false;
 
@@ -5165,8 +5177,8 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(BranchInst *BI,
   SwitchInst *New = Builder.CreateSwitch(CompVal, DefaultBB, Values.size());
 
   // Add all of the 'cases' to the switch instruction.
-  for (unsigned i = 0, e = Values.size(); i != e; ++i)
-    New->addCase(Values[i], EdgeBB);
+  for (ConstantInt *Val : Values)
+    New->addCase(Val, EdgeBB);
 
   // We added edges from PI to the EdgeBB.  As such, if there were any
   // PHI nodes in EdgeBB, they need entries to be added corresponding to
@@ -5702,8 +5714,7 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
                                              IRBuilder<> &Builder) {
   assert(SI->getNumCases() > 1 && "Degenerate switch?");
 
-  bool HasDefault =
-      !isa<UnreachableInst>(SI->getDefaultDest()->getFirstNonPHIOrDbg());
+  bool HasDefault = !SI->defaultDestUnreachable();
 
   auto *BB = SI->getParent();
 
@@ -5866,8 +5877,7 @@ static bool eliminateDeadSwitchCases(SwitchInst *SI, DomTreeUpdater *DTU,
   // default destination becomes dead and we can remove it.  If we know some
   // of the bits in the value, we can use that to more precisely compute the
   // number of possible unique case values.
-  bool HasDefault =
-      !isa<UnreachableInst>(SI->getDefaultDest()->getFirstNonPHIOrDbg());
+  bool HasDefault = !SI->defaultDestUnreachable();
   const unsigned NumUnknownBits =
       Known.getBitWidth() - (Known.Zero | Known.One).popcount();
   assert(NumUnknownBits <= Known.getBitWidth());
@@ -6217,18 +6227,14 @@ static bool initializeUniqueCases(SwitchInst *SI, PHINode *&PHI,
   }
   // Find the default result value.
   SmallVector<std::pair<PHINode *, Constant *>, 1> DefaultResults;
-  BasicBlock *DefaultDest = SI->getDefaultDest();
   getCaseResults(SI, nullptr, SI->getDefaultDest(), &CommonDest, DefaultResults,
                  DL, TTI);
   // If the default value is not found abort unless the default destination
   // is unreachable.
   DefaultResult =
       DefaultResults.size() == 1 ? DefaultResults.begin()->second : nullptr;
-  if ((!DefaultResult &&
-       !isa<UnreachableInst>(DefaultDest->getFirstNonPHIOrDbg())))
-    return false;
 
-  return true;
+  return DefaultResult || SI->defaultDestUnreachable();
 }
 
 // Helper function that checks if it is possible to transform a switch with only
@@ -6447,9 +6453,7 @@ SwitchLookupTable::SwitchLookupTable(
 
   // Build up the table contents.
   SmallVector<Constant *, 64> TableContents(TableSize);
-  for (size_t I = 0, E = Values.size(); I != E; ++I) {
-    ConstantInt *CaseVal = Values[I].first;
-    Constant *CaseRes = Values[I].second;
+  for (const auto &[CaseVal, CaseRes] : Values) {
     assert(CaseRes->getType() == ValueType);
 
     uint64_t Idx = (CaseVal->getValue() - Offset->getValue()).getLimitedValue();
@@ -6935,7 +6939,7 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   // If the default destination is unreachable, or if the lookup table covers
   // all values of the conditional variable, branch directly to the lookup table
   // BB. Otherwise, check that the condition is within the case range.
-  bool DefaultIsReachable = !SI->defaultDestUndefined();
+  bool DefaultIsReachable = !SI->defaultDestUnreachable();
 
   bool TableHasHoles = (NumResults < TableSize);
 
@@ -7268,7 +7272,7 @@ static bool simplifySwitchOfPowersOfTwo(SwitchInst *SI, IRBuilder<> &Builder,
   // We perform this optimization only for switches with
   // unreachable default case.
   // This assumtion will save us from checking if `Condition` is a power of two.
-  if (!isa<UnreachableInst>(SI->getDefaultDest()->getFirstNonPHIOrDbg()))
+  if (!SI->defaultDestUnreachable())
     return false;
 
   // Check that switch cases are powers of two.
@@ -7350,7 +7354,7 @@ static bool simplifySwitchOfCmpIntrinsic(SwitchInst *SI, IRBuilderBase &Builder,
 
     assert(Missing.size() == 1 && "Should have one case left");
     Res = *Missing.begin();
-  } else if (SI->getNumCases() == 3 && SI->defaultDestUndefined()) {
+  } else if (SI->getNumCases() == 3 && SI->defaultDestUnreachable()) {
     // Normalize so that Succ is taken once and OtherSucc twice.
     Unreachable = SI->getDefaultDest();
     Succ = OtherSucc = nullptr;
@@ -7464,8 +7468,7 @@ template <> struct DenseMapInfo<const SwitchSuccWrapper *> {
     for (PHINode &Phi : BB->phis())
       PhiValsForBB.emplace_back((*SSW->PhiPredIVs)[&Phi][BB]);
 
-    return hash_combine(
-        BB, hash_combine_range(PhiValsForBB.begin(), PhiValsForBB.end()));
+    return hash_combine(BB, hash_combine_range(PhiValsForBB));
   }
   static bool isEqual(const SwitchSuccWrapper *LHS,
                       const SwitchSuccWrapper *RHS) {
@@ -8018,8 +8021,7 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
           hoistCommonCodeFromSuccessors(BI, !Options.HoistCommonInsts))
         return requestResimplify();
 
-      if (BI && HoistLoadsStoresWithCondFaulting &&
-          Options.HoistLoadsStoresWithCondFaulting &&
+      if (BI && Options.HoistLoadsStoresWithCondFaulting &&
           isProfitableToSpeculate(BI, std::nullopt, TTI)) {
         SmallVector<Instruction *, 2> SpeculatedConditionalLoadsStores;
         auto CanSpeculateConditionalLoadsStores = [&]() {
@@ -8042,7 +8044,7 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
 
         if (CanSpeculateConditionalLoadsStores()) {
           hoistConditionalLoadsStores(BI, SpeculatedConditionalLoadsStores,
-                                      std::nullopt);
+                                      std::nullopt, nullptr);
           return requestResimplify();
         }
       }

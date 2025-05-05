@@ -154,7 +154,6 @@ const NoteTag *taintOriginTrackerTag(CheckerContext &C,
   return C.getNoteTag([TaintedSymbols = std::move(TaintedSymbols),
                        TaintedArgs = std::move(TaintedArgs), CallLocation](
                           PathSensitiveBugReport &BR) -> std::string {
-    SmallString<256> Msg;
     // We give diagnostics only for taint related reports
     if (!BR.isInteresting(CallLocation) ||
         BR.getBugType().getCategory() != categories::TaintedData) {
@@ -1080,7 +1079,23 @@ static bool getPrintfFormatArgumentNum(const CallEvent &Call,
   const ArgIdxTy CallNumArgs = fromArgumentCount(Call.getNumArgs());
 
   for (const auto *Format : FDecl->specific_attrs<FormatAttr>()) {
+    // The format attribute uses 1-based parameter indexing, for example
+    // plain `printf(const char *fmt, ...)` would be annotated with
+    // `__format__(__printf__, 1, 2)`, so we need to subtract 1 to get a
+    // 0-based index. (This checker uses 0-based parameter indices.)
     ArgNum = Format->getFormatIdx() - 1;
+    // The format attribute also counts the implicit `this` parameter of
+    // methods, so e.g. in `SomeClass::method(const char *fmt, ...)` could be
+    // annotated with `__format__(__printf__, 2, 3)`. This checker doesn't
+    // count the implicit `this` parameter, so in this case we need to subtract
+    // one again.
+    // FIXME: Apparently the implementation of the format attribute doesn't
+    // support methods with an explicit object parameter, so we cannot
+    // implement proper support for that rare case either.
+    const CXXMethodDecl *MDecl = dyn_cast<CXXMethodDecl>(FDecl);
+    if (MDecl && !MDecl->isStatic())
+      ArgNum--;
+
     if ((Format->getType()->getName() == "printf") && CallNumArgs > ArgNum)
       return true;
   }

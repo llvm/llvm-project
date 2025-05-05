@@ -35,6 +35,8 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/StringSaver.h"
 #include <cassert>
 #include <numeric>
@@ -449,9 +451,7 @@ static void printAsyncDependencies(OpAsmPrinter &printer, Operation *op,
     return;
   if (asyncTokenType)
     printer << ' ';
-  printer << '[';
-  llvm::interleaveComma(asyncDependencies, printer);
-  printer << ']';
+  printer << llvm::interleaved_array(asyncDependencies);
 }
 
 // GPU Memory attributions functions shared by LaunchOp and GPUFuncOp.
@@ -479,10 +479,11 @@ static void printAttributions(OpAsmPrinter &p, StringRef keyword,
   if (values.empty())
     return;
 
-  p << ' ' << keyword << '(';
-  llvm::interleaveComma(
-      values, p, [&p](BlockArgument v) { p << v << " : " << v.getType(); });
-  p << ')';
+  auto printBlockArg = [](BlockArgument v) {
+    return llvm::formatv("{} : {}", v, v.getType());
+  };
+  p << ' ' << keyword << '('
+    << llvm::interleaved(llvm::map_range(values, printBlockArg)) << ')';
 }
 
 /// Verifies a GPU function memory attribution.
@@ -1311,11 +1312,10 @@ static void printLaunchFuncOperands(OpAsmPrinter &printer, Operation *,
   if (operands.empty())
     return;
   printer << "args(";
-  llvm::interleaveComma(llvm::zip(operands, types), printer,
+  llvm::interleaveComma(llvm::zip_equal(operands, types), printer,
                         [&](const auto &pair) {
-                          printer.printOperand(std::get<0>(pair));
-                          printer << " : ";
-                          printer.printType(std::get<1>(pair));
+                          auto [operand, type] = pair;
+                          printer << operand << " : " << type;
                         });
   printer << ")";
 }

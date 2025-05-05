@@ -102,6 +102,10 @@ static char* global_buffer_local_end = &global_buffer[16];
 // CHECK-H: .p2align 4, 0x0
 char* global_buffer_global_end = &global_buffer[16];
 
+// CHECK-S-NOT: .memtag zero_sized
+struct empty {};
+char zero_sized[0];
+
 class MyClass {
  public:
   virtual ~MyClass() {}

@@ -350,16 +350,32 @@ static auto toJSONStrings(llvm::json::OStream &JOS, Container &&Strings) {
   };
 }
 
+static auto toJSONModuleID(llvm::json::OStream &JOS, StringRef ContextHash,
+                           StringRef ModuleName, bool Exported) {
+  return JOS.object([&] {
+    JOS.attribute("context-hash", StringRef(ContextHash));
+    JOS.attribute("module-name", StringRef(ModuleName));
+    if (Exported)
+      JOS.attribute("exported", StringRef("true"));
+  });
+}
+
 // Technically, we don't need to sort the dependency list to get determinism.
 // Leaving these be will simply preserve the import order.
 static auto toJSONSorted(llvm::json::OStream &JOS, std::vector<ModuleID> V) {
   llvm::sort(V);
   return [&JOS, V = std::move(V)] {
-    for (const ModuleID &MID : V)
-      JOS.object([&] {
-        JOS.attribute("context-hash", StringRef(MID.ContextHash));
-        JOS.attribute("module-name", StringRef(MID.ModuleName));
-      });
+    for (const auto &MID : V)
+      toJSONModuleID(JOS, MID.ContextHash, MID.ModuleName, false);
+  };
+}
+
+static auto toJSONSorted(llvm::json::OStream &JOS,
+                         std::vector<ModuleDeps::DepInfo> V) {
+  llvm::sort(V);
+  return [&JOS, V = std::move(V)] {
+    for (const ModuleDeps::DepInfo &MID : V)
+      toJSONModuleID(JOS, MID.ID.ContextHash, MID.ID.ModuleName, MID.Exported);
   };
 }
 
@@ -471,6 +487,9 @@ public:
         for (auto &&ModID : ModuleIDs) {
           auto &MD = Modules[ModID];
           JOS.object([&] {
+            if (MD.IsInStableDirectories)
+              JOS.attribute("is-in-stable-directories",
+                            MD.IsInStableDirectories);
             JOS.attributeArray("clang-module-deps",
                                toJSONSorted(JOS, MD.ClangModuleDeps));
             JOS.attribute("clang-modulemap-file",
@@ -706,9 +725,10 @@ static std::string constructPCMPath(ModuleID MID, StringRef OutputDir) {
   return std::string(ExplicitPCMPath);
 }
 
-static std::string lookupModuleOutput(const ModuleID &MID, ModuleOutputKind MOK,
+static std::string lookupModuleOutput(const ModuleDeps &MD,
+                                      ModuleOutputKind MOK,
                                       StringRef OutputDir) {
-  std::string PCMPath = constructPCMPath(MID, OutputDir);
+  std::string PCMPath = constructPCMPath(MD.ID, OutputDir);
   switch (MOK) {
   case ModuleOutputKind::ModuleFile:
     return PCMPath;
@@ -925,7 +945,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
     FileOS.emplace(OutputFileName, EC, llvm::sys::fs::OF_Text);
     if (EC) {
       llvm::errs() << "Failed to open output file '" << OutputFileName
-                   << "': " << llvm::errorCodeToError(EC) << '\n';
+                   << "': " << EC.message() << '\n';
       std::exit(1);
     }
     return *FileOS;
@@ -971,8 +991,8 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
       std::string OutputDir(ModuleFilesDir);
       if (OutputDir.empty())
         OutputDir = getModuleCachePath(Input->CommandLine);
-      auto LookupOutput = [&](const ModuleID &MID, ModuleOutputKind MOK) {
-        return ::lookupModuleOutput(MID, MOK, OutputDir);
+      auto LookupOutput = [&](const ModuleDeps &MD, ModuleOutputKind MOK) {
+        return ::lookupModuleOutput(MD, MOK, OutputDir);
       };
 
       // Run the tool on it.

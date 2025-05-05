@@ -53,6 +53,8 @@ using namespace llvm;
 #define GET_INSTRINFO_CTOR_DTOR
 #include "X86GenInstrInfo.inc"
 
+extern cl::opt<bool> X86EnableAPXForRelocation;
+
 static cl::opt<bool>
     NoFusing("disable-spill-fusing",
              cl::desc("Disable fusing of spill code into instructions"),
@@ -102,22 +104,8 @@ X86InstrInfo::getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
   if (X86II::canUseApxExtendedReg(MCID))
     return RC;
 
-  switch (RC->getID()) {
-  default:
-    return RC;
-  case X86::GR8RegClassID:
-    return &X86::GR8_NOREX2RegClass;
-  case X86::GR16RegClassID:
-    return &X86::GR16_NOREX2RegClass;
-  case X86::GR32RegClassID:
-    return &X86::GR32_NOREX2RegClass;
-  case X86::GR64RegClassID:
-    return &X86::GR64_NOREX2RegClass;
-  case X86::GR32_NOSPRegClassID:
-    return &X86::GR32_NOREX2_NOSPRegClass;
-  case X86::GR64_NOSPRegClassID:
-    return &X86::GR64_NOREX2_NOSPRegClass;
-  }
+  const X86RegisterInfo *RI = Subtarget.getRegisterInfo();
+  return RI->constrainRegClassToNonRex2(RC);
 }
 
 bool X86InstrInfo::isCoalescableExtInstr(const MachineInstr &MI,
@@ -486,21 +474,21 @@ bool X86InstrInfo::isFrameOperand(const MachineInstr &MI, unsigned int Op,
   return false;
 }
 
-static bool isFrameLoadOpcode(int Opcode, unsigned &MemBytes) {
+static bool isFrameLoadOpcode(int Opcode, TypeSize &MemBytes) {
   switch (Opcode) {
   default:
     return false;
   case X86::MOV8rm:
   case X86::KMOVBkm:
   case X86::KMOVBkm_EVEX:
-    MemBytes = 1;
+    MemBytes = TypeSize::getFixed(1);
     return true;
   case X86::MOV16rm:
   case X86::KMOVWkm:
   case X86::KMOVWkm_EVEX:
   case X86::VMOVSHZrm:
   case X86::VMOVSHZrm_alt:
-    MemBytes = 2;
+    MemBytes = TypeSize::getFixed(2);
     return true;
   case X86::MOV32rm:
   case X86::MOVSSrm:
@@ -511,7 +499,7 @@ static bool isFrameLoadOpcode(int Opcode, unsigned &MemBytes) {
   case X86::VMOVSSZrm_alt:
   case X86::KMOVDkm:
   case X86::KMOVDkm_EVEX:
-    MemBytes = 4;
+    MemBytes = TypeSize::getFixed(4);
     return true;
   case X86::MOV64rm:
   case X86::LD_Fp64m:
@@ -525,7 +513,7 @@ static bool isFrameLoadOpcode(int Opcode, unsigned &MemBytes) {
   case X86::MMX_MOVQ64rm:
   case X86::KMOVQkm:
   case X86::KMOVQkm_EVEX:
-    MemBytes = 8;
+    MemBytes = TypeSize::getFixed(8);
     return true;
   case X86::MOVAPSrm:
   case X86::MOVUPSrm:
@@ -551,7 +539,7 @@ static bool isFrameLoadOpcode(int Opcode, unsigned &MemBytes) {
   case X86::VMOVDQU32Z128rm:
   case X86::VMOVDQA64Z128rm:
   case X86::VMOVDQU64Z128rm:
-    MemBytes = 16;
+    MemBytes = TypeSize::getFixed(16);
     return true;
   case X86::VMOVAPSYrm:
   case X86::VMOVUPSYrm:
@@ -571,7 +559,7 @@ static bool isFrameLoadOpcode(int Opcode, unsigned &MemBytes) {
   case X86::VMOVDQU32Z256rm:
   case X86::VMOVDQA64Z256rm:
   case X86::VMOVDQU64Z256rm:
-    MemBytes = 32;
+    MemBytes = TypeSize::getFixed(32);
     return true;
   case X86::VMOVAPSZrm:
   case X86::VMOVUPSZrm:
@@ -583,25 +571,25 @@ static bool isFrameLoadOpcode(int Opcode, unsigned &MemBytes) {
   case X86::VMOVDQU32Zrm:
   case X86::VMOVDQA64Zrm:
   case X86::VMOVDQU64Zrm:
-    MemBytes = 64;
+    MemBytes = TypeSize::getFixed(64);
     return true;
   }
 }
 
-static bool isFrameStoreOpcode(int Opcode, unsigned &MemBytes) {
+static bool isFrameStoreOpcode(int Opcode, TypeSize &MemBytes) {
   switch (Opcode) {
   default:
     return false;
   case X86::MOV8mr:
   case X86::KMOVBmk:
   case X86::KMOVBmk_EVEX:
-    MemBytes = 1;
+    MemBytes = TypeSize::getFixed(1);
     return true;
   case X86::MOV16mr:
   case X86::KMOVWmk:
   case X86::KMOVWmk_EVEX:
   case X86::VMOVSHZmr:
-    MemBytes = 2;
+    MemBytes = TypeSize::getFixed(2);
     return true;
   case X86::MOV32mr:
   case X86::MOVSSmr:
@@ -609,7 +597,7 @@ static bool isFrameStoreOpcode(int Opcode, unsigned &MemBytes) {
   case X86::VMOVSSZmr:
   case X86::KMOVDmk:
   case X86::KMOVDmk_EVEX:
-    MemBytes = 4;
+    MemBytes = TypeSize::getFixed(4);
     return true;
   case X86::MOV64mr:
   case X86::ST_FpP64m:
@@ -621,7 +609,7 @@ static bool isFrameStoreOpcode(int Opcode, unsigned &MemBytes) {
   case X86::MMX_MOVNTQmr:
   case X86::KMOVQmk:
   case X86::KMOVQmk_EVEX:
-    MemBytes = 8;
+    MemBytes = TypeSize::getFixed(8);
     return true;
   case X86::MOVAPSmr:
   case X86::MOVUPSmr:
@@ -647,7 +635,7 @@ static bool isFrameStoreOpcode(int Opcode, unsigned &MemBytes) {
   case X86::VMOVDQU64Z128mr:
   case X86::VMOVDQU8Z128mr:
   case X86::VMOVDQU16Z128mr:
-    MemBytes = 16;
+    MemBytes = TypeSize::getFixed(16);
     return true;
   case X86::VMOVUPSYmr:
   case X86::VMOVAPSYmr:
@@ -667,7 +655,7 @@ static bool isFrameStoreOpcode(int Opcode, unsigned &MemBytes) {
   case X86::VMOVDQU32Z256mr:
   case X86::VMOVDQA64Z256mr:
   case X86::VMOVDQU64Z256mr:
-    MemBytes = 32;
+    MemBytes = TypeSize::getFixed(32);
     return true;
   case X86::VMOVUPSZmr:
   case X86::VMOVAPSZmr:
@@ -679,7 +667,7 @@ static bool isFrameStoreOpcode(int Opcode, unsigned &MemBytes) {
   case X86::VMOVDQU32Zmr:
   case X86::VMOVDQA64Zmr:
   case X86::VMOVDQU64Zmr:
-    MemBytes = 64;
+    MemBytes = TypeSize::getFixed(64);
     return true;
   }
   return false;
@@ -687,25 +675,24 @@ static bool isFrameStoreOpcode(int Opcode, unsigned &MemBytes) {
 
 Register X86InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                            int &FrameIndex) const {
-  unsigned Dummy;
+  TypeSize Dummy = TypeSize::getZero();
   return X86InstrInfo::isLoadFromStackSlot(MI, FrameIndex, Dummy);
 }
 
 Register X86InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                            int &FrameIndex,
-                                           unsigned &MemBytes) const {
+                                           TypeSize &MemBytes) const {
   if (isFrameLoadOpcode(MI.getOpcode(), MemBytes))
     if (MI.getOperand(0).getSubReg() == 0 && isFrameOperand(MI, 1, FrameIndex))
       return MI.getOperand(0).getReg();
-  return 0;
+  return Register();
 }
 
 Register X86InstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
                                                  int &FrameIndex) const {
-  unsigned Dummy;
+  TypeSize Dummy = TypeSize::getZero();
   if (isFrameLoadOpcode(MI.getOpcode(), Dummy)) {
-    unsigned Reg;
-    if ((Reg = isLoadFromStackSlot(MI, FrameIndex)))
+    if (Register Reg = isLoadFromStackSlot(MI, FrameIndex))
       return Reg;
     // Check for post-frame index elimination operations
     SmallVector<const MachineMemOperand *, 1> Accesses;
@@ -716,31 +703,30 @@ Register X86InstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
       return MI.getOperand(0).getReg();
     }
   }
-  return 0;
+  return Register();
 }
 
 Register X86InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                           int &FrameIndex) const {
-  unsigned Dummy;
+  TypeSize Dummy = TypeSize::getZero();
   return X86InstrInfo::isStoreToStackSlot(MI, FrameIndex, Dummy);
 }
 
 Register X86InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                           int &FrameIndex,
-                                          unsigned &MemBytes) const {
+                                          TypeSize &MemBytes) const {
   if (isFrameStoreOpcode(MI.getOpcode(), MemBytes))
     if (MI.getOperand(X86::AddrNumOperands).getSubReg() == 0 &&
         isFrameOperand(MI, 0, FrameIndex))
       return MI.getOperand(X86::AddrNumOperands).getReg();
-  return 0;
+  return Register();
 }
 
 Register X86InstrInfo::isStoreToStackSlotPostFE(const MachineInstr &MI,
                                                 int &FrameIndex) const {
-  unsigned Dummy;
+  TypeSize Dummy = TypeSize::getZero();
   if (isFrameStoreOpcode(MI.getOpcode(), Dummy)) {
-    unsigned Reg;
-    if ((Reg = isStoreToStackSlot(MI, FrameIndex)))
+    if (Register Reg = isStoreToStackSlot(MI, FrameIndex))
       return Reg;
     // Check for post-frame index elimination operations
     SmallVector<const MachineMemOperand *, 1> Accesses;
@@ -751,7 +737,7 @@ Register X86InstrInfo::isStoreToStackSlotPostFE(const MachineInstr &MI,
       return MI.getOperand(X86::AddrNumOperands).getReg();
     }
   }
-  return 0;
+  return Register();
 }
 
 /// Return true if register is PIC base; i.e.g defined by X86::MOVPC32r.
@@ -1037,12 +1023,11 @@ inline static bool isTruncatedShiftCountForLEA(unsigned ShAmt) {
   return ShAmt < 4 && ShAmt > 0;
 }
 
-static bool findRedundantFlagInstr(MachineInstr &CmpInstr,
-                                   MachineInstr &CmpValDefInstr,
-                                   const MachineRegisterInfo *MRI,
-                                   MachineInstr **AndInstr,
-                                   const TargetRegisterInfo *TRI,
-                                   bool &NoSignFlag, bool &ClearsOverflowFlag) {
+static bool
+findRedundantFlagInstr(MachineInstr &CmpInstr, MachineInstr &CmpValDefInstr,
+                       const MachineRegisterInfo *MRI, MachineInstr **AndInstr,
+                       const TargetRegisterInfo *TRI, const X86Subtarget &ST,
+                       bool &NoSignFlag, bool &ClearsOverflowFlag) {
   if (!(CmpValDefInstr.getOpcode() == X86::SUBREG_TO_REG &&
         CmpInstr.getOpcode() == X86::TEST64rr) &&
       !(CmpValDefInstr.getOpcode() == X86::COPY &&
@@ -1105,7 +1090,8 @@ static bool findRedundantFlagInstr(MachineInstr &CmpInstr,
   if (VregDefInstr->getParent() != CmpValDefInstr.getParent())
     return false;
 
-  if (X86::isAND(VregDefInstr->getOpcode())) {
+  if (X86::isAND(VregDefInstr->getOpcode()) &&
+      (!ST.hasNF() || VregDefInstr->modifiesRegister(X86::EFLAGS, TRI))) {
     // Get a sequence of instructions like
     //   %reg = and* ...                    // Set EFLAGS
     //   ...                                // EFLAGS not changed
@@ -3624,7 +3610,7 @@ unsigned X86::getVectorRegisterWidth(const MCOperandInfo &Info) {
 }
 
 /// Return true if the Reg is X87 register.
-static bool isX87Reg(unsigned Reg) {
+static bool isX87Reg(Register Reg) {
   return (Reg == X86::FPCW || Reg == X86::FPSW ||
           (Reg >= X86::ST0 && Reg <= X86::ST7));
 }
@@ -4245,12 +4231,12 @@ void X86InstrInfo::insertSelect(MachineBasicBlock &MBB,
 }
 
 /// Test if the given register is a physical h register.
-static bool isHReg(unsigned Reg) {
+static bool isHReg(Register Reg) {
   return X86::GR8_ABCD_HRegClass.contains(Reg);
 }
 
 // Try and copy between VR128/VR64 and GR64 registers.
-static unsigned CopyToFromAsymmetricReg(unsigned DestReg, unsigned SrcReg,
+static unsigned CopyToFromAsymmetricReg(Register DestReg, Register SrcReg,
                                         const X86Subtarget &Subtarget) {
   bool HasAVX = Subtarget.hasAVX();
   bool HasAVX512 = Subtarget.hasAVX512();
@@ -4750,8 +4736,8 @@ bool X86InstrInfo::getMemOperandsWithOffsetWidth(
   // FIXME: Relying on memoperands() may not be right thing to do here. Check
   // with X86 maintainers, and fix it accordingly. For now, it is ok, since
   // there is no use of `Width` for X86 back-end at the moment.
-  Width =
-      !MemOp.memoperands_empty() ? MemOp.memoperands().front()->getSize() : 0;
+  Width = !MemOp.memoperands_empty() ? MemOp.memoperands().front()->getSize()
+                                     : LocationSize::precise(0);
   BaseOps.push_back(BaseOp);
   return true;
 }
@@ -4877,10 +4863,6 @@ bool X86InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
   case X86::CMP32ri:
   case X86::CMP16ri:
   case X86::CMP8ri:
-  case X86::CCMP64ri32:
-  case X86::CCMP32ri:
-  case X86::CCMP16ri:
-  case X86::CCMP8ri:
     SrcReg = MI.getOperand(0).getReg();
     SrcReg2 = 0;
     if (MI.getOperand(1).isImm()) {
@@ -4977,18 +4959,6 @@ bool X86InstrInfo::isRedundantFlagInstr(const MachineInstr &FlagI,
       return true;
     }
     return false;
-  }
-  case X86::CCMP64ri32:
-  case X86::CCMP32ri:
-  case X86::CCMP16ri:
-  case X86::CCMP8ri: {
-    // The CCMP instruction should not be optimized if the scc/dfv in it is not
-    // same as the one in previous CCMP instruction.
-    if ((FlagI.getOpcode() != OI.getOpcode()) ||
-        (OI.getOperand(2).getImm() != FlagI.getOperand(2).getImm()) ||
-        (OI.getOperand(3).getImm() != FlagI.getOperand(3).getImm()))
-      return false;
-    [[fallthrough]];
   }
   case X86::CMP64ri32:
   case X86::CMP32ri:
@@ -5435,7 +5405,7 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         MachineInstr *AndInstr = nullptr;
         if (IsCmpZero &&
             findRedundantFlagInstr(CmpInstr, Inst, MRI, &AndInstr, TRI,
-                                   NoSignFlag, ClearsOverflowFlag)) {
+                                   Subtarget, NoSignFlag, ClearsOverflowFlag)) {
           assert(AndInstr != nullptr && X86::isAND(AndInstr->getOpcode()));
           MI = AndInstr;
           break;
@@ -5482,8 +5452,16 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
           continue;
         }
 
+        // For the instructions are ADDrm/ADDmr with relocation, we'll skip the
+        // optimization for replacing non-NF with NF. This is to keep backward
+        // compatiblity with old version of linkers without APX relocation type
+        // support on Linux OS.
+        bool IsWithReloc = X86EnableAPXForRelocation
+                               ? false
+                               : isAddMemInstrWithRelocation(Inst);
+
         // Try to replace non-NF with NF instructions.
-        if (HasNF && Inst.registerDefIsDead(X86::EFLAGS, TRI)) {
+        if (HasNF && Inst.registerDefIsDead(X86::EFLAGS, TRI) && !IsWithReloc) {
           unsigned NewOp = X86::getNFVariant(Inst.getOpcode());
           if (!NewOp)
             return false;
@@ -5691,7 +5669,8 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   // Replace non-NF with NF instructions.
   for (auto &Inst : InstsToUpdate) {
     Inst.first->setDesc(get(Inst.second));
-    Inst.first->removeOperand(Inst.first->getNumOperands() - 1);
+    Inst.first->removeOperand(
+        Inst.first->findRegisterDefOperandIdx(X86::EFLAGS, /*TRI=*/nullptr));
   }
 
   // Make sure Sub instruction defines EFLAGS and mark the def live.
@@ -5715,47 +5694,6 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
       MBB->addLiveIn(X86::EFLAGS);
   }
   return true;
-}
-
-/// Try to remove the load by folding it to a register
-/// operand at the use. We fold the load instructions if load defines a virtual
-/// register, the virtual register is used once in the same BB, and the
-/// instructions in-between do not load or store, and have no side effects.
-MachineInstr *X86InstrInfo::optimizeLoadInstr(MachineInstr &MI,
-                                              const MachineRegisterInfo *MRI,
-                                              Register &FoldAsLoadDefReg,
-                                              MachineInstr *&DefMI) const {
-  // Check whether we can move DefMI here.
-  DefMI = MRI->getVRegDef(FoldAsLoadDefReg);
-  assert(DefMI);
-  bool SawStore = false;
-  if (!DefMI->isSafeToMove(SawStore))
-    return nullptr;
-
-  // Collect information about virtual register operands of MI.
-  SmallVector<unsigned, 1> SrcOperandIds;
-  for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-    MachineOperand &MO = MI.getOperand(i);
-    if (!MO.isReg())
-      continue;
-    Register Reg = MO.getReg();
-    if (Reg != FoldAsLoadDefReg)
-      continue;
-    // Do not fold if we have a subreg use or a def.
-    if (MO.getSubReg() || MO.isDef())
-      return nullptr;
-    SrcOperandIds.push_back(i);
-  }
-  if (SrcOperandIds.empty())
-    return nullptr;
-
-  // Check whether we can fold the def into SrcOperandId.
-  if (MachineInstr *FoldMI = foldMemoryOperand(MI, SrcOperandIds, *DefMI)) {
-    FoldAsLoadDefReg = 0;
-    return FoldMI;
-  }
-
-  return nullptr;
 }
 
 /// \returns true if the instruction can be changed to COPY when imm is 0.
@@ -6281,7 +6219,7 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     }
     if (MI.getOpcode() == X86::AVX512_256_SET0) {
       // No VLX so we must reference a zmm.
-      unsigned ZReg =
+      MCRegister ZReg =
           TRI->getMatchingSuperReg(SrcReg, X86::sub_ymm, &X86::VR512RegClass);
       MIB->getOperand(0).setReg(ZReg);
     }
@@ -6794,19 +6732,37 @@ static bool hasPartialRegUpdate(unsigned Opcode, const X86Subtarget &Subtarget,
 unsigned X86InstrInfo::getPartialRegUpdateClearance(
     const MachineInstr &MI, unsigned OpNum,
     const TargetRegisterInfo *TRI) const {
-  if (OpNum != 0 || !hasPartialRegUpdate(MI.getOpcode(), Subtarget))
+
+  if (OpNum != 0)
     return 0;
 
-  // If MI is marked as reading Reg, the partial register update is wanted.
+  // NDD ops with 8/16b results may appear to be partial register
+  // updates after register allocation.
+  bool HasNDDPartialWrite = false;
+  if (X86II::hasNewDataDest(MI.getDesc().TSFlags)) {
+    Register Reg = MI.getOperand(0).getReg();
+    if (!Reg.isVirtual())
+      HasNDDPartialWrite =
+          X86::GR8RegClass.contains(Reg) || X86::GR16RegClass.contains(Reg);
+  }
+
+  if (!(HasNDDPartialWrite || hasPartialRegUpdate(MI.getOpcode(), Subtarget)))
+    return 0;
+
+  // Check if the result register is also used as a source.
+  // For non-NDD ops, this means a partial update is wanted, hence we return 0.
+  // For NDD ops, this means it is possible to compress the instruction
+  // to a legacy form in CompressEVEX, which would create an unwanted partial
+  // update, so we return the clearance.
   const MachineOperand &MO = MI.getOperand(0);
   Register Reg = MO.getReg();
-  if (Reg.isVirtual()) {
-    if (MO.readsReg() || MI.readsVirtualRegister(Reg))
-      return 0;
-  } else {
-    if (MI.readsRegister(Reg, TRI))
-      return 0;
-  }
+  bool ReadsReg = false;
+  if (Reg.isVirtual())
+    ReadsReg = (MO.readsReg() || MI.readsVirtualRegister(Reg));
+  else
+    ReadsReg = MI.readsRegister(Reg, TRI);
+  if (ReadsReg != HasNDDPartialWrite)
+    return 0;
 
   // If any instructions in the clearance range are reading Reg, insert a
   // dependency breaking instruction, which is inexpensive and is likely to
@@ -7230,6 +7186,17 @@ void X86InstrInfo::breakPartialRegDependency(
         .addReg(Reg, RegState::Undef)
         .addReg(Reg, RegState::Undef);
     MI.addRegisterKilled(Reg, TRI, true);
+  } else if ((X86::GR16RegClass.contains(Reg) ||
+              X86::GR8RegClass.contains(Reg)) &&
+             X86II::hasNewDataDest(MI.getDesc().TSFlags)) {
+    // This case is only expected for NDD ops which appear to be partial
+    // writes, but are not due to the zeroing of the upper part. Here
+    // we add an implicit def of the superegister, which prevents
+    // CompressEVEX from converting this to a legacy form.
+    Register SuperReg = getX86SubSuperRegister(Reg, 64);
+    MachineInstrBuilder BuildMI(*MI.getParent()->getParent(), &MI);
+    if (!MI.definesRegister(SuperReg, /*TRI=*/nullptr))
+      BuildMI.addReg(SuperReg, RegState::ImplicitDefine);
   }
 }
 
@@ -8491,7 +8458,7 @@ static unsigned getBroadcastOpcode(const X86FoldTableEntry *I,
 }
 
 bool X86InstrInfo::unfoldMemoryOperand(
-    MachineFunction &MF, MachineInstr &MI, unsigned Reg, bool UnfoldLoad,
+    MachineFunction &MF, MachineInstr &MI, Register Reg, bool UnfoldLoad,
     bool UnfoldStore, SmallVectorImpl<MachineInstr *> &NewMIs) const {
   const X86FoldTableEntry *I = lookupUnfoldTable(MI.getOpcode());
   if (I == nullptr)
@@ -8974,7 +8941,7 @@ bool X86InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
       Opcode == X86::PLDTILECFGV)
     return true;
 
-  // Frame setup and destory can't be scheduled around.
+  // Frame setup and destroy can't be scheduled around.
   if (MI.getFlag(MachineInstr::FrameSetup) ||
       MI.getFlag(MachineInstr::FrameDestroy))
     return true;
@@ -9005,10 +8972,10 @@ bool X86InstrInfo::isSafeToMoveRegClassDefs(
 ///
 /// TODO: Eliminate this and move the code to X86MachineFunctionInfo.
 ///
-unsigned X86InstrInfo::getGlobalBaseReg(MachineFunction *MF) const {
+Register X86InstrInfo::getGlobalBaseReg(MachineFunction *MF) const {
   X86MachineFunctionInfo *X86FI = MF->getInfo<X86MachineFunctionInfo>();
   Register GlobalBaseReg = X86FI->getGlobalBaseReg();
-  if (GlobalBaseReg != 0)
+  if (GlobalBaseReg)
     return GlobalBaseReg;
 
   // Create the register. The code to initialize it is inserted
@@ -10480,7 +10447,7 @@ struct LDTLSCleanup : public MachineFunctionPass {
 
     MachineDominatorTree *DT =
         &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-    return VisitNode(DT->getRootNode(), 0);
+    return VisitNode(DT->getRootNode(), Register());
   }
 
   // Visit the dominator subtree rooted at Node in pre-order.
@@ -10488,7 +10455,7 @@ struct LDTLSCleanup : public MachineFunctionPass {
   // TLS_base_addr instructions. Otherwise, create the register
   // when the first such instruction is seen, and then use it
   // as we encounter more instructions.
-  bool VisitNode(MachineDomTreeNode *Node, unsigned TLSBaseAddrReg) {
+  bool VisitNode(MachineDomTreeNode *Node, Register TLSBaseAddrReg) {
     MachineBasicBlock *BB = Node->getBlock();
     bool Changed = false;
 
@@ -10520,7 +10487,7 @@ struct LDTLSCleanup : public MachineFunctionPass {
   // Replace the TLS_base_addr instruction I with a copy from
   // TLSBaseAddrReg, returning the new instruction.
   MachineInstr *ReplaceTLSBaseAddrCall(MachineInstr &I,
-                                       unsigned TLSBaseAddrReg) {
+                                       Register TLSBaseAddrReg) {
     MachineFunction *MF = I.getParent()->getParent();
     const X86Subtarget &STI = MF->getSubtarget<X86Subtarget>();
     const bool is64Bit = STI.is64Bit();
@@ -10540,7 +10507,7 @@ struct LDTLSCleanup : public MachineFunctionPass {
 
   // Create a virtual register in *TLSBaseAddrReg, and populate it by
   // inserting a copy instruction after I. Returns the new instruction.
-  MachineInstr *SetRegister(MachineInstr &I, unsigned *TLSBaseAddrReg) {
+  MachineInstr *SetRegister(MachineInstr &I, Register *TLSBaseAddrReg) {
     MachineFunction *MF = I.getParent()->getParent();
     const X86Subtarget &STI = MF->getSubtarget<X86Subtarget>();
     const bool is64Bit = STI.is64Bit();

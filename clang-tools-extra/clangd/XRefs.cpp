@@ -909,13 +909,13 @@ public:
       return std::tie(LTok, L.Role) < std::tie(RTok, R.Role);
     });
     // We sometimes see duplicates when parts of the AST get traversed twice.
-    References.erase(std::unique(References.begin(), References.end(),
-                                 [](const Reference &L, const Reference &R) {
-                                   auto LTok = L.SpelledTok.location();
-                                   auto RTok = R.SpelledTok.location();
-                                   return std::tie(LTok, L.Role) ==
-                                          std::tie(RTok, R.Role);
-                                 }),
+    References.erase(llvm::unique(References,
+                                  [](const Reference &L, const Reference &R) {
+                                    auto LTok = L.SpelledTok.location();
+                                    auto RTok = R.SpelledTok.location();
+                                    return std::tie(LTok, L.Role) ==
+                                           std::tie(RTok, R.Role);
+                                  }),
                      References.end());
     return std::move(References);
   }
@@ -1502,12 +1502,12 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
     // We may get multiple refs with the same location and different Roles, as
     // cross-reference is only interested in locations, we deduplicate them
     // by the location to avoid emitting duplicated locations.
-    MainFileRefs.erase(std::unique(MainFileRefs.begin(), MainFileRefs.end(),
-                                   [](const ReferenceFinder::Reference &L,
-                                      const ReferenceFinder::Reference &R) {
-                                     return L.SpelledTok.location() ==
-                                            R.SpelledTok.location();
-                                   }),
+    MainFileRefs.erase(llvm::unique(MainFileRefs,
+                                    [](const ReferenceFinder::Reference &L,
+                                       const ReferenceFinder::Reference &R) {
+                                      return L.SpelledTok.location() ==
+                                             R.SpelledTok.location();
+                                    }),
                        MainFileRefs.end());
     for (const auto &Ref : MainFileRefs) {
       ReferencesResult::Reference Result;
@@ -2380,7 +2380,7 @@ outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
   // Initially store the ranges in a map keyed by SymbolID of the callee.
   // This allows us to group different calls to the same function
   // into the same CallHierarchyOutgoingCall.
-  llvm::DenseMap<SymbolID, std::vector<Range>> CallsOut;
+  llvm::DenseMap<SymbolID, std::vector<Location>> CallsOut;
   // We can populate the ranges based on a refs request only. As we do so, we
   // also accumulate the callee IDs into a lookup request.
   LookupRequest CallsOutLookup;
@@ -2390,8 +2390,8 @@ outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
       elog("outgoingCalls failed to convert location: {0}", Loc.takeError());
       return;
     }
-    auto It = CallsOut.try_emplace(R.Symbol, std::vector<Range>{}).first;
-    It->second.push_back(Loc->range);
+    auto It = CallsOut.try_emplace(R.Symbol, std::vector<Location>{}).first;
+    It->second.push_back(*Loc);
 
     CallsOutLookup.IDs.insert(R.Symbol);
   });
@@ -2411,9 +2411,22 @@ outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
 
     auto It = CallsOut.find(Callee.ID);
     assert(It != CallsOut.end());
-    if (auto CHI = symbolToCallHierarchyItem(Callee, Item.uri.file()))
+    if (auto CHI = symbolToCallHierarchyItem(Callee, Item.uri.file())) {
+      std::vector<Range> FromRanges;
+      for (const Location &L : It->second) {
+        if (L.uri != Item.uri) {
+          // Call location not in same file as the item that outgoingCalls was
+          // requested for. This can happen when Item is a declaration separate
+          // from the implementation. There's not much we can do, since the
+          // protocol only allows returning ranges interpreted as being in
+          // Item's file.
+          continue;
+        }
+        FromRanges.push_back(L.range);
+      }
       Results.push_back(
-          CallHierarchyOutgoingCall{std::move(*CHI), std::move(It->second)});
+          CallHierarchyOutgoingCall{std::move(*CHI), std::move(FromRanges)});
+    }
   });
   // Sort results by name of the callee.
   llvm::sort(Results, [](const CallHierarchyOutgoingCall &A,

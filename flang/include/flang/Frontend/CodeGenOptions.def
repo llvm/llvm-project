@@ -24,6 +24,8 @@ CODEGENOPT(OptimizationLevel, 2, 0) ///< The -O[0-3] option specified.
 CODEGENOPT(DebugPassManager, 1, 0) ///< Prints debug information for the new
                                    ///< pass manager.
 
+CODEGENOPT(InstrumentFunctions, 1, 0) ///< Set when -finstrument_functions is
+                                      ///< enabled on the compile step.
 CODEGENOPT(IsPIE, 1, 0) ///< PIE level is the same as PIC Level.
 CODEGENOPT(PICLevel, 2, 0) ///< PIC level of the LLVM module.
 CODEGENOPT(PrepareForFullLTO , 1, 0) ///< Set when -flto is enabled on the
@@ -32,6 +34,7 @@ CODEGENOPT(PrepareForThinLTO , 1, 0) ///< Set when -flto=thin is enabled on the
                                      ///< compile step.
 CODEGENOPT(StackArrays, 1, 0) ///< -fstack-arrays (enable the stack-arrays pass)
 CODEGENOPT(VectorizeLoop, 1, 0) ///< Enable loop vectorization.
+CODEGENOPT(VectorizeSLP, 1, 0) ///< Enable SLP vectorization.
 CODEGENOPT(LoopVersioning, 1, 0) ///< Enable loop versioning.
 CODEGENOPT(UnrollLoops, 1, 0) ///< Enable loop unrolling
 CODEGENOPT(AliasAnalysis, 1, 0) ///< Enable alias analysis pass
@@ -41,6 +44,8 @@ ENUM_CODEGENOPT(RelocationModel, llvm::Reloc::Model, 3, llvm::Reloc::PIC_) ///< 
 ENUM_CODEGENOPT(DebugInfo,  llvm::codegenoptions::DebugInfoKind, 4,  llvm::codegenoptions::NoDebugInfo) ///< Level of debug info to generate
 ENUM_CODEGENOPT(VecLib, llvm::driver::VectorLibrary, 3, llvm::driver::VectorLibrary::NoLibrary) ///< Vector functions library to use
 ENUM_CODEGENOPT(FramePointer, llvm::FramePointerKind, 2, llvm::FramePointerKind::None) ///< Enable the usage of frame pointers
+
+ENUM_CODEGENOPT(DoConcurrentMapping, DoConcurrentMappingKind, 2, DoConcurrentMappingKind::DCMK_None) ///< Map `do concurrent` to OpenMP
 
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT

@@ -73,6 +73,8 @@ public:
 
   void Enter(const parser::OpenMPConstruct &);
   void Leave(const parser::OpenMPConstruct &);
+  void Enter(const parser::OpenMPInteropConstruct &);
+  void Leave(const parser::OpenMPInteropConstruct &);
   void Enter(const parser::OpenMPDeclarativeConstruct &);
   void Leave(const parser::OpenMPDeclarativeConstruct &);
 
@@ -164,10 +166,6 @@ public:
 #define GEN_FLANG_CLAUSE_CHECK_ENTER
 #include "llvm/Frontend/OpenMP/OMP.inc"
 
-  void Leave(const parser::OmpClause::Fail &);
-  void Enter(const parser::OmpFailClause &);
-  void Leave(const parser::OmpFailClause &);
-
 private:
   bool CheckAllowedClause(llvmOmpClause clause);
   bool IsVariableListItem(const Symbol &sym);
@@ -225,6 +223,7 @@ private:
   std::optional<IterTy> FindDuplicate(RangeTy &&);
 
   const Symbol *GetObjectSymbol(const parser::OmpObject &object);
+  const Symbol *GetArgumentSymbol(const parser::OmpArgument &argument);
   std::optional<parser::CharBlock> GetObjectSource(
       const parser::OmpObject &object);
   void CheckDependList(const parser::DataRef &);
@@ -277,7 +276,7 @@ private:
   void CheckTaskDependenceType(const parser::OmpTaskDependenceType::Value &x);
   std::optional<llvm::omp::Directive> GetCancelType(
       llvm::omp::Directive cancelDir, const parser::CharBlock &cancelSource,
-      const parser::OmpClauseList &clauses);
+      const std::optional<parser::OmpClauseList> &maybeClauses);
   void CheckCancellationNest(
       const parser::CharBlock &source, llvm::omp::Directive type);
   std::int64_t GetOrdCollapseLevel(const parser::OpenMPLoopConstruct &x);
@@ -288,6 +287,7 @@ private:
   void CheckReductionObjectTypes(const parser::OmpObjectList &objects,
       const parser::OmpReductionIdentifier &ident);
   void CheckReductionModifier(const parser::OmpReductionModifier &);
+  void CheckLastprivateModifier(const parser::OmpLastprivateModifier &);
   void CheckMasterNesting(const parser::OpenMPBlockConstruct &x);
   void ChecksOnOrderedAsBlock();
   void CheckBarrierNesting(const parser::OpenMPSimpleStandaloneConstruct &x);
@@ -314,10 +314,12 @@ private:
 
   void CheckAlignValue(const parser::OmpClause &);
 
+  void AddEndDirectiveClauses(const parser::OmpClauseList &clauses);
+
   void EnterDirectiveNest(const int index) { directiveNest_[index]++; }
   void ExitDirectiveNest(const int index) { directiveNest_[index]--; }
   int GetDirectiveNest(const int index) { return directiveNest_[index]; }
-  template <typename D> void CheckHintClause(D *, D *);
+  template <typename D> void CheckHintClause(D *, D *, std::string_view);
   inline void ErrIfAllocatableVariable(const parser::Variable &);
   inline void ErrIfLHSAndRHSSymbolsMatch(
       const parser::Variable &, const parser::Expr &);
@@ -339,7 +341,6 @@ private:
   using LoopConstruct = std::variant<const parser::DoConstruct *,
       const parser::OpenMPLoopConstruct *>;
   std::vector<LoopConstruct> loopStack_;
-  bool isFailClause{false};
 };
 
 /// Find a duplicate entry in the range, and return an iterator to it.

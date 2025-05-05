@@ -586,12 +586,12 @@ public:
 ///   @code{.cpp}
 ///   class MyClass {
 ///   public:
-///     void myMethod(uint32_t, bool) { ... }
+///     std::string myMethod(uint32_t, bool) { ... }
 ///   };
 ///
 ///   // SPS Method signature -- note MyClass object address as first argument.
 ///   using SPSMyMethodWrapperSignature =
-///     SPSTuple<SPSExecutorAddr, uint32_t, bool>;
+///     SPSString(SPSExecutorAddr, uint32_t, bool);
 ///
 ///   WrapperFunctionResult
 ///   myMethodCallWrapper(const char *ArgData, size_t ArgSize) {

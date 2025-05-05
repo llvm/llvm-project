@@ -195,7 +195,7 @@ static void RegisterPassPlugins(ArrayRef<std::string> PassPlugins,
   for (auto &PluginFN : PassPlugins) {
     auto PassPlugin = PassPlugin::Load(PluginFN);
     if (!PassPlugin)
-      report_fatal_error(PassPlugin.takeError(), /*gen_crash_diag=*/false);
+      reportFatalUsageError(PassPlugin.takeError());
     PassPlugin->registerPassBuilderCallbacks(PB);
   }
 }
@@ -460,6 +460,9 @@ static void codegen(const Config &Conf, TargetMachine *TM,
 
   if (DwoOut)
     DwoOut->keep();
+
+  if (Error Err = Stream->commit())
+    report_fatal_error(std::move(Err));
 }
 
 static void splitCodeGen(const Config &C, TargetMachine *TM,

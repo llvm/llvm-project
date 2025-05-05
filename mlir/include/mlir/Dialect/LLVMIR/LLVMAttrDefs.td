@@ -1095,8 +1095,8 @@ def LLVM_TBAATagArrayAttr
 //===----------------------------------------------------------------------===//
 def LLVM_ConstantRangeAttr : LLVM_Attr<"ConstantRange", "constant_range"> {
   let parameters = (ins
-    "::llvm::APInt":$lower,
-    "::llvm::APInt":$upper
+    APIntParameter<"">:$lower,
+    APIntParameter<"">:$upper
   );
   let summary = "A range of two integers, corresponding to LLVM's ConstantRange";
   let description = [{
@@ -1214,6 +1214,36 @@ def LLVM_UndefAttr : LLVM_Attr<"Undef", "undef">;
 def LLVM_PoisonAttr : LLVM_Attr<"Poison", "poison">;
 
 //===----------------------------------------------------------------------===//
+// DSOLocalEquivalentAttr
+//===----------------------------------------------------------------------===//
+
+/// Folded into from LLVM::DSOLocalEquivalentOp.
+def LLVM_DSOLocalEquivalentAttr : LLVM_Attr<"DSOLocalEquivalent",
+                                            "dso_local_equivalent"> {
+  let parameters = (ins "FlatSymbolRefAttr":$sym);
+  let assemblyFormat = "$sym";
+}
+
+//===----------------------------------------------------------------------===//
+// BlockAddressAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_BlockTagAttr : LLVM_Attr<"BlockTag", "blocktag"> {
+  let parameters = (ins "uint32_t":$id);
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+/// Folded into from LLVM_BlockAddressAttr.
+def LLVM_BlockAddressAttr : LLVM_Attr<"BlockAddress", "blockaddress"> {
+  let description = [{
+    Describes a block address identified by a pair of `$function` and `$tag`.
+  }];
+  let parameters = (ins "FlatSymbolRefAttr":$function,
+                        "BlockTagAttr":$tag);
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
 // VecTypeHintAttr
 //===----------------------------------------------------------------------===//
 
@@ -1289,6 +1319,91 @@ def LLVM_DereferenceableAttr : LLVM_Attr<"Dereferenceable", "dereferenceable"> {
   let parameters = (ins "uint64_t":$bytes,
                         DefaultValuedParameter<"bool", "false">:$mayBeNull);
   let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// ModuleFlagAttr & related
+//===----------------------------------------------------------------------===//
+
+def ModuleFlagAttr
+    : LLVM_Attr<"ModuleFlag", "mlir.module_flag"> {
+  let summary = "LLVM module flag metadata";
+  let description = [{
+    Represents a single entry of llvm.module.flags metadata
+    (llvm::Module::ModuleFlagEntry in LLVM). The first element is a behavior
+    flag described by `ModFlagBehaviorAttr`, the second is a string ID
+    and third is the value of the flag. Supported keys and values include:
+      - Arbitrary `key`s holding integer constants or strings.
+      - Domain specific keys (e.g "CG Profile"), holding lists of supported
+        module flag values (e.g. `llvm.cgprofile_entry`).
+
+    Example:
+    ```mlir
+      llvm.module_flags [
+          #llvm.mlir.module_flag<error, "wchar_size", 4>,
+          #llvm.mlir.module_flag<error, "probe-stack", "inline-asm">,
+          #llvm.mlir.module_flag<append, "CG Profile", [
+            #llvm.cgprofile_entry<from = @from, to = @to, count = 222>,
+            #llvm.cgprofile_entry<from = @from, to = @from, count = 222>,
+            #llvm.cgprofile_entry<from = @to, to = @from, count = 222>
+          ]
+      >]
+    ```
+  }];
+  let parameters = (ins "ModFlagBehavior":$behavior,
+                        "StringAttr":$key,
+                        "Attribute":$value);
+  let assemblyFormat = "`<` $behavior `,` $key `,` $value `>`";
+  let genVerifyDecl = 1;
+}
+
+def ModuleFlagCGProfileEntryAttr
+    : LLVM_Attr<"ModuleFlagCGProfileEntry", "cgprofile_entry"> {
+  let summary = "CG profile module flag entry";
+  let description = [{
+    Describes a single entry for a CG profile module flag. Example:
+    ```mlir
+      llvm.module_flags [
+        #llvm.mlir.module_flag<append, "CG Profile",
+          [#llvm.cgprofile_entry<from = @from, to = @to, count = 222>,
+           ...
+          ]>]
+    ```
+  }];
+  let parameters = (
+    ins OptionalParameter<"FlatSymbolRefAttr">:$from,
+        OptionalParameter<"FlatSymbolRefAttr">:$to,
+        "uint64_t":$count);
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// LLVM_DependentLibrariesAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DependentLibrariesAttr
+    : LLVM_Attr<"DependentLibraries", "dependent_libraries"> {
+  let summary = "LLVM dependent libraries attribute";
+  let description = [{
+    Represents the list of dependent libraries for the current module.
+    This attribute is used to specify the libraries that the module depends
+    on, and it can be used for linking purposes.
+
+    See the following links for more details:
+    https://llvm.org/docs/LangRef.html#dependent-libs-named-metadata
+  }];
+  let parameters = (ins OptionalArrayRefParameter<"StringAttr">:$libs);
+  let assemblyFormat = "`<` $libs `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// UWTableKindAttr
+//===----------------------------------------------------------------------===//
+
+def UWTableKindAttr : LLVM_Attr<"UWTableKind", "uwtableKind"> {
+  let parameters = (ins "uwtable::UWTableKind":$uwtableKind);
+  let assemblyFormat = "`<` $uwtableKind `>`";
 }
 
 #endif // LLVMIR_ATTRDEFS

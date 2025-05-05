@@ -33,8 +33,8 @@ for.end:                                          ; preds = %for.body
 define void @widen_ptr_induction_dbg(ptr %start, ptr %end) {
 ; DEBUGLOC-LABEL: define void @widen_ptr_induction_dbg(
 ; DEBUGLOC: vector.body:
+; DEBUGLOC-NEXT: = phi i64
 ; DEBUGLOC-NEXT: = phi ptr {{.+}}, !dbg ![[PTRIVLOC:[0-9]+]]
-; DEBUGLOC: = phi i64
 ;
 ; DEBUGLOC: loop:
 ; DEBUGLOC-NEXT: = phi ptr {{.+}}, !dbg ![[PTRIVLOC]]

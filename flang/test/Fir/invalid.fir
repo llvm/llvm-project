@@ -1,6 +1,6 @@
-// FIR ops diagnotic tests
 
-// RUN: fir-opt -split-input-file -verify-diagnostics %s
+
+// RUN: fir-opt -split-input-file -verify-diagnostics --strict-fir-volatile-verifier %s
 
 // expected-error@+1{{custom op 'fir.string_lit' must have character type}}
 %0 = fir.string_lit "Hello, World!"(13) : !fir.int<32>
@@ -1161,4 +1161,153 @@ func.func @bad_box_total_elements(%arg0: !fir.ref<!fir.box<!fir.array<?xi32>>>) 
   // expected-error@+1{{op operand #0 must be any box, but got '!fir.ref<!fir.box<!fir.array<?xi32>>>'}}
   %0 = fir.box_total_elements %arg0 : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> i32
   return %0 : i32
+}
+
+// -----
+
+func.func @empty_dc_wrapper_body() {
+  // expected-error@+1 {{'fir.do_concurrent' op expects a non-empty block}}
+  fir.do_concurrent {
+  }
+  return
+}
+
+// -----
+
+func.func @dc_wrong_terminator() {
+  // expected-error@+1 {{'fir.do_concurrent' op must be terminated by 'fir.do_concurrent.loop'}}
+  fir.do_concurrent {
+    llvm.return
+  }
+  return
+}
+
+// -----
+
+func.func @dc_0d() {
+   // expected-error@+2 {{'fir.do_concurrent.loop' op needs at least one tuple element for lowerBound, upperBound and step}}
+  fir.do_concurrent {
+    fir.do_concurrent.loop () = () to () step () {
+      %tmp = fir.alloca i32
+    }
+  }
+  return
+}
+
+// -----
+
+func.func @dc_invalid_parent(%arg0: index, %arg1: index) {
+  // expected-error@+1 {{'fir.do_concurrent.loop' op expects parent op 'fir.do_concurrent'}}
+  "fir.do_concurrent.loop"(%arg0, %arg1) <{operandSegmentSizes = array<i32: 1, 1, 0, 0>}> ({
+  ^bb0(%arg2: index):
+     %tmp = "fir.alloca"() <{in_type = i32, operandSegmentSizes = array<i32: 0, 0>}> : () -> !fir.ref<i32>
+  }) : (index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @dc_invalid_control(%arg0: index, %arg1: index) {
+  // expected-error@+2 {{'fir.do_concurrent.loop' op different number of tuple elements for lowerBound, upperBound or step}}
+  fir.do_concurrent {
+    "fir.do_concurrent.loop"(%arg0, %arg1) <{operandSegmentSizes = array<i32: 1, 1, 0, 0>}> ({
+    ^bb0(%arg2: index):
+      %tmp = "fir.alloca"() <{in_type = i32, operandSegmentSizes = array<i32: 0, 0>}> : () -> !fir.ref<i32>
+    }) : (index, index) -> ()
+  }
+  return
+}
+
+// -----
+
+func.func @dc_invalid_ind_var(%arg0: index, %arg1: index) {
+  // expected-error@+2 {{'fir.do_concurrent.loop' op expects the same number of induction variables: 2 as bound and step values: 1}}
+  fir.do_concurrent {
+    "fir.do_concurrent.loop"(%arg0, %arg1, %arg0) <{operandSegmentSizes = array<i32: 1, 1, 1, 0>}> ({
+    ^bb0(%arg3: index, %arg4: index):
+      %tmp = "fir.alloca"() <{in_type = i32, operandSegmentSizes = array<i32: 0, 0>}> : () -> !fir.ref<i32>
+    }) : (index, index, index) -> ()
+  }
+  return
+}
+
+// -----
+
+func.func @dc_invalid_ind_var_type(%arg0: index, %arg1: index) {
+  // expected-error@+2 {{'fir.do_concurrent.loop' op expects arguments for the induction variable to be of index type}}
+  fir.do_concurrent {
+    "fir.do_concurrent.loop"(%arg0, %arg1, %arg0) <{operandSegmentSizes = array<i32: 1, 1, 1, 0>}> ({
+    ^bb0(%arg3: i32):
+      %tmp = "fir.alloca"() <{in_type = i32, operandSegmentSizes = array<i32: 0, 0>}> : () -> !fir.ref<i32>
+    }) : (index, index, index) -> ()
+  }
+  return
+}
+
+// -----
+
+func.func @dc_invalid_reduction(%arg0: index, %arg1: index) {
+  %sum = fir.alloca i32
+  // expected-error@+2 {{'fir.do_concurrent.loop' op mismatch in number of reduction variables and reduction attributes}}
+  fir.do_concurrent {
+    "fir.do_concurrent.loop"(%arg0, %arg1, %arg0, %sum) <{operandSegmentSizes = array<i32: 1, 1, 1, 1>}> ({
+    ^bb0(%arg3: index):
+      %tmp = "fir.alloca"() <{in_type = i32, operandSegmentSizes = array<i32: 0, 0>}> : () -> !fir.ref<i32>
+    }) : (index, index, index, !fir.ref<i32>) -> ()
+  }
+  return
+}
+
+// -----
+
+// Should fail when volatility changes from a fir.convert
+func.func @bad_convert_volatile(%arg0: !fir.ref<i32>) -> !fir.ref<i32, volatile> {
+  // expected-error@+1 {{'fir.convert' op cannot convert between volatile and non-volatile types, use fir.volatile_cast instead}}
+  %0 = fir.convert %arg0 : (!fir.ref<i32>) -> !fir.ref<i32, volatile>
+  return %0 : !fir.ref<i32, volatile>
+}
+
+// -----
+
+// Should fail when volatility changes from a fir.convert
+func.func @bad_convert_volatile2(%arg0: !fir.ref<i32, volatile>) -> !fir.ref<i32> {
+  // expected-error@+1 {{'fir.convert' op cannot convert between volatile and non-volatile types, use fir.volatile_cast instead}}
+  %0 = fir.convert %arg0 : (!fir.ref<i32, volatile>) -> !fir.ref<i32>
+  return %0 : !fir.ref<i32>
+}
+
+// -----
+
+// Should fail when the element type and the containing type change
+func.func @bad_convert_volatile3(%arg0: !fir.ref<i32>) -> !fir.box<i64> {
+  // expected-error@+1 {{'fir.volatile_cast' op types must be identical except for volatility}}
+  %0 = fir.volatile_cast %arg0 : (!fir.ref<i32>) -> !fir.box<i64>
+  return %0 : !fir.box<i64>
+}
+
+// -----
+
+// Should fail when the containing type changes
+func.func @bad_convert_volatile4(%arg0: !fir.ref<i32>) -> !fir.box<i32> {
+  // expected-error@+1 {{'fir.volatile_cast' op types must be identical except for volatility}}
+  %0 = fir.volatile_cast %arg0 : (!fir.ref<i32>) -> !fir.box<i32>
+  return %0 : !fir.box<i32>
+}
+
+// -----
+
+// Should fail when the containing type changes
+func.func @bad_convert_volatile5(%arg0: !fir.ref<i32>) -> !fir.box<i32, volatile> {
+  // expected-error@+1 {{'fir.volatile_cast' op types must be identical except for volatility}}
+  %0 = fir.volatile_cast %arg0 : (!fir.ref<i32>) -> !fir.box<i32, volatile>
+  return %0 : !fir.box<i32, volatile>
+}
+
+// -----
+
+// Should fail when the element type changes
+func.func @bad_convert_volatile6(%arg0: !fir.ref<i32>) -> !fir.ref<i64> {
+  // expected-error@+1 {{'fir.volatile_cast' op types must be identical except for volatility}}
+  %0 = fir.volatile_cast %arg0 : (!fir.ref<i32>) -> !fir.ref<i64>
+  return %0 : !fir.ref<i64>
 }

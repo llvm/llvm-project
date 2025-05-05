@@ -21,7 +21,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/Runtime/io-api-consts.h"
+#include "flang/Runtime/io-api.h"
 #include "flang/Runtime/reduce.h"
 #include "flang/Support/Fortran.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -829,14 +829,16 @@ template <int N, typename A>
 void createArguments(llvm::SmallVectorImpl<mlir::Value> &result,
                      fir::FirOpBuilder &builder, mlir::Location loc,
                      mlir::FunctionType fTy, A arg) {
-  result.emplace_back(builder.createConvert(loc, fTy.getInput(N), arg));
+  result.emplace_back(
+      builder.createConvertWithVolatileCast(loc, fTy.getInput(N), arg));
 }
 
 template <int N, typename A, typename... As>
 void createArguments(llvm::SmallVectorImpl<mlir::Value> &result,
                      fir::FirOpBuilder &builder, mlir::Location loc,
                      mlir::FunctionType fTy, A arg, As... args) {
-  result.emplace_back(builder.createConvert(loc, fTy.getInput(N), arg));
+  result.emplace_back(
+      builder.createConvertWithVolatileCast(loc, fTy.getInput(N), arg));
   createArguments<N + 1>(result, builder, loc, fTy, args...);
 }
 } // namespace helper

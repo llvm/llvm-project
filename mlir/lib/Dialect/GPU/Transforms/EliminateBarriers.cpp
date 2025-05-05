@@ -68,7 +68,7 @@ static bool isSequentialLoopLike(Operation *op) { return isa<scf::ForOp>(op); }
 /// most once. Thus, if an operation in one of the nested regions of `op` is
 /// executed than so are all the other operations in this region.
 static bool hasSingleExecutionBody(Operation *op) {
-  return isa<scf::IfOp, memref::AllocaScopeOp>(op);
+  return isa<FunctionOpInterface, scf::IfOp, memref::AllocaScopeOp>(op);
 }
 
 /// Returns `true` if the operation is known to produce a pointer-like object
@@ -182,8 +182,10 @@ getEffectsBefore(Operation *op,
   if (isParallelRegionBoundary(op->getParentOp()))
     return true;
 
+  Operation *parent = op->getParentOp();
   // Otherwise, keep collecting above the parent operation.
-  if (!getEffectsBefore(op->getParentOp(), effects, stopAtBarrier))
+  if (!parent->hasTrait<OpTrait::IsIsolatedFromAbove>() &&
+      !getEffectsBefore(parent, effects, stopAtBarrier))
     return false;
 
   // If the op is loop-like, collect effects from the trailing operations until
@@ -200,7 +202,7 @@ getEffectsBefore(Operation *op,
   // the operation `op2` at iteration `i` is known to be executed before the
   // operation `op1` at iteration `i+1` and the side effects must be ordered
   // appropriately.
-  if (isSequentialLoopLike(op->getParentOp())) {
+  if (isSequentialLoopLike(parent)) {
     // Assuming loop terminators have no side effects.
     return getEffectsBeforeInBlock(op->getBlock()->getTerminator(), effects,
                                    /*stopAtBarrier=*/true);
@@ -268,12 +270,15 @@ getEffectsAfter(Operation *op,
   // Collect all effects after the op.
   getEffectsAfterInBlock(op, effects, stopAtBarrier);
 
+  Operation *parent = op->getParentOp();
   // Stop if reached the parallel region boundary.
-  if (isParallelRegionBoundary(op->getParentOp()))
+  if (isParallelRegionBoundary(parent))
     return true;
 
   // Otherwise, keep collecting below the parent operation.
-  if (!getEffectsAfter(op->getParentOp(), effects, stopAtBarrier))
+  // Don't look into, for example, neighboring functions
+  if (!parent->hasTrait<OpTrait::IsIsolatedFromAbove>() &&
+      !getEffectsAfter(parent, effects, stopAtBarrier))
     return false;
 
   // If the op is loop-like, collect effects from the leading operations until
@@ -290,7 +295,7 @@ getEffectsAfter(Operation *op,
   // the operation `op1` at iteration `i` is known to be executed after the
   // operation `op2` at iteration `i-1` and the side effects must be ordered
   // appropriately.
-  if (isSequentialLoopLike(op->getParentOp())) {
+  if (isSequentialLoopLike(parent)) {
     if (isa<BarrierOp>(op->getBlock()->front()))
       return true;
 

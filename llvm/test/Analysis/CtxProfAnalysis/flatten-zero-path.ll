@@ -1,7 +1,7 @@
 ; Check that flattened profile lowering handles cold subgraphs that end in "unreachable"
 ; RUN: split-file %s %t
 ; RUN: llvm-ctxprof-util fromYAML --input=%t/profile.yaml --output=%t/profile.ctxprofdata
-; RUN: opt -passes=ctx-prof-flatten %t/example.ll -use-ctx-profile=%t/profile.ctxprofdata -S -o - | FileCheck %s
+; RUN: opt -passes=ctx-prof-flatten %t/1234.ll -use-ctx-profile=%t/profile.ctxprofdata -S -o - | FileCheck %s
 
 ; CHECK-LABEL: entry:
 ; CHECK:          br i1 %t, label %yes, label %no, !prof ![[C1:[0-9]+]]
@@ -14,9 +14,9 @@
 ; CHECK-LABEL: yes:
 ; CHECK:          br i1 %t3, label %yes1, label %yes2, !prof ![[C1]]
 ; CHECK-NOT:   !prof
-; CHECK: ![[C1]] = !{!"branch_weights", i32 6, i32 0}
+; CHECK: ![[C1]] = !{!"branch_weights", i32 72, i32 0}
 
-;--- example.ll
+;--- 1234.ll
 define void @f1(i32 %cond) !guid !0 {
 entry:
   call void @llvm.instrprof.increment(ptr @f1, i64 42, i32 42, i32 0)
@@ -54,4 +54,5 @@ exit:
 ;--- profile.yaml
 Contexts:
   - Guid: 1234
+    TotalRootEntryCount: 12
     Counters: [6,0,0,0]

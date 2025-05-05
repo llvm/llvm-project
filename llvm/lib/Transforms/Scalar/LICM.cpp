@@ -296,8 +296,7 @@ private:
 PreservedAnalyses LICMPass::run(Loop &L, LoopAnalysisManager &AM,
                                 LoopStandardAnalysisResults &AR, LPMUpdater &) {
   if (!AR.MSSA)
-    report_fatal_error("LICM requires MemorySSA (loop-mssa)",
-                       /*GenCrashDiag*/false);
+    reportFatalUsageError("LICM requires MemorySSA (loop-mssa)");
 
   // For the new PM, we also can't use OptimizationRemarkEmitter as an analysis
   // pass.  Function analyses need to be preserved across loop transformations
@@ -330,8 +329,7 @@ PreservedAnalyses LNICMPass::run(LoopNest &LN, LoopAnalysisManager &AM,
                                  LoopStandardAnalysisResults &AR,
                                  LPMUpdater &) {
   if (!AR.MSSA)
-    report_fatal_error("LNICM requires MemorySSA (loop-mssa)",
-                       /*GenCrashDiag*/false);
+    reportFatalUsageError("LNICM requires MemorySSA (loop-mssa)");
 
   // For the new PM, we also can't use OptimizationRemarkEmitter as an analysis
   // pass.  Function analyses need to be preserved across loop transformations
@@ -688,9 +686,10 @@ public:
     // intersection of their successors is non-empty.
     // TODO: This could be expanded to allowing branches where both ends
     // eventually converge to a single block.
-    SmallPtrSet<BasicBlock *, 4> TrueDestSucc, FalseDestSucc;
-    TrueDestSucc.insert(succ_begin(TrueDest), succ_end(TrueDest));
-    FalseDestSucc.insert(succ_begin(FalseDest), succ_end(FalseDest));
+    SmallPtrSet<BasicBlock *, 4> TrueDestSucc(llvm::from_range,
+                                              successors(TrueDest));
+    SmallPtrSet<BasicBlock *, 4> FalseDestSucc(llvm::from_range,
+                                               successors(FalseDest));
     BasicBlock *CommonSucc = nullptr;
     if (TrueDestSucc.count(FalseDest)) {
       CommonSucc = FalseDest;
@@ -730,10 +729,9 @@ public:
       return false;
     // We can hoist phis if the block they are in is the target of hoistable
     // branches which cover all of the predecessors of the block.
-    SmallPtrSet<BasicBlock *, 8> PredecessorBlocks;
     BasicBlock *BB = PN->getParent();
-    for (BasicBlock *PredBB : predecessors(BB))
-      PredecessorBlocks.insert(PredBB);
+    SmallPtrSet<BasicBlock *, 8> PredecessorBlocks(llvm::from_range,
+                                                   predecessors(BB));
     // If we have less predecessor blocks than predecessors then the phi will
     // have more than one incoming value for the same block which we can't
     // handle.
@@ -1564,8 +1562,7 @@ static void splitPredecessorsOfLoopExit(PHINode *PN, DominatorTree *DT,
 #ifndef NDEBUG
   SmallVector<BasicBlock *, 32> ExitBlocks;
   CurLoop->getUniqueExitBlocks(ExitBlocks);
-  SmallPtrSet<BasicBlock *, 32> ExitBlockSet(ExitBlocks.begin(),
-                                             ExitBlocks.end());
+  SmallPtrSet<BasicBlock *, 32> ExitBlockSet(llvm::from_range, ExitBlocks);
 #endif
   BasicBlock *ExitBB = PN->getParent();
   assert(ExitBlockSet.count(ExitBB) && "Expect the PHI is in an exit block.");
@@ -1699,8 +1696,7 @@ static bool sink(Instruction &I, LoopInfo *LI, DominatorTree *DT,
 #ifndef NDEBUG
   SmallVector<BasicBlock *, 32> ExitBlocks;
   CurLoop->getUniqueExitBlocks(ExitBlocks);
-  SmallPtrSet<BasicBlock *, 32> ExitBlockSet(ExitBlocks.begin(),
-                                             ExitBlocks.end());
+  SmallPtrSet<BasicBlock *, 32> ExitBlockSet(llvm::from_range, ExitBlocks);
 #endif
 
   // Clones of this instruction. Don't create more than one per exit block!
@@ -2296,10 +2292,14 @@ collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA, Loop *L) {
   AliasSetTracker AST(BatchAA);
 
   auto IsPotentiallyPromotable = [L](const Instruction *I) {
-    if (const auto *SI = dyn_cast<StoreInst>(I))
-      return L->isLoopInvariant(SI->getPointerOperand());
-    if (const auto *LI = dyn_cast<LoadInst>(I))
-      return L->isLoopInvariant(LI->getPointerOperand());
+    if (const auto *SI = dyn_cast<StoreInst>(I)) {
+      const Value *PtrOp = SI->getPointerOperand();
+      return !isa<ConstantData>(PtrOp) && L->isLoopInvariant(PtrOp);
+    }
+    if (const auto *LI = dyn_cast<LoadInst>(I)) {
+      const Value *PtrOp = LI->getPointerOperand();
+      return !isa<ConstantData>(PtrOp) && L->isLoopInvariant(PtrOp);
+    }
     return false;
   };
 

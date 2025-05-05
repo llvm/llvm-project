@@ -26,10 +26,13 @@
 ;--- profile.yaml
 Contexts:
   - Guid: 12341
+    TotalRootEntryCount: 90
     Counters: [9]
   - Guid: 12074870348631550642
+    TotalRootEntryCount: 24
     Counters: [5]
   - Guid: 11872291593386833696
+    TotalRootEntryCount: 4
     Counters: [1]
     Callsites:  -
                   - Guid: 728453322856651412
@@ -43,18 +46,24 @@ Function Info:
 Current Profile:
 
 Contexts:
+  - Guid:            12341
+    TotalRootEntryCount: 90
+    Counters:        [ 9 ]
   - Guid:            11872291593386833696
+    TotalRootEntryCount: 4
     Counters:        [ 1 ]
     Callsites:
       - - Guid:            728453322856651412
           Counters:        [ 6, 7 ]
   - Guid:            12074870348631550642
+    TotalRootEntryCount: 24
     Counters:        [ 5 ]
 
 Flat Profile:
-728453322856651412 : 6 7 
-11872291593386833696 : 1 
-12074870348631550642 : 5 
+12341 : 810 
+728453322856651412 : 24 28 
+11872291593386833696 : 4 
+12074870348631550642 : 120 
 ;--- example.ll
 declare void @bar()
 
