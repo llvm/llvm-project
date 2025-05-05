@@ -110,6 +110,9 @@ AliasResult AAResults::alias(const MemoryLocation &LocA,
 AliasResult AAResults::alias(const MemoryLocation &LocA,
                              const MemoryLocation &LocB, AAQueryInfo &AAQI,
                              const Instruction *CtxI) {
+  assert(LocA.Ptr->getType()->isPointerTy() &&
+         LocB.Ptr->getType()->isPointerTy() &&
+         "Can only call alias() on pointers");
   AliasResult Result = AliasResult::MayAlias;
 
   if (EnableAATrace) {
