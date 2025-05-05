@@ -31,6 +31,7 @@ FunctionPass *createSparcDelaySlotFillerPass();
 
 void LowerSparcMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
                                     AsmPrinter &AP);
+void initializeSparcAsmPrinterPass(PassRegistry &);
 void initializeSparcDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeErrataWorkaroundPass(PassRegistry &);
 } // namespace llvm

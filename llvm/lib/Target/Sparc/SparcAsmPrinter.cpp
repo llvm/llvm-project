@@ -45,7 +45,7 @@ namespace {
   public:
     explicit SparcAsmPrinter(TargetMachine &TM,
                              std::unique_ptr<MCStreamer> Streamer)
-        : AsmPrinter(TM, std::move(Streamer)) {}
+        : AsmPrinter(TM, std::move(Streamer), ID) {}
 
     StringRef getPassName() const override { return "Sparc Assembly Printer"; }
 
@@ -67,6 +67,7 @@ namespace {
     void LowerGETPCXAndEmitMCInsts(const MachineInstr *MI,
                                    const MCSubtargetInfo &STI);
 
+    static char ID;
   };
 } // end of anonymous namespace
 
@@ -437,6 +438,11 @@ bool SparcAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 
   return false;
 }
+
+char SparcAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(SparcAsmPrinter, "sparc-asm-printer",
+                "Sparc Assembly Printer", false, false)
 
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSparcAsmPrinter() {
