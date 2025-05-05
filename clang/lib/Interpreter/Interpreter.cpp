@@ -270,15 +270,15 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
   if (ErrOut)
     return;
 
-  if (IncrParser->getCodeGen()) {
-    IncrParser->CachedInCodeGenModule = IncrParser->GenModule();
+  if (Act->getCodeGen()) {
+    Act->CacheCodeGenModule();
     // The initial PTU is filled by `-include` or by CUDA includes
     // automatically.
     if (!CI->getPreprocessorOpts().Includes.empty()) {
       // We can't really directly pass the CachedInCodeGenModule to the Jit
       // because it will steal it, causing dangling references as explained in
       // Interpreter::Execute
-      auto M = llvm::CloneModule(*IncrParser->CachedInCodeGenModule);
+      auto M = llvm::CloneModule(*Act->getCachedCodeGenModule());
       ASTContext &C = CI->getASTContext();
       IncrParser->RegisterPTU(C.getTranslationUnitDecl(), std::move(M));
     }
@@ -289,7 +289,7 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
   }
 
   // Not all frontends support code-generation, e.g. ast-dump actions don't
-  if (IncrParser->getCodeGen()) {
+  if (Act->getCodeGen()) {
     // Process the PTUs that came from initialization. For example -include will
     // give us a header that's processed at initialization of the preprocessor.
     for (PartialTranslationUnit &PTU : PTUs)
@@ -303,6 +303,10 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
 Interpreter::~Interpreter() {
   IncrParser.reset();
   Act->FinalizeAction();
+  if (DeviceParser)
+    DeviceParser.reset();
+  if (DeviceAct)
+    DeviceAct->FinalizeAction();
   if (IncrExecutor) {
     if (llvm::Error Err = IncrExecutor->cleanUp())
       llvm::report_fatal_error(
@@ -388,9 +392,11 @@ Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
 
   DCI->ExecuteAction(*Interp->DeviceAct);
 
+  Interp->DeviceCI = std::move(DCI);
+
   auto DeviceParser = std::make_unique<IncrementalCUDADeviceParser>(
-      std::move(DCI), *Interp->getCompilerInstance(), Interp->DeviceAct.get(),
-      IMVFS, Err, Interp->PTUs);
+      *Interp->DeviceCI, *Interp->getCompilerInstance(),
+      Interp->DeviceAct.get(), IMVFS, Err, Interp->PTUs);
 
   if (Err)
     return std::move(Err);
@@ -479,7 +485,7 @@ llvm::Error Interpreter::CreateExecutor() {
     return llvm::make_error<llvm::StringError>("Operation failed. "
                                                "Execution engine exists",
                                                std::error_code());
-  if (!IncrParser->getCodeGen())
+  if (!Act->getCodeGen())
     return llvm::make_error<llvm::StringError>("Operation failed. "
                                                "No code generator available",
                                                std::error_code());
@@ -559,7 +565,7 @@ Interpreter::getSymbolAddress(GlobalDecl GD) const {
     return llvm::make_error<llvm::StringError>("Operation failed. "
                                                "No execution engine",
                                                std::error_code());
-  llvm::StringRef MangledName = IncrParser->getCodeGen()->GetMangledName(GD);
+  llvm::StringRef MangledName = Act->getCodeGen()->GetMangledName(GD);
   return getSymbolAddress(MangledName);
 }
 

@@ -111,6 +111,9 @@ class Interpreter {
   /// Compiler instance performing the incremental compilation.
   std::unique_ptr<CompilerInstance> CI;
 
+  /// An optional compiler instance for CUDA offloading
+  std::unique_ptr<CompilerInstance> DeviceCI;
+
 protected:
   // Derived classes can use an extended interface of the Interpreter.
   Interpreter(std::unique_ptr<CompilerInstance> Instance, llvm::Error &Err,

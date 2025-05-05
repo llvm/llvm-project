@@ -10,11 +10,14 @@
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/CodeGen/CodeGenAction.h"
+#include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/FrontendTool/Utils.h"
 #include "clang/Interpreter/Interpreter.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -50,7 +53,7 @@ IncrementalAction::IncrementalAction(CompilerInstance &CI,
         }
         return Act;
       }()),
-      Interp(I), Consumer(std::move(Consumer)) {}
+      Interp(I), CI(CI), Consumer(std::move(Consumer)) {}
 
 std::unique_ptr<ASTConsumer>
 IncrementalAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
@@ -81,6 +84,45 @@ void IncrementalAction::FinalizeAction() {
   assert(!IsTerminating && "Already finalized!");
   IsTerminating = true;
   EndSourceFile();
+}
+
+void IncrementalAction::CacheCodeGenModule() {
+  CachedInCodeGenModule = GenModule();
+}
+
+llvm::Module *IncrementalAction::getCachedCodeGenModule() const {
+  return CachedInCodeGenModule.get();
+}
+
+std::unique_ptr<llvm::Module> IncrementalAction::GenModule() {
+  static unsigned ID = 0;
+  if (CodeGenerator *CG = getCodeGen()) {
+    // Clang's CodeGen is designed to work with a single llvm::Module. In many
+    // cases for convenience various CodeGen parts have a reference to the
+    // llvm::Module (TheModule or Module) which does not change when a new
+    // module is pushed. However, the execution engine wants to take ownership
+    // of the module which does not map well to CodeGen's design. To work this
+    // around we created an empty module to make CodeGen happy. We should make
+    // sure it always stays empty.
+    assert(((!CachedInCodeGenModule ||
+             !CI.getPreprocessorOpts().Includes.empty()) ||
+            (CachedInCodeGenModule->empty() &&
+             CachedInCodeGenModule->global_empty() &&
+             CachedInCodeGenModule->alias_empty() &&
+             CachedInCodeGenModule->ifunc_empty())) &&
+           "CodeGen wrote to a readonly module");
+    std::unique_ptr<llvm::Module> M(CG->ReleaseModule());
+    CG->StartModule("incr_module_" + std::to_string(ID++), M->getContext());
+    return M;
+  }
+  return nullptr;
+}
+
+CodeGenerator *IncrementalAction::getCodeGen() const {
+  FrontendAction *WrappedAct = getWrapped();
+  if (!WrappedAct || !WrappedAct->hasIRSupport())
+    return nullptr;
+  return static_cast<CodeGenAction *>(WrappedAct)->getCodeGenerator();
 }
 
 InProcessPrintingASTConsumer::InProcessPrintingASTConsumer(

@@ -14,12 +14,8 @@
 #include "IncrementalAction.h"
 
 #include "clang/AST/DeclContextInternals.h"
-#include "clang/CodeGen/CodeGenAction.h"
-#include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/FrontendAction.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
-#include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/IR/Module.h"
@@ -37,10 +33,10 @@ namespace clang {
 IncrementalParser::IncrementalParser(CompilerInstance &Instance,
                                      IncrementalAction *Act, llvm::Error &Err,
                                      std::list<PartialTranslationUnit> &PTUs)
-    : S(Instance.getSema()), CI(Instance), Act(Act), PTUs(PTUs) {
+    : S(Instance.getSema()), Act(Act), PTUs(PTUs) {
   llvm::ErrorAsOutParameter EAO(&Err);
   Consumer = &S.getASTConsumer();
-  P = std::make_unique<Parser>(S.getPreprocessor(), S, /*SkipBodies=*/false);
+  P.reset(new Parser(S.getPreprocessor(), S, /*SkipBodies=*/false));
   P->Initialize();
 }
 
@@ -202,9 +198,9 @@ IncrementalParser::RegisterPTU(TranslationUnitDecl *TU,
   LastPTU.TUPart = TU;
 
   if (!M)
-    M = GenModule();
+    M = Act->GenModule();
 
-  assert((!getCodeGen() || M) && "Must have a llvm::Module at this point");
+  assert((!Act->getCodeGen() || M) && "Must have a llvm::Module at this point");
 
   LastPTU.TheModule = std::move(M);
   LLVM_DEBUG(llvm::dbgs() << "compile-ptu " << PTUs.size() - 1
@@ -215,36 +211,4 @@ IncrementalParser::RegisterPTU(TranslationUnitDecl *TU,
   LLVM_DEBUG(llvm::dbgs() << "]\n");
   return LastPTU;
 }
-
-std::unique_ptr<llvm::Module> IncrementalParser::GenModule() {
-  static unsigned ID = 0;
-  if (CodeGenerator *CG = getCodeGen()) {
-    // Clang's CodeGen is designed to work with a single llvm::Module. In many
-    // cases for convenience various CodeGen parts have a reference to the
-    // llvm::Module (TheModule or Module) which does not change when a new
-    // module is pushed. However, the execution engine wants to take ownership
-    // of the module which does not map well to CodeGen's design. To work this
-    // around we created an empty module to make CodeGen happy. We should make
-    // sure it always stays empty.
-    assert(((!CachedInCodeGenModule ||
-             !CI.getPreprocessorOpts().Includes.empty()) ||
-            (CachedInCodeGenModule->empty() &&
-             CachedInCodeGenModule->global_empty() &&
-             CachedInCodeGenModule->alias_empty() &&
-             CachedInCodeGenModule->ifunc_empty())) &&
-           "CodeGen wrote to a readonly module");
-    std::unique_ptr<llvm::Module> M(CG->ReleaseModule());
-    CG->StartModule("incr_module_" + std::to_string(ID++), M->getContext());
-    return M;
-  }
-  return nullptr;
-}
-
-CodeGenerator *IncrementalParser::getCodeGen() const {
-  FrontendAction *WrappedAct = Act->getWrapped();
-  if (!WrappedAct->hasIRSupport())
-    return nullptr;
-  return static_cast<CodeGenAction *>(WrappedAct)->getCodeGenerator();
-}
-
 } // end namespace clang

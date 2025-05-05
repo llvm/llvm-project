@@ -12,9 +12,14 @@
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/MultiplexConsumer.h"
 
+namespace llvm {
+class Module;
+}
+
 namespace clang {
 
 class Interpreter;
+class CodeGenerator;
 
 /// A custom action enabling the incremental processing functionality.
 ///
@@ -29,7 +34,12 @@ class IncrementalAction : public WrapperFrontendAction {
 private:
   bool IsTerminating = false;
   Interpreter &Interp;
+  CompilerInstance &CI;
   std::unique_ptr<ASTConsumer> Consumer;
+
+  /// When CodeGen is created the first llvm::Module gets cached in many places
+  /// and we must keep it alive.
+  std::unique_ptr<llvm::Module> CachedInCodeGenModule;
 
 public:
   IncrementalAction(CompilerInstance &CI, llvm::LLVMContext &LLVMCtx,
@@ -52,6 +62,18 @@ public:
   void EndSourceFile() override;
 
   void FinalizeAction();
+
+  /// Cache the current CodeGen module to preserve internal references.
+  void CacheCodeGenModule();
+
+  /// Access the cached CodeGen module.
+  llvm::Module *getCachedCodeGenModule() const;
+
+  /// Access the current code generator.
+  CodeGenerator *getCodeGen() const;
+
+  /// Generate an LLVM module for the most recent parsed input.
+  std::unique_ptr<llvm::Module> GenModule();
 };
 
 class InProcessPrintingASTConsumer final : public MultiplexConsumer {

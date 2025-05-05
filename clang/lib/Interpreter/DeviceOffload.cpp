@@ -25,13 +25,13 @@
 namespace clang {
 
 IncrementalCUDADeviceParser::IncrementalCUDADeviceParser(
-    std::unique_ptr<CompilerInstance> DeviceInstance,
-    CompilerInstance &HostInstance, IncrementalAction *DeviceAct,
+    CompilerInstance &DeviceInstance, CompilerInstance &HostInstance,
+    IncrementalAction *DeviceAct,
     llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS,
     llvm::Error &Err, std::list<PartialTranslationUnit> &PTUs)
-    : IncrementalParser(*DeviceInstance, DeviceAct, Err, PTUs), VFS(FS),
+    : IncrementalParser(DeviceInstance, DeviceAct, Err, PTUs), VFS(FS),
       CodeGenOpts(HostInstance.getCodeGenOpts()),
-      TargetOpts(DeviceInstance->getTargetOpts()) {
+      TargetOpts(DeviceInstance.getTargetOpts()) {
   if (Err)
     return;
   StringRef Arch = TargetOpts.CPU;
@@ -41,7 +41,6 @@ IncrementalCUDADeviceParser::IncrementalCUDADeviceParser(
                                                llvm::inconvertibleErrorCode()));
     return;
   }
-  DeviceCI = std::move(DeviceInstance);
 }
 
 llvm::Expected<llvm::StringRef> IncrementalCUDADeviceParser::GeneratePTX() {
