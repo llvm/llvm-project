@@ -27,13 +27,15 @@
 // don't define _LIBCPP_DISABLE_AVAILABILITY. Otherwise, something may have changed in libc++
 // and this test might not work anymore.
 // RUN: %{cxx} %s %{flags} %{compile_flags} %{link_flags} -fvisibility=hidden -fvisibility-inlines-hidden -shared -o %t.1.dylib
-// RUN: nm -omg %t.1.dylib | c++filt | grep value | grep weak
+// RUN: nm -m %t.1.dylib | c++filt | grep value > %t.1.symbols
+// RUN: grep weak %t.1.symbols
 
 // Now, make sure that 'weak' goes away when we define _LIBCPP_DISABLE_AVAILABILITY.
 // In fact, all references to the function might go away, so we just check that we don't emit
 // any weak reference.
 // RUN: %{cxx} %s %{flags} %{compile_flags} %{link_flags} -fvisibility=hidden -fvisibility-inlines-hidden -D_LIBCPP_DISABLE_AVAILABILITY -shared -o %t.2.dylib
-// RUN: nm -omg %t.2.dylib | c++filt | grep -v weak
+// RUN: nm -m %t.2.dylib | c++filt | grep value > %t.2.symbols
+// RUN: not grep weak %t.2.symbols
 
 #include <version>
 
