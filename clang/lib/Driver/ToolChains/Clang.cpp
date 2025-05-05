@@ -9298,6 +9298,11 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
           CmdArgs.push_back(
               Args.MakeArgString("--device-linker=" + TC->getTripleString() +
                                  "=-plugin-opt=-avail-extern-to-local"));
+          if (Kind == Action::OFK_OpenMP) {
+            CmdArgs.push_back(
+                Args.MakeArgString("--device-linker=" + TC->getTripleString() +
+                                   "=-plugin-opt=-amdgpu-internalize-symbols"));
+          }
         }
       }
     }
