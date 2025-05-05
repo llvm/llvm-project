@@ -3653,18 +3653,36 @@ void Verifier::visitCallBase(CallBase &Call) {
   // well.
   for (unsigned i = 0, e = FTy->getNumParams(); i != e; ++i) {
     if (Call.paramHasAttr(i, Attribute::SwiftError)) {
-      Value *SwiftErrorArg = Call.getArgOperand(i);
-      if (auto AI = dyn_cast<AllocaInst>(SwiftErrorArg->stripInBoundsOffsets())) {
-        Check(AI->isSwiftError(),
-              "swifterror argument for call has mismatched alloca", AI, Call);
-        continue;
+      SetVector<const Value *> Args;
+      Args.insert(Call.getArgOperand(i));
+      bool DidChange;
+      do {
+        DidChange = false;
+        // Inherit the incoming values of phi instructions to capture all
+        // values.
+        for (const Value *Arg : Args)
+          if (auto *PhiI = dyn_cast<PHINode>(Arg))
+            for (const auto &Op : PhiI->incoming_values())
+              DidChange |= Args.insert(Op.get());
+      } while (DidChange);
+
+      for (const Value *SwiftErrorArg : Args) {
+        if (isa<PHINode>(SwiftErrorArg))
+          continue;
+        if (auto AI =
+                dyn_cast<AllocaInst>(SwiftErrorArg->stripInBoundsOffsets())) {
+          Check(AI->isSwiftError(),
+                "swifterror argument for call has mismatched alloca", AI, Call);
+          continue;
+        }
+        auto ArgI = dyn_cast<Argument>(SwiftErrorArg);
+        Check(ArgI,
+              "swifterror argument should come from an alloca or parameter",
+              SwiftErrorArg, Call);
+        Check(ArgI->hasSwiftErrorAttr(),
+              "swifterror argument for call has mismatched parameter", ArgI,
+              Call);
       }
-      auto ArgI = dyn_cast<Argument>(SwiftErrorArg);
-      Check(ArgI, "swifterror argument should come from an alloca or parameter",
-            SwiftErrorArg, Call);
-      Check(ArgI->hasSwiftErrorAttr(),
-            "swifterror argument for call has mismatched parameter", ArgI,
-            Call);
     }
 
     if (Attrs.hasParamAttr(i, Attribute::ImmArg)) {
@@ -4356,11 +4374,23 @@ void Verifier::verifySwiftErrorCall(CallBase &Call,
 }
 
 void Verifier::verifySwiftErrorValue(const Value *SwiftErrorVal) {
+  SetVector<const User *> Users(SwiftErrorVal->users().begin(),
+                                SwiftErrorVal->users().end());
+  bool DidChange;
+  do {
+    DidChange = false;
+    // Inherit the users of phi instructions to capture all users.
+    for (const User *U : Users)
+      if (auto PhiI = dyn_cast<PHINode>(U))
+        for (const User *U : PhiI->users())
+          DidChange |= Users.insert(U);
+  } while (DidChange);
+
   // Check that swifterror value is only used by loads, stores, or as
   // a swifterror argument.
-  for (const User *U : SwiftErrorVal->users()) {
+  for (const User *U : Users) {
     Check(isa<LoadInst>(U) || isa<StoreInst>(U) || isa<CallInst>(U) ||
-              isa<InvokeInst>(U),
+              isa<InvokeInst>(U) || isa<PHINode>(U),
           "swifterror value can only be loaded and stored from, or "
           "as a swifterror argument!",
           SwiftErrorVal, U);
