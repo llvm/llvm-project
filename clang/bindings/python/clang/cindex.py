@@ -1887,7 +1887,7 @@ class Cursor(Structure):
         """
 
         if not hasattr(self, "_binopcode"):
-            self._binopcode = conf.lib.clang_Cursor_getBinaryOpcode(self)
+            self._binopcode = conf.lib.clang_getCursorBinaryOperatorKind(self)
 
         return BinaryOperator.from_id(self._binopcode)
 
@@ -4097,7 +4097,7 @@ FUNCTION_LIST: list[LibFunc] = [
     ("clang_Cursor_getTemplateArgumentType", [Cursor, c_uint], Type),
     ("clang_Cursor_getTemplateArgumentValue", [Cursor, c_uint], c_longlong),
     ("clang_Cursor_getTemplateArgumentUnsignedValue", [Cursor, c_uint], c_ulonglong),
-    ("clang_Cursor_getBinaryOpcode", [Cursor], c_int),
+    ("clang_getCursorBinaryOperatorKind", [Cursor], c_int),
     ("clang_Cursor_getBriefCommentText", [Cursor], _CXString),
     ("clang_Cursor_getRawCommentText", [Cursor], _CXString),
     ("clang_Cursor_getOffsetOfField", [Cursor], c_longlong),

@@ -16,6 +16,7 @@
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTMutationListener.h"
+#include "clang/AST/ASTStructuralEquivalence.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/AttrIterator.h"
@@ -11443,6 +11444,22 @@ static QualType mergeEnumWithInteger(ASTContext &Context, const EnumType *ET,
   return {};
 }
 
+QualType ASTContext::mergeTagDefinitions(QualType LHS, QualType RHS) {
+  // C17 and earlier and C++ disallow two tag definitions within the same TU
+  // from being compatible.
+  if (LangOpts.CPlusPlus || !LangOpts.C23)
+    return {};
+
+  // C23, on the other hand, requires the members to be "the same enough", so
+  // we use a structural equivalence check.
+  StructuralEquivalenceContext::NonEquivalentDeclSet NonEquivalentDecls;
+  StructuralEquivalenceContext Ctx(
+      getLangOpts(), *this, *this, NonEquivalentDecls,
+      StructuralEquivalenceKind::Default, /*StrictTypeSpelling=*/false,
+      /*Complain=*/false, /*ErrorOnTagTypeMismatch=*/true);
+  return Ctx.IsEquivalent(LHS, RHS) ? LHS : QualType{};
+}
+
 QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
                                 bool Unqualified, bool BlockReturnType,
                                 bool IsConditionalOperator) {
@@ -11740,7 +11757,7 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
                               /*AllowCXX=*/false, IsConditionalOperator);
   case Type::Record:
   case Type::Enum:
-    return {};
+    return mergeTagDefinitions(LHS, RHS);
   case Type::Builtin:
     // Only exactly equal builtin types are compatible, which is tested above.
     return {};

@@ -1372,9 +1372,8 @@ static llvm::Value *CreateCoercedLoad(Address Src, llvm::Type *Ty,
       if (ScalableDstTy->getElementType() == FixedSrcTy->getElementType()) {
         auto *Load = CGF.Builder.CreateLoad(Src);
         auto *PoisonVec = llvm::PoisonValue::get(ScalableDstTy);
-        auto *Zero = llvm::Constant::getNullValue(CGF.CGM.Int64Ty);
         llvm::Value *Result = CGF.Builder.CreateInsertVector(
-            ScalableDstTy, PoisonVec, Load, Zero, "cast.scalable");
+            ScalableDstTy, PoisonVec, Load, uint64_t(0), "cast.scalable");
         if (ScalableDstTy != Ty)
           Result = CGF.Builder.CreateBitCast(Result, Ty);
         return Result;
@@ -1482,10 +1481,8 @@ CoerceScalableToFixed(CodeGenFunction &CGF, llvm::FixedVectorType *ToTy,
     V = CGF.Builder.CreateBitCast(V, FromTy);
   }
   if (FromTy->getElementType() == ToTy->getElementType()) {
-    llvm::Value *Zero = llvm::Constant::getNullValue(CGF.CGM.Int64Ty);
-
     V->setName(Name + ".coerce");
-    V = CGF.Builder.CreateExtractVector(ToTy, V, Zero, "cast.fixed");
+    V = CGF.Builder.CreateExtractVector(ToTy, V, uint64_t(0), "cast.fixed");
     return {V, true};
   }
   return {V, false};
@@ -3520,8 +3517,7 @@ static llvm::Value *tryEmitFusedAutoreleaseOfResult(CodeGenFunction &CGF,
   // Look for:
   //   %generator = call i8* @objc_retain(i8* %originalResult)
   // or
-  //   %generator = call i8* @objc_retainAutoreleasedReturnValue(i8*
-  //   %originalResult)
+  //   %generator = call i8* @objc_retainAutoreleasedReturnValue(i8* %originalResult)
   llvm::CallInst *call = dyn_cast<llvm::CallInst>(generator);
   if (!call)
     return nullptr;
@@ -3997,7 +3993,7 @@ void CodeGenFunction::EmitFunctionEpilog(const CGFunctionInfo &FI,
         RV = SI->getValueOperand();
         SI->eraseFromParent();
 
-        // Otherwise, we have to do a simple load.
+      // Otherwise, we have to do a simple load.
       } else {
         RV = Builder.CreateLoad(ReturnValue);
       }
@@ -6111,8 +6107,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                   dyn_cast<llvm::ScalableVectorType>(V->getType())) {
             if (FixedDstTy->getElementType() ==
                 ScalableSrcTy->getElementType()) {
-              llvm::Value *Zero = llvm::Constant::getNullValue(CGM.Int64Ty);
-              V = Builder.CreateExtractVector(FixedDstTy, V, Zero,
+              V = Builder.CreateExtractVector(FixedDstTy, V, uint64_t(0),
                                               "cast.fixed");
               return RValue::get(V);
             }

@@ -3597,9 +3597,8 @@ void IRTranslator::translateDbgDeclareRecord(Value *Address, bool HasArgList,
   // A dbg.declare describes the address of a source variable, so lower it
   // into an indirect DBG_VALUE.
   MIRBuilder.setDebugLoc(DL);
-  MIRBuilder.buildIndirectDbgValue(getOrCreateVReg(*Address),
-                                   Variable, Expression);
-  return;
+  MIRBuilder.buildIndirectDbgValue(getOrCreateVReg(*Address), Variable,
+                                   Expression);
 }
 
 void IRTranslator::translateDbgInfo(const Instruction &Inst,

@@ -1834,8 +1834,8 @@ void UnwrappedLineParser::parseStructuralElement(
       nextToken();
       if (FormatTok->is(tok::l_paren)) {
         parseParens();
-        assert(FormatTok->Previous);
-        if (FormatTok->Previous->endsSequence(tok::r_paren, tok::kw_auto,
+        if (FormatTok->Previous &&
+            FormatTok->Previous->endsSequence(tok::r_paren, tok::kw_auto,
                                               tok::l_paren)) {
           Line->SeenDecltypeAuto = true;
         }
@@ -2599,7 +2599,8 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
       if (Prev) {
         auto OptionalParens = [&] {
           if (MightBeStmtExpr || MightBeFoldExpr || Line->InMacroBody ||
-              SeenComma || Style.RemoveParentheses == FormatStyle::RPS_Leave) {
+              SeenComma || Style.RemoveParentheses == FormatStyle::RPS_Leave ||
+              RParen->getPreviousNonComment() == LParen) {
             return false;
           }
           const bool DoubleParens =

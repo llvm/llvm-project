@@ -2487,9 +2487,8 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
         }
         if (FixedSrcTy->getElementType() == ScalableDstTy->getElementType()) {
           llvm::Value *PoisonVec = llvm::PoisonValue::get(ScalableDstTy);
-          llvm::Value *Zero = llvm::Constant::getNullValue(CGF.CGM.Int64Ty);
           llvm::Value *Result = Builder.CreateInsertVector(
-              ScalableDstTy, PoisonVec, Src, Zero, "cast.scalable");
+              ScalableDstTy, PoisonVec, Src, uint64_t(0), "cast.scalable");
           if (Result->getType() != DstTy)
             Result = Builder.CreateBitCast(Result, DstTy);
           return Result;
@@ -2512,10 +2511,9 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
               ScalableSrcTy->getElementCount().getKnownMinValue() / 8);
           Src = Builder.CreateBitCast(Src, ScalableSrcTy);
         }
-        if (ScalableSrcTy->getElementType() == FixedDstTy->getElementType()) {
-          llvm::Value *Zero = llvm::Constant::getNullValue(CGF.CGM.Int64Ty);
-          return Builder.CreateExtractVector(DstTy, Src, Zero, "cast.fixed");
-        }
+        if (ScalableSrcTy->getElementType() == FixedDstTy->getElementType())
+          return Builder.CreateExtractVector(DstTy, Src, uint64_t(0),
+                                             "cast.fixed");
       }
     }
 

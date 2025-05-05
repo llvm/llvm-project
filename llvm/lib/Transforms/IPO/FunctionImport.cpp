@@ -578,7 +578,6 @@ class WorkloadImportsManager : public ModuleImportsManager {
     GlobalsImporter GVI(Index, DefinedGVSummaries, IsPrevailing, ImportList,
                         ExportLists);
     auto &ValueInfos = SetIter->second;
-    SmallVector<EdgeInfo, 128> GlobWorklist;
     for (auto &VI : llvm::make_early_inc_range(ValueInfos)) {
       auto It = DefinedGVSummaries.find(VI.getGUID());
       if (It != DefinedGVSummaries.end() &&

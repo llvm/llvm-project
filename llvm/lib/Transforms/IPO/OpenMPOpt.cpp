@@ -5734,10 +5734,7 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   auto IsCalled = [&](Function &F) {
     if (Kernels.contains(&F))
       return true;
-    for (const User *U : F.users())
-      if (!isa<BlockAddress>(U))
-        return true;
-    return false;
+    return !F.use_empty();
   };
 
   auto EmitRemark = [&](Function &F) {

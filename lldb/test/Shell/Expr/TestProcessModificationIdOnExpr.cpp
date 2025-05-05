@@ -1,7 +1,8 @@
 // Tests that ProcessModID.m_memory_id is not bumped when evaluating expressions without side effects.
 
-// REQUIRES: target-windows
-// Due to different implementations exact numbers (m_stop_id) are different on different OSs. So we lock this test to specific platform.
+// REQUIRES: target-windows && target-x86
+// Due to different implementations exact numbers (m_stop_id) are different on different OSs. So we lock this test to specific platform (Windows). It is limited to x86 because on x86, running get()
+// requires that we write the return address to the stack, this does not happen on AArch64.
 
 // RUN: %build %s -o %t
 // RUN: %lldb %t \
@@ -46,7 +47,8 @@ int main() {
 // CHECK: m_memory_id: 0
 
 // CHECK-LABEL: expr x.get()
-// Expression causes ID to be bumped because LLDB has to execute function
+// Expression causes ID to be bumped because LLDB has to execute function and in doing
+// so must write the return address to the stack.
 
 // CHECK-LABEL: process status -d
 // CHECK: m_stop_id: 3
