@@ -278,9 +278,6 @@ public:
   /// addressed later.
   RValue getUndefRValue(clang::QualType ty);
 
-  const CaseStmt *foldCaseStmt(const clang::CaseStmt &s, mlir::Type condType,
-                               mlir::ArrayAttr &value, cir::CaseOpKind &kind);
-
   cir::FuncOp generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
                            cir::FuncType funcType);
 
