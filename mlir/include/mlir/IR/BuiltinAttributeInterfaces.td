@@ -514,7 +514,7 @@ def MemRefLayoutAttrInterface : AttrInterface<"MemRefLayoutAttrInterface"> {
     InterfaceMethod<
       [{Return the strides (using ShapedType::kDynamic for the dynamic case)
       that this layout corresponds to into `strides` and `offset` if such exist
-      and can be detirmined from a combination of the layout and the given
+      and can be determined from a combination of the layout and the given
       `shape`. If these strides cannot be inferred, return failure().
       The values of `strides` and `offset` are undefined on failure.}],
       "::llvm::LogicalResult", "getStridesAndOffset",
