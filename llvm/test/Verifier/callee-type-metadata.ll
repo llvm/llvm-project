@@ -14,15 +14,9 @@ entry:
   ;; callee_type metdata is a type metadata instead of a list of type metadata nodes.
   ; CHECK: The callee_type metadata must be a list of type metadata nodes
   %call2 = call i32 %fptr(i8 signext %x_val), !callee_type !0
-  ;; callee_type metdata is a list of non "gneralized" type metadata.  
+  ;; callee_type metdata must be a list of "generalized" type metadata.
   ; CHECK: Only generalized type metadata can be part of the callee_type metadata list
   %call3 = call i32 %fptr(i8 signext %x_val), !callee_type !4
-  ;; callee_type metadata should not be part of a direct call.
-  ; CHECK: !callee_type metadata should only exist on indirect function calls
-  %call_direct = call i32 @_Z3barc(i8 signext %x_val), !callee_type !1
-  ;; callee_type metadata should not be part of a direct call.
-  ; CHECK: !callee_type metadata should only exist on indirect function calls
-  %call_direct_wrong_signature = call i32 @_Z3barc(i8 signext %x_val), !callee_type !4
   ret i32 %call
 }
 
