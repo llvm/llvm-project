@@ -21,8 +21,8 @@
 #ifndef LLVM_ADT_INTEQCLASSES_H
 #define LLVM_ADT_INTEQCLASSES_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

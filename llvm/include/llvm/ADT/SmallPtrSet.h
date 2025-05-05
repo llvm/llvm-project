@@ -15,10 +15,10 @@
 #ifndef LLVM_ADT_SMALLPTRSET_H
 #define LLVM_ADT_SMALLPTRSET_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ADL.h"
 #include "llvm/ADT/EpochTracker.h"
 #include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ReverseIteration.h"
 #include "llvm/Support/type_traits.h"
@@ -72,9 +72,10 @@ protected:
 
   // Helpers to copy and move construct a SmallPtrSet.
   LLVM_ABI SmallPtrSetImplBase(const void **SmallStorage,
-                      const SmallPtrSetImplBase &that);
+                               const SmallPtrSetImplBase &that);
   LLVM_ABI SmallPtrSetImplBase(const void **SmallStorage, unsigned SmallSize,
-                      const void **RHSSmallStorage, SmallPtrSetImplBase &&that);
+                               const void **RHSSmallStorage,
+                               SmallPtrSetImplBase &&that);
 
   explicit SmallPtrSetImplBase(const void **SmallStorage, unsigned SmallSize)
       : CurArray(SmallStorage), CurArraySize(SmallSize), NumNonEmpty(0),
@@ -249,11 +250,13 @@ protected:
   /// swap - Swaps the elements of two sets.
   /// Note: This method assumes that both sets have the same small size.
   LLVM_ABI void swap(const void **SmallStorage, const void **RHSSmallStorage,
-            SmallPtrSetImplBase &RHS);
+                     SmallPtrSetImplBase &RHS);
 
-  LLVM_ABI void copyFrom(const void **SmallStorage, const SmallPtrSetImplBase &RHS);
+  LLVM_ABI void copyFrom(const void **SmallStorage,
+                         const SmallPtrSetImplBase &RHS);
   LLVM_ABI void moveFrom(const void **SmallStorage, unsigned SmallSize,
-                const void **RHSSmallStorage, SmallPtrSetImplBase &&RHS);
+                         const void **RHSSmallStorage,
+                         SmallPtrSetImplBase &&RHS);
 
 private:
   /// Code shared by moveFrom() and move constructor.

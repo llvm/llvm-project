@@ -18,8 +18,8 @@
 #ifndef LLVM_ADT_SLOWDYNAMICAPINT_H
 #define LLVM_ADT_SLOWDYNAMICAPINT_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class DynamicAPInt;
@@ -95,19 +95,22 @@ inline raw_ostream &operator<<(raw_ostream &OS, const SlowDynamicAPInt &X) {
 ///
 /// The RHS is always expected to be positive, and the result
 /// is always non-negative.
-LLVM_ABI SlowDynamicAPInt mod(const SlowDynamicAPInt &LHS, const SlowDynamicAPInt &RHS);
+LLVM_ABI SlowDynamicAPInt mod(const SlowDynamicAPInt &LHS,
+                              const SlowDynamicAPInt &RHS);
 
 /// Returns the least common multiple of A and B.
-LLVM_ABI SlowDynamicAPInt lcm(const SlowDynamicAPInt &A, const SlowDynamicAPInt &B);
+LLVM_ABI SlowDynamicAPInt lcm(const SlowDynamicAPInt &A,
+                              const SlowDynamicAPInt &B);
 
 /// Redeclarations of friend declarations above to
 /// make it discoverable by lookups.
 LLVM_ABI SlowDynamicAPInt abs(const SlowDynamicAPInt &X);
 LLVM_ABI SlowDynamicAPInt ceilDiv(const SlowDynamicAPInt &LHS,
-                         const SlowDynamicAPInt &RHS);
+                                  const SlowDynamicAPInt &RHS);
 LLVM_ABI SlowDynamicAPInt floorDiv(const SlowDynamicAPInt &LHS,
-                          const SlowDynamicAPInt &RHS);
-LLVM_ABI SlowDynamicAPInt gcd(const SlowDynamicAPInt &A, const SlowDynamicAPInt &B);
+                                   const SlowDynamicAPInt &RHS);
+LLVM_ABI SlowDynamicAPInt gcd(const SlowDynamicAPInt &A,
+                              const SlowDynamicAPInt &B);
 LLVM_ABI hash_code hash_value(const SlowDynamicAPInt &X); // NOLINT
 
 /// ---------------------------------------------------------------------------

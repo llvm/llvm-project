@@ -16,12 +16,12 @@
 #ifndef LLVM_ADT_FOLDINGSET_H
 #define LLVM_ADT_FOLDINGSET_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/xxhash.h"
 #include <cassert>
 #include <cstddef>
@@ -218,13 +218,15 @@ protected:
   /// FindNodeOrInsertPos - Look up the node specified by ID.  If it exists,
   /// return it.  If not, return the insertion token that will make insertion
   /// faster.
-  LLVM_ABI Node *FindNodeOrInsertPos(const FoldingSetNodeID &ID, void *&InsertPos,
-                            const FoldingSetInfo &Info);
+  LLVM_ABI Node *FindNodeOrInsertPos(const FoldingSetNodeID &ID,
+                                     void *&InsertPos,
+                                     const FoldingSetInfo &Info);
 
   /// InsertNode - Insert the specified node into the folding set, knowing that
   /// it is not already in the folding set.  InsertPos must be obtained from
   /// FindNodeOrInsertPos.
-  LLVM_ABI void InsertNode(Node *N, void *InsertPos, const FoldingSetInfo &Info);
+  LLVM_ABI void InsertNode(Node *N, void *InsertPos,
+                           const FoldingSetInfo &Info);
 };
 
 //===----------------------------------------------------------------------===//

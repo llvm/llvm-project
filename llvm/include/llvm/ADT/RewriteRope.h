@@ -13,9 +13,9 @@
 #ifndef LLVM_ADT_REWRITEROPE_H
 #define LLVM_ADT_REWRITEROPE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 #include <iterator>
