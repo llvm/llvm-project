@@ -2180,10 +2180,10 @@ SDValue SparcTargetLowering::makeAddress(SDValue Op, SelectionDAG &DAG) const {
     if (picLevel == PICLevel::SmallPIC) {
       // This is the pic13 code model, the GOT is known to be smaller than 8KiB.
       Idx = DAG.getNode(SPISD::Lo, DL, Op.getValueType(),
-                        withTargetFlags(Op, SparcMCExpr::VK_GOT13, DAG));
+                        withTargetFlags(Op, ELF::R_SPARC_GOT13, DAG));
     } else {
       // This is the pic32 code model, the GOT is known to be smaller than 4GB.
-      Idx = makeHiLoPair(Op, SparcMCExpr::VK_GOT22, SparcMCExpr::VK_GOT10, DAG);
+      Idx = makeHiLoPair(Op, ELF::R_SPARC_GOT22, ELF::R_SPARC_GOT10, DAG);
     }
 
     SDValue GlobalBase = DAG.getNode(SPISD::GLOBAL_BASE_REG, DL, VT);
