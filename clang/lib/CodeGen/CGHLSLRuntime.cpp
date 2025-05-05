@@ -628,9 +628,11 @@ void CGHLSLRuntime::handleGlobalVarDefinition(const VarDecl *VD,
   if (auto Attr = VD->getAttr<HLSLVkExtBuiltinInputAttr>()) {
     LLVMContext &Ctx = GV->getContext();
     IRBuilder<> B(GV->getContext());
-    MDNode *Val = MDNode::get(
-        Ctx, {ConstantAsMetadata::get(B.getInt32(Attr->getBuiltIn()))});
-    GV->addMetadata("spv.builtin", *Val);
+    MDNode *Operands = MDNode::get(
+        Ctx, {ConstantAsMetadata::get(B.getInt32(11)),
+              ConstantAsMetadata::get(B.getInt32(Attr->getBuiltIn()))});
+    MDNode *Decoration = MDNode::get(Ctx, {Operands});
+    GV->addMetadata("spirv.Decorations", *Decoration);
   }
 }
 
