@@ -16505,13 +16505,12 @@ TreeTransform<Derived>::TransformCXXParenListInitExpr(CXXParenListInitExpr *E) {
   QualType T = getDerived().TransformType(E->getType());
 
   bool ArgChanged = false;
-  ;
 
   if (getDerived().TransformExprs(InitExprs.data(), InitExprs.size(), true,
                                   TransformedInits, &ArgChanged))
     return ExprError();
 
-  if (!ArgChanged && T == E->getType())
+  if (!getDerived().AlwaysRebuild() && !ArgChanged && T == E->getType())
     return E;
 
   return getDerived().RebuildCXXParenListInitExpr(
