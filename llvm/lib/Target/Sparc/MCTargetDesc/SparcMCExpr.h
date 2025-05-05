@@ -24,11 +24,8 @@ class SparcMCExpr : public MCTargetExpr {
 public:
   enum Specifier {
     VK_None,
-    VK_LO,
+    VK_LO = 200, // larger than any relocation type
     VK_HI,
-    VK_H44,
-    VK_M44,
-    VK_L44,
     VK_HH,
     VK_HM,
     VK_LM,

@@ -40,13 +40,13 @@ void SparcMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
 
 StringRef SparcMCExpr::getSpecifierName(SparcMCExpr::Specifier S) {
   // clang-format off
-  switch (S) {
+  switch (uint16_t(S)) {
   case VK_None:          return {};
   case VK_LO:            return "lo";
   case VK_HI:            return "hi";
-  case VK_H44:           return "h44";
-  case VK_M44:           return "m44";
-  case VK_L44:           return "l44";
+  case ELF::R_SPARC_H44:           return "h44";
+  case ELF::R_SPARC_M44:           return "m44";
+  case ELF::R_SPARC_L44:           return "l44";
   case VK_HH:            return "hh";
   case VK_HM:            return "hm";
   case VK_LM:            return "lm";
@@ -89,9 +89,9 @@ SparcMCExpr::Specifier SparcMCExpr::parseSpecifier(StringRef name) {
   return StringSwitch<SparcMCExpr::Specifier>(name)
       .Case("lo", VK_LO)
       .Case("hi", VK_HI)
-      .Case("h44", VK_H44)
-      .Case("m44", VK_M44)
-      .Case("l44", VK_L44)
+      .Case("h44", (SparcMCExpr::Specifier)ELF::R_SPARC_H44)
+      .Case("m44", (SparcMCExpr::Specifier)ELF::R_SPARC_M44)
+      .Case("l44", (SparcMCExpr::Specifier)ELF::R_SPARC_L44)
       .Case("hh", VK_HH)
       .Case("uhi", VK_HH) // Nonstandard GNU extension
       .Case("hm", VK_HM)
@@ -132,12 +132,11 @@ SparcMCExpr::Specifier SparcMCExpr::parseSpecifier(StringRef name) {
 uint16_t SparcMCExpr::getFixupKind() const {
   // clang-format off
   switch (specifier) {
-  default: llvm_unreachable("Unhandled SparcMCExpr::Specifier");
+  default:
+    assert(uint16_t(specifier) < FirstTargetFixupKind);
+    return specifier;
   case VK_LO:            return Sparc::fixup_sparc_lo10;
   case VK_HI:            return Sparc::fixup_sparc_hi22;
-  case VK_H44:           return Sparc::fixup_sparc_h44;
-  case VK_M44:           return Sparc::fixup_sparc_m44;
-  case VK_L44:           return Sparc::fixup_sparc_l44;
   case VK_HH:            return Sparc::fixup_sparc_hh;
   case VK_HM:            return Sparc::fixup_sparc_hm;
   case VK_LM:            return Sparc::fixup_sparc_lm;
@@ -177,6 +176,27 @@ bool SparcMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
                                             const MCAssembler *Asm) const {
   if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
+
+  if (Res.isAbsolute()) {
+    std::optional<int64_t> V;
+    auto C = (uint64_t)Res.getConstant();
+    switch (uint16_t(specifier)) {
+    case ELF::R_SPARC_H44:
+      V = (C >> 22) & 0x3fffff;
+      break;
+    case ELF::R_SPARC_M44:
+      V = (C >> 12) & 0x3ff;
+      break;
+    case ELF::R_SPARC_L44:
+      V = C & 0xfff;
+      break;
+    }
+    if (V) {
+      Res = MCValue::get(*V);
+      return true;
+    }
+  }
+
   Res.setSpecifier(specifier);
   return true;
 }

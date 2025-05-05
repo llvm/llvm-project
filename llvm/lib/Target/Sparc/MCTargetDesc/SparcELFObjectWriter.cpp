@@ -122,9 +122,6 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
 
   case Sparc::fixup_sparc_hi22:  return ELF::R_SPARC_HI22;
   case Sparc::fixup_sparc_lo10:  return ELF::R_SPARC_LO10;
-  case Sparc::fixup_sparc_h44:   return ELF::R_SPARC_H44;
-  case Sparc::fixup_sparc_m44:   return ELF::R_SPARC_M44;
-  case Sparc::fixup_sparc_l44:   return ELF::R_SPARC_L44;
   case Sparc::fixup_sparc_hh:    return ELF::R_SPARC_HH22;
   case Sparc::fixup_sparc_hm:    return ELF::R_SPARC_HM10;
   case Sparc::fixup_sparc_lm:    return ELF::R_SPARC_LM22;
