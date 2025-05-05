@@ -400,6 +400,18 @@ class ConfinedProperty<Property p, Pred pred, string newSummary = "">
   : ConfinedProp<p, pred, newSummary>,
     Deprecated<"moved to shorter name ConfinedProp">;
 
+/// Defines a constant value of type `prop` to be used in pattern matching.
+/// When used as a constraint, forms a matcher that tests that the property is
+/// equal to the given value (and matches any other constraints on the property).
+/// The constant value is given as a string and should be of the _interface_ type
+/// of the attribute.
+class ConstantProp<Property prop, string val>
+    : ConfinedProp<prop,
+        CPred<"$_self == " # value>,
+        "constant property " # value> {
+  string value = val;
+}
+
 //===----------------------------------------------------------------------===//
 // Primitive property combinators
 //===----------------------------------------------------------------------===//
