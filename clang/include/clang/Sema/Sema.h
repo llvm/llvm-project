@@ -6476,6 +6476,8 @@ private:
   void setupImplicitSpecialMemberType(CXXMethodDecl *SpecialMem,
                                       QualType ResultTy,
                                       ArrayRef<QualType> Args);
+  // Helper for ActOnFields to check for all function pointer members.
+  bool EntirelyFunctionPointers(const RecordDecl *Record);
 
   // A cache representing if we've fully checked the various comparison category
   // types stored in ASTContext. The bit-index corresponds to the integer value
