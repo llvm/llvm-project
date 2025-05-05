@@ -475,7 +475,6 @@ static bool equalsPath(StringRef path1, StringRef path2) {
 
 // Find by name an OBJ provided on the command line
 PrecompSource *UsePrecompSource::findObjByName(StringRef fileNameOnly) {
-  SmallString<128> currentPath;
   for (auto kv : ctx.precompSourceMappings) {
     StringRef currentFileName = sys::path::filename(kv.second->file->getName(),
                                                     sys::path::Style::windows);

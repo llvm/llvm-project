@@ -869,7 +869,7 @@ fuseWithReshapeByExpansion(LinalgOp linalgOp, Operation *reshapeOp,
          "preconditions for fuse operation failed");
 
   Location loc = linalgOp.getLoc();
-  SmallVector<OpFoldResult> expandedShape, collapsedShape;
+  SmallVector<OpFoldResult> expandedShape;
   SmallVector<AffineMap, 4> reassociationIndices;
   Value src;
   if (auto expandingReshapeOp = dyn_cast<tensor::ExpandShapeOp>(reshapeOp)) {
