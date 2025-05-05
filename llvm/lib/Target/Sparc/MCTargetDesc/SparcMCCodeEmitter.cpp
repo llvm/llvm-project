@@ -190,34 +190,29 @@ getBranchTargetOpValue(const MCInst &MI, unsigned OpNo,
   if (MO.isReg() || MO.isImm())
     return getMachineOpValue(MI, MO, Fixups, STI);
 
-  Fixups.push_back(MCFixup::create(0, MO.getExpr(),
-                                   (MCFixupKind)Sparc::fixup_sparc_br22));
+  Fixups.push_back(MCFixup::create(0, MO.getExpr(), ELF::R_SPARC_WDISP22));
   return 0;
 }
 
-unsigned SparcMCCodeEmitter::
-getBranchPredTargetOpValue(const MCInst &MI, unsigned OpNo,
-                           SmallVectorImpl<MCFixup> &Fixups,
-                           const MCSubtargetInfo &STI) const {
+unsigned SparcMCCodeEmitter::getBranchPredTargetOpValue(
+    const MCInst &MI, unsigned OpNo, SmallVectorImpl<MCFixup> &Fixups,
+    const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(OpNo);
   if (MO.isReg() || MO.isImm())
     return getMachineOpValue(MI, MO, Fixups, STI);
 
-  Fixups.push_back(MCFixup::create(0, MO.getExpr(),
-                                   (MCFixupKind)Sparc::fixup_sparc_br19));
+  Fixups.push_back(MCFixup::create(0, MO.getExpr(), ELF::R_SPARC_WDISP19));
   return 0;
 }
 
-unsigned SparcMCCodeEmitter::
-getBranchOnRegTargetOpValue(const MCInst &MI, unsigned OpNo,
-                           SmallVectorImpl<MCFixup> &Fixups,
-                           const MCSubtargetInfo &STI) const {
+unsigned SparcMCCodeEmitter::getBranchOnRegTargetOpValue(
+    const MCInst &MI, unsigned OpNo, SmallVectorImpl<MCFixup> &Fixups,
+    const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(OpNo);
   if (MO.isReg() || MO.isImm())
     return getMachineOpValue(MI, MO, Fixups, STI);
 
-  Fixups.push_back(
-      MCFixup::create(0, MO.getExpr(), (MCFixupKind)Sparc::fixup_sparc_br16));
+  Fixups.push_back(MCFixup::create(0, MO.getExpr(), ELF::R_SPARC_WDISP16));
 
   return 0;
 }

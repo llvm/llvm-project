@@ -2549,7 +2549,6 @@ static SDValue checkIntrinsicImmArg(SDValue Op, unsigned ImmOp,
 SDValue
 LoongArchTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                  SelectionDAG &DAG) const {
-  SDLoc DL(Op);
   switch (Op.getConstantOperandVal(0)) {
   default:
     return SDValue(); // Don't custom lower most intrinsics.
