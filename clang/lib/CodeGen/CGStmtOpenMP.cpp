@@ -3980,7 +3980,6 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
         Ordered = true;
     }
 
-    llvm::DenseSet<const Expr *> EmittedFinals;
     emitAlignedClause(*this, S);
     bool HasLinears = EmitOMPLinearClauseInit(S);
     // Emit helper vars inits.

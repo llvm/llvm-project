@@ -4641,8 +4641,6 @@ OpenMPIRBuilder::applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
   SmallPtrSet<BasicBlock *, 32> ParallelRegionBlockSet;
   SmallVector<BasicBlock *, 32> Blocks;
   OI.collectBlocks(ParallelRegionBlockSet, Blocks);
-  SmallVector<BasicBlock *, 32> BlocksT(ParallelRegionBlockSet.begin(),
-                                        ParallelRegionBlockSet.end());
 
   CodeExtractorAnalysisCache CEAC(*OuterFn);
   CodeExtractor Extractor(Blocks,
@@ -4658,7 +4656,7 @@ OpenMPIRBuilder::applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
                           /* AggrArgsIn0AddrSpace */ true);
 
   BasicBlock *CommonExit = nullptr;
-  SetVector<Value *> Inputs, Outputs, SinkingCands, HoistingCands;
+  SetVector<Value *> SinkingCands, HoistingCands;
 
   // Find allocas outside the loop body region which are used inside loop
   // body
