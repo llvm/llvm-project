@@ -92,6 +92,8 @@ set(TSAN_HEADERS
   tsan_interface.h
   tsan_interface.inc
   tsan_interface_ann.h
+  tsan_interface_avx2.h
+  tsan_interface_avx512.h
   tsan_interface_java.h
   tsan_mman.h
   tsan_mutexset.h
@@ -241,6 +243,14 @@ else()
     else()
       set(TSAN_ASM_SOURCES)
     endif()
+    add_compiler_rt_object_libraries(RTTSanAVX2
+        ARCHS ${arch}
+        SOURCES tsan_interface_avx2.cpp
+        CFLAGS ${TSAN_RTL_CFLAGS} -mavx2)
+    add_compiler_rt_object_libraries(RTTSanAVX512
+        ARCHS ${arch}
+        SOURCES tsan_interface_avx512.cpp
+        CFLAGS ${TSAN_RTL_CFLAGS} -mavx512f)
     add_compiler_rt_runtime(clang_rt.tsan
       STATIC
       ARCHS ${arch}
@@ -252,6 +262,8 @@ else()
               $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
               $<TARGET_OBJECTS:RTSanitizerCommonSymbolizerInternal.${arch}>
               $<TARGET_OBJECTS:RTUbsan.${arch}>
+              $<TARGET_OBJECTS:RTTSanAVX2.${arch}>
+              $<TARGET_OBJECTS:RTTSanAVX512.${arch}>
       ADDITIONAL_HEADERS ${TSAN_HEADERS}
       CFLAGS ${TSAN_RTL_CFLAGS}
       PARENT_TARGET tsan)
@@ -275,6 +287,8 @@ else()
               $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
               $<TARGET_OBJECTS:RTSanitizerCommonSymbolizerInternal.${arch}>
               $<TARGET_OBJECTS:RTUbsan.${arch}>
+              $<TARGET_OBJECTS:RTTSanAVX2.${arch}>
+              $<TARGET_OBJECTS:RTTSanAVX512.${arch}>
       ADDITIONAL_HEADERS ${TSAN_HEADERS}
       CFLAGS ${TSAN_RTL_DYNAMIC_CFLAGS}
       DEFS SANITIZER_SHARED
