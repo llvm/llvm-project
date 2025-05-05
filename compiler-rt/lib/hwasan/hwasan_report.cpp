@@ -761,7 +761,7 @@ void BaseReport::PrintHeapOrGlobalCandidate() const {
     if (sym->SymbolizeData(candidate.untagged_addr, &info) && info.start) {
       Printf(
           "%p is located %zd bytes %s a %zd-byte global variable "
-          "%s [%p,%p) in %s\n",
+          "%s [%zd,%zd) in %s\n",
           untagged_addr,
           candidate.after ? untagged_addr - (info.start + info.size)
                           : info.start - untagged_addr,
