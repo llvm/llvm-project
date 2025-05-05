@@ -18,17 +18,6 @@ namespace llvm {
       // fixup_sparc_call30 - 30-bit PC relative relocation for call
       fixup_sparc_call30 = FirstTargetFixupKind,
 
-      /// fixup_sparc_br22 - 22-bit PC relative relocation for
-      /// branches
-      fixup_sparc_br22,
-
-      /// fixup_sparc_br19 - 19-bit PC relative relocation for
-      /// branches on icc/xcc
-      fixup_sparc_br19,
-
-      /// fixup_sparc_bpr  - 16-bit fixup for bpr
-      fixup_sparc_br16,
-
       /// fixup_sparc_13 - 13-bit fixup
       fixup_sparc_13,
 
