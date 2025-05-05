@@ -14,10 +14,10 @@
 #ifndef LLVM_ANALYSIS_LOOPNESTANALYSIS_H
 #define LLVM_ANALYSIS_LOOPNESTANALYSIS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -206,7 +206,8 @@ class LoopNestAnalysis : public AnalysisInfoMixin<LoopNestAnalysis> {
 
 public:
   using Result = LoopNest;
-  LLVM_ABI Result run(Loop &L, LoopAnalysisManager &AM, LoopStandardAnalysisResults &AR);
+  LLVM_ABI Result run(Loop &L, LoopAnalysisManager &AM,
+                      LoopStandardAnalysisResults &AR);
 };
 
 /// Printer pass for the \c LoopNest results.
@@ -217,7 +218,8 @@ public:
   explicit LoopNestPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
-                        LoopStandardAnalysisResults &AR, LPMUpdater &U);
+                                 LoopStandardAnalysisResults &AR,
+                                 LPMUpdater &U);
 
   static bool isRequired() { return true; }
 };

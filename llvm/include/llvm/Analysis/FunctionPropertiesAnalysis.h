@@ -14,10 +14,10 @@
 #ifndef LLVM_ANALYSIS_FUNCTIONPROPERTIESANALYSIS_H
 #define LLVM_ANALYSIS_FUNCTIONPROPERTIESANALYSIS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class BasicBlock;
@@ -148,7 +148,8 @@ public:
 
   using Result = const FunctionPropertiesInfo;
 
-  LLVM_ABI FunctionPropertiesInfo run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI FunctionPropertiesInfo run(Function &F,
+                                      FunctionAnalysisManager &FAM);
 };
 
 /// Printer pass for the FunctionPropertiesAnalysis results.
@@ -185,8 +186,9 @@ private:
   BasicBlock &CallSiteBB;
   Function &Caller;
 
-  LLVM_ABI static bool isUpdateValid(Function &F, const FunctionPropertiesInfo &FPI,
-                            FunctionAnalysisManager &FAM);
+  LLVM_ABI static bool isUpdateValid(Function &F,
+                                     const FunctionPropertiesInfo &FPI,
+                                     FunctionAnalysisManager &FAM);
 
   DominatorTree &getUpdatedDominatorTree(FunctionAnalysisManager &FAM) const;
 

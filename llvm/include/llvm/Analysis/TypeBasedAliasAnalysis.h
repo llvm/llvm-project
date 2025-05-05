@@ -15,10 +15,10 @@
 #ifndef LLVM_ANALYSIS_TYPEBASEDALIASANALYSIS_H
 #define LLVM_ANALYSIS_TYPEBASEDALIASANALYSIS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 
 namespace llvm {
@@ -47,17 +47,20 @@ public:
     return false;
   }
 
-  LLVM_ABI AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
-                    AAQueryInfo &AAQI, const Instruction *CtxI);
-  LLVM_ABI ModRefInfo getModRefInfoMask(const MemoryLocation &Loc, AAQueryInfo &AAQI,
-                               bool IgnoreLocals);
+  LLVM_ABI AliasResult alias(const MemoryLocation &LocA,
+                             const MemoryLocation &LocB, AAQueryInfo &AAQI,
+                             const Instruction *CtxI);
+  LLVM_ABI ModRefInfo getModRefInfoMask(const MemoryLocation &Loc,
+                                        AAQueryInfo &AAQI, bool IgnoreLocals);
 
-  LLVM_ABI MemoryEffects getMemoryEffects(const CallBase *Call, AAQueryInfo &AAQI);
+  LLVM_ABI MemoryEffects getMemoryEffects(const CallBase *Call,
+                                          AAQueryInfo &AAQI);
   LLVM_ABI MemoryEffects getMemoryEffects(const Function *F);
-  LLVM_ABI ModRefInfo getModRefInfo(const CallBase *Call, const MemoryLocation &Loc,
-                           AAQueryInfo &AAQI);
-  LLVM_ABI ModRefInfo getModRefInfo(const CallBase *Call1, const CallBase *Call2,
-                           AAQueryInfo &AAQI);
+  LLVM_ABI ModRefInfo getModRefInfo(const CallBase *Call,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI);
+  LLVM_ABI ModRefInfo getModRefInfo(const CallBase *Call1,
+                                    const CallBase *Call2, AAQueryInfo &AAQI);
 
 private:
   bool Aliases(const MDNode *A, const MDNode *B) const;

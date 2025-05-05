@@ -19,13 +19,13 @@
 #ifndef LLVM_ANALYSIS_PHIVALUES_H
 #define LLVM_ANALYSIS_PHIVALUES_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -67,7 +67,7 @@ public:
 
   /// Handle invalidation events in the new pass manager.
   LLVM_ABI bool invalidate(Function &, const PreservedAnalyses &,
-                  FunctionAnalysisManager::Invalidator &);
+                           FunctionAnalysisManager::Invalidator &);
 
 private:
   using ConstValueSet = SmallSetVector<const Value *, 4>;

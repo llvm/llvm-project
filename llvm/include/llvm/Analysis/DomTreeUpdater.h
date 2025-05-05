@@ -77,7 +77,7 @@ public:
   /// modified while awaiting deletion. Multiple callbacks can be queued for one
   /// DelBB under Lazy UpdateStrategy.
   LLVM_ABI void callbackDeleteBB(BasicBlock *DelBB,
-                        std::function<void(BasicBlock *)> Callback);
+                                 std::function<void(BasicBlock *)> Callback);
 
   ///@}
 

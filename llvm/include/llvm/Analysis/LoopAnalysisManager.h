@@ -29,8 +29,8 @@
 #ifndef LLVM_ANALYSIS_LOOPANALYSISMANAGER_H
 #define LLVM_ANALYSIS_LOOPANALYSISMANAGER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -133,7 +133,7 @@ public:
   /// clear all of the cached analysis results that are keyed on the \c
   /// LoopInfo for this function.
   LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
-                  FunctionAnalysisManager::Invalidator &Inv);
+                           FunctionAnalysisManager::Invalidator &Inv);
 
 private:
   LoopAnalysisManager *InnerAM;

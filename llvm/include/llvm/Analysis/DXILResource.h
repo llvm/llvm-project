@@ -9,7 +9,6 @@
 #ifndef LLVM_ANALYSIS_DXILRESOURCE_H
 #define LLVM_ANALYSIS_DXILRESOURCE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -17,6 +16,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DXILABI.h"
 
 namespace llvm {
@@ -287,8 +287,9 @@ private:
   dxil::ResourceKind Kind;
 
 public:
-  LLVM_ABI ResourceTypeInfo(TargetExtType *HandleTy, const dxil::ResourceClass RC,
-                   const dxil::ResourceKind Kind);
+  LLVM_ABI ResourceTypeInfo(TargetExtType *HandleTy,
+                            const dxil::ResourceClass RC,
+                            const dxil::ResourceKind Kind);
   ResourceTypeInfo(TargetExtType *HandleTy)
       : ResourceTypeInfo(HandleTy, {}, dxil::ResourceKind::Invalid) {}
 
@@ -379,7 +380,8 @@ public:
   const StringRef getName() const { return Symbol ? Symbol->getName() : ""; }
 
   bool hasSymbol() const { return Symbol; }
-  LLVM_ABI GlobalVariable *createSymbol(Module &M, StructType *Ty, StringRef Name = "");
+  LLVM_ABI GlobalVariable *createSymbol(Module &M, StructType *Ty,
+                                        StringRef Name = "");
   LLVM_ABI MDTuple *getAsMetadata(Module &M, dxil::ResourceTypeInfo &RTI) const;
 
   LLVM_ABI std::pair<uint32_t, uint32_t>
@@ -395,7 +397,7 @@ public:
   }
 
   LLVM_ABI void print(raw_ostream &OS, dxil::ResourceTypeInfo &RTI,
-             const DataLayout &DL) const;
+                      const DataLayout &DL) const;
 };
 
 } // namespace dxil
@@ -407,7 +409,7 @@ class DXILResourceTypeMap {
 
 public:
   LLVM_ABI bool invalidate(Module &M, const PreservedAnalyses &PA,
-                  ModuleAnalysisManager::Invalidator &Inv);
+                           ModuleAnalysisManager::Invalidator &Inv);
 
   dxil::ResourceTypeInfo &operator[](TargetExtType *Ty) {
     auto It = Infos.find(Ty);
@@ -534,7 +536,7 @@ public:
   }
 
   LLVM_ABI void print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
-             const DataLayout &DL) const;
+                      const DataLayout &DL) const;
 
   friend class DXILResourceAnalysis;
   friend class DXILResourceWrapperPass;

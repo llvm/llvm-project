@@ -15,9 +15,9 @@
 #ifndef LLVM_ANALYSIS_MEMORYLOCATION_H
 #define LLVM_ANALYSIS_MEMORYLOCATION_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/TypeSize.h"
 
 #include <optional>
@@ -248,7 +248,8 @@ public:
   static MemoryLocation get(const Instruction *Inst) {
     return *MemoryLocation::getOrNone(Inst);
   }
-  LLVM_ABI static std::optional<MemoryLocation> getOrNone(const Instruction *Inst);
+  LLVM_ABI static std::optional<MemoryLocation>
+  getOrNone(const Instruction *Inst);
 
   /// Return a location representing the source of a memory transfer.
   LLVM_ABI static MemoryLocation getForSource(const MemTransferInst *MTI);
@@ -258,12 +259,13 @@ public:
   /// transfer.
   LLVM_ABI static MemoryLocation getForDest(const MemIntrinsic *MI);
   LLVM_ABI static MemoryLocation getForDest(const AnyMemIntrinsic *MI);
-  LLVM_ABI static std::optional<MemoryLocation> getForDest(const CallBase *CI,
-                                                  const TargetLibraryInfo &TLI);
+  LLVM_ABI static std::optional<MemoryLocation>
+  getForDest(const CallBase *CI, const TargetLibraryInfo &TLI);
 
   /// Return a location representing a particular argument of a call.
-  LLVM_ABI static MemoryLocation getForArgument(const CallBase *Call, unsigned ArgIdx,
-                                       const TargetLibraryInfo *TLI);
+  LLVM_ABI static MemoryLocation getForArgument(const CallBase *Call,
+                                                unsigned ArgIdx,
+                                                const TargetLibraryInfo *TLI);
   static MemoryLocation getForArgument(const CallBase *Call, unsigned ArgIdx,
                                        const TargetLibraryInfo &TLI) {
     return getForArgument(Call, ArgIdx, &TLI);

@@ -13,10 +13,10 @@
 #ifndef LLVM_ANALYSIS_BLOCKFREQUENCYINFO_H
 #define LLVM_ANALYSIS_BLOCKFREQUENCYINFO_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BlockFrequency.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Printable.h"
 #include <cstdint>
 #include <memory>
@@ -42,8 +42,9 @@ class BlockFrequencyInfo {
 
 public:
   LLVM_ABI BlockFrequencyInfo();
-  LLVM_ABI BlockFrequencyInfo(const Function &F, const BranchProbabilityInfo &BPI,
-                     const LoopInfo &LI);
+  LLVM_ABI BlockFrequencyInfo(const Function &F,
+                              const BranchProbabilityInfo &BPI,
+                              const LoopInfo &LI);
   BlockFrequencyInfo(const BlockFrequencyInfo &) = delete;
   BlockFrequencyInfo &operator=(const BlockFrequencyInfo &) = delete;
   LLVM_ABI BlockFrequencyInfo(BlockFrequencyInfo &&Arg);
@@ -52,7 +53,7 @@ public:
 
   /// Handle invalidation explicitly.
   LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
-                  FunctionAnalysisManager::Invalidator &);
+                           FunctionAnalysisManager::Invalidator &);
 
   LLVM_ABI const Function *getFunction() const;
   LLVM_ABI const BranchProbabilityInfo *getBPI() const;
@@ -74,7 +75,8 @@ public:
   /// Returns the estimated profile count of \p Freq.
   /// This uses the frequency \p Freq and multiplies it by
   /// the enclosing function's count (if available) and returns the value.
-  LLVM_ABI std::optional<uint64_t> getProfileCountFromFreq(BlockFrequency Freq) const;
+  LLVM_ABI std::optional<uint64_t>
+  getProfileCountFromFreq(BlockFrequency Freq) const;
 
   /// Returns true if \p BB is an irreducible loop header
   /// block. Otherwise false.
@@ -86,12 +88,13 @@ public:
   /// Set the frequency of \p ReferenceBB to \p Freq and scale the frequencies
   /// of the blocks in \p BlocksToScale such that their frequencies relative
   /// to \p ReferenceBB remain unchanged.
-  LLVM_ABI void setBlockFreqAndScale(const BasicBlock *ReferenceBB, BlockFrequency Freq,
-                            SmallPtrSetImpl<BasicBlock *> &BlocksToScale);
+  LLVM_ABI void
+  setBlockFreqAndScale(const BasicBlock *ReferenceBB, BlockFrequency Freq,
+                       SmallPtrSetImpl<BasicBlock *> &BlocksToScale);
 
   /// calculate - compute block frequency info for the given function.
   LLVM_ABI void calculate(const Function &F, const BranchProbabilityInfo &BPI,
-                 const LoopInfo &LI);
+                          const LoopInfo &LI);
 
   LLVM_ABI BlockFrequency getEntryFreq() const;
   LLVM_ABI void releaseMemory();
@@ -104,11 +107,13 @@ public:
 /// Print the block frequency @p Freq relative to the current functions entry
 /// frequency. Returns a Printable object that can be piped via `<<` to a
 /// `raw_ostream`.
-LLVM_ABI Printable printBlockFreq(const BlockFrequencyInfo &BFI, BlockFrequency Freq);
+LLVM_ABI Printable printBlockFreq(const BlockFrequencyInfo &BFI,
+                                  BlockFrequency Freq);
 
 /// Convenience function equivalent to calling
 /// `printBlockFreq(BFI, BFI.getBlocakFreq(&BB))`.
-LLVM_ABI Printable printBlockFreq(const BlockFrequencyInfo &BFI, const BasicBlock &BB);
+LLVM_ABI Printable printBlockFreq(const BlockFrequencyInfo &BFI,
+                                  const BasicBlock &BB);
 
 /// Analysis pass which computes \c BlockFrequencyInfo.
 class BlockFrequencyAnalysis

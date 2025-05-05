@@ -13,9 +13,9 @@
 #ifndef LLVM_ANALYSIS_SCALAREVOLUTIONALIASANALYSIS_H
 #define LLVM_ANALYSIS_SCALAREVOLUTIONALIASANALYSIS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -32,11 +32,12 @@ public:
   explicit SCEVAAResult(ScalarEvolution &SE) : SE(SE) {}
   SCEVAAResult(SCEVAAResult &&Arg) : AAResultBase(std::move(Arg)), SE(Arg.SE) {}
 
-  LLVM_ABI AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
-                    AAQueryInfo &AAQI, const Instruction *CtxI);
+  LLVM_ABI AliasResult alias(const MemoryLocation &LocA,
+                             const MemoryLocation &LocB, AAQueryInfo &AAQI,
+                             const Instruction *CtxI);
 
   LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
-                  FunctionAnalysisManager::Invalidator &Inv);
+                           FunctionAnalysisManager::Invalidator &Inv);
 
 private:
   Value *GetBaseValue(const SCEV *S);
@@ -71,7 +72,6 @@ public:
 
 /// Creates an instance of \c SCEVAAWrapperPass.
 LLVM_ABI FunctionPass *createSCEVAAWrapperPass();
-
 }
 
 #endif

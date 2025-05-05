@@ -21,11 +21,11 @@
 #ifndef LLVM_ANALYSIS_DEMANDEDBITS_H
 #define LLVM_ANALYSIS_DEMANDEDBITS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -68,16 +68,16 @@ public:
   /// Compute alive bits of one addition operand from alive output and known
   /// operand bits
   LLVM_ABI static APInt determineLiveOperandBitsAdd(unsigned OperandNo,
-                                           const APInt &AOut,
-                                           const KnownBits &LHS,
-                                           const KnownBits &RHS);
+                                                    const APInt &AOut,
+                                                    const KnownBits &LHS,
+                                                    const KnownBits &RHS);
 
   /// Compute alive bits of one subtraction operand from alive output and known
   /// operand bits
   LLVM_ABI static APInt determineLiveOperandBitsSub(unsigned OperandNo,
-                                           const APInt &AOut,
-                                           const KnownBits &LHS,
-                                           const KnownBits &RHS);
+                                                    const APInt &AOut,
+                                                    const KnownBits &LHS,
+                                                    const KnownBits &RHS);
 
 private:
   void performAnalysis();

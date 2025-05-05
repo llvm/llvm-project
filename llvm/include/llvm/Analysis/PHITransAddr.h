@@ -13,9 +13,9 @@
 #ifndef LLVM_ANALYSIS_PHITRANSADDR_H
 #define LLVM_ANALYSIS_PHITRANSADDR_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class AssumptionCache;
@@ -77,7 +77,7 @@ public:
   /// CurBB to Pred, updating our state to reflect any needed changes.  If
   /// 'MustDominate' is true, the translated value must dominate PredBB.
   LLVM_ABI Value *translateValue(BasicBlock *CurBB, BasicBlock *PredBB,
-                        const DominatorTree *DT, bool MustDominate);
+                                 const DominatorTree *DT, bool MustDominate);
 
   /// translateWithInsertion - PHI translate this value into the specified
   /// predecessor block, inserting a computation of the value if it is
@@ -86,9 +86,10 @@ public:
   /// All newly created instructions are added to the NewInsts list.  This
   /// returns null on failure.
   ///
-  LLVM_ABI Value *translateWithInsertion(BasicBlock *CurBB, BasicBlock *PredBB,
-                                const DominatorTree &DT,
-                                SmallVectorImpl<Instruction *> &NewInsts);
+  LLVM_ABI Value *
+  translateWithInsertion(BasicBlock *CurBB, BasicBlock *PredBB,
+                         const DominatorTree &DT,
+                         SmallVectorImpl<Instruction *> &NewInsts);
 
   LLVM_ABI void dump() const;
 

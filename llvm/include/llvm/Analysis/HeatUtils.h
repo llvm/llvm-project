@@ -23,8 +23,8 @@ class BlockFrequencyInfo;
 class Function;
 
 // Returns number of calls of calledFunction by callerFunction.
-LLVM_ABI uint64_t
-getNumOfCalls(Function &callerFunction, Function &calledFunction);
+LLVM_ABI uint64_t getNumOfCalls(Function &callerFunction,
+                                Function &calledFunction);
 
 // Returns the maximum frequency of a BB in a function.
 LLVM_ABI uint64_t getMaxFreq(const Function &F, const BlockFrequencyInfo *BFI);

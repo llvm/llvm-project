@@ -88,11 +88,11 @@
 #ifndef LLVM_ANALYSIS_CGSCCPASSMANAGER_H
 #define LLVM_ANALYSIS_CGSCCPASSMANAGER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <utility>
@@ -189,7 +189,7 @@ public:
   /// analyses in the \c CGSCCAnalysisManager are potentially invalidated based
   /// on the set of preserved analyses.
   LLVM_ABI bool invalidate(Module &M, const PreservedAnalyses &PA,
-                  ModuleAnalysisManager::Invalidator &Inv);
+                           ModuleAnalysisManager::Invalidator &Inv);
 
 private:
   CGSCCAnalysisManager *InnerAM;
@@ -390,14 +390,15 @@ public:
     }
 
     LLVM_ABI bool invalidate(LazyCallGraph::SCC &C, const PreservedAnalyses &PA,
-                    CGSCCAnalysisManager::Invalidator &Inv);
+                             CGSCCAnalysisManager::Invalidator &Inv);
 
   private:
     FunctionAnalysisManager *FAM;
   };
 
   /// Computes the \c FunctionAnalysisManager and stores it in the result proxy.
-  LLVM_ABI Result run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM, LazyCallGraph &);
+  LLVM_ABI Result run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
+                      LazyCallGraph &);
 
 private:
   friend AnalysisInfoMixin<FunctionAnalysisManagerCGSCCProxy>;
@@ -466,8 +467,9 @@ public:
   }
 
   /// Runs the function pass across every function in the module.
-  LLVM_ABI PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
-                        LazyCallGraph &CG, CGSCCUpdateResult &UR);
+  LLVM_ABI PreservedAnalyses run(LazyCallGraph::SCC &C,
+                                 CGSCCAnalysisManager &AM, LazyCallGraph &CG,
+                                 CGSCCUpdateResult &UR);
 
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName) {
@@ -552,8 +554,9 @@ public:
 
   /// Runs the wrapped pass up to \c MaxIterations on the SCC, iterating
   /// whenever an indirect call is refined.
-  LLVM_ABI PreservedAnalyses run(LazyCallGraph::SCC &InitialC, CGSCCAnalysisManager &AM,
-                        LazyCallGraph &CG, CGSCCUpdateResult &UR);
+  LLVM_ABI PreservedAnalyses run(LazyCallGraph::SCC &InitialC,
+                                 CGSCCAnalysisManager &AM, LazyCallGraph &CG,
+                                 CGSCCUpdateResult &UR);
 
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName) {

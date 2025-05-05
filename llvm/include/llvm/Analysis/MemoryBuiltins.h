@@ -14,7 +14,6 @@
 #ifndef LLVM_ANALYSIS_MEMORYBUILTINS_H
 #define LLVM_ANALYSIS_MEMORYBUILTINS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -22,6 +21,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <optional>
 #include <utility>
@@ -54,8 +54,9 @@ class Value;
 /// allocates or reallocates memory (either malloc, calloc, realloc, or strdup
 /// like).
 LLVM_ABI bool isAllocationFn(const Value *V, const TargetLibraryInfo *TLI);
-LLVM_ABI bool isAllocationFn(const Value *V,
-                    function_ref<const TargetLibraryInfo &(Function &)> GetTLI);
+LLVM_ABI bool
+isAllocationFn(const Value *V,
+               function_ref<const TargetLibraryInfo &(Function &)> GetTLI);
 
 /// Tests if a value is a call or invoke to a library function that
 /// allocates memory via new.
@@ -63,7 +64,8 @@ LLVM_ABI bool isNewLikeFn(const Value *V, const TargetLibraryInfo *TLI);
 
 /// Tests if a value is a call or invoke to a library function that
 /// allocates memory similar to malloc or calloc.
-LLVM_ABI bool isMallocOrCallocLikeFn(const Value *V, const TargetLibraryInfo *TLI);
+LLVM_ABI bool isMallocOrCallocLikeFn(const Value *V,
+                                     const TargetLibraryInfo *TLI);
 
 /// Tests if a value is a call or invoke to a library function that
 /// allocates memory (either malloc, calloc, or strdup like).
@@ -84,7 +86,8 @@ LLVM_ABI Value *getReallocatedOperand(const CallBase *CB);
 LLVM_ABI bool isLibFreeFunction(const Function *F, const LibFunc TLIFn);
 
 /// If this if a call to a free function, return the freed operand.
-LLVM_ABI Value *getFreedOperand(const CallBase *CB, const TargetLibraryInfo *TLI);
+LLVM_ABI Value *getFreedOperand(const CallBase *CB,
+                                const TargetLibraryInfo *TLI);
 
 //===----------------------------------------------------------------------===//
 //  Properties of allocation functions
@@ -105,7 +108,8 @@ LLVM_ABI bool isRemovableAlloc(const CallBase *V, const TargetLibraryInfo *TLI);
 /// built-in knowledge based on fuction names/signatures or allocalign
 /// attributes. Note: the Value returned may not indicate a valid alignment, per
 /// the definition of the allocalign attribute.
-LLVM_ABI Value *getAllocAlignment(const CallBase *V, const TargetLibraryInfo *TLI);
+LLVM_ABI Value *getAllocAlignment(const CallBase *V,
+                                  const TargetLibraryInfo *TLI);
 
 /// Return the size of the requested allocation. With a trivial mapper, this is
 /// similar to calling getObjectSize(..., Exact), but without looking through
@@ -122,14 +126,14 @@ LLVM_ABI std::optional<APInt> getAllocSize(
 /// fixed value, return said value in the requested type.  Otherwise, return
 /// nullptr.
 LLVM_ABI Constant *getInitialValueOfAllocation(const Value *V,
-                                      const TargetLibraryInfo *TLI,
-                                      Type *Ty);
+                                               const TargetLibraryInfo *TLI,
+                                               Type *Ty);
 
 /// If a function is part of an allocation family (e.g.
 /// malloc/realloc/calloc/free), return the identifier for its family
 /// of functions.
-LLVM_ABI std::optional<StringRef> getAllocationFamily(const Value *I,
-                                             const TargetLibraryInfo *TLI);
+LLVM_ABI std::optional<StringRef>
+getAllocationFamily(const Value *I, const TargetLibraryInfo *TLI);
 
 //===----------------------------------------------------------------------===//
 //  Utility functions to compute size of objects.
@@ -173,15 +177,18 @@ struct ObjectSizeOpts {
 /// WARNING: The object size returned is the allocation size.  This does not
 /// imply dereferenceability at site of use since the object may be freeed in
 /// between.
-LLVM_ABI bool getObjectSize(const Value *Ptr, uint64_t &Size, const DataLayout &DL,
-                   const TargetLibraryInfo *TLI, ObjectSizeOpts Opts = {});
+LLVM_ABI bool getObjectSize(const Value *Ptr, uint64_t &Size,
+                            const DataLayout &DL, const TargetLibraryInfo *TLI,
+                            ObjectSizeOpts Opts = {});
 
 /// Try to turn a call to \@llvm.objectsize into an integer value of the given
 /// Type. Returns null on failure. If MustSucceed is true, this function will
 /// not return null, and may return conservative values governed by the second
 /// argument of the call to objectsize.
-LLVM_ABI Value *lowerObjectSizeCall(IntrinsicInst *ObjectSize, const DataLayout &DL,
-                           const TargetLibraryInfo *TLI, bool MustSucceed);
+LLVM_ABI Value *lowerObjectSizeCall(IntrinsicInst *ObjectSize,
+                                    const DataLayout &DL,
+                                    const TargetLibraryInfo *TLI,
+                                    bool MustSucceed);
 LLVM_ABI Value *lowerObjectSizeCall(
     IntrinsicInst *ObjectSize, const DataLayout &DL,
     const TargetLibraryInfo *TLI, AAResults *AA, bool MustSucceed,
@@ -265,8 +272,10 @@ class ObjectSizeOffsetVisitor
   static OffsetSpan unknown() { return OffsetSpan(); }
 
 public:
-  LLVM_ABI ObjectSizeOffsetVisitor(const DataLayout &DL, const TargetLibraryInfo *TLI,
-                          LLVMContext &Context, ObjectSizeOpts Options = {});
+  LLVM_ABI ObjectSizeOffsetVisitor(const DataLayout &DL,
+                                   const TargetLibraryInfo *TLI,
+                                   LLVMContext &Context,
+                                   ObjectSizeOpts Options = {});
 
   LLVM_ABI SizeOffsetAPInt compute(Value *V);
 
@@ -346,8 +355,10 @@ class ObjectSizeOffsetEvaluator
   SizeOffsetValue compute_(Value *V);
 
 public:
-  LLVM_ABI ObjectSizeOffsetEvaluator(const DataLayout &DL, const TargetLibraryInfo *TLI,
-                            LLVMContext &Context, ObjectSizeOpts EvalOpts = {});
+  LLVM_ABI ObjectSizeOffsetEvaluator(const DataLayout &DL,
+                                     const TargetLibraryInfo *TLI,
+                                     LLVMContext &Context,
+                                     ObjectSizeOpts EvalOpts = {});
 
   static SizeOffsetValue unknown() { return SizeOffsetValue(); }
 
