@@ -56,7 +56,7 @@ namespace __asan {
 #  define ASAN_READ_STRING(ctx, s, n) \
     ASAN_READ_STRING_OF_LEN((ctx), (s), internal_strlen(s), (n))
 
-#  if SANITIZER_INTERCEPT_STRCAT || SANITIZER_INTERCEPT_STRCPY
+#  if ASAN_INTERCEPT_STRCAT || ASAN_INTERCEPT_STRCPY
 static inline uptr MaybeRealStrnlen(const char *s, uptr maxlen) {
 #if SANITIZER_INTERCEPT_STRNLEN
   if (REAL(strnlen)) {
@@ -517,7 +517,7 @@ DEFINE_REAL(char*, index, const char *string, int c)
 
 // For both strcat() and strncat() we need to check the validity of |to|
 // argument irrespective of the |from| length.
-#  if SANITIZER_INTERCEPT_STRCAT
+#  if ASAN_INTERCEPT_STRCAT
   INTERCEPTOR(char *, strcat, char *to, const char *from) {
     void *ctx;
     ASAN_INTERCEPTOR_ENTER(ctx, strcat);
@@ -559,7 +559,7 @@ INTERCEPTOR(char*, strncat, char *to, const char *from, usize size) {
 }
 #  endif
 
-#  if SANITIZER_INTERCEPT_STRCPY
+#  if ASAN_INTERCEPT_STRCPY
 INTERCEPTOR(char *, strcpy, char *to, const char *from) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, strcpy);
@@ -837,11 +837,11 @@ void InitializeAsanInterceptors() {
   InitializeSignalInterceptors();
 
   // Intercept str* functions.
-#  if SANITIZER_INTERCEPT_STRCAT
+#  if ASAN_INTERCEPT_STRCAT
   ASAN_INTERCEPT_FUNC(strcat);
   ASAN_INTERCEPT_FUNC(strncat);
 #  endif
-#  if SANITIZER_INTERCEPT_STRCPY
+#  if ASAN_INTERCEPT_STRCPY
   ASAN_INTERCEPT_FUNC(strcpy);
   ASAN_INTERCEPT_FUNC(strncpy);
 #  endif

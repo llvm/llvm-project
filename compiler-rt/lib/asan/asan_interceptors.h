@@ -127,11 +127,11 @@ void InitializePlatformInterceptors();
 #  endif
 
 #  if SANITIZER_AIX
-#    define SANITIZER_INTERCEPT_STRCAT 0
-#    define SANITIZER_INTERCEPT_STRCPY 0
+#    define ASAN_INTERCEPT_STRCAT 0
+#    define ASAN_INTERCEPT_STRCPY 0
 #  else
-#    define SANITIZER_INTERCEPT_STRCAT 1
-#    define SANITIZER_INTERCEPT_STRCPY 1
+#    define ASAN_INTERCEPT_STRCAT 1
+#    define ASAN_INTERCEPT_STRCPY 1
 #  endif
 
 #  if SANITIZER_LINUX &&                                                \
