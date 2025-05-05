@@ -364,12 +364,11 @@ public:
     return CompilerDecl();
   }
 
-  virtual llvm::Expected<CompilerType> GetDereferencedType(
-      lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,
-      std::string &child_name, uint32_t &child_byte_size,
-      int32_t &child_byte_offset, uint32_t &child_bitfield_bit_size,
-      uint32_t &child_bitfield_bit_offset, bool &child_is_base_class,
-      ValueObject *valobj, uint64_t &language_flags) = 0;
+  virtual llvm::Expected<CompilerType>
+  GetDereferencedType(lldb::opaque_compiler_type_t type,
+                      ExecutionContext *exe_ctx, std::string &child_name,
+                      uint32_t &child_byte_size, int32_t &child_byte_offset,
+                      ValueObject *valobj, uint64_t &language_flags) = 0;
 
   virtual llvm::Expected<CompilerType> GetChildCompilerTypeAtIndex(
       lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, size_t idx,

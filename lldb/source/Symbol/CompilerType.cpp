@@ -895,16 +895,13 @@ CompilerDecl CompilerType::GetStaticFieldWithName(llvm::StringRef name) const {
 
 llvm::Expected<CompilerType> CompilerType::GetDereferencedType(
     ExecutionContext *exe_ctx, std::string &child_name,
-    uint32_t &child_byte_size, int32_t &child_byte_offset,
-    uint32_t &child_bitfield_bit_size, uint32_t &child_bitfield_bit_offset,
-    bool &child_is_base_class, ValueObject *valobj,
+    uint32_t &child_byte_size, int32_t &child_byte_offset, ValueObject *valobj,
     uint64_t &language_flags) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->GetDereferencedType(
           m_type, exe_ctx, child_name, child_byte_size, child_byte_offset,
-          child_bitfield_bit_size, child_bitfield_bit_offset,
-          child_is_base_class, valobj, language_flags);
+          valobj, language_flags);
   return CompilerType();
 }
 

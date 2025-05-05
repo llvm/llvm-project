@@ -436,10 +436,7 @@ public:
   llvm::Expected<CompilerType>
   GetDereferencedType(ExecutionContext *exe_ctx, std::string &child_name,
                       uint32_t &child_byte_size, int32_t &child_byte_offset,
-                      uint32_t &child_bitfield_bit_size,
-                      uint32_t &child_bitfield_bit_offset,
-                      bool &child_is_base_class, ValueObject *valobj,
-                      uint64_t &language_flags) const;
+                      ValueObject *valobj, uint64_t &language_flags) const;
 
   llvm::Expected<CompilerType> GetChildCompilerTypeAtIndex(
       ExecutionContext *exe_ctx, size_t idx, bool transparent_pointers,
