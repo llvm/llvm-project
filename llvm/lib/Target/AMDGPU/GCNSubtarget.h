@@ -278,6 +278,7 @@ protected:
   bool HasLshlAddU64Inst = false;
   bool HasAddSubU64Insts = false;
   bool HasPointSampleAccel = false;
+  bool HasLdsBarrierArriveAtomic = false;
 
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
@@ -1458,6 +1459,8 @@ public:
   bool hasSoftwareHazardMode() const { return getGeneration() >= GFX12; }
 
   bool hasPointSampleAccel() const { return HasPointSampleAccel; }
+
+  bool hasLdsBarrierArriveAtomic() const { return HasLdsBarrierArriveAtomic; }
 
   /// \returns The maximum number of instructions that can be enclosed in an
   /// S_CLAUSE on the given subtarget, or 0 for targets that do not support that
