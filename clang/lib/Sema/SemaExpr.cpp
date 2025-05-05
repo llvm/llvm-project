@@ -4700,6 +4700,10 @@ ExprResult Sema::CreateUnaryExprOrTypeTraitExpr(TypeSourceInfo *TInfo,
       TInfo->getType()->isVariablyModifiedType())
     TInfo = TransformToPotentiallyEvaluated(TInfo);
 
+  // It's possible that the transformation above failed.
+  if (!TInfo)
+    return ExprError();
+
   // C99 6.5.3.4p4: the type (an unsigned integer type) is size_t.
   return new (Context) UnaryExprOrTypeTraitExpr(
       ExprKind, TInfo, Context.getSizeType(), OpLoc, R.getEnd());
@@ -7999,6 +8003,15 @@ ExprResult Sema::ActOnParenListExpr(SourceLocation L,
                                     SourceLocation R,
                                     MultiExprArg Val) {
   return ParenListExpr::Create(Context, L, Val, R);
+}
+
+ExprResult Sema::ActOnCXXParenListInitExpr(ArrayRef<Expr *> Args, QualType T,
+                                           unsigned NumUserSpecifiedExprs,
+                                           SourceLocation InitLoc,
+                                           SourceLocation LParenLoc,
+                                           SourceLocation RParenLoc) {
+  return CXXParenListInitExpr::Create(Context, Args, T, NumUserSpecifiedExprs,
+                                      InitLoc, LParenLoc, RParenLoc);
 }
 
 bool Sema::DiagnoseConditionalForNull(const Expr *LHSExpr, const Expr *RHSExpr,

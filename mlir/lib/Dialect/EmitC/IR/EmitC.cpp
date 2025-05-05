@@ -465,7 +465,6 @@ ParseResult ForOp::parse(OpAsmParser &parser, OperationState &result) {
 
   // Parse the optional initial iteration arguments.
   SmallVector<OpAsmParser::Argument, 4> regionArgs;
-  SmallVector<OpAsmParser::UnresolvedOperand, 4> operands;
   regionArgs.push_back(inductionVariable);
 
   // Parse optional type, else assume Index.
