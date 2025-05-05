@@ -1306,15 +1306,13 @@ MDNode *MDNode::getMergedCalleeTypeMetadata(LLVMContext &Ctx, MDNode *A,
                                             MDNode *B) {
   SmallVector<Metadata *, 8> AB;
   SmallSet<Metadata *, 8> MergedCallees;
-  auto AddUniqueCallees = [&](llvm::MDNode *N) {
+  auto AddUniqueCallees = [&AB, &MergedCallees](llvm::MDNode *N) {
     if (!N)
       return;
     for (const MDOperand &Op : N->operands()) {
       Metadata *MD = Op.get();
-      if (!MergedCallees.contains(MD)) {
-        MergedCallees.insert(MD);
+      if (MergedCallees.insert(MD).second)
         AB.push_back(MD);
-      }
     }
   };
   AddUniqueCallees(A);
