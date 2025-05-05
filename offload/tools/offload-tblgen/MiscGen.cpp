@@ -89,9 +89,6 @@ void EmitOffloadErrcodes(const RecordKeeper &Records, raw_ostream &OS) {
   auto ErrorCodeEnum = EnumRec{Records.getDef("ErrorCode")};
   uint32_t EtorVal = 0;
   for (const auto &EnumVal : ErrorCodeEnum.getValues()) {
-    if (auto NewVal = EnumVal.getEnumValue()) {
-      EtorVal = *NewVal;
-    }
     OS << formatv(TAB_1 "OFFLOAD_ERRC({0}, \"{1}\", {2})\n", EnumVal.getName(),
                   EnumVal.getDesc(), EtorVal++);
   }

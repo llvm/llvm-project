@@ -49,6 +49,9 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
   case OL_ERRC_SUCCESS:
     os << "OL_ERRC_SUCCESS";
     break;
+  case OL_ERRC_UNKNOWN:
+    os << "OL_ERRC_UNKNOWN";
+    break;
   case OL_ERRC_INVALID_NULL_POINTER:
     os << "OL_ERRC_INVALID_NULL_POINTER";
     break;
@@ -60,6 +63,15 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
     break;
   case OL_ERRC_UNSUPPORTED:
     os << "OL_ERRC_UNSUPPORTED";
+    break;
+  case OL_ERRC_INVALID_SIZE:
+    os << "OL_ERRC_INVALID_SIZE";
+    break;
+  case OL_ERRC_INVALID_ENUMERATION:
+    os << "OL_ERRC_INVALID_ENUMERATION";
+    break;
+  case OL_ERRC_INVALID_KERNEL_NAME:
+    os << "OL_ERRC_INVALID_KERNEL_NAME";
     break;
   case OL_ERRC_INVALID_VALUE:
     os << "OL_ERRC_INVALID_VALUE";
@@ -76,20 +88,8 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
   case OL_ERRC_INVALID_EVENT:
     os << "OL_ERRC_INVALID_EVENT";
     break;
-  case OL_ERRC_INVALID_KERNEL_NAME:
-    os << "OL_ERRC_INVALID_KERNEL_NAME";
-    break;
   case OL_ERRC_INVALID_NULL_HANDLE:
     os << "OL_ERRC_INVALID_NULL_HANDLE";
-    break;
-  case OL_ERRC_INVALID_SIZE:
-    os << "OL_ERRC_INVALID_SIZE";
-    break;
-  case OL_ERRC_INVALID_ENUMERATION:
-    os << "OL_ERRC_INVALID_ENUMERATION";
-    break;
-  case OL_ERRC_UNKNOWN:
-    os << "OL_ERRC_UNKNOWN";
     break;
   default:
     os << "unknown enumerator";

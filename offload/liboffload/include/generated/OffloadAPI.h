@@ -22,34 +22,34 @@ extern "C" {
 typedef enum ol_errc_t {
   /// Success
   OL_ERRC_SUCCESS = 0,
-  /// A pointer argument is null when it should not be
-  OL_ERRC_INVALID_NULL_POINTER = 1,
-  /// An argument is invalid
-  OL_ERRC_INVALID_ARGUMENT = 2,
-  /// Out of resources
-  OL_ERRC_OUT_OF_RESOURCES = 3,
-  /// generic error code for unsupported features and enums
-  OL_ERRC_UNSUPPORTED = 4,
-  /// Invalid Value
-  OL_ERRC_INVALID_VALUE = 4096,
-  /// Invalid platform
-  OL_ERRC_INVALID_PLATFORM = 4097,
-  /// Invalid device
-  OL_ERRC_INVALID_DEVICE = 4098,
-  /// Invalid queue
-  OL_ERRC_INVALID_QUEUE = 4099,
-  /// Invalid event
-  OL_ERRC_INVALID_EVENT = 4100,
-  /// Named kernel not found in the program binary
-  OL_ERRC_INVALID_KERNEL_NAME = 4101,
-  /// handle argument is not valid
-  OL_ERRC_INVALID_NULL_HANDLE = 4102,
-  /// invalid size or dimensions (e.g., must not be zero, or is out of bounds)
-  OL_ERRC_INVALID_SIZE = 4103,
-  /// enumerator argument is not valid
-  OL_ERRC_INVALID_ENUMERATION = 4104,
   /// Unknown or internal error
-  OL_ERRC_UNKNOWN = 65536,
+  OL_ERRC_UNKNOWN = 1,
+  /// A pointer argument is null when it should not be
+  OL_ERRC_INVALID_NULL_POINTER = 2,
+  /// An argument is invalid
+  OL_ERRC_INVALID_ARGUMENT = 3,
+  /// Out of resources
+  OL_ERRC_OUT_OF_RESOURCES = 4,
+  /// generic error code for unsupported features and enums
+  OL_ERRC_UNSUPPORTED = 5,
+  /// invalid size or dimensions (e.g., must not be zero, or is out of bounds)
+  OL_ERRC_INVALID_SIZE = 6,
+  /// enumerator argument is not valid
+  OL_ERRC_INVALID_ENUMERATION = 7,
+  /// Named kernel not found in the program binary
+  OL_ERRC_INVALID_KERNEL_NAME = 8,
+  /// Invalid Value
+  OL_ERRC_INVALID_VALUE = 9,
+  /// Invalid platform
+  OL_ERRC_INVALID_PLATFORM = 10,
+  /// Invalid device
+  OL_ERRC_INVALID_DEVICE = 11,
+  /// Invalid queue
+  OL_ERRC_INVALID_QUEUE = 12,
+  /// Invalid event
+  OL_ERRC_INVALID_EVENT = 13,
+  /// handle argument is not valid
+  OL_ERRC_INVALID_NULL_HANDLE = 14,
   /// @cond
   OL_ERRC_FORCE_UINT32 = 0x7fffffff
   /// @endcond

@@ -87,26 +87,25 @@ def ErrorCode : Enum {
   let name = "ol_errc_t";
   let desc = "Defines Return/Error codes";
   let etors =[
-    Etor<"SUCCESS", "Success", 0>,
+    Etor<"SUCCESS", "Success">,
 
     // Universal errors
+    Etor<"UNKNOWN", "Unknown or internal error">,
     Etor<"INVALID_NULL_POINTER", "A pointer argument is null when it should not be">,
     Etor<"INVALID_ARGUMENT", "An argument is invalid">,
     Etor<"OUT_OF_RESOURCES", "Out of resources">,
     Etor<"UNSUPPORTED", "generic error code for unsupported features and enums">,
+    Etor<"INVALID_SIZE", "invalid size or dimensions (e.g., must not be zero, or is out of bounds)">,
+    Etor<"INVALID_ENUMERATION", "enumerator argument is not valid">,
+    Etor<"INVALID_KERNEL_NAME", "Named kernel not found in the program binary">,
 
-    // Liboffload specific errors
-    Etor<"INVALID_VALUE", "Invalid Value", 0x1000>,
+    // Handle related errors - only makes sense for liboffload
+    Etor<"INVALID_VALUE", "Invalid Value">,
     Etor<"INVALID_PLATFORM", "Invalid platform">,
     Etor<"INVALID_DEVICE", "Invalid device">,
     Etor<"INVALID_QUEUE", "Invalid queue">,
     Etor<"INVALID_EVENT", "Invalid event">,
-    Etor<"INVALID_KERNEL_NAME", "Named kernel not found in the program binary">,
-    Etor<"INVALID_NULL_HANDLE", "handle argument is not valid">,
-    Etor<"INVALID_SIZE", "invalid size or dimensions (e.g., must not be zero, or is out of bounds)">,
-    Etor<"INVALID_ENUMERATION", "enumerator argument is not valid">,
-
-    Etor<"UNKNOWN", "Unknown or internal error", 0x10000>
+    Etor<"INVALID_NULL_HANDLE", "handle argument is not valid">
   ];
 }
 
