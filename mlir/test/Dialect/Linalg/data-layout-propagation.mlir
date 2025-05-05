@@ -1398,24 +1398,45 @@ func.func @no_push_down_unpack_through_non_divisible_expand(%5: tensor<384x32x8x
 
 // -----
 
-#map = affine_map<(d0, d1) -> (d0, d1)>
-func.func @fold_unpack_pack_after_bubble_up(%arg0: tensor<8x8x4x8xf32>) -> tensor<8x8x4x8xf32> {
-  %empty = tensor.empty() : tensor<32x64xf32>
-  %unpack = linalg.unpack %arg0 inner_dims_pos = [0, 1] inner_tiles = [4, 8] into %empty : tensor<8x8x4x8xf32> -> tensor<32x64xf32>
-  %1 = linalg.generic {indexing_maps = [#map, #map], iterator_types = ["parallel", "parallel"]} ins(%unpack : tensor<32x64xf32>) outs(%empty : tensor<32x64xf32>) {
-  ^bb0(%in: f32, %out: f32):
-    %2 = arith.addf %in, %in : f32
-    linalg.yield %2 : f32
-  } -> tensor<32x64xf32>
-  %empty1 = tensor.empty() : tensor<8x8x4x8xf32>
-  %pack = linalg.pack %1 inner_dims_pos = [0, 1] inner_tiles = [4, 8] into %empty1 : tensor<32x64xf32> -> tensor<8x8x4x8xf32>
-  return %pack : tensor<8x8x4x8xf32>
+func.func @push_unpack_in_padded_domain_foldable(%arg0: tensor<8x8x4x8xf32>, %dest: tensor<?x64xf32>, %arg1: tensor<?x64xbf16>) -> tensor<?x64xbf16> {
+  %unpack = linalg.unpack %arg0 inner_dims_pos = [0, 1] inner_tiles = [4, 8] into %dest : tensor<8x8x4x8xf32> -> tensor<?x64xf32>
+  %0 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0, d1)>], iterator_types = ["parallel", "parallel"]} ins(%unpack : tensor<?x64xf32>) outs(%arg1 : tensor<?x64xbf16>) {
+  ^bb0(%in: f32, %out: bf16):
+    %1 = arith.truncf %in : f32 to bf16
+    linalg.yield %1 : bf16
+  } -> tensor<?x64xbf16>
+  return %0 : tensor<?x64xbf16>
 }
 
-// CHECK-LABEL: func.func @fold_unpack_pack_after_bubble_up
+// CHECK-LABEL: func.func @push_unpack_in_padded_domain_foldable
 // CHECK-SAME:    %[[ARG0:[a-zA-Z0-9]+]]
-// CHECK:         %[[EMPTY:.+]] = tensor.empty() : tensor<8x8x4x8xf32>
-// CHECK:         %[[GENERIC:.+]] = linalg.generic 
+// CHECK:         %[[EMPTY:.+]] = tensor.empty
+// CHECK:         %[[GENERIC:.+]] = linalg.generic
 // CHECK-SAME:    ins(%[[ARG0]] : tensor<8x8x4x8xf32>)
-// CHECK-SAME:    outs(%[[EMPTY]] : tensor<8x8x4x8xf32>)
-// CHECK:         return %[[GENERIC]] : tensor<8x8x4x8xf32>
+// CHECK-SAME:    outs(%[[EMPTY]] : tensor<?x8x4x8xbf16>)
+// CHECK:         %[[UNPACK:.+]] = linalg.unpack %[[GENERIC]]
+// CHECK:         return %[[UNPACK]] : tensor<?x64xbf16>
+
+// -----
+
+func.func @push_unpack_in_padded_domain_not_foldable(%arg0: tensor<8x8x4x8xf32>, %arg1: tensor<?x64xf32>) -> tensor<?x64xf32> {
+  %unpack = linalg.unpack %arg0 inner_dims_pos = [0, 1] inner_tiles = [4, 8] into %arg1 : tensor<8x8x4x8xf32> -> tensor<?x64xf32>
+  %0 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0, d1)>], iterator_types = ["parallel", "parallel"]} ins(%unpack : tensor<?x64xf32>) outs(%arg1 : tensor<?x64xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    %1 = arith.addf %in, %out : f32
+    linalg.yield %1 : f32
+  } -> tensor<?x64xf32>
+  return %0 : tensor<?x64xf32>
+}
+
+// CHECK-LABEL: func.func @push_unpack_in_padded_domain_not_foldable
+// CHECK-SAME:    %[[ARG0:[a-zA-Z0-9]+]]
+// CHECK-SAME:    %[[ARG1:[a-zA-Z0-9]+]]
+// CHECK:         %[[UNPACK:.+]] = linalg.unpack %[[ARG0]]
+// CHECK:         %[[PACK:.+]] = linalg.pack %[[ARG1]]
+// CHECK:         %[[UNPACK1:.+]] = linalg.pack %[[UNPACK]]
+// CHECK:         %[[GENERIC:.+]] = linalg.generic
+// CHECK-SAME:    ins(%[[UNPACK1]] : tensor<?x8x4x8xf32>)
+// CHECK-SAME:    outs(%[[PACK]] : tensor<?x8x4x8xf32>)
+// CHECK:         %[[UNPACK2:.+]] = linalg.unpack %[[GENERIC]]
+// CHECK:         return %[[UNPACK2]] : tensor<?x64xf32>
