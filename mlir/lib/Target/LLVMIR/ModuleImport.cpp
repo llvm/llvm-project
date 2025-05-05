@@ -595,7 +595,7 @@ static FailureOr<uint64_t>
 convertInt64FromKeyValueTuple(ModuleOp mlirModule,
                               const llvm::Module *llvmModule,
                               const llvm::MDOperand &md, StringRef matchKey) {
-  auto *valMD =
+  llvm::ConstantAsMetadata *valMD =
       getConstantMDFromKeyValueTuple(mlirModule, llvmModule, md, matchKey);
   if (!valMD)
     return failure();
@@ -671,13 +671,10 @@ convertProfileSummaryDetailed(ModuleOp mlirModule,
           << diagMD(entry, llvmModule);
       return failure();
     }
-    llvm::ConstantAsMetadata *op0 =
-        dyn_cast<llvm::ConstantAsMetadata>(entryMD->getOperand(0));
-    llvm::ConstantAsMetadata *op1 =
-        dyn_cast<llvm::ConstantAsMetadata>(entryMD->getOperand(1));
-    llvm::ConstantAsMetadata *op2 =
-        dyn_cast<llvm::ConstantAsMetadata>(entryMD->getOperand(2));
 
+    auto *op0 = dyn_cast<llvm::ConstantAsMetadata>(entryMD->getOperand(0));
+    auto *op1 = dyn_cast<llvm::ConstantAsMetadata>(entryMD->getOperand(1));
+    auto *op2 = dyn_cast<llvm::ConstantAsMetadata>(entryMD->getOperand(2));
     if (!op0 || !op1 || !op2) {
       emitWarning(mlirModule.getLoc())
           << "expected only integer entries in 'DetailedSummary': "
@@ -726,17 +723,15 @@ convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
   auto getOptIntValue =
       [&](const llvm::MDOperand &md,
           StringRef matchKey) -> FailureOr<std::optional<uint64_t>> {
-    std::optional<uint64_t> val = std::nullopt;
     if (!getConstantMDFromKeyValueTuple(mlirModule, llvmModule, md, matchKey,
                                         /*optional=*/true))
-      return val;
+      return FailureOr<std::optional<uint64_t>>(std::nullopt);
     if (checkOptionalPosition(md, matchKey).failed())
       return failure();
-    FailureOr<uint64_t> tmpVal =
+    FailureOr<uint64_t> val =
         convertInt64FromKeyValueTuple(mlirModule, llvmModule, md, matchKey);
-    if (failed(tmpVal))
+    if (failed(val))
       return failure();
-    val = tmpVal;
     return val;
   };
 
