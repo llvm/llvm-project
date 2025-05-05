@@ -1574,9 +1574,6 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   if (isValueEqualInPotentialCycles(V1, V2, AAQI))
     return AliasResult::MustAlias;
 
-  if (!V1->getType()->isPointerTy() || !V2->getType()->isPointerTy())
-    return AliasResult::NoAlias; // Scalars cannot alias each other
-
   // Figure out what objects these things are pointing to if we can.
   const Value *O1 = getUnderlyingObject(V1, MaxLookupSearchDepth);
   const Value *O2 = getUnderlyingObject(V2, MaxLookupSearchDepth);
