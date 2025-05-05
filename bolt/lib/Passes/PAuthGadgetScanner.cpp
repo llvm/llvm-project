@@ -232,12 +232,11 @@ struct SrcState {
   bool operator!=(const SrcState &RHS) const { return !((*this) == RHS); }
 };
 
-static void
-printLastInsts(raw_ostream &OS,
-               ArrayRef<SmallPtrSet<const MCInst *, 4>> LastInstWritingReg) {
+static void printInstsShort(raw_ostream &OS,
+                            ArrayRef<SmallPtrSet<const MCInst *, 4>> Insts) {
   OS << "Insts: ";
-  for (unsigned I = 0; I < LastInstWritingReg.size(); ++I) {
-    auto &Set = LastInstWritingReg[I];
+  for (unsigned I = 0; I < Insts.size(); ++I) {
+    auto &Set = Insts[I];
     OS << "[" << I << "](";
     for (const MCInst *MCInstP : Set)
       OS << MCInstP << " ";
@@ -252,7 +251,7 @@ raw_ostream &operator<<(raw_ostream &OS, const SrcState &S) {
   } else {
     OS << "SafeToDerefRegs: " << S.SafeToDerefRegs << ", ";
     OS << "TrustedRegs: " << S.TrustedRegs << ", ";
-    printLastInsts(OS, S.LastInstWritingReg);
+    printInstsShort(OS, S.LastInstWritingReg);
   }
   OS << ">";
   return OS;
@@ -281,7 +280,7 @@ void SrcStatePrinter::print(raw_ostream &OS, const SrcState &S) const {
     OS << ", TrustedRegs: ";
     RegStatePrinter.print(OS, S.TrustedRegs);
     OS << ", ";
-    printLastInsts(OS, S.LastInstWritingReg);
+    printInstsShort(OS, S.LastInstWritingReg);
   }
   OS << ">";
 }
@@ -752,7 +751,7 @@ SrcSafetyAnalysis::create(BinaryFunction &BF,
 struct DstState {
   /// The set of registers whose values cannot be inspected by an attacker in
   /// a way usable as an authentication oracle. The results of authentication
-  /// instructions should be written to such registers.
+  /// instructions should only be written to such registers.
   BitVector CannotEscapeUnchecked;
 
   std::vector<SmallPtrSet<const MCInst *, 4>> FirstInstLeakingReg;
@@ -770,6 +769,9 @@ struct DstState {
       return (*this = StateIn);
 
     CannotEscapeUnchecked &= StateIn.CannotEscapeUnchecked;
+    for (unsigned I = 0; I < FirstInstLeakingReg.size(); ++I)
+      for (const MCInst *J : StateIn.FirstInstLeakingReg[I])
+        FirstInstLeakingReg[I].insert(J);
     return *this;
   }
 
@@ -778,7 +780,8 @@ struct DstState {
   bool empty() const { return CannotEscapeUnchecked.empty(); }
 
   bool operator==(const DstState &RHS) const {
-    return CannotEscapeUnchecked == RHS.CannotEscapeUnchecked;
+    return CannotEscapeUnchecked == RHS.CannotEscapeUnchecked &&
+           FirstInstLeakingReg == RHS.FirstInstLeakingReg;
   }
   bool operator!=(const DstState &RHS) const { return !((*this) == RHS); }
 };
@@ -788,7 +791,8 @@ raw_ostream &operator<<(raw_ostream &OS, const DstState &S) {
   if (S.empty()) {
     OS << "empty";
   } else {
-    OS << "CannotEscapeUnchecked: " << S.CannotEscapeUnchecked;
+    OS << "CannotEscapeUnchecked: " << S.CannotEscapeUnchecked << ", ";
+    printInstsShort(OS, S.FirstInstLeakingReg);
   }
   OS << ">";
   return OS;
@@ -808,10 +812,13 @@ void DstStatePrinter::print(raw_ostream &OS, const DstState &S) const {
   OS << "dst-state<";
   if (S.empty()) {
     assert(S.CannotEscapeUnchecked.empty());
+    assert(S.FirstInstLeakingReg.empty());
     OS << "empty";
   } else {
     OS << "CannotEscapeUnchecked: ";
     RegStatePrinter.print(OS, S.CannotEscapeUnchecked);
+    OS << ", ";
+    printInstsShort(OS, S.FirstInstLeakingReg);
   }
   OS << ">";
 }
@@ -841,6 +848,7 @@ protected:
   const unsigned NumRegs;
 
   const TrackedRegisters RegsToTrackInstsFor;
+
   /// Stores information about the detected instruction sequences emitted to
   /// check an authenticated pointer. Specifically, if such sequence is detected
   /// in a basic block, it maps the first instruction of that sequence to the
@@ -897,7 +905,6 @@ protected:
                                               const BitVector &LeakedRegs,
                                               const DstState &Cur) const {
     SmallVector<MCPhysReg> Regs;
-    const MCPhysReg NoReg = BC.MIB->getNoRegister();
 
     // A pointer can be checked, or
     if (auto CheckedReg =
@@ -911,7 +918,7 @@ protected:
       bool IsAuthenticated;
       MCPhysReg BranchDestReg =
           BC.MIB->getRegUsedAsIndirectBranchDest(Inst, IsAuthenticated);
-      assert(BranchDestReg != NoReg);
+      assert(BranchDestReg != BC.MIB->getNoRegister());
       if (!IsAuthenticated)
         Regs.push_back(BranchDestReg);
     }
