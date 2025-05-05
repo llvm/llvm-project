@@ -594,6 +594,9 @@ Bug Fixes to Attribute Support
   ``__attribute__((unused))`` are still ignored after the definition, though
   this behavior may be relaxed in the future). (#GH135481)
 
+- Clang will warn if a complete type specializes a deprecated partial specialization.
+  (#GH44496)
+
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
