@@ -1148,8 +1148,8 @@ body:             |
     ; CHECK-LABEL: name: copy_vgpr32_vgpr64_to_areg96_coalesce_with_av96
     ; CHECK: liveins: $vgpr0, $vgpr1_vgpr2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr1_vgpr2
+    ; CHECK-NEXT: [[COPY:%[0-9]+]].sub0:vreg_96 = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]].sub1_sub2:vreg_96 = COPY $vgpr1_vgpr2
     ; CHECK-NEXT: undef [[COPY2:%[0-9]+]].sub0:areg_96 = COPY [[COPY]]
     ; CHECK-NEXT: [[COPY2:%[0-9]+]].sub1_sub2:areg_96 = COPY [[COPY1]]
     ; CHECK-NEXT: INLINEASM &"; use $0", 0 /* attdialect */, 4587529 /* reguse:AReg_96 */, [[COPY2]]
@@ -2490,11 +2490,11 @@ body:             |
     ; CHECK-LABEL: name: copy_vgpr32_vgpr64_to_areg96_coalesce_with_av96
     ; CHECK: liveins: $vgpr0, $vgpr1_vgpr2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr1_vgpr2
-    ; CHECK-NEXT: undef [[COPY2:%[0-9]+]].sub0:areg_96 = COPY [[COPY]]
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]].sub1_sub2:areg_96 = COPY [[COPY1]]
-    ; CHECK-NEXT: S_NOP 0, implicit %2
+    ; CHECK-NEXT: [[COPY:%[0-9]+]].sub0:vreg_96  = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]].sub1_sub2:vreg_96  = COPY $vgpr1_vgpr2
+    ; CHECK-NEXT: undef [[COPY2:%[0-9]+]].sub0:areg_96 = COPY [[COPY]].sub2
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]].sub1_sub2:areg_96 = COPY [[COPY]].sub0_sub1
+    ; CHECK-NEXT: S_NOP 0, implicit %1
     ; CHECK-NEXT: SI_RETURN
     undef %0.sub0:vreg_96 = COPY $vgpr0
     %0.sub1_sub2:vreg_96 = COPY $vgpr1_vgpr2
