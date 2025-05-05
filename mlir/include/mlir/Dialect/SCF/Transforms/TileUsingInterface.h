@@ -124,6 +124,17 @@ struct SCFTilingOptions {
     mappingVector = llvm::to_vector(mapping);
     return *this;
   }
+
+  /// Gives hints for whether the tile sizes divide the iteration space evenly.
+  /// For static sizes, this is trivially verifiable (and the helpers here take
+  /// advantage of that), however for dynamic sizes we are always forced to be
+  /// pessimistic. This allows external analysis to check for divisibility and
+  /// pass on the info to tiling.
+  SmallVector<bool> divisibilityHint = {};
+  SCFTilingOptions &setDivisibilityHint(ArrayRef<bool> hint) {
+    divisibilityHint.assign(hint.begin(), hint.end());
+    return *this;
+  }
 };
 
 /// Transformation information returned after tiling.
