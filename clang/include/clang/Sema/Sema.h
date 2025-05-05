@@ -2298,13 +2298,9 @@ public:
   bool typeListMatchesSymbolLabel(FunctionDecl *FD,
                                   const clang::Sema::SymbolLabel &Label);
 
-  FunctionDecl *tryFunctionLookUpInPragma(NestedNameSpecifier *NestedName,
-                                          SourceLocation NameLoc);
-
-  /// trySymbolLookupInPragma try to look up a decl matching the nested
+  /// tryLookupSymbolLabel try to look up a decl matching the nested
   //  specifier with optional type list.
-  NamedDecl *trySymbolLookupInPragma(NestedNameSpecifier *NestedName,
-                                     const clang::Sema::SymbolLabel &Label);
+  NamedDecl *tryLookupSymbolLabel(const clang::Sema::SymbolLabel &Label);
 
   /// ActonPragmaExport - called on well-formed '\#pragma export'.
   void ActOnPragmaExport(NestedNameSpecifier *NestedId,

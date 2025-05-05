@@ -1365,41 +1365,9 @@ bool Sema::typeListMatchesSymbolLabel(FunctionDecl *FD,
   return true;
 }
 
-FunctionDecl *Sema::tryFunctionLookUpInPragma(NestedNameSpecifier *NestedName,
-                                              SourceLocation NameLoc) {
-  assert(!NestedName->getPrefix() ||
-         NestedName->getPrefix()->getKind() == NestedNameSpecifier::Identifier);
-  IdentifierInfo *Prefix =
-      NestedName->getPrefix() ? NestedName->getPrefix()->getAsIdentifier() : 0;
-  IdentifierInfo *Name = NestedName->getAsIdentifier();
-  LookupResult Result(*this, (Prefix ? Prefix : Name), NameLoc,
-                      LookupOrdinaryName);
-  LookupName(Result, TUScope);
+NamedDecl *Sema::tryLookupSymbolLabel(const clang::Sema::SymbolLabel &Label) {
 
-  // Filter down to just a function, namespace or class.
-  LookupResult::Filter F = Result.makeFilter();
-  while (F.hasNext()) {
-    NamedDecl *D = F.next();
-    if (!(isa<FunctionDecl>(D)))
-      F.erase();
-  }
-  F.done();
-  // Loop over all the found decls and see if the arguments match
-  // any of the results.
-  for (LookupResult::iterator I = Result.begin(); I != Result.end(); ++I) {
-    NamedDecl *ND = (*I)->getUnderlyingDecl();
-    FunctionDecl *FD = dyn_cast<FunctionDecl>(ND);
-    if (FD) {
-      return FD;
-    }
-  }
-  return nullptr;
-}
-
-NamedDecl *
-Sema::trySymbolLookupInPragma(NestedNameSpecifier *NestedName,
-                              const clang::Sema::SymbolLabel &Label) {
-
+  NestedNameSpecifier *NestedName = Label.NestedNameId;
   assert(!NestedName->getPrefix() ||
          NestedName->getPrefix()->getKind() == NestedNameSpecifier::Identifier);
   IdentifierInfo *Prefix =
@@ -1489,7 +1457,7 @@ void Sema::ActOnPragmaExport(NestedNameSpecifier *NestedId,
   Label.NestedNameId = NestedId;
   Label.Used = false;
 
-  NamedDecl *PrevDecl = trySymbolLookupInPragma(NestedId, Label);
+  NamedDecl *PrevDecl = tryLookupSymbolLabel(Label);
   if (PrevDecl && (isa<FunctionDecl>(PrevDecl) || isa<VarDecl>(PrevDecl))) {
     if (PrevDecl->hasExternalFormalLinkage()) {
       if (auto *FD = dyn_cast<FunctionDecl>(PrevDecl)) {
