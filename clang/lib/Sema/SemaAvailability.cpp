@@ -1145,3 +1145,11 @@ void Sema::DiagnoseAvailabilityOfDecl(NamedDecl *D,
   EmitAvailabilityWarning(*this, Result, D, OffendingDecl, Message, Locs,
                           UnknownObjCClass, ObjCPDecl, ObjCPropertyAccess);
 }
+
+void Sema::DiagnoseAvailabilityOfDecl(NamedDecl *D,
+                                      ArrayRef<SourceLocation> Locs) {
+  DiagnoseAvailabilityOfDecl(D, Locs, /*UnknownObjCClass=*/nullptr,
+                             /*ObjCPropertyAccess=*/false,
+                             /*AvoidPartialAvailabilityChecks=*/false,
+                             /*ClassReceiver=*/nullptr);
+}

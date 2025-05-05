@@ -75,8 +75,20 @@ template struct B<A>; // expected-note {{requested here}}
 
 
 namespace GH44496 {
-  template <class> struct my_template {
-    using type = void;
+
+
+template <typename T>
+class function { };
+template <typename A>
+class __attribute__((deprecated)) function<void(A)> { };
+// expected-note@-1 {{'function<void (int)>' has been explicitly marked deprecated here}}
+
+void test() {
+    [[maybe_unused]] function<void(int)> f; // expected-warning{{'function<void (int)>' is deprecated}}
+}
+
+template <class> struct my_template {
+  using type = void;
 };
 
 template <class T>
