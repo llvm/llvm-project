@@ -5100,11 +5100,7 @@ void Verifier::visitCallsiteMetadata(Instruction &I, MDNode *MD) {
 void Verifier::visitCalleeTypeMetadata(Instruction &I, MDNode *MD) {
   Check(isa<CallBase>(I), "!callee_type metadata should only exist on calls",
         &I);
-  CallBase *CB = cast<CallBase>(&I);
-  Check(CB->isIndirectCall(),
-        "!callee_type metadata should only exist on indirect function calls",
-        &I);
-  for (const auto &Op : MD->operands()) {
+  for (const MDOperand &Op : MD->operands()) {
     Check(isa<MDNode>(Op.get()),
           "The callee_type metadata must be a list of type metadata nodes");
     auto *TypeMD = cast<MDNode>(Op.get());
