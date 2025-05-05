@@ -81,14 +81,41 @@ static void assignInteger(Pointer &Dest, PrimType ValueT, const APSInt &Value) {
       ValueT, { Dest.deref<T>() = T::from(static_cast<T>(Value)); });
 }
 
+template <PrimType Name, class V = typename PrimConv<Name>::T>
+static bool retBI(InterpState &S, const CallExpr *Call, unsigned BuiltinID) {
+  // The return value of the function is already on the stack.
+  // Remove it, get rid of all the arguments and add it back.
+  const V &Val = S.Stk.pop<V>();
+  if (!Context::isUnevaluatedBuiltin(BuiltinID)) {
+    for (int32_t I = Call->getNumArgs() - 1; I >= 0; --I) {
+      const Expr *A = Call->getArg(I);
+      PrimType Ty = S.getContext().classify(A).value_or(PT_Ptr);
+      TYPE_SWITCH(Ty, S.Stk.discard<T>());
+    }
+  }
+  S.Stk.push<V>(Val);
+  return true;
+}
+
 static bool retPrimValue(InterpState &S, CodePtr OpPC,
-                         std::optional<PrimType> &T) {
-  if (!T)
-    return RetVoid(S, OpPC);
+                         std::optional<PrimType> &T, const CallExpr *Call,
+                         unsigned BuiltinID) {
+
+  if (!T) {
+    if (!Context::isUnevaluatedBuiltin(BuiltinID)) {
+      for (int32_t I = Call->getNumArgs() - 1; I >= 0; --I) {
+        const Expr *A = Call->getArg(I);
+        PrimType Ty = S.getContext().classify(A).value_or(PT_Ptr);
+        TYPE_SWITCH(Ty, S.Stk.discard<T>());
+      }
+    }
+
+    return true;
+  }
 
 #define RET_CASE(X)                                                            \
   case X:                                                                      \
-    return Ret<X>(S, OpPC);
+    return retBI<X>(S, Call, BuiltinID);
   switch (*T) {
     RET_CASE(PT_Ptr);
     RET_CASE(PT_Float);
@@ -147,17 +174,16 @@ static bool interp__builtin_is_constant_evaluated(InterpState &S, CodePtr OpPC,
   // The one above that, potentially the one for std::is_constant_evaluated().
   if (S.inConstantContext() && !S.checkingPotentialConstantExpression() &&
       S.getEvalStatus().Diag &&
-      (Depth == 1 || (Depth == 2 && isStdCall(Caller->getCallee())))) {
-    if (Caller->Caller && isStdCall(Caller->getCallee())) {
-      const Expr *E = Caller->Caller->getExpr(Caller->getRetPC());
+      (Depth == 0 || (Depth == 1 && isStdCall(Frame->getCallee())))) {
+    if (Caller && isStdCall(Frame->getCallee())) {
+      const Expr *E = Caller->getExpr(Caller->getRetPC());
       S.report(E->getExprLoc(),
                diag::warn_is_constant_evaluated_always_true_constexpr)
           << "std::is_constant_evaluated" << E->getSourceRange();
     } else {
-      const Expr *E = Frame->Caller->getExpr(Frame->getRetPC());
-      S.report(E->getExprLoc(),
+      S.report(Call->getExprLoc(),
                diag::warn_is_constant_evaluated_always_true_constexpr)
-          << "__builtin_is_constant_evaluated" << E->getSourceRange();
+          << "__builtin_is_constant_evaluated" << Call->getSourceRange();
     }
   }
 
@@ -1387,6 +1413,7 @@ static bool interp__builtin_ia32_pext(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+/// (CarryIn, LHS, RHS, Result)
 static bool interp__builtin_ia32_addcarry_subborrow(InterpState &S,
                                                     CodePtr OpPC,
                                                     const InterpFrame *Frame,
@@ -1397,16 +1424,17 @@ static bool interp__builtin_ia32_addcarry_subborrow(InterpState &S,
       !Call->getArg(2)->getType()->isIntegerType())
     return false;
 
-  APSInt CarryIn = peekToAPSInt(
-      S.Stk, *S.getContext().classify(Call->getArg(0)),
-      align(primSize(*S.getContext().classify(Call->getArg(2)))) +
-          align(primSize(*S.getContext().classify(Call->getArg(1)))) +
-          align(primSize(*S.getContext().classify(Call->getArg(0)))));
+  PrimType CarryInT = *S.getContext().classify(Call->getArg(0));
+  PrimType LHST = *S.getContext().classify(Call->getArg(1));
+  PrimType RHST = *S.getContext().classify(Call->getArg(2));
+  unsigned PtrSize = align(primSize(PT_Ptr));
+  APSInt CarryIn =
+      peekToAPSInt(S.Stk, CarryInT,
+                   PtrSize + align(primSize(RHST)) + align(primSize(LHST)) +
+                       align(primSize(CarryInT)));
   APSInt LHS = peekToAPSInt(
-      S.Stk, *S.getContext().classify(Call->getArg(1)),
-      align(primSize(*S.getContext().classify(Call->getArg(2)))) +
-          align(primSize(*S.getContext().classify(Call->getArg(1)))));
-  APSInt RHS = peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)));
+      S.Stk, LHST, PtrSize + align(primSize(RHST)) + align(primSize(LHST)));
+  APSInt RHS = peekToAPSInt(S.Stk, RHST, PtrSize + align(primSize(RHST)));
 
   bool IsAdd = BuiltinOp == clang::X86::BI__builtin_ia32_addcarryx_u32 ||
                BuiltinOp == clang::X86::BI__builtin_ia32_addcarryx_u64;
@@ -1504,6 +1532,9 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
         << NumElems.getZExtValue();
     return false;
   }
+
+  if (!CheckArraySize(S, OpPC, NumElems.getZExtValue()))
+    return false;
 
   bool IsArray = NumElems.ugt(1);
   std::optional<PrimType> ElemT = S.getContext().classify(ElemType);
@@ -1823,8 +1854,17 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
 
   // Check for overlapping memory regions.
   if (!Move && Pointer::pointToSameBlock(SrcPtr, DestPtr)) {
-    unsigned SrcIndex = SrcPtr.getIndex() * SrcPtr.elemSize();
-    unsigned DstIndex = DestPtr.getIndex() * DestPtr.elemSize();
+    // Remove base casts.
+    Pointer SrcP = SrcPtr;
+    while (SrcP.isBaseClass())
+      SrcP = SrcP.getBase();
+
+    Pointer DestP = DestPtr;
+    while (DestP.isBaseClass())
+      DestP = DestP.getBase();
+
+    unsigned SrcIndex = SrcP.expand().getIndex() * SrcP.elemSize();
+    unsigned DstIndex = DestP.expand().getIndex() * DestP.elemSize();
     unsigned N = Size.getZExtValue();
 
     if ((SrcIndex <= DstIndex && (SrcIndex + N) > DstIndex) ||
@@ -2158,8 +2198,52 @@ static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
-                      const CallExpr *Call, uint32_t BuiltinID) {
+static bool interp__builtin_is_within_lifetime(InterpState &S, CodePtr OpPC,
+                                               const CallExpr *Call) {
+
+  if (!S.inConstantContext())
+    return false;
+
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+
+  auto Error = [&](int Diag) {
+    bool CalledFromStd = false;
+    const auto *Callee = S.Current->getCallee();
+    if (Callee && Callee->isInStdNamespace()) {
+      const IdentifierInfo *Identifier = Callee->getIdentifier();
+      CalledFromStd = Identifier && Identifier->isStr("is_within_lifetime");
+    }
+    S.CCEDiag(CalledFromStd
+                  ? S.Current->Caller->getSource(S.Current->getRetPC())
+                  : S.Current->getSource(OpPC),
+              diag::err_invalid_is_within_lifetime)
+        << (CalledFromStd ? "std::is_within_lifetime"
+                          : "__builtin_is_within_lifetime")
+        << Diag;
+    return false;
+  };
+
+  if (Ptr.isZero())
+    return Error(0);
+  if (Ptr.isOnePastEnd())
+    return Error(1);
+
+  bool Result = true;
+  if (!Ptr.isActive()) {
+    Result = false;
+  } else {
+    if (!CheckLive(S, OpPC, Ptr, AK_Read))
+      return false;
+    if (!CheckMutable(S, OpPC, Ptr))
+      return false;
+  }
+
+  pushInteger(S, Result, Call->getType());
+  return true;
+}
+
+bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
+                      uint32_t BuiltinID) {
   if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
     return Invalid(S, OpPC);
 
@@ -2667,6 +2751,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
       return false;
     break;
 
+  case Builtin::BI__builtin_is_within_lifetime:
+    if (!interp__builtin_is_within_lifetime(S, OpPC, Call))
+      return false;
+    break;
+
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
              diag::note_invalid_subexpr_in_const_expr)
@@ -2675,7 +2764,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
     return false;
   }
 
-  return retPrimValue(S, OpPC, ReturnT);
+  return retPrimValue(S, OpPC, ReturnT, Call, BuiltinID);
 }
 
 bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,

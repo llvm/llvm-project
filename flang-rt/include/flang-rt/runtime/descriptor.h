@@ -33,6 +33,7 @@ RT_OFFLOAD_VAR_GROUP_BEGIN
 /// Value used for asyncId when no specific stream is specified.
 static constexpr std::int64_t kNoAsyncId = -1;
 RT_OFFLOAD_VAR_GROUP_END
+/// Value used for asyncObject when no specific stream is specified.
 
 namespace Fortran::runtime {
 

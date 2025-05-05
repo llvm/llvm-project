@@ -142,7 +142,7 @@ CompilerInvocationBase::CompilerInvocationBase()
       DiagnosticOpts(llvm::makeIntrusiveRefCnt<DiagnosticOptions>()),
       HSOpts(std::make_shared<HeaderSearchOptions>()),
       PPOpts(std::make_shared<PreprocessorOptions>()),
-      AnalyzerOpts(llvm::makeIntrusiveRefCnt<AnalyzerOptions>()),
+      AnalyzerOpts(std::make_shared<AnalyzerOptions>()),
       MigratorOpts(std::make_shared<MigratorOptions>()),
       APINotesOpts(std::make_shared<APINotesOptions>()),
       CodeGenOpts(std::make_shared<CodeGenOptions>()),
@@ -159,7 +159,7 @@ CompilerInvocationBase::deep_copy_assign(const CompilerInvocationBase &X) {
     DiagnosticOpts = makeIntrusiveRefCntCopy(X.getDiagnosticOpts());
     HSOpts = make_shared_copy(X.getHeaderSearchOpts());
     PPOpts = make_shared_copy(X.getPreprocessorOpts());
-    AnalyzerOpts = makeIntrusiveRefCntCopy(X.getAnalyzerOpts());
+    AnalyzerOpts = make_shared_copy(X.getAnalyzerOpts());
     MigratorOpts = make_shared_copy(X.getMigratorOpts());
     APINotesOpts = make_shared_copy(X.getAPINotesOpts());
     CodeGenOpts = make_shared_copy(X.getCodeGenOpts());
@@ -1707,6 +1707,9 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
       GenerateArg(Consumer, OPT_ftime_report_EQ, "per-pass-run");
     else
       GenerateArg(Consumer, OPT_ftime_report);
+
+    if (Opts.TimePassesJson)
+      GenerateArg(Consumer, OPT_ftime_report_json);
   }
 
   if (Opts.PrepareForLTO && !Opts.PrepareForThinLTO)
@@ -2008,12 +2011,13 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
             : llvm::codegenoptions::DebugTemplateNamesKind::Mangled);
   }
 
-  if (const Arg *A = Args.getLastArg(OPT_ftime_report, OPT_ftime_report_EQ)) {
+  if (const Arg *A = Args.getLastArg(OPT_ftime_report, OPT_ftime_report_EQ,
+                                     OPT_ftime_report_json)) {
     Opts.TimePasses = true;
 
     // -ftime-report= is only for new pass manager.
-    if (A->getOption().getID() == OPT_ftime_report_EQ) {
-      StringRef Val = A->getValue();
+    if (const Arg *EQ = Args.getLastArg(OPT_ftime_report_EQ)) {
+      StringRef Val = EQ->getValue();
       if (Val == "per-pass")
         Opts.TimePassesPerRun = false;
       else if (Val == "per-pass-run")
@@ -2022,6 +2026,9 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
         Diags.Report(diag::err_drv_invalid_value)
             << A->getAsString(Args) << A->getValue();
     }
+
+    if (Args.getLastArg(OPT_ftime_report_json))
+      Opts.TimePassesJson = true;
   }
 
   Opts.PrepareForLTO = false;

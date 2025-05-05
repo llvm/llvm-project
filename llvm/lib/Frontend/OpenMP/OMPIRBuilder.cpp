@@ -268,33 +268,6 @@ computeOpenMPScheduleType(ScheduleKind ClauseKind, bool HasChunks,
   return Result;
 }
 
-/// Emit an implicit cast to convert \p XRead to type of variable \p V
-static llvm::Value *emitImplicitCast(IRBuilder<> &Builder, llvm::Value *XRead,
-                                     llvm::Value *V) {
-  // TODO: Add this functionality to the `AtomicInfo` interface
-  llvm::Type *XReadType = XRead->getType();
-  llvm::Type *VType = V->getType();
-  if (llvm::AllocaInst *vAlloca = dyn_cast<llvm::AllocaInst>(V))
-    VType = vAlloca->getAllocatedType();
-
-  if (XReadType->isStructTy() && VType->isStructTy())
-    // No need to extract or convert. A direct
-    // `store` will suffice.
-    return XRead;
-
-  if (XReadType->isStructTy())
-    XRead = Builder.CreateExtractValue(XRead, /*Idxs=*/0);
-  if (VType->isIntegerTy() && XReadType->isFloatingPointTy())
-    XRead = Builder.CreateFPToSI(XRead, VType);
-  else if (VType->isFloatingPointTy() && XReadType->isIntegerTy())
-    XRead = Builder.CreateSIToFP(XRead, VType);
-  else if (VType->isIntegerTy() && XReadType->isIntegerTy())
-    XRead = Builder.CreateIntCast(XRead, VType, true);
-  else if (VType->isFloatingPointTy() && XReadType->isFloatingPointTy())
-    XRead = Builder.CreateFPCast(XRead, VType);
-  return XRead;
-}
-
 /// Make \p Source branch to \p Target.
 ///
 /// Handles two situations:
@@ -394,7 +367,7 @@ BasicBlock *llvm::splitBBWithSuffix(IRBuilderBase &Builder, bool CreateBranch,
 // This function creates a fake integer value and a fake use for the integer
 // value. It returns the fake value created. This is useful in modeling the
 // extra arguments to the outlined functions.
-Value *createFakeIntVal(IRBuilderBase &Builder,
+Value *createFakeIntVal(IRBuilderBase &Builder, Module &M,
                         OpenMPIRBuilder::InsertPointTy OuterAllocaIP,
                         llvm::SmallVectorImpl<Instruction *> &ToBeDeleted,
                         OpenMPIRBuilder::InsertPointTy InnerAllocaIP,
@@ -402,12 +375,20 @@ Value *createFakeIntVal(IRBuilderBase &Builder,
   Builder.restoreIP(OuterAllocaIP);
   Instruction *FakeVal;
   AllocaInst *FakeValAddr =
-      Builder.CreateAlloca(Builder.getInt32Ty(), 0, nullptr, Name + ".addr");
+      Builder.CreateAlloca(Builder.getInt32Ty(), nullptr, Name + ".addr");
+  FakeVal = FakeValAddr;
+
+  if (M.getDataLayout().getAllocaAddrSpace() != 0) {
+    // Add additional casts to enforce pointers in zero address space
+    FakeVal = new AddrSpaceCastInst(
+        FakeValAddr, PointerType ::get(M.getContext(), 0), "tid.addr.ascast");
+    FakeVal->insertAfter(FakeValAddr->getIterator());
+    ToBeDeleted.push_back(FakeVal);
+  }
+
   ToBeDeleted.push_back(FakeValAddr);
 
-  if (AsPtr) {
-    FakeVal = FakeValAddr;
-  } else {
+  if (!AsPtr) {
     FakeVal =
         Builder.CreateLoad(Builder.getInt32Ty(), FakeValAddr, Name + ".val");
     ToBeDeleted.push_back(FakeVal);
@@ -812,8 +793,13 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
         Instruction &I = *It;
         It++;
 
-        if (I.isTerminator())
+        if (I.isTerminator()) {
+          // Absorb any debug value that terminator may have
+          if (OI.EntryBB->getTerminator())
+            OI.EntryBB->getTerminator()->adoptDbgRecords(
+                &ArtificialEntry, I.getIterator(), false);
           continue;
+        }
 
         I.moveBeforePreserving(*OI.EntryBB, OI.EntryBB->getFirstInsertionPt());
       }
@@ -1941,7 +1927,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
   // Add the thread ID argument.
   SmallVector<Instruction *, 4> ToBeDeleted;
   OI.ExcludeArgsFromAggregate.push_back(createFakeIntVal(
-      Builder, AllocaIP, ToBeDeleted, TaskAllocaIP, "global.tid", false));
+      Builder, M, AllocaIP, ToBeDeleted, TaskAllocaIP, "global.tid", false));
 
   OI.PostOutlineCB = [this, Ident, Tied, Final, IfCondition, Dependencies,
                       Mergeable, Priority, EventHandle, TaskAllocaBB,
@@ -2197,6 +2183,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createSections(
   if (!updateToLocation(Loc))
     return Loc.IP;
 
+  // FiniCBWrapper needs to create a branch to the loop finalization block, but
+  // this has not been created yet at some times when this callback runs.
+  SmallVector<BranchInst *> CancellationBranches;
   auto FiniCBWrapper = [&](InsertPointTy IP) {
     if (IP.getBlock()->end() != IP.getPoint())
       return FiniCB(IP);
@@ -2204,16 +2193,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createSections(
     // will fail because that function requires the Finalization Basic Block to
     // have a terminator, which is already removed by EmitOMPRegionBody.
     // IP is currently at cancelation block.
-    // We need to backtrack to the condition block to fetch
-    // the exit block and create a branch from cancelation
-    // to exit block.
-    IRBuilder<>::InsertPointGuard IPG(Builder);
-    Builder.restoreIP(IP);
-    auto *CaseBB = IP.getBlock()->getSinglePredecessor();
-    auto *CondBB = CaseBB->getSinglePredecessor()->getSinglePredecessor();
-    auto *ExitBB = CondBB->getTerminator()->getSuccessor(1);
-    Instruction *I = Builder.CreateBr(ExitBB);
-    IP = InsertPointTy(I->getParent(), I->getIterator());
+    BranchInst *DummyBranch = Builder.CreateBr(IP.getBlock());
+    IP = InsertPointTy(DummyBranch->getParent(), DummyBranch->getIterator());
+    CancellationBranches.push_back(DummyBranch);
     return FiniCB(IP);
   };
 
@@ -2276,6 +2258,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createSections(
     return WsloopIP.takeError();
   InsertPointTy AfterIP = *WsloopIP;
 
+  BasicBlock *LoopFini = AfterIP.getBlock()->getSinglePredecessor();
+  assert(LoopFini && "Bad structure of static workshare loop finalization");
+
   // Apply the finalization callback in LoopAfterBB
   auto FiniInfo = FinalizationStack.pop_back_val();
   assert(FiniInfo.DK == OMPD_sections &&
@@ -2287,6 +2272,12 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createSections(
     if (Error Err = CB(Builder.saveIP()))
       return Err;
     AfterIP = {FiniBB, FiniBB->begin()};
+  }
+
+  // Now we can fix the dummy branch to point to the right place
+  for (BranchInst *DummyBranch : CancellationBranches) {
+    assert(DummyBranch->getNumSuccessors() == 1);
+    DummyBranch->setSuccessor(0, LoopFini);
   }
 
   return AfterIP;
@@ -4650,8 +4641,6 @@ OpenMPIRBuilder::applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
   SmallPtrSet<BasicBlock *, 32> ParallelRegionBlockSet;
   SmallVector<BasicBlock *, 32> Blocks;
   OI.collectBlocks(ParallelRegionBlockSet, Blocks);
-  SmallVector<BasicBlock *, 32> BlocksT(ParallelRegionBlockSet.begin(),
-                                        ParallelRegionBlockSet.end());
 
   CodeExtractorAnalysisCache CEAC(*OuterFn);
   CodeExtractor Extractor(Blocks,
@@ -4667,7 +4656,7 @@ OpenMPIRBuilder::applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
                           /* AggrArgsIn0AddrSpace */ true);
 
   BasicBlock *CommonExit = nullptr;
-  SetVector<Value *> Inputs, Outputs, SinkingCands, HoistingCands;
+  SetVector<Value *> SinkingCands, HoistingCands;
 
   // Find allocas outside the loop body region which are used inside loop
   // body
@@ -7541,8 +7530,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
 
   // Add the thread ID argument.
   SmallVector<Instruction *, 4> ToBeDeleted;
-  OI.ExcludeArgsFromAggregate.push_back(createFakeIntVal(
-      Builder, AllocaIP, ToBeDeleted, TargetTaskAllocaIP, "global.tid", false));
+  OI.ExcludeArgsFromAggregate.push_back(
+      createFakeIntVal(Builder, M, AllocaIP, ToBeDeleted, TargetTaskAllocaIP,
+                       "global.tid", false));
 
   // Generate the task body which will subsequently be outlined.
   Builder.restoreIP(TargetTaskBodyIP);
@@ -8955,8 +8945,6 @@ OpenMPIRBuilder::createAtomicRead(const LocationDescription &Loc,
     }
   }
   checkAndEmitFlushAfterAtomic(Loc, AO, AtomicKind::Read);
-  if (XRead->getType() != V.Var->getType())
-    XRead = emitImplicitCast(Builder, XRead, V.Var);
   Builder.CreateStore(XRead, V.Var, V.IsVolatile);
   return Builder.saveIP();
 }
@@ -8964,7 +8952,7 @@ OpenMPIRBuilder::createAtomicRead(const LocationDescription &Loc,
 OpenMPIRBuilder::InsertPointTy
 OpenMPIRBuilder::createAtomicWrite(const LocationDescription &Loc,
                                    AtomicOpValue &X, Value *Expr,
-                                   AtomicOrdering AO) {
+                                   AtomicOrdering AO, InsertPointTy AllocaIP) {
   if (!updateToLocation(Loc))
     return Loc.IP;
 
@@ -8972,12 +8960,22 @@ OpenMPIRBuilder::createAtomicWrite(const LocationDescription &Loc,
          "OMP Atomic expects a pointer to target memory");
   Type *XElemTy = X.ElemTy;
   assert((XElemTy->isFloatingPointTy() || XElemTy->isIntegerTy() ||
-          XElemTy->isPointerTy()) &&
+          XElemTy->isPointerTy() || XElemTy->isStructTy()) &&
          "OMP atomic write expected a scalar type");
 
   if (XElemTy->isIntegerTy()) {
     StoreInst *XSt = Builder.CreateStore(Expr, X.Var, X.IsVolatile);
     XSt->setAtomic(AO);
+  } else if (XElemTy->isStructTy()) {
+    LoadInst *OldVal = Builder.CreateLoad(XElemTy, X.Var, "omp.atomic.read");
+    const DataLayout &LoadDL = OldVal->getModule()->getDataLayout();
+    unsigned LoadSize =
+        LoadDL.getTypeStoreSize(OldVal->getPointerOperand()->getType());
+    OpenMPIRBuilder::AtomicInfo atomicInfo(
+        &Builder, XElemTy, LoadSize * 8, LoadSize * 8, OldVal->getAlign(),
+        OldVal->getAlign(), true /* UseLibcall */, AllocaIP, X.Var);
+    atomicInfo.EmitAtomicStoreLibcall(AO, Expr);
+    OldVal->eraseFromParent();
   } else {
     // We need to bitcast and perform atomic op as integers
     IntegerType *IntCastTy =
@@ -9048,6 +9046,8 @@ Value *OpenMPIRBuilder::emitRMWOpAsInstruction(Value *Src1, Value *Src2,
   case AtomicRMWInst::UMin:
   case AtomicRMWInst::FMax:
   case AtomicRMWInst::FMin:
+  case AtomicRMWInst::FMaximum:
+  case AtomicRMWInst::FMinimum:
   case AtomicRMWInst::UIncWrap:
   case AtomicRMWInst::UDecWrap:
   case AtomicRMWInst::USubCond:
@@ -9241,8 +9241,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicCapture(
     return AtomicResult.takeError();
   Value *CapturedVal =
       (IsPostfixUpdate ? AtomicResult->first : AtomicResult->second);
-  if (CapturedVal->getType() != V.Var->getType())
-    CapturedVal = emitImplicitCast(Builder, CapturedVal, V.Var);
   Builder.CreateStore(CapturedVal, V.Var, V.IsVolatile);
 
   checkAndEmitFlushAfterAtomic(Loc, AO, AtomicKind::Capture);
@@ -9532,9 +9530,9 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
   SmallVector<Instruction *, 8> ToBeDeleted;
   InsertPointTy OuterAllocaIP(&OuterAllocaBB, OuterAllocaBB.begin());
   OI.ExcludeArgsFromAggregate.push_back(createFakeIntVal(
-      Builder, OuterAllocaIP, ToBeDeleted, AllocaIP, "gid", true));
+      Builder, M, OuterAllocaIP, ToBeDeleted, AllocaIP, "gid", true));
   OI.ExcludeArgsFromAggregate.push_back(createFakeIntVal(
-      Builder, OuterAllocaIP, ToBeDeleted, AllocaIP, "tid", true));
+      Builder, M, OuterAllocaIP, ToBeDeleted, AllocaIP, "tid", true));
 
   auto HostPostOutlineCB = [this, Ident,
                             ToBeDeleted](Function &OutlinedFn) mutable {
