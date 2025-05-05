@@ -57,11 +57,10 @@ using namespace llvm;
 static cl::opt<bool> EnableMachineCombinerPass("x86-machine-combiner",
                                cl::desc("Enable the machine combiner pass"),
                                cl::init(true), cl::Hidden);
-
-static cl::opt<bool>
-    EnableTileRAPass("x86-tile-ra",
-                     cl::desc("Enable the tile register allocation pass"),
-                     cl::init(true), cl::Hidden);
+cl::opt<bool>
+    llvm::EnableTileRAPass("x86-tile-ra",
+                           cl::desc("Enable the tile register allocation pass"),
+                           cl::init(true), cl::Hidden);
 
 extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   // Register the target.
@@ -680,9 +679,9 @@ std::unique_ptr<CSEConfigBase> X86PassConfig::getCSEConfig() const {
   return getStandardCSEConfigForOpt(TM->getOptLevel());
 }
 
-static bool onlyAllocateTileRegisters(const TargetRegisterInfo &TRI,
-                                      const MachineRegisterInfo &MRI,
-                                      const Register Reg) {
+bool llvm::onlyAllocateTileRegisters(const TargetRegisterInfo &TRI,
+                                     const MachineRegisterInfo &MRI,
+                                     const Register Reg) {
   const TargetRegisterClass *RC = MRI.getRegClass(Reg);
   return static_cast<const X86RegisterInfo &>(TRI).isTileRegisterClass(RC);
 }

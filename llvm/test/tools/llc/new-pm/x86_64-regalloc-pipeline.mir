@@ -1,6 +1,28 @@
 # REQUIRES x86_64-registered-target
-# RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-new-pm -O3 -regalloc-npm=fast -print-pipeline-passes %s -o - 2>&1 | FileCheck %s
-# RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-new-pm -O3 -regalloc-npm=greedy -print-pipeline-passes %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-GREEDY
+# Test default pipeline
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-new-pm -O3 -print-pipeline-passes %s -o - 2>&1 | FileCheck %s
 
-# CHECK: regallocfast
+# Test the -regalloc-npm option
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-new-pm -O3 -regalloc-npm=regallocfast -print-pipeline-passes %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-FAST
+
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-new-pm -O3 -regalloc-npm='greedy<tile-reg>' -print-pipeline-passes %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-GREEDY-FILTER
+
+# This test attempts to bypass the tile register filter pass, inserts the default greedy<all> pass and then 
+# attempts to insert an extraneous pass.
+# RUN: not llc -mtriple=x86_64-unknown-linux-gnu -enable-new-pm -O3 -regalloc-npm='default,default,basic' 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+
+# RUN: not llc -mtriple=x86_64-unknown-linux-gnu -enable-new-pm -O3 -regalloc-npm='machine-cp' -print-pipeline-passes %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID
+# RUN: not llc -mtriple=x86_64-unknown-linux-gnu -enable-new-pm -passes='machine-sink' -regalloc-npm='greedy' -print-pipeline-passes %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-BOTH-INVALID
+
+# RUN: not llc -mtriple=x86_64-unknown-linux-gnu -enable-new-pm -O0 -regalloc-npm='greedy' -print-pipeline-passes %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-ONLY-FAST
+
+# CHECK: greedy<tile-reg>
+# CHECK: greedy<all>
+
+# CHECK-FAST: regallocfast
 # CHECK-GREEDY: greedy<all>
+# CHECK-GREEDY-FILTER: greedy<tile-reg>
+# CHECK-ERROR: extra passes in regalloc pipeline: basic
+# CHECK-INVALID: unknown register allocator pass: machine-cp
+# CHECK-BOTH-INVALID: --passes and --regalloc-npm cannot be used together
+# CHECK-ONLY-FAST: expected regallocfast in option --regalloc-npm

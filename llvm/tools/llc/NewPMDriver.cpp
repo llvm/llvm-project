@@ -48,10 +48,11 @@
 
 using namespace llvm;
 
-static cl::opt<RegAllocType, false, RegAllocTypeParser>
-    RegAlloc("regalloc-npm",
-             cl::desc("Register allocator to use for new pass manager"),
-             cl::Hidden, cl::init(RegAllocType::Unset));
+static cl::opt<std::string> RegAllocPasses(
+    "regalloc-npm",
+    cl::desc("Register allocator pipeline for the new pass manager. Same as "
+             "--passes, but only regalloc passes can be used here."),
+    cl::Hidden);
 
 static cl::opt<bool>
     DebugPM("debug-pass-manager", cl::Hidden,
@@ -98,6 +99,11 @@ int llvm::compileModuleWithNewPM(
         << TargetPassConfig::getLimitedCodeGenPipelineReason() << ".\n";
     return 1;
   }
+  if (!PassPipeline.empty() && !RegAllocPasses.empty()) {
+    WithColor::error(errs(), Arg0)
+        << "--passes and --regalloc-npm cannot be used together.\n";
+    return 1;
+  }
 
   raw_pwrite_stream *OS = &Out->os();
 
@@ -105,7 +111,7 @@ int llvm::compileModuleWithNewPM(
   CGPassBuilderOption Opt = getCGPassBuilderOption();
   Opt.DisableVerify = VK != VerifierKind::InputOutput;
   Opt.DebugPM = DebugPM;
-  Opt.RegAlloc = RegAlloc;
+  Opt.RegAllocPipeline = RegAllocPasses;
 
   MachineModuleInfo MMI(Target.get());
 
@@ -155,7 +161,7 @@ int llvm::compileModuleWithNewPM(
 
   } else {
     ExitOnErr(Target->buildCodeGenPipeline(
-        MPM, *OS, DwoOut ? &DwoOut->os() : nullptr, FileType, Opt, &PIC));
+        MPM, *OS, DwoOut ? &DwoOut->os() : nullptr, FileType, Opt, &PIC, PB));
   }
 
   // If user only wants to print the pipeline, print it before parsing the MIR.

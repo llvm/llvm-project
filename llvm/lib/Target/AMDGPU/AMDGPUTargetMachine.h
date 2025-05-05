@@ -102,7 +102,8 @@ public:
                              raw_pwrite_stream *DwoOut,
                              CodeGenFileType FileType,
                              const CGPassBuilderOption &Opts,
-                             PassInstrumentationCallbacks *PIC) override;
+                             PassInstrumentationCallbacks *PIC,
+                             PassBuilder &) override;
 
   void registerMachineRegisterInfoCallback(MachineFunction &MF) const override;
 
@@ -169,7 +170,7 @@ class AMDGPUCodeGenPassBuilder
 public:
   AMDGPUCodeGenPassBuilder(GCNTargetMachine &TM,
                            const CGPassBuilderOption &Opts,
-                           PassInstrumentationCallbacks *PIC);
+                           PassInstrumentationCallbacks *PIC, PassBuilder &PB);
 
   void addIRPasses(AddIRPass &) const;
   void addCodeGenPrepare(AddIRPass &) const;

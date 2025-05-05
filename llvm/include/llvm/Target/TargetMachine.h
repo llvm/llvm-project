@@ -472,7 +472,8 @@ public:
   virtual Error buildCodeGenPipeline(ModulePassManager &, raw_pwrite_stream &,
                                      raw_pwrite_stream *, CodeGenFileType,
                                      const CGPassBuilderOption &,
-                                     PassInstrumentationCallbacks *) {
+                                     PassInstrumentationCallbacks *,
+                                     PassBuilder &) {
     return make_error<StringError>("buildCodeGenPipeline is not overridden",
                                    inconvertibleErrorCode());
   }
