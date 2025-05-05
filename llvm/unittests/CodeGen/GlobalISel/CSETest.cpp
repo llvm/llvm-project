@@ -500,6 +500,18 @@ TEST_F(AArch64GISelMITest, TestConstantFoldICMP) {
     EXPECT_TRUE(I->getOperand(1).getCImm()->getZExtValue());
   }
 
+  {
+    auto I = CSEB.buildICmp(CmpInst::Predicate::ICMP_EQ, s32, One, One);
+    EXPECT_TRUE(I->getOpcode() == TargetOpcode::G_CONSTANT);
+    EXPECT_EQ(I->getOperand(1).getCImm()->getZExtValue(), 1);
+  }
+
+  {
+    auto I = CSEB.buildICmp(CmpInst::Predicate::ICMP_EQ, s32, One, Two);
+    EXPECT_TRUE(I->getOpcode() == TargetOpcode::G_CONSTANT);
+    EXPECT_EQ(I->getOperand(1).getCImm()->getZExtValue(), 0);
+  }
+
   LLT VecTy = LLT::fixed_vector(2, s32);
   LLT DstTy = LLT::fixed_vector(2, s1);
   auto Three = CSEB.buildConstant(s32, 3);
@@ -508,6 +520,8 @@ TEST_F(AArch64GISelMITest, TestConstantFoldICMP) {
   auto OneTwo = CSEB.buildBuildVector(VecTy, {One.getReg(0), Two.getReg(0)});
   auto TwoThree =
       CSEB.buildBuildVector(VecTy, {Two.getReg(0), Three.getReg(0)});
+  auto OneThree =
+      CSEB.buildBuildVector(VecTy, {One.getReg(0), Three.getReg(0)});
   auto MinusOneOne =
       CSEB.buildBuildVector(VecTy, {MinusOne.getReg(0), MinusOne.getReg(0)});
   auto MinusOneTwo =
@@ -547,6 +561,36 @@ TEST_F(AArch64GISelMITest, TestConstantFoldICMP) {
   // ICMP_SLE
   CSEB.buildICmp(CmpInst::Predicate::ICMP_SLE, DstTy, MinusOneTwo, MinusOneOne);
 
+  {
+    auto I =
+        CSEB.buildICmp(CmpInst::Predicate::ICMP_EQ, VecTy, OneOne, TwoThree);
+    EXPECT_TRUE(I->getOpcode() == TargetOpcode::G_BUILD_VECTOR);
+    const APInt HiCst = *getIConstantVRegVal(I->getOperand(1).getReg(), *MRI);
+    const APInt LoCst = *getIConstantVRegVal(I->getOperand(2).getReg(), *MRI);
+    EXPECT_EQ(HiCst.getSExtValue(), 0);
+    EXPECT_EQ(LoCst.getSExtValue(), 0);
+  }
+
+  {
+    auto I =
+        CSEB.buildICmp(CmpInst::Predicate::ICMP_EQ, VecTy, OneThree, TwoThree);
+    EXPECT_TRUE(I->getOpcode() == TargetOpcode::G_BUILD_VECTOR);
+    const APInt HiCst = *getIConstantVRegVal(I->getOperand(1).getReg(), *MRI);
+    const APInt LoCst = *getIConstantVRegVal(I->getOperand(2).getReg(), *MRI);
+    EXPECT_EQ(HiCst.getSExtValue(), 0);
+    EXPECT_EQ(LoCst.getSExtValue(), -1);
+  }
+
+  {
+    auto I =
+        CSEB.buildICmp(CmpInst::Predicate::ICMP_EQ, VecTy, TwoThree, TwoThree);
+    EXPECT_TRUE(I->getOpcode() == TargetOpcode::G_BUILD_VECTOR);
+    const APInt HiCst = *getIConstantVRegVal(I->getOperand(1).getReg(), *MRI);
+    const APInt LoCst = *getIConstantVRegVal(I->getOperand(2).getReg(), *MRI);
+    EXPECT_EQ(HiCst.getSExtValue(), -1);
+    EXPECT_EQ(LoCst.getSExtValue(), -1);
+  }
+
   auto CheckStr = R"(
   ; CHECK: [[One:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; CHECK: [[Two:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
@@ -558,6 +602,7 @@ TEST_F(AArch64GISelMITest, TestConstantFoldICMP) {
   ; CHECK: {{%[0-9]+}}:_(<2 x s32>) = G_BUILD_VECTOR [[One]]:_(s32), [[One]]:_(s32)
   ; CHECK: {{%[0-9]+}}:_(<2 x s32>) = G_BUILD_VECTOR [[One]]:_(s32), [[Two]]:_(s32)
   ; CHECK: {{%[0-9]+}}:_(<2 x s32>) = G_BUILD_VECTOR [[Two]]:_(s32), [[Three]]:_(s32)
+  ; CHECK: {{%[0-9]+}}:_(<2 x s32>) = G_BUILD_VECTOR [[One]]:_(s32), [[Three]]:_(s32)
   ; CHECK: {{%[0-9]+}}:_(<2 x s32>) = G_BUILD_VECTOR [[MinusOne]]:_(s32), [[MinusOne]]:_(s32)
   ; CHECK: {{%[0-9]+}}:_(<2 x s32>) = G_BUILD_VECTOR [[MinusOne]]:_(s32), [[MinusTwo]]:_(s32)
   ; CHECK: {{%[0-9]+}}:_(<2 x s32>) = G_BUILD_VECTOR [[MinusTwo]]:_(s32), [[MinusThree]]:_(s32)
