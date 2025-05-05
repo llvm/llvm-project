@@ -4510,9 +4510,3 @@ def V_ILLEGAL : Enc32, InstSI<(outs), (ins), "v_illegal"> {
   let hasSideEffects = 1;
   let SubtargetPredicate = isGFX10Plus;
 }
-
-// FIXME: Would be nice if we could set the register class for the destination
-// register too.
-def IMP_DEF_FROM_INTRINSIC: Pat<
-  (i32 (int_amdgcn_dead)), (IMPLICIT_DEF)>;
-
