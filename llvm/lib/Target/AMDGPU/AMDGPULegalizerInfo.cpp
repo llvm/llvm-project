@@ -119,18 +119,6 @@ static LegalizeMutation fewerEltsToSize64Vector(unsigned TypeIdx) {
   };
 }
 
-static LegalizeMutation breakCurrentEltsToSize32Or64(unsigned TypeIdx) {
-  return [=](const LegalityQuery &Query) {
-    const LLT Ty = Query.Types[TypeIdx];
-    const LLT EltTy = Ty.getElementType();
-    const int Size = Ty.getSizeInBits();
-    const int EltSize = EltTy.getSizeInBits();
-    const unsigned TargetEltSize = EltSize % 64 == 0 ? 64 : 32;
-    const unsigned NewNumElts = (Size + (TargetEltSize - 1)) / TargetEltSize;
-    return std::pair(TypeIdx, LLT::fixed_vector(NewNumElts, TargetEltSize));
-  };
-}
-
 // Increase the number of vector elements to reach the next multiple of 32-bit
 // type.
 static LegalizeMutation moreEltsToNext32Bit(unsigned TypeIdx) {
@@ -890,8 +878,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .fewerElementsIf(
           all(vectorWiderThan(0, 64), scalarOrEltNarrowerThan(0, 64)),
           fewerEltsToSize64Vector(0))
-      .bitcastIf(all(vectorWiderThan(0, 64), scalarOrEltWiderThan(0, 64)),
-                 breakCurrentEltsToSize32Or64(0))
       .widenScalarToNextPow2(0)
       .scalarize(0);
 

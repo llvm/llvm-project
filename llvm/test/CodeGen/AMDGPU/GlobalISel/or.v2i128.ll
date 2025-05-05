@@ -3,7 +3,7 @@
 ; RUN: llc -global-isel=true -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefix=GFX9 %s
 ; RUN: llc -global-isel=true -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefix=GFX8 %s
 ; RUN: llc -global-isel=true -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck -check-prefix=GFX10 %s
-; RUN: llc -global-isel=true -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX10 %s
+; RUN: llc -global-isel=true -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX11 %s
 
 define <2 x i128> @v_or_v2i128(<2 x i128> %a, <2 x i128> %b) {
 ; GFX7-LABEL: v_or_v2i128:
@@ -57,6 +57,19 @@ define <2 x i128> @v_or_v2i128(<2 x i128> %a, <2 x i128> %b) {
 ; GFX10-NEXT:    v_or_b32_e32 v6, v6, v14
 ; GFX10-NEXT:    v_or_b32_e32 v7, v7, v15
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_or_v2i128:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_or_b32_e32 v0, v0, v8
+; GFX11-NEXT:    v_or_b32_e32 v1, v1, v9
+; GFX11-NEXT:    v_or_b32_e32 v2, v2, v10
+; GFX11-NEXT:    v_or_b32_e32 v3, v3, v11
+; GFX11-NEXT:    v_or_b32_e32 v4, v4, v12
+; GFX11-NEXT:    v_or_b32_e32 v5, v5, v13
+; GFX11-NEXT:    v_or_b32_e32 v6, v6, v14
+; GFX11-NEXT:    v_or_b32_e32 v7, v7, v15
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %or = or <2 x i128> %a, %b
   ret <2 x i128> %or
 }
@@ -65,53 +78,37 @@ define <2 x i128> @v_or_v2i128_inline_imm(<2 x i128> %a) {
 ; GFX7-LABEL: v_or_v2i128_inline_imm:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    s_mov_b64 s[4:5], 64
-; GFX7-NEXT:    s_mov_b64 s[6:7], 0
-; GFX7-NEXT:    s_mov_b64 s[4:5], s[4:5]
-; GFX7-NEXT:    s_mov_b64 s[6:7], s[6:7]
-; GFX7-NEXT:    v_or_b32_e32 v0, s4, v0
-; GFX7-NEXT:    v_or_b32_e32 v1, s5, v1
-; GFX7-NEXT:    v_or_b32_e32 v2, s6, v2
-; GFX7-NEXT:    v_or_b32_e32 v3, s7, v3
-; GFX7-NEXT:    v_or_b32_e32 v4, s4, v4
-; GFX7-NEXT:    v_or_b32_e32 v5, s5, v5
-; GFX7-NEXT:    v_or_b32_e32 v6, s6, v6
-; GFX7-NEXT:    v_or_b32_e32 v7, s7, v7
+; GFX7-NEXT:    v_or_b32_e32 v0, 64, v0
+; GFX7-NEXT:    v_or_b32_e32 v4, 64, v4
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_or_v2i128_inline_imm:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_mov_b64 s[4:5], 64
-; GFX9-NEXT:    s_mov_b64 s[6:7], 0
-; GFX9-NEXT:    s_mov_b64 s[4:5], s[4:5]
-; GFX9-NEXT:    s_mov_b64 s[6:7], s[6:7]
-; GFX9-NEXT:    v_or_b32_e32 v0, s4, v0
-; GFX9-NEXT:    v_or_b32_e32 v1, s5, v1
-; GFX9-NEXT:    v_or_b32_e32 v2, s6, v2
-; GFX9-NEXT:    v_or_b32_e32 v3, s7, v3
-; GFX9-NEXT:    v_or_b32_e32 v4, s4, v4
-; GFX9-NEXT:    v_or_b32_e32 v5, s5, v5
-; GFX9-NEXT:    v_or_b32_e32 v6, s6, v6
-; GFX9-NEXT:    v_or_b32_e32 v7, s7, v7
+; GFX9-NEXT:    v_or_b32_e32 v0, 64, v0
+; GFX9-NEXT:    v_or_b32_e32 v4, 64, v4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_or_v2i128_inline_imm:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    s_mov_b64 s[4:5], 64
-; GFX8-NEXT:    s_mov_b64 s[6:7], 0
-; GFX8-NEXT:    s_mov_b64 s[4:5], s[4:5]
-; GFX8-NEXT:    s_mov_b64 s[6:7], s[6:7]
-; GFX8-NEXT:    v_or_b32_e32 v0, s4, v0
-; GFX8-NEXT:    v_or_b32_e32 v1, s5, v1
-; GFX8-NEXT:    v_or_b32_e32 v2, s6, v2
-; GFX8-NEXT:    v_or_b32_e32 v3, s7, v3
-; GFX8-NEXT:    v_or_b32_e32 v4, s4, v4
-; GFX8-NEXT:    v_or_b32_e32 v5, s5, v5
-; GFX8-NEXT:    v_or_b32_e32 v6, s6, v6
-; GFX8-NEXT:    v_or_b32_e32 v7, s7, v7
+; GFX8-NEXT:    v_or_b32_e32 v0, 64, v0
+; GFX8-NEXT:    v_or_b32_e32 v4, 64, v4
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: v_or_v2i128_inline_imm:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_or_b32_e32 v0, 64, v0
+; GFX10-NEXT:    v_or_b32_e32 v4, 64, v4
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_or_v2i128_inline_imm:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_or_b32_e32 v0, 64, v0
+; GFX11-NEXT:    v_or_b32_e32 v4, 64, v4
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %or = or <2 x i128> %a, <i128 64, i128 64>
   ret <2 x i128> %or
 }
