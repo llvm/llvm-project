@@ -31,6 +31,7 @@ struct SwiftOptionalSummaryProvider : public TypeSummaryImpl {
   bool FormatObject(ValueObject *valobj, std::string &dest,
                     const TypeSummaryOptions &options) override;
   std::string GetDescription() override;
+  std::string GetName() override;
   bool DoesPrintChildren(ValueObject *valobj) const override;
   bool DoesPrintValue(ValueObject *valobj) const override;
 

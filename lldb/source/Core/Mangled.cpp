@@ -351,6 +351,7 @@ ConstString Mangled::GetDemangledNameImpl(
     // explicitly unsupported on llvm.org.
 #ifdef LLDB_ENABLE_SWIFT
   {
+    const char *mangled_name = m_mangled.GetCString();
     Log *log = GetLog(LLDBLog::Demangle);
     LLDB_LOGF(log, "demangle swift: %s", mangled_name);
     std::string demangled(SwiftLanguageRuntime::DemangleSymbolAsString(

@@ -47,11 +47,11 @@ public:
   lldb_private::Function *
   ParseFunctionFromDWARF(lldb_private::CompileUnit &comp_unit,
                          const DWARFDIE &die,
-                         const lldb_private::AddressRange &func_range) override;
+                         lldb_private::AddressRanges ranges) override;
 
-  bool
-  CompleteTypeFromDWARF(const DWARFDIE &die, lldb_private::Type *type,
-                        lldb_private::CompilerType &compiler_type) override {
+  bool CompleteTypeFromDWARF(
+      const DWARFDIE &die, lldb_private::Type *type,
+      const lldb_private::CompilerType &compiler_type) override {
     return false;
   }
 
@@ -70,8 +70,7 @@ public:
       lldb_private::CompilerDeclContext decl_context) override {}
 
   // FIXME: What should this do?
-  std::string
-  GetDIEClassTemplateParams(const DWARFDIE &die) override {
+  std::string GetDIEClassTemplateParams(DWARFDIE die) override {
     assert(false && "DWARFASTParserSwift::GetDIEClassTemplateParams has not "
                     "yet been implemented");
     return {};

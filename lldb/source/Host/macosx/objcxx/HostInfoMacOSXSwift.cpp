@@ -285,12 +285,12 @@ HostInfoMacOSX::GetSwiftResourceDir(llvm::Triple triple,
   if (it != g_resource_dir_cache.end())
     return it->getValue();
 
-  auto value = DetectSwiftResourceDir(
-      platform_sdk_path, swift_stdlib_os_dir,
-      HostInfo::GetSwiftResourceDir().GetPath(),
-      HostInfo::GetXcodeContentsDirectory().GetPath(),
-      PlatformDarwin::GetCurrentToolchainDirectory().GetPath(),
-      PlatformDarwin::GetCurrentCommandLineToolsDirectory().GetPath());
+  auto value =
+      DetectSwiftResourceDir(platform_sdk_path, swift_stdlib_os_dir,
+                             HostInfo::GetSwiftResourceDir().GetPath(),
+                             HostInfo::GetXcodeContentsDirectory().GetPath(),
+                             GetCurrentXcodeToolchainDirectory().GetPath(),
+                             GetCurrentCommandLineToolsDirectory().GetPath());
   g_resource_dir_cache.insert({key, value});
   return g_resource_dir_cache[key];
 }

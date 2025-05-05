@@ -2538,7 +2538,7 @@ static llvm::Expected<addr_t> ReadAsyncContextRegisterFromUnwind(
         pc.GetFileAddress());
 
   const RegisterKind unwind_regkind = unwind_plan->GetRegisterKind();
-  UnwindPlan::RowSP row = unwind_plan->GetRowForFunctionOffset(
+  auto *row = unwind_plan->GetRowForFunctionOffset(
       pc.GetFileAddress() - func_start_addr.GetFileAddress());
 
   // To request info about a register from the unwind plan, the register must
@@ -2707,26 +2707,26 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
   if (!async_ctx)
     return log_expected(async_ctx.takeError());
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
   const int32_t ptr_size = 8;
-  row->SetOffset(0);
+  row.SetOffset(0);
 
   // The CFA of a funclet is its own async context.
-  row->GetCFAValue().SetIsConstant(*async_ctx);
+  row.GetCFAValue().SetIsConstant(*async_ctx);
 
   // The value of the async register in the parent frame (which is the
   // continuation funclet) is the async context of this frame.
-  row->SetRegisterLocationToIsConstant(regnums->async_ctx_regnum, *async_ctx,
-                                       /*can_replace=*/false);
+  row.SetRegisterLocationToIsConstant(regnums->async_ctx_regnum, *async_ctx,
+                                      /*can_replace=*/false);
 
   if (std::optional<addr_t> pc_after_prologue =
           TrySkipVirtualParentProlog(*async_ctx, *process_sp))
-    row->SetRegisterLocationToIsConstant(regnums->pc_regnum, *pc_after_prologue,
-                                         false);
+    row.SetRegisterLocationToIsConstant(regnums->pc_regnum, *pc_after_prologue,
+                                        false);
   else
-    row->SetRegisterLocationToAtCFAPlusOffset(regnums->pc_regnum, ptr_size,
-                                              false);
-  row->SetUnspecifiedRegistersAreUndefined(true);
+    row.SetRegisterLocationToAtCFAPlusOffset(regnums->pc_regnum, ptr_size,
+                                             false);
+  row.SetUnspecifiedRegistersAreUndefined(true);
 
   UnwindPlanSP plan = std::make_shared<UnwindPlan>(lldb::eRegisterKindDWARF);
   plan->AppendRow(row);
@@ -2744,31 +2744,31 @@ UnwindPlanSP SwiftLanguageRuntime::GetFollowAsyncContextUnwindPlan(
     bool &behaves_like_zeroth_frame) {
   LLDB_SCOPED_TIMER();
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
   const int32_t ptr_size = 8;
-  row->SetOffset(0);
+  row.SetOffset(0);
 
   std::optional<AsyncUnwindRegisterNumbers> regnums =
       GetAsyncUnwindRegisterNumbers(arch.GetMachine());
   if (!regnums)
     return UnwindPlanSP();
 
-  row->GetCFAValue().SetIsRegisterDereferenced(regnums->async_ctx_regnum);
+  row.GetCFAValue().SetIsRegisterDereferenced(regnums->async_ctx_regnum);
   // The value of the async register in the parent frame (which is the
   // continuation funclet) is the async context of this frame.
-  row->SetRegisterLocationToIsCFAPlusOffset(regnums->async_ctx_regnum,
-                                            /*offset*/ 0, false);
+  row.SetRegisterLocationToIsCFAPlusOffset(regnums->async_ctx_regnum,
+                                           /*offset*/ 0, false);
 
   const unsigned num_indirections = 1;
   if (std::optional<addr_t> pc_after_prologue = TrySkipVirtualParentProlog(
           GetAsyncContext(regctx), *process_sp, num_indirections))
-    row->SetRegisterLocationToIsConstant(regnums->pc_regnum, *pc_after_prologue,
-                                         false);
+    row.SetRegisterLocationToIsConstant(regnums->pc_regnum, *pc_after_prologue,
+                                        false);
   else
-    row->SetRegisterLocationToAtCFAPlusOffset(regnums->pc_regnum, ptr_size,
-                                              false);
+    row.SetRegisterLocationToAtCFAPlusOffset(regnums->pc_regnum, ptr_size,
+                                             false);
 
-  row->SetUnspecifiedRegistersAreUndefined(true);
+  row.SetUnspecifiedRegistersAreUndefined(true);
 
   UnwindPlanSP plan = std::make_shared<UnwindPlan>(lldb::eRegisterKindDWARF);
   plan->AppendRow(row);

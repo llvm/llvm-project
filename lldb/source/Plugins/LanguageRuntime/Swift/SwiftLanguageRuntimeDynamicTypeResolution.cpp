@@ -2987,8 +2987,7 @@ std::optional<SwiftNominalType> GetSwiftClass(ValueObject &valobj,
 
   auto isa_load_addr = descriptor_sp->GetISA();
   Address isa;
-  const auto &sections = objc_runtime.GetTargetRef().GetSectionLoadList();
-  if (!sections.ResolveLoadAddress(isa_load_addr, isa))
+  if (!objc_runtime.GetTargetRef().ResolveLoadAddress(isa_load_addr, isa))
     return {};
 
   // Next, iterate over the Module's symbol table, looking for a symbol with

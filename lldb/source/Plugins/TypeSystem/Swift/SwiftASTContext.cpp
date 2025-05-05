@@ -5292,7 +5292,7 @@ swift::irgen::IRGenModule &SwiftASTContext::GetIRGenModule() {
             PSPs.MainInputFilenameForDebugInfo, ""));
         llvm::Module *llvm_module = m_ir_gen_module_ap->getModule();
         llvm_module->setDataLayout(data_layout.getStringRepresentation());
-        llvm_module->setTargetTriple(llvm_triple.str());
+        llvm_module->setTargetTriple(llvm_triple);
       }
     }
   });

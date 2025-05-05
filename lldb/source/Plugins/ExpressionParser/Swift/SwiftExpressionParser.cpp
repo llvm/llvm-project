@@ -48,6 +48,7 @@
 
 #include "llvm-c/Analysis.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/RewriteBuffer.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/IRBuilder.h"
@@ -62,7 +63,6 @@
 #include "llvm/TargetParser/Host.h"
 
 #include "clang/Basic/Module.h"
-#include "clang/Rewrite/Core/RewriteBuffer.h"
 
 #include "swift/AST/ASTContext.h"
 #include "swift/AST/DiagnosticConsumer.h"
@@ -1050,9 +1050,12 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
     // this check scattered in several places in the codebase, we should at
     // some point centralize it.
     lldb::StackFrameSP stack_frame_sp = stack_frame_wp.lock();
-    std::optional<uint64_t> size =
+    auto size_or_err =
         variable.GetType().GetByteSize(stack_frame_sp.get());
-    if (repl && size && *size == 0) {
+    if (!size_or_err)
+      return size_or_err.takeError();
+    uint64_t size = *size_or_err;
+    if (repl && size == 0) {
       auto &repl_mat = *llvm::cast<SwiftREPLMaterializer>(&materializer);
       offset = repl_mat.AddREPLResultVariable(
           variable.GetType(), variable.GetDecl(),
@@ -2341,7 +2344,7 @@ bool SwiftExpressionParser::RewriteExpression(
   if (num_diags == 0)
     return false;
 
-  clang::RewriteBuffer rewrite_buf;
+  llvm::RewriteBuffer rewrite_buf;
   llvm::StringRef text_ref(m_expr.Text());
   rewrite_buf.Initialize(text_ref);
 
