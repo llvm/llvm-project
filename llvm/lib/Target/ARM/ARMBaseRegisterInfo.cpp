@@ -961,17 +961,3 @@ bool ARMBaseRegisterInfo::shouldCoalesce(MachineInstr *MI,
   }
   return false;
 }
-
-bool ARMBaseRegisterInfo::shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
-                                               unsigned DefSubReg,
-                                               const TargetRegisterClass *SrcRC,
-                                               unsigned SrcSubReg) const {
-  // We can't extract an SPR from an arbitary DPR (as opposed to a DPR_VFP2).
-  if (DefRC == &ARM::SPRRegClass && DefSubReg == 0 &&
-      SrcRC == &ARM::DPRRegClass &&
-      (SrcSubReg == ARM::ssub_0 || SrcSubReg == ARM::ssub_1))
-    return false;
-
-  return TargetRegisterInfo::shouldRewriteCopySrc(DefRC, DefSubReg,
-                                                  SrcRC, SrcSubReg);
-}
