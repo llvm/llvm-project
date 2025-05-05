@@ -1496,6 +1496,10 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   else if (func.getArmPreservesZa())
     llvmFunc->addFnAttr("aarch64_preserves_za");
 
+  if (auto amdgpuUnsafeFpAtomics = func.getAmdgpuUnsafeFpAtomics())
+    llvmFunc->addFnAttr("amdgpu-unsafe-fp-atomics",
+                        llvm::toStringRef(*amdgpuUnsafeFpAtomics));
+
   if (auto targetCpu = func.getTargetCpu())
     llvmFunc->addFnAttr("target-cpu", *targetCpu);
 

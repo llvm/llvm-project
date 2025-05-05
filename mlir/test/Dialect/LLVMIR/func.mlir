@@ -236,6 +236,12 @@ module {
     llvm.return
   }
 
+  llvm.func @amdgpu_fp_unsafe_atomics() attributes {amdgpu_fp_unsafe_atomics = true} {
+    // CHECK: @amdgpu_fp_unsafe_atomics
+    // CHECK-SAME: attributes {amdgpu_fp_unsafe_atomics = true}
+    llvm.return
+  }
+
   // CHECK: llvm.comdat @__llvm_comdat
   llvm.comdat @__llvm_comdat {
     // CHECK: llvm.comdat_selector @any any

@@ -2140,6 +2140,7 @@ static constexpr std::array kExplicitAttributes{
     StringLiteral("aarch64_pstate_sm_body"),
     StringLiteral("aarch64_pstate_sm_compatible"),
     StringLiteral("aarch64_pstate_sm_enabled"),
+    StringLiteral("amdgpu-unsafe-fp-atomics"),
     StringLiteral("alwaysinline"),
     StringLiteral("approx-func-fp-math"),
     StringLiteral("convergent"),
@@ -2317,6 +2318,10 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
   if (llvm::Attribute attr = func->getFnAttribute("no-signed-zeros-fp-math");
       attr.isStringAttribute())
     funcOp.setNoSignedZerosFpMath(attr.getValueAsBool());
+
+  if (llvm::Attribute attr = func->getFnAttribute("amdgpu-unsafe-fp-atomics");
+      attr.isStringAttribute())
+    funcOp.setAmdgpuUnsafeFpAtomics(attr.getValueAsBool());
 
   if (llvm::Attribute attr = func->getFnAttribute("denormal-fp-math");
       attr.isStringAttribute())

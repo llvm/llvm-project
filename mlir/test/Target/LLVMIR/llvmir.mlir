@@ -2474,6 +2474,15 @@ llvm.func @preserves_za_func() attributes {arm_preserves_za} {
 
 // -----
 
+// CHECK-LABEL: @amdgpu_unsafe_fp_atomics_func
+// CHECK-SAME: #[[ATTR:[0-9]*]]
+llvm.func @amdgpu_unsafe_fp_atomics_func() attributes {amdgpu_unsafe_fp_atomics = true} {
+  llvm.return
+}
+// CHECK: #[[ATTR]] = { "amdgpu-unsafe-fp-atomics"="true" }
+
+// -----
+
 //
 // frame pointer attribute.
 //

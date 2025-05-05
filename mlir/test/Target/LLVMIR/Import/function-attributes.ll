@@ -267,6 +267,12 @@ define void @arm_preserves_za_func() "aarch64_preserves_za" {
   ret void
 }
 
+; // -----
+
+; CHECK-LABEL: @func_attr_amdgpu_unsafe_fp_atomics_true
+; CHECK-SAME: attributes {amdgpu_unsafe_fp_atomics = true}
+declare void @func_attr_amdgpu_unsafe_fp_atomics_true() "amdgpu-unsafe-fp-atomics"="true"
+
 // -----
 
 ; CHECK-LABEL: @section_func
