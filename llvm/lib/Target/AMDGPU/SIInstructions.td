@@ -2402,16 +2402,18 @@ def : GCNPat <
 
 // FIXME: Remove VGPRImm. Should be inferrable from register bank.
 
-foreach vt = [i32, p3, p5, p6, p2, p10] in {
-  def : GCNPat <
-    (VGPRImm<(vt imm)>:$imm),
-    (V_MOV_B32_e32 imm:$imm)
-  >;
+foreach vt = Reg32Types.types in {
+  if !and(!not(vt.isVector), !not(vt.isFP)) then {
+    def : GCNPat <
+      (VGPRImm<(vt imm)>:$imm),
+      (V_MOV_B32_e32 imm:$imm)
+    >;
 
-  def : GCNPat <
-    (vt imm:$imm),
-    (S_MOV_B32 imm:$imm)
-  >;
+    def : GCNPat <
+      (vt imm:$imm),
+      (S_MOV_B32 imm:$imm)
+    >;
+  }
 }
 
 // FIXME: The register bank of the frame index should depend on the
