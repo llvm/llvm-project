@@ -146,6 +146,15 @@ Language Selection and Mode Options
 
    ISO C 2017 with GNU extensions
 
+  | ``c23``
+  | ``iso9899:2024``
+
+   ISO C 2023
+
+  | ``gnu23``
+
+   ISO C 2023 with GNU extensions
+
  The default C language standard is ``gnu17``, except on PS4, where it is
  ``gnu99``.
 
