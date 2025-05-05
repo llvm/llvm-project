@@ -21,27 +21,6 @@ namespace llvm {
       /// fixup_sparc_13 - 13-bit fixup
       fixup_sparc_13,
 
-      /// fixup_sparc_hi22  - 22-bit fixup corresponding to %hi(foo)
-      /// for sethi
-      fixup_sparc_hi22,
-
-      /// fixup_sparc_lo10  - 10-bit fixup corresponding to %lo(foo)
-      fixup_sparc_lo10,
-
-      /// fixup_sparc_hh  -  22-bit fixup corresponding to %hh(foo)
-      fixup_sparc_hh,
-
-      /// fixup_sparc_hm  -  10-bit fixup corresponding to %hm(foo)
-      fixup_sparc_hm,
-
-      /// fixup_sparc_lm  -  22-bit fixup corresponding to %lm(foo)
-      fixup_sparc_lm,
-
-      /// 22-bit fixup corresponding to %hix(foo)
-      fixup_sparc_hix22,
-      /// 13-bit fixup corresponding to %lox(foo)
-      fixup_sparc_lox10,
-
       // Marker
       LastTargetFixupKind,
       NumTargetFixupKinds = LastTargetFixupKind - FirstTargetFixupKind
