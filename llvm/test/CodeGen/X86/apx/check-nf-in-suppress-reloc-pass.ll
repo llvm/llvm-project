@@ -4,29 +4,16 @@
 ; This is to check no assertion raised in X86 Suppress APX for Relocation pass
 ; if there is a NF instruction
 
-define fastcc void @foo(i32 %0, i1 %or.cond) {
+define fastcc void @foo(i32 %0, i1 %or.cond) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbp
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    pushq %r15
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    pushq %r14
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    pushq %r13
-; CHECK-NEXT:    .cfi_def_cfa_offset 40
 ; CHECK-NEXT:    pushq %r12
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 56
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    .cfi_offset %rbx, -56
-; CHECK-NEXT:    .cfi_offset %r12, -48
-; CHECK-NEXT:    .cfi_offset %r13, -40
-; CHECK-NEXT:    .cfi_offset %r14, -32
-; CHECK-NEXT:    .cfi_offset %r15, -24
-; CHECK-NEXT:    .cfi_offset %rbp, -16
 ; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:    movslq %edi, %r15
 ; CHECK-NEXT:    leaq (,%r15,4), %rax
