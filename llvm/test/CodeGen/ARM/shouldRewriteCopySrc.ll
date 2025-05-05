@@ -12,8 +12,8 @@ define float @shouldRewriteCopySrc(double %arg) #0 {
 ; CHECK-NEXT:    @APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    @NO_APP
-; CHECK-NEXT:    vmov r0, r1, d16
-; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vmov.f64 d0, d16
+; CHECK-NEXT:    @ kill: def $s0 killed $s0 killed $d0
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    bx lr
 bb:
