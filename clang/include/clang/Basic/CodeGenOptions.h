@@ -399,6 +399,9 @@ public:
   /// (0.0 [default] to skip none, 1.0 to skip all).
   SanitizerMaskCutoffs SanitizeSkipHotCutoffs;
 
+  /// Set of sanitizer checks that will be wrapped inside pseudofunctions.
+  SanitizerSet SanitizeAddPseudoFunctions;
+
   /// List of backend command-line options for -fembed-bitcode.
   std::vector<uint8_t> CmdArgs;
 

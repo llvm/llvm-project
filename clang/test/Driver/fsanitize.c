@@ -1,3 +1,5 @@
+// * Test -fsanitize-trap */
+
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-TRAP
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-trap=signed-integer-overflow %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-TRAP2
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-undefined-trap-on-error %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-TRAP
@@ -8,6 +10,9 @@
 // CHECK-UNDEFINED-TRAP: "-fsanitize={{((signed-integer-overflow|integer-divide-by-zero|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|function),?){18}"}}
 // CHECK-UNDEFINED-TRAP: "-fsanitize-trap=alignment,array-bounds,bool,builtin,enum,float-cast-overflow,function,integer-divide-by-zero,nonnull-attribute,null,pointer-overflow,return,returns-nonnull-attribute,shift-base,shift-exponent,signed-integer-overflow,unreachable,vla-bound"
 // CHECK-UNDEFINED-TRAP2: "-fsanitize-trap=alignment,array-bounds,bool,builtin,enum,float-cast-overflow,function,integer-divide-by-zero,nonnull-attribute,null,pointer-overflow,return,returns-nonnull-attribute,shift-base,shift-exponent,unreachable,vla-bound"
+
+
+// * Test -fsanitize-merge *
 
 // The trailing -fsanitize-merge takes precedence
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                                                                              %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE
@@ -61,6 +66,59 @@
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fsanitize-merge=signed-integer-overflow -fno-sanitize-merge           -fsanitize-merge=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE5
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fsanitize-merge=signed-integer-overflow -fno-sanitize-merge=undefined -fsanitize-merge=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE5
 // CHECK-UNDEFINED-MERGE5: "-fsanitize-merge=alignment,null"
+
+
+// * Test -fsanitize-add-pseudo-functions *
+
+// The trailing -fsanitize-add-pseudo-functions takes precedence
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                                            -fsanitize-add-pseudo-functions                                 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                                            -fsanitize-add-pseudo-functions=undefined                       %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-add-pseudo-functions                         -fsanitize-add-pseudo-functions                                 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-add-pseudo-functions                         -fsanitize-add-pseudo-functions=undefined                       %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-add-pseudo-functions=undefined               -fsanitize-add-pseudo-functions                                 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-add-pseudo-functions=undefined               -fsanitize-add-pseudo-functions=undefined                       %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-add-pseudo-functions=signed-integer-overflow -fsanitize-add-pseudo-functions                                 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fsanitize-add-pseudo-functions=bool                       -fsanitize-add-pseudo-functions=undefined                       %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                                            -fsanitize-add-pseudo-functions=undefined -fsanitize-add-pseudo-functions=bool %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO
+// CHECK-UNDEFINED-PSEUDO: "-fsanitize-add-pseudo-functions=alignment,array-bounds,bool,builtin,enum,float-cast-overflow,function,integer-divide-by-zero,nonnull-attribute,null,pointer-overflow,return,returns-nonnull-attribute,shift-base,shift-exponent,signed-integer-overflow,unreachable,vla-bound"
+
+// The trailing arguments (-fsanitize-add-pseudo-functions -fno-sanitize-add-pseudo-functions=signed-integer-overflow) take precedence
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                                            -fsanitize-add-pseudo-functions           -fno-sanitize-add-pseudo-functions=signed-integer-overflow %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO2
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                                            -fsanitize-add-pseudo-functions=undefined -fno-sanitize-add-pseudo-functions=signed-integer-overflow %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO2
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-add-pseudo-functions                         -fsanitize-add-pseudo-functions           -fno-sanitize-add-pseudo-functions=signed-integer-overflow %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO2
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-add-pseudo-functions                         -fsanitize-add-pseudo-functions=undefined -fno-sanitize-add-pseudo-functions=signed-integer-overflow %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO2
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-add-pseudo-functions=signed-integer-overflow -fsanitize-add-pseudo-functions           -fno-sanitize-add-pseudo-functions=signed-integer-overflow %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO2
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-add-pseudo-functions=signed-integer-overflow -fsanitize-add-pseudo-functions=undefined -fno-sanitize-add-pseudo-functions=signed-integer-overflow %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO2
+// CHECK-UNDEFINED-PSEUDO2: "-fsanitize-add-pseudo-functions=alignment,array-bounds,bool,builtin,enum,float-cast-overflow,function,integer-divide-by-zero,nonnull-attribute,null,pointer-overflow,return,returns-nonnull-attribute,shift-base,shift-exponent,unreachable,vla-bound"
+
+// The trailing -fno-sanitize-add-pseudo-functions takes precedence
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                           -fno-sanitize-add-pseudo-functions                                    %s -### 2>&1 | not FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO3
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                           -fno-sanitize-add-pseudo-functions=undefined                          %s -### 2>&1 | not FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO3
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                           -fno-sanitize-add-pseudo-functions           -fno-sanitize-add-pseudo-functions=bool %s -### 2>&1 | not FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO3
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                           -fno-sanitize-add-pseudo-functions=undefined -fno-sanitize-add-pseudo-functions=bool %s -### 2>&1 | not FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO3
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fsanitize-add-pseudo-functions           -fno-sanitize-add-pseudo-functions                                    %s -### 2>&1 | not FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO3
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fsanitize-add-pseudo-functions           -fno-sanitize-add-pseudo-functions=undefined                          %s -### 2>&1 | not FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO3
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fsanitize-add-pseudo-functions=undefined -fno-sanitize-add-pseudo-functions                                    %s -### 2>&1 | not FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO3
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fsanitize-add-pseudo-functions=undefined -fno-sanitize-add-pseudo-functions=undefined                          %s -### 2>&1 | not FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO3
+// CHECK-UNDEFINED-PSEUDO3: "-fsanitize-add-pseudo-functions"
+
+// The trailing arguments (-fsanitize-add-pseudo-functions -fno-sanitize-add-pseudo-functions=alignment,null) take precedence
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                                            -fsanitize-add-pseudo-functions           -fno-sanitize-add-pseudo-functions=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO4
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                                            -fsanitize-add-pseudo-functions=undefined -fno-sanitize-add-pseudo-functions=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO4
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-add-pseudo-functions                         -fsanitize-add-pseudo-functions           -fno-sanitize-add-pseudo-functions=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO4
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-add-pseudo-functions                         -fsanitize-add-pseudo-functions=undefined -fno-sanitize-add-pseudo-functions=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO4
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-add-pseudo-functions=signed-integer-overflow -fsanitize-add-pseudo-functions           -fno-sanitize-add-pseudo-functions=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO4
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-add-pseudo-functions=signed-integer-overflow -fsanitize-add-pseudo-functions=undefined -fno-sanitize-add-pseudo-functions=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO4
+// CHECK-UNDEFINED-PSEUDO4: "-fsanitize-add-pseudo-functions=array-bounds,bool,builtin,enum,float-cast-overflow,function,integer-divide-by-zero,nonnull-attribute,pointer-overflow,return,returns-nonnull-attribute,shift-base,shift-exponent,signed-integer-overflow,unreachable,vla-bound"
+
+// The trailing arguments (-fno-sanitize-add-pseudo-functions -fsanitize-add-pseudo-functions=alignment,null) take precedence
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                                         -fno-sanitize-add-pseudo-functions=undefined -fsanitize-add-pseudo-functions=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO5
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fsanitize-add-pseudo-functions                         -fno-sanitize-add-pseudo-functions           -fsanitize-add-pseudo-functions=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO5
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fsanitize-add-pseudo-functions                         -fno-sanitize-add-pseudo-functions=undefined -fsanitize-add-pseudo-functions=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO5
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fsanitize-add-pseudo-functions=signed-integer-overflow -fno-sanitize-add-pseudo-functions           -fsanitize-add-pseudo-functions=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO5
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fsanitize-add-pseudo-functions=signed-integer-overflow -fno-sanitize-add-pseudo-functions=undefined -fsanitize-add-pseudo-functions=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO5
+// CHECK-UNDEFINED-PSEUDO5: "-fsanitize-add-pseudo-functions=alignment,null"
+
 
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED
 // CHECK-UNDEFINED: "-fsanitize={{((signed-integer-overflow|integer-divide-by-zero|function|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute),?){18}"}}

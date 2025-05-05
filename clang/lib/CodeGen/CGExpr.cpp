@@ -1228,7 +1228,7 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
   SanitizerScope SanScope(this);
 
   llvm::DILocation *CheckDI = Builder.getCurrentDebugLocation();
-  if (ClArrayBoundsPseudoFn && CheckDI) {
+  if ((ClArrayBoundsPseudoFn || CGM.getCodeGenOpts().SanitizeAddPseudoFunctions.has(SanitizerKind::SO_ArrayBounds)) && CheckDI) {
     CheckDI = getDebugInfo()->CreateSyntheticInlineAt(
         Builder.getCurrentDebugLocation(), "__ubsan_check_array_bounds");
   }

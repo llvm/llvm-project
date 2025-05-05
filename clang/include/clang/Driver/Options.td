@@ -2533,6 +2533,21 @@ def fno_sanitize_merge_handlers : Flag<["-"], "fno-sanitize-merge">, Group<f_cla
                         Alias<fno_sanitize_merge_handlers_EQ>, AliasArgs<["all"]>,
                         Visibility<[ClangOption, CLOption]>,
                         HelpText<"Do not allow compiler to merge handlers for any sanitizers">;
+def fsanitize_add_pseudo_functions_EQ
+    : CommaJoined<["-"], "fsanitize-add-pseudo-functions=">,
+      Group<f_clang_Group>,
+      HelpText<"Add pseudo-functions to checks for specified sanitizers">;
+def fno_sanitize_add_pseudo_functions_EQ
+    : CommaJoined<["-"], "fno-sanitize-add-pseudo-functions=">,
+      Group<f_clang_Group>,
+      HelpText<"Do not allow compiler to add pseudo-functions to checks for specified sanitizers">;
+def fsanitize_add_pseudo_functions : Flag<["-"], "fsanitize-add-pseudo-functions">, Group<f_clang_Group>,
+                     Alias<fsanitize_add_pseudo_functions_EQ>, AliasArgs<["all"]>,
+                     HelpText<"Allow compiler to add pseudo-functions to checks for all sanitizers">;
+def fno_sanitize_add_pseudo_functions : Flag<["-"], "fno-sanitize-add-pseudo-functions">, Group<f_clang_Group>,
+                        Alias<fno_sanitize_add_pseudo_functions_EQ>, AliasArgs<["all"]>,
+                        Visibility<[ClangOption, CLOption]>,
+                        HelpText<"Do not allow compiler to add pseudo-functions to checks for any sanitizers">;
 def fsanitize_undefined_trap_on_error
     : Flag<["-"], "fsanitize-undefined-trap-on-error">, Group<f_clang_Group>,
       Alias<fsanitize_trap_EQ>, AliasArgs<["undefined"]>;
