@@ -9122,8 +9122,8 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return lowerLaneOp(*this, Op.getNode(), DAG);
   case Intrinsic::amdgcn_dead: {
     SmallVector<SDValue, 8> Poisons;
-    for (unsigned I = 0, E = Op.getNode()->getNumValues(); I != E; ++I)
-      Poisons.push_back(DAG.getPOISON(Op.getNode()->getValueType(I)));
+    for (const EVT ValTy : Op.getNode()->values())
+      Poisons.push_back(DAG.getPOISON(ValTy));
     return DAG.getMergeValues(Poisons, SDLoc(Op));
   }
   default:
