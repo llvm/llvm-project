@@ -149,6 +149,17 @@ mlir::LogicalResult BoxTotalElementsConversion::matchAndRewrite(
 
 class DoConcurrentConversion
     : public mlir::OpRewritePattern<fir::DoConcurrentOp> {
+  /// Looks up from the operation from and returns the LocalitySpecifierOp with
+  /// name symbolName
+  static fir::LocalitySpecifierOp
+  findLocalizer(mlir::Operation *from, mlir::SymbolRefAttr symbolName) {
+    fir::LocalitySpecifierOp localizer =
+        mlir::SymbolTable::lookupNearestSymbolFrom<fir::LocalitySpecifierOp>(
+            from, symbolName);
+    assert(localizer && "localizer not found in the symbol table");
+    return localizer;
+  }
+
 public:
   using mlir::OpRewritePattern<fir::DoConcurrentOp>::OpRewritePattern;
 
@@ -162,7 +173,52 @@ public:
     assert(loop.getRegion().hasOneBlock());
     mlir::Block &loopBlock = loop.getRegion().getBlocks().front();
 
-    // Collect iteration variable(s) allocations do that we can move them
+    // Handle localization
+    if (!loop.getLocalVars().empty()) {
+      mlir::OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPointToStart(&loop.getRegion().front());
+
+      std::optional<mlir::ArrayAttr> localSyms = loop.getLocalSyms();
+
+      for (auto [localVar, localArg, localizerSym] : llvm::zip_equal(
+               loop.getLocalVars(), loop.getRegionLocalArgs(), *localSyms)) {
+        mlir::SymbolRefAttr localizerName =
+            llvm::cast<mlir::SymbolRefAttr>(localizerSym);
+        fir::LocalitySpecifierOp localizer = findLocalizer(loop, localizerName);
+
+        mlir::Value localAlloc =
+            rewriter.create<fir::AllocaOp>(loop.getLoc(), localizer.getType());
+
+        if (localizer.getLocalitySpecifierType() ==
+            fir::LocalitySpecifierType::LocalInit) {
+          // It is reasonable to make this assumption since, at this stage,
+          // control-flow ops are not converted yet. Therefore, things like `if`
+          // conditions will still be represented by their encapsulating `fir`
+          // dialect ops.
+          assert(localizer.getCopyRegion().hasOneBlock() &&
+                 "Expected localizer to have a single block.");
+          mlir::Block *beforeLocalInit = rewriter.getInsertionBlock();
+          mlir::Block *afterLocalInit = rewriter.splitBlock(
+              rewriter.getInsertionBlock(), rewriter.getInsertionPoint());
+          rewriter.cloneRegionBefore(localizer.getCopyRegion(), afterLocalInit);
+          mlir::Block *copyRegionBody = beforeLocalInit->getNextNode();
+
+          rewriter.eraseOp(copyRegionBody->getTerminator());
+          rewriter.mergeBlocks(afterLocalInit, copyRegionBody);
+          rewriter.mergeBlocks(copyRegionBody, beforeLocalInit,
+                               {localVar, localArg});
+        }
+
+        rewriter.replaceAllUsesWith(localArg, localAlloc);
+      }
+
+      loop.getRegion().front().eraseArguments(loop.getNumInductionVars(),
+                                              loop.getNumLocalOperands());
+      loop.getLocalVarsMutable().clear();
+      loop.setLocalSymsAttr(nullptr);
+    }
+
+    // Collect iteration variable(s) allocations so that we can move them
     // outside the `fir.do_concurrent` wrapper.
     llvm::SmallVector<mlir::Operation *> opsToMove;
     for (mlir::Operation &op : llvm::drop_end(wrapperBlock))
