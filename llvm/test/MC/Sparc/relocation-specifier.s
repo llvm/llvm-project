@@ -24,6 +24,8 @@
 # READELF: TLS     GLOBAL DEFAULT   UND s_tgd_lo10
 # READELF: TLS     GLOBAL DEFAULT   UND s_tgd_add
 
+main:
+
 # ASM:      or %g1, %lo(sym), %g3
 # ASM-NEXT: sethi %hi(sym), %l0
 # ASM-NEXT: sethi %h44(sym), %l0
@@ -40,16 +42,30 @@ sethi %h44(sym), %l0
 or %g1, %m44(sym), %g3
 or %g1, %l44(sym), %g3
 
+## FIXME: Emit %pc22/%pc10
+# ASM:      sethi %hi(sym), %o1
+# ASM-NEXT: or %o1, %lo(sym), %o1
+# OBJDUMP:      sethi 0x0, %o1
+# OBJDUMP-NEXT:   R_SPARC_PC22 sym
+# OBJDUMP-NEXT: or %o1, 0x0, %o1
+# OBJDUMP-NEXT:   R_SPARC_PC10 sym
+# OBJDUMP-NEXT: sethi 0x3fffff, %o1
+# OBJDUMP-NEXT: or %o1, 0x3e0, %o1
+sethi %pc22(sym), %o1
+or %o1, %pc10(sym), %o1
+sethi %pc22(main), %o1
+or %o1, %pc10(main), %o1
+
 # ASM:      sethi %hh(sym), %l0
 # ASM-NEXT: sethi %hh(sym), %l0
 # ASM-NEXT: or %g1, %hm(sym), %g3
 # ASM-NEXT: or %g1, %hm(sym), %g3
 # ASM-NEXT: sethi %lm(sym), %l0
-# OBJDUMP:     0000014:  R_SPARC_HH22	sym
-# OBJDUMP:     0000018:  R_SPARC_HH22	sym
-# OBJDUMP:     000001c:  R_SPARC_HM10	sym
-# OBJDUMP:     0000020:  R_SPARC_HM10	sym
-# OBJDUMP:     0000024:  R_SPARC_LM22	sym
+# OBJDUMP:      R_SPARC_HH22	sym
+# OBJDUMP:      R_SPARC_HH22	sym
+# OBJDUMP:      R_SPARC_HM10	sym
+# OBJDUMP:      R_SPARC_HM10	sym
+# OBJDUMP:      R_SPARC_LM22	sym
 sethi %hh(sym), %l0
 sethi %uhi(sym), %l0
 or %g1, %hm(sym), %g3

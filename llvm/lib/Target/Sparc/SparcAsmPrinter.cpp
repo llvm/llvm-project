@@ -88,9 +88,9 @@ static MCOperand createPCXCallOP(MCSymbol *Label,
   return MCOperand::createExpr(MCSymbolRefExpr::create(Label, OutContext));
 }
 
-static MCOperand createPCXRelExprOp(SparcMCExpr::Specifier Kind,
-                                    MCSymbol *GOTLabel, MCSymbol *StartLabel,
-                                    MCSymbol *CurLabel, MCContext &OutContext) {
+static MCOperand createPCXRelExprOp(uint16_t Spec, MCSymbol *GOTLabel,
+                                    MCSymbol *StartLabel, MCSymbol *CurLabel,
+                                    MCContext &OutContext) {
   const MCSymbolRefExpr *GOT = MCSymbolRefExpr::create(GOTLabel, OutContext);
   const MCSymbolRefExpr *Start = MCSymbolRefExpr::create(StartLabel,
                                                          OutContext);
@@ -99,8 +99,8 @@ static MCOperand createPCXRelExprOp(SparcMCExpr::Specifier Kind,
 
   const MCBinaryExpr *Sub = MCBinaryExpr::createSub(Cur, Start, OutContext);
   const MCBinaryExpr *Add = MCBinaryExpr::createAdd(GOT, Sub, OutContext);
-  const SparcMCExpr *expr = SparcMCExpr::create(Kind,
-                                                Add, OutContext);
+  const SparcMCExpr *expr =
+      SparcMCExpr::create(SparcMCExpr::Specifier(Spec), Add, OutContext);
   return MCOperand::createExpr(expr);
 }
 
@@ -249,12 +249,12 @@ void SparcAsmPrinter::LowerGETPCXAndEmitMCInsts(const MachineInstr *MI,
     EmitRDPC(*OutStreamer, RegO7, STI);
   }
   OutStreamer->emitLabel(SethiLabel);
-  MCOperand hiImm = createPCXRelExprOp(SparcMCExpr::VK_PC22, GOTLabel,
-                                       StartLabel, SethiLabel, OutContext);
+  MCOperand hiImm = createPCXRelExprOp(ELF::R_SPARC_PC22, GOTLabel, StartLabel,
+                                       SethiLabel, OutContext);
   EmitSETHI(*OutStreamer, hiImm, MCRegOP, STI);
   OutStreamer->emitLabel(EndLabel);
-  MCOperand loImm = createPCXRelExprOp(SparcMCExpr::VK_PC10, GOTLabel,
-                                       StartLabel, EndLabel, OutContext);
+  MCOperand loImm = createPCXRelExprOp(ELF::R_SPARC_PC10, GOTLabel, StartLabel,
+                                       EndLabel, OutContext);
   EmitOR(*OutStreamer, MCRegOP, loImm, MCRegOP, STI);
   EmitADD(*OutStreamer, MCRegOP, RegO7, MCRegOP, STI);
 }

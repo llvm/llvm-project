@@ -51,11 +51,11 @@ StringRef SparcMCExpr::getSpecifierName(SparcMCExpr::Specifier S) {
   case VK_HM:            return "hm";
   case VK_LM:            return "lm";
     // FIXME: use %pc22/%pc10, if system assembler supports them.
-  case VK_PC22:          return "hi";
-  case VK_PC10:          return "lo";
-  case VK_GOT22:         return "hi";
-  case VK_GOT10:         return "lo";
-  case VK_GOT13:         return {};
+  case ELF::R_SPARC_PC22:          return "hi";
+  case ELF::R_SPARC_PC10:          return "lo";
+  case ELF::R_SPARC_GOT22:         return "hi";
+  case ELF::R_SPARC_GOT10:         return "lo";
+  case ELF::R_SPARC_GOT13:         return {};
   case VK_R_DISP32:      return "r_disp32";
   case VK_TLS_GD_HI22:   return "tgd_hi22";
   case VK_TLS_GD_LO10:   return "tgd_lo10";
@@ -97,11 +97,11 @@ SparcMCExpr::Specifier SparcMCExpr::parseSpecifier(StringRef name) {
       .Case("hm", VK_HM)
       .Case("ulo", VK_HM) // Nonstandard GNU extension
       .Case("lm", VK_LM)
-      .Case("pc22", VK_PC22)
-      .Case("pc10", VK_PC10)
-      .Case("got22", VK_GOT22)
-      .Case("got10", VK_GOT10)
-      .Case("got13", VK_GOT13)
+      .Case("pc22", (SparcMCExpr::Specifier)ELF::R_SPARC_PC22)
+      .Case("pc10", (SparcMCExpr::Specifier)ELF::R_SPARC_PC10)
+      .Case("got22", (SparcMCExpr::Specifier)ELF::R_SPARC_GOT22)
+      .Case("got10", (SparcMCExpr::Specifier)ELF::R_SPARC_GOT10)
+      .Case("got13", (SparcMCExpr::Specifier)ELF::R_SPARC_GOT13)
       .Case("r_disp32", VK_R_DISP32)
       .Case("tgd_hi22", VK_TLS_GD_HI22)
       .Case("tgd_lo10", VK_TLS_GD_LO10)
@@ -140,11 +140,6 @@ uint16_t SparcMCExpr::getFixupKind() const {
   case VK_HH:            return Sparc::fixup_sparc_hh;
   case VK_HM:            return Sparc::fixup_sparc_hm;
   case VK_LM:            return Sparc::fixup_sparc_lm;
-  case VK_PC22:          return Sparc::fixup_sparc_pc22;
-  case VK_PC10:          return Sparc::fixup_sparc_pc10;
-  case VK_GOT22:         return ELF::R_SPARC_GOT22;
-  case VK_GOT10:         return ELF::R_SPARC_GOT10;
-  case VK_GOT13:         return ELF::R_SPARC_GOT13;
   case VK_TLS_GD_HI22:   return ELF::R_SPARC_TLS_GD_HI22;
   case VK_TLS_GD_LO10:   return ELF::R_SPARC_TLS_GD_LO10;
   case VK_TLS_GD_ADD:    return ELF::R_SPARC_TLS_GD_ADD;
