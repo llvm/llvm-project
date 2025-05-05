@@ -195,12 +195,14 @@ public:
   }
 };
 
-unsigned getMaxVGPRs(const TargetMachine &TM, const Function &F) {
+static unsigned getMaxVGPRs(unsigned LDSBytes, const TargetMachine &TM,
+                            const Function &F) {
   if (!TM.getTargetTriple().isAMDGCN())
     return 128;
 
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-  unsigned MaxVGPRs = ST.getMaxNumVGPRs(ST.getWavesPerEU(F).first);
+  unsigned MaxVGPRs = ST.getMaxNumVGPRs(
+      ST.getWavesPerEU(ST.getFlatWorkGroupSizes(F), LDSBytes, F).first);
 
   // A non-entry function has only 32 caller preserved registers.
   // Do not promote alloca which will force spilling unless we know the function
@@ -336,10 +338,9 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
   if (!ST.isPromoteAllocaEnabled())
     return false;
 
-  MaxVGPRs = getMaxVGPRs(TM, F);
-  setFunctionLimits(F);
-
   bool SufficientLDS = PromoteToLDS && hasSufficientLocalMem(F);
+  MaxVGPRs = getMaxVGPRs(CurrentLocalMemUsage, TM, F);
+  setFunctionLimits(F);
 
   unsigned VectorizationBudget =
       (PromoteAllocaToVectorLimit ? PromoteAllocaToVectorLimit * 8
@@ -1452,29 +1453,14 @@ bool AMDGPUPromoteAllocaImpl::hasSufficientLocalMem(const Function &F) {
   }
 
   unsigned MaxOccupancy =
-      ST.getOccupancyWithWorkGroupSizes(CurrentLocalMemUsage, F).second;
-
-  // Restrict local memory usage so that we don't drastically reduce occupancy,
-  // unless it is already significantly reduced.
-
-  // TODO: Have some sort of hint or other heuristics to guess occupancy based
-  // on other factors..
-  unsigned OccupancyHint = ST.getWavesPerEU(F).second;
-  if (OccupancyHint == 0)
-    OccupancyHint = 7;
-
-  // Clamp to max value.
-  OccupancyHint = std::min(OccupancyHint, ST.getMaxWavesPerEU());
-
-  // Check the hint but ignore it if it's obviously wrong from the existing LDS
-  // usage.
-  MaxOccupancy = std::min(OccupancyHint, MaxOccupancy);
+      ST.getWavesPerEU(ST.getFlatWorkGroupSizes(F), CurrentLocalMemUsage, F)
+          .second;
 
   // Round up to the next tier of usage.
   unsigned MaxSizeWithWaveCount =
       ST.getMaxLocalMemSizeWithWaveCount(MaxOccupancy, F);
 
-  // Program is possibly broken by using more local mem than available.
+  // Program may already use more LDS than is usable at maximum occupancy.
   if (CurrentLocalMemUsage > MaxSizeWithWaveCount)
     return false;
 

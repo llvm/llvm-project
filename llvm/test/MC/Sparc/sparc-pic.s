@@ -2,9 +2,8 @@
 ! RUN: llvm-mc %s -triple=sparcv9 -filetype=obj | llvm-readobj -r - | FileCheck --check-prefix=NOPIC %s
 
 
-! PIC:      Relocations [
-! PIC-NOT:    0x{{[0-9,A-F]+}} R_SPARC_WPLT30 .text 0xC
-! PIC:        0x{{[0-9,A-F]+}} R_SPARC_PC22 _GLOBAL_OFFSET_TABLE_ 0x4
+! PIC:      .rela.text {
+! PIC-NEXT:   0x{{[0-9,A-F]+}} R_SPARC_PC22 _GLOBAL_OFFSET_TABLE_ 0x4
 ! PIC-NEXT:   0x{{[0-9,A-F]+}} R_SPARC_PC10 _GLOBAL_OFFSET_TABLE_ 0x8
 ! PIC-NEXT:   0x{{[0-9,A-F]+}} R_SPARC_PC22 _GLOBAL_OFFSET_TABLE_ 0x0
 ! PIC-NEXT:   0x{{[0-9,A-F]+}} R_SPARC_PC10 _GLOBAL_OFFSET_TABLE_ 0x0
@@ -18,9 +17,8 @@
 ! PIC:        0x{{[0-9,A-F]+}} R_SPARC_GOT13 value 0x0
 ! PIC:      ]
 
-! NOPIC:      Relocations [
-! NOPIC-NOT:    0x{{[0-9,A-F]+}} R_SPARC_WPLT30 .text 0xC
-! NOPIC:        0x{{[0-9,A-F]+}} R_SPARC_HI22 _GLOBAL_OFFSET_TABLE_ 0x4
+! NOPIC:      .rela.text {
+! NOPIC-NEXT:   0x{{[0-9,A-F]+}} R_SPARC_HI22 _GLOBAL_OFFSET_TABLE_ 0x4
 ! NOPIC-NEXT:   0x{{[0-9,A-F]+}} R_SPARC_LO10 _GLOBAL_OFFSET_TABLE_ 0x8
 ! NOPIC-NEXT:   0x{{[0-9,A-F]+}} R_SPARC_HI22 _GLOBAL_OFFSET_TABLE_ 0x0
 ! NOPIC-NEXT:   0x{{[0-9,A-F]+}} R_SPARC_LO10 _GLOBAL_OFFSET_TABLE_ 0x0
