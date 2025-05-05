@@ -56609,10 +56609,10 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
     }
     unsigned IndexWidth = Index.getScalarValueSizeInBits();
 
-    // If the index is a left shift, \ComputeNumSignBits we are recomputing the number of sign bits
-    // from the shifted value. We are trying to enable the optimization in which
-    // we can shrink indices if they are larger than 32-bits. Using the existing
-    // fold techniques implemented below.
+    // If the index is a left shift, \ComputeNumSignBits we are recomputing the
+    // number of sign bits from the shifted value. We are trying to enable the
+    // optimization in which we can shrink indices if they are larger than
+    // 32-bits. Using the existing fold techniques implemented below.
     unsigned ComputeNumSignBits = DAG.ComputeNumSignBits(Index);
     if (Index.getOpcode() == ISD::SHL) {
       if (auto MinShAmt = DAG.getValidMinimumShiftAmount(Index)) {
