@@ -65,9 +65,10 @@ struct LoopStandardAnalysisResults {
 };
 
 /// Extern template declaration for the analysis set for this IR unit.
-extern template class AllAnalysesOn<Loop>;
+extern template class LLVM_TEMPLATE_ABI AllAnalysesOn<Loop>;
 
-extern template class AnalysisManager<Loop, LoopStandardAnalysisResults &>;
+extern template class LLVM_TEMPLATE_ABI
+    AnalysisManager<Loop, LoopStandardAnalysisResults &>;
 /// The loop analysis manager.
 ///
 /// See the documentation for the AnalysisManager template for detail
@@ -149,10 +150,11 @@ LoopAnalysisManagerFunctionProxy::run(Function &F, FunctionAnalysisManager &AM);
 
 // Ensure the \c LoopAnalysisManagerFunctionProxy is provided as an extern
 // template.
-extern template class InnerAnalysisManagerProxy<LoopAnalysisManager, Function>;
+extern template class LLVM_TEMPLATE_ABI
+    InnerAnalysisManagerProxy<LoopAnalysisManager, Function>;
 
-extern template class OuterAnalysisManagerProxy<FunctionAnalysisManager, Loop,
-                                                LoopStandardAnalysisResults &>;
+extern template class LLVM_TEMPLATE_ABI OuterAnalysisManagerProxy<
+    FunctionAnalysisManager, Loop, LoopStandardAnalysisResults &>;
 /// A proxy from a \c FunctionAnalysisManager to a \c Loop.
 typedef OuterAnalysisManagerProxy<FunctionAnalysisManager, Loop,
                                   LoopStandardAnalysisResults &>

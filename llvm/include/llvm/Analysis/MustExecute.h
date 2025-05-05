@@ -344,7 +344,7 @@ private:
   LLVM_ABI MustBeExecutedIterator(ExplorerTy &Explorer, const Instruction *I);
 
   /// Reset the iterator to its initial state pointing at \p I.
-  void reset(const Instruction *I);
+  LLVM_ABI void reset(const Instruction *I);
 
   /// Reset the iterator to point at \p I, keep cached state.
   void resetInstruction(const Instruction *I);
