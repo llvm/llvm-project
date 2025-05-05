@@ -68,6 +68,13 @@ static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {
   case ELF::R_SPARC_LO10:
     return Value & 0x3ff;
 
+  case ELF::R_SPARC_H44:
+    return (Value >> 22) & 0x3fffff;
+  case ELF::R_SPARC_M44:
+    return (Value >> 12) & 0x3ff;
+  case ELF::R_SPARC_L44:
+    return Value & 0xfff;
+
   case ELF::R_SPARC_HH22:
     return (Value >> 42) & 0x3fffff;
   case ELF::R_SPARC_HM10:
