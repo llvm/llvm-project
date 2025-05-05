@@ -1273,7 +1273,8 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
           UsesAliasingPtr = true;
         }
 
-        if (isEscapeSource(V)) {
+        SmallVector<Value *> MayAlias;
+        if (isEscapeSource(V, MayAlias) && MayAlias.empty()) {
           // An escape source can only alias with a noalias argument if it has
           // been captured beforehand.
           RequiresNoCaptureBefore = true;
