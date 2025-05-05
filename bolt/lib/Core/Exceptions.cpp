@@ -650,6 +650,14 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
         // the RA State. The actual state for instructions are worked out in
         // MarkRAStates based on these annotations.
         Function.setInstModifiesRAState(DW_CFA_AARCH64_negate_ra_state, Offset);
+        // To have the --allow-experimental-pacret flag, we have to add the
+        // OpNegateRAState CFI, and remove it later in MarkRAStates. Unittests
+        // on AArch64 would be broken otherwise, as some AArch64 platforms will
+        // have pac-ret for linker inserted functions, e.g.
+        // __do_global_dtors_aux. The user cannot remove the
+        // .cfi_negate_ra_state from such functions.
+        Function.addCFIInstruction(
+            Offset, MCCFIInstruction::createNegateRAState(nullptr));
         break;
       }
       if (opts::Verbosity >= 1)
