@@ -3653,20 +3653,22 @@ void Verifier::visitCallBase(CallBase &Call) {
   // well.
   for (unsigned i = 0, e = FTy->getNumParams(); i != e; ++i) {
     if (Call.paramHasAttr(i, Attribute::SwiftError)) {
-      SetVector<const Value *> Args;
-      Args.insert(Call.getArgOperand(i));
-      bool DidChange;
-      do {
-        DidChange = false;
-        // Inherit the incoming values of phi instructions to capture all
-        // values.
-        for (const Value *Arg : Args)
-          if (auto *PhiI = dyn_cast<PHINode>(Arg))
-            for (const auto &Op : PhiI->incoming_values())
-              DidChange |= Args.insert(Op.get());
-      } while (DidChange);
+      const Value *Arg = Call.getArgOperand(i);
+      SetVector<const Value *> Values;
+      Values.insert(Arg);
+      SmallVector<const PHINode *> PHIWorkList;
+      if (auto *PhiI = dyn_cast<PHINode>(Arg))
+        PHIWorkList.push_back(PhiI);
 
-      for (const Value *SwiftErrorArg : Args) {
+      while (!PHIWorkList.empty()) {
+        const auto *PhiI = PHIWorkList.pop_back_val();
+        for (const auto &Op : PhiI->incoming_values()) {
+          const auto *NextPhiI = dyn_cast<PHINode>(Op.get());
+          if (Values.insert(Op.get()) && NextPhiI)
+            PHIWorkList.push_back(NextPhiI);
+        }
+      }
+      for (const Value *SwiftErrorArg : Values) {
         if (isa<PHINode>(SwiftErrorArg))
           continue;
         if (auto AI =
@@ -4376,21 +4378,26 @@ void Verifier::verifySwiftErrorCall(CallBase &Call,
 void Verifier::verifySwiftErrorValue(const Value *SwiftErrorVal) {
   SetVector<const User *> Users(SwiftErrorVal->users().begin(),
                                 SwiftErrorVal->users().end());
-  bool DidChange;
-  do {
-    DidChange = false;
-    // Inherit the users of phi instructions to capture all users.
-    for (const User *U : Users)
-      if (auto PhiI = dyn_cast<PHINode>(U))
-        for (const User *U : PhiI->users())
-          DidChange |= Users.insert(U);
-  } while (DidChange);
+  SmallVector<const PHINode *> PHIWorkList;
+  for (const User *U : Users)
+    if (auto *PhiI = dyn_cast<PHINode>(U))
+      PHIWorkList.push_back(PhiI);
 
+  while (!PHIWorkList.empty()) {
+    const auto *PhiI = PHIWorkList.pop_back_val();
+    for (const User *U : PhiI->users()) {
+      const auto *NextPhiI = dyn_cast<PHINode>(U);
+      if (Users.insert(U) && NextPhiI)
+        PHIWorkList.push_back(NextPhiI);
+    }
+  }
   // Check that swifterror value is only used by loads, stores, or as
   // a swifterror argument.
   for (const User *U : Users) {
+    if (isa<PHINode>(U))
+      continue;
     Check(isa<LoadInst>(U) || isa<StoreInst>(U) || isa<CallInst>(U) ||
-              isa<InvokeInst>(U) || isa<PHINode>(U),
+              isa<InvokeInst>(U),
           "swifterror value can only be loaded and stored from, or "
           "as a swifterror argument!",
           SwiftErrorVal, U);
