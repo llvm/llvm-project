@@ -3586,6 +3586,16 @@ ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
   } else if (E->getKind() == UETT_VectorElements) {
     auto *VecTy = cast<llvm::VectorType>(ConvertType(E->getTypeOfArgument()));
     return Builder.CreateElementCount(CGF.SizeTy, VecTy->getElementCount());
+  } else if (E->getKind() == clang::UETT_PtrAuthSchemaOptions) {
+    auto PointerAuth =
+        CGF.getContext().getExplicitOrImplicitPointerAuth(E->getArgumentType());
+    assert(PointerAuth);
+    auto OptionsString =
+        CGF.getContext().getPointerAuthOptionsString(*PointerAuth);
+    ConstantAddress C =
+        CGF.CGM.GetAddrOfConstantCString(OptionsString, OptionsString.c_str());
+    return CGF.Builder.CreateBitCast(C.getPointer(),
+                                     CGF.getTypes().ConvertType(E->getType()));
   }
 
   // If this isn't sizeof(vla), the result must be constant; use the constant

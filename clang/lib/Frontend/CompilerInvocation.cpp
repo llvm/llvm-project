@@ -1530,7 +1530,7 @@ void CompilerInvocation::setDefaultPointerAuthOptions(
     using Discrimination = PointerAuthSchema::Discrimination;
     // If you change anything here, be sure to update <ptrauth.h>.
     Opts.FunctionPointers = PointerAuthSchema(
-        Key::ASIA, false,
+        (Key)LangOpts.PointerAuthFunctionKey, false,
         LangOpts.PointerAuthFunctionTypeDiscrimination ? Discrimination::Type
                                                        : Discrimination::None);
 
@@ -3581,6 +3581,8 @@ static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
   Opts.PointerAuthELFGOT = Args.hasArg(OPT_fptrauth_elf_got);
   Opts.AArch64JumpTableHardening =
       Args.hasArg(OPT_faarch64_jump_table_hardening);
+  Opts.PointerAuthFunctionKey =
+      static_cast<unsigned>(PointerAuthSchema::ARM8_3Key::ASIA);
 }
 
 /// Check if input file kind and language standard are compatible.

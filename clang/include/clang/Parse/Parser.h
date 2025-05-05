@@ -3981,7 +3981,9 @@ private:
   ExprResult ParseArrayTypeTrait();
   ExprResult ParseExpressionTrait();
 
+  ExprResult ParseBuiltinUnaryExprOrTypeTrait(UnaryExprOrTypeTrait ExprKind);
   ExprResult ParseBuiltinPtrauthTypeDiscriminator();
+  ExprResult ParseBuiltinPtrauthQuery(tok::TokenKind Token);
 
   //===--------------------------------------------------------------------===//
   // Preprocessor code-completion pass-through

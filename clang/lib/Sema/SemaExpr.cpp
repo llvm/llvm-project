@@ -4200,6 +4200,23 @@ static bool checkPtrAuthTypeDiscriminatorOperandType(Sema &S, QualType T,
   return false;
 }
 
+static bool CheckPtrAuthQuery(Sema &S, StringRef KWName,
+                              UnaryExprOrTypeTrait Kind, QualType T,
+                              SourceLocation Loc, SourceRange ArgRange) {
+  if (Kind == UETT_PtrAuthHasAuthentication)
+    return false;
+
+  auto PointerAuth = S.Context.getExplicitOrImplicitPointerAuth(T);
+  if (!PointerAuth)
+    return false;
+  if (!PointerAuth->isPresent()) {
+    S.Diag(Loc, diag::err_ptrauth_query_type_has_no_pointer_authentication)
+        << KWName << ArgRange;
+    return true;
+  }
+  return false;
+}
+
 static bool CheckExtensionTraitOperandType(Sema &S, QualType T,
                                            SourceLocation Loc,
                                            SourceRange ArgRange,
@@ -4651,6 +4668,15 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(QualType ExprType,
                                        ExprKind))
     return true;
 
+  if (ExprKind == UETT_PtrAuthHasAuthentication ||
+      ExprKind == UETT_PtrAuthSchemaKey ||
+      ExprKind == UETT_PtrAuthSchemaIsAddressDiscriminated ||
+      ExprKind == UETT_PtrAuthSchemaExtraDiscriminator ||
+      ExprKind == UETT_PtrAuthSchemaOptions) {
+    return CheckPtrAuthQuery(*this, KWName, ExprKind, ExprType, OpLoc,
+                             ExprRange);
+  }
+
   if (ExprType->isVariablyModifiedType() && FunctionScopes.size() > 1) {
     if (auto *TT = ExprType->getAs<TypedefType>()) {
       for (auto I = FunctionScopes.rbegin(),
@@ -4704,9 +4730,24 @@ ExprResult Sema::CreateUnaryExprOrTypeTraitExpr(TypeSourceInfo *TInfo,
   if (!TInfo)
     return ExprError();
 
+  QualType ResultTy;
+  if (ExprKind == UETT_PtrAuthSchemaOptions) {
+    ResultTy = Context.CharTy.withConst();
+    ResultTy = Context.adjustStringLiteralBaseType(ResultTy);
+    ResultTy = Context.getPointerType(ResultTy);
+  } else if (ExprKind == UETT_PtrAuthHasAuthentication ||
+             ExprKind == UETT_PtrAuthSchemaIsAddressDiscriminated) {
+    ResultTy = Context.BoolTy;
+  } else if (ExprKind == UETT_PtrAuthSchemaKey ||
+             ExprKind == UETT_PtrAuthSchemaExtraDiscriminator) {
+    ResultTy = Context.UnsignedIntTy;
+  } else {
+    ResultTy = Context.getSizeType();
+  }
+
   // C99 6.5.3.4p4: the type (an unsigned integer type) is size_t.
-  return new (Context) UnaryExprOrTypeTraitExpr(
-      ExprKind, TInfo, Context.getSizeType(), OpLoc, R.getEnd());
+  return new (Context)
+      UnaryExprOrTypeTraitExpr(ExprKind, TInfo, ResultTy, OpLoc, R.getEnd());
 }
 
 ExprResult

@@ -605,6 +605,11 @@ KEYWORD(__private_extern__          , KEYALL)
 KEYWORD(__module_private__          , KEYALL)
 
 UNARY_EXPR_OR_TYPE_TRAIT(__builtin_ptrauth_type_discriminator, PtrAuthTypeDiscriminator, KEYALL)
+UNARY_EXPR_OR_TYPE_TRAIT(__builtin_ptrauth_has_authentication, PtrAuthHasAuthentication, KEYALL)
+UNARY_EXPR_OR_TYPE_TRAIT(__builtin_ptrauth_schema_key, PtrAuthSchemaKey, KEYALL)
+UNARY_EXPR_OR_TYPE_TRAIT(__builtin_ptrauth_schema_is_address_discriminated, PtrAuthSchemaIsAddressDiscriminated, KEYALL)
+UNARY_EXPR_OR_TYPE_TRAIT(__builtin_ptrauth_schema_extra_discriminator, PtrAuthSchemaExtraDiscriminator, KEYALL)
+UNARY_EXPR_OR_TYPE_TRAIT(__builtin_ptrauth_schema_options, PtrAuthSchemaOptions, KEYALL)
 
 // Extension that will be enabled for Microsoft, Borland and PS4, but can be
 // disabled via '-fno-declspec'.

@@ -861,7 +861,14 @@ bool Parser::isRevertibleTypeTrait(const IdentifierInfo *II,
   return false;
 }
 
-ExprResult Parser::ParseBuiltinPtrauthTypeDiscriminator() {
+ExprResult
+Parser::ParseBuiltinUnaryExprOrTypeTrait(UnaryExprOrTypeTrait ExprKind) {
+  assert(ExprKind == UETT_PtrAuthTypeDiscriminator ||
+         ExprKind == UETT_PtrAuthHasAuthentication ||
+         ExprKind == UETT_PtrAuthSchemaKey ||
+         ExprKind == UETT_PtrAuthSchemaIsAddressDiscriminated ||
+         ExprKind == UETT_PtrAuthSchemaExtraDiscriminator ||
+         ExprKind == UETT_PtrAuthSchemaOptions);
   SourceLocation Loc = ConsumeToken();
 
   BalancedDelimiterTracker T(*this, tok::l_paren);
@@ -877,8 +884,31 @@ ExprResult Parser::ParseBuiltinPtrauthTypeDiscriminator() {
   SourceLocation EndLoc = Tok.getLocation();
   T.consumeClose();
   return Actions.ActOnUnaryExprOrTypeTraitExpr(
-      Loc, UETT_PtrAuthTypeDiscriminator,
+      Loc, ExprKind,
       /*isType=*/true, Ty.get().getAsOpaquePtr(), SourceRange(Loc, EndLoc));
+}
+
+ExprResult Parser::ParseBuiltinPtrauthTypeDiscriminator() {
+  return ParseBuiltinUnaryExprOrTypeTrait(UETT_PtrAuthTypeDiscriminator);
+}
+
+ExprResult Parser::ParseBuiltinPtrauthQuery(tok::TokenKind Token) {
+  switch (Token) {
+  case tok::kw___builtin_ptrauth_has_authentication:
+    return ParseBuiltinUnaryExprOrTypeTrait(UETT_PtrAuthHasAuthentication);
+  case tok::kw___builtin_ptrauth_schema_key:
+    return ParseBuiltinUnaryExprOrTypeTrait(UETT_PtrAuthSchemaKey);
+  case tok::kw___builtin_ptrauth_schema_is_address_discriminated:
+    return ParseBuiltinUnaryExprOrTypeTrait(
+        UETT_PtrAuthSchemaIsAddressDiscriminated);
+  case tok::kw___builtin_ptrauth_schema_extra_discriminator:
+    return ParseBuiltinUnaryExprOrTypeTrait(
+        UETT_PtrAuthSchemaExtraDiscriminator);
+  case tok::kw___builtin_ptrauth_schema_options:
+    return ParseBuiltinUnaryExprOrTypeTrait(UETT_PtrAuthSchemaOptions);
+  default:
+    llvm_unreachable("Unexpected token");
+  }
 }
 
 /// Parse a cast-expression, or, if \pisUnaryExpression is true, parse
@@ -1857,6 +1887,13 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
 
   case tok::kw___builtin_ptrauth_type_discriminator:
     return ParseBuiltinPtrauthTypeDiscriminator();
+
+  case tok::kw___builtin_ptrauth_has_authentication:
+  case tok::kw___builtin_ptrauth_schema_key:
+  case tok::kw___builtin_ptrauth_schema_is_address_discriminated:
+  case tok::kw___builtin_ptrauth_schema_extra_discriminator:
+  case tok::kw___builtin_ptrauth_schema_options:
+    return ParseBuiltinPtrauthQuery(SavedKind);
 
   case tok::kw___is_lvalue_expr:
   case tok::kw___is_rvalue_expr:

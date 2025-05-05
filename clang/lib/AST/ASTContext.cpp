@@ -96,6 +96,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -9617,6 +9618,65 @@ ObjCInterfaceDecl *ASTContext::getObjCProtocolDecl() const {
   }
 
   return ObjCProtocolClassDecl;
+}
+
+std::optional<PointerAuthQualifier>
+ASTContext::getExplicitOrImplicitPointerAuth(QualType T) {
+  auto ExplicitQualifier = T.getPointerAuth();
+  if (ExplicitQualifier.isPresent())
+    return ExplicitQualifier;
+  if (T->isDependentType()) {
+    return std::nullopt;
+  }
+  // FIXME: The more we expand pointer auth support, the more it becomes clear
+  // the codegen option's PointerAuth info belongs in LangOpts
+  if (!LangOpts.PointerAuthCalls)
+    return PointerAuthQualifier();
+  if (T->isFunctionPointerType() || T->isFunctionReferenceType())
+    T = T->getPointeeType();
+  if (!T->isFunctionType())
+    return PointerAuthQualifier();
+  int ExtraDiscriminator = 0;
+  if (LangOpts.PointerAuthFunctionTypeDiscrimination) {
+    ExtraDiscriminator = getPointerAuthTypeDiscriminator(T);
+  }
+  return PointerAuthQualifier::Create(
+      LangOpts.PointerAuthFunctionKey, false, ExtraDiscriminator,
+      PointerAuthenticationMode::SignAndAuth,
+      /*isIsaPointer=*/false, /*authenticatesNullValues=*/false);
+}
+
+std::string
+ASTContext::getPointerAuthOptionsString(const PointerAuthQualifier &PAQ) {
+  llvm::SmallVector<llvm::StringLiteral, 4> Options;
+  switch (PAQ.getAuthenticationMode()) {
+  case PointerAuthenticationMode::Strip:
+    Options.push_back(PointerAuthenticationOptionStrip);
+    break;
+  case PointerAuthenticationMode::SignAndStrip:
+    Options.push_back(PointerAuthenticationOptionSignAndStrip);
+    break;
+  case PointerAuthenticationMode::SignAndAuth:
+    // Just default to not listing this explicitly
+    break;
+  default:
+    llvm_unreachable("Invalid authentication mode");
+  }
+  if (PAQ.isIsaPointer())
+    Options.push_back(PointerAuthenticationOptionIsaPointer);
+  if (PAQ.authenticatesNullValues())
+    Options.push_back(PointerAuthenticationOptionAuthenticatesNullValues);
+  if (Options.empty())
+    return std::string();
+  if (Options.size() == 1)
+    return Options[0].str();
+  std::ostringstream Buffer;
+  Buffer << Options[0].str();
+  for (unsigned i = 1; i < Options.size(); i++) {
+    Buffer << ',';
+    Buffer << Options[i].str();
+  }
+  return Buffer.str();
 }
 
 //===----------------------------------------------------------------------===//

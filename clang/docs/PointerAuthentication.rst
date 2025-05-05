@@ -499,6 +499,24 @@ type.  Implementations are not required to make all bits of the result equally
 significant; in particular, some implementations are known to not leave
 meaningful data in the low bits.
 
+``__ptrauth type queries``
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+There are a number of builtins that can be used to query the ptrauth qualifier
+parameters of a type, including those configured implicitly. These are:
+
+.. code-block:: c
+__builtin_ptrauth_has_authentication(type)
+__builtin_ptrauth_schema_key(type)
+__builtin_ptrauth_schema_is_address_discriminated(type)
+__builtin_ptrauth_schema_extra_discriminator(type)
+__builtin_ptrauth_schema_options(type)
+
+All these builtins are compile time constants. The schema queries are only valid
+on types that have some form of pointer authentication, including implicit
+authentication as is present of function pointers. Each schema query returns a
+value of the appropriate type for the relevant parameter to the __ptrauth
+qualifier.
 
 
 Alternative Implementations
