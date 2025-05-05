@@ -20,6 +20,7 @@
 #include "SparcTargetObjectFile.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -2204,10 +2205,9 @@ SDValue SparcTargetLowering::makeAddress(SDValue Op, SelectionDAG &DAG) const {
     return makeHiLoPair(Op, SparcMCExpr::VK_HI, SparcMCExpr::VK_LO, DAG);
   case CodeModel::Medium: {
     // abs44.
-    SDValue H44 =
-        makeHiLoPair(Op, SparcMCExpr::VK_H44, SparcMCExpr::VK_M44, DAG);
+    SDValue H44 = makeHiLoPair(Op, ELF::R_SPARC_H44, ELF::R_SPARC_M44, DAG);
     H44 = DAG.getNode(ISD::SHL, DL, VT, H44, DAG.getConstant(12, DL, MVT::i32));
-    SDValue L44 = withTargetFlags(Op, SparcMCExpr::VK_L44, DAG);
+    SDValue L44 = withTargetFlags(Op, ELF::R_SPARC_L44, DAG);
     L44 = DAG.getNode(SPISD::Lo, DL, VT, L44);
     return DAG.getNode(ISD::ADD, DL, VT, H44, L44);
   }
