@@ -98,13 +98,10 @@ void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
       allOf(hasCaptureDefaultKind(LambdaCaptureDefault::LCD_ByRef),
             unless(hasAnyCapture(
                 capturesVar(varDecl(hasSameNameAsBoundNode("param"))))));
-  auto CaptureInCopy = allOf(
-      hasCaptureDefaultKind(LambdaCaptureDefault::LCD_ByCopy), HasRefToParm);
   auto CaptureByRefExplicit = hasAnyCapture(
       allOf(hasCaptureKind(LambdaCaptureKind::LCK_ByRef), RefToParm));
 
-  auto CapturedInBody =
-      lambdaExpr(anyOf(CaptureInRef, CaptureInCopy, CaptureByRefExplicit));
+  auto CapturedInBody = lambdaExpr(anyOf(CaptureInRef, CaptureByRefExplicit));
   auto CapturedInCaptureList = hasAnyCapture(capturesVar(
       varDecl(hasInitializer(ignoringParenImpCasts(equalsBoundNode("call"))))));
 
