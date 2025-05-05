@@ -4966,32 +4966,25 @@ void CGOpenMPRuntime::emitPrivateReduction(
   CGF.Builder.CreateCondBr(IsWorker, InitBB, InitEndBB);
 
   CGF.EmitBlock(InitBB);
-  if (UDR) {
-    Address OrigAddr = Address::invalid();
-    emitInitWithReductionInitializer(CGF, UDR, ReductionOps[0], SharedResult,
-                                     OrigAddr, PrivateType);
 
-  } else {
-    if (const auto *DRE = dyn_cast<DeclRefExpr>(Privates[0])) {
-      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
-        const Expr *InitExpr = VD->getInit();
-        if (InitExpr && (PrivateType->isAggregateType() ||
-                         PrivateType->isAnyComplexType())) {
-          CGF.EmitAnyExprToMem(InitExpr, SharedResult,
-                               PrivateType.getQualifiers(),
-                               /*IsInitializer=*/true);
-        } else if (!InitVal->isNullValue()) {
-          CGF.EmitStoreOfScalar(InitVal,
-                                CGF.MakeAddrLValue(SharedResult, PrivateType));
-        } else {
-          CGF.EmitNullInitialization(SharedResult, PrivateType);
-        }
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(Privates[0])) {
+    if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+      const Expr *InitExpr = VD->getInit();
+      if (InitExpr &&
+          (PrivateType->isAggregateType() || PrivateType->isAnyComplexType())) {
+        CGF.EmitAnyExprToMem(InitExpr, SharedResult,
+                             PrivateType.getQualifiers(), true);
+      } else if (!InitVal->isNullValue()) {
+        CGF.EmitStoreOfScalar(InitVal,
+                              CGF.MakeAddrLValue(SharedResult, PrivateType));
       } else {
         CGF.EmitNullInitialization(SharedResult, PrivateType);
       }
     } else {
       CGF.EmitNullInitialization(SharedResult, PrivateType);
     }
+  } else {
+    CGF.EmitNullInitialization(SharedResult, PrivateType);
   }
 
   CGF.Builder.CreateBr(InitEndBB);
@@ -5080,6 +5073,28 @@ void CGOpenMPRuntime::emitPrivateReduction(
         (void)CGF.EmitOMPAtomicSimpleUpdateExpr(
             SharedLV, PrivateRV, BO, true,
             llvm::AtomicOrdering::SequentiallyConsistent, Loc, UpdateOp);
+      } else if (dyn_cast<CXXOperatorCallExpr>(ReductionClauseExpr)) {
+        // Implicit Reduction Identifiers ( openmp 6.0 sec 7.6.5 )
+        auto ReductionGen = [&](CodeGenFunction &CGF, PrePostActionTy &Action) {
+          Action.Enter(CGF);
+          const auto *OmpOutDRE =
+              dyn_cast<DeclRefExpr>(LHSExprs[I]->IgnoreParenImpCasts());
+          const auto *OmpInDRE =
+              dyn_cast<DeclRefExpr>(RHSExprs[I]->IgnoreParenImpCasts());
+
+          if (!OmpOutDRE || !OmpInDRE) {
+            return;
+          }
+          const VarDecl *OmpOutVD = cast<VarDecl>(OmpOutDRE->getDecl());
+          const VarDecl *OmpInVD = cast<VarDecl>(OmpInDRE->getDecl());
+          CodeGenFunction::OMPPrivateScope LocalScope(CGF);
+          LocalScope.addPrivate(OmpOutVD, SharedLV.getAddress());
+          LocalScope.addPrivate(OmpInVD, LHSLV.getAddress());
+          (void)LocalScope.Privatize();
+          CGF.EmitIgnoredExpr(ReductionOp);
+        };
+        std::string CriticalName = getName({"reduction_critical"});
+        emitCriticalRegion(CGF, CriticalName, ReductionGen, Loc);
       }
     }
   }

@@ -63,7 +63,6 @@ void do_red(int n, int *v, int &sum_v)
 // CHECK: @[[GLOB3:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
 // CHECK: @.gomp_critical_user_.atomic_reduction.var = common global [8 x i32] zeroinitializer, align 8
 // CHECK: @.omp.reduction..internal_private_var = common global %class.Sum zeroinitializer, align 4
-// CHECK: @_ZZ8func_redvE6result = internal global %class.Sum zeroinitializer, align 4
 // CHECK: @.gomp_critical_user_.reduction_critical.var = common global [8 x i32] zeroinitializer, align 8
 // CHECK: @[[GLOB4:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 66, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
 // CHECK: @.omp.reduction..internal_private_var.1 = common global i32 0, align 4
@@ -220,7 +219,7 @@ void do_red(int n, int *v, int &sum_v)
 // CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[TMP2]], 0
 // CHECK-NEXT:    br i1 [[TMP13]], label %[[INIT:.*]], label %[[INIT_END:.*]]
 // CHECK:       [[INIT]]:
-// CHECK-NEXT:    call void @.omp_initializer.(ptr noundef @.omp.reduction..internal_private_var, ptr noundef @_ZZ8func_redvE6result)
+// CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 @.omp.reduction..internal_private_var, i8 0, i64 4, i1 false)
 // CHECK-NEXT:    br label %[[INIT_END]]
 // CHECK:       [[INIT_END]]:
 // CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
@@ -533,4 +532,24 @@ void do_red(int n, int *v, int &sum_v)
 // CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [10 x i32], ptr [[TMP0]], i64 0, i64 0
 // CHECK-NEXT:    call void @_Z6do_rediPiRi(i32 noundef 10, ptr noundef [[ARRAYDECAY]], ptr noundef nonnull align 4 dereferenceable(4) [[S_V]])
 // CHECK-NEXT:    ret void
-
+//
+//.
+// CHECK: attributes #[[ATTR0]] = { mustprogress noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
+// CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+// CHECK: attributes #[[ATTR2]] = { noinline norecurse nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
+// CHECK: attributes #[[ATTR3]] = { noinline nounwind "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
+// CHECK: attributes #[[ATTR4:[0-9]+]] = { nounwind }
+// CHECK: attributes #[[ATTR5]] = { noinline norecurse nounwind "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
+// CHECK: attributes #[[ATTR6:[0-9]+]] = { convergent nounwind }
+// CHECK: attributes #[[ATTR7:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+// CHECK: attributes #[[ATTR8]] = { mustprogress noinline norecurse nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
+//.
+// CHECK: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+// CHECK: [[META1:![0-9]+]] = !{i32 7, !"openmp", i32 60}
+// CHECK: [[META2:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META4:![0-9]+]]}
+// CHECK: [[META4]] = !{!"llvm.loop.mustprogress"}
+// CHECK: [[META5:![0-9]+]] = !{[[META6:![0-9]+]]}
+// CHECK: [[META6]] = !{i64 2, i64 -1, i64 -1, i1 true}
+// CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META4]]}
+//.
