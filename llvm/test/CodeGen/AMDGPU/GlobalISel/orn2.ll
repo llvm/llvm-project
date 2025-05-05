@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel -amdgpu-codegenprepare-widen-16-bit-ops=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti < %s | FileCheck -check-prefixes=GCN,GFX6 %s
 ; RUN: llc -global-isel -amdgpu-codegenprepare-widen-16-bit-ops=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
 ; RUN: llc -global-isel -amdgpu-codegenprepare-widen-16-bit-ops=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GFX10PLUS,GFX10 %s
-; RUN: llc -global-isel -amdgpu-codegenprepare-widen-16-bit-ops=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX10PLUS,GFX11 %s
+; RUN: llc -global-isel -amdgpu-codegenprepare-widen-16-bit-ops=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -mattr=-real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX10PLUS,GFX11 %s
 
 define amdgpu_ps i32 @s_orn2_i32(i32 inreg %src0, i32 inreg %src1) {
 ; GCN-LABEL: s_orn2_i32:
