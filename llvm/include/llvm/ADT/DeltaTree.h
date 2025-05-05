@@ -13,6 +13,8 @@
 #ifndef LLVM_ADT_DELTATREE_H
 #define LLVM_ADT_DELTATREE_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
 /// DeltaTree - a multiway search tree (BTree) structure with some fancy
