@@ -216,6 +216,7 @@ public:
     assert(Sch.RegionBegin == Rgn.Begin && Sch.RegionEnd == Rgn.End);
     // DAG SUnits are stored using original region's order
     // so just use SUnits as the restoring schedule
+    errs() << "restore order\n";
     Sch.scheduleRegion(Rgn, Sch.SUnits, SaveMaxRP);
   }
 };
@@ -374,6 +375,10 @@ void GCNIterativeScheduler::scheduleRegion(Region &R, Range &&Schedule,
                                            const GCNRegPressure &MaxRP) {
   assert(RegionBegin == R.Begin && RegionEnd == R.End);
   assert(LIS != nullptr);
+  errs() << "Scheedule region R: ";
+  for (auto I = R.Begin; I != R.End; I++) {
+    I->dump();
+  }
 #ifndef NDEBUG
   const auto SchedMaxRP = getSchedulePressure(R, Schedule);
 #endif
