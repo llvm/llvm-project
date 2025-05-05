@@ -33,34 +33,34 @@
 // DEVLIBSERR2: '{{.*}}lib3.bc' SYCL device library file is not found
 //
 // Test AOT compilation for an Intel GPU.
-// RUN: clang-sycl-linker --dry-run -v -triple=spirv64 -arch=pvc %t_1.bc %t_2.bc -o a.out 2>&1 \
+// RUN: clang-sycl-linker --dry-run -v -triple=spirv64 -arch=bmg_g21 %t_1.bc %t_2.bc -o a.out 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=AOT-INTEL-GPU
 // AOT-INTEL-GPU:      sycl-device-link: inputs: {{.*}}.bc, {{.*}}.bc libfiles: output: [[LLVMLINKOUT:.*]].bc
-// AOT-INTEL-GPU-NEXT: SPIR-V Backend: input: [[LLVMLINKOUT]].bc, output: [[SPIRVTRANSLATIONOUT:.*]].spv
-// AOT-INTEL-GPU-NEXT: "{{.*}}ocloc{{.*}}" {{.*}}-device pvc {{.*}}-output a.out -file [[SPIRVTRANSLATIONOUT]]
+// AOT-INTEL-GPU-NEXT: SPIR-V Backend: input: [[LLVMLINKOUT]].bc, output: [[SPIRVTRANSLATIONOUT:.*]]_0.spv
+// AOT-INTEL-GPU-NEXT: "{{.*}}ocloc{{.*}}" {{.*}}-device bmg_g21 {{.*}}-output a_0.out -file [[SPIRVTRANSLATIONOUT]]_0.spv
 //
 // Test AOT compilation for an Intel GPU with additional options.
-// RUN: clang-sycl-linker --dry-run -v -triple=spirv64 -arch=pvc %t_1.bc %t_2.bc -o a.out 2>&1 \
+// RUN: clang-sycl-linker --dry-run -v -triple=spirv64 -arch=bmg_g21 %t_1.bc %t_2.bc -o a.out 2>&1 \
 // RUN:     --ocloc-options="-a -b" \
 // RUN:   | FileCheck %s --check-prefix=AOT-INTEL-GPU-2
 // AOT-INTEL-GPU-2:      sycl-device-link: inputs: {{.*}}.bc, {{.*}}.bc libfiles: output: [[LLVMLINKOUT:.*]].bc
-// AOT-INTEL-GPU-2-NEXT: SPIR-V Backend: input: [[LLVMLINKOUT]].bc, output: [[SPIRVTRANSLATIONOUT:.*]].spv
-// AOT-INTEL-GPU-2-NEXT: "{{.*}}ocloc{{.*}}" {{.*}}-device pvc -a -b {{.*}}-output a.out -file [[SPIRVTRANSLATIONOUT]]
+// AOT-INTEL-GPU-2-NEXT: SPIR-V Backend: input: [[LLVMLINKOUT]].bc, output: [[SPIRVTRANSLATIONOUT:.*]]_0.spv
+// AOT-INTEL-GPU-2-NEXT: "{{.*}}ocloc{{.*}}" {{.*}}-device bmg_g21 -a -b {{.*}}-output a_0.out -file [[SPIRVTRANSLATIONOUT]]_0.spv
 //
 // Test AOT compilation for an Intel CPU.
-// RUN: clang-sycl-linker --dry-run -v -triple=spirv64 -arch=corei7 %t_1.bc %t_2.bc -o a.out 2>&1 \
+// RUN: clang-sycl-linker --dry-run -v -triple=spirv64 -arch=graniterapids %t_1.bc %t_2.bc -o a.out 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=AOT-INTEL-CPU
 // AOT-INTEL-CPU:      sycl-device-link: inputs: {{.*}}.bc, {{.*}}.bc libfiles: output: [[LLVMLINKOUT:.*]].bc
-// AOT-INTEL-CPU-NEXT: SPIR-V Backend: input: [[LLVMLINKOUT]].bc, output: [[SPIRVTRANSLATIONOUT:.*]].spv
-// AOT-INTEL-CPU-NEXT: "{{.*}}opencl-aot{{.*}}" {{.*}}--device=cpu {{.*}}-o a.out [[SPIRVTRANSLATIONOUT]]
+// AOT-INTEL-CPU-NEXT: SPIR-V Backend: input: [[LLVMLINKOUT]].bc, output: [[SPIRVTRANSLATIONOUT:.*]]_0.spv
+// AOT-INTEL-CPU-NEXT: "{{.*}}opencl-aot{{.*}}" {{.*}}--device=cpu {{.*}}-o a_0.out [[SPIRVTRANSLATIONOUT]]_0.spv
 //
 // Test AOT compilation for an Intel CPU with additional options.
-// RUN: clang-sycl-linker --dry-run -v -triple=spirv64 -arch=corei7 %t_1.bc %t_2.bc -o a.out 2>&1 \
+// RUN: clang-sycl-linker --dry-run -v -triple=spirv64 -arch=graniterapids %t_1.bc %t_2.bc -o a.out 2>&1 \
 // RUN:     --opencl-aot-options="-a -b" \
 // RUN:   | FileCheck %s --check-prefix=AOT-INTEL-CPU-2
 // AOT-INTEL-CPU-2:      sycl-device-link: inputs: {{.*}}.bc, {{.*}}.bc libfiles: output: [[LLVMLINKOUT:.*]].bc
-// AOT-INTEL-CPU-2-NEXT: SPIR-V Backend: input: [[LLVMLINKOUT]].bc, output: [[SPIRVTRANSLATIONOUT:.*]].spv
-// AOT-INTEL-CPU-2-NEXT: "{{.*}}opencl-aot{{.*}}" {{.*}}--device=cpu -a -b {{.*}}-o a.out [[SPIRVTRANSLATIONOUT]]
+// AOT-INTEL-CPU-2-NEXT: SPIR-V Backend: input: [[LLVMLINKOUT]].bc, output: [[SPIRVTRANSLATIONOUT:.*]]_0.spv
+// AOT-INTEL-CPU-2-NEXT: "{{.*}}opencl-aot{{.*}}" {{.*}}--device=cpu -a -b {{.*}}-o a_0.out [[SPIRVTRANSLATIONOUT]]_0.spv
 //
 // Check that the output file must be specified.
 // RUN: not clang-sycl-linker --dry-run %t_1.bc %t_2.bc 2>& 1 \
