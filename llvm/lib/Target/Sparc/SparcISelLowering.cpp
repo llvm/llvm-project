@@ -16,6 +16,7 @@
 #include "MCTargetDesc/SparcMCTargetDesc.h"
 #include "SparcMachineFunctionInfo.h"
 #include "SparcRegisterInfo.h"
+#include "SparcSelectionDAGInfo.h"
 #include "SparcTargetMachine.h"
 #include "SparcTargetObjectFile.h"
 #include "llvm/ADT/StringExtras.h"
@@ -2032,47 +2033,6 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
 
 bool SparcTargetLowering::useSoftFloat() const {
   return Subtarget->useSoftFloat();
-}
-
-const char *SparcTargetLowering::getTargetNodeName(unsigned Opcode) const {
-  switch ((SPISD::NodeType)Opcode) {
-  case SPISD::FIRST_NUMBER:    break;
-  case SPISD::CMPICC:          return "SPISD::CMPICC";
-  case SPISD::CMPFCC:          return "SPISD::CMPFCC";
-  case SPISD::CMPFCC_V9:
-    return "SPISD::CMPFCC_V9";
-  case SPISD::BRICC:           return "SPISD::BRICC";
-  case SPISD::BPICC:
-    return "SPISD::BPICC";
-  case SPISD::BPXCC:
-    return "SPISD::BPXCC";
-  case SPISD::BRFCC:           return "SPISD::BRFCC";
-  case SPISD::BRFCC_V9:
-    return "SPISD::BRFCC_V9";
-  case SPISD::BR_REG:
-    return "SPISD::BR_REG";
-  case SPISD::SELECT_ICC:      return "SPISD::SELECT_ICC";
-  case SPISD::SELECT_XCC:      return "SPISD::SELECT_XCC";
-  case SPISD::SELECT_FCC:      return "SPISD::SELECT_FCC";
-  case SPISD::SELECT_REG:
-    return "SPISD::SELECT_REG";
-  case SPISD::Hi:              return "SPISD::Hi";
-  case SPISD::Lo:              return "SPISD::Lo";
-  case SPISD::FTOI:            return "SPISD::FTOI";
-  case SPISD::ITOF:            return "SPISD::ITOF";
-  case SPISD::FTOX:            return "SPISD::FTOX";
-  case SPISD::XTOF:            return "SPISD::XTOF";
-  case SPISD::CALL:            return "SPISD::CALL";
-  case SPISD::RET_GLUE:        return "SPISD::RET_GLUE";
-  case SPISD::GLOBAL_BASE_REG: return "SPISD::GLOBAL_BASE_REG";
-  case SPISD::FLUSHW:          return "SPISD::FLUSHW";
-  case SPISD::TLS_ADD:         return "SPISD::TLS_ADD";
-  case SPISD::TLS_LD:          return "SPISD::TLS_LD";
-  case SPISD::TLS_CALL:        return "SPISD::TLS_CALL";
-  case SPISD::TAIL_CALL:       return "SPISD::TAIL_CALL";
-  case SPISD::LOAD_GDOP:       return "SPISD::LOAD_GDOP";
-  }
-  return nullptr;
 }
 
 EVT SparcTargetLowering::getSetCCResultType(const DataLayout &, LLVMContext &,
