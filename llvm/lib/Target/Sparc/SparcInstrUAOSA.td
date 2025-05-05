@@ -10,27 +10,19 @@
 // UA 2005 instructions on SPARC.
 //===----------------------------------------------------------------------===//
 
+class UA2005RegWin<string asmstr, bits<5> fcn>
+    : F3_1<2, 0b110001, (outs), (ins), asmstr, []> {
+    let rd = fcn;
+    let rs1 = 0;
+    let rs2 = 0;
+}
+
 // UltraSPARC Architecture 2005 Instructions
 let Predicates = [HasUA2005] in {
-let hasSideEffects = 1 in
-def ALLCLEAN : InstSP<(outs), (ins), "allclean", []> {
-    let op = 2;
-    let Inst{29-19} = 0b00010110001;
-    let Inst{18-0} = 0;
-}
-def INVALW : InstSP<(outs), (ins), "invalw", []> {
-    let op = 2;
-    let Inst{29-19} = 0b00101110001;
-    let Inst{18-0} = 0;
-}
-def NORMALW : InstSP<(outs), (ins), "normalw", []> {
-    let op = 2;
-    let Inst{29-19} = 0b00100110001;
-    let Inst{18-0} = 0;
-}
-def OTHERW : InstSP<(outs), (ins), "otherw", []> {
-    let op = 2;
-    let Inst{29-19} = 0b00011110001;
-    let Inst{18-0} = 0;
+let hasSideEffects = 1 in {
+def ALLCLEAN : UA2005RegWin<"allclean", 0b00010>;
+def INVALW   : UA2005RegWin<"invalw", 0b00101>;
+def NORMALW  : UA2005RegWin<"normalw", 0b00100>;
+def OTHERW   : UA2005RegWin<"otherw", 0b00011>;
 }
 } // Predicates = [HasUA2005]

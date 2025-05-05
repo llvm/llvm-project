@@ -11,7 +11,6 @@
 
 #define __CLC_BODY <clc_bitselect.inc>
 #include <clc/integer/gentype.inc>
-#undef __CLC_BODY
 
 #define FLOAT_BITSELECT(f_type, i_type, width)                                 \
   _CLC_OVERLOAD _CLC_DEF f_type##width __clc_bitselect(                        \

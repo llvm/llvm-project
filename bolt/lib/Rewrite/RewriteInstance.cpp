@@ -2697,20 +2697,19 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
                BD->nameStartsWith("_ZTCN"))) { // construction vtable
       BinaryFunction *BF = BC->getBinaryFunctionContainingAddress(
           SymbolAddress, /*CheckPastEnd*/ false, /*UseMaxSize*/ true);
-      if (!BF || BF->getAddress() != SymbolAddress) {
-        BC->errs()
-            << "BOLT-ERROR: the virtual function table entry at offset 0x"
-            << Twine::utohexstr(Rel.getOffset());
-        if (BF)
-          BC->errs() << " points to the middle of a function @ 0x"
-                     << Twine::utohexstr(BF->getAddress()) << "\n";
-        else
-          BC->errs() << " does not point to any function\n";
-        exit(1);
+      if (BF) {
+        if (BF->getAddress() != SymbolAddress) {
+          BC->errs()
+              << "BOLT-ERROR: the virtual function table entry at offset 0x"
+              << Twine::utohexstr(Rel.getOffset())
+              << " points to the middle of a function @ 0x"
+              << Twine::utohexstr(BF->getAddress()) << "\n";
+          exit(1);
+        }
+        BC->addRelocation(Rel.getOffset(), BF->getSymbol(), RType, Addend,
+                          ExtractedValue);
+        return;
       }
-      BC->addRelocation(Rel.getOffset(), BF->getSymbol(), RType, Addend,
-                        ExtractedValue);
-      return;
     }
   }
 
