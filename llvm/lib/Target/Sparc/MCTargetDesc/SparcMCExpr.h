@@ -26,30 +26,6 @@ public:
     VK_None,
     VK_LO = 200, // larger than any relocation type
     VK_HI,
-    VK_HH,
-    VK_HM,
-    VK_LM,
-    VK_R_DISP32,
-    VK_TLS_GD_HI22,
-    VK_TLS_GD_LO10,
-    VK_TLS_GD_ADD,
-    VK_TLS_GD_CALL,
-    VK_TLS_LDM_HI22,
-    VK_TLS_LDM_LO10,
-    VK_TLS_LDM_ADD,
-    VK_TLS_LDM_CALL,
-    VK_TLS_LDO_HIX22,
-    VK_TLS_LDO_LOX10,
-    VK_TLS_LDO_ADD,
-    VK_TLS_IE_HI22,
-    VK_TLS_IE_LO10,
-    VK_TLS_IE_LD,
-    VK_TLS_IE_LDX,
-    VK_TLS_IE_ADD,
-    VK_TLS_LE_HIX22,
-    VK_TLS_LE_LOX10,
-    VK_HIX22,
-    VK_LOX10,
   };
 
 private:
@@ -63,7 +39,7 @@ public:
   /// @name Construction
   /// @{
 
-  static const SparcMCExpr *create(Specifier S, const MCExpr *Expr,
+  static const SparcMCExpr *create(uint16_t S, const MCExpr *Expr,
                                    MCContext &Ctx);
   /// @}
   /// @name Accessors
