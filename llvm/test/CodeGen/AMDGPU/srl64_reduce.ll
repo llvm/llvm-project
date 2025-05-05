@@ -27,16 +27,15 @@ define i64 @srl_metadata(i64 %arg0, ptr %arg1.ptr) {
   ret i64 %srl
 }
 
-define amdgpu_ps i64 @srl_metadata_sgpr_return(i64 inreg %arg0, ptr %arg1.ptr) {
+define amdgpu_ps i64 @srl_metadata_sgpr_return(i64 inreg %arg0, ptr addrspace(1) inreg %arg1.ptr) {
 ; CHECK-LABEL: srl_metadata_sgpr_return:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    flat_load_dword v0, v[0:1]
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_lshrrev_b64 v[0:1], v0, s[0:1]
+; CHECK-NEXT:    s_load_dword s2, s[2:3], 0x0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_lshr_b64 s[0:1], s[0:1], s2
 ; CHECK-NEXT:    s_mov_b32 s1, 0
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
 ; CHECK-NEXT:    ; return to shader part epilog
-  %shift.amt = load i64, ptr %arg1.ptr, !range !0, !noundef !{}
+  %shift.amt = load i64, ptr addrspace(1) %arg1.ptr, !range !0, !noundef !{}
   %srl = lshr i64 %arg0, %shift.amt
   ret i64 %srl
 }
