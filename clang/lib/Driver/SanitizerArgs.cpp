@@ -741,8 +741,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
 
   // Parse -f(no-)?sanitize-add-pseudo-functions flags
   SanitizerMask AddPseudoFunctionsKinds =
-      parseSanitizeArgs(D, Args, DiagnoseErrors, AddPseudoFunctionsDefault, {}, {},
-                        options::OPT_fsanitize_add_pseudo_functions_EQ,
+      parseSanitizeArgs(D, Args, DiagnoseErrors, AddPseudoFunctionsDefault, {},
+                        {}, options::OPT_fsanitize_add_pseudo_functions_EQ,
                         options::OPT_fno_sanitize_add_pseudo_functions_EQ);
   AddPseudoFunctionsKinds &= Kinds;
 
@@ -1346,8 +1346,8 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
         Args.MakeArgString("-fsanitize-skip-hot-cutoff=" + SkipHotCutoffsStr));
 
   if (!AddPseudoFunctions.empty())
-    CmdArgs.push_back(
-        Args.MakeArgString("-fsanitize-add-pseudo-functions=" + toString(AddPseudoFunctions)));
+    CmdArgs.push_back(Args.MakeArgString("-fsanitize-add-pseudo-functions=" +
+                                         toString(AddPseudoFunctions)));
 
   addSpecialCaseListOpt(Args, CmdArgs,
                         "-fsanitize-ignorelist=", UserIgnorelistFiles);
@@ -1534,7 +1534,8 @@ SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,
        A->getOption().matches(options::OPT_fsanitize_merge_handlers_EQ) ||
        A->getOption().matches(options::OPT_fno_sanitize_merge_handlers_EQ) ||
        A->getOption().matches(options::OPT_fsanitize_add_pseudo_functions_EQ) ||
-       A->getOption().matches(options::OPT_fno_sanitize_add_pseudo_functions_EQ)) &&
+       A->getOption().matches(
+           options::OPT_fno_sanitize_add_pseudo_functions_EQ)) &&
       "Invalid argument in parseArgValues!");
   SanitizerMask Kinds;
   for (int i = 0, n = A->getNumValues(); i != n; ++i) {
