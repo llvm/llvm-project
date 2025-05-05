@@ -15,7 +15,7 @@ enum SwitchTwo {
 };
 
 void testSwitchTwo(enum SwitchTwo st) {
-  switch (st) {} // expected-warning{{enumeration values 'Vim' and 'Emacs' not handled in switch}}
+  switch (st) {} // expected-warning{{enumeration values 'Ed', 'Vim' and 'Emacs' not handled in switch}}
 }
 
 enum SwitchThree {
