@@ -80,16 +80,10 @@ public:
   void Schedule() override;
 
   /// AddPred - adds a predecessor edge to SUnit SU.
-  /// This returns true if this is a new predecessor.
-  void AddPred(SUnit *SU, const SDep &D) {
-    SU->addPred(D);
-  }
+  void AddPred(SUnit *SU, const SDep &D) { SU->addPred(D); }
 
   /// RemovePred - removes a predecessor edge from SUnit SU.
-  /// This returns true if an edge was removed.
-  void RemovePred(SUnit *SU, const SDep &D) {
-    SU->removePred(D);
-  }
+  void RemovePred(SUnit *SU, const SDep &D) { SU->removePred(D); }
 
 private:
   void ReleasePred(SUnit *SU, SDep *PredEdge);
