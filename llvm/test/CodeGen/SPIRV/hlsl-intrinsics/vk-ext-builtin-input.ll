@@ -1,7 +1,7 @@
 ; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv-vulkan-unknown %s -o - | FileCheck %s
 
 ; FIXME(138268): Alignment decoration is emitted.
-; NO-RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-vulkan-unknown %s -o - -filetype=obj | spirv-val %}
+; FIXME: %if spirv-tools %{ llc -O0 -mtriple=spirv-vulkan-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG:        OpDecorate %[[#WorkgroupId:]] BuiltIn WorkgroupId
 
