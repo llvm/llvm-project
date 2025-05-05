@@ -26,6 +26,7 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_platform_limits_solaris.cpp
   sanitizer_posix.cpp
   sanitizer_printf.cpp
+  sanitizer_procmaps_aix.cpp
   sanitizer_procmaps_common.cpp
   sanitizer_procmaps_bsd.cpp
   sanitizer_procmaps_fuchsia.cpp
