@@ -29,10 +29,58 @@ bool fromJSON(const llvm::json::Value &value, SymbolValue &data,
 
 llvm::json::Value toJSON(const SymbolValue &data);
 
+///-----------------------------------------------------------------------------
+/// GPUBreakpointByName
+///
+/// A structure that contains information on how to set a breakpoint by function
+/// name with optional shared library name.
+///-----------------------------------------------------------------------------
+
+struct GPUBreakpointByName {
+  /// An optional breakpoint shared library name to limit the scope of the
+  /// breakpoint to a specific shared library.
+  std::optional<std::string> shlib;
+  /// The name of the function to set a breakpoint at.
+  std::string function_name;
+};
+
+bool fromJSON(const llvm::json::Value &value, GPUBreakpointByName &data,
+              llvm::json::Path path);
+
+llvm::json::Value toJSON(const GPUBreakpointByName &data);
+
+///-----------------------------------------------------------------------------
+/// GPUBreakpointByAddress
+///
+/// A structure that contains information on how to set a breakpoint by address.
+///-----------------------------------------------------------------------------
+struct GPUBreakpointByAddress {
+  /// A valid load address in the current native debug target.
+  lldb::addr_t load_address;
+};
+
+bool fromJSON(const llvm::json::Value &value, GPUBreakpointByAddress &data,
+              llvm::json::Path path);
+
+llvm::json::Value toJSON(const GPUBreakpointByAddress &data);
+
+///-----------------------------------------------------------------------------
+/// GPUBreakpointInfo
+///
+/// A breakpoint definition structure.
+///
+/// Clients should either fill in the \a name_info or the \a addr_info. If the
+/// breakpoint callback needs some symbols from the native process, they can
+/// fill in the array of symbol names with any symbol names that are needed. 
+/// These symbol values will be delivered in the breakpoint callback to the GPU
+/// plug-in.
+///-----------------------------------------------------------------------------
 struct GPUBreakpointInfo {
   std::string identifier;
-  std::string shlib;
-  std::string function_name;
+  /// An optional breakpoint by name info.
+  std::optional<GPUBreakpointByName> name_info;
+  /// An optional load address to set a breakpoint at in the native process.
+  std::optional<GPUBreakpointByAddress> addr_info;
   /// Names of symbols that should be supplied when the breakpoint is hit.
   std::vector<std::string> symbol_names;
 };

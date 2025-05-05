@@ -174,8 +174,7 @@ std::optional<GPUActions> LLDBServerPluginMockGPU::NativeProcessIsStopping() {
     actions.plugin_name = GetPluginName();
     GPUBreakpointInfo bp;
     bp.identifier = "3rd stop breakpoint";
-    bp.shlib = "a.out";
-    bp.function_name = "gpu_third_stop";
+    bp.name_info = {"a.out", "gpu_third_stop"};
     std::vector<GPUBreakpointInfo> breakpoints;
     breakpoints.emplace_back(std::move(bp));
     actions.breakpoints = std::move(breakpoints);
@@ -211,15 +210,13 @@ GPUActions LLDBServerPluginMockGPU::GetInitializeActions() {
   
   GPUBreakpointInfo bp1;
   bp1.identifier = "gpu_initialize";
-  bp1.shlib = "a.out";
-  bp1.function_name = "gpu_initialize";
+  bp1.name_info = {"a.out", "gpu_initialize"};
   bp1.symbol_names.push_back("printf");
   bp1.symbol_names.push_back("puts");
 
   GPUBreakpointInfo bp2;
   bp2.identifier = "gpu_shlib_load";
-  bp2.shlib = "a.out";
-  bp2.function_name = "gpu_shlib_load";
+  bp2.name_info = {"a.out", "gpu_shlib_load"};
   bp2.symbol_names.push_back("g_shlib_list");
   bp2.symbol_names.push_back("invalid_symbol");
 
