@@ -26,5 +26,16 @@ public:
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
 
+class PostRAMachineSinkingPass
+    : public PassInfoMixin<PostRAMachineSinkingPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF, MachineFunctionAnalysisManager &);
+
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::NoVRegs);
+  }
+};
+
 } // namespace llvm
 #endif // LLVM_CODEGEN_MACHINESINK_H
