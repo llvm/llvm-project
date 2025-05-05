@@ -19,6 +19,7 @@
 #ifndef LLVM_ANALYSIS_INSTSIMPLIFYFOLDER_H
 #define LLVM_ANALYSIS_INSTSIMPLIFYFOLDER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/TargetFolder.h"
@@ -32,7 +33,7 @@ class Constant;
 /// InstSimplifyFolder - Use InstructionSimplify to fold operations to existing
 /// values. Also applies target-specific constant folding when not using
 /// InstructionSimplify.
-class InstSimplifyFolder final : public IRBuilderFolder {
+class LLVM_ABI InstSimplifyFolder final : public IRBuilderFolder {
   TargetFolder ConstFolder;
   SimplifyQuery SQ;
 

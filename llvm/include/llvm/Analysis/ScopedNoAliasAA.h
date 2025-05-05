@@ -14,6 +14,7 @@
 #ifndef LLVM_ANALYSIS_SCOPEDNOALIASAA_H
 #define LLVM_ANALYSIS_SCOPEDNOALIASAA_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
@@ -36,14 +37,14 @@ public:
     return false;
   }
 
-  AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
+  LLVM_ABI AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
                     AAQueryInfo &AAQI, const Instruction *CtxI);
-  ModRefInfo getModRefInfo(const CallBase *Call, const MemoryLocation &Loc,
+  LLVM_ABI ModRefInfo getModRefInfo(const CallBase *Call, const MemoryLocation &Loc,
                            AAQueryInfo &AAQI);
-  ModRefInfo getModRefInfo(const CallBase *Call1, const CallBase *Call2,
+  LLVM_ABI ModRefInfo getModRefInfo(const CallBase *Call1, const CallBase *Call2,
                            AAQueryInfo &AAQI);
 
-  void collectScopedDomains(const MDNode *NoAlias,
+  LLVM_ABI void collectScopedDomains(const MDNode *NoAlias,
                             SmallPtrSetImpl<const MDNode *> &Domains) const;
 
 private:
@@ -59,11 +60,11 @@ class ScopedNoAliasAA : public AnalysisInfoMixin<ScopedNoAliasAA> {
 public:
   using Result = ScopedNoAliasAAResult;
 
-  ScopedNoAliasAAResult run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI ScopedNoAliasAAResult run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// Legacy wrapper pass to provide the ScopedNoAliasAAResult object.
-class ScopedNoAliasAAWrapperPass : public ImmutablePass {
+class LLVM_ABI ScopedNoAliasAAWrapperPass : public ImmutablePass {
   std::unique_ptr<ScopedNoAliasAAResult> Result;
 
 public:
@@ -84,7 +85,7 @@ public:
 // createScopedNoAliasAAWrapperPass - This pass implements metadata-based
 // scoped noalias analysis.
 //
-ImmutablePass *createScopedNoAliasAAWrapperPass();
+LLVM_ABI ImmutablePass *createScopedNoAliasAAWrapperPass();
 
 } // end namespace llvm
 

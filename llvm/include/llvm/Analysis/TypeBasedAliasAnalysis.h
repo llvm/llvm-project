@@ -15,6 +15,7 @@
 #ifndef LLVM_ANALYSIS_TYPEBASEDALIASANALYSIS_H
 #define LLVM_ANALYSIS_TYPEBASEDALIASANALYSIS_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
@@ -46,16 +47,16 @@ public:
     return false;
   }
 
-  AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
+  LLVM_ABI AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
                     AAQueryInfo &AAQI, const Instruction *CtxI);
-  ModRefInfo getModRefInfoMask(const MemoryLocation &Loc, AAQueryInfo &AAQI,
+  LLVM_ABI ModRefInfo getModRefInfoMask(const MemoryLocation &Loc, AAQueryInfo &AAQI,
                                bool IgnoreLocals);
 
-  MemoryEffects getMemoryEffects(const CallBase *Call, AAQueryInfo &AAQI);
-  MemoryEffects getMemoryEffects(const Function *F);
-  ModRefInfo getModRefInfo(const CallBase *Call, const MemoryLocation &Loc,
+  LLVM_ABI MemoryEffects getMemoryEffects(const CallBase *Call, AAQueryInfo &AAQI);
+  LLVM_ABI MemoryEffects getMemoryEffects(const Function *F);
+  LLVM_ABI ModRefInfo getModRefInfo(const CallBase *Call, const MemoryLocation &Loc,
                            AAQueryInfo &AAQI);
-  ModRefInfo getModRefInfo(const CallBase *Call1, const CallBase *Call2,
+  LLVM_ABI ModRefInfo getModRefInfo(const CallBase *Call1, const CallBase *Call2,
                            AAQueryInfo &AAQI);
 
 private:
@@ -75,11 +76,11 @@ class TypeBasedAA : public AnalysisInfoMixin<TypeBasedAA> {
 public:
   using Result = TypeBasedAAResult;
 
-  TypeBasedAAResult run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI TypeBasedAAResult run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// Legacy wrapper pass to provide the TypeBasedAAResult object.
-class TypeBasedAAWrapperPass : public ImmutablePass {
+class LLVM_ABI TypeBasedAAWrapperPass : public ImmutablePass {
   std::unique_ptr<TypeBasedAAResult> Result;
 
 public:
@@ -100,7 +101,7 @@ public:
 // createTypeBasedAAWrapperPass - This pass implements metadata-based
 // type-based alias analysis.
 //
-ImmutablePass *createTypeBasedAAWrapperPass();
+LLVM_ABI ImmutablePass *createTypeBasedAAWrapperPass();
 
 } // end namespace llvm
 

@@ -13,6 +13,7 @@
 #ifndef LLVM_ANALYSIS_POSTDOMINATORS_H
 #define LLVM_ANALYSIS_POSTDOMINATORS_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/PassManager.h"
@@ -32,7 +33,7 @@ public:
   PostDominatorTree() = default;
   explicit PostDominatorTree(Function &F) { recalculate(F); }
   /// Handle invalidation explicitly.
-  bool invalidate(Function &F, const PreservedAnalyses &PA,
+  LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
                   FunctionAnalysisManager::Invalidator &);
 
   // Ensure base-class overloads are visible.
@@ -40,7 +41,7 @@ public:
 
   /// Return true if \p I1 dominates \p I2. This checks if \p I2 comes before
   /// \p I1 if they belongs to the same basic block.
-  bool dominates(const Instruction *I1, const Instruction *I2) const;
+  LLVM_ABI bool dominates(const Instruction *I1, const Instruction *I2) const;
 };
 
 /// Analysis pass which computes a \c PostDominatorTree.
@@ -56,7 +57,7 @@ public:
 
   /// Run the analysis pass over a function and produce a post dominator
   ///        tree.
-  PostDominatorTree run(Function &F, FunctionAnalysisManager &);
+  LLVM_ABI PostDominatorTree run(Function &F, FunctionAnalysisManager &);
 };
 
 /// Printer pass for the \c PostDominatorTree.
@@ -65,14 +66,14 @@ class PostDominatorTreePrinterPass
   raw_ostream &OS;
 
 public:
-  explicit PostDominatorTreePrinterPass(raw_ostream &OS);
+  LLVM_ABI explicit PostDominatorTreePrinterPass(raw_ostream &OS);
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
   static bool isRequired() { return true; }
 };
 
-struct PostDominatorTreeWrapperPass : public FunctionPass {
+struct LLVM_ABI PostDominatorTreeWrapperPass : public FunctionPass {
   static char ID; // Pass identification, replacement for typeid
 
   PostDominatorTree DT;
@@ -95,7 +96,7 @@ struct PostDominatorTreeWrapperPass : public FunctionPass {
   void print(raw_ostream &OS, const Module*) const override;
 };
 
-FunctionPass* createPostDomTree();
+LLVM_ABI FunctionPass* createPostDomTree();
 
 template <> struct GraphTraits<PostDominatorTree*>
   : public GraphTraits<DomTreeNode*> {

@@ -29,6 +29,7 @@
 #ifndef LLVM_ANALYSIS_LOOPANALYSISMANAGER_H
 #define LLVM_ANALYSIS_LOOPANALYSISMANAGER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
@@ -131,7 +132,7 @@ public:
   /// If the necessary loop infrastructure is not preserved, this will forcibly
   /// clear all of the cached analysis results that are keyed on the \c
   /// LoopInfo for this function.
-  bool invalidate(Function &F, const PreservedAnalyses &PA,
+  LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
                   FunctionAnalysisManager::Invalidator &Inv);
 
 private:
@@ -143,7 +144,7 @@ private:
 /// Provide a specialized run method for the \c LoopAnalysisManagerFunctionProxy
 /// so it can pass the \c LoopInfo to the result.
 template <>
-LoopAnalysisManagerFunctionProxy::Result
+LLVM_ABI LoopAnalysisManagerFunctionProxy::Result
 LoopAnalysisManagerFunctionProxy::run(Function &F, FunctionAnalysisManager &AM);
 
 // Ensure the \c LoopAnalysisManagerFunctionProxy is provided as an extern
@@ -158,7 +159,7 @@ typedef OuterAnalysisManagerProxy<FunctionAnalysisManager, Loop,
     FunctionAnalysisManagerLoopProxy;
 
 /// Returns the minimum set of Analyses that all loop passes must preserve.
-PreservedAnalyses getLoopPassPreservedAnalyses();
+LLVM_ABI PreservedAnalyses getLoopPassPreservedAnalyses();
 }
 
 #endif // LLVM_ANALYSIS_LOOPANALYSISMANAGER_H

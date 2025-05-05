@@ -9,6 +9,7 @@
 #ifndef LLVM_ANALYSIS_VALUELATTICE_H
 #define LLVM_ANALYSIS_VALUELATTICE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 
@@ -467,7 +468,7 @@ public:
   // Compares this symbolic value with Other using Pred and returns either
   /// true, false or undef constants, or nullptr if the comparison cannot be
   /// evaluated.
-  Constant *getCompare(CmpInst::Predicate Pred, Type *Ty,
+  LLVM_ABI Constant *getCompare(CmpInst::Predicate Pred, Type *Ty,
                        const ValueLatticeElement &Other,
                        const DataLayout &DL) const;
 
@@ -486,7 +487,7 @@ public:
   ///   as not confuse the rest of LVI.  Ideally, we'd always return Undefined,
   ///   but we do not make this guarantee.  TODO: This would be a useful
   ///   enhancement.
-  ValueLatticeElement intersect(const ValueLatticeElement &Other) const;
+  LLVM_ABI ValueLatticeElement intersect(const ValueLatticeElement &Other) const;
 
   unsigned getNumRangeExtensions() const { return NumRangeExtensions; }
   void setNumRangeExtensions(unsigned N) { NumRangeExtensions = N; }
@@ -495,6 +496,6 @@ public:
 static_assert(sizeof(ValueLatticeElement) <= 40,
               "size of ValueLatticeElement changed unexpectedly");
 
-raw_ostream &operator<<(raw_ostream &OS, const ValueLatticeElement &Val);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const ValueLatticeElement &Val);
 } // end namespace llvm
 #endif
