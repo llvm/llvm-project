@@ -1481,6 +1481,12 @@ def FeatureMemToLDSLoad : SubtargetFeature<"vmem-to-lds-load-insts",
   "The platform has memory to lds instructions (global_load w/lds bit set, buffer_load w/lds bit set or global_load_lds. This does not include scratch_load_lds."
 >;
 
+def FeatureLdsBarrierArriveAtomic : SubtargetFeature< "lds-barrier-arrive-atomic",
+  "HasLdsBarrierArriveAtomic",
+  "true",
+  "Has LDS barrier-arrive atomic instructions"
+>;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -2167,6 +2173,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureVmemPrefInsts,
    FeatureLshlAddU64Inst,
    FeatureAddSubU64Insts,
+   FeatureLdsBarrierArriveAtomic,
 ]>;
 
 def FeatureISAVersion12_51 : FeatureSet<
@@ -2247,6 +2254,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureBVHDualAndBVH8Insts,
    FeatureLshlAddU64Inst,
    FeatureAddSubU64Insts,
+   FeatureLdsBarrierArriveAtomic,
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -3092,6 +3100,9 @@ def HasSGPRVMEM : Predicate<"Subtarget->hasSGPRVMEM()">,
 
 def HasParallelBitInsts : Predicate<"Subtarget->hasParallelBitInsts()">,
   AssemblerPredicate<(all_of FeatureParallelBitInsts)>;
+
+def HasLdsBarrierArriveAtomic : Predicate<"Subtarget->hasLdsBarrierArriveAtomic()">,
+  AssemblerPredicate<(all_of FeatureLdsBarrierArriveAtomic)>;
 
 // Include AMDGPU TD files
 include "SISchedule.td"
