@@ -2388,9 +2388,14 @@ public:
   void DiagnoseAvailabilityOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
                                   const ObjCInterfaceDecl *UnknownObjCClass,
                                   bool ObjCPropertyAccess,
-                                  bool AvoidPartialAvailabilityChecks = false,
-                                  ObjCInterfaceDecl *ClassReceiver = nullptr);
+                                  bool AvoidPartialAvailabilityChecks,
+                                  ObjCInterfaceDecl *ClassReceiver);
 
+  void DiagnoseAvailabilityOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs);
+
+  std::pair<AvailabilityResult, const NamedDecl *>
+  ShouldDiagnoseAvailabilityOfDecl(const NamedDecl *D, std::string *Message,
+                                   ObjCInterfaceDecl *ClassReceiver);
   ///@}
 
   //
@@ -7167,6 +7172,11 @@ public:
   ExprResult ActOnParenExpr(SourceLocation L, SourceLocation R, Expr *E);
   ExprResult ActOnParenListExpr(SourceLocation L, SourceLocation R,
                                 MultiExprArg Val);
+  ExprResult ActOnCXXParenListInitExpr(ArrayRef<Expr *> Args, QualType T,
+                                       unsigned NumUserSpecifiedExprs,
+                                       SourceLocation InitLoc,
+                                       SourceLocation LParenLoc,
+                                       SourceLocation RParenLoc);
 
   /// ActOnStringLiteral - The specified tokens were lexed as pasted string
   /// fragments (e.g. "foo" "bar" L"baz").  The result string has to handle
