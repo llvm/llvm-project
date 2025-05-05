@@ -14,7 +14,7 @@ parameters:
   # This is the default platform provided by Arcade, intended for use by a managed-only repo.
   defaultManagedPlatform:
     name: 'Managed'
-    container: 'mcr.microsoft.com/dotnet-buildtools/prereqs:centos-stream9'
+    container: 'mcr.microsoft.com/dotnet-buildtools/prereqs:centos-stream-10-amd64'
 
   # Defines the platforms on which to run build jobs. One job is created for each platform, and the
   # object in this array is sent to the job template as 'platform'. If no platforms are specified,
