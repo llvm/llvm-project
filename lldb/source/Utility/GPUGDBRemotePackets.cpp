@@ -26,6 +26,46 @@ json::Value toJSON(const SymbolValue &data) {
   return json::Value(Object{{"name", data.name}, {"value", data.value}});
 }
 
+///-----------------------------------------------------------------------------
+/// GPUBreakpointByName
+///
+/// A structure that contains information on how to set a breakpoint by function
+/// name with optional shared library name.
+///-----------------------------------------------------------------------------
+
+bool fromJSON(const llvm::json::Value &value, GPUBreakpointByName &data,
+              llvm::json::Path path) {
+  ObjectMapper o(value, path);
+  return o && 
+          o.mapOptional("shlib", data.shlib) &&
+          o.map("function_name", data.function_name);              
+}
+
+llvm::json::Value toJSON(const GPUBreakpointByName &data) {
+  return json::Value(
+    Object{{"shlib", data.shlib},
+           {"function_name", data.function_name}
+          });
+}
+
+///-----------------------------------------------------------------------------
+/// GPUBreakpointByAddress
+///
+/// A structure that contains information on how to set a breakpoint by address.
+///-----------------------------------------------------------------------------
+
+bool fromJSON(const llvm::json::Value &value, GPUBreakpointByAddress &data,
+              llvm::json::Path path){
+  ObjectMapper o(value, path);
+  return o && o.map("load_address", data.load_address);              
+}
+
+llvm::json::Value toJSON(const GPUBreakpointByAddress &data) {
+  return json::Value(
+    Object{{"load_address", data.load_address}});
+}
+
+
 //------------------------------------------------------------------------------
 // GPUBreakpointInfo
 //------------------------------------------------------------------------------
@@ -34,16 +74,16 @@ bool fromJSON(const llvm::json::Value &value, GPUBreakpointInfo &data,
   ObjectMapper o(value, path);
   return o && 
          o.map("identifier", data.identifier) &&
-         o.map("shlib", data.shlib) &&
-         o.map("function_name", data.function_name) &&
+         o.mapOptional("name_info", data.name_info) &&
+         o.mapOptional("addr_info", data.addr_info) &&
          o.map("symbol_names", data.symbol_names);
 }
 
 llvm::json::Value toJSON(const GPUBreakpointInfo &data) {
   return json::Value(
     Object{{"identifier", data.identifier}, 
-           {"shlib", data.shlib},
-           {"function_name", data.function_name},
+           {"name_info", data.name_info},
+           {"addr_info", data.addr_info},
            {"symbol_names", data.symbol_names},
           });
 }

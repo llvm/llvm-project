@@ -943,19 +943,26 @@ void ProcessGDBRemote::HandleGPUBreakpoints(
     args_up->plugin_name = plugin_name;
     args_up->breakpoint = bp;
     FileSpecList bp_modules;
-    if (!bp.shlib.empty())
-      bp_modules.Append(FileSpec(bp.shlib, 
-                                  llvm::sys::path::Style::native));
-    BreakpointSP bp_sp = target.CreateBreakpoint(
-        &bp_modules, // Containing modules.
-        nullptr, // Containing source files.
-        bp.function_name.c_str(), // Function name.
-        eFunctionNameTypeFull, // Function name type.
-        eLanguageTypeUnknown, // Language type
-        0, // Byte offset.
-        eLazyBoolNo, // Skip prologue.
-        true, // Internal breakpoint.
-        false); // Request hardware.
+    BreakpointSP bp_sp;
+    if (bp.name_info) {
+      if (bp.name_info->shlib && !bp.name_info->shlib->empty())
+        bp_modules.Append(FileSpec(*bp.name_info->shlib, 
+                                   llvm::sys::path::Style::native));
+      bp_sp = target.CreateBreakpoint(
+          &bp_modules, // Containing modules.
+          nullptr, // Containing source files.
+          bp.name_info->function_name.c_str(), // Function name.
+          eFunctionNameTypeFull, // Function name type.
+          eLanguageTypeUnknown, // Language type
+          0, // Byte offset.
+          eLazyBoolNo, // Skip prologue.
+          true, // Internal breakpoint.
+          false); // Request hardware.
+    } else if (bp.addr_info) {
+      bp_sp = target.CreateBreakpoint(bp.addr_info->load_address, 
+                                      /*internal=*/true,
+                                      /*request_hardware=*/false);
+    }
     if (bp_sp) {
       // Create some JSON we can send back to the lldb-server
       // that identifies the plug-in and the breakpoint for when
