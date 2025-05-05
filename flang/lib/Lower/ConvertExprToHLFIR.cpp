@@ -205,8 +205,8 @@ private:
       partInfo.resultShape =
           hlfir::genShape(getLoc(), getBuilder(), *partInfo.base);
 
-    // Enable volatility on the designatory type if it has the VOLATILE attribute
-    // or if the base is volatile.
+    // Enable volatility on the designatory type if it has the VOLATILE
+    // attribute or if the base is volatile.
     bool isVolatile = false;
 
     // Check if this should be a volatile reference
