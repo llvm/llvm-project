@@ -2202,7 +2202,7 @@ SDValue SparcTargetLowering::makeAddress(SDValue Op, SelectionDAG &DAG) const {
     llvm_unreachable("Unsupported absolute code model");
   case CodeModel::Small:
     // abs32.
-    return makeHiLoPair(Op, SparcMCExpr::VK_HI, SparcMCExpr::VK_LO, DAG);
+    return makeHiLoPair(Op, ELF::R_SPARC_HI22, ELF::R_SPARC_LO10, DAG);
   case CodeModel::Medium: {
     // abs44.
     SDValue H44 = makeHiLoPair(Op, ELF::R_SPARC_H44, ELF::R_SPARC_M44, DAG);
@@ -2215,7 +2215,7 @@ SDValue SparcTargetLowering::makeAddress(SDValue Op, SelectionDAG &DAG) const {
     // abs64.
     SDValue Hi = makeHiLoPair(Op, ELF::R_SPARC_HH22, ELF::R_SPARC_HM10, DAG);
     Hi = DAG.getNode(ISD::SHL, DL, VT, Hi, DAG.getConstant(32, DL, MVT::i32));
-    SDValue Lo = makeHiLoPair(Op, SparcMCExpr::VK_HI, SparcMCExpr::VK_LO, DAG);
+    SDValue Lo = makeHiLoPair(Op, ELF::R_SPARC_HI22, ELF::R_SPARC_LO10, DAG);
     return DAG.getNode(ISD::ADD, DL, VT, Hi, Lo);
   }
   }
