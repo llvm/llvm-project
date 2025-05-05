@@ -2642,6 +2642,7 @@ public:
     // Not all WidenCastRecipes contain nneg flag. Need to transfer flags from
     // the original recipe to prevent setting wrong flags.
     transferFlags(*Ext);
+    setUnderlyingValue(R->getUnderlyingValue());
   }
 
   ~VPExtendedReductionRecipe() override = default;
@@ -2656,10 +2657,6 @@ public:
     llvm_unreachable("VPExtendedReductionRecipe should be transform to "
                      "VPExtendedRecipe + VPReductionRecipe before execution.");
   };
-
-  /// Return the cost of VPExtendedReductionRecipe.
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -2720,6 +2717,7 @@ public:
     assert((ExtOp == Instruction::CastOps::ZExt ||
             ExtOp == Instruction::CastOps::SExt) &&
            "VPMulAccumulateReductionRecipe only support zext and sext.");
+    setUnderlyingValue(R->getUnderlyingValue());
     // Only set the non-negative flag if the original recipe contains.
     if (Ext0->hasNonNegFlag())
       IsNonNeg = Ext0->isNonNeg();
@@ -2737,6 +2735,7 @@ public:
                Instruction::Add &&
            "The reduction instruction in MulAccumulateReductionRecipe must be "
            "Add");
+    setUnderlyingValue(R->getUnderlyingValue());
   }
 
   ~VPMulAccumulateReductionRecipe() override = default;
@@ -2754,10 +2753,6 @@ public:
                      "VPWidenCastRecipe + "
                      "VPWidenRecipe + VPReductionRecipe before execution");
   }
-
-  /// Return the cost of VPMulAccumulateReductionRecipe.
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.

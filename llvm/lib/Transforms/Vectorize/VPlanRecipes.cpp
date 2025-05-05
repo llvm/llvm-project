@@ -2527,8 +2527,6 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
   auto *VectorTy = cast<VectorType>(toVectorTy(ElementTy, VF));
   unsigned Opcode = RecurrenceDescriptor::getOpcode(RdxKind);
   FastMathFlags FMFs = getFastMathFlags();
-  std::optional<FastMathFlags> OptionalFMF =
-      ElementTy->isFloatingPointTy() ? std::make_optional(FMFs) : std::nullopt;
 
   // TODO: Support any-of reductions.
   assert(
@@ -2536,40 +2534,17 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
        ForceTargetInstructionCost.getNumOccurrences() > 0) &&
       "Any-of reduction not implemented in VPlan-based cost model currently.");
 
+  // Cost = Reduction cost + BinOp cost
+  InstructionCost Cost =
+      Ctx.TTI.getArithmeticInstrCost(Opcode, ElementTy, Ctx.CostKind);
   if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RdxKind)) {
     Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RdxKind);
-    return Ctx.TTI.getMinMaxReductionCost(Id, VectorTy, FMFs, Ctx.CostKind);
+    return Cost +
+           Ctx.TTI.getMinMaxReductionCost(Id, VectorTy, FMFs, Ctx.CostKind);
   }
 
-  return Ctx.TTI.getArithmeticReductionCost(Opcode, VectorTy, OptionalFMF,
-                                            Ctx.CostKind);
-}
-
-InstructionCost
-VPExtendedReductionRecipe::computeCost(ElementCount VF,
-                                       VPCostContext &Ctx) const {
-  unsigned Opcode = RecurrenceDescriptor::getOpcode(getRecurrenceKind());
-  Type *RedTy = Ctx.Types.inferScalarType(this);
-  auto *SrcVecTy =
-      cast<VectorType>(toVectorTy(Ctx.Types.inferScalarType(getVecOp()), VF));
-  assert(RedTy->isIntegerTy() &&
-         "ExtendedReduction only support integer type currently.");
-  InstructionCost Cost = Ctx.TTI.getExtendedReductionCost(
-      Opcode, isZExt(), RedTy, SrcVecTy, std::nullopt, Ctx.CostKind);
-  // The cost of this recipe should be decided by the legacy model.
-  return Cost.isValid() ? 0 : Cost;
-}
-
-InstructionCost
-VPMulAccumulateReductionRecipe::computeCost(ElementCount VF,
-                                            VPCostContext &Ctx) const {
-  Type *RedTy = Ctx.Types.inferScalarType(this);
-  auto *SrcVecTy =
-      cast<VectorType>(toVectorTy(Ctx.Types.inferScalarType(getVecOp0()), VF));
-  InstructionCost Cost =
-      Ctx.TTI.getMulAccReductionCost(isZExt(), RedTy, SrcVecTy, Ctx.CostKind);
-  // The cost of this recipe should be decided by the legacy model.
-  return Cost.isValid() ? 0 : Cost;
+  return Cost + Ctx.TTI.getArithmeticReductionCost(Opcode, VectorTy, FMFs,
+                                                   Ctx.CostKind);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
