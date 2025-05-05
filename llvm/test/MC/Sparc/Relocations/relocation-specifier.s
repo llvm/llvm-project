@@ -24,6 +24,8 @@
 # READELF: TLS     GLOBAL DEFAULT   UND s_tgd_lo10
 # READELF: TLS     GLOBAL DEFAULT   UND s_tgd_add
 
+main:
+
 # ASM:      or %g1, %lo(sym), %g3
 # ASM-NEXT: sethi %hi(sym), %l0
 # ASM-NEXT: sethi %h44(sym), %l0
@@ -40,16 +42,30 @@ sethi %h44(sym), %l0
 or %g1, %m44(sym), %g3
 or %g1, %l44(sym), %g3
 
+## FIXME: Emit %pc22/%pc10
+# ASM:      sethi %hi(sym), %o1
+# ASM-NEXT: or %o1, %lo(sym), %o1
+# OBJDUMP:      sethi 0x0, %o1
+# OBJDUMP-NEXT:   R_SPARC_PC22 sym
+# OBJDUMP-NEXT: or %o1, 0x0, %o1
+# OBJDUMP-NEXT:   R_SPARC_PC10 sym
+# OBJDUMP-NEXT: sethi 0x3fffff, %o1
+# OBJDUMP-NEXT: or %o1, 0x3e0, %o1
+sethi %pc22(sym), %o1
+or %o1, %pc10(sym), %o1
+sethi %pc22(main), %o1
+or %o1, %pc10(main), %o1
+
 # ASM:      sethi %hh(sym), %l0
 # ASM-NEXT: sethi %hh(sym), %l0
 # ASM-NEXT: or %g1, %hm(sym), %g3
 # ASM-NEXT: or %g1, %hm(sym), %g3
 # ASM-NEXT: sethi %lm(sym), %l0
-# OBJDUMP:     0000014:  R_SPARC_HH22	sym
-# OBJDUMP:     0000018:  R_SPARC_HH22	sym
-# OBJDUMP:     000001c:  R_SPARC_HM10	sym
-# OBJDUMP:     0000020:  R_SPARC_HM10	sym
-# OBJDUMP:     0000024:  R_SPARC_LM22	sym
+# OBJDUMP:      R_SPARC_HH22	sym
+# OBJDUMP:      R_SPARC_HH22	sym
+# OBJDUMP:      R_SPARC_HM10	sym
+# OBJDUMP:      R_SPARC_HM10	sym
+# OBJDUMP:      R_SPARC_LM22	sym
 sethi %hh(sym), %l0
 sethi %uhi(sym), %l0
 or %g1, %hm(sym), %g3
@@ -71,6 +87,41 @@ xor %g1, %lox(sym), %g1
 sethi %gdop_hix22(sym), %l1
 or %l1, %gdop_lox10(sym), %l1
 ldx [%l7 + %l1], %l2, %gdop(sym)
+
+.set abs, 0xfedcba98
+
+## FIXME: Don't emit GOT relocations when -position-independent is specified.
+# NOPIC:      sethi 0x3fb72e, %o0
+# NOPIC-NEXT: xor %o0, 0x298, %o0
+# NOPIC-NEXT: sethi 0x3b72ea, %o1
+# NOPIC-NEXT: xor %o0, 0x188, %o1
+sethi %hi(abs), %o0
+xor %o0, %lo(abs), %o0
+sethi %hi(-0x12345678), %o1
+xor %o0, %lo(-0x12345678), %o1
+
+# OBJDUMP:      ld [%o0+0x7], %o0
+ld [%o0 + seven], %o0
+seven = 7
+
+# OBJDUMP:      sethi 0x3fb, %o0
+# OBJDUMP-NEXT: or %o0, 0x1cb, %o0
+# OBJDUMP-NEXT: ld [%o0+0xa98], %o0
+sethi %h44(abs), %o0
+or %o0, %m44(abs), %o0
+ld [%o0 + %l44(abs)], %o0
+
+# OBJDUMP-NEXT: sethi 0x0, %o0
+# OBJDUMP-NEXT: sethi 0x3fb72e, %o0
+# OBJDUMP-NEXT: or %o0, 0x0, %o0
+sethi %hh(abs), %o0
+sethi %lm(abs), %o0
+or %o0, %hm(abs), %o0
+
+# OBJDUMP-NEXT: sethi 0x48d1, %o0
+# OBJDUMP-NEXT: xor %o0, -0x168, %o0
+sethi %hix(abs), %o0
+xor %o0, %lox(abs), %o0
 
 # OBJDUMP-LABEL: <.tls>:
 .section .tls,"ax"
