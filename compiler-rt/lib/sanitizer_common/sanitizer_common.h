@@ -831,7 +831,6 @@ class LoadedModule {
  public:
   LoadedModule()
       : full_name_(nullptr),
-        display_name_(nullptr),
         base_address_(0),
         max_address_(0),
         arch_(kModuleArchUnknown),
@@ -843,7 +842,6 @@ class LoadedModule {
   void set(const char *module_name, uptr base_address);
   void set(const char *module_name, uptr base_address, ModuleArch arch,
            u8 uuid[kModuleUUIDSize], bool instrumented);
-  void setDisplayName(const char *display_name);
   void setUuid(const char *uuid, uptr size);
   void clear();
   void addAddressRange(uptr beg, uptr end, bool executable, bool writable,
@@ -851,7 +849,6 @@ class LoadedModule {
   bool containsAddress(uptr address) const;
 
   const char *full_name() const { return full_name_; }
-  const char *display_name() const { return display_name_; }
   uptr base_address() const { return base_address_; }
   uptr max_address() const { return max_address_; }
   ModuleArch arch() const { return arch_; }
@@ -882,7 +879,6 @@ class LoadedModule {
 
  private:
   char *full_name_;  // Owned.
-  char *display_name_;
   uptr base_address_;
   uptr max_address_;
   ModuleArch arch_;

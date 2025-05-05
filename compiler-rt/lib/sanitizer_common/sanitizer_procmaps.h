@@ -17,15 +17,14 @@
 
 #if SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD || \
     SANITIZER_APPLE || SANITIZER_SOLARIS || SANITIZER_HAIKU ||  \
-    SANITIZER_FUCHSIA || SANITIZER_AIX
+    SANITIZER_FUCHSIA
 
-#  include "sanitizer_aix.h"
-#  include "sanitizer_common.h"
-#  include "sanitizer_fuchsia.h"
-#  include "sanitizer_internal_defs.h"
-#  include "sanitizer_linux.h"
-#  include "sanitizer_mac.h"
-#  include "sanitizer_mutex.h"
+#include "sanitizer_common.h"
+#include "sanitizer_internal_defs.h"
+#include "sanitizer_fuchsia.h"
+#include "sanitizer_linux.h"
+#include "sanitizer_mac.h"
+#include "sanitizer_mutex.h"
 
 namespace __sanitizer {
 
@@ -41,13 +40,6 @@ class MemoryMappedSegment {
  public:
   explicit MemoryMappedSegment(char *buff = nullptr, uptr size = 0)
       : filename(buff), filename_size(size), data_(nullptr) {}
-  explicit MemoryMappedSegment(char *buff, uptr size, char *display_buff,
-                               uptr display_size)
-      : filename(buff),
-        filename_size(size),
-        displayname(display_buff),
-        displayname_size(display_size),
-        data_(nullptr) {}
   ~MemoryMappedSegment() {}
 
   bool IsReadable() const { return protection & kProtectionRead; }
@@ -62,8 +54,6 @@ class MemoryMappedSegment {
   uptr offset;
   char *filename;  // owned by caller
   uptr filename_size;
-  char *displayname;
-  uptr displayname_size;
   uptr protection;
   ModuleArch arch;
   u8 uuid[kModuleUUIDSize];

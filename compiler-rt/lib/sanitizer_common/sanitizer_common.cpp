@@ -171,10 +171,6 @@ void LoadedModule::set(const char *module_name, uptr base_address,
   instrumented_ = instrumented;
 }
 
-void LoadedModule::setDisplayName(const char *display_name) {
-  display_name_ = internal_strdup(display_name);
-}
-
 void LoadedModule::setUuid(const char *uuid, uptr size) {
   if (size > kModuleUUIDSize)
     size = kModuleUUIDSize;
@@ -184,11 +180,9 @@ void LoadedModule::setUuid(const char *uuid, uptr size) {
 
 void LoadedModule::clear() {
   InternalFree(full_name_);
-  InternalFree(display_name_);
   base_address_ = 0;
   max_address_ = 0;
   full_name_ = nullptr;
-  display_name_ = nullptr;
   arch_ = kModuleArchUnknown;
   internal_memset(uuid_, 0, kModuleUUIDSize);
   instrumented_ = false;

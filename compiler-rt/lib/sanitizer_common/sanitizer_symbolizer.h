@@ -30,7 +30,6 @@ struct AddressInfo {
   uptr address;
 
   char *module;
-  char *module_display;
   uptr module_offset;
   ModuleArch module_arch;
   u8 uuid[kModuleUUIDSize];

@@ -29,7 +29,6 @@ AddressInfo::AddressInfo() {
 
 void AddressInfo::Clear() {
   InternalFree(module);
-  InternalFree(module_display);
   InternalFree(function);
   InternalFree(file);
   internal_memset(this, 0, sizeof(AddressInfo));
@@ -47,9 +46,6 @@ void AddressInfo::FillModuleInfo(const char *mod_name, uptr mod_offset,
 
 void AddressInfo::FillModuleInfo(const LoadedModule &mod) {
   module = internal_strdup(mod.full_name());
-#if SANITIZER_AIX
-  module_display = internal_strdup(mod.display_name());
-#endif
   module_offset = address - mod.base_address();
   module_arch = mod.arch();
   if (mod.uuid_size())

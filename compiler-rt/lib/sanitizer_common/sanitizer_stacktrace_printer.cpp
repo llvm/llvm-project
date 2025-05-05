@@ -242,14 +242,10 @@ void FormattedStackTracePrinter::RenderFrame(InternalScopedString *buffer,
         RenderSourceLocation(buffer, info->file, info->line, info->column,
                              vs_style, strip_path_prefix);
       } else if (info->module) {
-#  if SANITIZER_AIX
-        RenderModuleLocation(buffer, info->module_display, info->module_offset,
-                             info->module_arch, strip_path_prefix);
-#  else
         RenderModuleLocation(buffer, info->module, info->module_offset,
                              info->module_arch, strip_path_prefix);
-#  endif
-#  if !SANITIZER_APPLE
+
+#if !SANITIZER_APPLE
         MaybeBuildIdToBuffer(*info, /*PrefixSpace=*/true, buffer);
 #endif
       } else {
@@ -262,14 +258,9 @@ void FormattedStackTracePrinter::RenderFrame(InternalScopedString *buffer,
         // There PCs are not meaningful.
       } else if (info->module) {
         // Always strip the module name for %M.
-#  if SANITIZER_AIX
-        RenderModuleLocation(buffer, StripModuleName(info->module_display),
-                             info->module_offset, info->module_arch, "");
-#  else
         RenderModuleLocation(buffer, StripModuleName(info->module),
                              info->module_offset, info->module_arch, "");
-#  endif
-#  if !SANITIZER_APPLE
+#if !SANITIZER_APPLE
         MaybeBuildIdToBuffer(*info, /*PrefixSpace=*/true, buffer);
 #endif
       } else {

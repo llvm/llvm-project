@@ -27,7 +27,6 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_platform_limits_solaris.cpp
   sanitizer_posix.cpp
   sanitizer_printf.cpp
-  sanitizer_procmaps_aix.cpp
   sanitizer_procmaps_common.cpp
   sanitizer_procmaps_bsd.cpp
   sanitizer_procmaps_fuchsia.cpp
@@ -99,7 +98,6 @@ set(SANITIZER_SYMBOLIZER_SOURCES
   sanitizer_symbolizer_report_fuchsia.cpp
   sanitizer_symbolizer_win.cpp
   sanitizer_thread_history.cpp
-  sanitizer_unwind_aix.cpp
   sanitizer_unwind_linux_libcdep.cpp
   sanitizer_unwind_fuchsia.cpp
   sanitizer_unwind_win.cpp
@@ -112,7 +110,6 @@ set(SANITIZER_IMPL_HEADERS
   sancov_flags.h
   sancov_flags.inc
   sanitizer_addrhashmap.h
-  sanitizer_aix.h
   sanitizer_allocator.h
   sanitizer_allocator_checks.h
   sanitizer_allocator_combined.h
