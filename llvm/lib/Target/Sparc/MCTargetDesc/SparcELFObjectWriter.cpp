@@ -91,10 +91,6 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
       if (Ctx.getObjectFileInfo()->isPositionIndependent())
         return ELF::R_SPARC_WPLT30;
       return ELF::R_SPARC_WDISP30;
-    case Sparc::fixup_sparc_br22:    return ELF::R_SPARC_WDISP22;
-    case Sparc::fixup_sparc_br19:    return ELF::R_SPARC_WDISP19;
-    case Sparc::fixup_sparc_br16:
-      return ELF::R_SPARC_WDISP16;
     }
   }
 
