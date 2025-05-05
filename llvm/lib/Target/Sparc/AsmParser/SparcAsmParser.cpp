@@ -11,6 +11,7 @@
 #include "TargetInfo/SparcTargetInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmMacro.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -1677,12 +1678,12 @@ SparcAsmParser::adjustPICRelocation(SparcMCExpr::Specifier VK,
     switch(VK) {
     default: break;
     case SparcMCExpr::VK_LO:
-      VK = (hasGOTReference(subExpr) ? SparcMCExpr::VK_PC10
-                                     : SparcMCExpr::VK_GOT10);
+      VK = SparcMCExpr::Specifier(
+          hasGOTReference(subExpr) ? ELF::R_SPARC_PC10 : ELF::R_SPARC_GOT10);
       break;
     case SparcMCExpr::VK_HI:
-      VK = (hasGOTReference(subExpr) ? SparcMCExpr::VK_PC22
-                                     : SparcMCExpr::VK_GOT22);
+      VK = SparcMCExpr::Specifier(
+          hasGOTReference(subExpr) ? ELF::R_SPARC_PC22 : ELF::R_SPARC_GOT22);
       break;
     }
   }
