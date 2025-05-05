@@ -9193,15 +9193,12 @@ static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan,
 static SetVector<VPIRInstruction *> collectUsersInLatchExitBlock(VPlan &Plan) {
   SetVector<VPIRInstruction *> ExitUsersToFix;
   for (VPIRBasicBlock *ExitVPBB : Plan.getExitBlocks()) {
+
+    if (ExitVPBB->getSinglePredecessor() != Plan.getMiddleBlock())
+      continue;
+
     for (VPRecipeBase &R : ExitVPBB->phis()) {
       auto *ExitIRI = cast<VPIRPhi>(&R);
-      if (ExitVPBB->getSinglePredecessor() != Plan.getMiddleBlock()) {
-        assert(ExitIRI->getNumOperands() ==
-                   ExitVPBB->getPredecessors().size() &&
-               "early-exit must update exit values on construction");
-        continue;
-      }
-
       assert(ExitIRI->getNumOperands() == 1 && "must have a single operand");
       VPValue *V = ExitIRI->getOperand(0);
       if (V->isLiveIn())
