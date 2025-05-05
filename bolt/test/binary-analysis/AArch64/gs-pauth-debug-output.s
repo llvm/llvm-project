@@ -282,10 +282,10 @@ auth_oracle:
 // CHECK:      End of Function "auth_oracle"
 // ...
 // PAUTH:      Running dst register safety analysis...
-// PAUTH-NEXT:   DstSafetyAnalysis::ComputeNext(       ret     x30, dst-state<CannotEscapeUnchecked: >)
-// PAUTH-NEXT:     .. result: (dst-state<CannotEscapeUnchecked: LR W30 W30_HI >)
-// PAUTH-NEXT:   DstSafetyAnalysis::ComputeNext(       autia   x0, x1, dst-state<CannotEscapeUnchecked: LR W30 W30_HI >)
-// PAUTH-NEXT:     .. result: (dst-state<CannotEscapeUnchecked: LR W30 W30_HI >)
+// PAUTH-NEXT:   DstSafetyAnalysis::ComputeNext(       ret     x30, dst-state<CannotEscapeUnchecked: , Insts: >)
+// PAUTH-NEXT:     .. result: (dst-state<CannotEscapeUnchecked: LR W30 W30_HI , Insts: >)
+// PAUTH-NEXT:   DstSafetyAnalysis::ComputeNext(       autia   x0, x1, dst-state<CannotEscapeUnchecked: LR W30 W30_HI , Insts: >)
+// PAUTH-NEXT:     .. result: (dst-state<CannotEscapeUnchecked: LR W30 W30_HI , Insts: >)
 // PAUTH-NEXT: After dst register safety analysis:
 // PAUTH-NEXT: Binary Function "auth_oracle"  {
 // PAUTH-NEXT:   Number      : 4
@@ -295,22 +295,22 @@ auth_oracle:
 // PAUTH-NEXT: }
 // PAUTH-NEXT: [[BB0]] (2 instructions, align : 1)
 // PAUTH-NEXT:   Entry Point
-// PAUTH-NEXT:     00000000:   autia   x0, x1 # DataflowDstSafetyAnalysis: dst-state<CannotEscapeUnchecked: BitVector>
-// PAUTH-NEXT:     00000004:   ret # DataflowDstSafetyAnalysis: dst-state<CannotEscapeUnchecked: BitVector>
+// PAUTH-NEXT:     00000000:   autia   x0, x1 # DataflowDstSafetyAnalysis: dst-state<CannotEscapeUnchecked: BitVector, Insts: >
+// PAUTH-NEXT:     00000004:   ret # DataflowDstSafetyAnalysis: dst-state<CannotEscapeUnchecked: BitVector, Insts: >
 // PAUTH-EMPTY:
 // PAUTH-NEXT: DWARF CFI Instructions:
 // PAUTH-NEXT:     <empty>
 // PAUTH-NEXT: End of Function "auth_oracle"
 // PAUTH-EMPTY:
-// PAUTH-NEXT:   Found auth inst:     00000000:        autia   x0, x1 # DataflowDstSafetyAnalysis: dst-state<CannotEscapeUnchecked: BitVector>
+// PAUTH-NEXT:   Found auth inst:     00000000:        autia   x0, x1 # DataflowDstSafetyAnalysis: dst-state<CannotEscapeUnchecked: BitVector, Insts: >
 // PAUTH-NEXT:     Authenticated reg: X0
 // PAUTH-NEXT:     safe output registers: LR W30 W30_HI
 // PAUTH-EMPTY:
 // PAUTH-NEXT: Running detailed dst register safety analysis...
-// PAUTH-NEXT:   DstSafetyAnalysis::ComputeNext(       ret     x30, dst-state<CannotEscapeUnchecked: >)
-// PAUTH-NEXT:     .. result: (dst-state<CannotEscapeUnchecked: LR W30 W30_HI >)
-// PAUTH-NEXT:   DstSafetyAnalysis::ComputeNext(       autia   x0, x1, dst-state<CannotEscapeUnchecked: LR W30 W30_HI >)
-// PAUTH-NEXT:     .. result: (dst-state<CannotEscapeUnchecked: LR W30 W30_HI >)
+// PAUTH-NEXT:   DstSafetyAnalysis::ComputeNext(       ret     x30, dst-state<CannotEscapeUnchecked: , Insts: [0]()>)
+// PAUTH-NEXT:     .. result: (dst-state<CannotEscapeUnchecked: LR W30 W30_HI , Insts: [0]()>)
+// PAUTH-NEXT:   DstSafetyAnalysis::ComputeNext(       autia   x0, x1, dst-state<CannotEscapeUnchecked: LR W30 W30_HI , Insts: [0]()>)
+// PAUTH-NEXT:     .. result: (dst-state<CannotEscapeUnchecked: LR W30 W30_HI , Insts: [0](0x{{[0-9a-f]+}} )>)
 // PAUTH-NEXT: After detailed dst register safety analysis:
 // PAUTH-NEXT: Binary Function "auth_oracle"  {
 // PAUTH-NEXT:   Number      : 4
@@ -320,14 +320,14 @@ auth_oracle:
 // PAUTH-NEXT: }
 // PAUTH-NEXT: [[BB0]] (2 instructions, align : 1)
 // PAUTH-NEXT:   Entry Point
-// PAUTH-NEXT:     00000000:   autia   x0, x1 # DataflowDstSafetyAnalysis: dst-state<CannotEscapeUnchecked: BitVector>
-// PAUTH-NEXT:     00000004:   ret # DataflowDstSafetyAnalysis: dst-state<CannotEscapeUnchecked: BitVector>
+// PAUTH-NEXT:     00000000:   autia   x0, x1 # DataflowDstSafetyAnalysis: dst-state<CannotEscapeUnchecked: BitVector, Insts: [0](0x{{[0-9a-f]+}} )>
+// PAUTH-NEXT:     00000004:   ret # DataflowDstSafetyAnalysis: dst-state<CannotEscapeUnchecked: BitVector, Insts: [0]()>
 // PAUTH-EMPTY:
 // PAUTH-NEXT: DWARF CFI Instructions:
 // PAUTH-NEXT:     <empty>
 // PAUTH-NEXT: End of Function "auth_oracle"
 // PAUTH-EMPTY:
-// PAUTH-NEXT:   Attaching leakage info to:     00000000:      autia   x0, x1 # DataflowDstSafetyAnalysis: dst-state<CannotEscapeUnchecked: BitVector>
+// PAUTH-NEXT:   Attaching leakage info to:     00000000:      autia   x0, x1 # DataflowDstSafetyAnalysis: dst-state<CannotEscapeUnchecked: BitVector, Insts: [0](0x{{[0-9a-f]+}} )>
 
 // CHECK-LABEL:Analyzing function main, AllocatorId = 1
         .globl  main

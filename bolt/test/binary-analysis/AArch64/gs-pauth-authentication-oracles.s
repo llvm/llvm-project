@@ -350,7 +350,8 @@ bad_leaked_to_subroutine_multi_bb:
 bad_unknown_usage_read_multi_bb:
 // CHECK-LABEL: GS-PAUTH: authentication oracle found in function bad_unknown_usage_read_multi_bb, basic block {{[^,]+}}, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      autia   x0, x1
-// CHECK-NEXT:  The 0 instructions that leak the affected registers are:
+// CHECK-NEXT:  The 1 instructions that leak the affected registers are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      mul     x3, x0, x1
         autia   x0, x1
         cbz     x3, 1f
         mul     x3, x0, x1
@@ -364,7 +365,8 @@ bad_unknown_usage_read_multi_bb:
 bad_unknown_usage_subreg_read_multi_bb:
 // CHECK-LABEL: GS-PAUTH: authentication oracle found in function bad_unknown_usage_subreg_read_multi_bb, basic block {{[^,]+}}, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      autia   x0, x1
-// CHECK-NEXT:  The 0 instructions that leak the affected registers are:
+// CHECK-NEXT:  The 1 instructions that leak the affected registers are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      mul     w3, w0, w1
         autia   x0, x1
         cbz     x3, 1f
         mul     w3, w0, w1
@@ -378,7 +380,8 @@ bad_unknown_usage_subreg_read_multi_bb:
 bad_unknown_usage_update_multi_bb:
 // CHECK-LABEL: GS-PAUTH: authentication oracle found in function bad_unknown_usage_update_multi_bb, basic block {{[^,]+}}, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      autia   x0, x1
-// CHECK-NEXT:  The 0 instructions that leak the affected registers are:
+// CHECK-NEXT:  The 1 instructions that leak the affected registers are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      movk    x0, #0x2a, lsl #16
         autia   x0, x1
         cbz     x3, 1f
         movk    x0, #42, lsl #16  // does not overwrite x0 completely
