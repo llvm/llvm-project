@@ -1544,63 +1544,6 @@ struct PrefetchNdDistribution final : public gpu::WarpDistributionPattern {
   }
 };
 
-/// Generic pattern for sinking a GPU index operations feeding into yield op
-/// of an enclosing `gpu.warp_execute_on_lane_0` region. The original index op
-/// becomes dead and an equivalent copy of the index op is created outside the
-/// warp op.
-/// Example:
-/// ```
-///   %r = gpu.warp_execute_on_lane_0(%laneid) -> (index) {
-///     ...
-///     %index = gpu.block_id x : index
-///     gpu.yield %index
-///   }
-///   ...
-/// ```
-/// To
-/// ```
-///   %r:2 = gpu.warp_execute_on_lane_0(%laneid) -> (index) {
-///     ...
-///     %dead = gpu.block_id x : index
-///     gpu.yield %dead
-///   }
-///   %0 = gpu.block_id x : index
-///   ...
-/// ```
-template <typename IndexOp>
-struct GpuIndexOpDistribution final : public gpu::WarpDistributionPattern {
-  using gpu::WarpDistributionPattern::WarpDistributionPattern;
-  LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
-                                PatternRewriter &rewriter) const override {
-    OpOperand *operand = getWarpResult(subgroupOp, llvm::IsaPred<IndexOp>);
-    if (!operand)
-      return rewriter.notifyMatchFailure(subgroupOp,
-                                         "warp result is not a gpu index op");
-    Operation *indexOp = operand->get().getDefiningOp<IndexOp>();
-    unsigned operandIdx = operand->getOperandNumber();
-    SmallVector<Value, 3> newYieldValues;
-    SmallVector<Type, 3> newYieldTypes;
-    for (Value operand : indexOp->getOperands()) {
-      newYieldValues.push_back(operand);
-      newYieldTypes.push_back(operand.getType());
-    }
-    SmallVector<size_t> newRetIndices;
-    gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
-        rewriter, subgroupOp, newYieldValues, newYieldTypes, newRetIndices);
-    rewriter.setInsertionPointAfter(newWarpOp);
-    SmallVector<Value> newIndexOperands;
-    for (size_t i : newRetIndices) {
-      newIndexOperands.push_back(newWarpOp.getResult(i));
-    }
-    auto newIndexOp = rewriter.create<IndexOp>(
-        newWarpOp.getLoc(), newIndexOperands,
-        removeTemporaryLayoutAttributes(indexOp->getAttrs()));
-    Value distributedVal = newWarpOp.getResult(operandIdx);
-    rewriter.replaceAllUsesWith(distributedVal, newIndexOp);
-    return success();
-  }
-};
-
 } // namespace
 
 namespace {
@@ -1621,20 +1564,6 @@ void xegpu::populateXeGPUSubgroupDistributePatterns(
   patterns.add<CreateNdDescDistribution, StoreNdDistribution,
                LoadNdDistribution, DpasDistribution, PrefetchNdDistribution,
                UpdateNdOffsetDistribution>(patterns.getContext());
-  // TODO: Is this the right place to add these patterns?
-  patterns.add<GpuIndexOpDistribution<gpu::BlockIdOp>,
-               GpuIndexOpDistribution<gpu::BlockDimOp>,
-               GpuIndexOpDistribution<gpu::SubgroupIdOp>,
-               GpuIndexOpDistribution<gpu::SubgroupSizeOp>,
-               GpuIndexOpDistribution<gpu::NumSubgroupsOp>,
-               GpuIndexOpDistribution<gpu::ClusterDimOp>,
-               GpuIndexOpDistribution<gpu::ClusterDimBlocksOp>,
-               GpuIndexOpDistribution<gpu::ClusterIdOp>,
-               GpuIndexOpDistribution<gpu::ClusterBlockIdOp>,
-               GpuIndexOpDistribution<gpu::GridDimOp>,
-               GpuIndexOpDistribution<gpu::ThreadIdOp>,
-               GpuIndexOpDistribution<gpu::LaneIdOp>,
-               GpuIndexOpDistribution<gpu::GlobalIdOp>>(patterns.getContext());
 }
 
 void XeGPUSubgroupDistributePass::runOnOperation() {
