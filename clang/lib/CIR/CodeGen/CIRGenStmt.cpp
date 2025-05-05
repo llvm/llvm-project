@@ -518,20 +518,15 @@ mlir::LogicalResult CIRGenFunction::emitCaseStmt(const CaseStmt &s,
                                                  bool buildingTopLevelCase) {
   cir::CaseOpKind kind;
   mlir::ArrayAttr value;
-
-  SmallVector<mlir::Attribute, 1> caseEltValueListAttr;
   llvm::APSInt intVal = s.getLHS()->EvaluateKnownConstInt(getContext());
 
   // If the case statement has an RHS value, it is representing a GNU
   // case range statement, where LHS is the beginning of the range
   // and RHS is the end of the range.
   if (const Expr *rhs = s.getRHS()) {
-
     llvm::APSInt endVal = rhs->EvaluateKnownConstInt(getContext());
-    SmallVector<mlir::Attribute, 4> rangeCaseAttr = {
-        cir::IntAttr::get(condType, intVal),
-        cir::IntAttr::get(condType, endVal)};
-    value = builder.getArrayAttr(rangeCaseAttr);
+    value = builder.getArrayAttr({cir::IntAttr::get(condType, intVal),
+                                  cir::IntAttr::get(condType, endVal)});
     kind = cir::CaseOpKind::Range;
 
     // We don't currently fold case range statements with other case statements.
@@ -540,8 +535,7 @@ mlir::LogicalResult CIRGenFunction::emitCaseStmt(const CaseStmt &s,
     assert(!cir::MissingFeatures::foldRangeCase());
     assert(!cir::MissingFeatures::foldCascadingCases());
   } else {
-    caseEltValueListAttr.push_back(cir::IntAttr::get(condType, intVal));
-    value = builder.getArrayAttr(caseEltValueListAttr);
+    value = builder.getArrayAttr({cir::IntAttr::get(condType, intVal)});
     kind = cir::CaseOpKind::Equal;
   }
 
