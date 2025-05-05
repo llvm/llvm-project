@@ -155,11 +155,19 @@ public:
                              Instruction *I = nullptr) const override;
 
   bool isTruncateFree(Type *SrcTy, Type *DstTy) const override {
-    // Truncating 64-bit to 32-bit is free in SASS.
-    if (!SrcTy->isIntegerTy() || !DstTy->isIntegerTy())
+    if (!(SrcTy->isIntegerTy() && DstTy->isIntegerTy()))
       return false;
-    return SrcTy->getPrimitiveSizeInBits() == 64 &&
-           DstTy->getPrimitiveSizeInBits() == 32;
+    if (SrcTy->getPrimitiveSizeInBits() <= DstTy->getPrimitiveSizeInBits())
+      return false;
+    return DstTy->getPrimitiveSizeInBits() % 32 == 0;
+  }
+
+  bool isTruncateFree(EVT FromVT, EVT ToVT) const override {
+    if (!(FromVT.isScalarInteger() && ToVT.isScalarInteger()))
+      return false;
+    if (FromVT.getSizeInBits() <= ToVT.getSizeInBits())
+      return false;
+    return ToVT.getSizeInBits() % 32 == 0;
   }
 
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Ctx,
