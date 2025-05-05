@@ -104,8 +104,9 @@ bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
     uptr len;
     constexpr unsigned BUFFER_SIZE = 128;
     char objPath[BUFFER_SIZE] = {};
-    // Use path /proc/<pid>/object/<object_id> 
-    // TODO: Pass a separate path from mapIter->pr_pathoff to display to the user.
+    // Use path /proc/<pid>/object/<object_id>
+    // TODO: Pass a separate path from mapIter->pr_pathoff to display to the
+    // user.
     // TODO: Append the archive member name if it exists.
     internal_snprintf(objPath, BUFFER_SIZE, "/proc/%d/object/%s",
                       internal_getpid(), mapIter->pr_mapname);
