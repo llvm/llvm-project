@@ -550,7 +550,9 @@ Bug Fixes in This Version
 - Fixed visibility calculation for template functions. (#GH103477)
 - Fixed a bug where an attribute before a ``pragma clang attribute`` or
   ``pragma clang __debug`` would cause an assertion. Instead, this now diagnoses
-  the invalid attribute location appropriately.  (#GH137861)
+  the invalid attribute location appropriately. (#GH137861)
+- Fixed a crash when a malformed ``_Pragma`` directive appears as part of an 
+  ``#include`` directive. (#GH138094)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
