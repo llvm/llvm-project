@@ -38,10 +38,36 @@
 // because we do not require a C++ ABI library to be linked to a program
 // using sanitizers; if it's not present, we'll just use the mangled name.
 namespace __cxxabiv1 {
+#  if !SANITIZER_AIX
 extern "C" SANITIZER_WEAK_ATTRIBUTE char *__cxa_demangle(const char *mangled,
                                                          char *buffer,
                                                          size_t *length,
                                                          int *status);
+#  else
+// `weak` attribute without definition on AIX will cause linking time undefined
+// symbol error, we use dlopen/dlsym here to find related symbol.
+typedef char *__cxa_demangle_t(const char *mangled, char *buffer,
+                               size_t *length, int *status);
+
+char *__cxa_demangle(const char *mangled, char *buffer, size_t *length,
+                     int *status) {
+  // Use NULL as the module name, so if the libc++abi module is linked into the
+  // main executable, we are able to find the __cxa_demangle symbol and this
+  // impelemtation will not force libc++abi to be loaded to the executable.
+  void *Handler = dlopen(0, RTLD_NOW);
+  if (!Handler) {
+    return nullptr;
+  }
+
+  auto FooPtr =
+      reinterpret_cast<__cxa_demangle_t *>(dlsym(Handler, "__cxa_demangle"));
+  if (!FooPtr) {
+    return nullptr;
+  }
+
+  return FooPtr(mangled, buffer, length, status);
+}
+#  endif
 }
 
 namespace __sanitizer {
