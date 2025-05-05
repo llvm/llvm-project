@@ -77,6 +77,8 @@ struct CIRRecordLowering final {
     return astContext.toCharUnitsFromBits(bitOffset);
   }
 
+  void calculateZeroInit();
+
   CharUnits getSize(mlir::Type Ty) {
     return CharUnits::fromQuantity(dataLayout.layout.getTypeSize(Ty));
   }
@@ -183,7 +185,7 @@ void CIRRecordLowering::lower() {
 
   accumulateFields();
 
-  if (auto const *cxxRecordDecl = dyn_cast<CXXRecordDecl>(recordDecl)) {
+  if (const auto *cxxRecordDecl = dyn_cast<CXXRecordDecl>(recordDecl)) {
     if (cxxRecordDecl->getNumBases() > 0) {
       CIRGenModule &cgm = cirGenTypes.getCGModule();
       cgm.errorNYI(recordDecl->getSourceRange(),
@@ -241,6 +243,19 @@ void CIRRecordLowering::accumulateFields() {
       assert(!cir::MissingFeatures::zeroSizeRecordMembers());
       ++field;
     }
+  }
+}
+
+void CIRRecordLowering::calculateZeroInit() {
+  for (const MemberInfo &member : members) {
+    if (member.kind == MemberInfo::InfoKind::Field) {
+      if (!member.fieldDecl || isZeroInitializable(member.fieldDecl))
+        continue;
+      zeroInitializable = zeroInitializableAsBase = false;
+      return;
+    }
+    // TODO(cir): handle base types
+    assert(!cir::MissingFeatures::cxxSupport());
   }
 }
 
@@ -315,7 +330,9 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
   assert(!cir::MissingFeatures::astRecordDeclAttr());
   ty->complete(lowering.fieldTypes, lowering.packed, lowering.padded);
 
-  auto rl = std::make_unique<CIRGenRecordLayout>(ty ? *ty : cir::RecordType());
+  auto rl = std::make_unique<CIRGenRecordLayout>(
+      ty ? *ty : cir::RecordType(), (bool)lowering.zeroInitializable,
+      (bool)lowering.zeroInitializableAsBase);
 
   assert(!cir::MissingFeatures::recordZeroInit());
   assert(!cir::MissingFeatures::cxxSupport());
