@@ -236,6 +236,12 @@ private:
         isVolatile = true;
     }
 
+    // Check if the base type is volatile
+    if (partInfo.base.has_value()) {
+      mlir::Type baseType = partInfo.base.value().getType();
+      isVolatile = isVolatile || fir::isa_volatile_type(baseType);
+    }
+
     // Arrays with non default lower bounds or dynamic length or dynamic extent
     // need a fir.box to hold the dynamic or lower bound information.
     if (fir::hasDynamicSize(resultValueType) ||
@@ -248,12 +254,6 @@ private:
             designatorNode, getConverter().getFoldingContext(),
             /*namedConstantSectionsAreAlwaysContiguous=*/false))
       return fir::BoxType::get(resultValueType, isVolatile);
-
-    // Check if the base type is volatile
-    if (partInfo.base.has_value()) {
-      mlir::Type baseType = partInfo.base.value().getType();
-      isVolatile = fir::isa_volatile_type(baseType);
-    }
 
     // Other designators can be handled as raw addresses.
     return fir::ReferenceType::get(resultValueType, isVolatile);
