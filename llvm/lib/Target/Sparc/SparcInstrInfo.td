@@ -321,6 +321,9 @@ def SDT_SPRet     : SDTypeProfile<0, 1, [SDTCisVT<0, i32>]>;
 def retglue       : SDNode<"SPISD::RET_GLUE", SDT_SPRet,
                            [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
+def global_base_reg : SDNode<"SPISD::GLOBAL_BASE_REG",
+                             SDTypeProfile<1, 0, [SDTCisVT<0, iPTR>]>>;
+
 def flushw        : SDNode<"SPISD::FLUSHW", SDTNone,
                            [SDNPHasChain, SDNPSideEffect, SDNPMayStore]>;
 
