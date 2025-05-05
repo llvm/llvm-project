@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.14.0 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.14.0 -fdollars-in-identifiers %s -emit-llvm -o - | FileCheck %s
 
 extern void OBJC_CLASS_$_f;
 Class c = (Class)&OBJC_CLASS_$_f;

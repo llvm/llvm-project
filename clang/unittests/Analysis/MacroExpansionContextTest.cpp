@@ -41,6 +41,7 @@ protected:
     TargetOpts->Triple = "x86_64-pc-linux-unknown";
     Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
     LangOpts.CPlusPlus20 = 1; // For __VA_OPT__
+    LangOpts.DollarIdents = 1; // For $identifier$ testing.
   }
 
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem;

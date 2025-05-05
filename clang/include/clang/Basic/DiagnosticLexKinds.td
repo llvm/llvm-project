@@ -57,6 +57,9 @@ def warn_no_newline_eof : Warning<"no newline at end of file">,
 
 def ext_dollar_in_identifier : Extension<"'$' in identifier">,
   InGroup<DiagGroup<"dollar-in-identifier-extension">>;
+def warn_dollar_in_identifier : Warning<
+  "'$' in identifier; did you mean to enable '-fdollars-in-identifiers'?">,
+  InGroup<DiagGroup<"dollar-in-identifier">>;
 def ext_charize_microsoft : Extension<
   "charizing operator #@ is a Microsoft extension">,
   InGroup<MicrosoftCharize>;

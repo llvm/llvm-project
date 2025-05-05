@@ -51,6 +51,11 @@ C/C++ Language Potentially Breaking Changes
   ensure they are not caught by these optimizations.  It is also possible to use
   ``-fwrapv-pointer`` or   ``-fno-delete-null-pointer-checks`` to make pointer arithmetic
   on null pointers well-defined. (#GH130734, #GH130742, #GH130952)
+- Use of the dollar sign (``$``) in an identifier is no longer a conforming
+  extension in either C or C++, so ``-fdollars-in-identifiers`` is no longer
+  enabled by default. Use of the dollar sign in an identifier will now be
+  diagnosed as an error unless ``-fdollars-in-identifiers`` is explicitly
+  enabled.
 
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
