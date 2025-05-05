@@ -3602,7 +3602,6 @@ public:
   }
 
   NestedNameSpecifier *getQualifier() const { return Qualifier; }
-  CXXRecordDecl *getCXXRecordDecl() const;
   /// Note: this can trigger extra deserialization when external AST sources are
   /// used. Prefer `getCXXRecordDecl()` unless you really need the most recent
   /// decl.
@@ -3624,6 +3623,9 @@ public:
   static bool classof(const Type *T) {
     return T->getTypeClass() == MemberPointer;
   }
+
+private:
+  CXXRecordDecl *getCXXRecordDecl() const;
 };
 
 /// Capture whether this is a normal array (e.g. int X[4])
