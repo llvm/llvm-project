@@ -117,6 +117,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUWaitSGPRHazards.cpp
   AMDGPUUnifyDivergentExitNodes.cpp
   AMDGPUUnifyMetadata.cpp
+  AMDGPUVGPRIndexingAnalysis.cpp
   R600MachineCFGStructurizer.cpp
   GCNCreateVOPD.cpp
   GCNDPPCombine.cpp
