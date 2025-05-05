@@ -10,11 +10,11 @@ int main() {
     return t.value;
 }
 
-// CHECK: ![[ENUM_MEMBER:[0-9]+]] = !DICompositeType(tag: DW_TAG_enumeration_type
+// CHECK:  !DICompositeType(tag: DW_TAG_enumeration_type
 // CHECK-SAME: scope: ![[STRUCT:[0-9]+]]
 // CHECK-SAME: elements: ![[ELEMENTS:[0-9]+]]
 
-// CHECK: ![[STRUCT]] = distinct !DICompositeType(tag: DW_TAG_structure_type
+// CHECK: ![[STRUCT]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "Type"
 
 // CHECK: ![[ELEMENTS]] = !{![[ENUMERATOR:[0-9]+]]}
 // CHECK: ![[ENUMERATOR]] = !DIEnumerator(name: "Unused", value: 0
