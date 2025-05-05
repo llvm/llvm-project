@@ -126,4 +126,10 @@ void testCustomOperator(CustomOperatorEnum e) {
     if (!(e & E1)) {}
 }
 
+enum EmptyEnum {};
+
+bool testCustomOperator(EmptyEnum value) {
+  return value;
+}
+
 }
