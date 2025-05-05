@@ -735,8 +735,8 @@ private:
 #endif
 };
 
-/// @deprecated Use reportFatalInternalError() or reportFatalUsageError()
-/// instead.
+/// report_fatal_error below has been soft deprecated.
+/// Use reportFatalInternalError() or reportFatalUsageError() instead.
 [[noreturn]] void report_fatal_error(Error Err, bool gen_crash_diag = true);
 
 /// Report a fatal error that indicates a bug in LLVM.

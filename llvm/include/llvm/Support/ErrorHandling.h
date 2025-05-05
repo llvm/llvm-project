@@ -59,8 +59,8 @@ namespace llvm {
     ~ScopedFatalErrorHandler() { remove_fatal_error_handler(); }
   };
 
-/// @deprecated Use reportFatalInternalError() or reportFatalUsageError()
-/// instead.
+/// report_fatal_error below has been soft deprecated.
+/// Use reportFatalInternalError() or reportFatalUsageError() instead.
 [[noreturn]] void report_fatal_error(const char *reason,
                                      bool gen_crash_diag = true);
 [[noreturn]] void report_fatal_error(StringRef reason,
