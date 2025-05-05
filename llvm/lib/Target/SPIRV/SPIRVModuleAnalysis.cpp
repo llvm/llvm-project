@@ -920,7 +920,7 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
   } else if (Dec == SPIRV::Decoration::FPMaxErrorDecorationINTEL) {
     Reqs.addRequirements(SPIRV::Capability::FPMaxErrorINTEL);
     Reqs.addExtension(SPIRV::Extension::SPV_INTEL_fp_max_error);
-  }else if (Dec == SPIRV::Decoration::MathOpDSPModeINTEL) {
+  } else if (Dec == SPIRV::Decoration::MathOpDSPModeINTEL) {
     Reqs.addExtension(SPIRV::Extension::Extension::SPV_INTEL_fpga_dsp_control);
   }
 }
@@ -2024,7 +2024,8 @@ static void handleFunctionDecoration(llvm::Module::const_iterator F,
     if (ST.canUseExtension(
             SPIRV::Extension::Extension::SPV_INTEL_fpga_dsp_control)) {
       std::vector<uint32_t> params = getMetaDataValues(MetaDataList);
-      params.push_back(0);
+      if (params.size() == 1)
+        params.push_back(0);
       buildOpDecorate(Des, *curr, TII, SPIRV::Decoration::MathOpDSPModeINTEL,
                       params);
     }
