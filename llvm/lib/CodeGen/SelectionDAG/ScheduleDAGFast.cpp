@@ -354,8 +354,8 @@ SUnit *ScheduleDAGFast::CopyAndMoveSuccessors(SUnit *SU) {
       DelDeps.push_back(std::make_pair(SuccSU, D));
     }
   }
-  for (unsigned i = 0, e = DelDeps.size(); i != e; ++i)
-    RemovePred(DelDeps[i].first, DelDeps[i].second);
+  for (const auto &[Del, Dep] : DelDeps)
+    RemovePred(Del, Dep);
 
   ++NumDups;
   return NewSU;
@@ -389,9 +389,8 @@ void ScheduleDAGFast::InsertCopiesAndMoveSuccs(SUnit *SU, unsigned Reg,
       DelDeps.push_back(std::make_pair(SuccSU, Succ));
     }
   }
-  for (unsigned i = 0, e = DelDeps.size(); i != e; ++i) {
-    RemovePred(DelDeps[i].first, DelDeps[i].second);
-  }
+  for (const auto &[Del, Dep] : DelDeps)
+    RemovePred(Del, Dep);
   SDep FromDep(SU, SDep::Data, Reg);
   FromDep.setLatency(SU->Latency);
   AddPred(CopyFromSU, FromDep);
