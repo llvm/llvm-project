@@ -27,6 +27,7 @@
 #include "sanitizer_common/sanitizer_posix.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
+#include "sanitizer_common/sanitizer_vector.h"
 #include "tsan_fd.h"
 #include "tsan_interceptors.h"
 #include "tsan_interface.h"
@@ -177,7 +178,7 @@ struct ThreadSignalContext {
   SignalDesc pending_signals[kSigCount];
   // emptyset and oldset are too big for stack.
   __sanitizer_sigset_t emptyset;
-  __sanitizer_sigset_t oldset;
+  __sanitizer::Vector<__sanitizer_sigset_t> oldset;
 };
 
 void EnterBlockingFunc(ThreadState *thr) {
@@ -980,6 +981,7 @@ void PlatformCleanUpThreadState(ThreadState *thr) {
       &thr->signal_ctx, memory_order_relaxed);
   if (sctx) {
     atomic_store(&thr->signal_ctx, 0, memory_order_relaxed);
+    sctx->oldset.Reset();
     UnmapOrDie(sctx, sizeof(*sctx));
   }
 }
@@ -2176,7 +2178,8 @@ void ProcessPendingSignalsImpl(ThreadState *thr) {
     return;
   atomic_fetch_add(&thr->in_signal_handler, 1, memory_order_relaxed);
   internal_sigfillset(&sctx->emptyset);
-  int res = REAL(pthread_sigmask)(SIG_SETMASK, &sctx->emptyset, &sctx->oldset);
+  __sanitizer_sigset_t *oldset = sctx->oldset.PushBack();
+  int res = REAL(pthread_sigmask)(SIG_SETMASK, &sctx->emptyset, oldset);
   CHECK_EQ(res, 0);
   for (int sig = 0; sig < kSigCount; sig++) {
     SignalDesc *signal = &sctx->pending_signals[sig];
@@ -2186,8 +2189,9 @@ void ProcessPendingSignalsImpl(ThreadState *thr) {
                             &signal->ctx);
     }
   }
-  res = REAL(pthread_sigmask)(SIG_SETMASK, &sctx->oldset, 0);
+  res = REAL(pthread_sigmask)(SIG_SETMASK, oldset, 0);
   CHECK_EQ(res, 0);
+  sctx->oldset.PopBack();
   atomic_fetch_add(&thr->in_signal_handler, -1, memory_order_relaxed);
 }
 
