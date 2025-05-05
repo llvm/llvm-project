@@ -246,9 +246,9 @@ bool RecurrenceDescriptor::AddReductionVar(
   // must include the original PHI.
   bool FoundStartPHI = false;
 
-  // To recognize min/max patterns formed by a icmp select sequence, we store
-  // the number of instruction we saw from the recognized min/max pattern,
-  //  to make sure we only see exactly the two instructions.
+  // Tracks the number of instructions (either cmp or select) observed in an
+  // AnyOf recurrence pattern to ensure it matches the expected instruction
+  // sequence.
   unsigned NumCmpSelectPatternInst = 0;
   InstDesc ReduxDesc(false, nullptr);
 
@@ -417,11 +417,9 @@ bool RecurrenceDescriptor::AddReductionVar(
     if (IsAPhi && Cur != Phi && !areAllUsesIn(Cur, VisitedInsts))
       return false;
 
-    if ((isIntMinMaxRecurrenceKind(Kind) || Kind == RecurKind::IAnyOf) &&
-        (isa<ICmpInst>(Cur) || isa<SelectInst>(Cur)))
+    if (Kind == RecurKind::IAnyOf && isa<ICmpInst, SelectInst>(Cur))
       ++NumCmpSelectPatternInst;
-    if ((isFPMinMaxRecurrenceKind(Kind) || Kind == RecurKind::FAnyOf) &&
-        (isa<FCmpInst>(Cur) || isa<SelectInst>(Cur)))
+    if (Kind == RecurKind::FAnyOf && isa<FCmpInst, SelectInst>(Cur))
       ++NumCmpSelectPatternInst;
 
     // Check  whether we found a reduction operator.
@@ -498,13 +496,6 @@ bool RecurrenceDescriptor::AddReductionVar(
     Worklist.append(PHIs.begin(), PHIs.end());
     Worklist.append(NonPHIs.begin(), NonPHIs.end());
   }
-
-  // This means we have seen one but not the other instruction of the
-  // pattern or more than just a select and cmp. Zero implies that we saw a
-  // llvm.min/max intrinsic, which is always OK.
-  if (isMinMaxRecurrenceKind(Kind) && NumCmpSelectPatternInst != 2 &&
-      NumCmpSelectPatternInst != 0)
-    return false;
 
   if (isAnyOfRecurrenceKind(Kind) && NumCmpSelectPatternInst != 1)
     return false;
