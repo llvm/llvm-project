@@ -5305,10 +5305,14 @@ void MemberPointerType::Profile(llvm::FoldingSetNodeID &ID, QualType Pointee,
     ID.AddPointer(Cls->getCanonicalDecl());
 }
 
+CXXRecordDecl *MemberPointerType::getCXXRecordDecl() const {
+  return dyn_cast<MemberPointerType>(getCanonicalTypeInternal())
+      ->getQualifier()
+      ->getAsRecordDecl();
+}
+
 CXXRecordDecl *MemberPointerType::getMostRecentCXXRecordDecl() const {
-  auto *RD = dyn_cast<MemberPointerType>(getCanonicalTypeInternal())
-                 ->getQualifier()
-                 ->getAsRecordDecl();
+  auto *RD = getCXXRecordDecl();
   if (!RD)
     return nullptr;
   return RD->getMostRecentNonInjectedDecl();
