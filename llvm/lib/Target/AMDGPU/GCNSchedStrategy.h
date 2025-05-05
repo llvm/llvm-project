@@ -466,9 +466,11 @@ private:
   /// Maps all MIs to their parent region. MI terminators are considered to be
   /// outside the region they delimitate, and as such are not stored in the map.
   DenseMap<MachineInstr *, unsigned> MIRegion;
+  /// Parent MBB to each region, in region order.
+  SmallVector<MachineBasicBlock *> RegionBB;
   /// Collects instructions to rematerialize.
   MapVector<MachineInstr *, RematInstruction> Rematerializations;
-  /// Collect regions whose live-ins or register pressure will change due to
+  /// Collects regions whose live-ins or register pressure will change due to
   /// rematerializations.
   DenseMap<unsigned, GCNRegPressure> ImpactedRegions;
   /// In case we need to rollback rematerializations, save lane masks for all

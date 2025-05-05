@@ -1102,15 +1102,22 @@ bool PreRARematStage::initGCNSchedStage() {
   assert(!S.hasNextStage());
 
   if (!GCNSchedStage::initGCNSchedStage() || DAG.RegionsWithMinOcc.none() ||
-      DAG.Regions.size() == 1 || !canIncreaseOccupancyOrReduceSpill())
+      DAG.Regions.size() == 1)
     return false;
 
-  // Map all MIs to their parent region.
-  for (unsigned I = 0, E = DAG.Regions.size(); I < E; ++I) {
+  // Before performing any IR modification record the parent region of each MI
+  // and the parent MBB of each region.
+  const unsigned NumRegions = DAG.Regions.size();
+  RegionBB.reserve(NumRegions);
+  for (unsigned I = 0; I < NumRegions; ++I) {
     RegionBoundaries Region = DAG.Regions[I];
     for (auto MI = Region.first; MI != Region.second; ++MI)
       MIRegion.insert({&*MI, I});
+    RegionBB.push_back(Region.first->getParent());
   }
+
+  if (!canIncreaseOccupancyOrReduceSpill())
+    return false;
 
   // Rematerialize identified instructions and update scheduler's state.
   rematerialize();
@@ -1844,8 +1851,11 @@ bool ExcessRP::saveAGPRs(unsigned NumRegs) {
 bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
   const SIRegisterInfo *SRI = static_cast<const SIRegisterInfo *>(DAG.TRI);
 
-  REMAT_DEBUG(dbgs() << "Collecting rematerializable instructions in "
-                     << MF.getFunction().getName() << '\n');
+  REMAT_DEBUG({
+    dbgs() << "Collecting rematerializable instructions in ";
+    MF.getFunction().printAsOperand(dbgs(), false);
+    dbgs() << '\n';
+  });
 
   // Maps optimizable regions (i.e., regions at minimum and VGPR-limited
   // occupancy, or regions with VGPR spilling) to a model of their excess RP.
@@ -1962,17 +1972,18 @@ bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
 
       // We only support rematerializing virtual VGPRs with one definition.
       Register Reg = DefMI.getOperand(0).getReg();
-      if (!Reg.isVirtual() || !DAG.LIS->hasInterval(Reg) ||
-          !SRI->isVGPRClass(DAG.MRI.getRegClass(Reg)) ||
+      if (!Reg.isVirtual() || !SRI->isVGPRClass(DAG.MRI.getRegClass(Reg)) ||
           !DAG.MRI.hasOneDef(Reg))
         continue;
 
       // We only care to rematerialize the instruction if it has a single
-      // non-debug user in a different block. The using MI may not belong to a
+      // non-debug user in a different region. The using MI may not belong to a
       // region if it is a lone region terminator.
       MachineInstr *UseMI = DAG.MRI.getOneNonDBGUser(Reg);
+      if (!UseMI)
+        continue;
       auto UseRegion = MIRegion.find(UseMI);
-      if (!UseMI || (UseRegion != MIRegion.end() && UseRegion->second == I))
+      if (UseRegion != MIRegion.end() && UseRegion->second == I)
         continue;
 
       // Do not rematerialize an instruction if it uses or is used by an
@@ -2109,8 +2120,7 @@ void PreRARematStage::rematerialize() {
         if (LI.hasSubRanges() && MO.getSubReg())
           LM = DAG.TRI->getSubRegIndexLaneMask(MO.getSubReg());
 
-        assert(RegionLiveIns.contains(UseReg));
-        LaneBitmask LiveInMask = RegionLiveIns[UseReg];
+        LaneBitmask LiveInMask = RegionLiveIns.at(UseReg);
         LaneBitmask UncoveredLanes = LM & ~(LiveInMask & LM);
         // If this register has lanes not covered by the LiveIns, be sure they
         // do not map to any subrange. ref:
@@ -2197,21 +2207,6 @@ bool PreRARematStage::isTriviallyReMaterializable(const MachineInstr &MI) {
   return true;
 }
 
-/// Identifies the parent MBB of a \p Region. For an empty region, this runs in
-/// linear time in the number of MBBs in \p MF; otherwise it runs in constant
-/// time.
-static MachineBasicBlock *getRegionMBB(MachineFunction &MF,
-                                       RegionBoundaries &Region) {
-  if (Region.first != Region.second)
-    return Region.first->getParent();
-  // The boundaries of an empty region may not point to a valid MI from which we
-  // can get the parent MBB, so we have to iterate over all the MF's MBBs.
-  for (MachineBasicBlock &MBB : MF)
-    if (MBB.end() == Region.second)
-      return &MBB;
-  llvm_unreachable("region's parent MBB cannot be identified");
-}
-
 void PreRARematStage::finalizeGCNSchedStage() {
   // We consider that reducing spilling is always beneficial so we never
   // rollback rematerializations in such cases. It's also possible that
@@ -2222,16 +2217,15 @@ void PreRARematStage::finalizeGCNSchedStage() {
   if (!IncreaseOccupancy || MaxOcc >= TargetOcc)
     return;
 
-  REMAT_DEBUG(dbgs() << "Rollbacking all rematerializations\n");
-  const auto *TII =
-      static_cast<const SIInstrInfo *>(MF.getSubtarget().getInstrInfo());
+  REMAT_DEBUG(dbgs() << "Rolling back all rematerializations\n");
+  const SIInstrInfo *TII = MF.getSubtarget<GCNSubtarget>().getInstrInfo();
 
   // Rollback the rematerializations.
   for (const auto &[DefMI, Remat] : Rematerializations) {
     MachineInstr &RematMI = *Remat.RematMI;
     unsigned DefRegion = MIRegion.at(DefMI);
     MachineBasicBlock::iterator InsertPos(DAG.Regions[DefRegion].second);
-    MachineBasicBlock *MBB = getRegionMBB(MF, DAG.Regions[DefRegion]);
+    MachineBasicBlock *MBB = RegionBB[DefRegion];
     Register Reg = RematMI.getOperand(0).getReg();
     unsigned SubReg = RematMI.getOperand(0).getSubReg();
 
