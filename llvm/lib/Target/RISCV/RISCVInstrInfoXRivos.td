@@ -131,12 +131,15 @@ def RI_VEXTRACT : CustomRivosXVI<0b010111, OPMVV, (outs GPR:$rd),
                                 "ri.vextract.x.v", "$rd, $vs2, $imm">;
 }
 
-
+// RI_VEXTRACT matches the semantics of ri.vextract.x.v. The result is always
+// XLenVT sign extended from the vector element size.  VEXTRACT does *not*
+// have a VL operand.
 def ri_vextract : RVSDNode<"RI_VEXTRACT",
                          SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisVec<1>,
                                               SDTCisInt<2>,
                                               SDTCisInt<1>]>>;
 
+// RI_VINSERT_VL matches the semantics of ri.vinsert.v.x. It carries a VL operand.
 def ri_vinsert_vl : RVSDNode<"RI_VINSERT_VL",
                            SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
                                                 SDTCisInt<0>,

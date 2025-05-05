@@ -15,6 +15,7 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
+// Scalar cryptography
 def riscv_sha256sig0 : RVSDNode<"SHA256SIG0", SDTIntUnaryOp>;
 def riscv_sha256sig1 : RVSDNode<"SHA256SIG1", SDTIntUnaryOp>;
 def riscv_sha256sum0 : RVSDNode<"SHA256SUM0", SDTIntUnaryOp>;
@@ -24,9 +25,11 @@ def SDT_RISCVZkByteSelect : SDTypeProfile<1, 3, [SDTCisVT<0, XLenVT>,
                                                  SDTCisVT<1, XLenVT>,
                                                  SDTCisVT<2, XLenVT>,
                                                  SDTCisVT<3, i32>]>;
+// Scalar cryptography
 def riscv_sm4ks : RVSDNode<"SM4KS", SDT_RISCVZkByteSelect>;
 def riscv_sm4ed : RVSDNode<"SM4ED", SDT_RISCVZkByteSelect>;
 
+// Scalar cryptography
 def riscv_sm3p0 : RVSDNode<"SM3P0", SDTIntUnaryOp>;
 def riscv_sm3p1 : RVSDNode<"SM3P1", SDTIntUnaryOp>;
 

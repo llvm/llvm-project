@@ -18,6 +18,7 @@
 def SDT_RISCVFLI
     : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisVT<1, XLenVT>]>;
 
+// Zfa fli instruction for constant materialization.
 def riscv_fli : RVSDNode<"FLI", SDT_RISCVFLI>;
 
 //===----------------------------------------------------------------------===//

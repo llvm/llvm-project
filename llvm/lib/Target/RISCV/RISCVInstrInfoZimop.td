@@ -32,6 +32,7 @@ class RVInstRMoprr<bits<4> imm4, bits<3> imm3, bits<3> funct3, RISCVOpcode opcod
   let Inst{25} = imm4{0};
 }
 
+// May-Be-Operations
 def riscv_mopr  : RVSDNode<"MOPR",
                          SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisSameAs<0, 1>,
                                               SDTCisSameAs<0, 2>]>>;

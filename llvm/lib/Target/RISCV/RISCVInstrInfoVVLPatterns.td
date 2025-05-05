@@ -33,11 +33,11 @@ def riscv_splat_vector_split_i64_vl : RVSDNode<"SPLAT_VECTOR_SPLIT_I64_VL",
                                                                     SDTCisVT<3, i32>,
                                                                     SDTCisVT<4, XLenVT>]>>;
 
+// RISC-V vector tuple type version of INSERT_SUBVECTOR/EXTRACT_SUBVECTOR.
 def riscv_tuple_insert : RVSDNode<"TUPLE_INSERT",
                                   SDTypeProfile<1, 3, [SDTCisSameAs<1, 0>,
                                                        SDTCisVec<2>,
                                                        SDTCisVT<3, i32>]>>;
-
 def riscv_tuple_extract : RVSDNode<"TUPLE_EXTRACT",
                                    SDTypeProfile<1, 2, [SDTCisVec<0>,
                                                         SDTCisVT<2, i32>]>>;
@@ -95,32 +95,49 @@ def SDT_RISCVCopySign_VL : SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
                                                 SDTCisSameNumEltsAs<0, 4>,
                                                 SDTCisVT<5, XLenVT>]>;
 
+// VMV_V_V_VL matches the semantics of vmv.v.v but includes an extra operand
+// for the VL value to be used for the operation. The first operand is
+// passthru operand.
 def riscv_vmv_v_v_vl : RVSDNode<"VMV_V_V_VL",
                                 SDTypeProfile<1, 3, [SDTCisVec<0>,
                                                      SDTCisSameAs<0, 1>,
                                                      SDTCisSameAs<0, 2>,
                                                      SDTCisVT<3, XLenVT>]>>;
+
+// VMV_V_X_VL matches the semantics of vmv.v.x but includes an extra operand
+// for the VL value to be used for the operation. The first operand is
+// passthru operand.
 def riscv_vmv_v_x_vl : RVSDNode<"VMV_V_X_VL",
                                 SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisInt<0>,
                                                      SDTCisSameAs<0, 1>,
                                                      SDTCisVT<2, XLenVT>,
                                                      SDTCisVT<3, XLenVT>]>>;
+
+// VFMV_V_F_VL matches the semantics of vfmv.v.f but includes an extra operand
+// for the VL value to be used for the operation. The first operand is
+// passthru operand.
 def riscv_vfmv_v_f_vl : RVSDNode<"VFMV_V_F_VL",
                                  SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisFP<0>,
                                                       SDTCisSameAs<0, 1>,
                                                       SDTCisEltOfVec<2, 0>,
                                                       SDTCisVT<3, XLenVT>]>>;
+
+// VMV_S_X_VL matches the semantics of vmv.s.x. It carries a VL operand.
 def riscv_vmv_s_x_vl : RVSDNode<"VMV_S_X_VL",
                                 SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>,
                                                      SDTCisInt<0>,
                                                      SDTCisVT<2, XLenVT>,
                                                      SDTCisVT<3, XLenVT>]>>;
+
+// VFMV_S_F_VL matches the semantics of vfmv.s.f. It carries a VL operand.
 def riscv_vfmv_s_f_vl : RVSDNode<"VFMV_S_F_VL",
                                  SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>,
                                                        SDTCisFP<0>,
                                                        SDTCisEltOfVec<2, 0>,
                                                        SDTCisVT<3, XLenVT>]>>;
 
+// Vector binary ops with a passthru as a third operand, a mask as a fourth
+// operand, and VL as a fifth operand.
 let HasPassthruOp = true, HasMaskOp = true in {
   def riscv_add_vl   : RVSDNode<"ADD_VL",   SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
   def riscv_sub_vl   : RVSDNode<"SUB_VL",   SDT_RISCVIntBinOp_VL>;
@@ -150,9 +167,13 @@ let HasPassthruOp = true, HasMaskOp = true in {
   def riscv_cttz_vl       : RVSDNode<"CTTZ_VL",       SDT_RISCVIntUnOp_VL>;
   def riscv_ctpop_vl      : RVSDNode<"CTPOP_VL",      SDT_RISCVIntUnOp_VL>;
   
+  // Averaging adds of signed integers.
   def riscv_avgfloors_vl  : RVSDNode<"AVGFLOORS_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
+  // Averaging adds of unsigned integers.
   def riscv_avgflooru_vl  : RVSDNode<"AVGFLOORU_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
+  // Rounding averaging adds of signed integers.
   def riscv_avgceils_vl   : RVSDNode<"AVGCEILS_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
+  // Rounding averaging adds of unsigned integers.
   def riscv_avgceilu_vl   : RVSDNode<"AVGCEILU_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
   def riscv_saddsat_vl   : RVSDNode<"SADDSAT_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
   def riscv_uaddsat_vl   : RVSDNode<"UADDSAT_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
@@ -165,6 +186,7 @@ let HasPassthruOp = true, HasMaskOp = true in {
   def riscv_fdiv_vl  : RVSDNode<"FDIV_VL",  SDT_RISCVFPBinOp_VL>;
 } // let HasPassthruOp = true, HasMaskOp = true
 
+// Vector unary ops with a mask as a second operand and VL as a third operand.
 let HasMaskOp = true in {
   def riscv_fneg_vl  : RVSDNode<"FNEG_VL",  SDT_RISCVFPUnOp_VL>;
   def riscv_fabs_vl  : RVSDNode<"FABS_VL",  SDT_RISCVFPUnOp_VL>;
@@ -222,6 +244,7 @@ def SDT_RISCVVecFMA_VL : SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
                                               SDTCisVT<5, XLenVT>]>;
 
 let HasMaskOp = true in {
+  // Vector FMA ops with a mask as a fourth operand and VL as a fifth operand.
   def riscv_vfmadd_vl  : RVSDNode<"VFMADD_VL",  SDT_RISCVVecFMA_VL, [SDNPCommutative]>;
   def riscv_vfnmadd_vl : RVSDNode<"VFNMADD_VL", SDT_RISCVVecFMA_VL, [SDNPCommutative]>;
   def riscv_vfmsub_vl  : RVSDNode<"VFMSUB_VL",  SDT_RISCVVecFMA_VL, [SDNPCommutative]>;
@@ -239,6 +262,8 @@ def SDT_RISCVWVecFMA_VL : SDTypeProfile<1, 5, [SDTCisVec<0>, SDTCisFP<0>,
                                                SDTCisVT<5, XLenVT>]>;
 
 let HasMaskOp = true in {
+  // Vector widening FMA ops with a mask as a fourth operand and VL as a fifth
+  // operand.
   def riscv_vfwmadd_vl  : RVSDNode<"VFWMADD_VL",  SDT_RISCVWVecFMA_VL, [SDNPCommutative]>;
   def riscv_vfwnmadd_vl : RVSDNode<"VFWNMADD_VL", SDT_RISCVWVecFMA_VL, [SDNPCommutative]>;
   def riscv_vfwmsub_vl  : RVSDNode<"VFWMSUB_VL",  SDT_RISCVWVecFMA_VL, [SDNPCommutative]>;
@@ -277,6 +302,11 @@ def SDT_RISCVFPExtendOp_VL  : SDTypeProfile<1, 3, [
 let HasMaskOp = true in {
   def riscv_fpround_vl : RVSDNode<"FP_ROUND_VL", SDT_RISCVFPRoundOp_VL>;
   def riscv_fpextend_vl : RVSDNode<"FP_EXTEND_VL", SDT_RISCVFPExtendOp_VL>;
+
+  // Matches the semantics of the vfcnvt.rod function (Convert double-width
+  // float to single-width float, rounding towards odd). Takes a double-width
+  // float vector and produces a single-width float vector. Also has a mask and
+  // VL operand.
   def riscv_fncvt_rod_vl : RVSDNode<"VFNCVT_ROD_VL", SDT_RISCVFPRoundOp_VL>;
 
   let IsStrictFP = true in {
@@ -379,6 +409,8 @@ def any_riscv_vfround_noexcept_vl : PatFrags<(ops node:$src, node:$mask, node:$v
                         [(riscv_vfround_noexcept_vl node:$src, node:$mask, node:$vl),
                          (riscv_strict_vfround_noexcept_vl node:$src, node:$mask, node:$vl)]>;
 
+// Vector compare producing a mask. Fourth operand is input mask. Fifth
+// operand is VL.
 let HasPassthruOp = true, HasMaskOp = true in
 def riscv_setcc_vl : RVSDNode<"SETCC_VL", SDT_RISCVSETCCOP_VL>;
 
@@ -395,6 +427,9 @@ def any_riscv_fsetccs_vl : PatFrags<(ops node:$lhs, node:$rhs, node:$cc, node:$p
                              (riscv_strict_fsetccs_vl node:$lhs, node:$rhs, node:$cc, node:$passthru, node:$mask, node:$vl)]>;
 
 let HasMaskOp = true in {
+  // Matches the semantics of vrgather.vx and vrgather.vv with extra operands
+  // for passthru and VL, except that out of bound indices result in a poison
+  // result not zero.  Operands are (src, index, mask, passthru, vl).
   def riscv_vrgather_vx_vl : RVSDNode<"VRGATHER_VX_VL",
                                       SDTypeProfile<1, 5, [SDTCisVec<0>,
                                                           SDTCisSameAs<0, 1>,
@@ -431,11 +466,15 @@ def SDT_RISCVVMERGE_VL  : SDTypeProfile<1, 5, [
   SDTCisVT<5, XLenVT>
 ]>;
 
+// General vmerge node with mask, true, false, passthru, and vl operands.
+// Tail agnostic vselect can be implemented by setting passthru to undef.
 let HasPassthruOp = true in
 def riscv_vmerge_vl : RVSDNode<"VMERGE_VL", SDT_RISCVVMERGE_VL>;
 
 def SDT_RISCVVMSETCLR_VL : SDTypeProfile<1, 1, [SDTCVecEltisVT<0, i1>,
                                                 SDTCisVT<1, XLenVT>]>;
+
+// Set mask vector to all zeros or ones.
 def riscv_vmclr_vl : RVSDNode<"VMCLR_VL", SDT_RISCVVMSETCLR_VL>;
 def riscv_vmset_vl : RVSDNode<"VMSET_VL", SDT_RISCVVMSETCLR_VL>;
 
@@ -443,6 +482,8 @@ def SDT_RISCVMaskBinOp_VL : SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>,
                                                  SDTCisSameAs<0, 2>,
                                                  SDTCVecEltisVT<0, i1>,
                                                  SDTCisVT<3, XLenVT>]>;
+
+// Mask binary operators.
 def riscv_vmand_vl : RVSDNode<"VMAND_VL", SDT_RISCVMaskBinOp_VL, [SDNPCommutative]>;
 def riscv_vmor_vl  : RVSDNode<"VMOR_VL",  SDT_RISCVMaskBinOp_VL, [SDNPCommutative]>;
 def riscv_vmxor_vl : RVSDNode<"VMXOR_VL", SDT_RISCVMaskBinOp_VL, [SDNPCommutative]>;
@@ -453,6 +494,7 @@ def riscv_vmnot_vl : PatFrag<(ops node:$rs, node:$vl),
                              (riscv_vmxor_vl node:$rs, true_mask, node:$vl)>;
 
 let HasMaskOp = true in {
+  //  vcpop.m with additional mask and VL operands.
   def riscv_vcpop_vl : RVSDNode<"VCPOP_VL",
                                 SDTypeProfile<1, 3, [SDTCisVT<0, XLenVT>,
                                                     SDTCisVec<1>, SDTCisInt<1>,
@@ -460,6 +502,7 @@ let HasMaskOp = true in {
                                                     SDTCisSameNumEltsAs<1, 2>,
                                                     SDTCisVT<3, XLenVT>]>>;
 
+  //  vfirst.m with additional mask and VL operands.
   def riscv_vfirst_vl : RVSDNode<"VFIRST_VL",
                                  SDTypeProfile<1, 3, [SDTCisVT<0, XLenVT>,
                                                      SDTCisVec<1>, SDTCisInt<1>,
@@ -475,6 +518,7 @@ def SDT_RISCVVEXTEND_VL : SDTypeProfile<1, 3, [SDTCisVec<0>,
                                                SDTCisVT<3, XLenVT>]>;
 
 let HasMaskOp = true in {
+  // Vector sign/zero extend with additional mask & VL operands.
   def riscv_sext_vl : RVSDNode<"VSEXT_VL", SDT_RISCVVEXTEND_VL>;
   def riscv_zext_vl : RVSDNode<"VZEXT_VL", SDT_RISCVVEXTEND_VL>;
 } // let HasMaskOp = true
@@ -490,8 +534,15 @@ def SDT_RISCVVTRUNCATE_VL : SDTypeProfile<1, 3, [SDTCisVec<0>,
                                                  SDTCisVT<3, XLenVT>]>;
 
 let HasMaskOp = true in {
+  // Truncates a RVV integer vector by one power-of-two. Carries both an extra
+  // mask and VL operand.
   def riscv_trunc_vector_vl : RVSDNode<"TRUNCATE_VECTOR_VL",
                                       SDT_RISCVVTRUNCATE_VL>;
+
+  // Truncates a RVV integer vector by one power-of-two. If the value doesn't
+  // fit in the destination type, the result is saturated. These correspond to
+  // vnclip and vnclipu with a shift of 0. Carries both an extra mask and VL
+  // operand.
   def riscv_trunc_vector_vl_ssat : RVSDNode<"TRUNCATE_VECTOR_VL_SSAT",
                                             SDT_RISCVVTRUNCATE_VL>;
   def riscv_trunc_vector_vl_usat : RVSDNode<"TRUNCATE_VECTOR_VL_USAT",
@@ -509,6 +560,8 @@ def SDT_RISCVVWIntBinOp_VL : SDTypeProfile<1, 5, [SDTCisVec<0>, SDTCisInt<0>,
                                                   SDTCisVT<5, XLenVT>]>;
 
 let HasPassthruOp = true, HasMaskOp = true in {
+  // Widening instructions with a passthru value a third operand, a mask as a
+  // fourth operand, and VL as a fifth operand.
   def riscv_vwmul_vl   : RVSDNode<"VWMUL_VL",   SDT_RISCVVWIntBinOp_VL, [SDNPCommutative]>;
   def riscv_vwmulu_vl  : RVSDNode<"VWMULU_VL",  SDT_RISCVVWIntBinOp_VL, [SDNPCommutative]>;
   def riscv_vwmulsu_vl : RVSDNode<"VWMULSU_VL", SDT_RISCVVWIntBinOp_VL>;
@@ -530,6 +583,8 @@ def SDT_RISCVVWIntTernOp_VL : SDTypeProfile<1, 5, [SDTCisVec<0>, SDTCisInt<0>,
                                                    SDTCisVT<5, XLenVT>]>;
 
 let HasMaskOp = true in {
+  // Widening ternary operations with a mask as the fourth operand and VL as the
+  // fifth operand.
   def riscv_vwmacc_vl : RVSDNode<"VWMACC_VL", SDT_RISCVVWIntTernOp_VL, [SDNPCommutative]>;
   def riscv_vwmaccu_vl : RVSDNode<"VWMACCU_VL", SDT_RISCVVWIntTernOp_VL, [SDNPCommutative]>;
   def riscv_vwmaccsu_vl : RVSDNode<"VWMACCSU_VL", SDT_RISCVVWIntTernOp_VL, []>;
@@ -655,6 +710,18 @@ def riscv_fpextend_vl_sameuser : PatFrag<(ops node:$A, node:$B, node:$C),
   return !N->use_empty() && all_equal(N->users());
 }]>;
 
+// These nodes match the semantics of the corresponding RVV vector reduction
+// instructions. They produce a vector result which is the reduction
+// performed over the second vector operand plus the first element of the
+// third vector operand. The first operand is the pass-thru operand. The
+// second operand is an unconstrained vector type, and the result, first, and
+// third operand's types are expected to be the corresponding full-width
+// LMUL=1 type for the second operand:
+//   nxv8i8 = vecreduce_add nxv8i8, nxv32i8, nxv8i8
+//   nxv2i32 = vecreduce_add nxv2i32, nxv8i32, nxv2i32
+// The different in types does introduce extra vsetvli instructions but
+// similarly it reduces the number of registers consumed per reduction.
+// Also has a mask and VL operand.
 let HasMaskOp = true in
 foreach kind = ["ADD", "UMAX", "SMAX", "UMIN", "SMIN", "AND", "OR", "XOR",
                 "FADD", "SEQ_FADD", "FMIN", "FMAX"] in
@@ -2933,6 +3000,8 @@ foreach vti = !listconcat(AllFloatVectors, AllBFloatVectors) in {
 // Miscellaneous RISCVISD SDNodes
 //===----------------------------------------------------------------------===//
 
+// Matches the semantics of the vid.v instruction, with a mask and VL
+// operand.
 let HasMaskOp = true in
 def riscv_vid_vl : RVSDNode<"VID_VL", SDTypeProfile<1, 2,
                           [SDTCisVec<0>, SDTCVecEltisVT<1, i1>,
@@ -2955,10 +3024,23 @@ def SDTRVVFSlide1 : SDTypeProfile<1, 5, [
 ]>;
 
 let HasMaskOp = true in {
+  // Matches the semantics of vslideup/vslidedown. The first operand is the
+  // pass-thru operand, the second is the source vector, the third is the XLenVT
+  // index (either constant or non-constant), the fourth is the mask, the fifth
+  // is the VL and the sixth is the policy.
   def riscv_slideup_vl   : RVSDNode<"VSLIDEUP_VL", SDTRVVSlide, []>;
-  def riscv_slide1up_vl  : RVSDNode<"VSLIDE1UP_VL", SDTRVVSlide1, []>;
   def riscv_slidedown_vl : RVSDNode<"VSLIDEDOWN_VL", SDTRVVSlide, []>;
+
+  // Matches the semantics of vslide1up/slide1down. The first operand is
+  // passthru operand, the second is source vector, third is the XLenVT scalar
+  // value. The fourth and fifth operands are the mask and VL operands.
+  def riscv_slide1up_vl  : RVSDNode<"VSLIDE1UP_VL", SDTRVVSlide1, []>;
   def riscv_slide1down_vl  : RVSDNode<"VSLIDE1DOWN_VL", SDTRVVSlide1, []>;
+
+  // Matches the semantics of vfslide1up/vfslide1down. The first operand is
+  // passthru operand, the second is source vector, third is a scalar value
+  // whose type matches the element type of the vectors.  The fourth and fifth
+  // operands are the mask and VL operands.
   def riscv_fslide1up_vl  : RVSDNode<"VFSLIDE1UP_VL", SDTRVVFSlide1, []>;
   def riscv_fslide1down_vl  : RVSDNode<"VFSLIDE1DOWN_VL", SDTRVVFSlide1, []>;
 } // let HasMaskOp = true

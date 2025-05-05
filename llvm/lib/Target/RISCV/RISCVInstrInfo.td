@@ -38,14 +38,6 @@ def SDT_RISCVSelectCC : SDTypeProfile<1, 5, [SDTCisSameAs<1, 2>,
 def SDT_RISCVBrCC : SDTypeProfile<0, 4, [SDTCisSameAs<0, 1>,
                                          SDTCisVT<2, OtherVT>,
                                          SDTCisVT<3, OtherVT>]>;
-def SDT_RISCVReadCSR  : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisInt<1>]>;
-def SDT_RISCVWriteCSR : SDTypeProfile<0, 2, [SDTCisInt<0>, SDTCisInt<1>]>;
-def SDT_RISCVSwapCSR  : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisInt<1>,
-                                             SDTCisInt<2>]>;
-def SDT_RISCVReadCounterWide : SDTypeProfile<2, 2, [SDTCisVT<0, i32>,
-                                                    SDTCisVT<1, i32>,
-                                                    SDTCisInt<2>,
-                                                    SDTCisInt<3>]>;
 def SDT_RISCVIntUnaryOpW : SDTypeProfile<1, 1, [
   SDTCisSameAs<0, 1>, SDTCisVT<0, i64>
 ]>;
@@ -62,13 +54,21 @@ def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_CallSeqStart,
 def callseq_end   : SDNode<"ISD::CALLSEQ_END", SDT_CallSeqEnd,
                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
-// Target-dependent nodes.
 def riscv_call      : RVSDNode<"CALL", SDT_RISCVCall,
                                [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                 SDNPVariadic]>;
+def riscv_tail      : RVSDNode<"TAIL", SDT_RISCVCall,
+                               [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                                SDNPVariadic]>;
+
+// Software guarded calls for large code model
 def riscv_sw_guarded_call : RVSDNode<"SW_GUARDED_CALL", SDT_RISCVCall,
                                      [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                       SDNPVariadic]>;
+def riscv_sw_guarded_tail : RVSDNode<"SW_GUARDED_TAIL", SDT_RISCVCall,
+                                     [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                                      SDNPVariadic]>;
+
 def riscv_ret_glue  : RVSDNode<"RET_GLUE", SDTNone,
                                [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def riscv_sret_glue : RVSDNode<"SRET_GLUE", SDTNone,
@@ -77,40 +77,78 @@ def riscv_mret_glue : RVSDNode<"MRET_GLUE", SDTNone,
                                [SDNPHasChain, SDNPOptInGlue]>;
 def riscv_mileaveret_glue : RVSDNode<"QC_C_MILEAVERET_GLUE", SDTNone,
                                      [SDNPHasChain, SDNPOptInGlue]>;
+
+// Select with condition operator - This selects between a true value and
+// a false value (ops #3 and #4) based on the boolean result of comparing
+// the lhs and rhs (ops #0 and #1) of a conditional expression with the
+// condition code in op #2, a XLenVT constant from the ISD::CondCode enum.
+// The lhs and rhs are XLenVT integers. The true and false values can be
+// integer or floating point.
 def riscv_selectcc  : RVSDNode<"SELECT_CC", SDT_RISCVSelectCC>;
 def riscv_brcc      : RVSDNode<"BR_CC", SDT_RISCVBrCC,
                                [SDNPHasChain]>;
-def riscv_tail      : RVSDNode<"TAIL", SDT_RISCVCall,
-                               [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
-                                SDNPVariadic]>;
-def riscv_sw_guarded_tail : RVSDNode<"SW_GUARDED_TAIL", SDT_RISCVCall,
-                                     [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
-                                      SDNPVariadic]>;
+
+// Software guarded BRIND node. Operand is the target address.
 def riscv_sw_guarded_brind : RVSDNode<"SW_GUARDED_BRIND",
                                       SDTBrind, [SDNPHasChain]>;
+
+// RV64I shifts, directly matching the semantics of the named RISC-V
+// instructions.
 def riscv_sllw      : RVSDNode<"SLLW", SDT_RISCVIntBinOpW>;
 def riscv_sraw      : RVSDNode<"SRAW", SDT_RISCVIntBinOpW>;
 def riscv_srlw      : RVSDNode<"SRLW", SDT_RISCVIntBinOpW>;
-def riscv_read_csr  : RVSDNode<"READ_CSR", SDT_RISCVReadCSR,
+
+// Reads value of CSR. The first operand is the address of the required CSR.
+// The result is the read value.
+def riscv_read_csr  : RVSDNode<"READ_CSR", 
+                               SDTypeProfile<1, 1, [SDTCisInt<0>,
+                                                    SDTCisInt<1>]>,
                                [SDNPHasChain]>;
-def riscv_write_csr : RVSDNode<"WRITE_CSR", SDT_RISCVWriteCSR,
-                               [SDNPHasChain]>;
-def riscv_swap_csr  : RVSDNode<"SWAP_CSR", SDT_RISCVSwapCSR,
+// Write value to CSR. The first operand is the address of the required CSR,
+// the second is the value to write.
+def riscv_write_csr : RVSDNode<"WRITE_CSR", 
+                               SDTypeProfile<0, 2, [SDTCisInt<0>,
+                                                    SDTCisInt<1>]>,
                                [SDNPHasChain]>;
 
+// Read and write value of CSR. The first operand is the address of the
+// required CSR, the second is the value to write, and the result is the
+// read value (before modification).
+def riscv_swap_csr  : RVSDNode<"SWAP_CSR",
+                               SDTypeProfile<1, 2, [SDTCisInt<0>,
+                                                    SDTCisInt<1>,
+                                                    SDTCisInt<2>]>,
+                               [SDNPHasChain]>;
+
+// A read of the 64-bit counter CSR on a 32-bit target (returns (Lo, Hi)).
+// It takes a chain operand and another two target constant operands (the
+// CSR numbers of the low and high parts of the counter).
 def riscv_read_counter_wide : RVSDNode<"READ_COUNTER_WIDE",
-                                       SDT_RISCVReadCounterWide,
+                                       SDTypeProfile<2, 2, [SDTCisVT<0, i32>,
+                                                            SDTCisVT<1, i32>,
+                                                            SDTCisInt<2>,
+                                                            SDTCisInt<3>]>,
                                        [SDNPHasChain, SDNPSideEffect]>;
 
+// Add the Lo 12 bits from an address. Selected to ADDI.
 def riscv_add_lo : RVSDNode<"ADD_LO", SDTIntBinOp>;
+
+// Get the Hi 20 bits from an address. Selected to LUI.
 def riscv_hi : RVSDNode<"HI", SDTIntUnaryOp>;
+
+// Represents an AUIPC+ADDI pair. Selected to PseudoLLA.
 def riscv_lla : RVSDNode<"LLA", SDTIntUnaryOp>;
+
+// Selected as PseudoAddTPRel. Used to emit a TP-relative relocation.
 def riscv_add_tprel : RVSDNode<"ADD_TPREL",
                                SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>,
                                                     SDTCisSameAs<0, 2>,
                                                     SDTCisSameAs<0, 3>,
                                                     SDTCisInt<0>]>>;
 
+// To avoid stack clash, allocation is performed by block and each block is
+// probed.
+// FIXME: The Type Profile here is incorrect.
 def riscv_probed_alloca : RVSDNode<"PROBED_ALLOCA",
                                    SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
                                                         SDTCisVT<0, i32>]>,

@@ -70,9 +70,13 @@
 ///
 //===----------------------------------------------------------------------===//
 
+// VMV_X_S matches the semantics of vmv.x.s. The result is always XLenVT sign
+// extended from the vector element size.
 def riscv_vmv_x_s : RVSDNode<"VMV_X_S",
                            SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<1>,
                                                 SDTCisInt<1>]>>;
+
+// Read VLENB CSR
 def riscv_read_vlenb : RVSDNode<"READ_VLENB",
                               SDTypeProfile<1, 0, [SDTCisVT<0, XLenVT>]>>;
 

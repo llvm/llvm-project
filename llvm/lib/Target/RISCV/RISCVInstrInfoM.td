@@ -15,7 +15,12 @@
 // RISC-V specific DAG Nodes.
 //===----------------------------------------------------------------------===//
 
+// Multiply high for signedxunsigned.
 def riscv_mulhsu : RVSDNode<"MULHSU", SDTIntBinOp>;
+
+// 32-bit operations from RV64M that can't be simply matched with a pattern
+// at instruction selection time. These have undefined behavior for division
+// by 0 or overflow (divw) like their target independent counterparts.
 def riscv_divw  : RVSDNode<"DIVW",  SDT_RISCVIntBinOpW>;
 def riscv_divuw : RVSDNode<"DIVUW", SDT_RISCVIntBinOpW>;
 def riscv_remuw : RVSDNode<"REMUW", SDT_RISCVIntBinOpW>;
