@@ -1910,8 +1910,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
         // insert into `operands` to include the indirect call target.
         FlatSymbolRefAttr calleeSym = convertCalleeName(callInst);
         Value indirectCallVal = builder.create<LLVM::AddressOfOp>(
-            translateLoc(callInst->getDebugLoc()),
-            LLVM::LLVMPointerType::get(context), calleeSym);
+            loc, LLVM::LLVMPointerType::get(context), calleeSym);
         operands->insert(operands->begin(), indirectCallVal);
       } else {
         // Regular direct call using callee name.
@@ -2003,8 +2002,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
       // insert into `operands` to include the indirect invoke target.
       FlatSymbolRefAttr calleeSym = convertCalleeName(invokeInst);
       Value indirectInvokeVal = builder.create<LLVM::AddressOfOp>(
-          translateLoc(invokeInst->getDebugLoc()),
-          LLVM::LLVMPointerType::get(context), calleeSym);
+          loc, LLVM::LLVMPointerType::get(context), calleeSym);
       operands->insert(operands->begin(), indirectInvokeVal);
     } else {
       // Regular direct invoke using callee name.
