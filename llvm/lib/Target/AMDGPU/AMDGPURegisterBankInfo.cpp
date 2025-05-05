@@ -2629,8 +2629,6 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     assert(MRI.getRegBankOrNull(DstReg) == &AMDGPU::VGPRRegBank &&
            "The destination operand should be in vector registers.");
 
-    DebugLoc DL = MI.getDebugLoc();
-
     // Extract the lower subregister from the first operand.
     Register Op0L = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     MRI.setRegClass(Op0L, &AMDGPU::VGPR_32RegClass);
