@@ -824,8 +824,6 @@ TEST_F(FileSystemTest, RealPathNoReadPerm) {
   ASSERT_NO_ERROR(fs::remove_directories(Twine(TestDirectory) + "/noreadperm"));
 }
 TEST_F(FileSystemTest, RemoveDirectoriesNoExePerm) {
-  SmallString<64> Expanded;
-
   ASSERT_NO_ERROR(
       fs::create_directories(Twine(TestDirectory) + "/noexeperm/foo"));
   ASSERT_TRUE(fs::exists(Twine(TestDirectory) + "/noexeperm/foo"));
@@ -965,7 +963,6 @@ TEST_F(FileSystemTest, TempFileCollisions) {
   FileRemover Cleanup(TestDirectory);
   SmallString<128> Model = TestDirectory;
   path::append(Model, "%.tmp");
-  SmallString<128> Path;
   std::vector<fs::TempFile> TempFiles;
 
   auto TryCreateTempFile = [&]() {

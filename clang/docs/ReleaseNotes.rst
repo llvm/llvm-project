@@ -134,6 +134,8 @@ Resolutions to C++ Defect Reports
 - Bumped the ``__cpp_constexpr`` feature-test macro to ``202002L`` in C++20 mode as indicated in
   `P2493R0 <https://wg21.link/P2493R0>`_.
 
+- Implemented `CWG3005 Function parameters should never be name-independent <https://wg21.link/CWG3005>`_.
+
 C Language Changes
 ------------------
 
@@ -154,6 +156,8 @@ C Language Changes
 - Added ``-Wimplicit-void-ptr-cast``, grouped under ``-Wc++-compat``, which
   diagnoses implicit conversion from ``void *`` to another pointer type as
   being incompatible with C++. (#GH17792)
+- Added ``-Wc++-keyword``, grouped under ``-Wc++-compat``, which diagnoses when
+  a C++ keyword is used as an identifier in C. (#GH21898)
 - Added ``-Wc++-hidden-decl``, grouped under ``-Wc++-compat``, which diagnoses
   use of tag types which are visible in C but not visible in C++ due to scoping
   rules. e.g.,
@@ -201,6 +205,10 @@ C Language Changes
   ``-Wunterminated-string-initialization``. However, this diagnostic is not
   silenced by the ``nonstring`` attribute as these initializations are always
   incompatible with C++.
+- Added ``-Wjump-bypasses-init``, which is off by default and grouped under
+  ``-Wc++-compat``. It diagnoses when a jump (``goto`` to its label, ``switch``
+  to its ``case``) will bypass the initialization of a local variable, which is
+  invalid in C++.
 - Added the existing ``-Wduplicate-decl-specifier`` diagnostic, which is on by
   default, to ``-Wc++-compat`` because duplicated declaration specifiers are
   not valid in C++.
@@ -243,6 +251,10 @@ C23 Feature Support
   scope.
 - Fixed a bug where you could not cast a null pointer constant to type
   ``nullptr_t``. Fixes #GH133644.
+- Implemented `WG14 N3037 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3037.pdf>`_
+  which allows tag types to be redefined within the same translation unit so
+  long as both definitions are structurally equivalent (same tag types, same
+  tag names, same tag members, etc).
 - Fixed a failed assertion with an invalid parameter to the ``#embed``
   directive. Fixes #GH126940.
 
@@ -482,6 +494,8 @@ Improvements to Clang's diagnostics
 - ``-Winitializer-overrides`` and ``-Wreorder-init-list`` are now grouped under
   the ``-Wc99-designator`` diagnostic group, as they also are about the
   behavior of the C99 feature as it was introduced into C++20. Fixes #GH47037
+- ``-Wreserved-identifier`` now fires on reserved parameter names in a function
+  declaration which is not a definition.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -546,6 +560,9 @@ Bug Fixes to Compiler Builtins
 - The signature for ``__builtin___clear_cache`` was changed from
   ``void(char *, char *)`` to ``void(void *, void *)`` to match GCC's signature
   for the same builtin. (#GH47833)
+
+- ``__has_unique_object_representations(Incomplete[])`` is no longer accepted, per
+  `LWG4113 <https://cplusplus.github.io/LWG/issue4113>`_.
 
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -620,9 +637,12 @@ Bug Fixes to C++ Support
 - Clang no longer crashes when establishing subsumption between some constraint expressions. (#GH122581)
 - Clang now issues an error when placement new is used to modify a const-qualified variable
   in a ``constexpr`` function. (#GH131432)
+- Fixed an incorrect TreeTransform for calls to ``consteval`` functions if a conversion template is present. (#GH137885)
 - Clang now emits a warning when class template argument deduction for alias templates is used in C++17. (#GH133806)
 - Fix a crash when checking the template template parameters of a dependent lambda appearing in an alias declaration.
   (#GH136432), (#GH137014), (#GH138018)
+- Fixed an assertion when trying to constant-fold various builtins when the argument
+  referred to a reference to an incomplete type. (#GH129397)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -769,7 +789,7 @@ clang-format
 
 libclang
 --------
-- Fixed a bug in ``clang_File_isEqual`` that sometimes led to different 
+- Fixed a bug in ``clang_File_isEqual`` that sometimes led to different
   in-memory files to be considered as equal.
 - Added ``clang_visitCXXMethods``, which allows visiting the methods
   of a class.

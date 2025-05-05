@@ -20,6 +20,7 @@
 #include "SparcTargetObjectFile.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -1056,12 +1057,10 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
   // If the callee is a GlobalAddress node (quite common, every direct call is)
   // turn it into a TargetGlobalAddress node so that legalize doesn't hack it.
   // Likewise ExternalSymbol -> TargetExternalSymbol.
-  unsigned TF = isPositionIndependent() ? SparcMCExpr::VK_WPLT30
-                                        : SparcMCExpr::VK_WDISP30;
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee))
-    Callee = DAG.getTargetGlobalAddress(G->getGlobal(), dl, MVT::i32, 0, TF);
+    Callee = DAG.getTargetGlobalAddress(G->getGlobal(), dl, MVT::i32, 0);
   else if (ExternalSymbolSDNode *E = dyn_cast<ExternalSymbolSDNode>(Callee))
-    Callee = DAG.getTargetExternalSymbol(E->getSymbol(), MVT::i32, TF);
+    Callee = DAG.getTargetExternalSymbol(E->getSymbol(), MVT::i32);
 
   // Returns a chain & a flag for retval copy to use
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
@@ -1390,12 +1389,10 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
   // Likewise ExternalSymbol -> TargetExternalSymbol.
   SDValue Callee = CLI.Callee;
   bool hasReturnsTwice = hasReturnsTwiceAttr(DAG, Callee, CLI.CB);
-  unsigned TF = isPositionIndependent() ? SparcMCExpr::VK_WPLT30
-                                        : SparcMCExpr::VK_WDISP30;
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee))
-    Callee = DAG.getTargetGlobalAddress(G->getGlobal(), DL, PtrVT, 0, TF);
+    Callee = DAG.getTargetGlobalAddress(G->getGlobal(), DL, PtrVT, 0);
   else if (ExternalSymbolSDNode *E = dyn_cast<ExternalSymbolSDNode>(Callee))
-    Callee = DAG.getTargetExternalSymbol(E->getSymbol(), PtrVT, TF);
+    Callee = DAG.getTargetExternalSymbol(E->getSymbol(), PtrVT);
 
   // Build the operands for the call instruction itself.
   SmallVector<SDValue, 8> Ops;
@@ -2183,10 +2180,10 @@ SDValue SparcTargetLowering::makeAddress(SDValue Op, SelectionDAG &DAG) const {
     if (picLevel == PICLevel::SmallPIC) {
       // This is the pic13 code model, the GOT is known to be smaller than 8KiB.
       Idx = DAG.getNode(SPISD::Lo, DL, Op.getValueType(),
-                        withTargetFlags(Op, SparcMCExpr::VK_GOT13, DAG));
+                        withTargetFlags(Op, ELF::R_SPARC_GOT13, DAG));
     } else {
       // This is the pic32 code model, the GOT is known to be smaller than 4GB.
-      Idx = makeHiLoPair(Op, SparcMCExpr::VK_GOT22, SparcMCExpr::VK_GOT10, DAG);
+      Idx = makeHiLoPair(Op, ELF::R_SPARC_GOT22, ELF::R_SPARC_GOT10, DAG);
     }
 
     SDValue GlobalBase = DAG.getNode(SPISD::GLOBAL_BASE_REG, DL, VT);
@@ -2208,10 +2205,9 @@ SDValue SparcTargetLowering::makeAddress(SDValue Op, SelectionDAG &DAG) const {
     return makeHiLoPair(Op, SparcMCExpr::VK_HI, SparcMCExpr::VK_LO, DAG);
   case CodeModel::Medium: {
     // abs44.
-    SDValue H44 =
-        makeHiLoPair(Op, SparcMCExpr::VK_H44, SparcMCExpr::VK_M44, DAG);
+    SDValue H44 = makeHiLoPair(Op, ELF::R_SPARC_H44, ELF::R_SPARC_M44, DAG);
     H44 = DAG.getNode(ISD::SHL, DL, VT, H44, DAG.getConstant(12, DL, MVT::i32));
-    SDValue L44 = withTargetFlags(Op, SparcMCExpr::VK_L44, DAG);
+    SDValue L44 = withTargetFlags(Op, ELF::R_SPARC_L44, DAG);
     L44 = DAG.getNode(SPISD::Lo, DL, VT, L44);
     return DAG.getNode(ISD::ADD, DL, VT, H44, L44);
   }
