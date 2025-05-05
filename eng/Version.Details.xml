@@ -1,24 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Dependencies>
   <ProductDependencies>
-    <Dependency Name="Microsoft.SourceBuild.Intermediate.source-build-reference-packages" Version="8.0.0-alpha.1.23266.3">
-      <Uri>https://github.com/dotnet/source-build-reference-packages</Uri>
-      <Sha>e2e64d25662c00a35726d3c52f969a50edaa4f48</Sha>
-      <SourceBuild RepoName="source-build-reference-packages" ManagedOnly="true" />
-    </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
     <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="10.0.0-beta.25253.1">
-      <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>cdf9c563205c673b7df205e24564aa48dbc341c3</Sha>
-    </Dependency>
-    <!-- Intermediate is necessary for source build. -->
-    <Dependency Name="Microsoft.SourceBuild.Intermediate.arcade" Version="10.0.0-beta.25225.4">
-      <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>5fb72aaffeff9c6f2ce46d3b226a84772fb72f55</Sha>
-      <SourceBuild RepoName="arcade" ManagedOnly="true" />
-    </Dependency>
-    <Dependency Name="Microsoft.DotNet.Helix.Sdk" Version="10.0.0-beta.25253.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
       <Sha>cdf9c563205c673b7df205e24564aa48dbc341c3</Sha>
     </Dependency>

@@ -1,7 +1,0 @@
-<Project>
-
-  <PropertyGroup>
-    <GitHubRepositoryName>llvm-project</GitHubRepositoryName>
-  </PropertyGroup>
-
-</Project>

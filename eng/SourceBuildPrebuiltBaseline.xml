@@ -1,8 +1,0 @@
-<!-- Whenever altering this or other Source Build files, please include @dotnet/source-build-internal as a reviewer. -->
-<!-- See aka.ms/dotnet/prebuilts for guidance on what pre-builts are and how to eliminate them. -->
-
-<UsageData>
-  <IgnorePatterns>
-    <UsagePattern IdentityGlob="Microsoft.SourceBuild.Intermediate.*" />
-  </IgnorePatterns>
-</UsageData>
