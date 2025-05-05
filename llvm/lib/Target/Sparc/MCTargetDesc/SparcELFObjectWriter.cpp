@@ -91,10 +91,6 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
       if (Ctx.getObjectFileInfo()->isPositionIndependent())
         return ELF::R_SPARC_WPLT30;
       return ELF::R_SPARC_WDISP30;
-    case Sparc::fixup_sparc_br22:    return ELF::R_SPARC_WDISP22;
-    case Sparc::fixup_sparc_br19:    return ELF::R_SPARC_WDISP19;
-    case Sparc::fixup_sparc_br16:
-      return ELF::R_SPARC_WDISP16;
     }
   }
 
@@ -117,14 +113,6 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
     if (Ctx.getObjectFileInfo()->isPositionIndependent())
       return ELF::R_SPARC_GOT13;
     return ELF::R_SPARC_13;
-
-  case Sparc::fixup_sparc_hi22:  return ELF::R_SPARC_HI22;
-  case Sparc::fixup_sparc_lo10:  return ELF::R_SPARC_LO10;
-  case Sparc::fixup_sparc_hh:    return ELF::R_SPARC_HH22;
-  case Sparc::fixup_sparc_hm:    return ELF::R_SPARC_HM10;
-  case Sparc::fixup_sparc_lm:    return ELF::R_SPARC_LM22;
-  case Sparc::fixup_sparc_hix22:         return ELF::R_SPARC_HIX22;
-  case Sparc::fixup_sparc_lox10:         return ELF::R_SPARC_LOX10;
   }
   // clang-format on
 
