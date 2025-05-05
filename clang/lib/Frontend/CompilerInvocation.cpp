@@ -1839,8 +1839,8 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
     GenerateArg(Consumer, OPT_fsanitize_skip_hot_cutoff_EQ, Sanitizer);
 
   for (StringRef Sanitizer :
-       serializeSanitizerKinds(Opts.SanitizeAddPseudoFunctions))
-    GenerateArg(Consumer, OPT_fsanitize_add_pseudo_functions_EQ, Sanitizer);
+       serializeSanitizerKinds(Opts.SanitizeAnnotateDebugInfo))
+    GenerateArg(Consumer, OPT_fsanitize_annotate_debug_info_EQ, Sanitizer);
 
   if (!Opts.EmitVersionIdentMetadata)
     GenerateArg(Consumer, OPT_Qn);
@@ -2337,9 +2337,9 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
       Args.getAllArgValues(OPT_fsanitize_skip_hot_cutoff_EQ), Diags);
 
   parseSanitizerKinds(
-      "-fsanitize-add-pseudo-functions=",
-      Args.getAllArgValues(OPT_fsanitize_add_pseudo_functions_EQ), Diags,
-      Opts.SanitizeAddPseudoFunctions);
+      "-fsanitize-annotate-debug-info=",
+      Args.getAllArgValues(OPT_fsanitize_annotate_debug_info_EQ), Diags,
+      Opts.SanitizeAnnotateDebugInfo);
 
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
 

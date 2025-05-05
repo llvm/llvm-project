@@ -2533,30 +2533,30 @@ def fno_sanitize_merge_handlers : Flag<["-"], "fno-sanitize-merge">, Group<f_cla
                         Alias<fno_sanitize_merge_handlers_EQ>, AliasArgs<["all"]>,
                         Visibility<[ClangOption, CLOption]>,
                         HelpText<"Do not allow compiler to merge handlers for any sanitizers">;
-def fsanitize_add_pseudo_functions_EQ
-    : CommaJoined<["-"], "fsanitize-add-pseudo-functions=">,
+def fsanitize_annotate_debug_info_EQ
+    : CommaJoined<["-"], "fsanitize-annotate-debug-info=">,
       Group<f_clang_Group>,
-      HelpText<"Add pseudo-functions to checks for specified sanitizers, if "
-               "supported.">;
-def fno_sanitize_add_pseudo_functions_EQ
-    : CommaJoined<["-"], "fno-sanitize-add-pseudo-functions=">,
+      HelpText<"Annotate checks with debug info for specified sanitizers, if "
+               "supported">;
+def fno_sanitize_annotate_debug_info_EQ
+    : CommaJoined<["-"], "fno-sanitize-annotate-debug-info=">,
       Group<f_clang_Group>,
-      HelpText<"Do not allow compiler to add pseudo-functions to checks for "
+      HelpText<"Do not allow compiler to annotate checks with debug info for "
                "specified sanitizers">;
-def fsanitize_add_pseudo_functions
-    : Flag<["-"], "fsanitize-add-pseudo-functions">,
+def fsanitize_annotate_debug_info
+    : Flag<["-"], "fsanitize-annotate_debug_info">,
       Group<f_clang_Group>,
-      Alias<fsanitize_add_pseudo_functions_EQ>,
+      Alias<fsanitize_annotate_debug_info_EQ>,
       AliasArgs<["all"]>,
-      HelpText<"Allow compiler to add pseudo-functions to checks for all "
+      HelpText<"Allow compiler to annotate checks with debug info for all "
                "sanitizers, where supported">;
-def fno_sanitize_add_pseudo_functions
-    : Flag<["-"], "fno-sanitize-add-pseudo-functions">,
+def fno_sanitize_annotate_debug_info
+    : Flag<["-"], "fno-sanitize-annotate_debug_info">,
       Group<f_clang_Group>,
-      Alias<fno_sanitize_add_pseudo_functions_EQ>,
+      Alias<fno_sanitize_annotate_debug_info_EQ>,
       AliasArgs<["all"]>,
       Visibility<[ClangOption, CLOption]>,
-      HelpText<"Do not allow compiler to add pseudo-functions to checks for "
+      HelpText<"Do not allow compiler to annotate checks with debug info for "
                "any sanitizers">;
 def fsanitize_undefined_trap_on_error
     : Flag<["-"], "fsanitize-undefined-trap-on-error">, Group<f_clang_Group>,
