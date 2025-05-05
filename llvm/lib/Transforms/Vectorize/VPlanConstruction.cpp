@@ -501,8 +501,12 @@ void VPlanTransforms::prepareForVectorization(
                                    cast<VPBasicBlock>(HeaderVPB),
                                    cast<VPBasicBlock>(LatchVPB), Range);
         HandledUncountableEarlyExit = true;
+      } else {
+        for (VPRecipeBase &R : cast<VPIRBasicBlock>(EB)->phis()) {
+          if (auto *PhiR = dyn_cast<VPIRPhi>(&R))
+            PhiR->removeIncomingValue(Pred);
+        }
       }
-
       cast<VPBasicBlock>(Pred)->getTerminator()->eraseFromParent();
       VPBlockUtils::disconnectBlocks(Pred, EB);
     }
@@ -535,25 +539,6 @@ void VPlanTransforms::prepareForVectorization(
   //    Thus if tail is to be folded, we know we don't need to run the
   //    remainder and we can set the condition to true.
   // 3) Otherwise, construct a runtime check.
-
-  if (!RequiresScalarEpilogueCheck) {
-    if (auto *LatchExitVPB = MiddleVPBB->getSingleSuccessor())
-      VPBlockUtils::disconnectBlocks(MiddleVPBB, LatchExitVPB);
-    VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
-    VPBlockUtils::connectBlocks(Plan.getEntry(), ScalarPH);
-    Plan.getEntry()->swapSuccessors();
-
-    // The exit blocks are unreachable, remove their recipes to make sure no
-    // users remain that may pessimize transforms.
-    for (auto *EB : Plan.getExitBlocks()) {
-      for (VPRecipeBase &R : make_early_inc_range(*EB))
-        R.eraseFromParent();
-    }
-    return;
-  }
-
-  // The connection order corresponds to the operands of the conditional branch,
-  // with the middle block already connected to the exit block.
   VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
   // Also connect the entry block to the scalar preheader.
   // TODO: Also introduce a branch recipe together with the minimum trip count
@@ -561,19 +546,26 @@ void VPlanTransforms::prepareForVectorization(
   VPBlockUtils::connectBlocks(Plan.getEntry(), ScalarPH);
   Plan.getEntry()->swapSuccessors();
 
+  if (MiddleVPBB->getNumSuccessors() != 2)
+    return;
+
   auto *ScalarLatchTerm = TheLoop->getLoopLatch()->getTerminator();
   // Here we use the same DebugLoc as the scalar loop latch terminator instead
   // of the corresponding compare because they may have ended up with
   // different line numbers and we want to avoid awkward line stepping while
   // debugging. Eg. if the compare has got a line number inside the loop.
   VPBuilder Builder(MiddleVPBB);
-  VPValue *Cmp =
-      TailFolded
-          ? Plan.getOrAddLiveIn(ConstantInt::getTrue(
-                IntegerType::getInt1Ty(TripCount->getType()->getContext())))
-          : Builder.createICmp(CmpInst::ICMP_EQ, Plan.getTripCount(),
-                               &Plan.getVectorTripCount(),
-                               ScalarLatchTerm->getDebugLoc(), "cmp.n");
+  VPValue *Cmp;
+  if (TailFolded)
+    Cmp = Plan.getOrAddLiveIn(ConstantInt::getTrue(
+        IntegerType::getInt1Ty(TripCount->getType()->getContext())));
+  else if (!RequiresScalarEpilogueCheck)
+    Cmp = Plan.getOrAddLiveIn(ConstantInt::getFalse(
+        IntegerType::getInt1Ty(TripCount->getType()->getContext())));
+  else
+    Cmp = Builder.createICmp(CmpInst::ICMP_EQ, Plan.getTripCount(),
+                             &Plan.getVectorTripCount(),
+                             ScalarLatchTerm->getDebugLoc(), "cmp.n");
   Builder.createNaryOp(VPInstruction::BranchOnCond, {Cmp},
                        ScalarLatchTerm->getDebugLoc());
 }

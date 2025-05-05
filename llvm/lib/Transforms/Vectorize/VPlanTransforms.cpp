@@ -1847,11 +1847,21 @@ static void removeBranchOnCondTrue(VPlan &Plan) {
   using namespace llvm::VPlanPatternMatch;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getEntry()))) {
+    VPValue *Cond;
     if (VPBB->getNumSuccessors() != 2 || VPBB == Plan.getEntry() ||
-        !match(&VPBB->back(), m_BranchOnCond(m_True())))
+        !match(&VPBB->back(), m_BranchOnCond(m_VPValue(Cond))))
       continue;
 
-    VPBasicBlock *RemovedSucc = cast<VPBasicBlock>(VPBB->getSuccessors()[1]);
+    unsigned RemovedIdx;
+    if (match(Cond, m_True()))
+      RemovedIdx = 1;
+    else if (match(Cond, m_False()))
+      RemovedIdx = 0;
+    else
+      continue;
+
+    VPBasicBlock *RemovedSucc =
+        cast<VPBasicBlock>(VPBB->getSuccessors()[RemovedIdx]);
     const auto &Preds = RemovedSucc->getPredecessors();
     assert(count(Preds, VPBB) == 1 &&
            "There must be a single edge between VPBB and its successor");
@@ -1860,10 +1870,12 @@ static void removeBranchOnCondTrue(VPlan &Plan) {
     // Values coming from VPBB into ResumePhi recipes of RemoveSucc are removed
     // from these recipes.
     for (VPRecipeBase &R : make_early_inc_range(*RemovedSucc)) {
-      assert((!isa<VPIRInstruction>(&R) ||
-              !isa<PHINode>(cast<VPIRInstruction>(&R)->getInstruction())) &&
-             !isa<VPHeaderPHIRecipe>(&R) &&
-             "Cannot update VPIRInstructions wrapping phis or header phis yet");
+      if (isa<VPIRPhi>(&R)) {
+        assert(RemovedSucc->getNumPredecessors() == 1);
+        cast<VPIRPhi>(&R)->removeIncomingValue(VPBB);
+        continue;
+      }
+
       auto *VPI = dyn_cast<VPPhi>(&R);
       if (!VPI)
         break;
