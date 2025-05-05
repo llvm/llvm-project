@@ -132,9 +132,6 @@ static void ProcessEnum(const EnumRec &Enum, raw_ostream &OS) {
 
   uint32_t EtorVal = 0;
   for (const auto &EnumVal : Enum.getValues()) {
-    if (auto NewVal = EnumVal.getEnumValue()) {
-      EtorVal = *NewVal;
-    }
     if (Enum.isTyped()) {
       OS << MakeComment(
           formatv("[{0}] {1}", EnumVal.getTaggedType(), EnumVal.getDesc())

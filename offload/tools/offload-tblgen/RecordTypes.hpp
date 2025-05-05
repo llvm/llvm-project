@@ -69,13 +69,6 @@ public:
   StringRef getTaggedType() const {
     return rec->getValueAsString("tagged_type");
   }
-  std::optional<uint32_t> getEnumValue() const {
-    if (rec->getValueAsInt("value") == -1) {
-      return std::nullopt;
-    } else {
-      return rec->getValueAsInt("value");
-    }
-  }
 
 private:
   const Record *rec;
