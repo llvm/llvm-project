@@ -566,7 +566,7 @@ public:
   /// or std::nullopt if not authenticating any register.
   ///
   /// Sets IsChecked if the instruction always checks authenticated pointer,
-  /// i.e. it either returns a successfully authenticated pointer or terminates
+  /// i.e. it either writes a successfully authenticated pointer or terminates
   /// the program abnormally (such as "ldra x0, [x1]!" on AArch64, which crashes
   /// on authentication failure even if FEAT_FPAC is not implemented).
   virtual std::optional<MCPhysReg>
@@ -610,7 +610,7 @@ public:
   getRegUsedAsIndirectBranchDest(const MCInst &Inst,
                                  bool &IsAuthenticatedInternally) const {
     llvm_unreachable("not implemented");
-    return getNoRegister();
+    return 0;
   }
 
   /// Returns the register containing an address safely materialized by `Inst`
