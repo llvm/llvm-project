@@ -113,94 +113,6 @@ IntegerAttr getIntegerAttrFromFloatAttr(FloatAttr floatAttr, Type dstType,
   return rewriter.getIntegerAttr(dstType, intVal);
 }
 
-struct RawAllocator {
-  RawAllocator(OpBuilder &builder, Location loc) : builder(builder), loc(loc) {}
-
-  std::variant<Value, int64_t> computeTotalBytes(MemRefType srcType,
-                                                 Value srcMemref) {
-    // Element size in bytes.
-    int64_t elemBitWidth = srcType.getElementTypeBitWidth();
-    int64_t elemByteWidth = (elemBitWidth + 7) / 8;
-
-    if (srcType.hasStaticShape()) {
-      // Static shape: compute total bytes statically.
-      int64_t numElements = 1;
-      for (int64_t dim : srcType.getShape()) {
-        numElements *= dim;
-      }
-      return numElements * elemByteWidth;
-    }
-
-    auto sizes = getSizes(srcType, srcMemref);
-    // Compute number of elements dynamically.
-    Value numElements = sizes.front();
-    for (auto size : llvm::drop_begin(sizes))
-      numElements = builder.create<arith::MulIOp>(loc, numElements, size);
-    Value elemSize = builder.create<arith::ConstantIndexOp>(loc, elemByteWidth);
-
-    return builder.create<arith::MulIOp>(loc, numElements, elemSize);
-  }
-
-  SmallVector<Value> getSizes(MemRefType type, Value memref) {
-    SmallVector<Value> sizes;
-    for (unsigned i = 0; i < type.getRank(); ++i) {
-      if (type.isDynamicDim(i)) {
-        sizes.push_back(builder.create<memref::DimOp>(loc, memref, i));
-      } else {
-        sizes.push_back(
-            builder.create<arith::ConstantIndexOp>(loc, type.getShape()[i]));
-      }
-    }
-    return sizes;
-  }
-
-  SmallVector<Value> getDynamicSizes(MemRefType type, Value memref) {
-    SmallVector<Value> sizes;
-    for (unsigned i = 0; i < type.getRank(); ++i) {
-      if (type.isDynamicDim(i)) {
-        sizes.push_back(builder.create<memref::DimOp>(loc, memref, i));
-      }
-    }
-    return sizes;
-  }
-
-  SmallVector<Value> getIdentityStrides(MemRefType type) {
-    SmallVector<Value> strides;
-    int64_t runningStride = 1;
-    for (int64_t dim : llvm::reverse(type.getShape())) {
-      strides.push_back(
-          builder.create<arith::ConstantIndexOp>(loc, runningStride));
-      if (dim != ShapedType::kDynamic)
-        runningStride *= dim;
-      else
-        runningStride = -1; // not handling dynamic strides.
-    }
-    std::reverse(strides.begin(), strides.end());
-    return strides;
-  }
-
-private:
-  OpBuilder &builder;
-  Location loc;
-};
-
-// Replace uses according to predicates automatically.
-template <typename OpTy>
-void replaceUsesWithPredicate(
-    OpTy originalValue,
-    ArrayRef<std::pair<std::function<bool(OpOperand &)>, Value>> replacements,
-    ConversionPatternRewriter &rewriter) {
-
-  for (OpOperand &use : llvm::make_early_inc_range(originalValue->getUses())) {
-    for (const auto &[predicate, newValue] : replacements) {
-      if (predicate(use)) {
-        use.set(newValue);
-        break;
-      }
-    }
-  }
-}
-
 //===----------------------------------------------------------------------===//
 // Convertion patterns
 //===----------------------------------------------------------------------===//
@@ -353,127 +265,6 @@ struct ConvertGPULaunchFuncOp : OpConversionPattern<gpu::LaunchFuncOp> {
     rewriter.replaceOp(op, newOp.getResults());
     return success();
   }
-};
-
-//===----------------------------------------------------------------------===//
-// AllocOp conversion pattern
-//===----------------------------------------------------------------------===//
-template <typename AllocOp>
-struct ConvertAllocOp : OpConversionPattern<AllocOp> {
-  ConvertAllocOp(MLIRContext *ctx, TypeConverter &typeConverter)
-      : OpConversionPattern<AllocOp>(ctx), typeConverter(typeConverter) {}
-
-  LogicalResult
-  matchAndRewrite(AllocOp op, typename AllocOp::Adaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    Location loc = op.getLoc();
-    MemRefType srcType = llvm::cast<MemRefType>(op.getType());
-    // Only supports memref types with identity layout. Since this mechanism
-    // requires the usage of memref.ViewOp, which requires the layout to be
-    // identity.
-    if (!srcType.getLayout().isIdentity())
-      op.emitError("only memrefs with identity layout is supported");
-
-    auto dstType =
-        dyn_cast_or_null<MemRefType>(typeConverter.convertType(srcType));
-    if (!dstType || dstType == srcType)
-      return failure(); // No need to rewrite.
-
-    // Helper class to allocate raw memory.
-    RawAllocator allocator(rewriter, loc);
-
-    // 1. Compute total allocation size.
-    auto totalBytes = allocator.computeTotalBytes(srcType, op.getMemref());
-
-    // 2. Create raw i8 buffer.
-    MemRefType rawType;
-    if (std::holds_alternative<int64_t>(totalBytes)) {
-      // Static size.
-      SmallVector<int64_t> staticI8Shape;
-      staticI8Shape.push_back(std::get<int64_t>(totalBytes));
-      rawType = MemRefType::get(staticI8Shape, rewriter.getI8Type(), {},
-                                srcType.getMemorySpaceAsInt());
-    } else {
-      // Dynamic size.
-      rawType = MemRefType::get({ShapedType::kDynamic}, rewriter.getI8Type(),
-                                {}, srcType.getMemorySpaceAsInt());
-    }
-    Value rawAlloc;
-
-    if constexpr (std::is_same_v<AllocOp, gpu::AllocOp>) {
-      rawAlloc =
-          rewriter
-              .create<gpu::AllocOp>(
-                  loc, rawType,
-                  op.getAsyncToken() ? op.getAsyncToken().getType() : nullptr,
-                  adaptor.getAsyncDependencies(),
-                  std::holds_alternative<Value>(totalBytes)
-                      ? ValueRange{std::get<Value>(totalBytes)}
-                      : ValueRange{},
-                  adaptor.getSymbolOperands(), op.getHostShared())
-              .getResult(0);
-    } else {
-      rawAlloc = rewriter.create<memref::AllocOp>(
-          loc, rawType,
-          std::holds_alternative<Value>(totalBytes)
-              ? ValueRange{std::get<Value>(totalBytes)}
-              : ValueRange{},
-          op.getSymbolOperands());
-    }
-
-    // 3. Create view for original type.
-    SmallVector<Value> dynamicSizes =
-        allocator.getDynamicSizes(srcType, op.getMemref());
-    // Since we are using memref::ViewOp, only identity strides are supported.
-    SmallVector<Value> dynamicStrides = allocator.getIdentityStrides(srcType);
-    Value zeroOffset = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-    Value originalView = rewriter.create<memref::ViewOp>(
-        loc, srcType, rawAlloc, zeroOffset, dynamicSizes);
-
-    // 4. Create view for converted type.
-    Value convertedView = rewriter.create<memref::ViewOp>(
-        loc, dstType, rawAlloc, zeroOffset, dynamicSizes);
-
-    // 5. Replace uses:
-    //  gpu::LaunchFuncOp uses -> Replace the original AllocOp use in
-    //                            gpu::LaunchFuncOp with the view of the
-    //                            converted type.
-    //
-    //  DeallocOp uses -> Replace the original AllocOp use in dealloc with
-    //                    the new AllocOp.
-    //
-    //  Other uses-> Replace the original AllocOp use with the view of the
-    //               original type.
-
-    SmallVector<OpOperand *> launchFuncUses;
-    SmallVector<OpOperand *> deallocUses;
-    SmallVector<OpOperand *> otherUses;
-
-    for (OpOperand &use : op->getUses()) {
-      if (isa<gpu::LaunchFuncOp>(use.getOwner())) {
-        launchFuncUses.push_back(&use);
-      } else if (isa<memref::DeallocOp>(use.getOwner()) ||
-                 isa<gpu::DeallocOp>(use.getOwner())) {
-        deallocUses.push_back(&use);
-      } else {
-        otherUses.push_back(&use);
-      }
-    }
-
-    for (OpOperand *use : launchFuncUses)
-      use->set(convertedView);
-    for (OpOperand *use : deallocUses)
-      use->set(rawAlloc);
-    for (OpOperand *use : otherUses)
-      use->set(originalView);
-
-    // Erase the original AllocOp.
-    rewriter.eraseOp(op);
-    return success();
-  }
-
-private:
-  TypeConverter &typeConverter;
 };
 
 //===----------------------------------------------------------------------===//
@@ -688,12 +479,10 @@ void mlir::populateImitateUnsupportedTypesTypeConverter(
                             ValueRange inputs, Location loc) -> Value {
     assert(inputs.size() == 1 && "Expected single input");
     Type inputType = inputs[0].getType();
-    if (isa<MemRefType>(resultType) && isa<MemRefType>(inputType)) {
-      return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
-          .getResult(0);
-    }
-    if ((resultType.isIntOrIndexOrFloat() || isa<VectorType>(resultType)) &&
-        (inputType.isIntOrIndexOrFloat() || isa<VectorType>(inputType))) {
+    if ((resultType.isIntOrIndexOrFloat() || isa<VectorType>(resultType) ||
+         isa<MemRefType>(resultType)) &&
+        (inputType.isIntOrIndexOrFloat() || isa<VectorType>(inputType) ||
+         isa<MemRefType>(inputType))) {
       return builder.create<arith::BitcastOp>(loc, resultType, inputs[0])
           .getResult();
     }
@@ -724,8 +513,6 @@ void mlir::populateImitateUnsupportedTypesConversionPatterns(
   patterns.add<ConvertCallOp>(ctx, typeConverter, convertedFuncTypes);
   patterns.add<ConvertArithConstantOp>(ctx, typeConverter, srcTypes, tgtTypes);
   patterns.add<ConvertGPULaunchFuncOp>(ctx);
-  patterns.add<ConvertAllocOp<gpu::AllocOp>>(ctx, typeConverter);
-  patterns.add<ConvertAllocOp<memref::AllocOp>>(ctx, typeConverter);
 }
 
 //===----------------------------------------------------------------------===//
@@ -744,8 +531,11 @@ void mlir::configureImitateUnsupportedTypesLegality(
       return true;
   });
 
-  target.addDynamicallyLegalDialect<gpu::GPUDialect>(
-      [&](Operation *op) { return typeConverter.isLegal(op); });
+  target.addDynamicallyLegalDialect<gpu::GPUDialect>([&](Operation *op) {
+    if (op->getParentOfType<gpu::GPUModuleOp>())
+      return typeConverter.isLegal(op);
+    return true;
+  });
 
   target.addDynamicallyLegalDialect<func::FuncDialect>([&](Operation *op) {
     if (op->getParentOfType<gpu::GPUModuleOp>())
@@ -755,7 +545,6 @@ void mlir::configureImitateUnsupportedTypesLegality(
   });
 
   target.addLegalOp<gpu::GPUModuleOp>();
-  target.addLegalOp<UnrealizedConversionCastOp>();
   // Manually mark arithmetic-performing vector instructions.
   target.addLegalOp<vector::ContractionOp, vector::ReductionOp,
                     vector::MultiDimReductionOp, vector::FMAOp,
@@ -767,6 +556,8 @@ void mlir::configureImitateUnsupportedTypesLegality(
   target.addDynamicallyLegalOp<gpu::GPUFuncOp>([&](gpu::GPUFuncOp op) {
     return typeConverter.isSignatureLegal(op.getFunctionType());
   });
+  target.addDynamicallyLegalOp<gpu::LaunchFuncOp>(
+      [&](gpu::LaunchFuncOp op) { return typeConverter.isLegal(op); });
   // Only convert functions and function calls in gpu.module
   target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
     if (op->getParentOfType<gpu::GPUModuleOp>())
@@ -779,22 +570,8 @@ void mlir::configureImitateUnsupportedTypesLegality(
     return true;
   });
 
-  // Only convert alloc ops in gpu.module or in host functions and has a use
-  // in LaunchFunc
-  target.addDynamicallyLegalOp<memref::AllocOp>([&](memref::AllocOp op) {
-    if (op->getParentOfType<gpu::GPUModuleOp>())
-      return typeConverter.isLegal(op.getType());
-    else {
-      for (auto user : op->getUsers()) {
-        if (isa<gpu::LaunchFuncOp>(user))
-          return typeConverter.isLegal(op.getType());
-      }
-    }
-    return true;
-  });
-
-  // Mark unknown ops that are inside gpu.module, and one of its's operand is a
-  // memref type as dynamically legal.
+  // Mark unknown ops that are inside gpu.module, and one of its's operand is
+  // a memref type as dynamically legal.
   target.markUnknownOpDynamicallyLegal([&typeConverter](Operation *op) -> bool {
     // Check if the operation is inside a gpu.module.
     if (op->getParentOfType<gpu::GPUModuleOp>()) {
@@ -899,21 +676,6 @@ struct GpuImitateUnsupportedTypesPass
     // Apply the conversion.
     if (failed(applyPartialConversion(op, target, std::move(patterns))))
       return signalPassFailure();
-
-    // Post-conversion validation: check for any remaining
-    // unrealized_conversion_cast.
-    op->walk([&](UnrealizedConversionCastOp op) {
-      // Check if the cast is from a source type to a target type.
-      for (auto [sourceType, targetType] :
-           llvm::zip_equal(sourceTypes, targetTypes)) {
-        if (getElementTypeOrSelf(op.getOperand(0).getType()) == sourceType &&
-            getElementTypeOrSelf(op.getResult(0).getType()) == targetType) {
-          op->emitError("unresolved unrealized_conversion_cast left in IR "
-                        "after conversion");
-          return signalPassFailure();
-        }
-      }
-    });
   }
 };
 
