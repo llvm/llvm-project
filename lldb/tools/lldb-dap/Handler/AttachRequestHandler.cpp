@@ -161,7 +161,7 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
         lldb::SBAttachInfo attach_info;
         if (pid != LLDB_INVALID_PROCESS_ID)
           attach_info.SetProcessID(pid);
-        if (dap.configuration.program.has_value())
+        else if (dap.configuration.program.has_value())
           attach_info.SetExecutable(dap.configuration.program->data());
         attach_info.SetWaitForLaunch(wait_for, false /*async*/);
         dap.target.Attach(attach_info, error);
