@@ -841,12 +841,12 @@ void BytecodeWriter::writeDialectSection(EncodingEmitter &emitter) {
 
   // Emit the referenced operation names grouped by dialect.
   auto emitOpName = [&](OpNameNumbering &name) {
+    const bool isKnownOp = name.isOpaqueEntry || name.name.isRegistered();
     size_t stringId = stringSection.insert(name.name.stripDialect());
     if (config.bytecodeVersion < bytecode::kNativePropertiesEncoding)
       dialectEmitter.emitVarInt(stringId, "dialect op name");
     else
-      dialectEmitter.emitVarIntWithFlag(stringId, name.name.isRegistered(),
-                                        "dialect op name");
+      dialectEmitter.emitVarIntWithFlag(stringId, isKnownOp, "dialect op name");
   };
   writeDialectGrouping(dialectEmitter, numberingState.getOpNames(), emitOpName);
 
@@ -986,7 +986,14 @@ LogicalResult BytecodeWriter::writeBlock(EncodingEmitter &emitter,
 }
 
 LogicalResult BytecodeWriter::writeOp(EncodingEmitter &emitter, Operation *op) {
-  emitter.emitVarInt(numberingState.getNumber(op->getName()), "op name ID");
+  OperationName opName = op->getName();
+  // For fallback ops, create a new operation name referencing the original op
+  // instead.
+  if (auto fallback = dyn_cast<FallbackBytecodeOpInterface>(op))
+    opName =
+        OperationName(fallback.getOriginalOperationName(), op->getContext());
+
+  emitter.emitVarInt(numberingState.getNumber(opName), "op name ID");
 
   // Emit a mask for the operation components. We need to fill this in later
   // (when we actually know what needs to be emitted), so emit a placeholder for
