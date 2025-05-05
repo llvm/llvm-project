@@ -1545,7 +1545,6 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
         if (!Visited.insert(&U).second)
           continue;
         UseCaptureInfo CI = DetermineUseCaptureKind(U, AI);
-        // TODO(captures): Make this more precise.
         if (capturesAnything(CI.UseCC))
           return false;
 

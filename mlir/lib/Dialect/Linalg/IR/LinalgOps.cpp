@@ -1416,7 +1416,6 @@ static void addBodyWithPayloadOp(OpAsmParser &parser, OperationState &result,
   Region *body = result.addRegion();
   Block &block = body->emplaceBlock();
   b.setInsertionPointToStart(&block);
-  SmallVector<Value> bbArgs;
   for (auto &operand : operands) {
     block.addArgument(
         llvm::cast<ShapedType>(operand.getType()).getElementType(),
