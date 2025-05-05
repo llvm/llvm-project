@@ -613,6 +613,13 @@ public:
 
   const Block *block() const { return asBlockPointer().Pointee; }
 
+  /// If backed by actual data (i.e. a block pointer), return
+  /// an address to that data.
+  const std::byte *getRawAddress() const {
+    assert(isBlockPointer());
+    return asBlockPointer().Pointee->rawData() + Offset;
+  }
+
   /// Returns the index into an array.
   int64_t getIndex() const {
     if (!isBlockPointer())

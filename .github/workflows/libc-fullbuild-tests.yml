@@ -19,13 +19,23 @@ jobs:
         include:
           - os: ubuntu-24.04
             ccache-variant: sccache
-            c_compiler: clang-20
-            cpp_compiler: clang++-20
+            c_compiler: clang-21
+            cpp_compiler: clang++-21
+            target: x86_64-unknown-linux-llvm
+            include_scudo: ON
           # TODO: remove ccache logic when https://github.com/hendrikmuhs/ccache-action/issues/279 is resolved.
           - os: ubuntu-24.04-arm
             ccache-variant: ccache
-            c_compiler: clang-20
-            cpp_compiler: clang++-20
+            c_compiler: clang-21
+            cpp_compiler: clang++-21
+            target: aarch64-unknown-linux-llvm
+            include_scudo: ON
+          - os: ubuntu-24.04
+            ccache-variant: ccache
+            c_compiler: clang-21
+            cpp_compiler: clang++-21
+            target: x86_64-unknown-uefi-llvm
+            include_scudo: OFF
           # TODO: add back gcc build when it is fixed
           # - c_compiler: gcc
           #   cpp_compiler: g++
@@ -53,7 +63,7 @@ jobs:
       run: |
         wget https://apt.llvm.org/llvm.sh
         chmod +x llvm.sh
-        sudo ./llvm.sh 20
+        sudo ./llvm.sh 21
         sudo apt-get update
         sudo apt-get install -y libmpfr-dev libgmp-dev libmpc-dev ninja-build linux-libc-dev
         sudo ln -sf /usr/include/$(uname -p)-linux-gnu/asm /usr/include/asm
@@ -68,22 +78,31 @@ jobs:
     # Configure libc fullbuild with scudo.
     # Use MinSizeRel to reduce the size of the build.
     - name: Configure CMake
-      run: >
-        cmake -B ${{ steps.strings.outputs.build-output-dir }}
-        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
-        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
-        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-        -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.ccache-variant }}
-        -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.ccache-variant }}
-        -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-install-dir }}
-        -DLLVM_ENABLE_RUNTIMES="libc;compiler-rt"
-        -DLLVM_LIBC_FULL_BUILD=ON
-        -DLLVM_LIBC_INCLUDE_SCUDO=ON
-        -DCOMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC=ON
-        -DCOMPILER_RT_BUILD_GWP_ASAN=OFF
-        -DCOMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED=OFF
-        -G Ninja
-        -S ${{ github.workspace }}/runtimes
+      run: |
+        export RUNTIMES="libc"
+
+        if [[ ${{ matrix.include_scudo}} == "ON" ]]; then
+          export RUNTIMES="$RUNTIMES;compiler-rt"
+          export CMAKE_FLAGS="
+            -DLLVM_LIBC_INCLUDE_SCUDO=ON
+            -DCOMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC=ON
+            -DCOMPILER_RT_BUILD_GWP_ASAN=OFF
+            -DCOMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED=OFF"
+        fi
+
+        cmake -B ${{ steps.strings.outputs.build-output-dir }} \
+        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
+        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
+        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+        -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.ccache-variant }} \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.ccache-variant }} \
+        -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-install-dir }} \
+        -DLLVM_RUNTIMES_TARGET=${{ matrix.target }} \
+        -DLLVM_ENABLE_RUNTIMES="$RUNTIMES" \
+        -DLLVM_LIBC_FULL_BUILD=ON \
+        -G Ninja \
+        -S ${{ github.workspace }}/runtimes \
+        $CMAKE_FLAGS
 
     - name: Build
       run: >
@@ -93,6 +112,8 @@ jobs:
         --target install
 
     - name: Test
+      # Skip UEFI tests until we have testing set up.
+      if: ${{ ! endsWith(matrix.target, '-uefi-llvm') }}
       run: >
         cmake 
         --build ${{ steps.strings.outputs.build-output-dir }} 

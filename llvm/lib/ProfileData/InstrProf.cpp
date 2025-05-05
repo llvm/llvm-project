@@ -537,7 +537,6 @@ Error InstrProfSymtab::create(Module &M, bool InLTO, bool AddCanonical) {
       return E;
   }
 
-  SmallVector<MDNode *, 2> Types;
   for (GlobalVariable &G : M.globals()) {
     if (!G.hasName() || !G.hasMetadata(LLVMContext::MD_type))
       continue;

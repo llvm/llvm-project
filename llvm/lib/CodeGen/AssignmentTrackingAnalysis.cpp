@@ -2780,7 +2780,6 @@ removeUndefDbgLocsFromEntryBlock(const BasicBlock *BB,
   };
 
   bool Changed = false;
-  DenseMap<DebugVariable, std::pair<Value *, DIExpression *>> VariableMap;
 
   // Scan over the entire block, not just over the instructions mapped by
   // FnVarLocs, because wedges in FnVarLocs may only be separated by debug

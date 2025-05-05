@@ -370,6 +370,12 @@ FollowForkMode ProcessProperties::GetFollowForkMode() const {
                g_process_properties[idx].default_uint_value));
 }
 
+bool ProcessProperties::TrackMemoryCacheChanges() const {
+  const uint32_t idx = ePropertyTrackMemoryCacheChanges;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_process_properties[idx].default_uint_value != 0);
+}
+
 ProcessSP Process::FindPlugin(lldb::TargetSP target_sp,
                               llvm::StringRef plugin_name,
                               ListenerSP listener_sp,
@@ -2285,6 +2291,7 @@ size_t Process::WriteMemoryPrivate(addr_t addr, const void *buf, size_t size,
   return bytes_written;
 }
 
+#define USE_ALLOCATE_MEMORY_CACHE 1
 size_t Process::WriteMemory(addr_t addr, const void *buf, size_t size,
                             Status &error) {
   if (ABISP abi_sp = GetABI())
@@ -2297,7 +2304,12 @@ size_t Process::WriteMemory(addr_t addr, const void *buf, size_t size,
   if (buf == nullptr || size == 0)
     return 0;
 
+#if defined(USE_ALLOCATE_MEMORY_CACHE)
+  if (TrackMemoryCacheChanges() || !m_allocated_memory_cache.IsInCache(addr))
+    m_mod_id.BumpMemoryID();
+#else
   m_mod_id.BumpMemoryID();
+#endif
 
   // We need to write any data that would go where any current software traps
   // (enabled software breakpoints) any software traps (breakpoints) that we
@@ -2426,7 +2438,6 @@ Status Process::WriteObjectFile(std::vector<ObjectFile::LoadableData> entries) {
   return error;
 }
 
-#define USE_ALLOCATE_MEMORY_CACHE 1
 addr_t Process::AllocateMemory(size_t size, uint32_t permissions,
                                Status &error) {
   if (GetPrivateState() != eStateStopped) {
@@ -2830,6 +2841,9 @@ Status Process::LoadCore() {
           "Did not get stopped event after loading the core file.");
     }
     RestoreProcessEvents();
+    // Since we hijacked the event stream, we will have we won't have run the
+    // stop hooks.  Make sure we do that here:
+    GetTarget().RunStopHooks(/* at_initial_stop= */ true);
   }
   return error;
 }
@@ -3200,6 +3214,9 @@ void Process::CompleteAttach() {
                         : "<none>");
     }
   }
+  // Since we hijacked the event stream, we will have we won't have run the
+  // stop hooks.  Make sure we do that here:
+  GetTarget().RunStopHooks(/* at_initial_stop= */ true);
 }
 
 Status Process::ConnectRemote(llvm::StringRef remote_url) {
@@ -6689,6 +6706,18 @@ static void GetCoreFileSaveRangesStackOnly(Process &process,
   }
 }
 
+// TODO: We should refactor CoreFileMemoryRanges to use the lldb range type, and
+// then add an intersect method on it, or MemoryRegionInfo.
+static MemoryRegionInfo Intersect(const MemoryRegionInfo &lhs,
+                                  const MemoryRegionInfo::RangeType &rhs) {
+
+  MemoryRegionInfo region_info;
+  region_info.SetLLDBPermissions(lhs.GetLLDBPermissions());
+  region_info.GetRange() = lhs.GetRange().Intersect(rhs);
+
+  return region_info;
+}
+
 static void GetUserSpecifiedCoreFileSaveRanges(Process &process,
                                                const MemoryRegionInfos &regions,
                                                const SaveCoreOptions &options,
@@ -6698,9 +6727,15 @@ static void GetUserSpecifiedCoreFileSaveRanges(Process &process,
     return;
 
   for (const auto &range : regions) {
-    auto entry = option_ranges.FindEntryThatContains(range.GetRange());
-    if (entry)
-      AddRegion(range, true, ranges);
+    auto *entry = option_ranges.FindEntryThatIntersects(range.GetRange());
+    if (entry) {
+      if (*entry != range.GetRange()) {
+        AddRegion(Intersect(range, *entry), true, ranges);
+      } else {
+        // If they match, add the range directly.
+        AddRegion(range, true, ranges);
+      }
+    }
   }
 }
 
