@@ -5,7 +5,7 @@
 define <4 x i16> @test_reconstructshuffle(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; CHECKLE-LABEL: test_reconstructshuffle:
 ; CHECKLE:       // %bb.0:
-; CHECKLE-NEXT:    mov v2.b[0], v0.b[3]
+; CHECKLE-NEXT:    mov b2, v0.b[3]
 ; CHECKLE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECKLE-NEXT:    mov v2.b[2], v0.b[2]
 ; CHECKLE-NEXT:    mov v2.b[4], v0.b[1]
@@ -21,7 +21,7 @@ define <4 x i16> @test_reconstructshuffle(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; CHECKBE-NEXT:    rev64 v1.16b, v1.16b
 ; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECKBE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECKBE-NEXT:    mov v2.b[0], v0.b[3]
+; CHECKBE-NEXT:    mov b2, v0.b[3]
 ; CHECKBE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECKBE-NEXT:    mov v2.b[2], v0.b[2]
 ; CHECKBE-NEXT:    mov v2.b[4], v0.b[1]
