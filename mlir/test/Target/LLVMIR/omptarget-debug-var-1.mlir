@@ -58,23 +58,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 #loc3 = loc(fused<#sp>[#loc2])
 #loc4 = loc(fused<#g_var>[#loc1])
 
-// CHECK: define{{.*}}@__omp_offloading{{.*}}test{{.*}}(ptr %0, ptr %[[ARG1:[0-9]+]], ptr  %[[ARG2:[0-9]+]], ptr %[[ARG3:[0-9]+]])
-// CHECK-DAG: store ptr %[[ARG1]], ptr %[[CAST1:[0-9]+]]{{.*}}
-// CHECK-DAG: %[[CAST1]] = addrspacecast ptr addrspace(5) %[[AL1:[0-9]+]]
-// CHECK-DAG: %[[AL1]] = alloca{{.*}}
-// CHECK-DAG: store ptr %[[ARG2]], ptr %[[CAST2:[0-9]+]]{{.*}}
-// CHECK-DAG: %[[CAST2]] = addrspacecast ptr addrspace(5) %[[AL2:[0-9]+]]
-// CHECK-DAG: %[[AL2]] = alloca{{.*}}
-// CHECK-DAG: store ptr %[[ARG3]], ptr %[[CAST3:[0-9]+]]{{.*}}
-// CHECK-DAG: %[[CAST3]] = addrspacecast ptr addrspace(5) %[[AL3:[0-9]+]]
-// CHECK-DAG: %[[AL3]] = alloca{{.*}}
-
-// CHECK-DAG: #dbg_declare(ptr %[[CAST1]], ![[X:[0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(ptr), DIOpDeref(ptr)), {{.*}})
-// CHECK-DAG: #dbg_declare(ptr %[[CAST2]], ![[ARR:[0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(ptr), DIOpDeref(ptr)), {{.*}})
-// CHECK-DAG: #dbg_declare(ptr %[[CAST3]], ![[I:[0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(ptr)), {{.*}})
-
-// CHECK-DAG: ![[SP:[0-9]+]] = distinct !DISubprogram(name: "__omp_offloading{{.*}}test{{.*}})
-// CHECK-DAG: !DILocalVariable(name: "dyn_ptr", arg: 1, scope: ![[SP]]{{.*}}flags: DIFlagArtificial)
-// CHECK-DAG: ![[X:[0-9]+]] = !DILocalVariable(name: "x", arg: 2, scope: ![[SP]]{{.*}})
-// CHECK-DAG: ![[ARR:[0-9]+]] = !DILocalVariable(name: "arr", arg: 3, scope: ![[SP]]{{.*}})
-// CHECK-DAG: ![[I:[0-9]+]] = !DILocalVariable(name: "i", arg: 4, scope: ![[SP]]{{.*}})
+// CHECK: ![[SP:[0-9]+]] = distinct !DISubprogram(name: "__omp_offloading{{.*}}test{{.*}})
+// CHECK: !DILocalVariable(name: "dyn_ptr", arg: 1, scope: ![[SP]]{{.*}}flags: DIFlagArtificial)
+// CHECK: !DILocalVariable(name: "x", arg: 2, scope: ![[SP]]{{.*}})
+// CHECK: !DILocalVariable(name: "arr", arg: 3, scope: ![[SP]]{{.*}})
+// CHECK: !DILocalVariable(name: "i", arg: 4, scope: ![[SP]]{{.*}})

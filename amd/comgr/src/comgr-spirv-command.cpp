@@ -17,7 +17,7 @@
 #ifndef COMGR_DISABLE_SPIRV
 #include "comgr-diagnostic-handler.h"
 
-#include <LLVMSPIRVLib/LLVMSPIRVLib.h>
+#include <LLVMSPIRVLib.h>
 #include <llvm/Bitcode/BitcodeWriter.h>
 #include <llvm/IR/LLVMContext.h>
 

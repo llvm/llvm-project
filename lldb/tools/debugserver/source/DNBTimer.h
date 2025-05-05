@@ -15,7 +15,6 @@
 
 #include "DNBDefs.h"
 #include <cstdint>
-#include <memory>
 #include <mutex>
 #include <sys/time.h>
 
@@ -24,7 +23,7 @@ public:
   // Constructors and Destructors
   DNBTimer(bool threadSafe) {
     if (threadSafe)
-      m_mutex_up = std::make_unique<std::recursive_mutex>();
+      m_mutex.emplace();
     Reset();
   }
 
@@ -32,7 +31,7 @@ public:
     // Create a new mutex to make this timer thread safe as well if
     // the timer we are copying is thread safe
     if (rhs.IsThreadSafe())
-      m_mutex_up = std::make_unique<std::recursive_mutex>();
+      m_mutex.emplace();
     m_timeval = rhs.m_timeval;
   }
 
@@ -40,43 +39,41 @@ public:
     // Create a new mutex to make this timer thread safe as well if
     // the timer we are copying is thread safe
     if (rhs.IsThreadSafe())
-      m_mutex_up = std::make_unique<std::recursive_mutex>();
+      m_mutex.emplace();
     m_timeval = rhs.m_timeval;
     return *this;
   }
 
   ~DNBTimer() {}
 
-  bool IsThreadSafe() const { return static_cast<bool>(m_mutex_up); }
+  bool IsThreadSafe() const { return m_mutex.has_value(); }
   // Reset the time value to now
   void Reset() {
-    auto guard = m_mutex_up
-                     ? std::unique_lock<std::recursive_mutex>()
-                     : std::unique_lock<std::recursive_mutex>(*m_mutex_up);
+    auto lock = m_mutex ? std::unique_lock<std::recursive_mutex>(*m_mutex)
+                        : std::unique_lock<std::recursive_mutex>();
     gettimeofday(&m_timeval, NULL);
   }
   // Get the total microseconds since Jan 1, 1970
   uint64_t TotalMicroSeconds() const {
-    auto guard = m_mutex_up
-                     ? std::unique_lock<std::recursive_mutex>()
-                     : std::unique_lock<std::recursive_mutex>(*m_mutex_up);
+    std::unique_lock<std::recursive_mutex> lock =
+        m_mutex ? std::unique_lock<std::recursive_mutex>(*m_mutex)
+                : std::unique_lock<std::recursive_mutex>();
     return (uint64_t)(m_timeval.tv_sec) * 1000000ull +
            (uint64_t)m_timeval.tv_usec;
   }
 
   void GetTime(uint64_t &sec, uint32_t &usec) const {
-    auto guard = m_mutex_up
-                     ? std::unique_lock<std::recursive_mutex>()
-                     : std::unique_lock<std::recursive_mutex>(*m_mutex_up);
+    auto lock = m_mutex ? std::unique_lock<std::recursive_mutex>(*m_mutex)
+                        : std::unique_lock<std::recursive_mutex>();
     sec = m_timeval.tv_sec;
     usec = m_timeval.tv_usec;
   }
   // Return the number of microseconds elapsed between now and the
   // m_timeval
   uint64_t ElapsedMicroSeconds(bool update) {
-    auto guard = m_mutex_up
-                     ? std::unique_lock<std::recursive_mutex>()
-                     : std::unique_lock<std::recursive_mutex>(*m_mutex_up);
+    std::unique_lock<std::recursive_mutex> lock =
+        m_mutex ? std::unique_lock<std::recursive_mutex>(*m_mutex)
+                : std::unique_lock<std::recursive_mutex>();
     struct timeval now;
     gettimeofday(&now, NULL);
     uint64_t now_usec =
@@ -123,16 +120,19 @@ public:
     OffsetTimeOfDay(&now);
     if (now.tv_sec > ts.tv_sec)
       return true;
-    if (now.tv_sec < ts.tv_sec)
+    else if (now.tv_sec < ts.tv_sec)
       return false;
-    if (now.tv_nsec > ts.tv_nsec)
-      return true;
-    return false;
+    else {
+      if (now.tv_nsec > ts.tv_nsec)
+        return true;
+      else
+        return false;
+    }
   }
 
 protected:
   // Classes that inherit from DNBTimer can see and modify these
-  std::unique_ptr<std::recursive_mutex> m_mutex_up;
+  mutable std::optional<std::recursive_mutex> m_mutex;
   struct timeval m_timeval;
 };
 
