@@ -79,8 +79,7 @@ private:
 static MCOperand createSparcMCOperand(uint16_t Kind, MCSymbol *Sym,
                                       MCContext &OutContext) {
   const MCSymbolRefExpr *MCSym = MCSymbolRefExpr::create(Sym, OutContext);
-  const SparcMCExpr *expr =
-      SparcMCExpr::create(SparcMCExpr::Specifier(Kind), MCSym, OutContext);
+  const SparcMCExpr *expr = SparcMCExpr::create(Kind, MCSym, OutContext);
   return MCOperand::createExpr(expr);
 }
 static MCOperand createPCXCallOP(MCSymbol *Label,
@@ -99,8 +98,7 @@ static MCOperand createPCXRelExprOp(uint16_t Spec, MCSymbol *GOTLabel,
 
   const MCBinaryExpr *Sub = MCBinaryExpr::createSub(Cur, Start, OutContext);
   const MCBinaryExpr *Add = MCBinaryExpr::createAdd(GOT, Sub, OutContext);
-  const SparcMCExpr *expr =
-      SparcMCExpr::create(SparcMCExpr::Specifier(Spec), Add, OutContext);
+  const SparcMCExpr *expr = SparcMCExpr::create(Spec, Add, OutContext);
   return MCOperand::createExpr(expr);
 }
 
@@ -164,7 +162,7 @@ static void EmitSHL(MCStreamer &OutStreamer,
   EmitBinary(OutStreamer, SP::SLLri, RS1, Imm, RD, STI);
 }
 
-static void EmitHiLo(MCStreamer &OutStreamer, MCSymbol *GOTSym, uint16_t HiKind,
+static void emitHiLo(MCStreamer &OutStreamer, MCSymbol *GOTSym, uint16_t HiKind,
                      uint16_t LoKind, MCOperand &RD, MCContext &OutContext,
                      const MCSubtargetInfo &STI) {
   MCOperand hi = createSparcMCOperand(HiKind, GOTSym, OutContext);
@@ -192,11 +190,11 @@ void SparcAsmPrinter::LowerGETPCXAndEmitMCInsts(const MachineInstr *MI,
     default:
       llvm_unreachable("Unsupported absolute code model");
     case CodeModel::Small:
-      EmitHiLo(*OutStreamer, GOTLabel, SparcMCExpr::VK_HI, SparcMCExpr::VK_LO,
+      emitHiLo(*OutStreamer, GOTLabel, ELF::R_SPARC_HI22, ELF::R_SPARC_LO10,
                MCRegOP, OutContext, STI);
       break;
     case CodeModel::Medium: {
-      EmitHiLo(*OutStreamer, GOTLabel, ELF::R_SPARC_H44, ELF::R_SPARC_M44,
+      emitHiLo(*OutStreamer, GOTLabel, ELF::R_SPARC_H44, ELF::R_SPARC_M44,
                MCRegOP, OutContext, STI);
       MCOperand imm = MCOperand::createExpr(MCConstantExpr::create(12,
                                                                    OutContext));
@@ -207,14 +205,14 @@ void SparcAsmPrinter::LowerGETPCXAndEmitMCInsts(const MachineInstr *MI,
       break;
     }
     case CodeModel::Large: {
-      EmitHiLo(*OutStreamer, GOTLabel, ELF::R_SPARC_HH22, ELF::R_SPARC_HM10,
+      emitHiLo(*OutStreamer, GOTLabel, ELF::R_SPARC_HH22, ELF::R_SPARC_HM10,
                MCRegOP, OutContext, STI);
       MCOperand imm = MCOperand::createExpr(MCConstantExpr::create(32,
                                                                    OutContext));
       EmitSHL(*OutStreamer, MCRegOP, imm, MCRegOP, STI);
       // Use register %o7 to load the lower 32 bits.
       MCOperand RegO7 = MCOperand::createReg(SP::O7);
-      EmitHiLo(*OutStreamer, GOTLabel, SparcMCExpr::VK_HI, SparcMCExpr::VK_LO,
+      emitHiLo(*OutStreamer, GOTLabel, ELF::R_SPARC_HI22, ELF::R_SPARC_LO10,
                RegO7, OutContext, STI);
       EmitADD(*OutStreamer, MCRegOP, RegO7, MCRegOP, STI);
     }
@@ -277,7 +275,7 @@ MCOperand SparcAsmPrinter::lowerOperand(const MachineOperand &MO) const {
   case MachineOperand::MO_BlockAddress:
   case MachineOperand::MO_ExternalSymbol:
   case MachineOperand::MO_ConstantPoolIndex: {
-    SparcMCExpr::Specifier Kind = (SparcMCExpr::Specifier)MO.getTargetFlags();
+    auto RelType = MO.getTargetFlags();
     const MCSymbol *Symbol = nullptr;
     switch (MO.getType()) {
     default:
@@ -300,8 +298,8 @@ MCOperand SparcAsmPrinter::lowerOperand(const MachineOperand &MO) const {
     }
 
     const MCExpr *expr = MCSymbolRefExpr::create(Symbol, OutContext);
-    if (Kind)
-      expr = SparcMCExpr::create(Kind, expr, OutContext);
+    if (RelType)
+      expr = SparcMCExpr::create(RelType, expr, OutContext);
     return MCOperand::createExpr(expr);
   }
 
@@ -371,7 +369,7 @@ void SparcAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
                                    raw_ostream &O) {
   const DataLayout &DL = getDataLayout();
   const MachineOperand &MO = MI->getOperand (opNum);
-  SparcMCExpr::Specifier TF = (SparcMCExpr::Specifier)MO.getTargetFlags();
+  auto TF = MO.getTargetFlags();
 
   StringRef Spec = SparcMCExpr::getSpecifierName(TF);
   O << Spec;
