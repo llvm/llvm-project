@@ -2549,7 +2549,7 @@ def fsanitize_add_pseudo_functions
       Alias<fsanitize_add_pseudo_functions_EQ>,
       AliasArgs<["all"]>,
       HelpText<"Allow compiler to add pseudo-functions to checks for all "
-               "sanitizers, if supported">;
+               "sanitizers, where supported">;
 def fno_sanitize_add_pseudo_functions
     : Flag<["-"], "fno-sanitize-add-pseudo-functions">,
       Group<f_clang_Group>,
