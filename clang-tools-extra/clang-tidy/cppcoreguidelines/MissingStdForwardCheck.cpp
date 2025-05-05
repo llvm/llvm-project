@@ -92,7 +92,6 @@ void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
                                   declRefExpr(to(equalsBoundNode("param"))))));
   auto RefToParm = capturesVar(
       varDecl(anyOf(hasSameNameAsBoundNode("param"), RefToParmImplicit)));
-  auto HasRefToParm = hasAnyCapture(RefToParm);
 
   auto CaptureInRef =
       allOf(hasCaptureDefaultKind(LambdaCaptureDefault::LCD_ByRef),
