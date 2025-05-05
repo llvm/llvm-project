@@ -33,13 +33,15 @@ namespace llvm {
 
   /// Helper functions for StringRef::getAsInteger.
   LLVM_ABI bool getAsUnsignedInteger(StringRef Str, unsigned Radix,
-                            unsigned long long &Result);
+                                     unsigned long long &Result);
 
-  LLVM_ABI bool getAsSignedInteger(StringRef Str, unsigned Radix, long long &Result);
+  LLVM_ABI bool getAsSignedInteger(StringRef Str, unsigned Radix,
+                                   long long &Result);
 
   LLVM_ABI bool consumeUnsignedInteger(StringRef &Str, unsigned Radix,
-                              unsigned long long &Result);
-  LLVM_ABI bool consumeSignedInteger(StringRef &Str, unsigned Radix, long long &Result);
+                                       unsigned long long &Result);
+  LLVM_ABI bool consumeSignedInteger(StringRef &Str, unsigned Radix,
+                                     long long &Result);
 
   /// StringRef - Represent a constant reference to a string, i.e. a character
   /// array and a length, which need not be null terminated.
@@ -217,9 +219,9 @@ namespace llvm {
     /// or (if \p AllowReplacements is \c true) replacements needed to
     /// transform one of the given strings into the other. If zero,
     /// the strings are identical.
-    [[nodiscard]] LLVM_ABI unsigned edit_distance(StringRef Other,
-                                         bool AllowReplacements = true,
-                                         unsigned MaxEditDistance = 0) const;
+    [[nodiscard]] LLVM_ABI unsigned
+    edit_distance(StringRef Other, bool AllowReplacements = true,
+                  unsigned MaxEditDistance = 0) const;
 
     [[nodiscard]] LLVM_ABI unsigned
     edit_distance_insensitive(StringRef Other, bool AllowReplacements = true,
@@ -302,7 +304,8 @@ namespace llvm {
     ///
     /// \returns The index of the first occurrence of \p C, or npos if not
     /// found.
-    [[nodiscard]] LLVM_ABI size_t find_insensitive(char C, size_t From = 0) const;
+    [[nodiscard]] LLVM_ABI size_t find_insensitive(char C,
+                                                   size_t From = 0) const;
 
     /// Search for the first character satisfying the predicate \p F
     ///
@@ -338,7 +341,8 @@ namespace llvm {
     ///
     /// \returns The index of the first occurrence of \p Str, or npos if not
     /// found.
-    [[nodiscard]] LLVM_ABI size_t find_insensitive(StringRef Str, size_t From = 0) const;
+    [[nodiscard]] LLVM_ABI size_t find_insensitive(StringRef Str,
+                                                   size_t From = 0) const;
 
     /// Search for the last character \p C in the string.
     ///
@@ -358,7 +362,8 @@ namespace llvm {
     ///
     /// \returns The index of the last occurrence of \p C, or npos if not
     /// found.
-    [[nodiscard]] LLVM_ABI size_t rfind_insensitive(char C, size_t From = npos) const;
+    [[nodiscard]] LLVM_ABI size_t rfind_insensitive(char C,
+                                                    size_t From = npos) const;
 
     /// Search for the last string \p Str in the string.
     ///
@@ -382,18 +387,20 @@ namespace llvm {
     /// not found.
     ///
     /// Complexity: O(size() + Chars.size())
-    [[nodiscard]] LLVM_ABI size_t find_first_of(StringRef Chars, size_t From = 0) const;
+    [[nodiscard]] LLVM_ABI size_t find_first_of(StringRef Chars,
+                                                size_t From = 0) const;
 
     /// Find the first character in the string that is not \p C or npos if not
     /// found.
-    [[nodiscard]] LLVM_ABI size_t find_first_not_of(char C, size_t From = 0) const;
+    [[nodiscard]] LLVM_ABI size_t find_first_not_of(char C,
+                                                    size_t From = 0) const;
 
     /// Find the first character in the string that is not in the string
     /// \p Chars, or npos if not found.
     ///
     /// Complexity: O(size() + Chars.size())
     [[nodiscard]] LLVM_ABI size_t find_first_not_of(StringRef Chars,
-                                           size_t From = 0) const;
+                                                    size_t From = 0) const;
 
     /// Find the last character in the string that is \p C, or npos if not
     /// found.
@@ -406,18 +413,19 @@ namespace llvm {
     ///
     /// Complexity: O(size() + Chars.size())
     [[nodiscard]] LLVM_ABI size_t find_last_of(StringRef Chars,
-                                      size_t From = npos) const;
+                                               size_t From = npos) const;
 
     /// Find the last character in the string that is not \p C, or npos if not
     /// found.
-    [[nodiscard]] LLVM_ABI size_t find_last_not_of(char C, size_t From = npos) const;
+    [[nodiscard]] LLVM_ABI size_t find_last_not_of(char C,
+                                                   size_t From = npos) const;
 
     /// Find the last character in the string that is not in \p Chars, or
     /// npos if not found.
     ///
     /// Complexity: O(size() + Chars.size())
     [[nodiscard]] LLVM_ABI size_t find_last_not_of(StringRef Chars,
-                                          size_t From = npos) const;
+                                                   size_t From = npos) const;
 
     /// Return true if the given string is a substring of *this, and false
     /// otherwise.
@@ -751,9 +759,8 @@ namespace llvm {
     /// \param Separator - The string to split on.
     /// \param MaxSplit - The maximum number of times the string is split.
     /// \param KeepEmpty - True if empty substring should be added.
-    LLVM_ABI void split(SmallVectorImpl<StringRef> &A,
-               StringRef Separator, int MaxSplit = -1,
-               bool KeepEmpty = true) const;
+    LLVM_ABI void split(SmallVectorImpl<StringRef> &A, StringRef Separator,
+                        int MaxSplit = -1, bool KeepEmpty = true) const;
 
     /// Split into substrings around the occurrences of a separator character.
     ///
@@ -769,8 +776,8 @@ namespace llvm {
     /// \param Separator - The string to split on.
     /// \param MaxSplit - The maximum number of times the string is split.
     /// \param KeepEmpty - True if empty substring should be added.
-    LLVM_ABI void split(SmallVectorImpl<StringRef> &A, char Separator, int MaxSplit = -1,
-               bool KeepEmpty = true) const;
+    LLVM_ABI void split(SmallVectorImpl<StringRef> &A, char Separator,
+                        int MaxSplit = -1, bool KeepEmpty = true) const;
 
     /// Split into two substrings around the last occurrence of a separator
     /// character.

@@ -9,10 +9,10 @@
 #ifndef LLVM_ADT_REWRITEBUFFER_H
 #define LLVM_ADT_REWRITEBUFFER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DeltaTree.h"
 #include "llvm/ADT/RewriteRope.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 
 namespace clang {
 class Rewriter;
@@ -62,12 +62,13 @@ public:
 
   /// RemoveText - Remove the specified text.
   LLVM_ABI void RemoveText(unsigned OrigOffset, unsigned Size,
-                  bool removeLineIfEmpty = false);
+                           bool removeLineIfEmpty = false);
 
   /// InsertText - Insert some text at the specified point, where the offset in
   /// the buffer is specified relative to the original SourceBuffer.  The
   /// text is inserted after the specified location.
-  LLVM_ABI void InsertText(unsigned OrigOffset, StringRef Str, bool InsertAfter = true);
+  LLVM_ABI void InsertText(unsigned OrigOffset, StringRef Str,
+                           bool InsertAfter = true);
 
   /// InsertTextBefore - Insert some text before the specified point, where the
   /// offset in the buffer is specified relative to the original
@@ -87,7 +88,8 @@ public:
   /// ReplaceText - This method replaces a range of characters in the input
   /// buffer with a new string.  This is effectively a combined "remove/insert"
   /// operation.
-  LLVM_ABI void ReplaceText(unsigned OrigOffset, unsigned OrigLength, StringRef NewStr);
+  LLVM_ABI void ReplaceText(unsigned OrigOffset, unsigned OrigLength,
+                            StringRef NewStr);
 
 private:
   /// getMappedOffset - Given an offset into the original SourceBuffer that this

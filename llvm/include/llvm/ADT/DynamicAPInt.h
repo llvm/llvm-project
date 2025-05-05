@@ -16,8 +16,8 @@
 #ifndef LLVM_ADT_DYNAMICAPINT_H
 #define LLVM_ADT_DYNAMICAPINT_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SlowDynamicAPInt.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include <numeric>
 
