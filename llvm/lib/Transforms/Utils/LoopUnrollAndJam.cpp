@@ -800,12 +800,7 @@ checkDependencies(Loop &Root, const BasicBlockSet &SubLoopBlocks,
     EarlierLoadsAndStores.append(CurrentLoadsAndStores.begin(),
                                  CurrentLoadsAndStores.end());
   }
-
-  SCEVUnionPredicate Assumptions = DI.getRuntimeAssumptions();
-  // Fail if the dependence analysis has runtime assumptions.
-  // FIXME: do loop versioning to keep the original loop, and transform the
-  // loop under the runtime assumptions.
-  return Assumptions.isAlwaysTrue();
+  return true;
 }
 
 static bool isEligibleLoopForm(const Loop &Root) {

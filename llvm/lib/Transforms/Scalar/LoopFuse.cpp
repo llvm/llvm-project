@@ -1129,11 +1129,7 @@ private:
         }
       }
     }
-    SCEVUnionPredicate Assumptions = DI.getRuntimeAssumptions();
-    // Fail if the dependence analysis has runtime assumptions.
-    // FIXME: do loop versioning to keep the original loop, and transform the
-    // loop under the runtime assumptions.
-    return Assumptions.isAlwaysTrue();
+    return true;
   }
 
   // Returns true if the instruction \p I can be sunk to the top of the exit
@@ -1176,11 +1172,7 @@ private:
       }
     }
 
-    SCEVUnionPredicate Assumptions = DI.getRuntimeAssumptions();
-    // Fail if the dependence analysis has runtime assumptions.
-    // FIXME: do loop versioning to keep the original loop, and transform the
-    // loop under the runtime assumptions.
-    return Assumptions.isAlwaysTrue();
+    return true;
   }
 
   /// Collect instructions in the \p FC1 Preheader that can be hoisted
@@ -1428,11 +1420,7 @@ private:
               return false;
             }
 
-    SCEVUnionPredicate Assumptions = DI.getRuntimeAssumptions();
-    // Fail if the dependence analysis has runtime assumptions.
-    // FIXME: do loop versioning to keep the original loop, and transform the
-    // loop under the runtime assumptions.
-    return Assumptions.isAlwaysTrue();
+    return true;
   }
 
   /// Determine if two fusion candidates are adjacent in the CFG.

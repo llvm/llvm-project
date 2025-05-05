@@ -220,11 +220,7 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
     }
   }
 
-  SCEVUnionPredicate Assumptions = DI->getRuntimeAssumptions();
-  // Fail if the dependence analysis has runtime assumptions.
-  // FIXME: do loop versioning to keep the original loop, and transform the
-  // loop under the runtime assumptions.
-  return Assumptions.isAlwaysTrue();
+  return true;
 }
 
 // A loop is moved from index 'from' to an index 'to'. Update the Dependence
@@ -1837,12 +1833,6 @@ PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,
   DependenceInfo DI(&F, &AR.AA, &AR.SE, &AR.LI);
   std::unique_ptr<CacheCost> CC =
       CacheCost::getCacheCost(LN.getOutermostLoop(), AR, DI);
-
-  SCEVUnionPredicate Assumptions = DI.getRuntimeAssumptions();
-  // Early fail when the dependence analysis has runtime assumptions.
-  // FIXME: this could be handled by versioning the loop.
-  if (!Assumptions.isAlwaysTrue())
-    return PreservedAnalyses::all();
 
   if (!LoopInterchange(&AR.SE, &AR.LI, &DI, &AR.DT, CC, &ORE).run(LN))
     return PreservedAnalyses::all();
