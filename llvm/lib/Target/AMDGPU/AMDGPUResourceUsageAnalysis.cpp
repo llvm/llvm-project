@@ -146,12 +146,15 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
     Info.NumAGPR = TRI.getNumDefinedPhysRegs(MRI, AMDGPU::AGPR_32RegClass);
 
   // Count any user or system SGPRs that are actually used.
-  for (int I = MFI->getNumPreloadedSGPRs() - 1; I >= 0; I--)
-    if (MRI.isPhysRegUsed(AMDGPU::SGPR0 + I)) {
-      Info.NumExplicitSGPR = std::max<int32_t>(
-          Info.NumExplicitSGPR, TRI.getHWRegIndex(AMDGPU::SGPR0 + I) + 1);
-      break;
-    }
+  auto GetNumUsedPreloadedRegs = [&](int NumPreloadedRegs, unsigned RegBase) -> int32_t {
+    for (int I = NumPreloadedRegs - 1; I >= 0; I--)
+      if (MRI.isPhysRegUsed(RegBase + I))
+        return TRI.getHWRegIndex(RegBase + I) + 1;
+    return 0;
+  };
+
+  Info.NumExplicitSGPR = std::max(Info.NumExplicitSGPR, GetNumUsedPreloadedRegs(MFI->getNumPreloadedSGPRs(), AMDGPU::SGPR0));
+  Info.NumVGPR = std::max(Info.NumVGPR, GetNumUsedPreloadedRegs(MFI->getNumPreloadedVGPRs(), AMDGPU::VGPR0));
 
   if (!FrameInfo.hasCalls() && !FrameInfo.hasTailCall())
     return Info;
