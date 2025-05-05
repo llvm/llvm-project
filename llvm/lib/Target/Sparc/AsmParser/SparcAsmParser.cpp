@@ -847,16 +847,16 @@ bool SparcAsmParser::expandSETX(MCInst &Inst, SMLoc IDLoc,
   // merge it with the lower half that has just been generated above.
 
   // sethi %hh(val), tmp
-  Instructions.push_back(
-      MCInstBuilder(SP::SETHIi)
-          .addReg(MCTmpOp.getReg())
-          .addExpr(adjustPICRelocation(SparcMCExpr::VK_HH, ValExpr)));
+  Instructions.push_back(MCInstBuilder(SP::SETHIi)
+                             .addReg(MCTmpOp.getReg())
+                             .addExpr(SparcMCExpr::create(
+                                 ELF::R_SPARC_HH22, ValExpr, getContext())));
   // or    tmp, %hm(val), tmp
-  Instructions.push_back(
-      MCInstBuilder(SP::ORri)
-          .addReg(MCTmpOp.getReg())
-          .addReg(MCTmpOp.getReg())
-          .addExpr(adjustPICRelocation(SparcMCExpr::VK_HM, ValExpr)));
+  Instructions.push_back(MCInstBuilder(SP::ORri)
+                             .addReg(MCTmpOp.getReg())
+                             .addReg(MCTmpOp.getReg())
+                             .addExpr(SparcMCExpr::create(
+                                 ELF::R_SPARC_HM10, ValExpr, getContext())));
   // sllx  tmp, 32, tmp
   Instructions.push_back(MCInstBuilder(SP::SLLXri)
                              .addReg(MCTmpOp.getReg())
@@ -1114,20 +1114,20 @@ ParseStatus SparcAsmParser::parseTailRelocSym(OperandVector &Operands) {
   SMLoc S = getLoc();
   SMLoc E = SMLoc::getFromPointer(S.getPointer() - 1);
 
-  auto MatchesKind = [](SparcMCExpr::Specifier VK) -> bool {
+  auto MatchesKind = [](uint16_t RelType) -> bool {
     switch (Kind) {
     case TailRelocKind::Load_GOT:
       // Non-TLS relocations on ld (or ldx).
       // ld [%rr + %rr], %rr, %rel(sym)
-      return VK == ELF::R_SPARC_GOTDATA_OP;
+      return RelType == ELF::R_SPARC_GOTDATA_OP;
     case TailRelocKind::Add_TLS:
       // TLS relocations on add.
       // add %rr, %rr, %rr, %rel(sym)
-      switch (VK) {
-      case SparcMCExpr::VK_TLS_GD_ADD:
-      case SparcMCExpr::VK_TLS_IE_ADD:
-      case SparcMCExpr::VK_TLS_LDM_ADD:
-      case SparcMCExpr::VK_TLS_LDO_ADD:
+      switch (RelType) {
+      case ELF::R_SPARC_TLS_GD_ADD:
+      case ELF::R_SPARC_TLS_IE_ADD:
+      case ELF::R_SPARC_TLS_LDM_ADD:
+      case ELF::R_SPARC_TLS_LDO_ADD:
         return true;
       default:
         return false;
@@ -1135,9 +1135,9 @@ ParseStatus SparcAsmParser::parseTailRelocSym(OperandVector &Operands) {
     case TailRelocKind::Load_TLS:
       // TLS relocations on ld (or ldx).
       // ld[x] %addr, %rr, %rel(sym)
-      switch (VK) {
-      case SparcMCExpr::VK_TLS_IE_LD:
-      case SparcMCExpr::VK_TLS_IE_LDX:
+      switch (RelType) {
+      case ELF::R_SPARC_TLS_IE_LD:
+      case ELF::R_SPARC_TLS_IE_LDX:
         return true;
       default:
         return false;
@@ -1145,9 +1145,9 @@ ParseStatus SparcAsmParser::parseTailRelocSym(OperandVector &Operands) {
     case TailRelocKind::Call_TLS:
       // TLS relocations on call.
       // call sym, %rel(sym)
-      switch (VK) {
-      case SparcMCExpr::VK_TLS_GD_CALL:
-      case SparcMCExpr::VK_TLS_LDM_CALL:
+      switch (RelType) {
+      case ELF::R_SPARC_TLS_GD_CALL:
+      case ELF::R_SPARC_TLS_LDM_CALL:
         return true;
       default:
         return false;
@@ -1706,14 +1706,14 @@ bool SparcAsmParser::matchSparcAsmModifiers(const MCExpr *&EVal,
     return false;
 
   case ELF::R_SPARC_GOTDATA_OP:
-  case SparcMCExpr::VK_TLS_GD_ADD:
-  case SparcMCExpr::VK_TLS_GD_CALL:
-  case SparcMCExpr::VK_TLS_IE_ADD:
-  case SparcMCExpr::VK_TLS_IE_LD:
-  case SparcMCExpr::VK_TLS_IE_LDX:
-  case SparcMCExpr::VK_TLS_LDM_ADD:
-  case SparcMCExpr::VK_TLS_LDM_CALL:
-  case SparcMCExpr::VK_TLS_LDO_ADD:
+  case ELF::R_SPARC_TLS_GD_ADD:
+  case ELF::R_SPARC_TLS_GD_CALL:
+  case ELF::R_SPARC_TLS_IE_ADD:
+  case ELF::R_SPARC_TLS_IE_LD:
+  case ELF::R_SPARC_TLS_IE_LDX:
+  case ELF::R_SPARC_TLS_LDM_ADD:
+  case ELF::R_SPARC_TLS_LDM_CALL:
+  case ELF::R_SPARC_TLS_LDO_ADD:
     // These are special-cased at tablegen level.
     return false;
 

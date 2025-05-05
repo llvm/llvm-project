@@ -207,7 +207,7 @@ void SparcAsmPrinter::LowerGETPCXAndEmitMCInsts(const MachineInstr *MI,
       break;
     }
     case CodeModel::Large: {
-      EmitHiLo(*OutStreamer, GOTLabel, SparcMCExpr::VK_HH, SparcMCExpr::VK_HM,
+      EmitHiLo(*OutStreamer, GOTLabel, ELF::R_SPARC_HH22, ELF::R_SPARC_HM10,
                MCRegOP, OutContext, STI);
       MCOperand imm = MCOperand::createExpr(MCConstantExpr::create(32,
                                                                    OutContext));
