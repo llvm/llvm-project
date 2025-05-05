@@ -231,10 +231,9 @@ namespace {
                     const MCValue &Target, MutableArrayRef<char> Data,
                     uint64_t Value, bool IsResolved,
                     const MCSubtargetInfo *STI) const override {
-      if (mc::isRelocRelocation(Fixup.getKind()))
+      if (!IsResolved)
         return;
       Value = adjustFixupValue(Fixup.getKind(), Value);
-      if (!Value) return;           // Doesn't change encoding.
 
       unsigned NumBytes = getFixupKindNumBytes(Fixup.getKind());
       unsigned Offset = Fixup.getOffset();
