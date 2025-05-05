@@ -300,10 +300,11 @@ getOrCreatePackedViewOfOperand(OpBuilder &b, Location loc, PackInfo packInfo,
 
 static bool isGenericOutsNotUsed(linalg::GenericOp genericOp) {
   int numDpsOuts = genericOp.getNumDpsInits();
+  Block *block = genericOp.getBody();
+  int numBlockArgs = block->getNumArguments();
+  int initArgStartIndex = numBlockArgs - numDpsOuts;
   for (int i = 0; i < numDpsOuts; ++i) {
-    Block *block = genericOp.getBody();
-    int numBlockArgs = block->getNumArguments();
-    int matchingInitArgIndex = numBlockArgs - numDpsOuts + i;
+    int matchingInitArgIndex = initArgStartIndex + i;
     return block->getArgument(matchingInitArgIndex).use_empty();
   }
   return true;
@@ -312,18 +313,13 @@ static bool isGenericOutsNotUsed(linalg::GenericOp genericOp) {
 /// Pack a genericOp and return it.
 static GenericOp packGenericOp(RewriterBase &rewriter, GenericOp genericOp,
                                Value dest, AffineMap packedOutIndexingMap,
-                               const PackInfo &packInfo) {
+                               const PackInfo &packInfo,
+                               bool canUnpackPackFold) {
   Location loc = genericOp.getLoc();
   SmallVector<Value> inputOperands;
   SmallVector<Value> inputOperandsFromUnpackedSource;
   SmallVector<AffineMap> indexingMaps;
 
-  // Note: canUnpackPackFold needs to also guarantee the generic body
-  // doesn't have gather semantics. Since such scenarios has been
-  // rejected by both BubbleUpPackOpThroughGenericOp and
-  // PushDownUnPackOpThroughGenericOp, we can safely assume
-  // canUnpackPackFold is as long as init is not used.
-  bool canUnpackPackFold = isGenericOutsNotUsed(genericOp);
   for (OpOperand *inputOperand : genericOp.getDpsInputOperands()) {
     auto [packedOperand, packedIndexingMap] = getOrCreatePackedViewOfOperand(
         rewriter, loc, packInfo, genericOp, inputOperand);
@@ -338,10 +334,18 @@ static GenericOp packGenericOp(RewriterBase &rewriter, GenericOp genericOp,
     indexingMaps.push_back(packedIndexingMap);
   }
 
+  // Note: Whether or not the unpack pack sequence can fold also depends on
+  // the caller of this routine.
+  // 1) In push down unpack op pattern, this is true because the pack op is
+  // generated and we can guarantee they are compatible.
+  // 2) In bubble up pack op pattern, this is not true because the unpack op
+  // can be from an arbitrary domain so we need to keep both.
+  canUnpackPackFold = canUnpackPackFold && isGenericOutsNotUsed(genericOp) &&
+                      !hasGatherSemantics(genericOp);
   // If The pack and unpack op can be folded:
-  // 1) use unpack op source op for operand to fold unpack -> pack sequence
-  // 2) init tensor of the generic op can be replaced by the new tensor.empty
-  // as the generic out.
+  // 1) use unpack op source op for operand to fold unpack -> pack sequence.
+  // 2) init tensor of the generic op can be replaced by the destination of the
+  // pack op.
   if (canUnpackPackFold) {
     inputOperands = inputOperandsFromUnpackedSource;
     if (auto destPack = dest.getDefiningOp<linalg::PackOp>())
@@ -484,7 +488,7 @@ bubbleUpPackOpThroughGenericOp(RewriterBase &rewriter, linalg::PackOp packOp,
     dest = packOpDest;
   }
   return packGenericOp(rewriter, genericOp, dest, packedOutIndexingMap,
-                       *packInfo);
+                       *packInfo, /*canUnpackPackFold=*/false);
 }
 
 /// Wrapper pattern that applies bubbleUpPackOpThroughGenericOp method.
@@ -1122,7 +1126,8 @@ pushDownUnPackOpThroughGenericOp(RewriterBase &rewriter, GenericOp genericOp,
 
   // Pack the genericOp.
   GenericOp newGenericOp =
-      packGenericOp(rewriter, genericOp, dest, packedOutIndexingMap, *packInfo);
+      packGenericOp(rewriter, genericOp, dest, packedOutIndexingMap, *packInfo,
+                    /*canUnpackPackFold=*/true);
   Value newResult =
       newGenericOp.getTiedOpResult(newGenericOp.getDpsInitOperand(0));
 
