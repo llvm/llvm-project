@@ -73,7 +73,7 @@ ROOT_ELEMENT_FLAG(11, SamplerHeapDirectlyIndexed)
 #endif // ROOT_ELEMENT_FLAG
 
  
-// ROOT_ELEMENT_FLAG(bit offset for the flag, name).
+// ROOT_DESCRIPTOR_FLAG(bit offset for the flag, name).
 #ifdef ROOT_DESCRIPTOR_FLAG
 
 ROOT_DESCRIPTOR_FLAG(0, NONE)
