@@ -1396,6 +1396,18 @@ void InstCombinerImpl::freelyInvertAllUsersOf(Value *I, Value *IgnoredUser) {
                        "canFreelyInvertAllUsersOf() ?");
     }
   }
+
+  // Update pre-existing debug value uses.
+  SmallVector<DbgValueInst *, 4> DbgValues;
+  SmallVector<DbgVariableRecord *, 4> DbgVariableRecords;
+  llvm::findDbgValues(DbgValues, I, &DbgVariableRecords);
+
+  SmallVector<uint64_t, 1> Ops = {dwarf::DW_OP_not};
+  for (auto *DVI : DbgValues)
+    DVI->setExpression(DIExpression::prependOpcodes(DVI->getExpression(), Ops));
+
+  for (DbgVariableRecord *DVR : DbgVariableRecords)
+    DVR->setExpression(DIExpression::prependOpcodes(DVR->getExpression(), Ops));
 }
 
 /// Given a 'sub' instruction, return the RHS of the instruction if the LHS is a
