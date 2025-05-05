@@ -2536,7 +2536,8 @@ def fno_sanitize_merge_handlers : Flag<["-"], "fno-sanitize-merge">, Group<f_cla
 def fsanitize_add_pseudo_functions_EQ
     : CommaJoined<["-"], "fsanitize-add-pseudo-functions=">,
       Group<f_clang_Group>,
-      HelpText<"Add pseudo-functions to checks for specified sanitizers">;
+      HelpText<"Add pseudo-functions to checks for specified sanitizers, if "
+               "supported.">;
 def fno_sanitize_add_pseudo_functions_EQ
     : CommaJoined<["-"], "fno-sanitize-add-pseudo-functions=">,
       Group<f_clang_Group>,
@@ -2548,7 +2549,7 @@ def fsanitize_add_pseudo_functions
       Alias<fsanitize_add_pseudo_functions_EQ>,
       AliasArgs<["all"]>,
       HelpText<"Allow compiler to add pseudo-functions to checks for all "
-               "sanitizers">;
+               "sanitizers, if supported">;
 def fno_sanitize_add_pseudo_functions
     : Flag<["-"], "fno-sanitize-add-pseudo-functions">,
       Group<f_clang_Group>,

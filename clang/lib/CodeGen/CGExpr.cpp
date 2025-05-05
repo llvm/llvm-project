@@ -1228,6 +1228,7 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
   SanitizerScope SanScope(this);
 
   llvm::DILocation *CheckDI = Builder.getCurrentDebugLocation();
+  // TODO: deprecate ClArrayBoundsPseudoFn
   if ((ClArrayBoundsPseudoFn ||
        CGM.getCodeGenOpts().SanitizeAddPseudoFunctions.has(
            SanitizerKind::SO_ArrayBounds)) &&
