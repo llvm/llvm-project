@@ -117,4 +117,38 @@ define void @test_store_memcpy_inline(ptr noalias %P, ptr noalias %Q) {
   ret void
 }
 
+;; Overwrite of memset.pattern by memcpy.
+define void @memset_pattern_overwrite(ptr %P, ptr noalias %Q) nounwind ssp {
+; CHECK-LABEL: @memset_pattern_overwrite(
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[P:%.*]], ptr [[Q:%.*]], i64 12, i1 false)
+; CHECK-NEXT:    ret void
+;
+  tail call void @llvm.experimental.memset.pattern.p0.i64(ptr %P, i8 42, i64 8, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %P, ptr %Q, i64 12, i1 false)
+  ret void
+}
+
+define void @memset_pattern_overwrite2(ptr %P, ptr noalias %Q) nounwind ssp {
+; CHECK-LABEL: @memset_pattern_overwrite2(
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[P:%.*]], ptr [[Q:%.*]], i64 12, i1 false)
+; CHECK-NEXT:    ret void
+;
+  tail call void @llvm.experimental.memset.pattern(ptr %P, i16 270, i64 4, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %P, ptr %Q, i64 12, i1 false)
+  ret void
+}
+
+define void @memset_pattern_value_noalias(ptr %P, ptr noalias %Q) nounwind ssp {
+; CHECK-LABEL: @memset_pattern_value_noalias(
+; CHECK-NEXT:    tail call void @llvm.experimental.memset.pattern.p0.p0.i64(ptr [[Q:%.*]], ptr [[P:%.*]], i64 8, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[P]], ptr [[Q]], i64 12, i1 false)
+; CHECK-NEXT:    ret void
+;
+  tail call void @llvm.memset.p0.i64(ptr %P, i8 42, i64 8, i1 false)
+  tail call void @llvm.experimental.memset.pattern.p0.i64(ptr %Q, ptr %P, i64 8, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %P, ptr %Q, i64 12, i1 false)
+  ret void
+}
+
+
 declare void @llvm.memcpy.inline.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64 immarg, i1 immarg)
