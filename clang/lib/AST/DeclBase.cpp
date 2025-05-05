@@ -695,11 +695,13 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
   if (!A->getIntroduced().empty() &&
       EnclosingVersion < A->getIntroduced()) {
     IdentifierInfo *IIEnv = A->getEnvironment();
-    StringRef TargetEnv =
-        Context.getTargetInfo().getTriple().getEnvironmentName();
-    StringRef EnvName = llvm::Triple::getEnvironmentTypeName(
-        Context.getTargetInfo().getTriple().getEnvironment());
-    // Matching environment or no environment on attribute
+    auto &Triple = Context.getTargetInfo().getTriple();
+    StringRef TargetEnv = Triple.getEnvironmentName();
+    StringRef EnvName =
+        Triple.hasEnvironment()
+            ? llvm::Triple::getEnvironmentTypeName(Triple.getEnvironment())
+            : "";
+    // Matching environment or no environment on attribute.
     if (!IIEnv || (!TargetEnv.empty() && IIEnv->getName() == TargetEnv)) {
       if (Message) {
         Message->clear();
@@ -709,7 +711,7 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
             << EnvName << HintMessage;
       }
     }
-    // Non-matching environment or no environment on target
+    // Non-matching environment or no environment on target.
     else {
       if (Message) {
         Message->clear();
