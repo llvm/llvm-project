@@ -20,8 +20,8 @@
     SANITIZER_FUCHSIA || SANITIZER_AIX
 
 #  include "sanitizer_common.h"
-#  include "sanitizer_internal_defs.h"
 #  include "sanitizer_fuchsia.h"
+#  include "sanitizer_internal_defs.h"
 #  include "sanitizer_linux.h"
 #  include "sanitizer_mac.h"
 #  include "sanitizer_mutex.h"
