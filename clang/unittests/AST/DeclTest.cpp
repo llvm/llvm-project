@@ -108,6 +108,12 @@ TEST(Decl, Availability) {
           clang::AR_Unavailable) {
         setFailure("failed obsoleted");
       }
+      if (Node.isWeakImported(clang::VersionTuple(10, 1)) != true) {
+        setFailure("failed not weak imported");
+      }
+      if (Node.isWeakImported(clang::VersionTuple(10, 10)) != false) {
+        setFailure("failed weak imported");
+      }
 
       if (Node.getAvailability() != clang::AR_Deprecated)
         setFailure("did not default to target OS version");

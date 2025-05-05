@@ -771,7 +771,7 @@ public:
   /// 'weak_import' attribute, but may also be marked with an
   /// 'availability' attribute where we're targing a platform prior to
   /// the introduction of this feature.
-  bool isWeakImported() const;
+  bool isWeakImported(VersionTuple EnclosingVersion = VersionTuple()) const;
 
   /// Determines whether this symbol can be weak-imported,
   /// e.g., whether it would be well-formed to add the weak_import

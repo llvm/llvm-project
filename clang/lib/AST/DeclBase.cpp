@@ -846,7 +846,7 @@ bool Decl::canBeWeakImported(bool &IsDefinition) const {
   return false;
 }
 
-bool Decl::isWeakImported() const {
+bool Decl::isWeakImported(VersionTuple EnclosingVersion) const {
   bool IsDefinition;
   if (!canBeWeakImported(IsDefinition))
     return false;
@@ -857,7 +857,7 @@ bool Decl::isWeakImported() const {
 
     if (const auto *Availability = dyn_cast<AvailabilityAttr>(A)) {
       if (CheckAvailability(getASTContext(), Availability, nullptr,
-                            VersionTuple()) == AR_NotYetIntroduced)
+                            EnclosingVersion) == AR_NotYetIntroduced)
         return true;
     } else if (const auto *DA = dyn_cast<DomainAvailabilityAttr>(A)) {
       auto DomainName = DA->getDomain();

@@ -2867,14 +2867,15 @@ void CodeGenModule::SetInternalFunctionAttributes(GlobalDecl GD,
   setNonAliasAttributes(GD, F);
 }
 
-static void setLinkageForGV(llvm::GlobalValue *GV, const NamedDecl *ND) {
+static void setLinkageForGV(llvm::GlobalValue *GV, const NamedDecl *ND,
+                            VersionTuple EnclosingVersion = VersionTuple()) {
   // Set linkage and visibility in case we never see a definition.
   LinkageInfo LV = ND->getLinkageAndVisibility();
   // Don't set internal linkage on declarations.
   // "extern_weak" is overloaded in LLVM; we probably should have
   // separate linkage types for this.
   if (isExternallyVisible(LV.getLinkage()) &&
-      (ND->hasAttr<WeakAttr>() || ND->isWeakImported()))
+      (ND->hasAttr<WeakAttr>() || ND->isWeakImported(EnclosingVersion)))
     GV->setLinkage(llvm::GlobalValue::ExternalWeakLinkage);
 }
 
@@ -2978,7 +2979,7 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
   // Only a few attributes are set on declarations; these may later be
   // overridden by a definition.
 
-  setLinkageForGV(F, FD);
+  setLinkageForGV(F, FD, Target.getPlatformMinVersion());
   setGVProperties(F, FD);
 
   // Setup target-specific attributes.
