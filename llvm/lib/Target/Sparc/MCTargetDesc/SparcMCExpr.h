@@ -50,9 +50,6 @@ public:
     VK_TLS_LE_LOX10,
     VK_HIX22,
     VK_LOX10,
-    VK_GOTDATA_OP_HIX22,
-    VK_GOTDATA_OP_LOX10,
-    VK_GOTDATA_OP,
   };
 
 private:

@@ -1119,7 +1119,7 @@ ParseStatus SparcAsmParser::parseTailRelocSym(OperandVector &Operands) {
     case TailRelocKind::Load_GOT:
       // Non-TLS relocations on ld (or ldx).
       // ld [%rr + %rr], %rr, %rel(sym)
-      return VK == SparcMCExpr::VK_GOTDATA_OP;
+      return VK == ELF::R_SPARC_GOTDATA_OP;
     case TailRelocKind::Add_TLS:
       // TLS relocations on add.
       // add %rr, %rr, %rr, %rel(sym)
@@ -1700,12 +1700,12 @@ bool SparcAsmParser::matchSparcAsmModifiers(const MCExpr *&EVal,
   StringRef name = Tok.getString();
 
   SparcMCExpr::Specifier VK = SparcMCExpr::parseSpecifier(name);
-  switch (VK) {
+  switch (uint16_t(VK)) {
   case SparcMCExpr::VK_None:
     Error(getLoc(), "invalid relocation specifier");
     return false;
 
-  case SparcMCExpr::VK_GOTDATA_OP:
+  case ELF::R_SPARC_GOTDATA_OP:
   case SparcMCExpr::VK_TLS_GD_ADD:
   case SparcMCExpr::VK_TLS_GD_CALL:
   case SparcMCExpr::VK_TLS_IE_ADD:
