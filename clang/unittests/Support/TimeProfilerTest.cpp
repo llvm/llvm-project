@@ -155,6 +155,16 @@ std::string buildTraceGraph(StringRef Json) {
       bool InsideCurrentEvent =
           Event.TimestampBegin >= EventStack.top()->TimestampBegin &&
           Event.TimestampEnd <= EventStack.top()->TimestampEnd;
+
+      // Presumably due to timer rounding, PerformPendingInstantiations often
+      // appear to be within the timer interval of the immediately previous
+      // event group. We always know these events occur at level 1, not level 2,
+      // in our tests, so pop an event in that case.
+      if (InsideCurrentEvent && Event.Name == "PerformPendingInstantiations" &&
+          EventStack.size() == 2) {
+        InsideCurrentEvent = false;
+      }
+
       if (!InsideCurrentEvent)
         EventStack.pop();
       else
