@@ -284,9 +284,10 @@ uint32_t Block::GetRangeIndexContainingAddress(const Address &addr) {
 }
 
 static AddressRange ToAddressRange(const Address &func_addr,
-                                   const Block::Range &range) {
+                                   const Block::Range &block_range) {
   assert(func_addr.GetModule());
-  return AddressRange(func_addr.GetFileAddress() + range.base, range.size,
+  return AddressRange(func_addr.GetFileAddress() + block_range.base,
+                      block_range.size,
                       func_addr.GetModule()->GetSectionList());
 }
 
