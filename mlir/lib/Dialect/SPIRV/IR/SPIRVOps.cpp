@@ -776,8 +776,6 @@ void spirv::EntryPointOp::build(OpBuilder &builder, OperationState &state,
 ParseResult spirv::EntryPointOp::parse(OpAsmParser &parser,
                                        OperationState &result) {
   spirv::ExecutionModel execModel;
-  SmallVector<OpAsmParser::UnresolvedOperand, 0> identifiers;
-  SmallVector<Type, 0> idTypes;
   SmallVector<Attribute, 4> interfaceVars;
 
   FlatSymbolRefAttr fn;
