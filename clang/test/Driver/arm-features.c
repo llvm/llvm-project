@@ -74,7 +74,7 @@
 // Check +crypto for M and R profiles:
 //
 // RUN: %clang -target arm-arm-none-eabi -march=armv8-r+crypto   -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CRYPTO-R %s
-// CHECK-CRYPTO-R: "-cc1"{{.*}} "-target-cpu" "generic"{{.*}} "-target-feature" "+sha2" "-target-feature" "+aes"
+// CHECK-CRYPTO-R: "-cc1"{{.*}} "-target-cpu" "generic"{{.*}} "-target-feature" "+sha2" "-target-feature" "+aes" "-target-feature" "+neon"
 // RUN: %clang -target arm-arm-none-eabi -march=armv8-m.base+crypto -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-NOCRYPTO5 %s
 // RUN: %clang -target arm-arm-none-eabi -march=armv8-m.main+crypto -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-NOCRYPTO5 %s
 // RUN: %clang -target arm-arm-none-eabi -mcpu=cortex-m23+crypto -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-NOCRYPTO5 %s
@@ -97,3 +97,21 @@
 // CHECK-NOSHA-DAG: "-target-feature" "-sha2"
 // CHECK-NOAES-DAG: "-target-feature" "-aes"
 //
+// Check that adding features that depend on NEON enable the feature
+// RUN: %clang -target arm-none-none-eabi -march=armv8-r+sha2 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-NEON-ENABLED-WITH-FEATURE %s
+// RUN: %clang -target arm-none-none-eabi -march=armv8-r+aes -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-NEON-ENABLED-WITH-FEATURE %s
+// RUN: %clang -target arm-none-none-eabi -march=armv8-r+crypto -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-NEON-ENABLED-WITH-FEATURE %s
+// RUN: %clang -target arm-none-none-eabi -march=armv8-r+dotprod -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-NEON-ENABLED-WITH-FEATURE %s
+// RUN: %clang -target arm-none-none-eabi -march=armv8-r+bf16 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-NEON-ENABLED-WITH-FEATURE %s
+// RUN: %clang -target arm-none-none-eabi -march=armv8-r+i8mm -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-NEON-ENABLED-WITH-FEATURE %s
+// CHECK-NEON-ENABLED-WITH-FEATURE: "-target-feature" "+neon"
+
+// Check that disabling NEON disables all features associated with this
+// RUN: %clang -target arm-none-none-eabi -march=armv8-a+nosimd -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-NEON-DISABLED-DISABLES-ALL-DEPENDENCIES %s
+// CHECK-NEON-DISABLED-DISABLES-ALL-DEPENDENCIES: "-target-feature" "-neon"
+// CHECK-NEON-DISABLED-DISABLES-ALL-DEPENDENCIES: "-target-feature" "-dotprod"
+// CHECK-NEON-DISABLED-DISABLES-ALL-DEPENDENCIES: "-target-feature" "-bf16"
+// CHECK-NEON-DISABLED-DISABLES-ALL-DEPENDENCIES: "-target-feature" "-i8mm"
+// CHECK-NEON-DISABLED-DISABLES-ALL-DEPENDENCIES: "-target-feature" "-crypto"
+// CHECK-NEON-DISABLED-DISABLES-ALL-DEPENDENCIES: "-target-feature" "-sha2"
+// CHECK-NEON-DISABLED-DISABLES-ALL-DEPENDENCIES: "-target-feature" "-aes"

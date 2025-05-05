@@ -9,6 +9,7 @@ add_flang_library(FlangOpenMPTransforms
   MapInfoFinalization.cpp
   MarkDeclareTarget.cpp
   LowerWorkshare.cpp
+  LowerNontemporal.cpp
 
   DEPENDS
   FIRDialect
@@ -18,7 +19,7 @@ add_flang_library(FlangOpenMPTransforms
   LINK_LIBS
   FIRAnalysis
   FIRBuilder
-  FIRCodeGen
+  FIRCodeGenDialect
   FIRDialect
   FIRDialectSupport
   FIRSupport

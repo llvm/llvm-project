@@ -19,7 +19,7 @@
 ; CHECK-SAME: #llvm.mlir.module_flag<override, "probe-stack", "inline-asm">]
 
 ; // -----
-; expected-warning@-2 {{unsupported module flag value: !4 = !{!"foo", i32 1}}}
+; expected-warning@-2 {{unsupported module flag value for key 'qux' : !4 = !{!"foo", i32 1}}}
 !10 = !{ i32 1, !"foo", i32 1 }
 !11 = !{ i32 4, !"bar", i32 37 }
 !12 = !{ i32 2, !"qux", i32 42 }
@@ -36,11 +36,11 @@ declare void @to()
 !20 = !{i32 5, !"CG Profile", !21}
 !21 = distinct !{!22, !23, !24}
 !22 = !{ptr @from, ptr @to, i64 222}
-!23 = !{ptr @from, ptr @from, i64 222}
+!23 = !{ptr @from, null, i64 222}
 !24 = !{ptr @to, ptr @from, i64 222}
 
 ; CHECK: llvm.module_flags [#llvm.mlir.module_flag<append, "CG Profile", [
 ; CHECK-SAME: #llvm.cgprofile_entry<from = @from, to = @to, count = 222>,
-; CHECK-SAME: #llvm.cgprofile_entry<from = @from, to = @from, count = 222>,
+; CHECK-SAME: #llvm.cgprofile_entry<from = @from, count = 222>,
 ; CHECK-SAME: #llvm.cgprofile_entry<from = @to, to = @from, count = 222>
 ; CHECK-SAME: ]>]

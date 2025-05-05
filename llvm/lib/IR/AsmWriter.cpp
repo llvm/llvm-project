@@ -2124,6 +2124,8 @@ static void writeDILocation(raw_ostream &Out, const DILocation *DL,
   Printer.printMetadata("inlinedAt", DL->getRawInlinedAt());
   Printer.printBool("isImplicitCode", DL->isImplicitCode(),
                     /* Default */ false);
+  Printer.printInt("atomGroup", DL->getAtomGroup());
+  Printer.printInt<unsigned>("atomRank", DL->getAtomRank());
   Out << ")";
 }
 

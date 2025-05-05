@@ -123,6 +123,12 @@ else()
         ${LLVM_EXTERNAL_LLD_SOURCE_DIR}/include
         ${LLVM_BINARY_DIR}/tools/lld/include)
   endif()
+
+  if (LLVM_EXTERNAL_SPIRV_LLVM_TRANSLATOR_SOURCE_DIR)
+    target_include_directories(amd_comgr
+      PRIVATE
+        ${LLVM_EXTERNAL_SPIRV_LLVM_TRANSLATOR_SOURCE_DIR}/include)
+  endif()
 endif()
 
 target_include_directories(amd_comgr
@@ -187,6 +193,9 @@ if(${COMGR_DISABLE_SPIRV})
   message("-- Comgr SPIRV Disabled")
 else()
   message("-- Comgr SPIRV Enabled")
+  target_include_directories(amd_comgr
+      PRIVATE
+        "${LLVM_INCLUDE_DIRS}/LLVMSPIRVLib")
 endif()
 
 
@@ -219,7 +228,8 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     "/wd4624" #[[Suppress 'derived class' : destructor could not be generated because a base class destructor is inaccessible]]
     "/wd4267" #[[Suppress 'var' : conversion from 'size_t' to 'type', possible loss of data]]
     "/wd4291" #[[Suppress 'declaration' : no matching operator delete found; memory will not be freed if initialization throws an exception]]
-    "/wd4146" #[[Suppress 'unary minus operator applied to unsigned type, result still unsigned]])
+    "/wd4146" #[[Suppress 'unary minus operator applied to unsigned type, result still unsigned]]
+    "/Zc:preprocessor" #[[Enable standards conforming preprocessor - https://learn.microsoft.com/en-us/cpp/build/reference/zc-preprocessor]])
   list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS _HAS_EXCEPTIONS=0)
 endif()
 

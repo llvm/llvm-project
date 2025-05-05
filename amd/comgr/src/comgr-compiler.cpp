@@ -1436,7 +1436,7 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
 
     if (Input->DataKind == AMD_COMGR_DATA_KIND_BC) {
       if (env::shouldEmitVerboseLogs()) {
-        LogS << "\t     Linking Bitcode: " << InputDir << "/" << Input->Name
+        LogS << "\t     Linking Bitcode: " << InputDir << path::get_separator() << Input->Name
              << "\n";
       }
 
@@ -1458,7 +1458,7 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
         return AMD_COMGR_STATUS_ERROR;
     } else if (Input->DataKind == AMD_COMGR_DATA_KIND_BC_BUNDLE) {
       if (env::shouldEmitVerboseLogs()) {
-        LogS << "      Linking Bundle: " << InputDir << "/" << Input->Name
+        LogS << "      Linking Bundle: " << InputDir << path::get_separator() << Input->Name
              << "\n";
       }
 
@@ -1501,7 +1501,7 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
       // on Windows. Replace with '_'
       std::replace(OutputFileName.begin(), OutputFileName.end(), ':', '_');
 
-      std::string OutputFilePath = OutputDir.str().str() + "/" + OutputFileName;
+      std::string OutputFilePath = OutputDir.str().str() + path::get_separator().str() + OutputFileName;
       BundlerConfig.OutputFileNames.push_back(OutputFilePath);
 
       OffloadBundler Bundler(BundlerConfig);
@@ -1556,7 +1556,7 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
     // Unbundle bitcode archive
     else if (Input->DataKind == AMD_COMGR_DATA_KIND_AR_BUNDLE) {
       if (env::shouldEmitVerboseLogs()) {
-        LogS << "\t     Linking Archive: " << InputDir << "/" << Input->Name
+        LogS << "\t     Linking Archive: " << InputDir << path::get_separator() << Input->Name
              << "\n";
       }
 
@@ -1602,7 +1602,7 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
       // on Windows. Replace with '_'
       std::replace(OutputFileName.begin(), OutputFileName.end(), ':', '_');
 
-      std::string OutputFilePath = OutputDir.str().str() + "/" + OutputFileName;
+      std::string OutputFilePath = OutputDir.str().str() + path::get_separator().str() + OutputFileName;
       BundlerConfig.OutputFileNames.push_back(OutputFilePath);
 
       OffloadBundler Bundler(BundlerConfig);

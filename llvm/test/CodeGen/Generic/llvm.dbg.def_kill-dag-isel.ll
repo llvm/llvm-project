@@ -35,8 +35,8 @@ entry:
 
 define void @alloca() {
 entry:
-  %0 = alloca i1
-  call void @llvm.dbg.def(metadata !11, metadata i1* %0), !dbg !5
+  %0 = alloca i1, addrspace(5)
+  call void @llvm.dbg.def(metadata !11, metadata ptr addrspace(5) %0), !dbg !5
   call void @llvm.dbg.kill(metadata !11), !dbg !7
   unreachable
 }
