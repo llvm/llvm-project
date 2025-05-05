@@ -1341,7 +1341,7 @@ static bool finalizeInstrRefRegSequenceNew(
   for (const Part &P : drop_begin(Parts, 1))
     DbgInstr.addOperand(MachineOperand::CreateDbgInstrRef(
         P.DbgInstrNum.first, P.DbgInstrNum.second));
-  DbgInstr.getDebugExpressionOp() = MachineOperand::CreateMetadata(NewExpr);
+  DbgInstr.getDebugExpressionOp().setMetadata(NewExpr);
   assert(NewExpr->getNewNumLocationOperands() ==
          DbgInstr.getNumDebugOperands());
   return true;
