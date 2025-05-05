@@ -911,7 +911,7 @@ static LogicalResult printOperation(CppEmitter &emitter, emitc::ForOp forOp) {
   if (failed(emitter.emitOperand(forOp.getLowerBound())))
     return failure();
   os << "; ";
-  os << emitter.getOrCreateName(forOp.getInductionVar());
+  os << emitter.getOrCreateInductionVarName(forOp.getInductionVar());
   os << " < ";
   Value upperBound = forOp.getUpperBound();
   bool upperBoundRequiresParentheses = requiresParentheses(upperBound);
@@ -922,7 +922,7 @@ static LogicalResult printOperation(CppEmitter &emitter, emitc::ForOp forOp) {
   if (upperBoundRequiresParentheses)
     os << ")";
   os << "; ";
-  os << emitter.getOrCreateName(forOp.getInductionVar());
+  os << emitter.getOrCreateInductionVarName(forOp.getInductionVar());
   os << " += ";
   if (failed(emitter.emitOperand(forOp.getStep())))
     return failure();
