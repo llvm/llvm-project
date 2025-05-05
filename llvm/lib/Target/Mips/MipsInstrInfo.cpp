@@ -87,6 +87,14 @@ MipsInstrInfo::GetMemOperand(MachineBasicBlock &MBB, int FI,
                                  MFI.getObjectAlign(FI));
 }
 
+MCInst MipsInstrInfo::getNop() const {
+  MCInst Nop;
+  // using Mips::NOP gives
+  // "fatal error: error in backend: Not supported instr: <MCInst 580>"
+  Nop.setOpcode(Mips::SSNOP);
+  return Nop;
+}
+
 //===----------------------------------------------------------------------===//
 // Branch Analysis
 //===----------------------------------------------------------------------===//

@@ -59,6 +59,8 @@ public:
 
   static const MipsInstrInfo *create(MipsSubtarget &STI);
 
+  MCInst getNop() const override;
+
   /// Branch Analysis
   bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                      MachineBasicBlock *&FBB,
