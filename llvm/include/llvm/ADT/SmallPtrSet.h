@@ -15,6 +15,7 @@
 #ifndef LLVM_ADT_SMALLPTRSET_H
 #define LLVM_ADT_SMALLPTRSET_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ADL.h"
 #include "llvm/ADT/EpochTracker.h"
 #include "llvm/ADT/STLForwardCompat.h"
@@ -70,9 +71,9 @@ protected:
   bool IsSmall;
 
   // Helpers to copy and move construct a SmallPtrSet.
-  SmallPtrSetImplBase(const void **SmallStorage,
+  LLVM_ABI SmallPtrSetImplBase(const void **SmallStorage,
                       const SmallPtrSetImplBase &that);
-  SmallPtrSetImplBase(const void **SmallStorage, unsigned SmallSize,
+  LLVM_ABI SmallPtrSetImplBase(const void **SmallStorage, unsigned SmallSize,
                       const void **RHSSmallStorage, SmallPtrSetImplBase &&that);
 
   explicit SmallPtrSetImplBase(const void **SmallStorage, unsigned SmallSize)
@@ -235,23 +236,23 @@ protected:
   bool isSmall() const { return IsSmall; }
 
 private:
-  std::pair<const void *const *, bool> insert_imp_big(const void *Ptr);
+  LLVM_ABI std::pair<const void *const *, bool> insert_imp_big(const void *Ptr);
 
-  const void *const *doFind(const void *Ptr) const;
+  LLVM_ABI const void *const *doFind(const void *Ptr) const;
   const void * const *FindBucketFor(const void *Ptr) const;
-  void shrink_and_clear();
+  LLVM_ABI void shrink_and_clear();
 
   /// Grow - Allocate a larger backing store for the buckets and move it over.
-  void Grow(unsigned NewSize);
+  LLVM_ABI void Grow(unsigned NewSize);
 
 protected:
   /// swap - Swaps the elements of two sets.
   /// Note: This method assumes that both sets have the same small size.
-  void swap(const void **SmallStorage, const void **RHSSmallStorage,
+  LLVM_ABI void swap(const void **SmallStorage, const void **RHSSmallStorage,
             SmallPtrSetImplBase &RHS);
 
-  void copyFrom(const void **SmallStorage, const SmallPtrSetImplBase &RHS);
-  void moveFrom(const void **SmallStorage, unsigned SmallSize,
+  LLVM_ABI void copyFrom(const void **SmallStorage, const SmallPtrSetImplBase &RHS);
+  LLVM_ABI void moveFrom(const void **SmallStorage, unsigned SmallSize,
                 const void **RHSSmallStorage, SmallPtrSetImplBase &&RHS);
 
 private:
