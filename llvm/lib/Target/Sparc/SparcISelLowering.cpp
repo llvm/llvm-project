@@ -3556,6 +3556,12 @@ bool SparcTargetLowering::useLoadStackGuardNode(const Module &M) const {
   return true;
 }
 
+bool SparcTargetLowering::isFNegFree(EVT VT) const {
+  if (Subtarget->isVIS3())
+    return VT == MVT::f32 || VT == MVT::f64;
+  return false;
+}
+
 bool SparcTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
                                        bool ForCodeSize) const {
   return Subtarget->isVIS() && (VT == MVT::f32 || VT == MVT::f64) &&
