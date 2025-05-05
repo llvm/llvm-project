@@ -1544,6 +1544,38 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::FunctionPointersINTEL);
     }
     break;
+  case SPIRV::OpSubgroup2DBlockLoadINTEL:
+  case SPIRV::OpSubgroup2DBlockPrefetchINTEL:
+  case SPIRV::OpSubgroup2DBlockStoreINTEL: {
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_2d_block_io))
+      report_fatal_error(
+          "OpSubgroup2DBlockLoadTransposeINTEL instruction requires the "
+          "following SPIR-V extension: SPV_INTEL_2d_block_io",
+          false);
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_2d_block_io);
+    Reqs.addCapability(SPIRV::Capability::Subgroup2DBlockIOINTEL);
+    break;
+  }
+  case SPIRV::OpSubgroup2DBlockLoadTransformINTEL: {
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_2d_block_io))
+      report_fatal_error(
+          "OpSubgroup2DBlockLoadTransformINTEL instruction requires the "
+          "following SPIR-V extension: SPV_INTEL_2d_block_io",
+          false);
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_2d_block_io);
+    Reqs.addCapability(SPIRV::Capability::Subgroup2DBlockTransformINTEL);
+    break;
+  }
+  case SPIRV::OpSubgroup2DBlockLoadTransposeINTEL: {
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_2d_block_io))
+      report_fatal_error(
+          "OpSubgroup2DBlockLoadTransposeINTEL instruction requires the "
+          "following SPIR-V extension: SPV_INTEL_2d_block_io",
+          false);
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_2d_block_io);
+    Reqs.addCapability(SPIRV::Capability::Subgroup2DBlockTransposeINTEL);
+    break;
+  }
   case SPIRV::OpAtomicFAddEXT:
   case SPIRV::OpAtomicFMinEXT:
   case SPIRV::OpAtomicFMaxEXT:

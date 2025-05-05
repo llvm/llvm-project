@@ -936,3 +936,21 @@ def OpAliasScopeListDeclINTEL: Op<5913, (outs ID:$res), (ins variable_ops),
 // SPV_INTEL_ternary_bitwise_function
 def OpBitwiseFunctionINTEL: Op<6242, (outs ID:$res), (ins TYPE:$type, ID:$a, ID:$b, ID:$c, ID:$lut_index),
                   "$res = OpBitwiseFunctionINTEL $type $a $b $c $lut_index">;
+
+
+//SPV_INTEL_2d_block_io
+def OpSubgroup2DBlockLoadINTEL: Op<6231, (outs),
+          (ins ID:$elementSize, ID:$blockWidth, ID:$blockHeight, ID:$blockCount, ID:$srcBasePointer, ID:$memoryWidth, ID:$memoryHeight, ID:$memoryPitch, ID:$coordinate, ID:$dstPointer),
+          "OpSubgroup2DBlockLoadINTEL $elementSize $blockWidth $blockHeight $blockCount $srcBasePointer $memoryWidth $memoryHeight $memoryPitch $coordinate $dstPointer">;
+def OpSubgroup2DBlockLoadTransposeINTEL: Op<6232, (outs),
+          (ins ID:$elementSize, ID:$blockWidth, ID:$blockHeight, ID:$blockCount, ID:$srcBasePointer, ID:$memoryWidth, ID:$memoryHeight, ID:$memoryPitch, ID:$coordinate, ID:$dstPointer),
+          "OpSubgroup2DBlockLoadTransposeINTEL $elementSize $blockWidth $blockHeight $blockCount $srcBasePointer $memoryWidth $memoryHeight $memoryPitch $coordinate $dstPointer">;
+def OpSubgroup2DBlockLoadTransformINTEL: Op<6233, (outs),
+          (ins ID:$elementSize, ID:$blockWidth, ID:$blockHeight, ID:$blockCount, ID:$srcBasePointer, ID:$memoryWidth, ID:$memoryHeight, ID:$memoryPitch, ID:$coordinate, ID:$dstPointer),
+          "OpSubgroup2DBlockLoadTransformINTEL $elementSize $blockWidth $blockHeight $blockCount $srcBasePointer $memoryWidth $memoryHeight $memoryPitch $coordinate $dstPointer">;
+def OpSubgroup2DBlockPrefetchINTEL: Op<6234, (outs),
+          (ins ID:$elementSize, ID:$blockWidth, ID:$blockHeight, ID:$blockCount, ID:$srcPointer, ID:$memoryWidth, ID:$memoryHeight, ID:$memoryPitch, ID:$coordinate),
+          "OpSubgroup2DBlockPrefetchINTEL $elementSize $blockWidth $blockHeight $blockCount $srcPointer $memoryWidth $memoryHeight $memoryPitch $coordinate">;
+def OpSubgroup2DBlockStoreINTEL: Op<6235, (outs),
+          (ins ID:$elementSize, ID:$blockWidth, ID:$blockHeight, ID:$blockCount, ID:$srcPointer, ID:$dstBasePointer, ID:$memoryWidth, ID:$memoryHeight, ID:$memoryPitch, ID:$coordinate),
+          "OpSubgroup2DBlockStoreINTEL $elementSize $blockWidth $blockHeight $blockCount $srcPointer $dstBasePointer $memoryWidth $memoryHeight $memoryPitch $coordinate">;
