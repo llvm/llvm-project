@@ -135,11 +135,11 @@ uint16_t SparcMCExpr::getFixupKind() const {
   default:
     assert(uint16_t(specifier) < FirstTargetFixupKind);
     return specifier;
-  case VK_LO:            return Sparc::fixup_sparc_lo10;
-  case VK_HI:            return Sparc::fixup_sparc_hi22;
-  case VK_HH:            return Sparc::fixup_sparc_hh;
-  case VK_HM:            return Sparc::fixup_sparc_hm;
-  case VK_LM:            return Sparc::fixup_sparc_lm;
+  case VK_LO:            return ELF::R_SPARC_LO10;
+  case VK_HI:            return ELF::R_SPARC_HI22;
+  case VK_HH:            return ELF::R_SPARC_HH22;
+  case VK_HM:            return ELF::R_SPARC_HM10;
+  case VK_LM:            return ELF::R_SPARC_LM22;
   case VK_TLS_GD_HI22:   return ELF::R_SPARC_TLS_GD_HI22;
   case VK_TLS_GD_LO10:   return ELF::R_SPARC_TLS_GD_LO10;
   case VK_TLS_GD_ADD:    return ELF::R_SPARC_TLS_GD_ADD;
@@ -158,8 +158,8 @@ uint16_t SparcMCExpr::getFixupKind() const {
   case VK_TLS_IE_ADD:    return ELF::R_SPARC_TLS_IE_ADD;
   case VK_TLS_LE_HIX22:  return ELF::R_SPARC_TLS_LE_HIX22;
   case VK_TLS_LE_LOX10:  return ELF::R_SPARC_TLS_LE_LOX10;
-  case VK_HIX22:         return Sparc::fixup_sparc_hix22;
-  case VK_LOX10:         return Sparc::fixup_sparc_lox10;
+  case VK_HIX22:         return ELF::R_SPARC_HIX22;
+  case VK_LOX10:         return ELF::R_SPARC_LOX10;
   }
   // clang-format on
 }
