@@ -1987,8 +1987,7 @@ void CGDebugInfo::CollectRecordFields(
 
         // Bump field number for next field.
         ++fieldNo;
-      } else if (CGM.getCodeGenOpts().hasMaybeUnusedDebugInfo() ||
-                 CGM.getCodeGenOpts().EmitCodeView) {
+      } else if (CGM.getCodeGenOpts().EmitCodeView) {
         // Debug info for nested types is included in the member list only for
         // CodeView.
         if (const auto *nestedType = dyn_cast<TypeDecl>(I)) {
