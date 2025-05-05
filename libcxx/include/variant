@@ -213,7 +213,7 @@ namespace std {
 */
 
 #if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
-#  include <__cxx03/variant>
+#  include <__cxx03/__config>
 #else
 #  include <__compare/common_comparison_category.h>
 #  include <__compare/compare_three_way_result.h>
@@ -283,14 +283,14 @@ namespace std {
 _LIBCPP_PUSH_MACROS
 #  include <__undef_macros>
 
-namespace std { // explicitly not using versioning namespace
+_LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
 
 class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_AVAILABILITY_BAD_VARIANT_ACCESS bad_variant_access : public exception {
 public:
   const char* what() const _NOEXCEPT override;
 };
 
-} // namespace std
+_LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -317,29 +317,29 @@ __throw_bad_variant_access() {
 
 // variant_size
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS variant_size<const _Tp> : variant_size<_Tp> {};
+struct variant_size<const _Tp> : variant_size<_Tp> {};
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS variant_size<volatile _Tp> : variant_size<_Tp> {};
+struct variant_size<volatile _Tp> : variant_size<_Tp> {};
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS variant_size<const volatile _Tp> : variant_size<_Tp> {};
+struct variant_size<const volatile _Tp> : variant_size<_Tp> {};
 
 template <class... _Types>
-struct _LIBCPP_TEMPLATE_VIS variant_size<variant<_Types...>> : integral_constant<size_t, sizeof...(_Types)> {};
+struct variant_size<variant<_Types...>> : integral_constant<size_t, sizeof...(_Types)> {};
 
 // variant_alternative
 template <size_t _Ip, class _Tp>
-struct _LIBCPP_TEMPLATE_VIS variant_alternative<_Ip, const _Tp> : add_const<variant_alternative_t<_Ip, _Tp>> {};
+struct variant_alternative<_Ip, const _Tp> : add_const<variant_alternative_t<_Ip, _Tp>> {};
 
 template <size_t _Ip, class _Tp>
-struct _LIBCPP_TEMPLATE_VIS variant_alternative<_Ip, volatile _Tp> : add_volatile<variant_alternative_t<_Ip, _Tp>> {};
+struct variant_alternative<_Ip, volatile _Tp> : add_volatile<variant_alternative_t<_Ip, _Tp>> {};
 
 template <size_t _Ip, class _Tp>
-struct _LIBCPP_TEMPLATE_VIS variant_alternative<_Ip, const volatile _Tp> : add_cv<variant_alternative_t<_Ip, _Tp>> {};
+struct variant_alternative<_Ip, const volatile _Tp> : add_cv<variant_alternative_t<_Ip, _Tp>> {};
 
 template <size_t _Ip, class... _Types>
-struct _LIBCPP_TEMPLATE_VIS variant_alternative<_Ip, variant<_Types...>> {
+struct variant_alternative<_Ip, variant<_Types...>> {
   static_assert(_Ip < sizeof...(_Types), "Index out of bounds in std::variant_alternative<>");
   using type _LIBCPP_NODEBUG = __type_pack_element<_Ip, _Types...>;
 };
@@ -658,7 +658,7 @@ private:
 #    define _LIBCPP_EAT_SEMICOLON static_assert(true, "")
 
 template <size_t _Index, class _Tp>
-struct _LIBCPP_TEMPLATE_VIS __alt {
+struct __alt {
   using __value_type _LIBCPP_NODEBUG = _Tp;
   static constexpr size_t __index    = _Index;
 
@@ -670,14 +670,14 @@ struct _LIBCPP_TEMPLATE_VIS __alt {
 };
 
 template <_Trait _DestructibleTrait, size_t _Index, class... _Types>
-union _LIBCPP_TEMPLATE_VIS __union;
+union __union;
 
 template <_Trait _DestructibleTrait, size_t _Index>
-union _LIBCPP_TEMPLATE_VIS __union<_DestructibleTrait, _Index> {};
+union __union<_DestructibleTrait, _Index> {};
 
 #    define _LIBCPP_VARIANT_UNION(destructible_trait, destructor_definition)                                           \
       template <size_t _Index, class _Tp, class... _Types>                                                             \
-      union _LIBCPP_TEMPLATE_VIS __union<destructible_trait, _Index, _Tp, _Types...> {                                 \
+      union __union<destructible_trait, _Index, _Tp, _Types...> {                                                      \
       public:                                                                                                          \
         _LIBCPP_HIDE_FROM_ABI explicit constexpr __union(__valueless_t) noexcept : __dummy{} {}                        \
                                                                                                                        \
@@ -712,7 +712,7 @@ _LIBCPP_VARIANT_UNION(_Trait::_Unavailable, _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTE
 #    undef _LIBCPP_VARIANT_UNION
 
 template <_Trait _DestructibleTrait, class... _Types>
-class _LIBCPP_TEMPLATE_VIS __base {
+class __base {
 public:
   using __index_t _LIBCPP_NODEBUG = __variant_index_t<sizeof...(_Types)>;
 
@@ -748,12 +748,11 @@ protected:
 };
 
 template <class _Traits, _Trait = _Traits::__destructible_trait>
-class _LIBCPP_TEMPLATE_VIS __dtor;
+class __dtor;
 
 #    define _LIBCPP_VARIANT_DESTRUCTOR(destructible_trait, destructor_definition, destroy)                             \
       template <class... _Types>                                                                                       \
-      class _LIBCPP_TEMPLATE_VIS __dtor<__traits<_Types...>, destructible_trait>                                       \
-          : public __base<destructible_trait, _Types...> {                                                             \
+      class __dtor<__traits<_Types...>, destructible_trait> : public __base<destructible_trait, _Types...> {           \
         using __base_type _LIBCPP_NODEBUG = __base<destructible_trait, _Types...>;                                     \
         using __index_t _LIBCPP_NODEBUG   = typename __base_type::__index_t;                                           \
                                                                                                                        \
@@ -799,7 +798,7 @@ _LIBCPP_VARIANT_DESTRUCTOR(_Trait::_Unavailable,
 #    undef _LIBCPP_VARIANT_DESTRUCTOR
 
 template <class _Traits>
-class _LIBCPP_TEMPLATE_VIS __ctor : public __dtor<_Traits> {
+class __ctor : public __dtor<_Traits> {
   using __base_type _LIBCPP_NODEBUG = __dtor<_Traits>;
 
 public:
@@ -826,12 +825,11 @@ protected:
 };
 
 template <class _Traits, _Trait = _Traits::__move_constructible_trait>
-class _LIBCPP_TEMPLATE_VIS __move_constructor;
+class __move_constructor;
 
 #    define _LIBCPP_VARIANT_MOVE_CONSTRUCTOR(move_constructible_trait, move_constructor_definition)                    \
       template <class... _Types>                                                                                       \
-      class _LIBCPP_TEMPLATE_VIS __move_constructor<__traits<_Types...>, move_constructible_trait>                     \
-          : public __ctor<__traits<_Types...>> {                                                                       \
+      class __move_constructor<__traits<_Types...>, move_constructible_trait> : public __ctor<__traits<_Types...>> {   \
         using __base_type _LIBCPP_NODEBUG = __ctor<__traits<_Types...>>;                                               \
                                                                                                                        \
       public:                                                                                                          \
@@ -864,11 +862,11 @@ _LIBCPP_VARIANT_MOVE_CONSTRUCTOR(
 #    undef _LIBCPP_VARIANT_MOVE_CONSTRUCTOR
 
 template <class _Traits, _Trait = _Traits::__copy_constructible_trait>
-class _LIBCPP_TEMPLATE_VIS __copy_constructor;
+class __copy_constructor;
 
 #    define _LIBCPP_VARIANT_COPY_CONSTRUCTOR(copy_constructible_trait, copy_constructor_definition)                    \
       template <class... _Types>                                                                                       \
-      class _LIBCPP_TEMPLATE_VIS __copy_constructor<__traits<_Types...>, copy_constructible_trait>                     \
+      class __copy_constructor<__traits<_Types...>, copy_constructible_trait>                                          \
           : public __move_constructor<__traits<_Types...>> {                                                           \
         using __base_type _LIBCPP_NODEBUG = __move_constructor<__traits<_Types...>>;                                   \
                                                                                                                        \
@@ -899,7 +897,7 @@ _LIBCPP_VARIANT_COPY_CONSTRUCTOR(
 #    undef _LIBCPP_VARIANT_COPY_CONSTRUCTOR
 
 template <class _Traits>
-class _LIBCPP_TEMPLATE_VIS __assignment : public __copy_constructor<_Traits> {
+class __assignment : public __copy_constructor<_Traits> {
   using __base_type _LIBCPP_NODEBUG = __copy_constructor<_Traits>;
 
 public:
@@ -953,12 +951,11 @@ protected:
 };
 
 template <class _Traits, _Trait = _Traits::__move_assignable_trait>
-class _LIBCPP_TEMPLATE_VIS __move_assignment;
+class __move_assignment;
 
 #    define _LIBCPP_VARIANT_MOVE_ASSIGNMENT(move_assignable_trait, move_assignment_definition)                         \
       template <class... _Types>                                                                                       \
-      class _LIBCPP_TEMPLATE_VIS __move_assignment<__traits<_Types...>, move_assignable_trait>                         \
-          : public __assignment<__traits<_Types...>> {                                                                 \
+      class __move_assignment<__traits<_Types...>, move_assignable_trait> : public __assignment<__traits<_Types...>> { \
         using __base_type _LIBCPP_NODEBUG = __assignment<__traits<_Types...>>;                                         \
                                                                                                                        \
       public:                                                                                                          \
@@ -992,11 +989,11 @@ _LIBCPP_VARIANT_MOVE_ASSIGNMENT(
 #    undef _LIBCPP_VARIANT_MOVE_ASSIGNMENT
 
 template <class _Traits, _Trait = _Traits::__copy_assignable_trait>
-class _LIBCPP_TEMPLATE_VIS __copy_assignment;
+class __copy_assignment;
 
 #    define _LIBCPP_VARIANT_COPY_ASSIGNMENT(copy_assignable_trait, copy_assignment_definition)                         \
       template <class... _Types>                                                                                       \
-      class _LIBCPP_TEMPLATE_VIS __copy_assignment<__traits<_Types...>, copy_assignable_trait>                         \
+      class __copy_assignment<__traits<_Types...>, copy_assignable_trait>                                              \
           : public __move_assignment<__traits<_Types...>> {                                                            \
         using __base_type _LIBCPP_NODEBUG = __move_assignment<__traits<_Types...>>;                                    \
                                                                                                                        \
@@ -1030,7 +1027,7 @@ _LIBCPP_VARIANT_COPY_ASSIGNMENT(_Trait::_Unavailable,
 #    undef _LIBCPP_VARIANT_COPY_ASSIGNMENT
 
 template <class... _Types>
-class _LIBCPP_TEMPLATE_VIS __impl : public __copy_assignment<__traits<_Types...>> {
+class __impl : public __copy_assignment<__traits<_Types...>> {
   using __base_type _LIBCPP_NODEBUG = __copy_assignment<__traits<_Types...>>;
 
 public:
@@ -1157,7 +1154,7 @@ visit(_Visitor&& __visitor, _Vs&&... __vs);
 #    endif
 
 template <class... _Types>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_DECLSPEC_EMPTY_BASES _LIBCPP_NO_SPECIALIZATIONS variant
+class _LIBCPP_DECLSPEC_EMPTY_BASES _LIBCPP_NO_SPECIALIZATIONS variant
     : private __sfinae_ctor_base< __all<is_copy_constructible_v<_Types>...>::value,
                                   __all<is_move_constructible_v<_Types>...>::value>,
       private __sfinae_assign_base<
@@ -1585,7 +1582,7 @@ swap(variant<_Types...>& __lhs,
 }
 
 template <class... _Types>
-struct _LIBCPP_TEMPLATE_VIS hash< __enable_hash_helper<variant<_Types...>, remove_const_t<_Types>...>> {
+struct hash< __enable_hash_helper<variant<_Types...>, remove_const_t<_Types>...>> {
 #    if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
   using argument_type _LIBCPP_DEPRECATED_IN_CXX17 = variant<_Types...>;
   using result_type _LIBCPP_DEPRECATED_IN_CXX17   = size_t;

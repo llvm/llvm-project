@@ -119,7 +119,7 @@ private:
   /// Exclusive or shared.
   LockKind LKind : 8;
 
-  // How it was acquired.
+  /// How it was acquired.
   SourceKind Source : 8;
 
   /// Where it was acquired.
@@ -1011,8 +1011,8 @@ private:
               SourceLocation loc, ThreadSafetyHandler *Handler) const {
     if (FSet.findLock(FactMan, Cp)) {
       FSet.removeLock(FactMan, Cp);
-      FSet.addLock(FactMan, std::make_unique<LockableFactEntry>(
-                                !Cp, LK_Exclusive, loc));
+      FSet.addLock(FactMan,
+                   std::make_unique<LockableFactEntry>(!Cp, LK_Exclusive, loc));
     } else if (Handler) {
       SourceLocation PrevLoc;
       if (const FactEntry *Neg = FSet.findLock(FactMan, !Cp))
@@ -1230,25 +1230,6 @@ static const ValueDecl *getValueDecl(const Expr *Exp) {
 
   return nullptr;
 }
-
-namespace {
-
-template <typename Ty>
-class has_arg_iterator_range {
-  using yes = char[1];
-  using no = char[2];
-
-  template <typename Inner>
-  static yes& test(Inner *I, decltype(I->args()) * = nullptr);
-
-  template <typename>
-  static no& test(...);
-
-public:
-  static const bool value = sizeof(test<Ty>(nullptr)) == sizeof(yes);
-};
-
-} // namespace
 
 bool ThreadSafetyAnalyzer::inCurrentScope(const CapabilityExpr &CapE) {
   const threadSafety::til::SExpr *SExp = CapE.sexpr();
@@ -1511,38 +1492,17 @@ void ThreadSafetyAnalyzer::getEdgeLockset(FactSet& Result,
     return;
 
   auto *FunDecl = dyn_cast_or_null<NamedDecl>(Exp->getCalleeDecl());
-  if(!FunDecl || !FunDecl->hasAttrs())
+  if (!FunDecl || !FunDecl->hasAttr<TryAcquireCapabilityAttr>())
     return;
 
   CapExprSet ExclusiveLocksToAdd;
   CapExprSet SharedLocksToAdd;
 
   // If the condition is a call to a Trylock function, then grab the attributes
-  for (const auto *Attr : FunDecl->attrs()) {
-    switch (Attr->getKind()) {
-      case attr::TryAcquireCapability: {
-        auto *A = cast<TryAcquireCapabilityAttr>(Attr);
-        getMutexIDs(A->isShared() ? SharedLocksToAdd : ExclusiveLocksToAdd, A,
-                    Exp, FunDecl, PredBlock, CurrBlock, A->getSuccessValue(),
-                    Negate);
-        break;
-      };
-      case attr::ExclusiveTrylockFunction: {
-        const auto *A = cast<ExclusiveTrylockFunctionAttr>(Attr);
-        getMutexIDs(ExclusiveLocksToAdd, A, Exp, FunDecl, PredBlock, CurrBlock,
-                    A->getSuccessValue(), Negate);
-        break;
-      }
-      case attr::SharedTrylockFunction: {
-        const auto *A = cast<SharedTrylockFunctionAttr>(Attr);
-        getMutexIDs(SharedLocksToAdd, A, Exp, FunDecl, PredBlock, CurrBlock,
-                    A->getSuccessValue(), Negate);
-        break;
-      }
-      default:
-        break;
-    }
-  }
+  for (const auto *Attr : FunDecl->specific_attrs<TryAcquireCapabilityAttr>())
+    getMutexIDs(Attr->isShared() ? SharedLocksToAdd : ExclusiveLocksToAdd, Attr,
+                Exp, FunDecl, PredBlock, CurrBlock, Attr->getSuccessValue(),
+                Negate);
 
   // Add and remove locks.
   SourceLocation Loc = Exp->getExprLoc();
@@ -1882,29 +1842,6 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
       // An assert will add a lock to the lockset, but will not generate
       // a warning if it is already there, and will not generate a warning
       // if it is not removed.
-      case attr::AssertExclusiveLock: {
-        const auto *A = cast<AssertExclusiveLockAttr>(At);
-
-        CapExprSet AssertLocks;
-        Analyzer->getMutexIDs(AssertLocks, A, Exp, D, Self);
-        for (const auto &AssertLock : AssertLocks)
-          Analyzer->addLock(
-              FSet, std::make_unique<LockableFactEntry>(
-                        AssertLock, LK_Exclusive, Loc, FactEntry::Asserted));
-        break;
-      }
-      case attr::AssertSharedLock: {
-        const auto *A = cast<AssertSharedLockAttr>(At);
-
-        CapExprSet AssertLocks;
-        Analyzer->getMutexIDs(AssertLocks, A, Exp, D, Self);
-        for (const auto &AssertLock : AssertLocks)
-          Analyzer->addLock(
-              FSet, std::make_unique<LockableFactEntry>(
-                        AssertLock, LK_Shared, Loc, FactEntry::Asserted));
-        break;
-      }
-
       case attr::AssertCapability: {
         const auto *A = cast<AssertCapabilityAttr>(At);
         CapExprSet AssertLocks;
@@ -2499,12 +2436,6 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
         getMutexIDs(A->isShared() ? SharedLocksAcquired
                                   : ExclusiveLocksAcquired,
                     A, nullptr, D);
-      } else if (isa<ExclusiveTrylockFunctionAttr>(Attr)) {
-        // Don't try to check trylock functions for now.
-        return;
-      } else if (isa<SharedTrylockFunctionAttr>(Attr)) {
-        // Don't try to check trylock functions for now.
-        return;
       } else if (isa<TryAcquireCapabilityAttr>(Attr)) {
         // Don't try to check trylock functions for now.
         return;

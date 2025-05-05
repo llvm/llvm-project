@@ -15,6 +15,7 @@
 #include "mlir/IR/Location.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/CIR/MissingFeatures.h"
@@ -49,7 +50,8 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d) {
   // A normal fixed sized variable becomes an alloca in the entry block,
   mlir::Type allocaTy = convertTypeForMem(ty);
   // Create the temp alloca and declare variable using it.
-  address = createTempAlloca(allocaTy, alignment, loc, d.getName());
+  address = createTempAlloca(allocaTy, alignment, loc, d.getName(),
+                             /*insertIntoFnEntryBlock=*/false);
   declare(address.getPointer(), &d, ty, getLoc(d.getSourceRange()), alignment);
 
   emission.Addr = address;
@@ -88,8 +90,13 @@ void CIRGenFunction::emitAutoVarInit(
   // If this local has an initializer, emit it now.
   const Expr *init = d.getInit();
 
-  if (!type.isPODType(getContext())) {
-    cgm.errorNYI(d.getSourceRange(), "emitAutoVarInit: non-POD type");
+  // Initialize the variable here if it doesn't have a initializer and it is a
+  // C struct that is non-trivial to initialize or an array containing such a
+  // struct.
+  if (!init && type.isNonTrivialToPrimitiveDefaultInitialize() ==
+                   QualType::PDIK_Struct) {
+    cgm.errorNYI(d.getSourceRange(),
+                 "emitAutoVarInit: non-trivial to default initialize");
     return;
   }
 
@@ -144,7 +151,7 @@ void CIRGenFunction::emitAutoVarInit(
   // its removal/optimization to the CIR lowering.
   if (!constant || isa<CXXTemporaryObjectExpr>(init)) {
     initializeWhatIsTechnicallyUninitialized(addr);
-    LValue lv = LValue::makeAddr(addr, type);
+    LValue lv = makeAddrLValue(addr, type, AlignmentSource::Decl);
     emitExprAsInit(init, &d, lv);
     // In case lv has uses it means we indeed initialized something
     // out of it while trying to build the expression, mark it as such.
@@ -163,7 +170,7 @@ void CIRGenFunction::emitAutoVarInit(
   assert(typedConstant && "expected typed attribute");
   if (!emission.IsConstantAggregate) {
     // For simple scalar/complex initialization, store the value directly.
-    LValue lv = LValue::makeAddr(addr, type);
+    LValue lv = makeAddrLValue(addr, type);
     assert(init && "expected initializer");
     mlir::Location initLoc = getLoc(init->getSourceRange());
     // lv.setNonGC(true);
@@ -238,7 +245,10 @@ void CIRGenFunction::emitExprAsInit(const Expr *init, const ValueDecl *d,
   QualType type = d->getType();
 
   if (type->isReferenceType()) {
-    cgm.errorNYI(init->getSourceRange(), "emitExprAsInit: reference type");
+    RValue rvalue = emitReferenceBindingToExpr(init);
+    if (capturedByInit)
+      cgm.errorNYI(init->getSourceRange(), "emitExprAsInit: captured by init");
+    emitStoreThroughLValue(rvalue, lvalue);
     return;
   }
   switch (CIRGenFunction::getEvaluationKind(type)) {
@@ -250,7 +260,7 @@ void CIRGenFunction::emitExprAsInit(const Expr *init, const ValueDecl *d,
     return;
   }
   case cir::TEK_Aggregate:
-    cgm.errorNYI(init->getSourceRange(), "emitExprAsInit: aggregate type");
+    emitAggExpr(init, AggValueSlot::forLValue(lvalue));
     return;
   }
   llvm_unreachable("bad evaluation kind");
@@ -258,6 +268,90 @@ void CIRGenFunction::emitExprAsInit(const Expr *init, const ValueDecl *d,
 
 void CIRGenFunction::emitDecl(const Decl &d) {
   switch (d.getKind()) {
+  case Decl::BuiltinTemplate:
+  case Decl::TranslationUnit:
+  case Decl::ExternCContext:
+  case Decl::Namespace:
+  case Decl::UnresolvedUsingTypename:
+  case Decl::ClassTemplateSpecialization:
+  case Decl::ClassTemplatePartialSpecialization:
+  case Decl::VarTemplateSpecialization:
+  case Decl::VarTemplatePartialSpecialization:
+  case Decl::TemplateTypeParm:
+  case Decl::UnresolvedUsingValue:
+  case Decl::NonTypeTemplateParm:
+  case Decl::CXXDeductionGuide:
+  case Decl::CXXMethod:
+  case Decl::CXXConstructor:
+  case Decl::CXXDestructor:
+  case Decl::CXXConversion:
+  case Decl::Field:
+  case Decl::MSProperty:
+  case Decl::IndirectField:
+  case Decl::ObjCIvar:
+  case Decl::ObjCAtDefsField:
+  case Decl::ParmVar:
+  case Decl::ImplicitParam:
+  case Decl::ClassTemplate:
+  case Decl::VarTemplate:
+  case Decl::FunctionTemplate:
+  case Decl::TypeAliasTemplate:
+  case Decl::TemplateTemplateParm:
+  case Decl::ObjCMethod:
+  case Decl::ObjCCategory:
+  case Decl::ObjCProtocol:
+  case Decl::ObjCInterface:
+  case Decl::ObjCCategoryImpl:
+  case Decl::ObjCImplementation:
+  case Decl::ObjCProperty:
+  case Decl::ObjCCompatibleAlias:
+  case Decl::PragmaComment:
+  case Decl::PragmaDetectMismatch:
+  case Decl::AccessSpec:
+  case Decl::LinkageSpec:
+  case Decl::Export:
+  case Decl::ObjCPropertyImpl:
+  case Decl::FileScopeAsm:
+  case Decl::Friend:
+  case Decl::FriendTemplate:
+  case Decl::Block:
+  case Decl::OutlinedFunction:
+  case Decl::Captured:
+  case Decl::UsingShadow:
+  case Decl::ConstructorUsingShadow:
+  case Decl::ObjCTypeParam:
+  case Decl::Binding:
+  case Decl::UnresolvedUsingIfExists:
+    llvm_unreachable("Declaration should not be in declstmts!");
+
+  case Decl::Function:     // void X();
+  case Decl::EnumConstant: // enum ? { X = ? }
+  case Decl::StaticAssert: // static_assert(X, ""); [C++0x]
+  case Decl::Label:        // __label__ x;
+  case Decl::Import:
+  case Decl::MSGuid: // __declspec(uuid("..."))
+  case Decl::TemplateParamObject:
+  case Decl::OMPThreadPrivate:
+  case Decl::OMPAllocate:
+  case Decl::OMPCapturedExpr:
+  case Decl::OMPRequires:
+  case Decl::Empty:
+  case Decl::Concept:
+  case Decl::LifetimeExtendedTemporary:
+  case Decl::RequiresExprBody:
+  case Decl::UnnamedGlobalConstant:
+    // None of these decls require codegen support.
+    return;
+
+  case Decl::Enum:   // enum X;
+  case Decl::Record: // struct/union/class X;
+  case Decl::CXXRecord: // struct/union/class X; [C++]
+  case Decl::NamespaceAlias:
+  case Decl::Using:          // using X; [C++]
+  case Decl::UsingEnum:      // using enum X; [C++]
+  case Decl::UsingDirective: // using namespace X; [C++]
+    assert(!cir::MissingFeatures::generateDebugInfo());
+    return;
   case Decl::Var: {
     const VarDecl &vd = cast<VarDecl>(d);
     assert(vd.isLocalVarDecl() &&
@@ -265,7 +359,37 @@ void CIRGenFunction::emitDecl(const Decl &d) {
     emitVarDecl(vd);
     return;
   }
-  default:
-    cgm.errorNYI(d.getSourceRange(), "emitDecl: unhandled decl type");
+  case Decl::OpenACCDeclare:
+    emitOpenACCDeclare(cast<OpenACCDeclareDecl>(d));
+    return;
+  case Decl::OpenACCRoutine:
+    emitOpenACCRoutine(cast<OpenACCRoutineDecl>(d));
+    return;
+  case Decl::Typedef:     // typedef int X;
+  case Decl::TypeAlias: { // using X = int; [C++0x]
+    QualType ty = cast<TypedefNameDecl>(d).getUnderlyingType();
+    assert(!cir::MissingFeatures::generateDebugInfo());
+    if (ty->isVariablyModifiedType())
+      cgm.errorNYI(d.getSourceRange(), "emitDecl: variably modified type");
+    return;
   }
+  case Decl::ImplicitConceptSpecialization:
+  case Decl::HLSLBuffer:
+  case Decl::TopLevelStmt:
+  case Decl::UsingPack:
+  case Decl::Decomposition: // This could be moved to join Decl::Var
+  case Decl::OMPDeclareReduction:
+  case Decl::OMPDeclareMapper:
+    cgm.errorNYI(d.getSourceRange(),
+                 std::string("emitDecl: unhandled decl type: ") +
+                     d.getDeclKindName());
+  }
+}
+
+void CIRGenFunction::emitNullabilityCheck(LValue lhs, mlir::Value rhs,
+                                          SourceLocation loc) {
+  if (!sanOpts.has(SanitizerKind::NullabilityAssign))
+    return;
+
+  assert(!cir::MissingFeatures::sanitizers());
 }

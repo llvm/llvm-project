@@ -14,7 +14,7 @@ target triple = "aarch64"
 define %"class.std::complex" @complex_mul_v2f64(ptr %a, ptr %b) {
 ; CHECK-LABEL: complex_mul_v2f64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z1.d, #0 // =0x0
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    mov w10, #100 // =0x64
 ; CHECK-NEXT:    neg x9, x8
@@ -98,20 +98,20 @@ exit.block:                                     ; preds = %vector.body
 define %"class.std::complex" @complex_mul_nonzero_init_v2f64(ptr %a, ptr %b) {
 ; CHECK-LABEL: complex_mul_nonzero_init_v2f64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov d0, #1.00000000
-; CHECK-NEXT:    mov z1.d, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    fmov d1, #1.00000000
 ; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    fmov d2, #2.00000000
 ; CHECK-NEXT:    ptrue p0.d, vl1
 ; CHECK-NEXT:    neg x9, x8
 ; CHECK-NEXT:    mov w10, #100 // =0x64
-; CHECK-NEXT:    sel z3.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    and x9, x9, x10
 ; CHECK-NEXT:    rdvl x10, #2
-; CHECK-NEXT:    mov z1.d, p0/m, z2.d
+; CHECK-NEXT:    sel z1.d, p0, z1.d, z0.d
+; CHECK-NEXT:    sel z2.d, p0, z2.d, z0.d
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    zip2 z0.d, z1.d, z3.d
-; CHECK-NEXT:    zip1 z1.d, z1.d, z3.d
+; CHECK-NEXT:    zip2 z0.d, z2.d, z1.d
+; CHECK-NEXT:    zip1 z1.d, z2.d, z1.d
 ; CHECK-NEXT:  .LBB1_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr z2, [x0, #1, mul vl]
@@ -183,7 +183,7 @@ exit.block:                                     ; preds = %vector.body
 define %"class.std::complex" @complex_mul_v2f64_unrolled(ptr %a, ptr %b) {
 ; CHECK-LABEL: complex_mul_v2f64_unrolled:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z1.d, #0 // =0x0
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    cntw x8
 ; CHECK-NEXT:    mov w10, #1000 // =0x3e8
 ; CHECK-NEXT:    neg x9, x8
@@ -309,7 +309,7 @@ exit.block:                                     ; preds = %vector.body
 define dso_local %"class.std::complex" @reduction_mix(ptr %a, ptr %b, ptr noalias nocapture noundef readnone %c, [2 x double] %d.coerce, ptr nocapture noundef readonly %s, ptr nocapture noundef writeonly %outs) local_unnamed_addr #0 {
 ; CHECK-LABEL: reduction_mix:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z2.d, #0 // =0x0
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    mov w11, #100 // =0x64
 ; CHECK-NEXT:    neg x10, x9

@@ -393,6 +393,14 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
             clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::All, "All", ""),
             clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::Reserved, "Reserved", "")
           )}]>,
+       Option<"instrumentFunctionEntry", "instrument-function-entry",
+              "std::string", /*default=*/"",
+              "Sets the name of the profiling function called during function "
+              "entry">,
+       Option<"instrumentFunctionExit", "instrument-function-exit",
+              "std::string", /*default=*/"",
+              "Sets the name of the profiling function called during function "
+              "exit">,
        Option<"noInfsFPMath", "no-infs-fp-math", "bool", /*default=*/"false",
               "Set the no-infs-fp-math attribute on functions in the module.">,
        Option<"noNaNsFPMath", "no-nans-fp-math", "bool", /*default=*/"false",
@@ -463,7 +471,7 @@ def CUFComputeSharedMemoryOffsetsAndSize
     the global and set it.
   }];
 
-  let dependentDialects = ["fir::FIROpsDialect"];
+  let dependentDialects = ["cuf::CUFDialect", "fir::FIROpsDialect"];
 }
 
 def SetRuntimeCallAttributes

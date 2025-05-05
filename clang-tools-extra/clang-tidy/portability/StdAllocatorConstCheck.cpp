@@ -15,12 +15,12 @@ namespace clang::tidy::portability {
 
 void StdAllocatorConstCheck::registerMatchers(MatchFinder *Finder) {
   // Match std::allocator<const T>.
-  auto allocatorConst =
+  auto AllocatorConst =
       recordType(hasDeclaration(classTemplateSpecializationDecl(
           hasName("::std::allocator"),
           hasTemplateArgument(0, refersToType(qualType(isConstQualified()))))));
 
-  auto hasContainerName =
+  auto HasContainerName =
       hasAnyName("::std::vector", "::std::deque", "::std::list",
                  "::std::multiset", "::std::set", "::std::unordered_multiset",
                  "::std::unordered_set", "::absl::flat_hash_set");
@@ -34,17 +34,17 @@ void StdAllocatorConstCheck::registerMatchers(MatchFinder *Finder) {
           templateSpecializationTypeLoc(),
           loc(hasUnqualifiedDesugaredType(anyOf(
               recordType(hasDeclaration(classTemplateSpecializationDecl(
-                  hasContainerName,
+                  HasContainerName,
                   anyOf(
-                      hasTemplateArgument(1, refersToType(allocatorConst)),
-                      hasTemplateArgument(2, refersToType(allocatorConst)),
-                      hasTemplateArgument(3, refersToType(allocatorConst)))))),
+                      hasTemplateArgument(1, refersToType(AllocatorConst)),
+                      hasTemplateArgument(2, refersToType(AllocatorConst)),
+                      hasTemplateArgument(3, refersToType(AllocatorConst)))))),
               // Match std::vector<const dependent>
               templateSpecializationType(
                   templateArgumentCountIs(1),
                   hasTemplateArgument(
                       0, refersToType(qualType(isConstQualified()))),
-                  hasDeclaration(namedDecl(hasContainerName)))))))
+                  hasDeclaration(namedDecl(HasContainerName)))))))
           .bind("type_loc"),
       this);
 }

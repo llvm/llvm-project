@@ -34,10 +34,6 @@ public:
   template <typename Range> StringSet(llvm::from_range_t, Range &&R) {
     insert(adl_begin(R), adl_end(R));
   }
-  template <typename Container> explicit StringSet(Container &&C) {
-    for (auto &&Str : C)
-      insert(Str);
-  }
   explicit StringSet(AllocatorTy a) : Base(a) {}
 
   std::pair<typename Base::iterator, bool> insert(StringRef key) {

@@ -114,7 +114,7 @@ bool MatchQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
     Profiler.emplace();
 
   for (auto &AST : QS.ASTs) {
-    ast_matchers::MatchFinderOptions FinderOptions;
+    ast_matchers::MatchFinder::MatchFinderOptions FinderOptions;
     std::optional<llvm::StringMap<llvm::TimeRecord>> Records;
     if (QS.EnableProfile) {
       Records.emplace();

@@ -14,9 +14,11 @@
 #include "Clauses.h"
 #include "Utils.h"
 
+#include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/Frontend/OpenMP/OMP.h.inc"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 
 namespace Fortran {
@@ -217,6 +219,39 @@ bool ClauseProcessor::processBind(mlir::omp::BindClauseOps &result) const {
     return true;
   }
   return false;
+}
+
+bool ClauseProcessor::processCancelDirectiveName(
+    mlir::omp::CancelDirectiveNameClauseOps &result) const {
+  using ConstructType = mlir::omp::ClauseCancellationConstructType;
+  mlir::MLIRContext *context = &converter.getMLIRContext();
+
+  ConstructType directive;
+  if (auto *clause = findUniqueClause<omp::CancellationConstructType>()) {
+    switch (clause->v) {
+    case llvm::omp::OMP_CANCELLATION_CONSTRUCT_Parallel:
+      directive = mlir::omp::ClauseCancellationConstructType::Parallel;
+      break;
+    case llvm::omp::OMP_CANCELLATION_CONSTRUCT_Loop:
+      directive = mlir::omp::ClauseCancellationConstructType::Loop;
+      break;
+    case llvm::omp::OMP_CANCELLATION_CONSTRUCT_Sections:
+      directive = mlir::omp::ClauseCancellationConstructType::Sections;
+      break;
+    case llvm::omp::OMP_CANCELLATION_CONSTRUCT_Taskgroup:
+      directive = mlir::omp::ClauseCancellationConstructType::Taskgroup;
+      break;
+    case llvm::omp::OMP_CANCELLATION_CONSTRUCT_None:
+      llvm_unreachable("OMP_CANCELLATION_CONSTRUCT_None");
+      break;
+    }
+  } else {
+    llvm_unreachable("cancel construct missing cancellation construct type");
+  }
+
+  result.cancelDirective =
+      mlir::omp::ClauseCancellationConstructTypeAttr::get(context, directive);
+  return true;
 }
 
 bool ClauseProcessor::processCollapse(
@@ -694,9 +729,10 @@ void TypeInfo::typeScan(mlir::Type ty) {
   } else if (auto pty = mlir::dyn_cast<fir::PointerType>(ty)) {
     typeScan(pty.getEleTy());
   } else {
-    // The scan ends when reaching any built-in or record type.
+    // The scan ends when reaching any built-in, record or boxproc type.
     assert(ty.isIntOrIndexOrFloat() || mlir::isa<mlir::ComplexType>(ty) ||
-           mlir::isa<fir::LogicalType>(ty) || mlir::isa<fir::RecordType>(ty));
+           mlir::isa<fir::LogicalType>(ty) || mlir::isa<fir::RecordType>(ty) ||
+           mlir::isa<fir::BoxProcType>(ty));
   }
 }
 
@@ -808,7 +844,21 @@ bool ClauseProcessor::processCopyprivate(
   return hasCopyPrivate;
 }
 
-bool ClauseProcessor::processDepend(mlir::omp::DependClauseOps &result) const {
+template <typename T>
+static bool isVectorSubscript(const evaluate::Expr<T> &expr) {
+  if (std::optional<evaluate::DataRef> dataRef{evaluate::ExtractDataRef(expr)})
+    if (const auto *arrayRef = std::get_if<evaluate::ArrayRef>(&dataRef->u))
+      for (const evaluate::Subscript &subscript : arrayRef->subscript())
+        if (std::holds_alternative<evaluate::IndirectSubscriptIntegerExpr>(
+                subscript.u))
+          if (subscript.Rank() > 0)
+            return true;
+  return false;
+}
+
+bool ClauseProcessor::processDepend(lower::SymMap &symMap,
+                                    lower::StatementContext &stmtCtx,
+                                    mlir::omp::DependClauseOps &result) const {
   auto process = [&](const omp::clause::Depend &clause,
                      const parser::CharBlock &) {
     using Depend = omp::clause::Depend;
@@ -819,6 +869,7 @@ bool ClauseProcessor::processDepend(mlir::omp::DependClauseOps &result) const {
     auto &taskDep = std::get<Depend::TaskDep>(clause.u);
     auto depType = std::get<clause::DependenceType>(taskDep.t);
     auto &objects = std::get<omp::ObjectList>(taskDep.t);
+    fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
     if (std::get<std::optional<omp::clause::Iterator>>(taskDep.t)) {
       TODO(converter.getCurrentLocation(),
@@ -830,18 +881,53 @@ bool ClauseProcessor::processDepend(mlir::omp::DependClauseOps &result) const {
 
     for (const omp::Object &object : objects) {
       assert(object.ref() && "Expecting designator");
+      mlir::Value dependVar;
 
       if (evaluate::ExtractSubstring(*object.ref())) {
         TODO(converter.getCurrentLocation(),
              "substring not supported for task depend");
       } else if (evaluate::IsArrayElement(*object.ref())) {
-        TODO(converter.getCurrentLocation(),
-             "array sections not supported for task depend");
+        // Array Section
+        SomeExpr expr = *object.ref();
+
+        if (isVectorSubscript(expr)) {
+          // OpenMP needs the address of the first indexed element (required by
+          // the standard to be the lowest index) to identify the dependency. We
+          // don't need an accurate length for the array section because the
+          // OpenMP standard forbids overlapping array sections.
+          dependVar = genVectorSubscriptedDesignatorFirstElementAddress(
+              converter.getCurrentLocation(), converter, expr, symMap, stmtCtx);
+        } else {
+          // Ordinary array section e.g. A(1:512:2)
+          hlfir::EntityWithAttributes entity = convertExprToHLFIR(
+              converter.getCurrentLocation(), converter, expr, symMap, stmtCtx);
+          dependVar = entity.getBase();
+        }
+      } else {
+        semantics::Symbol *sym = object.sym();
+        dependVar = converter.getSymbolAddress(*sym);
       }
 
-      semantics::Symbol *sym = object.sym();
-      const mlir::Value variable = converter.getSymbolAddress(*sym);
-      result.dependVars.push_back(variable);
+      // If we pass a mutable box e.g. !fir.ref<!fir.box<!fir.heap<...>>> then
+      // the runtime will use the address of the box not the address of the
+      // data. Flang generates a lot of memcpys between different box
+      // allocations so this is not a reliable way to identify the dependency.
+      if (auto ref = mlir::dyn_cast<fir::ReferenceType>(dependVar.getType()))
+        if (fir::isa_box_type(ref.getElementType()))
+          dependVar = builder.create<fir::LoadOp>(
+              converter.getCurrentLocation(), dependVar);
+
+      // The openmp dialect doesn't know what to do with boxes (and it would
+      // break layering to teach it about them). The dependency variable can be
+      // a box because it was an array section or because the original symbol
+      // was mapped to a box.
+      // Getting the address of the box data is okay because all the runtime
+      // ultimately cares about is the base address of the array.
+      if (fir::isa_box_type(dependVar.getType()))
+        dependVar = builder.create<fir::BoxAddrOp>(
+            converter.getCurrentLocation(), dependVar);
+
+      result.dependVars.push_back(dependVar);
     }
   };
 

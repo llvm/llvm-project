@@ -28,7 +28,6 @@
 #include <deque>
 #include <memory>
 #include <set>
-#include <vector>
 
 namespace clang {
 namespace ast_matchers {
@@ -423,7 +422,7 @@ class MatchASTVisitor : public RecursiveASTVisitor<MatchASTVisitor>,
                         public ASTMatchFinder {
 public:
   MatchASTVisitor(const MatchFinder::MatchersByType *Matchers,
-                  const MatchFinderOptions &Options)
+                  const MatchFinder::MatchFinderOptions &Options)
       : Matchers(Matchers), Options(Options), ActiveASTContext(nullptr) {}
 
   ~MatchASTVisitor() override {
@@ -585,7 +584,8 @@ public:
 
         if (LE->hasExplicitResultType())
           TraverseTypeLoc(Proto.getReturnLoc());
-        TraverseStmt(LE->getTrailingRequiresClause());
+        TraverseStmt(
+            const_cast<Expr *>(LE->getTrailingRequiresClause().ConstraintExpr));
       }
 
       TraverseStmt(LE->getBody());
@@ -1351,7 +1351,7 @@ private:
   /// We precalculate a list of matchers that pass the toplevel restrict check.
   llvm::DenseMap<ASTNodeKind, std::vector<unsigned short>> MatcherFiltersMap;
 
-  const MatchFinderOptions &Options;
+  const MatchFinder::MatchFinderOptions &Options;
   ASTContext *ActiveASTContext;
 
   // Maps a canonical type to its TypedefDecls.
@@ -1574,41 +1574,19 @@ bool MatchASTVisitor::TraverseAttr(Attr *AttrNode) {
 class MatchASTConsumer : public ASTConsumer {
 public:
   MatchASTConsumer(MatchFinder *Finder,
-                   MatchFinder::ParsingDoneTestCallback *ParsingDone,
-                   const MatchFinderOptions &Options)
-      : Finder(Finder), ParsingDone(ParsingDone), Options(Options) {}
+                   MatchFinder::ParsingDoneTestCallback *ParsingDone)
+      : Finder(Finder), ParsingDone(ParsingDone) {}
 
 private:
-  bool HandleTopLevelDecl(DeclGroupRef DG) override {
-    if (Options.SkipSystemHeaders) {
-      for (Decl *D : DG) {
-        if (!isInSystemHeader(D))
-          TraversalScope.push_back(D);
-      }
-    }
-    return true;
-  }
-
   void HandleTranslationUnit(ASTContext &Context) override {
-    if (!TraversalScope.empty())
-      Context.setTraversalScope(TraversalScope);
-
     if (ParsingDone != nullptr) {
       ParsingDone->run();
     }
     Finder->matchAST(Context);
   }
 
-  bool isInSystemHeader(Decl *D) {
-    const SourceManager &SM = D->getASTContext().getSourceManager();
-    const SourceLocation Loc = SM.getExpansionLoc(D->getBeginLoc());
-    return SM.isInSystemHeader(Loc);
-  }
-
   MatchFinder *Finder;
   MatchFinder::ParsingDoneTestCallback *ParsingDone;
-  const MatchFinderOptions &Options;
-  std::vector<Decl *> TraversalScope;
 };
 
 } // end namespace
@@ -1727,8 +1705,7 @@ bool MatchFinder::addDynamicMatcher(const internal::DynTypedMatcher &NodeMatch,
 }
 
 std::unique_ptr<ASTConsumer> MatchFinder::newASTConsumer() {
-  return std::make_unique<internal::MatchASTConsumer>(this, ParsingDone,
-                                                      Options);
+  return std::make_unique<internal::MatchASTConsumer>(this, ParsingDone);
 }
 
 void MatchFinder::match(const clang::DynTypedNode &Node, ASTContext &Context) {

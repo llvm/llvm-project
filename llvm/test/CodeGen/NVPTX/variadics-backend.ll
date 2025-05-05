@@ -13,7 +13,7 @@ define dso_local i32 @variadics1(i32 noundef %first, ...) {
 ; CHECK-PTX:       {
 ; CHECK-PTX-NEXT:    .reg .b32 %r<11>;
 ; CHECK-PTX-NEXT:    .reg .b64 %rd<11>;
-; CHECK-PTX-NEXT:    .reg .f64 %fd<7>;
+; CHECK-PTX-NEXT:    .reg .b64 %fd<7>;
 ; CHECK-PTX-EMPTY:
 ; CHECK-PTX-NEXT:  // %bb.0: // %entry
 ; CHECK-PTX-NEXT:    ld.param.u32 %r1, [variadics1_param_0];

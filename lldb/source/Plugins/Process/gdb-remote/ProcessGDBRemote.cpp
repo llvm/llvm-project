@@ -1410,7 +1410,7 @@ Status ProcessGDBRemote::DoResume(RunDirection direction) {
           LLDB_LOGF(log, "ProcessGDBRemote::DoResume: target does not "
                          "support reverse-continue");
           return Status::FromErrorString(
-              "target does not support reverse-continue");
+              "target does not support reverse execution of processes");
         }
 
         if (num_continue_C_tids > 0) {
@@ -2056,7 +2056,6 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
   // Stop with signal and thread info
   lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
   uint8_t signo = 0;
-  std::string value;
   std::string thread_name;
   std::string reason;
   std::string description;
@@ -2276,7 +2275,6 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         m_jstopinfo_sp = StructuredData::ParseJSON(json);
       } else if (key.compare("hexname") == 0) {
         StringExtractor name_extractor(value);
-        std::string name;
         // Now convert the HEX bytes into a string value
         name_extractor.GetHexByteString(thread_name);
       } else if (key.compare("name") == 0) {
@@ -2571,7 +2569,16 @@ Status ProcessGDBRemote::DoDestroy() {
 
   StopAsyncThread();
   KillDebugserverProcess();
+  RemoveNewThreadBreakpoints();
   return Status();
+}
+
+void ProcessGDBRemote::RemoveNewThreadBreakpoints() {
+  if (m_thread_create_bp_sp) {
+    if (TargetSP target_sp = m_target_wp.lock())
+      target_sp->RemoveBreakpointByID(m_thread_create_bp_sp->GetID());
+    m_thread_create_bp_sp.reset();
+  }
 }
 
 void ProcessGDBRemote::SetLastStopPacket(

@@ -312,6 +312,18 @@ module {
     llvm.return
   }
 
+  llvm.func @instrument_function_entry_function() attributes {instrument_function_entry = "__cyg_profile_func_enter"} {
+    // CHECK: @instrument_function_entry_function
+    // CHECK-SAME: attributes {instrument_function_entry = "__cyg_profile_func_enter"}
+    llvm.return
+  }
+
+  llvm.func @instrument_function_exit_function() attributes {instrument_function_exit = "__cyg_profile_func_exit"} {
+    // CHECK: @instrument_function_exit_function
+    // CHECK-SAME: attributes {instrument_function_exit = "__cyg_profile_func_exit"}
+    llvm.return
+  }
+
   llvm.func @nounwind_function() attributes {no_unwind} {
     // CHECK: @nounwind_function
     // CHECK-SAME: attributes {no_unwind}
@@ -428,7 +440,7 @@ module {
 
 module {
   "llvm.func"() ({
-  // expected-error @below {{invalid Calling Conventions specification: cc_12}}
+  // expected-error @below {{expected one of [ccc, fastcc, coldcc, cc_10, cc_11, anyregcc, preserve_mostcc, preserve_allcc, swiftcc, cxx_fast_tlscc, tailcc, cfguard_checkcc, swifttailcc, x86_stdcallcc, x86_fastcallcc, arm_apcscc, arm_aapcscc, arm_aapcs_vfpcc, msp430_intrcc, x86_thiscallcc, ptx_kernelcc, ptx_devicecc, spir_funccc, spir_kernelcc, intel_ocl_bicc, x86_64_sysvcc, win64cc, x86_vectorcallcc, hhvmcc, hhvm_ccc, x86_intrcc, avr_intrcc, avr_builtincc, amdgpu_vscc, amdgpu_gscc, amdgpu_cscc, amdgpu_kernelcc, x86_regcallcc, amdgpu_hscc, msp430_builtincc, amdgpu_lscc, amdgpu_escc, aarch64_vectorcallcc, aarch64_sve_vectorcallcc, wasm_emscripten_invokecc, amdgpu_gfxcc, m68k_intrcc] for Calling Conventions, got: cc_12}}
   // expected-error @below {{failed to parse CConvAttr parameter 'CallingConv' which is to be a `CConv`}}
   }) {sym_name = "generic_unknown_calling_convention", CConv = #llvm.cconv<cc_12>, function_type = !llvm.func<i64 (i64, i64)>} : () -> ()
 }

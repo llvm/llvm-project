@@ -9,6 +9,7 @@ load("@rules_python//python:defs.bzl", "py_binary")
 load(
     ":libc_build_rules.bzl",
     "libc_function",
+    "libc_header_library",
     "libc_math_function",
     "libc_support_library",
 )
@@ -87,6 +88,18 @@ py_binary(
     srcs = glob(["utils/hdrgen/hdrgen/**/*.py"]),
     imports = ["utils/hdrgen"],
     main = "utils/hdrgen/hdrgen/main.py",
+)
+
+# Library containing all headers that can be transitively included by generated llvm-libc
+# public headers (or by the unit tests).
+libc_support_library(
+    name = "public_headers_deps",
+    textual_hdrs = [
+        "include/__llvm-libc-common.h",
+    ] + glob([
+        "include/llvm-libc-types/**/*.h",
+        "include/llvm-libc-macros/**/*.h",
+    ]),
 )
 
 ################################## Base Config #################################
@@ -840,12 +853,6 @@ libc_support_library(
 libc_support_library(
     name = "__support_libc_assert",
     hdrs = ["src/__support/libc_assert.h"],
-    deps = [
-        ":__support_integer_to_string",
-        ":__support_macros_attributes",
-        ":__support_osutil_exit",
-        ":__support_osutil_io",
-    ],
 )
 
 libc_support_library(
@@ -867,7 +874,7 @@ libc_support_library(
         ":__support_ctype_utils",
         ":__support_str_to_num_result",
         ":__support_uint128",
-        ":errno",
+        ":hdr_errno_macros",
     ],
 )
 
@@ -891,7 +898,7 @@ libc_support_library(
         ":__support_str_to_integer",
         ":__support_str_to_num_result",
         ":__support_uint128",
-        ":errno",
+        ":hdr_errno_macros",
     ],
 )
 
@@ -993,6 +1000,7 @@ libc_support_library(
         ":__support_cpp_bit",
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
+        ":__support_macros_null_check",
         ":__support_macros_optimization",
         ":__support_math_extras",
         ":llvm_libc_macros_stdfix_macros",
@@ -1200,6 +1208,7 @@ libc_support_library(
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
         ":__support_fputil_rounding_mode",
+        ":__support_macros_properties_cpu_features",
         ":__support_uint128",
     ],
 )
@@ -1319,7 +1328,7 @@ libc_support_library(
             "src/__support/OSUtil/linux/aarch64/syscall.h",
             "src/__support/OSUtil/linux/x86_64/syscall.h",
         ],
-	"@platforms//os:windows": [],
+        "@platforms//os:windows": [],
     }),
     deps = [
         ":__support_common",
@@ -1361,7 +1370,7 @@ libc_support_library(
     textual_hdrs = select({
         "@platforms//os:macos": ["src/__support/OSUtil/darwin/io.h"],
         "@platforms//os:linux": ["src/__support/OSUtil/linux/io.h"],
-	"@platforms//os:windows": ["src/__support/OSUtil/windows/io.h"],
+        "@platforms//os:windows": ["src/__support/OSUtil/windows/io.h"],
     }),
     deps = [
         ":__support_common",
@@ -1589,12 +1598,13 @@ libc_support_library(
 
 ########################## externally shared targets ###########################
 
-libc_support_library(
-    name = "libc_external_common",
-    hdrs = glob(
-        ["shared/*.h"],
-        exclude = ["shared/rpc_server.h"],
-    ),
+libc_header_library(
+    name = "libcxx_shared_headers",
+    hdrs = [
+        "shared/fp_bits.h",
+        "shared/str_to_float.h",
+        "shared/str_to_integer.h",
+    ],
     deps = [
         ":__support_common",
         ":__support_fputil_fp_bits",
@@ -1886,7 +1896,6 @@ libc_support_library(
     srcs = ["src/math/generic/inv_trigf_utils.cpp"],
     hdrs = [
         "src/math/generic/inv_trigf_utils.h",
-        "src/math/generic/atan_utils.h",
     ],
     deps = [
         ":__support_common",
@@ -1894,6 +1903,20 @@ libc_support_library(
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
+        ":__support_integer_literals",
+    ],
+)
+
+libc_support_library(
+    name = "atan_utils",
+    hdrs = ["src/math/generic/atan_utils.h"],
+    deps = [
+        ":__support_fputil_double_double",
+        ":__support_fputil_dyadic_float",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_integer_literals",
+        ":__support_macros_optimization",
     ],
 )
 
@@ -2296,7 +2319,7 @@ libc_math_function(
         ":__support_fputil_double_double",
         ":__support_fputil_nearest_integer",
         ":__support_macros_optimization",
-        ":inv_trigf_utils",
+        ":atan_utils",
     ],
 )
 
@@ -2314,7 +2337,7 @@ libc_math_function(
     additional_deps = [
         ":__support_fputil_double_double",
         ":__support_fputil_nearest_integer",
-        ":inv_trigf_utils",
+        ":atan_utils",
     ],
 )
 
@@ -4186,7 +4209,6 @@ libc_function(
     name = "memcpy",
     srcs = ["src/string/memcpy.cpp"],
     hdrs = ["src/string/memcpy.h"],
-    weak = True,
     deps = [
         ":__support_common",
         ":string_memory_utils",
@@ -4197,7 +4219,6 @@ libc_function(
     name = "memset",
     srcs = ["src/string/memset.cpp"],
     hdrs = ["src/string/memset.h"],
-    weak = True,
     deps = [
         ":__support_common",
         ":string_memory_utils",
@@ -4208,7 +4229,6 @@ libc_function(
     name = "memmove",
     srcs = ["src/string/memmove.cpp"],
     hdrs = ["src/string/memmove.h"],
-    weak = True,
     deps = [
         ":__support_common",
         ":string_memory_utils",
@@ -4219,7 +4239,6 @@ libc_function(
     name = "mempcpy",
     srcs = ["src/string/mempcpy.cpp"],
     hdrs = ["src/string/mempcpy.h"],
-    weak = True,
     deps = [
         ":__support_common",
         ":string_memory_utils",
@@ -4240,7 +4259,6 @@ libc_function(
     name = "memcmp",
     srcs = ["src/string/memcmp.cpp"],
     hdrs = ["src/string/memcmp.h"],
-    weak = True,
     deps = [
         ":__support_common",
         ":__support_integer_operations",
@@ -4252,7 +4270,6 @@ libc_function(
     name = "bcmp",
     srcs = ["src/strings/bcmp.cpp"],
     hdrs = ["src/strings/bcmp.h"],
-    weak = True,
     deps = [
         ":__support_common",
         ":string_memory_utils",
@@ -4263,7 +4280,6 @@ libc_function(
     name = "bzero",
     srcs = ["src/strings/bzero.cpp"],
     hdrs = ["src/strings/bzero.h"],
-    weak = True,
     deps = [
         ":__support_common",
         ":string_memory_utils",
@@ -4749,7 +4765,6 @@ libc_function(
     name = "read",
     srcs = ["src/unistd/linux/read.cpp"],
     hdrs = ["src/unistd/read.h"],
-    weak = True,
     deps = [
         ":__support_common",
         ":__support_macros_sanitizer",
@@ -4898,7 +4913,6 @@ libc_function(
     name = "write",
     srcs = ["src/unistd/linux/write.cpp"],
     hdrs = ["src/unistd/write.h"],
-    weak = True,
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -5359,7 +5373,6 @@ libc_function(
     name = "socket",
     srcs = ["src/sys/socket/linux/socket.cpp"],
     hdrs = ["src/sys/socket/socket.h"],
-    weak = True,
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -5371,7 +5384,6 @@ libc_function(
     name = "socketpair",
     srcs = ["src/sys/socket/linux/socketpair.cpp"],
     hdrs = ["src/sys/socket/socketpair.h"],
-    weak = True,
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -5383,7 +5395,6 @@ libc_function(
     name = "send",
     srcs = ["src/sys/socket/linux/send.cpp"],
     hdrs = ["src/sys/socket/send.h"],
-    weak = True,
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -5398,7 +5409,6 @@ libc_function(
     name = "sendto",
     srcs = ["src/sys/socket/linux/sendto.cpp"],
     hdrs = ["src/sys/socket/sendto.h"],
-    weak = True,
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -5413,7 +5423,6 @@ libc_function(
     name = "sendmsg",
     srcs = ["src/sys/socket/linux/sendmsg.cpp"],
     hdrs = ["src/sys/socket/sendmsg.h"],
-    weak = True,
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -5427,7 +5436,6 @@ libc_function(
     name = "recv",
     srcs = ["src/sys/socket/linux/recv.cpp"],
     hdrs = ["src/sys/socket/recv.h"],
-    weak = True,
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -5442,7 +5450,6 @@ libc_function(
     name = "recvfrom",
     srcs = ["src/sys/socket/linux/recvfrom.cpp"],
     hdrs = ["src/sys/socket/recvfrom.h"],
-    weak = True,
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -5457,7 +5464,6 @@ libc_function(
     name = "recvmsg",
     srcs = ["src/sys/socket/linux/recvmsg.cpp"],
     hdrs = ["src/sys/socket/recvmsg.h"],
-    weak = True,
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -5477,7 +5483,6 @@ libc_function(
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
-    weak = True,
     deps = [
         ":__support_osutil_syscall",
         ":errno",
@@ -5492,7 +5497,6 @@ libc_function(
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
-    weak = True,
     deps = [
         ":__support_osutil_syscall",
         ":errno",
@@ -5507,7 +5511,6 @@ libc_function(
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
-    weak = True,
     deps = [
         ":__support_osutil_syscall",
         ":errno",
@@ -5524,7 +5527,6 @@ libc_function(
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
-    weak = True,
     deps = [
         ":__support_macros_sanitizer",
         ":__support_osutil_syscall",
@@ -5544,7 +5546,6 @@ libc_function(
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
-    weak = True,
     deps = [
         ":__support_macros_sanitizer",
         ":__support_osutil_syscall",
@@ -5564,7 +5565,6 @@ libc_function(
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
-    weak = True,
     deps = [
         ":__support_macros_sanitizer",
         ":__support_osutil_syscall",

@@ -37,7 +37,7 @@ jobs:
   stage1:
     if: github.repository_owner == 'llvm'
     runs-on: libcxx-self-hosted-linux
-    container: ghcr.io/llvm/libcxx-linux-builder:b6bb9dc5abd7c6452c13a53fa8949cb259db459b
+    container: ghcr.io/llvm/libcxx-linux-builder:2b57ebb50b6d418e70382e655feaa619b558e254
     continue-on-error: false
     strategy:
       fail-fast: false
@@ -75,7 +75,7 @@ jobs:
   stage2:
     if: github.repository_owner == 'llvm'
     runs-on: libcxx-self-hosted-linux
-    container: ghcr.io/llvm/libcxx-linux-builder:b6bb9dc5abd7c6452c13a53fa8949cb259db459b
+    container: ghcr.io/llvm/libcxx-linux-builder:2b57ebb50b6d418e70382e655feaa619b558e254
     needs: [ stage1 ]
     continue-on-error: false
     strategy:
@@ -100,10 +100,6 @@ jobs:
           - config: 'generic-cxx26'
             cc: 'clang-19'
             cxx: 'clang++-19'
-          # Release transition
-          - config: 'generic-cxx23'
-            cc: 'clang-18'
-            cxx: 'clang++-18'
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: ${{ matrix.config }}
@@ -167,7 +163,7 @@ jobs:
         - config: 'generic-msan'
           machine: libcxx-self-hosted-linux
     runs-on: ${{ matrix.machine }}
-    container: ghcr.io/llvm/libcxx-linux-builder:b6bb9dc5abd7c6452c13a53fa8949cb259db459b
+    container: ghcr.io/llvm/libcxx-linux-builder:2b57ebb50b6d418e70382e655feaa619b558e254
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: ${{ matrix.config }}
@@ -201,16 +197,27 @@ jobs:
           os: macos-15
         - config: apple-configuration
           os: macos-15
+        # TODO: These jobs are intended to test back-deployment (building against ToT libc++ but running against an
+        #       older system-provided libc++.dylib). Doing this properly would require building the test suite on a
+        #       recent macOS using a recent Clang (hence recent Xcode), and then running the actual test suite on an
+        #       older mac. We could do that by e.g. sharing artifacts between the two jobs.
+        #
+        #       However, our Lit configuration currently doesn't provide a good way to do that in a batch, so our only
+        #       alternative is to actually build on the same host that we're going to run on. Sadly, that doesn't work
+        #       since older macOSes don't support newer Xcodes. For now, we run the "backdeployment" jobs on recent
+        #       macOS versions as a way to avoid rotting that configuration, but it doesn't provide a lot of additional
+        #       coverage.
         - config: apple-system
-          os: macos-13
+          os: macos-15
         - config: apple-system-hardened
-          os: macos-13
+          os: macos-15
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: maxim-lobanov/setup-xcode@60606e260d2fc5762a71e64e74b2174e8ea3c8bd # v1.6.0
         with:
-          xcode-version: 'latest'
+          # https://github.com/actions/runner-images/blob/main/images/macos/macos-15-Readme.md
+          xcode-version: '16.3'
       - uses: seanmiddleditch/gha-setup-ninja@3b1f8f94a2f8254bd26914c4ab9474d4f0015f67 # v6
       - name: Build and test
         run: |
