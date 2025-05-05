@@ -197,6 +197,10 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-designated-initializers>` check by avoiding
   diagnosing designated initializers for ``std::array`` initializations.
 
+- Improved :doc:`modernize-use-emplace
+  <clang-tidy/checks/modernize/use-emplace>` check by adding support for C++20
+  Argument forwarding inside ``struct`` type objects.
+
 - Improved :doc:`modernize-use-ranges
   <clang-tidy/checks/modernize/use-ranges>` check by updating suppress 
   warnings logic for ``nullptr`` in ``std::find``.
