@@ -4,11 +4,11 @@
 // Testing pragma export after decl.
 void f0(void) {}
 int v0;
-#pragma export(f0)
+#pragma export(f0(void))
 #pragma export(v0)
 
 // Testing pragma export before decl.
-#pragma export(f1)
+#pragma export(f1(void))
 #pragma export(v1)
 void f1(void) {}
 int v1;
@@ -60,26 +60,31 @@ void fd8(int (*)()) {}
 // Testing pragma export with namespace.
 void f5(void) {}
 void f5a(void) {}
-#pragma export(N0::f2a)
+#pragma export(N0::f2a(void))
 namespace N0 {
 void f0(void) {}
 void f1(void) {}
 void f2(void) {}
 void f3(void) {}
 void f5(void) {}
-#pragma export(f0)
-#pragma export(N0::f1)
-#pragma export(f5)
-#pragma export(f0a)
-#pragma export(N0::f1a)
-#pragma export(f5a)
+#pragma export(f0(void))
+#pragma export(N0::f1(void))
+#pragma export(f5(void))
+#pragma export(f0a(void))
+#pragma export(N0::f1a(void))
+#pragma export(f5a(void))
 void f0a(void) {}
 void f1a(void) {}
 void f2a(void) {}
 void f3a(void) {}
 void f5a(void) {}
 } // namespace N0
-#pragma export(N0::f2)
+#pragma export(N0::f2(void))
+
+void f10(int);
+#pragma export(f10)
+extern "C" void f10(double) {}
+void f10(int) {}
 
 // CHECK: @v0 = hidden global i32 0
 // CHECK: @v1 = global i32 0
@@ -113,4 +118,5 @@ void f5a(void) {}
 // CHECK: define void @_ZN2N03f2aEv()
 // CHECK: define hidden void @_ZN2N03f3aEv()
 // CHECK: define void @_ZN2N03f5aEv()
-
+// CHECK: define void @f10(double noundef %0) #0 {
+// CHECK: define hidden void @_Z3f10i(i32 noundef signext %0) #0 {

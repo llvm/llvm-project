@@ -7517,8 +7517,8 @@ static void emitReadOnlyPlacementAttrWarning(Sema &S, const VarDecl *VD) {
 }
 
 // Checks if the given label matches the named declaration.
-static bool isNamedDeclSameAsLabel(Sema *S, NamedDecl *D,
-                                   Sema::SymbolLabel &Label) {
+bool Sema::isNamedDeclSameAsSymbolLabel(NamedDecl *D,
+                                        Sema::SymbolLabel &Label) {
   const DeclContext *Ctx = D->getDeclContext();
 
   // Check the name.
@@ -7586,10 +7586,11 @@ static bool isNamedDeclSameAsLabel(Sema *S, NamedDecl *D,
   if (FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
     // All function parameters match if specified in pragma.
     if (Label.TypeList.has_value())
-      return S->typeListMatchesSymbolLabel(FD, Label);
+      return typeListMatchesSymbolLabel(FD, Label);
     // There might be overloaded functions. However, with the available
     // information it cn only be concluded that the functions are the same.
-    return true;
+    if (!getLangOpts().CPlusPlus || FD->isExternC())
+      return true;
   }
 
   return false;
@@ -7606,7 +7607,7 @@ void Sema::ProcessPragmaExport(DeclaratorDecl *NewD) {
     for (auto I = PendingName->second.begin(), E = PendingName->second.end();
          I != E; ++I) {
       auto &Label = *I;
-      if (!Label.Used && isNamedDeclSameAsLabel(this, NewD, Label)) {
+      if (!Label.Used && isNamedDeclSameAsSymbolLabel(NewD, Label)) {
         Label.Used = true;
         if (NewD->hasExternalFormalLinkage())
           mergeVisibilityType(NewD, Label.NameLoc, VisibilityAttr::Default);

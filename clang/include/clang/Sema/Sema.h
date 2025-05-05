@@ -2291,16 +2291,19 @@ public:
     bool Used;
   };
 
-  typedef SmallVector<SymbolLabel, 1> PendingPragmaExportOverloads;
-  llvm::DenseMap<IdentifierInfo *, PendingPragmaExportOverloads>
-      PendingExportedNames;
-
   bool typeListMatchesSymbolLabel(FunctionDecl *FD,
                                   const clang::Sema::SymbolLabel &Label);
 
   /// tryLookupSymbolLabel try to look up a decl matching the nested
   //  specifier with optional type list.
   NamedDecl *tryLookupSymbolLabel(const clang::Sema::SymbolLabel &Label);
+
+  bool isNamedDeclSameAsSymbolLabel(NamedDecl *D,
+                                    clang::Sema::SymbolLabel &Label);
+
+  typedef SmallVector<SymbolLabel, 1> PendingPragmaExportOverloads;
+  llvm::DenseMap<IdentifierInfo *, PendingPragmaExportOverloads>
+      PendingExportedNames;
 
   /// ActonPragmaExport - called on well-formed '\#pragma export'.
   void ActOnPragmaExport(NestedNameSpecifier *NestedId,

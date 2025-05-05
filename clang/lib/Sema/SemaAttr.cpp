@@ -1421,8 +1421,18 @@ NamedDecl *Sema::tryLookupSymbolLabel(const clang::Sema::SymbolLabel &Label) {
   // either a variable, or a non-overloaded function, or an overloaded
   // function with extern "C" linkage.
   if (!Label.TypeList.has_value()) {
-    if (Result.isSingleResult())
-      return Result.getFoundDecl();
+    if (Result.isSingleResult()) {
+      NamedDecl *ND = Result.getFoundDecl();
+      if (isa<VarDecl>(ND))
+        return ND;
+      if (FunctionDecl *FD = dyn_cast<FunctionDecl>(ND)) {
+        if (!getLangOpts().CPlusPlus || FD->isExternC())
+          return FD;
+        else
+          return nullptr;
+      }
+      return ND;
+    }
     if (Result.isOverloadedResult()) {
       for (auto *Iter : Result) {
         FunctionDecl *FD = dyn_cast<FunctionDecl>(Iter);
