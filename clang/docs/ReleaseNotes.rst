@@ -649,6 +649,7 @@ Bug Fixes to C++ Support
   (#GH136432), (#GH137014), (#GH138018)
 - Fixed an assertion when trying to constant-fold various builtins when the argument
   referred to a reference to an incomplete type. (#GH129397)
+- Fixed a crash when a cast involved a parenthesized aggregate initialization in dependent context. (#GH72880)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
