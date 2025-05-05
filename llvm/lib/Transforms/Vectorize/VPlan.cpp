@@ -350,11 +350,6 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   return VectorValue;
 }
 
-BasicBlock *VPTransformState::CFGState::getPreheaderBBFor(VPRecipeBase *R) {
-  VPRegionBlock *LoopRegion = R->getParent()->getEnclosingLoopRegion();
-  return VPBB2IRBB[LoopRegion->getPreheaderVPBB()];
-}
-
 void VPTransformState::addNewMetadata(Instruction *To,
                                       const Instruction *Orig) {
   // If the loop was versioned with memchecks, add the corresponding no-alias
