@@ -3,7 +3,7 @@
 
 [[vk::ext_builtin_input(/* WorkgroupId */ 26)]]
 static const uint3 groupid;
-// CHECK: @_ZL7groupid = local_unnamed_addr addrspace(7) externally_initialized constant <3 x i32> undef, align 16, !spv.builtin [[META0:![0-9]+]]
+// CHECK: @_ZL7groupid = local_unnamed_addr addrspace(7) externally_initialized constant <3 x i32> undef, align 16, !spirv.Decorations [[META0:![0-9]+]]
 
 RWStructuredBuffer<int> output : register(u1, space0);
 
@@ -11,4 +11,5 @@ RWStructuredBuffer<int> output : register(u1, space0);
 void main() {
   output[0] = groupid;
 }
-// CHECK: [[META0]] = !{i32 26}
+// CHECK: [[META0]] = !{[[META1:![0-9]+]]}
+// CHECK: [[META1]] = !{i32 11, i32 26}
