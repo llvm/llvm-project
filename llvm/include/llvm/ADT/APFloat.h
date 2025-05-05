@@ -572,7 +572,7 @@ public:
   /// emphasizes producing different codes for different inputs in order to
   /// be used in canonicalization and memoization. As such, equality is
   /// bitwiseIsEqual, and 0 != -0.
-  friend hash_code hash_value(const IEEEFloat &Arg);
+  LLVM_ABI_FRIEND friend hash_code hash_value(const IEEEFloat &Arg);
 
   /// Converts this value into a decimal string.
   ///
@@ -629,12 +629,13 @@ public:
   ///   0   -> \c IEK_Zero
   ///   Inf -> \c IEK_Inf
   ///
-  friend int ilogb(const IEEEFloat &Arg);
+  LLVM_ABI_FRIEND friend int ilogb(const IEEEFloat &Arg);
 
   /// Returns: X * 2^Exp for integral exponents.
-  friend IEEEFloat scalbn(IEEEFloat X, int Exp, roundingMode);
+  LLVM_ABI_FRIEND friend IEEEFloat scalbn(IEEEFloat X, int Exp, roundingMode);
 
-  friend IEEEFloat frexp(const IEEEFloat &X, int &Exp, roundingMode);
+  LLVM_ABI_FRIEND friend IEEEFloat frexp(const IEEEFloat &X, int &Exp,
+                                         roundingMode);
 
   /// \name Special value setters.
   /// @{
@@ -905,9 +906,11 @@ public:
   LLVM_ABI LLVM_READONLY int getExactLog2() const;
   LLVM_ABI LLVM_READONLY int getExactLog2Abs() const;
 
-  friend DoubleAPFloat scalbn(const DoubleAPFloat &X, int Exp, roundingMode);
-  friend DoubleAPFloat frexp(const DoubleAPFloat &X, int &Exp, roundingMode);
-  friend hash_code hash_value(const DoubleAPFloat &Arg);
+  LLVM_ABI_FRIEND friend DoubleAPFloat scalbn(const DoubleAPFloat &X, int Exp,
+                                              roundingMode);
+  LLVM_ABI_FRIEND friend DoubleAPFloat frexp(const DoubleAPFloat &X, int &Exp,
+                                             roundingMode);
+  LLVM_ABI_FRIEND friend hash_code hash_value(const DoubleAPFloat &Arg);
 };
 
 LLVM_ABI hash_code hash_value(const DoubleAPFloat &Arg);
@@ -1515,7 +1518,7 @@ public:
     APFLOAT_DISPATCH_ON_SEMANTICS(getExactLog2());
   }
 
-  friend hash_code hash_value(const APFloat &Arg);
+  LLVM_ABI_FRIEND friend hash_code hash_value(const APFloat &Arg);
   friend int ilogb(const APFloat &Arg) { return ilogb(Arg.getIEEE()); }
   friend APFloat scalbn(APFloat X, int Exp, roundingMode RM);
   friend APFloat frexp(const APFloat &X, int &Exp, roundingMode RM);
