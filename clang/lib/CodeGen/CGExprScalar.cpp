@@ -13,6 +13,7 @@
 #include "CGCXXABI.h"
 #include "CGCleanup.h"
 #include "CGDebugInfo.h"
+#include "CGHLSLRuntime.h"
 #include "CGObjCRuntime.h"
 #include "CGOpenMPRuntime.h"
 #include "CGRecordLayout.h"
@@ -2094,6 +2095,17 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
   (void)Ignore;
   assert (Ignore == false && "init list ignored");
   unsigned NumInitElements = E->getNumInits();
+
+  // HLSL initialization lists in the AST are an expansion which can contain
+  // side-effecting expressions wrapped in opaque value expressions. To properly
+  // emit these we need to emit the opaque values before we emit the argument
+  // expressions themselves. This is a little hacky, but it prevents us needing
+  // to do a bigger AST-level change for a language feature that we need
+  // deprecate in the near future. See related HLSL language proposals:
+  // * 0005-strict-initializer-lists.md
+  // * https://github.com/microsoft/hlsl-specs/pull/325
+  if (CGF.getLangOpts().HLSL)
+    CGF.CGM.getHLSLRuntime().emitInitListOpaqueValues(CGF, E);
 
   if (E->hadArrayRangeDesignator())
     CGF.ErrorUnsupported(E, "GNU array range designator extension");
