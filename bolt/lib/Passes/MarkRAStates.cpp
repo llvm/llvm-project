@@ -43,6 +43,25 @@ void MarkRAStates::runOnFunction(BinaryFunction &BF) {
 
   BinaryContext &BC = BF.getBinaryContext();
 
+  // Because of the --allow-experimental-pacret flag,
+  // we cannot remove all OpNegateRAStates at FillCFIInfoFor,
+  // but we still need to remove them here, because their pre-optimization
+  // locations would be incorrect after optimizations.
+  std::vector<BinaryBasicBlock *> Blocks(BF.pbegin(), BF.pend());
+  for (BinaryBasicBlock *BB : Blocks) {
+    for (auto II = BB->begin(); II != BB->end();) {
+      MCInst &Instr = *II;
+      if (BC.MIB->isCFI(Instr)) {
+        const MCCFIInstruction *CFI = BF.getCFIFor(Instr);
+        if (CFI->getOperation() == MCCFIInstruction::OpNegateRAState) {
+          II = BB->erasePseudoInstruction(II);
+          continue;
+        }
+      }
+      ++II;
+    }
+  }
+
   for (BinaryBasicBlock &BB : BF) {
     for (auto It = BB.begin(); It != BB.end(); ++It) {
       MCInst &Inst = *It;
@@ -57,6 +76,8 @@ void MarkRAStates::runOnFunction(BinaryFunction &BF) {
         BF.setIgnored();
         BC.outs() << "BOLT-INFO: inconsistent RAStates in function "
                   << BF.getPrintName() << "\n";
+        BC.outs()
+            << "BOLT-INFO: ptr sign/auth inst without .cfi_negate_ra_state\n";
         return;
       }
     }
@@ -77,6 +98,8 @@ void MarkRAStates::runOnFunction(BinaryFunction &BF) {
           // RA signing instructions should only follow unsigned RA state.
           BC.outs() << "BOLT-INFO: inconsistent RAStates in function "
                     << BF.getPrintName() << "\n";
+          BC.outs() << "BOLT-INFO: ptr signing inst encountered in Signed RA "
+                       "state.\n";
           BF.setIgnored();
           return;
         }
@@ -86,6 +109,8 @@ void MarkRAStates::runOnFunction(BinaryFunction &BF) {
           // RA authenticating instructions should only follow signed RA state.
           BC.outs() << "BOLT-INFO: inconsistent RAStates in function "
                     << BF.getPrintName() << "\n";
+          BC.outs() << "BOLT-INFO: ptr authenticating inst encountered in "
+                       "Unsigned RA state.\n";
           BF.setIgnored();
           return;
         }
