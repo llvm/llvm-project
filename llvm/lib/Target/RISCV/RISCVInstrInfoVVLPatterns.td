@@ -39,8 +39,8 @@ def riscv_tuple_insert : RVSDNode<"TUPLE_INSERT",
                                                        SDTCisVT<3, i32>]>>;
 
 def riscv_tuple_extract : RVSDNode<"TUPLE_EXTRACT",
-                                  SDTypeProfile<1, 2, [SDTCisVec<0>,
-                                                       SDTCisVT<2, i32>]>>;
+                                   SDTypeProfile<1, 2, [SDTCisVec<0>,
+                                                        SDTCisVT<2, i32>]>>;
 
 
 //===----------------------------------------------------------------------===//
@@ -461,11 +461,11 @@ let HasMaskOp = true in {
                                                     SDTCisVT<3, XLenVT>]>>;
 
   def riscv_vfirst_vl : RVSDNode<"VFIRST_VL",
-                                SDTypeProfile<1, 3, [SDTCisVT<0, XLenVT>,
-                                                    SDTCisVec<1>, SDTCisInt<1>,
-                                                    SDTCVecEltisVT<2, i1>,
-                                                    SDTCisSameNumEltsAs<1, 2>,
-                                                    SDTCisVT<3, XLenVT>]>>;
+                                 SDTypeProfile<1, 3, [SDTCisVT<0, XLenVT>,
+                                                     SDTCisVec<1>, SDTCisInt<1>,
+                                                     SDTCVecEltisVT<2, i1>,
+                                                     SDTCisSameNumEltsAs<1, 2>,
+                                                     SDTCisVT<3, XLenVT>]>>;
 } // let HasMaskOp = true
 
 def SDT_RISCVVEXTEND_VL : SDTypeProfile<1, 3, [SDTCisVec<0>,
