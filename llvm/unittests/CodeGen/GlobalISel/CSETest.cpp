@@ -503,13 +503,13 @@ TEST_F(AArch64GISelMITest, TestConstantFoldICMP) {
   {
     auto I = CSEB.buildICmp(CmpInst::Predicate::ICMP_EQ, s32, One, One);
     EXPECT_TRUE(I->getOpcode() == TargetOpcode::G_CONSTANT);
-    EXPECT_EQ(I->getOperand(1).getCImm()->getZExtValue(), 1);
+    EXPECT_EQ(I->getOperand(1).getCImm()->getZExtValue(), 1U);
   }
 
   {
     auto I = CSEB.buildICmp(CmpInst::Predicate::ICMP_EQ, s32, One, Two);
     EXPECT_TRUE(I->getOpcode() == TargetOpcode::G_CONSTANT);
-    EXPECT_EQ(I->getOperand(1).getCImm()->getZExtValue(), 0);
+    EXPECT_EQ(I->getOperand(1).getCImm()->getZExtValue(), 0U);
   }
 
   LLT VecTy = LLT::fixed_vector(2, s32);
