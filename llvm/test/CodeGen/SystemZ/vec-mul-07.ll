@@ -7,11 +7,7 @@
 define <8 x i16> @f1(<16 x i8> %val1, <16 x i8> %val2) {
 ; CHECK-LABEL: f1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    larl %r1, .LCPI0_0
-; CHECK-NEXT:    vl %v0, 0(%r1), 3
-; CHECK-NEXT:    vperm %v1, %v24, %v0, %v0
-; CHECK-NEXT:    vperm %v0, %v26, %v0, %v0
-; CHECK-NEXT:    vmlhw %v24, %v1, %v0
+; CHECK-NEXT:    vmleb %v24, %v24, %v26
 ; CHECK-NEXT:    br %r14
   %shuf1 = shufflevector <16 x i8> %val1, <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
   %zext1 = zext <8 x i8> %shuf1 to <8 x i16>
@@ -25,12 +21,7 @@ define <8 x i16> @f1(<16 x i8> %val1, <16 x i8> %val2) {
 define <8 x i16> @f2(<16 x i8> %val1, <16 x i8> %val2) {
 ; CHECK-LABEL: f2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    larl %r1, .LCPI1_0
-; CHECK-NEXT:    vl %v0, 0(%r1), 3
-; CHECK-NEXT:    vgbm %v1, 0
-; CHECK-NEXT:    vperm %v2, %v24, %v1, %v0
-; CHECK-NEXT:    vperm %v0, %v26, %v1, %v0
-; CHECK-NEXT:    vmlhw %v24, %v2, %v0
+; CHECK-NEXT:    vmlob %v24, %v24, %v26
 ; CHECK-NEXT:    br %r14
   %shuf1 = shufflevector <16 x i8> %val1, <16 x i8> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
   %zext1 = zext <8 x i8> %shuf1 to <8 x i16>
@@ -72,11 +63,7 @@ define <8 x i16> @f4(<16 x i8> %val1, <16 x i8> %val2) {
 define <4 x i32> @f5(<8 x i16> %val1, <8 x i16> %val2) {
 ; CHECK-LABEL: f5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    larl %r1, .LCPI4_0
-; CHECK-NEXT:    vl %v0, 0(%r1), 3
-; CHECK-NEXT:    vperm %v1, %v24, %v0, %v0
-; CHECK-NEXT:    vperm %v0, %v26, %v0, %v0
-; CHECK-NEXT:    vmlf %v24, %v1, %v0
+; CHECK-NEXT:    vmleh %v24, %v24, %v26
 ; CHECK-NEXT:    br %r14
   %shuf1 = shufflevector <8 x i16> %val1, <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   %zext1 = zext <4 x i16> %shuf1 to <4 x i32>
@@ -90,12 +77,7 @@ define <4 x i32> @f5(<8 x i16> %val1, <8 x i16> %val2) {
 define <4 x i32> @f6(<8 x i16> %val1, <8 x i16> %val2) {
 ; CHECK-LABEL: f6:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    larl %r1, .LCPI5_0
-; CHECK-NEXT:    vl %v0, 0(%r1), 3
-; CHECK-NEXT:    vgbm %v1, 0
-; CHECK-NEXT:    vperm %v2, %v24, %v1, %v0
-; CHECK-NEXT:    vperm %v0, %v26, %v1, %v0
-; CHECK-NEXT:    vmlf %v24, %v2, %v0
+; CHECK-NEXT:    vmloh %v24, %v24, %v26
 ; CHECK-NEXT:    br %r14
   %shuf1 = shufflevector <8 x i16> %val1, <8 x i16> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
   %zext1 = zext <4 x i16> %shuf1 to <4 x i32>
@@ -137,7 +119,7 @@ define <4 x i32> @f8(<8 x i16> %val1, <8 x i16> %val2) {
 define <2 x i64> @f9(<4 x i32> %val1, <4 x i32> %val2) {
 ; CHECK-LABEL: f9:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vgbm %v24, 0
+; CHECK-NEXT:    vmlef %v24, %v24, %v26
 ; CHECK-NEXT:    br %r14
   %shuf1 = shufflevector <4 x i32> %val1, <4 x i32> poison, <2 x i32> <i32 0, i32 2>
   %zext1 = zext <2 x i32> %shuf1 to <2 x i64>
@@ -151,7 +133,7 @@ define <2 x i64> @f9(<4 x i32> %val1, <4 x i32> %val2) {
 define <2 x i64> @f10(<4 x i32> %val1, <4 x i32> %val2) {
 ; CHECK-LABEL: f10:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vgbm %v24, 0
+; CHECK-NEXT:    vmlof %v24, %v24, %v26
 ; CHECK-NEXT:    br %r14
   %shuf1 = shufflevector <4 x i32> %val1, <4 x i32> poison, <2 x i32> <i32 1, i32 3>
   %zext1 = zext <2 x i32> %shuf1 to <2 x i64>

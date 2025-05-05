@@ -15,18 +15,18 @@ define void @_blah() {
 ; CHECK-NEXT:    vperm v2, v4, v3, v2
 ; CHECK-NEXT:    lwz r4, 16(0)
 ; CHECK-NEXT:    stvx v2, 0, r5
-; CHECK-NEXT:    sth r3, -34(r1)
-; CHECK-NEXT:    sth r3, -38(r1)
-; CHECK-NEXT:    sth r3, -42(r1)
-; CHECK-NEXT:    sth r3, -46(r1)
-; CHECK-NEXT:    lhz r3, -52(r1)
+; CHECK-NEXT:    lhz r5, -64(r1)
+; CHECK-NEXT:    lhz r6, -58(r1)
+; CHECK-NEXT:    lhz r7, -52(r1)
+; CHECK-NEXT:    sth r4, -34(r1)
+; CHECK-NEXT:    sth r3, -36(r1)
 ; CHECK-NEXT:    sth r3, -40(r1)
-; CHECK-NEXT:    lhz r3, -58(r1)
 ; CHECK-NEXT:    sth r3, -44(r1)
-; CHECK-NEXT:    lhz r3, -64(r1)
-; CHECK-NEXT:    sth r4, -36(r1)
 ; CHECK-NEXT:    sth r3, -48(r1)
 ; CHECK-NEXT:    addi r3, r1, -48
+; CHECK-NEXT:    sth r7, -38(r1)
+; CHECK-NEXT:    sth r6, -42(r1)
+; CHECK-NEXT:    sth r5, -46(r1)
 ; CHECK-NEXT:    lvx v2, 0, r3
 ; CHECK-NEXT:    addi r3, r1, -32
 ; CHECK-NEXT:    vsldoi v3, v2, v2, 8

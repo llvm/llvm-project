@@ -14319,6 +14319,13 @@ static SDValue widenBuildVec(SDNode *Extend, SelectionDAG &DAG) {
     return SDValue();
   }
 
+  if (!all_of(BV->op_values(),
+              [](SDValue Op) { return Op.getOpcode() == ISD::LOAD; })) {
+    // If the build vector any element other than \ISD::LOAD, we cannot widen
+    // it.
+    return SDValue();
+  }
+
   SDLoc dl(BV);
   EVT VT = BV.getValueType();
   EVT EltVT = BV.getOperand(0).getValueType();
