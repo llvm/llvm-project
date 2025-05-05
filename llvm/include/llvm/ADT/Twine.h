@@ -9,9 +9,9 @@
 #ifndef LLVM_ADT_TWINE_H
 #define LLVM_ADT_TWINE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstdint>
@@ -502,7 +502,8 @@ namespace llvm {
     /// given SmallVector and a StringRef to the SmallVector's data is returned.
     ///
     /// The returned StringRef's size does not include the null terminator.
-    LLVM_ABI StringRef toNullTerminatedStringRef(SmallVectorImpl<char> &Out) const;
+    LLVM_ABI StringRef
+    toNullTerminatedStringRef(SmallVectorImpl<char> &Out) const;
 
     /// Write the concatenated string represented by this twine to the
     /// stream \p OS.

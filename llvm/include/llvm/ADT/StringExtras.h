@@ -14,12 +14,12 @@
 #ifndef LLVM_ADT_STRINGEXTRAS_H
 #define LLVM_ADT_STRINGEXTRAS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -364,14 +364,14 @@ LLVM_ABI StringRef::size_type StrInStrNoCase(StringRef s1, StringRef s2);
 /// there are no tokens in the source string, an empty string is returned.
 /// The function returns a pair containing the extracted token and the
 /// remaining tail string.
-LLVM_ABI std::pair<StringRef, StringRef> getToken(StringRef Source,
-                                         StringRef Delimiters = " \t\n\v\f\r");
+LLVM_ABI std::pair<StringRef, StringRef>
+getToken(StringRef Source, StringRef Delimiters = " \t\n\v\f\r");
 
 /// SplitString - Split up the specified string according to the specified
 /// delimiters, appending the result fragments to the output list.
 LLVM_ABI void SplitString(StringRef Source,
-                 SmallVectorImpl<StringRef> &OutFragments,
-                 StringRef Delimiters = " \t\n\v\f\r");
+                          SmallVectorImpl<StringRef> &OutFragments,
+                          StringRef Delimiters = " \t\n\v\f\r");
 
 /// Returns the English suffix for an ordinal integer (-st, -nd, -rd, -th).
 inline StringRef getOrdinalSuffix(unsigned Val) {
@@ -413,7 +413,7 @@ LLVM_ABI std::string convertToSnakeFromCamelCase(StringRef input);
 /// Optionally allow capitalization of the first letter (if it is a lowercase
 /// letter)
 LLVM_ABI std::string convertToCamelFromSnakeCase(StringRef input,
-                                        bool capitalizeFirst = false);
+                                                 bool capitalizeFirst = false);
 
 namespace detail {
 

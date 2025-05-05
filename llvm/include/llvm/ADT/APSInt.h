@@ -15,8 +15,8 @@
 #ifndef LLVM_ADT_APSINT_H
 #define LLVM_ADT_APSINT_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

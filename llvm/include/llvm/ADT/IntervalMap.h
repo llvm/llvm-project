@@ -104,10 +104,10 @@
 #ifndef LLVM_ADT_INTERVALMAP_H
 #define LLVM_ADT_INTERVALMAP_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/RecyclingAllocator.h"
 #include <algorithm>
 #include <cassert>
@@ -412,9 +412,9 @@ void adjustSiblingSizes(NodeT *Node[], unsigned Nodes,
 /// @param Position Insert position.
 /// @param Grow     Reserve space for a new element at Position.
 /// @return         (node, offset) for Position.
-LLVM_ABI IdxPair distribute(unsigned Nodes, unsigned Elements, unsigned Capacity,
-                   const unsigned *CurSize, unsigned NewSize[],
-                   unsigned Position, bool Grow);
+LLVM_ABI IdxPair distribute(unsigned Nodes, unsigned Elements,
+                            unsigned Capacity, const unsigned *CurSize,
+                            unsigned NewSize[], unsigned Position, bool Grow);
 
 //===----------------------------------------------------------------------===//
 //---                   IntervalMapImpl::NodeSizer                         ---//

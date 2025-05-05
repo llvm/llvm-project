@@ -996,15 +996,15 @@ public:
   /// computation making it a little more efficient. The pair of input arguments
   /// may overlap with the pair of output arguments. It is safe to call
   /// udivrem(X, Y, X, Y), for example.
-  LLVM_ABI static void udivrem(const APInt &LHS, const APInt &RHS, APInt &Quotient,
-                      APInt &Remainder);
+  LLVM_ABI static void udivrem(const APInt &LHS, const APInt &RHS,
+                               APInt &Quotient, APInt &Remainder);
   LLVM_ABI static void udivrem(const APInt &LHS, uint64_t RHS, APInt &Quotient,
-                      uint64_t &Remainder);
+                               uint64_t &Remainder);
 
-  LLVM_ABI static void sdivrem(const APInt &LHS, const APInt &RHS, APInt &Quotient,
-                      APInt &Remainder);
+  LLVM_ABI static void sdivrem(const APInt &LHS, const APInt &RHS,
+                               APInt &Quotient, APInt &Remainder);
   LLVM_ABI static void sdivrem(const APInt &LHS, int64_t RHS, APInt &Quotient,
-                      int64_t &Remainder);
+                               int64_t &Remainder);
 
   // Operations that return overflow indicators.
   LLVM_ABI APInt sadd_ov(const APInt &RHS, bool &Overflow) const;
@@ -1472,11 +1472,13 @@ public:
 
   /// Insert the bits from a smaller APInt starting at bitPosition.
   LLVM_ABI void insertBits(const APInt &SubBits, unsigned bitPosition);
-  LLVM_ABI void insertBits(uint64_t SubBits, unsigned bitPosition, unsigned numBits);
+  LLVM_ABI void insertBits(uint64_t SubBits, unsigned bitPosition,
+                           unsigned numBits);
 
   /// Return an APInt with the extracted bits [bitPosition,bitPosition+numBits).
   LLVM_ABI APInt extractBits(unsigned numBits, unsigned bitPosition) const;
-  LLVM_ABI uint64_t extractBitsAsZExtValue(unsigned numBits, unsigned bitPosition) const;
+  LLVM_ABI uint64_t extractBitsAsZExtValue(unsigned numBits,
+                                           unsigned bitPosition) const;
 
   /// @}
   /// \name Value Characterization Functions
@@ -1583,7 +1585,8 @@ public:
   /// Get the bits that are sufficient to represent the string value. This may
   /// over estimate the amount of bits required, but it does not require
   /// parsing the value in the string.
-  LLVM_ABI static unsigned getSufficientBitsNeeded(StringRef Str, uint8_t Radix);
+  LLVM_ABI static unsigned getSufficientBitsNeeded(StringRef Str,
+                                                   uint8_t Radix);
 
   /// The APInt version of std::countl_zero.
   ///
@@ -1678,9 +1681,10 @@ public:
   /// Converts an APInt to a string and append it to Str.  Str is commonly a
   /// SmallString. If Radix > 10, UpperCase determine the case of letter
   /// digits.
-  LLVM_ABI void toString(SmallVectorImpl<char> &Str, unsigned Radix, bool Signed,
-                bool formatAsCLiteral = false, bool UpperCase = true,
-                bool InsertSeparators = false) const;
+  LLVM_ABI void toString(SmallVectorImpl<char> &Str, unsigned Radix,
+                         bool Signed, bool formatAsCLiteral = false,
+                         bool UpperCase = true,
+                         bool InsertSeparators = false) const;
 
   /// Considers the APInt to be unsigned and converts it into a string in the
   /// radix given. The radix can be 2, 8, 10 16, or 36.
@@ -1824,8 +1828,9 @@ public:
   /// DST, of dstCOUNT parts, such that the bit srcLSB becomes the least
   /// significant bit of DST.  All high bits above srcBITS in DST are
   /// zero-filled.
-  LLVM_ABI static void tcExtract(WordType *, unsigned dstCount, const WordType *,
-                        unsigned srcBits, unsigned srcLSB);
+  LLVM_ABI static void tcExtract(WordType *, unsigned dstCount,
+                                 const WordType *, unsigned srcBits,
+                                 unsigned srcLSB);
 
   /// Set the given bit of a bignum.  Zero-based.
   LLVM_ABI static void tcSetBit(WordType *, unsigned bit);
@@ -1842,13 +1847,14 @@ public:
   LLVM_ABI static void tcNegate(WordType *, unsigned);
 
   /// DST += RHS + CARRY where CARRY is zero or one.  Returns the carry flag.
-  LLVM_ABI static WordType tcAdd(WordType *, const WordType *, WordType carry, unsigned);
+  LLVM_ABI static WordType tcAdd(WordType *, const WordType *, WordType carry,
+                                 unsigned);
   /// DST += RHS.  Returns the carry flag.
   LLVM_ABI static WordType tcAddPart(WordType *, WordType, unsigned);
 
   /// DST -= RHS + CARRY where CARRY is zero or one. Returns the carry flag.
-  LLVM_ABI static WordType tcSubtract(WordType *, const WordType *, WordType carry,
-                             unsigned);
+  LLVM_ABI static WordType tcSubtract(WordType *, const WordType *,
+                                      WordType carry, unsigned);
   /// DST -= RHS.  Returns the carry flag.
   LLVM_ABI static WordType tcSubtractPart(WordType *, WordType, unsigned);
 
@@ -1863,20 +1869,21 @@ public:
   /// result, and if all of the omitted higher parts were zero return zero,
   /// otherwise overflow occurred and return one.
   LLVM_ABI static int tcMultiplyPart(WordType *dst, const WordType *src,
-                            WordType multiplier, WordType carry,
-                            unsigned srcParts, unsigned dstParts, bool add);
+                                     WordType multiplier, WordType carry,
+                                     unsigned srcParts, unsigned dstParts,
+                                     bool add);
 
   /// DST = LHS * RHS, where DST has the same width as the operands and is
   /// filled with the least significant parts of the result.  Returns one if
   /// overflow occurred, otherwise zero.  DST must be disjoint from both
   /// operands.
   LLVM_ABI static int tcMultiply(WordType *, const WordType *, const WordType *,
-                        unsigned);
+                                 unsigned);
 
   /// DST = LHS * RHS, where DST has width the sum of the widths of the
   /// operands. No overflow occurs. DST must be disjoint from both operands.
-  LLVM_ABI static void tcFullMultiply(WordType *, const WordType *, const WordType *,
-                             unsigned, unsigned);
+  LLVM_ABI static void tcFullMultiply(WordType *, const WordType *,
+                                      const WordType *, unsigned, unsigned);
 
   /// If RHS is zero LHS and REMAINDER are left unchanged, return one.
   /// Otherwise set LHS to LHS / RHS with the fractional part discarded, set
@@ -1887,8 +1894,9 @@ public:
   /// SCRATCH is a bignum of the same size as the operands and result for use by
   /// the routine; its contents need not be initialized and are destroyed.  LHS,
   /// REMAINDER and SCRATCH must be distinct.
-  LLVM_ABI static int tcDivide(WordType *lhs, const WordType *rhs, WordType *remainder,
-                      WordType *scratch, unsigned parts);
+  LLVM_ABI static int tcDivide(WordType *lhs, const WordType *rhs,
+                               WordType *remainder, WordType *scratch,
+                               unsigned parts);
 
   /// Shift a bignum left Count bits. Shifted in bits are zero. There are no
   /// restrictions on Count.
@@ -2375,13 +2383,13 @@ LLVM_ABI APInt RoundingSDiv(const APInt &A, const APInt &B, APInt::Rounding RM);
 ///
 /// The returned value may have a different bit width from the input
 /// coefficients.
-LLVM_ABI std::optional<APInt> SolveQuadraticEquationWrap(APInt A, APInt B, APInt C,
-                                                unsigned RangeWidth);
+LLVM_ABI std::optional<APInt>
+SolveQuadraticEquationWrap(APInt A, APInt B, APInt C, unsigned RangeWidth);
 
 /// Compare two values, and if they are different, return the position of the
 /// most significant bit that is different in the values.
 LLVM_ABI std::optional<unsigned> GetMostSignificantDifferentBit(const APInt &A,
-                                                       const APInt &B);
+                                                                const APInt &B);
 
 /// Splat/Merge neighboring bits to widen/narrow the bitmask represented
 /// by \param A to \param NewBitWidth bits.
@@ -2395,7 +2403,7 @@ LLVM_ABI std::optional<unsigned> GetMostSignificantDifferentBit(const APInt &A,
 /// e.g. ScaleBitMask(0b00011011, 4) -> 0b0001
 /// A.getBitwidth() or NewBitWidth must be a whole multiples of the other.
 LLVM_ABI APInt ScaleBitMask(const APInt &A, unsigned NewBitWidth,
-                   bool MatchAllBits = false);
+                            bool MatchAllBits = false);
 } // namespace APIntOps
 
 // See friend declaration above. This additional declaration is required in
@@ -2404,11 +2412,13 @@ LLVM_ABI hash_code hash_value(const APInt &Arg);
 
 /// StoreIntToMemory - Fills the StoreBytes bytes of memory starting from Dst
 /// with the integer held in IntVal.
-LLVM_ABI void StoreIntToMemory(const APInt &IntVal, uint8_t *Dst, unsigned StoreBytes);
+LLVM_ABI void StoreIntToMemory(const APInt &IntVal, uint8_t *Dst,
+                               unsigned StoreBytes);
 
 /// LoadIntFromMemory - Loads the integer stored in the LoadBytes bytes starting
 /// from Src into IntVal, which is assumed to be wide enough and to hold zero.
-LLVM_ABI void LoadIntFromMemory(APInt &IntVal, const uint8_t *Src, unsigned LoadBytes);
+LLVM_ABI void LoadIntFromMemory(APInt &IntVal, const uint8_t *Src,
+                                unsigned LoadBytes);
 
 /// Provide DenseMapInfo for APInt.
 template <> struct DenseMapInfo<APInt, void> {
