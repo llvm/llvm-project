@@ -134,6 +134,8 @@ Resolutions to C++ Defect Reports
 - Bumped the ``__cpp_constexpr`` feature-test macro to ``202002L`` in C++20 mode as indicated in
   `P2493R0 <https://wg21.link/P2493R0>`_.
 
+- Implemented `CWG3005 Function parameters should never be name-independent <https://wg21.link/CWG3005>`_.
+
 C Language Changes
 ------------------
 
@@ -559,6 +561,9 @@ Bug Fixes to Compiler Builtins
   ``void(char *, char *)`` to ``void(void *, void *)`` to match GCC's signature
   for the same builtin. (#GH47833)
 
+- ``__has_unique_object_representations(Incomplete[])`` is no longer accepted, per
+  `LWG4113 <https://cplusplus.github.io/LWG/issue4113>`_.
+
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
  - Fixed crash when a parameter to the ``clang::annotate`` attribute evaluates to ``void``. See #GH119125
@@ -632,9 +637,12 @@ Bug Fixes to C++ Support
 - Clang no longer crashes when establishing subsumption between some constraint expressions. (#GH122581)
 - Clang now issues an error when placement new is used to modify a const-qualified variable
   in a ``constexpr`` function. (#GH131432)
+- Fixed an incorrect TreeTransform for calls to ``consteval`` functions if a conversion template is present. (#GH137885)
 - Clang now emits a warning when class template argument deduction for alias templates is used in C++17. (#GH133806)
 - Fix a crash when checking the template template parameters of a dependent lambda appearing in an alias declaration.
   (#GH136432), (#GH137014), (#GH138018)
+- Fixed an assertion when trying to constant-fold various builtins when the argument
+  referred to a reference to an incomplete type. (#GH129397)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -781,7 +789,7 @@ clang-format
 
 libclang
 --------
-- Fixed a bug in ``clang_File_isEqual`` that sometimes led to different 
+- Fixed a bug in ``clang_File_isEqual`` that sometimes led to different
   in-memory files to be considered as equal.
 - Added ``clang_visitCXXMethods``, which allows visiting the methods
   of a class.

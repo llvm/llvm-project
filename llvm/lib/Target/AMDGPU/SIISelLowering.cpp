@@ -3235,7 +3235,6 @@ SITargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
   // CCValAssign - represent the assignment of the return value to a location.
   SmallVector<CCValAssign, 48> RVLocs;
-  SmallVector<ISD::OutputArg, 48> Splits;
 
   // CCState - Info about the registers and stack slots.
   CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), RVLocs,
@@ -11808,7 +11807,6 @@ static unsigned getBasePtrIndex(const MemSDNode *N) {
 SDValue SITargetLowering::performMemSDNodeCombine(MemSDNode *N,
                                                   DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
-  SDLoc SL(N);
 
   unsigned PtrIdx = getBasePtrIndex(N);
   SDValue Ptr = N->getOperand(PtrIdx);

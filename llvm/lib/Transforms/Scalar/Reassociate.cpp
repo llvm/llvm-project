@@ -1115,10 +1115,8 @@ Value *ReassociatePass::RemoveFactorFromExpression(Value *V, Value *Factor,
   MadeChange |= LinearizeExprTree(BO, Tree, RedoInsts, Flags);
   SmallVector<ValueEntry, 8> Factors;
   Factors.reserve(Tree.size());
-  for (unsigned i = 0, e = Tree.size(); i != e; ++i) {
-    RepeatedValue E = Tree[i];
+  for (const RepeatedValue &E : Tree)
     Factors.append(E.second, ValueEntry(getRank(E.first), E.first));
-  }
 
   bool FoundFactor = false;
   bool NeedsNegate = false;
@@ -1391,8 +1389,8 @@ Value *ReassociatePass::OptimizeXor(Instruction *I,
   APInt ConstOpnd(Ty->getScalarSizeInBits(), 0);
 
   // Step 1: Convert ValueEntry to XorOpnd
-  for (unsigned i = 0, e = Ops.size(); i != e; ++i) {
-    Value *V = Ops[i].Op;
+  for (const ValueEntry &Op : Ops) {
+    Value *V = Op.Op;
     const APInt *C;
     // TODO: Support non-splat vectors.
     if (match(V, m_APInt(C))) {

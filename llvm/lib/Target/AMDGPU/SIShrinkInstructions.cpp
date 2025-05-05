@@ -797,7 +797,7 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
     dropInstructionKeepingImpDefs(*MovY);
     MachineInstr *Next = &*std::next(MovT.getIterator());
 
-    if (T.isVirtual() && MRI->use_nodbg_empty(T)) {
+    if (MRI->use_nodbg_empty(T)) {
       dropInstructionKeepingImpDefs(MovT);
     } else {
       Xop.setIsKill(false);
@@ -840,8 +840,6 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
   TRI = &TII->getRegisterInfo();
 
   unsigned VCCReg = ST->isWave32() ? AMDGPU::VCC_LO : AMDGPU::VCC;
-
-  std::vector<unsigned> I1Defs;
 
   for (MachineFunction::iterator BI = MF.begin(), BE = MF.end();
                                                   BI != BE; ++BI) {

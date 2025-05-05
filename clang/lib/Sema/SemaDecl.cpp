@@ -7542,16 +7542,20 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
   DeclSpec::SCS SCSpec = D.getDeclSpec().getStorageClassSpec();
   StorageClass SC = StorageClassSpecToVarDeclStorageClass(D.getDeclSpec());
-
   if (LangOpts.CPlusPlus && (DC->isClosure() || DC->isFunctionOrMethod()) &&
       SC != SC_Static && SC != SC_Extern && II && II->isPlaceholder()) {
+
     IsPlaceholderVariable = true;
+
     if (!Previous.empty()) {
       NamedDecl *PrevDecl = *Previous.begin();
       bool SameDC = PrevDecl->getDeclContext()->getRedeclContext()->Equals(
           DC->getRedeclContext());
-      if (SameDC && isDeclInScope(PrevDecl, CurContext, S, false))
-        DiagPlaceholderVariableDefinition(D.getIdentifierLoc());
+      if (SameDC && isDeclInScope(PrevDecl, CurContext, S, false)) {
+        IsPlaceholderVariable = !isa<ParmVarDecl>(PrevDecl);
+        if (IsPlaceholderVariable)
+          DiagPlaceholderVariableDefinition(D.getIdentifierLoc());
+      }
     }
   }
 
@@ -14369,7 +14373,12 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
       if (Var->getStorageDuration() == SD_Static ||
           Var->getStorageDuration() == SD_Thread)
         DiagID = diag::warn_default_init_const;
-      Diag(Var->getLocation(), DiagID) << Type;
+
+      bool EmitCppCompat = !Diags.isIgnored(
+          diag::warn_cxx_compat_hack_fake_diagnostic_do_not_emit,
+          Var->getLocation());
+
+      Diag(Var->getLocation(), DiagID) << Type << EmitCppCompat;
     }
 
     // Check for jumps past the implicit initializer.  C++0x
