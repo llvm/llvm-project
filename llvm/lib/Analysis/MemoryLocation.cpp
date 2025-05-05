@@ -186,6 +186,10 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
     case Intrinsic::experimental_memset_pattern:
       assert((ArgIdx == 0 || ArgIdx == 1) &&
              "Invalid argument index for memory intrinsic");
+      if (ArgIdx == 1) {
+        assert(Arg->getType()->isPointerTy());
+        return MemoryLocation(Arg, LocationSize::precise(0), AATags);
+      }
       if (ConstantInt *LenCI = dyn_cast<ConstantInt>(II->getArgOperand(2)))
         return MemoryLocation(
             Arg,
