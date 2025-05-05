@@ -1086,7 +1086,7 @@ TEST(RootSignature, ParseDescriptorTable) {
     ASSERT_THAT_ERROR(ParamView.takeError(), Succeeded());
 
     auto *DescriptorTableView =
-        dyn_cast<DirectX::DescriptorTableView<dxbc::RST0::v1::DescriptorRange>>(
+        dyn_cast<DirectX::DescriptorTableView<dxbc::RTS0::v1::DescriptorRange>>(
             &*ParamView);
     ASSERT_TRUE(DescriptorTableView != nullptr);
     auto Table = DescriptorTableView->read();
@@ -1139,7 +1139,7 @@ TEST(RootSignature, ParseDescriptorTable) {
     ASSERT_THAT_ERROR(ParamView.takeError(), Succeeded());
 
     auto *DescriptorTableView =
-        dyn_cast<DirectX::DescriptorTableView<dxbc::RST0::v0::DescriptorRange>>(
+        dyn_cast<DirectX::DescriptorTableView<dxbc::RTS0::v0::DescriptorRange>>(
             &*ParamView);
     ASSERT_TRUE(DescriptorTableView != nullptr);
     auto Table = DescriptorTableView->read();

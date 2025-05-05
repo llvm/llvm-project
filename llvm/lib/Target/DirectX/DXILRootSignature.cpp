@@ -76,16 +76,16 @@ static bool parseRootConstants(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
   if (RootConstantNode->getNumOperands() != 5)
     return reportError(Ctx, "Invalid format for RootConstants Element");
 
-  dxbc::RootParameterHeader Header;
+  dxbc::RTS0::v0::RootParameterHeader Header;
   Header.ParameterType =
-      llvm::to_underlying(dxbc::RootParameterType::Constants32Bit);
+      llvm::to_underlying(dxbc::RTS0::RootParameterType::Constants32Bit);
 
   if (std::optional<uint32_t> Val = extractMdIntValue(RootConstantNode, 1))
     Header.ShaderVisibility = *Val;
   else
     return reportError(Ctx, "Invalid value for ShaderVisibility");
 
-  dxbc::RootConstants Constants;
+  dxbc::RTS0::v0::RootConstants Constants;
   if (std::optional<uint32_t> Val = extractMdIntValue(RootConstantNode, 2))
     Constants.ShaderRegister = *Val;
   else
@@ -167,11 +167,11 @@ static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
   }
 
   for (const llvm::mcdxbc::RootParameterInfo &Info : RSD.ParametersContainer) {
-    if (!dxbc::isValidShaderVisibility(Info.Header.ShaderVisibility))
+    if (!dxbc::RTS0::isValidShaderVisibility(Info.Header.ShaderVisibility))
       return reportValueError(Ctx, "ShaderVisibility",
                               Info.Header.ShaderVisibility);
 
-    assert(dxbc::isValidParameterType(Info.Header.ParameterType) &&
+    assert(dxbc::RTS0::isValidParameterType(Info.Header.ParameterType) &&
            "Invalid value for ParameterType");
   }
 
@@ -246,7 +246,7 @@ analyzeModule(Module &M) {
     // Clang emits the root signature data in dxcontainer following a specific
     // sequence. First the header, then the root parameters. So the header
     // offset will always equal to the header size.
-    RSD.RootParameterOffset = sizeof(dxbc::RootSignatureHeader);
+    RSD.RootParameterOffset = sizeof(dxbc::RTS0::v0::RootSignatureHeader);
 
     if (parse(Ctx, RSD, RootElementListNode) || validate(Ctx, RSD)) {
       return RSDMap;
@@ -301,8 +301,8 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
           RS.ParametersContainer.getParameter(&Info);
       if (!P)
         continue;
-      if (std::holds_alternative<const dxbc::RootConstants *>(*P)) {
-        auto *Constants = std::get<const dxbc::RootConstants *>(*P);
+      if (std::holds_alternative<const dxbc::RTS0::v0::RootConstants *>(*P)) {
+        auto *Constants = std::get<const dxbc::RTS0::v0::RootConstants *>(*P);
         OS << indent(Space + 2)
            << "Register Space: " << Constants->RegisterSpace << "\n";
         OS << indent(Space + 2)

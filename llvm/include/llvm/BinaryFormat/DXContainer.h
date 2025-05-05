@@ -153,62 +153,6 @@ enum class FeatureFlags : uint64_t {
 static_assert((uint64_t)FeatureFlags::NextUnusedBit <= 1ull << 63,
               "Shader flag bits exceed enum size.");
 
-#define ROOT_ELEMENT_FLAG(Num, Val) Val = 1ull << Num,
-enum class RootElementFlag : uint32_t {
-#include "DXContainerConstants.def"
-};
-
-#define ROOT_DESCRIPTOR_FLAG(Num, Val) Val = 1ull << Num,
-enum class RootDescriptorFlag : uint32_t {
-#include "DXContainerConstants.def"
-};
-
-#define DESCRIPTOR_RANGE_FLAG(Num, Val) Val = 1ull << Num,
-enum class DescriptorRangeFlag : uint32_t {
-#include "DXContainerConstants.def"
-};
-
-#define ROOT_PARAMETER(Val, Enum) Enum = Val,
-enum class RootParameterType : uint32_t {
-#include "DXContainerConstants.def"
-};
-
-ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
-
-#define DESCRIPTOR_RANGE(Val, Enum) Enum = Val,
-enum class DescriptorRangeType : uint32_t {
-#include "DXContainerConstants.def"
-};
-
-ArrayRef<EnumEntry<DescriptorRangeType>> getDescriptorRangeTypes();
-
-#define ROOT_PARAMETER(Val, Enum)                                              \
-  case Val:                                                                    \
-    return true;
-inline bool isValidParameterType(uint32_t V) {
-  switch (V) {
-#include "DXContainerConstants.def"
-  }
-  return false;
-}
-
-#define SHADER_VISIBILITY(Val, Enum) Enum = Val,
-enum class ShaderVisibility : uint32_t {
-#include "DXContainerConstants.def"
-};
-
-ArrayRef<EnumEntry<ShaderVisibility>> getShaderVisibility();
-
-#define SHADER_VISIBILITY(Val, Enum)                                           \
-  case Val:                                                                    \
-    return true;
-inline bool isValidShaderVisibility(uint32_t V) {
-  switch (V) {
-#include "DXContainerConstants.def"
-  }
-  return false;
-}
-
 PartType parsePartType(StringRef S);
 
 struct VertexPSVInfo {
@@ -597,8 +541,109 @@ struct ProgramSignatureElement {
 
 static_assert(sizeof(ProgramSignatureElement) == 32,
               "ProgramSignatureElement is misaligned");
-namespace RST0 {
+
+namespace RTS0 {
+
+#define ROOT_ELEMENT_FLAG(Num, Val) Val = 1ull << Num,
+enum class RootElementFlag : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+#define ROOT_DESCRIPTOR_FLAG(Num, Val) Val = 1ull << Num,
+enum class RootDescriptorFlag : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+#define DESCRIPTOR_RANGE_FLAG(Num, Val) Val = 1ull << Num,
+enum class DescriptorRangeFlag : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+#define ROOT_PARAMETER(Val, Enum) Enum = Val,
+enum class RootParameterType : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
+
+#define DESCRIPTOR_RANGE(Val, Enum) Enum = Val,
+enum class DescriptorRangeType : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<DescriptorRangeType>> getDescriptorRangeTypes();
+
+#define ROOT_PARAMETER(Val, Enum)                                              \
+  case Val:                                                                    \
+    return true;
+inline bool isValidParameterType(uint32_t V) {
+  switch (V) {
+#include "DXContainerConstants.def"
+  }
+  return false;
+}
+
+#define SHADER_VISIBILITY(Val, Enum) Enum = Val,
+enum class ShaderVisibility : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<ShaderVisibility>> getShaderVisibility();
+
+#define SHADER_VISIBILITY(Val, Enum)                                           \
+  case Val:                                                                    \
+    return true;
+inline bool isValidShaderVisibility(uint32_t V) {
+  switch (V) {
+#include "DXContainerConstants.def"
+  }
+  return false;
+}
+
 namespace v0 {
+
+struct RootSignatureHeader {
+  uint32_t Version;
+  uint32_t NumParameters;
+  uint32_t ParametersOffset;
+  uint32_t NumStaticSamplers;
+  uint32_t StaticSamplerOffset;
+  uint32_t Flags;
+
+  void swapBytes() {
+    sys::swapByteOrder(Version);
+    sys::swapByteOrder(NumParameters);
+    sys::swapByteOrder(ParametersOffset);
+    sys::swapByteOrder(NumStaticSamplers);
+    sys::swapByteOrder(StaticSamplerOffset);
+    sys::swapByteOrder(Flags);
+  }
+};
+
+struct RootParameterHeader {
+  uint32_t ParameterType;
+  uint32_t ShaderVisibility;
+  uint32_t ParameterOffset;
+
+  void swapBytes() {
+    sys::swapByteOrder(ParameterType);
+    sys::swapByteOrder(ShaderVisibility);
+    sys::swapByteOrder(ParameterOffset);
+  }
+};
+
+struct RootConstants {
+  uint32_t ShaderRegister;
+  uint32_t RegisterSpace;
+  uint32_t Num32BitValues;
+
+  void swapBytes() {
+    sys::swapByteOrder(ShaderRegister);
+    sys::swapByteOrder(RegisterSpace);
+    sys::swapByteOrder(Num32BitValues);
+  }
+};
+
 struct RootDescriptor {
   uint32_t ShaderRegister;
   uint32_t RegisterSpace;
@@ -641,50 +686,10 @@ struct DescriptorRange : public v0::DescriptorRange {
   }
 };
 } // namespace v1
-} // namespace RST0
+} // namespace RTS0
 // following dx12 naming
 // https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_root_constants
-struct RootConstants {
-  uint32_t ShaderRegister;
-  uint32_t RegisterSpace;
-  uint32_t Num32BitValues;
 
-  void swapBytes() {
-    sys::swapByteOrder(ShaderRegister);
-    sys::swapByteOrder(RegisterSpace);
-    sys::swapByteOrder(Num32BitValues);
-  }
-};
-
-struct RootParameterHeader {
-  uint32_t ParameterType;
-  uint32_t ShaderVisibility;
-  uint32_t ParameterOffset;
-
-  void swapBytes() {
-    sys::swapByteOrder(ParameterType);
-    sys::swapByteOrder(ShaderVisibility);
-    sys::swapByteOrder(ParameterOffset);
-  }
-};
-
-struct RootSignatureHeader {
-  uint32_t Version;
-  uint32_t NumParameters;
-  uint32_t ParametersOffset;
-  uint32_t NumStaticSamplers;
-  uint32_t StaticSamplerOffset;
-  uint32_t Flags;
-
-  void swapBytes() {
-    sys::swapByteOrder(Version);
-    sys::swapByteOrder(NumParameters);
-    sys::swapByteOrder(ParametersOffset);
-    sys::swapByteOrder(NumStaticSamplers);
-    sys::swapByteOrder(StaticSamplerOffset);
-    sys::swapByteOrder(Flags);
-  }
-};
 } // namespace dxbc
 } // namespace llvm
 

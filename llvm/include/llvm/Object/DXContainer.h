@@ -120,11 +120,12 @@ template <typename T> struct ViewArray {
 
 namespace DirectX {
 struct RootParameterView {
-  const dxbc::RootParameterHeader &Header;
+  const dxbc::RTS0::v0::RootParameterHeader &Header;
   StringRef ParamData;
   uint32_t Version;
 
-  RootParameterView(uint32_t V, const dxbc::RootParameterHeader &H, StringRef P)
+  RootParameterView(uint32_t V, const dxbc::RTS0::v0::RootParameterHeader &H,
+                    StringRef P)
       : Header(H), ParamData(P), Version(V) {}
 
   template <typename T, typename VersionT = T> Expected<T> readParameter() {
@@ -147,29 +148,29 @@ struct RootParameterView {
 struct RootConstantView : RootParameterView {
   static bool classof(const RootParameterView *V) {
     return V->Header.ParameterType ==
-           (uint32_t)dxbc::RootParameterType::Constants32Bit;
+           (uint32_t)dxbc::RTS0::RootParameterType::Constants32Bit;
   }
 
-  llvm::Expected<dxbc::RootConstants> read() {
-    return readParameter<dxbc::RootConstants>();
+  llvm::Expected<dxbc::RTS0::v0::RootConstants> read() {
+    return readParameter<dxbc::RTS0::v0::RootConstants>();
   }
 };
 
 struct RootDescriptorView : RootParameterView {
   static bool classof(const RootParameterView *V) {
     return (V->Header.ParameterType ==
-                llvm::to_underlying(dxbc::RootParameterType::CBV) ||
+                llvm::to_underlying(dxbc::RTS0::RootParameterType::CBV) ||
             V->Header.ParameterType ==
-                llvm::to_underlying(dxbc::RootParameterType::SRV) ||
+                llvm::to_underlying(dxbc::RTS0::RootParameterType::SRV) ||
             V->Header.ParameterType ==
-                llvm::to_underlying(dxbc::RootParameterType::UAV));
+                llvm::to_underlying(dxbc::RTS0::RootParameterType::UAV));
   }
 
-  llvm::Expected<dxbc::RST0::v1::RootDescriptor> read(uint32_t Version) {
+  llvm::Expected<dxbc::RTS0::v1::RootDescriptor> read(uint32_t Version) {
     if (Version == 1)
-      return readParameter<dxbc::RST0::v1::RootDescriptor,
-                           dxbc::RST0::v0::RootDescriptor>();
-    return readParameter<dxbc::RST0::v1::RootDescriptor>();
+      return readParameter<dxbc::RTS0::v1::RootDescriptor,
+                           dxbc::RTS0::v0::RootDescriptor>();
+    return readParameter<dxbc::RTS0::v1::RootDescriptor>();
   }
 };
 template <typename T> struct DescriptorTable {
@@ -186,11 +187,11 @@ template <typename T> struct TemplateTypeToVersion {
   static constexpr uint32_t Value = -1;
 };
 
-template <> struct TemplateTypeToVersion<dxbc::RST0::v0::DescriptorRange> {
+template <> struct TemplateTypeToVersion<dxbc::RTS0::v0::DescriptorRange> {
   static constexpr uint32_t Value = 1;
 };
 
-template <> struct TemplateTypeToVersion<dxbc::RST0::v1::DescriptorRange> {
+template <> struct TemplateTypeToVersion<dxbc::RTS0::v1::DescriptorRange> {
   static constexpr uint32_t Value = 2;
 };
 
@@ -199,7 +200,8 @@ template <typename T> struct DescriptorTableView : RootParameterView {
 
   static bool classof(const RootParameterView *V) {
     return (V->Header.ParameterType ==
-            llvm::to_underlying(dxbc::RootParameterType::DescriptorTable)) &&
+            llvm::to_underlying(
+                dxbc::RTS0::RootParameterType::DescriptorTable)) &&
            (V->Version == TemplateTypeToVersion<T>::Value);
   }
 
@@ -234,10 +236,11 @@ private:
   uint32_t NumStaticSamplers;
   uint32_t StaticSamplersOffset;
   uint32_t Flags;
-  ViewArray<dxbc::RootParameterHeader> ParametersHeaders;
+  ViewArray<dxbc::RTS0::v0::RootParameterHeader> ParametersHeaders;
   StringRef PartData;
 
-  using param_header_iterator = ViewArray<dxbc::RootParameterHeader>::iterator;
+  using param_header_iterator =
+      ViewArray<dxbc::RTS0::v0::RootParameterHeader>::iterator;
 
 public:
   RootSignature(StringRef PD) : PartData(PD) {}
@@ -255,33 +258,33 @@ public:
   uint32_t getFlags() const { return Flags; }
 
   llvm::Expected<RootParameterView>
-  getParameter(const dxbc::RootParameterHeader &Header) const {
+  getParameter(const dxbc::RTS0::v0::RootParameterHeader &Header) const {
     size_t DataSize;
 
-    if (!dxbc::isValidParameterType(Header.ParameterType))
+    if (!dxbc::RTS0::isValidParameterType(Header.ParameterType))
       return parseFailed("invalid parameter type");
 
-    switch (static_cast<dxbc::RootParameterType>(Header.ParameterType)) {
-    case dxbc::RootParameterType::Constants32Bit:
-      DataSize = sizeof(dxbc::RootConstants);
+    switch (static_cast<dxbc::RTS0::RootParameterType>(Header.ParameterType)) {
+    case dxbc::RTS0::RootParameterType::Constants32Bit:
+      DataSize = sizeof(dxbc::RTS0::v0::RootConstants);
       break;
-    case dxbc::RootParameterType::CBV:
-    case dxbc::RootParameterType::SRV:
-    case dxbc::RootParameterType::UAV:
+    case dxbc::RTS0::RootParameterType::CBV:
+    case dxbc::RTS0::RootParameterType::SRV:
+    case dxbc::RTS0::RootParameterType::UAV:
       if (Version == 1)
-        DataSize = sizeof(dxbc::RST0::v0::RootDescriptor);
+        DataSize = sizeof(dxbc::RTS0::v0::RootDescriptor);
       else
-        DataSize = sizeof(dxbc::RST0::v1::RootDescriptor);
+        DataSize = sizeof(dxbc::RTS0::v1::RootDescriptor);
       break;
-    case dxbc::RootParameterType::DescriptorTable:
+    case dxbc::RTS0::RootParameterType::DescriptorTable:
       uint32_t NumRanges =
           support::endian::read<uint32_t, llvm::endianness::little>(
               PartData.begin() + Header.ParameterOffset);
       if (Version == 1)
-        DataSize = sizeof(dxbc::RST0::v0::DescriptorRange) * NumRanges +
+        DataSize = sizeof(dxbc::RTS0::v0::DescriptorRange) * NumRanges +
                    2 * sizeof(uint32_t);
       else
-        DataSize = sizeof(dxbc::RST0::v1::DescriptorRange) * NumRanges +
+        DataSize = sizeof(dxbc::RTS0::v1::DescriptorRange) * NumRanges +
                    2 * sizeof(uint32_t);
       break;
     }

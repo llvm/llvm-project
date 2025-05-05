@@ -60,23 +60,27 @@ ArrayRef<EnumEntry<SigComponentType>> dxbc::getSigComponentTypes() {
   return ArrayRef(SigComponentTypes);
 }
 
-#define SHADER_VISIBILITY(Val, Enum) {#Enum, ShaderVisibility::Enum},
+#define SHADER_VISIBILITY(Val, Enum)                                           \
+  {#Enum, dxbc::RTS0::ShaderVisibility::Enum},
 
-static const EnumEntry<ShaderVisibility> ShaderVisibilityValues[] = {
+static const EnumEntry<dxbc::RTS0::ShaderVisibility> ShaderVisibilityValues[] =
+    {
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 };
 
-ArrayRef<EnumEntry<ShaderVisibility>> dxbc::getShaderVisibility() {
+ArrayRef<EnumEntry<dxbc::RTS0::ShaderVisibility>>
+dxbc::RTS0::getShaderVisibility() {
   return ArrayRef(ShaderVisibilityValues);
 }
 
-#define ROOT_PARAMETER(Val, Enum) {#Enum, RootParameterType::Enum},
+#define ROOT_PARAMETER(Val, Enum) {#Enum, dxbc::RTS0::RootParameterType::Enum},
 
-static const EnumEntry<RootParameterType> RootParameterTypes[] = {
+static const EnumEntry<dxbc::RTS0::RootParameterType> RootParameterTypes[] = {
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 };
 
-ArrayRef<EnumEntry<RootParameterType>> dxbc::getRootParameterTypes() {
+ArrayRef<EnumEntry<dxbc::RTS0::RootParameterType>>
+dxbc::RTS0::getRootParameterTypes() {
   return ArrayRef(RootParameterTypes);
 }
 
