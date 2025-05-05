@@ -36,49 +36,6 @@ bool getNonDebugMBBEnd(MachineBasicBlock::reverse_iterator &BBEnd,
 } // namespace llvm
 
 namespace {
-bool isLocalSegment(const LiveRange::Segment *Seg, SlotIndexes *Indexes,
-                    SmallDenseSet<MachineBasicBlock *, 2> &TouchedMBBSet) {
-  MachineInstr *StartMI = Indexes->getInstructionFromIndex(Seg->start);
-  MachineInstr *EndMI = Indexes->getInstructionFromIndex(Seg->end);
-  // Treat non inst as not local.
-  if (!StartMI || !EndMI)
-    return false;
-  // is local when parent MBB the same.
-  bool IsSameMBB = StartMI->getParent() == EndMI->getParent();
-  if (!IsSameMBB)
-    return false;
-  // Collect touched MBB.
-  MachineBasicBlock *MBB = StartMI->getParent();
-  TouchedMBBSet.insert(MBB);
-  return true;
-}
-
-bool isLocalLiveRange(const LiveRange *Range, SlotIndexes *Indexes,
-                      SmallDenseSet<MachineBasicBlock *, 2> &TouchedMBBSet) {
-  for (const LiveRange::Segment &Seg : Range->segments) {
-    if (!isLocalSegment(&Seg, Indexes, TouchedMBBSet))
-      return false;
-  }
-  return true;
-}
-
-bool isLocalSegment(const LiveRange::Segment *Seg, SlotIndexes *Indexes) {
-  MachineInstr *StartMI = Indexes->getInstructionFromIndex(Seg->start);
-  MachineInstr *EndMI = Indexes->getInstructionFromIndex(Seg->end);
-  // Treat non inst as not local.
-  if (!StartMI || !EndMI)
-    return false;
-  // is local when parent MBB the same.
-  return StartMI->getParent() == EndMI->getParent();
-}
-
-bool isLocalLiveRange(const LiveRange *Range, SlotIndexes *Indexes) {
-  for (const LiveRange::Segment &Seg : Range->segments) {
-    if (!isLocalSegment(&Seg, Indexes))
-      return false;
-  }
-  return true;
-}
 
 // LoopInfo contains a mapping from basic block to the innermost loop. Find
 // the outermost loop in the loop nest that contains BB.
@@ -193,30 +150,6 @@ MachineBasicBlock::iterator findOrCreateInsertionPointForSccDef(
       .addImm(0);
 
   return MI;
-}
-
-// In case like float4 v, v.x used and defined in one block, v.y used and define
-// in another block, one live interval could touch more than one MBB.
-// TouchedMBBSet is used for scheduling where local live interval could cross
-// multiple regions, need to calculate livereg for each region inside touched
-// MBB.
-bool isLocalLiveInterval(const LiveInterval &LI, SlotIndexes *Indexes,
-                         SmallDenseSet<MachineBasicBlock *, 2> &TouchedMBBSet) {
-  if (LI.hasSubRanges()) {
-    for (const auto &S : LI.subranges())
-      if (!isLocalLiveRange(&S, Indexes, TouchedMBBSet))
-        return false;
-  }
-  return isLocalLiveRange(&LI, Indexes, TouchedMBBSet);
-}
-
-bool isLocalLiveInterval(const LiveInterval &LI, SlotIndexes *Indexes) {
-  if (LI.hasSubRanges()) {
-    for (const auto &S : LI.subranges())
-      if (!isLocalLiveRange(&S, Indexes))
-        return false;
-  }
-  return isLocalLiveRange(&LI, Indexes);
 }
 
 void dumpLiveSet(const LiveSet &LiveSet, const SIRegisterInfo *SIRI) {

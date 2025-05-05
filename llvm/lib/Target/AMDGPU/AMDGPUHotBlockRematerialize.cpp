@@ -443,7 +443,7 @@ unsigned collectFnPressure(MachineFunction &MF, LiveIntervals *LIS,
       const auto &LI = LIS->getInterval(Reg);
 
       // Skip local live interval to make live input/ouput faster.
-      if (llvm::isLocalLiveInterval(LI, SlotIndexes))
+      if (LIS->intervalIsInOneMBB(LI))
         continue;
 
       for (auto InputIt : MBBInputSlotMap) {
@@ -1276,7 +1276,7 @@ bool AMDGPUHotBlockRematerialize::hotBlockRemat(MachineFunction &MF,
   if (Status.TargetOcc >= MaxOcc)
     return false;
 
-  // Early check for
+  // Early checks
   {
     int InitialRematSCnt = Status.MaxSPressure - Status.TargetSLimit;
     // when agressive sgpr remat, reserve some for allocation lost.

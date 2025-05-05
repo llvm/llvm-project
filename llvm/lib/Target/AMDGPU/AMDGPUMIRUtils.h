@@ -33,14 +33,6 @@ constexpr unsigned RegForVCC = 2;
 bool getNonDebugMBBEnd(llvm::MachineBasicBlock::reverse_iterator &BBEnd,
                        llvm::MachineBasicBlock &MBB);
 
-// Check if LI live cross basic blocks, save all touched basic block if is
-// local.
-bool isLocalLiveInterval(
-    const llvm::LiveInterval &LI, llvm::SlotIndexes *Indexes,
-    llvm::SmallDenseSet<llvm::MachineBasicBlock *, 2> &TouchedMBBSet);
-bool isLocalLiveInterval(const llvm::LiveInterval &LI,
-                         llvm::SlotIndexes *Indexes);
-
 bool isSub0Sub1SingleDef(unsigned Reg, const llvm::MachineRegisterInfo &MRI);
 
 using LiveSet = llvm::DenseMap<unsigned, llvm::LaneBitmask>;
