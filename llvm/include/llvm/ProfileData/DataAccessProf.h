@@ -45,6 +45,11 @@ struct DataLocation {
 
 // The data access profiles for a symbol.
 struct DataAccessProfRecord {
+  DataAccessProfRecord(uint64_t SymbolID, uint64_t AccessCount,
+                       bool IsStringLiteral)
+      : SymbolID(SymbolID), AccessCount(AccessCount),
+        IsStringLiteral(IsStringLiteral) {}
+
   // Represents a data symbol. The semantic comes in two forms: a symbol index
   // for symbol name if `IsStringLiteral` is false, or the hash of a string
   // content if `IsStringLiteral` is true. Required.
@@ -58,7 +63,7 @@ struct DataAccessProfRecord {
   bool IsStringLiteral;
 
   // The locations of data in the source code. Optional.
-  llvm::SmallVector<DataLocation> Locations;
+  llvm::SmallVector<DataLocation, 0> Locations;
 };
 
 /// Encapsulates the data access profile data and the methods to operate on it.
@@ -70,7 +75,7 @@ public:
   using SymbolID = std::variant<StringRef, uint64_t>;
   using StringToIndexMap = llvm::MapVector<StringRef, uint64_t>;
 
-  DataAccessProfData() : saver(Allocator) {}
+  DataAccessProfData() : Saver(Allocator) {}
 
   /// Serialize profile data to the output stream.
   /// Storage layout:
@@ -94,10 +99,13 @@ public:
   /// symbol names or content hashes are seen. The user of this class should
   /// aggregate counters that corresponds to the same symbol name or with the
   /// same string literal hash before calling 'add*' methods.
-  Error addSymbolizedDataAccessProfile(SymbolID SymbolID, uint64_t AccessCount);
-  Error addSymbolizedDataAccessProfile(
-      SymbolID SymbolID, uint64_t AccessCount,
-      const llvm::SmallVector<DataLocation> &Locations);
+  Error setDataAccessProfile(SymbolID SymbolID, uint64_t AccessCount);
+  /// Similar to the method above, for records with \p Locations representing
+  /// the `filename:line` where this symbol shows up. Note because of linker's
+  /// merge of identical symbols (e.g., unnamed_addr string literals), one
+  /// symbol is likely to have multiple locations.
+  Error setDataAccessProfile(SymbolID SymbolID, uint64_t AccessCount,
+                             const llvm::SmallVector<DataLocation> &Locations);
   Error addKnownSymbolWithoutSamples(SymbolID SymbolID);
 
   /// Returns a iterable StringRef for strings in the order they are added.
@@ -122,19 +130,25 @@ public:
 
 private:
   /// Serialize the symbol strings into the output stream.
-  Error serializeStrings(ProfOStream &OS) const;
+  Error serializeSymbolsAndFilenames(ProfOStream &OS) const;
 
   /// Deserialize the symbol strings from \p Ptr and increment \p Ptr to the
   /// start of the next payload.
-  Error deserializeStrings(const unsigned char *&Ptr,
-                           const uint64_t NumSampledSymbols,
-                           uint64_t NumColdKnownSymbols);
+  Error deserializeSymbolsAndFilenames(const unsigned char *&Ptr,
+                                       const uint64_t NumSampledSymbols,
+                                       uint64_t NumColdKnownSymbols);
 
   /// Decode the records and increment \p Ptr to the start of the next payload.
   Error deserializeRecords(const unsigned char *&Ptr);
 
   /// A helper function to compute a storage index for \p SymbolID.
   uint64_t getEncodedIndex(const SymbolID SymbolID) const;
+
+  // Keeps owned copies of the input strings.
+  // NOTE: Keep `Saver` initialized before other class members that reference
+  // its string copies and destructed after they are destructed.
+  llvm::BumpPtrAllocator Allocator;
+  llvm::UniqueStringSaver Saver;
 
   // `Records` stores the records and `SymbolToRecordIndex` maps a symbol ID to
   // its record index.
@@ -145,9 +159,6 @@ private:
   StringToIndexMap StrToIndexMap;
   llvm::SetVector<uint64_t> KnownColdHashes;
   llvm::SetVector<StringRef> KnownColdSymbols;
-  // Keeps owned copies of the input strings.
-  llvm::BumpPtrAllocator Allocator;
-  llvm::UniqueStringSaver saver;
 };
 
 } // namespace data_access_prof

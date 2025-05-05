@@ -764,18 +764,17 @@ static std::string ErrorToString(Error E) {
 TEST(MemProf, DataAccessProfileError) {
   // Returns error if the input symbol name is empty.
   llvm::data_access_prof::DataAccessProfData Data;
-  EXPECT_THAT(ErrorToString(Data.addSymbolizedDataAccessProfile("", 100)),
+  EXPECT_THAT(ErrorToString(Data.setDataAccessProfile("", 100)),
               HasSubstr("Empty symbol name"));
 
   // Returns error when the same symbol gets added twice.
-  ASSERT_FALSE(Data.addSymbolizedDataAccessProfile("foo", 100));
-  EXPECT_THAT(ErrorToString(Data.addSymbolizedDataAccessProfile("foo", 100)),
+  ASSERT_FALSE(Data.setDataAccessProfile("foo", 100));
+  EXPECT_THAT(ErrorToString(Data.setDataAccessProfile("foo", 100)),
               HasSubstr("Duplicate symbol or string literal added"));
 
   // Returns error when the same string content hash gets added twice.
-  ASSERT_FALSE(Data.addSymbolizedDataAccessProfile((uint64_t)135246, 1000));
-  EXPECT_THAT(ErrorToString(
-                  Data.addSymbolizedDataAccessProfile((uint64_t)135246, 1000)),
+  ASSERT_FALSE(Data.setDataAccessProfile((uint64_t)135246, 1000));
+  EXPECT_THAT(ErrorToString(Data.setDataAccessProfile((uint64_t)135246, 1000)),
               HasSubstr("Duplicate symbol or string literal added"));
 }
 
@@ -788,16 +787,16 @@ TEST(MemProf, DataAccessProfile) {
 
   // In the bool conversion, Error is true if it's in a failure state and false
   // if it's in an accept state. Use ASSERT_FALSE or EXPECT_FALSE for no error.
-  ASSERT_FALSE(Data.addSymbolizedDataAccessProfile("foo.llvm.123", 100));
+  ASSERT_FALSE(Data.setDataAccessProfile("foo.llvm.123", 100));
   ASSERT_FALSE(Data.addKnownSymbolWithoutSamples((uint64_t)789));
   ASSERT_FALSE(Data.addKnownSymbolWithoutSamples("sym2"));
-  ASSERT_FALSE(Data.addSymbolizedDataAccessProfile("bar.__uniq.321", 123,
-                                                   {
-                                                       DataLocation{"file2", 3},
-                                                   }));
+  ASSERT_FALSE(Data.setDataAccessProfile("bar.__uniq.321", 123,
+                                         {
+                                             DataLocation{"file2", 3},
+                                         }));
   ASSERT_FALSE(Data.addKnownSymbolWithoutSamples("sym1"));
   ASSERT_FALSE(Data.addKnownSymbolWithoutSamples((uint64_t)678));
-  ASSERT_FALSE(Data.addSymbolizedDataAccessProfile(
+  ASSERT_FALSE(Data.setDataAccessProfile(
       (uint64_t)135246, 1000,
       {DataLocation{"file1", 1}, DataLocation{"file2", 2}}));
 

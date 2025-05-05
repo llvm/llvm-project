@@ -18,8 +18,8 @@ namespace data_access_prof {
 // iterator.
 static MapVector<StringRef, uint64_t>::iterator
 saveStringToMap(MapVector<StringRef, uint64_t> &Map,
-                llvm::UniqueStringSaver &saver, StringRef Str) {
-  auto [Iter, Inserted] = Map.try_emplace(saver.save(Str), Map.size());
+                llvm::UniqueStringSaver &Saver, StringRef Str) {
+  auto [Iter, Inserted] = Map.try_emplace(Saver.save(Str), Map.size());
   return Iter;
 }
 
@@ -38,12 +38,12 @@ DataAccessProfData::getProfileRecord(const SymbolID SymbolID) const {
 
 bool DataAccessProfData::isKnownColdSymbol(const SymbolID SymID) const {
   if (std::holds_alternative<uint64_t>(SymID))
-    return KnownColdHashes.count(std::get<uint64_t>(SymID));
-  return KnownColdSymbols.count(std::get<StringRef>(SymID));
+    return KnownColdHashes.contains(std::get<uint64_t>(SymID));
+  return KnownColdSymbols.contains(std::get<StringRef>(SymID));
 }
 
-Error DataAccessProfData::addSymbolizedDataAccessProfile(SymbolID Symbol,
-                                                         uint64_t AccessCount) {
+Error DataAccessProfData::setDataAccessProfile(SymbolID Symbol,
+                                               uint64_t AccessCount) {
   uint64_t RecordID = -1;
   bool IsStringLiteral = false;
   SymbolID Key;
@@ -59,12 +59,12 @@ Error DataAccessProfData::addSymbolizedDataAccessProfile(SymbolID Symbol,
 
     StringRef CanonicalName = InstrProfSymtab::getCanonicalName(SymbolName);
     Key = CanonicalName;
-    RecordID = saveStringToMap(StrToIndexMap, saver, CanonicalName)->second;
+    RecordID = saveStringToMap(StrToIndexMap, Saver, CanonicalName)->second;
     IsStringLiteral = false;
   }
 
-  auto [Iter, Inserted] = Records.try_emplace(
-      Key, DataAccessProfRecord{RecordID, AccessCount, IsStringLiteral});
+  auto [Iter, Inserted] =
+      Records.try_emplace(Key, RecordID, AccessCount, IsStringLiteral);
   if (!Inserted)
     return make_error<StringError>("Duplicate symbol or string literal added. "
                                    "User of DataAccessProfData should "
@@ -74,16 +74,16 @@ Error DataAccessProfData::addSymbolizedDataAccessProfile(SymbolID Symbol,
   return Error::success();
 }
 
-Error DataAccessProfData::addSymbolizedDataAccessProfile(
+Error DataAccessProfData::setDataAccessProfile(
     SymbolID SymbolID, uint64_t AccessCount,
     const llvm::SmallVector<DataLocation> &Locations) {
-  if (Error E = addSymbolizedDataAccessProfile(SymbolID, AccessCount))
+  if (Error E = setDataAccessProfile(SymbolID, AccessCount))
     return E;
 
   auto &Record = Records.back().second;
   for (const auto &Location : Locations)
     Record.Locations.push_back(
-        {saveStringToMap(StrToIndexMap, saver, Location.FileName)->first,
+        {saveStringToMap(StrToIndexMap, Saver, Location.FileName)->first,
          Location.Line});
 
   return Error::success();
@@ -108,7 +108,8 @@ Error DataAccessProfData::deserialize(const unsigned char *&Ptr) {
       support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
   uint64_t NumColdKnownSymbols =
       support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-  if (Error E = deserializeStrings(Ptr, NumSampledSymbols, NumColdKnownSymbols))
+  if (Error E = deserializeSymbolsAndFilenames(Ptr, NumSampledSymbols,
+                                               NumColdKnownSymbols))
     return E;
 
   uint64_t Num =
@@ -120,7 +121,7 @@ Error DataAccessProfData::deserialize(const unsigned char *&Ptr) {
   return deserializeRecords(Ptr);
 }
 
-Error DataAccessProfData::serializeStrings(ProfOStream &OS) const {
+Error DataAccessProfData::serializeSymbolsAndFilenames(ProfOStream &OS) const {
   OS.write(StrToIndexMap.size());
   OS.write(KnownColdSymbols.size());
 
@@ -158,7 +159,7 @@ uint64_t DataAccessProfData::getEncodedIndex(const SymbolID SymbolID) const {
 }
 
 Error DataAccessProfData::serialize(ProfOStream &OS) const {
-  if (Error E = serializeStrings(OS))
+  if (Error E = serializeSymbolsAndFilenames(OS))
     return E;
   OS.write(KnownColdHashes.size());
   for (const auto &Hash : KnownColdHashes)
@@ -177,9 +178,9 @@ Error DataAccessProfData::serialize(ProfOStream &OS) const {
   return Error::success();
 }
 
-Error DataAccessProfData::deserializeStrings(const unsigned char *&Ptr,
-                                             uint64_t NumSampledSymbols,
-                                             uint64_t NumColdKnownSymbols) {
+Error DataAccessProfData::deserializeSymbolsAndFilenames(
+    const unsigned char *&Ptr, uint64_t NumSampledSymbols,
+    uint64_t NumColdKnownSymbols) {
   uint64_t Len =
       support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
 
@@ -188,9 +189,9 @@ Error DataAccessProfData::deserializeStrings(const unsigned char *&Ptr,
   uint64_t StringCnt = 0;
   std::function<Error(StringRef)> addName = [&](StringRef Name) {
     if (StringCnt < NumSampledSymbols)
-      saveStringToMap(StrToIndexMap, saver, Name);
+      saveStringToMap(StrToIndexMap, Saver, Name);
     else
-      KnownColdSymbols.insert(saver.save(Name));
+      KnownColdSymbols.insert(Saver.save(Name));
     ++StringCnt;
     return Error::success();
   };
@@ -223,7 +224,7 @@ Error DataAccessProfData::deserializeRecords(const unsigned char *&Ptr) {
       SymbolID = ID;
     else
       SymbolID = Strings[ID];
-    if (Error E = addSymbolizedDataAccessProfile(SymbolID, AccessCount))
+    if (Error E = setDataAccessProfile(SymbolID, AccessCount))
       return E;
 
     auto &Record = Records.back().second;
