@@ -98,6 +98,7 @@ struct MissingFeatures {
   static bool opUnaryPromotionType() { return false; }
 
   // SwitchOp handling
+  static bool foldCascadingCases() { return false; }
   static bool foldRangeCase() { return false; }
 
   // Clang early optimizations or things defered to LLVM lowering.

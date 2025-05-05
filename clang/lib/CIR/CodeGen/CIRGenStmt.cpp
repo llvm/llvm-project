@@ -456,8 +456,7 @@ CIRGenFunction::emitCaseDefaultCascade(const T *stmt, mlir::Type condType,
     if (isa<DefaultStmt>(sub) && isa<CaseStmt>(stmt)) {
       subStmtKind = SubStmtKind::Default;
       builder.createYield(loc);
-    } else if ((isa<CaseStmt>(sub) && isa<DefaultStmt>(stmt)) ||
-               (isa<CaseStmt>(sub) && isa<CaseStmt>(stmt))) {
+    } else if (isa<CaseStmt>(sub) && isa<DefaultStmt, CaseStmt>(stmt)) {
       subStmtKind = SubStmtKind::Case;
       builder.createYield(loc);
     } else {
@@ -536,8 +535,10 @@ mlir::LogicalResult CIRGenFunction::emitCaseStmt(const CaseStmt &s,
     kind = cir::CaseOpKind::Range;
 
     // We don't currently fold case range statements with other case statements.
-    // TODO(cir): Add this capability.
+    // TODO(cir): Add this capability. Folding these cases is going to be
+    // implemented in CIRSimplify when it is upstreamed.
     assert(!cir::MissingFeatures::foldRangeCase());
+    assert(!cir::MissingFeatures::foldCascadingCases());
   } else {
     caseEltValueListAttr.push_back(cir::IntAttr::get(condType, intVal));
     value = builder.getArrayAttr(caseEltValueListAttr);
