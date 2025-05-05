@@ -59,21 +59,43 @@ namespace llvm {
     ~ScopedFatalErrorHandler() { remove_fatal_error_handler(); }
   };
 
-/// Reports a serious error, calling any installed error handler. These
-/// functions are intended to be used for error conditions which are outside
-/// the control of the compiler (I/O errors, invalid user input, etc.)
-///
-/// If no error handler is installed the default is to print the message to
-/// standard error, followed by a newline.
-/// After the error handler is called this function will call abort(), it
-/// does not return.
-/// NOTE: The std::string variant was removed to avoid a <string> dependency.
+/// @deprecated Use reportFatalInternalError() or reportFatalUsageError()
+/// instead.
 [[noreturn]] void report_fatal_error(const char *reason,
                                      bool gen_crash_diag = true);
 [[noreturn]] void report_fatal_error(StringRef reason,
                                      bool gen_crash_diag = true);
 [[noreturn]] void report_fatal_error(const Twine &reason,
                                      bool gen_crash_diag = true);
+
+/// Report a fatal error that likely indicates a bug in LLVM. It serves a
+/// similar purpose as an assertion, but is always enabled, regardless of the
+/// value of NDEBUG.
+///
+/// This will call installed error handlers (or print the message by default)
+/// and then abort. This will produce a crash trace and *will* ask users to
+/// report an LLVM bug.
+[[noreturn]] void reportFatalInternalError(const char *reason);
+[[noreturn]] void reportFatalInternalError(StringRef reason);
+[[noreturn]] void reportFatalInternalError(const Twine &reason);
+
+/// Report a fatal error that does not indicate a bug in LLVM.
+///
+/// This can be used in contexts where a proper error reporting mechanism
+/// (such as Error/Expected or DiagnosticInfo) is currently not supported, and
+/// would be too involved to introduce at the moment.
+///
+/// Examples where this function should be used instead of
+/// reportFatalInternalError() include invalid inputs or options, but also
+/// environment error conditions outside LLVM's control. It should also be used
+/// for known unsupported/unimplemented functionality.
+///
+/// This will call installed error handlers (or print the message by default)
+/// and then exit with code 1. It will not produce a crash trace and will
+/// *not* ask users to report an LLVM bug.
+[[noreturn]] void reportFatalUsageError(const char *reason);
+[[noreturn]] void reportFatalUsageError(StringRef reason);
+[[noreturn]] void reportFatalUsageError(const Twine &reason);
 
 /// Installs a new bad alloc error handler that should be used whenever a
 /// bad alloc error, e.g. failing malloc/calloc, is encountered by LLVM.
