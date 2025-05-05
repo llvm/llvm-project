@@ -12,7 +12,7 @@
 ; CHECK-SPIRV64-DAG: %[[#IntTy:]] = OpTypeInt 64 0
 ; CHECK-SPIRV32-DAG: %[[#IntTy:]] = OpTypeInt 32 0
 ; CHECK-SPIRV-DAG: %[[#Const2:]] = OpConstant %[[#IntTy]] 2
-; CHECK-SPIRV-DAG: %[[#]] = OpSpecConstantOp %[[#]] 70 %[[#]] %[[#]] %[[#Const2]]
+; CHECK-SPIRV-DAG: %[[#]] = OpSpecConstantOp %[[#]] InBoundsPtrAccessChain %[[#]] %[[#]] %[[#Const2]]
 ; CHECK-SPIRV: OpFunction
 
 @a_var = addrspace(1) global [2 x i8] [i8 1, i8 1]
