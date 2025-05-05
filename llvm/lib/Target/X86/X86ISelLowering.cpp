@@ -56582,16 +56582,18 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
     // index truncation below.
     if (Index.getOpcode() == ISD::SHL && isa<ConstantSDNode>(Scale)) {
       unsigned BitWidth = Index.getScalarValueSizeInBits();
-      unsigned MaskBits = BitWidth - Log2_32(Scale->getAsZExtVal());
+      unsigned ScaleAmt = Scale->getAsZExtVal();
+      assert(isPowerOf2_32(ScaleAmt) && "Scale must be a power of 2");
+      unsigned Log2ScaleAmt = Log2_32(ScaleAmt);
+      unsigned MaskBits = BitWidth - Log2ScaleAmt;
       APInt DemandedBits = APInt::getLowBitsSet(BitWidth, MaskBits);
       if (TLI.SimplifyDemandedBits(Index, DemandedBits, DCI)) {
         if (N->getOpcode() != ISD::DELETED_NODE)
           DCI.AddToWorklist(N);
         return SDValue(N, 0);
       }
-      uint64_t ScaleAmt = Scale->getAsZExtVal();
       if (auto MinShAmt = DAG.getValidMinimumShiftAmount(Index)) {
-        if (*MinShAmt >= 1 && (*MinShAmt + Log2_64(ScaleAmt)) < 4 &&
+        if (*MinShAmt >= 1 && (*MinShAmt + Log2ScaleAmt) < 4 &&
             DAG.ComputeNumSignBits(Index.getOperand(0)) > 1) {
           SDValue ShAmt = Index.getOperand(1);
           SDValue NewShAmt =
@@ -56607,10 +56609,10 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
     }
     unsigned IndexWidth = Index.getScalarValueSizeInBits();
 
-    // Shrink indices if they are larger than 32-bits.
-    // Only do this before legalize types since v2i64 could become v2i32.
-    // FIXME: We could check that the type is legal if we're after legalize
-    // types, but then we would need to construct test cases where that happens.
+    // If the index is a left shift, \ComputeNumSignBits we are recomputing the number of sign bits
+    // from the shifted value. We are trying to enable the optimization in which
+    // we can shrink indices if they are larger than 32-bits. Using the existing
+    // fold techniques implemented below.
     unsigned ComputeNumSignBits = DAG.ComputeNumSignBits(Index);
     if (Index.getOpcode() == ISD::SHL) {
       if (auto MinShAmt = DAG.getValidMinimumShiftAmount(Index)) {
@@ -56620,6 +56622,11 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
       }
     }
 
+    // Shrink indices if they are larger than 32-bits.
+    // Only do this before legalize types since v2i64 could become v2i32.
+    // FIXME: We could check that the type is legal if we're after legalize
+    // types, but then we would need to construct test cases where that happens.
+    // \ComputeNumSignBits value is recomputed for the shift Index
     if (IndexWidth > 32 && ComputeNumSignBits > (IndexWidth - 32)) {
       EVT NewVT = IndexVT.changeVectorElementType(MVT::i32);
 
@@ -56651,14 +56658,6 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
 
   EVT PtrVT = TLI.getPointerTy(DAG.getDataLayout());
 
-  // if (Index.getOpcode() == ISD::SHL) {
-  //   unsigned BitWidth = Index.getScalarValueSizeInBits();
-  //   unsigned MaskBits = BitWidth - Log2_32(Scale->getAsZExtVal());
-  //   APInt DemandedBits = APInt::getLowBitsSet(BitWidth, MaskBits);
-  //   if (TLI.SimplifyDemandedBits(Index, DemandedBits, DCI)) {
-  //     return SDValue(N, 0);
-  //   }
-  // }
   // Try to move splat adders from the index operand to the base
   // pointer operand. Taking care to multiply by the scale. We can only do
   // this when index element type is the same as the pointer type.
