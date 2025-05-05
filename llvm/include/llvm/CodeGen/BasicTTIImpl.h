@@ -1410,8 +1410,8 @@ public:
 
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      TTI::TargetCostKind CostKind,
-                                     unsigned Index, Value *Op0,
-                                     Value *Op1) const override {
+                                     unsigned Index, const Value *Op0,
+                                     const Value *Op1) const override {
     return getRegUsageForType(Val->getScalarType());
   }
 

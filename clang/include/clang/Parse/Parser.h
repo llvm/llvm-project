@@ -374,7 +374,7 @@ class Parser : public CodeCompletionHandler {
   /// function call.
   bool CalledSignatureHelp = false;
 
-  Sema::OffsetOfKind OffsetOfState = Sema::OffsetOfKind::OOK_Outside;
+  OffsetOfKind OffsetOfState = OffsetOfKind::Outside;
 
   /// The "depth" of the template parameters currently being parsed.
   unsigned TemplateParameterDepth;
@@ -2579,7 +2579,8 @@ private:
   void ParseEnumSpecifier(SourceLocation TagLoc, DeclSpec &DS,
                           const ParsedTemplateInfo &TemplateInfo,
                           AccessSpecifier AS, DeclSpecContext DSC);
-  void ParseEnumBody(SourceLocation StartLoc, Decl *TagDecl);
+  void ParseEnumBody(SourceLocation StartLoc, Decl *TagDecl,
+                     SkipBodyInfo *SkipBody = nullptr);
   void ParseStructUnionBody(SourceLocation StartLoc, DeclSpec::TST TagType,
                             RecordDecl *TagDecl);
 
@@ -3252,7 +3253,7 @@ private:
 
   void ParseTypeQualifierListOpt(
       DeclSpec &DS, unsigned AttrReqs = AR_AllAttributesParsed,
-      bool AtomicAllowed = true, bool IdentifierRequired = false,
+      bool AtomicOrPtrauthAllowed = true, bool IdentifierRequired = false,
       std::optional<llvm::function_ref<void()>> CodeCompletionHandler =
           std::nullopt);
   void ParseDirectDeclarator(Declarator &D);

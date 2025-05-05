@@ -392,14 +392,25 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
 
   Tokens = annotate("return s.operator int *();");
   ASSERT_EQ(Tokens.size(), 10u) << Tokens;
-  EXPECT_TOKEN(Tokens[3], tok::kw_operator, TT_FunctionDeclarationName);
+  // Not TT_FunctionDeclarationName.
+  EXPECT_TOKEN(Tokens[3], tok::kw_operator, TT_Unknown);
   EXPECT_TOKEN(Tokens[5], tok::star, TT_PointerOrReference);
-  EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_FunctionDeclarationLParen);
+  // Not TT_FunctionDeclarationLParen.
+  EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_Unknown);
+
+  Tokens = annotate("B &b = x.operator B &();");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[8], tok::amp, TT_PointerOrReference);
 
   Tokens = annotate("int8_t *a = MacroCall(int8_t, width * height * length);");
   ASSERT_EQ(Tokens.size(), 16u) << Tokens;
   EXPECT_TOKEN(Tokens[9], tok::star, TT_BinaryOperator);
   EXPECT_TOKEN(Tokens[11], tok::star, TT_BinaryOperator);
+
+  Tokens = annotate("float foo[3] = {M * H * H, H * M * H, H * H * M};");
+  ASSERT_EQ(Tokens.size(), 27u) << Tokens;
+  EXPECT_TOKEN(Tokens[16], tok::star, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[22], tok::star, TT_BinaryOperator);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {

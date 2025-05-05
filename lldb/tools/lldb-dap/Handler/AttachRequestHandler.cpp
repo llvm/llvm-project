@@ -9,6 +9,7 @@
 #include "DAP.h"
 #include "EventHelper.h"
 #include "JSONUtils.h"
+#include "LLDBUtils.h"
 #include "RequestHandler.h"
 #include "lldb/API/SBListener.h"
 #include "llvm/Support/FileSystem.h"
@@ -48,7 +49,6 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
   llvm::json::Object response;
   lldb::SBError error;
   FillResponse(request, response);
-  lldb::SBAttachInfo attach_info;
   const int invalid_port = 0;
   const auto *arguments = request.getObject("arguments");
   const lldb::pid_t pid =
@@ -57,10 +57,7 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
       GetInteger<uint64_t>(arguments, "gdb-remote-port").value_or(invalid_port);
   const auto gdb_remote_hostname =
       GetString(arguments, "gdb-remote-hostname").value_or("localhost");
-  if (pid != LLDB_INVALID_PROCESS_ID)
-    attach_info.SetProcessID(pid);
   const auto wait_for = GetBoolean(arguments, "waitFor").value_or(false);
-  attach_info.SetWaitForLaunch(wait_for, false /*async*/);
   dap.configuration.initCommands = GetStrings(arguments, "initCommands");
   dap.configuration.preRunCommands = GetStrings(arguments, "preRunCommands");
   dap.configuration.postRunCommands = GetStrings(arguments, "postRunCommands");
@@ -138,9 +135,11 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
   }
   if (attachCommands.empty()) {
     // No "attachCommands", just attach normally.
+
     // Disable async events so the attach will be successful when we return from
     // the launch call and the launch will happen synchronously
-    dap.debugger.SetAsync(false);
+    ScopeSyncMode scope_sync_mode(dap.debugger);
+
     if (core_file.empty()) {
       if ((pid != LLDB_INVALID_PROCESS_ID) &&
           (gdb_remote_port != invalid_port)) {
@@ -158,13 +157,18 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
         dap.target.ConnectRemote(listener, connect_url.c_str(), "gdb-remote",
                                  error);
       } else {
-        // Attach by process name or id.
+        // Attach by pid or process name.
+        lldb::SBAttachInfo attach_info;
+        if (pid != LLDB_INVALID_PROCESS_ID)
+          attach_info.SetProcessID(pid);
+        else if (dap.configuration.program.has_value())
+          attach_info.SetExecutable(dap.configuration.program->data());
+        attach_info.SetWaitForLaunch(wait_for, false /*async*/);
         dap.target.Attach(attach_info, error);
       }
-    } else
+    } else {
       dap.target.LoadCore(core_file.data(), error);
-    // Reenable async events
-    dap.debugger.SetAsync(true);
+    }
   } else {
     // We have "attachCommands" that are a set of commands that are expected
     // to execute the commands after which a process should be created. If there

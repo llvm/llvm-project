@@ -33,13 +33,13 @@ namespace llvm {
 cl::opt<bool> EnableFSDiscriminator(
     "enable-fs-discriminator", cl::Hidden,
     cl::desc("Enable adding flow sensitive discriminators"));
-} // namespace llvm
 
 // When true, preserves line and column number by picking one of the merged
 // location info in a deterministic manner to assist sample based PGO.
-static cl::opt<bool> PickMergedSourceLocations(
+cl::opt<bool> PickMergedSourceLocations(
     "pick-merged-source-locations", cl::init(false), cl::Hidden,
     cl::desc("Preserve line and column number when merging locations."));
+} // namespace llvm
 
 uint32_t DIType::getAlignInBits() const {
   return (getTag() == dwarf::DW_TAG_LLVM_ptrauth_type ? 0 : SubclassData32);
@@ -63,12 +63,19 @@ DebugVariableAggregate::DebugVariableAggregate(const DbgVariableIntrinsic *DVI)
                     DVI->getDebugLoc()->getInlinedAt()) {}
 
 DILocation::DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
-                       unsigned Column, ArrayRef<Metadata *> MDs,
-                       bool ImplicitCode)
-    : MDNode(C, DILocationKind, Storage, MDs) {
+                       unsigned Column, uint64_t AtomGroup, uint8_t AtomRank,
+                       ArrayRef<Metadata *> MDs, bool ImplicitCode)
+    : MDNode(C, DILocationKind, Storage, MDs)
+#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
+      ,
+      AtomGroup(AtomGroup), AtomRank(AtomRank)
+#endif
+{
+#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
+  assert(AtomRank <= 7 && "AtomRank number should fit in 3 bits");
+#endif
   assert((MDs.size() == 1 || MDs.size() == 2) &&
          "Expected a scope and optional inlined-at");
-
   // Set line and column.
   assert(Column < (1u << 16) && "Expected 16-bit column");
 
@@ -87,6 +94,7 @@ static void adjustColumn(unsigned &Column) {
 DILocation *DILocation::getImpl(LLVMContext &Context, unsigned Line,
                                 unsigned Column, Metadata *Scope,
                                 Metadata *InlinedAt, bool ImplicitCode,
+                                uint64_t AtomGroup, uint8_t AtomRank,
                                 StorageType Storage, bool ShouldCreate) {
   // Fixup column.
   adjustColumn(Column);
@@ -94,7 +102,8 @@ DILocation *DILocation::getImpl(LLVMContext &Context, unsigned Line,
   if (Storage == Uniqued) {
     if (auto *N = getUniqued(Context.pImpl->DILocations,
                              DILocationInfo::KeyTy(Line, Column, Scope,
-                                                   InlinedAt, ImplicitCode)))
+                                                   InlinedAt, ImplicitCode,
+                                                   AtomGroup, AtomRank)))
       return N;
     if (!ShouldCreate)
       return nullptr;
@@ -106,8 +115,9 @@ DILocation *DILocation::getImpl(LLVMContext &Context, unsigned Line,
   Ops.push_back(Scope);
   if (InlinedAt)
     Ops.push_back(InlinedAt);
-  return storeImpl(new (Ops.size(), Storage) DILocation(
-                       Context, Storage, Line, Column, Ops, ImplicitCode),
+  return storeImpl(new (Ops.size(), Storage)
+                       DILocation(Context, Storage, Line, Column, AtomGroup,
+                                  AtomRank, Ops, ImplicitCode),
                    Storage, Context.pImpl->DILocations);
 }
 
@@ -218,17 +228,18 @@ struct ScopeLocationsMatcher {
 };
 
 DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
-  if (!LocA || !LocB)
-    return nullptr;
-
   if (LocA == LocB)
     return LocA;
 
   // For some use cases (SamplePGO), it is important to retain distinct source
   // locations. When this flag is set, we choose arbitrarily between A and B,
   // rather than computing a merged location using line 0, which is typically
-  // not useful for PGO.
+  // not useful for PGO. If one of them is null, then try to return one which is
+  // valid.
   if (PickMergedSourceLocations) {
+    if (!LocA || !LocB)
+      return LocA ? LocA : LocB;
+
     auto A = std::make_tuple(LocA->getLine(), LocA->getColumn(),
                              LocA->getDiscriminator(), LocA->getFilename(),
                              LocA->getDirectory());
@@ -237,6 +248,9 @@ DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
                              LocB->getDirectory());
     return A < B ? LocA : LocB;
   }
+
+  if (!LocA || !LocB)
+    return nullptr;
 
   LLVMContext &C = LocA->getContext();
 

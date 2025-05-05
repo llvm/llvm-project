@@ -1046,8 +1046,14 @@ bool ModuleList::LoadScriptingResourcesInTarget(Target *target,
                                                 bool continue_on_error) {
   if (!target)
     return false;
-  std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
-  for (auto module : m_modules) {
+  m_modules_mutex.lock();
+  // Don't hold the module list mutex while loading the scripting resources,
+  // The initializer might do any amount of work, and having that happen while
+  // the module list is held is asking for A/B locking problems.
+  const ModuleList tmp_module_list(*this);
+  m_modules_mutex.unlock();
+
+  for (auto module : tmp_module_list.ModulesNoLocking()) {
     if (module) {
       Status error;
       if (!module->LoadScriptingResourceInTarget(target, error,
