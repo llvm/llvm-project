@@ -1954,10 +1954,20 @@ void SwiftASTContext::AddExtraClangCC1Args(
 
 void SwiftASTContext::AddUserClangArgs(TargetProperties &props) {
   Args args(props.GetSwiftExtraClangFlags());
+  if (args.empty())
+    return;
+
   std::vector<std::string> user_clang_flags;
-  for (const auto &arg : args.entries())
+  for (const auto &arg : args.entries())  {
+    if (arg.ref() == "--")
+      continue;
     user_clang_flags.push_back(arg.ref().str());
-  AddExtraClangArgs(user_clang_flags, {}, {});
+  }
+  if (GetClangImporterOptions().DirectClangCC1ModuleBuild) {
+    llvm::append_range(GetClangImporterOptions().ExtraArgs, user_clang_flags);
+  } else {
+    AddExtraClangArgs(user_clang_flags, {}, {});
+  }
 }
 
 /// Turn relative paths in clang options into absolute paths based on

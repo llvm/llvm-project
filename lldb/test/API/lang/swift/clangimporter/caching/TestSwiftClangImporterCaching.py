@@ -21,6 +21,7 @@ class TestSwiftClangImporterCaching(TestBase):
                                           lldb.SBFileSpec('main.swift'))
         log = self.getBuildArtifact("types.log")
         self.runCmd("settings set target.swift-clang-override-options +-DADDED=1")
+        self.runCmd("settings set target.swift-extra-clang-flags -- -DEXTRA=1")
         self.expect('log enable lldb types -f "%s"' % log)
         self.expect("expression obj", DATA_TYPES_DISPLAYED_CORRECTLY,
                     substrs=["b ="])
@@ -35,6 +36,7 @@ class TestSwiftClangImporterCaching(TestBase):
 #       CHECK:  SwiftASTContextForExpressions(module: "a", cu: "main.swift")::LogConfiguration() --     -F
 #       CHECK-NEXT:  SwiftASTContextForExpressions(module: "a", cu: "main.swift")::LogConfiguration() --     /FRAMEWORK_DIR
 #       CHECK:  SwiftASTContextForExpressions(module: "a", cu: "main.swift")::LogConfiguration() --     -DADDED=1
+#       CHECK:  SwiftASTContextForExpressions(module: "a", cu: "main.swift")::LogConfiguration() --     -DEXTRA=1
 #       CHECK:  SwiftASTContextForExpressions(module: "a", cu: "main.swift") Module import remark: loaded module 'ClangA'
 #       CHECK-NOT: -cc1
 #       CHECK-NOT: -fmodule-file-cache-key
