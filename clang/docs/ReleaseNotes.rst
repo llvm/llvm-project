@@ -288,7 +288,7 @@ Non-comprehensive list of changes in this release
   stack traces of Clang from debuggers, crashes, and profilers may look
   different than before.
 - Fixed a crash when a VLA with an invalid size expression was used within a
-  ``sizeof`` or ``typeof`` expression. #GH138444
+  ``sizeof`` or ``typeof`` expression. (#GH138444)
 
 New Compiler Flags
 ------------------
