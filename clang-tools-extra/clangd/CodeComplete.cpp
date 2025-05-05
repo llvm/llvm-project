@@ -926,7 +926,8 @@ struct CompletionRecorder : public CodeCompleteConsumer {
     // FIXME: in case there is no future sema completion callback after the
     // recovery mode, we might still want to provide some results (e.g. trivial
     // identifier-based completion).
-    if (Context.getKind() == CodeCompletionContext::CCC_Recovery) {
+    CodeCompletionContext::Kind ContextKind = Context.getKind();
+    if (ContextKind == CodeCompletionContext::CCC_Recovery) {
       log("Code complete: Ignoring sema code complete callback with Recovery "
           "context.");
       return;
@@ -952,7 +953,8 @@ struct CompletionRecorder : public CodeCompleteConsumer {
       auto &Result = InResults[I];
       if (Config::current().Completion.CodePatterns ==
               Config::CodePatternsPolicy::None &&
-          Result.Kind == CodeCompletionResult::RK_Pattern)
+          Result.Kind == CodeCompletionResult::RK_Pattern &&
+          ContextKind != CodeCompletionContext::CCC_IncludedFile)
         continue;
       // Class members that are shadowed by subclasses are usually noise.
       if (Result.Hidden && Result.Declaration &&

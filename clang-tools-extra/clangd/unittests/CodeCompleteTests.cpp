@@ -3344,6 +3344,22 @@ TEST(CompletionTest, NoCodePatternsIfDisabled) {
               Not(Contains(kind(CompletionItemKind::Snippet))));
 }
 
+TEST(CompletionTest, CompleteIncludeIfCodePatternsNone) {
+  clangd::CodeCompleteOptions Opts = {};
+  Opts.EnableSnippets = true;
+  Opts.CodePatterns = Config::CodePatternsPolicy::None;
+
+  Annotations Test(R"cpp(#include "^)cpp");
+  auto TU = TestTU::withCode(Test.code());
+  TU.AdditionalFiles["foo/bar.h"] = "";
+  TU.ExtraArgs.push_back("-I" + testPath("foo"));
+
+  auto Results = completions(TU, Test.point(), {}, Opts);
+  EXPECT_THAT(Results.Completions,
+              AllOf(has("foo/", CompletionItemKind::Folder),
+                    has("bar.h\"", CompletionItemKind::File)));
+}
+
 TEST(CompletionTest, NoQualifierIfShadowed) {
   clangd::CodeCompleteOptions Opts = {};
   Opts.AllScopes = true;
