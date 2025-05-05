@@ -12,6 +12,9 @@
 // sanitizer_common/sanitizer_common_interceptors.inc
 //===----------------------------------------------------------------------===//
 
+#include <stdarg.h>
+
+#include "interception/interception.h"
 #include "sanitizer_common/sanitizer_allocator_dlsym.h"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_errno.h"
@@ -24,16 +27,13 @@
 #include "sanitizer_common/sanitizer_posix.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
-#include "interception/interception.h"
+#include "tsan_fd.h"
 #include "tsan_interceptors.h"
 #include "tsan_interface.h"
-#include "tsan_platform.h"
-#include "tsan_suppressions.h"
-#include "tsan_rtl.h"
 #include "tsan_mman.h"
-#include "tsan_fd.h"
-
-#include <stdarg.h>
+#include "tsan_platform.h"
+#include "tsan_rtl.h"
+#include "tsan_suppressions.h"
 
 using namespace __tsan;
 
