@@ -310,11 +310,11 @@ namespace llvm {
     /// Returns NULL if no dependence; otherwise, returns a Dependence (or a
     /// FullDependence) with as much information as can be gleaned. By default,
     /// the dependence test collects a set of runtime assumptions that cannot be
-    /// solved at compilation time. Set UnderRuntimeAssumptions to false for a
-    /// safe approximation of the dependence relation that does not require
-    /// runtime checks.
+    /// solved at compilation time. By default UnderRuntimeAssumptions is false
+    /// for a safe approximation of the dependence relation that does not
+    /// require runtime checks.
     std::unique_ptr<Dependence> depends(Instruction *Src, Instruction *Dst,
-                                        bool UnderRuntimeAssumptions = true);
+                                        bool UnderRuntimeAssumptions = false);
 
     /// getSplitIteration - Give a dependence that's splittable at some
     /// particular level, return the iteration that should be used to split
