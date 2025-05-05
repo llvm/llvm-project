@@ -14967,6 +14967,10 @@ bool SCEVWrapPredicate::implies(const SCEVPredicate *N,
   if (Start->getType()->isPointerTy() != OpStart->getType()->isPointerTy())
     return false;
 
+  // Reject pointers to different address spaces.
+  if (Start->getType()->isPointerTy() && Start->getType() != OpStart->getType())
+    return false;
+
   const SCEV *Step = AR->getStepRecurrence(SE);
   const SCEV *OpStep = Op->AR->getStepRecurrence(SE);
   if (!SE.isKnownPositive(Step) || !SE.isKnownPositive(OpStep))

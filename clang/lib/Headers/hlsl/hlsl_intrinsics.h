@@ -304,6 +304,48 @@ fmod(__detail::HLSL_FIXED_VECTOR<float, N> X,
 }
 
 //===----------------------------------------------------------------------===//
+// ldexp builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T ldexp(T X, T Exp)
+/// \brief Returns the result of multiplying the specified value by two raised
+/// to the power of the specified exponent.
+/// \param X [in] The specified value.
+/// \param Exp [in] The specified exponent.
+///
+/// This function uses the following formula: X * 2^Exp
+
+template <typename T>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline __detail::enable_if_t<__detail::is_arithmetic<T>::Value &&
+                                       __detail::is_same<half, T>::value,
+                                   T> ldexp(T X, T Exp) {
+  return __detail::ldexp_impl(X, Exp);
+}
+
+template <typename T>
+const inline __detail::enable_if_t<
+    __detail::is_arithmetic<T>::Value && __detail::is_same<float, T>::value, T>
+ldexp(T X, T Exp) {
+  return __detail::ldexp_impl(X, Exp);
+}
+
+template <int N>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline __detail::HLSL_FIXED_VECTOR<half, N> ldexp(
+    __detail::HLSL_FIXED_VECTOR<half, N> X,
+    __detail::HLSL_FIXED_VECTOR<half, N> Exp) {
+  return __detail::ldexp_impl(X, Exp);
+}
+
+template <int N>
+const inline __detail::HLSL_FIXED_VECTOR<float, N>
+ldexp(__detail::HLSL_FIXED_VECTOR<float, N> X,
+      __detail::HLSL_FIXED_VECTOR<float, N> Exp) {
+  return __detail::ldexp_impl(X, Exp);
+}
+
+//===----------------------------------------------------------------------===//
 // length builtins
 //===----------------------------------------------------------------------===//
 

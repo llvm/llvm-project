@@ -1135,7 +1135,6 @@ bool AMDGPURegisterBankInfo::applyMappingLoad(
   if (LoadSize <= MaxNonSmrdLoadSize)
     return false;
 
-  SmallVector<Register, 16> DefRegs(OpdMapper.getVRegs(0));
   SmallVector<Register, 1> SrcRegs(OpdMapper.getVRegs(1));
 
   if (SrcRegs.empty())
@@ -2629,8 +2628,6 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     // with a vector mad.
     assert(MRI.getRegBankOrNull(DstReg) == &AMDGPU::VGPRRegBank &&
            "The destination operand should be in vector registers.");
-
-    DebugLoc DL = MI.getDebugLoc();
 
     // Extract the lower subregister from the first operand.
     Register Op0L = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);

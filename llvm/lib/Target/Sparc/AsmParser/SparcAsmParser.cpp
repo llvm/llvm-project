@@ -11,6 +11,7 @@
 #include "TargetInfo/SparcTargetInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmMacro.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -101,8 +102,7 @@ class SparcAsmParser : public MCTargetAsmParser {
 
   ParseStatus parseOperand(OperandVector &Operands, StringRef Name);
 
-  ParseStatus parseSparcAsmOperand(std::unique_ptr<SparcOperand> &Operand,
-                                   bool isCall = false);
+  ParseStatus parseSparcAsmOperand(std::unique_ptr<SparcOperand> &Operand);
 
   ParseStatus parseBranchModifiers(OperandVector &Operands);
 
@@ -847,16 +847,16 @@ bool SparcAsmParser::expandSETX(MCInst &Inst, SMLoc IDLoc,
   // merge it with the lower half that has just been generated above.
 
   // sethi %hh(val), tmp
-  Instructions.push_back(
-      MCInstBuilder(SP::SETHIi)
-          .addReg(MCTmpOp.getReg())
-          .addExpr(adjustPICRelocation(SparcMCExpr::VK_HH, ValExpr)));
+  Instructions.push_back(MCInstBuilder(SP::SETHIi)
+                             .addReg(MCTmpOp.getReg())
+                             .addExpr(SparcMCExpr::create(
+                                 ELF::R_SPARC_HH22, ValExpr, getContext())));
   // or    tmp, %hm(val), tmp
-  Instructions.push_back(
-      MCInstBuilder(SP::ORri)
-          .addReg(MCTmpOp.getReg())
-          .addReg(MCTmpOp.getReg())
-          .addExpr(adjustPICRelocation(SparcMCExpr::VK_HM, ValExpr)));
+  Instructions.push_back(MCInstBuilder(SP::ORri)
+                             .addReg(MCTmpOp.getReg())
+                             .addReg(MCTmpOp.getReg())
+                             .addExpr(SparcMCExpr::create(
+                                 ELF::R_SPARC_HM10, ValExpr, getContext())));
   // sllx  tmp, 32, tmp
   Instructions.push_back(MCInstBuilder(SP::SLLXri)
                              .addReg(MCTmpOp.getReg())
@@ -1114,20 +1114,20 @@ ParseStatus SparcAsmParser::parseTailRelocSym(OperandVector &Operands) {
   SMLoc S = getLoc();
   SMLoc E = SMLoc::getFromPointer(S.getPointer() - 1);
 
-  auto MatchesKind = [](SparcMCExpr::Specifier VK) -> bool {
+  auto MatchesKind = [](uint16_t RelType) -> bool {
     switch (Kind) {
     case TailRelocKind::Load_GOT:
       // Non-TLS relocations on ld (or ldx).
       // ld [%rr + %rr], %rr, %rel(sym)
-      return VK == SparcMCExpr::VK_GOTDATA_OP;
+      return RelType == ELF::R_SPARC_GOTDATA_OP;
     case TailRelocKind::Add_TLS:
       // TLS relocations on add.
       // add %rr, %rr, %rr, %rel(sym)
-      switch (VK) {
-      case SparcMCExpr::VK_TLS_GD_ADD:
-      case SparcMCExpr::VK_TLS_IE_ADD:
-      case SparcMCExpr::VK_TLS_LDM_ADD:
-      case SparcMCExpr::VK_TLS_LDO_ADD:
+      switch (RelType) {
+      case ELF::R_SPARC_TLS_GD_ADD:
+      case ELF::R_SPARC_TLS_IE_ADD:
+      case ELF::R_SPARC_TLS_LDM_ADD:
+      case ELF::R_SPARC_TLS_LDO_ADD:
         return true;
       default:
         return false;
@@ -1135,9 +1135,9 @@ ParseStatus SparcAsmParser::parseTailRelocSym(OperandVector &Operands) {
     case TailRelocKind::Load_TLS:
       // TLS relocations on ld (or ldx).
       // ld[x] %addr, %rr, %rel(sym)
-      switch (VK) {
-      case SparcMCExpr::VK_TLS_IE_LD:
-      case SparcMCExpr::VK_TLS_IE_LDX:
+      switch (RelType) {
+      case ELF::R_SPARC_TLS_IE_LD:
+      case ELF::R_SPARC_TLS_IE_LDX:
         return true;
       default:
         return false;
@@ -1145,9 +1145,9 @@ ParseStatus SparcAsmParser::parseTailRelocSym(OperandVector &Operands) {
     case TailRelocKind::Call_TLS:
       // TLS relocations on call.
       // call sym, %rel(sym)
-      switch (VK) {
-      case SparcMCExpr::VK_TLS_GD_CALL:
-      case SparcMCExpr::VK_TLS_LDM_CALL:
+      switch (RelType) {
+      case ELF::R_SPARC_TLS_GD_CALL:
+      case ELF::R_SPARC_TLS_LDM_CALL:
         return true;
       default:
         return false;
@@ -1323,12 +1323,7 @@ ParseStatus SparcAsmParser::parseCallTarget(OperandVector &Operands) {
   if (getParser().parseExpression(DestValue))
     return ParseStatus::NoMatch;
 
-  bool IsPic = getContext().getObjectFileInfo()->isPositionIndependent();
-  SparcMCExpr::Specifier Kind =
-      IsPic ? SparcMCExpr::VK_WPLT30 : SparcMCExpr::VK_WDISP30;
-
-  const MCExpr *DestExpr = SparcMCExpr::create(Kind, DestValue, getContext());
-  Operands.push_back(SparcOperand::CreateImm(DestExpr, S, E));
+  Operands.push_back(SparcOperand::CreateImm(DestValue, S, E));
   return ParseStatus::Success;
 }
 
@@ -1430,7 +1425,7 @@ ParseStatus SparcAsmParser::parseOperand(OperandVector &Operands,
 
   std::unique_ptr<SparcOperand> Op;
 
-  Res = parseSparcAsmOperand(Op, (Mnemonic == "call"));
+  Res = parseSparcAsmOperand(Op);
   if (!Res.isSuccess() || !Op)
     return ParseStatus::Failure;
 
@@ -1441,8 +1436,7 @@ ParseStatus SparcAsmParser::parseOperand(OperandVector &Operands,
 }
 
 ParseStatus
-SparcAsmParser::parseSparcAsmOperand(std::unique_ptr<SparcOperand> &Op,
-                                     bool isCall) {
+SparcAsmParser::parseSparcAsmOperand(std::unique_ptr<SparcOperand> &Op) {
   SMLoc S = Parser.getTok().getLoc();
   SMLoc E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
   const MCExpr *EVal;
@@ -1480,18 +1474,6 @@ SparcAsmParser::parseSparcAsmOperand(std::unique_ptr<SparcOperand> &Op,
     if (getParser().parseExpression(EVal, E))
       break;
 
-    int64_t Res;
-    if (!EVal->evaluateAsAbsolute(Res)) {
-      SparcMCExpr::Specifier Kind = SparcMCExpr::VK_13;
-
-      if (getContext().getObjectFileInfo()->isPositionIndependent()) {
-        if (isCall)
-          Kind = SparcMCExpr::VK_WPLT30;
-        else
-          Kind = SparcMCExpr::VK_GOT13;
-      }
-      EVal = SparcMCExpr::create(Kind, EVal, getContext());
-    }
     Op = SparcOperand::CreateImm(EVal, S, E);
     break;
   }
@@ -1696,12 +1678,12 @@ SparcAsmParser::adjustPICRelocation(SparcMCExpr::Specifier VK,
     switch(VK) {
     default: break;
     case SparcMCExpr::VK_LO:
-      VK = (hasGOTReference(subExpr) ? SparcMCExpr::VK_PC10
-                                     : SparcMCExpr::VK_GOT10);
+      VK = SparcMCExpr::Specifier(
+          hasGOTReference(subExpr) ? ELF::R_SPARC_PC10 : ELF::R_SPARC_GOT10);
       break;
     case SparcMCExpr::VK_HI:
-      VK = (hasGOTReference(subExpr) ? SparcMCExpr::VK_PC22
-                                     : SparcMCExpr::VK_GOT22);
+      VK = SparcMCExpr::Specifier(
+          hasGOTReference(subExpr) ? ELF::R_SPARC_PC22 : ELF::R_SPARC_GOT22);
       break;
     }
   }
@@ -1718,20 +1700,20 @@ bool SparcAsmParser::matchSparcAsmModifiers(const MCExpr *&EVal,
   StringRef name = Tok.getString();
 
   SparcMCExpr::Specifier VK = SparcMCExpr::parseSpecifier(name);
-  switch (VK) {
+  switch (uint16_t(VK)) {
   case SparcMCExpr::VK_None:
     Error(getLoc(), "invalid relocation specifier");
     return false;
 
-  case SparcMCExpr::VK_GOTDATA_OP:
-  case SparcMCExpr::VK_TLS_GD_ADD:
-  case SparcMCExpr::VK_TLS_GD_CALL:
-  case SparcMCExpr::VK_TLS_IE_ADD:
-  case SparcMCExpr::VK_TLS_IE_LD:
-  case SparcMCExpr::VK_TLS_IE_LDX:
-  case SparcMCExpr::VK_TLS_LDM_ADD:
-  case SparcMCExpr::VK_TLS_LDM_CALL:
-  case SparcMCExpr::VK_TLS_LDO_ADD:
+  case ELF::R_SPARC_GOTDATA_OP:
+  case ELF::R_SPARC_TLS_GD_ADD:
+  case ELF::R_SPARC_TLS_GD_CALL:
+  case ELF::R_SPARC_TLS_IE_ADD:
+  case ELF::R_SPARC_TLS_IE_LD:
+  case ELF::R_SPARC_TLS_IE_LDX:
+  case ELF::R_SPARC_TLS_LDM_ADD:
+  case ELF::R_SPARC_TLS_LDM_CALL:
+  case ELF::R_SPARC_TLS_LDO_ADD:
     // These are special-cased at tablegen level.
     return false;
 

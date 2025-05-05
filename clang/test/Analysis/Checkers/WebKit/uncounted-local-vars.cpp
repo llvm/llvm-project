@@ -205,6 +205,20 @@ void foo2() {
 }
 } // namespace guardian_casts
 
+namespace casts {
+
+RefCountable* provide() { return nullptr; }
+RefCountable* downcast(RefCountable*);
+template<class T> T* bitwise_cast(T*);
+template<class T> T* bit_cast(T*);
+
+  void foo() {
+    auto* cast1 = downcast(provide());
+    auto* cast2 = bitwise_cast(provide());
+    auto* cast3 = bit_cast(provide());
+   }
+} // namespace casts
+
 namespace guardian_ref_conversion_operator {
 void foo() {
   Ref<RefCountable> rc;

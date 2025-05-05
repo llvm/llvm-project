@@ -1902,6 +1902,8 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<StrAttr>:$denormal_fp_math,
     OptionalAttr<StrAttr>:$denormal_fp_math_f32,
     OptionalAttr<StrAttr>:$fp_contract,
+    OptionalAttr<StrAttr>:$instrument_function_entry,
+    OptionalAttr<StrAttr>:$instrument_function_exit,
     OptionalAttr<UnitAttr>:$no_inline,
     OptionalAttr<UnitAttr>:$always_inline,
     OptionalAttr<UnitAttr>:$no_unwind,
