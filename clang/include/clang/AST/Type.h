@@ -3613,6 +3613,9 @@ public:
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) {
+    // FIXME: `getMostRecentCXXRecordDecl()` should be possible to use here,
+    // however when external AST sources are used it causes nondeterminism
+    // issues (see https://github.com/llvm/llvm-project/pull/137910).
     Profile(ID, getPointeeType(), getQualifier(), getCXXRecordDecl());
   }
 
