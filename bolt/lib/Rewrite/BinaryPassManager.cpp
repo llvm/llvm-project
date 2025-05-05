@@ -275,6 +275,11 @@ static cl::opt<bool> ShortenInstructions("shorten-instructions",
                                          cl::desc("shorten instructions"),
                                          cl::init(true),
                                          cl::cat(BoltOptCategory));
+
+cl::opt<bool> AllowPacret(
+    "allow-experimental-pacret",
+    cl::desc("Enable processing binaries with pac-ret (experimental)"),
+    cl::cat(BoltOptCategory));
 } // namespace opts
 
 namespace llvm {
