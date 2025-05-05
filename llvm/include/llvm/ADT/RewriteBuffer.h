@@ -9,6 +9,7 @@
 #ifndef LLVM_ADT_REWRITEBUFFER_H
 #define LLVM_ADT_REWRITEBUFFER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DeltaTree.h"
 #include "llvm/ADT/RewriteRope.h"
 #include "llvm/ADT/StringRef.h"
@@ -57,16 +58,16 @@ public:
   /// Rewriter::overwriteChangedFiles() instead.
   ///
   /// The original buffer is not actually changed.
-  raw_ostream &write(raw_ostream &Stream) const;
+  LLVM_ABI raw_ostream &write(raw_ostream &Stream) const;
 
   /// RemoveText - Remove the specified text.
-  void RemoveText(unsigned OrigOffset, unsigned Size,
+  LLVM_ABI void RemoveText(unsigned OrigOffset, unsigned Size,
                   bool removeLineIfEmpty = false);
 
   /// InsertText - Insert some text at the specified point, where the offset in
   /// the buffer is specified relative to the original SourceBuffer.  The
   /// text is inserted after the specified location.
-  void InsertText(unsigned OrigOffset, StringRef Str, bool InsertAfter = true);
+  LLVM_ABI void InsertText(unsigned OrigOffset, StringRef Str, bool InsertAfter = true);
 
   /// InsertTextBefore - Insert some text before the specified point, where the
   /// offset in the buffer is specified relative to the original
@@ -86,7 +87,7 @@ public:
   /// ReplaceText - This method replaces a range of characters in the input
   /// buffer with a new string.  This is effectively a combined "remove/insert"
   /// operation.
-  void ReplaceText(unsigned OrigOffset, unsigned OrigLength, StringRef NewStr);
+  LLVM_ABI void ReplaceText(unsigned OrigOffset, unsigned OrigLength, StringRef NewStr);
 
 private:
   /// getMappedOffset - Given an offset into the original SourceBuffer that this

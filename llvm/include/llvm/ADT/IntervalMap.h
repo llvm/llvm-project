@@ -104,6 +104,7 @@
 #ifndef LLVM_ADT_INTERVALMAP_H
 #define LLVM_ADT_INTERVALMAP_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Allocator.h"
@@ -411,7 +412,7 @@ void adjustSiblingSizes(NodeT *Node[], unsigned Nodes,
 /// @param Position Insert position.
 /// @param Grow     Reserve space for a new element at Position.
 /// @return         (node, offset) for Position.
-IdxPair distribute(unsigned Nodes, unsigned Elements, unsigned Capacity,
+LLVM_ABI IdxPair distribute(unsigned Nodes, unsigned Elements, unsigned Capacity,
                    const unsigned *CurSize, unsigned NewSize[],
                    unsigned Position, bool Grow);
 
@@ -867,17 +868,17 @@ public:
   /// @param Root The new root node.
   /// @param Size Number of entries in the new root.
   /// @param Offsets Offsets into the root and first branch nodes.
-  void replaceRoot(void *Root, unsigned Size, IdxPair Offsets);
+  LLVM_ABI void replaceRoot(void *Root, unsigned Size, IdxPair Offsets);
 
   /// getLeftSibling - Get the left sibling node at Level, or a null NodeRef.
   /// @param Level Get the sibling to node(Level).
   /// @return Left sibling, or NodeRef().
-  NodeRef getLeftSibling(unsigned Level) const;
+  LLVM_ABI NodeRef getLeftSibling(unsigned Level) const;
 
   /// moveLeft - Move path to the left sibling at Level. Leave nodes below Level
   /// unaltered.
   /// @param Level Move node(Level).
-  void moveLeft(unsigned Level);
+  LLVM_ABI void moveLeft(unsigned Level);
 
   /// fillLeft - Grow path to Height by taking leftmost branches.
   /// @param Height The target height.
@@ -889,12 +890,12 @@ public:
   /// getLeftSibling - Get the left sibling node at Level, or a null NodeRef.
   /// @param Level Get the sibling to node(Level).
   /// @return Left sibling, or NodeRef().
-  NodeRef getRightSibling(unsigned Level) const;
+  LLVM_ABI NodeRef getRightSibling(unsigned Level) const;
 
   /// moveRight - Move path to the left sibling at Level. Leave nodes below
   /// Level unaltered.
   /// @param Level Move node(Level).
-  void moveRight(unsigned Level);
+  LLVM_ABI void moveRight(unsigned Level);
 
   /// atBegin - Return true if path is at begin().
   bool atBegin() const {
