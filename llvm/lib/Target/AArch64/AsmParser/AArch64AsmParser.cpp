@@ -7211,12 +7211,13 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
 bool AArch64AsmParser::parseDirectiveArchExtension(SMLoc L) {
   SMLoc ExtLoc = getLoc();
 
-  StringRef Name = getParser().parseStringToEndOfStatement().trim();
+  StringRef FullName = getParser().parseStringToEndOfStatement().trim();
 
   if (parseEOL())
     return true;
 
   bool EnableFeature = true;
+  StringRef Name = FullName;
   if (Name.starts_with_insensitive("no")) {
     EnableFeature = false;
     Name = Name.substr(2);
@@ -7237,7 +7238,7 @@ bool AArch64AsmParser::parseDirectiveArchExtension(SMLoc L) {
   FeatureBitset Features = ComputeAvailableFeatures(STI.getFeatureBits());
   setAvailableFeatures(Features);
 
-  getTargetStreamer().emitDirectiveArchExtension(Name);
+  getTargetStreamer().emitDirectiveArchExtension(FullName);
   return false;
 }
 
