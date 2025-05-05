@@ -3,14 +3,12 @@ import requests
 import yaml
 import sys
 import difflib
-from termcolor import colored  # Import termcolor to use colored output
+from termcolor import colored
 
-# Function to load configuration from the YAML file
 def load_config():
     with open("config.yaml") as f:
         return yaml.safe_load(f)["project"]
 
-# Function to fetch the diff from the GitHub API
 def fetch_diff(owner, repo, pr_number):
     url = f"https://api.github.com/repos/{owner}/{repo}/pulls/{pr_number}.diff"
     headers = {"Accept": "application/vnd.github.v3.diff"}
@@ -21,75 +19,49 @@ def fetch_diff(owner, repo, pr_number):
         sys.exit(1)
     return resp.text
 
-# Function to run the clang-format-diff.py and get the formatted output
-def run_clang_format_diff(diff):
-    print("🎯 Running clang-format-diff.py on diff...")
+def run_git_clang_format(base_commit):
+    print(f"🎯 Running git clang-format against base {base_commit}...")
     try:
         result = subprocess.run(
-            ["python3", "./clang-format-diff.py", "-p1", "-binary", "/ptmp/jay/new/llvm-project-checks/build/bin/clang-format"],
-            input=diff.encode("utf-8"),
+            ["git", "clang-format", "--diff", base_commit],
             capture_output=True,
-            check=True
+            check=True,
         )
         return result.stdout.decode()
     except subprocess.CalledProcessError as e:
-        print("❌ clang-format-diff.py failed!")
-        print("📤 STDOUT:")
-        print(e.stdout.decode())
-        print("📥 STDERR:")
-        print(e.stderr.decode())
+        print("❌ git clang-format failed!")
+        print("📤 STDOUT:\n", e.stdout.decode())
+        print("📥 STDERR:\n", e.stderr.decode())
         sys.exit(1)
 
-# Function to display before and after code with green coloring for the corrected code
-def display_changes(before, after):
-    """
-    This function will compare the before and after code and display the difference to the user.
-    The actual corrected code will be printed in green.
-    """
-    print("\n===================================")
-    print(colored("            BEFORE FORMATTING      ", 'yellow', attrs=['bold']))
-    print("===================================")
-    print(colored(before, 'red'))  # Display original code in red
-
-    print("\n===================================")
-    print(colored("            AFTER FORMATTING      ", 'yellow', attrs=['bold']))
-    print("===================================")
-    
-    diff = difflib.unified_diff(before.splitlines(), after.splitlines(), lineterm='')
+def display_diff_output(diff_output):
     print("\n🧼 Suggested clang-format changes:\n")
-    
-    for line in diff:
-        if line.startswith("+"):  # Lines that were added or corrected
-            print(colored(line, 'green'))  # Print the corrected lines in green
-        elif line.startswith("-"):  # Lines that were removed or incorrect
-            print(colored(line, 'red'))  # Print the removed lines in red
+    for line in diff_output.splitlines():
+        if line.startswith("+"):
+            print(colored(line, 'green'))
+        elif line.startswith("-"):
+            print(colored(line, 'red'))
         else:
-            print(line)  # Print unchanged lines
+            print(line)
 
-# Main function to load configuration, fetch diff, and run clang-format-diff.py
 def main():
     config = load_config()
-    diff_text = fetch_diff(config["owner"], config["repo"], config["pr_number"])
+    owner = config["owner"]
+    repo = config["repo"]
+    pr_number = config["pr_number"]
 
-    # Simulate before and after formatting
-    formatted_output = run_clang_format_diff(diff_text)
+    # Fetch PR diff just for logging
+    _ = fetch_diff(owner, repo, pr_number)
 
-    if not formatted_output.strip():
+    # Assuming PR is already checked out or fetched locally, else you'd need to do that here
+    base_commit = config.get("base_commit", "origin/main")
+
+    diff_output = run_git_clang_format(base_commit)
+
+    if "no modified files to format" in diff_output or not diff_output.strip():
         print("✅ No formatting issues found.")
     else:
-        # Get the "before" code from the diff (those with + or - sign)
-        before_code = ""
-        after_code = ""
-
-        # Extract the diff lines and display before/after comparison
-        for line in diff_text.splitlines():
-            if line.startswith('-'):
-                before_code += line[1:] + "\n"  # Before formatting (lines with '-')
-            elif line.startswith('+'):
-                after_code += line[1:] + "\n"  # After formatting (lines with '+')
-
-        # Now display the changes with green color for the corrected code
-        display_changes(before_code, formatted_output)
+        display_diff_output(diff_output)
 
 if __name__ == "__main__":
     main()
