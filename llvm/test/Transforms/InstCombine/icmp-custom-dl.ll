@@ -7,7 +7,7 @@ declare i32 @test58_d(i64 )
 
 define i1 @test59(ptr %foo) {
 ; CHECK-LABEL: @test59(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[FOO:%.*]], i32 8
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds nuw i8, ptr [[FOO:%.*]], i32 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[GEP1]] to i40
 ; CHECK-NEXT:    [[USE:%.*]] = zext i40 [[TMP1]] to i64
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @test58_d(i64 [[USE]])
@@ -23,7 +23,7 @@ define i1 @test59(ptr %foo) {
 
 define i1 @test59_as1(ptr addrspace(1) %foo) {
 ; CHECK-LABEL: @test59_as1(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[FOO:%.*]], i16 8
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[FOO:%.*]], i16 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[GEP1]] to i16
 ; CHECK-NEXT:    [[USE:%.*]] = zext i16 [[TMP1]] to i64
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @test58_d(i64 [[USE]])
@@ -146,8 +146,8 @@ define i1 @test61_as1(ptr addrspace(1) %foo, i16 %i, i16 %j) {
 ; Negative test: GEP inbounds may cross sign boundary.
 define i1 @test62(ptr %a) {
 ; CHECK-LABEL: @test62(
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i32 1
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 10
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[A:%.*]], i32 1
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i32 10
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt ptr [[ARRAYIDX1]], [[ARRAYIDX2]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -159,8 +159,8 @@ define i1 @test62(ptr %a) {
 
 define i1 @test62_as1(ptr addrspace(1) %a) {
 ; CHECK-LABEL: @test62_as1(
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[A:%.*]], i16 1
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[A]], i16 10
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[A:%.*]], i16 1
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[A]], i16 10
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt ptr addrspace(1) [[ARRAYIDX1]], [[ARRAYIDX2]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;

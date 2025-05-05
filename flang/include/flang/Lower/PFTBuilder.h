@@ -723,6 +723,7 @@ struct FunctionLikeUnit : public ProgramUnit {
   bool hasIeeeAccess{false};
   bool mayModifyHaltingMode{false};
   bool mayModifyRoundingMode{false};
+  bool mayModifyUnderflowMode{false};
   /// Terminal basic block (if any)
   mlir::Block *finalBlock{};
   HostAssociations hostAssociations;

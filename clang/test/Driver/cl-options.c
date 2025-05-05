@@ -437,7 +437,9 @@
 // RUN:     /d1import_no_registry \
 // RUN:     /d1nodatetime \
 // RUN:     /d2FH4 \
+// RUN:     /d2TrimInlines \
 // RUN:     /docname \
+// RUN:     /dynamicdeopt \
 // RUN:     /experimental:external \
 // RUN:     /experimental:module \
 // RUN:     /experimental:preprocessor \
@@ -680,6 +682,7 @@
 // RUN:     -fcoverage-mapping \
 // RUN:     -fno-coverage-mapping \
 // RUN:     -fdiagnostics-color \
+// RUN:     -fdiagnostics-color=auto \
 // RUN:     -fno-diagnostics-color \
 // RUN:     -fdebug-compilation-dir . \
 // RUN:     -fdebug-compilation-dir=. \
@@ -737,8 +740,15 @@
 // RUN:     -fno-modules-search-all \
 // RUN:     -fimplicit-modules \
 // RUN:     -fno-implicit-modules \
+// RUN:     -fstrict-overflow \
+// RUN:     -fno-strict-overflow \
 // RUN:     -ftrivial-auto-var-init=zero \
+// RUN:     -fwrapv \
+// RUN:     -fno-wrapv \
+// RUN:     -fwrapv-pointer \
+// RUN:     -fno-wrapv-pointer \
 // RUN:     --version \
+// RUN:     --warning-suppression-mappings=foo \
 // RUN:     -Werror /Zs -- %s 2>&1
 
 // Accept clang options under the /clang: flag.

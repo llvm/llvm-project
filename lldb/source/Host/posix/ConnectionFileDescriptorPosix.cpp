@@ -119,8 +119,7 @@ bool ConnectionFileDescriptor::IsConnected() const {
 
 ConnectionStatus ConnectionFileDescriptor::Connect(llvm::StringRef path,
                                                    Status *error_ptr) {
-  return Connect(
-      path, [](llvm::StringRef) {}, error_ptr);
+  return Connect(path, [](llvm::StringRef) {}, error_ptr);
 }
 
 ConnectionStatus
@@ -179,9 +178,7 @@ ConnectionFileDescriptor::Connect(llvm::StringRef path,
 }
 
 bool ConnectionFileDescriptor::InterruptRead() {
-  size_t bytes_written = 0;
-  Status result = m_pipe.Write("i", 1, bytes_written);
-  return result.Success();
+  return !errorToBool(m_pipe.Write("i", 1).takeError());
 }
 
 ConnectionStatus ConnectionFileDescriptor::Disconnect(Status *error_ptr) {
@@ -206,13 +203,11 @@ ConnectionStatus ConnectionFileDescriptor::Disconnect(Status *error_ptr) {
   std::unique_lock<std::recursive_mutex> locker(m_mutex, std::defer_lock);
   if (!locker.try_lock()) {
     if (m_pipe.CanWrite()) {
-      size_t bytes_written = 0;
-      Status result = m_pipe.Write("q", 1, bytes_written);
-      LLDB_LOGF(log,
-                "%p ConnectionFileDescriptor::Disconnect(): Couldn't get "
-                "the lock, sent 'q' to %d, error = '%s'.",
-                static_cast<void *>(this), m_pipe.GetWriteFileDescriptor(),
-                result.AsCString());
+      llvm::Error err = m_pipe.Write("q", 1).takeError();
+      LLDB_LOG(log,
+               "{0}: Couldn't get the lock, sent 'q' to {1}, error = '{2}'.",
+               this, m_pipe.GetWriteFileDescriptor(), err);
+      consumeError(std::move(err));
     } else if (log) {
       LLDB_LOGF(log,
                 "%p ConnectionFileDescriptor::Disconnect(): Couldn't get the "
@@ -731,9 +726,19 @@ ConnectionStatus ConnectionFileDescriptor::ConnectFile(
     struct termios options;
     ::tcgetattr(fd, &options);
 
-    // Set port speed to maximum
+    // Set port speed to the available maximum
+#ifdef B115200
     ::cfsetospeed(&options, B115200);
     ::cfsetispeed(&options, B115200);
+#elif B57600
+    ::cfsetospeed(&options, B57600);
+    ::cfsetispeed(&options, B57600);
+#elif B38400
+    ::cfsetospeed(&options, B38400);
+    ::cfsetispeed(&options, B38400);
+#else
+#error "Maximum Baud rate is Unknown"
+#endif
 
     // Raw input, disable echo and signals
     options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);

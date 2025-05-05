@@ -37,24 +37,25 @@ jobs:
   stage1:
     if: github.repository_owner == 'llvm'
     runs-on: libcxx-self-hosted-linux
-    container: ghcr.io/llvm/libcxx-linux-builder:0fd6f684b9c84c32d6cbfd9742402e788b2879f1
+    container: ghcr.io/llvm/libcxx-linux-builder:2b57ebb50b6d418e70382e655feaa619b558e254
     continue-on-error: false
     strategy:
       fail-fast: false
       matrix:
         config: [
+          'frozen-cxx03-headers',
           'generic-cxx03',
           'generic-cxx26',
           'generic-modules'
         ]
-        cc: [  'clang-19' ]
-        cxx: [ 'clang++-19' ]
+        cc: [  'clang-21' ]
+        cxx: [ 'clang++-21' ]
         include:
           - config: 'generic-gcc'
             cc: 'gcc-14'
             cxx: 'g++-14'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: ${{ matrix.config }}.${{ matrix.cxx }}
         run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
@@ -74,7 +75,7 @@ jobs:
   stage2:
     if: github.repository_owner == 'llvm'
     runs-on: libcxx-self-hosted-linux
-    container: ghcr.io/llvm/libcxx-linux-builder:0fd6f684b9c84c32d6cbfd9742402e788b2879f1
+    container: ghcr.io/llvm/libcxx-linux-builder:2b57ebb50b6d418e70382e655feaa619b558e254
     needs: [ stage1 ]
     continue-on-error: false
     strategy:
@@ -87,20 +88,20 @@ jobs:
           'generic-cxx20',
           'generic-cxx23'
         ]
-        cc: [ 'clang-19' ]
-        cxx: [ 'clang++-19' ]
+        cc: [ 'clang-21' ]
+        cxx: [ 'clang++-21' ]
         include:
           - config: 'generic-gcc-cxx11'
             cc: 'gcc-14'
             cxx: 'g++-14'
-          - config: 'generic-cxx23'
-            cc: 'clang-17'
-            cxx: 'clang++-17'
           - config: 'generic-cxx26'
-            cc: 'clang-18'
-            cxx: 'clang++-18'
+            cc: 'clang-20'
+            cxx: 'clang++-20'
+          - config: 'generic-cxx26'
+            cc: 'clang-19'
+            cxx: 'clang++-19'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: ${{ matrix.config }}
         run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
@@ -119,7 +120,7 @@ jobs:
             **/crash_diagnostics/*
   stage3:
     if: github.repository_owner == 'llvm'
-    needs: [ stage1, stage2 ]
+    needs: [ stage2 ]
     continue-on-error: false
     strategy:
       fail-fast: false
@@ -132,7 +133,7 @@ jobs:
           'generic-hardening-mode-fast',
           'generic-hardening-mode-fast-with-abi-breaks',
           'generic-merged',
-          'generic-modules-lsv',
+          'generic-modules-cxx17-lsv',
           'generic-no-exceptions',
           'generic-no-experimental',
           'generic-no-filesystem',
@@ -162,14 +163,14 @@ jobs:
         - config: 'generic-msan'
           machine: libcxx-self-hosted-linux
     runs-on: ${{ matrix.machine }}
-    container: ghcr.io/llvm/libcxx-linux-builder:0fd6f684b9c84c32d6cbfd9742402e788b2879f1
+    container: ghcr.io/llvm/libcxx-linux-builder:2b57ebb50b6d418e70382e655feaa619b558e254
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: ${{ matrix.config }}
         run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
-          CC: clang-19
-          CXX: clang++-19
+          CC: clang-21
+          CXX: clang++-21
       - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         if: always()
         with:
@@ -183,7 +184,7 @@ jobs:
             **/crash_diagnostics/*
 
   macos:
-    needs: [ stage1 ]
+    needs: [ stage3 ]
     strategy:
       fail-fast: false
       matrix:
@@ -196,17 +197,28 @@ jobs:
           os: macos-15
         - config: apple-configuration
           os: macos-15
+        # TODO: These jobs are intended to test back-deployment (building against ToT libc++ but running against an
+        #       older system-provided libc++.dylib). Doing this properly would require building the test suite on a
+        #       recent macOS using a recent Clang (hence recent Xcode), and then running the actual test suite on an
+        #       older mac. We could do that by e.g. sharing artifacts between the two jobs.
+        #
+        #       However, our Lit configuration currently doesn't provide a good way to do that in a batch, so our only
+        #       alternative is to actually build on the same host that we're going to run on. Sadly, that doesn't work
+        #       since older macOSes don't support newer Xcodes. For now, we run the "backdeployment" jobs on recent
+        #       macOS versions as a way to avoid rotting that configuration, but it doesn't provide a lot of additional
+        #       coverage.
         - config: apple-system
-          os: macos-13
+          os: macos-15
         - config: apple-system-hardened
-          os: macos-13
+          os: macos-15
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: maxim-lobanov/setup-xcode@v1
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: maxim-lobanov/setup-xcode@60606e260d2fc5762a71e64e74b2174e8ea3c8bd # v1.6.0
         with:
-          xcode-version: 'latest'
-      - uses: seanmiddleditch/gha-setup-ninja@master
+          # https://github.com/actions/runner-images/blob/main/images/macos/macos-15-Readme.md
+          xcode-version: '16.3'
+      - uses: seanmiddleditch/gha-setup-ninja@3b1f8f94a2f8254bd26914c4ab9474d4f0015f67 # v6
       - name: Build and test
         run: |
           python3 -m venv .venv
@@ -227,7 +239,7 @@ jobs:
 
   windows:
     runs-on: windows-2022
-    needs: [ stage1 ]
+    needs: [ stage2 ]
     strategy:
       fail-fast: false
       matrix:
@@ -242,7 +254,7 @@ jobs:
         - { config: mingw-dll-i686, mingw: true }
         - { config: mingw-incomplete-sysroot, mingw: true }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Install dependencies
         run: |
           choco install -y ninja
@@ -250,11 +262,11 @@ jobs:
       - name: Install a current LLVM
         if: ${{ matrix.mingw != true }}
         run: |
-          choco install -y llvm --version=18.1.6 --allow-downgrade
+          choco install -y llvm --version=19.1.7 --allow-downgrade
       - name: Install llvm-mingw
         if: ${{ matrix.mingw == true }}
         run: |
-          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20240606/llvm-mingw-20240606-ucrt-x86_64.zip
+          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20250114/llvm-mingw-20250114-ucrt-x86_64.zip
           powershell Expand-Archive llvm-mingw*.zip -DestinationPath .
           del llvm-mingw*.zip
           mv llvm-mingw* c:\llvm-mingw
@@ -270,7 +282,7 @@ jobs:
           echo "c:\Program Files\Git\usr\bin" | Out-File -FilePath $Env:GITHUB_PATH -Encoding utf8 -Append
       - name: Set up the MSVC dev environment
         if: ${{ matrix.mingw != true }}
-        uses: ilammy/msvc-dev-cmd@v1
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
       - name: Build and test
         run: |
           bash libcxx/utils/ci/run-buildbot ${{ matrix.config }}

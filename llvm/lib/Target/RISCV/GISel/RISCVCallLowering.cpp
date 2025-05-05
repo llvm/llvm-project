@@ -350,10 +350,13 @@ static bool isSupportedArgumentType(Type *T, const RISCVSubtarget &Subtarget,
                                     bool IsLowerArgs = false) {
   if (T->isIntegerTy())
     return true;
-  if (T->isHalfTy() || T->isFloatTy() || T->isDoubleTy())
+  if (T->isHalfTy() || T->isFloatTy() || T->isDoubleTy() || T->isFP128Ty())
     return true;
   if (T->isPointerTy())
     return true;
+  if (T->isArrayTy())
+    return isSupportedArgumentType(T->getArrayElementType(), Subtarget,
+                                   IsLowerArgs);
   // TODO: Support fixed vector types.
   if (IsLowerArgs && T->isVectorTy() && Subtarget.hasVInstructions() &&
       T->isScalableTy() &&
@@ -549,7 +552,6 @@ bool RISCVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   if (!FLI.CanLowerReturn)
     insertSRetIncomingArgument(F, SplitArgInfos, FLI.DemoteRegister, MRI, DL);
 
-  SmallVector<Type *, 4> TypeList;
   unsigned Index = 0;
   for (auto &Arg : F.args()) {
     // Construct the ArgInfo object from destination register and argument type.
@@ -593,6 +595,8 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   for (auto &AInfo : Info.OrigArgs) {
     if (!isSupportedArgumentType(AInfo.Ty, Subtarget))
       return false;
+    if (AInfo.Flags[0].isByVal())
+      return false;
   }
 
   if (!Info.OrigRet.Ty->isVoidTy() &&
@@ -603,7 +607,6 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       MIRBuilder.buildInstr(RISCV::ADJCALLSTACKDOWN);
 
   SmallVector<ArgInfo, 32> SplitArgInfos;
-  SmallVector<ISD::OutputArg, 8> Outs;
   for (auto &AInfo : Info.OrigArgs) {
     // Handle any required unmerging of split value types from a given VReg into
     // physical registers. ArgInfo objects are constructed correspondingly and

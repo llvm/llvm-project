@@ -11,8 +11,9 @@ let Component = "AST" in {
 // Constant expression diagnostics. These (and their users) belong in Sema.
 def note_expr_divide_by_zero : Note<"division by zero">;
 def note_constexpr_invalid_cast : Note<
-  "%select{reinterpret_cast|dynamic_cast|%select{this conversion|cast that"
-  " performs the conversions of a reinterpret_cast}1|cast from %1}0"
+  "%enum_select<ConstexprInvalidCastKind>{%Reinterpret{reinterpret_cast}|%Dynamic{dynamic_cast}|"
+  "%ThisConversionOrReinterpret{%select{this conversion|cast that performs the conversions "
+  "of a reinterpret_cast}1}|%CastFrom{cast from %1}}0"
   " is not allowed in a constant expression"
   "%select{| in C++ standards before C++20||}0">;
 def note_constexpr_invalid_void_star_cast : Note<
@@ -90,12 +91,18 @@ def note_constexpr_pointer_subtraction_not_same_array : Note<
 def note_constexpr_pointer_subtraction_zero_size : Note<
   "subtraction of pointers to type %0 of zero size">;
 def note_constexpr_pointer_comparison_unspecified : Note<
-  "comparison between '%0' and '%1' has unspecified value">;
+  "comparison between pointers to unrelated objects '%0' and '%1' has unspecified value">;
+def note_constexpr_pointer_arith_unspecified : Note<
+  "arithmetic involving unrelated objects '%0' and '%1' has unspecified value">;
 def note_constexpr_pointer_constant_comparison : Note<
   "comparison of numeric address '%0' with pointer '%1' can only be performed "
   "at runtime">;
 def note_constexpr_literal_comparison : Note<
-  "comparison of addresses of literals has unspecified value">;
+  "comparison of addresses of potentially overlapping literals has unspecified value">;
+def note_constexpr_literal_arith : Note<
+  "arithmetic on addresses of potentially overlapping literals has unspecified value">;
+def note_constexpr_repeated_literal_eval : Note<
+  "repeated evaluation of the same literal expression can produce different objects">;
 def note_constexpr_opaque_call_comparison : Note<
   "comparison against opaque constant address '%0' can only be performed at "
   "runtime">;
@@ -136,8 +143,8 @@ def note_constexpr_null_subobject : Note<
   "access array element of|perform pointer arithmetic on|"
   "access real component of|"
   "access imaginary component of}0 null pointer">;
-def note_constexpr_null_callee : Note<
-  "'%0' evaluates to a null function pointer">;
+def note_constexpr_null_callee
+    : Note<"%0 evaluates to a null function pointer">;
 def note_constexpr_function_param_value_unknown : Note<
   "function parameter %0 with unknown value cannot be used in a constant "
   "expression">;
@@ -390,6 +397,16 @@ def note_constexpr_assumption_failed : Note<
 def err_experimental_clang_interp_failed : Error<
   "the experimental clang interpreter failed to evaluate an expression">;
 
+def warn_attribute_needs_aggregate : Warning<
+  "%0 attribute is ignored in non-aggregate type %1">,
+  InGroup<IgnoredAttributes>;
+
+def warn_cxx20_compat_requires_explicit_init_non_aggregate : Warning<
+  "explicit initialization of field %1 will not be enforced in C++20 and later "
+  "because %2 has a user-declared constructor, making the type no longer an "
+  "aggregate">,
+  DefaultIgnore, InGroup<CXX20Compat>;
+
 def warn_integer_constant_overflow : Warning<
   "overflow in expression; result is %0 with type %1">,
   InGroup<DiagGroup<"integer-overflow">>;
@@ -461,16 +478,23 @@ def warn_odr_function_type_inconsistent : Warning<
   "external function %0 declared with incompatible types in different "
   "translation units (%1 vs. %2)">,
   InGroup<ODR>;
+def warn_odr_tag_type_with_attributes : Warning<
+  "type %0 has %select{an attribute|a member with an attribute}1 which "
+  "currently causes the types to be treated as though they are incompatible">,
+  InGroup<ODR>, DefaultError;
+def note_odr_attr_here : Note<"attribute %0 here">;
 def err_odr_tag_type_inconsistent
-    : Error<"type %0 has incompatible definitions in different translation "
-            "units">;
+    : Error<"type %0 has incompatible definitions%select{| in different "
+            "translation units}1">;
 def warn_odr_tag_type_inconsistent
-    : Warning<"type %0 has incompatible definitions in different translation "
-              "units">,
+    : Warning<"type %0 has incompatible definitions%select{| in different "
+              "translation units}1">,
       InGroup<ODR>;
 def note_odr_tag_kind_here: Note<
   "%0 is a %select{struct|interface|union|class|enum}1 here">;
 def note_odr_field : Note<"field %0 has type %1 here">;
+def note_odr_field_bit_width : Note<"bit-field %0 has bit-width %1 here">;
+def note_odr_field_not_bit_field : Note<"field %0 is not a bit-field">;
 def note_odr_field_name : Note<"field has name %0 here">;
 def note_odr_missing_field : Note<"no corresponding field here">;
 def note_odr_base : Note<"class has base type %0">;

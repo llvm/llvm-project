@@ -56,13 +56,13 @@ declare <2 x float> @_Z3cosDv2_f(<2 x float>)
 define amdgpu_kernel void @test_sincos_v3(ptr addrspace(1) nocapture %a) {
 entry:
   %loadVec4 = load <4 x float>, ptr addrspace(1) %a, align 16
-  %extractVec4 = shufflevector <4 x float> %loadVec4, <4 x float> undef, <3 x i32> <i32 0, i32 1, i32 2>
+  %extractVec4 = shufflevector <4 x float> %loadVec4, <4 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
   %call = call fast <3 x float> @_Z3sinDv3_f(<3 x float> %extractVec4)
-  %extractVec6 = shufflevector <3 x float> %call, <3 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
+  %extractVec6 = shufflevector <3 x float> %call, <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
   store <4 x float> %extractVec6, ptr addrspace(1) %a, align 16
   %call11 = call fast <3 x float> @_Z3cosDv3_f(<3 x float> %extractVec4)
   %arrayidx12 = getelementptr inbounds <3 x float>, ptr addrspace(1) %a, i64 1
-  %extractVec13 = shufflevector <3 x float> %call11, <3 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
+  %extractVec13 = shufflevector <3 x float> %call11, <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
   store <4 x float> %extractVec13, ptr addrspace(1) %arrayidx12, align 16
   ret void
 }
@@ -826,5 +826,5 @@ entry:
 ; GCN-PRELINK: declare float @_Z4cbrtf(float) local_unnamed_addr #[[$NOUNWIND_READONLY:[0-9]+]]
 
 ; GCN-PRELINK-DAG: attributes #[[$NOUNWIND]] = { nounwind }
-; GCN-PRELINK-DAG: attributes #[[$NOUNWIND_READONLY]] = { nounwind memory(read) "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
+; GCN-PRELINK-DAG: attributes #[[$NOUNWIND_READONLY]] = { nounwind memory(read) "uniform-work-group-size"="false" }
 attributes #0 = { nounwind }

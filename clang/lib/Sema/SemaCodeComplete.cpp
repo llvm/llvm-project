@@ -34,6 +34,7 @@
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Designator.h"
+#include "clang/Sema/HeuristicResolver.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/ParsedAttr.h"
@@ -121,8 +122,7 @@ private:
         return;
       }
 
-      if (const NamedDecl *PrevND =
-              DeclOrVector.dyn_cast<const NamedDecl *>()) {
+      if (const NamedDecl *PrevND = dyn_cast<const NamedDecl *>(DeclOrVector)) {
         // 1 -> 2 elements: create the vector of results and push in the
         // existing declaration.
         DeclIndexPairVector *Vec = new DeclIndexPairVector;
@@ -137,7 +137,7 @@ private:
 
     ~ShadowMapEntry() {
       if (DeclIndexPairVector *Vec =
-              DeclOrVector.dyn_cast<DeclIndexPairVector *>()) {
+              dyn_cast_if_present<DeclIndexPairVector *>(DeclOrVector)) {
         delete Vec;
         DeclOrVector = ((NamedDecl *)nullptr);
       }
@@ -436,7 +436,8 @@ void PreferredTypeBuilder::enterVariableInit(SourceLocation Tok, Decl *D) {
   ExpectedLoc = Tok;
 }
 
-static QualType getDesignatedType(QualType BaseType, const Designation &Desig);
+static QualType getDesignatedType(QualType BaseType, const Designation &Desig,
+                                  HeuristicResolver &Resolver);
 
 void PreferredTypeBuilder::enterDesignatedInitializer(SourceLocation Tok,
                                                       QualType BaseType,
@@ -444,7 +445,8 @@ void PreferredTypeBuilder::enterDesignatedInitializer(SourceLocation Tok,
   if (!Enabled)
     return;
   ComputeType = nullptr;
-  Type = getDesignatedType(BaseType, D);
+  HeuristicResolver Resolver(*Ctx);
+  Type = getDesignatedType(BaseType, D, Resolver);
   ExpectedLoc = Tok;
 }
 
@@ -678,7 +680,7 @@ public:
   }*/
 
   reference operator*() const {
-    if (const NamedDecl *ND = DeclOrIterator.dyn_cast<const NamedDecl *>())
+    if (const NamedDecl *ND = dyn_cast<const NamedDecl *>(DeclOrIterator))
       return reference(ND, SingleDeclIndex);
 
     return *cast<const DeclIndexPair *>(DeclOrIterator);
@@ -702,7 +704,7 @@ ResultBuilder::ShadowMapEntry::begin() const {
   if (DeclOrVector.isNull())
     return iterator();
 
-  if (const NamedDecl *ND = DeclOrVector.dyn_cast<const NamedDecl *>())
+  if (const NamedDecl *ND = dyn_cast<const NamedDecl *>(DeclOrVector))
     return iterator(ND, SingleDeclIndex);
 
   return iterator(cast<DeclIndexPairVector *>(DeclOrVector)->begin());
@@ -755,7 +757,7 @@ getRequiredQualification(ASTContext &Context, const DeclContext *CurContext,
       Result = NestedNameSpecifier::Create(Context, Result, Namespace);
     } else if (const auto *TD = dyn_cast<TagDecl>(Parent))
       Result = NestedNameSpecifier::Create(
-          Context, Result, false, Context.getTypeDeclType(TD).getTypePtr());
+          Context, Result, Context.getTypeDeclType(TD).getTypePtr());
   }
   return Result;
 }
@@ -1216,7 +1218,7 @@ void ResultBuilder::MaybeAddResult(Result R, DeclContext *CurContext) {
           NestedNameSpecifier::Create(SemaRef.Context, nullptr, Namespace);
     else if (const TagDecl *Tag = dyn_cast<TagDecl>(Ctx))
       R.Qualifier = NestedNameSpecifier::Create(
-          SemaRef.Context, nullptr, false,
+          SemaRef.Context, nullptr,
           SemaRef.Context.getTypeDeclType(Tag).getTypePtr());
     else
       R.QualifierIsInformative = false;
@@ -1405,7 +1407,7 @@ void ResultBuilder::AddResult(Result R, DeclContext *CurContext,
           NestedNameSpecifier::Create(SemaRef.Context, nullptr, Namespace);
     else if (const auto *Tag = dyn_cast<TagDecl>(Ctx))
       R.Qualifier = NestedNameSpecifier::Create(
-          SemaRef.Context, nullptr, false,
+          SemaRef.Context, nullptr,
           SemaRef.Context.getTypeDeclType(Tag).getTypePtr());
     else
       R.QualifierIsInformative = false;
@@ -4835,7 +4837,6 @@ void SemaCodeCompletion::CodeCompleteAttribute(
       // We skip this if the scope was already spelled and not guarded, or
       // we must spell it and can't guard it.
       if (!(InScope && !InScopeUnderscore) && SyntaxSupportsGuards) {
-        llvm::SmallString<32> Guarded;
         if (Scope.empty()) {
           Add(Scope, Name, /*Underscores=*/true);
         } else {
@@ -5346,27 +5347,11 @@ AddRecordMembersCompletionResults(Sema &SemaRef, ResultBuilder &Results,
 // Returns the RecordDecl inside the BaseType, falling back to primary template
 // in case of specializations. Since we might not have a decl for the
 // instantiation/specialization yet, e.g. dependent code.
-static RecordDecl *getAsRecordDecl(QualType BaseType) {
-  BaseType = BaseType.getNonReferenceType();
-  if (auto *RD = BaseType->getAsRecordDecl()) {
-    if (const auto *CTSD =
-            llvm::dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
-      // Template might not be instantiated yet, fall back to primary template
-      // in such cases.
-      if (CTSD->getTemplateSpecializationKind() == TSK_Undeclared)
-        RD = CTSD->getSpecializedTemplate()->getTemplatedDecl();
-    }
-    return RD;
-  }
-
-  if (const auto *TST = BaseType->getAs<TemplateSpecializationType>()) {
-    if (const auto *TD = dyn_cast_or_null<ClassTemplateDecl>(
-            TST->getTemplateName().getAsTemplateDecl())) {
-      return TD->getTemplatedDecl();
-    }
-  }
-
-  return nullptr;
+static RecordDecl *getAsRecordDecl(QualType BaseType,
+                                   HeuristicResolver &Resolver) {
+  BaseType = Resolver.simplifyType(BaseType, nullptr, /*UnwrapPointer=*/false);
+  return dyn_cast_if_present<RecordDecl>(
+      Resolver.resolveTypeToTagDecl(BaseType));
 }
 
 namespace {
@@ -5463,8 +5448,9 @@ public:
   // that T is attached to in order to gather the relevant constraints.
   ConceptInfo(const TemplateTypeParmType &BaseType, Scope *S) {
     auto *TemplatedEntity = getTemplatedEntity(BaseType.getDecl(), S);
-    for (const Expr *E : constraintsForTemplatedEntity(TemplatedEntity))
-      believe(E, &BaseType);
+    for (const AssociatedConstraint &AC :
+         constraintsForTemplatedEntity(TemplatedEntity))
+      believe(AC.ConstraintExpr, &BaseType);
   }
 
   std::vector<Member> members() {
@@ -5696,9 +5682,9 @@ private:
 
   // Gets all the type constraint expressions that might apply to the type
   // variables associated with DC (as returned by getTemplatedEntity()).
-  static SmallVector<const Expr *, 1>
+  static SmallVector<AssociatedConstraint, 1>
   constraintsForTemplatedEntity(DeclContext *DC) {
-    SmallVector<const Expr *, 1> Result;
+    SmallVector<AssociatedConstraint, 1> Result;
     if (DC == nullptr)
       return Result;
     // Primary templates can have constraints.
@@ -5736,11 +5722,22 @@ private:
 // In particular, when E->getType() is DependentTy, try to guess a likely type.
 // We accept some lossiness (like dropping parameters).
 // We only try to handle common expressions on the LHS of MemberExpr.
-QualType getApproximateType(const Expr *E) {
+QualType getApproximateType(const Expr *E, HeuristicResolver &Resolver) {
   if (E->getType().isNull())
     return QualType();
-  E = E->IgnoreParenImpCasts();
+  // Don't drop implicit cast if it's an array decay.
+  if (auto *ICE = dyn_cast<ImplicitCastExpr>(E);
+      !ICE || ICE->getCastKind() != CK_ArrayToPointerDecay)
+    E = E->IgnoreParenImpCasts();
   QualType Unresolved = E->getType();
+  // Resolve DependentNameType
+  if (const auto *DNT = Unresolved->getAs<DependentNameType>()) {
+    if (auto Decls = Resolver.resolveDependentNameType(DNT);
+        Decls.size() == 1) {
+      if (const auto *TD = dyn_cast<TypeDecl>(Decls[0]))
+        return QualType(TD->getTypeForDecl(), 0);
+    }
+  }
   // We only resolve DependentTy, or undeduced autos (including auto* etc).
   if (!Unresolved->isSpecificBuiltinType(BuiltinType::Dependent)) {
     AutoType *Auto = Unresolved->getContainedAutoType();
@@ -5749,7 +5746,7 @@ QualType getApproximateType(const Expr *E) {
   }
   // A call: approximate-resolve callee to a function type, get its return type
   if (const CallExpr *CE = llvm::dyn_cast<CallExpr>(E)) {
-    QualType Callee = getApproximateType(CE->getCallee());
+    QualType Callee = getApproximateType(CE->getCallee(), Resolver);
     if (Callee.isNull() ||
         Callee->isSpecificPlaceholderType(BuiltinType::BoundMember))
       Callee = Expr::findBoundMemberType(CE->getCallee());
@@ -5788,24 +5785,11 @@ QualType getApproximateType(const Expr *E) {
         return QualType(Common, 0);
     }
   }
-  // A dependent member: approximate-resolve the base, then lookup.
+  // A dependent member: resolve using HeuristicResolver.
   if (const auto *CDSME = llvm::dyn_cast<CXXDependentScopeMemberExpr>(E)) {
-    QualType Base = CDSME->isImplicitAccess()
-                        ? CDSME->getBaseType()
-                        : getApproximateType(CDSME->getBase());
-    if (CDSME->isArrow() && !Base.isNull())
-      Base = Base->getPointeeType(); // could handle unique_ptr etc here?
-    auto *RD =
-        Base.isNull()
-            ? nullptr
-            : llvm::dyn_cast_or_null<CXXRecordDecl>(getAsRecordDecl(Base));
-    if (RD && RD->isCompleteDefinition()) {
-      // Look up member heuristically, including in bases.
-      for (const auto *Member : RD->lookupDependentName(
-               CDSME->getMember(), [](const NamedDecl *Member) {
-                 return llvm::isa<ValueDecl>(Member);
-               })) {
-        return llvm::cast<ValueDecl>(Member)->getType().getNonReferenceType();
+    for (const auto *Member : Resolver.resolveMemberExpr(CDSME)) {
+      if (const auto *VD = dyn_cast<ValueDecl>(Member)) {
+        return VD->getType().getNonReferenceType();
       }
     }
   }
@@ -5813,14 +5797,15 @@ QualType getApproximateType(const Expr *E) {
   if (const auto *DRE = llvm::dyn_cast<DeclRefExpr>(E)) {
     if (const auto *VD = llvm::dyn_cast<VarDecl>(DRE->getDecl())) {
       if (VD->hasInit())
-        return getApproximateType(VD->getInit());
+        return getApproximateType(VD->getInit(), Resolver);
     }
   }
   if (const auto *UO = llvm::dyn_cast<UnaryOperator>(E)) {
     if (UO->getOpcode() == UnaryOperatorKind::UO_Deref) {
       // We recurse into the subexpression because it could be of dependent
       // type.
-      if (auto Pointee = getApproximateType(UO->getSubExpr())->getPointeeType();
+      if (auto Pointee =
+              getApproximateType(UO->getSubExpr(), Resolver)->getPointeeType();
           !Pointee.isNull())
         return Pointee;
       // Our caller expects a non-null result, even though the SubType is
@@ -5857,13 +5842,16 @@ void SemaCodeCompletion::CodeCompleteMemberReferenceExpr(
       SemaRef.PerformMemberExprBaseConversion(Base, IsArrow);
   if (ConvertedBase.isInvalid())
     return;
-  QualType ConvertedBaseType = getApproximateType(ConvertedBase.get());
+  QualType ConvertedBaseType =
+      getApproximateType(ConvertedBase.get(), Resolver);
 
   enum CodeCompletionContext::Kind contextKind;
 
   if (IsArrow) {
-    if (const auto *Ptr = ConvertedBaseType->getAs<PointerType>())
-      ConvertedBaseType = Ptr->getPointeeType();
+    if (QualType PointeeType = Resolver.getPointeeType(ConvertedBaseType);
+        !PointeeType.isNull()) {
+      ConvertedBaseType = PointeeType;
+    }
   }
 
   if (IsArrow) {
@@ -5894,14 +5882,15 @@ void SemaCodeCompletion::CodeCompleteMemberReferenceExpr(
       return false;
     Base = ConvertedBase.get();
 
-    QualType BaseType = getApproximateType(Base);
+    QualType BaseType = getApproximateType(Base, Resolver);
     if (BaseType.isNull())
       return false;
     ExprValueKind BaseKind = Base->getValueKind();
 
     if (IsArrow) {
-      if (const PointerType *Ptr = BaseType->getAs<PointerType>()) {
-        BaseType = Ptr->getPointeeType();
+      if (QualType PointeeType = Resolver.getPointeeType(BaseType);
+          !PointeeType.isNull()) {
+        BaseType = PointeeType;
         BaseKind = VK_LValue;
       } else if (BaseType->isObjCObjectPointerType() ||
                  BaseType->isTemplateTypeParmType()) {
@@ -5911,7 +5900,7 @@ void SemaCodeCompletion::CodeCompleteMemberReferenceExpr(
       }
     }
 
-    if (RecordDecl *RD = getAsRecordDecl(BaseType)) {
+    if (RecordDecl *RD = getAsRecordDecl(BaseType, Resolver)) {
       AddRecordMembersCompletionResults(SemaRef, Results, S, BaseType, BaseKind,
                                         RD, std::move(AccessOpFixIt));
     } else if (const auto *TTPT =
@@ -6229,8 +6218,8 @@ static void mergeCandidatesWithResults(
   // Sort the overload candidate set by placing the best overloads first.
   llvm::stable_sort(CandidateSet, [&](const OverloadCandidate &X,
                                       const OverloadCandidate &Y) {
-    return isBetterOverloadCandidate(SemaRef, X, Y, Loc,
-                                     CandidateSet.getKind());
+    return isBetterOverloadCandidate(SemaRef, X, Y, Loc, CandidateSet.getKind(),
+                                     /*PartialOverloading=*/true);
   });
 
   // Add the remaining viable overload candidates as code-completion results.
@@ -6364,7 +6353,8 @@ SemaCodeCompletion::ProduceCallSignatureHelp(Expr *Fn, ArrayRef<Expr *> Args,
   Expr *NakedFn = Fn->IgnoreParenCasts();
   // Build an overload candidate set based on the functions we find.
   SourceLocation Loc = Fn->getExprLoc();
-  OverloadCandidateSet CandidateSet(Loc, OverloadCandidateSet::CSK_Normal);
+  OverloadCandidateSet CandidateSet(Loc,
+                                    OverloadCandidateSet::CSK_CodeCompletion);
 
   if (auto ULE = dyn_cast<UnresolvedLookupExpr>(NakedFn)) {
     SemaRef.AddOverloadedCallCandidates(ULE, ArgsWithoutDependentTypes,
@@ -6567,7 +6557,8 @@ QualType SemaCodeCompletion::ProduceConstructorSignatureHelp(
   // FIXME: Provide support for variadic template constructors.
 
   if (CRD) {
-    OverloadCandidateSet CandidateSet(Loc, OverloadCandidateSet::CSK_Normal);
+    OverloadCandidateSet CandidateSet(Loc,
+                                      OverloadCandidateSet::CSK_CodeCompletion);
     for (NamedDecl *C : SemaRef.LookupConstructors(CRD)) {
       if (auto *FD = dyn_cast<FunctionDecl>(C)) {
         // FIXME: we can't yet provide correct signature help for initializer
@@ -6674,7 +6665,8 @@ QualType SemaCodeCompletion::ProduceTemplateArgumentSignatureHelp(
                               /*Braced=*/false);
 }
 
-static QualType getDesignatedType(QualType BaseType, const Designation &Desig) {
+static QualType getDesignatedType(QualType BaseType, const Designation &Desig,
+                                  HeuristicResolver &Resolver) {
   for (unsigned I = 0; I < Desig.getNumDesignators(); ++I) {
     if (BaseType.isNull())
       break;
@@ -6685,7 +6677,7 @@ static QualType getDesignatedType(QualType BaseType, const Designation &Desig) {
         NextType = BaseType->getAsArrayTypeUnsafe()->getElementType();
     } else {
       assert(D.isFieldDesignator());
-      auto *RD = getAsRecordDecl(BaseType);
+      auto *RD = getAsRecordDecl(BaseType, Resolver);
       if (RD && RD->isCompleteDefinition()) {
         for (const auto *Member : RD->lookup(D.getFieldDecl()))
           if (const FieldDecl *FD = llvm::dyn_cast<FieldDecl>(Member)) {
@@ -6701,10 +6693,10 @@ static QualType getDesignatedType(QualType BaseType, const Designation &Desig) {
 
 void SemaCodeCompletion::CodeCompleteDesignator(
     QualType BaseType, llvm::ArrayRef<Expr *> InitExprs, const Designation &D) {
-  BaseType = getDesignatedType(BaseType, D);
+  BaseType = getDesignatedType(BaseType, D, Resolver);
   if (BaseType.isNull())
     return;
-  const auto *RD = getAsRecordDecl(BaseType);
+  const auto *RD = getAsRecordDecl(BaseType, Resolver);
   if (!RD || RD->fields().empty())
     return;
 
@@ -6747,6 +6739,52 @@ void SemaCodeCompletion::CodeCompleteInitializer(Scope *S, Decl *D) {
   Data.IgnoreDecls.push_back(VD);
 
   CodeCompleteExpression(S, Data);
+}
+
+void SemaCodeCompletion::CodeCompleteKeywordAfterIf(bool AfterExclaim) const {
+  ResultBuilder Results(SemaRef, CodeCompleter->getAllocator(),
+                        CodeCompleter->getCodeCompletionTUInfo(),
+                        CodeCompletionContext::CCC_Other);
+  CodeCompletionBuilder Builder(Results.getAllocator(),
+                                Results.getCodeCompletionTUInfo());
+  if (getLangOpts().CPlusPlus17) {
+    if (!AfterExclaim) {
+      if (Results.includeCodePatterns()) {
+        Builder.AddTypedTextChunk("constexpr");
+        Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+        Builder.AddChunk(CodeCompletionString::CK_LeftParen);
+        Builder.AddPlaceholderChunk("condition");
+        Builder.AddChunk(CodeCompletionString::CK_RightParen);
+        Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+        Builder.AddChunk(CodeCompletionString::CK_LeftBrace);
+        Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+        Builder.AddPlaceholderChunk("statements");
+        Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+        Builder.AddChunk(CodeCompletionString::CK_RightBrace);
+        Results.AddResult({Builder.TakeString()});
+      } else {
+        Results.AddResult({"constexpr"});
+      }
+    }
+  }
+  if (getLangOpts().CPlusPlus23) {
+    if (Results.includeCodePatterns()) {
+      Builder.AddTypedTextChunk("consteval");
+      Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+      Builder.AddChunk(CodeCompletionString::CK_LeftBrace);
+      Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+      Builder.AddPlaceholderChunk("statements");
+      Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+      Builder.AddChunk(CodeCompletionString::CK_RightBrace);
+      Results.AddResult({Builder.TakeString()});
+    } else {
+      Results.AddResult({"consteval"});
+    }
+  }
+
+  HandleCodeCompleteResults(&SemaRef, CodeCompleter,
+                            Results.getCompletionContext(), Results.data(),
+                            Results.size());
 }
 
 void SemaCodeCompletion::CodeCompleteAfterIf(Scope *S, bool IsBracedThen) {
@@ -8681,7 +8719,7 @@ static void AddProtocolResults(DeclContext *Ctx, DeclContext *CurContext,
 }
 
 void SemaCodeCompletion::CodeCompleteObjCProtocolReferences(
-    ArrayRef<IdentifierLocPair> Protocols) {
+    ArrayRef<IdentifierLoc> Protocols) {
   ResultBuilder Results(SemaRef, CodeCompleter->getAllocator(),
                         CodeCompleter->getCodeCompletionTUInfo(),
                         CodeCompletionContext::CCC_ObjCProtocolName);
@@ -8692,9 +8730,9 @@ void SemaCodeCompletion::CodeCompleteObjCProtocolReferences(
     // Tell the result set to ignore all of the protocols we have
     // already seen.
     // FIXME: This doesn't work when caching code-completion results.
-    for (const IdentifierLocPair &Pair : Protocols)
-      if (ObjCProtocolDecl *Protocol =
-              SemaRef.ObjC().LookupProtocol(Pair.first, Pair.second))
+    for (const IdentifierLoc &Pair : Protocols)
+      if (ObjCProtocolDecl *Protocol = SemaRef.ObjC().LookupProtocol(
+              Pair.getIdentifierInfo(), Pair.getLoc()))
         Results.Ignore(Protocol);
 
     // Add all protocols.
@@ -10473,4 +10511,5 @@ void SemaCodeCompletion::GatherGlobalCodeCompletions(
 
 SemaCodeCompletion::SemaCodeCompletion(Sema &S,
                                        CodeCompleteConsumer *CompletionConsumer)
-    : SemaBase(S), CodeCompleter(CompletionConsumer) {}
+    : SemaBase(S), CodeCompleter(CompletionConsumer),
+      Resolver(S.getASTContext()) {}

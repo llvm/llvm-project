@@ -21,41 +21,11 @@ func.func @affine_apply_resul_non_index(%arg0 : index) {
 }
 
 // -----
-
-#map = affine_map<(d0)[s0] -> (d0 + s0)>
-
-func.func @affine_for_lower_bound_invalid_dim(%arg : index) {
-  affine.for %n0 = 0 to 7 {
-    %dim = arith.addi %arg, %arg : index
-
-    // expected-error@+1 {{operand cannot be used as a dimension id}}
-    affine.for %n1 = 0 to #map(%dim)[%arg] {
-    }
-  }
-  return
-}
-
-// -----
-
-#map = affine_map<(d0)[s0] -> (d0 + s0)>
-
-func.func @affine_for_upper_bound_invalid_dim(%arg : index) {
-  affine.for %n0 = 0 to 7 {
-    %dim = arith.addi %arg, %arg : index
-
-    // expected-error@+1 {{operand cannot be used as a dimension id}}
-    affine.for %n1 = #map(%dim)[%arg] to 7 {
-    }
-  }
-  return
-}
-
-// -----
 func.func @affine_load_invalid_dim(%M : memref<10xi32>) {
   "unknown"() ({
   ^bb0(%arg: index):
     affine.load %M[%arg] : memref<10xi32>
-    // expected-error@-1 {{index must be a valid dimension or symbol identifier}}
+    // expected-error@-1 {{op operand cannot be used as a dimension id}}
     cf.br ^bb1
   ^bb1:
     cf.br ^bb1
@@ -85,20 +55,6 @@ func.func @affine_for_upper_bound_invalid_sym() {
     // expected-error@+1 {{operand cannot be used as a symbol}}
     affine.for %n0 = 0 to #map0(%i0)[%i0] {
     }
-  }
-  return
-}
-
-// -----
-
-#set0 = affine_set<(i)[N] : (i >= 0, N - i >= 0)>
-
-func.func @affine_if_invalid_dim(%arg : index) {
-  affine.for %n0 = 0 to 7 {
-    %dim = arith.addi %arg, %arg : index
-
-    // expected-error@+1 {{operand cannot be used as a dimension id}}
-    affine.if #set0(%dim)[%n0] {}
   }
   return
 }
@@ -341,6 +297,24 @@ func.func @affine_parallel(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 // -----
 
+func.func @no_upper_bound_affine_parallel() {
+  // expected-error@+1 {{expected lower bound map to have at least one result}}
+  affine.parallel (%arg2) = (max()) to (1) {
+  }
+  return
+}
+
+// -----
+
+func.func @no_upper_bound_affine_parallel() {
+  // expected-error@+1 {{expected upper bound map to have at least one result}}
+  affine.parallel (%arg3) = (0) to (min()) {
+  }
+  return
+}
+
+// -----
+
 func.func @vector_load_invalid_vector_type() {
   %0 = memref.alloc() : memref<100xf32>
   affine.for %i0 = 0 to 16 step 8 {
@@ -561,9 +535,45 @@ func.func @dynamic_dimension_index() {
     %idx = "unknown.test"() : () -> (index)
     %memref = "unknown.test"() : () -> memref<?x?xf32>
     %dim = memref.dim %memref, %idx : memref<?x?xf32>
-    // expected-error @below {{op index must be a valid dimension or symbol identifier}}
+    // expected-error@below {{op operand cannot be used as a dimension id}}
     affine.load %memref[%dim, %dim] : memref<?x?xf32>
     "unknown.terminator"() : () -> ()
   }) : () -> ()
+  return
+}
+
+// -----
+
+#map = affine_map<() -> ()>
+#map1 = affine_map<() -> (1)>
+func.func @no_lower_bound() {
+  // expected-error@+1 {{'affine.for' op expected lower bound map to have at least one result}}
+  affine.for %i = max #map() to min #map1() {
+  }
+  return
+}
+
+// -----
+
+#map = affine_map<() -> ()>
+#map1 = affine_map<() -> (1)>
+func.func @no_upper_bound() {
+  // expected-error@+1 {{'affine.for' op expected upper bound map to have at least one result}}
+  affine.for %i = max #map1() to min #map() {
+  }
+  return
+}
+
+// -----
+
+func.func @invalid_symbol() {
+  affine.for %arg1 = 0 to 1 {
+    affine.for %arg2 = 0 to 26 {
+      affine.for %arg3 = 0 to 23 {
+        affine.apply affine_map<()[s0, s1] -> (s0 * 23 + s1)>()[%arg1, %arg3]
+        // expected-error@above {{dimensional operand cannot be used as a symbol}}
+      }
+    }
+  }
   return
 }

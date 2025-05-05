@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "HexagonLoopIdiomRecognition.h"
+#include "Hexagon.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
@@ -108,14 +109,6 @@ static cl::opt<unsigned> SimplifyLimit("hlir-simplify-limit", cl::init(10000),
 static const char *HexagonVolatileMemcpyName
   = "hexagon_memcpy_forward_vp4cp4n2";
 
-
-namespace llvm {
-
-void initializeHexagonLoopIdiomRecognizeLegacyPassPass(PassRegistry &);
-Pass *createHexagonLoopIdiomPass();
-
-} // end namespace llvm
-
 namespace {
 
 class HexagonLoopIdiomRecognize {
@@ -151,10 +144,7 @@ class HexagonLoopIdiomRecognizeLegacyPass : public LoopPass {
 public:
   static char ID;
 
-  explicit HexagonLoopIdiomRecognizeLegacyPass() : LoopPass(ID) {
-    initializeHexagonLoopIdiomRecognizeLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
+  explicit HexagonLoopIdiomRecognizeLegacyPass() : LoopPass(ID) {}
 
   StringRef getPassName() const override {
     return "Recognize Hexagon-specific loop idioms";
@@ -695,7 +685,7 @@ bool PolynomialMultiplyRecognize::matchLeftShift(SelectInst *SelI,
 
   using namespace PatternMatch;
 
-  CmpInst::Predicate P;
+  CmpPredicate P;
   Value *A = nullptr, *B = nullptr, *C = nullptr;
 
   if (!match(CondV, m_ICmp(P, m_And(m_Value(A), m_Value(B)), m_Value(C))) &&
@@ -810,7 +800,7 @@ bool PolynomialMultiplyRecognize::matchRightShift(SelectInst *SelI,
   using namespace PatternMatch;
 
   Value *C = nullptr;
-  CmpInst::Predicate P;
+  CmpPredicate P;
   bool TrueIfZero;
 
   if (match(CondV, m_c_ICmp(P, m_Value(C), m_Zero()))) {
@@ -1089,16 +1079,13 @@ bool PolynomialMultiplyRecognize::promoteTypes(BasicBlock *LoopB,
       return false;
 
   // Perform the promotion.
-  std::vector<Instruction*> LoopIns;
-  std::transform(LoopB->begin(), LoopB->end(), std::back_inserter(LoopIns),
-                 [](Instruction &In) { return &In; });
+  SmallVector<Instruction *> LoopIns(llvm::make_pointer_range(*LoopB));
   for (Instruction *In : LoopIns)
     if (!In->isTerminator())
       promoteTo(In, DestTy, LoopB);
 
   // Fix up the PHI nodes in the exit block.
-  Instruction *EndI = ExitB->getFirstNonPHI();
-  BasicBlock::iterator End = EndI ? EndI->getIterator() : ExitB->end();
+  BasicBlock::iterator End = ExitB->getFirstNonPHIIt();
   for (auto I = ExitB->begin(); I != End; ++I) {
     PHINode *P = dyn_cast<PHINode>(I);
     if (!P)
@@ -1326,13 +1313,13 @@ bool PolynomialMultiplyRecognize::convertShiftsToLeft(BasicBlock *LoopB,
     // Found a cycle.
     C.insert(&I);
     classifyCycle(&I, C, Early, Late);
-    Cycled.insert(C.begin(), C.end());
+    Cycled.insert_range(C);
     RShifts.insert(&I);
   }
 
   // Find the set of all values affected by the shift cycles, i.e. all
   // cycled values, and (recursively) all their users.
-  ValueSeq Users(Cycled.begin(), Cycled.end());
+  ValueSeq Users(llvm::from_range, Cycled);
   for (unsigned i = 0; i < Users.size(); ++i) {
     Value *V = Users[i];
     if (!isa<IntegerType>(V->getType()))
@@ -1360,7 +1347,7 @@ bool PolynomialMultiplyRecognize::convertShiftsToLeft(BasicBlock *LoopB,
     return false;
 
   // Verify that high bits remain zero.
-  ValueSeq Internal(Users.begin(), Users.end());
+  ValueSeq Internal(llvm::from_range, Users);
   ValueSeq Inputs;
   for (unsigned i = 0; i < Internal.size(); ++i) {
     auto *R = dyn_cast<Instruction>(Internal[i]);
@@ -1389,14 +1376,12 @@ bool PolynomialMultiplyRecognize::convertShiftsToLeft(BasicBlock *LoopB,
 
   CastMapType CastMap;
 
-  auto upcast = [] (CastMapType &CM, IRBuilder<> &IRB, Value *V,
-        IntegerType *Ty) -> Value* {
-    auto H = CM.find(std::make_pair(V, Ty));
-    if (H != CM.end())
-      return H->second;
-    Value *CV = IRB.CreateIntCast(V, Ty, false);
-    CM.insert(std::make_pair(std::make_pair(V, Ty), CV));
-    return CV;
+  auto upcast = [](CastMapType &CM, IRBuilder<> &IRB, Value *V,
+                   IntegerType *Ty) -> Value * {
+    auto [H, Inserted] = CM.try_emplace(std::make_pair(V, Ty));
+    if (Inserted)
+      H->second = IRB.CreateIntCast(V, Ty, false);
+    return H->second;
   };
 
   for (auto I = LoopB->begin(), E = LoopB->end(); I != E; ++I) {
@@ -1796,6 +1781,8 @@ bool PolynomialMultiplyRecognize::recognize() {
     IterCount = CV->getValue()->getZExtValue() + 1;
 
   Value *CIV = getCountIV(LoopB);
+  if (CIV == nullptr)
+    return false;
   ParsedValues PV;
   Simplifier PreSimp;
   PV.IterCount = IterCount;
@@ -2304,10 +2291,9 @@ CleanupAndExit:
 bool HexagonLoopIdiomRecognize::coverLoop(Loop *L,
       SmallVectorImpl<Instruction*> &Insts) const {
   SmallSet<BasicBlock*,8> LoopBlocks;
-  for (auto *B : L->blocks())
-    LoopBlocks.insert(B);
+  LoopBlocks.insert_range(L->blocks());
 
-  SetVector<Instruction*> Worklist(Insts.begin(), Insts.end());
+  SetVector<Instruction *> Worklist(llvm::from_range, Insts);
 
   // Collect all instructions from the loop that the instructions in Insts
   // depend on (plus their dependencies, etc.).  These instructions will
@@ -2407,7 +2393,7 @@ bool HexagonLoopIdiomRecognize::runOnCountableLoop(Loop *L) {
 
 bool HexagonLoopIdiomRecognize::run(Loop *L) {
   const Module &M = *L->getHeader()->getParent()->getParent();
-  if (Triple(M.getTargetTriple()).getArch() != Triple::hexagon)
+  if (M.getTargetTriple().getArch() != Triple::hexagon)
     return false;
 
   // If the loop could not be converted to canonical form, it must have an

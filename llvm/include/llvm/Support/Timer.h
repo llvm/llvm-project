@@ -12,6 +12,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataTypes.h"
+#include "llvm/Support/Mutex.h"
 #include <cassert>
 #include <memory>
 #include <string>
@@ -19,6 +20,7 @@
 
 namespace llvm {
 
+class TimerGlobals;
 class TimerGroup;
 class raw_ostream;
 
@@ -129,6 +131,9 @@ public:
   /// Clear the timer state.
   void clear();
 
+  /// Stop the timer and start another timer.
+  void yieldTo(Timer &);
+
   /// Return the duration for which this timer has been running.
   TimeRecord getTotalTime() const { return Time; }
 
@@ -164,6 +169,11 @@ struct NamedRegionTimer : public TimeRegion {
   explicit NamedRegionTimer(StringRef Name, StringRef Description,
                             StringRef GroupName,
                             StringRef GroupDescription, bool Enabled = true);
+
+  // Create or get a TimerGroup stored in the same global map owned by
+  // NamedRegionTimer.
+  static TimerGroup &getNamedTimerGroup(StringRef GroupName,
+                                        StringRef GroupDescription);
 };
 
 /// The TimerGroup class is used to group together related timers into a single
@@ -195,6 +205,10 @@ class TimerGroup {
   TimerGroup *Next;  ///< Pointer to next timergroup in list.
   TimerGroup(const TimerGroup &TG) = delete;
   void operator=(const TimerGroup &TG) = delete;
+
+  friend class TimerGlobals;
+  explicit TimerGroup(StringRef Name, StringRef Description,
+                      sys::SmartMutex<true> &lock);
 
 public:
   explicit TimerGroup(StringRef Name, StringRef Description);
@@ -234,9 +248,9 @@ public:
   /// global constructors and destructors.
   static void constructForStatistics();
 
-  /// This makes the default group unmanaged, and lets the user manage the
-  /// group's lifetime.
-  static std::unique_ptr<TimerGroup> aquireDefaultGroup();
+  /// This makes the timer globals unmanaged, and lets the user manage the
+  /// lifetime.
+  static void *acquireTimerGlobals();
 
 private:
   friend class Timer;

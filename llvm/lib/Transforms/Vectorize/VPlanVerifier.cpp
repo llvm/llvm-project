@@ -26,6 +26,7 @@ using namespace llvm;
 namespace {
 class VPlanVerifier {
   const VPDominatorTree &VPDT;
+  VPTypeAnalysis &TypeInfo;
 
   SmallPtrSet<BasicBlock *, 8> WrappedIRBBs;
 
@@ -58,7 +59,8 @@ class VPlanVerifier {
   bool verifyRegionRec(const VPRegionBlock *Region);
 
 public:
-  VPlanVerifier(VPDominatorTree &VPDT) : VPDT(VPDT) {}
+  VPlanVerifier(VPDominatorTree &VPDT, VPTypeAnalysis &TypeInfo)
+      : VPDT(VPDT), TypeInfo(TypeInfo) {}
 
   bool verify(const VPlan &Plan);
 };
@@ -75,7 +77,9 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
     if (isa<VPActiveLaneMaskPHIRecipe>(RecipeI))
       NumActiveLaneMaskPhiRecipes++;
 
-    if (IsHeaderVPBB && !isa<VPHeaderPHIRecipe, VPWidenPHIRecipe>(*RecipeI)) {
+    if (IsHeaderVPBB && !isa<VPHeaderPHIRecipe, VPWidenPHIRecipe>(*RecipeI) &&
+        !isa<VPInstruction>(*RecipeI) &&
+        cast<VPInstruction>(RecipeI)->getOpcode() == Instruction::PHI) {
       errs() << "Found non-header PHI recipe in header VPBB";
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       errs() << ": ";
@@ -91,6 +95,18 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
       RecipeI->dump();
 #endif
       return false;
+    }
+
+    // Check if the recipe operands match the number of predecessors.
+    // TODO Extend to other phi-like recipes.
+    if (auto *PhiIRI = dyn_cast<VPIRPhi>(&*RecipeI)) {
+      if (PhiIRI->getNumOperands() != VPBB->getNumPredecessors()) {
+        errs() << "Phi-like recipe with different number of operands and "
+                  "predecessors.\n";
+        // TODO: Print broken recipe. At the moment printing an ill-formed
+        // phi-like recipe may crash.
+        return false;
+      }
     }
 
     RecipeI++;
@@ -141,15 +157,13 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
         })
         .Case<VPWidenStoreEVLRecipe, VPReductionEVLRecipe>(
             [&](const VPRecipeBase *S) { return VerifyEVLUse(*S, 2); })
-        .Case<VPWidenLoadEVLRecipe, VPReverseVectorPointerRecipe>(
+        .Case<VPWidenLoadEVLRecipe, VPVectorEndPointerRecipe>(
             [&](const VPRecipeBase *R) { return VerifyEVLUse(*R, 1); })
-        .Case<VPWidenEVLRecipe>([&](const VPWidenEVLRecipe *W) {
-          return VerifyEVLUse(*W,
-                              Instruction::isUnaryOp(W->getOpcode()) ? 1 : 2);
-        })
-        .Case<VPScalarCastRecipe>(
-            [&](const VPScalarCastRecipe *S) { return VerifyEVLUse(*S, 0); })
+        .Case<VPInstructionWithType>(
+            [&](const VPInstructionWithType *S) { return VerifyEVLUse(*S, 0); })
         .Case<VPInstruction>([&](const VPInstruction *I) {
+          if (I->getOpcode() == Instruction::PHI)
+            return VerifyEVLUse(*I, 1);
           if (I->getOpcode() != Instruction::Add) {
             errs() << "EVL is used as an operand in non-VPInstruction::Add\n";
             return false;
@@ -185,7 +199,7 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
     RecipeNumbering[&R] = Cnt++;
 
   for (const VPRecipeBase &R : *VPBB) {
-    if (isa<VPIRInstruction>(&R) ^ isa<VPIRBasicBlock>(VPBB)) {
+    if (isa<VPIRInstruction>(&R) && !isa<VPIRBasicBlock>(VPBB)) {
       errs() << "VPIRInstructions ";
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       R.dump();
@@ -195,11 +209,22 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
       return false;
     }
     for (const VPValue *V : R.definedValues()) {
+      // Verify that we can infer a scalar type for each defined value. With
+      // assertions enabled, inferScalarType will perform some consistency
+      // checks during type inference.
+      if (!TypeInfo.inferScalarType(V)) {
+        errs() << "Failed to infer scalar type!\n";
+        return false;
+      }
+
       for (const VPUser *U : V->users()) {
-        auto *UI = dyn_cast<VPRecipeBase>(U);
+        auto *UI = cast<VPRecipeBase>(U);
         // TODO: check dominance of incoming values for phis properly.
         if (!UI ||
-            isa<VPHeaderPHIRecipe, VPWidenPHIRecipe, VPPredInstPHIRecipe>(UI))
+            isa<VPHeaderPHIRecipe, VPWidenPHIRecipe, VPPredInstPHIRecipe,
+                VPIRPhi>(UI) ||
+            (isa<VPInstruction>(UI) &&
+             cast<VPInstruction>(UI)->getOpcode() == Instruction::PHI))
           continue;
 
         // If the user is in the same block, check it comes after R in the
@@ -406,6 +431,8 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
 bool llvm::verifyVPlanIsValid(const VPlan &Plan) {
   VPDominatorTree VPDT;
   VPDT.recalculate(const_cast<VPlan &>(Plan));
-  VPlanVerifier Verifier(VPDT);
+  VPTypeAnalysis TypeInfo(
+      const_cast<VPlan &>(Plan).getCanonicalIV()->getScalarType());
+  VPlanVerifier Verifier(VPDT, TypeInfo);
   return Verifier.verify(Plan);
 }

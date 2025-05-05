@@ -120,17 +120,24 @@ bool CommandObject::ParseOptions(Args &args, CommandReturnObject &result) {
     if (args_or) {
       args = std::move(*args_or);
       error = options->NotifyOptionParsingFinished(&exe_ctx);
-    } else
-      error = Status::FromError(args_or.takeError());
-
-    if (error.Success()) {
-      if (options->VerifyOptions(result))
-        return true;
     } else {
-      result.SetError(error.takeError());
+      error = Status::FromError(args_or.takeError());
     }
-    result.SetStatus(eReturnStatusFailed);
-    return false;
+
+    if (error.Fail()) {
+      result.SetError(error.takeError());
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+
+    if (llvm::Error error = options->VerifyOptions()) {
+      result.SetError(std::move(error));
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+
+    result.SetStatus(eReturnStatusSuccessFinishNoResult);
+    return true;
   }
   return true;
 }
@@ -278,7 +285,6 @@ void CommandObject::HandleCompletion(CompletionRequest &request) {
   } else {
     // Can we do anything generic with the options?
     Options *cur_options = GetOptions();
-    CommandReturnObject result(m_interpreter.GetDebugger().GetUseColor());
     OptionElementVector opt_element_vector;
 
     if (cur_options != nullptr) {
@@ -332,14 +338,11 @@ void CommandObject::HandleArgumentCompletion(
 
 }
 
-
 bool CommandObject::HelpTextContainsWord(llvm::StringRef search_word,
                                          bool search_short_help,
                                          bool search_long_help,
                                          bool search_syntax,
                                          bool search_options) {
-  std::string options_usage_help;
-
   bool found_word = false;
 
   llvm::StringRef short_help = GetHelp();

@@ -29,8 +29,8 @@ define i32 @test_add_i3(i1 %tst, i32 %a, i32 %b) {
 ; CHECK-T2:       @ %bb.0:
 ; CHECK-T2-NEXT:    .save {r4, lr}
 ; CHECK-T2-NEXT:    push {r4, lr}
-; CHECK-T2-NEXT:    lsls r0, r0, #31
 ; CHECK-T2-NEXT:    bic r4, r2, #3
+; CHECK-T2-NEXT:    lsls r0, r0, #31
 ; CHECK-T2-NEXT:    it ne
 ; CHECK-T2-NEXT:    bicne r4, r1, #6
 ; CHECK-T2-NEXT:    mov r0, r4
@@ -144,12 +144,12 @@ define i32 @test_add_i12(i32 %a, i32 %b, i1 %tst) {
 ;
 ; CHECK-A-LABEL: test_add_i12:
 ; CHECK-A:       @ %bb.0:
-; CHECK-A-NEXT:    bfc r1, #0, #13
 ; CHECK-A-NEXT:    bfc r0, #0, #12
+; CHECK-A-NEXT:    bfc r1, #0, #13
 ; CHECK-A-NEXT:    tst r2, #1
-; CHECK-A-NEXT:    moveq r0, r1
-; CHECK-A-NEXT:    movw r1, #854
-; CHECK-A-NEXT:    orr r0, r0, r1
+; CHECK-A-NEXT:    movne r1, r0
+; CHECK-A-NEXT:    movw r0, #854
+; CHECK-A-NEXT:    orr r0, r1, r0
 ; CHECK-A-NEXT:    bx lr
   %tmp = and i32 %a, -4096
   %tmp1 = and i32 %b, -8192

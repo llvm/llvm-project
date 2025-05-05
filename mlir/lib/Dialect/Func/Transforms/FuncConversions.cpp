@@ -124,12 +124,10 @@ public:
   using OpConversionPattern<ReturnOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(ReturnOp op, OpAdaptor adaptor,
+  matchAndRewrite(ReturnOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
-    // For a return, all operands go to the results of the parent, so
-    // rewrite them all.
-    rewriter.modifyOpInPlace(op,
-                             [&] { op->setOperands(adaptor.getOperands()); });
+    rewriter.replaceOpWithNewOp<ReturnOp>(op,
+                                          flattenValues(adaptor.getOperands()));
     return success();
   }
 };

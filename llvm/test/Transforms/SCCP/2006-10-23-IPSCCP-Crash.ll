@@ -6,7 +6,7 @@ target triple = "powerpc-unknown-linux-gnu"
 @JUMP = external global i32		; <ptr> [#uses=1]
 @old_D_pat = external global [16 x i8]		; <ptr> [#uses=0]
 
-define void @asearch1(i32 %D) {
+define void @asearch1(i32 %D, i1 %arg) {
 entry:
 	%tmp80 = icmp ult i32 0, %D		; <i1> [#uses=1]
 	br i1 %tmp80, label %bb647.preheader, label %cond_true81.preheader
@@ -22,7 +22,7 @@ cond_true612:		; preds = %cond_true654
 cond_next624:		; preds = %cond_true654
 	ret void
 cond_true654:		; preds = %bb647.preheader
-	br i1 undef, label %cond_true612, label %cond_next624
+	br i1 %arg, label %cond_true612, label %cond_next624
 UnifiedReturnBlock:		; preds = %bb647.preheader
 	ret void
 }

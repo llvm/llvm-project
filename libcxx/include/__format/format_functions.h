@@ -31,7 +31,6 @@
 #include <__format/formatter_pointer.h>
 #include <__format/formatter_string.h>
 #include <__format/parser_std_format_spec.h>
-#include <__iterator/back_insert_iterator.h>
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iterator_traits.h> // iter_value_t
@@ -84,7 +83,7 @@ namespace __format {
 /// When parsing a handle which is not enabled the code is ill-formed.
 /// This helper uses the parser of the appropriate formatter for the stored type.
 template <class _CharT>
-class _LIBCPP_TEMPLATE_VIS __compile_time_handle {
+class __compile_time_handle {
 public:
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr void __parse(_ParseContext& __ctx) const {
@@ -111,7 +110,7 @@ private:
 // Dummy format_context only providing the parts used during constant
 // validation of the basic_format_string.
 template <class _CharT>
-struct _LIBCPP_TEMPLATE_VIS __compile_time_basic_format_context {
+struct __compile_time_basic_format_context {
 public:
   using char_type = _CharT;
 
@@ -340,12 +339,12 @@ _LIBCPP_HIDE_FROM_ABI constexpr typename _Ctx::iterator __vformat_to(_ParseCtx&&
 
 #  if _LIBCPP_STD_VER >= 26
 template <class _CharT>
-struct _LIBCPP_TEMPLATE_VIS __runtime_format_string {
+struct __runtime_format_string {
 private:
   basic_string_view<_CharT> __str_;
 
   template <class _Cp, class... _Args>
-  friend struct _LIBCPP_TEMPLATE_VIS basic_format_string;
+  friend struct basic_format_string;
 
 public:
   _LIBCPP_HIDE_FROM_ABI __runtime_format_string(basic_string_view<_CharT> __s) noexcept : __str_(__s) {}
@@ -363,7 +362,7 @@ _LIBCPP_HIDE_FROM_ABI inline __runtime_format_string<wchar_t> runtime_format(wst
 #  endif // _LIBCPP_STD_VER >= 26
 
 template <class _CharT, class... _Args>
-struct _LIBCPP_TEMPLATE_VIS basic_format_string {
+struct basic_format_string {
   template <class _Tp>
     requires convertible_to<const _Tp&, basic_string_view<_CharT>>
   consteval basic_format_string(const _Tp& __str) : __str_{__str} {
@@ -379,7 +378,7 @@ struct _LIBCPP_TEMPLATE_VIS basic_format_string {
 private:
   basic_string_view<_CharT> __str_;
 
-  using _Context = __format::__compile_time_basic_format_context<_CharT>;
+  using _Context _LIBCPP_NODEBUG = __format::__compile_time_basic_format_context<_CharT>;
 
   static constexpr array<__format::__arg_t, sizeof...(_Args)> __types_{
       __format::__determine_arg_t<_Context, remove_cvref_t<_Args>>()...};
@@ -411,7 +410,7 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __vformat_to(_OutIt __out_it,
     return std::__format::__vformat_to(
         basic_format_parse_context{__fmt, __args.__size()}, std::__format_context_create(std::move(__out_it), __args));
   else {
-    __format::__format_buffer<_OutIt, _CharT> __buffer{std::move(__out_it)};
+    typename __format::__buffer_selector<_OutIt, _CharT>::type __buffer{std::move(__out_it)};
     std::__format::__vformat_to(basic_format_parse_context{__fmt, __args.__size()},
                                 std::__format_context_create(__buffer.__make_output_iterator(), __args));
     return std::move(__buffer).__out_it();
@@ -452,9 +451,9 @@ format_to(_OutIt __out_it, wformat_string<_Args...> __fmt, _Args&&... __args) {
 // fires too eagerly, see http://llvm.org/PR61563.
 template <class = void>
 [[nodiscard]] _LIBCPP_ALWAYS_INLINE inline _LIBCPP_HIDE_FROM_ABI string vformat(string_view __fmt, format_args __args) {
-  string __res;
-  std::vformat_to(std::back_inserter(__res), __fmt, __args);
-  return __res;
+  __format::__allocating_buffer<char> __buffer;
+  std::vformat_to(__buffer.__make_output_iterator(), __fmt, __args);
+  return string{__buffer.__view()};
 }
 
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
@@ -463,9 +462,9 @@ template <class = void>
 template <class = void>
 [[nodiscard]] _LIBCPP_ALWAYS_INLINE inline _LIBCPP_HIDE_FROM_ABI wstring
 vformat(wstring_view __fmt, wformat_args __args) {
-  wstring __res;
-  std::vformat_to(std::back_inserter(__res), __fmt, __args);
-  return __res;
+  __format::__allocating_buffer<wchar_t> __buffer;
+  std::vformat_to(__buffer.__make_output_iterator(), __fmt, __args);
+  return wstring{__buffer.__view()};
 }
 #  endif
 
@@ -544,7 +543,7 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __vformat_to(
     return std::__format::__vformat_to(basic_format_parse_context{__fmt, __args.__size()},
                                        std::__format_context_create(std::move(__out_it), __args, std::move(__loc)));
   else {
-    __format::__format_buffer<_OutIt, _CharT> __buffer{std::move(__out_it)};
+    typename __format::__buffer_selector<_OutIt, _CharT>::type __buffer{std::move(__out_it)};
     std::__format::__vformat_to(
         basic_format_parse_context{__fmt, __args.__size()},
         std::__format_context_create(__buffer.__make_output_iterator(), __args, std::move(__loc)));
@@ -585,9 +584,9 @@ format_to(_OutIt __out_it, locale __loc, wformat_string<_Args...> __fmt, _Args&&
 template <class = void>
 [[nodiscard]] _LIBCPP_ALWAYS_INLINE inline _LIBCPP_HIDE_FROM_ABI string
 vformat(locale __loc, string_view __fmt, format_args __args) {
-  string __res;
-  std::vformat_to(std::back_inserter(__res), std::move(__loc), __fmt, __args);
-  return __res;
+  __format::__allocating_buffer<char> __buffer;
+  std::vformat_to(__buffer.__make_output_iterator(), std::move(__loc), __fmt, __args);
+  return string{__buffer.__view()};
 }
 
 #    if _LIBCPP_HAS_WIDE_CHARACTERS
@@ -596,9 +595,9 @@ vformat(locale __loc, string_view __fmt, format_args __args) {
 template <class = void>
 [[nodiscard]] _LIBCPP_ALWAYS_INLINE inline _LIBCPP_HIDE_FROM_ABI wstring
 vformat(locale __loc, wstring_view __fmt, wformat_args __args) {
-  wstring __res;
-  std::vformat_to(std::back_inserter(__res), std::move(__loc), __fmt, __args);
-  return __res;
+  __format::__allocating_buffer<wchar_t> __buffer;
+  std::vformat_to(__buffer.__make_output_iterator(), std::move(__loc), __fmt, __args);
+  return wstring{__buffer.__view()};
 }
 #    endif
 

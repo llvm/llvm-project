@@ -40,7 +40,7 @@ namespace lldb_private {
 /// blocks.
 class Block : public UserID, public SymbolContextScope {
 public:
-  typedef RangeVector<uint32_t, uint32_t, 1> RangeList;
+  typedef RangeVector<int32_t, uint32_t, 1> RangeList;
   typedef RangeList::Entry Range;
 
   // Creates a block representing the whole function. Only meant to be used from
@@ -77,6 +77,8 @@ public:
   Function *CalculateSymbolContextFunction() override;
 
   Block *CalculateSymbolContextBlock() override;
+
+  Function &GetFunction();
 
   /// Check if an offset is in one of the block offset ranges.
   ///

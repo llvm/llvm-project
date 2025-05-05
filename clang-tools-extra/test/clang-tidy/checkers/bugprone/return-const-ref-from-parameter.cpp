@@ -197,3 +197,32 @@ int const &overload_params_difference3(int p1, int const &a, int p2) { return a;
 int const &overload_params_difference3(int p1, long &&a, int p2);
 
 } // namespace overload
+
+namespace gh117696 {
+namespace use_lifetime_bound_attr {
+int const &f(int const &a [[clang::lifetimebound]]) { return a; }
+} // namespace use_lifetime_bound_attr
+} // namespace gh117696
+
+
+namespace lambda {
+using T = const int &;
+using K = const float &;
+T inner_valid_lambda(T a) {
+  [&]() -> T { return a; };
+  return a;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: returning a constant reference parameter
+}
+T inner_invalid_lambda(T a) {
+  [&](T a) -> T { return a; };
+  // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: returning a constant reference parameter
+  return a;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: returning a constant reference parameter
+}
+T inner_invalid_lambda2(T a) {
+  [&](K a) -> K { return a; };
+  // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: returning a constant reference parameter
+  return a;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: returning a constant reference parameter
+}
+} // namespace lambda

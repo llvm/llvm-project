@@ -1,8 +1,8 @@
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+zfh -riscv-no-aliases \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+zfh -M no-aliases \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc %s -triple=riscv32 -mattr=+zfh \
 # RUN:     | FileCheck -check-prefix=CHECK-ALIAS %s
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+zfh -riscv-no-aliases \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+zfh -M no-aliases \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc %s -triple=riscv64 -mattr=+zfh \
 # RUN:     | FileCheck -check-prefix=CHECK-ALIAS %s
@@ -39,13 +39,6 @@ fgt.h x4, f5, f6
 # CHECK-INST: fle.h t2, fs1, fs0
 # CHECK-ALIAS: fle.h t2, fs1, fs0
 fge.h x7, f8, f9
-
-# CHECK-INST: fmv.x.h a2, fs7
-# CHECK-ALIAS: fmv.x.h a2, fs7
-fmv.x.h a2, fs7
-# CHECK-INST: fmv.h.x ft1, a6
-# CHECK-ALIAS: fmv.h.x ft1, a6
-fmv.h.x ft1, a6
 
 # CHECK-INST: flh ft0, 0(a0)
 # CHECK-ALIAS: flh ft0, 0(a0)

@@ -105,7 +105,7 @@ void InstrEmitter::EmitCopyFromReg(SDNode *Node, unsigned ResNo, bool IsClone,
   if (TLI->isTypeLegal(VT))
     UseRC = TLI->getRegClassFor(VT, Node->isDivergent());
 
-  for (SDNode *User : Node->uses()) {
+  for (SDNode *User : Node->users()) {
     bool Match = true;
     if (User->getOpcode() == ISD::CopyToReg &&
         User->getOperand(2).getNode() == Node &&
@@ -225,7 +225,7 @@ void InstrEmitter::CreateVirtualRegisters(SDNode *Node,
     }
 
     if (!VRBase && !IsClone && !IsCloned)
-      for (SDNode *User : Node->uses()) {
+      for (SDNode *User : Node->users()) {
         if (User->getOpcode() == ISD::CopyToReg &&
             User->getOperand(2).getNode() == Node &&
             User->getOperand(2).getResNo() == i) {
@@ -351,8 +351,9 @@ InstrEmitter::AddRegisterOperand(MachineInstrBuilder &MIB,
         OpRC = TRI->getAllocatableClass(OpRC);
         assert(OpRC && "Constraints cannot be fulfilled for allocation");
         Register NewVReg = MRI->createVirtualRegister(OpRC);
-        BuildMI(*MBB, InsertPos, Op.getNode()->getDebugLoc(),
-                TII->get(TargetOpcode::COPY), NewVReg).addReg(VReg);
+        BuildMI(*MBB, InsertPos, MIB->getDebugLoc(),
+                TII->get(TargetOpcode::COPY), NewVReg)
+            .addReg(VReg);
         VReg = NewVReg;
       } else {
         assert(ConstrainedRC->isAllocatable() &&
@@ -502,7 +503,7 @@ void InstrEmitter::EmitSubregNode(SDNode *Node, VRBaseMapType &VRBaseMap,
 
   // If the node is only used by a CopyToReg and the dest reg is a vreg, use
   // the CopyToReg'd destination register instead of creating a new vreg.
-  for (SDNode *User : Node->uses()) {
+  for (SDNode *User : Node->users()) {
     if (User->getOpcode() == ISD::CopyToReg &&
         User->getOperand(2).getNode() == Node) {
       Register DestReg = cast<RegisterSDNode>(User->getOperand(1))->getReg();
@@ -826,7 +827,7 @@ InstrEmitter::EmitDbgInstrRef(SDDbgValue *SD,
   //
   // i.e., point the instruction at the vreg, and patch it up later in
   // MachineFunction::finalizeDebugInstrRefs.
-  auto AddVRegOp = [&](unsigned VReg) {
+  auto AddVRegOp = [&](Register VReg) {
     MOs.push_back(MachineOperand::CreateReg(
         /* Reg */ VReg, /* isDef */ false, /* isImp */ false,
         /* isKill */ false, /* isDead */ false,
@@ -839,7 +840,7 @@ InstrEmitter::EmitDbgInstrRef(SDDbgValue *SD,
 
     // Try to find both the defined register and the instruction defining it.
     MachineInstr *DefMI = nullptr;
-    unsigned VReg;
+    Register VReg;
 
     if (DbgOperand.getKind() == SDDbgOperand::VREG) {
       VReg = DbgOperand.getVReg();
@@ -1194,8 +1195,7 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
   // Add rounding control registers as implicit def for function call.
   if (II.isCall() && MF->getFunction().hasFnAttribute(Attribute::StrictFP)) {
     ArrayRef<MCPhysReg> RCRegs = TLI->getRoundingControlRegisters();
-    for (MCPhysReg Reg : RCRegs)
-      UsedRegs.push_back(Reg);
+    llvm::append_range(UsedRegs, RCRegs);
   }
 
   // Finally mark unused registers as dead.

@@ -13,6 +13,7 @@
 foo:
     movq    tlsvar@GOTTPOFF(%rip), %rcx
     movq    tlsvar2@GOTTPOFF(%rip), %r31
+    addq    tlsvar3@GOTTPOFF(%rip), %rcx, %r16
 
 
     .section    .tdata,"awT",@progbits
@@ -21,7 +22,11 @@ tlsvar:
     .word   42
 tlsvar2:
     .word   42
+tlsvar3:
+    .word   42
+
 // CHECK:          Section ({{.+}}) .rela.dyn {
 // CHECK-NEXT:     R_X86_64_TPOFF64 - 0x1234
 // CHECK-NEXT:     R_X86_64_TPOFF64 - 0x1236
+// CHECK-NEXT:     R_X86_64_TPOFF64 - 0x1238
 // CHECK-NEXT:     }

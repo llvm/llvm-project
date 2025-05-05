@@ -48,6 +48,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZTarget() {
   initializeSystemZPostRewritePass(PR);
   initializeSystemZTDCPassPass(PR);
   initializeSystemZDAGToDAGISelLegacyPass(PR);
+  initializeSystemZCopyPhysRegsPass(PR);
 }
 
 static std::string computeDataLayout(const Triple &TT) {
@@ -205,6 +206,12 @@ SystemZTargetMachine::getSubtargetImpl(const Function &F) const {
   return I.get();
 }
 
+ScheduleDAGInstrs *
+SystemZTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
+  return new ScheduleDAGMI(C, std::make_unique<SystemZPostRASchedStrategy>(C),
+                           /*RemoveKillFlags=*/true);
+}
+
 namespace {
 
 /// SystemZ Code Generator Pass Configuration Options.
@@ -215,13 +222,6 @@ public:
 
   SystemZTargetMachine &getSystemZTargetMachine() const {
     return getTM<SystemZTargetMachine>();
-  }
-
-  ScheduleDAGInstrs *
-  createPostMachineScheduler(MachineSchedContext *C) const override {
-    return new ScheduleDAGMI(C,
-                             std::make_unique<SystemZPostRASchedStrategy>(C),
-                             /*RemoveKillFlags=*/true);
   }
 
   void addIRPasses() override;
@@ -332,7 +332,7 @@ TargetPassConfig *SystemZTargetMachine::createPassConfig(PassManagerBase &PM) {
 
 TargetTransformInfo
 SystemZTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(SystemZTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<SystemZTTIImpl>(this, F));
 }
 
 MachineFunctionInfo *SystemZTargetMachine::createMachineFunctionInfo(

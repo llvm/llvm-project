@@ -97,19 +97,6 @@ static DISubprogram *getSubprogram(DIScope *Scope) {
   return cast<DILocalScope>(Scope)->getSubprogram();
 }
 
-/// Erase \p V from \p BB and move \II forward to avoid invalidating
-/// iterators.
-static void eraseFromParentAndMove(Value *V, BasicBlock::reverse_iterator &II,
-                                   BasicBlock &BB) {
-  auto *Inst = cast<Instruction>(V);
-  // Still used, don't erase.
-  if (!Inst->use_empty())
-    return;
-  if (II != BB.rend() && Inst == &*II)
-    ++II;
-  Inst->eraseFromParent();
-}
-
 /// Return true if V is a splat of a value (which is used when multiplying a
 /// matrix with a scalar).
 static bool isSplat(Value *V) {
@@ -259,7 +246,7 @@ static bool isUniformShape(Value *V) {
 /// Return the ShapeInfo for the result of \p I, it it can be determined.
 static std::optional<ShapeInfo>
 computeShapeInfoForInst(Instruction *I,
-                        const ValueMap<Value *, ShapeInfo> &ShapeMap) {
+                        const DenseMap<Value *, ShapeInfo> &ShapeMap) {
   Value *M;
   Value *N;
   Value *K;
@@ -493,10 +480,16 @@ class LowerMatrixIntrinsics {
   /// the result value of the instruction, with the only exceptions being store
   /// instructions and the matrix_column_major_store intrinsics. For those, the
   /// shape information indicates that those instructions should be lowered
-  /// using shape information as well.  A ValueMap is used so that when
-  /// sub-passes like optimizeTransposes performs RAUW the map stays
-  /// up-to-date.
-  ValueMap<Value *, ShapeInfo> ShapeMap;
+  /// using shape information as well. Note that extra care is needed when
+  /// erasing or RAUW'ing a value that is present in ShapeMap. If the
+  /// replacement is also a matrix operation, use
+  /// updateShapeAndReplaceAllUsesWith to make sure the replacement is added to
+  /// ShapeMap.  We don't use ValueMap, as there are also cases where we do not
+  /// want to add shape information for a replacement instruction. When directly
+  /// erasing a value with an entry in ShapeMap, use
+  /// eraseFromParentAndRemoveFromShapeMap to make sure ShapeMap is also updated
+  /// accordingly.
+  DenseMap<Value *, ShapeInfo> ShapeMap;
 
   /// List of instructions to remove. While lowering, we are not replacing all
   /// users of a lowered instruction, if shape information is available and
@@ -758,6 +751,28 @@ public:
     return Operation(T0, Shape0.t(), T1, Shape1.t());
   }
 
+  /// Erase \p Inst from both ShapeMap (if an entry exists) and erase \p Inst
+  /// itself.
+  void eraseFromParentAndRemoveFromShapeMap(Instruction *Inst) {
+    ShapeMap.erase(Inst);
+    Inst->eraseFromParent();
+  }
+
+  /// Erase \p V from \p BB and move \II forward to avoid invalidating
+  /// iterators.
+  void eraseFromParentAndMove(Value *V, BasicBlock::reverse_iterator &II,
+                              BasicBlock &BB) {
+    auto *Inst = cast<Instruction>(V);
+    // Still used, don't erase.
+    if (!Inst->use_empty())
+      return;
+    if (II != BB.rend() && Inst == &*II)
+      ++II;
+    eraseFromParentAndRemoveFromShapeMap(Inst);
+  }
+
+  /// Add a new entry to ShapeMap for \p New with \p Old's shape info, erase the
+  /// entry for \p Old and replace all uses of \p Old with \p New.
   void updateShapeAndReplaceAllUsesWith(Instruction &Old, Value *New) {
     // We need to remove Old from the ShapeMap otherwise RAUW will replace it
     // with New. We should only add New it it supportsShapeInfo so we insert
@@ -775,7 +790,8 @@ public:
   /// This creates and erases instructions as needed, and returns the newly
   /// created instruction while updating the iterator to avoid invalidation. If
   /// this returns nullptr, no new instruction was created.
-  Instruction *sinkTranspose(Instruction &I, BasicBlock::reverse_iterator &II) {
+  Instruction *sinkTranspose(Instruction &I, BasicBlock::reverse_iterator &II,
+                             bool &Changed) {
     BasicBlock &BB = *I.getParent();
     IRBuilder<> IB(&I);
     MatrixBuilder Builder(IB);
@@ -786,12 +802,14 @@ public:
                        m_Value(TA), m_ConstantInt(R), m_ConstantInt(C))))
       return nullptr;
 
-    // Transpose of a transpose is a nop
+    // Transpose of a transpose is a nop when the shapes match.
     Value *TATA;
-    if (match(TA, m_Intrinsic<Intrinsic::matrix_transpose>(m_Value(TATA)))) {
+    if (match(TA, m_Intrinsic<Intrinsic::matrix_transpose>(
+                      m_Value(TATA), m_Specific(C), m_Specific(R)))) {
       updateShapeAndReplaceAllUsesWith(I, TATA);
       eraseFromParentAndMove(&I, II, BB);
       eraseFromParentAndMove(TA, II, BB);
+      Changed = true;
       return nullptr;
     }
 
@@ -799,6 +817,7 @@ public:
     if (isSplat(TA)) {
       updateShapeAndReplaceAllUsesWith(I, TA);
       eraseFromParentAndMove(&I, II, BB);
+      Changed = true;
       return nullptr;
     }
 
@@ -817,6 +836,7 @@ public:
       updateShapeAndReplaceAllUsesWith(I, NewInst);
       eraseFromParentAndMove(&I, II, BB);
       eraseFromParentAndMove(TA, II, BB);
+      Changed = true;
       return NewInst;
     }
 
@@ -842,6 +862,7 @@ public:
       updateShapeAndReplaceAllUsesWith(I, NewInst);
       eraseFromParentAndMove(&I, II, BB);
       eraseFromParentAndMove(TA, II, BB);
+      Changed = true;
       return NewInst;
     }
 
@@ -863,21 +884,22 @@ public:
       updateShapeAndReplaceAllUsesWith(I, NewInst);
       eraseFromParentAndMove(&I, II, BB);
       eraseFromParentAndMove(TA, II, BB);
+      Changed = true;
       return NewInst;
     }
 
     return nullptr;
   }
 
-  void liftTranspose(Instruction &I) {
+  bool liftTranspose(Instruction &I) {
     // Erase dead Instructions after lifting transposes from binops.
-    auto CleanupBinOp = [](Instruction &T, Value *A, Value *B) {
+    auto CleanupBinOp = [this](Instruction &T, Value *A, Value *B) {
       if (T.use_empty())
-        T.eraseFromParent();
+        eraseFromParentAndRemoveFromShapeMap(&T);
       if (A->use_empty())
-        cast<Instruction>(A)->eraseFromParent();
+        eraseFromParentAndRemoveFromShapeMap(cast<Instruction>(A));
       if (A != B && B->use_empty())
-        cast<Instruction>(B)->eraseFromParent();
+        eraseFromParentAndRemoveFromShapeMap(cast<Instruction>(B));
     };
 
     Value *A, *B, *AT, *BT;
@@ -897,6 +919,7 @@ public:
                                                            R->getZExtValue());
       updateShapeAndReplaceAllUsesWith(I, NewInst);
       CleanupBinOp(I, A, B);
+      return true;
     }
     // A^t + B ^t -> (A + B)^t. Pick rows and columns from first transpose. If
     // the shape of the second transpose is different, there's a shape conflict
@@ -907,8 +930,7 @@ public:
              match(B, m_Intrinsic<Intrinsic::matrix_transpose>(
                           m_Value(BT), m_ConstantInt(), m_ConstantInt()))) {
       IRBuilder<> Builder(&I);
-      auto *Add = cast<Instruction>(Builder.CreateFAdd(AT, BT, "mfadd"));
-      setShapeInfo(Add, {R, C});
+      auto *Add = Builder.CreateFAdd(AT, BT, "mfadd");
       MatrixBuilder MBuilder(Builder);
       Instruction *NewInst = MBuilder.CreateMatrixTranspose(
           Add, R->getZExtValue(), C->getZExtValue(), "mfadd_t");
@@ -917,14 +939,21 @@ public:
                  computeShapeInfoForInst(&I, ShapeMap) &&
              "Shape of new instruction doesn't match original shape.");
       CleanupBinOp(I, A, B);
-      assert(computeShapeInfoForInst(Add, ShapeMap).value_or(ShapeMap[Add]) ==
-                 ShapeMap[Add] &&
-             "Shape of updated addition doesn't match cached shape.");
+      if (auto *AddI = dyn_cast<Instruction>(Add)) {
+        setShapeInfo(AddI, {R, C});
+        assert(
+            computeShapeInfoForInst(AddI, ShapeMap).value_or(ShapeMap[AddI]) ==
+                ShapeMap[AddI] &&
+            "Shape of updated addition doesn't match cached shape.");
+      }
+      return true;
     }
+    return false;
   }
 
   /// Try moving transposes in order to fold them away or into multiplies.
-  void optimizeTransposes() {
+  bool optimizeTransposes() {
+    bool Changed = false;
     // First sink all transposes inside matmuls and adds, hoping that we end up
     // with NN, NT or TN variants.
     for (BasicBlock &BB : reverse(Func)) {
@@ -932,7 +961,7 @@ public:
         Instruction &I = *II;
         // We may remove II.  By default continue on the next/prev instruction.
         ++II;
-        if (Instruction *NewInst = sinkTranspose(I, II))
+        if (Instruction *NewInst = sinkTranspose(I, II, Changed))
           II = std::next(BasicBlock::reverse_iterator(NewInst));
       }
     }
@@ -941,9 +970,10 @@ public:
     // to fold into consuming multiply or add.
     for (BasicBlock &BB : Func) {
       for (Instruction &I : llvm::make_early_inc_range(BB)) {
-        liftTranspose(I);
+        Changed |= liftTranspose(I);
       }
     }
+    return Changed;
   }
 
   bool Visit() {
@@ -986,15 +1016,15 @@ public:
       WorkList = propagateShapeBackward(WorkList);
     }
 
+    bool Changed = false;
     if (!isMinimal()) {
-      optimizeTransposes();
+      Changed |= optimizeTransposes();
       if (PrintAfterTransposeOpt) {
         dbgs() << "Dump after matrix transpose optimization:\n";
         Func.print(dbgs());
       }
     }
 
-    bool Changed = false;
     SmallVector<CallInst *, 16> MaybeFusableInsts;
     SmallVector<Instruction *, 16> MatrixInsts;
     SmallVector<IntrinsicInst *, 16> LifetimeEnds;
@@ -1006,7 +1036,7 @@ public:
       for (Instruction &I : *BB) {
         if (match(&I, m_Intrinsic<Intrinsic::lifetime_end>()))
           LifetimeEnds.push_back(cast<IntrinsicInst>(&I));
-        if (ShapeMap.find(&I) == ShapeMap.end())
+        if (!ShapeMap.contains(&I))
           continue;
         if (match(&I, m_Intrinsic<Intrinsic::matrix_multiply>()))
           MaybeFusableInsts.push_back(cast<CallInst>(&I));
@@ -1023,7 +1053,7 @@ public:
       if (!FusedInsts.contains(CI))
         LowerMatrixMultiplyFused(CI, FusedInsts, LifetimeEnds);
 
-    Changed = !FusedInsts.empty();
+    Changed |= !FusedInsts.empty();
 
     // Fourth, lower remaining instructions with shape information.
     for (Instruction *Inst : MatrixInsts) {
@@ -1324,7 +1354,7 @@ public:
     ToRemove.push_back(Inst);
     Value *Flattened = nullptr;
     for (Use &U : llvm::make_early_inc_range(Inst->uses())) {
-      if (ShapeMap.find(U.getUser()) == ShapeMap.end()) {
+      if (!ShapeMap.contains(U.getUser())) {
         if (!Flattened)
           Flattened = Matrix.embedInVector(Builder);
         U.set(Flattened);
@@ -1371,7 +1401,7 @@ public:
     // the returned cost is < 0, the argument is cheaper to use in the
     // dot-product lowering.
     auto GetCostForArg = [this, &CanBeFlattened](Value *Op, unsigned N) {
-      if (ShapeMap.find(Op) == ShapeMap.end())
+      if (!ShapeMap.contains(Op))
         return InstructionCost::getInvalid();
 
       if (!isa<Instruction>(Op))
@@ -1390,7 +1420,7 @@ public:
         return EmbedCost;
       }
 
-      if (match(Op, m_BinOp()) && ShapeMap.find(Op) != ShapeMap.end()) {
+      if (match(Op, m_BinOp()) && ShapeMap.contains(Op)) {
         InstructionCost OriginalCost =
             TTI.getArithmeticInstrCost(cast<Instruction>(Op)->getOpcode(),
                                        EltTy) *
@@ -1484,7 +1514,7 @@ public:
                         m_Value(Arg)))) {
         auto *NewLoad = Builder.CreateLoad(Op->getType(), Arg);
         Op->replaceAllUsesWith(NewLoad);
-        cast<Instruction>(Op)->eraseFromParent();
+        eraseFromParentAndRemoveFromShapeMap(cast<Instruction>(Op));
         return;
       } else if (match(Op, m_Intrinsic<Intrinsic::matrix_transpose>(
                                m_Value(Arg)))) {
@@ -1853,15 +1883,15 @@ public:
     // Mark eliminated instructions as fused and remove them.
     FusedInsts.insert(Store);
     FusedInsts.insert(MatMul);
-    Store->eraseFromParent();
-    MatMul->eraseFromParent();
-    if (LoadOp0->hasNUses(0)) {
+    eraseFromParentAndRemoveFromShapeMap(Store);
+    eraseFromParentAndRemoveFromShapeMap(MatMul);
+    if (LoadOp0->use_empty()) {
       FusedInsts.insert(LoadOp0);
-      LoadOp0->eraseFromParent();
+      eraseFromParentAndRemoveFromShapeMap(LoadOp0);
     }
-    if (LoadOp1 != LoadOp0 && LoadOp1->hasNUses(0)) {
+    if (LoadOp1 != LoadOp0 && LoadOp1->use_empty()) {
       FusedInsts.insert(LoadOp1);
-      LoadOp1->eraseFromParent();
+      eraseFromParentAndRemoveFromShapeMap(LoadOp1);
     }
   }
 
@@ -1952,14 +1982,14 @@ public:
         if (CurrI->mayHaveSideEffects() || CurrI->mayReadFromMemory())
           return;
         ToHoist.push_back(CurrI);
-        WorkList.insert(CurrI->op_begin(), CurrI->op_end());
+        WorkList.insert_range(CurrI->operands());
       }
 
       sort(ToHoist, [this](Instruction *A, Instruction *B) {
         return DT->dominates(A, B);
       });
       for (Instruction *I : ToHoist)
-        I->moveBefore(MatMul);
+        I->moveBefore(MatMul->getIterator());
 
       // Deal with lifetime.end calls that might be between Load0/Load1 and the
       // store. To avoid introducing loads to dead objects (i.e. after the

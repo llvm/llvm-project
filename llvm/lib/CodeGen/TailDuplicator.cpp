@@ -199,7 +199,7 @@ bool TailDuplicator::tailDuplicateAndUpdate(
 
   // Update SSA form.
   if (!SSAUpdateVRs.empty()) {
-    for (unsigned VReg : SSAUpdateVRs) {
+    for (Register VReg : SSAUpdateVRs) {
       SSAUpdate.Initialize(VReg);
 
       // If the original definition is still around, add it as an available
@@ -573,14 +573,6 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
   if (TailBB.isSuccessor(&TailBB))
     return false;
 
-  // Duplicating a BB which has both multiple predecessors and successors will
-  // result in a complex CFG and also may cause huge amount of PHI nodes. If we
-  // want to remove this limitation, we have to address
-  // https://github.com/llvm/llvm-project/issues/78578.
-  if (TailBB.pred_size() > TailDupPredSize &&
-      TailBB.succ_size() > TailDupSuccSize)
-    return false;
-
   // Set the limit on the cost to duplicate. When optimizing for size,
   // duplicate only one, because one branch instruction can be eliminated to
   // compensate for the duplication.
@@ -609,8 +601,11 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
   // that rearrange the predecessors of the indirect branch.
 
   bool HasIndirectbr = false;
-  if (!TailBB.empty())
+  bool HasComputedGoto = false;
+  if (!TailBB.empty()) {
     HasIndirectbr = TailBB.back().isIndirectBranch();
+    HasComputedGoto = TailBB.terminatorIsComputedGoto();
+  }
 
   if (HasIndirectbr && PreRegAlloc)
     MaxDuplicateCount = TailDupIndirectBranchSize;
@@ -618,6 +613,7 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
   // Check the instructions in the block to determine whether tail-duplication
   // is invalid or unlikely to be profitable.
   unsigned InstrCount = 0;
+  unsigned NumPhis = 0;
   for (MachineInstr &MI : TailBB) {
     // Non-duplicable things shouldn't be tail-duplicated.
     // CFI instructions are marked as non-duplicable, because Darwin compact
@@ -660,6 +656,25 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
       InstrCount += 1;
 
     if (InstrCount > MaxDuplicateCount)
+      return false;
+    NumPhis += MI.isPHI();
+  }
+
+  // Duplicating a BB which has both multiple predecessors and successors will
+  // may cause huge amount of PHI nodes. If we want to remove this limitation,
+  // we have to address https://github.com/llvm/llvm-project/issues/78578.
+  // NB. This basically unfactors computed gotos that were factored early on in
+  // the compilation process to speed up edge based data flow. If we do not
+  // unfactor them again, it can seriously pessimize code with many computed
+  // jumps in the source code, such as interpreters. Therefore we do not
+  // restrict the computed gotos.
+  if (!HasComputedGoto && TailBB.pred_size() > TailDupPredSize &&
+      TailBB.succ_size() > TailDupSuccSize) {
+    // If TailBB or any of its successors contains a phi, we may have to add a
+    // large number of additional phis with additional incoming values.
+    if (NumPhis != 0 || any_of(TailBB.successors(), [](MachineBasicBlock *MBB) {
+          return any_of(*MBB, [](MachineInstr &MI) { return MI.isPHI(); });
+        }))
       return false;
   }
 
@@ -736,8 +751,8 @@ bool TailDuplicator::canCompletelyDuplicateBB(MachineBasicBlock &BB) {
 bool TailDuplicator::duplicateSimpleBB(
     MachineBasicBlock *TailBB, SmallVectorImpl<MachineBasicBlock *> &TDBBs,
     const DenseSet<Register> &UsedByPhi) {
-  SmallPtrSet<MachineBasicBlock *, 8> Succs(TailBB->succ_begin(),
-                                            TailBB->succ_end());
+  SmallPtrSet<MachineBasicBlock *, 8> Succs(llvm::from_range,
+                                            TailBB->successors());
   SmallVector<MachineBasicBlock *, 8> Preds(TailBB->predecessors());
   bool Changed = false;
   for (MachineBasicBlock *PredBB : Preds) {
@@ -861,9 +876,9 @@ bool TailDuplicator::tailDuplicate(bool IsSimple, MachineBasicBlock *TailBB,
   bool Changed = false;
   SmallSetVector<MachineBasicBlock *, 8> Preds;
   if (CandidatePtr)
-    Preds.insert(CandidatePtr->begin(), CandidatePtr->end());
+    Preds.insert_range(*CandidatePtr);
   else
-    Preds.insert(TailBB->pred_begin(), TailBB->pred_end());
+    Preds.insert_range(TailBB->predecessors());
 
   for (MachineBasicBlock *PredBB : Preds) {
     assert(TailBB != PredBB &&
@@ -1068,10 +1083,10 @@ void TailDuplicator::removeDeadBlock(
   LLVM_DEBUG(dbgs() << "\nRemoving MBB: " << *MBB);
 
   MachineFunction *MF = MBB->getParent();
-  // Update the call site info.
+  // Update the call info.
   for (const MachineInstr &MI : *MBB)
-    if (MI.shouldUpdateCallSiteInfo())
-      MF->eraseCallSiteInfo(&MI);
+    if (MI.shouldUpdateAdditionalCallInfo())
+      MF->eraseAdditionalCallInfo(&MI);
 
   if (RemovalCallback)
     (*RemovalCallback)(MBB);

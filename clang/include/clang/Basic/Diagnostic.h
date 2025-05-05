@@ -284,7 +284,10 @@ public:
     ak_qualtype_pair,
 
     /// Attr *
-    ak_attr
+    ak_attr,
+
+    /// Expr *
+    ak_expr,
   };
 
   /// Represents on argument value, which is a union discriminated
@@ -375,10 +378,12 @@ private:
     // Map extensions to warnings or errors?
     diag::Severity ExtBehavior = diag::Severity::Ignored;
 
-    DiagState()
+    DiagnosticIDs &DiagIDs;
+
+    DiagState(DiagnosticIDs &DiagIDs)
         : IgnoreAllWarnings(false), EnableAllWarnings(false),
           WarningsAsErrors(false), ErrorsAsFatal(false),
-          SuppressSystemWarnings(false) {}
+          SuppressSystemWarnings(false), DiagIDs(DiagIDs) {}
 
     using iterator = llvm::DenseMap<unsigned, DiagnosticMapping>::iterator;
     using const_iterator =
@@ -560,7 +565,8 @@ private:
   ArgToStringFnTy ArgToStringFn;
 
   /// Whether the diagnostic should be suppressed in FilePath.
-  llvm::unique_function<bool(diag::kind, StringRef /*FilePath*/) const>
+  llvm::unique_function<bool(diag::kind, SourceLocation /*DiagLoc*/,
+                             const SourceManager &) const>
       DiagSuppressionMapping;
 
 public:
@@ -892,6 +898,8 @@ public:
   /// \param FormatString A fixed diagnostic format string that will be hashed
   /// and mapped to a unique DiagID.
   template <unsigned N>
+  // TODO: Deprecate this once all uses are removed from Clang.
+  // [[deprecated("Use a CustomDiagDesc instead of a Level")]]
   unsigned getCustomDiagID(Level L, const char (&FormatString)[N]) {
     return Diags->getCustomDiagID((DiagnosticIDs::Level)L,
                                   StringRef(FormatString, N - 1));
@@ -972,7 +980,7 @@ public:
   /// These take presumed locations into account, and can still be overriden by
   /// clang-diagnostics pragmas.
   void setDiagSuppressionMapping(llvm::MemoryBuffer &Input);
-  bool isSuppressedViaMapping(diag::kind DiagId, StringRef FilePath) const;
+  bool isSuppressedViaMapping(diag::kind DiagId, SourceLocation DiagLoc) const;
 
   /// Issue the message to the client.
   ///
@@ -1418,6 +1426,25 @@ inline std::enable_if_t<
 operator<<(const StreamingDiagnostic &DB, T *DC) {
   DB.AddTaggedVal(reinterpret_cast<intptr_t>(DC),
                   DiagnosticsEngine::ak_declcontext);
+  return DB;
+}
+
+// Convert scoped enums to their underlying type, so that we don't have
+// clutter the emitting code with `llvm::to_underlying()`.
+// We also need to disable implicit conversion for the first argument,
+// because classes that derive from StreamingDiagnostic define their own
+// templated operator<< that accept a wide variety of types, leading
+// to ambiguity.
+template <typename T, typename U,
+          typename UnderlyingU = typename std::enable_if_t<
+              std::is_enum_v<std::remove_reference_t<U>>,
+              std::underlying_type<std::remove_reference_t<U>>>::type>
+inline std::enable_if_t<
+    std::is_same_v<std::remove_const_t<T>, StreamingDiagnostic> &&
+        !std::is_convertible_v<U, UnderlyingU>,
+    const StreamingDiagnostic &>
+operator<<(const T &DB, U &&SE) {
+  DB << llvm::to_underlying(SE);
   return DB;
 }
 

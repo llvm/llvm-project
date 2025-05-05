@@ -6,12 +6,12 @@
 
 target datalayout = "e-m:e-p:16:16-p1:32:16-i32:16-i64:16-n8:16"
 
-define void @foo() {
+define void @foo(i1 %arg) {
 ; CHECK-LABEL: @foo
 entry:
   %arrayidx.i1 = getelementptr inbounds i16, ptr undef, i16 undef
   %arrayidx.i = addrspacecast ptr %arrayidx.i1 to ptr addrspace(1)
-  br i1 undef, label %for.body.i, label %bar.exit
+  br i1 %arg, label %for.body.i, label %bar.exit
 
 for.body.i:                                       ; preds = %for.body.i, %entry
 ; When we call makeLoopInvariant (i.e. trivial LICM) on this load, it

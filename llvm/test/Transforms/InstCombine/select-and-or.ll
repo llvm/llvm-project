@@ -445,7 +445,7 @@ define i1 @demorgan_select_infloop1(i1 %L) {
 define i1 @demorgan_select_infloop2(i1 %L) {
 ; CHECK-LABEL: @demorgan_select_infloop2(
 ; CHECK-NEXT:    [[NOT_L:%.*]] = xor i1 [[L:%.*]], true
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne ptr getelementptr inbounds (i8, ptr @g2, i64 2), @g1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne ptr getelementptr inbounds nuw (i8, ptr @g2, i64 2), @g1
 ; CHECK-NEXT:    [[C15:%.*]] = select i1 [[NOT_L]], i1 [[CMP2]], i1 false
 ; CHECK-NEXT:    ret i1 [[C15]]
 ;

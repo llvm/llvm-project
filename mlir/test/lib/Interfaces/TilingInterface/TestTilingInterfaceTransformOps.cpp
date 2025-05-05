@@ -169,10 +169,10 @@ transform::TestFuseAndYieldOp::apply(TransformRewriter &rewriter,
 /// Apply fusing of consumer transformation to all payload ops and store both
 /// the original consumer operation as well as the fused consumer operation.
 template <typename Range>
-static LogicalResult
-applyFuseConsumer(RewriterBase &rewriter, Operation *transformOp,
-                  Range &&payloadOps, uint32_t numConsumerToFuse,
-                  TransformResults &transformResults) {
+static LogicalResult applyFuseConsumer(
+    RewriterBase &rewriter, Operation *transformOp, Range &&payloadOps,
+    MutableArrayRef<LoopLikeOpInterface> loops, uint32_t numConsumerToFuse,
+    TransformResults &transformResults) {
   SmallVector<Operation *> originalConsumerOps;
   SmallVector<Operation *> fusedConsumerOps;
 
@@ -181,7 +181,7 @@ applyFuseConsumer(RewriterBase &rewriter, Operation *transformOp,
 
     while (numConsumerToFuse--) {
       FailureOr<scf::SCFFuseConsumerOfSliceResult> fuseConsumerResults =
-          scf::tileAndFuseConsumerOfSlice(rewriter, target);
+          scf::tileAndFuseConsumerOfSlice(rewriter, target, loops);
 
       if (failed(fuseConsumerResults))
         return failure();
@@ -203,8 +203,17 @@ DiagnosedSilenceableFailure
 transform::TestFuseConsumerOp::apply(TransformRewriter &rewriter,
                                      TransformResults &transformResults,
                                      TransformState &state) {
+  SmallVector<LoopLikeOpInterface> loops;
+  for (auto op : llvm::reverse(getLoops())) {
+    auto loopLikeOp =
+        dyn_cast<LoopLikeOpInterface>(*state.getPayloadOps(op).begin());
+    if (!loopLikeOp) {
+      return DiagnosedSilenceableFailure::definiteFailure();
+    }
+    loops.push_back(loopLikeOp);
+  }
   LogicalResult result = applyFuseConsumer(
-      rewriter, getOperation(), state.getPayloadOps(getTarget()),
+      rewriter, getOperation(), state.getPayloadOps(getTarget()), loops,
       getNumConsumerToFuse(), transformResults);
   return failed(result) ? DiagnosedSilenceableFailure::definiteFailure()
                         : DiagnosedSilenceableFailure::success();
@@ -213,6 +222,7 @@ transform::TestFuseConsumerOp::apply(TransformRewriter &rewriter,
 void transform::TestFuseConsumerOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   consumesHandle(getTargetMutable(), effects);
+  consumesHandle(getLoopsMutable(), effects);
   producesHandle(getOperation()->getOpResults(), effects);
   modifiesPayload(effects);
 }
@@ -250,7 +260,8 @@ applyTileToAll(RewriterBase &rewriter, Operation *transformOp,
       return failure();
 
     // Perform the replacement of tiled and fused values.
-    rewriter.replaceOp(tilingInterfaceOp, tiledResults->replacements);
+    rewriter.replaceOp(tilingInterfaceOp,
+                       tiledResults->mergeResult.replacements);
 
     // Report back the relevant handles to the transform op.
     tiledOps.push_back(tiledResults->tiledOps.front());

@@ -47,7 +47,10 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFTarget() {
   initializeGlobalISel(PR);
   initializeBPFCheckAndAdjustIRPass(PR);
   initializeBPFMIPeepholePass(PR);
+  initializeBPFMIPreEmitPeepholePass(PR);
   initializeBPFDAGToDAGISelLegacyPass(PR);
+  initializeBPFMISimplifyPatchablePass(PR);
+  initializeBPFMIPreEmitCheckingPass(PR);
 }
 
 // DataLayout: little or big endian
@@ -151,7 +154,7 @@ void BPFPassConfig::addIRPasses() {
 
 TargetTransformInfo
 BPFTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(BPFTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<BPFTTIImpl>(this, F));
 }
 
 // Install an instruction selector pass using

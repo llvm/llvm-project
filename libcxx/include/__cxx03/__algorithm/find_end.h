@@ -7,19 +7,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_FIND_END_OF_H
-#define _LIBCPP___ALGORITHM_FIND_END_OF_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_FIND_END_OF_H
+#define _LIBCPP___CXX03___ALGORITHM_FIND_END_OF_H
 
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__algorithm/iterator_operations.h>
 #include <__cxx03/__algorithm/search.h>
 #include <__cxx03/__config>
 #include <__cxx03/__functional/identity.h>
-#include <__cxx03/__functional/invoke.h>
 #include <__cxx03/__iterator/advance.h>
 #include <__cxx03/__iterator/iterator_traits.h>
 #include <__cxx03/__iterator/next.h>
 #include <__cxx03/__iterator/reverse_iterator.h>
+#include <__cxx03/__type_traits/invoke.h>
 #include <__cxx03/__utility/pair.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -222,4 +222,4 @@ find_end(_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_FIND_END_OF_H
+#endif // _LIBCPP___CXX03___ALGORITHM_FIND_END_OF_H

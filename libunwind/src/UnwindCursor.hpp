@@ -11,7 +11,7 @@
 #ifndef __UNWINDCURSOR_HPP__
 #define __UNWINDCURSOR_HPP__
 
-#include "cet_unwind.h"
+#include "shadow_stack_unwind.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,8 +31,9 @@
 #endif
 
 #if defined(_LIBUNWIND_TARGET_LINUX) &&                                        \
-    (defined(_LIBUNWIND_TARGET_AARCH64) || defined(_LIBUNWIND_TARGET_RISCV) || \
-     defined(_LIBUNWIND_TARGET_S390X))
+    (defined(_LIBUNWIND_TARGET_AARCH64) ||                                     \
+     defined(_LIBUNWIND_TARGET_LOONGARCH) ||                                   \
+     defined(_LIBUNWIND_TARGET_RISCV) || defined(_LIBUNWIND_TARGET_S390X))
 #include <errno.h>
 #include <signal.h>
 #include <sys/syscall.h>
@@ -996,6 +997,10 @@ private:
   bool setInfoForSigReturn(Registers_arm64 &);
   int stepThroughSigReturn(Registers_arm64 &);
 #endif
+#if defined(_LIBUNWIND_TARGET_LOONGARCH)
+  bool setInfoForSigReturn(Registers_loongarch &);
+  int stepThroughSigReturn(Registers_loongarch &);
+#endif
 #if defined(_LIBUNWIND_TARGET_RISCV)
   bool setInfoForSigReturn(Registers_riscv &);
   int stepThroughSigReturn(Registers_riscv &);
@@ -1010,6 +1015,9 @@ private:
   template <typename Registers> int stepThroughSigReturn(Registers &) {
     return UNW_STEP_END;
   }
+#elif defined(_LIBUNWIND_TARGET_HAIKU)
+  bool setInfoForSigReturn();
+  int stepThroughSigReturn();
 #endif
 
 #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
@@ -1313,7 +1321,8 @@ private:
   unw_proc_info_t  _info;
   bool             _unwindInfoMissing;
   bool             _isSignalFrame;
-#if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN)
+#if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) ||                               \
+    defined(_LIBUNWIND_TARGET_HAIKU)
   bool             _isSigReturn = false;
 #endif
 };
@@ -2549,7 +2558,8 @@ int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
 
 template <typename A, typename R>
 void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
-#if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN)
+#if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) ||                               \
+    defined(_LIBUNWIND_TARGET_HAIKU)
   _isSigReturn = false;
 #endif
 
@@ -2673,7 +2683,8 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
   }
 #endif // #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
 
-#if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN)
+#if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) ||                               \
+    defined(_LIBUNWIND_TARGET_HAIKU)
   if (setInfoForSigReturn())
     return;
 #endif
@@ -2749,8 +2760,120 @@ int UnwindCursor<A, R>::stepThroughSigReturn(Registers_arm64 &) {
   _isSignalFrame = true;
   return UNW_STEP_SUCCESS;
 }
+
+#elif defined(_LIBUNWIND_TARGET_HAIKU) && defined(_LIBUNWIND_TARGET_X86_64)
+#include <commpage_defs.h>
+#include <signal.h>
+
+extern "C" {
+extern void *__gCommPageAddress;
+}
+
+template <typename A, typename R>
+bool UnwindCursor<A, R>::setInfoForSigReturn() {
+#if defined(_LIBUNWIND_TARGET_X86_64)
+  addr_t signal_handler =
+      (((addr_t *)__gCommPageAddress)[COMMPAGE_ENTRY_X86_SIGNAL_HANDLER] +
+       (addr_t)__gCommPageAddress);
+  addr_t signal_handler_ret = signal_handler + 45;
+#endif
+  pint_t pc = static_cast<pint_t>(this->getReg(UNW_REG_IP));
+  if (pc == signal_handler_ret) {
+    _info = {};
+    _info.start_ip = signal_handler;
+    _info.end_ip = signal_handler_ret;
+    _isSigReturn = true;
+    return true;
+  }
+  return false;
+}
+
+template <typename A, typename R>
+int UnwindCursor<A, R>::stepThroughSigReturn() {
+  _isSignalFrame = true;
+  pint_t sp = _registers.getSP();
+#if defined(_LIBUNWIND_TARGET_X86_64)
+  vregs *regs = (vregs *)(sp + 0x70);
+
+  _registers.setRegister(UNW_REG_IP, regs->rip);
+  _registers.setRegister(UNW_REG_SP, regs->rsp);
+  _registers.setRegister(UNW_X86_64_RAX, regs->rax);
+  _registers.setRegister(UNW_X86_64_RDX, regs->rdx);
+  _registers.setRegister(UNW_X86_64_RCX, regs->rcx);
+  _registers.setRegister(UNW_X86_64_RBX, regs->rbx);
+  _registers.setRegister(UNW_X86_64_RSI, regs->rsi);
+  _registers.setRegister(UNW_X86_64_RDI, regs->rdi);
+  _registers.setRegister(UNW_X86_64_RBP, regs->rbp);
+  _registers.setRegister(UNW_X86_64_R8, regs->r8);
+  _registers.setRegister(UNW_X86_64_R9, regs->r9);
+  _registers.setRegister(UNW_X86_64_R10, regs->r10);
+  _registers.setRegister(UNW_X86_64_R11, regs->r11);
+  _registers.setRegister(UNW_X86_64_R12, regs->r12);
+  _registers.setRegister(UNW_X86_64_R13, regs->r13);
+  _registers.setRegister(UNW_X86_64_R14, regs->r14);
+  _registers.setRegister(UNW_X86_64_R15, regs->r15);
+  // TODO: XMM
+#endif
+
+  return UNW_STEP_SUCCESS;
+}
 #endif // defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&
        // defined(_LIBUNWIND_TARGET_AARCH64)
+
+#if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&                               \
+    defined(_LIBUNWIND_TARGET_LOONGARCH)
+template <typename A, typename R>
+bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_loongarch &) {
+  const pint_t pc = static_cast<pint_t>(getReg(UNW_REG_IP));
+  // The PC might contain an invalid address if the unwind info is bad, so
+  // directly accessing it could cause a SIGSEGV.
+  if (!isReadableAddr(pc))
+    return false;
+  const auto *instructions = reinterpret_cast<const uint32_t *>(pc);
+  // Look for the two instructions used in the sigreturn trampoline
+  // __vdso_rt_sigreturn:
+  //
+  // 0x03822c0b li a7,0x8b
+  // 0x002b0000 syscall 0
+  if (instructions[0] != 0x03822c0b || instructions[1] != 0x002b0000)
+    return false;
+
+  _info = {};
+  _info.start_ip = pc;
+  _info.end_ip = pc + 4;
+  _isSigReturn = true;
+  return true;
+}
+
+template <typename A, typename R>
+int UnwindCursor<A, R>::stepThroughSigReturn(Registers_loongarch &) {
+  // In the signal trampoline frame, sp points to an rt_sigframe[1], which is:
+  //  - 128-byte siginfo struct
+  //  - ucontext_t struct:
+  //     - 8-byte long (__uc_flags)
+  //     - 8-byte pointer (*uc_link)
+  //     - 24-byte uc_stack
+  //     - 8-byte uc_sigmask
+  //     - 120-byte of padding to allow sigset_t to be expanded in the future
+  //     - 8 bytes of padding because sigcontext has 16-byte alignment
+  //     - struct sigcontext uc_mcontext
+  // [1]
+  // https://github.com/torvalds/linux/blob/master/arch/loongarch/kernel/signal.c
+  const pint_t kOffsetSpToSigcontext = 128 + 8 + 8 + 24 + 8 + 128;
+
+  const pint_t sigctx = _registers.getSP() + kOffsetSpToSigcontext;
+  _registers.setIP(_addressSpace.get64(sigctx));
+  for (int i = UNW_LOONGARCH_R1; i <= UNW_LOONGARCH_R31; ++i) {
+    // skip R0
+    uint64_t value =
+        _addressSpace.get64(sigctx + static_cast<pint_t>((i + 1) * 8));
+    _registers.setRegister(i, value);
+  }
+  _isSignalFrame = true;
+  return UNW_STEP_SUCCESS;
+}
+#endif // defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&
+       // defined(_LIBUNWIND_TARGET_LOONGARCH)
 
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&                               \
     defined(_LIBUNWIND_TARGET_RISCV)
@@ -2917,7 +3040,8 @@ template <typename A, typename R> int UnwindCursor<A, R>::step(bool stage2) {
 
   // Use unwinding info to modify register set as if function returned.
   int result;
-#if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN)
+#if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) ||                               \
+    defined(_LIBUNWIND_TARGET_HAIKU)
   if (_isSigReturn) {
     result = this->stepThroughSigReturn();
   } else
@@ -2998,7 +3122,7 @@ bool UnwindCursor<A, R>::isReadableAddr(const pint_t addr) const {
 #endif
 
 #if defined(_LIBUNWIND_USE_CET) || defined(_LIBUNWIND_USE_GCS)
-extern "C" void *__libunwind_cet_get_registers(unw_cursor_t *cursor) {
+extern "C" void *__libunwind_shstk_get_registers(unw_cursor_t *cursor) {
   AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
   return co->get_registers();
 }

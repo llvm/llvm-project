@@ -9,7 +9,7 @@
 ...
 
 # CHECK-LABEL: fun0:
-# CHECK: ld      %f1, 160(%r15)          # 8-byte Folded Reload
+# CHECK: ld      %f1, 160(%r15)          # 8-byte Reload
 # CHECK-NEXT: wfadb   %f0, %f0, %f1
 ---
 name:            fun0

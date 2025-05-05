@@ -11,6 +11,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/VectorTypeUtils.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <limits>
@@ -346,12 +347,20 @@ getScalableECFromSignature(const FunctionType *Signature, const VFISAKind ISA,
   // Also check the return type if not void.
   Type *RetTy = Signature->getReturnType();
   if (!RetTy->isVoidTy()) {
-    std::optional<ElementCount> ReturnEC = getElementCountForTy(ISA, RetTy);
-    // If we have an unknown scalar element type we can't find a reasonable VF.
-    if (!ReturnEC)
+    // If the return type is a struct, only allow unpacked struct literals.
+    StructType *StructTy = dyn_cast<StructType>(RetTy);
+    if (StructTy && !isUnpackedStructLiteral(StructTy))
       return std::nullopt;
-    if (ElementCount::isKnownLT(*ReturnEC, MinEC))
-      MinEC = *ReturnEC;
+
+    for (Type *RetTy : getContainedTypes(RetTy)) {
+      std::optional<ElementCount> ReturnEC = getElementCountForTy(ISA, RetTy);
+      // If we have an unknown scalar element type we can't find a reasonable
+      // VF.
+      if (!ReturnEC)
+        return std::nullopt;
+      if (ElementCount::isKnownLT(*ReturnEC, MinEC))
+        MinEC = *ReturnEC;
+    }
   }
 
   // The SVE Vector function call ABI bases the VF on the widest element types
@@ -532,7 +541,7 @@ void VFABI::getVectorVariantNames(
   SmallVector<StringRef, 8> ListAttr;
   S.split(ListAttr, ",");
 
-  for (const auto &S : SetVector<StringRef>(ListAttr.begin(), ListAttr.end())) {
+  for (const auto &S : SetVector<StringRef>(llvm::from_range, ListAttr)) {
     std::optional<VFInfo> Info =
         VFABI::tryDemangleForVFABI(S, CI.getFunctionType());
     if (Info && CI.getModule()->getFunction(Info->VectorName)) {
@@ -566,7 +575,7 @@ FunctionType *VFABI::createFunctionType(const VFInfo &Info,
 
   auto *RetTy = ScalarFTy->getReturnType();
   if (!RetTy->isVoidTy())
-    RetTy = VectorType::get(RetTy, VF);
+    RetTy = toVectorizedTy(RetTy, VF);
   return FunctionType::get(RetTy, VecTypes, false);
 }
 

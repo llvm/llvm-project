@@ -50,7 +50,7 @@ declare double @llvm.fma.f64(double, double, double) #0
 define float @ceil_float(float %a) {
 ; CHECK-LABEL: ceil_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [ceil_float_param_0];
@@ -64,7 +64,7 @@ define float @ceil_float(float %a) {
 define float @ceil_float_ftz(float %a) #1 {
 ; CHECK-LABEL: ceil_float_ftz(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [ceil_float_ftz_param_0];
@@ -78,7 +78,7 @@ define float @ceil_float_ftz(float %a) #1 {
 define double @ceil_double(double %a) {
 ; CHECK-LABEL: ceil_double(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f64 %fd1, [ceil_double_param_0];
@@ -94,7 +94,7 @@ define double @ceil_double(double %a) {
 define float @floor_float(float %a) {
 ; CHECK-LABEL: floor_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [floor_float_param_0];
@@ -108,7 +108,7 @@ define float @floor_float(float %a) {
 define float @floor_float_ftz(float %a) #1 {
 ; CHECK-LABEL: floor_float_ftz(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [floor_float_ftz_param_0];
@@ -122,7 +122,7 @@ define float @floor_float_ftz(float %a) #1 {
 define double @floor_double(double %a) {
 ; CHECK-LABEL: floor_double(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f64 %fd1, [floor_double_param_0];
@@ -141,7 +141,7 @@ define float @round_float(float %a) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<3>;
 ; CHECK-NEXT:    .reg .b32 %r<4>;
-; CHECK-NEXT:    .reg .f32 %f<9>;
+; CHECK-NEXT:    .reg .b32 %f<9>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [round_float_param_0];
@@ -169,7 +169,7 @@ define float @round_float_ftz(float %a) #1 {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<3>;
 ; CHECK-NEXT:    .reg .b32 %r<4>;
-; CHECK-NEXT:    .reg .f32 %f<9>;
+; CHECK-NEXT:    .reg .b32 %f<9>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [round_float_ftz_param_0];
@@ -196,7 +196,7 @@ define double @round_double(double %a) {
 ; CHECK-LABEL: round_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<3>;
-; CHECK-NEXT:    .reg .f64 %fd<8>;
+; CHECK-NEXT:    .reg .b64 %fd<8>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f64 %fd1, [round_double_param_0];
@@ -219,7 +219,7 @@ define double @round_double(double %a) {
 define float @nearbyint_float(float %a) {
 ; CHECK-LABEL: nearbyint_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [nearbyint_float_param_0];
@@ -233,7 +233,7 @@ define float @nearbyint_float(float %a) {
 define float @nearbyint_float_ftz(float %a) #1 {
 ; CHECK-LABEL: nearbyint_float_ftz(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [nearbyint_float_ftz_param_0];
@@ -247,7 +247,7 @@ define float @nearbyint_float_ftz(float %a) #1 {
 define double @nearbyint_double(double %a) {
 ; CHECK-LABEL: nearbyint_double(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f64 %fd1, [nearbyint_double_param_0];
@@ -263,7 +263,7 @@ define double @nearbyint_double(double %a) {
 define float @rint_float(float %a) {
 ; CHECK-LABEL: rint_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [rint_float_param_0];
@@ -277,7 +277,7 @@ define float @rint_float(float %a) {
 define float @rint_float_ftz(float %a) #1 {
 ; CHECK-LABEL: rint_float_ftz(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [rint_float_ftz_param_0];
@@ -291,7 +291,7 @@ define float @rint_float_ftz(float %a) #1 {
 define double @rint_double(double %a) {
 ; CHECK-LABEL: rint_double(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f64 %fd1, [rint_double_param_0];
@@ -307,7 +307,7 @@ define double @rint_double(double %a) {
 define float @roundeven_float(float %a) {
 ; CHECK-LABEL: roundeven_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [roundeven_float_param_0];
@@ -321,7 +321,7 @@ define float @roundeven_float(float %a) {
 define float @roundeven_float_ftz(float %a) #1 {
 ; CHECK-LABEL: roundeven_float_ftz(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [roundeven_float_ftz_param_0];
@@ -335,7 +335,7 @@ define float @roundeven_float_ftz(float %a) #1 {
 define double @roundeven_double(double %a) {
 ; CHECK-LABEL: roundeven_double(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f64 %fd1, [roundeven_double_param_0];
@@ -351,7 +351,7 @@ define double @roundeven_double(double %a) {
 define float @trunc_float(float %a) {
 ; CHECK-LABEL: trunc_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [trunc_float_param_0];
@@ -365,7 +365,7 @@ define float @trunc_float(float %a) {
 define float @trunc_float_ftz(float %a) #1 {
 ; CHECK-LABEL: trunc_float_ftz(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [trunc_float_ftz_param_0];
@@ -379,7 +379,7 @@ define float @trunc_float_ftz(float %a) #1 {
 define double @trunc_double(double %a) {
 ; CHECK-LABEL: trunc_double(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f64 %fd1, [trunc_double_param_0];
@@ -395,7 +395,7 @@ define double @trunc_double(double %a) {
 define float @abs_float(float %a) {
 ; CHECK-LABEL: abs_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [abs_float_param_0];
@@ -409,7 +409,7 @@ define float @abs_float(float %a) {
 define float @abs_float_ftz(float %a) #1 {
 ; CHECK-LABEL: abs_float_ftz(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [abs_float_ftz_param_0];
@@ -423,7 +423,7 @@ define float @abs_float_ftz(float %a) #1 {
 define double @abs_double(double %a) {
 ; CHECK-LABEL: abs_double(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f64 %fd1, [abs_double_param_0];
@@ -440,7 +440,7 @@ define half @minnum_half(half %a, half %b) {
 ; CHECK-NOF16-LABEL: minnum_half(
 ; CHECK-NOF16:       {
 ; CHECK-NOF16-NEXT:    .reg .b16 %rs<4>;
-; CHECK-NOF16-NEXT:    .reg .f32 %f<4>;
+; CHECK-NOF16-NEXT:    .reg .b32 %f<4>;
 ; CHECK-NOF16-EMPTY:
 ; CHECK-NOF16-NEXT:  // %bb.0:
 ; CHECK-NOF16-NEXT:    ld.param.b16 %rs1, [minnum_half_param_0];
@@ -466,7 +466,7 @@ define half @minnum_half(half %a, half %b) {
 ; CHECK-SM80-NOF16-LABEL: minnum_half(
 ; CHECK-SM80-NOF16:       {
 ; CHECK-SM80-NOF16-NEXT:    .reg .b16 %rs<4>;
-; CHECK-SM80-NOF16-NEXT:    .reg .f32 %f<4>;
+; CHECK-SM80-NOF16-NEXT:    .reg .b32 %f<4>;
 ; CHECK-SM80-NOF16-EMPTY:
 ; CHECK-SM80-NOF16-NEXT:  // %bb.0:
 ; CHECK-SM80-NOF16-NEXT:    ld.param.b16 %rs1, [minnum_half_param_0];
@@ -484,7 +484,7 @@ define half @minnum_half(half %a, half %b) {
 define float @minnum_float(float %a, float %b) {
 ; CHECK-LABEL: minnum_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<4>;
+; CHECK-NEXT:    .reg .b32 %f<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [minnum_float_param_0];
@@ -499,7 +499,7 @@ define float @minnum_float(float %a, float %b) {
 define float @minnum_imm1(float %a) {
 ; CHECK-LABEL: minnum_imm1(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [minnum_imm1_param_0];
@@ -513,7 +513,7 @@ define float @minnum_imm1(float %a) {
 define float @minnum_imm2(float %a) {
 ; CHECK-LABEL: minnum_imm2(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [minnum_imm2_param_0];
@@ -527,7 +527,7 @@ define float @minnum_imm2(float %a) {
 define float @minnum_float_ftz(float %a, float %b) #1 {
 ; CHECK-LABEL: minnum_float_ftz(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<4>;
+; CHECK-NEXT:    .reg .b32 %f<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [minnum_float_ftz_param_0];
@@ -542,7 +542,7 @@ define float @minnum_float_ftz(float %a, float %b) #1 {
 define double @minnum_double(double %a, double %b) {
 ; CHECK-LABEL: minnum_double(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f64 %fd<4>;
+; CHECK-NEXT:    .reg .b64 %fd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f64 %fd1, [minnum_double_param_0];
@@ -559,7 +559,7 @@ define <2 x half> @minnum_v2half(<2 x half> %a, <2 x half> %b) {
 ; CHECK-NOF16:       {
 ; CHECK-NOF16-NEXT:    .reg .b16 %rs<7>;
 ; CHECK-NOF16-NEXT:    .reg .b32 %r<4>;
-; CHECK-NOF16-NEXT:    .reg .f32 %f<7>;
+; CHECK-NOF16-NEXT:    .reg .b32 %f<7>;
 ; CHECK-NOF16-EMPTY:
 ; CHECK-NOF16-NEXT:  // %bb.0:
 ; CHECK-NOF16-NEXT:    ld.param.b32 %r1, [minnum_v2half_param_0];
@@ -593,7 +593,7 @@ define <2 x half> @minnum_v2half(<2 x half> %a, <2 x half> %b) {
 ; CHECK-SM80-NOF16:       {
 ; CHECK-SM80-NOF16-NEXT:    .reg .b16 %rs<7>;
 ; CHECK-SM80-NOF16-NEXT:    .reg .b32 %r<4>;
-; CHECK-SM80-NOF16-NEXT:    .reg .f32 %f<7>;
+; CHECK-SM80-NOF16-NEXT:    .reg .b32 %f<7>;
 ; CHECK-SM80-NOF16-EMPTY:
 ; CHECK-SM80-NOF16-NEXT:  // %bb.0:
 ; CHECK-SM80-NOF16-NEXT:    ld.param.b32 %r1, [minnum_v2half_param_0];
@@ -621,26 +621,26 @@ define half @minimum_half(half %a, half %b) {
 ; CHECK-NOF16-LABEL: minimum_half(
 ; CHECK-NOF16:       {
 ; CHECK-NOF16-NEXT:    .reg .pred %p<6>;
-; CHECK-NOF16-NEXT:    .reg .b16 %rs<10>;
-; CHECK-NOF16-NEXT:    .reg .f32 %f<4>;
+; CHECK-NOF16-NEXT:    .reg .b16 %rs<8>;
+; CHECK-NOF16-NEXT:    .reg .b32 %f<4>;
 ; CHECK-NOF16-EMPTY:
 ; CHECK-NOF16-NEXT:  // %bb.0:
 ; CHECK-NOF16-NEXT:    ld.param.b16 %rs1, [minimum_half_param_0];
-; CHECK-NOF16-NEXT:    ld.param.b16 %rs3, [minimum_half_param_1];
-; CHECK-NOF16-NEXT:    cvt.f32.f16 %f1, %rs3;
+; CHECK-NOF16-NEXT:    ld.param.b16 %rs2, [minimum_half_param_1];
+; CHECK-NOF16-NEXT:    cvt.f32.f16 %f1, %rs2;
 ; CHECK-NOF16-NEXT:    cvt.f32.f16 %f2, %rs1;
 ; CHECK-NOF16-NEXT:    setp.lt.f32 %p1, %f2, %f1;
-; CHECK-NOF16-NEXT:    selp.b16 %rs4, %rs1, %rs3, %p1;
+; CHECK-NOF16-NEXT:    selp.b16 %rs3, %rs1, %rs2, %p1;
 ; CHECK-NOF16-NEXT:    setp.nan.f32 %p2, %f2, %f1;
-; CHECK-NOF16-NEXT:    selp.b16 %rs5, 0x7E00, %rs4, %p2;
+; CHECK-NOF16-NEXT:    selp.b16 %rs4, 0x7E00, %rs3, %p2;
 ; CHECK-NOF16-NEXT:    setp.eq.s16 %p3, %rs1, -32768;
-; CHECK-NOF16-NEXT:    selp.b16 %rs6, %rs1, %rs5, %p3;
-; CHECK-NOF16-NEXT:    setp.eq.s16 %p4, %rs3, -32768;
-; CHECK-NOF16-NEXT:    selp.b16 %rs8, %rs3, %rs6, %p4;
-; CHECK-NOF16-NEXT:    cvt.f32.f16 %f3, %rs5;
+; CHECK-NOF16-NEXT:    selp.b16 %rs5, %rs1, %rs4, %p3;
+; CHECK-NOF16-NEXT:    setp.eq.s16 %p4, %rs2, -32768;
+; CHECK-NOF16-NEXT:    selp.b16 %rs6, %rs2, %rs5, %p4;
+; CHECK-NOF16-NEXT:    cvt.f32.f16 %f3, %rs4;
 ; CHECK-NOF16-NEXT:    setp.eq.f32 %p5, %f3, 0f00000000;
-; CHECK-NOF16-NEXT:    selp.b16 %rs9, %rs8, %rs5, %p5;
-; CHECK-NOF16-NEXT:    st.param.b16 [func_retval0], %rs9;
+; CHECK-NOF16-NEXT:    selp.b16 %rs7, %rs6, %rs4, %p5;
+; CHECK-NOF16-NEXT:    st.param.b16 [func_retval0], %rs7;
 ; CHECK-NOF16-NEXT:    ret;
 ;
 ; CHECK-F16-LABEL: minimum_half(
@@ -657,26 +657,26 @@ define half @minimum_half(half %a, half %b) {
 ; CHECK-SM80-NOF16-LABEL: minimum_half(
 ; CHECK-SM80-NOF16:       {
 ; CHECK-SM80-NOF16-NEXT:    .reg .pred %p<6>;
-; CHECK-SM80-NOF16-NEXT:    .reg .b16 %rs<10>;
-; CHECK-SM80-NOF16-NEXT:    .reg .f32 %f<4>;
+; CHECK-SM80-NOF16-NEXT:    .reg .b16 %rs<8>;
+; CHECK-SM80-NOF16-NEXT:    .reg .b32 %f<4>;
 ; CHECK-SM80-NOF16-EMPTY:
 ; CHECK-SM80-NOF16-NEXT:  // %bb.0:
 ; CHECK-SM80-NOF16-NEXT:    ld.param.b16 %rs1, [minimum_half_param_0];
-; CHECK-SM80-NOF16-NEXT:    ld.param.b16 %rs3, [minimum_half_param_1];
-; CHECK-SM80-NOF16-NEXT:    cvt.f32.f16 %f1, %rs3;
+; CHECK-SM80-NOF16-NEXT:    ld.param.b16 %rs2, [minimum_half_param_1];
+; CHECK-SM80-NOF16-NEXT:    cvt.f32.f16 %f1, %rs2;
 ; CHECK-SM80-NOF16-NEXT:    cvt.f32.f16 %f2, %rs1;
 ; CHECK-SM80-NOF16-NEXT:    setp.lt.f32 %p1, %f2, %f1;
-; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs4, %rs1, %rs3, %p1;
+; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs3, %rs1, %rs2, %p1;
 ; CHECK-SM80-NOF16-NEXT:    setp.nan.f32 %p2, %f2, %f1;
-; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs5, 0x7E00, %rs4, %p2;
+; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs4, 0x7E00, %rs3, %p2;
 ; CHECK-SM80-NOF16-NEXT:    setp.eq.s16 %p3, %rs1, -32768;
-; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs6, %rs1, %rs5, %p3;
-; CHECK-SM80-NOF16-NEXT:    setp.eq.s16 %p4, %rs3, -32768;
-; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs8, %rs3, %rs6, %p4;
-; CHECK-SM80-NOF16-NEXT:    cvt.f32.f16 %f3, %rs5;
+; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs5, %rs1, %rs4, %p3;
+; CHECK-SM80-NOF16-NEXT:    setp.eq.s16 %p4, %rs2, -32768;
+; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs6, %rs2, %rs5, %p4;
+; CHECK-SM80-NOF16-NEXT:    cvt.f32.f16 %f3, %rs4;
 ; CHECK-SM80-NOF16-NEXT:    setp.eq.f32 %p5, %f3, 0f00000000;
-; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs9, %rs8, %rs5, %p5;
-; CHECK-SM80-NOF16-NEXT:    st.param.b16 [func_retval0], %rs9;
+; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs7, %rs6, %rs4, %p5;
+; CHECK-SM80-NOF16-NEXT:    st.param.b16 [func_retval0], %rs7;
 ; CHECK-SM80-NOF16-NEXT:    ret;
   %x = call half @llvm.minimum.f16(half %a, half %b)
   ret half %x
@@ -687,7 +687,7 @@ define float @minimum_float(float %a, float %b) {
 ; CHECK-NOF16:       {
 ; CHECK-NOF16-NEXT:    .reg .pred %p<5>;
 ; CHECK-NOF16-NEXT:    .reg .b32 %r<3>;
-; CHECK-NOF16-NEXT:    .reg .f32 %f<8>;
+; CHECK-NOF16-NEXT:    .reg .b32 %f<8>;
 ; CHECK-NOF16-EMPTY:
 ; CHECK-NOF16-NEXT:  // %bb.0:
 ; CHECK-NOF16-NEXT:    ld.param.f32 %f1, [minimum_float_param_0];
@@ -708,7 +708,7 @@ define float @minimum_float(float %a, float %b) {
 ;
 ; CHECK-F16-LABEL: minimum_float(
 ; CHECK-F16:       {
-; CHECK-F16-NEXT:    .reg .f32 %f<4>;
+; CHECK-F16-NEXT:    .reg .b32 %f<4>;
 ; CHECK-F16-EMPTY:
 ; CHECK-F16-NEXT:  // %bb.0:
 ; CHECK-F16-NEXT:    ld.param.f32 %f1, [minimum_float_param_0];
@@ -719,7 +719,7 @@ define float @minimum_float(float %a, float %b) {
 ;
 ; CHECK-SM80-NOF16-LABEL: minimum_float(
 ; CHECK-SM80-NOF16:       {
-; CHECK-SM80-NOF16-NEXT:    .reg .f32 %f<4>;
+; CHECK-SM80-NOF16-NEXT:    .reg .b32 %f<4>;
 ; CHECK-SM80-NOF16-EMPTY:
 ; CHECK-SM80-NOF16-NEXT:  // %bb.0:
 ; CHECK-SM80-NOF16-NEXT:    ld.param.f32 %f1, [minimum_float_param_0];
@@ -736,7 +736,7 @@ define float @minimum_imm1(float %a) {
 ; CHECK-NOF16:       {
 ; CHECK-NOF16-NEXT:    .reg .pred %p<4>;
 ; CHECK-NOF16-NEXT:    .reg .b32 %r<2>;
-; CHECK-NOF16-NEXT:    .reg .f32 %f<6>;
+; CHECK-NOF16-NEXT:    .reg .b32 %f<6>;
 ; CHECK-NOF16-EMPTY:
 ; CHECK-NOF16-NEXT:  // %bb.0:
 ; CHECK-NOF16-NEXT:    ld.param.f32 %f1, [minimum_imm1_param_0];
@@ -753,7 +753,7 @@ define float @minimum_imm1(float %a) {
 ;
 ; CHECK-F16-LABEL: minimum_imm1(
 ; CHECK-F16:       {
-; CHECK-F16-NEXT:    .reg .f32 %f<3>;
+; CHECK-F16-NEXT:    .reg .b32 %f<3>;
 ; CHECK-F16-EMPTY:
 ; CHECK-F16-NEXT:  // %bb.0:
 ; CHECK-F16-NEXT:    ld.param.f32 %f1, [minimum_imm1_param_0];
@@ -763,7 +763,7 @@ define float @minimum_imm1(float %a) {
 ;
 ; CHECK-SM80-NOF16-LABEL: minimum_imm1(
 ; CHECK-SM80-NOF16:       {
-; CHECK-SM80-NOF16-NEXT:    .reg .f32 %f<3>;
+; CHECK-SM80-NOF16-NEXT:    .reg .b32 %f<3>;
 ; CHECK-SM80-NOF16-EMPTY:
 ; CHECK-SM80-NOF16-NEXT:  // %bb.0:
 ; CHECK-SM80-NOF16-NEXT:    ld.param.f32 %f1, [minimum_imm1_param_0];
@@ -779,7 +779,7 @@ define float @minimum_imm2(float %a) {
 ; CHECK-NOF16:       {
 ; CHECK-NOF16-NEXT:    .reg .pred %p<4>;
 ; CHECK-NOF16-NEXT:    .reg .b32 %r<2>;
-; CHECK-NOF16-NEXT:    .reg .f32 %f<6>;
+; CHECK-NOF16-NEXT:    .reg .b32 %f<6>;
 ; CHECK-NOF16-EMPTY:
 ; CHECK-NOF16-NEXT:  // %bb.0:
 ; CHECK-NOF16-NEXT:    ld.param.f32 %f1, [minimum_imm2_param_0];
@@ -796,7 +796,7 @@ define float @minimum_imm2(float %a) {
 ;
 ; CHECK-F16-LABEL: minimum_imm2(
 ; CHECK-F16:       {
-; CHECK-F16-NEXT:    .reg .f32 %f<3>;
+; CHECK-F16-NEXT:    .reg .b32 %f<3>;
 ; CHECK-F16-EMPTY:
 ; CHECK-F16-NEXT:  // %bb.0:
 ; CHECK-F16-NEXT:    ld.param.f32 %f1, [minimum_imm2_param_0];
@@ -806,7 +806,7 @@ define float @minimum_imm2(float %a) {
 ;
 ; CHECK-SM80-NOF16-LABEL: minimum_imm2(
 ; CHECK-SM80-NOF16:       {
-; CHECK-SM80-NOF16-NEXT:    .reg .f32 %f<3>;
+; CHECK-SM80-NOF16-NEXT:    .reg .b32 %f<3>;
 ; CHECK-SM80-NOF16-EMPTY:
 ; CHECK-SM80-NOF16-NEXT:  // %bb.0:
 ; CHECK-SM80-NOF16-NEXT:    ld.param.f32 %f1, [minimum_imm2_param_0];
@@ -822,7 +822,7 @@ define float @minimum_float_ftz(float %a, float %b) #1 {
 ; CHECK-NOF16:       {
 ; CHECK-NOF16-NEXT:    .reg .pred %p<5>;
 ; CHECK-NOF16-NEXT:    .reg .b32 %r<3>;
-; CHECK-NOF16-NEXT:    .reg .f32 %f<8>;
+; CHECK-NOF16-NEXT:    .reg .b32 %f<8>;
 ; CHECK-NOF16-EMPTY:
 ; CHECK-NOF16-NEXT:  // %bb.0:
 ; CHECK-NOF16-NEXT:    ld.param.f32 %f1, [minimum_float_ftz_param_0];
@@ -843,7 +843,7 @@ define float @minimum_float_ftz(float %a, float %b) #1 {
 ;
 ; CHECK-F16-LABEL: minimum_float_ftz(
 ; CHECK-F16:       {
-; CHECK-F16-NEXT:    .reg .f32 %f<4>;
+; CHECK-F16-NEXT:    .reg .b32 %f<4>;
 ; CHECK-F16-EMPTY:
 ; CHECK-F16-NEXT:  // %bb.0:
 ; CHECK-F16-NEXT:    ld.param.f32 %f1, [minimum_float_ftz_param_0];
@@ -854,7 +854,7 @@ define float @minimum_float_ftz(float %a, float %b) #1 {
 ;
 ; CHECK-SM80-NOF16-LABEL: minimum_float_ftz(
 ; CHECK-SM80-NOF16:       {
-; CHECK-SM80-NOF16-NEXT:    .reg .f32 %f<4>;
+; CHECK-SM80-NOF16-NEXT:    .reg .b32 %f<4>;
 ; CHECK-SM80-NOF16-EMPTY:
 ; CHECK-SM80-NOF16-NEXT:  // %bb.0:
 ; CHECK-SM80-NOF16-NEXT:    ld.param.f32 %f1, [minimum_float_ftz_param_0];
@@ -871,7 +871,7 @@ define double @minimum_double(double %a, double %b) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
-; CHECK-NEXT:    .reg .f64 %fd<8>;
+; CHECK-NEXT:    .reg .b64 %fd<8>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f64 %fd1, [minimum_double_param_0];
@@ -897,9 +897,9 @@ define <2 x half> @minimum_v2half(<2 x half> %a, <2 x half> %b) {
 ; CHECK-NOF16-LABEL: minimum_v2half(
 ; CHECK-NOF16:       {
 ; CHECK-NOF16-NEXT:    .reg .pred %p<11>;
-; CHECK-NOF16-NEXT:    .reg .b16 %rs<19>;
+; CHECK-NOF16-NEXT:    .reg .b16 %rs<15>;
 ; CHECK-NOF16-NEXT:    .reg .b32 %r<4>;
-; CHECK-NOF16-NEXT:    .reg .f32 %f<7>;
+; CHECK-NOF16-NEXT:    .reg .b32 %f<7>;
 ; CHECK-NOF16-EMPTY:
 ; CHECK-NOF16-NEXT:  // %bb.0:
 ; CHECK-NOF16-NEXT:    ld.param.b32 %r1, [minimum_v2half_param_0];
@@ -913,26 +913,26 @@ define <2 x half> @minimum_v2half(<2 x half> %a, <2 x half> %b) {
 ; CHECK-NOF16-NEXT:    setp.nan.f32 %p2, %f2, %f1;
 ; CHECK-NOF16-NEXT:    selp.b16 %rs6, 0x7E00, %rs5, %p2;
 ; CHECK-NOF16-NEXT:    setp.eq.s16 %p3, %rs4, -32768;
-; CHECK-NOF16-NEXT:    selp.b16 %rs8, %rs4, %rs6, %p3;
+; CHECK-NOF16-NEXT:    selp.b16 %rs7, %rs4, %rs6, %p3;
 ; CHECK-NOF16-NEXT:    setp.eq.s16 %p4, %rs2, -32768;
-; CHECK-NOF16-NEXT:    selp.b16 %rs10, %rs2, %rs8, %p4;
+; CHECK-NOF16-NEXT:    selp.b16 %rs8, %rs2, %rs7, %p4;
 ; CHECK-NOF16-NEXT:    cvt.f32.f16 %f3, %rs6;
 ; CHECK-NOF16-NEXT:    setp.eq.f32 %p5, %f3, 0f00000000;
-; CHECK-NOF16-NEXT:    selp.b16 %rs11, %rs10, %rs6, %p5;
+; CHECK-NOF16-NEXT:    selp.b16 %rs9, %rs8, %rs6, %p5;
 ; CHECK-NOF16-NEXT:    cvt.f32.f16 %f4, %rs1;
 ; CHECK-NOF16-NEXT:    cvt.f32.f16 %f5, %rs3;
 ; CHECK-NOF16-NEXT:    setp.lt.f32 %p6, %f5, %f4;
-; CHECK-NOF16-NEXT:    selp.b16 %rs12, %rs3, %rs1, %p6;
+; CHECK-NOF16-NEXT:    selp.b16 %rs10, %rs3, %rs1, %p6;
 ; CHECK-NOF16-NEXT:    setp.nan.f32 %p7, %f5, %f4;
-; CHECK-NOF16-NEXT:    selp.b16 %rs13, 0x7E00, %rs12, %p7;
+; CHECK-NOF16-NEXT:    selp.b16 %rs11, 0x7E00, %rs10, %p7;
 ; CHECK-NOF16-NEXT:    setp.eq.s16 %p8, %rs3, -32768;
-; CHECK-NOF16-NEXT:    selp.b16 %rs15, %rs3, %rs13, %p8;
+; CHECK-NOF16-NEXT:    selp.b16 %rs12, %rs3, %rs11, %p8;
 ; CHECK-NOF16-NEXT:    setp.eq.s16 %p9, %rs1, -32768;
-; CHECK-NOF16-NEXT:    selp.b16 %rs17, %rs1, %rs15, %p9;
-; CHECK-NOF16-NEXT:    cvt.f32.f16 %f6, %rs13;
+; CHECK-NOF16-NEXT:    selp.b16 %rs13, %rs1, %rs12, %p9;
+; CHECK-NOF16-NEXT:    cvt.f32.f16 %f6, %rs11;
 ; CHECK-NOF16-NEXT:    setp.eq.f32 %p10, %f6, 0f00000000;
-; CHECK-NOF16-NEXT:    selp.b16 %rs18, %rs17, %rs13, %p10;
-; CHECK-NOF16-NEXT:    mov.b32 %r3, {%rs18, %rs11};
+; CHECK-NOF16-NEXT:    selp.b16 %rs14, %rs13, %rs11, %p10;
+; CHECK-NOF16-NEXT:    mov.b32 %r3, {%rs14, %rs9};
 ; CHECK-NOF16-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NOF16-NEXT:    ret;
 ;
@@ -950,9 +950,9 @@ define <2 x half> @minimum_v2half(<2 x half> %a, <2 x half> %b) {
 ; CHECK-SM80-NOF16-LABEL: minimum_v2half(
 ; CHECK-SM80-NOF16:       {
 ; CHECK-SM80-NOF16-NEXT:    .reg .pred %p<11>;
-; CHECK-SM80-NOF16-NEXT:    .reg .b16 %rs<19>;
+; CHECK-SM80-NOF16-NEXT:    .reg .b16 %rs<15>;
 ; CHECK-SM80-NOF16-NEXT:    .reg .b32 %r<4>;
-; CHECK-SM80-NOF16-NEXT:    .reg .f32 %f<7>;
+; CHECK-SM80-NOF16-NEXT:    .reg .b32 %f<7>;
 ; CHECK-SM80-NOF16-EMPTY:
 ; CHECK-SM80-NOF16-NEXT:  // %bb.0:
 ; CHECK-SM80-NOF16-NEXT:    ld.param.b32 %r1, [minimum_v2half_param_0];
@@ -966,26 +966,26 @@ define <2 x half> @minimum_v2half(<2 x half> %a, <2 x half> %b) {
 ; CHECK-SM80-NOF16-NEXT:    setp.nan.f32 %p2, %f2, %f1;
 ; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs6, 0x7E00, %rs5, %p2;
 ; CHECK-SM80-NOF16-NEXT:    setp.eq.s16 %p3, %rs4, -32768;
-; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs8, %rs4, %rs6, %p3;
+; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs7, %rs4, %rs6, %p3;
 ; CHECK-SM80-NOF16-NEXT:    setp.eq.s16 %p4, %rs2, -32768;
-; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs10, %rs2, %rs8, %p4;
+; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs8, %rs2, %rs7, %p4;
 ; CHECK-SM80-NOF16-NEXT:    cvt.f32.f16 %f3, %rs6;
 ; CHECK-SM80-NOF16-NEXT:    setp.eq.f32 %p5, %f3, 0f00000000;
-; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs11, %rs10, %rs6, %p5;
+; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs9, %rs8, %rs6, %p5;
 ; CHECK-SM80-NOF16-NEXT:    cvt.f32.f16 %f4, %rs1;
 ; CHECK-SM80-NOF16-NEXT:    cvt.f32.f16 %f5, %rs3;
 ; CHECK-SM80-NOF16-NEXT:    setp.lt.f32 %p6, %f5, %f4;
-; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs12, %rs3, %rs1, %p6;
+; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs10, %rs3, %rs1, %p6;
 ; CHECK-SM80-NOF16-NEXT:    setp.nan.f32 %p7, %f5, %f4;
-; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs13, 0x7E00, %rs12, %p7;
+; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs11, 0x7E00, %rs10, %p7;
 ; CHECK-SM80-NOF16-NEXT:    setp.eq.s16 %p8, %rs3, -32768;
-; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs15, %rs3, %rs13, %p8;
+; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs12, %rs3, %rs11, %p8;
 ; CHECK-SM80-NOF16-NEXT:    setp.eq.s16 %p9, %rs1, -32768;
-; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs17, %rs1, %rs15, %p9;
-; CHECK-SM80-NOF16-NEXT:    cvt.f32.f16 %f6, %rs13;
+; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs13, %rs1, %rs12, %p9;
+; CHECK-SM80-NOF16-NEXT:    cvt.f32.f16 %f6, %rs11;
 ; CHECK-SM80-NOF16-NEXT:    setp.eq.f32 %p10, %f6, 0f00000000;
-; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs18, %rs17, %rs13, %p10;
-; CHECK-SM80-NOF16-NEXT:    mov.b32 %r3, {%rs18, %rs11};
+; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs14, %rs13, %rs11, %p10;
+; CHECK-SM80-NOF16-NEXT:    mov.b32 %r3, {%rs14, %rs9};
 ; CHECK-SM80-NOF16-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-SM80-NOF16-NEXT:    ret;
   %x = call <2 x half> @llvm.minimum.v2f16(<2 x half> %a, <2 x half> %b)
@@ -998,7 +998,7 @@ define half @maxnum_half(half %a, half %b) {
 ; CHECK-NOF16-LABEL: maxnum_half(
 ; CHECK-NOF16:       {
 ; CHECK-NOF16-NEXT:    .reg .b16 %rs<4>;
-; CHECK-NOF16-NEXT:    .reg .f32 %f<4>;
+; CHECK-NOF16-NEXT:    .reg .b32 %f<4>;
 ; CHECK-NOF16-EMPTY:
 ; CHECK-NOF16-NEXT:  // %bb.0:
 ; CHECK-NOF16-NEXT:    ld.param.b16 %rs1, [maxnum_half_param_0];
@@ -1024,7 +1024,7 @@ define half @maxnum_half(half %a, half %b) {
 ; CHECK-SM80-NOF16-LABEL: maxnum_half(
 ; CHECK-SM80-NOF16:       {
 ; CHECK-SM80-NOF16-NEXT:    .reg .b16 %rs<4>;
-; CHECK-SM80-NOF16-NEXT:    .reg .f32 %f<4>;
+; CHECK-SM80-NOF16-NEXT:    .reg .b32 %f<4>;
 ; CHECK-SM80-NOF16-EMPTY:
 ; CHECK-SM80-NOF16-NEXT:  // %bb.0:
 ; CHECK-SM80-NOF16-NEXT:    ld.param.b16 %rs1, [maxnum_half_param_0];
@@ -1042,7 +1042,7 @@ define half @maxnum_half(half %a, half %b) {
 define float @maxnum_imm1(float %a) {
 ; CHECK-LABEL: maxnum_imm1(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [maxnum_imm1_param_0];
@@ -1056,7 +1056,7 @@ define float @maxnum_imm1(float %a) {
 define float @maxnum_imm2(float %a) {
 ; CHECK-LABEL: maxnum_imm2(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [maxnum_imm2_param_0];
@@ -1070,7 +1070,7 @@ define float @maxnum_imm2(float %a) {
 define float @maxnum_float(float %a, float %b) {
 ; CHECK-LABEL: maxnum_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<4>;
+; CHECK-NEXT:    .reg .b32 %f<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [maxnum_float_param_0];
@@ -1085,7 +1085,7 @@ define float @maxnum_float(float %a, float %b) {
 define float @maxnum_float_ftz(float %a, float %b) #1 {
 ; CHECK-LABEL: maxnum_float_ftz(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<4>;
+; CHECK-NEXT:    .reg .b32 %f<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [maxnum_float_ftz_param_0];
@@ -1100,7 +1100,7 @@ define float @maxnum_float_ftz(float %a, float %b) #1 {
 define double @maxnum_double(double %a, double %b) {
 ; CHECK-LABEL: maxnum_double(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f64 %fd<4>;
+; CHECK-NEXT:    .reg .b64 %fd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f64 %fd1, [maxnum_double_param_0];
@@ -1117,7 +1117,7 @@ define <2 x half> @maxnum_v2half(<2 x half> %a, <2 x half> %b) {
 ; CHECK-NOF16:       {
 ; CHECK-NOF16-NEXT:    .reg .b16 %rs<7>;
 ; CHECK-NOF16-NEXT:    .reg .b32 %r<4>;
-; CHECK-NOF16-NEXT:    .reg .f32 %f<7>;
+; CHECK-NOF16-NEXT:    .reg .b32 %f<7>;
 ; CHECK-NOF16-EMPTY:
 ; CHECK-NOF16-NEXT:  // %bb.0:
 ; CHECK-NOF16-NEXT:    ld.param.b32 %r1, [maxnum_v2half_param_0];
@@ -1151,7 +1151,7 @@ define <2 x half> @maxnum_v2half(<2 x half> %a, <2 x half> %b) {
 ; CHECK-SM80-NOF16:       {
 ; CHECK-SM80-NOF16-NEXT:    .reg .b16 %rs<7>;
 ; CHECK-SM80-NOF16-NEXT:    .reg .b32 %r<4>;
-; CHECK-SM80-NOF16-NEXT:    .reg .f32 %f<7>;
+; CHECK-SM80-NOF16-NEXT:    .reg .b32 %f<7>;
 ; CHECK-SM80-NOF16-EMPTY:
 ; CHECK-SM80-NOF16-NEXT:  // %bb.0:
 ; CHECK-SM80-NOF16-NEXT:    ld.param.b32 %r1, [maxnum_v2half_param_0];
@@ -1179,26 +1179,26 @@ define half @maximum_half(half %a, half %b) {
 ; CHECK-NOF16-LABEL: maximum_half(
 ; CHECK-NOF16:       {
 ; CHECK-NOF16-NEXT:    .reg .pred %p<6>;
-; CHECK-NOF16-NEXT:    .reg .b16 %rs<10>;
-; CHECK-NOF16-NEXT:    .reg .f32 %f<4>;
+; CHECK-NOF16-NEXT:    .reg .b16 %rs<8>;
+; CHECK-NOF16-NEXT:    .reg .b32 %f<4>;
 ; CHECK-NOF16-EMPTY:
 ; CHECK-NOF16-NEXT:  // %bb.0:
 ; CHECK-NOF16-NEXT:    ld.param.b16 %rs1, [maximum_half_param_0];
-; CHECK-NOF16-NEXT:    ld.param.b16 %rs3, [maximum_half_param_1];
-; CHECK-NOF16-NEXT:    cvt.f32.f16 %f1, %rs3;
+; CHECK-NOF16-NEXT:    ld.param.b16 %rs2, [maximum_half_param_1];
+; CHECK-NOF16-NEXT:    cvt.f32.f16 %f1, %rs2;
 ; CHECK-NOF16-NEXT:    cvt.f32.f16 %f2, %rs1;
 ; CHECK-NOF16-NEXT:    setp.gt.f32 %p1, %f2, %f1;
-; CHECK-NOF16-NEXT:    selp.b16 %rs4, %rs1, %rs3, %p1;
+; CHECK-NOF16-NEXT:    selp.b16 %rs3, %rs1, %rs2, %p1;
 ; CHECK-NOF16-NEXT:    setp.nan.f32 %p2, %f2, %f1;
-; CHECK-NOF16-NEXT:    selp.b16 %rs5, 0x7E00, %rs4, %p2;
+; CHECK-NOF16-NEXT:    selp.b16 %rs4, 0x7E00, %rs3, %p2;
 ; CHECK-NOF16-NEXT:    setp.eq.s16 %p3, %rs1, 0;
-; CHECK-NOF16-NEXT:    selp.b16 %rs6, %rs1, %rs5, %p3;
-; CHECK-NOF16-NEXT:    setp.eq.s16 %p4, %rs3, 0;
-; CHECK-NOF16-NEXT:    selp.b16 %rs8, %rs3, %rs6, %p4;
-; CHECK-NOF16-NEXT:    cvt.f32.f16 %f3, %rs5;
+; CHECK-NOF16-NEXT:    selp.b16 %rs5, %rs1, %rs4, %p3;
+; CHECK-NOF16-NEXT:    setp.eq.s16 %p4, %rs2, 0;
+; CHECK-NOF16-NEXT:    selp.b16 %rs6, %rs2, %rs5, %p4;
+; CHECK-NOF16-NEXT:    cvt.f32.f16 %f3, %rs4;
 ; CHECK-NOF16-NEXT:    setp.eq.f32 %p5, %f3, 0f00000000;
-; CHECK-NOF16-NEXT:    selp.b16 %rs9, %rs8, %rs5, %p5;
-; CHECK-NOF16-NEXT:    st.param.b16 [func_retval0], %rs9;
+; CHECK-NOF16-NEXT:    selp.b16 %rs7, %rs6, %rs4, %p5;
+; CHECK-NOF16-NEXT:    st.param.b16 [func_retval0], %rs7;
 ; CHECK-NOF16-NEXT:    ret;
 ;
 ; CHECK-F16-LABEL: maximum_half(
@@ -1215,26 +1215,26 @@ define half @maximum_half(half %a, half %b) {
 ; CHECK-SM80-NOF16-LABEL: maximum_half(
 ; CHECK-SM80-NOF16:       {
 ; CHECK-SM80-NOF16-NEXT:    .reg .pred %p<6>;
-; CHECK-SM80-NOF16-NEXT:    .reg .b16 %rs<10>;
-; CHECK-SM80-NOF16-NEXT:    .reg .f32 %f<4>;
+; CHECK-SM80-NOF16-NEXT:    .reg .b16 %rs<8>;
+; CHECK-SM80-NOF16-NEXT:    .reg .b32 %f<4>;
 ; CHECK-SM80-NOF16-EMPTY:
 ; CHECK-SM80-NOF16-NEXT:  // %bb.0:
 ; CHECK-SM80-NOF16-NEXT:    ld.param.b16 %rs1, [maximum_half_param_0];
-; CHECK-SM80-NOF16-NEXT:    ld.param.b16 %rs3, [maximum_half_param_1];
-; CHECK-SM80-NOF16-NEXT:    cvt.f32.f16 %f1, %rs3;
+; CHECK-SM80-NOF16-NEXT:    ld.param.b16 %rs2, [maximum_half_param_1];
+; CHECK-SM80-NOF16-NEXT:    cvt.f32.f16 %f1, %rs2;
 ; CHECK-SM80-NOF16-NEXT:    cvt.f32.f16 %f2, %rs1;
 ; CHECK-SM80-NOF16-NEXT:    setp.gt.f32 %p1, %f2, %f1;
-; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs4, %rs1, %rs3, %p1;
+; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs3, %rs1, %rs2, %p1;
 ; CHECK-SM80-NOF16-NEXT:    setp.nan.f32 %p2, %f2, %f1;
-; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs5, 0x7E00, %rs4, %p2;
+; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs4, 0x7E00, %rs3, %p2;
 ; CHECK-SM80-NOF16-NEXT:    setp.eq.s16 %p3, %rs1, 0;
-; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs6, %rs1, %rs5, %p3;
-; CHECK-SM80-NOF16-NEXT:    setp.eq.s16 %p4, %rs3, 0;
-; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs8, %rs3, %rs6, %p4;
-; CHECK-SM80-NOF16-NEXT:    cvt.f32.f16 %f3, %rs5;
+; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs5, %rs1, %rs4, %p3;
+; CHECK-SM80-NOF16-NEXT:    setp.eq.s16 %p4, %rs2, 0;
+; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs6, %rs2, %rs5, %p4;
+; CHECK-SM80-NOF16-NEXT:    cvt.f32.f16 %f3, %rs4;
 ; CHECK-SM80-NOF16-NEXT:    setp.eq.f32 %p5, %f3, 0f00000000;
-; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs9, %rs8, %rs5, %p5;
-; CHECK-SM80-NOF16-NEXT:    st.param.b16 [func_retval0], %rs9;
+; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs7, %rs6, %rs4, %p5;
+; CHECK-SM80-NOF16-NEXT:    st.param.b16 [func_retval0], %rs7;
 ; CHECK-SM80-NOF16-NEXT:    ret;
   %x = call half @llvm.maximum.f16(half %a, half %b)
   ret half %x
@@ -1244,7 +1244,7 @@ define float @maximum_imm1(float %a) {
 ; CHECK-NOF16-LABEL: maximum_imm1(
 ; CHECK-NOF16:       {
 ; CHECK-NOF16-NEXT:    .reg .pred %p<3>;
-; CHECK-NOF16-NEXT:    .reg .f32 %f<5>;
+; CHECK-NOF16-NEXT:    .reg .b32 %f<5>;
 ; CHECK-NOF16-EMPTY:
 ; CHECK-NOF16-NEXT:  // %bb.0:
 ; CHECK-NOF16-NEXT:    ld.param.f32 %f1, [maximum_imm1_param_0];
@@ -1258,7 +1258,7 @@ define float @maximum_imm1(float %a) {
 ;
 ; CHECK-F16-LABEL: maximum_imm1(
 ; CHECK-F16:       {
-; CHECK-F16-NEXT:    .reg .f32 %f<3>;
+; CHECK-F16-NEXT:    .reg .b32 %f<3>;
 ; CHECK-F16-EMPTY:
 ; CHECK-F16-NEXT:  // %bb.0:
 ; CHECK-F16-NEXT:    ld.param.f32 %f1, [maximum_imm1_param_0];
@@ -1268,7 +1268,7 @@ define float @maximum_imm1(float %a) {
 ;
 ; CHECK-SM80-NOF16-LABEL: maximum_imm1(
 ; CHECK-SM80-NOF16:       {
-; CHECK-SM80-NOF16-NEXT:    .reg .f32 %f<3>;
+; CHECK-SM80-NOF16-NEXT:    .reg .b32 %f<3>;
 ; CHECK-SM80-NOF16-EMPTY:
 ; CHECK-SM80-NOF16-NEXT:  // %bb.0:
 ; CHECK-SM80-NOF16-NEXT:    ld.param.f32 %f1, [maximum_imm1_param_0];
@@ -1283,7 +1283,7 @@ define float @maximum_imm2(float %a) {
 ; CHECK-NOF16-LABEL: maximum_imm2(
 ; CHECK-NOF16:       {
 ; CHECK-NOF16-NEXT:    .reg .pred %p<3>;
-; CHECK-NOF16-NEXT:    .reg .f32 %f<5>;
+; CHECK-NOF16-NEXT:    .reg .b32 %f<5>;
 ; CHECK-NOF16-EMPTY:
 ; CHECK-NOF16-NEXT:  // %bb.0:
 ; CHECK-NOF16-NEXT:    ld.param.f32 %f1, [maximum_imm2_param_0];
@@ -1297,7 +1297,7 @@ define float @maximum_imm2(float %a) {
 ;
 ; CHECK-F16-LABEL: maximum_imm2(
 ; CHECK-F16:       {
-; CHECK-F16-NEXT:    .reg .f32 %f<3>;
+; CHECK-F16-NEXT:    .reg .b32 %f<3>;
 ; CHECK-F16-EMPTY:
 ; CHECK-F16-NEXT:  // %bb.0:
 ; CHECK-F16-NEXT:    ld.param.f32 %f1, [maximum_imm2_param_0];
@@ -1307,7 +1307,7 @@ define float @maximum_imm2(float %a) {
 ;
 ; CHECK-SM80-NOF16-LABEL: maximum_imm2(
 ; CHECK-SM80-NOF16:       {
-; CHECK-SM80-NOF16-NEXT:    .reg .f32 %f<3>;
+; CHECK-SM80-NOF16-NEXT:    .reg .b32 %f<3>;
 ; CHECK-SM80-NOF16-EMPTY:
 ; CHECK-SM80-NOF16-NEXT:  // %bb.0:
 ; CHECK-SM80-NOF16-NEXT:    ld.param.f32 %f1, [maximum_imm2_param_0];
@@ -1323,7 +1323,7 @@ define float @maximum_float(float %a, float %b) {
 ; CHECK-NOF16:       {
 ; CHECK-NOF16-NEXT:    .reg .pred %p<5>;
 ; CHECK-NOF16-NEXT:    .reg .b32 %r<3>;
-; CHECK-NOF16-NEXT:    .reg .f32 %f<8>;
+; CHECK-NOF16-NEXT:    .reg .b32 %f<8>;
 ; CHECK-NOF16-EMPTY:
 ; CHECK-NOF16-NEXT:  // %bb.0:
 ; CHECK-NOF16-NEXT:    ld.param.f32 %f1, [maximum_float_param_0];
@@ -1344,7 +1344,7 @@ define float @maximum_float(float %a, float %b) {
 ;
 ; CHECK-F16-LABEL: maximum_float(
 ; CHECK-F16:       {
-; CHECK-F16-NEXT:    .reg .f32 %f<4>;
+; CHECK-F16-NEXT:    .reg .b32 %f<4>;
 ; CHECK-F16-EMPTY:
 ; CHECK-F16-NEXT:  // %bb.0:
 ; CHECK-F16-NEXT:    ld.param.f32 %f1, [maximum_float_param_0];
@@ -1355,7 +1355,7 @@ define float @maximum_float(float %a, float %b) {
 ;
 ; CHECK-SM80-NOF16-LABEL: maximum_float(
 ; CHECK-SM80-NOF16:       {
-; CHECK-SM80-NOF16-NEXT:    .reg .f32 %f<4>;
+; CHECK-SM80-NOF16-NEXT:    .reg .b32 %f<4>;
 ; CHECK-SM80-NOF16-EMPTY:
 ; CHECK-SM80-NOF16-NEXT:  // %bb.0:
 ; CHECK-SM80-NOF16-NEXT:    ld.param.f32 %f1, [maximum_float_param_0];
@@ -1372,7 +1372,7 @@ define float @maximum_float_ftz(float %a, float %b) #1 {
 ; CHECK-NOF16:       {
 ; CHECK-NOF16-NEXT:    .reg .pred %p<5>;
 ; CHECK-NOF16-NEXT:    .reg .b32 %r<3>;
-; CHECK-NOF16-NEXT:    .reg .f32 %f<8>;
+; CHECK-NOF16-NEXT:    .reg .b32 %f<8>;
 ; CHECK-NOF16-EMPTY:
 ; CHECK-NOF16-NEXT:  // %bb.0:
 ; CHECK-NOF16-NEXT:    ld.param.f32 %f1, [maximum_float_ftz_param_0];
@@ -1393,7 +1393,7 @@ define float @maximum_float_ftz(float %a, float %b) #1 {
 ;
 ; CHECK-F16-LABEL: maximum_float_ftz(
 ; CHECK-F16:       {
-; CHECK-F16-NEXT:    .reg .f32 %f<4>;
+; CHECK-F16-NEXT:    .reg .b32 %f<4>;
 ; CHECK-F16-EMPTY:
 ; CHECK-F16-NEXT:  // %bb.0:
 ; CHECK-F16-NEXT:    ld.param.f32 %f1, [maximum_float_ftz_param_0];
@@ -1404,7 +1404,7 @@ define float @maximum_float_ftz(float %a, float %b) #1 {
 ;
 ; CHECK-SM80-NOF16-LABEL: maximum_float_ftz(
 ; CHECK-SM80-NOF16:       {
-; CHECK-SM80-NOF16-NEXT:    .reg .f32 %f<4>;
+; CHECK-SM80-NOF16-NEXT:    .reg .b32 %f<4>;
 ; CHECK-SM80-NOF16-EMPTY:
 ; CHECK-SM80-NOF16-NEXT:  // %bb.0:
 ; CHECK-SM80-NOF16-NEXT:    ld.param.f32 %f1, [maximum_float_ftz_param_0];
@@ -1421,7 +1421,7 @@ define double @maximum_double(double %a, double %b) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
-; CHECK-NEXT:    .reg .f64 %fd<8>;
+; CHECK-NEXT:    .reg .b64 %fd<8>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f64 %fd1, [maximum_double_param_0];
@@ -1447,9 +1447,9 @@ define <2 x half> @maximum_v2half(<2 x half> %a, <2 x half> %b) {
 ; CHECK-NOF16-LABEL: maximum_v2half(
 ; CHECK-NOF16:       {
 ; CHECK-NOF16-NEXT:    .reg .pred %p<11>;
-; CHECK-NOF16-NEXT:    .reg .b16 %rs<19>;
+; CHECK-NOF16-NEXT:    .reg .b16 %rs<15>;
 ; CHECK-NOF16-NEXT:    .reg .b32 %r<4>;
-; CHECK-NOF16-NEXT:    .reg .f32 %f<7>;
+; CHECK-NOF16-NEXT:    .reg .b32 %f<7>;
 ; CHECK-NOF16-EMPTY:
 ; CHECK-NOF16-NEXT:  // %bb.0:
 ; CHECK-NOF16-NEXT:    ld.param.b32 %r1, [maximum_v2half_param_0];
@@ -1463,26 +1463,26 @@ define <2 x half> @maximum_v2half(<2 x half> %a, <2 x half> %b) {
 ; CHECK-NOF16-NEXT:    setp.nan.f32 %p2, %f2, %f1;
 ; CHECK-NOF16-NEXT:    selp.b16 %rs6, 0x7E00, %rs5, %p2;
 ; CHECK-NOF16-NEXT:    setp.eq.s16 %p3, %rs4, 0;
-; CHECK-NOF16-NEXT:    selp.b16 %rs8, %rs4, %rs6, %p3;
+; CHECK-NOF16-NEXT:    selp.b16 %rs7, %rs4, %rs6, %p3;
 ; CHECK-NOF16-NEXT:    setp.eq.s16 %p4, %rs2, 0;
-; CHECK-NOF16-NEXT:    selp.b16 %rs10, %rs2, %rs8, %p4;
+; CHECK-NOF16-NEXT:    selp.b16 %rs8, %rs2, %rs7, %p4;
 ; CHECK-NOF16-NEXT:    cvt.f32.f16 %f3, %rs6;
 ; CHECK-NOF16-NEXT:    setp.eq.f32 %p5, %f3, 0f00000000;
-; CHECK-NOF16-NEXT:    selp.b16 %rs11, %rs10, %rs6, %p5;
+; CHECK-NOF16-NEXT:    selp.b16 %rs9, %rs8, %rs6, %p5;
 ; CHECK-NOF16-NEXT:    cvt.f32.f16 %f4, %rs1;
 ; CHECK-NOF16-NEXT:    cvt.f32.f16 %f5, %rs3;
 ; CHECK-NOF16-NEXT:    setp.gt.f32 %p6, %f5, %f4;
-; CHECK-NOF16-NEXT:    selp.b16 %rs12, %rs3, %rs1, %p6;
+; CHECK-NOF16-NEXT:    selp.b16 %rs10, %rs3, %rs1, %p6;
 ; CHECK-NOF16-NEXT:    setp.nan.f32 %p7, %f5, %f4;
-; CHECK-NOF16-NEXT:    selp.b16 %rs13, 0x7E00, %rs12, %p7;
+; CHECK-NOF16-NEXT:    selp.b16 %rs11, 0x7E00, %rs10, %p7;
 ; CHECK-NOF16-NEXT:    setp.eq.s16 %p8, %rs3, 0;
-; CHECK-NOF16-NEXT:    selp.b16 %rs15, %rs3, %rs13, %p8;
+; CHECK-NOF16-NEXT:    selp.b16 %rs12, %rs3, %rs11, %p8;
 ; CHECK-NOF16-NEXT:    setp.eq.s16 %p9, %rs1, 0;
-; CHECK-NOF16-NEXT:    selp.b16 %rs17, %rs1, %rs15, %p9;
-; CHECK-NOF16-NEXT:    cvt.f32.f16 %f6, %rs13;
+; CHECK-NOF16-NEXT:    selp.b16 %rs13, %rs1, %rs12, %p9;
+; CHECK-NOF16-NEXT:    cvt.f32.f16 %f6, %rs11;
 ; CHECK-NOF16-NEXT:    setp.eq.f32 %p10, %f6, 0f00000000;
-; CHECK-NOF16-NEXT:    selp.b16 %rs18, %rs17, %rs13, %p10;
-; CHECK-NOF16-NEXT:    mov.b32 %r3, {%rs18, %rs11};
+; CHECK-NOF16-NEXT:    selp.b16 %rs14, %rs13, %rs11, %p10;
+; CHECK-NOF16-NEXT:    mov.b32 %r3, {%rs14, %rs9};
 ; CHECK-NOF16-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NOF16-NEXT:    ret;
 ;
@@ -1500,9 +1500,9 @@ define <2 x half> @maximum_v2half(<2 x half> %a, <2 x half> %b) {
 ; CHECK-SM80-NOF16-LABEL: maximum_v2half(
 ; CHECK-SM80-NOF16:       {
 ; CHECK-SM80-NOF16-NEXT:    .reg .pred %p<11>;
-; CHECK-SM80-NOF16-NEXT:    .reg .b16 %rs<19>;
+; CHECK-SM80-NOF16-NEXT:    .reg .b16 %rs<15>;
 ; CHECK-SM80-NOF16-NEXT:    .reg .b32 %r<4>;
-; CHECK-SM80-NOF16-NEXT:    .reg .f32 %f<7>;
+; CHECK-SM80-NOF16-NEXT:    .reg .b32 %f<7>;
 ; CHECK-SM80-NOF16-EMPTY:
 ; CHECK-SM80-NOF16-NEXT:  // %bb.0:
 ; CHECK-SM80-NOF16-NEXT:    ld.param.b32 %r1, [maximum_v2half_param_0];
@@ -1516,26 +1516,26 @@ define <2 x half> @maximum_v2half(<2 x half> %a, <2 x half> %b) {
 ; CHECK-SM80-NOF16-NEXT:    setp.nan.f32 %p2, %f2, %f1;
 ; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs6, 0x7E00, %rs5, %p2;
 ; CHECK-SM80-NOF16-NEXT:    setp.eq.s16 %p3, %rs4, 0;
-; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs8, %rs4, %rs6, %p3;
+; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs7, %rs4, %rs6, %p3;
 ; CHECK-SM80-NOF16-NEXT:    setp.eq.s16 %p4, %rs2, 0;
-; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs10, %rs2, %rs8, %p4;
+; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs8, %rs2, %rs7, %p4;
 ; CHECK-SM80-NOF16-NEXT:    cvt.f32.f16 %f3, %rs6;
 ; CHECK-SM80-NOF16-NEXT:    setp.eq.f32 %p5, %f3, 0f00000000;
-; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs11, %rs10, %rs6, %p5;
+; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs9, %rs8, %rs6, %p5;
 ; CHECK-SM80-NOF16-NEXT:    cvt.f32.f16 %f4, %rs1;
 ; CHECK-SM80-NOF16-NEXT:    cvt.f32.f16 %f5, %rs3;
 ; CHECK-SM80-NOF16-NEXT:    setp.gt.f32 %p6, %f5, %f4;
-; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs12, %rs3, %rs1, %p6;
+; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs10, %rs3, %rs1, %p6;
 ; CHECK-SM80-NOF16-NEXT:    setp.nan.f32 %p7, %f5, %f4;
-; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs13, 0x7E00, %rs12, %p7;
+; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs11, 0x7E00, %rs10, %p7;
 ; CHECK-SM80-NOF16-NEXT:    setp.eq.s16 %p8, %rs3, 0;
-; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs15, %rs3, %rs13, %p8;
+; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs12, %rs3, %rs11, %p8;
 ; CHECK-SM80-NOF16-NEXT:    setp.eq.s16 %p9, %rs1, 0;
-; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs17, %rs1, %rs15, %p9;
-; CHECK-SM80-NOF16-NEXT:    cvt.f32.f16 %f6, %rs13;
+; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs13, %rs1, %rs12, %p9;
+; CHECK-SM80-NOF16-NEXT:    cvt.f32.f16 %f6, %rs11;
 ; CHECK-SM80-NOF16-NEXT:    setp.eq.f32 %p10, %f6, 0f00000000;
-; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs18, %rs17, %rs13, %p10;
-; CHECK-SM80-NOF16-NEXT:    mov.b32 %r3, {%rs18, %rs11};
+; CHECK-SM80-NOF16-NEXT:    selp.b16 %rs14, %rs13, %rs11, %p10;
+; CHECK-SM80-NOF16-NEXT:    mov.b32 %r3, {%rs14, %rs9};
 ; CHECK-SM80-NOF16-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-SM80-NOF16-NEXT:    ret;
   %x = call <2 x half> @llvm.maximum.v2f16(<2 x half> %a, <2 x half> %b)
@@ -1547,7 +1547,7 @@ define <2 x half> @maximum_v2half(<2 x half> %a, <2 x half> %b) {
 define float @fma_float(float %a, float %b, float %c) {
 ; CHECK-LABEL: fma_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [fma_float_param_0];
@@ -1563,7 +1563,7 @@ define float @fma_float(float %a, float %b, float %c) {
 define float @fma_float_ftz(float %a, float %b, float %c) #1 {
 ; CHECK-LABEL: fma_float_ftz(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [fma_float_ftz_param_0];
@@ -1579,7 +1579,7 @@ define float @fma_float_ftz(float %a, float %b, float %c) #1 {
 define double @fma_double(double %a, double %b, double %c) {
 ; CHECK-LABEL: fma_double(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f64 %fd<5>;
+; CHECK-NEXT:    .reg .b64 %fd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f64 %fd1, [fma_double_param_0];

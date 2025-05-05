@@ -166,14 +166,9 @@ def FeatureVP2INTERSECT  : SubtargetFeature<"avx512vp2intersect",
                                             "HasVP2INTERSECT", "true",
                                             "Enable AVX-512 vp2intersect",
                                             [FeatureAVX512]>;
-// FIXME: FP16 scalar intrinsics use the type v8f16, which is supposed to be
-// guarded under condition hasVLX. So we imply it in FeatureFP16 currently.
-// FIXME: FP16 conversion between f16 and i64 customize type v8i64, which is
-// supposed to be guarded under condition hasDQI. So we imply it in FeatureFP16
-// currently.
 def FeatureFP16    : SubtargetFeature<"avx512fp16", "HasFP16", "true",
                            "Support 16-bit floating point",
-                           [FeatureBWI, FeatureVLX, FeatureDQI]>;
+                           [FeatureBWI]>;
 def FeatureAVXVNNIINT8  : SubtargetFeature<"avxvnniint8",
                              "HasAVXVNNIINT8", "true",
                              "Enable AVX-VNNI-INT8",
@@ -338,7 +333,7 @@ def FeatureAVX10_1 : SubtargetFeature<"avx10.1-256", "HasAVX10_1", "true",
                                       "Support AVX10.1 up to 256-bit instruction",
                                       [FeatureCDI, FeatureVBMI, FeatureIFMA, FeatureVNNI,
                                        FeatureBF16, FeatureVPOPCNTDQ, FeatureVBMI2, FeatureBITALG,
-                                       FeatureVAES, FeatureVPCLMULQDQ, FeatureFP16]>;
+                                       FeatureFP16, FeatureVLX, FeatureDQI]>;
 def FeatureAVX10_1_512 : SubtargetFeature<"avx10.1-512", "HasAVX10_1_512", "true",
                                           "Support AVX10.1 up to 512-bit instruction",
                                           [FeatureAVX10_1, FeatureEVEX512]>;
@@ -1163,6 +1158,7 @@ def ProcessorFeatures {
                                                   FeatureAVXNECONVERT,
                                                   FeatureAVXVNNIINT8,
                                                   FeatureAVXVNNIINT16,
+                                                  FeatureUSERMSR,
                                                   FeatureSHA512,
                                                   FeatureSM3,
                                                   FeatureEGPR,
@@ -1595,8 +1591,7 @@ def ProcessorFeatures {
     !listconcat(ZN3Features, ZN4AdditionalFeatures);
 
   list<SubtargetFeature> ZN5Tuning = ZN4Tuning;
-  list<SubtargetFeature> ZN5AdditionalFeatures = [FeatureVNNI,
-                                                  FeatureMOVDIRI,
+  list<SubtargetFeature> ZN5AdditionalFeatures = [FeatureMOVDIRI,
                                                   FeatureMOVDIR64B,
                                                   FeatureVP2INTERSECT,
                                                   FeaturePREFETCHI,

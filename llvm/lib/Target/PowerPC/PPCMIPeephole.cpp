@@ -112,9 +112,7 @@ struct PPCMIPeephole : public MachineFunctionPass {
   MachineRegisterInfo *MRI;
   LiveVariables *LV;
 
-  PPCMIPeephole() : MachineFunctionPass(ID) {
-    initializePPCMIPeepholePass(*PassRegistry::getPassRegistry());
-  }
+  PPCMIPeephole() : MachineFunctionPass(ID) {}
 
 private:
   MachineDominatorTree *MDT;
@@ -187,12 +185,11 @@ public:
 
 #define addRegToUpdate(R) addRegToUpdateWithLine(R, __LINE__)
 void PPCMIPeephole::addRegToUpdateWithLine(Register Reg, int Line) {
-  if (!Register::isVirtualRegister(Reg))
+  if (!Reg.isVirtual())
     return;
   if (RegsToUpdate.insert(Reg).second)
-    LLVM_DEBUG(dbgs() << "Adding register: " << Register::virtReg2Index(Reg)
-                      << " on line " << Line
-                      << " for re-computation of kill flags\n");
+    LLVM_DEBUG(dbgs() << "Adding register: " << printReg(Reg) << " on line "
+                      << Line << " for re-computation of kill flags\n");
 }
 
 // Initialize class variables.

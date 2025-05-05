@@ -35,6 +35,24 @@ UEFI::UEFI(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
 
 Tool *UEFI::buildLinker() const { return new tools::uefi::Linker(*this); }
 
+void UEFI::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
+                                     ArgStringList &CC1Args) const {
+  if (DriverArgs.hasArg(options::OPT_nostdinc))
+    return;
+
+  if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
+    SmallString<128> Dir(getDriver().ResourceDir);
+    llvm::sys::path::append(Dir, "include");
+    addSystemInclude(DriverArgs, CC1Args, Dir.str());
+  }
+
+  if (DriverArgs.hasArg(options::OPT_nostdlibinc))
+    return;
+
+  if (std::optional<std::string> Path = getStdlibIncludePath())
+    addSystemInclude(DriverArgs, CC1Args, *Path);
+}
+
 void tools::uefi::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                        const InputInfo &Output,
                                        const InputInfoList &Inputs,
@@ -61,9 +79,6 @@ void tools::uefi::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   // "Terminal Service Aware" flag is not needed for UEFI applications.
   CmdArgs.push_back("-tsaware:no");
-
-  // EFI_APPLICATION to be linked as DLL by default.
-  CmdArgs.push_back("-dll");
 
   if (Args.hasArg(options::OPT_g_Group, options::OPT__SLASH_Z7))
     CmdArgs.push_back("-debug");

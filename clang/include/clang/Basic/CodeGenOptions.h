@@ -95,6 +95,12 @@ public:
     Embed_Marker    // Embed a marker as a placeholder for bitcode.
   };
 
+  enum class ExtendVariableLivenessKind {
+    None,
+    This,
+    All,
+  };
+
   enum InlineAsmDialectKind {
     IAD_ATT,
     IAD_Intel,
@@ -186,7 +192,7 @@ public:
   std::string ProfileExcludeFiles;
 
   /// The version string to put into coverage files.
-  char CoverageVersion[4];
+  char CoverageVersion[4] = {'0', '0', '0', '0'};
 
   /// Enable additional debugging information.
   std::string DebugPass;
@@ -274,6 +280,10 @@ public:
   /// Name of the profile file to use as output for -fprofile-instr-generate,
   /// -fprofile-generate, and -fcs-profile-generate.
   std::string InstrProfileOutput;
+
+  /// Name of the patchable function entry section with
+  /// -fpatchable-function-entry.
+  std::string PatchableFunctionEntrySection;
 
   /// Name of the profile file to use with -fprofile-sample-use.
   std::string SampleProfileFile;
@@ -379,6 +389,15 @@ public:
 
   /// Set of sanitizer checks that trap rather than diagnose.
   SanitizerSet SanitizeTrap;
+
+  /// Set of sanitizer checks that can merge handlers (smaller code size at
+  /// the expense of debuggability).
+  SanitizerSet SanitizeMergeHandlers;
+
+  /// Set of thresholds in a range [0.0, 1.0]: the top hottest code responsible
+  /// for the given fraction of PGO counters will be excluded from sanitization
+  /// (0.0 [default] to skip none, 1.0 to skip all).
+  SanitizerMaskCutoffs SanitizeSkipHotCutoffs;
 
   /// List of backend command-line options for -fembed-bitcode.
   std::vector<uint8_t> CmdArgs;

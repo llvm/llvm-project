@@ -10,8 +10,8 @@ add_mlir_library(MLIRLinalgTestPasses
   TestPadFusion.cpp
 
   EXCLUDE_FROM_LIBMLIR
-
-  LINK_LIBS PUBLIC
+  )
+mlir_target_link_libraries(MLIRLinalgTestPasses PUBLIC
   MLIRAffineDialect
   MLIRArithDialect
   MLIRArithTransforms

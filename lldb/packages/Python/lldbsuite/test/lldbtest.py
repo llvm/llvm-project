@@ -143,6 +143,8 @@ STOPPED_DUE_TO_STEP_IN = "Process state is stopped due to step in"
 
 STOPPED_DUE_TO_WATCHPOINT = "Process should be stopped due to watchpoint"
 
+STOPPED_DUE_TO_HISTORY_BOUNDARY = "Process should be stopped due to history boundary"
+
 DATA_TYPES_DISPLAYED_CORRECTLY = "Data type(s) displayed correctly"
 
 VALID_BREAKPOINT = "Got a valid breakpoint"
@@ -747,11 +749,15 @@ class Base(unittest.TestCase):
         """Return absolute path to a file in the test's source directory."""
         return os.path.join(self.getSourceDir(), name)
 
+    def getPlatformAvailablePorts(self):
+        """Return ports available for connection to a lldb server on the remote platform."""
+        return configuration.lldb_platform_available_ports
+
     @classmethod
     def setUpCommands(cls):
         commands = [
             # First of all, clear all settings to have clean state of global properties.
-            "settings clear -all",
+            "settings clear --all",
             # Disable Spotlight lookup. The testsuite creates
             # different binaries with the same UUID, because they only
             # differ in the debug info, which is not being hashed.
@@ -770,7 +776,10 @@ class Base(unittest.TestCase):
             'settings set symbols.clang-modules-cache-path "{}"'.format(
                 configuration.lldb_module_cache_dir
             ),
+            # Disable colors by default.
             "settings set use-color false",
+            # Disable the statusline by default.
+            "settings set show-statusline false",
         ]
 
         # Set any user-overridden settings.
@@ -1344,6 +1353,13 @@ class Base(unittest.TestCase):
         arch = self.getArchitecture().lower()
         return arch in ["aarch64", "arm64", "arm64e"]
 
+    def isARM(self):
+        """Returns true if the architecture is ARM, meaning 32-bit ARM. Which could
+        be M profile, A profile Armv7-a, or the AArch32 mode of Armv8-a."""
+        return not self.isAArch64() and (
+            self.getArchitecture().lower().startswith("arm")
+        )
+
     def isAArch64SVE(self):
         return self.isAArch64() and "sve" in self.getCPUInfo()
 
@@ -1364,6 +1380,9 @@ class Base(unittest.TestCase):
     def isAArch64MTE(self):
         return self.isAArch64() and "mte" in self.getCPUInfo()
 
+    def isAArch64GCS(self):
+        return self.isAArch64() and "gcs" in self.getCPUInfo()
+
     def isAArch64PAuth(self):
         if self.getArchitecture() == "arm64e":
             return True
@@ -1378,6 +1397,21 @@ class Base(unittest.TestCase):
             arch = self.getArchitecture().lower()
             return arch in ["aarch64", "arm64", "arm64e"]
         return False
+
+    def isLoongArch(self):
+        """Returns true if the architecture is LoongArch."""
+        arch = self.getArchitecture().lower()
+        return arch in ["loongarch64", "loongarch32"]
+
+    def isLoongArchLSX(self):
+        return self.isLoongArch() and "lsx" in self.getCPUInfo()
+
+    def isLoongArchLASX(self):
+        return self.isLoongArch() and "lasx" in self.getCPUInfo()
+
+    def isRISCV(self):
+        """Returns true if the architecture is RISCV64 or RISCV32."""
+        return self.getArchitecture() in ["riscv64", "riscv32"]
 
     def getArchitecture(self):
         """Returns the architecture in effect the test suite is running with."""
@@ -1997,7 +2031,7 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
         """Get the working directory that should be used when launching processes for local or remote processes."""
         if lldb.remote_platform:
             # Remote tests set the platform working directory up in
-            # TestBase.setUp()
+            # Base.setUp()
             return lldb.remote_platform.GetWorkingDirectory()
         else:
             # local tests change directory into each test subdirectory
@@ -2223,12 +2257,12 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
                 substrs=[p],
             )
 
-    def completions_match(self, command, completions):
+    def completions_match(self, command, completions, max_completions=-1):
         """Checks that the completions for the given command are equal to the
         given list of completions"""
         interp = self.dbg.GetCommandInterpreter()
         match_strings = lldb.SBStringList()
-        interp.HandleCompletion(command, len(command), 0, -1, match_strings)
+        interp.HandleCompletion(command, len(command), 0, max_completions, match_strings)
         # match_strings is a 1-indexed list, so we have to slice...
         self.assertCountEqual(
             completions, list(match_strings)[1:], "List of returned completion is wrong"
@@ -2331,8 +2365,9 @@ FileCheck output:
         matches the patterns contained in 'patterns'.
 
         When matching is true and ordered is true, which are both the default,
-        the strings in the substrs array have to appear in the command output
-        in the order in which they appear in the array.
+        the strings in the substrs array, and regex in the patterns array, have
+        to appear in the command output in the order in which they appear in
+        their respective array.
 
         If the keyword argument error is set to True, it signifies that the API
         client is expecting the command to fail.  In this case, the error stream
@@ -2435,9 +2470,9 @@ FileCheck output:
         if substrs and matched == matching:
             start = 0
             for substr in substrs:
-                index = output[start:].find(substr)
-                start = start + index + len(substr) if ordered and matching else 0
+                index = output.find(substr, start)
                 matched = index != -1
+                start = index + len(substr) if ordered and matched else 0
                 log_lines.append(
                     '{} sub string: "{}" ({})'.format(
                         expecting_str, substr, found_str(matched)
@@ -2448,20 +2483,21 @@ FileCheck output:
                     break
 
         if patterns and matched == matching:
+            start = 0
             for pattern in patterns:
-                matched = re.search(pattern, output)
+                pat = re.compile(pattern)
+                match = pat.search(output, start)
+                matched = bool(match)
+                start = match.end() if ordered and matched else 0
 
                 pattern_line = '{} regex pattern: "{}" ({}'.format(
                     expecting_str, pattern, found_str(matched)
                 )
-                if matched:
-                    pattern_line += ', matched "{}"'.format(matched.group(0))
+                if match:
+                    pattern_line += ', matched "{}"'.format(match.group(0))
                 pattern_line += ")"
                 log_lines.append(pattern_line)
 
-                # Convert to bool because match objects
-                # are True-ish but is not True itself
-                matched = bool(matched)
                 if matched != matching:
                     break
 

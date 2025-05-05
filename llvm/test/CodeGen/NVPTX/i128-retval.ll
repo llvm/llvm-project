@@ -1,5 +1,5 @@
-; RUN: llc < %s -O0 -march=nvptx64 -mcpu=sm_20 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -O0 -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
+; RUN: llc < %s -O0 -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -O0 -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 ; CHECK-LABEL: .visible .func (.param .align 16 .b8 func_retval0[16]) callee(
 define i128 @callee(i128) {
@@ -21,8 +21,7 @@ start:
 	; CHECK: } // callseq 0
   %a = call i128 @callee(i128 %0)
 
-	; CHECK-DAG: st.u64 [%[[OUT]]], %[[REG2]];
-	; CHECK-DAG: st.u64 [%[[OUT]]+8], %[[REG3]];
+	; CHECK-DAG: st.v2.u64 [%[[OUT]]], {%[[REG2]], %[[REG3]]};
   store i128 %a, ptr %1
 
   ret void

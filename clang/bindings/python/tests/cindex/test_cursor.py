@@ -4,7 +4,10 @@ from clang.cindex import (
     AvailabilityKind,
     BinaryOperator,
     Config,
+    Cursor,
     CursorKind,
+    PrintingPolicy,
+    PrintingPolicyProperty,
     StorageClass,
     TemplateArgumentKind,
     TranslationUnit,
@@ -19,7 +22,7 @@ import unittest
 
 from .util import get_cursor, get_cursors, get_tu
 
-kInput = """\
+CHILDREN_TEST = """\
 struct s0 {
   int a;
   int b;
@@ -39,7 +42,7 @@ void f0(int a0, int a1) {
 }
 """
 
-kParentTest = """\
+PARENT_TEST = """\
         class C {
             void f();
         }
@@ -47,7 +50,7 @@ kParentTest = """\
         void C::f() { }
     """
 
-kTemplateArgTest = """\
+TEMPLATE_ARG_TEST = """\
         template <int kInt, typename T, bool kBool>
         void foo();
 
@@ -55,7 +58,7 @@ kTemplateArgTest = """\
         void foo<-7, float, true>();
     """
 
-kBinops = """\
+BINOPS = """\
 struct C {
    int m;
  };
@@ -116,7 +119,7 @@ struct C {
 
 class TestCursor(unittest.TestCase):
     def test_get_children(self):
-        tu = get_tu(kInput)
+        tu = get_tu(CHILDREN_TEST)
 
         it = tu.cursor.get_children()
         tu_nodes = list(it)
@@ -611,7 +614,7 @@ int add(float a, float b) { return a + b; }
         self.assertEqual(underlying.kind, TypeKind.INT)
 
     def test_semantic_parent(self):
-        tu = get_tu(kParentTest, "cpp")
+        tu = get_tu(PARENT_TEST, "cpp")
         curs = get_cursors(tu, "f")
         decl = get_cursor(tu, "C")
         self.assertEqual(len(curs), 2)
@@ -619,7 +622,7 @@ int add(float a, float b) { return a + b; }
         self.assertEqual(curs[0].semantic_parent, decl)
 
     def test_lexical_parent(self):
-        tu = get_tu(kParentTest, "cpp")
+        tu = get_tu(PARENT_TEST, "cpp")
         curs = get_cursors(tu, "f")
         decl = get_cursor(tu, "C")
         self.assertEqual(len(curs), 2)
@@ -863,13 +866,13 @@ int count(int a, int b){
         self.assertEqual(arguments[1].spelling, "j")
 
     def test_get_num_template_arguments(self):
-        tu = get_tu(kTemplateArgTest, lang="cpp")
+        tu = get_tu(TEMPLATE_ARG_TEST, lang="cpp")
         foos = get_cursors(tu, "foo")
 
         self.assertEqual(foos[1].get_num_template_arguments(), 3)
 
     def test_get_template_argument_kind(self):
-        tu = get_tu(kTemplateArgTest, lang="cpp")
+        tu = get_tu(TEMPLATE_ARG_TEST, lang="cpp")
         foos = get_cursors(tu, "foo")
 
         self.assertEqual(
@@ -883,20 +886,20 @@ int count(int a, int b){
         )
 
     def test_get_template_argument_type(self):
-        tu = get_tu(kTemplateArgTest, lang="cpp")
+        tu = get_tu(TEMPLATE_ARG_TEST, lang="cpp")
         foos = get_cursors(tu, "foo")
 
         self.assertEqual(foos[1].get_template_argument_type(1).kind, TypeKind.FLOAT)
 
     def test_get_template_argument_value(self):
-        tu = get_tu(kTemplateArgTest, lang="cpp")
+        tu = get_tu(TEMPLATE_ARG_TEST, lang="cpp")
         foos = get_cursors(tu, "foo")
 
         self.assertEqual(foos[1].get_template_argument_value(0), -7)
         self.assertEqual(foos[1].get_template_argument_value(2), True)
 
     def test_get_template_argument_unsigned_value(self):
-        tu = get_tu(kTemplateArgTest, lang="cpp")
+        tu = get_tu(TEMPLATE_ARG_TEST, lang="cpp")
         foos = get_cursors(tu, "foo")
 
         self.assertEqual(foos[1].get_template_argument_unsigned_value(0), 2**32 - 7)
@@ -928,7 +931,7 @@ int count(int a, int b){
         )
 
     def test_binop(self):
-        tu = get_tu(kBinops, lang="cpp")
+        tu = get_tu(BINOPS, lang="cpp")
 
         operators = {
             # not exposed yet
@@ -981,3 +984,69 @@ int count(int a, int b){
     def test_from_cursor_result_null(self):
         tu = get_tu("")
         self.assertEqual(tu.cursor.semantic_parent, None)
+
+    def test_pretty_print(self):
+        tu = get_tu("struct X { int x; }; void f(bool x) { }", lang="cpp")
+        f = get_cursor(tu, "f")
+
+        self.assertEqual(f.displayname, "f(bool)")
+        pp = PrintingPolicy.create(f)
+        self.assertEqual(pp.get_property(PrintingPolicyProperty.Bool), True)
+        self.assertEqual(f.pretty_printed(pp), "void f(bool x) {\n}\n")
+        pp.set_property(PrintingPolicyProperty.Bool, False)
+        self.assertEqual(pp.get_property(PrintingPolicyProperty.Bool), False)
+        self.assertEqual(f.pretty_printed(pp), "void f(_Bool x) {\n}\n")
+
+    def test_hash(self):
+        def accumulate_cursors(cursor: Cursor, all_cursors: list):
+            all_cursors.append(cursor)
+            for child in cursor.get_children():
+                all_cursors = accumulate_cursors(child, all_cursors)
+            return all_cursors
+
+        tu = get_tu(CHILDREN_TEST)
+        all_cursors = accumulate_cursors(tu.cursor, [])
+        cursor_hashes = set()
+        for cursor in all_cursors:
+            self.assertNotIn(hash(cursor), cursor_hashes)
+            cursor_hashes.add(hash(cursor))
+
+    def test_has_attrs(self):
+        tu = get_tu(
+            """
+struct A;
+struct A final {};
+
+struct B;
+struct B {};
+""",
+            lang="cpp",
+        )
+        A = get_cursor(tu, "A")
+        B = get_cursor(tu, "B")
+        self.assertTrue(A.get_definition().has_attrs())
+        self.assertFalse(B.get_definition().has_attrs())
+
+    def test_specialized_template(self):
+        tu = get_tu(TEMPLATE_ARG_TEST, lang="cpp")
+        foos = get_cursors(tu, "foo")
+        prime_foo = foos[1].specialized_template
+
+        self.assertNotEqual(foos[0], foos[1])
+        self.assertEqual(foos[0], prime_foo)
+        self.assertIsNone(tu.cursor.specialized_template)
+
+    def test_equality(self):
+        tu = get_tu(CHILDREN_TEST, lang="cpp")
+        cursor1 = get_cursor(tu, "s0")
+        cursor1_2 = get_cursor(tu, "s0")
+        cursor2 = get_cursor(tu, "f0")
+
+        self.assertIsNotNone(cursor1)
+        self.assertIsNotNone(cursor1_2)
+        self.assertIsNotNone(cursor2)
+
+        self.assertEqual(cursor1, cursor1)
+        self.assertEqual(cursor1, cursor1_2)
+        self.assertNotEqual(cursor1, cursor2)
+        self.assertNotEqual(cursor1, "foo")

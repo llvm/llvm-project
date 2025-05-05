@@ -123,6 +123,8 @@ static CPUType mapArchToCVCPUType(Triple::ArchType Type) {
     return CPUType::ARMNT;
   case Triple::ArchType::aarch64:
     return CPUType::ARM64;
+  case Triple::ArchType::mipsel:
+    return CPUType::MIPS;
   default:
     report_fatal_error("target architecture doesn't map to a CodeView CPUType");
   }
@@ -162,7 +164,7 @@ StringRef CodeViewDebug::getFullFilepath(const DIFile *File) {
   // Canonicalize the path.  We have to do it textually because we may no longer
   // have access the file in the filesystem.
   // First, replace all slashes with backslashes.
-  std::replace(Filepath.begin(), Filepath.end(), '/', '\\');
+  llvm::replace(Filepath, '/', '\\');
 
   // Remove all "\.\" with "\".
   size_t Cursor = 0;
@@ -617,7 +619,7 @@ void CodeViewDebug::beginModule(Module *M) {
     return;
   }
 
-  TheCPU = mapArchToCVCPUType(Triple(M->getTargetTriple()).getArch());
+  TheCPU = mapArchToCVCPUType(M->getTargetTriple().getArch());
 
   // Get the current source language.
   const MDNode *Node = *M->debug_compile_units_begin();
@@ -843,7 +845,7 @@ void CodeViewDebug::emitCompilerInformation() {
     Flags |= static_cast<uint32_t>(CompileSym3Flags::PGO);
   }
   using ArchType = llvm::Triple::ArchType;
-  ArchType Arch = Triple(MMI->getModule()->getTargetTriple()).getArch();
+  ArchType Arch = MMI->getModule()->getTargetTriple().getArch();
   if (Asm->TM.Options.Hotpatch || Arch == ArchType::thumb ||
       Arch == ArchType::aarch64) {
     Flags |= static_cast<uint32_t>(CompileSym3Flags::HotPatch);
@@ -1096,7 +1098,7 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     FuncName = std::string(GlobalValue::dropLLVMManglingEscape(GV->getName()));
 
   // Emit FPO data, but only on 32-bit x86. No other platforms use it.
-  if (Triple(MMI->getModule()->getTargetTriple()).getArch() == Triple::x86)
+  if (MMI->getModule()->getTargetTriple().getArch() == Triple::x86)
     OS.emitCVFPOData(Fn);
 
   // Emit a symbol subsection, required by VS2012+ to find function boundaries.
@@ -1359,7 +1361,7 @@ void CodeViewDebug::calculateRanges(
     }
 
     // We can only handle a register or an offseted load of a register.
-    if (Location->Register == 0 || Location->LoadChain.size() > 1)
+    if (!Location->Register || Location->LoadChain.size() > 1)
       continue;
 
     // Codeview can only express byte-aligned offsets, ensure that we have a
@@ -1558,7 +1560,7 @@ void CodeViewDebug::beginFunctionImpl(const MachineFunction *MF) {
   }
 
   // Mark branches that may potentially be using jump tables with labels.
-  bool isThumb = Triple(MMI->getModule()->getTargetTriple()).getArch() ==
+  bool isThumb = MMI->getModule()->getTargetTriple().getArch() ==
                  llvm::Triple::ArchType::thumb;
   discoverJumpTableBranches(MF, isThumb);
 }
@@ -3066,7 +3068,7 @@ void CodeViewDebug::endFunctionImpl(const MachineFunction *MF) {
     }
   }
 
-  bool isThumb = Triple(MMI->getModule()->getTargetTriple()).getArch() ==
+  bool isThumb = MMI->getModule()->getTargetTriple().getArch() ==
                  llvm::Triple::ArchType::thumb;
   collectDebugInfoForJumpTables(MF, isThumb);
 

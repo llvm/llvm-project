@@ -60,6 +60,7 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/SimplifyIndVar.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -592,7 +593,8 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       !UnrollRuntimeLoopRemainder(L, ULO.Count, ULO.AllowExpensiveTripCount,
                                   EpilogProfitability, ULO.UnrollRemainder,
                                   ULO.ForgetAllSCEV, LI, SE, DT, AC, TTI,
-                                  PreserveLCSSA, RemainderLoop)) {
+                                  PreserveLCSSA, ULO.SCEVExpansionBudget,
+                                  ULO.RuntimeUnrollMultiExit, RemainderLoop)) {
     if (ULO.Force)
       ULO.Runtime = false;
     else {
@@ -682,8 +684,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   // share the same exit blocks). We'll keep track of loops for which we can
   // break this so that later we can re-simplify them.
   SmallSetVector<Loop *, 4> LoopsToSimplify;
-  for (Loop *SubLoop : *L)
-    LoopsToSimplify.insert(SubLoop);
+  LoopsToSimplify.insert_range(*L);
 
   // When a FSDiscriminator is enabled, we don't need to add the multiply
   // factors to the discriminators.
@@ -996,7 +997,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
                                     /*PredecessorWithTwoSuccessors=*/false,
                                     DTUToUse ? nullptr : DT)) {
         // Dest has been folded into Fold. Update our worklists accordingly.
-        std::replace(Latches.begin(), Latches.end(), Dest, Fold);
+        llvm::replace(Latches, Dest, Fold);
         llvm::erase(UnrolledLoopBlocks, Dest);
       }
     }

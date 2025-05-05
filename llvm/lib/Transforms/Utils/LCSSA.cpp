@@ -99,10 +99,10 @@ formLCSSAForInstructionsImpl(SmallVectorImpl<Instruction *> &Worklist,
     BasicBlock *InstBB = I->getParent();
     Loop *L = LI.getLoopFor(InstBB);
     assert(L && "Instruction belongs to a BB that's not part of a loop");
-    if (!LoopExitBlocks.count(L))
-      L->getExitBlocks(LoopExitBlocks[L]);
-    assert(LoopExitBlocks.count(L));
-    const SmallVectorImpl<BasicBlock *> &ExitBlocks = LoopExitBlocks[L];
+    auto [It, Inserted] = LoopExitBlocks.try_emplace(L);
+    if (Inserted)
+      L->getExitBlocks(It->second);
+    const SmallVectorImpl<BasicBlock *> &ExitBlocks = It->second;
 
     if (ExitBlocks.empty())
       continue;
@@ -389,9 +389,10 @@ static bool formLCSSAImpl(Loop &L, const DominatorTree &DT, const LoopInfo *LI,
   }
 #endif
 
-  if (!LoopExitBlocks.count(&L))
-    L.getExitBlocks(LoopExitBlocks[&L]);
-  const SmallVectorImpl<BasicBlock *> &ExitBlocks = LoopExitBlocks[&L];
+  auto [It, Inserted] = LoopExitBlocks.try_emplace(&L);
+  if (Inserted)
+    L.getExitBlocks(It->second);
+  const SmallVectorImpl<BasicBlock *> &ExitBlocks = It->second;
   if (ExitBlocks.empty())
     return false;
 

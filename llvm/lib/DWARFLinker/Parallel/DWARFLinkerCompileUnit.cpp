@@ -1433,13 +1433,13 @@ DIE *CompileUnit::allocateTypeDie(TypeEntryBody *TypeDescriptor,
   if (IsDeclaration && !DeclarationDie) {
     // Alocate declaration DIE.
     DIE *NewDie = TypeDIEGenerator.createDIE(DieTag, 0);
-    if (TypeDescriptor->DeclarationDie.compare_exchange_weak(DeclarationDie,
-                                                             NewDie))
+    if (TypeDescriptor->DeclarationDie.compare_exchange_strong(DeclarationDie,
+                                                               NewDie))
       return NewDie;
   } else if (IsDeclaration && !IsParentDeclaration && OldParentIsDeclaration) {
     // Overwrite existing declaration DIE if it's parent is also an declaration
     // while parent of current declaration DIE is a definition.
-    if (TypeDescriptor->ParentIsDeclaration.compare_exchange_weak(
+    if (TypeDescriptor->ParentIsDeclaration.compare_exchange_strong(
             OldParentIsDeclaration, false)) {
       DIE *NewDie = TypeDIEGenerator.createDIE(DieTag, 0);
       TypeDescriptor->DeclarationDie = NewDie;
@@ -1449,13 +1449,13 @@ DIE *CompileUnit::allocateTypeDie(TypeEntryBody *TypeDescriptor,
     // Alocate declaration DIE since parent of current DIE is marked as
     // declaration.
     DIE *NewDie = TypeDIEGenerator.createDIE(DieTag, 0);
-    if (TypeDescriptor->DeclarationDie.compare_exchange_weak(DeclarationDie,
-                                                             NewDie))
+    if (TypeDescriptor->DeclarationDie.compare_exchange_strong(DeclarationDie,
+                                                               NewDie))
       return NewDie;
   } else if (!IsDeclaration && !IsParentDeclaration) {
     // Allocate definition DIE.
     DIE *NewDie = TypeDIEGenerator.createDIE(DieTag, 0);
-    if (TypeDescriptor->Die.compare_exchange_weak(DefinitionDie, NewDie)) {
+    if (TypeDescriptor->Die.compare_exchange_strong(DefinitionDie, NewDie)) {
       TypeDescriptor->ParentIsDeclaration = false;
       return NewDie;
     }
@@ -1813,19 +1813,19 @@ DwarfUnit *CompileUnit::OutputUnitVariantPtr::operator->() {
 }
 
 bool CompileUnit::OutputUnitVariantPtr::isCompileUnit() {
-  return Ptr.is<CompileUnit *>();
+  return isa<CompileUnit *>(Ptr);
 }
 
 bool CompileUnit::OutputUnitVariantPtr::isTypeUnit() {
-  return Ptr.is<TypeUnit *>();
+  return isa<TypeUnit *>(Ptr);
 }
 
 CompileUnit *CompileUnit::OutputUnitVariantPtr::getAsCompileUnit() {
-  return Ptr.get<CompileUnit *>();
+  return cast<CompileUnit *>(Ptr);
 }
 
 TypeUnit *CompileUnit::OutputUnitVariantPtr::getAsTypeUnit() {
-  return Ptr.get<TypeUnit *>();
+  return cast<TypeUnit *>(Ptr);
 }
 
 bool CompileUnit::resolveDependenciesAndMarkLiveness(

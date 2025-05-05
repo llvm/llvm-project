@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___LIBCXX_DEBUG_STRICT_WEAK_ORDERING_CHECK
-#define _LIBCPP___LIBCXX_DEBUG_STRICT_WEAK_ORDERING_CHECK
+#ifndef _LIBCPP___CXX03___LIBCXX_DEBUG_STRICT_WEAK_ORDERING_CHECK
+#define _LIBCPP___CXX03___LIBCXX_DEBUG_STRICT_WEAK_ORDERING_CHECK
 
 #include <__cxx03/__config>
 
@@ -74,4 +74,4 @@ __check_strict_weak_ordering_sorted(_RandomAccessIterator __first, _RandomAccess
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___LIBCXX_DEBUG_STRICT_WEAK_ORDERING_CHECK
+#endif // _LIBCPP___CXX03___LIBCXX_DEBUG_STRICT_WEAK_ORDERING_CHECK

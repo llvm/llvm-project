@@ -110,6 +110,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringMatcher.h"
@@ -125,7 +126,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "asm-matcher-emitter"
 
-cl::OptionCategory AsmMatcherEmitterCat("Options for -gen-asm-matcher");
+static cl::OptionCategory AsmMatcherEmitterCat("Options for -gen-asm-matcher");
 
 static cl::opt<std::string>
     MatchPrefix("match-prefix", cl::init(""),
@@ -1299,7 +1300,7 @@ void AsmMatcherInfo::buildRegisterClasses(
 
     if (!ContainingSet.empty()) {
       RegisterSets.insert(ContainingSet);
-      RegisterMap.insert(std::pair(CGR.TheDef, ContainingSet));
+      RegisterMap.try_emplace(CGR.TheDef, ContainingSet);
     }
   }
 
@@ -1320,7 +1321,7 @@ void AsmMatcherInfo::buildRegisterClasses(
     CI->DiagnosticType = "";
     CI->IsOptional = false;
     CI->DefaultMethod = ""; // unused
-    RegisterSetClasses.insert(std::pair(RS, CI));
+    RegisterSetClasses.try_emplace(RS, CI);
     ++Index;
   }
 
@@ -1362,7 +1363,7 @@ void AsmMatcherInfo::buildRegisterClasses(
     if (!CI->DiagnosticString.empty() && CI->DiagnosticType.empty())
       CI->DiagnosticType = RC.getName();
 
-    RegisterClassClasses.insert(std::pair(Def, CI));
+    RegisterClassClasses.try_emplace(Def, CI);
   }
 
   // Populate the map for individual registers.
@@ -2333,9 +2334,9 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
     OS << "  // " << InstructionConversionKinds[Row] << "\n";
     OS << "  { ";
     for (unsigned i = 0, e = ConversionTable[Row].size(); i != e; i += 2) {
-      OS << OperandConversionKinds[ConversionTable[Row][i]] << ", ";
-      if (OperandConversionKinds[ConversionTable[Row][i]] !=
-          CachedHashString("CVT_Tied")) {
+      const auto &OCK = OperandConversionKinds[ConversionTable[Row][i]];
+      OS << OCK << ", ";
+      if (OCK != CachedHashString("CVT_Tied")) {
         OS << (unsigned)(ConversionTable[Row][i + 1]) << ", ";
         continue;
       }
@@ -2522,9 +2523,9 @@ static void emitValidateOperandClass(const CodeGenTarget &Target,
   for (auto &MatchClassName : Table)
     OS << "      " << MatchClassName << ",\n";
   OS << "    };\n\n";
-  OS << "    unsigned RegID = Operand.getReg().id();\n";
-  OS << "    MatchClassKind OpKind = MCRegister::isPhysicalRegister(RegID) ? "
-        "(MatchClassKind)Table[RegID] : InvalidMatchClass;\n";
+  OS << "    MCRegister Reg = Operand.getReg();\n";
+  OS << "    MatchClassKind OpKind = Reg.isPhysical() ? "
+        "(MatchClassKind)Table[Reg.id()] : InvalidMatchClass;\n";
   OS << "    return isSubclass(OpKind, Kind) ? "
      << "(unsigned)MCTargetAsmParser::Match_Success :\n                     "
      << "                 getDiagKindFromRegisterClass(Kind);\n  }\n\n";
@@ -2823,7 +2824,7 @@ emitMnemonicAliasVariant(raw_ostream &OS, const AsmMatcherInfo &Info,
 
     MatchCode += "return;";
 
-    Cases.push_back(std::pair(AliasEntry.first, MatchCode));
+    Cases.emplace_back(AliasEntry.first, MatchCode);
   }
   StringMatcher("Mnemonic", Cases, OS).Emit(Indent);
 }
@@ -3933,7 +3934,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
           "convert to\n";
     OS << "    // an MCInst, so bail out on this instruction variant now.\n";
     OS << "    if (OperandNearMiss) {\n";
-    OS << "      // If the operand mismatch was the only problem, reprrt it as "
+    OS << "      // If the operand mismatch was the only problem, report it as "
           "a near-miss.\n";
     OS << "      if (NearMisses && !FeaturesNearMiss && "
           "!EarlyPredicateNearMiss) {\n";

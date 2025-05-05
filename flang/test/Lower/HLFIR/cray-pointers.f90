@@ -21,7 +21,7 @@ end subroutine test1
 ! CHECK:           %[[VAL_16:.*]] = fir.load %[[VAL_15]] : !fir.ref<!fir.ptr<i64>>
 ! CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_12]]#0 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:           %[[VAL_18:.*]] = fir.convert %[[VAL_16]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
-! CHECK:           %[[VAL_19:.*]] = fir.call @_FortranAPointerAssociateScalar(%[[VAL_17]], %[[VAL_18]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> none
+! CHECK:           fir.call @_FortranAPointerAssociateScalar(%[[VAL_17]], %[[VAL_18]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
 ! CHECK:           %[[VAL_20:.*]] = fir.load %[[VAL_12]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK:           %[[VAL_21:.*]] = arith.constant 7 : index
 ! CHECK:           %[[VAL_22:.*]] = hlfir.designate %[[VAL_20]] (%[[VAL_21]])  : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, index) -> !fir.ref<f32>
@@ -47,7 +47,7 @@ end subroutine test2
 ! CHECK:           %[[VAL_28:.*]] = fir.load %[[VAL_27]] : !fir.ref<!fir.ptr<i64>>
 ! CHECK:           %[[VAL_29:.*]] = fir.convert %[[VAL_24]]#0 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:           %[[VAL_30:.*]] = fir.convert %[[VAL_28]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
-! CHECK:           %[[VAL_31:.*]] = fir.call @_FortranAPointerAssociateScalar(%[[VAL_29]], %[[VAL_30]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> none
+! CHECK:           fir.call @_FortranAPointerAssociateScalar(%[[VAL_29]], %[[VAL_30]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
 ! CHECK:           %[[VAL_32:.*]] = fir.load %[[VAL_24]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK:           %[[VAL_33:.*]] = arith.constant 7 : index
 ! CHECK:           %[[VAL_34:.*]] = hlfir.designate %[[VAL_32]] (%[[VAL_33]])  : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, index) -> !fir.ref<f32>
@@ -75,7 +75,7 @@ end subroutine test3
 ! CHECK:           %[[VAL_33:.*]] = fir.load %[[VAL_32]] : !fir.ref<!fir.ptr<i64>>
 ! CHECK:           %[[VAL_34:.*]] = fir.convert %[[VAL_29]]#0 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,11>>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:           %[[VAL_35:.*]] = fir.convert %[[VAL_33]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
-! CHECK:           %[[VAL_36:.*]] = fir.call @_FortranAPointerAssociateScalar(%[[VAL_34]], %[[VAL_35]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> none
+! CHECK:           fir.call @_FortranAPointerAssociateScalar(%[[VAL_34]], %[[VAL_35]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
 ! CHECK:           %[[VAL_37:.*]] = fir.load %[[VAL_29]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,11>>>>>
 ! CHECK:           %[[VAL_38:.*]] = arith.constant 7 : index
 ! CHECK:           %[[VAL_39:.*]] = hlfir.designate %[[VAL_37]] (%[[VAL_38]])  typeparams %[[VAL_8]] : (!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,11>>>>, index, index) -> !fir.ref<!fir.char<1,11>>
@@ -103,7 +103,7 @@ end subroutine test4
 ! CHECK:           %[[VAL_23:.*]] = fir.load %[[VAL_22]] : !fir.ref<!fir.ptr<i64>>
 ! CHECK:           %[[VAL_24:.*]] = fir.convert %[[VAL_13]]#0 : (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:           %[[VAL_25:.*]] = fir.convert %[[VAL_23]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
-! CHECK:           %[[VAL_26:.*]] = fir.call @_FortranAPointerAssociateScalar(%[[VAL_24]], %[[VAL_25]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> none
+! CHECK:           fir.call @_FortranAPointerAssociateScalar(%[[VAL_24]], %[[VAL_25]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
 ! CHECK:           %[[VAL_27:.*]] = fir.load %[[VAL_13]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>
 ! CHECK:           %[[VAL_28:.*]] = fir.box_addr %[[VAL_27]] : (!fir.box<!fir.ptr<!fir.char<1,?>>>) -> !fir.ptr<!fir.char<1,?>>
 ! CHECK:           %[[VAL_29:.*]] = fir.emboxchar %[[VAL_28]], %[[VAL_8]] : (!fir.ptr<!fir.char<1,?>>, i32) -> !fir.boxchar<1>
@@ -134,7 +134,7 @@ end subroutine test5
 ! CHECK:           %[[VAL_17:.*]] = fir.load %[[VAL_16]] : !fir.ref<!fir.ptr<i64>>
 ! CHECK:           %[[VAL_18:.*]] = fir.convert %[[VAL_13]]#0 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{r:f32,i:i32}>>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:           %[[VAL_19:.*]] = fir.convert %[[VAL_17]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
-! CHECK:           %[[VAL_20:.*]] = fir.call @_FortranAPointerAssociateScalar(%[[VAL_18]], %[[VAL_19]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> none
+! CHECK:           fir.call @_FortranAPointerAssociateScalar(%[[VAL_18]], %[[VAL_19]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
 ! CHECK:           %[[VAL_21:.*]] = fir.load %[[VAL_13]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{r:f32,i:i32}>>>>>
 ! CHECK:           %[[VAL_22:.*]] = arith.constant 7 : index
 ! CHECK:           %[[VAL_23:.*]] = hlfir.designate %[[VAL_21]] (%[[VAL_22]])  : (!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{r:f32,i:i32}>>>>, index) -> !fir.ref<!fir.type<_QFtest5Tt{r:f32,i:i32}>>
@@ -178,7 +178,7 @@ end subroutine test6
 ! CHECK:           %[[VAL_50:.*]] = fir.load %[[VAL_49]] : !fir.ref<!fir.ptr<i64>>
 ! CHECK:           %[[VAL_51:.*]] = fir.convert %[[VAL_20]]#0 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:           %[[VAL_52:.*]] = fir.convert %[[VAL_50]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
-! CHECK:           %[[VAL_53:.*]] = fir.call @_FortranAPointerAssociateScalar(%[[VAL_51]], %[[VAL_52]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> none
+! CHECK:           fir.call @_FortranAPointerAssociateScalar(%[[VAL_51]], %[[VAL_52]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
 ! CHECK:           %[[VAL_54:.*]] = fir.load %[[VAL_20]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>
 ! CHECK:           %[[VAL_55:.*]] = arith.constant 9 : index
 ! CHECK:           %[[VAL_56:.*]] = hlfir.designate %[[VAL_54]] (%[[VAL_55]])  typeparams %[[VAL_11]] : (!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>, index, i32) -> !fir.boxchar<1>
@@ -187,7 +187,7 @@ end subroutine test6
 ! CHECK:           %[[VAL_58:.*]] = fir.load %[[VAL_57]] : !fir.ref<!fir.ptr<i64>>
 ! CHECK:           %[[VAL_59:.*]] = fir.convert %[[VAL_46]]#0 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:           %[[VAL_60:.*]] = fir.convert %[[VAL_58]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
-! CHECK:           %[[VAL_61:.*]] = fir.call @_FortranAPointerAssociateScalar(%[[VAL_59]], %[[VAL_60]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> none
+! CHECK:           fir.call @_FortranAPointerAssociateScalar(%[[VAL_59]], %[[VAL_60]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
 ! CHECK:           %[[VAL_62:.*]] = fir.load %[[VAL_46]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK:           %[[VAL_63:.*]] = arith.constant 5 : index
 ! CHECK:           %[[VAL_64:.*]] = hlfir.designate %[[VAL_62]] (%[[VAL_63]])  : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, index) -> !fir.ref<f32>
@@ -216,7 +216,7 @@ end subroutine test7
 ! CHECK:    %[[VAL_15:.*]] = fir.load %[[VAL_14]] : !fir.ref<!fir.ptr<i64>>
 ! CHECK:    %[[VAL_16:.*]] = fir.convert %[[VAL_9]]#0 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:    %[[VAL_17:.*]] = fir.convert %[[VAL_15]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
-! CHECK:    %[[VAL_18:.*]] = fir.call @_FortranAPointerAssociateScalar(%[[VAL_16]], %[[VAL_17]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> none
+! CHECK:    fir.call @_FortranAPointerAssociateScalar(%[[VAL_16]], %[[VAL_17]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
 ! CHECK:    %[[VAL_19:.*]] = fir.load %[[VAL_9]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 
 subroutine test8()
@@ -238,7 +238,7 @@ end subroutine test8
 ! CHECK:    %[[VAL_11:.*]] = fir.load %[[VAL_10]] : !fir.ref<!fir.ptr<i64>>
 ! CHECK:    %[[VAL_12:.*]] = fir.convert %[[VAL_5]]#0 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:    %[[VAL_13:.*]] = fir.convert %[[VAL_11]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
-! CHECK:    %[[VAL_14:.*]] = fir.call @_FortranAPointerAssociateScalar(%[[VAL_12]], %[[VAL_13]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> none
+! CHECK:    fir.call @_FortranAPointerAssociateScalar(%[[VAL_12]], %[[VAL_13]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
 ! CHECK:    %[[VAL_15:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:    %[[VAL_16:.*]] = fir.box_addr %[[VAL_15]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.ptr<!fir.array<?xi32>>
 ! CHECK:    %[[VAL_17:.*]] = fir.convert %[[VAL_16]] : (!fir.ptr<!fir.array<?xi32>>) -> !fir.ref<!fir.array<5xi32>>
@@ -268,7 +268,7 @@ end subroutine test9
 ! CHECK:    %[[VAL_11:.*]] = fir.load %[[VAL_10]] : !fir.ref<!fir.ptr<i64>>
 ! CHECK:    %[[VAL_12:.*]] = fir.convert %[[VAL_5]]#0 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:    %[[VAL_13:.*]] = fir.convert %[[VAL_11]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
-! CHECK:    %[[VAL_14:.*]] = fir.call @_FortranAPointerAssociateScalar(%[[VAL_12]], %[[VAL_13]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> none
+! CHECK:    fir.call @_FortranAPointerAssociateScalar(%[[VAL_12]], %[[VAL_13]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
 ! CHECK:    %[[VAL_15:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:    %[[VAL_16:.*]] = hlfir.as_expr %[[VAL_15]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !hlfir.expr<?xi32>
 ! CHECK:    %[[VAL_17:.*]] = arith.constant 0 : index
@@ -297,7 +297,7 @@ end subroutine test10
 ! CHECK:    %[[VAL_9:.*]] = fir.load %[[VAL_8]] : !fir.ref<!fir.ptr<i64>>
 ! CHECK:    %[[VAL_10:.*]] = fir.convert %[[VAL_3]]#0 : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:    %[[VAL_11:.*]] = fir.convert %[[VAL_9]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
-! CHECK:    %[[VAL_12:.*]] = fir.call @_FortranAPointerAssociateScalar(%[[VAL_10]], %[[VAL_11]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> none
+! CHECK:    fir.call @_FortranAPointerAssociateScalar(%[[VAL_10]], %[[VAL_11]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
 ! CHECK:    %[[VAL_13:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK:    %[[VAL_14:.*]] = fir.box_addr %[[VAL_13]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
 ! CHECK:    %[[VAL_15:.*]] = fir.convert %[[VAL_14]] : (!fir.ptr<i32>) -> !fir.ref<i32>
@@ -325,7 +325,7 @@ end subroutine test11
 ! CHECK:    %[[VAL_9:.*]] = fir.load %[[VAL_8]] : !fir.ref<!fir.ptr<i64>>
 ! CHECK:    %[[VAL_10:.*]] = fir.convert %[[VAL_3]]#0 : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:    %[[VAL_11:.*]] = fir.convert %[[VAL_9]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
-! CHECK:    %[[VAL_12:.*]] = fir.call @_FortranAPointerAssociateScalar(%[[VAL_10]], %[[VAL_11]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> none
+! CHECK:    fir.call @_FortranAPointerAssociateScalar(%[[VAL_10]], %[[VAL_11]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
 ! CHECK:    %[[VAL_13:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK:    %[[VAL_14:.*]] = fir.box_addr %[[VAL_13]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
 ! CHECK:    %[[VAL_15:.*]] = fir.load %[[VAL_14]] : !fir.ptr<i32>
@@ -355,7 +355,7 @@ end
 ! CHECK:           %[[VAL_7:.*]] = fir.load %[[VAL_6]] : !fir.ref<!fir.ptr<i64>>
 ! CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_3]]#0 : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_7]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
-! CHECK:           %[[VAL_10:.*]] = fir.call @_FortranAPointerAssociateScalar(%[[VAL_8]], %[[VAL_9]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> none
+! CHECK:           fir.call @_FortranAPointerAssociateScalar(%[[VAL_8]], %[[VAL_9]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
 ! CHECK:           %[[VAL_11:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.ptr<f32>>>
 ! CHECK:           %[[VAL_12:.*]] = fir.box_addr %[[VAL_11]] : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
 ! CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_12]] : (!fir.ptr<f32>) -> !fir.ref<f32>
@@ -393,10 +393,10 @@ end subroutine
 ! CHECK:           %[[VAL_12:.*]] = fir.alloca tuple<!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>, !fir.ref<i64>>
 ! CHECK:           %[[VAL_13:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[VAL_14:.*]] = fir.coordinate_of %[[VAL_12]], %[[VAL_13]] : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>, !fir.ref<i64>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>>
-! CHECK:           fir.store %[[VAL_9]]#1 to %[[VAL_14]] : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>>
+! CHECK:           fir.store %[[VAL_9]]#0 to %[[VAL_14]] : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>>
 ! CHECK:           %[[VAL_15:.*]] = arith.constant 1 : i32
 ! CHECK:           %[[VAL_16:.*]] = fir.coordinate_of %[[VAL_12]], %[[VAL_15]] : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>, !fir.ref<i64>>>, i32) -> !fir.llvm_ptr<!fir.ref<i64>>
-! CHECK:           fir.store %[[VAL_4]]#1 to %[[VAL_16]] : !fir.llvm_ptr<!fir.ref<i64>>
+! CHECK:           fir.store %[[VAL_4]]#0 to %[[VAL_16]] : !fir.llvm_ptr<!fir.ref<i64>>
 ! CHECK:           fir.call @_QFtest_craypointer_capturePinternal(%[[VAL_12]]) fastmath<contract> : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>, !fir.ref<i64>>>) -> ()
 ! CHECK:           return
 ! CHECK:         }
@@ -417,7 +417,7 @@ end subroutine
 ! CHECK:           %[[VAL_12:.*]] = fir.load %[[VAL_11]] : !fir.ref<!fir.ptr<i64>>
 ! CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_6]]#0 : (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_12]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
-! CHECK:           %[[VAL_15:.*]] = fir.call @_FortranAPointerAssociateScalar(%[[VAL_13]], %[[VAL_14]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> none
+! CHECK:           fir.call @_FortranAPointerAssociateScalar(%[[VAL_13]], %[[VAL_14]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
 ! CHECK:           %[[VAL_16:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>
 ! CHECK:           %[[VAL_17:.*]] = fir.box_addr %[[VAL_16]] : (!fir.box<!fir.ptr<!fir.char<1,?>>>) -> !fir.ptr<!fir.char<1,?>>
 ! CHECK:           %[[VAL_18:.*]] = fir.emboxchar %[[VAL_17]], %[[VAL_5]] : (!fir.ptr<!fir.char<1,?>>, index) -> !fir.boxchar<1>

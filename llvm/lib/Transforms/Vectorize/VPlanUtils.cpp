@@ -30,11 +30,18 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
   VPValue *Expanded = nullptr;
   if (auto *E = dyn_cast<SCEVConstant>(Expr))
     Expanded = Plan.getOrAddLiveIn(E->getValue());
-  else if (auto *E = dyn_cast<SCEVUnknown>(Expr))
-    Expanded = Plan.getOrAddLiveIn(E->getValue());
   else {
-    Expanded = new VPExpandSCEVRecipe(Expr, SE);
-    Plan.getPreheader()->appendRecipe(Expanded->getDefiningRecipe());
+    auto *U = dyn_cast<SCEVUnknown>(Expr);
+    // Skip SCEV expansion if Expr is a SCEVUnknown wrapping a non-instruction
+    // value. Otherwise the value may be defined in a loop and using it directly
+    // will break LCSSA form. The SCEV expansion takes care of preserving LCSSA
+    // form.
+    if (U && !isa<Instruction>(U->getValue())) {
+      Expanded = Plan.getOrAddLiveIn(U->getValue());
+    } else {
+      Expanded = new VPExpandSCEVRecipe(Expr, SE);
+      Plan.getEntry()->appendRecipe(Expanded->getDefiningRecipe());
+    }
   }
   Plan.addSCEVExpansion(Expr, Expanded);
   return Expanded;
@@ -85,8 +92,7 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
               m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>(
                   m_VPValue())))
       return false;
-    return all_of(R->operands(),
-                  [](VPValue *Op) { return isUniformAcrossVFsAndUFs(Op); });
+    return all_of(R->operands(), isUniformAcrossVFsAndUFs);
   }
 
   auto *CanonicalIV = R->getParent()->getPlan()->getCanonicalIV();
@@ -103,10 +109,13 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
         // TODO: Further relax the restrictions.
         return R->isUniform() &&
                (isa<LoadInst, StoreInst>(R->getUnderlyingValue())) &&
-               all_of(R->operands(),
-                      [](VPValue *Op) { return isUniformAcrossVFsAndUFs(Op); });
+               all_of(R->operands(), isUniformAcrossVFsAndUFs);
       })
-      .Case<VPScalarCastRecipe, VPWidenCastRecipe>([](const auto *R) {
+      .Case<VPInstruction>([](const auto *VPI) {
+        return VPI->isScalarCast() &&
+               isUniformAcrossVFsAndUFs(VPI->getOperand(0));
+      })
+      .Case<VPWidenCastRecipe>([](const auto *R) {
         // A cast is uniform according to its operand.
         return isUniformAcrossVFsAndUFs(R->getOperand(0));
       })

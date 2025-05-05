@@ -144,14 +144,14 @@ static void EmitInstructions(std::vector<AsmWriterInst> &Insts, raw_ostream &O,
       O << "    switch (MI->getOpcode()) {\n";
       O << "    default: llvm_unreachable(\"Unexpected opcode.\");\n";
       std::vector<std::pair<std::string, AsmWriterOperand>> OpsToPrint;
-      OpsToPrint.push_back(std::pair(FirstInst.CGI->Namespace.str() + "::" +
-                                         FirstInst.CGI->TheDef->getName().str(),
-                                     FirstInst.Operands[i]));
+      OpsToPrint.emplace_back(FirstInst.CGI->Namespace.str() +
+                                  "::" + FirstInst.CGI->TheDef->getName().str(),
+                              FirstInst.Operands[i]);
 
       for (const AsmWriterInst &AWI : SimilarInsts) {
-        OpsToPrint.push_back(std::pair(
-            AWI.CGI->Namespace.str() + "::" + AWI.CGI->TheDef->getName().str(),
-            AWI.Operands[i]));
+        OpsToPrint.emplace_back(AWI.CGI->Namespace.str() +
+                                    "::" + AWI.CGI->TheDef->getName().str(),
+                                AWI.Operands[i]);
       }
       std::reverse(OpsToPrint.begin(), OpsToPrint.end());
       while (!OpsToPrint.empty())
@@ -722,7 +722,7 @@ public:
   void addOperand(StringRef Op, int OpIdx, int PrintMethodIdx = -1) {
     assert(OpIdx >= 0 && OpIdx < 0xFE && "Idx out of range");
     assert(PrintMethodIdx >= -1 && PrintMethodIdx < 0xFF && "Idx out of range");
-    OpMap[Op] = std::pair(OpIdx, PrintMethodIdx);
+    OpMap[Op] = {OpIdx, PrintMethodIdx};
   }
 
   unsigned getNumMIOps() { return NumMIOps; }
@@ -753,7 +753,7 @@ public:
       Next = I;
     }
 
-    return std::pair(StringRef(Start, I - Start), Next);
+    return {StringRef(Start, I - Start), Next};
   }
 
   std::string formatAliasString(uint32_t &UnescapedSize) {
@@ -854,8 +854,8 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
       continue; // Aliases with priority 0 are never emitted.
 
     const DagInit *DI = R->getValueAsDag("ResultInst");
-    AliasMap[getQualifiedName(DI->getOperatorAsDef(R->getLoc()))].insert(
-        std::pair(CodeGenInstAlias(R, Target), Priority));
+    AliasMap[getQualifiedName(DI->getOperatorAsDef(R->getLoc()))].emplace(
+        CodeGenInstAlias(R, Target), Priority);
   }
 
   // A map of which conditions need to be met for each instruction operand
@@ -869,9 +869,6 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
   DenseMap<const Record *, unsigned> MCOpPredicateMap;
 
   for (auto &Aliases : AliasMap) {
-    // Collection of instruction alias rules. May contain ambiguous rules.
-    std::vector<IAPrinter> IAPs;
-
     for (auto &Alias : Aliases.second) {
       const CodeGenInstAlias &CGA = Alias.first;
       unsigned LastOpNo = CGA.ResultInstOperandIndex.size();
@@ -967,12 +964,11 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
             IAP.addOperand(ROName, MIOpNum, PrintMethodIdx);
 
             // There might be an additional predicate on the MCOperand
-            unsigned Entry = MCOpPredicateMap[Rec];
+            unsigned &Entry = MCOpPredicateMap[Rec];
             if (!Entry) {
               if (!Rec->isValueUnset("MCOperandPredicate")) {
                 MCOpPredicates.push_back(Rec);
                 Entry = MCOpPredicates.size();
-                MCOpPredicateMap[Rec] = Entry;
               } else
                 break; // No conditions on this operand at all
             }

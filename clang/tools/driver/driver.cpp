@@ -156,6 +156,11 @@ static bool SetBackdoorDriverOutputsFromEnvVars(Driver &TheDriver) {
       }
 
       const char *FilteringStr = ::getenv("CC_PRINT_HEADERS_FILTERING");
+      if (!FilteringStr) {
+        TheDriver.Diag(clang::diag::err_drv_print_header_env_var_invalid_format)
+            << EnvVar;
+        return false;
+      }
       HeaderIncludeFilteringKind Filtering;
       if (!stringToHeaderIncludeFiltering(FilteringStr, Filtering)) {
         TheDriver.Diag(clang::diag::err_drv_print_header_env_var)
@@ -166,7 +171,7 @@ static bool SetBackdoorDriverOutputsFromEnvVars(Driver &TheDriver) {
       if ((TheDriver.CCPrintHeadersFormat == HIFMT_Textual &&
            Filtering != HIFIL_None) ||
           (TheDriver.CCPrintHeadersFormat == HIFMT_JSON &&
-           Filtering != HIFIL_Only_Direct_System)) {
+           Filtering == HIFIL_None)) {
         TheDriver.Diag(clang::diag::err_drv_print_header_env_var_combination)
             << EnvVar << FilteringStr;
         return false;
@@ -318,6 +323,10 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
 
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts =
       CreateAndPopulateDiagOpts(Args);
+  // Driver's diagnostics don't use suppression mappings, so don't bother
+  // parsing them. CC1 still receives full args, so this doesn't impact other
+  // actions.
+  DiagOpts->DiagnosticSuppressionMappingsFile.clear();
 
   TextDiagnosticPrinter *DiagClient
     = new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);
@@ -355,10 +364,12 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   if (!SetBackdoorDriverOutputsFromEnvVars(TheDriver))
     return 1;
 
+  auto ExecuteCC1WithContext =
+      [&ToolContext](SmallVectorImpl<const char *> &ArgV) {
+        return ExecuteCC1Tool(ArgV, ToolContext);
+      };
   if (!UseNewCC1Process) {
-    TheDriver.CC1Main = [ToolContext](SmallVectorImpl<const char *> &ArgV) {
-      return ExecuteCC1Tool(ArgV, ToolContext);
-    };
+    TheDriver.CC1Main = ExecuteCC1WithContext;
     // Ensure the CC1Command actually catches cc1 crashes
     llvm::CrashRecoveryContext::Enable();
   }
@@ -437,7 +448,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   if (!UseNewCC1Process && IsCrash) {
     // When crashing in -fintegrated-cc1 mode, bury the timer pointers, because
     // the internal linked list might point to already released stack frames.
-    llvm::BuryPointer(llvm::TimerGroup::aquireDefaultGroup());
+    llvm::BuryPointer(llvm::TimerGroup::acquireTimerGlobals());
   } else {
     // If any timers were active but haven't been destroyed yet, print their
     // results now.  This happens in -disable-free mode.

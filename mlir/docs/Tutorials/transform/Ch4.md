@@ -355,7 +355,7 @@ mlir::transform::HasOperandSatisfyingOp::apply(
     transform::detail::prepareValueMappings(
         yieldedMappings, getBody().front().getTerminator()->getOperands(),
         state);
-    results.setParams(getPosition().cast<OpResult>(),
+    results.setParams(cast<OpResult>(getPosition()),
                       {rewriter.getI32IntegerAttr(operand.getOperandNumber())});
     for (auto &&[result, mapping] : llvm::zip(getResults(), yieldedMappings))
       results.setMappedValues(result, mapping);

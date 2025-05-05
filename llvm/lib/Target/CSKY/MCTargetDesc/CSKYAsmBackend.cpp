@@ -13,6 +13,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "csky-asmbackend"
@@ -24,8 +25,7 @@ CSKYAsmBackend::createObjectTargetWriter() const {
   return createCSKYELFObjectWriter();
 }
 
-const MCFixupKindInfo &
-CSKYAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+MCFixupKindInfo CSKYAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 
   static llvm::DenseMap<unsigned, MCFixupKindInfo> Infos = {
       {CSKY::Fixups::fixup_csky_addr32, {"fixup_csky_addr32", 0, 32, 0}},
@@ -70,16 +70,11 @@ CSKYAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   assert(Infos.size() == CSKY::NumTargetFixupKinds &&
          "Not all fixup kinds added to Infos array");
 
-  if (FirstTargetFixupKind <= Kind && Kind < FirstLiteralRelocationKind) {
-    assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
-           "Invalid kind!");
-
-    return Infos[Kind];
-  } else if (Kind < FirstTargetFixupKind) {
-    return MCAsmBackend::getFixupKindInfo(Kind);
-  } else {
+  if (mc::isRelocation(Kind))
     return MCAsmBackend::getFixupKindInfo(FK_NONE);
-  }
+  if (Kind < FirstTargetFixupKind)
+    return MCAsmBackend::getFixupKindInfo(Kind);
+  return Infos[Kind];
 }
 
 static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
@@ -170,16 +165,13 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   }
 }
 
-bool CSKYAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
+bool CSKYAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &,
                                                   const MCFixup &Fixup,
-                                                  bool Resolved, uint64_t Value,
-                                                  const MCRelaxableFragment *DF,
-                                                  const bool WasForced) const {
-  // Return true if the symbol is actually unresolved.
-  // Resolved could be always false when shouldForceRelocation return true.
-  // We use !WasForced to indicate that the symbol is unresolved and not forced
-  // by shouldForceRelocation.
-  if (!Resolved && !WasForced)
+                                                  const MCValue &,
+                                                  uint64_t Value,
+                                                  bool Resolved) const {
+  // Return true if the symbol is unresolved.
+  if (!Resolved)
     return true;
 
   int64_t Offset = int64_t(Value);
@@ -203,7 +195,7 @@ void CSKYAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                 bool IsResolved,
                                 const MCSubtargetInfo *STI) const {
   MCFixupKind Kind = Fixup.getKind();
-  if (Kind >= FirstLiteralRelocationKind)
+  if (mc::isRelocation(Kind))
     return;
   MCContext &Ctx = Asm.getContext();
   MCFixupKindInfo Info = getFixupKindInfo(Kind);
@@ -263,17 +255,11 @@ bool CSKYAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                            const MCFixup &Fixup,
                                            const MCValue &Target,
                                            const MCSubtargetInfo * /*STI*/) {
-  if (Fixup.getKind() >= FirstLiteralRelocationKind)
+  if (Target.getSpecifier())
     return true;
   switch (Fixup.getTargetKind()) {
   default:
     break;
-  case CSKY::fixup_csky_got32:
-  case CSKY::fixup_csky_got_imm18_scale4:
-  case CSKY::fixup_csky_gotoff:
-  case CSKY::fixup_csky_gotpc:
-  case CSKY::fixup_csky_plt32:
-  case CSKY::fixup_csky_plt_imm18_scale4:
   case CSKY::fixup_csky_doffset_imm18:
   case CSKY::fixup_csky_doffset_imm18_scale2:
   case CSKY::fixup_csky_doffset_imm18_scale4:

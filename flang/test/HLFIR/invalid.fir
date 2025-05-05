@@ -1348,3 +1348,210 @@ func.func @bad_eval_in_mem_3() {
   }
   return
 }
+
+// -----
+
+func.func @bad_cshift1(%arg0: !hlfir.expr<?x?xi32>, %arg1: i32) {
+  // expected-error@+1 {{'hlfir.cshift' op input and output arrays should have the same element type}}
+  %0 = hlfir.cshift %arg0 %arg1 : (!hlfir.expr<?x?xi32>, i32) -> !hlfir.expr<?x?xf32>
+  return
+}
+
+// -----
+
+func.func @bad_cshift2(%arg0: !hlfir.expr<?x?xi32>, %arg1: i32) {
+  // expected-error@+1 {{'hlfir.cshift' op input and output arrays should have the same rank}}
+  %0 = hlfir.cshift %arg0 %arg1 : (!hlfir.expr<?x?xi32>, i32) -> !hlfir.expr<?xi32>
+  return
+}
+
+// -----
+
+func.func @bad_cshift3(%arg0: !hlfir.expr<2x2xi32>, %arg1: i32) {
+  // expected-error@+1 {{'hlfir.cshift' op output array's shape conflicts with the input array's shape}}
+  %0 = hlfir.cshift %arg0 %arg1 : (!hlfir.expr<2x2xi32>, i32) -> !hlfir.expr<2x3xi32>
+  return
+}
+
+// -----
+
+func.func @bad_cshift4(%arg0: !hlfir.expr<2x2xi32>, %arg1: i32) {
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{'hlfir.cshift' op DIM must be >= 1}}
+  %0 = hlfir.cshift %arg0 %arg1 dim %c0 : (!hlfir.expr<2x2xi32>, i32, index) -> !hlfir.expr<2x2xi32>
+  return
+}
+
+// -----
+
+func.func @bad_cshift5(%arg0: !hlfir.expr<2x2xi32>, %arg1: i32) {
+  %c10 = arith.constant 10 : index
+  // expected-error@+1 {{'hlfir.cshift' op DIM must be <= input array's rank}}
+  %0 = hlfir.cshift %arg0 %arg1 dim %c10 : (!hlfir.expr<2x2xi32>, i32, index) -> !hlfir.expr<2x2xi32>
+  return
+}
+
+// -----
+
+func.func @bad_cshift6(%arg0: !hlfir.expr<2x2xi32>, %arg1: !hlfir.expr<2x2xi32>) {
+  // expected-error@+1 {{'hlfir.cshift' op SHIFT's rank must be 1 less than the input array's rank}}
+  %0 = hlfir.cshift %arg0 %arg1 : (!hlfir.expr<2x2xi32>, !hlfir.expr<2x2xi32>) -> !hlfir.expr<2x2xi32>
+  return
+}
+
+// -----
+
+func.func @bad_cshift7(%arg0: !hlfir.expr<?x2xi32>, %arg1: !hlfir.expr<3xi32>) {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'hlfir.cshift' op SHAPE(ARRAY)(2) must be equal to SHAPE(SHIFT)(1): 2 != 3}}
+  %0 = hlfir.cshift %arg0 %arg1 dim %c1 : (!hlfir.expr<?x2xi32>, !hlfir.expr<3xi32>, index) -> !hlfir.expr<2x2xi32>
+  return
+}
+
+// -----
+
+func.func @bad_cshift8(%arg0: !hlfir.expr<?x!fir.char<1,?>>, %arg1: i32) {
+  // expected-error@+2 {{'hlfir.cshift' op character KIND mismatch}}
+  // expected-error@+1 {{'hlfir.cshift' op input and output arrays should have the same element type}}
+  %0 = hlfir.cshift %arg0 %arg1 : (!hlfir.expr<?x!fir.char<1,?>>, i32) -> !hlfir.expr<?x!fir.char<2,?>>
+  return
+}
+
+// -----
+
+func.func @bad_cshift9(%arg0: !hlfir.expr<?x!fir.char<1,1>>, %arg1: i32) {
+  // expected-error@+2 {{'hlfir.cshift' op character LEN mismatch}}
+  // expected-error@+1 {{'hlfir.cshift' op input and output arrays should have the same element type}}
+  %0 = hlfir.cshift %arg0 %arg1 : (!hlfir.expr<?x!fir.char<1,1>>, i32) -> !hlfir.expr<?x!fir.char<1,2>>
+  return
+}
+
+// -----
+
+func.func @bad_reshape(%arg0: !hlfir.expr<1xi32>) {
+  // expected-error@+1 {{'hlfir.reshape' op ARRAY and the result must have the same element type}}
+  %0 = hlfir.reshape %arg0 %arg0 : (!hlfir.expr<1xi32>, !hlfir.expr<1xi32>) -> !hlfir.expr<?xf32>
+  return
+}
+
+// -----
+
+func.func @bad_reshape(%arg0: !hlfir.expr<?x!fir.type<whatever>?>, %arg1: !hlfir.expr<1xi32>) {
+  // expected-error@+1 {{'hlfir.reshape' op ARRAY must be polymorphic iff result is polymorphic}}
+  %0 = hlfir.reshape %arg0 %arg1 : (!hlfir.expr<?x!fir.type<whatever>?>, !hlfir.expr<1xi32>) -> !hlfir.expr<?x!fir.type<whatever>>
+  return
+}
+
+// -----
+
+func.func @bad_reshape(%arg0: !hlfir.expr<?x!fir.type<whatever>>, %arg1: !hlfir.expr<1xi32>) {
+  // expected-error@+1 {{'hlfir.reshape' op ARRAY must be polymorphic iff result is polymorphic}}
+  %0 = hlfir.reshape %arg0 %arg1 : (!hlfir.expr<?x!fir.type<whatever>>, !hlfir.expr<1xi32>) -> !hlfir.expr<?x!fir.type<whatever>?>
+  return
+}
+
+// -----
+
+func.func @bad_reshape(%arg0: !hlfir.expr<1x1xi32>) {
+  // expected-error@+1 {{'hlfir.reshape' op SHAPE must be an array of rank 1}}
+  %0 = hlfir.reshape %arg0 %arg0 : (!hlfir.expr<1x1xi32>, !hlfir.expr<1x1xi32>) -> !hlfir.expr<?xi32>
+  return
+}
+
+// -----
+
+func.func @bad_reshape(%arg0: !hlfir.expr<1xf32>) {
+  // expected-error@+1 {{'hlfir.reshape' op SHAPE must be an integer array}}
+  %0 = hlfir.reshape %arg0 %arg0 : (!hlfir.expr<1xf32>, !hlfir.expr<1xf32>) -> !hlfir.expr<?xf32>
+  return
+}
+
+// -----
+
+func.func @bad_reshape(%arg0: !hlfir.expr<?xi32>) {
+  // expected-error@+1 {{'hlfir.reshape' op SHAPE must have known size}}
+  %0 = hlfir.reshape %arg0 %arg0 : (!hlfir.expr<?xi32>, !hlfir.expr<?xi32>) -> !hlfir.expr<?xi32>
+  return
+}
+
+// -----
+
+func.func @bad_reshape(%arg0: !hlfir.expr<1xi32>) {
+  // expected-error@+1 {{'hlfir.reshape' op SHAPE's extent must match the result rank}}
+  %0 = hlfir.reshape %arg0 %arg0 : (!hlfir.expr<1xi32>, !hlfir.expr<1xi32>) -> !hlfir.expr<?x?xi32>
+  return
+}
+
+// -----
+
+func.func @bad_reshape(%arg0: !hlfir.expr<1xi32>, %arg1: !hlfir.expr<?xi16>) {
+  // expected-error@+1 {{'hlfir.reshape' op ARRAY and PAD must be of the same type}}
+  %0 = hlfir.reshape %arg0 %arg0 pad %arg1 : (!hlfir.expr<1xi32>, !hlfir.expr<1xi32>, !hlfir.expr<?xi16>) -> !hlfir.expr<?xi32>
+  return
+}
+
+// -----
+
+func.func @bad_reshape(%arg0: !hlfir.expr<1xi32>, %arg1: !hlfir.expr<?x?xi16>) {
+  // expected-error@+1 {{'hlfir.reshape' op ORDER must be an array of rank 1}}
+  %0 = hlfir.reshape %arg0 %arg0 order %arg1 : (!hlfir.expr<1xi32>, !hlfir.expr<1xi32>, !hlfir.expr<?x?xi16>) -> !hlfir.expr<?xi32>
+  return
+}
+
+// -----
+
+func.func @bad_reshape(%arg0: !hlfir.expr<1xi32>, %arg1: !hlfir.expr<?xf16>) {
+  // expected-error@+1 {{'hlfir.reshape' op ORDER must be an integer array}}
+  %0 = hlfir.reshape %arg0 %arg0 order %arg1 : (!hlfir.expr<1xi32>, !hlfir.expr<1xi32>, !hlfir.expr<?xf16>) -> !hlfir.expr<?xi32>
+  return
+}
+
+// -----
+
+func.func @bad_reshape(%arg0: !fir.ref<!fir.array<?xi32>>, %arg1: !hlfir.expr<1xi32>) {
+  // expected-error@+1 {{'hlfir.reshape' op operand #0 must be any array-like entity}}
+  %0 = hlfir.reshape %arg0 %arg1 : (!fir.ref<!fir.array<?xi32>>, !hlfir.expr<1xi32>) -> !hlfir.expr<?xi32>
+  return
+}
+
+// -----
+
+func.func @bad_reshape(%arg0: !fir.ref<!fir.array<?xi32>>, %arg1: !hlfir.expr<?xi32>) {
+  // expected-error@+1 {{'hlfir.reshape' op operand #1 must be any array-like entity containing a numerical type}}
+  %0 = hlfir.reshape %arg1 %arg0 : (!hlfir.expr<?xi32>, !fir.ref<!fir.array<?xi32>>) -> !hlfir.expr<?xi32>
+  return
+}
+
+// -----
+
+func.func @bad_reshape(%arg0: !fir.ref<!fir.array<?xi32>>, %arg1: !hlfir.expr<1xi32>) {
+  // expected-error@+1 {{'hlfir.reshape' op operand #2 must be any array-like entity}}
+  %0 = hlfir.reshape %arg1 %arg1 pad %arg0 : (!hlfir.expr<1xi32>, !hlfir.expr<1xi32>, !fir.ref<!fir.array<?xi32>>) -> !hlfir.expr<?xi32>
+  return
+}
+
+// -----
+
+func.func @bad_reshape(%arg0: !fir.ref<!fir.array<?xi32>>, %arg1: !hlfir.expr<1xi32>) {
+  // expected-error@+1 {{'hlfir.reshape' op operand #3 must be any array-like entity containing a numerical type}}
+  %0 = hlfir.reshape %arg1 %arg1 pad %arg1 order %arg0 : (!hlfir.expr<1xi32>, !hlfir.expr<1xi32>, !hlfir.expr<1xi32>, !fir.ref<!fir.array<?xi32>>) -> !hlfir.expr<?xi32>
+  return
+}
+
+// -----
+
+func.func @bad_reshape(%arg0: !hlfir.expr<1x!fir.char<1,2>>, %arg1: !hlfir.expr<1xi32>) {
+  // expected-error@+2 {{'hlfir.reshape' op character KIND mismatch}}
+  // expected-error@+1 {{'hlfir.reshape' op ARRAY and the result must have the same element type}}
+  %0 = hlfir.reshape %arg0 %arg1 : (!hlfir.expr<1x!fir.char<1,2>>, !hlfir.expr<1xi32>) -> !hlfir.expr<?x!fir.char<2,?>>
+  return
+}
+
+// -----
+
+func.func @bad_reshape(%arg0: !hlfir.expr<1x!fir.char<1,2>>, %arg1: !hlfir.expr<1xi32>, %arg2: !hlfir.expr<1x!fir.char<2,?>>) {
+  // expected-error@+2 {{'hlfir.reshape' op character KIND mismatch}}
+  // expected-error@+1 {{'hlfir.reshape' op ARRAY and PAD must be of the same type}}
+  %0 = hlfir.reshape %arg0 %arg1 pad %arg2 : (!hlfir.expr<1x!fir.char<1,2>>, !hlfir.expr<1xi32>, !hlfir.expr<1x!fir.char<2,?>>) -> !hlfir.expr<?x!fir.char<1,?>>
+  return
+}

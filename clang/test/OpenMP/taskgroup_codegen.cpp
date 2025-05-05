@@ -224,9 +224,7 @@ void parallel_taskgroup() {
 // CHECK2:       omp_parallel:
 // CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 0, ptr @_Z18parallel_taskgroupv..omp_par)
 // CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-// CHECK2:       omp.par.outlined.exit:
-// CHECK2-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-// CHECK2:       omp.par.exit.split:
+// CHECK2:       omp.par.exit:
 // CHECK2-NEXT:    ret void
 //
 //
@@ -250,6 +248,6 @@ void parallel_taskgroup() {
 // CHECK2-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 // CHECK2:       omp.par.pre_finalize:
 // CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
-// CHECK2:       omp.par.outlined.exit.exitStub:
+// CHECK2:       omp.par.exit.exitStub:
 // CHECK2-NEXT:    ret void
 //

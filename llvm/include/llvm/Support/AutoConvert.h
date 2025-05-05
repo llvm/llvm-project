@@ -17,6 +17,7 @@
 #ifdef __MVS__
 #include <_Ccsid.h>
 #ifdef __cplusplus
+#include "llvm/Support/ErrorOr.h"
 #include <system_error>
 #endif /* __cplusplus */
 
@@ -53,6 +54,14 @@ std::error_code restorezOSStdHandleAutoConversion(int FD);
 
 /** \brief Set the tag information for a file descriptor. */
 std::error_code setzOSFileTag(int FD, int CCSID, bool Text);
+
+/** \brief Get the the tag ccsid for a file name or a file descriptor. */
+ErrorOr<__ccsid_t> getzOSFileTag(const char *FileName, const int FD = -1);
+
+/** \brief Query the file tag to determine if it needs conversion to UTF-8
+ *  codepage.
+ */
+ErrorOr<bool> needzOSConversion(const char *FileName, const int FD = -1);
 
 } /* namespace llvm */
 #endif /* __cplusplus */

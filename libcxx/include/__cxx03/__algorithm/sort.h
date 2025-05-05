@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_SORT_H
-#define _LIBCPP___ALGORITHM_SORT_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_SORT_H
+#define _LIBCPP___CXX03___ALGORITHM_SORT_H
 
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__algorithm/comp_ref_type.h>
@@ -24,7 +24,6 @@
 #include <__cxx03/__debug_utils/randomize_range.h>
 #include <__cxx03/__debug_utils/strict_weak_ordering_check.h>
 #include <__cxx03/__functional/operations.h>
-#include <__cxx03/__functional/ranges_operations.h>
 #include <__cxx03/__iterator/iterator_traits.h>
 #include <__cxx03/__type_traits/conditional.h>
 #include <__cxx03/__type_traits/disjunction.h>
@@ -1013,4 +1012,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_SORT_H
+#endif // _LIBCPP___CXX03___ALGORITHM_SORT_H

@@ -63,16 +63,19 @@ getNewFieldsOrder(const RecordDecl *Definition,
     NameToIndex[Field->getName()] = Field->getFieldIndex();
 
   if (DesiredFieldsOrder.size() != NameToIndex.size()) {
-    llvm::errs() << "Number of provided fields doesn't match definition.\n";
+    llvm::errs() << "Number of provided fields (" << DesiredFieldsOrder.size()
+                 << ") doesn't match definition (" << NameToIndex.size()
+                 << ").\n";
     return {};
   }
   SmallVector<unsigned, 4> NewFieldsOrder;
   for (const auto &Name : DesiredFieldsOrder) {
-    if (!NameToIndex.count(Name)) {
+    auto It = NameToIndex.find(Name);
+    if (It == NameToIndex.end()) {
       llvm::errs() << "Field " << Name << " not found in definition.\n";
       return {};
     }
-    NewFieldsOrder.push_back(NameToIndex[Name]);
+    NewFieldsOrder.push_back(It->second);
   }
   assert(NewFieldsOrder.size() == NameToIndex.size());
   return NewFieldsOrder;
@@ -116,26 +119,73 @@ findMembersUsedInInitExpr(const CXXCtorInitializer *Initializer,
   return Results;
 }
 
-/// Returns the full source range for the field declaration up to (not
-/// including) the trailing semicolumn, including potential macro invocations,
-/// e.g. `int a GUARDED_BY(mu);`.
+/// Returns the start of the leading comments before `Loc`.
+static SourceLocation getStartOfLeadingComment(SourceLocation Loc,
+                                               const SourceManager &SM,
+                                               const LangOptions &LangOpts) {
+  // We consider any leading comment token that is on the same line or
+  // indented similarly to the first comment to be part of the leading comment.
+  const unsigned Line = SM.getPresumedLineNumber(Loc);
+  const unsigned Column = SM.getPresumedColumnNumber(Loc);
+  std::optional<Token> Tok =
+      Lexer::findPreviousToken(Loc, SM, LangOpts, /*IncludeComments=*/true);
+  while (Tok && Tok->is(tok::comment)) {
+    const SourceLocation CommentLoc =
+        Lexer::GetBeginningOfToken(Tok->getLocation(), SM, LangOpts);
+    if (SM.getPresumedLineNumber(CommentLoc) != Line &&
+        SM.getPresumedColumnNumber(CommentLoc) != Column) {
+      break;
+    }
+    Loc = CommentLoc;
+    Tok = Lexer::findPreviousToken(Loc, SM, LangOpts, /*IncludeComments=*/true);
+  }
+  return Loc;
+}
+
+/// Returns the end of the trailing comments after `Loc`.
+static SourceLocation getEndOfTrailingComment(SourceLocation Loc,
+                                              const SourceManager &SM,
+                                              const LangOptions &LangOpts) {
+  // We consider any following comment token that is indented more than the
+  // first comment to be part of the trailing comment.
+  const unsigned Column = SM.getPresumedColumnNumber(Loc);
+  std::optional<Token> Tok =
+      Lexer::findNextToken(Loc, SM, LangOpts, /*IncludeComments=*/true);
+  while (Tok && Tok->is(tok::comment) &&
+         SM.getPresumedColumnNumber(Tok->getLocation()) > Column) {
+    Loc = Tok->getEndLoc();
+    Tok = Lexer::findNextToken(Loc, SM, LangOpts, /*IncludeComments=*/true);
+  }
+  return Loc;
+}
+
+/// Returns the full source range for the field declaration up to (including)
+/// the trailing semicolumn, including potential macro invocations,
+/// e.g. `int a GUARDED_BY(mu);`. If there is a trailing comment, include it.
 static SourceRange getFullFieldSourceRange(const FieldDecl &Field,
                                            const ASTContext &Context) {
-  SourceRange Range = Field.getSourceRange();
+  const SourceRange Range = Field.getSourceRange();
+  SourceLocation Begin = Range.getBegin();
   SourceLocation End = Range.getEnd();
   const SourceManager &SM = Context.getSourceManager();
   const LangOptions &LangOpts = Context.getLangOpts();
   while (true) {
     std::optional<Token> CurrentToken = Lexer::findNextToken(End, SM, LangOpts);
 
-    if (!CurrentToken || CurrentToken->is(tok::semi))
-      break;
+    if (!CurrentToken)
+      return SourceRange(Begin, End);
 
     if (CurrentToken->is(tok::eof))
       return Range; // Something is wrong, return the original range.
+
     End = CurrentToken->getLastLoc();
+
+    if (CurrentToken->is(tok::semi))
+      break;
   }
-  return SourceRange(Range.getBegin(), End);
+  Begin = getStartOfLeadingComment(Begin, SM, LangOpts);
+  End = getEndOfTrailingComment(End, SM, LangOpts);
+  return SourceRange(Begin, End);
 }
 
 /// Reorders fields in the definition of a struct/class.

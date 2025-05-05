@@ -1238,8 +1238,8 @@ declare i32 @test58_d(i64)
 ; Negative test: GEP inbounds may cross sign boundary.
 define i1 @test62(ptr %a) {
 ; CHECK-LABEL: @test62(
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 10
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[A:%.*]], i64 1
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 10
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt ptr [[ARRAYIDX1]], [[ARRAYIDX2]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -1251,8 +1251,8 @@ define i1 @test62(ptr %a) {
 
 define i1 @test62_as1(ptr addrspace(1) %a) {
 ; CHECK-LABEL: @test62_as1(
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[A:%.*]], i16 1
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[A]], i16 10
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[A:%.*]], i16 1
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[A]], i16 10
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt ptr addrspace(1) [[ARRAYIDX1]], [[ARRAYIDX2]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -2197,8 +2197,7 @@ define i1 @icmp_ashr_and_overshift(i8 %X) {
 
 define i1 @icmp_and_ashr_neg_and_legal(i8 %x) {
 ; CHECK-LABEL: @icmp_and_ashr_neg_and_legal(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[TMP1]], 16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], 32
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ashr = ashr i8 %x, 4
@@ -2953,6 +2952,99 @@ define i1 @or1_eq1(i32 %x) {
   %t0 = or i32 %x, 1
   %t1 = icmp eq i32 %t0, 1
   ret i1 %t1
+}
+
+define <2 x i1> @or1_eq1_vec(<2 x i32> %x) {
+; CHECK-LABEL: @or1_eq1_vec(
+; CHECK-NEXT:    [[T1:%.*]] = icmp ult <2 x i32> [[X:%.*]], splat (i32 2)
+; CHECK-NEXT:    ret <2 x i1> [[T1]]
+;
+  %t0 = or <2 x i32> %x, splat (i32 1)
+  %t1 = icmp eq <2 x i32> %t0, splat (i32 1)
+  ret <2 x i1> %t1
+}
+
+define <2 x i1> @or_eq_vec_nonsplat(<2 x i32> %x) {
+; CHECK-LABEL: @or_eq_vec_nonsplat(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], <i32 -2, i32 -3>
+; CHECK-NEXT:    [[T1:%.*]] = icmp eq <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[T1]]
+;
+  %t0 = or <2 x i32> %x, <i32 1, i32 2>
+  %t1 = icmp eq <2 x i32> %t0, <i32 1, i32 2>
+  ret <2 x i1> %t1
+}
+
+define void @or_eq_vec_multiple_nonsplat(<2 x i32> %x, <2 x i32> %y, <2 x i32> %z, ptr %ptr0, ptr %ptr1, ptr %ptr2) {
+; CHECK-LABEL: @or_eq_vec_multiple_nonsplat(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], <i32 -2, i32 -3>
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp eq <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    store <2 x i1> [[CMP0]], ptr [[PTR0:%.*]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[Y:%.*]], <i32 -2, i32 -3>
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq <2 x i32> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    store <2 x i1> [[CMP1]], ptr [[PTR1:%.*]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i32> [[Z:%.*]], <i32 -2, i32 -3>
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq <2 x i32> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    store <2 x i1> [[CMP2]], ptr [[PTR2:%.*]], align 1
+; CHECK-NEXT:    ret void
+;
+  %t0 = or <2 x i32> %x, <i32 1, i32 2>
+  %cmp0 = icmp eq <2 x i32> %t0, <i32 1, i32 2>
+  store <2 x i1> %cmp0, ptr %ptr0
+
+  %t1 = or <2 x i32> %y, <i32 1, i32 2>
+  %cmp1 = icmp eq <2 x i32> %t1, <i32 1, i32 2>
+  store <2 x i1> %cmp1, ptr %ptr1
+
+  %t2 = or <2 x i32> %z, <i32 1, i32 2>
+  %cmp2 = icmp eq <2 x i32> %t2, <i32 1, i32 2>
+  store <2 x i1> %cmp2, ptr %ptr2
+  ret void
+}
+
+; Make sure use count of 1 doesn't matter
+define i1 @or1_eq1_multiple(i32 %x, i32 %y, i32 %z, ptr %ptr0, ptr %ptr1) {
+; CHECK-LABEL: @or1_eq1_multiple(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[X:%.*]], 2
+; CHECK-NEXT:    store i1 [[CMP1]], ptr [[PTR:%.*]], align 1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[Y:%.*]], 2
+; CHECK-NEXT:    store i1 [[CMP2]], ptr [[PTR1:%.*]], align 1
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[Z:%.*]], 2
+; CHECK-NEXT:    ret i1 [[CMP3]]
+;
+  %t0 = or i32 %x, 1
+  %cmp0 = icmp eq i32 %t0, 1
+  store i1 %cmp0, ptr %ptr0
+
+  %t1 = or i32 %y, 1
+  %cmp1 = icmp eq i32 %t1, 1
+  store i1 %cmp1, ptr %ptr1
+
+  %t2 = or i32 %z, 1
+  %cmp2 = icmp eq i32 %t2, 1
+  ret i1 %cmp2
+}
+
+define <2 x i1> @or1_eq1_multiple_vec(<2 x i32> %x, <2 x i32> %y, <2 x i32> %z, ptr %ptr0, ptr %ptr1) {
+; CHECK-LABEL: @or1_eq1_multiple_vec(
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp ult <2 x i32> [[X:%.*]], splat (i32 2)
+; CHECK-NEXT:    store <2 x i1> [[CMP0]], ptr [[PTR0:%.*]], align 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i32> [[Y:%.*]], splat (i32 2)
+; CHECK-NEXT:    store <2 x i1> [[CMP1]], ptr [[PTR1:%.*]], align 1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult <2 x i32> [[Z:%.*]], splat (i32 2)
+; CHECK-NEXT:    ret <2 x i1> [[CMP2]]
+;
+  %t0 = or <2 x i32> %x, splat (i32 1)
+  %cmp0 = icmp eq <2 x i32> %t0, splat (i32 1)
+  store <2 x i1> %cmp0, ptr %ptr0
+
+  %t1 = or <2 x i32> %y, splat (i32 1)
+  %cmp1 = icmp eq <2 x i32> %t1, splat (i32 1)
+  store <2 x i1> %cmp1, ptr %ptr1
+
+  %t2 = or <2 x i32> %z, splat (i32 1)
+  %cmp2 = icmp eq <2 x i32> %t2, splat (i32 1)
+  ret <2 x i1> %cmp2
 }
 
 ; X | C == C --> X <=u C (when C+1 is PowerOf2).

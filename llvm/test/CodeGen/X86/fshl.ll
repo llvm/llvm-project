@@ -657,6 +657,29 @@ define i64 @combine_fshl_load_i64(ptr %p) nounwind {
   ret i64 %res
 }
 
+define i16 @combine_fshl_load_i16_chain_use(ptr %p, ptr %q, i16 %r) nounwind {
+; X86-LABEL: combine_fshl_load_i16_chain_use:
+; X86:       # %bb.0:
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl 1(%eax), %eax
+; X86-NEXT:    movw %cx, (%edx)
+; X86-NEXT:    retl
+;
+; X64-LABEL: combine_fshl_load_i16_chain_use:
+; X64:       # %bb.0:
+; X64-NEXT:    movzwl 1(%rdi), %eax
+; X64-NEXT:    movw %dx, (%rsi)
+; X64-NEXT:    retq
+  %p1 = getelementptr i16, ptr %p, i32 1
+  %ld0 = load i16, ptr %p
+  %ld1 = load i16, ptr %p1
+  %res = call i16 @llvm.fshl.i16(i16 %ld1, i16 %ld0, i16 8)
+  store i16 %r, ptr %q
+  ret i16 %res
+}
+
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}
 !1 = !{!2, !3, !4, !5, !6, !7, !8, !9}

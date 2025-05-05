@@ -14,6 +14,8 @@
 #include "lldb/Host/Editline.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Host/StreamFile.h"
+#include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBAssert.h"
@@ -22,6 +24,7 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/Utility/Timeout.h"
+#include "lldb/lldb-forward.h"
 #include "llvm/Support/ConvertUTF.h"
 
 #include "llvm/Support/FileSystem.h"
@@ -76,6 +79,19 @@ using namespace lldb_private::line_editor;
 
 #endif // #if LLDB_EDITLINE_USE_WCHAR
 
+template <typename T> class ScopedOptional {
+public:
+  template <typename... Args>
+  ScopedOptional(std::optional<T> &optional, Args &&...args)
+      : m_optional(optional) {
+    m_optional.emplace(std::forward<Args>(args)...);
+  }
+  ~ScopedOptional() { m_optional.reset(); }
+
+private:
+  std::optional<T> &m_optional;
+};
+
 bool IsOnlySpaces(const EditLineStringType &content) {
   for (wchar_t ch : content) {
     if (ch != EditLineCharType(' '))
@@ -85,7 +101,8 @@ bool IsOnlySpaces(const EditLineStringType &content) {
 }
 
 static size_t ColumnWidth(llvm::StringRef str) {
-  return llvm::sys::locale::columnWidth(str);
+  std::string stripped = ansi::StripAnsiTerminalCodes(str);
+  return llvm::sys::locale::columnWidth(stripped);
 }
 
 static int GetOperation(HistoryOperation op) {
@@ -387,11 +404,13 @@ void Editline::MoveCursor(CursorLocation from, CursorLocation to) {
       (int)((info->cursor - info->buffer) + GetPromptWidth());
   int editline_cursor_row = editline_cursor_position / m_terminal_width;
 
+  LockedStreamFile locked_stream = m_output_stream_sp->Lock();
+
   // Determine relative starting and ending lines
   int fromLine = GetLineIndexForLocation(from, editline_cursor_row);
   int toLine = GetLineIndexForLocation(to, editline_cursor_row);
   if (toLine != fromLine) {
-    fprintf(m_output_file,
+    fprintf(locked_stream.GetFile().GetStream(),
             (toLine > fromLine) ? ANSI_DOWN_N_ROWS : ANSI_UP_N_ROWS,
             std::abs(toLine - fromLine));
   }
@@ -407,21 +426,23 @@ void Editline::MoveCursor(CursorLocation from, CursorLocation to) {
          80) +
         1;
   }
-  fprintf(m_output_file, ANSI_SET_COLUMN_N, toColumn);
+  fprintf(locked_stream.GetFile().GetStream(), ANSI_SET_COLUMN_N, toColumn);
 }
 
 void Editline::DisplayInput(int firstIndex) {
-  fprintf(m_output_file, ANSI_SET_COLUMN_N ANSI_CLEAR_BELOW, 1);
+  LockedStreamFile locked_stream = m_output_stream_sp->Lock();
+  fprintf(locked_stream.GetFile().GetStream(),
+          ANSI_SET_COLUMN_N ANSI_CLEAR_BELOW, 1);
   int line_count = (int)m_input_lines.size();
   for (int index = firstIndex; index < line_count; index++) {
-    fprintf(m_output_file,
+    fprintf(locked_stream.GetFile().GetStream(),
             "%s"
             "%s"
             "%s" EditLineStringFormatSpec " ",
             m_prompt_ansi_prefix.c_str(), PromptForIndex(index).c_str(),
             m_prompt_ansi_suffix.c_str(), m_input_lines[index].c_str());
     if (index < line_count - 1)
-      fprintf(m_output_file, "\n");
+      fprintf(locked_stream.GetFile().GetStream(), "\n");
   }
 }
 
@@ -533,8 +554,10 @@ int Editline::GetCharacter(EditLineGetCharType *c) {
   // Paint a ANSI formatted version of the desired prompt over the version
   // libedit draws. (will only be requested if colors are supported)
   if (m_needs_prompt_repaint) {
+    ScopedOptional<LockedStreamFile> scope(m_locked_output,
+                                           m_output_stream_sp->Lock());
     MoveCursor(CursorLocation::EditingCursor, CursorLocation::EditingPrompt);
-    fprintf(m_output_file,
+    fprintf(m_locked_output->GetFile().GetStream(),
             "%s"
             "%s"
             "%s",
@@ -559,58 +582,60 @@ int Editline::GetCharacter(EditLineGetCharType *c) {
     m_current_line_rows = new_line_rows;
   }
 
+  if (m_terminal_size_has_changed)
+    ApplyTerminalSizeChange();
+
+  // This mutex is locked by our caller (GetLine). Unlock it while we read a
+  // character (blocking operation), so we do not hold the mutex
+  // indefinitely. This gives a chance for someone to interrupt us. After
+  // Read returns, immediately lock the mutex again and check if we were
+  // interrupted.
+  m_locked_output.reset();
+
+  if (m_redraw_callback)
+    m_redraw_callback();
+
   // Read an actual character
-  while (true) {
-    lldb::ConnectionStatus status = lldb::eConnectionStatusSuccess;
-    char ch = 0;
+  lldb::ConnectionStatus status = lldb::eConnectionStatusSuccess;
+  char ch = 0;
+  int read_count =
+      m_input_connection.Read(&ch, 1, std::nullopt, status, nullptr);
 
-    if (m_terminal_size_has_changed)
-      ApplyTerminalSizeChange();
-
-    // This mutex is locked by our caller (GetLine). Unlock it while we read a
-    // character (blocking operation), so we do not hold the mutex
-    // indefinitely. This gives a chance for someone to interrupt us. After
-    // Read returns, immediately lock the mutex again and check if we were
-    // interrupted.
-    m_output_mutex.unlock();
-    int read_count =
-        m_input_connection.Read(&ch, 1, std::nullopt, status, nullptr);
-    m_output_mutex.lock();
-    if (m_editor_status == EditorStatus::Interrupted) {
-      while (read_count > 0 && status == lldb::eConnectionStatusSuccess)
-        read_count =
-            m_input_connection.Read(&ch, 1, std::nullopt, status, nullptr);
-      lldbassert(status == lldb::eConnectionStatusInterrupted);
-      return 0;
-    }
-
-    if (read_count) {
-      if (CompleteCharacter(ch, *c))
-        return 1;
-    } else {
-      switch (status) {
-      case lldb::eConnectionStatusSuccess: // Success
-        break;
-
-      case lldb::eConnectionStatusInterrupted:
-        llvm_unreachable("Interrupts should have been handled above.");
-
-      case lldb::eConnectionStatusError:        // Check GetError() for details
-      case lldb::eConnectionStatusTimedOut:     // Request timed out
-      case lldb::eConnectionStatusEndOfFile:    // End-of-file encountered
-      case lldb::eConnectionStatusNoConnection: // No connection
-      case lldb::eConnectionStatusLostConnection: // Lost connection while
-                                                  // connected to a valid
-                                                  // connection
-        m_editor_status = EditorStatus::EndOfInput;
-        return 0;
-      }
-    }
+  // Re-lock the output mutex to protected m_editor_status here and in the
+  // switch below.
+  m_locked_output.emplace(m_output_stream_sp->Lock());
+  if (m_editor_status == EditorStatus::Interrupted) {
+    while (read_count > 0 && status == lldb::eConnectionStatusSuccess)
+      read_count =
+          m_input_connection.Read(&ch, 1, std::nullopt, status, nullptr);
+    lldbassert(status == lldb::eConnectionStatusInterrupted);
+    return 0;
   }
+
+  if (read_count) {
+    if (CompleteCharacter(ch, *c))
+      return 1;
+    return 0;
+  }
+
+  switch (status) {
+  case lldb::eConnectionStatusSuccess:
+    llvm_unreachable("Success should have resulted in positive read_count.");
+  case lldb::eConnectionStatusInterrupted:
+    llvm_unreachable("Interrupts should have been handled above.");
+  case lldb::eConnectionStatusError:
+  case lldb::eConnectionStatusTimedOut:
+  case lldb::eConnectionStatusEndOfFile:
+  case lldb::eConnectionStatusNoConnection:
+  case lldb::eConnectionStatusLostConnection:
+    m_editor_status = EditorStatus::EndOfInput;
+  }
+
+  return 0;
 }
 
 const char *Editline::Prompt() {
-  if (!m_prompt_ansi_prefix.empty() || !m_prompt_ansi_suffix.empty())
+  if (m_color)
     m_needs_prompt_repaint = true;
   return m_current_prompt.c_str();
 }
@@ -698,12 +723,14 @@ unsigned char Editline::EndOrAddLineCommand(int ch) {
     }
   }
   MoveCursor(CursorLocation::EditingCursor, CursorLocation::BlockEnd);
-  fprintf(m_output_file, "\n");
+  LockedStreamFile locked_stream = m_output_stream_sp->Lock();
+  fprintf(locked_stream.GetFile().GetStream(), "\n");
   m_editor_status = EditorStatus::Complete;
   return CC_NEWLINE;
 }
 
 unsigned char Editline::DeleteNextCharCommand(int ch) {
+  LockedStreamFile locked_stream = m_output_stream_sp->Lock();
   LineInfoW *info = const_cast<LineInfoW *>(el_wline(m_editline));
 
   // Just delete the next character normally if possible
@@ -717,7 +744,7 @@ unsigned char Editline::DeleteNextCharCommand(int ch) {
   // line is empty, in which case it is treated as EOF
   if (m_current_line_index == m_input_lines.size() - 1) {
     if (ch == 4 && info->buffer == info->lastchar) {
-      fprintf(m_output_file, "^D\n");
+      fprintf(locked_stream.GetFile().GetStream(), "^D\n");
       m_editor_status = EditorStatus::EndOfInput;
       return CC_EOF;
     }
@@ -765,7 +792,8 @@ unsigned char Editline::DeletePreviousCharCommand(int ch) {
       priorLine + m_input_lines[m_current_line_index];
 
   // Repaint from the new line down
-  fprintf(m_output_file, ANSI_UP_N_ROWS ANSI_SET_COLUMN_N,
+  LockedStreamFile locked_stream = m_output_stream_sp->Lock();
+  fprintf(locked_stream.GetFile().GetStream(), ANSI_UP_N_ROWS ANSI_SET_COLUMN_N,
           CountRowsForLine(priorLine), 1);
   DisplayInput(m_current_line_index);
 
@@ -783,17 +811,19 @@ unsigned char Editline::PreviousLineCommand(int ch) {
     return RecallHistory(HistoryOperation::Older);
   }
 
+  LockedStreamFile locked_stream = m_output_stream_sp->Lock();
+
   // Start from a known location
   MoveCursor(CursorLocation::EditingCursor, CursorLocation::EditingPrompt);
 
   // Treat moving up from a blank last line as a deletion of that line
   if (m_current_line_index == m_input_lines.size() - 1 && IsOnlySpaces()) {
     m_input_lines.erase(m_input_lines.begin() + m_current_line_index);
-    fprintf(m_output_file, ANSI_CLEAR_BELOW);
+    fprintf(locked_stream.GetFile().GetStream(), ANSI_CLEAR_BELOW);
   }
 
   SetCurrentLine(m_current_line_index - 1);
-  fprintf(m_output_file, ANSI_UP_N_ROWS ANSI_SET_COLUMN_N,
+  fprintf(locked_stream.GetFile().GetStream(), ANSI_UP_N_ROWS ANSI_SET_COLUMN_N,
           CountRowsForLine(m_input_lines[m_current_line_index]), 1);
   return CC_NEWLINE;
 }
@@ -827,9 +857,11 @@ unsigned char Editline::NextLineCommand(int ch) {
   const LineInfoW *info = el_wline(m_editline);
   int cursor_position = (int)((info->cursor - info->buffer) + GetPromptWidth());
   int cursor_row = cursor_position / m_terminal_width;
+
+  LockedStreamFile locked_stream = m_output_stream_sp->Lock();
   for (int line_count = 0; line_count < m_current_line_rows - cursor_row;
        line_count++) {
-    fprintf(m_output_file, "\n");
+    fprintf(locked_stream.GetFile().GetStream(), "\n");
   }
   return CC_NEWLINE;
 }
@@ -924,10 +956,11 @@ unsigned char Editline::BufferEndCommand(int ch) {
 
 /// Prints completions and their descriptions to the given file. Only the
 /// completions in the interval [start, end) are printed.
-static void
+static size_t
 PrintCompletion(FILE *output_file,
                 llvm::ArrayRef<CompletionResult::Completion> results,
-                size_t max_completion_length, size_t max_length) {
+                size_t max_completion_length, size_t max_length,
+                std::optional<size_t> max_height = std::nullopt) {
   constexpr size_t ellipsis_length = 3;
   constexpr size_t padding_length = 8;
   constexpr size_t separator_length = 4;
@@ -935,7 +968,14 @@ PrintCompletion(FILE *output_file,
   const size_t description_col =
       std::min(max_completion_length + padding_length, max_length);
 
+  size_t lines_printed = 0;
+  size_t results_printed = 0;
   for (const CompletionResult::Completion &c : results) {
+    if (max_height && lines_printed >= *max_height)
+      break;
+
+    results_printed++;
+
     if (c.GetCompletion().empty())
       continue;
 
@@ -956,6 +996,7 @@ PrintCompletion(FILE *output_file,
       fprintf(output_file, "%.*s...\n",
               static_cast<int>(max_length - padding_length - ellipsis_length),
               c.GetCompletion().c_str());
+      lines_printed++;
       continue;
     }
 
@@ -964,6 +1005,7 @@ PrintCompletion(FILE *output_file,
     if (c.GetDescription().empty() ||
         description_col + separator_length + ellipsis_length >= max_length) {
       fprintf(output_file, "\n");
+      lines_printed++;
       continue;
     }
 
@@ -990,6 +1032,8 @@ PrintCompletion(FILE *output_file,
     for (llvm::StringRef line : llvm::split(c.GetDescription(), '\n')) {
       if (line.empty())
         break;
+      if (max_height && lines_printed >= *max_height)
+        break;
       if (!first)
         fprintf(output_file, "%*s",
                 static_cast<int>(description_col + separator_length), "");
@@ -1000,23 +1044,32 @@ PrintCompletion(FILE *output_file,
       if (position + description_length < max_length) {
         fprintf(output_file, "%.*s\n", static_cast<int>(description_length),
                 line.data());
+        lines_printed++;
       } else {
         fprintf(output_file, "%.*s...\n",
                 static_cast<int>(max_length - position - ellipsis_length),
                 line.data());
+        lines_printed++;
         continue;
       }
     }
   }
+  return results_printed;
 }
 
 void Editline::DisplayCompletions(
     Editline &editline, llvm::ArrayRef<CompletionResult::Completion> results) {
   assert(!results.empty());
 
-  fprintf(editline.m_output_file,
+  LockedStreamFile locked_stream = editline.m_output_stream_sp->Lock();
+
+  fprintf(locked_stream.GetFile().GetStream(),
           "\n" ANSI_CLEAR_BELOW "Available completions:\n");
-  const size_t page_size = 40;
+
+  /// Account for the current line, the line showing "Available completions"
+  /// before and the line saying "More" after.
+  const size_t page_size = editline.GetTerminalHeight() - 3;
+
   bool all = false;
 
   auto longest =
@@ -1026,26 +1079,17 @@ void Editline::DisplayCompletions(
 
   const size_t max_len = longest->GetCompletion().size();
 
-  if (results.size() < page_size) {
-    PrintCompletion(editline.m_output_file, results, max_len,
-                    editline.GetTerminalWidth());
-    return;
-  }
-
   size_t cur_pos = 0;
   while (cur_pos < results.size()) {
-    size_t remaining = results.size() - cur_pos;
-    size_t next_size = all ? remaining : std::min(page_size, remaining);
-
-    PrintCompletion(editline.m_output_file, results.slice(cur_pos, next_size),
-                    max_len, editline.GetTerminalWidth());
-
-    cur_pos += next_size;
+    cur_pos += PrintCompletion(
+        locked_stream.GetFile().GetStream(), results.slice(cur_pos), max_len,
+        editline.GetTerminalWidth(),
+        all ? std::nullopt : std::optional<size_t>(page_size));
 
     if (cur_pos >= results.size())
       break;
 
-    fprintf(editline.m_output_file, "More (Y/n/a): ");
+    fprintf(locked_stream.GetFile().GetStream(), "More (Y/n/a): ");
     // The type for the output and the type for the parameter are different,
     // to allow interoperability with older versions of libedit. The container
     // for the reply must be as wide as what our implementation is using,
@@ -1057,17 +1101,19 @@ void Editline::DisplayCompletions(
     // Check for a ^C or other interruption.
     if (editline.m_editor_status == EditorStatus::Interrupted) {
       editline.m_editor_status = EditorStatus::Editing;
-      fprintf(editline.m_output_file, "^C\n");
+      fprintf(locked_stream.GetFile().GetStream(), "^C\n");
       break;
     }
 
-    fprintf(editline.m_output_file, "\n");
+    fprintf(locked_stream.GetFile().GetStream(), "\n");
     if (got_char == -1 || reply == 'n')
       break;
     if (reply == 'a')
       all = true;
   }
 }
+
+void Editline::UseColor(bool use_color) { m_color = use_color; }
 
 unsigned char Editline::TabCommand(int ch) {
   if (!m_completion_callback)
@@ -1170,17 +1216,18 @@ unsigned char Editline::TypedCharacter(int ch) {
                        line_info->lastchar - line_info->buffer);
 
   if (std::optional<std::string> to_add = m_suggestion_callback(line)) {
+    LockedStreamFile locked_stream = m_output_stream_sp->Lock();
     std::string to_add_color =
         m_suggestion_ansi_prefix + to_add.value() + m_suggestion_ansi_suffix;
-    fputs(typed.c_str(), m_output_file);
-    fputs(to_add_color.c_str(), m_output_file);
+    fputs(typed.c_str(), locked_stream.GetFile().GetStream());
+    fputs(to_add_color.c_str(), locked_stream.GetFile().GetStream());
     size_t new_autosuggestion_size = line.size() + to_add->length();
     // Print spaces to hide any remains of a previous longer autosuggestion.
     if (new_autosuggestion_size < m_previous_autosuggestion_size) {
       size_t spaces_to_print =
           m_previous_autosuggestion_size - new_autosuggestion_size;
       std::string spaces = std::string(spaces_to_print, ' ');
-      fputs(spaces.c_str(), m_output_file);
+      fputs(spaces.c_str(), locked_stream.GetFile().GetStream());
     }
     m_previous_autosuggestion_size = new_autosuggestion_size;
 
@@ -1189,7 +1236,7 @@ unsigned char Editline::TypedCharacter(int ch) {
     int editline_cursor_row = editline_cursor_position / m_terminal_width;
     int toColumn =
         editline_cursor_position - (editline_cursor_row * m_terminal_width);
-    fprintf(m_output_file, ANSI_SET_COLUMN_N, toColumn);
+    fprintf(locked_stream.GetFile().GetStream(), ANSI_SET_COLUMN_N, toColumn);
     return CC_REFRESH;
   }
 
@@ -1224,13 +1271,17 @@ void Editline::ConfigureEditor(bool multiline) {
     el_end(m_editline);
   }
 
-  m_editline =
-      el_init(m_editor_name.c_str(), m_input_file, m_output_file, m_error_file);
+  LockedStreamFile locked_output_stream = m_output_stream_sp->Lock();
+  LockedStreamFile locked_error_stream = m_output_stream_sp->Lock();
+  m_editline = el_init(m_editor_name.c_str(), m_input_file,
+                       locked_output_stream.GetFile().GetStream(),
+                       locked_error_stream.GetFile().GetStream());
   ApplyTerminalSizeChange();
 
   if (m_history_sp && m_history_sp->IsValid()) {
     if (!m_history_sp->Load()) {
-        fputs("Could not load history file\n.", m_output_file);
+      fputs("Could not load history file\n.",
+            locked_output_stream.GetFile().GetStream());
     }
     el_wset(m_editline, EL_HIST, history, m_history_sp->GetHistoryPtr());
   }
@@ -1461,12 +1512,12 @@ Editline *Editline::InstanceFor(EditLine *editline) {
 }
 
 Editline::Editline(const char *editline_name, FILE *input_file,
-                   FILE *output_file, FILE *error_file,
-                   std::recursive_mutex &output_mutex)
+                   lldb::LockableStreamFileSP output_stream_sp,
+                   lldb::LockableStreamFileSP error_stream_sp, bool color)
     : m_editor_status(EditorStatus::Complete), m_input_file(input_file),
-      m_output_file(output_file), m_error_file(error_file),
-      m_input_connection(fileno(input_file), false),
-      m_output_mutex(output_mutex) {
+      m_output_stream_sp(output_stream_sp), m_error_stream_sp(error_stream_sp),
+      m_input_connection(fileno(input_file), false), m_color(color) {
+  assert(output_stream_sp && error_stream_sp);
   // Get a shared history instance
   m_editor_name = (editline_name == nullptr) ? "lldb-tmp" : editline_name;
   m_history_sp = EditlineHistory::GetHistory(m_editor_name);
@@ -1525,6 +1576,13 @@ void Editline::ApplyTerminalSizeChange() {
     m_terminal_width = INT_MAX;
     m_current_line_rows = 1;
   }
+
+  int rows;
+  if (el_get(m_editline, EL_GETTC, "li", &rows, nullptr) == 0) {
+    m_terminal_height = rows;
+  } else {
+    m_terminal_height = INT_MAX;
+  }
 }
 
 const char *Editline::GetPrompt() { return m_set_prompt.c_str(); }
@@ -1533,9 +1591,9 @@ uint32_t Editline::GetCurrentLine() { return m_current_line_index; }
 
 bool Editline::Interrupt() {
   bool result = true;
-  std::lock_guard<std::recursive_mutex> guard(m_output_mutex);
+  LockedStreamFile locked_stream = m_output_stream_sp->Lock();
   if (m_editor_status == EditorStatus::Editing) {
-    fprintf(m_output_file, "^C\n");
+    fprintf(locked_stream.GetFile().GetStream(), "^C\n");
     result = m_input_connection.InterruptRead();
   }
   m_editor_status = EditorStatus::Interrupted;
@@ -1544,10 +1602,10 @@ bool Editline::Interrupt() {
 
 bool Editline::Cancel() {
   bool result = true;
-  std::lock_guard<std::recursive_mutex> guard(m_output_mutex);
+  LockedStreamFile locked_stream = m_output_stream_sp->Lock();
   if (m_editor_status == EditorStatus::Editing) {
     MoveCursor(CursorLocation::EditingCursor, CursorLocation::BlockStart);
-    fprintf(m_output_file, ANSI_CLEAR_BELOW);
+    fprintf(locked_stream.GetFile().GetStream(), ANSI_CLEAR_BELOW);
     result = m_input_connection.InterruptRead();
   }
   m_editor_status = EditorStatus::Interrupted;
@@ -1559,7 +1617,8 @@ bool Editline::GetLine(std::string &line, bool &interrupted) {
   m_input_lines = std::vector<EditLineStringType>();
   m_input_lines.insert(m_input_lines.begin(), EditLineConstString(""));
 
-  std::lock_guard<std::recursive_mutex> guard(m_output_mutex);
+  ScopedOptional<LockedStreamFile> scope(m_locked_output,
+                                         m_output_stream_sp->Lock());
 
   lldbassert(m_editor_status != EditorStatus::Editing);
   if (m_editor_status == EditorStatus::Interrupted) {
@@ -1579,7 +1638,7 @@ bool Editline::GetLine(std::string &line, bool &interrupted) {
   interrupted = m_editor_status == EditorStatus::Interrupted;
   if (!interrupted) {
     if (input == nullptr) {
-      fprintf(m_output_file, "\n");
+      fprintf(m_locked_output->GetFile().GetStream(), "\n");
       m_editor_status = EditorStatus::EndOfInput;
     } else {
       m_history_sp->Enter(input);
@@ -1604,7 +1663,9 @@ bool Editline::GetLines(int first_line_number, StringList &lines,
   m_input_lines = std::vector<EditLineStringType>();
   m_input_lines.insert(m_input_lines.begin(), EditLineConstString(""));
 
-  std::lock_guard<std::recursive_mutex> guard(m_output_mutex);
+  ScopedOptional<LockedStreamFile> scope(m_locked_output,
+                                         m_output_stream_sp->Lock());
+
   // Begin the line editing loop
   DisplayInput();
   SetCurrentLine(0);
@@ -1633,15 +1694,15 @@ bool Editline::GetLines(int first_line_number, StringList &lines,
   return m_editor_status != EditorStatus::EndOfInput;
 }
 
-void Editline::PrintAsync(Stream *stream, const char *s, size_t len) {
-  std::lock_guard<std::recursive_mutex> guard(m_output_mutex);
+void Editline::PrintAsync(lldb::LockableStreamFileSP stream_sp, const char *s,
+                          size_t len) {
+  LockedStreamFile locked_stream = m_output_stream_sp->Lock();
   if (m_editor_status == EditorStatus::Editing) {
     SaveEditedLine();
     MoveCursor(CursorLocation::EditingCursor, CursorLocation::BlockStart);
-    fprintf(m_output_file, ANSI_CLEAR_BELOW);
+    fprintf(locked_stream.GetFile().GetStream(), ANSI_CLEAR_BELOW);
   }
-  stream->Write(s, len);
-  stream->Flush();
+  locked_stream.Write(s, len);
   if (m_editor_status == EditorStatus::Editing) {
     DisplayInput();
     MoveCursor(CursorLocation::BlockEnd, CursorLocation::EditingCursor);

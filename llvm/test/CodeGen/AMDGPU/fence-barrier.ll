@@ -7,8 +7,8 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 declare i32 @llvm.amdgcn.workgroup.id.x()
 declare void @llvm.amdgcn.s.barrier()
 
-@test_local.temp = internal addrspace(3) global [1 x i32] undef, align 4
-@test_global_local.temp = internal addrspace(3) global [1 x i32] undef, align 4
+@test_local.temp = internal addrspace(3) global [1 x i32] poison, align 4
+@test_global_local.temp = internal addrspace(3) global [1 x i32] poison, align 4
 
 
 ; GCN-LABEL: {{^}}test_local

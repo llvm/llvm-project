@@ -12,6 +12,15 @@ define internal spir_func void @spir_func_internal() {
 
 ; // -----
 
+; Ensure that we have dso_local.
+; CHECK: llvm.func @dsolocal_func()
+; CHECK-SAME: attributes {dso_local}
+define dso_local void @dsolocal_func() {
+  ret void
+}
+
+; // -----
+
 ; CHECK-LABEL: @func_readnone
 ; CHECK-SAME:  attributes {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>}
 ; CHECK:   llvm.return
@@ -58,7 +67,7 @@ define ptr @func_arg_attrs(
     ptr dereferenceable(12) %arg10,
     ptr dereferenceable_or_null(42) %arg11,
     double inreg %arg12,
-    ptr nocapture %arg13,
+    ptr captures(none) %arg13,
     ptr nofree %arg14,
     ptr nonnull %arg15,
     ptr preallocated(double) %arg16,
@@ -369,6 +378,18 @@ declare void @func_attr_denormal_fp_math_f32_preserve_sign() "denormal-fp-math-f
 ; CHECK-LABEL: @func_attr_fp_contract_fast
 ; CHECK-SAME: attributes {fp_contract = "fast"}
 declare void @func_attr_fp_contract_fast() "fp-contract"="fast"
+
+// -----
+
+; CHECK-LABEL: @func_attr_instrument_function_entry
+; CHECK-SAME: attributes {instrument_function_entry = "__cyg_profile_func_enter"}
+declare void @func_attr_instrument_function_entry() "instrument-function-entry"="__cyg_profile_func_enter"
+
+// -----
+
+; CHECK-LABEL: @func_attr_instrument_function_exit
+; CHECK-SAME: attributes {instrument_function_exit = "__cyg_profile_func_exit"}
+declare void @func_attr_instrument_function_exit() "instrument-function-exit"="__cyg_profile_func_exit"
 
 // -----
 

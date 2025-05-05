@@ -248,7 +248,7 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
       continue;
 
     // Add nodes on the Path into Candidates.
-    Candidates.insert(Path.begin(), Path.end());
+    Candidates.insert_range(Path);
   }
 
   // Sort the nodes in Candidates in top-down order and save the nodes
@@ -274,8 +274,7 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
   InsertPtsMap.reserve(Orders.size() + 1);
   for (BasicBlock *Node : llvm::reverse(Orders)) {
     bool NodeInBBs = BBs.count(Node);
-    auto &InsertPts = InsertPtsMap[Node].first;
-    BlockFrequency &InsertPtsFreq = InsertPtsMap[Node].second;
+    auto &[InsertPts, InsertPtsFreq] = InsertPtsMap[Node];
 
     // Return the optimal insert points in BBs.
     if (Node == Entry) {
@@ -284,15 +283,14 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
           (InsertPtsFreq == BFI.getBlockFreq(Node) && InsertPts.size() > 1))
         BBs.insert(Entry);
       else
-        BBs.insert(InsertPts.begin(), InsertPts.end());
+        BBs.insert_range(InsertPts);
       break;
     }
 
     BasicBlock *Parent = DT.getNode(Node)->getIDom()->getBlock();
     // Initially, ParentInsertPts is empty and ParentPtsFreq is 0. Every child
     // will update its parent's ParentInsertPts and ParentPtsFreq.
-    auto &ParentInsertPts = InsertPtsMap[Parent].first;
-    BlockFrequency &ParentPtsFreq = InsertPtsMap[Parent].second;
+    auto &[ParentInsertPts, ParentPtsFreq] = InsertPtsMap[Parent];
     // Choose to insert in Node or in subtree of Node.
     // Don't hoist to EHPad because we may not find a proper place to insert
     // in EHPad.
@@ -306,7 +304,7 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
       ParentInsertPts.insert(Node);
       ParentPtsFreq += BFI.getBlockFreq(Node);
     } else {
-      ParentInsertPts.insert(InsertPts.begin(), InsertPts.end());
+      ParentInsertPts.insert_range(InsertPts);
       ParentPtsFreq += InsertPtsFreq;
     }
   }
@@ -388,7 +386,7 @@ void ConstantHoistingPass::collectConstantCandidates(
       ConstIntCandVec.push_back(ConstantCandidate(ConstInt));
       Itr->second = ConstIntCandVec.size() - 1;
     }
-    ConstIntCandVec[Itr->second].addUser(Inst, Idx, *Cost.getValue());
+    ConstIntCandVec[Itr->second].addUser(Inst, Idx, Cost.getValue());
     LLVM_DEBUG(if (isa<ConstantInt>(Inst->getOperand(Idx))) dbgs()
                    << "Collect constant " << *ConstInt << " from " << *Inst
                    << " with cost " << Cost << '\n';
@@ -448,7 +446,7 @@ void ConstantHoistingPass::collectConstantCandidates(
         ConstExpr));
     Itr->second = ExprCandVec.size() - 1;
   }
-  ExprCandVec[Itr->second].addUser(Inst, Idx, *Cost.getValue());
+  ExprCandVec[Itr->second].addUser(Inst, Idx, Cost.getValue());
 }
 
 /// Check the operand for instruction Inst at index Idx.
@@ -776,7 +774,7 @@ void ConstantHoistingPass::emitBaseConstants(Instruction *Base,
     if (!ClonedCastInst) {
       ClonedCastInst = CastInst->clone();
       ClonedCastInst->setOperand(0, Mat);
-      ClonedCastInst->insertAfter(CastInst);
+      ClonedCastInst->insertAfter(CastInst->getIterator());
       // Use the same debug location as the original cast instruction.
       ClonedCastInst->setDebugLoc(CastInst->getDebugLoc());
       LLVM_DEBUG(dbgs() << "Clone instruction: " << *CastInst << '\n'

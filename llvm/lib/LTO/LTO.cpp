@@ -75,6 +75,8 @@ static cl::opt<bool>
 
 extern cl::opt<bool> CodeGenDataThinLTOTwoRounds;
 
+extern cl::opt<bool> ForceImportAll;
+
 namespace llvm {
 /// Enable global value internalization in LTO.
 cl::opt<bool> EnableLTOInternalization(
@@ -406,8 +408,11 @@ static void thinLTOResolvePrevailingGUID(
         Visibility = S->getVisibility();
     }
     // Alias and aliasee can't be turned into available_externally.
+    // When force-import-all is used, it indicates that object linking is not
+    // supported by the target. In this case, we can't change the linkage as
+    // well in case the global is converted to declaration.
     else if (!isa<AliasSummary>(S.get()) &&
-             !GlobalInvolvedWithAlias.count(S.get()))
+             !GlobalInvolvedWithAlias.count(S.get()) && !ForceImportAll)
       S->setLinkage(GlobalValue::AvailableExternallyLinkage);
 
     // For ELF, set visibility to the computed visibility from summaries. We
@@ -629,7 +634,6 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
   auto *ResI = Res.begin();
   auto *ResE = Res.end();
   (void)ResE;
-  const Triple TT(RegularLTO.CombinedModule->getTargetTriple());
   for (const InputFile::Symbol &Sym : Syms) {
     assert(ResI != ResE);
     SymbolResolution Res = *ResI++;
@@ -733,8 +737,9 @@ Error LTO::add(std::unique_ptr<InputFile> Input,
     writeToResolutionFile(*Conf.ResolutionFile, Input.get(), Res);
 
   if (RegularLTO.CombinedModule->getTargetTriple().empty()) {
-    RegularLTO.CombinedModule->setTargetTriple(Input->getTargetTriple());
-    if (Triple(Input->getTargetTriple()).isOSBinFormatELF())
+    Triple InputTriple(Input->getTargetTriple());
+    RegularLTO.CombinedModule->setTargetTriple(InputTriple);
+    if (InputTriple.isOSBinFormatELF())
       Conf.VisibilityScheme = Config::ELF;
   }
 
@@ -1037,8 +1042,9 @@ Error LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
     SymbolResolution Res = *ResITmp++;
 
     if (!Sym.getIRName().empty()) {
-      auto GUID = GlobalValue::getGUID(GlobalValue::getGlobalIdentifier(
-          Sym.getIRName(), GlobalValue::ExternalLinkage, ""));
+      auto GUID = GlobalValue::getGUIDAssumingExternalLinkage(
+          GlobalValue::getGlobalIdentifier(Sym.getIRName(),
+                                           GlobalValue::ExternalLinkage, ""));
       if (Res.Prevailing)
         ThinLTO.PrevailingModuleForGUID[GUID] = BM.getModuleIdentifier();
     }
@@ -1058,8 +1064,9 @@ Error LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
     SymbolResolution Res = *ResI++;
 
     if (!Sym.getIRName().empty()) {
-      auto GUID = GlobalValue::getGUID(GlobalValue::getGlobalIdentifier(
-          Sym.getIRName(), GlobalValue::ExternalLinkage, ""));
+      auto GUID = GlobalValue::getGUIDAssumingExternalLinkage(
+          GlobalValue::getGlobalIdentifier(Sym.getIRName(),
+                                           GlobalValue::ExternalLinkage, ""));
       if (Res.Prevailing) {
         assert(ThinLTO.PrevailingModuleForGUID[GUID] ==
                BM.getModuleIdentifier());
@@ -1168,7 +1175,7 @@ Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
     if (Res.second.IRName.empty())
       continue;
 
-    GlobalValue::GUID GUID = GlobalValue::getGUID(
+    GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
         GlobalValue::dropLLVMManglingEscape(Res.second.IRName));
 
     if (Res.second.VisibleOutsideSummary && Res.second.Prevailing)
@@ -1313,7 +1320,8 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
   // expected to be handled separately.
   auto IsVisibleToRegularObj = [&](StringRef name) {
     auto It = GlobalResolutions->find(name);
-    return (It == GlobalResolutions->end() || It->second.VisibleOutsideSummary);
+    return (It == GlobalResolutions->end() ||
+            It->second.VisibleOutsideSummary || !It->second.Prevailing);
   };
 
   // If allowed, upgrade public vcall visibility metadata to linkage unit
@@ -1436,12 +1444,10 @@ public:
                         OnWrite, ShouldEmitImportsFiles, ThinLTOParallelism),
         AddStream(std::move(AddStream)), Cache(std::move(Cache)),
         ShouldEmitIndexFiles(ShouldEmitIndexFiles) {
-    for (auto &Name : CombinedIndex.cfiFunctionDefs())
-      CfiFunctionDefs.insert(
-          GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(Name)));
-    for (auto &Name : CombinedIndex.cfiFunctionDecls())
-      CfiFunctionDecls.insert(
-          GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(Name)));
+    auto &Defs = CombinedIndex.cfiFunctionDefs();
+    CfiFunctionDefs.insert_range(Defs.guids());
+    auto &Decls = CombinedIndex.cfiFunctionDecls();
+    CfiFunctionDecls.insert_range(Decls.guids());
   }
 
   virtual Error runThinLTOBackendThread(
@@ -1906,7 +1912,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
     auto IsVisibleToRegularObj = [&](StringRef name) {
       auto It = GlobalResolutions->find(name);
       return (It == GlobalResolutions->end() ||
-              It->second.VisibleOutsideSummary);
+              It->second.VisibleOutsideSummary || !It->second.Prevailing);
     };
 
     getVisibleToRegularObjVtableGUIDs(ThinLTO.CombinedIndex,
@@ -1945,7 +1951,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
     if (Res.second.Partition != GlobalResolution::External ||
         !Res.second.isPrevailingIRSymbol())
       continue;
-    auto GUID = GlobalValue::getGUID(
+    auto GUID = GlobalValue::getGUIDAssumingExternalLinkage(
         GlobalValue::dropLLVMManglingEscape(Res.second.IRName));
     // Mark exported unless index-based analysis determined it to be dead.
     if (ThinLTO.CombinedIndex.isGUIDLive(GUID))
@@ -1964,12 +1970,10 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
 
   // Any functions referenced by the jump table in the regular LTO object must
   // be exported.
-  for (auto &Def : ThinLTO.CombinedIndex.cfiFunctionDefs())
-    ExportedGUIDs.insert(
-        GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(Def)));
-  for (auto &Decl : ThinLTO.CombinedIndex.cfiFunctionDecls())
-    ExportedGUIDs.insert(
-        GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(Decl)));
+  auto &Defs = ThinLTO.CombinedIndex.cfiFunctionDefs();
+  ExportedGUIDs.insert(Defs.guid_begin(), Defs.guid_end());
+  auto &Decls = ThinLTO.CombinedIndex.cfiFunctionDecls();
+  ExportedGUIDs.insert(Decls.guid_begin(), Decls.guid_end());
 
   auto isExported = [&](StringRef ModuleIdentifier, ValueInfo VI) {
     const auto &ExportList = ExportLists.find(ModuleIdentifier);

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_COUNT_H
-#define _LIBCPP___ALGORITHM_COUNT_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_COUNT_H
+#define _LIBCPP___CXX03___ALGORITHM_COUNT_H
 
 #include <__cxx03/__algorithm/iterator_operations.h>
 #include <__cxx03/__algorithm/min.h>
@@ -16,9 +16,9 @@
 #include <__cxx03/__bit/popcount.h>
 #include <__cxx03/__config>
 #include <__cxx03/__functional/identity.h>
-#include <__cxx03/__functional/invoke.h>
 #include <__cxx03/__fwd/bit_reference.h>
 #include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__type_traits/invoke.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -89,4 +89,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_COUNT_H
+#endif // _LIBCPP___CXX03___ALGORITHM_COUNT_H

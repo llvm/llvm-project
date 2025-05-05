@@ -63,7 +63,9 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override { return {}; }
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override {
+    return {};
+  }
 
   bool allowsLargerPreferedTypeAlignment() const override { return false; }
 
@@ -122,7 +124,9 @@ public:
       Info.setAllowsRegister();
       return true;
     case 'I': // 6-bit positive integer constant
-      Info.setRequiresImmediate(0, 63);
+      // Due to issue https://github.com/llvm/llvm-project/issues/51513, we
+      // allow value 64 in the frontend and let it be denied in the backend.
+      Info.setRequiresImmediate(0, 64);
       return true;
     case 'J': // 6-bit negative integer constant
       Info.setRequiresImmediate(-63, 0);

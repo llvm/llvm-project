@@ -145,12 +145,35 @@ public:
   /// Find all declarations with the given name in the given context,
   /// and add them to the context by calling SetExternalVisibleDeclsForName
   /// or SetNoExternalVisibleDeclsForName.
+  /// \param DC The context for lookup in. \c DC should be a primary context.
+  /// \param Name The name to look for.
+  /// \param OriginalDC The original context for lookup.  \c OriginalDC can
+  /// provide more information than \c DC. e.g., The same namespace can appear
+  /// in multiple module units. So we need the \c OriginalDC to tell us what
+  /// the module the lookup come from.
+  ///
   /// \return \c true if any declarations might have been found, \c false if
   /// we definitely have no declarations with tbis name.
   ///
   /// The default implementation of this method is a no-op returning \c false.
+  virtual bool FindExternalVisibleDeclsByName(const DeclContext *DC,
+                                              DeclarationName Name,
+                                              const DeclContext *OriginalDC);
+
+  /// Load all the external specializations for the Decl \param D if \param
+  /// OnlyPartial is false. Otherwise, load all the external **partial**
+  /// specializations for the \param D.
+  ///
+  /// Return true if any new specializations get loaded. Return false otherwise.
+  virtual bool LoadExternalSpecializations(const Decl *D, bool OnlyPartial);
+
+  /// Load all the specializations for the Decl \param D with the same template
+  /// args specified by \param TemplateArgs.
+  ///
+  /// Return true if any new specializations get loaded. Return false otherwise.
   virtual bool
-  FindExternalVisibleDeclsByName(const DeclContext *DC, DeclarationName Name);
+  LoadExternalSpecializations(const Decl *D,
+                              ArrayRef<TemplateArgument> TemplateArgs);
 
   /// Ensures that the table of all visible declarations inside this
   /// context is up to date.
@@ -167,6 +190,10 @@ public:
   enum ExtKind { EK_Always, EK_Never, EK_ReplyHazy };
 
   virtual ExtKind hasExternalDefinitions(const Decl *D);
+
+  /// True if this function declaration was a definition before in its own
+  /// module.
+  virtual bool wasThisDeclarationADefinition(const FunctionDecl *FD);
 
   /// Finds all declarations lexically contained within the given
   /// DeclContext, after applying an optional filter predicate.
@@ -447,9 +474,7 @@ public:
       : Value(Value) {}
 
   /// Forcibly set this pointer (which must be lazy) as needing updates.
-  void markIncomplete() {
-    Value.template get<LazyData *>()->LastGeneration = 0;
-  }
+  void markIncomplete() { cast<LazyData *>(Value)->LastGeneration = 0; }
 
   /// Set the value of this pointer, in the current generation.
   void set(T NewValue) {
@@ -472,14 +497,14 @@ public:
       }
       return LazyVal->LastValue;
     }
-    return Value.template get<T>();
+    return cast<T>(Value);
   }
 
   /// Get the most recently computed value of this pointer without updating it.
   T getNotUpdated() const {
     if (auto *LazyVal = Value.template dyn_cast<LazyData *>())
       return LazyVal->LastValue;
-    return Value.template get<T>();
+    return cast<T>(Value);
   }
 
   void *getOpaqueValue() { return Value.getOpaqueValue(); }

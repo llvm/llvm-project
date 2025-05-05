@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_MINMAX_H
-#define _LIBCPP___ALGORITHM_MINMAX_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_MINMAX_H
+#define _LIBCPP___CXX03___ALGORITHM_MINMAX_H
 
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__algorithm/minmax_element.h>
@@ -15,7 +15,6 @@
 #include <__cxx03/__functional/identity.h>
 #include <__cxx03/__type_traits/is_callable.h>
 #include <__cxx03/__utility/pair.h>
-#include <__cxx03/initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -56,4 +55,4 @@ minmax(initializer_list<_Tp> __t) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_MINMAX_H
+#endif // _LIBCPP___CXX03___ALGORITHM_MINMAX_H
