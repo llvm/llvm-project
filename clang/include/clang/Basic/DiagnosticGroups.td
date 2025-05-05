@@ -177,7 +177,7 @@ def DefaultConstInit : DiagGroup<"default-const-init",
 def ImplicitVoidPtrCast : DiagGroup<"implicit-void-ptr-cast">;
 def ImplicitIntToEnumCast : DiagGroup<"implicit-int-enum-cast",
                                       [ImplicitEnumEnumCast]>;
-def JumpBypassesInit : DiagGroup<"jump-bypasses-init">;
+def JumpBypassesInit : DiagGroup<"jump-misses-init">;
 def TentativeDefnCompat : DiagGroup<"tentative-definition-compat">;
 def CXXCompat: DiagGroup<"c++-compat", [ImplicitVoidPtrCast, DefaultConstInit,
                                         ImplicitIntToEnumCast, HiddenCppDecl,
