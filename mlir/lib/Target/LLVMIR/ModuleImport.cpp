@@ -41,6 +41,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/ModRef.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -554,13 +555,284 @@ static Attribute convertCGProfileModuleFlagValue(ModuleOp mlirModule,
   return ArrayAttr::get(mlirModule->getContext(), cgProfile);
 }
 
+/// Extract a two element `MDTuple` from a `MDOperand`. Emit a warning in case
+/// something else is found.
+static llvm::MDTuple *getTwoElementMDTuple(ModuleOp mlirModule,
+                                           const llvm::Module *llvmModule,
+                                           const llvm::MDOperand &md) {
+  auto *tupleEntry = dyn_cast_or_null<llvm::MDTuple>(md);
+  if (!tupleEntry || tupleEntry->getNumOperands() != 2)
+    emitWarning(mlirModule.getLoc())
+        << "expected 2-element tuple metadata: " << diagMD(md, llvmModule);
+  return tupleEntry;
+}
+
+/// Extract a constant metadata value from a two element tuple (<key, value>).
+/// Return nullptr if requirements are not met. A warning is emitted if the
+/// `matchKey` is different from the tuple's key.
+static llvm::ConstantAsMetadata *getConstantMDFromKeyValueTuple(
+    ModuleOp mlirModule, const llvm::Module *llvmModule,
+    const llvm::MDOperand &md, StringRef matchKey, bool optional = false) {
+  llvm::MDTuple *tupleEntry = getTwoElementMDTuple(mlirModule, llvmModule, md);
+  if (!tupleEntry)
+    return nullptr;
+  auto *keyMD = dyn_cast<llvm::MDString>(tupleEntry->getOperand(0));
+  if (!keyMD || keyMD->getString() != matchKey) {
+    if (!optional)
+      emitWarning(mlirModule.getLoc())
+          << "expected '" << matchKey << "' key, but found: "
+          << diagMD(tupleEntry->getOperand(0), llvmModule);
+    return nullptr;
+  }
+
+  return dyn_cast<llvm::ConstantAsMetadata>(tupleEntry->getOperand(1));
+}
+
+/// Extract an integer value from a two element tuple (<key, value>).
+/// Fail if requirements are not met. A warning is emitted if the
+/// found value isn't a LLVM constant integer.
+static FailureOr<uint64_t>
+convertInt64FromKeyValueTuple(ModuleOp mlirModule,
+                              const llvm::Module *llvmModule,
+                              const llvm::MDOperand &md, StringRef matchKey) {
+  llvm::ConstantAsMetadata *valMD =
+      getConstantMDFromKeyValueTuple(mlirModule, llvmModule, md, matchKey);
+  if (!valMD)
+    return failure();
+
+  if (auto *cstInt = dyn_cast<llvm::ConstantInt>(valMD->getValue()))
+    return cstInt->getZExtValue();
+
+  emitWarning(mlirModule.getLoc())
+      << "expected integer metadata value for key '" << matchKey
+      << "': " << diagMD(md, llvmModule);
+  return failure();
+}
+
+static std::optional<ProfileSummaryFormatKind>
+convertProfileSummaryFormat(ModuleOp mlirModule, const llvm::Module *llvmModule,
+                            const llvm::MDOperand &formatMD) {
+  auto *tupleEntry = getTwoElementMDTuple(mlirModule, llvmModule, formatMD);
+  if (!tupleEntry)
+    return std::nullopt;
+
+  llvm::MDString *keyMD = dyn_cast<llvm::MDString>(tupleEntry->getOperand(0));
+  if (!keyMD || keyMD->getString() != "ProfileFormat") {
+    emitWarning(mlirModule.getLoc())
+        << "expected 'ProfileFormat' key: "
+        << diagMD(tupleEntry->getOperand(0), llvmModule);
+    return std::nullopt;
+  }
+
+  llvm::MDString *valMD = dyn_cast<llvm::MDString>(tupleEntry->getOperand(1));
+  std::optional<ProfileSummaryFormatKind> fmtKind =
+      symbolizeProfileSummaryFormatKind(valMD->getString());
+  if (!fmtKind) {
+    emitWarning(mlirModule.getLoc())
+        << "expected 'SampleProfile', 'InstrProf' or 'CSInstrProf' values, "
+           "but found: "
+        << diagMD(valMD, llvmModule);
+    return std::nullopt;
+  }
+
+  return fmtKind;
+}
+
+static FailureOr<SmallVector<ModuleFlagProfileSummaryDetailedAttr>>
+convertProfileSummaryDetailed(ModuleOp mlirModule,
+                              const llvm::Module *llvmModule,
+                              const llvm::MDOperand &summaryMD) {
+  auto *tupleEntry = getTwoElementMDTuple(mlirModule, llvmModule, summaryMD);
+  if (!tupleEntry)
+    return failure();
+
+  llvm::MDString *keyMD = dyn_cast<llvm::MDString>(tupleEntry->getOperand(0));
+  if (!keyMD || keyMD->getString() != "DetailedSummary") {
+    emitWarning(mlirModule.getLoc())
+        << "expected 'DetailedSummary' key: "
+        << diagMD(tupleEntry->getOperand(0), llvmModule);
+    return failure();
+  }
+
+  llvm::MDTuple *entriesMD = dyn_cast<llvm::MDTuple>(tupleEntry->getOperand(1));
+  if (!entriesMD) {
+    emitWarning(mlirModule.getLoc())
+        << "expected tuple value for 'DetailedSummary' key: "
+        << diagMD(tupleEntry->getOperand(1), llvmModule);
+    return failure();
+  }
+
+  SmallVector<ModuleFlagProfileSummaryDetailedAttr> detailedSummary;
+  for (auto &&entry : entriesMD->operands()) {
+    llvm::MDTuple *entryMD = dyn_cast<llvm::MDTuple>(entry);
+    if (!entryMD || entryMD->getNumOperands() != 3) {
+      emitWarning(mlirModule.getLoc())
+          << "'DetailedSummary' entry expects 3 operands: "
+          << diagMD(entry, llvmModule);
+      return failure();
+    }
+
+    auto *op0 = dyn_cast<llvm::ConstantAsMetadata>(entryMD->getOperand(0));
+    auto *op1 = dyn_cast<llvm::ConstantAsMetadata>(entryMD->getOperand(1));
+    auto *op2 = dyn_cast<llvm::ConstantAsMetadata>(entryMD->getOperand(2));
+    if (!op0 || !op1 || !op2) {
+      emitWarning(mlirModule.getLoc())
+          << "expected only integer entries in 'DetailedSummary': "
+          << diagMD(entry, llvmModule);
+      return failure();
+    }
+
+    auto detaildSummaryEntry = ModuleFlagProfileSummaryDetailedAttr::get(
+        mlirModule->getContext(),
+        cast<llvm::ConstantInt>(op0->getValue())->getZExtValue(),
+        cast<llvm::ConstantInt>(op1->getValue())->getZExtValue(),
+        cast<llvm::ConstantInt>(op2->getValue())->getZExtValue());
+    detailedSummary.push_back(detaildSummaryEntry);
+  }
+  return detailedSummary;
+}
+
+static Attribute
+convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
+                                     const llvm::Module *llvmModule,
+                                     llvm::MDTuple *mdTuple) {
+  unsigned profileNumEntries = mdTuple->getNumOperands();
+  if (profileNumEntries < 8) {
+    emitWarning(mlirModule.getLoc())
+        << "expected at 8 entries in 'ProfileSummary': "
+        << diagMD(mdTuple, llvmModule);
+    return nullptr;
+  }
+
+  unsigned summayIdx = 0;
+  auto checkOptionalPosition = [&](const llvm::MDOperand &md,
+                                   StringRef matchKey) -> LogicalResult {
+    // Make sure we won't step over the bound of the array of summary entries.
+    // Since (non-optional) DetailedSummary always comes last, the next entry in
+    // the tuple operand array must exist.
+    if (summayIdx + 1 >= profileNumEntries) {
+      emitWarning(mlirModule.getLoc())
+          << "the last summary entry is '" << matchKey
+          << "', expected 'DetailedSummary': " << diagMD(md, llvmModule);
+      return failure();
+    }
+
+    return success();
+  };
+
+  auto getOptIntValue =
+      [&](const llvm::MDOperand &md,
+          StringRef matchKey) -> FailureOr<std::optional<uint64_t>> {
+    if (!getConstantMDFromKeyValueTuple(mlirModule, llvmModule, md, matchKey,
+                                        /*optional=*/true))
+      return FailureOr<std::optional<uint64_t>>(std::nullopt);
+    if (checkOptionalPosition(md, matchKey).failed())
+      return failure();
+    FailureOr<uint64_t> val =
+        convertInt64FromKeyValueTuple(mlirModule, llvmModule, md, matchKey);
+    if (failed(val))
+      return failure();
+    return val;
+  };
+
+  auto getOptDoubleValue = [&](const llvm::MDOperand &md,
+                               StringRef matchKey) -> FailureOr<FloatAttr> {
+    auto *valMD = getConstantMDFromKeyValueTuple(mlirModule, llvmModule, md,
+                                                 matchKey, /*optional=*/true);
+    if (!valMD)
+      return FloatAttr{};
+    if (auto *cstFP = dyn_cast<llvm::ConstantFP>(valMD->getValue())) {
+      if (checkOptionalPosition(md, matchKey).failed())
+        return failure();
+      return FloatAttr::get(Float64Type::get(mlirModule.getContext()),
+                            cstFP->getValueAPF());
+    }
+    emitWarning(mlirModule.getLoc())
+        << "expected double metadata value for key '" << matchKey
+        << "': " << diagMD(md, llvmModule);
+    return failure();
+  };
+
+  // Build ModuleFlagProfileSummaryAttr by sequentially fetching elements in
+  // a fixed order: format, total count, etc.
+  SmallVector<Attribute> profileSummary;
+  std::optional<ProfileSummaryFormatKind> format = convertProfileSummaryFormat(
+      mlirModule, llvmModule, mdTuple->getOperand(summayIdx++));
+  if (!format.has_value())
+    return nullptr;
+
+  FailureOr<uint64_t> totalCount = convertInt64FromKeyValueTuple(
+      mlirModule, llvmModule, mdTuple->getOperand(summayIdx++), "TotalCount");
+  if (failed(totalCount))
+    return nullptr;
+
+  FailureOr<uint64_t> maxCount = convertInt64FromKeyValueTuple(
+      mlirModule, llvmModule, mdTuple->getOperand(summayIdx++), "MaxCount");
+  if (failed(maxCount))
+    return nullptr;
+
+  FailureOr<uint64_t> maxInternalCount = convertInt64FromKeyValueTuple(
+      mlirModule, llvmModule, mdTuple->getOperand(summayIdx++),
+      "MaxInternalCount");
+  if (failed(maxInternalCount))
+    return nullptr;
+
+  FailureOr<uint64_t> maxFunctionCount = convertInt64FromKeyValueTuple(
+      mlirModule, llvmModule, mdTuple->getOperand(summayIdx++),
+      "MaxFunctionCount");
+  if (failed(maxFunctionCount))
+    return nullptr;
+
+  FailureOr<uint64_t> numCounts = convertInt64FromKeyValueTuple(
+      mlirModule, llvmModule, mdTuple->getOperand(summayIdx++), "NumCounts");
+  if (failed(numCounts))
+    return nullptr;
+
+  FailureOr<uint64_t> numFunctions = convertInt64FromKeyValueTuple(
+      mlirModule, llvmModule, mdTuple->getOperand(summayIdx++), "NumFunctions");
+  if (failed(numFunctions))
+    return nullptr;
+
+  // Handle optional keys.
+  FailureOr<std::optional<uint64_t>> isPartialProfile =
+      getOptIntValue(mdTuple->getOperand(summayIdx), "IsPartialProfile");
+  if (failed(isPartialProfile))
+    return nullptr;
+  if (isPartialProfile->has_value())
+    summayIdx++;
+
+  FailureOr<FloatAttr> partialProfileRatio =
+      getOptDoubleValue(mdTuple->getOperand(summayIdx), "PartialProfileRatio");
+  if (failed(partialProfileRatio))
+    return nullptr;
+  if (*partialProfileRatio)
+    summayIdx++;
+
+  // Handle detailed summary.
+  FailureOr<SmallVector<ModuleFlagProfileSummaryDetailedAttr>> detailed =
+      convertProfileSummaryDetailed(mlirModule, llvmModule,
+                                    mdTuple->getOperand(summayIdx));
+  if (failed(detailed))
+    return nullptr;
+
+  // Build the final profile summary attribute.
+  return ModuleFlagProfileSummaryAttr::get(
+      mlirModule->getContext(), *format, *totalCount, *maxCount,
+      *maxInternalCount, *maxFunctionCount, *numCounts, *numFunctions,
+      *isPartialProfile, *partialProfileRatio, *detailed);
+}
+
 /// Invoke specific handlers for each known module flag value, returns nullptr
 /// if the key is unknown or unimplemented.
-static Attribute convertModuleFlagValueFromMDTuple(ModuleOp mlirModule,
-                                                   StringRef key,
-                                                   llvm::MDTuple *mdTuple) {
+static Attribute
+convertModuleFlagValueFromMDTuple(ModuleOp mlirModule,
+                                  const llvm::Module *llvmModule, StringRef key,
+                                  llvm::MDTuple *mdTuple) {
   if (key == LLVMDialect::getModuleFlagKeyCGProfileName())
     return convertCGProfileModuleFlagValue(mlirModule, mdTuple);
+  if (key == LLVMDialect::getModuleFlagKeyProfileSummaryName())
+    return convertProfileSummaryModuleFlagValue(mlirModule, llvmModule,
+                                                mdTuple);
   return nullptr;
 }
 
@@ -576,8 +848,8 @@ LogicalResult ModuleImport::convertModuleFlagsMetadata() {
     } else if (auto *mdString = dyn_cast<llvm::MDString>(val)) {
       valAttr = builder.getStringAttr(mdString->getString());
     } else if (auto *mdTuple = dyn_cast<llvm::MDTuple>(val)) {
-      valAttr = convertModuleFlagValueFromMDTuple(mlirModule, key->getString(),
-                                                  mdTuple);
+      valAttr = convertModuleFlagValueFromMDTuple(mlirModule, llvmModule.get(),
+                                                  key->getString(), mdTuple);
     }
 
     if (!valAttr) {
