@@ -213,6 +213,8 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Adds a bitwise instruction on three operands and a look-up table index for specifying the bitwise operation to perform. 
    * - ``SPV_INTEL_subgroup_matrix_multiply_accumulate``
      - Adds an instruction to compute the matrix product of an M x K matrix with a K x N matrix and then add an M x N matrix. 
+   * - ``SPV_INTEL_fpga_reg``
+     - Adds an instruction to explicitly place values into FPGA registers to control register-level pipelining and performance.
 
 To enable multiple extensions, list them separated by comma. For example, to enable support for atomic operations on floating-point numbers and arbitrary precision integers, use:
 
@@ -489,6 +491,11 @@ SPIR-V backend, along with their descriptions and argument details.
      - `[spirv.Image Image, 32-bit Integer coordinate, vec4 data]`
      - Stores the data to the image buffer at the given coordinate. The \
        data must be a 4-element vector.
+   * - `int_spv_fpga`
+     - Type
+     - `[Type]`
+     - Stores the metadata and preserve the original annotation or ptr annotation \
+       intrinsic.
 
 .. _spirv-builtin-functions:
 

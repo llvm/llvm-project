@@ -2412,11 +2412,12 @@ bool SPIRVInstructionSelector::selectSplatVector(Register ResVReg,
 bool SPIRVInstructionSelector::selectFpga(Register ResVReg,
                                           const SPIRVType *ResType,
                                           MachineInstr &I) const {
-  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpFPGARegINTEL))
-      .addDef(ResVReg)
-      .addUse(GR.getSPIRVTypeID(ResType))
-      .addUse(I.getOperand(2).getReg());
-  return true;
+  auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                     TII.get(SPIRV::OpFPGARegINTEL))
+                 .addDef(ResVReg)
+                 .addUse(GR.getSPIRVTypeID(ResType))
+                 .addUse(I.getOperand(2).getReg());
+  return MIB.constrainAllUses(TII, TRI, RBI);
 }
 
 bool SPIRVInstructionSelector::selectDiscard(Register ResVReg,

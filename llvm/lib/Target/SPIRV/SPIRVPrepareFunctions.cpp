@@ -267,7 +267,7 @@ static void lowerPtrAnnotation(IntrinsicInst *II) {
   std::string Anno =
       getAnnotation(II->getArgOperand(1),
                     4 < II->arg_size() ? II->getArgOperand(4) : nullptr);
-  Value *ReplacementValue = PtrArg;
+  Value *ReplacementValue = II->getOperand(0);
 
   // Parse the annotation.
   SmallVector<Metadata *> MDs = parseAnnotation(II, Anno, Ctx, Int32Ty);
@@ -446,11 +446,8 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
         Changed = true;
         break;
       case Intrinsic::annotation: {
-        const SPIRVSubtarget &STI = TM.getSubtarget<SPIRVSubtarget>(*F);
-        if (STI.canUseExtension(SPIRV::Extension::SPV_INTEL_fpga_reg)) {
-          if (lowerAnnotation(II))
-            Changed = true;
-        }
+        if (STI.canUseExtension(SPIRV::Extension::SPV_INTEL_fpga_reg))
+          Changed |= lowerAnnotation(II);
         break;
       }
       }
