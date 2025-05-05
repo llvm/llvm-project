@@ -202,7 +202,6 @@ Error DwarfLinkerForBinary::emitRelocations(
     Obj.OutRelocs->addValidRelocs(RM);
   }
 
-  SmallString<128> InputPath;
   SmallString<128> Path;
   // Create the "Relocations" directory in the "Resources" directory, and
   // create an architecture-specific directory in the "Relocations" directory.
@@ -233,7 +232,6 @@ static Error emitRemarks(const LinkOptions &Options, StringRef BinaryPath,
   if (RL.empty())
     return Error::success();
 
-  SmallString<128> InputPath;
   SmallString<128> Path;
   // Create the "Remarks" directory in the "Resources" directory.
   sys::path::append(Path, *Options.ResourceDir, "Remarks");

@@ -27,7 +27,6 @@ add_llvm_target(SparcCodeGen
   SparcRegisterInfo.cpp
   SparcSubtarget.cpp
   SparcTargetMachine.cpp
-  SparcMCInstLower.cpp
   SparcTargetObjectFile.cpp
 
   LINK_COMPONENTS
