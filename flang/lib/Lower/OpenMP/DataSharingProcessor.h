@@ -77,8 +77,6 @@ private:
   llvm::SetVector<const semantics::Symbol *> preDeterminedSymbols;
   llvm::SetVector<const semantics::Symbol *> allPrivatizedSymbols;
 
-  llvm::DenseMap<const semantics::Symbol *, mlir::omp::PrivateClauseOp>
-      symToPrivatizer;
   lower::AbstractConverter &converter;
   semantics::SemanticsContext &semaCtx;
   fir::FirOpBuilder &firOpBuilder;
@@ -105,8 +103,6 @@ private:
   void collectImplicitSymbols();
   void collectPreDeterminedSymbols();
   void privatize(mlir::omp::PrivateClauseOps *clauseOps);
-  void doPrivatize(const semantics::Symbol *sym,
-                   mlir::omp::PrivateClauseOps *clauseOps);
   void copyLastPrivatize(mlir::Operation *op);
   void insertLastPrivateCompare(mlir::Operation *op);
   void cloneSymbol(const semantics::Symbol *sym);
@@ -123,6 +119,11 @@ public:
                        const List<Clause> &clauses,
                        lower::pft::Evaluation &eval,
                        bool shouldCollectPreDeterminedSymbols,
+                       bool useDelayedPrivatization, lower::SymMap &symTable);
+
+  DataSharingProcessor(lower::AbstractConverter &converter,
+                       semantics::SemanticsContext &semaCtx,
+                       lower::pft::Evaluation &eval,
                        bool useDelayedPrivatization, lower::SymMap &symTable);
 
   // Privatisation is split into two steps.
@@ -151,6 +152,11 @@ public:
                ? allPrivatizedSymbols.getArrayRef()
                : llvm::ArrayRef<const semantics::Symbol *>();
   }
+
+  template <typename OpType = mlir::omp::PrivateClauseOp,
+            typename OperandsStructType = mlir::omp::PrivateClauseOps>
+  void privatizeSymbol(const semantics::Symbol *symToPrivatize,
+                       OperandsStructType *clauseOps);
 };
 
 } // namespace omp
