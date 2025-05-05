@@ -70,6 +70,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.inttypes.strtoimax
     libc.src.inttypes.strtoumax
 
+    # setjmp.h entrypoints
+    libc.src.setjmp.sigsetjmp
+
     # stdlib.h entrypoints
     libc.src.stdlib.abs
     libc.src.stdlib.atoi
