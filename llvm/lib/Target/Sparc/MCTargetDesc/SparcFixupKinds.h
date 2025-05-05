@@ -63,9 +63,6 @@ namespace llvm {
       /// fixup_sparc_pc10 - 10-bit fixup corresponding to %pc10(foo)
       fixup_sparc_pc10,
 
-      /// fixup_sparc_wplt30
-      fixup_sparc_wplt30,
-
       /// 22-bit fixup corresponding to %hix(foo)
       fixup_sparc_hix22,
       /// 13-bit fixup corresponding to %lox(foo)
