@@ -199,8 +199,7 @@ static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA,
                 OS << "!\n";
               }
             }
-          }
-          else
+          } else
             OS << "none!\n";
         }
       }
