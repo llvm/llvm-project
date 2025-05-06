@@ -1034,6 +1034,9 @@ ComplexDeinterleavingGraph::identifyPartialReduction(Value *R, Value *I) {
   if (!isa<VectorType>(R->getType()) || !isa<VectorType>(I->getType()))
     return nullptr;
 
+  if (!R->hasUseList() || !I->hasUseList())
+    return nullptr;
+
   auto CommonUser =
       findCommonBetweenCollections<Value *>(R->users(), I->users());
   if (!CommonUser)
