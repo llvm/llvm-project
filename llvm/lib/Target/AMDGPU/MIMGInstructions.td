@@ -478,7 +478,7 @@ class MIMG_NoSampler_gfx11<mimgopc op, string opcode,
                            RegisterOperand DataRC, RegisterOperand AddrRC,
                            string dns="">
   : MIMG_gfx11<op.GFX11, (outs DataRC:$vdata), dns> {
-  let InOperandList = !con((ins AddrRC:$vaddr0, SReg_256_XNULL:$srsrc, DMask:$dmask,
+  let InOperandList = !con((ins AddrRC:$vaddr0, SReg_RSRC:$srsrc, DMask:$dmask,
                                 Dim:$dim, UNorm:$unorm, CPol:$cpol,
                                 R128A16:$r128, A16:$a16, TFE:$tfe, LWE:$lwe),
                            !if(BaseOpcode.HasD16, (ins D16:$d16), (ins)));
@@ -491,7 +491,7 @@ class MIMG_NoSampler_nsa_gfx11<mimgopc op, string opcode,
                                string dns="">
   : MIMG_nsa_gfx11<op.GFX11, (outs DataRC:$vdata), num_addrs, dns> {
   let InOperandList = !con(AddrIns,
-                           (ins SReg_256_XNULL:$srsrc, DMask:$dmask,
+                           (ins SReg_RSRC:$srsrc, DMask:$dmask,
                                 Dim:$dim, UNorm:$unorm, CPol:$cpol,
                                 R128A16:$r128, A16:$a16, TFE:$tfe, LWE:$lwe),
                            !if(BaseOpcode.HasD16, (ins D16:$d16), (ins)));
@@ -737,7 +737,7 @@ class MIMG_Store_gfx11<mimgopc op, string opcode,
                        RegisterOperand DataRC, RegisterClass AddrRC,
                        string dns="">
   : MIMG_gfx11<op.GFX11, (outs), dns> {
-  let InOperandList = !con((ins DataRC:$vdata, AddrRC:$vaddr0, SReg_256_XNULL:$srsrc,
+  let InOperandList = !con((ins DataRC:$vdata, AddrRC:$vaddr0, SReg_RSRC:$srsrc,
                                 DMask:$dmask, Dim:$dim, UNorm:$unorm, CPol:$cpol,
                                 R128A16:$r128, A16:$a16, TFE:$tfe, LWE:$lwe),
                            !if(BaseOpcode.HasD16, (ins D16:$d16), (ins)));
@@ -751,7 +751,7 @@ class MIMG_Store_nsa_gfx11<mimgopc op, string opcode,
   : MIMG_nsa_gfx11<op.GFX11, (outs), num_addrs, dns> {
   let InOperandList = !con((ins DataRC:$vdata),
                            AddrIns,
-                           (ins SReg_256_XNULL:$srsrc, DMask:$dmask,
+                           (ins SReg_RSRC:$srsrc, DMask:$dmask,
                                 Dim:$dim, UNorm:$unorm, CPol:$cpol,
                                 R128A16:$r128, A16:$a16, TFE:$tfe, LWE:$lwe),
                            !if(BaseOpcode.HasD16, (ins D16:$d16), (ins)));
@@ -955,7 +955,7 @@ class MIMG_Atomic_gfx11<mimgopc op, string opcode,
                !if(enableDisasm, "GFX11", "")> {
   let Constraints = !if(noRtn, "", "$vdst = $vdata");
   let isCodeGenOnly = noRtn;
-  let InOperandList = (ins DataRC:$vdata, AddrRC:$vaddr0, SReg_256_XNULL:$srsrc,
+  let InOperandList = (ins DataRC:$vdata, AddrRC:$vaddr0, SReg_RSRC:$srsrc,
                            DMask:$dmask, Dim:$dim, UNorm:$unorm, CPol:$cpol,
                            R128A16:$r128, A16:$a16, TFE:$tfe, LWE:$lwe);
   let AsmString = opcode#" $vdata, $vaddr0, $srsrc$dmask$dim$unorm$cpol$r128$a16$tfe$lwe";
@@ -970,7 +970,7 @@ class MIMG_Atomic_nsa_gfx11<mimgopc op, string opcode,
   let isCodeGenOnly = noRtn;
   let InOperandList = !con((ins DataRC:$vdata),
                            AddrIns,
-                           (ins SReg_256_XNULL:$srsrc, DMask:$dmask,
+                           (ins SReg_RSRC:$srsrc, DMask:$dmask,
                                 Dim:$dim, UNorm:$unorm, CPol:$cpol,
                                 R128A16:$r128, A16:$a16, TFE:$tfe, LWE:$lwe));
   let AsmString = opcode#" $vdata, "#AddrAsm#", $srsrc$dmask$dim$unorm$cpol$r128$a16$tfe$lwe";
