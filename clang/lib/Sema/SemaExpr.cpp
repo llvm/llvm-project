@@ -1568,70 +1568,67 @@ void Sema::checkEnumArithmeticConversions(Expr *LHS, Expr *RHS,
   }
 }
 
-static void CheckUnicodeArithmeticConversions(Sema & SemaRef,
-                                       Expr *LHS,
-                                       Expr *RHS,
-                                       SourceLocation Loc,
-                                       ArithConvKind ACK) {
-    QualType LHSType = LHS->getType().getUnqualifiedType();
-    QualType RHSType = RHS->getType().getUnqualifiedType();
+static void CheckUnicodeArithmeticConversions(Sema &SemaRef, Expr *LHS,
+                                              Expr *RHS, SourceLocation Loc,
+                                              ArithConvKind ACK) {
+  QualType LHSType = LHS->getType().getUnqualifiedType();
+  QualType RHSType = RHS->getType().getUnqualifiedType();
 
-    if(!SemaRef.getLangOpts().CPlusPlus ||
-            !LHSType->isUnicodeCharacterType() || !RHSType->isUnicodeCharacterType())
-        return;
+  if (!SemaRef.getLangOpts().CPlusPlus || !LHSType->isUnicodeCharacterType() ||
+      !RHSType->isUnicodeCharacterType())
+    return;
 
-    if(ACK == ArithConvKind::Comparison) {
-      if (SemaRef.getASTContext().hasSameType(LHSType, RHSType))
-        return;
-
-      Expr::EvalResult LHSRes, RHSRes;
-      bool Success = LHS->EvaluateAsInt(LHSRes, SemaRef.getASTContext(),
-                                        Expr::SE_AllowSideEffects,
-                                        SemaRef.isConstantEvaluatedContext());
-      if (Success)
-        Success = RHS->EvaluateAsInt(RHSRes, SemaRef.getASTContext(),
-                                     Expr::SE_AllowSideEffects,
-                                     SemaRef.isConstantEvaluatedContext());
-      if (Success) {
-        llvm::APSInt LHSValue(32);
-        LHSValue = LHSRes.Val.getInt();
-        llvm::APSInt RHSValue(32);
-        RHSValue = RHSRes.Val.getInt();
-
-        auto IsSingleCodeUnitCP = [](const QualType &T,
-                                     const llvm::APSInt &Value) {
-          if (T->isChar8Type())
-            return llvm::IsSingleCodeUnitUTF8Codepoint(Value.getExtValue());
-          if (T->isChar16Type())
-            return llvm::IsSingleCodeUnitUTF16Codepoint(Value.getExtValue());
-          return llvm::IsSingleCodeUnitUTF32Codepoint(Value.getExtValue());
-        };
-
-        bool LHSSafe = IsSingleCodeUnitCP(LHSType, LHSValue);
-        bool RHSSafe = IsSingleCodeUnitCP(RHSType, RHSValue);
-        if (LHSSafe && RHSSafe)
-          return;
-
-        SemaRef.Diag(Loc, diag::warn_comparison_unicode_mixed_types_constant)
-            << LHS->getSourceRange() << RHS->getSourceRange() << LHSType
-            << RHSType
-            << FormatUTFCodeUnitAsCodepoint(LHSValue.getExtValue(), LHSType)
-            << FormatUTFCodeUnitAsCodepoint(RHSValue.getExtValue(), RHSType);
-        return;
-      }
-        SemaRef.Diag(Loc, diag::warn_comparison_unicode_mixed_types)
-                << LHS->getSourceRange() << RHS->getSourceRange()
-                << LHSType << RHSType;
-        return;
-    }
-
+  if (ACK == ArithConvKind::Comparison) {
     if (SemaRef.getASTContext().hasSameType(LHSType, RHSType))
       return;
 
-    SemaRef.Diag(Loc, diag::warn_arith_conv_mixed__unicode_types)
-        << LHS->getSourceRange() << RHS->getSourceRange() << ACK << LHSType
-        << RHSType;
+    Expr::EvalResult LHSRes, RHSRes;
+    bool Success = LHS->EvaluateAsInt(LHSRes, SemaRef.getASTContext(),
+                                      Expr::SE_AllowSideEffects,
+                                      SemaRef.isConstantEvaluatedContext());
+    if (Success)
+      Success = RHS->EvaluateAsInt(RHSRes, SemaRef.getASTContext(),
+                                   Expr::SE_AllowSideEffects,
+                                   SemaRef.isConstantEvaluatedContext());
+    if (Success) {
+      llvm::APSInt LHSValue(32);
+      LHSValue = LHSRes.Val.getInt();
+      llvm::APSInt RHSValue(32);
+      RHSValue = RHSRes.Val.getInt();
+
+      auto IsSingleCodeUnitCP = [](const QualType &T,
+                                   const llvm::APSInt &Value) {
+        if (T->isChar8Type())
+          return llvm::IsSingleCodeUnitUTF8Codepoint(Value.getExtValue());
+        if (T->isChar16Type())
+          return llvm::IsSingleCodeUnitUTF16Codepoint(Value.getExtValue());
+        return llvm::IsSingleCodeUnitUTF32Codepoint(Value.getExtValue());
+      };
+
+      bool LHSSafe = IsSingleCodeUnitCP(LHSType, LHSValue);
+      bool RHSSafe = IsSingleCodeUnitCP(RHSType, RHSValue);
+      if (LHSSafe && RHSSafe)
+        return;
+
+      SemaRef.Diag(Loc, diag::warn_comparison_unicode_mixed_types_constant)
+          << LHS->getSourceRange() << RHS->getSourceRange() << LHSType
+          << RHSType
+          << FormatUTFCodeUnitAsCodepoint(LHSValue.getExtValue(), LHSType)
+          << FormatUTFCodeUnitAsCodepoint(RHSValue.getExtValue(), RHSType);
+      return;
+    }
+    SemaRef.Diag(Loc, diag::warn_comparison_unicode_mixed_types)
+        << LHS->getSourceRange() << RHS->getSourceRange() << LHSType << RHSType;
     return;
+  }
+
+  if (SemaRef.getASTContext().hasSameType(LHSType, RHSType))
+    return;
+
+  SemaRef.Diag(Loc, diag::warn_arith_conv_mixed__unicode_types)
+      << LHS->getSourceRange() << RHS->getSourceRange() << ACK << LHSType
+      << RHSType;
+  return;
 }
 
 /// UsualArithmeticConversions - Performs various conversions that are common to
@@ -1644,8 +1641,7 @@ QualType Sema::UsualArithmeticConversions(ExprResult &LHS, ExprResult &RHS,
 
   checkEnumArithmeticConversions(LHS.get(), RHS.get(), Loc, ACK);
 
-  CheckUnicodeArithmeticConversions(*this, LHS.get(), RHS.get(),
-                                    Loc, ACK);
+  CheckUnicodeArithmeticConversions(*this, LHS.get(), RHS.get(), Loc, ACK);
 
   if (ACK != ArithConvKind::CompAssign) {
     LHS = UsualUnaryConversions(LHS.get());

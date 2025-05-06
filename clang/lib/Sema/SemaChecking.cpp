@@ -12188,12 +12188,10 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
 
   DiscardMisalignedMemberAddress(Target, E);
 
-
-  if(Source->isUnicodeCharacterType() && Target->isUnicodeCharacterType()) {
+  if (Source->isUnicodeCharacterType() && Target->isUnicodeCharacterType()) {
     DiagnoseMixedUnicodeImplicitConversion(*this, Source, Target, E, T, CC);
     return;
   }
-
 
   if (Target->isBooleanType())
     DiagnoseIntInBoolContext(*this, E);
