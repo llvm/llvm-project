@@ -64,25 +64,14 @@ static std::optional<llvm::StringRef> IsWord(llvm::StringRef expr,
   return candidate;
 }
 
-static void ConsumeNumberBody(char &prev_ch, llvm::StringRef::iterator &cur_pos,
-                              llvm::StringRef expr) {
-  while (cur_pos != expr.end() &&
-         (IsDigit(*cur_pos) || IsLetter(*cur_pos) || *cur_pos == '_')) {
-    prev_ch = *cur_pos;
-    cur_pos++;
-  }
-}
+static bool IsNumberBodyChar(char ch) { return IsDigit(ch) || IsLetter(ch); }
 
 static std::optional<llvm::StringRef> IsNumber(llvm::StringRef expr,
                                                llvm::StringRef &remainder) {
-  llvm::StringRef::iterator cur_pos = remainder.begin();
-  llvm::StringRef::iterator start = cur_pos;
-  char prev_ch = 0;
-  if (IsDigit(*start)) {
-    ConsumeNumberBody(prev_ch, cur_pos, expr);
-    llvm::StringRef number = expr.substr(start - expr.begin(), cur_pos - start);
-    if (remainder.consume_front(number))
-      return number;
+  if (IsDigit(remainder[0])) {
+    llvm::StringRef number = remainder.take_while(IsNumberBodyChar);
+    remainder = remainder.drop_front(number.size());
+    return number;
   }
   return std::nullopt;
 }

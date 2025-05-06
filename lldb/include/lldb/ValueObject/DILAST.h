@@ -118,8 +118,8 @@ public:
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
-  UnaryOpKind kind() const { return m_kind; }
-  ASTNode *operand() const { return m_operand.get(); }
+  UnaryOpKind GetKind() const { return m_kind; }
+  ASTNode *GetOperand() const { return m_operand.get(); }
 
   static bool classof(const ASTNode *node) {
     return node->GetKind() == NodeKind::eUnaryOpNode;
@@ -138,8 +138,8 @@ public:
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
-  ASTNode *lhs() const { return m_lhs.get(); }
-  ASTNode *rhs() const { return m_rhs.get(); }
+  ASTNode *GetLHS() const { return m_lhs.get(); }
+  ASTNode *GetRHS() const { return m_rhs.get(); }
 
   static bool classof(const ASTNode *node) {
     return node->GetKind() == NodeKind::eArraySubscriptNode;

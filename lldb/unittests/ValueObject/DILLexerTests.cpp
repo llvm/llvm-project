@@ -157,8 +157,7 @@ TEST(DILLexerTests, IdentifiersTest) {
 
 TEST(DILLexerTests, NumbersTest) {
   // These strings should lex into number tokens.
-  std::vector<std::string> valid_numbers = {"123", "0x123", "0123", "0b101",
-                                            "1_000"};
+  std::vector<std::string> valid_numbers = {"123", "0x123", "0123", "0b101"};
 
   // The lexer can lex these strings, but they should not be numbers.
   std::vector<std::string> invalid_numbers = {"", "x123", "b123"};
