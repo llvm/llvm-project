@@ -117,7 +117,6 @@ class VPBlockBase {
     Predecessors.erase(Pos);
   }
 
-public:
   /// Remove \p Successor from the successors of this block.
   void removeSuccessor(VPBlockBase *Successor) {
     auto Pos = find(Successors, Successor);

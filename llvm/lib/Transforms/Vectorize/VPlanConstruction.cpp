@@ -411,6 +411,8 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
   VPBlockBase *Succ = LatchVPBB->getSingleSuccessor();
   assert(Succ && "Latch expected to be left with a single successor");
 
+  // Use a temporary placeholder between LatchVPBB and its successor, to
+  // preserve the original predecessor/successor order of the blocks.
   auto *PlaceHolder = Plan.createVPBasicBlock("Region place holder");
   VPBlockUtils::insertOnEdge(LatchVPBB, Succ, PlaceHolder);
   VPBlockUtils::disconnectBlocks(LatchVPBB, PlaceHolder);
@@ -418,8 +420,8 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
 
   auto *R = Plan.createVPRegionBlock(HeaderVPB, LatchVPBB, "",
                                      false /*isReplicator*/);
-  // All VPBB's reachable shallowly from HeaderVPB belong to top level loop,
-  // because VPlan is expected to end at top level latch disconnected above.
+  // All VPBB's reachable shallowly from HeaderVPB belong to the current region,
+  // except the exit blocks reachable via non-latch exiting blocks,
   SmallPtrSet<VPBlockBase *, 2> ExitBlocks(Plan.getExitBlocks().begin(),
                                            Plan.getExitBlocks().end());
   for (VPBlockBase *VPBB : vp_depth_first_shallow(HeaderVPB))
@@ -428,6 +430,8 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
 
   VPBlockUtils::insertBlockAfter(R, PreheaderVPBB);
   VPBlockUtils::insertOnEdge(PlaceHolder, Succ, R);
+
+  // Remove placeholder block.
   VPBlockUtils::disconnectBlocks(R, PlaceHolder);
   VPBlockUtils::disconnectBlocks(PlaceHolder, R);
 }
@@ -481,9 +485,6 @@ void VPlanTransforms::prepareForVectorization(VPlan &Plan, Type *InductionTy,
   VPBlockUtils::insertBlockAfter(VecPreheader, Plan.getEntry());
 
   VPBasicBlock *MiddleVPBB = Plan.createVPBasicBlock("middle.block");
-  VPBlockBase *LatchExitVPB = LatchVPB->getNumSuccessors() == 2
-                                  ? LatchVPB->getSuccessors()[0]
-                                  : nullptr;
   // Canonical LatchVPB has header block as last successor. If it has another
   // successor, the latter is an exit block - insert middle block on its edge.
   // Otherwise, add middle block as another successor retaining header as last.
@@ -498,8 +499,10 @@ void VPlanTransforms::prepareForVectorization(VPlan &Plan, Type *InductionTy,
   addCanonicalIVRecipes(Plan, cast<VPBasicBlock>(HeaderVPB),
                         cast<VPBasicBlock>(LatchVPB), InductionTy, IVDL);
 
-  // Disconnect all edges between exit blocks other than from the latch.
-  // TODO: Uncountable exit blocks should be handled here.
+  // Disconnect all edges to exit blocks other than from the middle block.
+  // TODO: VPlans with early exits should be explicitly converted to a form only
+  // exiting via the latch here, including adjusting the exit condition, instead
+  // of simplify disconnecting the edges and adjusting the VPlan later.
   for (VPBlockBase *EB : to_vector(Plan.getExitBlocks())) {
     for (VPBlockBase *Pred : to_vector(EB->getPredecessors())) {
       if (Pred == MiddleVPBB)
@@ -533,8 +536,9 @@ void VPlanTransforms::prepareForVectorization(VPlan &Plan, Type *InductionTy,
   //    Thus if tail is to be folded, we know we don't need to run the
   //    remainder and we can set the condition to true.
   // 3) Otherwise, construct a runtime check.
+
   if (!RequiresScalarEpilogueCheck) {
-    if (LatchExitVPB)
+    if (auto *LatchExitVPB = MiddleVPBB->getSingleSuccessor())
       VPBlockUtils::disconnectBlocks(MiddleVPBB, LatchExitVPB);
     VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
     // The exit blocks are unreachable, remove their recipes to make sure no
@@ -569,7 +573,8 @@ void VPlanTransforms::prepareForVectorization(VPlan &Plan, Type *InductionTy,
 void VPlanTransforms::createLoopRegions(VPlan &Plan) {
   VPDominatorTree VPDT;
   VPDT.recalculate(Plan);
-  for (VPBlockBase *HeaderVPB : vp_depth_first_shallow(Plan.getEntry()))
+  for (VPBlockBase *HeaderVPB : post_order(
+           VPBlockShallowTraversalWrapper<VPBlockBase *>(Plan.getEntry())))
     if (canonicalHeaderAndLatch(HeaderVPB, VPDT))
       createLoopRegion(Plan, HeaderVPB);
 
