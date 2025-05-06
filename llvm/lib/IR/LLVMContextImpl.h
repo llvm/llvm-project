@@ -1880,6 +1880,16 @@ public:
 
   std::string DefaultTargetCPU;
   std::string DefaultTargetFeatures;
+
+  /// The next available source atom group number. The front end is responsible
+  /// for assigning source atom numbers, but certain optimisations need to
+  /// assign new group numbers to a set of instructions. Most often code
+  /// duplication optimisations like loop unroll. Tracking a global maximum
+  /// value means we can know (cheaply) we're never using a group number that's
+  /// already used within this function.
+  ///
+  /// Start a 1 because 0 means the source location isn't part of an atom group.
+  uint64_t NextAtomGroup = 1;
 };
 
 } // end namespace llvm
