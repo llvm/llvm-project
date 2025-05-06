@@ -4006,10 +4006,23 @@ bool RISCVInstrInfo::optimizeInstruction(MachineInstr &MI) const {
   case RISCV::SLL:
   case RISCV::SRL:
   case RISCV::SRA:
+    // shift rd, zero, rs => addi rd, zero, 0
+    if (MI.getOperand(1).getReg() == RISCV::X0) {
+      MI.getOperand(2).ChangeToImmediate(0);
+      MI.setDesc(get(RISCV::ADDI));
+      return true;
+    }
+    // shift rd, rs, zero => addi rd, rs, 0
+    if (MI.getOperand(2).getReg() == RISCV::X0) {
+      MI.getOperand(2).ChangeToImmediate(0);
+      MI.setDesc(get(RISCV::ADDI));
+      return true;
+    }
+    break;
   case RISCV::SLLW:
   case RISCV::SRLW:
   case RISCV::SRAW:
-    // shift rd, zero, rs => addi rd, zero, 0
+    // shiftw rd, zero, rs => addi rd, zero, 0
     if (MI.getOperand(1).getReg() == RISCV::X0) {
       MI.getOperand(2).ChangeToImmediate(0);
       MI.setDesc(get(RISCV::ADDI));

@@ -575,10 +575,10 @@ body: |
     PseudoRET implicit $x10
 ...
 ---
-name: sll
+name: sll1
 body: |
   bb.0:
-    ; CHECK-LABEL: name: sll
+    ; CHECK-LABEL: name: sll1
     ; CHECK: renamable $x10 = ADDI $x0, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
@@ -586,10 +586,21 @@ body: |
     PseudoRET implicit $x10
 ...
 ---
-name: srl
+name: sll2
 body: |
   bb.0:
-    ; CHECK-LABEL: name: srl
+    ; CHECK-LABEL: name: sll2
+    ; CHECK: renamable $x10 = ADDI $x12, 0
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    renamable $x11 = COPY $x12
+    renamable $x10 = SLL renamable $x11, $x0
+    PseudoRET implicit $x10
+...
+---
+name: sr11
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: sr11
     ; CHECK: renamable $x10 = ADDI $x0, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
@@ -597,14 +608,36 @@ body: |
     PseudoRET implicit $x10
 ...
 ---
-name: sra
+name: sr12
 body: |
   bb.0:
-    ; CHECK-LABEL: name: sra
+    ; CHECK-LABEL: name: sr12
+    ; CHECK: renamable $x10 = ADDI $x12, 0
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    renamable $x11 = COPY $x12
+    renamable $x10 = SRL renamable $x11, $x0
+    PseudoRET implicit $x10
+...
+---
+name: sra1
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: sra1
     ; CHECK: renamable $x10 = ADDI $x0, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = SRA $x0, renamable $x11
+    PseudoRET implicit $x10
+...
+---
+name: sra2
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: sra2
+    ; CHECK: renamable $x10 = ADDI $x12, 0
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    renamable $x11 = COPY $x12
+    renamable $x10 = SRA renamable $x11, $x0
     PseudoRET implicit $x10
 ...
 ---
