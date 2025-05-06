@@ -18,6 +18,7 @@
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
 #include <numeric>
 
@@ -79,8 +80,8 @@ protected:
     return layout.dropInstData();
   };
 
-  SmallVector<Type> convertType(ShapedType type,
-                                ArrayRef<int64_t> blockSize) const {
+  SmallVector<Type> getUnrolledTypes(ShapedType type,
+                                     ArrayRef<int64_t> blockSize) const {
     auto elemTy = type.getElementType();
     Type newTy;
     // TensorDescType needs to drop the inst_data field in the layout attribute
@@ -99,8 +100,8 @@ protected:
     return llvm::SmallVector<Type>(computeProduct(*ratio), newTy);
   }
 
-  // emulate the the unpack behavior using insert_strided_slice for VectorType
-  // values and unrealized_conversion_cast for TileType values.
+  /// emulate the the unpack behavior using insert_strided_slice for VectorType
+  /// values and unrealized_conversion_cast for TileType values.
   Value unpack(ValueRange srcs, Type destTy, llvm::ArrayRef<int64_t> blockSize,
                Location loc, PatternRewriter &rewriter) const {
     if (auto vecTy = dyn_cast<VectorType>(destTy)) {
@@ -136,8 +137,8 @@ protected:
     return Value();
   }
 
-  // emulate the the pack behavior using extract_strided_slice for VectorType
-  // values and unrealized_conversion_cast for TensorDescType values.
+  /// emulate the the pack behavior using extract_strided_slice for VectorType
+  /// values and unrealized_conversion_cast for TensorDescType values.
   llvm::SmallVector<Value> pack(Value src, TypeRange destTypes,
                                 llvm::ArrayRef<int64_t> blockSize, Location loc,
                                 PatternRewriter &rewriter) const {
@@ -266,7 +267,7 @@ struct UnrollUpdateNdOffsetOp : public UnrollPattern<xegpu::UpdateNdOffsetOp> {
       return failure();
     auto grids = *maybeGrids;
 
-    auto convertedTdescTypes = convertType(tdescTy, targetShape);
+    auto convertedTdescTypes = getUnrolledTypes(tdescTy, targetShape);
     auto convertedTdesc =
         pack(tdesc, convertedTdescTypes, targetShape, loc, rewriter);
 
@@ -301,7 +302,7 @@ struct UnrollPrefetchNdOp : public UnrollPattern<xegpu::PrefetchNdOp> {
       return failure();
     auto grids = *maybeGrids;
 
-    auto convertedTdescTypes = convertType(tdescTy, targetShape);
+    auto convertedTdescTypes = getUnrolledTypes(tdescTy, targetShape);
     auto convertedTdesc =
         pack(tdesc, convertedTdescTypes, targetShape, loc, rewriter);
 
@@ -340,7 +341,7 @@ struct UnrollLoadNdOp : public UnrollPattern<xegpu::LoadNdOp> {
     auto elemTy = tdescTy.getElementType();
     auto newValueTy = valueTy.cloneWith(targetShape, elemTy);
 
-    auto convertedTdescTypes = convertType(tdescTy, targetShape);
+    auto convertedTdescTypes = getUnrolledTypes(tdescTy, targetShape);
     auto convertedTdescs = pack(op.getTensorDesc(), convertedTdescTypes,
                                 targetShape, loc, rewriter);
 
@@ -380,8 +381,8 @@ struct UnrollStoreNdOp : public UnrollPattern<xegpu::StoreNdOp> {
       return failure();
     auto grids = *maybeGrids;
 
-    auto convertedValTypes = convertType(valueTy, targetShape);
-    auto convertedTdescTypes = convertType(tdescTy, targetShape);
+    auto convertedValTypes = getUnrolledTypes(valueTy, targetShape);
+    auto convertedTdescTypes = getUnrolledTypes(tdescTy, targetShape);
 
     auto convertedValues =
         pack(op.getValue(), convertedValTypes, targetShape, loc, rewriter);
@@ -448,8 +449,12 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
 
     // skip the operation if every operand has an invalid blocking size (empty)
     // or if the original shape matches the blocking size (size == 1).
-    if (aVals.size() <= 1 && bVals.size() <= 1 && cVals.size() <= 1)
+    auto ranges = c ? SmallVector<ValueRange>({aVals, bVals, cVals})
+                    : SmallVector<ValueRange>({aVals, bVals});
+    if (any_of(ranges, [](auto &v) { return v.size() == 0; }) ||
+        all_of(ranges, [](auto &v) { return v.size() == 1; })) {
       return failure();
+    }
 
     auto resultTy = op.getResult().getType();
     auto vecTy = VectorType::get(cBlockSize, resultTy.getElementType());
