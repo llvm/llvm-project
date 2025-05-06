@@ -396,12 +396,10 @@ static llvm::Type *getInlineSpirvConstant(CodeGenModule &CGM,
   if (Words.size() == 0)
     Words.push_back(0);
 
-  if (IntegralType) {
+  if (IntegralType)
     return llvm::TargetExtType::get(Ctx, "spirv.IntegralConstant",
                                     {IntegralType}, Words);
-  } else {
-    return llvm::TargetExtType::get(Ctx, "spirv.Literal", {}, Words);
-  }
+  return llvm::TargetExtType::get(Ctx, "spirv.Literal", {}, Words);
 }
 
 static llvm::Type *getInlineSpirvType(CodeGenModule &CGM,
@@ -415,7 +413,7 @@ static llvm::Type *getInlineSpirvType(CodeGenModule &CGM,
 
     llvm::Type *Result = nullptr;
     switch (Operand.getKind()) {
-    case SpirvOperandKind::kConstantId: {
+    case SpirvOperandKind::ConstantId: {
       llvm::Type *IntegralType =
           CGM.getTypes().ConvertType(Operand.getResultType());
       llvm::APInt Value = Operand.getValue();
@@ -423,12 +421,12 @@ static llvm::Type *getInlineSpirvType(CodeGenModule &CGM,
       Result = getInlineSpirvConstant(CGM, IntegralType, Value);
       break;
     }
-    case SpirvOperandKind::kLiteral: {
+    case SpirvOperandKind::Literal: {
       llvm::APInt Value = Operand.getValue();
       Result = getInlineSpirvConstant(CGM, nullptr, Value);
       break;
     }
-    case SpirvOperandKind::kTypeId: {
+    case SpirvOperandKind::TypeId: {
       QualType TypeOperand = Operand.getResultType();
       if (auto *RT = TypeOperand->getAs<RecordType>()) {
         auto *RD = RT->getDecl();
@@ -465,9 +463,8 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(
     const SmallVector<int32_t> *Packoffsets) const {
   llvm::LLVMContext &Ctx = CGM.getLLVMContext();
 
-  if (auto *SpirvType = dyn_cast<HLSLInlineSpirvType>(Ty)) {
+  if (auto *SpirvType = dyn_cast<HLSLInlineSpirvType>(Ty))
     return getInlineSpirvType(CGM, SpirvType);
-  }
 
   auto *ResType = dyn_cast<HLSLAttributedResourceType>(Ty);
   if (!ResType)

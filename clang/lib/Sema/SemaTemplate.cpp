@@ -3269,20 +3269,17 @@ static SpirvOperand checkHLSLSpirvTypeOperand(Sema &SemaRef,
       QualType ConstantType = ConstantArgs[0].getAsType();
       llvm::APInt Value = ConstantArgs[1].getAsIntegral();
 
-      if (Literal) {
+      if (Literal)
         return SpirvOperand::createLiteral(Value);
-      } else {
-        return SpirvOperand::createConstant(ConstantType, Value);
-      }
+      return SpirvOperand::createConstant(ConstantType, Value);
     } else if (Literal) {
       SemaRef.Diag(LiteralLoc, diag::err_hlsl_vk_literal_must_contain_constant);
       return SpirvOperand();
     }
   }
   if (SemaRef.RequireCompleteType(Loc, OperandArg,
-                                  diag::err_call_incomplete_argument)) {
+                                  diag::err_call_incomplete_argument))
     return SpirvOperand();
-  }
   return SpirvOperand::createType(OperandArg);
 }
 
@@ -3391,8 +3388,7 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
     assert(Converted.size() == 4);
 
     if (!Context.getTargetInfo().getTriple().isSPIRV()) {
-      SemaRef.Diag(TemplateLoc, diag::err_hlsl_spirv_only)
-          << "__hlsl_spirv_type";
+      SemaRef.Diag(TemplateLoc, diag::err_hlsl_spirv_only) << BTD;
     }
 
     if (llvm::any_of(Converted, [](auto &C) { return C.isDependent(); }))
@@ -3410,9 +3406,8 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
       QualType OperandArg = OperandTA.getAsType();
       auto Operand = checkHLSLSpirvTypeOperand(SemaRef, OperandArg,
                                                TemplateArgs[3].getLocation());
-      if (!Operand.isValid()) {
+      if (!Operand.isValid())
         return QualType();
-      }
       Operands.push_back(Operand);
     }
 
@@ -6250,13 +6245,10 @@ bool UnnamedLocalNoLinkageFinder::VisitHLSLAttributedResourceType(
 
 bool UnnamedLocalNoLinkageFinder::VisitHLSLInlineSpirvType(
     const HLSLInlineSpirvType *T) {
-  for (auto &Operand : T->getOperands()) {
-    if (Operand.isConstant() && Operand.isLiteral()) {
-      if (Visit(Operand.getResultType())) {
+  for (auto &Operand : T->getOperands())
+    if (Operand.isConstant() && Operand.isLiteral())
+      if (Visit(Operand.getResultType()))
         return true;
-      }
-    }
-  }
   return false;
 }
 

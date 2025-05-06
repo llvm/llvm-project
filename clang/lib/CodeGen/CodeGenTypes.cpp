@@ -882,9 +882,8 @@ bool CodeGenTypes::isZeroInitializable(QualType T) {
     return getCXXABI().isZeroInitializable(MPT);
 
   // HLSL Inline SPIR-V types are non-zero-initializable.
-  if (T->getAs<HLSLInlineSpirvType>()) {
+  if (T->getAs<HLSLInlineSpirvType>())
     return false;
-  }
 
   // Everything else is okay.
   return true;

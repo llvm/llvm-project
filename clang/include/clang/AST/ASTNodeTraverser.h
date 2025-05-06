@@ -455,11 +455,11 @@ public:
       using SpirvOperandKind = SpirvOperand::SpirvOperandKind;
 
       switch (Operand.getKind()) {
-      case SpirvOperandKind::kConstantId:
-      case SpirvOperandKind::kLiteral:
+      case SpirvOperandKind::ConstantId:
+      case SpirvOperandKind::Literal:
         break;
 
-      case SpirvOperandKind::kTypeId:
+      case SpirvOperandKind::TypeId:
         Visit(Operand.getResultType());
         break;
 

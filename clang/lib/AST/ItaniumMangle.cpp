@@ -4709,17 +4709,17 @@ void CXXNameMangler::mangleType(const HLSLInlineSpirvType *T) {
     using SpirvOperandKind = SpirvOperand::SpirvOperandKind;
 
     switch (Operand.getKind()) {
-    case SpirvOperandKind::kConstantId:
+    case SpirvOperandKind::ConstantId:
       mangleVendorQualifier("_Const");
       mangleIntegerLiteral(Operand.getResultType(),
                            llvm::APSInt(Operand.getValue()));
       break;
-    case SpirvOperandKind::kLiteral:
+    case SpirvOperandKind::Literal:
       mangleVendorQualifier("_Lit");
       mangleIntegerLiteral(Context.getASTContext().IntTy,
                            llvm::APSInt(Operand.getValue()));
       break;
-    case SpirvOperandKind::kTypeId:
+    case SpirvOperandKind::TypeId:
       mangleVendorQualifier("_Type");
       mangleType(Operand.getResultType());
       break;

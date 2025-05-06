@@ -1837,19 +1837,18 @@ ExpectedType clang::ASTNodeImporter::VisitHLSLInlineSpirvType(
 
   llvm::SmallVector<SpirvOperand> ToOperands;
 
-  size_t I = 0;
   for (auto &Operand : T->getOperands()) {
     using SpirvOperandKind = SpirvOperand::SpirvOperandKind;
 
     switch (Operand.getKind()) {
-    case SpirvOperandKind::kConstantId:
+    case SpirvOperandKind::ConstantId:
       ToOperands.push_back(SpirvOperand::createConstant(
           importChecked(Err, Operand.getResultType()), Operand.getValue()));
       break;
-    case SpirvOperandKind::kLiteral:
+    case SpirvOperandKind::Literal:
       ToOperands.push_back(SpirvOperand::createLiteral(Operand.getValue()));
       break;
-    case SpirvOperandKind::kTypeId:
+    case SpirvOperandKind::TypeId:
       ToOperands.push_back(SpirvOperand::createType(
           importChecked(Err, Operand.getResultType())));
       break;
@@ -1860,8 +1859,6 @@ ExpectedType clang::ASTNodeImporter::VisitHLSLInlineSpirvType(
     if (Err)
       return std::move(Err);
   }
-
-  assert(I == NumOperands);
 
   return Importer.getToContext().getHLSLInlineSpirvType(
       ToOpcode, ToSize, ToAlignment, ToOperands);

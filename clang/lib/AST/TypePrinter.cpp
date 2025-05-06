@@ -2152,7 +2152,7 @@ void TypePrinter::printHLSLInlineSpirvBefore(const HLSLInlineSpirvType *T,
 
     OS << ", ";
     switch (Operand.getKind()) {
-    case SpirvOperandKind::kConstantId: {
+    case SpirvOperandKind::ConstantId: {
       QualType ConstantType = Operand.getResultType();
       OS << "vk::integral_constant<";
       printBefore(ConstantType, OS);
@@ -2162,12 +2162,12 @@ void TypePrinter::printHLSLInlineSpirvBefore(const HLSLInlineSpirvType *T,
       OS << ">";
       break;
     }
-    case SpirvOperandKind::kLiteral:
+    case SpirvOperandKind::Literal:
       OS << "vk::Literal<vk::integral_constant<uint, ";
       OS << Operand.getValue();
       OS << ">>";
       break;
-    case SpirvOperandKind::kTypeId: {
+    case SpirvOperandKind::TypeId: {
       QualType Type = Operand.getResultType();
       printBefore(Type, OS);
       printAfter(Type, OS);

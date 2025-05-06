@@ -6366,23 +6366,23 @@ public:
 class SpirvOperand {
 public:
   enum SpirvOperandKind : unsigned char {
-    kInvalid,    ///< Uninitialized.
-    kConstantId, ///< Integral value to represent as a SPIR-V OpConstant
-                 ///< instruction ID.
-    kLiteral,    ///< Integral value to represent as an immediate literal.
-    kTypeId,     ///< Type to represent as a SPIR-V type ID.
+    Invalid,    ///< Uninitialized.
+    ConstantId, ///< Integral value to represent as a SPIR-V OpConstant
+                ///< instruction ID.
+    Literal,    ///< Integral value to represent as an immediate literal.
+    TypeId,     ///< Type to represent as a SPIR-V type ID.
 
-    kMax,
+    Max,
   };
 
 private:
-  SpirvOperandKind Kind = kInvalid;
+  SpirvOperandKind Kind = Invalid;
 
   QualType ResultType;
   llvm::APInt Value; // Signedness of constants is represented by ResultType.
 
 public:
-  SpirvOperand() : Kind(kInvalid), ResultType() {}
+  SpirvOperand() : Kind(Invalid), ResultType() {}
 
   SpirvOperand(SpirvOperandKind Kind, QualType ResultType, llvm::APInt Value)
       : Kind(Kind), ResultType(ResultType), Value(Value) {}
@@ -6406,10 +6406,10 @@ public:
 
   SpirvOperandKind getKind() const { return Kind; }
 
-  bool isValid() const { return Kind != kInvalid && Kind < kMax; }
-  bool isConstant() const { return Kind == kConstantId; }
-  bool isLiteral() const { return Kind == kLiteral; }
-  bool isType() const { return Kind == kTypeId; }
+  bool isValid() const { return Kind != Invalid && Kind < Max; }
+  bool isConstant() const { return Kind == ConstantId; }
+  bool isLiteral() const { return Kind == Literal; }
+  bool isType() const { return Kind == TypeId; }
 
   llvm::APInt getValue() const {
     assert((isConstant() || isLiteral()) &&
@@ -6424,15 +6424,15 @@ public:
   }
 
   static SpirvOperand createConstant(QualType ResultType, llvm::APInt Val) {
-    return SpirvOperand(kConstantId, ResultType, Val);
+    return SpirvOperand(ConstantId, ResultType, Val);
   }
 
   static SpirvOperand createLiteral(llvm::APInt Val) {
-    return SpirvOperand(kLiteral, QualType(), Val);
+    return SpirvOperand(Literal, QualType(), Val);
   }
 
   static SpirvOperand createType(QualType T) {
-    return SpirvOperand(kTypeId, T, llvm::APSInt());
+    return SpirvOperand(TypeId, T, llvm::APSInt());
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) const {
@@ -6460,9 +6460,8 @@ private:
                       ArrayRef<SpirvOperand> Operands)
       : Type(HLSLInlineSpirv, QualType(), TypeDependence::None), Opcode(Opcode),
         Size(Size), Alignment(Alignment), NumOperands(Operands.size()) {
-    for (size_t I = 0; I < NumOperands; I++) {
+    for (size_t I = 0; I < NumOperands; I++)
       getTrailingObjects<SpirvOperand>()[I] = Operands[I];
-    }
   }
 
 public:
@@ -6486,9 +6485,8 @@ public:
     ID.AddInteger(Opcode);
     ID.AddInteger(Size);
     ID.AddInteger(Alignment);
-    for (auto &Operand : Operands) {
+    for (auto &Operand : Operands)
       Operand.Profile(ID);
-    }
   }
 
   static bool classof(const Type *T) {

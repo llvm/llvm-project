@@ -5496,9 +5496,9 @@ QualType ASTContext::getHLSLInlineSpirvType(uint32_t Opcode, uint32_t Size,
 
   unsigned size = sizeof(HLSLInlineSpirvType);
   size += Operands.size() * sizeof(SpirvOperand);
-  void *mem = Allocate(size, alignof(HLSLInlineSpirvType));
+  void *Mem = Allocate(size, alignof(HLSLInlineSpirvType));
 
-  Ty = new (mem) HLSLInlineSpirvType(Opcode, Size, Alignment, Operands);
+  Ty = new (Mem) HLSLInlineSpirvType(Opcode, Size, Alignment, Operands);
 
   Types.push_back(Ty);
   HLSLInlineSpirvTypes.InsertNode(Ty, InsertPos);
@@ -11864,11 +11864,9 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
     if (LHSTy->getOpcode() == RHSTy->getOpcode() &&
         LHSTy->getSize() == RHSTy->getSize() &&
         LHSTy->getAlignment() == RHSTy->getAlignment()) {
-      for (size_t I = 0; I < LHSTy->getOperands().size(); I++) {
-        if (LHSTy->getOperands()[I] != RHSTy->getOperands()[I]) {
+      for (size_t I = 0; I < LHSTy->getOperands().size(); I++)
+        if (LHSTy->getOperands()[I] != RHSTy->getOperands()[I])
           return {};
-        }
-      }
 
       return LHS;
     }
