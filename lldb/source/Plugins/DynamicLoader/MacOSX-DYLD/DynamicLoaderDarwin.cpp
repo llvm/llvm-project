@@ -1030,9 +1030,9 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
           thread, load_addrs, stop_others);
     }
     // One more case we have to consider is "branch islands".  These are regular
-    // TEXT symbols but their names end in .island plus maybe a .digit suffix.  
-    // They are to allow arm64 code to branch further than the size of the 
-    // address slot allows.  We just need to single-instruction step in that 
+    // TEXT symbols but their names end in .island plus maybe a .digit suffix.
+    // They are to allow arm64 code to branch further than the size of the
+    // address slot allows.  We just need to single-instruction step in that
     // case.
     static const char *g_branch_island_pattern = "\\.island\\.?[0-9]*$";
     static RegularExpression g_branch_island_regex(g_branch_island_pattern);
