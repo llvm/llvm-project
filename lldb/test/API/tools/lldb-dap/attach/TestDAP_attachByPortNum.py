@@ -18,6 +18,7 @@ import sys
 import socket
 
 
+@skip("SBTarget::ConnectRemote is not synchronous")
 class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
     default_timeout = 20
 
