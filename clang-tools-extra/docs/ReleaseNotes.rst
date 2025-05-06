@@ -219,6 +219,11 @@ Changes in existing checks
   tolerating fix-it breaking compilation when functions is used as pointers
   to avoid matching usage of functions within the current compilation unit.
 
+- Improved :doc:`cppcoreguidelines-rvalue-reference-param-not-moved
+  <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check
+  by adding a flag to specify the function used for moving instead of
+  ``std::move``.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
