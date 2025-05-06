@@ -37,7 +37,7 @@ class TestDAP_stackTraceMissingSourcePath(lldbdap_testcase.DAPTestCaseBase):
             breakpoint_line = line_number(other_source_file, "// Break here")
 
             program = self.getBuildArtifact("a.out")
-            self.build_and_launch(program, commandEscapePrefix="")
+            self.build_and_launch(program, stopOnEntry=True, commandEscapePrefix="")
 
             breakpoint_ids = self.set_source_breakpoints(
                 other_source_file, [breakpoint_line]
