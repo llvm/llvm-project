@@ -13,6 +13,7 @@ define amdgpu_ps i64 @test_nor(i64 inreg %a, i64 inreg %b) {
 ; SDAG-W64-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; SDAG-W64-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; SDAG-W64-NEXT:    v_cmp_ne_u32_e64 s[0:1], 0, v0
+; SDAG-W64-NEXT:    s_waitcnt_depctr 0xf1ff
 ; SDAG-W64-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-W64-LABEL: test_nor:
@@ -57,8 +58,8 @@ define amdgpu_ps i64 @test_or_two_uses(i64 inreg %a, i64 inreg %b) {
 ; SDAG-W64-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; SDAG-W64-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; SDAG-W64-NEXT:    v_cmp_ne_u32_e64 s[0:1], 0, v1
+; SDAG-W64-NEXT:    s_waitcnt_depctr 0xf1ff
 ; SDAG-W64-NEXT:    s_and_b64 s[0:1], s[0:1], vcc
-; SDAG-W64-NEXT:    s_waitcnt_depctr 0xfffe
 ; SDAG-W64-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-W64-LABEL: test_or_two_uses:
