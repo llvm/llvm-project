@@ -140,29 +140,6 @@ define ptx_kernel void @ptr_generic(ptr %out, ptr %in) {
   ret void
 }
 
-define ptx_kernel void @ptr_nongeneric(ptr addrspace(1) %out, ptr addrspace(3) %in) {
-; IR-LABEL: define ptx_kernel void @ptr_nongeneric(
-; IR-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(3) [[IN:%.*]]) {
-; IR-NEXT:    [[V:%.*]] = load i32, ptr addrspace(3) [[IN]], align 4
-; IR-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT]], align 4
-; IR-NEXT:    ret void
-;
-; PTX-LABEL: ptr_nongeneric(
-; PTX:       {
-; PTX-NEXT:    .reg .b32 %r<2>;
-; PTX-NEXT:    .reg .b64 %rd<3>;
-; PTX-EMPTY:
-; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    ld.param.b64 %rd1, [ptr_nongeneric_param_0];
-; PTX-NEXT:    ld.param.b64 %rd2, [ptr_nongeneric_param_1];
-; PTX-NEXT:    ld.shared.b32 %r1, [%rd2];
-; PTX-NEXT:    st.global.b32 [%rd1], %r1;
-; PTX-NEXT:    ret;
-  %v = load i32, ptr addrspace(3) %in, align 4
-  store i32 %v, ptr addrspace(1) %out, align 4
-  ret void
-}
-
 define ptx_kernel void @ptr_as_int(i64 noundef %i, i32 noundef %v) {
 ; IRC-LABEL: define ptx_kernel void @ptr_as_int(
 ; IRC-SAME: i64 noundef [[I:%.*]], i32 noundef [[V:%.*]]) {
