@@ -5787,8 +5787,7 @@ static Value *createInsertVector(
     function_ref<Value *(Value *, Value *, ArrayRef<int>)> Generator = {}) {
   const unsigned SubVecVF = getNumElements(V->getType());
   if (Index % SubVecVF == 0) {
-    Vec = Builder.CreateInsertVector(Vec->getType(), Vec, V,
-                                     Builder.getInt64(Index));
+    Vec = Builder.CreateInsertVector(Vec->getType(), Vec, V, Index);
   } else {
     // Create shuffle, insertvector requires that index is multiple of
     // the subvector length.
@@ -5818,7 +5817,7 @@ static Value *createExtractVector(IRBuilderBase &Builder, Value *Vec,
   if (Index % SubVecVF == 0) {
     VectorType *SubVecTy =
         getWidenedType(Vec->getType()->getScalarType(), SubVecVF);
-    return Builder.CreateExtractVector(SubVecTy, Vec, Builder.getInt64(Index));
+    return Builder.CreateExtractVector(SubVecTy, Vec, Index);
   }
   // Create shuffle, extract_subvector requires that index is multiple of
   // the subvector length.
@@ -7187,7 +7186,6 @@ void BoUpSLP::reorderTopToBottom() {
     MapVector<OrdersType, unsigned,
               DenseMap<OrdersType, unsigned, OrdersTypeDenseMapInfo>>
         OrdersUses;
-    SmallPtrSet<const TreeEntry *, 4> VisitedOps;
     for (const TreeEntry *OpTE : OrderedEntries) {
       // No need to reorder this nodes, still need to extend and to use shuffle,
       // just need to merge reordering shuffle and the reuse shuffle.
@@ -8154,7 +8152,6 @@ static void gatherPossiblyVectorizableLoads(
           int &Offset, unsigned &Start) {
         if (Loads.empty())
           return GatheredLoads.end();
-        SmallVector<std::pair<int, int>> Res;
         LoadInst *LI = Loads.front().first;
         for (auto [Idx, Data] : enumerate(GatheredLoads)) {
           if (Idx < Start)
@@ -13802,7 +13799,6 @@ bool BoUpSLP::isFullyVectorizableTinyTree(bool ForReduction) const {
   // with the second gather nodes if they have less scalar operands rather than
   // the initial tree element (may be profitable to shuffle the second gather)
   // or they are extractelements, which form shuffle.
-  SmallVector<int> Mask;
   if (VectorizableTree[0]->State == TreeEntry::Vectorize &&
       AreVectorizableGathers(VectorizableTree[1].get(),
                              VectorizableTree[0]->Scalars.size()))
@@ -15249,6 +15245,11 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
           continue;
       }
 
+      if (!TEUseEI.UserTE->isGather() && !UserPHI &&
+          doesNotNeedToSchedule(TEUseEI.UserTE->Scalars) !=
+              doesNotNeedToSchedule(UseEI.UserTE->Scalars) &&
+          is_contained(UseEI.UserTE->Scalars, TEInsertPt))
+        continue;
       // Check if the user node of the TE comes after user node of TEPtr,
       // otherwise TEPtr depends on TE.
       if ((TEInsertBlock != InsertPt->getParent() ||
@@ -16876,8 +16877,6 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
   unsigned VF = E->getVectorFactor();
 
   bool NeedFreeze = false;
-  SmallVector<int> ReuseShuffleIndices(E->ReuseShuffleIndices.begin(),
-                                       E->ReuseShuffleIndices.end());
   SmallVector<Value *> GatheredScalars(E->Scalars.begin(), E->Scalars.end());
   // Clear values, to be replaced by insertvector instructions.
   for (auto [EIdx, Idx] : E->CombinedEntriesWithIndices)
@@ -17620,7 +17619,6 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       SmallPtrSet<BasicBlock *, 4> VisitedBBs;
 
       for (unsigned I : seq<unsigned>(PH->getNumIncomingValues())) {
-        ValueList Operands;
         BasicBlock *IBB = PH->getIncomingBlock(I);
 
         // Stop emission if all incoming values are generated.
@@ -18292,7 +18290,6 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         TysForDecl.push_back(VecTy);
       auto *CEI = cast<CallInst>(VL0);
       for (unsigned I : seq<unsigned>(0, CI->arg_size())) {
-        ValueList OpVL;
         // Some intrinsics have scalar arguments. This argument should not be
         // vectorized.
         if (UseIntrinsic && isVectorIntrinsicWithScalarOpAtArg(ID, I, TTI)) {

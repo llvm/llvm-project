@@ -1659,7 +1659,6 @@ void transform::detail::getPotentialTopLevelEffects(
       if (!iface)
         continue;
 
-      SmallVector<MemoryEffects::EffectInstance, 2> nestedEffects;
       iface.getEffects(effects);
     }
     return;

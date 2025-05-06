@@ -18348,7 +18348,10 @@ CreateNewDecl:
 
   // If we're declaring or defining a tag in function prototype scope in C,
   // note that this type can only be used within the function and add it to
-  // the list of decls to inject into the function definition scope.
+  // the list of decls to inject into the function definition scope. However,
+  // in C23 and later, while the type is only visible within the function, the
+  // function can be called with a compatible type defined in the same TU, so
+  // we silence the diagnostic in C23 and up. This matches the behavior of GCC.
   if ((Name || Kind == TagTypeKind::Enum) &&
       getNonFieldDeclScope(S)->isFunctionPrototypeScope()) {
     if (getLangOpts().CPlusPlus) {
@@ -18362,7 +18365,10 @@ CreateNewDecl:
       if (TUK == TagUseKind::Declaration)
         Invalid = true;
     } else if (!PrevDecl) {
-      Diag(Loc, diag::warn_decl_in_param_list) << Context.getTagDeclType(New);
+      // In C23 mode, if the declaration is complete, we do not want to
+      // diagnose.
+      if (!getLangOpts().C23 || TUK != TagUseKind::Definition)
+        Diag(Loc, diag::warn_decl_in_param_list) << Context.getTagDeclType(New);
     }
   }
 
@@ -18474,11 +18480,10 @@ bool Sema::ActOnDuplicateDefinition(Scope *S, Decl *Prev,
   return true;
 }
 
-void Sema::ActOnStartCXXMemberDeclarations(Scope *S, Decl *TagD,
-                                           SourceLocation FinalLoc,
-                                           bool IsFinalSpelledSealed,
-                                           bool IsAbstract,
-                                           SourceLocation LBraceLoc) {
+void Sema::ActOnStartCXXMemberDeclarations(
+    Scope *S, Decl *TagD, SourceLocation FinalLoc, bool IsFinalSpelledSealed,
+    bool IsAbstract, SourceLocation TriviallyRelocatable,
+    SourceLocation Replaceable, SourceLocation LBraceLoc) {
   AdjustDeclIfTemplate(TagD);
   CXXRecordDecl *Record = cast<CXXRecordDecl>(TagD);
 
@@ -18496,6 +18501,14 @@ void Sema::ActOnStartCXXMemberDeclarations(Scope *S, Decl *TagD,
                                           ? FinalAttr::Keyword_sealed
                                           : FinalAttr::Keyword_final));
   }
+
+  if (TriviallyRelocatable.isValid())
+    Record->addAttr(
+        TriviallyRelocatableAttr::Create(Context, TriviallyRelocatable));
+
+  if (Replaceable.isValid())
+    Record->addAttr(ReplaceableAttr::Create(Context, Replaceable));
+
   // C++ [class]p2:
   //   [...] The class-name is also inserted into the scope of the
   //   class itself; this is known as the injected-class-name. For
@@ -19303,6 +19316,43 @@ static void ComputeSpecialMemberFunctionsEligiblity(Sema &S,
                      CXXSpecialMemberKind::MoveAssignment);
 }
 
+bool Sema::EntirelyFunctionPointers(const RecordDecl *Record) {
+  // Check to see if a FieldDecl is a pointer to a function.
+  auto IsFunctionPointerOrForwardDecl = [&](const Decl *D) {
+    const FieldDecl *FD = dyn_cast<FieldDecl>(D);
+    if (!FD) {
+      // Check whether this is a forward declaration that was inserted by
+      // Clang. This happens when a non-forward declared / defined type is
+      // used, e.g.:
+      //
+      //   struct foo {
+      //     struct bar *(*f)();
+      //     struct bar *(*g)();
+      //   };
+      //
+      // "struct bar" shows up in the decl AST as a "RecordDecl" with an
+      // incomplete definition.
+      if (const auto *TD = dyn_cast<TagDecl>(D))
+        return !TD->isCompleteDefinition();
+      return false;
+    }
+    QualType FieldType = FD->getType().getDesugaredType(Context);
+    if (isa<PointerType>(FieldType)) {
+      QualType PointeeType = cast<PointerType>(FieldType)->getPointeeType();
+      return PointeeType.getDesugaredType(Context)->isFunctionType();
+    }
+    // If a member is a struct entirely of function pointers, that counts too.
+    if (const RecordType *RT = FieldType->getAs<RecordType>()) {
+      const RecordDecl *Record = RT->getDecl();
+      if (Record->isStruct() && EntirelyFunctionPointers(Record))
+        return true;
+    }
+    return false;
+  };
+
+  return llvm::all_of(Record->decls(), IsFunctionPointerOrForwardDecl);
+}
+
 void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
                        ArrayRef<Decl *> Fields, SourceLocation LBrac,
                        SourceLocation RBrac,
@@ -19640,41 +19690,13 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
     // Handle attributes before checking the layout.
     ProcessDeclAttributeList(S, Record, Attrs);
 
-    // Check to see if a FieldDecl is a pointer to a function.
-    auto IsFunctionPointerOrForwardDecl = [&](const Decl *D) {
-      const FieldDecl *FD = dyn_cast<FieldDecl>(D);
-      if (!FD) {
-        // Check whether this is a forward declaration that was inserted by
-        // Clang. This happens when a non-forward declared / defined type is
-        // used, e.g.:
-        //
-        //   struct foo {
-        //     struct bar *(*f)();
-        //     struct bar *(*g)();
-        //   };
-        //
-        // "struct bar" shows up in the decl AST as a "RecordDecl" with an
-        // incomplete definition.
-        if (const auto *TD = dyn_cast<TagDecl>(D))
-          return !TD->isCompleteDefinition();
-        return false;
-      }
-      QualType FieldType = FD->getType().getDesugaredType(Context);
-      if (isa<PointerType>(FieldType)) {
-        QualType PointeeType = cast<PointerType>(FieldType)->getPointeeType();
-        return PointeeType.getDesugaredType(Context)->isFunctionType();
-      }
-      return false;
-    };
-
     // Maybe randomize the record's decls. We automatically randomize a record
     // of function pointers, unless it has the "no_randomize_layout" attribute.
-    if (!getLangOpts().CPlusPlus &&
+    if (!getLangOpts().CPlusPlus && !getLangOpts().RandstructSeed.empty() &&
+        !Record->isRandomized() && !Record->isUnion() &&
         (Record->hasAttr<RandomizeLayoutAttr>() ||
          (!Record->hasAttr<NoRandomizeLayoutAttr>() &&
-          llvm::all_of(Record->decls(), IsFunctionPointerOrForwardDecl))) &&
-        !Record->isUnion() && !getLangOpts().RandstructSeed.empty() &&
-        !Record->isRandomized()) {
+          EntirelyFunctionPointers(Record)))) {
       SmallVector<Decl *, 32> NewDeclOrdering;
       if (randstruct::randomizeStructureLayout(Context, Record,
                                                NewDeclOrdering))

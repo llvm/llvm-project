@@ -1114,8 +1114,8 @@ void IRTranslator::emitBitTestHeader(SwitchCG::BitTestBlock &B,
     MaskTy = LLT::scalar(PtrTy.getSizeInBits());
   else {
     // Ensure that the type will fit the mask value.
-    for (unsigned I = 0, E = B.Cases.size(); I != E; ++I) {
-      if (!isUIntN(SwitchOpTy.getSizeInBits(), B.Cases[I].Mask)) {
+    for (const SwitchCG::BitTestCase &Case : B.Cases) {
+      if (!isUIntN(SwitchOpTy.getSizeInBits(), Case.Mask)) {
         // Switch table case range are encoded into series of masks.
         // Just use pointer type, it's guaranteed to fit.
         MaskTy = LLT::scalar(PtrTy.getSizeInBits());
@@ -1731,10 +1731,6 @@ bool IRTranslator::translateMemFunc(const CallInst &CI,
   ConstantInt *CopySize = nullptr;
 
   if (auto *MCI = dyn_cast<MemCpyInst>(&CI)) {
-    DstAlign = MCI->getDestAlign().valueOrOne();
-    SrcAlign = MCI->getSourceAlign().valueOrOne();
-    CopySize = dyn_cast<ConstantInt>(MCI->getArgOperand(2));
-  } else if (auto *MCI = dyn_cast<MemCpyInlineInst>(&CI)) {
     DstAlign = MCI->getDestAlign().valueOrOne();
     SrcAlign = MCI->getSourceAlign().valueOrOne();
     CopySize = dyn_cast<ConstantInt>(MCI->getArgOperand(2));

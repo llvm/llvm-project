@@ -73,7 +73,7 @@ void llvm::simpleSimplifyCFG(Function &F, ArrayRef<BasicBlock *> BBs,
   for (BasicBlock *BB : Unreachable) {
     for (BasicBlock *Successor : successors(&*BB))
       if (Visited.count(Successor))
-        Successor->removePredecessor(&*BB);
+        Successor->removePredecessor(&*BB, /*KeepOneInputPHIs=*/true);
     BB->dropAllReferences();
   }
 

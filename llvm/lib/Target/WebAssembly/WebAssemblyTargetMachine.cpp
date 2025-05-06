@@ -402,7 +402,6 @@ using WebAssembly::WasmEnableEH;
 using WebAssembly::WasmEnableEmEH;
 using WebAssembly::WasmEnableEmSjLj;
 using WebAssembly::WasmEnableSjLj;
-using WebAssembly::WasmUseLegacyEH;
 
 static void basicCheckForEHAndSjLj(TargetMachine *TM) {
 
