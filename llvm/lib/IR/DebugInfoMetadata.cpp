@@ -306,11 +306,15 @@ DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
 
   // Merge the two locations if possible, using the supplied
   // inlined-at location for the created location.
-  auto MergeLocPair = [&C](const DILocation *L1, const DILocation *L2,
-                           DILocation *InlinedAt) -> DILocation * {
+  auto *LocAIA = LocA->getInlinedAt();
+  auto *LocBIA = LocB->getInlinedAt();
+  auto MergeLocPair = [&C, LocAIA,
+                       LocBIA](const DILocation *L1, const DILocation *L2,
+                               DILocation *InlinedAt) -> DILocation * {
     if (L1 == L2)
       return DILocation::get(C, L1->getLine(), L1->getColumn(), L1->getScope(),
-                             InlinedAt);
+                             InlinedAt, L1->isImplicitCode(),
+                             L1->getAtomGroup(), L1->getAtomRank());
 
     // If the locations originate from different subprograms we can't produce
     // a common location.
@@ -346,8 +350,47 @@ DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
     bool SameCol = L1->getColumn() == L2->getColumn();
     unsigned Line = SameLine ? L1->getLine() : 0;
     unsigned Col = SameLine && SameCol ? L1->getColumn() : 0;
+    bool IsImplicitCode = L1->isImplicitCode() && L2->isImplicitCode();
 
-    return DILocation::get(C, Line, Col, Scope, InlinedAt);
+    // Discard source location atom if the line becomes 0. And there's nothing
+    // further to do if neither location has an atom number.
+    if (!SameLine || !(L1->getAtomGroup() || L2->getAtomGroup()))
+      return DILocation::get(C, Line, Col, Scope, InlinedAt, IsImplicitCode,
+                             /*AtomGroup*/ 0, /*AtomRank*/ 0);
+
+    uint64_t Group = 0;
+    uint64_t Rank = 0;
+    // If we're preserving the same matching inlined-at field we can
+    // preserve the atom.
+    if (LocBIA == LocAIA && InlinedAt == LocBIA) {
+      // Deterministically keep the lowest non-zero ranking atom group
+      // number.
+      // FIXME: It would be nice if we could track that an instruction
+      // belongs to two source atoms.
+      bool UseL1Atom = [L1, L2]() {
+        if (L1->getAtomRank() == L2->getAtomRank()) {
+          // Arbitrarily choose the lowest non-zero group number.
+          if (!L1->getAtomGroup() || !L2->getAtomGroup())
+            return !L2->getAtomGroup();
+          return L1->getAtomGroup() < L2->getAtomGroup();
+        }
+        // Choose the lowest non-zero rank.
+        if (!L1->getAtomRank() || !L2->getAtomRank())
+          return !L2->getAtomRank();
+        return L1->getAtomRank() < L2->getAtomRank();
+      }();
+      Group = UseL1Atom ? L1->getAtomGroup() : L2->getAtomGroup();
+      Rank = UseL1Atom ? L1->getAtomRank() : L2->getAtomRank();
+    } else {
+      // If either instruction is part of a source atom, reassign it a new
+      // atom group. This essentially regresses to non-key-instructions
+      // behaviour (now that it's the only instruction in its group it'll
+      // probably get is_stmt applied).
+      Group = C.incNextDILocationAtomGroup();
+      Rank = 1;
+    }
+    return DILocation::get(C, Line, Col, Scope, InlinedAt, IsImplicitCode,
+                           Group, Rank);
   };
 
   DILocation *Result = ARIt != ALocs.rend() ? (*ARIt)->getInlinedAt() : nullptr;
@@ -374,7 +417,10 @@ DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
   // historically picked A's scope, and a nullptr inlined-at location, so that
   // behavior is mimicked here but I am not sure if this is always the correct
   // way to handle this.
-  return DILocation::get(C, 0, 0, LocA->getScope(), nullptr);
+  // Key Instructions: it's fine to drop atom group and rank here, as line 0
+  // is a nonsensical is_stmt location.
+  return DILocation::get(C, 0, 0, LocA->getScope(), nullptr, false,
+                         /*AtomGroup*/ 0, /*AtomRank*/ 0);
 }
 
 std::optional<unsigned>
