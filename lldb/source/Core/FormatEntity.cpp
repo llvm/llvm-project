@@ -60,6 +60,7 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/TargetParser/Triple.h"
 
+#include <cassert>
 #include <cctype>
 #include <cinttypes>
 #include <cstdio>
@@ -281,29 +282,51 @@ constexpr Definition g_top_level_entries[] = {
 constexpr Definition g_root = Entry::DefinitionWithChildren(
     "<root>", EntryType::Root, g_top_level_entries);
 
+FormatEntity::Entry::Entry(Type t, const char *s, const char *f)
+    : string(s ? s : ""), printf_format(f ? f : ""), children_stack({{}}),
+      type(t) {}
+
 FormatEntity::Entry::Entry(llvm::StringRef s)
-    : string(s.data(), s.size()), printf_format(), children(),
-      type(Type::String) {}
+    : string(s.data(), s.size()), children_stack({{}}), type(Type::String) {}
 
 FormatEntity::Entry::Entry(char ch)
-    : string(1, ch), printf_format(), children(), type(Type::String) {}
+    : string(1, ch), printf_format(), children_stack({{}}), type(Type::String) {
+}
+
+std::vector<Entry> &FormatEntity::Entry::GetChildren() {
+  assert(level < children_stack.size());
+  return children_stack[level];
+}
 
 void FormatEntity::Entry::AppendChar(char ch) {
-  if (children.empty() || children.back().type != Entry::Type::String)
-    children.push_back(Entry(ch));
+  auto &entries = GetChildren();
+  if (entries.empty() || entries.back().type != Entry::Type::String)
+    entries.push_back(Entry(ch));
   else
-    children.back().string.append(1, ch);
+    entries.back().string.append(1, ch);
 }
 
 void FormatEntity::Entry::AppendText(const llvm::StringRef &s) {
-  if (children.empty() || children.back().type != Entry::Type::String)
-    children.push_back(Entry(s));
+  auto &entries = GetChildren();
+  if (entries.empty() || entries.back().type != Entry::Type::String)
+    entries.push_back(Entry(s));
   else
-    children.back().string.append(s.data(), s.size());
+    entries.back().string.append(s.data(), s.size());
 }
 
 void FormatEntity::Entry::AppendText(const char *cstr) {
   return AppendText(llvm::StringRef(cstr));
+}
+
+void FormatEntity::Entry::AppendEntry(const Entry &&entry) {
+  auto &entries = GetChildren();
+  entries.push_back(entry);
+}
+
+void FormatEntity::Entry::StartAlternative() {
+  assert(type == Entry::Type::Scope);
+  children_stack.emplace_back();
+  level++;
 }
 
 #define ENUM_TO_CSTR(eee)                                                      \
@@ -405,8 +428,9 @@ void FormatEntity::Entry::Dump(Stream &s, int depth) const {
   if (deref)
     s.Printf("deref = true, ");
   s.EOL();
-  for (const auto &child : children) {
-    child.Dump(s, depth + 1);
+  for (const auto &children : children_stack) {
+    for (const auto &child : children)
+      child.Dump(s, depth + 1);
   }
 }
 
@@ -1308,7 +1332,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return true;
 
   case Entry::Type::Root:
-    for (const auto &child : entry.children) {
+    for (const auto &child : entry.children_stack[0]) {
       if (!Format(child, s, sc, exe_ctx, addr, valobj, function_changed,
                   initial_function)) {
         return false; // If any item of root fails, then the formatting fails
@@ -1322,19 +1346,26 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
 
   case Entry::Type::Scope: {
     StreamString scope_stream;
-    bool success = false;
-    for (const auto &child : entry.children) {
-      success = Format(child, scope_stream, sc, exe_ctx, addr, valobj,
-                       function_changed, initial_function);
-      if (!success)
-        break;
+    auto format_children = [&](const std::vector<Entry> &children) {
+      scope_stream.Clear();
+      for (const auto &child : children) {
+        if (!Format(child, scope_stream, sc, exe_ctx, addr, valobj,
+                    function_changed, initial_function))
+          return false;
+      }
+      return true;
+    };
+
+    for (auto &children : entry.children_stack) {
+      if (format_children(children)) {
+        s.Write(scope_stream.GetString().data(),
+                scope_stream.GetString().size());
+        return true;
+      }
     }
-    // Only if all items in a scope succeed, then do we print the output into
-    // the main stream
-    if (success)
-      s.Write(scope_stream.GetString().data(), scope_stream.GetString().size());
-  }
+
     return true; // Scopes always successfully print themselves
+  }
 
   case Entry::Type::Variable:
   case Entry::Type::VariableSynthetic:
@@ -2124,7 +2155,7 @@ static Status ParseInternal(llvm::StringRef &format, Entry &parent_entry,
                             uint32_t depth) {
   Status error;
   while (!format.empty() && error.Success()) {
-    const size_t non_special_chars = format.find_first_of("${}\\");
+    const size_t non_special_chars = format.find_first_of("${}\\|");
 
     if (non_special_chars == llvm::StringRef::npos) {
       // No special characters, just string bytes so add them and we are done
@@ -2160,6 +2191,14 @@ static Status ParseInternal(llvm::StringRef &format, Entry &parent_entry,
             format
                 .drop_front(); // Skip the '}' as we are at the end of the scope
       return error;
+
+    case '|':
+      format = format.drop_front(); // Skip the '|'
+      if (parent_entry.type == Entry::Type::Scope)
+        parent_entry.StartAlternative();
+      else
+        parent_entry.AppendChar('|');
+      break;
 
     case '\\': {
       format = format.drop_front(); // Skip the '\' character
