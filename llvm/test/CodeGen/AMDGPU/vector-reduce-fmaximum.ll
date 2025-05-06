@@ -450,12 +450,11 @@ define half @test_vector_reduce_fmaximum_v8half(<8 x half> %v) {
 ; GFX9-NEXT:    v_cndmask_b32_e32 v4, v5, v2, vcc
 ; GFX9-NEXT:    v_max_f16_e32 v6, v0, v4
 ; GFX9-NEXT:    v_cmp_o_f16_e32 vcc, v0, v4
-; GFX9-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
-; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    s_nop 1
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, v5, v6, vcc
 ; GFX9-NEXT:    v_cmp_o_f16_sdwa vcc, v1, v3 src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX9-NEXT:    s_nop 1
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v5, v2, vcc
+; GFX9-NEXT:    v_cndmask_b32_sdwa v1, v5, v2, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX9-NEXT:    v_max_f16_e32 v2, v0, v1
 ; GFX9-NEXT:    v_cmp_o_f16_e32 vcc, v0, v1
 ; GFX9-NEXT:    s_nop 1
@@ -476,13 +475,13 @@ define half @test_vector_reduce_fmaximum_v8half(<8 x half> %v) {
 ; GFX10-NEXT:    v_max_f16_e32 v5, v4, v0
 ; GFX10-NEXT:    v_cndmask_b32_e32 v6, 0x7e00, v2, vcc_lo
 ; GFX10-NEXT:    v_cmp_o_f16_e32 vcc_lo, v4, v0
-; GFX10-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x7e00, v5, vcc_lo
-; GFX10-NEXT:    v_max_f16_e32 v4, v0, v6
-; GFX10-NEXT:    v_cmp_o_f16_e32 vcc_lo, v0, v6
-; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x7e00, v4, vcc_lo
 ; GFX10-NEXT:    v_cmp_o_f16_sdwa vcc_lo, v1, v3 src0_sel:WORD_1 src1_sel:WORD_1
-; GFX10-NEXT:    v_cndmask_b32_e32 v1, 0x7e00, v2, vcc_lo
+; GFX10-NEXT:    v_mov_b32_e32 v1, 0x7e00
+; GFX10-NEXT:    v_max_f16_e32 v4, v0, v6
+; GFX10-NEXT:    v_cmp_o_f16_e64 s4, v0, v6
+; GFX10-NEXT:    v_cndmask_b32_sdwa v1, v1, v2, vcc_lo dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX10-NEXT:    v_cndmask_b32_e64 v0, 0x7e00, v4, s4
 ; GFX10-NEXT:    v_max_f16_e32 v2, v0, v1
 ; GFX10-NEXT:    v_cmp_o_f16_e32 vcc_lo, v0, v1
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x7e00, v2, vcc_lo
@@ -786,12 +785,11 @@ define half @test_vector_reduce_fmaximum_v16half(<16 x half> %v) {
 ; GFX9-NEXT:    v_cndmask_b32_e32 v4, v9, v3, vcc
 ; GFX9-NEXT:    v_max_f16_e32 v5, v0, v4
 ; GFX9-NEXT:    v_cmp_o_f16_e32 vcc, v0, v4
-; GFX9-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
-; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    s_nop 1
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, v9, v5, vcc
 ; GFX9-NEXT:    v_cmp_o_f16_e32 vcc, v1, v2
 ; GFX9-NEXT:    s_nop 1
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v9, v3, vcc
+; GFX9-NEXT:    v_cndmask_b32_sdwa v1, v9, v3, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX9-NEXT:    v_max_f16_e32 v2, v0, v1
 ; GFX9-NEXT:    v_cmp_o_f16_e32 vcc, v0, v1
 ; GFX9-NEXT:    s_nop 1
@@ -840,13 +838,13 @@ define half @test_vector_reduce_fmaximum_v16half(<16 x half> %v) {
 ; GFX10-NEXT:    v_max_f16_e32 v5, v4, v0
 ; GFX10-NEXT:    v_cndmask_b32_e32 v6, 0x7e00, v2, vcc_lo
 ; GFX10-NEXT:    v_cmp_o_f16_e32 vcc_lo, v4, v0
-; GFX10-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x7e00, v5, vcc_lo
-; GFX10-NEXT:    v_max_f16_e32 v4, v0, v6
-; GFX10-NEXT:    v_cmp_o_f16_e32 vcc_lo, v0, v6
-; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x7e00, v4, vcc_lo
 ; GFX10-NEXT:    v_cmp_o_f16_e32 vcc_lo, v1, v3
-; GFX10-NEXT:    v_cndmask_b32_e32 v1, 0x7e00, v2, vcc_lo
+; GFX10-NEXT:    v_mov_b32_e32 v1, 0x7e00
+; GFX10-NEXT:    v_max_f16_e32 v4, v0, v6
+; GFX10-NEXT:    v_cmp_o_f16_e64 s4, v0, v6
+; GFX10-NEXT:    v_cndmask_b32_sdwa v1, v1, v2, vcc_lo dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX10-NEXT:    v_cndmask_b32_e64 v0, 0x7e00, v4, s4
 ; GFX10-NEXT:    v_max_f16_e32 v2, v0, v1
 ; GFX10-NEXT:    v_cmp_o_f16_e32 vcc_lo, v0, v1
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x7e00, v2, vcc_lo
