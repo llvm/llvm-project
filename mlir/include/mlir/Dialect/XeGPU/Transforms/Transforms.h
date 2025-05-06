@@ -40,6 +40,8 @@ struct UnrollOptions {
 
 /// Appends patterns for folding aliasing ops into XeGPU ops into `patterns`.
 void populateXeGPUFoldAliasOpsPatterns(RewritePatternSet &patterns);
+/// Appends patterns for XeGPU SIMT distribution into `patterns`.
+void populateXeGPUSubgroupDistributePatterns(RewritePatternSet &patterns);
 
 void populateXeGPUUnrollPatterns(RewritePatternSet &patterns,
                                  const UnrollOptions &options);

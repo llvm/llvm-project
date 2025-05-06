@@ -4554,9 +4554,8 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     Value *NewLdCall = Builder.CreateCall(NewFn, Args);
     Value *Ret = llvm::PoisonValue::get(RetTy);
     for (unsigned I = 0; I < N; I++) {
-      Value *Idx = ConstantInt::get(Type::getInt64Ty(C), I * MinElts);
       Value *SRet = Builder.CreateExtractValue(NewLdCall, I);
-      Ret = Builder.CreateInsertVector(RetTy, Ret, SRet, Idx);
+      Ret = Builder.CreateInsertVector(RetTy, Ret, SRet, I * MinElts);
     }
     NewCall = dyn_cast<CallInst>(Ret);
     break;
@@ -4611,9 +4610,8 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Value *Ret = llvm::PoisonValue::get(RetTy);
       unsigned MinElts = RetTy->getMinNumElements() / N;
       for (unsigned I = 0; I < N; I++) {
-        Value *Idx = ConstantInt::get(Type::getInt64Ty(C), I * MinElts);
         Value *V = CI->getArgOperand(I);
-        Ret = Builder.CreateInsertVector(RetTy, Ret, V, Idx);
+        Ret = Builder.CreateInsertVector(RetTy, Ret, V, I * MinElts);
       }
       NewCall = dyn_cast<CallInst>(Ret);
     }

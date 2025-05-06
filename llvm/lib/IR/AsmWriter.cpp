@@ -125,11 +125,15 @@ static void orderValue(const Value *V, OrderMap &OM) {
   if (OM.lookup(V))
     return;
 
-  if (const Constant *C = dyn_cast<Constant>(V))
+  if (const Constant *C = dyn_cast<Constant>(V)) {
+    if (isa<ConstantData>(C))
+      return;
+
     if (C->getNumOperands() && !isa<GlobalValue>(C))
       for (const Value *Op : C->operands())
         if (!isa<BasicBlock>(Op) && !isa<GlobalValue>(Op))
           orderValue(Op, OM);
+  }
 
   // Note: we cannot cache this lookup above, since inserting into the map
   // changes the map's size, and thus affects the other IDs.
@@ -2103,6 +2107,8 @@ static void writeDILocation(raw_ostream &Out, const DILocation *DL,
   Printer.printMetadata("inlinedAt", DL->getRawInlinedAt());
   Printer.printBool("isImplicitCode", DL->isImplicitCode(),
                     /* Default */ false);
+  Printer.printInt("atomGroup", DL->getAtomGroup());
+  Printer.printInt<unsigned>("atomRank", DL->getAtomRank());
   Out << ")";
 }
 
