@@ -10,9 +10,7 @@
 #define LLVM_LIBC_SRC_TIME_LINUX_TIMEZONE_H
 
 namespace LIBC_NAMESPACE_DECL {
-namespace timezone {
-
-} // namespace timezone
+namespace timezone {} // namespace timezone
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_TIME_LINUX_TIMEZONE_H
