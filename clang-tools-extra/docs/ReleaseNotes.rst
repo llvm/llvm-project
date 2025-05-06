@@ -327,6 +327,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/redundant-smartptr-get>` check by fixing
   some false positives involving smart pointers to arrays.
 
+- Improved :doc:`cppcoreguidelines-missing-std-forward
+  <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by adding a
+  flag to specify the function used for forwarding instead of ``std::forward``.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
