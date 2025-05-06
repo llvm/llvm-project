@@ -8253,10 +8253,14 @@ SDValue SITargetLowering::lowerDEBUGTRAP(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
                                              SelectionDAG &DAG) const {
+  // Treat DDS like LDS since the high bits of the aperture are the same.
+  assert(AS == AMDGPUAS::PRIVATE_ADDRESS || AS == AMDGPUAS::LOCAL_ADDRESS ||
+         AS == AMDGPUAS::DISTRIBUTED);
+
   if (Subtarget->hasApertureRegs()) {
-    const unsigned ApertureRegNo = (AS == AMDGPUAS::LOCAL_ADDRESS)
-                                       ? AMDGPU::SRC_SHARED_BASE
-                                       : AMDGPU::SRC_PRIVATE_BASE;
+    const unsigned ApertureRegNo = AS == AMDGPUAS::PRIVATE_ADDRESS
+                                       ? AMDGPU::SRC_PRIVATE_BASE
+                                       : AMDGPU::SRC_SHARED_BASE;
     assert((ApertureRegNo != AMDGPU::SRC_PRIVATE_BASE ||
             !Subtarget->hasGloballyAddressableScratch()) &&
            "Cannot use src_private_base with globally addressable scratch!");
@@ -8290,7 +8294,7 @@ SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
   const Module *M = DAG.getMachineFunction().getFunction().getParent();
   if (AMDGPU::getAMDHSACodeObjectVersion(*M) >= AMDGPU::AMDHSA_COV5) {
     ImplicitParameter Param =
-        (AS == AMDGPUAS::LOCAL_ADDRESS) ? SHARED_BASE : PRIVATE_BASE;
+        AS == AMDGPUAS::PRIVATE_ADDRESS ? PRIVATE_BASE : SHARED_BASE;
     return loadImplicitKernelArgument(DAG, MVT::i32, DL, Align(4), Param);
   }
 
@@ -8308,7 +8312,7 @@ SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
 
   // Offset into amd_queue_t for group_segment_aperture_base_hi /
   // private_segment_aperture_base_hi.
-  uint32_t StructOffset = (AS == AMDGPUAS::LOCAL_ADDRESS) ? 0x40 : 0x44;
+  uint32_t StructOffset = AS == AMDGPUAS::PRIVATE_ADDRESS ? 0x44 : 0x40;
 
   SDValue Ptr =
       DAG.getObjectPtrOffset(DL, QueuePtr, TypeSize::getFixed(StructOffset));
@@ -8364,11 +8368,11 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
 
   SDValue FlatNullPtr = DAG.getConstant(0, SL, MVT::i64);
 
-  // flat -> local/private/laneshared
+  // flat -> local/private/laneshared/dds
   if (SrcAS == AMDGPUAS::FLAT_ADDRESS) {
     if (DestAS == AMDGPUAS::LOCAL_ADDRESS ||
         DestAS == AMDGPUAS::PRIVATE_ADDRESS ||
-        DestAS == AMDGPUAS::LANE_SHARED) {
+        DestAS == AMDGPUAS::LANE_SHARED || DestAS == AMDGPUAS::DISTRIBUTED) {
       SDValue Ptr = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, Src);
 
       if ((DestAS == AMDGPUAS::PRIVATE_ADDRESS ||
@@ -8384,6 +8388,11 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
         Ptr = DAG.getNode(ISD::SUB, SL, MVT::i32, Ptr, FlatScratchBaseLo);
       }
 
+      if (DestAS == AMDGPUAS::DISTRIBUTED) {
+        SDValue DDSBaseLo = DAG.getConstant(0x80000000, SL, MVT::i32);
+        Ptr = DAG.getNode(ISD::SUB, SL, MVT::i32, Ptr, DDSBaseLo);
+      }
+
       if (IsNonNull || isKnownNonNull(Op, DAG, TM, SrcAS))
         return Ptr;
 
@@ -8396,10 +8405,11 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
     }
   }
 
-  // local/private -> flat
+  // local/private/laneshared/dds -> flat
   if (DestAS == AMDGPUAS::FLAT_ADDRESS) {
     if (SrcAS == AMDGPUAS::LOCAL_ADDRESS ||
-        SrcAS == AMDGPUAS::PRIVATE_ADDRESS || SrcAS == AMDGPUAS::LANE_SHARED) {
+        SrcAS == AMDGPUAS::PRIVATE_ADDRESS || SrcAS == AMDGPUAS::LANE_SHARED ||
+        SrcAS == AMDGPUAS::DISTRIBUTED) {
       SDValue CvtPtr;
       if ((SrcAS == AMDGPUAS::PRIVATE_ADDRESS ||
            SrcAS == AMDGPUAS::LANE_SHARED) &&
@@ -8432,7 +8442,12 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
         CvtPtr = DAG.getNode(ISD::ADD, SL, MVT::i64, CvtPtr, FlatScratchBase);
       } else {
         SDValue Aperture = getSegmentAperture(SrcAS, SL, DAG);
-        CvtPtr = DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i32, Src, Aperture);
+        SDValue Ptr = Src;
+        if (SrcAS == AMDGPUAS::DISTRIBUTED) {
+          SDValue DDSBaseLo = DAG.getConstant(0x80000000, SL, MVT::i32);
+          Ptr = DAG.getNode(ISD::SUB, SL, MVT::i32, Ptr, DDSBaseLo);
+        }
+        CvtPtr = DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i32, Ptr, Aperture);
         CvtPtr = DAG.getNode(ISD::BITCAST, SL, MVT::i64, CvtPtr);
       }
 
@@ -8448,6 +8463,25 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
       return DAG.getNode(ISD::SELECT, SL, MVT::i64, NonNull, CvtPtr,
                          FlatNullPtr);
     }
+  }
+
+  // dds -> lds
+  if (SrcAS == AMDGPUAS::DISTRIBUTED && DestAS == AMDGPUAS::LOCAL_ADDRESS) {
+    return DAG.getNode(AMDGPUISD::BFE_I32, SL, MVT::i32, Src,
+                       DAG.getConstant(0, SL, MVT::i32),
+                       DAG.getConstant(24, SL, MVT::i32));
+  }
+
+  // lds -> dds
+  if (SrcAS == AMDGPUAS::LOCAL_ADDRESS && DestAS == AMDGPUAS::DISTRIBUTED) {
+    SDValue WgIdInCluster = DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, SL, MVT::i32,
+        DAG.getTargetConstant(Intrinsic::amdgcn_cluster_workgroup_flat_id, SL,
+                              MVT::i32));
+    return DAG.getNode(
+        ISD::OR, SL, MVT::i32, Src,
+        DAG.getNode(ISD::SHL, SL, MVT::i32, WgIdInCluster,
+                    DAG.getShiftAmountConstant(24, MVT::i32, SL)));
   }
 
   if (SrcAS == AMDGPUAS::CONSTANT_ADDRESS_32BIT &&

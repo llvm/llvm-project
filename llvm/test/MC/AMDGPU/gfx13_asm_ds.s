@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -show-encoding %s | FileCheck --check-prefixes=GFX13 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=+lds-barrier-arrive-atomic -show-encoding %s | FileCheck --check-prefixes=GFX13 %s
 
 ds_atomic_async_barrier_arrive_b64 v1 offset:65407
 // GFX13: ds_atomic_async_barrier_arrive_b64 v1 offset:65407 ; encoding: [0x7f,0xff,0x58,0xd9,0x01,0x00,0x00,0x00]

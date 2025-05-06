@@ -19,6 +19,7 @@ def p4 : PtrValueType<i64, 4>;
 def p5 : PtrValueType<i32, 5>;
 def p6 : PtrValueType<i32, 6>;
 def p10 : PtrValueType<i32, 10>;
+def p11 : PtrValueType<i32, 11>;
 
 //===------------------------------------------------------------===//
 // Subtarget Features (device properties)
@@ -2238,8 +2239,6 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureMLMathInsts,
    FeatureVGPRIndexingRegisters,
    FeatureMaxHardClauseLength63,
-   FeatureMin3Max3PKF16,
-   FeatureMinimum3Maximum3PKF16,
    FeatureAtomicFMinFMaxF64GlobalInsts,
    FeatureAtomicFMinFMaxF64FlatInsts,
    FeatureFmaMixBF16Insts,
@@ -2253,7 +2252,6 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureBVHDualAndBVH8Insts,
    FeatureLshlAddU64Inst,
    FeatureAddSubU64Insts,
-   FeatureLdsBarrierArriveAtomic,
 ]>;
 
 //===----------------------------------------------------------------------===//

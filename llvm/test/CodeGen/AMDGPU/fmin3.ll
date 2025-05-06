@@ -1232,8 +1232,9 @@ define <2 x half> @no_fmin3_v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c, <
 ; GFX13-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_pk_min_num_f16 v0, v0, v1
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-NEXT:    v_pk_min3_num_f16 v0, v2, v0, v3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_pk_min_num_f16 v0, v2, v0
+; GFX13-NEXT:    v_pk_min_num_f16 v0, v0, v3
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %min = call <2 x half> @llvm.minnum.v2f16(<2 x half> %a, <2 x half> %b)
