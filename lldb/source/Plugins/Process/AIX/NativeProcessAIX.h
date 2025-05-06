@@ -12,7 +12,7 @@
 #include "Plugins/Process/Utility/NativeProcessSoftwareSingleStep.h"
 #include "lldb/Host/Debug.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
-#include "lldb/Host/linux/Support.h"
+#include "lldb/Host/posix/Support.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"

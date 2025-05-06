@@ -1304,6 +1304,18 @@ def ElementwiseMin : Builtin {
   let Prototype = "void(...)";
 }
 
+def ElementwiseMaxNum : Builtin {
+  let Spellings = ["__builtin_elementwise_maxnum"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseMinNum : Builtin {
+  let Spellings = ["__builtin_elementwise_minnum"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def ElementwiseMaximum : Builtin {
   let Spellings = ["__builtin_elementwise_maximum"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
@@ -2839,6 +2851,12 @@ def MemMove : LibBuiltin<"string.h"> {
   let Attributes = [NoThrow, Constexpr];
   let Prototype = "void*(void*, void const*, size_t)";
   let AddBuiltinPrefixedAlias = 1;
+}
+
+def BuiltinTriviallyRelocate : Builtin {
+  let Spellings = ["__builtin_trivially_relocate"];
+  let Attributes = [FunctionWithBuiltinPrefix, CustomTypeChecking, NoThrow];
+  let Prototype = "void*(void*, void*, size_t)";
 }
 
 def StrCpy : LibBuiltin<"string.h"> {
@@ -4785,6 +4803,18 @@ def HLSLAddUint64: LangBuiltin<"HLSL_LANG"> {
 
 def HLSLResourceGetPointer : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_getpointer"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
+def HLSLResourceUninitializedHandle : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_uninitializedhandle"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
+def HLSLResourceHandleFromBinding : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_handlefrombinding"];
   let Attributes = [NoThrow];
   let Prototype = "void(...)";
 }

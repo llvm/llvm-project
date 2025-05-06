@@ -2866,19 +2866,21 @@ TEST_F(FormatTest, ShortEnums) {
 }
 
 TEST_F(FormatTest, ShortCompoundRequirement) {
+  constexpr StringRef Code("template <typename T>\n"
+                           "concept c = requires(T x) {\n"
+                           "  { x + 1 } -> std::same_as<int>;\n"
+                           "};");
+
   FormatStyle Style = getLLVMStyle();
   EXPECT_TRUE(Style.AllowShortCompoundRequirementOnASingleLine);
-  verifyFormat("template <typename T>\n"
-               "concept c = requires(T x) {\n"
-               "  { x + 1 } -> std::same_as<int>;\n"
-               "};",
-               Style);
+  verifyFormat(Code, Style);
   verifyFormat("template <typename T>\n"
                "concept c = requires(T x) {\n"
                "  { x + 1 } -> std::same_as<int>;\n"
                "  { x + 2 } -> std::same_as<int>;\n"
                "};",
                Style);
+
   Style.AllowShortCompoundRequirementOnASingleLine = false;
   verifyFormat("template <typename T>\n"
                "concept c = requires(T x) {\n"
@@ -2886,7 +2888,7 @@ TEST_F(FormatTest, ShortCompoundRequirement) {
                "    x + 1\n"
                "  } -> std::same_as<int>;\n"
                "};",
-               Style);
+               Code, Style);
   verifyFormat("template <typename T>\n"
                "concept c = requires(T x) {\n"
                "  {\n"
@@ -2897,6 +2899,11 @@ TEST_F(FormatTest, ShortCompoundRequirement) {
                "  } -> std::same_as<int>;\n"
                "};",
                Style);
+
+  Style.AllowShortCompoundRequirementOnASingleLine = true;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_MultiLine;
+  verifyFormat(Code, Style);
 }
 
 TEST_F(FormatTest, ShortCaseLabels) {
@@ -3419,6 +3426,17 @@ TEST_F(FormatTest, MultiLineControlStatements) {
                "{\n"
                "};",
                Style);
+
+  Style = getLLVMStyle();
+  Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Always;
+  Style.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_WithoutElse;
+  Style.AllowShortLoopsOnASingleLine = true;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_MultiLine;
+  verifyFormat("if (true) { return; }", Style);
+  verifyFormat("while (true) { return; }", Style);
+  // Failing test in https://reviews.llvm.org/D114521#3151727
+  verifyFormat("for (;;) { bar(); }", Style);
 }
 
 TEST_F(FormatTest, BeforeWhile) {
@@ -6473,6 +6491,18 @@ TEST_F(FormatTest, IndentPreprocessorDirectives) {
                "\n"
                "#if 1\n"
                "#endif",
+               Style);
+
+  verifyFormat("#ifndef ABCDE\n"
+               "  #define ABCDE 0\n"
+               "#endif\n"
+               "\n"
+               "#define FGHIJK",
+               "#ifndef ABCDE\n"
+               "#define ABCDE 0\n"
+               "#endif\n"
+               "\n"
+               "#define FGHIJK",
                Style);
 }
 
@@ -12627,9 +12657,6 @@ TEST_F(FormatTest, UnderstandsAttributes) {
   verifyFormat("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa __attribute__((unused))\n"
                "aaaaaaaaaaaaaaaaaaaaaaa(int i);");
   verifyFormat("__attribute__((nodebug)) ::qualified_type f();");
-  verifyFormat(
-      "RenderWidgetHostViewCocoa *\n"
-      "    __attribute__((objc_precise_lifetime)) keepSelfAlive = self;");
   FormatStyle AfterType = getLLVMStyle();
   AfterType.BreakAfterReturnType = FormatStyle::RTBS_All;
   verifyFormat("__attribute__((nodebug)) void\n"
@@ -14232,6 +14259,8 @@ TEST_F(FormatTest, IncorrectCodeUnbalancedBraces) {
   verifyNoCrash("struct Foo {\n"
                 "  operator foo(bar\n"
                 "};");
+  verifyNoCrash("decltype( {\n"
+                "  {");
 }
 
 TEST_F(FormatTest, IncorrectUnbalancedBracesInMacrosWithUnicode) {
@@ -24927,6 +24956,105 @@ TEST_F(FormatTest, DisableRegions) {
                  "// clang-format on");
 }
 
+TEST_F(FormatTest, OneLineFormatOffRegex) {
+  auto Style = getLLVMStyle();
+  Style.OneLineFormatOffRegex = "// format off$";
+
+  verifyFormat(" // format off\n"
+               " int i ;\n"
+               "int j;",
+               " // format off\n"
+               " int i ;\n"
+               " int j ;",
+               Style);
+  verifyFormat("// format off?\n"
+               "int i;",
+               " // format off?\n"
+               " int i ;",
+               Style);
+  verifyFormat("f(\"// format off\");", " f(\"// format off\") ;", Style);
+
+  verifyFormat("int i;\n"
+               " // format off\n"
+               " int j ;\n"
+               "int k;",
+               " int i ;\n"
+               " // format off\n"
+               " int j ;\n"
+               " int k ;",
+               Style);
+
+  verifyFormat(" // format off\n"
+               "\n"
+               "int i;",
+               " // format off\n"
+               " \n"
+               " int i ;",
+               Style);
+
+  verifyFormat("int i;\n"
+               " int j ; // format off\n"
+               "int k;",
+               " int i ;\n"
+               " int j ; // format off\n"
+               " int k ;",
+               Style);
+
+  verifyFormat("// clang-format off\n"
+               " int i ;\n"
+               " int j ; // format off\n"
+               " int k ;\n"
+               "// clang-format on\n"
+               "f();",
+               " // clang-format off\n"
+               " int i ;\n"
+               " int j ; // format off\n"
+               " int k ;\n"
+               " // clang-format on\n"
+               " f() ;",
+               Style);
+
+  Style.OneLineFormatOffRegex = "^/\\* format off \\*/";
+  verifyFormat("int i;\n"
+               " /* format off */ int j ;\n"
+               "int k;",
+               " int i ;\n"
+               " /* format off */ int j ;\n"
+               " int k ;",
+               Style);
+  verifyFormat("f(\"/* format off */\");", " f(\"/* format off */\") ;", Style);
+
+  Style.AlignEscapedNewlines = FormatStyle::ENAS_DontAlign;
+  verifyFormat("#define A \\\n"
+               "  do { \\\n"
+               "  /* format off */\\\n"
+               "  f() ; \\\n"
+               "    g(); \\\n"
+               "  } while (0)",
+               "# define A\\\n"
+               " do{ \\\n"
+               "  /* format off */\\\n"
+               "  f() ; \\\n"
+               "  g() ;\\\n"
+               " } while (0 )",
+               Style);
+
+  Style.ColumnLimit = 50;
+  Style.OneLineFormatOffRegex = "^LogErrorPrint$";
+  verifyFormat(" myproject::LogErrorPrint(logger, \"Don't split me!\");\n"
+               "myproject::MyLogErrorPrinter(myLogger,\n"
+               "                             \"Split me!\");",
+               " myproject::LogErrorPrint(logger, \"Don't split me!\");\n"
+               " myproject::MyLogErrorPrinter(myLogger, \"Split me!\");",
+               Style);
+
+  Style.OneLineFormatOffRegex = "//(< clang-format off| NO_TRANSLATION)$";
+  verifyNoChange(
+      " int i ;  //< clang-format off\n"
+      " msg = sprintf(\"Long string with placeholders.\"); // NO_TRANSLATION",
+      Style);
+}
+
 TEST_F(FormatTest, DoNotCrashOnInvalidInput) {
   format("? ) =");
   verifyNoCrash("#define a\\\n /**/}");
@@ -27981,6 +28109,33 @@ TEST_F(FormatTest, EnumTrailingComma) {
                "};\n"
                "enum Color { red, green, blue /**/ };",
                Code, Style);
+
+  EXPECT_TRUE(Style.AllowShortEnumsOnASingleLine);
+  Style.AllowShortEnumsOnASingleLine = false;
+
+  constexpr StringRef Input("enum {\n"
+                            "  //\n"
+                            "  a,\n"
+                            "  /**/\n"
+                            "  b,\n"
+                            "};");
+  verifyFormat(Input, Input, Style, {tooling::Range(12, 3)}); // line 3
+  verifyFormat("enum {\n"
+               "  //\n"
+               "  a,\n"
+               "  /**/\n"
+               "  b\n"
+               "};",
+               Input, Style, {tooling::Range(24, 3)}); // line 5
+
+  Style.EnumTrailingComma = FormatStyle::ETC_Insert;
+  verifyFormat("enum class MyEnum_E {\n"
+               "  MY_ENUM = 0U,\n"
+               "};",
+               "enum class MyEnum_E {\n"
+               "  MY_ENUM = 0U\n"
+               "};",
+               Style);
 }
 
 TEST_F(FormatTest, BreakAfterAttributes) {
@@ -28300,6 +28455,8 @@ TEST_F(FormatTest, RemoveParentheses) {
   verifyFormat("return ((... && std::is_convertible_v<TArgsLocal, TArgs>));",
                "return (((... && std::is_convertible_v<TArgsLocal, TArgs>)));",
                Style);
+  verifyFormat("MOCK_METHOD(void, Function, (), override);",
+               "MOCK_METHOD(void, Function, (), (override));", Style);
 
   Style.RemoveParentheses = FormatStyle::RPS_ReturnStatement;
   verifyFormat("#define Return0 return (0);", Style);

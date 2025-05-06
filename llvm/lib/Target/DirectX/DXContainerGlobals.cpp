@@ -180,7 +180,7 @@ void DXContainerGlobals::addRootSignature(Module &M,
 
 void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
   const DXILResourceMap &DRM =
-      getAnalysis<DXILResourceWrapperPass>().getBindingMap();
+      getAnalysis<DXILResourceWrapperPass>().getResourceMap();
   DXILResourceTypeMap &DRTM =
       getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
 
@@ -229,7 +229,7 @@ void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
 
     dxil::ResourceTypeInfo &TypeInfo = DRTM[RI.getHandleTy()];
     dxbc::PSV::ResourceType ResType;
-    if (TypeInfo.getUAV().HasCounter)
+    if (RI.hasCounter())
       ResType = dxbc::PSV::ResourceType::UAVStructuredWithCounter;
     else if (TypeInfo.isStruct())
       ResType = dxbc::PSV::ResourceType::UAVStructured;

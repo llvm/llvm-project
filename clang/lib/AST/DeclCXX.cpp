@@ -1118,6 +1118,33 @@ void CXXRecordDecl::addedMember(Decl *D) {
     } else if (!T.isCXX98PODType(Context))
       data().PlainOldData = false;
 
+    // If a class has an address-discriminated signed pointer member, it is a
+    // non-POD type and its copy constructor, move constructor, copy assignment
+    // operator, move assignment operator are non-trivial.
+    if (PointerAuthQualifier Q = T.getPointerAuth()) {
+      if (Q.isAddressDiscriminated()) {
+        struct DefinitionData &Data = data();
+        Data.PlainOldData = false;
+        Data.HasTrivialSpecialMembers &=
+            ~(SMF_CopyConstructor | SMF_MoveConstructor | SMF_CopyAssignment |
+              SMF_MoveAssignment);
+        setArgPassingRestrictions(RecordArgPassingKind::CanNeverPassInRegs);
+
+        // Copy/move constructors/assignment operators of a union are deleted by
+        // default if it has an address-discriminated ptrauth field.
+        if (isUnion()) {
+          data().DefaultedCopyConstructorIsDeleted = true;
+          data().DefaultedMoveConstructorIsDeleted = true;
+          data().DefaultedCopyAssignmentIsDeleted = true;
+          data().DefaultedMoveAssignmentIsDeleted = true;
+          data().NeedOverloadResolutionForCopyConstructor = true;
+          data().NeedOverloadResolutionForMoveConstructor = true;
+          data().NeedOverloadResolutionForCopyAssignment = true;
+          data().NeedOverloadResolutionForMoveAssignment = true;
+        }
+      }
+    }
+
     if (Field->hasAttr<ExplicitInitAttr>())
       setHasUninitializedExplicitInitFields(true);
 
@@ -1529,7 +1556,6 @@ void CXXRecordDecl::addedEligibleSpecialMemberFunction(const CXXMethodDecl *MD,
     if (DD->isNoReturn())
       data().IsAnyDestructorNoReturn = true;
   }
-
   if (!MD->isImplicit() && !MD->isUserProvided()) {
     // This method is user-declared but not user-provided. We can't work
     // out whether it's trivial yet (not until we get to the end of the
@@ -1669,7 +1695,11 @@ static NamedDecl* getLambdaCallOperatorHelper(const CXXRecordDecl &RD) {
       RD.getASTContext().DeclarationNames.getCXXOperatorName(OO_Call);
 
   DeclContext::lookup_result Calls = RD.lookup(Name);
-  assert(!Calls.empty() && "Missing lambda call operator!");
+
+  // This can happen while building the lambda.
+  if (Calls.empty())
+    return nullptr;
+
   assert(allLookupResultsAreTheSame(Calls) &&
          "More than one lambda call operator!");
 
@@ -1723,6 +1753,7 @@ CXXMethodDecl *CXXRecordDecl::getLambdaCallOperator() const {
 
 CXXMethodDecl* CXXRecordDecl::getLambdaStaticInvoker() const {
   CXXMethodDecl *CallOp = getLambdaCallOperator();
+  assert(CallOp && "null call operator");
   CallingConv CC = CallOp->getType()->castAs<FunctionType>()->getCallConv();
   return getLambdaStaticInvoker(CC);
 }
@@ -2110,6 +2141,12 @@ CXXDestructorDecl *CXXRecordDecl::getDestructor() const {
       return DD;
   }
   return nullptr;
+}
+
+bool CXXRecordDecl::hasDeletedDestructor() const {
+  if (const CXXDestructorDecl *D = getDestructor())
+    return D->isDeleted();
+  return false;
 }
 
 static bool isDeclContextInNamespace(const DeclContext *DC) {
@@ -3062,12 +3099,6 @@ void CXXDestructorDecl::setOperatorDelete(FunctionDecl *OD, Expr *ThisArg) {
     if (auto *L = getASTMutationListener())
       L->ResolvedOperatorDelete(First, OD, ThisArg);
   }
-}
-
-void CXXDestructorDecl::setOperatorArrayDelete(FunctionDecl *OD) {
-  auto *First = cast<CXXDestructorDecl>(getFirstDecl());
-  if (OD && !First->OperatorArrayDelete)
-    First->OperatorArrayDelete = OD;
 }
 
 bool CXXDestructorDecl::isCalledByDelete(const FunctionDecl *OpDel) const {

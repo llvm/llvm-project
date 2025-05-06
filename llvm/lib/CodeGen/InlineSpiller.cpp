@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AllocationOrder.h"
 #include "SplitKit.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -23,6 +24,7 @@
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRangeEdit.h"
+#include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
@@ -149,12 +151,14 @@ class InlineSpiller : public Spiller {
   MachineRegisterInfo &MRI;
   const TargetInstrInfo &TII;
   const TargetRegisterInfo &TRI;
+  LiveRegMatrix *Matrix = nullptr;
 
   // Variables that are valid during spill(), but used by multiple methods.
   LiveRangeEdit *Edit = nullptr;
   LiveInterval *StackInt = nullptr;
   int StackSlot;
   Register Original;
+  AllocationOrder *Order = nullptr;
 
   // All registers to spill to StackSlot, including the main register.
   SmallVector<Register, 8> RegsToSpill;
@@ -184,13 +188,13 @@ class InlineSpiller : public Spiller {
 
 public:
   InlineSpiller(const Spiller::RequiredAnalyses &Analyses, MachineFunction &MF,
-                VirtRegMap &VRM, VirtRegAuxInfo &VRAI)
+                VirtRegMap &VRM, VirtRegAuxInfo &VRAI, LiveRegMatrix *Matrix)
       : MF(MF), LIS(Analyses.LIS), LSS(Analyses.LSS), VRM(VRM),
         MRI(MF.getRegInfo()), TII(*MF.getSubtarget().getInstrInfo()),
-        TRI(*MF.getSubtarget().getRegisterInfo()), HSpiller(Analyses, MF, VRM),
-        VRAI(VRAI) {}
+        TRI(*MF.getSubtarget().getRegisterInfo()), Matrix(Matrix),
+        HSpiller(Analyses, MF, VRM), VRAI(VRAI) {}
 
-  void spill(LiveRangeEdit &) override;
+  void spill(LiveRangeEdit &, AllocationOrder *Order = nullptr) override;
   ArrayRef<Register> getSpilledRegs() override { return RegsToSpill; }
   ArrayRef<Register> getReplacedRegs() override { return RegsReplaced; }
   void postOptimization() override;
@@ -207,6 +211,7 @@ private:
 
   void markValueUsed(LiveInterval*, VNInfo*);
   bool canGuaranteeAssignmentAfterRemat(Register VReg, MachineInstr &MI);
+  bool hasPhysRegAvailable(const MachineInstr &MI);
   bool reMaterializeFor(LiveInterval &, MachineInstr &MI);
   void reMaterializeAll();
 
@@ -229,8 +234,8 @@ void Spiller::anchor() {}
 Spiller *
 llvm::createInlineSpiller(const InlineSpiller::RequiredAnalyses &Analyses,
                           MachineFunction &MF, VirtRegMap &VRM,
-                          VirtRegAuxInfo &VRAI) {
-  return new InlineSpiller(Analyses, MF, VRM, VRAI);
+                          VirtRegAuxInfo &VRAI, LiveRegMatrix *Matrix) {
+  return new InlineSpiller(Analyses, MF, VRM, VRAI, Matrix);
 }
 
 //===----------------------------------------------------------------------===//
@@ -615,6 +620,23 @@ bool InlineSpiller::canGuaranteeAssignmentAfterRemat(Register VReg,
   return true;
 }
 
+/// hasPhysRegAvailable - Check if there is an available physical register for
+/// rematerialization.
+bool InlineSpiller::hasPhysRegAvailable(const MachineInstr &MI) {
+  if (!Order || !Matrix)
+    return false;
+
+  SlotIndex UseIdx = LIS.getInstructionIndex(MI).getRegSlot(true);
+  SlotIndex PrevIdx = UseIdx.getPrevSlot();
+
+  for (MCPhysReg PhysReg : *Order) {
+    if (!Matrix->checkInterference(PrevIdx, UseIdx, PhysReg))
+      return true;
+  }
+
+  return false;
+}
+
 /// reMaterializeFor - Attempt to rematerialize before MI instead of reloading.
 bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
   // Analyze instruction
@@ -661,6 +683,7 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
   // Before rematerializing into a register for a single instruction, try to
   // fold a load into the instruction. That avoids allocating a new register.
   if (RM.OrigMI->canFoldAsLoad() &&
+      (RM.OrigMI->mayLoad() || !hasPhysRegAvailable(MI)) &&
       foldMemoryOperand(Ops, RM.OrigMI)) {
     Edit->markRematerialized(RM.ParentVNI);
     ++NumFoldedLoads;
@@ -1282,9 +1305,10 @@ void InlineSpiller::spillAll() {
     Edit->eraseVirtReg(Reg);
 }
 
-void InlineSpiller::spill(LiveRangeEdit &edit) {
+void InlineSpiller::spill(LiveRangeEdit &edit, AllocationOrder *order) {
   ++NumSpilledRanges;
   Edit = &edit;
+  Order = order;
   assert(!edit.getReg().isStack() && "Trying to spill a stack slot.");
   // Share a stack slot among all descendants of Original.
   Original = VRM.getOriginal(edit.getReg());

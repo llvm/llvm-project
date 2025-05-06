@@ -312,12 +312,9 @@ public:
   /// this, the old CallArgList retains its list of arguments, but must not
   /// be used to emit a call.
   void addFrom(const CallArgList &other) {
-    insert(end(), other.begin(), other.end());
-    Writebacks.insert(Writebacks.end(), other.Writebacks.begin(),
-                      other.Writebacks.end());
-    CleanupsToDeactivate.insert(CleanupsToDeactivate.end(),
-                                other.CleanupsToDeactivate.begin(),
-                                other.CleanupsToDeactivate.end());
+    llvm::append_range(*this, other);
+    llvm::append_range(Writebacks, other.Writebacks);
+    llvm::append_range(CleanupsToDeactivate, other.CleanupsToDeactivate);
     assert(!(StackBase && other.StackBase) && "can't merge stackbases");
     if (!StackBase)
       StackBase = other.StackBase;

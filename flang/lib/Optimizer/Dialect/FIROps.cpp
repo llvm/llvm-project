@@ -33,10 +33,20 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/CommandLine.h"
 
 namespace {
 #include "flang/Optimizer/Dialect/CanonicalizationPatterns.inc"
 } // namespace
+
+static llvm::cl::opt<bool> clUseStrictVolatileVerification(
+    "strict-fir-volatile-verifier", llvm::cl::init(false),
+    llvm::cl::desc(
+        "use stricter verifier for FIR operations with volatile types"));
+
+bool fir::useStrictVolatileVerification() {
+  return clUseStrictVolatileVerification;
+}
 
 static void propagateAttributes(mlir::Operation *fromOp,
                                 mlir::Operation *toOp) {
@@ -1345,21 +1355,38 @@ mlir::ParseResult fir::CmpcOp::parse(mlir::OpAsmParser &parser,
 // VolatileCastOp
 //===----------------------------------------------------------------------===//
 
-llvm::LogicalResult fir::VolatileCastOp::verify() {
-  mlir::Type fromType = getValue().getType();
-  mlir::Type toType = getType();
-  // Other than volatility, are the types identical?
-  const bool sameBaseType =
+static bool typesMatchExceptForVolatility(mlir::Type fromType,
+                                          mlir::Type toType) {
+  // If we can change only the volatility and get identical types, then we
+  // match.
+  if (fir::updateTypeWithVolatility(fromType, fir::isa_volatile_type(toType)) ==
+      toType)
+    return true;
+
+  // Otherwise, recurse on the element types if the base classes are the same.
+  const bool match =
       llvm::TypeSwitch<mlir::Type, bool>(fromType)
           .Case<fir::BoxType, fir::ReferenceType, fir::ClassType>(
               [&](auto type) {
                 using TYPE = decltype(type);
-                return mlir::isa<TYPE>(toType);
+                // If we are not the same base class, then we don't match.
+                auto castedToType = mlir::dyn_cast<TYPE>(toType);
+                if (!castedToType)
+                  return false;
+                // If we are the same base class, we match if the element types
+                // match.
+                return typesMatchExceptForVolatility(type.getEleTy(),
+                                                     castedToType.getEleTy());
               })
-          .Default([=](mlir::Type) { return fromType == toType; });
-  const bool sameElementType = fir::dyn_cast_ptrOrBoxEleTy(fromType) ==
-                               fir::dyn_cast_ptrOrBoxEleTy(toType);
-  if (!sameBaseType || !sameElementType)
+          .Default([](mlir::Type) { return false; });
+
+  return match;
+}
+
+llvm::LogicalResult fir::VolatileCastOp::verify() {
+  mlir::Type fromType = getValue().getType();
+  mlir::Type toType = getType();
+  if (!typesMatchExceptForVolatility(fromType, toType))
     return emitOpError("types must be identical except for volatility ")
            << fromType << " / " << toType;
   return mlir::success();
@@ -1512,10 +1539,20 @@ bool fir::ConvertOp::canBeConverted(mlir::Type inType, mlir::Type outType) {
 llvm::LogicalResult fir::ConvertOp::verify() {
   mlir::Type inType = getValue().getType();
   mlir::Type outType = getType();
-  if (fir::isa_volatile_type(inType) != fir::isa_volatile_type(outType))
-    return emitOpError("cannot convert between volatile and non-volatile "
-                       "types, use fir.volatile_cast instead ")
-           << inType << " / " << outType;
+  // If we're converting to an LLVM pointer type or an integer, we don't
+  // need to check for volatility mismatch - volatility will be handled by the
+  // memory operations themselves in llvm code generation and ptr-to-int can't
+  // represent volatility.
+  const bool toLLVMPointer = mlir::isa<mlir::LLVM::LLVMPointerType>(outType);
+  const bool toInteger = fir::isa_integer(outType);
+  if (fir::useStrictVolatileVerification()) {
+    if (fir::isa_volatile_type(inType) != fir::isa_volatile_type(outType) &&
+        !toLLVMPointer && !toInteger) {
+      return emitOpError("cannot convert between volatile and non-volatile "
+                         "types, use fir.volatile_cast instead ")
+             << inType << " / " << outType;
+    }
+  }
   if (canBeConverted(inType, outType))
     return mlir::success();
   return emitOpError("invalid type conversion")
@@ -1813,6 +1850,33 @@ llvm::LogicalResult fir::TypeInfoOp::verify() {
 // EmboxOp
 //===----------------------------------------------------------------------===//
 
+// Conversions from reference types to box types must preserve volatility.
+static llvm::LogicalResult
+verifyEmboxOpVolatilityInvariants(mlir::Type memrefType,
+                                  mlir::Type resultType) {
+
+  if (!fir::useStrictVolatileVerification())
+    return mlir::success();
+
+  mlir::Type boxElementType =
+      llvm::TypeSwitch<mlir::Type, mlir::Type>(resultType)
+          .Case<fir::BoxType, fir::ClassType>(
+              [&](auto type) { return type.getEleTy(); })
+          .Default([&](mlir::Type type) { return type; });
+
+  // If the embox is simply wrapping a non-volatile type into a volatile box,
+  // we're not losing any volatility information.
+  if (boxElementType == memrefType) {
+    return mlir::success();
+  }
+
+  // Otherwise, the volatility of the input and result must match.
+  const bool volatilityMatches =
+      fir::isa_volatile_type(memrefType) == fir::isa_volatile_type(resultType);
+
+  return mlir::success(volatilityMatches);
+}
+
 llvm::LogicalResult fir::EmboxOp::verify() {
   auto eleTy = fir::dyn_cast_ptrEleTy(getMemref().getType());
   bool isArray = false;
@@ -1842,10 +1906,11 @@ llvm::LogicalResult fir::EmboxOp::verify() {
     return emitOpError("slice must not be provided for a scalar");
   if (getSourceBox() && !mlir::isa<fir::ClassType>(getResult().getType()))
     return emitOpError("source_box must be used with fir.class result type");
-  if (fir::isa_volatile_type(getMemref().getType()) !=
-      fir::isa_volatile_type(getResult().getType()))
-    return emitOpError("cannot convert between volatile and non-volatile "
-                       "types, use fir.volatile_cast instead");
+  if (failed(verifyEmboxOpVolatilityInvariants(getMemref().getType(),
+                                               getResult().getType())))
+    return emitOpError(
+               "cannot convert between volatile and non-volatile types:")
+           << " " << getMemref().getType() << " " << getResult().getType();
   return mlir::success();
 }
 

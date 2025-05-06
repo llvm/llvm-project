@@ -102,9 +102,6 @@ void GenericConvergenceVerifier<ContextT>::visit(const InstructionT &I) {
     SeenFirstConvOp = true;
 
   if (TokenDef || ConvOp != CONV_NONE) {
-    Check(isConvergent(I),
-          "Convergence control token can only be used in a convergent call.",
-          {Context.print(&I)});
     Check(ConvergenceKind != UncontrolledConvergence,
           "Cannot mix controlled and uncontrolled convergence in the same "
           "function.",
