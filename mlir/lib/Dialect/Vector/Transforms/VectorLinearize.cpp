@@ -228,20 +228,20 @@ struct LinearizeVectorExtractStridedSlice final
                                          "strides other than 1 not supported");
     }
 
-    ArrayRef<int64_t> inputShape =
-        extractStridedSliceOp.getSourceVectorType().getShape();
-
-    ArrayRef<int64_t> outputType = extractStridedSliceOp.getType().getShape();
-
-    auto maybeIntOffsets =
+    FailureOr<SmallVector<int64_t>> offsets =
         intsFromArrayAttr(extractStridedSliceOp.getOffsets());
-    if (failed(maybeIntOffsets)) {
+    if (failed(offsets)) {
       return rewriter.notifyMatchFailure(extractStridedSliceOp,
                                          "failed to get integer offsets");
     }
 
+    ArrayRef<int64_t> inputShape =
+        extractStridedSliceOp.getSourceVectorType().getShape();
+
+    ArrayRef<int64_t> outputShape = extractStridedSliceOp.getType().getShape();
+
     SmallVector<int64_t> indices = getFlattenedStridedSliceIndices(
-        outputType, inputShape, maybeIntOffsets.value());
+        outputShape, inputShape, offsets.value());
 
     Value srcVector = adaptor.getVector();
     rewriter.replaceOpWithNewOp<vector::ShuffleOp>(
@@ -299,13 +299,14 @@ struct LinearizeVectorInsertStridedSlice final
     ArrayRef<int64_t> outputShape = outputType.getShape();
     int64_t nOutputElements = outputType.getNumElements();
 
-    auto maybeIntOffsets = intsFromArrayAttr(insertStridedSliceOp.getOffsets());
-    if (failed(maybeIntOffsets)) {
+    FailureOr<SmallVector<int64_t>> offsets =
+        intsFromArrayAttr(insertStridedSliceOp.getOffsets());
+    if (failed(offsets)) {
       return rewriter.notifyMatchFailure(insertStridedSliceOp,
                                          "failed to get integer offsets");
     }
     SmallVector<int64_t> sliceIndices = getFlattenedStridedSliceIndices(
-        inputShape, outputShape, maybeIntOffsets.value());
+        inputShape, outputShape, offsets.value());
 
     SmallVector<int64_t> indices(nOutputElements, 0);
     std::iota(indices.begin(), indices.end(), 0);
