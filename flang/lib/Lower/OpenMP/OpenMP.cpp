@@ -3293,7 +3293,8 @@ static mlir::omp::TaskloopOp genStandaloneTaskloop(
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
                            enableDelayedPrivatization, symTable);
-  dsp.processStep1(&taskloopClauseOps);
+  dsp.processStep1();
+  dsp.processStep2(&taskloopClauseOps);
 
   mlir::omp::LoopNestOperands loopNestClauseOps;
   llvm::SmallVector<const semantics::Symbol *> iv;
