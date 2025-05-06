@@ -430,17 +430,20 @@ public:
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class SetVariableRequestHandler : public LegacyRequestHandler {
+class SetVariableRequestHandler final
+    : public RequestHandler<protocol::SetVariableArguments,
+                            llvm::Expected<protocol::SetVariableResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "setVariable"; }
   FeatureSet GetSupportedFeatures() const override {
     return {protocol::eAdapterFeatureSetVariable};
   }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::SetVariableResponseBody>
+  Run(const protocol::SetVariableArguments &args) const override;
 };
 
-class SourceRequestHandler
+class SourceRequestHandler final
     : public RequestHandler<protocol::SourceArguments,
                             llvm::Expected<protocol::SourceResponseBody>> {
 public:
