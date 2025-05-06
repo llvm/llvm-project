@@ -33,11 +33,6 @@ struct __tuple_like_ext<volatile _Tp> : public __tuple_like_ext<_Tp> {};
 template <class _Tp>
 struct __tuple_like_ext<const volatile _Tp> : public __tuple_like_ext<_Tp> {};
 
-#ifndef _LIBCPP_CXX03_LANG
-template <class... _Tp>
-struct __tuple_like_ext<tuple<_Tp...> > : true_type {};
-#endif
-
 template <class _T1, class _T2>
 struct __tuple_like_ext<pair<_T1, _T2> > : true_type {};
 

@@ -492,7 +492,6 @@ def OMPC_ThreadLimit : Clause<"thread_limit"> {
   let flangClass = "ScalarIntExpr";
 }
 def OMPC_ThreadPrivate : Clause<"threadprivate"> {
-  let alternativeName = "threadprivate or thread local";
   let isImplicit = true;
 }
 def OMPC_Threads : Clause<"threads"> {
@@ -525,6 +524,7 @@ def OMPC_Untied : Clause<"untied"> {
 def OMPC_Update : Clause<"update"> {
   let clangClass = "OMPUpdateClause";
   let flangClass = "OmpUpdateClause";
+  let isValueOptional = true;
 }
 def OMPC_Use : Clause<"use"> {
   let clangClass = "OMPUseClause";

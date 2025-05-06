@@ -837,8 +837,23 @@ class LLVM_LIBRARY_VISIBILITY UEFIX86_64TargetInfo
 public:
   UEFIX86_64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : UEFITargetInfo<X86_64TargetInfo>(Triple, Opts) {
+    // The UEFI spec does not mandate specific C++ ABI, integer widths, or
+    // alignment. We are setting these defaults to match the Windows target as
+    // it is the only way to build EFI applications with Clang/LLVM today. We
+    // intend to offer flexibility by supporting choices that are not default in
+    // Windows target in the future.
     this->TheCXXABI.set(TargetCXXABI::Microsoft);
-    this->MaxTLSAlign = 8192u * this->getCharWidth();
+    LongWidth = LongAlign = 32;
+    DoubleAlign = LongLongAlign = 64;
+    LongDoubleWidth = LongDoubleAlign = 64;
+    LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+    IntMaxType = SignedLongLong;
+    Int64Type = SignedLongLong;
+    SizeType = UnsignedLongLong;
+    PtrDiffType = SignedLongLong;
+    IntPtrType = SignedLongLong;
+    WCharType = UnsignedShort;
+    WIntType = UnsignedShort;
     this->resetDataLayout("e-m:w-p270:32:32-p271:32:32-p272:64:64-"
                           "i64:64-i128:128-f80:128-n8:16:32:64-S128");
   }
