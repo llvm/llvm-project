@@ -4284,10 +4284,9 @@ getTargetRegionParams(Sema &SemaRef) {
 
 static SmallVector<SemaOpenMP::CapturedParamNameType>
 getDispatchRegionParams(Sema &SemaRef) {
-  ASTContext &Context = SemaRef.getASTContext();
   SmallVector<SemaOpenMP::CapturedParamNameType> Params;
 
-  Params.push_back(std::make_pair(StringRef(), QualType()));
+  Params.emplace_back(StringRef(), QualType());
   return Params;
 }
 
@@ -10687,8 +10686,8 @@ SemaOpenMP::ActOnOpenMPDispatchDirective(ArrayRef<OMPClause *> Clauses,
     return StmtError();
 
   Stmt *S = cast<CapturedStmt>(AStmt)->getCapturedStmt();
-  if (isa<CapturedStmt>(S))
-    S = cast<CapturedStmt>(S)->getCapturedStmt();
+  if (auto *CS = dyn_cast<CapturedStmt>(S))
+    S = CS->getCapturedStmt();
 
   // 5.1 OpenMP
   // expression-stmt : an expression statement with one of the following forms:

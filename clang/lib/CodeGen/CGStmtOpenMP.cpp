@@ -4617,10 +4617,11 @@ static void emitIfElse(CodeGenFunction *CGF, Stmt *AssociatedStmt,
     CGF->EmitBranchOnBoolExpr(Condition_NoVariants, ThenNoVariantsBlock,
                               ElseNoVariantsBlock, 0);
 
-  } else if (Condition_NoVariants)
+  } else if (Condition_NoVariants) {
     CGF->EmitBranchOnBoolExpr(Condition_NoVariants, ThenBlock, ElseBlock, 0);
-  else
+  } else {
     CGF->EmitBranchOnBoolExpr(Condition_NoContext, ThenBlock, ElseBlock, 0);
+  }
 
   if (Condition_NoVariants && Condition_NoContext) {
     // Emit the NoVariants (if then, for the NoVariants)  block.
@@ -4640,19 +4641,15 @@ static void emitIfElse(CodeGenFunction *CGF, Stmt *AssociatedStmt,
     CGF->EmitStmt(ThenNoContextStmt);
     CGF->Builder.CreateBr(MergeBlock);
 
-  } else if (Condition_NoVariants) {
-    // Emit the NoVariants (then) block.
-    CGF->EmitBlock(ThenBlock);
-    Stmt *ThenStmt = AssociatedStmt;
-    ElseCall = transformCallInStmt(ThenStmt, false);
-    CGF->EmitStmt(ThenStmt);
-    CGF->Builder.CreateBr(MergeBlock);
+  } else {
+    bool CNoVariantsOrCNoContext = false;
+    if (Condition_NoContext) {
+      CNoVariantsOrCNoContext = true;
+    }
 
-  } else if (Condition_NoContext) {
-    // Emit the NoContext (then) block.
     CGF->EmitBlock(ThenBlock);
     Stmt *ThenStmt = AssociatedStmt;
-    ElseCall = transformCallInStmt(ThenStmt, true);
+    ElseCall = transformCallInStmt(ThenStmt, CNoVariantsOrCNoContext);
     CGF->EmitStmt(ThenStmt);
     CGF->Builder.CreateBr(MergeBlock);
   }
@@ -4674,11 +4671,11 @@ void CodeGenFunction::EmitOMPDispatchDirective(const OMPDispatchDirective &S) {
   ArrayRef<OMPClause *> Clauses = S.clauses();
 
   Stmt *AssociatedStmt = const_cast<Stmt *>(S.getAssociatedStmt());
-  if (auto *AssocStmt = dyn_cast<CapturedStmt>(AssociatedStmt))
+  if (auto *AssocStmt = dyn_cast<CapturedStmt>(AssociatedStmt)) {
     if (auto *InnerCapturedStmt =
-            dyn_cast<CapturedStmt>(AssocStmt->getCapturedStmt())) {
+            dyn_cast<CapturedStmt>(AssocStmt->getCapturedStmt()))
       AssociatedStmt = InnerCapturedStmt;
-    }
+  }
   CodeGenFunction::CGCapturedStmtInfo CapStmtInfo;
   if (!CapturedStmtInfo)
     CapturedStmtInfo = &CapStmtInfo;
@@ -4710,8 +4707,9 @@ void CodeGenFunction::EmitOMPDispatchDirective(const OMPDispatchDirective &S) {
       OMPLexicalScope Scope(*this, S, OMPD_dispatch);
       emitIfElse(this, AssociatedStmt, NoVariantsCondition, NoContextCondition);
     }
-  } else
+  } else {
     EmitStmt(AssociatedStmt);
+  }
 }
 
 static void emitMasked(CodeGenFunction &CGF, const OMPExecutableDirective &S) {
