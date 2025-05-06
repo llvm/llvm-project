@@ -62,7 +62,6 @@ private:
   }
 };
 
-#if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_RANDOM_SHUFFLE) || defined(_LIBCPP_BUILDING_LIBRARY)
 class _LIBCPP_EXPORTED_FROM_ABI __rs_default;
 
 _LIBCPP_EXPORTED_FROM_ABI __rs_default __rs_get();
@@ -111,14 +110,7 @@ random_shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last) {
 
 template <class _RandomAccessIterator, class _RandomNumberGenerator>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_IN_CXX14 void
-random_shuffle(_RandomAccessIterator __first,
-               _RandomAccessIterator __last,
-#  ifndef _LIBCPP_CXX03_LANG
-               _RandomNumberGenerator&& __rand)
-#  else
-               _RandomNumberGenerator& __rand)
-#  endif
-{
+random_shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last, _RandomNumberGenerator&& __rand) {
   typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
   difference_type __d = __last - __first;
   if (__d > 1) {
@@ -129,7 +121,6 @@ random_shuffle(_RandomAccessIterator __first,
     }
   }
 }
-#endif
 
 template <class _AlgPolicy, class _RandomAccessIterator, class _Sentinel, class _UniformRandomNumberGenerator>
 _LIBCPP_HIDE_FROM_ABI _RandomAccessIterator
