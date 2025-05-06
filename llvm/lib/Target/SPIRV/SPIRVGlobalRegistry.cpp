@@ -2062,8 +2062,9 @@ void SPIRVGlobalRegistry::updateAssignType(CallInst *AssignCI, Value *Arg,
 
 void SPIRVGlobalRegistry::addStructOffsetDecorations(
     Register Reg, StructType *Ty, MachineIRBuilder &MIRBuilder) {
+  DataLayout DL;
   ArrayRef<TypeSize> Offsets =
-      DataLayout().getStructLayout(Ty)->getMemberOffsets();
+      DL.getStructLayout(Ty)->getMemberOffsets();
   for (uint32_t I = 0; I < Ty->getNumElements(); ++I) {
     buildOpMemberDecorate(Reg, MIRBuilder, SPIRV::Decoration::Offset, I,
                           {static_cast<uint32_t>(Offsets[I])});
