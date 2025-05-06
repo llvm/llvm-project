@@ -184,11 +184,11 @@ namespace SPIRV {
 /// Parses the name part of the demangled builtin call.
 std::string lookupBuiltinNameHelper(StringRef DemangledCall,
                                     FPDecorationId *DecorationId) {
-  const static std::string PassPrefix = "(anonymous namespace)::";
+  StringRef PassPrefix = "(anonymous namespace)::";
   std::string BuiltinName;
   // Itanium Demangler result may have "(anonymous namespace)::" prefix
-  if (DemangledCall.starts_with(PassPrefix.c_str()))
-    BuiltinName = DemangledCall.substr(PassPrefix.length());
+  if (DemangledCall.starts_with(PassPrefix))
+    BuiltinName = DemangledCall.substr(PassPrefix.size());
   else
     BuiltinName = DemangledCall;
   // Extract the builtin function name and types of arguments from the call
