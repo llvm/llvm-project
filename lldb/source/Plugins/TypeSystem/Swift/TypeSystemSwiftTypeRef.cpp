@@ -2989,13 +2989,21 @@ bool TypeSystemSwiftTypeRef::IsArrayType(opaque_compiler_type_t type,
         !node->getChild(1)->hasText() ||
         (node->getChild(1)->getText() != "Array" &&
          node->getChild(1)->getText() != "ContiguousArray" &&
+         node->getChild(1)->getText() != "InlineArray" &&
          node->getChild(1)->getText() != "ArraySlice"))
       return false;
 
-    if (elem_node->getNumChildren() != 1 ||
-        elem_node->getKind() != Node::Kind::TypeList)
+    if (elem_node->getKind() != Node::Kind::TypeList)
       return false;
-    elem_node = elem_node->getFirstChild();
+    if (node->getChild(1)->getText() == "InlineArray") {
+      if (elem_node->getNumChildren() != 2)
+        return false;
+      elem_node = elem_node->getChild(1);
+    } else {
+      if (elem_node->getNumChildren() != 1)
+        return false;
+      elem_node = elem_node->getFirstChild();
+    }
     if (element_type)
       // FIXME: This expensive canonicalization is only there for
       // SwiftASTContext compatibility.

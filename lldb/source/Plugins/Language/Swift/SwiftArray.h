@@ -139,6 +139,26 @@ private:
   uint64_t m_start_index;
 };
 
+/// Handles Swift.InlineArray<>
+class SwiftArrayInlineBufferHandler : public SwiftArrayBufferHandler {
+public:
+  size_t GetCount() override;
+  size_t GetCapacity() override;
+  lldb_private::CompilerType GetElementType() override;
+  lldb::ValueObjectSP GetElementAtIndex(size_t) override;
+  bool IsValid() override;
+
+protected:
+  SwiftArrayInlineBufferHandler(lldb::ValueObjectSP, lldb::addr_t,
+                                CompilerType);
+  friend class SwiftArrayBufferHandler;
+
+private:
+  CompilerType m_elem_type;
+  lldb::ValueObjectSP m_valobj_sp;
+  unsigned m_size;
+};
+
 class SwiftSyntheticFrontEndBufferHandler : public SwiftArrayBufferHandler {
 public:
   size_t GetCount() override;
