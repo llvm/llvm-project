@@ -72,7 +72,7 @@ protected:
         SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions) {
     // This is an arbitrarily chosen target triple to create the target info.
     TargetOpts->Triple = "dxil";
-    Target = TargetInfo::CreateTargetInfo(Diags, TargetOpts);
+    Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
   }
 
   std::unique_ptr<Preprocessor> createPP(StringRef Source,

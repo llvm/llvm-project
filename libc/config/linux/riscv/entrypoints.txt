@@ -779,7 +779,7 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.idivr
     libc.src.stdfix.idivlr
     libc.src.stdfix.idivk
-    libc.src.stdfix.idivulk
+    libc.src.stdfix.idivlk
     libc.src.stdfix.idivur
     libc.src.stdfix.idivulr
     libc.src.stdfix.idivuk
@@ -877,6 +877,8 @@ if(LLVM_LIBC_FULL_BUILD)
     # setjmp.h entrypoints
     libc.src.setjmp.longjmp
     libc.src.setjmp.setjmp
+    libc.src.setjmp.siglongjmp
+    libc.src.setjmp.sigsetjmp
 
     # stdio.h entrypoints
     libc.src.stdio.clearerr

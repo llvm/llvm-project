@@ -195,7 +195,7 @@ static bool parseVectorLibArg(Fortran::frontend::CodeGenOptions &opts,
   std::optional<VectorLibrary> val =
       llvm::StringSwitch<std::optional<VectorLibrary>>(arg->getValue())
           .Case("Accelerate", VectorLibrary::Accelerate)
-          .Case("LIBMVEC", VectorLibrary::LIBMVEC)
+          .Case("libmvec", VectorLibrary::LIBMVEC)
           .Case("MASSV", VectorLibrary::MASSV)
           .Case("SVML", VectorLibrary::SVML)
           .Case("SLEEF", VectorLibrary::SLEEF)
@@ -309,6 +309,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   for (auto *a :
        args.filtered(clang::driver::options::OPT_fembed_offload_object_EQ))
     opts.OffloadObjects.push_back(a->getValue());
+
+  if (args.hasArg(clang::driver::options::OPT_finstrument_functions))
+    opts.InstrumentFunctions = 1;
 
   // -flto=full/thin option.
   if (const llvm::opt::Arg *a =

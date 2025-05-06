@@ -517,6 +517,19 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitMemberExpr(cast<MemberExpr>(e));
   case Expr::BinaryOperatorClass:
     return emitBinaryOperatorLValue(cast<BinaryOperator>(e));
+  case Expr::CompoundAssignOperatorClass: {
+    QualType ty = e->getType();
+    if (ty->getAs<AtomicType>()) {
+      cgm.errorNYI(e->getSourceRange(),
+                   "CompoundAssignOperator with AtomicType");
+      return LValue();
+    }
+    if (!ty->isAnyComplexType())
+      return emitCompoundAssignmentLValue(cast<CompoundAssignOperator>(e));
+    cgm.errorNYI(e->getSourceRange(),
+                 "CompoundAssignOperator with ComplexType");
+    return LValue();
+  }
   case Expr::ParenExprClass:
     return emitLValue(cast<ParenExpr>(e)->getSubExpr());
   case Expr::DeclRefExprClass:

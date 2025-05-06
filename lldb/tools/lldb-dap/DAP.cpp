@@ -693,7 +693,11 @@ void DAP::SetTarget(const lldb::SBTarget target) {
     lldb::SBListener listener = this->debugger.GetListener();
     listener.StartListeningForEvents(
         this->target.GetBroadcaster(),
-        lldb::SBTarget::eBroadcastBitBreakpointChanged);
+        lldb::SBTarget::eBroadcastBitBreakpointChanged |
+            lldb::SBTarget::eBroadcastBitModulesLoaded |
+            lldb::SBTarget::eBroadcastBitModulesUnloaded |
+            lldb::SBTarget::eBroadcastBitSymbolsLoaded |
+            lldb::SBTarget::eBroadcastBitSymbolsChanged);
     listener.StartListeningForEvents(this->broadcaster,
                                      eBroadcastBitStopEventThread);
   }
@@ -816,11 +820,11 @@ llvm::Error DAP::Disconnect(bool terminateDebuggee) {
   case lldb::eStateCrashed:
   case lldb::eStateSuspended:
   case lldb::eStateStopped:
-  case lldb::eStateRunning:
-    debugger.SetAsync(false);
+  case lldb::eStateRunning: {
+    ScopeSyncMode scope_sync_mode(debugger);
     error = terminateDebuggee ? process.Kill() : process.Detach();
-    debugger.SetAsync(true);
     break;
+  }
   }
 
   SendTerminatedEvent();
@@ -964,6 +968,7 @@ lldb::SBError DAP::WaitForProcessToStop(std::chrono::seconds seconds) {
   while (std::chrono::steady_clock::now() < timeout_time) {
     const auto state = process.GetState();
     switch (state) {
+    case lldb::eStateUnloaded:
     case lldb::eStateAttaching:
     case lldb::eStateConnected:
     case lldb::eStateInvalid:
@@ -977,9 +982,6 @@ lldb::SBError DAP::WaitForProcessToStop(std::chrono::seconds seconds) {
       return error;
     case lldb::eStateExited:
       error.SetErrorString("process exited during launch or attach");
-      return error;
-    case lldb::eStateUnloaded:
-      error.SetErrorString("process unloaded during launch or attach");
       return error;
     case lldb::eStateCrashed:
     case lldb::eStateStopped:

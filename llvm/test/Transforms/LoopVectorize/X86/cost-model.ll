@@ -479,10 +479,8 @@ define i1 @any_of_cost(ptr %start, ptr %end) #0 {
 ; CHECK-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[TMP13]], align 8
 ; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP18]], i32 0
 ; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <2 x ptr> [[TMP20]], ptr [[TMP19]], i32 1
-; CHECK-NEXT:    [[TMP22:%.*]] = icmp eq <2 x ptr> [[TMP17]], zeroinitializer
-; CHECK-NEXT:    [[TMP23:%.*]] = icmp eq <2 x ptr> [[TMP21]], zeroinitializer
-; CHECK-NEXT:    [[TMP24:%.*]] = xor <2 x i1> [[TMP22]], splat (i1 true)
-; CHECK-NEXT:    [[TMP25:%.*]] = xor <2 x i1> [[TMP23]], splat (i1 true)
+; CHECK-NEXT:    [[TMP24:%.*]] = icmp ne <2 x ptr> [[TMP17]], zeroinitializer
+; CHECK-NEXT:    [[TMP25:%.*]] = icmp ne <2 x ptr> [[TMP21]], zeroinitializer
 ; CHECK-NEXT:    [[TMP26]] = or <2 x i1> [[VEC_PHI]], [[TMP24]]
 ; CHECK-NEXT:    [[TMP27]] = or <2 x i1> [[VEC_PHI3]], [[TMP25]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -1398,6 +1396,7 @@ loop.latch:
 exit:
   ret i32 %p.2
 }
+
 declare void @llvm.assume(i1 noundef) #0
 
 attributes #0 = { "target-cpu"="penryn" }

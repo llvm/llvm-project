@@ -4,10 +4,8 @@
 define <2 x i8> @test_v16i8_v2i32_824(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: test_v16i8_v2i32_824:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umov w8, v0.b[8]
-; CHECK-NEXT:    umov w9, v1.b[8]
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    mov v0.s[1], w9
+; CHECK-NEXT:    mov v0.b[0], v0.b[8]
+; CHECK-NEXT:    mov v0.b[4], v1.b[8]
 ; CHECK-NEXT:    add v0.2s, v0.2s, v0.2s
 ; CHECK-NEXT:    ret
   %c = shufflevector <16 x i8> %a, <16 x i8> %b, <2 x i32> <i32 8, i32 24>
@@ -18,10 +16,8 @@ define <2 x i8> @test_v16i8_v2i32_824(<16 x i8> %a, <16 x i8> %b) {
 define <2 x i8> @test_v16i8_v2i32_016(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: test_v16i8_v2i32_016:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umov w8, v0.b[0]
-; CHECK-NEXT:    umov w9, v1.b[0]
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    mov v0.s[1], w9
+; CHECK-NEXT:    mov v0.b[0], v0.b[0]
+; CHECK-NEXT:    mov v0.b[4], v1.b[0]
 ; CHECK-NEXT:    add v0.2s, v0.2s, v0.2s
 ; CHECK-NEXT:    ret
   %c = shufflevector <16 x i8> %a, <16 x i8> %b, <2 x i32> <i32 0, i32 16>
@@ -33,11 +29,9 @@ define <2 x i8> @test_v8i8_v2i32_08(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: test_v8i8_v2i32_08:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    umov w8, v0.b[0]
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    umov w9, v1.b[0]
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    mov v0.s[1], w9
+; CHECK-NEXT:    mov v0.b[0], v0.b[0]
+; CHECK-NEXT:    mov v0.b[4], v1.b[0]
 ; CHECK-NEXT:    add v0.2s, v0.2s, v0.2s
 ; CHECK-NEXT:    ret
   %c = shufflevector <8 x i8> %a, <8 x i8> %b, <2 x i32> <i32 0, i32 8>
@@ -48,10 +42,8 @@ define <2 x i8> @test_v8i8_v2i32_08(<8 x i8> %a, <8 x i8> %b) {
 define <2 x i16> @test_v8i16_v2i32_08(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_v8i16_v2i32_08:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umov w8, v0.h[0]
-; CHECK-NEXT:    umov w9, v1.h[0]
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    mov v0.s[1], w9
+; CHECK-NEXT:    mov v0.h[0], v0.h[0]
+; CHECK-NEXT:    mov v0.h[2], v1.h[0]
 ; CHECK-NEXT:    add v0.2s, v0.2s, v0.2s
 ; CHECK-NEXT:    ret
   %c = shufflevector <8 x i16> %a, <8 x i16> %b, <2 x i32> <i32 0, i32 8>
@@ -63,11 +55,9 @@ define <2 x i16> @test_v4i16_v2i32_04(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: test_v4i16_v2i32_04:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    umov w8, v0.h[0]
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    umov w9, v1.h[0]
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    mov v0.s[1], w9
+; CHECK-NEXT:    mov v0.h[0], v0.h[0]
+; CHECK-NEXT:    mov v0.h[2], v1.h[0]
 ; CHECK-NEXT:    add v0.2s, v0.2s, v0.2s
 ; CHECK-NEXT:    ret
   %c = shufflevector <4 x i16> %a, <4 x i16> %b, <2 x i32> <i32 0, i32 4>
@@ -79,14 +69,10 @@ define <2 x i16> @test_v4i16_v2i32_04(<4 x i16> %a, <4 x i16> %b) {
 define <4 x i8> @test_v16i8_v4i16_824(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: test_v16i8_v4i16_824:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umov w8, v0.b[8]
-; CHECK-NEXT:    umov w9, v1.b[8]
-; CHECK-NEXT:    fmov s2, w8
-; CHECK-NEXT:    umov w8, v0.b[0]
-; CHECK-NEXT:    mov v2.h[1], w9
-; CHECK-NEXT:    mov v2.h[2], w8
-; CHECK-NEXT:    umov w8, v1.b[0]
-; CHECK-NEXT:    mov v2.h[3], w8
+; CHECK-NEXT:    mov v2.b[0], v0.b[8]
+; CHECK-NEXT:    mov v2.b[2], v1.b[8]
+; CHECK-NEXT:    mov v2.b[4], v0.b[0]
+; CHECK-NEXT:    mov v2.b[6], v1.b[0]
 ; CHECK-NEXT:    add v0.4h, v2.4h, v2.4h
 ; CHECK-NEXT:    ret
   %c = shufflevector <16 x i8> %a, <16 x i8> %b, <4 x i32> <i32 8, i32 24, i32 0, i32 16>
@@ -97,14 +83,10 @@ define <4 x i8> @test_v16i8_v4i16_824(<16 x i8> %a, <16 x i8> %b) {
 define <4 x i8> @test_v16i8_v4i16_016(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: test_v16i8_v4i16_016:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umov w8, v0.b[0]
-; CHECK-NEXT:    umov w9, v1.b[0]
-; CHECK-NEXT:    fmov s2, w8
-; CHECK-NEXT:    umov w8, v0.b[4]
-; CHECK-NEXT:    mov v2.h[1], w9
-; CHECK-NEXT:    mov v2.h[2], w8
-; CHECK-NEXT:    umov w8, v1.b[4]
-; CHECK-NEXT:    mov v2.h[3], w8
+; CHECK-NEXT:    mov v2.b[0], v0.b[0]
+; CHECK-NEXT:    mov v2.b[2], v1.b[0]
+; CHECK-NEXT:    mov v2.b[4], v0.b[4]
+; CHECK-NEXT:    mov v2.b[6], v1.b[4]
 ; CHECK-NEXT:    add v0.4h, v2.4h, v2.4h
 ; CHECK-NEXT:    ret
   %c = shufflevector <16 x i8> %a, <16 x i8> %b, <4 x i32> <i32 0, i32 16, i32 4, i32 20>
@@ -116,15 +98,11 @@ define <4 x i8> @test_v8i8_v4i16_08(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: test_v8i8_v4i16_08:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    umov w8, v0.b[0]
+; CHECK-NEXT:    mov v2.b[0], v0.b[0]
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    umov w9, v1.b[0]
-; CHECK-NEXT:    fmov s2, w8
-; CHECK-NEXT:    umov w8, v0.b[4]
-; CHECK-NEXT:    mov v2.h[1], w9
-; CHECK-NEXT:    mov v2.h[2], w8
-; CHECK-NEXT:    umov w8, v1.b[4]
-; CHECK-NEXT:    mov v2.h[3], w8
+; CHECK-NEXT:    mov v2.b[2], v1.b[0]
+; CHECK-NEXT:    mov v2.b[4], v0.b[4]
+; CHECK-NEXT:    mov v2.b[6], v1.b[4]
 ; CHECK-NEXT:    add v0.4h, v2.4h, v2.4h
 ; CHECK-NEXT:    ret
   %c = shufflevector <8 x i8> %a, <8 x i8> %b, <4 x i32> <i32 0, i32 8, i32 4, i32 12>
@@ -215,23 +193,19 @@ define i1 @test2(ptr %add.ptr, ptr %result, <2 x i64> %hi, <2 x i64> %lo) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q2, [x0]
 ; CHECK-NEXT:    movi v3.16b, #1
+; CHECK-NEXT:    mov w9, #1 // =0x1
 ; CHECK-NEXT:    cmgt v0.2d, v2.2d, v0.2d
 ; CHECK-NEXT:    cmgt v4.2d, v1.2d, v2.2d
 ; CHECK-NEXT:    sub v1.2d, v2.2d, v1.2d
+; CHECK-NEXT:    dup v2.2d, x9
 ; CHECK-NEXT:    and v0.16b, v0.16b, v3.16b
 ; CHECK-NEXT:    and v3.16b, v4.16b, v3.16b
-; CHECK-NEXT:    umov w8, v0.b[8]
-; CHECK-NEXT:    umov w9, v3.b[8]
-; CHECK-NEXT:    umov w10, v0.b[0]
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    umov w8, v3.b[0]
-; CHECK-NEXT:    fmov s3, w10
-; CHECK-NEXT:    mov v0.s[1], w9
-; CHECK-NEXT:    mov w9, #1 // =0x1
-; CHECK-NEXT:    mov v3.s[1], w8
-; CHECK-NEXT:    dup v2.2d, x9
-; CHECK-NEXT:    add v0.2s, v0.2s, v0.2s
-; CHECK-NEXT:    orr v0.8b, v0.8b, v3.8b
+; CHECK-NEXT:    mov v5.b[0], v0.b[8]
+; CHECK-NEXT:    mov v0.b[0], v0.b[0]
+; CHECK-NEXT:    mov v5.b[4], v3.b[8]
+; CHECK-NEXT:    mov v0.b[4], v3.b[0]
+; CHECK-NEXT:    add v3.2s, v5.2s, v5.2s
+; CHECK-NEXT:    orr v0.8b, v3.8b, v0.8b
 ; CHECK-NEXT:    mov w8, v0.s[1]
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    add v0.2d, v1.2d, v2.2d

@@ -1,4 +1,4 @@
-# XFAIL: system-windows
+# XFAIL: target-windows
 
 # Test the plugin.cplusplus.display.function-name-format setting.
 
@@ -24,7 +24,7 @@ int main(int argc, char const *argv[]) {
 #--- commands.input
 settings set plugin.cplusplus.display.function-name-format "${function.scope}${function.basename}"
 settings set -f frame-format "custom-frame '${function.name-with-args}'\n"
-break set -l 3
+break set -l 3 -f main.cpp
 
 run
 bt
