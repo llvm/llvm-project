@@ -2456,8 +2456,7 @@ bool SIInsertWaitcnts::isPreheaderToFlush(
 bool SIInsertWaitcnts::isVMEMOrFlatVMEM(const MachineInstr &MI) const {
   if (SIInstrInfo::isFLAT(MI))
     return mayAccessVMEMThroughFlat(MI);
-  return SIInstrInfo::isMUBUF(MI) || SIInstrInfo::isMTBUF(MI) ||
-         SIInstrInfo::isImage(MI);
+  return SIInstrInfo::isVMEM(MI);
 }
 
 // Return true if it is better to flush the vmcnt counter in the preheader of
