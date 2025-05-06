@@ -334,7 +334,6 @@ bool MipsCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     splitToValueTypes(ArgRetInfo, RetInfos, DL, F.getCallingConv());
 
     SmallVector<CCValAssign, 16> ArgLocs;
-    SmallVector<ISD::OutputArg, 8> Outs;
 
     MipsCCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs,
                        F.getContext());
@@ -382,8 +381,6 @@ bool MipsCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     splitToValueTypes(AInfo, ArgInfos, DL, F.getCallingConv());
     ++i;
   }
-
-  SmallVector<ISD::InputArg, 8> Ins;
 
   SmallVector<CCValAssign, 16> ArgLocs;
   MipsCCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs,
@@ -554,7 +551,6 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                     F.getCallingConv());
 
     const std::string FuncName = F.getName().str();
-    SmallVector<ISD::InputArg, 8> Ins;
     SmallVector<CCValAssign, 8> ArgLocs;
     MipsIncomingValueAssigner Assigner(TLI.CCAssignFnForReturn(),
                                        FuncName.c_str(),

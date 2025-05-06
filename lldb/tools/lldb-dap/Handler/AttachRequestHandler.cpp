@@ -90,12 +90,12 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
         dap.target.ConnectRemote(listener, connect_url.data(), "gdb-remote",
                                  error);
       } else {
-        // Attach by process name or id.
+        // Attach by pid or process name.
         lldb::SBAttachInfo attach_info;
-        if (!args.configuration.program.empty())
-          attach_info.SetExecutable(args.configuration.program.data());
         if (args.pid != LLDB_INVALID_PROCESS_ID)
           attach_info.SetProcessID(args.pid);
+        else if (!args.configuration.program.empty())
+          attach_info.SetExecutable(args.configuration.program.data());
         attach_info.SetWaitForLaunch(args.waitFor, false /*async*/);
         dap.target.Attach(attach_info, error);
       }

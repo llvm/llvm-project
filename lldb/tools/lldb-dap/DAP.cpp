@@ -967,6 +967,7 @@ lldb::SBError DAP::WaitForProcessToStop(std::chrono::seconds seconds) {
   while (std::chrono::steady_clock::now() < timeout_time) {
     const auto state = process.GetState();
     switch (state) {
+    case lldb::eStateUnloaded:
     case lldb::eStateAttaching:
     case lldb::eStateConnected:
     case lldb::eStateInvalid:
@@ -980,9 +981,6 @@ lldb::SBError DAP::WaitForProcessToStop(std::chrono::seconds seconds) {
       return error;
     case lldb::eStateExited:
       error.SetErrorString("process exited during launch or attach");
-      return error;
-    case lldb::eStateUnloaded:
-      error.SetErrorString("process unloaded during launch or attach");
       return error;
     case lldb::eStateCrashed:
     case lldb::eStateStopped:

@@ -617,6 +617,20 @@ private:
   using ParameterIndexTable = llvm::DenseMap<const VarDecl *, unsigned>;
   ParameterIndexTable ParamIndices;
 
+public:
+  struct CXXRecordDeclRelocationInfo {
+    unsigned IsRelocatable;
+    unsigned IsReplaceable;
+  };
+  std::optional<CXXRecordDeclRelocationInfo>
+  getRelocationInfoForCXXRecord(const CXXRecordDecl *) const;
+  void setRelocationInfoForCXXRecord(const CXXRecordDecl *,
+                                     CXXRecordDeclRelocationInfo);
+
+private:
+  llvm::DenseMap<const CXXRecordDecl *, CXXRecordDeclRelocationInfo>
+      RelocatableClasses;
+
   ImportDecl *FirstLocalImport = nullptr;
   ImportDecl *LastLocalImport = nullptr;
 
@@ -3147,6 +3161,7 @@ public:
   QualType mergeTransparentUnionType(QualType, QualType,
                                      bool OfBlockPointer=false,
                                      bool Unqualified = false);
+  QualType mergeTagDefinitions(QualType, QualType);
 
   QualType mergeObjCGCQualifiers(QualType, QualType);
 
