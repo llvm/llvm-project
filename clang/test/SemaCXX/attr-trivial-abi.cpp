@@ -81,7 +81,7 @@ struct __attribute__((trivial_abi)) S10 {
 
 S10<int *> p1;
 static_assert(__is_trivially_relocatable(S10<int>), "");
-static_assert(!__is_trivially_relocatable(S10<S3>), "");
+static_assert(__is_trivially_relocatable(S10<S3>), "");
 
 template <class T>
 struct S14 {
@@ -94,14 +94,14 @@ struct __attribute__((trivial_abi)) S15 : S14<T> {
 
 S15<int> s15;
 static_assert(__is_trivially_relocatable(S15<int>), "");
-static_assert(!__is_trivially_relocatable(S15<S3>), "");
+static_assert(__is_trivially_relocatable(S15<S3>), "");
 
 template <class T>
 struct __attribute__((trivial_abi)) S16 {
   S14<T> a;
 };
 static_assert(__is_trivially_relocatable(S16<int>), "");
-static_assert(!__is_trivially_relocatable(S16<S3>), "");
+static_assert(__is_trivially_relocatable(S16<S3>), "");
 
 S16<int> s16;
 

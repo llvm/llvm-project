@@ -75,7 +75,7 @@ static_assert(!__is_trivially_constructible(Holder<S3>, const Holder<S3>&));
 static_assert(!__is_trivially_assignable(Holder<S3>, const Holder<S3>&));
 static_assert(__is_trivially_destructible(Holder<S3>));
 static_assert(!__is_trivially_copyable(Holder<S3>));
-static_assert(!__is_trivially_relocatable(Holder<S3>));
+static_assert(__is_trivially_relocatable(Holder<S3>));
 static_assert(!__is_trivially_equality_comparable(Holder<S3>));
 
 struct IA S4 {
@@ -97,7 +97,7 @@ static_assert(!__is_trivially_constructible(Holder<S4>, const Holder<S4>&));
 static_assert(!__is_trivially_assignable(Holder<S4>, const Holder<S4>&));
 static_assert(__is_trivially_destructible(Holder<S4>));
 static_assert(!__is_trivially_copyable(Holder<S4>));
-static_assert(!__is_trivially_relocatable(Holder<S4>));
+static_assert(__is_trivially_relocatable(Holder<S4>));
 static_assert(!__is_trivially_equality_comparable(Holder<S4>));
 
 struct PA S5 {
@@ -119,5 +119,5 @@ static_assert(!__is_trivially_constructible(Holder<S5>, const Holder<S5>&));
 static_assert(!__is_trivially_assignable(Holder<S5>, const Holder<S5>&));
 static_assert(__is_trivially_destructible(Holder<S5>));
 static_assert(!__is_trivially_copyable(Holder<S5>));
-static_assert(!__is_trivially_relocatable(Holder<S5>));
+static_assert(__is_trivially_relocatable(Holder<S5>));
 static_assert(!__is_trivially_equality_comparable(Holder<S5>));
