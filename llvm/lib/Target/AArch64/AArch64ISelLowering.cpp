@@ -3099,7 +3099,6 @@ AArch64TargetLowering::EmitDynamicProbedAlloc(MachineInstr &MI,
                                               MachineBasicBlock *MBB) const {
   MachineFunction &MF = *MBB->getParent();
   MachineBasicBlock::iterator MBBI = MI.getIterator();
-  DebugLoc DL = MBB->findDebugLoc(MBBI);
   const AArch64InstrInfo &TII =
       *MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
   Register TargetReg = MI.getOperand(0).getReg();
@@ -11953,7 +11952,6 @@ SDValue AArch64TargetLowering::LowerSPONENTRY(SDValue Op,
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
 
   EVT VT = getPointerTy(DAG.getDataLayout());
-  SDLoc DL(Op);
   int FI = MFI.CreateFixedObject(4, 0, false);
   return DAG.getFrameIndex(FI, VT);
 }
