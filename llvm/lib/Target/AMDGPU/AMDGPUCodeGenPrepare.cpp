@@ -2164,17 +2164,33 @@ bool AMDGPUCodeGenPrepareImpl::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
     return false;
 
   // Check if this can be lowered to a amdgcn.addrspacecast.nonnull.
+#if LLPC_BUILD_NPI
+  // This is only worthwhile for casts from/to priv/local/distributed to flat.
+#else /* LLPC_BUILD_NPI */
   // This is only worthwhile for casts from/to priv/local to flat.
+#endif /* LLPC_BUILD_NPI */
   const unsigned SrcAS = I.getSrcAddressSpace();
   const unsigned DstAS = I.getDestAddressSpace();
 
   bool CanLower = false;
   if (SrcAS == AMDGPUAS::FLAT_ADDRESS)
+#if LLPC_BUILD_NPI
+    CanLower =
+        (DstAS == AMDGPUAS::LOCAL_ADDRESS ||
+         DstAS == AMDGPUAS::PRIVATE_ADDRESS || DstAS == AMDGPUAS::DISTRIBUTED);
+#else /* LLPC_BUILD_NPI */
     CanLower = (DstAS == AMDGPUAS::LOCAL_ADDRESS ||
                 DstAS == AMDGPUAS::PRIVATE_ADDRESS);
+#endif /* LLPC_BUILD_NPI */
   else if (DstAS == AMDGPUAS::FLAT_ADDRESS)
+#if LLPC_BUILD_NPI
+    CanLower =
+        (SrcAS == AMDGPUAS::LOCAL_ADDRESS ||
+         SrcAS == AMDGPUAS::PRIVATE_ADDRESS || SrcAS == AMDGPUAS::DISTRIBUTED);
+#else /* LLPC_BUILD_NPI */
     CanLower = (SrcAS == AMDGPUAS::LOCAL_ADDRESS ||
                 SrcAS == AMDGPUAS::PRIVATE_ADDRESS);
+#endif /* LLPC_BUILD_NPI */
   if (!CanLower)
     return false;
 

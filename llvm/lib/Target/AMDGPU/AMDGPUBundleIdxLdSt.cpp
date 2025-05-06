@@ -547,7 +547,6 @@ bool AMDGPUBundleIdxLdSt::sinkLoadsAndCoreMIs(MachineFunction &MF) {
   for (auto &MBB : ReversePostOrderTraversal<MachineFunction *>(&MF)) {
 
     // Walk the basic block bottom-up.
-    bool ProcessedBegin = false;
     SmallVector<MachineInstr *, 8> Conflicts;
     for (auto &I : make_early_inc_range(llvm::reverse(*MBB))) {
       MachineInstr &MI = I; // MI is the instruction to sink.

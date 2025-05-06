@@ -685,6 +685,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   const LLT RsrcPtr = GetAddrSpacePtr(AMDGPUAS::BUFFER_RESOURCE);
   const LLT BufferStridedPtr =
       GetAddrSpacePtr(AMDGPUAS::BUFFER_STRIDED_POINTER);
+#if LLPC_BUILD_NPI
+  const LLT DistributedPtr = GetAddrSpacePtr(AMDGPUAS::DISTRIBUTED);
+#endif /* LLPC_BUILD_NPI */
 
   const LLT CodePtr = FlatPtr;
 
@@ -693,8 +696,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   };
 
   const std::initializer_list<LLT> AddrSpaces32 = {
+#if LLPC_BUILD_NPI
+      LocalPtr, PrivatePtr, Constant32Ptr, RegionPtr, DistributedPtr};
+#else /* LLPC_BUILD_NPI */
     LocalPtr, PrivatePtr, Constant32Ptr, RegionPtr
   };
+#endif /* LLPC_BUILD_NPI */
 
   const std::initializer_list<LLT> AddrSpaces128 = {RsrcPtr};
 
@@ -891,11 +898,19 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .lower();
 
   getActionDefinitionsBuilder(G_CONSTANT)
+#if LLPC_BUILD_NPI
+      .legalFor({S1, S32, S64, S16, GlobalPtr, LocalPtr, ConstantPtr,
+                 PrivatePtr, FlatPtr, DistributedPtr})
+      .legalIf(isPointer(0))
+      .clampScalar(0, S32, S64)
+      .widenScalarToNextPow2(0);
+#else /* LLPC_BUILD_NPI */
     .legalFor({S1, S32, S64, S16, GlobalPtr,
                LocalPtr, ConstantPtr, PrivatePtr, FlatPtr })
     .legalIf(isPointer(0))
     .clampScalar(0, S32, S64)
     .widenScalarToNextPow2(0);
+#endif /* LLPC_BUILD_NPI */
 
   getActionDefinitionsBuilder(G_FCONSTANT)
     .legalFor({S32, S64, S16})
@@ -2271,19 +2286,29 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
   const LLT S32 = LLT::scalar(32);
   const LLT S64 = LLT::scalar(64);
 
+#if LLPC_BUILD_NPI
+  // Treat DDS like LDS since the high bits of the aperture are the same.
+  assert(AS == AMDGPUAS::PRIVATE_ADDRESS || AS == AMDGPUAS::LOCAL_ADDRESS ||
+         AS == AMDGPUAS::DISTRIBUTED);
+#else /* LLPC_BUILD_NPI */
   assert(AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::PRIVATE_ADDRESS);
+#endif /* LLPC_BUILD_NPI */
 
   if (ST.hasApertureRegs()) {
     // Note: this register is somewhat broken. When used as a 32-bit operand,
     // it only returns zeroes. The real value is in the upper 32 bits.
     // Thus, we must emit extract the high 32 bits.
-    const unsigned ApertureRegNo = (AS == AMDGPUAS::LOCAL_ADDRESS)
-                                       ? AMDGPU::SRC_SHARED_BASE
-                                       : AMDGPU::SRC_PRIVATE_BASE;
 #if LLPC_BUILD_NPI
+    const unsigned ApertureRegNo = AS == AMDGPUAS::PRIVATE_ADDRESS
+                                       ? AMDGPU::SRC_PRIVATE_BASE
+                                       : AMDGPU::SRC_SHARED_BASE;
     assert((ApertureRegNo != AMDGPU::SRC_PRIVATE_BASE ||
             !ST.hasGloballyAddressableScratch()) &&
            "Cannot use src_private_base with globally addressable scratch!");
+#else /* LLPC_BUILD_NPI */
+    const unsigned ApertureRegNo = (AS == AMDGPUAS::LOCAL_ADDRESS)
+                                       ? AMDGPU::SRC_SHARED_BASE
+                                       : AMDGPU::SRC_PRIVATE_BASE;
 #endif /* LLPC_BUILD_NPI */
     // FIXME: It would be more natural to emit a COPY here, but then copy
     // coalescing would kick in and it would think it's okay to use the "HI"
@@ -2307,8 +2332,13 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
   if (AMDGPU::getAMDHSACodeObjectVersion(*MF.getFunction().getParent()) >=
       AMDGPU::AMDHSA_COV5) {
     AMDGPUTargetLowering::ImplicitParameter Param =
+#if LLPC_BUILD_NPI
+        AS == AMDGPUAS::PRIVATE_ADDRESS ? AMDGPUTargetLowering::PRIVATE_BASE
+                                        : AMDGPUTargetLowering::SHARED_BASE;
+#else /* LLPC_BUILD_NPI */
         AS == AMDGPUAS::LOCAL_ADDRESS ? AMDGPUTargetLowering::SHARED_BASE
                                       : AMDGPUTargetLowering::PRIVATE_BASE;
+#endif /* LLPC_BUILD_NPI */
     uint64_t Offset =
         ST.getTargetLowering()->getImplicitParameterOffset(B.getMF(), Param);
 
@@ -2340,7 +2370,11 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
 
   // Offset into amd_queue_t for group_segment_aperture_base_hi /
   // private_segment_aperture_base_hi.
+#if LLPC_BUILD_NPI
+  uint32_t StructOffset = AS == AMDGPUAS::PRIVATE_ADDRESS ? 0x44 : 0x40;
+#else /* LLPC_BUILD_NPI */
   uint32_t StructOffset = (AS == AMDGPUAS::LOCAL_ADDRESS) ? 0x40 : 0x44;
+#endif /* LLPC_BUILD_NPI */
 
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       PtrInfo,
@@ -2406,17 +2440,17 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
     return true;
   }
 
+  if (SrcAS == AMDGPUAS::FLAT_ADDRESS &&
+      (DestAS == AMDGPUAS::LOCAL_ADDRESS ||
 #if LLPC_BUILD_NPI
-  if (SrcAS == AMDGPUAS::FLAT_ADDRESS && (DestAS == AMDGPUAS::LOCAL_ADDRESS ||
-                                          DestAS == AMDGPUAS::PRIVATE_ADDRESS ||
-                                          DestAS == AMDGPUAS::LANE_SHARED)) {
+       DestAS == AMDGPUAS::PRIVATE_ADDRESS || DestAS == AMDGPUAS::LANE_SHARED ||
+       DestAS == AMDGPUAS::DISTRIBUTED)) {
     auto castFlatToLocalOrPrivate = [&](const DstOp &Dst) -> Register {
       if ((DestAS == AMDGPUAS::PRIVATE_ADDRESS ||
            DestAS == AMDGPUAS::LANE_SHARED) &&
           ST.hasGloballyAddressableScratch()) {
         // flat -> private with globally addressable scratch: subtract
         // src_flat_scratch_base_lo.
-        const LLT S32 = LLT::scalar(32);
         Register SrcLo = B.buildExtract(S32, Src, 0).getReg(0);
         Register FlatScratchBaseLo =
             B.buildInstr(AMDGPU::S_MOV_B32, {S32},
@@ -2427,13 +2461,18 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
         return B.buildIntToPtr(Dst, Sub).getReg(0);
       }
 
+      if (DestAS == AMDGPUAS::DISTRIBUTED) {
+        Register SrcLo = B.buildExtract(S32, Src, 0).getReg(0);
+        Register DDSBaseLo = B.buildConstant(S32, 0x80000000).getReg(0);
+        Register Sub = B.buildSub(S32, SrcLo, DDSBaseLo).getReg(0);
+        return B.buildIntToPtr(Dst, Sub).getReg(0);
+      }
+
       // Extract low 32-bits of the pointer.
       return B.buildExtract(Dst, Src, 0).getReg(0);
     };
 
 #else /* LLPC_BUILD_NPI */
-  if (SrcAS == AMDGPUAS::FLAT_ADDRESS &&
-      (DestAS == AMDGPUAS::LOCAL_ADDRESS ||
        DestAS == AMDGPUAS::PRIVATE_ADDRESS)) {
 #endif /* LLPC_BUILD_NPI */
     // For llvm.amdgcn.addrspacecast.nonnull we can always assume non-null, for
@@ -2472,24 +2511,17 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   if (DestAS == AMDGPUAS::FLAT_ADDRESS &&
 #if LLPC_BUILD_NPI
       (SrcAS == AMDGPUAS::LOCAL_ADDRESS || SrcAS == AMDGPUAS::PRIVATE_ADDRESS ||
-       SrcAS == AMDGPUAS::LANE_SHARED)) {
+       SrcAS == AMDGPUAS::LANE_SHARED || SrcAS == AMDGPUAS::DISTRIBUTED)) {
 #else /* LLPC_BUILD_NPI */
       (SrcAS == AMDGPUAS::LOCAL_ADDRESS ||
        SrcAS == AMDGPUAS::PRIVATE_ADDRESS)) {
 #endif /* LLPC_BUILD_NPI */
     auto castLocalOrPrivateToFlat = [&](const DstOp &Dst) -> Register {
 #if LLPC_BUILD_NPI
-#else /* LLPC_BUILD_NPI */
-      Register ApertureReg = getSegmentAperture(SrcAS, MRI, B);
-      if (!ApertureReg.isValid())
-        return false;
-
-#endif /* LLPC_BUILD_NPI */
       // Coerce the type of the low half of the result so we can use
       // merge_values.
       Register SrcAsInt = B.buildPtrToInt(S32, Src).getReg(0);
 
-#if LLPC_BUILD_NPI
       if ((SrcAS == AMDGPUAS::PRIVATE_ADDRESS ||
            SrcAS == AMDGPUAS::LANE_SHARED) &&
           ST.hasGloballyAddressableScratch()) {
@@ -2522,11 +2554,22 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
         return B.buildPtrAdd(Dst, CvtPtr, FlatScratchBase).getReg(0);
       }
 
+#endif /* LLPC_BUILD_NPI */
       Register ApertureReg = getSegmentAperture(SrcAS, MRI, B);
       if (!ApertureReg.isValid())
         return false;
 
+#if LLPC_BUILD_NPI
+      if (SrcAS == AMDGPUAS::DISTRIBUTED) {
+        Register DDSBaseLo = B.buildConstant(S32, 0x80000000).getReg(0);
+        SrcAsInt = B.buildAdd(S32, SrcAsInt, DDSBaseLo).getReg(0);
+      }
+#else /* LLPC_BUILD_NPI */
+      // Coerce the type of the low half of the result so we can use
+      // merge_values.
+      Register SrcAsInt = B.buildPtrToInt(S32, Src).getReg(0);
 #endif /* LLPC_BUILD_NPI */
+
       // TODO: Should we allow mismatched types but matching sizes in merges to
       // avoid the ptrtoint?
       return B.buildMergeLikeInstr(Dst, {SrcAsInt, ApertureReg}).getReg(0);
@@ -2554,6 +2597,32 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
     return true;
   }
 
+#if LLPC_BUILD_NPI
+  if (SrcAS == AMDGPUAS::DISTRIBUTED && DestAS == AMDGPUAS::LOCAL_ADDRESS) {
+    Register SrcAsInt = B.buildPtrToInt(S32, Src).getReg(0);
+    Register DstAsInt = B.buildSbfx(S32, SrcAsInt, B.buildConstant(S32, 0),
+                                    B.buildConstant(S32, 24))
+                            .getReg(0);
+    B.buildPtrToInt(Dst, DstAsInt);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  if (SrcAS == AMDGPUAS::LOCAL_ADDRESS && DestAS == AMDGPUAS::DISTRIBUTED) {
+    Register SrcAsInt = B.buildPtrToInt(S32, Src).getReg(0);
+    Register WgIdInCluster =
+        B.buildIntrinsic(Intrinsic::amdgcn_cluster_workgroup_flat_id, {S32})
+            .getReg(0);
+    Register DstAsInt =
+        B.buildOr(S32, SrcAsInt,
+                  B.buildShl(S32, WgIdInCluster, B.buildConstant(S32, 24)))
+            .getReg(0);
+    B.buildPtrToInt(Dst, DstAsInt);
+    MI.eraseFromParent();
+    return true;
+  }
+
+#endif /* LLPC_BUILD_NPI */
   if (DestAS == AMDGPUAS::CONSTANT_ADDRESS_32BIT &&
       SrcTy.getSizeInBits() == 64) {
     // Truncate.

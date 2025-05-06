@@ -1220,6 +1220,8 @@ void GCNHazardRecognizer::fixHazards(MachineInstr *MI) {
 #if LLPC_BUILD_NPI
   if (ST.requiresWaitIdleBeforeGetReg())
     fixGetRegWaitIdle(MI);
+  if (ST.hasDsAtomicAsyncBarrierArriveB64PipeBug())
+    fixDsAtomicAsyncBarrierArriveB64(MI);
 #endif /* LLPC_BUILD_NPI */
 }
 
@@ -3475,8 +3477,8 @@ bool GCNHazardRecognizer::fixRequiredExportPriority(MachineInstr *MI) {
     BuildMI(*MBB, NextMI, DL, TII.get(AMDGPU::S_SETPRIO))
         .addImm(NormalPriority);
   }
-
 #if LLPC_BUILD_NPI
+
   return true;
 }
 
@@ -3498,6 +3500,21 @@ bool GCNHazardRecognizer::fixGetRegWaitIdle(MachineInstr *MI) {
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
           TII->get(AMDGPU::S_WAITCNT_DEPCTR))
       .addImm(0);
+  return true;
+}
+
+bool GCNHazardRecognizer::fixDsAtomicAsyncBarrierArriveB64(MachineInstr *MI) {
+  if (MI->getOpcode() != AMDGPU::DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64)
+    return false;
+
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+          TII->get(AMDGPU::S_WAITCNT_DEPCTR))
+      .addImm(0xFFE3);
+  BuildMI(*MI->getParent(), std::next(MI->getIterator()), MI->getDebugLoc(),
+          TII->get(AMDGPU::S_WAITCNT_DEPCTR))
+      .addImm(0xFFE3);
 #endif /* LLPC_BUILD_NPI */
+
   return true;
 }

@@ -1982,6 +1982,14 @@ public:
     return false;
   }
 
+#if LLPC_BUILD_NPI
+  // DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 shall not be claused with anything
+  // and surronded by S_WAIT_ALU(0xFFE3).
+  bool hasDsAtomicAsyncBarrierArriveB64PipeBug() const {
+    return getGeneration() == GFX12;
+  }
+
+#endif /* LLPC_BUILD_NPI */
   bool isDynamicVGPREnabled() const { return DynamicVGPR; }
 #if LLPC_BUILD_NPI
 

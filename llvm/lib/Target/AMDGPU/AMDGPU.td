@@ -20,6 +20,7 @@ def p5 : PtrValueType<i32, 5>;
 def p6 : PtrValueType<i32, 6>;
 #ifdef LLPC_BUILD_NPI
 def p10 : PtrValueType<i32, 10>;
+def p11 : PtrValueType<i32, 11>;
 #endif /* LLPC_BUILD_NPI */
 
 //===------------------------------------------------------------===//
@@ -2287,8 +2288,6 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureMLMathInsts,
    FeatureVGPRIndexingRegisters,
    FeatureMaxHardClauseLength63,
-   FeatureMin3Max3PKF16,
-   FeatureMinimum3Maximum3PKF16,
    FeatureAtomicFMinFMaxF64GlobalInsts,
    FeatureAtomicFMinFMaxF64FlatInsts,
    FeatureFmaMixBF16Insts,
@@ -2302,7 +2301,6 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureBVHDualAndBVH8Insts,
    FeatureLshlAddU64Inst,
    FeatureAddSubU64Insts,
-   FeatureLdsBarrierArriveAtomic,
 ]>;
 
 #endif /* LLPC_BUILD_NPI */

@@ -68,7 +68,6 @@ Type mlir::memref::getTensorTypeFromMemRefType(Type type) {
 OpFoldResult memref::getMixedSize(OpBuilder &builder, Location loc, Value value,
                                   int64_t dim) {
   auto memrefType = llvm::cast<MemRefType>(value.getType());
-  SmallVector<OpFoldResult> result;
   if (memrefType.isDynamicDim(dim))
     return builder.createOrFold<memref::DimOp>(loc, value, dim);
 

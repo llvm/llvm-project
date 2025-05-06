@@ -117,6 +117,7 @@ private:
 #if LLPC_BUILD_NPI
   bool fixCvtScaleForwardingHazard(MachineInstr *MI);
   bool fixGetRegWaitIdle(MachineInstr *MI);
+  bool fixDsAtomicAsyncBarrierArriveB64(MachineInstr *MI);
 #endif /* LLPC_BUILD_NPI */
 
   int checkMAIHazards(MachineInstr *MI);
