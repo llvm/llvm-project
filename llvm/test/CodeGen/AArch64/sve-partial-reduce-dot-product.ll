@@ -516,16 +516,8 @@ define <vscale x 4 x i32> @udot_no_bin_op(<vscale x 4 x i32> %acc, <vscale x 16 
 ;
 ; CHECK-NEWLOWERING-LABEL: udot_no_bin_op:
 ; CHECK-NEWLOWERING:       // %bb.0:
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z2.h, z1.b
-; CHECK-NEWLOWERING-NEXT:    uunpklo z1.h, z1.b
-; CHECK-NEWLOWERING-NEXT:    uunpklo z3.s, z2.h
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z4.s, z1.h
-; CHECK-NEWLOWERING-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z2.s, z2.h
-; CHECK-NEWLOWERING-NEXT:    add z0.s, z0.s, z1.s
-; CHECK-NEWLOWERING-NEXT:    add z1.s, z4.s, z3.s
-; CHECK-NEWLOWERING-NEXT:    add z0.s, z0.s, z1.s
-; CHECK-NEWLOWERING-NEXT:    add z0.s, z0.s, z2.s
+; CHECK-NEWLOWERING-NEXT:    mov z2.b, #1 // =0x1
+; CHECK-NEWLOWERING-NEXT:    udot z0.s, z1.b, z2.b
 ; CHECK-NEWLOWERING-NEXT:    ret
   %a.ext = zext <vscale x 16 x i8> %a to <vscale x 16 x i32>
   %partial.reduce = tail call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> %acc, <vscale x 16 x i32> %a.ext)
@@ -541,16 +533,8 @@ define <vscale x 4 x i32> @sdot_no_bin_op(<vscale x 4 x i32> %acc, <vscale x 16 
 ;
 ; CHECK-NEWLOWERING-LABEL: sdot_no_bin_op:
 ; CHECK-NEWLOWERING:       // %bb.0:
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z2.h, z1.b
-; CHECK-NEWLOWERING-NEXT:    sunpklo z1.h, z1.b
-; CHECK-NEWLOWERING-NEXT:    sunpklo z3.s, z2.h
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z4.s, z1.h
-; CHECK-NEWLOWERING-NEXT:    sunpklo z1.s, z1.h
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z2.s, z2.h
-; CHECK-NEWLOWERING-NEXT:    add z0.s, z0.s, z1.s
-; CHECK-NEWLOWERING-NEXT:    add z1.s, z4.s, z3.s
-; CHECK-NEWLOWERING-NEXT:    add z0.s, z0.s, z1.s
-; CHECK-NEWLOWERING-NEXT:    add z0.s, z0.s, z2.s
+; CHECK-NEWLOWERING-NEXT:    mov z2.b, #1 // =0x1
+; CHECK-NEWLOWERING-NEXT:    sdot z0.s, z1.b, z2.b
 ; CHECK-NEWLOWERING-NEXT:    ret
   %a.ext = sext <vscale x 16 x i8> %a to <vscale x 16 x i32>
   %partial.reduce = tail call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> %acc, <vscale x 16 x i32> %a.ext)
@@ -566,16 +550,8 @@ define <vscale x 2 x i64> @udot_no_bin_op_wide(<vscale x 2 x i64> %acc, <vscale 
 ;
 ; CHECK-NEWLOWERING-LABEL: udot_no_bin_op_wide:
 ; CHECK-NEWLOWERING:       // %bb.0: // %entry
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z2.s, z1.h
-; CHECK-NEWLOWERING-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEWLOWERING-NEXT:    uunpklo z3.d, z2.s
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z4.d, z1.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z1.d, z1.s
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z2.d, z2.s
-; CHECK-NEWLOWERING-NEXT:    add z0.d, z0.d, z1.d
-; CHECK-NEWLOWERING-NEXT:    add z1.d, z4.d, z3.d
-; CHECK-NEWLOWERING-NEXT:    add z0.d, z0.d, z1.d
-; CHECK-NEWLOWERING-NEXT:    add z0.d, z0.d, z2.d
+; CHECK-NEWLOWERING-NEXT:    mov z2.h, #1 // =0x1
+; CHECK-NEWLOWERING-NEXT:    udot z0.d, z1.h, z2.h
 ; CHECK-NEWLOWERING-NEXT:    ret
 entry:
   %a.wide = zext <vscale x 8 x i16> %a to <vscale x 8 x i64>
@@ -592,16 +568,8 @@ define <vscale x 2 x i64> @sdot_no_bin_op_wide(<vscale x 2 x i64> %acc, <vscale 
 ;
 ; CHECK-NEWLOWERING-LABEL: sdot_no_bin_op_wide:
 ; CHECK-NEWLOWERING:       // %bb.0: // %entry
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z2.s, z1.h
-; CHECK-NEWLOWERING-NEXT:    sunpklo z1.s, z1.h
-; CHECK-NEWLOWERING-NEXT:    sunpklo z3.d, z2.s
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z4.d, z1.s
-; CHECK-NEWLOWERING-NEXT:    sunpklo z1.d, z1.s
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z2.d, z2.s
-; CHECK-NEWLOWERING-NEXT:    add z0.d, z0.d, z1.d
-; CHECK-NEWLOWERING-NEXT:    add z1.d, z4.d, z3.d
-; CHECK-NEWLOWERING-NEXT:    add z0.d, z0.d, z1.d
-; CHECK-NEWLOWERING-NEXT:    add z0.d, z0.d, z2.d
+; CHECK-NEWLOWERING-NEXT:    mov z2.h, #1 // =0x1
+; CHECK-NEWLOWERING-NEXT:    sdot z0.d, z1.h, z2.h
 ; CHECK-NEWLOWERING-NEXT:    ret
 entry:
   %a.wide = sext <vscale x 8 x i16> %a to <vscale x 8 x i64>
