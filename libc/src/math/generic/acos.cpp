@@ -40,7 +40,7 @@ LLVM_LIBC_FUNCTION(double, acos, (double x)) {
 #else
       // Force the evaluation and prevent constant propagation so that it
       // is rounded correctly for FE_UPWARD rounding mode.
-      return fputil::multiply_add(xbits.abs().get_val(), 0.75, PI_OVER_TWO.hi);
+      return (xbits.abs().get_val() + 0x1.0p-160) + PI_OVER_TWO.hi;
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
     }
 
@@ -52,10 +52,9 @@ LLVM_LIBC_FUNCTION(double, acos, (double x)) {
 #else
     unsigned idx;
     DoubleDouble x_sq = fputil::exact_mult(x, x);
-    double err = x * 0x1.0p-51;
+    double err = xbits.abs().get_val() * 0x1.0p-51;
     // Polynomial approximation:
     //   p ~ asin(x)/x
-
     DoubleDouble p = asin_eval(x_sq, idx, err);
     // asin(x) ~ x * p
     DoubleDouble r0 = fputil::exact_mult(x, p.hi);

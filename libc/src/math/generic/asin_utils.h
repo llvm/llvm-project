@@ -174,7 +174,8 @@ LIBC_INLINE DoubleDouble asin_eval(const DoubleDouble &u, unsigned &idx,
   double y_hi = multiply_add(k, -0x1.0p-5, u.hi); // Exact
   DoubleDouble y = fputil::exact_add(y_hi, u.lo);
   double y2 = y.hi * y.hi;
-  err *= y2 + 0x1.0p-30;
+  // Add double-double errors in addition to the relative errors from y2.
+  err = fputil::multiply_add(err, y2, 0x1.0p-102);
   DoubleDouble c0 = fputil::quick_mult(
       y, DoubleDouble{ASIN_COEFFS[idx][3], ASIN_COEFFS[idx][2]});
   double c1 = multiply_add(y.hi, ASIN_COEFFS[idx][5], ASIN_COEFFS[idx][4]);

@@ -74,7 +74,7 @@ LLVM_LIBC_FUNCTION(double, asin, (double x)) {
 #else
     unsigned idx;
     DoubleDouble x_sq = fputil::exact_mult(x, x);
-    double err = x * 0x1.0p-51;
+    double err = xbits.abs().get_val() * 0x1.0p-51;
     // Polynomial approximation:
     //   p ~ asin(x)/x
 
