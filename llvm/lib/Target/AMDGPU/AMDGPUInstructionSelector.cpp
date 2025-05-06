@@ -1226,12 +1226,6 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
     return selectPermlaneSwapIntrin(I, IntrinsicID);
   case Intrinsic::amdgcn_bpermute_b32:
     return selectBPermute(I);
-  case Intrinsic::amdgcn_dead: {
-    I.setDesc(TII.get(TargetOpcode::IMPLICIT_DEF));
-    I.removeOperand(1); // drop intrinsic ID
-    return RBI.constrainGenericRegister(I.getOperand(0).getReg(),
-                                        AMDGPU::VGPR_32RegClass, *MRI);
-  }
   default:
     return selectImpl(I, *CoverageInfo);
   }

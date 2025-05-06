@@ -1111,6 +1111,7 @@ void InstrInfoEmitter::emitRecord(
   OperandInfoTy OperandInfo = GetOperandInfo(Inst);
   OS << OperandInfoMap.find(OperandInfo)->second << ",\t";
 
+  // Emit implicit operand base.
   OS << Target.getName() << "ImpOpBase + " << EmittedLists[ImplicitOps]
      << ",\t0";
 

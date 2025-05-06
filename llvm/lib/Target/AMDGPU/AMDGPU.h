@@ -71,6 +71,7 @@ FunctionPass *createGCNPreRAOptimizationsLegacyPass();
 FunctionPass *createAMDGPUPreloadKernArgPrologLegacyPass();
 FunctionPass *createAMDGPUIdxRegAllocPass();
 FunctionPass *createAMDGPUPrivateObjectVGPRsPass();
+FunctionPass *createAMDGPUIndexingInfoWrapperPass();
 
 struct AMDGPUSimplifyLibCallsPass : PassInfoMixin<AMDGPUSimplifyLibCallsPass> {
   AMDGPUSimplifyLibCallsPass() {}
@@ -275,6 +276,9 @@ extern char &AMDGPUPreloadKernArgPrologLegacyID;
 
 void initializeAMDGPUPrivateObjectVGPRsPass(PassRegistry &);
 extern char &AMDGPUPrivateObjectVGPRsID;
+
+void initializeAMDGPUIndexingInfoWrapperPass(PassRegistry &);
+extern char &AMDGPUIndexingInfoWrapperID;
 
 // Passes common to R600 and SI
 FunctionPass *createAMDGPUPromoteAlloca();

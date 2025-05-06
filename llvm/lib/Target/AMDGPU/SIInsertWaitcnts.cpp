@@ -24,6 +24,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUVGPRIndexingAnalysis.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
@@ -172,7 +173,6 @@ enum RegisterMapping {
   // instruction's location is unknown.
   EXTRA_VGPR_LDS = 0,
   NUM_ALL_VGPRS = SQ_MAX_PGM_VGPRS + NUM_EXTRA_VGPRS, // Where SGPR starts.
-  NUM_IDX_REGS = 4,
 };
 
 // Enumerate different types of result-returning VMEM operations. Although
@@ -290,12 +290,13 @@ InstCounterType eventCounter(const unsigned *masks, WaitEventType E) {
 // "s_waitcnt 0" before use.
 class WaitcntBrackets {
 public:
-  WaitcntBrackets(const GCNSubtarget *SubTarget, InstCounterType MaxCounter,
-                  HardwareLimits Limits,
+  WaitcntBrackets(const GCNSubtarget *SubTarget,
+                  const AMDGPUIndexingInfo *IndexingInfo,
+                  InstCounterType MaxCounter, HardwareLimits Limits,
                   unsigned LaneSharedSize, const unsigned *WaitEventMaskForInst,
                   InstCounterType SmemAccessCounter)
-      : ST(SubTarget), MaxCounter(MaxCounter), Limits(Limits),
-        LaneSharedSize(LaneSharedSize),
+      : ST(SubTarget), SII(IndexingInfo), MaxCounter(MaxCounter),
+        Limits(Limits), LaneSharedSize(LaneSharedSize),
         WaitEventMaskForInst(WaitEventMaskForInst),
         SmemAccessCounter(SmemAccessCounter) {}
 
@@ -460,12 +461,6 @@ public:
     return LDSDMAStores;
   }
 
-  void setGprIdxImmedVal(unsigned Idx, int64_t Imm) {
-    GprIdxImmedVals[Idx] = Imm;
-  }
-
-  void clearGprIdxImmedVal(unsigned Idx) { GprIdxImmedVals[Idx] = {}; }
-
   bool hasPointSampleAccel(const MachineInstr &MI) const;
   bool hasPointSamplePendingVmemTypes(const MachineInstr &MI,
                                       RegInterval Interval) const;
@@ -512,6 +507,7 @@ private:
                          unsigned Val);
 
   const GCNSubtarget *ST = nullptr;
+  const AMDGPUIndexingInfo *SII = nullptr;
   InstCounterType MaxCounter = NUM_EXTENDED_INST_CNTS;
   HardwareLimits Limits = {};
   unsigned LaneSharedSize = 0;
@@ -540,8 +536,6 @@ private:
   // Store representative LDS DMA operations. The only useful info here is
   // alias info. One store is kept per unique AAInfo.
   SmallVector<const MachineInstr *, NUM_EXTRA_VGPRS - 1> LDSDMAStores;
-  // Track the possible immediate value stored in gpr-idx registers
-  std::optional<int64_t> GprIdxImmedVals[NUM_IDX_REGS];
 };
 
 // This abstracts the logic for generating and updating S_WAIT* instructions
@@ -706,6 +700,7 @@ private:
   MachineLoopInfo *MLI;
   MachinePostDominatorTree *PDT;
   AliasAnalysis *AA = nullptr;
+  const AMDGPUIndexingInfo &SII;
 
   struct BlockInfo {
     std::unique_ptr<WaitcntBrackets> Incoming;
@@ -733,8 +728,8 @@ private:
 
 public:
   SIInsertWaitcnts(MachineLoopInfo *MLI, MachinePostDominatorTree *PDT,
-                   AliasAnalysis *AA)
-      : MLI(MLI), PDT(PDT), AA(AA) {
+                   AliasAnalysis *AA, const AMDGPUIndexingInfo &SII)
+      : MLI(MLI), PDT(PDT), AA(AA), SII(SII) {
     (void)ForceExpCounter;
     (void)ForceLgkmCounter;
     (void)ForceVMCounter;
@@ -868,6 +863,7 @@ public:
     AU.addRequired<MachinePostDominatorTreeWrapperPass>();
     AU.addUsedIfAvailable<AAResultsWrapperPass>();
     AU.addPreserved<AAResultsWrapperPass>();
+    AU.addRequired<AMDGPUIndexingInfoWrapper>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -880,54 +876,35 @@ WaitcntBrackets::getRegIndexingInterval(const MachineInstr *MI,
                                         const SIRegisterInfo *TRI) const {
   assert(MI->getOpcode() == AMDGPU::V_LOAD_IDX ||
          MI->getOpcode() == AMDGPU::V_STORE_IDX);
-  RegInterval Result;
-  auto IdxSrcIdx =
-      AMDGPU::getNamedOperandIdx(MI->getOpcode(), AMDGPU::OpName::idx);
-  unsigned Idx = MI->getOperand(IdxSrcIdx).getReg() - AMDGPU::IDX0;
-  assert(Idx < NUM_IDX_REGS);
-  assert(MI->hasOneMemOperand());
-  const MachineMemOperand *MMO = *(MI->memoperands_begin());
-  bool IsLaneShared = MMO->getAddrSpace() == AMDGPUAS::LANE_SHARED;
-#ifndef NDEBUG
-  // Do not allow vector registers as implicit operands of v_load/store_idx
-  // on laneshared because it is not clear whether those registers are
-  // laneshared or wave-private.
-  if (IsLaneShared) {
-    for (auto Opnd : MI->implicit_operands())
-      assert(!Opnd.isReg() || !TRI->isVectorRegister(*MRI, Opnd.getReg()));
-  }
-#endif
-
-  Result.first = IsLaneShared ? 0 : LaneSharedSize;
-  int MaxNumVGPRs = SQ_MAX_PGM_VGPRS;
-  if (GprIdxImmedVals[Idx].has_value()) {
-    auto OffsetSrcIdx =
-        AMDGPU::getNamedOperandIdx(MI->getOpcode(), AMDGPU::OpName::offset);
-    auto Offset = MI->getOperand(OffsetSrcIdx).getImm();
-    Result.first += GprIdxImmedVals[Idx].value() + Offset;
-    assert(MI->hasOneMemOperand() && "V_LOAD/STORE_IDX must have one MMO");
-    MachineMemOperand *MMO = *MI->memoperands_begin();
-    // Handle the case where the range is out of bound.
-    Result.first = Result.first % MaxNumVGPRs;
-    auto Size = MMO->getSizeInBits().getValue();
-    Result.second = Result.first + divideCeil(Size, 32);
-    if (Result.second > MaxNumVGPRs) {
-      Result.first = 0;
-      Result.second = MaxNumVGPRs;
+  auto CheckBounds = [&](RegInterval Interval) {
+    auto Size = Interval.second - Interval.first;
+    Interval.first = Interval.first % SQ_MAX_PGM_VGPRS;
+    Interval.second = Interval.first + Size;
+    if (Interval.second > SQ_MAX_PGM_VGPRS) {
+      Interval.first = 0;
+      Interval.second = SQ_MAX_PGM_VGPRS;
     }
-  } else if (IsLaneShared) {
+    return Interval;
+  };
+  if (auto Info = SII->getPrivateObjectIdxInfo(MI)) {
+    if (auto UsedRegs = Info->get().UsedRegs)
+      return CheckBounds(*UsedRegs);
+    // we don't know the exact vgprs,
+    // so best we can do is use the size of the private object
+    RegInterval Interval = {LaneSharedSize + Info->get().Offset / 4, 0};
+    Interval.second += Interval.first + Info->get().Size / 4;
+    return Interval;
+  }
+  if (auto Info = SII->getLaneSharedIdxInfo(MI)) {
+    if (auto UsedRegs = Info->get().UsedRegs)
+      return CheckBounds(*UsedRegs);
     // Claim the entire lane-shared range when idx is unknown
     // TODO-GFX13:
     // We want to build an event-queue and apply alias analysis to
     // get more accurate result in this case.
-    Result.second = LaneSharedSize;
-  } else {
-    // TODO-GFX13: we expect to scan implicit defs/uses on VGPRs
-    // that should provide more accurate interval for private objects.
-    // v_load/store_idx on private vgpr?
-    Result.second = MaxNumVGPRs;
+    return {0, LaneSharedSize};
   }
-  return Result;
+  llvm_unreachable("v_load/store_idx without index info");
 }
 
 RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
@@ -2847,17 +2824,6 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
       ++Iter;
       continue;
     }
-    // Track the gpr-idx value in case that is an immed.
-    // TODO-GFX13: need to handle s_add_gpr_idx_u32 when it is added.
-    if (Inst.getOpcode() == AMDGPU::S_SET_GPR_IDX_U32) {
-      auto SrcOpnd = Inst.getOperand(1);
-      unsigned Idx = Inst.getOperand(0).getReg() - AMDGPU::IDX0;
-      assert(Idx < NUM_IDX_REGS);
-      if (SrcOpnd.isImm())
-        ScoreBrackets.setGprIdxImmedVal(Idx, SrcOpnd.getImm());
-      else
-        ScoreBrackets.clearGprIdxImmedVal(Idx);
-    }
 
     bool FlushVmCnt = Block.getFirstTerminator() == Inst &&
                       isPreheaderToFlush(Block, ScoreBrackets);
@@ -3064,8 +3030,10 @@ bool SIInsertWaitcntsLegacy::runOnMachineFunction(MachineFunction &MF) {
   AliasAnalysis *AA = nullptr;
   if (auto *AAR = getAnalysisIfAvailable<AAResultsWrapperPass>())
     AA = &AAR->getAAResults();
+  const AMDGPUIndexingInfo &SII =
+      getAnalysis<AMDGPUIndexingInfoWrapper>().getIndexingInfo();
 
-  return SIInsertWaitcnts(MLI, PDT, AA).run(MF);
+  return SIInsertWaitcnts(MLI, PDT, AA, SII).run(MF);
 }
 
 PreservedAnalyses
@@ -3076,8 +3044,9 @@ SIInsertWaitcntsPass::run(MachineFunction &MF,
   auto *AA = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
                  .getManager()
                  .getCachedResult<AAManager>(MF.getFunction());
-
-  if (!SIInsertWaitcnts(MLI, PDT, AA).run(MF))
+  // TODO-GFX13: When VGPR Indexing passes are ported to NPM SII analysis needs
+  // to be fetched here
+  if (!SIInsertWaitcnts(MLI, PDT, AA, AMDGPUIndexingInfo{}).run(MF))
     return PreservedAnalyses::all();
 
   return getMachineFunctionPassPreservedAnalyses()
@@ -3187,7 +3156,7 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
     }
 
     auto NonKernelInitialState = std::make_unique<WaitcntBrackets>(
-        ST, MaxCounter, Limits, LaneSharedSize, WaitEventMaskForInst,
+        ST, &SII, MaxCounter, Limits, LaneSharedSize, WaitEventMaskForInst,
         SmemAccessCounter);
     NonKernelInitialState->setStateOnFunctionEntryOrReturn();
     BlockInfos[&EntryBB].Incoming = std::move(NonKernelInitialState);
@@ -3226,16 +3195,16 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
       } else {
         if (!Brackets) {
           Brackets = std::make_unique<WaitcntBrackets>(
-              ST, MaxCounter, Limits, LaneSharedSize,
+              ST, &SII, MaxCounter, Limits, LaneSharedSize,
               WaitEventMaskForInst, SmemAccessCounter);
         } else {
           // Reinitialize in-place. N.B. do not do this by assigning from a
           // temporary because the WaitcntBrackets class is large and it could
           // cause this function to use an unreasonable amount of stack space.
           Brackets->~WaitcntBrackets();
-          new (Brackets.get()) WaitcntBrackets(
-              ST, MaxCounter, Limits, LaneSharedSize,
-              WaitEventMaskForInst, SmemAccessCounter);
+          new (Brackets.get())
+              WaitcntBrackets(ST, &SII, MaxCounter, Limits, LaneSharedSize,
+                              WaitEventMaskForInst, SmemAccessCounter);
         }
       }
 
