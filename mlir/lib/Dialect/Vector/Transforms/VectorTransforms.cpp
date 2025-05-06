@@ -2184,12 +2184,13 @@ struct FoldArithToVectorOuterProduct : public OpRewritePattern<MulOpType> {
 
 /// For example,
 /// ```
-/// %0 = vector.transpose %arg0, [0, 2, 1] : vector<2x1x2xf32> to
-/// vector<2x2x1xf32>
+/// %0 = vector.transpose %arg0, [0, 2, 1] :
+///                   vector<2x1x2xf32> to vector<2x2x1xf32>
 /// ```
 /// becomes
 /// ```
-/// %0 = vector.shape_cast %arg0 : vector<2x1x2xf32> to vector<2x2x1xf32>
+/// %0 = vector.shape_cast %arg0 :
+///                   vector<2x1x2xf32> to vector<2x2x1xf32>
 /// ```
 struct TransposeToShapeCast final
     : public OpRewritePattern<vector::TransposeOp> {
