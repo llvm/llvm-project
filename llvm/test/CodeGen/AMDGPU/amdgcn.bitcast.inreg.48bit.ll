@@ -5,8 +5,8 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefix=GFX9 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX11 %s
 
-define inreg <3 x half> @s_bitcast_v3bf16_to_v3f16_inreg(<3 x bfloat> inreg %a, i32 inreg %b) {
-; SI-LABEL: s_bitcast_v3bf16_to_v3f16_inreg:
+define inreg <3 x half> @s_bitcast_v3bf16_to_v3f16(<3 x bfloat> inreg %a, i32 inreg %b) {
+; SI-LABEL: s_bitcast_v3bf16_to_v3f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_cmp_lg_u32 s19, 0
@@ -43,7 +43,7 @@ define inreg <3 x half> @s_bitcast_v3bf16_to_v3f16_inreg(<3 x bfloat> inreg %a, 
 ; SI-NEXT:    ; implicit-def: $vgpr2
 ; SI-NEXT:    s_branch .LBB0_2
 ;
-; VI-LABEL: s_bitcast_v3bf16_to_v3f16_inreg:
+; VI-LABEL: s_bitcast_v3bf16_to_v3f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_cmp_lg_u32 s18, 0
@@ -88,7 +88,7 @@ define inreg <3 x half> @s_bitcast_v3bf16_to_v3f16_inreg(<3 x bfloat> inreg %a, 
 ; VI-NEXT:    v_mov_b32_e32 v1, s17
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: s_bitcast_v3bf16_to_v3f16_inreg:
+; GFX9-LABEL: s_bitcast_v3bf16_to_v3f16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_cmp_lg_u32 s18, 0
@@ -136,7 +136,7 @@ define inreg <3 x half> @s_bitcast_v3bf16_to_v3f16_inreg(<3 x bfloat> inreg %a, 
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s17
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: s_bitcast_v3bf16_to_v3f16_inreg:
+; GFX11-LABEL: s_bitcast_v3bf16_to_v3f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_cmp_lg_u32 s2, 0
@@ -206,8 +206,8 @@ end:
   ret <3 x half> %phi
 }
 
-define inreg <3 x bfloat> @s_bitcast_v3f16_to_v3bf16_inreg(<3 x half> inreg %a, i32 inreg %b) {
-; SI-LABEL: s_bitcast_v3f16_to_v3bf16_inreg:
+define inreg <3 x bfloat> @s_bitcast_v3f16_to_v3bf16(<3 x half> inreg %a, i32 inreg %b) {
+; SI-LABEL: s_bitcast_v3f16_to_v3bf16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_cvt_f16_f32_e32 v3, s16
@@ -241,7 +241,7 @@ define inreg <3 x bfloat> @s_bitcast_v3f16_to_v3bf16_inreg(<3 x half> inreg %a, 
 ; SI-NEXT:    ; implicit-def: $vgpr2
 ; SI-NEXT:    s_branch .LBB1_2
 ;
-; VI-LABEL: s_bitcast_v3f16_to_v3bf16_inreg:
+; VI-LABEL: s_bitcast_v3f16_to_v3bf16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_cmp_lg_u32 s18, 0
@@ -265,7 +265,7 @@ define inreg <3 x bfloat> @s_bitcast_v3f16_to_v3bf16_inreg(<3 x half> inreg %a, 
 ; VI-NEXT:    v_mov_b32_e32 v1, s17
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: s_bitcast_v3f16_to_v3bf16_inreg:
+; GFX9-LABEL: s_bitcast_v3f16_to_v3bf16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_cmp_lg_u32 s18, 0
@@ -284,7 +284,7 @@ define inreg <3 x bfloat> @s_bitcast_v3f16_to_v3bf16_inreg(<3 x half> inreg %a, 
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s17
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: s_bitcast_v3f16_to_v3bf16_inreg:
+; GFX11-LABEL: s_bitcast_v3f16_to_v3bf16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_cmp_lg_u32 s2, 0
@@ -319,8 +319,8 @@ end:
   ret <3 x bfloat> %phi
 }
 
-define inreg <3 x i16> @s_bitcast_v3bf16_to_v3i16_inreg(<3 x bfloat> inreg %a, i32 inreg %b) {
-; SI-LABEL: s_bitcast_v3bf16_to_v3i16_inreg:
+define inreg <3 x i16> @s_bitcast_v3bf16_to_v3i16(<3 x bfloat> inreg %a, i32 inreg %b) {
+; SI-LABEL: s_bitcast_v3bf16_to_v3i16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_cmp_lg_u32 s19, 0
@@ -353,7 +353,7 @@ define inreg <3 x i16> @s_bitcast_v3bf16_to_v3i16_inreg(<3 x bfloat> inreg %a, i
 ; SI-NEXT:    ; implicit-def: $vgpr2
 ; SI-NEXT:    s_branch .LBB2_2
 ;
-; VI-LABEL: s_bitcast_v3bf16_to_v3i16_inreg:
+; VI-LABEL: s_bitcast_v3bf16_to_v3i16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_cmp_lg_u32 s18, 0
@@ -398,7 +398,7 @@ define inreg <3 x i16> @s_bitcast_v3bf16_to_v3i16_inreg(<3 x bfloat> inreg %a, i
 ; VI-NEXT:    v_mov_b32_e32 v1, s17
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: s_bitcast_v3bf16_to_v3i16_inreg:
+; GFX9-LABEL: s_bitcast_v3bf16_to_v3i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_cmp_lg_u32 s18, 0
@@ -446,7 +446,7 @@ define inreg <3 x i16> @s_bitcast_v3bf16_to_v3i16_inreg(<3 x bfloat> inreg %a, i
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s17
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: s_bitcast_v3bf16_to_v3i16_inreg:
+; GFX11-LABEL: s_bitcast_v3bf16_to_v3i16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_cmp_lg_u32 s2, 0
@@ -513,8 +513,8 @@ end:
   ret <3 x i16> %phi
 }
 
-define inreg <3 x bfloat> @s_bitcast_v3i16_to_v3bf16_inreg(<3 x i16> inreg %a, i32 inreg %b) {
-; SI-LABEL: s_bitcast_v3i16_to_v3bf16_inreg:
+define inreg <3 x bfloat> @s_bitcast_v3i16_to_v3bf16(<3 x i16> inreg %a, i32 inreg %b) {
+; SI-LABEL: s_bitcast_v3i16_to_v3bf16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_cmp_lg_u32 s19, 0
@@ -545,7 +545,7 @@ define inreg <3 x bfloat> @s_bitcast_v3i16_to_v3bf16_inreg(<3 x i16> inreg %a, i
 ; SI-NEXT:    ; implicit-def: $sgpr8
 ; SI-NEXT:    s_branch .LBB3_2
 ;
-; VI-LABEL: s_bitcast_v3i16_to_v3bf16_inreg:
+; VI-LABEL: s_bitcast_v3i16_to_v3bf16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_cmp_lg_u32 s18, 0
@@ -566,7 +566,7 @@ define inreg <3 x bfloat> @s_bitcast_v3i16_to_v3bf16_inreg(<3 x i16> inreg %a, i
 ; VI-NEXT:  .LBB3_4:
 ; VI-NEXT:    s_branch .LBB3_2
 ;
-; GFX9-LABEL: s_bitcast_v3i16_to_v3bf16_inreg:
+; GFX9-LABEL: s_bitcast_v3i16_to_v3bf16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_cmp_lg_u32 s18, 0
@@ -584,7 +584,7 @@ define inreg <3 x bfloat> @s_bitcast_v3i16_to_v3bf16_inreg(<3 x i16> inreg %a, i
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s17
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: s_bitcast_v3i16_to_v3bf16_inreg:
+; GFX11-LABEL: s_bitcast_v3i16_to_v3bf16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_cmp_lg_u32 s2, 0
@@ -619,8 +619,8 @@ end:
   ret <3 x bfloat> %phi
 }
 
-define inreg <3 x i16> @s_bitcast_v3f16_to_v3i16_inreg(<3 x half> inreg %a, i32 inreg %b) {
-; SI-LABEL: s_bitcast_v3f16_to_v3i16_inreg:
+define inreg <3 x i16> @s_bitcast_v3f16_to_v3i16(<3 x half> inreg %a, i32 inreg %b) {
+; SI-LABEL: s_bitcast_v3f16_to_v3i16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, s16
@@ -648,7 +648,7 @@ define inreg <3 x i16> @s_bitcast_v3f16_to_v3i16_inreg(<3 x half> inreg %a, i32 
 ; SI-NEXT:  .LBB4_4:
 ; SI-NEXT:    s_branch .LBB4_2
 ;
-; VI-LABEL: s_bitcast_v3f16_to_v3i16_inreg:
+; VI-LABEL: s_bitcast_v3f16_to_v3i16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_cmp_lg_u32 s18, 0
@@ -672,7 +672,7 @@ define inreg <3 x i16> @s_bitcast_v3f16_to_v3i16_inreg(<3 x half> inreg %a, i32 
 ; VI-NEXT:    v_mov_b32_e32 v1, s17
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: s_bitcast_v3f16_to_v3i16_inreg:
+; GFX9-LABEL: s_bitcast_v3f16_to_v3i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_cmp_lg_u32 s18, 0
@@ -691,7 +691,7 @@ define inreg <3 x i16> @s_bitcast_v3f16_to_v3i16_inreg(<3 x half> inreg %a, i32 
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s17
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: s_bitcast_v3f16_to_v3i16_inreg:
+; GFX11-LABEL: s_bitcast_v3f16_to_v3i16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_cmp_lg_u32 s2, 0
@@ -726,8 +726,8 @@ end:
   ret <3 x i16> %phi
 }
 
-define inreg <3 x half> @s_bitcast_v3i16_to_v3f16_inreg(<3 x i16> inreg %a, i32 inreg %b) {
-; SI-LABEL: s_bitcast_v3i16_to_v3f16_inreg:
+define inreg <3 x half> @s_bitcast_v3i16_to_v3f16(<3 x i16> inreg %a, i32 inreg %b) {
+; SI-LABEL: s_bitcast_v3i16_to_v3f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_cmp_lg_u32 s19, 0
@@ -752,7 +752,7 @@ define inreg <3 x half> @s_bitcast_v3i16_to_v3f16_inreg(<3 x i16> inreg %a, i32 
 ; SI-NEXT:    ; implicit-def: $vgpr2
 ; SI-NEXT:    s_branch .LBB5_2
 ;
-; VI-LABEL: s_bitcast_v3i16_to_v3f16_inreg:
+; VI-LABEL: s_bitcast_v3i16_to_v3f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_cmp_lg_u32 s18, 0
@@ -773,7 +773,7 @@ define inreg <3 x half> @s_bitcast_v3i16_to_v3f16_inreg(<3 x i16> inreg %a, i32 
 ; VI-NEXT:  .LBB5_4:
 ; VI-NEXT:    s_branch .LBB5_2
 ;
-; GFX9-LABEL: s_bitcast_v3i16_to_v3f16_inreg:
+; GFX9-LABEL: s_bitcast_v3i16_to_v3f16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_cmp_lg_u32 s18, 0
@@ -791,7 +791,7 @@ define inreg <3 x half> @s_bitcast_v3i16_to_v3f16_inreg(<3 x i16> inreg %a, i32 
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s17
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: s_bitcast_v3i16_to_v3f16_inreg:
+; GFX11-LABEL: s_bitcast_v3i16_to_v3f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_cmp_lg_u32 s2, 0
