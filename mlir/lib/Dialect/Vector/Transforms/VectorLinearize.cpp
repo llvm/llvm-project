@@ -545,18 +545,16 @@ void mlir::vector::populateForVectorLinearize(TypeConverter &typeConverter,
 }
 
 /// Linearize a vector.create_mask that has at most 1 non-unit dimension.
-/// Example:
-///
+/// For example,
 /// ```
-/// %0 = vector.create_mask %arg0, %arg1, %arg2: vector<1x16x1xi1>
+/// %mask3 = vector.create_mask %arg0, %arg1, %arg2: vector<1x16x1xi1>
 /// ```
 ///
-/// becomes
-///
+/// becomes,
 /// ```
 /// [...]
-/// %2 = vector.create_mask %prod: vector<16xi1>
-/// %3 = vector.shape_cast %2: vector<16xi1> to vector<1x16x1xi1>
+/// %mask1 = vector.create_mask %prod: vector<16xi1>
+/// %mask3 = vector.shape_cast %mask1: vector<16xi1> to vector<1x16x1xi1>
 /// ```
 ///
 /// where %prod above the product of the (clamped) dimension-wise masking ranges
@@ -601,11 +599,11 @@ struct LinearizeVectorCreateMask final
     Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
     int nonUnitDim = -1;
     for (unsigned i = 0; i < type.getRank(); ++i) {
-      auto v = adaptor.getOperands()[i];
-      auto dimSize = type.getDimSize(i);
+      Value dimRange = adaptor.getOperands()[i];
+      int64_t dimSize = type.getDimSize(i);
       if (dimSize <= 1) {
         Value nxt = rewriter.create<arith::CmpIOp>(
-            loc, arith::CmpIPredicate::sgt, v, zero);
+            loc, arith::CmpIPredicate::sgt, dimRange, zero);
         prod = rewriter.create<arith::MulIOp>(loc, prod, nxt);
       } else {
         assert(nonUnitDim == -1 && "at most 1 non-unit expected");
