@@ -973,8 +973,8 @@ INTERCEPTOR(long double, frexpl, long double x, int *exp) {
 }
 
 #define INIT_FREXPF_FREXPL           \
-   COMMON_INTERCEPT_FUNCTION(frexpf); \
-   COMMON_INTERCEPT_FUNCTION_LDBL(frexpl)
+  COMMON_INTERCEPT_FUNCTION(frexpf); \
+  COMMON_INTERCEPT_FUNCTION_LDBL(frexpl)
 #else
 #define INIT_FREXPF_FREXPL
 #endif  // SANITIZER_INTERCEPT_FREXPF_FREXPL
