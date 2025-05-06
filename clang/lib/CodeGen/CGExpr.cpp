@@ -1228,10 +1228,10 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
   SanitizerScope SanScope(this);
 
   llvm::DILocation *CheckDI = Builder.getCurrentDebugLocation();
-  auto CurrentCheckKind = SanitizerKind::SO_ArrayBounds;
+  auto CheckKind = SanitizerKind::SO_ArrayBounds;
   // TODO: deprecate ClArrayBoundsPseudoFn
   if ((ClArrayBoundsPseudoFn ||
-       CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo.has(CurrentCheckKind)) &&
+       CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo.has(CheckKind)) &&
       CheckDI) {
     CheckDI = getDebugInfo()->CreateSyntheticInlineAt(
         Builder.getCurrentDebugLocation(), "__ubsan_check_array_bounds");
@@ -1249,7 +1249,7 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
   };
   llvm::Value *Check = Accessed ? Builder.CreateICmpULT(IndexVal, BoundVal)
                                 : Builder.CreateICmpULE(IndexVal, BoundVal);
-  EmitCheck(std::make_pair(Check, CurrentCheckKind),
+  EmitCheck(std::make_pair(Check, CheckKind),
             SanitizerHandler::OutOfBounds, StaticData, Index);
 }
 
