@@ -70,7 +70,6 @@ FUNCTION_PASS("scalarize-masked-mem-intrin", ScalarizeMaskedMemIntrinPass())
 FUNCTION_PASS("select-optimize", SelectOptimizePass(TM))
 FUNCTION_PASS("sjlj-eh-prepare", SjLjEHPreparePass(TM))
 FUNCTION_PASS("stack-protector", StackProtectorPass(TM))
-FUNCTION_PASS("tlshoist", TLSVariableHoistPass())
 FUNCTION_PASS("unreachableblockelim", UnreachableBlockElimPass())
 FUNCTION_PASS("verify", VerifierPass())
 FUNCTION_PASS("wasm-eh-prepare", WasmEHPreparePass())
@@ -281,6 +280,7 @@ MACHINE_FUNCTION_PASS_WITH_PARAMS(
 #ifndef DUMMY_FUNCTION_PASS
 #define DUMMY_FUNCTION_PASS(NAME, PASS_NAME)
 #endif
+DUMMY_FUNCTION_PASS("tlshoist", TLSVariableHoistPass)
 #undef DUMMY_FUNCTION_PASS
 
 #ifndef DUMMY_MACHINE_MODULE_PASS
