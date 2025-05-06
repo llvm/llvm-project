@@ -308,7 +308,7 @@ public:
 };
 
 /// Converts memref.extract_aligned_pointer_as_index to spirv.ConvertPtrToU.
-class ExtractAlignedPointerAsIndexOpPattern
+class ExtractAlignedPointerAsIndexOpPattern final
     : public OpConversionPattern<memref::ExtractAlignedPointerAsIndexOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
