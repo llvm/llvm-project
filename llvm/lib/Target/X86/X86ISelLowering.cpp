@@ -8813,8 +8813,8 @@ static SDValue lowerBuildVectorAsBlend(BuildVectorSDNode *BVOp, SDLoc const &DL,
   UniqueOps.erase(Op0);
   SDValue Op1 = *UniqueOps.begin();
 
-  if (isShuffleFoldableLoad(Op0) || isShuffleFoldableLoad(Op1) ||
-      Subtarget.hasAVX2()) {
+  if (Subtarget.hasAVX2() || isShuffleFoldableLoad(Op0) ||
+      isShuffleFoldableLoad(Op1)) {
     // Create shuffle mask.
     auto const NumElems = VT.getVectorNumElements();
     SmallVector<int, 16u> Mask(NumElems);
