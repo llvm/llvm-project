@@ -3070,10 +3070,16 @@ bool Sema::FindAllocationFunctions(
     Filter.done();
   }
 
+  auto GetRedeclContext = [](Decl *D) {
+    return D->getDeclContext()->getRedeclContext();
+  };
+
+  DeclContext *OperatorNewContext = GetRedeclContext(OperatorNew);
+
   bool FoundGlobalDelete = FoundDelete.empty();
   bool IsClassScopedTypeAwareNew =
       isTypeAwareAllocation(IAP.PassTypeIdentity) &&
-      OperatorNew->getDeclContext()->isRecord();
+      OperatorNewContext->isRecord();
   auto DiagnoseMissingTypeAwareCleanupOperator = [&](bool IsPlacementOperator) {
     assert(isTypeAwareAllocation(IAP.PassTypeIdentity));
     if (Diagnose) {
@@ -3081,7 +3087,7 @@ bool Sema::FindAllocationFunctions(
           << OperatorNew->getDeclName() << IsPlacementOperator << DeleteName;
       Diag(OperatorNew->getLocation(), diag::note_type_aware_operator_declared)
           << OperatorNew->isTypeAwareOperatorNewOrDelete()
-          << OperatorNew->getDeclName() << OperatorNew->getDeclContext();
+          << OperatorNew->getDeclName() << OperatorNewContext;
     }
   };
   if (IsClassScopedTypeAwareNew && FoundDelete.empty()) {
@@ -3224,6 +3230,7 @@ bool Sema::FindAllocationFunctions(
   //   deallocation function will be called.
   if (Matches.size() == 1) {
     OperatorDelete = Matches[0].second;
+    DeclContext *OperatorDeleteContext = GetRedeclContext(OperatorDelete);
     bool FoundTypeAwareOperator =
         OperatorDelete->isTypeAwareOperatorNewOrDelete() ||
         OperatorNew->isTypeAwareOperatorNewOrDelete();
@@ -3231,8 +3238,7 @@ bool Sema::FindAllocationFunctions(
       bool MismatchedTypeAwareness =
           OperatorDelete->isTypeAwareOperatorNewOrDelete() !=
           OperatorNew->isTypeAwareOperatorNewOrDelete();
-      bool MismatchedContext =
-          OperatorDelete->getDeclContext() != OperatorNew->getDeclContext();
+      bool MismatchedContext = OperatorDeleteContext != OperatorNewContext;
       if (MismatchedTypeAwareness || MismatchedContext) {
         FunctionDecl *Operators[] = {OperatorDelete, OperatorNew};
         bool TypeAwareOperatorIndex =
@@ -3241,16 +3247,15 @@ bool Sema::FindAllocationFunctions(
             << Operators[TypeAwareOperatorIndex]->getDeclName()
             << isPlacementNew
             << Operators[!TypeAwareOperatorIndex]->getDeclName()
-            << Operators[TypeAwareOperatorIndex]->getDeclContext();
+            << GetRedeclContext(Operators[TypeAwareOperatorIndex]);
         Diag(OperatorNew->getLocation(),
              diag::note_type_aware_operator_declared)
             << OperatorNew->isTypeAwareOperatorNewOrDelete()
-            << OperatorNew->getDeclName() << OperatorNew->getDeclContext();
+            << OperatorNew->getDeclName() << OperatorNewContext;
         Diag(OperatorDelete->getLocation(),
              diag::note_type_aware_operator_declared)
             << OperatorDelete->isTypeAwareOperatorNewOrDelete()
-            << OperatorDelete->getDeclName()
-            << OperatorDelete->getDeclContext();
+            << OperatorDelete->getDeclName() << OperatorDeleteContext;
       }
     }
 
