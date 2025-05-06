@@ -16,6 +16,7 @@ namespace llvm {
 class Function;
 class CallBase;
 class AttributeList;
+class SMECallAttrs;
 
 /// SMEAttrs is a utility class to parse the SME ACLE attributes on functions.
 /// It helps determine a function's requirements for PSTATE.ZA and PSTATE.SM.
@@ -50,12 +51,7 @@ public:
 
   SMEAttrs() = default;
   SMEAttrs(unsigned Mask) { set(Mask); }
-  SMEAttrs(const Function *F)
-      : SMEAttrs(F ? F->getAttributes() : AttributeList()) {
-    if (F)
-      addKnownFunctionAttrs(F->getName());
-  }
-  SMEAttrs(const Function &F) : SMEAttrs(&F) {}
+  SMEAttrs(const Function &F) : SMEAttrs(F.getAttributes()) {}
   SMEAttrs(const AttributeList &L);
   SMEAttrs(StringRef FuncName) { addKnownFunctionAttrs(FuncName); };
 
@@ -143,6 +139,8 @@ public:
   bool operator==(SMEAttrs const &Other) const {
     return Bitmask == Other.Bitmask;
   }
+
+  friend SMECallAttrs;
 
 private:
   void addKnownFunctionAttrs(StringRef FuncName);
