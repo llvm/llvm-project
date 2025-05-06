@@ -74,52 +74,52 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
     dap.SendOutput(OutputType::Console, StringRef(attach_msg, attach_msg_len));
   }
 
-  if (args.attachCommands.empty()) {
-    // No "attachCommands", just attach normally.
-
-    // Disable async events so the attach will be successful when we return from
-    // the launch call and the launch will happen synchronously
+  {
+    // Perform the launch in synchronous mode so that we don't have to worry
+    // about process state changes during the launch.
     ScopeSyncMode scope_sync_mode(dap.debugger);
+    if (args.attachCommands.empty()) {
+      // No "attachCommands", just attach normally.
+      if (args.coreFile.empty()) {
+        if (args.gdbRemotePort != LLDB_DAP_INVALID_PORT) {
+          // If port is specified and pid is not.
+          lldb::SBListener listener = dap.debugger.GetListener();
 
-    if (args.coreFile.empty()) {
-      if (args.gdbRemotePort != LLDB_DAP_INVALID_PORT) {
-        lldb::SBListener listener = dap.debugger.GetListener();
-        std::string connect_url =
-            llvm::formatv("connect://{0}:", args.gdbRemoteHostname);
-        connect_url += std::to_string(args.gdbRemotePort);
-        dap.target.ConnectRemote(listener, connect_url.data(), "gdb-remote",
-                                 error);
+          // If the user hasn't provided the hostname property, default
+          // localhost being used.
+          std::string connect_url =
+              llvm::formatv("connect://{0}:", args.gdbRemoteHostname);
+          connect_url += std::to_string(args.gdbRemotePort);
+          dap.target.ConnectRemote(listener, connect_url.c_str(), "gdb-remote",
+                                   error);
+        } else {
+          // Attach by pid or process name.
+          lldb::SBAttachInfo attach_info;
+          if (args.pid != LLDB_INVALID_PROCESS_ID)
+            attach_info.SetProcessID(args.pid);
+          else if (!dap.configuration.program.empty())
+            attach_info.SetExecutable(dap.configuration.program.data());
+          attach_info.SetWaitForLaunch(args.waitFor, false /*async*/);
+          dap.target.Attach(attach_info, error);
+        }
       } else {
-        // Attach by pid or process name.
-        lldb::SBAttachInfo attach_info;
-        if (args.pid != LLDB_INVALID_PROCESS_ID)
-          attach_info.SetProcessID(args.pid);
-        else if (!args.configuration.program.empty())
-          attach_info.SetExecutable(args.configuration.program.data());
-        attach_info.SetWaitForLaunch(args.waitFor, false /*async*/);
-        dap.target.Attach(attach_info, error);
+        dap.target.LoadCore(args.coreFile.data(), error);
       }
-    } else
-      dap.target.LoadCore(args.coreFile.data(), error);
-  } else {
-    // We have "attachCommands" that are a set of commands that are expected
-    // to execute the commands after which a process should be created. If there
-    // is no valid process after running these commands, we have failed.
-    if (llvm::Error err = dap.RunAttachCommands(args.attachCommands))
-      return err;
+    } else {
+      // We have "attachCommands" that are a set of commands that are expected
+      // to execute the commands after which a process should be created. If
+      // there is no valid process after running these commands, we have failed.
+      if (llvm::Error err = dap.RunAttachCommands(args.attachCommands))
+        return err;
 
-    // The custom commands might have created a new target so we should use the
-    // selected target after these commands are run.
-    dap.target = dap.debugger.GetSelectedTarget();
-    if (!dap.target.IsValid())
-      return make_error<DAPError>(
-          "attachCommands failed to create a valid target");
-
-    // Make sure the process is attached and stopped before proceeding as the
-    // the launch commands are not run using the synchronous mode.
-    error = dap.WaitForProcessToStop(dap.configuration.timeout);
+      // The custom commands might have created a new target so we should use
+      // the selected target after these commands are run.
+      dap.target = dap.debugger.GetSelectedTarget();
+    }
   }
 
+  // Make sure the process is attached and stopped.
+  error = dap.WaitForProcessToStop(args.configuration.timeout);
   if (error.Fail())
     return ToError(error);
 
@@ -132,11 +132,24 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
 }
 
 void AttachRequestHandler::PostRun() const {
-  if (dap.target.GetProcess().IsValid()) {
-    SendProcessEvent(dap, Attach);
-  }
+  if (!dap.target.GetProcess().IsValid())
+    return;
 
-  dap.SendJSON(CreateEventObject("initialized"));
+  // Clients can request a baseline of currently existing threads after
+  // we acknowledge the configurationDone request.
+  // Client requests the baseline of currently existing threads after
+  // a successful or attach by sending a 'threads' request
+  // right after receiving the configurationDone response.
+  // Obtain the list of threads before we resume the process
+  dap.initial_thread_list =
+      GetThreads(dap.target.GetProcess(), dap.thread_format);
+
+  SendProcessEvent(dap, Attach);
+
+  if (dap.stop_at_entry)
+    SendThreadStoppedEvent(dap);
+  else
+    dap.target.GetProcess().Continue();
 }
 
 } // namespace lldb_dap
