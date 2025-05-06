@@ -4056,15 +4056,14 @@ SIRegisterInfo::getNumUsedPhysRegs(const MachineRegisterInfo &MRI,
 unsigned
 SIRegisterInfo::getNumDefinedPhysRegs(const MachineRegisterInfo &MRI,
                                       const TargetRegisterClass &RC) const {
-  auto isDefinedByImplicitDef = [](MachineOperand &Op) {
-    return Op.getParent()->isImplicitDef();
-  };
-
-  for (MCPhysReg Reg : reverse(RC.getRegisters()))
-    for (MCRegAliasIterator AI(Reg, this, true); AI.isValid(); ++AI)
-      if (!(MRI.def_empty(*AI) || std::all_of(MRI.def_begin(*AI), MRI.def_end(),
-                                              isDefinedByImplicitDef)))
+  for (MCPhysReg Reg : reverse(RC.getRegisters())) {
+    for (MCRegAliasIterator AI(Reg, this, true); AI.isValid(); ++AI) {
+      if (!std::all_of(
+              MRI.def_instr_begin(*AI), MRI.def_instr_end(),
+              [](const MachineInstr &MI) { return MI.isImplicitDef(); }))
         return getHWRegIndex(Reg) + 1;
+    }
+  }
   return 0;
 }
 
