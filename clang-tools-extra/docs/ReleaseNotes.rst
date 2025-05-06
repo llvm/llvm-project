@@ -219,6 +219,10 @@ Changes in existing checks
   tolerating fix-it breaking compilation when functions is used as pointers
   to avoid matching usage of functions within the current compilation unit.
 
+- Improved :doc:`cppcoreguidelines-missing-std-forward
+  <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by adding a
+  flag to specify the function used for forwarding instead of ``std::forward``.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
