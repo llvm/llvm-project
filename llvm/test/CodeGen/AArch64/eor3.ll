@@ -17,8 +17,11 @@ define <16 x i8> @eor3_16x8_left(<16 x i8> %0, <16 x i8> %1, <16 x i8> %2) {
 ;
 ; SVE2-LABEL: eor3_16x8_left:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    eor v0.16b, v0.16b, v1.16b
-; SVE2-NEXT:    eor v0.16b, v2.16b, v0.16b
+; SVE2-NEXT:    // kill: def $q2 killed $q2 def $z2
+; SVE2-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE2-NEXT:    eor3 z2.d, z2.d, z0.d, z1.d
+; SVE2-NEXT:    mov v0.16b, v2.16b
 ; SVE2-NEXT:    ret
   %4 = xor <16 x i8> %0, %1
   %5 = xor <16 x i8> %2, %4
@@ -39,8 +42,11 @@ define <16 x i8> @eor3_16x8_right(<16 x i8> %0, <16 x i8> %1, <16 x i8> %2) {
 ;
 ; SVE2-LABEL: eor3_16x8_right:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    eor v1.16b, v1.16b, v2.16b
-; SVE2-NEXT:    eor v0.16b, v1.16b, v0.16b
+; SVE2-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE2-NEXT:    // kill: def $q2 killed $q2 def $z2
+; SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE2-NEXT:    eor3 z1.d, z1.d, z2.d, z0.d
+; SVE2-NEXT:    mov v0.16b, v1.16b
 ; SVE2-NEXT:    ret
   %4 = xor <16 x i8> %1, %2
   %5 = xor <16 x i8> %4, %0
@@ -61,8 +67,11 @@ define <8 x i16> @eor3_8x16_left(<8 x i16> %0, <8 x i16> %1, <8 x i16> %2) {
 ;
 ; SVE2-LABEL: eor3_8x16_left:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    eor v0.16b, v0.16b, v1.16b
-; SVE2-NEXT:    eor v0.16b, v2.16b, v0.16b
+; SVE2-NEXT:    // kill: def $q2 killed $q2 def $z2
+; SVE2-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE2-NEXT:    eor3 z2.d, z2.d, z0.d, z1.d
+; SVE2-NEXT:    mov v0.16b, v2.16b
 ; SVE2-NEXT:    ret
   %4 = xor <8 x i16> %0, %1
   %5 = xor <8 x i16> %2, %4
@@ -83,8 +92,11 @@ define <8 x i16> @eor3_8x16_right(<8 x i16> %0, <8 x i16> %1, <8 x i16> %2) {
 ;
 ; SVE2-LABEL: eor3_8x16_right:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    eor v1.16b, v1.16b, v2.16b
-; SVE2-NEXT:    eor v0.16b, v1.16b, v0.16b
+; SVE2-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE2-NEXT:    // kill: def $q2 killed $q2 def $z2
+; SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE2-NEXT:    eor3 z1.d, z1.d, z2.d, z0.d
+; SVE2-NEXT:    mov v0.16b, v1.16b
 ; SVE2-NEXT:    ret
   %4 = xor <8 x i16> %1, %2
   %5 = xor <8 x i16> %4, %0
@@ -105,8 +117,11 @@ define <4 x i32> @eor3_4x32_left(<4 x i32> %0, <4 x i32> %1, <4 x i32> %2) {
 ;
 ; SVE2-LABEL: eor3_4x32_left:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    eor v0.16b, v0.16b, v1.16b
-; SVE2-NEXT:    eor v0.16b, v2.16b, v0.16b
+; SVE2-NEXT:    // kill: def $q2 killed $q2 def $z2
+; SVE2-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE2-NEXT:    eor3 z2.d, z2.d, z0.d, z1.d
+; SVE2-NEXT:    mov v0.16b, v2.16b
 ; SVE2-NEXT:    ret
   %4 = xor <4 x i32> %0, %1
   %5 = xor <4 x i32> %2, %4
@@ -127,8 +142,11 @@ define <4 x i32> @eor3_4x32_right(<4 x i32> %0, <4 x i32> %1, <4 x i32> %2) {
 ;
 ; SVE2-LABEL: eor3_4x32_right:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    eor v1.16b, v1.16b, v2.16b
-; SVE2-NEXT:    eor v0.16b, v1.16b, v0.16b
+; SVE2-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE2-NEXT:    // kill: def $q2 killed $q2 def $z2
+; SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE2-NEXT:    eor3 z1.d, z1.d, z2.d, z0.d
+; SVE2-NEXT:    mov v0.16b, v1.16b
 ; SVE2-NEXT:    ret
   %4 = xor <4 x i32> %1, %2
   %5 = xor <4 x i32> %4, %0
@@ -149,8 +167,11 @@ define <2 x i64> @eor3_2x64_left(<2 x i64> %0, <2 x i64> %1, <2 x i64> %2) {
 ;
 ; SVE2-LABEL: eor3_2x64_left:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    eor v0.16b, v0.16b, v1.16b
-; SVE2-NEXT:    eor v0.16b, v2.16b, v0.16b
+; SVE2-NEXT:    // kill: def $q2 killed $q2 def $z2
+; SVE2-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE2-NEXT:    eor3 z2.d, z2.d, z0.d, z1.d
+; SVE2-NEXT:    mov v0.16b, v2.16b
 ; SVE2-NEXT:    ret
   %4 = xor <2 x i64> %0, %1
   %5 = xor <2 x i64> %2, %4
@@ -171,8 +192,11 @@ define <2 x i64> @eor3_2x64_right(<2 x i64> %0, <2 x i64> %1, <2 x i64> %2) {
 ;
 ; SVE2-LABEL: eor3_2x64_right:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    eor v1.16b, v1.16b, v2.16b
-; SVE2-NEXT:    eor v0.16b, v1.16b, v0.16b
+; SVE2-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE2-NEXT:    // kill: def $q2 killed $q2 def $z2
+; SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE2-NEXT:    eor3 z1.d, z1.d, z2.d, z0.d
+; SVE2-NEXT:    mov v0.16b, v1.16b
 ; SVE2-NEXT:    ret
   %4 = xor <2 x i64> %1, %2
   %5 = xor <2 x i64> %4, %0
