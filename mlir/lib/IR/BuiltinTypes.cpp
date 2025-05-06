@@ -484,14 +484,6 @@ bool mlir::detail::isSupportedMemorySpace(Attribute memorySpace) {
   return false;
 }
 
-Attribute mlir::detail::wrapIntegerMemorySpace(unsigned memorySpace,
-                                               MLIRContext *ctx) {
-  if (memorySpace == 0)
-    return nullptr;
-
-  return IntegerAttr::get(IntegerType::get(ctx, 64), memorySpace);
-}
-
 Attribute mlir::detail::skipDefaultMemorySpace(Attribute memorySpace) {
   IntegerAttr intMemorySpace = llvm::dyn_cast_or_null<IntegerAttr>(memorySpace);
   if (intMemorySpace && intMemorySpace.getValue() == 0)
@@ -578,46 +570,6 @@ MemRefType::getChecked(function_ref<InFlightDiagnostic()> emitErrorFn,
 
   // Drop default memory space value and replace it with empty attribute.
   memorySpace = skipDefaultMemorySpace(memorySpace);
-
-  return Base::getChecked(emitErrorFn, elementType.getContext(), shape,
-                          elementType, layout, memorySpace);
-}
-
-MemRefType MemRefType::get(ArrayRef<int64_t> shape, Type elementType,
-                           AffineMap map, unsigned memorySpaceInd) {
-
-  // Use default layout for empty map.
-  if (!map)
-    map = AffineMap::getMultiDimIdentityMap(shape.size(),
-                                            elementType.getContext());
-
-  // Wrap AffineMap into Attribute.
-  auto layout = AffineMapAttr::get(map);
-
-  // Convert deprecated integer-like memory space to Attribute.
-  Attribute memorySpace =
-      wrapIntegerMemorySpace(memorySpaceInd, elementType.getContext());
-
-  return Base::get(elementType.getContext(), shape, elementType, layout,
-                   memorySpace);
-}
-
-MemRefType
-MemRefType::getChecked(function_ref<InFlightDiagnostic()> emitErrorFn,
-                       ArrayRef<int64_t> shape, Type elementType, AffineMap map,
-                       unsigned memorySpaceInd) {
-
-  // Use default layout for empty map.
-  if (!map)
-    map = AffineMap::getMultiDimIdentityMap(shape.size(),
-                                            elementType.getContext());
-
-  // Wrap AffineMap into Attribute.
-  auto layout = AffineMapAttr::get(map);
-
-  // Convert deprecated integer-like memory space to Attribute.
-  Attribute memorySpace =
-      wrapIntegerMemorySpace(memorySpaceInd, elementType.getContext());
 
   return Base::getChecked(emitErrorFn, elementType.getContext(), shape,
                           elementType, layout, memorySpace);

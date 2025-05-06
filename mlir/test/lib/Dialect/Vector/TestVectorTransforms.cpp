@@ -518,15 +518,17 @@ struct TestVectorScanLowering
 static Value allocateGlobalSharedMemory(Location loc, OpBuilder &builder,
                                         gpu::WarpExecuteOnLane0Op warpOp,
                                         Type type) {
-  static constexpr int64_t kSharedMemorySpace = 3;
+  Attribute sharedMemorySpaceAttr =
+      builder.getAttr<gpu::AddressSpaceAttr>(gpu::AddressSpace::Workgroup);
   // Compute type of shared memory buffer.
   MemRefType memrefType;
   if (auto vectorType = dyn_cast<VectorType>(type)) {
     memrefType =
-        MemRefType::get(vectorType.getShape(), vectorType.getElementType(), {},
-                        kSharedMemorySpace);
+        MemRefType::get(vectorType.getShape(), vectorType.getElementType(),
+                        MemRefLayoutAttrInterface{}, sharedMemorySpaceAttr);
   } else {
-    memrefType = MemRefType::get({1}, type, {}, kSharedMemorySpace);
+    memrefType = MemRefType::get({1}, type, MemRefLayoutAttrInterface{},
+                                 sharedMemorySpaceAttr);
   }
 
   // Get symbol table holding all shared memory globals.
