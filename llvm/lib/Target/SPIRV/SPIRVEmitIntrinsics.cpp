@@ -1108,7 +1108,7 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
   IRBuilder<> B(Ctx);
   for (auto &OpIt : Ops) {
     Value *Op = OpIt.first;
-    if (!Op->hasUseList() || Op->use_empty())
+    if (Op->use_empty())
       continue;
     if (AskOps && !AskOps->contains(Op))
       continue;
@@ -1124,7 +1124,8 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
       continue;
     Value *OpTyVal = getNormalizedPoisonValue(KnownElemTy);
     Type *OpTy = Op->getType();
-    if (!Ty || AskTy || isUntypedPointerTy(Ty) || isTodoType(Op)) {
+    if (Op->hasUseList() &&
+        (!Ty || AskTy || isUntypedPointerTy(Ty) || isTodoType(Op))) {
       Type *PrevElemTy = GR->findDeducedElementType(Op);
       GR->addDeducedElementType(Op, normalizeType(KnownElemTy));
       // check if KnownElemTy is complete
@@ -1635,9 +1636,6 @@ void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
   for (unsigned OpIdx = 0; OpIdx < CI->arg_size(); OpIdx++) {
     Value *ArgOperand = CI->getArgOperand(OpIdx);
     if (!isPointerTy(ArgOperand->getType()))
-      continue;
-
-    if (!ArgOperand->hasUseList())
       continue;
 
     // Constants (nulls/undefs) are handled in insertAssignPtrTypeIntrs()
