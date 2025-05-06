@@ -2432,15 +2432,15 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
     Result = true;
 
   else if (((SGMask & SchedGroupMask::DS) != SchedGroupMask::NONE) &&
-           (TII->isDS(MI) || TII->isLDSDMA(MI)))
+           TII->isDS(MI))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::DS_READ) != SchedGroupMask::NONE) &&
-           MI.mayLoad() && (TII->isDS(MI) || TII->isLDSDMA(MI)))
+           MI.mayLoad() && TII->isDS(MI))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::DS_WRITE) != SchedGroupMask::NONE) &&
-           MI.mayStore() && (TII->isDS(MI) || TII->isLDSDMA(MI)))
+           MI.mayStore() && TII->isDS(MI))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::TRANS) != SchedGroupMask::NONE) &&
