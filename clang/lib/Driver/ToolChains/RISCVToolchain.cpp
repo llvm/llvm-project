@@ -49,7 +49,9 @@ bool RISCVToolChain::hasGCCToolchain(const Driver &D,
 /// RISC-V Toolchain
 RISCVToolChain::RISCVToolChain(const Driver &D, const llvm::Triple &Triple,
                                const ArgList &Args)
-    : Generic_ELF(D, Triple, Args) {
+    : Generic_ELF(D, Triple, Args), UseLLD{Args.getLastArgValue(
+                                                   options::OPT_fuse_ld_EQ)
+                                               .equals_insensitive("lld")} {
   GCCInstallation.init(Triple, Args);
   if (GCCInstallation.isValid()) {
     Multilibs = GCCInstallation.getMultilibs();

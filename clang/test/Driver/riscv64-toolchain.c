@@ -121,6 +121,31 @@
 // C-RV64IMAC-BAREMETAL-MULTI-LP64: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
 // C-RV64IMAC-BAREMETAL-MULTI-LP64: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/rv64imac/lp64/crtend.o"
 
+// Check that lto works in riscv-toolchain when explicitly specified lld as linker.
+// RUN: env "PATH=" %clang -### %s -fuse-ld=lld -flto \
+// RUN:   -B%S/Inputs/lld --target=riscv64-unknown-elf --rtlib=platform --sysroot= \
+// RUN:   -march=rv64imac -mabi=lp64\
+// RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_elf_sdk 2>&1 \
+// RUN:   | FileCheck -check-prefix=C-RV64IMAC-BAREMETAL-LTO-LP64 %s
+
+// C-RV64IMAC-BAREMETAL-LTO-LP64: "{{.*}}lld"
+// C-RV64IMAC-BAREMETAL-LTO-LP64: "-m" "elf64lriscv"
+// C-RV64IMAC-BAREMETAL-LTO-LP64: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/../../../../riscv64-unknown-elf/lib/rv64imac/lp64/crt0.o"
+// C-RV64IMAC-BAREMETAL-LTO-LP64: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/rv64imac/lp64/crtbegin.o"
+// C-RV64IMAC-BAREMETAL-LTO-LP64: "-L{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0"
+// C-RV64IMAC-BAREMETAL-LTO-LP64: "-L{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/../../../../riscv64-unknown-elf/lib"
+// C-RV64IMAC-BAREMETAL-LTO-LP64: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
+// C-RV64IMAC-BAREMETAL-LTO-LP64: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/rv64imac/lp64/crtend.o"
+
+// Check driver error when lto is used without specified lld linker.
+// RUN: not env "PATH=" %clang -### %s -flto \
+// RUN:   --target=riscv64-unknown-elf --rtlib=platform --sysroot= \
+// RUN:   -march=rv64imac -mabi=lp64\
+// RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_elf_sdk 2>&1 \
+// RUN:   | FileCheck -check-prefix=C-RV64IMAC-BAREMETAL-LTO-FAIL-LP64 %s
+
+// C-RV64IMAC-BAREMETAL-LTO-FAIL-LP64: error: 'riscv64-unknown-unknown-elf': unable to pass LLVM bit-code files to linker
+
 // RUN: env "PATH=" %clang -### %s -fuse-ld=ld \
 // RUN:   --target=riscv64-unknown-elf --rtlib=platform --unwindlib=platform --sysroot= \
 // RUN:   -march=rv64imafdc -mabi=lp64d \
