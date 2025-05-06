@@ -1829,6 +1829,26 @@ private:
     setCurrentPosition(stmt.source);
     assert(stmt.typedCall && "Call was not analyzed");
     mlir::Value res{};
+
+    // Set 'no_inline', 'inline_hint' or 'always_inline' to true on the
+    // ProcedureRef. The NoInline and AlwaysInline attribute will be set in
+    // genProcedureRef later.
+    for (const auto *dir : eval.dirs) {
+      Fortran::common::visit(
+          Fortran::common::visitors{
+              [&](const Fortran::parser::CompilerDirective::ForceInline &) {
+                stmt.typedCall->set_alwaysInline(true);
+              },
+              [&](const Fortran::parser::CompilerDirective::Inline &) {
+                stmt.typedCall->set_inlineHint(true);
+              },
+              [&](const Fortran::parser::CompilerDirective::NoInline &) {
+                stmt.typedCall->set_noInline(true);
+              },
+              [&](const auto &) {}},
+          dir->u);
+    }
+
     if (lowerToHighLevelFIR()) {
       std::optional<mlir::Type> resultType;
       if (stmt.typedCall->hasAlternateReturns())
@@ -2054,6 +2074,50 @@ private:
     // so no clean-up needs to be generated for these entities.
   }
 
+  void attachInlineAttributes(
+      mlir::Operation &op,
+      const llvm::ArrayRef<const Fortran::parser::CompilerDirective *> &dirs) {
+    if (dirs.empty())
+      return;
+
+    for (mlir::Value operand : op.getOperands()) {
+      if (operand.getDefiningOp())
+        attachInlineAttributes(*operand.getDefiningOp(), dirs);
+    }
+
+    if (fir::CallOp callOp = mlir::dyn_cast<fir::CallOp>(op)) {
+      for (const auto *dir : dirs) {
+        Fortran::common::visit(
+            Fortran::common::visitors{
+                [&](const Fortran::parser::CompilerDirective::NoInline &) {
+                  callOp.setInlineAttr(fir::FortranInlineEnum::no_inline);
+                },
+                [&](const Fortran::parser::CompilerDirective::Inline &) {
+                  callOp.setInlineAttr(fir::FortranInlineEnum::inline_hint);
+                },
+                [&](const Fortran::parser::CompilerDirective::ForceInline &) {
+                  callOp.setInlineAttr(fir::FortranInlineEnum::always_inline);
+                },
+                [&](const auto &) {}},
+            dir->u);
+      }
+    }
+  }
+
+  void attachAttributesToDoLoopOperations(
+      fir::DoLoopOp &doLoop,
+      llvm::SmallVectorImpl<const Fortran::parser::CompilerDirective *> &dirs) {
+    if (!doLoop.getOperation() || dirs.empty())
+      return;
+
+    for (mlir::Block &block : doLoop.getRegion()) {
+      for (mlir::Operation &op : block.getOperations()) {
+        if (!dirs.empty())
+          attachInlineAttributes(op, dirs);
+      }
+    }
+  }
+
   /// Generate FIR for a DO construct. There are six variants:
   ///  - unstructured infinite and while loops
   ///  - structured and unstructured increment loops
@@ -2163,6 +2227,10 @@ private:
 
     // This call may generate a branch in some contexts.
     genFIR(endDoEval, unstructuredContext);
+
+    // Add attribute(s) on operations in fir::DoLoopOp if necessary
+    for (IncrementLoopInfo &info : incrementLoopNestInfo)
+      attachAttributesToDoLoopOperations(info.doLoop, doStmtEval.dirs);
   }
 
   /// Generate FIR to evaluate loop control values (lower, upper and step).
@@ -2936,6 +3004,26 @@ private:
       e->dirs.push_back(&dir);
   }
 
+  void
+  attachInliningDirectiveToStmt(const Fortran::parser::CompilerDirective &dir,
+                                Fortran::lower::pft::Evaluation *e) {
+    while (e->isDirective())
+      e = e->lexicalSuccessor;
+
+    // If the successor is a statement or a do loop, the compiler
+    // will perform inlining.
+    if (e->isA<Fortran::parser::CallStmt>() ||
+        e->isA<Fortran::parser::NonLabelDoStmt>() ||
+        e->isA<Fortran::parser::AssignmentStmt>()) {
+      e->dirs.push_back(&dir);
+    } else {
+      mlir::Location loc = toLocation();
+      mlir::emitWarning(loc,
+                        "Inlining directive not in front of loops, function"
+                        "call or assignment.\n");
+    }
+  }
+
   void genFIR(const Fortran::parser::CompilerDirective &dir) {
     Fortran::lower::pft::Evaluation &eval = getEval();
 
@@ -2958,6 +3046,15 @@ private:
             },
             [&](const Fortran::parser::CompilerDirective::NoUnrollAndJam &) {
               attachDirectiveToLoop(dir, &eval);
+            },
+            [&](const Fortran::parser::CompilerDirective::ForceInline &) {
+              attachInliningDirectiveToStmt(dir, &eval);
+            },
+            [&](const Fortran::parser::CompilerDirective::Inline &) {
+              attachInliningDirectiveToStmt(dir, &eval);
+            },
+            [&](const Fortran::parser::CompilerDirective::NoInline &) {
+              attachInliningDirectiveToStmt(dir, &eval);
             },
             [&](const auto &) {}},
         dir.u);
@@ -4762,7 +4859,9 @@ private:
 
   void genDataAssignment(
       const Fortran::evaluate::Assignment &assign,
-      const Fortran::evaluate::ProcedureRef *userDefinedAssignment) {
+      const Fortran::evaluate::ProcedureRef *userDefinedAssignment,
+      const llvm::ArrayRef<const Fortran::parser::CompilerDirective *> &dirs =
+          {}) {
     mlir::Location loc = getCurrentLocation();
     fir::FirOpBuilder &builder = getFirOpBuilder();
 
@@ -4835,12 +4934,22 @@ private:
       Fortran::lower::StatementContext localStmtCtx;
       hlfir::Entity rhs = evaluateRhs(localStmtCtx);
       hlfir::Entity lhs = evaluateLhs(localStmtCtx);
-      if (isCUDATransfer && !hasCUDAImplicitTransfer)
+      if (isCUDATransfer && !hasCUDAImplicitTransfer) {
         genCUDADataTransfer(builder, loc, assign, lhs, rhs);
-      else
+      } else {
+        // If RHS or LHS have a CallOp in their expression, this operation will
+        // have the 'no_inline' or 'always_inline' attribute if there is a
+        // directive just before the assignement.
+        if (!dirs.empty()) {
+          if (rhs.getDefiningOp())
+            attachInlineAttributes(*rhs.getDefiningOp(), dirs);
+          if (lhs.getDefiningOp())
+            attachInlineAttributes(*lhs.getDefiningOp(), dirs);
+        }
         builder.create<hlfir::AssignOp>(loc, rhs, lhs,
                                         isWholeAllocatableAssignment,
                                         keepLhsLengthInAllocatableAssignment);
+      }
       if (hasCUDAImplicitTransfer && !isInDeviceContext) {
         localSymbols.popScope();
         for (mlir::Value temp : implicitTemps)
@@ -4908,16 +5017,21 @@ private:
   }
 
   /// Shared for both assignments and pointer assignments.
-  void genAssignment(const Fortran::evaluate::Assignment &assign) {
+  void
+  genAssignment(const Fortran::evaluate::Assignment &assign,
+                const llvm::ArrayRef<const Fortran::parser::CompilerDirective *>
+                    &dirs = {}) {
     mlir::Location loc = toLocation();
     if (lowerToHighLevelFIR()) {
       Fortran::common::visit(
           Fortran::common::visitors{
               [&](const Fortran::evaluate::Assignment::Intrinsic &) {
-                genDataAssignment(assign, /*userDefinedAssignment=*/nullptr);
+                genDataAssignment(assign, /*userDefinedAssignment=*/nullptr,
+                                  dirs);
               },
               [&](const Fortran::evaluate::ProcedureRef &procRef) {
-                genDataAssignment(assign, /*userDefinedAssignment=*/&procRef);
+                genDataAssignment(assign, /*userDefinedAssignment=*/&procRef,
+                                  dirs);
               },
               [&](const Fortran::evaluate::Assignment::BoundsSpec &lbExprs) {
                 if (isInsideHlfirForallOrWhere())
@@ -5322,7 +5436,8 @@ private:
   }
 
   void genFIR(const Fortran::parser::AssignmentStmt &stmt) {
-    genAssignment(*stmt.typedAssignment->v);
+    Fortran::lower::pft::Evaluation &eval = getEval();
+    genAssignment(*stmt.typedAssignment->v, eval.dirs);
   }
 
   void genFIR(const Fortran::parser::SyncAllStmt &stmt) {
