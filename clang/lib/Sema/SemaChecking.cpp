@@ -11647,6 +11647,29 @@ static void DiagnoseFloatingImpCast(Sema &S, Expr *E, QualType T,
   }
 }
 
+static void CheckCommaOperand(Sema &S, Expr *E, QualType T, SourceLocation CC,
+                              bool Check) {
+  E = E->IgnoreParenImpCasts();
+  AnalyzeImplicitConversions(S, E, CC);
+
+  if (Check && E->getType() != T)
+    S.CheckImplicitConversion(E, T, CC);
+}
+
+/// Analyze the given comma operator. The basic idea behind the analysis is to
+/// analyze the left and right operands slightly differently. The left operand
+/// needs to check whether the operand itself has an implicit conversion, but
+/// not whether the left operand induces an implicit conversion for the entire
+/// comma expression itself. This is similar to how CheckConditionalOperand
+/// behaves; it's as-if the correct operand were directly used for the implicit
+/// conversion check.
+static void AnalyzeCommaOperator(Sema &S, BinaryOperator *E, QualType T) {
+  assert(E->isCommaOp() && "Must be a comma operator");
+
+  CheckCommaOperand(S, E->getLHS(), T, E->getOperatorLoc(), false);
+  CheckCommaOperand(S, E->getRHS(), T, E->getOperatorLoc(), true);
+}
+
 /// Analyze the given compound assignment for the possible losing of
 /// floating-point precision.
 static void AnalyzeCompoundAssignment(Sema &S, BinaryOperator *E) {
@@ -12464,7 +12487,7 @@ static void AnalyzeImplicitConversions(
           << OrigE->getSourceRange() << T->isBooleanType()
           << FixItHint::CreateReplacement(UO->getBeginLoc(), "!");
 
-  if (const auto *BO = dyn_cast<BinaryOperator>(SourceExpr))
+  if (auto *BO = dyn_cast<BinaryOperator>(SourceExpr))
     if ((BO->getOpcode() == BO_And || BO->getOpcode() == BO_Or) &&
         BO->getLHS()->isKnownToHaveBooleanValue() &&
         BO->getRHS()->isKnownToHaveBooleanValue() &&
@@ -12490,6 +12513,9 @@ static void AnalyzeImplicitConversions(
                    (BO->getOpcode() == BO_And ? "&&" : "||"));
         S.Diag(BO->getBeginLoc(), diag::note_cast_operand_to_int);
       }
+    } else if (BO->isCommaOp() && !S.getLangOpts().CPlusPlus) {
+      AnalyzeCommaOperator(S, BO, T);
+      return;
     }
 
   // For conditional operators, we analyze the arguments as if they
