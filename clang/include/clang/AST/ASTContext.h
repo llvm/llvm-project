@@ -243,8 +243,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::FoldingSet<PackExpansionType> PackExpansionTypes;
   mutable llvm::FoldingSet<ObjCObjectTypeImpl> ObjCObjectTypes;
   mutable llvm::FoldingSet<ObjCObjectPointerType> ObjCObjectPointerTypes;
-  mutable llvm::FoldingSet<DependentUnaryTransformType>
-    DependentUnaryTransformTypes;
+  mutable llvm::FoldingSet<UnaryTransformType> UnaryTransformTypes;
   // An AutoType can have a dependency on another AutoType via its template
   // arguments. Since both dependent and dependency are on the same set,
   // we can end up in an infinite recursion when looking for a node if we used
@@ -329,6 +328,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// This is lazily created.  This is intentionally not serialized.
   mutable llvm::StringMap<StringLiteral *> StringLiteralCache;
 
+  mutable llvm::DenseSet<const FunctionDecl *> DestroyingOperatorDeletes;
+  mutable llvm::DenseSet<const FunctionDecl *> TypeAwareOperatorNewAndDeletes;
+
   /// The next string literal "version" to allocate during constant evaluation.
   /// This is used to distinguish between repeated evaluations of the same
   /// string literal.
@@ -363,9 +365,6 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::ContextualFoldingSet<CanonicalTemplateTemplateParm,
                                      const ASTContext&>
     CanonTemplateTemplateParms;
-
-  TemplateTemplateParmDecl *
-    getCanonicalTemplateTemplateParmDecl(TemplateTemplateParmDecl *TTP) const;
 
   /// The typedef for the __int128_t type.
   mutable TypedefDecl *Int128Decl = nullptr;
@@ -617,6 +616,20 @@ private:
   /// that value exceeds the bitfield size of ParmVarDeclBits.ParameterIndex.
   using ParameterIndexTable = llvm::DenseMap<const VarDecl *, unsigned>;
   ParameterIndexTable ParamIndices;
+
+public:
+  struct CXXRecordDeclRelocationInfo {
+    unsigned IsRelocatable;
+    unsigned IsReplaceable;
+  };
+  std::optional<CXXRecordDeclRelocationInfo>
+  getRelocationInfoForCXXRecord(const CXXRecordDecl *) const;
+  void setRelocationInfoForCXXRecord(const CXXRecordDecl *,
+                                     CXXRecordDeclRelocationInfo);
+
+private:
+  llvm::DenseMap<const CXXRecordDecl *, CXXRecordDeclRelocationInfo>
+      RelocatableClasses;
 
   ImportDecl *FirstLocalImport = nullptr;
   ImportDecl *LastLocalImport = nullptr;
@@ -1565,8 +1578,8 @@ public:
   /// Return a non-unique reference to the type for a variable array of
   /// the specified element type.
   QualType getVariableArrayType(QualType EltTy, Expr *NumElts,
-                                ArraySizeModifier ASM, unsigned IndexTypeQuals,
-                                SourceRange Brackets) const;
+                                ArraySizeModifier ASM,
+                                unsigned IndexTypeQuals) const;
 
   /// Return a non-unique reference to the type for a dependently-sized
   /// array of the specified element type.
@@ -1575,8 +1588,7 @@ public:
   /// point.
   QualType getDependentSizedArrayType(QualType EltTy, Expr *NumElts,
                                       ArraySizeModifier ASM,
-                                      unsigned IndexTypeQuals,
-                                      SourceRange Brackets) const;
+                                      unsigned IndexTypeQuals) const;
 
   /// Return a unique reference to the type for an incomplete array of
   /// the specified element type.
@@ -1808,22 +1820,26 @@ public:
                           bool ParameterPack,
                           TemplateTypeParmDecl *ParmDecl = nullptr) const;
 
-  QualType getTemplateSpecializationType(TemplateName T,
-                                         ArrayRef<TemplateArgument> Args,
-                                         QualType Canon = QualType()) const;
+  QualType getCanonicalTemplateSpecializationType(
+      TemplateName T, ArrayRef<TemplateArgument> CanonicalArgs) const;
 
   QualType
-  getCanonicalTemplateSpecializationType(TemplateName T,
-                                         ArrayRef<TemplateArgument> Args) const;
+  getTemplateSpecializationType(TemplateName T,
+                                ArrayRef<TemplateArgument> SpecifiedArgs,
+                                ArrayRef<TemplateArgument> CanonicalArgs,
+                                QualType Underlying = QualType()) const;
 
-  QualType getTemplateSpecializationType(TemplateName T,
-                                         ArrayRef<TemplateArgumentLoc> Args,
-                                         QualType Canon = QualType()) const;
+  QualType
+  getTemplateSpecializationType(TemplateName T,
+                                ArrayRef<TemplateArgumentLoc> SpecifiedArgs,
+                                ArrayRef<TemplateArgument> CanonicalArgs,
+                                QualType Canon = QualType()) const;
 
-  TypeSourceInfo *
-  getTemplateSpecializationTypeInfo(TemplateName T, SourceLocation TLoc,
-                                    const TemplateArgumentListInfo &Args,
-                                    QualType Canon = QualType()) const;
+  TypeSourceInfo *getTemplateSpecializationTypeInfo(
+      TemplateName T, SourceLocation TLoc,
+      const TemplateArgumentListInfo &SpecifiedArgs,
+      ArrayRef<TemplateArgument> CanonicalArgs,
+      QualType Canon = QualType()) const;
 
   QualType getParenType(QualType NamedType) const;
 
@@ -2939,6 +2955,21 @@ public:
   TemplateArgument getCanonicalTemplateArgument(const TemplateArgument &Arg)
     const;
 
+  /// Canonicalize the given template argument list.
+  ///
+  /// Returns true if any arguments were non-canonical, false otherwise.
+  bool
+  canonicalizeTemplateArguments(MutableArrayRef<TemplateArgument> Args) const;
+
+  /// Canonicalize the given TemplateTemplateParmDecl.
+  TemplateTemplateParmDecl *
+  getCanonicalTemplateTemplateParmDecl(TemplateTemplateParmDecl *TTP) const;
+
+  TemplateTemplateParmDecl *findCanonicalTemplateTemplateParmDeclInternal(
+      TemplateTemplateParmDecl *TTP) const;
+  TemplateTemplateParmDecl *insertCanonicalTemplateTemplateParmDeclInternal(
+      TemplateTemplateParmDecl *CanonTTP) const;
+
   /// Type Query functions.  If the type is an instance of the specified class,
   /// return the Type pointer for the underlying maximally pretty type.  This
   /// is a member of ASTContext because this may need to do some amount of
@@ -3130,6 +3161,7 @@ public:
   QualType mergeTransparentUnionType(QualType, QualType,
                                      bool OfBlockPointer=false,
                                      bool Unqualified = false);
+  QualType mergeTagDefinitions(QualType, QualType);
 
   QualType mergeObjCGCQualifiers(QualType, QualType);
 
@@ -3339,6 +3371,15 @@ public:
 
   void setStaticLocalNumber(const VarDecl *VD, unsigned Number);
   unsigned getStaticLocalNumber(const VarDecl *VD) const;
+
+  bool hasSeenTypeAwareOperatorNewOrDelete() const {
+    return !TypeAwareOperatorNewAndDeletes.empty();
+  }
+  void setIsDestroyingOperatorDelete(const FunctionDecl *FD, bool IsDestroying);
+  bool isDestroyingOperatorDelete(const FunctionDecl *FD) const;
+  void setIsTypeAwareOperatorNewOrDelete(const FunctionDecl *FD,
+                                         bool IsTypeAware);
+  bool isTypeAwareOperatorNewOrDelete(const FunctionDecl *FD) const;
 
   /// Retrieve the context for computing mangling numbers in the given
   /// DeclContext.

@@ -103,7 +103,6 @@ static cl::opt<bool> ExpandConstantExprs(
         "Expand constant expressions to instructions for testing purposes"));
 
 extern cl::opt<bool> UseNewDbgInfoFormat;
-extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
 
 namespace {
 
@@ -1357,6 +1356,10 @@ static AtomicRMWInst::BinOp getDecodedRMWOperation(unsigned Val) {
   case bitc::RMW_FSUB: return AtomicRMWInst::FSub;
   case bitc::RMW_FMAX: return AtomicRMWInst::FMax;
   case bitc::RMW_FMIN: return AtomicRMWInst::FMin;
+  case bitc::RMW_FMAXIMUM:
+    return AtomicRMWInst::FMaximum;
+  case bitc::RMW_FMINIMUM:
+    return AtomicRMWInst::FMinimum;
   case bitc::RMW_UINC_WRAP:
     return AtomicRMWInst::UIncWrap;
   case bitc::RMW_UDEC_WRAP:
@@ -1650,7 +1653,7 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
               FwdBBs[BBID] = BasicBlock::Create(Context);
             BB = FwdBBs[BBID];
           }
-          C = BlockAddress::get(Fn, BB);
+          C = BlockAddress::get(Fn->getType(), BB);
           break;
         }
         case BitcodeConstant::ConstantStructOpcode: {
@@ -3953,11 +3956,7 @@ Error BitcodeReader::globalCleanup() {
   for (Function &F : *TheModule) {
     MDLoader->upgradeDebugIntrinsics(F);
     Function *NewFn;
-    // If PreserveInputDbgFormat=true, then we don't know whether we want
-    // intrinsics or records, and we won't perform any conversions in either
-    // case, so don't upgrade intrinsics to records.
-    if (UpgradeIntrinsicFunction(
-            &F, NewFn, PreserveInputDbgFormat != cl::boolOrDefault::BOU_TRUE))
+    if (UpgradeIntrinsicFunction(&F, NewFn))
       UpgradedIntrinsics[&F] = NewFn;
     // Look for functions that rely on old function attribute behavior.
     UpgradeFunctionAttributes(F);
@@ -3997,8 +3996,6 @@ Error BitcodeReader::rememberAndSkipFunctionBodies() {
   // An old bitcode file with the symbol table at the end would have
   // finished the parse greedily.
   assert(SeenValueSymbolTable);
-
-  SmallVector<uint64_t, 64> Record;
 
   while (true) {
     Expected<llvm::BitstreamEntry> MaybeEntry = Stream.advance();
@@ -7002,37 +6999,9 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
   F->setIsMaterializable(false);
 
   // All parsed Functions should load into the debug info format dictated by the
-  // Module, unless we're attempting to preserve the input debug info format.
+  // Module.
   if (SeenDebugIntrinsic && SeenDebugRecord)
     return error("Mixed debug intrinsics and debug records in bitcode module!");
-  if (PreserveInputDbgFormat == cl::boolOrDefault::BOU_TRUE) {
-    bool SeenAnyDebugInfo = SeenDebugIntrinsic || SeenDebugRecord;
-    bool NewDbgInfoFormatDesired =
-        SeenAnyDebugInfo ? SeenDebugRecord : F->getParent()->IsNewDbgInfoFormat;
-    if (SeenAnyDebugInfo) {
-      UseNewDbgInfoFormat = SeenDebugRecord;
-    }
-    // If the module's debug info format doesn't match the observed input
-    // format, then set its format now; we don't need to call the conversion
-    // function because there must be no existing intrinsics to convert.
-    // Otherwise, just set the format on this function now.
-    if (NewDbgInfoFormatDesired != F->getParent()->IsNewDbgInfoFormat)
-      F->getParent()->setNewDbgInfoFormatFlag(NewDbgInfoFormatDesired);
-    else
-      F->setNewDbgInfoFormatFlag(NewDbgInfoFormatDesired);
-  } else {
-    // If we aren't preserving formats, we use the Module flag to get our
-    // desired format instead of reading flags, in case we are lazy-loading and
-    // the format of the module has been changed since it was set by the flags.
-    // We only need to convert debug info here if we have debug records but
-    // desire the intrinsic format; everything else is a no-op or handled by the
-    // autoupgrader.
-    bool ModuleIsNewDbgInfoFormat = F->getParent()->IsNewDbgInfoFormat;
-    if (ModuleIsNewDbgInfoFormat || !SeenDebugRecord)
-      F->setNewDbgInfoFormatFlag(ModuleIsNewDbgInfoFormat);
-    else
-      F->setIsNewDbgInfoFormat(ModuleIsNewDbgInfoFormat);
-  }
 
   if (StripDebugInfo)
     stripDebugInfo(*F);
@@ -7199,10 +7168,10 @@ void ModuleSummaryIndexBitcodeReader::setValueGUID(
     StringRef SourceFileName) {
   std::string GlobalId =
       GlobalValue::getGlobalIdentifier(ValueName, Linkage, SourceFileName);
-  auto ValueGUID = GlobalValue::getGUID(GlobalId);
+  auto ValueGUID = GlobalValue::getGUIDAssumingExternalLinkage(GlobalId);
   auto OriginalNameID = ValueGUID;
   if (GlobalValue::isLocalLinkage(Linkage))
-    OriginalNameID = GlobalValue::getGUID(ValueName);
+    OriginalNameID = GlobalValue::getGUIDAssumingExternalLinkage(ValueName);
   if (PrintSummaryGUIDs)
     dbgs() << "GUID " << ValueGUID << "(" << OriginalNameID << ") is "
            << ValueName << "\n";
@@ -8112,9 +8081,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
     case bitc::FS_PERMODULE_CALLSITE_INFO: {
       unsigned ValueID = Record[0];
       SmallVector<unsigned> StackIdList;
-      for (auto R = Record.begin() + 1; R != Record.end(); R++) {
-        assert(*R < StackIds.size());
-        StackIdList.push_back(TheIndex.addOrGetStackIdIndex(StackIds[*R]));
+      for (uint64_t R : drop_begin(Record)) {
+        assert(R < StackIds.size());
+        StackIdList.push_back(TheIndex.addOrGetStackIdIndex(StackIds[R]));
       }
       ValueInfo VI = std::get<0>(getValueInfoFromValueId(ValueID));
       PendingCallsites.push_back(CallsiteInfo({VI, std::move(StackIdList)}));

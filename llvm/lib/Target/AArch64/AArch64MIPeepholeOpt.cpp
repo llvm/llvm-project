@@ -261,15 +261,18 @@ bool AArch64MIPeepholeOpt::visitORR(MachineInstr &MI) {
     // A COPY from an FPR will become a FMOVSWr, so do so now so that we know
     // that the upper bits are zero.
     if (RC != &AArch64::FPR32RegClass &&
-        ((RC != &AArch64::FPR64RegClass && RC != &AArch64::FPR128RegClass) ||
+        ((RC != &AArch64::FPR64RegClass && RC != &AArch64::FPR128RegClass &&
+          RC != &AArch64::ZPRRegClass) ||
          SrcMI->getOperand(1).getSubReg() != AArch64::ssub))
       return false;
-    Register CpySrc = SrcMI->getOperand(1).getReg();
+    Register CpySrc;
     if (SrcMI->getOperand(1).getSubReg() == AArch64::ssub) {
       CpySrc = MRI->createVirtualRegister(&AArch64::FPR32RegClass);
       BuildMI(*SrcMI->getParent(), SrcMI, SrcMI->getDebugLoc(),
               TII->get(TargetOpcode::COPY), CpySrc)
           .add(SrcMI->getOperand(1));
+    } else {
+      CpySrc = SrcMI->getOperand(1).getReg();
     }
     BuildMI(*SrcMI->getParent(), SrcMI, SrcMI->getDebugLoc(),
             TII->get(AArch64::FMOVSWr), SrcMI->getOperand(0).getReg())

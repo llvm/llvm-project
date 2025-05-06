@@ -1,11 +1,11 @@
 # Xqcibm - Qualcomm uC Bit Manipulation Extension
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcibm -riscv-no-aliases -show-encoding \
-# RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcibm -M no-aliases -show-encoding \
+# RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST,CHECK-NOALIAS %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcibm < %s \
 # RUN:     | llvm-objdump --mattr=+experimental-xqcibm -M no-aliases --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcibm -show-encoding \
-# RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
+# RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST,CHECK-ALIAS %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcibm < %s \
 # RUN:     | llvm-objdump --mattr=+experimental-xqcibm --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
@@ -118,6 +118,14 @@ qc.c.bexti x9, 8
 # CHECK-ENC: encoding: [0x41,0x96]
 qc.c.bseti x12, 16
 
-# CHECK-INST: qc.c.extu a5, 32
+# CHECK-NOALIAS: qc.c.extu a5, 32
+# CHECK-ALIAS: qc.extu a5, a5, 32, 0
 # CHECK-ENC: encoding: [0xfe,0x17]
 qc.c.extu x15, 32
+
+# Check that compress pattern for qc.extu works
+
+# CHECK-NOALIAS: qc.c.extu  a1, 11
+# CHECK-ALIAS: qc.extu a1, a1, 11, 0
+# CHECK-ENC: encoding: [0xaa,0x15]
+qc.extu x11, x11, 11, 0	

@@ -46,6 +46,7 @@
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstdint>
@@ -938,13 +939,48 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
   return false; // No other 'arm.*', 'aarch64.*'.
 }
 
-static Intrinsic::ID shouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
-  if (Name.consume_front("abs."))
-    return StringSwitch<Intrinsic::ID>(Name)
-        .Case("bf16", Intrinsic::nvvm_abs_bf16)
-        .Case("bf16x2", Intrinsic::nvvm_abs_bf16x2)
-        .Default(Intrinsic::not_intrinsic);
+static Intrinsic::ID shouldUpgradeNVPTXSharedClusterIntrinsic(Function *F,
+                                                              StringRef Name) {
+  if (Name.consume_front("mapa.shared.cluster"))
+    if (F->getReturnType()->getPointerAddressSpace() ==
+        NVPTXAS::ADDRESS_SPACE_SHARED)
+      return Intrinsic::nvvm_mapa_shared_cluster;
 
+  if (Name.consume_front("cp.async.bulk.")) {
+    Intrinsic::ID ID =
+        StringSwitch<Intrinsic::ID>(Name)
+            .Case("global.to.shared.cluster",
+                  Intrinsic::nvvm_cp_async_bulk_global_to_shared_cluster)
+            .Case("shared.cta.to.cluster",
+                  Intrinsic::nvvm_cp_async_bulk_shared_cta_to_cluster)
+            .Case("tensor.g2s.im2col.3d",
+                  Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_3d)
+            .Case("tensor.g2s.im2col.4d",
+                  Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_4d)
+            .Case("tensor.g2s.im2col.5d",
+                  Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_5d)
+            .Case("tensor.g2s.tile.1d",
+                  Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_1d)
+            .Case("tensor.g2s.tile.2d",
+                  Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_2d)
+            .Case("tensor.g2s.tile.3d",
+                  Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_3d)
+            .Case("tensor.g2s.tile.4d",
+                  Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_4d)
+            .Case("tensor.g2s.tile.5d",
+                  Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_5d)
+            .Default(Intrinsic::not_intrinsic);
+
+    if (ID != Intrinsic::not_intrinsic)
+      if (F->getArg(0)->getType()->getPointerAddressSpace() ==
+          NVPTXAS::ADDRESS_SPACE_SHARED)
+        return ID;
+  }
+
+  return Intrinsic::not_intrinsic;
+}
+
+static Intrinsic::ID shouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
   if (Name.consume_front("fma.rn."))
     return StringSwitch<Intrinsic::ID>(Name)
         .Case("bf16", Intrinsic::nvvm_fma_rn_bf16)
@@ -1016,6 +1052,12 @@ static Intrinsic::ID shouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
         .Default(Intrinsic::not_intrinsic);
 
   return Intrinsic::not_intrinsic;
+}
+
+static bool consumeNVVMPtrAddrSpace(StringRef &Name) {
+  return Name.consume_front("local") || Name.consume_front("shared") ||
+         Name.consume_front("global") || Name.consume_front("constant") ||
+         Name.consume_front("param");
 }
 
 static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
@@ -1284,6 +1326,14 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         }
       }
 
+      // Upgrade Distributed Shared Memory Intrinsics
+      Intrinsic::ID IID = shouldUpgradeNVPTXSharedClusterIntrinsic(F, Name);
+      if (IID != Intrinsic::not_intrinsic) {
+        rename(F);
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
+        return true;
+      }
+
       // The following nvvm intrinsics correspond exactly to an LLVM idiom, but
       // not to an intrinsic alone.  We expand them in UpgradeIntrinsicCall.
       //
@@ -1291,7 +1341,11 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       bool Expand = false;
       if (Name.consume_front("abs."))
         // nvvm.abs.{i,ii}
-        Expand = Name == "i" || Name == "ll";
+        Expand =
+            Name == "i" || Name == "ll" || Name == "bf16" || Name == "bf16x2";
+      else if (Name == "fabs.f" || Name == "fabs.ftz.f" || Name == "fabs.d")
+        // nvvm.fabs.{f,ftz.f,d}
+        Expand = true;
       else if (Name == "clz.ll" || Name == "popc.ll" || Name == "h2f" ||
                Name == "swap.lo.hi.b64")
         Expand = true;
@@ -1302,6 +1356,9 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       else if (Name.consume_front("atomic.load.add."))
         // nvvm.atomic.load.add.{f32.p,f64.p}
         Expand = Name.starts_with("f32.p") || Name.starts_with("f64.p");
+      else if (Name.consume_front("atomic.load.") && Name.consume_back(".32"))
+        // nvvm.atomic.load.{inc,dec}.32
+        Expand = Name == "inc" || Name == "dec";
       else if (Name.consume_front("bitcast."))
         // nvvm.bitcast.{f2i,i2f,ll2d,d2ll}
         Expand =
@@ -1310,15 +1367,11 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         // nvvm.rotate.{b32,b64,right.b64}
         Expand = Name == "b32" || Name == "b64" || Name == "right.b64";
       else if (Name.consume_front("ptr.gen.to."))
-        // nvvm.ptr.gen.to.{local,shared,global,constant}
-        Expand = Name.starts_with("local") || Name.starts_with("shared") ||
-                 Name.starts_with("global") || Name.starts_with("constant");
+        // nvvm.ptr.gen.to.{local,shared,global,constant,param}
+        Expand = consumeNVVMPtrAddrSpace(Name);
       else if (Name.consume_front("ptr."))
-        // nvvm.ptr.{local,shared,global,constant}.to.gen
-        Expand =
-            (Name.consume_front("local") || Name.consume_front("shared") ||
-             Name.consume_front("global") || Name.consume_front("constant")) &&
-            Name.starts_with(".to.gen");
+        // nvvm.ptr.{local,shared,global,constant,param}.to.gen
+        Expand = consumeNVVMPtrAddrSpace(Name) && Name.starts_with(".to.gen");
       else if (Name.consume_front("ldg.global."))
         // nvvm.ldg.global.{i,p,f}
         Expand = (Name.starts_with("i.") || Name.starts_with("f.") ||
@@ -1516,8 +1569,13 @@ bool llvm::UpgradeIntrinsicFunction(Function *F, Function *&NewFn,
   // Upgrade intrinsic attributes.  This does not change the function.
   if (NewFn)
     F = NewFn;
-  if (Intrinsic::ID id = F->getIntrinsicID())
-    F->setAttributes(Intrinsic::getAttributes(F->getContext(), id));
+  if (Intrinsic::ID id = F->getIntrinsicID()) {
+    // Only do this if the intrinsic signature is valid.
+    SmallVector<Type *> OverloadTys;
+    if (Intrinsic::getIntrinsicSignature(id, F->getFunctionType(), OverloadTys))
+      F->setAttributes(
+          Intrinsic::getAttributes(F->getContext(), id, F->getFunctionType()));
+  }
   return Upgraded;
 }
 
@@ -2308,11 +2366,28 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     Value *Cmp = Builder.CreateICmpSGE(
         Arg, llvm::Constant::getNullValue(Arg->getType()), "abs.cond");
     Rep = Builder.CreateSelect(Cmp, Arg, Neg, "abs");
+  } else if (Name == "abs.bf16" || Name == "abs.bf16x2") {
+    Type *Ty = (Name == "abs.bf16")
+                   ? Builder.getBFloatTy()
+                   : FixedVectorType::get(Builder.getBFloatTy(), 2);
+    Value *Arg = Builder.CreateBitCast(CI->getArgOperand(0), Ty);
+    Value *Abs = Builder.CreateUnaryIntrinsic(Intrinsic::nvvm_fabs, Arg);
+    Rep = Builder.CreateBitCast(Abs, CI->getType());
+  } else if (Name == "fabs.f" || Name == "fabs.ftz.f" || Name == "fabs.d") {
+    Intrinsic::ID IID = (Name == "fabs.ftz.f") ? Intrinsic::nvvm_fabs_ftz
+                                               : Intrinsic::nvvm_fabs;
+    Rep = Builder.CreateUnaryIntrinsic(IID, CI->getArgOperand(0));
   } else if (Name.starts_with("atomic.load.add.f32.p") ||
              Name.starts_with("atomic.load.add.f64.p")) {
     Value *Ptr = CI->getArgOperand(0);
     Value *Val = CI->getArgOperand(1);
     Rep = Builder.CreateAtomicRMW(AtomicRMWInst::FAdd, Ptr, Val, MaybeAlign(),
+                                  AtomicOrdering::SequentiallyConsistent);
+  } else if (Name.consume_front("atomic.load.") && Name.consume_back(".32")) {
+    Value *Ptr = CI->getArgOperand(0);
+    Value *Val = CI->getArgOperand(1);
+    auto Op = Name == "inc" ? AtomicRMWInst::UIncWrap : AtomicRMWInst::UDecWrap;
+    Rep = Builder.CreateAtomicRMW(Op, Ptr, Val, MaybeAlign(),
                                   AtomicOrdering::SequentiallyConsistent);
   } else if (Name.consume_front("max.") &&
              (Name == "s" || Name == "i" || Name == "ll" || Name == "us" ||
@@ -2377,12 +2452,8 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     Rep = Builder.CreateIntrinsic(Int64Ty, Intrinsic::fshl,
                                   {Arg, Arg, Builder.getInt64(32)});
   } else if ((Name.consume_front("ptr.gen.to.") &&
-              (Name.starts_with("local") || Name.starts_with("shared") ||
-               Name.starts_with("global") || Name.starts_with("constant"))) ||
-             (Name.consume_front("ptr.") &&
-              (Name.consume_front("local") || Name.consume_front("shared") ||
-               Name.consume_front("global") ||
-               Name.consume_front("constant")) &&
+              consumeNVVMPtrAddrSpace(Name)) ||
+             (Name.consume_front("ptr.") && consumeNVVMPtrAddrSpace(Name) &&
               Name.starts_with(".to.gen"))) {
     Rep = Builder.CreateAddrSpaceCast(CI->getArgOperand(0), CI->getType());
   } else if (Name.consume_front("ldg.global")) {
@@ -4483,9 +4554,8 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     Value *NewLdCall = Builder.CreateCall(NewFn, Args);
     Value *Ret = llvm::PoisonValue::get(RetTy);
     for (unsigned I = 0; I < N; I++) {
-      Value *Idx = ConstantInt::get(Type::getInt64Ty(C), I * MinElts);
       Value *SRet = Builder.CreateExtractValue(NewLdCall, I);
-      Ret = Builder.CreateInsertVector(RetTy, Ret, SRet, Idx);
+      Ret = Builder.CreateInsertVector(RetTy, Ret, SRet, I * MinElts);
     }
     NewCall = dyn_cast<CallInst>(Ret);
     break;
@@ -4540,9 +4610,8 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Value *Ret = llvm::PoisonValue::get(RetTy);
       unsigned MinElts = RetTy->getMinNumElements() / N;
       for (unsigned I = 0; I < N; I++) {
-        Value *Idx = ConstantInt::get(Type::getInt64Ty(C), I * MinElts);
         Value *V = CI->getArgOperand(I);
-        Ret = Builder.CreateInsertVector(RetTy, Ret, V, Idx);
+        Ret = Builder.CreateInsertVector(RetTy, Ret, V, I * MinElts);
       }
       NewCall = dyn_cast<CallInst>(Ret);
     }
@@ -4692,6 +4761,39 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Res = Builder.CreateIntCast(NewCall, CI->getType(), /*isSigned*/ true);
     NewCall->takeName(CI);
     CI->replaceAllUsesWith(Res);
+    CI->eraseFromParent();
+    return;
+  }
+  case Intrinsic::nvvm_mapa_shared_cluster: {
+    // Create a new call with the correct address space.
+    NewCall =
+        Builder.CreateCall(NewFn, {CI->getArgOperand(0), CI->getArgOperand(1)});
+    Value *Res = NewCall;
+    Res = Builder.CreateAddrSpaceCast(
+        Res, Builder.getPtrTy(NVPTXAS::ADDRESS_SPACE_SHARED));
+    NewCall->takeName(CI);
+    CI->replaceAllUsesWith(Res);
+    CI->eraseFromParent();
+    return;
+  }
+  case Intrinsic::nvvm_cp_async_bulk_global_to_shared_cluster:
+  case Intrinsic::nvvm_cp_async_bulk_shared_cta_to_cluster:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_3d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_4d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_5d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_1d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_2d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_3d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_4d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_5d: {
+    // Create a new call with the correct address space.
+    SmallVector<Value *, 4> Args(CI->args());
+    Args[0] = Builder.CreateAddrSpaceCast(
+        Args[0], Builder.getPtrTy(NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER));
+
+    NewCall = Builder.CreateCall(NewFn, Args);
+    NewCall->takeName(CI);
+    CI->replaceAllUsesWith(NewCall);
     CI->eraseFromParent();
     return;
   }

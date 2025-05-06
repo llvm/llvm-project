@@ -663,7 +663,7 @@ define float @test_fcmp_ogt_fadd_select_rewrite_flags2(float %in) {
 define float @test_fcmp_ogt_fadd_select_rewrite_and_fastmath(float %in) {
 ; CHECK-LABEL: define float @test_fcmp_ogt_fadd_select_rewrite_and_fastmath(
 ; CHECK-SAME: float [[IN:%.*]]) {
-; CHECK-NEXT:    [[SEL_NEW:%.*]] = call fast float @llvm.maxnum.f32(float [[IN]], float 0.000000e+00)
+; CHECK-NEXT:    [[SEL_NEW:%.*]] = call reassoc nnan nsz arcp contract afn float @llvm.maxnum.f32(float [[IN]], float 0.000000e+00)
 ; CHECK-NEXT:    [[ADD_NEW:%.*]] = fadd fast float [[SEL_NEW]], 1.000000e+00
 ; CHECK-NEXT:    ret float [[ADD_NEW]]
 ;

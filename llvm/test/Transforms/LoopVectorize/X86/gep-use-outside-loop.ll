@@ -14,8 +14,7 @@ define void @gep_use_in_dead_block(ptr noalias %dst, ptr %src) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i16, ptr [[TMP4]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP5]], align 2
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i16> [[WIDE_LOAD]], splat (i16 10)
-; CHECK-NEXT:    [[TMP7:%.*]] = xor <4 x i1> [[TMP6]], splat (i1 true)
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne <4 x i16> [[WIDE_LOAD]], splat (i16 10)
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i16, ptr [[DST]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i16, ptr [[TMP8]], i32 0
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i16.p0(<4 x i16> zeroinitializer, ptr [[TMP12]], i32 2, <4 x i1> [[TMP7]])
@@ -89,8 +88,7 @@ define void @gep_use_outside_loop(ptr noalias %dst, ptr %src) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i16, ptr [[TMP2]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP3]], align 2
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i16> [[WIDE_LOAD]], splat (i16 10)
-; CHECK-NEXT:    [[TMP5:%.*]] = xor <4 x i1> [[TMP4]], splat (i1 true)
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <4 x i16> [[WIDE_LOAD]], splat (i16 10)
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x ptr> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i16, ptr [[TMP6]], i32 0
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i16.p0(<4 x i16> zeroinitializer, ptr [[TMP7]], i32 2, <4 x i1> [[TMP5]])

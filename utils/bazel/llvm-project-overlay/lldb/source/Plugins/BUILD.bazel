@@ -238,8 +238,8 @@ cc_library(
 
 objc_library(
     name = "PluginPlatformMacOSXObjCXX",
-    srcs = glob(["Platform/MacOSX/objcxx/*.mm"]),
     copts = OBJCPP_COPTS,
+    non_arc_srcs = glob(["Platform/MacOSX/objcxx/*.mm"]),
     tags = ["nobuildkite"],
     target_compatible_with = select({
         "@platforms//os:macos": [],
@@ -826,6 +826,19 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "LanguageCPlusPlusProperties",
+    strip_include_prefix = "Language/CPlusPlus",
+    tbl_outs = {
+        "Language/CPlusPlus/LanguageCPlusPlusProperties.inc": ["-gen-lldb-property-defs"],
+        "Language/CPlusPlus/LanguageCPlusPlusPropertiesEnum.inc": ["-gen-lldb-property-enum-defs"],
+    },
+    tblgen = "//lldb:lldb-tblgen",
+    td_file = "Language/CPlusPlus/LanguageCPlusPlusProperties.td",
+    deps = ["//lldb:CoreTdFiles"],
+)
+
+
 cc_library(
     name = "PluginCPlusPlusLanguageHeaders",
     hdrs = glob(["Language/CPlusPlus/*.h"]),
@@ -842,6 +855,7 @@ cc_library(
     srcs = glob(["Language/CPlusPlus/*.cpp"]),
     includes = [".."],
     deps = [
+        ":LanguageCPlusPlusProperties",
         ":PluginCPPRuntime",
         ":PluginCPlusPlusLanguageHeaders",
         ":PluginClangCommon",
@@ -852,6 +866,7 @@ cc_library(
         "//lldb:Core",
         "//lldb:DataFormatters",
         "//lldb:Headers",
+        "//lldb:InterpreterHeaders",
         "//lldb:Host",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",

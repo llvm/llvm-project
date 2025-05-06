@@ -230,5 +230,3 @@ define amdgpu_kernel void @nocall_false_sharing() {
 }
 ; CHECK: ; LDSByteSize: 4 bytes
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}
