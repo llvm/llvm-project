@@ -143,7 +143,7 @@ def SharedVar : SubsetSubject<Var,
 def HLSLInputBuiltin : SubsetSubject<Var, [{S->hasGlobalStorage() &&
                     S->getStorageClass()==StorageClass::SC_Static &&
                     S->getType().isConstQualified()}],
-                                     "input builtin">;
+                                     "static const globals">;
 
 def GlobalVar : SubsetSubject<Var,
                              [{S->hasGlobalStorage()}], "global variables">;
@@ -4958,7 +4958,7 @@ def HLSLWaveSize: InheritableAttr {
 
 def HLSLVkExtBuiltinInput : InheritableAttr {
   let Spellings = [CXX11<"vk", "ext_builtin_input">];
-  let Args = [IntArgument<"BuiltIn">];
+  let Args = [UnsignedArgument<"BuiltIn">];
   let Subjects = SubjectList<[HLSLInputBuiltin], ErrorDiag>;
   let LangOpts = [HLSL];
   let Documentation = [HLSLVkExtBuiltinInputDocs];

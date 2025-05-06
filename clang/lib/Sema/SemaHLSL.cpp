@@ -1118,9 +1118,11 @@ void SemaHLSL::handleWaveSizeAttr(Decl *D, const ParsedAttr &AL) {
 }
 
 void SemaHLSL::handleVkExtBuiltinInputAttr(Decl *D, const ParsedAttr &AL) {
-  IntegerLiteral *IL = cast<IntegerLiteral>(AL.getArgAsExpr(0));
-  D->addAttr(::new (getASTContext()) HLSLVkExtBuiltinInputAttr(
-      getASTContext(), AL, IL->getValue().getZExtValue()));
+  uint32_t ID;
+  if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(0), ID))
+    return;
+  D->addAttr(::new (getASTContext())
+                 HLSLVkExtBuiltinInputAttr(getASTContext(), AL, ID));
 }
 
 bool SemaHLSL::diagnoseInputIDType(QualType T, const ParsedAttr &AL) {
