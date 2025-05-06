@@ -1422,8 +1422,9 @@ private:
       } else if (CurrentToken && CurrentToken->is(tok::numeric_constant)) {
         Tok->setType(TT_BitFieldColon);
       } else if (Contexts.size() == 1 &&
-                 !Line.First->isOneOf(tok::kw_enum, tok::kw_case,
-                                      tok::kw_default)) {
+                 !Line.getFirstNonComment()->isOneOf(tok::kw_enum, tok::kw_case,
+                                                     tok::kw_default) &&
+                 !Line.startsWith(tok::kw_typedef, tok::kw_enum)) {
         FormatToken *Prev = Tok->getPreviousNonComment();
         if (!Prev)
           break;
@@ -1437,7 +1438,7 @@ private:
             break;
           if (PrevPrev && PrevPrev->isOneOf(tok::r_paren, tok::kw_noexcept))
             Tok->setType(TT_CtorInitializerColon);
-        } else if (!Prev->endsSequence(tok::kw_enum, tok::kw_typedef)) {
+        } else {
           Tok->setType(TT_InheritanceColon);
           if (Prev->isAccessSpecifierKeyword())
             Line.Type = LT_AccessModifier;
