@@ -348,3 +348,9 @@ v_pk_minimum3_f16 v8, v1, s1, v4
 
 v_pk_maximum3_f16 v8, v1, s1, v4
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_pk_max3_num_f16 v8, v1, s1, v4
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_pk_min3_num_f16 v8, v1, s1, v4
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
