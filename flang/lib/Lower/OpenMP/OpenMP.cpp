@@ -3759,7 +3759,7 @@ static void
 genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
        semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
        const parser::OmpDeclareVariantDirective &declareVariantDirective) {
-  TODO(converter.getCurrentLocation(), "OpenMPDeclareVariantDirective");
+  TODO(converter.getCurrentLocation(), "OmpDeclareVariantDirective");
 }
 
 static void genOMP(
