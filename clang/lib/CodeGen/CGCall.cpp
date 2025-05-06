@@ -5484,15 +5484,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           Builder.CreateStore(errorValue, swiftErrorTemp);
         }
 
-        // Mfloat8 type is loaded as scalar type, but is treated as single
-        // vector type for other operations. We need to bitcast it to the vector
-        // type here.
-        if (auto *EltTy =
-                dyn_cast<llvm::FixedVectorType>(ArgInfo.getCoerceToType());
-            EltTy && EltTy->getNumElements() == 1 &&
-            V->getType() == EltTy->getScalarType())
-          V = Builder.CreateBitCast(V, EltTy);
-
         // We might have to widen integers, but we should never truncate.
         if (ArgInfo.getCoerceToType() != V->getType() &&
             V->getType()->isIntegerTy())

@@ -86,18 +86,23 @@ mfloat8x8_t test_vcreate_mf8(uint64_t a) {
 // CHECK-LABEL: define dso_local <8 x i8> @test_vdup_n_mf8(
 // CHECK-SAME: <1 x i8> [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i8> [[A]] to i8
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8 [[TMP0]] to <1 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i8> [[TMP1]] to i8
-// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <8 x i8> poison, i8 [[TMP2]], i32 0
-// CHECK-NEXT:    [[VECINIT1_I:%.*]] = insertelement <8 x i8> [[VECINIT_I]], i8 [[TMP2]], i32 1
-// CHECK-NEXT:    [[VECINIT2_I:%.*]] = insertelement <8 x i8> [[VECINIT1_I]], i8 [[TMP2]], i32 2
-// CHECK-NEXT:    [[VECINIT3_I:%.*]] = insertelement <8 x i8> [[VECINIT2_I]], i8 [[TMP2]], i32 3
-// CHECK-NEXT:    [[VECINIT4_I:%.*]] = insertelement <8 x i8> [[VECINIT3_I]], i8 [[TMP2]], i32 4
-// CHECK-NEXT:    [[VECINIT5_I:%.*]] = insertelement <8 x i8> [[VECINIT4_I]], i8 [[TMP2]], i32 5
-// CHECK-NEXT:    [[VECINIT6_I:%.*]] = insertelement <8 x i8> [[VECINIT5_I]], i8 [[TMP2]], i32 6
-// CHECK-NEXT:    [[VECINIT7_I:%.*]] = insertelement <8 x i8> [[VECINIT6_I]], i8 [[TMP2]], i32 7
-// CHECK-NEXT:    ret <8 x i8> [[VECINIT7_I]]
+// CHECK-NEXT:    [[VEXT_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT_I:%.*]] = shufflevector <8 x i8> [[VEXT_I]], <8 x i8> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT1_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT2_I:%.*]] = shufflevector <8 x i8> [[VECINIT_I]], <8 x i8> [[VEXT1_I]], <8 x i32> <i32 0, i32 8, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT3_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT4_I:%.*]] = shufflevector <8 x i8> [[VECINIT2_I]], <8 x i8> [[VEXT3_I]], <8 x i32> <i32 0, i32 1, i32 8, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT5_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT6_I:%.*]] = shufflevector <8 x i8> [[VECINIT4_I]], <8 x i8> [[VEXT5_I]], <8 x i32> <i32 0, i32 1, i32 2, i32 8, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT7_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT8_I:%.*]] = shufflevector <8 x i8> [[VECINIT6_I]], <8 x i8> [[VEXT7_I]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT9_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT10_I:%.*]] = shufflevector <8 x i8> [[VECINIT8_I]], <8 x i8> [[VEXT9_I]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 8, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT11_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT12_I:%.*]] = shufflevector <8 x i8> [[VECINIT10_I]], <8 x i8> [[VEXT11_I]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 poison>
+// CHECK-NEXT:    [[VEXT13_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT14_I:%.*]] = shufflevector <8 x i8> [[VECINIT12_I]], <8 x i8> [[VEXT13_I]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 8>
+// CHECK-NEXT:    ret <8 x i8> [[VECINIT14_I]]
 //
 mfloat8x8_t test_vdup_n_mf8(mfloat8_t a) {
   return vdup_n_mf8(a);
@@ -106,26 +111,39 @@ mfloat8x8_t test_vdup_n_mf8(mfloat8_t a) {
 // CHECK-LABEL: define dso_local <16 x i8> @test_vdupq_n_mf8(
 // CHECK-SAME: <1 x i8> [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i8> [[A]] to i8
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8 [[TMP0]] to <1 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i8> [[TMP1]] to i8
-// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <16 x i8> poison, i8 [[TMP2]], i32 0
-// CHECK-NEXT:    [[VECINIT1_I:%.*]] = insertelement <16 x i8> [[VECINIT_I]], i8 [[TMP2]], i32 1
-// CHECK-NEXT:    [[VECINIT2_I:%.*]] = insertelement <16 x i8> [[VECINIT1_I]], i8 [[TMP2]], i32 2
-// CHECK-NEXT:    [[VECINIT3_I:%.*]] = insertelement <16 x i8> [[VECINIT2_I]], i8 [[TMP2]], i32 3
-// CHECK-NEXT:    [[VECINIT4_I:%.*]] = insertelement <16 x i8> [[VECINIT3_I]], i8 [[TMP2]], i32 4
-// CHECK-NEXT:    [[VECINIT5_I:%.*]] = insertelement <16 x i8> [[VECINIT4_I]], i8 [[TMP2]], i32 5
-// CHECK-NEXT:    [[VECINIT6_I:%.*]] = insertelement <16 x i8> [[VECINIT5_I]], i8 [[TMP2]], i32 6
-// CHECK-NEXT:    [[VECINIT7_I:%.*]] = insertelement <16 x i8> [[VECINIT6_I]], i8 [[TMP2]], i32 7
-// CHECK-NEXT:    [[VECINIT8_I:%.*]] = insertelement <16 x i8> [[VECINIT7_I]], i8 [[TMP2]], i32 8
-// CHECK-NEXT:    [[VECINIT9_I:%.*]] = insertelement <16 x i8> [[VECINIT8_I]], i8 [[TMP2]], i32 9
-// CHECK-NEXT:    [[VECINIT10_I:%.*]] = insertelement <16 x i8> [[VECINIT9_I]], i8 [[TMP2]], i32 10
-// CHECK-NEXT:    [[VECINIT11_I:%.*]] = insertelement <16 x i8> [[VECINIT10_I]], i8 [[TMP2]], i32 11
-// CHECK-NEXT:    [[VECINIT12_I:%.*]] = insertelement <16 x i8> [[VECINIT11_I]], i8 [[TMP2]], i32 12
-// CHECK-NEXT:    [[VECINIT13_I:%.*]] = insertelement <16 x i8> [[VECINIT12_I]], i8 [[TMP2]], i32 13
-// CHECK-NEXT:    [[VECINIT14_I:%.*]] = insertelement <16 x i8> [[VECINIT13_I]], i8 [[TMP2]], i32 14
-// CHECK-NEXT:    [[VECINIT15_I:%.*]] = insertelement <16 x i8> [[VECINIT14_I]], i8 [[TMP2]], i32 15
-// CHECK-NEXT:    ret <16 x i8> [[VECINIT15_I]]
+// CHECK-NEXT:    [[VEXT_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT_I:%.*]] = shufflevector <16 x i8> [[VEXT_I]], <16 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT1_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT2_I:%.*]] = shufflevector <16 x i8> [[VECINIT_I]], <16 x i8> [[VEXT1_I]], <16 x i32> <i32 0, i32 16, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT3_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT4_I:%.*]] = shufflevector <16 x i8> [[VECINIT2_I]], <16 x i8> [[VEXT3_I]], <16 x i32> <i32 0, i32 1, i32 16, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT5_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT6_I:%.*]] = shufflevector <16 x i8> [[VECINIT4_I]], <16 x i8> [[VEXT5_I]], <16 x i32> <i32 0, i32 1, i32 2, i32 16, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT7_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT8_I:%.*]] = shufflevector <16 x i8> [[VECINIT6_I]], <16 x i8> [[VEXT7_I]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 16, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT9_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT10_I:%.*]] = shufflevector <16 x i8> [[VECINIT8_I]], <16 x i8> [[VEXT9_I]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 16, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT11_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT12_I:%.*]] = shufflevector <16 x i8> [[VECINIT10_I]], <16 x i8> [[VEXT11_I]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 16, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT13_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT14_I:%.*]] = shufflevector <16 x i8> [[VECINIT12_I]], <16 x i8> [[VEXT13_I]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 16, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT15_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT16_I:%.*]] = shufflevector <16 x i8> [[VECINIT14_I]], <16 x i8> [[VEXT15_I]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT17_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT18_I:%.*]] = shufflevector <16 x i8> [[VECINIT16_I]], <16 x i8> [[VEXT17_I]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 16, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT19_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT20_I:%.*]] = shufflevector <16 x i8> [[VECINIT18_I]], <16 x i8> [[VEXT19_I]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 16, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT21_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT22_I:%.*]] = shufflevector <16 x i8> [[VECINIT20_I]], <16 x i8> [[VEXT21_I]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 16, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT23_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT24_I:%.*]] = shufflevector <16 x i8> [[VECINIT22_I]], <16 x i8> [[VEXT23_I]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 16, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT25_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT26_I:%.*]] = shufflevector <16 x i8> [[VECINIT24_I]], <16 x i8> [[VEXT25_I]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 16, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT27_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT28_I:%.*]] = shufflevector <16 x i8> [[VECINIT26_I]], <16 x i8> [[VEXT27_I]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 16, i32 poison>
+// CHECK-NEXT:    [[VEXT29_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT30_I:%.*]] = shufflevector <16 x i8> [[VECINIT28_I]], <16 x i8> [[VEXT29_I]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 16>
+// CHECK-NEXT:    ret <16 x i8> [[VECINIT30_I]]
 //
 mfloat8x16_t test_vdupq_n_mf8(mfloat8_t a) {
   return vdupq_n_mf8(a);
@@ -134,18 +152,23 @@ mfloat8x16_t test_vdupq_n_mf8(mfloat8_t a) {
 // CHECK-LABEL: define dso_local <8 x i8> @test_vmov_n_mf8(
 // CHECK-SAME: <1 x i8> [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i8> [[A]] to i8
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8 [[TMP0]] to <1 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i8> [[TMP1]] to i8
-// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <8 x i8> poison, i8 [[TMP2]], i32 0
-// CHECK-NEXT:    [[VECINIT1_I:%.*]] = insertelement <8 x i8> [[VECINIT_I]], i8 [[TMP2]], i32 1
-// CHECK-NEXT:    [[VECINIT2_I:%.*]] = insertelement <8 x i8> [[VECINIT1_I]], i8 [[TMP2]], i32 2
-// CHECK-NEXT:    [[VECINIT3_I:%.*]] = insertelement <8 x i8> [[VECINIT2_I]], i8 [[TMP2]], i32 3
-// CHECK-NEXT:    [[VECINIT4_I:%.*]] = insertelement <8 x i8> [[VECINIT3_I]], i8 [[TMP2]], i32 4
-// CHECK-NEXT:    [[VECINIT5_I:%.*]] = insertelement <8 x i8> [[VECINIT4_I]], i8 [[TMP2]], i32 5
-// CHECK-NEXT:    [[VECINIT6_I:%.*]] = insertelement <8 x i8> [[VECINIT5_I]], i8 [[TMP2]], i32 6
-// CHECK-NEXT:    [[VECINIT7_I:%.*]] = insertelement <8 x i8> [[VECINIT6_I]], i8 [[TMP2]], i32 7
-// CHECK-NEXT:    ret <8 x i8> [[VECINIT7_I]]
+// CHECK-NEXT:    [[VEXT_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT_I:%.*]] = shufflevector <8 x i8> [[VEXT_I]], <8 x i8> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT1_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT2_I:%.*]] = shufflevector <8 x i8> [[VECINIT_I]], <8 x i8> [[VEXT1_I]], <8 x i32> <i32 0, i32 8, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT3_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT4_I:%.*]] = shufflevector <8 x i8> [[VECINIT2_I]], <8 x i8> [[VEXT3_I]], <8 x i32> <i32 0, i32 1, i32 8, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT5_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT6_I:%.*]] = shufflevector <8 x i8> [[VECINIT4_I]], <8 x i8> [[VEXT5_I]], <8 x i32> <i32 0, i32 1, i32 2, i32 8, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT7_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT8_I:%.*]] = shufflevector <8 x i8> [[VECINIT6_I]], <8 x i8> [[VEXT7_I]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT9_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT10_I:%.*]] = shufflevector <8 x i8> [[VECINIT8_I]], <8 x i8> [[VEXT9_I]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 8, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT11_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT12_I:%.*]] = shufflevector <8 x i8> [[VECINIT10_I]], <8 x i8> [[VEXT11_I]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 poison>
+// CHECK-NEXT:    [[VEXT13_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT14_I:%.*]] = shufflevector <8 x i8> [[VECINIT12_I]], <8 x i8> [[VEXT13_I]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 8>
+// CHECK-NEXT:    ret <8 x i8> [[VECINIT14_I]]
 //
 mfloat8x8_t test_vmov_n_mf8(mfloat8_t a) {
   return vmov_n_mf8(a);
@@ -154,26 +177,39 @@ mfloat8x8_t test_vmov_n_mf8(mfloat8_t a) {
 // CHECK-LABEL: define dso_local <16 x i8> @test_vmovq_n_mf8(
 // CHECK-SAME: <1 x i8> [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i8> [[A]] to i8
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8 [[TMP0]] to <1 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i8> [[TMP1]] to i8
-// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <16 x i8> poison, i8 [[TMP2]], i32 0
-// CHECK-NEXT:    [[VECINIT1_I:%.*]] = insertelement <16 x i8> [[VECINIT_I]], i8 [[TMP2]], i32 1
-// CHECK-NEXT:    [[VECINIT2_I:%.*]] = insertelement <16 x i8> [[VECINIT1_I]], i8 [[TMP2]], i32 2
-// CHECK-NEXT:    [[VECINIT3_I:%.*]] = insertelement <16 x i8> [[VECINIT2_I]], i8 [[TMP2]], i32 3
-// CHECK-NEXT:    [[VECINIT4_I:%.*]] = insertelement <16 x i8> [[VECINIT3_I]], i8 [[TMP2]], i32 4
-// CHECK-NEXT:    [[VECINIT5_I:%.*]] = insertelement <16 x i8> [[VECINIT4_I]], i8 [[TMP2]], i32 5
-// CHECK-NEXT:    [[VECINIT6_I:%.*]] = insertelement <16 x i8> [[VECINIT5_I]], i8 [[TMP2]], i32 6
-// CHECK-NEXT:    [[VECINIT7_I:%.*]] = insertelement <16 x i8> [[VECINIT6_I]], i8 [[TMP2]], i32 7
-// CHECK-NEXT:    [[VECINIT8_I:%.*]] = insertelement <16 x i8> [[VECINIT7_I]], i8 [[TMP2]], i32 8
-// CHECK-NEXT:    [[VECINIT9_I:%.*]] = insertelement <16 x i8> [[VECINIT8_I]], i8 [[TMP2]], i32 9
-// CHECK-NEXT:    [[VECINIT10_I:%.*]] = insertelement <16 x i8> [[VECINIT9_I]], i8 [[TMP2]], i32 10
-// CHECK-NEXT:    [[VECINIT11_I:%.*]] = insertelement <16 x i8> [[VECINIT10_I]], i8 [[TMP2]], i32 11
-// CHECK-NEXT:    [[VECINIT12_I:%.*]] = insertelement <16 x i8> [[VECINIT11_I]], i8 [[TMP2]], i32 12
-// CHECK-NEXT:    [[VECINIT13_I:%.*]] = insertelement <16 x i8> [[VECINIT12_I]], i8 [[TMP2]], i32 13
-// CHECK-NEXT:    [[VECINIT14_I:%.*]] = insertelement <16 x i8> [[VECINIT13_I]], i8 [[TMP2]], i32 14
-// CHECK-NEXT:    [[VECINIT15_I:%.*]] = insertelement <16 x i8> [[VECINIT14_I]], i8 [[TMP2]], i32 15
-// CHECK-NEXT:    ret <16 x i8> [[VECINIT15_I]]
+// CHECK-NEXT:    [[VEXT_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT_I:%.*]] = shufflevector <16 x i8> [[VEXT_I]], <16 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT1_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT2_I:%.*]] = shufflevector <16 x i8> [[VECINIT_I]], <16 x i8> [[VEXT1_I]], <16 x i32> <i32 0, i32 16, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT3_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT4_I:%.*]] = shufflevector <16 x i8> [[VECINIT2_I]], <16 x i8> [[VEXT3_I]], <16 x i32> <i32 0, i32 1, i32 16, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT5_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT6_I:%.*]] = shufflevector <16 x i8> [[VECINIT4_I]], <16 x i8> [[VEXT5_I]], <16 x i32> <i32 0, i32 1, i32 2, i32 16, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT7_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT8_I:%.*]] = shufflevector <16 x i8> [[VECINIT6_I]], <16 x i8> [[VEXT7_I]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 16, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT9_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT10_I:%.*]] = shufflevector <16 x i8> [[VECINIT8_I]], <16 x i8> [[VEXT9_I]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 16, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT11_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT12_I:%.*]] = shufflevector <16 x i8> [[VECINIT10_I]], <16 x i8> [[VEXT11_I]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 16, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT13_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT14_I:%.*]] = shufflevector <16 x i8> [[VECINIT12_I]], <16 x i8> [[VEXT13_I]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 16, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT15_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT16_I:%.*]] = shufflevector <16 x i8> [[VECINIT14_I]], <16 x i8> [[VEXT15_I]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT17_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT18_I:%.*]] = shufflevector <16 x i8> [[VECINIT16_I]], <16 x i8> [[VEXT17_I]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 16, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT19_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT20_I:%.*]] = shufflevector <16 x i8> [[VECINIT18_I]], <16 x i8> [[VEXT19_I]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 16, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT21_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT22_I:%.*]] = shufflevector <16 x i8> [[VECINIT20_I]], <16 x i8> [[VEXT21_I]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 16, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT23_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT24_I:%.*]] = shufflevector <16 x i8> [[VECINIT22_I]], <16 x i8> [[VEXT23_I]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 16, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT25_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT26_I:%.*]] = shufflevector <16 x i8> [[VECINIT24_I]], <16 x i8> [[VEXT25_I]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 16, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VEXT27_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT28_I:%.*]] = shufflevector <16 x i8> [[VECINIT26_I]], <16 x i8> [[VEXT27_I]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 16, i32 poison>
+// CHECK-NEXT:    [[VEXT29_I:%.*]] = shufflevector <1 x i8> [[A]], <1 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK-NEXT:    [[VECINIT30_I:%.*]] = shufflevector <16 x i8> [[VECINIT28_I]], <16 x i8> [[VEXT29_I]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 16>
+// CHECK-NEXT:    ret <16 x i8> [[VECINIT30_I]]
 //
 mfloat8x16_t test_vmovq_n_mf8(mfloat8_t a) {
   return vmovq_n_mf8(a);
@@ -585,7 +621,9 @@ mfloat8x16x2_t test_vuzpq_mf8(mfloat8x16_t a, mfloat8x16_t b) {
 // CHECK-SAME: <8 x i8> [[ARG_I8X8:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <8 x i8> [[ARG_I8X8]], i32 0
-// CHECK-NEXT:    [[VSET_LANE:%.*]] = insertelement <8 x i8> [[ARG_I8X8]], i8 [[VGET_LANE]], i32 0
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8 [[VGET_LANE]] to <1 x i8>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i8> [[TMP0]] to i8
+// CHECK-NEXT:    [[VSET_LANE:%.*]] = insertelement <8 x i8> [[ARG_I8X8]], i8 [[TMP1]], i32 0
 // CHECK-NEXT:    ret void
 //
 void test_vcopy_lane_mf8(mfloat8x8_t arg_i8x8) {
@@ -596,7 +634,9 @@ void test_vcopy_lane_mf8(mfloat8x8_t arg_i8x8) {
 // CHECK-SAME: <8 x i8> [[ARG_I8X8:%.*]], <16 x i8> [[ARG_I8X16:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <8 x i8> [[ARG_I8X8]], i32 0
-// CHECK-NEXT:    [[VSET_LANE:%.*]] = insertelement <16 x i8> [[ARG_I8X16]], i8 [[VGET_LANE]], i32 0
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8 [[VGET_LANE]] to <1 x i8>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i8> [[TMP0]] to i8
+// CHECK-NEXT:    [[VSET_LANE:%.*]] = insertelement <16 x i8> [[ARG_I8X16]], i8 [[TMP1]], i32 0
 // CHECK-NEXT:    ret void
 //
 void test_vcopyq_lane_mf8(mfloat8x8_t arg_i8x8, mfloat8x16_t arg_i8x16) {
@@ -607,7 +647,9 @@ void test_vcopyq_lane_mf8(mfloat8x8_t arg_i8x8, mfloat8x16_t arg_i8x16) {
 // CHECK-SAME: <8 x i8> [[ARG_I8X8:%.*]], <16 x i8> [[ARG_I8X16:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <16 x i8> [[ARG_I8X16]], i32 0
-// CHECK-NEXT:    [[VSET_LANE:%.*]] = insertelement <8 x i8> [[ARG_I8X8]], i8 [[VGET_LANE]], i32 0
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8 [[VGET_LANE]] to <1 x i8>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i8> [[TMP0]] to i8
+// CHECK-NEXT:    [[VSET_LANE:%.*]] = insertelement <8 x i8> [[ARG_I8X8]], i8 [[TMP1]], i32 0
 // CHECK-NEXT:    ret void
 //
 void test_vcopy_laneq_mf8(mfloat8x8_t arg_i8x8, mfloat8x16_t arg_i8x16) {
@@ -618,7 +660,9 @@ void test_vcopy_laneq_mf8(mfloat8x8_t arg_i8x8, mfloat8x16_t arg_i8x16) {
 // CHECK-SAME: <16 x i8> [[ARG_I8X16:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <16 x i8> [[ARG_I8X16]], i32 0
-// CHECK-NEXT:    [[VSET_LANE:%.*]] = insertelement <16 x i8> [[ARG_I8X16]], i8 [[VGET_LANE]], i32 0
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8 [[VGET_LANE]] to <1 x i8>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i8> [[TMP0]] to i8
+// CHECK-NEXT:    [[VSET_LANE:%.*]] = insertelement <16 x i8> [[ARG_I8X16]], i8 [[TMP1]], i32 0
 // CHECK-NEXT:    ret void
 //
 void test_vcopyq_laneq_mf8(mfloat8x16_t arg_i8x16) {

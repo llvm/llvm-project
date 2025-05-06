@@ -4183,8 +4183,20 @@ Value *CodeGenFunction::EmitSVEMaskedLoad(const CallExpr *E,
                                           unsigned IntrinsicID,
                                           bool IsZExtReturn) {
   QualType LangPTy = E->getArg(1)->getType();
-  llvm::Type *MemEltTy = CGM.getTypes().ConvertTypeForMem(
+  llvm::Type *MemEltTy = CGM.getTypes().ConvertType(
       LangPTy->castAs<PointerType>()->getPointeeType());
+
+  // Mfloat8 types is stored as a vector, so extra work
+  // to extract sclar element type is necessary.
+  if (MemEltTy->isVectorTy()) {
+    #ifndef NDEBUG
+        auto *VecTy = cast<llvm::VectorType>(MemEltTy);
+        ElementCount EC = VecTy->getElementCount();
+        assert(EC.isScalar() && VecTy->getElementType() == Int8Ty &&
+              "Only <1 x i8> expected");
+    #endif
+        MemEltTy = cast<llvm::VectorType>(MemEltTy)->getElementType();
+  }
 
   // The vector type that is returned may be different from the
   // eventual type loaded from memory.
@@ -4230,8 +4242,20 @@ Value *CodeGenFunction::EmitSVEMaskedStore(const CallExpr *E,
                                            SmallVectorImpl<Value *> &Ops,
                                            unsigned IntrinsicID) {
   QualType LangPTy = E->getArg(1)->getType();
-  llvm::Type *MemEltTy = CGM.getTypes().ConvertTypeForMem(
+  llvm::Type *MemEltTy = CGM.getTypes().ConvertType(
       LangPTy->castAs<PointerType>()->getPointeeType());
+
+  // Mfloat8 types is stored as a vector, so extra work
+  // to extract sclar element type is necessary.
+  if (MemEltTy->isVectorTy()) {
+    #ifndef NDEBUG
+        auto *VecTy = cast<llvm::VectorType>(MemEltTy);
+        ElementCount EC = VecTy->getElementCount();
+        assert(EC.isScalar() && VecTy->getElementType() == Int8Ty &&
+              "Only <1 x i8> expected");
+    #endif
+        MemEltTy = cast<llvm::VectorType>(MemEltTy)->getElementType();
+  }
 
   // The vector type that is stored may be different from the
   // eventual type stored to memory.
@@ -6169,6 +6193,9 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   case NEON::BI__builtin_neon_vset_lane_mf8:
   case NEON::BI__builtin_neon_vsetq_lane_mf8:
     Ops.push_back(EmitScalarExpr(E->getArg(2)));
+    // The input vector type needs a cast to scalar type.
+    Ops[0] =
+        Builder.CreateBitCast(Ops[0], llvm::Type::getInt8Ty(getLLVMContext()));
     return Builder.CreateInsertElement(Ops[1], Ops[0], Ops[2], "vset_lane");
   case NEON::BI__builtin_neon_vsetq_lane_f64:
     // The vector type needs a cast for the v2f64 variant.
