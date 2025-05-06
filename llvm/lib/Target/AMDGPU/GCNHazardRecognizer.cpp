@@ -441,42 +441,55 @@ using IsExpiredFn = function_ref<bool(const MachineInstr &, int WaitStates)>;
 using GetNumWaitStatesFn = function_ref<unsigned int(const MachineInstr &)>;
 
 // Search for a hazard in a block and its predecessors.
+// StateT must implement getHashValue().
 template <typename StateT>
 static bool
-hasHazard(StateT State,
+hasHazard(StateT InitialState,
           function_ref<HazardFnResult(StateT &, const MachineInstr &)> IsHazard,
           function_ref<void(StateT &, const MachineInstr &)> UpdateState,
-          const MachineBasicBlock *MBB,
-          MachineBasicBlock::const_reverse_instr_iterator I,
-          DenseSet<const MachineBasicBlock *> &Visited) {
-  for (auto E = MBB->instr_rend(); I != E; ++I) {
-    // No need to look at parent BUNDLE instructions.
-    if (I->isBundle())
-      continue;
+          const MachineBasicBlock *InitialMBB,
+          MachineBasicBlock::const_reverse_instr_iterator InitialI) {
+  SmallVector<std::pair<const MachineBasicBlock *, StateT>> Worklist;
+  DenseSet<std::pair<const MachineBasicBlock *, unsigned>> Visited;
+  const MachineBasicBlock *MBB = InitialMBB;
+  StateT State = InitialState;
+  auto I = InitialI;
 
-    switch (IsHazard(State, *I)) {
-    case HazardFound:
-      return true;
-    case HazardExpired:
-      return false;
-    default:
-      // Continue search
-      break;
+  for (;;) {
+    bool Expired = false;
+    for (auto E = MBB->instr_rend(); I != E; ++I) {
+      // No need to look at parent BUNDLE instructions.
+      if (I->isBundle())
+        continue;
+
+      auto Result = IsHazard(State, *I);
+      if (Result == HazardFound)
+        return true;
+      if (Result == HazardExpired) {
+        Expired = true;
+        break;
+      }
+
+      if (I->isInlineAsm() || I->isMetaInstruction())
+        continue;
+
+      UpdateState(State, *I);
     }
 
-    if (I->isInlineAsm() || I->isMetaInstruction())
-      continue;
+    if (!Expired) {
+      unsigned StateHash = State.getHashValue();
+      for (MachineBasicBlock *Pred : MBB->predecessors()) {
+        if (!Visited.insert(std::pair(Pred, StateHash)).second)
+          continue;
+        Worklist.emplace_back(Pred, State);
+      }
+    }
 
-    UpdateState(State, *I);
-  }
+    if (Worklist.empty())
+      break;
 
-  for (MachineBasicBlock *Pred : MBB->predecessors()) {
-    if (!Visited.insert(Pred).second)
-      continue;
-
-    if (hasHazard(State, IsHazard, UpdateState, Pred, Pred->instr_rbegin(),
-                  Visited))
-      return true;
+    std::tie(MBB, State) = Worklist.pop_back_val();
+    I = MBB->instr_rbegin();
   }
 
   return false;
@@ -1641,6 +1654,10 @@ bool GCNHazardRecognizer::fixVALUPartialForwardingHazard(MachineInstr *MI) {
     SmallDenseMap<Register, int, 4> DefPos;
     int ExecPos = std::numeric_limits<int>::max();
     int VALUs = 0;
+
+    unsigned getHashValue() const {
+      return hash_combine(ExecPos, VALUs, hash_combine_range(DefPos));
+    }
   };
 
   StateType State;
@@ -1735,9 +1752,8 @@ bool GCNHazardRecognizer::fixVALUPartialForwardingHazard(MachineInstr *MI) {
       State.VALUs += 1;
   };
 
-  DenseSet<const MachineBasicBlock *> Visited;
   if (!hasHazard<StateType>(State, IsHazardFn, UpdateStateFn, MI->getParent(),
-                            std::next(MI->getReverseIterator()), Visited))
+                            std::next(MI->getReverseIterator())))
     return false;
 
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
@@ -1778,6 +1794,8 @@ bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
   struct StateType {
     int VALUs = 0;
     int TRANS = 0;
+
+    unsigned getHashValue() const { return hash_combine(VALUs, TRANS); }
   };
 
   StateType State;
@@ -1813,9 +1831,8 @@ bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
       State.TRANS += 1;
   };
 
-  DenseSet<const MachineBasicBlock *> Visited;
   if (!hasHazard<StateType>(State, IsHazardFn, UpdateStateFn, MI->getParent(),
-                            std::next(MI->getReverseIterator()), Visited))
+                            std::next(MI->getReverseIterator())))
     return false;
 
   // Hazard is observed - insert a wait on va_dst counter to ensure hazard is
