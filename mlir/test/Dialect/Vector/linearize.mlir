@@ -215,7 +215,6 @@ func.func @insert_strided_slice_3D(%arg0 : vector<1x2x1xi8>, %arg2 : vector<3x3x
   return %0 : vector<3x3x2xi8>
 }
 
-
 // -----
 
 // CHECK-LABEL: test_vector_shuffle

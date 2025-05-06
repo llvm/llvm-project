@@ -561,8 +561,8 @@ struct LinearizeVectorSplat final
 static bool isNotLinearizableBecauseScalable(Operation *op) {
 
   bool unsupported =
-      isa<vector::ExtractStridedSliceOp, vector::ExtractOp, vector::InsertOp>(
-          op);
+      isa<vector::ExtractStridedSliceOp, vector::InsertStridedSliceOp,
+          vector::ExtractOp, vector::InsertOp>(op);
   if (!unsupported)
     return false;
 
