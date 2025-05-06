@@ -55,7 +55,7 @@ void llvm::mapAtomInstance(const DebugLoc &DL, ValueToValueMapTy &VMap) {
     return;
 
   // Map entry to a new atom group.
-  uint64_t NewGroup = DL->getContext().incNextAtomGroup();
+  uint64_t NewGroup = DL->getContext().incNextDILocationAtomGroup();
   assert(NewGroup > CurGroup && "Next should always be greater than current");
   It->second = NewGroup;
 
