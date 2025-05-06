@@ -68,7 +68,6 @@
 #include <optional>
 #include <type_traits>
 #include <utility>
-#include "ExprConcepts.h"
 
 namespace clang {
 
@@ -741,6 +740,40 @@ namespace clang {
     // that type is declared inside the body of the function.
     // E.g. auto f() { struct X{}; return X(); }
     bool hasReturnTypeDeclaredInside(FunctionDecl *D);
+    
+    Expected<ConstraintSatisfaction> FillConstraintSatisfaction(const ASTConstraintSatisfaction& from) {
+      auto ImportStringRef = [this](const StringRef& FromString) {
+        char* ToDiagMessage = new (Importer.getToContext()) char[FromString.size()];
+        std::copy(FromString.begin(),FromString.end(),ToDiagMessage);
+        return StringRef(ToDiagMessage,FromString.size());
+      };
+      ConstraintSatisfaction Satisfaction;
+      Satisfaction.IsSatisfied = from.IsSatisfied;
+      Satisfaction.ContainsErrors = from.ContainsErrors;        
+      if (!Satisfaction.IsSatisfied) {
+        using SubstitutionDiagnostic = std::pair<SourceLocation, StringRef>;
+        for (auto &Record : from) {
+          if (auto *SubstDiag = Record.dyn_cast<SubstitutionDiagnostic *>()) {
+            Error Err = Error::success();
+    
+            auto ToPairFirst = import(SubstDiag->first);
+            if(!ToPairFirst)
+              return ToPairFirst.takeError();
+            StringRef ToPairSecond = ImportStringRef(SubstDiag->second);
+            Satisfaction.Details.emplace_back(new (Importer.getToContext())
+              ConstraintSatisfaction::SubstitutionDiagnostic{
+                ToPairFirst.get(), ToPairSecond});
+          } else { 
+            const Expr *ConstraintExpr = Record.dyn_cast<Expr *>();
+            Expected<Expr *> ToConstraintExpr = import(ConstraintExpr);
+            if(!ToConstraintExpr)
+              return ToConstraintExpr.takeError();
+            Satisfaction.Details.emplace_back(ToConstraintExpr.get());
+          }
+        }
+      }
+      return Satisfaction;
+    }
   };
 
 template <typename InContainerTy>
@@ -1193,37 +1226,11 @@ Expected<concepts::Requirement*> ASTNodeImporter::import(concepts::Requirement* 
       if(ToExpr.get()->isInstantiationDependent())
         return new (Importer.getToContext()) concepts::NestedRequirement(ToExpr.get());
       else {
-        ConstraintSatisfaction Satisfaction;
-        Satisfaction.IsSatisfied = FromSatisfaction.IsSatisfied;
-        Satisfaction.ContainsErrors = FromSatisfaction.ContainsErrors;        
-        if (!Satisfaction.IsSatisfied) {
-          for (auto Record = FromSatisfaction.begin(); Record != FromSatisfaction.end(); ++Record) {
-            const Expr *ConstraintExpr = Record->first;
-            Expected<Expr *> ToConstraintExpr = import(ConstraintExpr);
-            if(!ToConstraintExpr)
-              return ToConstraintExpr.takeError();
-            if(Record->second.is<Expr*>()) {
-              Expected<Expr *> ToSecondExpr = import(Record->second.get<Expr*>());
-              if(!ToSecondExpr)
-                return ToSecondExpr.takeError();
-              Satisfaction.Details.emplace_back(ToConstraintExpr.get(),ToSecondExpr.get());
-            } else {
-              std::pair<SourceLocation, StringRef> *pair = Record->second.get<
-                std::pair<SourceLocation, StringRef> *>();
-              Error Err = Error::success();
-
-              auto ToPairFirst = import(pair->first);
-              if(!ToPairFirst)
-                return ToPairFirst.takeError();
-              StringRef ToPairSecond = ImportStringRef(pair->second);
-              Satisfaction.Details.emplace_back(
-              ToConstraintExpr.get(), new (Importer.getToContext())
-                ConstraintSatisfaction::SubstitutionDiagnostic{
-                  ToPairFirst.get(), ToPairSecond});
-            }
-          }
+        auto expected_satisfaction = FillConstraintSatisfaction(FromSatisfaction);
+        if (!expected_satisfaction) {
+          return expected_satisfaction.takeError();
         }
-        return new (Importer.getToContext()) concepts::NestedRequirement(Importer.getToContext(),ToExpr.get(),Satisfaction);
+        return new (Importer.getToContext()) concepts::NestedRequirement(Importer.getToContext(),ToExpr.get(), *expected_satisfaction);
       }      
     }
     break;
@@ -7576,38 +7583,13 @@ ExpectedStmt ASTNodeImporter::VisitConceptSpecializationExpr(ConceptSpecializati
     std::copy(FromString.begin(),FromString.end(),ToDiagMessage);
     return StringRef(ToDiagMessage,FromString.size());
   };
-  ConstraintSatisfaction Satisfaction;
-  Satisfaction.IsSatisfied = FromSatisfaction.IsSatisfied;
-  Satisfaction.ContainsErrors = FromSatisfaction.ContainsErrors;        
-  if (!Satisfaction.IsSatisfied) {
-    for (auto Record = FromSatisfaction.begin(); Record != FromSatisfaction.end(); ++Record) {
-      const Expr *ConstraintExpr = Record->first;
-      Expected<Expr *> ToConstraintExpr = import(ConstraintExpr);
-      if(!ToConstraintExpr)
-        return ToConstraintExpr.takeError();
-      if(Record->second.is<Expr*>()) {
-        Expected<Expr *> ToSecondExpr = import(Record->second.get<Expr*>());
-        if(!ToSecondExpr)
-          return ToSecondExpr.takeError();
-        Satisfaction.Details.emplace_back(ToConstraintExpr.get(),ToSecondExpr.get());
-      } else {
-        std::pair<SourceLocation, StringRef> *pair = Record->second.get<
-          std::pair<SourceLocation, StringRef> *>();
-        Error Err = Error::success();
-
-        auto ToPairFirst = import(pair->first);
-        if(!ToPairFirst)
-          return ToPairFirst.takeError();
-        StringRef ToPairSecond = ImportStringRef(pair->second);
-        Satisfaction.Details.emplace_back(
-        ToConstraintExpr.get(), new(Importer.getToContext()) ConstraintSatisfaction::SubstitutionDiagnostic{
-                                  ToPairFirst.get(), ToPairSecond});
-      }
-    }
+  auto expected_satisfaction = FillConstraintSatisfaction(FromSatisfaction);
+  if (!expected_satisfaction) {
+    return expected_satisfaction.takeError();
   }
   return ConceptSpecializationExpr::Create(
     Importer.getToContext(), CL,
-    const_cast<ImplicitConceptSpecializationDecl *>(CSD), &Satisfaction);
+    const_cast<ImplicitConceptSpecializationDecl *>(CSD), &*expected_satisfaction);
 }
 
 ExpectedDecl ASTNodeImporter::VisitConceptDecl(ConceptDecl* D) {
