@@ -80,6 +80,10 @@ enum tgt_map_type {
   // the structured region
   // This is an OpenMP extension for the sake of OpenACC support.
   OMP_TGT_MAPTYPE_OMPX_HOLD       = 0x2000,
+  // mapping is for a descriptor (a.k.a. dope vector)
+  OMP_TGT_MAPTYPE_DESCRIPTOR      = 0x4000,
+  // Mapping is for a descriptor's (a.k.a. dope vector) data base address
+  OMP_TGT_MAPTYPE_DESCRIPTOR_BASE_ADDR = 0x8000,
   // descriptor for non-contiguous target-update
   OMP_TGT_MAPTYPE_NON_CONTIG      = 0x100000000000,
   // member of struct, member given by [16 MSBs] - 1

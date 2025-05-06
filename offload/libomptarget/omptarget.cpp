@@ -422,7 +422,7 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       // when HasPresentModifier.
       PointerTpr = Device.getMappingInfo().getTargetPointer(
           HDTTMap, HstPtrBase, HstPtrBase, /*TgtPadding=*/0, sizeof(void *),
-          /*HstPtrName=*/nullptr,
+          ArgTypes[I], /*HstPtrName=*/nullptr,
           /*HasFlagTo=*/false, /*HasFlagAlways=*/false, IsImplicit, UpdateRef,
           HasCloseModifier, HasPresentModifier, HasHoldModifier, AsyncInfo,
           /*OwnedTPR=*/nullptr, /*ReleaseHDTTMap=*/false);
@@ -451,9 +451,10 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     const bool HasFlagAlways = ArgTypes[I] & OMP_TGT_MAPTYPE_ALWAYS;
     // Note that HDTTMap will be released in getTargetPointer.
     auto TPR = Device.getMappingInfo().getTargetPointer(
-        HDTTMap, HstPtrBegin, HstPtrBase, TgtPadding, DataSize, HstPtrName,
-        HasFlagTo, HasFlagAlways, IsImplicit, UpdateRef, HasCloseModifier,
-        HasPresentModifier, HasHoldModifier, AsyncInfo, PointerTpr.getEntry());
+        HDTTMap, HstPtrBegin, HstPtrBase, TgtPadding, DataSize, ArgTypes[I],
+        HstPtrName, HasFlagTo, HasFlagAlways, IsImplicit, UpdateRef,
+        HasCloseModifier, HasPresentModifier, HasHoldModifier, AsyncInfo,
+        PointerTpr.getEntry());
     void *TgtPtrBegin = TPR.TargetPointer;
     IsHostPtr = TPR.Flags.IsHostPointer;
     // If data_size==0, then the argument could be a zero-length pointer to
@@ -482,7 +483,9 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
 
       if (PointerTpr.getEntry()->addShadowPointer(ShadowPtrInfoTy{
               (void **)PointerHstPtrBegin, HstPtrBase,
-              (void **)PointerTgtPtrBegin, ExpectedTgtPtrBase})) {
+              (void **)PointerTgtPtrBegin, ExpectedTgtPtrBase,
+              static_cast<bool>(ArgTypes[I] &
+                                OMP_TGT_MAPTYPE_DESCRIPTOR_BASE_ADDR)})) {
         DP("Update pointer (" DPxMOD ") -> [" DPxMOD "]\n",
            DPxPTR(PointerTgtPtrBegin), DPxPTR(TgtPtrBegin));
 
@@ -591,6 +594,12 @@ postProcessingTargetDataEnd(DeviceTy *Device,
     const bool HasFrom = ArgType & OMP_TGT_MAPTYPE_FROM;
     if (HasFrom) {
       Entry->foreachShadowPointerInfo([&](const ShadowPtrInfoTy &ShadowPtr) {
+        // For Fortran descriptors/dope vectors, it is possible, we have
+        // deallocated the data on host and the descriptor persists as it is
+        // a separate entity, and we do not want to map back the data to host
+        // in these cases when releasing the dope vector.
+        if (*ShadowPtr.HstPtrAddr == nullptr && ShadowPtr.IsDescriptorBaseAddr)
+          return OFFLOAD_SUCCESS;
         *ShadowPtr.HstPtrAddr = ShadowPtr.HstPtrVal;
         DP("Restoring original host pointer value " DPxMOD " for host "
            "pointer " DPxMOD "\n",
@@ -833,6 +842,13 @@ static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
       AsyncInfo.addPostProcessingFunction([=]() -> int {
         int Ret = Entry->foreachShadowPointerInfo(
             [&](const ShadowPtrInfoTy &ShadowPtr) {
+              // For Fortran descriptors/dope vectors, it is possible, we have
+              // deallocated the data on host and the descriptor persists as it
+              // is a separate entity, and we do not want to map back the data
+              // to host in these cases when releasing the dope vector.
+              if (*ShadowPtr.HstPtrAddr == nullptr &&
+                  ShadowPtr.IsDescriptorBaseAddr)
+                return OFFLOAD_SUCCESS;
               *ShadowPtr.HstPtrAddr = ShadowPtr.HstPtrVal;
               DP("Restoring original host pointer value " DPxMOD
                  " for host pointer " DPxMOD "\n",

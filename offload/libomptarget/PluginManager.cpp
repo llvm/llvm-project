@@ -497,8 +497,8 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
                 CurrHostEntry->Size /*HstPtrEnd*/,
             (uintptr_t)CurrDeviceEntryAddr /*TgtAllocBegin*/,
             (uintptr_t)CurrDeviceEntryAddr /*TgtPtrBegin*/,
-            false /*UseHoldRefCount*/, CurrHostEntry->SymbolName,
-            true /*IsRefCountINF*/));
+            false /*UseHoldRefCount*/, TARGET_ALLOC_DEFAULT /*AllocKind*/,
+            CurrHostEntry->SymbolName, true /*IsRefCountINF*/));
 
         // Notify about the new mapping.
         if (Device.notifyDataMapped(CurrHostEntry->Address,
