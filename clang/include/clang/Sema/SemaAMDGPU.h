@@ -64,6 +64,10 @@ public:
   void handleAMDGPUNumVGPRAttr(Decl *D, const ParsedAttr &AL);
   void handleAMDGPUMaxNumWorkGroupsAttr(Decl *D, const ParsedAttr &AL);
   void handleAMDGPUFlatWorkGroupSizeAttr(Decl *D, const ParsedAttr &AL);
+
+  /// Expand a valid use of the feature identification builtins into its
+  /// corresponding sequence of instructions.
+  Expr *ExpandAMDGPUPredicateBI(CallExpr *CE);
 };
 } // namespace clang
 

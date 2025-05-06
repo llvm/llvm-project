@@ -50,6 +50,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaFixItUtils.h"
 #include "clang/Sema/SemaHLSL.h"
@@ -6556,7 +6557,8 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
     if (FD->getName() == "__builtin_amdgcn_is_invocable") {
       auto FnPtrTy = Context.getPointerType(FD->getType());
       auto *R = ImpCastExprToType(Fn, FnPtrTy, CK_BuiltinFnToFnPtr).get();
-      return CallExpr::Create(Context, R, ArgExprs, Context.VoidTy,
+      return CallExpr::Create(Context, R, ArgExprs,
+                              Context.AMDGPUFeaturePredicateTy,
                               ExprValueKind::VK_PRValue, RParenLoc,
                               FPOptionsOverride());
     }
@@ -13365,20 +13367,6 @@ inline QualType Sema::CheckBitwiseOperands(ExprResult &LHS, ExprResult &RHS,
   return InvalidOperands(Loc, LHS, RHS);
 }
 
-static inline bool IsAMDGPUPredicateBI(Expr *E) {
-  if (!E->getType()->isVoidType())
-    return false;
-
-  if (auto *CE = dyn_cast<CallExpr>(E)) {
-    if (auto *BI = CE->getDirectCallee())
-      if (BI->getName() == "__builtin_amdgcn_processor_is" ||
-          BI->getName() == "__builtin_amdgcn_is_invocable")
-        return true;
-  }
-
-  return false;
-}
-
 // C99 6.5.[13,14]
 inline QualType Sema::CheckLogicalOperands(ExprResult &LHS, ExprResult &RHS,
                                            SourceLocation Loc,
@@ -13473,9 +13461,6 @@ inline QualType Sema::CheckLogicalOperands(ExprResult &LHS, ExprResult &RHS,
 
   // The following is safe because we only use this method for
   // non-overloadable operands.
-
-  if (IsAMDGPUPredicateBI(LHS.get()) && IsAMDGPUPredicateBI(RHS.get()))
-    return Context.VoidTy;
 
   // C++ [expr.log.and]p1
   // C++ [expr.log.or]p1
@@ -15706,37 +15691,6 @@ static bool isOverflowingIntegerType(ASTContext &Ctx, QualType T) {
   return Ctx.getIntWidth(T) >= Ctx.getIntWidth(Ctx.IntTy);
 }
 
-static Expr *ExpandAMDGPUPredicateBI(ASTContext &Ctx, CallExpr *CE) {
-  if (!CE->getBuiltinCallee())
-    return CXXBoolLiteralExpr::Create(Ctx, false, Ctx.BoolTy, CE->getExprLoc());
-
-  if (Ctx.getTargetInfo().getTriple().isSPIRV()) {
-    CE->setType(Ctx.getLogicalOperationType());
-    return CE;
-  }
-
-  bool P = false;
-  auto &TI = Ctx.getTargetInfo();
-
-  if (CE->getDirectCallee()->getName() == "__builtin_amdgcn_processor_is") {
-    auto *GFX = dyn_cast<StringLiteral>(CE->getArg(0)->IgnoreParenCasts());
-    auto TID = TI.getTargetID();
-    if (GFX && TID) {
-      auto N = GFX->getString();
-      P = TI.isValidCPUName(GFX->getString()) && TID->find(N) == 0;
-    }
-  } else {
-    auto *FD = cast<FunctionDecl>(CE->getArg(0)->getReferencedDeclOfCallee());
-
-    StringRef RF = Ctx.BuiltinInfo.getRequiredFeatures(FD->getBuiltinID());
-    llvm::StringMap<bool> CF;
-    Ctx.getFunctionFeatureMap(CF, FD);
-
-    P = Builtin::evaluateRequiredTargetFeatures(RF, CF);
-  }
-
-  return CXXBoolLiteralExpr::Create(Ctx, P, Ctx.BoolTy, CE->getExprLoc());
-}
 
 ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
                                       UnaryOperatorKind Opc, Expr *InputExpr,
@@ -15915,7 +15869,9 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
         // Vector logical not returns the signed variant of the operand type.
         resultType = GetSignedVectorType(resultType);
         break;
-      } else if (IsAMDGPUPredicateBI(InputExpr)) {
+      } else if (resultType == Context.AMDGPUFeaturePredicateTy) {
+        resultType = Context.getLogicalOperationType();
+        Input = AMDGPU().ExpandAMDGPUPredicateBI(dyn_cast<CallExpr>(InputExpr));
         break;
       } else {
         return ExprError(Diag(OpLoc, diag::err_typecheck_unary_expr)
@@ -20661,88 +20617,6 @@ void Sema::DiagnoseEqualityWithExtraParens(ParenExpr *ParenE) {
     }
 }
 
-static bool ValidateAMDGPUPredicateBI(Sema &Sema, CallExpr *CE) {
-  if (CE->getDirectCallee()->getName() == "__builtin_amdgcn_processor_is") {
-    auto *GFX = dyn_cast<StringLiteral>(CE->getArg(0)->IgnoreParenCasts());
-    if (!GFX) {
-      Sema.Diag(CE->getExprLoc(),
-                diag::err_amdgcn_processor_is_arg_not_literal);
-      return false;
-    }
-    auto N = GFX->getString();
-    if (!Sema.getASTContext().getTargetInfo().isValidCPUName(N) &&
-        (!Sema.getASTContext().getAuxTargetInfo() ||
-         !Sema.getASTContext().getAuxTargetInfo()->isValidCPUName(N))) {
-      Sema.Diag(CE->getExprLoc(),
-                diag::err_amdgcn_processor_is_arg_invalid_value)
-          << N;
-      return false;
-    }
-  } else {
-    auto *Arg = CE->getArg(0);
-    if (!Arg || Arg->getType() != Sema.getASTContext().BuiltinFnTy) {
-      Sema.Diag(CE->getExprLoc(),
-                diag::err_amdgcn_is_invocable_arg_invalid_value)
-          << Arg;
-      return false;
-    }
-  }
-
-  return true;
-}
-
-static Expr *MaybeHandleAMDGPUPredicateBI(Sema &Sema, Expr *E, bool &Invalid) {
-  if (auto *UO = dyn_cast<UnaryOperator>(E)) {
-    auto *SE = dyn_cast<CallExpr>(UO->getSubExpr());
-    if (IsAMDGPUPredicateBI(SE)) {
-      assert(UO->getOpcode() == UnaryOperator::Opcode::UO_LNot &&
-             "__builtin_amdgcn_processor_is and __builtin_amdgcn_is_invocable "
-             "can only be used as operands of logical ops!");
-
-      if (!ValidateAMDGPUPredicateBI(Sema, SE)) {
-        Invalid = true;
-        return nullptr;
-      }
-
-      UO->setSubExpr(ExpandAMDGPUPredicateBI(Sema.getASTContext(), SE));
-      UO->setType(Sema.getASTContext().getLogicalOperationType());
-
-      return UO;
-    }
-  }
-  if (auto *BO = dyn_cast<BinaryOperator>(E)) {
-    auto *LHS = dyn_cast<CallExpr>(BO->getLHS());
-    auto *RHS = dyn_cast<CallExpr>(BO->getRHS());
-    if (IsAMDGPUPredicateBI(LHS) && IsAMDGPUPredicateBI(RHS)) {
-      assert(BO->isLogicalOp() &&
-             "__builtin_amdgcn_processor_is and __builtin_amdgcn_is_invocable "
-             "can only be used as operands of logical ops!");
-
-      if (!ValidateAMDGPUPredicateBI(Sema, LHS) ||
-          !ValidateAMDGPUPredicateBI(Sema, RHS)) {
-        Invalid = true;
-        return nullptr;
-      }
-
-      BO->setLHS(ExpandAMDGPUPredicateBI(Sema.getASTContext(), LHS));
-      BO->setRHS(ExpandAMDGPUPredicateBI(Sema.getASTContext(), RHS));
-      BO->setType(Sema.getASTContext().getLogicalOperationType());
-
-      return BO;
-    }
-  }
-  if (auto *CE = dyn_cast<CallExpr>(E))
-    if (IsAMDGPUPredicateBI(CE)) {
-      if (!ValidateAMDGPUPredicateBI(Sema, CE)) {
-        Invalid = true;
-        return nullptr;
-      }
-      return ExpandAMDGPUPredicateBI(Sema.getASTContext(), CE);
-    }
-
-  return nullptr;
-}
-
 ExprResult Sema::CheckBooleanCondition(SourceLocation Loc, Expr *E,
                                        bool IsConstexpr) {
   DiagnoseAssignmentAsCondition(E);
@@ -20754,13 +20628,8 @@ ExprResult Sema::CheckBooleanCondition(SourceLocation Loc, Expr *E,
   E = result.get();
 
   if (!E->isTypeDependent()) {
-    if (E->getType()->isVoidType()) {
-      bool InvalidPredicate = false;
-      if (auto *BIC = MaybeHandleAMDGPUPredicateBI(*this, E, InvalidPredicate))
-        return BIC;
-      else if (InvalidPredicate)
-        return ExprError();
-    }
+    if (E->getType() == Context.AMDGPUFeaturePredicateTy)
+      return AMDGPU().ExpandAMDGPUPredicateBI(dyn_cast_or_null<CallExpr>(E));
 
     if (getLangOpts().CPlusPlus)
       return CheckCXXBooleanCondition(E, IsConstexpr); // C++ 6.4p4

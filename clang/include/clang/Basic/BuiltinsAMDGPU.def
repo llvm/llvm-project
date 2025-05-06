@@ -351,8 +351,8 @@ BUILTIN(__builtin_amdgcn_set_fpenv, "vWUi", "n")
 
 // These are special FE only builtins intended for forwarding the requirements
 // to the ME.
-BUILTIN(__builtin_amdgcn_processor_is, "vcC*", "nctu")
-BUILTIN(__builtin_amdgcn_is_invocable, "v", "nctu")
+BUILTIN(__builtin_amdgcn_processor_is, "QccC*", "nctu")
+BUILTIN(__builtin_amdgcn_is_invocable, "Qc", "nctu")
 
 //===----------------------------------------------------------------------===//
 // R600-NI only builtins.

@@ -12,6 +12,7 @@
 
 #include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Basic/DiagnosticSema.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/Sema.h"
@@ -366,4 +367,63 @@ void SemaAMDGPU::handleAMDGPUMaxNumWorkGroupsAttr(Decl *D,
   addAMDGPUMaxNumWorkGroupsAttr(D, AL, AL.getArgAsExpr(0), YExpr, ZExpr);
 }
 
+Expr *SemaAMDGPU::ExpandAMDGPUPredicateBI(CallExpr *CE) {
+  auto &Ctx = getASTContext();
+  auto BoolTy = Ctx.getLogicalOperationType();
+  auto False = llvm::APInt::getZero(Ctx.getIntWidth(BoolTy));
+  auto True = llvm::APInt::getAllOnes(Ctx.getIntWidth(BoolTy));
+  auto Loc = CE->getExprLoc();
+
+  if (!CE->getBuiltinCallee())
+    return IntegerLiteral::Create(Ctx, False, BoolTy, Loc);
+
+  auto P = false;
+  auto BI = CE->getBuiltinCallee();
+  if (Ctx.BuiltinInfo.isAuxBuiltinID(BI))
+    BI = Ctx.BuiltinInfo.getAuxBuiltinID(BI);
+
+  if (BI == AMDGPU::BI__builtin_amdgcn_processor_is) {
+    auto *GFX = dyn_cast<StringLiteral>(CE->getArg(0)->IgnoreParenCasts());
+    if (!GFX) {
+      Diag(Loc, diag::err_amdgcn_processor_is_arg_not_literal);
+      return nullptr;
+    }
+
+    auto N = GFX->getString();
+    if (!Ctx.getTargetInfo().isValidCPUName(N) &&
+        (!Ctx.getAuxTargetInfo() ||
+         !Ctx.getAuxTargetInfo()->isValidCPUName(N))) {
+      Diag(Loc, diag::err_amdgcn_processor_is_arg_invalid_value) << N;
+      return nullptr;
+    }
+    if (Ctx.getTargetInfo().getTriple().isSPIRV()) {
+      CE->setType(BoolTy);
+      return CE;
+    }
+
+    if (auto TID = Ctx.getTargetInfo().getTargetID())
+      P = TID->find(N) == 0;
+  } else {
+    auto *Arg = CE->getArg(0);
+    if (!Arg || Arg->getType() != Ctx.BuiltinFnTy) {
+      Diag(Loc, diag::err_amdgcn_is_invocable_arg_invalid_value) << Arg;
+      return nullptr;
+    }
+
+    if (Ctx.getTargetInfo().getTriple().isSPIRV()) {
+      CE->setType(BoolTy);
+      return CE;
+    }
+
+    auto *FD = cast<FunctionDecl>(Arg->getReferencedDeclOfCallee());
+
+    StringRef RF = Ctx.BuiltinInfo.getRequiredFeatures(FD->getBuiltinID());
+    llvm::StringMap<bool> CF;
+    Ctx.getFunctionFeatureMap(CF, FD);
+
+    P = Builtin::evaluateRequiredTargetFeatures(RF, CF);
+  }
+
+  return IntegerLiteral::Create(Ctx, P ? True : False, BoolTy, Loc);
+}
 } // namespace clang
