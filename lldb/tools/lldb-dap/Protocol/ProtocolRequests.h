@@ -294,6 +294,75 @@ bool fromJSON(const llvm::json::Value &, LaunchRequestArguments &,
 /// field is required.
 using LaunchResponseBody = VoidResponse;
 
+/// Arguments for `setVariable` request.
+struct SetVariableArguments {
+  /// The reference of the variable container. The `variablesReference` must
+  /// have been obtained in the current suspended state. See 'Lifetime of Object
+  ///  References' in the Overview section for details.
+  uint64_t variablesReference = UINT64_MAX;
+
+  /// The name of the variable in the container.
+  std::string name;
+
+  /// The value of the variable.
+  std::string value;
+
+  /// Specifies details on how to format the response value.
+  ValueFormat format;
+};
+bool fromJSON(const llvm::json::Value &, SetVariableArguments &,
+              llvm::json::Path);
+
+/// Response to `setVariable` request.
+struct SetVariableResponseBody {
+
+  /// The new value of the variable.
+  std::string value;
+
+  /// The type of the new value. Typically shown in the UI when hovering over
+  /// the value.
+  std::optional<std::string> type;
+
+  /// If `variablesReference` is > 0, the new value is structured and its
+  /// children can be retrieved by passing `variablesReference` to the
+  /// `variables` request as long as execution remains suspended. See 'Lifetime
+  /// of Object References' in the Overview section for details.
+  ///
+  /// If this property is included in the response, any `variablesReference`
+  /// previously associated with the updated variable, and those of its
+  /// children, are no longer valid.
+  std::optional<uint64_t> variablesReference;
+
+  /// The number of named child variables.
+  /// The client can use this information to present the variables in a paged
+  /// UI and fetch them in chunks.
+  /// The value should be less than or equal to 2147483647 (2^31-1).
+  std::optional<uint32_t> namedVariables;
+
+  /// The number of indexed child variables.
+  /// The client can use this information to present the variables in a paged
+  /// UI and fetch them in chunks.
+  /// The value should be less than or equal to 2147483647 (2^31-1).
+  std::optional<uint32_t> indexedVariables;
+
+  /// A memory reference to a location appropriate for this result.
+  /// For pointer type eval results, this is generally a reference to the
+  /// memory address contained in the pointer.
+  /// This attribute may be returned by a debug adapter if corresponding
+  /// capability `supportsMemoryReferences` is true.
+  std::optional<std::string> memoryReference;
+
+  /// A reference that allows the client to request the location where the new
+  /// value is declared. For example, if the new value is function pointer, the
+  /// adapter may be able to look up the function's location. This should be
+  /// present only if the adapter is likely to be able to resolve the location.
+  ///
+  /// This reference shares the same lifetime as the `variablesReference`. See
+  /// 'Lifetime of Object References' in the Overview section for details.
+  std::optional<uint64_t> valueLocationReference;
+};
+llvm::json::Value toJSON(const SetVariableResponseBody &);
+
 /// Arguments for `source` request.
 struct SourceArguments {
   /// Specifies the source content to load. Either `source.path` or
