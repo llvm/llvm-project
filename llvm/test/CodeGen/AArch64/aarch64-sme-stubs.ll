@@ -42,6 +42,6 @@ define void @__arm_za_disable() {
 ; CHECK-LABEL: __arm_za_disable:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ret
-gientry:
+entry:
   ret void
 }
