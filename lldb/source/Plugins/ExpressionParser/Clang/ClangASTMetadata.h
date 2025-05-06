@@ -12,6 +12,7 @@
 #include "lldb/Core/dwarf.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-private-enumerations.h"
 
 namespace lldb_private {
 
@@ -28,11 +29,13 @@ public:
         ,
         m_is_potentially_swift_interop_type(true)
   // END SWIFT
-  {}
+  {
+    SetIsDynamicCXXType(std::nullopt);
+  }
 
-  bool GetIsDynamicCXXType() const { return m_is_dynamic_cxx; }
+  std::optional<bool> GetIsDynamicCXXType() const;
 
-  void SetIsDynamicCXXType(bool b) { m_is_dynamic_cxx = b; }
+  void SetIsDynamicCXXType(std::optional<bool> b);
 
   void SetUserID(lldb::user_id_t user_id) {
     m_user_id = user_id;
@@ -120,8 +123,7 @@ private:
   };
 
   bool m_union_is_user_id : 1, m_union_is_isa_ptr : 1, m_has_object_ptr : 1,
-      m_is_self : 1, m_is_dynamic_cxx : 1,
-      m_is_forcefully_completed : 1
+      m_is_self : 1, m_is_dynamic_cxx : 2, m_is_forcefully_completed : 1
       // BEGIN SWIFT
       , m_is_potentially_swift_interop_type : 1
       // END SWIFT
