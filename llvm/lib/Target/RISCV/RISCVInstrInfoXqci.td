@@ -40,6 +40,12 @@ def uimm5_plus1 : RISCVOp, ImmLeaf<XLenVT,
   let EncoderMethod = "getImmOpValueMinus1";
   let DecoderMethod = "decodeUImmPlus1Operand<5>";
   let OperandType = "OPERAND_UIMM5_PLUS1";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return (isUInt<5>(Imm) && (Imm != 0)) || (Imm == 32);
+  }];
 }
 
 def uimm5ge6_plus1 : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
@@ -48,6 +54,12 @@ def uimm5ge6_plus1 : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
   let EncoderMethod = "getImmOpValueMinus1";
   let DecoderMethod = "decodeUImmPlus1OperandGE<5,6>";
   let OperandType = "OPERAND_UIMM5_GE6_PLUS1";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return (Imm >= 6) && (isUInt<5>(Imm) || (Imm == 32));
+  }];
 }
 
 def uimm5slist : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
@@ -1369,3 +1381,13 @@ def : CompressPat<(QC_E_SH GPR:$rs2, GPRMem:$rs1, simm12:$imm12),
 def : CompressPat<(QC_E_SW GPR:$rs2, GPRMem:$rs1, simm12:$imm12),
                   (SW GPR:$rs2, GPRMem:$rs1, simm12:$imm12)>;
 } // isCompressOnly = true, Predicates = [HasVendorXqcilo, IsRV32]
+
+let Predicates = [HasVendorXqcicm, IsRV32] in {
+def : CompressPat<(QC_MVEQI GPRC:$rd, GPRC:$rd, 0, GPRC:$rs1),
+                  (QC_C_MVEQZ GPRC:$rd, GPRC:$rs1)>;
+}
+
+let Predicates = [HasVendorXqcibm, IsRV32] in {
+def : CompressPat<(QC_EXTU GPRNoX0:$rd, GPRNoX0:$rd, uimm5ge6_plus1:$width, 0),
+                  (QC_C_EXTU GPRNoX0:$rd, uimm5ge6_plus1:$width)>;
+}
