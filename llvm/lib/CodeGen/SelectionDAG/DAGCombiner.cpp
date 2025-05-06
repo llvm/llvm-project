@@ -10975,7 +10975,7 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
   // fold (srl (logic_op x, (shl (zext y), c1)), c1)
   //   -> (logic_op (srl x, c1), (zext y))
   // c1 <= leadingzeros(zext(y))
-  if (N1C && ISD::isBitwiseLogicOp(N0.getOpcode())) {
+  if (N1C && ISD::isBitwiseLogicOp(N0.getOpcode()) && N0.hasOneUse()) {
     SDValue lhs = N0.getOperand(0);
     SDValue rhs = N0.getOperand(1);
     SDValue shl;
@@ -10987,7 +10987,7 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
       shl = rhs;
       other = lhs;
     }
-    if (shl && shl.getOperand(1) == N1) {
+    if (shl && shl.getOperand(1) == N1 && shl.hasOneUse()) {
       SDValue zext = shl.getOperand(0);
       if (zext.getOpcode() == ISD::ZERO_EXTEND) {
         unsigned numLeadingZeros =

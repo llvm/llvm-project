@@ -107,15 +107,17 @@ define i64 @test_negative_use_lop(i64 %x, i32 %y) {
 ;
 ; srl (or (x, shl(zext(y),c1)),c1) -> or(srl(x,c1), zext(y))
 ; c1 <= leadingzeros(zext(y))
-;  
-; 
+; multiple usage of "or"
 ;
 ; CHECK-LABEL: test_negative_use_lop
-; CHECK: ld.param.u64 %[[X:rd[0-9]+]], [test_negative_c_param_0];
-; CHECK: ld.param.u32 %[[Y:rd[0-9]+]], [test_negative_c_param_1];
-; CHECK: shl.b64      %[[SHL:rd[0-9]+]], %[[Y]], 33;
+; CHECK: ld.param.u64 %[[X:rd[0-9]+]], [test_negative_use_lop_param_0];
+; CHECK: ld.param.u32 %[[Y:r[0-9]+]], [test_negative_use_lop_param_1];
+; CHECK: mul.wide.u32 %[[SHL:rd[0-9]+]], %[[Y]], 32;
 ; CHECK: or.b64       %[[OR:rd[0-9]+]], %[[X]], %[[SHL]];
-; CHECK: shr.u64      %[[SHR:rd[0-9]+]], %[[OR]], 33;
+; CHECK: shr.u64      %[[SHR:rd[0-9]+]], %[[OR]], 5;
+; CHECK: { // callseq
+; CHECK:      st.param.b64    [param0], %[[OR]];
+; CHECK: } // callseq
 ; CHECK: st.param.b64 [func_retval0], %[[SHR]];
 ;
   %ext = zext i32 %y to i64
@@ -123,5 +125,31 @@ define i64 @test_negative_use_lop(i64 %x, i32 %y) {
   %or = or i64 %x, %shl
   %srl = lshr i64 %or, 5
   call void @use(i64 %or)
+  ret i64 %srl
+}
+
+
+define i64 @test_negative_use_shl(i64 %x, i32 %y) {
+;
+; srl (or (x, shl(zext(y),c1)),c1) -> or(srl(x,c1), zext(y))
+; c1 <= leadingzeros(zext(y))
+; multiple usage of "shl"
+;
+; CHECK-LABEL: test_negative_use_shl
+; CHECK: ld.param.u64 %[[X:rd[0-9]+]], [test_negative_use_shl_param_0];
+; CHECK: ld.param.u32 %[[Y:r[0-9]+]], [test_negative_use_shl_param_1];
+; CHECK: mul.wide.u32 %[[SHL:rd[0-9]+]], %[[Y]], 32;
+; CHECK: or.b64       %[[OR:rd[0-9]+]], %[[X]], %[[SHL]];
+; CHECK: shr.u64      %[[SHR:rd[0-9]+]], %[[OR]], 5;
+; CHECK: { // callseq
+; CHECK:      st.param.b64    [param0], %[[SHL]];
+; CHECK: } // callseq
+; CHECK: st.param.b64 [func_retval0], %[[SHR]];
+;
+  %ext = zext i32 %y to i64
+  %shl = shl i64 %ext, 5
+  %or = or i64 %x, %shl
+  %srl = lshr i64 %or, 5
+  call void @use(i64 %shl)
   ret i64 %srl
 }
