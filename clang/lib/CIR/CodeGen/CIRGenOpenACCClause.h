@@ -354,9 +354,7 @@ public:
       llvm::APInt value =
           clause.getIntExpr()->EvaluateKnownConstInt(cgf.cgm.getASTContext());
 
-      if (value.getBitWidth() != 64)
-        value = value.sext(64);
-
+      value = value.sextOrTrunc(64);
       operation.setCollapseForDeviceTypes(builder.getContext(),
                                           lastDeviceTypeValues, value);
     } else {
@@ -381,8 +379,8 @@ public:
         } else {
           llvm::APInt curValue =
               e->EvaluateKnownConstInt(cgf.cgm.getASTContext());
-          values.push_back(
-              createConstantInt(exprLoc, 64, curValue.getSExtValue()));
+          values.push_back(createConstantInt(
+              exprLoc, 64, curValue.sextOrTrunc(64).getSExtValue()));
         }
       }
 
