@@ -406,6 +406,26 @@ void populateVectorNarrowTypeRewritePatterns(RewritePatternSet &patterns,
 void populateVectorTransposeNarrowTypeRewritePatterns(
     RewritePatternSet &patterns, PatternBenefit benefit = 1);
 
+/// Add patterns that convert operations that are semantically equivalent to
+/// shape_cast, to shape_cast. Currently this includes patterns for converting
+/// transpose, extract and broadcast to shape_cast. Examples that will be
+/// converted to shape_cast are:
+///
+/// ```
+/// %0 = vector.broadcast %arg0 : vector<4xi8> to vector<1x1x4xi8>
+/// %1 = vector.transpose %arg1, [1, 0] : vector<2x1xi8> to vector<1x2xi8>
+/// %2 = vector.extract %arg2[0] : vector<4xi8> from vector<1x4xi8>
+/// ```
+///
+/// Note that there is no pattern for vector.extract_strided_slice, because the
+/// only extract_strided_slice that is semantically equivalent to shape_cast is
+/// one that has idential input and output shapes, which is already folded.
+///
+/// These patterns can be useful to expose more folding opportunities by
+/// creating pairs of shape_casts that cancel. 
+void populateConvertToShapeCastPatterns(RewritePatternSet &,
+                                        PatternBenefit = 1);
+
 /// Initialize `typeConverter` and `conversionTarget` for vector linearization.
 /// This registers (1) which operations are legal and hence should not be
 /// linearized, (2) what converted types are (rank-1 vectors) and how to

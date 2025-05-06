@@ -1022,6 +1022,26 @@ struct TestEliminateVectorMasks
                          VscaleRange{vscaleMin, vscaleMax});
   }
 };
+
+struct TestConvertToShapeCast
+    : public PassWrapper<TestConvertToShapeCast, OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestConvertToShapeCast)
+
+  TestConvertToShapeCast() = default;
+
+  StringRef getArgument() const final { return "test-convert-to-shape-cast"; }
+  StringRef getDescription() const final {
+    return "Test conversion to shape_cast of semantically equivalent ops";
+  }
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<vector::VectorDialect>();
+  }
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    populateConvertToShapeCastPatterns(patterns);
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+  }
+};
 } // namespace
 
 namespace mlir {
@@ -1072,6 +1092,8 @@ void registerTestVectorLowerings() {
   PassRegistration<vendor::TestVectorBitWidthLinearize>();
 
   PassRegistration<TestEliminateVectorMasks>();
+
+  PassRegistration<TestConvertToShapeCast>();
 }
 } // namespace test
 } // namespace mlir

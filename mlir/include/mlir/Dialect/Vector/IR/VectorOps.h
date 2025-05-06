@@ -50,6 +50,7 @@ namespace vector {
 class ContractionOp;
 class TransferReadOp;
 class TransferWriteOp;
+class TransposeOp;
 class VectorDialect;
 
 namespace detail {
@@ -170,6 +171,12 @@ SmallVector<Value> getAsValues(OpBuilder &builder, Location loc,
 /// vector.vscale`), return the multiplier (`%cst`). Otherwise, return
 /// `std::nullopt`.
 std::optional<int64_t> getConstantVscaleMultiplier(Value value);
+
+/// Return true if `transpose` does not permute a pair of non-unit dims.
+/// By `order preserving` we mean that the flattened versions of the input and
+/// output vectors are (numerically) identical. In other words `transpose` is
+/// effectively a shape cast.
+bool isOrderPreserving(TransposeOp transpose);
 
 //===----------------------------------------------------------------------===//
 // Vector Masking Utilities
