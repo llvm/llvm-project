@@ -157,6 +157,7 @@ def C99Compat : DiagGroup<"c99-compat">;
 def C23Compat : DiagGroup<"c23-compat">;
 def : DiagGroup<"c2x-compat", [C23Compat]>;
 
+def CppKeywordInC : DiagGroup<"c++-keyword">;
 def DuplicateDeclSpecifier : DiagGroup<"duplicate-decl-specifier">;
 def InitStringTooLongMissingNonString :
   DiagGroup<"unterminated-string-initialization">;
@@ -176,11 +177,12 @@ def DefaultConstInit : DiagGroup<"default-const-init",
 def ImplicitVoidPtrCast : DiagGroup<"implicit-void-ptr-cast">;
 def ImplicitIntToEnumCast : DiagGroup<"implicit-int-enum-cast",
                                       [ImplicitEnumEnumCast]>;
+def JumpBypassesInit : DiagGroup<"jump-misses-init">;
 def TentativeDefnCompat : DiagGroup<"tentative-definition-compat">;
 def CXXCompat: DiagGroup<"c++-compat", [ImplicitVoidPtrCast, DefaultConstInit,
                                         ImplicitIntToEnumCast, HiddenCppDecl,
-                                        InitStringTooLongForCpp,
-                                        TentativeDefnCompat,
+                                        InitStringTooLongForCpp, CppKeywordInC,
+                                        TentativeDefnCompat, JumpBypassesInit,
                                         DuplicateDeclSpecifier]>;
 
 def ExternCCompat : DiagGroup<"extern-c-compat">;
@@ -619,6 +621,7 @@ def ModuleImport : DiagGroup<"module-import">;
 def ModuleConflict : DiagGroup<"module-conflict">;
 def ModuleFileExtension : DiagGroup<"module-file-extension">;
 def ModuleIncludeDirectiveTranslation : DiagGroup<"module-include-translation">;
+def ModuleMap : DiagGroup<"module-map">;
 def RoundTripCC1Args : DiagGroup<"round-trip-cc1-args">;
 def NewlineEOF : DiagGroup<"newline-eof">;
 def Nullability : DiagGroup<"nullability">;

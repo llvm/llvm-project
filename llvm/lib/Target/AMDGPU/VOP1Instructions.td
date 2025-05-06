@@ -1472,16 +1472,9 @@ def : GCNPat <
 
 } // End OtherPredicates = [isGFX8Plus, p]
 
-let True16Predicate = UseFakeTrue16Insts in {
-def : GCNPat<
-  (i32 (DivergentUnaryFrag<anyext> i16:$src)),
-  (COPY $src)
->;
-} // End True16Predicate = UseFakeTrue16Insts
-
 let True16Predicate = UseRealTrue16Insts in {
 def : GCNPat<
-  (i32 (UniformUnaryFrag<anyext> (i16 SReg_32:$src))),
+  (i32 (UniformUnaryFrag<anyext> i16:$src)),
   (COPY $src)
 >;
 
