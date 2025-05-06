@@ -18,10 +18,15 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-#define EFI_ERROR_MAX_BIT (cpp::numeric_limits<EFI_STATUS>::max())
-#define EFI_ENCODE_ERROR(value)                                                \
-  (EFI_ERROR_MAX_BIT | (EFI_ERROR_MAX_BIT >> 2) | (value))
-#define EFI_ENCODE_WARNING(value) ((EFI_ERROR_MAX_BIT >> 2) | (value))
+static constexpr int EFI_ERROR_MAX_BIT = cpp::numeric_limits<EFI_STATUS>::max();
+
+static constexpr int EFI_ENCODE_ERROR(int value) {
+  return EFI_ERROR_MAX_BIT | (EFI_ERROR_MAX_BIT >> 2) | (value);
+}
+
+static constexpr int EFI_ENCODE_WARNING(int value) {
+  return (EFI_ERROR_MAX_BIT >> 2) | (value);
+}
 
 struct UefiStatusErrnoEntry {
   EFI_STATUS status;
@@ -79,7 +84,7 @@ LIBC_INLINE int uefi_status_to_errno(EFI_STATUS status) {
   }
 
   // Unknown type
-  __builtin_unreachable();
+  return EINVAL;
 }
 
 LIBC_INLINE EFI_STATUS errno_to_uefi_status(int errno_value) {
@@ -91,7 +96,7 @@ LIBC_INLINE EFI_STATUS errno_to_uefi_status(int errno_value) {
   }
 
   // Unknown type
-  __builtin_unreachable();
+  return EFI_INVALID_PARAMETER;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

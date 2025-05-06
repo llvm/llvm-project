@@ -7,7 +7,7 @@
 //===-----------------------------------------------------------------===//
 
 #include "src/__support/OSUtil/exit.h"
-#include "config/uefi/app.h"
+#include "config/uefi.h"
 #include "include/llvm-libc-types/EFI_SYSTEM_TABLE.h"
 #include "src/__support/macros/config.h"
 

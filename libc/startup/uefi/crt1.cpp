@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "config/uefi/app.h"
+#include "config/app.h"
 #include "include/llvm-libc-types/EFI_STATUS.h"
 #include "src/__support/OSUtil/uefi/error.h"
 #include "src/__support/macros/config.h"

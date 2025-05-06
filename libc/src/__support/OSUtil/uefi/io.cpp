@@ -9,7 +9,7 @@
 #include "io.h"
 
 #include "Uefi.h"
-#include "config/uefi/app.h"
+#include "config/app.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/macros/config.h"
 
