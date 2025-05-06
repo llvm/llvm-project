@@ -19796,7 +19796,7 @@ performExtractVectorEltCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   SDValue N0 = N->getOperand(0), N1 = N->getOperand(1);
 
   EVT VT = N->getValueType(0);
-  const bool FullFP16 = DAG.getSubtarget<AArch64Subtarget>().hasFullFP16();
+  const bool FullFP16 = Subtarget->hasFullFP16();
   bool IsStrict = N0->isStrictFPOpcode();
 
   // extract(dup x) -> x
