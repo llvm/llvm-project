@@ -2396,6 +2396,7 @@ static std::optional<Instruction *> instCombineSVEUzp1(InstCombiner &IC,
 
   // uzp1(to_svbool(A), to_svbool(B)) --> <A, B>
   // uzp1(from_svbool(to_svbool(A)), from_svbool(to_svbool(B))) --> <A, B>
+
   if ((match(II.getArgOperand(0),
              m_Intrinsic<FromSVB>(m_Intrinsic<ToSVB>(m_Value(A)))) &&
        match(II.getArgOperand(1),
@@ -2702,6 +2703,52 @@ static std::optional<Instruction *> instCombinePTrue(InstCombiner &IC,
   return std::nullopt;
 }
 
+static std::optional<Instruction *> instCombineSVERev(InstCombiner &IC,
+                                                      IntrinsicInst &II) {
+  // rev(rev(x)) -> x
+  switch (II.getIntrinsicID()) {
+  default:
+    return std::nullopt;
+
+  case Intrinsic::aarch64_sve_rev:
+  case Intrinsic::aarch64_sve_rev_b16:
+  case Intrinsic::aarch64_sve_rev_b32:
+  case Intrinsic::aarch64_sve_rev_b64: {
+    Value *InnerArg = II.getArgOperand(0);
+    IntrinsicInst *InnerRev = dyn_cast<IntrinsicInst>(InnerArg);
+    // Fold rev(rev(x)) -> x, if intrinsic IDs match and InnerRev has one use
+    if (InnerRev && InnerRev->getIntrinsicID() == II.getIntrinsicID() &&
+        InnerRev->hasOneUse())
+      return IC.replaceInstUsesWith(II, InnerRev->getArgOperand(0));
+
+    return std::nullopt;
+  }
+
+  case Intrinsic::aarch64_sve_revb:
+  case Intrinsic::aarch64_sve_revd:
+  case Intrinsic::aarch64_sve_revh:
+  case Intrinsic::aarch64_sve_revw: {
+    Value *InnerArg = II.getArgOperand(2);
+    IntrinsicInst *InnerRev = dyn_cast<IntrinsicInst>(InnerArg);
+
+    // Early exit if InnerRev != outerId and doesn't only have one use
+    if (!InnerRev || InnerRev->getIntrinsicID() != II.getIntrinsicID() ||
+        !InnerRev->hasOneUse())
+      return std::nullopt;
+
+    Value *OuterPred = II.getArgOperand(0);
+    Value *OuterPassThru = II.getArgOperand(1);
+    Value *InnerPred = InnerRev->getArgOperand(0);
+    Value *InnerPassThru = InnerRev->getArgOperand(1);
+
+    // Fold rev(rev(x)) -> x, if predicates and pass-thrus match
+    return IC.replaceInstUsesWith(II, InnerRev->getArgOperand(2));
+
+    return std::nullopt;
+  }
+  }
+}
+
 std::optional<Instruction *>
 AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                      IntrinsicInst &II) const {
@@ -2801,6 +2848,15 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVEInsr(IC, II);
   case Intrinsic::aarch64_sve_ptrue:
     return instCombinePTrue(IC, II);
+  case Intrinsic::aarch64_sve_rev:
+  case Intrinsic::aarch64_sve_rev_b16:
+  case Intrinsic::aarch64_sve_rev_b32:
+  case Intrinsic::aarch64_sve_rev_b64:
+  case Intrinsic::aarch64_sve_revb:
+  case Intrinsic::aarch64_sve_revd:
+  case Intrinsic::aarch64_sve_revh:
+  case Intrinsic::aarch64_sve_revw:
+    return instCombineSVERev(IC, II);
   }
 
   return std::nullopt;
