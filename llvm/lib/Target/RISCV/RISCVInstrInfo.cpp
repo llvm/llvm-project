@@ -3894,7 +3894,7 @@ bool RISCVInstrInfo::optimizeInstruction(MachineInstr &MI) const {
     break;
   case RISCV::OR:
   case RISCV::XOR:
-    // Normalize:
+    // Normalize (so we hit the next if clause).
     // [x]or rd, zero, rs => [x]or rd, rs, zero
     if (MI.getOperand(1).getReg() == RISCV::X0)
       commuteInstruction(MI);
@@ -3938,7 +3938,7 @@ bool RISCVInstrInfo::optimizeInstruction(MachineInstr &MI) const {
     }
     break;
   case RISCV::ADDW:
-    // Normalize:
+    // Normalize (so we hit the next if clause).
     // addw rd, zero, rs => addw rd, rs, zero
     if (MI.getOperand(1).getReg() == RISCV::X0)
       commuteInstruction(MI);
