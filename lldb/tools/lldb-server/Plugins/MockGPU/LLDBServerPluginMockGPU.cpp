@@ -175,9 +175,7 @@ std::optional<GPUActions> LLDBServerPluginMockGPU::NativeProcessIsStopping() {
     GPUBreakpointInfo bp;
     bp.identifier = "3rd stop breakpoint";
     bp.name_info = {"a.out", "gpu_third_stop"};
-    std::vector<GPUBreakpointInfo> breakpoints;
-    breakpoints.emplace_back(std::move(bp));
-    actions.breakpoints = std::move(breakpoints);
+    actions.breakpoints.emplace_back(std::move(bp));
     return actions;
   }
   return std::nullopt;
@@ -200,6 +198,23 @@ LLDBServerPluginMockGPU::BreakpointWasHit(GPUPluginBreakpointHitArgs &args) {
     LLDB_LOGF(log, "LLDBServerPluginMockGPU::BreakpointWasHit(\"%s\") disabling breakpoint", 
               bp_identifier.c_str());
     response.actions.connect_info = CreateConnection();
+
+    // We asked for the symbol "gpu_shlib_load" to be delivered as a symbol
+    // value when the "gpu_initialize" breakpoint was set. So we will use this
+    // to set a breakpoint by address to test setting breakpoints by address.
+    std::optional<uint64_t> gpu_shlib_load_addr = 
+        args.GetSymbolValue("gpu_shlib_load");
+    if (gpu_shlib_load_addr) {
+      GPUBreakpointInfo bp;
+      bp.identifier = "gpu_shlib_load";
+      bp.addr_info = {*gpu_shlib_load_addr};
+      bp.symbol_names.push_back("g_shlib_list");
+      bp.symbol_names.push_back("invalid_symbol");
+      response.actions.breakpoints.emplace_back(std::move(bp));
+    }
+  } else if (bp_identifier == "gpu_shlib_load") {
+    // Tell the native process to tell the GPU process to load libraries.
+    response.actions.load_libraries = true;
   }
   return response;
 }
@@ -210,19 +225,8 @@ GPUActions LLDBServerPluginMockGPU::GetInitializeActions() {
   
   GPUBreakpointInfo bp1;
   bp1.identifier = "gpu_initialize";
-  bp1.name_info = {"a.out", "gpu_initialize"};
-  bp1.symbol_names.push_back("printf");
-  bp1.symbol_names.push_back("puts");
-
-  GPUBreakpointInfo bp2;
-  bp2.identifier = "gpu_shlib_load";
-  bp2.name_info = {"a.out", "gpu_shlib_load"};
-  bp2.symbol_names.push_back("g_shlib_list");
-  bp2.symbol_names.push_back("invalid_symbol");
-
-  std::vector<GPUBreakpointInfo> breakpoints;
-  breakpoints.emplace_back(std::move(bp1));
-  breakpoints.emplace_back(std::move(bp2));
-  init_actions.breakpoints = std::move(breakpoints);
+  bp1.name_info = {"a.out", "gpu_initialize"};  
+  bp1.symbol_names.push_back("gpu_shlib_load");
+  init_actions.breakpoints.emplace_back(std::move(bp1));
   return init_actions;
 }

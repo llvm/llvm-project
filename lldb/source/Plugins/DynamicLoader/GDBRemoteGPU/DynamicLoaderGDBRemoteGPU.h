@@ -61,11 +61,15 @@ public:
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
 private:
-  /// Load all modules by calling sending a packet via GDB remote.
+  /// Load all modules by sending a "jGPUPluginGetDynamicLoaderLibraryInfo"
+  /// packet to the GDB server.
   ///
   /// \param[in] full
   ///     If true, load all modules. If false, load or unload only new modules.
-  void LoadModules(bool full);
+  ///
+  /// \returns True if the GDB server supports the packet named 
+  ///     "jGPUPluginGetDynamicLoaderLibraryInfo", false otherwise.
+  bool LoadModulesFromGDBServer(bool full);
 };
 
 #endif // LLDB_SOURCE_PLUGINS_DYNAMICLOADER_STATIC_DYNAMICLOADERGDBREMOTEGPU_H

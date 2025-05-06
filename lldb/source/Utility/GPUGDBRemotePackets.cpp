@@ -131,6 +131,14 @@ json::Value toJSON(const GPUPluginBreakpointHitArgs &data) {
             });
 }
 
+std::optional<uint64_t> 
+GPUPluginBreakpointHitArgs::GetSymbolValue(llvm::StringRef symbol_name) {
+  for (const auto &symbol: symbol_values)
+    if (symbol_name == symbol.name)
+      return symbol.value;
+  return std::nullopt;
+}
+
 //------------------------------------------------------------------------------
 // GPUActions
 //------------------------------------------------------------------------------
@@ -139,8 +147,9 @@ bool fromJSON(const llvm::json::Value &value, GPUActions &data,
   ObjectMapper o(value, path);
   return o && 
          o.map("plugin_name", data.plugin_name) &&
-         o.mapOptional("breakpoints", data.breakpoints) &&
-         o.mapOptional("connect_info", data.connect_info);
+         o.map("breakpoints", data.breakpoints) &&
+         o.mapOptional("connect_info", data.connect_info) &&
+         o.map("load_libraries", data.load_libraries);
 }
 
 llvm::json::Value toJSON(const GPUActions &data) {
@@ -148,6 +157,7 @@ llvm::json::Value toJSON(const GPUActions &data) {
     Object{{"plugin_name", data.plugin_name},
            {"breakpoints", data.breakpoints},
            {"connect_info", data.connect_info},
+           {"load_libraries", data.load_libraries},
           });
 }
 

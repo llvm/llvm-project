@@ -883,15 +883,28 @@ bool ProcessGDBRemote::GPUBreakpointHit(void *baton,
 
 Status ProcessGDBRemote::HandleGPUActions(const GPUActions &gpu_action) {
   Status error;
-  if (gpu_action.breakpoints)
-    HandleGPUBreakpoints(gpu_action.plugin_name, *gpu_action.breakpoints);
+  if (!gpu_action.breakpoints.empty())
+    HandleGPUBreakpoints(gpu_action);
   if (gpu_action.connect_info)
-    error = HandleConnectionRequest(*gpu_action.connect_info);
+    error = HandleConnectionRequest(gpu_action);
+  if (gpu_action.load_libraries) {
+    lldb::TargetSP gpu_target_sp = 
+        GetTarget().GetGPUPluginTarget(gpu_action.plugin_name);
+    if (gpu_target_sp) {
+      lldb::ProcessSP gpu_process_sp = gpu_target_sp->GetProcessSP();
+      if (gpu_process_sp) {
+        llvm::Error error = gpu_process_sp->LoadModules();
+        if (error)
+          llvm::consumeError(std::move(error));
+      }
+    }
+  }
   return error;
 }
 
-Status ProcessGDBRemote::HandleConnectionRequest(
-    const GPUPluginConnectionInfo &connection_info) {
+Status ProcessGDBRemote::HandleConnectionRequest(const GPUActions &gpu_action) {
+  const GPUPluginConnectionInfo &connection_info = 
+    gpu_action.connect_info.value();
   Log *log = GetLog(GDBRLog::Plugin);
   LLDB_LOG(log, "ProcessGDBRemote::HandleConnectionRequest()"); 
   auto &debugger = GetTarget().GetDebugger();
@@ -926,21 +939,21 @@ Status ProcessGDBRemote::HandleConnectionRequest(
   if (!process_sp)
     return Status::FromErrorString("invalid process after conneting");
 
+  GetTarget().SetGPUPluginTarget(gpu_action.plugin_name, 
+                                 process_sp->GetTarget().shared_from_this());
   LLDB_LOG(log, "ProcessGDBRemote::HandleConnectionRequest(): successfully "
            "created process!!!");
   return Status();
 }
 
-void ProcessGDBRemote::HandleGPUBreakpoints(
-    const std::string plugin_name,
-    const std::vector<GPUBreakpointInfo> &breakpoints) {
+void ProcessGDBRemote::HandleGPUBreakpoints(const GPUActions &gpu_action) {
   Target &target = GetTarget();
-  for (const auto &bp: breakpoints) {
+  for (const auto &bp: gpu_action.breakpoints) {
     // Create data that will live with the breakpoint so when we hit the 
     // breakpoint and the GPUBreakpointHitCallback is called, we can use this
     // data.
     auto args_up = std::make_unique<GPUPluginBreakpointHitArgs>();
-    args_up->plugin_name = plugin_name;
+    args_up->plugin_name = gpu_action.plugin_name;
     args_up->breakpoint = bp;
     FileSpecList bp_modules;
     BreakpointSP bp_sp;
@@ -2100,10 +2113,16 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
               StopInfo::CreateStopReasonVForkDone(*thread_sp));
           handled = true;
         } else if (reason == "dyld") {
-          // Let the dynamic loader handle the dynamic loader stop reason.
-          if (m_dyld_up)
-            m_dyld_up->HandleStopReasonDynammicLoader();
-          // TODO: create dyld stop reason
+          // When plugins can't set a breakpoint, they might stop with a "dyld"
+          // reason to indicate that they need to load shared libraries.
+          auto error = LoadModules();
+          if (error) {
+            Log *log(GetLog(GDBRLog::Process));
+            LLDB_LOG_ERROR(log, std::move(error), "Failed to load modules: {0}");
+          }
+          // TODO: create dyld stop reason, or auto resume depending on value
+          // of setting that specifies if we should stop for shared library
+          // load events.
           thread_sp->SetStopInfo(StopInfo::CreateStopReasonToTrace(*thread_sp));
           handled = true;
         }
@@ -5383,6 +5402,29 @@ lldb::ModuleSP ProcessGDBRemote::LoadModuleAtAddress(const FileSpec &file,
 
 llvm::Error ProcessGDBRemote::LoadModules() {
   using lldb_private::process_gdb_remote::ProcessGDBRemote;
+
+  /// See if the dynamic loader knows how to load the modules when requested.
+  /// This can get triggered in multiple ways:
+  /// - If a breakpoint in the native process that was set by any GPUActions 
+  ///   gets hit, and the breakpoint hit response from the GPU plug-in via an 
+  ///   instance of GPUPluginBreakpointHitResponse has the "load_libraries" 
+  ///   bool member variable is set to true. This is the preferred method if
+  ///   it is possible for a breakpoint to be set in the native process as it
+  ///   allows the native process to be stopped while GPU shared libraries are
+  ///   loaded. The breakpoint will auto resume the process after the GPU
+  ///   shared libraries are loaded.
+  /// - Stop reason for a thread in GPU process is set to the 
+  ///   eStopReasonDynammicLoader stop reason. This is used when the GPU process
+  ///   doesn't require synchronization with the native process. If the GPU
+  ///   can't set a breakpoint in GPU code and the GPU driver gets a 
+  ///   notification that shared libraries are available. This should be used
+  ///   if we want to stop for shared library loading and LLDB should auto 
+  ///   continue the process. It doesn't do this yet, but it can and will in the
+  ///   future if we need this method of shared library load notification.
+  /// - The GPU process stop reply packet contains for a GPU thread has the
+  ///   "library;" key in the key value pairs.
+  if (m_dyld_up && m_dyld_up->HandleStopReasonDynammicLoader())
+    return llvm::ErrorSuccess();
 
   // request a list of loaded libraries from GDBServer
   llvm::Expected<LoadedModuleInfoList> module_list = GetLoadedModuleList();

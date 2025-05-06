@@ -46,20 +46,19 @@ DynamicLoaderGDBRemoteGPU::DynamicLoaderGDBRemoteGPU(Process *process)
 ///
 /// Allow DynamicLoader plug-ins to execute some code after
 /// attaching to a process.
-void DynamicLoaderGDBRemoteGPU::DidAttach() { LoadModules(true); }
+void DynamicLoaderGDBRemoteGPU::DidAttach() { LoadModulesFromGDBServer(true); }
 
 /// Called after attaching a process.
 ///
 /// Allow DynamicLoader plug-ins to execute some code after
 /// attaching to a process.
-void DynamicLoaderGDBRemoteGPU::DidLaunch() { LoadModules(true); }
+void DynamicLoaderGDBRemoteGPU::DidLaunch() { LoadModulesFromGDBServer(true); }
 
 bool DynamicLoaderGDBRemoteGPU::HandleStopReasonDynammicLoader() { 
-  LoadModules(false);
-  return GetStopWhenImagesChange();
+  return LoadModulesFromGDBServer(false);
 }
 
-void DynamicLoaderGDBRemoteGPU::LoadModules(bool full) {
+bool DynamicLoaderGDBRemoteGPU::LoadModulesFromGDBServer(bool full) {
   Log *log = GetLog(LLDBLog::DynamicLoader);
 
   ProcessGDBRemote *gdb_process = static_cast<ProcessGDBRemote *>(m_process);
@@ -71,7 +70,7 @@ void DynamicLoaderGDBRemoteGPU::LoadModules(bool full) {
       gdb_process->GetGDBRemote().GetGPUDynamicLoaderLibraryInfos(args);
   if (!response) {
     LLDB_LOG(log, "Failed to get dynamic loading info from GDB server");
-    return;
+    return false;
   }
   for (const GPUDynamicLoaderLibraryInfo &info : response->library_infos) {
     std::shared_ptr<DataBufferHeap> data_sp;
@@ -156,6 +155,7 @@ void DynamicLoaderGDBRemoteGPU::LoadModules(bool full) {
     }
   }
   target.ModulesDidLoad(loaded_module_list);
+  return true; // Handled the request.
 }
 
 ThreadPlanSP

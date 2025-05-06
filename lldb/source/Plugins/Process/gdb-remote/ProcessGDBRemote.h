@@ -447,10 +447,9 @@ private:
   bool GPUBreakpointHit(void *baton, StoppointCallbackContext *context, 
                         lldb::user_id_t break_id, lldb::user_id_t break_loc_id);
                     
-  void HandleGPUBreakpoints(const std::string plugin_name,
-                            const std::vector<GPUBreakpointInfo> &breakpoints);
+  void HandleGPUBreakpoints(const GPUActions &gpu_action);
 
-  Status HandleConnectionRequest(const GPUPluginConnectionInfo &connection_info);
+  Status HandleConnectionRequest(const GPUActions &gpu_action);
 
   Status HandleGPUActions(const GPUActions &gpu_action);
 

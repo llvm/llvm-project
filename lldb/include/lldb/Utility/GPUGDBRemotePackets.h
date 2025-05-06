@@ -94,6 +94,8 @@ struct GPUPluginBreakpointHitArgs {
   std::string plugin_name;
   GPUBreakpointInfo breakpoint;
   std::vector<SymbolValue> symbol_values;
+
+  std::optional<uint64_t> GetSymbolValue(llvm::StringRef symbol_name);
 };
 
 bool fromJSON(const llvm::json::Value &value, GPUPluginBreakpointHitArgs &data,
@@ -126,17 +128,47 @@ llvm::json::Value toJSON(const GPUPluginConnectionInfo &data);
 ///-----------------------------------------------------------------------------
 /// GPUActions
 ///
-/// A structure that contains action to be taken after a stop or breakpoint hit
-/// event.
+/// A structure used by the native process that is debugging the GPU that
+/// contains actions to be performed after:
+///
+/// - GPU Initilization in response to the "jGPUPluginInitialize" packet sent to
+///   the native process' lldb-server that contains GPU plugins. This packet is
+///   sent to the ProcessGDBRemote for the native process one time when a native
+///   process is being attached or launched.
+///
+/// - When a native breakpoint that was requested by the GPU plugin is hit, the
+///   native process in LLDB will call into the native process' GDB server and
+///   have it call the GPU plug-in method:
+///
+///     GPUPluginBreakpointHitResponse 
+///     LLDBServerPlugin::BreakpointWasHit(GPUPluginBreakpointHitArgs &args);
+///
+///   The GPUPluginBreakpointHitResponse contains a GPUActions member that will
+///   be encoded and sent back to the ProcessGDBRemote for the native process. 
+///
+/// - Anytime the native process stops, the native process' GDB server will ask
+///   each GPU plug-in if there are any actions it would like to report, the
+///   native process' lldb-server will call the GPU plug-in method:
+///
+///     std::optional<GPUActions> LLDBServerPlugin::NativeProcessIsStopping();
+///
+///   If GPUActions are returned from this method, they will be encoded into the
+///   native process' stop reply packet and handled in ProcessGDBRemote for the
+///   native process.
 ///-----------------------------------------------------------------------------
 struct GPUActions {
   /// The name of the plugin.
   std::string plugin_name;
-  /// Optional new breakpoints to set.
-  std::optional<std::vector<GPUBreakpointInfo>> breakpoints;
+  /// New breakpoints to set. Nothing to set if this is empty.
+  std::vector<GPUBreakpointInfo> breakpoints;
   /// If a GPU connection is available return a connect URL to use to reverse
-  /// connect to the GPU GDB server.
+  /// connect to the GPU GDB server as a separate process.
   std::optional<GPUPluginConnectionInfo> connect_info;
+  /// Set this to true if the native plug-in should tell the ProcessGDBRemote
+  /// in LLDB for the GPU process to load libraries. This allows the native 
+  /// process to be notified that it should query for the shared libraries on 
+  /// the GPU connection.
+  bool load_libraries = false;
 };
 
 bool fromJSON(const llvm::json::Value &value, 
@@ -145,24 +177,6 @@ bool fromJSON(const llvm::json::Value &value,
 
 llvm::json::Value toJSON(const GPUActions &data);
 
-///-----------------------------------------------------------------------------
-/// GPUPluginBreakpointHitResponse
-///
-/// A response structure from the GPU plugin from hitting a native breakpoint
-/// set by the GPU plugin.
-///-----------------------------------------------------------------------------
-struct GPUPluginBreakpointHitResponse {
-  ///< Set to true if this berakpoint should be disabled.
-  bool disable_bp = false; 
-  /// Optional new breakpoints to set.
-  GPUActions actions;
-};
-
-bool fromJSON(const llvm::json::Value &value, 
-              GPUPluginBreakpointHitResponse &data,
-              llvm::json::Path path);
-
-llvm::json::Value toJSON(const GPUPluginBreakpointHitResponse &data);
 
 struct GPUSectionInfo {
   /// Name of the section to load. If there are multiple sections, each section
@@ -226,6 +240,26 @@ bool fromJSON(const llvm::json::Value &value, GPUDynamicLoaderLibraryInfo &data,
 
 llvm::json::Value toJSON(const GPUDynamicLoaderLibraryInfo &data);
 
+
+
+///-----------------------------------------------------------------------------
+/// GPUPluginBreakpointHitResponse
+///
+/// A response structure from the GPU plugin from hitting a native breakpoint
+/// set by the GPU plugin.
+///-----------------------------------------------------------------------------
+struct GPUPluginBreakpointHitResponse {
+  ///< Set to true if this berakpoint should be disabled.
+  bool disable_bp = false; 
+  /// Optional new breakpoints to set.
+  GPUActions actions;
+};
+
+bool fromJSON(const llvm::json::Value &value, 
+              GPUPluginBreakpointHitResponse &data,
+              llvm::json::Path path);
+
+llvm::json::Value toJSON(const GPUPluginBreakpointHitResponse &data);
 
 struct GPUDynamicLoaderArgs {
   /// Set to true to get all shared library information. Set to false to get

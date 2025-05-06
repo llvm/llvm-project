@@ -1562,6 +1562,21 @@ public:
   /// Print all the signals set in this target.
   void PrintDummySignals(Stream &strm, Args &signals);
 
+
+  lldb::TargetSP GetGPUPluginTarget(llvm::StringRef plugin_name) {
+    return m_gpu_plugin_targets.lookup(plugin_name).lock();
+  }
+
+  void SetGPUPluginTarget(llvm::StringRef plugin_name, 
+                          lldb::TargetSP target_sp) {
+    m_native_target_gpu_wp = shared_from_this();
+    m_gpu_plugin_targets[plugin_name] = target_sp;
+  }
+
+  lldb::TargetSP GetNativeTargetForGPU() {
+    return m_native_target_gpu_wp.lock();
+  }
+
 protected:
   /// Implementing of ModuleList::Notifier.
 
@@ -1649,6 +1664,14 @@ protected:
   /// more usefully in the Dummy target where you can't know exactly what
   /// signals you will have.
   llvm::StringMap<DummySignalValues> m_dummy_signals;
+
+  /// If a process spawns another target for a GPU plug-in, this map tracks the
+  /// associated plug-in targets so they can be accessed.
+  llvm::StringMap<lldb::TargetWP> m_gpu_plugin_targets;
+  /// If a target has a parent target, this can be used to synchronize the two
+  /// targets. For example if a GPU target wants to resume but it requires its
+  /// native target to resume as well, we can use this to make this happen.
+  lldb::TargetWP m_native_target_gpu_wp;
 
   static void ImageSearchPathsChanged(const PathMappingList &path_list,
                                       void *baton);
