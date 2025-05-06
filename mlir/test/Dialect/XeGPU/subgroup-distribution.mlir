@@ -1,4 +1,4 @@
-// RUN: mlir-opt -xegpu-subgroup-distribute -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -xegpu-subgroup-distribute -cse -split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: gpu.func @store_nd_1d
 // CHECK: (%[[ARG0:[0-9a-zA-Z]+]]: memref<16xf32>) {
@@ -164,9 +164,9 @@ gpu.func @create_nd_tdesc_non_memref(%arg0: ui64, %arg1: ui64,
 // -----
 // CHECK-LABEL: gpu.func @gemm_loop
 // CHECK: (%[[ARG0:[0-9a-zA-Z]+]]: memref<1024x1024xbf16>, %[[ARG1:[0-9a-zA-Z]+]]: memref<1024x1024xbf16>, %[[ARG2:[0-9a-zA-Z]+]]: memref<1024x1024xf32>) {
+// CHECK: %[[BLOCK_ID_X:.*]] = gpu.block_id x
 // CHECK: %[[BLOCK_ID_Y:.*]] = gpu.block_id y
 // CHECK: %[[Y_COORD:.*]] = arith.muli %[[BLOCK_ID_Y]], %c16 : index
-// CHECK: %[[BLOCK_ID_X:.*]] = gpu.block_id x
 // CHECK: %[[X_COORD:.*]] = arith.muli %[[BLOCK_ID_X]], %c8 : index
 // CHECK: %[[T2:.*]] = xegpu.create_nd_tdesc %[[ARG2]][%[[X_COORD]], %[[Y_COORD]]] : memref<1024x1024xf32> -> !xegpu.tensor_desc<8x16xf32>
 // CHECK: %[[T3:.*]] = xegpu.load_nd %[[T2]] : !xegpu.tensor_desc<8x16xf32> -> vector<8xf32>
@@ -181,9 +181,8 @@ gpu.func @create_nd_tdesc_non_memref(%arg0: ui64, %arg1: ui64,
 // CHECK: %[[T16:.*]] = vector.shape_cast %[[T15]] : vector<8xf32> to vector<8x1xf32>
 // CHECK: scf.yield %[[T16]] : vector<8x1xf32>
 // CHECK: }
-// CHECK: %[[T8:.*]] = xegpu.create_nd_tdesc %[[ARG2]]{{.*}} : memref<1024x1024xf32> -> !xegpu.tensor_desc<8x16xf32>
 // CHECK: %[[T9:.*]] = vector.shape_cast %[[T5]] : vector<8x1xf32> to vector<8xf32>
-// CHECK: xegpu.store_nd %[[T9]], %[[T8]] : vector<8xf32>, !xegpu.tensor_desc<8x16xf32>
+// CHECK: xegpu.store_nd %[[T9]], %[[T2]] : vector<8xf32>, !xegpu.tensor_desc<8x16xf32>
 gpu.module @test {
 gpu.func @gemm_loop(%arg0: memref<1024x1024xbf16>, %arg1: memref<1024x1024xbf16>, %arg2: memref<1024x1024xf32>){
   %c0 = arith.constant 0 : index
