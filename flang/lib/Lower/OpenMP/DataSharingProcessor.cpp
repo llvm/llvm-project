@@ -409,8 +409,8 @@ void DataSharingProcessor::collectSymbols(
   // Collect all symbols referenced in the evaluation being processed,
   // that matches 'flag'.
   llvm::SetVector<const semantics::Symbol *> allSymbols;
-
-  converter.collectSymbolSet(eval, allSymbols, flag, /*collectSymbols=*/true,
+  converter.collectSymbolSet(eval, allSymbols, flag,
+                             /*collectSymbols=*/true,
                              /*collectHostAssociatedSymbols=*/true);
 
   llvm::SetVector<const semantics::Symbol *> symbolsInNestedRegions;
