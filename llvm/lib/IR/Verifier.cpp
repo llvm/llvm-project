@@ -3662,9 +3662,9 @@ void Verifier::visitCallBase(CallBase &Call) {
 
       while (!PHIWorkList.empty()) {
         const auto *PhiI = PHIWorkList.pop_back_val();
-        for (const auto &Op : PhiI->incoming_values()) {
-          const auto *NextPhiI = dyn_cast<PHINode>(Op.get());
-          if (Values.insert(Op.get()) && NextPhiI)
+        for (const Value *Op : PhiI->incoming_values()) {
+          const auto *NextPhiI = dyn_cast<PHINode>(Op);
+          if (Values.insert(Op) && NextPhiI)
             PHIWorkList.push_back(NextPhiI);
         }
       }
