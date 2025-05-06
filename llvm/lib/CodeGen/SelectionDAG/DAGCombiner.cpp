@@ -10994,10 +10994,9 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
             ZExt.getValueType().getScalarSizeInBits() -
             ZExt.getOperand(0).getValueType().getScalarSizeInBits();
         if (N1C->getZExtValue() <= NumLeadingZeros) {
-          return DAG.getNode(
-              N0.getOpcode(), SDLoc(N0), VT,
-              DAG.getNode(ISD::SRL, SDLoc(N0), VT, Other, N1),
-              ZExt);
+          return DAG.getNode(N0.getOpcode(), SDLoc(N0), VT,
+                             DAG.getNode(ISD::SRL, SDLoc(N0), VT, Other, N1),
+                             ZExt);
         }
       }
     }
