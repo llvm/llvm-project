@@ -340,6 +340,7 @@ class DAPTestCaseBase(TestBase):
         exitCommands=None,
         attachCommands=None,
         coreFile=None,
+        stopOnAttach=True,
         disconnectAutomatically=True,
         terminateCommands=None,
         postRunCommands=None,
@@ -364,6 +365,8 @@ class DAPTestCaseBase(TestBase):
         self.addTearDownHook(cleanup)
         # Initialize and launch the program
         self.dap_server.request_initialize(sourceInitFile)
+        self.dap_server.wait_for_event("initialized")
+        self.dap_server.request_configurationDone()
         response = self.dap_server.request_attach(
             program=program,
             pid=pid,
@@ -376,6 +379,7 @@ class DAPTestCaseBase(TestBase):
             attachCommands=attachCommands,
             terminateCommands=terminateCommands,
             coreFile=coreFile,
+            stopOnAttach=stopOnAttach,
             postRunCommands=postRunCommands,
             sourceMap=sourceMap,
             gdbRemotePort=gdbRemotePort,
@@ -434,6 +438,9 @@ class DAPTestCaseBase(TestBase):
 
         # Initialize and launch the program
         self.dap_server.request_initialize(sourceInitFile)
+        self.dap_server.wait_for_event("initialized")
+        self.dap_server.request_configurationDone()
+
         response = self.dap_server.request_launch(
             program,
             args=args,
