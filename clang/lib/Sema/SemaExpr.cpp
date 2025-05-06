@@ -6612,15 +6612,14 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
             *this, dyn_cast<UnresolvedMemberExpr>(Fn->IgnoreParens()),
             Fn->getBeginLoc());
 
-        if (!Fn->getType()->isDependentType()) {
-          // If the type of the function itself is not dependent
-          // check that it is a reasonable as a function, as type deduction
-          // later assume the CallExpr has a sensible TYPE.
-          if (!MayBeFunctionType(Context, Fn->getType()))
-            return ExprError(
-                Diag(LParenLoc, diag::err_typecheck_call_not_function)
-                << Fn->getType() << Fn->getSourceRange());
-        }
+        // If the type of the function itself is not dependent
+        // check that it is a reasonable as a function, as type deduction
+        // later assume the CallExpr has a sensible TYPE.
+        if (!Fn->getType()->isDependentType() &&
+            !MayBeFunctionType(Context, Fn->getType()))
+          return ExprError(
+              Diag(LParenLoc, diag::err_typecheck_call_not_function)
+              << Fn->getType() << Fn->getSourceRange());
 
         return CallExpr::Create(Context, Fn, ArgExprs, Context.DependentTy,
                                 VK_PRValue, RParenLoc, CurFPFeatureOverrides());
