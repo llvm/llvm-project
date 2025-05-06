@@ -505,7 +505,6 @@ getCollapsedStride(memref::CollapseShapeOp collapseShape, OpBuilder &builder,
 
   auto [strides, offset] = sourceType.getStridesAndOffset();
 
-  SmallVector<OpFoldResult> groupStrides;
   ArrayRef<int64_t> srcShape = sourceType.getShape();
 
   OpFoldResult lastValidStride = nullptr;
