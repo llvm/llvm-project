@@ -428,7 +428,7 @@ class MIMG_NoSampler_Helper <mimgopc op, string asm,
                              RegisterOperand addr_rc,
                              string dns="">
   : MIMG_gfx6789 <op.GFX10M, (outs dst_rc:$vdata), dns> {
-  let InOperandList = !con((ins addr_rc:$vaddr, SReg_256_XNULL:$srsrc,
+  let InOperandList = !con((ins addr_rc:$vaddr, SReg_RSRC:$srsrc,
                                 DMask:$dmask, UNorm:$unorm, CPol:$cpol,
                                 R128A16:$r128, TFE:$tfe, LWE:$lwe, DA:$da),
                            !if(BaseOpcode.HasD16, (ins D16:$d16), (ins)));
@@ -685,7 +685,7 @@ class MIMG_Store_Helper <mimgopc op, string asm,
                          RegisterClass addr_rc,
                          string dns = "">
   : MIMG_gfx6789<op.GFX10M, (outs), dns> {
-  let InOperandList = !con((ins data_rc:$vdata, addr_rc:$vaddr, SReg_256_XNULL:$srsrc,
+  let InOperandList = !con((ins data_rc:$vdata, addr_rc:$vaddr, SReg_RSRC:$srsrc,
                                 DMask:$dmask, UNorm:$unorm, CPol:$cpol,
                                 R128A16:$r128, TFE:$tfe, LWE:$lwe, DA:$da),
                            !if(BaseOpcode.HasD16, (ins D16:$d16), (ins)));
@@ -1142,7 +1142,7 @@ multiclass MIMG_Atomic_Renamed <mimgopc op, string asm, string renamed,
 class MIMG_Sampler_Helper <mimgopc op, string asm, RegisterOperand dst_rc,
                            RegisterOperand src_rc, string dns="">
   : MIMG_gfx6789 <op.VI, (outs dst_rc:$vdata), dns> {
-  let InOperandList = !con((ins src_rc:$vaddr, SReg_256_XNULL:$srsrc, SReg_128_XNULL:$ssamp,
+  let InOperandList = !con((ins src_rc:$vaddr, SReg_RSRC:$srsrc, SReg_128_XNULL:$ssamp,
                                 DMask:$dmask, UNorm:$unorm, CPol:$cpol,
                                 R128A16:$r128, TFE:$tfe, LWE:$lwe, DA:$da),
                            !if(BaseOpcode.HasD16, (ins D16:$d16), (ins)));
