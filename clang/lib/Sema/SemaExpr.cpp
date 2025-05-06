@@ -15690,7 +15690,6 @@ static bool isOverflowingIntegerType(ASTContext &Ctx, QualType T) {
   return Ctx.getIntWidth(T) >= Ctx.getIntWidth(Ctx.IntTy);
 }
 
-
 ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
                                       UnaryOperatorKind Opc, Expr *InputExpr,
                                       bool IsAfterAmp) {
