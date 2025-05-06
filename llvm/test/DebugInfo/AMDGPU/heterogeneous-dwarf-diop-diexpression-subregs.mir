@@ -40,6 +40,7 @@
   !24 = !DILocalVariable(name: "sgpr", scope: !9, file: !1, line: 1, type: !14)
   !25 = !DILocalVariable(name: "vgpr", scope: !9, file: !1, line: 1, type: !14)
   !26 = !DILocalVariable(name: "vgpr_frags", scope: !9, file: !1, line: 1, type: !15)
+  !27 = !DILocalVariable(name: "composite", scope: !9, file: !1, line: 1, type: !15)
 
 ...
 ---
@@ -92,6 +93,11 @@ body: |
     ; CHECK-NEXT: DW_AT_name    ("vgpr_frags")
     DBG_VALUE renamable $vgpr42_vgpr43, $noreg, !26, !DIExpression(DIOpArg(0, i64), DIOpFragment(0, 32)), debug-location !16
     DBG_VALUE renamable $vgpr44_vgpr45, $noreg, !26, !DIExpression(DIOpArg(0, i64), DIOpFragment(32, 32)), debug-location !16
+
+    ; CHECK: DW_TAG_variable
+    ; CHECK-NEXT: DW_AT_location (DW_OP_regx SGPR10, DW_OP_piece 0x4, DW_OP_regx SGPR11, DW_OP_piece 0x4, DW_OP_LLVM_user DW_OP_LLVM_piece_end)
+    ; CHECK-NEXT: DW_AT_name ("composite")
+    DBG_VALUE_LIST !27, !DIExpression(DIOpArg(0, i32), DIOpArg(1, i32), DIOpComposite(2, i64)), $sgpr10, $sgpr11, debug-location !16
 
     S_ENDPGM 0, debug-location !16
 
