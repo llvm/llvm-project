@@ -76,6 +76,7 @@ FunctionPass *createAMDGPUPreloadKernArgPrologLegacyPass();
 #if LLPC_BUILD_NPI
 FunctionPass *createAMDGPUIdxRegAllocPass();
 FunctionPass *createAMDGPUPrivateObjectVGPRsPass();
+FunctionPass *createAMDGPUIndexingInfoWrapperPass();
 #endif /* LLPC_BUILD_NPI */
 
 struct AMDGPUSimplifyLibCallsPass : PassInfoMixin<AMDGPUSimplifyLibCallsPass> {
@@ -286,6 +287,9 @@ extern char &AMDGPUPreloadKernArgPrologLegacyID;
 #if LLPC_BUILD_NPI
 void initializeAMDGPUPrivateObjectVGPRsPass(PassRegistry &);
 extern char &AMDGPUPrivateObjectVGPRsID;
+
+void initializeAMDGPUIndexingInfoWrapperPass(PassRegistry &);
+extern char &AMDGPUIndexingInfoWrapperID;
 
 #endif /* LLPC_BUILD_NPI */
 // Passes common to R600 and SI

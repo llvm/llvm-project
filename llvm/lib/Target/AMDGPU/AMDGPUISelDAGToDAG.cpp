@@ -1042,7 +1042,6 @@ void AMDGPUDAGToDAGISel::SelectADD_SUB_I64(SDNode *N) {
 }
 
 void AMDGPUDAGToDAGISel::SelectAddcSubb(SDNode *N) {
-  SDLoc DL(N);
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
   SDValue CI = N->getOperand(2);
@@ -1095,7 +1094,6 @@ void AMDGPUDAGToDAGISel::SelectUADDO_USUBO(SDNode *N) {
 }
 
 void AMDGPUDAGToDAGISel::SelectFMA_W_CHAIN(SDNode *N) {
-  SDLoc SL(N);
   //  src0_modifiers, src0,  src1_modifiers, src1, src2_modifiers, src2, clamp, omod
   SDValue Ops[10];
 
@@ -1116,7 +1114,6 @@ void AMDGPUDAGToDAGISel::SelectFMA_W_CHAIN(SDNode *N) {
 }
 
 void AMDGPUDAGToDAGISel::SelectFMUL_W_CHAIN(SDNode *N) {
-  SDLoc SL(N);
   //    src0_modifiers, src0,  src1_modifiers, src1, clamp, omod
   SDValue Ops[8];
 
@@ -1131,7 +1128,6 @@ void AMDGPUDAGToDAGISel::SelectFMUL_W_CHAIN(SDNode *N) {
 // We need to handle this here because tablegen doesn't support matching
 // instructions with multiple outputs.
 void AMDGPUDAGToDAGISel::SelectDIV_SCALE(SDNode *N) {
-  SDLoc SL(N);
   EVT VT = N->getValueType(0);
 
   assert(VT == MVT::f32 || VT == MVT::f64);

@@ -319,6 +319,9 @@ protected:
   bool HasParallelBitInsts = false;
 #endif /* LLPC_BUILD_NPI */
   bool HasPointSampleAccel = false;
+#if LLPC_BUILD_NPI
+  bool HasLdsBarrierArriveAtomic = false;
+#endif /* LLPC_BUILD_NPI */
 
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
@@ -1588,6 +1591,10 @@ public:
 
   bool hasPointSampleAccel() const { return HasPointSampleAccel; }
 
+#if LLPC_BUILD_NPI
+  bool hasLdsBarrierArriveAtomic() const { return HasLdsBarrierArriveAtomic; }
+
+#endif /* LLPC_BUILD_NPI */
   /// \returns The maximum number of instructions that can be enclosed in an
   /// S_CLAUSE on the given subtarget, or 0 for targets that do not support that
   /// instruction.

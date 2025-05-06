@@ -1106,22 +1106,14 @@ void InstrInfoEmitter::emitRecord(
   OS << Inst.ImplicitUses.size() << ",\t" << Inst.ImplicitDefs.size() << ",\t";
   std::vector<const Record *> ImplicitOps = Inst.ImplicitUses;
   llvm::append_range(ImplicitOps, Inst.ImplicitDefs);
-#if LLPC_BUILD_NPI
-#else /* LLPC_BUILD_NPI */
-  OS << Target.getName() << "ImpOpBase + " << EmittedLists[ImplicitOps]
-     << ",\t";
-#endif /* LLPC_BUILD_NPI */
 
   // Emit the operand info offset.
   OperandInfoTy OperandInfo = GetOperandInfo(Inst);
-#if LLPC_BUILD_NPI
   OS << OperandInfoMap.find(OperandInfo)->second << ",\t";
 
+  // Emit implicit operand base.
   OS << Target.getName() << "ImpOpBase + " << EmittedLists[ImplicitOps]
      << ",\t0";
-#else /* LLPC_BUILD_NPI */
-  OS << OperandInfoMap.find(OperandInfo)->second << ",\t0";
-#endif /* LLPC_BUILD_NPI */
 
   // Emit all of the target independent flags...
   if (Inst.isPreISelOpcode)

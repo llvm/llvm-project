@@ -182,6 +182,11 @@ static DecodeStatus decodeSrcOp(MCInst &Inst, unsigned EncSize,
 #define DECODE_OPERAND_SREG_8(RegClass, OpWidth)                               \
   DECODE_SrcOp(Decode##RegClass##RegisterClass, 8, OpWidth, Imm, false, 0)
 
+#if LLPC_BUILD_NPI
+#define DECODE_OPERAND_SREG_9(RegClass, OpWidth)                               \
+  DECODE_SrcOp(Decode##RegClass##RegisterClass, 9, OpWidth, Imm, false, 0)
+
+#endif /* LLPC_BUILD_NPI */
 // Decoder for registers. Imm(10-bit): Imm{7-0} is number of register,
 // Imm{9} is acc(agpr or vgpr) Imm{8} should be 0 (see VOP3Pe_SMFMAC).
 // Set Imm{8} to 1 (IS_VGPR) to decode using 'enum10' from decodeSrcOp.
@@ -351,13 +356,20 @@ DECODE_OPERAND_SREG_7(SReg_64_XEXEC, OPW64)
 DECODE_OPERAND_SREG_7(SReg_64_XEXEC_XNULL, OPW64)
 DECODE_OPERAND_SREG_7(SReg_96, OPW96)
 DECODE_OPERAND_SREG_7(SReg_128, OPW128)
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
 DECODE_OPERAND_SREG_7(SReg_128_XNULL, OPW128)
+#endif /* LLPC_BUILD_NPI */
 DECODE_OPERAND_SREG_7(SReg_256, OPW256)
 DECODE_OPERAND_SREG_7(SReg_256_XNULL, OPW256)
 DECODE_OPERAND_SREG_7(SReg_512, OPW512)
 
 DECODE_OPERAND_SREG_8(SReg_64, OPW64)
 
+#if LLPC_BUILD_NPI
+DECODE_OPERAND_SREG_9(SReg_128_XNULL, OPW128)
+
+#endif /* LLPC_BUILD_NPI */
 DECODE_OPERAND_REG_8(AGPR_32)
 DECODE_OPERAND_REG_8(AReg_64)
 DECODE_OPERAND_REG_8(AReg_128)

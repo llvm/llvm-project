@@ -1046,7 +1046,7 @@ public:
         Kernel2BarId[BarrierScope][F] += BarCnt;
 #else /* LLPC_BUILD_NPI */
         int BarId = (NumAbsolutes + 1);
-        if (Kernel2BarId.find(F) != Kernel2BarId.end()) {
+        if (Kernel2BarId.contains(F)) {
           BarId = (Kernel2BarId[F] + 1);
         }
         Kernel2BarId[F] = BarId;

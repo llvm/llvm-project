@@ -1557,8 +1557,6 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   }
 
   // Do the actual argument marshalling.
-  SmallVector<Register, 8> PhysRegs;
-
   OutgoingValueAssigner Assigner(AssignFnFixed, AssignFnVarArg);
   if (!determineAssignments(Assigner, OutArgs, CCInfo))
     return false;

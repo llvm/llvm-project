@@ -209,14 +209,8 @@ public:
   unsigned short SchedClass;     // enum identifying instr sched class
   unsigned char NumImplicitUses; // Num of regs implicitly used
   unsigned char NumImplicitDefs; // Num of regs implicitly defined
-#if LLPC_BUILD_NPI
-#else /* LLPC_BUILD_NPI */
-  unsigned short ImplicitOffset; // Offset to start of implicit op list
-#endif /* LLPC_BUILD_NPI */
   unsigned short OpInfoOffset;   // Offset to info about operands
-#if LLPC_BUILD_NPI
   unsigned int ImplicitOffset;   // Offset to start of implicit op list
-#endif /* LLPC_BUILD_NPI */
   uint64_t Flags;                // Flags identifying machine instr class
   uint64_t TSFlags;              // Target Specific Flag values
 

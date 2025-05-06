@@ -3103,10 +3103,14 @@ private:
     // Or expressions like:
     //   width * height * length
     if (NextToken->Tok.isAnyIdentifier()) {
-      const FormatToken *NextNextToken = NextToken->getNextNonComment();
-      if (NextNextToken && (NextNextToken->is(tok::arrow) ||
-                            NextNextToken->isPointerOrReference())) {
-        return TT_BinaryOperator;
+      auto *NextNextToken = NextToken->getNextNonComment();
+      if (NextNextToken) {
+        if (NextNextToken->is(tok::arrow))
+          return TT_BinaryOperator;
+        if (NextNextToken->isPointerOrReference()) {
+          NextNextToken->setFinalizedType(TT_BinaryOperator);
+          return TT_BinaryOperator;
+        }
       }
     }
 
