@@ -338,13 +338,16 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    ; in Loop: Header=BB0_5 Depth=1
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s55
 ; CHECK-NEXT:  ; %bb.24: ; in Loop: Header=BB0_5 Depth=1
-; CHECK-NEXT:    v_cmp_ge_u32_e32 vcc_lo, s54, v45
-; CHECK-NEXT:    v_cmp_lt_u32_e64 s4, 59, v47
+; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc_lo, 59, v47
 ; CHECK-NEXT:    v_add_nc_u32_e32 v46, 1, v46
 ; CHECK-NEXT:    s_mov_b32 s55, s54
-; CHECK-NEXT:    s_or_b32 s4, vcc_lo, s4
-; CHECK-NEXT:    s_and_b32 s4, exec_lo, s4
-; CHECK-NEXT:    s_or_b32 s53, s4, s53
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; CHECK-NEXT:    v_cmp_ge_u32_e32 vcc_lo, s54, v45
+; CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; CHECK-NEXT:    v_or_b32_e32 v0, v1, v0
+; CHECK-NEXT:    v_and_b32_e32 v0, 1, v0
+; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
+; CHECK-NEXT:    s_or_b32 s53, vcc_lo, s53
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s53
 ; CHECK-NEXT:    s_cbranch_execnz .LBB0_5
 ; CHECK-NEXT:  .LBB0_25: ; %Flow51
@@ -966,12 +969,15 @@ define protected amdgpu_kernel void @kernel_round1_short(ptr addrspace(1) nocapt
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s54
 ; CHECK-NEXT:  ; %bb.12: ; %.32
 ; CHECK-NEXT:    ; in Loop: Header=BB1_1 Depth=1
-; CHECK-NEXT:    v_cmp_ge_u32_e32 vcc_lo, s53, v45
-; CHECK-NEXT:    v_cmp_lt_u32_e64 s4, 59, v43
-; CHECK-NEXT:    s_or_b32 s4, vcc_lo, s4
-; CHECK-NEXT:    s_and_b32 s4, exec_lo, s4
-; CHECK-NEXT:    s_or_b32 s52, s4, s52
+; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc_lo, 59, v43
 ; CHECK-NEXT:    s_mov_b32 s4, s53
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; CHECK-NEXT:    v_cmp_ge_u32_e32 vcc_lo, s53, v45
+; CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; CHECK-NEXT:    v_or_b32_e32 v0, v1, v0
+; CHECK-NEXT:    v_and_b32_e32 v0, 1, v0
+; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
+; CHECK-NEXT:    s_or_b32 s52, vcc_lo, s52
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s52
 ; CHECK-NEXT:    s_cbranch_execnz .LBB1_1
 ; CHECK-NEXT:  ; %bb.13: ; %.119

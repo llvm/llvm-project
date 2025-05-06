@@ -31,7 +31,7 @@ define i32 @trunc_not(i64 %a, i64 %b) {
 ; CHECK-NEXT:    ld.param.u64 %rd2, [trunc_not_param_1];
 ; CHECK-NEXT:    or.b64 %rd3, %rd1, %rd2;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
-; CHECK-NEXT:    mov.u64 %rd4, 0;
+; CHECK-NEXT:    mov.b64 %rd4, 0;
 ; CHECK-NEXT:    st.u64 [%rd4], %rd3;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;

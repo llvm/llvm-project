@@ -1253,8 +1253,10 @@ define amdgpu_kernel void @s_or_i1(ptr addrspace(1) %out, i32 %a, i32 %b, i32 %c
 ; GFX6-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; GFX6-NEXT:    s_cmp_eq_u32 s2, s3
 ; GFX6-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX6-NEXT:    s_or_b64 s[0:1], s[0:1], s[2:3]
-; GFX6-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
+; GFX6-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[2:3]
+; GFX6-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]
+; GFX6-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX6-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX6-NEXT:    buffer_store_byte v0, off, s[4:7], 0
 ; GFX6-NEXT:    s_endpgm
 ;
@@ -1269,8 +1271,10 @@ define amdgpu_kernel void @s_or_i1(ptr addrspace(1) %out, i32 %a, i32 %b, i32 %c
 ; GFX8-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; GFX8-NEXT:    s_cmp_eq_u32 s2, s3
 ; GFX8-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX8-NEXT:    s_or_b64 s[0:1], s[0:1], s[2:3]
-; GFX8-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
+; GFX8-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[2:3]
+; GFX8-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]
+; GFX8-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX8-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX8-NEXT:    buffer_store_byte v0, off, s[4:7], 0
 ; GFX8-NEXT:    s_endpgm
 ;

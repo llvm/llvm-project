@@ -14,6 +14,8 @@ define amdgpu_kernel void @break_inserted_outside_of_loop(ptr addrspace(1) %out,
 ; SI-NEXT:    s_mov_b64 s[0:1], 0
 ; SI-NEXT:  .LBB0_1: ; %ENDIF
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; SI-NEXT:    s_and_b64 s[2:3], exec, vcc
+; SI-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
 ; SI-NEXT:    s_andn2_b64 exec, exec, s[0:1]
 ; SI-NEXT:    s_cbranch_execnz .LBB0_1
 ; SI-NEXT:  ; %bb.2: ; %ENDLOOP
@@ -37,18 +39,8 @@ define amdgpu_kernel void @break_inserted_outside_of_loop(ptr addrspace(1) %out,
 ; FLAT-NEXT:    s_mov_b64 s[0:1], 0
 ; FLAT-NEXT:  .LBB0_1: ; %ENDIF
 ; FLAT-NEXT:    ; =>This Inner Loop Header: Depth=1
-<<<<<<< HEAD
-<<<<<<< HEAD
 ; FLAT-NEXT:    s_and_b64 s[2:3], exec, vcc
 ; FLAT-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
-=======
-; FLAT-NEXT:    s_and_b64 s[6:7], exec, s[4:5]
-; FLAT-NEXT:    s_or_b64 s[0:1], s[6:7], s[0:1]
->>>>>>> 357472736b45 (Update AMDGPU tests)
-=======
-; FLAT-NEXT:    s_and_b64 s[4:5], exec, vcc
-; FLAT-NEXT:    s_or_b64 s[0:1], s[4:5], s[0:1]
->>>>>>> 2d8bd10355b4 ([AMDGPU] revert xor.ll si-annotate-cf.ll changes)
 ; FLAT-NEXT:    s_andn2_b64 exec, exec, s[0:1]
 ; FLAT-NEXT:    s_cbranch_execnz .LBB0_1
 ; FLAT-NEXT:  ; %bb.2: ; %ENDLOOP

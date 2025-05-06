@@ -3275,25 +3275,25 @@ define void @load_32byte_chunk_of_64byte_alloca_with_zero_upper_half(ptr %src, i
 ; X86-SHLD-NEXT:    movaps %xmm2, {{[0-9]+}}(%esp)
 ; X86-SHLD-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp)
 ; X86-SHLD-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
-; X86-SHLD-NEXT:    movl %ecx, %edi
-; X86-SHLD-NEXT:    andl $60, %edi
-; X86-SHLD-NEXT:    movl 24(%esp,%edi), %edx
-; X86-SHLD-NEXT:    movl 20(%esp,%edi), %esi
-; X86-SHLD-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SHLD-NEXT:    shll $3, %ecx
-; X86-SHLD-NEXT:    andl $24, %ecx
-; X86-SHLD-NEXT:    movl %edx, %eax
-; X86-SHLD-NEXT:    shrdl %cl, %edx, %esi
-; X86-SHLD-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SHLD-NEXT:    movl 28(%esp,%edi), %edx
-; X86-SHLD-NEXT:    shrdl %cl, %edx, %eax
-; X86-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SHLD-NEXT:    movl 32(%esp,%edi), %ebp
-; X86-SHLD-NEXT:    shrdl %cl, %ebp, %edx
-; X86-SHLD-NEXT:    movl %edx, (%esp) # 4-byte Spill
-; X86-SHLD-NEXT:    movl 36(%esp,%edi), %esi
-; X86-SHLD-NEXT:    shrdl %cl, %esi, %ebp
-; X86-SHLD-NEXT:    movl 40(%esp,%edi), %edx
+; X86-SHLD-NEXT:    leal (,%eax,8), %ecx
+; X86-SHLD-NEXT:    andl $60, %eax
+; X86-SHLD-NEXT:    movl 24(%esp,%eax), %esi
+; X86-SHLD-NEXT:    movl 20(%esp,%eax), %edi
+; X86-SHLD-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-SHLD-NEXT:    movl %esi, %edx
+; X86-SHLD-NEXT:    shrdl %cl, %esi, %edi
+; X86-SHLD-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-SHLD-NEXT:    movl 28(%esp,%eax), %esi
+; X86-SHLD-NEXT:    shrdl %cl, %esi, %edx
+; X86-SHLD-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-SHLD-NEXT:    movl 32(%esp,%eax), %ebp
+; X86-SHLD-NEXT:    shrdl %cl, %ebp, %esi
+; X86-SHLD-NEXT:    movl %esi, (%esp) # 4-byte Spill
+; X86-SHLD-NEXT:    movl 36(%esp,%eax), %edi
+; X86-SHLD-NEXT:    shrdl %cl, %edi, %ebp
+; X86-SHLD-NEXT:    movl 40(%esp,%eax), %esi
+; X86-SHLD-NEXT:    shrdl %cl, %esi, %edi
+; X86-SHLD-NEXT:    movl 44(%esp,%eax), %edx
 ; X86-SHLD-NEXT:    shrdl %cl, %edx, %esi
 ; X86-SHLD-NEXT:    movl 16(%esp,%eax), %ebx
 ; X86-SHLD-NEXT:    movl 48(%esp,%eax), %eax

@@ -262,7 +262,7 @@ define void @test_i1_uge(ptr%A2) {
 define i64 @PR40657(i8 %var2, i8 %var9) {
 ; CHECK-LABEL: PR40657:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %esi, %edi
+; CHECK-NEXT:    xorb %sil, %dil
 ; CHECK-NEXT:    notb %dil
 ; CHECK-NEXT:    movzbl %dil, %eax
 ; CHECK-NEXT:    andl $1, %eax

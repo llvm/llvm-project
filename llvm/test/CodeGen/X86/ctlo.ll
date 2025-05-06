@@ -47,7 +47,7 @@ define i8 @ctlo_i8(i8 %x) {
 ; X64-NEXT:    movzbl %dil, %ecx
 ; X64-NEXT:    movl $15, %eax
 ; X64-NEXT:    bsrl %ecx, %eax
-; X64-NEXT:    xorl $7, %eax
+; X64-NEXT:    xorb $7, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 ;

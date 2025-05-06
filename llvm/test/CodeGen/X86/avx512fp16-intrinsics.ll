@@ -697,9 +697,9 @@ define i8 @test_int_x86_avx512_mask_cmp_sh_all(<8 x half> %x0, <8 x half> %x1, i
 ; CHECK-NEXT:    kmovd %k0, %esi
 ; CHECK-NEXT:    vcmpnltsh {sae}, %xmm1, %xmm0, %k0 {%k1}
 ; CHECK-NEXT:    kmovd %k0, %eax
-; CHECK-NEXT:    andl %ecx, %edx
-; CHECK-NEXT:    andl %esi, %eax
-; CHECK-NEXT:    andl %edx, %eax
+; CHECK-NEXT:    andb %cl, %dl
+; CHECK-NEXT:    andb %sil, %al
+; CHECK-NEXT:    andb %dl, %al
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %res1 = call i8 @llvm.x86.avx512fp16.mask.cmp.sh(<8 x half> %x0, <8 x half> %x1, i32 2, i8 -1, i32 4)

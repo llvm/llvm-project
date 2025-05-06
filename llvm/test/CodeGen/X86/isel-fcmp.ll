@@ -13,7 +13,7 @@
 ; X64:       ## %bb.0:
 ; X64-NEXT:    cmpeqss %xmm1, %xmm0
 ; X64-NEXT:    movd %xmm0, %eax
-; X64-NEXT:    andl $1, %eax
+; X64-NEXT:    andb $1, %al
 ; X64-NEXT:    ## kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 ;
@@ -418,7 +418,7 @@
 ; X64:       ## %bb.0:
 ; X64-NEXT:    cmpneqss %xmm1, %xmm0
 ; X64-NEXT:    movd %xmm0, %eax
-; X64-NEXT:    andl $1, %eax
+; X64-NEXT:    andb $1, %al
 ; X64-NEXT:    ## kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 ;
@@ -451,7 +451,7 @@
 ; X64:       ## %bb.0:
 ; X64-NEXT:    cmpeqsd %xmm1, %xmm0
 ; X64-NEXT:    movq %xmm0, %rax
-; X64-NEXT:    andl $1, %eax
+; X64-NEXT:    andb $1, %al
 ; X64-NEXT:    ## kill: def $al killed $al killed $rax
 ; X64-NEXT:    retq
 ;
@@ -856,7 +856,7 @@
 ; X64:       ## %bb.0:
 ; X64-NEXT:    cmpneqsd %xmm1, %xmm0
 ; X64-NEXT:    movq %xmm0, %rax
-; X64-NEXT:    andl $1, %eax
+; X64-NEXT:    andb $1, %al
 ; X64-NEXT:    ## kill: def $al killed $al killed $rax
 ; X64-NEXT:    retq
 ;

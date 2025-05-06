@@ -6,33 +6,24 @@ define amdgpu_ps float @uniform_kill(float %a, i32 %b, float %c) {
 ; SI-LABEL: uniform_kill:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    v_cvt_i32_f32_e32 v0, v0
-; SI-NEXT:    v_and_b32_e32 v1, 1, v1
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
-; SI-NEXT:    s_mov_b64 s[2:3], exec
+; SI-NEXT:    s_mov_b64 s[0:1], exec
+; SI-NEXT:    s_mov_b64 s[2:3], -1
+; SI-NEXT:    v_or_b32_e32 v0, v1, v0
 ; SI-NEXT:    v_and_b32_e32 v0, 1, v0
-; SI-NEXT:    v_cmp_eq_u32_e64 s[0:1], 1, v0
-; SI-NEXT:    s_or_b64 s[6:7], vcc, s[0:1]
-; SI-NEXT:    s_mov_b64 s[4:5], -1
-; SI-NEXT:    s_and_saveexec_b64 s[0:1], s[6:7]
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; SI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; SI-NEXT:  ; %bb.1: ; %if1
-; SI-NEXT:    s_xor_b64 s[4:5], exec, -1
+; SI-NEXT:    s_xor_b64 s[2:3], exec, -1
 ; SI-NEXT:  ; %bb.2: ; %endif1
-<<<<<<< HEAD
 ; SI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; SI-NEXT:    s_wqm_b64 s[4:5], s[2:3]
 ; SI-NEXT:    s_andn2_b64 s[4:5], exec, s[4:5]
 ; SI-NEXT:    s_andn2_b64 s[0:1], s[0:1], s[4:5]
-=======
-; SI-NEXT:    s_or_b64 exec, exec, s[0:1]
-; SI-NEXT:    s_wqm_b64 s[0:1], s[4:5]
-; SI-NEXT:    s_xor_b64 s[0:1], s[0:1], exec
-; SI-NEXT:    s_andn2_b64 s[2:3], s[2:3], s[0:1]
->>>>>>> 357472736b45 (Update AMDGPU tests)
 ; SI-NEXT:    s_cbranch_scc0 .LBB0_6
 ; SI-NEXT:  ; %bb.3: ; %endif1
-; SI-NEXT:    s_and_b64 exec, exec, s[2:3]
+; SI-NEXT:    s_and_b64 exec, exec, s[0:1]
 ; SI-NEXT:    v_mov_b32_e32 v0, 0
-; SI-NEXT:    s_and_saveexec_b64 s[0:1], s[4:5]
+; SI-NEXT:    s_and_saveexec_b64 s[0:1], s[2:3]
 ; SI-NEXT:    s_cbranch_execz .LBB0_5
 ; SI-NEXT:  ; %bb.4: ; %if2
 ; SI-NEXT:    s_mov_b32 s3, 0
@@ -57,33 +48,24 @@ define amdgpu_ps float @uniform_kill(float %a, i32 %b, float %c) {
 ; FLAT-LABEL: uniform_kill:
 ; FLAT:       ; %bb.0: ; %entry
 ; FLAT-NEXT:    v_cvt_i32_f32_e32 v0, v0
-; FLAT-NEXT:    v_and_b32_e32 v1, 1, v1
-; FLAT-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
-; FLAT-NEXT:    s_mov_b64 s[2:3], exec
+; FLAT-NEXT:    s_mov_b64 s[0:1], exec
+; FLAT-NEXT:    s_mov_b64 s[2:3], -1
+; FLAT-NEXT:    v_or_b32_e32 v0, v1, v0
 ; FLAT-NEXT:    v_and_b32_e32 v0, 1, v0
-; FLAT-NEXT:    v_cmp_eq_u32_e64 s[0:1], 1, v0
-; FLAT-NEXT:    s_or_b64 s[6:7], vcc, s[0:1]
-; FLAT-NEXT:    s_mov_b64 s[4:5], -1
-; FLAT-NEXT:    s_and_saveexec_b64 s[0:1], s[6:7]
+; FLAT-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; FLAT-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; FLAT-NEXT:  ; %bb.1: ; %if1
-; FLAT-NEXT:    s_xor_b64 s[4:5], exec, -1
+; FLAT-NEXT:    s_xor_b64 s[2:3], exec, -1
 ; FLAT-NEXT:  ; %bb.2: ; %endif1
-<<<<<<< HEAD
 ; FLAT-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; FLAT-NEXT:    s_wqm_b64 s[4:5], s[2:3]
 ; FLAT-NEXT:    s_andn2_b64 s[4:5], exec, s[4:5]
 ; FLAT-NEXT:    s_andn2_b64 s[0:1], s[0:1], s[4:5]
-=======
-; FLAT-NEXT:    s_or_b64 exec, exec, s[0:1]
-; FLAT-NEXT:    s_wqm_b64 s[0:1], s[4:5]
-; FLAT-NEXT:    s_xor_b64 s[0:1], s[0:1], exec
-; FLAT-NEXT:    s_andn2_b64 s[2:3], s[2:3], s[0:1]
->>>>>>> 357472736b45 (Update AMDGPU tests)
 ; FLAT-NEXT:    s_cbranch_scc0 .LBB0_6
 ; FLAT-NEXT:  ; %bb.3: ; %endif1
-; FLAT-NEXT:    s_and_b64 exec, exec, s[2:3]
+; FLAT-NEXT:    s_and_b64 exec, exec, s[0:1]
 ; FLAT-NEXT:    v_mov_b32_e32 v0, 0
-; FLAT-NEXT:    s_and_saveexec_b64 s[0:1], s[4:5]
+; FLAT-NEXT:    s_and_saveexec_b64 s[0:1], s[2:3]
 ; FLAT-NEXT:    s_cbranch_execz .LBB0_5
 ; FLAT-NEXT:  ; %bb.4: ; %if2
 ; FLAT-NEXT:    s_mov_b32 s3, 0

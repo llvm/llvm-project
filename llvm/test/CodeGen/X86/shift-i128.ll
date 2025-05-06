@@ -537,14 +537,13 @@ define void @test_shl_v2i128(<2 x i128> %x, <2 x i128> %a, ptr nocapture %r) nou
 ; i686-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; i686-NEXT:    movl (%eax), %ecx
 ; i686-NEXT:    movl %ecx, (%esp) # 4-byte Spill
-; i686-NEXT:    movl 4(%eax), %edx
+; i686-NEXT:    movl 4(%eax), %edi
 ; i686-NEXT:    movl 8(%eax), %eax
 ; i686-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; i686-NEXT:    movl 40(%ebp), %ecx
 ; i686-NEXT:    # kill: def $cl killed $cl killed $ecx
-; i686-NEXT:    shldl %cl, %edx, %eax
+; i686-NEXT:    shldl %cl, %edi, %eax
 ; i686-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl %edx, %edi
 ; i686-NEXT:    movl 56(%ebp), %edx
 ; i686-NEXT:    shrl $3, %edx
 ; i686-NEXT:    andl $12, %edx

@@ -1272,11 +1272,11 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GCN-NEXT:    s_cselect_b64 s[8:9], -1, 0
 ; GCN-NEXT:    s_cmp_lt_i32 s3, 6
 ; GCN-NEXT:    s_cbranch_scc1 .LBB10_1
-; GCN-NEXT:  ; %bb.8: ; %bb
+; GCN-NEXT:  ; %bb.10: ; %bb
 ; GCN-NEXT:    s_getpc_b64 s[8:9]
-; GCN-NEXT:  .Lpost_getpc12:
-; GCN-NEXT:    s_add_u32 s8, s8, (.LBB10_2-.Lpost_getpc12)&4294967295
-; GCN-NEXT:    s_addc_u32 s9, s9, (.LBB10_2-.Lpost_getpc12)>>32
+; GCN-NEXT:  .Lpost_getpc13:
+; GCN-NEXT:    s_add_u32 s8, s8, (.LBB10_2-.Lpost_getpc13)&4294967295
+; GCN-NEXT:    s_addc_u32 s9, s9, (.LBB10_2-.Lpost_getpc13)>>32
 ; GCN-NEXT:    s_setpc_b64 s[8:9]
 ; GCN-NEXT:  .LBB10_1: ; %bb13
 ; GCN-NEXT:    ;;#ASMSTART
@@ -1286,32 +1286,44 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    s_cbranch_execz .LBB10_3
-; GCN-NEXT:    s_branch .LBB10_4
+; GCN-NEXT:  ; %bb.8: ; %bb13
+; GCN-NEXT:    s_getpc_b64 s[10:11]
+; GCN-NEXT:  .Lpost_getpc12:
+; GCN-NEXT:    s_add_u32 s10, s10, (.LBB10_4-.Lpost_getpc12)&4294967295
+; GCN-NEXT:    s_addc_u32 s11, s11, (.LBB10_4-.Lpost_getpc12)>>32
+; GCN-NEXT:    s_setpc_b64 s[10:11]
 ; GCN-NEXT:  .LBB10_2:
 ; GCN-NEXT:    s_mov_b64 s[8:9], 0
 ; GCN-NEXT:  .LBB10_3: ; %bb9
 ; GCN-NEXT:    s_cmp_lt_i32 s3, 11
 ; GCN-NEXT:    s_cselect_b64 s[8:9], -1, 0
 ; GCN-NEXT:    s_cmp_ge_i32 s2, s3
-; GCN-NEXT:    s_cselect_b64 s[10:11], -1, 0
-; GCN-NEXT:    s_and_b64 s[8:9], s[10:11], s[8:9]
+; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[8:9]
+; GCN-NEXT:    s_cselect_b64 s[8:9], -1, 0
+; GCN-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[8:9]
+; GCN-NEXT:    v_and_b32_e32 v0, v1, v0
+; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
+; GCN-NEXT:    v_cmp_eq_u32_e64 s[8:9], 1, v0
 ; GCN-NEXT:  .LBB10_4: ; %Flow5
 ; GCN-NEXT:    s_andn2_b64 vcc, exec, s[8:9]
 ; GCN-NEXT:    s_cbranch_vccz .LBB10_5
-; GCN-NEXT:  ; %bb.10: ; %Flow5
+; GCN-NEXT:  ; %bb.12: ; %Flow5
 ; GCN-NEXT:    s_getpc_b64 s[0:1]
-; GCN-NEXT:  .Lpost_getpc13:
-; GCN-NEXT:    s_add_u32 s0, s0, (.LBB10_6-.Lpost_getpc13)&4294967295
-; GCN-NEXT:    s_addc_u32 s1, s1, (.LBB10_6-.Lpost_getpc13)>>32
+; GCN-NEXT:  .Lpost_getpc14:
+; GCN-NEXT:    s_add_u32 s0, s0, (.LBB10_6-.Lpost_getpc14)&4294967295
+; GCN-NEXT:    s_addc_u32 s1, s1, (.LBB10_6-.Lpost_getpc14)>>32
 ; GCN-NEXT:    s_setpc_b64 s[0:1]
 ; GCN-NEXT:  .LBB10_5: ; %bb14
 ; GCN-NEXT:    s_cmp_lt_i32 s1, 9
 ; GCN-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; GCN-NEXT:    s_cmp_lt_i32 s2, s3
-; GCN-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GCN-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
-; GCN-NEXT:    s_and_b64 s[0:1], s[6:7], s[0:1]
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
+; GCN-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GCN-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]
+; GCN-NEXT:    v_or_b32_e32 v0, v1, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[6:7]
+; GCN-NEXT:    v_and_b32_e32 v0, v1, v0
+; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GCN-NEXT:    s_branch .LBB10_7
 ; GCN-NEXT:  .LBB10_6:
 ; GCN-NEXT:    ; implicit-def: $vgpr0
@@ -1337,12 +1349,12 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GFX11-NEXT:    s_cselect_b64 s[8:9], -1, 0
 ; GFX11-NEXT:    s_cmp_lt_i32 s3, 6
 ; GFX11-NEXT:    s_cbranch_scc1 .LBB10_1
-; GFX11-NEXT:  ; %bb.8: ; %bb
+; GFX11-NEXT:  ; %bb.10: ; %bb
 ; GFX11-NEXT:    s_getpc_b64 s[8:9]
-; GFX11-NEXT:  .Lpost_getpc11:
+; GFX11-NEXT:  .Lpost_getpc12:
 ; GFX11-NEXT:    s_waitcnt_depctr 0xfffe
-; GFX11-NEXT:    s_add_u32 s8, s8, (.LBB10_2-.Lpost_getpc11)&4294967295
-; GFX11-NEXT:    s_addc_u32 s9, s9, (.LBB10_2-.Lpost_getpc11)>>32
+; GFX11-NEXT:    s_add_u32 s8, s8, (.LBB10_2-.Lpost_getpc12)&4294967295
+; GFX11-NEXT:    s_addc_u32 s9, s9, (.LBB10_2-.Lpost_getpc12)>>32
 ; GFX11-NEXT:    s_waitcnt_depctr 0xfffe
 ; GFX11-NEXT:    s_setpc_b64 s[8:9]
 ; GFX11-NEXT:  .LBB10_1: ; %bb13
@@ -1353,30 +1365,55 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GFX11-NEXT:    v_nop_e64
 ; GFX11-NEXT:    ;;#ASMEND
 ; GFX11-NEXT:    s_cbranch_execz .LBB10_3
-; GFX11-NEXT:    s_branch .LBB10_4
+; GFX11-NEXT:  ; %bb.8: ; %bb13
+; GFX11-NEXT:    s_getpc_b64 s[10:11]
+; GFX11-NEXT:  .Lpost_getpc11:
+; GFX11-NEXT:    s_waitcnt_depctr 0xfffe
+; GFX11-NEXT:    s_add_u32 s10, s10, (.LBB10_4-.Lpost_getpc11)&4294967295
+; GFX11-NEXT:    s_addc_u32 s11, s11, (.LBB10_4-.Lpost_getpc11)>>32
+; GFX11-NEXT:    s_waitcnt_depctr 0xfffe
+; GFX11-NEXT:    s_setpc_b64 s[10:11]
 ; GFX11-NEXT:  .LBB10_2:
 ; GFX11-NEXT:    s_mov_b64 s[8:9], 0
 ; GFX11-NEXT:  .LBB10_3: ; %bb9
 ; GFX11-NEXT:    s_cmp_lt_i32 s3, 11
 ; GFX11-NEXT:    s_cselect_b64 s[8:9], -1, 0
 ; GFX11-NEXT:    s_cmp_ge_i32 s2, s3
-; GFX11-NEXT:    s_cselect_b64 s[10:11], -1, 0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_and_b64 s[8:9], s[10:11], s[8:9]
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[8:9]
+; GFX11-NEXT:    s_cselect_b64 s[8:9], -1, 0
+; GFX11-NEXT:    s_waitcnt_depctr 0xfffe
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[8:9]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_and_b32_e32 v0, v1, v0
+; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_cmp_eq_u32_e64 s[8:9], 1, v0
 ; GFX11-NEXT:  .LBB10_4: ; %Flow5
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    s_and_not1_b64 vcc, exec, s[8:9]
-; GFX11-NEXT:    s_cbranch_vccnz .LBB10_6
-; GFX11-NEXT:  ; %bb.5: ; %bb14
+; GFX11-NEXT:    s_cbranch_vccz .LBB10_5
+; GFX11-NEXT:  ; %bb.12: ; %Flow5
+; GFX11-NEXT:    s_getpc_b64 s[0:1]
+; GFX11-NEXT:  .Lpost_getpc13:
+; GFX11-NEXT:    s_waitcnt_depctr 0xfffe
+; GFX11-NEXT:    s_add_u32 s0, s0, (.LBB10_6-.Lpost_getpc13)&4294967295
+; GFX11-NEXT:    s_addc_u32 s1, s1, (.LBB10_6-.Lpost_getpc13)>>32
+; GFX11-NEXT:    s_waitcnt_depctr 0xfffe
+; GFX11-NEXT:    s_setpc_b64 s[0:1]
+; GFX11-NEXT:  .LBB10_5: ; %bb14
 ; GFX11-NEXT:    s_cmp_lt_i32 s1, 9
 ; GFX11-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; GFX11-NEXT:    s_cmp_lt_i32 s2, s3
-; GFX11-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
-; GFX11-NEXT:    s_and_b64 s[0:1], s[6:7], s[0:1]
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
+; GFX11-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GFX11-NEXT:    s_waitcnt_depctr 0xfffe
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[6:7]
+; GFX11-NEXT:    v_and_b32_e32 v0, v1, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX11-NEXT:    s_branch .LBB10_7
 ; GFX11-NEXT:  .LBB10_6:
 ; GFX11-NEXT:    ; implicit-def: $vgpr0
@@ -1387,7 +1424,7 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
-; GFX11-NEXT:    s_waitcnt_depctr 0xfffe
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_add_u32 s0, s2, s0
 ; GFX11-NEXT:    s_addc_u32 s1, s3, s1
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
@@ -1405,46 +1442,51 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GFX12-NEXT:    s_cselect_b32 s8, -1, 0
 ; GFX12-NEXT:    s_cmp_lt_i32 s3, 6
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB10_1
-; GFX12-NEXT:  ; %bb.18: ; %bb
+; GFX12-NEXT:  ; %bb.10: ; %bb
 ; GFX12-NEXT:    s_getpc_b64 s[10:11]
-; GFX12-NEXT:  .Lpost_getpc17:
+; GFX12-NEXT:  .Lpost_getpc13:
 ; GFX12-NEXT:    s_wait_alu 0xfffe
-; GFX12-NEXT:    s_add_co_u32 s10, s10, (.LBB10_4-.Lpost_getpc17)&4294967295
-; GFX12-NEXT:    s_add_co_ci_u32 s11, s11, (.LBB10_4-.Lpost_getpc17)>>32
+; GFX12-NEXT:    s_add_co_u32 s10, s10, (.LBB10_4-.Lpost_getpc13)&4294967295
+; GFX12-NEXT:    s_add_co_ci_u32 s11, s11, (.LBB10_4-.Lpost_getpc13)>>32
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[10:11]
 ; GFX12-NEXT:  .LBB10_1: ; %Flow
 ; GFX12-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s7
 ; GFX12-NEXT:    s_cbranch_vccnz .LBB10_2
-; GFX12-NEXT:  ; %bb.10: ; %Flow
+; GFX12-NEXT:  ; %bb.12: ; %Flow
 ; GFX12-NEXT:    s_getpc_b64 s[8:9]
-; GFX12-NEXT:  .Lpost_getpc13:
+; GFX12-NEXT:  .Lpost_getpc14:
 ; GFX12-NEXT:    s_wait_alu 0xfffe
-; GFX12-NEXT:    s_add_co_u32 s8, s8, (.LBB10_5-.Lpost_getpc13)&4294967295
-; GFX12-NEXT:    s_add_co_ci_u32 s9, s9, (.LBB10_5-.Lpost_getpc13)>>32
+; GFX12-NEXT:    s_add_co_u32 s8, s8, (.LBB10_5-.Lpost_getpc14)&4294967295
+; GFX12-NEXT:    s_add_co_ci_u32 s9, s9, (.LBB10_5-.Lpost_getpc14)>>32
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[8:9]
 ; GFX12-NEXT:  .LBB10_2: ; %Flow5
 ; GFX12-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
 ; GFX12-NEXT:    s_cbranch_vccz .LBB10_3
-; GFX12-NEXT:  ; %bb.12: ; %Flow5
+; GFX12-NEXT:  ; %bb.14: ; %Flow5
 ; GFX12-NEXT:    s_getpc_b64 s[0:1]
-; GFX12-NEXT:  .Lpost_getpc14:
+; GFX12-NEXT:  .Lpost_getpc15:
 ; GFX12-NEXT:    s_wait_alu 0xfffe
-; GFX12-NEXT:    s_add_co_u32 s0, s0, (.LBB10_6-.Lpost_getpc14)&4294967295
-; GFX12-NEXT:    s_add_co_ci_u32 s1, s1, (.LBB10_6-.Lpost_getpc14)>>32
+; GFX12-NEXT:    s_add_co_u32 s0, s0, (.LBB10_6-.Lpost_getpc15)&4294967295
+; GFX12-NEXT:    s_add_co_ci_u32 s1, s1, (.LBB10_6-.Lpost_getpc15)>>32
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[0:1]
 ; GFX12-NEXT:  .LBB10_3: ; %bb14
 ; GFX12-NEXT:    s_cmp_lt_i32 s1, 9
 ; GFX12-NEXT:    s_cselect_b32 s0, -1, 0
 ; GFX12-NEXT:    s_cmp_lt_i32 s2, s3
-; GFX12-NEXT:    s_cselect_b32 s1, -1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX12-NEXT:    s_or_b32 s0, s1, s0
-; GFX12-NEXT:    s_and_b32 s0, s6, s0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX12-NEXT:    s_cselect_b32 s0, -1, 0
+; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX12-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s6
+; GFX12-NEXT:    v_and_b32_e32 v0, v1, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX12-NEXT:  ; %bb.8: ; %bb14
 ; GFX12-NEXT:    s_getpc_b64 s[0:1]
 ; GFX12-NEXT:  .Lpost_getpc12:
@@ -1462,29 +1504,35 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GFX12-NEXT:    v_nop_e64
 ; GFX12-NEXT:    ;;#ASMEND
 ; GFX12-NEXT:    s_cbranch_execz .LBB10_5
-; GFX12-NEXT:  ; %bb.14: ; %bb13
+; GFX12-NEXT:  ; %bb.16: ; %bb13
 ; GFX12-NEXT:    s_getpc_b64 s[8:9]
-; GFX12-NEXT:  .Lpost_getpc15:
+; GFX12-NEXT:  .Lpost_getpc16:
 ; GFX12-NEXT:    s_wait_alu 0xfffe
-; GFX12-NEXT:    s_add_co_u32 s8, s8, (.LBB10_2-.Lpost_getpc15)&4294967295
-; GFX12-NEXT:    s_add_co_ci_u32 s9, s9, (.LBB10_2-.Lpost_getpc15)>>32
+; GFX12-NEXT:    s_add_co_u32 s8, s8, (.LBB10_2-.Lpost_getpc16)&4294967295
+; GFX12-NEXT:    s_add_co_ci_u32 s9, s9, (.LBB10_2-.Lpost_getpc16)>>32
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[8:9]
 ; GFX12-NEXT:  .LBB10_5: ; %bb9
 ; GFX12-NEXT:    s_cmp_lt_i32 s3, 11
 ; GFX12-NEXT:    s_cselect_b32 s0, -1, 0
 ; GFX12-NEXT:    s_cmp_ge_i32 s2, s3
-; GFX12-NEXT:    s_cselect_b32 s7, -1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX12-NEXT:    s_and_b32 s0, s7, s0
+; GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX12-NEXT:    s_cselect_b32 s0, -1, 0
+; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    v_and_b32_e32 v0, v1, v0
+; GFX12-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_cmp_eq_u32_e64 s0, 1, v0
 ; GFX12-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
 ; GFX12-NEXT:    s_cbranch_vccnz .LBB10_6
-; GFX12-NEXT:  ; %bb.16: ; %bb9
+; GFX12-NEXT:  ; %bb.18: ; %bb9
 ; GFX12-NEXT:    s_getpc_b64 s[8:9]
-; GFX12-NEXT:  .Lpost_getpc16:
+; GFX12-NEXT:  .Lpost_getpc17:
 ; GFX12-NEXT:    s_wait_alu 0xfffe
-; GFX12-NEXT:    s_add_co_u32 s8, s8, (.LBB10_3-.Lpost_getpc16)&4294967295
-; GFX12-NEXT:    s_add_co_ci_u32 s9, s9, (.LBB10_3-.Lpost_getpc16)>>32
+; GFX12-NEXT:    s_add_co_u32 s8, s8, (.LBB10_3-.Lpost_getpc17)&4294967295
+; GFX12-NEXT:    s_add_co_ci_u32 s9, s9, (.LBB10_3-.Lpost_getpc17)>>32
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[8:9]
 ; GFX12-NEXT:  .LBB10_6:

@@ -74,8 +74,8 @@ define amdgpu_kernel void @s_anyext_i16_i32(ptr addrspace(1) %out, ptr addrspace
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 1, v1
 ; GCN-NEXT:    s_mov_b64 s[6:7], s[14:15]
 ; GCN-NEXT:    v_mov_b32_e32 v1, v3
-; GCN-NEXT:    buffer_load_ushort v2, v[2:3], s[12:15], 0 addr64
-; GCN-NEXT:    buffer_load_ushort v0, v[0:1], s[4:7], 0 addr64
+; GCN-NEXT:    buffer_load_ubyte v2, v[2:3], s[12:15], 0 addr64
+; GCN-NEXT:    buffer_load_ubyte v0, v[0:1], s[4:7], 0 addr64
 ; GCN-NEXT:    s_mov_b32 s10, -1
 ; GCN-NEXT:    s_mov_b32 s8, s0
 ; GCN-NEXT:    s_mov_b32 s9, s1
@@ -99,8 +99,8 @@ define amdgpu_kernel void @s_anyext_i16_i32(ptr addrspace(1) %out, ptr addrspace
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s4, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_load_ushort v2, v[2:3]
-; GFX8-NEXT:    flat_load_ushort v0, v[0:1]
+; GFX8-NEXT:    flat_load_ubyte v2, v[2:3]
+; GFX8-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX8-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX8-NEXT:    s_mov_b32 s2, -1
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
@@ -118,8 +118,8 @@ define amdgpu_kernel void @s_anyext_i16_i32(ptr addrspace(1) %out, ptr addrspace
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 1, v1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_ushort v2, v0, s[2:3]
-; GFX9-NEXT:    global_load_ushort v3, v1, s[6:7]
+; GFX9-NEXT:    global_load_ubyte v2, v0, s[2:3]
+; GFX9-NEXT:    global_load_ubyte v3, v1, s[6:7]
 ; GFX9-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX9-NEXT:    s_mov_b32 s2, -1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)

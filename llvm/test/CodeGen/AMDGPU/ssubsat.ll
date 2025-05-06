@@ -82,11 +82,15 @@ define i16 @v_ssubsat_i16(i16 %lhs, i16 %rhs) {
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_cmp_lt_i16_e32 vcc, 0, v1
 ; GFX8-NEXT:    v_sub_u16_e32 v1, v0, v1
-; GFX8-NEXT:    v_cmp_lt_i16_e64 s[4:5], v1, v0
-; GFX8-NEXT:    v_ashrrev_i16_e32 v0, 15, v1
-; GFX8-NEXT:    v_xor_b32_e32 v0, 0xffff8000, v0
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GFX8-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX8-NEXT:    v_cmp_lt_i16_e32 vcc, v1, v0
+; GFX8-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v0, v2, v0
+; GFX8-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX8-NEXT:    v_ashrrev_i16_e32 v2, 15, v1
+; GFX8-NEXT:    v_xor_b32_e32 v2, 0xffff8000, v2
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GFX8-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_ssubsat_i16:
@@ -121,24 +125,32 @@ define i32 @v_ssubsat_i32(i32 %lhs, i32 %rhs) {
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v1
-; GFX6-NEXT:    v_sub_i32_e64 v1, s[4:5], v0, v1
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v1, v0
-; GFX6-NEXT:    v_ashrrev_i32_e32 v0, 31, v1
-; GFX6-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GFX6-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX6-NEXT:    v_sub_i32_e32 v1, vcc, v0, v1
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v1, v0
+; GFX6-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v0, v2, v0
+; GFX6-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX6-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; GFX6-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GFX6-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_ssubsat_i32:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v1
-; GFX8-NEXT:    v_sub_u32_e64 v1, s[4:5], v0, v1
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v1, v0
-; GFX8-NEXT:    v_ashrrev_i32_e32 v0, 31, v1
-; GFX8-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GFX8-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX8-NEXT:    v_sub_u32_e32 v1, vcc, v0, v1
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v1, v0
+; GFX8-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v0, v2, v0
+; GFX8-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX8-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; GFX8-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GFX8-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_ssubsat_i32:
@@ -183,19 +195,27 @@ define <2 x i16> @v_ssubsat_v2i16(<2 x i16> %lhs, <2 x i16> %rhs) {
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
 ; GFX8-NEXT:    v_sub_u16_e32 v4, v3, v2
 ; GFX8-NEXT:    v_cmp_lt_i16_e32 vcc, v4, v3
-; GFX8-NEXT:    v_cmp_lt_i16_e64 s[4:5], 0, v2
-; GFX8-NEXT:    v_ashrrev_i16_e32 v2, 15, v4
-; GFX8-NEXT:    v_xor_b32_e32 v2, 0xffff8000, v2
-; GFX8-NEXT:    s_xor_b64 vcc, s[4:5], vcc
-; GFX8-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
+; GFX8-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
+; GFX8-NEXT:    v_cmp_lt_i16_e32 vcc, 0, v2
+; GFX8-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v2, v2, v3
+; GFX8-NEXT:    v_ashrrev_i16_e32 v5, 15, v4
+; GFX8-NEXT:    v_and_b32_e32 v2, 1, v2
+; GFX8-NEXT:    v_xor_b32_e32 v5, 0xffff8000, v5
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v2
+; GFX8-NEXT:    v_cndmask_b32_e32 v2, v4, v5, vcc
 ; GFX8-NEXT:    v_cmp_lt_i16_e32 vcc, 0, v1
 ; GFX8-NEXT:    v_sub_u16_e32 v1, v0, v1
-; GFX8-NEXT:    v_cmp_lt_i16_e64 s[4:5], v1, v0
-; GFX8-NEXT:    v_ashrrev_i16_e32 v0, 15, v1
-; GFX8-NEXT:    v_xor_b32_e32 v0, 0xffff8000, v0
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
+; GFX8-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
+; GFX8-NEXT:    v_cmp_lt_i16_e32 vcc, v1, v0
+; GFX8-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v0, v3, v0
+; GFX8-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX8-NEXT:    v_ashrrev_i16_e32 v3, 15, v1
+; GFX8-NEXT:    v_xor_b32_e32 v3, 0xffff8000, v3
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; GFX8-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GFX8-NEXT:    v_cndmask_b32_e32 v0, v1, v3, vcc
 ; GFX8-NEXT:    v_or_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -246,25 +266,37 @@ define <3 x i16> @v_ssubsat_v3i16(<3 x i16> %lhs, <3 x i16> %rhs) {
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v5, 16, v0
 ; GFX8-NEXT:    v_sub_u16_e32 v6, v5, v4
 ; GFX8-NEXT:    v_cmp_lt_i16_e32 vcc, v6, v5
-; GFX8-NEXT:    v_cmp_lt_i16_e64 s[4:5], 0, v4
-; GFX8-NEXT:    v_ashrrev_i16_e32 v4, 15, v6
-; GFX8-NEXT:    v_xor_b32_e32 v4, 0xffff8000, v4
-; GFX8-NEXT:    s_xor_b64 vcc, s[4:5], vcc
-; GFX8-NEXT:    v_cndmask_b32_e32 v4, v6, v4, vcc
+; GFX8-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc
+; GFX8-NEXT:    v_cmp_lt_i16_e32 vcc, 0, v4
+; GFX8-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v4, v4, v5
+; GFX8-NEXT:    v_ashrrev_i16_e32 v7, 15, v6
+; GFX8-NEXT:    v_and_b32_e32 v4, 1, v4
+; GFX8-NEXT:    v_xor_b32_e32 v7, 0xffff8000, v7
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v4
+; GFX8-NEXT:    v_cndmask_b32_e32 v4, v6, v7, vcc
 ; GFX8-NEXT:    v_cmp_lt_i16_e32 vcc, 0, v3
 ; GFX8-NEXT:    v_sub_u16_e32 v3, v1, v3
-; GFX8-NEXT:    v_cmp_lt_i16_e64 s[4:5], v3, v1
-; GFX8-NEXT:    v_ashrrev_i16_e32 v1, 15, v3
-; GFX8-NEXT:    v_xor_b32_e32 v1, 0xffff8000, v1
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
+; GFX8-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc
+; GFX8-NEXT:    v_cmp_lt_i16_e32 vcc, v3, v1
+; GFX8-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v1, v5, v1
+; GFX8-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX8-NEXT:    v_ashrrev_i16_e32 v5, 15, v3
+; GFX8-NEXT:    v_xor_b32_e32 v5, 0xffff8000, v5
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GFX8-NEXT:    v_cndmask_b32_e32 v1, v3, v5, vcc
 ; GFX8-NEXT:    v_cmp_lt_i16_e32 vcc, 0, v2
 ; GFX8-NEXT:    v_sub_u16_e32 v2, v0, v2
-; GFX8-NEXT:    v_cmp_lt_i16_e64 s[4:5], v2, v0
-; GFX8-NEXT:    v_ashrrev_i16_e32 v0, 15, v2
-; GFX8-NEXT:    v_xor_b32_e32 v0, 0xffff8000, v0
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; GFX8-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
+; GFX8-NEXT:    v_cmp_lt_i16_e32 vcc, v2, v0
+; GFX8-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v0, v3, v0
+; GFX8-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX8-NEXT:    v_ashrrev_i16_e32 v3, 15, v2
+; GFX8-NEXT:    v_xor_b32_e32 v3, 0xffff8000, v3
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GFX8-NEXT:    v_cndmask_b32_e32 v0, v2, v3, vcc
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v2, 16, v4
 ; GFX8-NEXT:    v_or_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -323,37 +355,53 @@ define <2 x float> @v_ssubsat_v4i16(<4 x i16> %lhs, <4 x i16> %rhs) {
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v5, 16, v0
 ; GFX8-NEXT:    v_sub_u16_e32 v6, v5, v4
 ; GFX8-NEXT:    v_cmp_lt_i16_e32 vcc, v6, v5
-; GFX8-NEXT:    v_cmp_lt_i16_e64 s[4:5], 0, v4
-; GFX8-NEXT:    v_ashrrev_i16_e32 v4, 15, v6
-; GFX8-NEXT:    v_xor_b32_e32 v4, 0xffff8000, v4
-; GFX8-NEXT:    s_xor_b64 vcc, s[4:5], vcc
-; GFX8-NEXT:    v_cndmask_b32_e32 v4, v6, v4, vcc
+; GFX8-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc
+; GFX8-NEXT:    v_cmp_lt_i16_e32 vcc, 0, v4
+; GFX8-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v4, v4, v5
+; GFX8-NEXT:    v_ashrrev_i16_e32 v7, 15, v6
+; GFX8-NEXT:    v_and_b32_e32 v4, 1, v4
+; GFX8-NEXT:    v_xor_b32_e32 v7, 0xffff8000, v7
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v4
+; GFX8-NEXT:    v_cndmask_b32_e32 v4, v6, v7, vcc
 ; GFX8-NEXT:    v_cmp_lt_i16_e32 vcc, 0, v2
 ; GFX8-NEXT:    v_sub_u16_e32 v2, v0, v2
-; GFX8-NEXT:    v_cmp_lt_i16_e64 s[4:5], v2, v0
-; GFX8-NEXT:    v_ashrrev_i16_e32 v0, 15, v2
-; GFX8-NEXT:    v_xor_b32_e32 v0, 0xffff8000, v0
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
+; GFX8-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc
+; GFX8-NEXT:    v_cmp_lt_i16_e32 vcc, v2, v0
+; GFX8-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v0, v5, v0
+; GFX8-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX8-NEXT:    v_ashrrev_i16_e32 v5, 15, v2
+; GFX8-NEXT:    v_xor_b32_e32 v5, 0xffff8000, v5
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
-; GFX8-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; GFX8-NEXT:    v_cndmask_b32_e32 v0, v2, v5, vcc
 ; GFX8-NEXT:    v_or_b32_sdwa v0, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v2, 16, v3
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
 ; GFX8-NEXT:    v_sub_u16_e32 v5, v4, v2
 ; GFX8-NEXT:    v_cmp_lt_i16_e32 vcc, v5, v4
-; GFX8-NEXT:    v_cmp_lt_i16_e64 s[4:5], 0, v2
-; GFX8-NEXT:    v_ashrrev_i16_e32 v2, 15, v5
-; GFX8-NEXT:    v_xor_b32_e32 v2, 0xffff8000, v2
-; GFX8-NEXT:    s_xor_b64 vcc, s[4:5], vcc
-; GFX8-NEXT:    v_cndmask_b32_e32 v2, v5, v2, vcc
+; GFX8-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
+; GFX8-NEXT:    v_cmp_lt_i16_e32 vcc, 0, v2
+; GFX8-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v2, v2, v4
+; GFX8-NEXT:    v_ashrrev_i16_e32 v6, 15, v5
+; GFX8-NEXT:    v_and_b32_e32 v2, 1, v2
+; GFX8-NEXT:    v_xor_b32_e32 v6, 0xffff8000, v6
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v2
+; GFX8-NEXT:    v_cndmask_b32_e32 v2, v5, v6, vcc
 ; GFX8-NEXT:    v_cmp_lt_i16_e32 vcc, 0, v3
 ; GFX8-NEXT:    v_sub_u16_e32 v3, v1, v3
-; GFX8-NEXT:    v_cmp_lt_i16_e64 s[4:5], v3, v1
-; GFX8-NEXT:    v_ashrrev_i16_e32 v1, 15, v3
-; GFX8-NEXT:    v_xor_b32_e32 v1, 0xffff8000, v1
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
+; GFX8-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
+; GFX8-NEXT:    v_cmp_lt_i16_e32 vcc, v3, v1
+; GFX8-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v1, v4, v1
+; GFX8-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX8-NEXT:    v_ashrrev_i16_e32 v4, 15, v3
+; GFX8-NEXT:    v_xor_b32_e32 v4, 0xffff8000, v4
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; GFX8-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
+; GFX8-NEXT:    v_cndmask_b32_e32 v1, v3, v4, vcc
 ; GFX8-NEXT:    v_or_b32_sdwa v1, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -380,38 +428,54 @@ define <2 x i32> @v_ssubsat_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v2
-; GFX6-NEXT:    v_sub_i32_e64 v2, s[4:5], v0, v2
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v2, v0
-; GFX6-NEXT:    v_ashrrev_i32_e32 v0, 31, v2
-; GFX6-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
-; GFX6-NEXT:    v_sub_i32_e64 v2, s[4:5], v1, v3
+; GFX6-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
+; GFX6-NEXT:    v_sub_i32_e32 v2, vcc, v0, v2
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v2, v0
+; GFX6-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v0, v4, v0
+; GFX6-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX6-NEXT:    v_ashrrev_i32_e32 v4, 31, v2
+; GFX6-NEXT:    v_xor_b32_e32 v4, 0x80000000, v4
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GFX6-NEXT:    v_cndmask_b32_e32 v0, v2, v4, vcc
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v3
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v2, v1
-; GFX6-NEXT:    v_ashrrev_i32_e32 v1, 31, v2
-; GFX6-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
+; GFX6-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX6-NEXT:    v_sub_i32_e32 v3, vcc, v1, v3
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v3, v1
+; GFX6-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v1, v2, v1
+; GFX6-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX6-NEXT:    v_ashrrev_i32_e32 v2, 31, v3
+; GFX6-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GFX6-NEXT:    v_cndmask_b32_e32 v1, v3, v2, vcc
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_ssubsat_v2i32:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v2
-; GFX8-NEXT:    v_sub_u32_e64 v2, s[4:5], v0, v2
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v2, v0
-; GFX8-NEXT:    v_ashrrev_i32_e32 v0, 31, v2
-; GFX8-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
-; GFX8-NEXT:    v_sub_u32_e64 v2, s[4:5], v1, v3
+; GFX8-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
+; GFX8-NEXT:    v_sub_u32_e32 v2, vcc, v0, v2
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v2, v0
+; GFX8-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v0, v4, v0
+; GFX8-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX8-NEXT:    v_ashrrev_i32_e32 v4, 31, v2
+; GFX8-NEXT:    v_xor_b32_e32 v4, 0x80000000, v4
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GFX8-NEXT:    v_cndmask_b32_e32 v0, v2, v4, vcc
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v3
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v2, v1
-; GFX8-NEXT:    v_ashrrev_i32_e32 v1, 31, v2
-; GFX8-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
+; GFX8-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX8-NEXT:    v_sub_u32_e32 v3, vcc, v1, v3
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v3, v1
+; GFX8-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v1, v2, v1
+; GFX8-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX8-NEXT:    v_ashrrev_i32_e32 v2, 31, v3
+; GFX8-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GFX8-NEXT:    v_cndmask_b32_e32 v1, v3, v2, vcc
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_ssubsat_v2i32:
@@ -436,52 +500,76 @@ define <3 x i32> @v_ssubsat_v3i32(<3 x i32> %lhs, <3 x i32> %rhs) {
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v3
-; GFX6-NEXT:    v_sub_i32_e64 v3, s[4:5], v0, v3
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v3, v0
-; GFX6-NEXT:    v_ashrrev_i32_e32 v0, 31, v3
-; GFX6-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v0, v3, v0, vcc
-; GFX6-NEXT:    v_sub_i32_e64 v3, s[4:5], v1, v4
+; GFX6-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc
+; GFX6-NEXT:    v_sub_i32_e32 v3, vcc, v0, v3
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v3, v0
+; GFX6-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v0, v6, v0
+; GFX6-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX6-NEXT:    v_ashrrev_i32_e32 v6, 31, v3
+; GFX6-NEXT:    v_xor_b32_e32 v6, 0x80000000, v6
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GFX6-NEXT:    v_cndmask_b32_e32 v0, v3, v6, vcc
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v4
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v3, v1
-; GFX6-NEXT:    v_ashrrev_i32_e32 v1, 31, v3
-; GFX6-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
-; GFX6-NEXT:    v_sub_i32_e64 v3, s[4:5], v2, v5
+; GFX6-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
+; GFX6-NEXT:    v_sub_i32_e32 v4, vcc, v1, v4
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v4, v1
+; GFX6-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v1, v3, v1
+; GFX6-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX6-NEXT:    v_ashrrev_i32_e32 v3, 31, v4
+; GFX6-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GFX6-NEXT:    v_cndmask_b32_e32 v1, v4, v3, vcc
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v5
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v3, v2
-; GFX6-NEXT:    v_ashrrev_i32_e32 v2, 31, v3
-; GFX6-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v2, v3, v2, vcc
+; GFX6-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
+; GFX6-NEXT:    v_sub_i32_e32 v4, vcc, v2, v5
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v4, v2
+; GFX6-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v2, v3, v2
+; GFX6-NEXT:    v_and_b32_e32 v2, 1, v2
+; GFX6-NEXT:    v_ashrrev_i32_e32 v3, 31, v4
+; GFX6-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v2
+; GFX6-NEXT:    v_cndmask_b32_e32 v2, v4, v3, vcc
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_ssubsat_v3i32:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v3
-; GFX8-NEXT:    v_sub_u32_e64 v3, s[4:5], v0, v3
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v3, v0
-; GFX8-NEXT:    v_ashrrev_i32_e32 v0, 31, v3
-; GFX8-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v0, v3, v0, vcc
-; GFX8-NEXT:    v_sub_u32_e64 v3, s[4:5], v1, v4
+; GFX8-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc
+; GFX8-NEXT:    v_sub_u32_e32 v3, vcc, v0, v3
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v3, v0
+; GFX8-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v0, v6, v0
+; GFX8-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX8-NEXT:    v_ashrrev_i32_e32 v6, 31, v3
+; GFX8-NEXT:    v_xor_b32_e32 v6, 0x80000000, v6
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GFX8-NEXT:    v_cndmask_b32_e32 v0, v3, v6, vcc
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v4
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v3, v1
-; GFX8-NEXT:    v_ashrrev_i32_e32 v1, 31, v3
-; GFX8-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
-; GFX8-NEXT:    v_sub_u32_e64 v3, s[4:5], v2, v5
+; GFX8-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
+; GFX8-NEXT:    v_sub_u32_e32 v4, vcc, v1, v4
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v4, v1
+; GFX8-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v1, v3, v1
+; GFX8-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX8-NEXT:    v_ashrrev_i32_e32 v3, 31, v4
+; GFX8-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GFX8-NEXT:    v_cndmask_b32_e32 v1, v4, v3, vcc
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v5
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v3, v2
-; GFX8-NEXT:    v_ashrrev_i32_e32 v2, 31, v3
-; GFX8-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v2, v3, v2, vcc
+; GFX8-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
+; GFX8-NEXT:    v_sub_u32_e32 v4, vcc, v2, v5
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v4, v2
+; GFX8-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v2, v3, v2
+; GFX8-NEXT:    v_and_b32_e32 v2, 1, v2
+; GFX8-NEXT:    v_ashrrev_i32_e32 v3, 31, v4
+; GFX8-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v2
+; GFX8-NEXT:    v_cndmask_b32_e32 v2, v4, v3, vcc
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_ssubsat_v3i32:
@@ -508,66 +596,98 @@ define <4 x i32> @v_ssubsat_v4i32(<4 x i32> %lhs, <4 x i32> %rhs) {
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v4
-; GFX6-NEXT:    v_sub_i32_e64 v4, s[4:5], v0, v4
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v4, v0
-; GFX6-NEXT:    v_ashrrev_i32_e32 v0, 31, v4
-; GFX6-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
-; GFX6-NEXT:    v_sub_i32_e64 v4, s[4:5], v1, v5
+; GFX6-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
+; GFX6-NEXT:    v_sub_i32_e32 v4, vcc, v0, v4
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v4, v0
+; GFX6-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v0, v8, v0
+; GFX6-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX6-NEXT:    v_ashrrev_i32_e32 v8, 31, v4
+; GFX6-NEXT:    v_xor_b32_e32 v8, 0x80000000, v8
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GFX6-NEXT:    v_cndmask_b32_e32 v0, v4, v8, vcc
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v5
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v4, v1
-; GFX6-NEXT:    v_ashrrev_i32_e32 v1, 31, v4
-; GFX6-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v1, v4, v1, vcc
-; GFX6-NEXT:    v_sub_i32_e64 v4, s[4:5], v2, v6
+; GFX6-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
+; GFX6-NEXT:    v_sub_i32_e32 v5, vcc, v1, v5
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v5, v1
+; GFX6-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v1, v4, v1
+; GFX6-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX6-NEXT:    v_ashrrev_i32_e32 v4, 31, v5
+; GFX6-NEXT:    v_xor_b32_e32 v4, 0x80000000, v4
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GFX6-NEXT:    v_cndmask_b32_e32 v1, v5, v4, vcc
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v6
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v4, v2
-; GFX6-NEXT:    v_ashrrev_i32_e32 v2, 31, v4
-; GFX6-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
-; GFX6-NEXT:    v_sub_i32_e64 v4, s[4:5], v3, v7
+; GFX6-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
+; GFX6-NEXT:    v_sub_i32_e32 v5, vcc, v2, v6
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v5, v2
+; GFX6-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v2, v4, v2
+; GFX6-NEXT:    v_and_b32_e32 v2, 1, v2
+; GFX6-NEXT:    v_ashrrev_i32_e32 v4, 31, v5
+; GFX6-NEXT:    v_xor_b32_e32 v4, 0x80000000, v4
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v2
+; GFX6-NEXT:    v_cndmask_b32_e32 v2, v5, v4, vcc
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v7
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v4, v3
-; GFX6-NEXT:    v_ashrrev_i32_e32 v3, 31, v4
-; GFX6-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v3, v4, v3, vcc
+; GFX6-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
+; GFX6-NEXT:    v_sub_i32_e32 v5, vcc, v3, v7
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v5, v3
+; GFX6-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v3, v4, v3
+; GFX6-NEXT:    v_and_b32_e32 v3, 1, v3
+; GFX6-NEXT:    v_ashrrev_i32_e32 v4, 31, v5
+; GFX6-NEXT:    v_xor_b32_e32 v4, 0x80000000, v4
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v3
+; GFX6-NEXT:    v_cndmask_b32_e32 v3, v5, v4, vcc
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_ssubsat_v4i32:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v4
-; GFX8-NEXT:    v_sub_u32_e64 v4, s[4:5], v0, v4
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v4, v0
-; GFX8-NEXT:    v_ashrrev_i32_e32 v0, 31, v4
-; GFX8-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
-; GFX8-NEXT:    v_sub_u32_e64 v4, s[4:5], v1, v5
+; GFX8-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
+; GFX8-NEXT:    v_sub_u32_e32 v4, vcc, v0, v4
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v4, v0
+; GFX8-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v0, v8, v0
+; GFX8-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX8-NEXT:    v_ashrrev_i32_e32 v8, 31, v4
+; GFX8-NEXT:    v_xor_b32_e32 v8, 0x80000000, v8
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GFX8-NEXT:    v_cndmask_b32_e32 v0, v4, v8, vcc
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v5
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v4, v1
-; GFX8-NEXT:    v_ashrrev_i32_e32 v1, 31, v4
-; GFX8-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v1, v4, v1, vcc
-; GFX8-NEXT:    v_sub_u32_e64 v4, s[4:5], v2, v6
+; GFX8-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
+; GFX8-NEXT:    v_sub_u32_e32 v5, vcc, v1, v5
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v5, v1
+; GFX8-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v1, v4, v1
+; GFX8-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX8-NEXT:    v_ashrrev_i32_e32 v4, 31, v5
+; GFX8-NEXT:    v_xor_b32_e32 v4, 0x80000000, v4
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GFX8-NEXT:    v_cndmask_b32_e32 v1, v5, v4, vcc
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v6
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v4, v2
-; GFX8-NEXT:    v_ashrrev_i32_e32 v2, 31, v4
-; GFX8-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
-; GFX8-NEXT:    v_sub_u32_e64 v4, s[4:5], v3, v7
+; GFX8-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
+; GFX8-NEXT:    v_sub_u32_e32 v5, vcc, v2, v6
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v5, v2
+; GFX8-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v2, v4, v2
+; GFX8-NEXT:    v_and_b32_e32 v2, 1, v2
+; GFX8-NEXT:    v_ashrrev_i32_e32 v4, 31, v5
+; GFX8-NEXT:    v_xor_b32_e32 v4, 0x80000000, v4
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v2
+; GFX8-NEXT:    v_cndmask_b32_e32 v2, v5, v4, vcc
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v7
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v4, v3
-; GFX8-NEXT:    v_ashrrev_i32_e32 v3, 31, v4
-; GFX8-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v3, v4, v3, vcc
+; GFX8-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
+; GFX8-NEXT:    v_sub_u32_e32 v5, vcc, v3, v7
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v5, v3
+; GFX8-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v3, v4, v3
+; GFX8-NEXT:    v_and_b32_e32 v3, 1, v3
+; GFX8-NEXT:    v_ashrrev_i32_e32 v4, 31, v5
+; GFX8-NEXT:    v_xor_b32_e32 v4, 0x80000000, v4
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v3
+; GFX8-NEXT:    v_cndmask_b32_e32 v3, v5, v4, vcc
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_ssubsat_v4i32:
@@ -596,122 +716,186 @@ define <8 x i32> @v_ssubsat_v8i32(<8 x i32> %lhs, <8 x i32> %rhs) {
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v8
-; GFX6-NEXT:    v_sub_i32_e64 v8, s[4:5], v0, v8
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v8, v0
-; GFX6-NEXT:    v_ashrrev_i32_e32 v0, 31, v8
-; GFX6-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v0, v8, v0, vcc
-; GFX6-NEXT:    v_sub_i32_e64 v8, s[4:5], v1, v9
+; GFX6-NEXT:    v_cndmask_b32_e64 v16, 0, 1, vcc
+; GFX6-NEXT:    v_sub_i32_e32 v8, vcc, v0, v8
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v8, v0
+; GFX6-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v0, v16, v0
+; GFX6-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX6-NEXT:    v_ashrrev_i32_e32 v16, 31, v8
+; GFX6-NEXT:    v_xor_b32_e32 v16, 0x80000000, v16
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GFX6-NEXT:    v_cndmask_b32_e32 v0, v8, v16, vcc
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v9
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v8, v1
-; GFX6-NEXT:    v_ashrrev_i32_e32 v1, 31, v8
-; GFX6-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v1, v8, v1, vcc
-; GFX6-NEXT:    v_sub_i32_e64 v8, s[4:5], v2, v10
+; GFX6-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
+; GFX6-NEXT:    v_sub_i32_e32 v9, vcc, v1, v9
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v9, v1
+; GFX6-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v1, v8, v1
+; GFX6-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX6-NEXT:    v_ashrrev_i32_e32 v8, 31, v9
+; GFX6-NEXT:    v_xor_b32_e32 v8, 0x80000000, v8
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GFX6-NEXT:    v_cndmask_b32_e32 v1, v9, v8, vcc
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v10
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v8, v2
-; GFX6-NEXT:    v_ashrrev_i32_e32 v2, 31, v8
-; GFX6-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v2, v8, v2, vcc
-; GFX6-NEXT:    v_sub_i32_e64 v8, s[4:5], v3, v11
+; GFX6-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
+; GFX6-NEXT:    v_sub_i32_e32 v9, vcc, v2, v10
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v9, v2
+; GFX6-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v2, v8, v2
+; GFX6-NEXT:    v_and_b32_e32 v2, 1, v2
+; GFX6-NEXT:    v_ashrrev_i32_e32 v8, 31, v9
+; GFX6-NEXT:    v_xor_b32_e32 v8, 0x80000000, v8
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v2
+; GFX6-NEXT:    v_cndmask_b32_e32 v2, v9, v8, vcc
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v11
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v8, v3
-; GFX6-NEXT:    v_ashrrev_i32_e32 v3, 31, v8
-; GFX6-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v3, v8, v3, vcc
-; GFX6-NEXT:    v_sub_i32_e64 v8, s[4:5], v4, v12
+; GFX6-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
+; GFX6-NEXT:    v_sub_i32_e32 v9, vcc, v3, v11
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v9, v3
+; GFX6-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v3, v8, v3
+; GFX6-NEXT:    v_and_b32_e32 v3, 1, v3
+; GFX6-NEXT:    v_ashrrev_i32_e32 v8, 31, v9
+; GFX6-NEXT:    v_xor_b32_e32 v8, 0x80000000, v8
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v3
+; GFX6-NEXT:    v_cndmask_b32_e32 v3, v9, v8, vcc
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v12
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v8, v4
-; GFX6-NEXT:    v_ashrrev_i32_e32 v4, 31, v8
-; GFX6-NEXT:    v_xor_b32_e32 v4, 0x80000000, v4
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v4, v8, v4, vcc
-; GFX6-NEXT:    v_sub_i32_e64 v8, s[4:5], v5, v13
+; GFX6-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
+; GFX6-NEXT:    v_sub_i32_e32 v9, vcc, v4, v12
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v9, v4
+; GFX6-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v4, v8, v4
+; GFX6-NEXT:    v_and_b32_e32 v4, 1, v4
+; GFX6-NEXT:    v_ashrrev_i32_e32 v8, 31, v9
+; GFX6-NEXT:    v_xor_b32_e32 v8, 0x80000000, v8
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v4
+; GFX6-NEXT:    v_cndmask_b32_e32 v4, v9, v8, vcc
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v13
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v8, v5
-; GFX6-NEXT:    v_ashrrev_i32_e32 v5, 31, v8
-; GFX6-NEXT:    v_xor_b32_e32 v5, 0x80000000, v5
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v5, v8, v5, vcc
-; GFX6-NEXT:    v_sub_i32_e64 v8, s[4:5], v6, v14
+; GFX6-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
+; GFX6-NEXT:    v_sub_i32_e32 v9, vcc, v5, v13
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v9, v5
+; GFX6-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v5, v8, v5
+; GFX6-NEXT:    v_and_b32_e32 v5, 1, v5
+; GFX6-NEXT:    v_ashrrev_i32_e32 v8, 31, v9
+; GFX6-NEXT:    v_xor_b32_e32 v8, 0x80000000, v8
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v5
+; GFX6-NEXT:    v_cndmask_b32_e32 v5, v9, v8, vcc
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v14
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v8, v6
-; GFX6-NEXT:    v_ashrrev_i32_e32 v6, 31, v8
-; GFX6-NEXT:    v_xor_b32_e32 v6, 0x80000000, v6
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v6, v8, v6, vcc
-; GFX6-NEXT:    v_sub_i32_e64 v8, s[4:5], v7, v15
+; GFX6-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
+; GFX6-NEXT:    v_sub_i32_e32 v9, vcc, v6, v14
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v9, v6
+; GFX6-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v6, v8, v6
+; GFX6-NEXT:    v_and_b32_e32 v6, 1, v6
+; GFX6-NEXT:    v_ashrrev_i32_e32 v8, 31, v9
+; GFX6-NEXT:    v_xor_b32_e32 v8, 0x80000000, v8
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v6
+; GFX6-NEXT:    v_cndmask_b32_e32 v6, v9, v8, vcc
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v15
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v8, v7
-; GFX6-NEXT:    v_ashrrev_i32_e32 v7, 31, v8
-; GFX6-NEXT:    v_xor_b32_e32 v7, 0x80000000, v7
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v7, v8, v7, vcc
+; GFX6-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
+; GFX6-NEXT:    v_sub_i32_e32 v9, vcc, v7, v15
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v9, v7
+; GFX6-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v7, v8, v7
+; GFX6-NEXT:    v_and_b32_e32 v7, 1, v7
+; GFX6-NEXT:    v_ashrrev_i32_e32 v8, 31, v9
+; GFX6-NEXT:    v_xor_b32_e32 v8, 0x80000000, v8
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v7
+; GFX6-NEXT:    v_cndmask_b32_e32 v7, v9, v8, vcc
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_ssubsat_v8i32:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v8
-; GFX8-NEXT:    v_sub_u32_e64 v8, s[4:5], v0, v8
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v8, v0
-; GFX8-NEXT:    v_ashrrev_i32_e32 v0, 31, v8
-; GFX8-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v0, v8, v0, vcc
-; GFX8-NEXT:    v_sub_u32_e64 v8, s[4:5], v1, v9
+; GFX8-NEXT:    v_cndmask_b32_e64 v16, 0, 1, vcc
+; GFX8-NEXT:    v_sub_u32_e32 v8, vcc, v0, v8
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v8, v0
+; GFX8-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v0, v16, v0
+; GFX8-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX8-NEXT:    v_ashrrev_i32_e32 v16, 31, v8
+; GFX8-NEXT:    v_xor_b32_e32 v16, 0x80000000, v16
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GFX8-NEXT:    v_cndmask_b32_e32 v0, v8, v16, vcc
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v9
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v8, v1
-; GFX8-NEXT:    v_ashrrev_i32_e32 v1, 31, v8
-; GFX8-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v1, v8, v1, vcc
-; GFX8-NEXT:    v_sub_u32_e64 v8, s[4:5], v2, v10
+; GFX8-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
+; GFX8-NEXT:    v_sub_u32_e32 v9, vcc, v1, v9
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v9, v1
+; GFX8-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v1, v8, v1
+; GFX8-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX8-NEXT:    v_ashrrev_i32_e32 v8, 31, v9
+; GFX8-NEXT:    v_xor_b32_e32 v8, 0x80000000, v8
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GFX8-NEXT:    v_cndmask_b32_e32 v1, v9, v8, vcc
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v10
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v8, v2
-; GFX8-NEXT:    v_ashrrev_i32_e32 v2, 31, v8
-; GFX8-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v2, v8, v2, vcc
-; GFX8-NEXT:    v_sub_u32_e64 v8, s[4:5], v3, v11
+; GFX8-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
+; GFX8-NEXT:    v_sub_u32_e32 v9, vcc, v2, v10
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v9, v2
+; GFX8-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v2, v8, v2
+; GFX8-NEXT:    v_and_b32_e32 v2, 1, v2
+; GFX8-NEXT:    v_ashrrev_i32_e32 v8, 31, v9
+; GFX8-NEXT:    v_xor_b32_e32 v8, 0x80000000, v8
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v2
+; GFX8-NEXT:    v_cndmask_b32_e32 v2, v9, v8, vcc
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v11
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v8, v3
-; GFX8-NEXT:    v_ashrrev_i32_e32 v3, 31, v8
-; GFX8-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v3, v8, v3, vcc
-; GFX8-NEXT:    v_sub_u32_e64 v8, s[4:5], v4, v12
+; GFX8-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
+; GFX8-NEXT:    v_sub_u32_e32 v9, vcc, v3, v11
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v9, v3
+; GFX8-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v3, v8, v3
+; GFX8-NEXT:    v_and_b32_e32 v3, 1, v3
+; GFX8-NEXT:    v_ashrrev_i32_e32 v8, 31, v9
+; GFX8-NEXT:    v_xor_b32_e32 v8, 0x80000000, v8
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v3
+; GFX8-NEXT:    v_cndmask_b32_e32 v3, v9, v8, vcc
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v12
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v8, v4
-; GFX8-NEXT:    v_ashrrev_i32_e32 v4, 31, v8
-; GFX8-NEXT:    v_xor_b32_e32 v4, 0x80000000, v4
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v4, v8, v4, vcc
-; GFX8-NEXT:    v_sub_u32_e64 v8, s[4:5], v5, v13
+; GFX8-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
+; GFX8-NEXT:    v_sub_u32_e32 v9, vcc, v4, v12
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v9, v4
+; GFX8-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v4, v8, v4
+; GFX8-NEXT:    v_and_b32_e32 v4, 1, v4
+; GFX8-NEXT:    v_ashrrev_i32_e32 v8, 31, v9
+; GFX8-NEXT:    v_xor_b32_e32 v8, 0x80000000, v8
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v4
+; GFX8-NEXT:    v_cndmask_b32_e32 v4, v9, v8, vcc
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v13
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v8, v5
-; GFX8-NEXT:    v_ashrrev_i32_e32 v5, 31, v8
-; GFX8-NEXT:    v_xor_b32_e32 v5, 0x80000000, v5
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v5, v8, v5, vcc
-; GFX8-NEXT:    v_sub_u32_e64 v8, s[4:5], v6, v14
+; GFX8-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
+; GFX8-NEXT:    v_sub_u32_e32 v9, vcc, v5, v13
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v9, v5
+; GFX8-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v5, v8, v5
+; GFX8-NEXT:    v_and_b32_e32 v5, 1, v5
+; GFX8-NEXT:    v_ashrrev_i32_e32 v8, 31, v9
+; GFX8-NEXT:    v_xor_b32_e32 v8, 0x80000000, v8
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v5
+; GFX8-NEXT:    v_cndmask_b32_e32 v5, v9, v8, vcc
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v14
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v8, v6
-; GFX8-NEXT:    v_ashrrev_i32_e32 v6, 31, v8
-; GFX8-NEXT:    v_xor_b32_e32 v6, 0x80000000, v6
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v6, v8, v6, vcc
-; GFX8-NEXT:    v_sub_u32_e64 v8, s[4:5], v7, v15
+; GFX8-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
+; GFX8-NEXT:    v_sub_u32_e32 v9, vcc, v6, v14
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v9, v6
+; GFX8-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v6, v8, v6
+; GFX8-NEXT:    v_and_b32_e32 v6, 1, v6
+; GFX8-NEXT:    v_ashrrev_i32_e32 v8, 31, v9
+; GFX8-NEXT:    v_xor_b32_e32 v8, 0x80000000, v8
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v6
+; GFX8-NEXT:    v_cndmask_b32_e32 v6, v9, v8, vcc
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v15
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v8, v7
-; GFX8-NEXT:    v_ashrrev_i32_e32 v7, 31, v8
-; GFX8-NEXT:    v_xor_b32_e32 v7, 0x80000000, v7
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v7, v8, v7, vcc
+; GFX8-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
+; GFX8-NEXT:    v_sub_u32_e32 v9, vcc, v7, v15
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v9, v7
+; GFX8-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v7, v8, v7
+; GFX8-NEXT:    v_and_b32_e32 v7, 1, v7
+; GFX8-NEXT:    v_ashrrev_i32_e32 v8, 31, v9
+; GFX8-NEXT:    v_xor_b32_e32 v8, 0x80000000, v8
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v7
+; GFX8-NEXT:    v_cndmask_b32_e32 v7, v9, v8, vcc
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_ssubsat_v8i32:
@@ -747,239 +931,367 @@ define <16 x i32> @v_ssubsat_v16i32(<16 x i32> %lhs, <16 x i32> %rhs) {
 ; GFX6-LABEL: v_ssubsat_v16i32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_sub_i32_e32 v31, vcc, v0, v16
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v16
-; GFX6-NEXT:    v_sub_i32_e64 v16, s[4:5], v0, v16
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v16, v0
-; GFX6-NEXT:    v_ashrrev_i32_e32 v0, 31, v16
-; GFX6-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v0, v16, v0, vcc
-; GFX6-NEXT:    v_sub_i32_e64 v16, s[4:5], v1, v17
+; GFX6-NEXT:    v_cndmask_b32_e64 v16, 0, 1, vcc
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v31, v0
+; GFX6-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v0, v16, v0
+; GFX6-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX6-NEXT:    v_ashrrev_i32_e32 v16, 31, v31
+; GFX6-NEXT:    v_xor_b32_e32 v16, 0x80000000, v16
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GFX6-NEXT:    v_cndmask_b32_e32 v0, v31, v16, vcc
+; GFX6-NEXT:    v_sub_i32_e32 v16, vcc, v1, v17
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v17
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v16, v1
-; GFX6-NEXT:    v_ashrrev_i32_e32 v1, 31, v16
-; GFX6-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v1, v16, v1, vcc
-; GFX6-NEXT:    v_sub_i32_e64 v16, s[4:5], v2, v18
+; GFX6-NEXT:    v_cndmask_b32_e64 v17, 0, 1, vcc
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v16, v1
+; GFX6-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v1, v17, v1
+; GFX6-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX6-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; GFX6-NEXT:    v_xor_b32_e32 v17, 0x80000000, v17
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GFX6-NEXT:    v_cndmask_b32_e32 v1, v16, v17, vcc
+; GFX6-NEXT:    v_sub_i32_e32 v16, vcc, v2, v18
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v18
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v16, v2
-; GFX6-NEXT:    v_ashrrev_i32_e32 v2, 31, v16
-; GFX6-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v2, v16, v2, vcc
-; GFX6-NEXT:    v_sub_i32_e64 v16, s[4:5], v3, v19
+; GFX6-NEXT:    v_cndmask_b32_e64 v17, 0, 1, vcc
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v16, v2
+; GFX6-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v2, v17, v2
+; GFX6-NEXT:    v_and_b32_e32 v2, 1, v2
+; GFX6-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; GFX6-NEXT:    v_xor_b32_e32 v17, 0x80000000, v17
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v2
+; GFX6-NEXT:    v_cndmask_b32_e32 v2, v16, v17, vcc
+; GFX6-NEXT:    v_sub_i32_e32 v16, vcc, v3, v19
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v19
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v16, v3
-; GFX6-NEXT:    v_ashrrev_i32_e32 v3, 31, v16
-; GFX6-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v3, v16, v3, vcc
-; GFX6-NEXT:    v_sub_i32_e64 v16, s[4:5], v4, v20
+; GFX6-NEXT:    v_cndmask_b32_e64 v17, 0, 1, vcc
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v16, v3
+; GFX6-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v3, v17, v3
+; GFX6-NEXT:    buffer_load_dword v18, off, s[0:3], s32
+; GFX6-NEXT:    v_and_b32_e32 v3, 1, v3
+; GFX6-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; GFX6-NEXT:    v_xor_b32_e32 v17, 0x80000000, v17
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v3
+; GFX6-NEXT:    v_cndmask_b32_e32 v3, v16, v17, vcc
+; GFX6-NEXT:    v_sub_i32_e32 v16, vcc, v4, v20
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v20
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v16, v4
-; GFX6-NEXT:    v_ashrrev_i32_e32 v4, 31, v16
-; GFX6-NEXT:    v_xor_b32_e32 v4, 0x80000000, v4
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v4, v16, v4, vcc
-; GFX6-NEXT:    buffer_load_dword v16, off, s[0:3], s32
-; GFX6-NEXT:    v_sub_i32_e64 v17, s[4:5], v5, v21
+; GFX6-NEXT:    v_cndmask_b32_e64 v17, 0, 1, vcc
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v16, v4
+; GFX6-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v4, v17, v4
+; GFX6-NEXT:    v_and_b32_e32 v4, 1, v4
+; GFX6-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; GFX6-NEXT:    v_xor_b32_e32 v17, 0x80000000, v17
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v4
+; GFX6-NEXT:    v_cndmask_b32_e32 v4, v16, v17, vcc
+; GFX6-NEXT:    v_sub_i32_e32 v16, vcc, v5, v21
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v21
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v17, v5
-; GFX6-NEXT:    v_ashrrev_i32_e32 v5, 31, v17
-; GFX6-NEXT:    v_xor_b32_e32 v5, 0x80000000, v5
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v5, v17, v5, vcc
-; GFX6-NEXT:    v_sub_i32_e64 v17, s[4:5], v6, v22
+; GFX6-NEXT:    v_cndmask_b32_e64 v17, 0, 1, vcc
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v16, v5
+; GFX6-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v5, v17, v5
+; GFX6-NEXT:    v_and_b32_e32 v5, 1, v5
+; GFX6-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; GFX6-NEXT:    v_xor_b32_e32 v17, 0x80000000, v17
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v5
+; GFX6-NEXT:    v_cndmask_b32_e32 v5, v16, v17, vcc
+; GFX6-NEXT:    v_sub_i32_e32 v16, vcc, v6, v22
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v22
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v17, v6
-; GFX6-NEXT:    v_ashrrev_i32_e32 v6, 31, v17
-; GFX6-NEXT:    v_xor_b32_e32 v6, 0x80000000, v6
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v6, v17, v6, vcc
-; GFX6-NEXT:    v_sub_i32_e64 v17, s[4:5], v7, v23
+; GFX6-NEXT:    v_cndmask_b32_e64 v17, 0, 1, vcc
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v16, v6
+; GFX6-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v6, v17, v6
+; GFX6-NEXT:    v_and_b32_e32 v6, 1, v6
+; GFX6-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; GFX6-NEXT:    v_xor_b32_e32 v17, 0x80000000, v17
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v6
+; GFX6-NEXT:    v_cndmask_b32_e32 v6, v16, v17, vcc
+; GFX6-NEXT:    v_sub_i32_e32 v16, vcc, v7, v23
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v23
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v17, v7
-; GFX6-NEXT:    v_ashrrev_i32_e32 v7, 31, v17
-; GFX6-NEXT:    v_xor_b32_e32 v7, 0x80000000, v7
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v7, v17, v7, vcc
-; GFX6-NEXT:    v_sub_i32_e64 v17, s[4:5], v8, v24
+; GFX6-NEXT:    v_cndmask_b32_e64 v17, 0, 1, vcc
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v16, v7
+; GFX6-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v7, v17, v7
+; GFX6-NEXT:    v_and_b32_e32 v7, 1, v7
+; GFX6-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; GFX6-NEXT:    v_xor_b32_e32 v17, 0x80000000, v17
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v7
+; GFX6-NEXT:    v_cndmask_b32_e32 v7, v16, v17, vcc
+; GFX6-NEXT:    v_sub_i32_e32 v16, vcc, v8, v24
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v24
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v17, v8
-; GFX6-NEXT:    v_ashrrev_i32_e32 v8, 31, v17
-; GFX6-NEXT:    v_xor_b32_e32 v8, 0x80000000, v8
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v8, v17, v8, vcc
-; GFX6-NEXT:    v_sub_i32_e64 v17, s[4:5], v9, v25
+; GFX6-NEXT:    v_cndmask_b32_e64 v17, 0, 1, vcc
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v16, v8
+; GFX6-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v8, v17, v8
+; GFX6-NEXT:    v_and_b32_e32 v8, 1, v8
+; GFX6-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; GFX6-NEXT:    v_xor_b32_e32 v17, 0x80000000, v17
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v8
+; GFX6-NEXT:    v_cndmask_b32_e32 v8, v16, v17, vcc
+; GFX6-NEXT:    v_sub_i32_e32 v16, vcc, v9, v25
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v25
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v17, v9
-; GFX6-NEXT:    v_ashrrev_i32_e32 v9, 31, v17
-; GFX6-NEXT:    v_xor_b32_e32 v9, 0x80000000, v9
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v9, v17, v9, vcc
-; GFX6-NEXT:    v_sub_i32_e64 v17, s[4:5], v10, v26
+; GFX6-NEXT:    v_cndmask_b32_e64 v17, 0, 1, vcc
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v16, v9
+; GFX6-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v9, v17, v9
+; GFX6-NEXT:    v_and_b32_e32 v9, 1, v9
+; GFX6-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; GFX6-NEXT:    v_xor_b32_e32 v17, 0x80000000, v17
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v9
+; GFX6-NEXT:    v_cndmask_b32_e32 v9, v16, v17, vcc
+; GFX6-NEXT:    v_sub_i32_e32 v16, vcc, v10, v26
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v26
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v17, v10
-; GFX6-NEXT:    v_ashrrev_i32_e32 v10, 31, v17
-; GFX6-NEXT:    v_xor_b32_e32 v10, 0x80000000, v10
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v10, v17, v10, vcc
-; GFX6-NEXT:    v_sub_i32_e64 v17, s[4:5], v11, v27
+; GFX6-NEXT:    v_cndmask_b32_e64 v17, 0, 1, vcc
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v16, v10
+; GFX6-NEXT:    v_cndmask_b32_e64 v10, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v10, v17, v10
+; GFX6-NEXT:    v_and_b32_e32 v10, 1, v10
+; GFX6-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; GFX6-NEXT:    v_xor_b32_e32 v17, 0x80000000, v17
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v10
+; GFX6-NEXT:    v_cndmask_b32_e32 v10, v16, v17, vcc
+; GFX6-NEXT:    v_sub_i32_e32 v16, vcc, v11, v27
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v27
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v17, v11
-; GFX6-NEXT:    v_ashrrev_i32_e32 v11, 31, v17
-; GFX6-NEXT:    v_xor_b32_e32 v11, 0x80000000, v11
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v11, v17, v11, vcc
-; GFX6-NEXT:    v_sub_i32_e64 v17, s[4:5], v12, v28
+; GFX6-NEXT:    v_cndmask_b32_e64 v17, 0, 1, vcc
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v16, v11
+; GFX6-NEXT:    v_cndmask_b32_e64 v11, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v11, v17, v11
+; GFX6-NEXT:    v_and_b32_e32 v11, 1, v11
+; GFX6-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; GFX6-NEXT:    v_xor_b32_e32 v17, 0x80000000, v17
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v11
+; GFX6-NEXT:    v_cndmask_b32_e32 v11, v16, v17, vcc
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v28
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v17, v12
-; GFX6-NEXT:    v_ashrrev_i32_e32 v12, 31, v17
-; GFX6-NEXT:    v_xor_b32_e32 v12, 0x80000000, v12
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v12, v17, v12, vcc
-; GFX6-NEXT:    v_sub_i32_e64 v17, s[4:5], v13, v29
+; GFX6-NEXT:    v_cndmask_b32_e64 v16, 0, 1, vcc
+; GFX6-NEXT:    v_sub_i32_e32 v17, vcc, v12, v28
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v17, v12
+; GFX6-NEXT:    v_cndmask_b32_e64 v12, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v12, v16, v12
+; GFX6-NEXT:    v_and_b32_e32 v12, 1, v12
+; GFX6-NEXT:    v_ashrrev_i32_e32 v16, 31, v17
+; GFX6-NEXT:    v_xor_b32_e32 v16, 0x80000000, v16
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v12
+; GFX6-NEXT:    v_cndmask_b32_e32 v12, v17, v16, vcc
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v29
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v17, v13
-; GFX6-NEXT:    v_ashrrev_i32_e32 v13, 31, v17
-; GFX6-NEXT:    v_xor_b32_e32 v13, 0x80000000, v13
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v13, v17, v13, vcc
-; GFX6-NEXT:    v_sub_i32_e64 v17, s[4:5], v14, v30
+; GFX6-NEXT:    v_cndmask_b32_e64 v16, 0, 1, vcc
+; GFX6-NEXT:    v_sub_i32_e32 v17, vcc, v13, v29
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v17, v13
+; GFX6-NEXT:    v_cndmask_b32_e64 v13, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v13, v16, v13
+; GFX6-NEXT:    v_and_b32_e32 v13, 1, v13
+; GFX6-NEXT:    v_ashrrev_i32_e32 v16, 31, v17
+; GFX6-NEXT:    v_xor_b32_e32 v16, 0x80000000, v16
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v13
+; GFX6-NEXT:    v_cndmask_b32_e32 v13, v17, v16, vcc
 ; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v30
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v17, v14
-; GFX6-NEXT:    v_ashrrev_i32_e32 v14, 31, v17
-; GFX6-NEXT:    v_xor_b32_e32 v14, 0x80000000, v14
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v14, v17, v14, vcc
+; GFX6-NEXT:    v_cndmask_b32_e64 v16, 0, 1, vcc
+; GFX6-NEXT:    v_sub_i32_e32 v17, vcc, v14, v30
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v17, v14
+; GFX6-NEXT:    v_cndmask_b32_e64 v14, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v14, v16, v14
+; GFX6-NEXT:    v_and_b32_e32 v14, 1, v14
+; GFX6-NEXT:    v_ashrrev_i32_e32 v16, 31, v17
+; GFX6-NEXT:    v_xor_b32_e32 v16, 0x80000000, v16
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v14
+; GFX6-NEXT:    v_cndmask_b32_e32 v14, v17, v16, vcc
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
-; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v16
-; GFX6-NEXT:    v_sub_i32_e64 v16, s[4:5], v15, v16
-; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v16, v15
-; GFX6-NEXT:    v_ashrrev_i32_e32 v15, 31, v16
-; GFX6-NEXT:    v_xor_b32_e32 v15, 0x80000000, v15
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v15, v16, v15, vcc
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v18
+; GFX6-NEXT:    v_cndmask_b32_e64 v16, 0, 1, vcc
+; GFX6-NEXT:    v_sub_i32_e32 v17, vcc, v15, v18
+; GFX6-NEXT:    v_cmp_lt_i32_e32 vcc, v17, v15
+; GFX6-NEXT:    v_cndmask_b32_e64 v15, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v15, v16, v15
+; GFX6-NEXT:    v_and_b32_e32 v15, 1, v15
+; GFX6-NEXT:    v_ashrrev_i32_e32 v16, 31, v17
+; GFX6-NEXT:    v_xor_b32_e32 v16, 0x80000000, v16
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v15
+; GFX6-NEXT:    v_cndmask_b32_e32 v15, v17, v16, vcc
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_ssubsat_v16i32:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_sub_u32_e32 v31, vcc, v0, v16
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v16
-; GFX8-NEXT:    v_sub_u32_e64 v16, s[4:5], v0, v16
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v16, v0
-; GFX8-NEXT:    v_ashrrev_i32_e32 v0, 31, v16
-; GFX8-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v0, v16, v0, vcc
-; GFX8-NEXT:    v_sub_u32_e64 v16, s[4:5], v1, v17
+; GFX8-NEXT:    v_cndmask_b32_e64 v16, 0, 1, vcc
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v31, v0
+; GFX8-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v0, v16, v0
+; GFX8-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX8-NEXT:    v_ashrrev_i32_e32 v16, 31, v31
+; GFX8-NEXT:    v_xor_b32_e32 v16, 0x80000000, v16
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GFX8-NEXT:    v_cndmask_b32_e32 v0, v31, v16, vcc
+; GFX8-NEXT:    v_sub_u32_e32 v16, vcc, v1, v17
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v17
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v16, v1
-; GFX8-NEXT:    v_ashrrev_i32_e32 v1, 31, v16
-; GFX8-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v1, v16, v1, vcc
-; GFX8-NEXT:    v_sub_u32_e64 v16, s[4:5], v2, v18
+; GFX8-NEXT:    v_cndmask_b32_e64 v17, 0, 1, vcc
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v16, v1
+; GFX8-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v1, v17, v1
+; GFX8-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX8-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; GFX8-NEXT:    v_xor_b32_e32 v17, 0x80000000, v17
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GFX8-NEXT:    v_cndmask_b32_e32 v1, v16, v17, vcc
+; GFX8-NEXT:    v_sub_u32_e32 v16, vcc, v2, v18
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v18
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v16, v2
-; GFX8-NEXT:    v_ashrrev_i32_e32 v2, 31, v16
-; GFX8-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v2, v16, v2, vcc
-; GFX8-NEXT:    v_sub_u32_e64 v16, s[4:5], v3, v19
+; GFX8-NEXT:    v_cndmask_b32_e64 v17, 0, 1, vcc
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v16, v2
+; GFX8-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v2, v17, v2
+; GFX8-NEXT:    v_and_b32_e32 v2, 1, v2
+; GFX8-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; GFX8-NEXT:    v_xor_b32_e32 v17, 0x80000000, v17
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v2
+; GFX8-NEXT:    v_cndmask_b32_e32 v2, v16, v17, vcc
+; GFX8-NEXT:    v_sub_u32_e32 v16, vcc, v3, v19
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v19
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v16, v3
-; GFX8-NEXT:    v_ashrrev_i32_e32 v3, 31, v16
-; GFX8-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v3, v16, v3, vcc
-; GFX8-NEXT:    v_sub_u32_e64 v16, s[4:5], v4, v20
+; GFX8-NEXT:    v_cndmask_b32_e64 v17, 0, 1, vcc
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v16, v3
+; GFX8-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v3, v17, v3
+; GFX8-NEXT:    buffer_load_dword v18, off, s[0:3], s32
+; GFX8-NEXT:    v_and_b32_e32 v3, 1, v3
+; GFX8-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; GFX8-NEXT:    v_xor_b32_e32 v17, 0x80000000, v17
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v3
+; GFX8-NEXT:    v_cndmask_b32_e32 v3, v16, v17, vcc
+; GFX8-NEXT:    v_sub_u32_e32 v16, vcc, v4, v20
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v20
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v16, v4
-; GFX8-NEXT:    v_ashrrev_i32_e32 v4, 31, v16
-; GFX8-NEXT:    v_xor_b32_e32 v4, 0x80000000, v4
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v4, v16, v4, vcc
-; GFX8-NEXT:    buffer_load_dword v16, off, s[0:3], s32
-; GFX8-NEXT:    v_sub_u32_e64 v17, s[4:5], v5, v21
+; GFX8-NEXT:    v_cndmask_b32_e64 v17, 0, 1, vcc
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v16, v4
+; GFX8-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v4, v17, v4
+; GFX8-NEXT:    v_and_b32_e32 v4, 1, v4
+; GFX8-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; GFX8-NEXT:    v_xor_b32_e32 v17, 0x80000000, v17
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v4
+; GFX8-NEXT:    v_cndmask_b32_e32 v4, v16, v17, vcc
+; GFX8-NEXT:    v_sub_u32_e32 v16, vcc, v5, v21
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v21
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v17, v5
-; GFX8-NEXT:    v_ashrrev_i32_e32 v5, 31, v17
-; GFX8-NEXT:    v_xor_b32_e32 v5, 0x80000000, v5
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v5, v17, v5, vcc
-; GFX8-NEXT:    v_sub_u32_e64 v17, s[4:5], v6, v22
+; GFX8-NEXT:    v_cndmask_b32_e64 v17, 0, 1, vcc
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v16, v5
+; GFX8-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v5, v17, v5
+; GFX8-NEXT:    v_and_b32_e32 v5, 1, v5
+; GFX8-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; GFX8-NEXT:    v_xor_b32_e32 v17, 0x80000000, v17
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v5
+; GFX8-NEXT:    v_cndmask_b32_e32 v5, v16, v17, vcc
+; GFX8-NEXT:    v_sub_u32_e32 v16, vcc, v6, v22
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v22
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v17, v6
-; GFX8-NEXT:    v_ashrrev_i32_e32 v6, 31, v17
-; GFX8-NEXT:    v_xor_b32_e32 v6, 0x80000000, v6
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v6, v17, v6, vcc
-; GFX8-NEXT:    v_sub_u32_e64 v17, s[4:5], v7, v23
+; GFX8-NEXT:    v_cndmask_b32_e64 v17, 0, 1, vcc
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v16, v6
+; GFX8-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v6, v17, v6
+; GFX8-NEXT:    v_and_b32_e32 v6, 1, v6
+; GFX8-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; GFX8-NEXT:    v_xor_b32_e32 v17, 0x80000000, v17
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v6
+; GFX8-NEXT:    v_cndmask_b32_e32 v6, v16, v17, vcc
+; GFX8-NEXT:    v_sub_u32_e32 v16, vcc, v7, v23
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v23
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v17, v7
-; GFX8-NEXT:    v_ashrrev_i32_e32 v7, 31, v17
-; GFX8-NEXT:    v_xor_b32_e32 v7, 0x80000000, v7
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v7, v17, v7, vcc
-; GFX8-NEXT:    v_sub_u32_e64 v17, s[4:5], v8, v24
+; GFX8-NEXT:    v_cndmask_b32_e64 v17, 0, 1, vcc
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v16, v7
+; GFX8-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v7, v17, v7
+; GFX8-NEXT:    v_and_b32_e32 v7, 1, v7
+; GFX8-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; GFX8-NEXT:    v_xor_b32_e32 v17, 0x80000000, v17
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v7
+; GFX8-NEXT:    v_cndmask_b32_e32 v7, v16, v17, vcc
+; GFX8-NEXT:    v_sub_u32_e32 v16, vcc, v8, v24
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v24
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v17, v8
-; GFX8-NEXT:    v_ashrrev_i32_e32 v8, 31, v17
-; GFX8-NEXT:    v_xor_b32_e32 v8, 0x80000000, v8
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v8, v17, v8, vcc
-; GFX8-NEXT:    v_sub_u32_e64 v17, s[4:5], v9, v25
+; GFX8-NEXT:    v_cndmask_b32_e64 v17, 0, 1, vcc
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v16, v8
+; GFX8-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v8, v17, v8
+; GFX8-NEXT:    v_and_b32_e32 v8, 1, v8
+; GFX8-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; GFX8-NEXT:    v_xor_b32_e32 v17, 0x80000000, v17
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v8
+; GFX8-NEXT:    v_cndmask_b32_e32 v8, v16, v17, vcc
+; GFX8-NEXT:    v_sub_u32_e32 v16, vcc, v9, v25
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v25
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v17, v9
-; GFX8-NEXT:    v_ashrrev_i32_e32 v9, 31, v17
-; GFX8-NEXT:    v_xor_b32_e32 v9, 0x80000000, v9
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v9, v17, v9, vcc
-; GFX8-NEXT:    v_sub_u32_e64 v17, s[4:5], v10, v26
+; GFX8-NEXT:    v_cndmask_b32_e64 v17, 0, 1, vcc
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v16, v9
+; GFX8-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v9, v17, v9
+; GFX8-NEXT:    v_and_b32_e32 v9, 1, v9
+; GFX8-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; GFX8-NEXT:    v_xor_b32_e32 v17, 0x80000000, v17
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v9
+; GFX8-NEXT:    v_cndmask_b32_e32 v9, v16, v17, vcc
+; GFX8-NEXT:    v_sub_u32_e32 v16, vcc, v10, v26
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v26
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v17, v10
-; GFX8-NEXT:    v_ashrrev_i32_e32 v10, 31, v17
-; GFX8-NEXT:    v_xor_b32_e32 v10, 0x80000000, v10
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v10, v17, v10, vcc
-; GFX8-NEXT:    v_sub_u32_e64 v17, s[4:5], v11, v27
+; GFX8-NEXT:    v_cndmask_b32_e64 v17, 0, 1, vcc
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v16, v10
+; GFX8-NEXT:    v_cndmask_b32_e64 v10, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v10, v17, v10
+; GFX8-NEXT:    v_and_b32_e32 v10, 1, v10
+; GFX8-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; GFX8-NEXT:    v_xor_b32_e32 v17, 0x80000000, v17
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v10
+; GFX8-NEXT:    v_cndmask_b32_e32 v10, v16, v17, vcc
+; GFX8-NEXT:    v_sub_u32_e32 v16, vcc, v11, v27
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v27
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v17, v11
-; GFX8-NEXT:    v_ashrrev_i32_e32 v11, 31, v17
-; GFX8-NEXT:    v_xor_b32_e32 v11, 0x80000000, v11
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v11, v17, v11, vcc
-; GFX8-NEXT:    v_sub_u32_e64 v17, s[4:5], v12, v28
+; GFX8-NEXT:    v_cndmask_b32_e64 v17, 0, 1, vcc
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v16, v11
+; GFX8-NEXT:    v_cndmask_b32_e64 v11, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v11, v17, v11
+; GFX8-NEXT:    v_and_b32_e32 v11, 1, v11
+; GFX8-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; GFX8-NEXT:    v_xor_b32_e32 v17, 0x80000000, v17
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v11
+; GFX8-NEXT:    v_cndmask_b32_e32 v11, v16, v17, vcc
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v28
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v17, v12
-; GFX8-NEXT:    v_ashrrev_i32_e32 v12, 31, v17
-; GFX8-NEXT:    v_xor_b32_e32 v12, 0x80000000, v12
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v12, v17, v12, vcc
-; GFX8-NEXT:    v_sub_u32_e64 v17, s[4:5], v13, v29
+; GFX8-NEXT:    v_cndmask_b32_e64 v16, 0, 1, vcc
+; GFX8-NEXT:    v_sub_u32_e32 v17, vcc, v12, v28
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v17, v12
+; GFX8-NEXT:    v_cndmask_b32_e64 v12, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v12, v16, v12
+; GFX8-NEXT:    v_and_b32_e32 v12, 1, v12
+; GFX8-NEXT:    v_ashrrev_i32_e32 v16, 31, v17
+; GFX8-NEXT:    v_xor_b32_e32 v16, 0x80000000, v16
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v12
+; GFX8-NEXT:    v_cndmask_b32_e32 v12, v17, v16, vcc
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v29
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v17, v13
-; GFX8-NEXT:    v_ashrrev_i32_e32 v13, 31, v17
-; GFX8-NEXT:    v_xor_b32_e32 v13, 0x80000000, v13
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v13, v17, v13, vcc
-; GFX8-NEXT:    v_sub_u32_e64 v17, s[4:5], v14, v30
+; GFX8-NEXT:    v_cndmask_b32_e64 v16, 0, 1, vcc
+; GFX8-NEXT:    v_sub_u32_e32 v17, vcc, v13, v29
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v17, v13
+; GFX8-NEXT:    v_cndmask_b32_e64 v13, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v13, v16, v13
+; GFX8-NEXT:    v_and_b32_e32 v13, 1, v13
+; GFX8-NEXT:    v_ashrrev_i32_e32 v16, 31, v17
+; GFX8-NEXT:    v_xor_b32_e32 v16, 0x80000000, v16
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v13
+; GFX8-NEXT:    v_cndmask_b32_e32 v13, v17, v16, vcc
 ; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v30
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v17, v14
-; GFX8-NEXT:    v_ashrrev_i32_e32 v14, 31, v17
-; GFX8-NEXT:    v_xor_b32_e32 v14, 0x80000000, v14
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v14, v17, v14, vcc
+; GFX8-NEXT:    v_cndmask_b32_e64 v16, 0, 1, vcc
+; GFX8-NEXT:    v_sub_u32_e32 v17, vcc, v14, v30
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v17, v14
+; GFX8-NEXT:    v_cndmask_b32_e64 v14, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v14, v16, v14
+; GFX8-NEXT:    v_and_b32_e32 v14, 1, v14
+; GFX8-NEXT:    v_ashrrev_i32_e32 v16, 31, v17
+; GFX8-NEXT:    v_xor_b32_e32 v16, 0x80000000, v16
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v14
+; GFX8-NEXT:    v_cndmask_b32_e32 v14, v17, v16, vcc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v16
-; GFX8-NEXT:    v_sub_u32_e64 v16, s[4:5], v15, v16
-; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v16, v15
-; GFX8-NEXT:    v_ashrrev_i32_e32 v15, 31, v16
-; GFX8-NEXT:    v_xor_b32_e32 v15, 0x80000000, v15
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v15, v16, v15, vcc
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v18
+; GFX8-NEXT:    v_cndmask_b32_e64 v16, 0, 1, vcc
+; GFX8-NEXT:    v_sub_u32_e32 v17, vcc, v15, v18
+; GFX8-NEXT:    v_cmp_lt_i32_e32 vcc, v17, v15
+; GFX8-NEXT:    v_cndmask_b32_e64 v15, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v15, v16, v15
+; GFX8-NEXT:    v_and_b32_e32 v15, 1, v15
+; GFX8-NEXT:    v_ashrrev_i32_e32 v16, 31, v17
+; GFX8-NEXT:    v_xor_b32_e32 v16, 0x80000000, v16
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v15
+; GFX8-NEXT:    v_cndmask_b32_e32 v15, v17, v16, vcc
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_ssubsat_v16i32:
@@ -1062,11 +1374,15 @@ define i64 @v_ssubsat_i64(i64 %lhs, i64 %rhs) {
 ; GFX6-NEXT:    v_sub_i32_e32 v4, vcc, v0, v2
 ; GFX6-NEXT:    v_subb_u32_e32 v5, vcc, v1, v3, vcc
 ; GFX6-NEXT:    v_cmp_lt_i64_e32 vcc, v[4:5], v[0:1]
-; GFX6-NEXT:    v_cmp_lt_i64_e64 s[4:5], 0, v[2:3]
-; GFX6-NEXT:    v_ashrrev_i32_e32 v1, 31, v5
-; GFX6-NEXT:    s_xor_b64 vcc, s[4:5], vcc
-; GFX6-NEXT:    v_cndmask_b32_e32 v0, v4, v1, vcc
-; GFX6-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GFX6-NEXT:    v_ashrrev_i32_e32 v6, 31, v5
+; GFX6-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX6-NEXT:    v_cmp_lt_i64_e32 vcc, 0, v[2:3]
+; GFX6-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v0, v1, v0
+; GFX6-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GFX6-NEXT:    v_xor_b32_e32 v1, 0x80000000, v6
+; GFX6-NEXT:    v_cndmask_b32_e32 v0, v4, v6, vcc
 ; GFX6-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1076,11 +1392,15 @@ define i64 @v_ssubsat_i64(i64 %lhs, i64 %rhs) {
 ; GFX8-NEXT:    v_sub_u32_e32 v4, vcc, v0, v2
 ; GFX8-NEXT:    v_subb_u32_e32 v5, vcc, v1, v3, vcc
 ; GFX8-NEXT:    v_cmp_lt_i64_e32 vcc, v[4:5], v[0:1]
-; GFX8-NEXT:    v_cmp_lt_i64_e64 s[4:5], 0, v[2:3]
-; GFX8-NEXT:    v_ashrrev_i32_e32 v1, 31, v5
-; GFX8-NEXT:    s_xor_b64 vcc, s[4:5], vcc
-; GFX8-NEXT:    v_cndmask_b32_e32 v0, v4, v1, vcc
-; GFX8-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GFX8-NEXT:    v_ashrrev_i32_e32 v6, 31, v5
+; GFX8-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX8-NEXT:    v_cmp_lt_i64_e32 vcc, 0, v[2:3]
+; GFX8-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX8-NEXT:    v_xor_b32_e32 v0, v1, v0
+; GFX8-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GFX8-NEXT:    v_xor_b32_e32 v1, 0x80000000, v6
+; GFX8-NEXT:    v_cndmask_b32_e32 v0, v4, v6, vcc
 ; GFX8-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1090,11 +1410,15 @@ define i64 @v_ssubsat_i64(i64 %lhs, i64 %rhs) {
 ; GFX9-NEXT:    v_sub_co_u32_e32 v4, vcc, v0, v2
 ; GFX9-NEXT:    v_subb_co_u32_e32 v5, vcc, v1, v3, vcc
 ; GFX9-NEXT:    v_cmp_lt_i64_e32 vcc, v[4:5], v[0:1]
-; GFX9-NEXT:    v_cmp_lt_i64_e64 s[4:5], 0, v[2:3]
-; GFX9-NEXT:    v_ashrrev_i32_e32 v1, 31, v5
-; GFX9-NEXT:    s_xor_b64 vcc, s[4:5], vcc
-; GFX9-NEXT:    v_cndmask_b32_e32 v0, v4, v1, vcc
-; GFX9-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GFX9-NEXT:    v_ashrrev_i32_e32 v6, 31, v5
+; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX9-NEXT:    v_cmp_lt_i64_e32 vcc, 0, v[2:3]
+; GFX9-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX9-NEXT:    v_xor_b32_e32 v0, v1, v0
+; GFX9-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GFX9-NEXT:    v_xor_b32_e32 v1, 0x80000000, v6
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v4, v6, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1103,13 +1427,17 @@ define i64 @v_ssubsat_i64(i64 %lhs, i64 %rhs) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_sub_co_u32 v4, vcc_lo, v0, v2
 ; GFX10-NEXT:    v_sub_co_ci_u32_e32 v5, vcc_lo, v1, v3, vcc_lo
-; GFX10-NEXT:    v_cmp_lt_i64_e64 s4, 0, v[2:3]
-; GFX10-NEXT:    v_ashrrev_i32_e32 v6, 31, v5
 ; GFX10-NEXT:    v_cmp_lt_i64_e32 vcc_lo, v[4:5], v[0:1]
-; GFX10-NEXT:    v_xor_b32_e32 v1, 0x80000000, v6
-; GFX10-NEXT:    s_xor_b32 vcc_lo, s4, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e32 v0, v4, v6, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX10-NEXT:    v_cmp_lt_i64_e32 vcc_lo, 0, v[2:3]
+; GFX10-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GFX10-NEXT:    v_xor_b32_e32 v0, v1, v0
+; GFX10-NEXT:    v_ashrrev_i32_e32 v1, 31, v5
+; GFX10-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX10-NEXT:    v_xor_b32_e32 v2, 0x80000000, v1
+; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, v4, v1, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, v5, v2, vcc_lo
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_ssubsat_i64:
@@ -1117,12 +1445,16 @@ define i64 @v_ssubsat_i64(i64 %lhs, i64 %rhs) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_sub_co_u32 v4, vcc_lo, v0, v2
 ; GFX11-NEXT:    v_sub_co_ci_u32_e64 v5, null, v1, v3, vcc_lo
-; GFX11-NEXT:    v_cmp_lt_i64_e64 s0, 0, v[2:3]
-; GFX11-NEXT:    v_ashrrev_i32_e32 v6, 31, v5
 ; GFX11-NEXT:    v_cmp_lt_i64_e32 vcc_lo, v[4:5], v[0:1]
-; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v6
-; GFX11-NEXT:    s_xor_b32 vcc_lo, s0, vcc_lo
-; GFX11-NEXT:    v_dual_cndmask_b32 v0, v4, v6 :: v_dual_cndmask_b32 v1, v5, v1
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11-NEXT:    v_cmp_lt_i64_e32 vcc_lo, 0, v[2:3]
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GFX11-NEXT:    v_xor_b32_e32 v0, v1, v0
+; GFX11-NEXT:    v_ashrrev_i32_e32 v1, 31, v5
+; GFX11-NEXT:    v_xor_b32_e32 v2, 0x80000000, v1
+; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
+; GFX11-NEXT:    v_dual_cndmask_b32 v0, v4, v1 :: v_dual_cndmask_b32 v1, v5, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call i64 @llvm.ssub.sat.i64(i64 %lhs, i64 %rhs)
   ret i64 %result

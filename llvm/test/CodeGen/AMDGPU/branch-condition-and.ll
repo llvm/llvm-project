@@ -13,10 +13,14 @@
 define amdgpu_ps void @ham(float %arg, float %arg1) #0 {
 ; GCN-LABEL: ham:
 ; GCN:       ; %bb.0: ; %bb
+; GCN-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v1
+; GCN-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
 ; GCN-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v0
-; GCN-NEXT:    v_cmp_lt_f32_e64 s[0:1], 0, v1
-; GCN-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
-; GCN-NEXT:    s_and_saveexec_b64 s[2:3], s[0:1]
+; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GCN-NEXT:    v_and_b32_e32 v0, v0, v1
+; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GCN-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GCN-NEXT:  ; %bb.1: ; %bb4
 ; GCN-NEXT:    v_mov_b32_e32 v0, 4
 ; GCN-NEXT:    s_mov_b32 m0, -1

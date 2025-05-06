@@ -11,8 +11,8 @@
 define dso_local i32 @variadics1(i32 noundef %first, ...) {
 ; CHECK-PTX-LABEL: variadics1(
 ; CHECK-PTX:       {
-; CHECK-PTX-NEXT:    .reg .b32 %r<11>;
-; CHECK-PTX-NEXT:    .reg .b64 %rd<11>;
+; CHECK-PTX-NEXT:    .reg .b32 %r<12>;
+; CHECK-PTX-NEXT:    .reg .b64 %rd<8>;
 ; CHECK-PTX-NEXT:    .reg .b64 %fd<7>;
 ; CHECK-PTX-EMPTY:
 ; CHECK-PTX-NEXT:  // %bb.0: // %entry
@@ -150,8 +150,8 @@ define dso_local i32 @variadics2(i32 noundef %first, ...) {
 ; CHECK-PTX-NEXT:    .reg .b64 %SP;
 ; CHECK-PTX-NEXT:    .reg .b64 %SPL;
 ; CHECK-PTX-NEXT:    .reg .b16 %rs<4>;
-; CHECK-PTX-NEXT:    .reg .b32 %r<7>;
-; CHECK-PTX-NEXT:    .reg .b64 %rd<9>;
+; CHECK-PTX-NEXT:    .reg .b32 %r<8>;
+; CHECK-PTX-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-PTX-EMPTY:
 ; CHECK-PTX-NEXT:  // %bb.0: // %entry
 ; CHECK-PTX-NEXT:    mov.b64 %SPL, __local_depot2;
@@ -168,13 +168,11 @@ define dso_local i32 @variadics2(i32 noundef %first, ...) {
 ; CHECK-PTX-NEXT:    st.local.u8 [%rd3+1], %rs2;
 ; CHECK-PTX-NEXT:    ld.u8 %rs3, [%rd5+5];
 ; CHECK-PTX-NEXT:    st.local.u8 [%rd3], %rs3;
-; CHECK-PTX-NEXT:    ld.u64 %rd6, [%rd5+8];
-; CHECK-PTX-NEXT:    add.s32 %r4, %r1, %r2;
-; CHECK-PTX-NEXT:    add.s32 %r5, %r4, %r3;
-; CHECK-PTX-NEXT:    cvt.u64.u32 %rd7, %r5;
-; CHECK-PTX-NEXT:    add.s64 %rd8, %rd7, %rd6;
-; CHECK-PTX-NEXT:    cvt.u32.u64 %r6, %rd8;
-; CHECK-PTX-NEXT:    st.param.b32 [func_retval0], %r6;
+; CHECK-PTX-NEXT:    ld.u32 %r4, [%rd5+8];
+; CHECK-PTX-NEXT:    add.s32 %r5, %r1, %r2;
+; CHECK-PTX-NEXT:    add.s32 %r6, %r5, %r3;
+; CHECK-PTX-NEXT:    add.s32 %r7, %r6, %r4;
+; CHECK-PTX-NEXT:    st.param.b32 [func_retval0], %r7;
 ; CHECK-PTX-NEXT:    ret;
 entry:
   %vlist = alloca ptr, align 8
@@ -335,20 +333,19 @@ entry:
 define dso_local i32 @variadics4(ptr noundef byval(%struct.S2) align 8 %first, ...) {
 ; CHECK-PTX-LABEL: variadics4(
 ; CHECK-PTX:       {
-; CHECK-PTX-NEXT:    .reg .b32 %r<2>;
-; CHECK-PTX-NEXT:    .reg .b64 %rd<10>;
+; CHECK-PTX-NEXT:    .reg .b32 %r<6>;
+; CHECK-PTX-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-PTX-EMPTY:
 ; CHECK-PTX-NEXT:  // %bb.0: // %entry
 ; CHECK-PTX-NEXT:    ld.param.u64 %rd2, [variadics4_param_1];
 ; CHECK-PTX-NEXT:    add.s64 %rd3, %rd2, 7;
 ; CHECK-PTX-NEXT:    and.b64 %rd4, %rd3, -8;
-; CHECK-PTX-NEXT:    ld.u64 %rd5, [%rd4];
-; CHECK-PTX-NEXT:    ld.param.u64 %rd6, [variadics4_param_0];
-; CHECK-PTX-NEXT:    ld.param.u64 %rd7, [variadics4_param_0+8];
-; CHECK-PTX-NEXT:    add.s64 %rd8, %rd6, %rd7;
-; CHECK-PTX-NEXT:    add.s64 %rd9, %rd8, %rd5;
-; CHECK-PTX-NEXT:    cvt.u32.u64 %r1, %rd9;
-; CHECK-PTX-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-PTX-NEXT:    ld.u32 %r1, [%rd4];
+; CHECK-PTX-NEXT:    ld.param.u32 %r2, [variadics4_param_0];
+; CHECK-PTX-NEXT:    ld.param.u32 %r3, [variadics4_param_0+8];
+; CHECK-PTX-NEXT:    add.s32 %r4, %r2, %r3;
+; CHECK-PTX-NEXT:    add.s32 %r5, %r4, %r1;
+; CHECK-PTX-NEXT:    st.param.b32 [func_retval0], %r5;
 ; CHECK-PTX-NEXT:    ret;
 entry:
   %vlist = alloca ptr, align 8

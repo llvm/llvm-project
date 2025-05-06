@@ -51,7 +51,7 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    image_sample_lz v3, v[2:3], s[16:23], s[68:71] dmask:0x1
 ; CHECK-NEXT:    v_mov_b32_e32 v2, v1
 ; CHECK-NEXT:    ; implicit-def: $vgpr6 : SGPR spill to VGPR lane
-; CHECK-NEXT:    s_mov_b32 s6, 48
+; CHECK-NEXT:    s_mov_b32 s4, 48
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_writelane_b32 v6, s36, 0
 ; CHECK-NEXT:    v_writelane_b32 v6, s37, 1
@@ -69,16 +69,17 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    v_writelane_b32 v6, s48, 12
 ; CHECK-NEXT:    v_writelane_b32 v6, s49, 13
 ; CHECK-NEXT:    v_writelane_b32 v6, s50, 14
-; CHECK-NEXT:    s_movk_i32 s56, 0x1f0
 ; CHECK-NEXT:    s_movk_i32 s72, 0x2f0
-; CHECK-NEXT:    s_mov_b32 s57, s24
+; CHECK-NEXT:    s_mov_b32 s5, s24
 ; CHECK-NEXT:    s_mov_b32 s73, s24
 ; CHECK-NEXT:    v_writelane_b32 v6, s51, 15
-; CHECK-NEXT:    s_load_dwordx8 s[24:31], s[6:7], 0x0
-; CHECK-NEXT:    s_load_dwordx16 s[36:51], s[56:57], 0x0
-; CHECK-NEXT:    v_and_b32_e32 v0, 1, v0
+; CHECK-NEXT:    s_movk_i32 s6, 0x1f0
+; CHECK-NEXT:    s_load_dwordx8 s[24:31], s[4:5], 0x0
+; CHECK-NEXT:    s_load_dwordx16 s[36:51], s[6:7], 0x0
 ; CHECK-NEXT:    s_load_dwordx16 s[52:67], s[72:73], 0x0
-; CHECK-NEXT:    v_cmp_ne_u32_e64 s[4:5], 1, v0
+; CHECK-NEXT:    v_not_b32_e32 v0, v0
+; CHECK-NEXT:    v_and_b32_e32 v0, 1, v0
+; CHECK-NEXT:    v_cmp_eq_u32_e64 s[4:5], 1, v0
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mul_f32_e32 v0, v4, v3
 ; CHECK-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]

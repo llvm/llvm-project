@@ -97,11 +97,14 @@ define amdgpu_cs void @issue130119(i1 %arg) {
 ; CHECK-NEXT:    s_branch .LBB1_4
 ; CHECK-NEXT:  .LBB1_3: ; %Flow1
 ; CHECK-NEXT:    ; in Loop: Header=BB1_4 Depth=2
-; CHECK-NEXT:    s_xor_b64 s[14:15], s[14:15], -1
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[14:15]
+; CHECK-NEXT:    v_not_b32_e32 v0, v0
+; CHECK-NEXT:    v_and_b32_e32 v0, 1, v0
 ; CHECK-NEXT:    s_and_b64 s[12:13], exec, s[12:13]
+; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
 ; CHECK-NEXT:    s_or_b64 s[10:11], s[12:13], s[10:11]
 ; CHECK-NEXT:    s_andn2_b64 s[8:9], s[8:9], exec
-; CHECK-NEXT:    s_and_b64 s[12:13], s[14:15], exec
+; CHECK-NEXT:    s_and_b64 s[12:13], vcc, exec
 ; CHECK-NEXT:    s_or_b64 s[8:9], s[8:9], s[12:13]
 ; CHECK-NEXT:    s_andn2_b64 exec, exec, s[10:11]
 ; CHECK-NEXT:    s_cbranch_execz .LBB1_8

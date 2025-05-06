@@ -264,8 +264,10 @@ define amdgpu_kernel void @s_sext_i1_to_i16_with_and(ptr addrspace(1) %out, i32 
 ; SI-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; SI-NEXT:    s_cmp_eq_u32 s2, s3
 ; SI-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; SI-NEXT:    s_and_b64 s[0:1], s[0:1], s[2:3]
-; SI-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[0:1]
+; SI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[2:3]
+; SI-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]
+; SI-NEXT:    v_and_b32_e32 v0, v1, v0
+; SI-NEXT:    v_bfe_i32 v0, v0, 0, 1
 ; SI-NEXT:    buffer_store_short v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -280,8 +282,10 @@ define amdgpu_kernel void @s_sext_i1_to_i16_with_and(ptr addrspace(1) %out, i32 
 ; VI-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; VI-NEXT:    s_cmp_eq_u32 s2, s3
 ; VI-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; VI-NEXT:    s_and_b64 s[0:1], s[0:1], s[2:3]
-; VI-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[0:1]
+; VI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[2:3]
+; VI-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]
+; VI-NEXT:    v_and_b32_e32 v0, v1, v0
+; VI-NEXT:    v_bfe_i32 v0, v0, 0, 1
 ; VI-NEXT:    buffer_store_short v0, off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
   %cmp0 = icmp eq i32 %a, %b
@@ -301,10 +305,12 @@ define amdgpu_kernel void @v_sext_i1_to_i16_with_and(ptr addrspace(1) %out, i32 
 ; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_cmp_eq_u32 s1, s2
+; SI-NEXT:    s_cselect_b64 s[2:3], -1, 0
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s0, v0
-; SI-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; SI-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
-; SI-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[0:1]
+; SI-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[2:3]
+; SI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; SI-NEXT:    v_and_b32_e32 v0, v0, v1
+; SI-NEXT:    v_bfe_i32 v0, v0, 0, 1
 ; SI-NEXT:    buffer_store_short v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -316,10 +322,12 @@ define amdgpu_kernel void @v_sext_i1_to_i16_with_and(ptr addrspace(1) %out, i32 
 ; VI-NEXT:    s_mov_b32 s6, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_cmp_eq_u32 s1, s2
+; VI-NEXT:    s_cselect_b64 s[2:3], -1, 0
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, s0, v0
-; VI-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; VI-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
-; VI-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[0:1]
+; VI-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[2:3]
+; VI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; VI-NEXT:    v_and_b32_e32 v0, v0, v1
+; VI-NEXT:    v_bfe_i32 v0, v0, 0, 1
 ; VI-NEXT:    buffer_store_short v0, off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #1

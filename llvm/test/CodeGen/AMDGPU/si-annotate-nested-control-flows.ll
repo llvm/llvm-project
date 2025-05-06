@@ -18,9 +18,10 @@ define void @nested_inf_loop(i1 %0, i1 %1) {
 ; ISA:       ; %bb.0: ; %BB
 ; ISA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; ISA-NEXT:    v_and_b32_e32 v1, 1, v1
-; ISA-NEXT:    v_and_b32_e32 v0, 1, v0
+; ISA-NEXT:    v_not_b32_e32 v0, v0
 ; ISA-NEXT:    v_cmp_eq_u32_e64 s[4:5], 1, v1
-; ISA-NEXT:    v_cmp_ne_u32_e64 s[6:7], 1, v0
+; ISA-NEXT:    v_and_b32_e32 v0, 1, v0
+; ISA-NEXT:    v_cmp_eq_u32_e64 s[6:7], 1, v0
 ; ISA-NEXT:    s_mov_b64 s[8:9], 0
 ; ISA-NEXT:  .LBB0_1: ; %BB1
 ; ISA-NEXT:    ; =>This Loop Header: Depth=1

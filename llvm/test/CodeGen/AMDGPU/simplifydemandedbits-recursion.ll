@@ -27,14 +27,14 @@ define amdgpu_kernel void @foo(ptr addrspace(1) noalias nocapture readonly %arg,
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_bitcmp1_b32 s6, 8
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    s_bitcmp1_b32 s6, 16
+; CHECK-NEXT:    s_not_b32 s4, s6
 ; CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[0:1]
-; CHECK-NEXT:    s_cselect_b64 s[4:5], -1, 0
+; CHECK-NEXT:    s_bitcmp1_b32 s4, 16
 ; CHECK-NEXT:    v_cmp_ne_u32_e64 s[0:1], 1, v2
-; CHECK-NEXT:    s_xor_b64 s[4:5], s[4:5], -1
+; CHECK-NEXT:    s_cselect_b64 s[4:5], -1, 0
+; CHECK-NEXT:    s_not_b32 s2, s2
 ; CHECK-NEXT:    s_bitcmp1_b32 s2, 24
 ; CHECK-NEXT:    s_cselect_b64 s[6:7], -1, 0
-; CHECK-NEXT:    s_xor_b64 s[6:7], s[6:7], -1
 ; CHECK-NEXT:    s_bitcmp1_b32 s3, 0
 ; CHECK-NEXT:    s_cselect_b64 s[8:9], -1, 0
 ; CHECK-NEXT:    s_bitcmp1_b32 s10, 8
