@@ -146,7 +146,7 @@ llvm::raw_ostream &operator<<(
   }
   if (!x.openACCRoutineInfos_.empty()) {
     os << " openACCRoutineInfos:";
-    for (const auto x : x.openACCRoutineInfos_) {
+    for (const auto &x : x.openACCRoutineInfos_) {
       os << x;
     }
   }

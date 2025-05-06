@@ -38,7 +38,7 @@ class FirOpBuilder;
 
 namespace Fortran {
 namespace evaluate {
-class ProcedureDesignator;
+struct ProcedureDesignator;
 } // namespace evaluate
 
 namespace parser {

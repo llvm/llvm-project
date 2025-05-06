@@ -3041,5 +3041,3 @@ void OmpAttributeVisitor::IssueNonConformanceWarning(
       warnStrOS.str());
 }
 } // namespace Fortran::semantics
-
-} // namespace Fortran::semantics
