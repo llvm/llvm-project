@@ -572,4 +572,9 @@ void no_dupes_since_last_device_type() {
 #pragma acc loop device_type(radeon) collapse(1) device_type(nvidia, radeon) collapse(2)
   for(unsigned i = 0; i < 5; ++i)
     for(unsigned j = 0; j < 5; ++j);
+
+  int NotConstexpr;
+  // expected-error@+1 3{{OpenACC 'collapse' clause loop count must be a constant expression}}
+#pragma acc loop collapse(NotConstexpr) device_type(radeon, nvidia) collapse(NotConstexpr) device_type(host) collapse(NotConstexpr)
+  for(unsigned j = 0; j < 5; ++j);
 }

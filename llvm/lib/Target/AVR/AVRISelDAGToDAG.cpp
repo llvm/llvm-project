@@ -571,7 +571,6 @@ void AVRDAGToDAGISel::Select(SDNode *N) {
 
 bool AVRDAGToDAGISel::trySelect(SDNode *N) {
   unsigned Opcode = N->getOpcode();
-  SDLoc DL(N);
 
   switch (Opcode) {
   // Nodes we fully handle.
