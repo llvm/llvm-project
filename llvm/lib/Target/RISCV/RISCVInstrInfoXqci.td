@@ -75,6 +75,15 @@ def uimm5slist : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
   let EncoderMethod = "getImmOpValueSlist";
   let DecoderMethod = "decodeUImmSlistOperand";
   let OperandType = "OPERAND_UIMM5_SLIST";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return ((Imm == 0)  || (Imm == 1)  ||
+            (Imm == 2)  || (Imm == 4)  ||
+            (Imm == 8)  || (Imm == 16) ||
+            (Imm == 15) || (Imm == 31));
+  }];
 }
 
 def uimm10 : RISCVUImmLeafOp<10>;
@@ -1340,6 +1349,13 @@ def : Pat<(riscv_mileaveret_glue), (QC_C_MILEAVERET)>;
 //===----------------------------------------------------------------------===/i
 // Compress Instruction tablegen backend.
 //===----------------------------------------------------------------------===//
+
+let Predicates = [HasVendorXqcisync, IsRV32] in {
+def : CompressPat<(QC_SYNC uimm5slist:$imm5), (QC_C_SYNC uimm5slist:$imm5)>;
+def : CompressPat<(QC_SYNCR uimm5slist:$imm5), (QC_C_SYNCR uimm5slist:$imm5)>;
+def : CompressPat<(QC_SYNCWL uimm5slist:$imm5), (QC_C_SYNCWL uimm5slist:$imm5)>;
+def : CompressPat<(QC_SYNCWF uimm5slist:$imm5), (QC_C_SYNCWF uimm5slist:$imm5)>;
+} // Predicates = [HasVendorXqcisync, IsRV32]
 
 let isCompressOnly = true, Predicates = [HasVendorXqcilo, HasStdExtZcb, IsRV32] in {
 def : CompressPat<(QC_E_LBU GPRC:$rd, GPRCMem:$rs1, uimm2:$imm),
