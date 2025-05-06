@@ -28,7 +28,10 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+
+#include <numeric>
 
 namespace mlir {
 namespace memref {
@@ -182,6 +185,29 @@ struct MemRefRewritePattern : public OpRewritePattern<T> {
   }
 };
 
+// For any memref op that emits a new memref.
+template <typename T>
+struct MemRefSourceRewritePattern : public OpRewritePattern<T> {
+  using OpRewritePattern<T>::OpRewritePattern;
+  LogicalResult matchAndRewrite(T op,
+                                PatternRewriter &rewriter) const override {
+    if (!needFlattening(op) || !checkLayout(op))
+      return failure();
+    MemRefType sourceType = cast<MemRefType>(op.getType());
+    
+    // Get flattened size, no strides.
+    auto dimSizes = llvm::to_vector(sourceType.getShape());
+    auto flattenedSize = std::accumulate(
+        dimSizes.begin(), dimSizes.end(), 1, std::multiplies<int64_t>());
+    auto flatMemrefType = MemRefType::get(
+        /*shape=*/{flattenedSize}, sourceType.getElementType(),
+        /*layout=*/nullptr, sourceType.getMemorySpace());
+    rewriter.replaceOpWithNewOp<T>(
+        op, flatMemrefType);
+    return success();
+  }
+};
+
 struct FlattenMemrefsPass
     : public mlir::memref::impl::FlattenMemrefsPassBase<FlattenMemrefsPass> {
   using Base::Base;
@@ -206,6 +232,8 @@ struct FlattenMemrefsPass
 void memref::populateFlattenMemrefsPatterns(RewritePatternSet &patterns) {
   patterns.insert<MemRefRewritePattern<memref::LoadOp>,
                   MemRefRewritePattern<memref::StoreOp>,
+                  MemRefSourceRewritePattern<memref::AllocOp>,
+                  MemRefSourceRewritePattern<memref::AllocaOp>,
                   MemRefRewritePattern<vector::LoadOp>,
                   MemRefRewritePattern<vector::StoreOp>,
                   MemRefRewritePattern<vector::TransferReadOp>,
