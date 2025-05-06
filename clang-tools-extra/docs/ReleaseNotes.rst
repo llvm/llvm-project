@@ -327,6 +327,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/redundant-smartptr-get>` check by fixing
   some false positives involving smart pointers to arrays.
 
+- Improved :doc:`cppcoreguidelines-rvalue-reference-param-not-moved
+  <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check
+  by adding a flag to specify the function used for moving instead of
+  ``std::move``.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
