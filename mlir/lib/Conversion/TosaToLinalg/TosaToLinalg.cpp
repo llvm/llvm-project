@@ -82,6 +82,15 @@ materializeBinaryNanCheckIfRequired(OpTy op, PatternRewriter &rewriter,
                                           rhsOrResult);
 }
 
+template <typename T>
+static arith::ConstantOp
+createConstOpFromZpVal(Operation *op, const int64_t &zp, Type requiredAttrType,
+                       OpBuilder &rewriter) {
+  auto castedN = static_cast<T>(zp);
+  return rewriter.create<arith::ConstantOp>(
+      op->getLoc(), IntegerAttr::get(requiredAttrType, castedN));
+}
+
 static Value createLinalgBodyCalculationForElementwiseOp(
     Operation *op, ValueRange args, ArrayRef<Type> resultTypes,
     ConversionPatternRewriter &rewriter) {
@@ -1458,6 +1467,11 @@ public:
           Value value = blockArgs[0];
           Type valueTy = value.getType();
 
+          // For now we do all of our math in 64-bit. This is not optimal but
+          // should be correct for now, consider computing correct bit depth
+          // later.
+          int32_t inBitwidth = valueTy.getIntOrFloatBitWidth() > 32 ? 48 : 32;
+
           FailureOr<int64_t> maybeIZp = op.getInputZeroPoint();
           if (failed(maybeIZp)) {
             (void)rewriter.notifyMatchFailure(
@@ -1465,12 +1479,9 @@ public:
             return;
           }
 
-          const int32_t inBitwidth = valueTy.getIntOrFloatBitWidth();
-          // Extend zeropoint for sub-32bits widths.
-          const int32_t inAttrBitwidth = inBitwidth > 32 ? inBitwidth : 32;
-          auto inputZp = nestedBuilder.create<arith::ConstantOp>(
-              loc, IntegerAttr::get(rewriter.getIntegerType(inAttrBitwidth),
-                                    *maybeIZp));
+          auto inputZp = createConstOpFromZpVal<int32_t>(
+              op, *maybeIZp, nestedBuilder.getIntegerType(inBitwidth),
+              nestedBuilder);
 
           FailureOr<int64_t> maybeOZp = op.getOutputZeroPoint();
           if (failed(maybeOZp)) {
@@ -1479,14 +1490,16 @@ public:
             return;
           };
 
-          IntegerType outIntType =
-              cast<IntegerType>(blockArgs.back().getType());
-          unsigned outBitWidth = outIntType.getWidth();
-          const int32_t outAttrBitwidth = 32;
-          assert(outBitWidth <= 32 && "Unexpected output zeropoint bitwidth");
-          auto outputZp = nestedBuilder.create<arith::ConstantOp>(
-              loc, IntegerAttr::get(rewriter.getIntegerType(outAttrBitwidth),
-                                    *maybeOZp));
+          // pre-process OutputZP as it can be unsigned
+          auto outBitwidth = outputTy.getElementType().getIntOrFloatBitWidth();
+          APInt OZp(outBitwidth, !op.getOutputUnsigned());
+          OZp = static_cast<int64_t>(*maybeOZp);
+          *maybeOZp = op.getOutputUnsigned()
+                          ? static_cast<int64_t>(OZp.getZExtValue())
+                          : OZp.getSExtValue();
+
+          auto outputZp = createConstOpFromZpVal<int32_t>(
+              op, *maybeOZp, nestedBuilder.getI32Type(), nestedBuilder);
 
           Value multiplier = multiplierConstant ? multiplierConstant
                                                 : blockArgs[multiplierArg];
@@ -1514,6 +1527,10 @@ public:
               nestedBuilder.create<arith::AddIOp>(nestedLoc, value, outputZp);
 
           // Saturate to the output size.
+          IntegerType outIntType =
+              cast<IntegerType>(blockArgs.back().getType());
+          unsigned outBitWidth = outIntType.getWidth();
+
           int32_t intMin = APInt::getSignedMinValue(outBitWidth).getSExtValue();
           int32_t intMax = APInt::getSignedMaxValue(outBitWidth).getSExtValue();
 
