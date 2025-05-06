@@ -398,7 +398,7 @@ static void verifyUseListOrder(const Module &M) {
 
 static void shuffleValueUseLists(Value *V, std::minstd_rand0 &Gen,
                                  DenseSet<Value *> &Seen) {
-  if (isa<ConstantData>(V))
+  if (!V->hasUseList())
     return;
 
   if (!Seen.insert(V).second)
@@ -443,7 +443,7 @@ static void shuffleValueUseLists(Value *V, std::minstd_rand0 &Gen,
 }
 
 static void reverseValueUseLists(Value *V, DenseSet<Value *> &Seen) {
-  if (isa<ConstantData>(V))
+  if (!V->hasUseList())
     return;
 
   if (!Seen.insert(V).second)
