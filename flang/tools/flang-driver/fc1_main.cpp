@@ -20,6 +20,7 @@
 #include "flang/Frontend/CompilerInvocation.h"
 #include "flang/Frontend/TextDiagnosticBuffer.h"
 #include "flang/FrontendTool/Utils.h"
+#include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Option/Arg.h"
@@ -63,15 +64,17 @@ int fc1_main(llvm::ArrayRef<const char *> argv, const char *argv0) {
   // them using a well formed diagnostic object.
   TextDiagnosticBuffer *diagsBuffer = new TextDiagnosticBuffer;
 
-  // Create CompilerInvocation - use a dedicated instance of DiagnosticsEngine
+  // Use the DiagnosticsEngine instance of the frontend driver
   // for parsing the arguments
-  llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagID(
-      new clang::DiagnosticIDs());
-  llvm::IntrusiveRefCntPtr<clang::DiagnosticOptions> diagOpts =
-      new clang::DiagnosticOptions();
-  clang::DiagnosticsEngine diags(diagID, &*diagOpts, diagsBuffer);
-  bool success = CompilerInvocation::createFromArgs(flang->getInvocation(),
-                                                    argv, diags, argv0);
+  unsigned missingArgIndex, missingArgCount;
+  llvm::opt::InputArgList args = clang::driver::getDriverOptTable().ParseArgs(
+      argv.slice(0), missingArgIndex, missingArgCount,
+      llvm::opt::Visibility(clang::driver::options::FC1Option));
+  parseDiagnosticArgs(flang->getDiagnosticOpts(), args, false);
+
+  bool success = CompilerInvocation::createFromArgs(
+      flang->getInvocation(), argv, flang->getDiagnostics(), argv0);
+  processWarningOptions(flang->getDiagnostics(), flang->getDiagnosticOpts());
 
   // Initialize targets first, so that --version shows registered targets.
   llvm::InitializeAllTargets();

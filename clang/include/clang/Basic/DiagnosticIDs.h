@@ -360,6 +360,11 @@ public:
   /// Given a diagnostic group ID, return its documentation.
   static StringRef getWarningOptionDocumentation(diag::Group GroupID);
 
+  /// Given a diagnostic group ID, return true if its a Flang warning.
+  static bool isFlangWarningOption(diag::Group Group);
+  /// Given a diagnostic group ID, return true if its a Clang warning.
+  static bool isClangWarningOption(diag::Group Group);
+
   void setGroupSeverity(StringRef Group, diag::Severity);
   void setGroupNoWarningsAsError(StringRef Group, bool);
 

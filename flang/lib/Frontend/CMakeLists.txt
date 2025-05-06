@@ -12,6 +12,7 @@ add_flang_library(flangFrontend
   TextDiagnosticPrinter.cpp
   TextDiagnosticBuffer.cpp
   TextDiagnostic.cpp
+  Warnings.cpp
 
   DEPENDS
   CUFDialect

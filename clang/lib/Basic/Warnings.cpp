@@ -106,6 +106,15 @@ void clang::ProcessWarningOptions(DiagnosticsEngine &Diags,
       diag::Severity Mapping =
           isPositive ? diag::Severity::Warning : diag::Severity::Ignored;
 
+      // Check if the warning option is valid for Clang
+      std::optional<diag::Group> Group = DiagIDs->getGroupForWarningOption(Opt);
+      if (Group.has_value() && !DiagIDs->isClangWarningOption(Group.value())) {
+        const unsigned DiagID = Diags.getCustomDiagID(
+            DiagnosticsEngine::Error,
+            "Warning option \"%0\" is valid for Fortran but not for C++.");
+        Diags.Report(DiagID) << Opt;
+      }
+
       // -Wsystem-headers is a special case, not driven by the option table.  It
       // cannot be controlled with -Werror.
       if (Opt == "system-headers") {

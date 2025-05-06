@@ -293,10 +293,13 @@ public:
   void set_isDummy(bool value = true) { isDummy_ = value; }
   bool isFuncResult() const { return isFuncResult_; }
   void set_funcResult(bool x) { isFuncResult_ = x; }
+  bool isUsed() const { return isUsed_; }
+  void set_isUsed() { isUsed_ = true; }
 
 private:
   bool isDummy_{false};
   bool isFuncResult_{false};
+  bool isUsed_{false};
   const DeclTypeSpec *type_{nullptr};
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const EntityDetails &);

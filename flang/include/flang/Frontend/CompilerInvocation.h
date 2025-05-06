@@ -33,12 +33,18 @@ class TargetMachine;
 
 namespace Fortran::frontend {
 
+/// processWarningOptions - Initialize the diagnostic client and process the
+/// warning options specified on the command line.
+void processWarningOptions(clang::DiagnosticsEngine &Diags,
+                           const clang::DiagnosticOptions &Opts);
+
 /// Fill out Opts based on the options given in Args.
 ///
 /// When errors are encountered, return false and, if Diags is non-null,
 /// report the error(s).
 bool parseDiagnosticArgs(clang::DiagnosticOptions &opts,
-                         llvm::opt::ArgList &args);
+                         llvm::opt::ArgList &args,
+                         bool defaultDiagColor = true);
 
 class CompilerInvocationBase {
 public:
@@ -174,7 +180,7 @@ public:
   /// Creates and configures semantics context based on the compilation flags.
   std::unique_ptr<Fortran::semantics::SemanticsContext>
   getSemanticsCtx(Fortran::parser::AllCookedSources &allCookedSources,
-                  const llvm::TargetMachine &);
+                  const llvm::TargetMachine &, clang::DiagnosticsEngine &diag);
 
   std::string &getModuleDir() { return moduleDir; }
   const std::string &getModuleDir() const { return moduleDir; }

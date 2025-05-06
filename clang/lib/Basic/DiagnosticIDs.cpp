@@ -586,6 +586,8 @@ namespace {
     uint16_t Members;
     uint16_t SubGroups;
     StringRef Documentation;
+    bool IsClangDiag;
+    bool IsFlangDiag;
 
     StringRef getName() const { return DiagGroupNames[NameOffset]; }
   };
@@ -593,8 +595,9 @@ namespace {
 
 // Second the table of options, sorted by name for fast binary lookup.
 static const WarningOption OptionTable[] = {
-#define DIAG_ENTRY(GroupName, FlagNameOffset, Members, SubGroups, Docs)        \
-  {FlagNameOffset, Members, SubGroups, Docs},
+#define DIAG_ENTRY(GroupName, FlagNameOffset, Members, SubGroups, Docs,        \
+                   IsClang, IsFlang)                                           \
+  {FlagNameOffset, Members, SubGroups, Docs, IsClang, IsFlang},
 #include "clang/Basic/DiagnosticGroups.inc"
 #undef DIAG_ENTRY
 };
@@ -608,6 +611,13 @@ StringRef DiagnosticIDs::getWarningOptionForGroup(diag::Group Group) {
   return OptionTable[static_cast<int>(Group)].getName();
 }
 
+bool DiagnosticIDs::isFlangWarningOption(diag::Group Group) {
+  return OptionTable[static_cast<int>(Group)].IsFlangDiag;
+}
+
+bool DiagnosticIDs::isClangWarningOption(diag::Group Group) {
+  return OptionTable[static_cast<int>(Group)].IsClangDiag;
+}
 std::optional<diag::Group>
 DiagnosticIDs::getGroupForWarningOption(StringRef Name) {
   const auto *Found = llvm::partition_point(

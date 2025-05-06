@@ -55,11 +55,13 @@ class DiagCategory<string Name> {
 }
 
 // Diagnostic Groups.
-class DiagGroup<string Name, list<DiagGroup> subgroups = []> {
+class DiagGroup<string Name, list<DiagGroup> subgroups = [], bit clangDiag = 1, bit flangDiag = 0> {
   string GroupName = Name;
   list<DiagGroup> SubGroups = subgroups;
   string CategoryName = "";
   code Documentation = [{}];
+  bit IsClangDiag = clangDiag;
+  bit IsFlangDiag = flangDiag;
 }
 class InGroup<DiagGroup G> { DiagGroup Group = G; }
 //class IsGroup<string Name> { DiagGroup Group = DiagGroup<Name>; }

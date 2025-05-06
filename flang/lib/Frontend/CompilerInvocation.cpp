@@ -33,6 +33,7 @@
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
+#include "llvm/Option/Option.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
@@ -119,9 +120,26 @@ static unsigned getOptimizationLevel(llvm::opt::ArgList &args,
 }
 
 bool Fortran::frontend::parseDiagnosticArgs(clang::DiagnosticOptions &opts,
-                                            llvm::opt::ArgList &args) {
-  opts.ShowColors = parseShowColorsArgs(args);
+                                            llvm::opt::ArgList &args,
+                                            bool defaultDiagColor) {
+  opts.ShowColors = parseShowColorsArgs(args, defaultDiagColor);
 
+  for (llvm::opt::Arg *A : args.filtered(clang::driver::options::OPT_W_Group)) {
+    if (A->getOption().getKind() == llvm::opt::Option::FlagClass) {
+      // The argument is a pure flag (such as OPT_Wall).
+      opts.Warnings.push_back(
+          std::string(A->getOption().getName().drop_front(1)));
+    } else if (A->getOption().matches(
+                   clang::driver::options::OPT_W_value_Group)) {
+      // This is -Wfoo= where foo is the name of the diagnostic group.
+      // Add only the group name to the diagnostics.
+      opts.Warnings.push_back(
+          std::string(A->getOption().getName().drop_front(1).rtrim("=-")));
+    } else {
+      // Otherwise, add its value for OPT_W_Joined.
+      opts.Warnings.push_back(A->getValue());
+    }
+  }
   return true;
 }
 
@@ -971,22 +989,11 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
                           clang::DiagnosticsEngine &diags) {
   unsigned numErrorsBefore = diags.getNumErrors();
 
-  // -Werror option
-  // TODO: Currently throws a Diagnostic for anything other than -W<error>,
-  // this has to change when other -W<opt>'s are supported.
-  if (args.hasArg(clang::driver::options::OPT_W_Joined)) {
-    const auto &wArgs =
-        args.getAllArgValues(clang::driver::options::OPT_W_Joined);
-    for (const auto &wArg : wArgs) {
-      if (wArg == "error") {
-        res.setWarnAsErr(true);
-      } else {
-        const unsigned diagID =
-            diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
-                                  "Only `-Werror` is supported currently.");
-        diags.Report(diagID);
-      }
-    }
+  // Handle warning Diagnostic for the frontend.
+  clang::DiagnosticOptions &diagOpts = res.getDiagnosticOpts();
+  for (const auto &warning : diagOpts.Warnings) {
+    if (warning == "error")
+      res.setWarnAsErr(true);
   }
 
   // Default to off for `flang -fc1`.
@@ -1074,6 +1081,7 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   if (args.hasArg(clang::driver::options::OPT_pedantic)) {
     res.setEnableConformanceChecks();
     res.setEnableUsageChecks();
+    res.getDiagnosticOpts().Pedantic = true;
   }
 
   // -w
@@ -1698,12 +1706,12 @@ void CompilerInvocation::setFortranOpts() {
 std::unique_ptr<Fortran::semantics::SemanticsContext>
 CompilerInvocation::getSemanticsCtx(
     Fortran::parser::AllCookedSources &allCookedSources,
-    const llvm::TargetMachine &targetMachine) {
+    const llvm::TargetMachine &targetMachine, clang::DiagnosticsEngine &diags) {
   auto &fortranOptions = getFortranOpts();
 
   auto semanticsContext = std::make_unique<semantics::SemanticsContext>(
       getDefaultKinds(), fortranOptions.features, getLangOpts(),
-      allCookedSources);
+      allCookedSources, diags);
 
   semanticsContext->set_moduleDirectory(getModuleDir())
       .set_searchDirectories(fortranOptions.searchDirectories)

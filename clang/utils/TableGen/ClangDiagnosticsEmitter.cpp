@@ -1994,6 +1994,10 @@ static void emitDiagTable(DiagsInGroupTy &DiagsInGroup,
 
     OS << "R\"(" << StringRef(Documentation).trim() << ")\"";
 
+    OS << ", /*IsClangDiag*/ "
+       << bool(GroupInfo.Defs.back()->getValueAsBit("IsClangDiag"));
+    OS << ", /*IsFlangDiag*/ "
+       << bool(GroupInfo.Defs.back()->getValueAsBit("IsFlangDiag"));
     OS << ")\n";
   }
   OS << "#endif // DIAG_ENTRY\n\n";
