@@ -1157,6 +1157,19 @@ unsigned getNumSGPRBlocks(const MCSubtargetInfo *STI, unsigned NumSGPRs) {
          1;
 }
 
+unsigned getVGPRReductionToIncreaseWavesPerEU(const MCSubtargetInfo *STI,
+                                              unsigned NumVGPRs) {
+  unsigned Granule = getVGPRAllocGranule(STI);
+  unsigned MaxWaves = getMaxWavesPerEU(STI);
+  unsigned TotalNumVGPRs = getTotalNumVGPRs(STI);
+
+  unsigned NumWaves =
+      getNumWavesPerEUWithNumVGPRs(NumVGPRs, Granule, MaxWaves, TotalNumVGPRs);
+  if (NumWaves == MaxWaves)
+    return 0;
+  return NumVGPRs - alignDown(TotalNumVGPRs / (NumWaves + 1), Granule);
+}
+
 unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI,
                              std::optional<bool> EnableWavefrontSize32) {
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))

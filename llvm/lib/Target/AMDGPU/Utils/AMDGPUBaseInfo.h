@@ -347,6 +347,14 @@ unsigned getNumWavesPerEUWithNumVGPRs(unsigned NumVGPRs, unsigned Granule,
 unsigned getOccupancyWithNumSGPRs(unsigned SGPRs, unsigned MaxWaves,
                                   AMDGPUSubtarget::Generation Gen);
 
+/// Returns the necessary reduction in number of VGPRs from using \p VGPRs VGPRs
+/// to increase the achievable number of waves per EU for this subtarget by 1.
+/// Returns 0 when using \p VGPRs VGPRs already results in maximum number of
+/// waves per EU.
+
+unsigned getVGPRReductionToIncreaseWavesPerEU(const MCSubtargetInfo *STI,
+                                              unsigned NumVGPRs);
+
 /// \returns Number of VGPR blocks needed for given subtarget \p STI when
 /// \p NumVGPRs are used. We actually return the number of blocks -1, since
 /// that's what we encode.

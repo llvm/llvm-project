@@ -370,6 +370,10 @@ unsigned GCNSubtarget::getOccupancyWithNumVGPRs(unsigned NumVGPRs) const {
   return AMDGPU::IsaInfo::getNumWavesPerEUWithNumVGPRs(this, NumVGPRs);
 }
 
+unsigned GCNSubtarget::getNumVGPRsToIncreaseOccupancy(unsigned NumVGPRs) const {
+  return AMDGPU::IsaInfo::getVGPRReductionToIncreaseWavesPerEU(this, NumVGPRs);
+}
+
 unsigned
 GCNSubtarget::getBaseReservedNumSGPRs(const bool HasFlatScratch) const {
   if (getGeneration() >= AMDGPUSubtarget::GFX10)

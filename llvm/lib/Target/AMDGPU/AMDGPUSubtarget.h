@@ -85,6 +85,11 @@ public:
   static const AMDGPUSubtarget &get(const TargetMachine &TM,
                                     const Function &F);
 
+  unsigned getOccupancyWithLocalMemSize(uint32_t Bytes,
+                                        const Function &F) const;
+
+  unsigned getOccupancyWithLocalMemSize(const MachineFunction &MF) const;
+
   /// \returns Default range flat work group size for a calling convention.
   std::pair<unsigned, unsigned> getDefaultFlatWorkGroupSize(CallingConv::ID CC) const;
 
@@ -143,9 +148,8 @@ public:
   /// This notably depends on the range of allowed flat group sizes for the
   /// function and hardware characteristics.
   std::pair<unsigned, unsigned>
-  getOccupancyWithWorkGroupSizes(uint32_t LDSBytes, const Function &F) const {
-    return getOccupancyWithWorkGroupSizes(LDSBytes, getFlatWorkGroupSizes(F));
-  }
+  getOccupancyWithWorkGroupSizes(uint32_t LDSBytes, const Function &F) const;
+
 
   /// Overload which uses the specified values for the flat work group sizes,
   /// rather than querying the function itself. \p FlatWorkGroupSizes should
