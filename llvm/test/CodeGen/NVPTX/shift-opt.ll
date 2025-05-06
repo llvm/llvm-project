@@ -2,7 +2,7 @@
 
 define i64 @test_or(i64 %x, i32 %y) {
 ;
-; srl (or (x, shl(zext(y),c1)),c1) -> or(srl(x,c1), zext(y))
+; Fold: srl (or (x, shl(zext(y),c1)),c1) -> or(srl(x,c1), zext(y))
 ; c1 <= leadingzeros(zext(y))
 ;
 ; CHECK-LABEL: test_or
@@ -21,7 +21,7 @@ define i64 @test_or(i64 %x, i32 %y) {
 
 define i64 @test_xor(i64 %x, i32 %y) {
 ;
-; srl (xor (x, shl(zext(y),c1)),c1) -> xor(srl(x,c1), zext(y))
+; Fold: srl (xor (x, shl(zext(y),c1)),c1) -> xor(srl(x,c1), zext(y))
 ; c1 <= leadingzeros(zext(y))
 ;
 ; CHECK-LABEL: test_xor
@@ -40,7 +40,7 @@ define i64 @test_xor(i64 %x, i32 %y) {
 
 define i64 @test_and(i64 %x, i32 %y) {
 ;
-; srl (and (x, shl(zext(y),c1)),c1) -> and(srl(x,c1), zext(y))
+; Fold: srl (and (x, shl(zext(y),c1)),c1) -> and(srl(x,c1), zext(y))
 ; c1 <= leadingzeros(zext(y))
 ;
 ; CHECK-LABEL: test_and
@@ -59,7 +59,7 @@ define i64 @test_and(i64 %x, i32 %y) {
 
 define <2 x i16> @test_vec(<2 x i16> %x, <2 x i8> %y) {
 ;
-; srl (or (x, shl(zext(y),c1)),c1) -> or(srl(x,c1), zext(y))
+; Fold: srl (or (x, shl(zext(y),c1)),c1) -> or(srl(x,c1), zext(y))
 ; c1 <= leadingzeros(zext(y))
 ; x, y - vectors
 ;
@@ -83,8 +83,8 @@ define <2 x i16> @test_vec(<2 x i16> %x, <2 x i8> %y) {
 
 define i64 @test_negative_c(i64 %x, i32 %y) {
 ;
-; srl (or (x, shl(zext(y),c1)),c1) -> or(srl(x,c1), zext(y))
-; c1 > leadingzeros(zext(y)).
+; Do not fold: srl (or (x, shl(zext(y),c1)),c1) -> or(srl(x,c1), zext(y))
+; Reason: c1 > leadingzeros(zext(y)).
 ;
 ; CHECK-LABEL: test_negative_c
 ; CHECK: ld.param.u64 %[[X:rd[0-9]+]], [test_negative_c_param_0];
@@ -105,9 +105,8 @@ declare void @use(i64)
 
 define i64 @test_negative_use_lop(i64 %x, i32 %y) {
 ;
-; srl (or (x, shl(zext(y),c1)),c1) -> or(srl(x,c1), zext(y))
-; c1 <= leadingzeros(zext(y))
-; multiple usage of "or"
+; Do not fold: srl (or (x, shl(zext(y),c1)),c1) -> or(srl(x,c1), zext(y))
+; Reason: multiple usage of "or"
 ;
 ; CHECK-LABEL: test_negative_use_lop
 ; CHECK: ld.param.u64 %[[X:rd[0-9]+]], [test_negative_use_lop_param_0];
@@ -116,7 +115,7 @@ define i64 @test_negative_use_lop(i64 %x, i32 %y) {
 ; CHECK: or.b64       %[[OR:rd[0-9]+]], %[[X]], %[[SHL]];
 ; CHECK: shr.u64      %[[SHR:rd[0-9]+]], %[[OR]], 5;
 ; CHECK: { // callseq
-; CHECK:      st.param.b64    [param0], %[[OR]];
+; CHECK:   st.param.b64    [param0], %[[OR]];
 ; CHECK: } // callseq
 ; CHECK: st.param.b64 [func_retval0], %[[SHR]];
 ;
@@ -128,12 +127,10 @@ define i64 @test_negative_use_lop(i64 %x, i32 %y) {
   ret i64 %srl
 }
 
-
 define i64 @test_negative_use_shl(i64 %x, i32 %y) {
 ;
-; srl (or (x, shl(zext(y),c1)),c1) -> or(srl(x,c1), zext(y))
-; c1 <= leadingzeros(zext(y))
-; multiple usage of "shl"
+; Do not fold: srl (or (x, shl(zext(y),c1)),c1) -> or(srl(x,c1), zext(y))
+; Reason: multiple usage of "shl"
 ;
 ; CHECK-LABEL: test_negative_use_shl
 ; CHECK: ld.param.u64 %[[X:rd[0-9]+]], [test_negative_use_shl_param_0];
@@ -142,7 +139,7 @@ define i64 @test_negative_use_shl(i64 %x, i32 %y) {
 ; CHECK: or.b64       %[[OR:rd[0-9]+]], %[[X]], %[[SHL]];
 ; CHECK: shr.u64      %[[SHR:rd[0-9]+]], %[[OR]], 5;
 ; CHECK: { // callseq
-; CHECK:      st.param.b64    [param0], %[[SHL]];
+; CHECK:   st.param.b64    [param0], %[[SHL]];
 ; CHECK: } // callseq
 ; CHECK: st.param.b64 [func_retval0], %[[SHR]];
 ;
