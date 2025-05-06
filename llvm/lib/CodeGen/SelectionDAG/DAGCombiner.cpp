@@ -12612,7 +12612,7 @@ SDValue DAGCombiner::visitMHISTOGRAM(SDNode *N) {
   return SDValue();
 }
 
-// partial_reduce_*mla(acc, mul(ext(a), ext(b)))
+// partial_reduce_*mla(acc, mul(ext(a), ext(b)), splat(1))
 // -> partial_reduce_*mla(acc, a, b)
 //
 // partial_reduce_*mla(acc, mul(ext(x), splat(C)), splat(1))
