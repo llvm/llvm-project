@@ -5,6 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// This file contains patterns for unrolling XeGPU operations. It follows a
+// similar concept and design as vector unroll patterns, serving as a complement
+// to them.
+//
+//===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 
@@ -37,9 +43,17 @@ struct UnrollPattern : public OpRewritePattern<SourceOp> {
       : OpRewritePattern<SourceOp>(context, benefit), options(options) {}
 
 protected:
+  /// Return the target shape for the given `op`. Return std::nullopt if the
+  /// op shouldn't be or cannot be unrolled.
   std::optional<SmallVector<int64_t>> getTargetShape(Operation *op) const {
     LDBG("");
     LDBG("Get unroll shape for: " << *op);
+
+    if (options.filterConstraint && failed(options.filterConstraint(op))) {
+      LDBG("--no filter constraint -> BAIL");
+      return std::nullopt;
+    }
+
     assert(options.nativeShape &&
            "expects the native shape for native shape call back function.");
     auto nativeShape = options.nativeShape(op);
