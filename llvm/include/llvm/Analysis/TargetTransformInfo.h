@@ -1921,8 +1921,9 @@ public:
   /// instruction.Currently Uniformity analysis catagorises instructions with a
   /// fixed set of InstructionUniformity values: Default, AlwaysUniform and
   /// NeverUniform.
-  std::optional<InstructionUniformity>
-  getInstructionUniformity(const Instruction &I) const;
+  std::optional<InstructionUniformity> getInstructionUniformity(
+      const Instruction &I,
+      SmallVector<InstructionUniformity> OperandUniformities) const;
 
 private:
   std::unique_ptr<const TargetTransformInfoImplBase> TTIImpl;

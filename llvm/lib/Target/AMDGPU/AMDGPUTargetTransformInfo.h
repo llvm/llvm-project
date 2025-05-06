@@ -290,8 +290,9 @@ public:
   void collectKernelLaunchBounds(
       const Function &F,
       SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const override;
-  std::optional<InstructionUniformity>
-  getInstructionUniformity(const Instruction &I) const override;
+  std::optional<InstructionUniformity> getInstructionUniformity(
+      const Instruction &I,
+      SmallVector<InstructionUniformity> OperandUniformities) const override;
 };
 
 } // end namespace llvm

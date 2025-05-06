@@ -1477,8 +1477,10 @@ void TargetTransformInfo::collectKernelLaunchBounds(
 }
 
 std::optional<InstructionUniformity>
-TargetTransformInfo::getInstructionUniformity(const Instruction &I) const {
-  return TTIImpl->getInstructionUniformity(I);
+TargetTransformInfo::getInstructionUniformity(
+    const Instruction &I,
+    SmallVector<InstructionUniformity> OperandUniformities) const {
+  return TTIImpl->getInstructionUniformity(I, OperandUniformities);
 }
 
 TargetTransformInfoImplBase::~TargetTransformInfoImplBase() = default;
