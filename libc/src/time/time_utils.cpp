@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/time/time_utils.h"
-#include "config/app.h"
 #include "src/__support/CPP/limits.h" // INT_MIN, INT_MAX
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
