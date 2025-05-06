@@ -2537,7 +2537,7 @@ def fsanitize_annotate_debug_info_EQ
     : CommaJoined<["-"], "fsanitize-annotate-debug-info=">,
       Group<f_clang_Group>,
       HelpText<"Annotate sanitizer instrumentation with extra debug info for "
-               the specified sanitizers, if supported">;
+               "the specified sanitizers, if supported">;
 def fno_sanitize_annotate_debug_info_EQ
     : CommaJoined<["-"], "fno-sanitize-annotate-debug-info=">,
       Group<f_clang_Group>,

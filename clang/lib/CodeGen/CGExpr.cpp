@@ -1249,8 +1249,8 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
   };
   llvm::Value *Check = Accessed ? Builder.CreateICmpULT(IndexVal, BoundVal)
                                 : Builder.CreateICmpULE(IndexVal, BoundVal);
-  EmitCheck(std::make_pair(Check, CheckKind),
-            SanitizerHandler::OutOfBounds, StaticData, Index);
+  EmitCheck(std::make_pair(Check, CheckKind), SanitizerHandler::OutOfBounds,
+            StaticData, Index);
 }
 
 CodeGenFunction::ComplexPairTy CodeGenFunction::
