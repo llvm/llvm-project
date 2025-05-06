@@ -1468,9 +1468,9 @@ public:
           const int32_t inBitwidth = valueTy.getIntOrFloatBitWidth();
           // Extend zeropoint for sub-32bits widths.
           const int32_t inAttrBitwidth = inBitwidth > 32 ? inBitwidth : 32;
-          auto inputZp = nestedBuilder.create<arith::ConstantOp>(loc,
-              IntegerAttr::get(rewriter.getIntegerType(inAttrBitwidth),
-              *maybeIZp));
+          auto inputZp = nestedBuilder.create<arith::ConstantOp>(
+              loc, IntegerAttr::get(rewriter.getIntegerType(inAttrBitwidth),
+                                    *maybeIZp));
 
           FailureOr<int64_t> maybeOZp = op.getOutputZeroPoint();
           if (failed(maybeOZp)) {
@@ -1484,9 +1484,9 @@ public:
           unsigned outBitWidth = outIntType.getWidth();
           const int32_t outAttrBitwidth = 32;
           assert(outBitWidth <= 32 && "Unexpected output zeropoint bitwidth");
-          auto outputZp = nestedBuilder.create<arith::ConstantOp>(loc,
-              IntegerAttr::get(rewriter.getIntegerType(outAttrBitwidth),
-              *maybeOZp));
+          auto outputZp = nestedBuilder.create<arith::ConstantOp>(
+              loc, IntegerAttr::get(rewriter.getIntegerType(outAttrBitwidth),
+                                    *maybeOZp));
 
           Value multiplier = multiplierConstant ? multiplierConstant
                                                 : blockArgs[multiplierArg];
