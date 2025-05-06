@@ -217,3 +217,24 @@ func.func @transfer_write_memref(%input: memref<4x8xi2>, %value: vector<8xi2>, %
 // CHECK: %[[IDX:.*]] = affine.apply #[[MAP]]()[%[[ARG3]], %[[ARG2]]]
 // CHECK: %[[REINT:.*]] = memref.reinterpret_cast %[[ARG0]]
 // CHECK: vector.transfer_write %[[ARG1]], %[[REINT]][%[[IDX]]]
+
+// -----
+
+func.func @alloc_4x8_f32() -> memref<4x8xf32> {
+  // Allocate a memref of size 4x8 with f32 elements.
+  // The memref is uninitialized by default.
+  %0 = memref.alloc() : memref<4x8xf32>
+
+  // Return the allocated memref.
+  return %0 : memref<4x8xf32>
+}
+
+// -----
+
+func.func @chained_alloc_load() -> vector<8xf32> {
+  %c3 = arith.constant 3 : index
+  %c6 = arith.constant 6 : index
+  %0 = memref.alloc() : memref<4x8xf32>
+  %value = vector.load %0[%c3, %c6] : memref<4x8xf32>, vector<8xf32>
+  return %value : vector<8xf32>
+}
