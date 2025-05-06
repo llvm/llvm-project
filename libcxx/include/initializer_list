@@ -59,7 +59,7 @@ namespace std // purposefully not versioned
 #  ifndef _LIBCPP_CXX03_LANG
 
 template <class _Ep>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_NO_SPECIALIZATIONS initializer_list {
+class _LIBCPP_NO_SPECIALIZATIONS initializer_list {
   const _Ep* __begin_;
   size_t __size_;
 

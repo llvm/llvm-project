@@ -398,6 +398,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     # math.h entrypoints
     libc.src.math.acosf
     libc.src.math.acoshf
+    libc.src.math.asin
     libc.src.math.asinf
     libc.src.math.asinhf
     libc.src.math.atan2
@@ -775,6 +776,14 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.countlsuhk
     libc.src.stdfix.countlsuk
     libc.src.stdfix.countlsulk
+    libc.src.stdfix.idivr
+    libc.src.stdfix.idivlr
+    libc.src.stdfix.idivk
+    libc.src.stdfix.idivlk
+    libc.src.stdfix.idivur
+    libc.src.stdfix.idivulr
+    libc.src.stdfix.idivuk
+    libc.src.stdfix.idivulk
   )
 endif()
 
@@ -868,6 +877,8 @@ if(LLVM_LIBC_FULL_BUILD)
     # setjmp.h entrypoints
     libc.src.setjmp.longjmp
     libc.src.setjmp.setjmp
+    libc.src.setjmp.siglongjmp
+    libc.src.setjmp.sigsetjmp
 
     # stdio.h entrypoints
     libc.src.stdio.clearerr

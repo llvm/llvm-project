@@ -149,6 +149,14 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
       if (LIS)
         LIS->removeAllRegUnitsForPhysReg(Reg);
     }
+  } else {
+    // TFI doesn't update Indexes and LIS, so we have to do it separately.
+    if (Indexes)
+      Indexes->repairIndexesInRange(&SaveBlock, SaveBlock.begin(), I);
+
+    if (LIS)
+      for (const CalleeSavedInfo &CS : CSI)
+        LIS->removeAllRegUnitsForPhysReg(CS.getReg());
   }
 }
 
@@ -160,25 +168,18 @@ static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  const SIRegisterInfo *RI = ST.getRegisterInfo();
   // Restore all registers immediately before the return and any
   // terminators that precede it.
   MachineBasicBlock::iterator I = RestoreBlock.getFirstTerminator();
+  const MachineBasicBlock::iterator BeforeRestoresI =
+      I == RestoreBlock.begin() ? I : std::prev(I);
 
   // FIXME: Just emit the readlane/writelane directly
   if (!TFI->restoreCalleeSavedRegisters(RestoreBlock, I, CSI, TRI)) {
     for (const CalleeSavedInfo &CI : reverse(CSI)) {
-      Register Reg = CI.getReg();
-      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(
-          Reg, Reg == RI->getReturnAddressReg(MF) ? MVT::i64 : MVT::i32);
-
-      TII.loadRegFromStackSlot(RestoreBlock, I, Reg, CI.getFrameIdx(), RC, TRI,
-                               Register());
-      assert(I != RestoreBlock.begin() &&
-             "loadRegFromStackSlot didn't insert any code!");
       // Insert in reverse order.  loadRegFromStackSlot can insert
       // multiple instructions.
+      TFI->restoreCalleeSavedRegister(RestoreBlock, I, CI, &TII, TRI);
 
       if (Indexes) {
         MachineInstr &Inst = *std::prev(I);
@@ -186,8 +187,17 @@ static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
       }
 
       if (LIS)
-        LIS->removeAllRegUnitsForPhysReg(Reg);
+        LIS->removeAllRegUnitsForPhysReg(CI.getReg());
     }
+  } else {
+    // TFI doesn't update Indexes and LIS, so we have to do it separately.
+    if (Indexes)
+      Indexes->repairIndexesInRange(&RestoreBlock, BeforeRestoresI,
+                                    RestoreBlock.getFirstTerminator());
+
+    if (LIS)
+      for (const CalleeSavedInfo &CS : CSI)
+        LIS->removeAllRegUnitsForPhysReg(CS.getReg());
   }
 }
 

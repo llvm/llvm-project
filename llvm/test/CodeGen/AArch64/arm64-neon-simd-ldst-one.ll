@@ -674,16 +674,10 @@ entry:
 }
 
 define void @test_vst1_lane_s64(ptr %a, <1 x i64> %b) {
-; CHECK-GI-LABEL: test_vst1_lane_s64:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    str d0, [x0]
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-SD-LABEL: test_vst1_lane_s64:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    str d0, [x0]
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: test_vst1_lane_s64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str d0, [x0]
+; CHECK-NEXT:    ret
 entry:
   %0 = extractelement <1 x i64> %b, i32 0
   store i64 %0, ptr %a, align 8

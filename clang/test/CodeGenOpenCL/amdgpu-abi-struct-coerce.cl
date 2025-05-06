@@ -214,7 +214,8 @@ typedef struct struct_4regs
   int w;
 } struct_4regs;
 
-// CHECK: void @kernel_empty_struct_arg(%struct.empty_struct %s.coerce)
+// CHECK: void @kernel_empty_struct_arg(ptr addrspace(4) noundef readnone byref(%struct.empty_struct) align 1 captures(none) {{%.+}})
+// CHECK: void @__clang_ocl_kern_imp_kernel_empty_struct_arg()
 __kernel void kernel_empty_struct_arg(empty_struct s) { }
 
 // CHECK: void @kernel_single_element_struct_arg(i32 %arg1.coerce)
@@ -223,28 +224,35 @@ __kernel void kernel_single_element_struct_arg(single_element_struct_arg_t arg1)
 // CHECK: void @kernel_nested_single_element_struct_arg(i32 %arg1.coerce)
 __kernel void kernel_nested_single_element_struct_arg(nested_single_element_struct_arg_t arg1) { }
 
-// CHECK: void @kernel_struct_arg(%struct.struct_arg %arg1.coerce)
+// CHECK: void @kernel_struct_arg(ptr addrspace(4) noundef readonly byref(%struct.struct_arg) align 4 captures(none) {{%.+}})
+// CHECK: void @__clang_ocl_kern_imp_kernel_struct_arg(i32 %arg1.coerce0, float %arg1.coerce1, i32 %arg1.coerce2)
 __kernel void kernel_struct_arg(struct_arg_t arg1) { }
 
-// CHECK: void @kernel_struct_padding_arg(%struct.struct_padding_arg %arg1.coerce)
+// CHECK: void @kernel_struct_padding_arg(ptr addrspace(4) noundef readonly byref(%struct.struct_padding_arg) align 8 captures(none) {{%.+}})
+// CHECK: void @__clang_ocl_kern_imp_kernel_struct_padding_arg(i8 %arg1.coerce0, i64 %arg1.coerce1)
 __kernel void kernel_struct_padding_arg(struct_padding_arg arg1) { }
 
-// CHECK: void @kernel_test_struct_of_arrays_arg(%struct.struct_of_arrays_arg %arg1.coerce)
+// CHECK: void @kernel_test_struct_of_arrays_arg(ptr addrspace(4) noundef readonly byref(%struct.struct_of_arrays_arg) align 4 captures(none) {{%.+}})
+// CHECK: void @__clang_ocl_kern_imp_kernel_test_struct_of_arrays_arg([2 x i32] %arg1.coerce0, float %arg1.coerce1, [4 x i32] %arg1.coerce2, [3 x float] %arg1.coerce3, i32 %arg1.coerce4)
 __kernel void kernel_test_struct_of_arrays_arg(struct_of_arrays_arg_t arg1) { }
 
-// CHECK: void @kernel_struct_of_structs_arg(%struct.struct_of_structs_arg %arg1.coerce)
+// CHECK: void @kernel_struct_of_structs_arg(ptr addrspace(4) noundef readonly byref(%struct.struct_of_structs_arg) align 4 captures(none) {{%.+}})
+// CHECK: void @__clang_ocl_kern_imp_kernel_struct_of_structs_arg(i32 %arg1.coerce0, float %arg1.coerce1, %struct.struct_arg %arg1.coerce2, i32 %arg1.coerce3)
 __kernel void kernel_struct_of_structs_arg(struct_of_structs_arg_t arg1) { }
 
 // CHECK: void @test_kernel_transparent_union_arg(i32 %u.coerce)
 __kernel void test_kernel_transparent_union_arg(transparent_u u) { }
 
-// CHECK: void @kernel_single_array_element_struct_arg(%struct.single_array_element_struct_arg %arg1.coerce)
+// CHECK: void @kernel_single_array_element_struct_arg(ptr addrspace(4) noundef readonly byref(%struct.single_array_element_struct_arg) align 4 captures(none) {{%.+}})
+// CHECK: void @__clang_ocl_kern_imp_kernel_single_array_element_struct_arg([4 x i32] %arg1.coerce)
 __kernel void kernel_single_array_element_struct_arg(single_array_element_struct_arg_t arg1) { }
 
-// CHECK: void @kernel_single_struct_element_struct_arg(%struct.single_struct_element_struct_arg %arg1.coerce)
+// CHECK: void @kernel_single_struct_element_struct_arg(ptr addrspace(4) noundef readonly byref(%struct.single_struct_element_struct_arg) align 8 captures(none) {{%.+}})
+// CHECK: void @__clang_ocl_kern_imp_kernel_single_struct_element_struct_arg(%struct.inner %arg1.coerce)
 __kernel void kernel_single_struct_element_struct_arg(single_struct_element_struct_arg_t arg1) { }
 
-// CHECK: void @kernel_different_size_type_pair_arg(%struct.different_size_type_pair %arg1.coerce)
+// CHECK: void @kernel_different_size_type_pair_arg(ptr addrspace(4) noundef readonly byref(%struct.different_size_type_pair) align 8 captures(none) {{%.+}})
+// CHECK: void @__clang_ocl_kern_imp_kernel_different_size_type_pair_arg(i64 %arg1.coerce0, i32 %arg1.coerce1)
 __kernel void kernel_different_size_type_pair_arg(different_size_type_pair arg1) { }
 
 // CHECK: define{{.*}} void @func_f32_arg(float noundef %arg)

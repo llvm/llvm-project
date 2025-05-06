@@ -19,12 +19,9 @@
 
 using namespace llvm;
 
-static bool canReplaceFunction(Function *F) {
-  return all_of(F->uses(), [](Use &Op) {
-    if (auto *CI = dyn_cast<CallBase>(Op.getUser()))
-      return &CI->getCalledOperandUse() == &Op;
-    return false;
-  });
+static bool canReplaceFunction(const Function &F) {
+  // TODO: Add controls to avoid ABI breaks (e.g. don't break main)
+  return true;
 }
 
 static bool canReduceUse(Use &Op) {
@@ -59,8 +56,9 @@ static bool canReduceUse(Use &Op) {
 static void replaceFunctionCalls(Function *OldF, Function *NewF) {
   SmallVector<CallBase *> Callers;
   for (Use &U : OldF->uses()) {
-    auto *CI = cast<CallBase>(U.getUser());
-    assert(&U == &CI->getCalledOperandUse());
+    auto *CI = dyn_cast<CallBase>(U.getUser());
+    if (!CI || !CI->isCallee(&U)) // RAUW can handle these fine.
+      continue;
 
     Function *CalledF = CI->getCalledFunction();
     if (CalledF == OldF) {
@@ -131,8 +129,7 @@ static void substituteOperandWithArgument(Function *OldF,
     UniqueValues.insert(Op->get());
 
   // Determine the new function's signature.
-  SmallVector<Type *> NewArgTypes;
-  llvm::append_range(NewArgTypes, OldF->getFunctionType()->params());
+  SmallVector<Type *> NewArgTypes(OldF->getFunctionType()->params());
   size_t ArgOffset = NewArgTypes.size();
   for (Value *V : UniqueValues)
     NewArgTypes.push_back(V->getType());
@@ -141,9 +138,8 @@ static void substituteOperandWithArgument(Function *OldF,
                         OldF->getFunctionType()->isVarArg());
 
   // Create the new function...
-  Function *NewF =
-      Function::Create(FTy, OldF->getLinkage(), OldF->getAddressSpace(),
-                       OldF->getName(), OldF->getParent());
+  Function *NewF = Function::Create(
+      FTy, OldF->getLinkage(), OldF->getAddressSpace(), "", OldF->getParent());
 
   // In order to preserve function order, we move NewF behind OldF
   NewF->removeFromParent();
@@ -209,7 +205,7 @@ void llvm::reduceOperandsToArgsDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
 
   SmallVector<Use *> OperandsToReduce;
   for (Function &F : make_early_inc_range(Program.functions())) {
-    if (!canReplaceFunction(&F))
+    if (!canReplaceFunction(F))
       continue;
     OperandsToReduce.clear();
     for (Instruction &I : instructions(&F)) {

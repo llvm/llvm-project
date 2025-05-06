@@ -1949,7 +1949,6 @@ RValue CodeGenFunction::emitBuiltinOSLogFormat(const CallExpr &E) {
   analyze_os_log::OSLogBufferLayout Layout;
   analyze_os_log::computeOSLogBufferLayout(Ctx, &E, Layout);
   Address BufAddr = EmitPointerWithAlignment(E.getArg(0));
-  llvm::SmallVector<llvm::Value *, 4> RetainableOperands;
 
   // Ignore argument 1, the format string. It is not currently used.
   CallArgList Args;
@@ -3815,6 +3814,22 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           Op1, nullptr, "elt.min");
     } else
       Result = Builder.CreateMinNum(Op0, Op1, /*FMFSource=*/nullptr, "elt.min");
+    return RValue::get(Result);
+  }
+
+  case Builtin::BI__builtin_elementwise_maxnum: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Result = Builder.CreateBinaryIntrinsic(llvm::Intrinsic::maxnum, Op0,
+                                                  Op1, nullptr, "elt.maxnum");
+    return RValue::get(Result);
+  }
+
+  case Builtin::BI__builtin_elementwise_minnum: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Result = Builder.CreateBinaryIntrinsic(llvm::Intrinsic::minnum, Op0,
+                                                  Op1, nullptr, "elt.minnum");
     return RValue::get(Result);
   }
 

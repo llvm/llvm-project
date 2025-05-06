@@ -16,36 +16,24 @@
 #include <cstdint>
 #include <functional>
 #include <optional>
-#include <type_traits>
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
-#include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
-#include "mlir/Interfaces/VectorInterfaces.h"
 
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "vector-to-vector"
 
@@ -70,54 +58,6 @@ static std::optional<int64_t> getResultIndex(AffineMap map, int64_t index) {
 }
 
 namespace {
-
-/// ShapeCastOpFolder folds cancelling ShapeCastOps away.
-//
-// Example:
-//
-//  The following MLIR with cancelling ShapeCastOps:
-//
-//   %0 = source : vector<5x4x2xf32>
-//   %1 = shape_cast %0 : vector<5x4x2xf32> to vector<20x2xf32>
-//   %2 = shape_cast %1 : vector<20x2xf32> to vector<5x4x2xf32>
-//   %3 = user %2 : vector<5x4x2xf32>
-//
-//  Should canonicalize to the following:
-//
-//   %0 = source : vector<5x4x2xf32>
-//   %1 = user %0 : vector<5x4x2xf32>
-//
-struct ShapeCastOpFolder : public OpRewritePattern<vector::ShapeCastOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(vector::ShapeCastOp shapeCastOp,
-                                PatternRewriter &rewriter) const override {
-    // Check if 'shapeCastOp' has vector source/result type.
-    auto sourceVectorType =
-        dyn_cast_or_null<VectorType>(shapeCastOp.getSource().getType());
-    auto resultVectorType =
-        dyn_cast_or_null<VectorType>(shapeCastOp.getResult().getType());
-    if (!sourceVectorType || !resultVectorType)
-      return failure();
-
-    // Check if shape cast op source operand is also a shape cast op.
-    auto sourceShapeCastOp = dyn_cast_or_null<vector::ShapeCastOp>(
-        shapeCastOp.getSource().getDefiningOp());
-    if (!sourceShapeCastOp)
-      return failure();
-    auto operandSourceVectorType =
-        cast<VectorType>(sourceShapeCastOp.getSource().getType());
-    auto operandResultVectorType = sourceShapeCastOp.getType();
-
-    // Check if shape cast operations invert each other.
-    if (operandSourceVectorType != resultVectorType ||
-        operandResultVectorType != sourceVectorType)
-      return failure();
-
-    rewriter.replaceOp(shapeCastOp, sourceShapeCastOp.getSource());
-    return success();
-  }
-};
 
 /// Convert MulIOp/MulFOp + MultiDimReductionOp<add> into ContractionOp.
 /// Ex:
@@ -962,6 +902,8 @@ private:
 };
 
 /// Reorders elementwise(broadcast/splat) to broadcast(elementwise). Ex:
+///
+/// Example:
 /// ```
 /// %a = vector.broadcast %arg1 : index to vector<1x4xindex>
 /// %b = vector.broadcast %arg2 : index to vector<1x4xindex>
@@ -1047,6 +989,8 @@ struct ReorderElementwiseOpsOnBroadcast final
 /// This may result in cleaner code when extracting a single value
 /// from multi-element vector and also to help canonicalize 1-element vectors to
 /// scalars.
+///
+/// Example:
 /// ```
 ///  %0 = arith.addf %arg0, %arg1 : vector<4xf32>
 ///  %1 = vector.extract %0[1] : f32 from vector<4xf32>
@@ -1099,6 +1043,150 @@ public:
 
     rewriter.replaceOp(op, newEltwise);
     rewriter.eraseOp(eltwise);
+    return success();
+  }
+};
+
+/// Check if the element type is suitable for vector.load/store sinking.
+/// Element type must be index or byte-aligned integer or floating-point type.
+static bool isSupportedMemSinkElementType(Type type) {
+  if (isa<IndexType>(type))
+    return true;
+
+  return type.isIntOrFloat() && type.getIntOrFloatBitWidth() % 8 == 0;
+}
+
+/// Pattern to rewrite `vector.extract(vector.load) -> vector/memref.load.
+/// Only index and byte-aligned integer and floating-point element types are
+/// supported for now.
+///
+/// Example:
+/// ```
+///  vector.load %arg0[%arg1] : memref<?xf32>, vector<4xf32>
+///  vector.extract %0[1] : f32 from vector<4xf32>
+/// ```
+/// Gets converted to:
+/// ```
+/// %c1 = arith.constant 1 : index
+/// %0 = arith.addi %arg1, %c1 overflow<nsw> : index
+/// %1 = memref.load %arg0[%0] : memref<?xf32>
+/// ```
+class ExtractOpFromLoad final : public OpRewritePattern<vector::ExtractOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::ExtractOp op,
+                                PatternRewriter &rewriter) const override {
+    auto loadOp = op.getVector().getDefiningOp<vector::LoadOp>();
+    if (!loadOp)
+      return rewriter.notifyMatchFailure(op, "expected a load op");
+
+    // Checking for single use so we won't duplicate load ops.
+    if (!loadOp->hasOneUse())
+      return rewriter.notifyMatchFailure(op, "expected single op use");
+
+    VectorType loadVecType = loadOp.getVectorType();
+    if (loadVecType.isScalable())
+      return rewriter.notifyMatchFailure(op,
+                                         "scalable vectors are not supported");
+
+    MemRefType memType = loadOp.getMemRefType();
+
+    // Non-byte-aligned types are tricky and may require special handling,
+    // ignore them for now.
+    if (!isSupportedMemSinkElementType(memType.getElementType()))
+      return rewriter.notifyMatchFailure(op, "unsupported element type");
+
+    int64_t rankOffset = memType.getRank() - loadVecType.getRank();
+    if (rankOffset < 0)
+      return rewriter.notifyMatchFailure(op, "unsupported ranks combination");
+
+    auto extractVecType = dyn_cast<VectorType>(op.getResult().getType());
+    int64_t finalRank = 0;
+    if (extractVecType)
+      finalRank = extractVecType.getRank();
+
+    SmallVector<Value> indices = loadOp.getIndices();
+    SmallVector<OpFoldResult> extractPos = op.getMixedPosition();
+
+    // There may be memory stores between the load and the extract op, so we
+    // need to make sure that the new load op is inserted at the same place as
+    // the original load op.
+    OpBuilder::InsertionGuard g(rewriter);
+    rewriter.setInsertionPoint(loadOp);
+    Location loc = loadOp.getLoc();
+    ArithIndexingBuilder idxBuilderf(rewriter, loc);
+    for (auto i : llvm::seq<int64_t>(rankOffset, indices.size() - finalRank)) {
+      OpFoldResult pos = extractPos[i - rankOffset];
+      if (isConstantIntValue(pos, 0))
+        continue;
+
+      Value offset = getValueOrCreateConstantIndexOp(rewriter, loc, pos);
+      indices[i] = idxBuilderf.add(indices[i], offset);
+    }
+
+    Value base = loadOp.getBase();
+    if (extractVecType) {
+      rewriter.replaceOpWithNewOp<vector::LoadOp>(op, extractVecType, base,
+                                                  indices);
+    } else {
+      rewriter.replaceOpWithNewOp<memref::LoadOp>(op, base, indices);
+    }
+    // We checked for single use so we can safely erase the load op.
+    rewriter.eraseOp(loadOp);
+    return success();
+  }
+};
+
+/// Pattern to rewrite vector.store(vector.splat) -> vector/memref.store.
+///
+/// Example:
+/// ```
+/// %0 = vector.splat %arg2 : vector<1xf32>
+/// vector.store %0, %arg0[%arg1] : memref<?xf32>, vector<1xf32>
+/// ```
+/// Gets converted to:
+/// ```
+/// memref.store %arg2, %arg0[%arg1] : memref<?xf32>
+/// ```
+class StoreOpFromSplatOrBroadcast final
+    : public OpRewritePattern<vector::StoreOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::StoreOp op,
+                                PatternRewriter &rewriter) const override {
+    VectorType vecType = op.getVectorType();
+    if (vecType.isScalable())
+      return rewriter.notifyMatchFailure(op,
+                                         "scalable vectors are not supported");
+
+    if (isa<VectorType>(op.getMemRefType().getElementType()))
+      return rewriter.notifyMatchFailure(
+          op, "memrefs of vectors are not supported");
+
+    if (vecType.getNumElements() != 1)
+      return rewriter.notifyMatchFailure(
+          op, "only 1-element vectors are supported");
+
+    Operation *splat = op.getValueToStore().getDefiningOp();
+    if (!isa_and_present<vector::BroadcastOp, vector::SplatOp>(splat))
+      return rewriter.notifyMatchFailure(op, "neither a splat nor a broadcast");
+
+    // Checking for single use so we can remove splat.
+    if (!splat->hasOneUse())
+      return rewriter.notifyMatchFailure(op, "expected single op use");
+
+    Value source = splat->getOperand(0);
+    Value base = op.getBase();
+    ValueRange indices = op.getIndices();
+
+    if (isa<VectorType>(source.getType())) {
+      rewriter.replaceOpWithNewOp<vector::StoreOp>(op, source, base, indices);
+    } else {
+      rewriter.replaceOpWithNewOp<memref::StoreOp>(op, source, base, indices);
+    }
+    rewriter.eraseOp(splat);
     return success();
   }
 };
@@ -2113,11 +2201,6 @@ void mlir::vector::populateVectorMaskMaterializationPatterns(
   patterns.add<FoldI1Select>(patterns.getContext(), benefit);
 }
 
-void mlir::vector::populateShapeCastFoldingPatterns(RewritePatternSet &patterns,
-                                                    PatternBenefit benefit) {
-  patterns.add<ShapeCastOpFolder>(patterns.getContext(), benefit);
-}
-
 void mlir::vector::populateDropUnitDimWithShapeCastPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
   // TODO: Consider either:
@@ -2126,8 +2209,7 @@ void mlir::vector::populateDropUnitDimWithShapeCastPatterns(
   //  * better naming to distinguish this and
   //    populateVectorTransferCollapseInnerMostContiguousDimsPatterns.
   patterns.add<DropUnitDimFromElementwiseOps, DropUnitDimsFromScfForOp,
-               DropUnitDimsFromTransposeOp, ShapeCastOpFolder>(
-      patterns.getContext(), benefit);
+               DropUnitDimsFromTransposeOp>(patterns.getContext(), benefit);
 }
 
 void mlir::vector::populateBubbleVectorBitCastOpPatterns(
@@ -2172,6 +2254,13 @@ void mlir::vector::populateSinkVectorOpsPatterns(RewritePatternSet &patterns,
                                                  PatternBenefit benefit) {
   patterns.add<ReorderElementwiseOpsOnTranspose, ReorderCastOpsOnBroadcast,
                ReorderElementwiseOpsOnBroadcast, ExtractOpFromElementwise>(
+      patterns.getContext(), benefit);
+}
+
+void mlir::vector::populateSinkVectorMemOpsPatterns(RewritePatternSet &patterns,
+                                                    PatternBenefit benefit) {
+  // TODO: Consider converting these patterns to canonicalizations.
+  patterns.add<ExtractOpFromLoad, StoreOpFromSplatOrBroadcast>(
       patterns.getContext(), benefit);
 }
 

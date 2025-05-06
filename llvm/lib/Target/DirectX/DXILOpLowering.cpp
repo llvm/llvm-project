@@ -8,7 +8,6 @@
 
 #include "DXILOpLowering.h"
 #include "DXILConstants.h"
-#include "DXILIntrinsicExpansion.h"
 #include "DXILOpBuilder.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
@@ -27,57 +26,12 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 
 #define DEBUG_TYPE "dxil-op-lower"
 
 using namespace llvm;
 using namespace llvm::dxil;
-
-static bool isVectorArgExpansion(Function &F) {
-  switch (F.getIntrinsicID()) {
-  case Intrinsic::dx_dot2:
-  case Intrinsic::dx_dot3:
-  case Intrinsic::dx_dot4:
-    return true;
-  }
-  return false;
-}
-
-static SmallVector<Value *> populateOperands(Value *Arg, IRBuilder<> &Builder) {
-  SmallVector<Value *> ExtractedElements;
-  auto *VecArg = dyn_cast<FixedVectorType>(Arg->getType());
-  for (unsigned I = 0; I < VecArg->getNumElements(); ++I) {
-    Value *Index = ConstantInt::get(Type::getInt32Ty(Arg->getContext()), I);
-    Value *ExtractedElement = Builder.CreateExtractElement(Arg, Index);
-    ExtractedElements.push_back(ExtractedElement);
-  }
-  return ExtractedElements;
-}
-
-static SmallVector<Value *>
-argVectorFlatten(CallInst *Orig, IRBuilder<> &Builder, unsigned NumOperands) {
-  assert(NumOperands > 0);
-  Value *Arg0 = Orig->getOperand(0);
-  [[maybe_unused]] auto *VecArg0 = dyn_cast<FixedVectorType>(Arg0->getType());
-  assert(VecArg0);
-  SmallVector<Value *> NewOperands = populateOperands(Arg0, Builder);
-  for (unsigned I = 1; I < NumOperands; ++I) {
-    Value *Arg = Orig->getOperand(I);
-    [[maybe_unused]] auto *VecArg = dyn_cast<FixedVectorType>(Arg->getType());
-    assert(VecArg);
-    assert(VecArg0->getElementType() == VecArg->getElementType());
-    assert(VecArg0->getNumElements() == VecArg->getNumElements());
-    auto NextOperandList = populateOperands(Arg, Builder);
-    NewOperands.append(NextOperandList.begin(), NextOperandList.end());
-  }
-  return NewOperands;
-}
-
-static SmallVector<Value *> argVectorFlatten(CallInst *Orig,
-                                             IRBuilder<> &Builder) {
-  // Note: arg[NumOperands-1] is a pointer and is not needed by our flattening.
-  return argVectorFlatten(Orig, Builder, Orig->getNumOperands() - 1);
-}
 
 namespace {
 class OpLowerer {
@@ -150,9 +104,6 @@ public:
   [[nodiscard]] bool
   replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp,
                         ArrayRef<IntrinArgSelect> ArgSelects) {
-    bool IsVectorArgExpansion = isVectorArgExpansion(F);
-    assert(!(IsVectorArgExpansion && ArgSelects.size()) &&
-           "Cann't do vector arg expansion when using arg selects.");
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       OpBuilder.getIRB().SetInsertPoint(CI);
       SmallVector<Value *> Args;
@@ -170,15 +121,6 @@ public:
             break;
           }
         }
-      } else if (IsVectorArgExpansion) {
-        Args = argVectorFlatten(CI, OpBuilder.getIRB());
-      } else if (F.getIntrinsicID() == Intrinsic::dx_dot2add) {
-        // arg[NumOperands-1] is a pointer and is not needed by our flattening.
-        // arg[NumOperands-2] also does not need to be flattened because it is a
-        // scalar.
-        unsigned NumOperands = CI->getNumOperands() - 2;
-        Args.push_back(CI->getArgOperand(NumOperands));
-        Args.append(argVectorFlatten(CI, OpBuilder.getIRB(), NumOperands));
       } else {
         Args.append(CI->arg_begin(), CI->arg_end());
       }
@@ -811,15 +753,23 @@ public:
       case Intrinsic::dx_resource_casthandle:
       // NOTE: llvm.dbg.value is supported as is in DXIL.
       case Intrinsic::dbg_value:
+      case Intrinsic::lifetime_start:
+      case Intrinsic::lifetime_end:
       case Intrinsic::not_intrinsic:
+        if (F.use_empty())
+          F.eraseFromParent();
         continue;
-      default: {
-        DiagnosticInfoUnsupported Diag(
-            F, "Unsupported intrinsic for DXIL lowering");
-        M.getContext().diagnose(Diag);
-        HasErrors |= true;
+      default:
+        if (F.use_empty())
+          F.eraseFromParent();
+        else {
+          SmallString<128> Msg = formatv(
+              "Unsupported intrinsic {0} for DXIL lowering", F.getName());
+          M.getContext().emitError(Msg);
+          HasErrors |= true;
+        }
         break;
-      }
+
 #define DXIL_OP_INTRINSIC(OpCode, Intrin, ...)                                 \
   case Intrin:                                                                 \
     HasErrors |= replaceFunctionWithOp(                                        \
@@ -885,7 +835,7 @@ class DXILOpLoweringLegacy : public ModulePass {
 public:
   bool runOnModule(Module &M) override {
     DXILResourceMap &DRM =
-        getAnalysis<DXILResourceWrapperPass>().getBindingMap();
+        getAnalysis<DXILResourceWrapperPass>().getResourceMap();
     DXILResourceTypeMap &DRTM =
         getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
 

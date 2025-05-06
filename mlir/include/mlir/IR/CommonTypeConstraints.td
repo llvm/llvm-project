@@ -63,6 +63,9 @@ def IsTensorTypePred : CPred<"::llvm::isa<::mlir::TensorType>($_self)">;
 // Whether a type is a MemRefType.
 def IsMemRefTypePred : CPred<"::llvm::isa<::mlir::MemRefType>($_self)">;
 
+// Whether a type is a TensorType or a MemRefType.
+def IsTensorOrMemRefTypePred : Or<[IsTensorTypePred, IsMemRefTypePred]>;
+
 // Whether a type is an UnrankedMemRefType
 def IsUnrankedMemRefTypePred
         : CPred<"::llvm::isa<::mlir::UnrankedMemRefType>($_self)">;
@@ -426,7 +429,9 @@ class ValueSemanticsContainerOf<list<Type> allowedTypes> :
   ShapedContainerType<allowedTypes, HasValueSemanticsPred,
   "container with value semantics">;
 
+//===----------------------------------------------------------------------===//
 // Vector types.
+//===----------------------------------------------------------------------===//
 
 class VectorOfNonZeroRankOf<list<Type> allowedTypes> :
   ShapedContainerType<allowedTypes, IsVectorOfNonZeroRankTypePred, "vector",
@@ -755,7 +760,7 @@ class StaticShapeTensorOf<list<Type> allowedTypes>
 def AnyStaticShapeTensor : StaticShapeTensorOf<[AnyType]>;
 
 //===----------------------------------------------------------------------===//
-// Memref type.
+// Memref types.
 //===----------------------------------------------------------------------===//
 
 // Any unranked memref whose element type is from the given `allowedTypes` list.
@@ -877,6 +882,14 @@ class NestedTupleOf<list<Type> allowedTypes> :
     MixedContainerType<AnyTypeOf<allowedTypes>, IsTupleTypePred,
                        "getFlattenedTypes(::llvm::cast<::mlir::TupleType>($_self))",
                        "nested tuple">;
+
+//===----------------------------------------------------------------------===//
+// Mixed types
+//===----------------------------------------------------------------------===//
+
+class TensorOrMemRef<list<Type> allowedTypes> :
+  ShapedContainerType<allowedTypes, IsTensorOrMemRefTypePred, "Tensor or MemRef",
+                      "::mlir::ShapedType">;
 
 //===----------------------------------------------------------------------===//
 // Common type constraints
