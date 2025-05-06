@@ -350,11 +350,17 @@ func.func @linearize_scalable_vector_splat(%arg0: i32) -> vector<4x[2]xi32> {
 
 // CHECK-LABEL: linearize_create_mask
 //  CHECK-SAME: (%[[ARG0:.*]]: index, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index) -> vector<1x16x1xi1>
-//       CHECK: %[[MULI1:.*]] = arith.muli %[[ARG0]], %[[ARG1]] : index
-//       CHECK: %[[MULI2:.*]] = arith.muli %[[MULI1]], %[[ARG2]] : index
-//       CHECK: %[[MASK:.*]]  = vector.create_mask %[[MULI2]] : vector<16xi1>
-//       CHECK: %[[CAST:.*]]  = vector.shape_cast %[[MASK]] : vector<16xi1> to vector<1x16x1xi1>
-//       CHECK: return %[[CAST]] : vector<1x16x1xi1>
+//   CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+//   CHECK-DAG: %[[TRUE:.*]] = arith.constant true
+//       CHECK: %[[CMP0:.*]] = arith.cmpi sgt, %[[ARG0]], %[[C0]] : index
+//       CHECK: %[[MUL0:.*]] = arith.muli %[[TRUE]], %[[CMP0]] : i1
+//       CHECK: %[[CMP1:.*]] = arith.cmpi sgt, %[[ARG2]], %[[C0]] : index
+//       CHECK: %[[MUL1:.*]] = arith.muli %[[MUL0]], %[[CMP1]] : i1
+//       CHECK: %[[CAST:.*]] = arith.index_cast %[[MUL1]] : i1 to index
+//       CHECK: %[[MUL2:.*]] = arith.muli %[[CAST]], %[[ARG1]] : index
+//       CHECK: %[[MASK:.*]] = vector.create_mask %[[MUL2]] : vector<16xi1>
+//       CHECK: %[[CAST2:.*]] = vector.shape_cast %[[MASK]] : vector<16xi1> to vector<1x16x1xi1>
+//       CHECK: return %[[CAST2]] : vector<1x16x1xi1>
 func.func @linearize_create_mask(%arg0 : index, %arg1 : index, %arg2 : index) -> vector<1x16x1xi1> {
   %0 = vector.create_mask %arg0, %arg1, %arg2: vector<1x16x1xi1>
   return %0 : vector<1x16x1xi1>
