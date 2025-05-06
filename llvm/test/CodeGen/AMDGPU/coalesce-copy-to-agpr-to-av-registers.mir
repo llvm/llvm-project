@@ -517,8 +517,6 @@ body:             |
 
 ...
 
-
-
 # Should coalesce %0 and %1 into subregisters of the av_64 common
 # class
 ---
