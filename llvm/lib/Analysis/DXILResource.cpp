@@ -977,7 +977,6 @@ void DXILResourceBindingInfo::populate(Module &M, DXILResourceTypeMap &DRTM) {
         LastFreeRange.LowerBound = B.UpperBound + 1;
       else
         S->FreeRanges.pop_back();
-
     } else if (LastFreeRange.LowerBound < B.LowerBound) {
       LastFreeRange.UpperBound = B.LowerBound - 1;
       if (B.UpperBound < UINT32_MAX)
