@@ -215,7 +215,8 @@ llvm::Error BaseRequestHandler::LaunchProcess(
 
   // Make sure the process is launched and stopped at the entry point before
   // proceeding.
-  lldb::SBError error = dap.WaitForProcessToStop(arguments.configuration.timeout);
+  lldb::SBError error =
+      dap.WaitForProcessToStop(arguments.configuration.timeout);
   if (error.Fail())
     return ToError(error);
 
