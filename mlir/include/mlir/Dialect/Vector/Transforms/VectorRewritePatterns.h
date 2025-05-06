@@ -422,7 +422,7 @@ void populateVectorTransposeNarrowTypeRewritePatterns(
 /// one that has idential input and output shapes, which is already folded.
 ///
 /// These patterns can be useful to expose more folding opportunities by
-/// creating pairs of shape_casts that cancel. 
+/// creating pairs of shape_casts that cancel.
 void populateConvertToShapeCastPatterns(RewritePatternSet &,
                                         PatternBenefit = 1);
 
