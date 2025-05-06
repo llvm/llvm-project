@@ -12601,47 +12601,63 @@ SDValue DAGCombiner::visitMHISTOGRAM(SDNode *N) {
   return SDValue();
 }
 
-// Makes PARTIAL_REDUCE_*MLA(Acc, MUL(ZEXT(LHSExtOp), ZEXT(RHSExtOp)),
-// Splat(1)) into
-// PARTIAL_REDUCE_UMLA(Acc, LHSExtOp, RHSExtOp).
-// Makes PARTIAL_REDUCE_*MLA(Acc, MUL(SEXT(LHSExtOp), SEXT(RHSExtOp)),
-// Splat(1)) into
-// PARTIAL_REDUCE_SMLA(Acc, LHSExtOp, RHSExtOp).
+// partial_reduce_*mla(acc, mul(ext(a), ext(b)), splat(1))
+// -> partial_reduce_*mla(acc, a, b)
+//
+// partial_reduce_*mla(acc, mul(ext(x), splat(C)), splat(1))
+// -> partial_reduce_*mla(acc, x, C)
 SDValue DAGCombiner::visitPARTIAL_REDUCE_MLA(SDNode *N) {
   SDLoc DL(N);
-
+  auto *Context = DAG.getContext();
   SDValue Acc = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
   SDValue Op2 = N->getOperand(2);
 
-  APInt ConstantOne;
+  APInt C;
   if (Op1->getOpcode() != ISD::MUL ||
-      !ISD::isConstantSplatVector(Op2.getNode(), ConstantOne) ||
-      !ConstantOne.isOne())
+      !ISD::isConstantSplatVector(Op2.getNode(), C) || !C.isOne())
     return SDValue();
 
   SDValue LHS = Op1->getOperand(0);
   SDValue RHS = Op1->getOperand(1);
   unsigned LHSOpcode = LHS->getOpcode();
-  unsigned RHSOpcode = RHS->getOpcode();
-  if (!ISD::isExtOpcode(LHSOpcode) || !ISD::isExtOpcode(RHSOpcode))
+  if (!ISD::isExtOpcode(LHSOpcode))
     return SDValue();
 
   SDValue LHSExtOp = LHS->getOperand(0);
-  SDValue RHSExtOp = RHS->getOperand(0);
   EVT LHSExtOpVT = LHSExtOp.getValueType();
-  if (LHSExtOpVT != RHSExtOp.getValueType() || LHSOpcode != RHSOpcode)
-    return SDValue();
 
-  // Only perform the DAG combine if there is custom lowering provided by the
-  // target
-  auto *Context = DAG.getContext();
+  // Only perform these combines if the target supports folding
+  // the extends into the operation.
   if (!TLI.isPartialReduceMLALegalOrCustom(
           TLI.getTypeToTransformTo(*Context, N->getValueType(0)),
           TLI.getTypeToTransformTo(*Context, LHSExtOpVT)))
     return SDValue();
 
   bool ExtIsSigned = LHSOpcode == ISD::SIGN_EXTEND;
+  unsigned NewOpcode =
+      ExtIsSigned ? ISD::PARTIAL_REDUCE_SMLA : ISD::PARTIAL_REDUCE_UMLA;
+
+  // partial_reduce_*mla(acc, mul(ext(x), splat(C)), splat(1))
+  // -> partial_reduce_*mla(acc, x, C)
+  if (ISD::isConstantSplatVector(RHS.getNode(), C)) {
+    APInt CTrunc = C.trunc(LHSExtOpVT.getScalarSizeInBits());
+    unsigned LHSBits = LHS.getValueType().getScalarSizeInBits();
+    if ((LHSOpcode != ISD::ZERO_EXTEND || CTrunc.zext(LHSBits) != C) &&
+        (LHSOpcode != ISD::SIGN_EXTEND || CTrunc.sext(LHSBits) != C))
+      return SDValue();
+
+    return DAG.getNode(NewOpcode, DL, N->getValueType(0), Acc, LHSExtOp,
+                       DAG.getConstant(CTrunc, DL, LHSExtOpVT));
+  }
+
+  unsigned RHSOpcode = RHS->getOpcode();
+  if (!ISD::isExtOpcode(RHSOpcode))
+    return SDValue();
+
+  SDValue RHSExtOp = RHS->getOperand(0);
+  if (LHSExtOpVT != RHSExtOp.getValueType() || LHSOpcode != RHSOpcode)
+    return SDValue();
 
   // For a 2-stage extend the signedness of both of the extends must be the
   // same. This is so the node can be folded into only a signed or unsigned
@@ -12652,8 +12668,6 @@ SDValue DAGCombiner::visitPARTIAL_REDUCE_MLA(SDNode *N) {
       Op1.getValueType().getVectorElementType() != AccElemVT)
     return SDValue();
 
-  unsigned NewOpcode =
-      ExtIsSigned ? ISD::PARTIAL_REDUCE_SMLA : ISD::PARTIAL_REDUCE_UMLA;
   return DAG.getNode(NewOpcode, DL, N->getValueType(0), Acc, LHSExtOp,
                      RHSExtOp);
 }

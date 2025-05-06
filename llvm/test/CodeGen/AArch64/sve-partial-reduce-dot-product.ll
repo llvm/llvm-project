@@ -1139,7 +1139,6 @@ entry:
   ret <vscale x 2 x i16> %partial.reduce
 }
 
-
 define <vscale x 4 x i64> @partial_reduce_only_split_acc(<vscale x 4 x i64> %acc, <vscale x 8 x i8> %a, <vscale x 8 x i8> %b) {
 ; CHECK-LABEL: partial_reduce_only_split_acc:
 ; CHECK:       // %bb.0: // %entry
@@ -1177,4 +1176,146 @@ entry:
   %partial.reduce = tail call <vscale x 4 x i64> @llvm.experimental.vector.partial.reduce.add.nxv4i64.nxv8i64(
   <vscale x 4 x i64> %acc, <vscale x 8 x i64> %mult)
   ret <vscale x 4 x i64> %partial.reduce
+}
+
+define <vscale x 4 x i32> @sdot_imm(<vscale x 4 x i32> %acc, <vscale x 16 x i8> %a) {
+; CHECK-LABEL: sdot_imm:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sunpklo z2.h, z1.b
+; CHECK-NEXT:    sunpkhi z1.h, z1.b
+; CHECK-NEXT:    sunpklo z3.s, z2.h
+; CHECK-NEXT:    sunpkhi z2.s, z2.h
+; CHECK-NEXT:    sub z0.s, z0.s, z3.s
+; CHECK-NEXT:    sunpklo z3.s, z1.h
+; CHECK-NEXT:    sunpkhi z1.s, z1.h
+; CHECK-NEXT:    sub z0.s, z0.s, z2.s
+; CHECK-NEXT:    sub z0.s, z0.s, z3.s
+; CHECK-NEXT:    sub z0.s, z0.s, z1.s
+; CHECK-NEXT:    ret
+;
+; CHECK-NEWLOWERING-LABEL: sdot_imm:
+; CHECK-NEWLOWERING:       // %bb.0: // %entry
+; CHECK-NEWLOWERING-NEXT:    mov z2.b, #-1 // =0xffffffffffffffff
+; CHECK-NEWLOWERING-NEXT:    sdot z0.s, z1.b, z2.b
+; CHECK-NEWLOWERING-NEXT:    ret
+entry:
+  %a.wide = sext <vscale x 16 x i8> %a to <vscale x 16 x i32>
+  %mult = mul nuw nsw <vscale x 16 x i32> %a.wide, splat(i32 -1)
+  %partial.reduce = tail call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> %acc, <vscale x 16 x i32> %mult)
+  ret <vscale x 4 x i32> %partial.reduce
+}
+
+define <vscale x 4 x i32> @sdot_imm_does_not_fit(<vscale x 4 x i32> %acc, <vscale x 16 x i8> %a) {
+; CHECK-LABEL: sdot_imm_does_not_fit:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sunpklo z2.h, z1.b
+; CHECK-NEXT:    sunpkhi z1.h, z1.b
+; CHECK-NEXT:    sunpklo z3.s, z2.h
+; CHECK-NEXT:    sunpkhi z2.s, z2.h
+; CHECK-NEXT:    sunpklo z4.s, z1.h
+; CHECK-NEXT:    sunpkhi z1.s, z1.h
+; CHECK-NEXT:    lsl z4.s, z4.s, #8
+; CHECK-NEXT:    lsl z2.s, z2.s, #8
+; CHECK-NEXT:    lsl z3.s, z3.s, #8
+; CHECK-NEXT:    lsl z1.s, z1.s, #8
+; CHECK-NEXT:    add z0.s, z0.s, z3.s
+; CHECK-NEXT:    add z2.s, z2.s, z4.s
+; CHECK-NEXT:    add z0.s, z0.s, z2.s
+; CHECK-NEXT:    add z0.s, z0.s, z1.s
+; CHECK-NEXT:    ret
+;
+; CHECK-NEWLOWERING-LABEL: sdot_imm_does_not_fit:
+; CHECK-NEWLOWERING:       // %bb.0: // %entry
+; CHECK-NEWLOWERING-NEXT:    sunpklo z2.h, z1.b
+; CHECK-NEWLOWERING-NEXT:    sunpkhi z1.h, z1.b
+; CHECK-NEWLOWERING-NEXT:    sunpklo z3.s, z2.h
+; CHECK-NEWLOWERING-NEXT:    sunpkhi z2.s, z2.h
+; CHECK-NEWLOWERING-NEXT:    sunpklo z4.s, z1.h
+; CHECK-NEWLOWERING-NEXT:    sunpkhi z1.s, z1.h
+; CHECK-NEWLOWERING-NEXT:    lsl z4.s, z4.s, #8
+; CHECK-NEWLOWERING-NEXT:    lsl z2.s, z2.s, #8
+; CHECK-NEWLOWERING-NEXT:    lsl z3.s, z3.s, #8
+; CHECK-NEWLOWERING-NEXT:    lsl z1.s, z1.s, #8
+; CHECK-NEWLOWERING-NEXT:    add z0.s, z0.s, z3.s
+; CHECK-NEWLOWERING-NEXT:    add z2.s, z2.s, z4.s
+; CHECK-NEWLOWERING-NEXT:    add z0.s, z0.s, z2.s
+; CHECK-NEWLOWERING-NEXT:    add z0.s, z0.s, z1.s
+; CHECK-NEWLOWERING-NEXT:    ret
+entry:
+  %a.wide = sext <vscale x 16 x i8> %a to <vscale x 16 x i32>
+  %mult = mul nuw nsw <vscale x 16 x i32> %a.wide, splat(i32 256)
+  %partial.reduce = tail call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> %acc, <vscale x 16 x i32> %mult)
+  ret <vscale x 4 x i32> %partial.reduce
+}
+
+define <vscale x 4 x i32> @udot_imm(<vscale x 4 x i32> %acc, <vscale x 16 x i8> %a) {
+; CHECK-LABEL: udot_imm:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uunpklo z3.h, z1.b
+; CHECK-NEXT:    mov z2.s, #255 // =0xff
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    uunpkhi z1.h, z1.b
+; CHECK-NEXT:    uunpklo z4.s, z3.h
+; CHECK-NEXT:    uunpkhi z3.s, z3.h
+; CHECK-NEXT:    mla z0.s, p0/m, z4.s, z2.s
+; CHECK-NEXT:    uunpklo z4.s, z1.h
+; CHECK-NEXT:    uunpkhi z1.s, z1.h
+; CHECK-NEXT:    mla z0.s, p0/m, z3.s, z2.s
+; CHECK-NEXT:    mla z0.s, p0/m, z4.s, z2.s
+; CHECK-NEXT:    mla z0.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    ret
+;
+; CHECK-NEWLOWERING-LABEL: udot_imm:
+; CHECK-NEWLOWERING:       // %bb.0: // %entry
+; CHECK-NEWLOWERING-NEXT:    mov z2.b, #-1 // =0xffffffffffffffff
+; CHECK-NEWLOWERING-NEXT:    udot z0.s, z1.b, z2.b
+; CHECK-NEWLOWERING-NEXT:    ret
+entry:
+  %a.wide = zext <vscale x 16 x i8> %a to <vscale x 16 x i32>
+  %mult = mul nuw nsw <vscale x 16 x i32> %a.wide, splat(i32 255)
+  %partial.reduce = tail call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> %acc, <vscale x 16 x i32> %mult)
+  ret <vscale x 4 x i32> %partial.reduce
+}
+
+define <vscale x 4 x i32> @udot_imm_does_not_fit(<vscale x 4 x i32> %acc, <vscale x 16 x i8> %a) {
+; CHECK-LABEL: udot_imm_does_not_fit:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uunpklo z2.h, z1.b
+; CHECK-NEXT:    uunpkhi z1.h, z1.b
+; CHECK-NEXT:    uunpklo z3.s, z2.h
+; CHECK-NEXT:    uunpkhi z2.s, z2.h
+; CHECK-NEXT:    uunpklo z4.s, z1.h
+; CHECK-NEXT:    uunpkhi z1.s, z1.h
+; CHECK-NEXT:    lsl z4.s, z4.s, #8
+; CHECK-NEXT:    lsl z2.s, z2.s, #8
+; CHECK-NEXT:    lsl z3.s, z3.s, #8
+; CHECK-NEXT:    lsl z1.s, z1.s, #8
+; CHECK-NEXT:    add z0.s, z0.s, z3.s
+; CHECK-NEXT:    add z2.s, z2.s, z4.s
+; CHECK-NEXT:    add z0.s, z0.s, z2.s
+; CHECK-NEXT:    add z0.s, z0.s, z1.s
+; CHECK-NEXT:    ret
+;
+; CHECK-NEWLOWERING-LABEL: udot_imm_does_not_fit:
+; CHECK-NEWLOWERING:       // %bb.0: // %entry
+; CHECK-NEWLOWERING-NEXT:    uunpklo z2.h, z1.b
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z1.h, z1.b
+; CHECK-NEWLOWERING-NEXT:    uunpklo z3.s, z2.h
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z2.s, z2.h
+; CHECK-NEWLOWERING-NEXT:    uunpklo z4.s, z1.h
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z1.s, z1.h
+; CHECK-NEWLOWERING-NEXT:    lsl z4.s, z4.s, #8
+; CHECK-NEWLOWERING-NEXT:    lsl z2.s, z2.s, #8
+; CHECK-NEWLOWERING-NEXT:    lsl z3.s, z3.s, #8
+; CHECK-NEWLOWERING-NEXT:    lsl z1.s, z1.s, #8
+; CHECK-NEWLOWERING-NEXT:    add z0.s, z0.s, z3.s
+; CHECK-NEWLOWERING-NEXT:    add z2.s, z2.s, z4.s
+; CHECK-NEWLOWERING-NEXT:    add z0.s, z0.s, z2.s
+; CHECK-NEWLOWERING-NEXT:    add z0.s, z0.s, z1.s
+; CHECK-NEWLOWERING-NEXT:    ret
+entry:
+  %a.wide = zext <vscale x 16 x i8> %a to <vscale x 16 x i32>
+  %mult = mul nuw nsw <vscale x 16 x i32> %a.wide, splat(i32 256)
+  %partial.reduce = tail call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> %acc, <vscale x 16 x i32> %mult)
+  ret <vscale x 4 x i32> %partial.reduce
 }
