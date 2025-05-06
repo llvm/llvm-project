@@ -7742,8 +7742,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerFLDEXP(Op, DAG);
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
     return LowerVECTOR_HISTOGRAM(Op, DAG);
-  case ISD::PARTIAL_REDUCE_SMLA:
   case ISD::PARTIAL_REDUCE_UMLA:
+  case ISD::PARTIAL_REDUCE_SMLA:
     return LowerPARTIAL_REDUCE_MLA(Op, DAG);
   }
 }
@@ -27533,6 +27533,10 @@ void AArch64TargetLowering::ReplaceNodeResults(
     if (SDValue Res = LowerVECTOR_COMPRESS(SDValue(N, 0), DAG))
       Results.push_back(Res);
     return;
+  case ISD::PARTIAL_REDUCE_UMLA:
+  case ISD::PARTIAL_REDUCE_SMLA:
+    Results.push_back(LowerPARTIAL_REDUCE_MLA(SDValue(N, 0), DAG));
+    return;
   case ISD::ADD:
   case ISD::FADD:
     ReplaceAddWithADDP(N, Results, DAG, Subtarget);
@@ -29513,6 +29517,80 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
   auto Hi = DAG.getNode(HiOpcode, DL, ResultVT, DotNode);
   auto Extended = DAG.getNode(ISD::ADD, DL, ResultVT, Lo, Hi);
   return DAG.getNode(ISD::ADD, DL, ResultVT, Acc, Extended);
+}
+
+// Lower PARTIAL_REDUCE_*MLA(Acc, MUL(ZEXT(MulOpLHS), SEXT(MulOpRHS)), Splat 1)
+// to USDOT(Acc, MulOpLHS, MulOpRHS)
+// Lower PARTIAL_REDUCE_*MLA(Acc, MUL(SEXT(MulOpLHS), ZEXT(MulOpRHS)), Splat 1)
+// to USDOT(Acc, MulOpRHS, MulOpLHS)
+SDValue
+AArch64TargetLowering::LowerPARTIAL_REDUCE_MLAToUSDOT(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  bool Scalable = Op.getValueType().isScalableVector();
+  auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
+  if (Scalable && !Subtarget.isSVEorStreamingSVEAvailable())
+    return SDValue();
+  if (!Scalable && (!Subtarget.isNeonAvailable() || !Subtarget.hasDotProd()))
+    return SDValue();
+  if (!Subtarget.hasMatMulInt8())
+    return SDValue();
+  SDLoc DL(Op);
+
+  if (Op.getOperand(1).getOpcode() != ISD::MUL)
+    return SDValue();
+
+  SDValue Acc = Op.getOperand(0);
+  SDValue Mul = Op.getOperand(1);
+
+  APInt ConstantOne;
+  if (!ISD::isConstantSplatVector(Op.getOperand(2).getNode(), ConstantOne) ||
+      !ConstantOne.isOne())
+    return SDValue();
+
+  SDValue ExtMulOpLHS = Mul.getOperand(0);
+  SDValue ExtMulOpRHS = Mul.getOperand(1);
+  unsigned ExtMulOpLHSOpcode = ExtMulOpLHS.getOpcode();
+  unsigned ExtMulOpRHSOpcode = ExtMulOpRHS.getOpcode();
+  if (!ISD::isExtOpcode(ExtMulOpLHSOpcode) ||
+      !ISD::isExtOpcode(ExtMulOpRHSOpcode))
+    return SDValue();
+
+  SDValue MulOpLHS = ExtMulOpLHS.getOperand(0);
+  SDValue MulOpRHS = ExtMulOpRHS.getOperand(0);
+  EVT MulOpLHSVT = MulOpLHS.getValueType();
+  if (MulOpLHSVT != MulOpRHS.getValueType())
+    return SDValue();
+
+  bool LHSIsSigned = ExtMulOpLHSOpcode == ISD::SIGN_EXTEND;
+  bool RHSIsSigned = ExtMulOpRHSOpcode == ISD::SIGN_EXTEND;
+  if (LHSIsSigned == RHSIsSigned)
+    return SDValue();
+
+  EVT AccVT = Acc.getValueType();
+  // There is no nxv2i64 version of usdot
+  if (Scalable && AccVT != MVT::nxv4i32 && AccVT != MVT::nxv4i64)
+    return SDValue();
+
+  // USDOT expects the signed operand to be last
+  if (!RHSIsSigned)
+    std::swap(MulOpLHS, MulOpRHS);
+
+  unsigned Opcode = AArch64ISD::USDOT;
+  // Partial reduction lowering for (nx)v16i8 to (nx)v4i64 requires an i32 dot
+  // product followed by a zero / sign extension
+  // Don't want this to be split because there is no nxv2i64 version of usdot
+  if ((AccVT == MVT::nxv4i64 && MulOpLHSVT == MVT::nxv16i8) ||
+      (AccVT == MVT::v4i64 && MulOpLHSVT == MVT::v16i8)) {
+    EVT AccVTI32 = (AccVT.isScalableVector()) ? MVT::nxv4i32 : MVT::v4i32;
+
+    SDValue DotI32 =
+        DAG.getNode(Opcode, DL, AccVTI32, DAG.getConstant(0, DL, AccVTI32),
+                    MulOpLHS, MulOpRHS);
+    SDValue Extended = DAG.getSExtOrTrunc(DotI32, DL, AccVT);
+    return DAG.getNode(ISD::ADD, DL, AccVT, Acc, Extended);
+  }
+
+  return DAG.getNode(Opcode, DL, AccVT, Acc, MulOpLHS, MulOpRHS);
 }
 
 SDValue
