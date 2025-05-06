@@ -506,6 +506,28 @@ define float @freeze_maximum(float %arg0, float noundef %arg1) {
   ret float %freeze
 }
 
+define float @freeze_minimumnum(float %arg0, float noundef %arg1) {
+; CHECK-LABEL: @freeze_minimumnum(
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.minimumnum.f32(float [[ARG0:%.*]], float noundef [[ARG1:%.*]])
+; CHECK-NEXT:    [[FREEZE:%.*]] = freeze float [[OP]]
+; CHECK-NEXT:    ret float [[FREEZE]]
+;
+  %op = call float @llvm.minimumnum.f32(float %arg0, float noundef %arg1)
+  %freeze = freeze float %op
+  ret float %freeze
+}
+
+define float @freeze_maximumnum(float %arg0, float noundef %arg1) {
+; CHECK-LABEL: @freeze_maximumnum(
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.maximumnum.f32(float [[ARG0:%.*]], float noundef [[ARG1:%.*]])
+; CHECK-NEXT:    [[FREEZE:%.*]] = freeze float [[OP]]
+; CHECK-NEXT:    ret float [[FREEZE]]
+;
+  %op = call float @llvm.maximumnum.f32(float %arg0, float noundef %arg1)
+  %freeze = freeze float %op
+  ret float %freeze
+}
+
 define i1 @freeze_isfpclass(float %arg0) {
 ; CHECK-LABEL: @freeze_isfpclass(
 ; CHECK-NEXT:    [[ARG0_FR:%.*]] = freeze float [[ARG0:%.*]]
