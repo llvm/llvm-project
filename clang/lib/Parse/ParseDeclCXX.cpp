@@ -2802,7 +2802,7 @@ void Parser::MaybeParseAndDiagnoseDeclSpecAfterCXX11VirtSpecifierSeq(
   // GNU-style and C++11 attributes are not allowed here, but they will be
   // handled by the caller.  Diagnose everything else.
   ParseTypeQualifierListOpt(
-      DS, AR_NoAttributesParsed, false,
+      DS, AR_NoAttributesParsed, /*AtomicOrPtrauthAllowed=*/false,
       /*IdentifierRequired=*/false, llvm::function_ref<void()>([&]() {
         Actions.CodeCompletion().CodeCompleteFunctionQualifiers(DS, D, &VS);
       }));
@@ -3472,7 +3472,7 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
     if (TemplateInfo.Kind != ParsedTemplateKind::NonTemplate &&
         DeclaratorInfo.isFirstDeclarator()) {
       Diag(CommaLoc, diag::err_multiple_template_declarators)
-          << llvm::to_underlying(TemplateInfo.Kind);
+          << TemplateInfo.Kind;
     }
 
     // Parse the next declarator.

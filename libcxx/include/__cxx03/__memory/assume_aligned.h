@@ -36,15 +36,6 @@ _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __ass
   }
 }
 
-#if _LIBCPP_STD_VER >= 20
-
-template <size_t _Np, class _Tp>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp* assume_aligned(_Tp* __ptr) {
-  return std::__assume_aligned<_Np>(__ptr);
-}
-
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___CXX03___MEMORY_ASSUME_ALIGNED_H

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Metadata.h"
+#include "../lib/IR/LLVMContextImpl.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Constants.h"
@@ -24,6 +25,10 @@
 #include "gtest/gtest.h"
 #include <optional>
 using namespace llvm;
+
+namespace llvm {
+extern cl::opt<bool> PickMergedSourceLocations;
+} // namespace llvm
 
 namespace {
 
@@ -1444,6 +1449,25 @@ TEST_F(DILocationTest, Merge) {
     auto *M2 = DILocation::getMergedLocation(A2, B);
     EXPECT_EQ(M1, M2);
   }
+
+  {
+    // If PickMergedSourceLocation is enabled, when one source location is null
+    // we should return the valid location.
+    PickMergedSourceLocations = true;
+    auto *A = DILocation::get(Context, 2, 7, N);
+    auto *M1 = DILocation::getMergedLocation(A, nullptr);
+    ASSERT_NE(nullptr, M1);
+    EXPECT_EQ(2u, M1->getLine());
+    EXPECT_EQ(7u, M1->getColumn());
+    EXPECT_EQ(N, M1->getScope());
+
+    auto *M2 = DILocation::getMergedLocation(nullptr, A);
+    ASSERT_NE(nullptr, M2);
+    EXPECT_EQ(2u, M2->getLine());
+    EXPECT_EQ(7u, M2->getColumn());
+    EXPECT_EQ(N, M2->getScope());
+    PickMergedSourceLocations = false;
+  }
 }
 
 TEST_F(DILocationTest, getDistinct) {
@@ -1568,6 +1592,44 @@ TEST_F(DILocationTest, discriminatorSpecialCases) {
   EXPECT_EQ(std::nullopt, L4->cloneByMultiplyingDuplicationFactor(0x1000));
 }
 
+TEST_F(DILocationTest, KeyInstructions) {
+  Context.pImpl->NextAtomGroup = 1;
+
+  EXPECT_EQ(Context.pImpl->NextAtomGroup, 1u);
+  DILocation *A1 =
+      DILocation::get(Context, 1, 0, getSubprogram(), nullptr, false, 1, 2);
+  // The group is only applied to the DILocation if we've built LLVM with
+  // EXPERIMENTAL_KEY_INSTRUCTIONS.
+#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
+  EXPECT_EQ(A1->getAtomGroup(), 1u);
+  EXPECT_EQ(A1->getAtomRank(), 2u);
+#else
+  EXPECT_EQ(A1->getAtomGroup(), 0u);
+  EXPECT_EQ(A1->getAtomRank(), 0u);
+#endif
+
+  // Group number 1 has been "used" so next available is 2.
+  EXPECT_EQ(Context.pImpl->NextAtomGroup, 2u);
+
+  // Set a group number higher than current + 1, then check the waterline.
+  DILocation::get(Context, 2, 0, getSubprogram(), nullptr, false, 5, 1);
+  EXPECT_EQ(Context.pImpl->NextAtomGroup, 6u);
+
+  // The waterline should be unchanged (group <= next).
+  DILocation::get(Context, 3, 0, getSubprogram(), nullptr, false, 4, 1);
+  EXPECT_EQ(Context.pImpl->NextAtomGroup, 6u);
+  DILocation::get(Context, 3, 0, getSubprogram(), nullptr, false, 5, 1);
+  EXPECT_EQ(Context.pImpl->NextAtomGroup, 6u);
+
+  // Check the waterline gets incremented by 1.
+  EXPECT_EQ(Context.incNextDILocationAtomGroup(), 6u);
+  EXPECT_EQ(Context.pImpl->NextAtomGroup, 7u);
+
+  Context.updateDILocationAtomGroupWaterline(8);
+  EXPECT_EQ(Context.pImpl->NextAtomGroup, 8u);
+  Context.updateDILocationAtomGroupWaterline(7);
+  EXPECT_EQ(Context.pImpl->NextAtomGroup, 8u);
+}
 
 typedef MetadataTest GenericDINodeTest;
 
