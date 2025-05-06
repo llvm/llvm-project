@@ -455,13 +455,10 @@ func.func @unpack_on_output(%arg0: tensor<12x2x56x56x32xf32>) -> tensor<12x56x56
 // CHECK:         %[[UNPACKED_ARG0:.+]] = linalg.unpack %[[ARG0]]
 // CHECK-SAME:      outer_dims_perm = [0, 3, 1, 2] inner_dims_pos = [3] inner_tiles = [32]
 // CHECK-SAME:      into %[[ARG0_EMPTY_UNPACK]]
-// CHECK:         %[[ARG0_EMPTY_PACK:.+]] = tensor.empty() : tensor<12x2x56x56x32xf32>
-// CHECK:         %[[PACKED_ARG0:.+]] = linalg.pack %[[UNPACKED_ARG0]]
-// CHECK-SAME:      outer_dims_perm = [0, 3, 1, 2] inner_dims_pos = [3] inner_tiles = [32]
-// CHECK-SAME:      into %[[ARG0_EMPTY_PACK]]
+// CHECK:         %[[EMPTY:.+]] = tensor.empty() : tensor<12x2x56x56x32xf32>
 // CHECK:         %[[RES:.+]] = linalg.generic
 // CHECK-SAME:      indexing_maps = [#[[$MAP]]]
-// CHECK-SAME:      outs(%[[PACKED_ARG0]]
+// CHECK-SAME:      outs(%[[EMPTY]]
 // CHECK:         %[[UNPACK:.+]] = linalg.unpack %[[RES]]
 // CHECK-SAME:      outer_dims_perm = [0, 3, 1, 2] inner_dims_pos = [3] inner_tiles = [32]
 // CHECK-SAME:      into %[[UNPACKED_ARG0]]
@@ -485,22 +482,11 @@ func.func @unpack_on_input(%arg0: tensor<12x2x56x56x32xf32>, %init: tensor<12x56
 // CHECK-LABEL: func.func @unpack_on_input
 // CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]
 // CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]
-// CHECK:         %[[ARG0_UNPACK_EMPTY:.+]] = tensor.empty() : tensor<12x56x56x64xf32>
-// CHECK:         %[[UNPACKED_ARG0:.+]] = linalg.unpack %[[ARG0]]
-// CHECK-SAME:      outer_dims_perm = [0, 3, 1, 2] inner_dims_pos = [3] inner_tiles = [32]
-// CHECK-SAME:      into %[[ARG0_UNPACK_EMPTY]]
-// CHECK:         %[[ARG1_PACK_EMPTY:.+]] = tensor.empty() : tensor<12x2x56x56x32xf32>
-// CHECK:         %[[ARG1_PACK:.+]] = linalg.pack %[[ARG1]]
-// CHECK-SAME:      outer_dims_perm = [0, 3, 1, 2] inner_dims_pos = [3] inner_tiles = [32]
-// CHECK-SAME:      into %[[ARG1_PACK_EMPTY]]
-// CHECK:         %[[ARG0_PACK_EMPTY:.+]] = tensor.empty() : tensor<12x2x56x56x32xf32>
-// CHECK:         %[[ARG0_PACK:.+]] = linalg.pack %[[UNPACKED_ARG0]]
-// CHECK-SAME:      outer_dims_perm = [0, 3, 1, 2] inner_dims_pos = [3] inner_tiles = [32]
-// CHECK-SAME:      into %[[ARG0_PACK_EMPTY]]
+// CHECK:         %[[EMPTY:.+]] = tensor.empty() : tensor<12x2x56x56x32xf32>
 // CHECK:         %[[RES:.+]] = linalg.generic
 // CHECK-SAME:      indexing_maps = [#[[$MAP]], #[[$MAP]]]
-// CHECK-SAME:      ins(%[[ARG0_PACK]]
-// CHECK-SAME:      outs(%[[ARG1_PACK]]
+// CHECK-SAME:      ins(%[[ARG0]]
+// CHECK-SAME:      outs(%[[EMPTY]]
 // CHECK:         %[[UNPACK:.+]] = linalg.unpack %[[RES]]
 // CHECK-SAME:      outer_dims_perm = [0, 3, 1, 2] inner_dims_pos = [3] inner_tiles = [32]
 // CHECK-SAME:      into %[[ARG1]]
@@ -1407,19 +1393,21 @@ func.func @push_unpack_in_padded_domain_foldable(%arg0: tensor<8x8x4x8xf32>, %de
   } -> tensor<?x64xbf16>
   return %0 : tensor<?x64xbf16>
 }
-
 // CHECK-LABEL: func.func @push_unpack_in_padded_domain_foldable
 // CHECK-SAME:    %[[ARG0:[a-zA-Z0-9]+]]
+// CHECK-SAME:    %[[ARG1:[a-zA-Z0-9]+]]
+// CHECK-SAME:    %[[ARG2:[a-zA-Z0-9]+]]
 // CHECK:         %[[EMPTY:.+]] = tensor.empty
 // CHECK:         %[[GENERIC:.+]] = linalg.generic
 // CHECK-SAME:    ins(%[[ARG0]] : tensor<8x8x4x8xf32>)
 // CHECK-SAME:    outs(%[[EMPTY]] : tensor<?x8x4x8xbf16>)
 // CHECK:         %[[UNPACK:.+]] = linalg.unpack %[[GENERIC]]
+// CHECK-SAME:    into %[[ARG2]]
 // CHECK:         return %[[UNPACK]] : tensor<?x64xbf16>
 
 // -----
 
-func.func @push_unpack_in_padded_domain_not_foldable(%arg0: tensor<8x8x4x8xf32>, %arg1: tensor<?x64xf32>) -> tensor<?x64xf32> {
+func.func @push_unpack_in_padded_domain_out_used(%arg0: tensor<8x8x4x8xf32>, %arg1: tensor<?x64xf32>) -> tensor<?x64xf32> {
   %unpack = linalg.unpack %arg0 inner_dims_pos = [0, 1] inner_tiles = [4, 8] into %arg1 : tensor<8x8x4x8xf32> -> tensor<?x64xf32>
   %0 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0, d1)>], iterator_types = ["parallel", "parallel"]} ins(%unpack : tensor<?x64xf32>) outs(%arg1 : tensor<?x64xf32>) {
   ^bb0(%in: f32, %out: f32):
@@ -1428,15 +1416,13 @@ func.func @push_unpack_in_padded_domain_not_foldable(%arg0: tensor<8x8x4x8xf32>,
   } -> tensor<?x64xf32>
   return %0 : tensor<?x64xf32>
 }
-
-// CHECK-LABEL: func.func @push_unpack_in_padded_domain_not_foldable
+// CHECK-LABEL: func.func @push_unpack_in_padded_domain_out_used
 // CHECK-SAME:    %[[ARG0:[a-zA-Z0-9]+]]
 // CHECK-SAME:    %[[ARG1:[a-zA-Z0-9]+]]
-// CHECK:         %[[UNPACK:.+]] = linalg.unpack %[[ARG0]]
-// CHECK:         %[[PACK:.+]] = linalg.pack %[[ARG1]]
-// CHECK:         %[[UNPACK1:.+]] = linalg.pack %[[UNPACK]]
+// CHECK:         %[[EMPTY:.+]] = tensor.empty
 // CHECK:         %[[GENERIC:.+]] = linalg.generic
-// CHECK-SAME:    ins(%[[UNPACK1]] : tensor<?x8x4x8xf32>)
-// CHECK-SAME:    outs(%[[PACK]] : tensor<?x8x4x8xf32>)
+// CHECK-SAME:    ins(%[[ARG0]] : tensor<8x8x4x8xf32>)
+// CHECK-SAME:    outs(%[[EMPTY]] : tensor<?x8x4x8xf32>)
 // CHECK:         %[[UNPACK2:.+]] = linalg.unpack %[[GENERIC]]
+// CHECK-SAME:    into %[[ARG1]]
 // CHECK:         return %[[UNPACK2]] : tensor<?x64xf32>
