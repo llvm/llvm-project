@@ -351,6 +351,41 @@ static void PrepareContextToReceiveMembers(TypeSystemClang &ast,
   }
 }
 
+/// Returns \c true if a forward declaration in C or C++ is actually an
+/// Objective-C++ forward declaration. Otherwise, or on error, returns
+/// \c false.
+static bool IsCppForwardDeclObjC(SymbolFileDWARF &dwarf,
+                                 const ParsedDWARFTypeAttributes &attrs) {
+  assert(attrs.is_forward_declaration);
+
+  if (Language::LanguageIsObjC(attrs.class_language))
+    return false;
+
+  TypeQuery query(attrs.name);
+  TypeResults results;
+
+  if (SymbolFileDWARFDebugMap *debug_map_symfile = dwarf.GetDebugMapSymfile())
+    debug_map_symfile->FindTypes(query, results);
+  else
+    dwarf.FindTypes(query, results);
+
+  // Check that all types we found are Objective-C++ types.
+  // Otherwise we're dealing with an actual ODR violation and
+  // we can't say for sure what language this forward declaration
+  // referred to.
+  bool all_objc_types = true;
+  results.GetTypeMap().ForEach([&](const lldb::TypeSP &t) -> bool {
+    assert(t);
+
+    all_objc_types &= Language::LanguageIsObjC(
+        t->GetForwardCompilerType().GetMinimumLanguage());
+
+    return true;
+  });
+
+  return all_objc_types;
+}
+
 ParsedDWARFTypeAttributes::ParsedDWARFTypeAttributes(const DWARFDIE &die) {
   DWARFAttributes attributes = die.GetAttributes();
   for (size_t i = 0; i < attributes.Size(); ++i) {
@@ -1810,6 +1845,9 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   }
 
   if (attrs.is_forward_declaration) {
+    if (IsCppForwardDeclObjC(*dwarf, attrs))
+      attrs.class_language = eLanguageTypeObjC_plus_plus;
+
     // See if the type comes from a Clang module and if so, track down
     // that type.
     TypeSP type_sp = ParseTypeFromClangModule(sc, die, log);
