@@ -37,6 +37,10 @@
     ret <4 x half> %res
   }
 
+  define void @unbalanced_operations_packed(<4 x half> %a) #0 {
+    ret void
+  }
+
   declare <4 x half> @llvm.cos.v4f16(<4 x half>) #1
 
   declare <4 x half> @llvm.exp.v4f16(<4 x half>) #1
@@ -333,5 +337,44 @@ body:             |
     %31:vgpr_32 = nofpexcept V_PACK_B32_F16_e64 0, killed %23, 0, killed %25, 0, 0, implicit $mode, implicit $exec
     $vgpr0 = COPY %30
     $vgpr1 = COPY %31
+    SI_RETURN implicit $vgpr0, implicit $vgpr1
+...
+
+---
+name:            unbalanced_operations_packed
+tracksRegLiveness: true
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: $vgpr0, $vgpr1
+    ; GFX9-LABEL: name: unbalanced_operations_packed
+    ; GFX9: liveins: $vgpr0, $vgpr1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[V_LOG_F16_sdwa:%[0-9]+]]:vgpr_32 = nofpexcept V_LOG_F16_sdwa 0, [[COPY]], 0, 0, 4, 2, 4, implicit $mode, implicit $exec, implicit [[COPY]](tied-def 0)
+    ; GFX9-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 14732
+    ; GFX9-NEXT: [[V_MUL_F16_sdwa:%[0-9]+]]:vgpr_32 = nofpexcept V_MUL_F16_sdwa 0, killed [[V_LOG_F16_sdwa]], 0, [[S_MOV_B32_]], 0, 0, 4, 2, 4, 6, implicit $mode, implicit $exec, implicit killed [[V_LOG_F16_sdwa]](tied-def 0)
+    ; GFX9-NEXT: [[V_LOG_F16_sdwa1:%[0-9]+]]:vgpr_32 = nofpexcept V_LOG_F16_sdwa 0, [[V_MUL_F16_sdwa]], 0, 0, 5, 2, 5, implicit $mode, implicit $exec, implicit [[V_MUL_F16_sdwa]](tied-def 0)
+    ; GFX9-NEXT: [[V_LOG_F16_sdwa2:%[0-9]+]]:vgpr_32 = nofpexcept V_LOG_F16_sdwa 0, [[COPY1]], 0, 0, 4, 2, 4, implicit $mode, implicit $exec, implicit [[COPY1]](tied-def 0)
+    ; GFX9-NEXT: [[V_LOG_F16_sdwa3:%[0-9]+]]:vgpr_32 = nofpexcept V_LOG_F16_sdwa 0, [[V_LOG_F16_sdwa2]], 0, 0, 5, 2, 5, implicit $mode, implicit $exec, implicit [[V_LOG_F16_sdwa2]](tied-def 0)
+    ; GFX9-NEXT: [[V_MUL_F16_sdwa1:%[0-9]+]]:vgpr_32 = nofpexcept V_MUL_F16_sdwa 0, killed [[V_LOG_F16_sdwa3]], 0, [[S_MOV_B32_]], 0, 0, 5, 2, 5, 6, implicit $mode, implicit $exec, implicit killed [[V_LOG_F16_sdwa3]](tied-def 0)
+    ; GFX9-NEXT: $vgpr0 = COPY [[V_MUL_F16_sdwa1]]
+    ; GFX9-NEXT: $vgpr1 = COPY [[V_LOG_F16_sdwa1]]
+    ; GFX9-NEXT: SI_RETURN implicit $vgpr0, implicit $vgpr1
+    %9:vgpr_32 = COPY $vgpr1
+    %8:vgpr_32 = COPY $vgpr0
+    %11:vgpr_32 = nofpexcept V_LOG_F16_e64 0, %9, 0, 0, implicit $mode, implicit $exec
+    %12:sreg_32 = S_MOV_B32 14732
+    %13:vgpr_32 = nofpexcept V_MUL_F16_e64 0, killed %11, 0, %12, 0, 0, implicit $mode, implicit $exec
+    %15:vgpr_32 = V_LSHRREV_B32_e64 16, %9, implicit $exec
+    %17:vgpr_32 = nofpexcept V_LOG_F16_e64 0, %15, 0, 0, implicit $mode, implicit $exec
+    %20:vgpr_32 = nofpexcept V_LOG_F16_e64 0, %8, 0, 0, implicit $mode, implicit $exec
+    %22:vgpr_32 = V_LSHRREV_B32_e64 16, %8, implicit $exec
+    %24:vgpr_32 = nofpexcept V_LOG_F16_e64 0, %22, 0, 0, implicit $mode, implicit $exec
+    %25:vgpr_32 = nofpexcept V_MUL_F16_e64 0, killed %24, 0, %12, 0, 0, implicit $mode, implicit $exec
+    %26:vgpr_32 = nofpexcept V_PACK_B32_F16_e64 0, killed %20, 0, killed %25, 0, 0, implicit $mode, implicit $exec
+    %27:vgpr_32 = nofpexcept V_PACK_B32_F16_e64 0, killed %13, 0, killed %17, 0, 0, implicit $mode, implicit $exec
+    $vgpr0 = COPY %26
+    $vgpr1 = COPY %27
     SI_RETURN implicit $vgpr0, implicit $vgpr1
 ...
