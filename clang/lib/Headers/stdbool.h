@@ -22,8 +22,8 @@
  */
 #elif !defined(__cplusplus)
 #define bool _Bool
-#define true 1
-#define false 0
+#define true (bool)1
+#define false (bool)0
 #elif defined(__GNUC__) && !defined(__STRICT_ANSI__)
 /* Define _Bool as a GNU extension. */
 #define _Bool bool
