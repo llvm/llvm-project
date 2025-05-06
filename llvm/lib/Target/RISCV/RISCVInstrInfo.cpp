@@ -3983,10 +3983,10 @@ bool RISCVInstrInfo::optimizeInstruction(MachineInstr &MI) const {
   case RISCV::MULHSU:
   case RISCV::MULHU:
   case RISCV::MULW:
-    // and rd, rs, zero => addi rd, zero, 0
     // and rd, zero, rs => addi rd, zero, 0
-    // mul* rd, rs, zero => addi rd, zero, 0
     // mul* rd, zero, rs => addi rd, zero, 0
+    // and rd, rs, zero => addi rd, zero, 0
+    // mul* rd, rs, zero => addi rd, zero, 0
     if (MI.getOperand(1).getReg() == RISCV::X0 ||
         MI.getOperand(2).getReg() == RISCV::X0) {
       MI.getOperand(1).setReg(RISCV::X0);
