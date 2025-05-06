@@ -216,8 +216,8 @@ static bool GetStatusInfo(::pid_t Pid, ProcessInstanceInfo &ProcessInfo,
     } else if (Line.consume_front("CoreDumping:")) {
       uint32_t coredumping;
       Line = Line.ltrim();
-      Line.consumeInteger(1, coredumping);
-      ProcessInfo.SetIsCoreDumping(coredumping);
+      if (!Line.consumeInteger(2, coredumping))
+        ProcessInfo.SetIsCoreDumping(coredumping);
     }
   }
   return true;
