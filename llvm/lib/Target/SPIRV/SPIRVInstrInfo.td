@@ -936,3 +936,9 @@ def OpAliasScopeListDeclINTEL: Op<5913, (outs ID:$res), (ins variable_ops),
 // SPV_INTEL_ternary_bitwise_function
 def OpBitwiseFunctionINTEL: Op<6242, (outs ID:$res), (ins TYPE:$type, ID:$a, ID:$b, ID:$c, ID:$lut_index),
                   "$res = OpBitwiseFunctionINTEL $type $a $b $c $lut_index">;
+
+//SPV_INTEL_blocking_pipes
+def OpReadPipeBlockingINTEL :Op<5946, (outs), (ins ID:$pipe, ID:$pointer, ID:$packetSize, ID:$packetAlignment),
+                   "OpReadPipeBlockingINTEL $pipe $pointer $packetSize $packetAlignment">;
+def OpWritePipeBlockingINTEL :Op<5946, (outs), (ins ID:$pipe, ID:$pointer, ID:$packetSize, ID:$packetAlignment),
+                   "OpWritePipeBlockingINTEL $pipe $pointer $packetSize $packetAlignment">;
