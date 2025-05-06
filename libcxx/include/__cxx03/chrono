@@ -953,25 +953,17 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 #  pragma GCC system_header
 #endif
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 17
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
 #  include <__cxx03/cstdint>
 #  include <__cxx03/stdexcept>
 #  include <__cxx03/string_view>
 #  include <__cxx03/vector>
 #endif
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
 #  include <__cxx03/cstring>
 #  include <__cxx03/forward_list>
 #  include <__cxx03/string>
-#endif
-
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER == 20
-#  include <__cxx03/charconv>
-#  if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
-#    include <__cxx03/locale>
-#    include <__cxx03/ostream>
-#  endif
 #endif
 
 #endif // _LIBCPP___CXX03_CHRONO
