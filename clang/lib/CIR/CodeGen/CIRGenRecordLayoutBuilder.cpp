@@ -209,6 +209,7 @@ void CIRRecordLowering::lower() {
   insertPadding();
   members.pop_back();
 
+  calculateZeroInit();
   fillOutputFields();
 }
 

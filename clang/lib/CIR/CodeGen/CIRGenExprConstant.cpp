@@ -381,9 +381,13 @@ mlir::Attribute ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &d) {
             cgm.errorNYI("tryEmitPrivateForVarInit: cxx record with bases");
             return {};
           }
-          assert(cgm.getTypes()
-                     .getCIRGenRecordLayout(cxxrd)
-                     .isZeroInitializable());
+          if (!cgm.getTypes().isZeroInitializable(cxxrd)) {
+            // To handle this case, we really need to go through
+            // emitNullConstant, but we need an attribute, not a value
+            cgm.errorNYI(
+                "tryEmitPrivateForVarInit: non-zero-initializable cxx record");
+            return {};
+          }
           return cir::ZeroAttr::get(cgm.convertType(d.getType()));
         }
       }
