@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
@@ -20,6 +21,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/ArrayRef.h"
+#include <algorithm>
 #include <cstdint>
 #include <numeric>
 #include <optional>
@@ -469,6 +471,11 @@ static bool isNotLinearizableBecauseScalable(Operation *op) {
   return containsScalableResult;
 }
 
+static bool isLinearizableCreateMaskOp(vector::CreateMaskOp createMaskOp) {
+  auto shape = createMaskOp.getType().getShape();
+  return llvm::count_if(shape, [](int64_t dim) { return dim > 1; }) <= 1;
+}
+
 static bool isNotLinearizable(Operation *op) {
 
   // Only ops that are in the vector dialect, are ConstantLike, or
@@ -484,6 +491,12 @@ static bool isNotLinearizable(Operation *op) {
   // Some ops currently don't support scalable vectors.
   if (isNotLinearizableBecauseScalable(op))
     return true;
+
+  if (auto createMaskOp = dyn_cast<vector::CreateMaskOp>(op)) {
+    if (!isLinearizableCreateMaskOp(createMaskOp)) {
+      return true;
+    }
+  }
 
   return false;
 }
@@ -527,12 +540,54 @@ void mlir::vector::populateForVectorLinearize(TypeConverter &typeConverter,
       });
 }
 
+/// Linearize vector.create_mask with at most 1 non-unit dimension. Example:
+///
+/// ```
+/// %0 = vector.create_mask %arg0, %arg1, %arg2: vector<1x16x1xi1>
+/// ```
+///
+/// becomes
+///
+/// ```
+/// %0 = arith.muli %arg0, %arg1 : index
+/// %1 = arith.muli %0, %arg2 : index
+/// %2 = vector.create_mask %1: vector<16xi1>
+/// %3 = vector.shape_cast %2: vector<16xi1> to vector<1x16x1xi1>
+/// ```
+struct LinearizeVectorCreateMask final
+    : OpConversionPattern<vector::CreateMaskOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LinearizeVectorCreateMask(const TypeConverter &typeConverter,
+                            MLIRContext *context, PatternBenefit benefit = 1)
+      : OpConversionPattern(typeConverter, context, benefit) {}
+
+  LogicalResult
+  matchAndRewrite(vector::CreateMaskOp createMaskOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    VectorType maskType = createMaskOp.getType();
+    assert(isLinearizableCreateMaskOp(createMaskOp));
+
+    Value product = adaptor.getOperands().front();
+    for (unsigned i = 1; i < maskType.getRank(); ++i) {
+      product = rewriter.create<mlir::arith::MulIOp>(
+          createMaskOp.getLoc(), product, adaptor.getOperands()[i]);
+    }
+    Type flatMaskType = getTypeConverter()->convertType(maskType);
+    auto newMask = rewriter.create<mlir::vector::CreateMaskOp>(
+        createMaskOp.getLoc(), flatMaskType, product);
+    rewriter.replaceOp(createMaskOp, newMask);
+    return success();
+  }
+};
+
 void mlir::vector::populateVectorLinearizeBasePatterns(
     const TypeConverter &typeConverter, const ConversionTarget &target,
     RewritePatternSet &patterns) {
   patterns.add<LinearizeConstantLike, LinearizeVectorizable,
-               LinearizeVectorBitCast, LinearizeVectorSplat>(
-      typeConverter, patterns.getContext());
+               LinearizeVectorCreateMask, LinearizeVectorBitCast,
+               LinearizeVectorSplat>(typeConverter, patterns.getContext());
 }
 
 void mlir::vector::populateVectorLinearizeShuffleLikeOpsPatterns(
