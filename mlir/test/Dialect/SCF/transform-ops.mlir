@@ -500,13 +500,11 @@ func.func @coalesce_i32_loops() {
   %1 = arith.constant 128 : i32
   %2 = arith.constant 2 : i32
   %3 = arith.constant 64 : i32
-  // CHECK:           %[[VAL_4:.*]] = arith.constant 64 : i32
   // CHECK:           %[[ZERO:.*]] = arith.constant 0 : i32
   // CHECK:           %[[ONE:.*]] = arith.constant 1 : i32
-  // CHECK:           %[[VAL_7:.*]] = arith.constant 32 : i32
   // CHECK:           %[[VAL_8:.*]] = arith.constant 0 : i32
   // CHECK:           %[[VAL_9:.*]] = arith.constant 1 : i32
-  // CHECK:           %[[UB:.*]] = arith.muli %[[VAL_4]], %[[VAL_7]] : i32
+  // CHECK:           %[[UB:.*]] = arith.constant 2048 : i32
   // CHECK:           scf.for %[[VAL_11:.*]] = %[[ZERO]] to %[[UB]] step %[[ONE]]  : i32 {
   scf.for %i = %0 to %1 step %2 : i32 {
     scf.for %j = %0 to %3 step %2 : i32 {

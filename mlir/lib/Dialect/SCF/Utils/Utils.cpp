@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/OpDefinition.h"
@@ -807,7 +808,7 @@ void mlir::denormalizeInductionVariable(RewriterBase &rewriter, Location loc,
 
 static OpFoldResult getProductOfIndexes(RewriterBase &rewriter, Location loc,
                                         ArrayRef<OpFoldResult> values) {
-  assert(!values.empty() && "unexecpted empty array");
+  assert(!values.empty() && "unexpected empty array");
   AffineExpr s0, s1;
   bindSymbols(rewriter.getContext(), s0, s1);
   AffineExpr mul = s0 * s1;
@@ -819,9 +820,8 @@ static OpFoldResult getProductOfIndexes(RewriterBase &rewriter, Location loc,
   return products;
 }
 
-/// Helper function to multiply a sequence of values.
-static Value getProductOfIntsOrIndexes(RewriterBase &rewriter, Location loc,
-                                       ArrayRef<Value> values) {
+Value mlir::getProductOfIntsOrIndexes(RewriterBase &rewriter, Location loc,
+                                      ArrayRef<Value> values) {
   assert(!values.empty() && "unexpected empty list");
   if (getType(values.front()).isIndex()) {
     SmallVector<OpFoldResult> ofrs = getAsOpFoldResult(values);
@@ -835,7 +835,7 @@ static Value getProductOfIntsOrIndexes(RewriterBase &rewriter, Location loc,
       continue;
     if (productOf)
       productOf =
-          rewriter.create<arith::MulIOp>(loc, productOf.value(), v).getResult();
+          rewriter.createOrFold<arith::MulIOp>(loc, productOf.value(), v);
     else
       productOf = v;
   }
@@ -848,17 +848,9 @@ static Value getProductOfIntsOrIndexes(RewriterBase &rewriter, Location loc,
   return productOf.value();
 }
 
-/// For each original loop, the value of the
-/// induction variable can be obtained by dividing the induction variable of
-/// the linearized loop by the total number of iterations of the loops nested
-/// in it modulo the number of iterations in this loop (remove the values
-/// related to the outer loops):
-///   iv_i = floordiv(iv_linear, product-of-loop-ranges-until-i) mod range_i.
-/// Compute these iteratively from the innermost loop by creating a "running
-/// quotient" of division by the range.
-static std::pair<SmallVector<Value>, SmallPtrSet<Operation *, 2>>
-delinearizeInductionVariable(RewriterBase &rewriter, Location loc,
-                             Value linearizedIv, ArrayRef<Value> ubs) {
+std::pair<SmallVector<Value>, SmallPtrSet<Operation *, 2>>
+mlir::delinearizeInductionVariable(RewriterBase &rewriter, Location loc,
+                                   Value linearizedIv, ArrayRef<Value> ubs) {
 
   if (linearizedIv.getType().isIndex()) {
     Operation *delinearizedOp =

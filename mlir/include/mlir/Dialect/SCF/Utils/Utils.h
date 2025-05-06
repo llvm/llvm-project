@@ -148,6 +148,22 @@ void denormalizeInductionVariable(RewriterBase &rewriter, Location loc,
                                   Value normalizedIv, OpFoldResult origLb,
                                   OpFoldResult origStep);
 
+/// For each original loop, the value of the induction variable can be obtained
+/// by dividing the induction variable of the linearized loop by the total
+/// number of iterations of the loops nested in it modulo the number of
+/// iterations in this loop (remove the values related to the outer loops):
+///   iv_i = floordiv(iv_linear, product-of-loop-ranges-until-i) mod range_i.
+/// Compute these iteratively from the innermost loop by creating a "running
+/// quotient" of division by the range.
+/// Returns the delinearized induction variables and the preserved users.
+std::pair<SmallVector<Value>, SmallPtrSet<Operation *, 2>>
+delinearizeInductionVariable(RewriterBase &rewriter, Location loc,
+                             Value linearizedIv, ArrayRef<Value> ubs);
+
+/// Helper function to multiply a sequence of values.
+Value getProductOfIntsOrIndexes(RewriterBase &rewriter, Location loc,
+                                ArrayRef<Value> values);
+
 /// Tile a nest of standard for loops rooted at `rootForOp` by finding such
 /// parametric tile sizes that the outer loops have a fixed number of iterations
 /// as defined in `sizes`.
