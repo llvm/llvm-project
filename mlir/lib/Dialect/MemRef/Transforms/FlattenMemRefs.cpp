@@ -119,27 +119,28 @@ static void replaceOp(T op, PatternRewriter &rewriter, Value flatMemref,
   auto loc = op->getLoc();
   llvm::TypeSwitch<Operation *>(op.getOperation())
       .template Case<memref::AllocOp>([&](auto oper) {
-        // grab flatMemref's type, and replace op with a new one. Then
-        // reinterpret it back.
-        auto flatMemrefType = cast<MemRefType>(flatMemref.getType());
-        auto loc = oper.getLoc();
         auto newAlloc = rewriter.create<memref::AllocOp>(
-            loc, flatMemrefType, oper.getAlignmentAttr());
-        auto originalType = cast<MemRefType>(oper.getType());
-
-        auto rank = originalType.getRank();
-        SmallVector<OpFoldResult, 4> sizes, strides;
-        sizes.resize(rank);
-        strides.resize(rank);
-        int64_t staticStride = 1;
-        for (int i = rank - 1; i >= 0; --i) {
-          sizes[i] = rewriter.getIndexAttr(originalType.getShape()[i]);
-          strides[i] = rewriter.getIndexAttr(staticStride);
-          staticStride *= originalType.getShape()[i];
-        }
+            loc, cast<MemRefType>(flatMemref.getType()),
+            oper.getAlignmentAttr());
+        memref::ExtractStridedMetadataOp stridedMetadata =
+            rewriter.create<memref::ExtractStridedMetadataOp>(loc, oper);
         rewriter.replaceOpWithNewOp<memref::ReinterpretCastOp>(
-            op, originalType, newAlloc,
-            /*offset=*/rewriter.getIndexAttr(0), sizes, strides);
+            op, cast<MemRefType>(oper.getType()), newAlloc,
+            /*offset=*/rewriter.getIndexAttr(0),
+            stridedMetadata.getConstifiedMixedSizes(),
+            stridedMetadata.getConstifiedMixedStrides());
+      })
+      .template Case<memref::AllocaOp>([&](auto oper) {
+        auto newAlloca = rewriter.create<memref::AllocaOp>(
+            loc, cast<MemRefType>(flatMemref.getType()),
+            oper.getAlignmentAttr());
+        memref::ExtractStridedMetadataOp stridedMetadata =
+            rewriter.create<memref::ExtractStridedMetadataOp>(loc, oper);
+        rewriter.replaceOpWithNewOp<memref::ReinterpretCastOp>(
+            op, cast<MemRefType>(oper.getType()), newAlloca,
+            /*offset=*/rewriter.getIndexAttr(0),
+            stridedMetadata.getConstifiedMixedSizes(),
+            stridedMetadata.getConstifiedMixedStrides());
       })
       .template Case<memref::LoadOp>([&](auto op) {
         auto newLoad = rewriter.create<memref::LoadOp>(
@@ -218,37 +219,6 @@ struct MemRefRewritePattern : public OpRewritePattern<T> {
     return success();
   }
 };
-
-// // For any memref op that emits a new memref.
-// template <typename T>
-// struct MemRefSourceRewritePattern : public OpRewritePattern<T> {
-//   using OpRewritePattern<T>::OpRewritePattern;
-//   LogicalResult matchAndRewrite(T op,
-//                                 PatternRewriter &rewriter) const override {
-//     if (!needFlattening(op) || !checkLayout(op))
-//       return failure();
-//     MemRefType sourceType = cast<MemRefType>(op.getType());
-
-//     auto mixedSizes = op.getMixedSizes();
-
-//     // Get flattened size, no strides.
-//     auto flattenedSize = std::accumulate(
-//         mixedSizes.begin(), mixedSizes.end(), 1,
-//         [](int64_t a, OpFoldResult b) {
-//           return a * getConstantIntValue(b).value_or(1);
-//         });
-
-//     auto flatMemrefType = MemRefType::get(
-//         /*shape=*/{flattenedSize}, sourceType.getElementType(),
-//         /*layout=*/nullptr, sourceType.getMemorySpace());
-//     auto newSource = rewriter.create<T>(
-//         op.getLoc(), flatMemrefType, op.getDynamicSizes());
-//     auto reinterpretCast = rewriter.create<memref::ReinterpretCastOp>(
-//         op.getLoc(), sourceType, newSource, op.getOffset(),
-//         op.getMixedSizes(), op.getStrides());
-//     return success();
-//   }
-// };
 
 struct FlattenMemrefsPass
     : public mlir::memref::impl::FlattenMemrefsPassBase<FlattenMemrefsPass> {
