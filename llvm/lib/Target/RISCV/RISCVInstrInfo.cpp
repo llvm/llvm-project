@@ -4049,9 +4049,10 @@ bool RISCVInstrInfo::optimizeInstruction(MachineInstr &MI) const {
     }
     break;
   case RISCV::SLTIU:
-    // sltiu rd, zero, 1 => addi rd, zero, 1
+    // sltiu rd, zero, NZC => addi rd, zero, 1
     if (MI.getOperand(1).getReg() == RISCV::X0 &&
-        MI.getOperand(2).getImm() == 1) {
+        MI.getOperand(2).getImm() != 0) {
+      MI.getOperand(2).setImm(1);
       MI.setDesc(get(RISCV::ADDI));
       return true;
     }

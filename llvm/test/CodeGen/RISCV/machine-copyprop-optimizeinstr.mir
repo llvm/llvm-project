@@ -483,7 +483,18 @@ body: |
     ; CHECK: renamable $x10 = ADDI $x0, 1
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x0
-    renamable $x10 = SLTIU renamable $x11, 1
+    renamable $x10 = SLTIU renamable $x11, 2
+    PseudoRET implicit $x10
+...
+---
+name: sltiu_noopt
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: sltiu_noopt
+    ; CHECK: renamable $x10 = SLTIU $x0, 0
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    renamable $x11 = COPY $x0
+    renamable $x10 = SLTIU renamable $x11, 0
     PseudoRET implicit $x10
 ...
 ---
