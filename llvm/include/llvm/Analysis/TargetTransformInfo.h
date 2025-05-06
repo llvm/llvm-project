@@ -202,7 +202,7 @@ enum class TailFoldingStyle {
 enum class RTCheckStyle {
   /// Branch to scalar loop if checks fails at runtime.
   ScalarFallback,
-  /// Form a mask based on elements which won't be a WAR or RAW hazard
+  /// Form a mask based on elements which won't be a WAR or RAW hazard.
   UseSafeEltsMask,
 };
 

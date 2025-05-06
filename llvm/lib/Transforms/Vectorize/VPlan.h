@@ -2889,14 +2889,14 @@ struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
   }
 };
 
-// Given a pointer A that is being stored to, and pointer B that is being
-// read from, both with unknown lengths, create a mask that disables
+// Given a pointer A that is being laoded from, and pointer B that is being
+// stored to, both with unknown lengths, create a mask that disables
 // elements which could overlap across a loop iteration. For example, if A
-// is X and B is X + 2 with VF being 4, only the final two elements of the
+// is X and B is X + 2 with VF being 4, only the first two elements of the
 // loaded vector can be stored since they don't overlap with the stored
-// vector. %b.vec = load %b ; = [s, t, u, v]
+// vector. %a.vec = load %a ; = [s, t, u, v]
 // [...]
-// store %a, %b.vec ; only u and v can be stored as their addresses don't
+// store %b, %a.vec ; only s and t can be stored as their addresses don't
 // overlap with %a + (VF - 1)
 class VPAliasLaneMaskRecipe : public VPSingleDefRecipe {
 

@@ -441,7 +441,7 @@ public:
   /// Build VPlans for the specified \p UserVF and \p UserIC if they are
   /// non-zero or all applicable candidate VFs otherwise. If vectorization and
   /// interleaving should be avoided up-front, no plans are generated.
-  /// RTChecks is a list of pointer pairs that should be checked for aliasing,
+  /// DiffChecks is a list of pointer pairs that should be checked for aliasing,
   /// setting HasAliasMask to true in the case that an alias mask is generated
   /// and the vector loop should be entered even if the pointers alias across a
   /// loop iteration.
