@@ -13,5 +13,4 @@
 #include <clc/math/gentype.inc>
 
 #undef __FLOAT_ONLY
-#undef __CLC_BODY
 #undef __CLC_FUNCTION

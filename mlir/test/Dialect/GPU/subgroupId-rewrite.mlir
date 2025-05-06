@@ -10,12 +10,12 @@ func.func @subgroupId(%sz : index, %mem: memref<index, 1>) {
     // CHECK-NEXT: %[[TIDX:.*]] = gpu.thread_id  x
     // CHECK-NEXT: %[[TIDY:.*]] = gpu.thread_id  y
     // CHECK-NEXT: %[[TIDZ:.*]] = gpu.thread_id  z
-    // CHECK-NEXT: %[[T0:.*]] = index.mul %[[DIMY]], %[[TIDZ]]
-    // CHECK-NEXT: %[[T1:.*]] = index.add %[[T0]], %[[TIDY]]
-    // CHECK-NEXT: %[[T2:.*]] = index.mul %[[DIMX]], %[[T1]]
-    // CHECK-NEXT: %[[T3:.*]] = index.add %[[TIDX]], %[[T2]]
+    // CHECK-NEXT: %[[T0:.*]] = arith.muli %[[DIMY]], %[[TIDZ]] : index
+    // CHECK-NEXT: %[[T1:.*]] = arith.addi %[[T0]], %[[TIDY]] : index
+    // CHECK-NEXT: %[[T2:.*]] = arith.muli %[[DIMX]], %[[T1]] : index
+    // CHECK-NEXT: %[[T3:.*]] = arith.addi %[[TIDX]], %[[T2]] : index
     // CHECK-NEXT: %[[T4:.*]] = gpu.subgroup_size : index
-    // CHECK-NEXT: %[[T5:.*]] = index.divu %[[T3]], %[[T4]]
+    // CHECK-NEXT: %[[T5:.*]] = arith.divui %[[T3]], %[[T4]] : index
     %idz = gpu.subgroup_id : index
     memref.store %idz, %mem[] : memref<index, 1>
     gpu.terminator

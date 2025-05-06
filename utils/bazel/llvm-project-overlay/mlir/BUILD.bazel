@@ -3421,14 +3421,29 @@ cc_library(
         ":Analysis",
         ":FunctionInterfaces",
         ":GPUDialect",
+        ":GPUUtils",
         ":IR",
+        ":InliningUtils",
         ":MemRefDialect",
         ":Pass",
         ":TransformUtils",
         ":VectorDialect",
+        ":VectorTransforms",
         ":XeGPUDialect",
         ":XeGPUPassIncGen",
+        ":XeGPUUtils",
         "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "XeGPUUtils",
+    srcs = glob(["lib/Dialect/XeGPU/Utils/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/XeGPU/Utils/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":XeGPUDialect",
     ],
 )
 
@@ -3786,6 +3801,7 @@ cc_library(
         ":ControlFlowToSCF",
         ":ControlFlowToSPIRV",
         ":ConversionPassIncGen",
+        ":ConvertToEmitC",
         ":ConvertToLLVM",
         ":FuncToEmitC",
         ":FuncToLLVM",
@@ -3904,6 +3920,7 @@ cc_library(
         ":BufferizationInterfaces",
         ":ControlFlowDialect",
         ":ControlFlowInterfaces",
+        ":ConvertToEmitCInterface",
         ":DestinationStyleOpInterface",
         ":FunctionInterfaces",
         ":IR",
@@ -4317,6 +4334,7 @@ cc_library(
         ":BytecodeOpInterface",
         ":CallOpInterfaces",
         ":ControlFlowInterfaces",
+        ":ConvertToEmitCInterface",
         ":ConvertToLLVMInterface",
         ":FuncIncGen",
         ":FunctionInterfaces",
@@ -4396,6 +4414,7 @@ cc_library(
     deps = [
         ":AMXTransforms",
         ":AffineTransformOps",
+        ":ArithToEmitC",
         ":ArithToLLVM",
         ":BufferizationTransformOps",
         ":BuiltinToLLVMIRTranslation",
@@ -4403,6 +4422,7 @@ cc_library(
         ":ControlFlowToLLVM",
         ":DLTITransformOps",
         ":FuncExtensions",
+        ":FuncToEmitC",
         ":FuncToLLVM",
         ":FuncTransformOps",
         ":GPUToGPURuntimeTransforms",
@@ -4414,6 +4434,7 @@ cc_library(
         ":LinalgTransformOps",
         ":MPIToLLVM",
         ":MathToLLVM",
+        ":MemRefToEmitC",
         ":MemRefToLLVM",
         ":MemRefTransformOps",
         ":MeshDialect",
@@ -4423,6 +4444,7 @@ cc_library(
         ":OpenMPToLLVM",
         ":ROCDLTarget",
         ":ROCDLToLLVMIRTranslation",
+        ":SCFToEmitC",
         ":SCFTransformOps",
         ":SparseTensorTransformOps",
         ":TensorExtensions",
@@ -6740,6 +6762,7 @@ cc_library(
     ],
     deps = [
         ":ConversionPassIncGen",
+        ":ConvertToEmitCInterface",
         ":EmitCDialect",
         ":FuncDialect",
         ":Pass",
@@ -7491,6 +7514,7 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":ConversionPassIncGen",
+        ":ConvertToEmitCInterface",
         ":EmitCDialect",
         ":EmitCTransforms",
         ":IR",
@@ -7643,6 +7667,34 @@ cc_library(
 )
 
 cc_library(
+    name = "ConvertToEmitCInterface",
+    hdrs = ["include/mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"],
+    includes = ["include"],
+    deps = [
+        ":ConversionPassIncGen",
+        ":IR",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "ConvertToEmitC",
+    srcs = ["lib/Conversion/ConvertToEmitC/ConvertToEmitCPass.cpp"],
+    hdrs = ["include/mlir/Conversion/ConvertToEmitC/ConvertToEmitCPass.h"],
+    includes = ["include"],
+    deps = [
+        ":ConversionPassIncGen",
+        ":ConvertToEmitCInterface",
+        ":EmitCDialect",
+        ":IR",
+        ":LLVMCommonConversion",
+        ":Pass",
+        ":TransformUtils",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "FuncToLLVM",
     srcs = [
         "lib/Conversion/FuncToLLVM/FuncToLLVM.cpp",
@@ -7774,6 +7826,7 @@ cc_library(
     ],
     deps = [
         ":ConversionPassIncGen",
+        ":ConvertToEmitCInterface",
         ":EmitCDialect",
         ":IR",
         ":MemRefDialect",
@@ -7893,6 +7946,7 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":ConversionPassIncGen",
+        ":ConvertToEmitCInterface",
         ":EmitCDialect",
         ":EmitCTransforms",
         ":IR",
@@ -8749,6 +8803,7 @@ cc_library(
         ":ControlFlowDialect",
         ":ControlFlowTransforms",
         ":ConversionPasses",
+        ":ConvertToEmitC",
         ":ConvertToLLVM",
         ":DLTIDialect",
         ":EmitCDialect",
@@ -9516,6 +9571,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":FuncDialect",
+        ":IR",
         ":OpenACCDialect",
         ":OpenACCPassIncGen",
         ":Pass",
@@ -11753,6 +11809,7 @@ cc_library(
         ":CastInterfaces",
         ":CommonFolders",
         ":ControlFlowInterfaces",
+        ":ConvertToEmitCInterface",
         ":ConvertToLLVMInterface",
         ":DestinationStyleOpInterface",
         ":IR",
@@ -12029,6 +12086,7 @@ cc_library(
         ":CallOpInterfaces",
         ":CastInterfaces",
         ":ControlFlowInterfaces",
+        ":ConvertToEmitCInterface",
         ":ConvertToLLVMInterface",
         ":CopyOpInterface",
         ":DialectUtils",
