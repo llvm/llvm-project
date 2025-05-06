@@ -643,7 +643,7 @@ INTERCEPTOR(char*, __strdup, const char *s) {
 }
 #endif // ASAN_INTERCEPT___STRDUP
 
-#  if SANITIZER_INTERCEPT_STRCPY
+#  if ASAN_INTERCEPT_STRCPY
 INTERCEPTOR(char*, strncpy, char *to, const char *from, usize size) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, strncpy);
