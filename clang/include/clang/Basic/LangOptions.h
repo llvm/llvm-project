@@ -78,8 +78,6 @@ public:
   using RoundingMode = llvm::RoundingMode;
   using CFBranchLabelSchemeKind = clang::CFBranchLabelSchemeKind;
 
-  LangOptionsBase() = default;
-
   enum GCMode { NonGC, GCOnly, HybridGC };
   enum StackProtectorMode { SSPOff, SSPOn, SSPStrong, SSPReq };
 
