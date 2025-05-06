@@ -113,9 +113,6 @@ VPBasicBlock *PlainCFGBuilder::getOrCreateVPBB(BasicBlock *BB) {
     return VPBB;
   }
 
-  if (!TheLoop->contains(BB))
-    return Plan->getExitBlock(BB);
-
   // Create new VPBB.
   StringRef Name = BB->getName();
   LLVM_DEBUG(dbgs() << "Creating VPBasicBlock for " << Name << "\n");
@@ -249,6 +246,8 @@ std::unique_ptr<VPlan> PlainCFGBuilder::buildPlainCFG(
     DenseMap<VPBlockBase *, BasicBlock *> &VPB2IRBB) {
   VPIRBasicBlock *Entry = cast<VPIRBasicBlock>(Plan->getEntry());
   BB2VPBB[Entry->getIRBasicBlock()] = Entry;
+  for (VPIRBasicBlock *ExitVPBB : Plan->getExitBlocks())
+    BB2VPBB[ExitVPBB->getIRBasicBlock()] = ExitVPBB;
 
   // 1. Scan the body of the loop in a topological order to visit each basic
   // block after having visited its predecessor basic blocks. Create a VPBB for
@@ -410,9 +409,12 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
   VPBlockUtils::disconnectBlocks(PreheaderVPBB, HeaderVPB);
   VPBlockUtils::disconnectBlocks(LatchVPBB, HeaderVPB);
   VPBlockBase *Succ = LatchVPBB->getSingleSuccessor();
-  assert(LatchVPBB->getNumSuccessors() <= 1 &&
-         "Latch has more than one successor");
-  LatchVPBB->removeSuccessor(Succ);
+  assert(Succ && "Latch expected to be left with a single successor");
+
+  auto *PlaceHolder = Plan.createVPBasicBlock("Region place holder");
+  VPBlockUtils::insertOnEdge(LatchVPBB, Succ, PlaceHolder);
+  VPBlockUtils::disconnectBlocks(LatchVPBB, PlaceHolder);
+  VPBlockUtils::connectBlocks(PreheaderVPBB, PlaceHolder);
 
   auto *R = Plan.createVPRegionBlock(HeaderVPB, LatchVPBB, "",
                                      false /*isReplicator*/);
@@ -425,8 +427,9 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
       VPBB->setParent(R);
 
   VPBlockUtils::insertBlockAfter(R, PreheaderVPBB);
-  R->setOneSuccessor(Succ);
-  Succ->replacePredecessor(LatchVPBB, R);
+  VPBlockUtils::insertOnEdge(PlaceHolder, Succ, R);
+  VPBlockUtils::disconnectBlocks(R, PlaceHolder);
+  VPBlockUtils::disconnectBlocks(PlaceHolder, R);
 }
 
 // Add the necessary canonical IV and branch recipes required to control the
@@ -481,11 +484,12 @@ void VPlanTransforms::prepareForVectorization(VPlan &Plan, Type *InductionTy,
   VPBlockBase *LatchExitVPB = LatchVPB->getNumSuccessors() == 2
                                   ? LatchVPB->getSuccessors()[0]
                                   : nullptr;
-  if (LatchExitVPB) {
-    LatchVPB->getSuccessors()[0] = MiddleVPBB;
-    MiddleVPBB->setPredecessors({LatchVPB});
-    MiddleVPBB->setSuccessors({LatchExitVPB});
-    LatchExitVPB->replacePredecessor(LatchVPB, MiddleVPBB);
+  // Canonical LatchVPB has header block as last successor. If it has another
+  // successor, the latter is an exit block - insert middle block on its edge.
+  // Otherwise, add middle block as another successor retaining header as last.
+  if (LatchVPB->getNumSuccessors() == 2) {
+    VPBlockBase *LatchExitVPB = LatchVPB->getSuccessors()[0];
+    VPBlockUtils::insertOnEdge(LatchVPB, LatchExitVPB, MiddleVPBB);
   } else {
     VPBlockUtils::connectBlocks(LatchVPB, MiddleVPBB);
     LatchVPB->swapSuccessors();
