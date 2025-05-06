@@ -52,9 +52,10 @@ shared demangler library.
 Testing
 -------
 
-The main ItaniumDemangle test-suite lives in llvm/unittests/Demangle/.
-The libcxxabi/test/{unit,}test_demangle.cpp suite tests basic functionality
-of __cxa_demangle.
+The tests are split up between libcxxabi/test/{unit,}test_demangle.cpp, and
+llvm/unittests/Demangle. The llvm directory should only get tests for stuff not
+included in the core library. In the future though, we should probably move all
+the tests to LLVM.
 
 It is also a really good idea to run libFuzzer after non-trivial changes, see
 libcxxabi/fuzz/cxa_demangle_fuzzer.cpp and https://llvm.org/docs/LibFuzzer.html.
