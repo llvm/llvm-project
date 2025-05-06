@@ -29,6 +29,27 @@ define void @memcpy_i8(ptr %dest, ptr %src, i8 zeroext %len) {
   ret void
 }
 
+; CHECK-LABEL: memcpy_i8_fixed_32
+; CHECK: i64.load
+; CHECK: i64.store
+; CHECK: i64.load
+; CHECK: i64.store
+; CHECK: i64.load
+; CHECK: i64.store
+; CHECK: i64.load
+; CHECK: i64.store
+define void @memcpy_i8_fixed_32(ptr %dest, ptr %src) {
+  call void @llvm.memcpy.p0.p0.i8(ptr %dest, ptr %src, i8 32, i1 0)
+  ret void
+}
+
+; CHECK-LABEL: memcpy_i8_fixed_36
+; BULK-MEM: memory.copy
+define void @memcpy_i8_fixed_36(ptr %dest, ptr %src) {
+  call void @llvm.memcpy.p0.p0.i8(ptr %dest, ptr %src, i8 36, i1 0)
+  ret void
+}
+
 ; CHECK-LABEL: memmove_i8:
 ; NO-BULK-MEM-NOT: memory.copy
 ; BULK-MEM-NEXT: .functype memmove_i8 (i32, i32, i32) -> ()
@@ -41,6 +62,27 @@ define void @memcpy_i8(ptr %dest, ptr %src, i8 zeroext %len) {
 ; BULK-MEM-NEXT: return
 define void @memmove_i8(ptr %dest, ptr %src, i8 zeroext %len) {
   call void @llvm.memmove.p0.p0.i8(ptr %dest, ptr %src, i8 %len, i1 0)
+  ret void
+}
+
+; CHECK-LABEL: memmove_i8_fixed_32
+; CHECK: i64.load
+; CHECK: i64.load
+; CHECK: i64.load
+; CHECK: i64.load
+; CHECK: i64.store
+; CHECK: i64.store
+; CHECK: i64.store
+; CHECK: i64.store
+define void @memmove_i8_fixed_32(ptr %dest, ptr %src) {
+  call void @llvm.memmove.p0.p0.i8(ptr %dest, ptr %src, i8 32, i1 0)
+  ret void
+}
+
+; CHECK-LABEL: memmove_i8_fixed_36
+; BULK-MEM: memory.copy
+define void @memmove_i8_fixed_36(ptr %dest, ptr %src) {
+  call void @llvm.memmove.p0.p0.i8(ptr %dest, ptr %src, i8 36, i1 0)
   ret void
 }
 
@@ -59,6 +101,23 @@ define void @memset_i8(ptr %dest, i8 %val, i8 zeroext %len) {
   ret void
 }
 
+; CHECK-LABEL: memset_i8_fixed_32
+; CHECK: i64.store
+; CHECK: i64.store
+; CHECK: i64.store
+; CHECK: i64.store
+define void @memset_i8_fixed_32(ptr %dest, i8 %val) {
+  call void @llvm.memset.p0.i8(ptr %dest, i8 %val, i8 32, i1 0)
+  ret void
+}
+
+; CHECK-LABEL: memset_i8_fixed_36
+; BULK-MEM: memory.fill
+define void @memset_i8_fixed_36(ptr %dest, i8 %val) {
+  call void @llvm.memset.p0.i8(ptr %dest, i8 %val, i8 36, i1 0)
+  ret void
+}
+
 ; CHECK-LABEL: memcpy_i32:
 ; NO-BULK-MEM-NOT: memory.copy
 ; BULK-MEM-NEXT: .functype memcpy_i32 (i32, i32, i32) -> ()
@@ -71,6 +130,27 @@ define void @memset_i8(ptr %dest, i8 %val, i8 zeroext %len) {
 ; BULK-MEM-NEXT: return
 define void @memcpy_i32(ptr %dest, ptr %src, i32 %len) {
   call void @llvm.memcpy.p0.p0.i32(ptr %dest, ptr %src, i32 %len, i1 0)
+  ret void
+}
+
+; CHECK-LABEL: memcpy_i32_fixed_32
+; CHECK: i64.load
+; CHECK: i64.store
+; CHECK: i64.load
+; CHECK: i64.store
+; CHECK: i64.load
+; CHECK: i64.store
+; CHECK: i64.load
+; CHECK: i64.store
+define void @memcpy_i32_fixed_32(ptr %dest, ptr %src) {
+  call void @llvm.memcpy.p0.p0.i32(ptr %dest, ptr %src, i32 32, i1 0)
+  ret void
+}
+
+; CHECK-LABEL: memcpy_i32_fixed_36
+; BULK-MEM: memory.copy
+define void @memcpy_i32_fixed_36(ptr %dest, ptr %src) {
+  call void @llvm.memcpy.p0.p0.i32(ptr %dest, ptr %src, i32 36, i1 0)
   ret void
 }
 
@@ -89,6 +169,27 @@ define void @memmove_i32(ptr %dest, ptr %src, i32 %len) {
   ret void
 }
 
+; CHECK-LABEL: memmove_i32_fixed_32
+; CHECK: i64.load
+; CHECK: i64.load
+; CHECK: i64.load
+; CHECK: i64.load
+; CHECK: i64.store
+; CHECK: i64.store
+; CHECK: i64.store
+; CHECK: i64.store
+define void @memmove_i32_fixed_32(ptr %dest, ptr %src) {
+  call void @llvm.memmove.p0.p0.i32(ptr %dest, ptr %src, i32 32, i1 0)
+  ret void
+}
+
+; CHECK-LABEL: memmove_i32_fixed_36
+; BULK-MEM: memory.copy
+define void @memmove_i32_fixed_36(ptr %dest, ptr %src) {
+  call void @llvm.memmove.p0.p0.i32(ptr %dest, ptr %src, i32 36, i1 0)
+  ret void
+}
+
 ; CHECK-LABEL: memset_i32:
 ; NO-BULK-MEM-NOT: memory.fill
 ; BULK-MEM-NEXT: .functype memset_i32 (i32, i32, i32) -> ()
@@ -101,6 +202,23 @@ define void @memmove_i32(ptr %dest, ptr %src, i32 %len) {
 ; BULK-MEM-NEXT: return
 define void @memset_i32(ptr %dest, i8 %val, i32 %len) {
   call void @llvm.memset.p0.i32(ptr %dest, i8 %val, i32 %len, i1 0)
+  ret void
+}
+
+; CHECK-LABEL: memset_i32_fixed_32
+; CHECK: i64.store
+; CHECK: i64.store
+; CHECK: i64.store
+; CHECK: i64.store
+define void @memset_i32_fixed_32(ptr %dest, i8 %val) {
+  call void @llvm.memset.p0.i32(ptr %dest, i8 %val, i32 32, i1 0)
+  ret void
+}
+
+; CHECK-LABEL: memset_i32_fixed_36
+; BULK-MEM: memory.fill
+define void @memset_i32_fixed_36(ptr %dest, i8 %val) {
+  call void @llvm.memset.p0.i32(ptr %dest, i8 %val, i32 36, i1 0)
   ret void
 }
 
