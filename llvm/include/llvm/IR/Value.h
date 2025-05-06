@@ -915,26 +915,6 @@ const Use &Use::operator=(const Use &RHS) {
   return *this;
 }
 
-void Use::addToList(Use **List) {
-  Next = *List;
-  if (Next)
-    Next->Prev = &Next;
-  Prev = List;
-  *Prev = this;
-}
-
-void Use::removeFromList() {
-  if (Prev) {
-    *Prev = Next;
-    if (Next) {
-      Next->Prev = Prev;
-      Next = nullptr;
-    }
-
-    Prev = nullptr;
-  }
-}
-
 template <class Compare> void Value::sortUseList(Compare Cmp) {
   if (!UseList || !UseList->Next)
     // No need to sort 0 or 1 uses.

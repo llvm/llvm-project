@@ -84,8 +84,25 @@ private:
   Use **Prev = nullptr;
   User *Parent = nullptr;
 
-  inline void addToList(Use **List);
-  inline void removeFromList();
+  void addToList(Use **List) {
+    Next = *List;
+    if (Next)
+      Next->Prev = &Next;
+    Prev = List;
+    *Prev = this;
+  }
+
+  void removeFromList() {
+    if (Prev) {
+      *Prev = Next;
+      if (Next) {
+        Next->Prev = Prev;
+        Next = nullptr;
+      }
+
+      Prev = nullptr;
+    }
+  }
 };
 
 /// Allow clients to treat uses just like values when using
