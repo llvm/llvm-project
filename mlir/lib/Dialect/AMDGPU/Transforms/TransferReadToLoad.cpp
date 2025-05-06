@@ -175,7 +175,6 @@ struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
     // It computes the multiplied sizes of all dimensions instead of taking
     // the maximum of each dimension size * stride.
     SmallVector<AffineExpr> productExpressions;
-    SmallVector<Value> productResults;
     unsigned sourceRank = cast<ShapedType>(src.getType()).getRank();
 
     SmallVector<AffineExpr> symbols(2 * sourceRank);
