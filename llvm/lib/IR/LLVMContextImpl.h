@@ -316,7 +316,7 @@ template <> struct MDNodeKeyImpl<DILocation> {
   Metadata *InlinedAt;
   bool ImplicitCode;
   uint64_t AtomGroup : 61;
-  uint8_t AtomRank : 3;
+  uint64_t AtomRank : 3;
 
   MDNodeKeyImpl(unsigned Line, unsigned Column, Metadata *Scope,
                 Metadata *InlinedAt, bool ImplicitCode, uint64_t AtomGroup,
@@ -338,7 +338,7 @@ template <> struct MDNodeKeyImpl<DILocation> {
 
   unsigned getHashValue() const {
     return hash_combine(Line, Column, Scope, InlinedAt, ImplicitCode, AtomGroup,
-                        AtomRank);
+                        (uint8_t)AtomRank);
   }
 };
 
