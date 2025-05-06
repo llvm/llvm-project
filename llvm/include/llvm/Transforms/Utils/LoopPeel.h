@@ -22,10 +22,13 @@ namespace llvm {
 bool canPeel(const Loop *L);
 
 /// VMap is the value-map that maps instructions from the original loop to
-/// instructions in the last peeled-off iteration.
-bool peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI, ScalarEvolution *SE,
-              DominatorTree &DT, AssumptionCache *AC, bool PreserveLCSSA,
-              ValueToValueMapTy &VMap);
+/// instructions in the last peeled-off iteration. If \p PeelLast is true, peel
+/// off the last \p PeelCount iterations from \p L. In that case, the caller has
+/// to make sure that the exit condition can be adjusted when peeling and that
+/// the loop executes at least 2 iterations.
+bool peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
+              ScalarEvolution *SE, DominatorTree &DT, AssumptionCache *AC,
+              bool PreserveLCSSA, ValueToValueMapTy &VMap);
 
 TargetTransformInfo::PeelingPreferences
 gatherPeelingPreferences(Loop *L, ScalarEvolution &SE,
