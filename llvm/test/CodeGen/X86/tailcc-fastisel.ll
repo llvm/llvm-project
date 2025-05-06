@@ -6,8 +6,8 @@
 define tailcc ptr @"visit_array_aux<`Reference>"(%0 %arg, i32 %arg1) nounwind {
 fail:                                             ; preds = %entry
   %tmp20 = tail call tailcc ptr @"visit_array_aux<`Reference>"(%0 %arg, i32 undef) ; <ptr> [#uses=1]
-; DARWIN64: jmp "_visit_array_aux<`Reference>" ## TAILCALL
-; UEFI64: jmp	"visit_array_aux<`Reference>"   # TAILCALL
+; DARWIN64: jmp "_visit_array_aux<`Reference>" # TAILCALL
+; UEFI64:   jmp	"visit_array_aux<`Reference>"  # TAILCALL
   ret ptr %tmp20
 }
 
