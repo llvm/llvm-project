@@ -1476,54 +1476,44 @@ static bool checkForRightSrcRootAccess(MachineInstr *Def0MI,
       Def1DstUnused->getImm() != AMDGPU::SDWA::DstUnused::UNUSED_PAD)
     return false;
 
-  MachineOperand *Def1Src0 =
-      TII->getNamedOperand(*Def1MI, AMDGPU::OpName::src0);
-  MachineOperand *Def1Src1 =
-      TII->getNamedOperand(*Def1MI, AMDGPU::OpName::src1);
-  MachineOperand *Def0Src0 =
-      TII->getNamedOperand(*Def0MI, AMDGPU::OpName::src0);
-  MachineOperand *Def0Src1 =
-      TII->getNamedOperand(*Def0MI, AMDGPU::OpName::src1);
-
-  auto checkForDef0MIAccess = [&]() -> bool {
-    if (Def0Src0 && Def0Src0->isReg() && (Def0Src0->getReg() == SrcRootReg)) {
-      MachineOperand *Def0Src0Sel =
-          TII->getNamedOperand(*Def0MI, AMDGPU::OpName::src0_sel);
-      if (!Def0Src0Sel ||
-          Def0Src0Sel->getImm() == AMDGPU::SDWA::SdwaSel::WORD_0)
-        return true;
+  const auto checkSrcSel = [&](MachineInstr *DefMI, AMDGPU::OpName SrcName,
+                               AMDGPU::OpName SrcSelName,
+                               AMDGPU::SDWA::SdwaSel SdwaSel) -> bool {
+    MachineOperand *DefSrc = TII->getNamedOperand(*DefMI, SrcName);
+    if (DefSrc && DefSrc->isReg() && (DefSrc->getReg() == SrcRootReg)) {
+      MachineOperand *DefSrcSel = TII->getNamedOperand(*DefMI, SrcSelName);
+      if (SdwaSel == AMDGPU::SDWA::SdwaSel::WORD_0) {
+        if (!DefSrcSel || DefSrcSel->getImm() == SdwaSel)
+          return true;
+      } else {
+        assert(SdwaSel == AMDGPU::SDWA::SdwaSel::WORD_1 &&
+               "Not valid SDWA SrcSel operand");
+        if (DefSrcSel && DefSrcSel->getImm() == SdwaSel)
+          return true;
+      }
     }
-
-    if (Def0Src1 && Def0Src1->isReg() && (Def0Src1->getReg() == SrcRootReg)) {
-      MachineOperand *Def0Src1Sel =
-          TII->getNamedOperand(*Def0MI, AMDGPU::OpName::src1_sel);
-      if (!Def0Src1Sel ||
-          Def0Src1Sel->getImm() == AMDGPU::SDWA::SdwaSel::WORD_0)
-        return true;
-    }
-
     return false;
   };
 
-  if (Def1Src0 && Def1Src0->isReg() && (Def1Src0->getReg() == SrcRootReg)) {
-    MachineOperand *Def1Src0Sel =
-        TII->getNamedOperand(*Def1MI, AMDGPU::OpName::src0_sel);
-    if (!Def1Src0Sel || Def1Src0Sel->getImm() != AMDGPU::SDWA::SdwaSel::WORD_1)
-      return false;
+  const auto checkForDef0MIAccess = [&]() -> bool {
+    if (checkSrcSel(Def0MI, AMDGPU::OpName::src0, AMDGPU::OpName::src0_sel,
+                    AMDGPU::SDWA::SdwaSel::WORD_0))
+      return true;
+    if (checkSrcSel(Def0MI, AMDGPU::OpName::src1, AMDGPU::OpName::src1_sel,
+                    AMDGPU::SDWA::SdwaSel::WORD_0))
+      return true;
+    return false;
+  };
 
+  if (checkSrcSel(Def1MI, AMDGPU::OpName::src0, AMDGPU::OpName::src0_sel,
+                  AMDGPU::SDWA::SdwaSel::WORD_1))
     if (checkForDef0MIAccess())
       return true;
-  }
 
-  if (Def1Src1 && Def1Src1->isReg() && (Def1Src1->getReg() == SrcRootReg)) {
-    MachineOperand *Def1Src1Sel =
-        TII->getNamedOperand(*Def1MI, AMDGPU::OpName::src1_sel);
-    if (!Def1Src1Sel || Def1Src1Sel->getImm() != AMDGPU::SDWA::SdwaSel::WORD_1)
-      return false;
-
+  if (checkSrcSel(Def1MI, AMDGPU::OpName::src1, AMDGPU::OpName::src1_sel,
+                  AMDGPU::SDWA::SdwaSel::WORD_1))
     if (checkForDef0MIAccess())
       return true;
-  }
 
   return false;
 }
@@ -1576,7 +1566,7 @@ void SIPeepholeSDWA::convertMIToSDWAWithOpsel(MachineInstr *MI,
       TII->getNamedOperand(*MI, AMDGPU::OpName::dst_unused);
   assert(DstUnused &&
          AMDGPU::hasNamedOperand(SDWAOpcode, AMDGPU::OpName::dst_unused));
-  assert(!(DstUnused->getImm() == AMDGPU::SDWA::DstUnused::UNUSED_PRESERVE) &&
+  assert(DstUnused->getImm() != AMDGPU::SDWA::DstUnused::UNUSED_PRESERVE &&
          "Dst_unused should not be UNUSED_PRESERVE already");
   DstUnused->setImm(AMDGPU::SDWA::DstUnused::UNUSED_PRESERVE);
 
@@ -1589,31 +1579,27 @@ void SIPeepholeSDWA::convertMIToSDWAWithOpsel(MachineInstr *MI,
   MI->addOperand(NewSrcImplitMO);
   MI->tieOperands(PreserveDstIdx, MI->getNumOperands() - 1);
 
-  MachineOperand *Src0 = TII->getNamedOperand(*MI, AMDGPU::OpName::src0);
-  assert(Src0 && AMDGPU::hasNamedOperand(SDWAOpcode, AMDGPU::OpName::src0));
-  if (Src0->isReg() && (Src0->getReg() == SrcMO.getReg())) {
-    MachineOperand *Src0Sel =
-        TII->getNamedOperand(*MI, AMDGPU::OpName::src0_sel);
-    assert(Src0Sel &&
-           AMDGPU::hasNamedOperand(SDWAOpcode, AMDGPU::OpName::src0_sel));
-    Src0Sel->setImm(OpSel);
+  auto modifySrcSelIntoOpSel = [&](AMDGPU::OpName SrcName,
+                                   AMDGPU::OpName SrcSelName) -> bool {
+    MachineOperand *Src = TII->getNamedOperand(*MI, SrcName);
+    assert(Src && AMDGPU::hasNamedOperand(SDWAOpcode, SrcName));
+    if (Src->isReg() && (Src->getReg() == SrcMO.getReg())) {
+      MachineOperand *SrcSel = TII->getNamedOperand(*MI, SrcSelName);
+      assert(SrcSel && AMDGPU::hasNamedOperand(SDWAOpcode, SrcSelName));
+      SrcSel->setImm(OpSel);
 
-    LLVM_DEBUG(dbgs() << "\nInto:" << *MI << '\n');
+      LLVM_DEBUG(dbgs() << "\nInto:" << *MI << '\n');
+      return true;
+    }
+
+    return false;
+  };
+
+  if (modifySrcSelIntoOpSel(AMDGPU::OpName::src0, AMDGPU::OpName::src0_sel))
     return;
-  }
 
-  MachineOperand *Src1 = TII->getNamedOperand(*MI, AMDGPU::OpName::src1);
-  assert(Src1 && AMDGPU::hasNamedOperand(SDWAOpcode, AMDGPU::OpName::src1));
-  if (Src1->isReg() && (Src1->getReg() == SrcMO.getReg())) {
-    MachineOperand *Src1Sel =
-        TII->getNamedOperand(*MI, AMDGPU::OpName::src1_sel);
-    assert(Src1Sel &&
-           AMDGPU::hasNamedOperand(SDWAOpcode, AMDGPU::OpName::src1_sel));
-    Src1Sel->setImm(OpSel);
-
-    LLVM_DEBUG(dbgs() << "\nInto:" << *MI << '\n');
+  if (modifySrcSelIntoOpSel(AMDGPU::OpName::src1, AMDGPU::OpName::src1_sel))
     return;
-  }
 }
 
 // BackTracks the given Parent MI to look for any of its use operand that has
