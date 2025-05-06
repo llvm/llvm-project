@@ -5686,8 +5686,7 @@ PerformBUILD_VECTORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   return DAG.getNode(ISD::BITCAST, DL, VT, PRMT);
 }
 
-static SDValue combineADDRSPACECAST(SDNode *N,
-                                    TargetLowering::DAGCombinerInfo &DCI) {
+static SDValue PerformADDRSPACECASTCombine(SDNode *N) {
   auto *ASCN1 = cast<AddrSpaceCastSDNode>(N);
 
   if (auto *ASCN2 = dyn_cast<AddrSpaceCastSDNode>(ASCN1->getOperand(0))) {
@@ -5736,7 +5735,7 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
     case ISD::BUILD_VECTOR:
       return PerformBUILD_VECTORCombine(N, DCI);
     case ISD::ADDRSPACECAST:
-      return combineADDRSPACECAST(N, DCI);
+      return PerformADDRSPACECASTCombine(N);
   }
   return SDValue();
 }
