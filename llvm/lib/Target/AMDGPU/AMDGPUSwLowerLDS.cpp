@@ -1256,7 +1256,7 @@ bool AMDGPUSwLowerLDS::run() {
     }
     for (Function *Func : FuncLDSAccessInfo.NonKernelsWithLDSArgument) {
       auto &K = FuncLDSAccessInfo.NonKernelToLDSAccessMap;
-      if (K.find(Func) != K.end())
+      if (K.contains(Func))
         continue;
       SetVector<llvm::GlobalVariable *> Vec;
       lowerNonKernelLDSAccesses(Func, Vec, NKLDSParams);

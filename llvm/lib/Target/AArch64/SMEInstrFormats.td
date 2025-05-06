@@ -5601,6 +5601,7 @@ class sme2_bf16_fp32_quarter_tile_outer_product<bit M, bit N, bit S, string mnem
   let Inst{1-0} = ZAda;
 
   let Constraints = "$ZAda = $_ZAda";
+  let Uses = [FPCR];
 }
 
 multiclass sme2_bfmop4as_widening<bit S, string mnemonic, string op> {
@@ -5764,6 +5765,7 @@ class sme2_fp16_quarter_tile_outer_product<bit M, bit N, bit S, string mnemonic,
   let Inst{0} = ZAda;
 
   let Constraints = "$ZAda = $_ZAda";
+  let Uses = [FPCR];
 }
 
 multiclass sme2_fmop4as_fp16_non_widening<bit S, string mnemonic, string op> {
@@ -5869,6 +5871,7 @@ class sme2_bf16_fp16_quarter_tile_outer_product<bit M, bit N, bit S, string mnem
   let Inst{0} = ZAda;
 
   let Constraints = "$ZAda = $_ZAda";
+  let Uses = [FPCR];
 }
 
 multiclass sme2_bfmop4as_non_widening<bit S, string mnemonic, string op> {
@@ -5922,6 +5925,7 @@ class sme2_fp32_quarter_tile_outer_product<bit M, bit N, bit S, string mnemonic,
   let Inst{1-0} = ZAda;
 
   let Constraints = "$ZAda = $_ZAda";
+  let Uses = [FPCR];
 }
 
 multiclass sme2_fmop4as_fp32_non_widening<bit S, string mnemonic, string op> {
@@ -5975,6 +5979,7 @@ class sme2_fp64_quarter_tile_outer_product<bit M, bit N, bit S, string mnemonic,
   let Inst{2-0} = ZAda;
 
   let Constraints = "$ZAda = $_ZAda";
+  let Uses = [FPCR];
 }
 
 multiclass sme2_fmop4as_fp64_non_widening<bit S, string mnemonic, string op> {
@@ -6028,6 +6033,7 @@ class sme2_fp16_fp32_quarter_tile_outer_product<bit M, bit N, bit S, string mnem
   let Inst{1-0} = ZAda;
 
   let Constraints = "$ZAda = $_ZAda";
+  let Uses = [FPCR];
 }
 
 multiclass sme2_fmop4as_fp16_fp32_widening<bit S, string mnemonic, string op> {

@@ -1210,14 +1210,11 @@ struct DSEState {
   bool isInvisibleToCallerAfterRet(const Value *V) {
     if (isa<AllocaInst>(V))
       return true;
+
     auto I = InvisibleToCallerAfterRet.insert({V, false});
-    if (I.second) {
-      if (!isInvisibleToCallerOnUnwind(V)) {
-        I.first->second = false;
-      } else if (isNoAliasCall(V)) {
-        I.first->second = !PointerMayBeCaptured(V, /*ReturnCaptures=*/true);
-      }
-    }
+    if (I.second && isInvisibleToCallerOnUnwind(V) && isNoAliasCall(V))
+      I.first->second = capturesNothing(PointerMayBeCaptured(
+          V, /*ReturnCaptures=*/true, CaptureComponents::Provenance));
     return I.first->second;
   }
 
@@ -1234,7 +1231,8 @@ struct DSEState {
       // with the killing MemoryDef. But we refrain from doing so for now to
       // limit compile-time and this does not cause any changes to the number
       // of stores removed on a large test set in practice.
-      I.first->second = PointerMayBeCaptured(V, /*ReturnCaptures=*/false);
+      I.first->second = capturesAnything(PointerMayBeCaptured(
+          V, /*ReturnCaptures=*/false, CaptureComponents::Provenance));
     return !I.first->second;
   }
 

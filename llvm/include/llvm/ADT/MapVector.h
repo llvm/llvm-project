@@ -57,6 +57,7 @@ public:
     return std::move(Vector);
   }
 
+  /// Returns an array reference of the underlying vector.
   ArrayRef<value_type> getArrayRef() const { return Vector; }
 
   size_type size() const { return Vector.size(); }

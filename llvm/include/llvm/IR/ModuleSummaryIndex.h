@@ -1321,14 +1321,14 @@ public:
 
   template <typename... Args> void emplace(Args &&...A) {
     StringRef S(std::forward<Args>(A)...);
-    GlobalValue::GUID GUID =
-        GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(S));
+    GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
+        GlobalValue::dropLLVMManglingEscape(S));
     Index[GUID].emplace(S);
   }
 
   size_t count(StringRef S) const {
-    GlobalValue::GUID GUID =
-        GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(S));
+    GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
+        GlobalValue::dropLLVMManglingEscape(S));
     auto I = Index.find(GUID);
     if (I == Index.end())
       return 0;
@@ -1731,8 +1731,10 @@ public:
   /// Add a global value summary for a value of the given name.
   void addGlobalValueSummary(StringRef ValueName,
                              std::unique_ptr<GlobalValueSummary> Summary) {
-    addGlobalValueSummary(getOrInsertValueInfo(GlobalValue::getGUID(ValueName)),
-                          std::move(Summary));
+    addGlobalValueSummary(
+        getOrInsertValueInfo(
+            GlobalValue::getGUIDAssumingExternalLinkage(ValueName)),
+        std::move(Summary));
   }
 
   /// Add a global value summary for the given ValueInfo.
@@ -1869,19 +1871,22 @@ public:
   /// This accessor can mutate the map and therefore should not be used in
   /// the ThinLTO backends.
   TypeIdSummary &getOrInsertTypeIdSummary(StringRef TypeId) {
-    auto TidIter = TypeIdMap.equal_range(GlobalValue::getGUID(TypeId));
+    auto TidIter = TypeIdMap.equal_range(
+        GlobalValue::getGUIDAssumingExternalLinkage(TypeId));
     for (auto &[GUID, TypeIdPair] : make_range(TidIter))
       if (TypeIdPair.first == TypeId)
         return TypeIdPair.second;
-    auto It = TypeIdMap.insert({GlobalValue::getGUID(TypeId),
-                                {TypeIdSaver.save(TypeId), TypeIdSummary()}});
+    auto It =
+        TypeIdMap.insert({GlobalValue::getGUIDAssumingExternalLinkage(TypeId),
+                          {TypeIdSaver.save(TypeId), TypeIdSummary()}});
     return It->second.second;
   }
 
   /// This returns either a pointer to the type id summary (if present in the
   /// summary map) or null (if not present). This may be used when importing.
   const TypeIdSummary *getTypeIdSummary(StringRef TypeId) const {
-    auto TidIter = TypeIdMap.equal_range(GlobalValue::getGUID(TypeId));
+    auto TidIter = TypeIdMap.equal_range(
+        GlobalValue::getGUIDAssumingExternalLinkage(TypeId));
     for (const auto &[GUID, TypeIdPair] : make_range(TidIter))
       if (TypeIdPair.first == TypeId)
         return &TypeIdPair.second;

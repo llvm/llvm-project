@@ -84,11 +84,8 @@ define half @test_fmadd(half %a, half %b, half %c) #0 {
 ; CHECK-CVT-SD:       // %bb.0:
 ; CHECK-CVT-SD-NEXT:    fcvt s1, h1
 ; CHECK-CVT-SD-NEXT:    fcvt s0, h0
-; CHECK-CVT-SD-NEXT:    fmul s0, s0, s1
-; CHECK-CVT-SD-NEXT:    fcvt s1, h2
-; CHECK-CVT-SD-NEXT:    fcvt h0, s0
-; CHECK-CVT-SD-NEXT:    fcvt s0, h0
-; CHECK-CVT-SD-NEXT:    fadd s0, s0, s1
+; CHECK-CVT-SD-NEXT:    fcvt s2, h2
+; CHECK-CVT-SD-NEXT:    fmadd s0, s0, s1, s2
 ; CHECK-CVT-SD-NEXT:    fcvt h0, s0
 ; CHECK-CVT-SD-NEXT:    ret
 ;
@@ -1248,6 +1245,15 @@ define half @test_atan(half %a) #0 {
 }
 
 define half @test_atan2(half %a, half %b) #0 {
+; CHECK-LABEL: test_atan2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    fcvt s1, h1
+; CHECK-NEXT:    bl atan2f
+; CHECK-NEXT:    fcvt h0, s0
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
   %r = call half @llvm.atan2.f16(half %a, half %b)
   ret half %r
 }

@@ -1920,9 +1920,9 @@ void LowerTypeTestsModule::replaceCfiUses(Function *Old, Value *New,
                                           bool IsJumpTableCanonical) {
   SmallSetVector<Constant *, 4> Constants;
   for (Use &U : llvm::make_early_inc_range(Old->uses())) {
-    // Skip block addresses and no_cfi values, which refer to the function
-    // body instead of the jump table.
-    if (isa<BlockAddress, NoCFIValue>(U.getUser()))
+    // Skip no_cfi values, which refer to the function body instead of the jump
+    // table.
+    if (isa<NoCFIValue>(U.getUser()))
       continue;
 
     // Skip direct calls to externally defined or non-dso_local functions.
@@ -2112,7 +2112,8 @@ bool LowerTypeTestsModule::lower() {
                 ->getValue()
                 ->getUniqueInteger()
                 .getZExtValue());
-        const GlobalValue::GUID GUID = GlobalValue::getGUID(
+        const GlobalValue::GUID GUID =
+            GlobalValue::getGUIDAssumingExternalLinkage(
                 GlobalValue::dropLLVMManglingEscape(FunctionName));
         // Do not emit jumptable entries for functions that are not-live and
         // have no live references (and are not exported with cross-DSO CFI.)
@@ -2318,8 +2319,9 @@ bool LowerTypeTestsModule::lower() {
     DenseMap<GlobalValue::GUID, TinyPtrVector<Metadata *>> MetadataByGUID;
     for (auto &P : TypeIdInfo) {
       if (auto *TypeId = dyn_cast<MDString>(P.first))
-        MetadataByGUID[GlobalValue::getGUID(TypeId->getString())].push_back(
-            TypeId);
+        MetadataByGUID[GlobalValue::getGUIDAssumingExternalLinkage(
+                           TypeId->getString())]
+            .push_back(TypeId);
     }
 
     for (auto &P : *ExportSummary) {
