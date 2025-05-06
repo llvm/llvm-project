@@ -35,7 +35,7 @@ operations are generated from. To define an operation one needs to specify:
     values that affect the behavior of the op) that are the inputs of/define the
     behavior of the operation. The input operands may be named, the attributes
     must be named.
-*   The result(s) of the operation. These may again named or not.
+*   The result(s) of the operation. These may again be named or not.
 *   Documentation of the operation. This includes a one-line summary as well as
     a longer human-readable description of the operation.
 *   Dialect specific information. Additional information could be added to the
