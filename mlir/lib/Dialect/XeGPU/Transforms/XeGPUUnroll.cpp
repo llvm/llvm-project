@@ -32,8 +32,7 @@ namespace {
 
 template <typename SourceOp>
 struct UnrollPattern : public OpRewritePattern<SourceOp> {
-  UnrollPattern(MLIRContext *context,
-                const xegpu::UnrollOptions &options,
+  UnrollPattern(MLIRContext *context, const xegpu::UnrollOptions &options,
                 PatternBenefit benefit = 1)
       : OpRewritePattern<SourceOp>(context, benefit), options(options) {}
 
@@ -474,8 +473,7 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
 } // namespace
 
 void mlir::xegpu::populateXeGPUUnrollPatterns(
-    RewritePatternSet &patterns,
-    const xegpu::UnrollOptions &options) {
+    RewritePatternSet &patterns, const xegpu::UnrollOptions &options) {
   patterns.add<UnrollCreateNdOp, UnrollUpdateNdOffsetOp, UnrollPrefetchNdOp,
                UnrollLoadNdOp, UnrollStoreNdOp, UnrollDpasOp>(
       patterns.getContext(), options);

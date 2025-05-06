@@ -12,7 +12,6 @@
 namespace mlir {
 class RewritePatternSet;
 
-
 namespace xegpu {
 struct UnrollOptions {
   using FilterConstraintFnType = std::function<LogicalResult(Operation *op)>;
@@ -35,7 +34,6 @@ struct UnrollOptions {
     return *this;
   }
 };
-
 
 /// Appends patterns for folding aliasing ops into XeGPU ops into `patterns`.
 void populateXeGPUFoldAliasOpsPatterns(RewritePatternSet &patterns);
