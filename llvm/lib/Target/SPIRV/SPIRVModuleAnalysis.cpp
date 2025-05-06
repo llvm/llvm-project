@@ -1980,44 +1980,13 @@ static void handleMIFlagDecoration(MachineInstr &I, const SPIRVSubtarget &ST,
   buildOpDecorate(DstReg, I, TII, SPIRV::Decoration::FPFastMathMode, {FMFlags});
 }
 
-static std::vector<uint32_t>
-getMetaDataValues(std::vector<llvm::MDNode *> &MetaDataList) {
-  std::vector<uint32_t> res;
-  for (auto metaDataNode : MetaDataList) {
-    if (metaDataNode->getNumOperands() > 0) {
-      if (auto *CMD = llvm::dyn_cast<llvm::ConstantAsMetadata>(
-              metaDataNode->getOperand(0))) {
-        if (auto *CI = llvm::dyn_cast<llvm::ConstantInt>(CMD->getValue())) {
-          APInt val = CI->getValue();
-          int64_t decVal = val.getZExtValue();
-          res.push_back(decVal);
-        }
-      }
-    }
-  }
-  return res;
-}
-
-static void handleFunctionDecoration(llvm::Module::const_iterator F,
+static void handleFunctionDecoration(MachineInstr &MI, const SPIRVSubtarget &ST,
                                      const SPIRVInstrInfo &TII,
-                                     MachineModuleInfo *MMI,
-                                     const SPIRVSubtarget &ST) {
-  MachineFunction *MF = MMI->getMachineFunction(*F);
-  Register FuncReg;
-  MachineInstr *FirstInstr = nullptr;
+                                     SPIRV::ModuleAnalysisInfo &MAI,
+                                     llvm::Module::const_iterator F) {
+  Register FuncReg = MI.getOperand(0).getReg();
   llvm::SmallVector<std::pair<unsigned int, llvm::MDNode *>> MetaDataList;
-  // Find function register and first instruction
-  for (auto &MBB : *MF) {
-    for (auto &MI : MBB) {
-      if (MI.getOpcode() == SPIRV::OpFunction) {
-        FirstInstr = &MI;
-        FuncReg = MI.getOperand(0).getReg();
-        break;
-      }
-    }
-    if (FuncReg.isValid() && FirstInstr)
-      break;
-  }
+
   // Add function-level decorations based on metadata
   F->getAllMetadata(MetaDataList);
   for (auto &MetaData : MetaDataList) {
@@ -2025,17 +1994,18 @@ static void handleFunctionDecoration(llvm::Module::const_iterator F,
         MetaData.second == F->getMetadata("stall_free")) {
       if (ST.canUseExtension(
               SPIRV::Extension::SPV_INTEL_fpga_cluster_attributes)) {
-        std::vector<llvm::MDNode *> MetaDataVector;
+        llvm::SmallVector<llvm::MDNode *> MetaDataVector;
         MetaDataVector.push_back(MetaData.second);
-        std::vector<uint32_t> params = getMetaDataValues(MetaDataVector);
-        if (params.at(0) == 1) {
-          if (MetaData.second == F->getMetadata("stall_enable")) {
-            buildOpDecorate(FuncReg, *FirstInstr, TII,
+        llvm::SmallVector<uint32_t> params =
+            getConstantFromMetadata(MetaDataVector);
+
+        if (params[0] == 1) {
+          if (MetaData.second == F->getMetadata("stall_enable"))
+            buildOpDecorate(FuncReg, MI, TII,
                             SPIRV::Decoration::StallEnableINTEL, {});
-          } else {
-            buildOpDecorate(FuncReg, *FirstInstr, TII,
-                            SPIRV::Decoration::StallFreeINTEL, {});
-          }
+          else
+            buildOpDecorate(FuncReg, MI, TII, SPIRV::Decoration::StallFreeINTEL,
+                            {});
         }
       }
     }
@@ -2050,11 +2020,13 @@ static void addDecorations(const Module &M, const SPIRVInstrInfo &TII,
     MachineFunction *MF = MMI->getMachineFunction(*F);
     if (!MF)
       continue;
-    for (auto &MBB : *MF)
-      for (auto &MI : MBB)
+    for (auto &MBB : *MF) {
+      for (auto &MI : MBB) {
         handleMIFlagDecoration(MI, ST, TII, MAI.Reqs);
-
-    handleFunctionDecoration(F, TII, MMI, ST);
+        if (MI.getOpcode() == SPIRV::OpFunction)
+          handleFunctionDecoration(MI, ST, TII, MAI, F);
+      }
+    }
   }
 }
 
