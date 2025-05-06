@@ -697,7 +697,8 @@ static bool buildAtomicStoreInst(const SPIRV::IncomingCall *Call,
                                  MachineIRBuilder &MIRBuilder,
                                  SPIRVGlobalRegistry *GR) {
   if (Call->isSpirvOp())
-    return buildOpFromWrapper(MIRBuilder, SPIRV::OpAtomicStore, Call, Register(0));
+    return buildOpFromWrapper(MIRBuilder, SPIRV::OpAtomicStore, Call,
+                              Register(0));
 
   Register ScopeRegister =
       buildConstantIntReg32(SPIRV::Scope::Device, MIRBuilder, GR);
@@ -2909,7 +2910,7 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generateExtendedBitOpsInst(Call.get(), MIRBuilder, GR);
   case SPIRV::BindlessINTEL:
     return generateBindlessImageINTELInst(Call.get(), MIRBuilder, GR);
-    case SPIRV::TernaryBitwiseINTEL:
+  case SPIRV::TernaryBitwiseINTEL:
     return generateTernaryBitwiseFunctionINTELInst(Call.get(), MIRBuilder, GR);
   case SPIRV::Subgroup2DBlock:
     return generateSubgroup2DBlockInst(Call.get(), MIRBuilder, GR);
