@@ -366,6 +366,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor({s32, s64, v8s8, v16s8})
       .widenScalarToNextPow2(0, /*Min = */ 32)
       .clampScalar(0, s32, s64)
+      .clampNumElements(0, v8s8, v16s8)
+      .moreElementsToNextPow2(0)
       .lower();
 
   getActionDefinitionsBuilder(G_BSWAP)
