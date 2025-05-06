@@ -61,7 +61,7 @@ void expandMemSetAsLoop(MemSetInst *MemSet);
 /// Expand \p MemSetPattern as a loop. \p MemSet is not deleted.
 void expandMemSetPatternAsLoop(MemSetPatternInst *MemSet);
 
-/// Expand an atomic \p MemCpy as a loop. \p AtomicMemCpy is not deleted.
+/// Expand \p AtomicMemCpy as a loop. \p AtomicMemCpy is not deleted.
 void expandAtomicMemCpyAsLoop(AnyMemCpyInst *AtomicMemCpy,
                               const TargetTransformInfo &TTI,
                               ScalarEvolution *SE);
