@@ -4,7 +4,7 @@
 
 using Int = vk::SpirvType</* OpTypeInt */ 21, 4, 64, vk::Literal<vk::integral_constant<uint, 8>>, vk::Literal<vk::integral_constant<bool, false>>>;
 
-// CHECK: %struct.S = type <{ i32, [4 x i8], target("spirv.Type", target("spirv.Literal", 8), target("spirv.Literal", 0), 21, 4, 64), [8 x i8] }>
+// CHECK: %struct.S = type <{ i32, target("spirv.Type", target("spirv.Literal", 8), target("spirv.Literal", 0), 21, 4, 64), [4 x i8] }>
 struct S {
     int a;
     Int b;

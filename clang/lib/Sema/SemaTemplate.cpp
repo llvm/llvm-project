@@ -3396,8 +3396,7 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
     }
 
     if (llvm::any_of(Converted, [](auto &C) { return C.isDependent(); }))
-      return Context.getCanonicalTemplateSpecializationType(TemplateName(BTD),
-                                                            Converted);
+      return QualType();
 
     uint64_t Opcode = Converted[0].getAsIntegral().getZExtValue();
     uint64_t Size = Converted[1].getAsIntegral().getZExtValue();

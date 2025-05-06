@@ -49,7 +49,7 @@ void main() {
     // CHECK: %words2 = alloca target("spirv.Type", target("spirv.Type", target("spirv.Literal", 32), target("spirv.Literal", 0), 21, 4, 32), target("spirv.IntegralConstant", i64, 5), 28, 0, 0), align 4
     ArrayInt words2;
 
-    // CHECK: %value = alloca %struct.S, align 4
+    // CHECK: %value = alloca %struct.S, align 1
     S value;
 
     // CHECK: %buffers2 = alloca target("spirv.Type", target("spirv.Image", float, 5, 2, 0, 0, 2, 0), target("spirv.IntegralConstant", i64, 4), 28, 0, 0), align 4
