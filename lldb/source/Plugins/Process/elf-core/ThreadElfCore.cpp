@@ -95,6 +95,7 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
         reg_interface = new RegisterContextFreeBSD_powerpc32(arch);
         break;
       case llvm::Triple::ppc64:
+      case llvm::Triple::ppc64le:
         reg_interface = new RegisterContextFreeBSD_powerpc64(arch);
         break;
       case llvm::Triple::mips64:
