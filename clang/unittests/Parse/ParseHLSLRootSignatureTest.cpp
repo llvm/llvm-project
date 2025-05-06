@@ -72,7 +72,7 @@ protected:
         SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions) {
     // This is an arbitrarily chosen target triple to create the target info.
     TargetOpts->Triple = "dxil";
-    Target = TargetInfo::CreateTargetInfo(Diags, TargetOpts);
+    Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
   }
 
   std::unique_ptr<Preprocessor> createPP(StringRef Source,
@@ -130,10 +130,10 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   const llvm::StringLiteral Source = R"cc(
     DescriptorTable(
       CBV(b0),
-      SRV(space = 3, t42, flags = 0),
+      SRV(space = 3, offset = 32, t42, flags = 0, numDescriptors = 4),
       visibility = SHADER_VISIBILITY_PIXEL,
-      Sampler(s987, space = +2),
-      UAV(u4294967294,
+      Sampler(s987, space = +2, offset = DESCRIPTOR_RANGE_OFFSET_APPEND),
+      UAV(u4294967294, numDescriptors = unbounded,
         flags = Descriptors_Volatile | Data_Volatile
                       | Data_Static_While_Set_At_Execute | Data_Static
                       | Descriptors_Static_Keeping_Buffer_Bounds_Checks
@@ -162,7 +162,10 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.ViewType,
             RegisterType::BReg);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.Number, 0u);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).NumDescriptors, 1u);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Space, 0u);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Offset,
+            DescriptorTableOffsetAppend);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
             DescriptorRangeFlags::DataStaticWhileSetAtExecute);
 
@@ -172,7 +175,9 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.ViewType,
             RegisterType::TReg);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.Number, 42u);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).NumDescriptors, 4u);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Space, 3u);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Offset, 32u);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
             DescriptorRangeFlags::None);
 
@@ -182,7 +187,10 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.ViewType,
             RegisterType::SReg);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.Number, 987u);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).NumDescriptors, 1u);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Space, 2u);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Offset,
+            DescriptorTableOffsetAppend);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
             DescriptorRangeFlags::None);
 
@@ -192,7 +200,11 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.ViewType,
             RegisterType::UReg);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.Number, 4294967294u);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).NumDescriptors,
+            NumDescriptorsUnbounded);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Space, 0u);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Offset,
+            DescriptorTableOffsetAppend);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
             DescriptorRangeFlags::ValidFlags);
 

@@ -134,6 +134,85 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
   return true;
 }
 
+template <typename ResultT>
+bool Context::evaluateStringRepr(State &Parent, const Expr *SizeExpr,
+                                 const Expr *PtrExpr, ResultT &Result) {
+  assert(Stk.empty());
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+
+  // Evaluate size value.
+  APValue SizeValue;
+  if (!evaluateAsRValue(Parent, SizeExpr, SizeValue))
+    return false;
+
+  if (!SizeValue.isInt())
+    return false;
+  uint64_t Size = SizeValue.getInt().getZExtValue();
+
+  auto PtrRes = C.interpretAsPointer(PtrExpr, [&](const Pointer &Ptr) {
+    if (Size == 0) {
+      if constexpr (std::is_same_v<ResultT, APValue>)
+        Result = APValue(APValue::UninitArray{}, 0, 0);
+      return true;
+    }
+
+    if (!Ptr.isLive() || !Ptr.getFieldDesc()->isPrimitiveArray())
+      return false;
+
+    // Must be char.
+    if (Ptr.getFieldDesc()->getElemSize() != 1 /*bytes*/)
+      return false;
+
+    if (Size > Ptr.getNumElems()) {
+      Parent.FFDiag(SizeExpr, diag::note_constexpr_access_past_end) << AK_Read;
+      Size = Ptr.getNumElems();
+    }
+
+    if constexpr (std::is_same_v<ResultT, APValue>) {
+      QualType CharTy = PtrExpr->getType()->getPointeeType();
+      Result = APValue(APValue::UninitArray{}, Size, Size);
+      for (uint64_t I = 0; I != Size; ++I) {
+        if (std::optional<APValue> ElemVal =
+                Ptr.atIndex(I).toRValue(*this, CharTy))
+          Result.getArrayInitializedElt(I) = *ElemVal;
+        else
+          return false;
+      }
+    } else {
+      assert((std::is_same_v<ResultT, std::string>));
+      if (Size < Result.max_size())
+        Result.resize(Size);
+      Result.assign(reinterpret_cast<const char *>(Ptr.getRawAddress()), Size);
+    }
+
+    return true;
+  });
+
+  if (PtrRes.isInvalid()) {
+    C.cleanup();
+    Stk.clear();
+    return false;
+  }
+
+  return true;
+}
+
+bool Context::evaluateCharRange(State &Parent, const Expr *SizeExpr,
+                                const Expr *PtrExpr, APValue &Result) {
+  assert(SizeExpr);
+  assert(PtrExpr);
+
+  return evaluateStringRepr(Parent, SizeExpr, PtrExpr, Result);
+}
+
+bool Context::evaluateCharRange(State &Parent, const Expr *SizeExpr,
+                                const Expr *PtrExpr, std::string &Result) {
+  assert(SizeExpr);
+  assert(PtrExpr);
+
+  return evaluateStringRepr(Parent, SizeExpr, PtrExpr, Result);
+}
+
 const LangOptions &Context::getLangOpts() const { return Ctx.getLangOpts(); }
 
 std::optional<PrimType> Context::classify(QualType T) const {
@@ -449,4 +528,10 @@ unsigned Context::collectBaseOffset(const RecordDecl *BaseDecl,
 
 const Record *Context::getRecord(const RecordDecl *D) const {
   return P->getOrCreateRecord(D);
+}
+
+bool Context::isUnevaluatedBuiltin(unsigned ID) {
+  return ID == Builtin::BI__builtin_classify_type ||
+         ID == Builtin::BI__builtin_os_log_format_buffer_size ||
+         ID == Builtin::BI__builtin_constant_p || ID == Builtin::BI__noop;
 }

@@ -1357,7 +1357,7 @@ bool UnwrappedLineParser::parseModuleImport() {
     // Handle import <foo/bar.h> as we would an include statement.
     else if (FormatTok->is(tok::less)) {
       nextToken();
-      while (!FormatTok->isOneOf(tok::semi, tok::greater, tok::eof)) {
+      while (!FormatTok->isOneOf(tok::semi, tok::greater) && !eof()) {
         // Mark tokens up to the trailing line comments as implicit string
         // literals.
         if (FormatTok->isNot(tok::comment) &&
@@ -1834,8 +1834,8 @@ void UnwrappedLineParser::parseStructuralElement(
       nextToken();
       if (FormatTok->is(tok::l_paren)) {
         parseParens();
-        assert(FormatTok->Previous);
-        if (FormatTok->Previous->endsSequence(tok::r_paren, tok::kw_auto,
+        if (FormatTok->Previous &&
+            FormatTok->Previous->endsSequence(tok::r_paren, tok::kw_auto,
                                               tok::l_paren)) {
           Line->SeenDecltypeAuto = true;
         }
@@ -2089,7 +2089,13 @@ void UnwrappedLineParser::parseStructuralElement(
       parseSquare();
       break;
     case tok::kw_new:
-      parseNew();
+      if (Style.isCSharp() &&
+          (Tokens->peekNextToken()->isAccessSpecifierKeyword() ||
+           (Previous && Previous->isAccessSpecifierKeyword()))) {
+        nextToken();
+      } else {
+        parseNew();
+      }
       break;
     case tok::kw_switch:
       if (Style.isJava())
@@ -2593,7 +2599,8 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
       if (Prev) {
         auto OptionalParens = [&] {
           if (MightBeStmtExpr || MightBeFoldExpr || Line->InMacroBody ||
-              SeenComma || Style.RemoveParentheses == FormatStyle::RPS_Leave) {
+              SeenComma || Style.RemoveParentheses == FormatStyle::RPS_Leave ||
+              RParen->getPreviousNonComment() == LParen) {
             return false;
           }
           const bool DoubleParens =
@@ -3106,7 +3113,7 @@ void UnwrappedLineParser::parseTryCatch() {
         parseParens();
         continue;
       }
-      if (FormatTok->isOneOf(tok::semi, tok::r_brace, tok::eof)) {
+      if (FormatTok->isOneOf(tok::semi, tok::r_brace) || eof()) {
         if (Style.RemoveBracesLLVM)
           NestedTooDeep.pop_back();
         return;

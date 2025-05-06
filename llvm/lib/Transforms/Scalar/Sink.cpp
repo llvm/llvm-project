@@ -35,6 +35,12 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis &AA,
     return false;
   }
 
+  // Don't sink static alloca instructions.  CodeGen assumes allocas outside the
+  // entry block are dynamically sized stack objects.
+  if (AllocaInst *AI = dyn_cast<AllocaInst>(Inst))
+    if (AI->isStaticAlloca())
+      return false;
+
   if (LoadInst *L = dyn_cast<LoadInst>(Inst)) {
     MemoryLocation Loc = MemoryLocation::get(L);
     for (Instruction *S : Stores)
@@ -97,12 +103,6 @@ static bool IsAcceptableTarget(Instruction *Inst, BasicBlock *SuccToSinkTo,
 static bool SinkInstruction(Instruction *Inst,
                             SmallPtrSetImpl<Instruction *> &Stores,
                             DominatorTree &DT, LoopInfo &LI, AAResults &AA) {
-
-  // Don't sink static alloca instructions.  CodeGen assumes allocas outside the
-  // entry block are dynamically sized stack objects.
-  if (AllocaInst *AI = dyn_cast<AllocaInst>(Inst))
-    if (AI->isStaticAlloca())
-      return false;
 
   // Check if it's safe to move the instruction.
   if (!isSafeToMove(Inst, AA, Stores))

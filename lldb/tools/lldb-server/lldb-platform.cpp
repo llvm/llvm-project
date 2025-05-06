@@ -469,6 +469,7 @@ int main_platform(int argc, char *argv[]) {
     if (gdbserver_port) {
       socket = std::make_unique<TCPSocket>(sockfd, /*should_close=*/true);
     } else {
+#if LLDB_ENABLE_POSIX
       llvm::Expected<std::unique_ptr<DomainSocket>> domain_socket =
           DomainSocket::FromBoundNativeSocket(sockfd, /*should_close=*/true);
       if (!domain_socket) {
@@ -477,6 +478,11 @@ int main_platform(int argc, char *argv[]) {
         return socket_error;
       }
       socket = std::move(domain_socket.get());
+#else
+      WithColor::error() << "lldb-platform child: Unix domain sockets are not "
+                            "supported on this platform.";
+      return socket_error;
+#endif
     }
 
     GDBRemoteCommunicationServerPlatform platform(socket->GetSocketProtocol(),

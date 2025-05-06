@@ -4334,6 +4334,33 @@ define i16 @or_zext_zext_2_use1(i8 %x, i8 %y) {
   ret i16 %r
 }
 
+define i16 @or_disjoint_zext_zext(i8 %x, i4 %y) {
+; CHECK-LABEL: define {{[^@]+}}@or_disjoint_zext_zext
+; CHECK-SAME: (i8 [[X:%.*]], i4 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i4 [[Y]] to i8
+; CHECK-NEXT:    [[R1:%.*]] = or disjoint i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = zext i8 [[R1]] to i16
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %zx = zext i8 %x to i16
+  %zy = zext i4 %y to i16
+  %r = or disjoint i16 %zy, %zx
+  ret i16 %r
+}
+
+define i16 @or_disjoint_zext_zext_2(i8 %x, i8 %y) {
+; CHECK-LABEL: define {{[^@]+}}@or_disjoint_zext_zext_2
+; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R1:%.*]] = or disjoint i8 [[Y]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = zext i8 [[R1]] to i16
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %zx = zext i8 %x to i16
+  %zy = zext i8 %y to i16
+  %r = or disjoint i16 %zy, %zx
+  ret i16 %r
+}
+
 define <2 x i16> @xor_zext_zext(<2 x i8> %x, <2 x i4> %y) {
 ; CHECK-LABEL: define {{[^@]+}}@xor_zext_zext
 ; CHECK-SAME: (<2 x i8> [[X:%.*]], <2 x i4> [[Y:%.*]]) {
@@ -4460,6 +4487,33 @@ define i16 @or_sext_sext_2_use1(i8 %x, i8 %y) {
   call void @use_i16(i16 %sx)
   %sy = sext i8 %y to i16
   %r = or i16 %sx, %sy
+  ret i16 %r
+}
+
+define i16 @or_disjoint_sext_sext(i8 %x, i4 %y) {
+; CHECK-LABEL: define {{[^@]+}}@or_disjoint_sext_sext
+; CHECK-SAME: (i8 [[X:%.*]], i4 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i4 [[Y]] to i8
+; CHECK-NEXT:    [[R1:%.*]] = or disjoint i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = sext i8 [[R1]] to i16
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %sx = sext i8 %x to i16
+  %sy = sext i4 %y to i16
+  %r = or disjoint i16 %sx, %sy
+  ret i16 %r
+}
+
+define i16 @or_disjoint_sext_sext_2(i8 %x, i8 %y) {
+; CHECK-LABEL: define {{[^@]+}}@or_disjoint_sext_sext_2
+; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R1:%.*]] = or disjoint i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = sext i8 [[R1]] to i16
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %sx = sext i8 %x to i16
+  %sy = sext i8 %y to i16
+  %r = or disjoint i16 %sx, %sy
   ret i16 %r
 }
 

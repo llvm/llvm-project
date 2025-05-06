@@ -52,6 +52,25 @@ namespace mlir {
 
 using namespace mlir;
 
+// Truncate or extend the result depending on the index bitwidth specified
+// by the LLVMTypeConverter options.
+static Value truncOrExtToLLVMType(ConversionPatternRewriter &rewriter,
+                                  Location loc, Value value,
+                                  const LLVMTypeConverter &converter) {
+  int64_t intWidth = cast<IntegerType>(value.getType()).getWidth();
+  int64_t indexBitwidth = converter.getIndexTypeBitwidth();
+  auto indexBitwidthType =
+      IntegerType::get(rewriter.getContext(), converter.getIndexTypeBitwidth());
+  // TODO: use <=> in C++20.
+  if (indexBitwidth > intWidth) {
+    return rewriter.create<LLVM::SExtOp>(loc, indexBitwidthType, value);
+  }
+  if (indexBitwidth < intWidth) {
+    return rewriter.create<LLVM::TruncOp>(loc, indexBitwidthType, value);
+  }
+  return value;
+}
+
 /// Returns true if the given `gpu.func` can be safely called using the bare
 /// pointer calling convention.
 static bool canBeCalledWithBarePointers(gpu::GPUFuncOp func) {
@@ -113,6 +132,35 @@ struct GPULaneIdOpToROCDL : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
   }
 };
 
+struct GPUSubgroupSizeOpToROCDL : ConvertOpToLLVMPattern<gpu::SubgroupSizeOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  GPUSubgroupSizeOpToROCDL(const LLVMTypeConverter &converter,
+                           amdgpu::Chipset chipset)
+      : ConvertOpToLLVMPattern<gpu::SubgroupSizeOp>(converter),
+        chipset(chipset) {}
+
+  LogicalResult
+  matchAndRewrite(gpu::SubgroupSizeOp op, gpu::SubgroupSizeOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    LLVM::ConstantRangeAttr bounds = nullptr;
+    bool isBeforeGfx10 = chipset.majorVersion < 10;
+    if (auto upperBoundAttr = op.getUpperBoundAttr()) {
+      bounds = rewriter.getAttr<LLVM::ConstantRangeAttr>(
+          /*bitWidth=*/32, /*lower=*/isBeforeGfx10 ? 64 : 32,
+          /*upper=*/op.getUpperBoundAttr().getInt() + 1);
+    }
+    Value wavefrontOp = rewriter.create<ROCDL::WavefrontSizeOp>(
+        op.getLoc(), rewriter.getI32Type(), bounds);
+    wavefrontOp = truncOrExtToLLVMType(rewriter, op.getLoc(), wavefrontOp,
+                                       *getTypeConverter());
+    rewriter.replaceOp(op, {wavefrontOp});
+    return success();
+  }
+
+  const amdgpu::Chipset chipset;
+};
+
 struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
   using ConvertOpToLLVMPattern<gpu::ShuffleOp>::ConvertOpToLLVMPattern;
 
@@ -167,8 +215,6 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     case gpu::ShuffleMode::IDX:
       dstLane = adaptor.getOffset();
       break;
-    default:
-      return failure();
     }
     Value isActiveSrcLane = rewriter.create<LLVM::ICmpOp>(
         loc, LLVM::ICmpPredicate::slt, dstLane, widthOrZeroIfOutside);
@@ -322,7 +368,8 @@ struct LowerGpuOpsToROCDLOpsPass final
 
     populateAMDGPUToROCDLConversionPatterns(converter, llvmPatterns,
                                             *maybeChipset);
-    populateGpuToROCDLConversionPatterns(converter, llvmPatterns, runtime);
+    populateGpuToROCDLConversionPatterns(converter, llvmPatterns, runtime,
+                                         *maybeChipset);
     configureGpuToROCDLConversionLegality(target);
     if (failed(applyPartialConversion(m, target, std::move(llvmPatterns))))
       signalPassFailure();
@@ -370,7 +417,7 @@ void mlir::configureGpuToROCDLConversionLegality(ConversionTarget &target) {
 
 void mlir::populateGpuToROCDLConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns,
-    mlir::gpu::amd::Runtime runtime) {
+    mlir::gpu::amd::Runtime runtime, amdgpu::Chipset chipset) {
   using gpu::index_lowering::IndexKind;
   using gpu::index_lowering::IntrType;
   using mlir::gpu::amd::Runtime;
@@ -409,6 +456,7 @@ void mlir::populateGpuToROCDLConversionPatterns(
   patterns.add<GPUDynamicSharedMemoryOpLowering>(converter);
 
   patterns.add<GPUShuffleOpLowering, GPULaneIdOpToROCDL>(converter);
+  patterns.add<GPUSubgroupSizeOpToROCDL>(converter, chipset);
 
   populateMathToROCDLConversionPatterns(converter, patterns);
 }

@@ -221,3 +221,15 @@ namespace PseudoDtor {
   static_assert(f() == 0, ""); // both-error {{constant expression}} \
                                // expected-note {{in call to}}
 }
+
+namespace IntToPtrCast {
+  typedef __INTPTR_TYPE__ intptr_t;
+
+  constexpr intptr_t f(intptr_t x) {
+    return (((x) >> 21) * 8);
+  }
+
+  extern "C" int foo;
+  constexpr intptr_t i = f((intptr_t)&foo - 10); // both-error{{constexpr variable 'i' must be initialized by a constant expression}} \
+                                                 // both-note{{reinterpret_cast}}
+}

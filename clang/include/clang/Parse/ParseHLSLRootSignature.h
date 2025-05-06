@@ -80,7 +80,9 @@ private:
   /// state of parsed params
   struct ParsedClauseParams {
     std::optional<llvm::hlsl::rootsig::Register> Reg;
+    std::optional<uint32_t> NumDescriptors;
     std::optional<uint32_t> Space;
+    std::optional<uint32_t> Offset;
     std::optional<llvm::hlsl::rootsig::DescriptorRangeFlags> Flags;
   };
   std::optional<ParsedClauseParams>
