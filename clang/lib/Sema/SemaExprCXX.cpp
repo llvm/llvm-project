@@ -5654,6 +5654,9 @@ static bool IsTriviallyRelocatableType(Sema &SemaRef, QualType T) {
   if (!BaseElementType->isObjectType())
     return false;
 
+  if(T.hasAddressDiscriminatedPointerAuth())
+      return false;
+
   if (const auto *RD = BaseElementType->getAsCXXRecordDecl();
       RD && !RD->isPolymorphic() && IsCXXTriviallyRelocatableType(SemaRef, RD))
     return true;
