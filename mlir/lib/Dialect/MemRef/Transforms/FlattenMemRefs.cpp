@@ -182,66 +182,6 @@ struct MemRefRewritePattern : public OpRewritePattern<T> {
   }
 };
 
-struct FlattenSubview : public OpRewritePattern<memref::SubViewOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(memref::SubViewOp op,
-                                PatternRewriter &rewriter) const override {
-    Value memref = op.getSource();
-    if (!needFlattening(memref))
-      return rewriter.notifyMatchFailure(op, "already flattened");
-
-    if (!checkLayout(memref))
-      return rewriter.notifyMatchFailure(op, "unsupported layout");
-
-    Location loc = op.getLoc();
-    SmallVector<OpFoldResult> subOffsets = op.getMixedOffsets();
-    SmallVector<OpFoldResult> subSizes = op.getMixedSizes();
-    SmallVector<OpFoldResult> subStrides = op.getMixedStrides();
-
-    // base, finalOffset, strides
-    memref::ExtractStridedMetadataOp stridedMetadata =
-        rewriter.create<memref::ExtractStridedMetadataOp>(loc, memref);
-
-    auto sourceType = cast<MemRefType>(memref.getType());
-    auto typeBit = sourceType.getElementType().getIntOrFloatBitWidth();
-    OpFoldResult linearizedIndices;
-    memref::LinearizedMemRefInfo linearizedInfo;
-    std::tie(linearizedInfo, linearizedIndices) =
-        memref::getLinearizedMemRefOffsetAndSize(
-            rewriter, loc, typeBit, typeBit,
-            stridedMetadata.getConstifiedMixedOffset(),
-            stridedMetadata.getConstifiedMixedSizes(),
-            stridedMetadata.getConstifiedMixedStrides(), op.getMixedOffsets());
-    auto finalOffset = linearizedInfo.linearizedOffset;
-    auto strides = stridedMetadata.getConstifiedMixedStrides();
-
-    auto srcType = cast<MemRefType>(memref.getType());
-    auto resultType = cast<MemRefType>(op.getType());
-    unsigned subRank = static_cast<unsigned>(resultType.getRank());
-
-    llvm::SmallBitVector droppedDims = op.getDroppedDims();
-
-    SmallVector<OpFoldResult> finalSizes;
-    finalSizes.reserve(subRank);
-
-    SmallVector<OpFoldResult> finalStrides;
-    finalStrides.reserve(subRank);
-
-    for (auto i : llvm::seq(0u, static_cast<unsigned>(srcType.getRank()))) {
-      if (droppedDims.test(i))
-        continue;
-
-      finalSizes.push_back(subSizes[i]);
-      finalStrides.push_back(strides[i]);
-    }
-
-    rewriter.replaceOpWithNewOp<memref::ReinterpretCastOp>(
-        op, resultType, memref, finalOffset, finalSizes, finalStrides);
-    return success();
-  }
-};
-
 struct FlattenMemrefsPass
     : public mlir::memref::impl::FlattenMemrefsPassBase<FlattenMemrefsPass> {
   using Base::Base;
@@ -271,6 +211,6 @@ void memref::populateFlattenMemrefsPatterns(RewritePatternSet &patterns) {
                   MemRefRewritePattern<vector::TransferReadOp>,
                   MemRefRewritePattern<vector::TransferWriteOp>,
                   MemRefRewritePattern<vector::MaskedLoadOp>,
-                  MemRefRewritePattern<vector::MaskedStoreOp>, FlattenSubview>(
+                  MemRefRewritePattern<vector::MaskedStoreOp>>(
       patterns.getContext());
 }
