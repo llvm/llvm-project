@@ -43,7 +43,7 @@ define fp128 @test_sincos_f128(fp128 %f) {
   %sin = call fp128 @sinl(fp128 %f) readnone
   %cos = call fp128 @cosl(fp128 %f) readnone
   %val = fadd fp128 %sin, %cos
-; CHECK: bl sincosl
+; CHECK: bl sincosf128
   ret fp128 %val
 }
 

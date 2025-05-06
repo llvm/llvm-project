@@ -583,7 +583,7 @@ define float @test_v3f32_ninf(<3 x float> %a) nounwind {
 define fp128 @test_v2f128(<2 x fp128> %a) nounwind {
 ; CHECK-LABEL: test_v2f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    b fmaxl
+; CHECK-NEXT:    b fmaxf128
   %b = call fp128 @llvm.vector.reduce.fmax.v2f128(<2 x fp128> %a)
   ret fp128 %b
 }

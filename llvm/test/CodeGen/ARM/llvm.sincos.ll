@@ -206,7 +206,7 @@ define { fp128, fp128 } @test_sincos_f128(fp128 %a) {
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    mov r1, r2
 ; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    bl sincosl
+; CHECK-NEXT:    bl sincosf128
 ; CHECK-NEXT:    ldrd r2, r3, [sp, #16]
 ; CHECK-NEXT:    ldrd r12, r1, [sp, #8]
 ; CHECK-NEXT:    str r3, [r4, #28]

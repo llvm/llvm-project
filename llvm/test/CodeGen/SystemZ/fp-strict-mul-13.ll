@@ -4,7 +4,7 @@ declare fp128 @llvm.experimental.constrained.fma.f128(fp128 %f1, fp128 %f2, fp12
 
 define void @f1(ptr %ptr1, ptr %ptr2, ptr %ptr3, ptr %dst) #0 {
 ; CHECK-LABEL: f1:
-; CHECK: brasl %r14, fmal
+; CHECK: brasl %r14, fmaf128
 ; CHECK: br %r14
   %f1 = load fp128, ptr %ptr1
   %f2 = load fp128, ptr %ptr2
