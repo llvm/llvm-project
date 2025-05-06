@@ -220,14 +220,26 @@ func.func @transfer_write_memref(%input: memref<4x8xi2>, %value: vector<8xi2>, %
 
 // -----
 
-func.func @alloc_4x8_f32() -> memref<4x8xf32> {
-  // Allocate a memref of size 4x8 with f32 elements.
-  // The memref is uninitialized by default.
+func.func @alloc() -> memref<4x8xf32> {
   %0 = memref.alloc() : memref<4x8xf32>
-
-  // Return the allocated memref.
   return %0 : memref<4x8xf32>
 }
+
+// CHECK-LABEL: func @alloc
+// CHECK-SAME: () -> memref<4x8xf32>
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc() : memref<32xf32, strided<[1]>>
+// CHECK-NEXT: %[[REINT:.*]] = memref.reinterpret_cast %[[ALLOC]] to offset: [0], sizes: [4, 8], strides: [8, 1] : memref<32xf32, strided<[1]>> to memref<4x8xf32>
+
+// -----
+
+func.func @alloca() -> memref<4x8xf32> {
+  %0 = memref.alloca() : memref<4x8xf32>
+  return %0 : memref<4x8xf32>
+}
+
+// CHECK-LABEL: func.func @alloca() -> memref<4x8xf32>
+// CHECK: %[[ALLOC:.*]] = memref.alloca() : memref<32xf32, strided<[1]>>
+// CHECK: %[[REINT:.*]] = memref.reinterpret_cast %[[ALLOC]] to offset: [0], sizes: [4, 8], strides: [8, 1] : memref<32xf32, strided<[1]>> to memref<4x8xf32>
 
 // -----
 
@@ -238,3 +250,9 @@ func.func @chained_alloc_load() -> vector<8xf32> {
   %value = vector.load %0[%c3, %c6] : memref<4x8xf32>, vector<8xf32>
   return %value : vector<8xf32>
 }
+
+// CHECK-LABEL: func @chained_alloc_load
+// CHECK-SAME: () -> vector<8xf32>
+// CHECK-NEXT: %[[C30:.*]] = arith.constant 30 : index
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc() : memref<32xf32, strided<[1]>>
+// CHECK-NEXT: vector.load %[[ALLOC]][%[[C30]]] : memref<32xf32, strided<[1]>>, vector<8xf32>
