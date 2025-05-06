@@ -106,9 +106,7 @@ lldb_private::formatters::ExtractIndexFromString(const char *item_name) {
   item_name++;
   char *endptr = nullptr;
   unsigned long int idx = ::strtoul(item_name, &endptr, 0);
-  if (idx == 0 && endptr == item_name)
-    return std::nullopt;
-  if (idx == ULONG_MAX)
+  if ((idx == 0 && endptr == item_name) || idx == ULONG_MAX)
     return std::nullopt;
   return idx;
 }
