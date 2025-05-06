@@ -5606,6 +5606,9 @@ bool Sema::IsCXXTriviallyRelocatableType(QualType Type) {
   if (BaseElementType.hasNonTrivialObjCLifetime())
     return false;
 
+  if (BaseElementType.hasAddressDiscriminatedPointerAuth())
+    return false;
+
   if (BaseElementType->isIncompleteType())
     return false;
 
