@@ -59,9 +59,8 @@ void BaseRequestHandler::SetSourceMapFromArguments(
       "source must be be an array of two-element arrays, "
       "each containing a source and replacement path string.\n";
 
-  std::string sourceMapCommand;
-  llvm::raw_string_ostream strm(sourceMapCommand);
-  strm << "settings set target.source-map ";
+  std::string sourceMapCommandMappings;
+  llvm::raw_string_ostream strm(sourceMapCommandMappings);
   const auto sourcePath = GetString(arguments, "sourcePath").value_or("");
 
   // sourceMap is the new, more general form of sourcePath and overrides it.
@@ -96,7 +95,9 @@ void BaseRequestHandler::SetSourceMapFromArguments(
     // Do any source remapping needed before we create our targets
     strm << "\".\" \"" << sourcePath << "\"";
   }
-  if (!sourceMapCommand.empty()) {
+  if (!sourceMapCommandMappings.empty()) {
+    std::string sourceMapCommand = "settings set target.source-map ";
+    sourceMapCommand += sourceMapCommandMappings;
     dap.RunLLDBCommands("Setting source map:", {sourceMapCommand});
   }
 }

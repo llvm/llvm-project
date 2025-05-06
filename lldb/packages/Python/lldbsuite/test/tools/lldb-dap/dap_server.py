@@ -866,7 +866,7 @@ class DebugCommunication(object):
             args_dict["debuggerRoot"] = debuggerRoot
         if launchCommands:
             args_dict["launchCommands"] = launchCommands
-        if sourceMap:
+        if sourceMap is not None: # sourceMap can be empty array.
             args_dict["sourceMap"] = sourceMap
         if runInTerminal:
             args_dict["runInTerminal"] = runInTerminal
