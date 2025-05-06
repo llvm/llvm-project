@@ -884,18 +884,6 @@ getDistVecTypeBasedOnLaneLayout(xegpu::LayoutAttr layout,
   return VectorType::get(distributedShape, originalType.getElementType());
 }
 
-// Drop the layout attribute from the tensor descriptor type if layout is
-// present.
-static xegpu::TensorDescType dropLayouts(xegpu::TensorDescType tensorDesc) {
-  if (tensorDesc.getLayoutAttr() == xegpu::LayoutAttr())
-    return tensorDesc;
-
-  return xegpu::TensorDescType::get(
-      tensorDesc.getContext(), tensorDesc.getShape(),
-      tensorDesc.getElementType(), tensorDesc.getEncoding(),
-      xegpu::LayoutAttr());
-}
-
 /// Helper function to resolve types if the distributed type out of
 /// gpu.warp_execute_on_lane0 is different from the expected xegpu SIMT type.
 /// Example 1:
@@ -1042,12 +1030,12 @@ struct MoveFuncBodyToWarpExecuteOnLane0
 /// Example:
 ///
 /// ```
-///   #lo0 = #xegpu.layout<wi_layout = [1, 8], wi_data = [1, 1]>
+///   #layout0 = #xegpu.layout<wi_layout = [1, 8], wi_data = [1, 1]>
 ///   %r = gpu.warp_execute_on_lane_0(%laneid) ->
-///                   (!xegpu.tensor_desc<4x8xf32, #lo0>) {
+///                   (!xegpu.tensor_desc<4x8xf32, #layout0>) {
 ///     ...
 ///     %td = xegpu.create_nd_tdesc %arg0[0, 0]
-///               : memref<4x8xf32> -> !xegpu.tensor_desc<4x8xf32, #lo0>
+///               : memref<4x8xf32> -> !xegpu.tensor_desc<4x8xf32, #layout0>
 ///     vector.yield %td
 ///   }
 /// ```
@@ -1056,7 +1044,7 @@ struct MoveFuncBodyToWarpExecuteOnLane0
 ///   %r:2 = gpu.warp_execute_on_lane_0(%laneid) -> (...) {
 ///     ...
 ///     %dead = xegpu.create_nd_tdesc %arg0[0, 0]
-///               : memref<4x8xf32> -> !xegpu.tensor_desc<4x8xf32, #lo0>
+///               : memref<4x8xf32> -> !xegpu.tensor_desc<4x8xf32, #layout0>
 ///     vector.yield %arg0, %dead
 ///   }
 ///   %td = xegpu.create_nd_tdesc %r#0[0, 0]: memref<4x8xf32>
@@ -1099,8 +1087,8 @@ struct CreateNdDescDistribution final : public gpu::WarpDistributionPattern {
     }
     rewriter.setInsertionPointAfter(newWarpOp);
     xegpu::TensorDescType distributedTensorDescTy =
-        dropLayouts(descOp.getType()); // Distributed tensor descriptor type
-                                       // does not contain layout info.
+        descOp.getType().dropLayouts(); // Distributed tensor descriptor type
+                                        // does not contain layout info.
     auto newDescOp = rewriter.create<xegpu::CreateNdDescOp>(
         newWarpOp.getLoc(), distributedTensorDescTy, newDescOperands,
         descOp->getAttrs());
@@ -1120,23 +1108,23 @@ struct CreateNdDescDistribution final : public gpu::WarpDistributionPattern {
 /// Example:
 ///
 /// ```
-///   #lo0 = #xegpu.layout<wi_layout = [1, 8], wi_data = [1, 1]>
+///   #layout0 = #xegpu.layout<wi_layout = [1, 8], wi_data = [1, 1]>
 ///   gpu.warp_execute_on_lane_0(%laneid) -> () {
 ///     ...
 ///     xegpu.store_nd %arg0, %arg1: vector<4x8xf32>,
-///                                 !xegpu.tensor_desc<4x8xf32, #lo0>
+///                                 !xegpu.tensor_desc<4x8xf32, #layout0>
 ///   }
 /// ```
 /// To
 /// ```
 ///   %r:2 = gpu.warp_execute_on_lane_0(%laneid) -> (vector<4x1xf32>,
-///   !xegpu.tensor_desc<4x8xf32, #lo0>) {
+///   !xegpu.tensor_desc<4x8xf32, #layout0>) {
 ///     gpu.yield %arg0, %arg1: vector<4x8xf32>, !xegpu.tensor_desc<4x8xf32,
-///     #lo0>
+///     #layout0>
 ///   }
 ///   %0 = vector.shape_cast %r#0: vector<4x1xf32> to vector<4xf32>
 ///   %1 = unrealized_conversion_cast %r#1: !xegpu.tensor_desc<4x8xf32,
-///   #lo0>
+///   #layout0>
 ///     -> !xegpu.tensor_desc<4x8xf32>
 ///   xegpu.store_nd %0, %1: vector<4xf32>,
 ///     !xegpu.tensor_desc<4x8xf32>
@@ -1195,7 +1183,7 @@ struct StoreNdDistribution final : public gpu::WarpDistributionPattern {
     // For the tensor descriptor operand, the layout attribute is dropped after
     // distribution. Types needs to be resolved in this case also.
     xegpu::TensorDescType distributedTensorDescTy =
-        dropLayouts(storeOp.getTensorDescType());
+        storeOp.getTensorDescType().dropLayouts();
     newStoreOperands.push_back(
         resolveDistributedTy(newWarpOp.getResult(newRetIndices[1]),
                              distributedTensorDescTy, rewriter));
@@ -1220,11 +1208,12 @@ struct StoreNdDistribution final : public gpu::WarpDistributionPattern {
 /// Example:
 ///
 /// ```
-///   #lo0 = #xegpu.layout<wi_layout = [1, 8], wi_data = [1, 1]>
+///   #layout0 = #xegpu.layout<wi_layout = [1, 8], wi_data = [1, 1]>
 ///   %r = gpu.warp_execute_on_lane_0(%laneid) ->
 ///                   (vector<4x1xf32>) {
 ///     ...
-///     %ld = xegpu.load_nd %arg0, %arg1: !xegpu.tensor_desc<4x8xf32, #lo0> ->
+///     %ld = xegpu.load_nd %arg0, %arg1: !xegpu.tensor_desc<4x8xf32, #layout0>
+///     ->
 ///       vector<4x8xf32>
 ///     gpu.yield %ld
 ///   }
@@ -1232,13 +1221,13 @@ struct StoreNdDistribution final : public gpu::WarpDistributionPattern {
 /// To
 /// ```
 ///   %r:2 = gpu.warp_execute_on_lane_0(%laneid) -> (vector<4x1xf32>,
-///   !xegpu.tensor_desc<4x8xf32, #lo0>) {
+///   !xegpu.tensor_desc<4x8xf32, #layout0>) {
 ///     ...
-///     %dead = xegpu.load_nd %arg0: !xegpu.tensor_desc<4x8xf32, #lo0> ->
+///     %dead = xegpu.load_nd %arg0: !xegpu.tensor_desc<4x8xf32, #layout0> ->
 ///     vector<4x8xf32> gpu.yield %dead, %arg0
 ///   }
 ///   %0 = unrealized_conversion_cast %r#1: !xegpu.tensor_desc<4x8xf32,
-///        #lo0> -> !xegpu.tensor_desc<4x8xf32>
+///        #layout0> -> !xegpu.tensor_desc<4x8xf32>
 ///   %1 = xegpu.load_nd %0: !xegpu.tensor_desc<4x8xf32> -> vector<4xf32>
 ///   %2 = vector.shape_cast %r#0: vector<4xf32> to vector<4x1xf32>
 ///
@@ -1279,9 +1268,9 @@ struct LoadNdDistribution final : public gpu::WarpDistributionPattern {
       return rewriter.notifyMatchFailure(
           loadOp, "Failed to get distributed vector type for the load op");
     xegpu::TensorDescType distributedTensorDescTy =
-        dropLayouts(loadOp.getTensorDescType()); // Distributed tensor
-                                                 // descriptor type does not
-                                                 // contain layout info.
+        loadOp.getTensorDescType().dropLayouts(); // Distributed tensor
+                                                  // descriptor type does not
+                                                  // contain layout info.
     auto newLoadOp = rewriter.create<xegpu::LoadNdOp>(
         newWarpOp.getLoc(), loadNdDistValueTyOrFailure.value(),
         resolveDistributedTy(newWarpOp->getResult(newRetIndices[0]),
@@ -1439,28 +1428,29 @@ struct DpasDistribution final : public gpu::WarpDistributionPattern {
 /// the distributed types does not match expected xegpu SIMT types.
 /// Example:
 /// ```
-///   #lo0 = #xegpu.layout<wi_layout = [1, 8], wi_data = [1, 1]>
+///   #layout0 = #xegpu.layout<wi_layout = [1, 8], wi_data = [1, 1]>
 ///   %r = gpu.warp_execute_on_lane_0(%laneid) ->
-///                   (!xegpu.tensor_desc<4x8xf32, #lo0>) {
+///                   (!xegpu.tensor_desc<4x8xf32, #layout0>) {
 ///     ...
 ///     %update = xegpu.update_nd_offset %arg0, [%c32, %c16]:
-///       !xegpu.tensor_desc<4x8xf32, #lo0>
+///       !xegpu.tensor_desc<4x8xf32, #layout0>
 ///     gpu.yield %update
 ///   }
 ///   ...
 /// ```
 /// To
 /// ```
-///   %r:2 = gpu.warp_execute_on_lane_0(%laneid) -> (vector<4x1xf32>,
-///   !xegpu.tensor_desc<4x8xf32, #lo0>) {
+///   %r:2 = gpu.warp_execute_on_lane_0(%laneid) -> (
+///     !xegpu.tensor_desc<4x8xf32, #layout0>,
+///     !xegpu.tensor_desc<4x8xf32, #layout0>, index, index) {
 ///     ...
 ///     %dead = xegpu.update_nd_offset %arg0, [%c32, %c16]:
-///       !xegpu.tensor_desc<4x8xf32, #lo0> gpu.yield %dead, %arg0
-///     gup.yield %dead, %arg0, %c32, %c16
+///       !xegpu.tensor_desc<4x8xf32, #layout0> gpu.yield %dead, %arg0
+///     gpu.yield %dead, %arg0, %c32, %c16
 ///   }
 ///   %0 = xegpu.unrealized_conversion_cast %r#1: !xegpu.tensor_desc<4x8xf32,
-///        #lo0> -> !xegpu.tensor_desc<4x8xf32>
-///   %1 = xegpu.update_nd_offset %0, [%c32, %c16]:
+///        #layout0> -> !xegpu.tensor_desc<4x8xf32>
+///   %1 = xegpu.update_nd_offset %0, [%r#2, %r#3]:
 ///     !xegpu.tensor_desc<4x8xf32>
 ///   ...
 /// ```
@@ -1477,7 +1467,7 @@ struct UpdateNdOffsetDistribution final : public gpu::WarpDistributionPattern {
     unsigned operandIdx = operand->getOperandNumber();
     // new update op does not have layout attribute.
     xegpu::TensorDescType newTensorDescTy =
-        dropLayouts(updateOp.getTensorDescType());
+        updateOp.getTensorDescType().dropLayouts();
 
     SmallVector<Value, 3> newYieldValues;
     SmallVector<Type, 3> newYieldTypes;
@@ -1523,20 +1513,20 @@ struct UpdateNdOffsetDistribution final : public gpu::WarpDistributionPattern {
 /// Example:
 ///
 /// ```
-///   #lo0 = #xegpu.layout<wi_layout = [1, 8], wi_data = [1, 1]>
+///   #layout0 = #xegpu.layout<wi_layout = [1, 8], wi_data = [1, 1]>
 ///   gpu.warp_execute_on_lane_0(%laneid) -> () {
 ///     ...
-///     xegpu.prefetch_nd %arg0 : !xegpu.tensor_desc<4x8xf32, #lo0>
+///     xegpu.prefetch_nd %arg0 : !xegpu.tensor_desc<4x8xf32, #layout0>
 ///   }
 /// ```
 /// To
 /// ```
 ///   %r:2 = gpu.warp_execute_on_lane_0(%laneid) -> (
-//    !xegpu.tensor_desc<4x8xf32, #lo0>) {
-///     gpu.yield %arg0: !xegpu.tensor_desc<4x8xf32, #lo0>
+///    !xegpu.tensor_desc<4x8xf32, #layout0>) {
+///     gpu.yield %arg0: !xegpu.tensor_desc<4x8xf32, #layout0>
 ///   }
 ///   %1 = unrealized_conversion_cast %r#0: !xegpu.tensor_desc<4x8xf32,
-///     #lo0> -> !xegpu.tensor_desc<4x8xf32>
+///     #layout0> -> !xegpu.tensor_desc<4x8xf32>
 ///   xegpu.prefetch_nd %0 : !xegpu.tensor_desc<4x8xf32>
 ///
 /// ```
@@ -1563,7 +1553,7 @@ struct PrefetchNdDistribution final : public gpu::WarpDistributionPattern {
     // Create a new prefetch op outside the warp op with updated tensor
     // descriptor type. Source tensor descriptor require type resolution.
     xegpu::TensorDescType newTensorDescTy =
-        dropLayouts(prefetchOp.getTensorDescType());
+        prefetchOp.getTensorDescType().dropLayouts();
     rewriter.setInsertionPointAfter(newWarpOp);
     SmallVector<Value> newPrefetchOperands = {resolveDistributedTy(
         newWarpOp.getResult(newRetIndices[0]), newTensorDescTy, rewriter)};
