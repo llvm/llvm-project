@@ -55,8 +55,6 @@ private:
   llvm::Expected<lldb::ValueObjectSP>
   Visit(const ArraySubscriptNode *node) override;
 
-  lldb::ValueObjectSP PointerAdd(lldb::ValueObjectSP lhs, int64_t offset);
-
   // Used by the interpreter to create objects, perform casts, etc.
   lldb::TargetSP m_target;
   llvm::StringRef m_expr;
