@@ -29514,11 +29514,10 @@ SDValue AArch64TargetLowering::LowerVECTOR_HISTOGRAM(SDValue Op,
   return Scatter;
 }
 
-/// If a PARTIAL_REDUCE_MLA node comes in with an accumulator type that is too
-/// wide to be used for (u|s)dot, we can still make use of the dot product
-/// instruction by instead treating the accumulator as a vector type with twice
-/// as many elements that are each half as wide, accumulating the low and high
-/// parts of the result together in the actual accumulator afterwards.
+/// If a PARTIAL_REDUCE_MLA node comes in with an accumulator-input type pairing
+/// of nxv2i64/nxv16i8, we cannot directly lower it to a (u|s)dot. We can
+/// however still make use of the dot product instruction by instead
+/// accumulating over two steps: nxv16i8 -> nxv4i32 -> nxv2i64.
 SDValue
 AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
                                                SelectionDAG &DAG) const {
