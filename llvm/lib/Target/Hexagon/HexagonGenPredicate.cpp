@@ -40,18 +40,18 @@ using namespace llvm;
 
 namespace {
 
-  struct PrintRegister {
-    friend raw_ostream &operator<<(raw_ostream &OS, const PrintRegister &PR);
+using RegSubRegPair = TargetInstrInfo::RegSubRegPair;
 
-    PrintRegister(RegSubRegPair R, const TargetRegisterInfo &I)
-        : Reg(R), TRI(I) {}
+struct PrintRegister {
+  friend raw_ostream &operator<<(raw_ostream &OS, const PrintRegister &PR);
 
-  private:
-    RegSubRegPair Reg;
-    const TargetRegisterInfo &TRI;
-  };
+  PrintRegister(RegSubRegPair R, const TargetRegisterInfo &I)
+      : Reg(R), TRI(I) {}
 
-  using RegSubRegPair = TargetInstrInfo::RegSubRegPair;
+private:
+  RegSubRegPair Reg;
+  const TargetRegisterInfo &TRI;
+};
 
   raw_ostream &operator<< (raw_ostream &OS, const PrintRegister &PR)
     LLVM_ATTRIBUTE_UNUSED;
