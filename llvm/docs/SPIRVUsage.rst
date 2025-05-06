@@ -213,6 +213,8 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Adds a bitwise instruction on three operands and a look-up table index for specifying the bitwise operation to perform. 
    * - ``SPV_INTEL_subgroup_matrix_multiply_accumulate``
      - Adds an instruction to compute the matrix product of an M x K matrix with a K x N matrix and then add an M x N matrix. 
+   * - ``SPV_INTEL_2d_block_io``
+     - Adds additional subgroup block load and store instructions to read two-dimensional blocks of data from a two-dimensional region of memory, or to write two-dimensional blocks of data to a two dimensional region of memory.
 
 To enable multiple extensions, list them separated by comma. For example, to enable support for atomic operations on floating-point numbers and arbitrary precision integers, use:
 
