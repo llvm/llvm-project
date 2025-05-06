@@ -705,12 +705,15 @@ Error RewriteInstance::run() {
     return E;
   if (Error E = readSpecialSections())
     return E;
-  adjustCommandLineOptions();
   discoverFileObjects();
 
-  if (opts::Instrument && !BC->IsStaticExecutable)
+  if (opts::Instrument && !BC->IsStaticExecutable) {
+    if (Error E = discoverRtInitAddress())
+      return E;
     if (Error E = discoverRtFiniAddress())
       return E;
+  }
+  adjustCommandLineOptions();
 
   preprocessProfileData();
 
@@ -752,8 +755,10 @@ Error RewriteInstance::run() {
 
   updateMetadata();
 
-  if (opts::Instrument && !BC->IsStaticExecutable)
+  if (opts::Instrument && !BC->IsStaticExecutable) {
+    updateRtInitReloc();
     updateRtFiniReloc();
+  }
 
   if (opts::OutputFilename == "/dev/null") {
     BC->outs() << "BOLT-INFO: skipping writing final binary to disk\n";
@@ -1381,6 +1386,49 @@ void RewriteInstance::discoverBOLTReserved() {
   NextAvailableAddress = BC->BOLTReserved.start();
 }
 
+Error RewriteInstance::discoverRtInitAddress() {
+  // Use ELF e_entry
+  if (BC->StartFunctionAddress.has_value() &&
+      BC->StartFunctionAddress.value() != 0 && !BC->InitAddress)
+    return Error::success();
+
+  // Use init address if it is available.
+  if (BC->InitAddress) {
+    BC->StartFunctionAddress = BC->InitAddress;
+    return Error::success();
+  }
+
+  if (!BC->InitArrayAddress || !BC->InitArraySize) {
+    return createStringError(
+        std::errc::not_supported,
+        "Instrumentation needs either DT_INIT or DT_INIT_ARRAY");
+  }
+
+  if (*BC->InitArraySize < BC->AsmInfo->getCodePointerSize()) {
+    return createStringError(std::errc::not_supported,
+                             "Need at least 1 DT_INIT_ARRAY slot");
+  }
+
+  ErrorOr<BinarySection &> InitArraySection =
+      BC->getSectionForAddress(*BC->InitArrayAddress);
+  if (auto EC = InitArraySection.getError())
+    return errorCodeToError(EC);
+
+  if (const Relocation *Reloc = InitArraySection->getDynamicRelocationAt(0)) {
+    BC->StartFunctionAddress = Reloc->Addend;
+    return Error::success();
+  }
+
+  if (const Relocation *Reloc = InitArraySection->getRelocationAt(0)) {
+    BC->StartFunctionAddress = Reloc->Value;
+    return Error::success();
+  }
+
+  dbgs() << "REturn with error!\n";
+  return createStringError(std::errc::not_supported,
+                           "No relocation for first DT_INIT_ARRAY slot");
+}
+
 Error RewriteInstance::discoverRtFiniAddress() {
   // Use DT_FINI if it's available.
   if (BC->FiniAddress) {
@@ -1450,6 +1498,40 @@ void RewriteInstance::updateRtFiniReloc() {
   FiniArraySection->addPendingRelocation(Relocation{
       /*Offset*/ 0, /*Symbol*/ nullptr, /*Type*/ Relocation::getAbs64(),
       /*Addend*/ RT->getRuntimeFiniAddress(), /*Value*/ 0});
+}
+
+void RewriteInstance::updateRtInitReloc() {
+  // Updating DT_INIT is handled by patchELFDynamic.
+  if (BC->InitAddress || !BC->InitArrayAddress)
+    return;
+
+  const RuntimeLibrary *RT = BC->getRuntimeLibrary();
+  if (!RT || !RT->getRuntimeStartAddress())
+    return;
+
+  assert(BC->InitArrayAddress && BC->InitArraySize &&
+         "inconsistent .init_array state");
+
+  ErrorOr<BinarySection &> InitArraySection =
+      BC->getSectionForAddress(*BC->InitArrayAddress);
+  assert(InitArraySection && ".init_array removed");
+
+  if (std::optional<Relocation> Reloc =
+          InitArraySection->takeDynamicRelocationAt(0)) {
+    assert(Reloc->Addend == BC->StartFunctionAddress &&
+           "inconsistent .init_array dynamic relocation");
+    Reloc->Addend = RT->getRuntimeStartAddress();
+    InitArraySection->addDynamicRelocation(*Reloc);
+  }
+
+  // Update the static relocation by adding a pending relocation which will get
+  // patched when flushPendingRelocations is called in rewriteFile. Note that
+  // flushPendingRelocations will calculate the value to patch as
+  // "Symbol + Addend". Since we don't have a symbol, just set the addend to the
+  // desired value.
+  InitArraySection->addPendingRelocation(Relocation{
+      /*Offset*/ 0, /*Symbol*/ nullptr, /*Type*/ Relocation::getAbs64(),
+      /*Addend*/ RT->getRuntimeStartAddress(), /*Value*/ 0});
 }
 
 void RewriteInstance::registerFragments() {
@@ -5705,8 +5787,18 @@ Error RewriteInstance::readELFDynamic(ELFObjectFile<ELFT> *File) {
     switch (Dyn.d_tag) {
     case ELF::DT_INIT:
       if (!BC->HasInterpHeader) {
-        LLVM_DEBUG(dbgs() << "BOLT-DEBUG: Set start function address\n");
-        BC->StartFunctionAddress = Dyn.getPtr();
+        LLVM_DEBUG(dbgs() << "BOLT-DEBUG: Set init address\n");
+        BC->InitAddress = Dyn.getPtr();
+      }
+      break;
+    case ELF::DT_INIT_ARRAY:
+      if (!BC->HasInterpHeader) {
+        BC->InitArrayAddress = Dyn.getPtr();
+      }
+      break;
+    case ELF::DT_INIT_ARRAYSZ:
+      if (!BC->HasInterpHeader) {
+        BC->InitArraySize = Dyn.getPtr();
       }
       break;
     case ELF::DT_FINI:
