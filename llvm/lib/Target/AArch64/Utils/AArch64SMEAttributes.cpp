@@ -113,10 +113,8 @@ bool SMECallAttrs::requiresSMChange() const {
 SMECallAttrs::SMECallAttrs(const CallBase &CB)
     : CallerFn(*CB.getFunction()), CalledFn(SMEAttrs::Normal),
       Callsite(CB.getAttributes()), IsIndirect(CB.isIndirectCall()) {
-  if (auto *CalledFunction = CB.getCalledFunction()) {
-    CalledFn = SMEAttrs(*CalledFunction);
-    CalledFn.addKnownFunctionAttrs(CalledFunction->getName());
-  }
+  if (auto *CalledFunction = CB.getCalledFunction())
+    CalledFn = SMEAttrs(*CalledFunction, SMEAttrs::InferAttrsFromName::Yes);
 
   // FIXME: We probably should not allow SME attributes on direct calls but
   // clang duplicates streaming mode attributes at each callsite.
