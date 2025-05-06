@@ -1,5 +1,5 @@
 // RUN: mlir-translate -mlir-to-llvmir -split-input-file %s | FileCheck %s
-// XFAIL: *
+
 // Only check the overall shape of the code and the presence of relevant
 // runtime calls. Actual IR checking is done at the OpenMPIRBuilder level.
 
@@ -559,7 +559,7 @@ llvm.func @parallel_nested_workshare_reduction(%ub : i64) {
 // CHECK: define internal void @[[OUTLINED]]
 
 // Private reduction variable and its initialization.
-// CHECK: %[[PRIVATE:private_redvar]] = alloca i32
+// CHECK: %[[PRIVATE:[0-9]+]] = alloca i32
 // CHECK: store i32 0, ptr %[[PRIVATE]]
 
 // Loop exit:

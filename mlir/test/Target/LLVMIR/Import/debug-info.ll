@@ -1,7 +1,5 @@
 ; RUN: mlir-translate -import-llvm -mlir-print-debuginfo -split-input-file %s | FileCheck %s
 
-; XFAIL: *
-
 ; CHECK: #[[$UNKNOWN_LOC:.+]] = loc(unknown)
 
 ; CHECK-LABEL: @module_loc(
@@ -157,7 +155,7 @@ define void @derived_type() !dbg !3 {
 !6 = !DIBasicType(name: "int")
 !7 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !6)
 !8 = !DIDerivedType(name: "mypointer", tag: DW_TAG_pointer_type, baseType: !6, size: 64, align: 32, offset: 4, extraData: !6)
-!9 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !6, dwarfAddressSpace: 3)
+!9 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !6, addressSpace: 3)
 
 ; // -----
 

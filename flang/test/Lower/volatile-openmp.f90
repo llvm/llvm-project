@@ -1,8 +1,6 @@
 ! RUN: bbc --strict-fir-volatile-verifier -fopenmp %s -o - | FileCheck %s
-! new test
-! XFAIL: *
 type t
-    integer, pointer :: array(:)
+integer, pointer :: array(:)
 end type
 integer, volatile, pointer :: array1(:)
 type(t), volatile :: container
@@ -37,9 +35,9 @@ end
 ! CHECK:           %[[VAL_23:.*]] = omp.map.bounds lower_bound(%[[VAL_0]] : index) upper_bound(%[[VAL_22]] : index) extent(%[[VAL_21]]#1 : index) stride(%[[VAL_21]]#2 : index) start_idx(%[[VAL_21]]#0 : index) {stride_in_bytes = true}
 ! CHECK:           %[[VAL_24:.*]] = fir.coordinate_of %[[VAL_13]]#0, array : (!fir.ref<!fir.type<_QFTt{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>, volatile>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:           %[[VAL_25:.*]] = fir.box_offset %[[VAL_24]] base_addr : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
-! CHECK:           %[[VAL_26:.*]] = omp.map.info var_ptr(%[[VAL_24]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, i32) map_clauses(to) capture(ByRef) var_ptr_ptr(%[[VAL_25]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) bounds(%[[VAL_23]]) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>> {name = ""}
-! CHECK:           %[[VAL_27:.*]] = omp.map.info var_ptr(%[[VAL_24]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.box<!fir.ptr<!fir.array<?xi32>>>) map_clauses(to) capture(ByRef) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> {name = "container%[[VAL_28:.*]]"}
-! CHECK:           %[[VAL_29:.*]] = omp.map.info var_ptr(%[[VAL_13]]#1 : !fir.ref<!fir.type<_QFTt{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>, volatile>, !fir.type<_QFTt{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>) map_clauses(to) capture(ByRef) members(%[[VAL_27]], %[[VAL_26]] : [0], [0, 0] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) -> !fir.ref<!fir.type<_QFTt{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>, volatile> {name = "container", partial_map = true}
+! CHECK:           %[[VAL_26:.*]] = omp.map.info var_ptr(%[[VAL_24]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, i32) map_clauses(descriptor_base_addr, to) capture(ByRef) var_ptr_ptr(%[[VAL_25]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) bounds(%[[VAL_23]]) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>> {name = ""}
+! CHECK:           %[[VAL_27:.*]] = omp.map.info var_ptr(%[[VAL_24]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.box<!fir.ptr<!fir.array<?xi32>>>) map_clauses(always, descriptor, to) capture(ByRef) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> {name = "container%[[VAL_28:.*]]"}
+! CHECK:           %[[VAL_29:.*]] = omp.map.info var_ptr(%[[VAL_13]]#1 : !fir.ref<!fir.type<_QFTt{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>, volatile>, !fir.type<_QFTt{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>) map_clauses(exit_release_or_enter_alloc) capture(ByRef) members(%[[VAL_27]], %[[VAL_26]] : [0], [0, 0] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) -> !fir.ref<!fir.type<_QFTt{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>, volatile> {name = "container", partial_map = true}
 ! CHECK:           omp.target_enter_data map_entries(%[[VAL_29]], %[[VAL_27]], %[[VAL_26]] : !fir.ref<!fir.type<_QFTt{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>, volatile>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>)
 ! CHECK:           %[[VAL_30:.*]] = fir.load %[[VAL_10]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>
 ! CHECK:           %[[VAL_31:.*]] = fir.load %[[VAL_10]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>
@@ -48,8 +46,8 @@ end
 ! CHECK:           %[[VAL_34:.*]] = arith.subi %[[VAL_33]]#1, %[[VAL_1]] : index
 ! CHECK:           %[[VAL_35:.*]] = omp.map.bounds lower_bound(%[[VAL_0]] : index) upper_bound(%[[VAL_34]] : index) extent(%[[VAL_33]]#1 : index) stride(%[[VAL_33]]#2 : index) start_idx(%[[VAL_32]]#0 : index) {stride_in_bytes = true}
 ! CHECK:           %[[VAL_36:.*]] = fir.box_offset %[[VAL_10]]#1 base_addr : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
-! CHECK:           %[[VAL_37:.*]] = omp.map.info var_ptr(%[[VAL_10]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>, i32) map_clauses(to) capture(ByRef) var_ptr_ptr(%[[VAL_36]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) bounds(%[[VAL_35]]) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>> {name = ""}
-! CHECK:           %[[VAL_38:.*]] = omp.map.info var_ptr(%[[VAL_10]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>, !fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>) map_clauses(to) capture(ByRef) members(%[[VAL_37]] : [0] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile> {name = "array1"}
+! CHECK:           %[[VAL_37:.*]] = omp.map.info var_ptr(%[[VAL_10]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>, i32) map_clauses(descriptor_base_addr, to) capture(ByRef) var_ptr_ptr(%[[VAL_36]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) bounds(%[[VAL_35]]) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>> {name = ""}
+! CHECK:           %[[VAL_38:.*]] = omp.map.info var_ptr(%[[VAL_10]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>, !fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>) map_clauses(always, descriptor, to) capture(ByRef) members(%[[VAL_37]] : [0] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile> {name = "array1"}
 ! CHECK:           omp.target_enter_data map_entries(%[[VAL_38]], %[[VAL_37]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>, !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>)
 ! CHECK:           return
 ! CHECK:         }

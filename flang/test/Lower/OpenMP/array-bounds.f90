@@ -1,7 +1,7 @@
 !RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s --check-prefixes HOST
-!XFAIL: *
+
 !HOST-LABEL:  func.func @_QPread_write_section() {
-!HOST:  %0 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFread_write_sectionEi"}
+!HOST:  %{{.*}} = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFread_write_sectionEi"}
 !HOST:  %[[READ:.*]] = fir.address_of(@_QFread_write_sectionEsp_read) : !fir.ref<!fir.array<10xi32>>
 !HOST:  %[[C10:.*]] = arith.constant 10 : index
 !HOST:  %[[READ_SHAPE:.*]] = fir.shape %[[C10]] : (index) -> !fir.shape<1>
