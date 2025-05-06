@@ -670,7 +670,7 @@ static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
   assert(DeadSize > ToRemoveSize && "Can't remove more than original size");
 
   uint64_t NewSize = DeadSize - ToRemoveSize;
-  if (auto *AMI = dyn_cast<AtomicMemIntrinsic>(DeadI)) {
+  if (auto *AMI = dyn_cast<AnyMemIntrinsic>(DeadI); AMI && AMI->isAtomic()) {
     // When shortening an atomic memory intrinsic, the newly shortened
     // length must remain an integer multiple of the element size.
     const uint32_t ElementSize = AMI->getElementSizeInBytes();
