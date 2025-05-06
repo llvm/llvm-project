@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Metadata.h"
+#include "../lib/IR/LLVMContextImpl.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Constants.h"
@@ -1591,6 +1592,44 @@ TEST_F(DILocationTest, discriminatorSpecialCases) {
   EXPECT_EQ(std::nullopt, L4->cloneByMultiplyingDuplicationFactor(0x1000));
 }
 
+TEST_F(DILocationTest, KeyInstructions) {
+  Context.pImpl->NextAtomGroup = 1;
+
+  EXPECT_EQ(Context.pImpl->NextAtomGroup, 1u);
+  DILocation *A1 =
+      DILocation::get(Context, 1, 0, getSubprogram(), nullptr, false, 1, 2);
+  // The group is only applied to the DILocation if we've built LLVM with
+  // EXPERIMENTAL_KEY_INSTRUCTIONS.
+#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
+  EXPECT_EQ(A1->getAtomGroup(), 1u);
+  EXPECT_EQ(A1->getAtomRank(), 2u);
+#else
+  EXPECT_EQ(A1->getAtomGroup(), 0u);
+  EXPECT_EQ(A1->getAtomRank(), 0u);
+#endif
+
+  // Group number 1 has been "used" so next available is 2.
+  EXPECT_EQ(Context.pImpl->NextAtomGroup, 2u);
+
+  // Set a group number higher than current + 1, then check the waterline.
+  DILocation::get(Context, 2, 0, getSubprogram(), nullptr, false, 5, 1);
+  EXPECT_EQ(Context.pImpl->NextAtomGroup, 6u);
+
+  // The waterline should be unchanged (group <= next).
+  DILocation::get(Context, 3, 0, getSubprogram(), nullptr, false, 4, 1);
+  EXPECT_EQ(Context.pImpl->NextAtomGroup, 6u);
+  DILocation::get(Context, 3, 0, getSubprogram(), nullptr, false, 5, 1);
+  EXPECT_EQ(Context.pImpl->NextAtomGroup, 6u);
+
+  // Check the waterline gets incremented by 1.
+  EXPECT_EQ(Context.incNextDILocationAtomGroup(), 6u);
+  EXPECT_EQ(Context.pImpl->NextAtomGroup, 7u);
+
+  Context.updateDILocationAtomGroupWaterline(8);
+  EXPECT_EQ(Context.pImpl->NextAtomGroup, 8u);
+  Context.updateDILocationAtomGroupWaterline(7);
+  EXPECT_EQ(Context.pImpl->NextAtomGroup, 8u);
+}
 
 typedef MetadataTest GenericDINodeTest;
 
