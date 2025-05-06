@@ -228,15 +228,16 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
                  ? ELF::R_AARCH64_GOTPCREL32
                  : R_CLS(ABS32);
     case FK_Data_8: {
-      bool IsAuth = (RefKind == AArch64MCExpr::VK_AUTH ||
-                     RefKind == AArch64MCExpr::VK_AUTHADDR);
       if (IsILP32) {
         Ctx.reportError(
             Fixup.getLoc(),
             "8 byte absolute data relocation is not supported in ILP32");
         return ELF::R_AARCH64_NONE;
       }
-      return (IsAuth ? ELF::R_AARCH64_AUTH_ABS64 : ELF::R_AARCH64_ABS64);
+      if (RefKind == AArch64MCExpr::VK_AUTH ||
+          RefKind == AArch64MCExpr::VK_AUTHADDR)
+        return ELF::R_AARCH64_AUTH_ABS64;
+      return ELF::R_AARCH64_ABS64;
     }
     case AArch64::fixup_aarch64_add_imm12:
       if (RefKind == AArch64MCExpr::VK_DTPREL_HI12)
