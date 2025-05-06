@@ -136,7 +136,7 @@ function(compileDeviceRTLLibrary target_name target_triple)
     "--target=${target_triple}" "-fuse-ld=lld" "-march=" "-mcpu="
     "-Wno-unused-command-line-argument")
   target_link_options(libomptarget-${target_name} PRIVATE "--target=${target_triple}"
-                      "-mcpu=power8" "-r" "-nostdlib" "-flto" "-Wl,--lto-emit-llvm"
+                      "-r" "-nostdlib" "-flto" "-Wl,--lto-emit-llvm"
                       "-fuse-ld=lld" "-march=" "-mcpu=")
   install(TARGETS libomptarget-${target_name}
           PERMISSIONS OWNER_WRITE OWNER_READ GROUP_READ WORLD_READ
