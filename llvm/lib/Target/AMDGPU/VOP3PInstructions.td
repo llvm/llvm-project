@@ -2436,8 +2436,8 @@ defm V_PK_ADD_BF16     : VOP3P_Real_gfx1250_gfx13<0x23>;
 defm V_PK_MUL_BF16     : VOP3P_Real_gfx1250_gfx13<0x2a>;
 defm V_PK_MIN_NUM_BF16 : VOP3P_Real_gfx1250_gfx13<0x2b>;
 defm V_PK_MAX_NUM_BF16 : VOP3P_Real_gfx1250_gfx13<0x2c>;
-defm V_PK_MINIMUM3_F16 : VOP3P_Real_gfx1250_gfx13<0x36>;
-defm V_PK_MAXIMUM3_F16 : VOP3P_Real_gfx1250_gfx13<0x37>;
+defm V_PK_MINIMUM3_F16 : VOP3P_Real_gfx1250<0x36>;
+defm V_PK_MAXIMUM3_F16 : VOP3P_Real_gfx1250<0x37>;
 defm V_PK_MIN3_NUM_F16 : VOP3P_Real_gfx1250_gfx13<0x38>;
 defm V_PK_MAX3_NUM_F16 : VOP3P_Real_gfx1250_gfx13<0x39>;
 
