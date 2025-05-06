@@ -148,14 +148,18 @@ void Value::destroyValueName() {
 }
 
 bool Value::hasNUses(unsigned N) const {
-  if (!hasUseList())
-    return Uses.Count == N;
+  if (!UseList)
+    return N == 0;
+
+  // TODO: Disallow for ConstantData and remove !UseList check?
   return hasNItems(use_begin(), use_end(), N);
 }
 
 bool Value::hasNUsesOrMore(unsigned N) const {
-  if (!hasUseList())
-    return Uses.Count >= N;
+  // TODO: Disallow for ConstantData and remove !UseList check?
+  if (!UseList)
+    return N == 0;
+
   return hasNItemsOrMore(use_begin(), use_end(), N);
 }
 
@@ -259,9 +263,9 @@ bool Value::isUsedInBasicBlock(const BasicBlock *BB) const {
 }
 
 unsigned Value::getNumUses() const {
-  if (!hasUseList())
-    return Uses.Count;
-
+  // TODO: Disallow for ConstantData and remove !UseList check?
+  if (!UseList)
+    return 0;
   return (unsigned)std::distance(use_begin(), use_end());
 }
 
@@ -522,7 +526,7 @@ void Value::doRAUW(Value *New, ReplaceMetadataUses ReplaceMetaUses) {
     ValueAsMetadata::handleRAUW(this, New);
 
   while (!materialized_use_empty()) {
-    Use &U = *Uses.List;
+    Use &U = *UseList;
     // Must handle Constants specially, we cannot call replaceUsesOfWith on a
     // constant because they are uniqued.
     if (auto *C = dyn_cast<Constant>(U.getUser())) {
@@ -1102,12 +1106,12 @@ const Value *Value::DoPHITranslation(const BasicBlock *CurBB,
 LLVMContext &Value::getContext() const { return VTy->getContext(); }
 
 void Value::reverseUseList() {
-  if (!Uses.List || !Uses.List->Next || !hasUseList())
+  if (!UseList || !UseList->Next)
     // No need to reverse 0 or 1 uses.
     return;
 
-  Use *Head = Uses.List;
-  Use *Current = Uses.List->Next;
+  Use *Head = UseList;
+  Use *Current = UseList->Next;
   Head->Next = nullptr;
   while (Current) {
     Use *Next = Current->Next;
@@ -1116,8 +1120,8 @@ void Value::reverseUseList() {
     Head = Current;
     Current = Next;
   }
-  Uses.List = Head;
-  Head->Prev = &Uses.List;
+  UseList = Head;
+  Head->Prev = &UseList;
 }
 
 bool Value::isSwiftError() const {
