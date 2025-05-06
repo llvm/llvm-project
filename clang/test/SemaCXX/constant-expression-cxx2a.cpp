@@ -1497,3 +1497,45 @@ namespace GH67317 {
                               // expected-note {{subobject of type 'const unsigned char' is not initialized}}
     __builtin_bit_cast(unsigned char, *new char[3][1]);
 };
+
+namespace LargeArrays {
+  constexpr unsigned kNumberOfIterations = 2000000;
+  constexpr unsigned kThreadsNumber = 2 * 8 * 1024;
+
+  /// Large array initialized by Paren/InitListExpr.
+  template <typename T, unsigned long S>
+  struct array1 {
+    using AT = T[S];
+    AT Data{};
+    constexpr array1() : Data(T()) {} // expected-note {{cannot allocate array}}
+  };
+
+  /// And initialized by a CXXConstructExpr.
+  template <typename T, unsigned long S>
+  struct array2 {
+    using AT = T[S];
+    AT Data;
+    constexpr array2() {} // expected-note {{cannot allocate array}}
+  };
+
+  template <typename T>
+  class A{};
+  int main() {
+      array1<A<short*>, kThreadsNumber * kNumberOfIterations> futures1{};
+      array2<A<short*>, kThreadsNumber * kNumberOfIterations> futures2{};
+  }
+
+  constexpr int CE1() {
+    array1<A<short*>, kThreadsNumber * kNumberOfIterations> futures1{}; // expected-note {{in call to}}
+    return 1;
+  }
+  static_assert(CE1() == 1); // expected-error {{not an integral constant expression}} \
+                             // expected-note {{in call to}}
+
+  constexpr int CE2() {
+    array2<A<short*>, kThreadsNumber * kNumberOfIterations> futures2{}; // expected-note {{in call to}}
+    return 1;
+  }
+  static_assert(CE2() == 1); // expected-error {{not an integral constant expression}} \
+                             // expected-note {{in call to}}
+}
