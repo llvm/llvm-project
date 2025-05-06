@@ -4127,6 +4127,9 @@ void PostGenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
     RegionPolicy.OnlyBottomUp = false;
     RegionPolicy.OnlyTopDown = false;
   }
+
+  BotIdx = NumRegionInstrs - 1;
+  this->NumRegionInstrs = NumRegionInstrs;
 }
 
 void PostGenericScheduler::registerRoots() {
