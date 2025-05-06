@@ -179,7 +179,7 @@ bool SemaOpenACC::DiagnoseAllowedOnceClauses(
     return false;
 
   Diag(ClauseLoc, diag::err_acc_duplicate_clause_disallowed) << DK << CK;
-  Diag((*Res)->getBeginLoc(), diag::note_acc_previous_clause_here);
+  Diag((*Res)->getBeginLoc(), diag::note_acc_previous_clause_here) << CK;
   return true;
 }
 
@@ -202,7 +202,8 @@ bool SemaOpenACC::DiagnoseExclusiveClauses(
     if (Lists.AllowedExclusive.isSet(dealiasClauseKind(C->getClauseKind()))) {
       Diag(ClauseLoc, diag::err_acc_clause_cannot_combine)
           << CK << C->getClauseKind() << DK;
-      Diag(C->getBeginLoc(), diag::note_acc_previous_clause_here);
+      Diag(C->getBeginLoc(), diag::note_acc_previous_clause_here)
+          << C->getClauseKind();
 
       return true;
     }
