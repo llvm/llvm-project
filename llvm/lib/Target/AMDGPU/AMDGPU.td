@@ -2255,7 +2255,6 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureBVHDualAndBVH8Insts,
    FeatureLshlAddU64Inst,
    FeatureAddSubU64Insts,
-   FeatureLdsBarrierArriveAtomic,
 ]>;
 
 //===----------------------------------------------------------------------===//
