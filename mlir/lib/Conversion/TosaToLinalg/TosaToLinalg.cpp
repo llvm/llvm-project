@@ -82,18 +82,6 @@ materializeBinaryNanCheckIfRequired(OpTy op, PatternRewriter &rewriter,
                                           rhsOrResult);
 }
 
-// Create i32 Value from zp, a zero-point value sign-extended from bitwidth.
-static arith::ConstantOp
-createConstOpFromSExtZp(int64_t zp, unsigned zpBitwidth, unsigned attrBitwidth,
-                        bool isSigned, Location loc, OpBuilder &rewriter) {
-
-  // Zero the signed-extended bits if isSigned is false.
-  zp = isSigned ? zp : zp & ((1 << zpBitwidth) - 1);
-
-  return rewriter.create<arith::ConstantOp>(
-      loc, IntegerAttr::get(rewriter.getIntegerType(attrBitwidth), zp));
-}
-
 static Value createLinalgBodyCalculationForElementwiseOp(
     Operation *op, ValueRange args, ArrayRef<Type> resultTypes,
     ConversionPatternRewriter &rewriter) {
@@ -1478,10 +1466,11 @@ public:
           }
 
           const int32_t inBitwidth = valueTy.getIntOrFloatBitWidth();
-          const int32_t attrBitwidth = inBitwidth > 32 ? 48 : 32;
-          auto inputZp = createConstOpFromSExtZp(
-              *maybeIZp, inBitwidth, attrBitwidth, !op.getInputUnsigned(), loc,
-              nestedBuilder);
+          // Extend zeropoint for sub-32bits widths.
+          const int32_t inAttrBitwidth = inBitwidth > 32 ? inBitwidth : 32;
+          auto inputZp = nestedBuilder.create<arith::ConstantOp>(loc,
+              IntegerAttr::get(rewriter.getIntegerType(inAttrBitwidth),
+              *maybeIZp));
 
           FailureOr<int64_t> maybeOZp = op.getOutputZeroPoint();
           if (failed(maybeOZp)) {
@@ -1493,9 +1482,11 @@ public:
           IntegerType outIntType =
               cast<IntegerType>(blockArgs.back().getType());
           unsigned outBitWidth = outIntType.getWidth();
-          auto outputZp = createConstOpFromSExtZp(
-              *maybeOZp, outBitWidth, /*attrBitwidth=*/32,
-              !op.getOutputUnsigned(), loc, nestedBuilder);
+          const int32_t outAttrBitwidth = 32;
+          assert(outBitWidth <= 32 && "Unexpected output zeropoint bitwidth");
+          auto outputZp = nestedBuilder.create<arith::ConstantOp>(loc,
+              IntegerAttr::get(rewriter.getIntegerType(outAttrBitwidth),
+              *maybeOZp));
 
           Value multiplier = multiplierConstant ? multiplierConstant
                                                 : blockArgs[multiplierArg];
