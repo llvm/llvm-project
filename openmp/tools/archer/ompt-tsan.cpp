@@ -166,6 +166,8 @@ DECLARE_TSAN_FUNCTION(AnnotateNewMemory, const char *, int,
                       const volatile void *, size_t)
 DECLARE_TSAN_FUNCTION(__tsan_func_entry, const void *)
 DECLARE_TSAN_FUNCTION(__tsan_func_exit)
+DECLARE_TSAN_FUNCTION(AnnotateRWLockReleased, const char *, int,
+                      const volatile void *, size_t)
 }
 
 // This marker is used to define a happens-before arc. The race detector will
@@ -190,6 +192,9 @@ DECLARE_TSAN_FUNCTION(__tsan_func_exit)
   AnnotateNewMemory(__FILE__, __LINE__, addr, size)
 #define TsanFreeMemory(addr, size)                                             \
   AnnotateNewMemory(__FILE__, __LINE__, addr, size)
+
+#define TsanRWLockRelease(mutex, isw)                                          \
+  AnnotateRWLockReleased(__FILE__, __LINE__, mutex, isw)
 #endif
 
 // Function entry/exit
@@ -598,7 +603,11 @@ static inline TaskData *ToTaskData(ompt_data_t *task_data) {
 }
 
 /// Store a mutex for each wait_id to resolve race condition with callbacks.
-static std::unordered_map<ompt_wait_id_t, std::mutex> Locks;
+struct LockInfo {
+  std::mutex mu;
+  uint64_t thread_id;
+};
+static std::unordered_map<ompt_wait_id_t, LockInfo> Locks;
 static std::mutex LocksMutex;
 
 static void ompt_tsan_thread_begin(ompt_thread_t thread_type,
@@ -1109,22 +1118,31 @@ static void ompt_tsan_mutex_acquired(ompt_mutex_t kind, ompt_wait_id_t wait_id,
   // Acquire our own lock to make sure that
   // 1. the previous release has finished.
   // 2. the next acquire doesn't start before we have finished our release.
+  TsanFuncEntry(codeptr_ra);
   LocksMutex.lock();
-  std::mutex &Lock = Locks[wait_id];
+  std::mutex &Lock = Locks[wait_id].mu;
+  Locks[wait_id].thread_id = ompt_get_thread_data()->value;
   LocksMutex.unlock();
 
   Lock.lock();
   TsanHappensAfter(&Lock);
+  TsanFuncExit();
 }
 
 static void ompt_tsan_mutex_released(ompt_mutex_t kind, ompt_wait_id_t wait_id,
                                      const void *codeptr_ra) {
+  TsanFuncEntry(codeptr_ra);
   LocksMutex.lock();
-  std::mutex &Lock = Locks[wait_id];
+  std::mutex &Lock = Locks[wait_id].mu;
+  auto lock_owner = Locks[wait_id].thread_id;
   LocksMutex.unlock();
   TsanHappensBefore(&Lock);
 
+  if (lock_owner != ompt_get_thread_data()->value)
+    TsanRWLockRelease(&wait_id, 1);
+
   Lock.unlock();
+  TsanFuncExit();
 }
 
 // callback , signature , variable to store result , required support level
@@ -1179,6 +1197,12 @@ static int ompt_tsan_initialize(ompt_function_lookup_t lookup, int device_num,
     exit(1);
   }
 
+  if (ompt_get_thread_data == NULL) {
+    fprintf(stderr, "Could not get inquiry function 'ompt_get_thread_data', "
+                    "exiting...\n");
+    exit(1);
+  }
+
   findTsanFunction(AnnotateHappensAfter,
                    (void (*)(const char *, int, const volatile void *)));
   findTsanFunction(AnnotateHappensBefore,
@@ -1190,6 +1214,9 @@ static int ompt_tsan_initialize(ompt_function_lookup_t lookup, int device_num,
       (void (*)(const char *, int, const volatile void *, size_t)));
   findTsanFunction(__tsan_func_entry, (void (*)(const void *)));
   findTsanFunction(__tsan_func_exit, (void (*)(void)));
+  findTsanFunction(
+      AnnotateRWLockReleased,
+      (void (*)(const char *, int, const volatile void *, size_t)));
 
   SET_CALLBACK(thread_begin);
   SET_CALLBACK(thread_end);
