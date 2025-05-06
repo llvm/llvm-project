@@ -10974,8 +10974,7 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
 
   // fold (srl (or x, (shl (zext y), c1)), c1) -> (or (srl x, c1), (zext y))
   // c1 <= leadingzeros(zext(y))
-  if (N1C && (N0.getOpcode() == ISD::OR || N0.getOpcode() == ISD::AND ||
-              N0.getOpcode() == ISD::XOR)) {
+  if (N1C && ISD::isBitwiseLogicOp(N0.getOpcode())) {
     SDValue lhs = N0.getOperand(0);
     SDValue rhs = N0.getOperand(1);
     SDValue shl;
@@ -10987,19 +10986,17 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
       shl = rhs;
       other = lhs;
     }
-    if (shl.getNode()) {
-      if (shl.getOperand(1).getNode() == N1C) {
-        SDValue zext = shl.getOperand(0);
-        if (zext.getOpcode() == ISD::ZERO_EXTEND) {
-          unsigned numLeadingZeros =
-              zext.getValueType().getSizeInBits() -
-              zext.getOperand(0).getValueType().getSizeInBits();
-          if (N1C->getZExtValue() <= numLeadingZeros) {
-            return DAG.getNode(
-                N0.getOpcode(), SDLoc(N0), VT,
-                DAG.getNode(ISD::SRL, SDLoc(N0), VT, other, SDValue(N1C, 0)),
-                zext);
-          }
+    if (shl && shl.getOperand(1) == N1) {
+      SDValue zext = shl.getOperand(0);
+      if (zext.getOpcode() == ISD::ZERO_EXTEND) {
+        unsigned numLeadingZeros =
+            zext.getValueType().getScalarSizeInBits() -
+            zext.getOperand(0).getValueType().getScalarSizeInBits();
+        if (N1C->getZExtValue() <= numLeadingZeros) {
+          return DAG.getNode(
+              N0.getOpcode(), SDLoc(N0), VT,
+              DAG.getNode(ISD::SRL, SDLoc(N0), VT, other, SDValue(N1C, 0)),
+              zext);
         }
       }
     }
