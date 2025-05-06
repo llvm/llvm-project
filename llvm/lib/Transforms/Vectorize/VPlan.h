@@ -129,6 +129,8 @@ class VPBlockBase {
   void replacePredecessor(VPBlockBase *Old, VPBlockBase *New) {
     auto I = find(Predecessors, Old);
     assert(I != Predecessors.end());
+    assert(Old->getParent() == New->getParent() &&
+           "replaced predecessor must have the same parent");
     *I = New;
   }
 
