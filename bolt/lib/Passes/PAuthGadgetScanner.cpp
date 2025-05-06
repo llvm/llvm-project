@@ -1328,6 +1328,11 @@ shouldReportUnsafeTailCall(const BinaryContext &BC, const BinaryFunction &BF,
     return std::nullopt;
   }
 
+  if (BC.MIB->isSafeJumpTableBranchForPtrAuth(Inst)) {
+    LLVM_DEBUG({ dbgs() << "  Safe jump table detected, skipping.\n"; });
+    return std::nullopt;
+  }
+
   // Returns at most one report per instruction - this is probably OK...
   for (auto Reg : RegsToCheck)
     if (!S.TrustedRegs[Reg])
@@ -1357,6 +1362,11 @@ shouldReportCallGadget(const BinaryContext &BC, const MCInstReference &Inst,
   });
   if (S.SafeToDerefRegs[DestReg])
     return std::nullopt;
+
+  if (BC.MIB->isSafeJumpTableBranchForPtrAuth(Inst)) {
+    LLVM_DEBUG({ dbgs() << "  Safe jump table detected, skipping.\n"; });
+    return std::nullopt;
+  }
 
   return make_gadget_report(CallKind, Inst, DestReg);
 }
