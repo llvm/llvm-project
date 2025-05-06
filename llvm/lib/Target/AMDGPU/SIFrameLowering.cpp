@@ -1027,7 +1027,10 @@ void SIFrameLowering::emitCSRSpillStores(
     // it now. If we have already saved some WWM CSR registers, then the EXEC is
     // already -1 and we don't need to do anything else. Otherwise, set EXEC to
     // -1 here.
-    if (WWMCalleeSavedRegs.empty())
+    if (!ScratchExecCopy)
+      buildScratchExecCopy(LiveUnits, MF, MBB, MBBI, DL, /*IsProlog*/ true,
+                           /*EnableInactiveLanes*/ true);
+    else if (WWMCalleeSavedRegs.empty())
       EnableAllLanes();
     TII->getWholeWaveFunctionSetup(MF)->eraseFromParent();
   } else if (ScratchExecCopy) {

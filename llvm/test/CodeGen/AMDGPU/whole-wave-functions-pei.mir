@@ -360,7 +360,7 @@ body:             |
     ; CHECK-LABEL: name: dont_restore_used_vgprs
     ; CHECK: liveins: $vgpr0, $vgpr20, $vgpr40
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $exec_lo = S_MOV_B32 -1
+    ; CHECK-NEXT: $sgpr0 = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; CHECK-NEXT: S_NOP 0, implicit $vgpr0, implicit $vgpr20, implicit $vgpr40
     ; CHECK-NEXT: $exec_lo = S_MOV_B32 $sgpr0
     ; CHECK-NEXT: SI_WHOLE_WAVE_FUNC_RETURN killed renamable $sgpr0, implicit killed $vgpr0
