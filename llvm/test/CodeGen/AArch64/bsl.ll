@@ -38,8 +38,11 @@ define <1 x i64> @nbsl_v1i64(<1 x i64> %0, <1 x i64> %1, <1 x i64> %2) {
 ;
 ; SVE2-LABEL: nbsl_v1i64:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    bif v0.8b, v1.8b, v2.8b
-; SVE2-NEXT:    mvn v0.8b, v0.8b
+; SVE2-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE2-NEXT:    // kill: def $d2 killed $d2 def $z2
+; SVE2-NEXT:    // kill: def $d1 killed $d1 def $z1
+; SVE2-NEXT:    nbsl z0.d, z0.d, z1.d, z2.d
+; SVE2-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2-NEXT:    ret
   %4 = and <1 x i64> %2, %0
   %5 = xor <1 x i64> %2, splat (i64 -1)
@@ -58,8 +61,11 @@ define <1 x i64> @bsl1n_v1i64(<1 x i64> %0, <1 x i64> %1, <1 x i64> %2) {
 ;
 ; SVE2-LABEL: bsl1n_v1i64:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    mvn v0.8b, v0.8b
-; SVE2-NEXT:    bif v0.8b, v1.8b, v2.8b
+; SVE2-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE2-NEXT:    // kill: def $d2 killed $d2 def $z2
+; SVE2-NEXT:    // kill: def $d1 killed $d1 def $z1
+; SVE2-NEXT:    bsl1n z0.d, z0.d, z1.d, z2.d
+; SVE2-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2-NEXT:    ret
   %4 = xor <1 x i64> %0, splat (i64 -1)
   %5 = and <1 x i64> %2, %4
@@ -79,9 +85,11 @@ define <1 x i64> @bsl2n_v1i64(<1 x i64> %0, <1 x i64> %1, <1 x i64> %2) {
 ;
 ; SVE2-LABEL: bsl2n_v1i64:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    and v0.8b, v2.8b, v0.8b
-; SVE2-NEXT:    orr v1.8b, v2.8b, v1.8b
-; SVE2-NEXT:    orn v0.8b, v0.8b, v1.8b
+; SVE2-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE2-NEXT:    // kill: def $d2 killed $d2 def $z2
+; SVE2-NEXT:    // kill: def $d1 killed $d1 def $z1
+; SVE2-NEXT:    bsl2n z0.d, z0.d, z1.d, z2.d
+; SVE2-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2-NEXT:    ret
   %4 = and <1 x i64> %2, %0
   %5 = or <1 x i64> %2, %1
@@ -116,8 +124,11 @@ define <2 x i64> @nbsl_v2i64(<2 x i64> %0, <2 x i64> %1, <2 x i64> %2) {
 ;
 ; SVE2-LABEL: nbsl_v2i64:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    bif v0.16b, v1.16b, v2.16b
-; SVE2-NEXT:    mvn v0.16b, v0.16b
+; SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE2-NEXT:    // kill: def $q2 killed $q2 def $z2
+; SVE2-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE2-NEXT:    nbsl z0.d, z0.d, z1.d, z2.d
+; SVE2-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE2-NEXT:    ret
   %4 = and <2 x i64> %2, %0
   %5 = xor <2 x i64> %2, splat (i64 -1)
@@ -136,8 +147,11 @@ define <2 x i64> @bsl1n_v2i64(<2 x i64> %0, <2 x i64> %1, <2 x i64> %2) {
 ;
 ; SVE2-LABEL: bsl1n_v2i64:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    mvn v0.16b, v0.16b
-; SVE2-NEXT:    bif v0.16b, v1.16b, v2.16b
+; SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE2-NEXT:    // kill: def $q2 killed $q2 def $z2
+; SVE2-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE2-NEXT:    bsl1n z0.d, z0.d, z1.d, z2.d
+; SVE2-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE2-NEXT:    ret
   %4 = xor <2 x i64> %0, splat (i64 -1)
   %5 = and <2 x i64> %2, %4
@@ -157,9 +171,11 @@ define <2 x i64> @bsl2n_v2i64(<2 x i64> %0, <2 x i64> %1, <2 x i64> %2) {
 ;
 ; SVE2-LABEL: bsl2n_v2i64:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    and v0.16b, v2.16b, v0.16b
-; SVE2-NEXT:    orr v1.16b, v2.16b, v1.16b
-; SVE2-NEXT:    orn v0.16b, v0.16b, v1.16b
+; SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE2-NEXT:    // kill: def $q2 killed $q2 def $z2
+; SVE2-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE2-NEXT:    bsl2n z0.d, z0.d, z1.d, z2.d
+; SVE2-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE2-NEXT:    ret
   %4 = and <2 x i64> %2, %0
   %5 = or <2 x i64> %2, %1
@@ -179,8 +195,11 @@ define <8 x i8> @nbsl_v8i8(<8 x i8> %0, <8 x i8> %1, <8 x i8> %2) {
 ;
 ; SVE2-LABEL: nbsl_v8i8:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    bif v0.8b, v1.8b, v2.8b
-; SVE2-NEXT:    mvn v0.8b, v0.8b
+; SVE2-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE2-NEXT:    // kill: def $d2 killed $d2 def $z2
+; SVE2-NEXT:    // kill: def $d1 killed $d1 def $z1
+; SVE2-NEXT:    nbsl z0.d, z0.d, z1.d, z2.d
+; SVE2-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2-NEXT:    ret
   %4 = and <8 x i8> %2, %0
   %5 = xor <8 x i8> %2, splat (i8 -1)
@@ -199,8 +218,11 @@ define <4 x i16> @nbsl_v4i16(<4 x i16> %0, <4 x i16> %1, <4 x i16> %2) {
 ;
 ; SVE2-LABEL: nbsl_v4i16:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    bif v0.8b, v1.8b, v2.8b
-; SVE2-NEXT:    mvn v0.8b, v0.8b
+; SVE2-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE2-NEXT:    // kill: def $d2 killed $d2 def $z2
+; SVE2-NEXT:    // kill: def $d1 killed $d1 def $z1
+; SVE2-NEXT:    nbsl z0.d, z0.d, z1.d, z2.d
+; SVE2-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2-NEXT:    ret
   %4 = and <4 x i16> %2, %0
   %5 = xor <4 x i16> %2, splat (i16 -1)
@@ -219,8 +241,11 @@ define <2 x i32> @nbsl_v2i32(<2 x i32> %0, <2 x i32> %1, <2 x i32> %2) {
 ;
 ; SVE2-LABEL: nbsl_v2i32:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    bif v0.8b, v1.8b, v2.8b
-; SVE2-NEXT:    mvn v0.8b, v0.8b
+; SVE2-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE2-NEXT:    // kill: def $d2 killed $d2 def $z2
+; SVE2-NEXT:    // kill: def $d1 killed $d1 def $z1
+; SVE2-NEXT:    nbsl z0.d, z0.d, z1.d, z2.d
+; SVE2-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2-NEXT:    ret
   %4 = and <2 x i32> %2, %0
   %5 = xor <2 x i32> %2, splat (i32 -1)
@@ -239,8 +264,11 @@ define <16 x i8> @nbsl_v16i8(<16 x i8> %0, <16 x i8> %1, <16 x i8> %2) {
 ;
 ; SVE2-LABEL: nbsl_v16i8:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    bif v0.16b, v1.16b, v2.16b
-; SVE2-NEXT:    mvn v0.16b, v0.16b
+; SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE2-NEXT:    // kill: def $q2 killed $q2 def $z2
+; SVE2-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE2-NEXT:    nbsl z0.d, z0.d, z1.d, z2.d
+; SVE2-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE2-NEXT:    ret
   %4 = and <16 x i8> %2, %0
   %5 = xor <16 x i8> %2, splat (i8 -1)
@@ -259,8 +287,11 @@ define <8 x i16> @nbsl_v8i16(<8 x i16> %0, <8 x i16> %1, <8 x i16> %2) {
 ;
 ; SVE2-LABEL: nbsl_v8i16:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    bif v0.16b, v1.16b, v2.16b
-; SVE2-NEXT:    mvn v0.16b, v0.16b
+; SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE2-NEXT:    // kill: def $q2 killed $q2 def $z2
+; SVE2-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE2-NEXT:    nbsl z0.d, z0.d, z1.d, z2.d
+; SVE2-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE2-NEXT:    ret
   %4 = and <8 x i16> %2, %0
   %5 = xor <8 x i16> %2, splat (i16 -1)
@@ -279,8 +310,11 @@ define <4 x i32> @nbsl_v4i32(<4 x i32> %0, <4 x i32> %1, <4 x i32> %2) {
 ;
 ; SVE2-LABEL: nbsl_v4i32:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    bif v0.16b, v1.16b, v2.16b
-; SVE2-NEXT:    mvn v0.16b, v0.16b
+; SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE2-NEXT:    // kill: def $q2 killed $q2 def $z2
+; SVE2-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE2-NEXT:    nbsl z0.d, z0.d, z1.d, z2.d
+; SVE2-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE2-NEXT:    ret
   %4 = and <4 x i32> %2, %0
   %5 = xor <4 x i32> %2, splat (i32 -1)
