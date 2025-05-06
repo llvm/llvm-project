@@ -15,10 +15,9 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::bugprone {
 
 void MisleadingSetterOfReferenceCheck::registerMatchers(MatchFinder *Finder) {
-  auto RefField =
-      fieldDecl(unless(isPublic()), hasType(hasCanonicalType(referenceType(
-                                        pointee(equalsBoundNode("type"))))))
-          .bind("member");
+  auto RefField = fieldDecl(hasType(hasCanonicalType(referenceType(
+                                pointee(equalsBoundNode("type"))))))
+                      .bind("member");
   auto AssignLHS = memberExpr(
       hasObjectExpression(ignoringParenCasts(cxxThisExpr())), member(RefField));
   auto DerefOperand = expr(ignoringParenCasts(

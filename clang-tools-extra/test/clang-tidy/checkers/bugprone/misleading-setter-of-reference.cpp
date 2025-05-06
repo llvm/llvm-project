@@ -42,6 +42,7 @@ public:
     MemL = *NewValue;
   }
   void setLPub(long *NewValue) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: function 'setLPub' can be mistakenly used in order to change the reference 'MemLPub' instead of the value of it
     MemLPub = *NewValue;
   }
 
