@@ -5277,9 +5277,8 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
       break;
     if (N->getOpcode() == ISD::SHL) {
       return performShlCombine(N, DCI);
-    } else {
-      return performSrlCombine(N, DCI);
     }
+    return performSrlCombine(N, DCI);
   }
   case ISD::SRA: {
     if (DCI.getDAGCombineLevel() < AfterLegalizeDAG)
