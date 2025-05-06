@@ -88,47 +88,10 @@ void test_invalid_args() {
 }
 
 int main(int, char**) {
-  {
-    timer t;
-    test();
-    test_invalid_cases();
-    test_invalid_args();
-  }
-#if 0
-    std::string input;
-    while (std::cin)
-    {
-        std::getline(std::cin, input);
-        if (std::cin.fail())
-            break;
-        std::size_t len = 0;
-        int status;
-        len = 0;
-        char* demang = abi::__cxa_demangle(input.c_str(), 0, &len, &status);
-        switch (status)
-        {
-        case -3:
-            std::cout << "Invalid arguments\n";
-            break;
-        case -2:
-            std::cout << "Invalid mangled name\n";
-            break;
-        case -1:
-            std::cout << "memory allocation failure\n";
-            break;
-        case 0:
-            std::cout << "len = " << len << '\n';
-            std::cout << demang << '\n';
-            std::free(demang);
-            break;
-        case 1:
-            std::cout << "not implemented\n";
-            break;
-        }
-        std::cout << '\n';
-    }
-#endif
+  timer t;
+  test();
+  test_invalid_cases();
+  test_invalid_args();
 
   return 0;
 }
-// TODO: add cxa_demangle tests
