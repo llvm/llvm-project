@@ -73,7 +73,7 @@ protected:
   }
 
   // copy the layout attribte and drops the inst_data field.
-  xegpu::LayoutAttr getLaneLayoutAttr(Attribute attr) const {
+  xegpu::LayoutAttr getLaneLevelAttrsOnly(Attribute attr) const {
     auto layout = dyn_cast_if_present<xegpu::LayoutAttr>(attr);
     if (!layout || layout.getLaneLayout() == nullptr)
       return xegpu::LayoutAttr();
@@ -90,7 +90,7 @@ protected:
       auto encoding = tdescTy.getEncoding();
       auto layout = tdescTy.getLayout();
       newTy = xegpu::TensorDescType::get(ctx, blockSize, elemTy, encoding,
-                                         getLaneLayoutAttr(layout));
+                                         getLaneLevelAttrsOnly(layout));
     } else {
       newTy = type.clone(blockSize, elemTy);
     }
@@ -205,7 +205,7 @@ struct UnrollCreateNdOp : public UnrollPattern<xegpu::CreateNdDescOp> {
       return failure();
 
     auto encoding = tdescTy.getEncoding();
-    auto newLayout = getLaneLayoutAttr(layout);
+    auto newLayout = getLaneLevelAttrsOnly(layout);
     auto newTdescTy = xegpu::TensorDescType::get(
         ctx, targetShape, tdescTy.getElementType(), encoding, newLayout);
 
