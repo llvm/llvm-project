@@ -20,11 +20,11 @@ void bar(void) {
 #define PRODUCT(A ,B) struct prod { A a; B b; }                   // expected-note 2 {{expanded from macro 'PRODUCT'}}
 #define SUM(A, B) struct sum { _Bool flag; union { A a; B b; }; } // expected-note 2 {{expanded from macro 'SUM'}}
 
-void func1(PRODUCT(int, SUM(float, double)) x); // both-warning {{declaration of 'struct prod' will not be visible outside of this function}} \
-                                                   both-warning {{declaration of 'struct sum' will not be visible outside of this function}} \
+void func1(PRODUCT(int, SUM(float, double)) x); // c17-warning {{declaration of 'struct prod' will not be visible outside of this function}} \
+                                                   c17-warning {{declaration of 'struct sum' will not be visible outside of this function}} \
                                                    c17-note {{passing argument to parameter 'x' here}}
-void func2(PRODUCT(int, SUM(float, double)) y) { // both-warning {{declaration of 'struct prod' will not be visible outside of this function}} \
-                                                    both-warning {{declaration of 'struct sum' will not be visible outside of this function}}
+void func2(PRODUCT(int, SUM(float, double)) y) { // c17-warning {{declaration of 'struct prod' will not be visible outside of this function}} \
+                                                    c17-warning {{declaration of 'struct sum' will not be visible outside of this function}}
   func1(y); // c17-error {{passing 'struct prod' to parameter of incompatible type 'struct prod'}}
 }
 
@@ -307,7 +307,7 @@ enum fixed_test_2 : typedef_of_type_int { FT2 }; // c17-error {{redefinition of 
 // Test more bizarre situations in terms of where the type is declared. This
 // has always been allowed.
 struct declared_funny_1 { int x; }
-declared_funny_func(struct declared_funny_1 { int x; } arg) { // both-warning {{declaration of 'struct declared_funny_1' will not be visible outside of this function}}
+declared_funny_func(struct declared_funny_1 { int x; } arg) { // c17-warning {{declaration of 'struct declared_funny_1' will not be visible outside of this function}}
   return declared_funny_func((__typeof__(arg)){ 0 });
 }
 

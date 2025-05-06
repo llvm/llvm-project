@@ -155,8 +155,14 @@ static bool handleNDDOrNFInstructions(MachineFunction &MF,
       switch (Opcode) {
       case X86::ADD64rm_NF:
       case X86::ADD64mr_NF_ND:
-      case X86::ADD64rm_NF_ND:
-        llvm_unreachable("Unexpected NF instruction!");
+      case X86::ADD64rm_NF_ND: {
+        int MemOpNo = X86II::getMemoryOperandNo(MI.getDesc().TSFlags) +
+                      X86II::getOperandBias(MI.getDesc());
+        const MachineOperand &MO = MI.getOperand(X86::AddrDisp + MemOpNo);
+        if (MO.getTargetFlags() == X86II::MO_GOTTPOFF)
+          llvm_unreachable("Unexpected NF instruction!");
+        break;
+      }
       case X86::ADD64rm_ND: {
         int MemOpNo = X86II::getMemoryOperandNo(MI.getDesc().TSFlags) +
                       X86II::getOperandBias(MI.getDesc());

@@ -7,8 +7,8 @@
 define void @a() "sign-return-address"="all" {
 ; V8A-LABEL: a:
 ; V8A:       // %bb.0:
-; V8A-NEXT:    .cfi_negate_ra_state
 ; V8A-NEXT:    hint #25
+; V8A-NEXT:    .cfi_negate_ra_state
 ; V8A-NEXT:    sub sp, sp, #32
 ; V8A-NEXT:    .cfi_def_cfa_offset 32
 ; V8A-NEXT:    mov w8, #1 // =0x1
@@ -26,8 +26,8 @@ define void @a() "sign-return-address"="all" {
 ;
 ; V83A-LABEL: a:
 ; V83A:       // %bb.0:
-; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    paciasp
+; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    sub sp, sp, #32
 ; V83A-NEXT:    .cfi_def_cfa_offset 32
 ; V83A-NEXT:    mov w8, #1 // =0x1
@@ -60,8 +60,8 @@ define void @b() "sign-return-address"="all" "sign-return-address-key"="b_key" {
 ; V8A-LABEL: b:
 ; V8A:       // %bb.0:
 ; V8A-NEXT:    .cfi_b_key_frame
-; V8A-NEXT:    .cfi_negate_ra_state
 ; V8A-NEXT:    hint #27
+; V8A-NEXT:    .cfi_negate_ra_state
 ; V8A-NEXT:    sub sp, sp, #32
 ; V8A-NEXT:    .cfi_def_cfa_offset 32
 ; V8A-NEXT:    mov w8, #1 // =0x1
@@ -80,8 +80,8 @@ define void @b() "sign-return-address"="all" "sign-return-address-key"="b_key" {
 ; V83A-LABEL: b:
 ; V83A:       // %bb.0:
 ; V83A-NEXT:    .cfi_b_key_frame
-; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    pacibsp
+; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    sub sp, sp, #32
 ; V83A-NEXT:    .cfi_def_cfa_offset 32
 ; V83A-NEXT:    mov w8, #1 // =0x1
@@ -113,8 +113,8 @@ define void @b() "sign-return-address"="all" "sign-return-address-key"="b_key" {
 define void @c() "sign-return-address"="all" {
 ; V8A-LABEL: c:
 ; V8A:       // %bb.0:
-; V8A-NEXT:    .cfi_negate_ra_state
 ; V8A-NEXT:    hint #25
+; V8A-NEXT:    .cfi_negate_ra_state
 ; V8A-NEXT:    sub sp, sp, #32
 ; V8A-NEXT:    .cfi_def_cfa_offset 32
 ; V8A-NEXT:    mov w8, #1 // =0x1
@@ -132,8 +132,8 @@ define void @c() "sign-return-address"="all" {
 ;
 ; V83A-LABEL: c:
 ; V83A:       // %bb.0:
-; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    paciasp
+; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    sub sp, sp, #32
 ; V83A-NEXT:    .cfi_def_cfa_offset 32
 ; V83A-NEXT:    mov w8, #1 // =0x1

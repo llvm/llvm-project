@@ -2891,6 +2891,37 @@ llvm.func @to()
 
 // -----
 
+llvm.module_flags [#llvm.mlir.module_flag<error, "ProfileSummary",
+                       #llvm.profile_summary<format = InstrProf, total_count = 263646, max_count = 86427,
+                         max_internal_count = 86427, max_function_count = 4691,
+                         num_counts = 3712, num_functions = 796,
+                         is_partial_profile = 0,
+                         partial_profile_ratio = 0.000000e+00 : f64,
+                         detailed_summary =
+                           <cut_off = 10000, min_count = 86427, num_counts = 1>,
+                           <cut_off = 100000, min_count = 86427, num_counts = 1>
+                  >>]
+
+// CHECK: !llvm.module.flags = !{![[#PSUM:]], {{.*}}}
+
+// CHECK: ![[#PSUM]] = !{i32 1, !"ProfileSummary", ![[#SUMLIST:]]}
+// CHECK: ![[#SUMLIST]] = !{![[#FMT:]], ![[#TC:]], ![[#MC:]], ![[#MIC:]], ![[#MFC:]], ![[#NC:]], ![[#NF:]], ![[#IPP:]], ![[#PPR:]], ![[#DS:]]}
+// CHECK: ![[#FMT]] = !{!"ProfileFormat", !"InstrProf"}
+// CHECK: ![[#TC]] = !{!"TotalCount", i64 263646}
+// CHECK: ![[#MC]] = !{!"MaxCount", i64 86427}
+// CHECK: ![[#MIC]] = !{!"MaxInternalCount", i64 86427}
+// CHECK: ![[#MFC]] = !{!"MaxFunctionCount", i64 4691}
+// CHECK: ![[#NC]] = !{!"NumCounts", i64 3712}
+// CHECK: ![[#NF]] = !{!"NumFunctions", i64 796}
+// CHECK: ![[#IPP]] = !{!"IsPartialProfile", i64 0}
+// CHECK: ![[#PPR]] = !{!"PartialProfileRatio", double 0.000000e+00}
+// CHECK: ![[#DS]] = !{!"DetailedSummary", ![[#DETAILED:]]}
+// CHECK: ![[#DETAILED]] = !{![[#DS0:]], ![[#DS1:]]}
+// CHECK: ![[#DS0:]] = !{i64 10000, i64 86427, i64 1}
+// CHECK: ![[#DS1:]] = !{i64 100000, i64 86427, i64 1}
+
+// -----
+
 module attributes {llvm.dependent_libraries = ["foo", "bar"]} {}
 
 // CHECK: !llvm.dependent-libraries =  !{![[#LIBFOO:]], ![[#LIBBAR:]]}
