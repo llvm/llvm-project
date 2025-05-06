@@ -267,7 +267,7 @@ void PerfMonitor::insertRegionStart(Instruction *InsertBefore) {
   if (!Supported)
     return;
 
-  Builder.SetInsertPoint(InsertBefore);
+  Builder.SetInsertPoint(InsertBefore->getIterator());
   Function *RDTSCPFn = getRDTSCP();
   Value *CurrentCycles =
       Builder.CreateExtractValue(Builder.CreateCall(RDTSCPFn), {0});
@@ -278,7 +278,7 @@ void PerfMonitor::insertRegionEnd(Instruction *InsertBefore) {
   if (!Supported)
     return;
 
-  Builder.SetInsertPoint(InsertBefore);
+  Builder.SetInsertPoint(InsertBefore->getIterator());
   Function *RDTSCPFn = getRDTSCP();
   Type *Int64Ty = Builder.getInt64Ty();
   LoadInst *CyclesStart =

@@ -119,8 +119,7 @@ struct AnonStructTypeKeyInfo {
   }
 
   static unsigned getHashValue(const KeyTy &Key) {
-    return hash_combine(
-        hash_combine_range(Key.ETypes.begin(), Key.ETypes.end()), Key.isPacked);
+    return hash_combine(hash_combine_range(Key.ETypes), Key.isPacked);
   }
 
   static unsigned getHashValue(const StructType *ST) {
@@ -171,9 +170,8 @@ struct FunctionTypeKeyInfo {
   }
 
   static unsigned getHashValue(const KeyTy &Key) {
-    return hash_combine(
-        Key.ReturnType,
-        hash_combine_range(Key.Params.begin(), Key.Params.end()), Key.isVarArg);
+    return hash_combine(Key.ReturnType, hash_combine_range(Key.Params),
+                        Key.isVarArg);
   }
 
   static unsigned getHashValue(const FunctionType *FT) {
@@ -219,10 +217,8 @@ struct TargetExtTypeKeyInfo {
   }
 
   static unsigned getHashValue(const KeyTy &Key) {
-    return hash_combine(
-        Key.Name,
-        hash_combine_range(Key.TypeParams.begin(), Key.TypeParams.end()),
-        hash_combine_range(Key.IntParams.begin(), Key.IntParams.end()));
+    return hash_combine(Key.Name, hash_combine_range(Key.TypeParams),
+                        hash_combine_range(Key.IntParams));
   }
 
   static unsigned getHashValue(const TargetExtType *FT) {
@@ -319,23 +315,30 @@ template <> struct MDNodeKeyImpl<DILocation> {
   Metadata *Scope;
   Metadata *InlinedAt;
   bool ImplicitCode;
+  uint64_t AtomGroup : 61;
+  uint8_t AtomRank : 3;
 
   MDNodeKeyImpl(unsigned Line, unsigned Column, Metadata *Scope,
-                Metadata *InlinedAt, bool ImplicitCode)
+                Metadata *InlinedAt, bool ImplicitCode, uint64_t AtomGroup,
+                uint8_t AtomRank)
       : Line(Line), Column(Column), Scope(Scope), InlinedAt(InlinedAt),
-        ImplicitCode(ImplicitCode) {}
+        ImplicitCode(ImplicitCode), AtomGroup(AtomGroup), AtomRank(AtomRank) {}
+
   MDNodeKeyImpl(const DILocation *L)
       : Line(L->getLine()), Column(L->getColumn()), Scope(L->getRawScope()),
-        InlinedAt(L->getRawInlinedAt()), ImplicitCode(L->isImplicitCode()) {}
+        InlinedAt(L->getRawInlinedAt()), ImplicitCode(L->isImplicitCode()),
+        AtomGroup(L->getAtomGroup()), AtomRank(L->getAtomRank()) {}
 
   bool isKeyOf(const DILocation *RHS) const {
     return Line == RHS->getLine() && Column == RHS->getColumn() &&
            Scope == RHS->getRawScope() && InlinedAt == RHS->getRawInlinedAt() &&
-           ImplicitCode == RHS->isImplicitCode();
+           ImplicitCode == RHS->isImplicitCode() &&
+           AtomGroup == RHS->getAtomGroup() && AtomRank == RHS->getAtomRank();
   }
 
   unsigned getHashValue() const {
-    return hash_combine(Line, Column, Scope, InlinedAt, ImplicitCode);
+    return hash_combine(Line, Column, Scope, InlinedAt, ImplicitCode, AtomGroup,
+                        AtomRank);
   }
 };
 
@@ -1324,9 +1327,7 @@ template <> struct MDNodeKeyImpl<DIExpression> {
     return Elements == RHS->getElements();
   }
 
-  unsigned getHashValue() const {
-    return hash_combine_range(Elements.begin(), Elements.end());
-  }
+  unsigned getHashValue() const { return hash_combine_range(Elements); }
 };
 
 template <> struct MDNodeKeyImpl<DIGlobalVariableExpression> {
@@ -1463,9 +1464,7 @@ struct DIArgListKeyInfo {
 
   bool isKeyOf(const DIArgList *RHS) const { return Args == RHS->getArgs(); }
 
-  unsigned getHashValue() const {
-    return hash_combine_range(Args.begin(), Args.end());
-  }
+  unsigned getHashValue() const { return hash_combine_range(Args); }
 };
 
 /// DenseMapInfo for DIArgList.
@@ -1696,8 +1695,7 @@ public:
 
   StringMap<std::unique_ptr<ConstantDataSequential>> CDSConstants;
 
-  DenseMap<std::pair<const Function *, const BasicBlock *>, BlockAddress *>
-      BlockAddresses;
+  DenseMap<const BasicBlock *, BlockAddress *> BlockAddresses;
 
   DenseMap<const GlobalValue *, DSOLocalEquivalent *> DSOLocalEquivalents;
 
@@ -1815,9 +1813,6 @@ public:
 
   LLVMContextImpl(LLVMContext &C);
   ~LLVMContextImpl();
-
-  /// Destroy the ConstantArrays if they are not used.
-  void dropTriviallyDeadConstantArrays();
 
   mutable OptPassGate *OPG = nullptr;
 

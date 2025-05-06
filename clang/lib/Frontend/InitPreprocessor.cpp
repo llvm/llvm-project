@@ -32,7 +32,7 @@ using namespace clang;
 static bool MacroBodyEndsInBackslash(StringRef MacroBody) {
   while (!MacroBody.empty() && isWhitespace(MacroBody.back()))
     MacroBody = MacroBody.drop_back();
-  return !MacroBody.empty() && MacroBody.back() == '\\';
+  return MacroBody.ends_with('\\');
 }
 
 // Append a #define line to Buf for Macro.  Macro should be of the form XXX,
@@ -974,7 +974,6 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
 
     if (LangOpts.ObjCRuntime.getKind() == ObjCRuntime::GNUstep) {
       auto version = LangOpts.ObjCRuntime.getVersion();
-      std::string versionString = "1";
       // Don't rely on the tuple argument, because we can be asked to target
       // later ABIs than we actually support, so clamp these values to those
       // currently supported

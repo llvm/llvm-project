@@ -507,17 +507,17 @@ INSTANTIATE_TEST_SUITE_P(
                                    "8-M.Mainline"),
         ARMCPUTestParams<uint64_t>(
             "cortex-m55", "armv8.1-m.main", "fp-armv8-fullfp16-d16",
-            ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_SIMD | ARM::AEK_FP |
+            ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_MVE | ARM::AEK_FP |
                 ARM::AEK_RAS | ARM::AEK_LOB | ARM::AEK_FP16,
             "8.1-M.Mainline"),
         ARMCPUTestParams<uint64_t>(
             "cortex-m85", "armv8.1-m.main", "fp-armv8-fullfp16-d16",
-            ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_SIMD | ARM::AEK_FP |
+            ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_MVE | ARM::AEK_FP |
                 ARM::AEK_RAS | ARM::AEK_LOB | ARM::AEK_FP16 | ARM::AEK_PACBTI,
             "8.1-M.Mainline"),
         ARMCPUTestParams<uint64_t>(
             "cortex-m52", "armv8.1-m.main", "fp-armv8-fullfp16-d16",
-            ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_SIMD | ARM::AEK_FP |
+            ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_MVE | ARM::AEK_FP |
                 ARM::AEK_RAS | ARM::AEK_LOB | ARM::AEK_FP16 | ARM::AEK_PACBTI,
             "8.1-M.Mainline"),
         ARMCPUTestParams<uint64_t>("iwmmxt", "iwmmxt", "none", ARM::AEK_NONE,
@@ -801,7 +801,7 @@ TEST(TargetParserTest, ARMArchExtFeature) {
                               {"fp", "nofp", nullptr, nullptr},
                               {"idiv", "noidiv", nullptr, nullptr},
                               {"mp", "nomp", nullptr, nullptr},
-                              {"simd", "nosimd", nullptr, nullptr},
+                              {"simd", "nosimd", "+neon", "-neon"},
                               {"sec", "nosec", nullptr, nullptr},
                               {"virt", "novirt", nullptr, nullptr},
                               {"fp16", "nofp16", "+fullfp16", "-fullfp16"},
@@ -1046,7 +1046,6 @@ TEST(TargetParserTest, ARMPrintSupportedExtensions) {
   EXPECT_EQ(std::string::npos, captured.find("invalid"));
   // Should not include anything that lacks a feature name. Checking a few here
   // but not all as if one is hidden correctly the rest should be.
-  EXPECT_EQ(std::string::npos, captured.find("simd"));
   EXPECT_EQ(std::string::npos, captured.find("maverick"));
   EXPECT_EQ(std::string::npos, captured.find("xscale"));
 }

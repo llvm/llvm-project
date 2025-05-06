@@ -312,7 +312,7 @@ FrontendAction::CreateWrappedASTConsumer(CompilerInstance &CI,
     std::error_code ErrorCode;
     auto FileStream = std::make_unique<llvm::raw_fd_ostream>(
         DumpDeserializedDeclarationRangesPath, ErrorCode,
-        llvm::sys::fs::OF_None);
+        llvm::sys::fs::OF_TextWithCRLF);
     if (!ErrorCode) {
       Consumers.push_back(std::make_unique<DeserializedDeclsSourceRangePrinter>(
           CI.getSourceManager(), std::move(FileStream)));
@@ -780,8 +780,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
         InputFile, CI.getPCHContainerReader(), ASTUnit::LoadPreprocessorOnly,
-        ASTDiags, CI.getFileSystemOpts(),
-        /*HeaderSearchOptions=*/nullptr);
+        ASTDiags, CI.getFileSystemOpts(), CI.getHeaderSearchOpts());
     if (!AST)
       return false;
 
@@ -848,8 +847,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
         InputFile, CI.getPCHContainerReader(), ASTUnit::LoadEverything, Diags,
-        CI.getFileSystemOpts(), CI.getHeaderSearchOptsPtr(),
-        CI.getLangOptsPtr());
+        CI.getFileSystemOpts(), CI.getHeaderSearchOpts(), &CI.getLangOpts());
 
     if (!AST)
       return false;

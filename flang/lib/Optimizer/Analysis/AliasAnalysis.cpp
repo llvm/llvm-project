@@ -110,6 +110,14 @@ bool AliasAnalysis::Source::isTargetOrPointer() const {
          attributes.test(Attribute::Target);
 }
 
+bool AliasAnalysis::Source::isTarget() const {
+  return attributes.test(Attribute::Target);
+}
+
+bool AliasAnalysis::Source::isPointer() const {
+  return attributes.test(Attribute::Pointer);
+}
+
 bool AliasAnalysis::Source::isDummyArgument() const {
   if (auto v = origin.u.dyn_cast<mlir::Value>()) {
     return fir::isDummyArgument(v);
@@ -541,6 +549,14 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           // Skip ConvertOp's and track further through the operand.
           v = op->getOperand(0);
           defOp = v.getDefiningOp();
+        })
+        .Case<fir::PackArrayOp>([&](auto op) {
+          // The packed array is not distinguishable from the original
+          // array, so skip PackArrayOp and track further through
+          // the array operand.
+          v = op.getArray();
+          defOp = v.getDefiningOp();
+          approximateSource = true;
         })
         .Case<fir::BoxAddrOp>([&](auto op) {
           v = op->getOperand(0);

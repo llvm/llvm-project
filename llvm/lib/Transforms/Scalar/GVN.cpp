@@ -165,9 +165,8 @@ struct llvm::GVNPass::Expression {
   }
 
   friend hash_code hash_value(const Expression &Value) {
-    return hash_combine(
-        Value.Opcode, Value.Ty,
-        hash_combine_range(Value.VarArgs.begin(), Value.VarArgs.end()));
+    return hash_combine(Value.Opcode, Value.Ty,
+                        hash_combine_range(Value.VarArgs));
   }
 };
 
@@ -3037,12 +3036,12 @@ bool GVNPass::performScalarPRE(Instruction *CurInst) {
   PHINode *Phi = PHINode::Create(CurInst->getType(), PredMap.size(),
                                  CurInst->getName() + ".pre-phi");
   Phi->insertBefore(CurrentBlock->begin());
-  for (unsigned I = 0, E = PredMap.size(); I != E; ++I) {
-    if (Value *V = PredMap[I].first) {
+  for (auto &[V, BB] : PredMap) {
+    if (V) {
       // If we use an existing value in this phi, we have to patch the original
       // value because the phi will be used to replace a later value.
       patchReplacementInstruction(CurInst, V);
-      Phi->addIncoming(V, PredMap[I].second);
+      Phi->addIncoming(V, BB);
     } else
       Phi->addIncoming(PREInstr, PREPred);
   }

@@ -83,7 +83,7 @@ define float @clamp_float_fast_unordered_strict_maxmin(float %x) {
 ; (X <= C1) ? C1 : MIN(X, C2)
 define float @clamp_float_fast_unordered_nonstrict_maxmin(float %x) {
 ; CHECK-LABEL: @clamp_float_fast_unordered_nonstrict_maxmin(
-; CHECK-NEXT:    [[MIN:%.*]] = call fast float @llvm.minnum.f32(float [[X:%.*]], float 2.550000e+02) 
+; CHECK-NEXT:    [[MIN:%.*]] = call fast float @llvm.minnum.f32(float [[X:%.*]], float 2.550000e+02)
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp fast ule float [[X]], 1.000000e+00
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], float 1.000000e+00, float [[MIN]]
 ; CHECK-NEXT:    ret float [[R]]
@@ -98,7 +98,7 @@ define float @clamp_float_fast_unordered_nonstrict_maxmin(float %x) {
 ; (X > C1) ? C1 : MAX(X, C2)
 define float @clamp_float_fast_unordered_strict_minmax(float %x) {
 ; CHECK-LABEL: @clamp_float_fast_unordered_strict_minmax(
-; CHECK-NEXT:    [[MAX:%.*]] = call fast float @llvm.maxnum.f32(float [[X:%.*]], float 1.000000e+00) 
+; CHECK-NEXT:    [[MAX:%.*]] = call fast float @llvm.maxnum.f32(float [[X:%.*]], float 1.000000e+00)
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp fast ugt float [[X]], 2.550000e+02
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], float 2.550000e+02, float [[MAX]]
 ; CHECK-NEXT:    ret float [[R]]
@@ -113,7 +113,7 @@ define float @clamp_float_fast_unordered_strict_minmax(float %x) {
 ; (X >= C1) ? C1 : MAX(X, C2)
 define float @clamp_float_fast_unordered_nonstrict_minmax(float %x) {
 ; CHECK-LABEL: @clamp_float_fast_unordered_nonstrict_minmax(
-; CHECK-NEXT:    [[MAX:%.*]] = call fast float @llvm.maxnum.f32(float [[X:%.*]], float 1.000000e+00) 
+; CHECK-NEXT:    [[MAX:%.*]] = call fast float @llvm.maxnum.f32(float [[X:%.*]], float 1.000000e+00)
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp fast uge float [[X]], 2.550000e+02
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], float 2.550000e+02, float [[MAX]]
 ; CHECK-NEXT:    ret float [[R]]
@@ -147,7 +147,7 @@ define float @clamp_test_1(float %x) {
 ; Like @clamp_test_1 but HighConst < LowConst
 define float @clamp_negative_wrong_const(float %x) {
 ; CHECK-LABEL: @clamp_negative_wrong_const(
-; CHECK-NEXT:    [[INNER_SEL:%.*]] = call fast float @llvm.minnum.f32(float [[X:%.*]], float 2.550000e+02) 
+; CHECK-NEXT:    [[INNER_SEL:%.*]] = call fast float @llvm.minnum.f32(float [[X:%.*]], float 2.550000e+02)
 ; CHECK-NEXT:    [[OUTER_CMP:%.*]] = fcmp fast ugt float [[X]], 5.120000e+02
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[OUTER_CMP]], float [[INNER_SEL]], float 5.120000e+02
 ; CHECK-NEXT:    ret float [[R]]
@@ -162,7 +162,7 @@ define float @clamp_negative_wrong_const(float %x) {
 ; Like @clamp_test_1 but both are min
 define float @clamp_negative_same_op(float %x) {
 ; CHECK-LABEL: @clamp_negative_same_op(
-; CHECK-NEXT:    [[INNER_SEL:%.*]] = call fast float @llvm.minnum.f32(float [[X:%.*]], float 2.550000e+02) 
+; CHECK-NEXT:    [[INNER_SEL:%.*]] = call fast float @llvm.minnum.f32(float [[X:%.*]], float 2.550000e+02)
 ; CHECK-NEXT:    [[OUTER_CMP:%.*]] = fcmp fast ult float [[X]], 1.000000e+00
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[OUTER_CMP]], float [[INNER_SEL]], float 1.000000e+00
 ; CHECK-NEXT:    ret float [[R]]
@@ -500,9 +500,9 @@ define float @ui64_clamp_and_cast_to_float(i64 %x) {
 
 define float @mixed_clamp_to_float_1(i32 %x) {
 ; CHECK-LABEL: @mixed_clamp_to_float_1(
-; CHECK-NEXT:    [[SI_MIN:%.*]] = call i32 @llvm.smin.i32(i32 [[X:%.*]], i32 255)
-; CHECK-NEXT:    [[R1:%.*]] = call i32 @llvm.smax.i32(i32 [[SI_MIN]], i32 1)
-; CHECK-NEXT:    [[R:%.*]] = uitofp nneg i32 [[R1]] to float
+; CHECK-NEXT:    [[R1:%.*]] = call i32 @llvm.smax.i32(i32 [[SI_MIN:%.*]], i32 1)
+; CHECK-NEXT:    [[R2:%.*]] = call i32 @llvm.smin.i32(i32 [[R1]], i32 255)
+; CHECK-NEXT:    [[R:%.*]] = uitofp nneg i32 [[R2]] to float
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %si_min_cmp = icmp sgt i32 %x, 255
@@ -535,9 +535,9 @@ define i32 @mixed_clamp_to_i32_1(float %x) {
 
 define float @mixed_clamp_to_float_2(i32 %x) {
 ; CHECK-LABEL: @mixed_clamp_to_float_2(
-; CHECK-NEXT:    [[SI_MIN:%.*]] = call i32 @llvm.smin.i32(i32 [[X:%.*]], i32 255)
-; CHECK-NEXT:    [[R1:%.*]] = call i32 @llvm.smax.i32(i32 [[SI_MIN]], i32 1)
-; CHECK-NEXT:    [[R:%.*]] = uitofp nneg i32 [[R1]] to float
+; CHECK-NEXT:    [[R1:%.*]] = call i32 @llvm.smax.i32(i32 [[SI_MIN:%.*]], i32 1)
+; CHECK-NEXT:    [[R2:%.*]] = call i32 @llvm.smin.i32(i32 [[R1]], i32 255)
+; CHECK-NEXT:    [[R:%.*]] = uitofp nneg i32 [[R2]] to float
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %si_min_cmp = icmp sgt i32 %x, 255
@@ -568,9 +568,9 @@ define i32 @mixed_clamp_to_i32_2(float %x) {
 
 define <2 x float> @mixed_clamp_to_float_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @mixed_clamp_to_float_vec(
-; CHECK-NEXT:    [[SI_MIN:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[X:%.*]], <2 x i32> splat (i32 255))
-; CHECK-NEXT:    [[R1:%.*]] = call <2 x i32> @llvm.smax.v2i32(<2 x i32> [[SI_MIN]], <2 x i32> splat (i32 1))
-; CHECK-NEXT:    [[R:%.*]] = uitofp nneg <2 x i32> [[R1]] to <2 x float>
+; CHECK-NEXT:    [[R1:%.*]] = call <2 x i32> @llvm.smax.v2i32(<2 x i32> [[SI_MIN:%.*]], <2 x i32> splat (i32 1))
+; CHECK-NEXT:    [[R2:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[R1]], <2 x i32> splat (i32 255))
+; CHECK-NEXT:    [[R:%.*]] = uitofp nneg <2 x i32> [[R2]] to <2 x float>
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %si_min_cmp = icmp sgt <2 x i32> %x, <i32 255, i32 255>

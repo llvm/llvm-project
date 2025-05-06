@@ -632,8 +632,7 @@ getVectorDeinterleaveFactor(IntrinsicInst *II,
 
 // Return the corresponded deinterleaved mask, or nullptr if there is no valid
 // mask.
-static Value *getMask(Value *WideMask, unsigned Factor,
-                      VectorType *LeafValueTy) {
+static Value *getMask(Value *WideMask, unsigned Factor) {
   using namespace llvm::PatternMatch;
   if (auto *IMI = dyn_cast<IntrinsicInst>(WideMask)) {
     SmallVector<Value *, 8> Operands;
@@ -676,8 +675,7 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
       return false;
     // Check mask operand. Handle both all-true and interleaved mask.
     Value *WideMask = VPLoad->getOperand(1);
-    Value *Mask = getMask(WideMask, Factor,
-                          cast<VectorType>(DeinterleaveValues[0]->getType()));
+    Value *Mask = getMask(WideMask, Factor);
     if (!Mask)
       return false;
 
@@ -729,8 +727,7 @@ bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
       return false;
 
     Value *WideMask = VPStore->getOperand(2);
-    Value *Mask = getMask(WideMask, Factor,
-                          cast<VectorType>(InterleaveValues[0]->getType()));
+    Value *Mask = getMask(WideMask, Factor);
     if (!Mask)
       return false;
 

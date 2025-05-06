@@ -908,7 +908,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles(
     DenseSet<uint64_t> FuncGuidsToUse;
     if (useMD5()) {
       for (auto Name : FuncsToUse)
-        FuncGuidsToUse.insert(Function::getGUID(Name));
+        FuncGuidsToUse.insert(Function::getGUIDAssumingExternalLinkage(Name));
     }
 
     // For each function in current module, load all context profiles for

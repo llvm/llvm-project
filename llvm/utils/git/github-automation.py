@@ -270,6 +270,7 @@ class CommitRequestGreeter:
         merged_by = {}
         reviewed_by = {}
         for i in self.repo.get_issues(creator=self.issue.user.login, state="all"):
+            print("Looking at issue:", i)
             issue_reviewed_by = set()
             try:
                 pr = i.as_pull_request()
@@ -292,7 +293,8 @@ class CommitRequestGreeter:
                         merged_by[merger] += 1
                     continue
 
-            except github.GithubException:
+            except github.GithubException as e:
+                print(e)
                 continue
 
         comment = f"""

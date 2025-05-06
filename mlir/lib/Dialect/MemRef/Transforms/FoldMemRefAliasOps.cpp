@@ -35,7 +35,7 @@
 
 namespace mlir {
 namespace memref {
-#define GEN_PASS_DEF_FOLDMEMREFALIASOPS
+#define GEN_PASS_DEF_FOLDMEMREFALIASOPSPASS
 #include "mlir/Dialect/MemRef/Transforms/Passes.h.inc"
 } // namespace memref
 } // namespace mlir
@@ -168,7 +168,6 @@ resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
                                   ValueRange indices,
                                   SmallVectorImpl<Value> &sourceIndices) {
   int64_t cnt = 0;
-  SmallVector<Value> tmp(indices.size());
   SmallVector<OpFoldResult> dynamicIndices;
   for (ArrayRef<int64_t> groups : collapseShapeOp.getReassociationIndices()) {
     assert(!groups.empty() && "association indices groups cannot be empty");
@@ -848,7 +847,7 @@ void memref::populateFoldMemRefAliasOpPatterns(RewritePatternSet &patterns) {
 namespace {
 
 struct FoldMemRefAliasOpsPass final
-    : public memref::impl::FoldMemRefAliasOpsBase<FoldMemRefAliasOpsPass> {
+    : public memref::impl::FoldMemRefAliasOpsPassBase<FoldMemRefAliasOpsPass> {
   void runOnOperation() override;
 };
 
@@ -858,8 +857,4 @@ void FoldMemRefAliasOpsPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   memref::populateFoldMemRefAliasOpPatterns(patterns);
   (void)applyPatternsGreedily(getOperation(), std::move(patterns));
-}
-
-std::unique_ptr<Pass> memref::createFoldMemRefAliasOpsPass() {
-  return std::make_unique<FoldMemRefAliasOpsPass>();
 }

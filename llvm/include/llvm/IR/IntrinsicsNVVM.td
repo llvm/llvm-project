@@ -116,10 +116,12 @@
 //   * llvm.nvvm.ptr.gen.to.shared   --> ibid.
 //   * llvm.nvvm.ptr.gen.to.constant --> ibid.
 //   * llvm.nvvm.ptr.gen.to.local    --> ibid.
+//   * llvm.nvvm.ptr.gen.to.param    --> ibid.
 //   * llvm.nvvm.ptr.global.to.gen   --> ibid.
 //   * llvm.nvvm.ptr.shared.to.gen   --> ibid.
 //   * llvm.nvvm.ptr.constant.to.gen --> ibid.
 //   * llvm.nvvm.ptr.local.to.gen    --> ibid.
+//   * llvm.nvvm.ptr.param.to.gen    --> ibid.
 //   * llvm.nvvm.ldg.global.i        --> load addrspace(1) !load.invariant
 //   * llvm.nvvm.ldg.global.f        --> ibid.
 //   * llvm.nvvm.ldg.global.p        --> ibid.
@@ -127,14 +129,28 @@
 //   * llvm.nvvm.atomic.load.inc.32  --> atomicrmw uinc_wrap
 //   * llvm.nvvm.atomic.load.dec.32  --> atomicrmw udec_wrap
 
-def llvm_global_ptr_ty  : LLVMQualPointerType<1>;  // (global)ptr
-def llvm_shared_ptr_ty  : LLVMQualPointerType<3>;  // (shared)ptr
-def llvm_local_ptr_ty   : LLVMQualPointerType<5>;  // (local)ptr
-def llvm_tmem_ptr_ty    : LLVMQualPointerType<6>;  // (tensor memory)ptr
+def llvm_global_ptr_ty  : LLVMQualPointerType<1>;         // (global)ptr
+def llvm_shared_ptr_ty  : LLVMQualPointerType<3>;         // (shared)ptr
+def llvm_local_ptr_ty   : LLVMQualPointerType<5>;         // (local)ptr
+def llvm_tmem_ptr_ty    : LLVMQualPointerType<6>;         // (tensor memory)ptr
+def llvm_shared_cluster_ptr_ty : LLVMQualPointerType<7>;  // (shared_cluster)ptr
 
 //
 // MISC
 //
+
+defvar WARP_SIZE = 32;
+
+// Note: the maximum grid size in the x-dimension is the lower value of 65535
+// on sm_20. We conservatively use the larger value here as it required for
+// sm_30+ and also correct for sm_20.
+defvar MAX_GRID_SIZE_X = 0x7fffffff;
+defvar MAX_GRID_SIZE_Y = 0xffff;
+defvar MAX_GRID_SIZE_Z = 0xffff;
+
+defvar MAX_BLOCK_SIZE_X = 1024;
+defvar MAX_BLOCK_SIZE_Y = 1024;
+defvar MAX_BLOCK_SIZE_Z = 64;
 
 // Helper class that concatenates list elements with
 // a given separator 'sep' and returns the result.
@@ -691,15 +707,15 @@ class CP_ASYNC_BULK_TENSOR_G2S_INTR<int dim, string mode> {
   list<LLVMType> Im2ColOffsetsTy = !listsplat(llvm_i16_ty, NumIm2ColOffsets);
   list<LLVMType> TensorDimsTy = !listsplat(llvm_i32_ty, dim);
   list<LLVMType> ArgsTy = !listconcat(
-                          [llvm_shared_ptr_ty,  // dst_smem_ptr
-                           llvm_shared_ptr_ty,  // mbarrier_smem_ptr
-                           llvm_ptr_ty],        // tensormap_ptr
-                           TensorDimsTy,        // actual tensor dims
-                           Im2ColOffsetsTy,     // im2col offsets
-                          [llvm_i16_ty,         // cta_mask
-                           llvm_i64_ty,         // cache_hint
-                           llvm_i1_ty,          // Flag for cta_mask
-                           llvm_i1_ty]          // Flag for cache_hint
+                          [llvm_shared_cluster_ptr_ty,  // dst_shared_cluster_ptr
+                           llvm_shared_ptr_ty,          // mbarrier_smem_ptr
+                           llvm_ptr_ty],                // tensormap_ptr
+                           TensorDimsTy,                // actual tensor dims
+                           Im2ColOffsetsTy,             // im2col offsets
+                          [llvm_i16_ty,                 // cta_mask
+                           llvm_i64_ty,                 // cache_hint
+                           llvm_i1_ty,                  // Flag for cta_mask
+                           llvm_i1_ty]                  // Flag for cache_hint
                           );
 
   int TempFlagsStartIdx = !add(dim, 5);
@@ -1039,18 +1055,18 @@ let TargetPrefix = "nvvm" in {
 // Abs
 //
 
-  def int_nvvm_fabs_ftz_f : ClangBuiltin<"__nvvm_fabs_ftz_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_fabs_f : ClangBuiltin<"__nvvm_fabs_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_fabs_d : ClangBuiltin<"__nvvm_fabs_d">,
-      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
+  def int_nvvm_fabs_ftz :
+      DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>],
+                            [IntrNoMem, IntrSpeculatable]>;
 
+  def int_nvvm_fabs :
+      DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>],
+                            [IntrNoMem, IntrSpeculatable]>;
 //
 // Abs, Neg bf16, bf16x2
 //
 
-  foreach unary = ["abs", "neg"] in {
+  foreach unary = ["neg"] in {
     def int_nvvm_ # unary # _bf16 :
       ClangBuiltin<!strconcat("__nvvm_", unary, "_bf16")>,
       DefaultAttrsIntrinsic<[llvm_bfloat_ty], [llvm_bfloat_ty], [IntrNoMem]>;
@@ -1628,6 +1644,37 @@ let TargetPrefix = "nvvm" in {
       Intrinsic<[llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrNoCallback]>;
   def int_nvvm_e5m2x2_to_f16x2_rn_relu : ClangBuiltin<"__nvvm_e5m2x2_to_f16x2_rn_relu">,
       Intrinsic<[llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrNoCallback]>;
+  
+  class CVT_FF_TO_I16<string type, string suffix> : ClangBuiltin<!strconcat("__nvvm_ff_to_", type, suffix)>,
+      DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+      
+  class CVT_I16_TO_F16X2<string type, string suffix>
+    : ClangBuiltin<!strconcat("__nvvm_", type, "_to_f16x2", suffix)>,
+      DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrNoCallback]>;
+
+  class CVT_BF16X2_TO_I16<string type, string suffix> : ClangBuiltin<!strconcat("__nvvm_bf16x2_to_", type, suffix)>,
+      DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty], [IntrNoMem, IntrNoCallback]>;
+
+  // FP6 conversions.
+  foreach type = ["e2m3x2", "e3m2x2"] in {
+    foreach relu = ["", "_relu"] in {
+      defvar suffix = !strconcat("_rn", relu);
+      def int_nvvm_ff_to_ # type # suffix # _satfinite : CVT_FF_TO_I16<type, !strconcat(suffix, "_satfinite")>;
+      def int_nvvm_ # type # _to_f16x2 # suffix : CVT_I16_TO_F16X2<type, suffix>;
+    }
+  }
+  
+  // UE8M0x2 conversions.
+  foreach rmode = ["_rz", "_rp"] in {
+    foreach satmode = ["", "_satfinite"] in {
+      defvar suffix = !strconcat(rmode, satmode);
+      def int_nvvm_ff_to_ue8m0x2 # suffix : CVT_FF_TO_I16<"ue8m0x2", suffix>;
+      def int_nvvm_bf16x2_to_ue8m0x2 # suffix : CVT_BF16X2_TO_I16<"ue8m0x2", suffix>;
+    }
+  }
+      
+  def int_nvvm_ue8m0x2_to_bf16x2 : ClangBuiltin<"__nvvm_ue8m0x2_to_bf16x2">,
+      Intrinsic<[llvm_v2bf16_ty], [llvm_i16_ty], [IntrNoMem, IntrNoCallback]>;
 
 // FNS
 
@@ -1865,18 +1912,21 @@ def int_nvvm_ldu_global_p : Intrinsic<[llvm_anyptr_ty],
   [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillReturn, NoCapture<ArgIndex<0>>],
   "llvm.nvvm.ldu.global.p">;
 
-// Used in nvvm internally to help address space opt and ptx code generation
-// This is for params that are passed to kernel functions by pointer by-val.
-def int_nvvm_ptr_gen_to_param: Intrinsic<[llvm_anyptr_ty],
-                                     [llvm_anyptr_ty],
-                                   [IntrNoMem, IntrSpeculatable, IntrNoCallback],
-                                   "llvm.nvvm.ptr.gen.to.param">;
-
-// sm70+, PTX7.7+
-def int_nvvm_ptr_param_to_gen: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                                     [llvm_anyptr_ty],
-                                   [IntrNoMem, IntrSpeculatable, IntrNoCallback],
-                                   "llvm.nvvm.ptr.param.to.gen">;
+// Represents an explicit hole in the LLVM IR type system. It may be inserted by
+// the compiler in cases where a pointer is of the wrong type. In the backend
+// this intrinsic will be folded away and not equate to any instruction. It
+// should not be used by any frontend and should only be considered well defined
+// when added in the following cases:
+//
+//  - NVPTXLowerArgs: When wrapping a byval pointer argument to a kernel
+//    function to convert the address space from generic (0) to param (101).
+//    This accounts for the fact that the parameter symbols will occupy this
+//    space when lowered during ISel.
+//
+def int_nvvm_internal_addrspace_wrap :
+  DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_anyptr_ty],
+                        [IntrNoMem, IntrSpeculatable, NoUndef<ArgIndex<0>>,
+                         NoUndef<RetIndex>]>;
 
 // Move intrinsics, used in nvvm internally
 
@@ -4710,26 +4760,35 @@ def int_nvvm_sust_p_3d_v4i32_trap
 
 // Accessing special registers.
 
-class PTXReadSRegIntrinsicNB_r32
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>]>;
-class PTXReadSRegIntrinsic_r32<string name>
-  : PTXReadSRegIntrinsicNB_r32, ClangBuiltin<"__nvvm_read_ptx_sreg_" # name>;
+class PTXReadSRegIntrinsicNB_r32<list<IntrinsicProperty> properties = []>
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [],
+      !listconcat([IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>], properties)>;
 
-multiclass PTXReadSRegIntrinsic_v4i32<string regname> {
+class PTXReadSRegIntrinsic_r32<string name,
+                               list<IntrinsicProperty> properties = []>
+  : PTXReadSRegIntrinsicNB_r32<properties>,
+    ClangBuiltin<"__nvvm_read_ptx_sreg_" # name>;
+
+multiclass PTXReadSRegIntrinsic_v4i32<string regname,
+                                      list<list<IntrinsicProperty>> properties = [[], [], [], []]> {
+  assert !eq(!size(properties), 4), "properties must be a list of 4 lists";
 // FIXME: Do we need the 128-bit integer type version?
 //    def _r64   : Intrinsic<[llvm_i128_ty],   [], [IntrNoMem, IntrSpeculatable]>;
 
 // FIXME: Enable this once v4i32 support is enabled in back-end.
 //    def _v4i16 : Intrinsic<[llvm_v4i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
-  foreach suffix = ["_x", "_y", "_z", "_w"] in
-    def suffix : PTXReadSRegIntrinsic_r32<regname # suffix>;
+  defvar suffixes = ["_x", "_y", "_z", "_w"];
+  foreach i = !range(suffixes) in
+    def suffixes[i] : PTXReadSRegIntrinsic_r32<regname # suffixes[i], properties[i]>;
 }
 
 // Same, but without automatic clang builtins. It will be used for
 // registers that require particular GPU or PTX version.
-multiclass PTXReadSRegIntrinsicNB_v4i32 {
-  foreach suffix = ["_x", "_y", "_z", "_w"] in
-    def suffix : PTXReadSRegIntrinsicNB_r32;
+multiclass PTXReadSRegIntrinsicNB_v4i32<list<list<IntrinsicProperty>> properties = [[], [], [], []]> {
+  assert !eq(!size(properties), 4), "properties must be a list of 4 lists";
+  defvar suffixes = ["_x", "_y", "_z", "_w"];
+  foreach i = !range(suffixes) in
+    def suffixes[i] : PTXReadSRegIntrinsicNB_r32<properties[i]>;
 }
 
 class PTXReadSRegIntrinsic_r64<string name>
@@ -4745,15 +4804,41 @@ class PTXReadNCSRegIntrinsic_r64<string name>
   : Intrinsic<[llvm_i64_ty], [], [IntrInaccessibleMemOnly, IntrNoCallback, NoUndef<RetIndex>]>,
     ClangBuiltin<"__nvvm_read_ptx_sreg_" # name>;
 
-defm int_nvvm_read_ptx_sreg_tid : PTXReadSRegIntrinsic_v4i32<"tid">;
-defm int_nvvm_read_ptx_sreg_ntid : PTXReadSRegIntrinsic_v4i32<"ntid">;
+defm int_nvvm_read_ptx_sreg_tid
+  : PTXReadSRegIntrinsic_v4i32<"tid",
+                              [[Range<RetIndex, 0, MAX_BLOCK_SIZE_X>],
+                               [Range<RetIndex, 0, MAX_BLOCK_SIZE_Y>],
+                               [Range<RetIndex, 0, MAX_BLOCK_SIZE_Z>],
+                               [Range<RetIndex, 0, 1>]]>;
 
-def int_nvvm_read_ptx_sreg_laneid : PTXReadSRegIntrinsic_r32<"laneid">;
+defm int_nvvm_read_ptx_sreg_ntid
+  : PTXReadSRegIntrinsic_v4i32<"ntid",
+                               [[Range<RetIndex, 1, !add(MAX_BLOCK_SIZE_X, 1)>],
+                                [Range<RetIndex, 1, !add(MAX_BLOCK_SIZE_Y, 1)>],
+                                [Range<RetIndex, 1, !add(MAX_BLOCK_SIZE_Z, 1)>],
+                                [Range<RetIndex, 0, 1>]]>;
+
+def int_nvvm_read_ptx_sreg_laneid
+  : PTXReadSRegIntrinsic_r32<"laneid", [Range<RetIndex, 0, WARP_SIZE>]>;
+
 def int_nvvm_read_ptx_sreg_warpid : PTXReadSRegIntrinsic_r32<"warpid">;
 def int_nvvm_read_ptx_sreg_nwarpid : PTXReadSRegIntrinsic_r32<"nwarpid">;
 
-defm int_nvvm_read_ptx_sreg_ctaid : PTXReadSRegIntrinsic_v4i32<"ctaid">;
-defm int_nvvm_read_ptx_sreg_nctaid : PTXReadSRegIntrinsic_v4i32<"nctaid">;
+defvar MAX_GRID_ID_RANGE = [[Range<RetIndex, 0, MAX_GRID_SIZE_X>],
+                            [Range<RetIndex, 0, MAX_GRID_SIZE_Y>],
+                            [Range<RetIndex, 0, MAX_GRID_SIZE_Z>],
+                            [Range<RetIndex, 0, 1>]];
+
+defvar MAX_GRID_NID_RANGE = [[Range<RetIndex, 1, !add(MAX_GRID_SIZE_X, 1)>],
+                             [Range<RetIndex, 1, !add(MAX_GRID_SIZE_Y, 1)>],
+                             [Range<RetIndex, 1, !add(MAX_GRID_SIZE_Z, 1)>],
+                             [Range<RetIndex, 0, 1>]];
+
+defm int_nvvm_read_ptx_sreg_ctaid
+  : PTXReadSRegIntrinsic_v4i32<"ctaid", MAX_GRID_ID_RANGE>;
+
+defm int_nvvm_read_ptx_sreg_nctaid
+  : PTXReadSRegIntrinsic_v4i32<"nctaid", MAX_GRID_NID_RANGE>;
 
 def int_nvvm_read_ptx_sreg_smid : PTXReadSRegIntrinsic_r32<"smid">;
 def int_nvvm_read_ptx_sreg_nsmid : PTXReadSRegIntrinsic_r32<"nsmid">;
@@ -4780,13 +4865,25 @@ def int_nvvm_read_ptx_sreg_pm1 : PTXReadNCSRegIntrinsic_r32<"pm1">;
 def int_nvvm_read_ptx_sreg_pm2 : PTXReadNCSRegIntrinsic_r32<"pm2">;
 def int_nvvm_read_ptx_sreg_pm3 : PTXReadNCSRegIntrinsic_r32<"pm3">;
 
-def int_nvvm_read_ptx_sreg_warpsize : PTXReadSRegIntrinsic_r32<"warpsize">;
+def int_nvvm_read_ptx_sreg_warpsize
+  : PTXReadSRegIntrinsic_r32<"warpsize",
+                             [Range<RetIndex, WARP_SIZE, !add(WARP_SIZE, 1)>]>;
 
 // sm90+, PTX7.8+
-defm int_nvvm_read_ptx_sreg_clusterid : PTXReadSRegIntrinsicNB_v4i32;
-defm int_nvvm_read_ptx_sreg_nclusterid : PTXReadSRegIntrinsicNB_v4i32;
-defm int_nvvm_read_ptx_sreg_cluster_ctaid : PTXReadSRegIntrinsicNB_v4i32;
-defm int_nvvm_read_ptx_sreg_cluster_nctaid : PTXReadSRegIntrinsicNB_v4i32;
+
+// Note: Since clusters are subdivisions of the grid, we conservatively use the
+// maximum grid size as an upper bound for the clusterid and cluster_ctaid. In
+// practice, the clusterid will likely be much smaller. The CUDA programming
+// guide recommends 8 as a maximum portable value and H100s support 16.
+
+defm int_nvvm_read_ptx_sreg_clusterid
+  : PTXReadSRegIntrinsicNB_v4i32<MAX_GRID_ID_RANGE>;
+defm int_nvvm_read_ptx_sreg_nclusterid
+  : PTXReadSRegIntrinsicNB_v4i32<MAX_GRID_NID_RANGE>;
+defm int_nvvm_read_ptx_sreg_cluster_ctaid
+  : PTXReadSRegIntrinsicNB_v4i32<MAX_GRID_ID_RANGE>;
+defm int_nvvm_read_ptx_sreg_cluster_nctaid
+  : PTXReadSRegIntrinsicNB_v4i32<MAX_GRID_NID_RANGE>;
 
 def int_nvvm_read_ptx_sreg_cluster_ctarank : PTXReadSRegIntrinsicNB_r32;
 def int_nvvm_read_ptx_sreg_cluster_nctarank : PTXReadSRegIntrinsicNB_r32;
@@ -5087,7 +5184,7 @@ def int_nvvm_mapa
               [IntrNoMem, IntrSpeculatable, NoCapture<ArgIndex<0>>],
               "llvm.nvvm.mapa">;
 def int_nvvm_mapa_shared_cluster
-  : DefaultAttrsIntrinsic<[llvm_shared_ptr_ty], [llvm_shared_ptr_ty, llvm_i32_ty],
+  : DefaultAttrsIntrinsic<[llvm_shared_cluster_ptr_ty], [llvm_shared_ptr_ty, llvm_i32_ty],
               [IntrNoMem, IntrSpeculatable, NoCapture<ArgIndex<0>>],
               "llvm.nvvm.mapa.shared.cluster">;
 def int_nvvm_getctarank
@@ -5187,14 +5284,14 @@ def int_nvvm_discard_L2 : DefaultAttrsIntrinsic<[],
 // From Global to Shared Cluster
 def int_nvvm_cp_async_bulk_global_to_shared_cluster
   : DefaultAttrsIntrinsic<[],
-      [llvm_shared_ptr_ty, // dst_smem_ptr
-       llvm_shared_ptr_ty, // mbarrier_ptr
-       llvm_global_ptr_ty, // src_gmem_ptr
-       llvm_i32_ty,        // copy_size
-       llvm_i16_ty,        // cta_mask
-       llvm_i64_ty,        // cache_hint
-       llvm_i1_ty,         // Flag for cta_mask
-       llvm_i1_ty],        // Flag for cache_hint
+      [llvm_shared_cluster_ptr_ty, // dst_shared_cluster_ptr
+       llvm_shared_ptr_ty,         // mbarrier_ptr
+       llvm_global_ptr_ty,         // src_gmem_ptr
+       llvm_i32_ty,                // copy_size
+       llvm_i16_ty,                // cta_mask
+       llvm_i64_ty,                // cache_hint
+       llvm_i1_ty,                 // Flag for cta_mask
+       llvm_i1_ty],                // Flag for cache_hint
       [IntrConvergent, IntrArgMemOnly,
        WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
        NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
@@ -5204,10 +5301,10 @@ def int_nvvm_cp_async_bulk_global_to_shared_cluster
 // From Shared CTA to Shared Cluster
 def int_nvvm_cp_async_bulk_shared_cta_to_cluster
   : DefaultAttrsIntrinsic<[],
-      [llvm_shared_ptr_ty, // dst_smem_ptr
-       llvm_shared_ptr_ty, // mbarrier_ptr
-       llvm_shared_ptr_ty, // src_smem_ptr
-       llvm_i32_ty],       // copy_size
+      [llvm_shared_cluster_ptr_ty, // dst_shared_cluster_ptr
+       llvm_shared_ptr_ty,         // mbarrier_ptr
+       llvm_shared_ptr_ty,         // src_smem_ptr
+       llvm_i32_ty],               // copy_size
       [IntrConvergent, IntrArgMemOnly,
        WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
        NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,

@@ -25,42 +25,9 @@ class CPlusPlusLanguage : public Language {
   ClangHighlighter m_highlighter;
 
 public:
-  class MethodName {
+  class CxxMethodName : public Language::MethodName {
   public:
-    MethodName()
-        : m_full(), m_basename(), m_context(), m_arguments(), m_qualifiers() {}
-
-    MethodName(ConstString s)
-        : m_full(s), m_basename(), m_context(), m_arguments(), m_qualifiers(),
-          m_parsed(false), m_parse_error(false) {}
-
-    void Clear();
-
-    bool IsValid() {
-      if (!m_parsed)
-        Parse();
-      if (m_parse_error)
-        return false;
-      return (bool)m_full;
-    }
-
-    ConstString GetFullName() const { return m_full; }
-
-    std::string GetScopeQualifiedName();
-
-    llvm::StringRef GetBasename();
-
-    llvm::StringRef GetContext();
-
-    llvm::StringRef GetArguments();
-
-    llvm::StringRef GetQualifiers();
-
-    /// Returns the methods return-type.
-    ///
-    /// Currently returns an empty llvm::StringRef
-    /// if the return-type is a function pointer.
-    llvm::StringRef GetReturnType();
+    CxxMethodName(ConstString s) : Language::MethodName(s) {}
 
     bool ContainsPath(llvm::StringRef path);
 
@@ -80,24 +47,19 @@ public:
     llvm::StringRef GetBasenameNoTemplateParameters();
 
   protected:
-    void Parse();
+    void Parse() override;
     bool TrySimplifiedParse();
-
-    ConstString m_full; // Full name:
-                        // "size_t lldb::SBTarget::GetBreakpointAtIndex(unsigned
-                        // int) const"
-    llvm::StringRef m_basename;    // Basename:     "GetBreakpointAtIndex"
-    llvm::StringRef m_context;     // Decl context: "lldb::SBTarget"
-    llvm::StringRef m_arguments;   // Arguments:    "(unsigned int)"
-    llvm::StringRef m_qualifiers;  // Qualifiers:   "const"
-    llvm::StringRef m_return_type; // Return type:  "size_t"
-    bool m_parsed = false;
-    bool m_parse_error = false;
   };
 
   CPlusPlusLanguage() = default;
 
   ~CPlusPlusLanguage() override = default;
+
+  virtual std::unique_ptr<Language::MethodName>
+  GetMethodName(ConstString name) const override;
+
+  std::pair<lldb::FunctionNameType, std::optional<ConstString>>
+  GetFunctionNameInfo(ConstString name) const override;
 
   lldb::LanguageType GetLanguageType() const override {
     return lldb::eLanguageTypeC_plus_plus;
@@ -143,12 +105,17 @@ public:
                               FunctionNameRepresentation representation,
                               Stream &s) override;
 
+  bool HandleFrameFormatVariable(const SymbolContext &sc,
+                                 const ExecutionContext *exe_ctx,
+                                 FormatEntity::Entry::Type type,
+                                 Stream &s) override;
+
   static bool IsCPPMangledName(llvm::StringRef name);
 
   // Extract C++ context and identifier from a string using heuristic matching
   // (as opposed to
-  // CPlusPlusLanguage::MethodName which has to have a fully qualified C++ name
-  // with parens and arguments.
+  // CPlusPlusLanguage::CxxMethodName which has to have a fully qualified C++
+  // name with parens and arguments.
   // If the name is a lone C identifier (e.g. C) or a qualified C identifier
   // (e.g. A::B::C) it will return true,
   // and identifier will be the identifier (C and C respectively) and the
@@ -169,8 +136,13 @@ public:
 
   llvm::StringRef GetInstanceVariableName() override { return "this"; }
 
+  const FormatEntity::Entry *GetFunctionNameFormat() const override;
+
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
+
+private:
+  static void DebuggerInitialize(Debugger &);
 };
 
 } // namespace lldb_private
