@@ -57,33 +57,37 @@ define i64 @test_and(i64 %x, i32 %y) {
   ret i64 %srl
 }
 
-define <2 x i64> @test_or_vec(<2 x i64> %x, <2 x i32> %y) {
+define <2 x i16> @test_vec(<2 x i16> %x, <2 x i8> %y) {
 ;
 ; srl (or (x, shl(zext(y),c1)),c1) -> or(srl(x,c1), zext(y))
 ; c1 <= leadingzeros(zext(y))
 ;
-; CHECK-LABEL: test_or
-; CHECK: ld.param.u64 %[[X:rd[0-9]+]], [test_or_param_0];
-; CHECK: ld.param.u32 %[[Y:rd[0-9]+]], [test_or_param_1];
-; CHECK: shr.u64      %[[SHR:rd[0-9]+]], %[[X]], 5;
-; CHECK: or.b64       %[[LOP:rd[0-9]+]], %[[SHR]], %[[Y]];
-; CHECK: st.param.b64 [func_retval0], %[[LOP]];
+; CHECK-LABEL: test_vec
+; CHECK: ld.param.u32 %[[X:r[0-9]+]], [test_vec_param_0];
+; CHECK: ld.param.u32 %[[P1:r[0-9]+]], [test_vec_param_1];
+; CHECK: and.b32      %[[Y:r[0-9]+]], %[[P1]], 16711935;
+; CHECK: mov.b32      {%[[X1:rs[0-9]+]], %[[X2:rs[0-9]+]]}, %[[X]];
+; CHECK: shr.u16      %[[SHR2:rs[0-9]+]], %[[X2]], 5;
+; CHECK: shr.u16      %[[SHR1:rs[0-9]+]], %[[X1]], 5;
+; CHECK: mov.b32      %[[SHR:r[0-9]+]], {%[[SHR1]], %[[SHR2]]};
+; CHECK: or.b32       %[[LOP:r[0-9]+]], %[[SHR]], %[[Y]];
+; CHECK: st.param.b32 [func_retval0], %[[LOP]];
 ;
-  %ext = zext <2 x i32> %y to <2 x i64>
-  %shl = shl <2 x i64> %ext, splat(i64 5)
-  %or = or <2 x i64> %x, %shl
-  %srl = lshr <2 x i64> %or, splat(i64 5)
-  ret <2 x i64> %srl
+  %ext = zext <2 x i8> %y to <2 x i16>
+  %shl = shl <2 x i16> %ext, splat(i16 5)
+  %or = or <2 x i16> %x, %shl
+  %srl = lshr <2 x i16> %or, splat(i16 5)
+  ret <2 x i16> %srl
 }
 
-define i64 @test2(i64 %x, i32 %y) {
+define i64 @test_negative_c(i64 %x, i32 %y) {
 ;
 ; srl (or (x, shl(zext(y),c1)),c1) -> or(srl(x,c1), zext(y))
 ; c1 > leadingzeros(zext(y)).
 ;
-; CHECK-LABEL: test2
-; CHECK: ld.param.u64 %[[X:rd[0-9]+]], [test2_param_0];
-; CHECK: ld.param.u32 %[[Y:rd[0-9]+]], [test2_param_1];
+; CHECK-LABEL: test_negative_c
+; CHECK: ld.param.u64 %[[X:rd[0-9]+]], [test_negative_c_param_0];
+; CHECK: ld.param.u32 %[[Y:rd[0-9]+]], [test_negative_c_param_1];
 ; CHECK: shl.b64      %[[SHL:rd[0-9]+]], %[[Y]], 33;
 ; CHECK: or.b64       %[[OR:rd[0-9]+]], %[[X]], %[[SHL]];
 ; CHECK: shr.u64      %[[SHR:rd[0-9]+]], %[[OR]], 33;
