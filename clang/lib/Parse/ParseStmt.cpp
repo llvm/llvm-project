@@ -36,8 +36,6 @@ using namespace clang;
 // C99 6.8: Statements and Blocks.
 //===----------------------------------------------------------------------===//
 
-/// Parse a standalone statement (for instance, as the body of an 'if',
-/// 'while', or 'for').
 StmtResult Parser::ParseStatement(SourceLocation *TrailingElseLoc,
                                   ParsedStmtContext StmtCtx) {
   StmtResult Res;
@@ -52,55 +50,6 @@ StmtResult Parser::ParseStatement(SourceLocation *TrailingElseLoc,
   return Res;
 }
 
-/// ParseStatementOrDeclaration - Read 'statement' or 'declaration'.
-///       StatementOrDeclaration:
-///         statement
-///         declaration
-///
-///       statement:
-///         labeled-statement
-///         compound-statement
-///         expression-statement
-///         selection-statement
-///         iteration-statement
-///         jump-statement
-/// [C++]   declaration-statement
-/// [C++]   try-block
-/// [MS]    seh-try-block
-/// [OBC]   objc-throw-statement
-/// [OBC]   objc-try-catch-statement
-/// [OBC]   objc-synchronized-statement
-/// [GNU]   asm-statement
-/// [OMP]   openmp-construct             [TODO]
-///
-///       labeled-statement:
-///         identifier ':' statement
-///         'case' constant-expression ':' statement
-///         'default' ':' statement
-///
-///       selection-statement:
-///         if-statement
-///         switch-statement
-///
-///       iteration-statement:
-///         while-statement
-///         do-statement
-///         for-statement
-///
-///       expression-statement:
-///         expression[opt] ';'
-///
-///       jump-statement:
-///         'goto' identifier ';'
-///         'continue' ';'
-///         'break' ';'
-///         'return' expression[opt] ';'
-/// [GNU]   'goto' '*' expression ';'
-///
-/// [OBC] objc-throw-statement:
-/// [OBC]   '@' 'throw' expression ';'
-/// [OBC]   '@' 'throw' ';'
-///
 StmtResult
 Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
                                     ParsedStmtContext StmtCtx,
@@ -551,7 +500,6 @@ Retry:
   return Res;
 }
 
-/// Parse an expression statement.
 StmtResult Parser::ParseExprStatement(ParsedStmtContext StmtCtx) {
   // If a case keyword is missing, this is where it should be inserted.
   Token OldToken = Tok;
@@ -596,15 +544,6 @@ StmtResult Parser::ParseExprStatement(ParsedStmtContext StmtCtx) {
   return R;
 }
 
-/// ParseSEHTryBlockCommon
-///
-/// seh-try-block:
-///   '__try' compound-statement seh-handler
-///
-/// seh-handler:
-///   seh-except-block
-///   seh-finally-block
-///
 StmtResult Parser::ParseSEHTryBlock() {
   assert(Tok.is(tok::kw___try) && "Expected '__try'");
   SourceLocation TryLoc = ConsumeToken();
@@ -639,11 +578,6 @@ StmtResult Parser::ParseSEHTryBlock() {
                                   Handler.get());
 }
 
-/// ParseSEHExceptBlock - Handle __except
-///
-/// seh-except-block:
-///   '__except' '(' seh-filter-expression ')' compound-statement
-///
 StmtResult Parser::ParseSEHExceptBlock(SourceLocation ExceptLoc) {
   PoisonIdentifierRAIIObject raii(Ident__exception_code, false),
     raii2(Ident___exception_code, false),
@@ -691,11 +625,6 @@ StmtResult Parser::ParseSEHExceptBlock(SourceLocation ExceptLoc) {
   return Actions.ActOnSEHExceptBlock(ExceptLoc, FilterExpr.get(), Block.get());
 }
 
-/// ParseSEHFinallyBlock - Handle __finally
-///
-/// seh-finally-block:
-///   '__finally' compound-statement
-///
 StmtResult Parser::ParseSEHFinallyBlock(SourceLocation FinallyLoc) {
   PoisonIdentifierRAIIObject raii(Ident__abnormal_termination, false),
     raii2(Ident___abnormal_termination, false),
@@ -738,15 +667,6 @@ static void DiagnoseLabelFollowedByDecl(Parser &P, const Stmt *SubStmt) {
   }
 }
 
-/// ParseLabeledStatement - We have an identifier and a ':' after it.
-///
-///       label:
-///         identifier ':'
-/// [GNU]   identifier ':' attributes[opt]
-///
-///       labeled-statement:
-///         label statement
-///
 StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
                                          ParsedStmtContext StmtCtx) {
   assert(Tok.is(tok::identifier) && Tok.getIdentifierInfo() &&
@@ -815,11 +735,6 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
                                 SubStmt.get());
 }
 
-/// ParseCaseStatement
-///       labeled-statement:
-///         'case' constant-expression ':' statement
-/// [GNU]   'case' constant-expression '...' constant-expression ':' statement
-///
 StmtResult Parser::ParseCaseStatement(ParsedStmtContext StmtCtx,
                                       bool MissingCase, ExprResult Expr) {
   assert((MissingCase || Tok.is(tok::kw_case)) && "Not a case stmt!");
@@ -969,11 +884,6 @@ StmtResult Parser::ParseCaseStatement(ParsedStmtContext StmtCtx,
   return TopLevelCase;
 }
 
-/// ParseDefaultStatement
-///       labeled-statement:
-///         'default' ':' statement
-/// Note that this does not parse the 'statement' at the end.
-///
 StmtResult Parser::ParseDefaultStatement(ParsedStmtContext StmtCtx) {
   assert(Tok.is(tok::kw_default) && "Not a default stmt!");
 
@@ -1024,28 +934,6 @@ StmtResult Parser::ParseCompoundStatement(bool isStmtExpr) {
                                 Scope::DeclScope | Scope::CompoundStmtScope);
 }
 
-/// ParseCompoundStatement - Parse a "{}" block.
-///
-///       compound-statement: [C99 6.8.2]
-///         { block-item-list[opt] }
-/// [GNU]   { label-declarations block-item-list } [TODO]
-///
-///       block-item-list:
-///         block-item
-///         block-item-list block-item
-///
-///       block-item:
-///         declaration
-/// [GNU]   '__extension__' declaration
-///         statement
-///
-/// [GNU] label-declarations:
-/// [GNU]   label-declaration
-/// [GNU]   label-declarations label-declaration
-///
-/// [GNU] label-declaration:
-/// [GNU]   '__label__' identifier-list ';'
-///
 StmtResult Parser::ParseCompoundStatement(bool isStmtExpr,
                                           unsigned ScopeFlags) {
   assert(Tok.is(tok::l_brace) && "Not a compound stmt!");
@@ -1062,9 +950,6 @@ StmtResult Parser::ParseCompoundStatement(bool isStmtExpr,
   return R;
 }
 
-/// Parse any pragmas at the start of the compound expression. We handle these
-/// separately since some pragmas (FP_CONTRACT) must appear before any C
-/// statement in the compound, but may be intermingled with other pragmas.
 void Parser::ParseCompoundStatementLeadingPragmas() {
   bool checkForPragmas = true;
   while (checkForPragmas) {
@@ -1144,8 +1029,6 @@ void Parser::DiagnoseLabelAtEndOfCompoundStatement() {
   }
 }
 
-/// Consume any extra semi-colons resulting in null statements,
-/// returning true if any tok::semi were consumed.
 bool Parser::ConsumeNullStmt(StmtVector &Stmts) {
   if (!Tok.is(tok::semi))
     return false;
@@ -1193,10 +1076,6 @@ StmtResult Parser::handleExprStmt(ExprResult E, ParsedStmtContext StmtCtx) {
   return Actions.ActOnExprStmt(E, /*DiscardedValue=*/!IsStmtExprResult);
 }
 
-/// ParseCompoundStatementBody - Parse a sequence of statements optionally
-/// followed by a label and invoke the ActOnCompoundStmt action.  This expects
-/// the '{' to be the current token, and consume the '}' at the end of the
-/// block.  It does not manipulate the scope stack.
 StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
   PrettyStackTraceLoc CrashInfo(PP.getSourceManager(),
                                 Tok.getLocation(),
@@ -1350,20 +1229,6 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
                                    Stmts, isStmtExpr);
 }
 
-/// ParseParenExprOrCondition:
-/// [C  ]     '(' expression ')'
-/// [C++]     '(' condition ')'
-/// [C++1z]   '(' init-statement[opt] condition ')'
-///
-/// This function parses and performs error recovery on the specified condition
-/// or expression (depending on whether we're in C++ or C mode).  This function
-/// goes out of its way to recover well.  It returns true if there was a parser
-/// error (the right paren couldn't be found), which indicates that the caller
-/// should try to recover harder.  It returns false if the condition is
-/// successfully parsed.  Note that a successful parse can still have semantic
-/// errors in the condition.
-/// Additionally, it will assign the location of the outer-most '(' and ')',
-/// to LParenLoc and RParenLoc, respectively.
 bool Parser::ParseParenExprOrCondition(StmtResult *InitStmt,
                                        Sema::ConditionResult &Cond,
                                        SourceLocation Loc,
@@ -1518,15 +1383,6 @@ struct MisleadingIndentationChecker {
 
 }
 
-/// ParseIfStatement
-///       if-statement: [C99 6.8.4.1]
-///         'if' '(' expression ')' statement
-///         'if' '(' expression ')' statement 'else' statement
-/// [C++]   'if' '(' condition ')' statement
-/// [C++]   'if' '(' condition ')' statement 'else' statement
-/// [C++23] 'if' '!' [opt] consteval compound-statement
-/// [C++23] 'if' '!' [opt] consteval compound-statement 'else' statement
-///
 StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
   assert(Tok.is(tok::kw_if) && "Not an if stmt!");
   SourceLocation IfLoc = ConsumeToken();  // eat the 'if'.
@@ -1750,10 +1606,6 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
                              ThenStmt.get(), ElseLoc, ElseStmt.get());
 }
 
-/// ParseSwitchStatement
-///       switch-statement:
-///         'switch' '(' expression ')' statement
-/// [C++]   'switch' '(' condition ')' statement
 StmtResult Parser::ParseSwitchStatement(SourceLocation *TrailingElseLoc) {
   assert(Tok.is(tok::kw_switch) && "Not a switch stmt!");
   SourceLocation SwitchLoc = ConsumeToken();  // eat the 'switch'.
@@ -1837,10 +1689,6 @@ StmtResult Parser::ParseSwitchStatement(SourceLocation *TrailingElseLoc) {
   return Actions.ActOnFinishSwitchStmt(SwitchLoc, Switch.get(), Body.get());
 }
 
-/// ParseWhileStatement
-///       while-statement: [C99 6.8.5.1]
-///         'while' '(' expression ')' statement
-/// [C++]   'while' '(' condition ')' statement
 StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc) {
   assert(Tok.is(tok::kw_while) && "Not a while stmt!");
   SourceLocation WhileLoc = Tok.getLocation();
@@ -1917,10 +1765,6 @@ StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc) {
   return Actions.ActOnWhileStmt(WhileLoc, LParen, Cond, RParen, Body.get());
 }
 
-/// ParseDoStatement
-///       do-statement: [C99 6.8.5.2]
-///         'do' statement 'while' '(' expression ')' ';'
-/// Note: this lets the caller parse the end ';'.
 StmtResult Parser::ParseDoStatement() {
   assert(Tok.is(tok::kw_do) && "Not a do stmt!");
   SourceLocation DoLoc = ConsumeToken();  // eat the 'do'.
@@ -2022,29 +1866,6 @@ bool Parser::isForRangeIdentifier() {
   return false;
 }
 
-/// ParseForStatement
-///       for-statement: [C99 6.8.5.3]
-///         'for' '(' expr[opt] ';' expr[opt] ';' expr[opt] ')' statement
-///         'for' '(' declaration expr[opt] ';' expr[opt] ')' statement
-/// [C++]   'for' '(' for-init-statement condition[opt] ';' expression[opt] ')'
-/// [C++]       statement
-/// [C++0x] 'for'
-///             'co_await'[opt]    [Coroutines]
-///             '(' for-range-declaration ':' for-range-initializer ')'
-///             statement
-/// [OBJC2] 'for' '(' declaration 'in' expr ')' statement
-/// [OBJC2] 'for' '(' expr 'in' expr ')' statement
-///
-/// [C++] for-init-statement:
-/// [C++]   expression-statement
-/// [C++]   simple-declaration
-/// [C++23] alias-declaration
-///
-/// [C++0x] for-range-declaration:
-/// [C++0x]   attribute-specifier-seq[opt] type-specifier-seq declarator
-/// [C++0x] for-range-initializer:
-/// [C++0x]   expression
-/// [C++0x]   braced-init-list            [TODO]
 StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
   assert(Tok.is(tok::kw_for) && "Not a for stmt!");
   SourceLocation ForLoc = ConsumeToken();  // eat the 'for'.
@@ -2431,13 +2252,6 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
                               Body.get());
 }
 
-/// ParseGotoStatement
-///       jump-statement:
-///         'goto' identifier ';'
-/// [GNU]   'goto' '*' expression ';'
-///
-/// Note: this lets the caller parse the end ';'.
-///
 StmtResult Parser::ParseGotoStatement() {
   assert(Tok.is(tok::kw_goto) && "Not a goto stmt!");
   SourceLocation GotoLoc = ConsumeToken();  // eat the 'goto'.
@@ -2466,34 +2280,16 @@ StmtResult Parser::ParseGotoStatement() {
   return Res;
 }
 
-/// ParseContinueStatement
-///       jump-statement:
-///         'continue' ';'
-///
-/// Note: this lets the caller parse the end ';'.
-///
 StmtResult Parser::ParseContinueStatement() {
   SourceLocation ContinueLoc = ConsumeToken();  // eat the 'continue'.
   return Actions.ActOnContinueStmt(ContinueLoc, getCurScope());
 }
 
-/// ParseBreakStatement
-///       jump-statement:
-///         'break' ';'
-///
-/// Note: this lets the caller parse the end ';'.
-///
 StmtResult Parser::ParseBreakStatement() {
   SourceLocation BreakLoc = ConsumeToken();  // eat the 'break'.
   return Actions.ActOnBreakStmt(BreakLoc, getCurScope());
 }
 
-/// ParseReturnStatement
-///       jump-statement:
-///         'return' expression[opt] ';'
-///         'return' braced-init-list ';'
-///         'co_return' expression[opt] ';'
-///         'co_return' braced-init-list ';'
 StmtResult Parser::ParseReturnStatement() {
   assert((Tok.is(tok::kw_return) || Tok.is(tok::kw_co_return)) &&
          "Not a return stmt!");
@@ -2599,11 +2395,6 @@ Decl *Parser::ParseFunctionStatementBody(Decl *Decl, ParseScope &BodyScope) {
   return Actions.ActOnFinishFunctionBody(Decl, FnBody.get());
 }
 
-/// ParseFunctionTryBlock - Parse a C++ function-try-block.
-///
-///       function-try-block:
-///         'try' ctor-initializer[opt] compound-statement handler-seq
-///
 Decl *Parser::ParseFunctionTryBlock(Decl *Decl, ParseScope &BodyScope) {
   assert(Tok.is(tok::kw_try) && "Expected 'try'");
   SourceLocation TryLoc = ConsumeToken();
@@ -2676,11 +2467,6 @@ bool Parser::trySkippingFunctionBody() {
   return true;
 }
 
-/// ParseCXXTryBlock - Parse a C++ try-block.
-///
-///       try-block:
-///         'try' compound-statement handler-seq
-///
 StmtResult Parser::ParseCXXTryBlock() {
   assert(Tok.is(tok::kw_try) && "Expected 'try'");
 
@@ -2688,22 +2474,6 @@ StmtResult Parser::ParseCXXTryBlock() {
   return ParseCXXTryBlockCommon(TryLoc);
 }
 
-/// ParseCXXTryBlockCommon - Parse the common part of try-block and
-/// function-try-block.
-///
-///       try-block:
-///         'try' compound-statement handler-seq
-///
-///       function-try-block:
-///         'try' ctor-initializer[opt] compound-statement handler-seq
-///
-///       handler-seq:
-///         handler handler-seq[opt]
-///
-///       [Borland] try-block:
-///         'try' compound-statement seh-except-block
-///         'try' compound-statement seh-finally-block
-///
 StmtResult Parser::ParseCXXTryBlockCommon(SourceLocation TryLoc, bool FnTry) {
   if (Tok.isNot(tok::l_brace))
     return StmtError(Diag(Tok, diag::err_expected) << tok::l_brace);
@@ -2761,16 +2531,6 @@ StmtResult Parser::ParseCXXTryBlockCommon(SourceLocation TryLoc, bool FnTry) {
   }
 }
 
-/// ParseCXXCatchBlock - Parse a C++ catch block, called handler in the standard
-///
-///   handler:
-///     'catch' '(' exception-declaration ')' compound-statement
-///
-///   exception-declaration:
-///     attribute-specifier-seq[opt] type-specifier-seq declarator
-///     attribute-specifier-seq[opt] type-specifier-seq abstract-declarator[opt]
-///     '...'
-///
 StmtResult Parser::ParseCXXCatchBlock(bool FnCatch) {
   assert(Tok.is(tok::kw_catch) && "Expected 'catch'");
 

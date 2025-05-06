@@ -29,7 +29,6 @@
 
 using namespace clang;
 
-/// Skips attributes after an Objective-C @ directive. Emits a diagnostic.
 void Parser::MaybeSkipAttributes(tok::ObjCKeywordKind Kind) {
   ParsedAttributes attrs(AttrFactory);
   if (Tok.is(tok::kw___attribute)) {
@@ -42,14 +41,6 @@ void Parser::MaybeSkipAttributes(tok::ObjCKeywordKind Kind) {
   }
 }
 
-/// ParseObjCAtDirectives - Handle parts of the external-declaration production:
-///       external-declaration: [C99 6.9]
-/// [OBJC]  objc-class-definition
-/// [OBJC]  objc-class-declaration
-/// [OBJC]  objc-alias-declaration
-/// [OBJC]  objc-protocol-definition
-/// [OBJC]  objc-method-definition
-/// [OBJC]  '@' 'end'
 Parser::DeclGroupPtrTy
 Parser::ParseObjCAtDirectives(ParsedAttributes &DeclAttrs,
                               ParsedAttributes &DeclSpecAttrs) {
@@ -115,7 +106,6 @@ Parser::ParseObjCAtDirectives(ParsedAttributes &DeclAttrs,
   return Actions.ConvertDeclToDeclGroup(SingleDecl);
 }
 
-/// Class to handle popping type parameters when leaving the scope.
 class Parser::ObjCTypeParamListScope {
   Sema &Actions;
   Scope *S;
@@ -141,13 +131,6 @@ public:
   }
 };
 
-///
-/// objc-class-declaration:
-///    '@' 'class' objc-class-forward-decl (',' objc-class-forward-decl)* ';'
-///
-/// objc-class-forward-decl:
-///   identifier objc-type-parameter-list[opt]
-///
 Parser::DeclGroupPtrTy
 Parser::ParseObjCAtClassDeclaration(SourceLocation atLoc) {
   ConsumeToken(); // the identifier "class"
@@ -206,35 +189,6 @@ void Parser::CheckNestedObjCContexts(SourceLocation AtLoc)
     Diag(Decl->getBeginLoc(), diag::note_objc_container_start) << (int)ock;
 }
 
-///
-///   objc-interface:
-///     objc-class-interface-attributes[opt] objc-class-interface
-///     objc-category-interface
-///
-///   objc-class-interface:
-///     '@' 'interface' identifier objc-type-parameter-list[opt]
-///       objc-superclass[opt] objc-protocol-refs[opt]
-///       objc-class-instance-variables[opt]
-///       objc-interface-decl-list
-///     @end
-///
-///   objc-category-interface:
-///     '@' 'interface' identifier objc-type-parameter-list[opt]
-///       '(' identifier[opt] ')' objc-protocol-refs[opt]
-///       objc-interface-decl-list
-///     @end
-///
-///   objc-superclass:
-///     ':' identifier objc-type-arguments[opt]
-///
-///   objc-class-interface-attributes:
-///     __attribute__((visibility("default")))
-///     __attribute__((visibility("hidden")))
-///     __attribute__((deprecated))
-///     __attribute__((unavailable))
-///     __attribute__((objc_exception)) - used by NSException on 64-bit
-///     __attribute__((objc_root_class))
-///
 Decl *Parser::ParseObjCAtInterfaceDeclaration(SourceLocation AtLoc,
                                               ParsedAttributes &attrs) {
   assert(Tok.isObjCAtKeyword(tok::objc_interface) &&
@@ -434,30 +388,6 @@ static void addContextSensitiveTypeNullability(Parser &P,
   }
 }
 
-/// Parse an Objective-C type parameter list, if present, or capture
-/// the locations of the protocol identifiers for a list of protocol
-/// references.
-///
-///   objc-type-parameter-list:
-///     '<' objc-type-parameter (',' objc-type-parameter)* '>'
-///
-///   objc-type-parameter:
-///     objc-type-parameter-variance? identifier objc-type-parameter-bound[opt]
-///
-///   objc-type-parameter-bound:
-///     ':' type-name
-///
-///   objc-type-parameter-variance:
-///     '__covariant'
-///     '__contravariant'
-///
-/// \param lAngleLoc The location of the starting '<'.
-///
-/// \param protocolIdents Will capture the list of identifiers, if the
-/// angle brackets contain a list of protocol references rather than a
-/// type parameter list.
-///
-/// \param rAngleLoc The location of the ending '>'.
 ObjCTypeParamList *Parser::parseObjCTypeParamListOrProtocolRefs(
     ObjCTypeParamListScope &Scope, SourceLocation &lAngleLoc,
     SmallVectorImpl<IdentifierLoc> &protocolIdents, SourceLocation &rAngleLoc,
@@ -605,7 +535,6 @@ ObjCTypeParamList *Parser::parseObjCTypeParamListOrProtocolRefs(
   return invalid ? nullptr : list;
 }
 
-/// Parse an objc-type-parameter-list.
 ObjCTypeParamList *Parser::parseObjCTypeParamList() {
   SourceLocation lAngleLoc;
   SmallVector<IdentifierLoc, 1> protocolIdents;
@@ -630,18 +559,6 @@ static bool isTopLevelObjCKeyword(tok::ObjCKeywordKind DirectiveKind) {
   }
 }
 
-///   objc-interface-decl-list:
-///     empty
-///     objc-interface-decl-list objc-property-decl [OBJC2]
-///     objc-interface-decl-list objc-method-requirement [OBJC2]
-///     objc-interface-decl-list objc-method-proto ';'
-///     objc-interface-decl-list declaration
-///     objc-interface-decl-list ';'
-///
-///   objc-method-requirement: [OBJC2]
-///     @required
-///     @optional
-///
 void Parser::ParseObjCInterfaceDeclList(tok::ObjCKeywordKind contextKey,
                                         Decl *CDecl) {
   SmallVector<Decl *, 32> allMethods;
@@ -870,32 +787,6 @@ static void diagnoseRedundantPropertyNullability(Parser &P,
     << SourceRange(DS.getNullabilityLoc());
 }
 
-///   Parse property attribute declarations.
-///
-///   property-attr-decl: '(' property-attrlist ')'
-///   property-attrlist:
-///     property-attribute
-///     property-attrlist ',' property-attribute
-///   property-attribute:
-///     getter '=' identifier
-///     setter '=' identifier ':'
-///     direct
-///     readonly
-///     readwrite
-///     assign
-///     retain
-///     copy
-///     nonatomic
-///     atomic
-///     strong
-///     weak
-///     unsafe_unretained
-///     nonnull
-///     nullable
-///     null_unspecified
-///     null_resettable
-///     class
-///
 void Parser::ParseObjCPropertyAttribute(ObjCDeclSpec &DS) {
   assert(Tok.getKind() == tok::l_paren);
   BalancedDelimiterTracker T(*this, tok::l_paren);
@@ -1033,16 +924,6 @@ void Parser::ParseObjCPropertyAttribute(ObjCDeclSpec &DS) {
   T.consumeClose();
 }
 
-///   objc-method-proto:
-///     objc-instance-method objc-method-decl objc-method-attributes[opt]
-///     objc-class-method objc-method-decl objc-method-attributes[opt]
-///
-///   objc-instance-method: '-'
-///   objc-class-method: '+'
-///
-///   objc-method-attributes:         [OBJC2]
-///     __attribute__((deprecated))
-///
 Decl *Parser::ParseObjCMethodPrototype(tok::ObjCKeywordKind MethodImplKind,
                                        bool MethodDefinition) {
   assert(Tok.isOneOf(tok::minus, tok::plus) && "expected +/-");
@@ -1056,14 +937,6 @@ Decl *Parser::ParseObjCMethodPrototype(tok::ObjCKeywordKind MethodImplKind,
   return MDecl;
 }
 
-///   objc-selector:
-///     identifier
-///     one of
-///       enum struct union if else while do for switch case default
-///       break continue return goto asm sizeof typeof __alignof
-///       unsigned long const short volatile signed restrict _Complex
-///       in out inout bycopy byref oneway int char float double void _Bool
-///
 IdentifierInfo *Parser::ParseObjCSelectorPiece(SourceLocation &SelectorLoc) {
 
   switch (Tok.getKind()) {
@@ -1170,8 +1043,6 @@ IdentifierInfo *Parser::ParseObjCSelectorPiece(SourceLocation &SelectorLoc) {
   }
 }
 
-///  objc-for-collection-in: 'in'
-///
 bool Parser::isTokIdentifier_in() const {
   // FIXME: May have to do additional look-ahead to only allow for
   // valid tokens following an 'in'; such as an identifier, unary operators,
@@ -1181,25 +1052,6 @@ bool Parser::isTokIdentifier_in() const {
               ObjCTypeQuals[llvm::to_underlying(ObjCTypeQual::in)]);
 }
 
-/// ParseObjCTypeQualifierList - This routine parses the objective-c's type
-/// qualifier list and builds their bitmask representation in the input
-/// argument.
-///
-///   objc-type-qualifiers:
-///     objc-type-qualifier
-///     objc-type-qualifiers objc-type-qualifier
-///
-///   objc-type-qualifier:
-///     'in'
-///     'out'
-///     'inout'
-///     'oneway'
-///     'bycopy'
-///     'byref'
-///     'nonnull'
-///     'nullable'
-///     'null_unspecified'
-///
 void Parser::ParseObjCTypeQualifierList(ObjCDeclSpec &DS,
                                         DeclaratorContext Context) {
   assert(Context == DeclaratorContext::ObjCParameter ||
@@ -1309,10 +1161,6 @@ static void takeDeclAttributes(ParsedAttributes &attrs,
     takeDeclAttributes(attrs, D.getTypeObject(i).getAttrs());
 }
 
-///   objc-type-name:
-///     '(' objc-type-qualifiers[opt] type-name ')'
-///     '(' objc-type-qualifiers[opt] ')'
-///
 ParsedType Parser::ParseObjCTypeName(ObjCDeclSpec &DS,
                                      DeclaratorContext context,
                                      ParsedAttributes *paramAttrs) {
@@ -1379,34 +1227,6 @@ ParsedType Parser::ParseObjCTypeName(ObjCDeclSpec &DS,
   return Ty;
 }
 
-///   objc-method-decl:
-///     objc-selector
-///     objc-keyword-selector objc-parmlist[opt]
-///     objc-type-name objc-selector
-///     objc-type-name objc-keyword-selector objc-parmlist[opt]
-///
-///   objc-keyword-selector:
-///     objc-keyword-decl
-///     objc-keyword-selector objc-keyword-decl
-///
-///   objc-keyword-decl:
-///     objc-selector ':' objc-type-name objc-keyword-attributes[opt] identifier
-///     objc-selector ':' objc-keyword-attributes[opt] identifier
-///     ':' objc-type-name objc-keyword-attributes[opt] identifier
-///     ':' objc-keyword-attributes[opt] identifier
-///
-///   objc-parmlist:
-///     objc-parms objc-ellipsis[opt]
-///
-///   objc-parms:
-///     objc-parms , parameter-declaration
-///
-///   objc-ellipsis:
-///     , ...
-///
-///   objc-keyword-attributes:         [OBJC2]
-///     __attribute__((unused))
-///
 Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
                                   tok::TokenKind mType,
                                   tok::ObjCKeywordKind MethodImplKind,
@@ -1601,9 +1421,6 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
   return Result;
 }
 
-///   objc-protocol-refs:
-///     '<' identifier-list '>'
-///
 bool Parser::
 ParseObjCProtocolReferences(SmallVectorImpl<Decl *> &Protocols,
                             SmallVectorImpl<SourceLocation> &ProtocolLocs,
@@ -1668,11 +1485,6 @@ TypeResult Parser::parseObjCProtocolQualifierType(SourceLocation &rAngleLoc) {
   return result;
 }
 
-/// Parse Objective-C type arguments or protocol qualifiers.
-///
-///   objc-type-arguments:
-///     '<' type-name '...'[opt] (',' type-name '...'[opt])* '>'
-///
 void Parser::parseObjCTypeArgsOrProtocolQualifiers(
        ParsedType baseType,
        SourceLocation &typeArgsLAngleLoc,
@@ -1950,27 +1762,6 @@ void Parser::HelperActionsForIvarDeclarations(
                       ParsedAttributesView());
 }
 
-///   objc-class-instance-variables:
-///     '{' objc-instance-variable-decl-list[opt] '}'
-///
-///   objc-instance-variable-decl-list:
-///     objc-visibility-spec
-///     objc-instance-variable-decl ';'
-///     ';'
-///     objc-instance-variable-decl-list objc-visibility-spec
-///     objc-instance-variable-decl-list objc-instance-variable-decl ';'
-///     objc-instance-variable-decl-list static_assert-declaration
-///     objc-instance-variable-decl-list ';'
-///
-///   objc-visibility-spec:
-///     @private
-///     @protected
-///     @public
-///     @package [OBJC2]
-///
-///   objc-instance-variable-decl:
-///     struct-declaration
-///
 void Parser::ParseObjCClassInstanceVariables(ObjCContainerDecl *interfaceDecl,
                                              tok::ObjCKeywordKind visibility,
                                              SourceLocation atLoc) {
@@ -2070,22 +1861,6 @@ void Parser::ParseObjCClassInstanceVariables(ObjCContainerDecl *interfaceDecl,
                                    T, AllIvarDecls, false);
 }
 
-///   objc-protocol-declaration:
-///     objc-protocol-definition
-///     objc-protocol-forward-reference
-///
-///   objc-protocol-definition:
-///     \@protocol identifier
-///       objc-protocol-refs[opt]
-///       objc-interface-decl-list
-///     \@end
-///
-///   objc-protocol-forward-reference:
-///     \@protocol identifier-list ';'
-///
-///   "\@protocol identifier ;" should be resolved as "\@protocol
-///   identifier-list ;": objc-interface-decl-list may not start with a
-///   semicolon in the first alternative if objc-protocol-refs are omitted.
 Parser::DeclGroupPtrTy
 Parser::ParseObjCAtProtocolDeclaration(SourceLocation AtLoc,
                                        ParsedAttributes &attrs) {
@@ -2171,16 +1946,6 @@ Parser::ParseObjCAtProtocolDeclaration(SourceLocation AtLoc,
   return Actions.ConvertDeclToDeclGroup(ProtoType);
 }
 
-///   objc-implementation:
-///     objc-class-implementation-prologue
-///     objc-category-implementation-prologue
-///
-///   objc-class-implementation-prologue:
-///     @implementation identifier objc-superclass[opt]
-///       objc-class-instance-variables[opt]
-///
-///   objc-category-implementation-prologue:
-///     @implementation identifier ( identifier )
 Parser::DeclGroupPtrTy
 Parser::ParseObjCAtImplementationDeclaration(SourceLocation AtLoc,
                                              ParsedAttributes &Attrs) {
@@ -2366,9 +2131,6 @@ void Parser::ObjCImplParsingDataRAII::finish(SourceRange AtEnd) {
   Finished = true;
 }
 
-///   compatibility-alias-decl:
-///     @compatibility_alias alias-name  class-name ';'
-///
 Decl *Parser::ParseObjCAtAliasDeclaration(SourceLocation atLoc) {
   assert(Tok.isObjCAtKeyword(tok::objc_compatibility_alias) &&
          "ParseObjCAtAliasDeclaration(): Expected @compatibility_alias");
@@ -2386,17 +2148,6 @@ Decl *Parser::ParseObjCAtAliasDeclaration(SourceLocation atLoc) {
                                                 classId, classLoc);
 }
 
-///   property-synthesis:
-///     @synthesize property-ivar-list ';'
-///
-///   property-ivar-list:
-///     property-ivar
-///     property-ivar-list ',' property-ivar
-///
-///   property-ivar:
-///     identifier
-///     identifier '=' identifier
-///
 Decl *Parser::ParseObjCPropertySynthesize(SourceLocation atLoc) {
   assert(Tok.isObjCAtKeyword(tok::objc_synthesize) &&
          "ParseObjCPropertySynthesize(): Expected '@synthesize'");
@@ -2445,13 +2196,6 @@ Decl *Parser::ParseObjCPropertySynthesize(SourceLocation atLoc) {
   return nullptr;
 }
 
-///   property-dynamic:
-///     @dynamic  property-list
-///
-///   property-list:
-///     identifier
-///     property-list ',' identifier
-///
 Decl *Parser::ParseObjCPropertyDynamic(SourceLocation atLoc) {
   assert(Tok.isObjCAtKeyword(tok::objc_dynamic) &&
          "ParseObjCPropertyDynamic(): Expected '@dynamic'");
@@ -2510,9 +2254,6 @@ Decl *Parser::ParseObjCPropertyDynamic(SourceLocation atLoc) {
   return nullptr;
 }
 
-///  objc-throw-statement:
-///    throw expression[opt];
-///
 StmtResult Parser::ParseObjCThrowStmt(SourceLocation atLoc) {
   ExprResult Res;
   ConsumeToken(); // consume throw
@@ -2528,9 +2269,6 @@ StmtResult Parser::ParseObjCThrowStmt(SourceLocation atLoc) {
   return Actions.ObjC().ActOnObjCAtThrowStmt(atLoc, Res.get(), getCurScope());
 }
 
-/// objc-synchronized-statement:
-///   @synchronized '(' expression ')' compound-statement
-///
 StmtResult
 Parser::ParseObjCSynchronizedStmt(SourceLocation atLoc) {
   ConsumeToken(); // consume synchronized
@@ -2582,17 +2320,6 @@ Parser::ParseObjCSynchronizedStmt(SourceLocation atLoc) {
                                                     body.get());
 }
 
-///  objc-try-catch-statement:
-///    @try compound-statement objc-catch-list[opt]
-///    @try compound-statement objc-catch-list[opt] @finally compound-statement
-///
-///  objc-catch-list:
-///    @catch ( parameter-declaration ) compound-statement
-///    objc-catch-list @catch ( catch-parameter-declaration ) compound-statement
-///  catch-parameter-declaration:
-///     parameter-declaration
-///     '...' [OBJC2]
-///
 StmtResult Parser::ParseObjCTryStmt(SourceLocation atLoc) {
   bool catch_or_finally_seen = false;
 
@@ -2709,9 +2436,6 @@ StmtResult Parser::ParseObjCTryStmt(SourceLocation atLoc) {
                                            FinallyStmt.get());
 }
 
-/// objc-autoreleasepool-statement:
-///   @autoreleasepool compound-statement
-///
 StmtResult
 Parser::ParseObjCAutoreleasePoolStmt(SourceLocation atLoc) {
   ConsumeToken(); // consume autoreleasepool
@@ -2732,8 +2456,6 @@ Parser::ParseObjCAutoreleasePoolStmt(SourceLocation atLoc) {
                                                      AutoreleasePoolBody.get());
 }
 
-/// StashAwayMethodOrFunctionBodyTokens -  Consume the tokens and store them
-/// for later parsing.
 void Parser::StashAwayMethodOrFunctionBodyTokens(Decl *MDecl) {
   if (SkipFunctionBodies && (!MDecl || Actions.canSkipFunctionBody(MDecl)) &&
       trySkippingFunctionBody()) {
@@ -2776,8 +2498,6 @@ void Parser::StashAwayMethodOrFunctionBodyTokens(Decl *MDecl) {
   }
 }
 
-///   objc-method-def: objc-method-proto ';'[opt] '{' body '}'
-///
 Decl *Parser::ParseObjCMethodDefinition() {
   Decl *MDecl = ParseObjCMethodPrototype();
 
@@ -2966,28 +2686,6 @@ ExprResult Parser::ParseObjCAtExpression(SourceLocation AtLoc) {
   }
 }
 
-/// Parse the receiver of an Objective-C++ message send.
-///
-/// This routine parses the receiver of a message send in
-/// Objective-C++ either as a type or as an expression. Note that this
-/// routine must not be called to parse a send to 'super', since it
-/// has no way to return such a result.
-///
-/// \param IsExpr Whether the receiver was parsed as an expression.
-///
-/// \param TypeOrExpr If the receiver was parsed as an expression (\c
-/// IsExpr is true), the parsed expression. If the receiver was parsed
-/// as a type (\c IsExpr is false), the parsed type.
-///
-/// \returns True if an error occurred during parsing or semantic
-/// analysis, in which case the arguments do not have valid
-/// values. Otherwise, returns false for a successful parse.
-///
-///   objc-receiver: [C++]
-///     'super' [not parsed here]
-///     expression
-///     simple-type-specifier
-///     typename-specifier
 bool Parser::ParseObjCXXMessageReceiver(bool &IsExpr, void *&TypeOrExpr) {
   InMessageExpressionRAIIObject InMessage(*this, true);
 
@@ -3057,11 +2755,6 @@ bool Parser::ParseObjCXXMessageReceiver(bool &IsExpr, void *&TypeOrExpr) {
   return false;
 }
 
-/// Determine whether the parser is currently referring to a an
-/// Objective-C message send, using a simplified heuristic to avoid overhead.
-///
-/// This routine will only return true for a subset of valid message-send
-/// expressions.
 bool Parser::isSimpleObjCMessageExpression() {
   assert(Tok.is(tok::l_square) && getLangOpts().ObjC &&
          "Incorrect start for isSimpleObjCMessageExpression");
@@ -3098,15 +2791,6 @@ bool Parser::isStartOfObjCClassMessageMissingOpenBracket() {
   return false;
 }
 
-///   objc-message-expr:
-///     '[' objc-receiver objc-message-args ']'
-///
-///   objc-receiver: [C]
-///     'super'
-///     expression
-///     class-name
-///     type-name
-///
 ExprResult Parser::ParseObjCMessageExpression() {
   assert(Tok.is(tok::l_square) && "'[' expected");
   SourceLocation LBracLoc = ConsumeBracket(); // consume '['
@@ -3202,44 +2886,6 @@ ExprResult Parser::ParseObjCMessageExpression() {
                                         Res.get());
 }
 
-/// Parse the remainder of an Objective-C message following the
-/// '[' objc-receiver.
-///
-/// This routine handles sends to super, class messages (sent to a
-/// class name), and instance messages (sent to an object), and the
-/// target is represented by \p SuperLoc, \p ReceiverType, or \p
-/// ReceiverExpr, respectively. Only one of these parameters may have
-/// a valid value.
-///
-/// \param LBracLoc The location of the opening '['.
-///
-/// \param SuperLoc If this is a send to 'super', the location of the
-/// 'super' keyword that indicates a send to the superclass.
-///
-/// \param ReceiverType If this is a class message, the type of the
-/// class we are sending a message to.
-///
-/// \param ReceiverExpr If this is an instance message, the expression
-/// used to compute the receiver object.
-///
-///   objc-message-args:
-///     objc-selector
-///     objc-keywordarg-list
-///
-///   objc-keywordarg-list:
-///     objc-keywordarg
-///     objc-keywordarg-list objc-keywordarg
-///
-///   objc-keywordarg:
-///     selector-name[opt] ':' objc-keywordexpr
-///
-///   objc-keywordexpr:
-///     nonempty-expr-list
-///
-///   nonempty-expr-list:
-///     assignment-expression
-///     nonempty-expr-list , assignment-expression
-///
 ExprResult
 Parser::ParseObjCMessageExpressionBody(SourceLocation LBracLoc,
                                        SourceLocation SuperLoc,
@@ -3437,20 +3083,12 @@ ExprResult Parser::ParseObjCStringLiteral(SourceLocation AtLoc) {
   return Actions.ObjC().ParseObjCStringLiteral(AtLocs.data(), AtStrings);
 }
 
-/// ParseObjCBooleanLiteral -
-/// objc-scalar-literal : '@' boolean-keyword
-///                        ;
-/// boolean-keyword: 'true' | 'false' | '__objc_yes' | '__objc_no'
-///                        ;
 ExprResult Parser::ParseObjCBooleanLiteral(SourceLocation AtLoc,
                                            bool ArgValue) {
   SourceLocation EndLoc = ConsumeToken();             // consume the keyword.
   return Actions.ObjC().ActOnObjCBoolLiteral(AtLoc, EndLoc, ArgValue);
 }
 
-/// ParseObjCCharacterLiteral -
-/// objc-scalar-literal : '@' character-literal
-///                        ;
 ExprResult Parser::ParseObjCCharacterLiteral(SourceLocation AtLoc) {
   ExprResult Lit(Actions.ActOnCharacterConstant(Tok));
   if (Lit.isInvalid()) {
@@ -3460,11 +3098,6 @@ ExprResult Parser::ParseObjCCharacterLiteral(SourceLocation AtLoc) {
   return Actions.ObjC().BuildObjCNumericLiteral(AtLoc, Lit.get());
 }
 
-/// ParseObjCNumericLiteral -
-/// objc-scalar-literal : '@' scalar-literal
-///                        ;
-/// scalar-literal : | numeric-constant			/* any numeric constant. */
-///                    ;
 ExprResult Parser::ParseObjCNumericLiteral(SourceLocation AtLoc) {
   ExprResult Lit(Actions.ActOnNumericConstant(Tok));
   if (Lit.isInvalid()) {
@@ -3474,9 +3107,6 @@ ExprResult Parser::ParseObjCNumericLiteral(SourceLocation AtLoc) {
   return Actions.ObjC().BuildObjCNumericLiteral(AtLoc, Lit.get());
 }
 
-/// ParseObjCBoxedExpr -
-/// objc-box-expression:
-///       @( assignment-expression )
 ExprResult
 Parser::ParseObjCBoxedExpr(SourceLocation AtLoc) {
   if (Tok.isNot(tok::l_paren))
@@ -3608,8 +3238,6 @@ ExprResult Parser::ParseObjCDictionaryLiteral(SourceLocation AtLoc) {
                                                    Elements);
 }
 
-///    objc-encode-expression:
-///      \@encode ( type-name )
 ExprResult
 Parser::ParseObjCEncodeExpression(SourceLocation AtLoc) {
   assert(Tok.isObjCAtKeyword(tok::objc_encode) && "Not an @encode expression!");
@@ -3633,8 +3261,6 @@ Parser::ParseObjCEncodeExpression(SourceLocation AtLoc) {
       AtLoc, EncLoc, T.getOpenLocation(), Ty.get(), T.getCloseLocation());
 }
 
-///     objc-protocol-expression
-///       \@protocol ( protocol-name )
 ExprResult
 Parser::ParseObjCProtocolExpression(SourceLocation AtLoc) {
   SourceLocation ProtoLoc = ConsumeToken();
@@ -3658,8 +3284,6 @@ Parser::ParseObjCProtocolExpression(SourceLocation AtLoc) {
       T.getCloseLocation());
 }
 
-///     objc-selector-expression
-///       @selector '(' '('[opt] objc-keyword-selector ')'[opt] ')'
 ExprResult Parser::ParseObjCSelectorExpression(SourceLocation AtLoc) {
   SourceLocation SelectorLoc = ConsumeToken();
 
