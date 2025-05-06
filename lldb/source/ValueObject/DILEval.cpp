@@ -276,13 +276,13 @@ Interpreter::Visit(const IdentifierNode *node) {
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const UnaryOpNode *node) {
   Status error;
-  auto rhs_or_err = Evaluate(node->operand());
+  auto rhs_or_err = Evaluate(node->GetOperand());
   if (!rhs_or_err)
     return rhs_or_err;
 
   lldb::ValueObjectSP rhs = *rhs_or_err;
 
-  switch (node->kind()) {
+  switch (node->GetKind()) {
   case UnaryOpKind::Deref: {
     lldb::ValueObjectSP dynamic_rhs = rhs->GetDynamicValue(m_default_dynamic);
     if (dynamic_rhs)
@@ -313,12 +313,12 @@ Interpreter::Visit(const UnaryOpNode *node) {
 
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const ArraySubscriptNode *node) {
-  auto lhs_or_err = Evaluate(node->lhs());
+  auto lhs_or_err = Evaluate(node->GetLHS());
   if (!lhs_or_err) {
     return lhs_or_err;
   }
   lldb::ValueObjectSP base = *lhs_or_err;
-  auto rhs_or_err = Evaluate(node->rhs());
+  auto rhs_or_err = Evaluate(node->GetRHS());
   if (!rhs_or_err) {
     return rhs_or_err;
   }
