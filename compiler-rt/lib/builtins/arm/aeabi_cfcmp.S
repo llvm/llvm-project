@@ -22,7 +22,12 @@
         .syntax unified
         .p2align 2
 DEFINE_COMPILERRT_FUNCTION(__aeabi_cfcmpeq)
+        PACBTI_LANDING
+#if defined(__ARM_FEATURE_PAC_DEFAULT)
+        push {r0-r3, r12, lr}
+#else
         push {r0-r3, lr}
+#endif
         bl __aeabi_cfcmpeq_check_nan
         cmp r0, #1
 #if defined(USE_THUMB_1)
@@ -38,21 +43,32 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_cfcmpeq)
         lsls r0, r0, #31
         pop {r0-r3, pc}
 #else
+#if defined(__ARM_FEATURE_PAC_DEFAULT)
+        pop {r0-r3, r12, lr}
+        beq 2f
+        aut r12, lr, sp
+        b __aeabi_cfcmple
+#else
         pop {r0-r3, lr}
-
         // NaN has been ruled out, so __aeabi_cfcmple can't trap
         // Use "it ne" + unconditional branch to guarantee a supported relocation if
         // __aeabi_cfcmple is in a different section for some builds.
         IT(ne)
         bne __aeabi_cfcmple
+#endif
 
+2:
 #if defined(USE_THUMB_2)
-        mov ip, #APSR_C
-        msr APSR_nzcvq, ip
+        mov r0, #APSR_C
+        msr APSR_nzcvq, r0
 #else
         msr APSR_nzcvq, #APSR_C
 #endif
+#if defined(__ARM_FEATURE_PAC_DEFAULT)
+        bxaut r12, lr, sp
+#else
         JMP(lr)
+#endif
 #endif
 END_COMPILERRT_FUNCTION(__aeabi_cfcmpeq)
 
@@ -70,9 +86,14 @@ END_COMPILERRT_FUNCTION(__aeabi_cfcmpeq)
         .syntax unified
         .p2align 2
 DEFINE_COMPILERRT_FUNCTION(__aeabi_cfcmple)
+        PACBTI_LANDING
         // Per the RTABI, this function must preserve r0-r11.
         // Save lr in the same instruction for compactness
+#if defined(__ARM_FEATURE_PAC_DEFAULT)
+        push {r0-r3, r12, lr}
+#else
         push {r0-r3, lr}
+#endif
 
         bl __aeabi_fcmplt
         cmp r0, #1
@@ -111,8 +132,13 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_cfcmple)
 
 1:
         msr APSR_nzcvq, ip
+#if defined(__ARM_FEATURE_PAC_DEFAULT)
+        pop {r0-r3, r12, lr}
+        bxaut r12, lr, sp
+#else
         pop {r0-r3}
         POP_PC()
+#endif
 #endif
 END_COMPILERRT_FUNCTION(__aeabi_cfcmple)
 
@@ -123,6 +149,9 @@ END_COMPILERRT_FUNCTION(__aeabi_cfcmple)
         .syntax unified
         .p2align 2
 DEFINE_COMPILERRT_FUNCTION(__aeabi_cfrcmple)
+#if defined(__ARM_FEATURE_BTI_DEFAULT)
+        bti
+#endif
         // Swap r0 and r1
         mov ip, r0
         mov r0, r1
