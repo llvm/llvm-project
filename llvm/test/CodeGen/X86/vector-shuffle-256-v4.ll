@@ -2367,6 +2367,97 @@ define <4 x double> @unpckh_v4f64(<4 x double> %x, <4 x double> %y) {
   ret <4 x double> %unpckh
 }
 
+define <4 x double> @blend_broadcasts_v1f64(ptr %p0, ptr %p1) {
+; AVX1-LABEL: blend_broadcasts_v1f64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX1-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm1[0],xmm0[0]
+; AVX1-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: blend_broadcasts_v1f64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vbroadcastsd (%rsi), %ymm0
+; AVX2-NEXT:    vbroadcastsd (%rdi), %ymm1
+; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3,4,5],ymm1[6,7]
+; AVX2-NEXT:    retq
+;
+; AVX512VL-LABEL: blend_broadcasts_v1f64:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vbroadcastsd (%rsi), %ymm0
+; AVX512VL-NEXT:    vbroadcastsd (%rdi), %ymm1
+; AVX512VL-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3,4,5],ymm1[6,7]
+; AVX512VL-NEXT:    retq
+  %ld0 = load <1 x double>, ptr %p0, align 32
+  %ld1 = load <1 x double>, ptr %p1, align 32
+  %blend = shufflevector <1 x double> %ld0, <1 x double> %ld1, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
+  ret <4 x double> %blend
+}
+
+define <4 x double> @blend_broadcasts_v1f64_4x(ptr %p0, ptr %p1) {
+; AVX1-LABEL: blend_broadcasts_v1f64_4x:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX1-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm1[0],xmm0[0]
+; AVX1-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: blend_broadcasts_v1f64_4x:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vbroadcastsd (%rsi), %ymm0
+; AVX2-NEXT:    vbroadcastsd (%rdi), %ymm1
+; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3,4,5],ymm1[6,7]
+; AVX2-NEXT:    retq
+;
+; AVX512VL-LABEL: blend_broadcasts_v1f64_4x:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vbroadcastsd (%rsi), %ymm0
+; AVX512VL-NEXT:    vbroadcastsd (%rdi), %ymm1
+; AVX512VL-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3,4,5],ymm1[6,7]
+; AVX512VL-NEXT:    retq
+  %ld0 = load <1 x double>, ptr %p0, align 32
+  %ld1 = load <1 x double>, ptr %p1, align 32
+  %bcst0 = shufflevector <1 x double> %ld0, <1 x double> poison, <4 x i32> zeroinitializer
+  %bcst1 = shufflevector <1 x double> %ld1, <1 x double> poison, <4 x i32> zeroinitializer
+  %blend = shufflevector <4 x double> %bcst0, <4 x double> %bcst1, <4 x i32> <i32 0, i32 5, i32 6, i32 3>
+  ret <4 x double> %blend
+}
+
+define <4 x double> @blend_broadcasts_v1f64_2x(ptr %p0, ptr %p1) {
+; AVX1-LABEL: blend_broadcasts_v1f64_2x:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX1-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm1[0],xmm0[0]
+; AVX1-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: blend_broadcasts_v1f64_2x:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vbroadcastsd (%rsi), %ymm0
+; AVX2-NEXT:    vbroadcastsd (%rdi), %ymm1
+; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3,4,5],ymm1[6,7]
+; AVX2-NEXT:    retq
+;
+; AVX512VL-LABEL: blend_broadcasts_v1f64_2x:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vbroadcastsd (%rsi), %ymm0
+; AVX512VL-NEXT:    vbroadcastsd (%rdi), %ymm1
+; AVX512VL-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3,4,5],ymm1[6,7]
+; AVX512VL-NEXT:    retq
+  %ld0 = load <1 x double>, ptr %p0, align 32
+  %ld1 = load <1 x double>, ptr %p1, align 32
+  %bcst0 = shufflevector <1 x double> %ld0, <1 x double> poison, <2 x i32> zeroinitializer
+  %bcst1 = shufflevector <1 x double> %ld1, <1 x double> poison, <2 x i32> zeroinitializer
+  %blend = shufflevector <2 x double> %bcst0, <2 x double> %bcst1, <4 x i32> <i32 0, i32 2, i32 3, i32 1>
+  ret <4 x double> %blend
+}
+
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}
 !1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
