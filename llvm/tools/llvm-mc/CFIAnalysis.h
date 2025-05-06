@@ -50,7 +50,7 @@ public:
     }
     dbgs() << "------------------------------\n";
     bool ChangedCFA = false;
-    for (int I = 0; I < Inst.getNumOperands(); I++) {
+    for (unsigned I = 0; I < Inst.getNumOperands(); I++) {
       auto &&Operand = Inst.getOperand(I);
       if (!Operand.isReg())
         continue;

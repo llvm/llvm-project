@@ -7,16 +7,15 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/Support/Debug.h"
 #include <cstdio>
 #include <optional>
-#include <set>
 
 namespace llvm {
 
 class CFIAnalysisMCStreamer : public MCStreamer {
+  MCInstrInfo const &MCII;
+
   struct CFIDirectivesState {
     int FrameIndex; // TODO remove it, no need for it
     int DirectiveIndex;
@@ -27,6 +26,7 @@ class CFIAnalysisMCStreamer : public MCStreamer {
         : FrameIndex(FrameIndex), DirectiveIndex(InstructionIndex) {}
   } LastCFIDirectivesState;
   std::vector<int> FrameIndices;
+  std::vector<CFIAnalysis> CFIAs;
 
   struct ICFI {
     MCInst Instruction;
@@ -38,7 +38,6 @@ class CFIAnalysisMCStreamer : public MCStreamer {
 
   std::optional<MCInst> LastInstruction;
   std::optional<MCDwarfFrameInfo> LastDwarfFrameInfo;
-  CFIAnalysis CFIA;
 
   std::optional<ICFI> getLastICFI() {
     if (!LastInstruction)
@@ -79,15 +78,17 @@ class CFIAnalysisMCStreamer : public MCStreamer {
       return;
     }
 
-    if (auto ICFI = getLastICFI())
-      CFIA.update(LastDwarfFrameInfo.value(), ICFI->Instruction,
-                  ICFI->CFIDirectives);
+    if (auto ICFI = getLastICFI()) {
+      assert(!CFIAs.empty());
+      CFIAs.back().update(LastDwarfFrameInfo.value(), ICFI->Instruction,
+                          ICFI->CFIDirectives);
+    }
   }
 
 public:
   CFIAnalysisMCStreamer(MCContext &Context, const MCInstrInfo &MCII)
-      : MCStreamer(Context), LastCFIDirectivesState(),
-        LastInstruction(std::nullopt), CFIA(Context, MCII) {
+      : MCStreamer(Context), MCII(MCII), LastCFIDirectivesState(),
+        LastInstruction(std::nullopt) {
     FrameIndices.push_back(-1);
   }
 
@@ -124,6 +125,7 @@ public:
   void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override {
     feedCFIA();
     FrameIndices.push_back(getNumFrameInfos());
+    CFIAs.emplace_back(getContext(), MCII);
     LastInstruction = std::nullopt;
     LastDwarfFrameInfo = std::nullopt;
     LastCFIDirectivesState.FrameIndex = FrameIndices.back();
@@ -135,6 +137,7 @@ public:
     feedCFIA();
     // TODO this will break if the input frame are malformed.
     FrameIndices.pop_back();
+    CFIAs.pop_back();
     LastInstruction = std::nullopt;
     LastDwarfFrameInfo = std::nullopt;
     LastCFIDirectivesState.FrameIndex = FrameIndices.back();
