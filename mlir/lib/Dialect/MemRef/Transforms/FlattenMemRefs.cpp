@@ -114,6 +114,18 @@ static Value getTargetMemref(Operation *op) {
 }
 
 template <typename T>
+static void castResult(T oper, T newOper, Location loc,
+                       PatternRewriter &rewriter) {
+  memref::ExtractStridedMetadataOp stridedMetadata =
+      rewriter.create<memref::ExtractStridedMetadataOp>(loc, oper);
+  rewriter.replaceOpWithNewOp<memref::ReinterpretCastOp>(
+      oper, cast<MemRefType>(oper.getType()), newOper,
+      /*offset=*/rewriter.getIndexAttr(0),
+      stridedMetadata.getConstifiedMixedSizes(),
+      stridedMetadata.getConstifiedMixedStrides());
+}
+
+template <typename T>
 static void replaceOp(T op, PatternRewriter &rewriter, Value flatMemref,
                       Value offset) {
   auto loc = op->getLoc();
@@ -122,25 +134,13 @@ static void replaceOp(T op, PatternRewriter &rewriter, Value flatMemref,
         auto newAlloc = rewriter.create<memref::AllocOp>(
             loc, cast<MemRefType>(flatMemref.getType()),
             oper.getAlignmentAttr());
-        memref::ExtractStridedMetadataOp stridedMetadata =
-            rewriter.create<memref::ExtractStridedMetadataOp>(loc, oper);
-        rewriter.replaceOpWithNewOp<memref::ReinterpretCastOp>(
-            op, cast<MemRefType>(oper.getType()), newAlloc,
-            /*offset=*/rewriter.getIndexAttr(0),
-            stridedMetadata.getConstifiedMixedSizes(),
-            stridedMetadata.getConstifiedMixedStrides());
+        castResult(oper, newAlloc, loc, rewriter);
       })
       .template Case<memref::AllocaOp>([&](auto oper) {
         auto newAlloca = rewriter.create<memref::AllocaOp>(
             loc, cast<MemRefType>(flatMemref.getType()),
             oper.getAlignmentAttr());
-        memref::ExtractStridedMetadataOp stridedMetadata =
-            rewriter.create<memref::ExtractStridedMetadataOp>(loc, oper);
-        rewriter.replaceOpWithNewOp<memref::ReinterpretCastOp>(
-            op, cast<MemRefType>(oper.getType()), newAlloca,
-            /*offset=*/rewriter.getIndexAttr(0),
-            stridedMetadata.getConstifiedMixedSizes(),
-            stridedMetadata.getConstifiedMixedStrides());
+        castResult(oper, newAlloca, loc, rewriter);
       })
       .template Case<memref::LoadOp>([&](auto op) {
         auto newLoad = rewriter.create<memref::LoadOp>(
