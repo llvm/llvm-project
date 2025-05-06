@@ -1036,6 +1036,10 @@ public:
   /// Return value: true =>  null pointer dereference is not undefined.
   bool nullPointerIsDefined() const;
 
+  /// Return the value for vscale based on the vscale_range attribute or 0 when
+  /// unknown.
+  unsigned getVScaleValue() const;
+
 private:
   void allocHungoffUselist();
   template<int Idx> void setHungoffOperand(Constant *C);
