@@ -1883,30 +1883,21 @@ class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe {
 
 public:
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
-                                VPValue *VF, VPValue *StepVector,
-                                const InductionDescriptor &IndDesc, DebugLoc DL)
+                                VPValue *VF, const InductionDescriptor &IndDesc,
+                                DebugLoc DL)
       : VPWidenInductionRecipe(VPDef::VPWidenIntOrFpInductionSC, IV, Start,
                                Step, IndDesc, DL),
         Trunc(nullptr) {
     addOperand(VF);
-    // Temporarily use Poison for step-vector, which will only be introduced
-    // when needed, when preparing to execute.
-    assert(isa<PoisonValue>(StepVector->getLiveInIRValue()));
-    addOperand(StepVector);
   }
 
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
-                                VPValue *VF, VPValue *StepVector,
-                                const InductionDescriptor &IndDesc,
+                                VPValue *VF, const InductionDescriptor &IndDesc,
                                 TruncInst *Trunc, DebugLoc DL)
       : VPWidenInductionRecipe(VPDef::VPWidenIntOrFpInductionSC, IV, Start,
                                Step, IndDesc, DL),
         Trunc(Trunc) {
     addOperand(VF);
-    // Temporarily use Poison for step-vector, which will only be introduced
-    // when needed, when preparing to execute.
-    assert(isa<PoisonValue>(StepVector->getLiveInIRValue()));
-    addOperand(StepVector);
     SmallVector<std::pair<unsigned, MDNode *>> Metadata;
     (void)Metadata;
     if (Trunc)
@@ -1919,7 +1910,7 @@ public:
   VPWidenIntOrFpInductionRecipe *clone() override {
     return new VPWidenIntOrFpInductionRecipe(
         getPHINode(), getStartValue(), getStepValue(), getVFValue(),
-        getStepVector(), getInductionDescriptor(), Trunc, getDebugLoc());
+        getInductionDescriptor(), Trunc, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenIntOrFpInductionSC)
@@ -1937,10 +1928,13 @@ public:
   VPValue *getVFValue() { return getOperand(2); }
   const VPValue *getVFValue() const { return getOperand(2); }
 
+  // TODO: Remove once VPWidenIntOrFpInduction is fully expanded in
+  // convertToConcreteRecipes.
   VPValue *getStepVector() { return getOperand(3); }
   const VPValue *getStepVector() const { return getOperand(3); }
   void setStepVector(VPValue *V) {
-    assert(isa<PoisonValue>(getOperand(3)->getLiveInIRValue()) &&
+    assert(cast<VPInstructionWithType>(getStepVector()->getDefiningRecipe())
+                   ->getOpcode() == VPInstruction::StepVector &&
            cast<VPInstructionWithType>(V->getDefiningRecipe())->getOpcode() ==
                VPInstruction::StepVector);
     setOperand(3, V);

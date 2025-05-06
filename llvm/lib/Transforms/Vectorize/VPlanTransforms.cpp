@@ -70,11 +70,8 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
         VPValue *Start = Plan->getOrAddLiveIn(II->getStartValue());
         VPValue *Step =
             vputils::getOrCreateVPValueForSCEVExpr(*Plan, II->getStep(), SE);
-        VPValue *StepVector =
-            Plan->getOrAddLiveIn(PoisonValue::get(Phi->getType()));
         NewRecipe = new VPWidenIntOrFpInductionRecipe(
-            Phi, Start, Step, &Plan->getVF(), StepVector, *II,
-            Ingredient.getDebugLoc());
+            Phi, Start, Step, &Plan->getVF(), *II, Ingredient.getDebugLoc());
       } else {
         assert(isa<VPInstruction>(&Ingredient) &&
                "only VPInstructions expected here");
@@ -1226,6 +1223,15 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
     WideIV->setStartValue(NewStart);
     auto *NewStep = Plan.getOrAddLiveIn(ConstantInt::get(NewIVTy, 1));
     WideIV->setStepValue(NewStep);
+    // TODO: Remove once VPWidenIntOrFpInductionRecipe is fully expanded.
+    auto *OldStepVector = cast<VPInstructionWithType>(
+        WideIV->getStepVector()->getDefiningRecipe());
+    assert(OldStepVector->getOpcode() == VPInstruction::StepVector);
+    auto *NewStepVector = new VPInstructionWithType(
+        VPInstruction::StepVector, {}, NewIVTy, OldStepVector->getDebugLoc());
+    NewStepVector->insertAfter(WideIV->getStepVector()->getDefiningRecipe());
+    WideIV->setStepVector(NewStepVector);
+    OldStepVector->eraseFromParent();
 
     auto *NewBTC = new VPWidenCastRecipe(
         Instruction::Trunc, Plan.getOrCreateBackedgeTakenCount(), NewIVTy);
@@ -2445,23 +2451,6 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
         continue;
       }
 
-      if (auto *IVR = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
-        // Infer an up-to-date type since
-        // optimizeVectorInductionWidthForTCAndVFUF may have truncated the start
-        // and step values.
-        Type *Ty = TypeInfo.inferScalarType(IVR->getStartValue());
-        if (TruncInst *Trunc = IVR->getTruncInst())
-          Ty = Trunc->getType();
-        if (Ty->isFloatingPointTy())
-          Ty = IntegerType::get(Ty->getContext(), Ty->getScalarSizeInBits());
-
-        VPBuilder Builder(Plan.getVectorPreheader());
-        VPInstruction *StepVector = Builder.createNaryOp(
-            VPInstruction::StepVector, {}, Ty, {}, R.getDebugLoc());
-        IVR->setStepVector(StepVector);
-        continue;
-      }
-
       VPValue *VectorStep;
       VPValue *ScalarStep;
       if (!match(&R, m_VPInstruction<VPInstruction::WideIVStep>(
@@ -2604,6 +2593,29 @@ void VPlanTransforms::handleUncountableEarlyExit(
       Instruction::Or, {IsEarlyExitTaken, IsLatchExitTaken});
   Builder.createNaryOp(VPInstruction::BranchOnCond, AnyExitTaken);
   LatchExitingBranch->eraseFromParent();
+}
+
+void VPlanTransforms::materializeStepVectors(VPlan &Plan) {
+  for (auto &Phi : Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
+    auto *IVR = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
+    if (!IVR)
+      continue;
+
+    // Infer an up-to-date type since
+    // optimizeVectorInductionWidthForTCAndVFUF may have truncated the start
+    // and step values.
+    Type *Ty = IVR->getPHINode()->getType();
+    if (TruncInst *Trunc = IVR->getTruncInst())
+      Ty = Trunc->getType();
+    if (Ty->isFloatingPointTy())
+      Ty = IntegerType::get(Ty->getContext(), Ty->getScalarSizeInBits());
+
+    VPBuilder Builder(Plan.getVectorPreheader());
+    VPInstruction *StepVector = Builder.createNaryOp(
+        VPInstruction::StepVector, {}, Ty, {}, IVR->getDebugLoc());
+    assert(IVR->getNumOperands() == 3);
+    IVR->addOperand(StepVector);
+  }
 }
 
 void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
