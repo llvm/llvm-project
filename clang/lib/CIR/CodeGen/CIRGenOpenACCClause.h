@@ -89,7 +89,7 @@ class OpenACCClauseCIREmitter final
         &cgf.getMLIRContext(), width,
         mlir::IntegerType::SignednessSemantics::Signless);
     auto constOp = builder.create<mlir::arith::ConstantOp>(
-        loc, ty, builder.getIntegerAttr(ty, value));
+        loc, builder.getIntegerAttr(ty, value));
 
     return constOp.getResult();
   }
