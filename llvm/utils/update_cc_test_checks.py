@@ -303,6 +303,29 @@ def exec_run_line(exe):
         sys.stderr.write(stdout)
         sys.exit(3)
 
+# DO_NOT_UPSTREAM(BoundsSafety) ON
+def _match_path(path_to_match:list, path:str) -> bool:
+    split_path = path.split(os.sep)
+    matched_idx = 0
+    for comp in split_path:
+        if comp == path_to_match[matched_idx]:
+            if matched_idx == len(path_to_match) -1:
+                # Matched all
+                return True
+            matched_idx +=1
+        else:
+            # Failed to match
+            matched_idx = 0
+    return False
+
+def is_bounds_safety_test_with_new_bounds_checks(ti: common.TestInfo) -> bool:
+    return _match_path(['clang', 'test', 'BoundsSafety'], ti.path)
+
+def is_bounds_safety_test_with_legacy_bounds_checks(ti: common.TestInfo) -> bool:
+    return _match_path(['clang', 'test', 'BoundsSafety-legacy-checks'], ti.path)
+
+# DO_NOT_UPSTREAM(BoundsSafety) OFF
+
 
 def update_test(ti: common.TestInfo):
     # Build a list of filechecked and non-filechecked RUN lines.
@@ -335,7 +358,36 @@ def update_test(ti: common.TestInfo):
         # This is a clang runline, apply %clang substitution rule, do lit-like substitutions,
         # and append args.clang_args
         clang_args = exec_args
+        # DO_NOT_UPSTREAM(BoundsSafety) ON
+        original_subst = clang_args[0] # Apple Internal
+        # DO_NOT_UPSTREAM(BoundsSafety) OFF
         clang_args[0:1] = SUBST[clang_args[0]]
+
+        # DO_NOT_UPSTREAM(BoundsSafety) ON
+        # The -fbounds-safety tests under:
+        #
+        # * `clang/test/BoundsSafety` expect to be run with the new bounds checks enabled.
+        # * `clang/test/BoundsSafety-legacy-checks` expect to be run the new bounds checks disabled.
+        #
+        # The lit config files handle this when running the tests by patching
+        # `%clang_cc1` with the appropriate flag However, this script currently
+        # hardcodes the `%clang_cc1` substitution and so doesn't know about the
+        # lit configuration. To make sure the correct flags are used the
+        # appropriate flags are added based on the path to the test.
+        #
+        # This can be removed once support for the legacy bounds checks are
+        # removed (rdar://134095901)
+        if is_bounds_safety_test_with_new_bounds_checks(ti) and original_subst == "%clang_cc1":
+            enable_bounds_safety_checks_flag = '-fbounds-safety-bringup-missing-checks=batch_0'
+            print(f"Implicitly adding {enable_bounds_safety_checks_flag}")
+            clang_args.append(enable_bounds_safety_checks_flag)
+
+        if is_bounds_safety_test_with_legacy_bounds_checks(ti) and original_subst == "%clang_cc1":
+            enable_bounds_safety_legacy_checks_flag = '-fno-bounds-safety-bringup-missing-checks=all'
+            print(f"Implicitly adding {enable_bounds_safety_legacy_checks_flag}")
+            clang_args.append(enable_bounds_safety_legacy_checks_flag)
+        # DO_NOT_UPSTREAM(BoundsSafety) OFF
+
         for s in subs:
             clang_args = [i.replace(s, subs[s]) if s in i else i for i in clang_args]
         clang_args += ti.args.clang_args
