@@ -315,10 +315,10 @@ define <2 x i64> @lshr_constant_op1_not_undef_lane(i64 %x) {
 define <2 x i64> @urem_constant_op0(i64 %x) {
 ; CHECK-LABEL: @urem_constant_op0(
 ; CHECK-NEXT:    [[BO_SCALAR:%.*]] = urem i64 5, [[X:%.*]]
-; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> poison, i64 [[BO_SCALAR]], i64 0
+; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> zeroinitializer, i64 [[BO_SCALAR]], i64 0
 ; CHECK-NEXT:    ret <2 x i64> [[BO]]
 ;
-  %ins = insertelement <2 x i64> undef, i64 %x, i32 0
+  %ins = insertelement <2 x i64> splat (i64 1), i64 %x, i32 0
   %bo = urem <2 x i64> <i64 5, i64 undef>, %ins
   ret <2 x i64> %bo
 }
@@ -326,10 +326,10 @@ define <2 x i64> @urem_constant_op0(i64 %x) {
 define <2 x i64> @urem_constant_op0_not_undef_lane(i64 %x) {
 ; CHECK-LABEL: @urem_constant_op0_not_undef_lane(
 ; CHECK-NEXT:    [[BO_SCALAR:%.*]] = urem i64 5, [[X:%.*]]
-; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> poison, i64 [[BO_SCALAR]], i64 0
+; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> zeroinitializer, i64 [[BO_SCALAR]], i64 0
 ; CHECK-NEXT:    ret <2 x i64> [[BO]]
 ;
-  %ins = insertelement <2 x i64> undef, i64 %x, i32 0
+  %ins = insertelement <2 x i64> splat (i64 1), i64 %x, i32 0
   %bo = urem <2 x i64> <i64 5, i64 2>, %ins
   ret <2 x i64> %bo
 }
@@ -337,11 +337,11 @@ define <2 x i64> @urem_constant_op0_not_undef_lane(i64 %x) {
 define <2 x i64> @urem_constant_op1(i64 %x) {
 ; CHECK-LABEL: @urem_constant_op1(
 ; CHECK-NEXT:    [[BO_SCALAR:%.*]] = urem i64 [[X:%.*]], 2
-; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> <i64 poison, i64 0>, i64 [[BO_SCALAR]], i64 1
+; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> zeroinitializer, i64 [[BO_SCALAR]], i64 1
 ; CHECK-NEXT:    ret <2 x i64> [[BO]]
 ;
   %ins = insertelement <2 x i64> undef, i64 %x, i32 1
-  %bo = urem <2 x i64> %ins, <i64 undef, i64 2>
+  %bo = urem <2 x i64> %ins, <i64 2, i64 2>
   ret <2 x i64> %bo
 }
 
@@ -359,10 +359,10 @@ define <2 x i64> @urem_constant_op1_not_undef_lane(i64 %x) {
 define <2 x i64> @srem_constant_op0(i64 %x) {
 ; CHECK-LABEL: @srem_constant_op0(
 ; CHECK-NEXT:    [[BO_SCALAR:%.*]] = srem i64 5, [[X:%.*]]
-; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> poison, i64 [[BO_SCALAR]], i64 0
+; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> zeroinitializer, i64 [[BO_SCALAR]], i64 0
 ; CHECK-NEXT:    ret <2 x i64> [[BO]]
 ;
-  %ins = insertelement <2 x i64> undef, i64 %x, i32 0
+  %ins = insertelement <2 x i64> splat (i64 1), i64 %x, i32 0
   %bo = srem <2 x i64> <i64 5, i64 undef>, %ins
   ret <2 x i64> %bo
 }
@@ -370,10 +370,10 @@ define <2 x i64> @srem_constant_op0(i64 %x) {
 define <2 x i64> @srem_constant_op0_not_undef_lane(i64 %x) {
 ; CHECK-LABEL: @srem_constant_op0_not_undef_lane(
 ; CHECK-NEXT:    [[BO_SCALAR:%.*]] = srem i64 5, [[X:%.*]]
-; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> poison, i64 [[BO_SCALAR]], i64 0
+; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> zeroinitializer, i64 [[BO_SCALAR]], i64 0
 ; CHECK-NEXT:    ret <2 x i64> [[BO]]
 ;
-  %ins = insertelement <2 x i64> undef, i64 %x, i32 0
+  %ins = insertelement <2 x i64> splat (i64 1), i64 %x, i32 0
   %bo = srem <2 x i64> <i64 5, i64 2>, %ins
   ret <2 x i64> %bo
 }
@@ -381,11 +381,11 @@ define <2 x i64> @srem_constant_op0_not_undef_lane(i64 %x) {
 define <2 x i64> @srem_constant_op1(i64 %x) {
 ; CHECK-LABEL: @srem_constant_op1(
 ; CHECK-NEXT:    [[BO_SCALAR:%.*]] = srem i64 [[X:%.*]], 2
-; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> <i64 poison, i64 0>, i64 [[BO_SCALAR]], i64 1
+; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> zeroinitializer, i64 [[BO_SCALAR]], i64 1
 ; CHECK-NEXT:    ret <2 x i64> [[BO]]
 ;
   %ins = insertelement <2 x i64> undef, i64 %x, i32 1
-  %bo = srem <2 x i64> %ins, <i64 undef, i64 2>
+  %bo = srem <2 x i64> %ins, <i64 2, i64 2>
   ret <2 x i64> %bo
 }
 
@@ -403,10 +403,10 @@ define <2 x i64> @srem_constant_op1_not_undef_lane(i64 %x) {
 define <2 x i64> @udiv_constant_op0(i64 %x) {
 ; CHECK-LABEL: @udiv_constant_op0(
 ; CHECK-NEXT:    [[BO_SCALAR:%.*]] = udiv exact i64 5, [[X:%.*]]
-; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> poison, i64 [[BO_SCALAR]], i64 0
+; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> <i64 5, i64 undef>, i64 [[BO_SCALAR]], i64 0
 ; CHECK-NEXT:    ret <2 x i64> [[BO]]
 ;
-  %ins = insertelement <2 x i64> undef, i64 %x, i32 0
+  %ins = insertelement <2 x i64> splat (i64 1), i64 %x, i32 0
   %bo = udiv exact <2 x i64> <i64 5, i64 undef>, %ins
   ret <2 x i64> %bo
 }
@@ -414,10 +414,10 @@ define <2 x i64> @udiv_constant_op0(i64 %x) {
 define <2 x i64> @udiv_constant_op0_not_undef_lane(i64 %x) {
 ; CHECK-LABEL: @udiv_constant_op0_not_undef_lane(
 ; CHECK-NEXT:    [[BO_SCALAR:%.*]] = udiv exact i64 5, [[X:%.*]]
-; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> poison, i64 [[BO_SCALAR]], i64 0
+; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> <i64 5, i64 2>, i64 [[BO_SCALAR]], i64 0
 ; CHECK-NEXT:    ret <2 x i64> [[BO]]
 ;
-  %ins = insertelement <2 x i64> undef, i64 %x, i32 0
+  %ins = insertelement <2 x i64> splat (i64 1), i64 %x, i32 0
   %bo = udiv exact <2 x i64> <i64 5, i64 2>, %ins
   ret <2 x i64> %bo
 }
@@ -425,11 +425,11 @@ define <2 x i64> @udiv_constant_op0_not_undef_lane(i64 %x) {
 define <2 x i64> @udiv_constant_op1(i64 %x) {
 ; CHECK-LABEL: @udiv_constant_op1(
 ; CHECK-NEXT:    [[BO_SCALAR:%.*]] = udiv i64 [[X:%.*]], 2
-; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> <i64 poison, i64 0>, i64 [[BO_SCALAR]], i64 1
+; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> zeroinitializer, i64 [[BO_SCALAR]], i64 1
 ; CHECK-NEXT:    ret <2 x i64> [[BO]]
 ;
   %ins = insertelement <2 x i64> undef, i64 %x, i32 1
-  %bo = udiv <2 x i64> %ins, <i64 undef, i64 2>
+  %bo = udiv <2 x i64> %ins, <i64 2, i64 2>
   ret <2 x i64> %bo
 }
 
@@ -447,10 +447,10 @@ define <2 x i64> @udiv_constant_op1_not_undef_lane(i64 %x) {
 define <2 x i64> @sdiv_constant_op0(i64 %x) {
 ; CHECK-LABEL: @sdiv_constant_op0(
 ; CHECK-NEXT:    [[BO_SCALAR:%.*]] = sdiv i64 5, [[X:%.*]]
-; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> poison, i64 [[BO_SCALAR]], i64 0
+; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> <i64 5, i64 undef>, i64 [[BO_SCALAR]], i64 0
 ; CHECK-NEXT:    ret <2 x i64> [[BO]]
 ;
-  %ins = insertelement <2 x i64> undef, i64 %x, i32 0
+  %ins = insertelement <2 x i64> splat (i64 1), i64 %x, i32 0
   %bo = sdiv <2 x i64> <i64 5, i64 undef>, %ins
   ret <2 x i64> %bo
 }
@@ -458,10 +458,10 @@ define <2 x i64> @sdiv_constant_op0(i64 %x) {
 define <2 x i64> @sdiv_constant_op0_not_undef_lane(i64 %x) {
 ; CHECK-LABEL: @sdiv_constant_op0_not_undef_lane(
 ; CHECK-NEXT:    [[BO_SCALAR:%.*]] = sdiv i64 5, [[X:%.*]]
-; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> poison, i64 [[BO_SCALAR]], i64 0
+; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> <i64 5, i64 2>, i64 [[BO_SCALAR]], i64 0
 ; CHECK-NEXT:    ret <2 x i64> [[BO]]
 ;
-  %ins = insertelement <2 x i64> undef, i64 %x, i32 0
+  %ins = insertelement <2 x i64> splat (i64 1), i64 %x, i32 0
   %bo = sdiv <2 x i64> <i64 5, i64 2>, %ins
   ret <2 x i64> %bo
 }
@@ -469,11 +469,11 @@ define <2 x i64> @sdiv_constant_op0_not_undef_lane(i64 %x) {
 define <2 x i64> @sdiv_constant_op1(i64 %x) {
 ; CHECK-LABEL: @sdiv_constant_op1(
 ; CHECK-NEXT:    [[BO_SCALAR:%.*]] = sdiv exact i64 [[X:%.*]], 2
-; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> <i64 poison, i64 0>, i64 [[BO_SCALAR]], i64 1
+; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> zeroinitializer, i64 [[BO_SCALAR]], i64 1
 ; CHECK-NEXT:    ret <2 x i64> [[BO]]
 ;
   %ins = insertelement <2 x i64> undef, i64 %x, i32 1
-  %bo = sdiv exact <2 x i64> %ins, <i64 undef, i64 2>
+  %bo = sdiv exact <2 x i64> %ins, <i64 2, i64 2>
   ret <2 x i64> %bo
 }
 

@@ -2486,8 +2486,7 @@ LoongArchTargetLowering::lowerGlobalTLSAddress(SDValue Op,
   assert(N->getOffset() == 0 && "unexpected offset in global node");
 
   if (DAG.getTarget().useEmulatedTLS())
-    report_fatal_error("the emulated TLS is prohibited",
-                       /*GenCrashDiag=*/false);
+    reportFatalUsageError("the emulated TLS is prohibited");
 
   bool IsDesc = DAG.getTarget().useTLSDESC();
 
@@ -2549,7 +2548,6 @@ static SDValue checkIntrinsicImmArg(SDValue Op, unsigned ImmOp,
 SDValue
 LoongArchTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                  SelectionDAG &DAG) const {
-  SDLoc DL(Op);
   switch (Op.getConstantOperandVal(0)) {
   default:
     return SDValue(); // Don't custom lower most intrinsics.

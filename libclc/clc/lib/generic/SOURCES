@@ -41,6 +41,7 @@ math/clc_exp2.cl
 math/clc_expm1.cl
 math/clc_exp_helper.cl
 math/clc_fabs.cl
+math/clc_fdim.cl
 math/clc_fma.cl
 math/clc_fmax.cl
 math/clc_fmin.cl
@@ -57,6 +58,8 @@ math/clc_log10.cl
 math/clc_log1p.cl
 math/clc_log2.cl
 math/clc_mad.cl
+math/clc_maxmag.cl
+math/clc_minmag.cl
 math/clc_modf.cl
 math/clc_nan.cl
 math/clc_native_cos.cl

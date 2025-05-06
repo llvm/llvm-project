@@ -32,11 +32,14 @@ public:
   using LabelTy = uint32_t;
   using AddrTy = uintptr_t;
   using Local = Scope::Local;
+  using PtrCallback = llvm::function_ref<bool(const Pointer &)>;
 
   EvaluationResult interpretExpr(const Expr *E,
                                  bool ConvertResultToRValue = false,
                                  bool DestroyToplevelScope = false);
   EvaluationResult interpretDecl(const VarDecl *VD, bool CheckFullyInitialized);
+  /// Interpret the given Expr to a Pointer.
+  EvaluationResult interpretAsPointer(const Expr *E, PtrCallback PtrCB);
 
   /// Clean up all resources.
   void cleanup();
@@ -69,6 +72,9 @@ protected:
   /// Since expressions can only jump forward, predicated execution is
   /// used to deal with if-else statements.
   bool isActive() const { return CurrentLabel == ActiveLabel; }
+  bool checkingForUndefinedBehavior() const {
+    return S.checkingForUndefinedBehavior();
+  }
 
   /// Callback for registering a local.
   Local createLocal(Descriptor *D);
@@ -101,6 +107,8 @@ private:
   /// Whether we should check if the result has been fully
   /// initialized.
   bool CheckFullyInitialized = false;
+  /// Callback to call when using interpretAsPointer.
+  std::optional<PtrCallback> PtrCB;
 
   /// Temporaries which require storage.
   llvm::DenseMap<unsigned, std::unique_ptr<char[]>> Locals;
