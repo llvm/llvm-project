@@ -1230,7 +1230,7 @@ void TargetPassConfig::addMachinePasses() {
   }
 
   if (GCEmptyBlocks)
-    addPass(llvm::createGCEmptyBasicBlocksPass());
+    addPass(llvm::createGCEmptyBasicBlocksLegacyPass());
 
   if (EnableFSDiscriminator)
     addPass(createMIRAddFSDiscriminatorsPass(
