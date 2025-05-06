@@ -329,18 +329,18 @@ protected:
 
   private:
     void flushMFPMToMPM() {
-      if (!MFPM.isEmpty()) {
-        if (PB.AddInCGSCCOrder) {
-          MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
-              createCGSCCToFunctionPassAdaptor(
-                  createFunctionToMachineFunctionPassAdaptor(
-                      std::move(MFPM)))));
-        } else {
-          MPM.addPass(createModuleToFunctionPassAdaptor(
-              createFunctionToMachineFunctionPassAdaptor(std::move(MFPM))));
-        }
-        MFPM = MachineFunctionPassManager();
+      if (MFPM.isEmpty())
+        return;
+
+      if (PB.AddInCGSCCOrder) {
+        MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
+            createCGSCCToFunctionPassAdaptor(
+                createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)))));
+      } else {
+        MPM.addPass(createModuleToFunctionPassAdaptor(
+            createFunctionToMachineFunctionPassAdaptor(std::move(MFPM))));
       }
+      MFPM = MachineFunctionPassManager();
     }
 
     ModulePassManager &MPM;
