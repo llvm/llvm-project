@@ -2270,6 +2270,17 @@ size_t Target::ReadScalarIntegerFromMemory(const Address &addr, uint32_t byte_si
   return 0;
 }
 
+int64_t Target::ReadSignedIntegerFromMemory(const Address &addr,
+                                            size_t integer_byte_size,
+                                            int64_t fail_value, Status &error,
+                                            bool force_live_memory) {
+  Scalar scalar;
+  if (ReadScalarIntegerFromMemory(addr, integer_byte_size, false, scalar, error,
+                                  force_live_memory))
+    return scalar.SLongLong(fail_value);
+  return fail_value;
+}
+
 uint64_t Target::ReadUnsignedIntegerFromMemory(const Address &addr,
                                                size_t integer_byte_size,
                                                uint64_t fail_value, Status &error,
