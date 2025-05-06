@@ -1665,8 +1665,11 @@ SourceLocation CallExpr::getBeginLoc() const {
         Method && Method->isExplicitObjectMemberFunction()) {
       bool HasFirstArg = getNumArgs() > 0 && getArg(0);
       assert(HasFirstArg);
-      if (HasFirstArg)
-        return getArg(0)->getBeginLoc();
+      if (HasFirstArg) {
+        if (auto FirstArgLoc = getArg(0)->getBeginLoc(); FirstArgLoc.isValid()) {
+          return FirstArgLoc;
+        }
+      }
     }
   }
 
