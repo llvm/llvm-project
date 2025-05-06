@@ -2,11 +2,12 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -aarch64-streaming-hazard-size=0 -mattr=+sve,+sme2 < %s | FileCheck %s
 
 declare void @callee()
+declare void @callee_sm() "aarch64_pstate_sm_enabled"
 declare void @callee_farg(float)
 declare float @callee_farg_fret(float)
 
 ; normal caller -> streaming callees
-define void @test0() nounwind {
+define void @test0(ptr %callee) nounwind {
 ; CHECK-LABEL: test0:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
@@ -16,8 +17,8 @@ define void @test0() nounwind {
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x30, x9, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstart sm
-; CHECK-NEXT:    bl callee
-; CHECK-NEXT:    bl callee
+; CHECK-NEXT:    bl callee_sm
+; CHECK-NEXT:    bl callee_sm
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
@@ -25,8 +26,8 @@ define void @test0() nounwind {
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
-  call void @callee() "aarch64_pstate_sm_enabled"
-  call void @callee() "aarch64_pstate_sm_enabled"
+  call void @callee_sm()
+  call void @callee_sm()
   ret void
 }
 
@@ -118,7 +119,7 @@ define void @test3() nounwind "aarch64_pstate_sm_compatible" {
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB3_2:
-; CHECK-NEXT:    bl callee
+; CHECK-NEXT:    bl callee_sm
 ; CHECK-NEXT:    tbnz w19, #0, .LBB3_4
 ; CHECK-NEXT:  // %bb.3:
 ; CHECK-NEXT:    smstop sm
@@ -140,7 +141,7 @@ define void @test3() nounwind "aarch64_pstate_sm_compatible" {
 ; CHECK-NEXT:  // %bb.9:
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB3_10:
-; CHECK-NEXT:    bl callee
+; CHECK-NEXT:    bl callee_sm
 ; CHECK-NEXT:    tbnz w19, #0, .LBB3_12
 ; CHECK-NEXT:  // %bb.11:
 ; CHECK-NEXT:    smstop sm
@@ -152,9 +153,9 @@ define void @test3() nounwind "aarch64_pstate_sm_compatible" {
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp], #96 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
-  call void @callee() "aarch64_pstate_sm_enabled"
+  call void @callee_sm()
   call void @callee()
-  call void @callee() "aarch64_pstate_sm_enabled"
+  call void @callee_sm()
   ret void
 }
 
@@ -342,7 +343,7 @@ define void @test10() "aarch64_pstate_sm_body" {
 ; CHECK-NEXT:    bl callee
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    .cfi_restore vg
-; CHECK-NEXT:    bl callee
+; CHECK-NEXT:    bl callee_sm
 ; CHECK-NEXT:    .cfi_offset vg, -24
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl callee
@@ -363,7 +364,7 @@ define void @test10() "aarch64_pstate_sm_body" {
 ; CHECK-NEXT:    .cfi_restore b15
 ; CHECK-NEXT:    ret
   call void @callee()
-  call void @callee() "aarch64_pstate_sm_enabled"
+  call void @callee_sm()
   call void @callee()
   ret void
 }

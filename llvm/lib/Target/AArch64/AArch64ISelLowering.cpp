@@ -8636,6 +8636,16 @@ static void analyzeCallOperands(const AArch64TargetLowering &TLI,
   }
 }
 
+static SMECallAttrs
+getSMECallAttrs(const Function &Function,
+                const TargetLowering::CallLoweringInfo &CLI) {
+  if (CLI.CB)
+    return SMECallAttrs(*CLI.CB);
+  if (auto *ES = dyn_cast<ExternalSymbolSDNode>(CLI.Callee))
+    return SMECallAttrs(SMEAttrs(Function), SMEAttrs(ES->getSymbol()));
+  return SMECallAttrs(SMEAttrs(Function), SMEAttrs(SMEAttrs::Normal));
+}
+
 bool AArch64TargetLowering::isEligibleForTailCallOptimization(
     const CallLoweringInfo &CLI) const {
   CallingConv::ID CalleeCC = CLI.CallConv;
@@ -8654,12 +8664,10 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
 
   // SME Streaming functions are not eligible for TCO as they may require
   // the streaming mode or ZA to be restored after returning from the call.
-  SMEAttrs CallerAttrs(MF.getFunction());
-  auto CalleeAttrs = CLI.CB ? SMEAttrs(*CLI.CB) : SMEAttrs(SMEAttrs::Normal);
-  if (CallerAttrs.requiresSMChange(CalleeAttrs) ||
-      CallerAttrs.requiresLazySave(CalleeAttrs) ||
-      CallerAttrs.requiresPreservingAllZAState(CalleeAttrs) ||
-      CallerAttrs.hasStreamingBody())
+  SMECallAttrs CallAttrs = getSMECallAttrs(CallerF, CLI);
+  if (CallAttrs.requiresSMChange() || CallAttrs.requiresLazySave() ||
+      CallAttrs.requiresPreservingAllZAState() ||
+      CallAttrs.caller().hasStreamingBody())
     return false;
 
   // Functions using the C or Fast calling convention that have an SVE signature
@@ -8951,14 +8959,13 @@ static SDValue emitSMEStateSaveRestore(const AArch64TargetLowering &TLI,
   return TLI.LowerCallTo(CLI).second;
 }
 
-static unsigned getSMCondition(const SMEAttrs &CallerAttrs,
-                               const SMEAttrs &CalleeAttrs) {
-  if (!CallerAttrs.hasStreamingCompatibleInterface() ||
-      CallerAttrs.hasStreamingBody())
+static unsigned getSMCondition(const SMECallAttrs &CallAttrs) {
+  if (!CallAttrs.caller().hasStreamingCompatibleInterface() ||
+      CallAttrs.caller().hasStreamingBody())
     return AArch64SME::Always;
-  if (CalleeAttrs.hasNonStreamingInterface())
+  if (CallAttrs.callee().hasNonStreamingInterface())
     return AArch64SME::IfCallerIsStreaming;
-  if (CalleeAttrs.hasStreamingInterface())
+  if (CallAttrs.callee().hasStreamingInterface())
     return AArch64SME::IfCallerIsNonStreaming;
 
   llvm_unreachable("Unsupported attributes");
@@ -9091,11 +9098,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   // Determine whether we need any streaming mode changes.
-  SMEAttrs CalleeAttrs, CallerAttrs(MF.getFunction());
-  if (CLI.CB)
-    CalleeAttrs = SMEAttrs(*CLI.CB);
-  else if (auto *ES = dyn_cast<ExternalSymbolSDNode>(CLI.Callee))
-    CalleeAttrs = SMEAttrs(ES->getSymbol());
+  SMECallAttrs CallAttrs = getSMECallAttrs(MF.getFunction(), CLI);
 
   auto DescribeCallsite =
       [&](OptimizationRemarkAnalysis &R) -> OptimizationRemarkAnalysis & {
@@ -9110,9 +9113,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     return R;
   };
 
-  bool RequiresLazySave = CallerAttrs.requiresLazySave(CalleeAttrs);
-  bool RequiresSaveAllZA =
-      CallerAttrs.requiresPreservingAllZAState(CalleeAttrs);
+  bool RequiresLazySave = CallAttrs.requiresLazySave();
+  bool RequiresSaveAllZA = CallAttrs.requiresPreservingAllZAState();
   if (RequiresLazySave) {
     const TPIDR2Object &TPIDR2 = FuncInfo->getTPIDR2Obj();
     MachinePointerInfo MPI =
@@ -9140,18 +9142,18 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       return DescribeCallsite(R) << " sets up a lazy save for ZA";
     });
   } else if (RequiresSaveAllZA) {
-    assert(!CalleeAttrs.hasSharedZAInterface() &&
+    assert(!CallAttrs.callee().hasSharedZAInterface() &&
            "Cannot share state that may not exist");
     Chain = emitSMEStateSaveRestore(*this, DAG, FuncInfo, DL, Chain,
                                     /*IsSave=*/true);
   }
 
   SDValue PStateSM;
-  bool RequiresSMChange = CallerAttrs.requiresSMChange(CalleeAttrs);
+  bool RequiresSMChange = CallAttrs.requiresSMChange();
   if (RequiresSMChange) {
-    if (CallerAttrs.hasStreamingInterfaceOrBody())
+    if (CallAttrs.caller().hasStreamingInterfaceOrBody())
       PStateSM = DAG.getConstant(1, DL, MVT::i64);
-    else if (CallerAttrs.hasNonStreamingInterface())
+    else if (CallAttrs.caller().hasNonStreamingInterface())
       PStateSM = DAG.getConstant(0, DL, MVT::i64);
     else
       PStateSM = getRuntimePStateSM(DAG, Chain, DL, MVT::i64);
@@ -9168,7 +9170,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   SDValue ZTFrameIdx;
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  bool ShouldPreserveZT0 = CallerAttrs.requiresPreservingZT0(CalleeAttrs);
+  bool ShouldPreserveZT0 = CallAttrs.requiresPreservingZT0();
 
   // If the caller has ZT0 state which will not be preserved by the callee,
   // spill ZT0 before the call.
@@ -9184,7 +9186,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // If caller shares ZT0 but the callee is not shared ZA, we need to stop
   // PSTATE.ZA before the call if there is no lazy-save active.
-  bool DisableZA = CallerAttrs.requiresDisablingZABeforeCall(CalleeAttrs);
+  bool DisableZA = CallAttrs.requiresDisablingZABeforeCall();
   assert((!DisableZA || !RequiresLazySave) &&
          "Lazy-save should have PSTATE.SM=1 on entry to the function");
 
@@ -9466,9 +9468,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       InGlue = Chain.getValue(1);
     }
 
-    SDValue NewChain = changeStreamingMode(
-        DAG, DL, CalleeAttrs.hasStreamingInterface(), Chain, InGlue,
-        getSMCondition(CallerAttrs, CalleeAttrs), PStateSM);
+    SDValue NewChain =
+        changeStreamingMode(DAG, DL, CallAttrs.callee().hasStreamingInterface(),
+                            Chain, InGlue, getSMCondition(CallAttrs), PStateSM);
     Chain = NewChain.getValue(0);
     InGlue = NewChain.getValue(1);
   }
@@ -9647,8 +9649,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (RequiresSMChange) {
     assert(PStateSM && "Expected a PStateSM to be set");
     Result = changeStreamingMode(
-        DAG, DL, !CalleeAttrs.hasStreamingInterface(), Result, InGlue,
-        getSMCondition(CallerAttrs, CalleeAttrs), PStateSM);
+        DAG, DL, !CallAttrs.callee().hasStreamingInterface(), Result, InGlue,
+        getSMCondition(CallAttrs), PStateSM);
 
     if (!Subtarget->isTargetDarwin() || Subtarget->hasSVE()) {
       InGlue = Result.getValue(1);
@@ -9658,7 +9660,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     }
   }
 
-  if (CallerAttrs.requiresEnablingZAAfterCall(CalleeAttrs))
+  if (CallAttrs.requiresEnablingZAAfterCall())
     // Unconditionally resume ZA.
     Result = DAG.getNode(
         AArch64ISD::SMSTART, DL, MVT::Other, Result,
@@ -28518,12 +28520,10 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
 
   // Checks to allow the use of SME instructions
   if (auto *Base = dyn_cast<CallBase>(&Inst)) {
-    auto CallerAttrs = SMEAttrs(*Inst.getFunction());
-    auto CalleeAttrs = SMEAttrs(*Base);
-    if (CallerAttrs.requiresSMChange(CalleeAttrs) ||
-        CallerAttrs.requiresLazySave(CalleeAttrs) ||
-        CallerAttrs.requiresPreservingZT0(CalleeAttrs) ||
-        CallerAttrs.requiresPreservingAllZAState(CalleeAttrs))
+    auto CallAttrs = SMECallAttrs(*Base);
+    if (CallAttrs.requiresSMChange() || CallAttrs.requiresLazySave() ||
+        CallAttrs.requiresPreservingZT0() ||
+        CallAttrs.requiresPreservingAllZAState())
       return true;
   }
   return false;
