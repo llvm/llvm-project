@@ -120,12 +120,14 @@ LLVM_LIBC_FUNCTION(double, acos, (double x)) {
       return x == 1.0 ? 0.0 : fputil::multiply_add(-x_sign, PI.hi, PI.lo);
     }
     // |x| > 1, return NaN.
-    if (xbits.is_finite()) {
+    if (xbits.is_quiet_nan())
+      return x;
+
+    // Set domain error for non-NaN input.
+    if (!xbits.is_nan())
       fputil::set_errno_if_required(EDOM);
-      fputil::raise_except_if_required(FE_INVALID);
-    } else if (xbits.is_signaling_nan()) {
-      fputil::raise_except_if_required(FE_INVALID);
-    }
+
+    fputil::raise_except_if_required(FE_INVALID);
     return FPBits::quiet_nan().get_val();
   }
 
