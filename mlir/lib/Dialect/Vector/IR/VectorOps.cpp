@@ -5574,7 +5574,6 @@ LogicalResult ShapeCastOp::verify() {
   return success();
 }
 
-
 /// Return true if `transpose` does not permute a pair of non-unit dims.
 /// By `order preserving` we mean that the flattened versions of the input and
 /// output vectors are (numerically) identical. In other words `transpose` is
