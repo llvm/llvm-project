@@ -9109,7 +9109,7 @@ bool InitializationSequence::Diagnose(Sema &S,
         DestType == S.Context.getLogicalOperationType()) {
       S.Diag(OnlyArg->getExprLoc(),
              diag::err_amdgcn_predicate_type_needs_explicit_bool_cast)
-      << OnlyArg << DestType;
+          << OnlyArg << DestType;
       break;
     }
     PartialDiagnostic PDiag = S.PDiag(diag::err_init_conversion_failed)

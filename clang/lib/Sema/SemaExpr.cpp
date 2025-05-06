@@ -6557,10 +6557,9 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
     if (FD->getName() == "__builtin_amdgcn_is_invocable") {
       auto FnPtrTy = Context.getPointerType(FD->getType());
       auto *R = ImpCastExprToType(Fn, FnPtrTy, CK_BuiltinFnToFnPtr).get();
-      return CallExpr::Create(Context, R, ArgExprs,
-                              Context.AMDGPUFeaturePredicateTy,
-                              ExprValueKind::VK_PRValue, RParenLoc,
-                              FPOptionsOverride());
+      return CallExpr::Create(
+          Context, R, ArgExprs, Context.AMDGPUFeaturePredicateTy,
+          ExprValueKind::VK_PRValue, RParenLoc, FPOptionsOverride());
     }
   }
 

@@ -12,8 +12,8 @@
 
 #include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Basic/DiagnosticSema.h"
-#include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/Support/AtomicOrdering.h"

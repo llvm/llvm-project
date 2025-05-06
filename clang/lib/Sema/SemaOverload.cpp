@@ -11929,7 +11929,7 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
       ToTy == S.Context.getLogicalOperationType()) {
     S.Diag(Conv.Bad.FromExpr->getExprLoc(),
            diag::err_amdgcn_predicate_type_needs_explicit_bool_cast)
-      << Conv.Bad.FromExpr << ToTy;
+        << Conv.Bad.FromExpr << ToTy;
     return;
   }
 

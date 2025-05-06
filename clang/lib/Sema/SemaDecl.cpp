@@ -13619,9 +13619,10 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
 
   // __amdgpu_feature_predicate_t cannot be initialised
   if (VDecl->getType().getDesugaredType(Context) ==
-        Context.AMDGPUFeaturePredicateTy) {
+      Context.AMDGPUFeaturePredicateTy) {
     Diag(VDecl->getLocation(),
-         diag::err_amdgcn_predicate_type_is_not_constructible) << VDecl;
+         diag::err_amdgcn_predicate_type_is_not_constructible)
+        << VDecl;
     VDecl->setInvalidDecl();
     return;
   }
@@ -14162,7 +14163,8 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
 
     if (Type.getDesugaredType(Context) == Context.AMDGPUFeaturePredicateTy) {
       Diag(Var->getLocation(),
-           diag::err_amdgcn_predicate_type_is_not_constructible) << Var;
+           diag::err_amdgcn_predicate_type_is_not_constructible)
+          << Var;
       Var->setInvalidDecl();
       return;
     }
