@@ -238,8 +238,8 @@ bool LanaiAsmPrinter::isBlockOnlyReachableByFallthrough(
 
 char LanaiAsmPrinter::ID = 0;
 
-INITIALIZE_PASS(LanaiAsmPrinter, "lanai-asm-printer",
-                "Lanai Assembly Printer", false, false)
+INITIALIZE_PASS(LanaiAsmPrinter, "lanai-asm-printer", "Lanai Assembly Printer",
+                false, false)
 
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLanaiAsmPrinter() {

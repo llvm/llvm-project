@@ -1294,8 +1294,8 @@ bool MipsAsmPrinter::isLongBranchPseudo(int Opcode) const {
 
 char MipsAsmPrinter::ID = 0;
 
-INITIALIZE_PASS(MipsAsmPrinter, "mips-asm-printer",
-                "Mips Assembly Printer", false, false)
+INITIALIZE_PASS(MipsAsmPrinter, "mips-asm-printer", "Mips Assembly Printer",
+                false, false)
 
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsAsmPrinter() {

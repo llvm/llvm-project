@@ -292,8 +292,8 @@ void XCoreAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
 char XCoreAsmPrinter::ID = 0;
 
-INITIALIZE_PASS(XCoreAsmPrinter, "xcore-asm-printer",
-                "XCore Assembly Printer", false, false)
+INITIALIZE_PASS(XCoreAsmPrinter, "xcore-asm-printer", "XCore Assembly Printer",
+                false, false)
 
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXCoreAsmPrinter() {

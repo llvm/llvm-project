@@ -423,8 +423,8 @@ bool VEAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
 
 char VEAsmPrinter::ID = 0;
 
-INITIALIZE_PASS(VEAsmPrinter, "ve-asm-printer",
-                "VE Assembly Printer", false, false)
+INITIALIZE_PASS(VEAsmPrinter, "ve-asm-printer", "VE Assembly Printer", false,
+                false)
 
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVEAsmPrinter() {

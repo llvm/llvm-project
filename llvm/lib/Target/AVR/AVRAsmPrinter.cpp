@@ -332,8 +332,8 @@ void AVRAsmPrinter::emitStartOfAsmFile(Module &M) {
 
 char AVRAsmPrinter::ID = 0;
 
-INITIALIZE_PASS(AVRAsmPrinter, "avr-asm-printer", "AVR Assembly Printer",
-                false, false)
+INITIALIZE_PASS(AVRAsmPrinter, "avr-asm-printer", "AVR Assembly Printer", false,
+                false)
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRAsmPrinter() {
   llvm::RegisterAsmPrinter<AVRAsmPrinter> X(getTheAVRTarget());

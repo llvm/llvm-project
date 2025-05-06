@@ -508,8 +508,8 @@ bool SparcAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 
 char SparcAsmPrinter::ID = 0;
 
-INITIALIZE_PASS(SparcAsmPrinter, "sparc-asm-printer",
-                "Sparc Assembly Printer", false, false)
+INITIALIZE_PASS(SparcAsmPrinter, "sparc-asm-printer", "Sparc Assembly Printer",
+                false, false)
 
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSparcAsmPrinter() {

@@ -159,8 +159,7 @@ protected:
 
 public:
   explicit PPCAsmPrinter(TargetMachine &TM,
-                         std::unique_ptr<MCStreamer> Streamer,
-                         char &ID)
+                         std::unique_ptr<MCStreamer> Streamer, char &ID)
       : AsmPrinter(TM, std::move(Streamer), ID) {}
 
   StringRef getPassName() const override { return "PowerPC Assembly Printer"; }

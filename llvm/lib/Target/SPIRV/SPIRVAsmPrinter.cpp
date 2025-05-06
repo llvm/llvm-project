@@ -638,8 +638,8 @@ bool SPIRVAsmPrinter::doInitialization(Module &M) {
 
 char SPIRVAsmPrinter::ID = 0;
 
-INITIALIZE_PASS(SPIRVAsmPrinter, "spirv-asm-printer",
-                "SPIRV Assembly Printer", false, false)
+INITIALIZE_PASS(SPIRVAsmPrinter, "spirv-asm-printer", "SPIRV Assembly Printer",
+                false, false)
 
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVAsmPrinter() {

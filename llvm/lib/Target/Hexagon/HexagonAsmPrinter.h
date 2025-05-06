@@ -38,7 +38,7 @@ class TargetMachine;
   public:
     explicit HexagonAsmPrinter(TargetMachine &TM,
                                std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer), ID) {}
+        : AsmPrinter(TM, std::move(Streamer), ID) {}
 
     bool runOnMachineFunction(MachineFunction &Fn) override {
       Subtarget = &Fn.getSubtarget<HexagonSubtarget>();

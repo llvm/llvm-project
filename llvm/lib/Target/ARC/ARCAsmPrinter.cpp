@@ -76,8 +76,8 @@ bool ARCAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
 char ARCAsmPrinter::ID = 0;
 
-INITIALIZE_PASS(ARCAsmPrinter, "arc-asm-printer", "ARC Assmebly Printer",
-                false, false)
+INITIALIZE_PASS(ARCAsmPrinter, "arc-asm-printer", "ARC Assmebly Printer", false,
+                false)
 
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARCAsmPrinter() {

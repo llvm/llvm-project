@@ -151,8 +151,8 @@ void BPFAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
 char BPFAsmPrinter::ID = 0;
 
-INITIALIZE_PASS(BPFAsmPrinter, "bpf-asm-printer",
-                "BPF Assembly Printer", false, false)
+INITIALIZE_PASS(BPFAsmPrinter, "bpf-asm-printer", "BPF Assembly Printer", false,
+                false)
 
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFAsmPrinter() {
