@@ -583,3 +583,38 @@ body: |
     $vgpr0_vgpr1 = DS_LOAD_TR8_B64 $vgpr0, 8, 0, implicit $exec
     $vgpr2_vgpr3 = DS_READ_B64_gfx9 $vgpr0, 16, 0, implicit $exec
 ...
+
+# Make sure we do not clause DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 with anything
+---
+name: ds_atomic_async_barrier_arrive_b64_ds_read
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    ; GFX12-LABEL: name: ds_atomic_async_barrier_arrive_b64_ds_read
+    ; GFX12: liveins: $vgpr0, $vgpr1
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: $vgpr2 = DS_READ_B32_gfx9 $vgpr0, 0, 0, implicit $exec
+    ; GFX12-NEXT: DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 $vgpr1, 0, 0, implicit-def $asynccnt, implicit $asynccnt, implicit $exec
+    ; GFX12-NEXT: $vgpr3 = DS_READ_B32_gfx9 $vgpr0, 16, 0, implicit $exec
+    $vgpr2 = DS_READ_B32_gfx9 $vgpr0, 0, 0, implicit $exec
+    DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 $vgpr1, 0, 0, implicit-def $asynccnt, implicit $asynccnt, implicit $exec
+    $vgpr3 = DS_READ_B32_gfx9 $vgpr0, 16, 0, implicit $exec
+...
+
+---
+name: ds_atomic_async_barrier_arrive_b64_flat_load
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    ; GFX12-LABEL: name: ds_atomic_async_barrier_arrive_b64_flat_load
+    ; GFX12: liveins: $vgpr0, $vgpr1
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: $vgpr2 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX12-NEXT: DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 $vgpr1, 0, 0, implicit-def $asynccnt, implicit $asynccnt, implicit $exec
+    ; GFX12-NEXT: $vgpr3 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 16, 0, implicit $exec, implicit $flat_scr
+    $vgpr2 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 $vgpr1, 0, 0, implicit-def $asynccnt, implicit $asynccnt, implicit $exec
+    $vgpr3 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 16, 0, implicit $exec, implicit $flat_scr
+...

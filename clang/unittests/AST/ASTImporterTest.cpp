@@ -10456,6 +10456,79 @@ TEST_P(ASTImporterOptionSpecificTestBase,
   EXPECT_EQ(ToFr1Imp, ToFr1);
 }
 
+struct ImportAndMergeAnonymousNamespace
+    : public ASTImporterOptionSpecificTestBase {
+protected:
+  void test(const char *ToCode, const char *FromCode) {
+    Decl *ToTU = getToTuDecl(ToCode, Lang_CXX11);
+    Decl *FromTU = getTuDecl(FromCode, Lang_CXX11);
+    auto *FromNS = FirstDeclMatcher<NamespaceDecl>().match(
+        FromTU, namespaceDecl(isAnonymous()));
+    auto *ToNS = FirstDeclMatcher<NamespaceDecl>().match(
+        ToTU, namespaceDecl(isAnonymous()));
+    auto *FromF = FirstDeclMatcher<FunctionDecl>().match(
+        FromTU, functionDecl(hasName("f")));
+    auto *ImportedF = Import(FromF, Lang_CXX11);
+    EXPECT_TRUE(ImportedF);
+    EXPECT_EQ(ImportedF->getDeclContext(), ToNS);
+    auto *ImportedNS = Import(FromNS, Lang_CXX11);
+    EXPECT_EQ(ImportedNS, ToNS);
+  }
+};
+
+TEST_P(ImportAndMergeAnonymousNamespace, NamespaceInTU) {
+  const char *ToCode =
+      R"(
+      namespace {
+      }
+      )";
+  const char *FromCode =
+      R"(
+      namespace {
+        void f();
+      }
+      )";
+  test(ToCode, FromCode);
+}
+
+TEST_P(ImportAndMergeAnonymousNamespace, NamespaceInLinkageSpec) {
+  const char *ToCode =
+      R"(
+      extern "C" {
+      namespace {
+      }
+      }
+      )";
+  const char *FromCode =
+      R"(
+      extern "C" {
+      namespace {
+        void f();
+      }
+      }
+      )";
+  test(ToCode, FromCode);
+}
+
+TEST_P(ImportAndMergeAnonymousNamespace, NamespaceInNamespace) {
+  const char *ToCode =
+      R"(
+      namespace X {
+        namespace {
+        }
+      }
+      )";
+  const char *FromCode =
+      R"(
+      namespace X {
+        namespace {
+          void f();
+        }
+      }
+      )";
+  test(ToCode, FromCode);
+}
+
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ASTImporterLookupTableTest,
                          DefaultTestValuesForRunOptions);
 
@@ -10540,6 +10613,9 @@ INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportMatrixType,
                          DefaultTestValuesForRunOptions);
 
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportTemplateParmDeclDefaultValue,
+                         DefaultTestValuesForRunOptions);
+
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportAndMergeAnonymousNamespace,
                          DefaultTestValuesForRunOptions);
 
 // FIXME: Make ImportOpenCLPipe test work.
