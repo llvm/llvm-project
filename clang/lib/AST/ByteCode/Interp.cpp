@@ -834,6 +834,12 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
     return false;
   }
 
+  // Bail out if the function declaration itself is invalid.  We will
+  // have produced a relevant diagnostic while parsing it, so just
+  // note the problematic sub-expression.
+  if (F->getDecl()->isInvalidDecl())
+    return Invalid(S, OpPC);
+
   if (S.checkingPotentialConstantExpression() && S.Current->getDepth() != 0)
     return false;
 

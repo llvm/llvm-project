@@ -51,6 +51,8 @@ void foo() {
   vi4 e = { x, 5, 6, x + 1 };
 
   vi4 f = { 5 };
+
+  vi4 g = {};
 }
 
 // CIR: %[[VEC_A:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a"]
@@ -59,12 +61,34 @@ void foo() {
 // CIR: %[[VEC_D:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["d", init]
 // CIR: %[[VEC_E:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["e", init]
 // CIR: %[[VEC_F:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["f", init]
-// CIR: %[[VEC_D_VAL:.*]] = cir.vec.create({{.*}}, {{.*}}, {{.*}}, {{.*}} : !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+// CIR: %[[VEC_G:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["g", init]
+// CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
+// CIR: %[[CONST_2:.*]] = cir.const #cir.int<2> : !s32i
+// CIR: %[[CONST_3:.*]] = cir.const #cir.int<3> : !s32i
+// CIR: %[[CONST_4:.*]] = cir.const #cir.int<4> : !s32i
+// CIR: %[[VEC_D_VAL:.*]] = cir.vec.create(%[[CONST_1]], %[[CONST_2]], %[[CONST_3]], %[[CONST_4]] :
+// CIR-SAME: !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
 // CIR: cir.store %[[VEC_D_VAL]], %[[VEC_D]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
-// CIR: %[[VEC_E_VAL:.*]] = cir.vec.create({{.*}}, {{.*}}, {{.*}}, {{.*}} : !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+// CIR: %[[GLOBAL_X:.*]] = cir.get_global @x : !cir.ptr<!s32i>
+// CIR: %[[X_VAL:.*]] = cir.load %[[GLOBAL_X]] : !cir.ptr<!s32i>, !s32i
+// CIR: %[[CONST_5:.*]] = cir.const #cir.int<5> : !s32i
+// CIR: %[[CONST_6:.*]] = cir.const #cir.int<6> : !s32i
+// CIR: %[[GLOBAL_X:.*]] = cir.get_global @x : !cir.ptr<!s32i>
+// CIR: %[[X:.*]] = cir.load %[[GLOBAL_X]] : !cir.ptr<!s32i>, !s32i
+// CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
+// CIR: %[[X_PLUS_1:.*]] = cir.binop(add, %[[X]], %[[CONST_1]]) nsw : !s32i
+// CIR: %[[VEC_E_VAL:.*]] = cir.vec.create(%[[X_VAL]], %[[CONST_5]], %[[CONST_6]], %[[X_PLUS_1]] :
+// CIR-SAME: !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
 // CIR: cir.store %[[VEC_E_VAL]], %[[VEC_E]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
-// CIR: %[[VEC_F_VAL:.*]] = cir.vec.create({{.*}}, {{.*}}, {{.*}}, {{.*}} : !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+// CIR: %[[CONST_5:.*]] = cir.const #cir.int<5> : !s32i
+// CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
+// CIR: %[[VEC_F_VAL:.*]] = cir.vec.create(%[[CONST_5]], %[[CONST_0]], %[[CONST_0]], %[[CONST_0]] :
+// CIR-SAME: !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
 // CIR: cir.store %[[VEC_F_VAL]], %[[VEC_F]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
+// CIR: %[[VEC_G_VAL:.*]] = cir.vec.create(%[[CONST_0]], %[[CONST_0]], %[[CONST_0]], %[[CONST_0]] :
+// CIR-SAME: !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+// CIR: cir.store %[[VEC_G_VAL]], %[[VEC_G]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 
 // LLVM: %[[VEC_A:.*]] = alloca <4 x i32>, i64 1, align 16
 // LLVM: %[[VEC_B:.*]] = alloca <2 x double>, i64 1, align 16
@@ -72,9 +96,11 @@ void foo() {
 // LLVM: %[[VEC_D:.*]] = alloca <4 x i32>, i64 1, align 16
 // LLVM: %[[VEC_E:.*]] = alloca <4 x i32>, i64 1, align 16
 // LLVM: %[[VEC_F:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[VEC_G:.*]] = alloca <4 x i32>, i64 1, align 16
 // LLVM: store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %[[VEC_D]], align 16
 // LLVM: store <4 x i32> {{.*}}, ptr %[[VEC_E]], align 16
 // LLVM: store <4 x i32> <i32 5, i32 0, i32 0, i32 0>, ptr %[[VEC_F]], align 16
+// LLVM: store <4 x i32> zeroinitializer, ptr %[[VEC_G]], align 16
 
 // OGCG: %[[VEC_A:.*]] = alloca <4 x i32>, align 16
 // OGCG: %[[VEC_B:.*]] = alloca <2 x double>, align 16
@@ -82,9 +108,11 @@ void foo() {
 // OGCG: %[[VEC_D:.*]] = alloca <4 x i32>, align 16
 // OGCG: %[[VEC_E:.*]] = alloca <4 x i32>, align 16
 // OGCG: %[[VEC_F:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[VEC_G:.*]] = alloca <4 x i32>, align 16
 // OGCG: store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %[[VEC_D]], align 16
 // OGCG: store <4 x i32> {{.*}}, ptr %[[VEC_E]], align 16
 // OGCG: store <4 x i32> <i32 5, i32 0, i32 0, i32 0>, ptr %[[VEC_F]], align 16
+// OGCG: store <4 x i32> zeroinitializer, ptr %[[VEC_G]], align 16
 
 void foo2(vi4 p) {}
 

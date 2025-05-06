@@ -138,8 +138,7 @@ static Value *expandCrossIntrinsic(CallInst *Orig) {
 
   VectorType *VT = cast<VectorType>(Orig->getType());
   if (cast<FixedVectorType>(VT)->getNumElements() != 3)
-    report_fatal_error(Twine("return vector must have exactly 3 elements"),
-                       /* gen_crash_diag=*/false);
+    reportFatalUsageError("return vector must have exactly 3 elements");
 
   Value *op0 = Orig->getOperand(0);
   Value *op1 = Orig->getOperand(1);
@@ -197,9 +196,8 @@ static Value *expandFloatDotIntrinsic(CallInst *Orig, Value *A, Value *B) {
     DotIntrinsic = Intrinsic::dx_dot4;
     break;
   default:
-    report_fatal_error(
-        Twine("Invalid dot product input vector: length is outside 2-4"),
-        /* gen_crash_diag=*/false);
+    reportFatalUsageError(
+        "Invalid dot product input vector: length is outside 2-4");
     return nullptr;
   }
 
@@ -359,8 +357,7 @@ static Value *expandNormalizeIntrinsic(CallInst *Orig) {
     if (auto *constantFP = dyn_cast<ConstantFP>(X)) {
       const APFloat &fpVal = constantFP->getValueAPF();
       if (fpVal.isZero())
-        report_fatal_error(Twine("Invalid input scalar: length is zero"),
-                           /* gen_crash_diag=*/false);
+        reportFatalUsageError("Invalid input scalar: length is zero");
     }
     return Builder.CreateFDiv(X, X);
   }
@@ -372,8 +369,7 @@ static Value *expandNormalizeIntrinsic(CallInst *Orig) {
   if (auto *constantFP = dyn_cast<ConstantFP>(DotProduct)) {
     const APFloat &fpVal = constantFP->getValueAPF();
     if (fpVal.isZero())
-      report_fatal_error(Twine("Invalid input vector: length is zero"),
-                         /* gen_crash_diag=*/false);
+      reportFatalUsageError("Invalid input vector: length is zero");
   }
 
   Value *Multiplicand = Builder.CreateIntrinsic(EltTy, Intrinsic::dx_rsqrt,

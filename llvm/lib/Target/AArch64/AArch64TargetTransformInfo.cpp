@@ -3798,7 +3798,7 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
         return false;
       for (auto &[S, U, L] : ScalarUserAndIdx) {
         for (auto *U : S->users()) {
-          if (UserToExtractIdx.find(U) != UserToExtractIdx.end()) {
+          if (UserToExtractIdx.contains(U)) {
             auto *FMul = cast<BinaryOperator>(U);
             auto *Op0 = FMul->getOperand(0);
             auto *Op1 = FMul->getOperand(1);

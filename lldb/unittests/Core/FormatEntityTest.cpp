@@ -8,14 +8,29 @@
 
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Utility/Status.h"
-
+#include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
 using namespace lldb_private;
+using namespace llvm;
 
 using Definition = FormatEntity::Entry::Definition;
 using Entry = FormatEntity::Entry;
+
+static Expected<std::string> Format(StringRef format_str) {
+  StreamString stream;
+  FormatEntity::Entry format;
+  Status status = FormatEntity::Parse(format_str, format);
+  if (status.Fail())
+    return status.ToError();
+
+  FormatEntity::Format(format, stream, nullptr, nullptr, nullptr, nullptr,
+                       false, false);
+  return stream.GetString().str();
+}
 
 TEST(FormatEntityTest, DefinitionConstructionNameAndType) {
   Definition d("foo", FormatEntity::Entry::Type::Invalid);
@@ -153,10 +168,37 @@ constexpr llvm::StringRef lookupStrings[] = {
     "${target.file.fullpath}",
     "${var.dummy-var-to-test-wildcard}"};
 
-TEST(FormatEntity, LookupAllEntriesInTree) {
+TEST(FormatEntityTest, LookupAllEntriesInTree) {
   for (const llvm::StringRef testString : lookupStrings) {
     Entry e;
     EXPECT_TRUE(FormatEntity::Parse(testString, e).Success())
         << "Formatting " << testString << " did not succeed";
   }
+}
+
+TEST(FormatEntityTest, Scope) {
+  // Scope with  one alternative.
+  EXPECT_THAT_EXPECTED(Format("{${frame.pc}|foo}"), HasValue("foo"));
+
+  // Scope with multiple alternatives.
+  EXPECT_THAT_EXPECTED(Format("{${frame.pc}|${function.name}|foo}"),
+                       HasValue("foo"));
+
+  // Escaped pipe inside a scope.
+  EXPECT_THAT_EXPECTED(Format("{foo\\|bar}"), HasValue("foo|bar"));
+
+  // Unescaped pipe outside a scope.
+  EXPECT_THAT_EXPECTED(Format("foo|bar"), HasValue("foo|bar"));
+
+  // Nested scopes. Note that scopes always resolve.
+  EXPECT_THAT_EXPECTED(Format("{{${frame.pc}|foo}|{bar}}"), HasValue("foo"));
+  EXPECT_THAT_EXPECTED(Format("{{${frame.pc}}|{bar}}"), HasValue(""));
+
+  // Pipe between scopes.
+  EXPECT_THAT_EXPECTED(Format("{foo}|{bar}"), HasValue("foo|bar"));
+  EXPECT_THAT_EXPECTED(Format("{foo}||{bar}"), HasValue("foo||bar"));
+
+  // Empty space between pipes.
+  EXPECT_THAT_EXPECTED(Format("{{foo}||{bar}}"), HasValue("foo"));
+  EXPECT_THAT_EXPECTED(Format("{${frame.pc}||{bar}}"), HasValue(""));
 }

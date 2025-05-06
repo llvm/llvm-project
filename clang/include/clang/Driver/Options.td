@@ -1554,7 +1554,11 @@ def fstrict_flex_arrays_EQ : Joined<["-"], "fstrict-flex-arrays=">, Group<f_Grou
   Visibility<[ClangOption, CC1Option]>,
   NormalizedValuesScope<"LangOptions::StrictFlexArraysLevelKind">,
   NormalizedValues<["Default", "OneZeroOrIncomplete", "ZeroOrIncomplete", "IncompleteOnly"]>,
-  HelpText<"Enable optimizations based on the strict definition of flexible arrays">,
+  HelpText<"Enable optimizations based on the strict definition of flexible arrays.">,
+  DocBrief<[{If ``<n>`` is equal to 0, any trailing array member is considered a flexible array.
+             If ``<n>`` is equal to 1, trailing array members of size 0, 1 or undefined are considered flexible arrays.
+             If ``<n>`` is equal to 2, trailing array members of size 0 or undefined are considered flexible arrays.
+             If ``<n>`` is equal to 3, only trailing array members of undefined size are considered flexible arrays.}]>,
   MarshallingInfoEnum<LangOpts<"StrictFlexArraysLevel">, "Default">;
 defm apple_pragma_pack : BoolFOption<"apple-pragma-pack",
   LangOpts<"ApplePragmaPack">, DefaultFalse,

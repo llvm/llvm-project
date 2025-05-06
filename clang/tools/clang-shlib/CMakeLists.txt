@@ -57,7 +57,7 @@ endif()
 
 # Optimize function calls for default visibility definitions to avoid PLT and
 # reduce dynamic relocations.
-if (NOT APPLE AND NOT MINGW AND NOT LLVM_LINKER_IS_SOLARISLD_ILLUMOS)
+if (NOT APPLE AND NOT MINGW AND NOT CYGWIN AND NOT LLVM_LINKER_IS_SOLARISLD_ILLUMOS)
   target_link_options(clang-cpp PRIVATE LINKER:-Bsymbolic-functions)
 endif()
 if (MINGW OR CYGWIN)

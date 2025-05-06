@@ -18019,10 +18019,14 @@ static bool EvaluateCharRangeAsStringImpl(const Expr *, T &Result,
                                           const Expr *PtrExpression,
                                           ASTContext &Ctx,
                                           Expr::EvalResult &Status) {
-  LValue String;
   EvalInfo Info(Ctx, Status, EvalInfo::EM_ConstantExpression);
   Info.InConstantContext = true;
 
+  if (Info.EnableNewConstInterp)
+    return Info.Ctx.getInterpContext().evaluateCharRange(Info, SizeExpression,
+                                                         PtrExpression, Result);
+
+  LValue String;
   FullExpressionRAII Scope(Info);
   APSInt SizeValue;
   if (!::EvaluateInteger(SizeExpression, SizeValue, Info))

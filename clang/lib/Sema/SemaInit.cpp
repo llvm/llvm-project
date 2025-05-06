@@ -5842,7 +5842,6 @@ static void TryOrBuildParenListInitialization(
 
   if (const ArrayType *AT =
           S.getASTContext().getAsArrayType(Entity.getType())) {
-    SmallVector<InitializedEntity, 4> ElementEntities;
     uint64_t ArrayLength;
     // C++ [dcl.init]p16.5
     //   if the destination type is an array, the object is initialized as

@@ -362,7 +362,7 @@ class Sema;
 
     /// Whether the source expression was originally a single element
     /// braced-init-list. Such a conversion is not a perfect match,
-    /// as we prefer a std::list_initializer constructor over an exact match
+    /// as we prefer a std::initializer_list constructor over an exact match
     /// constructor.
     LLVM_PREFERRED_TYPE(bool)
     unsigned FromBracedInitList : 1;
@@ -420,7 +420,7 @@ class Sema;
       if (!isIdentityConversion())
         return false;
 
-      // We might prefer a std::initializer constructor,
+      // We might prefer a std::initializer_list constructor,
       // so this sequence cannot be perfect
       if (FromBracedInitList)
         return false;

@@ -403,8 +403,10 @@ class SemaOpenACCClauseVisitor {
 
       // There are no clauses of the current kind between these device_types, so
       // continue.
-      if (CurClauseKindItr == CurDevTypeItr)
+      if (CurClauseKindItr == CurDevTypeItr) {
+        PrevDeviceTypeItr = CurDevTypeItr;
         continue;
+      }
 
       // At this point, we know that this device_type region has a collapse.  So
       // diagnose if the two device_types have any overlap in their

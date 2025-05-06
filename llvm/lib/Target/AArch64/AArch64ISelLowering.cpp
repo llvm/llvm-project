@@ -3099,7 +3099,6 @@ AArch64TargetLowering::EmitDynamicProbedAlloc(MachineInstr &MI,
                                               MachineBasicBlock *MBB) const {
   MachineFunction &MF = *MBB->getParent();
   MachineBasicBlock::iterator MBBI = MI.getIterator();
-  DebugLoc DL = MBB->findDebugLoc(MBBI);
   const AArch64InstrInfo &TII =
       *MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
   Register TargetReg = MI.getOperand(0).getReg();
@@ -7974,7 +7973,6 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   assert(Chain.getOpcode() == ISD::EntryToken && "Unexpected Chain value");
   SDValue Glue = Chain.getValue(1);
 
-  SmallVector<SDValue, 16> ArgValues;
   unsigned ExtraArgLocs = 0;
   for (unsigned i = 0, e = Ins.size(); i != e; ++i) {
     CCValAssign &VA = ArgLocs[i - ExtraArgLocs];
@@ -11954,7 +11952,6 @@ SDValue AArch64TargetLowering::LowerSPONENTRY(SDValue Op,
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
 
   EVT VT = getPointerTy(DAG.getDataLayout());
-  SDLoc DL(Op);
   int FI = MFI.CreateFixedObject(4, 0, false);
   return DAG.getFrameIndex(FI, VT);
 }
@@ -18253,7 +18250,6 @@ static SDValue performVecReduceAddCombine(SDNode *N, SelectionDAG &DAG,
     return VecReduceAdd16;
 
   // Generate the remainder Dot operation that is multiple of 8.
-  SmallVector<SDValue, 4> SDotVec8;
   SDValue Zeros = DAG.getConstant(0, DL, MVT::v2i32);
   SDValue Vec8Op0 =
       DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v8i8, A.getOperand(0),

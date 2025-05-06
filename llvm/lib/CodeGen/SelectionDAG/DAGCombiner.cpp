@@ -12356,7 +12356,6 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
   SDValue Chain = MST->getChain();
   SDValue Value = MST->getValue();
   SDValue Ptr = MST->getBasePtr();
-  SDLoc DL(N);
 
   // Zap masked stores with a zero mask.
   if (ISD::isConstantSplatVectorAllZeros(Mask.getNode()))
@@ -12559,7 +12558,6 @@ SDValue DAGCombiner::visitMGATHER(SDNode *N) {
 SDValue DAGCombiner::visitMLOAD(SDNode *N) {
   MaskedLoadSDNode *MLD = cast<MaskedLoadSDNode>(N);
   SDValue Mask = MLD->getMask();
-  SDLoc DL(N);
 
   // Zap masked loads with a zero mask.
   if (ISD::isConstantSplatVectorAllZeros(Mask.getNode()))
@@ -15197,10 +15195,7 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
   if (ISD::isExtVecInRegOpcode(N0.getOpcode())) {
     SDValue N00 = N0.getOperand(0);
     unsigned N00Bits = N00.getScalarValueSizeInBits();
-    unsigned DstElts = N0.getValueType().getVectorMinNumElements();
-    unsigned SrcElts = N00.getValueType().getVectorMinNumElements();
     bool IsZext = N0.getOpcode() == ISD::ZERO_EXTEND_VECTOR_INREG;
-    APInt DemandedSrcElts = APInt::getLowBitsSet(SrcElts, DstElts);
     if ((N00Bits == ExtVTBits ||
          (!IsZext && (N00Bits < ExtVTBits ||
                       DAG.ComputeMaxSignificantBits(N00) <= ExtVTBits))) &&
@@ -20772,8 +20767,6 @@ SDValue DAGCombiner::TransformFPLoadStorePair(SDNode *N) {
 // We're checking for cases where we have common "c3 * A" expressions.
 bool DAGCombiner::isMulAddWithConstProfitable(SDNode *MulNode, SDValue AddNode,
                                               SDValue ConstNode) {
-  APInt Val;
-
   // If the add only has one use, and the target thinks the folding is
   // profitable or does not lead to worse code, this would be OK to do.
   if (AddNode->hasOneUse() &&
@@ -23730,7 +23723,6 @@ SDValue DAGCombiner::reduceBuildVecTruncToBitCast(SDNode *N) {
   if (!DAG.getDataLayout().isLittleEndian())
     return SDValue();
 
-  SDLoc DL(N);
   EVT OutScalarTy = VT.getScalarType();
   uint64_t ScalarTypeBitsize = OutScalarTy.getSizeInBits();
 

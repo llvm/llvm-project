@@ -523,7 +523,6 @@ static void computeFunctionSummary(
       auto *MemProfMD = I.getMetadata(LLVMContext::MD_memprof);
       if (MemProfMD) {
         std::vector<MIBInfo> MIBs;
-        std::vector<uint64_t> TotalSizes;
         std::vector<std::vector<ContextTotalSize>> ContextSizeInfos;
         for (auto &MDOp : MemProfMD->operands()) {
           auto *MIBMD = cast<const MDNode>(MDOp);
