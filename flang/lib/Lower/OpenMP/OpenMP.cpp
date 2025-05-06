@@ -1333,9 +1333,7 @@ static void genBodyOfTargetOp(
     ConstructQueue::const_iterator item, DataSharingProcessor &dsp) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   auto argIface = llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(*targetOp);
-
-  mlir::Region &region = targetOp.getRegion();
-  mlir::Block *entryBlock = genEntryBlock(firOpBuilder, args, region);
+  genEntryBlock(firOpBuilder, args, targetOp.getRegion());
 
   if (!enableDelayedPrivatizationStaging)
     dsp.processStep2();
@@ -1348,41 +1346,7 @@ static void genBodyOfTargetOp(
   // If so, then either clone them as well if they are MemoryEffectFree, or else
   // copy them to a new temporary and add them to the map and block_argument
   // lists and replace their uses with the new temporary.
-  llvm::SetVector<mlir::Value> valuesDefinedAbove;
-  mlir::getUsedValuesDefinedAbove(region, valuesDefinedAbove);
-  while (!valuesDefinedAbove.empty()) {
-    for (mlir::Value val : valuesDefinedAbove) {
-      mlir::Operation *valOp = val.getDefiningOp();
-      assert(valOp != nullptr);
-
-      // NOTE: We skip BoxDimsOp's as the lesser of two evils is to map the
-      // indices separately, as the alternative is to eventually map the Box,
-      // which comes with a fairly large overhead comparatively. We could be
-      // more robust about this and check using a BackwardsSlice to see if we
-      // run the risk of mapping a box.
-      if (mlir::isMemoryEffectFree(valOp) &&
-          !mlir::isa<fir::BoxDimsOp>(valOp)) {
-        mlir::Operation *clonedOp = valOp->clone();
-        entryBlock->push_front(clonedOp);
-
-        auto replace = [entryBlock](mlir::OpOperand &use) {
-          return use.getOwner()->getBlock() == entryBlock;
-        };
-
-        valOp->getResults().replaceUsesWithIf(clonedOp->getResults(), replace);
-        valOp->replaceUsesWithIf(clonedOp, replace);
-      } else {
-        mlir::Value mappedTemp = Fortran::common::openmp::mapTemporaryValue(
-            firOpBuilder, targetOp, val,
-            /*name=*/{});
-        val.replaceUsesWithIf(mappedTemp, [entryBlock](mlir::OpOperand &use) {
-          return use.getOwner()->getBlock() == entryBlock;
-        });
-      }
-    }
-    valuesDefinedAbove.clear();
-    mlir::getUsedValuesDefinedAbove(region, valuesDefinedAbove);
-  }
+  Fortran::common::openmp::cloneOrMapRegionOutsiders(firOpBuilder, targetOp);
 
   // Insert dummy instruction to remember the insertion position. The
   // marker will be deleted since there are not uses.

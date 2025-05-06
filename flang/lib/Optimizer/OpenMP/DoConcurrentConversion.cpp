@@ -39,56 +39,6 @@ namespace flangomp {
 #define DEBUG_TYPE "do-concurrent-conversion"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE << "]: ")
 
-namespace Fortran {
-namespace lower {
-namespace omp {
-namespace internal {
-/// Check if cloning the bounds introduced any dependency on the outer region.
-/// If so, then either clone them as well if they are MemoryEffectFree, or else
-/// copy them to a new temporary and add them to the map and block_argument
-/// lists and replace their uses with the new temporary.
-///
-/// TODO: similar to the above functions, this is copied from OpenMP lowering
-/// (in this case, from `genBodyOfTargetOp`). Once we move to a common lib for
-/// these utils this will move as well.
-void cloneOrMapRegionOutsiders(fir::FirOpBuilder &builder,
-                               mlir::omp::TargetOp targetOp) {
-  mlir::Region &targetRegion = targetOp.getRegion();
-  mlir::Block *targetEntryBlock = &targetRegion.getBlocks().front();
-  llvm::SetVector<mlir::Value> valuesDefinedAbove;
-  mlir::getUsedValuesDefinedAbove(targetRegion, valuesDefinedAbove);
-
-  while (!valuesDefinedAbove.empty()) {
-    for (mlir::Value val : valuesDefinedAbove) {
-      mlir::Operation *valOp = val.getDefiningOp();
-      assert(valOp != nullptr);
-      if (mlir::isMemoryEffectFree(valOp)) {
-        mlir::Operation *clonedOp = valOp->clone();
-        targetEntryBlock->push_front(clonedOp);
-        assert(clonedOp->getNumResults() == 1);
-        val.replaceUsesWithIf(
-            clonedOp->getResult(0), [targetEntryBlock](mlir::OpOperand &use) {
-              return use.getOwner()->getBlock() == targetEntryBlock;
-            });
-      } else {
-        mlir::Value mappedTemp = Fortran::common::openmp::mapTemporaryValue(
-            builder, targetOp, val,
-            /*name=*/llvm::StringRef{});
-        val.replaceUsesWithIf(
-            mappedTemp, [targetEntryBlock](mlir::OpOperand &use) {
-              return use.getOwner()->getBlock() == targetEntryBlock;
-            });
-      }
-    }
-    valuesDefinedAbove.clear();
-    mlir::getUsedValuesDefinedAbove(targetRegion, valuesDefinedAbove);
-  }
-}
-} // namespace internal
-} // namespace omp
-} // namespace lower
-} // namespace Fortran
-
 namespace {
 namespace looputils {
 /// Stores info needed about the induction/iteration variable for each `do
@@ -665,7 +615,12 @@ private:
           mapper.lookup(loopNestClauseOps.loopSteps[i]);
     }
 
-    Fortran::lower::omp::internal::cloneOrMapRegionOutsiders(builder, targetOp);
+    // Check if cloning the bounds introduced any dependency on the outer
+    // region. If so, then either clone them as well if they are
+    // MemoryEffectFree, or else copy them to a new temporary and add them to
+    // the map and block_argument lists and replace their uses with the new
+    // temporary.
+    Fortran::common::openmp::cloneOrMapRegionOutsiders(builder, targetOp);
     rewriter.setInsertionPoint(
         rewriter.create<mlir::omp::TerminatorOp>(targetOp.getLoc()));
 

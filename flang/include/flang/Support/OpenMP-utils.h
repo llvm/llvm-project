@@ -86,6 +86,9 @@ mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
 
 mlir::Value mapTemporaryValue(fir::FirOpBuilder &firOpBuilder,
     mlir::omp::TargetOp targetOp, mlir::Value val, llvm::StringRef name);
+
+void cloneOrMapRegionOutsiders(
+    fir::FirOpBuilder &firOpBuilder, mlir::omp::TargetOp targetOp);
 } // namespace Fortran::common::openmp
 
 #endif // FORTRAN_SUPPORT_OPENMP_UTILS_H_
