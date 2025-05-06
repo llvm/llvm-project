@@ -28,9 +28,8 @@ struct UnrollOptions {
 
   using NativeShapeFnType =
       std::function<std::optional<SmallVector<int64_t>>(Operation *op)>;
-  /// Function that returns the shape of the vector to unroll to for a given
-  /// operation. The unrolling is aborted if the function returns
-  /// `std::nullopt`.
+  /// Function that returns the shape to unroll to for a given operation.
+  /// The unrolling is aborted if the function returns `std::nullopt`.
   NativeShapeFnType nativeShape = nullptr;
   UnrollOptions &setNativeShapeFn(NativeShapeFnType fn) {
     nativeShape = std::move(fn);
@@ -59,7 +58,6 @@ void populateXeGPUSubgroupDistributePatterns(RewritePatternSet &patterns);
 ///   4. InsertStridedSlice are inserted for VectorType result, and
 ///   BuildinUnrealizedCastOp are inserted for TensorDescType result to
 ///   re-assemble the slices into the original shape.
-///
 void populateXeGPUUnrollPatterns(RewritePatternSet &patterns,
                                  const UnrollOptions &options);
 
