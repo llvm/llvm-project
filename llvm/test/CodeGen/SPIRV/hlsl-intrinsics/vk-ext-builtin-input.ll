@@ -11,7 +11,7 @@
 ; CHECK-DAG:   %[[#ptr_Input_uint:]] = OpTypePointer Input %[[#uint]]
 ; CHECK-DAG: %[[#ptr_Input_v3uint:]] = OpTypePointer Input %[[#v3uint]]
 ; CHECK-DAG:      %[[#WorkgroupId:]] = OpVariable %[[#ptr_Input_v3uint]] Input
-@var = local_unnamed_addr addrspace(7) externally_initialized constant <3 x i32> undef, align 16, !spirv.Decorations !0
+@var = external local_unnamed_addr addrspace(7) externally_initialized constant <3 x i32>, align 16, !spirv.Decorations !0
 
 define i32 @foo() {
 entry:
