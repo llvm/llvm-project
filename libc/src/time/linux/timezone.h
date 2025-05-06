@@ -9,48 +9,8 @@
 #ifndef LLVM_LIBC_SRC_TIME_LINUX_TIMEZONE_H
 #define LLVM_LIBC_SRC_TIME_LINUX_TIMEZONE_H
 
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
-#include <stddef.h>
-#include <stdint.h>
-
-#include "hdr/types/FILE.h"
-
 namespace LIBC_NAMESPACE_DECL {
 namespace timezone {
-
-// accoring to `tzfile`, timezone header if always 44 bytes
-#define TIMEZONE_HDR_SIZE 44
-
-typedef struct {
-  int64_t tt_utoff;
-  uint8_t tt_isdst;
-  uint8_t tt_desigidx;
-
-  // additional fields
-  int64_t offsets;
-  size_t &size;
-} ttinfo;
-
-typedef struct {
-  uint64_t tzh_ttisutcnt;
-  uint64_t tzh_ttisstdcnt;
-  uint64_t tzh_leapcnt;
-  uint64_t tzh_timecnt;
-  uint64_t tzh_typecnt;
-  uint64_t tzh_charcnt;
-  ttinfo &ttinfo;
-
-  // additional fields
-  int64_t &tzh_timecnt_transitions;
-  int64_t &tzh_timecnt_indices;
-  size_t tzh_timecnt_number_transitions;
-  int64_t &tz;
-  int8_t global_offset;
-  int8_t global_isdst;
-} tzset;
-
-tzset &get_tzset(::FILE &file);
 
 } // namespace timezone
 } // namespace LIBC_NAMESPACE_DECL
