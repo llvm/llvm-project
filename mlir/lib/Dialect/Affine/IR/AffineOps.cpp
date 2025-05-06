@@ -307,6 +307,8 @@ bool mlir::affine::isValidDim(Value value) {
 // *) It is valid as a symbol.
 // *) It is an induction variable.
 // *) It is the result of an affine apply operation with dimension id operands.
+// *) It is the result of a more specialized index transformation (ex.
+// delinearize_index or linearize_index) with dimension id operands.
 bool mlir::affine::isValidDim(Value value, Region *region) {
   // The value must be an index type.
   if (!value.getType().isIndex())
@@ -326,6 +328,10 @@ bool mlir::affine::isValidDim(Value value, Region *region) {
   // Affine apply operation is ok if all of its operands are ok.
   if (auto applyOp = dyn_cast<AffineApplyOp>(op))
     return applyOp.isValidDim(region);
+  if (auto delinearizeOp = dyn_cast<AffineDelinearizeIndexOp>(op))
+    return delinearizeOp.isValidDim(region);
+  if (auto linearizeOp = dyn_cast<AffineLinearizeIndexOp>(op))
+    return linearizeOp.isValidDim(region);
   // The dim op is okay if its operand memref/tensor is defined at the top
   // level.
   if (auto dimOp = dyn_cast<ShapedDimOpInterface>(op))
@@ -4636,6 +4642,14 @@ void AffineDelinearizeIndexOp::build(OpBuilder &odsBuilder,
         hasOuterBound);
 }
 
+// The result of the affine apply operation can be used as a dimension id if all
+// its operands are valid dimension ids with the parent operation of `region`
+// defining the polyhedral scope for symbols.
+bool AffineDelinearizeIndexOp::isValidDim(Region *region) {
+  return llvm::all_of(getOperands(),
+                      [&](Value op) { return ::isValidDim(op, region); });
+}
+
 void AffineDelinearizeIndexOp::build(OpBuilder &odsBuilder,
                                      OperationState &odsState,
                                      Value linearIndex, ArrayRef<int64_t> basis,
@@ -5021,6 +5035,14 @@ LogicalResult AffineLinearizeIndexOp::verify() {
         "incorrect fold/rewrite");
 
   return success();
+}
+
+// The result of the affine apply operation can be used as a dimension id if all
+// its operands are valid dimension ids with the parent operation of `region`
+// defining the polyhedral scope for symbols.
+bool AffineLinearizeIndexOp::isValidDim(Region *region) {
+  return llvm::all_of(getOperands(),
+                      [&](Value op) { return ::isValidDim(op, region); });
 }
 
 OpFoldResult AffineLinearizeIndexOp::fold(FoldAdaptor adaptor) {
