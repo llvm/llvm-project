@@ -1171,8 +1171,14 @@ void SIFoldOperandsImpl::foldOperand(
 
         if (OpToFold.isImm())
           UseMI->getOperand(1).ChangeToImmediate(OpToFold.getImm());
-        else
+        else if (OpToFold.isFI())
           UseMI->getOperand(1).ChangeToFrameIndex(OpToFold.getIndex());
+        else {
+          assert(OpToFold.isGlobal());
+          UseMI->getOperand(1).ChangeToGA(OpToFold.getGlobal(),
+                                          OpToFold.getOffset(),
+                                          OpToFold.getTargetFlags());
+        }
         UseMI->removeOperand(2); // Remove exec read (or src1 for readlane)
         return;
       }
@@ -1629,7 +1635,6 @@ bool SIFoldOperandsImpl::foldCopyToAGPRRegSequence(MachineInstr *CopyMI) const {
 
   MachineInstrBuilder B(*MBB.getParent(), CopyMI);
   DenseMap<TargetInstrInfo::RegSubRegPair, Register> VGPRCopies;
-  SmallSetVector<TargetInstrInfo::RegSubRegPair, 32> SeenInputs;
 
   const TargetRegisterClass *UseRC =
       MRI->getRegClass(CopyMI->getOperand(1).getReg());

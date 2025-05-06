@@ -1187,7 +1187,6 @@ struct UnPackOpTiling
         loc, unPackOp.getDest(), outputOffsets, outputSizes, strides);
     tiledOperands.push_back(extractDestSlice);
 
-    SmallVector<OpFoldResult> inputOffsets, inputSizes;
     strides.append(unPackOp.getSourceRank() - outputRank, oneAttr);
     // Create slice of the source operand.
     auto extractSourceSlice = b.create<tensor::ExtractSliceOp>(
