@@ -619,8 +619,7 @@ void ASTNode::render(const json::Value &Data, raw_ostream &OS) {
     return;
   }
   case InvertSection: {
-    bool IsLambda =
-        SectionLambdas.find(AccessorValue[0]) != SectionLambdas.end();
+    bool IsLambda = SectionLambdas.contains(AccessorValue[0]);
     if (!isFalsey(Context) || IsLambda)
       return;
     renderChild(Context, OS);

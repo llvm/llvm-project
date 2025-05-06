@@ -224,6 +224,7 @@ include "MipsRegisterBanks.td"
 include "MipsCombine.td"
 
 // Avoid forward declaration issues.
+include "MipsScheduleI6400.td"
 include "MipsScheduleP5600.td"
 include "MipsScheduleGeneric.td"
 
@@ -271,8 +272,8 @@ def : Proc<"mips64r6", [FeatureMips64r6]>;
 def : Proc<"octeon", [FeatureMips64r2, FeatureCnMips]>;
 def : Proc<"octeon+", [FeatureMips64r2, FeatureCnMips, FeatureCnMipsP]>;
 def : ProcessorModel<"p5600", MipsP5600Model, [ImplP5600]>;
-def : ProcessorModel<"i6400", NoSchedModel, [ImplI6400]>;
-def : ProcessorModel<"i6500", NoSchedModel, [ImplI6500]>;
+def : ProcessorModel<"i6400", MipsI6400Model, [ImplI6400]>;
+def : ProcessorModel<"i6500", MipsI6400Model, [ImplI6500]>;
 
 def MipsAsmParser : AsmParser {
   let ShouldEmitMatchRegisterName = 0;

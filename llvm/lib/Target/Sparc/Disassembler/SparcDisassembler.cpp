@@ -276,6 +276,7 @@ static DecodeStatus readInstruction32(ArrayRef<uint8_t> Bytes, uint64_t Address,
     return MCDisassembler::Fail;
   }
 
+  Size = 4;
   Insn = IsLittleEndian
              ? (Bytes[0] << 0) | (Bytes[1] << 8) | (Bytes[2] << 16) |
                    (Bytes[3] << 24)
@@ -306,20 +307,13 @@ DecodeStatus SparcDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
   {
     Result = decodeInstruction(DecoderTableSparcV832, Instr, Insn, Address, this, STI);
   }
-  if (Result != MCDisassembler::Fail) {
-    Size = 4;
+  if (Result != MCDisassembler::Fail)
     return Result;
-  }
 
   Result =
       decodeInstruction(DecoderTableSparc32, Instr, Insn, Address, this, STI);
 
-  if (Result != MCDisassembler::Fail) {
-    Size = 4;
-    return Result;
-  }
-
-  return MCDisassembler::Fail;
+  return Result;
 }
 
 static bool tryAddingSymbolicOperand(int64_t Value, bool isBranch,
