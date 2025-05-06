@@ -61,6 +61,7 @@ define <2 x i16> @test_vec(<2 x i16> %x, <2 x i8> %y) {
 ;
 ; srl (or (x, shl(zext(y),c1)),c1) -> or(srl(x,c1), zext(y))
 ; c1 <= leadingzeros(zext(y))
+; x, y - vectors
 ;
 ; CHECK-LABEL: test_vec
 ; CHECK: ld.param.u32 %[[X:r[0-9]+]], [test_vec_param_0];
@@ -97,5 +98,30 @@ define i64 @test_negative_c(i64 %x, i32 %y) {
   %shl = shl i64 %ext, 33
   %or = or i64 %x, %shl
   %srl = lshr i64 %or, 33
+  ret i64 %srl
+}
+
+declare void @use(i64)
+
+define i64 @test_negative_use_lop(i64 %x, i32 %y) {
+;
+; srl (or (x, shl(zext(y),c1)),c1) -> or(srl(x,c1), zext(y))
+; c1 <= leadingzeros(zext(y))
+;  
+; 
+;
+; CHECK-LABEL: test_negative_use_lop
+; CHECK: ld.param.u64 %[[X:rd[0-9]+]], [test_negative_c_param_0];
+; CHECK: ld.param.u32 %[[Y:rd[0-9]+]], [test_negative_c_param_1];
+; CHECK: shl.b64      %[[SHL:rd[0-9]+]], %[[Y]], 33;
+; CHECK: or.b64       %[[OR:rd[0-9]+]], %[[X]], %[[SHL]];
+; CHECK: shr.u64      %[[SHR:rd[0-9]+]], %[[OR]], 33;
+; CHECK: st.param.b64 [func_retval0], %[[SHR]];
+;
+  %ext = zext i32 %y to i64
+  %shl = shl i64 %ext, 5
+  %or = or i64 %x, %shl
+  %srl = lshr i64 %or, 5
+  call void @use(i64 %or)
   ret i64 %srl
 }
