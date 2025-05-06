@@ -121,3 +121,29 @@ int AllComparisons() {
 
     return 0;
 }
+
+namespace PR127471 {
+    int getSignedValue();
+    unsigned int getUnsignedValue();
+
+    void callExprTest() {
+
+        if (getSignedValue() < getUnsignedValue())
+            return;
+// CHECK-MESSAGES: :[[@LINE-2]]:13: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
+// CHECK-FIXES:  if (std::cmp_less(getSignedValue() , getUnsignedValue()))
+
+        int sVar = 0;
+        if (getUnsignedValue() > sVar)
+            return;
+// CHECK-MESSAGES: :[[@LINE-2]]:13: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
+// CHECK-FIXES: if (std::cmp_greater(getUnsignedValue() , sVar))
+
+        unsigned int uVar = 0;
+        if (getSignedValue() > uVar)
+            return;
+// CHECK-MESSAGES: :[[@LINE-2]]:13: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
+// CHECK-FIXES: if (std::cmp_greater(getSignedValue() , uVar))
+
+    }
+} // namespace PR127471
