@@ -112,13 +112,11 @@ protected:
 
       Value result = rewriter.create<arith::ConstantOp>(
           loc, vecTy, DenseElementsAttr::get(vecTy, zeroAttr));
-      int64_t idx = 0;
-      for (int64_t i = 0; i < shape[0]; i += blockSize[0]) {
-        for (int64_t j = 0; j < shape[1]; j += blockSize[1]) {
-          result = rewriter.create<vector::InsertStridedSliceOp>(
-              loc, srcs[idx++], result, llvm::ArrayRef<int64_t>({i, j}),
-              llvm::ArrayRef<int64_t>({1, 1}));
-        }
+      for (auto [src, offsets] :
+           llvm::zip_equal(srcs, StaticTileOffsetRange(shape, blockSize))) {
+        SmallVector<int64_t> staticStrides(offsets.size(), 1);
+        result = rewriter.create<vector::InsertStridedSliceOp>(
+            loc, src, result, offsets, staticStrides);
       }
       return result;
     }
@@ -147,13 +145,12 @@ protected:
              "Expecting blockSize size to match the rank of src.");
       auto shape = vecTy.getShape();
       llvm::SmallVector<Value> results;
-      for (int64_t i = 0; i < shape[0]; i += blockSize[0]) {
-        for (int64_t j = 0; j < shape[1]; j += blockSize[1]) {
-          auto slice = rewriter.create<vector::ExtractStridedSliceOp>(
-              loc, src, llvm::ArrayRef<int64_t>({i, j}), blockSize,
-              llvm::ArrayRef<int64_t>({1, 1}));
-          results.push_back(slice);
-        }
+      for (SmallVector<int64_t> offsets :
+           StaticTileOffsetRange(shape, blockSize)) {
+        SmallVector<int64_t> staticStrides(offsets.size(), 1);
+        auto slice = rewriter.create<vector::ExtractStridedSliceOp>(
+            loc, src, offsets, blockSize, staticStrides);
+        results.push_back(slice);
       }
       return results;
     }
@@ -187,6 +184,7 @@ struct UnrollCreateNdOp : public UnrollPattern<xegpu::CreateNdDescOp> {
     auto loc = op.getLoc();
     auto ctx = op.getContext();
     auto tdescTy = op.getType();
+    auto rank = tdescTy.getRank();
     auto shape = tdescTy.getShape();
     auto layout = tdescTy.getLayout();
 
@@ -197,11 +195,6 @@ struct UnrollCreateNdOp : public UnrollPattern<xegpu::CreateNdDescOp> {
 
     auto maybeGrids = computeGrids(shape, targetShape);
     if (!maybeGrids)
-      return failure();
-    auto grids = *maybeGrids;
-
-    // TODO: enable 1D block tensor desc
-    if (tdescTy.getRank() != 2)
       return failure();
 
     auto encoding = tdescTy.getEncoding();
@@ -221,25 +214,25 @@ struct UnrollCreateNdOp : public UnrollPattern<xegpu::CreateNdDescOp> {
     };
 
     auto mixedOffsets = op.getMixedOffsets();
-    // For n-D memrefs where n > 2, we need to handle the last two
-    // dimensions, and keep the first n-2 dimensions as is.
-    int64_t x = mixedOffsets.size() - 2;
-    int64_t y = mixedOffsets.size() - 1;
-    OpFoldResult oldX = mixedOffsets[x];
-    OpFoldResult oldY = mixedOffsets[y];
+
+    // For n-D memrefs where n > rank, we need to handle the last `rank`
+    // dimensions only, and keep the first `n-rank` dimensions as is.
+    SmallVector<OpFoldResult> oldOffsets = llvm::to_vector(
+        llvm::drop_begin(mixedOffsets, mixedOffsets.size() - rank));
+    auto validIdxes =
+        llvm::seq<int64_t>(mixedOffsets.size() - rank, mixedOffsets.size());
 
     SmallVector<Value> newOps;
-    for (int64_t i = 0; i < grids[0]; i++) {
-      for (int64_t j = 0; j < grids[1]; j++) {
-        auto subOffX = targetShape[0] * i;
-        auto subOffY = targetShape[1] * j;
-        mixedOffsets[x] = addi(oldX, subOffX);
-        mixedOffsets[y] = addi(oldY, subOffY);
-        auto newOp = rewriter.create<xegpu::CreateNdDescOp>(
-            loc, newTdescTy, op.getSource(), mixedOffsets, op.getMixedSizes(),
-            op.getMixedStrides());
-        newOps.push_back(newOp);
+    for (SmallVector<int64_t> offsets :
+         StaticTileOffsetRange(shape, targetShape)) {
+      for (auto [idx, oldOff, offset] :
+           llvm::zip(validIdxes, oldOffsets, offsets)) {
+        mixedOffsets[idx] = addi(oldOff, offset);
       }
+      auto newOp = rewriter.create<xegpu::CreateNdDescOp>(
+          loc, newTdescTy, op.getSource(), mixedOffsets, op.getMixedSizes(),
+          op.getMixedStrides());
+      newOps.push_back(newOp);
     }
     auto castOp = unpack(newOps, tdescTy, targetShape, loc, rewriter);
     rewriter.replaceOp(op, castOp);
