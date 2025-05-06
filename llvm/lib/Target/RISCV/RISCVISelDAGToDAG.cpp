@@ -3213,7 +3213,8 @@ bool RISCVDAGToDAGISel::selectNegImm(SDValue N, SDValue &Val) {
   if (isInt<32>(Imm))
     return false;
 
-  if (any_of(N->users(), [](const SDNode *U) { return U->getOpcode() != ISD::ADD; }))
+  if (any_of(N->users(),
+             [](const SDNode *U) { return U->getOpcode() != ISD::ADD; }))
     return false;
 
   int OrigImmCost = RISCVMatInt::getIntMatCost(APInt(64, Imm), 64, *Subtarget,
