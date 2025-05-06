@@ -701,7 +701,6 @@ void ExprEngine::handleConstructor(const Expr *E,
   if (CE) {
     // FIXME: Is it possible and/or useful to do this before PreStmt?
     StmtNodeBuilder Bldr(DstPreVisit, PreInitialized, *currBldrCtx);
-    ASTContext &Ctx = LCtx->getAnalysisDeclContext()->getASTContext();
     for (ExplodedNode *N : DstPreVisit) {
       ProgramStateRef State = N->getState();
       if (CE->requiresZeroInitialization()) {
@@ -718,7 +717,7 @@ void ExprEngine::handleConstructor(const Expr *E,
         // since it's then possible to be initializing one part of a multi-
         // dimensional array.
         const CXXRecordDecl *TargetHeldRecord =
-            Target.getType(Ctx)->getPointeeCXXRecordDecl();
+            dyn_cast_or_null<CXXRecordDecl>(CE->getType()->getAsRecordDecl());
 
         if (!TargetHeldRecord || !TargetHeldRecord->isEmpty())
           State = State->bindDefaultZero(Target, LCtx);
