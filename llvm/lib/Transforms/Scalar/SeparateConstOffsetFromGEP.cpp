@@ -198,6 +198,8 @@
 using namespace llvm;
 using namespace llvm::PatternMatch;
 
+#define DEBUG_TYPE "separate-offset-gep"
+
 static cl::opt<bool> DisableSeparateConstOffsetFromGEP(
     "disable-separate-const-offset-from-gep", cl::init(false),
     cl::desc("Do not separate the constant offset from a GEP instruction"),
@@ -486,6 +488,9 @@ private:
 
   DenseMap<ExprKey, SmallVector<Instruction *, 2>> DominatingAdds;
   DenseMap<ExprKey, SmallVector<Instruction *, 2>> DominatingSubs;
+
+  bool decomposeXor(Function &F);
+  Value *tryFoldXorToOrDisjoint(Instruction &I);
 };
 
 } // end anonymous namespace
@@ -1223,6 +1228,179 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   return true;
 }
 
+bool SeparateConstOffsetFromGEP::decomposeXor(Function &F) {
+  bool FunctionChanged = false;
+  SmallVector<std::pair<Instruction *, Value *>, 16> ReplacementsToMake;
+
+  for (BasicBlock &BB : F) {
+    for (Instruction &I : BB) {
+      if (I.getOpcode() == Instruction::Xor) {
+        if (Value *Replacement = tryFoldXorToOrDisjoint(I)) {
+          ReplacementsToMake.push_back({&I, Replacement});
+          FunctionChanged = true;
+        }
+      }
+    }
+  }
+
+  if (!ReplacementsToMake.empty()) {
+    LLVM_DEBUG(dbgs() << "Applying " << ReplacementsToMake.size()
+                      << " XOR->OR Disjoint replacements in " << F.getName()
+                      << "\n");
+    for (auto &Pair : ReplacementsToMake)
+      Pair.first->replaceAllUsesWith(Pair.second);
+
+    for (auto &Pair : ReplacementsToMake)
+      Pair.first->eraseFromParent();
+  }
+
+  return FunctionChanged;
+}
+
+static llvm::Instruction *findClosestSequentialXor(Value *A, Instruction &I) {
+  llvm::Instruction *ClosestUser = nullptr;
+  for (llvm::User *User : A->users()) {
+    if (auto *UserInst = llvm::dyn_cast<llvm::Instruction>(User)) {
+      if (UserInst->getOpcode() != Instruction::Xor || UserInst == &I)
+        continue;
+      if (!ClosestUser)
+        ClosestUser = UserInst;
+      else {
+        // Compare instruction positions.
+        if (UserInst->comesBefore(ClosestUser)) {
+          ClosestUser = UserInst;
+        }
+      }
+    }
+  }
+  return ClosestUser;
+}
+
+/// Try to transform I = xor(A, C1) into or_disjoint(Y, C2)
+/// where Y = xor(A, C0) is another existing instruction dominating I,
+/// C2 = C1 - C0, and A is known to be disjoint with C2.
+///
+/// This transformation is beneficial particularly for GEPs because:
+/// 1. OR operations often map better to addressing modes than XOR
+/// 2. Disjoint OR operations preserve the semantics of the original XOR
+/// 3. This can enable further optimizations in the GEP offset folding pipeline
+///
+/// @param I  The XOR instruction being visited.
+/// @return The replacement Value* if successful, nullptr otherwise.
+Value *SeparateConstOffsetFromGEP::tryFoldXorToOrDisjoint(Instruction &I) {
+  assert(I.getOpcode() == Instruction::Xor && "Instruction must be XOR");
+
+  // Check if I has at least one GEP user.
+  bool HasGepUser = false;
+  for (User *U : I.users()) {
+    if (isa<GetElementPtrInst>(U)) {
+      HasGepUser = true;
+      break;
+    }
+  }
+  // If no user is a GEP instruction, abort the transformation.
+  if (!HasGepUser) {
+    LLVM_DEBUG(
+        dbgs() << "SeparateConstOffsetFromGEP: Skipping XOR->OR DISJOINT for"
+               << I << " because it has no GEP users.\n");
+    return nullptr;
+  }
+
+  Value *Op0 = I.getOperand(0);
+  Value *Op1 = I.getOperand(1);
+  ConstantInt *C1 = dyn_cast<ConstantInt>(Op1);
+  Value *A = Op0;
+
+  // Bail out of there is not constant operand.
+  if (!C1) {
+    C1 = dyn_cast<ConstantInt>(Op0);
+    if (!C1)
+      return nullptr;
+    A = Op1;
+  }
+
+  if (isa<UndefValue>(A))
+    return nullptr;
+
+  APInt C1_APInt = C1->getValue();
+  unsigned BitWidth = C1_APInt.getBitWidth();
+  Type *Ty = I.getType();
+
+  // Find Dominating Y = xor A, C0
+  Instruction *FoundUserInst = nullptr;
+  APInt C0_APInt;
+
+  // Find the closest XOR instruction using the same value.
+  Instruction *UserInst = findClosestSequentialXor(A, I);
+  if (!UserInst) {
+    LLVM_DEBUG(
+        dbgs() << "SeparateConstOffsetFromGEP: No dominating XOR found for" << I
+               << "\n");
+    return nullptr;
+  }
+
+  BinaryOperator *UserBO = cast<BinaryOperator>(UserInst);
+  Value *UserOp0 = UserBO->getOperand(0);
+  Value *UserOp1 = UserBO->getOperand(1);
+  ConstantInt *UserC = nullptr;
+  if (UserOp0 == A)
+    UserC = dyn_cast<ConstantInt>(UserOp1);
+  else if (UserOp1 == A)
+    UserC = dyn_cast<ConstantInt>(UserOp0);
+  else {
+    LLVM_DEBUG(dbgs() << "SeparateConstOffsetFromGEP: Found XOR" << *UserInst
+                      << " doesn't use value " << *A << "\n");
+    return nullptr;
+  }
+
+  if (!UserC) {
+    LLVM_DEBUG(
+        dbgs()
+        << "SeparateConstOffsetFromGEP: Found XOR doesn't have constant operand"
+        << *UserInst << "\n");
+    return nullptr;
+  }
+
+  if (!DT->dominates(UserInst, &I)) {
+    LLVM_DEBUG(dbgs() << "SeparateConstOffsetFromGEP: Found XOR" << *UserInst
+                      << " doesn't dominate " << I << "\n");
+    return nullptr;
+  }
+
+  FoundUserInst = UserInst;
+  C0_APInt = UserC->getValue();
+
+  // Calculate C2 = C1 - C0.
+  APInt C2_APInt = C1_APInt - C0_APInt;
+
+  // Check Disjointness A & C2 == 0.
+  KnownBits KnownA(BitWidth);
+  computeKnownBits(A, KnownA, *DL, 0, nullptr, &I, DT);
+
+  if ((KnownA.One & C2_APInt) != 0) {
+    LLVM_DEBUG(
+        dbgs() << "SeparateConstOffsetFromGEP: Disjointness check failed for"
+               << I << "\n");
+    return nullptr;
+  }
+
+  IRBuilder<> Builder(&I);
+  Builder.SetInsertPoint(&I);
+  Constant *C2_Const = ConstantInt::get(Ty, C2_APInt);
+  Twine Name = I.getName();
+  Value *NewOr = BinaryOperator::CreateDisjointOr(FoundUserInst, C2_Const, Name,
+                                                  I.getIterator());
+  // Preserve metadata
+  if (Instruction *NewOrInst = dyn_cast<Instruction>(NewOr))
+    NewOrInst->copyMetadata(I);
+
+  LLVM_DEBUG(dbgs() << "SeparateConstOffsetFromGEP: Replacing" << I
+                    << " (used by GEP) with" << *NewOr << " based on"
+                    << *FoundUserInst << "\n");
+
+  return NewOr;
+}
+
 bool SeparateConstOffsetFromGEPLegacyPass::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
@@ -1242,6 +1420,10 @@ bool SeparateConstOffsetFromGEP::run(Function &F) {
 
   DL = &F.getDataLayout();
   bool Changed = false;
+
+  // Decompose xor in to "or disjoint" if possible.
+  Changed |= decomposeXor(F);
+
   for (BasicBlock &B : F) {
     if (!DT->isReachableFromEntry(&B))
       continue;
