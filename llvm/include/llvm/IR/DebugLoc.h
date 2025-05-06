@@ -170,6 +170,16 @@ namespace llvm {
                                     LLVMContext &Ctx,
                                     DenseMap<const MDNode *, MDNode *> &Cache);
 
+    /// Return true if the source locations match, ignoring isImplicitCode and
+    /// source atom info.
+    bool isSameSourceLocation(const DebugLoc &Other) const {
+      if (get() == Other.get())
+        return true;
+      return ((bool)*this == (bool)Other) && getLine() == Other.getLine() &&
+             getCol() == Other.getCol() && getScope() == Other.getScope() &&
+             getInlinedAt() == Other.getInlinedAt();
+    }
+
     unsigned getLine() const;
     unsigned getCol() const;
     MDNode *getScope() const;
