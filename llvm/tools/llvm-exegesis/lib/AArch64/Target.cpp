@@ -207,14 +207,17 @@ private:
 
     if (isPointerAuth(Opcode)) {
 #if defined(__aarch64__) && defined(__linux__)
-      
-      // Fix for some systems where PAC/PAG keys are present but is 
-      // explicitly getting disabled
+
+      // For some systems with existing PAC keys set, it is better to
+      // check the existing state of the key before setting it.
+      // For systems without PAC, this is a No-op but with PAC, it is
+      // safer to check the existing key state and then disable/enable them.
+      // Hence the guard placed for switching.
       unsigned long pac_keys = 0;
       if (prctl(PR_PAC_GET_ENABLED_KEYS, &pac_keys, 0, 0, 0) < 0) {
         return "Failed to get PAC key status";
       }
-      
+
       // Disable all PAC keys. Note that while we expect the measurements to
       // be the same with PAC keys disabled, they could potentially be lower
       // since authentication checks are bypassed.
@@ -226,7 +229,7 @@ private:
                   0, 0) < 0) {
           return "Failed to disable PAC keys";
         }
-      } 
+      }
 #else
       return "Unsupported opcode: isPointerAuth";
 #endif
