@@ -172,6 +172,10 @@ public:
     // LLVMTM ctor. See TargetMachine::setGlobalISel for example.
     if (Opt.EnableIPRA)
       TM.Options.EnableIPRA = *Opt.EnableIPRA;
+    else {
+      // If not explicitly specified, use target default.
+      TM.Options.EnableIPRA |= TM.useIPRA();
+    }
 
     if (Opt.EnableGlobalISelAbort)
       TM.Options.GlobalISelAbort = *Opt.EnableGlobalISelAbort;
