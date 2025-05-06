@@ -49,7 +49,7 @@ public:
       if (!CurGroup->Next)
         allocateNewGroup(CurGroup->Next);
 
-      LastGroup.compare_exchange_strong(CurGroup, CurGroup->Next);
+      LastGroup.compare_exchange_weak(CurGroup, CurGroup->Next);
     } while (true);
 
     // Store item into the current group.
@@ -145,7 +145,7 @@ protected:
       ItemsGroup *NextGroup = CurGroup->Next;
 
       if (!NextGroup) {
-        if (CurGroup->Next.compare_exchange_strong(NextGroup, NewGroup))
+        if (CurGroup->Next.compare_exchange_weak(NextGroup, NewGroup))
           break;
       }
 
