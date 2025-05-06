@@ -575,7 +575,9 @@ Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
       // variable index could pessimize the path.  This also handles the case
       // for struct indices, which must always be constant.
       if (isa<ConstantInt>(FirstInst->getOperand(Op)) ||
-          isa<ConstantInt>(GEP->getOperand(Op)))
+          isa<ConstantInt>(GEP->getOperand(Op)) ||
+          isa<ConstantDataVector>(FirstInst->getOperand(Op)) ||
+          isa<ConstantDataVector>(GEP->getOperand(Op)))
         return nullptr;
 
       if (FirstInst->getOperand(Op)->getType() !=
