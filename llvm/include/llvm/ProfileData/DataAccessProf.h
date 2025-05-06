@@ -97,7 +97,7 @@ public:
 
   /// Methods to add symbolized data access profile. Returns error if duplicated
   /// symbol names or content hashes are seen. The user of this class should
-  /// aggregate counters that corresponds to the same symbol name or with the
+  /// aggregate counters that correspond to the same symbol name or with the
   /// same string literal hash before calling 'add*' methods.
   Error setDataAccessProfile(SymbolID SymbolID, uint64_t AccessCount);
   /// Similar to the method above, for records with \p Locations representing
@@ -108,7 +108,8 @@ public:
                              const llvm::SmallVector<DataLocation> &Locations);
   Error addKnownSymbolWithoutSamples(SymbolID SymbolID);
 
-  /// Returns a iterable StringRef for strings in the order they are added.
+  /// Returns an iterable StringRef for strings in the order they are added.
+  /// Each string may be a symbol name or a file name.
   auto getStrings() const {
     ArrayRef<std::pair<StringRef, uint64_t>> RefSymbolNames(
         StrToIndexMap.begin(), StrToIndexMap.end());
@@ -116,15 +117,15 @@ public:
   }
 
   /// Returns array reference for various internal data structures.
-  inline ArrayRef<
+  ArrayRef<
       std::pair<std::variant<StringRef, uint64_t>, DataAccessProfRecord>>
   getRecords() const {
     return Records.getArrayRef();
   }
-  inline ArrayRef<StringRef> getKnownColdSymbols() const {
+  ArrayRef<StringRef> getKnownColdSymbols() const {
     return KnownColdSymbols.getArrayRef();
   }
-  inline ArrayRef<uint64_t> getKnownColdHashes() const {
+  ArrayRef<uint64_t> getKnownColdHashes() const {
     return KnownColdHashes.getArrayRef();
   }
 

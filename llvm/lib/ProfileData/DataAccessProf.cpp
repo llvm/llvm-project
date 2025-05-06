@@ -141,7 +141,7 @@ Error DataAccessProfData::serializeSymbolsAndFilenames(ProfOStream &OS) const {
   // Record the length of compressed string.
   OS.write(CompressedStringLen);
   // Write the chars in compressed strings.
-  for (auto &c : CompressedStrings)
+  for (char C : CompressedStrings)
     OS.writeByte(static_cast<uint8_t>(c));
   // Pad up to a multiple of 8.
   // InstrProfReader could read bytes according to 'CompressedStringLen'.
