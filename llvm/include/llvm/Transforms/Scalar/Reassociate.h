@@ -65,16 +65,14 @@ struct Factor {
 };
 
 struct OverflowTracking {
-  bool HasNUW;
-  bool HasNSW;
-  bool AllKnownNonNegative;
-  bool AllKnownNonZero;
+  bool HasNUW = true;
+  bool HasNSW = true;
+  bool AllKnownNonNegative = true;
+  bool AllKnownNonZero = true;
   // Note: AllKnownNonNegative can be true in a case where one of the operands
   // is negative, but one the operators is not NSW. AllKnownNonNegative should
   // not be used independently of HasNSW
-  OverflowTracking()
-      : HasNUW(true), HasNSW(true), AllKnownNonNegative(true),
-        AllKnownNonZero(true) {}
+  OverflowTracking() = default;
 };
 
 class XorOpnd;
