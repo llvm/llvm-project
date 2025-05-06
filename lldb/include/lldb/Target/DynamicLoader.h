@@ -96,9 +96,9 @@ public:
   /// set a breakpoint in the process, but rely on being notified by a driver or
   /// debug services that shared libraries are available.
   ///
-  /// \returns The value of GetStopWhenImagesChange()
+  /// \returns True if handled, false otherwise.
   virtual bool HandleStopReasonDynammicLoader() { 
-    return GetStopWhenImagesChange();
+    return false;
   }
 
   /// Get whether the process should stop when images change.

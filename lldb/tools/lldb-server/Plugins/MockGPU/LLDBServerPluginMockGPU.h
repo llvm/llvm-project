@@ -32,12 +32,16 @@ int gpu_initialize() {
 int gpu_shlib_load() {
   return puts(__FUNCTION__);
 }
+int gpu_third_stop() {
+  return puts(__FUNCTION__);
+}
 int main(int argc, const char **argv) {
   gpu_initialize();
   gpu_shlib_load();
+  gpu_third_stop();
+  gpu_shlib_load();
   return 0; // Break here
 }
-
 $ clang++ -g -O0 -o a.out main.cpp
 $ ninja lldb lldb-server
 $ ./bin/lldb a.out -o 'b /Break here/ -o run
