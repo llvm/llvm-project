@@ -4225,9 +4225,8 @@ bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
     return false;
 
   // Early exit.
-  if (!isa<Constant, InlineAsm>(I->getOperand(OpIdx))) {
+  if (!isa<Constant, InlineAsm>(I->getOperand(OpIdx)))
     return true;
-  }
 
   switch (I->getOpcode()) {
   default:
