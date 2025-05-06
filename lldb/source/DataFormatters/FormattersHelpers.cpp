@@ -97,19 +97,19 @@ void lldb_private::formatters::AddFilter(
   category_sp->AddTypeFilter(type_name, match_type, filter_sp);
 }
 
-llvm::Expected<size_t>
+std::optional<size_t>
 lldb_private::formatters::ExtractIndexFromString(const char *item_name) {
   if (!item_name || !*item_name)
-    return llvm::createStringError("String has no item named '%s'", item_name);
+    return std::nullopt;
   if (*item_name != '[')
-    return llvm::createStringError("String has no item named '%s'", item_name);
+    return std::nullopt;
   item_name++;
   char *endptr = nullptr;
   unsigned long int idx = ::strtoul(item_name, &endptr, 0);
   if (idx == 0 && endptr == item_name)
-    return llvm::createStringError("String has no item named '%s'", item_name);
+    return std::nullopt;
   if (idx == ULONG_MAX)
-    return llvm::createStringError("String has no item named '%s'", item_name);
+    return std::nullopt;
   return idx;
 }
 

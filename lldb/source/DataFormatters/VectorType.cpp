@@ -270,13 +270,12 @@ public:
   }
 
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
-    auto idx_or_err = ExtractIndexFromString(name.AsCString());
-    if (!idx_or_err) {
-      llvm::consumeError(idx_or_err.takeError());
+    auto optional_idx = ExtractIndexFromString(name.AsCString());
+    if (!optional_idx) {
       return llvm::createStringError("Type has no child named '%s'",
                                      name.AsCString());
     }
-    uint32_t idx = *idx_or_err;
+    uint32_t idx = *optional_idx;
     if (idx >= CalculateNumChildrenIgnoringErrors())
       return llvm::createStringError("Type has no child named '%s'",
                                      name.AsCString());

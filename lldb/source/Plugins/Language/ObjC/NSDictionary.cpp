@@ -587,13 +587,12 @@ lldb_private::formatters::NSDictionaryISyntheticFrontEnd::
 
 llvm::Expected<size_t> lldb_private::formatters::
     NSDictionaryISyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
-  auto idx_or_err = ExtractIndexFromString(name.AsCString());
-  if (!idx_or_err) {
-    llvm::consumeError(idx_or_err.takeError());
+  auto optional_idx = ExtractIndexFromString(name.AsCString());
+  if (!optional_idx) {
     return llvm::createStringError("Type has no child named '%s'",
                                    name.AsCString());
   }
-  uint32_t idx = *idx_or_err;
+  uint32_t idx = *optional_idx;
   if (idx >= CalculateNumChildrenIgnoringErrors())
     return llvm::createStringError("Type has no child named '%s'",
                                    name.AsCString());
@@ -726,13 +725,12 @@ lldb_private::formatters::NSCFDictionarySyntheticFrontEnd::
 
 llvm::Expected<size_t> lldb_private::formatters::
     NSCFDictionarySyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
-  auto idx_or_err = ExtractIndexFromString(name.AsCString());
-  if (!idx_or_err) {
-    llvm::consumeError(idx_or_err.takeError());
+  auto optional_idx = ExtractIndexFromString(name.AsCString());
+  if (!optional_idx) {
     return llvm::createStringError("Type has no child named '%s'",
                                    name.AsCString());
   }
-  uint32_t idx = *idx_or_err;
+  uint32_t idx = *optional_idx;
   if (idx >= CalculateNumChildrenIgnoringErrors())
     return llvm::createStringError("Type has no child named '%s'",
                                    name.AsCString());
@@ -864,13 +862,12 @@ lldb_private::formatters::NSConstantDictionarySyntheticFrontEnd::
 llvm::Expected<size_t>
 lldb_private::formatters::NSConstantDictionarySyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
-  auto idx_or_err = ExtractIndexFromString(name.AsCString());
-  if (!idx_or_err) {
-    llvm::consumeError(idx_or_err.takeError());
+  auto optional_idx = ExtractIndexFromString(name.AsCString());
+  if (!optional_idx) {
     return llvm::createStringError("Type has no child named '%s'",
                                    name.AsCString());
   }
-  uint32_t idx = *idx_or_err;
+  uint32_t idx = *optional_idx;
   if (idx >= CalculateNumChildrenIgnoringErrors())
     return llvm::createStringError("Type has no child named '%s'",
                                    name.AsCString());
@@ -1070,13 +1067,12 @@ template <typename D32, typename D64>
 llvm::Expected<size_t>
 lldb_private::formatters::GenericNSDictionaryMSyntheticFrontEnd<
     D32, D64>::GetIndexOfChildWithName(ConstString name) {
-  auto idx_or_err = ExtractIndexFromString(name.AsCString());
-  if (!idx_or_err) {
-    llvm::consumeError(idx_or_err.takeError());
+  auto optional_idx = ExtractIndexFromString(name.AsCString());
+  if (!optional_idx) {
     return llvm::createStringError("Type has no child named '%s'",
                                    name.AsCString());
   }
-  uint32_t idx = *idx_or_err;
+  uint32_t idx = *optional_idx;
   if (idx >= CalculateNumChildrenIgnoringErrors())
     return llvm::createStringError("Type has no child named '%s'",
                                    name.AsCString());
@@ -1233,13 +1229,12 @@ lldb_private::formatters::Foundation1100::
 
 llvm::Expected<size_t> lldb_private::formatters::Foundation1100::
     NSDictionaryMSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
-  auto idx_or_err = ExtractIndexFromString(name.AsCString());
-  if (!idx_or_err) {
-    llvm::consumeError(idx_or_err.takeError());
+  auto optional_idx = ExtractIndexFromString(name.AsCString());
+  if (!optional_idx) {
     return llvm::createStringError("Type has no child named '%s'",
                                    name.AsCString());
   }
-  uint32_t idx = *idx_or_err;
+  uint32_t idx = *optional_idx;
   if (idx >= CalculateNumChildrenIgnoringErrors())
     return llvm::createStringError("Type has no child named '%s'",
                                    name.AsCString());

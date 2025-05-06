@@ -98,13 +98,12 @@ LibStdcppTupleSyntheticFrontEnd::CalculateNumChildren() {
 
 llvm::Expected<size_t>
 LibStdcppTupleSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
-  auto idx_or_err = formatters::ExtractIndexFromString(name.GetCString());
-  if (!idx_or_err) {
-    llvm::consumeError(idx_or_err.takeError());
+  auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
+  if (!optional_idx) {
     return llvm::createStringError("Type has no child named '%s'",
                                    name.AsCString());
   }
-  return *idx_or_err;
+  return *optional_idx;
 }
 
 SyntheticChildrenFrontEnd *
