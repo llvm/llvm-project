@@ -1,6 +1,6 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 // needs flang to be default
-// XFAIL: *
+
 // Not intended to be a functional example, the aim of this test is to verify
 // omp.threadprivate does not crash on lowering during the OpenMP target device
 // pass when used in conjunction with target code in the same module.
@@ -24,7 +24,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
   }
 }
 
-// CHECK: define weak_odr protected amdgpu_kernel void @{{.*}}(ptr %{{.*}}, ptr %[[ARG1:.*]]) #{{[0-9]+}} {
+// CHECK: define weak_odr protected amdgpu_kernel void @{{.*}}(ptr %{{.*}}, ptr %[[ARG1:.*]]) {
 // CHECK:  %[[ALLOCA:.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK:  %[[ALLOCA_ASCAST:.*]] = addrspacecast ptr addrspace(5) %[[ALLOCA]] to ptr
 // CHECK:  store ptr %[[ARG1]], ptr %[[ALLOCA_ASCAST]], align 8
