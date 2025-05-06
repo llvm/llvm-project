@@ -446,10 +446,8 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
     if (c)
       cVals = packWrapper(c, cBlockSize);
 
-    // Vals are empty due to invalid blocking size, or with size 1 due to
-    // the original shape is the same with the blocking size. The op will
-    // be skipped if every operand got an invalid blocking size or the
-    // original shape is the same with the blocking size.
+    // skip the operation if every operand has an invalid blocking size (empty)
+    // or if the original shape matches the blocking size (size == 1).
     if (aVals.size() <= 1 && bVals.size() <= 1 && cVals.size() <= 1)
       return failure();
 
