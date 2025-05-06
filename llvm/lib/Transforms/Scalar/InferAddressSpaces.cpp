@@ -1142,18 +1142,18 @@ static bool handleMemIntrinsicPtrUse(MemIntrinsic *MI, Value *OldV,
     if (Dest == OldV)
       Dest = NewV;
 
-    if (isa<MemCpyInlineInst>(MTI)) {
+    if (auto *MCI = dyn_cast<MemCpyInst>(MTI)) {
       MDNode *TBAAStruct = MTI->getMetadata(LLVMContext::MD_tbaa_struct);
-      B.CreateMemCpyInline(Dest, MTI->getDestAlign(), Src,
-                           MTI->getSourceAlign(), MTI->getLength(),
-                           false, // isVolatile
-                           TBAA, TBAAStruct, ScopeMD, NoAliasMD);
-    } else if (isa<MemCpyInst>(MTI)) {
-      MDNode *TBAAStruct = MTI->getMetadata(LLVMContext::MD_tbaa_struct);
-      B.CreateMemCpy(Dest, MTI->getDestAlign(), Src, MTI->getSourceAlign(),
-                     MTI->getLength(),
-                     false, // isVolatile
-                     TBAA, TBAAStruct, ScopeMD, NoAliasMD);
+      if (MCI->isForceInlined())
+        B.CreateMemCpyInline(Dest, MTI->getDestAlign(), Src,
+                             MTI->getSourceAlign(), MTI->getLength(),
+                             false, // isVolatile
+                             TBAA, TBAAStruct, ScopeMD, NoAliasMD);
+      else
+        B.CreateMemCpy(Dest, MTI->getDestAlign(), Src, MTI->getSourceAlign(),
+                       MTI->getLength(),
+                       false, // isVolatile
+                       TBAA, TBAAStruct, ScopeMD, NoAliasMD);
     } else {
       assert(isa<MemMoveInst>(MTI));
       B.CreateMemMove(Dest, MTI->getDestAlign(), Src, MTI->getSourceAlign(),
