@@ -424,7 +424,7 @@ class MIMG_NoSampler_Helper <mimgopc op, string asm,
                              RegisterClass addr_rc,
                              string dns="">
   : MIMG_gfx6789 <op.GFX10M, (outs dst_rc:$vdata), dns> {
-  let InOperandList = !con((ins addr_rc:$vaddr, SReg_256_XNULL:$srsrc,
+  let InOperandList = !con((ins addr_rc:$vaddr, SReg_RSRC:$srsrc,
                                 DMask:$dmask, UNorm:$unorm, CPol:$cpol,
                                 R128A16:$r128, TFE:$tfe, LWE:$lwe, DA:$da),
                            !if(BaseOpcode.HasD16, (ins D16:$d16), (ins)));
@@ -681,7 +681,7 @@ class MIMG_Store_Helper <mimgopc op, string asm,
                          RegisterClass addr_rc,
                          string dns = "">
   : MIMG_gfx6789<op.GFX10M, (outs), dns> {
-  let InOperandList = !con((ins data_rc:$vdata, addr_rc:$vaddr, SReg_256_XNULL:$srsrc,
+  let InOperandList = !con((ins data_rc:$vdata, addr_rc:$vaddr, SReg_RSRC:$srsrc,
                                 DMask:$dmask, UNorm:$unorm, CPol:$cpol,
                                 R128A16:$r128, TFE:$tfe, LWE:$lwe, DA:$da),
                            !if(BaseOpcode.HasD16, (ins D16:$d16), (ins)));
@@ -923,7 +923,7 @@ class MIMG_Atomic_gfx10<mimgopc op, string opcode,
                !if(enableDisasm, "GFX10", "")> {
   let Constraints = "$vdst = $vdata";
 
-  let InOperandList = (ins DataRC:$vdata, AddrRC:$vaddr0, SReg_RSRC:$srsrc,
+  let InOperandList = (ins DataRC:$vdata, AddrRC:$vaddr0, SReg_256_XNULL:$srsrc,
                            DMask:$dmask, Dim:$dim, UNorm:$unorm, CPol:$cpol,
                            R128A16:$r128, A16:$a16, TFE:$tfe, LWE:$lwe);
   let AsmString = opcode#" $vdst, $vaddr0, $srsrc$dmask$dim$unorm$cpol$r128$a16$tfe$lwe";
@@ -1130,7 +1130,7 @@ multiclass MIMG_Atomic_Renamed <mimgopc op, string asm, string renamed,
 class MIMG_Sampler_Helper <mimgopc op, string asm, RegisterClass dst_rc,
                            RegisterClass src_rc, string dns="">
   : MIMG_gfx6789 <op.VI, (outs dst_rc:$vdata), dns> {
-  let InOperandList = !con((ins src_rc:$vaddr, SReg_256_XNULL:$srsrc, SReg_128_XNULL:$ssamp,
+  let InOperandList = !con((ins src_rc:$vaddr, SReg_RSRC:$srsrc, SReg_128_XNULL:$ssamp,
                                 DMask:$dmask, UNorm:$unorm, CPol:$cpol,
                                 R128A16:$r128, TFE:$tfe, LWE:$lwe, DA:$da),
                            !if(BaseOpcode.HasD16, (ins D16:$d16), (ins)));
