@@ -128,7 +128,8 @@ private:
 // Device type specific OpenACC routine information
 class OpenACCRoutineDeviceTypeInfo {
 public:
-  OpenACCRoutineDeviceTypeInfo(Fortran::common::OpenACCDeviceType dType)
+  explicit OpenACCRoutineDeviceTypeInfo(
+      Fortran::common::OpenACCDeviceType dType)
       : deviceType_{dType} {}
   bool isSeq() const { return isSeq_; }
   void set_isSeq(bool value = true) { isSeq_ = value; }
@@ -161,6 +162,8 @@ private:
   bool isWorker_{false};
   bool isGang_{false};
   unsigned gangDim_{0};
+  // bind("name") -> std::string
+  // bind(sym) -> SymbolRef (requires namemangling in lowering)
   std::optional<std::variant<std::string, SymbolRef>> bindName_;
   Fortran::common::OpenACCDeviceType deviceType_{
       Fortran::common::OpenACCDeviceType::None};
