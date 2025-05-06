@@ -358,8 +358,9 @@ void createPGONameMetadata(GlobalObject &GO, StringRef PGOName);
 bool needsComdatForCounter(const GlobalObject &GV, const Module &M);
 
 /// \c NameStrings is a string composed of one or more possibly encoded
-/// sub-strings. The substrings are separated by 0 or more zero bytes. This
-/// method decodes the string and calls `NameCallback` for each substring.
+/// sub-strings. The substrings are separated by `\01` (returned by
+/// InstrProf.h:getInstrProfNameSeparator). This method decodes the string and
+/// calls `NameCallback` for each substring.
 Error readAndDecodeStrings(StringRef NameStrings,
                            std::function<Error(StringRef)> NameCallback);
 

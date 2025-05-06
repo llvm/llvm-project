@@ -23,11 +23,22 @@ saveStringToMap(MapVector<StringRef, uint64_t> &Map,
   return Iter;
 }
 
+// Returns the canonical name or error.
+static Expected<StringRef> getCanonicalName(StringRef Name) {
+  if (Name.empty())
+    return make_error<StringError>("Empty symbol name",
+                                   llvm::errc::invalid_argument);
+  return InstrProfSymtab::getCanonicalName(Name);
+}
+
 const DataAccessProfRecord *
-DataAccessProfData::getProfileRecord(const SymbolID SymbolID) const {
+DataAccessProfData::getProfileRecord(const SymbolHandle SymbolID) const {
   auto Key = SymbolID;
-  if (std::holds_alternative<StringRef>(SymbolID))
-    Key = InstrProfSymtab::getCanonicalName(std::get<StringRef>(SymbolID));
+  if (std::holds_alternative<StringRef>(SymbolID)) {
+    StringRef Name = std::get<StringRef>(SymbolID);
+    assert(!Name.empty() && "Empty symbol name");
+    Key = InstrProfSymtab::getCanonicalName(Name);
+  }
 
   auto It = Records.find(Key);
   if (It != Records.end())
@@ -36,30 +47,27 @@ DataAccessProfData::getProfileRecord(const SymbolID SymbolID) const {
   return nullptr;
 }
 
-bool DataAccessProfData::isKnownColdSymbol(const SymbolID SymID) const {
+bool DataAccessProfData::isKnownColdSymbol(const SymbolHandle SymID) const {
   if (std::holds_alternative<uint64_t>(SymID))
     return KnownColdHashes.contains(std::get<uint64_t>(SymID));
   return KnownColdSymbols.contains(std::get<StringRef>(SymID));
 }
 
-Error DataAccessProfData::setDataAccessProfile(SymbolID Symbol,
+Error DataAccessProfData::setDataAccessProfile(SymbolHandle Symbol,
                                                uint64_t AccessCount) {
   uint64_t RecordID = -1;
   bool IsStringLiteral = false;
-  SymbolID Key;
+  SymbolHandle Key;
   if (std::holds_alternative<uint64_t>(Symbol)) {
     RecordID = std::get<uint64_t>(Symbol);
     Key = RecordID;
     IsStringLiteral = true;
   } else {
-    StringRef SymbolName = std::get<StringRef>(Symbol);
-    if (SymbolName.empty())
-      return make_error<StringError>("Empty symbol name",
-                                     llvm::errc::invalid_argument);
-
-    StringRef CanonicalName = InstrProfSymtab::getCanonicalName(SymbolName);
-    Key = CanonicalName;
-    RecordID = saveStringToMap(StrToIndexMap, Saver, CanonicalName)->second;
+    auto CanonicalName = getCanonicalName(std::get<StringRef>(Symbol));
+    if (!CanonicalName)
+      return CanonicalName.takeError();
+    std::tie(Key, RecordID) =
+        *saveStringToMap(StrToIndexMap, Saver, *CanonicalName);
     IsStringLiteral = false;
   }
 
@@ -75,8 +83,8 @@ Error DataAccessProfData::setDataAccessProfile(SymbolID Symbol,
 }
 
 Error DataAccessProfData::setDataAccessProfile(
-    SymbolID SymbolID, uint64_t AccessCount,
-    const llvm::SmallVector<DataLocation> &Locations) {
+    SymbolHandle SymbolID, uint64_t AccessCount,
+    ArrayRef<DataLocation> Locations) {
   if (Error E = setDataAccessProfile(SymbolID, AccessCount))
     return E;
 
@@ -89,17 +97,15 @@ Error DataAccessProfData::setDataAccessProfile(
   return Error::success();
 }
 
-Error DataAccessProfData::addKnownSymbolWithoutSamples(SymbolID SymbolID) {
+Error DataAccessProfData::addKnownSymbolWithoutSamples(SymbolHandle SymbolID) {
   if (std::holds_alternative<uint64_t>(SymbolID)) {
     KnownColdHashes.insert(std::get<uint64_t>(SymbolID));
     return Error::success();
   }
-  StringRef SymbolName = std::get<StringRef>(SymbolID);
-  if (SymbolName.empty())
-    return make_error<StringError>("Empty symbol name",
-                                   llvm::errc::invalid_argument);
-  StringRef CanonicalSymName = InstrProfSymtab::getCanonicalName(SymbolName);
-  KnownColdSymbols.insert(CanonicalSymName);
+  auto CanonicalName = getCanonicalName(std::get<StringRef>(SymbolID));
+  if (!CanonicalName)
+    return CanonicalName.takeError();
+  KnownColdSymbols.insert(*CanonicalName);
   return Error::success();
 }
 
@@ -142,7 +148,7 @@ Error DataAccessProfData::serializeSymbolsAndFilenames(ProfOStream &OS) const {
   OS.write(CompressedStringLen);
   // Write the chars in compressed strings.
   for (char C : CompressedStrings)
-    OS.writeByte(static_cast<uint8_t>(c));
+    OS.writeByte(static_cast<uint8_t>(C));
   // Pad up to a multiple of 8.
   // InstrProfReader could read bytes according to 'CompressedStringLen'.
   const uint64_t PaddedLength = alignTo(CompressedStringLen, 8);
@@ -151,11 +157,15 @@ Error DataAccessProfData::serializeSymbolsAndFilenames(ProfOStream &OS) const {
   return Error::success();
 }
 
-uint64_t DataAccessProfData::getEncodedIndex(const SymbolID SymbolID) const {
+uint64_t
+DataAccessProfData::getEncodedIndex(const SymbolHandle SymbolID) const {
   if (std::holds_alternative<uint64_t>(SymbolID))
     return std::get<uint64_t>(SymbolID);
 
-  return StrToIndexMap.find(std::get<StringRef>(SymbolID))->second;
+  auto Iter = StrToIndexMap.find(std::get<StringRef>(SymbolID));
+  assert(Iter != StrToIndexMap.end() &&
+         "String literals not found in StrToIndexMap");
+  return Iter->second;
 }
 
 Error DataAccessProfData::serialize(ProfOStream &OS) const {
@@ -179,13 +189,13 @@ Error DataAccessProfData::serialize(ProfOStream &OS) const {
 }
 
 Error DataAccessProfData::deserializeSymbolsAndFilenames(
-    const unsigned char *&Ptr, uint64_t NumSampledSymbols,
-    uint64_t NumColdKnownSymbols) {
+    const unsigned char *&Ptr, const uint64_t NumSampledSymbols,
+    const uint64_t NumColdKnownSymbols) {
   uint64_t Len =
       support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
 
-  // With M=NumSampledSymbols and N=NumColdKnownSymbols, the first M strings are
-  // symbols with samples, and next N strings are known cold symbols.
+  // The first NumSampledSymbols strings are symbols with samples, and next
+  // NumColdKnownSymbols strings are known cold symbols.
   uint64_t StringCnt = 0;
   std::function<Error(StringRef)> addName = [&](StringRef Name) {
     if (StringCnt < NumSampledSymbols)
@@ -219,7 +229,7 @@ Error DataAccessProfData::deserializeRecords(const unsigned char *&Ptr) {
     uint64_t AccessCount =
         support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
 
-    SymbolID SymbolID;
+    SymbolHandle SymbolID;
     if (IsStringLiteral)
       SymbolID = ID;
     else

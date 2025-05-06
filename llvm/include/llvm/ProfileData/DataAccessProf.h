@@ -70,9 +70,11 @@ struct DataAccessProfRecord {
 /// This class provides profile look-up, serialization and deserialization.
 class DataAccessProfData {
 public:
-  // SymbolID is either a string representing symbol name, or a uint64_t
-  // representing the content hash of a string literal.
-  using SymbolID = std::variant<StringRef, uint64_t>;
+  // SymbolID is either a string representing symbol name if the symbol has
+  // stable mangled name relative to source code, or a uint64_t representing the
+  // content hash of a string literal (with unstable name patterns like
+  // `.str.N[.llvm.hash]`). The StringRef is owned by the class's saver object.
+  using SymbolHandle = std::variant<StringRef, uint64_t>;
   using StringToIndexMap = llvm::MapVector<StringRef, uint64_t>;
 
   DataAccessProfData() : Saver(Allocator) {}
@@ -90,38 +92,32 @@ public:
   /// Returns a pointer of profile record for \p SymbolID, or nullptr if there
   /// isn't a record. Internally, this function will canonicalize the symbol
   /// name before the lookup.
-  const DataAccessProfRecord *getProfileRecord(const SymbolID SymID) const;
+  const DataAccessProfRecord *getProfileRecord(const SymbolHandle SymID) const;
 
   /// Returns true if \p SymID is seen in profiled binaries and cold.
-  bool isKnownColdSymbol(const SymbolID SymID) const;
+  bool isKnownColdSymbol(const SymbolHandle SymID) const;
 
-  /// Methods to add symbolized data access profile. Returns error if duplicated
+  /// Methods to set symbolized data access profile. Returns error if duplicated
   /// symbol names or content hashes are seen. The user of this class should
   /// aggregate counters that correspond to the same symbol name or with the
-  /// same string literal hash before calling 'add*' methods.
-  Error setDataAccessProfile(SymbolID SymbolID, uint64_t AccessCount);
+  /// same string literal hash before calling 'set*' methods.
+  Error setDataAccessProfile(SymbolHandle SymbolID, uint64_t AccessCount);
   /// Similar to the method above, for records with \p Locations representing
   /// the `filename:line` where this symbol shows up. Note because of linker's
   /// merge of identical symbols (e.g., unnamed_addr string literals), one
   /// symbol is likely to have multiple locations.
-  Error setDataAccessProfile(SymbolID SymbolID, uint64_t AccessCount,
-                             const llvm::SmallVector<DataLocation> &Locations);
-  Error addKnownSymbolWithoutSamples(SymbolID SymbolID);
+  Error setDataAccessProfile(SymbolHandle SymbolID, uint64_t AccessCount,
+                             ArrayRef<DataLocation> Locations);
+  Error addKnownSymbolWithoutSamples(SymbolHandle SymbolID);
 
   /// Returns an iterable StringRef for strings in the order they are added.
   /// Each string may be a symbol name or a file name.
   auto getStrings() const {
-    ArrayRef<std::pair<StringRef, uint64_t>> RefSymbolNames(
-        StrToIndexMap.begin(), StrToIndexMap.end());
-    return llvm::make_first_range(RefSymbolNames);
+    return llvm::make_first_range(StrToIndexMap.getArrayRef());
   }
 
   /// Returns array reference for various internal data structures.
-  ArrayRef<
-      std::pair<std::variant<StringRef, uint64_t>, DataAccessProfRecord>>
-  getRecords() const {
-    return Records.getArrayRef();
-  }
+  auto getRecords() const { return Records.getArrayRef(); }
   ArrayRef<StringRef> getKnownColdSymbols() const {
     return KnownColdSymbols.getArrayRef();
   }
@@ -137,13 +133,13 @@ private:
   /// start of the next payload.
   Error deserializeSymbolsAndFilenames(const unsigned char *&Ptr,
                                        const uint64_t NumSampledSymbols,
-                                       uint64_t NumColdKnownSymbols);
+                                       const uint64_t NumColdKnownSymbols);
 
   /// Decode the records and increment \p Ptr to the start of the next payload.
   Error deserializeRecords(const unsigned char *&Ptr);
 
   /// A helper function to compute a storage index for \p SymbolID.
-  uint64_t getEncodedIndex(const SymbolID SymbolID) const;
+  uint64_t getEncodedIndex(const SymbolHandle SymbolID) const;
 
   // Keeps owned copies of the input strings.
   // NOTE: Keep `Saver` initialized before other class members that reference
@@ -151,9 +147,8 @@ private:
   llvm::BumpPtrAllocator Allocator;
   llvm::UniqueStringSaver Saver;
 
-  // `Records` stores the records and `SymbolToRecordIndex` maps a symbol ID to
-  // its record index.
-  MapVector<SymbolID, DataAccessProfRecord> Records;
+  // `Records` stores the records.
+  MapVector<SymbolHandle, DataAccessProfRecord> Records;
 
   // Use MapVector to keep input order of strings for serialization and
   // deserialization.
