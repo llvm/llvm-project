@@ -809,7 +809,8 @@ public:
   /// \c NullTerminated is supplied, it is set to whether there is at least one
   /// NUL character in the string.
   std::optional<StringEvalResult>
-  tryEvaluateString(ASTContext &Ctx, bool *NullTerminated = nullptr) const;
+  tryEvaluateString(ASTContext &Ctx, bool *NullTerminated = nullptr,
+                    bool InConstantContext = false) const;
 
   /// Enumeration used to describe the kind of Null pointer constant
   /// returned from \c isNullPointerConstant().

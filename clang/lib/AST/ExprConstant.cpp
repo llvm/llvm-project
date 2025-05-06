@@ -18081,12 +18081,18 @@ bool Expr::StringEvalResult::getStringLiteral(const StringLiteral *&SL,
 }
 
 std::optional<Expr::StringEvalResult>
-Expr::tryEvaluateString(ASTContext &Ctx, bool *NullTerminated) const {
+Expr::tryEvaluateString(ASTContext &Ctx, bool *NullTerminated,
+                        bool InConstantContext) const {
   if (NullTerminated)
     *NullTerminated = false;
 
   Expr::EvalStatus Status;
-  EvalInfo Info(Ctx, Status, EvalInfo::EM_ConstantFold);
+  EvalInfo Info(Ctx, Status,
+                (InConstantContext &&
+                 (Ctx.getLangOpts().CPlusPlus || Ctx.getLangOpts().C23))
+                    ? EvalInfo::EM_ConstantExpression
+                    : EvalInfo::EM_ConstantFold);
+  Info.InConstantContext = InConstantContext;
   LValue String;
   QualType CharTy;
   if (!EvaluateStringAsLValue(Info, this, CharTy, String))

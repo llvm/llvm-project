@@ -310,24 +310,29 @@ void test_constexpr_string() {
 #endif
 
 #if __cplusplus >= 202300L
-constexpr const char *consteval_str() {
+constexpr const char *consteval_d() {
   if consteval {
-    return "%s";
+    return "%s"; // expected-note 3{{format string is defined here}}
   } else {
-    return "%d"; // expected-note 2{{format string is defined here}}
+    return "%d"; // expected-note{{format string is defined here}}
   }
 }
 
-constexpr const char *consteval_str_global = consteval_str();
+constexpr const char *consteval_s = consteval_d();
+constinit const char *const consteval_s2 = consteval_d();
 
 void test_consteval_str() {
-  printf(consteval_str(), 789); // no-warning
-  printf(consteval_str(), "hello"); // expected-warning {{format specifies type 'int' but the argument has type 'const char *'}}
+  printf(consteval_d(), 789); // no-warning
+  printf(consteval_d(), "hello"); // expected-warning {{format specifies type 'int' but the argument has type 'const char *'}}
 
-#if 0
-  // TODO: incorrect result
-  printf(consteval_str_global, 1234); // expected-warning {{format specifies type 'const char *' but the argument has type 'int'}}
-  printf(consteval_str_global, "hello"); // no-warning
-#endif
+  printf(consteval_s, 1234); // expected-warning {{format specifies type 'char *' but the argument has type 'int'}}
+  printf(consteval_s, "hello"); // no-warning
+
+  printf(consteval_s2, 1234); // expected-warning {{format specifies type 'char *' but the argument has type 'int'}}
+  printf(consteval_s2, "hello"); // no-warning
+
+  constexpr const char *consteval_s3 = consteval_d();
+  printf(consteval_s3, 1234); // expected-warning {{format specifies type 'char *' but the argument has type 'int'}}
+  printf(consteval_s3, "hello"); // no-warning
 }
 #endif
