@@ -7723,6 +7723,8 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
       case Intrinsic::maxnum:
       case Intrinsic::minimum:
       case Intrinsic::maximum:
+      case Intrinsic::minimumnum:
+      case Intrinsic::maximumnum:
       case Intrinsic::is_fpclass:
       case Intrinsic::ldexp:
       case Intrinsic::frexp:
