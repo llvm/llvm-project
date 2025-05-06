@@ -2127,7 +2127,7 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
           Builder.CreateMul(StartIdx0, ConstantInt::get(StartIdx0->getType(),
                                                         getUnrollPart(*this)));
     }
-    StartIdx0 = Builder.CreateTrunc(StartIdx0, IntStepTy);
+    StartIdx0 = Builder.CreateSExtOrTrunc(StartIdx0, IntStepTy);
   }
 
   if (!FirstLaneOnly && State.VF.isScalable()) {
