@@ -72,8 +72,6 @@ static StringRef OutputFile;
 /// Directory to dump SPIR-V IR if requested by user.
 static SmallString<128> SPIRVDumpDir;
 
-static bool IsAOTCompileNeeded = false;
-
 using OffloadingImage = OffloadBinary::OffloadingImage;
 
 static void printVersion(raw_ostream &OS) {
@@ -383,11 +381,13 @@ static Error runSPIRVCodeGen(StringRef File, const ArgList &Args,
 }
 
 /// Run AOT compilation for Intel CPU.
-/// Calls opencl-aot tool to generate device code for Intel CPU backend.
-/// 'InputFile' is the input SPIR-V file.
-/// 'Args' encompasses all arguments required for linking and wrapping device
-/// code and will be parsed to generate options required to be passed into the
-/// SYCL AOT compilation step.
+/// Calls opencl-aot tool to generate device code for the Intel OpenCL CPU
+/// Runtime.
+/// \param InputFile The input SPIR-V file.
+/// \param OutputFile The output file name.
+/// \param Args Encompasses all arguments required for linking and wrapping
+/// device code and will be parsed to generate options required to be passed
+/// into the SYCL AOT compilation step.
 static Error runAOTCompileIntelCPU(StringRef InputFile, StringRef OutputFile,
                                    const ArgList &Args) {
   SmallVector<StringRef, 8> CmdArgs;
@@ -408,12 +408,14 @@ static Error runAOTCompileIntelCPU(StringRef InputFile, StringRef OutputFile,
   return Error::success();
 }
 
-/// Run AOT compilation for Intel GPU
-/// Calls ocloc tool to generate device code for Intel GPU backend.
-/// 'InputFile' is the input SPIR-V file.
-/// 'Args' encompasses all arguments required for linking and wrapping device
-/// code and will be parsed to generate options required to be passed into the
-/// SYCL AOT compilation step.
+/// Run AOT compilation for Intel GPU.
+/// Calls ocloc tool to generate device code for the Intel Graphics Compute
+/// Runtime.
+/// \param InputFile The input SPIR-V file.
+/// \param OutputFile The output file name.
+/// \param Args Encompasses all arguments required for linking and wrapping
+/// device code and will be parsed to generate options required to be passed
+/// into the SYCL AOT compilation step.
 static Error runAOTCompileIntelGPU(StringRef InputFile, StringRef OutputFile,
                                    const ArgList &Args) {
   SmallVector<StringRef, 8> CmdArgs;
@@ -447,10 +449,11 @@ static Error runAOTCompileIntelGPU(StringRef InputFile, StringRef OutputFile,
 }
 
 /// Run AOT compilation for Intel CPU/GPU.
-/// 'InputFile' is the input SPIR-V file.
-/// 'Args' encompasses all arguments required for linking and wrapping device
-/// code and will be parsed to generate options required to be passed into the
-/// SYCL AOT compilation step.
+/// \param InputFile The input SPIR-V file.
+/// \param OutputFile The output file name.
+/// \param Args Encompasses all arguments required for linking and wrapping
+/// device code and will be parsed to generate options required to be passed
+/// into the SYCL AOT compilation step.
 static Error runAOTCompile(StringRef InputFile, StringRef OutputFile,
                            const ArgList &Args) {
   StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
@@ -483,7 +486,10 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
   SmallVector<std::string> SplitModules;
   SplitModules.emplace_back(*LinkedFile);
 
-  // SPIR-V code generation step and AOT compilation step.
+  bool IsAOTCompileNeeded = IsIntelOffloadArch(
+      StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ)));
+
+  // SPIR-V code generation step.
   for (size_t I = 0, E = SplitModules.size(); I != E; ++I) {
     StringRef Stem = OutputFile.rsplit('.').first;
     std::string SPVFile = (Stem + "_" + Twine(I) + ".spv").str();
@@ -492,6 +498,7 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
     if (!IsAOTCompileNeeded) {
       SplitModules[I] = SPVFile;
     } else {
+      // AOT compilation step.
       std::string AOTFile = (Stem + "_" + Twine(I) + ".out").str();
       if (Error Err = runAOTCompile(SPVFile, AOTFile, Args))
         return Err;
@@ -569,9 +576,6 @@ int main(int argc, char **argv) {
   Verbose = Args.hasArg(OPT_verbose);
   DryRun = Args.hasArg(OPT_dry_run);
   SaveTemps = Args.hasArg(OPT_save_temps);
-
-  IsAOTCompileNeeded = IsIntelOffloadArch(
-      StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ)));
 
   if (!Args.hasArg(OPT_o))
     reportError(createStringError("Output file must be specified"));

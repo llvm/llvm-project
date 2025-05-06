@@ -53,4 +53,4 @@ def ocloc_options_EQ : Joined<["--", "-"], "ocloc-options=">,
 
 def opencl_aot_options_EQ : Joined<["--", "-"], "opencl-aot-options=">,
   Flags<[LinkerOnlyOption]>,
-  HelpText<"Options passed to opencl-aot for CPU AOT compilation">;
+  HelpText<"Options passed to opencl-aot for Intel CPU AOT compilation">;
