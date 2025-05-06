@@ -1521,13 +1521,13 @@ struct UpdateNdOffsetDistribution final : public gpu::WarpDistributionPattern {
 /// ```
 /// To
 /// ```
-///   %r:2 = gpu.warp_execute_on_lane_0(%laneid) -> (
+///   %r:1 = gpu.warp_execute_on_lane_0(%laneid) -> (
 ///    !xegpu.tensor_desc<4x8xf32, #layout0>) {
 ///     gpu.yield %arg0: !xegpu.tensor_desc<4x8xf32, #layout0>
 ///   }
 ///   %1 = unrealized_conversion_cast %r#0: !xegpu.tensor_desc<4x8xf32,
 ///     #layout0> -> !xegpu.tensor_desc<4x8xf32>
-///   xegpu.prefetch_nd %0 : !xegpu.tensor_desc<4x8xf32>
+///   xegpu.prefetch_nd %1 : !xegpu.tensor_desc<4x8xf32>
 ///
 /// ```
 struct PrefetchNdDistribution final : public gpu::WarpDistributionPattern {
