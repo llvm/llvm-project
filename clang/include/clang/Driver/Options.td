@@ -2544,14 +2544,14 @@ def fno_sanitize_annotate_debug_info_EQ
       HelpText<"Do not allow compiler to annotate sanitizer instrumentation "
                "with extra debug info for the specified sanitizers">;
 def fsanitize_annotate_debug_info
-    : Flag<["-"], "fsanitize-annotate_debug_info">,
+    : Flag<["-"], "fsanitize-annotate-debug-info">,
       Group<f_clang_Group>,
       Alias<fsanitize_annotate_debug_info_EQ>,
       AliasArgs<["all"]>,
       HelpText<"Allow compiler to annotate sanitizer instrumentation with "
                "extra debug info for all sanitizers, where supported">;
 def fno_sanitize_annotate_debug_info
-    : Flag<["-"], "fno-sanitize-annotate_debug_info">,
+    : Flag<["-"], "fno-sanitize-annotate-debug-info">,
       Group<f_clang_Group>,
       Alias<fno_sanitize_annotate_debug_info_EQ>,
       AliasArgs<["all"]>,
