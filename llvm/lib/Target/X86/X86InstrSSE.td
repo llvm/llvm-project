@@ -5705,7 +5705,7 @@ let Predicates = [UseSSE41, OptForSize] in {
 // commuting would change which operand is inverted.
 def X86ptest_commutable : PatFrag<(ops node:$src1, node:$src2),
                                   (X86ptest node:$src1, node:$src2), [{
-  return onlyUsesZeroFlag(SDValue(Node, 0));
+  return onlyUsesZeroFlag(SDValue(N, 0));
 }]>;
 
 // ptest instruction we'll lower to this in X86ISelLowering primarily from
@@ -5772,7 +5772,7 @@ multiclass avx_bittest<bits<8> opc, string OpcodeStr, RegisterClass RC,
 // used, commuting would change which operand is inverted.
 def X86testp_commutable : PatFrag<(ops node:$src1, node:$src2),
                                   (X86testp node:$src1, node:$src2), [{
-  return onlyUsesZeroFlag(SDValue(Node, 0));
+  return onlyUsesZeroFlag(SDValue(N, 0));
 }]>;
 
 let Defs = [EFLAGS], Predicates = [HasAVX] in {
