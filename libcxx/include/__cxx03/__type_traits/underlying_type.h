@@ -32,11 +32,6 @@ struct __underlying_type_impl<_Tp, true> {
 template <class _Tp>
 struct underlying_type : __underlying_type_impl<_Tp, is_enum<_Tp>::value> {};
 
-#if _LIBCPP_STD_VER >= 14
-template <class _Tp>
-using underlying_type_t = typename underlying_type<_Tp>::type;
-#endif
-
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___CXX03___TYPE_TRAITS_UNDERLYING_TYPE_H

@@ -73,6 +73,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LockstepReverseIterator.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -1129,13 +1130,17 @@ static void cloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
 
     Instruction *NewBonusInst = BonusInst.clone();
 
-    if (!isa<DbgInfoIntrinsic>(BonusInst) &&
-        PTI->getDebugLoc() != NewBonusInst->getDebugLoc()) {
-      // Unless the instruction has the same !dbg location as the original
-      // branch, drop it. When we fold the bonus instructions we want to make
-      // sure we reset their debug locations in order to avoid stepping on
-      // dead code caused by folding dead branches.
-      NewBonusInst->setDebugLoc(DebugLoc());
+    if (!isa<DbgInfoIntrinsic>(BonusInst)) {
+      if (!NewBonusInst->getDebugLoc().isSameSourceLocation(
+              PTI->getDebugLoc())) {
+        // Unless the instruction has the same !dbg location as the original
+        // branch, drop it. When we fold the bonus instructions we want to make
+        // sure we reset their debug locations in order to avoid stepping on
+        // dead code caused by folding dead branches.
+        NewBonusInst->setDebugLoc(DebugLoc());
+      } else if (const DebugLoc &DL = NewBonusInst->getDebugLoc()) {
+        mapAtomInstance(DL, VMap);
+      }
     }
 
     RemapInstruction(NewBonusInst, VMap,
@@ -1180,6 +1185,19 @@ static void cloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
       assert(PN->getIncomingBlock(U) == PredBlock &&
              "Not in block-closed SSA form?");
       U.set(NewBonusInst);
+    }
+  }
+
+  // Key Instructions: We may have propagated atom info into the pred. If the
+  // pred's terminator already has atom info do nothing as merging would drop
+  // one atom group anyway. If it doesn't, propagte the remapped atom group
+  // from BB's terminator.
+  if (auto &PredDL = PTI->getDebugLoc()) {
+    auto &DL = BB->getTerminator()->getDebugLoc();
+    if (!PredDL->getAtomGroup() && DL && DL->getAtomGroup() &&
+        PredDL.isSameSourceLocation(DL)) {
+      PTI->setDebugLoc(DL);
+      RemapSourceAtom(PTI, VMap);
     }
   }
 }
