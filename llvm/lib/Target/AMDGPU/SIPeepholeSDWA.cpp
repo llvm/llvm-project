@@ -1106,7 +1106,6 @@ void SIPeepholeSDWA::convertVcndmaskToVOP2(MachineInstr &MI,
                        .add(*TII->getNamedOperand(MI, AMDGPU::OpName::src1))
                        .setMIFlags(MI.getFlags());
   LLVM_DEBUG(dbgs() << "Converted to VOP2: " << *Converted);
-  (void)Converted;
   MI.eraseFromParent();
 }
 
