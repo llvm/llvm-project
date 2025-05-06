@@ -6748,7 +6748,7 @@ bool Parser::isConstructorDeclarator(bool IsUnqualified, bool DeductionGuide,
 /// Note: vendor can be GNU, MS, etc and can be explicitly controlled via
 /// AttrRequirements bitmask values.
 void Parser::ParseTypeQualifierListOpt(
-    DeclSpec &DS, unsigned AttrReqs, bool AtomicAllowed,
+    DeclSpec &DS, unsigned AttrReqs, bool AtomicOrPtrauthAllowed,
     bool IdentifierRequired,
     std::optional<llvm::function_ref<void()>> CodeCompletionHandler,
     // TO_UPSTREAM(BoundsSafety)
@@ -6790,7 +6790,7 @@ void Parser::ParseTypeQualifierListOpt(
                                  getLangOpts());
       break;
     case tok::kw__Atomic:
-      if (!AtomicAllowed)
+      if (!AtomicOrPtrauthAllowed)
         goto DoneWithTypeQuals;
       diagnoseUseOfC11Keyword(Tok);
       isInvalid = DS.SetTypeQual(DeclSpec::TQ_atomic, Loc, PrevSpec, DiagID,
@@ -6815,6 +6815,8 @@ void Parser::ParseTypeQualifierListOpt(
 
     // __ptrauth qualifier.
     case tok::kw___ptrauth:
+      if (!AtomicOrPtrauthAllowed)
+        goto DoneWithTypeQuals;
       ParsePtrauthQualifier(DS.getAttributes());
       EndLoc = PrevTokLocation;
       continue;
@@ -7122,7 +7124,8 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
     LateParsedAttrList *LateAttrsPtr =
         enableTypeAttrLateParsing(getLangOpts()) ? &LateAttrs : nullptr;
     // Upstream doesn't pass LateAttrsPtr
-    ParseTypeQualifierListOpt(DS, Reqs, true, !D.mayOmitIdentifier(),
+    ParseTypeQualifierListOpt(DS, Reqs, /*AtomicOrPtrauthAllowed=*/true,
+                              !D.mayOmitIdentifier(),
                               std::nullopt, LateAttrsPtr);
     /* TO_UPSTREAM(BoundsSafety) OFF */
     D.ExtendWithDeclSpec(DS);
@@ -8047,7 +8050,7 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
       // Parse cv-qualifier-seq[opt].
       ParseTypeQualifierListOpt(
           DS, AR_NoAttributesParsed,
-          /*AtomicAllowed*/ false,
+          /*AtomicOrPtrauthAllowed=*/false,
           /*IdentifierRequired=*/false, llvm::function_ref<void()>([&]() {
             Actions.CodeCompletion().CodeCompleteFunctionQualifiers(DS, D);
           }));
