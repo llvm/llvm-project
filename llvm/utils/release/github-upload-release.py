@@ -51,12 +51,9 @@ LLVM {release} Release
 
 # Package Types
 
-* If the file name starts with `LLVM-` then it is a binary release of LLVM for the platform at the end of the file name. For example, `LLVM-{release}-Linux-ARM64.tar.xz` contains LLVM binaries for Arm64 Linux.
-* If the file name starts with `clang+llvm-` then it is a binary release of LLVM for the platform at the end of the filename. For example, `clang+llvm-{release}-armv7a-linux-gnueabihf.tar.gz` contains LLVM binaries for Armv7-a Linux.
+Each platform has one binary release package. The file name starts with either `LLVM-` or `clang+llvm-` and ends with the platform's name. For example, `LLVM-{release}-Linux-ARM64.tar.xz` contains LLVM binaries for Arm64 Linux.
 
-Most of the time, you will want one of the files described above. Each platform will have either an `LLVM-` package or a `clang+llvm-` package.
-
-Except for Windows. Where the `LLVM-` file is an installer intended for using LLVM as a toolchain and the `clang+llvm-` archive contains the contents of the installer, plus libraries and tools not normally used in a toolchain. You most likely want the `LLLVM-` installer, unless you are developing software which itself uses LLVM, in which case choose the `clang+llvm-` archive.
+Except for Windows. Where `LLVM-` is an installer intended for using LLVM as a toolchain and `clang+llvm-` contains the contents of the installer, plus libraries and tools not normally used in a toolchain. You most likely want the `LLVM-` installer, unless you are developing software which itself uses LLVM, in which case choose `clang+llvm-`.
 
 If you do not find a release package for your platform, you may be able to find a community built package on the LLVM Discourse forum thread for this release. Remember that these are built by volunteers and may not always be available.
 
