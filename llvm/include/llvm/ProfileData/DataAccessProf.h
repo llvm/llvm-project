@@ -52,7 +52,11 @@ struct DataAccessProfRecord {
 
   // Represents a data symbol. The semantic comes in two forms: a symbol index
   // for symbol name if `IsStringLiteral` is false, or the hash of a string
-  // content if `IsStringLiteral` is true. Required.
+  // content if `IsStringLiteral` is true. For most of the symbolizable static
+  // data, the mangled symbol names remain stable relative to the source code
+  // and therefore used to identify symbols across binary releases. String
+  // literals have unstable name patterns like `.str.N[.llvm.hash]`, so we use
+  // the content hash instead. This is a required field.
   uint64_t SymbolID;
 
   // The access count of symbol. Required.

@@ -35,9 +35,15 @@ const DataAccessProfRecord *
 DataAccessProfData::getProfileRecord(const SymbolHandle SymbolID) const {
   auto Key = SymbolID;
   if (std::holds_alternative<StringRef>(SymbolID)) {
-    StringRef Name = std::get<StringRef>(SymbolID);
-    assert(!Name.empty() && "Empty symbol name");
-    Key = InstrProfSymtab::getCanonicalName(Name);
+    auto NameOrErr = getCanonicalName(std::get<StringRef>(SymbolID));
+    // If name canonicalization fails, suppress the error inside.
+    if (!NameOrErr) {
+      assert(
+          std::get<StringRef>(SymbolID).empty() &&
+          "Name canonicalization only fails when stringified string is empty.");
+      return nullptr;
+    }
+    Key = *NameOrErr;
   }
 
   auto It = Records.find(Key);
