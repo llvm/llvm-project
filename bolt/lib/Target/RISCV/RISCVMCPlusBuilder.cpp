@@ -435,19 +435,19 @@ public:
     case ELF::R_RISCV_TLS_GD_HI20:
       // The GOT is reused so no need to create GOT relocations
     case ELF::R_RISCV_PCREL_HI20:
-      return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_PCREL_HI, Ctx);
+      return RISCVMCExpr::create(Expr, ELF::R_RISCV_PCREL_HI20, Ctx);
     case ELF::R_RISCV_PCREL_LO12_I:
     case ELF::R_RISCV_PCREL_LO12_S:
       return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_PCREL_LO, Ctx);
     case ELF::R_RISCV_HI20:
-      return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_HI, Ctx);
+      return RISCVMCExpr::create(Expr, ELF::R_RISCV_HI20, Ctx);
     case ELF::R_RISCV_LO12_I:
     case ELF::R_RISCV_LO12_S:
       return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_LO, Ctx);
     case ELF::R_RISCV_CALL:
       return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_CALL, Ctx);
     case ELF::R_RISCV_CALL_PLT:
-      return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_CALL_PLT, Ctx);
+      return RISCVMCExpr::create(Expr, ELF::R_RISCV_CALL_PLT, Ctx);
     }
   }
 
@@ -473,7 +473,7 @@ public:
     default:
       return false;
     case RISCVMCExpr::VK_CALL:
-    case RISCVMCExpr::VK_CALL_PLT:
+    case ELF::R_RISCV_CALL_PLT:
       return true;
     }
   }

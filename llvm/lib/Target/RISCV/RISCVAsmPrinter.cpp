@@ -949,49 +949,49 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
     Kind = RISCVMCExpr::VK_None;
     break;
   case RISCVII::MO_CALL:
-    Kind = RISCVMCExpr::VK_CALL_PLT;
+    Kind = ELF::R_RISCV_CALL_PLT;
     break;
   case RISCVII::MO_LO:
     Kind = RISCVMCExpr::VK_LO;
     break;
   case RISCVII::MO_HI:
-    Kind = RISCVMCExpr::VK_HI;
+    Kind = ELF::R_RISCV_HI20;
     break;
   case RISCVII::MO_PCREL_LO:
     Kind = RISCVMCExpr::VK_PCREL_LO;
     break;
   case RISCVII::MO_PCREL_HI:
-    Kind = RISCVMCExpr::VK_PCREL_HI;
+    Kind = ELF::R_RISCV_PCREL_HI20;
     break;
   case RISCVII::MO_GOT_HI:
-    Kind = RISCVMCExpr::VK_GOT_HI;
+    Kind = ELF::R_RISCV_GOT_HI20;
     break;
   case RISCVII::MO_TPREL_LO:
     Kind = RISCVMCExpr::VK_TPREL_LO;
     break;
   case RISCVII::MO_TPREL_HI:
-    Kind = RISCVMCExpr::VK_TPREL_HI;
+    Kind = ELF::R_RISCV_TPREL_HI20;
     break;
   case RISCVII::MO_TPREL_ADD:
-    Kind = RISCVMCExpr::VK_TPREL_ADD;
+    Kind = ELF::R_RISCV_TPREL_ADD;
     break;
   case RISCVII::MO_TLS_GOT_HI:
-    Kind = RISCVMCExpr::VK_TLS_GOT_HI;
+    Kind = ELF::R_RISCV_TLS_GOT_HI20;
     break;
   case RISCVII::MO_TLS_GD_HI:
-    Kind = RISCVMCExpr::VK_TLS_GD_HI;
+    Kind = ELF::R_RISCV_TLS_GD_HI20;
     break;
   case RISCVII::MO_TLSDESC_HI:
-    Kind = RISCVMCExpr::VK_TLSDESC_HI;
+    Kind = ELF::R_RISCV_TLSDESC_HI20;
     break;
   case RISCVII::MO_TLSDESC_LOAD_LO:
-    Kind = RISCVMCExpr::VK_TLSDESC_LOAD_LO;
+    Kind = ELF::R_RISCV_TLSDESC_LOAD_LO12;
     break;
   case RISCVII::MO_TLSDESC_ADD_LO:
-    Kind = RISCVMCExpr::VK_TLSDESC_ADD_LO;
+    Kind = ELF::R_RISCV_TLSDESC_ADD_LO12;
     break;
   case RISCVII::MO_TLSDESC_CALL:
-    Kind = RISCVMCExpr::VK_TLSDESC_CALL;
+    Kind = ELF::R_RISCV_TLSDESC_CALL;
     break;
   }
 

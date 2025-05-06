@@ -583,7 +583,7 @@ public:
 
     RISCVMCExpr::Specifier VK = RISCVMCExpr::VK_None;
     return RISCVAsmParser::classifySymbolRef(getImm(), VK) &&
-           (VK == RISCVMCExpr::VK_CALL || VK == RISCVMCExpr::VK_CALL_PLT);
+           (VK == RISCVMCExpr::VK_CALL || VK == ELF::R_RISCV_CALL_PLT);
   }
 
   bool isPseudoJumpSymbol() const {
@@ -605,7 +605,7 @@ public:
 
     RISCVMCExpr::Specifier VK = RISCVMCExpr::VK_None;
     return RISCVAsmParser::classifySymbolRef(getImm(), VK) &&
-           VK == RISCVMCExpr::VK_TPREL_ADD;
+           VK == ELF::R_RISCV_TPREL_ADD;
   }
 
   bool isTLSDESCCallSymbol() const {
@@ -616,7 +616,7 @@ public:
 
     RISCVMCExpr::Specifier VK = RISCVMCExpr::VK_None;
     return RISCVAsmParser::classifySymbolRef(getImm(), VK) &&
-           VK == RISCVMCExpr::VK_TLSDESC_CALL;
+           VK == ELF::R_RISCV_TLSDESC_CALL;
   }
 
   bool isCSRSystemRegister() const { return isSystemRegister(); }
@@ -868,8 +868,8 @@ public:
     return RISCVAsmParser::classifySymbolRef(getImm(), VK) &&
            (VK == RISCVMCExpr::VK_LO || VK == RISCVMCExpr::VK_PCREL_LO ||
             VK == RISCVMCExpr::VK_TPREL_LO ||
-            VK == RISCVMCExpr::VK_TLSDESC_LOAD_LO ||
-            VK == RISCVMCExpr::VK_TLSDESC_ADD_LO);
+            VK == ELF::R_RISCV_TLSDESC_LOAD_LO12 ||
+            VK == ELF::R_RISCV_TLSDESC_ADD_LO12);
   }
 
   bool isSImm12Lsb00000() const {
@@ -912,7 +912,7 @@ public:
 
     RISCVMCExpr::Specifier VK = RISCVMCExpr::VK_None;
     return RISCVAsmParser::classifySymbolRef(getImm(), VK) &&
-           (VK == RISCVMCExpr::VK_HI || VK == RISCVMCExpr::VK_TPREL_HI);
+           (VK == ELF::R_RISCV_HI20 || VK == ELF::R_RISCV_TPREL_HI20);
   }
 
   bool isUImm20AUIPC() const {
@@ -925,10 +925,9 @@ public:
 
     RISCVMCExpr::Specifier VK = RISCVMCExpr::VK_None;
     return RISCVAsmParser::classifySymbolRef(getImm(), VK) &&
-           (VK == RISCVMCExpr::VK_PCREL_HI || VK == RISCVMCExpr::VK_GOT_HI ||
-            VK == RISCVMCExpr::VK_TLS_GOT_HI ||
-            VK == RISCVMCExpr::VK_TLS_GD_HI ||
-            VK == RISCVMCExpr::VK_TLSDESC_HI);
+           (VK == ELF::R_RISCV_PCREL_HI20 || VK == ELF::R_RISCV_GOT_HI20 ||
+            VK == ELF::R_RISCV_TLS_GOT_HI20 || VK == ELF::R_RISCV_TLS_GD_HI20 ||
+            VK == ELF::R_RISCV_TLSDESC_HI20);
   }
 
   bool isImmZero() const {
@@ -2168,7 +2167,7 @@ ParseStatus RISCVAsmParser::parseCallSymbol(OperandVector &Operands) {
   }
 
   SMLoc E = SMLoc::getFromPointer(S.getPointer() + Identifier.size());
-  RISCVMCExpr::Specifier Kind = RISCVMCExpr::VK_CALL_PLT;
+  RISCVMCExpr::Specifier Kind = ELF::R_RISCV_CALL_PLT;
 
   MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
   Res = MCSymbolRefExpr::create(Sym, getContext());
@@ -3409,7 +3408,7 @@ void RISCVAsmParser::emitLoadLocalAddress(MCInst &Inst, SMLoc IDLoc,
   //             ADDI rdest, rdest, %pcrel_lo(TmpLabel)
   MCRegister DestReg = Inst.getOperand(0).getReg();
   const MCExpr *Symbol = Inst.getOperand(1).getExpr();
-  emitAuipcInstPair(DestReg, DestReg, Symbol, RISCVMCExpr::VK_PCREL_HI,
+  emitAuipcInstPair(DestReg, DestReg, Symbol, ELF::R_RISCV_PCREL_HI20,
                     RISCV::ADDI, IDLoc, Out);
 }
 
@@ -3424,7 +3423,7 @@ void RISCVAsmParser::emitLoadGlobalAddress(MCInst &Inst, SMLoc IDLoc,
   MCRegister DestReg = Inst.getOperand(0).getReg();
   const MCExpr *Symbol = Inst.getOperand(1).getExpr();
   unsigned SecondOpcode = isRV64() ? RISCV::LD : RISCV::LW;
-  emitAuipcInstPair(DestReg, DestReg, Symbol, RISCVMCExpr::VK_GOT_HI,
+  emitAuipcInstPair(DestReg, DestReg, Symbol, ELF::R_RISCV_GOT_HI20,
                     SecondOpcode, IDLoc, Out);
 }
 
@@ -3454,7 +3453,7 @@ void RISCVAsmParser::emitLoadTLSIEAddress(MCInst &Inst, SMLoc IDLoc,
   MCRegister DestReg = Inst.getOperand(0).getReg();
   const MCExpr *Symbol = Inst.getOperand(1).getExpr();
   unsigned SecondOpcode = isRV64() ? RISCV::LD : RISCV::LW;
-  emitAuipcInstPair(DestReg, DestReg, Symbol, RISCVMCExpr::VK_TLS_GOT_HI,
+  emitAuipcInstPair(DestReg, DestReg, Symbol, ELF::R_RISCV_TLS_GOT_HI20,
                     SecondOpcode, IDLoc, Out);
 }
 
@@ -3468,7 +3467,7 @@ void RISCVAsmParser::emitLoadTLSGDAddress(MCInst &Inst, SMLoc IDLoc,
   //             ADDI rdest, rdest, %pcrel_lo(TmpLabel)
   MCRegister DestReg = Inst.getOperand(0).getReg();
   const MCExpr *Symbol = Inst.getOperand(1).getExpr();
-  emitAuipcInstPair(DestReg, DestReg, Symbol, RISCVMCExpr::VK_TLS_GD_HI,
+  emitAuipcInstPair(DestReg, DestReg, Symbol, ELF::R_RISCV_TLS_GD_HI20,
                     RISCV::ADDI, IDLoc, Out);
 }
 
@@ -3494,7 +3493,7 @@ void RISCVAsmParser::emitLoadStoreSymbol(MCInst &Inst, unsigned Opcode,
   }
 
   const MCExpr *Symbol = Inst.getOperand(SymbolOpIdx).getExpr();
-  emitAuipcInstPair(DestReg, TmpReg, Symbol, RISCVMCExpr::VK_PCREL_HI, Opcode,
+  emitAuipcInstPair(DestReg, TmpReg, Symbol, ELF::R_RISCV_PCREL_HI20, Opcode,
                     IDLoc, Out);
 }
 

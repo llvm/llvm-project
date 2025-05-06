@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVMCEXPR_H
 
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCFixup.h"
 
 namespace llvm {
 
@@ -22,27 +23,13 @@ class StringRef;
 
 class RISCVMCExpr : public MCTargetExpr {
 public:
-  enum Specifier : uint8_t {
+  using Specifier = uint16_t;
+  enum {
     VK_None,
-    VK_LO = MCSymbolRefExpr::FirstTargetSpecifier,
-    VK_HI,
+    VK_LO = FirstTargetFixupKind,
     VK_PCREL_LO,
-    VK_PCREL_HI,
-    VK_GOT_HI,
     VK_TPREL_LO,
-    VK_TPREL_HI,
-    VK_TPREL_ADD,
-    VK_TLS_GOT_HI,
-    VK_TLS_GD_HI,
     VK_CALL,
-    VK_CALL_PLT,
-    VK_32_PCREL,
-    VK_GOTPCREL,
-    VK_PLTPCREL,
-    VK_TLSDESC_HI,
-    VK_TLSDESC_LOAD_LO,
-    VK_TLSDESC_ADD_LO,
-    VK_TLSDESC_CALL,
     VK_QC_ABS20,
   };
 

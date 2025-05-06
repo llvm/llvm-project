@@ -34,7 +34,7 @@ const RISCVMCExpr *RISCVMCExpr::create(const MCExpr *Expr, Specifier S,
 
 void RISCVMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   Specifier S = getSpecifier();
-  bool HasVariant = ((S != VK_None) && (S != VK_CALL) && (S != VK_CALL_PLT));
+  bool HasVariant = S != VK_None && S != VK_CALL && S != ELF::R_RISCV_CALL_PLT;
 
   if (HasVariant)
     OS << '%' << getSpecifierName(S) << '(';
@@ -106,23 +106,23 @@ std::optional<RISCVMCExpr::Specifier>
 RISCVMCExpr::getSpecifierForName(StringRef name) {
   return StringSwitch<std::optional<RISCVMCExpr::Specifier>>(name)
       .Case("lo", VK_LO)
-      .Case("hi", VK_HI)
+      .Case("hi", ELF::R_RISCV_HI20)
       .Case("pcrel_lo", VK_PCREL_LO)
-      .Case("pcrel_hi", VK_PCREL_HI)
-      .Case("got_pcrel_hi", VK_GOT_HI)
+      .Case("pcrel_hi", ELF::R_RISCV_PCREL_HI20)
+      .Case("got_pcrel_hi", ELF::R_RISCV_GOT_HI20)
       .Case("tprel_lo", VK_TPREL_LO)
-      .Case("tprel_hi", VK_TPREL_HI)
-      .Case("tprel_add", VK_TPREL_ADD)
-      .Case("tls_ie_pcrel_hi", VK_TLS_GOT_HI)
-      .Case("tls_gd_pcrel_hi", VK_TLS_GD_HI)
-      .Case("tlsdesc_hi", VK_TLSDESC_HI)
-      .Case("tlsdesc_load_lo", VK_TLSDESC_LOAD_LO)
-      .Case("tlsdesc_add_lo", VK_TLSDESC_ADD_LO)
-      .Case("tlsdesc_call", VK_TLSDESC_CALL)
+      .Case("tprel_hi", ELF::R_RISCV_TPREL_HI20)
+      .Case("tprel_add", ELF::R_RISCV_TPREL_ADD)
+      .Case("tls_ie_pcrel_hi", ELF::R_RISCV_TLS_GOT_HI20)
+      .Case("tls_gd_pcrel_hi", ELF::R_RISCV_TLS_GD_HI20)
+      .Case("tlsdesc_hi", ELF::R_RISCV_TLSDESC_HI20)
+      .Case("tlsdesc_load_lo", ELF::R_RISCV_TLSDESC_LOAD_LO12)
+      .Case("tlsdesc_add_lo", ELF::R_RISCV_TLSDESC_ADD_LO12)
+      .Case("tlsdesc_call", ELF::R_RISCV_TLSDESC_CALL)
       .Case("qc.abs20", VK_QC_ABS20)
       // Used in data directives
-      .Case("pltpcrel", VK_PLTPCREL)
-      .Case("gotpcrel", VK_GOTPCREL)
+      .Case("pltpcrel", ELF::R_RISCV_PLT32)
+      .Case("gotpcrel", ELF::R_RISCV_GOT32_PCREL)
       .Default(std::nullopt);
 }
 
@@ -132,41 +132,41 @@ StringRef RISCVMCExpr::getSpecifierName(Specifier S) {
     llvm_unreachable("not used as %specifier()");
   case VK_LO:
     return "lo";
-  case VK_HI:
+  case ELF::R_RISCV_HI20:
     return "hi";
   case VK_PCREL_LO:
     return "pcrel_lo";
-  case VK_PCREL_HI:
+  case ELF::R_RISCV_PCREL_HI20:
     return "pcrel_hi";
-  case VK_GOT_HI:
+  case ELF::R_RISCV_GOT_HI20:
     return "got_pcrel_hi";
   case VK_TPREL_LO:
     return "tprel_lo";
-  case VK_TPREL_HI:
+  case ELF::R_RISCV_TPREL_HI20:
     return "tprel_hi";
-  case VK_TPREL_ADD:
+  case ELF::R_RISCV_TPREL_ADD:
     return "tprel_add";
-  case VK_TLS_GOT_HI:
+  case ELF::R_RISCV_TLS_GOT_HI20:
     return "tls_ie_pcrel_hi";
-  case VK_TLSDESC_HI:
+  case ELF::R_RISCV_TLSDESC_HI20:
     return "tlsdesc_hi";
-  case VK_TLSDESC_LOAD_LO:
+  case ELF::R_RISCV_TLSDESC_LOAD_LO12:
     return "tlsdesc_load_lo";
-  case VK_TLSDESC_ADD_LO:
+  case ELF::R_RISCV_TLSDESC_ADD_LO12:
     return "tlsdesc_add_lo";
-  case VK_TLSDESC_CALL:
+  case ELF::R_RISCV_TLSDESC_CALL:
     return "tlsdesc_call";
-  case VK_TLS_GD_HI:
+  case ELF::R_RISCV_TLS_GD_HI20:
     return "tls_gd_pcrel_hi";
   case VK_CALL:
     return "call";
-  case VK_CALL_PLT:
+  case ELF::R_RISCV_CALL_PLT:
     return "call_plt";
-  case VK_32_PCREL:
+  case ELF::R_RISCV_32_PCREL:
     return "32_pcrel";
-  case VK_GOTPCREL:
+  case ELF::R_RISCV_GOT32_PCREL:
     return "gotpcrel";
-  case VK_PLTPCREL:
+  case ELF::R_RISCV_PLT32:
     return "pltpcrel";
   case VK_QC_ABS20:
     return "qc.abs20";
