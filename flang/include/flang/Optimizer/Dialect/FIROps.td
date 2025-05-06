@@ -3505,7 +3505,7 @@ def YieldOp : fir_Op<"yield",
 }
 
 def fir_LocalitySpecifierOp : fir_Op<"local", [IsolatedFromAbove]> {
-  let summary = "Provides declaration of [first]private logic.";
+  let summary = "Provides declaration of local and local_init logic.";
   let description = [{
     This operation provides a declaration of how to implement the
     localization of a variable. The dialect users should provide
@@ -3519,7 +3519,7 @@ def fir_LocalitySpecifierOp : fir_Op<"local", [IsolatedFromAbove]> {
     Examples:
 
     * `local(x)` would not need any regions because no initialization is
-      required by the standard for i32 variables and this is not firstprivate.
+      required by the standard for i32 variables and this is not local_init.
     ```
     fir.local {type = local} @x.localizer : i32
     ```
@@ -3538,16 +3538,16 @@ def fir_LocalitySpecifierOp : fir_Op<"local", [IsolatedFromAbove]> {
     * `local(x)` for "allocatables" would be emitted as:
     ```
     fir.local {type = local} @x.privatizer : !some.type init {
-    ^bb0(%arg0: !some.pointer<!some.type>, %arg1: !some.pointer<!some.type>):
+    ^bb0(%arg0: !fir.ref<!some.type>, %arg1: !fir.ref<!some.type>):
     // initialize %arg1, using %arg0 as a mold for allocations.
     // For example if %arg0 is a heap allocated array with a runtime determined
     // length and !some.type is a runtime type descriptor, the init region
     // will read the array length from %arg0, and heap allocate an array of the
     // right length and initialize %arg1 to contain the array allocation and
     // length.
-    fir.yield(%arg1 : !some.pointer<!some.type>)
+    fir.yield(%arg1 : !fir.ref<!some.type>)
     } dealloc {
-    ^bb0(%arg0: !some.pointer<!some.type>):
+    ^bb0(%arg0: !fir.ref<!some.type>):
     // ... deallocate memory allocated by the init region...
     // In the example above, this will free the heap allocated array data.
     fir.yield
