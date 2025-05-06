@@ -111,6 +111,7 @@ def EnumConversion : DiagGroup<"enum-conversion",
                                 ImplicitEnumEnumCast,
                                 EnumFloatConversion,
                                 EnumCompareConditional]>;
+def ImplicitUnicodeConversion : DiagGroup<"implicit-unicode-conversion">;
 def DeprecatedOFast : DiagGroup<"deprecated-ofast">;
 def ObjCSignedCharBoolImplicitIntConversion :
   DiagGroup<"objc-signed-char-bool-implicit-int-conversion">;
