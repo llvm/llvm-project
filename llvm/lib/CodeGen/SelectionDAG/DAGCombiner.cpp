@@ -10976,28 +10976,28 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
   //   -> (logic_op (srl x, c1), (zext y))
   // c1 <= leadingzeros(zext(y))
   if (N1C && ISD::isBitwiseLogicOp(N0.getOpcode()) && N0.hasOneUse()) {
-    SDValue lhs = N0.getOperand(0);
-    SDValue rhs = N0.getOperand(1);
-    SDValue shl;
-    SDValue other;
-    if (lhs.getOpcode() == ISD::SHL) {
-      shl = lhs;
-      other = rhs;
-    } else if (rhs.getOpcode() == ISD::SHL) {
-      shl = rhs;
-      other = lhs;
+    SDValue LHS = N0.getOperand(0);
+    SDValue RHS = N0.getOperand(1);
+    SDValue SHL;
+    SDValue Other;
+    if (LHS.getOpcode() == ISD::SHL) {
+      SHL = LHS;
+      Other = RHS;
+    } else if (RHS.getOpcode() == ISD::SHL) {
+      SHL = RHS;
+      Other = LHS;
     }
-    if (shl && shl.getOperand(1) == N1 && shl.hasOneUse()) {
-      SDValue zext = shl.getOperand(0);
-      if (zext.getOpcode() == ISD::ZERO_EXTEND) {
-        unsigned numLeadingZeros =
-            zext.getValueType().getScalarSizeInBits() -
-            zext.getOperand(0).getValueType().getScalarSizeInBits();
-        if (N1C->getZExtValue() <= numLeadingZeros) {
+    if (SHL && SHL.getOperand(1) == N1 && SHL.hasOneUse()) {
+      SDValue ZExt = SHL.getOperand(0);
+      if (ZExt.getOpcode() == ISD::ZERO_EXTEND) {
+        unsigned NumLeadingZeros =
+            ZExt.getValueType().getScalarSizeInBits() -
+            ZExt.getOperand(0).getValueType().getScalarSizeInBits();
+        if (N1C->getZExtValue() <= NumLeadingZeros) {
           return DAG.getNode(
               N0.getOpcode(), SDLoc(N0), VT,
-              DAG.getNode(ISD::SRL, SDLoc(N0), VT, other, N1),
-              zext);
+              DAG.getNode(ISD::SRL, SDLoc(N0), VT, Other, N1),
+              ZExt);
         }
       }
     }
