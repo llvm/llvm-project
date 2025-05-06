@@ -53,7 +53,6 @@
 
 #include "llvm/CAS/MappedFileRegionBumpPtr.h"
 #include "OnDiskCommon.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/CAS/OnDiskCASLogger.h"
 
 using namespace llvm;
@@ -196,6 +195,8 @@ void MappedFileRegionBumpPtr::destroyImpl() {
       size_t Size = size();
       size_t Capacity = capacity();
       assert(Size < Capacity);
+      // sync to file system to make sure all contents are up-to-date.
+      (void)Region.sync();
       (void)sys::fs::resize_file(*FD, size());
       (void)unlockFileThreadSafe(*SharedLockFD);
 
