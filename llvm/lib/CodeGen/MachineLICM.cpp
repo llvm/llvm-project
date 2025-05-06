@@ -1017,24 +1017,6 @@ MachineLICMImpl::calcRegisterCost(const MachineInstr *MI, bool ConsiderSeen,
   return Cost;
 }
 
-/// Return true if this machine instruction loads from global offset table or
-/// constant pool.
-static bool mayLoadFromGOTOrConstantPool(MachineInstr &MI) {
-  assert(MI.mayLoad() && "Expected MI that loads!");
-
-  // If we lost memory operands, conservatively assume that the instruction
-  // reads from everything..
-  if (MI.memoperands_empty())
-    return true;
-
-  for (MachineMemOperand *MemOp : MI.memoperands())
-    if (const PseudoSourceValue *PSV = MemOp->getPseudoValue())
-      if (PSV->isGOT() || PSV->isConstantPool())
-        return true;
-
-  return false;
-}
-
 // This function iterates through all the operands of the input store MI and
 // checks that each register operand statisfies isCallerPreservedPhysReg.
 // This means, the value being stored and the address where it is being stored
@@ -1105,6 +1087,28 @@ static bool isCopyFeedingInvariantStore(const MachineInstr &MI,
   return false;
 }
 
+static bool isSafeLoadToSpeculate(MachineInstr &MI) {
+  assert(MI.mayLoad() && "Expected MI that loads!");
+
+  // If we lost memory operands, conservatively assume that the instruction
+  // reads from everything..
+  if (MI.memoperands_empty())
+    return false;
+
+  for (MachineMemOperand *MemOp : MI.memoperands()) {
+    if (const PseudoSourceValue *PSV = MemOp->getPseudoValue()) {
+      // TODO: use `!PSV->isConstant(MFI)`
+      if (!PSV->isConstantPool() && !PSV->isGOT())
+        return false;
+      continue;
+    } else {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 /// Returns true if the instruction may be a suitable candidate for LICM.
 /// e.g. If the instruction is a call, then it's obviously not safe to hoist it.
 bool MachineLICMImpl::IsLICMCandidate(MachineInstr &I, MachineLoop *CurLoop) {
@@ -1122,8 +1126,8 @@ bool MachineLICMImpl::IsLICMCandidate(MachineInstr &I, MachineLoop *CurLoop) {
   // Loads from constant memory are safe to speculate, for example indexed load
   // from a jump table.
   // Stores and side effects are already checked by isSafeToMove.
-  if (I.mayLoad() && !mayLoadFromGOTOrConstantPool(I) &&
-      !IsGuaranteedToExecute(I.getParent(), CurLoop)) {
+  if (I.mayLoad() && !IsGuaranteedToExecute(I.getParent(), CurLoop) &&
+      !isSafeLoadToSpeculate(I)) {
     LLVM_DEBUG(dbgs() << "LICM: Load not guaranteed to execute.\n");
     return false;
   }
