@@ -1,6 +1,6 @@
 ; Test proper insertion of mcount instrumentation
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu -o - | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -verify-machineinstrs -o - | FileCheck %s
 ;
 ; CHECK: # %bb.0:
 ; CHECK-NEXT: stg %r14, 8(%r15)
