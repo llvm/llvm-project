@@ -1118,10 +1118,12 @@ struct GatherToLDSOpLowering : public ConvertOpToLLVMPattern<GatherToLDSOp> {
     if (loadWidth != 1 && loadWidth != 2 && loadWidth != 4)
       return op.emitOpError("chipset unsupported element size");
 
-    Value srcPtr = getStridedElementPtr(loc, srcMemRefType, adaptor.getSrc(),
-                                        (adaptor.getSrcIndices()), rewriter);
-    Value dstPtr = getStridedElementPtr(loc, dstMemRefType, adaptor.getDst(),
-                                        (adaptor.getDstIndices()), rewriter);
+    Value srcPtr =
+        getStridedElementPtr(rewriter, loc, srcMemRefType, adaptor.getSrc(),
+                             (adaptor.getSrcIndices()));
+    Value dstPtr =
+        getStridedElementPtr(rewriter, loc, dstMemRefType, adaptor.getDst(),
+                             (adaptor.getDstIndices()));
 
     rewriter.replaceOpWithNewOp<ROCDL::GlobalLoadLDSOp>(
         op, srcPtr, dstPtr, createI32Constant(rewriter, loc, loadWidth),
