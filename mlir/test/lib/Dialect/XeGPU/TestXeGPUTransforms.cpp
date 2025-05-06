@@ -43,7 +43,7 @@ struct TestXeGPUUnrollingPatterns
       : PassWrapper(pass) {}
 
   void runOnOperation() override {
-    vector::UnrollVectorOptions options;
+    xegpu::UnrollOptions options;
     options.setNativeShapeFn(
         [&](Operation *op) -> std::optional<SmallVector<int64_t>> {
           if (isa<xegpu::CreateNdDescOp, xegpu::UpdateNdOffsetOp,

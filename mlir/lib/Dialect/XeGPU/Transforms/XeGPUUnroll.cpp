@@ -9,7 +9,6 @@
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 
 #include "mlir/Dialect/Utils/IndexingUtils.h"
-#include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -34,7 +33,7 @@ namespace {
 template <typename SourceOp>
 struct UnrollPattern : public OpRewritePattern<SourceOp> {
   UnrollPattern(MLIRContext *context,
-                const vector::UnrollVectorOptions &options,
+                const xegpu::UnrollOptions &options,
                 PatternBenefit benefit = 1)
       : OpRewritePattern<SourceOp>(context, benefit), options(options) {}
 
@@ -64,10 +63,7 @@ protected:
     auto layout = dyn_cast_if_present<xegpu::LayoutAttr>(attr);
     if (!layout || layout.getLaneLayout() == nullptr)
       return xegpu::LayoutAttr();
-    return xegpu::LayoutAttr::get(
-        layout.getContext(), nullptr /* sg_layout */, nullptr /* sg_data */,
-        nullptr /* inst_data */, layout.getLaneLayout(), layout.getLaneData(),
-        layout.getOrder());
+    return layout.dropInstData();
   };
 
   SmallVector<Type> convertType(ShapedType type,
@@ -167,7 +163,7 @@ private:
   const char *const unpackAttrName = "__xetile_blocking_unpack__";
   const char *const blockAttrName = "__xetile_blocking_inner_block__";
 
-  vector::UnrollVectorOptions options;
+  xegpu::UnrollOptions options;
 };
 
 struct UnrollCreateNdOp : public UnrollPattern<xegpu::CreateNdDescOp> {
@@ -479,7 +475,7 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
 
 void mlir::xegpu::populateXeGPUUnrollPatterns(
     RewritePatternSet &patterns,
-    const mlir::vector::UnrollVectorOptions &options) {
+    const xegpu::UnrollOptions &options) {
   patterns.add<UnrollCreateNdOp, UnrollUpdateNdOffsetOp, UnrollPrefetchNdOp,
                UnrollLoadNdOp, UnrollStoreNdOp, UnrollDpasOp>(
       patterns.getContext(), options);
