@@ -111,7 +111,7 @@ if (NOT CMAKE_CROSSCOMPILING)
       DEPENDS flang ${FLANG_SOURCE_DIR}/module/${filename}.f90 ${FLANG_SOURCE_DIR}/module/__fortran_builtins.f90 ${depends}
     )
     list(APPEND MODULE_FILES ${base}.mod)
-    install(FILES ${base}.mod DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang")
+    install(FILES ${base}.mod DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang" COMPONENT flang-module-interfaces)
 
     # If a module has been compiled into an object file, add the file to
     # the link line for the flang_rt.runtime library.
@@ -144,12 +144,14 @@ if (NOT CMAKE_CROSSCOMPILING)
         DEPENDS ${base}.mod
         COMMAND ${CMAKE_COMMAND} -E copy ${base}_kinds.mod ${base}_kinds.f18.mod)
     list(APPEND MODULE_FILES ${base}.mod ${base}.f18.mod ${base}_kinds.mod ${base}_kinds.f18.mod)
-    install(FILES ${base}.mod ${base}.f18.mod ${base}_kinds.mod ${base}_kinds.f18.mod DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang")
+    install(FILES ${base}.mod ${base}.f18.mod ${base}_kinds.mod ${base}_kinds.f18.mod DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang" COMPONENT flang-module-interfaces)
   elseif ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES)
     message(STATUS "OpenMP runtime support enabled via LLVM_ENABLE_RUNTIMES, assuming omp_lib.mod is built there")
   else()
     message(WARNING "Not building omp_lib.mod, no OpenMP runtime in either LLVM_ENABLE_PROJECTS or LLVM_ENABLE_RUNTIMES")
   endif()
+  add_llvm_install_targets(install-flang-module-interfaces
+    COMPONENT flang-module-interfaces)
 endif()
 
 add_custom_target(module_files ALL DEPENDS ${MODULE_FILES})
