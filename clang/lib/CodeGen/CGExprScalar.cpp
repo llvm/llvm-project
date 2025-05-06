@@ -4169,10 +4169,10 @@ static Value *emitPointerArithmetic(CodeGenFunction &CGF,
   //   The index is not pointer-sized.
   //   The pointer type is not byte-sized.
   //
-  if (BinaryOperator::isNullPointerArithmeticExtension(CGF.getContext(),
-                                                       op.Opcode,
-                                                       expr->getLHS(),
-                                                       expr->getRHS()))
+  // Note that we do not suppress the pointer overflow check in this case.
+  if (!CGF.SanOpts.has(SanitizerKind::PointerOverflow) &&
+      BinaryOperator::isNullPointerArithmeticExtension(
+          CGF.getContext(), op.Opcode, expr->getLHS(), expr->getRHS()))
     return CGF.Builder.CreateIntToPtr(index, pointer->getType());
 
   if (width != DL.getIndexTypeSizeInBits(PtrTy)) {
