@@ -567,7 +567,6 @@ void CombineRuleOperandTypeChecker::getInstEqClasses(
 
 CombineRuleOperandTypeChecker::TypeEquivalenceClasses
 CombineRuleOperandTypeChecker::getRuleEqClasses() const {
-  StringMap<unsigned> OpNameToEqClassIdx;
   TypeEquivalenceClasses TECs;
 
   if (DebugTypeInfer)

@@ -1198,7 +1198,6 @@ bool X86LowerAMXCast::combineLdSt(SmallVectorImpl<Instruction *> &Casts) {
       for (auto *Store : DeadStores)
         Store->eraseFromParent();
     } else { // x86_cast_vector_to_tile
-      SmallVector<Instruction *, 2> DeadLoads;
       auto *Load = dyn_cast<LoadInst>(Cast->getOperand(0));
       if (!Load || !Load->hasOneUse())
         continue;
