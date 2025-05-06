@@ -83,6 +83,9 @@ mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
     uint64_t mapType, mlir::omp::VariableCaptureKind mapCaptureType,
     mlir::Type retTy, bool partialMap = false,
     mlir::FlatSymbolRefAttr mapperId = mlir::FlatSymbolRefAttr());
+
+mlir::Value mapTemporaryValue(fir::FirOpBuilder &firOpBuilder,
+    mlir::omp::TargetOp targetOp, mlir::Value val, llvm::StringRef name);
 } // namespace Fortran::common::openmp
 
 #endif // FORTRAN_SUPPORT_OPENMP_UTILS_H_

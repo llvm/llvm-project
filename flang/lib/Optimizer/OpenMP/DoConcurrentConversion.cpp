@@ -43,41 +43,6 @@ namespace Fortran {
 namespace lower {
 namespace omp {
 namespace internal {
-mlir::Value mapTemporaryValue(fir::FirOpBuilder &builder,
-                              mlir::omp::TargetOp targetOp, mlir::Value val,
-                              llvm::StringRef name) {
-  mlir::OpBuilder::InsertionGuard guard(builder);
-  builder.setInsertionPointAfterValue(val);
-  auto copyVal = builder.createTemporary(val.getLoc(), val.getType());
-  builder.createStoreWithConvert(copyVal.getLoc(), val, copyVal);
-
-  llvm::SmallVector<mlir::Value> bounds;
-  builder.setInsertionPoint(targetOp);
-  mlir::Value mapOp = Fortran::common::openmp::createMapInfoOp(
-      builder, copyVal.getLoc(), copyVal,
-      /*varPtrPtr=*/mlir::Value{}, name.str(), bounds,
-      /*members=*/llvm::SmallVector<mlir::Value>{},
-      /*membersIndex=*/mlir::ArrayAttr{},
-      static_cast<std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT),
-      mlir::omp::VariableCaptureKind::ByCopy, copyVal.getType());
-
-  mlir::Region &targetRegion = targetOp.getRegion();
-
-  auto argIface = llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(*targetOp);
-  unsigned insertIndex =
-      argIface.getMapBlockArgsStart() + argIface.numMapBlockArgs();
-  targetOp.getMapVarsMutable().append(mlir::ValueRange{mapOp});
-  mlir::Value clonedValArg =
-      targetRegion.insertArgument(insertIndex, mapOp.getType(), mapOp.getLoc());
-
-  mlir::Block *targetEntryBlock = &targetRegion.getBlocks().front();
-  builder.setInsertionPointToStart(targetEntryBlock);
-  auto loadOp =
-      builder.create<fir::LoadOp>(clonedValArg.getLoc(), clonedValArg);
-  return loadOp.getResult();
-}
-
 /// Check if cloning the bounds introduced any dependency on the outer region.
 /// If so, then either clone them as well if they are MemoryEffectFree, or else
 /// copy them to a new temporary and add them to the map and block_argument
@@ -106,8 +71,9 @@ void cloneOrMapRegionOutsiders(fir::FirOpBuilder &builder,
               return use.getOwner()->getBlock() == targetEntryBlock;
             });
       } else {
-        mlir::Value mappedTemp = mapTemporaryValue(builder, targetOp, val,
-                                                   /*name=*/llvm::StringRef{});
+        mlir::Value mappedTemp = Fortran::common::openmp::mapTemporaryValue(
+            builder, targetOp, val,
+            /*name=*/llvm::StringRef{});
         val.replaceUsesWithIf(
             mappedTemp, [targetEntryBlock](mlir::OpOperand &use) {
               return use.getOwner()->getBlock() == targetEntryBlock;
@@ -732,11 +698,11 @@ private:
              llvm::zip_equal(targetShapeCreationInfo.startIndices,
                              targetShapeCreationInfo.extents)) {
           shapeShiftOperands.push_back(
-              Fortran::lower::omp::internal::mapTemporaryValue(
+              Fortran::common::openmp::mapTemporaryValue(
                   builder, targetOp, startIndex,
                   liveInName + ".start_idx.dim" + std::to_string(shapeIdx)));
           shapeShiftOperands.push_back(
-              Fortran::lower::omp::internal::mapTemporaryValue(
+              Fortran::common::openmp::mapTemporaryValue(
                   builder, targetOp, extent,
                   liveInName + ".extent.dim" + std::to_string(shapeIdx)));
           ++shapeIdx;
@@ -751,10 +717,9 @@ private:
       llvm::SmallVector<mlir::Value> shapeOperands;
       size_t shapeIdx = 0;
       for (auto extent : targetShapeCreationInfo.extents) {
-        shapeOperands.push_back(
-            Fortran::lower::omp::internal::mapTemporaryValue(
-                builder, targetOp, extent,
-                liveInName + ".extent.dim" + std::to_string(shapeIdx)));
+        shapeOperands.push_back(Fortran::common::openmp::mapTemporaryValue(
+            builder, targetOp, extent,
+            liveInName + ".extent.dim" + std::to_string(shapeIdx)));
         ++shapeIdx;
       }
 
