@@ -154,13 +154,8 @@ public:
   typedef __libcpp_thread_t native_handle_type;
 
   _LIBCPP_HIDE_FROM_ABI thread() _NOEXCEPT : __t_(_LIBCPP_NULL_THREAD) {}
-#ifndef _LIBCPP_CXX03_LANG
-  template <class _Fp, class... _Args, __enable_if_t<!is_same<__remove_cvref_t<_Fp>, thread>::value, int> = 0>
-  _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS explicit thread(_Fp&& __f, _Args&&... __args);
-#else // _LIBCPP_CXX03_LANG
   template <class _Fp>
   _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS explicit thread(_Fp __f);
-#endif
   ~thread();
 
   _LIBCPP_HIDE_FROM_ABI thread(thread&& __t) _NOEXCEPT : __t_(__t.__t_) { __t.__t_ = _LIBCPP_NULL_THREAD; }
@@ -183,38 +178,6 @@ public:
 
   static unsigned hardware_concurrency() _NOEXCEPT;
 };
-
-#ifndef _LIBCPP_CXX03_LANG
-
-template <class _TSp, class _Fp, class... _Args, size_t... _Indices>
-inline _LIBCPP_HIDE_FROM_ABI void __thread_execute(tuple<_TSp, _Fp, _Args...>& __t, __tuple_indices<_Indices...>) {
-  std::__invoke(std::move(std::get<1>(__t)), std::move(std::get<_Indices>(__t))...);
-}
-
-template <class _Fp>
-_LIBCPP_HIDE_FROM_ABI void* __thread_proxy(void* __vp) {
-  // _Fp = tuple< unique_ptr<__thread_struct>, Functor, Args...>
-  unique_ptr<_Fp> __p(static_cast<_Fp*>(__vp));
-  __thread_local_data().set_pointer(std::get<0>(*__p.get()).release());
-  typedef typename __make_tuple_indices<tuple_size<_Fp>::value, 2>::type _Index;
-  std::__thread_execute(*__p.get(), _Index());
-  return nullptr;
-}
-
-template <class _Fp, class... _Args, __enable_if_t<!is_same<__remove_cvref_t<_Fp>, thread>::value, int> >
-thread::thread(_Fp&& __f, _Args&&... __args) {
-  typedef unique_ptr<__thread_struct> _TSPtr;
-  _TSPtr __tsp(new __thread_struct);
-  typedef tuple<_TSPtr, __decay_t<_Fp>, __decay_t<_Args>...> _Gp;
-  unique_ptr<_Gp> __p(new _Gp(std::move(__tsp), std::forward<_Fp>(__f), std::forward<_Args>(__args)...));
-  int __ec = std::__libcpp_thread_create(&__t_, &__thread_proxy<_Gp>, __p.get());
-  if (__ec == 0)
-    __p.release();
-  else
-    __throw_system_error(__ec, "thread constructor failed");
-}
-
-#else // _LIBCPP_CXX03_LANG
 
 template <class _Fp>
 struct __thread_invoke_pair {
@@ -245,8 +208,6 @@ thread::thread(_Fp __f) {
   else
     __throw_system_error(__ec, "thread constructor failed");
 }
-
-#endif // _LIBCPP_CXX03_LANG
 
 inline _LIBCPP_HIDE_FROM_ABI void swap(thread& __x, thread& __y) _NOEXCEPT { __x.swap(__y); }
 
