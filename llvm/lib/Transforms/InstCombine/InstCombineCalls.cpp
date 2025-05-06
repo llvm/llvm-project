@@ -1659,8 +1659,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   // Intrinsics cannot occur in an invoke or a callbr, so handle them here
   // instead of in visitCallBase.
   if (auto *MI = dyn_cast<AnyMemIntrinsic>(II)) {
-    bool Changed = false;
-
     if (ConstantInt *NumBytes = dyn_cast<ConstantInt>(MI->getLength())) {
       // memmove/cpy/set of zero bytes is a noop.
       if (NumBytes->isNullValue())
@@ -1679,28 +1677,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
 
     // No other transformations apply to volatile transfers.
-    if (auto *M = dyn_cast<MemIntrinsic>(MI))
-      if (M->isVolatile())
-        return nullptr;
-
-    // If we have a memmove and the source operation is a constant global,
-    // then the source and dest pointers can't alias, so we can change this
-    // into a call to memcpy.
-    if (auto *MMI = dyn_cast<AnyMemMoveInst>(MI)) {
-      if (GlobalVariable *GVSrc = dyn_cast<GlobalVariable>(MMI->getSource()))
-        if (GVSrc->isConstant()) {
-          Module *M = CI.getModule();
-          Intrinsic::ID MemCpyID =
-              MMI->isAtomic() ? Intrinsic::memcpy_element_unordered_atomic
-                              : Intrinsic::memcpy;
-          Type *Tys[3] = {CI.getArgOperand(0)->getType(),
-                          CI.getArgOperand(1)->getType(),
-                          CI.getArgOperand(2)->getType()};
-          CI.setCalledFunction(
-              Intrinsic::getOrInsertDeclaration(M, MemCpyID, Tys));
-          Changed = true;
-        }
-    }
+    if (MI->isVolatile())
+      return nullptr;
 
     if (AnyMemTransferInst *MTI = dyn_cast<AnyMemTransferInst>(MI)) {
       // memmove(x,x,size) -> noop.
@@ -1732,7 +1710,25 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return eraseInstFromFunction(CI);
     }
 
-    if (Changed) return II;
+    // If we have a memmove and the source operation is a constant global,
+    // then the source and dest pointers can't alias, so we can change this
+    // into a call to memcpy.
+    if (auto *MMI = dyn_cast<AnyMemMoveInst>(MI)) {
+      if (GlobalVariable *GVSrc = dyn_cast<GlobalVariable>(MMI->getSource()))
+        if (GVSrc->isConstant()) {
+          Module *M = CI.getModule();
+          Intrinsic::ID MemCpyID =
+              MMI->isAtomic()
+                  ? Intrinsic::memcpy_element_unordered_atomic
+                  : Intrinsic::memcpy;
+          Type *Tys[3] = { CI.getArgOperand(0)->getType(),
+                           CI.getArgOperand(1)->getType(),
+                           CI.getArgOperand(2)->getType() };
+          CI.setCalledFunction(
+              Intrinsic::getOrInsertDeclaration(M, MemCpyID, Tys));
+          return II;
+        }
+    }
   }
 
   // For fixed width vector result intrinsics, use the generic demanded vector

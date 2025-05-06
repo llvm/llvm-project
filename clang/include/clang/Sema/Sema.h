@@ -4316,12 +4316,17 @@ public:
                                        SourceLocation FinalLoc,
                                        bool IsFinalSpelledSealed,
                                        bool IsAbstract,
+                                       SourceLocation TriviallyRelocatable,
+                                       SourceLocation Replaceable,
                                        SourceLocation LBraceLoc);
 
   /// ActOnTagFinishDefinition - Invoked once we have finished parsing
   /// the definition of a tag (enumeration, class, struct, or union).
   void ActOnTagFinishDefinition(Scope *S, Decl *TagDecl,
                                 SourceRange BraceRange);
+
+  ASTContext::CXXRecordDeclRelocationInfo
+  CheckCXX2CRelocatableAndReplaceable(const clang::CXXRecordDecl *D);
 
   void ActOnTagFinishSkippedDefinition(SkippedDefinitionContext Context);
 
@@ -6476,6 +6481,8 @@ private:
   void setupImplicitSpecialMemberType(CXXMethodDecl *SpecialMem,
                                       QualType ResultTy,
                                       ArrayRef<QualType> Args);
+  // Helper for ActOnFields to check for all function pointer members.
+  bool EntirelyFunctionPointers(const RecordDecl *Record);
 
   // A cache representing if we've fully checked the various comparison category
   // types stored in ASTContext. The bit-index corresponds to the integer value
@@ -8634,6 +8641,18 @@ public:
   QualType CheckSizelessVectorConditionalTypes(ExprResult &Cond,
                                                ExprResult &LHS, ExprResult &RHS,
                                                SourceLocation QuestionLoc);
+
+  //// Determines if a type is trivially relocatable
+  /// according to the C++26 rules.
+  // FIXME: This is in Sema because it requires
+  // overload resolution, can we move to ASTContext?
+  bool IsCXXTriviallyRelocatableType(QualType T);
+
+  //// Determines if a type is replaceable
+  /// according to the C++26 rules.
+  // FIXME: This is in Sema because it requires
+  // overload resolution, can we move to ASTContext?
+  bool IsCXXReplaceableType(QualType T);
 
   /// Check the operands of ?: under C++ semantics.
   ///
