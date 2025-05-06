@@ -392,7 +392,6 @@ struct IndexSwitchOpInterface
     int64_t resultNum = cast<OpResult>(value).getResultNumber();
 
     // Helper function to get buffer type of a case.
-    SmallVector<BaseMemRefType> yieldedTypes;
     auto getYieldedBufferType = [&](Block &b) -> FailureOr<BaseMemRefType> {
       auto yieldOp = cast<scf::YieldOp>(b.getTerminator());
       Value yieldedValue = yieldOp->getOperand(resultNum);
