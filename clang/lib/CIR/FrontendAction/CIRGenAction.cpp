@@ -62,17 +62,16 @@ class CIRGenConsumer : public clang::ASTConsumer {
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
   std::unique_ptr<CIRGenerator> Gen;
   const FrontendOptions &FEOptions;
-  CodeGenOptions &codeGenOptions;
+  CodeGenOptions &CGO;
 
 public:
   CIRGenConsumer(CIRGenAction::OutputType Action, CompilerInstance &CI,
-                 CodeGenOptions &codeGenOptions,
-                 std::unique_ptr<raw_pwrite_stream> OS)
+                 CodeGenOptions &CGO, std::unique_ptr<raw_pwrite_stream> OS)
       : Action(Action), CI(CI), OutputStream(std::move(OS)),
         FS(&CI.getVirtualFileSystem()),
         Gen(std::make_unique<CIRGenerator>(CI.getDiagnostics(), std::move(FS),
                                            CI.getCodeGenOpts())),
-        FEOptions(CI.getFrontendOpts()), codeGenOptions(codeGenOptions) {}
+        FEOptions(CI.getFrontendOpts()), CGO(CGO) {}
 
   void Initialize(ASTContext &Ctx) override {
     assert(!Context && "initialized multiple times");
@@ -105,7 +104,7 @@ public:
       // Setup and run CIR pipeline.
       if (runCIRToCIRPasses(MlirModule, MlirCtx, C,
                             !FEOptions.ClangIRDisableCIRVerifier,
-                            codeGenOptions.OptimizationLevel > 0)
+                            CGO.OptimizationLevel > 0)
               .failed()) {
         CI.getDiagnostics().Report(diag::err_cir_to_cir_transform_failed);
         return;
@@ -142,7 +141,7 @@ public:
 void CIRGenConsumer::anchor() {}
 
 CIRGenAction::CIRGenAction(OutputType Act, mlir::MLIRContext *MLIRCtx)
-    : MLIRCtx(MLIRCtx ? MLIRCtx : new mlir::MLIRContext), action(Act) {}
+    : MLIRCtx(MLIRCtx ? MLIRCtx : new mlir::MLIRContext), Action(Act) {}
 
 CIRGenAction::~CIRGenAction() { MLIRMod.release(); }
 
@@ -165,14 +164,14 @@ getOutputStream(CompilerInstance &CI, StringRef InFile,
 }
 
 std::unique_ptr<ASTConsumer>
-CIRGenAction::CreateASTConsumer(CompilerInstance &ci, StringRef inFile) {
-  std::unique_ptr<llvm::raw_pwrite_stream> out = ci.takeOutputStream();
+CIRGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
+  std::unique_ptr<llvm::raw_pwrite_stream> Out = CI.takeOutputStream();
 
-  if (!out)
-    out = getOutputStream(ci, inFile, action);
+  if (!Out)
+    Out = getOutputStream(CI, InFile, Action);
 
   auto Result = std::make_unique<cir::CIRGenConsumer>(
-      action, ci, ci.getCodeGenOpts(), std::move(out));
+      Action, CI, CI.getCodeGenOpts(), std::move(Out));
 
   return Result;
 }

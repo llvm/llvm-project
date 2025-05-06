@@ -37,12 +37,12 @@ namespace {
 ///
 /// For example, we will simplify the following ternary operation:
 ///
-///   %0 = cir.ternary (%condition, true {
-///     %1 = cir.const ...
-///     cir.yield %1
-///   } false {
+///   %0 = ...
+///   %1 = cir.ternary (%condition, true {
+///     %2 = cir.const ...
 ///     cir.yield %2
-///   })
+///   } false {
+///     cir.yield %0
 ///
 /// into the following sequence of operations:
 ///
@@ -103,6 +103,24 @@ private:
   }
 };
 
+/// Simplify select operations with boolean constants into simpler forms.
+///
+/// This pattern simplifies select operations where both true and false values
+/// are boolean constants. Two specific cases are handled:
+///
+/// 1. When selecting between true and false based on a condition,
+///    the operation simplifies to just the condition itself:
+///
+///    %0 = cir.select if %condition then true else false
+///    ->
+///    (replaced with %condition directly)
+///
+/// 2. When selecting between false and true based on a condition,
+///    the operation simplifies to the logical negation of the condition:
+///
+///    %0 = cir.select if %condition then false else true
+///    ->
+///    %0 = cir.unary not %condition
 struct SimplifySelect : public OpRewritePattern<SelectOp> {
   using OpRewritePattern<SelectOp>::OpRewritePattern;
 
