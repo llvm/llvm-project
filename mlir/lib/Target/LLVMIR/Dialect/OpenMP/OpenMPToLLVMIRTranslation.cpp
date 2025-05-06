@@ -158,6 +158,22 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (op.getBare())
       result = todo("ompx_bare");
   };
+  auto checkCancelDirective = [&todo](auto op, LogicalResult &result) {
+    omp::ClauseCancellationConstructType cancelledDirective =
+        op.getCancelDirective();
+    // Cancelling a taskloop is not yet supported because we don't yet have LLVM
+    // IR conversion for taskloop
+    if (cancelledDirective == omp::ClauseCancellationConstructType::Taskgroup) {
+      Operation *parent = op->getParentOp();
+      while (parent) {
+        if (parent->getDialect() == op->getDialect())
+          break;
+        parent = parent->getParentOp();
+      }
+      if (isa_and_nonnull<omp::TaskloopOp>(parent))
+        result = todo("cancel directive inside of taskloop");
+    }
+  };
   auto checkDepend = [&todo](auto op, LogicalResult &result) {
     if (!op.getDependVars().empty() || op.getDependKinds())
       result = todo("depend");
@@ -234,6 +250,10 @@ static LogicalResult checkImplementationStatus(Operation &op) {
 
   LogicalResult result = success();
   llvm::TypeSwitch<Operation &>(op)
+      .Case([&](omp::CancelOp op) { checkCancelDirective(op, result); })
+      .Case([&](omp::CancellationPointOp op) {
+        checkCancelDirective(op, result);
+      })
       .Case([&](omp::DistributeOp op) {
         checkAllocate(op, result);
         checkDistSchedule(op, result);
