@@ -41,8 +41,8 @@ const char *__indexable good_chars_unsafe(void) {
 }
 
 // CHECK-LABEL: @bad_null(
-// CHECK-NEXT:  terminated_by.loop_end:
-// CHECK-NEXT:    ret { ptr, ptr } zeroinitializer
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    unreachable
 //
 int *__indexable bad_null(void) {
   int *__null_terminated p = 0;
@@ -50,8 +50,8 @@ int *__indexable bad_null(void) {
 }
 
 // CHECK-LABEL: @bad_null_unsafe(
-// CHECK-NEXT:  terminated_by.loop_end:
-// CHECK-NEXT:    ret { ptr, ptr } zeroinitializer
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    unreachable
 //
 int *__indexable bad_null_unsafe(void) {
   int *__null_terminated p = 0;

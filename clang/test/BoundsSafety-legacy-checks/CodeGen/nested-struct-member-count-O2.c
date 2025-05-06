@@ -42,12 +42,17 @@ char access(struct Outer *bar, int index) {
 
 
 
-// CHECK-LABEL: define dso_local noundef nonnull ptr @assign(
+// CHECK-LABEL: define dso_local ptr @assign(
 // CHECK-SAME: ptr noundef readonly captures(none) [[BAR:%.*]], i32 noundef [[LEN:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[AGG_TEMP1_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[BAR]], align 8, !nonnull {{![0-9]+}}, !noundef {{![0-9]+}}
+// CHECK-NEXT:    [[AGG_TEMP1_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[BAR]], align 8
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_2_0_BAR_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[BAR]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP1_SROA_2_0_BAR_SROA_IDX]], align 8
+// CHECK-NEXT:    [[AGG_TEMP1_SROA_3_0_BAR_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[BAR]], i64 16
+// CHECK-NEXT:    [[AGG_TEMP1_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP1_SROA_3_0_BAR_SROA_IDX]], align 8, !tbaa {{![0-9]+}}
+// CHECK-NEXT:    [[FLEX_BASE_NULL_CHECK_NOT:%.*]] = icmp eq ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], null, !annotation {{![0-9]+}}
+// CHECK-NEXT:    br i1 [[FLEX_BASE_NULL_CHECK_NOT]], label [[BOUNDSCHECK_CONT_THREAD:%.*]], label [[FLEX_BASE_NONNULL:%.*]], !annotation {{![0-9]+}}
+// CHECK:       flex.base.nonnull:
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], i64 8
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ugt ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], [[TMP0]], !annotation {{![0-9]+}}
 // CHECK-NEXT:    br i1 [[DOTNOT]], label [[TRAP:%.*]], label [[CONT:%.*]], !prof {{![0-9]+}}, !annotation {{![0-9]+}}
@@ -55,8 +60,6 @@ char access(struct Outer *bar, int index) {
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR2]], !annotation {{![0-9]+}}
 // CHECK-NEXT:    unreachable, !annotation {{![0-9]+}}
 // CHECK:       cont:
-// CHECK-NEXT:    [[AGG_TEMP1_SROA_3_0_BAR_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[BAR]], i64 16
-// CHECK-NEXT:    [[AGG_TEMP1_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP1_SROA_3_0_BAR_SROA_IDX]], align 8, !tbaa {{![0-9]+}}
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[AGG_TEMP1_SROA_2_0_COPYLOAD]], !annotation {{![0-9]+}}
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[AGG_TEMP1_SROA_3_0_COPYLOAD]], [[AGG_TEMP1_SROA_0_0_COPYLOAD]], !annotation {{![0-9]+}}
 // CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false, !annotation {{![0-9]+}}
@@ -72,9 +75,14 @@ char access(struct Outer *bar, int index) {
 // CHECK-NEXT:    [[TMP3:%.*]] = icmp ult ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], [[AGG_TEMP1_SROA_2_0_COPYLOAD]], !annotation {{![0-9]+}}
 // CHECK-NEXT:    [[OR_COND60:%.*]] = select i1 [[OR_COND49]], i1 [[TMP3]], i1 false, !annotation {{![0-9]+}}
 // CHECK-NEXT:    br i1 [[OR_COND60]], label [[BOUNDSCHECK_CONT:%.*]], label [[TRAP]], !prof {{![0-9]+}}, !annotation {{![0-9]+}}
+// CHECK:       boundscheck.cont.thread:
+// CHECK-NEXT:    store i32 [[LEN]], ptr inttoptr (i64 4 to ptr), align 4, !tbaa {{![0-9]+}}
+// CHECK-NEXT:    br label [[CONT46:%.*]]
 // CHECK:       boundscheck.cont:
 // CHECK-NEXT:    [[LEN31:%.*]] = getelementptr inbounds nuw i8, ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], i64 4
 // CHECK-NEXT:    store i32 [[LEN]], ptr [[LEN31]], align 4, !tbaa {{![0-9]+}}
+// CHECK-NEXT:    br label [[CONT46]], !annotation {{![0-9]+}}
+// CHECK:       cont46:
 // CHECK-NEXT:    ret ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]]
 //
 struct Outer * assign(void * __bidi_indexable bar, int len) {
