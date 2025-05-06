@@ -1120,9 +1120,7 @@ define i1 @fpclass_test_normal_fp128(ppc_fp128 %x) {
 define i1 @fpclass_test_normal_mismatch_pred(float %num) {
 ; CHECK-LABEL: define i1 @fpclass_test_normal_mismatch_pred(
 ; CHECK-SAME: float [[NUM:%.*]]) {
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast float [[NUM]] to i32
-; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[CAST]], 2139095040
-; CHECK-NEXT:    [[TEST2:%.*]] = icmp eq i32 [[MASKED]], 0
+; CHECK-NEXT:    [[TEST2:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NUM]], i32 240)
 ; CHECK-NEXT:    ret i1 [[TEST2]]
 ;
   %cast = bitcast float %num to i32
