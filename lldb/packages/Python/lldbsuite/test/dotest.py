@@ -619,12 +619,12 @@ def visit_file(dir, name):
     if configuration.regexp:
         if not re.search(configuration.regexp, name):
             # We didn't match the regex, we're done.
-            return
+            return False
 
     if configuration.skip_tests:
         for file_regexp in configuration.skip_tests:
             if re.search(file_regexp, name):
-                return
+                return False
 
     # We found a match for our test.  Add it to the suite.
 
@@ -659,22 +659,20 @@ def visit_file(dir, name):
                     if check(value, parts):
                         yield key + "." + filterspec
 
-    filtered = False
-    for filterspec in iter_filters():
-        filtered = True
-        print("adding filter spec %s to module %s" % (filterspec, repr(module)))
-        tests = unittest.defaultTestLoader.loadTestsFromName(filterspec, module)
-        configuration.suite.addTests(tests)
+    if configuration.filters:
+        filtered = False
+        for filterspec in iter_filters():
+            filtered = True
+            print(f"adding filter spec {filterspec} to module {module!r}")
+            tests = unittest.defaultTestLoader.loadTestsFromName(filterspec, module)
+            configuration.suite.addTests(tests)
+        return filtered
 
-    # Forgo this module if the (base, filterspec) combo is invalid
-    if configuration.filters and not filtered:
-        return
-
-    if not filtered:
-        # Add the entire file's worth of tests since we're not filtered.
-        # Also the fail-over case when the filterspec branch
-        # (base, filterspec) combo doesn't make sense.
-        configuration.suite.addTests(unittest.defaultTestLoader.loadTestsFromName(base))
+    # Add the entire file's worth of tests since we're not filtered.
+    # Also the fail-over case when the filterspec branch
+    # (base, filterspec) combo doesn't make sense.
+    configuration.suite.addTests(unittest.defaultTestLoader.loadTestsFromName(base))
+    return True
 
 
 def visit(prefix, dir, names):
@@ -699,10 +697,11 @@ def visit(prefix, dir, names):
         # to disambiguate these, so we shouldn't need this constraint.
         if name in configuration.all_tests:
             raise Exception("Found multiple tests with the name %s" % name)
-        configuration.all_tests.add(name)
 
         # Run the relevant tests in the python file.
-        visit_file(dir, name)
+        if visit_file(dir, name):
+            # Only add to all_tests if the test wasn't skipped/filtered.
+            configuration.all_tests.add(name)
 
 
 # ======================================== #
