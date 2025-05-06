@@ -320,7 +320,7 @@ func.func @test_vector_bitcast(%arg0: vector<[4]x2xf32>) -> vector<[4]x4xf16> {
   return %1 : vector<[4]x4xf16>
 }
 
-// ----- 
+// -----
 
 // CHECK-LABEL: test_linearize_across_for
 func.func @test_linearize_across_for(%arg0 : vector<4xi8>) -> vector<4xi8> {
