@@ -3917,7 +3917,7 @@ INTERCEPTOR(SIZE_T, wcrtomb, char *dest, wchar_t src, void *ps) {
   if (res != ((SIZE_T)-1)) {
     CHECK_LE(res, sizeof(local_dest));
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dest, res);
-    REAL(memcpy)(dest, local_dest, res);
+    internal_memcpy(dest, local_dest, res);
   }
   return res;
 }
@@ -3939,7 +3939,7 @@ INTERCEPTOR(int, wctomb, char *dest, wchar_t src) {
   if (res != -1) {
     CHECK_LE(res, sizeof(local_dest));
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dest, res);
-    REAL(memcpy)(dest, local_dest, res);
+    internal_memcpy(dest, local_dest, res);
   }
   return res;
 }
