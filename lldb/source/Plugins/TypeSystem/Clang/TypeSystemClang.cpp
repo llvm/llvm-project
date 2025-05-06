@@ -6743,14 +6743,11 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
           if (field_name.empty()) {
             CompilerType field_type = GetType(field->getType());
             std::vector<uint32_t> save_indices = child_indexes;
-            if (field_type.IsAnonymousType())
-              // We have to add on the number of non-empty base classes to this
-              // index!
-              child_indexes.push_back(
-                  child_idx +
-                  TypeSystemClang::GetNumBaseClasses(cxx_record_decl, true));
-            else
-              child_indexes.push_back(child_idx);
+            // We have to add on the number of non-empty base classes to this
+            // index!
+            child_indexes.push_back(
+                child_idx + TypeSystemClang::GetNumBaseClasses(
+                                cxx_record_decl, omit_empty_base_classes));
             if (field_type.GetIndexOfChildMemberWithName(
                     name, omit_empty_base_classes, child_indexes))
               return child_indexes.size();
