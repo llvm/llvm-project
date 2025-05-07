@@ -1422,8 +1422,9 @@ private:
       } else if (CurrentToken && CurrentToken->is(tok::numeric_constant)) {
         Tok->setType(TT_BitFieldColon);
       } else if (Contexts.size() == 1 &&
-                 !Line.First->isOneOf(tok::kw_enum, tok::kw_case,
-                                      tok::kw_default)) {
+                 !Line.getFirstNonComment()->isOneOf(tok::kw_enum, tok::kw_case,
+                                                     tok::kw_default) &&
+                 !Line.startsWith(tok::kw_typedef, tok::kw_enum)) {
         FormatToken *Prev = Tok->getPreviousNonComment();
         if (!Prev)
           break;
