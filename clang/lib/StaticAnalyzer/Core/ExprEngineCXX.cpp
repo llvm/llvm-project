@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/ASTContext.h"
 #include "clang/AST/AttrIterator.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ParentMap.h"
@@ -716,11 +715,7 @@ void ExprEngine::handleConstructor(const Expr *E,
         // actually make things worse. Placement new makes this tricky as well,
         // since it's then possible to be initializing one part of a multi-
         // dimensional array.
-        const CXXRecordDecl *TargetHeldRecord =
-            cast<CXXRecordDecl>(CE->getType()->getAsRecordDecl());
-
-        if (!TargetHeldRecord || !TargetHeldRecord->isEmpty())
-          State = State->bindDefaultZero(Target, LCtx);
+        State = State->bindDefaultZero(Target, LCtx);
       }
 
       Bldr.generateNode(CE, N, State, /*tag=*/nullptr,
