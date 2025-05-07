@@ -237,8 +237,11 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
   assert(insertResult && "isSafeToCovert() should have caught this.");
 
   // Force conversion of non-virtual base classes recursively.
-  if (isa<CXXRecordDecl>(rd)) {
-    cgm.errorNYI(rd->getSourceRange(), "CXXRecordDecl");
+  if (const auto *cxxRecordDecl = dyn_cast<CXXRecordDecl>(rd)) {
+    if (cxxRecordDecl->getNumBases() > 0) {
+      cgm.errorNYI(rd->getSourceRange(),
+                   "convertRecordDeclType: derived CXXRecordDecl");
+    }
   }
 
   // Layout fields.
@@ -497,9 +500,9 @@ bool CIRGenTypes::isZeroInitializable(clang::QualType t) {
         return true;
   }
 
-  if (t->getAs<RecordType>()) {
-    cgm.errorNYI(SourceLocation(), "isZeroInitializable for RecordType", t);
-    return false;
+  if (const RecordType *rt = t->getAs<RecordType>()) {
+    const RecordDecl *rd = rt->getDecl();
+    return isZeroInitializable(rd);
   }
 
   if (t->getAs<MemberPointerType>()) {
@@ -509,6 +512,10 @@ bool CIRGenTypes::isZeroInitializable(clang::QualType t) {
   }
 
   return true;
+}
+
+bool CIRGenTypes::isZeroInitializable(const RecordDecl *rd) {
+  return getCIRGenRecordLayout(rd).isZeroInitializable();
 }
 
 const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
