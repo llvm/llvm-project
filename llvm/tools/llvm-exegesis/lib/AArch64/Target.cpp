@@ -212,9 +212,9 @@ private:
       // check the existing state of the key before setting it.
       // For systems without PAC, this is a No-op but with PAC, it is
       // safer to check the existing key state and then disable/enable them.
-      // Hence the guard placed for switching.
+      // Hence the guard for switching.
       unsigned long PacKeys = 0;
-      if (prctl(PR_PAC_GET_ENABLED_KEYS, &pac_keys, 0, 0, 0) < 0) {
+      if (prctl(PR_PAC_GET_ENABLED_KEYS, &PacKeys, 0, 0, 0) < 0) {
         return "Failed to get PAC key status";
       }
 
