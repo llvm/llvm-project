@@ -167,7 +167,7 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
 
     def test_diagnositcs(self):
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program, stopOnEntry=True)
+        self.build_and_launch(program)
 
         core = self.getBuildArtifact("minidump.core")
         self.yaml2obj("minidump.yaml", core)

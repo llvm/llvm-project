@@ -140,28 +140,43 @@ static void EventThreadFunction(DAP &dap) {
         lldb::SBProcess process = lldb::SBProcess::GetProcessFromEvent(event);
         if (event_mask & lldb::SBProcess::eBroadcastBitStateChanged) {
           auto state = lldb::SBProcess::GetStateFromEvent(event);
-
-          DAP_LOG(dap.log, "State = {0}", state);
           switch (state) {
-          case lldb::eStateConnected:
-          case lldb::eStateDetached:
           case lldb::eStateInvalid:
+            // Not a state event
+            break;
           case lldb::eStateUnloaded:
             break;
+          case lldb::eStateConnected:
+            break;
           case lldb::eStateAttaching:
-          case lldb::eStateCrashed:
+            break;
           case lldb::eStateLaunching:
-          case lldb::eStateStopped:
+            break;
+          case lldb::eStateStepping:
+            break;
+          case lldb::eStateCrashed:
+            break;
+          case lldb::eStateDetached:
+            break;
           case lldb::eStateSuspended:
-            // Only report a stopped event if the process was not
-            // automatically restarted.
-            if (!lldb::SBProcess::GetRestartedFromEvent(event)) {
-              SendStdOutStdErr(dap, process);
-              SendThreadStoppedEvent(dap);
+            break;
+          case lldb::eStateStopped:
+            // We launch and attach in synchronous mode then the first stop
+            // event will not be delivered. If we use "launchCommands" during a
+            // launch or "attachCommands" during an attach we might some process
+            // stop events which we do not want to send an event for. We will
+            // manually send a stopped event in request_configurationDone(...)
+            // so don't send any before then.
+            if (dap.configuration_done_sent) {
+              // Only report a stopped event if the process was not
+              // automatically restarted.
+              if (!lldb::SBProcess::GetRestartedFromEvent(event)) {
+                SendStdOutStdErr(dap, process);
+                SendThreadStoppedEvent(dap);
+              }
             }
             break;
           case lldb::eStateRunning:
-          case lldb::eStateStepping:
             dap.WillContinue();
             SendContinuedEvent(dap);
             break;
@@ -269,7 +284,6 @@ llvm::Expected<InitializeResponseBody> InitializeRequestHandler::Run(
   // Do not source init files until in/out/err are configured.
   dap.debugger = lldb::SBDebugger::Create(false);
   dap.debugger.SetInputFile(dap.in);
-  dap.target = dap.debugger.GetDummyTarget();
 
   llvm::Expected<int> out_fd = dap.out.GetWriteFileDescriptor();
   if (!out_fd)
@@ -322,10 +336,6 @@ llvm::Expected<InitializeResponseBody> InitializeRequestHandler::Run(
   dap.event_thread = std::thread(EventThreadFunction, std::ref(dap));
 
   return dap.GetCapabilities();
-}
-
-void InitializeRequestHandler::PostRun() const {
-  dap.SendJSON(CreateEventObject("initialized"));
 }
 
 } // namespace lldb_dap
