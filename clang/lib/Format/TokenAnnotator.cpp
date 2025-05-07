@@ -1720,22 +1720,12 @@ private:
         break;
       }
       if (Style.isCSharp()) {
-        // `Type?)`, `Type?>`, `Type? name;` and `Type? name =` can only be
+        // `Type?)`, `Type?>`, `Type? name;`, and `Type? name =` can only be
         // nullable types.
-
-        // `Type?)`, `Type?>`, `Type? name;`
-        if (Tok->Next &&
-            (Tok->Next->startsSequence(tok::question, tok::r_paren) ||
-             Tok->Next->startsSequence(tok::question, tok::greater) ||
-             Tok->Next->startsSequence(tok::question, tok::identifier,
-                                       tok::semi))) {
-          Tok->setType(TT_CSharpNullable);
-          break;
-        }
-
-        // `Type? name =`
-        if (Tok->Next && Tok->Next->is(tok::identifier) && Tok->Next->Next &&
-            Tok->Next->Next->is(tok::equal)) {
+        if (const auto *Next = Tok->getNextNonComment();
+            Next && (Next->isOneOf(tok::r_paren, tok::greater) ||
+                     Next->startsSequence(tok::identifier, tok::semi) ||
+                     Next->startsSequence(tok::identifier, tok::equal))) {
           Tok->setType(TT_CSharpNullable);
           break;
         }
