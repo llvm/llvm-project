@@ -766,7 +766,7 @@ bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
     if (HasConstPtr)
       EltTy = EltTy.withConst();
     QualType LHSTy = getASTContext().getPointerType(EltTy);
-    Sema::AssignConvertType ConvTy;
+    AssignConvertType ConvTy;
     ConvTy = SemaRef.CheckSingleAssignmentConstraints(LHSTy, RHS);
     if (RHS.isInvalid())
       return true;
@@ -1310,12 +1310,36 @@ void SemaARM::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  const TargetInfo &TI = getASTContext().getTargetInfo();
-  if (TI.hasFeature("vfp"))
-    Diag(D->getLocation(), diag::warn_arm_interrupt_vfp_clobber);
+  if (!D->hasAttr<ARMSaveFPAttr>()) {
+    const TargetInfo &TI = getASTContext().getTargetInfo();
+    if (TI.hasFeature("vfp"))
+      Diag(D->getLocation(), diag::warn_arm_interrupt_vfp_clobber);
+  }
 
   D->addAttr(::new (getASTContext())
                  ARMInterruptAttr(getASTContext(), AL, Kind));
+}
+
+void SemaARM::handleInterruptSaveFPAttr(Decl *D, const ParsedAttr &AL) {
+  // Go ahead and add ARMSaveFPAttr because handleInterruptAttr() checks for
+  // it when deciding to issue a diagnostic about clobbering floating point
+  // registers, which ARMSaveFPAttr prevents.
+  D->addAttr(::new (SemaRef.Context) ARMSaveFPAttr(SemaRef.Context, AL));
+  SemaRef.ARM().handleInterruptAttr(D, AL);
+
+  // If ARM().handleInterruptAttr() failed, remove ARMSaveFPAttr.
+  if (!D->hasAttr<ARMInterruptAttr>()) {
+    D->dropAttr<ARMSaveFPAttr>();
+    return;
+  }
+
+  // If VFP not enabled, remove ARMSaveFPAttr but leave ARMInterruptAttr.
+  bool VFP = SemaRef.Context.getTargetInfo().hasFeature("vfp");
+
+  if (!VFP) {
+    SemaRef.Diag(D->getLocation(), diag::warn_arm_interrupt_save_fp_without_vfp_unit);
+    D->dropAttr<ARMSaveFPAttr>();
+  }
 }
 
 // Check if the function definition uses any AArch64 SME features without

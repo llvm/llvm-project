@@ -1158,7 +1158,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
   if (BB == Succ)
     return false;
 
-  SmallPtrSet<BasicBlock *, 16> BBPreds(pred_begin(BB), pred_end(BB));
+  SmallPtrSet<BasicBlock *, 16> BBPreds(llvm::from_range, predecessors(BB));
 
   // The single common predecessor of BB and Succ when BB cannot be killed
   BasicBlock *CommonPred = nullptr;
@@ -1293,7 +1293,8 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     // All predecessors of BB (except the common predecessor) will be moved to
     // Succ.
     Updates.reserve(Updates.size() + 2 * pred_size(BB) + 1);
-    SmallPtrSet<BasicBlock *, 16> SuccPreds(pred_begin(Succ), pred_end(Succ));
+    SmallPtrSet<BasicBlock *, 16> SuccPreds(llvm::from_range,
+                                            predecessors(Succ));
     for (auto *PredOfBB : predecessors(BB)) {
       // Do not modify those common predecessors of BB and Succ
       if (!SuccPreds.contains(PredOfBB))
@@ -1445,9 +1446,9 @@ EliminateDuplicatePHINodesSetBasedImpl(BasicBlock *BB,
       // Compute a hash value on the operands. Instcombine will likely have
       // sorted them, which helps expose duplicates, but we have to check all
       // the operands to be safe in case instcombine hasn't run.
-      return static_cast<unsigned>(hash_combine(
-          hash_combine_range(PN->value_op_begin(), PN->value_op_end()),
-          hash_combine_range(PN->block_begin(), PN->block_end())));
+      return static_cast<unsigned>(
+          hash_combine(hash_combine_range(PN->operand_values()),
+                       hash_combine_range(PN->blocks())));
     }
 
     static unsigned getHashValue(PHINode *PN) {
@@ -2964,7 +2965,11 @@ CallInst *llvm::changeToCall(InvokeInst *II, DomTreeUpdater *DTU) {
 
   // Follow the call by a branch to the normal destination.
   BasicBlock *NormalDestBB = II->getNormalDest();
-  BranchInst::Create(NormalDestBB, II->getIterator());
+  auto *BI = BranchInst::Create(NormalDestBB, II->getIterator());
+  // Although it takes place after the call itself, the new branch is still
+  // performing part of the control-flow functionality of the invoke, so we use
+  // II's DebugLoc.
+  BI->setDebugLoc(II->getDebugLoc());
 
   // Update PHI nodes in the unwind destination
   BasicBlock *BB = II->getParent();
@@ -4220,7 +4225,7 @@ bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
     return false;
 
   // Early exit.
-  if (!isa<Constant>(I->getOperand(OpIdx)))
+  if (!isa<Constant, InlineAsm>(I->getOperand(OpIdx)))
     return true;
 
   switch (I->getOpcode()) {

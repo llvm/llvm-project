@@ -62,15 +62,20 @@ TEST(UnwindPlan, PlanValidAtAddress) {
   UnwindPlan::Row row2 = make_simple_row(10, 47);
 
   UnwindPlan plan(eRegisterKindGeneric);
+  // When valid address range is not set, plans are valid as long as they have a
+  // row that sets the CFA.
   EXPECT_FALSE(plan.PlanValidAtAddress(Address(0)));
+  EXPECT_FALSE(plan.PlanValidAtAddress(Address(10)));
 
   plan.InsertRow(row2);
-  EXPECT_FALSE(plan.PlanValidAtAddress(Address(0)));
+  EXPECT_TRUE(plan.PlanValidAtAddress(Address(0)));
+  EXPECT_TRUE(plan.PlanValidAtAddress(Address(10)));
 
   plan.InsertRow(row1);
   EXPECT_TRUE(plan.PlanValidAtAddress(Address(0)));
   EXPECT_TRUE(plan.PlanValidAtAddress(Address(10)));
 
+  // With an address range, they're only valid within that range.
   plan.SetPlanValidAddressRanges({AddressRange(0, 5), AddressRange(15, 5)});
   EXPECT_TRUE(plan.PlanValidAtAddress(Address(0)));
   EXPECT_FALSE(plan.PlanValidAtAddress(Address(5)));

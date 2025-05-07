@@ -246,8 +246,10 @@ private:
     return opBuilder.getStringAttr(attrName);
   }
 
-  // Move a conditional branch into a separate basic block to avoid sinking
-  // defs that are required outside a selection region.
+  /// Move a conditional branch into a separate basic block to avoid unnecessary
+  /// sinking of defs that may be required outside a selection region. This
+  /// function also ensures that a single block cannot be a header block of one
+  /// selection construct and the merge block of another.
   LogicalResult splitConditionalBlocks();
 
   //===--------------------------------------------------------------------===//

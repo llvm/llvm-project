@@ -180,7 +180,7 @@ void DXContainerGlobals::addRootSignature(Module &M,
 
 void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
   const DXILResourceMap &DRM =
-      getAnalysis<DXILResourceWrapperPass>().getBindingMap();
+      getAnalysis<DXILResourceWrapperPass>().getResourceMap();
   DXILResourceTypeMap &DRTM =
       getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
 

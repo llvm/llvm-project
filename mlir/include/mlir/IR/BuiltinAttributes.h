@@ -994,7 +994,7 @@ auto SparseElementsAttr::try_value_begin_impl(OverloadToken<T>) const
   auto valueIt = getValues().try_value_begin<T>();
   if (failed(valueIt))
     return failure();
-  const std::vector<ptrdiff_t> flatSparseIndices(getFlattenedSparseIndices());
+  const SmallVector<ptrdiff_t> flatSparseIndices(getFlattenedSparseIndices());
   std::function<T(ptrdiff_t)> mapFn =
       [flatSparseIndices{flatSparseIndices}, valueIt{std::move(*valueIt)},
        zeroValue{std::move(zeroValue)}](ptrdiff_t index) {

@@ -238,7 +238,7 @@ struct OffsetMapInfo {
   static SmallVector<int64_t> getTombstoneKey() { return {int64_t(-2)}; }
 
   static unsigned getHashValue(const SmallVector<int64_t> &v) {
-    return static_cast<unsigned>(llvm::hash_combine_range(v.begin(), v.end()));
+    return static_cast<unsigned>(llvm::hash_combine_range(v));
   }
 
   static bool isEqual(const SmallVector<int64_t> &lhs,

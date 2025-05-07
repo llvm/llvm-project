@@ -16,7 +16,7 @@ define void @func() uwtable {
 ; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    cbnz w8, .LBB0_3
 ; CHECK-NEXT:  // %bb.1: // %b1
-; CHECK-NEXT:    cbz wzr, .LBB0_4
+; CHECK-NEXT:    cbz w8, .LBB0_4
 ; CHECK-NEXT:  // %bb.2: // %b3
 ; CHECK-NEXT:    ldr w8, [x8]
 ; CHECK-NEXT:    and w0, w8, #0x100

@@ -18,7 +18,7 @@ declare <2 x bfloat> @llvm.nvvm.fabs.v2bf16(<2 x bfloat>)
 define float @fabs_float(float %a) {
 ; CHECK-LABEL: fabs_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [fabs_float_param_0];
@@ -32,7 +32,7 @@ define float @fabs_float(float %a) {
 define float @fabs_float_ftz(float %a) {
 ; CHECK-LABEL: fabs_float_ftz(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [fabs_float_ftz_param_0];
@@ -46,7 +46,7 @@ define float @fabs_float_ftz(float %a) {
 define double @fabs_double(double %a) {
 ; CHECK-LABEL: fabs_double(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f64 %fd1, [fabs_double_param_0];

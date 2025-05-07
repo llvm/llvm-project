@@ -349,6 +349,32 @@ static void canonicalizeDefines(PreprocessorOptions &PPOpts) {
   std::swap(PPOpts.Macros, NewMacros);
 }
 
+class ScanningDependencyDirectivesGetter : public DependencyDirectivesGetter {
+  DependencyScanningWorkerFilesystem *DepFS;
+
+public:
+  ScanningDependencyDirectivesGetter(FileManager &FileMgr) : DepFS(nullptr) {
+    FileMgr.getVirtualFileSystem().visit([&](llvm::vfs::FileSystem &FS) {
+      auto *DFS = llvm::dyn_cast<DependencyScanningWorkerFilesystem>(&FS);
+      if (DFS) {
+        assert(!DepFS && "Found multiple scanning VFSs");
+        DepFS = DFS;
+      }
+    });
+    assert(DepFS && "Did not find scanning VFS");
+  }
+
+  std::unique_ptr<DependencyDirectivesGetter>
+  cloneFor(FileManager &FileMgr) override {
+    return std::make_unique<ScanningDependencyDirectivesGetter>(FileMgr);
+  }
+
+  std::optional<ArrayRef<dependency_directives_scan::Directive>>
+  operator()(FileEntryRef File) override {
+    return DepFS->getDirectiveTokens(File.getName());
+  }
+};
+
 /// A clang tool that runs the preprocessor in a mode that's optimized for
 /// dependency scanning for the given compiler invocation.
 class DependencyScanningAction : public tooling::ToolAction {
@@ -385,10 +411,10 @@ public:
     Scanned = true;
 
     // Create a compiler instance to handle the actual work.
-    auto ModCache = makeInProcessModuleCache(Service.getModuleCacheMutexes());
-    ScanInstanceStorage.emplace(std::move(PCHContainerOps), ModCache.get());
+    auto ModCache = makeInProcessModuleCache(Service.getModuleCacheEntries());
+    ScanInstanceStorage.emplace(std::move(Invocation),
+                                std::move(PCHContainerOps), ModCache.get());
     CompilerInstance &ScanInstance = *ScanInstanceStorage;
-    ScanInstance.setInvocation(std::move(Invocation));
     ScanInstance.setBuildingModule(false);
 
     // Create the compiler's actual diagnostics engine.
@@ -401,6 +427,10 @@ public:
 
     ScanInstance.getPreprocessorOpts().AllowPCHWithDifferentModulesCachePath =
         true;
+
+    if (ScanInstance.getHeaderSearchOpts().ModulesValidateOncePerBuildSession)
+      ScanInstance.getHeaderSearchOpts().BuildSessionTimestamp =
+          Service.getBuildSessionTimestamp();
 
     ScanInstance.getFrontendOpts().GenerateGlobalModuleIndex = false;
     ScanInstance.getFrontendOpts().UseGlobalModuleIndex = false;
@@ -416,6 +446,9 @@ public:
         ScanInstance.getInvocation(), ScanInstance.getDiagnostics(),
         DriverFileMgr->getVirtualFileSystemPtr());
 
+    // Create a new FileManager to match the invocation's FileSystemOptions.
+    auto *FileMgr = ScanInstance.createFileManager(FS);
+
     // Use the dependency scanning optimized file system if requested to do so.
     if (DepFS) {
       StringRef ModulesCachePath =
@@ -425,19 +458,10 @@ public:
       if (!ModulesCachePath.empty())
         DepFS->setBypassedPathPrefix(ModulesCachePath);
 
-      ScanInstance.getPreprocessorOpts().DependencyDirectivesForFile =
-          [LocalDepFS = DepFS](FileEntryRef File)
-          -> std::optional<ArrayRef<dependency_directives_scan::Directive>> {
-        if (llvm::ErrorOr<EntryRef> Entry =
-                LocalDepFS->getOrCreateFileSystemEntry(File.getName()))
-          if (LocalDepFS->ensureDirectiveTokensArePopulated(*Entry))
-            return Entry->getDirectiveTokens();
-        return std::nullopt;
-      };
+      ScanInstance.setDependencyDirectivesGetter(
+          std::make_unique<ScanningDependencyDirectivesGetter>(*FileMgr));
     }
 
-    // Create a new FileManager to match the invocation's FileSystemOptions.
-    auto *FileMgr = ScanInstance.createFileManager(FS);
     ScanInstance.createSourceManager(*FileMgr);
 
     // Create a collection of stable directories derived from the ScanInstance
@@ -752,8 +776,7 @@ bool DependencyScanningWorker::scanDependencies(
           // Insert -cc1 comand line options into Argv
           std::vector<std::string> Argv;
           Argv.push_back(Cmd.getExecutable());
-          Argv.insert(Argv.end(), Cmd.getArguments().begin(),
-                      Cmd.getArguments().end());
+          llvm::append_range(Argv, Cmd.getArguments());
 
           // Create an invocation that uses the underlying file
           // system to ensure that any file system requests that

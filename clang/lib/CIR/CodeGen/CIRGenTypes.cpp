@@ -116,16 +116,93 @@ std::string CIRGenTypes::getRecordTypeName(const clang::RecordDecl *recordDecl,
   return builder.getUniqueRecordName(std::string(typeName));
 }
 
+/// Return true if the specified type is already completely laid out.
+bool CIRGenTypes::isRecordLayoutComplete(const Type *ty) const {
+  const auto it = recordDeclTypes.find(ty);
+  return it != recordDeclTypes.end() && it->second.isComplete();
+}
+
+// We have multiple forms of this function that call each other, so we need to
+// declare one in advance.
+static bool
+isSafeToConvert(QualType qt, CIRGenTypes &cgt,
+                llvm::SmallPtrSetImpl<const RecordDecl *> &alreadyChecked);
+
+/// Return true if it is safe to convert the specified record decl to CIR and
+/// lay it out, false if doing so would cause us to get into a recursive
+/// compilation mess.
+static bool
+isSafeToConvert(const RecordDecl *rd, CIRGenTypes &cgt,
+                llvm::SmallPtrSetImpl<const RecordDecl *> &alreadyChecked) {
+  // If we have already checked this type (maybe the same type is used by-value
+  // multiple times in multiple record fields, don't check again.
+  if (!alreadyChecked.insert(rd).second)
+    return true;
+
+  const Type *key = cgt.getASTContext().getTagDeclType(rd).getTypePtr();
+
+  // If this type is already laid out, converting it is a noop.
+  if (cgt.isRecordLayoutComplete(key))
+    return true;
+
+  // If this type is currently being laid out, we can't recursively compile it.
+  if (cgt.isRecordBeingLaidOut(key))
+    return false;
+
+  // If this type would require laying out bases that are currently being laid
+  // out, don't do it.  This includes virtual base classes which get laid out
+  // when a class is translated, even though they aren't embedded by-value into
+  // the class.
+  if (isa<CXXRecordDecl>(rd)) {
+    assert(!cir::MissingFeatures::cxxSupport());
+    cgt.getCGModule().errorNYI(rd->getSourceRange(),
+                               "isSafeToConvert: CXXRecordDecl");
+    return false;
+  }
+
+  // If this type would require laying out members that are currently being laid
+  // out, don't do it.
+  for (const FieldDecl *field : rd->fields())
+    if (!isSafeToConvert(field->getType(), cgt, alreadyChecked))
+      return false;
+
+  // If there are no problems, lets do it.
+  return true;
+}
+
+/// Return true if it is safe to convert this field type, which requires the
+/// record elements contained by-value to all be recursively safe to convert.
+static bool
+isSafeToConvert(QualType qt, CIRGenTypes &cgt,
+                llvm::SmallPtrSetImpl<const RecordDecl *> &alreadyChecked) {
+  // Strip off atomic type sugar.
+  if (const auto *at = qt->getAs<AtomicType>())
+    qt = at->getValueType();
+
+  // If this is a record, check it.
+  if (const auto *rt = qt->getAs<RecordType>())
+    return isSafeToConvert(rt->getDecl(), cgt, alreadyChecked);
+
+  // If this is an array, check the elements, which are embedded inline.
+  if (const auto *at = cgt.getASTContext().getAsArrayType(qt))
+    return isSafeToConvert(at->getElementType(), cgt, alreadyChecked);
+
+  // Otherwise, there is no concern about transforming this. We only care about
+  // things that are contained by-value in a record that can have another
+  // record as a member.
+  return true;
+}
+
 // Return true if it is safe to convert the specified record decl to CIR and lay
 // it out, false if doing so would cause us to get into a recursive compilation
 // mess.
-static bool isSafeToConvert(const RecordDecl *RD, CIRGenTypes &CGT) {
+static bool isSafeToConvert(const RecordDecl *rd, CIRGenTypes &cgt) {
   // If no records are being laid out, we can certainly do this one.
-  if (CGT.noRecordsBeingLaidOut())
+  if (cgt.noRecordsBeingLaidOut())
     return true;
 
-  assert(!cir::MissingFeatures::recursiveRecordLayout());
-  return false;
+  llvm::SmallPtrSet<const RecordDecl *, 16> alreadyChecked;
+  return isSafeToConvert(rd, cgt, alreadyChecked);
 }
 
 /// Lay out a tagged decl type like struct or union.
@@ -161,7 +238,10 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
 
   // Force conversion of non-virtual base classes recursively.
   if (const auto *cxxRecordDecl = dyn_cast<CXXRecordDecl>(rd)) {
-    cgm.errorNYI(rd->getSourceRange(), "CXXRecordDecl");
+    if (cxxRecordDecl->getNumBases() > 0) {
+      cgm.errorNYI(rd->getSourceRange(),
+                   "convertRecordDeclType: derived CXXRecordDecl");
+    }
   }
 
   // Layout fields.
@@ -304,6 +384,16 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     break;
   }
 
+  case Type::LValueReference:
+  case Type::RValueReference: {
+    const ReferenceType *refTy = cast<ReferenceType>(ty);
+    QualType elemTy = refTy->getPointeeType();
+    auto pointeeType = convertTypeForMem(elemTy);
+    resultType = builder.getPointerTo(pointeeType);
+    assert(resultType && "Cannot get pointer type?");
+    break;
+  }
+
   case Type::Pointer: {
     const PointerType *ptrTy = cast<PointerType>(ty);
     QualType elemTy = ptrTy->getPointeeType();
@@ -318,8 +408,15 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   case Type::ConstantArray: {
     const ConstantArrayType *arrTy = cast<ConstantArrayType>(ty);
     mlir::Type elemTy = convertTypeForMem(arrTy->getElementType());
-    resultType = cir::ArrayType::get(builder.getContext(), elemTy,
-                                     arrTy->getSize().getZExtValue());
+    resultType = cir::ArrayType::get(elemTy, arrTy->getSize().getZExtValue());
+    break;
+  }
+
+  case Type::ExtVector:
+  case Type::Vector: {
+    const VectorType *vec = cast<VectorType>(ty);
+    const mlir::Type elemTy = convertType(vec->getElementType());
+    resultType = cir::VectorType::get(elemTy, vec->getNumElements());
     break;
   }
 
@@ -369,6 +466,27 @@ mlir::Type CIRGenTypes::convertTypeForMem(clang::QualType qualType,
   return convertedType;
 }
 
+/// Return record layout info for the given record decl.
+const CIRGenRecordLayout &
+CIRGenTypes::getCIRGenRecordLayout(const RecordDecl *rd) {
+  const auto *key = astContext.getTagDeclType(rd).getTypePtr();
+
+  // If we have already computed the layout, return it.
+  auto it = cirGenRecordLayouts.find(key);
+  if (it != cirGenRecordLayouts.end())
+    return *it->second;
+
+  // Compute the type information.
+  convertRecordDeclType(rd);
+
+  // Now try again.
+  it = cirGenRecordLayouts.find(key);
+
+  assert(it != cirGenRecordLayouts.end() &&
+         "Unable to find record layout information for type");
+  return *it->second;
+}
+
 bool CIRGenTypes::isZeroInitializable(clang::QualType t) {
   if (t->getAs<PointerType>())
     return astContext.getTargetNullPointerValue(t) == 0;
@@ -382,9 +500,9 @@ bool CIRGenTypes::isZeroInitializable(clang::QualType t) {
         return true;
   }
 
-  if (t->getAs<RecordType>()) {
-    cgm.errorNYI(SourceLocation(), "isZeroInitializable for RecordType", t);
-    return false;
+  if (const RecordType *rt = t->getAs<RecordType>()) {
+    const RecordDecl *rd = rt->getDecl();
+    return isZeroInitializable(rd);
   }
 
   if (t->getAs<MemberPointerType>()) {
@@ -396,11 +514,18 @@ bool CIRGenTypes::isZeroInitializable(clang::QualType t) {
   return true;
 }
 
-const CIRGenFunctionInfo &
-CIRGenTypes::arrangeCIRFunctionInfo(CanQualType returnType) {
+bool CIRGenTypes::isZeroInitializable(const RecordDecl *rd) {
+  return getCIRGenRecordLayout(rd).isZeroInitializable();
+}
+
+const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
+    CanQualType returnType, llvm::ArrayRef<clang::CanQualType> argTypes) {
+  assert(llvm::all_of(argTypes,
+                      [](CanQualType T) { return T.isCanonicalAsParam(); }));
+
   // Lookup or create unique function info.
   llvm::FoldingSetNodeID id;
-  CIRGenFunctionInfo::Profile(id, returnType);
+  CIRGenFunctionInfo::Profile(id, returnType, argTypes);
 
   void *insertPos = nullptr;
   CIRGenFunctionInfo *fi = functionInfos.FindNodeOrInsertPos(id, insertPos);
@@ -410,7 +535,7 @@ CIRGenTypes::arrangeCIRFunctionInfo(CanQualType returnType) {
   assert(!cir::MissingFeatures::opCallCallConv());
 
   // Construction the function info. We co-allocate the ArgInfos.
-  fi = CIRGenFunctionInfo::create(returnType);
+  fi = CIRGenFunctionInfo::create(returnType, argTypes);
   functionInfos.InsertNode(fi, insertPos);
 
   bool inserted = functionsBeingProcessed.insert(fi).second;
@@ -427,7 +552,9 @@ CIRGenTypes::arrangeCIRFunctionInfo(CanQualType returnType) {
   if (retInfo.canHaveCoerceToType() && retInfo.getCoerceToType() == nullptr)
     retInfo.setCoerceToType(convertType(fi->getReturnType()));
 
-  assert(!cir::MissingFeatures::opCallArgs());
+  for (CIRGenFunctionInfoArgInfo &i : fi->arguments())
+    if (i.info.canHaveCoerceToType() && i.info.getCoerceToType() == nullptr)
+      i.info.setCoerceToType(convertType(i.type));
 
   bool erased = functionsBeingProcessed.erase(fi);
   (void)erased;

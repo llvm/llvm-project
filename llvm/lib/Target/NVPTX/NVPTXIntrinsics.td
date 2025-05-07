@@ -33,6 +33,9 @@ def AS_match {
   code shared = [{
    return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_SHARED);
   }];
+  code shared_cluster = [{
+   return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_SHARED_CLUSTER);
+  }];
   code global = [{
    return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_GLOBAL);
   }];
@@ -2039,9 +2042,10 @@ class ATOMIC_GLOBAL_CHK <dag frag>
  : PatFrag<!setdagop(frag, ops), frag, AS_match.global>;
 class ATOMIC_SHARED_CHK <dag frag>
  : PatFrag<!setdagop(frag, ops), frag, AS_match.shared>;
+class ATOMIC_SHARED_CLUSTER_CHK <dag frag>
+ : PatFrag<!setdagop(frag, ops), frag, AS_match.shared_cluster>;
 class ATOMIC_GENERIC_CHK <dag frag>
  : PatFrag<!setdagop(frag, ops), frag, AS_match.generic>;
-
 
 multiclass F_ATOMIC_2<RegTyInfo t, string sem_str, string as_str, string op_str,
                       SDPatternOperator op, list<Predicate> preds> {
@@ -2094,6 +2098,7 @@ multiclass F_ATOMIC_2_AS<RegTyInfo t, SDPatternOperator frag, string op_str, lis
   defvar frag_pat = (frag node:$a, node:$b);
   defm _G : F_ATOMIC_2<t, "", ".global", op_str, ATOMIC_GLOBAL_CHK<frag_pat>, preds>;
   defm _S : F_ATOMIC_2<t, "", ".shared", op_str, ATOMIC_SHARED_CHK<frag_pat>, preds>;
+  defm _S_C : F_ATOMIC_2<t, "", ".shared::cluster", op_str, ATOMIC_SHARED_CLUSTER_CHK<frag_pat>, !listconcat([hasClusters], preds)>;
   defm _GEN : F_ATOMIC_2<t, "", "", op_str, ATOMIC_GENERIC_CHK<frag_pat>, preds>;
 }
 
@@ -2101,6 +2106,7 @@ multiclass F_ATOMIC_3_AS<RegTyInfo t, SDPatternOperator frag, string sem_str, st
   defvar frag_pat = (frag node:$a, node:$b, node:$c);
   defm _G : F_ATOMIC_3<t, sem_str, ".global", op_str, ATOMIC_GLOBAL_CHK<frag_pat>, preds>;
   defm _S : F_ATOMIC_3<t, sem_str, ".shared", op_str, ATOMIC_SHARED_CHK<frag_pat>, preds>;
+  defm _S_C : F_ATOMIC_3<t, sem_str, ".shared::cluster", op_str, ATOMIC_SHARED_CLUSTER_CHK<frag_pat>, !listconcat([hasClusters], preds)>;
   defm _GEN : F_ATOMIC_3<t, sem_str, "", op_str, ATOMIC_GENERIC_CHK<frag_pat>, preds>;
 }
 
@@ -2381,45 +2387,32 @@ def INT_PTX_LDG_G_v4i32_ELE : VLDG_G_ELE_V4<"u32", Int32Regs>;
 def INT_PTX_LDG_G_v4f32_ELE : VLDG_G_ELE_V4<"f32", Float32Regs>;
 
 
-multiclass NG_TO_G<string Str> {
-   def "" : NVPTXInst<(outs Int32Regs:$result), (ins Int32Regs:$src),
-          "cvta." # Str # ".u32 \t$result, $src;", []>;
-   def _64 : NVPTXInst<(outs Int64Regs:$result), (ins Int64Regs:$src),
-          "cvta." # Str # ".u64 \t$result, $src;", []>;
+multiclass NG_TO_G<string Str, bit Supports32 = 1, list<Predicate> Preds = []> {
+  if Supports32 then
+    def "" : NVPTXInst<(outs Int32Regs:$result), (ins Int32Regs:$src),
+             "cvta." # Str # ".u32 \t$result, $src;", []>, Requires<Preds>;
+  
+  def _64 : NVPTXInst<(outs Int64Regs:$result), (ins Int64Regs:$src),
+              "cvta." # Str # ".u64 \t$result, $src;", []>, Requires<Preds>;
 }
 
-multiclass G_TO_NG<string Str> {
-   def "" : NVPTXInst<(outs Int32Regs:$result), (ins Int32Regs:$src),
-          "cvta.to." # Str # ".u32 \t$result, $src;", []>;
-   def _64 : NVPTXInst<(outs Int64Regs:$result), (ins Int64Regs:$src),
-          "cvta.to." # Str # ".u64 \t$result, $src;", []>;
+multiclass G_TO_NG<string Str, bit Supports32 = 1, list<Predicate> Preds = []> {
+  if Supports32 then
+    def "" : NVPTXInst<(outs Int32Regs:$result), (ins Int32Regs:$src),
+            "cvta.to." # Str # ".u32 \t$result, $src;", []>, Requires<Preds>;
+  
+  def _64 : NVPTXInst<(outs Int64Regs:$result), (ins Int64Regs:$src),
+            "cvta.to." # Str # ".u64 \t$result, $src;", []>, Requires<Preds>;
 }
 
-defm cvta_local  : NG_TO_G<"local">;
-defm cvta_shared : NG_TO_G<"shared">;
-defm cvta_global : NG_TO_G<"global">;
-defm cvta_const  : NG_TO_G<"const">;
+foreach space = ["local", "shared", "global", "const", "param"] in {
+  defm cvta_#space : NG_TO_G<space>;
+  defm cvta_to_#space : G_TO_NG<space>;
+}
 
-defm cvta_to_local  : G_TO_NG<"local">;
-defm cvta_to_shared : G_TO_NG<"shared">;
-defm cvta_to_global : G_TO_NG<"global">;
-defm cvta_to_const  : G_TO_NG<"const">;
+defm cvta_shared_cluster : NG_TO_G<"shared::cluster", false, [hasClusters]>;
+defm cvta_to_shared_cluster : G_TO_NG<"shared::cluster", false, [hasClusters]>;
 
-// nvvm.ptr.param.to.gen
-defm cvta_param : NG_TO_G<"param">;
-
-def : Pat<(int_nvvm_ptr_param_to_gen i32:$src),
-          (cvta_param $src)>;
-
-def : Pat<(int_nvvm_ptr_param_to_gen i64:$src),
-          (cvta_param_64 $src)>;
-
-// nvvm.ptr.gen.to.param
-def : Pat<(int_nvvm_ptr_gen_to_param i32:$src),
-          (i32 Int32Regs:$src)>;
-
-def : Pat<(int_nvvm_ptr_gen_to_param i64:$src),
-          (i64 Int64Regs:$src)>;
 
 // nvvm.move intrinsicc
 def nvvm_move_i16 : NVPTXInst<(outs Int16Regs:$r), (ins Int16Regs:$s),

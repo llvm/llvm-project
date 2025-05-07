@@ -75,10 +75,6 @@ if(${LIBOMPTARGET_GPU_LIBC_SUPPORT})
   list(APPEND clang_opt_flags -DOMPTARGET_HAS_LIBC)
 endif()
 
-# Prepend -I to each list element
-set (LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL "${LIBOMPTARGET_LLVM_INCLUDE_DIRS}")
-list(TRANSFORM LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL PREPEND "-I")
-
 # Set flags for LLVM Bitcode compilation.
 set(bc_flags -c -flto -std=c++17 -fvisibility=hidden
              ${clang_opt_flags} -nogpulib -nostdlibinc
@@ -88,7 +84,6 @@ set(bc_flags -c -flto -std=c++17 -fvisibility=hidden
              -I${include_directory}
              -I${devicertl_base_directory}/../include
              -I${devicertl_base_directory}/../../libc
-             ${LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL}
 )
 
 # first create an object target
@@ -137,16 +132,20 @@ function(compileDeviceRTLLibrary target_name target_triple)
     BUILD_RPATH ""
     INSTALL_RPATH ""
     RUNTIME_OUTPUT_NAME libomptarget-${target_name}.bc)
-  target_compile_options(libomptarget-${target_name} PRIVATE "--target=${target_triple}")
+  target_compile_options(libomptarget-${target_name} PRIVATE
+    "--target=${target_triple}" "-fuse-ld=lld" "-march=" "-mcpu="
+    "-Wno-unused-command-line-argument")
   target_link_options(libomptarget-${target_name} PRIVATE "--target=${target_triple}"
-                      "-r" "-nostdlib" "-flto" "-Wl,--lto-emit-llvm")
+                      "-r" "-nostdlib" "-flto" "-Wl,--lto-emit-llvm"
+                      "-fuse-ld=lld" "-march=" "-mcpu=")
   install(TARGETS libomptarget-${target_name}
           PERMISSIONS OWNER_WRITE OWNER_READ GROUP_READ WORLD_READ
-          DESTINATION ${OFFLOAD_INSTALL_LIBDIR})
+          DESTINATION "lib${LLVM_LIBDIR_SUFFIX}/${target_triple}")
 
   add_library(omptarget.${target_name}.all_objs OBJECT IMPORTED)
   set_property(TARGET omptarget.${target_name}.all_objs APPEND PROPERTY IMPORTED_OBJECTS
                ${LIBOMPTARGET_LLVM_LIBRARY_INTDIR}/libomptarget-${target_name}.bc)
+  add_dependencies(omptarget.${target_name}.all_objs libomptarget-${target_name})
 
   # Archive all the object files generated above into a static library
   add_library(omptarget.${target_name} STATIC)
@@ -156,6 +155,9 @@ function(compileDeviceRTLLibrary target_name target_triple)
     LINKER_LANGUAGE CXX
   )
   target_link_libraries(omptarget.${target_name} PRIVATE omptarget.${target_name}.all_objs)
+  target_link_options(omptarget.${target_name} PRIVATE "--target=${target_triple}"
+                      "-Wno-unused-command-line-argument""-r" "-nostdlib" "-flto"
+                       "-Wl,--lto-emit-llvm" "-fuse-ld=lld" "-march=" "-mcpu=")
 
   install(TARGETS omptarget.${target_name}
           ARCHIVE DESTINATION "lib${LLVM_LIBDIR_SUFFIX}/${target_triple}")
@@ -172,7 +174,6 @@ function(compileDeviceRTLLibrary target_name target_triple)
       ${include_directory}
       ${devicertl_base_directory}/../../libc
       ${devicertl_base_directory}/../include
-      ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
     )
     install(TARGETS ${ide_target_name} EXCLUDE_FROM_ALL)
   endif()

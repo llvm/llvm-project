@@ -147,14 +147,19 @@ bool SIInstrInfo::isReallyTriviallyReMaterializable(
 }
 
 // Returns true if the scalar result of a VALU instruction depends on exec.
-static bool resultDependsOnExec(const MachineInstr &MI) {
+bool SIInstrInfo::resultDependsOnExec(const MachineInstr &MI) const {
   // Ignore comparisons which are only used masked with exec.
   // This allows some hoisting/sinking of VALU comparisons.
   if (MI.isCompare()) {
-    const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
-    Register DstReg = MI.getOperand(0).getReg();
+    const MachineOperand *Dst = getNamedOperand(MI, AMDGPU::OpName::sdst);
+    if (!Dst)
+      return true;
+
+    Register DstReg = Dst->getReg();
     if (!DstReg.isVirtual())
       return true;
+
+    const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
     for (MachineInstr &Use : MRI.use_nodbg_instructions(DstReg)) {
       switch (Use.getOpcode()) {
       case AMDGPU::S_AND_SAVEEXEC_B32:
@@ -7772,8 +7777,8 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
       return;
     }
 
-    // If this is a v2s copy src from vgpr16 to sgpr32,
-    // replace vgpr copy to subreg_to_reg
+    // If this is a v2s copy src from 16bit to 32bit,
+    // replace vgpr copy to reg_sequence
     // This can be remove after we have sgpr16 in place
     if (ST.useRealTrue16Insts() && Inst.isCopy() &&
         Inst.getOperand(1).getReg().isVirtual() &&
@@ -7782,11 +7787,15 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
       if (16 == RI.getRegSizeInBits(*SrcRegRC) &&
           32 == RI.getRegSizeInBits(*NewDstRC)) {
         Register NewDstReg = MRI.createVirtualRegister(NewDstRC);
+        Register Undef = MRI.createVirtualRegister(&AMDGPU::VGPR_16RegClass);
         BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
-                get(TargetOpcode::SUBREG_TO_REG), NewDstReg)
-            .add(MachineOperand::CreateImm(0))
-            .add(Inst.getOperand(1))
-            .add(MachineOperand::CreateImm(AMDGPU::lo16));
+                get(AMDGPU::IMPLICIT_DEF), Undef);
+        BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
+                get(AMDGPU::REG_SEQUENCE), NewDstReg)
+            .addReg(Inst.getOperand(1).getReg())
+            .addImm(AMDGPU::lo16)
+            .addReg(Undef)
+            .addImm(AMDGPU::hi16);
         Inst.eraseFromParent();
 
         MRI.replaceRegWith(DstReg, NewDstReg);

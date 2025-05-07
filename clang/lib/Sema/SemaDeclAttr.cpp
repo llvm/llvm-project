@@ -851,7 +851,6 @@ static void handleDiagnoseIfAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 
   StringRef WarningGroup;
-  SmallVector<StringRef, 2> Options;
   if (AL.getNumArgs() > 3) {
     if (!S.checkStringLiteralArgumentAttr(AL, 3, WarningGroup))
       return;
@@ -909,7 +908,7 @@ static void handleNoBuiltinAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   // Repeating the same attribute is fine.
   llvm::sort(Names);
-  Names.erase(std::unique(Names.begin(), Names.end()), Names.end());
+  Names.erase(llvm::unique(Names), Names.end());
 
   // Empty no_builtin must be on its own.
   if (HasWildcard && Names.size() > 1)
@@ -1483,7 +1482,7 @@ static void handleOwnershipAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     break;
   case OwnershipAttr::Returns:
     if (AL.getNumArgs() > 2) {
-      S.Diag(AL.getLoc(), diag::err_attribute_too_many_arguments) << AL << 1;
+      S.Diag(AL.getLoc(), diag::err_attribute_too_many_arguments) << AL << 2;
       return;
     }
     break;
@@ -2188,14 +2187,14 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(
   bool FoundAny = false;
   bool OverrideOrImpl = false;
   switch (AMK) {
-  case AMK_None:
-  case AMK_Redeclaration:
+  case AvailabilityMergeKind::None:
+  case AvailabilityMergeKind::Redeclaration:
     OverrideOrImpl = false;
     break;
 
-  case AMK_Override:
-  case AMK_ProtocolImplementation:
-  case AMK_OptionalProtocolImplementation:
+  case AvailabilityMergeKind::Override:
+  case AvailabilityMergeKind::ProtocolImplementation:
+  case AvailabilityMergeKind::OptionalProtocolImplementation:
     OverrideOrImpl = true;
     break;
   }
@@ -2268,9 +2267,10 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(
           if (Which == -1) {
             Diag(OldAA->getLocation(),
                  diag::warn_mismatched_availability_override_unavail)
-              << AvailabilityAttr::getPrettyPlatformName(Platform->getName())
-              << (AMK == AMK_Override);
-          } else if (Which != 1 && AMK == AMK_OptionalProtocolImplementation) {
+                << AvailabilityAttr::getPrettyPlatformName(Platform->getName())
+                << (AMK == AvailabilityMergeKind::Override);
+          } else if (Which != 1 && AMK == AvailabilityMergeKind::
+                                              OptionalProtocolImplementation) {
             // Allow different 'introduced' / 'obsoleted' availability versions
             // on a method that implements an optional protocol requirement. It
             // makes less sense to allow this for 'deprecated' as the user can't
@@ -2281,12 +2281,12 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(
           } else {
             Diag(OldAA->getLocation(),
                  diag::warn_mismatched_availability_override)
-              << Which
-              << AvailabilityAttr::getPrettyPlatformName(Platform->getName())
-              << FirstVersion.getAsString() << SecondVersion.getAsString()
-              << (AMK == AMK_Override);
+                << Which
+                << AvailabilityAttr::getPrettyPlatformName(Platform->getName())
+                << FirstVersion.getAsString() << SecondVersion.getAsString()
+                << (AMK == AvailabilityMergeKind::Override);
           }
-          if (AMK == AMK_Override)
+          if (AMK == AvailabilityMergeKind::Override)
             Diag(CI.getLoc(), diag::note_overridden_method);
           else
             Diag(CI.getLoc(), diag::note_protocol_method);
@@ -2427,7 +2427,7 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(
       ND, AL, II, false /*Implicit*/, Introduced.Version, Deprecated.Version,
       Obsoleted.Version, IsUnavailable, Str, IsStrict, Replacement,
-      Sema::AMK_None, PriorityModifier, IIEnvironment);
+      AvailabilityMergeKind::None, PriorityModifier, IIEnvironment);
   if (NewAttr)
     D->addAttr(NewAttr);
 
@@ -2483,8 +2483,8 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(
           ND, AL, NewII, true /*Implicit*/, NewIntroduced, NewDeprecated,
           NewObsoleted, IsUnavailable, Str, IsStrict, Replacement,
-          Sema::AMK_None, PriorityModifier + Sema::AP_InferredFromOtherPlatform,
-          IIEnvironment);
+          AvailabilityMergeKind::None,
+          PriorityModifier + Sema::AP_InferredFromOtherPlatform, IIEnvironment);
       if (NewAttr)
         D->addAttr(NewAttr);
     }
@@ -2525,8 +2525,8 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(
           ND, AL, NewII, true /*Implicit*/, NewIntroduced, NewDeprecated,
           NewObsoleted, IsUnavailable, Str, IsStrict, Replacement,
-          Sema::AMK_None, PriorityModifier + Sema::AP_InferredFromOtherPlatform,
-          IIEnvironment);
+          AvailabilityMergeKind::None,
+          PriorityModifier + Sema::AP_InferredFromOtherPlatform, IIEnvironment);
       if (NewAttr)
         D->addAttr(NewAttr);
     }
@@ -2558,7 +2558,7 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
           MinMacCatalystVersion(Introduced.Version),
           MinMacCatalystVersion(Deprecated.Version),
           MinMacCatalystVersion(Obsoleted.Version), IsUnavailable, Str,
-          IsStrict, Replacement, Sema::AMK_None,
+          IsStrict, Replacement, AvailabilityMergeKind::None,
           PriorityModifier + Sema::AP_InferredFromOtherPlatform, IIEnvironment);
       if (NewAttr)
         D->addAttr(NewAttr);
@@ -2600,7 +2600,7 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
               VersionOrEmptyVersion(NewIntroduced),
               VersionOrEmptyVersion(NewDeprecated),
               VersionOrEmptyVersion(NewObsoleted), /*IsUnavailable=*/false, Str,
-              IsStrict, Replacement, Sema::AMK_None,
+              IsStrict, Replacement, AvailabilityMergeKind::None,
               PriorityModifier + Sema::AP_InferredFromOtherPlatform +
                   Sema::AP_InferredFromOtherPlatform,
               IIEnvironment);
@@ -3589,8 +3589,8 @@ static void handleCleanupAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // If this ever proves to be a problem it should be easy to fix.
   QualType Ty = S.Context.getPointerType(cast<VarDecl>(D)->getType());
   QualType ParamTy = FD->getParamDecl(0)->getType();
-  if (S.CheckAssignmentConstraints(FD->getParamDecl(0)->getLocation(),
-                                   ParamTy, Ty) != Sema::Compatible) {
+  if (!S.IsAssignConvertCompatible(S.CheckAssignmentConstraints(
+          FD->getParamDecl(0)->getLocation(), ParamTy, Ty))) {
     S.Diag(Loc, diag::err_attribute_cleanup_func_arg_incompatible_type)
       << NI.getName() << ParamTy << Ty;
     return;
@@ -3972,8 +3972,7 @@ static void handleFormatMatchesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   Expr *FormatStrExpr = AL.getArgAsExpr(2)->IgnoreParenImpCasts();
   if (auto *SL = dyn_cast<StringLiteral>(FormatStrExpr)) {
-    Sema::FormatStringType FST =
-        S.GetFormatStringType(Info.Identifier->getName());
+    FormatStringType FST = S.GetFormatStringType(Info.Identifier->getName());
     if (S.ValidateFormatString(FST, SL))
       if (auto *NewAttr = S.mergeFormatMatchesAttr(D, AL, Info.Identifier,
                                                    Info.FormatStringIdx, SL))
@@ -4908,6 +4907,20 @@ void Sema::AddModeAttr(Decl *D, const AttributeCommonInfo &CI,
   D->addAttr(::new (Context) ModeAttr(Context, CI, Name));
 }
 
+static void handleNonStringAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  // This only applies to fields and variable declarations which have an array
+  // type.
+  QualType QT = cast<ValueDecl>(D)->getType();
+  if (!QT->isArrayType() ||
+      !QT->getBaseElementTypeUnsafe()->isAnyCharacterType()) {
+    S.Diag(D->getBeginLoc(), diag::warn_attribute_non_character_array)
+        << AL << AL.isRegularKeywordAttribute() << QT << AL.getRange();
+    return;
+  }
+
+  D->addAttr(::new (S.Context) NonStringAttr(S.Context, AL));
+}
+
 static void handleNoDebugAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) NoDebugAttr(S.Context, AL));
 }
@@ -5045,7 +5058,7 @@ static void handleSharedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
   if (S.getLangOpts().CUDA && VD->hasLocalStorage() &&
       S.CUDA().DiagIfHostCode(AL.getLoc(), diag::err_cuda_host_shared)
-          << llvm::to_underlying(S.CUDA().CurrentTarget()))
+          << S.CUDA().CurrentTarget())
     return;
   D->addAttr(::new (S.Context) CUDASharedAttr(S.Context, AL));
 }
@@ -6037,7 +6050,7 @@ static void handleAbiTagAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   // Store tags sorted and without duplicates.
   llvm::sort(Tags);
-  Tags.erase(std::unique(Tags.begin(), Tags.end()), Tags.end());
+  Tags.erase(llvm::unique(Tags), Tags.end());
 
   D->addAttr(::new (S.Context)
                  AbiTagAttr(S.Context, AL, Tags.data(), Tags.size()));
@@ -6950,6 +6963,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_Interrupt:
     handleInterruptAttr(S, D, AL);
     break;
+  case ParsedAttr::AT_ARMInterruptSaveFP:
+    S.ARM().handleInterruptSaveFPAttr(D, AL);
+    break;
   case ParsedAttr::AT_X86ForceAlignArgPointer:
     S.X86().handleForceAlignArgPointerAttr(D, AL);
     break;
@@ -7141,6 +7157,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_Mode:
     handleModeAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_NonString:
+    handleNonStringAttr(S, D, AL);
     break;
   case ParsedAttr::AT_NonNull:
     if (auto *PVD = dyn_cast<ParmVarDecl>(D))

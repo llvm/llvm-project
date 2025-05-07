@@ -19,7 +19,7 @@
 #include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
 
 #include "llvm/Bitcode/BitcodeWriter.h"
-#include "llvm/Config/llvm-config.h" // for LLVM_HAS_NVPTX_TARGET
+#include "llvm/Config/Targets.h" // for LLVM_HAS_NVPTX_TARGET
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Process.h"

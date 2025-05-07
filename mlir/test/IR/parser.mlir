@@ -1169,6 +1169,15 @@ func.func @op_with_region_args() {
   return
 }
 
+// Test parsing an operation name from within another op custom syntax.
+
+// CHECK-LABEL: @custom_name_api
+func.func @custom_name_api() {
+  // CHECK: test.parse_custom_operation_name_api(builtin.module)
+  test.parse_custom_operation_name_api(builtin.module)
+  return
+}
+
 // Test allowing different name scopes for regions isolated from above.
 
 // CHECK-LABEL: func @op_with_passthrough_region_args

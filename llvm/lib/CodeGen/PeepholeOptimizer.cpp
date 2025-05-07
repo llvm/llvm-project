@@ -521,7 +521,7 @@ private:
   DenseMap<RegSubRegPair, MachineInstr *> CopySrcMIs;
 
   // MachineFunction::Delegate implementation. Used to maintain CopySrcMIs.
-  void MF_HandleInsertion(MachineInstr &MI) override { return; }
+  void MF_HandleInsertion(MachineInstr &MI) override {}
 
   bool getCopySrc(MachineInstr &MI, RegSubRegPair &SrcPair) {
     if (!MI.isCopy())

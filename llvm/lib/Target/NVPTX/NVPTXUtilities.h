@@ -54,6 +54,7 @@ SmallVector<unsigned, 3> getClusterDim(const Function &);
 
 std::optional<uint64_t> getOverallMaxNTID(const Function &);
 std::optional<uint64_t> getOverallReqNTID(const Function &);
+std::optional<uint64_t> getOverallClusterRank(const Function &);
 
 std::optional<unsigned> getMaxClusterRank(const Function &);
 std::optional<unsigned> getMinCTASm(const Function &);
@@ -63,7 +64,7 @@ inline bool isKernelFunction(const Function &F) {
   return F.getCallingConv() == CallingConv::PTX_Kernel;
 }
 
-bool isParamGridConstant(const Value &);
+bool isParamGridConstant(const Argument &);
 
 inline MaybeAlign getAlign(const Function &F, unsigned Index) {
   return F.getAttributes().getAttributes(Index).getStackAlignment();
@@ -168,6 +169,8 @@ inline std::string AddressSpaceToString(AddressSpace A) {
     return "const";
   case AddressSpace::Shared:
     return "shared";
+  case AddressSpace::SharedCluster:
+    return "shared::cluster";
   case AddressSpace::Param:
     return "param";
   case AddressSpace::Local:

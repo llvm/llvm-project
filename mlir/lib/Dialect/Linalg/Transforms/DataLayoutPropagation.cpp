@@ -298,18 +298,40 @@ getOrCreatePackedViewOfOperand(OpBuilder &b, Location loc, PackInfo packInfo,
   return std::make_tuple(packedOperand, indexingMap);
 }
 
-/// Pack a genericOp and return it.
+/// This function is a helper subroutine to pack a genericOp and return it. It
+/// will create a new generic op with the packed operand and the packed output
+/// according to packInfo when we attempt to push down unpack or bubble up pack
+/// around it. Implicitly this will only work when a packInfo can be obtained.
+/// This make sure that we are only using this function on parallel permuted
+/// dimensions.
 static GenericOp packGenericOp(RewriterBase &rewriter, GenericOp genericOp,
                                Value dest, AffineMap packedOutIndexingMap,
-                               const PackInfo &packInfo) {
+                               const PackInfo &packInfo,
+                               bool isFoldableUnpackPack) {
   Location loc = genericOp.getLoc();
   SmallVector<Value> inputOperands;
+  SmallVector<Value> inputOperandsFromUnpackedSource;
   SmallVector<AffineMap> indexingMaps;
   for (OpOperand *inputOperand : genericOp.getDpsInputOperands()) {
     auto [packedOperand, packedIndexingMap] = getOrCreatePackedViewOfOperand(
         rewriter, loc, packInfo, genericOp, inputOperand);
+    if (auto unpackOp = inputOperand->get().getDefiningOp<linalg::UnPackOp>()) {
+      inputOperandsFromUnpackedSource.push_back(unpackOp.getSource());
+    } else {
+      inputOperandsFromUnpackedSource.push_back(packedOperand);
+    }
     inputOperands.push_back(packedOperand);
     indexingMaps.push_back(packedIndexingMap);
+  }
+
+  // If the pack and unpack op can be folded:
+  // 1) use unpack op source op for operand to fold unpack -> pack sequence.
+  // 2) init tensor of the generic op can be replaced by the destination of the
+  // pack op.
+  if (isFoldableUnpackPack) {
+    inputOperands = inputOperandsFromUnpackedSource;
+    if (auto destPack = dest.getDefiningOp<linalg::PackOp>())
+      dest = destPack.getDest();
   }
 
   int64_t numInnerLoops = packInfo.getNumTiledLoops();
@@ -447,8 +469,10 @@ bubbleUpPackOpThroughGenericOp(RewriterBase &rewriter, linalg::PackOp packOp,
                             .getDefiningOp<tensor::EmptyOp>()) {
     dest = packOpDest;
   }
+  // pack(unpack) isn't naively foldable because the unpack op can be from
+  // an arbitrary domain so we need to keep both.
   return packGenericOp(rewriter, genericOp, dest, packedOutIndexingMap,
-                       *packInfo);
+                       *packInfo, /*isFoldableUnpackPack=*/false);
 }
 
 /// Wrapper pattern that applies bubbleUpPackOpThroughGenericOp method.
@@ -766,13 +790,12 @@ bubbleUpPackOpThroughExpandShape(tensor::ExpandShapeOp expandOp,
   SmallVector<ReassociationIndices, 4> reassoc =
       expandOp.getReassociationIndices();
   ArrayRef<int64_t> packInnerDims = packOp.getInnerDimsPos();
-  llvm::SetVector<int64_t> packDimsPos(packInnerDims.begin(),
-                                       packInnerDims.end());
+  llvm::SetVector<int64_t> packDimsPos(llvm::from_range, packInnerDims);
 
   for (auto [idx, indices] : llvm::enumerate(reassoc)) {
     // For each expand_shape reassociation, figure out which dimensions get
     // packed if any.
-    llvm::SetVector<int64_t> expandDimPos(indices.begin(), indices.end());
+    llvm::SetVector<int64_t> expandDimPos(llvm::from_range, indices);
     llvm::SetVector<int64_t> packedDims =
         llvm::set_intersection(packDimsPos, expandDimPos);
 
@@ -1086,8 +1109,12 @@ pushDownUnPackOpThroughGenericOp(RewriterBase &rewriter, GenericOp genericOp,
   }
 
   // Pack the genericOp.
+  // pack(unpack) is foldable in this case. This is because in pushing down the
+  // unpack, by default we will populate an additional pack op after the unpack.
+  // This guarantees them to be foldable.
   GenericOp newGenericOp =
-      packGenericOp(rewriter, genericOp, dest, packedOutIndexingMap, *packInfo);
+      packGenericOp(rewriter, genericOp, dest, packedOutIndexingMap, *packInfo,
+                    /*isFoldableUnpackPack=*/true);
   Value newResult =
       newGenericOp.getTiedOpResult(newGenericOp.getDpsInitOperand(0));
 

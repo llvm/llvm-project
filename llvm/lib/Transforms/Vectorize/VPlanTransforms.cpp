@@ -55,6 +55,9 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
          make_early_inc_range(make_range(VPBB->begin(), EndIter))) {
 
       VPValue *VPV = Ingredient.getVPSingleValue();
+      if (!VPV->getUnderlyingValue())
+        continue;
+
       Instruction *Inst = cast<Instruction>(VPV->getUnderlyingValue());
 
       VPRecipeBase *NewRecipe = nullptr;
@@ -164,8 +167,10 @@ static bool sinkScalarOperands(VPlan &Plan) {
       if (UI->getParent() == SinkTo)
         return true;
       NeedsDuplicating = UI->onlyFirstLaneUsed(SinkCandidate);
-      // We only know how to duplicate VPRecipeRecipes for now.
-      return NeedsDuplicating && isa<VPReplicateRecipe>(SinkCandidate);
+      // We only know how to duplicate VPReplicateRecipes and
+      // VPScalarIVStepsRecipes for now.
+      return NeedsDuplicating &&
+             isa<VPReplicateRecipe, VPScalarIVStepsRecipe>(SinkCandidate);
     };
     if (!all_of(SinkCandidate->users(), CanSinkWithUser))
       continue;
@@ -173,9 +178,16 @@ static bool sinkScalarOperands(VPlan &Plan) {
     if (NeedsDuplicating) {
       if (ScalarVFOnly)
         continue;
-      Instruction *I = SinkCandidate->getUnderlyingInstr();
-      auto *Clone = new VPReplicateRecipe(I, SinkCandidate->operands(), true);
-      // TODO: add ".cloned" suffix to name of Clone's VPValue.
+      VPSingleDefRecipe *Clone;
+      if (isa<VPReplicateRecipe>(SinkCandidate)) {
+        // TODO: Handle converting to uniform recipes as separate transform,
+        // then cloning should be sufficient here.
+        Instruction *I = SinkCandidate->getUnderlyingInstr();
+        Clone = new VPReplicateRecipe(I, SinkCandidate->operands(), true);
+        // TODO: add ".cloned" suffix to name of Clone's VPValue.
+      } else {
+        Clone = SinkCandidate->clone();
+      }
 
       Clone->insertBefore(SinkCandidate);
       SinkCandidate->replaceUsesWithIf(Clone, [SinkTo](VPUser &U, unsigned) {
@@ -378,9 +390,13 @@ static void addReplicateRegions(VPlan &Plan) {
     SplitBlock->setName(
         OrigBB->hasName() ? OrigBB->getName() + "." + Twine(BBNum++) : "");
     // Record predicated instructions for above packing optimizations.
-    VPBlockBase *Region = createReplicateRegion(RepR, Plan);
+    VPRegionBlock *Region = createReplicateRegion(RepR, Plan);
     Region->setParent(CurrentBlock->getParent());
     VPBlockUtils::insertOnEdge(CurrentBlock, SplitBlock, Region);
+
+    VPRegionBlock *ParentRegion = Region->getParent();
+    if (ParentRegion && ParentRegion->getExiting() == CurrentBlock)
+      ParentRegion->setExiting(SplitBlock);
   }
 }
 
@@ -581,7 +597,7 @@ createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
 }
 
 static SmallVector<VPUser *> collectUsersRecursively(VPValue *V) {
-  SetVector<VPUser *> Users(V->user_begin(), V->user_end());
+  SetVector<VPUser *> Users(llvm::from_range, V->users());
   for (unsigned I = 0; I != Users.size(); ++I) {
     VPRecipeBase *Cur = cast<VPRecipeBase>(Users[I]);
     if (isa<VPHeaderPHIRecipe>(Cur))
@@ -818,8 +834,8 @@ optimizeLatchExitInductionUser(VPlan &Plan, VPTypeAnalysis &TypeInfo,
   using namespace VPlanPatternMatch;
 
   VPValue *Incoming;
-  if (!match(Op, m_VPInstruction<VPInstruction::ExtractFromEnd>(
-                     m_VPValue(Incoming), m_SpecificInt(1))))
+  if (!match(Op, m_VPInstruction<VPInstruction::ExtractLastElement>(
+                     m_VPValue(Incoming))))
     return nullptr;
 
   auto *WideIV = getOptimizableIVOf(Incoming);
@@ -865,10 +881,8 @@ void VPlanTransforms::optimizeInductionExitUsers(
   VPBlockBase *MiddleVPBB = Plan.getMiddleBlock();
   VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType());
   for (VPIRBasicBlock *ExitVPBB : Plan.getExitBlocks()) {
-    for (VPRecipeBase &R : *ExitVPBB) {
-      auto *ExitIRI = dyn_cast<VPIRPhi>(&R);
-      if (!ExitIRI)
-        break;
+    for (VPRecipeBase &R : ExitVPBB->phis()) {
+      auto *ExitIRI = cast<VPIRPhi>(&R);
 
       for (auto [Idx, PredVPBB] : enumerate(ExitVPBB->getPredecessors())) {
         VPValue *Escape = nullptr;
@@ -1009,8 +1023,25 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   if (match(&R, m_c_Mul(m_VPValue(A), m_SpecificInt(1))))
     return R.getVPSingleValue()->replaceAllUsesWith(A);
 
-  if (match(&R, m_Not(m_Not(m_VPValue(A)))))
-    return R.getVPSingleValue()->replaceAllUsesWith(A);
+  if (match(&R, m_Not(m_VPValue(A)))) {
+    if (match(A, m_Not(m_VPValue(A))))
+      return R.getVPSingleValue()->replaceAllUsesWith(A);
+
+    // Try to fold Not into compares by adjusting the predicate in-place.
+    if (isa<VPWidenRecipe>(A) && A->getNumUsers() == 1) {
+      auto *WideCmp = cast<VPWidenRecipe>(A);
+      if (WideCmp->getOpcode() == Instruction::ICmp ||
+          WideCmp->getOpcode() == Instruction::FCmp) {
+        WideCmp->setPredicate(
+            CmpInst::getInversePredicate(WideCmp->getPredicate()));
+        R.getVPSingleValue()->replaceAllUsesWith(WideCmp);
+        // If WideCmp doesn't have a debug location, use the one from the
+        // negation, to preserve the location.
+        if (!WideCmp->getDebugLoc() && R.getDebugLoc())
+          WideCmp->setDebugLoc(R.getDebugLoc());
+      }
+    }
+  }
 
   // Remove redundant DerviedIVs, that is 0 + A * 1 -> A and 0 + 0 * x -> 0.
   if ((match(&R,
@@ -1608,7 +1639,8 @@ void VPlanTransforms::truncateToMinimalBitwidths(
            vp_depth_first_deep(Plan.getVectorLoopRegion()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       if (!isa<VPWidenRecipe, VPWidenCastRecipe, VPReplicateRecipe,
-               VPWidenSelectRecipe, VPWidenLoadRecipe>(&R))
+               VPWidenSelectRecipe, VPWidenLoadRecipe, VPWidenIntrinsicRecipe>(
+              &R))
         continue;
 
       VPValue *ResultVPV = R.getVPSingleValue();
@@ -1681,7 +1713,7 @@ void VPlanTransforms::truncateToMinimalBitwidths(
       }
 
       assert(!isa<VPWidenStoreRecipe>(&R) && "stores cannot be narrowed");
-      if (isa<VPWidenLoadRecipe>(&R))
+      if (isa<VPWidenLoadRecipe, VPWidenIntrinsicRecipe>(&R))
         continue;
 
       // Shrink operands by introducing truncates as needed.
@@ -2061,17 +2093,16 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
     // TODO: Use VPInstruction::ExplicitVectorLength to get maximum EVL.
     VPValue *MaxEVL = &Plan.getVF();
     // Emit VPScalarCastRecipe in preheader if VF is not a 32 bits integer.
+    VPBuilder Builder(LoopRegion->getPreheaderVPBB());
     if (unsigned VFSize =
             TypeInfo.inferScalarType(MaxEVL)->getScalarSizeInBits();
         VFSize != 32) {
-      VPBuilder Builder(LoopRegion->getPreheaderVPBB());
       MaxEVL = Builder.createScalarCast(
           VFSize > 32 ? Instruction::Trunc : Instruction::ZExt, MaxEVL,
           Type::getInt32Ty(Ctx), DebugLoc());
     }
-    PrevEVL = new VPInstruction(Instruction::PHI, {MaxEVL, &EVL}, DebugLoc(),
-                                "prev.evl");
-    PrevEVL->insertBefore(*Header, Header->getFirstNonPhi());
+    Builder.setInsertPoint(Header, Header->getFirstNonPhi());
+    PrevEVL = Builder.createScalarPhi({MaxEVL, &EVL}, DebugLoc(), "prev.evl");
   }
 
   for (VPUser *U : to_vector(Plan.getVF().users())) {
@@ -2401,10 +2432,10 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
         auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
         StringRef Name =
             isa<VPCanonicalIVPHIRecipe>(PhiR) ? "index" : "evl.based.iv";
-        auto *ScalarR = new VPInstruction(
-            Instruction::PHI, {PhiR->getStartValue(), PhiR->getBackedgeValue()},
+        VPBuilder Builder(PhiR);
+        auto *ScalarR = Builder.createScalarPhi(
+            {PhiR->getStartValue(), PhiR->getBackedgeValue()},
             PhiR->getDebugLoc(), Name);
-        ScalarR->insertBefore(PhiR);
         PhiR->replaceAllUsesWith(ScalarR);
         ToRemove.push_back(PhiR);
         continue;
@@ -2457,9 +2488,8 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
 }
 
 void VPlanTransforms::handleUncountableEarlyExit(
-    VPlan &Plan, ScalarEvolution &SE, Loop *OrigLoop,
-    BasicBlock *UncountableExitingBlock, VPRecipeBuilder &RecipeBuilder,
-    VFRange &Range) {
+    VPlan &Plan, Loop *OrigLoop, BasicBlock *UncountableExitingBlock,
+    VPRecipeBuilder &RecipeBuilder, VFRange &Range) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   auto *LatchVPBB = cast<VPBasicBlock>(LoopRegion->getExiting());
   VPBuilder Builder(LatchVPBB->getTerminator());
@@ -2496,25 +2526,31 @@ void VPlanTransforms::handleUncountableEarlyExit(
   // Update the exit phis in the early exit block.
   VPBuilder MiddleBuilder(NewMiddle);
   VPBuilder EarlyExitB(VectorEarlyExitVPBB);
-  for (VPRecipeBase &R : *VPEarlyExitBlock) {
-    auto *ExitIRI = dyn_cast<VPIRPhi>(&R);
-    if (!ExitIRI)
-      break;
+  for (VPRecipeBase &R : VPEarlyExitBlock->phis()) {
+    auto *ExitIRI = cast<VPIRPhi>(&R);
+    // Early exit operand should always be last, i.e., 0 if VPEarlyExitBlock has
+    // a single predecessor and 1 if it has two.
+    unsigned EarlyExitIdx = ExitIRI->getNumOperands() - 1;
+    if (!VPEarlyExitBlock->getSinglePredecessor()) {
+      // If VPEarlyExitBlock has two predecessors, they are already ordered such
+      // that early exit is second (and latch exit is first), by construction.
+      // But its underlying IRBB (EarlyExitIRBB) may have its predecessors
+      // ordered the other way around, and it is the order of the latter which
+      // corresponds to the order of operands of VPEarlyExitBlock's phi recipes.
+      // Therefore, if early exit (UncountableExitingBlock) is the first
+      // predecessor of EarlyExitIRBB, we swap the operands of phi recipes,
+      // thereby bringing them to match VPEarlyExitBlock's predecessor order,
+      // with early exit being last (second). Otherwise they already match.
+      if (*pred_begin(VPEarlyExitBlock->getIRBasicBlock()) ==
+          UncountableExitingBlock)
+        ExitIRI->swapOperands();
 
-    PHINode &ExitPhi = ExitIRI->getIRPhi();
-    VPValue *IncomingFromEarlyExit = RecipeBuilder.getVPValueOrAddLiveIn(
-        ExitPhi.getIncomingValueForBlock(UncountableExitingBlock));
-
-    if (OrigLoop->getUniqueExitBlock()) {
-      // If there's a unique exit block, VPEarlyExitBlock has 2 predecessors
-      // (MiddleVPBB and NewMiddle). Add the incoming value from MiddleVPBB
-      // which is coming from the original latch.
-      VPValue *IncomingFromLatch = RecipeBuilder.getVPValueOrAddLiveIn(
-          ExitPhi.getIncomingValueForBlock(OrigLoop->getLoopLatch()));
-      ExitIRI->addOperand(IncomingFromLatch);
-      ExitIRI->extractLastLaneOfOperand(MiddleBuilder);
+      // The first of two operands corresponds to the latch exit, via MiddleVPBB
+      // predecessor. Extract its last lane.
+      ExitIRI->extractLastLaneOfFirstOperand(MiddleBuilder);
     }
 
+    VPValue *IncomingFromEarlyExit = ExitIRI->getOperand(EarlyExitIdx);
     auto IsVector = [](ElementCount VF) { return VF.isVector(); };
     // When the VFs are vectors, need to add `extract` to get the incoming value
     // from early exit. When the range contains scalar VF, limit the range to
@@ -2522,14 +2558,15 @@ void VPlanTransforms::handleUncountableEarlyExit(
     // and vector VFs.
     if (!IncomingFromEarlyExit->isLiveIn() &&
         LoopVectorizationPlanner::getDecisionAndClampRange(IsVector, Range)) {
+      // Update the incoming value from the early exit.
       VPValue *FirstActiveLane = EarlyExitB.createNaryOp(
           VPInstruction::FirstActiveLane, {EarlyExitTakenCond}, nullptr,
           "first.active.lane");
       IncomingFromEarlyExit = EarlyExitB.createNaryOp(
           Instruction::ExtractElement, {IncomingFromEarlyExit, FirstActiveLane},
           nullptr, "early.exit.value");
+      ExitIRI->setOperand(EarlyExitIdx, IncomingFromEarlyExit);
     }
-    ExitIRI->addOperand(IncomingFromEarlyExit);
   }
   MiddleBuilder.createNaryOp(VPInstruction::BranchOnCond, {IsEarlyExitTaken});
 

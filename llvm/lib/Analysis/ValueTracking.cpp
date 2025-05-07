@@ -5357,7 +5357,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     case Intrinsic::maxnum:
     case Intrinsic::minnum:
     case Intrinsic::minimum:
-    case Intrinsic::maximum: {
+    case Intrinsic::maximum:
+    case Intrinsic::minimumnum:
+    case Intrinsic::maximumnum: {
       KnownFPClass KnownLHS, KnownRHS;
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
                           KnownLHS, Depth + 1, Q);
@@ -5368,10 +5370,12 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       Known = KnownLHS | KnownRHS;
 
       // If either operand is not NaN, the result is not NaN.
-      if (NeverNaN && (IID == Intrinsic::minnum || IID == Intrinsic::maxnum))
+      if (NeverNaN &&
+          (IID == Intrinsic::minnum || IID == Intrinsic::maxnum ||
+           IID == Intrinsic::minimumnum || IID == Intrinsic::maximumnum))
         Known.knownNot(fcNan);
 
-      if (IID == Intrinsic::maxnum) {
+      if (IID == Intrinsic::maxnum || IID == Intrinsic::maximumnum) {
         // If at least one operand is known to be positive, the result must be
         // positive.
         if ((KnownLHS.cannotBeOrderedLessThanZero() &&
@@ -5385,7 +5389,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         if (KnownLHS.cannotBeOrderedLessThanZero() ||
             KnownRHS.cannotBeOrderedLessThanZero())
           Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
-      } else if (IID == Intrinsic::minnum) {
+      } else if (IID == Intrinsic::minnum || IID == Intrinsic::minimumnum) {
         // If at least one operand is known to be negative, the result must be
         // negative.
         if ((KnownLHS.cannotBeOrderedGreaterThanZero() &&
@@ -5393,13 +5397,14 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
             (KnownRHS.cannotBeOrderedGreaterThanZero() &&
              KnownRHS.isKnownNeverNaN()))
           Known.knownNot(KnownFPClass::OrderedGreaterThanZeroMask);
-      } else {
+      } else if (IID == Intrinsic::minimum) {
         // If at least one operand is known to be negative, the result must be
         // negative.
         if (KnownLHS.cannotBeOrderedGreaterThanZero() ||
             KnownRHS.cannotBeOrderedGreaterThanZero())
           Known.knownNot(KnownFPClass::OrderedGreaterThanZeroMask);
-      }
+      } else
+        llvm_unreachable("unhandled intrinsic");
 
       // Fixup zero handling if denormals could be returned as a zero.
       //
@@ -5427,15 +5432,20 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
             Known.signBitMustBeOne();
           else
             Known.signBitMustBeZero();
-        } else if ((IID == Intrinsic::maximum || IID == Intrinsic::minimum) ||
+        } else if ((IID == Intrinsic::maximum || IID == Intrinsic::minimum ||
+                    IID == Intrinsic::maximumnum ||
+                    IID == Intrinsic::minimumnum) ||
+                   // FIXME: Should be using logical zero versions
                    ((KnownLHS.isKnownNeverNegZero() ||
                      KnownRHS.isKnownNeverPosZero()) &&
                     (KnownLHS.isKnownNeverPosZero() ||
                      KnownRHS.isKnownNeverNegZero()))) {
-          if ((IID == Intrinsic::maximum || IID == Intrinsic::maxnum) &&
+          if ((IID == Intrinsic::maximum || IID == Intrinsic::maximumnum ||
+               IID == Intrinsic::maxnum) &&
               (KnownLHS.SignBit == false || KnownRHS.SignBit == false))
             Known.signBitMustBeZero();
-          else if ((IID == Intrinsic::minimum || IID == Intrinsic::minnum) &&
+          else if ((IID == Intrinsic::minimum || IID == Intrinsic::minimumnum ||
+                    IID == Intrinsic::minnum) &&
                    (KnownLHS.SignBit == true || KnownRHS.SignBit == true))
             Known.signBitMustBeOne();
         }
@@ -7201,20 +7211,19 @@ bool llvm::isNotCrossLaneOperation(const Instruction *I) {
          !isa<CallBase, BitCastInst, ExtractElementInst>(I);
 }
 
-bool llvm::isSafeToSpeculativelyExecute(const Instruction *Inst,
-                                        const Instruction *CtxI,
-                                        AssumptionCache *AC,
-                                        const DominatorTree *DT,
-                                        const TargetLibraryInfo *TLI,
-                                        bool UseVariableInfo) {
+bool llvm::isSafeToSpeculativelyExecute(
+    const Instruction *Inst, const Instruction *CtxI, AssumptionCache *AC,
+    const DominatorTree *DT, const TargetLibraryInfo *TLI, bool UseVariableInfo,
+    bool IgnoreUBImplyingAttrs) {
   return isSafeToSpeculativelyExecuteWithOpcode(Inst->getOpcode(), Inst, CtxI,
-                                                AC, DT, TLI, UseVariableInfo);
+                                                AC, DT, TLI, UseVariableInfo,
+                                                IgnoreUBImplyingAttrs);
 }
 
 bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
     unsigned Opcode, const Instruction *Inst, const Instruction *CtxI,
     AssumptionCache *AC, const DominatorTree *DT, const TargetLibraryInfo *TLI,
-    bool UseVariableInfo) {
+    bool UseVariableInfo, bool IgnoreUBImplyingAttrs) {
 #ifndef NDEBUG
   if (Inst->getOpcode() != Opcode) {
     // Check that the operands are actually compatible with the Opcode override.
@@ -7287,7 +7296,11 @@ bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
 
     // The called function could have undefined behavior or side-effects, even
     // if marked readnone nounwind.
-    return Callee && Callee->isSpeculatable();
+    if (!Callee || !Callee->isSpeculatable())
+      return false;
+    // Since the operands may be changed after hoisting, undefined behavior may
+    // be triggered by some UB-implying attributes.
+    return IgnoreUBImplyingAttrs || !CI->hasUBImplyingAttrs();
   }
   case Instruction::VAArg:
   case Instruction::Alloca:
@@ -7720,6 +7733,8 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
       case Intrinsic::maxnum:
       case Intrinsic::minimum:
       case Intrinsic::maximum:
+      case Intrinsic::minimumnum:
+      case Intrinsic::maximumnum:
       case Intrinsic::is_fpclass:
       case Intrinsic::ldexp:
       case Intrinsic::frexp:
@@ -10146,10 +10161,6 @@ static ConstantRange getRangeForIntrinsic(const IntrinsicInst &II,
     if (!II.getParent() || !II.getFunction())
       break;
     return getVScaleRange(II.getFunction(), Width);
-  case Intrinsic::scmp:
-  case Intrinsic::ucmp:
-    return ConstantRange::getNonEmpty(APInt::getAllOnes(Width),
-                                      APInt(Width, 2));
   default:
     break;
   }

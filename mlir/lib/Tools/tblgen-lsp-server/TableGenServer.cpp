@@ -113,7 +113,7 @@ getBaseValue(const Record *record, const RecordVal *value) {
   // On success, `record` is updated to the new parent record.
   StringRef valueName = value->getName();
   auto findValueInSupers = [&](const Record *&record) -> const RecordVal * {
-    for (auto [parentRecord, loc] : record->getSuperClasses()) {
+    for (const Record *parentRecord : record->getSuperClasses()) {
       if (auto *newBase = parentRecord->getValue(valueName)) {
         record = parentRecord;
         return newBase;

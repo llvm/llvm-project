@@ -196,6 +196,24 @@ public:
   }
 };
 
+class AnyResourceExtType : public TargetExtType {
+public:
+  AnyResourceExtType() = delete;
+  AnyResourceExtType(const AnyResourceExtType &) = delete;
+  AnyResourceExtType &operator=(const AnyResourceExtType &) = delete;
+
+  static bool classof(const TargetExtType *T) {
+    return isa<RawBufferExtType>(T) || isa<TypedBufferExtType>(T) ||
+           isa<TextureExtType>(T) || isa<MSTextureExtType>(T) ||
+           isa<FeedbackTextureExtType>(T) || isa<CBufferExtType>(T) ||
+           isa<SamplerExtType>(T);
+  }
+
+  static bool classof(const Type *T) {
+    return isa<TargetExtType>(T) && classof(cast<TargetExtType>(T));
+  }
+};
+
 /// The dx.Layout target extension type
 ///
 /// `target("dx.Layout", <Type>, <size>, [offsets...])`
@@ -357,7 +375,7 @@ public:
 
   const ResourceBinding &getBinding() const { return Binding; }
   TargetExtType *getHandleTy() const { return HandleTy; }
-  const StringRef getName() const { return Symbol ? Symbol->getName() : ""; }
+  StringRef getName() const { return Symbol ? Symbol->getName() : ""; }
 
   bool hasSymbol() const { return Symbol; }
   GlobalVariable *createSymbol(Module &M, StructType *Ty, StringRef Name = "");
@@ -439,8 +457,19 @@ class DXILResourceMap {
   unsigned FirstCBuffer = 0;
   unsigned FirstSampler = 0;
 
-  /// Populate the map given the resource binding calls in the given module.
+  /// Populate all the resource instance data.
   void populate(Module &M, DXILResourceTypeMap &DRTM);
+  /// Populate the map given the resource binding calls in the given module.
+  void populateResourceInfos(Module &M, DXILResourceTypeMap &DRTM);
+  /// Analyze and populate the directions of the resource counters.
+  void populateCounterDirections(Module &M);
+
+  /// Resolves a resource handle into a vector of ResourceInfos that
+  /// represent the possible unique creations of the handle. Certain cases are
+  /// ambiguous so multiple creation instructions may be returned. The resulting
+  /// ResourceInfo can be used to depuplicate unique handles that
+  /// reference the same resource
+  SmallVector<dxil::ResourceInfo *> findByUse(const Value *Key);
 
 public:
   using iterator = SmallVector<dxil::ResourceInfo>::iterator;
@@ -457,13 +486,6 @@ public:
     auto Pos = CallMap.find(Key);
     return Pos == CallMap.end() ? Infos.end() : (Infos.begin() + Pos->second);
   }
-
-  /// Resolves a resource handle into a vector of ResourceInfos that
-  /// represent the possible unique creations of the handle. Certain cases are
-  /// ambiguous so multiple creation instructions may be returned. The resulting
-  /// ResourceInfo can be used to depuplicate unique handles that
-  /// reference the same resource
-  SmallVector<dxil::ResourceInfo> findByUse(const Value *Key) const;
 
   const_iterator find(const CallInst *Key) const {
     auto Pos = CallMap.find(Key);
@@ -551,8 +573,8 @@ public:
   DXILResourceWrapperPass();
   ~DXILResourceWrapperPass() override;
 
-  const DXILResourceMap &getBindingMap() const { return *Map; }
-  DXILResourceMap &getBindingMap() { return *Map; }
+  const DXILResourceMap &getResourceMap() const { return *Map; }
+  DXILResourceMap &getResourceMap() { return *Map; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnModule(Module &M) override;

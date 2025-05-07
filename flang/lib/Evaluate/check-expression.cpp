@@ -881,10 +881,12 @@ class IsContiguousHelper
 public:
   using Result = std::optional<bool>; // tri-state
   using Base = AnyTraverse<IsContiguousHelper, Result>;
-  explicit IsContiguousHelper(
-      FoldingContext &c, bool namedConstantSectionsAreContiguous)
-      : Base{*this}, context_{c}, namedConstantSectionsAreContiguous_{
-                                      namedConstantSectionsAreContiguous} {}
+  explicit IsContiguousHelper(FoldingContext &c,
+      bool namedConstantSectionsAreContiguous,
+      bool firstDimensionStride1 = false)
+      : Base{*this}, context_{c},
+        namedConstantSectionsAreContiguous_{namedConstantSectionsAreContiguous},
+        firstDimensionStride1_{firstDimensionStride1} {}
   using Base::operator();
 
   template <typename T> Result operator()(const Constant<T> &) const {
@@ -956,13 +958,14 @@ public:
         if (!*baseIsContiguous) {
           return false;
         }
-        // TODO could be true if base contiguous and this is only component, or
-        // if base has only one element?
+        // TODO: should be true if base is contiguous and this is only
+        // component, or when the base has at most one element
       }
       return std::nullopt;
     }
   }
   Result operator()(const ComplexPart &x) const {
+    // TODO: should be true when base is empty array, too
     return x.complex().Rank() == 0;
   }
   Result operator()(const Substring &x) const {
@@ -1061,6 +1064,9 @@ private:
     auto dims{subscript.size()};
     std::vector<bool> knownPartialSlice(dims, false);
     for (auto j{dims}; j-- > 0;) {
+      if (j == 0 && firstDimensionStride1_ && !result.value_or(true)) {
+        result.reset(); // ignore problems on later dimensions
+      }
       std::optional<ConstantSubscript> dimLbound;
       std::optional<ConstantSubscript> dimUbound;
       std::optional<ConstantSubscript> dimExtent;
@@ -1083,18 +1089,20 @@ private:
           dimExtent = 0;
         }
       }
-
       if (const auto *triplet{std::get_if<Triplet>(&subscript[j].u)}) {
         ++rank;
+        const Expr<SubscriptInteger> *lowerBound{triplet->GetLower()};
+        const Expr<SubscriptInteger> *upperBound{triplet->GetUpper()};
+        std::optional<ConstantSubscript> lowerVal{lowerBound
+                ? ToInt64(Fold(context_, Expr<SubscriptInteger>{*lowerBound}))
+                : dimLbound};
+        std::optional<ConstantSubscript> upperVal{upperBound
+                ? ToInt64(Fold(context_, Expr<SubscriptInteger>{*upperBound}))
+                : dimUbound};
         if (auto stride{ToInt64(triplet->stride())}) {
-          const Expr<SubscriptInteger> *lowerBound{triplet->GetLower()};
-          const Expr<SubscriptInteger> *upperBound{triplet->GetUpper()};
-          std::optional<ConstantSubscript> lowerVal{lowerBound
-                  ? ToInt64(Fold(context_, Expr<SubscriptInteger>{*lowerBound}))
-                  : dimLbound};
-          std::optional<ConstantSubscript> upperVal{upperBound
-                  ? ToInt64(Fold(context_, Expr<SubscriptInteger>{*upperBound}))
-                  : dimUbound};
+          if (j == 0 && *stride == 1 && firstDimensionStride1_) {
+            result = *stride == 1; // contiguous or empty if so
+          }
           if (lowerVal && upperVal) {
             if (*lowerVal < *upperVal) {
               if (*stride < 0) {
@@ -1110,23 +1118,31 @@ private:
                   *lowerVal + *stride >= *upperVal) {
                 result = false; // discontiguous if not empty
               }
-            } else {
-              mayBeEmpty = true;
+            } else { // bounds known and equal
+              if (j == 0 && firstDimensionStride1_) {
+                result = true; // stride doesn't matter
+              }
+            }
+          } else { // bounds not both known
+            mayBeEmpty = true;
+          }
+        } else { // stride not known
+          if (lowerVal && upperVal && *lowerVal == *upperVal) {
+            // stride doesn't matter when bounds are equal
+            if (j == 0 && firstDimensionStride1_) {
+              result = true;
             }
           } else {
             mayBeEmpty = true;
           }
-        } else {
-          mayBeEmpty = true;
         }
-      } else if (subscript[j].Rank() > 0) {
+      } else if (subscript[j].Rank() > 0) { // vector subscript
         ++rank;
         if (!result) {
-          result = false; // vector subscript
+          result = false;
         }
         mayBeEmpty = true;
-      } else {
-        // Scalar subscript.
+      } else { // scalar subscript
         if (dimExtent && *dimExtent > 1) {
           knownPartialSlice[j] = true;
         }
@@ -1138,7 +1154,7 @@ private:
     if (result) {
       return result;
     }
-    // Not provably discontiguous at this point.
+    // Not provably contiguous or discontiguous at this point.
     // Return "true" if simply contiguous, otherwise nullopt.
     for (auto j{subscript.size()}; j-- > 0;) {
       if (const auto *triplet{std::get_if<Triplet>(&subscript[j].u)}) {
@@ -1170,33 +1186,36 @@ private:
 
   FoldingContext &context_;
   bool namedConstantSectionsAreContiguous_{false};
+  bool firstDimensionStride1_{false};
 };
 
 template <typename A>
 std::optional<bool> IsContiguous(const A &x, FoldingContext &context,
-    bool namedConstantSectionsAreContiguous) {
+    bool namedConstantSectionsAreContiguous, bool firstDimensionStride1) {
   if (!IsVariable(x) &&
       (namedConstantSectionsAreContiguous || !ExtractDataRef(x, true, true))) {
     return true;
   } else {
-    return IsContiguousHelper{context, namedConstantSectionsAreContiguous}(x);
+    return IsContiguousHelper{
+        context, namedConstantSectionsAreContiguous, firstDimensionStride1}(x);
   }
 }
 
 template std::optional<bool> IsContiguous(const Expr<SomeType> &,
-    FoldingContext &, bool namedConstantSectionsAreContiguous);
+    FoldingContext &, bool namedConstantSectionsAreContiguous,
+    bool firstDimensionStride1);
 template std::optional<bool> IsContiguous(const ArrayRef &, FoldingContext &,
-    bool namedConstantSectionsAreContiguous);
+    bool namedConstantSectionsAreContiguous, bool firstDimensionStride1);
 template std::optional<bool> IsContiguous(const Substring &, FoldingContext &,
-    bool namedConstantSectionsAreContiguous);
+    bool namedConstantSectionsAreContiguous, bool firstDimensionStride1);
 template std::optional<bool> IsContiguous(const Component &, FoldingContext &,
-    bool namedConstantSectionsAreContiguous);
+    bool namedConstantSectionsAreContiguous, bool firstDimensionStride1);
 template std::optional<bool> IsContiguous(const ComplexPart &, FoldingContext &,
-    bool namedConstantSectionsAreContiguous);
+    bool namedConstantSectionsAreContiguous, bool firstDimensionStride1);
 template std::optional<bool> IsContiguous(const CoarrayRef &, FoldingContext &,
-    bool namedConstantSectionsAreContiguous);
-template std::optional<bool> IsContiguous(
-    const Symbol &, FoldingContext &, bool namedConstantSectionsAreContiguous);
+    bool namedConstantSectionsAreContiguous, bool firstDimensionStride1);
+template std::optional<bool> IsContiguous(const Symbol &, FoldingContext &,
+    bool namedConstantSectionsAreContiguous, bool firstDimensionStride1);
 
 // IsErrorExpr()
 struct IsErrorExprHelper : public AnyTraverse<IsErrorExprHelper, bool> {

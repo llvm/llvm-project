@@ -16,10 +16,12 @@
 #include "MCTargetDesc/SparcMCTargetDesc.h"
 #include "SparcMachineFunctionInfo.h"
 #include "SparcRegisterInfo.h"
+#include "SparcSelectionDAGInfo.h"
 #include "SparcTargetMachine.h"
 #include "SparcTargetObjectFile.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -1056,12 +1058,10 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
   // If the callee is a GlobalAddress node (quite common, every direct call is)
   // turn it into a TargetGlobalAddress node so that legalize doesn't hack it.
   // Likewise ExternalSymbol -> TargetExternalSymbol.
-  unsigned TF = isPositionIndependent() ? SparcMCExpr::VK_WPLT30
-                                        : SparcMCExpr::VK_WDISP30;
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee))
-    Callee = DAG.getTargetGlobalAddress(G->getGlobal(), dl, MVT::i32, 0, TF);
+    Callee = DAG.getTargetGlobalAddress(G->getGlobal(), dl, MVT::i32, 0);
   else if (ExternalSymbolSDNode *E = dyn_cast<ExternalSymbolSDNode>(Callee))
-    Callee = DAG.getTargetExternalSymbol(E->getSymbol(), MVT::i32, TF);
+    Callee = DAG.getTargetExternalSymbol(E->getSymbol(), MVT::i32);
 
   // Returns a chain & a flag for retval copy to use
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
@@ -1390,12 +1390,10 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
   // Likewise ExternalSymbol -> TargetExternalSymbol.
   SDValue Callee = CLI.Callee;
   bool hasReturnsTwice = hasReturnsTwiceAttr(DAG, Callee, CLI.CB);
-  unsigned TF = isPositionIndependent() ? SparcMCExpr::VK_WPLT30
-                                        : SparcMCExpr::VK_WDISP30;
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee))
-    Callee = DAG.getTargetGlobalAddress(G->getGlobal(), DL, PtrVT, 0, TF);
+    Callee = DAG.getTargetGlobalAddress(G->getGlobal(), DL, PtrVT, 0);
   else if (ExternalSymbolSDNode *E = dyn_cast<ExternalSymbolSDNode>(Callee))
-    Callee = DAG.getTargetExternalSymbol(E->getSymbol(), PtrVT, TF);
+    Callee = DAG.getTargetExternalSymbol(E->getSymbol(), PtrVT);
 
   // Build the operands for the call instruction itself.
   SmallVector<SDValue, 8> Ops;
@@ -1757,7 +1755,6 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::CTPOP, MVT::i64,
                        Subtarget->usePopc() ? Legal : Expand);
-    setOperationAction(ISD::CTTZ, MVT::i64, Expand);
     setOperationAction(ISD::BSWAP, MVT::i64, Expand);
     setOperationAction(ISD::ROTL , MVT::i64, Expand);
     setOperationAction(ISD::ROTR , MVT::i64, Expand);
@@ -1817,8 +1814,7 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FCOS , MVT::f32, Expand);
   setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
   setOperationAction(ISD::FREM , MVT::f32, Expand);
-  setOperationAction(ISD::FMA  , MVT::f32, Expand);
-  setOperationAction(ISD::CTTZ, MVT::i32, Expand);
+  setOperationAction(ISD::FMA, MVT::f32, Expand);
   setOperationAction(ISD::ROTL , MVT::i32, Expand);
   setOperationAction(ISD::ROTR , MVT::i32, Expand);
   setOperationAction(ISD::BSWAP, MVT::i32, Expand);
@@ -1857,8 +1853,10 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   if (Subtarget->is64Bit()) {
     setOperationAction(ISD::UMUL_LOHI, MVT::i64, Expand);
     setOperationAction(ISD::SMUL_LOHI, MVT::i64, Expand);
-    setOperationAction(ISD::MULHU,     MVT::i64, Expand);
-    setOperationAction(ISD::MULHS,     MVT::i64, Expand);
+    setOperationAction(ISD::MULHU, MVT::i64,
+                       Subtarget->isVIS3() ? Legal : Expand);
+    setOperationAction(ISD::MULHS, MVT::i64,
+                       Subtarget->isVIS3() ? Legal : Expand);
 
     setOperationAction(ISD::SHL_PARTS, MVT::i64, Expand);
     setOperationAction(ISD::SRA_PARTS, MVT::i64, Expand);
@@ -1994,17 +1992,36 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::CTLZ, MVT::i64, Legal);
     setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Legal);
     setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i64, Legal);
+
+    setOperationAction(ISD::CTTZ, MVT::i32,
+                       Subtarget->is64Bit() ? Promote : Expand);
+    setOperationAction(ISD::CTTZ, MVT::i64, Expand);
+    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32,
+                       Subtarget->is64Bit() ? Promote : Expand);
+    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i64, Expand);
   } else if (Subtarget->usePopc()) {
     setOperationAction(ISD::CTLZ, MVT::i32, Expand);
     setOperationAction(ISD::CTLZ, MVT::i64, Expand);
     setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Expand);
     setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i64, Expand);
+
+    setOperationAction(ISD::CTTZ, MVT::i32, Expand);
+    setOperationAction(ISD::CTTZ, MVT::i64, Expand);
+    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32, Expand);
+    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i64, Expand);
   } else {
     setOperationAction(ISD::CTLZ, MVT::i32, Expand);
     setOperationAction(ISD::CTLZ, MVT::i64, Expand);
     setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32,
                        Subtarget->is64Bit() ? Promote : LibCall);
     setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i64, LibCall);
+
+    // FIXME here we don't have any ISA extensions that could help us, so to
+    // prevent large expansions those should be made into LibCalls.
+    setOperationAction(ISD::CTTZ, MVT::i32, Expand);
+    setOperationAction(ISD::CTTZ, MVT::i64, Expand);
+    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32, Expand);
+    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i64, Expand);
   }
 
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
@@ -2016,47 +2033,6 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
 
 bool SparcTargetLowering::useSoftFloat() const {
   return Subtarget->useSoftFloat();
-}
-
-const char *SparcTargetLowering::getTargetNodeName(unsigned Opcode) const {
-  switch ((SPISD::NodeType)Opcode) {
-  case SPISD::FIRST_NUMBER:    break;
-  case SPISD::CMPICC:          return "SPISD::CMPICC";
-  case SPISD::CMPFCC:          return "SPISD::CMPFCC";
-  case SPISD::CMPFCC_V9:
-    return "SPISD::CMPFCC_V9";
-  case SPISD::BRICC:           return "SPISD::BRICC";
-  case SPISD::BPICC:
-    return "SPISD::BPICC";
-  case SPISD::BPXCC:
-    return "SPISD::BPXCC";
-  case SPISD::BRFCC:           return "SPISD::BRFCC";
-  case SPISD::BRFCC_V9:
-    return "SPISD::BRFCC_V9";
-  case SPISD::BR_REG:
-    return "SPISD::BR_REG";
-  case SPISD::SELECT_ICC:      return "SPISD::SELECT_ICC";
-  case SPISD::SELECT_XCC:      return "SPISD::SELECT_XCC";
-  case SPISD::SELECT_FCC:      return "SPISD::SELECT_FCC";
-  case SPISD::SELECT_REG:
-    return "SPISD::SELECT_REG";
-  case SPISD::Hi:              return "SPISD::Hi";
-  case SPISD::Lo:              return "SPISD::Lo";
-  case SPISD::FTOI:            return "SPISD::FTOI";
-  case SPISD::ITOF:            return "SPISD::ITOF";
-  case SPISD::FTOX:            return "SPISD::FTOX";
-  case SPISD::XTOF:            return "SPISD::XTOF";
-  case SPISD::CALL:            return "SPISD::CALL";
-  case SPISD::RET_GLUE:        return "SPISD::RET_GLUE";
-  case SPISD::GLOBAL_BASE_REG: return "SPISD::GLOBAL_BASE_REG";
-  case SPISD::FLUSHW:          return "SPISD::FLUSHW";
-  case SPISD::TLS_ADD:         return "SPISD::TLS_ADD";
-  case SPISD::TLS_LD:          return "SPISD::TLS_LD";
-  case SPISD::TLS_CALL:        return "SPISD::TLS_CALL";
-  case SPISD::TAIL_CALL:       return "SPISD::TAIL_CALL";
-  case SPISD::LOAD_GDOP:       return "SPISD::LOAD_GDOP";
-  }
-  return nullptr;
 }
 
 EVT SparcTargetLowering::getSetCCResultType(const DataLayout &, LLVMContext &,
@@ -2164,10 +2140,10 @@ SDValue SparcTargetLowering::makeAddress(SDValue Op, SelectionDAG &DAG) const {
     if (picLevel == PICLevel::SmallPIC) {
       // This is the pic13 code model, the GOT is known to be smaller than 8KiB.
       Idx = DAG.getNode(SPISD::Lo, DL, Op.getValueType(),
-                        withTargetFlags(Op, SparcMCExpr::VK_GOT13, DAG));
+                        withTargetFlags(Op, ELF::R_SPARC_GOT13, DAG));
     } else {
       // This is the pic32 code model, the GOT is known to be smaller than 4GB.
-      Idx = makeHiLoPair(Op, SparcMCExpr::VK_GOT22, SparcMCExpr::VK_GOT10, DAG);
+      Idx = makeHiLoPair(Op, ELF::R_SPARC_GOT22, ELF::R_SPARC_GOT10, DAG);
     }
 
     SDValue GlobalBase = DAG.getNode(SPISD::GLOBAL_BASE_REG, DL, VT);
@@ -2186,21 +2162,20 @@ SDValue SparcTargetLowering::makeAddress(SDValue Op, SelectionDAG &DAG) const {
     llvm_unreachable("Unsupported absolute code model");
   case CodeModel::Small:
     // abs32.
-    return makeHiLoPair(Op, SparcMCExpr::VK_HI, SparcMCExpr::VK_LO, DAG);
+    return makeHiLoPair(Op, ELF::R_SPARC_HI22, ELF::R_SPARC_LO10, DAG);
   case CodeModel::Medium: {
     // abs44.
-    SDValue H44 =
-        makeHiLoPair(Op, SparcMCExpr::VK_H44, SparcMCExpr::VK_M44, DAG);
+    SDValue H44 = makeHiLoPair(Op, ELF::R_SPARC_H44, ELF::R_SPARC_M44, DAG);
     H44 = DAG.getNode(ISD::SHL, DL, VT, H44, DAG.getConstant(12, DL, MVT::i32));
-    SDValue L44 = withTargetFlags(Op, SparcMCExpr::VK_L44, DAG);
+    SDValue L44 = withTargetFlags(Op, ELF::R_SPARC_L44, DAG);
     L44 = DAG.getNode(SPISD::Lo, DL, VT, L44);
     return DAG.getNode(ISD::ADD, DL, VT, H44, L44);
   }
   case CodeModel::Large: {
     // abs64.
-    SDValue Hi = makeHiLoPair(Op, SparcMCExpr::VK_HH, SparcMCExpr::VK_HM, DAG);
+    SDValue Hi = makeHiLoPair(Op, ELF::R_SPARC_HH22, ELF::R_SPARC_HM10, DAG);
     Hi = DAG.getNode(ISD::SHL, DL, VT, Hi, DAG.getConstant(32, DL, MVT::i32));
-    SDValue Lo = makeHiLoPair(Op, SparcMCExpr::VK_HI, SparcMCExpr::VK_LO, DAG);
+    SDValue Lo = makeHiLoPair(Op, ELF::R_SPARC_HI22, ELF::R_SPARC_LO10, DAG);
     return DAG.getNode(ISD::ADD, DL, VT, Hi, Lo);
   }
   }
@@ -2236,17 +2211,17 @@ SDValue SparcTargetLowering::LowerGlobalTLSAddress(SDValue Op,
 
   if (model == TLSModel::GeneralDynamic || model == TLSModel::LocalDynamic) {
     unsigned HiTF =
-        ((model == TLSModel::GeneralDynamic) ? SparcMCExpr::VK_TLS_GD_HI22
-                                             : SparcMCExpr::VK_TLS_LDM_HI22);
+        ((model == TLSModel::GeneralDynamic) ? ELF::R_SPARC_TLS_GD_HI22
+                                             : ELF::R_SPARC_TLS_LDM_HI22);
     unsigned LoTF =
-        ((model == TLSModel::GeneralDynamic) ? SparcMCExpr::VK_TLS_GD_LO10
-                                             : SparcMCExpr::VK_TLS_LDM_LO10);
+        ((model == TLSModel::GeneralDynamic) ? ELF::R_SPARC_TLS_GD_LO10
+                                             : ELF::R_SPARC_TLS_LDM_LO10);
     unsigned addTF =
-        ((model == TLSModel::GeneralDynamic) ? SparcMCExpr::VK_TLS_GD_ADD
-                                             : SparcMCExpr::VK_TLS_LDM_ADD);
+        ((model == TLSModel::GeneralDynamic) ? ELF::R_SPARC_TLS_GD_ADD
+                                             : ELF::R_SPARC_TLS_LDM_ADD);
     unsigned callTF =
-        ((model == TLSModel::GeneralDynamic) ? SparcMCExpr::VK_TLS_GD_CALL
-                                             : SparcMCExpr::VK_TLS_LDM_CALL);
+        ((model == TLSModel::GeneralDynamic) ? ELF::R_SPARC_TLS_GD_CALL
+                                             : ELF::R_SPARC_TLS_LDM_CALL);
 
     SDValue HiLo = makeHiLoPair(Op, HiTF, LoTF, DAG);
     SDValue Base = DAG.getNode(SPISD::GLOBAL_BASE_REG, DL, PtrVT);
@@ -2283,18 +2258,18 @@ SDValue SparcTargetLowering::LowerGlobalTLSAddress(SDValue Op,
 
     SDValue Hi =
         DAG.getNode(SPISD::Hi, DL, PtrVT,
-                    withTargetFlags(Op, SparcMCExpr::VK_TLS_LDO_HIX22, DAG));
+                    withTargetFlags(Op, ELF::R_SPARC_TLS_LDO_HIX22, DAG));
     SDValue Lo =
         DAG.getNode(SPISD::Lo, DL, PtrVT,
-                    withTargetFlags(Op, SparcMCExpr::VK_TLS_LDO_LOX10, DAG));
+                    withTargetFlags(Op, ELF::R_SPARC_TLS_LDO_LOX10, DAG));
     HiLo =  DAG.getNode(ISD::XOR, DL, PtrVT, Hi, Lo);
     return DAG.getNode(SPISD::TLS_ADD, DL, PtrVT, Ret, HiLo,
-                       withTargetFlags(Op, SparcMCExpr::VK_TLS_LDO_ADD, DAG));
+                       withTargetFlags(Op, ELF::R_SPARC_TLS_LDO_ADD, DAG));
   }
 
   if (model == TLSModel::InitialExec) {
-    unsigned ldTF = ((PtrVT == MVT::i64) ? SparcMCExpr::VK_TLS_IE_LDX
-                                         : SparcMCExpr::VK_TLS_IE_LD);
+    unsigned ldTF = ((PtrVT == MVT::i64) ? ELF::R_SPARC_TLS_IE_LDX
+                                         : ELF::R_SPARC_TLS_IE_LD);
 
     SDValue Base = DAG.getNode(SPISD::GLOBAL_BASE_REG, DL, PtrVT);
 
@@ -2303,24 +2278,22 @@ SDValue SparcTargetLowering::LowerGlobalTLSAddress(SDValue Op,
     MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
     MFI.setHasCalls(true);
 
-    SDValue TGA = makeHiLoPair(Op, SparcMCExpr::VK_TLS_IE_HI22,
-                               SparcMCExpr::VK_TLS_IE_LO10, DAG);
+    SDValue TGA = makeHiLoPair(Op, ELF::R_SPARC_TLS_IE_HI22,
+                               ELF::R_SPARC_TLS_IE_LO10, DAG);
     SDValue Ptr = DAG.getNode(ISD::ADD, DL, PtrVT, Base, TGA);
     SDValue Offset = DAG.getNode(SPISD::TLS_LD,
                                  DL, PtrVT, Ptr,
                                  withTargetFlags(Op, ldTF, DAG));
     return DAG.getNode(SPISD::TLS_ADD, DL, PtrVT,
                        DAG.getRegister(SP::G7, PtrVT), Offset,
-                       withTargetFlags(Op, SparcMCExpr::VK_TLS_IE_ADD, DAG));
+                       withTargetFlags(Op, ELF::R_SPARC_TLS_IE_ADD, DAG));
   }
 
   assert(model == TLSModel::LocalExec);
-  SDValue Hi =
-      DAG.getNode(SPISD::Hi, DL, PtrVT,
-                  withTargetFlags(Op, SparcMCExpr::VK_TLS_LE_HIX22, DAG));
-  SDValue Lo =
-      DAG.getNode(SPISD::Lo, DL, PtrVT,
-                  withTargetFlags(Op, SparcMCExpr::VK_TLS_LE_LOX10, DAG));
+  SDValue Hi = DAG.getNode(SPISD::Hi, DL, PtrVT,
+                           withTargetFlags(Op, ELF::R_SPARC_TLS_LE_HIX22, DAG));
+  SDValue Lo = DAG.getNode(SPISD::Lo, DL, PtrVT,
+                           withTargetFlags(Op, ELF::R_SPARC_TLS_LE_LOX10, DAG));
   SDValue Offset =  DAG.getNode(ISD::XOR, DL, PtrVT, Hi, Lo);
 
   return DAG.getNode(ISD::ADD, DL, PtrVT,
@@ -2599,7 +2572,6 @@ static SDValue LowerSINT_TO_FP(SDValue Op, SelectionDAG &DAG,
 static SDValue LowerFP_TO_UINT(SDValue Op, SelectionDAG &DAG,
                                const SparcTargetLowering &TLI,
                                bool hasHardQuad) {
-  SDLoc dl(Op);
   EVT VT = Op.getValueType();
 
   // Expand if it does not involve f128 or the target has support for
@@ -2620,7 +2592,6 @@ static SDValue LowerFP_TO_UINT(SDValue Op, SelectionDAG &DAG,
 static SDValue LowerUINT_TO_FP(SDValue Op, SelectionDAG &DAG,
                                const SparcTargetLowering &TLI,
                                bool hasHardQuad) {
-  SDLoc dl(Op);
   EVT OpVT = Op.getOperand(0).getValueType();
   assert(OpVT == MVT::i32 || OpVT == MVT::i64);
 
@@ -3143,7 +3114,6 @@ static SDValue LowerATOMIC_LOAD_STORE(SDValue Op, SelectionDAG &DAG) {
 SDValue SparcTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                      SelectionDAG &DAG) const {
   unsigned IntNo = Op.getConstantOperandVal(0);
-  SDLoc dl(Op);
   switch (IntNo) {
   default: return SDValue();    // Don't custom lower most intrinsics.
   case Intrinsic::thread_pointer: {
@@ -3586,6 +3556,12 @@ bool SparcTargetLowering::useLoadStackGuardNode(const Module &M) const {
   return true;
 }
 
+bool SparcTargetLowering::isFNegFree(EVT VT) const {
+  if (Subtarget->isVIS3())
+    return VT == MVT::f32 || VT == MVT::f64;
+  return false;
+}
+
 bool SparcTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
                                        bool ForCodeSize) const {
   return Subtarget->isVIS() && (VT == MVT::f32 || VT == MVT::f64) &&
@@ -3593,6 +3569,15 @@ bool SparcTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
 }
 
 bool SparcTargetLowering::isCtlzFast() const { return Subtarget->isVIS3(); }
+
+bool SparcTargetLowering::isCheapToSpeculateCttz(Type *Ty) const {
+  // We lack native cttz, however,
+  // On 64-bit targets it is cheap to implement it in terms of popc.
+  if (Subtarget->is64Bit() && Subtarget->usePopc())
+    return true;
+  // Otherwise, implementing cttz in terms of ctlz is still cheap.
+  return isCheapToSpeculateCtlz(Ty);
+}
 
 // Override to disable global variable loading on Linux.
 void SparcTargetLowering::insertSSPDeclarations(Module &M) const {

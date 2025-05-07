@@ -565,6 +565,9 @@ public:
   llvm::ArrayRef<Expr *> getQueueIdExprs() const {
     return OpenACCClauseWithExprs::getExprs().drop_front();
   }
+  // If this is a plain `wait` (no parens) this returns 'false'. Else Sema/Parse
+  // ensures we have at least one QueueId expression.
+  bool hasExprs() const { return getLParenLoc().isValid(); }
 };
 
 class OpenACCNumGangsClause final

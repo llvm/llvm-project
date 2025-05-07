@@ -1228,7 +1228,11 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
   SanitizerScope SanScope(this);
 
   llvm::DILocation *CheckDI = Builder.getCurrentDebugLocation();
-  if (ClArrayBoundsPseudoFn && CheckDI) {
+  auto CheckKind = SanitizerKind::SO_ArrayBounds;
+  // TODO: deprecate ClArrayBoundsPseudoFn
+  if ((ClArrayBoundsPseudoFn ||
+       CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo.has(CheckKind)) &&
+      CheckDI) {
     CheckDI = getDebugInfo()->CreateSyntheticInlineAt(
         Builder.getCurrentDebugLocation(), "__ubsan_check_array_bounds");
   }
@@ -1245,8 +1249,8 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
   };
   llvm::Value *Check = Accessed ? Builder.CreateICmpULT(IndexVal, BoundVal)
                                 : Builder.CreateICmpULE(IndexVal, BoundVal);
-  EmitCheck(std::make_pair(Check, SanitizerKind::SO_ArrayBounds),
-            SanitizerHandler::OutOfBounds, StaticData, Index);
+  EmitCheck(std::make_pair(Check, CheckKind), SanitizerHandler::OutOfBounds,
+            StaticData, Index);
 }
 
 CodeGenFunction::ComplexPairTy CodeGenFunction::
@@ -1920,7 +1924,7 @@ static bool getRangeForType(CodeGenFunction &CGF, QualType Ty,
 llvm::MDNode *CodeGenFunction::getRangeForLoadFromType(QualType Ty) {
   llvm::APInt Min, End;
   if (!getRangeForType(*this, Ty, Min, End, CGM.getCodeGenOpts().StrictEnums,
-                       Ty->hasBooleanRepresentation()))
+                       Ty->hasBooleanRepresentation() && !Ty->isVectorType()))
     return nullptr;
 
   llvm::MDBuilder MDHelper(getLLVMContext());
@@ -1948,7 +1952,7 @@ bool CodeGenFunction::EmitScalarRangeCheck(llvm::Value *Value, QualType Ty,
   if (!HasBoolCheck && !HasEnumCheck)
     return false;
 
-  bool IsBool = Ty->hasBooleanRepresentation() ||
+  bool IsBool = (Ty->hasBooleanRepresentation() && !Ty->isVectorType()) ||
                 NSAPI(CGM.getContext()).isObjCBOOLType(Ty);
   bool NeedsBoolCheck = HasBoolCheck && IsBool;
   bool NeedsEnumCheck = HasEnumCheck && Ty->getAs<EnumType>();
@@ -2068,11 +2072,8 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
 /// by ConvertType) to its load/store type (as returned by
 /// convertTypeForLoadStore).
 llvm::Value *CodeGenFunction::EmitToMemory(llvm::Value *Value, QualType Ty) {
-  if (Ty->hasBooleanRepresentation() || Ty->isBitIntType()) {
-    llvm::Type *StoreTy = convertTypeForLoadStore(Ty, Value->getType());
-    bool Signed = Ty->isSignedIntegerOrEnumerationType();
-    return Builder.CreateIntCast(Value, StoreTy, Signed, "storedv");
-  }
+  if (auto *AtomicTy = Ty->getAs<AtomicType>())
+    Ty = AtomicTy->getValueType();
 
   if (Ty->isExtVectorBoolType()) {
     llvm::Type *StoreTy = convertTypeForLoadStore(Ty, Value->getType());
@@ -2088,6 +2089,12 @@ llvm::Value *CodeGenFunction::EmitToMemory(llvm::Value *Value, QualType Ty) {
     Value = Builder.CreateBitCast(Value, StoreTy);
   }
 
+  if (Ty->hasBooleanRepresentation() || Ty->isBitIntType()) {
+    llvm::Type *StoreTy = convertTypeForLoadStore(Ty, Value->getType());
+    bool Signed = Ty->isSignedIntegerOrEnumerationType();
+    return Builder.CreateIntCast(Value, StoreTy, Signed, "storedv");
+  }
+
   return Value;
 }
 
@@ -2095,6 +2102,9 @@ llvm::Value *CodeGenFunction::EmitToMemory(llvm::Value *Value, QualType Ty) {
 /// by convertTypeForLoadStore) to its primary IR type (as returned
 /// by ConvertType).
 llvm::Value *CodeGenFunction::EmitFromMemory(llvm::Value *Value, QualType Ty) {
+  if (auto *AtomicTy = Ty->getAs<AtomicType>())
+    Ty = AtomicTy->getValueType();
+
   if (Ty->isPackedVectorBoolType(getContext())) {
     const auto *RawIntTy = Value->getType();
 
@@ -3486,8 +3496,7 @@ llvm::Constant *CodeGenFunction::EmitCheckTypeDescriptor(QualType T) {
   return GV;
 }
 
-llvm::Value *CodeGenFunction::EmitCheckValue(llvm::Value *V,
-                                             bool &MayReadFromPtrToInt) {
+llvm::Value *CodeGenFunction::EmitCheckValue(llvm::Value *V) {
   llvm::Type *TargetTy = IntPtrTy;
 
   if (V->getType() == TargetTy)
@@ -3513,7 +3522,6 @@ llvm::Value *CodeGenFunction::EmitCheckValue(llvm::Value *V,
     Builder.CreateStore(V, Ptr);
     V = Ptr.getPointer();
   }
-  MayReadFromPtrToInt = true;
   return Builder.CreatePtrToInt(V, TargetTy);
 }
 
@@ -3619,8 +3627,7 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
                                  ArrayRef<llvm::Value *> FnArgs,
                                  SanitizerHandler CheckHandler,
                                  CheckRecoverableKind RecoverKind, bool IsFatal,
-                                 llvm::BasicBlock *ContBB, bool NoMerge,
-                                 bool MayReadFromPtrToInt) {
+                                 llvm::BasicBlock *ContBB, bool NoMerge) {
   assert(IsFatal || RecoverKind != CheckRecoverableKind::Unrecoverable);
   std::optional<ApplyDebugLocation> DL;
   if (!CGF.Builder.getCurrentDebugLocation()) {
@@ -3648,20 +3655,6 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
         .addAttribute(llvm::Attribute::NoUnwind);
   }
   B.addUWTableAttr(llvm::UWTableKind::Default);
-  // Add more precise attributes to recoverable ubsan handlers for better
-  // optimizations.
-  if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0 && MayReturn) {
-    // __ubsan_handle_dynamic_type_cache_miss reads the vtable, which is also
-    // accessible by the current module.
-    if (CheckHandler != SanitizerHandler::DynamicTypeCacheMiss) {
-      llvm::MemoryEffects ME =
-          llvm::MemoryEffects::argMemOnly(llvm::ModRefInfo::Ref) |
-          llvm::MemoryEffects::inaccessibleMemOnly();
-      if (MayReadFromPtrToInt)
-        ME |= llvm::MemoryEffects::readOnly();
-      B.addMemoryAttr(ME);
-    }
-  }
 
   llvm::FunctionCallee Fn = CGF.CGM.CreateRuntimeFunction(
       FnType, FnName,
@@ -3758,7 +3751,6 @@ void CodeGenFunction::EmitCheck(
   // representing operand values.
   SmallVector<llvm::Value *, 4> Args;
   SmallVector<llvm::Type *, 4> ArgTypes;
-  bool MayReadFromPtrToInt = false;
   if (!CGM.getCodeGenOpts().SanitizeMinimalRuntime) {
     Args.reserve(DynamicArgs.size() + 1);
     ArgTypes.reserve(DynamicArgs.size() + 1);
@@ -3778,7 +3770,7 @@ void CodeGenFunction::EmitCheck(
     }
 
     for (size_t i = 0, n = DynamicArgs.size(); i != n; ++i) {
-      Args.push_back(EmitCheckValue(DynamicArgs[i], MayReadFromPtrToInt));
+      Args.push_back(EmitCheckValue(DynamicArgs[i]));
       ArgTypes.push_back(IntPtrTy);
     }
   }
@@ -3790,8 +3782,7 @@ void CodeGenFunction::EmitCheck(
     // Simple case: we need to generate a single handler call, either
     // fatal, or non-fatal.
     emitCheckHandlerCall(*this, FnType, Args, CheckHandler, RecoverKind,
-                         (FatalCond != nullptr), Cont, NoMerge,
-                         MayReadFromPtrToInt);
+                         (FatalCond != nullptr), Cont, NoMerge);
   } else {
     // Emit two handler calls: first one for set of unrecoverable checks,
     // another one for recoverable.
@@ -3801,10 +3792,10 @@ void CodeGenFunction::EmitCheck(
     Builder.CreateCondBr(FatalCond, NonFatalHandlerBB, FatalHandlerBB);
     EmitBlock(FatalHandlerBB);
     emitCheckHandlerCall(*this, FnType, Args, CheckHandler, RecoverKind, true,
-                         NonFatalHandlerBB, NoMerge, MayReadFromPtrToInt);
+                         NonFatalHandlerBB, NoMerge);
     EmitBlock(NonFatalHandlerBB);
     emitCheckHandlerCall(*this, FnType, Args, CheckHandler, RecoverKind, false,
-                         Cont, NoMerge, MayReadFromPtrToInt);
+                         Cont, NoMerge);
   }
 
   EmitBlock(Cont);
@@ -3936,7 +3927,11 @@ void CodeGenFunction::EmitCfiCheckFail() {
   // Data == nullptr means the calling module has trap behaviour for this check.
   llvm::Value *DataIsNotNullPtr =
       Builder.CreateICmpNE(Data, llvm::ConstantPointerNull::get(Int8PtrTy));
-  EmitTrapCheck(DataIsNotNullPtr, SanitizerHandler::CFICheckFail);
+  // TODO: since there is no data, we don't know the CheckKind, and therefore
+  // cannot inspect CGM.getCodeGenOpts().SanitizeMergeHandlers. We default to
+  // NoMerge = false. Users can disable merging by disabling optimization.
+  EmitTrapCheck(DataIsNotNullPtr, SanitizerHandler::CFICheckFail,
+                /*NoMerge=*/false);
 
   llvm::StructType *SourceLocationTy =
       llvm::StructType::get(VoidPtrTy, Int32Ty, Int32Ty);
@@ -3964,8 +3959,6 @@ void CodeGenFunction::EmitCfiCheckFail() {
       {CFITCK_UnrelatedCast, SanitizerKind::SO_CFIUnrelatedCast},
       {CFITCK_ICall, SanitizerKind::SO_CFIICall}};
 
-  SmallVector<std::pair<llvm::Value *, SanitizerKind::SanitizerOrdinal>, 5>
-      Checks;
   for (auto CheckKindOrdinalPair : CheckKinds) {
     int Kind = CheckKindOrdinalPair.first;
     SanitizerKind::SanitizerOrdinal Ordinal = CheckKindOrdinalPair.second;
@@ -3975,7 +3968,11 @@ void CodeGenFunction::EmitCfiCheckFail() {
       EmitCheck(std::make_pair(Cond, Ordinal), SanitizerHandler::CFICheckFail,
                 {}, {Data, Addr, ValidVtable});
     else
-      EmitTrapCheck(Cond, SanitizerHandler::CFICheckFail);
+      // TODO: we can't rely on CGM.getCodeGenOpts().SanitizeMergeHandlers.
+      // Although the compiler allows SanitizeMergeHandlers to be set
+      // independently of CGM.getLangOpts().Sanitize, Driver/SanitizerArgs.cpp
+      // requires that SanitizeMergeHandlers is a subset of Sanitize.
+      EmitTrapCheck(Cond, SanitizerHandler::CFICheckFail, /*NoMerge=*/false);
   }
 
   FinishFunction();

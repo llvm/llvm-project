@@ -56,7 +56,7 @@ struct CIRRecordLowering final {
   };
   // The constructor.
   CIRRecordLowering(CIRGenTypes &cirGenTypes, const RecordDecl *recordDecl,
-                    bool isPacked);
+                    bool packed);
 
   /// Constructs a MemberInfo instance from an offset and mlir::Type.
   MemberInfo makeStorageInfo(CharUnits offset, mlir::Type data) {
@@ -64,6 +64,7 @@ struct CIRRecordLowering final {
   }
 
   void lower();
+  void lowerUnion();
 
   /// Determines if we need a packed llvm struct.
   void determinePacked();
@@ -76,11 +77,17 @@ struct CIRRecordLowering final {
     return astContext.toCharUnitsFromBits(bitOffset);
   }
 
+  void calculateZeroInit();
+
   CharUnits getSize(mlir::Type Ty) {
     return CharUnits::fromQuantity(dataLayout.layout.getTypeSize(Ty));
   }
   CharUnits getAlignment(mlir::Type Ty) {
     return CharUnits::fromQuantity(dataLayout.layout.getTypeABIAlignment(Ty));
+  }
+
+  bool isZeroInitializable(const FieldDecl *fd) {
+    return cirGenTypes.isZeroInitializable(fd->getType());
   }
 
   /// Wraps cir::IntType with some implicit arguments.
@@ -102,8 +109,7 @@ struct CIRRecordLowering final {
     mlir::Type type = getCharType();
     return numberOfChars == CharUnits::One()
                ? type
-               : cir::ArrayType::get(type.getContext(), type,
-                                     numberOfChars.getQuantity());
+               : cir::ArrayType::get(type, numberOfChars.getQuantity());
   }
 
   mlir::Type getStorageType(const FieldDecl *fieldDecl) {
@@ -122,6 +128,13 @@ struct CIRRecordLowering final {
   /// Fills out the structures that are ultimately consumed.
   void fillOutputFields();
 
+  void appendPaddingBytes(CharUnits size) {
+    if (!size.isZero()) {
+      fieldTypes.push_back(getByteArrayType(size));
+      padded = true;
+    }
+  }
+
   CIRGenTypes &cirGenTypes;
   CIRGenBuilderTy &builder;
   const ASTContext &astContext;
@@ -131,11 +144,13 @@ struct CIRRecordLowering final {
   std::vector<MemberInfo> members;
   // Output fields, consumed by CIRGenTypes::computeRecordLayout
   llvm::SmallVector<mlir::Type, 16> fieldTypes;
-  llvm::DenseMap<const FieldDecl *, unsigned> fields;
+  llvm::DenseMap<const FieldDecl *, unsigned> fieldIdxMap;
   cir::CIRDataLayout dataLayout;
 
   LLVM_PREFERRED_TYPE(bool)
   unsigned zeroInitializable : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned zeroInitializableAsBase : 1;
   LLVM_PREFERRED_TYPE(bool)
   unsigned packed : 1;
   LLVM_PREFERRED_TYPE(bool)
@@ -148,25 +163,19 @@ private:
 } // namespace
 
 CIRRecordLowering::CIRRecordLowering(CIRGenTypes &cirGenTypes,
-                                     const RecordDecl *recordDecl,
-                                     bool isPacked)
+                                     const RecordDecl *recordDecl, bool packed)
     : cirGenTypes(cirGenTypes), builder(cirGenTypes.getBuilder()),
       astContext(cirGenTypes.getASTContext()), recordDecl(recordDecl),
       astRecordLayout(
           cirGenTypes.getASTContext().getASTRecordLayout(recordDecl)),
       dataLayout(cirGenTypes.getCGModule().getModule()),
-      zeroInitializable(true), packed(isPacked), padded(false) {}
+      zeroInitializable(true), zeroInitializableAsBase(true), packed(packed),
+      padded(false) {}
 
 void CIRRecordLowering::lower() {
   if (recordDecl->isUnion()) {
-    cirGenTypes.getCGModule().errorNYI(recordDecl->getSourceRange(),
-                                       "lower: union");
-    return;
-  }
-
-  if (isa<CXXRecordDecl>(recordDecl)) {
-    cirGenTypes.getCGModule().errorNYI(recordDecl->getSourceRange(),
-                                       "lower: class");
+    lowerUnion();
+    assert(!cir::MissingFeatures::bitfields());
     return;
   }
 
@@ -175,6 +184,20 @@ void CIRRecordLowering::lower() {
   CharUnits size = astRecordLayout.getSize();
 
   accumulateFields();
+
+  if (const auto *cxxRecordDecl = dyn_cast<CXXRecordDecl>(recordDecl)) {
+    if (cxxRecordDecl->getNumBases() > 0) {
+      CIRGenModule &cgm = cirGenTypes.getCGModule();
+      cgm.errorNYI(recordDecl->getSourceRange(),
+                   "CIRRecordLowering::lower: derived CXXRecordDecl");
+      return;
+    }
+    if (members.empty()) {
+      appendPaddingBytes(size);
+      assert(!cir::MissingFeatures::bitfields());
+      return;
+    }
+  }
 
   llvm::stable_sort(members);
   // TODO: implement clipTailPadding once bitfields are implemented
@@ -186,6 +209,7 @@ void CIRRecordLowering::lower() {
   insertPadding();
   members.pop_back();
 
+  calculateZeroInit();
   fillOutputFields();
 }
 
@@ -195,7 +219,8 @@ void CIRRecordLowering::fillOutputFields() {
       fieldTypes.push_back(member.data);
     if (member.kind == MemberInfo::InfoKind::Field) {
       if (member.fieldDecl)
-        fields[member.fieldDecl->getCanonicalDecl()] = fieldTypes.size() - 1;
+        fieldIdxMap[member.fieldDecl->getCanonicalDecl()] =
+            fieldTypes.size() - 1;
       // A field without storage must be a bitfield.
       assert(!cir::MissingFeatures::bitfields());
     }
@@ -219,6 +244,19 @@ void CIRRecordLowering::accumulateFields() {
       assert(!cir::MissingFeatures::zeroSizeRecordMembers());
       ++field;
     }
+  }
+}
+
+void CIRRecordLowering::calculateZeroInit() {
+  for (const MemberInfo &member : members) {
+    if (member.kind == MemberInfo::InfoKind::Field) {
+      if (!member.fieldDecl || isZeroInitializable(member.fieldDecl))
+        continue;
+      zeroInitializable = zeroInitializableAsBase = false;
+      return;
+    }
+    // TODO(cir): handle base types
+    assert(!cir::MissingFeatures::cxxSupport());
   }
 }
 
@@ -281,7 +319,10 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
   // If we're in C++, compute the base subobject type.
   if (llvm::isa<CXXRecordDecl>(rd) && !rd->isUnion() &&
       !rd->hasAttr<FinalAttr>()) {
-    cgm.errorNYI(rd->getSourceRange(), "computeRecordLayout: CXXRecordDecl");
+    if (lowering.astRecordLayout.getNonVirtualSize() !=
+        lowering.astRecordLayout.getSize()) {
+      cgm.errorNYI(rd->getSourceRange(), "computeRecordLayout: CXXRecordDecl");
+    }
   }
 
   // Fill in the record *after* computing the base type.  Filling in the body
@@ -290,14 +331,16 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
   assert(!cir::MissingFeatures::astRecordDeclAttr());
   ty->complete(lowering.fieldTypes, lowering.packed, lowering.padded);
 
-  auto rl = std::make_unique<CIRGenRecordLayout>(ty ? *ty : cir::RecordType());
+  auto rl = std::make_unique<CIRGenRecordLayout>(
+      ty ? *ty : cir::RecordType(), (bool)lowering.zeroInitializable,
+      (bool)lowering.zeroInitializableAsBase);
 
   assert(!cir::MissingFeatures::recordZeroInit());
   assert(!cir::MissingFeatures::cxxSupport());
   assert(!cir::MissingFeatures::bitfields());
 
   // Add all the field numbers.
-  rl->fieldInfo.swap(lowering.fields);
+  rl->fieldIdxMap.swap(lowering.fieldIdxMap);
 
   // Dump the layout, if requested.
   if (getASTContext().getLangOpts().DumpRecordLayouts) {
@@ -306,4 +349,69 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
 
   // TODO: implement verification
   return rl;
+}
+
+void CIRRecordLowering::lowerUnion() {
+  CharUnits layoutSize = astRecordLayout.getSize();
+  mlir::Type storageType = nullptr;
+  bool seenNamedMember = false;
+
+  // Iterate through the fields setting bitFieldInfo and the Fields array. Also
+  // locate the "most appropriate" storage type.
+  for (const FieldDecl *field : recordDecl->fields()) {
+    mlir::Type fieldType;
+    if (field->isBitField())
+      cirGenTypes.getCGModule().errorNYI(recordDecl->getSourceRange(),
+                                         "bitfields in lowerUnion");
+    else
+      fieldType = getStorageType(field);
+
+    // This maps a field to its index. For unions, the index is always 0.
+    fieldIdxMap[field->getCanonicalDecl()] = 0;
+
+    // Compute zero-initializable status.
+    // This union might not be zero initialized: it may contain a pointer to
+    // data member which might have some exotic initialization sequence.
+    // If this is the case, then we ought not to try and come up with a "better"
+    // type, it might not be very easy to come up with a Constant which
+    // correctly initializes it.
+    if (!seenNamedMember) {
+      seenNamedMember = field->getIdentifier();
+      if (!seenNamedMember)
+        if (const RecordDecl *fieldRD = field->getType()->getAsRecordDecl())
+          seenNamedMember = fieldRD->findFirstNamedDataMember();
+      if (seenNamedMember && !isZeroInitializable(field)) {
+        zeroInitializable = zeroInitializableAsBase = false;
+        storageType = fieldType;
+      }
+    }
+
+    // Because our union isn't zero initializable, we won't be getting a better
+    // storage type.
+    if (!zeroInitializable)
+      continue;
+
+    // Conditionally update our storage type if we've got a new "better" one.
+    if (!storageType || getAlignment(fieldType) > getAlignment(storageType) ||
+        (getAlignment(fieldType) == getAlignment(storageType) &&
+         getSize(fieldType) > getSize(storageType)))
+      storageType = fieldType;
+
+    // NOTE(cir): Track all union member's types, not just the largest one. It
+    // allows for proper type-checking and retain more info for analisys.
+    fieldTypes.push_back(fieldType);
+  }
+
+  if (!storageType)
+    cirGenTypes.getCGModule().errorNYI(recordDecl->getSourceRange(),
+                                       "No-storage Union NYI");
+
+  if (layoutSize < getSize(storageType))
+    storageType = getByteArrayType(layoutSize);
+  else
+    appendPaddingBytes(layoutSize - getSize(storageType));
+
+  // Set packed if we need it.
+  if (layoutSize % getAlignment(storageType))
+    packed = true;
 }

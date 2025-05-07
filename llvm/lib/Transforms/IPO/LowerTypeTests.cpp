@@ -441,10 +441,6 @@ class LowerTypeTestsModule {
   // Cache variable used by hasBranchTargetEnforcement().
   int HasBranchTargetEnforcement = -1;
 
-  // The jump table type we ended up deciding on. (Usually the same as
-  // Arch, except that 'arm' and 'thumb' are often interchangeable.)
-  Triple::ArchType JumpTableArch = Triple::UnknownArch;
-
   IntegerType *Int1Ty = Type::getInt1Ty(M.getContext());
   IntegerType *Int8Ty = Type::getInt8Ty(M.getContext());
   PointerType *PtrTy = PointerType::getUnqual(M.getContext());
@@ -525,11 +521,8 @@ class LowerTypeTestsModule {
   Triple::ArchType
   selectJumpTableArmEncoding(ArrayRef<GlobalTypeMember *> Functions);
   bool hasBranchTargetEnforcement();
-  unsigned getJumpTableEntrySize();
-  Type *getJumpTableEntryType();
-  void createJumpTableEntry(raw_ostream &AsmOS, raw_ostream &ConstraintOS,
-                            Triple::ArchType JumpTableArch,
-                            SmallVectorImpl<Value *> &AsmArgs, Function *Dest);
+  unsigned getJumpTableEntrySize(Triple::ArchType JumpTableArch);
+  InlineAsm *createJumpTableEntryAsm(Triple::ArchType JumpTableArch);
   void verifyTypeMDNode(GlobalObject *GO, MDNode *Type);
   void buildBitSetsFromFunctions(ArrayRef<Metadata *> TypeIds,
                                  ArrayRef<GlobalTypeMember *> Functions);
@@ -548,7 +541,8 @@ class LowerTypeTestsModule {
   void findGlobalVariableUsersOf(Constant *C,
                                  SmallSetVector<GlobalVariable *, 8> &Out);
 
-  void createJumpTable(Function *F, ArrayRef<GlobalTypeMember *> Functions);
+  void createJumpTable(Function *F, ArrayRef<GlobalTypeMember *> Functions,
+                       Triple::ArchType JumpTableArch);
 
   /// replaceCfiUses - Go through the uses list for this definition
   /// and make each use point to "V" instead of "this" when the use is outside
@@ -1245,7 +1239,8 @@ bool LowerTypeTestsModule::hasBranchTargetEnforcement() {
   return HasBranchTargetEnforcement;
 }
 
-unsigned LowerTypeTestsModule::getJumpTableEntrySize() {
+unsigned
+LowerTypeTestsModule::getJumpTableEntrySize(Triple::ArchType JumpTableArch) {
   switch (JumpTableArch) {
   case Triple::x86:
   case Triple::x86_64:
@@ -1278,33 +1273,32 @@ unsigned LowerTypeTestsModule::getJumpTableEntrySize() {
   }
 }
 
-// Create a jump table entry for the target. This consists of an instruction
-// sequence containing a relative branch to Dest. Appends inline asm text,
-// constraints and arguments to AsmOS, ConstraintOS and AsmArgs.
-void LowerTypeTestsModule::createJumpTableEntry(
-    raw_ostream &AsmOS, raw_ostream &ConstraintOS,
-    Triple::ArchType JumpTableArch, SmallVectorImpl<Value *> &AsmArgs,
-    Function *Dest) {
-  unsigned ArgIndex = AsmArgs.size();
+// Create an inline asm constant representing a jump table entry for the target.
+// This consists of an instruction sequence containing a relative branch to
+// Dest.
+InlineAsm *
+LowerTypeTestsModule::createJumpTableEntryAsm(Triple::ArchType JumpTableArch) {
+  std::string Asm;
+  raw_string_ostream AsmOS(Asm);
 
   if (JumpTableArch == Triple::x86 || JumpTableArch == Triple::x86_64) {
     bool Endbr = false;
     if (const auto *MD = mdconst::extract_or_null<ConstantInt>(
-          Dest->getParent()->getModuleFlag("cf-protection-branch")))
+            M.getModuleFlag("cf-protection-branch")))
       Endbr = !MD->isZero();
     if (Endbr)
       AsmOS << (JumpTableArch == Triple::x86 ? "endbr32\n" : "endbr64\n");
-    AsmOS << "jmp ${" << ArgIndex << ":c}@plt\n";
+    AsmOS << "jmp ${0:c}@plt\n";
     if (Endbr)
       AsmOS << ".balign 16, 0xcc\n";
     else
       AsmOS << "int3\nint3\nint3\n";
   } else if (JumpTableArch == Triple::arm) {
-    AsmOS << "b $" << ArgIndex << "\n";
+    AsmOS << "b $0\n";
   } else if (JumpTableArch == Triple::aarch64) {
     if (hasBranchTargetEnforcement())
       AsmOS << "bti c\n";
-    AsmOS << "b $" << ArgIndex << "\n";
+    AsmOS << "b $0\n";
   } else if (JumpTableArch == Triple::thumb) {
     if (!CanUseThumbBWJumpTable) {
       // In Armv6-M, this sequence will generate a branch without corrupting
@@ -1328,28 +1322,26 @@ void LowerTypeTestsModule::createJumpTableEntry(
             << "str r0, [sp, #4]\n"
             << "pop {r0,pc}\n"
             << ".balign 4\n"
-            << "1: .word $" << ArgIndex << " - (0b + 4)\n";
+            << "1: .word $0 - (0b + 4)\n";
     } else {
       if (hasBranchTargetEnforcement())
         AsmOS << "bti\n";
-      AsmOS << "b.w $" << ArgIndex << "\n";
+      AsmOS << "b.w $0\n";
     }
   } else if (JumpTableArch == Triple::riscv32 ||
              JumpTableArch == Triple::riscv64) {
-    AsmOS << "tail $" << ArgIndex << "@plt\n";
+    AsmOS << "tail $0@plt\n";
   } else if (JumpTableArch == Triple::loongarch64) {
-    AsmOS << "pcalau12i $$t0, %pc_hi20($" << ArgIndex << ")\n"
-          << "jirl $$r0, $$t0, %pc_lo12($" << ArgIndex << ")\n";
+    AsmOS << "pcalau12i $$t0, %pc_hi20($0)\n"
+          << "jirl $$r0, $$t0, %pc_lo12($0)\n";
   } else {
     report_fatal_error("Unsupported architecture for jump tables");
   }
 
-  ConstraintOS << (ArgIndex > 0 ? ",s" : "s");
-  AsmArgs.push_back(Dest);
-}
-
-Type *LowerTypeTestsModule::getJumpTableEntryType() {
-  return ArrayType::get(Int8Ty, getJumpTableEntrySize());
+  return InlineAsm::get(
+      FunctionType::get(Type::getVoidTy(M.getContext()), PtrTy, false),
+      AsmOS.str(), "s",
+      /*hasSideEffects=*/true);
 }
 
 /// Given a disjoint set of type identifiers and functions, build the bit sets
@@ -1498,11 +1490,17 @@ Triple::ArchType LowerTypeTestsModule::selectJumpTableArmEncoding(
 }
 
 void LowerTypeTestsModule::createJumpTable(
-    Function *F, ArrayRef<GlobalTypeMember *> Functions) {
+    Function *F, ArrayRef<GlobalTypeMember *> Functions,
+    Triple::ArchType JumpTableArch) {
   std::string AsmStr, ConstraintStr;
   raw_string_ostream AsmOS(AsmStr), ConstraintOS(ConstraintStr);
   SmallVector<Value *, 16> AsmArgs;
   AsmArgs.reserve(Functions.size() * 2);
+
+  BasicBlock *BB = BasicBlock::Create(M.getContext(), "entry", F);
+  IRBuilder<> IRB(BB);
+
+  InlineAsm *JumpTableAsm = createJumpTableEntryAsm(JumpTableArch);
 
   // Check if all entries have the NoUnwind attribute.
   // If all entries have it, we can safely mark the
@@ -1514,12 +1512,12 @@ void LowerTypeTestsModule::createJumpTable(
              ->hasFnAttribute(llvm::Attribute::NoUnwind)) {
       areAllEntriesNounwind = false;
     }
-    createJumpTableEntry(AsmOS, ConstraintOS, JumpTableArch, AsmArgs,
-                         cast<Function>(GTM->getGlobal()));
+    IRB.CreateCall(JumpTableAsm, GTM->getGlobal());
   }
+  IRB.CreateUnreachable();
 
   // Align the whole table by entry size.
-  F->setAlignment(Align(getJumpTableEntrySize()));
+  F->setAlignment(Align(getJumpTableEntrySize(JumpTableArch)));
   // Skip prologue.
   // Disabled on win32 due to https://llvm.org/bugs/show_bug.cgi?id=28641#c3.
   // Luckily, this function does not get any prologue even without the
@@ -1568,21 +1566,6 @@ void LowerTypeTestsModule::createJumpTable(
 
   // Make sure we do not inline any calls to the cfi.jumptable.
   F->addFnAttr(Attribute::NoInline);
-
-  BasicBlock *BB = BasicBlock::Create(M.getContext(), "entry", F);
-  IRBuilder<> IRB(BB);
-
-  SmallVector<Type *, 16> ArgTypes;
-  ArgTypes.reserve(AsmArgs.size());
-  for (const auto &Arg : AsmArgs)
-    ArgTypes.push_back(Arg->getType());
-  InlineAsm *JumpTableAsm =
-      InlineAsm::get(FunctionType::get(IRB.getVoidTy(), ArgTypes, false),
-                     AsmOS.str(), ConstraintOS.str(),
-                     /*hasSideEffects=*/true);
-
-  IRB.CreateCall(JumpTableAsm, AsmArgs);
-  IRB.CreateUnreachable();
 }
 
 /// Given a disjoint set of type identifiers and functions, build a jump table
@@ -1669,11 +1652,11 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
 
   // Decide on the jump table encoding, so that we know how big the
   // entries will be.
-  JumpTableArch = selectJumpTableArmEncoding(Functions);
+  Triple::ArchType JumpTableArch = selectJumpTableArmEncoding(Functions);
 
   // Build a simple layout based on the regular layout of jump tables.
   DenseMap<GlobalTypeMember *, uint64_t> GlobalLayout;
-  unsigned EntrySize = getJumpTableEntrySize();
+  unsigned EntrySize = getJumpTableEntrySize(JumpTableArch);
   for (unsigned I = 0; I != Functions.size(); ++I)
     GlobalLayout[Functions[I]] = I * EntrySize;
 
@@ -1684,7 +1667,7 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
                        M.getDataLayout().getProgramAddressSpace(),
                        ".cfi.jumptable", &M);
   ArrayType *JumpTableType =
-      ArrayType::get(getJumpTableEntryType(), Functions.size());
+      ArrayType::get(ArrayType::get(Int8Ty, EntrySize), Functions.size());
   auto JumpTable = ConstantExpr::getPointerCast(
       JumpTableFn, PointerType::getUnqual(M.getContext()));
 
@@ -1742,7 +1725,7 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
     }
   }
 
-  createJumpTable(JumpTableFn, Functions);
+  createJumpTable(JumpTableFn, Functions, JumpTableArch);
 }
 
 /// Assign a dummy layout using an incrementing counter, tag each function
@@ -1937,9 +1920,9 @@ void LowerTypeTestsModule::replaceCfiUses(Function *Old, Value *New,
                                           bool IsJumpTableCanonical) {
   SmallSetVector<Constant *, 4> Constants;
   for (Use &U : llvm::make_early_inc_range(Old->uses())) {
-    // Skip block addresses and no_cfi values, which refer to the function
-    // body instead of the jump table.
-    if (isa<BlockAddress, NoCFIValue>(U.getUser()))
+    // Skip no_cfi values, which refer to the function body instead of the jump
+    // table.
+    if (isa<NoCFIValue>(U.getUser()))
       continue;
 
     // Skip direct calls to externally defined or non-dso_local functions.
@@ -2129,7 +2112,8 @@ bool LowerTypeTestsModule::lower() {
                 ->getValue()
                 ->getUniqueInteger()
                 .getZExtValue());
-        const GlobalValue::GUID GUID = GlobalValue::getGUID(
+        const GlobalValue::GUID GUID =
+            GlobalValue::getGUIDAssumingExternalLinkage(
                 GlobalValue::dropLLVMManglingEscape(FunctionName));
         // Do not emit jumptable entries for functions that are not-live and
         // have no live references (and are not exported with cross-DSO CFI.)
@@ -2335,8 +2319,9 @@ bool LowerTypeTestsModule::lower() {
     DenseMap<GlobalValue::GUID, TinyPtrVector<Metadata *>> MetadataByGUID;
     for (auto &P : TypeIdInfo) {
       if (auto *TypeId = dyn_cast<MDString>(P.first))
-        MetadataByGUID[GlobalValue::getGUID(TypeId->getString())].push_back(
-            TypeId);
+        MetadataByGUID[GlobalValue::getGUIDAssumingExternalLinkage(
+                           TypeId->getString())]
+            .push_back(TypeId);
     }
 
     for (auto &P : *ExportSummary) {

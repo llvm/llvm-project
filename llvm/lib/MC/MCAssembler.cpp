@@ -203,7 +203,7 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
   if (IsResolved) {
     auto TargetVal = Target;
     TargetVal.Cst = Value;
-    if (Fixup.getKind() >= FirstRelocationKind ||
+    if (mc::isRelocRelocation(Fixup.getKind()) ||
         getBackend().shouldForceRelocation(*this, Fixup, TargetVal, STI))
       IsResolved = false;
   }

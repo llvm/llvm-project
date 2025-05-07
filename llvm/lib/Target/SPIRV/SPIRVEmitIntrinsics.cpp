@@ -680,6 +680,10 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
       } else {
         llvm_unreachable("Unknown handle type for spv_resource_getpointer.");
       }
+    } else if (II && II->getIntrinsicID() ==
+                         Intrinsic::spv_generic_cast_to_ptr_explicit) {
+      Ty = deduceElementTypeHelper(CI->getArgOperand(0), Visited,
+                                   UnknownElemTypeI8);
     } else if (Function *CalledF = CI->getCalledFunction()) {
       std::string DemangledName =
           getOclOrSpirvBuiltinDemangledName(CalledF->getName());
@@ -1829,7 +1833,7 @@ void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
                                        {GV.getType(), Ty}, {&GV, Const});
     InitInst->setArgOperand(1, Init);
   }
-  if (!Init && GV.getNumUses() == 0)
+  if (!Init && GV.use_empty())
     B.CreateIntrinsic(Intrinsic::spv_unref_global, GV.getType(), &GV);
 }
 
@@ -2399,9 +2403,8 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
 
   preprocessUndefs(B);
   preprocessCompositeConstants(B);
-  SmallVector<Instruction *> Worklist;
-  for (auto &I : instructions(Func))
-    Worklist.push_back(&I);
+  SmallVector<Instruction *> Worklist(
+      llvm::make_pointer_range(instructions(Func)));
 
   applyDemangledPtrArgTypes(B);
 

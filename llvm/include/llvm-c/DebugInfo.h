@@ -630,6 +630,19 @@ LLVMMetadataRef LLVMDIBuilderCreateEnumerator(LLVMDIBuilderRef Builder,
                                               LLVMBool IsUnsigned);
 
 /**
+ * Create debugging information entry for an enumerator of arbitrary precision.
+ * @param Builder        The DIBuilder.
+ * @param Name           Enumerator name.
+ * @param NameLen        Length of enumerator name.
+ * @param SizeInBits     Number of bits of the value.
+ * @param Words          The words that make up the value.
+ * @param IsUnsigned     True if the value is unsigned.
+ */
+LLVMMetadataRef LLVMDIBuilderCreateEnumeratorOfArbitraryPrecision(
+    LLVMDIBuilderRef Builder, const char *Name, size_t NameLen,
+    uint64_t SizeInBits, const uint64_t Words[], LLVMBool IsUnsigned);
+
+/**
  * Create debugging information entry for an enumeration.
  * \param Builder        The DIBuilder.
  * \param Scope          Scope in which this enumeration is defined.
