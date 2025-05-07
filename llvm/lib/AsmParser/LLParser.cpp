@@ -8869,8 +8869,6 @@ bool LLParser::parseMDNodeVector(SmallVectorImpl<Metadata *> &Elts) {
 //===----------------------------------------------------------------------===//
 bool LLParser::sortUseListOrder(Value *V, ArrayRef<unsigned> Indexes,
                                 SMLoc Loc) {
-  if (!V->hasUseList())
-    return false;
   if (V->use_empty())
     return error(Loc, "value has no uses");
 
