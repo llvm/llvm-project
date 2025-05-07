@@ -230,7 +230,7 @@ option(LIBCXX_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
 set(LIBCXX_SUPPORTED_C_LIBRARIES system llvm-libc)
 set(LIBCXX_LIBC "system" CACHE STRING "Specify C library to use. Supported values are ${LIBCXX_SUPPORTED_C_LIBRARIES}.")
 if (NOT "${LIBCXX_LIBC}" IN_LIST LIBCXX_SUPPORTED_C_LIBRARIES)
-  message(FATAL_ERROR "Unsupported C library: '${LIBCXX_CXX_ABI}'. Supported values are ${LIBCXX_SUPPORTED_C_LIBRARIES}.")
+  message(FATAL_ERROR "Unsupported C library: '${LIBCXX_LIBC}'. Supported values are ${LIBCXX_SUPPORTED_C_LIBRARIES}.")
 endif()
 
 # ABI Library options ---------------------------------------------------------
