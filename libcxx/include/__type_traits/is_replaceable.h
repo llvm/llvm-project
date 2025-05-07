@@ -43,19 +43,18 @@ inline const bool __is_replaceable_v = __is_replaceable<_Tp>::value;
 
 // Determines whether an allocator member of a container is replaceable.
 //
-// We take into account whether the allocator is propagated on assignments. If the allocator
-// always compares equal, then it doesn't matter whether we propagate it or not on assignments,
-// the result will be the same and we can just as much move-construct it instead.
-//
-// If the allocator does not always compare equal, we check whether it propagates on assignment
-// and it is replaceable.
+// First, we require the allocator type to be considered replaceable. If not, then something fishy might be
+// happening. Assuming the allocator type is replaceable, we conclude replaceability of the allocator as a
+// member of the container if the allocator always compares equal (in which case propagation doesn't matter),
+// or if the allocator always propagates on assignment, which is required in order for move construction and
+// assignment to be equivalent.
 template <class _AllocatorTraits>
 struct __container_allocator_is_replaceable
     : integral_constant<bool,
-                        _AllocatorTraits::is_always_equal::value ||
-                            (_AllocatorTraits::propagate_on_container_move_assignment::value &&
-                             _AllocatorTraits::propagate_on_container_copy_assignment::value &&
-                             __is_replaceable_v<typename _AllocatorTraits::allocator_type>)> {};
+                        __is_replaceable_v<typename _AllocatorTraits::allocator_type> &&
+                            (_AllocatorTraits::is_always_equal::value ||
+                             (_AllocatorTraits::propagate_on_container_move_assignment::value &&
+                              _AllocatorTraits::propagate_on_container_copy_assignment::value))> {};
 
 _LIBCPP_END_NAMESPACE_STD
 

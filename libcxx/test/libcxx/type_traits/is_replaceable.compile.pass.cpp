@@ -69,6 +69,23 @@ struct NonPropagatingStatelessCopyAssignAlloc : std::allocator<T> {
   };
 };
 
+template <class T>
+struct NonReplaceableStatelessAlloc : std::allocator<T> {
+  // Ensure that we don't consider an allocator that is a member of a container to be
+  // replaceable if it's not replaceable, even if it always compares equal and always propagates.
+  using propagate_on_container_move_assignment = std::true_type;
+  using propagate_on_container_copy_assignment = std::true_type;
+  using is_always_equal                        = std::true_type;
+  NonReplaceableStatelessAlloc()               = default;
+  NonReplaceableStatelessAlloc(NonReplaceableStatelessAlloc const&) {}
+  NonReplaceableStatelessAlloc(NonReplaceableStatelessAlloc&&) = default;
+  template <class U>
+  struct rebind {
+    using other = NonReplaceableStatelessAlloc<U>;
+  };
+};
+static_assert(!std::__is_replaceable<NonReplaceableStatelessAlloc<int> >::value, "");
+
 static_assert(!std::__is_replaceable<test_allocator<char> >::value, ""); // we use that property below
 
 struct Empty {};
@@ -161,6 +178,9 @@ static_assert(
     "");
 static_assert(!std::__is_replaceable<std::basic_string<char, std::char_traits<char>, test_allocator<char> > >::value,
               "");
+static_assert(!std::__is_replaceable<
+                  std::basic_string<char, std::char_traits<char>, NonReplaceableStatelessAlloc<char> > >::value,
+              "");
 static_assert(std::__is_replaceable<
                   std::basic_string<MyChar, NotReplaceableCharTraits<MyChar>, std::allocator<MyChar> > >::value,
               "");
@@ -185,6 +205,7 @@ static_assert(
 static_assert(std::__is_replaceable<std::deque<int> >::value, "");
 static_assert(std::__is_replaceable<std::deque<NotTriviallyCopyable> >::value, "");
 static_assert(!std::__is_replaceable<std::deque<int, test_allocator<int> > >::value, "");
+static_assert(!std::__is_replaceable<std::deque<int, NonReplaceableStatelessAlloc<int> > >::value, "");
 static_assert(!std::__is_replaceable<std::deque<int, NonPropagatingStatefulCopyAssignAlloc<int> > >::value, "");
 static_assert(!std::__is_replaceable<std::deque<int, NonPropagatingStatefulMoveAssignAlloc<int> > >::value, "");
 static_assert(std::__is_replaceable<std::deque<int, NonPropagatingStatelessCopyAssignAlloc<int> > >::value, "");
@@ -280,6 +301,7 @@ static_assert(!std::__is_replaceable<std::variant<CustomCopyAssignment, CustomCo
 static_assert(std::__is_replaceable<std::vector<int> >::value, "");
 static_assert(std::__is_replaceable<std::vector<CustomCopyAssignment> >::value, "");
 static_assert(!std::__is_replaceable<std::vector<int, test_allocator<int> > >::value, "");
+static_assert(!std::__is_replaceable<std::vector<int, NonReplaceableStatelessAlloc<int> > >::value, "");
 static_assert(!std::__is_replaceable<std::vector<int, NonPropagatingStatefulCopyAssignAlloc<int> > >::value, "");
 static_assert(!std::__is_replaceable<std::vector<int, NonPropagatingStatefulMoveAssignAlloc<int> > >::value, "");
 static_assert(std::__is_replaceable<std::vector<int, NonPropagatingStatelessCopyAssignAlloc<int> > >::value, "");
