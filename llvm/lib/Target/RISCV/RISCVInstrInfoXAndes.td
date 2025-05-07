@@ -305,6 +305,30 @@ class NDSRVInstSDGP<bits<3> funct3, string opcodestr>
   let mayStore = 1;
 }
 
+class NDSRVInstVFPMAD<bits<6> funct6, string opcodestr>
+    : RVInst<(outs VR:$vd), (ins VR:$vs2, FPR32:$rs1, VMaskOp:$vm),
+             opcodestr # "." # "vf", "$vd, $rs1, $vs2$vm", [], InstFormatR>,
+      SchedTernaryMC<"WriteVFMulAddF", "ReadVFMulAddV", "ReadVFMulAddF",
+                     "ReadVFWMulAddV"> {
+  bits<5> vs2;
+  bits<5> rs1;
+  bits<5> vd;
+  bit vm;
+
+  let Inst{31-26} = funct6;
+  let Inst{25} = vm;
+  let Inst{24-20} = vs2;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = 0b100;
+  let Inst{11-7} = vd;
+  let Inst{6-0} = OPC_CUSTOM_2.Value;
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+
+  let RVVConstraint = VMConstraint;
+}
+
 //===----------------------------------------------------------------------===//
 // XAndesPerf
 //===----------------------------------------------------------------------===//
@@ -355,4 +379,14 @@ def NDS_LDGP  : NDSRVInstLDGP<0b011, "nds.ldgp">;
 
 def NDS_SDGP  : NDSRVInstSDGP<0b111, "nds.sdgp">;
 } // Predicates = [HasVendorXAndesPerf, IsRV64]
+
+//===----------------------------------------------------------------------===//
+// XAndesVPackFPH
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasVendorXAndesVPackFPH],
+    Uses = [FRM, VL, VTYPE], mayRaiseFPException = true in {
+def NDS_VFPMADT_VF : NDSRVInstVFPMAD<0b000010, "nds.vfpmadt">;
+def NDS_VFPMADB_VF : NDSRVInstVFPMAD<0b000011, "nds.vfpmadb">;
+}
 } // DecoderNamespace = "XAndes"
