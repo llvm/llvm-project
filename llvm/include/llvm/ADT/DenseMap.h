@@ -198,6 +198,16 @@ public:
     return ValueT();
   }
 
+  // Return the entry with the specified key, or \p Default. This variant is
+  // useful, because `lookup` cannot be used with non-default-constructible
+  // values.
+  ValueT lookup_or(const_arg_type_t<KeyT> Val,
+                   const_arg_type_t<ValueT> Default) const {
+    if (const BucketT *Bucket = doFind(Val))
+      return Bucket->getSecond();
+    return Default;
+  }
+
   /// at - Return the entry for the specified key, or abort if no such
   /// entry exists.
   const ValueT &at(const_arg_type_t<KeyT> Val) const {

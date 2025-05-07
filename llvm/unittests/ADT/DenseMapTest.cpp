@@ -570,6 +570,26 @@ TEST(DenseMapCustomTest, StringRefTest) {
   EXPECT_EQ(42, M.lookup(StringRef("a", 0)));
 }
 
+struct NonDefaultConstructible {
+  unsigned V;
+  NonDefaultConstructible(unsigned V) : V(V) {};
+  bool operator==(const NonDefaultConstructible &Other) const {
+    return V == Other.V;
+  }
+};
+
+TEST(DenseMapCustomTest, LookupOr) {
+  DenseMap<int, NonDefaultConstructible> M;
+
+  M.insert_or_assign(0, 3u);
+  M.insert_or_assign(1, 2u);
+  M.insert_or_assign(1, 0u);
+
+  EXPECT_EQ(M.lookup_or(0, 4u), 3u);
+  EXPECT_EQ(M.lookup_or(1, 4u), 0u);
+  EXPECT_EQ(M.lookup_or(2, 4u), 4u);
+}
+
 // Key traits that allows lookup with either an unsigned or char* key;
 // In the latter case, "a" == 0, "b" == 1 and so on.
 struct TestDenseMapInfo {
