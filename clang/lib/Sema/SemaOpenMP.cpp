@@ -4890,9 +4890,9 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     // construct-type-clause.
     ArrayRef<OpenMPDirectiveKind> Leafs = getLeafConstructsOrSelf(ParentRegion);
     if (CancelRegion == OMPD_taskgroup) {
-      NestingProhibited = EnclosingConstruct != OMPD_task &&
-                          (OMPVersion < 50 ||
-                           EnclosingConstruct != OMPD_taskloop);
+      NestingProhibited =
+          EnclosingConstruct != OMPD_task &&
+          (OMPVersion < 50 || EnclosingConstruct != OMPD_taskloop);
     } else if (CancelRegion == OMPD_sections) {
       NestingProhibited = EnclosingConstruct != OMPD_section &&
                           EnclosingConstruct != OMPD_sections;
