@@ -197,10 +197,6 @@ private:
 
   BoltAddressTranslation *BAT{nullptr};
 
-  /// Whether pre-aggregated profile needs to convert branch profile into call
-  /// to continuation fallthrough profile.
-  bool NeedsConvertRetProfileToCallCont{false};
-
   /// Update function execution profile with a recorded trace.
   /// A trace is region of code executed between two LBR entries supplied in
   /// execution order.
