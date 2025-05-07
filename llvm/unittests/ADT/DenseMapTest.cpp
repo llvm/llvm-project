@@ -10,6 +10,7 @@
 #include "CountCopyAndMove.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseMapInfoVariant.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -357,6 +358,51 @@ TYPED_TEST(DenseMapTest, ConstIteratorTest) {
   // Check copying of const_iterators.
   typename TypeParam::const_iterator cit2(cit);
   EXPECT_TRUE(cit == cit2);
+}
+
+TYPED_TEST(DenseMapTest, KeysValuesIterator) {
+  SmallSet<typename TypeParam::key_type, 10> Keys;
+  SmallSet<typename TypeParam::mapped_type, 10> Values;
+  for (int I = 0; I < 10; ++I) {
+    auto K = this->getKey(I);
+    auto V = this->getValue(I);
+    Keys.insert(K);
+    Values.insert(V);
+    this->Map[K] = V;
+  }
+
+  SmallSet<typename TypeParam::key_type, 10> ActualKeys;
+  SmallSet<typename TypeParam::mapped_type, 10> ActualValues;
+  for (auto K : this->Map.keys())
+    ActualKeys.insert(K);
+  for (auto V : this->Map.values())
+    ActualValues.insert(V);
+
+  EXPECT_EQ(Keys, ActualKeys);
+  EXPECT_EQ(Values, ActualValues);
+}
+
+TYPED_TEST(DenseMapTest, ConstKeysValuesIterator) {
+  SmallSet<typename TypeParam::key_type, 10> Keys;
+  SmallSet<typename TypeParam::mapped_type, 10> Values;
+  for (int I = 0; I < 10; ++I) {
+    auto K = this->getKey(I);
+    auto V = this->getValue(I);
+    Keys.insert(K);
+    Values.insert(V);
+    this->Map[K] = V;
+  }
+
+  const TypeParam &ConstMap = this->Map;
+  SmallSet<typename TypeParam::key_type, 10> ActualKeys;
+  SmallSet<typename TypeParam::mapped_type, 10> ActualValues;
+  for (auto K : ConstMap.keys())
+    ActualKeys.insert(K);
+  for (auto V : ConstMap.values())
+    ActualValues.insert(V);
+
+  EXPECT_EQ(Keys, ActualKeys);
+  EXPECT_EQ(Values, ActualValues);
 }
 
 // Test initializer list construction.
