@@ -23,7 +23,7 @@ bnez $t1, %b21(foo)
 
 bl %plt(foo)
 # RELOC: R_LARCH_B26
-# INSTR: bl %plt(foo)
+# INSTR: bl foo
 
 bl foo
 # RELOC: R_LARCH_B26
