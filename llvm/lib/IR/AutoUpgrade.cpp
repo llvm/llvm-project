@@ -1353,12 +1353,12 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         // nvvm.{min,max}.{i,ii,ui,ull}
         Expand = Name == "s" || Name == "i" || Name == "ll" || Name == "us" ||
                  Name == "ui" || Name == "ull";
-      else if (Name.consume_front("atomic.load.add."))
-        // nvvm.atomic.load.add.{f32.p,f64.p}
-        Expand = Name.starts_with("f32.p") || Name.starts_with("f64.p");
-      else if (Name.consume_front("atomic.load.") && Name.consume_back(".32"))
-        // nvvm.atomic.load.{inc,dec}.32
-        Expand = Name == "inc" || Name == "dec";
+      else if (Name.consume_front("atomic.load."))
+        // nvvm.atomic.load.add.{f32,f64}.p
+        // nvvm.atomic.load.{inc,dec}.32.p
+        Expand = Name.starts_with("add.f32.p") ||
+                 Name.starts_with("add.f64.p") ||
+                 Name.starts_with("inc.32.p") || Name.starts_with("dec.32.p");
       else if (Name.consume_front("bitcast."))
         // nvvm.bitcast.{f2i,i2f,ll2d,d2ll}
         Expand =
@@ -2383,10 +2383,12 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     Value *Val = CI->getArgOperand(1);
     Rep = Builder.CreateAtomicRMW(AtomicRMWInst::FAdd, Ptr, Val, MaybeAlign(),
                                   AtomicOrdering::SequentiallyConsistent);
-  } else if (Name.consume_front("atomic.load.") && Name.consume_back(".32")) {
+  } else if (Name.starts_with("atomic.load.inc.32.p") ||
+             Name.starts_with("atomic.load.dec.32.p")) {
     Value *Ptr = CI->getArgOperand(0);
     Value *Val = CI->getArgOperand(1);
-    auto Op = Name == "inc" ? AtomicRMWInst::UIncWrap : AtomicRMWInst::UDecWrap;
+    auto Op = Name.starts_with("atomic.load.inc") ? AtomicRMWInst::UIncWrap
+                                                  : AtomicRMWInst::UDecWrap;
     Rep = Builder.CreateAtomicRMW(Op, Ptr, Val, MaybeAlign(),
                                   AtomicOrdering::SequentiallyConsistent);
   } else if (Name.consume_front("max.") &&
