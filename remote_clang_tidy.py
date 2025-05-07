@@ -24,12 +24,18 @@ def run_clang_tidy_diff(diff_text):
     print("🎯 Running clang-tidy-diff on changed lines...")
     try:
         result = subprocess.run(
-            ["python3", CLANG_TIDY_DIFF_PATH, "-p", "1", "-quiet", "-j", "4"],
-            input=diff_text.encode("utf-8"),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            check=False,
-        )
+    [
+        "python3", CLANG_TIDY_DIFF_PATH,
+        "-p", "1",
+        "-quiet",
+        "-j", "4",
+        "-clang-tidy-binary", "/ptmp/jay/new/llvm-project-checks/build/bin/clang-tidy"
+    ],
+    input=diff_text.encode("utf-8"),
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+    check=False,
+)
         print(result.stdout.decode("utf-8"))
         if result.stderr:
             print("⚠️ Errors/Warnings:", result.stderr.decode("utf-8"), file=sys.stderr)
