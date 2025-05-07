@@ -13,7 +13,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "LLVMContextImpl.h"
 #include "MetadataImpl.h"
-#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/DebugProgramInstruction.h"
@@ -21,6 +21,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/CommandLine.h"
 
 #include <numeric>
 #include <optional>
@@ -32,6 +33,12 @@ namespace llvm {
 cl::opt<bool> EnableFSDiscriminator(
     "enable-fs-discriminator", cl::Hidden,
     cl::desc("Enable adding flow sensitive discriminators"));
+
+// When true, preserves line and column number by picking one of the merged
+// location info in a deterministic manner to assist sample based PGO.
+cl::opt<bool> PickMergedSourceLocations(
+    "pick-merged-source-locations", cl::init(false), cl::Hidden,
+    cl::desc("Preserve line and column number when merging locations."));
 } // namespace llvm
 
 uint32_t DIType::getAlignInBits() const {
@@ -56,12 +63,22 @@ DebugVariableAggregate::DebugVariableAggregate(const DbgVariableIntrinsic *DVI)
                     DVI->getDebugLoc()->getInlinedAt()) {}
 
 DILocation::DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
-                       unsigned Column, ArrayRef<Metadata *> MDs,
-                       bool ImplicitCode)
-    : MDNode(C, DILocationKind, Storage, MDs) {
+                       unsigned Column, uint64_t AtomGroup, uint8_t AtomRank,
+                       ArrayRef<Metadata *> MDs, bool ImplicitCode)
+    : MDNode(C, DILocationKind, Storage, MDs)
+#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
+      ,
+      AtomGroup(AtomGroup), AtomRank(AtomRank)
+#endif
+{
+#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
+  assert(AtomRank <= 7 && "AtomRank number should fit in 3 bits");
+#endif
+  if (AtomGroup)
+    C.updateDILocationAtomGroupWaterline(AtomGroup + 1);
+
   assert((MDs.size() == 1 || MDs.size() == 2) &&
          "Expected a scope and optional inlined-at");
-
   // Set line and column.
   assert(Column < (1u << 16) && "Expected 16-bit column");
 
@@ -80,6 +97,7 @@ static void adjustColumn(unsigned &Column) {
 DILocation *DILocation::getImpl(LLVMContext &Context, unsigned Line,
                                 unsigned Column, Metadata *Scope,
                                 Metadata *InlinedAt, bool ImplicitCode,
+                                uint64_t AtomGroup, uint8_t AtomRank,
                                 StorageType Storage, bool ShouldCreate) {
   // Fixup column.
   adjustColumn(Column);
@@ -87,7 +105,8 @@ DILocation *DILocation::getImpl(LLVMContext &Context, unsigned Line,
   if (Storage == Uniqued) {
     if (auto *N = getUniqued(Context.pImpl->DILocations,
                              DILocationInfo::KeyTy(Line, Column, Scope,
-                                                   InlinedAt, ImplicitCode)))
+                                                   InlinedAt, ImplicitCode,
+                                                   AtomGroup, AtomRank)))
       return N;
     if (!ShouldCreate)
       return nullptr;
@@ -99,8 +118,9 @@ DILocation *DILocation::getImpl(LLVMContext &Context, unsigned Line,
   Ops.push_back(Scope);
   if (InlinedAt)
     Ops.push_back(InlinedAt);
-  return storeImpl(new (Ops.size(), Storage) DILocation(
-                       Context, Storage, Line, Column, Ops, ImplicitCode),
+  return storeImpl(new (Ops.size(), Storage)
+                       DILocation(Context, Storage, Line, Column, AtomGroup,
+                                  AtomRank, Ops, ImplicitCode),
                    Storage, Context.pImpl->DILocations);
 }
 
@@ -118,12 +138,122 @@ DILocation *DILocation::getMergedLocations(ArrayRef<DILocation *> Locs) {
   return Merged;
 }
 
-DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
-  if (!LocA || !LocB)
-    return nullptr;
+static DILexicalBlockBase *cloneAndReplaceParentScope(DILexicalBlockBase *LBB,
+                                                      DIScope *NewParent) {
+  TempMDNode ClonedScope = LBB->clone();
+  cast<DILexicalBlockBase>(*ClonedScope).replaceScope(NewParent);
+  return cast<DILexicalBlockBase>(
+      MDNode::replaceWithUniqued(std::move(ClonedScope)));
+}
 
+using LineColumn = std::pair<unsigned /* Line */, unsigned /* Column */>;
+
+/// Returns the location of DILocalScope, if present, or a default value.
+static LineColumn getLocalScopeLocationOr(DIScope *S, LineColumn Default) {
+  assert(isa<DILocalScope>(S) && "Expected DILocalScope.");
+
+  if (isa<DILexicalBlockFile>(S))
+    return Default;
+  if (auto *LB = dyn_cast<DILexicalBlock>(S))
+    return {LB->getLine(), LB->getColumn()};
+  if (auto *SP = dyn_cast<DISubprogram>(S))
+    return {SP->getLine(), 0u};
+
+  llvm_unreachable("Unhandled type of DILocalScope.");
+}
+
+// Returns the nearest matching scope inside a subprogram.
+template <typename MatcherT>
+static std::pair<DIScope *, LineColumn>
+getNearestMatchingScope(const DILocation *L1, const DILocation *L2) {
+  MatcherT Matcher;
+
+  DIScope *S1 = L1->getScope();
+  DIScope *S2 = L2->getScope();
+
+  LineColumn Loc1(L1->getLine(), L1->getColumn());
+  for (; S1; S1 = S1->getScope()) {
+    Loc1 = getLocalScopeLocationOr(S1, Loc1);
+    Matcher.insert(S1, Loc1);
+    if (isa<DISubprogram>(S1))
+      break;
+  }
+
+  LineColumn Loc2(L2->getLine(), L2->getColumn());
+  for (; S2; S2 = S2->getScope()) {
+    Loc2 = getLocalScopeLocationOr(S2, Loc2);
+
+    if (DIScope *S = Matcher.match(S2, Loc2))
+      return std::make_pair(S, Loc2);
+
+    if (isa<DISubprogram>(S2))
+      break;
+  }
+  return std::make_pair(nullptr, LineColumn(L2->getLine(), L2->getColumn()));
+}
+
+// Matches equal scopes.
+struct EqualScopesMatcher {
+  SmallPtrSet<DIScope *, 8> Scopes;
+
+  void insert(DIScope *S, LineColumn Loc) { Scopes.insert(S); }
+
+  DIScope *match(DIScope *S, LineColumn Loc) {
+    return Scopes.contains(S) ? S : nullptr;
+  }
+};
+
+// Matches scopes with the same location.
+struct ScopeLocationsMatcher {
+  SmallMapVector<std::pair<DIFile *, LineColumn>, SmallSetVector<DIScope *, 8>,
+                 8>
+      Scopes;
+
+  void insert(DIScope *S, LineColumn Loc) {
+    Scopes[{S->getFile(), Loc}].insert(S);
+  }
+
+  DIScope *match(DIScope *S, LineColumn Loc) {
+    auto ScopesAtLoc = Scopes.find({S->getFile(), Loc});
+    // No scope found with the given location.
+    if (ScopesAtLoc == Scopes.end())
+      return nullptr;
+
+    // Prefer S over other scopes with the same location.
+    if (ScopesAtLoc->second.contains(S))
+      return S;
+
+    if (!ScopesAtLoc->second.empty())
+      return *ScopesAtLoc->second.begin();
+
+    llvm_unreachable("Scopes must not have empty entries.");
+  }
+};
+
+DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
   if (LocA == LocB)
     return LocA;
+
+  // For some use cases (SamplePGO), it is important to retain distinct source
+  // locations. When this flag is set, we choose arbitrarily between A and B,
+  // rather than computing a merged location using line 0, which is typically
+  // not useful for PGO. If one of them is null, then try to return one which is
+  // valid.
+  if (PickMergedSourceLocations) {
+    if (!LocA || !LocB)
+      return LocA ? LocA : LocB;
+
+    auto A = std::make_tuple(LocA->getLine(), LocA->getColumn(),
+                             LocA->getDiscriminator(), LocA->getFilename(),
+                             LocA->getDirectory());
+    auto B = std::make_tuple(LocB->getLine(), LocB->getColumn(),
+                             LocB->getDiscriminator(), LocB->getFilename(),
+                             LocB->getDirectory());
+    return A < B ? LocA : LocB;
+  }
+
+  if (!LocA || !LocB)
+    return nullptr;
 
   LLVMContext &C = LocA->getContext();
 
@@ -176,45 +306,91 @@ DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
 
   // Merge the two locations if possible, using the supplied
   // inlined-at location for the created location.
-  auto MergeLocPair = [&C](const DILocation *L1, const DILocation *L2,
-                           DILocation *InlinedAt) -> DILocation * {
+  auto *LocAIA = LocA->getInlinedAt();
+  auto *LocBIA = LocB->getInlinedAt();
+  auto MergeLocPair = [&C, LocAIA,
+                       LocBIA](const DILocation *L1, const DILocation *L2,
+                               DILocation *InlinedAt) -> DILocation * {
     if (L1 == L2)
       return DILocation::get(C, L1->getLine(), L1->getColumn(), L1->getScope(),
-                             InlinedAt);
+                             InlinedAt, L1->isImplicitCode(),
+                             L1->getAtomGroup(), L1->getAtomRank());
 
     // If the locations originate from different subprograms we can't produce
     // a common location.
     if (L1->getScope()->getSubprogram() != L2->getScope()->getSubprogram())
       return nullptr;
 
-    // Return the nearest common scope inside a subprogram.
-    auto GetNearestCommonScope = [](DIScope *S1, DIScope *S2) -> DIScope * {
-      SmallPtrSet<DIScope *, 8> Scopes;
-      for (; S1; S1 = S1->getScope()) {
-        Scopes.insert(S1);
-        if (isa<DISubprogram>(S1))
-          break;
-      }
-
-      for (; S2; S2 = S2->getScope()) {
-        if (Scopes.count(S2))
-          return S2;
-        if (isa<DISubprogram>(S2))
-          break;
-      }
-
-      return nullptr;
-    };
-
-    auto Scope = GetNearestCommonScope(L1->getScope(), L2->getScope());
+    // Find nearest common scope inside subprogram.
+    DIScope *Scope = getNearestMatchingScope<EqualScopesMatcher>(L1, L2).first;
     assert(Scope && "No common scope in the same subprogram?");
+
+    // Try using the nearest scope with common location if files are different.
+    if (Scope->getFile() != L1->getFile() || L1->getFile() != L2->getFile()) {
+      auto [CommonLocScope, CommonLoc] =
+          getNearestMatchingScope<ScopeLocationsMatcher>(L1, L2);
+
+      // If CommonLocScope is a DILexicalBlockBase, clone it and locate
+      // a new scope inside the nearest common scope to preserve
+      // lexical blocks structure.
+      if (auto *LBB = dyn_cast<DILexicalBlockBase>(CommonLocScope);
+          LBB && LBB != Scope)
+        CommonLocScope = cloneAndReplaceParentScope(LBB, Scope);
+
+      Scope = CommonLocScope;
+
+      // If files are still different, assume that L1 and L2 were "included"
+      // from CommonLoc. Use it as merged location.
+      if (Scope->getFile() != L1->getFile() || L1->getFile() != L2->getFile())
+        return DILocation::get(C, CommonLoc.first, CommonLoc.second,
+                               CommonLocScope, InlinedAt);
+    }
 
     bool SameLine = L1->getLine() == L2->getLine();
     bool SameCol = L1->getColumn() == L2->getColumn();
     unsigned Line = SameLine ? L1->getLine() : 0;
     unsigned Col = SameLine && SameCol ? L1->getColumn() : 0;
+    bool IsImplicitCode = L1->isImplicitCode() && L2->isImplicitCode();
 
-    return DILocation::get(C, Line, Col, Scope, InlinedAt);
+    // Discard source location atom if the line becomes 0. And there's nothing
+    // further to do if neither location has an atom number.
+    if (!SameLine || !(L1->getAtomGroup() || L2->getAtomGroup()))
+      return DILocation::get(C, Line, Col, Scope, InlinedAt, IsImplicitCode,
+                             /*AtomGroup*/ 0, /*AtomRank*/ 0);
+
+    uint64_t Group = 0;
+    uint64_t Rank = 0;
+    // If we're preserving the same matching inlined-at field we can
+    // preserve the atom.
+    if (LocBIA == LocAIA && InlinedAt == LocBIA) {
+      // Deterministically keep the lowest non-zero ranking atom group
+      // number.
+      // FIXME: It would be nice if we could track that an instruction
+      // belongs to two source atoms.
+      bool UseL1Atom = [L1, L2]() {
+        if (L1->getAtomRank() == L2->getAtomRank()) {
+          // Arbitrarily choose the lowest non-zero group number.
+          if (!L1->getAtomGroup() || !L2->getAtomGroup())
+            return !L2->getAtomGroup();
+          return L1->getAtomGroup() < L2->getAtomGroup();
+        }
+        // Choose the lowest non-zero rank.
+        if (!L1->getAtomRank() || !L2->getAtomRank())
+          return !L2->getAtomRank();
+        return L1->getAtomRank() < L2->getAtomRank();
+      }();
+      Group = UseL1Atom ? L1->getAtomGroup() : L2->getAtomGroup();
+      Rank = UseL1Atom ? L1->getAtomRank() : L2->getAtomRank();
+    } else {
+      // If either instruction is part of a source atom, reassign it a new
+      // atom group. This essentially regresses to non-key-instructions
+      // behaviour (now that it's the only instruction in its group it'll
+      // probably get is_stmt applied).
+      Group = C.incNextDILocationAtomGroup();
+      Rank = 1;
+    }
+    return DILocation::get(C, Line, Col, Scope, InlinedAt, IsImplicitCode,
+                           Group, Rank);
   };
 
   DILocation *Result = ARIt != ALocs.rend() ? (*ARIt)->getInlinedAt() : nullptr;
@@ -241,7 +417,10 @@ DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
   // historically picked A's scope, and a nullptr inlined-at location, so that
   // behavior is mimicked here but I am not sure if this is always the correct
   // way to handle this.
-  return DILocation::get(C, 0, 0, LocA->getScope(), nullptr);
+  // Key Instructions: it's fine to drop atom group and rank here, as line 0
+  // is a nonsensical is_stmt location.
+  return DILocation::get(C, 0, 0, LocA->getScope(), nullptr, false,
+                         /*AtomGroup*/ 0, /*AtomRank*/ 0);
 }
 
 std::optional<unsigned>
@@ -1166,10 +1345,8 @@ DILocalScope *DILocalScope::cloneScopeForSubprogram(
   // cached result).
   DIScope *UpdatedScope = CachedResult ? CachedResult : &NewSP;
   for (DIScope *ScopeToUpdate : reverse(ScopeChain)) {
-    TempMDNode ClonedScope = ScopeToUpdate->clone();
-    cast<DILexicalBlockBase>(*ClonedScope).replaceScope(UpdatedScope);
-    UpdatedScope =
-        cast<DIScope>(MDNode::replaceWithUniqued(std::move(ClonedScope)));
+    UpdatedScope = cloneAndReplaceParentScope(
+        cast<DILexicalBlockBase>(ScopeToUpdate), UpdatedScope);
     Cache[ScopeToUpdate] = UpdatedScope;
   }
 
@@ -1969,7 +2146,7 @@ DIExpression *DIExpression::appendOpsToArg(const DIExpression *Expr,
     }
     Op.appendToVector(NewOps);
     if (Op.getOp() == dwarf::DW_OP_LLVM_arg && Op.getArg(0) == ArgNo)
-      NewOps.insert(NewOps.end(), Ops.begin(), Ops.end());
+      llvm::append_range(NewOps, Ops);
   }
   if (StackValue)
     NewOps.push_back(dwarf::DW_OP_stack_value);

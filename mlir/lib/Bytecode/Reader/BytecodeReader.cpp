@@ -1984,8 +1984,7 @@ LogicalResult BytecodeReader::Impl::sortUseListOrder(Value value) {
     // If the bytecode file did not contain any custom use-list order, it means
     // that the order was descending useID. Hence, shuffle by the first index
     // of the `currentOrder` pair.
-    SmallVector<unsigned> shuffle = SmallVector<unsigned>(
-        llvm::map_range(currentOrder, [&](auto item) { return item.first; }));
+    SmallVector<unsigned> shuffle(llvm::make_first_range(currentOrder));
     value.shuffleUseList(shuffle);
     return success();
   }

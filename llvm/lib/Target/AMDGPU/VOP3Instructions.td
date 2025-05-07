@@ -1049,7 +1049,7 @@ class VOP3_CVT_SCALE_SR_PK_F4_F32_TiedInput_Profile<VOPProfile P>
 
   let Src0RC64 = !if(!gt(P.Src0VT.Size, 32), getVOP3VRegSrcForVT<P.Src0VT>.ret,
                      getVOP3SrcForVT<P.Src0VT>.ret);
-  let InsVOP3OpSel = (ins PackedF32InputMods: $src0_modifiers, Src0RC64:$src0,
+  let InsVOP3OpSel = (ins PackedVGPRF32InputMods: $src0_modifiers, Src0RC64:$src0,
                           Int32InputMods:     $src1_modifiers, Src1RC64:$src1,
                           FP32InputMods:      $src2_modifiers, Src2RC64:$src2,
                           VGPR_32:$vdst_in,   op_sel0:$op_sel);
@@ -1443,16 +1443,11 @@ let SubtargetPredicate = HasBF16ConversionInsts in {
   }
   def : GCNPat<(v2bf16 (bf16_fpround v2f32:$src)),
                (V_CVT_PK_BF16_F32_e64 0, (EXTRACT_SUBREG VReg_64:$src, sub0), 0, (EXTRACT_SUBREG VReg_64:$src, sub1))>;
-  def : GCNPat<(v2bf16 (bf16_fpround v2f64:$src)),
-               (V_CVT_PK_BF16_F32_e64 0, (V_CVT_F32_F64_e64 0, (EXTRACT_SUBREG VReg_128:$src, sub0_sub1)),
-                                      0, (V_CVT_F32_F64_e64 0, (EXTRACT_SUBREG VReg_128:$src, sub2_sub3)))>;
   def : GCNPat<(v2bf16 (build_vector (bf16 (bf16_fpround (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
                                      (bf16 (bf16_fpround (f32 (VOP3Mods f32:$src1, i32:$src1_modifiers)))))),
                (V_CVT_PK_BF16_F32_e64 $src0_modifiers, $src0, $src1_modifiers, $src1)>;
   def : GCNPat<(bf16 (bf16_fpround (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
                (V_CVT_PK_BF16_F32_e64 $src0_modifiers, $src0, 0, (f32 (IMPLICIT_DEF)))>;
-  def : GCNPat<(bf16 (bf16_fpround (f64 (VOP3Mods f64:$src0, i32:$src0_modifiers)))),
-               (V_CVT_PK_BF16_F32_e64 0, (f32 (V_CVT_F32_F64_e64 $src0_modifiers, $src0)), 0, (f32 (IMPLICIT_DEF)))>;
 }
 
 class Cvt_Scale_Sr_F32ToBF16F16_Pat<SDPatternOperator node, VOP3_Pseudo inst, ValueType DstTy> : GCNPat<

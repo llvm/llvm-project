@@ -20,10 +20,106 @@ async function isServerModeSupported(exe: string): Promise<boolean> {
   return /--connection/.test(stdout);
 }
 
+interface BoolConfig {
+  type: "boolean";
+  default: boolean;
+}
+interface StringConfig {
+  type: "string";
+  default: string;
+}
+interface NumberConfig {
+  type: "number";
+  default: number;
+}
+interface StringArrayConfig {
+  type: "stringArray";
+  default: string[];
+}
+type DefaultConfig =
+  | BoolConfig
+  | NumberConfig
+  | StringConfig
+  | StringArrayConfig;
+
+const configurations: Record<string, DefaultConfig> = {
+  // Keys for debugger configurations.
+  commandEscapePrefix: { type: "string", default: "`" },
+  customFrameFormat: { type: "string", default: "" },
+  customThreadFormat: { type: "string", default: "" },
+  detachOnError: { type: "boolean", default: false },
+  disableASLR: { type: "boolean", default: true },
+  disableSTDIO: { type: "boolean", default: false },
+  displayExtendedBacktrace: { type: "boolean", default: false },
+  enableAutoVariableSummaries: { type: "boolean", default: false },
+  enableSyntheticChildDebugging: { type: "boolean", default: false },
+  timeout: { type: "number", default: 30 },
+
+  // Keys for platform / target configuration.
+  platformName: { type: "string", default: "" },
+  targetTriple: { type: "string", default: "" },
+
+  // Keys for debugger command hooks.
+  initCommands: { type: "stringArray", default: [] },
+  preRunCommands: { type: "stringArray", default: [] },
+  postRunCommands: { type: "stringArray", default: [] },
+  stopCommands: { type: "stringArray", default: [] },
+  exitCommands: { type: "stringArray", default: [] },
+  terminateCommands: { type: "stringArray", default: [] },
+};
+
 export class LLDBDapConfigurationProvider
   implements vscode.DebugConfigurationProvider
 {
   constructor(private readonly server: LLDBDapServer) {}
+
+  async resolveDebugConfiguration(
+    folder: vscode.WorkspaceFolder | undefined,
+    debugConfiguration: vscode.DebugConfiguration,
+    token?: vscode.CancellationToken,
+  ): Promise<vscode.DebugConfiguration> {
+    let config = vscode.workspace.getConfiguration("lldb-dap.defaults");
+    for (const [key, cfg] of Object.entries(configurations)) {
+      if (Reflect.has(debugConfiguration, key)) {
+        continue;
+      }
+      const value = config.get(key);
+      if (!value || value === cfg.default) {
+        continue;
+      }
+      switch (cfg.type) {
+        case "string":
+          if (typeof value !== "string") {
+            throw new Error(`Expected ${key} to be a string, got ${value}`);
+          }
+          break;
+        case "number":
+          if (typeof value !== "number") {
+            throw new Error(`Expected ${key} to be a number, got ${value}`);
+          }
+          break;
+        case "boolean":
+          if (typeof value !== "boolean") {
+            throw new Error(`Expected ${key} to be a boolean, got ${value}`);
+          }
+          break;
+        case "stringArray":
+          if (typeof value !== "object" && Array.isArray(value)) {
+            throw new Error(
+              `Expected ${key} to be a array of strings, got ${value}`,
+            );
+          }
+          if ((value as string[]).length === 0) {
+            continue;
+          }
+          break;
+      }
+
+      debugConfiguration[key] = value;
+    }
+
+    return debugConfiguration;
+  }
 
   async resolveDebugConfigurationWithSubstitutedVariables(
     folder: vscode.WorkspaceFolder | undefined,
@@ -32,11 +128,11 @@ export class LLDBDapConfigurationProvider
   ): Promise<vscode.DebugConfiguration | null | undefined> {
     try {
       if (
-        "debugAdapterHost" in debugConfiguration &&
+        "debugAdapterHostname" in debugConfiguration &&
         !("debugAdapterPort" in debugConfiguration)
       ) {
         throw new ErrorWithNotification(
-          "A debugAdapterPort must be provided when debugAdapterHost is set. Please update your launch configuration.",
+          "A debugAdapterPort must be provided when debugAdapterHostname is set. Please update your launch configuration.",
           new ConfigureButton(),
         );
       }
@@ -83,7 +179,7 @@ export class LLDBDapConfigurationProvider
           // and list of arguments.
           delete debugConfiguration.debugAdapterExecutable;
           delete debugConfiguration.debugAdapterArgs;
-          debugConfiguration.debugAdapterHost = serverInfo.host;
+          debugConfiguration.debugAdapterHostname = serverInfo.host;
           debugConfiguration.debugAdapterPort = serverInfo.port;
         }
       }

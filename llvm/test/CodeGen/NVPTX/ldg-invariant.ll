@@ -27,7 +27,7 @@ define half @ld_global_v2f16(ptr addrspace(1) %ptr) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<4>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .f32 %f<4>;
+; CHECK-NEXT:    .reg .b32 %f<4>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -54,7 +54,7 @@ define half @ld_global_v4f16(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: ld_global_v4f16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<8>;
-; CHECK-NEXT:    .reg .f32 %f<10>;
+; CHECK-NEXT:    .reg .b32 %f<10>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -92,7 +92,7 @@ define half @ld_global_v8f16(ptr addrspace(1) %ptr) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<8>;
 ; CHECK-NEXT:    .reg .b32 %r<5>;
-; CHECK-NEXT:    .reg .f32 %f<10>;
+; CHECK-NEXT:    .reg .b32 %f<10>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:

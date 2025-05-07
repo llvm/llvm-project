@@ -72,6 +72,24 @@ EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
   return std::move(this->EvalResult);
 }
 
+EvaluationResult EvalEmitter::interpretAsPointer(const Expr *E,
+                                                 PtrCallback PtrCB) {
+
+  S.setEvalLocation(E->getExprLoc());
+  this->ConvertResultToRValue = false;
+  this->CheckFullyInitialized = false;
+  this->PtrCB = PtrCB;
+  EvalResult.setSource(E);
+
+  if (!this->visitExpr(E, /*DestroyToplevelScope=*/true)) {
+    // EvalResult may already have a result set, but something failed
+    // after that (e.g. evaluating destructors).
+    EvalResult.setInvalid();
+  }
+
+  return std::move(this->EvalResult);
+}
+
 void EvalEmitter::emitLabel(LabelTy Label) { CurrentLabel = Label; }
 
 EvalEmitter::LabelTy EvalEmitter::getLabel() { return NextLabel++; }
@@ -142,10 +160,6 @@ bool EvalEmitter::speculate(const CallExpr *E, const LabelTy &EndLabel) {
   if (T == PT_Ptr) {
     const auto &Ptr = S.Stk.pop<Pointer>();
     return this->emitBool(CheckBCPResult(S, Ptr), E);
-  } else if (T == PT_FnPtr) {
-    S.Stk.discard<FunctionPointer>();
-    // Never accepted
-    return this->emitBool(false, E);
   }
 
   // Otherwise, this is fine!
@@ -168,6 +182,15 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
     return true;
 
   const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  if (Ptr.isFunctionPointer()) {
+    EvalResult.setValue(Ptr.toAPValue(Ctx.getASTContext()));
+    return true;
+  }
+
+  // If we're returning a raw pointer, call our callback.
+  if (this->PtrCB)
+    return (*this->PtrCB)(Ptr);
 
   if (!EvalResult.checkReturnValue(S, Ctx, Ptr, Info))
     return false;
@@ -203,14 +226,6 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
     EvalResult.setValue(Ptr.toAPValue(Ctx.getASTContext()));
   }
 
-  return true;
-}
-template <> bool EvalEmitter::emitRet<PT_FnPtr>(const SourceInfo &Info) {
-  if (!isActive())
-    return true;
-
-  // Function pointers cannot be converted to rvalues.
-  EvalResult.setFunctionPointer(S.Stk.pop<FunctionPointer>());
   return true;
 }
 

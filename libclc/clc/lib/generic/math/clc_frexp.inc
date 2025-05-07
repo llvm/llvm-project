@@ -26,7 +26,7 @@ __clc_frexp(__CLC_GENTYPE x, __CLC_ADDRESS_SPACE __CLC_INTN *ep) {
       (ai & (__CLC_INTN)MANTBITS_SP32);
 
   __CLC_INTN is_inf_nan_or_zero =
-      x == __CLC_FP_LIT(0.0) || __clc_isinf(x) || __clc_isnan(x);
+      ai == (__CLC_INTN)0 || __clc_isinf(x) || __clc_isnan(x);
   *ep = __clc_select(e, (__CLC_INTN)0, is_inf_nan_or_zero);
   return __clc_select(__CLC_AS_GENTYPE(i), x, is_inf_nan_or_zero);
 }

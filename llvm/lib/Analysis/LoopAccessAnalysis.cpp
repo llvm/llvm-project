@@ -513,7 +513,7 @@ void RuntimePointerChecking::groupChecks(
   for (unsigned I = 0; I < Pointers.size(); ++I) {
     // We've seen this pointer before, and therefore already processed
     // its equivalence class.
-    if (Seen.count(I))
+    if (Seen.contains(I))
       continue;
 
     MemoryDepChecker::MemAccessInfo Access(Pointers[I].PointerValue,
@@ -526,9 +526,8 @@ void RuntimePointerChecking::groupChecks(
     // iteration order within an equivalence class member is only dependent on
     // the order in which unions and insertions are performed on the
     // equivalence class, the iteration order is deterministic.
-    for (auto MI = DepCands.findLeader(Access), ME = DepCands.member_end();
-         MI != ME; ++MI) {
-      auto PointerI = PositionMap.find(MI->getPointer());
+    for (auto M : DepCands.members(Access)) {
+      auto PointerI = PositionMap.find(M.getPointer());
       assert(PointerI != PositionMap.end() &&
              "pointer in equivalence class not found in PositionMap");
       for (unsigned Pointer : PointerI->second) {
@@ -564,7 +563,7 @@ void RuntimePointerChecking::groupChecks(
 
     // We've computed the grouped checks for this partition.
     // Save the results and continue with the next one.
-    llvm::copy(Groups, std::back_inserter(CheckingGroups));
+    llvm::append_range(CheckingGroups, Groups);
   }
 }
 
@@ -1213,7 +1212,7 @@ bool AccessAnalysis::canCheckPtrAtRT(
     SmallVector<MemAccessInfo, 4> AccessInfos;
     for (const Value *ConstPtr : ASPointers) {
       Value *Ptr = const_cast<Value *>(ConstPtr);
-      bool IsWrite = Accesses.count(MemAccessInfo(Ptr, true));
+      bool IsWrite = Accesses.contains(MemAccessInfo(Ptr, true));
       if (IsWrite)
         ++NumWritePtrChecks;
       else
@@ -1342,9 +1341,10 @@ void AccessAnalysis::processMemAccesses() {
   LLVM_DEBUG({
     for (const auto &[A, _] : Accesses)
       dbgs() << "\t" << *A.getPointer() << " ("
-             << (A.getInt() ? "write"
-                            : (ReadOnlyPtr.count(A.getPointer()) ? "read-only"
-                                                                 : "read"))
+             << (A.getInt()
+                     ? "write"
+                     : (ReadOnlyPtr.contains(A.getPointer()) ? "read-only"
+                                                             : "read"))
              << ")\n";
   });
 
@@ -1388,13 +1388,13 @@ void AccessAnalysis::processMemAccesses() {
 
           // If we're using the deferred access set, then it contains only
           // reads.
-          bool IsReadOnlyPtr = ReadOnlyPtr.count(Ptr) && !IsWrite;
+          bool IsReadOnlyPtr = ReadOnlyPtr.contains(Ptr) && !IsWrite;
           if (UseDeferred && !IsReadOnlyPtr)
             continue;
           // Otherwise, the pointer must be in the PtrAccessSet, either as a
           // read or a write.
           assert(((IsReadOnlyPtr && UseDeferred) || IsWrite ||
-                  S.count(MemAccessInfo(Ptr, false))) &&
+                  S.contains(MemAccessInfo(Ptr, false))) &&
                  "Alias-set pointer not in the access set?");
 
           MemAccessInfo Access(Ptr, IsWrite);
@@ -1426,9 +1426,6 @@ void AccessAnalysis::processMemAccesses() {
 
           // Create sets of pointers connected by a shared alias set and
           // underlying object.
-          typedef SmallVector<const Value *, 16> ValueVector;
-          ValueVector TempObjects;
-
           SmallVector<const Value *, 16> &UOs = UnderlyingObjects[Ptr];
           UOs = {};
           ::getUnderlyingObjects(Ptr, UOs, LI);
@@ -1782,7 +1779,8 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
           MaxStoreLoadForwardSafeDistanceInBits &&
       MaxVFWithoutSLForwardIssuesPowerOf2 !=
           VectorizerParams::MaxVectorWidth * TypeByteSize) {
-    uint64_t MaxVF = MaxVFWithoutSLForwardIssuesPowerOf2 / CommonStride;
+    uint64_t MaxVF =
+        bit_floor(MaxVFWithoutSLForwardIssuesPowerOf2 / CommonStride);
     uint64_t MaxVFInBits = MaxVF * TypeByteSize * 8;
     MaxStoreLoadForwardSafeDistanceInBits =
         std::min(MaxStoreLoadForwardSafeDistanceInBits, MaxVFInBits);
@@ -2260,7 +2258,7 @@ bool MemoryDepChecker::areDepsSafe(const DepCandidates &AccessSets,
   MinDepDistBytes = -1;
   SmallPtrSet<MemAccessInfo, 8> Visited;
   for (MemAccessInfo CurAccess : CheckDeps) {
-    if (Visited.count(CurAccess))
+    if (Visited.contains(CurAccess))
       continue;
 
     // Check accesses within this set.
@@ -2605,7 +2603,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
 
     // See if there is an unsafe dependency between a load to a uniform address and
     // store to the same uniform address.
-    if (UniformStores.count(Ptr)) {
+    if (UniformStores.contains(Ptr)) {
       LLVM_DEBUG(dbgs() << "LAA: Found an unsafe dependency between a uniform "
                            "load and uniform store to the same address!\n");
       HasLoadStoreDependenceInvolvingLoopInvariantAddress = true;

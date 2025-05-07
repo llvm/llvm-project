@@ -14,6 +14,7 @@
 #include "ABIInfo.h"
 #include "CGCUDARuntime.h"
 #include "CGCXXABI.h"
+#include "CGDebugInfo.h"
 #include "CGObjCRuntime.h"
 #include "CGOpenCLRuntime.h"
 #include "CGRecordLayout.h"
@@ -69,6 +70,8 @@ static Value *EmitTargetArchBuiltinExpr(CodeGenFunction *CGF,
   case llvm::Triple::bpfeb:
   case llvm::Triple::bpfel:
     return CGF->EmitBPFBuiltinExpr(BuiltinID, E);
+  case llvm::Triple::dxil:
+    return CGF->EmitDirectXBuiltinExpr(BuiltinID, E);
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:
     return CGF->EmitX86BuiltinExpr(BuiltinID, E);
@@ -1946,7 +1949,6 @@ RValue CodeGenFunction::emitBuiltinOSLogFormat(const CallExpr &E) {
   analyze_os_log::OSLogBufferLayout Layout;
   analyze_os_log::computeOSLogBufferLayout(Ctx, &E, Layout);
   Address BufAddr = EmitPointerWithAlignment(E.getArg(0));
-  llvm::SmallVector<llvm::Value *, 4> RetainableOperands;
 
   // Ignore argument 1, the format string. It is not currently used.
   CallArgList Args;
@@ -3815,6 +3817,22 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Result);
   }
 
+  case Builtin::BI__builtin_elementwise_maxnum: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Result = Builder.CreateBinaryIntrinsic(llvm::Intrinsic::maxnum, Op0,
+                                                  Op1, nullptr, "elt.maxnum");
+    return RValue::get(Result);
+  }
+
+  case Builtin::BI__builtin_elementwise_minnum: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Result = Builder.CreateBinaryIntrinsic(llvm::Intrinsic::minnum, Op0,
+                                                  Op1, nullptr, "elt.minnum");
+    return RValue::get(Result);
+  }
+
   case Builtin::BI__builtin_elementwise_maximum: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     Value *Op1 = EmitScalarExpr(E->getArg(1));
@@ -4192,6 +4210,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Dest, *this);
   }
 
+  case Builtin::BI__builtin_trivially_relocate:
   case Builtin::BImemmove:
   case Builtin::BI__builtin_memmove: {
     Address Dest = EmitPointerWithAlignment(E->getArg(0));

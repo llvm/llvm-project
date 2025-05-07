@@ -32,48 +32,6 @@ using namespace clang::driver::toolchains;
 using namespace clang;
 using namespace llvm::opt;
 
-// Look for sub-directory starts with PackageName under ROCm candidate path.
-// If there is one and only one matching sub-directory found, append the
-// sub-directory to Path. If there is no matching sub-directory or there are
-// more than one matching sub-directories, diagnose them. Returns the full
-// path of the package if there is only one matching sub-directory, otherwise
-// returns an empty string.
-llvm::SmallString<0>
-RocmInstallationDetector::findSPACKPackage(const Candidate &Cand,
-                                           StringRef PackageName) {
-  if (!Cand.isSPACK())
-    return {};
-  std::error_code EC;
-  std::string Prefix = Twine(PackageName + "-" + Cand.SPACKReleaseStr).str();
-  llvm::SmallVector<llvm::SmallString<0>> SubDirs;
-  for (llvm::vfs::directory_iterator File = D.getVFS().dir_begin(Cand.Path, EC),
-                                     FileEnd;
-       File != FileEnd && !EC; File.increment(EC)) {
-    llvm::StringRef FileName = llvm::sys::path::filename(File->path());
-    if (FileName.starts_with(Prefix)) {
-      SubDirs.push_back(FileName);
-      if (SubDirs.size() > 1)
-        break;
-    }
-  }
-  if (SubDirs.size() == 1) {
-    auto PackagePath = Cand.Path;
-    llvm::sys::path::append(PackagePath, SubDirs[0]);
-    return PackagePath;
-  }
-  if (SubDirs.size() == 0 && Verbose) {
-    llvm::errs() << "SPACK package " << Prefix << " not found at " << Cand.Path
-                 << '\n';
-    return {};
-  }
-
-  if (SubDirs.size() > 1 && Verbose) {
-    llvm::errs() << "Cannot use SPACK package " << Prefix << " at " << Cand.Path
-                 << " due to multiple installations for the same version\n";
-  }
-  return {};
-}
-
 void RocmInstallationDetector::scanLibDevicePath(llvm::StringRef Path) {
   assert(!Path.empty());
 
@@ -101,8 +59,6 @@ void RocmInstallationDetector::scanLibDevicePath(llvm::StringRef Path) {
       OCKL = FilePath;
     } else if (BaseName == "opencl") {
       OpenCL = FilePath;
-    } else if (BaseName == "hip") {
-      HIP = FilePath;
     } else if (BaseName == "asanrtl") {
       AsanRTL = FilePath;
     } else if (BaseName == "oclc_finite_only_off") {
@@ -187,10 +143,7 @@ RocmInstallationDetector::getInstallationPathCandidates() {
   auto DoPrintROCmSearchDirs = [&]() {
     if (PrintROCmSearchDirs)
       for (auto Cand : ROCmSearchDirs) {
-        llvm::errs() << "ROCm installation search path";
-        if (Cand.isSPACK())
-          llvm::errs() << " (Spack " << Cand.SPACKReleaseStr << ")";
-        llvm::errs() << ": " << Cand.Path << '\n';
+        llvm::errs() << "ROCm installation search path: " << Cand.Path << '\n';
       }
   };
 
@@ -224,22 +177,6 @@ RocmInstallationDetector::getInstallationPathCandidates() {
     if (ParentName == "bin") {
       ParentDir = llvm::sys::path::parent_path(ParentDir);
       ParentName = llvm::sys::path::filename(ParentDir);
-    }
-
-    // Detect ROCm packages built with SPACK.
-    // clang is installed at
-    // <rocm_root>/llvm-amdgpu-<rocm_release_string>-<hash>/bin directory.
-    // We only consider the parent directory of llvm-amdgpu package as ROCm
-    // installation candidate for SPACK.
-    if (ParentName.starts_with("llvm-amdgpu-")) {
-      auto SPACKPostfix =
-          ParentName.drop_front(strlen("llvm-amdgpu-")).split('-');
-      auto SPACKReleaseStr = SPACKPostfix.first;
-      if (!SPACKReleaseStr.empty()) {
-        ParentDir = llvm::sys::path::parent_path(ParentDir);
-        return Candidate(ParentDir.str(), /*StrictChecking=*/true,
-                         SPACKReleaseStr);
-      }
     }
 
     // Some versions of the rocm llvm package install to /opt/rocm/llvm/bin
@@ -462,10 +399,6 @@ void RocmInstallationDetector::detectHIPRuntime() {
     InstallPath = Candidate.Path;
     if (InstallPath.empty() || !FS.exists(InstallPath))
       continue;
-    // HIP runtime built by SPACK is installed to
-    // <rocm_root>/hip-<rocm_release_string>-<hash> directory.
-    auto SPACKPath = findSPACKPackage(Candidate, "hip");
-    InstallPath = SPACKPath.empty() ? InstallPath : SPACKPath;
 
     BinPath = InstallPath;
     llvm::sys::path::append(BinPath, "bin");
@@ -1000,7 +933,13 @@ bool RocmInstallationDetector::checkCommonBitcodeLibs(
     return false;
   }
   if (ABIVer.requiresLibrary() && getABIVersionPath(ABIVer).empty()) {
-    D.Diag(diag::err_drv_no_rocm_device_lib) << 2 << ABIVer.toString();
+    // Starting from COV6, we will report minimum ROCm version requirement in
+    // the error message.
+    if (ABIVer.getAsCodeObjectVersion() < 6)
+      D.Diag(diag::err_drv_no_rocm_device_lib) << 2 << ABIVer.toString() << 0;
+    else
+      D.Diag(diag::err_drv_no_rocm_device_lib)
+          << 2 << ABIVer.toString() << 1 << "6.3";
     return false;
   }
   return true;

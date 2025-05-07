@@ -128,8 +128,9 @@ size_t getSize(Function &F, TargetTransformInfo &TTI) {
   size_t Ret = 0;
   for (const auto &BB : F)
     for (const auto &I : BB)
-      Ret += *(TTI.getInstructionCost(
-          &I, TargetTransformInfo::TargetCostKind::TCK_CodeSize).getValue());
+      Ret += TTI.getInstructionCost(
+                    &I, TargetTransformInfo::TargetCostKind::TCK_CodeSize)
+                 .getValue();
   return Ret;
 }
 

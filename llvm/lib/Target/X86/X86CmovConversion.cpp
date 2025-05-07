@@ -190,9 +190,7 @@ bool X86CmovConverterPass::runOnMachineFunction(MachineFunction &MF) {
   // execution behind a branch is better suited to handle on modern x86 chips.
   if (ForceMemOperand || ForceAll) {
     CmovGroups AllCmovGroups;
-    SmallVector<MachineBasicBlock *, 4> Blocks;
-    for (auto &MBB : MF)
-      Blocks.push_back(&MBB);
+    SmallVector<MachineBasicBlock *, 4> Blocks(llvm::make_pointer_range(MF));
     if (collectCmovCandidates(Blocks, AllCmovGroups, /*IncludeLoads*/ true)) {
       for (auto &Group : AllCmovGroups) {
         // Skip any group that doesn't do at least one memory operand cmov.

@@ -41,9 +41,7 @@ namespace {
   struct XCoreLowerThreadLocal : public ModulePass {
     static char ID;
 
-    XCoreLowerThreadLocal() : ModulePass(ID) {
-      initializeXCoreLowerThreadLocalPass(*PassRegistry::getPassRegistry());
-    }
+    XCoreLowerThreadLocal() : ModulePass(ID) {}
 
     bool lowerGlobal(GlobalVariable *GV);
 

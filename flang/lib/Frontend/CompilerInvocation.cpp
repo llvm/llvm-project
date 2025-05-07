@@ -195,7 +195,7 @@ static bool parseVectorLibArg(Fortran::frontend::CodeGenOptions &opts,
   std::optional<VectorLibrary> val =
       llvm::StringSwitch<std::optional<VectorLibrary>>(arg->getValue())
           .Case("Accelerate", VectorLibrary::Accelerate)
-          .Case("LIBMVEC", VectorLibrary::LIBMVEC)
+          .Case("libmvec", VectorLibrary::LIBMVEC)
           .Case("MASSV", VectorLibrary::MASSV)
           .Case("SVML", VectorLibrary::SVML)
           .Case("SLEEF", VectorLibrary::SLEEF)
@@ -309,6 +309,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   for (auto *a :
        args.filtered(clang::driver::options::OPT_fembed_offload_object_EQ))
     opts.OffloadObjects.push_back(a->getValue());
+
+  if (args.hasArg(clang::driver::options::OPT_finstrument_functions))
+    opts.InstrumentFunctions = 1;
 
   // -flto=full/thin option.
   if (const llvm::opt::Arg *a =
@@ -1108,8 +1111,8 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   unsigned numErrorsBefore = diags.getNumErrors();
   llvm::Triple t(res.getTargetOpts().triple);
 
-  // By default OpenMP is set to 1.1 version
-  res.getLangOpts().OpenMPVersion = 11;
+  // By default OpenMP is set to 3.1 version
+  res.getLangOpts().OpenMPVersion = 31;
   res.getFrontendOpts().features.Enable(
       Fortran::common::LanguageFeature::OpenMP);
   if (int Version = getLastArgIntValue(
@@ -1476,6 +1479,19 @@ bool CompilerInvocation::createFromArgs(
                     clang::driver::options::OPT_fno_realloc_lhs, true))
     invoc.loweringOpts.setReallocateLHS(false);
 
+  invoc.loweringOpts.setRepackArrays(
+      args.hasFlag(clang::driver::options::OPT_frepack_arrays,
+                   clang::driver::options::OPT_fno_repack_arrays,
+                   /*default=*/false));
+  invoc.loweringOpts.setStackRepackArrays(
+      args.hasFlag(clang::driver::options::OPT_fstack_repack_arrays,
+                   clang::driver::options::OPT_fno_stack_repack_arrays,
+                   /*default=*/false));
+  if (auto *arg = args.getLastArg(
+          clang::driver::options::OPT_frepack_arrays_contiguity_EQ))
+    invoc.loweringOpts.setRepackArraysWhole(arg->getValue() ==
+                                            llvm::StringRef{"whole"});
+
   success &= parseFrontendArgs(invoc.getFrontendOpts(), args, diags);
   parseTargetArgs(invoc.getTargetOpts(), args);
   parsePreprocessorArgs(invoc.getPreprocessorOpts(), args);
@@ -1599,13 +1615,10 @@ void CompilerInvocation::setDefaultPredefinitions() {
   }
 
   llvm::Triple targetTriple{llvm::Triple(this->targetOpts.triple)};
-  if (targetTriple.isPPC()) {
-    // '__powerpc__' is a generic macro for any PowerPC cases. e.g. Max integer
-    // size.
-    fortranOptions.predefinitions.emplace_back("__powerpc__", "1");
-  }
   if (targetTriple.isOSLinux()) {
     fortranOptions.predefinitions.emplace_back("__linux__", "1");
+  } else if (targetTriple.isOSAIX()) {
+    fortranOptions.predefinitions.emplace_back("_AIX", "1");
   }
 
   switch (targetTriple.getArch()) {
@@ -1614,6 +1627,16 @@ void CompilerInvocation::setDefaultPredefinitions() {
   case llvm::Triple::ArchType::x86_64:
     fortranOptions.predefinitions.emplace_back("__x86_64__", "1");
     fortranOptions.predefinitions.emplace_back("__x86_64", "1");
+    break;
+  case llvm::Triple::ArchType::ppc:
+  case llvm::Triple::ArchType::ppc64:
+  case llvm::Triple::ArchType::ppcle:
+  case llvm::Triple::ArchType::ppc64le:
+    // '__powerpc__' is a generic macro for any PowerPC.
+    fortranOptions.predefinitions.emplace_back("__powerpc__", "1");
+    if (targetTriple.isOSAIX() && targetTriple.isArch64Bit()) {
+      fortranOptions.predefinitions.emplace_back("__64BIT__", "1");
+    }
     break;
   }
 }

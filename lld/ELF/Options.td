@@ -432,6 +432,10 @@ defm rosegment: BB<"rosegment",
   "Put read-only non-executable sections in their own segment (default)",
   "Do not put read-only non-executable sections in their own segment">;
 
+defm xosegment: BB<"xosegment",
+  "Put execute-only sections in their own segment",
+  "Do not put execute-only sections in their own segment (default)">;
+
 defm rpath: Eq<"rpath", "Add a DT_RUNPATH to the output">;
 
 def relocatable: F<"relocatable">, HelpText<"Create relocatable object file">;

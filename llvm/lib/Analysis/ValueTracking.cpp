@@ -430,6 +430,10 @@ void llvm::computeKnownBitsFromRangeMetadata(const MDNode &Ranges,
     ConstantInt *Upper =
         mdconst::extract<ConstantInt>(Ranges.getOperand(2 * i + 1));
     ConstantRange Range(Lower->getValue(), Upper->getValue());
+    // BitWidth must equal the Ranges BitWidth for the correct number of high
+    // bits to be set.
+    assert(BitWidth == Range.getBitWidth() &&
+           "Known bit width must match range bit width!");
 
     // The first CommonPrefixBits of all values in Range are equal.
     unsigned CommonPrefixBits =
@@ -442,9 +446,9 @@ void llvm::computeKnownBitsFromRangeMetadata(const MDNode &Ranges,
 }
 
 static bool isEphemeralValueOf(const Instruction *I, const Value *E) {
-  SmallVector<const Value *, 16> WorkSet(1, I);
-  SmallPtrSet<const Value *, 32> Visited;
-  SmallPtrSet<const Value *, 16> EphValues;
+  SmallVector<const Instruction *, 16> WorkSet(1, I);
+  SmallPtrSet<const Instruction *, 32> Visited;
+  SmallPtrSet<const Instruction *, 16> EphValues;
 
   // The instruction defining an assumption's condition itself is always
   // considered ephemeral to that assumption (even if it has other
@@ -453,23 +457,26 @@ static bool isEphemeralValueOf(const Instruction *I, const Value *E) {
     return true;
 
   while (!WorkSet.empty()) {
-    const Value *V = WorkSet.pop_back_val();
+    const Instruction *V = WorkSet.pop_back_val();
     if (!Visited.insert(V).second)
       continue;
 
     // If all uses of this value are ephemeral, then so is this value.
-    if (llvm::all_of(V->users(), [&](const User *U) {
-                                   return EphValues.count(U);
-                                 })) {
+    if (all_of(V->users(), [&](const User *U) {
+          return EphValues.count(cast<Instruction>(U));
+        })) {
       if (V == E)
         return true;
 
-      if (V == I || (isa<Instruction>(V) &&
-                     !cast<Instruction>(V)->mayHaveSideEffects() &&
-                     !cast<Instruction>(V)->isTerminator())) {
-       EphValues.insert(V);
-       if (const User *U = dyn_cast<User>(V))
-         append_range(WorkSet, U->operands());
+      if (V == I || (!V->mayHaveSideEffects() && !V->isTerminator())) {
+        EphValues.insert(V);
+
+        if (const User *U = dyn_cast<User>(V)) {
+          for (const Use &U : U->operands()) {
+            if (const auto *I = dyn_cast<Instruction>(U.get()))
+              WorkSet.push_back(I);
+          }
+        }
       }
     }
   }
@@ -901,6 +908,16 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
       assert(BitWidth == 1 && "assume operand is not i1?");
       (void)BitWidth;
       Known.setAllZero();
+      return;
+    }
+    auto *Trunc = dyn_cast<TruncInst>(Arg);
+    if (Trunc && Trunc->getOperand(0) == V &&
+        isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
+      if (Trunc->hasNoUnsignedWrap()) {
+        Known = KnownBits::makeConstant(APInt(BitWidth, 1));
+        return;
+      }
+      Known.One.setBit(0);
       return;
     }
 
@@ -3787,6 +3804,63 @@ static bool isNonEqualPointersWithRecursiveGEP(const Value *A, const Value *B,
           (StartOffset.sle(OffsetB) && StepOffset.isNegative()));
 }
 
+static bool isKnownNonEqualFromContext(const Value *V1, const Value *V2,
+                                       unsigned Depth, const SimplifyQuery &Q) {
+  if (!Q.CxtI)
+    return false;
+
+  // Try to infer NonEqual based on information from dominating conditions.
+  if (Q.DC && Q.DT) {
+    auto IsKnownNonEqualFromDominatingCondition = [&](const Value *V) {
+      for (BranchInst *BI : Q.DC->conditionsFor(V)) {
+        Value *Cond = BI->getCondition();
+        BasicBlockEdge Edge0(BI->getParent(), BI->getSuccessor(0));
+        if (Q.DT->dominates(Edge0, Q.CxtI->getParent()) &&
+            isImpliedCondition(Cond, ICmpInst::ICMP_NE, V1, V2, Q.DL,
+                               /*LHSIsTrue=*/true, Depth)
+                .value_or(false))
+          return true;
+
+        BasicBlockEdge Edge1(BI->getParent(), BI->getSuccessor(1));
+        if (Q.DT->dominates(Edge1, Q.CxtI->getParent()) &&
+            isImpliedCondition(Cond, ICmpInst::ICMP_NE, V1, V2, Q.DL,
+                               /*LHSIsTrue=*/false, Depth)
+                .value_or(false))
+          return true;
+      }
+
+      return false;
+    };
+
+    if (IsKnownNonEqualFromDominatingCondition(V1) ||
+        IsKnownNonEqualFromDominatingCondition(V2))
+      return true;
+  }
+
+  if (!Q.AC)
+    return false;
+
+  // Try to infer NonEqual based on information from assumptions.
+  for (auto &AssumeVH : Q.AC->assumptionsFor(V1)) {
+    if (!AssumeVH)
+      continue;
+    CallInst *I = cast<CallInst>(AssumeVH);
+
+    assert(I->getFunction() == Q.CxtI->getFunction() &&
+           "Got assumption for the wrong function!");
+    assert(I->getIntrinsicID() == Intrinsic::assume &&
+           "must be an assume intrinsic");
+
+    if (isImpliedCondition(I->getArgOperand(0), ICmpInst::ICMP_NE, V1, V2, Q.DL,
+                           /*LHSIsTrue=*/true, Depth)
+            .value_or(false) &&
+        isValidAssumeForContext(I, Q.CxtI, Q.DT))
+      return true;
+  }
+
+  return false;
+}
+
 /// Return true if it is known that V1 != V2.
 static bool isKnownNonEqual(const Value *V1, const Value *V2,
                             const APInt &DemandedElts, unsigned Depth,
@@ -3858,49 +3932,8 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2,
       match(V2, m_PtrToIntSameSize(Q.DL, m_Value(B))))
     return isKnownNonEqual(A, B, DemandedElts, Depth + 1, Q);
 
-  if (!Q.CxtI)
-    return false;
-
-  // Try to infer NonEqual based on information from dominating conditions.
-  if (Q.DC && Q.DT) {
-    for (BranchInst *BI : Q.DC->conditionsFor(V1)) {
-      Value *Cond = BI->getCondition();
-      BasicBlockEdge Edge0(BI->getParent(), BI->getSuccessor(0));
-      if (Q.DT->dominates(Edge0, Q.CxtI->getParent()) &&
-          isImpliedCondition(Cond, ICmpInst::ICMP_NE, V1, V2, Q.DL,
-                             /*LHSIsTrue=*/true, Depth)
-              .value_or(false))
-        return true;
-
-      BasicBlockEdge Edge1(BI->getParent(), BI->getSuccessor(1));
-      if (Q.DT->dominates(Edge1, Q.CxtI->getParent()) &&
-          isImpliedCondition(Cond, ICmpInst::ICMP_NE, V1, V2, Q.DL,
-                             /*LHSIsTrue=*/false, Depth)
-              .value_or(false))
-        return true;
-    }
-  }
-
-  if (!Q.AC)
-    return false;
-
-  // Try to infer NonEqual based on information from assumptions.
-  for (auto &AssumeVH : Q.AC->assumptionsFor(V1)) {
-    if (!AssumeVH)
-      continue;
-    CallInst *I = cast<CallInst>(AssumeVH);
-
-    assert(I->getFunction() == Q.CxtI->getFunction() &&
-           "Got assumption for the wrong function!");
-    assert(I->getIntrinsicID() == Intrinsic::assume &&
-           "must be an assume intrinsic");
-
-    if (isImpliedCondition(I->getArgOperand(0), ICmpInst::ICMP_NE, V1, V2, Q.DL,
-                           /*LHSIsTrue=*/true, Depth)
-            .value_or(false) &&
-        isValidAssumeForContext(I, Q.CxtI, Q.DT))
-      return true;
-  }
+  if (isKnownNonEqualFromContext(V1, V2, Depth, Q))
+    return true;
 
   return false;
 }
@@ -5324,7 +5357,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     case Intrinsic::maxnum:
     case Intrinsic::minnum:
     case Intrinsic::minimum:
-    case Intrinsic::maximum: {
+    case Intrinsic::maximum:
+    case Intrinsic::minimumnum:
+    case Intrinsic::maximumnum: {
       KnownFPClass KnownLHS, KnownRHS;
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
                           KnownLHS, Depth + 1, Q);
@@ -5335,10 +5370,12 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       Known = KnownLHS | KnownRHS;
 
       // If either operand is not NaN, the result is not NaN.
-      if (NeverNaN && (IID == Intrinsic::minnum || IID == Intrinsic::maxnum))
+      if (NeverNaN &&
+          (IID == Intrinsic::minnum || IID == Intrinsic::maxnum ||
+           IID == Intrinsic::minimumnum || IID == Intrinsic::maximumnum))
         Known.knownNot(fcNan);
 
-      if (IID == Intrinsic::maxnum) {
+      if (IID == Intrinsic::maxnum || IID == Intrinsic::maximumnum) {
         // If at least one operand is known to be positive, the result must be
         // positive.
         if ((KnownLHS.cannotBeOrderedLessThanZero() &&
@@ -5352,7 +5389,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         if (KnownLHS.cannotBeOrderedLessThanZero() ||
             KnownRHS.cannotBeOrderedLessThanZero())
           Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
-      } else if (IID == Intrinsic::minnum) {
+      } else if (IID == Intrinsic::minnum || IID == Intrinsic::minimumnum) {
         // If at least one operand is known to be negative, the result must be
         // negative.
         if ((KnownLHS.cannotBeOrderedGreaterThanZero() &&
@@ -5360,13 +5397,14 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
             (KnownRHS.cannotBeOrderedGreaterThanZero() &&
              KnownRHS.isKnownNeverNaN()))
           Known.knownNot(KnownFPClass::OrderedGreaterThanZeroMask);
-      } else {
+      } else if (IID == Intrinsic::minimum) {
         // If at least one operand is known to be negative, the result must be
         // negative.
         if (KnownLHS.cannotBeOrderedGreaterThanZero() ||
             KnownRHS.cannotBeOrderedGreaterThanZero())
           Known.knownNot(KnownFPClass::OrderedGreaterThanZeroMask);
-      }
+      } else
+        llvm_unreachable("unhandled intrinsic");
 
       // Fixup zero handling if denormals could be returned as a zero.
       //
@@ -5394,15 +5432,20 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
             Known.signBitMustBeOne();
           else
             Known.signBitMustBeZero();
-        } else if ((IID == Intrinsic::maximum || IID == Intrinsic::minimum) ||
+        } else if ((IID == Intrinsic::maximum || IID == Intrinsic::minimum ||
+                    IID == Intrinsic::maximumnum ||
+                    IID == Intrinsic::minimumnum) ||
+                   // FIXME: Should be using logical zero versions
                    ((KnownLHS.isKnownNeverNegZero() ||
                      KnownRHS.isKnownNeverPosZero()) &&
                     (KnownLHS.isKnownNeverPosZero() ||
                      KnownRHS.isKnownNeverNegZero()))) {
-          if ((IID == Intrinsic::maximum || IID == Intrinsic::maxnum) &&
+          if ((IID == Intrinsic::maximum || IID == Intrinsic::maximumnum ||
+               IID == Intrinsic::maxnum) &&
               (KnownLHS.SignBit == false || KnownRHS.SignBit == false))
             Known.signBitMustBeZero();
-          else if ((IID == Intrinsic::minimum || IID == Intrinsic::minnum) &&
+          else if ((IID == Intrinsic::minimum || IID == Intrinsic::minimumnum ||
+                    IID == Intrinsic::minnum) &&
                    (KnownLHS.SignBit == true || KnownRHS.SignBit == true))
             Known.signBitMustBeOne();
         }
@@ -7168,20 +7211,19 @@ bool llvm::isNotCrossLaneOperation(const Instruction *I) {
          !isa<CallBase, BitCastInst, ExtractElementInst>(I);
 }
 
-bool llvm::isSafeToSpeculativelyExecute(const Instruction *Inst,
-                                        const Instruction *CtxI,
-                                        AssumptionCache *AC,
-                                        const DominatorTree *DT,
-                                        const TargetLibraryInfo *TLI,
-                                        bool UseVariableInfo) {
+bool llvm::isSafeToSpeculativelyExecute(
+    const Instruction *Inst, const Instruction *CtxI, AssumptionCache *AC,
+    const DominatorTree *DT, const TargetLibraryInfo *TLI, bool UseVariableInfo,
+    bool IgnoreUBImplyingAttrs) {
   return isSafeToSpeculativelyExecuteWithOpcode(Inst->getOpcode(), Inst, CtxI,
-                                                AC, DT, TLI, UseVariableInfo);
+                                                AC, DT, TLI, UseVariableInfo,
+                                                IgnoreUBImplyingAttrs);
 }
 
 bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
     unsigned Opcode, const Instruction *Inst, const Instruction *CtxI,
     AssumptionCache *AC, const DominatorTree *DT, const TargetLibraryInfo *TLI,
-    bool UseVariableInfo) {
+    bool UseVariableInfo, bool IgnoreUBImplyingAttrs) {
 #ifndef NDEBUG
   if (Inst->getOpcode() != Opcode) {
     // Check that the operands are actually compatible with the Opcode override.
@@ -7254,7 +7296,11 @@ bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
 
     // The called function could have undefined behavior or side-effects, even
     // if marked readnone nounwind.
-    return Callee && Callee->isSpeculatable();
+    if (!Callee || !Callee->isSpeculatable())
+      return false;
+    // Since the operands may be changed after hoisting, undefined behavior may
+    // be triggered by some UB-implying attributes.
+    return IgnoreUBImplyingAttrs || !CI->hasUBImplyingAttrs();
   }
   case Instruction::VAArg:
   case Instruction::Alloca:
@@ -7687,6 +7733,8 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
       case Intrinsic::maxnum:
       case Intrinsic::minimum:
       case Intrinsic::maximum:
+      case Intrinsic::minimumnum:
+      case Intrinsic::maximumnum:
       case Intrinsic::is_fpclass:
       case Intrinsic::ldexp:
       case Intrinsic::frexp:
@@ -10113,10 +10161,6 @@ static ConstantRange getRangeForIntrinsic(const IntrinsicInst &II,
     if (!II.getParent() || !II.getFunction())
       break;
     return getVScaleRange(II.getFunction(), Width);
-  case Intrinsic::scmp:
-  case Intrinsic::ucmp:
-    return ConstantRange::getNonEmpty(APInt::getAllOnes(Width),
-                                      APInt(Width, 2));
   default:
     break;
   }
@@ -10331,7 +10375,8 @@ void llvm::findValuesAffectedByCondition(
       bool HasRHSC = match(B, m_ConstantInt());
       if (ICmpInst::isEquality(Pred)) {
         AddAffected(A);
-        AddAffected(B);
+        if (IsAssume)
+          AddAffected(B);
         if (HasRHSC) {
           Value *Y;
           // (X & C) or (X | C).

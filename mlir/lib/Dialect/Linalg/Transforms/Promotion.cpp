@@ -270,7 +270,6 @@ FailureOr<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
     partialSizes.push_back(
         b.createOrFold<memref::DimOp>(loc, subView, resultDimIdx++));
   }
-  SmallVector<int64_t, 4> dynSizes(fullSizes.size(), ShapedType::kDynamic);
   // If a callback is not specified, then use the default implementation for
   // allocating the promoted buffer.
   std::optional<Value> fullLocalView =

@@ -195,12 +195,14 @@ public:
   }
 };
 
-unsigned getMaxVGPRs(const TargetMachine &TM, const Function &F) {
+static unsigned getMaxVGPRs(unsigned LDSBytes, const TargetMachine &TM,
+                            const Function &F) {
   if (!TM.getTargetTriple().isAMDGCN())
     return 128;
 
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-  unsigned MaxVGPRs = ST.getMaxNumVGPRs(ST.getWavesPerEU(F).first);
+  unsigned MaxVGPRs = ST.getMaxNumVGPRs(
+      ST.getWavesPerEU(ST.getFlatWorkGroupSizes(F), LDSBytes, F).first);
 
   // A non-entry function has only 32 caller preserved registers.
   // Do not promote alloca which will force spilling unless we know the function
@@ -336,10 +338,9 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
   if (!ST.isPromoteAllocaEnabled())
     return false;
 
-  MaxVGPRs = getMaxVGPRs(TM, F);
-  setFunctionLimits(F);
-
   bool SufficientLDS = PromoteToLDS && hasSufficientLocalMem(F);
+  MaxVGPRs = getMaxVGPRs(CurrentLocalMemUsage, TM, F);
+  setFunctionLimits(F);
 
   unsigned VectorizationBudget =
       (PromoteAllocaToVectorLimit ? PromoteAllocaToVectorLimit * 8
@@ -729,6 +730,11 @@ static bool isSupportedAccessType(FixedVectorType *VecTy, Type *AccessTy,
   // complicated.
   if (isa<FixedVectorType>(AccessTy)) {
     TypeSize AccTS = DL.getTypeStoreSize(AccessTy);
+    // If the type size and the store size don't match, we would need to do more
+    // than just bitcast to translate between an extracted/insertable subvectors
+    // and the accessed value.
+    if (AccTS * 8 != DL.getTypeSizeInBits(AccessTy))
+      return false;
     TypeSize VecTS = DL.getTypeStoreSize(VecTy->getElementType());
     return AccTS.isKnownMultipleOf(VecTS);
   }
@@ -813,15 +819,17 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
 
     if (VectorType::isValidElementType(ElemTy) && NumElems > 0) {
       unsigned ElementSize = DL->getTypeSizeInBits(ElemTy) / 8;
-      unsigned AllocaSize = DL->getTypeStoreSize(AllocaTy);
-      // Expand vector if required to match padding of inner type,
-      // i.e. odd size subvectors.
-      // Storage size of new vector must match that of alloca for correct
-      // behaviour of byte offsets and GEP computation.
-      if (NumElems * ElementSize != AllocaSize)
-        NumElems = AllocaSize / ElementSize;
-      if (NumElems > 0 && (AllocaSize % ElementSize) == 0)
-        VectorTy = FixedVectorType::get(ElemTy, NumElems);
+      if (ElementSize > 0) {
+        unsigned AllocaSize = DL->getTypeStoreSize(AllocaTy);
+        // Expand vector if required to match padding of inner type,
+        // i.e. odd size subvectors.
+        // Storage size of new vector must match that of alloca for correct
+        // behaviour of byte offsets and GEP computation.
+        if (NumElems * ElementSize != AllocaSize)
+          NumElems = AllocaSize / ElementSize;
+        if (NumElems > 0 && (AllocaSize % ElementSize) == 0)
+          VectorTy = FixedVectorType::get(ElemTy, NumElems);
+      }
     }
   }
 
@@ -861,7 +869,14 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
   LLVM_DEBUG(dbgs() << "  Attempting promotion to: " << *VectorTy << "\n");
 
   Type *VecEltTy = VectorTy->getElementType();
-  unsigned ElementSize = DL->getTypeSizeInBits(VecEltTy) / 8;
+  unsigned ElementSizeInBits = DL->getTypeSizeInBits(VecEltTy);
+  if (ElementSizeInBits != DL->getTypeAllocSizeInBits(VecEltTy)) {
+    LLVM_DEBUG(dbgs() << "  Cannot convert to vector if the allocation size "
+                         "does not match the type's size\n");
+    return false;
+  }
+  unsigned ElementSize = ElementSizeInBits / 8;
+  assert(ElementSize > 0);
   for (auto *U : Uses) {
     Instruction *Inst = cast<Instruction>(U->getUser());
 
@@ -1438,29 +1453,14 @@ bool AMDGPUPromoteAllocaImpl::hasSufficientLocalMem(const Function &F) {
   }
 
   unsigned MaxOccupancy =
-      ST.getOccupancyWithWorkGroupSizes(CurrentLocalMemUsage, F).second;
-
-  // Restrict local memory usage so that we don't drastically reduce occupancy,
-  // unless it is already significantly reduced.
-
-  // TODO: Have some sort of hint or other heuristics to guess occupancy based
-  // on other factors..
-  unsigned OccupancyHint = ST.getWavesPerEU(F).second;
-  if (OccupancyHint == 0)
-    OccupancyHint = 7;
-
-  // Clamp to max value.
-  OccupancyHint = std::min(OccupancyHint, ST.getMaxWavesPerEU());
-
-  // Check the hint but ignore it if it's obviously wrong from the existing LDS
-  // usage.
-  MaxOccupancy = std::min(OccupancyHint, MaxOccupancy);
+      ST.getWavesPerEU(ST.getFlatWorkGroupSizes(F), CurrentLocalMemUsage, F)
+          .second;
 
   // Round up to the next tier of usage.
   unsigned MaxSizeWithWaveCount =
       ST.getMaxLocalMemSizeWithWaveCount(MaxOccupancy, F);
 
-  // Program is possibly broken by using more local mem than available.
+  // Program may already use more LDS than is usable at maximum occupancy.
   if (CurrentLocalMemUsage > MaxSizeWithWaveCount)
     return false;
 

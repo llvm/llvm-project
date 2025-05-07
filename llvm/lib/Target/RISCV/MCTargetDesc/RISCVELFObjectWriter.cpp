@@ -50,23 +50,16 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
                                             const MCValue &Target,
                                             const MCFixup &Fixup,
                                             bool IsPCRel) const {
-  assert((!Target.getSymA() ||
-          Target.getSymA()->getKind() == MCSymbolRefExpr::VK_None) &&
-         "sym@specifier should have been rejected");
   const MCExpr *Expr = Fixup.getValue();
-  // Determine the type of the relocation
   unsigned Kind = Fixup.getTargetKind();
-  if (Kind >= FirstLiteralRelocationKind)
-    return Kind - FirstLiteralRelocationKind;
-
-  auto Spec = RISCVMCExpr::Specifier(Target.getRefKind());
+  auto Spec = RISCVMCExpr::Specifier(Target.getSpecifier());
   switch (Spec) {
   case RISCVMCExpr::VK_TPREL_HI:
   case RISCVMCExpr::VK_TLS_GOT_HI:
   case RISCVMCExpr::VK_TLS_GD_HI:
   case RISCVMCExpr::VK_TLSDESC_HI:
-    if (auto *S = Target.getSymA())
-      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
+    if (auto *SA = Target.getAddSym())
+      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
     break;
   case RISCVMCExpr::VK_PLTPCREL:
   case RISCVMCExpr::VK_GOTPCREL:
@@ -79,6 +72,11 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
   default:
     break;
   }
+
+  // Extract the relocation type from the fixup kind, after applying STT_TLS as
+  // needed.
+  if (mc::isRelocation(Fixup.getKind()))
+    return Kind;
 
   if (IsPCRel) {
     switch (Kind) {
@@ -94,20 +92,6 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
       return ELF::R_RISCV_PCREL_LO12_I;
     case RISCV::fixup_riscv_pcrel_lo12_s:
       return ELF::R_RISCV_PCREL_LO12_S;
-    case RISCV::fixup_riscv_got_hi20:
-      return ELF::R_RISCV_GOT_HI20;
-    case RISCV::fixup_riscv_tls_got_hi20:
-      return ELF::R_RISCV_TLS_GOT_HI20;
-    case RISCV::fixup_riscv_tls_gd_hi20:
-      return ELF::R_RISCV_TLS_GD_HI20;
-    case RISCV::fixup_riscv_tlsdesc_hi20:
-      return ELF::R_RISCV_TLSDESC_HI20;
-    case RISCV::fixup_riscv_tlsdesc_load_lo12:
-      return ELF::R_RISCV_TLSDESC_LOAD_LO12;
-    case RISCV::fixup_riscv_tlsdesc_add_lo12:
-      return ELF::R_RISCV_TLSDESC_ADD_LO12;
-    case RISCV::fixup_riscv_tlsdesc_call:
-      return ELF::R_RISCV_TLSDESC_CALL;
     case RISCV::fixup_riscv_jal:
       return ELF::R_RISCV_JAL;
     case RISCV::fixup_riscv_branch:
@@ -120,6 +104,10 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
       return ELF::R_RISCV_CALL_PLT;
     case RISCV::fixup_riscv_call_plt:
       return ELF::R_RISCV_CALL_PLT;
+    case RISCV::fixup_riscv_qc_e_branch:
+      return ELF::R_RISCV_QC_E_BRANCH;
+    case RISCV::fixup_riscv_qc_e_jump_plt:
+      return ELF::R_RISCV_QC_E_JUMP_PLT;
     }
   }
 
@@ -127,12 +115,6 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
   default:
     Ctx.reportError(Fixup.getLoc(), "unsupported relocation type");
     return ELF::R_RISCV_NONE;
-  case RISCV::fixup_riscv_tlsdesc_load_lo12:
-    return ELF::R_RISCV_TLSDESC_LOAD_LO12;
-  case RISCV::fixup_riscv_tlsdesc_add_lo12:
-    return ELF::R_RISCV_TLSDESC_ADD_LO12;
-  case RISCV::fixup_riscv_tlsdesc_call:
-    return ELF::R_RISCV_TLSDESC_CALL;
 
   case FK_Data_1:
     Ctx.reportError(Fixup.getLoc(), "1-byte data relocations not supported");
@@ -162,18 +144,10 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_RISCV_LO12_I;
   case RISCV::fixup_riscv_lo12_s:
     return ELF::R_RISCV_LO12_S;
-  case RISCV::fixup_riscv_tprel_hi20:
-    return ELF::R_RISCV_TPREL_HI20;
-  case RISCV::fixup_riscv_tprel_lo12_i:
-    return ELF::R_RISCV_TPREL_LO12_I;
-  case RISCV::fixup_riscv_tprel_lo12_s:
-    return ELF::R_RISCV_TPREL_LO12_S;
-  case RISCV::fixup_riscv_tprel_add:
-    return ELF::R_RISCV_TPREL_ADD;
-  case RISCV::fixup_riscv_relax:
-    return ELF::R_RISCV_RELAX;
-  case RISCV::fixup_riscv_align:
-    return ELF::R_RISCV_ALIGN;
+  case RISCV::fixup_riscv_qc_e_32:
+    return ELF::R_RISCV_QC_E_32;
+  case RISCV::fixup_riscv_qc_abs20_u:
+    return ELF::R_RISCV_QC_ABS20_U;
   }
 }
 

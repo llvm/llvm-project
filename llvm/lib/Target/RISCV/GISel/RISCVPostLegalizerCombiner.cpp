@@ -118,8 +118,6 @@ void RISCVPostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
 
 RISCVPostLegalizerCombiner::RISCVPostLegalizerCombiner()
     : MachineFunctionPass(ID) {
-  initializeRISCVPostLegalizerCombinerPass(*PassRegistry::getPassRegistry());
-
   if (!RuleConfig.parseCommandLineOption())
     report_fatal_error("Invalid rule identifier");
 }
@@ -164,8 +162,6 @@ INITIALIZE_PASS_END(RISCVPostLegalizerCombiner, DEBUG_TYPE,
                     "Combine RISC-V MachineInstrs after legalization", false,
                     false)
 
-namespace llvm {
-FunctionPass *createRISCVPostLegalizerCombiner() {
+FunctionPass *llvm::createRISCVPostLegalizerCombiner() {
   return new RISCVPostLegalizerCombiner();
 }
-} // end namespace llvm

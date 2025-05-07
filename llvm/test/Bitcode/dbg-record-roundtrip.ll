@@ -1,12 +1,10 @@
 ;; Roundtrip tests.
 
-;; Tests that bitcode can be printed and interpreted by llvm-dis with non-intrinsic
-;; debug records -- llvm-as will autoupgrade.
 ; RUN: llvm-as %s -o - \
 ; RUN: | llvm-dis \
 ; RUN: | FileCheck %s --check-prefixes=RECORDS
 
-;; Check that verify-uselistorder passes regardless of input format.
+;; Check that verify-uselistorder passes with bitcode and textual IR.
 ; RUN: llvm-as %s -o - | verify-uselistorder
 ; RUN: verify-uselistorder %s
 
@@ -31,17 +29,18 @@ entry:
 ; RECORDS-NEXT: dbg_value(![[empty:[0-9]+]], ![[e]], !DIExpression(), ![[dbg]])
 ; RECORDS-NEXT: dbg_value(i32 poison, ![[e]], !DIExpression(), ![[dbg]])
 ; RECORDS-NEXT: dbg_value(i32 1, ![[f:[0-9]+]], !DIExpression(), ![[dbg]])
-  tail call void @llvm.dbg.value(metadata i32 %p, metadata !32, metadata !DIExpression()), !dbg !19
-  tail call void @llvm.dbg.value(metadata !29, metadata !32, metadata !DIExpression()), !dbg !19
-  tail call void @llvm.dbg.value(metadata i32 poison, metadata !32, metadata !DIExpression()), !dbg !19
-  tail call void @llvm.dbg.value(metadata i32 1, metadata !33, metadata !DIExpression()), !dbg !19
+    #dbg_value(i32 %p, !32, !DIExpression(), !19)
+    #dbg_value(!29, !32, !DIExpression(), !19)
+    #dbg_value(i32 poison, !32, !DIExpression(), !19)
+    #dbg_value(i32 1, !33, !DIExpression(), !19)
 ;; Arglist with an argument, constant, local use before def, poison.
 ; RECORDS-NEXT: dbg_value(!DIArgList(i32 %p, i32 0, i32 %0, i32 poison), ![[f]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_LLVM_arg, 2, DW_OP_LLVM_arg, 3, DW_OP_plus, DW_OP_minus), ![[dbg]])
-  tail call void @llvm.dbg.value(metadata !DIArgList(i32 %p, i32 0, i32 %0, i32 poison), metadata !33, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_LLVM_arg, 2, DW_OP_LLVM_arg, 3, DW_OP_plus, DW_OP_minus)), !dbg !19
+    #dbg_value(!DIArgList(i32 %p, i32 0, i32 %0, i32 poison), !33, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_LLVM_arg, 2, DW_OP_LLVM_arg, 3, DW_OP_plus, DW_OP_minus), !19)
+
 ;; Check dbg.assign use before def (value, addr and ID). Check expression order too.
 ; RECORDS: dbg_assign(i32 %0, ![[i:[0-9]+]], !DIExpression(DW_OP_plus_uconst, 0),
 ; RECORDS-SAME:       ![[ID:[0-9]+]], ptr %a, !DIExpression(DW_OP_plus_uconst, 1), ![[dbg]])
-  tail call void @llvm.dbg.assign(metadata i32 %0, metadata !36, metadata !DIExpression(DW_OP_plus_uconst, 0), metadata !37, metadata ptr %a, metadata !DIExpression(DW_OP_plus_uconst, 1)), !dbg !19
+    #dbg_assign(i32 %0, !36, !DIExpression(DW_OP_plus_uconst, 0), !37, ptr %a, !DIExpression(DW_OP_plus_uconst, 1), !19)
   %a = alloca i32, align 4, !DIAssignID !37
 ; CHECK: %a = alloca i32, align 4, !DIAssignID ![[ID]]
 ;; Check dbg.declare configurations.
@@ -51,25 +50,25 @@ entry:
 ; RECORDS-NEXT: dbg_declare(ptr poison, ![[c:[0-9]+]], !DIExpression(), ![[dbg]])
 ; RECORDS-NEXT: dbg_declare(ptr null, ![[d:[0-9]+]], !DIExpression(), ![[dbg]])
 ; RECORDS-NEXT: dbg_declare(ptr @g, ![[h:[0-9]+]], !DIExpression(), ![[dbg]])
-  tail call void @llvm.dbg.declare(metadata ptr %a, metadata !17, metadata !DIExpression()), !dbg !19
-  tail call void @llvm.dbg.declare(metadata !29, metadata !28, metadata !DIExpression()), !dbg !19
-  tail call void @llvm.dbg.declare(metadata ptr poison, metadata !30, metadata !DIExpression()), !dbg !19
-  tail call void @llvm.dbg.declare(metadata ptr null, metadata !31, metadata !DIExpression()), !dbg !19
-  tail call void @llvm.dbg.declare(metadata ptr @g, metadata !35, metadata !DIExpression()), !dbg !19
+    #dbg_declare(ptr %a, !17, !DIExpression(), !19)
+    #dbg_declare(!29, !28, !DIExpression(), !19)
+    #dbg_declare(ptr poison, !30, !DIExpression(), !19)
+    #dbg_declare(ptr null, !31, !DIExpression(), !19)
+    #dbg_declare(ptr @g, !35, !DIExpression(), !19)
 ;; Argument value dbg.declare.
 ; RECORDS: dbg_declare(ptr %storage, ![[g:[0-9]+]], !DIExpression(), ![[dbg]])
-  tail call void @llvm.dbg.declare(metadata ptr %storage, metadata !34, metadata !DIExpression()), !dbg !19
+    #dbg_declare(ptr %storage, !34, !DIExpression(), !19)
 ;; Use before def dbg.value.
 ; RECORDS: dbg_value(i32 %0, ![[e]], !DIExpression(), ![[dbg]])
-  tail call void @llvm.dbg.value(metadata i32 %0, metadata !32, metadata !DIExpression()), !dbg !19
+    #dbg_value(i32 %0, !32, !DIExpression(), !19)
   %0 = load i32, ptr @g, align 4, !dbg !20
 ;; Non-argument local value dbg.value.
 ; RECORDS: dbg_value(i32 %0, ![[e]], !DIExpression(), ![[dbg]])
-  tail call void @llvm.dbg.value(metadata i32 %0, metadata !32, metadata !DIExpression()), !dbg !19
+    #dbg_value(i32 %0, !32, !DIExpression(), !19)
   store i32 %0, ptr %a, align 4, !dbg !19
   %1 = load i32, ptr %a, align 4, !dbg !25
 ; RECORDS: dbg_label(![[label:[0-9]+]], ![[dbg]])
-  tail call void @llvm.dbg.label(metadata !38), !dbg !19
+    #dbg_label(!38, !19)
   ret i32 %1, !dbg !27
 }
 

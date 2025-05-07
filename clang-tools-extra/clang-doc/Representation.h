@@ -220,12 +220,14 @@ struct FieldTypeInfo : public TypeInfo {
 // Info for member types.
 struct MemberTypeInfo : public FieldTypeInfo {
   MemberTypeInfo() = default;
-  MemberTypeInfo(const TypeInfo &TI, StringRef Name, AccessSpecifier Access)
-      : FieldTypeInfo(TI, Name), Access(Access) {}
+  MemberTypeInfo(const TypeInfo &TI, StringRef Name, AccessSpecifier Access,
+                 bool IsStatic = false)
+      : FieldTypeInfo(TI, Name), Access(Access), IsStatic(IsStatic) {}
 
   bool operator==(const MemberTypeInfo &Other) const {
-    return std::tie(Type, Name, Access, Description) ==
-           std::tie(Other.Type, Other.Name, Other.Access, Other.Description);
+    return std::tie(Type, Name, Access, IsStatic, Description) ==
+           std::tie(Other.Type, Other.Name, Other.Access, Other.IsStatic,
+                    Other.Description);
   }
 
   // Access level associated with this info (public, protected, private, none).
@@ -235,34 +237,33 @@ struct MemberTypeInfo : public FieldTypeInfo {
   AccessSpecifier Access = AccessSpecifier::AS_public;
 
   std::vector<CommentInfo> Description; // Comment description of this field.
+  bool IsStatic = false;
 };
 
 struct Location {
-  Location(int LineNumber = 0, StringRef Filename = StringRef(),
-           bool IsFileInRootDir = false)
-      : LineNumber(LineNumber), Filename(Filename),
-        IsFileInRootDir(IsFileInRootDir) {}
+  Location(int StartLineNumber = 0, int EndLineNumber = 0,
+           StringRef Filename = StringRef(), bool IsFileInRootDir = false)
+      : StartLineNumber(StartLineNumber), EndLineNumber(EndLineNumber),
+        Filename(Filename), IsFileInRootDir(IsFileInRootDir) {}
 
   bool operator==(const Location &Other) const {
-    return std::tie(LineNumber, Filename) ==
-           std::tie(Other.LineNumber, Other.Filename);
+    return std::tie(StartLineNumber, EndLineNumber, Filename) ==
+           std::tie(Other.StartLineNumber, Other.EndLineNumber, Other.Filename);
   }
 
-  bool operator!=(const Location &Other) const {
-    return std::tie(LineNumber, Filename) !=
-           std::tie(Other.LineNumber, Other.Filename);
-  }
+  bool operator!=(const Location &Other) const { return !(*this == Other); }
 
   // This operator is used to sort a vector of Locations.
   // No specific order (attributes more important than others) is required. Any
   // sort is enough, the order is only needed to call std::unique after sorting
   // the vector.
   bool operator<(const Location &Other) const {
-    return std::tie(LineNumber, Filename) <
-           std::tie(Other.LineNumber, Other.Filename);
+    return std::tie(StartLineNumber, EndLineNumber, Filename) <
+           std::tie(Other.StartLineNumber, Other.EndLineNumber, Other.Filename);
   }
 
-  int LineNumber = 0;           // Line number of this Location.
+  int StartLineNumber = 0; // Line number of this Location.
+  int EndLineNumber = 0;
   SmallString<32> Filename;     // File for this Location.
   bool IsFileInRootDir = false; // Indicates if file is inside root directory
 };
@@ -320,9 +321,6 @@ struct SymbolInfo : public Info {
 
   void merge(SymbolInfo &&I);
 
-  std::optional<Location> DefLoc;     // Location where this decl is defined.
-  llvm::SmallVector<Location, 2> Loc; // Locations where this decl is declared.
-
   bool operator<(const SymbolInfo &Other) const {
     // Sort by declaration location since we want the doc to be
     // generated in the order of the source code.
@@ -336,6 +334,10 @@ struct SymbolInfo : public Info {
 
     return extractName() < Other.extractName();
   }
+
+  std::optional<Location> DefLoc;     // Location where this decl is defined.
+  llvm::SmallVector<Location, 2> Loc; // Locations where this decl is declared.
+  bool IsStatic = false;
 };
 
 // TODO: Expand to allow for documenting templating and default args.
@@ -413,7 +415,13 @@ struct TypedefInfo : public SymbolInfo {
 
   TypeInfo Underlying;
 
-  // Inidicates if this is a new C++ "using"-style typedef:
+  // Underlying type declaration
+  SmallString<16> TypeDeclaration;
+
+  /// Comment description for the typedef.
+  std::vector<CommentInfo> Description;
+
+  // Indicates if this is a new C++ "using"-style typedef:
   //   using MyVector = std::vector<int>
   // False means it's a C-style typedef:
   //   typedef std::vector<int> MyVector;
@@ -456,7 +464,8 @@ struct EnumValueInfo {
   // constant. This will be empty for implicit enumeration values.
   SmallString<16> ValueExpr;
 
-  std::vector<CommentInfo> Description; /// Comment description of this field.
+  /// Comment description of this field.
+  std::vector<CommentInfo> Description;
 };
 
 // TODO: Expand to allow for documenting templating.

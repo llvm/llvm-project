@@ -190,18 +190,15 @@ OpenACCCollapseClause::OpenACCCollapseClause(SourceLocation BeginLoc,
                                              SourceLocation EndLoc)
     : OpenACCClauseWithSingleIntExpr(OpenACCClauseKind::Collapse, BeginLoc,
                                      LParenLoc, LoopCount, EndLoc),
-      HasForce(HasForce) {
-  assert(LoopCount && "LoopCount required");
-}
+      HasForce(HasForce) {}
 
 OpenACCCollapseClause *
 OpenACCCollapseClause::Create(const ASTContext &C, SourceLocation BeginLoc,
                               SourceLocation LParenLoc, bool HasForce,
                               Expr *LoopCount, SourceLocation EndLoc) {
-  assert(
-      LoopCount &&
-      (LoopCount->isInstantiationDependent() || isa<ConstantExpr>(LoopCount)) &&
-      "Loop count not constant expression");
+  assert((!LoopCount || (LoopCount->isInstantiationDependent() ||
+                         isa<ConstantExpr>(LoopCount))) &&
+         "Loop count not constant expression");
   void *Mem =
       C.Allocate(sizeof(OpenACCCollapseClause), alignof(OpenACCCollapseClause));
   return new (Mem)
@@ -434,11 +431,12 @@ OpenACCDeviceClause *OpenACCDeviceClause::Create(const ASTContext &C,
 OpenACCCopyClause *
 OpenACCCopyClause::Create(const ASTContext &C, OpenACCClauseKind Spelling,
                           SourceLocation BeginLoc, SourceLocation LParenLoc,
-                          ArrayRef<Expr *> VarList, SourceLocation EndLoc) {
+                          OpenACCModifierKind Mods, ArrayRef<Expr *> VarList,
+                          SourceLocation EndLoc) {
   void *Mem =
       C.Allocate(OpenACCCopyClause::totalSizeToAlloc<Expr *>(VarList.size()));
   return new (Mem)
-      OpenACCCopyClause(Spelling, BeginLoc, LParenLoc, VarList, EndLoc);
+      OpenACCCopyClause(Spelling, BeginLoc, LParenLoc, Mods, VarList, EndLoc);
 }
 
 OpenACCLinkClause *OpenACCLinkClause::Create(const ASTContext &C,
@@ -463,34 +461,34 @@ OpenACCDeviceResidentClause *OpenACCDeviceResidentClause::Create(
 OpenACCCopyInClause *
 OpenACCCopyInClause::Create(const ASTContext &C, OpenACCClauseKind Spelling,
                             SourceLocation BeginLoc, SourceLocation LParenLoc,
-                            bool IsReadOnly, ArrayRef<Expr *> VarList,
+                            OpenACCModifierKind Mods, ArrayRef<Expr *> VarList,
                             SourceLocation EndLoc) {
   void *Mem =
       C.Allocate(OpenACCCopyInClause::totalSizeToAlloc<Expr *>(VarList.size()));
-  return new (Mem) OpenACCCopyInClause(Spelling, BeginLoc, LParenLoc,
-                                       IsReadOnly, VarList, EndLoc);
+  return new (Mem)
+      OpenACCCopyInClause(Spelling, BeginLoc, LParenLoc, Mods, VarList, EndLoc);
 }
 
 OpenACCCopyOutClause *
 OpenACCCopyOutClause::Create(const ASTContext &C, OpenACCClauseKind Spelling,
                              SourceLocation BeginLoc, SourceLocation LParenLoc,
-                             bool IsZero, ArrayRef<Expr *> VarList,
+                             OpenACCModifierKind Mods, ArrayRef<Expr *> VarList,
                              SourceLocation EndLoc) {
   void *Mem = C.Allocate(
       OpenACCCopyOutClause::totalSizeToAlloc<Expr *>(VarList.size()));
-  return new (Mem) OpenACCCopyOutClause(Spelling, BeginLoc, LParenLoc, IsZero,
+  return new (Mem) OpenACCCopyOutClause(Spelling, BeginLoc, LParenLoc, Mods,
                                         VarList, EndLoc);
 }
 
 OpenACCCreateClause *
 OpenACCCreateClause::Create(const ASTContext &C, OpenACCClauseKind Spelling,
                             SourceLocation BeginLoc, SourceLocation LParenLoc,
-                            bool IsZero, ArrayRef<Expr *> VarList,
+                            OpenACCModifierKind Mods, ArrayRef<Expr *> VarList,
                             SourceLocation EndLoc) {
   void *Mem =
       C.Allocate(OpenACCCreateClause::totalSizeToAlloc<Expr *>(VarList.size()));
-  return new (Mem) OpenACCCreateClause(Spelling, BeginLoc, LParenLoc, IsZero,
-                                       VarList, EndLoc);
+  return new (Mem)
+      OpenACCCreateClause(Spelling, BeginLoc, LParenLoc, Mods, VarList, EndLoc);
 }
 
 OpenACCDeviceTypeClause *OpenACCDeviceTypeClause::Create(
@@ -808,6 +806,8 @@ void OpenACCClausePrinter::VisitDeviceClause(const OpenACCDeviceClause &C) {
 
 void OpenACCClausePrinter::VisitCopyClause(const OpenACCCopyClause &C) {
   OS << C.getClauseKind() << '(';
+  if (C.getModifierList() != OpenACCModifierKind::Invalid)
+    OS << C.getModifierList() << ": ";
   llvm::interleaveComma(C.getVarList(), OS,
                         [&](const Expr *E) { printExpr(E); });
   OS << ")";
@@ -830,8 +830,8 @@ void OpenACCClausePrinter::VisitDeviceResidentClause(
 
 void OpenACCClausePrinter::VisitCopyInClause(const OpenACCCopyInClause &C) {
   OS << C.getClauseKind() << '(';
-  if (C.isReadOnly())
-    OS << "readonly: ";
+  if (C.getModifierList() != OpenACCModifierKind::Invalid)
+    OS << C.getModifierList() << ": ";
   llvm::interleaveComma(C.getVarList(), OS,
                         [&](const Expr *E) { printExpr(E); });
   OS << ")";
@@ -839,8 +839,8 @@ void OpenACCClausePrinter::VisitCopyInClause(const OpenACCCopyInClause &C) {
 
 void OpenACCClausePrinter::VisitCopyOutClause(const OpenACCCopyOutClause &C) {
   OS << C.getClauseKind() << '(';
-  if (C.isZero())
-    OS << "zero: ";
+  if (C.getModifierList() != OpenACCModifierKind::Invalid)
+    OS << C.getModifierList() << ": ";
   llvm::interleaveComma(C.getVarList(), OS,
                         [&](const Expr *E) { printExpr(E); });
   OS << ")";
@@ -848,8 +848,8 @@ void OpenACCClausePrinter::VisitCopyOutClause(const OpenACCCopyOutClause &C) {
 
 void OpenACCClausePrinter::VisitCreateClause(const OpenACCCreateClause &C) {
   OS << C.getClauseKind() << '(';
-  if (C.isZero())
-    OS << "zero: ";
+  if (C.getModifierList() != OpenACCModifierKind::Invalid)
+    OS << C.getModifierList() << ": ";
   llvm::interleaveComma(C.getVarList(), OS,
                         [&](const Expr *E) { printExpr(E); });
   OS << ")";
@@ -865,7 +865,7 @@ void OpenACCClausePrinter::VisitReductionClause(
 
 void OpenACCClausePrinter::VisitWaitClause(const OpenACCWaitClause &C) {
   OS << "wait";
-  if (!C.getLParenLoc().isInvalid()) {
+  if (C.hasExprs()) {
     OS << "(";
     if (C.hasDevNumExpr()) {
       OS << "devnum: ";
@@ -888,10 +888,10 @@ void OpenACCClausePrinter::VisitDeviceTypeClause(
   OS << "(";
   llvm::interleaveComma(C.getArchitectures(), OS,
                         [&](const DeviceTypeArgument &Arch) {
-                          if (Arch.first == nullptr)
+                          if (Arch.getIdentifierInfo() == nullptr)
                             OS << "*";
                           else
-                            OS << Arch.first->getName();
+                            OS << Arch.getIdentifierInfo()->getName();
                         });
   OS << ")";
 }

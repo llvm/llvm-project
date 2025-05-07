@@ -727,12 +727,7 @@ void SymbolFileDWARFDebugMap::ForEachSymbolFile(
                     Progress::kDefaultHighFrequencyReportTime);
   for (uint32_t oso_idx = 0; oso_idx < num_oso_idxs; ++oso_idx) {
     if (SymbolFileDWARF *oso_dwarf = GetSymbolFileByOSOIndex(oso_idx)) {
-      progress.Increment(oso_idx, oso_dwarf->GetObjectFile()
-                                      ? oso_dwarf->GetObjectFile()
-                                            ->GetFileSpec()
-                                            .GetFilename()
-                                            .GetString()
-                                      : "");
+      progress.Increment(oso_idx, oso_dwarf->GetObjectName());
       if (closure(*oso_dwarf) == IterationAction::Stop)
         return;
     }

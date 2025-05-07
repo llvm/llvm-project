@@ -194,35 +194,21 @@ define void @widen_fdiv_v2f32_v16f32(ptr %a0, ptr %b0, ptr %c0) {
 ; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
 ; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
 ; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm5 = mem[0],zero
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm6 = mem[0],zero
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm7 = mem[0],zero
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm8 = mem[0],zero
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm9 = mem[0],zero
-; AVX512VL-NEXT:    vdivps %xmm9, %xmm8, %xmm8
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm9 = mem[0],zero
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm10 = mem[0],zero
-; AVX512VL-NEXT:    vdivps %xmm10, %xmm9, %xmm9
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm10 = mem[0],zero
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm11 = mem[0],zero
-; AVX512VL-NEXT:    vdivps %xmm11, %xmm10, %xmm10
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm11 = mem[0],zero
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm12 = mem[0],zero
-; AVX512VL-NEXT:    vdivps %xmm12, %xmm11, %xmm11
-; AVX512VL-NEXT:    vinsertf128 $1, %xmm7, %ymm6, %ymm6
-; AVX512VL-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
-; AVX512VL-NEXT:    vdivps %ymm6, %ymm2, %ymm2
-; AVX512VL-NEXT:    vinsertf128 $1, %xmm5, %ymm4, %ymm3
-; AVX512VL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX512VL-NEXT:    vdivps %ymm3, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [0,2,4,6]
-; AVX512VL-NEXT:    vpermi2pd %ymm2, %ymm0, %ymm1
-; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm11, %zmm10, %zmm0
-; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm9, %zmm8, %zmm2
-; AVX512VL-NEXT:    vbroadcasti64x4 {{.*#+}} zmm3 = [0,2,8,10,0,2,8,10]
-; AVX512VL-NEXT:    # zmm3 = mem[0,1,2,3,0,1,2,3]
-; AVX512VL-NEXT:    vpermi2pd %zmm0, %zmm2, %zmm3
-; AVX512VL-NEXT:    vinsertf64x4 $0, %ymm1, %zmm3, %zmm0
+; AVX512VL-NEXT:    vdivps %xmm4, %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
+; AVX512VL-NEXT:    vdivps %xmm4, %xmm1, %xmm1
+; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
+; AVX512VL-NEXT:    vdivps %xmm4, %xmm2, %xmm2
+; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
+; AVX512VL-NEXT:    vdivps %xmm4, %xmm3, %xmm3
+; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm3, %zmm2, %zmm2
+; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm1, %zmm0, %zmm0
+; AVX512VL-NEXT:    vbroadcasti64x4 {{.*#+}} zmm1 = [0,2,8,10,0,2,8,10]
+; AVX512VL-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3]
+; AVX512VL-NEXT:    vpermi2pd %zmm2, %zmm0, %zmm1
+; AVX512VL-NEXT:    vmovups (%rdi), %ymm0
+; AVX512VL-NEXT:    vdivps (%rsi), %ymm0, %ymm0
+; AVX512VL-NEXT:    vinsertf64x4 $0, %ymm0, %zmm1, %zmm0
 ; AVX512VL-NEXT:    vmovupd %zmm0, (%rdx)
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq

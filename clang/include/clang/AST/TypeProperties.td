@@ -154,40 +154,22 @@ let Class = IncompleteArrayType in {
 }
 
 let Class = VariableArrayType in {
-  def : Property<"leftBracketLoc", SourceLocation> {
-    let Read = [{ node->getLBracketLoc() }];
-  }
-  def : Property<"rightBracketLoc", SourceLocation> {
-    let Read = [{ node->getRBracketLoc() }];
-  }
   def : Property<"size", ExprRef> {
     let Read = [{ node->getSizeExpr() }];
   }
 
   def : Creator<[{
     return ctx.getVariableArrayType(elementType, size, sizeModifier,
-                                    indexQualifiers.getCVRQualifiers(),
-                                    SourceRange(leftBracketLoc,
-                                                rightBracketLoc));
+                                    indexQualifiers.getCVRQualifiers());
   }]>;
 }
 
 let Class = DependentSizedArrayType in {
-  def : Property<"size", ExprRef> {
-    let Read = [{ node->getSizeExpr() }];
-  }
-  def : Property<"leftBracketLoc", SourceLocation> {
-    let Read = [{ node->getLBracketLoc() }];
-  }
-  def : Property<"rightBracketLoc", SourceLocation> {
-    let Read = [{ node->getRBracketLoc() }];
-  }
+  def : Property<"size", ExprRef> { let Read = [{ node->getSizeExpr() }]; }
 
   def : Creator<[{
     return ctx.getDependentSizedArrayType(elementType, size, sizeModifier,
-                                          indexQualifiers.getCVRQualifiers(),
-                                          SourceRange(leftBracketLoc,
-                                                      rightBracketLoc));
+                                          indexQualifiers.getCVRQualifiers());
   }]>;
 }
 
@@ -737,39 +719,19 @@ let Class = DependentAddressSpaceType in {
 }
 
 let Class = TemplateSpecializationType in {
-  def : Property<"dependent", Bool> {
-    let Read = [{ node->isDependentType() }];
-  }
   def : Property<"templateName", TemplateName> {
     let Read = [{ node->getTemplateName() }];
   }
-  def : Property<"templateArguments", Array<TemplateArgument>> {
+  def : Property<"args", Array<TemplateArgument>> {
     let Read = [{ node->template_arguments() }];
   }
-  def : Property<"underlyingType", Optional<QualType>> {
-    let Read = [{
-      node->isTypeAlias()
-        ? std::optional<QualType>(node->getAliasedType())
-        : node->isCanonicalUnqualified()
-            ? std::nullopt
-            : std::optional<QualType>(node->getCanonicalTypeInternal())
-    }];
+  def : Property<"UnderlyingType", QualType> {
+    let Read = [{ node->isCanonicalUnqualified() ? QualType() :
+                                                   node->desugar() }];
   }
 
   def : Creator<[{
-    QualType result;
-    if (!underlyingType) {
-      result = ctx.getCanonicalTemplateSpecializationType(templateName,
-                                                          templateArguments);
-    } else {
-      result = ctx.getTemplateSpecializationType(templateName,
-                                                 templateArguments,
-                                                 *underlyingType);
-    }
-    if (dependent)
-      const_cast<Type *>(result.getTypePtr())
-          ->addDependence(TypeDependence::DependentInstantiation);
-    return result;
+    return ctx.getTemplateSpecializationType(templateName, args, std::nullopt, UnderlyingType);
   }]>;
 }
 
@@ -839,14 +801,14 @@ let Class = SubstTemplateTypeParmType in {
   def : Property<"Index", UInt32> {
     let Read = [{ node->getIndex() }];
   }
-  def : Property<"PackIndex", Optional<UInt32>> {
+  def : Property<"PackIndex", UnsignedOrNone> {
     let Read = [{ node->getPackIndex() }];
   }
+  def : Property<"Final", Bool> { let Read = [{ node->getFinal() }]; }
 
-  // The call to getCanonicalType here existed in ASTReader.cpp, too.
   def : Creator<[{
     return ctx.getSubstTemplateTypeParmType(
-        replacementType, associatedDecl, Index, PackIndex);
+        replacementType, associatedDecl, Index, PackIndex, Final);
   }]>;
 }
 
@@ -854,7 +816,7 @@ let Class = PackExpansionType in {
   def : Property<"pattern", QualType> {
     let Read = [{ node->getPattern() }];
   }
-  def : Property<"numExpansions", Optional<UInt32>> {
+  def : Property<"numExpansions", UnsignedOrNone> {
     let Read = [{ node->getNumExpansions() }];
   }
 

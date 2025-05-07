@@ -386,11 +386,11 @@ public:
     // Merge the member of an equivalence class into its class leader.  This
     // makes the members empty.
     for (const auto &C : ToBeMerged) {
-      if (!C.isLeader())
+      if (!C->isLeader())
         continue;
 
-      auto PartI = C.getData();
-      for (auto *PartJ : make_range(std::next(ToBeMerged.member_begin(C)),
+      auto PartI = C->getData();
+      for (auto *PartJ : make_range(std::next(ToBeMerged.member_begin(*C)),
                                     ToBeMerged.member_end())) {
         PartJ->moveTo(*PartI);
       }

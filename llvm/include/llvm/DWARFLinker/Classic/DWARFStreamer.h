@@ -286,7 +286,6 @@ private:
   MCAsmBackend *MAB; // Owned by MCStreamer
   std::unique_ptr<MCInstrInfo> MII;
   std::unique_ptr<MCSubtargetInfo> MSTI;
-  MCInstPrinter *MIP; // Owned by AsmPrinter
   MCCodeEmitter *MCE; // Owned by MCStreamer
   MCStreamer *MS;     // Owned by AsmPrinter
   std::unique_ptr<TargetMachine> TM;

@@ -232,9 +232,9 @@ public:
   // Return the full path of the compiler-rt library on a non-Darwin MachO
   // system. Those are under
   // <resourcedir>/lib/darwin/macho_embedded/<...>(.dylib|.a).
-  std::string
-  getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
-                FileType Type = ToolChain::FT_Static) const override;
+  std::string getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
+                            FileType Type = ToolChain::FT_Static,
+                            bool IsFortran = false) const override;
 
   /// }
   /// @name ToolChain Implementation
@@ -412,9 +412,9 @@ public:
 
   // Return the full path of the compiler-rt library on a Darwin MachO system.
   // Those are under <resourcedir>/lib/darwin/<...>(.dylib|.a).
-  std::string
-  getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
-                FileType Type = ToolChain::FT_Static) const override;
+  std::string getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
+                            FileType Type = ToolChain::FT_Static,
+                            bool IsFortran = false) const override;
 
 protected:
   /// }

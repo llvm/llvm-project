@@ -18,7 +18,7 @@ define i32 @basic(i1 %PredEntry, i1 %PredLeft, i1 %PredRight, i32 %X, i32 %Y) {
 ; CHECK-NEXT:    [[Z:%.*]] = phi i32 [ [[L]], [[LEFT]] ], [ [[R_PHI_MOVED]], [[RIGHT]] ]
 ; CHECK-NEXT:    ret i32 [[Z]]
 ; CHECK:       irr.guard:
-; CHECK-NEXT:    [[L_PHI_MOVED]] = phi i32 [ [[L_PHI_MOVED]], [[LEFT]] ], [ [[X:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[L_PHI_MOVED]] = phi i32 [ poison, [[LEFT]] ], [ [[X:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[R_PHI_MOVED]] = phi i32 [ [[L]], [[LEFT]] ], [ [[Y:%.*]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[GUARD_RIGHT:%.*]] = phi i1 [ true, [[LEFT]] ], [ [[PREDENTRY_INV]], [[ENTRY]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_RIGHT]], label [[RIGHT]], label [[LEFT]]
@@ -54,7 +54,7 @@ define i32 @feedback_loop(i1 %PredEntry, i1 %PredLeft, i1 %PredRight, i32 %X, i3
 ; CHECK-NEXT:    [[Z:%.*]] = phi i32 [ [[L_PHI]], [[LEFT]] ], [ [[R_PHI_MOVED]], [[RIGHT]] ]
 ; CHECK-NEXT:    ret i32 [[Z]]
 ; CHECK:       irr.guard:
-; CHECK-NEXT:    [[L_PHI_MOVED]] = phi i32 [ [[L_PHI_MOVED]], [[LEFT]] ], [ [[X:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[L_PHI_MOVED]] = phi i32 [ poison, [[LEFT]] ], [ [[X:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[R_PHI_MOVED]] = phi i32 [ [[L_PHI]], [[LEFT]] ], [ [[Y:%.*]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[GUARD_RIGHT:%.*]] = phi i1 [ true, [[LEFT]] ], [ [[PREDENTRY_INV]], [[ENTRY]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_RIGHT]], label [[RIGHT]], label [[LEFT]]
@@ -95,7 +95,7 @@ define i32 @multiple_predecessors(i1 %PredEntry, i1 %PredA, i1 %PredB, i1 %PredC
 ; CHECK-NEXT:    [[RET:%.*]] = phi i32 [ [[C_PHI_MOVED]], [[C]] ], [ [[D_INC]], [[D]] ]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ; CHECK:       irr.guard:
-; CHECK-NEXT:    [[D_PHI_MOVED]] = phi i32 [ [[D_PHI_MOVED]], [[D]] ], [ [[Y:%.*]], [[B]] ], [ [[A_INC]], [[A]] ]
+; CHECK-NEXT:    [[D_PHI_MOVED]] = phi i32 [ poison, [[D]] ], [ [[Y:%.*]], [[B]] ], [ [[A_INC]], [[A]] ]
 ; CHECK-NEXT:    [[C_PHI_MOVED]] = phi i32 [ [[D_INC]], [[D]] ], [ [[Y]], [[B]] ], [ [[X]], [[A]] ]
 ; CHECK-NEXT:    [[GUARD_C:%.*]] = phi i1 [ true, [[D]] ], [ [[PREDB_INV]], [[B]] ], [ [[PREDA:%.*]], [[A]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_C]], label [[C]], label [[D]]
@@ -143,7 +143,7 @@ define i32 @separate_predecessors(i1 %PredEntry, i1 %PredA, i1 %PredB, i1 %PredC
 ; CHECK-NEXT:    [[RET:%.*]] = phi i32 [ [[C_PHI]], [[C]] ], [ [[D_INC]], [[D]] ]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ; CHECK:       irr.guard:
-; CHECK-NEXT:    [[C_PHI_MOVED]] = phi i32 [ [[C_PHI_MOVED]], [[C]] ], [ poison, [[B]] ], [ [[X]], [[A]] ]
+; CHECK-NEXT:    [[C_PHI_MOVED]] = phi i32 [ poison, [[C]] ], [ poison, [[B]] ], [ [[X]], [[A]] ]
 ; CHECK-NEXT:    [[D_PHI_MOVED]] = phi i32 [ [[C_PHI]], [[C]] ], [ [[Y:%.*]], [[B]] ], [ poison, [[A]] ]
 ; CHECK-NEXT:    [[GUARD_D:%.*]] = phi i1 [ true, [[C]] ], [ true, [[B]] ], [ false, [[A]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_D]], label [[D]], label [[C]]
@@ -247,7 +247,7 @@ define i32 @hidden_nodes(i1 %PredEntry, i1 %PredA, i1 %PredB, i1 %PredC, i1 %Pre
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 [[B_PHI_MOVED]]
 ; CHECK:       irr.guard:
-; CHECK-NEXT:    [[A_PHI_MOVED]] = phi i32 [ [[A_PHI_MOVED]], [[A]] ], [ [[X:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[A_PHI_MOVED]] = phi i32 [ poison, [[A]] ], [ [[X:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[B_PHI_MOVED]] = phi i32 [ [[A_INC]], [[A]] ], [ [[Y:%.*]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[GUARD_B:%.*]] = phi i1 [ true, [[A]] ], [ [[PREDENTRY_INV]], [[ENTRY]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_B]], label [[B:%.*]], label [[A]]
@@ -276,4 +276,60 @@ E:
 
 exit:
   ret i32 %B.phi
+}
+
+
+define void @recursive_phis(i1 %cond, ptr addrspace(5) %ptr) {
+; CHECK-LABEL: @recursive_phis(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca i8, align 1, addrspace(5)
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[THEN:%.*]], label [[IRR_GUARD:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[PTR_INT:%.*]] = ptrtoint ptr addrspace(5) [[PTR:%.*]] to i32
+; CHECK-NEXT:    [[PTR_OR:%.*]] = and i32 [[PTR_INT]], 65535
+; CHECK-NEXT:    [[KB_PTR:%.*]] = inttoptr i32 [[PTR_OR]] to ptr addrspace(5)
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       else:
+; CHECK-NEXT:    br i1 [[COND]], label [[IRR_GUARD]], label [[BB:%.*]]
+; CHECK:       BB:
+; CHECK-NEXT:    br label [[FINALLY:%.*]]
+; CHECK:       finally:
+; CHECK-NEXT:    [[PHI_PTR:%.*]] = phi ptr addrspace(5) [ [[OTHER_PHI_MOVED:%.*]], [[BB]] ], [ [[PHI_PTR_MOVED:%.*]], [[IRR_GUARD]] ]
+; CHECK-NEXT:    [[X:%.*]] = addrspacecast ptr addrspace(5) [[PHI_PTR]] to ptr
+; CHECK-NEXT:    store volatile i32 7, ptr [[X]], align 4
+; CHECK-NEXT:    br i1 [[COND]], label [[IRR_GUARD]], label [[END:%.*]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+; CHECK:       irr.guard:
+; CHECK-NEXT:    [[PHI_PTR_MOVED]] = phi ptr addrspace(5) [ poison, [[FINALLY]] ], [ poison, [[ELSE:%.*]] ], [ poison, [[ENTRY:%.*]] ], [ [[KB_PTR]], [[THEN]] ]
+; CHECK-NEXT:    [[OTHER_PHI_MOVED]] = phi ptr addrspace(5) [ [[PHI_PTR]], [[FINALLY]] ], [ [[OTHER_PHI_MOVED]], [[ELSE]] ], [ [[ALLOCA]], [[ENTRY]] ], [ poison, [[THEN]] ]
+; CHECK-NEXT:    [[GUARD_ELSE:%.*]] = phi i1 [ true, [[FINALLY]] ], [ true, [[ELSE]] ], [ true, [[ENTRY]] ], [ false, [[THEN]] ]
+; CHECK-NEXT:    br i1 [[GUARD_ELSE]], label [[ELSE]], label [[FINALLY]]
+;
+
+entry:
+  %alloca = alloca i8, align 1, addrspace(5)
+  br i1 %cond, label %then, label %else
+
+then:                                             ; preds = %entry
+  %ptr.int = ptrtoint ptr addrspace(5) %ptr to i32
+  %ptr.or = and i32 %ptr.int, 65535
+  %kb.ptr = inttoptr i32 %ptr.or to ptr addrspace(5)
+  br label %finally
+
+else:                                             ; preds = %finally, %else, %entry
+  %other.phi = phi ptr addrspace(5) [ %alloca, %entry ], [ %phi.ptr, %finally ], [ undef, %else ]
+  br i1 %cond, label %else, label %BB
+
+BB:                                               ; preds = %else
+  br label %finally
+
+finally:                                          ; preds = %BB, %then
+  %phi.ptr = phi ptr addrspace(5) [ %kb.ptr, %then ], [ %other.phi, %BB ]
+  %x = addrspacecast ptr addrspace(5) %phi.ptr to ptr
+  store volatile i32 7, ptr %x, align 4
+  br i1 %cond, label %else, label %end
+
+end:                                              ; preds = %finally
+  ret void
 }

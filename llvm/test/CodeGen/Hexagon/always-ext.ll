@@ -18,7 +18,7 @@
 
 declare void @_Assert()
 
-define void @CuSuiteAddSuite() nounwind {
+define void @CuSuiteAddSuite() nounwind null_pointer_is_valid {
 entry:
   br i1 undef, label %for.body.us, label %for.end
 

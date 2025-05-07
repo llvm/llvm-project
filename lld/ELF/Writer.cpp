@@ -2379,10 +2379,16 @@ Writer<ELFT>::createPhdrs(Partition &part) {
     // so when hasSectionsCommand, since we cannot introduce the extra alignment
     // needed to create a new LOAD)
     uint64_t newFlags = computeFlags(ctx, sec->getPhdrFlags());
-    // When --no-rosegment is specified, RO and RX sections are compatible.
-    uint32_t incompatible = flags ^ newFlags;
-    if (ctx.arg.singleRoRx && !(newFlags & PF_W))
-      incompatible &= ~PF_X;
+    uint64_t incompatible = flags ^ newFlags;
+    if (!(newFlags & PF_W)) {
+      // When --no-rosegment is specified, RO and RX sections are compatible.
+      if (ctx.arg.singleRoRx)
+        incompatible &= ~PF_X;
+      // When --no-xosegment is specified (the default), XO and RX sections are
+      // compatible.
+      if (ctx.arg.singleXoRx)
+        incompatible &= ~PF_R;
+    }
     if (incompatible)
       load = nullptr;
 

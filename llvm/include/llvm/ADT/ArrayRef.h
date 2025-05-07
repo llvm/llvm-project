@@ -149,6 +149,14 @@ namespace llvm {
                  * = nullptr)
         : Data(Vec.data()), Length(Vec.size()) {}
 
+    /// Construct an ArrayRef<T> from iterator_range<U*>. This uses SFINAE
+    /// to ensure that this is only used for iterator ranges over plain pointer
+    /// iterators.
+    template <typename U, typename = std::enable_if_t<
+                              std::is_convertible_v<U *const *, T *const *>>>
+    ArrayRef(const iterator_range<U *> &Range)
+        : Data(Range.begin()), Length(llvm::size(Range)) {}
+
     /// @}
     /// @name Simple Operations
     /// @{
@@ -562,7 +570,7 @@ namespace llvm {
   /// @}
 
   template <typename T> hash_code hash_value(ArrayRef<T> S) {
-    return hash_combine_range(S.begin(), S.end());
+    return hash_combine_range(S);
   }
 
   // Provide DenseMapInfo for ArrayRefs.

@@ -142,8 +142,8 @@ void X86AsmPrinter::EmitAndCountInstruction(MCInst &Inst) {
 
 X86MCInstLower::X86MCInstLower(const MachineFunction &mf,
                                X86AsmPrinter &asmprinter)
-    : Ctx(mf.getContext()), MF(mf), TM(mf.getTarget()), MAI(*TM.getMCAsmInfo()),
-      AsmPrinter(asmprinter) {}
+    : Ctx(asmprinter.OutContext), MF(mf), TM(mf.getTarget()),
+      MAI(*TM.getMCAsmInfo()), AsmPrinter(asmprinter) {}
 
 MachineModuleInfoMachO &X86MCInstLower::getMachOMMI() const {
   return AsmPrinter.MMI->getObjFileInfo<MachineModuleInfoMachO>();
@@ -1709,7 +1709,7 @@ static void printZeroExtend(const MachineInstr *MI, MCStreamer &OutStreamer,
 
 void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
   assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
-  assert(getSubtarget().isOSWindowsOrUEFI() &&
+  assert((getSubtarget().isOSWindows() || getSubtarget().isUEFI()) &&
          "SEH_ instruction Windows and UEFI only");
 
   // Use the .cv_fpo directives if we're emitting CodeView on 32-bit x86.

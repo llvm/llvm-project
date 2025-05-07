@@ -177,6 +177,57 @@ exit:
   ret void
 }
 
+define void @steps_match_two_loadstores_different_access_sizes(ptr %src.1, ptr %src.2, ptr %dst.1, ptr %dst.2, i64 %n) {
+; CHECK-LABEL: define void @steps_match_two_loadstores_different_access_sizes(
+; CHECK-SAME: ptr [[SRC_1:%.*]], ptr [[SRC_2:%.*]], ptr [[DST_1:%.*]], ptr [[DST_2:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[SRC_25:%.*]] = ptrtoint ptr [[SRC_2]] to i64
+; CHECK-NEXT:    [[SRC_13:%.*]] = ptrtoint ptr [[SRC_1]] to i64
+; CHECK-NEXT:    [[DST_12:%.*]] = ptrtoint ptr [[DST_1]] to i64
+; CHECK-NEXT:    [[DST_21:%.*]] = ptrtoint ptr [[DST_2]] to i64
+; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N]], i64 1)
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[UMAX]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[DST_21]], [[DST_12]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[DST_12]], [[SRC_13]]
+; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP1]], 32
+; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[DST_12]], [[SRC_25]]
+; CHECK-NEXT:    [[DIFF_CHECK6:%.*]] = icmp ult i64 [[TMP2]], 32
+; CHECK-NEXT:    [[CONFLICT_RDX7:%.*]] = or i1 [[CONFLICT_RDX]], [[DIFF_CHECK6]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[DST_21]], [[SRC_13]]
+; CHECK-NEXT:    [[DIFF_CHECK8:%.*]] = icmp ult i64 [[TMP3]], 32
+; CHECK-NEXT:    [[CONFLICT_RDX9:%.*]] = or i1 [[CONFLICT_RDX7]], [[DIFF_CHECK8]]
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[DST_21]], [[SRC_25]]
+; CHECK-NEXT:    [[DIFF_CHECK10:%.*]] = icmp ult i64 [[TMP4]], 32
+; CHECK-NEXT:    [[CONFLICT_RDX11:%.*]] = or i1 [[CONFLICT_RDX9]], [[DIFF_CHECK10]]
+; CHECK-NEXT:    br i1 [[CONFLICT_RDX11]], [[SCALAR_PH]], [[VECTOR_PH:label %.*]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.src.1 = getelementptr i64, ptr %src.1, i64 %iv
+  %ld.src.1 = load i64, ptr %gep.src.1
+  %ld.src.1.i32 = trunc i64 %ld.src.1 to i32
+  %gep.src.2 = getelementptr i64, ptr %src.2, i64 %iv
+  %ld.src.2 = load i64, ptr %gep.src.2
+  %add = add i64 %ld.src.1, %ld.src.2
+  %gep.dst.1 = getelementptr nusw i64, ptr %dst.1, i64 %iv
+  store i32 %ld.src.1.i32, ptr %gep.dst.1
+  %gep.dst.2 = getelementptr nusw i64, ptr %dst.2, i64 %iv
+  store i64 %add, ptr %gep.dst.2
+  %iv.next = add nuw nsw i64 %iv, 1
+  %cond = icmp ult i64 %iv.next, %n
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
 ; Full no-overlap checks are required instead of difference checks, as
 ; one of the add-recs used is invariant in the inner loop.
 ; Test case for PR57315.

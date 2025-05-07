@@ -85,7 +85,7 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
     Env = IsMachO;
     break;
   case Triple::COFF:
-    if (!TheTriple.isOSWindowsOrUEFI())
+    if (!TheTriple.isOSWindows() && !TheTriple.isUEFI())
       report_fatal_error(
           "Cannot initialize MC for non-Windows COFF object files.");
 
@@ -718,7 +718,7 @@ MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
   StringRef CachedName = Iter->first.SectionName;
   MCSymbol *Begin = getOrCreateSectionSymbol<MCSymbolCOFF>(Section);
   MCSectionCOFF *Result = new (COFFAllocator.Allocate()) MCSectionCOFF(
-      CachedName, Characteristics, COMDATSymbol, Selection, Begin);
+      CachedName, Characteristics, COMDATSymbol, Selection, UniqueID, Begin);
   Iter->second = Result;
   auto *F = allocInitialFragment(*Result);
   Begin->setFragment(F);

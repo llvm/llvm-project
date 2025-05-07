@@ -31,8 +31,7 @@ static CXXRecordDecl *getCurrentInstantiationOf(QualType T,
   const Type *Ty = T->getCanonicalTypeInternal().getTypePtr();
   if (const RecordType *RecordTy = dyn_cast<RecordType>(Ty)) {
     CXXRecordDecl *Record = cast<CXXRecordDecl>(RecordTy->getDecl());
-    if (!Record->isDependentContext() ||
-        Record->isCurrentInstantiation(CurContext))
+    if (Record->isCurrentInstantiation(CurContext))
       return Record;
 
     return nullptr;
@@ -70,17 +69,14 @@ DeclContext *Sema::computeDeclContext(const CXXScopeSpec &SS,
 
       // Look through type alias templates, per C++0x [temp.dep.type]p1.
       NNSType = Context.getCanonicalType(NNSType);
-      if (const TemplateSpecializationType *SpecType
-            = NNSType->getAs<TemplateSpecializationType>()) {
+      if (const auto *SpecType =
+              dyn_cast<TemplateSpecializationType>(NNSType)) {
         // We are entering the context of the nested name specifier, so try to
         // match the nested name specifier to either a primary class template
         // or a class template partial specialization.
-        if (ClassTemplateDecl *ClassTemplate
-              = dyn_cast_or_null<ClassTemplateDecl>(
-                            SpecType->getTemplateName().getAsTemplateDecl())) {
-          QualType ContextType =
-              Context.getCanonicalType(QualType(SpecType, 0));
-
+        if (ClassTemplateDecl *ClassTemplate =
+                dyn_cast_or_null<ClassTemplateDecl>(
+                    SpecType->getTemplateName().getAsTemplateDecl())) {
           // FIXME: The fallback on the search of partial
           // specialization using ContextType should be eventually removed since
           // it doesn't handle the case of constrained template parameters
@@ -101,7 +97,8 @@ DeclContext *Sema::computeDeclContext(const CXXScopeSpec &SS,
                   SpecType->template_arguments(), *L, Pos);
             }
           } else {
-            PartialSpec = ClassTemplate->findPartialSpecialization(ContextType);
+            PartialSpec =
+                ClassTemplate->findPartialSpecialization(QualType(SpecType, 0));
           }
 
           if (PartialSpec) {
@@ -123,7 +120,7 @@ DeclContext *Sema::computeDeclContext(const CXXScopeSpec &SS,
           // into that class template definition.
           QualType Injected =
               ClassTemplate->getInjectedClassNameSpecialization();
-          if (Context.hasSameType(Injected, ContextType))
+          if (Context.hasSameType(Injected, QualType(SpecType, 0)))
             return ClassTemplate->getTemplatedDecl();
         }
       } else if (const RecordType *RecordT = NNSType->getAs<RecordType>()) {
@@ -545,7 +542,7 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
     NestedNameSpecifierValidatorCCC CCC(*this);
     if (TypoCorrection Corrected = CorrectTypo(
             Found.getLookupNameInfo(), Found.getLookupKind(), S, &SS, CCC,
-            CTK_ErrorRecovery, LookupCtx, EnteringContext)) {
+            CorrectTypoKind::ErrorRecovery, LookupCtx, EnteringContext)) {
       if (LookupCtx) {
         bool DroppedSpecifier =
             Corrected.WillReplaceSpecifier() &&

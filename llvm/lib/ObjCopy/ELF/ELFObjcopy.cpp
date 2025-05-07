@@ -662,13 +662,13 @@ RemoveNoteDetail::updateData(ArrayRef<uint8_t> OldData,
   for (const DeletedRange &RemRange : ToRemove) {
     if (CurPos < RemRange.OldFrom) {
       auto Slice = OldData.slice(CurPos, RemRange.OldFrom - CurPos);
-      NewData.insert(NewData.end(), Slice.begin(), Slice.end());
+      llvm::append_range(NewData, Slice);
     }
     CurPos = RemRange.OldTo;
   }
   if (CurPos < OldData.size()) {
     auto Slice = OldData.slice(CurPos);
-    NewData.insert(NewData.end(), Slice.begin(), Slice.end());
+    llvm::append_range(NewData, Slice);
   }
   return NewData;
 }
@@ -857,8 +857,7 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
           "cannot change section address in a non-relocatable file");
     StringMap<AddressUpdate> SectionsToUpdateAddress;
     for (const SectionPatternAddressUpdate &PatternUpdate :
-         make_range(Config.ChangeSectionAddress.rbegin(),
-                    Config.ChangeSectionAddress.rend())) {
+         reverse(Config.ChangeSectionAddress)) {
       for (SectionBase &Sec : Obj.sections()) {
         if (PatternUpdate.SectionPattern.matches(Sec.Name) &&
             SectionsToUpdateAddress.try_emplace(Sec.Name, PatternUpdate.Update)

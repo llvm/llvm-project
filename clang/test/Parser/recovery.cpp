@@ -222,3 +222,21 @@ void k() {
   func(1, ); // expected-error {{expected expression}}
 }
 }
+
+namespace GH136254 {
+
+void call() {
+  [a(42, )]() {} (); // expected-error {{expected expression}}
+
+  int *b = new int(42, ); // expected-error {{expected expression}}
+
+  struct S {
+    int c;
+
+    S() : c(42, ) {} // expected-error {{expected expression}}
+  };
+
+  int d(42, ); // expected-error {{expected expression}}
+}
+
+}

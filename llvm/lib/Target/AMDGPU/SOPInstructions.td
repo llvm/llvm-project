@@ -663,14 +663,16 @@ let SubtargetPredicate = isGFX12Plus in {
   }
 
   // The higher 32-bits of the inputs contain the sign extension bits.
-  def S_MUL_I64_I32_PSEUDO : SPseudoInstSI <
-    (outs SReg_64:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1)
-  >;
+  let hasSideEffects = 0 in {
+    def S_MUL_I64_I32_PSEUDO : SPseudoInstSI <
+      (outs SReg_64:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1)
+    >;
 
-  // The higher 32-bits of the inputs are zero.
-  def S_MUL_U64_U32_PSEUDO : SPseudoInstSI <
-    (outs SReg_64:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1)
-  >;
+    // The higher 32-bits of the inputs are zero.
+    def S_MUL_U64_U32_PSEUDO : SPseudoInstSI <
+      (outs SReg_64:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1)
+    >;
+  }
 
 } // End SubtargetPredicate = isGFX12Plus
 

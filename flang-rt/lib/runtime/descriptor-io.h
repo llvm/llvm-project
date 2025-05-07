@@ -263,10 +263,8 @@ static RT_API_ATTRS bool DefaultComponentIO(IoStatementState &io,
     // Component is itself a descriptor
     char *pointer{
         origDescriptor.Element<char>(origSubscripts) + component.offset()};
-    RUNTIME_CHECK(
-        terminator, component.genre() == typeInfo::Component::Genre::Automatic);
     const Descriptor &compDesc{*reinterpret_cast<const Descriptor *>(pointer)};
-    return DescriptorIO<DIR>(io, compDesc, table);
+    return compDesc.IsAllocated() && DescriptorIO<DIR>(io, compDesc, table);
   }
 #else
   terminator.Crash("not yet implemented: component IO");

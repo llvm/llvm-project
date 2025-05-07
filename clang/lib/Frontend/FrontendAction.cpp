@@ -13,9 +13,13 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileEntry.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/Basic/Sarif.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Stack.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
@@ -35,6 +39,7 @@
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
@@ -48,6 +53,185 @@ using namespace clang;
 LLVM_INSTANTIATE_REGISTRY(FrontendPluginRegistry)
 
 namespace {
+
+/// DeserializedDeclsLineRangePrinter dumps ranges of deserialized declarations
+/// to aid debugging and bug minimization. It implements ASTConsumer and
+/// ASTDeserializationListener, so that an object of
+/// DeserializedDeclsLineRangePrinter registers as its own listener. The
+/// ASTDeserializationListener interface provides the DeclRead callback that we
+/// use to collect the deserialized Decls. Note that printing or otherwise
+/// processing them as this point is dangerous, since that could trigger
+/// additional deserialization and crash compilation. Therefore, we process the
+/// collected Decls in HandleTranslationUnit method of ASTConsumer. This is a
+/// safe point, since we know that by this point all the Decls needed by the
+/// compiler frontend have been deserialized. In case our processing causes
+/// further deserialization, DeclRead from the listener might be called again.
+/// However, at that point we don't accept any more Decls for processing.
+class DeserializedDeclsSourceRangePrinter : public ASTConsumer,
+                                            ASTDeserializationListener {
+public:
+  explicit DeserializedDeclsSourceRangePrinter(
+      SourceManager &SM, std::unique_ptr<llvm::raw_fd_ostream> OS)
+      : ASTDeserializationListener(), SM(SM), OS(std::move(OS)) {}
+
+  ASTDeserializationListener *GetASTDeserializationListener() override {
+    return this;
+  }
+
+  void DeclRead(GlobalDeclID ID, const Decl *D) override {
+    if (!IsCollectingDecls)
+      return;
+    if (!D || isa<TranslationUnitDecl>(D) || isa<LinkageSpecDecl>(D) ||
+        isa<NamespaceDecl>(D)) {
+      // These decls cover a lot of nested declarations that might not be used,
+      // reducing the granularity and making the output less useful.
+      return;
+    }
+    if (auto *DC = D->getDeclContext(); !DC || !DC->isFileContext()) {
+      // We choose to work at namespace level to reduce complexity and the
+      // number of cases we care about.
+      return;
+    }
+    PendingDecls.push_back(D);
+  }
+
+  struct Position {
+    unsigned Line;
+    unsigned Column;
+
+    bool operator<(const Position &other) const {
+      if (Line < other.Line)
+        return true;
+      if (Line > other.Line)
+        return false;
+      return Column < other.Column;
+    }
+
+    static Position GetBeginSpelling(const SourceManager &SM,
+                                     const CharSourceRange &R) {
+      SourceLocation Begin = R.getBegin();
+      return {SM.getSpellingLineNumber(Begin),
+              SM.getSpellingColumnNumber(Begin)};
+    }
+
+    static Position GetEndSpelling(const SourceManager &SM,
+                                   const CharSourceRange &Range,
+                                   const LangOptions &LangOpts) {
+      // For token ranges, compute end location for end character of the range.
+      CharSourceRange R = Lexer::getAsCharRange(Range, SM, LangOpts);
+      SourceLocation End = R.getEnd();
+      // Relex the token past the end location of the last token in the source
+      // range. If it's a semicolon, advance the location by one token.
+      Token PossiblySemi;
+      Lexer::getRawToken(End, PossiblySemi, SM, LangOpts, true);
+      if (PossiblySemi.is(tok::semi))
+        End = End.getLocWithOffset(1);
+      // Column number of the returned end position is exclusive.
+      return {SM.getSpellingLineNumber(End), SM.getSpellingColumnNumber(End)};
+    }
+  };
+
+  struct RequiredRanges {
+    StringRef Filename;
+    std::vector<std::pair<Position, Position>> FromTo;
+  };
+  void HandleTranslationUnit(ASTContext &Context) override {
+    assert(IsCollectingDecls && "HandleTranslationUnit called twice?");
+    IsCollectingDecls = false;
+
+    // Merge ranges in each of the files.
+    struct FileData {
+      std::vector<std::pair<Position, Position>> FromTo;
+      OptionalFileEntryRef Ref;
+    };
+    llvm::DenseMap<const FileEntry *, FileData> FileToRanges;
+    for (const Decl *D : PendingDecls) {
+      CharSourceRange R = SM.getExpansionRange(D->getSourceRange());
+      if (!R.isValid())
+        continue;
+
+      auto *F = SM.getFileEntryForID(SM.getFileID(R.getBegin()));
+      if (F != SM.getFileEntryForID(SM.getFileID(R.getEnd()))) {
+        // Such cases are rare and difficult to handle.
+        continue;
+      }
+
+      auto &Data = FileToRanges[F];
+      if (!Data.Ref)
+        Data.Ref = SM.getFileEntryRefForID(SM.getFileID(R.getBegin()));
+      Data.FromTo.push_back(
+          {Position::GetBeginSpelling(SM, R),
+           Position::GetEndSpelling(SM, R, D->getLangOpts())});
+    }
+
+    // To simplify output, merge consecutive and intersecting ranges.
+    std::vector<RequiredRanges> Result;
+    for (auto &[F, Data] : FileToRanges) {
+      auto &FromTo = Data.FromTo;
+      assert(!FromTo.empty());
+
+      if (!Data.Ref)
+        continue;
+
+      llvm::sort(FromTo);
+
+      std::vector<std::pair<Position, Position>> MergedRanges;
+      MergedRanges.push_back(FromTo.front());
+      for (auto It = FromTo.begin() + 1; It < FromTo.end(); ++It) {
+        if (MergedRanges.back().second < It->first) {
+          MergedRanges.push_back(*It);
+          continue;
+        }
+        if (MergedRanges.back().second < It->second)
+          MergedRanges.back().second = It->second;
+      }
+      Result.push_back({Data.Ref->getName(), MergedRanges});
+    }
+    printJson(Result);
+  }
+
+private:
+  std::vector<const Decl *> PendingDecls;
+  bool IsCollectingDecls = true;
+  const SourceManager &SM;
+  std::unique_ptr<llvm::raw_ostream> OS;
+
+  void printJson(llvm::ArrayRef<RequiredRanges> Result) {
+    *OS << "{\n";
+    *OS << R"(  "required_ranges": [)" << "\n";
+    for (size_t I = 0; I < Result.size(); ++I) {
+      auto &F = Result[I].Filename;
+      auto &MergedRanges = Result[I].FromTo;
+      *OS << R"(    {)" << "\n";
+      *OS << R"(      "file": ")" << F << "\"," << "\n";
+      *OS << R"(      "range": [)" << "\n";
+      for (size_t J = 0; J < MergedRanges.size(); ++J) {
+        auto &From = MergedRanges[J].first;
+        auto &To = MergedRanges[J].second;
+        *OS << R"(        {)" << "\n";
+        *OS << R"(          "from": {)" << "\n";
+        *OS << R"(            "line": )" << From.Line << ",\n";
+        *OS << R"(            "column": )" << From.Column << "\n"
+            << R"(          },)" << "\n";
+        *OS << R"(          "to": {)" << "\n";
+        *OS << R"(            "line": )" << To.Line << ",\n";
+        *OS << R"(            "column": )" << To.Column << "\n"
+            << R"(          })" << "\n";
+        *OS << R"(        })";
+        if (J < MergedRanges.size() - 1) {
+          *OS << ",";
+        }
+        *OS << "\n";
+      }
+      *OS << "      ]" << "\n" << "    }";
+      if (I < Result.size() - 1)
+        *OS << ",";
+      *OS << "\n";
+    }
+    *OS << "  ]\n";
+    *OS << "}\n";
+  }
+};
 
 /// Dumps deserialized declarations.
 class DeserializedDeclsDumper : public DelegatingDeserializationListener {
@@ -121,6 +305,25 @@ FrontendAction::CreateWrappedASTConsumer(CompilerInstance &CI,
   if (!Consumer)
     return nullptr;
 
+  std::vector<std::unique_ptr<ASTConsumer>> Consumers;
+  llvm::StringRef DumpDeserializedDeclarationRangesPath =
+      CI.getFrontendOpts().DumpMinimizationHintsPath;
+  if (!DumpDeserializedDeclarationRangesPath.empty()) {
+    std::error_code ErrorCode;
+    auto FileStream = std::make_unique<llvm::raw_fd_ostream>(
+        DumpDeserializedDeclarationRangesPath, ErrorCode,
+        llvm::sys::fs::OF_TextWithCRLF);
+    if (!ErrorCode) {
+      Consumers.push_back(std::make_unique<DeserializedDeclsSourceRangePrinter>(
+          CI.getSourceManager(), std::move(FileStream)));
+    } else {
+      llvm::errs() << "Failed to create output file for "
+                      "-dump-minimization-hints flag, file path: "
+                   << DumpDeserializedDeclarationRangesPath
+                   << ", error: " << ErrorCode.message() << "\n";
+    }
+  }
+
   // Validate -add-plugin args.
   bool FoundAllPlugins = true;
   for (const std::string &Arg : CI.getFrontendOpts().AddPluginActions) {
@@ -138,17 +341,12 @@ FrontendAction::CreateWrappedASTConsumer(CompilerInstance &CI,
   if (!FoundAllPlugins)
     return nullptr;
 
-  // If there are no registered plugins we don't need to wrap the consumer
-  if (FrontendPluginRegistry::begin() == FrontendPluginRegistry::end())
-    return Consumer;
-
   // If this is a code completion run, avoid invoking the plugin consumers
   if (CI.hasCodeCompletionConsumer())
     return Consumer;
 
   // Collect the list of plugins that go before the main action (in Consumers)
   // or after it (in AfterConsumers)
-  std::vector<std::unique_ptr<ASTConsumer>> Consumers;
   std::vector<std::unique_ptr<ASTConsumer>> AfterConsumers;
   for (const FrontendPluginRegistry::entry &Plugin :
        FrontendPluginRegistry::entries()) {
@@ -191,6 +389,9 @@ FrontendAction::CreateWrappedASTConsumer(CompilerInstance &CI,
       Consumers.push_back(std::move(C));
   }
 
+  assert(Consumers.size() >= 1 && "should have added the main consumer");
+  if (Consumers.size() == 1)
+    return std::move(Consumers.front());
   return std::make_unique<MultiplexConsumer>(std::move(Consumers));
 }
 
@@ -420,8 +621,8 @@ static bool loadModuleMapForModuleBuild(CompilerInstance &CI, bool IsSystem,
   }
 
   // Load the module map file.
-  if (HS.loadModuleMapFile(*ModuleMap, IsSystem, ModuleMapID, &Offset,
-                           PresumedModuleMapFile))
+  if (HS.parseAndLoadModuleMapFile(*ModuleMap, IsSystem, ModuleMapID, &Offset,
+                                   PresumedModuleMapFile))
     return true;
 
   if (SrcMgr.getBufferOrFake(ModuleMapID).getBufferSize() == Offset)
@@ -579,8 +780,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
         InputFile, CI.getPCHContainerReader(), ASTUnit::LoadPreprocessorOnly,
-        ASTDiags, CI.getFileSystemOpts(),
-        /*HeaderSearchOptions=*/nullptr);
+        ASTDiags, CI.getFileSystemOpts(), CI.getHeaderSearchOpts());
     if (!AST)
       return false;
 
@@ -647,8 +847,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
         InputFile, CI.getPCHContainerReader(), ASTUnit::LoadEverything, Diags,
-        CI.getFileSystemOpts(), CI.getHeaderSearchOptsPtr(),
-        CI.getLangOptsPtr());
+        CI.getFileSystemOpts(), CI.getHeaderSearchOpts(), &CI.getLangOpts());
 
     if (!AST)
       return false;
@@ -878,8 +1077,8 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   // If we were asked to load any module map files, do so now.
   for (const auto &Filename : CI.getFrontendOpts().ModuleMapFiles) {
     if (auto File = CI.getFileManager().getOptionalFileRef(Filename))
-      CI.getPreprocessor().getHeaderSearchInfo().loadModuleMapFile(
-          *File, /*IsSystem*/false);
+      CI.getPreprocessor().getHeaderSearchInfo().parseAndLoadModuleMapFile(
+          *File, /*IsSystem*/ false);
     else
       CI.getDiagnostics().Report(diag::err_module_map_not_found) << Filename;
   }

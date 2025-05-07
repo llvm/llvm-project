@@ -105,9 +105,9 @@ fir::FirOpBuilder::getNamedGlobal(mlir::ModuleOp modOp,
   return modOp.lookupSymbol<fir::GlobalOp>(name);
 }
 
-mlir::Type fir::FirOpBuilder::getRefType(mlir::Type eleTy) {
+mlir::Type fir::FirOpBuilder::getRefType(mlir::Type eleTy, bool isVolatile) {
   assert(!mlir::isa<fir::ReferenceType>(eleTy) && "cannot be a reference type");
-  return fir::ReferenceType::get(eleTy);
+  return fir::ReferenceType::get(eleTy, isVolatile);
 }
 
 mlir::Type fir::FirOpBuilder::getVarLenSeqTy(mlir::Type eleTy, unsigned rank) {
@@ -279,6 +279,9 @@ mlir::Block *fir::FirOpBuilder::getAllocaBlock() {
 
   if (auto cufKernelOp = getRegion().getParentOfType<cuf::KernelOp>())
     return &cufKernelOp.getRegion().front();
+
+  if (auto doConcurentOp = getRegion().getParentOfType<fir::DoConcurrentOp>())
+    return doConcurentOp.getBody();
 
   return getEntryBlock();
 }
@@ -577,6 +580,23 @@ mlir::Value fir::FirOpBuilder::convertWithSemantics(
   return createConvert(loc, toTy, val);
 }
 
+mlir::Value fir::FirOpBuilder::createVolatileCast(mlir::Location loc,
+                                                  bool isVolatile,
+                                                  mlir::Value val) {
+  mlir::Type volatileAdjustedType =
+      fir::updateTypeWithVolatility(val.getType(), isVolatile);
+  if (volatileAdjustedType == val.getType())
+    return val;
+  return create<fir::VolatileCastOp>(loc, volatileAdjustedType, val);
+}
+
+mlir::Value fir::FirOpBuilder::createConvertWithVolatileCast(mlir::Location loc,
+                                                             mlir::Type toTy,
+                                                             mlir::Value val) {
+  val = createVolatileCast(loc, fir::isa_volatile_type(toTy), val);
+  return createConvert(loc, toTy, val);
+}
+
 mlir::Value fir::factory::createConvert(mlir::OpBuilder &builder,
                                         mlir::Location loc, mlir::Type toTy,
                                         mlir::Value val) {
@@ -598,8 +618,9 @@ mlir::Value fir::FirOpBuilder::createConvert(mlir::Location loc,
 void fir::FirOpBuilder::createStoreWithConvert(mlir::Location loc,
                                                mlir::Value val,
                                                mlir::Value addr) {
-  mlir::Value cast =
-      createConvert(loc, fir::unwrapRefType(addr.getType()), val);
+  mlir::Type unwrapedRefType = fir::unwrapRefType(addr.getType());
+  val = createVolatileCast(loc, fir::isa_volatile_type(unwrapedRefType), val);
+  mlir::Value cast = createConvert(loc, unwrapedRefType, val);
   create<fir::StoreOp>(loc, cast, addr);
 }
 
@@ -739,19 +760,20 @@ mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc,
         << itemAddr.getType();
     llvm_unreachable("not a memory reference type");
   }
+  const bool isVolatile = fir::isa_volatile_type(itemAddr.getType());
   mlir::Type boxTy;
   mlir::Value tdesc;
   // Avoid to wrap a box/class with box/class.
   if (mlir::isa<fir::BaseBoxType>(elementType)) {
     boxTy = elementType;
   } else {
-    boxTy = fir::BoxType::get(elementType);
+    boxTy = fir::BoxType::get(elementType, isVolatile);
     if (isPolymorphic) {
       elementType = fir::updateTypeForUnlimitedPolymorphic(elementType);
       if (isAssumedType)
-        boxTy = fir::BoxType::get(elementType);
+        boxTy = fir::BoxType::get(elementType, isVolatile);
       else
-        boxTy = fir::ClassType::get(elementType);
+        boxTy = fir::ClassType::get(elementType, isVolatile);
     }
   }
 

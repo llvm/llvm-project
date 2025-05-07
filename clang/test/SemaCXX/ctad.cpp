@@ -1,5 +1,31 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wno-unused-value -std=c++20 %s
 
+namespace GH39811 {
+
+template<int = 0> class C {};
+
+C (a);
+C (b) = C();
+C (c) {};
+C (((((d)))));
+
+template<C (e)> class X;
+template<C (...f)> class Y;
+
+void test() {
+    C (g);
+    C (h) = C();
+    C (i) {};
+    (void)g;
+    (void)h;
+    (void)i;
+}
+
+C* (bad1); // expected-error {{cannot form pointer to deduced class template specialization type}}
+C (*bad2); // expected-error {{cannot form pointer to deduced class template specialization type}}
+
+}
+
 namespace GH64347 {
 
 template<typename X, typename Y> struct A { X x; Y y;};

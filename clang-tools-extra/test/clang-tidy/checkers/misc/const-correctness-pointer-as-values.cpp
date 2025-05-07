@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-const-correctness %t \
+// RUN: %check_clang_tidy --match-partial-fixes %s misc-const-correctness %t \
 // RUN: -config='{CheckOptions: \
 // RUN:  {misc-const-correctness.AnalyzeValues: true,\
 // RUN:   misc-const-correctness.WarnPointersAsValues: true,\

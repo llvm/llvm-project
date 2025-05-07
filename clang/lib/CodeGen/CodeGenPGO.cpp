@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenPGO.h"
+#include "CGDebugInfo.h"
 #include "CodeGenFunction.h"
 #include "CoverageMappingGen.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -1511,4 +1512,15 @@ CodeGenFunction::createProfileWeightsForLoop(const Stmt *Cond,
     return nullptr;
   return createProfileWeights(LoopCount,
                               std::max(*CondCount, LoopCount) - LoopCount);
+}
+
+void CodeGenFunction::incrementProfileCounter(const Stmt *S,
+                                              llvm::Value *StepV) {
+  if (CGM.getCodeGenOpts().hasProfileClangInstr() &&
+      !CurFn->hasFnAttribute(llvm::Attribute::NoProfile) &&
+      !CurFn->hasFnAttribute(llvm::Attribute::SkipProfile)) {
+    auto AL = ApplyDebugLocation::CreateArtificial(*this);
+    PGO.emitCounterSetOrIncrement(Builder, S, StepV);
+  }
+  PGO.setCurrentStmt(S);
 }

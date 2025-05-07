@@ -35,7 +35,7 @@ public:
   bool detectFoldable(MachineInstr &Hi, MachineInstr *&Lo);
 
   bool detectAndFoldOffset(MachineInstr &Hi, MachineInstr &Lo);
-  void foldOffset(MachineInstr &Hi, MachineInstr &Lo, MachineInstr &Tail,
+  bool foldOffset(MachineInstr &Hi, MachineInstr &Lo, MachineInstr &Tail,
                   int64_t Offset);
   bool foldLargeOffset(MachineInstr &Hi, MachineInstr &Lo,
                        MachineInstr &TailAdd, Register GSReg);
@@ -142,9 +142,21 @@ bool RISCVMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi,
 // Update the offset in Hi and Lo instructions.
 // Delete the tail instruction and update all the uses to use the
 // output from Lo.
-void RISCVMergeBaseOffsetOpt::foldOffset(MachineInstr &Hi, MachineInstr &Lo,
+bool RISCVMergeBaseOffsetOpt::foldOffset(MachineInstr &Hi, MachineInstr &Lo,
                                          MachineInstr &Tail, int64_t Offset) {
   assert(isInt<32>(Offset) && "Unexpected offset");
+
+  // If Hi is an AUIPC, don't fold the offset if it is outside the bounds of
+  // the global object. The object may be within 2GB of the PC, but addresses
+  // outside of the object might not be.
+  if (Hi.getOpcode() == RISCV::AUIPC && Hi.getOperand(1).isGlobal()) {
+    const GlobalValue *GV = Hi.getOperand(1).getGlobal();
+    Type *Ty = GV->getValueType();
+    if (!Ty->isSized() || Offset < 0 ||
+        (uint64_t)Offset > GV->getDataLayout().getTypeAllocSize(Ty))
+      return false;
+  }
+
   // Put the offset back in Hi and the Lo
   Hi.getOperand(1).setOffset(Offset);
   if (Hi.getOpcode() != RISCV::AUIPC)
@@ -156,6 +168,7 @@ void RISCVMergeBaseOffsetOpt::foldOffset(MachineInstr &Hi, MachineInstr &Lo,
   Tail.eraseFromParent();
   LLVM_DEBUG(dbgs() << "  Merged offset " << Offset << " into base.\n"
                     << "     " << Hi << "     " << Lo;);
+  return true;
 }
 
 // Detect patterns for large offsets that are passed into an ADD instruction.
@@ -205,7 +218,8 @@ bool RISCVMergeBaseOffsetOpt::foldLargeOffset(MachineInstr &Hi,
     // Handle rs1 of ADDI is X0.
     if (AddiReg == RISCV::X0) {
       LLVM_DEBUG(dbgs() << "  Offset Instrs: " << OffsetTail);
-      foldOffset(Hi, Lo, TailAdd, OffLo);
+      if (!foldOffset(Hi, Lo, TailAdd, OffLo))
+        return false;
       OffsetTail.eraseFromParent();
       return true;
     }
@@ -226,7 +240,8 @@ bool RISCVMergeBaseOffsetOpt::foldLargeOffset(MachineInstr &Hi,
       return false;
     LLVM_DEBUG(dbgs() << "  Offset Instrs: " << OffsetTail
                       << "                 " << OffsetLui);
-    foldOffset(Hi, Lo, TailAdd, Offset);
+    if (!foldOffset(Hi, Lo, TailAdd, Offset))
+      return false;
     OffsetTail.eraseFromParent();
     OffsetLui.eraseFromParent();
     return true;
@@ -235,7 +250,8 @@ bool RISCVMergeBaseOffsetOpt::foldLargeOffset(MachineInstr &Hi,
     // exists.
     LLVM_DEBUG(dbgs() << "  Offset Instr: " << OffsetTail);
     int64_t Offset = SignExtend64<32>(OffsetTail.getOperand(1).getImm() << 12);
-    foldOffset(Hi, Lo, TailAdd, Offset);
+    if (!foldOffset(Hi, Lo, TailAdd, Offset))
+      return false;
     OffsetTail.eraseFromParent();
     return true;
   }
@@ -294,7 +310,8 @@ bool RISCVMergeBaseOffsetOpt::foldShiftedOffset(MachineInstr &Hi,
   Offset = (uint64_t)Offset << ShAmt;
 
   LLVM_DEBUG(dbgs() << "  Offset Instr: " << OffsetTail);
-  foldOffset(Hi, Lo, TailShXAdd, Offset);
+  if (!foldOffset(Hi, Lo, TailShXAdd, Offset))
+    return false;
   OffsetTail.eraseFromParent();
   return true;
 }
@@ -327,15 +344,15 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &Hi,
       if (TailTail.getOpcode() == RISCV::ADDI) {
         Offset += TailTail.getOperand(2).getImm();
         LLVM_DEBUG(dbgs() << "  Offset Instrs: " << Tail << TailTail);
-        foldOffset(Hi, Lo, TailTail, Offset);
+        if (!foldOffset(Hi, Lo, TailTail, Offset))
+          return false;
         Tail.eraseFromParent();
         return true;
       }
     }
 
     LLVM_DEBUG(dbgs() << "  Offset Instr: " << Tail);
-    foldOffset(Hi, Lo, Tail, Offset);
-    return true;
+    return foldOffset(Hi, Lo, Tail, Offset);
   }
   case RISCV::ADD:
     // The offset is too large to fit in the immediate field of ADDI.

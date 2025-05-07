@@ -203,6 +203,7 @@ bool CodeGenAction::beginSourceFileAction() {
   fir::support::registerLLVMTranslation(*mlirCtx);
   mlir::DialectRegistry registry;
   fir::acc::registerOpenACCExtensions(registry);
+  fir::omp::registerOpenMPExtensions(registry);
   mlirCtx->appendDialectRegistry(registry);
 
   const llvm::TargetMachine &targetMachine = ci.getTargetMachine();
@@ -804,6 +805,17 @@ void CodeGenAction::generateLLVMIR() {
     llvmModule->addModuleFlag(
         llvm::Module::Error, "target-abi",
         llvm::MDString::get(llvmModule->getContext(), targetOpts.abi));
+
+  if (triple.isAMDGPU() ||
+      (triple.isSPIRV() && triple.getVendor() == llvm::Triple::AMD)) {
+    // Emit amdhsa_code_object_version module flag, which is code object version
+    // times 100.
+    if (opts.CodeObjectVersion != llvm::CodeObjectVersionKind::COV_None) {
+      llvmModule->addModuleFlag(llvm::Module::Error,
+                                "amdhsa_code_object_version",
+                                opts.CodeObjectVersion);
+    }
+  }
 }
 
 static std::unique_ptr<llvm::raw_pwrite_stream>

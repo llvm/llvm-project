@@ -22,6 +22,11 @@ Baremetal
 | Petr Hosek
 | phosek\@google.com (email), `petrhosek <https://github.com/petrhosek>`_ (github)
 
+Baremetal (Allocator)
+---------------------
+| Daniel Thornburgh
+| dthorn\@google.com (email), `mysterymath <https://github.com/mysterymath>`_ (github)
+
 Fixed Point
 -----------
 | Leonard Chan
@@ -53,5 +58,10 @@ RISC-V
 ------
 | Mikhail R. Gadelha
 | mikhail\@igalia.com (email), `mikhailramalho <https://github.com/mikhailramalho>`_ (github)
+
+Public Headers / hdrgen
+-----------------------
+| Roland McGrath
+| mcgrathr\@google.com (email), `frobtech <https://github.com/frobtech>`_ (github)
 
 .. TODO: add "Inactive Maintainers" section when needed.

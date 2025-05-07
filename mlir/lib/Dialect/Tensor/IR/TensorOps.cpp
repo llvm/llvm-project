@@ -60,7 +60,6 @@ Operation *TensorDialect::materializeConstant(OpBuilder &builder,
 OpFoldResult tensor::getMixedSize(OpBuilder &builder, Location loc, Value value,
                                   int64_t dim) {
   auto tensorType = llvm::cast<RankedTensorType>(value.getType());
-  SmallVector<OpFoldResult> result;
   if (tensorType.isDynamicDim(dim))
     return builder.createOrFold<tensor::DimOp>(loc, value, dim);
 
@@ -1703,7 +1702,6 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
       if (auto dimOp = element.getDefiningOp<tensor::DimOp>()) {
         dynamicNoop &= dimOp.getSource() == source;
 
-        APSInt dim;
         auto cst = getConstantIntValue(dimOp.getIndex());
         dynamicNoop &=
             cst.has_value() && cst.value() == static_cast<int64_t>(id);
@@ -1986,90 +1984,6 @@ struct FoldCollapseOfCastOp : public OpRewritePattern<CollapseShapeOp> {
   }
 };
 
-struct FoldDimOfExpandShape : public OpRewritePattern<DimOp> {
-  using OpRewritePattern<DimOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(DimOp dimOp,
-                                PatternRewriter &rewriter) const override {
-    auto expandShapeOp = dimOp.getSource().getDefiningOp<ExpandShapeOp>();
-    if (!expandShapeOp)
-      return failure();
-
-    // Only constant dimension values are supported.
-    std::optional<int64_t> dim = dimOp.getConstantIndex();
-    if (!dim.has_value())
-      return failure();
-
-    // Skip static dims. These are folded to constant ops.
-    RankedTensorType resultType = expandShapeOp.getResultType();
-    if (!resultType.isDynamicDim(*dim))
-      return failure();
-
-    // Find reassociation group that contains this result dimension.
-    int64_t srcDim = expandShapeOp.getCorrespondingSourceDim(*dim);
-
-    // `dim` is the only dynamic dimension in `group`. (Otherwise, the
-    // ExpandShapeOp would be ambiguous.)
-    int64_t product = 1;
-    ReassociationIndices grp = expandShapeOp.getReassociationIndices()[srcDim];
-    for (int64_t d : grp) {
-      if (d != dim) {
-        assert(!resultType.isDynamicDim(d) && "expected static dim");
-        product *= resultType.getDimSize(d);
-      }
-    }
-
-    // result dim size = src dim size / (product(other dims in reassoc group))
-    Value srcDimSz =
-        rewriter.create<DimOp>(dimOp.getLoc(), expandShapeOp.getSrc(), srcDim);
-    AffineExpr expr;
-    bindSymbols(dimOp.getContext(), expr);
-    rewriter.replaceOpWithNewOp<affine::AffineApplyOp>(
-        dimOp, expr.floorDiv(product), srcDimSz);
-    return success();
-  }
-};
-
-struct FoldDimOfCollapseShape : public OpRewritePattern<DimOp> {
-  using OpRewritePattern<DimOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(DimOp dimOp,
-                                PatternRewriter &rewriter) const override {
-    auto collapseShapeOp = dimOp.getSource().getDefiningOp<CollapseShapeOp>();
-    if (!collapseShapeOp)
-      return failure();
-
-    // Only constant dimension values are supported.
-    std::optional<int64_t> dim = dimOp.getConstantIndex();
-    if (!dim.has_value() ||
-        dim.value() >= collapseShapeOp.getResultType().getRank())
-      return failure();
-
-    // Skip static dims. These are folded to constant ops.
-    RankedTensorType resultType = collapseShapeOp.getResultType();
-    if (!resultType.isDynamicDim(*dim))
-      return failure();
-
-    // Get reassociation group of the result dimension.
-    ReassociationIndices group =
-        collapseShapeOp.getReassociationIndices()[*dim];
-
-    // result dim size = product(dims in reassoc group)
-    SmallVector<Value> srcDimSizes;
-    SmallVector<AffineExpr> syms;
-    AffineExpr product;
-    for (const auto &it : llvm::enumerate(group)) {
-      srcDimSizes.push_back(rewriter.create<DimOp>(
-          dimOp.getLoc(), collapseShapeOp.getSrc(), it.value()));
-      syms.push_back(rewriter.getAffineSymbolExpr(it.index()));
-      product = product ? product * syms.back() : syms.back();
-    }
-    rewriter.replaceOpWithNewOp<affine::AffineApplyOp>(dimOp, product,
-                                                       srcDimSizes);
-    return success();
-  }
-};
-
 /// Fold/sink a producer `tensor.cast` with a consumer `tensor.expand_shape` by
 /// matching constant output_shape operands of the expand. This makes the
 /// `tensor.expand_shape` more static and creates a consumer cast that can be
@@ -2158,8 +2072,7 @@ void ExpandShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
       ComposeExpandOfCollapseOp<ExpandShapeOp, CollapseShapeOp>,
       ConvertToStaticExpandShape, FoldReshapeWithConstant<ExpandShapeOp>,
       FoldReshapeWithSplat<ExpandShapeOp>,
-      FoldReshapeWithFromElements<ExpandShapeOp>, FoldDimOfExpandShape,
-      FoldDimOfCollapseShape>(context);
+      FoldReshapeWithFromElements<ExpandShapeOp>>(context);
 }
 
 void CollapseShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,

@@ -992,25 +992,26 @@ define <32 x i8> @splatvar_funnnel_v32i8(<32 x i8> %x, <32 x i8> %amt) nounwind 
 ;
 ; AVX512VBMI2-LABEL: splatvar_funnnel_v32i8:
 ; AVX512VBMI2:       # %bb.0:
-; AVX512VBMI2-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,2,4,6,8,10,12,14,64,66,68,70,72,74,76,78,16,18,20,22,24,26,28,30,80,82,84,86,88,90,92,94]
-; AVX512VBMI2-NEXT:    vpunpckhbw {{.*#+}} ymm3 = ymm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
+; AVX512VBMI2-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512VBMI2-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,2,4,6,8,10,12,14,32,34,36,38,40,42,44,46,16,18,20,22,24,26,28,30,48,50,52,54,56,58,60,62]
+; AVX512VBMI2-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23,8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
+; AVX512VBMI2-NEXT:    vpermb %zmm0, %zmm3, %zmm0
 ; AVX512VBMI2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX512VBMI2-NEXT:    vpsrlw %xmm1, %ymm3, %ymm3
-; AVX512VBMI2-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
-; AVX512VBMI2-NEXT:    vpsrlw %xmm1, %ymm0, %ymm0
-; AVX512VBMI2-NEXT:    vpermt2b %zmm3, %zmm2, %zmm0
+; AVX512VBMI2-NEXT:    vpsrlw %xmm1, %zmm0, %zmm0
+; AVX512VBMI2-NEXT:    vpermb %zmm0, %zmm2, %zmm0
 ; AVX512VBMI2-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512VBMI2-NEXT:    retq
 ;
 ; AVX512VLVBMI2-LABEL: splatvar_funnnel_v32i8:
 ; AVX512VLVBMI2:       # %bb.0:
-; AVX512VLVBMI2-NEXT:    vpunpckhbw {{.*#+}} ymm2 = ymm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
+; AVX512VLVBMI2-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512VLVBMI2-NEXT:    vmovdqa {{.*#+}} ymm2 = [32,34,36,38,40,42,44,46,0,2,4,6,8,10,12,14,48,50,52,54,56,58,60,62,16,18,20,22,24,26,28,30]
+; AVX512VLVBMI2-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
+; AVX512VLVBMI2-NEXT:    vpermb %zmm0, %zmm3, %zmm0
 ; AVX512VLVBMI2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX512VLVBMI2-NEXT:    vpsrlw %xmm1, %ymm2, %ymm2
-; AVX512VLVBMI2-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
-; AVX512VLVBMI2-NEXT:    vpsrlw %xmm1, %ymm0, %ymm1
-; AVX512VLVBMI2-NEXT:    vmovdqa {{.*#+}} ymm0 = [0,2,4,6,8,10,12,14,32,34,36,38,40,42,44,46,16,18,20,22,24,26,28,30,48,50,52,54,56,58,60,62]
-; AVX512VLVBMI2-NEXT:    vpermi2b %ymm2, %ymm1, %ymm0
+; AVX512VLVBMI2-NEXT:    vpsrlw %xmm1, %zmm0, %zmm0
+; AVX512VLVBMI2-NEXT:    vpermb %zmm0, %zmm2, %zmm0
+; AVX512VLVBMI2-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512VLVBMI2-NEXT:    retq
 ;
 ; XOPAVX1-LABEL: splatvar_funnnel_v32i8:

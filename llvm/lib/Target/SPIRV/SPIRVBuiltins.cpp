@@ -184,11 +184,11 @@ namespace SPIRV {
 /// Parses the name part of the demangled builtin call.
 std::string lookupBuiltinNameHelper(StringRef DemangledCall,
                                     FPDecorationId *DecorationId) {
-  const static std::string PassPrefix = "(anonymous namespace)::";
+  StringRef PassPrefix = "(anonymous namespace)::";
   std::string BuiltinName;
   // Itanium Demangler result may have "(anonymous namespace)::" prefix
-  if (DemangledCall.starts_with(PassPrefix.c_str()))
-    BuiltinName = DemangledCall.substr(PassPrefix.length());
+  if (DemangledCall.starts_with(PassPrefix))
+    BuiltinName = DemangledCall.substr(PassPrefix.size());
   else
     BuiltinName = DemangledCall;
   // Extract the builtin function name and types of arguments from the call
@@ -1058,6 +1058,24 @@ static bool buildBindlessImageINTELInst(const SPIRV::IncomingCall *Call,
   return true;
 }
 
+/// Helper function for building Intel's OpBitwiseFunctionINTEL instruction.
+static bool buildTernaryBitwiseFunctionINTELInst(
+    const SPIRV::IncomingCall *Call, unsigned Opcode,
+    MachineIRBuilder &MIRBuilder, SPIRVGlobalRegistry *GR) {
+  // Generate SPIRV instruction accordingly.
+  if (Call->isSpirvOp())
+    return buildOpFromWrapper(MIRBuilder, Opcode, Call,
+                              GR->getSPIRVTypeID(Call->ReturnType));
+
+  auto MIB = MIRBuilder.buildInstr(Opcode)
+                 .addDef(Call->ReturnRegister)
+                 .addUse(GR->getSPIRVTypeID(Call->ReturnType));
+  for (unsigned i = 0; i < Call->Arguments.size(); ++i)
+    MIB.addUse(Call->Arguments[i]);
+
+  return true;
+}
+
 static unsigned getNumComponentsForDim(SPIRV::Dim::Dim dim) {
   switch (dim) {
   case SPIRV::Dim::DIM_1D:
@@ -1143,9 +1161,15 @@ static bool generateGroupInst(const SPIRV::IncomingCall *Call,
 
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
   if (Call->isSpirvOp()) {
-    if (GroupBuiltin->NoGroupOperation)
+    if (GroupBuiltin->NoGroupOperation) {
+      SmallVector<uint32_t, 1> ImmArgs;
+      if (GroupBuiltin->Opcode ==
+              SPIRV::OpSubgroupMatrixMultiplyAccumulateINTEL &&
+          Call->Arguments.size() > 4)
+        ImmArgs.push_back(getConstFromIntrinsic(Call->Arguments[4], MRI));
       return buildOpFromWrapper(MIRBuilder, GroupBuiltin->Opcode, Call,
-                                GR->getSPIRVTypeID(Call->ReturnType));
+                                GR->getSPIRVTypeID(Call->ReturnType), ImmArgs);
+    }
 
     // Group Operation is a literal
     Register GroupOpReg = Call->Arguments[1];
@@ -1632,10 +1656,29 @@ static bool generateBarrierInst(const SPIRV::IncomingCall *Call,
 }
 
 static bool generateCastToPtrInst(const SPIRV::IncomingCall *Call,
-                                  MachineIRBuilder &MIRBuilder) {
-  MIRBuilder.buildInstr(TargetOpcode::G_ADDRSPACE_CAST)
-      .addDef(Call->ReturnRegister)
-      .addUse(Call->Arguments[0]);
+                                  MachineIRBuilder &MIRBuilder,
+                                  SPIRVGlobalRegistry *GR) {
+  // Lookup the instruction opcode in the TableGen records.
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  unsigned Opcode =
+      SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
+
+  if (Opcode == SPIRV::OpGenericCastToPtrExplicit) {
+    SPIRV::StorageClass::StorageClass ResSC =
+        GR->getPointerStorageClass(Call->ReturnRegister);
+    if (!isGenericCastablePtr(ResSC))
+      return false;
+
+    MIRBuilder.buildInstr(Opcode)
+        .addDef(Call->ReturnRegister)
+        .addUse(GR->getSPIRVTypeID(Call->ReturnType))
+        .addUse(Call->Arguments[0])
+        .addImm(ResSC);
+  } else {
+    MIRBuilder.buildInstr(TargetOpcode::G_ADDRSPACE_CAST)
+        .addDef(Call->ReturnRegister)
+        .addUse(Call->Arguments[0]);
+  }
   return true;
 }
 
@@ -2264,6 +2307,18 @@ static bool generateBindlessImageINTELInst(const SPIRV::IncomingCall *Call,
   return buildBindlessImageINTELInst(Call, Opcode, MIRBuilder, GR);
 }
 
+static bool
+generateTernaryBitwiseFunctionINTELInst(const SPIRV::IncomingCall *Call,
+                                        MachineIRBuilder &MIRBuilder,
+                                        SPIRVGlobalRegistry *GR) {
+  // Lookup the instruction opcode in the TableGen records.
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  unsigned Opcode =
+      SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
+
+  return buildTernaryBitwiseFunctionINTELInst(Call, Opcode, MIRBuilder, GR);
+}
+
 static bool buildNDRange(const SPIRV::IncomingCall *Call,
                          MachineIRBuilder &MIRBuilder,
                          SPIRVGlobalRegistry *GR) {
@@ -2797,7 +2852,7 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
   case SPIRV::Barrier:
     return generateBarrierInst(Call.get(), MIRBuilder, GR);
   case SPIRV::CastToPtr:
-    return generateCastToPtrInst(Call.get(), MIRBuilder);
+    return generateCastToPtrInst(Call.get(), MIRBuilder, GR);
   case SPIRV::Dot:
   case SPIRV::IntegerDot:
     return generateDotOrFMulInst(DemangledCall, Call.get(), MIRBuilder, GR);
@@ -2845,6 +2900,8 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generateExtendedBitOpsInst(Call.get(), MIRBuilder, GR);
   case SPIRV::BindlessINTEL:
     return generateBindlessImageINTELInst(Call.get(), MIRBuilder, GR);
+  case SPIRV::TernaryBitwiseINTEL:
+    return generateTernaryBitwiseFunctionINTELInst(Call.get(), MIRBuilder, GR);
   }
   return false;
 }
@@ -3090,6 +3147,22 @@ static SPIRVType *getInlineSpirvType(const TargetExtType *ExtensionType,
                                     Operands);
 }
 
+static SPIRVType *getVulkanBufferType(const TargetExtType *ExtensionType,
+                                      MachineIRBuilder &MIRBuilder,
+                                      SPIRVGlobalRegistry *GR) {
+  assert(ExtensionType->getNumTypeParameters() == 1 &&
+         "Vulkan buffers have exactly one type for the type of the buffer.");
+  assert(ExtensionType->getNumIntParameters() == 2 &&
+         "Vulkan buffer have 2 integer parameters: storage class and is "
+         "writable.");
+
+  auto *T = ExtensionType->getTypeParameter(0);
+  auto SC = static_cast<SPIRV::StorageClass::StorageClass>(
+      ExtensionType->getIntParameter(0));
+  bool IsWritable = ExtensionType->getIntParameter(1);
+  return GR->getOrCreateVulkanBufferType(MIRBuilder, T, SC, IsWritable);
+}
+
 namespace SPIRV {
 TargetExtType *parseBuiltinTypeNameToTargetExtType(std::string TypeName,
                                                    LLVMContext &Context) {
@@ -3165,6 +3238,8 @@ SPIRVType *lowerBuiltinType(const Type *OpaqueType,
   SPIRVType *TargetType;
   if (Name == "spirv.Type") {
     TargetType = getInlineSpirvType(BuiltinType, MIRBuilder, GR);
+  } else if (Name == "spirv.VulkanBuffer") {
+    TargetType = getVulkanBufferType(BuiltinType, MIRBuilder, GR);
   } else {
     // Lookup the demangled builtin type in the TableGen records.
     const SPIRV::BuiltinType *TypeRecord = SPIRV::lookupBuiltinType(Name);

@@ -18,6 +18,7 @@
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/Frontend/OpenMP/OMP.h.inc"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 
 namespace Fortran {
@@ -218,6 +219,39 @@ bool ClauseProcessor::processBind(mlir::omp::BindClauseOps &result) const {
     return true;
   }
   return false;
+}
+
+bool ClauseProcessor::processCancelDirectiveName(
+    mlir::omp::CancelDirectiveNameClauseOps &result) const {
+  using ConstructType = mlir::omp::ClauseCancellationConstructType;
+  mlir::MLIRContext *context = &converter.getMLIRContext();
+
+  ConstructType directive;
+  if (auto *clause = findUniqueClause<omp::CancellationConstructType>()) {
+    switch (clause->v) {
+    case llvm::omp::OMP_CANCELLATION_CONSTRUCT_Parallel:
+      directive = mlir::omp::ClauseCancellationConstructType::Parallel;
+      break;
+    case llvm::omp::OMP_CANCELLATION_CONSTRUCT_Loop:
+      directive = mlir::omp::ClauseCancellationConstructType::Loop;
+      break;
+    case llvm::omp::OMP_CANCELLATION_CONSTRUCT_Sections:
+      directive = mlir::omp::ClauseCancellationConstructType::Sections;
+      break;
+    case llvm::omp::OMP_CANCELLATION_CONSTRUCT_Taskgroup:
+      directive = mlir::omp::ClauseCancellationConstructType::Taskgroup;
+      break;
+    case llvm::omp::OMP_CANCELLATION_CONSTRUCT_None:
+      llvm_unreachable("OMP_CANCELLATION_CONSTRUCT_None");
+      break;
+    }
+  } else {
+    llvm_unreachable("cancel construct missing cancellation construct type");
+  }
+
+  result.cancelDirective =
+      mlir::omp::ClauseCancellationConstructTypeAttr::get(context, directive);
+  return true;
 }
 
 bool ClauseProcessor::processCollapse(
@@ -695,9 +729,10 @@ void TypeInfo::typeScan(mlir::Type ty) {
   } else if (auto pty = mlir::dyn_cast<fir::PointerType>(ty)) {
     typeScan(pty.getEleTy());
   } else {
-    // The scan ends when reaching any built-in or record type.
+    // The scan ends when reaching any built-in, record or boxproc type.
     assert(ty.isIntOrIndexOrFloat() || mlir::isa<mlir::ComplexType>(ty) ||
-           mlir::isa<fir::LogicalType>(ty) || mlir::isa<fir::RecordType>(ty));
+           mlir::isa<fir::LogicalType>(ty) || mlir::isa<fir::RecordType>(ty) ||
+           mlir::isa<fir::BoxProcType>(ty));
   }
 }
 
@@ -854,13 +889,20 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
       } else if (evaluate::IsArrayElement(*object.ref())) {
         // Array Section
         SomeExpr expr = *object.ref();
-        if (isVectorSubscript(expr))
-          TODO(converter.getCurrentLocation(),
-               "Vector subscripted array section for task dependency");
 
-        hlfir::EntityWithAttributes entity = convertExprToHLFIR(
-            converter.getCurrentLocation(), converter, expr, symMap, stmtCtx);
-        dependVar = entity.getBase();
+        if (isVectorSubscript(expr)) {
+          // OpenMP needs the address of the first indexed element (required by
+          // the standard to be the lowest index) to identify the dependency. We
+          // don't need an accurate length for the array section because the
+          // OpenMP standard forbids overlapping array sections.
+          dependVar = genVectorSubscriptedDesignatorFirstElementAddress(
+              converter.getCurrentLocation(), converter, expr, symMap, stmtCtx);
+        } else {
+          // Ordinary array section e.g. A(1:512:2)
+          hlfir::EntityWithAttributes entity = convertExprToHLFIR(
+              converter.getCurrentLocation(), converter, expr, symMap, stmtCtx);
+          dependVar = entity.getBase();
+        }
       } else {
         semantics::Symbol *sym = object.sym();
         dependVar = converter.getSymbolAddress(*sym);
@@ -940,6 +982,29 @@ bool ClauseProcessor::processIf(
     }
   });
   return found;
+}
+bool ClauseProcessor::processInReduction(
+    mlir::Location currentLocation, mlir::omp::InReductionClauseOps &result,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &outReductionSyms) const {
+  return findRepeatableClause<omp::clause::InReduction>(
+      [&](const omp::clause::InReduction &clause, const parser::CharBlock &) {
+        llvm::SmallVector<mlir::Value> inReductionVars;
+        llvm::SmallVector<bool> inReduceVarByRef;
+        llvm::SmallVector<mlir::Attribute> inReductionDeclSymbols;
+        llvm::SmallVector<const semantics::Symbol *> inReductionSyms;
+        ReductionProcessor rp;
+        rp.processReductionArguments<omp::clause::InReduction>(
+            currentLocation, converter, clause, inReductionVars,
+            inReduceVarByRef, inReductionDeclSymbols, inReductionSyms);
+
+        // Copy local lists into the output.
+        llvm::copy(inReductionVars, std::back_inserter(result.inReductionVars));
+        llvm::copy(inReduceVarByRef,
+                   std::back_inserter(result.inReductionByref));
+        llvm::copy(inReductionDeclSymbols,
+                   std::back_inserter(result.inReductionSyms));
+        llvm::copy(inReductionSyms, std::back_inserter(outReductionSyms));
+      });
 }
 
 bool ClauseProcessor::processIsDevicePtr(
@@ -1215,15 +1280,39 @@ bool ClauseProcessor::processReduction(
         llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
         llvm::SmallVector<const semantics::Symbol *> reductionSyms;
         ReductionProcessor rp;
-        rp.processReductionArguments(
+        rp.processReductionArguments<omp::clause::Reduction>(
             currentLocation, converter, clause, reductionVars, reduceVarByRef,
-            reductionDeclSymbols, reductionSyms, result.reductionMod);
+            reductionDeclSymbols, reductionSyms, &result.reductionMod);
         // Copy local lists into the output.
         llvm::copy(reductionVars, std::back_inserter(result.reductionVars));
         llvm::copy(reduceVarByRef, std::back_inserter(result.reductionByref));
         llvm::copy(reductionDeclSymbols,
                    std::back_inserter(result.reductionSyms));
         llvm::copy(reductionSyms, std::back_inserter(outReductionSyms));
+      });
+}
+
+bool ClauseProcessor::processTaskReduction(
+    mlir::Location currentLocation, mlir::omp::TaskReductionClauseOps &result,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &outReductionSyms) const {
+  return findRepeatableClause<omp::clause::TaskReduction>(
+      [&](const omp::clause::TaskReduction &clause, const parser::CharBlock &) {
+        llvm::SmallVector<mlir::Value> taskReductionVars;
+        llvm::SmallVector<bool> TaskReduceVarByRef;
+        llvm::SmallVector<mlir::Attribute> TaskReductionDeclSymbols;
+        llvm::SmallVector<const semantics::Symbol *> TaskReductionSyms;
+        ReductionProcessor rp;
+        rp.processReductionArguments<omp::clause::TaskReduction>(
+            currentLocation, converter, clause, taskReductionVars,
+            TaskReduceVarByRef, TaskReductionDeclSymbols, TaskReductionSyms);
+        // Copy local lists into the output.
+        llvm::copy(taskReductionVars,
+                   std::back_inserter(result.taskReductionVars));
+        llvm::copy(TaskReduceVarByRef,
+                   std::back_inserter(result.taskReductionByref));
+        llvm::copy(TaskReductionDeclSymbols,
+                   std::back_inserter(result.taskReductionSyms));
+        llvm::copy(TaskReductionSyms, std::back_inserter(outReductionSyms));
       });
 }
 

@@ -31,3 +31,9 @@ def SPIRVSmoothStep : Builtin {
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
+
+def SPIRVFaceForward : Builtin {
+  let Spellings = ["__builtin_spirv_faceforward"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}

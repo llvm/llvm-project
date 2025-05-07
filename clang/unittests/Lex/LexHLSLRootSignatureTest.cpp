@@ -19,7 +19,7 @@ class LexHLSLRootSignatureTest : public ::testing::Test {
 protected:
   LexHLSLRootSignatureTest() {}
 
-  void CheckTokens(hlsl::RootSignatureLexer &Lexer,
+  void checkTokens(hlsl::RootSignatureLexer &Lexer,
                    SmallVector<hlsl::RootSignatureToken> &Computed,
                    SmallVector<TokenKind> &Expected) {
     for (unsigned I = 0, E = Expected.size(); I != E; ++I) {
@@ -27,13 +27,13 @@ protected:
       if (Expected[I] == TokenKind::invalid ||
           Expected[I] == TokenKind::end_of_stream)
         continue;
-      hlsl::RootSignatureToken Result = Lexer.ConsumeToken();
+      hlsl::RootSignatureToken Result = Lexer.consumeToken();
       ASSERT_EQ(Result.TokKind, Expected[I]);
       Computed.push_back(Result);
     }
-    hlsl::RootSignatureToken EndOfStream = Lexer.ConsumeToken();
+    hlsl::RootSignatureToken EndOfStream = Lexer.consumeToken();
     ASSERT_EQ(EndOfStream.TokKind, TokenKind::end_of_stream);
-    ASSERT_TRUE(Lexer.EndOfBuffer());
+    ASSERT_TRUE(Lexer.isEndOfBuffer());
   }
 };
 
@@ -43,6 +43,10 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexNumbersTest) {
   // This test will check that we can lex different number tokens
   const llvm::StringLiteral Source = R"cc(
     -42 42 +42 +2147483648
+    42. 4.2 .42
+    42f 4.2F
+    .42e+3 4.2E-12
+    42.e+10f
   )cc";
 
   auto TokLoc = SourceLocation();
@@ -51,11 +55,16 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexNumbersTest) {
 
   SmallVector<hlsl::RootSignatureToken> Tokens;
   SmallVector<TokenKind> Expected = {
-      TokenKind::pu_minus,    TokenKind::int_literal, TokenKind::int_literal,
-      TokenKind::pu_plus,     TokenKind::int_literal, TokenKind::pu_plus,
-      TokenKind::int_literal,
+      TokenKind::pu_minus,      TokenKind::int_literal,
+      TokenKind::int_literal,   TokenKind::pu_plus,
+      TokenKind::int_literal,   TokenKind::pu_plus,
+      TokenKind::int_literal,   TokenKind::float_literal,
+      TokenKind::float_literal, TokenKind::float_literal,
+      TokenKind::float_literal, TokenKind::float_literal,
+      TokenKind::float_literal, TokenKind::float_literal,
+      TokenKind::float_literal,
   };
-  CheckTokens(Lexer, Tokens, Expected);
+  checkTokens(Lexer, Tokens, Expected);
 
   // Sample negative: int component
   hlsl::RootSignatureToken IntToken = Tokens[1];
@@ -73,13 +82,45 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexNumbersTest) {
   // is treated as an unsigned integer instead
   IntToken = Tokens[6];
   ASSERT_EQ(IntToken.NumSpelling, "2147483648");
+
+  // Sample decimal end
+  hlsl::RootSignatureToken FloatToken = Tokens[7];
+  ASSERT_EQ(FloatToken.NumSpelling, "42.");
+
+  // Sample decimal middle
+  FloatToken = Tokens[8];
+  ASSERT_EQ(FloatToken.NumSpelling, "4.2");
+
+  // Sample decimal start
+  FloatToken = Tokens[9];
+  ASSERT_EQ(FloatToken.NumSpelling, ".42");
+
+  // Sample float lower
+  FloatToken = Tokens[10];
+  ASSERT_EQ(FloatToken.NumSpelling, "42f");
+
+  // Sample float upper
+  FloatToken = Tokens[11];
+  ASSERT_EQ(FloatToken.NumSpelling, "4.2F");
+
+  // Sample exp +
+  FloatToken = Tokens[12];
+  ASSERT_EQ(FloatToken.NumSpelling, ".42e+3");
+
+  // Sample exp -
+  FloatToken = Tokens[13];
+  ASSERT_EQ(FloatToken.NumSpelling, "4.2E-12");
+
+  // Sample all combined
+  FloatToken = Tokens[14];
+  ASSERT_EQ(FloatToken.NumSpelling, "42.e+10f");
 }
 
 TEST_F(LexHLSLRootSignatureTest, ValidLexAllTokensTest) {
   // This test will check that we can lex all defined tokens as defined in
   // HLSLRootSignatureTokenKinds.def, plus some additional integer variations
   const llvm::StringLiteral Source = R"cc(
-    42
+    42 42.0f
 
     b0 t43 u987 s234
 
@@ -93,6 +134,7 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexAllTokensTest) {
     space visibility flags
     numDescriptors offset
 
+    unbounded
     DESCRIPTOR_RANGE_OFFSET_APPEND
 
     DATA_VOLATILE
@@ -119,7 +161,7 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexAllTokensTest) {
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   };
 
-  CheckTokens(Lexer, Tokens, Expected);
+  checkTokens(Lexer, Tokens, Expected);
 }
 
 TEST_F(LexHLSLRootSignatureTest, ValidCaseInsensitiveKeywordsTest) {
@@ -149,7 +191,7 @@ TEST_F(LexHLSLRootSignatureTest, ValidCaseInsensitiveKeywordsTest) {
       TokenKind::kw_offset,
   };
 
-  CheckTokens(Lexer, Tokens, Expected);
+  checkTokens(Lexer, Tokens, Expected);
 }
 
 TEST_F(LexHLSLRootSignatureTest, ValidLexPeekTest) {
@@ -161,26 +203,26 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexPeekTest) {
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
 
   // Test basic peek
-  hlsl::RootSignatureToken Res = Lexer.PeekNextToken();
+  hlsl::RootSignatureToken Res = Lexer.peekNextToken();
   ASSERT_EQ(Res.TokKind, TokenKind::pu_r_paren);
 
   // Ensure it doesn't peek past one element
-  Res = Lexer.PeekNextToken();
+  Res = Lexer.peekNextToken();
   ASSERT_EQ(Res.TokKind, TokenKind::pu_r_paren);
 
-  Res = Lexer.ConsumeToken();
+  Res = Lexer.consumeToken();
   ASSERT_EQ(Res.TokKind, TokenKind::pu_r_paren);
 
   // Invoke after reseting the NextToken
-  Res = Lexer.PeekNextToken();
+  Res = Lexer.peekNextToken();
   ASSERT_EQ(Res.TokKind, TokenKind::int_literal);
 
   // Ensure we can still consume the second token
-  Res = Lexer.ConsumeToken();
+  Res = Lexer.consumeToken();
   ASSERT_EQ(Res.TokKind, TokenKind::int_literal);
 
   // Ensure end of stream token
-  Res = Lexer.PeekNextToken();
+  Res = Lexer.peekNextToken();
   ASSERT_EQ(Res.TokKind, TokenKind::end_of_stream);
 }
 
