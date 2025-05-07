@@ -2,7 +2,7 @@ include(HandleFlags)
 
 # Warning flags ===============================================================
 function(cxx_add_warning_flags target enable_werror enable_pedantic)
-  target_compile_definitions(${target} PUBLIC -D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+  target_compile_definitions(${target} PRIVATE -D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
   if (MSVC)
     # -W4 is the cl.exe/clang-cl equivalent of -Wall. (In cl.exe and clang-cl,
     # -Wall is equivalent to -Weverything in GCC style compiler drivers.)
