@@ -1752,6 +1752,13 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_seg6_load:
   case Intrinsic::riscv_seg7_load:
   case Intrinsic::riscv_seg8_load:
+  case Intrinsic::riscv_seg2_load_mask:
+  case Intrinsic::riscv_seg3_load_mask:
+  case Intrinsic::riscv_seg4_load_mask:
+  case Intrinsic::riscv_seg5_load_mask:
+  case Intrinsic::riscv_seg6_load_mask:
+  case Intrinsic::riscv_seg7_load_mask:
+  case Intrinsic::riscv_seg8_load_mask:
     return SetRVVLoadStoreInfo(/*PtrOp*/ 0, /*IsStore*/ false,
                                /*IsUnitStrided*/ false, /*UsePtrVal*/ true);
   case Intrinsic::riscv_seg2_store:
@@ -1763,6 +1770,17 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_seg8_store:
     // Operands are (vec, ..., vec, ptr, vl)
     return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 2,
+                               /*IsStore*/ true,
+                               /*IsUnitStrided*/ false, /*UsePtrVal*/ true);
+  case Intrinsic::riscv_seg2_store_mask:
+  case Intrinsic::riscv_seg3_store_mask:
+  case Intrinsic::riscv_seg4_store_mask:
+  case Intrinsic::riscv_seg5_store_mask:
+  case Intrinsic::riscv_seg6_store_mask:
+  case Intrinsic::riscv_seg7_store_mask:
+  case Intrinsic::riscv_seg8_store_mask:
+    // Operands are (vec, ..., vec, ptr, mask, vl)
+    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 3,
                                /*IsStore*/ true,
                                /*IsUnitStrided*/ false, /*UsePtrVal*/ true);
   case Intrinsic::riscv_vle:
@@ -10579,13 +10597,20 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::riscv_seg5_load:
   case Intrinsic::riscv_seg6_load:
   case Intrinsic::riscv_seg7_load:
-  case Intrinsic::riscv_seg8_load: {
+  case Intrinsic::riscv_seg8_load:
+  case Intrinsic::riscv_seg2_load_mask:
+  case Intrinsic::riscv_seg3_load_mask:
+  case Intrinsic::riscv_seg4_load_mask:
+  case Intrinsic::riscv_seg5_load_mask:
+  case Intrinsic::riscv_seg6_load_mask:
+  case Intrinsic::riscv_seg7_load_mask:
+  case Intrinsic::riscv_seg8_load_mask: {
     SDLoc DL(Op);
     static const Intrinsic::ID VlsegInts[7] = {
-        Intrinsic::riscv_vlseg2, Intrinsic::riscv_vlseg3,
-        Intrinsic::riscv_vlseg4, Intrinsic::riscv_vlseg5,
-        Intrinsic::riscv_vlseg6, Intrinsic::riscv_vlseg7,
-        Intrinsic::riscv_vlseg8};
+        Intrinsic::riscv_vlseg2_mask, Intrinsic::riscv_vlseg3_mask,
+        Intrinsic::riscv_vlseg4_mask, Intrinsic::riscv_vlseg5_mask,
+        Intrinsic::riscv_vlseg6_mask, Intrinsic::riscv_vlseg7_mask,
+        Intrinsic::riscv_vlseg8_mask};
     unsigned NF = Op->getNumValues() - 1;
     assert(NF >= 2 && NF <= 8 && "Unexpected seg number");
     MVT XLenVT = Subtarget.getXLenVT();
@@ -10595,7 +10620,19 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                   ContainerVT.getScalarSizeInBits();
     EVT VecTupTy = MVT::getRISCVVectorTupleVT(Sz, NF);
 
-    SDValue VL = DAG.getConstant(VT.getVectorNumElements(), DL, XLenVT);
+    // Masked: (pointer, mask, vl)
+    // Non-masked: (pointer, vl)
+    bool IsMasked = Op.getNumOperands() > 4;
+    SDValue VL = Op.getOperand(Op.getNumOperands() - 1);
+    SDValue Mask =
+        IsMasked ? Op.getOperand(3) : getAllOnesMask(ContainerVT, VL, DL, DAG);
+    MVT MaskVT = Mask.getSimpleValueType();
+    if (MaskVT.isFixedLengthVector()) {
+      MVT MaskContainerVT =
+          ::getContainerForFixedLengthVector(DAG, MaskVT, Subtarget);
+      Mask = convertToScalableVector(MaskContainerVT, Mask, DAG, Subtarget);
+    }
+
     SDValue IntID = DAG.getTargetConstant(VlsegInts[NF - 2], DL, XLenVT);
     auto *Load = cast<MemIntrinsicSDNode>(Op);
 
@@ -10605,7 +10642,10 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
         IntID,
         DAG.getUNDEF(VecTupTy),
         Op.getOperand(2),
+        Mask,
         VL,
+        DAG.getTargetConstant(
+            RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC, DL, XLenVT),
         DAG.getTargetConstant(Log2_64(VT.getScalarSizeInBits()), DL, XLenVT)};
     SDValue Result =
         DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops,
@@ -10665,15 +10705,39 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   case Intrinsic::riscv_seg5_store:
   case Intrinsic::riscv_seg6_store:
   case Intrinsic::riscv_seg7_store:
-  case Intrinsic::riscv_seg8_store: {
+  case Intrinsic::riscv_seg8_store:
+  case Intrinsic::riscv_seg2_store_mask:
+  case Intrinsic::riscv_seg3_store_mask:
+  case Intrinsic::riscv_seg4_store_mask:
+  case Intrinsic::riscv_seg5_store_mask:
+  case Intrinsic::riscv_seg6_store_mask:
+  case Intrinsic::riscv_seg7_store_mask:
+  case Intrinsic::riscv_seg8_store_mask: {
     SDLoc DL(Op);
     static const Intrinsic::ID VssegInts[] = {
-        Intrinsic::riscv_vsseg2, Intrinsic::riscv_vsseg3,
-        Intrinsic::riscv_vsseg4, Intrinsic::riscv_vsseg5,
-        Intrinsic::riscv_vsseg6, Intrinsic::riscv_vsseg7,
-        Intrinsic::riscv_vsseg8};
-    // Operands are (chain, int_id, vec*, ptr, vl)
-    unsigned NF = Op->getNumOperands() - 4;
+        Intrinsic::riscv_vsseg2_mask, Intrinsic::riscv_vsseg3_mask,
+        Intrinsic::riscv_vsseg4_mask, Intrinsic::riscv_vsseg5_mask,
+        Intrinsic::riscv_vsseg6_mask, Intrinsic::riscv_vsseg7_mask,
+        Intrinsic::riscv_vsseg8_mask};
+
+    bool IsMasked = false;
+    switch (IntNo) {
+    case Intrinsic::riscv_seg2_store_mask:
+    case Intrinsic::riscv_seg3_store_mask:
+    case Intrinsic::riscv_seg4_store_mask:
+    case Intrinsic::riscv_seg5_store_mask:
+    case Intrinsic::riscv_seg6_store_mask:
+    case Intrinsic::riscv_seg7_store_mask:
+    case Intrinsic::riscv_seg8_store_mask:
+      IsMasked = true;
+      break;
+    default:
+      break;
+    }
+
+    // Non-masked: (chain, int_id, vec*, ptr, vl)
+    // Masked: (chain, int_id, vec*, ptr, mask, vl)
+    unsigned NF = Op->getNumOperands() - (IsMasked ? 5 : 4);
     assert(NF >= 2 && NF <= 8 && "Unexpected seg number");
     MVT XLenVT = Subtarget.getXLenVT();
     MVT VT = Op->getOperand(2).getSimpleValueType();
@@ -10682,7 +10746,16 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
                   ContainerVT.getScalarSizeInBits();
     EVT VecTupTy = MVT::getRISCVVectorTupleVT(Sz, NF);
 
-    SDValue VL = DAG.getConstant(VT.getVectorNumElements(), DL, XLenVT);
+    SDValue VL = Op.getOperand(Op.getNumOperands() - 1);
+    SDValue Mask = IsMasked ? Op.getOperand(Op.getNumOperands() - 2)
+                            : getAllOnesMask(ContainerVT, VL, DL, DAG);
+    MVT MaskVT = Mask.getSimpleValueType();
+    if (MaskVT.isFixedLengthVector()) {
+      MVT MaskContainerVT =
+          ::getContainerForFixedLengthVector(DAG, MaskVT, Subtarget);
+      Mask = convertToScalableVector(MaskContainerVT, Mask, DAG, Subtarget);
+    }
+
     SDValue IntID = DAG.getTargetConstant(VssegInts[NF - 2], DL, XLenVT);
     SDValue Ptr = Op->getOperand(NF + 2);
 
@@ -10701,6 +10774,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
         IntID,
         StoredVal,
         Ptr,
+        Mask,
         VL,
         DAG.getTargetConstant(Log2_64(VT.getScalarSizeInBits()), DL, XLenVT)};
 
@@ -24043,15 +24117,20 @@ static bool isMultipleOfN(const Value *V, const DataLayout &DL, unsigned N) {
   if (N == 1)
     return true;
 
+  using namespace PatternMatch;
+  // Right now we're only recognizing the simplest pattern.
+  uint64_t C;
+  if (match(V, m_CombineOr(m_ConstantInt(C),
+                           m_c_Mul(m_Value(), m_ConstantInt(C)))) &&
+      C && C % N == 0)
+    return true;
+
   if (isPowerOf2_32(N)) {
     KnownBits KB = llvm::computeKnownBits(V, DL);
     return KB.countMinTrailingZeros() >= Log2_32(N);
   }
 
-  using namespace PatternMatch;
-  // Right now we're only recognizing the simplest pattern.
-  uint64_t C;
-  return match(V, m_c_Mul(m_Value(), m_ConstantInt(C))) && C && C % N == 0;
+  return false;
 }
 
 /// Lower an interleaved vp.load into a vlsegN intrinsic.
@@ -24083,7 +24162,7 @@ static bool isMultipleOfN(const Value *V, const DataLayout &DL, unsigned N) {
 /// TODO: We probably can loosen the dependency on matching extractvalue when
 /// dealing with factor of 2 (extractvalue is still required for most of other
 /// factors though).
-bool RISCVTargetLowering::lowerDeinterleavedIntrinsicToVPLoad(
+bool RISCVTargetLowering::lowerInterleavedVPLoad(
     VPIntrinsic *Load, Value *Mask,
     ArrayRef<Value *> DeinterleaveResults) const {
   assert(Mask && "Expect a valid mask");
@@ -24092,27 +24171,21 @@ bool RISCVTargetLowering::lowerDeinterleavedIntrinsicToVPLoad(
 
   const unsigned Factor = DeinterleaveResults.size();
 
-  auto *WideVTy = dyn_cast<ScalableVectorType>(Load->getType());
-  // TODO: Support fixed vectors.
-  if (!WideVTy)
+  auto *VTy = dyn_cast<VectorType>(DeinterleaveResults[0]->getType());
+  if (!VTy)
     return false;
 
-  unsigned WideNumElements = WideVTy->getElementCount().getKnownMinValue();
-  assert(WideNumElements % Factor == 0 &&
-         "ElementCount of a wide load must be divisible by interleave factor");
-  auto *VTy =
-      VectorType::get(WideVTy->getScalarType(), WideNumElements / Factor,
-                      WideVTy->isScalableTy());
   auto &DL = Load->getModule()->getDataLayout();
   Align Alignment = Load->getParamAlign(0).value_or(
-      DL.getABITypeAlign(WideVTy->getElementType()));
+      DL.getABITypeAlign(VTy->getElementType()));
   if (!isLegalInterleavedAccessType(
           VTy, Factor, Alignment,
           Load->getArgOperand(0)->getType()->getPointerAddressSpace(), DL))
     return false;
 
   IRBuilder<> Builder(Load);
-  Value *WideEVL = Load->getArgOperand(2);
+
+  Value *WideEVL = Load->getVectorLengthParam();
   // Conservatively check if EVL is a multiple of factor, otherwise some
   // (trailing) elements might be lost after the transformation.
   if (!isMultipleOfN(WideEVL, Load->getDataLayout(), Factor))
@@ -24123,49 +24196,64 @@ bool RISCVTargetLowering::lowerDeinterleavedIntrinsicToVPLoad(
       Builder.CreateUDiv(WideEVL, ConstantInt::get(WideEVL->getType(), Factor)),
       XLenTy);
 
-  static const Intrinsic::ID IntrMaskIds[] = {
-      Intrinsic::riscv_vlseg2_mask, Intrinsic::riscv_vlseg3_mask,
-      Intrinsic::riscv_vlseg4_mask, Intrinsic::riscv_vlseg5_mask,
-      Intrinsic::riscv_vlseg6_mask, Intrinsic::riscv_vlseg7_mask,
-      Intrinsic::riscv_vlseg8_mask,
-  };
+  Value *Return = nullptr;
+  if (auto *FVTy = dyn_cast<FixedVectorType>(VTy)) {
+    static const Intrinsic::ID FixedMaskedVlsegIntrIds[] = {
+        Intrinsic::riscv_seg2_load_mask, Intrinsic::riscv_seg3_load_mask,
+        Intrinsic::riscv_seg4_load_mask, Intrinsic::riscv_seg5_load_mask,
+        Intrinsic::riscv_seg6_load_mask, Intrinsic::riscv_seg7_load_mask,
+        Intrinsic::riscv_seg8_load_mask};
 
-  unsigned SEW = DL.getTypeSizeInBits(VTy->getElementType());
-  unsigned NumElts = VTy->getElementCount().getKnownMinValue();
-  Type *VecTupTy = TargetExtType::get(
-      Load->getContext(), "riscv.vector.tuple",
-      ScalableVectorType::get(Type::getInt8Ty(Load->getContext()),
-                              NumElts * SEW / 8),
-      Factor);
+    Return = Builder.CreateIntrinsic(FixedMaskedVlsegIntrIds[Factor - 2],
+                                     {FVTy, XLenTy},
+                                     {Load->getArgOperand(0), Mask, EVL});
+  } else {
+    static const Intrinsic::ID IntrMaskIds[] = {
+        Intrinsic::riscv_vlseg2_mask, Intrinsic::riscv_vlseg3_mask,
+        Intrinsic::riscv_vlseg4_mask, Intrinsic::riscv_vlseg5_mask,
+        Intrinsic::riscv_vlseg6_mask, Intrinsic::riscv_vlseg7_mask,
+        Intrinsic::riscv_vlseg8_mask,
+    };
 
-  Value *PoisonVal = PoisonValue::get(VecTupTy);
+    unsigned SEW = DL.getTypeSizeInBits(VTy->getElementType());
+    unsigned NumElts = VTy->getElementCount().getKnownMinValue();
+    Type *VecTupTy = TargetExtType::get(
+        Load->getContext(), "riscv.vector.tuple",
+        ScalableVectorType::get(Type::getInt8Ty(Load->getContext()),
+                                NumElts * SEW / 8),
+        Factor);
 
-  Function *VlsegNFunc = Intrinsic::getOrInsertDeclaration(
-      Load->getModule(), IntrMaskIds[Factor - 2],
-      {VecTupTy, Mask->getType(), EVL->getType()});
+    Value *PoisonVal = PoisonValue::get(VecTupTy);
 
-  Value *Operands[] = {PoisonVal,
-                       Load->getArgOperand(0),
-                       Mask,
-                       EVL,
-                       ConstantInt::get(XLenTy, RISCVVType::TAIL_AGNOSTIC |
-                                                    RISCVVType::MASK_AGNOSTIC),
-                       ConstantInt::get(XLenTy, Log2_64(SEW))};
+    Function *VlsegNFunc = Intrinsic::getOrInsertDeclaration(
+        Load->getModule(), IntrMaskIds[Factor - 2],
+        {VecTupTy, Mask->getType(), EVL->getType()});
 
-  CallInst *VlsegN = Builder.CreateCall(VlsegNFunc, Operands);
+    Value *Operands[] = {
+        PoisonVal,
+        Load->getArgOperand(0),
+        Mask,
+        EVL,
+        ConstantInt::get(XLenTy,
+                         RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC),
+        ConstantInt::get(XLenTy, Log2_64(SEW))};
 
-  SmallVector<Type *, 8> AggrTypes{Factor, VTy};
-  Value *Return =
-      PoisonValue::get(StructType::get(Load->getContext(), AggrTypes));
-  Function *VecExtractFunc = Intrinsic::getOrInsertDeclaration(
-      Load->getModule(), Intrinsic::riscv_tuple_extract, {VTy, VecTupTy});
-  for (unsigned i = 0; i < Factor; ++i) {
-    Value *VecExtract =
-        Builder.CreateCall(VecExtractFunc, {VlsegN, Builder.getInt32(i)});
-    Return = Builder.CreateInsertValue(Return, VecExtract, i);
+    CallInst *VlsegN = Builder.CreateCall(VlsegNFunc, Operands);
+
+    SmallVector<Type *, 8> AggrTypes{Factor, VTy};
+    Return = PoisonValue::get(StructType::get(Load->getContext(), AggrTypes));
+    Function *VecExtractFunc = Intrinsic::getOrInsertDeclaration(
+        Load->getModule(), Intrinsic::riscv_tuple_extract, {VTy, VecTupTy});
+    for (unsigned i = 0; i < Factor; ++i) {
+      Value *VecExtract =
+          Builder.CreateCall(VecExtractFunc, {VlsegN, Builder.getInt32(i)});
+      Return = Builder.CreateInsertValue(Return, VecExtract, i);
+    }
   }
 
   for (auto [Idx, DIO] : enumerate(DeinterleaveResults)) {
+    if (!DIO)
+      continue;
     // We have to create a brand new ExtractValue to replace each
     // of these old ExtractValue instructions.
     Value *NewEV =
@@ -24196,7 +24284,7 @@ bool RISCVTargetLowering::lowerDeinterleavedIntrinsicToVPLoad(
 ///                               <vscale x 32 x i8> %load2, ptr %ptr,
 ///                               %mask,
 ///                               i64 %rvl)
-bool RISCVTargetLowering::lowerInterleavedIntrinsicToVPStore(
+bool RISCVTargetLowering::lowerInterleavedVPStore(
     VPIntrinsic *Store, Value *Mask,
     ArrayRef<Value *> InterleaveOperands) const {
   assert(Mask && "Expect a valid mask");
@@ -24205,8 +24293,7 @@ bool RISCVTargetLowering::lowerInterleavedIntrinsicToVPStore(
 
   const unsigned Factor = InterleaveOperands.size();
 
-  auto *VTy = dyn_cast<ScalableVectorType>(InterleaveOperands[0]->getType());
-  // TODO: Support fixed vectors.
+  auto *VTy = dyn_cast<VectorType>(InterleaveOperands[0]->getType());
   if (!VTy)
     return false;
 
@@ -24229,6 +24316,20 @@ bool RISCVTargetLowering::lowerInterleavedIntrinsicToVPStore(
   Value *EVL = Builder.CreateZExt(
       Builder.CreateUDiv(WideEVL, ConstantInt::get(WideEVL->getType(), Factor)),
       XLenTy);
+
+  if (auto *FVTy = dyn_cast<FixedVectorType>(VTy)) {
+    static const Intrinsic::ID FixedMaskedVssegIntrIds[] = {
+        Intrinsic::riscv_seg2_store_mask, Intrinsic::riscv_seg3_store_mask,
+        Intrinsic::riscv_seg4_store_mask, Intrinsic::riscv_seg5_store_mask,
+        Intrinsic::riscv_seg6_store_mask, Intrinsic::riscv_seg7_store_mask,
+        Intrinsic::riscv_seg8_store_mask};
+
+    SmallVector<Value *, 8> Operands(InterleaveOperands);
+    Operands.append({Store->getArgOperand(1), Mask, EVL});
+    Builder.CreateIntrinsic(FixedMaskedVssegIntrIds[Factor - 2], {FVTy, XLenTy},
+                            Operands);
+    return true;
+  }
 
   static const Intrinsic::ID IntrMaskIds[] = {
       Intrinsic::riscv_vsseg2_mask, Intrinsic::riscv_vsseg3_mask,
