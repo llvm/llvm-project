@@ -873,6 +873,7 @@ void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
   // Attempt to canonicalize/optimize the instruction now its arguments have
   // been mutated.
   if (TII->optimizeInstruction(MI)) {
+    Changed = true;
     LLVM_DEBUG(dbgs() << "MCP: After optimizeInstruction: " << MI);
   }
 }
