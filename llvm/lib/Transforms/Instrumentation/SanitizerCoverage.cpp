@@ -1096,7 +1096,7 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
 
     if (Options.StackDepthCallbackMin) {
       // In callback mode, only add call when stack depth reaches minimum.
-      uint32_t EstimatedStackSize = 0;
+      int EstimatedStackSize = 0;
       // If dynamic alloca found, always add call.
       bool HasDynamicAlloc = false;
       // Find an insertion point after last "alloca".
