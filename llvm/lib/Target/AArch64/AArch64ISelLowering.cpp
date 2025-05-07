@@ -22042,6 +22042,30 @@ SDValue tryLowerPartialReductionToWideAdd(SDNode *N,
   return DAG.getNode(TopOpcode, DL, AccVT, BottomNode, ExtOp);
 }
 
+static SDValue combineSVEBitSel(unsigned IID, SDNode *N, SelectionDAG &DAG) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  SDValue Op1 = N->getOperand(1);
+  SDValue Op2 = N->getOperand(2);
+  SDValue Op3 = N->getOperand(3);
+
+  switch (IID) {
+  default:
+    llvm_unreachable("Called with wrong intrinsic!");
+  case Intrinsic::aarch64_sve_bsl:
+    return DAG.getNode(AArch64ISD::BSP, DL, VT, Op3, Op1, Op2);
+  case Intrinsic::aarch64_sve_bsl1n:
+    return DAG.getNode(AArch64ISD::BSP, DL, VT, Op3, DAG.getNOT(DL, Op1, VT),
+                       Op2);
+  case Intrinsic::aarch64_sve_bsl2n:
+    return DAG.getNode(AArch64ISD::BSP, DL, VT, Op3, Op1,
+                       DAG.getNOT(DL, Op2, VT));
+  case Intrinsic::aarch64_sve_nbsl:
+    return DAG.getNOT(DL, DAG.getNode(AArch64ISD::BSP, DL, VT, Op3, Op1, Op2),
+                      VT);
+  }
+}
+
 static SDValue performIntrinsicCombine(SDNode *N,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        const AArch64Subtarget *Subtarget) {
@@ -22364,6 +22388,11 @@ static SDValue performIntrinsicCombine(SDNode *N,
                     AArch64CC::LAST_ACTIVE);
   case Intrinsic::aarch64_sve_whilelo:
     return tryCombineWhileLo(N, DCI, Subtarget);
+  case Intrinsic::aarch64_sve_bsl:
+  case Intrinsic::aarch64_sve_bsl1n:
+  case Intrinsic::aarch64_sve_bsl2n:
+  case Intrinsic::aarch64_sve_nbsl:
+    return combineSVEBitSel(IID, N, DAG);
   }
   return SDValue();
 }

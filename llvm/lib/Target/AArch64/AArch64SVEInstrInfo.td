@@ -545,22 +545,18 @@ def AArch64umulh : PatFrag<(ops node:$op1, node:$op2),
 
 
 def AArch64bsl  : PatFrags<(ops node:$Op1, node:$Op2, node:$Op3),
-                           [(int_aarch64_sve_bsl node:$Op1, node:$Op2, node:$Op3),
-                            (AArch64bsp node:$Op3, node:$Op1, node:$Op2),
+                           [(AArch64bsp node:$Op3, node:$Op1, node:$Op2),
                             (or (and node:$Op1, node:$Op3), (and node:$Op2, (vnot node:$Op3)))]>;
 
-def AArch64bsl1n : PatFrags<(ops node:$Op1, node:$Op2, node:$Op3),
-                            [(int_aarch64_sve_bsl1n node:$Op1, node:$Op2, node:$Op3),
-                             (AArch64bsl (vnot node:$Op1), node:$Op2, node:$Op3)]>;
+def AArch64bsl1n : PatFrag<(ops node:$Op1, node:$Op2, node:$Op3),
+                           (AArch64bsl (vnot node:$Op1), node:$Op2, node:$Op3)>;
 
 def AArch64bsl2n : PatFrags<(ops node:$Op1, node:$Op2, node:$Op3),
-                            [(int_aarch64_sve_bsl2n node:$Op1, node:$Op2, node:$Op3),
+                            [(AArch64bsl node:$Op1, (vnot node:$Op2), node:$Op3),
                              (or (and node:$Op1, node:$Op3), (vnot (or node:$Op2, node:$Op3)))]>;
 
-def AArch64nbsl : PatFrags<(ops node:$Op1, node:$Op2, node:$Op3),
-                           [(int_aarch64_sve_nbsl node:$Op1, node:$Op2, node:$Op3),
-                            (vnot (AArch64bsp node:$Op3, node:$Op1, node:$Op2)),
-                            (vnot (AArch64bsl node:$Op1, node:$Op2, node:$Op3))]>;
+def AArch64nbsl : PatFrag<(ops node:$Op1, node:$Op2, node:$Op3),
+                          (vnot (AArch64bsl node:$Op1, node:$Op2, node:$Op3))>;
 
 
 let Predicates = [HasSVE] in {
