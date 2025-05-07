@@ -2515,6 +2515,15 @@ static bool generateEnqueueInst(const SPIRV::IncomingCall *Call,
     return buildNDRange(Call, MIRBuilder, GR);
   case SPIRV::OpEnqueueKernel:
     return buildEnqueueKernel(Call, MIRBuilder, GR);
+  case SPIRV::OpEnqueueMarker:
+    return MIRBuilder.buildInstr(Opcode)
+                      .addDef(Call->ReturnRegister)
+                      .addUse(GR->getSPIRVTypeID(Call->ReturnType))
+                      .addUse(Call->Arguments[0])
+                      .addUse(Call->Arguments[1])
+                      .addUse(Call->Arguments[2])
+                      .addUse(Call->Arguments[3]);
+
   default:
     return false;
   }
@@ -2817,7 +2826,6 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
                                  const SmallVectorImpl<Register> &Args,
                                  SPIRVGlobalRegistry *GR) {
   LLVM_DEBUG(dbgs() << "Lowering builtin call: " << DemangledCall << "\n");
-
   // Lookup the builtin in the TableGen records.
   SPIRVType *SpvType = GR->getSPIRVTypeForVReg(OrigRet);
   assert(SpvType && "Inconsistent return register: expected valid type info");
