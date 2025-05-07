@@ -3895,8 +3895,9 @@ InstructionCost AArch64TTIImpl::getVectorInstrCost(
     unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
     Value *Scalar,
     ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) const {
-  return getVectorInstrCostHelper(Opcode, Val, CostKind, Index, false, nullptr,
-                                  Scalar, ScalarUserAndIdx);
+  return getVectorInstrCostHelper(Opcode, Val, CostKind, Index,
+                                  /*HasRealUse=*/true, nullptr, Scalar,
+                                  ScalarUserAndIdx);
 }
 
 InstructionCost AArch64TTIImpl::getVectorInstrCost(const Instruction &I,
