@@ -62,6 +62,22 @@ struct FormatStyle {
   /// \version 3.3
   int AccessModifierOffset;
 
+  /// Different styles for breaking the parenthesis after a control statement
+  /// (``if/switch/while/for ...``).
+  /// \version 21
+  enum BreakAfterControlStatementStyle : int8_t {
+    /// Use the default behavior.
+    BACSS_Default,
+    /// Force break after the left parenthesis of a control statement only
+    /// when the expression exceeds the column limit, and align on the
+    /// ``ContinuationIndentWidth``.
+    BACSS_MultiLine,
+    /// Do not force a break after the control statment.
+    BACSS_No,
+  };
+
+  BreakAfterControlStatementStyle AlignAfterControlStatement;
+
   /// Different styles for aligning after open brackets.
   enum BracketAlignmentStyle : int8_t {
     /// Align parameters on the open bracket, e.g.:
@@ -5303,6 +5319,7 @@ struct FormatStyle {
 
   bool operator==(const FormatStyle &R) const {
     return AccessModifierOffset == R.AccessModifierOffset &&
+           AlignAfterControlStatement == R.AlignAfterControlStatement &&
            AlignAfterOpenBracket == R.AlignAfterOpenBracket &&
            AlignArrayOfStructures == R.AlignArrayOfStructures &&
            AlignConsecutiveAssignments == R.AlignConsecutiveAssignments &&

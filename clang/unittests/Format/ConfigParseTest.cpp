@@ -529,6 +529,14 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("EnumTrailingComma: Remove", EnumTrailingComma,
               FormatStyle::ETC_Remove);
 
+  Style.AlignAfterControlStatement = FormatStyle::BACSS_Default;
+  CHECK_PARSE("AlignAfterControlStatement: MultiLine",
+              AlignAfterControlStatement, FormatStyle::BACSS_MultiLine);
+  CHECK_PARSE("AlignAfterControlStatement: No", AlignAfterControlStatement,
+              FormatStyle::BACSS_No);
+  CHECK_PARSE("AlignAfterControlStatement: Default", AlignAfterControlStatement,
+              FormatStyle::BACSS_Default);
+
   Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
   CHECK_PARSE("AlignAfterOpenBracket: Align", AlignAfterOpenBracket,
               FormatStyle::BAS_Align);
