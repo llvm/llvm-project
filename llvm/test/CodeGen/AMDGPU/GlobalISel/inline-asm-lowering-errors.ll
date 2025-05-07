@@ -26,6 +26,5 @@ define amdgpu_kernel void @indirect_input() {
 ; CHECK: error: invalid constraint 'i': unsupported constraint
 define amdgpu_kernel void @badimm() {
   tail call void asm sideeffect "s_nop", "i"(i32 poison)
-  ret
-  void
+  ret void
 }
