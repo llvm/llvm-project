@@ -236,6 +236,8 @@ static constexpr std::pair<StringLiteral, StringLiteral> ReplaceMap[]{
   {"free",                      "__hipstdpar_free"},
   {"malloc",                    "__hipstdpar_malloc"},
   {"memalign",                  "__hipstdpar_aligned_alloc"},
+  {"mmap",                      "__hipstdpar_mmap"},
+  {"munmap",                    "__hipstdpar_munmap"},
   {"posix_memalign",            "__hipstdpar_posix_aligned_alloc"},
   {"realloc",                   "__hipstdpar_realloc"},
   {"reallocarray",              "__hipstdpar_realloc_array"},
@@ -271,6 +273,16 @@ static constexpr std::pair<StringLiteral, StringLiteral> ReplaceMap[]{
   {"__libc_realloc",            "__hipstdpar_realloc"}
 };
 
+static constexpr std::pair<StringLiteral, StringLiteral> HiddenMap[]{
+  // hidden_malloc and hidden_free are only kept for backwards compatibility /
+  // legacy purposes, and we should remove them in the future
+  {"__hipstdpar_hidden_malloc",   "__libc_malloc"},
+  {"__hipstdpar_hidden_free",     "__libc_free"},
+  {"__hipstdpar_hidden_memalign", "__libc_memalign"},
+  {"__hipstdpar_hidden_mmap",     "mmap"},
+  {"__hipstdpar_hidden_munmap",   "munmap"}
+};
+
 PreservedAnalyses
 HipStdParAllocationInterpositionPass::run(Module &M, ModuleAnalysisManager&) {
   SmallDenseMap<StringRef, StringRef> AllocReplacements(std::cbegin(ReplaceMap),
@@ -299,19 +311,14 @@ HipStdParAllocationInterpositionPass::run(Module &M, ModuleAnalysisManager&) {
     }
   }
 
-  if (auto F = M.getFunction("__hipstdpar_hidden_malloc")) {
-    auto LibcMalloc = M.getOrInsertFunction(
-        "__libc_malloc", F->getFunctionType(), F->getAttributes());
-    F->replaceAllUsesWith(LibcMalloc.getCallee());
+  for (auto &&HR : HiddenMap) {
+    if (auto F = M.getFunction(HR.first)) {
+      auto R = M.getOrInsertFunction(HR.second, F->getFunctionType(),
+                                     F->getAttributes());
+      F->replaceAllUsesWith(R.getCallee());
 
-    eraseFromModule(*F);
-  }
-  if (auto F = M.getFunction("__hipstdpar_hidden_free")) {
-    auto LibcFree = M.getOrInsertFunction("__libc_free", F->getFunctionType(),
-                                          F->getAttributes());
-    F->replaceAllUsesWith(LibcFree.getCallee());
-
-    eraseFromModule(*F);
+      eraseFromModule(*F);
+    }
   }
 
   return PreservedAnalyses::none();
