@@ -186,7 +186,7 @@ public:
                               std::decay_t<FnT>>::template arg_t<1>>
   void addSourceMaterialization(FnT &&callback) {
     sourceMaterializations.emplace_back(
-        wrapMaterialization<T>(std::forward<FnT>(callback)));
+        wrapSourceMaterialization<T>(std::forward<FnT>(callback)));
   }
 
   /// This method registers a materialization that will be called when
@@ -330,11 +330,10 @@ private:
   using ConversionCallbackFn = std::function<std::optional<LogicalResult>(
       Type, SmallVectorImpl<Type> &)>;
 
-  /// The signature of the callback used to materialize a source/argument
-  /// conversion.
+  /// The signature of the callback used to materialize a source conversion.
   ///
   /// Arguments: builder, result type, inputs, location
-  using MaterializationCallbackFn =
+  using SourceMaterializationCallbackFn =
       std::function<Value(OpBuilder &, Type, ValueRange, Location)>;
 
   /// The signature of the callback used to materialize a target conversion.
@@ -387,12 +386,12 @@ private:
     cachedMultiConversions.clear();
   }
 
-  /// Generate a wrapper for the given argument/source materialization
-  /// callback. The callback may take any subclass of `Type` and the
-  /// wrapper will check for the target type to be of the expected class
-  /// before calling the callback.
+  /// Generate a wrapper for the given source materialization callback. The
+  /// callback may take any subclass of `Type` and the wrapper will check for
+  /// the target type to be of the expected class before calling the callback.
   template <typename T, typename FnT>
-  MaterializationCallbackFn wrapMaterialization(FnT &&callback) const {
+  SourceMaterializationCallbackFn
+  wrapSourceMaterialization(FnT &&callback) const {
     return [callback = std::forward<FnT>(callback)](
                OpBuilder &builder, Type resultType, ValueRange inputs,
                Location loc) -> Value {
@@ -491,7 +490,7 @@ private:
   SmallVector<ConversionCallbackFn, 4> conversions;
 
   /// The list of registered materialization functions.
-  SmallVector<MaterializationCallbackFn, 2> sourceMaterializations;
+  SmallVector<SourceMaterializationCallbackFn, 2> sourceMaterializations;
   SmallVector<TargetMaterializationCallbackFn, 2> targetMaterializations;
 
   /// The list of registered type attribute conversion functions.
@@ -740,7 +739,7 @@ public:
   ///
   /// Optionally, a type converter can be provided to build materializations.
   /// Note: If no type converter was provided or the type converter does not
-  /// specify any suitable argument/target materialization rules, the dialect
+  /// specify any suitable source/target materialization rules, the dialect
   /// conversion may fail to legalize unresolved materializations.
   Block *
   applySignatureConversion(Block *block,
