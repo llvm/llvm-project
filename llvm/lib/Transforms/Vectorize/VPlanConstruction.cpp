@@ -423,8 +423,6 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
   R->setExiting(LatchVPBB);
 
   // All VPBB's reachable shallowly from HeaderVPB belong to the current region.
-  SmallPtrSet<VPBlockBase *, 2> ExitBlocks(Plan.getExitBlocks().begin(),
-                                           Plan.getExitBlocks().end());
   for (VPBlockBase *VPBB : vp_depth_first_shallow(HeaderVPB))
     VPBB->setParent(R);
 }
