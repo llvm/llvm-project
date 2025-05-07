@@ -545,6 +545,41 @@ TEST(DenseMapCustomTest, InsertOrAssignTest) {
   EXPECT_EQ(1, CountCopyAndMove::MoveAssignments);
 }
 
+TEST(DenseMapCustomTest, EmplaceOrAssign) {
+  DenseMap<int, CountCopyAndMove> Map;
+
+  CountCopyAndMove::ResetCounts();
+  auto Try0 = Map.emplace_or_assign(3, 3);
+  EXPECT_TRUE(Try0.second);
+  EXPECT_EQ(0, CountCopyAndMove::TotalCopies());
+  EXPECT_EQ(0, CountCopyAndMove::TotalMoves());
+  EXPECT_EQ(1, CountCopyAndMove::ValueConstructions);
+
+  CountCopyAndMove::ResetCounts();
+  auto Try1 = Map.emplace_or_assign(3, 4);
+  EXPECT_FALSE(Try1.second);
+  EXPECT_EQ(0, CountCopyAndMove::TotalCopies());
+  EXPECT_EQ(1, CountCopyAndMove::ValueConstructions);
+  EXPECT_EQ(0, CountCopyAndMove::MoveConstructions);
+  EXPECT_EQ(1, CountCopyAndMove::MoveAssignments);
+
+  int Key = 5;
+  CountCopyAndMove::ResetCounts();
+  auto Try2 = Map.emplace_or_assign(Key, 3);
+  EXPECT_TRUE(Try2.second);
+  EXPECT_EQ(0, CountCopyAndMove::TotalCopies());
+  EXPECT_EQ(0, CountCopyAndMove::TotalMoves());
+  EXPECT_EQ(1, CountCopyAndMove::ValueConstructions);
+
+  CountCopyAndMove::ResetCounts();
+  auto Try3 = Map.emplace_or_assign(Key, 4);
+  EXPECT_FALSE(Try3.second);
+  EXPECT_EQ(0, CountCopyAndMove::TotalCopies());
+  EXPECT_EQ(1, CountCopyAndMove::ValueConstructions);
+  EXPECT_EQ(0, CountCopyAndMove::MoveConstructions);
+  EXPECT_EQ(1, CountCopyAndMove::MoveAssignments);
+}
+
 // Make sure DenseMap works with StringRef keys.
 TEST(DenseMapCustomTest, StringRefTest) {
   DenseMap<StringRef, int> M;
