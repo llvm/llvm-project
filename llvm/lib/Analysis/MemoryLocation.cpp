@@ -95,20 +95,12 @@ MemoryLocation MemoryLocation::getForSource(const MemTransferInst *MTI) {
   return getForSource(cast<AnyMemTransferInst>(MTI));
 }
 
-MemoryLocation MemoryLocation::getForSource(const AtomicMemTransferInst *MTI) {
-  return getForSource(cast<AnyMemTransferInst>(MTI));
-}
-
 MemoryLocation MemoryLocation::getForSource(const AnyMemTransferInst *MTI) {
   assert(MTI->getRawSource() == MTI->getArgOperand(1));
   return getForArgument(MTI, 1, nullptr);
 }
 
 MemoryLocation MemoryLocation::getForDest(const MemIntrinsic *MI) {
-  return getForDest(cast<AnyMemIntrinsic>(MI));
-}
-
-MemoryLocation MemoryLocation::getForDest(const AtomicMemIntrinsic *MI) {
   return getForDest(cast<AnyMemIntrinsic>(MI));
 }
 
