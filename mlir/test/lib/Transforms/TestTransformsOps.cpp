@@ -39,6 +39,23 @@ transform::TestMoveOperandDeps::apply(TransformRewriter &rewriter,
   return DiagnosedSilenceableFailure::success();
 }
 
+DiagnosedSilenceableFailure
+transform::TestMoveValueDefns::apply(TransformRewriter &rewriter,
+                                     TransformResults &TransformResults,
+                                     TransformState &state) {
+  SmallVector<Value> values;
+  for (auto tdValue : getValues()) {
+    values.push_back(*state.getPayloadValues(tdValue).begin());
+  }
+  Operation *moveBefore = *state.getPayloadOps(getInsertionPoint()).begin();
+  if (failed(moveValueDefinitions(rewriter, values, moveBefore))) {
+    auto listener = cast<ErrorCheckingTrackingListener>(rewriter.getListener());
+    std::string errorMsg = listener->getLatestMatchFailureMessage();
+    (void)emitRemark(errorMsg);
+  }
+  return DiagnosedSilenceableFailure::success();
+}
+
 namespace {
 
 class TestTransformsDialectExtension

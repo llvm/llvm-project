@@ -23,6 +23,8 @@
 
 #include "mlir/IR/Value.h"
 
+#include "clang/CIR/MissingFeatures.h"
+
 namespace clang::CIRGen {
 
 /// This trivial value class is used to represent the result of an
@@ -75,6 +77,28 @@ enum class AlignmentSource {
   Type
 };
 
+/// Given that the base address has the given alignment source, what's
+/// our confidence in the alignment of the field?
+static inline AlignmentSource getFieldAlignmentSource(AlignmentSource source) {
+  // For now, we don't distinguish fields of opaque pointers from
+  // top-level declarations, but maybe we should.
+  return AlignmentSource::Decl;
+}
+
+class LValueBaseInfo {
+  AlignmentSource alignSource;
+
+public:
+  explicit LValueBaseInfo(AlignmentSource source = AlignmentSource::Type)
+      : alignSource(source) {}
+  AlignmentSource getAlignmentSource() const { return alignSource; }
+  void setAlignmentSource(AlignmentSource source) { alignSource = source; }
+
+  void mergeForCast(const LValueBaseInfo &info) {
+    setAlignmentSource(info.getAlignmentSource());
+  }
+};
+
 class LValue {
   enum {
     Simple,       // This is a normal l-value, use getAddress().
@@ -85,39 +109,106 @@ class LValue {
     MatrixElt     // This is a matrix element, use getVector*
   } lvType;
   clang::QualType type;
+  clang::Qualifiers quals;
 
+  // The alignment to use when accessing this lvalue. (For vector elements,
+  // this is the alignment of the whole vector)
+  unsigned alignment;
   mlir::Value v;
   mlir::Type elementType;
+  LValueBaseInfo baseInfo;
 
-  void initialize(clang::QualType type) { this->type = type; }
+  void initialize(clang::QualType type, clang::Qualifiers quals,
+                  clang::CharUnits alignment, LValueBaseInfo baseInfo) {
+    assert((!alignment.isZero() || type->isIncompleteType()) &&
+           "initializing l-value with zero alignment!");
+    this->type = type;
+    this->quals = quals;
+    const unsigned maxAlign = 1U << 31;
+    this->alignment = alignment.getQuantity() <= maxAlign
+                          ? alignment.getQuantity()
+                          : maxAlign;
+    assert(this->alignment == alignment.getQuantity() &&
+           "Alignment exceeds allowed max!");
+    this->baseInfo = baseInfo;
+  }
 
 public:
   bool isSimple() const { return lvType == Simple; }
+  bool isBitField() const { return lvType == BitField; }
 
   // TODO: Add support for volatile
   bool isVolatile() const { return false; }
+
+  unsigned getVRQualifiers() const {
+    return quals.getCVRQualifiers() & ~clang::Qualifiers::Const;
+  }
 
   clang::QualType getType() const { return type; }
 
   mlir::Value getPointer() const { return v; }
 
   clang::CharUnits getAlignment() const {
-    // TODO: Handle alignment
-    return clang::CharUnits::One();
+    return clang::CharUnits::fromQuantity(alignment);
   }
+  void setAlignment(clang::CharUnits a) { alignment = a.getQuantity(); }
 
   Address getAddress() const {
     return Address(getPointer(), elementType, getAlignment());
   }
 
-  static LValue makeAddr(Address address, clang::QualType t) {
+  const clang::Qualifiers &getQuals() const { return quals; }
+  clang::Qualifiers &getQuals() { return quals; }
+
+  LValueBaseInfo getBaseInfo() const { return baseInfo; }
+
+  static LValue makeAddr(Address address, clang::QualType t,
+                         LValueBaseInfo baseInfo) {
+    // Classic codegen sets the objc gc qualifier here. That requires an
+    // ASTContext, which is passed in from CIRGenFunction::makeAddrLValue.
+    assert(!cir::MissingFeatures::objCGC());
+
     LValue r;
     r.lvType = Simple;
     r.v = address.getPointer();
     r.elementType = address.getElementType();
-    r.initialize(t);
+    r.initialize(t, t.getQualifiers(), address.getAlignment(), baseInfo);
     return r;
   }
+};
+
+/// An aggregate value slot.
+class AggValueSlot {
+
+  Address addr;
+  clang::Qualifiers quals;
+
+  /// This is set to true if the memory in the slot is known to be zero before
+  /// the assignment into it.  This means that zero fields don't need to be set.
+  bool zeroedFlag : 1;
+
+public:
+  enum IsZeroed_t { IsNotZeroed, IsZeroed };
+
+  AggValueSlot(Address addr, clang::Qualifiers quals, bool zeroedFlag)
+      : addr(addr), quals(quals), zeroedFlag(zeroedFlag) {}
+
+  static AggValueSlot forAddr(Address addr, clang::Qualifiers quals,
+                              IsZeroed_t isZeroed = IsNotZeroed) {
+    return AggValueSlot(addr, quals, isZeroed);
+  }
+
+  static AggValueSlot forLValue(const LValue &lv) {
+    return forAddr(lv.getAddress(), lv.getQuals());
+  }
+
+  clang::Qualifiers getQualifiers() const { return quals; }
+
+  Address getAddress() const { return addr; }
+
+  bool isIgnored() const { return !addr.isValid(); }
+
+  IsZeroed_t isZeroed() const { return IsZeroed_t(zeroedFlag); }
 };
 
 } // namespace clang::CIRGen

@@ -1367,7 +1367,7 @@ void Intrinsic::emitBodyAsBuiltinCall() {
     LocalCK = ClassB;
 
   if (!getReturnType().isVoid() && !SRet)
-    S += "(" + RetVar.getType().str() + ") ";
+    S += "__builtin_bit_cast(" + RetVar.getType().str() + ", ";
 
   S += "__builtin_neon_" + mangleName(std::string(N), LocalCK) + "(";
 
@@ -1387,11 +1387,12 @@ void Intrinsic::emitBodyAsBuiltinCall() {
         Type T2 = T;
         T2.makeOneVector();
         T2.makeInteger(8, /*Sign=*/true);
-        Cast = "(" + T2.str() + ")";
+        Cast = "__builtin_bit_cast(" + T2.str() + ", ";
       }
 
       for (unsigned J = 0; J < T.getNumVectors(); ++J)
-        S += Cast + V.getName() + ".val[" + utostr(J) + "], ";
+        S += Cast + V.getName() + ".val[" + utostr(J) + "]" +
+             (Cast.empty() ? ", " : "), ");
       continue;
     }
 
@@ -1399,14 +1400,16 @@ void Intrinsic::emitBodyAsBuiltinCall() {
     Type CastToType = T;
 
     // Check if an explicit cast is needed.
-    if (CastToType.isVector() &&
-        (LocalCK == ClassB || (T.isHalf() && !T.isScalarForMangling()))) {
-      CastToType.makeInteger(8, true);
-      Arg = "(" + CastToType.str() + ")" + Arg;
-    } else if (CastToType.isVector() && LocalCK == ClassI) {
-      if (CastToType.isInteger())
-        CastToType.makeSigned();
-      Arg = "(" + CastToType.str() + ")" + Arg;
+    if (CastToType.isVector()) {
+      if (LocalCK == ClassB || (T.isHalf() && !T.isScalarForMangling())) {
+        CastToType.makeInteger(8, true);
+        Arg = "__builtin_bit_cast(" + CastToType.str() + ", " + Arg + ")";
+      } else if (LocalCK == ClassI) {
+        if (CastToType.isInteger()) {
+          CastToType.makeSigned();
+          Arg = "__builtin_bit_cast(" + CastToType.str() + ", " + Arg + ")";
+        }
+      }
     }
 
     S += Arg + ", ";
@@ -1420,6 +1423,9 @@ void Intrinsic::emitBodyAsBuiltinCall() {
     S.pop_back();
     S.pop_back();
   }
+
+  if (!getReturnType().isVoid() && !SRet)
+    S += ")";
   S += ");";
 
   std::string RetExpr;
@@ -1661,7 +1667,7 @@ Intrinsic::DagEmitter::emitDagShuffle(const DagInit *DI) {
         }
       }
 
-      Elts.insert(Revved.begin(), Revved.end());
+      Elts.insert_range(Revved);
     }
   };
 
@@ -1809,12 +1815,11 @@ Intrinsic::DagEmitter::emitDagSaveTemp(const DagInit *DI) {
   assert_with_loc(!N.empty(),
                   "save_temp() expects a name as the first argument");
 
-  assert_with_loc(Intr.Variables.find(N) == Intr.Variables.end(),
-                  "Variable already defined!");
-  Intr.Variables[N] = Variable(A.first, N + Intr.VariablePostfix);
+  auto [It, Inserted] =
+      Intr.Variables.try_emplace(N, A.first, N + Intr.VariablePostfix);
+  assert_with_loc(Inserted, "Variable already defined!");
 
-  std::string S =
-      A.first.str() + " " + Intr.Variables[N].getName() + " = " + A.second;
+  std::string S = A.first.str() + " " + It->second.getName() + " = " + A.second;
 
   return std::make_pair(Type::getVoid(), S);
 }
@@ -2024,8 +2029,8 @@ void NeonEmitter::createIntrinsic(const Record *R,
   std::vector<TypeSpec> TypeSpecs = TypeSpec::fromTypeSpecs(Types);
 
   ClassKind CK = ClassNone;
-  if (R->getSuperClasses().size() >= 2)
-    CK = ClassMap[R->getSuperClasses()[1].first];
+  if (!R->getDirectSuperClasses().empty())
+    CK = ClassMap[R->getDirectSuperClasses()[0].first];
 
   std::vector<std::pair<TypeSpec, TypeSpec>> NewTypeSpecs;
   if (!CartesianProductWith.empty()) {
@@ -2047,8 +2052,7 @@ void NeonEmitter::createIntrinsic(const Record *R,
   }
 
   sort(NewTypeSpecs);
-  NewTypeSpecs.erase(std::unique(NewTypeSpecs.begin(), NewTypeSpecs.end()),
-		     NewTypeSpecs.end());
+  NewTypeSpecs.erase(llvm::unique(NewTypeSpecs), NewTypeSpecs.end());
   auto &Entry = IntrinsicMap[Name];
 
   for (auto &I : NewTypeSpecs) {
@@ -2246,9 +2250,9 @@ void NeonEmitter::genIntrinsicRangeCheckCode(
     // Sorted by immediate argument index
     ArrayRef<ImmCheck> Checks = Def->getImmChecks();
 
-    const auto it = Emitted.find(Def->getMangledName());
-    if (it != Emitted.end()) {
-      assert(areRangeChecksCompatible(Checks, it->second) &&
+    auto [It, Inserted] = Emitted.try_emplace(Def->getMangledName(), Checks);
+    if (!Inserted) {
+      assert(areRangeChecksCompatible(Checks, It->second) &&
              "Neon intrinsics with incompatible immediate range checks cannot "
              "share a builtin.");
       continue; // Ensure this is emitted only once
@@ -2262,7 +2266,6 @@ void NeonEmitter::genIntrinsicRangeCheckCode(
          << Check.getVecSizeInBits() << ");\n"
          << " break;\n";
     }
-    Emitted[Def->getMangledName()] = Checks;
   }
 
   OS << "#endif\n\n";

@@ -130,7 +130,7 @@ define amdgpu_kernel void @v_pack_b32_v2f16(ptr addrspace(1) %in0, ptr addrspace
   %v1 = load volatile half, ptr addrspace(1) %in1.gep
   %v0.add = fadd half %v0, 2.0
   %v1.add = fadd half %v1, 2.0
-  %vec.0 = insertelement <2 x half> undef, half %v0.add, i32 0
+  %vec.0 = insertelement <2 x half> poison, half %v0.add, i32 0
   %vec.1 = insertelement <2 x half> %vec.0, half %v1.add, i32 1
   %vec.i32 = bitcast <2 x half> %vec.1 to i32
   call void asm sideeffect "; use $0", "v"(i32 %vec.i32) #0
@@ -259,7 +259,7 @@ define amdgpu_kernel void @v_pack_b32_v2f16_sub(ptr addrspace(1) %in0, ptr addrs
   %v1 = load volatile half, ptr addrspace(1) %in1.gep
   %v0.add = fsub half %v0, 2.0
   %v1.add = fadd half %v1, 2.0
-  %vec.0 = insertelement <2 x half> undef, half %v0.add, i32 0
+  %vec.0 = insertelement <2 x half> poison, half %v0.add, i32 0
   %vec.1 = insertelement <2 x half> %vec.0, half %v1.add, i32 1
   %vec.i32 = bitcast <2 x half> %vec.1 to i32
   call void asm sideeffect "; use $0", "v"(i32 %vec.i32) #0
@@ -504,7 +504,7 @@ define amdgpu_kernel void @v_pack_b32.fabs(ptr addrspace(1) %in0, ptr addrspace(
   %v1.add = fadd half %v1, 2.0
   %v0.fabs = call half @llvm.fabs.f16(half %v0.add)
   %v1.fabs = call half @llvm.fabs.f16(half %v1.add)
-  %vec.0 = insertelement <2 x half> undef, half %v0.fabs, i32 0
+  %vec.0 = insertelement <2 x half> poison, half %v0.fabs, i32 0
   %vec.1 = insertelement <2 x half> %vec.0, half %v1.fabs, i32 1
   %vec.i32 = bitcast <2 x half> %vec.1 to i32
   call void asm sideeffect "; use $0", "v"(i32 %vec.i32) #0
@@ -635,7 +635,7 @@ define amdgpu_kernel void @v_pack_b32.fneg(ptr addrspace(1) %in0, ptr addrspace(
   %v1.add = fadd half %v1, 2.0
   %v0.fneg = fsub half -0.0, %v0.add
   %v1.fneg = fsub half -0.0, %v1.add
-  %vec.0 = insertelement <2 x half> undef, half %v0.fneg, i32 0
+  %vec.0 = insertelement <2 x half> poison, half %v0.fneg, i32 0
   %vec.1 = insertelement <2 x half> %vec.0, half %v1.fneg, i32 1
   %vec.i32 = bitcast <2 x half> %vec.1 to i32
   call void asm sideeffect "; use $0", "v"(i32 %vec.i32) #0

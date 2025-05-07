@@ -15,6 +15,9 @@ using LlvmLibcSinTest = LIBC_NAMESPACE::testing::FPTest<double>;
 using LIBC_NAMESPACE::testing::tlog;
 
 TEST_F(LlvmLibcSinTest, SpecialNumbers) {
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::sin(sNaN), FE_INVALID);
+  EXPECT_MATH_ERRNO(0);
+
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::sin(aNaN));
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::sin(inf));
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::sin(neg_inf));

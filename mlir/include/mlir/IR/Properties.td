@@ -210,6 +210,7 @@ defvar writeMlirBytecodeWithConvertToAttribute = [{
 
 //===----------------------------------------------------------------------===//
 // Primitive property kinds
+//===----------------------------------------------------------------------===//
 
 // Any kind of integer stored as properties.
 class IntProp<string storageTypeParam, string desc = ""> :
@@ -237,25 +238,6 @@ def I64Prop : IntProp<"int64_t">;
 
 def I32Property : IntProp<"int32_t">, Deprecated<"moved to shorter name I32Prop">;
 def I64Property : IntProp<"int64_t">, Deprecated<"moved to shorter name I64Prop">;
-
-class EnumProp<string storageTypeParam, string desc = "", string default = ""> :
-    Property<storageTypeParam, desc> {
-  // TODO:  implement predicate for enum validity.
-  let writeToMlirBytecode = [{
-    $_writer.writeVarInt(static_cast<uint64_t>($_storage));
-  }];
-  let readFromMlirBytecode = [{
-    uint64_t val;
-    if (failed($_reader.readVarInt(val)))
-      return ::mlir::failure();
-    $_storage = static_cast<}] # storageTypeParam # [{>(val);
-  }];
-  let defaultValue = default;
-}
-
-class EnumProperty<string storageTypeParam, string desc = "", string default = ""> :
-  EnumProp<storageTypeParam, desc, default>,
-  Deprecated<"moved to shorter name EnumProp">;
 
 // Note: only a class so we can deprecate the old name
 class _cls_StringProp : Property<"std::string", "string"> {
@@ -360,6 +342,7 @@ def UnitProperty : _cls_UnitProp, Deprecated<"moved to shorter name UnitProp">;
 
 //===----------------------------------------------------------------------===//
 // Property field overwrites
+//===----------------------------------------------------------------------===//
 
 /// Class for giving a property a default value.
 /// This doesn't change anything about the property other than giving it a default
@@ -419,6 +402,7 @@ class ConfinedProperty<Property p, Pred pred, string newSummary = "">
 
 //===----------------------------------------------------------------------===//
 // Primitive property combinators
+//===----------------------------------------------------------------------===//
 
 /// Create a variable named `name` of `prop`'s storage type that is initialized
 /// to the correct default value, if there is one.

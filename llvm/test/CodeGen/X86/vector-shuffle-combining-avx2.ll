@@ -817,15 +817,13 @@ define <32 x i8> @concat_alignr_unnecessary(<16 x i8> %a0, <16 x i8> noundef %a1
   ret <32 x i8> %res
 }
 
-; TODO: Not beneficial to concatenate both inputs just to create a 256-bit packss
-define <32 x i8> @concat_packsr_unnecessary(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> %a2) nounwind {
-; CHECK-LABEL: concat_packsr_unnecessary:
+; Not beneficial to concatenate both inputs just to create a 256-bit packss
+define <32 x i8> @concat_packss_unnecessary(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> %a2) nounwind {
+; CHECK-LABEL: concat_packss_unnecessary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
-; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
-; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; CHECK-NEXT:    vpacksswb %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpacksswb %xmm1, %xmm0, %xmm1
+; CHECK-NEXT:    vpacksswb %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %lo = tail call <16 x i8> @llvm.x86.sse2.packsswb.128(<8 x i16> %a0, <8 x i16> %a1)
   %hi = tail call <16 x i8> @llvm.x86.sse2.packsswb.128(<8 x i16> %a0, <8 x i16> %a2)
@@ -846,6 +844,26 @@ define <32 x i8> @concat_pshufb_unnecessary(<16 x i8> %a0, <16 x i8> %a1, <16 x 
   %hi = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a0, <16 x i8> %a2)
   %res = shufflevector <16 x i8> %lo, <16 x i8> %hi, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ret <32 x i8> %res
+}
+
+define <8 x float> @demandedelts_vpermps(<8 x float> %a0, <8 x float> %a1) {
+; AVX2-LABEL: demandedelts_vpermps:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,1,1,0]
+; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; AVX2-NEXT:    ret{{[l|q]}}
+;
+; AVX512-LABEL: demandedelts_vpermps:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm2 = [3,1,1,0,20,21,22,23]
+; AVX512-NEXT:    vpermt2ps %zmm1, %zmm2, %zmm0
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512-NEXT:    ret{{[l|q]}}
+  %lo = call <8 x float> @llvm.x86.avx2.permps(<8 x float> %a0, <8 x i32> <i32 3, i32 1, i32 1, i32 0, i32 0, i32 0, i32 7, i32 7>)
+  %hi = shufflevector <8 x float> %lo, <8 x float> %a1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
+  ret <8 x float> %hi
 }
 
 define <8 x i32> @constant_fold_permd() {

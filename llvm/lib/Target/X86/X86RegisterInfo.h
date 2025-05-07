@@ -31,6 +31,10 @@ private:
   ///
   bool IsWin64;
 
+  /// IsUEFI64 - Is UEFI 64 bit target.
+  ///
+  bool IsUEFI64;
+
   /// SlotSize - Stack slot size in bytes.
   ///
   unsigned SlotSize;
@@ -155,8 +159,8 @@ public:
 
   // Debug information queries.
   Register getFrameRegister(const MachineFunction &MF) const override;
-  unsigned getPtrSizedFrameRegister(const MachineFunction &MF) const;
-  unsigned getPtrSizedStackRegister(const MachineFunction &MF) const;
+  Register getPtrSizedFrameRegister(const MachineFunction &MF) const;
+  Register getPtrSizedStackRegister(const MachineFunction &MF) const;
   Register getStackRegister() const { return StackPtr; }
   Register getBaseRegister() const { return BasePtr; }
   /// Returns physical register used as frame pointer.
@@ -171,6 +175,9 @@ public:
                              SmallVectorImpl<MCPhysReg> &Hints,
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
+
+  const TargetRegisterClass *
+  constrainRegClassToNonRex2(const TargetRegisterClass *RC) const;
 };
 
 } // End llvm namespace

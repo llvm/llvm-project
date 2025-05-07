@@ -234,48 +234,9 @@ private:
 // RewritePattern
 //===----------------------------------------------------------------------===//
 
-namespace detail {
-/// Helper class that derives from a RewritePattern class and provides separate
-/// `match` and `rewrite` entry points instead of a combined `matchAndRewrite`.
-///
-/// This class is deprecated. Use `matchAndRewrite` instead of separate `match`
-/// and `rewrite`.
-template <typename PatternT>
-class SplitMatchAndRewriteImpl : public PatternT {
-  using PatternT::PatternT;
-
-  /// Attempt to match against IR rooted at the specified operation, which is
-  /// the same operation kind as getRootKind().
-  ///
-  /// Note: This function must not modify the IR.
-  virtual LogicalResult match(typename PatternT::OperationT op) const = 0;
-
-  /// Rewrite the IR rooted at the specified operation with the result of
-  /// this pattern, generating any new operations with the specified
-  /// rewriter.
-  virtual void rewrite(typename PatternT::OperationT op,
-                       PatternRewriter &rewriter) const = 0;
-
-  LogicalResult matchAndRewrite(typename PatternT::OperationT op,
-                                PatternRewriter &rewriter) const final {
-    if (succeeded(match(op))) {
-      rewrite(op, rewriter);
-      return success();
-    }
-    return failure();
-  }
-};
-} // namespace detail
-
 /// RewritePattern is the common base class for all DAG to DAG replacements.
 class RewritePattern : public Pattern {
 public:
-  using OperationT = Operation *;
-
-  /// `SplitMatchAndRewrite` is deprecated. Use `matchAndRewrite` instead of
-  /// separate `match` and `rewrite`.
-  using SplitMatchAndRewrite = detail::SplitMatchAndRewriteImpl<RewritePattern>;
-
   virtual ~RewritePattern() = default;
 
   /// Attempt to match against code rooted at the specified operation,
@@ -312,17 +273,13 @@ private:
   template <typename T>
   using detect_has_initialize = llvm::is_detected<has_initialize, T>;
 
-  /// Initialize the derived pattern by calling its `initialize` method.
+  /// Initialize the derived pattern by calling its `initialize` method if
+  /// available.
   template <typename T>
-  static std::enable_if_t<detect_has_initialize<T>::value>
-  initializePattern(T &pattern) {
-    pattern.initialize();
+  static void initializePattern(T &pattern) {
+    if constexpr (detect_has_initialize<T>::value)
+      pattern.initialize();
   }
-  /// Empty derived pattern initializer for patterns that do not have an
-  /// initialize method.
-  template <typename T>
-  static std::enable_if_t<!detect_has_initialize<T>::value>
-  initializePattern(T &) {}
 
   /// An anchor for the virtual table.
   virtual void anchor();
@@ -334,7 +291,6 @@ namespace detail {
 /// class or Interface.
 template <typename SourceOp>
 struct OpOrInterfaceRewritePatternBase : public RewritePattern {
-  using OperationT = SourceOp;
   using RewritePattern::RewritePattern;
 
   /// Wrapper around the RewritePattern method that passes the derived op type.
@@ -357,11 +313,6 @@ template <typename SourceOp>
 struct OpRewritePattern
     : public detail::OpOrInterfaceRewritePatternBase<SourceOp> {
 
-  /// `SplitMatchAndRewrite` is deprecated. Use `matchAndRewrite` instead of
-  /// separate `match` and `rewrite`.
-  using SplitMatchAndRewrite =
-      detail::SplitMatchAndRewriteImpl<OpRewritePattern<SourceOp>>;
-
   /// Patterns must specify the root operation name they match against, and can
   /// also specify the benefit of the pattern matching and a list of generated
   /// ops.
@@ -377,11 +328,6 @@ struct OpRewritePattern
 template <typename SourceOp>
 struct OpInterfaceRewritePattern
     : public detail::OpOrInterfaceRewritePatternBase<SourceOp> {
-
-  /// `SplitMatchAndRewrite` is deprecated. Use `matchAndRewrite` instead of
-  /// separate `match` and `rewrite`.
-  using SplitMatchAndRewrite =
-      detail::SplitMatchAndRewriteImpl<OpInterfaceRewritePattern<SourceOp>>;
 
   OpInterfaceRewritePattern(MLIRContext *context, PatternBenefit benefit = 1)
       : detail::OpOrInterfaceRewritePatternBase<SourceOp>(

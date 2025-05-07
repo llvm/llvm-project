@@ -163,9 +163,8 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
 
   // TODO: We're checking this late, would be nice to check it earlier.
   if (STM.requiresCodeObjectV6() && CodeObjectVersion < AMDGPU::AMDHSA_COV6) {
-    report_fatal_error(
-        STM.getCPU() + " is only available on code object version 6 or better",
-        /*gen_crash_diag*/ false);
+    reportFatalUsageError(
+        STM.getCPU() + " is only available on code object version 6 or better");
   }
 
   // TODO: Which one is called first, emitStartOfAsmFile or
@@ -1197,6 +1196,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   if (getIsaVersion(getGlobalSTI()->getCPU()).Major >= 10) {
     ProgInfo.WgpMode = STM.isCuModeEnabled() ? 0 : 1;
     ProgInfo.MemOrdered = 1;
+    ProgInfo.FwdProgress = 1;
   }
 
   // 0 = X, 1 = XY, 2 = XYZ
@@ -1414,6 +1414,9 @@ static void EmitPALMetadataCommon(AMDGPUPALMetadata *MD,
     MD->setHwStage(CC, ".trap_present",
                    (bool)CurrentProgramInfo.TrapHandlerEnable);
     MD->setHwStage(CC, ".excp_en", CurrentProgramInfo.EXCPEnable);
+
+    if (ST.isDynamicVGPREnabled())
+      MD->setComputeRegisters(".dynamic_vgpr_en", true);
   }
 
   MD->setHwStage(CC, ".lds_size",
@@ -1436,8 +1439,15 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
   MD->setEntryPoint(CC, MF.getFunction().getName());
   MD->setNumUsedVgprs(CC, CurrentProgramInfo.NumVGPRsForWavesPerEU, Ctx);
 
-  // Only set AGPRs for supported devices
+  // For targets that support dynamic VGPRs, set the number of saved dynamic
+  // VGPRs (if any) in the PAL metadata.
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
+  if (STM.isDynamicVGPREnabled() &&
+      MFI->getScratchReservedForDynamicVGPRs() > 0)
+    MD->setHwStage(CC, ".dynamic_vgpr_saved_count",
+                   MFI->getScratchReservedForDynamicVGPRs() / 4);
+
+  // Only set AGPRs for supported devices
   if (STM.hasMAIInsts()) {
     MD->setNumUsedAgprs(CC, CurrentProgramInfo.NumAccVGPR);
   }
@@ -1732,3 +1742,8 @@ void AMDGPUAsmPrinter::emitResourceUsageRemarks(
     EmitResourceUsageRemark("BytesLDS", "LDS Size [bytes/block]",
                             CurrentProgramInfo.LDSSize);
 }
+
+char AMDGPUAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(AMDGPUAsmPrinter, "amdgpu-asm-printer",
+                "AMDGPU Assembly Printer", false, false)

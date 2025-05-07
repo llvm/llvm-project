@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++2c -verify -emit-llvm -triple=x86_64-pc-linux-gnu %s -o - | FileCheck %s
-// RUN: %clang_cc1 -std=c++2c -verify -fsyntax-only -fexperimental-new-constant-interpreter -triple=x86_64-pc-linux-gnu %s
+// RUN: %clang_cc1 -std=c++2c -verify -emit-llvm -triple=x86_64-pc-linux-gnu %s -o -                                         | FileCheck %s
+// RUN: %clang_cc1 -std=c++2c -verify -emit-llvm -triple=x86_64-pc-linux-gnu %s -o - -fexperimental-new-constant-interpreter | FileCheck %s
 // expected-no-diagnostics
 
 namespace std {
@@ -138,9 +138,6 @@ constexpr int bar(auto) {
     return S(0, 0);
   }();
   static_assert(value == S(1, 2));
-
-  // FIXME: The diagnostic message adds a trailing comma "static assertion failed due to requirement 'value == Case1::S((0, 1, ))'"
-  // static_assert(value == S(0, 1));
 
   constexpr auto value2 = [] {
     if (auto [a, b] = S(1, 2))

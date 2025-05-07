@@ -53,7 +53,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 
 //--- device.mlir
 
-module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true, omp.is_gpu = true} {
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui32>>, llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true, omp.is_gpu = true} {
   llvm.func @main(%x : i32) {
     omp.target host_eval(%x -> %lb, %x -> %ub, %x -> %step : i32, i32, i32) {
       omp.teams {

@@ -9,16 +9,18 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Telemetry.h"
 #include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/UUID.h"
-#include "lldb/Version/Version.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Telemetry/Telemetry.h"
 #include <chrono>
 #include <cstdlib>
+#include <ctime>
 #include <memory>
 #include <string>
 #include <utility>
@@ -38,18 +40,9 @@ static uint64_t ToNanosec(const SteadyTimePoint Point) {
 // This reduces the chances of getting the same UUID, even when the same
 // user runs the two copies of binary at the same time.
 static std::string MakeUUID() {
-  uint8_t random_bytes[16];
-  std::string randomString = "_";
-  if (auto ec = llvm::getRandomBytes(random_bytes, 16)) {
-    LLDB_LOG(GetLog(LLDBLog::Object),
-             "Failed to generate random bytes for UUID: {0}", ec.message());
-  } else {
-    randomString = UUID(random_bytes).GetAsString();
-  }
-
-  return llvm::formatv(
-      "{0}_{1}", randomString,
-      std::chrono::steady_clock::now().time_since_epoch().count());
+  auto timestmap = std::chrono::steady_clock::now().time_since_epoch().count();
+  UUID uuid = UUID::Generate();
+  return llvm::formatv("{0}_{1}", uuid.GetAsString(), timestmap);
 }
 
 void LLDBBaseTelemetryInfo::serialize(Serializer &serializer) const {
@@ -58,6 +51,14 @@ void LLDBBaseTelemetryInfo::serialize(Serializer &serializer) const {
   serializer.write("start_time", ToNanosec(start_time));
   if (end_time.has_value())
     serializer.write("end_time", ToNanosec(end_time.value()));
+}
+
+void ClientInfo::serialize(Serializer &serializer) const {
+  LLDBBaseTelemetryInfo::serialize(serializer);
+  serializer.write("client_data", client_data);
+  serializer.write("client_name", client_name);
+  if (error_msg.has_value())
+    serializer.write("error_msg", error_msg.value());
 }
 
 void CommandInfo::serialize(Serializer &serializer) const {
@@ -76,6 +77,9 @@ void CommandInfo::serialize(Serializer &serializer) const {
     serializer.write("error_data", error_data.value());
 }
 
+std::atomic<uint64_t> CommandInfo::g_command_id_seed = 1;
+uint64_t CommandInfo::GetNextID() { return g_command_id_seed.fetch_add(1); }
+
 void DebuggerInfo::serialize(Serializer &serializer) const {
   LLDBBaseTelemetryInfo::serialize(serializer);
 
@@ -83,8 +87,26 @@ void DebuggerInfo::serialize(Serializer &serializer) const {
   serializer.write("is_exit_entry", is_exit_entry);
 }
 
-std::atomic<uint64_t> CommandInfo::g_command_id_seed = 0;
-uint64_t CommandInfo::GetNextId() { return g_command_id_seed.fetch_add(1); }
+void ExecutableModuleInfo::serialize(Serializer &serializer) const {
+  LLDBBaseTelemetryInfo::serialize(serializer);
+
+  serializer.write("uuid", uuid.GetAsString());
+  serializer.write("pid", pid);
+  serializer.write("triple", triple);
+  serializer.write("is_start_entry", is_start_entry);
+}
+
+void ProcessExitInfo::serialize(Serializer &serializer) const {
+  LLDBBaseTelemetryInfo::serialize(serializer);
+
+  serializer.write("module_uuid", module_uuid.GetAsString());
+  serializer.write("pid", pid);
+  serializer.write("is_start_entry", is_start_entry);
+  if (exit_desc.has_value()) {
+    serializer.write("exit_code", exit_desc->exit_code);
+    serializer.write("exit_desc", exit_desc->description);
+  }
+}
 
 TelemetryManager::TelemetryManager(std::unique_ptr<LLDBConfig> config)
     : m_config(std::move(config)), m_id(MakeUUID()) {}
@@ -98,6 +120,63 @@ llvm::Error TelemetryManager::preDispatch(TelemetryInfo *entry) {
   return llvm::Error::success();
 }
 
+void TelemetryManager::DispatchClientTelemetry(
+    const lldb_private::StructuredDataImpl &entry, Debugger *debugger) {
+  if (!m_config->enable_client_telemetry)
+    return;
+
+  ClientInfo client_info;
+  client_info.debugger = debugger;
+  if (entry.GetObjectSP()->GetType() != lldb::eStructuredDataTypeDictionary) {
+    LLDB_LOG(GetLog(LLDBLog::Object), "Expected Dictionary type but got {0}.",
+             entry.GetObjectSP()->GetType());
+    return;
+  }
+
+  auto *dict = entry.GetObjectSP()->GetAsDictionary();
+
+  llvm::StringRef client_name;
+  if (dict->GetValueForKeyAsString("client_name", client_name))
+    client_info.client_name = client_name.str();
+  else
+    LLDB_LOG(GetLog(LLDBLog::Object),
+             "Cannot determine client_name from client-telemetry entry");
+
+  llvm::StringRef client_data;
+  if (dict->GetValueForKeyAsString("client_data", client_data))
+    client_info.client_data = client_data.str();
+  else
+    LLDB_LOG(GetLog(LLDBLog::Object),
+             "Cannot determine client_data from client-telemetry entry");
+
+  int64_t start_time;
+  if (dict->GetValueForKeyAsInteger("start_time", start_time)) {
+    client_info.start_time +=
+        std::chrono::nanoseconds(static_cast<size_t>(start_time));
+  } else {
+    LLDB_LOG(GetLog(LLDBLog::Object),
+             "Cannot determine start-time from client-telemetry entry");
+  }
+
+  int64_t end_time;
+  if (dict->GetValueForKeyAsInteger("end_time", end_time)) {
+    SteadyTimePoint epoch;
+    client_info.end_time =
+        epoch + std::chrono::nanoseconds(static_cast<size_t>(end_time));
+  } else {
+    LLDB_LOG(GetLog(LLDBLog::Object),
+             "Cannot determine end-time from client-telemetry entry");
+  }
+
+  llvm::StringRef error_msg;
+  if (dict->GetValueForKeyAsString("error", error_msg))
+    client_info.error_msg = error_msg.str();
+
+  if (llvm::Error er = dispatch(&client_info))
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Object), std::move(er),
+                   "Failed to dispatch client telemetry");
+}
+
 class NoOpTelemetryManager : public TelemetryManager {
 public:
   llvm::Error preDispatch(llvm::telemetry::TelemetryInfo *entry) override {
@@ -107,10 +186,16 @@ public:
 
   explicit NoOpTelemetryManager()
       : TelemetryManager(std::make_unique<LLDBConfig>(
-            /*EnableTelemetry*/ false, /*DetailedCommand*/ false)) {}
+            /*EnableTelemetry=*/false, /*DetailedCommand=*/false,
+            /*ClientTelemery=*/false)) {}
 
   virtual llvm::StringRef GetInstanceName() const override {
     return "NoOpTelemetryManager";
+  }
+
+  void DispatchClientTelemetry(const lldb_private::StructuredDataImpl &entry,
+                               Debugger *debugger) override {
+    // Does nothing.
   }
 
   llvm::Error dispatch(llvm::telemetry::TelemetryInfo *entry) override {

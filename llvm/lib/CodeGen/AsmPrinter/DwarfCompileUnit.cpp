@@ -782,6 +782,8 @@ DIE *DwarfCompileUnit::constructLexicalScopeDIE(LexicalScope *Scope) {
     assert(!LexicalBlockDIEs.count(DS) &&
            "Concrete out-of-line DIE for this scope exists!");
     LexicalBlockDIEs[DS] = ScopeDIE;
+  } else {
+    InlinedLocalScopeDIEs[DS].push_back(ScopeDIE);
   }
 
   attachRangesOrLowHighPC(*ScopeDIE, Scope->getRanges());
@@ -1170,7 +1172,7 @@ DIE *DwarfCompileUnit::createAndAddScopeChildren(LexicalScope *Scope,
   // should be emitted for subprograms in this CU.
   if (!includeMinimalInlineScopes() && !Scope->getInlinedAt()) {
     auto &LocalDecls = DD->getLocalDeclsForScope(Scope->getScopeNode());
-    DeferredLocalDecls.insert(LocalDecls.begin(), LocalDecls.end());
+    DeferredLocalDecls.insert_range(LocalDecls);
   }
 
   // Emit inner lexical scopes.
@@ -1489,6 +1491,19 @@ void DwarfCompileUnit::finishEntityDefinition(const DbgEntity *Entity) {
   // A TAG_label with a name and an AT_low_pc must be placed in debug_names.
   if (StringRef Name = Label->getName(); !Name.empty())
     getDwarfDebug().addAccelName(*this, CUNode->getNameTableKind(), Name, *Die);
+}
+
+void DwarfCompileUnit::attachLexicalScopesAbstractOrigins() {
+  auto AttachAO = [&](const DILocalScope *LS, DIE *ScopeDIE) {
+    if (auto *AbsLSDie = getAbstractScopeDIEs().lookup(LS))
+      addDIEEntry(*ScopeDIE, dwarf::DW_AT_abstract_origin, *AbsLSDie);
+  };
+
+  for (auto [LScope, ScopeDIE] : LexicalBlockDIEs)
+    AttachAO(LScope, ScopeDIE);
+  for (auto &[LScope, ScopeDIEs] : InlinedLocalScopeDIEs)
+    for (auto *ScopeDIE : ScopeDIEs)
+      AttachAO(LScope, ScopeDIE);
 }
 
 DbgEntity *DwarfCompileUnit::getExistingAbstractEntity(const DINode *Node) {

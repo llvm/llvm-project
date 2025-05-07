@@ -366,9 +366,9 @@ scc_member_iterator<GraphT, GT>::scc_member_iterator(
     Queue.pop();
     Nodes.push_back(Node);
     for (auto &Edge : Node->Edges) {
-      NodeInfoMap[Edge.Target].IncomingMSTEdges.erase(&Edge);
-      if (MSTEdges.count(&Edge) &&
-          NodeInfoMap[Edge.Target].IncomingMSTEdges.empty()) {
+      NodeInfo &Info = NodeInfoMap[Edge.Target];
+      Info.IncomingMSTEdges.erase(&Edge);
+      if (MSTEdges.count(&Edge) && Info.IncomingMSTEdges.empty()) {
         Queue.push(Edge.Target);
       }
     }

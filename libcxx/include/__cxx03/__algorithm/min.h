@@ -13,7 +13,6 @@
 #include <__cxx03/__algorithm/comp_ref_type.h>
 #include <__cxx03/__algorithm/min_element.h>
 #include <__cxx03/__config>
-#include <__cxx03/initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -35,21 +34,6 @@ _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 con
 min(_LIBCPP_LIFETIMEBOUND const _Tp& __a, _LIBCPP_LIFETIMEBOUND const _Tp& __b) {
   return std::min(__a, __b, __less<>());
 }
-
-#ifndef _LIBCPP_CXX03_LANG
-
-template <class _Tp, class _Compare>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp
-min(initializer_list<_Tp> __t, _Compare __comp) {
-  return *std::__min_element<__comp_ref_type<_Compare> >(__t.begin(), __t.end(), __comp);
-}
-
-template <class _Tp>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp min(initializer_list<_Tp> __t) {
-  return *std::min_element(__t.begin(), __t.end(), __less<>());
-}
-
-#endif // _LIBCPP_CXX03_LANG
 
 _LIBCPP_END_NAMESPACE_STD
 

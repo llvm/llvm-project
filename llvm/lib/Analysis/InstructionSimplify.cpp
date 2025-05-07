@@ -43,6 +43,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/KnownFPClass.h"
 #include <algorithm>
 #include <optional>
 using namespace llvm;
@@ -6539,6 +6540,10 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     // Canonicalize immediate constant operand as Op1.
     if (match(Op0, m_ImmConstant()))
       std::swap(Op0, Op1);
+
+    // Propagate poison.
+    if (isa<PoisonValue>(Op1))
+      return Op1;
 
     // Assume undef is the limit value.
     if (Q.isUndefValue(Op1))

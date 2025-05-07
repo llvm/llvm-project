@@ -125,7 +125,7 @@ define amdgpu_gfx float @simple_stack_recurse(float %arg0) #0 {
   ret float %add
 }
 
-@lds = internal addrspace(3) global [64 x float] undef
+@lds = internal addrspace(3) global [64 x float] poison
 
 define amdgpu_gfx float @simple_lds(float %arg0) #0 {
   %val = load float, ptr addrspace(3) @lds

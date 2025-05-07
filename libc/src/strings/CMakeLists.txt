@@ -116,12 +116,36 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  strcasecmp_l
+  SRCS
+    strcasecmp_l.cpp
+  HDRS
+    strcasecmp_l.h
+  DEPENDS
+    libc.hdr.types.locale_t
+    libc.src.__support.ctype_utils
+    libc.src.string.memory_utils.inline_strcmp
+)
+
+add_entrypoint_object(
   strncasecmp
   SRCS
     strncasecmp.cpp
   HDRS
     strncasecmp.h
   DEPENDS
+    libc.src.__support.ctype_utils
+    libc.src.string.memory_utils.inline_strcmp
+)
+
+add_entrypoint_object(
+  strncasecmp_l
+  SRCS
+    strncasecmp_l.cpp
+  HDRS
+    strncasecmp_l.h
+  DEPENDS
+    libc.hdr.types.locale_t
     libc.src.__support.ctype_utils
     libc.src.string.memory_utils.inline_strcmp
 )

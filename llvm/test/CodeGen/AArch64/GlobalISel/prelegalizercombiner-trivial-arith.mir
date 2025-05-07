@@ -551,3 +551,48 @@ body:             |
     RET_ReallyLR implicit $w0
 
 ...
+---
+name:   sub_to_add_nsw_128
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+
+    ; CHECK-LABEL: name: sub_to_add_nsw_128
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a:_(s32) = COPY $w0
+    ; CHECK-NEXT: %b:_(s8) = G_TRUNC %a(s32)
+    ; CHECK-NEXT: %c:_(s8) = G_CONSTANT i8 -128
+    ; CHECK-NEXT: %add:_(s8) = G_ADD %b, %c
+    ; CHECK-NEXT: %d:_(s32) = G_ZEXT %add(s8)
+    ; CHECK-NEXT: $w0 = COPY %d(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %a:_(s32) = COPY $w0
+    %b:_(s8) = G_TRUNC %a
+    %c:_(s8) = G_CONSTANT i8 -128
+    %add:_(s8) = nsw nuw G_SUB %b, %c
+    %d:_(s32) = G_ZEXT %add
+    $w0 = COPY %d
+    RET_ReallyLR implicit $x0
+
+...
+---
+name:   sub_to_add_nsw_intmin
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+
+    ; CHECK-LABEL: name: sub_to_add_nsw_intmin
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a:_(s32) = COPY $w0
+    ; CHECK-NEXT: %c:_(s32) = G_CONSTANT i32 -2147483648
+    ; CHECK-NEXT: %add:_(s32) = G_ADD %a, %c
+    ; CHECK-NEXT: $w0 = COPY %add(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %a:_(s32) = COPY $w0
+    %c:_(s32) = G_CONSTANT i32 -2147483648
+    %add:_(s32) = nsw nuw G_SUB %a, %c
+    $w0 = COPY %add
+    RET_ReallyLR implicit $x0
+...

@@ -1356,12 +1356,6 @@ std::optional<int64_t> MemRefRegion::getRegionSize() {
     return false;
   }
 
-  // Indices to use for the DmaStart op.
-  // Indices for the original memref being DMAed from/to.
-  SmallVector<Value, 4> memIndices;
-  // Indices for the faster buffer being DMAed into/from.
-  SmallVector<Value, 4> bufIndices;
-
   // Compute the extents of the buffer.
   std::optional<int64_t> numElements = getConstantBoundingSizeAndShape();
   if (!numElements) {
@@ -1988,6 +1982,8 @@ unsigned mlir::affine::getNestingDepth(Operation *op) {
   while ((currOp = currOp->getParentOp())) {
     if (isa<AffineForOp>(currOp))
       depth++;
+    if (auto parOp = dyn_cast<AffineParallelOp>(currOp))
+      depth += parOp.getNumDims();
   }
   return depth;
 }

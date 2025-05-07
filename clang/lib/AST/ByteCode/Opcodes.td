@@ -29,7 +29,6 @@ def IntAP : Type;
 def IntAPS : Type;
 def Float : Type;
 def Ptr : Type;
-def FnPtr : Type;
 def MemberPtr : Type;
 def FixedPoint : Type;
 
@@ -106,9 +105,7 @@ def AluTypeClass : TypeClass {
   let Types = !listconcat(IntegerTypeClass.Types, [Bool], [FixedPoint]);
 }
 
-def PtrTypeClass : TypeClass {
-  let Types = [Ptr, FnPtr, MemberPtr];
-}
+def PtrTypeClass : TypeClass { let Types = [Ptr, MemberPtr]; }
 
 def NonPtrTypeClass : TypeClass {
   let Types = !listconcat(IntegerTypeClass.Types, [Bool], [Float], [FixedPoint]);
@@ -119,7 +116,7 @@ def AllTypeClass : TypeClass {
 }
 
 def ComparableTypeClass : TypeClass {
-  let Types = !listconcat(AluTypeClass.Types, [Ptr], [Float], [FnPtr]);
+  let Types = !listconcat(AluTypeClass.Types, [Ptr], [Float]);
 }
 
 class SingletonTypeClass<Type Ty> : TypeClass {
@@ -216,9 +213,7 @@ def CallVirt : Opcode {
   let Args = [ArgFunction, ArgUint32];
 }
 
-def CallBI : Opcode {
-  let Args = [ArgFunction, ArgCallExpr, ArgUint32];
-}
+def CallBI : Opcode { let Args = [ArgCallExpr, ArgUint32]; }
 
 def CallPtr : Opcode {
   let Args = [ArgUint32, ArgCallExpr];
@@ -419,6 +414,8 @@ def CheckLiteralType : Opcode {
   let Args = [ArgTypePtr];
 }
 
+def CheckArraySize : Opcode { let Args = [ArgUint64]; }
+
 // [] -> [Value]
 def GetGlobal : AccessOpcode;
 def GetGlobalUnchecked : AccessOpcode;
@@ -593,10 +590,18 @@ def Shr : Opcode {
 def Inv: Opcode;
 
 // Increment and decrement.
-def Inc: AluOpcode;
-def IncPop : AluOpcode;
-def Dec: AluOpcode;
-def DecPop: AluOpcode;
+class OverflowOpcode : Opcode {
+  let Types = [AluTypeClass];
+  let Args = [ArgBool];
+  let HasGroup = 1;
+}
+
+def Inc : OverflowOpcode;
+def IncPop : OverflowOpcode;
+def PreInc : OverflowOpcode;
+def Dec : OverflowOpcode;
+def DecPop : OverflowOpcode;
+def PreDec : OverflowOpcode;
 
 // Float increment and decrement.
 def Incf: FloatOpcode;
@@ -778,6 +783,7 @@ def SideEffect : Opcode {}
 def InvalidCast : Opcode {
   let Args = [ArgCastKind, ArgBool];
 }
+def CheckPseudoDtor : Opcode {}
 
 def InvalidDeclRef : Opcode {
   let Args = [ArgDeclRef, ArgBool];
@@ -865,3 +871,8 @@ def BitCast : Opcode;
 def GetTypeid : Opcode { let Args = [ArgTypePtr, ArgTypePtr]; }
 def GetTypeidPtr : Opcode { let Args = [ArgTypePtr]; }
 def DiagTypeid : Opcode;
+
+def CheckDestruction : Opcode;
+
+def PushCC : Opcode { let Args = [ArgBool]; }
+def PopCC : Opcode;

@@ -28,6 +28,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ScaledNumber.h"
 #include "llvm/Support/StringSaver.h"
@@ -300,7 +301,7 @@ template <> struct DenseMapInfo<ValueInfo> {
     assert(isSpecialKey(L) || isSpecialKey(R) || (L.haveGVs() == R.haveGVs()));
     return L.getRef() == R.getRef();
   }
-  static unsigned getHashValue(ValueInfo I) { return (uintptr_t)I.getRef(); }
+  static unsigned getHashValue(ValueInfo I) { return hash_value(I.getRef()); }
 };
 
 // For optional hinted size reporting, holds a pair of the full stack id
@@ -342,22 +343,8 @@ struct CallsiteInfo {
 
 inline raw_ostream &operator<<(raw_ostream &OS, const CallsiteInfo &SNI) {
   OS << "Callee: " << SNI.Callee;
-  bool First = true;
-  OS << " Clones: ";
-  for (auto V : SNI.Clones) {
-    if (!First)
-      OS << ", ";
-    First = false;
-    OS << V;
-  }
-  First = true;
-  OS << " StackIds: ";
-  for (auto Id : SNI.StackIdIndices) {
-    if (!First)
-      OS << ", ";
-    First = false;
-    OS << Id;
-  }
+  OS << " Clones: " << llvm::interleaved(SNI.Clones);
+  OS << " StackIds: " << llvm::interleaved(SNI.StackIdIndices);
   return OS;
 }
 
@@ -391,14 +378,7 @@ struct MIBInfo {
 
 inline raw_ostream &operator<<(raw_ostream &OS, const MIBInfo &MIB) {
   OS << "AllocType " << (unsigned)MIB.AllocType;
-  bool First = true;
-  OS << " StackIds: ";
-  for (auto Id : MIB.StackIdIndices) {
-    if (!First)
-      OS << ", ";
-    First = false;
-    OS << Id;
-  }
+  OS << " StackIds: " << llvm::interleaved(MIB.StackIdIndices);
   return OS;
 }
 
@@ -1291,40 +1271,40 @@ struct TypeIdSummary {
 };
 
 class CfiFunctionIndex {
-  std::set<std::string, std::less<>> Index;
+  DenseMap<GlobalValue::GUID, std::set<std::string, std::less<>>> Index;
+  using IndexIterator =
+      DenseMap<GlobalValue::GUID,
+               std::set<std::string, std::less<>>>::const_iterator;
+  using NestedIterator = std::set<std::string, std::less<>>::const_iterator;
 
 public:
-  class GUIDIterator
-      : public iterator_adaptor_base<
-            GUIDIterator, std::set<std::string, std::less<>>::const_iterator,
-            std::forward_iterator_tag, GlobalValue::GUID> {
-    using base = iterator_adaptor_base<
-        GUIDIterator, std::set<std::string, std::less<>>::const_iterator,
-        std::forward_iterator_tag, GlobalValue::GUID>;
+  // Iterates keys of the DenseMap.
+  class GUIDIterator : public iterator_adaptor_base<GUIDIterator, IndexIterator,
+                                                    std::forward_iterator_tag,
+                                                    GlobalValue::GUID> {
+    using base = GUIDIterator::iterator_adaptor_base;
 
   public:
     GUIDIterator() = default;
-    explicit GUIDIterator(std::set<std::string, std::less<>>::const_iterator I)
-        : base(std::move(I)) {}
+    explicit GUIDIterator(IndexIterator I) : base(I) {}
 
-    GlobalValue::GUID operator*() const {
-      return GlobalValue::getGUID(
-          GlobalValue::dropLLVMManglingEscape(*this->wrapped()));
-    }
+    GlobalValue::GUID operator*() const { return this->wrapped()->first; }
   };
 
   CfiFunctionIndex() = default;
-  template <typename It> CfiFunctionIndex(It B, It E) : Index(B, E) {}
-
-  std::set<std::string, std::less<>>::const_iterator begin() const {
-    return Index.begin();
+  template <typename It> CfiFunctionIndex(It B, It E) {
+    for (; B != E; ++B)
+      emplace(*B);
   }
 
-  std::set<std::string, std::less<>>::const_iterator end() const {
-    return Index.end();
+  std::vector<StringRef> symbols() const {
+    std::vector<StringRef> Symbols;
+    for (auto &[GUID, Syms] : Index) {
+      (void)GUID;
+      llvm::append_range(Symbols, Syms);
+    }
+    return Symbols;
   }
-
-  std::vector<StringRef> symbols() const { return {begin(), end()}; }
 
   GUIDIterator guid_begin() const { return GUIDIterator(Index.begin()); }
   GUIDIterator guid_end() const { return GUIDIterator(Index.end()); }
@@ -1332,11 +1312,30 @@ public:
     return make_range(guid_begin(), guid_end());
   }
 
-  template <typename... Args> void emplace(Args &&...A) {
-    Index.emplace(std::forward<Args>(A)...);
+  iterator_range<NestedIterator> forGuid(GlobalValue::GUID GUID) const {
+    auto I = Index.find(GUID);
+    if (I == Index.end())
+      return make_range(NestedIterator{}, NestedIterator{});
+    return make_range(I->second.begin(), I->second.end());
   }
 
-  size_t count(StringRef S) const { return Index.count(S); }
+  template <typename... Args> void emplace(Args &&...A) {
+    StringRef S(std::forward<Args>(A)...);
+    GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
+        GlobalValue::dropLLVMManglingEscape(S));
+    Index[GUID].emplace(S);
+  }
+
+  size_t count(StringRef S) const {
+    GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
+        GlobalValue::dropLLVMManglingEscape(S));
+    auto I = Index.find(GUID);
+    if (I == Index.end())
+      return 0;
+    return I->second.count(S);
+  }
+
+  bool empty() const { return Index.empty(); }
 };
 
 /// 160 bits SHA1
@@ -1732,8 +1731,10 @@ public:
   /// Add a global value summary for a value of the given name.
   void addGlobalValueSummary(StringRef ValueName,
                              std::unique_ptr<GlobalValueSummary> Summary) {
-    addGlobalValueSummary(getOrInsertValueInfo(GlobalValue::getGUID(ValueName)),
-                          std::move(Summary));
+    addGlobalValueSummary(
+        getOrInsertValueInfo(
+            GlobalValue::getGUIDAssumingExternalLinkage(ValueName)),
+        std::move(Summary));
   }
 
   /// Add a global value summary for the given ValueInfo.
@@ -1870,19 +1871,22 @@ public:
   /// This accessor can mutate the map and therefore should not be used in
   /// the ThinLTO backends.
   TypeIdSummary &getOrInsertTypeIdSummary(StringRef TypeId) {
-    auto TidIter = TypeIdMap.equal_range(GlobalValue::getGUID(TypeId));
+    auto TidIter = TypeIdMap.equal_range(
+        GlobalValue::getGUIDAssumingExternalLinkage(TypeId));
     for (auto &[GUID, TypeIdPair] : make_range(TidIter))
       if (TypeIdPair.first == TypeId)
         return TypeIdPair.second;
-    auto It = TypeIdMap.insert({GlobalValue::getGUID(TypeId),
-                                {TypeIdSaver.save(TypeId), TypeIdSummary()}});
+    auto It =
+        TypeIdMap.insert({GlobalValue::getGUIDAssumingExternalLinkage(TypeId),
+                          {TypeIdSaver.save(TypeId), TypeIdSummary()}});
     return It->second.second;
   }
 
   /// This returns either a pointer to the type id summary (if present in the
   /// summary map) or null (if not present). This may be used when importing.
   const TypeIdSummary *getTypeIdSummary(StringRef TypeId) const {
-    auto TidIter = TypeIdMap.equal_range(GlobalValue::getGUID(TypeId));
+    auto TidIter = TypeIdMap.equal_range(
+        GlobalValue::getGUIDAssumingExternalLinkage(TypeId));
     for (const auto &[GUID, TypeIdPair] : make_range(TidIter))
       if (TypeIdPair.first == TypeId)
         return &TypeIdPair.second;

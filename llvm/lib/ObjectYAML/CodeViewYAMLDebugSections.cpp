@@ -735,9 +735,7 @@ Expected<std::shared_ptr<YAMLCoffSymbolRVASubsection>>
 YAMLCoffSymbolRVASubsection::fromCodeViewSubsection(
     const DebugSymbolRVASubsectionRef &Section) {
   auto Result = std::make_shared<YAMLCoffSymbolRVASubsection>();
-  for (const auto &RVA : Section) {
-    Result->RVAs.push_back(RVA);
-  }
+  llvm::append_range(Result->RVAs, Section);
   return Result;
 }
 

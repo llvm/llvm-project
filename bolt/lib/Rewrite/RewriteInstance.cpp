@@ -20,7 +20,7 @@
 #include "bolt/Passes/BinaryPasses.h"
 #include "bolt/Passes/CacheMetrics.h"
 #include "bolt/Passes/IdenticalCodeFolding.h"
-#include "bolt/Passes/NonPacProtectedRetAnalysis.h"
+#include "bolt/Passes/PAuthGadgetScanner.h"
 #include "bolt/Passes/ReorderFunctions.h"
 #include "bolt/Profile/BoltAddressTranslation.h"
 #include "bolt/Profile/DataAggregator.h"
@@ -237,6 +237,12 @@ UseGnuStack("use-gnu-stack",
   cl::ZeroOrMore,
   cl::cat(BoltCategory));
 
+static cl::opt<uint64_t> CustomAllocationVMA(
+    "custom-allocation-vma",
+    cl::desc("use a custom address at which new code will be put, "
+             "bypassing BOLT's logic to detect where to put code"),
+    cl::Hidden, cl::cat(BoltCategory));
+
 static cl::opt<bool>
 SequentialDisassembly("sequential-disassembly",
   cl::desc("performs disassembly sequentially"),
@@ -247,12 +253,14 @@ static cl::opt<bool> WriteBoltInfoSection(
     "bolt-info", cl::desc("write bolt info section in the output binary"),
     cl::init(true), cl::Hidden, cl::cat(BoltOutputCategory));
 
-cl::list<GadgetScannerKind>
-    GadgetScannersToRun("scanners", cl::desc("which gadget scanners to run"),
-                        cl::values(clEnumValN(GS_PACRET, "pacret", "pac-ret"),
-                                   clEnumValN(GS_ALL, "all", "all")),
-                        cl::ZeroOrMore, cl::CommaSeparated,
-                        cl::cat(BinaryAnalysisCategory));
+cl::bits<GadgetScannerKind> GadgetScannersToRun(
+    "scanners", cl::desc("which gadget scanners to run"),
+    cl::values(
+        clEnumValN(GS_PACRET, "pacret",
+                   "pac-ret: return address protection (subset of \"pauth\")"),
+        clEnumValN(GS_PAUTH, "pauth", "All Pointer Authentication scanners"),
+        clEnumValN(GS_ALL, "all", "All implemented scanners")),
+    cl::ZeroOrMore, cl::CommaSeparated, cl::cat(BinaryAnalysisCategory));
 
 } // namespace opts
 
@@ -590,13 +598,33 @@ Error RewriteInstance::discoverStorage() {
 
   FirstNonAllocatableOffset = NextAvailableOffset;
 
+  if (opts::CustomAllocationVMA) {
+    // If user specified a custom address where we should start writing new
+    // data, honor that.
+    NextAvailableAddress = opts::CustomAllocationVMA;
+    // Sanity check the user-supplied address and emit warnings if something
+    // seems off.
+    for (const ELF64LE::Phdr &Phdr : PHs) {
+      switch (Phdr.p_type) {
+      case ELF::PT_LOAD:
+        if (NextAvailableAddress >= Phdr.p_vaddr &&
+            NextAvailableAddress < Phdr.p_vaddr + Phdr.p_memsz) {
+          BC->errs() << "BOLT-WARNING: user-supplied allocation vma 0x"
+                     << Twine::utohexstr(NextAvailableAddress)
+                     << " conflicts with ELF segment at 0x"
+                     << Twine::utohexstr(Phdr.p_vaddr) << "\n";
+        }
+      }
+    }
+  }
   NextAvailableAddress = alignTo(NextAvailableAddress, BC->PageAlign);
   NextAvailableOffset = alignTo(NextAvailableOffset, BC->PageAlign);
 
   // Hugify: Additional huge page from left side due to
   // weird ASLR mapping addresses (4KB aligned)
-  if (opts::Hugify && !BC->HasFixedLoadAddress)
+  if (opts::Hugify && !BC->HasFixedLoadAddress) {
     NextAvailableAddress += BC->PageAlign;
+  }
 
   if (!opts::UseGnuStack && !BC->IsLinuxKernel) {
     // This is where the black magic happens. Creating PHDR table in a segment
@@ -1052,10 +1080,11 @@ void RewriteInstance::discoverFileObjects() {
       continue;
     }
 
-    if (!Section->isText()) {
+    if (!Section->isText() || Section->isVirtual()) {
       assert(SymbolType != SymbolRef::ST_Function &&
              "unexpected function inside non-code section");
-      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: rejecting as symbol is not in code\n");
+      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: rejecting as symbol is not in code or "
+                           "is in nobits section\n");
       registerName(SymbolSize);
       continue;
     }
@@ -1900,7 +1929,7 @@ void RewriteInstance::relocateEHFrameSection() {
     if (!(DwarfType & dwarf::DW_EH_PE_sdata4))
       return;
 
-    uint64_t RelType;
+    uint32_t RelType;
     switch (DwarfType & 0x0f) {
     default:
       llvm_unreachable("unsupported DWARF encoding type");
@@ -2207,7 +2236,7 @@ uint32_t getRelocationSymbol(const ELFObjectFileBase *Obj,
 } // anonymous namespace
 
 bool RewriteInstance::analyzeRelocation(
-    const RelocationRef &Rel, uint64_t &RType, std::string &SymbolName,
+    const RelocationRef &Rel, uint32_t &RType, std::string &SymbolName,
     bool &IsSectionRelocation, uint64_t &SymbolAddress, int64_t &Addend,
     uint64_t &ExtractedValue, bool &Skip) const {
   Skip = false;
@@ -2229,8 +2258,6 @@ bool RewriteInstance::analyzeRelocation(
   ErrorOr<uint64_t> Value =
       BC->getUnsignedValueAtAddress(Rel.getOffset(), RelSize);
   assert(Value && "failed to extract relocated value");
-  if ((Skip = Relocation::skipRelocationProcess(RType, *Value)))
-    return true;
 
   ExtractedValue = Relocation::extractValue(RType, *Value, Rel.getOffset());
   Addend = getRelocationAddend(InputFile, Rel);
@@ -2283,17 +2310,14 @@ bool RewriteInstance::analyzeRelocation(
     }
   }
 
-  // If no symbol has been found or if it is a relocation requiring the
-  // creation of a GOT entry, do not link against the symbol but against
-  // whatever address was extracted from the instruction itself. We are
-  // not creating a GOT entry as this was already processed by the linker.
-  // For GOT relocs, do not subtract addend as the addend does not refer
-  // to this instruction's target, but it refers to the target in the GOT
-  // entry.
-  if (Relocation::isGOT(RType)) {
-    Addend = 0;
-    SymbolAddress = ExtractedValue + PCRelOffset;
-  } else if (Relocation::isTLS(RType)) {
+  // GOT relocation can cause the underlying instruction to be modified by the
+  // linker, resulting in the extracted value being different from the actual
+  // symbol. It's also possible to have a GOT entry for a symbol defined in the
+  // binary. In the latter case, the instruction can be using the GOT version
+  // causing the extracted value mismatch. Similar cases can happen for TLS.
+  // Pass the relocation information as is to the disassembler and let it decide
+  // how to use it for the operand symbolization.
+  if (Relocation::isGOT(RType) || Relocation::isTLS(RType)) {
     SkipVerification = true;
   } else if (!SymbolAddress) {
     assert(!IsSectionRelocation);
@@ -2426,7 +2450,7 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
   });
 
   for (const RelocationRef &Rel : Section.relocations()) {
-    const uint64_t RType = Rel.getType();
+    const uint32_t RType = Relocation::getType(Rel);
     if (Relocation::isNone(RType))
       continue;
 
@@ -2460,6 +2484,30 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
     if (Symbol)
       SymbolIndex[Symbol] = getRelocationSymbol(InputFile, Rel);
 
+    const uint64_t ReferencedAddress = SymbolAddress + Addend;
+    BinaryFunction *Func =
+        BC->getBinaryFunctionContainingAddress(ReferencedAddress);
+
+    if (Relocation::isRelative(RType) && SymbolAddress == 0) {
+      if (Func) {
+        if (!Func->isInConstantIsland(ReferencedAddress)) {
+          if (const uint64_t ReferenceOffset =
+                  ReferencedAddress - Func->getAddress()) {
+            Func->addEntryPointAtOffset(ReferenceOffset);
+          }
+        } else {
+          BC->errs() << "BOLT-ERROR: referenced address at 0x"
+                     << Twine::utohexstr(ReferencedAddress)
+                     << " is in constant island of function " << *Func << "\n";
+          exit(1);
+        }
+      }
+    } else if (Relocation::isRelative(RType) && SymbolAddress != 0) {
+      BC->errs() << "BOLT-ERROR: symbol address non zero for RELATIVE "
+                    "relocation type\n";
+      exit(1);
+    }
+
     BC->addDynamicRelocation(Rel.getOffset(), Symbol, RType, Addend);
   }
 }
@@ -2473,7 +2521,7 @@ void RewriteInstance::readDynamicRelrRelocations(BinarySection &Section) {
            << ":\n";
   });
 
-  const uint64_t RType = Relocation::getRelative();
+  const uint32_t RType = Relocation::getRelative();
   const uint8_t PSize = BC->AsmInfo->getCodePointerSize();
   const uint64_t MaxDelta = ((CHAR_BIT * DynamicRelrEntrySize) - 1) * PSize;
 
@@ -2582,16 +2630,18 @@ void RewriteInstance::readRelocations(const SectionRef &Section) {
 void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
                                        const RelocationRef &Rel) {
   const bool IsAArch64 = BC->isAArch64();
+  const bool IsX86 = BC->isX86();
   const bool IsFromCode = RelocatedSection.isText();
+  const bool IsWritable = BinarySection(*BC, RelocatedSection).isWritable();
 
   SmallString<16> TypeName;
   Rel.getTypeName(TypeName);
-  uint64_t RType = Rel.getType();
+  uint32_t RType = Relocation::getType(Rel);
   if (Relocation::skipRelocationType(RType))
     return;
 
   // Adjust the relocation type as the linker might have skewed it.
-  if (BC->isX86() && (RType & ELF::R_X86_64_converted_reloc_bit)) {
+  if (IsX86 && (RType & ELF::R_X86_64_converted_reloc_bit)) {
     if (opts::Verbosity >= 1)
       dbgs() << "BOLT-WARNING: ignoring R_X86_64_converted_reloc_bit\n";
     RType &= ~ELF::R_X86_64_converted_reloc_bit;
@@ -2599,7 +2649,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
 
   if (Relocation::isTLS(RType)) {
     // No special handling required for TLS relocations on X86.
-    if (BC->isX86())
+    if (IsX86)
       return;
 
     // The non-got related TLS relocations on AArch64 and RISC-V also could be
@@ -2640,6 +2690,29 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
     return;
   }
 
+  if (!IsFromCode && !IsWritable && (IsX86 || IsAArch64) &&
+      Relocation::isPCRelative(RType)) {
+    BinaryData *BD = BC->getBinaryDataContainingAddress(Rel.getOffset());
+    if (BD && (BD->nameStartsWith("_ZTV") ||   // vtable
+               BD->nameStartsWith("_ZTCN"))) { // construction vtable
+      BinaryFunction *BF = BC->getBinaryFunctionContainingAddress(
+          SymbolAddress, /*CheckPastEnd*/ false, /*UseMaxSize*/ true);
+      if (BF) {
+        if (BF->getAddress() != SymbolAddress) {
+          BC->errs()
+              << "BOLT-ERROR: the virtual function table entry at offset 0x"
+              << Twine::utohexstr(Rel.getOffset())
+              << " points to the middle of a function @ 0x"
+              << Twine::utohexstr(BF->getAddress()) << "\n";
+          exit(1);
+        }
+        BC->addRelocation(Rel.getOffset(), BF->getSymbol(), RType, Addend,
+                          ExtractedValue);
+        return;
+      }
+    }
+  }
+
   const uint64_t Address = SymbolAddress + Addend;
 
   LLVM_DEBUG({
@@ -2666,11 +2739,14 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
 
   MCSymbol *ReferencedSymbol = nullptr;
   if (!IsSectionRelocation) {
-    if (BinaryData *BD = BC->getBinaryDataByName(SymbolName))
+    if (BinaryData *BD = BC->getBinaryDataByName(SymbolName)) {
       ReferencedSymbol = BD->getSymbol();
-    else if (BC->isGOTSymbol(SymbolName))
+    } else if (BC->isGOTSymbol(SymbolName)) {
       if (BinaryData *BD = BC->getGOTSymbol())
         ReferencedSymbol = BD->getSymbol();
+    } else if (BinaryData *BD = BC->getBinaryDataAtAddress(SymbolAddress)) {
+      ReferencedSymbol = BD->getSymbol();
+    }
   }
 
   ErrorOr<BinarySection &> ReferencedSection{std::errc::bad_address};
@@ -2688,7 +2764,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
       // This might be a relocation for an ABS symbols like __global_pointer$ on
       // RISC-V
       ContainingBF->addRelocation(Rel.getOffset(), ReferencedSymbol,
-                                  Rel.getType(), 0,
+                                  Relocation::getType(Rel), 0,
                                   cantFail(Symbol.getValue()));
       return;
     }
@@ -2700,7 +2776,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
   const bool IsToCode = ReferencedSection && ReferencedSection->isText();
 
   // Special handling of PC-relative relocations.
-  if (BC->isX86() && Relocation::isPCRelative(RType)) {
+  if (IsX86 && Relocation::isPCRelative(RType)) {
     if (!IsFromCode && IsToCode) {
       // PC-relative relocations from data to code are tricky since the
       // original information is typically lost after linking, even with
@@ -2798,15 +2874,15 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
     }
   }
 
-  if (ForceRelocation) {
-    std::string Name =
-        Relocation::isGOT(RType) ? "__BOLT_got_zero" : SymbolName;
-    ReferencedSymbol = BC->registerNameAtAddress(Name, 0, 0, 0);
-    SymbolAddress = 0;
-    if (Relocation::isGOT(RType))
-      Addend = Address;
-    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: forcing relocation against symbol "
-                      << SymbolName << " with addend " << Addend << '\n');
+  if (ForceRelocation && !ReferencedBF) {
+    // Create the relocation symbol if it's not defined in the binary.
+    if (SymbolAddress == 0)
+      ReferencedSymbol = BC->registerNameAtAddress(SymbolName, 0, 0, 0);
+
+    LLVM_DEBUG(
+        dbgs() << "BOLT-DEBUG: forcing relocation against symbol "
+               << (ReferencedSymbol ? ReferencedSymbol->getName() : "<none>")
+               << " with addend " << Addend << '\n');
   } else if (ReferencedBF) {
     ReferencedSymbol = ReferencedBF->getSymbol();
     uint64_t RefFunctionOffset = 0;
@@ -2875,12 +2951,12 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
 
     if (BinaryData *BD = BC->getBinaryDataContainingAddress(SymbolAddress)) {
       // Note: this assertion is trying to check sanity of BinaryData objects
-      // but AArch64 has inferred and incomplete object locations coming from
-      // GOT/TLS or any other non-trivial relocation (that requires creation
-      // of sections and whose symbol address is not really what should be
-      // encoded in the instruction). So we essentially disabled this check
+      // but AArch64 and RISCV has inferred and incomplete object locations
+      // coming from GOT/TLS or any other non-trivial relocation (that requires
+      // creation of sections and whose symbol address is not really what should
+      // be encoded in the instruction). So we essentially disabled this check
       // for AArch64 and live with bogus names for objects.
-      assert((IsAArch64 || IsSectionRelocation ||
+      assert((IsAArch64 || BC->isRISCV() || IsSectionRelocation ||
               BD->nameStartsWith(SymbolName) ||
               BD->nameStartsWith("PG" + SymbolName) ||
               (BD->nameStartsWith("ANONYMOUS") &&
@@ -3518,13 +3594,18 @@ void RewriteInstance::runBinaryAnalyses() {
   // FIXME: add a pass that warns about which functions do not have CFG,
   // and therefore, analysis is most likely to be less accurate.
   using GSK = opts::GadgetScannerKind;
-  // if no command line option was given, act as if "all" was specified.
-  if (opts::GadgetScannersToRun.empty())
-    opts::GadgetScannersToRun.addValue(GSK::GS_ALL);
-  for (GSK ScannerToRun : opts::GadgetScannersToRun) {
-    if (ScannerToRun == GSK::GS_PACRET || ScannerToRun == GSK::GS_ALL)
-      Manager.registerPass(
-          std::make_unique<NonPacProtectedRetAnalysis::Analysis>());
+  using PAuthScanner = PAuthGadgetScanner::Analysis;
+
+  // If no command line option was given, act as if "all" was specified.
+  bool RunAll = !opts::GadgetScannersToRun.getBits() ||
+                opts::GadgetScannersToRun.isSet(GSK::GS_ALL);
+
+  if (RunAll || opts::GadgetScannersToRun.isSet(GSK::GS_PAUTH)) {
+    Manager.registerPass(
+        std::make_unique<PAuthScanner>(/*OnlyPacRetChecks=*/false));
+  } else if (RunAll || opts::GadgetScannersToRun.isSet(GSK::GS_PACRET)) {
+    Manager.registerPass(
+        std::make_unique<PAuthScanner>(/*OnlyPacRetChecks=*/true));
   }
 
   BC->logBOLTErrorsAndQuitOnFatal(Manager.runPasses());
@@ -5058,6 +5139,8 @@ void RewriteInstance::updateELFSymbolTable(
 
   // Add symbols of injected functions
   for (BinaryFunction *Function : BC->getInjectedBinaryFunctions()) {
+    if (Function->isAnonymous())
+      continue;
     ELFSymTy NewSymbol;
     BinarySection *OriginSection = Function->getOriginSection();
     NewSymbol.st_shndx =
@@ -5699,7 +5782,7 @@ uint64_t RewriteInstance::getNewFunctionOrDataAddress(uint64_t OldAddress) {
         for (const BinaryBasicBlock &BB : *BF)
           if (BB.isEntryPoint() &&
               (BF->getAddress() + BB.getOffset()) == OldAddress)
-            return BF->getOutputAddress() + BB.getOffset();
+            return BB.getOutputStartAddress();
       }
       BC->errs() << "BOLT-ERROR: unable to get new address corresponding to "
                     "input address 0x"
@@ -5828,17 +5911,28 @@ void RewriteInstance::rewriteFile() {
 
   // Write all allocatable sections - reloc-mode text is written here as well
   for (BinarySection &Section : BC->allocatableSections()) {
-    if (!Section.isFinalized() || !Section.getOutputData())
+    if (!Section.isFinalized() || !Section.getOutputData()) {
+      LLVM_DEBUG(if (opts::Verbosity > 1) {
+        dbgs() << "BOLT-INFO: new section is finalized or !getOutputData, skip "
+               << Section.getName() << '\n';
+      });
       continue;
-    if (Section.isLinkOnly())
+    }
+    if (Section.isLinkOnly()) {
+      LLVM_DEBUG(if (opts::Verbosity > 1) {
+        dbgs() << "BOLT-INFO: new section is link only, skip "
+               << Section.getName() << '\n';
+      });
       continue;
+    }
 
     if (opts::Verbosity >= 1)
       BC->outs() << "BOLT: writing new section " << Section.getName()
                  << "\n data at 0x"
                  << Twine::utohexstr(Section.getAllocAddress()) << "\n of size "
                  << Section.getOutputSize() << "\n at offset "
-                 << Section.getOutputFileOffset() << '\n';
+                 << Section.getOutputFileOffset() << " with content size "
+                 << Section.getOutputContents().size() << '\n';
     OS.seek(Section.getOutputFileOffset());
     Section.write(OS);
   }

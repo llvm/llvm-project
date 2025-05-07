@@ -194,7 +194,7 @@ bool PointerAssignmentChecker::Check(const SomeExpr &rhs) {
     return true;
   }
   if (const auto *pureProc{FindPureProcedureContaining(scope_)}) {
-    if (pointerComponentLHS_) { // C1594(4) is a hard error
+    if (pointerComponentLHS_) { // F'2023 C15104(4) is a hard error
       if (const Symbol * object{FindExternallyVisibleObject(rhs, *pureProc)}) {
         if (auto *msg{Say(
                 "Externally visible object '%s' may not be associated with pointer component '%s' in a pure procedure"_err_en_US,
@@ -360,6 +360,20 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
     } else {
       Say(std::get<MessageFormattedText>(*msg));
     }
+  }
+
+  // Show warnings after errors
+
+  // 8.5.20(3) A pointer should have the VOLATILE attribute if its target has
+  // the VOLATILE attribute
+  // 8.5.20(4) If an object has the VOLATILE attribute, then all of its
+  // subobjects also have the VOLATILE attribute.
+  if (!isVolatile_ && base->attrs().test(Attr::VOLATILE)) {
+    Warn(common::UsageWarning::NonVolatilePointerToVolatile,
+        "VOLATILE target associated with non-VOLATILE pointer"_warn_en_US);
+  }
+
+  if (msg) {
     return false;
   } else {
     context_.NoteDefinedSymbol(*base);

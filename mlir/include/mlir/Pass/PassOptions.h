@@ -75,16 +75,13 @@ static void printOptionValue(raw_ostream &os, const std::string &str) {
     os << "}";
 }
 template <typename ParserT, typename DataT>
-static std::enable_if_t<has_stream_operator<DataT>::value>
-printOptionValue(raw_ostream &os, const DataT &value) {
-  os << value;
-}
-template <typename ParserT, typename DataT>
-static std::enable_if_t<!has_stream_operator<DataT>::value>
-printOptionValue(raw_ostream &os, const DataT &value) {
-  // If the value can't be streamed, fallback to checking for a print in the
-  // parser.
-  ParserT::print(os, value);
+static void printOptionValue(raw_ostream &os, const DataT &value) {
+  if constexpr (has_stream_operator<DataT>::value)
+    os << value;
+  else
+    // If the value can't be streamed, fallback to checking for a print in the
+    // parser.
+    ParserT::print(os, value);
 }
 } // namespace pass_options
 
@@ -406,6 +403,7 @@ namespace llvm {
 namespace cl {
 //===----------------------------------------------------------------------===//
 // std::vector+SmallVector
+//===----------------------------------------------------------------------===//
 
 namespace detail {
 template <typename VectorT, typename ElementT>
@@ -470,6 +468,7 @@ public:
 
 //===----------------------------------------------------------------------===//
 // OpPassManager: OptionValue
+//===----------------------------------------------------------------------===//
 
 template <>
 struct OptionValue<mlir::OpPassManager> final : GenericOptionValue {
@@ -514,6 +513,7 @@ private:
 
 //===----------------------------------------------------------------------===//
 // OpPassManager: Parser
+//===----------------------------------------------------------------------===//
 
 extern template class basic_parser<mlir::OpPassManager>;
 

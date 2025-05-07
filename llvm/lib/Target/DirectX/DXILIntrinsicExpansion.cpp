@@ -49,6 +49,7 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::log:
   case Intrinsic::log10:
   case Intrinsic::pow:
+  case Intrinsic::powi:
   case Intrinsic::dx_all:
   case Intrinsic::dx_any:
   case Intrinsic::dx_cross:
@@ -64,12 +65,27 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_sign:
   case Intrinsic::dx_step:
   case Intrinsic::dx_radians:
+  case Intrinsic::usub_sat:
   case Intrinsic::vector_reduce_add:
   case Intrinsic::vector_reduce_fadd:
     return true;
   }
   return false;
 }
+
+static Value *expandUsubSat(CallInst *Orig) {
+  Value *A = Orig->getArgOperand(0);
+  Value *B = Orig->getArgOperand(1);
+  Type *Ty = A->getType();
+
+  IRBuilder<> Builder(Orig);
+
+  Value *Cmp = Builder.CreateICmpULT(A, B, "usub.cmp");
+  Value *Sub = Builder.CreateSub(A, B, "usub.sub");
+  Value *Zero = ConstantInt::get(Ty, 0);
+  return Builder.CreateSelect(Cmp, Zero, Sub, "usub.sat");
+}
+
 static Value *expandVecReduceAdd(CallInst *Orig, Intrinsic::ID IntrinsicId) {
   assert(IntrinsicId == Intrinsic::vector_reduce_add ||
          IntrinsicId == Intrinsic::vector_reduce_fadd);
@@ -122,8 +138,7 @@ static Value *expandCrossIntrinsic(CallInst *Orig) {
 
   VectorType *VT = cast<VectorType>(Orig->getType());
   if (cast<FixedVectorType>(VT)->getNumElements() != 3)
-    report_fatal_error(Twine("return vector must have exactly 3 elements"),
-                       /* gen_crash_diag=*/false);
+    reportFatalUsageError("return vector must have exactly 3 elements");
 
   Value *op0 = Orig->getOperand(0);
   Value *op1 = Orig->getOperand(1);
@@ -147,7 +162,7 @@ static Value *expandCrossIntrinsic(CallInst *Orig) {
   Value *zx_xz = MulSub(op0_z, op0_x, op1_z, op1_x);
   Value *xy_yx = MulSub(op0_x, op0_y, op1_x, op1_y);
 
-  Value *cross = UndefValue::get(VT);
+  Value *cross = PoisonValue::get(VT);
   cross = Builder.CreateInsertElement(cross, yz_zy, (uint64_t)0);
   cross = Builder.CreateInsertElement(cross, zx_xz, 1);
   cross = Builder.CreateInsertElement(cross, xy_yx, 2);
@@ -169,7 +184,8 @@ static Value *expandFloatDotIntrinsic(CallInst *Orig, Value *A, Value *B) {
   assert(ATy->getScalarType()->isFloatingPointTy());
 
   Intrinsic::ID DotIntrinsic = Intrinsic::dx_dot4;
-  switch (AVec->getNumElements()) {
+  int NumElts = AVec->getNumElements();
+  switch (NumElts) {
   case 2:
     DotIntrinsic = Intrinsic::dx_dot2;
     break;
@@ -180,13 +196,18 @@ static Value *expandFloatDotIntrinsic(CallInst *Orig, Value *A, Value *B) {
     DotIntrinsic = Intrinsic::dx_dot4;
     break;
   default:
-    report_fatal_error(
-        Twine("Invalid dot product input vector: length is outside 2-4"),
-        /* gen_crash_diag=*/false);
+    reportFatalUsageError(
+        "Invalid dot product input vector: length is outside 2-4");
     return nullptr;
   }
-  return Builder.CreateIntrinsic(ATy->getScalarType(), DotIntrinsic,
-                                 ArrayRef<Value *>{A, B}, nullptr, "dot");
+
+  SmallVector<Value *> Args;
+  for (int I = 0; I < NumElts; ++I)
+    Args.push_back(Builder.CreateExtractElement(A, Builder.getInt32(I)));
+  for (int I = 0; I < NumElts; ++I)
+    Args.push_back(Builder.CreateExtractElement(B, Builder.getInt32(I)));
+  return Builder.CreateIntrinsic(ATy->getScalarType(), DotIntrinsic, Args,
+                                 nullptr, "dot");
 }
 
 // Create the appropriate DXIL float dot intrinsic for the operands of Orig
@@ -251,7 +272,7 @@ static Value *expandExpIntrinsic(CallInst *Orig) {
 }
 
 static Value *expandAnyOrAllIntrinsic(CallInst *Orig,
-                                      Intrinsic::ID intrinsicId) {
+                                      Intrinsic::ID IntrinsicId) {
   Value *X = Orig->getOperand(0);
   IRBuilder<> Builder(Orig);
   Type *Ty = X->getType();
@@ -285,7 +306,7 @@ static Value *expandAnyOrAllIntrinsic(CallInst *Orig,
     Result = Builder.CreateExtractElement(Cond, (uint64_t)0);
     for (unsigned I = 1; I < XVec->getNumElements(); I++) {
       Value *Elt = Builder.CreateExtractElement(Cond, I);
-      Result = ApplyOp(intrinsicId, Result, Elt);
+      Result = ApplyOp(IntrinsicId, Result, Elt);
     }
   }
   return Result;
@@ -336,8 +357,7 @@ static Value *expandNormalizeIntrinsic(CallInst *Orig) {
     if (auto *constantFP = dyn_cast<ConstantFP>(X)) {
       const APFloat &fpVal = constantFP->getValueAPF();
       if (fpVal.isZero())
-        report_fatal_error(Twine("Invalid input scalar: length is zero"),
-                           /* gen_crash_diag=*/false);
+        reportFatalUsageError("Invalid input scalar: length is zero");
     }
     return Builder.CreateFDiv(X, X);
   }
@@ -349,8 +369,7 @@ static Value *expandNormalizeIntrinsic(CallInst *Orig) {
   if (auto *constantFP = dyn_cast<ConstantFP>(DotProduct)) {
     const APFloat &fpVal = constantFP->getValueAPF();
     if (fpVal.isZero())
-      report_fatal_error(Twine("Invalid input vector: length is zero"),
-                         /* gen_crash_diag=*/false);
+      reportFatalUsageError("Invalid input vector: length is zero");
   }
 
   Value *Multiplicand = Builder.CreateIntrinsic(EltTy, Intrinsic::dx_rsqrt,
@@ -410,12 +429,15 @@ static Value *expandAtan2Intrinsic(CallInst *Orig) {
   return Result;
 }
 
-static Value *expandPowIntrinsic(CallInst *Orig) {
+static Value *expandPowIntrinsic(CallInst *Orig, Intrinsic::ID IntrinsicId) {
 
   Value *X = Orig->getOperand(0);
   Value *Y = Orig->getOperand(1);
   Type *Ty = X->getType();
   IRBuilder<> Builder(Orig);
+
+  if (IntrinsicId == Intrinsic::powi)
+    Y = Builder.CreateSIToFP(Y, Ty);
 
   auto *Log2Call =
       Builder.CreateIntrinsic(Ty, Intrinsic::log2, {X}, nullptr, "elt.log2");
@@ -542,7 +564,8 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     Result = expandLog10Intrinsic(Orig);
     break;
   case Intrinsic::pow:
-    Result = expandPowIntrinsic(Orig);
+  case Intrinsic::powi:
+    Result = expandPowIntrinsic(Orig, IntrinsicId);
     break;
   case Intrinsic::dx_all:
   case Intrinsic::dx_any:
@@ -580,6 +603,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     break;
   case Intrinsic::dx_radians:
     Result = expandRadiansIntrinsic(Orig);
+    break;
+  case Intrinsic::usub_sat:
+    Result = expandUsubSat(Orig);
     break;
   case Intrinsic::vector_reduce_add:
   case Intrinsic::vector_reduce_fadd:

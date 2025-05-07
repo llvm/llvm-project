@@ -786,6 +786,7 @@ of different sizes and signs is forbidden in binary and ternary builtins.
  T __builtin_elementwise_bitreverse(T x)        return the integer represented after reversing the bits of x           integer types
  T __builtin_elementwise_exp(T x)               returns the base-e exponential, e^x, of the specified value            floating point types
  T __builtin_elementwise_exp2(T x)              returns the base-2 exponential, 2^x, of the specified value            floating point types
+ T __builtin_elementwise_exp10(T x)             returns the base-10 exponential, 10^x, of the specified value          floating point types
 
  T __builtin_elementwise_sqrt(T x)              return the square root of a floating-point number                      floating point types
  T __builtin_elementwise_roundeven(T x)         round x to the nearest integer value in floating point format,         floating point types
@@ -817,7 +818,23 @@ of different sizes and signs is forbidden in binary and ternary builtins.
  T __builtin_elementwise_fmod(T x, T y)         return The floating-point remainder of (x/y) whose sign                floating point types
                                                 matches the sign of x.
  T __builtin_elementwise_max(T x, T y)          return x or y, whichever is larger                                     integer and floating point types
+                                                For floating point types, follows semantics of maxNum
+                                                in IEEE 754-2008. See `LangRef
+                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                for the comparison.
  T __builtin_elementwise_min(T x, T y)          return x or y, whichever is smaller                                    integer and floating point types
+                                                For floating point types, follows semantics of minNum
+                                                in IEEE 754-2008. See `LangRef
+                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                for the comparison.
+ T __builtin_elementwise_maxnum(T x, T y)       return x or y, whichever is larger. Follows IEEE 754-2008              floating point types
+                                                semantics (maxNum) with +0.0>-0.0. See `LangRef
+                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                for the comparison.
+ T __builtin_elementwise_minnum(T x, T y)       return x or y, whichever is smaller. Follows IEEE 754-2008             floating point types
+                                                semantics (minNum) with +0.0>-0.0. See `LangRef
+                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                for the comparison.
  T __builtin_elementwise_add_sat(T x, T y)      return the sum of x and y, clamped to the range of                     integer types
                                                 representable values for the signed/unsigned integer type.
  T __builtin_elementwise_sub_sat(T x, T y)      return the difference of x and y, clamped to the range of              integer types
@@ -983,6 +1000,7 @@ to ``float``; see below for more information on this emulation.
   * SPIR (natively)
   * X86 (if SSE2 is available; natively if AVX512-FP16 is also available)
   * RISC-V (natively if Zfh or Zhinx is available)
+  * SystemZ (emulated)
 
 * ``__bf16`` is supported on the following targets (currently never natively):
 
@@ -1593,6 +1611,22 @@ C11 ``_Thread_local``
 Use ``__has_feature(c_thread_local)`` or ``__has_extension(c_thread_local)``
 to determine if support for ``_Thread_local`` variables is enabled.
 
+C2y
+---
+
+The features listed below are part of the C2y standard.  As a result, all these
+features are enabled with the ``-std=c2y`` or ``-std=gnu2y`` option when
+compiling C code.
+
+C2y ``_Countof``
+^^^^^^^^^^^^^^^^
+
+Use ``__has_feature(c_countof)`` (in C2y or later mode) or
+``__has_extension(c_countof)`` (in C23 or earlier mode) to determine if support
+for the ``_Countof`` operator is enabled. This feature is not available in C++
+mode.
+
+
 Modules
 -------
 
@@ -1646,11 +1680,14 @@ Static assert with user-generated message     __cpp_static_assert >= 202306L   C
 Pack Indexing                                 __cpp_pack_indexing              C++26         C++03
 ``= delete ("should have a reason");``        __cpp_deleted_function           C++26         C++03
 Variadic Friends                              __cpp_variadic_friend            C++26         C++03
+Trivial Relocatability                        __cpp_trivial_relocatability     C++26         C++03
 --------------------------------------------- -------------------------------- ------------- -------------
 Designated initializers (N494)                                                 C99           C89
 Array & element qualification (N2607)                                          C23           C89
 Attributes (N2335)                                                             C23           C89
 ``#embed`` (N3017)                                                             C23           C89, C++
+Octal literals prefixed with ``0o`` or ``0O``                                  C2y           C89, C++
+``_Countof`` (N3369, N3469)                                                    C2y           C89
 ============================================= ================================ ============= =============
 
 Builtin type aliases
@@ -1825,8 +1862,15 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_trivially_relocatable`` (Clang): Returns true if moving an object
   of the given type, and then destroying the source object, is known to be
   functionally equivalent to copying the underlying bytes and then dropping the
-  source object on the floor. This is true of trivial types and types which
+  source object on the floor. This is true of trivial types,
+  C++26 relocatable types, and types which
   were made trivially relocatable via the ``clang::trivial_abi`` attribute.
+* ``__builtin_is_cpp_trivially_relocatable`` (C++): Returns true if an object
+  is trivially relocatable, as defined by the C++26 standard [meta.unary.prop].
+  Note that when relocating the caller code should ensure that if the object is polymorphic,
+  the dynamic type is of the most derived type. Padding bytes should not be copied.
+* ``__builtin_is_replaceable`` (C++): Returns true if an object
+  is replaceable, as defined by the C++26 standard [meta.unary.prop].
 * ``__is_trivially_equality_comparable`` (Clang): Returns true if comparing two
   objects of the provided type is known to be equivalent to comparing their
   object representations. Note that types containing padding bytes are never
@@ -1910,6 +1954,40 @@ A simplistic usage example as might be seen in standard C++ headers follows:
   // Emulate type trait for compatibility with other compilers.
   #endif
 
+
+.. _builtin_structured_binding_size-doc:
+
+__builtin_structured_binding_size (C++)
+---------------------------------------
+
+The ``__builtin_structured_binding_size(T)`` type trait returns
+the *structured binding size* ([dcl.struct.bind]) of type ``T``
+
+This is equivalent to the size of the pack ``p`` in ``auto&& [...p] = declval<T&>();``.
+If the argument cannot be decomposed, ``__builtin_structured_binding_size(T)``
+is not a valid expression (``__builtin_structured_binding_size`` is SFINAE-friendly).
+
+builtin arrays, builtin SIMD vectors,
+builtin complex types, *tuple-like* types, and decomposable class types
+are decomposable types.
+
+A type is considered a valid *tuple-like* if ``std::tuple_size_v<T>`` is a valid expression,
+even if there is no valid ``std::tuple_element`` specialization or suitable
+``get`` function for that type.
+
+.. code-block:: c++
+
+  template<std::size_t Idx, typename T>
+  requires (Idx < __builtin_structured_binding_size(T))
+  decltype(auto) constexpr get_binding(T&& obj) {
+      auto && [...p] = std::forward<T>(obj);
+      return p...[Idx];
+  }
+  struct S { int a = 0, b = 42; };
+  static_assert(__builtin_structured_binding_size(S) == 2);
+  static_assert(get_binding<1>(S{}) == 42);
+
+
 Blocks
 ======
 
@@ -1957,6 +2035,32 @@ references can be used instead of numeric references.
     err:
       return -1;
   }
+
+
+Constexpr strings in GNU ASM statememts
+=======================================
+
+In C++11 mode (and greater), Clang supports specifying the template,
+constraints, and clobber strings with a parenthesized constant expression
+producing an object with the following member functions
+
+.. code-block:: c++
+
+  constexpr const char* data() const;
+  constexpr size_t size() const;
+
+such as ``std::string``, ``std::string_view``, ``std::vector<char>``.
+This mechanism follow the same rules as ``static_assert`` messages in
+C++26, see ``[dcl.pre]/p12``.
+
+Query for this feature with ``__has_extension(gnu_asm_constexpr_strings)``.
+
+.. code-block:: c++
+
+   int foo() {
+      asm((std::string_view("nop")) ::: (std::string_view("memory")));
+   }
+
 
 Objective-C Features
 ====================
@@ -3626,6 +3730,21 @@ Query for this feature with ``__has_builtin(__builtin_operator_new)`` or
     replaceable global (de)allocation functions, but do support calling at least
     ``::operator new(size_t)`` and ``::operator delete(void*)``.
 
+
+``__builtin_trivially_relocate``
+-----------------------------------
+
+**Syntax**:
+
+.. code-block:: c
+
+  T* __builtin_trivially_relocate(T* dest, T* src, size_t count)
+
+Trivially relocates ``count`` objects of relocatable, complete type ``T``
+from ``src`` to ``dest`` and returns ``dest``.
+This builtin is used to implement ``std::trivially_relocate``.
+
+
 ``__builtin_preserve_access_index``
 -----------------------------------
 
@@ -4280,6 +4399,17 @@ ellipsis (``...``) in the function signature. Alternatively, in C23 mode or
 later, it may be the integer literal ``0`` if there is no parameter preceding
 the ellipsis. This function initializes the given ``__builtin_va_list`` object.
 It is undefined behavior to call this function on an already initialized
+``__builtin_va_list`` object.
+
+* ``void __builtin_c23_va_start(__builtin_va_list list, ...)``
+
+A builtin function for the target-specific ``va_start`` function-like macro,
+available only in C23 and later. The builtin accepts zero or one argument for
+the ellipsis (``...``). If such an argument is provided, it should be the name
+of the parameter preceeding the ellipsis, which is used for compatibility with
+C versions before C23. It is an error to provide two or more variadic arguments.
+This function initializes the given ``__builtin_va_list`` object. It is
+undefined behavior to call this function on an already initialized
 ``__builtin_va_list`` object.
 
 * ``void __builtin_va_end(__builtin_va_list list)``

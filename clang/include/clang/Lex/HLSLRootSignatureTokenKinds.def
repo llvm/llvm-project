@@ -14,19 +14,22 @@
 //===----------------------------------------------------------------------===//
 
 #ifndef TOK
-#define TOK(X)
+#define TOK(X, SPELLING)
 #endif
 #ifndef PUNCTUATOR
-#define PUNCTUATOR(X,Y) TOK(pu_ ## X)
+#define PUNCTUATOR(X,Y) TOK(pu_ ## X, Y)
 #endif
 #ifndef KEYWORD
-#define KEYWORD(X) TOK(kw_ ## X)
+#define KEYWORD(X) TOK(kw_ ## X, #X)
 #endif
 #ifndef ENUM
-#define ENUM(NAME, LIT) TOK(en_ ## NAME)
+#define ENUM(NAME, LIT) TOK(en_ ## NAME, LIT)
 #endif
 
 // Defines the various types of enum
+#ifndef UNBOUNDED_ENUM
+#define UNBOUNDED_ENUM(NAME, LIT) ENUM(NAME, LIT)
+#endif
 #ifndef DESCRIPTOR_RANGE_OFFSET_ENUM
 #define DESCRIPTOR_RANGE_OFFSET_ENUM(NAME, LIT) ENUM(NAME, LIT)
 #endif
@@ -49,15 +52,16 @@
 #endif
 
 // General Tokens:
-TOK(invalid)
-TOK(end_of_stream)
-TOK(int_literal)
+TOK(invalid, "invalid identifier")
+TOK(end_of_stream, "end of stream")
+TOK(int_literal, "integer literal")
+TOK(float_literal, "float literal")
 
 // Register Tokens:
-TOK(bReg)
-TOK(tReg)
-TOK(uReg)
-TOK(sReg)
+TOK(bReg, "b register")
+TOK(tReg, "t register")
+TOK(uReg, "u register")
+TOK(sReg, "s register")
 
 // Punctuators:
 PUNCTUATOR(l_paren, '(')
@@ -69,6 +73,7 @@ PUNCTUATOR(plus,    '+')
 PUNCTUATOR(minus,   '-')
 
 // RootElement Keywords:
+KEYWORD(RootSignature) // used only for diagnostic messaging
 KEYWORD(DescriptorTable)
 
 // DescriptorTable Keywords:
@@ -85,6 +90,9 @@ KEYWORD(flags)
 // View Parameter Keywords:
 KEYWORD(numDescriptors)
 KEYWORD(offset)
+
+// Unbounded Enum:
+UNBOUNDED_ENUM(unbounded, "unbounded")
 
 // Descriptor Range Offset Enum:
 DESCRIPTOR_RANGE_OFFSET_ENUM(DescriptorRangeOffsetAppend, "DESCRIPTOR_RANGE_OFFSET_APPEND")
@@ -117,6 +125,7 @@ SHADER_VISIBILITY_ENUM(Mesh, "SHADER_VISIBILITY_MESH")
 #undef DESCRIPTOR_RANGE_FLAG_ENUM_ON
 #undef ROOT_DESCRIPTOR_FLAG_ENUM
 #undef DESCRIPTOR_RANGE_OFFSET_ENUM
+#undef UNBOUNDED_ENUM
 #undef ENUM
 #undef KEYWORD
 #undef PUNCTUATOR

@@ -130,7 +130,7 @@ void BreakpointLocationsRequestHandler::operator()(
   FillResponse(request, response);
   auto *arguments = request.getObject("arguments");
   auto *source = arguments->getObject("source");
-  std::string path = GetString(source, "path").str();
+  std::string path = GetString(source, "path").value_or("").str();
   const auto start_line = GetInteger<uint64_t>(arguments, "line")
                               .value_or(LLDB_INVALID_LINE_NUMBER);
   const auto start_column = GetInteger<uint64_t>(arguments, "column")
@@ -189,8 +189,7 @@ void BreakpointLocationsRequestHandler::operator()(
   // The line entries are sorted by addresses, but we must return the list
   // ordered by line / column position.
   std::sort(locations.begin(), locations.end());
-  locations.erase(std::unique(locations.begin(), locations.end()),
-                  locations.end());
+  locations.erase(llvm::unique(locations), locations.end());
 
   llvm::json::Array locations_json;
   for (auto &l : locations) {

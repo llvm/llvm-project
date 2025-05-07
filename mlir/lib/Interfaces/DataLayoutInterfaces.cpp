@@ -246,6 +246,16 @@ Attribute mlir::detail::getDefaultEndianness(DataLayoutEntryInterface entry) {
   return entry.getValue();
 }
 
+// Returns the default memory space if specified in the given entry. If the
+// entry is empty the default memory space represented by an empty attribute is
+// returned.
+Attribute mlir::detail::getDefaultMemorySpace(DataLayoutEntryInterface entry) {
+  if (!entry)
+    return Attribute();
+
+  return entry.getValue();
+}
+
 // Returns the memory space used for alloca operations if specified in the
 // given entry. If the entry is empty the default memory space represented by
 // an empty attribute is returned.
@@ -392,7 +402,6 @@ static DataLayoutSpecInterface getCombinedDataLayout(Operation *leaf) {
   assert((isa<ModuleOp, DataLayoutOpInterface>(leaf)) &&
          "expected an op with data layout spec");
 
-  SmallVector<DataLayoutOpInterface> opsWithLayout;
   SmallVector<DataLayoutSpecInterface> specs;
   collectParentLayouts(leaf, specs);
 
@@ -605,6 +614,22 @@ mlir::Attribute mlir::DataLayout::getEndianness() const {
   return *endianness;
 }
 
+mlir::Attribute mlir::DataLayout::getDefaultMemorySpace() const {
+  checkValid();
+  if (defaultMemorySpace)
+    return *defaultMemorySpace;
+  DataLayoutEntryInterface entry;
+  if (originalLayout)
+    entry = originalLayout.getSpecForIdentifier(
+        originalLayout.getDefaultMemorySpaceIdentifier(
+            originalLayout.getContext()));
+  if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
+    defaultMemorySpace = iface.getDefaultMemorySpace(entry);
+  else
+    defaultMemorySpace = detail::getDefaultMemorySpace(entry);
+  return *defaultMemorySpace;
+}
+
 mlir::Attribute mlir::DataLayout::getAllocaMemorySpace() const {
   checkValid();
   if (allocaMemorySpace)
@@ -710,8 +735,8 @@ std::optional<Attribute> mlir::DataLayout::getDevicePropertyValue(
 //===----------------------------------------------------------------------===//
 
 void DataLayoutSpecInterface::bucketEntriesByType(
-    DenseMap<TypeID, DataLayoutEntryList> &types,
-    DenseMap<StringAttr, DataLayoutEntryInterface> &ids) {
+    llvm::MapVector<TypeID, DataLayoutEntryList> &types,
+    llvm::MapVector<StringAttr, DataLayoutEntryInterface> &ids) {
   for (DataLayoutEntryInterface entry : getEntries()) {
     if (auto type = llvm::dyn_cast_if_present<Type>(entry.getKey()))
       types[type.getTypeID()].push_back(entry);
@@ -729,8 +754,8 @@ LogicalResult mlir::detail::verifyDataLayoutSpec(DataLayoutSpecInterface spec,
 
   // Second, dispatch verifications of entry groups to types or dialects they
   // are associated with.
-  DenseMap<TypeID, DataLayoutEntryList> types;
-  DenseMap<StringAttr, DataLayoutEntryInterface> ids;
+  llvm::MapVector<TypeID, DataLayoutEntryList> types;
+  llvm::MapVector<StringAttr, DataLayoutEntryInterface> ids;
   spec.bucketEntriesByType(types, ids);
 
   for (const auto &kvp : types) {

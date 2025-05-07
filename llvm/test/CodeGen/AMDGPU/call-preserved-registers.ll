@@ -260,8 +260,8 @@ define amdgpu_kernel void @test_call_void_func_void_clobber_vcc(ptr addrspace(1)
 ; FLATSCR-NEXT:    s_endpgm
   %vcc = call i64 asm sideeffect "; def $0", "={vcc}"()
   call void @void_func_void_clobber_vcc()
-  %val0 = load volatile i32, ptr addrspace(1) undef
-  %val1 = load volatile i32, ptr addrspace(1) undef
+  %val0 = load volatile i32, ptr addrspace(1) poison
+  %val1 = load volatile i32, ptr addrspace(1) poison
   call void asm sideeffect "; use $0", "{vcc}"(i64 %vcc)
   ret void
 }

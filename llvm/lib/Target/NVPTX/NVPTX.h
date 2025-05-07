@@ -18,6 +18,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
 class FunctionPass;
@@ -42,7 +43,7 @@ ModulePass *createNVPTXAssignValidGlobalNamesPass();
 ModulePass *createGenericToNVVMLegacyPass();
 ModulePass *createNVPTXCtorDtorLoweringLegacyPass();
 FunctionPass *createNVVMIntrRangePass();
-FunctionPass *createNVVMReflectPass(unsigned int SmVersion);
+ModulePass *createNVVMReflectPass(unsigned int SmVersion);
 MachineFunctionPass *createNVPTXPrologEpilogPass();
 MachineFunctionPass *createNVPTXReplaceImageHandlesPass();
 FunctionPass *createNVPTXImageOptimizerPass();
@@ -50,18 +51,40 @@ FunctionPass *createNVPTXLowerArgsPass();
 FunctionPass *createNVPTXLowerAllocaPass();
 FunctionPass *createNVPTXLowerUnreachablePass(bool TrapUnreachable,
                                               bool NoTrapAfterNoreturn);
+FunctionPass *createNVPTXTagInvariantLoadsPass();
 MachineFunctionPass *createNVPTXPeephole();
 MachineFunctionPass *createNVPTXProxyRegErasurePass();
 MachineFunctionPass *createNVPTXForwardParamsPass();
+
+void initializeNVVMReflectLegacyPassPass(PassRegistry &);
+void initializeGenericToNVVMLegacyPassPass(PassRegistry &);
+void initializeNVPTXAllocaHoistingPass(PassRegistry &);
+void initializeNVPTXAsmPrinterPass(PassRegistry &);
+void initializeNVPTXAssignValidGlobalNamesPass(PassRegistry &);
+void initializeNVPTXAtomicLowerPass(PassRegistry &);
+void initializeNVPTXCtorDtorLoweringLegacyPass(PassRegistry &);
+void initializeNVPTXLowerAggrCopiesPass(PassRegistry &);
+void initializeNVPTXLowerAllocaPass(PassRegistry &);
+void initializeNVPTXLowerUnreachablePass(PassRegistry &);
+void initializeNVPTXCtorDtorLoweringLegacyPass(PassRegistry &);
+void initializeNVPTXLowerArgsLegacyPassPass(PassRegistry &);
+void initializeNVPTXProxyRegErasurePass(PassRegistry &);
+void initializeNVPTXForwardParamsPassPass(PassRegistry &);
+void initializeNVVMIntrRangePass(PassRegistry &);
+void initializeNVVMReflectPass(PassRegistry &);
+void initializeNVPTXAAWrapperPassPass(PassRegistry &);
+void initializeNVPTXExternalAAWrapperPass(PassRegistry &);
+void initializeNVPTXPeepholePass(PassRegistry &);
+void initializeNVPTXTagInvariantLoadLegacyPassPass(PassRegistry &);
 
 struct NVVMIntrRangePass : PassInfoMixin<NVVMIntrRangePass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 struct NVVMReflectPass : PassInfoMixin<NVVMReflectPass> {
-  NVVMReflectPass();
+  NVVMReflectPass() : SmVersion(0) {}
   NVVMReflectPass(unsigned SmVersion) : SmVersion(SmVersion) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  PreservedAnalyses run(Module &F, ModuleAnalysisManager &AM);
 
 private:
   unsigned SmVersion;
@@ -72,6 +95,19 @@ struct GenericToNVVMPass : PassInfoMixin<GenericToNVVMPass> {
 };
 
 struct NVPTXCopyByValArgsPass : PassInfoMixin<NVPTXCopyByValArgsPass> {
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+struct NVPTXLowerArgsPass : PassInfoMixin<NVPTXLowerArgsPass> {
+private:
+  TargetMachine &TM;
+
+public:
+  NVPTXLowerArgsPass(TargetMachine &TM) : TM(TM) {};
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+struct NVPTXTagInvariantLoadsPass : PassInfoMixin<NVPTXTagInvariantLoadsPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
@@ -147,6 +183,7 @@ enum AddressSpace : AddressSpaceUnderlyingType {
   Shared = 3,
   Const = 4,
   Local = 5,
+  SharedCluster = 7,
 
   // NVPTX Backend Private:
   Param = 101
