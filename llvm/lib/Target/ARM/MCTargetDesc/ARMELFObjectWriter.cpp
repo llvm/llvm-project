@@ -39,7 +39,8 @@ namespace {
     unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
                           const MCFixup &Fixup, bool IsPCRel) const override;
 
-    bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
+    bool needsRelocateWithSymbol(const MCAssembler &Asm, const MCValue &Val,
+                                 const MCSymbol &Sym,
                                  unsigned Type) const override;
   };
 
@@ -50,7 +51,8 @@ ARMELFObjectWriter::ARMELFObjectWriter(uint8_t OSABI)
                             ELF::EM_ARM,
                             /*HasRelocationAddend*/ false) {}
 
-bool ARMELFObjectWriter::needsRelocateWithSymbol(const MCValue &,
+bool ARMELFObjectWriter::needsRelocateWithSymbol(const MCAssembler &Asm,
+                                                 const MCValue &,
                                                  const MCSymbol &,
                                                  unsigned Type) const {
   // FIXME: This is extremely conservative. This really needs to use an

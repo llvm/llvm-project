@@ -1303,7 +1303,7 @@ bool ELFObjectWriter::useSectionSymbol(const MCAssembler &Asm,
   if (Asm.isThumbFunc(Sym))
     return false;
 
-  return !TargetObjectWriter->needsRelocateWithSymbol(Val, *Sym, Type);
+  return !TargetObjectWriter->needsRelocateWithSymbol(Asm, Val, *Sym, Type);
 }
 
 bool ELFObjectWriter::checkRelocation(MCContext &Ctx, SMLoc Loc,

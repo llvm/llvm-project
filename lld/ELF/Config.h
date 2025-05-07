@@ -276,6 +276,7 @@ struct Config {
   bool bpFunctionOrderForCompression = false;
   bool bpDataOrderForCompression = false;
   bool bpVerboseSectionOrderer = false;
+  bool branchToBranch = false;
   bool checkSections;
   bool checkDynamicRelocs;
   std::optional<llvm::DebugCompressionType> compressDebugSections;

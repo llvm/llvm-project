@@ -34,7 +34,8 @@ protected:
   // Override MCELFObjectTargetWriter.
   unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
                         const MCFixup &Fixup, bool IsPCRel) const override;
-  bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
+  bool needsRelocateWithSymbol(const MCAssembler &Asm, const MCValue &Val,
+                               const MCSymbol &Sym,
                                unsigned Type) const override;
 };
 
@@ -215,7 +216,8 @@ unsigned SystemZELFObjectWriter::getRelocType(MCContext &Ctx,
   }
 }
 
-bool SystemZELFObjectWriter::needsRelocateWithSymbol(const MCValue &V,
+bool SystemZELFObjectWriter::needsRelocateWithSymbol(const MCAssembler &Asm,
+                                                     const MCValue &V,
                                                      const MCSymbol &Sym,
                                                      unsigned Type) const {
   switch (V.getSpecifier()) {

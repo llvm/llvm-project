@@ -194,7 +194,7 @@ Error registerELFGraphInfo(Session &S, LinkGraph &G) {
     else
       FileInfo.SectionInfos[Sec.getName()] = {
           ArrayRef<char>(FirstSym->getBlock().getContent().data(), SecSize),
-          SecAddr.getValue(), FirstSym->getTargetFlags()};
+          (SecAddr - FirstSym->getOffset()).getValue(), FirstSym->getTargetFlags()};
   }
 
   return Error::success();

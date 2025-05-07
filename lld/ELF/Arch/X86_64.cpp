@@ -11,6 +11,7 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
+#include "TargetImpl.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Endian.h"
@@ -50,6 +51,7 @@ public:
   bool deleteFallThruJmpInsn(InputSection &is, InputFile *file,
                              InputSection *nextIS) const override;
   bool relaxOnce(int pass) const override;
+  void applyBranchToBranchOpt() const override;
 
 private:
   void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
@@ -1160,6 +1162,58 @@ void X86_64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
     applyJumpInstrMod(buf + sec.jumpInstrMod->offset,
                       sec.jumpInstrMod->original, sec.jumpInstrMod->size);
   }
+}
+
+static std::optional<uint64_t> getControlTransferAddend(InputSection &is,
+                                                        Relocation &r) {
+  // Identify a control transfer relocation for the branch-to-branch
+  // optimization. A "control transfer relocation" usually means a CALL or JMP
+  // target but it also includes relative vtable relocations for example.
+  //
+  // We require the relocation type to be PLT32. With a relocation type of PLT32
+  // the value may be assumed to be used for branching directly to the symbol
+  // and the addend is only used to produce the relocated value (hence the
+  // effective addend is always 0). This is because if a PLT is needed the
+  // addend will be added to the address of the PLT, and it doesn't make sense
+  // to branch into the middle of a PLT. For example, relative vtable
+  // relocations use PLT32 and 0 or a positive value as the addend but still are
+  // used to branch to the symbol.
+  if (r.type == R_X86_64_PLT32)
+    return 0;
+  return std::nullopt;
+}
+
+static std::pair<Relocation *, uint64_t> getBranchInfo(InputSection &is,
+                                                       uint64_t offset) {
+  auto content = is.contentMaybeDecompress();
+  if (content.size() > offset && content[offset] == 0xe9) { // JMP immediate
+    auto *i = std::lower_bound(
+        is.relocations.begin(), is.relocations.end(), offset + 1,
+        [](Relocation &r, uint64_t offset) { return r.offset < offset; });
+    // Unlike with getControlTransferAddend() it is valid to accept a PC32
+    // relocation here because we know that this is actually a JMP and not some
+    // other reference, so the interpretation is that we add 4 to the addend and
+    // use that as the effective addend.
+    if (i != is.relocations.end() && i->offset == offset + 1 &&
+        (i->type == R_X86_64_PC32 || i->type == R_X86_64_PLT32)) {
+      return {i, i->addend + 4};
+    }
+  }
+  return {nullptr, 0};
+}
+
+static void mergeControlTransferRelocations(Relocation &r1,
+                                            const Relocation &r2) {
+  r1.expr = r2.expr;
+  r1.sym = r2.sym;
+  // The +4 is here to compensate for r2.addend which will likely be -4,
+  // but may also be addend-4 in case of a PC32 branch to symbol+addend.
+  r1.addend += r2.addend + 4;
+}
+
+void X86_64::applyBranchToBranchOpt() const {
+  applyBranchToBranchOptImpl(ctx, getBranchInfo, getControlTransferAddend,
+                             mergeControlTransferRelocations);
 }
 
 // If Intel Indirect Branch Tracking is enabled, we have to emit special PLT

@@ -29,7 +29,8 @@ public:
 
   unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
                         const MCFixup &Fixup, bool IsPCRel) const override;
-  bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
+  bool needsRelocateWithSymbol(const MCAssembler &Asm, const MCValue &Val,
+                               const MCSymbol &Sym,
                                unsigned Type) const override;
 };
 
@@ -167,7 +168,8 @@ unsigned CSKYELFObjectWriter::getRelocType(MCContext &Ctx,
   }
 }
 
-bool CSKYELFObjectWriter::needsRelocateWithSymbol(const MCValue &V,
+bool CSKYELFObjectWriter::needsRelocateWithSymbol(const MCAssembler &Asm,
+                                                  const MCValue &V,
                                                   const MCSymbol &,
                                                   unsigned Type) const {
   switch (V.getSpecifier()) {

@@ -11,6 +11,7 @@
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
@@ -33,7 +34,8 @@ public:
 protected:
   unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
                         const MCFixup &Fixup, bool IsPCRel) const override;
-  bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
+  bool needsRelocateWithSymbol(const MCAssembler &Asm, const MCValue &Val,
+                               const MCSymbol &Sym,
                                unsigned Type) const override;
 };
 
@@ -386,7 +388,8 @@ unsigned X86ELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
   return getRelocType32(Ctx, Fixup.getLoc(), Specifier, RelType, IsPCRel, Kind);
 }
 
-bool X86ELFObjectWriter::needsRelocateWithSymbol(const MCValue &V,
+bool X86ELFObjectWriter::needsRelocateWithSymbol(const MCAssembler &Asm,
+                                                 const MCValue &V,
                                                  const MCSymbol &Sym,
                                                  unsigned Type) const {
   switch (V.getSpecifier()) {
@@ -396,7 +399,8 @@ bool X86ELFObjectWriter::needsRelocateWithSymbol(const MCValue &V,
   case X86MCExpr::VK_GOTPCREL_NORELAX:
     return true;
   default:
-    return false;
+    return Type == ELF::R_X86_64_PLT32 &&
+           (Asm.getFragmentOffset(*Sym.getFragment()) + Sym.getOffset()) != 0;
   }
 }
 
