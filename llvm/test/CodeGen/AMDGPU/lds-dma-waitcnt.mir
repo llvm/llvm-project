@@ -117,3 +117,173 @@ body:             |
     S_ENDPGM 0
 
 ...
+
+# Soft waitcnt should be honored here.
+# GCN-LABEL: name: buffer_load_dword_lds_ds_read_soft_wait
+# GCN:      BUFFER_LOAD_DWORD_LDS_IDXEN
+# GCN-NEXT: S_WAITCNT 3952
+#                     vmcnt(0)
+# GCN-NEXT: S_BARRIER
+---
+name: buffer_load_dword_lds_ds_read_soft_wait
+body:             |
+  bb.0:
+    $m0 = S_MOV_B32 0
+    BUFFER_LOAD_DWORD_LDS_IDXEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) poison` + 4), (store (s32) into `ptr addrspace(3) poison` + 4)
+    S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
+    S_BARRIER
+    $vgpr0 = DS_READ_B32_gfx9 $vgpr1, 0, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) poison`)
+    S_ENDPGM 0
+
+...
+
+# No need for waitcnt.
+# GCN-LABEL: name: buffer_store_lds_dword_ds_read_soft_wait
+# GCN:      BUFFER_STORE_LDS_DWORD
+# GCN-NEXT: S_BARRIER
+---
+name: buffer_store_lds_dword_ds_read_soft_wait
+body:             |
+  bb.0:
+    $m0 = S_MOV_B32 0
+    BUFFER_STORE_LDS_DWORD $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(3) poison` + 4), (store (s32) into `ptr addrspace(1) poison` + 4)
+    S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
+    S_BARRIER
+    $vgpr0 = DS_READ_B32_gfx9 $vgpr1, 0, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) poison`)
+    S_ENDPGM 0
+
+...
+
+# Soft waitcnt should mean vmcnt(1) before the barrier and vmcnt(0) after.
+# GCN-LABEL: name: series_of_buffer_load_dword_lds_ds_read_soft_wait
+# GCN:      BUFFER_LOAD_DWORD_LDS_IDXEN
+# GCN-NEXT: BUFFER_LOAD_DWORD_LDS_IDXEN
+# GCN-NEXT: BUFFER_LOAD_DWORD_LDS_IDXEN
+# GCN-NEXT: S_WAITCNT 3953
+#                     vmcnt(1)
+# GCN-NEXT: S_BARRIER
+# GCN-NEXT: S_WAITCNT 3952
+#                     vmcnt(0)
+# GCN-NEXT: DS_READ_B32_gfx9
+---
+name: series_of_buffer_load_dword_lds_ds_read_soft_wait
+body:             |
+  bb.0:
+    $m0 = S_MOV_B32 0
+    BUFFER_LOAD_DWORD_LDS_IDXEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) poison`), (store (s32) into `ptr addrspace(3) poison`)
+    BUFFER_LOAD_DWORD_LDS_IDXEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) poison` + 4), (store (s32) into `ptr addrspace(3) poison` + 4)
+    BUFFER_LOAD_DWORD_LDS_IDXEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 8, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) poison` + 8), (store (s32) into `ptr addrspace(3) poison` + 8)
+    S_WAITCNT_DIRECT_LDS_LOAD_soft 3953
+    S_BARRIER
+    $vgpr0 = DS_READ_B32_gfx9 $vgpr1, 0, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) poison`)
+    S_ENDPGM 0
+
+...
+
+# No waitcnt before the barrier because counter is too high
+# GCN-LABEL: name: buffer_load_dword_lds_ds_read_soft_wait_redundant
+# GCN:      BUFFER_LOAD_DWORD_LDS_IDXEN
+# GCN-NEXT: S_BARRIER
+# GCN-NEXT: S_WAITCNT 3952
+#                     vmcnt(0)
+# GCN-NEXT: DS_READ_B32_gfx9
+---
+name: buffer_load_dword_lds_ds_read_soft_wait_redundant
+body:             |
+  bb.0:
+    $m0 = S_MOV_B32 0
+    BUFFER_LOAD_DWORD_LDS_IDXEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) poison` + 4), (store (s32) into `ptr addrspace(3) poison` + 4)
+    S_WAITCNT_DIRECT_LDS_LOAD_soft 3953
+    S_BARRIER
+    $vgpr0 = DS_READ_B32_gfx9 $vgpr1, 0, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) poison`)
+    S_ENDPGM 0
+
+...
+
+# Combine waitcnt.
+# GCN-LABEL: name: series_of_buffer_load_dword_lds_ds_read_soft_wait_repeat
+# GCN:      BUFFER_LOAD_DWORD_LDS_IDXEN
+# GCN-NEXT: BUFFER_LOAD_DWORD_LDS_IDXEN
+# GCN-NEXT: BUFFER_LOAD_DWORD_LDS_IDXEN
+# GCN-NEXT: S_WAITCNT 3953
+#                     vmcnt(1)
+# GCN-NEXT: S_BARRIER
+# GCN-NEXT: S_WAITCNT 3952
+#                     vmcnt(0)
+# GCN-NEXT: DS_READ_B32_gfx9
+---
+name: series_of_buffer_load_dword_lds_ds_read_soft_wait_repeat
+body:             |
+  bb.0:
+    $m0 = S_MOV_B32 0
+    BUFFER_LOAD_DWORD_LDS_IDXEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) poison`), (store (s32) into `ptr addrspace(3) poison`)
+    BUFFER_LOAD_DWORD_LDS_IDXEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) poison` + 4), (store (s32) into `ptr addrspace(3) poison` + 4)
+    BUFFER_LOAD_DWORD_LDS_IDXEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 8, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) poison` + 8), (store (s32) into `ptr addrspace(3) poison` + 8)
+    S_WAITCNT_DIRECT_LDS_LOAD_soft 3953
+    S_WAITCNT_DIRECT_LDS_LOAD_soft 3953
+    S_BARRIER
+    S_WAITCNT_DIRECT_LDS_LOAD_soft 3953
+    S_WAITCNT_DIRECT_LDS_LOAD_soft 3953
+    $vgpr0 = DS_READ_B32_gfx9 $vgpr1, 0, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) poison`)
+    S_ENDPGM 0
+
+...
+
+# Merge waitcnt.
+# GCN-LABEL: name: series_of_buffer_load_dword_lds_ds_read_soft_wait_merge
+# GCN:      BUFFER_LOAD_DWORD_LDS_IDXEN
+# GCN-NEXT: BUFFER_LOAD_DWORD_LDS_IDXEN
+# GCN-NEXT: BUFFER_LOAD_DWORD_LDS_IDXEN
+# GCN-NEXT: S_WAITCNT 3953
+#                     vmcnt(1)
+# GCN-NEXT: S_BARRIER
+# GCN-NEXT: S_WAITCNT 3952
+#                     vmcnt(0)
+# GCN-NEXT: DS_READ_B32_gfx9
+---
+name: series_of_buffer_load_dword_lds_ds_read_soft_wait_merge
+body:             |
+  bb.0:
+    $m0 = S_MOV_B32 0
+    BUFFER_LOAD_DWORD_LDS_IDXEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) poison`), (store (s32) into `ptr addrspace(3) poison`)
+    BUFFER_LOAD_DWORD_LDS_IDXEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) poison` + 4), (store (s32) into `ptr addrspace(3) poison` + 4)
+    BUFFER_LOAD_DWORD_LDS_IDXEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 8, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) poison` + 8), (store (s32) into `ptr addrspace(3) poison` + 8)
+    S_WAITCNT_DIRECT_LDS_LOAD_soft 3954
+    S_WAITCNT_DIRECT_LDS_LOAD_soft 3953
+    S_BARRIER
+    S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
+    S_WAITCNT_DIRECT_LDS_LOAD_soft 3952
+    $vgpr0 = DS_READ_B32_gfx9 $vgpr1, 0, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) poison`)
+    S_ENDPGM 0
+
+...
+
+
+# Handle the preexisting waitcnt.
+# GCN-LABEL: name: series_of_buffer_load_dword_lds_ds_read_soft_wait_preexisting
+# GCN:      BUFFER_LOAD_DWORD_LDS_IDXEN
+# GCN-NEXT: BUFFER_LOAD_DWORD_LDS_IDXEN
+# GCN-NEXT: S_WAITCNT 0
+# GCN-NEXT: BUFFER_LOAD_DWORD_LDS_IDXEN
+# GCN-NEXT: S_BARRIER
+# GCN-NEXT: S_WAITCNT 3952
+#                     vmcnt(0)
+# GCN-NEXT: DS_READ_B32_gfx9
+---
+name: series_of_buffer_load_dword_lds_ds_read_soft_wait_preexisting
+body:             |
+  bb.0:
+    $m0 = S_MOV_B32 0
+    BUFFER_LOAD_DWORD_LDS_IDXEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) poison`), (store (s32) into `ptr addrspace(3) poison`)
+    BUFFER_LOAD_DWORD_LDS_IDXEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) poison` + 4), (store (s32) into `ptr addrspace(3) poison` + 4)
+    S_WAITCNT 0
+    BUFFER_LOAD_DWORD_LDS_IDXEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 8, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) poison` + 8), (store (s32) into `ptr addrspace(3) poison` + 8)
+    S_WAITCNT_DIRECT_LDS_LOAD_soft 3953
+    S_WAITCNT_DIRECT_LDS_LOAD_soft 3953
+    S_BARRIER
+    S_WAITCNT_DIRECT_LDS_LOAD_soft 3953
+    S_WAITCNT_DIRECT_LDS_LOAD_soft 3953
+    $vgpr0 = DS_READ_B32_gfx9 $vgpr1, 0, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) poison`)
+    S_ENDPGM 0
+
+...
