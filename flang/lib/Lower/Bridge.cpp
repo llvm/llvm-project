@@ -2035,6 +2035,9 @@ private:
     fir::LocalitySpecifierOperands privateClauseOps;
     auto doConcurrentLoopOp =
         mlir::dyn_cast_if_present<fir::DoConcurrentLoopOp>(info.loopOp);
+    // TODO Promote to using `enableDelayedPrivatization` (which is enabled by
+    // default unlike the staging flag) once the implementation of this is more
+    // complete.
     bool useDelayedPriv =
         enableDelayedPrivatizationStaging && doConcurrentLoopOp;
 
