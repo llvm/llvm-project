@@ -57,7 +57,7 @@ Clang MLIR generation
 | akaylor\@nvidia.com (email), AndyKaylor (Discord), AndyKaylor (GitHub)
 
 | Bruno Cardoso Lopes
-| sonicsprawl (Discord), bcardosolopes (GitHub)
+| bruno.cardoso\@gmail.com (email), sonicsprawl (Discord), bcardosolopes (GitHub)
 
 
 Analysis & CFG
