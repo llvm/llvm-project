@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=cplusplus -verify %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=cplusplus -verify %s -DEMPTY_CLASS
-
+// UNSUPPORTED: system-windows
 // expected-no-diagnostics
 
 // This test reproduces the issue that previously the static analyzer
