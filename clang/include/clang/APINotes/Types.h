@@ -740,6 +740,7 @@ public:
   std::optional<std::string> SwiftImportAs;
   std::optional<std::string> SwiftRetainOp;
   std::optional<std::string> SwiftReleaseOp;
+  std::optional<std::string> SwiftDefaultOwnership;
 
   /// The Swift protocol that this type should be automatically conformed to.
   std::optional<std::string> SwiftConformance;
@@ -789,6 +790,8 @@ public:
       SwiftRetainOp = RHS.SwiftRetainOp;
     if (!SwiftReleaseOp)
       SwiftReleaseOp = RHS.SwiftReleaseOp;
+    if (!SwiftDefaultOwnership)
+      SwiftDefaultOwnership = RHS.SwiftDefaultOwnership;
 
     if (!SwiftConformance)
       SwiftConformance = RHS.SwiftConformance;
@@ -818,6 +821,7 @@ inline bool operator==(const TagInfo &LHS, const TagInfo &RHS) {
          LHS.SwiftImportAs == RHS.SwiftImportAs &&
          LHS.SwiftRetainOp == RHS.SwiftRetainOp &&
          LHS.SwiftReleaseOp == RHS.SwiftReleaseOp &&
+         LHS.SwiftDefaultOwnership == RHS.SwiftDefaultOwnership &&
          LHS.SwiftConformance == RHS.SwiftConformance &&
          LHS.isFlagEnum() == RHS.isFlagEnum() &&
          LHS.isSwiftCopyable() == RHS.isSwiftCopyable() &&
