@@ -15,6 +15,7 @@
 #include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Symbol/CompileUnit.h"
 #include <lldb/lldb-enumerations.h>
 #include <llvm/ADT/StringRef.h>
 
@@ -70,6 +71,47 @@ void TypeSystemSwift::Terminate() {
 }
 
 /// \}
+
+bool TypeSystemSwift::CheckFlagInCU(CompileUnit *cu, const char *flag) {
+  AutoBool interop_enabled =
+    ModuleList::GetGlobalModuleListProperties().GetSwiftEnableCxxInterop();
+  switch (interop_enabled) {
+  case AutoBool::True:
+    return true;
+  case AutoBool::False:
+    return false;
+  case AutoBool::Auto: {
+    if (!cu)
+      return false;
+    lldb::ModuleSP module = cu->CalculateSymbolContextModule();
+    if (!module)
+      return false;
+    auto *sym_file = module->GetSymbolFile();
+    if (!sym_file)
+      return false;
+    auto options = sym_file->GetCompileOptions();
+    for (auto &[unit, args] : options) {
+      if (unit.get() == cu) {
+        if (cu->GetLanguage() == eLanguageTypeSwift)
+          for (const char *arg : args.GetArgumentArrayRef())
+            if (strcmp(arg, flag) == 0)
+              return true;
+        return false;
+      }
+    }
+  }
+  }
+  return false;
+}
+
+/// Determine whether this CU was compiled with C++ interop enabled.
+bool TypeSystemSwift::ShouldEnableCXXInterop(CompileUnit *cu) {
+  return CheckFlagInCU(cu, "-enable-experimental-cxx-interop");
+}
+
+bool TypeSystemSwift::ShouldEnableEmbeddedSwift(CompileUnit *cu) {
+  return CheckFlagInCU(cu, "-enable-embedded-swift");
+}
 
 void TypeSystemSwift::Dump(llvm::raw_ostream &output) {
   // TODO: What to dump?
