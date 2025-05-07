@@ -722,6 +722,10 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                 self.verify_variables(verify_locals, local_variables, varref_dict)
                 break
 
+        self.assertFalse(
+            self.dap_server.request_setVariable(1, "(Return Value)", 20)["success"]
+        )
+
     @skipIfWindows
     def test_indexedVariables(self):
         self.do_test_indexedVariables(enableSyntheticChildDebugging=False)

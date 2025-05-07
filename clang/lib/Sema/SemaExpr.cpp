@@ -251,7 +251,8 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
         << D->getDeclName();
     } else {
       Diag(Loc, diag::err_auto_variable_cannot_appear_in_own_initializer)
-        << D->getDeclName() << cast<VarDecl>(D)->getType();
+          << diag::ParsingInitFor::Var << D->getDeclName()
+          << cast<VarDecl>(D)->getType();
     }
     return true;
   }
@@ -4700,6 +4701,10 @@ ExprResult Sema::CreateUnaryExprOrTypeTraitExpr(TypeSourceInfo *TInfo,
       TInfo->getType()->isVariablyModifiedType())
     TInfo = TransformToPotentiallyEvaluated(TInfo);
 
+  // It's possible that the transformation above failed.
+  if (!TInfo)
+    return ExprError();
+
   // C99 6.5.3.4p4: the type (an unsigned integer type) is size_t.
   return new (Context) UnaryExprOrTypeTraitExpr(
       ExprKind, TInfo, Context.getSizeType(), OpLoc, R.getEnd());
@@ -6537,6 +6542,15 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
   return Call;
 }
 
+// Any type that could be used to form a callable expression
+static bool MayBeFunctionType(const ASTContext &Context, QualType T) {
+  return T == Context.BoundMemberTy || T == Context.UnknownAnyTy ||
+         T == Context.BuiltinFnTy || T == Context.OverloadTy ||
+         T->isFunctionType() || T->isFunctionReferenceType() ||
+         T->isMemberFunctionPointerType() || T->isFunctionPointerType() ||
+         T->isBlockPointerType() || T->isRecordType();
+}
+
 ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
                                MultiExprArg ArgExprs, SourceLocation RParenLoc,
                                Expr *ExecConfig, bool IsExecConfig,
@@ -6589,6 +6603,15 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
         tryImplicitlyCaptureThisIfImplicitMemberFunctionAccessWithDependentArgs(
             *this, dyn_cast<UnresolvedMemberExpr>(Fn->IgnoreParens()),
             Fn->getBeginLoc());
+
+        // If the type of the function itself is not dependent
+        // check that it is a reasonable as a function, as type deduction
+        // later assume the CallExpr has a sensible TYPE.
+        if (!Fn->getType()->isDependentType() &&
+            !MayBeFunctionType(Context, Fn->getType()))
+          return ExprError(
+              Diag(LParenLoc, diag::err_typecheck_call_not_function)
+              << Fn->getType() << Fn->getSourceRange());
 
         return CallExpr::Create(Context, Fn, ArgExprs, Context.DependentTy,
                                 VK_PRValue, RParenLoc, CurFPFeatureOverrides());
@@ -7983,6 +8006,15 @@ ExprResult Sema::ActOnParenListExpr(SourceLocation L,
                                     SourceLocation R,
                                     MultiExprArg Val) {
   return ParenListExpr::Create(Context, L, Val, R);
+}
+
+ExprResult Sema::ActOnCXXParenListInitExpr(ArrayRef<Expr *> Args, QualType T,
+                                           unsigned NumUserSpecifiedExprs,
+                                           SourceLocation InitLoc,
+                                           SourceLocation LParenLoc,
+                                           SourceLocation RParenLoc) {
+  return CXXParenListInitExpr::Create(Context, Args, T, NumUserSpecifiedExprs,
+                                      InitLoc, LParenLoc, RParenLoc);
 }
 
 bool Sema::DiagnoseConditionalForNull(const Expr *LHSExpr, const Expr *RHSExpr,
@@ -9824,15 +9856,35 @@ AssignConvertType Sema::CheckSingleAssignmentConstraints(QualType LHSType,
       ((getLangOpts().C23 && RHS.get()->getType()->isNullPtrType()) ||
        RHS.get()->isNullPointerConstant(Context,
                                         Expr::NPC_ValueDependentIsNull))) {
+    AssignConvertType Ret = AssignConvertType::Compatible;
     if (Diagnose || ConvertRHS) {
       CastKind Kind;
       CXXCastPath Path;
       CheckPointerConversion(RHS.get(), LHSType, Kind, Path,
                              /*IgnoreBaseAccess=*/false, Diagnose);
+
+      // If there is a conversion of some kind, check to see what kind of
+      // pointer conversion happened so we can diagnose a C++ compatibility
+      // diagnostic if the conversion is invalid. This only matters if the RHS
+      // is some kind of void pointer.
+      if (Kind != CK_NoOp && !getLangOpts().CPlusPlus) {
+        QualType CanRHS =
+            RHS.get()->getType().getCanonicalType().getUnqualifiedType();
+        QualType CanLHS = LHSType.getCanonicalType().getUnqualifiedType();
+        if (CanRHS->isVoidPointerType() && CanLHS->isPointerType()) {
+          Ret = checkPointerTypesForAssignment(*this, CanLHS, CanRHS,
+                                               RHS.get()->getExprLoc());
+          // Anything that's not considered perfectly compatible would be
+          // incompatible in C++.
+          if (Ret != AssignConvertType::Compatible)
+            Ret = AssignConvertType::CompatibleVoidPtrToNonVoidPtr;
+        }
+      }
+
       if (ConvertRHS)
         RHS = ImpCastExprToType(RHS.get(), LHSType, Kind, VK_PRValue, &Path);
     }
-    return AssignConvertType::Compatible;
+    return Ret;
   }
   // C23 6.5.16.1p1: the left operand has type atomic, qualified, or
   // unqualified bool, and the right operand is a pointer or its type is
@@ -13958,7 +14010,7 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
           LHSType->isObjCObjectPointerType())))
       ConvTy = AssignConvertType::Compatible;
 
-    if (ConvTy == AssignConvertType::Compatible && LHSType->isObjCObjectType())
+    if (IsAssignConvertCompatible(ConvTy) && LHSType->isObjCObjectType())
       Diag(Loc, diag::err_objc_object_assignment) << LHSType;
 
     // If the RHS is a unary plus or minus, check to see if they = and + are
@@ -13981,7 +14033,7 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
       }
     }
 
-    if (ConvTy == AssignConvertType::Compatible) {
+    if (IsAssignConvertCompatible(ConvTy)) {
       if (LHSType.getObjCLifetime() == Qualifiers::OCL_Strong) {
         // Warn about retain cycles where a block captures the LHS, but
         // not if the LHS is a simple variable into which the block is

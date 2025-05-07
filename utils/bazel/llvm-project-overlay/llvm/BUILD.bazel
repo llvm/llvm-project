@@ -2342,6 +2342,10 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/Sparc/SparcGenSubtargetInfo.inc": ["-gen-subtarget"],
             "lib/Target/Sparc/SparcGenDisassemblerTables.inc": ["-gen-disassembler"],
             "lib/Target/Sparc/SparcGenSearchableTables.inc": ["-gen-searchable-tables"],
+            "lib/Target/Sparc/SparcGenSDNodeInfo.inc": [
+                "-gen-sd-node-info",
+                "-sdnode-namespace=SPISD",
+            ],
         },
     },
     {

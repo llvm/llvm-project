@@ -417,7 +417,7 @@ LinkerDriver::createManifestXmlWithInternalMt(StringRef defaultXml) {
       MemoryBuffer::getMemBufferCopy(defaultXml);
 
   windows_manifest::WindowsManifestMerger merger;
-  if (auto e = merger.merge(*defaultXmlCopy.get()))
+  if (auto e = merger.merge(*defaultXmlCopy))
     Fatal(ctx) << "internal manifest tool failed on default xml: "
                << toString(std::move(e));
 
@@ -430,7 +430,7 @@ LinkerDriver::createManifestXmlWithInternalMt(StringRef defaultXml) {
                  << toString(std::move(e));
   }
 
-  return std::string(merger.getMergedManifest().get()->getBuffer());
+  return std::string(merger.getMergedManifest()->getBuffer());
 }
 
 std::string

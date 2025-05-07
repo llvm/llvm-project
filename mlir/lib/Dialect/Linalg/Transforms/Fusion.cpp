@@ -85,7 +85,6 @@ getShapeDefiningLoopRange(LinalgOp op, unsigned loopDepth,
                             << opOperand.getOperandNumber() << "\n");
     LLVM_DEBUG(llvm::dbgs()
                << "getShapeDefiningLoopRange map: " << map << "\n");
-    SmallVector<Value, 8> shapeRanges(map.getNumResults(), nullptr);
     for (const auto &en : llvm::enumerate(map.getResults())) {
       auto dimExpr = dyn_cast<AffineDimExpr>(en.value());
       if (!dimExpr)

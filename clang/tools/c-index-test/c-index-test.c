@@ -1863,14 +1863,14 @@ static enum CXChildVisitResult PrintTypeSize(CXCursor cursor, CXCursor p,
 static enum CXChildVisitResult PrintBinOps(CXCursor C, CXCursor p,
                                            CXClientData d) {
   enum CXCursorKind ck = clang_getCursorKind(C);
-  enum CX_BinaryOperatorKind bok;
+  enum CXBinaryOperatorKind bok;
   CXString opstr;
   if (ck != CXCursor_BinaryOperator && ck != CXCursor_CompoundAssignOperator)
     return CXChildVisit_Recurse;
 
   PrintCursor(C, NULL);
-  bok = clang_Cursor_getBinaryOpcode(C);
-  opstr = clang_Cursor_getBinaryOpcodeStr(bok);
+  bok = clang_getCursorBinaryOperatorKind(C);
+  opstr = clang_getBinaryOperatorKindSpelling(bok);
   printf(" BinOp=%s %d\n", clang_getCString(opstr), bok);
   clang_disposeString(opstr);
   return CXChildVisit_Recurse;
