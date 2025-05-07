@@ -89,8 +89,7 @@ TEST_F(LlvmLibcExp10m1fTest, InFloatRange) {
     // in the single-precision floating point range, then ignore comparing with
     // MPFR result as MPFR can still produce valid results because of its
     // wider precision.
-    if (FPBits(result).is_nan() || FPBits(result).is_inf() ||
-        LIBC_NAMESPACE::libc_errno != 0)
+    if (FPBits(result).is_inf_or_nan() || LIBC_NAMESPACE::libc_errno != 0)
       continue;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp10m1, x,
                                    LIBC_NAMESPACE::exp10m1f(x), 0.5);
