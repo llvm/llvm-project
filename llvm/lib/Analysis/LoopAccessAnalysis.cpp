@@ -2183,7 +2183,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   // the minimum distance needed is 28, which is greater than distance. It is
   // not safe to do vectorization.
   //
-  // We use MaxStride (maximum of src and sink strides), to get conservative
+  // We use MaxStride (maximum of src and sink strides) to get a conservative
   // lower bound on the MinDistanceNeeded in case of different strides.
 
   // We know that Dist is positive, but it may not be constant. Use the signed
@@ -2235,9 +2235,6 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
       couldPreventStoreLoadForward(MinDistance, TypeByteSize, *CommonStride))
     return Dependence::BackwardVectorizableButPreventsForwarding;
 
-  // An update to MinDepDistBytes requires an update to MaxSafeVectorWidthInBits
-  // since there is a backwards dependency. We use MaxStride to get a
-  // conservative upper bound on MaxVF.
   uint64_t MaxVF = MinDepDistBytes / MaxStride;
   LLVM_DEBUG(dbgs() << "LAA: Positive min distance " << MinDistance
                     << " with max VF = " << MaxVF << '\n');
