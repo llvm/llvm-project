@@ -61,16 +61,16 @@ protected:
     return nativeShape;
   }
 
-  std::optional<SmallVector<int64_t>>
-  computeGrids(llvm::ArrayRef<int64_t> shape,
-               llvm::ArrayRef<int64_t> subShape) const {
-    // if the shape == subshape, we don't need to unroll.
-    if (shape == subShape) {
-      LDBG("shape == subshape, no unroll");
-      return std::nullopt;
-    }
-    return computeShapeRatio(shape, subShape);
-  }
+  // std::optional<SmallVector<int64_t>>
+  // computeGrids(llvm::ArrayRef<int64_t> shape,
+  //              llvm::ArrayRef<int64_t> subShape) const {
+  //   // if the shape == subshape, we don't need to unroll.
+  //   if (shape == subShape) {
+  //     LDBG("shape == subshape, no unroll");
+  //     return std::nullopt;
+  //   }
+  //   return computeShapeRatio(shape, subShape);
+  // }
 
   // copy the layout attribte and drops the inst_data field.
   xegpu::LayoutAttr getLaneLevelAttrsOnly(Attribute attr) const {
@@ -193,10 +193,6 @@ struct UnrollCreateNdOp : public UnrollPattern<xegpu::CreateNdDescOp> {
       return failure();
     auto targetShape = *maybeTargetShape;
 
-    auto maybeGrids = computeGrids(shape, targetShape);
-    if (!maybeGrids)
-      return failure();
-
     auto encoding = tdescTy.getEncoding();
     auto newLayout = getLaneLevelAttrsOnly(layout);
     auto newTdescTy = xegpu::TensorDescType::get(
@@ -251,14 +247,9 @@ struct UnrollUpdateNdOffsetOp : public UnrollPattern<xegpu::UpdateNdOffsetOp> {
     auto shape = tdescTy.getShape();
 
     auto maybeTargetShape = getTargetShape(op);
-    if (!maybeTargetShape)
+    if (!maybeTargetShape || llvm::equal(*maybeTargetShape, shape))
       return failure();
     auto targetShape = *maybeTargetShape;
-
-    auto maybeGrids = computeGrids(shape, targetShape);
-    if (!maybeGrids)
-      return failure();
-    auto grids = *maybeGrids;
 
     auto convertedTdescTypes = getUnrolledTypes(tdescTy, targetShape);
     auto convertedTdesc =
@@ -286,14 +277,9 @@ struct UnrollPrefetchNdOp : public UnrollPattern<xegpu::PrefetchNdOp> {
     auto shape = tdescTy.getShape();
 
     auto maybeTargetShape = getTargetShape(op);
-    if (!maybeTargetShape)
+    if (!maybeTargetShape || llvm::equal(*maybeTargetShape, shape))
       return failure();
     auto targetShape = *maybeTargetShape;
-
-    auto maybeGrids = computeGrids(shape, targetShape);
-    if (!maybeGrids)
-      return failure();
-    auto grids = *maybeGrids;
 
     auto convertedTdescTypes = getUnrolledTypes(tdescTy, targetShape);
     auto convertedTdesc =
@@ -316,20 +302,12 @@ struct UnrollLoadNdOp : public UnrollPattern<xegpu::LoadNdOp> {
     auto loc = op.getLoc();
     auto valueTy = op.getType();
     auto tdescTy = op.getTensorDescType();
-
-    // TODO: enable 1D block tensor desc
-    if (tdescTy.getRank() != 2)
-      return failure();
+    auto shape = tdescTy.getShape();
 
     auto maybeTargetShape = getTargetShape(op);
-    if (!maybeTargetShape)
+    if (!maybeTargetShape || llvm::equal(*maybeTargetShape, shape))
       return failure();
     auto targetShape = *maybeTargetShape;
-
-    auto maybeGrids = computeGrids(tdescTy.getShape(), targetShape);
-    if (!maybeGrids)
-      return failure();
-    auto grids = *maybeGrids;
 
     auto elemTy = tdescTy.getElementType();
     auto newValueTy = valueTy.cloneWith(targetShape, elemTy);
@@ -359,20 +337,16 @@ struct UnrollStoreNdOp : public UnrollPattern<xegpu::StoreNdOp> {
     auto loc = op.getLoc();
     auto valueTy = op.getValueType();
     auto tdescTy = op.getTensorDescType();
+    auto shape = tdescTy.getShape();
 
     // TODO: enable 1D block tensor desc
     if (tdescTy.getRank() != 2)
       return failure();
 
     auto maybeTargetShape = getTargetShape(op);
-    if (!maybeTargetShape)
+    if (!maybeTargetShape || llvm::equal(*maybeTargetShape, shape))
       return failure();
     auto targetShape = *maybeTargetShape;
-
-    auto maybeGrids = computeGrids(tdescTy.getShape(), targetShape);
-    if (!maybeGrids)
-      return failure();
-    auto grids = *maybeGrids;
 
     auto convertedValTypes = getUnrolledTypes(valueTy, targetShape);
     auto convertedTdescTypes = getUnrolledTypes(tdescTy, targetShape);
@@ -395,8 +369,14 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
   using UnrollPattern<xegpu::DpasOp>::UnrollPattern;
   LogicalResult matchAndRewrite(xegpu::DpasOp op,
                                 PatternRewriter &rewriter) const override {
-
     auto loc = op.getLoc();
+
+    // expecting every operands is a 2D Vector
+    if (llvm::any_of(op->getOperandTypes(), [&](Type type) {
+          auto vecTy = dyn_cast<VectorType>(type);
+          return !vecTy || vecTy.getRank() != 2;
+        }))
+      return failure();
 
     // a vector of 3 elements should be returned, representing M, K, N
     // respectively.
