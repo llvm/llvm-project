@@ -270,7 +270,7 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
   } else if (auto *VPLoad = dyn_cast<VPIntrinsic>(Load)) {
     assert(VPLoad->getIntrinsicID() == Intrinsic::vp_load);
     // Require a constant mask.
-    if (!isa<ConstantVector>(VPLoad->getArgOperand(1)))
+    if (!isa<ConstantVector>(VPLoad->getMaskParam()))
       return false;
   } else {
     llvm_unreachable("unsupported load operation");
@@ -364,8 +364,8 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
       replaceBinOpShuffles(BinOpShuffles.getArrayRef(), Shuffles, Load);
 
   if (auto *VPLoad = dyn_cast<VPIntrinsic>(Load)) {
-    Value *LaneMask = getMask(VPLoad->getArgOperand(1), Factor,
-                              cast<VectorType>(Shuffles[0]->getType()));
+    Value *LaneMask =
+        getMask(VPLoad->getMaskParam(), Factor, cast<VectorType>(VecTy));
     if (!LaneMask)
       return false;
 
@@ -505,7 +505,7 @@ bool InterleavedAccessImpl::lowerInterleavedStore(
   } else if (auto *VPStore = dyn_cast<VPIntrinsic>(Store)) {
     assert(VPStore->getIntrinsicID() == Intrinsic::vp_store);
     // Require a constant mask.
-    if (!isa<ConstantVector>(VPStore->getArgOperand(2)))
+    if (!isa<ConstantVector>(VPStore->getMaskParam()))
       return false;
     StoredValue = VPStore->getArgOperand(0);
   } else {
@@ -527,7 +527,7 @@ bool InterleavedAccessImpl::lowerInterleavedStore(
 
   if (auto *VPStore = dyn_cast<VPIntrinsic>(Store)) {
     unsigned LaneMaskLen = NumStoredElements / Factor;
-    Value *LaneMask = getMask(VPStore->getArgOperand(2), Factor,
+    Value *LaneMask = getMask(VPStore->getMaskParam(), Factor,
                               ElementCount::getFixed(LaneMaskLen));
     if (!LaneMask)
       return false;
