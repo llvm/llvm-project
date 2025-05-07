@@ -204,17 +204,10 @@ namespace {
       return InfosBE[Kind - FirstTargetFixupKind];
     }
 
-    bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                               const MCValue &Target,
-                               const MCSubtargetInfo *STI) override {
-      switch ((Sparc::Fixups)Fixup.getKind()) {
-      default:
-        return false;
-      case Sparc::fixup_sparc_wplt30:
-        if (Target.getAddSym()->isTemporary())
-          return false;
-        return true;
-      }
+    bool shouldForceRelocation(const MCAssembler &, const MCFixup &,
+                               const MCValue &,
+                               const MCSubtargetInfo *) override {
+      return false;
     }
 
     void relaxInstruction(MCInst &Inst,
