@@ -965,7 +965,6 @@ public:
   CygwinX86_64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : X86_64TargetInfo(Triple, Opts) {
     this->WCharType = TargetInfo::UnsignedShort;
-    TLSSupported = false;
   }
 
   void getTargetDefines(const LangOptions &Opts,

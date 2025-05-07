@@ -406,6 +406,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   ASSERT_EQ(Tokens.size(), 16u) << Tokens;
   EXPECT_TOKEN(Tokens[9], tok::star, TT_BinaryOperator);
   EXPECT_TOKEN(Tokens[11], tok::star, TT_BinaryOperator);
+
+  Tokens = annotate("float foo[3] = {M * H * H, H * M * H, H * H * M};");
+  ASSERT_EQ(Tokens.size(), 27u) << Tokens;
+  EXPECT_TOKEN(Tokens[16], tok::star, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[22], tok::star, TT_BinaryOperator);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {

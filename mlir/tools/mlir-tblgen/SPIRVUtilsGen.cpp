@@ -1180,8 +1180,7 @@ static bool emitSerializationFns(const RecordKeeper &records, raw_ostream &os) {
   llvm::emitSourceFileHeader("SPIR-V Serialization Utilities/Functions", os,
                              records);
 
-  std::string dSerFnString, dDesFnString, serFnString, deserFnString,
-      utilsString;
+  std::string dSerFnString, dDesFnString, serFnString, deserFnString;
   raw_string_ostream dSerFn(dSerFnString), dDesFn(dDesFnString),
       serFn(serFnString), deserFn(deserFnString);
   const Record *attrClass = records.getClass("Attr");
