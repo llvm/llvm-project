@@ -283,6 +283,7 @@ class DynamicValueTestCase(TestBase):
     @no_debug_info_test
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24663")
     @expectedFailureDarwin  # dynamic loader unloads modules
+    @expectedFailureAll(archs=["arm"]) # Minidump saving not implemented
     def test_from_core_file(self):
         """Test fetching C++ dynamic values from core files. Specifically, test
         that we can determine the dynamic type of the value if the core file
