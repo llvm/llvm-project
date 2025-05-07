@@ -505,6 +505,10 @@ Improvements to Clang's diagnostics
 - ``-Wreserved-identifier`` now fires on reserved parameter names in a function
   declaration which is not a definition.
 
+- The compatibility diagnostic for implicit ``typename`` before a dependent type
+  name is now correctly part of ``-Wpre-c++20-compat`` rather than
+  ``-Wc++20-compat``. (#GH138775)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
