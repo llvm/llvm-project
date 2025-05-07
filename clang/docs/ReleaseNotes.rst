@@ -106,6 +106,8 @@ C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
 - Implemented `P1061R10 Structured Bindings can introduce a Pack <https://wg21.link/P1061R10>`_.
+- Implemented `P2786R13 Trivial Relocatability <https://wg21.link/P2786R13>`_.
+
 
 - Implemented `P0963R3 Structured binding declaration as a condition <https://wg21.link/P0963R3>`_.
 
@@ -255,7 +257,10 @@ C23 Feature Support
 - Implemented `WG14 N3037 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3037.pdf>`_
   which allows tag types to be redefined within the same translation unit so
   long as both definitions are structurally equivalent (same tag types, same
-  tag names, same tag members, etc).
+  tag names, same tag members, etc). As a result of this paper, ``-Wvisibility``
+  is no longer diagnosed in C23 if the parameter is a complete tag type (it
+  does still fire when the parameter is an incomplete tag type as that cannot
+  be completed).
 - Fixed a failed assertion with an invalid parameter to the ``#embed``
   directive. Fixes #GH126940.
 
@@ -284,6 +289,8 @@ Non-comprehensive list of changes in this release
   stack space when running on Apple AArch64 based platforms. This means that
   stack traces of Clang from debuggers, crashes, and profilers may look
   different than before.
+- Fixed a crash when a VLA with an invalid size expression was used within a
+  ``sizeof`` or ``typeof`` expression. (#GH138444)
 
 New Compiler Flags
 ------------------
@@ -589,6 +596,9 @@ Bug Fixes to Attribute Support
   ``__attribute__((unused))`` are still ignored after the definition, though
   this behavior may be relaxed in the future). (#GH135481)
 
+- Clang will warn if a complete type specializes a deprecated partial specialization.
+  (#GH44496)
+
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -646,6 +656,10 @@ Bug Fixes to C++ Support
   (#GH136432), (#GH137014), (#GH138018)
 - Fixed an assertion when trying to constant-fold various builtins when the argument
   referred to a reference to an incomplete type. (#GH129397)
+- Fixed a crash when a cast involved a parenthesized aggregate initialization in dependent context. (#GH72880)
+- Fixed a crash when forming an invalid function type in a dependent context. (#GH138657) (#GH115725) (#GH68852)
+- No longer crashes when instantiating invalid variable template specialization
+  whose type depends on itself. (#GH51347), (#GH55872)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

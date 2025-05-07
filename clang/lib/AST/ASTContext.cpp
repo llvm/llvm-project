@@ -1693,6 +1693,24 @@ void ASTContext::getOverriddenMethods(
   Overridden.append(OverDecls.begin(), OverDecls.end());
 }
 
+std::optional<ASTContext::CXXRecordDeclRelocationInfo>
+ASTContext::getRelocationInfoForCXXRecord(const CXXRecordDecl *RD) const {
+  assert(RD);
+  CXXRecordDecl *D = RD->getDefinition();
+  auto it = RelocatableClasses.find(D);
+  if (it != RelocatableClasses.end())
+    return it->getSecond();
+  return std::nullopt;
+}
+
+void ASTContext::setRelocationInfoForCXXRecord(
+    const CXXRecordDecl *RD, CXXRecordDeclRelocationInfo Info) {
+  assert(RD);
+  CXXRecordDecl *D = RD->getDefinition();
+  assert(RelocatableClasses.find(D) == RelocatableClasses.end());
+  RelocatableClasses.insert({D, Info});
+}
+
 void ASTContext::addedLocalImportDecl(ImportDecl *Import) {
   assert(!Import->getNextLocalImport() &&
          "Import declaration already in the chain");
@@ -7644,6 +7662,55 @@ ASTContext::getCanonicalTemplateArgument(const TemplateArgument &Arg) const {
   }
 
   // Silence GCC warning
+  llvm_unreachable("Unhandled template argument kind");
+}
+
+bool ASTContext::isSameTemplateArgument(const TemplateArgument &Arg1,
+                                        const TemplateArgument &Arg2) const {
+  if (Arg1.getKind() != Arg2.getKind())
+    return false;
+
+  switch (Arg1.getKind()) {
+  case TemplateArgument::Null:
+    llvm_unreachable("Comparing NULL template argument");
+
+  case TemplateArgument::Type:
+    return hasSameType(Arg1.getAsType(), Arg2.getAsType());
+
+  case TemplateArgument::Declaration:
+    return Arg1.getAsDecl()->getUnderlyingDecl()->getCanonicalDecl() ==
+           Arg2.getAsDecl()->getUnderlyingDecl()->getCanonicalDecl();
+
+  case TemplateArgument::NullPtr:
+    return hasSameType(Arg1.getNullPtrType(), Arg2.getNullPtrType());
+
+  case TemplateArgument::Template:
+  case TemplateArgument::TemplateExpansion:
+    return getCanonicalTemplateName(Arg1.getAsTemplateOrTemplatePattern()) ==
+           getCanonicalTemplateName(Arg2.getAsTemplateOrTemplatePattern());
+
+  case TemplateArgument::Integral:
+    return llvm::APSInt::isSameValue(Arg1.getAsIntegral(),
+                                     Arg2.getAsIntegral());
+
+  case TemplateArgument::StructuralValue:
+    return Arg1.structurallyEquals(Arg2);
+
+  case TemplateArgument::Expression: {
+    llvm::FoldingSetNodeID ID1, ID2;
+    Arg1.getAsExpr()->Profile(ID1, *this, /*Canonical=*/true);
+    Arg2.getAsExpr()->Profile(ID2, *this, /*Canonical=*/true);
+    return ID1 == ID2;
+  }
+
+  case TemplateArgument::Pack:
+    return llvm::equal(
+        Arg1.getPackAsArray(), Arg2.getPackAsArray(),
+        [&](const TemplateArgument &Arg1, const TemplateArgument &Arg2) {
+          return isSameTemplateArgument(Arg1, Arg2);
+        });
+  }
+
   llvm_unreachable("Unhandled template argument kind");
 }
 
