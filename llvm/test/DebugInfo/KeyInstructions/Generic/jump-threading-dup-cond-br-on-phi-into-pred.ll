@@ -16,7 +16,7 @@
 ;;        |         /   v 
 ;;        +--> Merge -> F2
 ;;
-;; Check the duplicated  (into T1) instructions' atoms are remapped.
+;; Check the duplicated (into T1) instructions' atoms are remapped.
 
 ; CHECK: T1:
 ; CHECK-NEXT: %v1 = call i32 @f1()
