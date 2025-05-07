@@ -51,6 +51,8 @@ defm adl_only_template_id : CXX20Compat<
   "with explicit template arguments is">;
 defm ctad_for_alias_templates
     : CXX20Compat<"class template argument deduction for alias templates is">;
+defm implicit_typename : CXX20Compat<
+  "missing 'typename' prior to dependent type name %0 is">;
 
 // C++23 compatibility with C++20 and earlier.
 defm constexpr_static_var : CXX23Compat<
@@ -5869,14 +5871,6 @@ def err_typename_refers_to_using_value_decl : Error<
   "%0 in %1">;
 def note_using_value_decl_missing_typename : Note<
   "add 'typename' to treat this using declaration as a type">;
-def warn_cxx17_compat_implicit_typename : Warning<"use of implicit 'typename' is "
-  "incompatible with C++ standards before C++20">, InGroup<CXX20Compat>,
-  DefaultIgnore;
-def ext_implicit_typename
-    : ExtWarn<"missing 'typename' prior to dependent "
-              "type name %0; implicit 'typename' is a C++20 extension">,
-      InGroup<CXX20>;
-
 def err_template_kw_refers_to_non_template : Error<
   "%0%select{| following the 'template' keyword}1 "
   "does not refer to a template">;
