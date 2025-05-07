@@ -4398,9 +4398,10 @@ define i128 @v_sdiv_i128_v_pow2k(i128 %lhs) {
 ; GFX9-NEXT:    v_addc_co_u32_e32 v2, vcc, 0, v2, vcc
 ; GFX9-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX9-NEXT:    v_lshlrev_b64 v[0:1], 31, v[2:3]
-; GFX9-NEXT:    v_lshrrev_b32_e32 v4, 1, v4
-; GFX9-NEXT:    v_ashrrev_i64 v[2:3], 33, v[2:3]
-; GFX9-NEXT:    v_or_b32_e32 v0, v4, v0
+; GFX9-NEXT:    v_lshrrev_b32_e32 v2, 1, v4
+; GFX9-NEXT:    v_or_b32_e32 v0, v2, v0
+; GFX9-NEXT:    v_ashrrev_i32_e32 v2, 1, v3
+; GFX9-NEXT:    v_ashrrev_i32_e32 v3, 31, v3
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-O0-LABEL: v_sdiv_i128_v_pow2k:
