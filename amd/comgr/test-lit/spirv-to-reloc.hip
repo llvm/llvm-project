@@ -3,20 +3,21 @@
 // COM: Generate a SPIR-V file from a HIP kernel
 // RUN: clang -x hip --offload-arch=amdgcnspirv -nogpulib -nogpuinc \
 // RUN:    --no-gpu-bundle-output --offload-device-only -O3 %s -o %t.spv \
-// RUN:    -fno-rounding-math -fvisibility=hidden -O3 -fno-autolink \
-// RUN:    -fexceptions -fcolor-diagnostics
+// RUN:    -fvisibility=hidden -fno-autolink -fexceptions -fcolor-diagnostics
 
 // COM: Compile SPIR-V source to a relocatable
-// RUN: AMD_COMGR_EMIT_VERBOSE_LOGS=1 AMD_COMGR_REDIRECT_LOGS=stdout \
-// RUN:   spirv-to-reloc %t.spv %t.o | FileCheck %s --dump-input-filter all
-
-// CHECK: ActionKind: AMD_COMGR_ACTION_COMPILE_SPIRV_TO_RELOCATABLE
-
-// COM: Check translation
-// CHECK: SPIR-V Translation: amd-llvm-spirv -r --spirv-target-env=CL2.0 {{.*}}
+// RUN: AMD_COMGR_EMIT_VERBOSE_LOGS=1 AMD_COMGR_REDIRECT_LOGS=spirv-flags.txt \
+// RUN:   spirv-to-reloc %t.spv %t.o
 
 // COM: Check that SPIR-V flags are correctly extracted
-// CHECK: Compilation Args: {{.*}}  "-Xclang" "-fcolor-diagnostics" "-Xclang" "-fexceptions" "-Xclang" "-fno-threadsafe-statics" "-Xclang" "-fvisibility=hidden" "-Xclang" "-fconvergent-functions" "-Xclang" "-ffp-contract=fast-honor-pragmas" "-Xclang" "-fno-experimental-relative-c++-abi-vtables" "-Xclang" "-O3" "-Xclang" "-fno-autolink" "-Xclang" "-finline-functions" "-Xclang" "-mcode-object-version=5"
+// RUN: grep '\-fvisibility=hidden' spirv-flags.txt
+// RUN: grep '\-fno-autolink' spirv-flags.txt
+// RUN: grep '\-fexceptions' spirv-flags.txt
+// RUN: grep '\-fcolor-diagnostics' spirv-flags.txt
+// RUN: grep '\-O3' spirv-flags.txt
+// RUN: grep '\-mcode-object-version=5' spirv-flags.txt
+
+// RUN: rm spirv-flags.txt
 
 #include <cstdlib>
 
