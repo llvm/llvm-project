@@ -12,6 +12,7 @@
 #include "LLDBUtils.h"
 #include "Protocol/ProtocolRequests.h"
 #include "RequestHandler.h"
+#include "lldb/API/SBAttachInfo.h"
 #include "lldb/API/SBListener.h"
 #include "lldb/lldb-defines.h"
 #include "llvm/Support/Error.h"
@@ -28,15 +29,24 @@ namespace lldb_dap {
 /// Since attaching is debugger/runtime specific, the arguments for this request
 /// are not part of this specification.
 Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
-  dap.SetConfiguration(args.configuration, true);
-  if (!args.coreFile.empty())
-    dap.stop_at_entry = true;
+  // Validate that we have a well formed attach request.
+  if (args.attachCommands.empty() && args.coreFile.empty() &&
+      args.configuration.program.empty() &&
+      args.pid == LLDB_INVALID_PROCESS_ID &&
+      args.gdbRemotePort == LLDB_DAP_INVALID_PORT)
+    return make_error<DAPError>(
+        "expected one of 'pid', 'program', 'attachCommands', "
+        "'coreFile' or 'gdb-remote-port' to be specified");
 
-  // If both pid and port numbers are specified.
+  // Check if we have mutually exclusive arguments.
   if ((args.pid != LLDB_INVALID_PROCESS_ID) &&
       (args.gdbRemotePort != LLDB_DAP_INVALID_PORT))
     return make_error<DAPError>(
-        "pid and gdb-remote-port are mutually exclusive");
+        "'pid' and 'gdb-remote-port' are mutually exclusive");
+
+  dap.SetConfiguration(args.configuration, /*is_attach=*/true);
+  if (!args.coreFile.empty())
+    dap.stop_at_entry = true;
 
   PrintWelcomeMessage();
 
@@ -78,20 +88,18 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
     // Perform the launch in synchronous mode so that we don't have to worry
     // about process state changes during the launch.
     ScopeSyncMode scope_sync_mode(dap.debugger);
+
     if (!args.attachCommands.empty()) {
-      // We have "attachCommands" that are a set of commands that are expected
-      // to execute the commands after which a process should be created. If
-      // there is no valid process after running these commands, we have failed.
+      // Run the attach commands, after which we expect the debugger's selected
+      // target to contain a valid and stopped process. Otherwise inform the
+      // user that their command failed or the debugger is in an unexpected
+      // state.
       if (llvm::Error err = dap.RunAttachCommands(args.attachCommands))
         return err;
-
-      // The custom commands might have created a new target so we should use
-      // the selected target after these commands are run.
       dap.target = dap.debugger.GetSelectedTarget();
     } else if (!args.coreFile.empty()) {
       dap.target.LoadCore(args.coreFile.data(), error);
     } else if (args.gdbRemotePort != LLDB_DAP_INVALID_PORT) {
-      // If port is specified and pid is not.
       lldb::SBListener listener = dap.debugger.GetListener();
 
       // If the user hasn't provided the hostname property, default
