@@ -125,11 +125,10 @@ class NDSRVInstBFO<bits<3> funct3, string opcodestr>
   let mayStore = 0;
 }
 
-class NDSRVInstRR<bits<7> funct7, string opcodestr,
-                  string argstr = "$rd, $rs1, $rs2">
+class NDSRVInstRR<bits<7> funct7, string opcodestr>
     : RVInstR<funct7, 0b000, OPC_CUSTOM_2,
               (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
-              opcodestr, argstr>,
+              opcodestr, "$rd, $rs1, $rs2">,
       Sched<[WriteIALU, ReadIALU, ReadIALU]> {
   let hasSideEffects = 0;
   let mayLoad = 0;
@@ -137,7 +136,14 @@ class NDSRVInstRR<bits<7> funct7, string opcodestr,
 }
 
 class NDSRVInstLEA<bits<7> funct7, string opcodestr>
-    : NDSRVInstRR<funct7, opcodestr, "$rd, $rs2, $rs1">;
+    : RVInstR<funct7, 0b000, OPC_CUSTOM_2,
+              (outs GPR:$rd), (ins GPR:$rs2, GPR:$rs1),
+              opcodestr, "$rd, $rs1, $rs2">,
+      Sched<[WriteIALU, ReadIALU, ReadIALU]> {
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+}
 
 // GP: ADDI, LB, LBU
 class NDSRVInstLBGP<bits<2> funct2, string opcodestr>
