@@ -114,7 +114,7 @@ class ELFLinkGraphBuilder_i386 : public ELFLinkGraphBuilder<object::ELF32LE> {
 private:
   using ELFT = object::ELF32LE;
 
-  static Expected<i386::EdgeKind_i386> getRelocationKind(const uint32_t Type) {
+  Expected<i386::EdgeKind_i386> getRelocationKind(const uint32_t Type) {
     using namespace i386;
     switch (Type) {
     case ELF::R_386_NONE:
@@ -137,8 +137,9 @@ private:
       return EdgeKind_i386::BranchPCRel32;
     }
 
-    return make_error<JITLinkError>("Unsupported i386 relocation:" +
-                                    formatv("{0:d}", Type));
+    return make_error<JITLinkError>(
+        "In " + G->getName() + ": Unsupported i386 relocation type " +
+        object::getELFRelocationTypeName(ELF::EM_386, Type));
   }
 
   Error addRelocations() override {
