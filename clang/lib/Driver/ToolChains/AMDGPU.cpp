@@ -186,7 +186,7 @@ RocmInstallationDetector::getInstallationPathCandidates() {
       ParentName = llvm::sys::path::filename(ParentDir);
 
       // Some versions of the rocm llvm package install to
-      // /opt/rocm/lib/llvm/bin, so also back up if within the lib dir still.
+      // /opt/rocm/lib/llvm/bin, so also back up if within the lib dir still
       if (ParentName == "lib")
         ParentDir = llvm::sys::path::parent_path(ParentDir);
     }
