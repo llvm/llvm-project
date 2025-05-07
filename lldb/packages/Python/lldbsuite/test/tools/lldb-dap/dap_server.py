@@ -592,7 +592,7 @@ class DebugCommunication(object):
         attachCommands=None,
         terminateCommands=None,
         coreFile=None,
-        stopOnAttach=True,
+        stopOnAttach=False,
         postRunCommands=None,
         sourceMap=None,
         gdbRemotePort=None,
