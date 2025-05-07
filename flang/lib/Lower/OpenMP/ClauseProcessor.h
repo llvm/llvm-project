@@ -196,9 +196,11 @@ void ClauseProcessor::processTODO(mlir::Location currentLocation,
   auto checkUnhandledClause = [&](llvm::omp::Clause id, const auto *x) {
     if (!x)
       return;
+    unsigned version = semaCtx.langOptions().OpenMPVersion;
     TODO(currentLocation,
          "Unhandled clause " + llvm::omp::getOpenMPClauseName(id).upper() +
-             " in " + llvm::omp::getOpenMPDirectiveName(directive).upper() +
+             " in " +
+             llvm::omp::getOpenMPDirectiveName(directive, version).upper() +
              " construct");
   };
 

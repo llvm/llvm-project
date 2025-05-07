@@ -18,6 +18,10 @@ namespace llvm {
 class raw_ostream;
 }
 
+namespace Fortran::common {
+class LangOptions;
+}
+
 namespace Fortran::evaluate {
 struct GenericExprWrapper;
 struct GenericAssignmentWrapper;
@@ -47,14 +51,17 @@ struct AnalyzedObjectsAsFortran {
 // Converts parsed program (or fragment) to out as Fortran.
 template <typename A>
 void Unparse(llvm::raw_ostream &out, const A &root,
+    const common::LangOptions &langOpts,
     Encoding encoding = Encoding::UTF_8, bool capitalizeKeywords = true,
     bool backslashEscapes = true, preStatementType *preStatement = nullptr,
     AnalyzedObjectsAsFortran * = nullptr);
 
 extern template void Unparse(llvm::raw_ostream &out, const Program &program,
+    const common::LangOptions &langOpts,
     Encoding encoding, bool capitalizeKeywords, bool backslashEscapes,
     preStatementType *preStatement, AnalyzedObjectsAsFortran *);
 extern template void Unparse(llvm::raw_ostream &out, const Expr &expr,
+    const common::LangOptions &langOpts,
     Encoding encoding, bool capitalizeKeywords, bool backslashEscapes,
     preStatementType *preStatement, AnalyzedObjectsAsFortran *);
 } // namespace Fortran::parser

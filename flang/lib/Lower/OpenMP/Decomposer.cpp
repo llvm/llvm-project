@@ -16,6 +16,7 @@
 #include "Utils.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Semantics/semantics.h"
+#include "flang/Support/LangOptions.h"
 #include "flang/Tools/CrossToolHelpers.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -70,7 +71,7 @@ struct ConstructDecomposition {
 namespace Fortran::lower::omp {
 LLVM_DUMP_METHOD llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
                                                const UnitConstruct &uc) {
-  os << llvm::omp::getOpenMPDirectiveName(uc.id);
+  os << llvm::omp::getOpenMPDirectiveName(uc.id, llvm::omp::FallbackVersion);
   for (auto [index, clause] : llvm::enumerate(uc.clauses)) {
     os << (index == 0 ? '\t' : ' ');
     os << llvm::omp::getOpenMPClauseName(clause.id);
