@@ -20,6 +20,8 @@ def sub_64 : SubRegIndex<64>;
 def sub_64_hi_phony : SubRegIndex<64,64>;
 def sub_vsx0 : SubRegIndex<128>;
 def sub_vsx1 : SubRegIndex<128, 128>;
+def sub_vsx2 : ComposedSubRegIndex<sub_vsx1, sub_vsx0>;
+def sub_vsx3 : ComposedSubRegIndex<sub_vsx2, sub_vsx0>;
 def sub_gp8_x0 : SubRegIndex<64>;
 def sub_gp8_x1 : SubRegIndex<64, 64>;
 def sub_fp0 : SubRegIndex<64>;
