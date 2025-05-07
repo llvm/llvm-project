@@ -2342,7 +2342,9 @@ void JumpThreadingPass::threadThroughTwoBasicBlocks(BasicBlock *PredPredBB,
        {DominatorTree::Insert, PredPredBB, NewBB},
        {DominatorTree::Delete, PredPredBB, PredBB}});
 
+  // Remap source location atoms beacuse we're duplicating control flow.
   remapSourceAtoms(ValueMapping, NewBB->begin(), NewBB->end());
+
   updateSSA(PredBB, NewBB, ValueMapping);
 
   // Clean up things like PHI nodes with single operands, dead instructions,
