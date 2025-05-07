@@ -5513,9 +5513,9 @@ QualType ASTContext::getHLSLInlineSpirvType(uint32_t Opcode, uint32_t Size,
   if (Ty)
     return QualType(Ty, 0);
 
-  unsigned size = sizeof(HLSLInlineSpirvType);
-  size += Operands.size() * sizeof(SpirvOperand);
-  void *Mem = Allocate(size, alignof(HLSLInlineSpirvType));
+  void *Mem = Allocate(
+      HLSLInlineSpirvType::totalSizeToAlloc<SpirvOperand>(Operands.size()),
+      alignof(HLSLInlineSpirvType));
 
   Ty = new (Mem) HLSLInlineSpirvType(Opcode, Size, Alignment, Operands);
 

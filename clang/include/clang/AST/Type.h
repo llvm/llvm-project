@@ -6388,7 +6388,7 @@ private:
   llvm::APInt Value; // Signedness of constants is represented by ResultType.
 
 public:
-  SpirvOperand() : Kind(Invalid), ResultType() {}
+  SpirvOperand() : Kind(Invalid), ResultType(), Value() {}
 
   SpirvOperand(SpirvOperandKind Kind, QualType ResultType, llvm::APInt Value)
       : Kind(Kind), ResultType(ResultType), Value(Value) {}
@@ -6466,8 +6466,13 @@ private:
                       ArrayRef<SpirvOperand> Operands)
       : Type(HLSLInlineSpirv, QualType(), TypeDependence::None), Opcode(Opcode),
         Size(Size), Alignment(Alignment), NumOperands(Operands.size()) {
-    for (size_t I = 0; I < NumOperands; I++)
-      getTrailingObjects<SpirvOperand>()[I] = Operands[I];
+    for (size_t I = 0; I < NumOperands; I++) {
+      // Since Operands are stored as a trailing object, they have not been
+      // initialized yet. Call the constructor manually.
+      auto *Operand =
+          new (&getTrailingObjects<SpirvOperand>()[I]) SpirvOperand();
+      *Operand = Operands[I];
+    }
   }
 
 public:
