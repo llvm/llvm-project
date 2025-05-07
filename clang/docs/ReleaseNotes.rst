@@ -434,9 +434,9 @@ Improvements to Clang's diagnostics
 - The ``-Wsign-compare`` warning now treats expressions with bitwise not(~) and minus(-) as signed integers
   except for the case where the operand is an unsigned integer
   and throws warning if they are compared with unsigned integers (##18878).
-- The ``-Wunnecessary-virtual-specifier`` warning has been added to warn about
-  methods which are marked as virtual inside a ``final`` class, and hence can
-  never be overridden.
+- The ``-Wunnecessary-virtual-specifier`` warning (included in ``-Wextra``) has
+  been added to warn about methods which are marked as virtual inside a
+  ``final`` class, and hence can never be overridden.
 
 - Improve the diagnostics for chained comparisons to report actual expressions and operators (#GH129069).
 
