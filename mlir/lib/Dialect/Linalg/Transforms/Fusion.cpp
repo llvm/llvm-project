@@ -236,37 +236,39 @@ mlir::linalg::fuseProducerOfTensor(OpBuilder &b, OpOperand &consumerOpOperand) {
   return fuseProducerOfTensor(b, producerOpResult, consumerOpOperand);
 }
 
-/// Create tensor.collapse_shape to drop dimensions in `dropDims` in tensor
+/// Create tensor.collapse_shape to drop unit dimensions in `dropDims` in tensor
 /// `from`.
 static tensor::CollapseShapeOp
-collapseTo(OpBuilder &b, Location loc, Value from,
-           const llvm::SmallBitVector &dropDims) {
+dropGivenUnitDims(OpBuilder &b, Location loc, Value from,
+                  const llvm::SmallBitVector &dropDims) {
   auto fromType = cast<ShapedType>(from.getType());
-  assert(fromType.getRank() == dropDims.size() &&
+  assert(fromType.getRank() == static_cast<int64_t>(dropDims.size()) &&
          "dropDims dimension does not match from tensor rank");
   // Computed reassociation map for the corresponding tensor.collapse_shape.
-  SmallVector<ReassociationIndices, 2> reassocIdxsVec;
-  // Current reassociation indices to add dropped dimension to.
-  ReassociationIndices reassocIdxs;
+  SmallVector<ReassociationIndices, 2> reassocMaps;
+  // Current reassociation group to add dropped dimension to.
+  ReassociationIndices reassocGroup;
 
   bool foundKeptDim = false;
   // Dropped dimensions might be at the beginning or end of the shape so
   // combine all contiguous dimensions before and after a given non dropped
-  // dimension in reassocIdxs until another non dropped dimension is found.
+  // dimension in reassocGroup until another non dropped dimension is found.
   // When that happens, add the reassociation indices to the map.
   for (int dim = 0; dim < fromType.getRank(); dim++) {
-    if (!dropDims.test(dim)) {
+    if (dropDims.test(dim))
+      assert(fromType.getShape()[dim] == 1 && "Dropping non unit dimension");
+    else {
       if (foundKeptDim) {
-        reassocIdxsVec.push_back(reassocIdxs);
-        reassocIdxs.clear();
+        reassocMaps.push_back(reassocGroup);
+        reassocGroup.clear();
       }
       foundKeptDim = true;
     }
-    reassocIdxs.push_back(dim);
+    reassocGroup.push_back(dim);
   }
-  if (!reassocIdxs.empty())
-    reassocIdxsVec.push_back(reassocIdxs);
-  return b.create<tensor::CollapseShapeOp>(loc, from, reassocIdxsVec);
+  if (!reassocGroup.empty())
+    reassocMaps.push_back(reassocGroup);
+  return b.create<tensor::CollapseShapeOp>(loc, from, reassocMaps);
 }
 
 FailureOr<FusionInfo>
@@ -312,7 +314,7 @@ mlir::linalg::fuseProducerOfTensor(OpBuilder &b, OpResult producerOpResult,
   // Rank-reduction occured as part of the extract_slice.
   if (cast<ShapedType>(consumerType).getRank() !=
       cast<ShapedType>(def.getType()).getRank())
-    def = collapseTo(b, fusedProducer.getLoc(), def, droppedDims);
+    def = dropGivenUnitDims(b, fusedProducer.getLoc(), def, droppedDims);
   // Canonicalizations are not guaranteed to have happened before constructing
   // `fusedProducer`. In the tensor case this can result in temporary type
   // mismatches. Insert a `tensor.cast` op to propagate the transformation
