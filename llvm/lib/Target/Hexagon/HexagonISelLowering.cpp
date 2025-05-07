@@ -2141,10 +2141,6 @@ bool HexagonTargetLowering::hasBitTest(SDValue X, SDValue Y) const {
   return X.getValueType().isScalarInteger(); // 'tstbit'
 }
 
-bool HexagonTargetLowering::isTruncateFree(Type *Ty1, Type *Ty2) const {
-  return isTruncateFree(EVT::getEVT(Ty1), EVT::getEVT(Ty2));
-}
-
 bool HexagonTargetLowering::isTruncateFree(EVT VT1, EVT VT2) const {
   if (!VT1.isSimple() || !VT2.isSimple())
     return false;

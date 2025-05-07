@@ -1382,15 +1382,6 @@ const char *MSP430TargetLowering::getTargetNodeName(unsigned Opcode) const {
   return nullptr;
 }
 
-bool MSP430TargetLowering::isTruncateFree(Type *Ty1,
-                                          Type *Ty2) const {
-  if (!Ty1->isIntegerTy() || !Ty2->isIntegerTy())
-    return false;
-
-  return (Ty1->getPrimitiveSizeInBits().getFixedValue() >
-          Ty2->getPrimitiveSizeInBits().getFixedValue());
-}
-
 bool MSP430TargetLowering::isTruncateFree(EVT VT1, EVT VT2) const {
   if (!VT1.isInteger() || !VT2.isInteger())
     return false;

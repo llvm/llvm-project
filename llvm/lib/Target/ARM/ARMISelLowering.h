@@ -472,7 +472,6 @@ class VectorType;
     EVT getOptimalMemOpType(const MemOp &Op,
                             const AttributeList &FuncAttributes) const override;
 
-    bool isTruncateFree(Type *SrcTy, Type *DstTy) const override;
     bool isTruncateFree(EVT SrcVT, EVT DstVT) const override;
     bool isZExtFree(SDValue Val, EVT VT2) const override;
     Type* shouldConvertSplatType(ShuffleVectorInst* SVI) const override;

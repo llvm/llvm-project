@@ -1445,14 +1445,6 @@ EVT SystemZTargetLowering::getOptimalMemOpType(const MemOp &Op,
   return Subtarget.hasVector() ? MVT::v2i64 : MVT::Other;
 }
 
-bool SystemZTargetLowering::isTruncateFree(Type *FromType, Type *ToType) const {
-  if (!FromType->isIntegerTy() || !ToType->isIntegerTy())
-    return false;
-  unsigned FromBits = FromType->getPrimitiveSizeInBits().getFixedValue();
-  unsigned ToBits = ToType->getPrimitiveSizeInBits().getFixedValue();
-  return FromBits > ToBits;
-}
-
 bool SystemZTargetLowering::isTruncateFree(EVT FromVT, EVT ToVT) const {
   if (!FromVT.isInteger() || !ToVT.isInteger())
     return false;

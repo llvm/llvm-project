@@ -148,7 +148,6 @@ private:
   // isTruncateFree - Return true if it's free to truncate a value of
   // type Ty1 to type Ty2. e.g. On BPF at alu32 mode, it's free to truncate
   // a i64 value in register R1 to i32 by referencing its sub-register W1.
-  bool isTruncateFree(Type *Ty1, Type *Ty2) const override;
   bool isTruncateFree(EVT VT1, EVT VT2) const override;
 
   // For 32bit ALU result zext to 64bit is free.
