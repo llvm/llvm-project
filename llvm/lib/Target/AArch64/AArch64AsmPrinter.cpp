@@ -1372,7 +1372,8 @@ void AArch64AsmPrinter::emitFunctionEntryLabel() {
       MF->getInfo<AArch64FunctionInfo>()->isSVECC()) {
     auto *TS =
         static_cast<AArch64TargetStreamer *>(OutStreamer->getTargetStreamer());
-    TS->emitDirectiveVariantPCS(CurrentFnSym);
+    if (TS)
+      TS->emitDirectiveVariantPCS(CurrentFnSym);
   }
 
   AsmPrinter::emitFunctionEntryLabel();
