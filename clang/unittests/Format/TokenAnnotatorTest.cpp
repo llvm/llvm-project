@@ -3106,6 +3106,19 @@ TEST_F(TokenAnnotatorTest, CSharpNullableTypes) {
   ASSERT_EQ(Tokens.size(), 4u) << Tokens;
   EXPECT_TOKEN(Tokens[1], tok::question, TT_CSharpNullable);
 
+  Tokens = annotate("{\n"
+                    "  int? a;\n"
+                    "  if (b is int?)\n"
+                    "    f();\n"
+                    "  var foo = A<Foo?>();\n"
+                    "}",
+                    Style);
+  ASSERT_EQ(Tokens.size(), 29u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::question, TT_CSharpNullable);
+  EXPECT_TOKEN(Tokens[10], tok::question, TT_CSharpNullable);
+  EXPECT_TOKEN(Tokens[20], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[22], tok::question, TT_CSharpNullable);
+
   Tokens = annotate("cond? id : id2", Style);
   ASSERT_EQ(Tokens.size(), 6u) << Tokens;
   EXPECT_TOKEN(Tokens[1], tok::question, TT_ConditionalExpr);
