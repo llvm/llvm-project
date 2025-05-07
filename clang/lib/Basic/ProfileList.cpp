@@ -81,8 +81,8 @@ static StringRef getSectionName(CodeGenOptions::ProfileInstrKind Kind) {
     return "llvm";
   case CodeGenOptions::ProfileCSIRInstr:
     return "csllvm";
-  case CodeGenOptions::ProfileIRColdCov:
-    return "coldcov";
+  case CodeGenOptions::ProfileIRSampleColdCov:
+    return "sample-coldcov";
   }
   llvm_unreachable("Unhandled CodeGenOptions::ProfileInstrKind enum");
 }

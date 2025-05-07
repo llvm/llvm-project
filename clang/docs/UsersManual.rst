@@ -3394,9 +3394,9 @@ This can be done using the ``-fprofile-list`` option.
 
     $ clang++ -O2 -fprofile-instr-generate -fcoverage-mapping -fprofile-list=fun.list -fprofile-list=code.list code.cc -o code
 
-Supported sections are ``[clang]``, ``[llvm]``, ``[csllvm]``, and ``[coldcov]`` representing
-clang PGO, IRPGO, CSIRPGO and cold function coverage, respectively. Supported prefixes are 
-``function`` and ``source``. Supported categories are ``allow``, ``skip``, and ``forbid``.
+Supported sections are ``[clang]``, ``[llvm]``, ``[csllvm]``, and ``[sample-coldcov]`` representing
+clang PGO, IRPGO, CSIRPGO and sample PGO based cold function coverage, respectively. Supported prefixes 
+are ``function`` and ``source``. Supported categories are ``allow``, ``skip``, and ``forbid``.
 ``skip`` adds the ``skipprofile`` attribute while ``forbid`` adds the
 ``noprofile`` attribute to the appropriate function. Use
 ``default:<allow|skip|forbid>`` to specify the default category.
