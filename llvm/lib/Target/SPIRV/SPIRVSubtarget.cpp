@@ -83,6 +83,14 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
   }
   OpenCLVersion = VersionTuple(2, 2);
 
+  // Set the environment based on the target triple.
+  if (TargetTriple.getOS() == Triple::Vulkan)
+    Env = Vulkan;
+  else if (TargetTriple.getEnvironment() == Triple::OpenCL)
+    Env = OpenCL;
+  else
+    Env = Unknown;
+
   // The order of initialization is important.
   initAvailableExtensions(Extensions);
   initAvailableExtInstSets();
@@ -112,7 +120,11 @@ bool SPIRVSubtarget::canUseExtInstSet(
 
 SPIRV::InstructionSet::InstructionSet
 SPIRVSubtarget::getPreferredInstructionSet() const {
-  if (isOpenCLEnv())
+  // FIXME: For now, both `isVulkanEnv()` and `isOpenCLEnv()` can return true
+  // under some circumstances. Instead, we're using `isLogicalSPIRV()`, but we
+  // should change this when `isVulkanEnv()` and `isOpenCLEnv()` are precise
+  // enough.
+  if (!isLogicalSPIRV())
     return SPIRV::InstructionSet::OpenCL_std;
   else
     return SPIRV::InstructionSet::GLSL_std_450;
@@ -123,7 +135,11 @@ bool SPIRVSubtarget::isAtLeastSPIRVVer(VersionTuple VerToCompareTo) const {
 }
 
 bool SPIRVSubtarget::isAtLeastOpenCLVer(VersionTuple VerToCompareTo) const {
-  if (!isOpenCLEnv())
+  // FIXME: For now, both `isVulkanEnv()` and `isOpenCLEnv()` can return true
+  // under some circumstances. Instead, we're using `isLogicalSPIRV()`, but we
+  // should change this when `isVulkanEnv()` and `isOpenCLEnv()` are precise
+  // enough.
+  if (isLogicalSPIRV())
     return false;
   return isAtLeastVer(OpenCLVersion, VerToCompareTo);
 }
@@ -146,7 +162,11 @@ void SPIRVSubtarget::accountForAMDShaderTrinaryMinmax() {
 // Must have called initAvailableExtensions first.
 void SPIRVSubtarget::initAvailableExtInstSets() {
   AvailableExtInstSets.clear();
-  if (!isOpenCLEnv())
+  // FIXME: For now, both `isVulkanEnv()` and `isOpenCLEnv()` can return true
+  // under some circumstances. Instead, we're using `isLogicalSPIRV()`, but we
+  // should change this when `isVulkanEnv()` and `isOpenCLEnv()` are precise
+  // enough.
+  if (isLogicalSPIRV())
     AvailableExtInstSets.insert(SPIRV::InstructionSet::GLSL_std_450);
   else
     AvailableExtInstSets.insert(SPIRV::InstructionSet::OpenCL_std);

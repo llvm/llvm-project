@@ -36,6 +36,10 @@ class StringRef;
 class SPIRVTargetMachine;
 
 class SPIRVSubtarget : public SPIRVGenSubtargetInfo {
+public:
+  // Enum for the SPIR-V environment: OpenCL, Vulkan or Unkwnown.
+  enum SPIRVEnvType { OpenCL, Vulkan, Unknown };
+
 private:
   const unsigned PointerSize;
   VersionTuple SPIRVVersion;
@@ -49,6 +53,7 @@ private:
   SPIRVFrameLowering FrameLowering;
   SPIRVTargetLowering TLInfo;
   Triple TargetTriple;
+  SPIRVEnvType Env;
 
   // GlobalISel related APIs.
   std::unique_ptr<CallLowering> CallLoweringInfo;
@@ -78,14 +83,21 @@ public:
   unsigned getPointerSize() const { return PointerSize; }
   unsigned getBound() const { return GR->getBound(); }
   bool canDirectlyComparePointers() const;
-  // TODO: this environment is not implemented in Triple, we need to decide
-  // how to standardize its support. For now, let's assume SPIR-V with physical
-  // addressing is OpenCL, and Logical addressing is Vulkan.
-  bool isOpenCLEnv() const {
-    return TargetTriple.getArch() == Triple::spirv32 ||
-           TargetTriple.getArch() == Triple::spirv64;
+  void setEnv(SPIRVEnvType E) {
+    assert(E != Unknown && "Unknown environment is not allowed");
+    assert(Env == Unknown && "Environment is already set");
+
+    Env = E;
   }
-  bool isVulkanEnv() const { return TargetTriple.getArch() == Triple::spirv; }
+  SPIRVEnvType getEnv() const { return Env; }
+  bool isOpenCLEnv() const { return getEnv() == OpenCL; }
+  bool isVulkanEnv() const { return getEnv() == Vulkan; }
+  // FIXME: This should check the triple arch instead, but a lot of places use
+  // this method now instead of `is[OpenCL/Vulkan]Env()`, and this is a
+  // shortcut to make sure `is[OpenCL/Vulkan]Env()` works as expected. When we
+  // change back all uses of `isLogicalSPIRV()` to `is[OpenCL/Vulkan]Env()`, we
+  // can implement this correctly again.
+  bool isLogicalSPIRV() const { return isVulkanEnv(); }
   const std::string &getTargetTripleAsStr() const { return TargetTriple.str(); }
   VersionTuple getSPIRVVersion() const { return SPIRVVersion; };
   bool isAtLeastSPIRVVer(VersionTuple VerToCompareTo) const;

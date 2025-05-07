@@ -68,7 +68,12 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
                                SPIRV::RequirementHandler &Reqs) {
   // A set of capabilities to avoid if there is another option.
   AvoidCapabilitiesSet AvoidCaps;
-  if (ST.isOpenCLEnv())
+  // FIXME: At the moment, there's a possibility that both `isOpenCLEnv()` and
+  // `isVulkanEnv()` return true. This is because the Triple is not always
+  // precise enough. For now, we'll rely instead on `isLogicalSPIRV()`, but this
+  // should be changed when `isOpenCLEnv()` and `isVulkanEnv()` cannot be true
+  // at the same time.
+  if (!ST.isLogicalSPIRV())
     AvoidCaps.S.insert(SPIRV::Capability::Shader);
 
   VersionTuple ReqMinVer = getSymbolicOperandMinVersion(Category, i);
@@ -144,8 +149,13 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
         static_cast<SPIRV::MemoryModel::MemoryModel>(getMetadataUInt(MemMD, 1));
   } else {
     // TODO: Add support for VulkanMemoryModel.
-    MAI.Mem = ST->isOpenCLEnv() ? SPIRV::MemoryModel::OpenCL
-                                : SPIRV::MemoryModel::GLSL450;
+    // FIXME: At the moment, there's a possibility that both `isOpenCLEnv()` and
+    // `isVulkanEnv()` return true. This is because the Triple is not always
+    // precise enough. For now, we'll rely instead on `isLogicalSPIRV()`, but
+    // this should be changed when `isOpenCLEnv()` and `isVulkanEnv()` cannot be
+    // true at the same time.
+    MAI.Mem = !ST->isLogicalSPIRV() ? SPIRV::MemoryModel::OpenCL
+                                    : SPIRV::MemoryModel::GLSL450;
     if (MAI.Mem == SPIRV::MemoryModel::OpenCL) {
       unsigned PtrSize = ST->getPointerSize();
       MAI.Addr = PtrSize == 32   ? SPIRV::AddressingModel::Physical32
@@ -175,7 +185,11 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
     // OpenCL 1.0 by default for the OpenCL environment to avoid puzzling
     // run-times with Unknown/0.0 version output. For a reference, LLVM-SPIRV
     // Translator avoids potential issues with run-times in a similar manner.
-    if (ST->isOpenCLEnv()) {
+    // FIXME: At the moment, `isOpenCLEnv()` is not precise enough. This is
+    // because the Triple is not always precise enough. For now, we'll rely
+    // instead on `isLogicalSPIRV()`, but this should be changed when
+    // `isOpenCLEnv()` is precise enough.
+    if (!ST->isLogicalSPIRV()) {
       MAI.SrcLang = SPIRV::SourceLanguage::OpenCL_CPP;
       MAI.SrcLangVersion = 100000;
     } else {
@@ -203,7 +217,12 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
   MAI.Reqs.getAndAddRequirements(SPIRV::OperandCategory::AddressingModelOperand,
                                  MAI.Addr, *ST);
 
-  if (ST->isOpenCLEnv()) {
+  // FIXME: At the moment, there's a possibility that both `isOpenCLEnv()` and
+  // `isVulkanEnv()` return true. This is because the Triple is not always
+  // precise enough. For now, we'll rely instead on `isLogicalSPIRV()`, but this
+  // should be changed when `isOpenCLEnv()` and `isVulkanEnv()` cannot be true
+  // at the same time.
+  if (!ST->isLogicalSPIRV()) {
     // TODO: check if it's required by default.
     MAI.ExtInstSetMap[static_cast<unsigned>(
         SPIRV::InstructionSet::OpenCL_std)] = MAI.getNextIDRegister();
@@ -804,12 +823,17 @@ void RequirementHandler::initAvailableCapabilities(const SPIRVSubtarget &ST) {
     addAvailableCaps(EnabledCapabilities);
   }
 
-  if (ST.isOpenCLEnv()) {
+  // FIXME: At the moment, there's a possibility that both `isOpenCLEnv()` and
+  // `isVulkanEnv()` return true. This is because the Triple is not always
+  // precise enough. For now, we'll rely instead on `isLogicalSPIRV`, but this
+  // should be changed when `isOpenCLEnv()` and `isVulkanEnv()` cannot be true
+  // at the same time.
+  if (!ST.isLogicalSPIRV()) {
     initAvailableCapabilitiesForOpenCL(ST);
     return;
   }
 
-  if (ST.isVulkanEnv()) {
+  if (ST.isLogicalSPIRV()) {
     initAvailableCapabilitiesForVulkan(ST);
     return;
   }
@@ -969,7 +993,12 @@ static void addOpTypeImageReqs(const MachineInstr &MI,
   }
 
   // Has optional access qualifier.
-  if (ST.isOpenCLEnv()) {
+  // FIXME: ImageBasic/ImageReadWrite capabilities require Kernel capability.
+  // However, for now, both `isVulkanEnv()` and `isOpenCLEnv()` can return
+  // true under some circumstances. Instead, we're using `isLogicalSPIRV()`,
+  // but we should change this when `isVulkanEnv()` and `isOpenCLEnv()` are
+  // precise enough.
+  if (!ST.isLogicalSPIRV()) {
     if (MI.getNumOperands() > 8 &&
         MI.getOperand(8).getImm() == SPIRV::AccessQualifier::ReadWrite)
       Reqs.addRequirements(SPIRV::Capability::ImageReadWrite);
@@ -1267,7 +1296,12 @@ void addInstrRequirements(const MachineInstr &MI,
                                ST);
     // If it's a type of pointer to float16 targeting OpenCL, add Float16Buffer
     // capability.
-    if (!ST.isOpenCLEnv())
+    // FIXME: Float16Buffer capability requires Kernel capability. However,
+    // for now, both `isVulkanEnv()` and `isOpenCLEnv()` can return true under
+    // some circumstances. Instead, we're using `isLogicalSPIRV()`, but we
+    // should change this when `isVulkanEnv()` and `isOpenCLEnv()` are precise
+    // enough.
+    if (ST.isLogicalSPIRV())
       break;
     assert(MI.getOperand(2).isReg());
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
@@ -1342,7 +1376,12 @@ void addInstrRequirements(const MachineInstr &MI,
     addOpTypeImageReqs(MI, Reqs, ST);
     break;
   case SPIRV::OpTypeSampler:
-    if (!ST.isVulkanEnv()) {
+    // FIXME: ImageBasic capability requires Kernel capability. However, for
+    // now, both `isVulkanEnv()` and `isOpenCLEnv()` can return true under
+    // some circumstances. Instead, we're using `isLogicalSPIRV()`, but
+    // we should change this when `isVulkanEnv()` and `isOpenCLEnv()` are
+    // precise enough.
+    if (!ST.isLogicalSPIRV()) {
       Reqs.addCapability(SPIRV::Capability::ImageBasic);
     }
     break;
@@ -1769,7 +1808,11 @@ void addInstrRequirements(const MachineInstr &MI,
     // not allowed to produce
     // StorageImageReadWithoutFormat/StorageImageWriteWithoutFormat, see
     // https://github.com/KhronosGroup/SPIRV-Headers/issues/487
-    if (isImageTypeWithUnknownFormat(TypeDef) && !ST.isOpenCLEnv())
+
+    // FIXME: For now, `isOpenCLEnv()` is not precise enough. Instead, we're
+    // using `isLogicalSPIRV()`, but we should change this when `isOpenCLEnv()`
+    // is precise enough.
+    if (isImageTypeWithUnknownFormat(TypeDef) && ST.isLogicalSPIRV())
       Reqs.addCapability(SPIRV::Capability::StorageImageReadWithoutFormat);
     break;
   }
@@ -1782,7 +1825,11 @@ void addInstrRequirements(const MachineInstr &MI,
     // not allowed to produce
     // StorageImageReadWithoutFormat/StorageImageWriteWithoutFormat, see
     // https://github.com/KhronosGroup/SPIRV-Headers/issues/487
-    if (isImageTypeWithUnknownFormat(TypeDef) && !ST.isOpenCLEnv())
+
+    // FIXME: For now, `isOpenCLEnv()` is not precise enough. Instead, we're
+    // using `isLogicalSPIRV()`, but we should change this when `isOpenCLEnv()`
+    // is precise enough.
+    if (isImageTypeWithUnknownFormat(TypeDef) && ST.isLogicalSPIRV())
       Reqs.addCapability(SPIRV::Capability::StorageImageWriteWithoutFormat);
     break;
   }
