@@ -4,7 +4,7 @@
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32,+real-true16 -filetype=null %s 2>&1 | FileCheck --check-prefix=W32-ERR --implicit-check-not=error: %s
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64,+real-true16 -filetype=null %s 2>&1 | FileCheck --check-prefix=W64-ERR --implicit-check-not=error: %s
 
-v_add_co_ci_u32 v5, vcc_lo, v1, v2, vcc_lo quad_perm:[3,2,1,0]
+v_add_co_ci_u32_dpp v5, vcc_lo, v1, v2, vcc_lo quad_perm:[3,2,1,0]
 // W32: v_add_co_ci_u32_dpp v5, vcc_lo, v1, v2, vcc_lo quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0x0a,0x40,0x01,0x1b,0x00,0xff]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
@@ -459,15 +459,15 @@ v_cndmask_b32 v255, v255, v255, vcc row_xmask:15 row_mask:0x3 bank_mask:0x0 boun
 // W64: v_cndmask_b32_dpp v255, v255, v255, vcc row_xmask:15 row_mask:0x3 bank_mask:0x0 fi:1 ; encoding: [0xfa,0xfe,0xff,0x03,0xff,0x6f,0x05,0x30]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cndmask_b32 v5, -v1, |v2|, vcc quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0 bound_ctrl:0
+v_cndmask_b32_dpp v5, -v1, |v2|, vcc quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0 bound_ctrl:0
 // W64: v_cndmask_b32_dpp v5, -v1, |v2|, vcc quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0 ; encoding: [0xfa,0x04,0x0a,0x02,0x01,0xe4,0x90,0x00]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cndmask_b32 v5, |v1|, -v2, vcc quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0 bound_ctrl:0
+v_cndmask_b32_dpp v5, |v1|, -v2, vcc quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0 bound_ctrl:0
 // W64: v_cndmask_b32_dpp v5, |v1|, -v2, vcc quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0 ; encoding: [0xfa,0x04,0x0a,0x02,0x01,0xe4,0x60,0x00]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cndmask_b32 v5, -|v1|, -|v2|, vcc quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0 bound_ctrl:0
+v_cndmask_b32_dpp v5, -|v1|, -|v2|, vcc quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0 bound_ctrl:0
 // W64: v_cndmask_b32_dpp v5, -|v1|, -|v2|, vcc quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0 ; encoding: [0xfa,0x04,0x0a,0x02,0x01,0xe4,0xf0,0x00]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
