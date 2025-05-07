@@ -392,8 +392,6 @@ related warnings within the method body.
 - Clang now disallows the use of attributes applied before an
   ``extern template`` declaration (#GH79893).
 
-- Clang now diagnoses unknown attribute namespaces.
-
 Improvements to Clang's diagnostics
 -----------------------------------
 
@@ -506,6 +504,8 @@ Improvements to Clang's diagnostics
   behavior of the C99 feature as it was introduced into C++20. Fixes #GH47037
 - ``-Wreserved-identifier`` now fires on reserved parameter names in a function
   declaration which is not a definition.
+- Clang now prints the namespace for an attribute, if any,
+  when emitting an unknown attribute diagnostic.
 
 Improvements to Clang's time-trace
 ----------------------------------
