@@ -554,7 +554,6 @@ VPBasicBlock *VPBasicBlock::splitAt(iterator SplitAt) {
   assert((SplitAt == end() || SplitAt->getParent() == this) &&
          "can only split at a position in the same block");
 
-  SmallVector<VPBlockBase *, 2> Succs(successors());
   // Create new empty block after the block to split.
   auto *SplitBlock = getPlan()->createVPBasicBlock(getName() + ".split");
   VPBlockUtils::insertBlockAfter(SplitBlock, this);

@@ -2702,7 +2702,7 @@ void IROutliner::updateOutputMapping(OutlinableRegion &Region,
 }
 
 bool IROutliner::extractSection(OutlinableRegion &Region) {
-  SetVector<Value *> ArgInputs, Outputs, SinkCands;
+  SetVector<Value *> ArgInputs, Outputs;
   assert(Region.StartBB && "StartBB for the OutlinableRegion is nullptr!");
   BasicBlock *InitialStart = Region.StartBB;
   Function *OrigF = Region.StartBB->getParent();
