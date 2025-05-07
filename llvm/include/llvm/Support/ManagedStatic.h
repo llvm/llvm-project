@@ -61,7 +61,8 @@ protected:
   mutable const ManagedStaticBase *Next;
 #endif
 
-  LLVM_ABI void RegisterManagedStatic(void *(*creator)(), void (*deleter)(void*)) const;
+  LLVM_ABI void RegisterManagedStatic(void *(*creator)(),
+                                      void (*deleter)(void *)) const;
 
 public:
 #ifdef LLVM_USE_CONSTEXPR_CTOR

@@ -655,7 +655,8 @@ inline bool Object::erase(StringRef K) {
   return M.erase(ObjectKey(K));
 }
 
-LLVM_ABI std::vector<const Object::value_type *> sortedElements(const Object &O);
+LLVM_ABI std::vector<const Object::value_type *>
+sortedElements(const Object &O);
 
 /// A "cursor" marking a position within a Value.
 /// The Value is a tree, and this is the path from the root to the current node.
@@ -1112,7 +1113,8 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Value &V) {
 /// The default style is basic/compact formatting, like operator<<.
 /// A format string like formatv("{0:2}", Value) pretty-prints with indent 2.
 template <> struct format_provider<llvm::json::Value> {
-  LLVM_ABI static void format(const llvm::json::Value &, raw_ostream &, StringRef);
+  LLVM_ABI static void format(const llvm::json::Value &, raw_ostream &,
+                              StringRef);
 };
 } // namespace llvm
 

@@ -14,9 +14,9 @@
 #ifndef LLVM_SUPPORT_VERSIONTUPLE_H
 #define LLVM_SUPPORT_VERSIONTUPLE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 #include <string>
 #include <tuple>

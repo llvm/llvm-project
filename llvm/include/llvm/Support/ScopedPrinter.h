@@ -9,12 +9,12 @@
 #ifndef LLVM_SUPPORT_SCOPEDPRINTER_H
 #define LLVM_SUPPORT_SCOPEDPRINTER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/JSON.h"
@@ -574,8 +574,8 @@ private:
 
 public:
   LLVM_ABI JSONScopedPrinter(raw_ostream &OS, bool PrettyPrint = false,
-                    std::unique_ptr<DelimitedScope> &&OuterScope =
-                        std::unique_ptr<DelimitedScope>{});
+                             std::unique_ptr<DelimitedScope> &&OuterScope =
+                                 std::unique_ptr<DelimitedScope>{});
 
   static bool classof(const ScopedPrinter *SP) {
     return SP->getKind() == ScopedPrinter::ScopedPrinterKind::JSON;

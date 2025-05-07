@@ -35,7 +35,8 @@ namespace llvm {
   ///
   /// \see EnablePrettyStackTrace
   /// \see PrettyStackTraceEntry
-  LLVM_ABI void EnablePrettyStackTraceOnSigInfoForThisThread(bool ShouldEnable = true);
+  LLVM_ABI void
+  EnablePrettyStackTraceOnSigInfoForThisThread(bool ShouldEnable = true);
 
   /// Replaces the generic bug report message that is output upon
   /// a crash.

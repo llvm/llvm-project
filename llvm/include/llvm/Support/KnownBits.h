@@ -14,8 +14,8 @@
 #ifndef LLVM_SUPPORT_KNOWNBITS_H
 #define LLVM_SUPPORT_KNOWNBITS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 namespace llvm {
@@ -321,17 +321,20 @@ public:
   }
 
   /// Compute known bits resulting from adding LHS, RHS and a 1-bit Carry.
-  LLVM_ABI static KnownBits computeForAddCarry(
-      const KnownBits &LHS, const KnownBits &RHS, const KnownBits &Carry);
+  LLVM_ABI static KnownBits computeForAddCarry(const KnownBits &LHS,
+                                               const KnownBits &RHS,
+                                               const KnownBits &Carry);
 
   /// Compute known bits resulting from adding LHS and RHS.
   LLVM_ABI static KnownBits computeForAddSub(bool Add, bool NSW, bool NUW,
-                                    const KnownBits &LHS, const KnownBits &RHS);
+                                             const KnownBits &LHS,
+                                             const KnownBits &RHS);
 
   /// Compute known bits results from subtracting RHS from LHS with 1-bit
   /// Borrow.
-  LLVM_ABI static KnownBits computeForSubBorrow(const KnownBits &LHS, KnownBits RHS,
-                                       const KnownBits &Borrow);
+  LLVM_ABI static KnownBits computeForSubBorrow(const KnownBits &LHS,
+                                                KnownBits RHS,
+                                                const KnownBits &Borrow);
 
   /// Compute knownbits resulting from addition of LHS and RHS.
   static KnownBits add(const KnownBits &LHS, const KnownBits &RHS,
@@ -346,32 +349,40 @@ public:
   }
 
   /// Compute knownbits resulting from llvm.sadd.sat(LHS, RHS)
-  LLVM_ABI static KnownBits sadd_sat(const KnownBits &LHS, const KnownBits &RHS);
+  LLVM_ABI static KnownBits sadd_sat(const KnownBits &LHS,
+                                     const KnownBits &RHS);
 
   /// Compute knownbits resulting from llvm.uadd.sat(LHS, RHS)
-  LLVM_ABI static KnownBits uadd_sat(const KnownBits &LHS, const KnownBits &RHS);
+  LLVM_ABI static KnownBits uadd_sat(const KnownBits &LHS,
+                                     const KnownBits &RHS);
 
   /// Compute knownbits resulting from llvm.ssub.sat(LHS, RHS)
-  LLVM_ABI static KnownBits ssub_sat(const KnownBits &LHS, const KnownBits &RHS);
+  LLVM_ABI static KnownBits ssub_sat(const KnownBits &LHS,
+                                     const KnownBits &RHS);
 
   /// Compute knownbits resulting from llvm.usub.sat(LHS, RHS)
-  LLVM_ABI static KnownBits usub_sat(const KnownBits &LHS, const KnownBits &RHS);
+  LLVM_ABI static KnownBits usub_sat(const KnownBits &LHS,
+                                     const KnownBits &RHS);
 
   /// Compute knownbits resulting from APIntOps::avgFloorS
-  LLVM_ABI static KnownBits avgFloorS(const KnownBits &LHS, const KnownBits &RHS);
+  LLVM_ABI static KnownBits avgFloorS(const KnownBits &LHS,
+                                      const KnownBits &RHS);
 
   /// Compute knownbits resulting from APIntOps::avgFloorU
-  LLVM_ABI static KnownBits avgFloorU(const KnownBits &LHS, const KnownBits &RHS);
+  LLVM_ABI static KnownBits avgFloorU(const KnownBits &LHS,
+                                      const KnownBits &RHS);
 
   /// Compute knownbits resulting from APIntOps::avgCeilS
-  LLVM_ABI static KnownBits avgCeilS(const KnownBits &LHS, const KnownBits &RHS);
+  LLVM_ABI static KnownBits avgCeilS(const KnownBits &LHS,
+                                     const KnownBits &RHS);
 
   /// Compute knownbits resulting from APIntOps::avgCeilU
-  LLVM_ABI static KnownBits avgCeilU(const KnownBits &LHS, const KnownBits &RHS);
+  LLVM_ABI static KnownBits avgCeilU(const KnownBits &LHS,
+                                     const KnownBits &RHS);
 
   /// Compute known bits resulting from multiplying LHS and RHS.
   LLVM_ABI static KnownBits mul(const KnownBits &LHS, const KnownBits &RHS,
-                       bool NoUndefSelfMultiply = false);
+                                bool NoUndefSelfMultiply = false);
 
   /// Compute known bits from sign-extended multiply-hi.
   LLVM_ABI static KnownBits mulhs(const KnownBits &LHS, const KnownBits &RHS);
@@ -381,11 +392,11 @@ public:
 
   /// Compute known bits for sdiv(LHS, RHS).
   LLVM_ABI static KnownBits sdiv(const KnownBits &LHS, const KnownBits &RHS,
-                        bool Exact = false);
+                                 bool Exact = false);
 
   /// Compute known bits for udiv(LHS, RHS).
   LLVM_ABI static KnownBits udiv(const KnownBits &LHS, const KnownBits &RHS,
-                        bool Exact = false);
+                                 bool Exact = false);
 
   /// Compute known bits for urem(LHS, RHS).
   LLVM_ABI static KnownBits urem(const KnownBits &LHS, const KnownBits &RHS);
@@ -414,48 +425,58 @@ public:
   /// Compute known bits for shl(LHS, RHS).
   /// NOTE: RHS (shift amount) bitwidth doesn't need to be the same as LHS.
   LLVM_ABI static KnownBits shl(const KnownBits &LHS, const KnownBits &RHS,
-                       bool NUW = false, bool NSW = false,
-                       bool ShAmtNonZero = false);
+                                bool NUW = false, bool NSW = false,
+                                bool ShAmtNonZero = false);
 
   /// Compute known bits for lshr(LHS, RHS).
   /// NOTE: RHS (shift amount) bitwidth doesn't need to be the same as LHS.
   LLVM_ABI static KnownBits lshr(const KnownBits &LHS, const KnownBits &RHS,
-                        bool ShAmtNonZero = false, bool Exact = false);
+                                 bool ShAmtNonZero = false, bool Exact = false);
 
   /// Compute known bits for ashr(LHS, RHS).
   /// NOTE: RHS (shift amount) bitwidth doesn't need to be the same as LHS.
   LLVM_ABI static KnownBits ashr(const KnownBits &LHS, const KnownBits &RHS,
-                        bool ShAmtNonZero = false, bool Exact = false);
+                                 bool ShAmtNonZero = false, bool Exact = false);
 
   /// Determine if these known bits always give the same ICMP_EQ result.
-  LLVM_ABI static std::optional<bool> eq(const KnownBits &LHS, const KnownBits &RHS);
+  LLVM_ABI static std::optional<bool> eq(const KnownBits &LHS,
+                                         const KnownBits &RHS);
 
   /// Determine if these known bits always give the same ICMP_NE result.
-  LLVM_ABI static std::optional<bool> ne(const KnownBits &LHS, const KnownBits &RHS);
+  LLVM_ABI static std::optional<bool> ne(const KnownBits &LHS,
+                                         const KnownBits &RHS);
 
   /// Determine if these known bits always give the same ICMP_UGT result.
-  LLVM_ABI static std::optional<bool> ugt(const KnownBits &LHS, const KnownBits &RHS);
+  LLVM_ABI static std::optional<bool> ugt(const KnownBits &LHS,
+                                          const KnownBits &RHS);
 
   /// Determine if these known bits always give the same ICMP_UGE result.
-  LLVM_ABI static std::optional<bool> uge(const KnownBits &LHS, const KnownBits &RHS);
+  LLVM_ABI static std::optional<bool> uge(const KnownBits &LHS,
+                                          const KnownBits &RHS);
 
   /// Determine if these known bits always give the same ICMP_ULT result.
-  LLVM_ABI static std::optional<bool> ult(const KnownBits &LHS, const KnownBits &RHS);
+  LLVM_ABI static std::optional<bool> ult(const KnownBits &LHS,
+                                          const KnownBits &RHS);
 
   /// Determine if these known bits always give the same ICMP_ULE result.
-  LLVM_ABI static std::optional<bool> ule(const KnownBits &LHS, const KnownBits &RHS);
+  LLVM_ABI static std::optional<bool> ule(const KnownBits &LHS,
+                                          const KnownBits &RHS);
 
   /// Determine if these known bits always give the same ICMP_SGT result.
-  LLVM_ABI static std::optional<bool> sgt(const KnownBits &LHS, const KnownBits &RHS);
+  LLVM_ABI static std::optional<bool> sgt(const KnownBits &LHS,
+                                          const KnownBits &RHS);
 
   /// Determine if these known bits always give the same ICMP_SGE result.
-  LLVM_ABI static std::optional<bool> sge(const KnownBits &LHS, const KnownBits &RHS);
+  LLVM_ABI static std::optional<bool> sge(const KnownBits &LHS,
+                                          const KnownBits &RHS);
 
   /// Determine if these known bits always give the same ICMP_SLT result.
-  LLVM_ABI static std::optional<bool> slt(const KnownBits &LHS, const KnownBits &RHS);
+  LLVM_ABI static std::optional<bool> slt(const KnownBits &LHS,
+                                          const KnownBits &RHS);
 
   /// Determine if these known bits always give the same ICMP_SLE result.
-  LLVM_ABI static std::optional<bool> sle(const KnownBits &LHS, const KnownBits &RHS);
+  LLVM_ABI static std::optional<bool> sle(const KnownBits &LHS,
+                                          const KnownBits &RHS);
 
   /// Update known bits based on ANDing with RHS.
   LLVM_ABI KnownBits &operator&=(const KnownBits &RHS);

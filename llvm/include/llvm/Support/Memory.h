@@ -96,10 +96,9 @@ namespace sys {
     /// otherwise a null MemoryBlock is with \p EC describing the error.
     ///
     /// Allocate mapped memory.
-    LLVM_ABI static MemoryBlock allocateMappedMemory(size_t NumBytes,
-                                            const MemoryBlock *const NearBlock,
-                                            unsigned Flags,
-                                            std::error_code &EC);
+    LLVM_ABI static MemoryBlock
+    allocateMappedMemory(size_t NumBytes, const MemoryBlock *const NearBlock,
+                         unsigned Flags, std::error_code &EC);
 
     /// This method releases a block of memory that was allocated with the
     /// allocateMappedMemory method. It should not be used to release any
@@ -126,13 +125,14 @@ namespace sys {
     /// describing the failure if an error occurred.
     ///
     /// Set memory protection state.
-    LLVM_ABI static std::error_code protectMappedMemory(const MemoryBlock &Block,
-                                               unsigned Flags);
+    LLVM_ABI static std::error_code
+    protectMappedMemory(const MemoryBlock &Block, unsigned Flags);
 
     /// InvalidateInstructionCache - Before the JIT can run a block of code
     /// that has been emitted it must invalidate the instruction cache on some
     /// platforms.
-    LLVM_ABI static void InvalidateInstructionCache(const void *Addr, size_t Len);
+    LLVM_ABI static void InvalidateInstructionCache(const void *Addr,
+                                                    size_t Len);
   };
 
   /// Owning version of MemoryBlock.

@@ -60,7 +60,7 @@ public:
   /// @param S Symbolic name for syntax element to color
   /// @param Mode Enable, disable or compute whether to use colors.
   LLVM_CTOR_NODISCARD LLVM_ABI WithColor(raw_ostream &OS, HighlightColor S,
-                                ColorMode Mode = ColorMode::Auto);
+                                         ColorMode Mode = ColorMode::Auto);
   /// To be used like this: WithColor(OS, raw_ostream::BLACK) << "text";
   /// @param OS The output stream
   /// @param Color ANSI color to use, the special SAVEDCOLOR can be used to
@@ -98,16 +98,16 @@ public:
 
   /// Convenience method for printing "error: " to the given stream.
   LLVM_ABI static raw_ostream &error(raw_ostream &OS, StringRef Prefix = "",
-                            bool DisableColors = false);
+                                     bool DisableColors = false);
   /// Convenience method for printing "warning: " to the given stream.
   LLVM_ABI static raw_ostream &warning(raw_ostream &OS, StringRef Prefix = "",
-                              bool DisableColors = false);
+                                       bool DisableColors = false);
   /// Convenience method for printing "note: " to the given stream.
   LLVM_ABI static raw_ostream &note(raw_ostream &OS, StringRef Prefix = "",
-                           bool DisableColors = false);
+                                    bool DisableColors = false);
   /// Convenience method for printing "remark: " to the given stream.
   LLVM_ABI static raw_ostream &remark(raw_ostream &OS, StringRef Prefix = "",
-                             bool DisableColors = false);
+                                      bool DisableColors = false);
 
   /// Determine whether colors are displayed.
   LLVM_ABI bool colorsEnabled();
@@ -118,7 +118,7 @@ public:
   /// @param Bold Bold/brighter text, default false
   /// @param BG If true, change the background, default: change foreground
   LLVM_ABI WithColor &changeColor(raw_ostream::Colors Color, bool Bold = false,
-                         bool BG = false);
+                                  bool BG = false);
 
   /// Reset the colors to terminal defaults. Call this when you are done
   /// outputting colored text, or before program exit.

@@ -13,8 +13,8 @@
 #ifndef LLVM_SUPPORT_MEMORYBUFFERREF_H
 #define LLVM_SUPPORT_MEMORYBUFFERREF_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

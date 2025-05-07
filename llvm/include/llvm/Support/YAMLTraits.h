@@ -9,7 +9,6 @@
 #ifndef LLVM_SUPPORT_YAMLTRAITS_H
 #define LLVM_SUPPORT_YAMLTRAITS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -19,6 +18,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
@@ -1197,7 +1197,7 @@ yamlize(IO &io, T &Seq, bool, Context &Ctx) {
 
 template<>
 struct ScalarTraits<bool> {
-  LLVM_ABI static void output(const bool &, void* , raw_ostream &);
+  LLVM_ABI static void output(const bool &, void *, raw_ostream &);
   LLVM_ABI static StringRef input(StringRef, void *, bool &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
 };
@@ -1770,7 +1770,8 @@ struct ScalarTraits<Hex64> {
 };
 
 template <> struct ScalarTraits<VersionTuple> {
-  LLVM_ABI static void output(const VersionTuple &Value, void *, llvm::raw_ostream &Out);
+  LLVM_ABI static void output(const VersionTuple &Value, void *,
+                              llvm::raw_ostream &Out);
   LLVM_ABI static StringRef input(StringRef, void *, VersionTuple &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
 };

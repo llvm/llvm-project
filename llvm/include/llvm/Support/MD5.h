@@ -28,8 +28,8 @@
 #ifndef LLVM_SUPPORT_MD5_H
 #define LLVM_SUPPORT_MD5_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include <array>
 #include <cstdint>
@@ -82,7 +82,8 @@ public:
 
   /// Translates the bytes in \p Res to a hex string that is
   /// deposited into \p Str. The result will be of length 32.
-  LLVM_ABI static void stringifyResult(MD5Result &Result, SmallVectorImpl<char> &Str);
+  LLVM_ABI static void stringifyResult(MD5Result &Result,
+                                       SmallVectorImpl<char> &Str);
 
   /// Computes the hash for a given bytes.
   LLVM_ABI static MD5Result hash(ArrayRef<uint8_t> Data);

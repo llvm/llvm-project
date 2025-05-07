@@ -9,12 +9,12 @@
 #ifndef LLVM_SUPPORT_BINARYSTREAMREADER_H
 #define LLVM_SUPPORT_BINARYSTREAMREADER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
@@ -32,7 +32,8 @@ public:
   BinaryStreamReader() = default;
   LLVM_ABI explicit BinaryStreamReader(BinaryStreamRef Ref);
   LLVM_ABI explicit BinaryStreamReader(BinaryStream &Stream);
-  LLVM_ABI explicit BinaryStreamReader(ArrayRef<uint8_t> Data, llvm::endianness Endian);
+  LLVM_ABI explicit BinaryStreamReader(ArrayRef<uint8_t> Data,
+                                       llvm::endianness Endian);
   LLVM_ABI explicit BinaryStreamReader(StringRef Data, llvm::endianness Endian);
 
   BinaryStreamReader(const BinaryStreamReader &Other) = default;

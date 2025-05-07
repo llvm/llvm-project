@@ -35,9 +35,9 @@
 #ifndef LLVM_SUPPORT_OPTIMIZEDSTRUCTLAYOUT_H
 #define LLVM_SUPPORT_OPTIMIZEDSTRUCTLAYOUT_H
 
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/Alignment.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Alignment.h"
+#include "llvm/Support/Compiler.h"
 #include <utility>
 
 namespace llvm {
@@ -137,7 +137,7 @@ struct OptimizedStructLayoutField {
 /// alignment.  Note that the total size is not rounded up to a multiple
 /// of the required alignment; clients which require this can do so easily.
 LLVM_ABI std::pair<uint64_t, Align> performOptimizedStructLayout(
-                        MutableArrayRef<OptimizedStructLayoutField> Fields);
+    MutableArrayRef<OptimizedStructLayoutField> Fields);
 
 } // namespace llvm
 

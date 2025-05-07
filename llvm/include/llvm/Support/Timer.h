@@ -9,9 +9,9 @@
 #ifndef LLVM_SUPPORT_TIMER_H
 #define LLVM_SUPPORT_TIMER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Mutex.h"
 #include <cassert>
@@ -109,7 +109,8 @@ public:
   /// Create an uninitialized timer, client must use 'init'.
   explicit Timer() = default;
   LLVM_ABI void init(StringRef TimerName, StringRef TimerDescription);
-  LLVM_ABI void init(StringRef TimerName, StringRef TimerDescription, TimerGroup &tg);
+  LLVM_ABI void init(StringRef TimerName, StringRef TimerDescription,
+                     TimerGroup &tg);
 
   const std::string &getName() const { return Name; }
   const std::string &getDescription() const { return Description; }
@@ -168,13 +169,14 @@ public:
 /// used for debugging and for hunting performance problems.
 struct NamedRegionTimer : public TimeRegion {
   LLVM_ABI explicit NamedRegionTimer(StringRef Name, StringRef Description,
-                            StringRef GroupName,
-                            StringRef GroupDescription, bool Enabled = true);
+                                     StringRef GroupName,
+                                     StringRef GroupDescription,
+                                     bool Enabled = true);
 
   // Create or get a TimerGroup stored in the same global map owned by
   // NamedRegionTimer.
   LLVM_ABI static TimerGroup &getNamedTimerGroup(StringRef GroupName,
-                                        StringRef GroupDescription);
+                                                 StringRef GroupDescription);
 };
 
 /// The TimerGroup class is used to group together related timers into a single
@@ -215,7 +217,7 @@ public:
   LLVM_ABI explicit TimerGroup(StringRef Name, StringRef Description);
 
   LLVM_ABI explicit TimerGroup(StringRef Name, StringRef Description,
-                      const StringMap<TimeRecord> &Records);
+                               const StringMap<TimeRecord> &Records);
 
   LLVM_ABI ~TimerGroup();
 
@@ -242,7 +244,8 @@ public:
   LLVM_ABI const char *printJSONValues(raw_ostream &OS, const char *delim);
 
   /// Prints all timers as JSON key/value pairs.
-  LLVM_ABI static const char *printAllJSONValues(raw_ostream &OS, const char *delim);
+  LLVM_ABI static const char *printAllJSONValues(raw_ostream &OS,
+                                                 const char *delim);
 
   /// Ensure global objects required for statistics printing are initialized.
   /// This function is used by the Statistic code to ensure correct order of

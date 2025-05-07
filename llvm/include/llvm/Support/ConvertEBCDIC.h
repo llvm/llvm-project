@@ -13,15 +13,15 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include <system_error>
 
 namespace llvm {
 namespace ConverterEBCDIC {
 LLVM_ABI std::error_code convertToEBCDIC(StringRef Source,
-                                SmallVectorImpl<char> &Result);
+                                         SmallVectorImpl<char> &Result);
 
 LLVM_ABI void convertToUTF8(StringRef Source, SmallVectorImpl<char> &Result);
 

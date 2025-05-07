@@ -9,8 +9,8 @@
 #ifndef LLVM_SUPPORT_ELFCOMPACTATTRPARSER_H
 #define LLVM_SUPPORT_ELFCOMPACTATTRPARSER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/ELFAttributeParser.h"
 #include "llvm/Support/ELFAttributes.h"

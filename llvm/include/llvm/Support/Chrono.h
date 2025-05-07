@@ -91,24 +91,36 @@ LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, sys::UtcTime<> TP);
 template <>
 struct format_provider<sys::TimePoint<>> {
   LLVM_ABI static void format(const sys::TimePoint<> &TP, llvm::raw_ostream &OS,
-                     StringRef Style);
+                              StringRef Style);
 };
 
 template <> struct format_provider<sys::UtcTime<std::chrono::seconds>> {
   LLVM_ABI static void format(const sys::UtcTime<std::chrono::seconds> &TP,
-                     llvm::raw_ostream &OS, StringRef Style);
+                              llvm::raw_ostream &OS, StringRef Style);
 };
 
 namespace detail {
 template <typename Period> struct unit { static const char value[]; };
 template <typename Period> const char unit<Period>::value[] = "";
 
-template <> struct unit<std::ratio<3600>> { LLVM_ABI static const char value[]; };
-template <> struct unit<std::ratio<60>> { LLVM_ABI static const char value[]; };
-template <> struct unit<std::ratio<1>> { LLVM_ABI static const char value[]; };
-template <> struct unit<std::milli> { LLVM_ABI static const char value[]; };
-template <> struct unit<std::micro> { LLVM_ABI static const char value[]; };
-template <> struct unit<std::nano> { LLVM_ABI static const char value[]; };
+template <> struct unit<std::ratio<3600>> {
+  LLVM_ABI static const char value[];
+};
+template <> struct unit<std::ratio<60>> {
+  LLVM_ABI static const char value[];
+};
+template <> struct unit<std::ratio<1>> {
+  LLVM_ABI static const char value[];
+};
+template <> struct unit<std::milli> {
+  LLVM_ABI static const char value[];
+};
+template <> struct unit<std::micro> {
+  LLVM_ABI static const char value[];
+};
+template <> struct unit<std::nano> {
+  LLVM_ABI static const char value[];
+};
 } // namespace detail
 
 /// Implementation of format_provider<T> for duration types.

@@ -9,9 +9,9 @@
 #ifndef LLVM_SUPPORT_FILECOLLECTOR_H
 #define LLVM_SUPPORT_FILECOLLECTOR_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <mutex>
 #include <string>

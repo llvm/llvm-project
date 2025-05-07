@@ -13,9 +13,9 @@
 #ifndef LLVM_SUPPORT_RAW_OSTREAM_H
 #define LLVM_SUPPORT_RAW_OSTREAM_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include <cassert>
 #include <cstddef>
@@ -837,7 +837,7 @@ class Error;
 /// a temporary file. The final output file is atomically replaced with the
 /// temporary file after the \p Write function is finished.
 LLVM_ABI Error writeToOutput(StringRef OutputFileName,
-                    std::function<Error(raw_ostream &)> Write);
+                             std::function<Error(raw_ostream &)> Write);
 
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, std::nullopt_t);
 

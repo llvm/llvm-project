@@ -9,8 +9,8 @@
 #ifndef LLVM_SUPPORT_LINEITERATOR_H
 #define LLVM_SUPPORT_LINEITERATOR_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include <iterator>
@@ -50,12 +50,14 @@ public:
   line_iterator() = default;
 
   /// Construct a new iterator around an unowned memory buffer.
-  LLVM_ABI explicit line_iterator(const MemoryBufferRef &Buffer, bool SkipBlanks = true,
-                         char CommentMarker = '\0');
+  LLVM_ABI explicit line_iterator(const MemoryBufferRef &Buffer,
+                                  bool SkipBlanks = true,
+                                  char CommentMarker = '\0');
 
   /// Construct a new iterator around some memory buffer.
-  LLVM_ABI explicit line_iterator(const MemoryBuffer &Buffer, bool SkipBlanks = true,
-                         char CommentMarker = '\0');
+  LLVM_ABI explicit line_iterator(const MemoryBuffer &Buffer,
+                                  bool SkipBlanks = true,
+                                  char CommentMarker = '\0');
 
   /// Return true if we've reached EOF or are an "end" iterator.
   bool is_at_eof() const { return !Buffer; }

@@ -13,13 +13,13 @@
 #ifndef LLVM_SUPPORT_MEMORYBUFFER_H
 #define LLVM_SUPPORT_MEMORYBUFFER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm-c/Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/CBindingWrapping.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include <cstddef>

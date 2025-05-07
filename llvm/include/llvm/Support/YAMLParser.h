@@ -36,9 +36,9 @@
 #ifndef LLVM_SUPPORT_YAMLPARSER_H
 #define LLVM_SUPPORT_YAMLPARSER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
 #include <cassert>
@@ -88,10 +88,10 @@ class Stream {
 public:
   /// This keeps a reference to the string referenced by \p Input.
   LLVM_ABI Stream(StringRef Input, SourceMgr &, bool ShowColors = true,
-         std::error_code *EC = nullptr);
+                  std::error_code *EC = nullptr);
 
-  LLVM_ABI Stream(MemoryBufferRef InputBuffer, SourceMgr &, bool ShowColors = true,
-         std::error_code *EC = nullptr);
+  LLVM_ABI Stream(MemoryBufferRef InputBuffer, SourceMgr &,
+                  bool ShowColors = true, std::error_code *EC = nullptr);
   LLVM_ABI ~Stream();
 
   LLVM_ABI document_iterator begin();
@@ -105,9 +105,9 @@ public:
   }
 
   LLVM_ABI void printError(Node *N, const Twine &Msg,
-                  SourceMgr::DiagKind Kind = SourceMgr::DK_Error);
+                           SourceMgr::DiagKind Kind = SourceMgr::DK_Error);
   LLVM_ABI void printError(const SMRange &Range, const Twine &Msg,
-                  SourceMgr::DiagKind Kind = SourceMgr::DK_Error);
+                           SourceMgr::DiagKind Kind = SourceMgr::DK_Error);
 
 private:
   friend class Document;

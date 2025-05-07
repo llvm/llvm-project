@@ -9,10 +9,10 @@
 #ifndef LLVM_SUPPORT_BINARYSTREAMREF_H
 #define LLVM_SUPPORT_BINARYSTREAMREF_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/BinaryStream.h"
 #include "llvm/Support/BinaryStreamError.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <memory>
@@ -163,8 +163,9 @@ public:
   BinaryStreamRef() = default;
   LLVM_ABI BinaryStreamRef(BinaryStream &Stream);
   LLVM_ABI BinaryStreamRef(BinaryStream &Stream, uint64_t Offset,
-                  std::optional<uint64_t> Length);
-  LLVM_ABI explicit BinaryStreamRef(ArrayRef<uint8_t> Data, llvm::endianness Endian);
+                           std::optional<uint64_t> Length);
+  LLVM_ABI explicit BinaryStreamRef(ArrayRef<uint8_t> Data,
+                                    llvm::endianness Endian);
   LLVM_ABI explicit BinaryStreamRef(StringRef Data, llvm::endianness Endian);
 
   BinaryStreamRef(const BinaryStreamRef &Other) = default;
@@ -183,7 +184,7 @@ public:
   /// bounds of this BinaryStreamRef's view and the implementation could read
   /// the data, and an appropriate error code otherwise.
   LLVM_ABI Error readBytes(uint64_t Offset, uint64_t Size,
-                  ArrayRef<uint8_t> &Buffer) const;
+                           ArrayRef<uint8_t> &Buffer) const;
 
   /// Given an Offset into this BinaryStreamRef, return a reference to the
   /// largest buffer the stream could support without necessitating a copy.
@@ -191,7 +192,7 @@ public:
   /// \returns a success error code if implementation could read the data,
   /// and an appropriate error code otherwise.
   LLVM_ABI Error readLongestContiguousChunk(uint64_t Offset,
-                                   ArrayRef<uint8_t> &Buffer) const;
+                                            ArrayRef<uint8_t> &Buffer) const;
 };
 
 struct BinarySubstreamRef {
@@ -235,10 +236,11 @@ class WritableBinaryStreamRef
 public:
   WritableBinaryStreamRef() = default;
   LLVM_ABI WritableBinaryStreamRef(WritableBinaryStream &Stream);
-  LLVM_ABI WritableBinaryStreamRef(WritableBinaryStream &Stream, uint64_t Offset,
-                          std::optional<uint64_t> Length);
+  LLVM_ABI WritableBinaryStreamRef(WritableBinaryStream &Stream,
+                                   uint64_t Offset,
+                                   std::optional<uint64_t> Length);
   LLVM_ABI explicit WritableBinaryStreamRef(MutableArrayRef<uint8_t> Data,
-                                   llvm::endianness Endian);
+                                            llvm::endianness Endian);
   WritableBinaryStreamRef(const WritableBinaryStreamRef &Other) = default;
   WritableBinaryStreamRef &
   operator=(const WritableBinaryStreamRef &Other) = default;

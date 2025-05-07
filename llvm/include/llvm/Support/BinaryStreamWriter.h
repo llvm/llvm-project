@@ -9,12 +9,12 @@
 #ifndef LLVM_SUPPORT_BINARYSTREAMWRITER_H
 #define LLVM_SUPPORT_BINARYSTREAMWRITER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamError.h"
 #include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
@@ -34,7 +34,7 @@ public:
   LLVM_ABI explicit BinaryStreamWriter(WritableBinaryStreamRef Ref);
   LLVM_ABI explicit BinaryStreamWriter(WritableBinaryStream &Stream);
   LLVM_ABI explicit BinaryStreamWriter(MutableArrayRef<uint8_t> Data,
-                              llvm::endianness Endian);
+                                       llvm::endianness Endian);
 
   BinaryStreamWriter(const BinaryStreamWriter &Other) = default;
 
@@ -172,7 +172,8 @@ public:
   }
 
   /// Splits the Writer into two Writers at a given offset.
-  LLVM_ABI std::pair<BinaryStreamWriter, BinaryStreamWriter> split(uint64_t Off) const;
+  LLVM_ABI std::pair<BinaryStreamWriter, BinaryStreamWriter>
+  split(uint64_t Off) const;
 
   void setOffset(uint64_t Off) { Offset = Off; }
   uint64_t getOffset() const { return Offset; }

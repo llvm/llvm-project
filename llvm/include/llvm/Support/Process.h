@@ -24,8 +24,8 @@
 #ifndef LLVM_SUPPORT_PROCESS_H
 #define LLVM_SUPPORT_PROCESS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Chrono.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Program.h"
@@ -84,8 +84,8 @@ public:
   /// \param user_time Returns the current amount of user time for the process
   /// \param sys_time Returns the current amount of system time for the process
   LLVM_ABI static void GetTimeUsage(TimePoint<> &elapsed,
-                           std::chrono::nanoseconds &user_time,
-                           std::chrono::nanoseconds &sys_time);
+                                    std::chrono::nanoseconds &user_time,
+                                    std::chrono::nanoseconds &sys_time);
 
   /// This function makes the necessary calls to the operating system to
   /// prevent core files or any other kind of large memory dumps that can

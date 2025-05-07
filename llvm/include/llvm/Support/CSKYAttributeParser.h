@@ -9,8 +9,8 @@
 #ifndef LLVM_SUPPORT_CSKYATTRIBUTEPARSER_H
 #define LLVM_SUPPORT_CSKYATTRIBUTEPARSER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/CSKYAttributes.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ELFAttrParserCompact.h"
 
 namespace llvm {
