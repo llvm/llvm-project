@@ -3,6 +3,7 @@
 
 define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK:      VPlan 'Final VPlan for VF={2},UF={1}' {
+; CHECK-NEXT: Live-in ir<[[VF:.+]]> = VF
 ; CHECK-NEXT: Live-in ir<[[VFxUF:.+]]> = VF * UF
 ; CHECK-NEXT: Live-in ir<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: ir<%0> = original trip-count
@@ -19,7 +20,7 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = phi ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
-; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, ir<2>
 ; CHECK-NEXT:     EMIT vp<[[PTR:%.+]]> = ptradd ir<%start>, vp<[[STEPS]]>
 ; CHECK-NEXT:     vp<[[WIDE_PTR:%.+]]> = vector-pointer vp<[[PTR]]>
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[WIDE_PTR]]>

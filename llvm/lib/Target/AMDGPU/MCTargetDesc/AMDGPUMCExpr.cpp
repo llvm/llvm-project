@@ -77,7 +77,7 @@ void AMDGPUMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
     break;
   }
   for (const auto *It = Args.begin(); It != Args.end(); ++It) {
-    (*It)->print(OS, MAI, /*InParens=*/false);
+    (*It)->print(OS, MAI);
     if ((It + 1) != Args.end())
       OS << ", ";
   }

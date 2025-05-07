@@ -20,6 +20,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/DomConditionCache.h"
 #include "llvm/Analysis/EphemeralValuesCache.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -262,6 +263,8 @@ protected:
   // Cache the DataLayout since we use it a lot.
   const DataLayout &DL;
 
+  DominatorTree DT;
+
   /// The OptimizationRemarkEmitter available for this compilation.
   OptimizationRemarkEmitter *ORE;
 
@@ -344,7 +347,7 @@ protected:
   /// Called at the end of processing a switch instruction, with the given
   /// number of case clusters.
   virtual void onFinalizeSwitch(unsigned JumpTableSize, unsigned NumCaseCluster,
-                                bool DefaultDestUndefined) {}
+                                bool DefaultDestUnreachable) {}
 
   /// Called to account for any other instruction not specifically accounted
   /// for.
@@ -444,6 +447,7 @@ protected:
   bool canFoldInboundsGEP(GetElementPtrInst &I);
   bool accumulateGEPOffset(GEPOperator &GEP, APInt &Offset);
   bool simplifyCallSite(Function *F, CallBase &Call);
+  bool simplifyCmpInstForRecCall(CmpInst &Cmp);
   bool simplifyInstruction(Instruction &I);
   bool simplifyIntrinsicCallIsConstant(CallBase &CB);
   bool simplifyIntrinsicCallObjectSize(CallBase &CB);
@@ -722,14 +726,14 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
   }
 
   void onFinalizeSwitch(unsigned JumpTableSize, unsigned NumCaseCluster,
-                        bool DefaultDestUndefined) override {
+                        bool DefaultDestUnreachable) override {
     // If suitable for a jump table, consider the cost for the table size and
     // branch to destination.
     // Maximum valid cost increased in this function.
     if (JumpTableSize) {
       // Suppose a default branch includes one compare and one conditional
       // branch if it's reachable.
-      if (!DefaultDestUndefined)
+      if (!DefaultDestUnreachable)
         addCost(2 * InstrCost);
       // Suppose a jump table requires one load and one jump instruction.
       int64_t JTCost =
@@ -742,7 +746,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
       // Suppose a comparison includes one compare and one conditional branch.
       // We can reduce a set of instructions if the default branch is
       // undefined.
-      addCost((NumCaseCluster - DefaultDestUndefined) * 2 * InstrCost);
+      addCost((NumCaseCluster - DefaultDestUnreachable) * 2 * InstrCost);
       return;
     }
 
@@ -1268,9 +1272,9 @@ private:
   }
 
   void onFinalizeSwitch(unsigned JumpTableSize, unsigned NumCaseCluster,
-                        bool DefaultDestUndefined) override {
+                        bool DefaultDestUnreachable) override {
     if (JumpTableSize) {
-      if (!DefaultDestUndefined)
+      if (!DefaultDestUnreachable)
         increment(InlineCostFeatureIndex::switch_default_dest_penalty,
                   SwitchDefaultDestCostMultiplier * InstrCost);
       int64_t JTCost = static_cast<int64_t>(JumpTableSize) * InstrCost +
@@ -1281,7 +1285,7 @@ private:
 
     if (NumCaseCluster <= 3) {
       increment(InlineCostFeatureIndex::case_cluster_penalty,
-                (NumCaseCluster - DefaultDestUndefined) *
+                (NumCaseCluster - DefaultDestUnreachable) *
                     CaseClusterCostMultiplier * InstrCost);
       return;
     }
@@ -1676,6 +1680,79 @@ bool CallAnalyzer::visitGetElementPtr(GetElementPtrInst &I) {
   return isGEPFree(I);
 }
 
+// Simplify \p Cmp if RHS is const and we can ValueTrack LHS.
+// This handles the case only when the Cmp instruction is guarding a recursive
+// call that will cause the Cmp to fail/succeed for the recursive call.
+bool CallAnalyzer::simplifyCmpInstForRecCall(CmpInst &Cmp) {
+  // Bail out if LHS is not a function argument or RHS is NOT const:
+  if (!isa<Argument>(Cmp.getOperand(0)) || !isa<Constant>(Cmp.getOperand(1)))
+    return false;
+  auto *CmpOp = Cmp.getOperand(0);
+  Function *F = Cmp.getFunction();
+  // Iterate over the users of the function to check if it's a recursive
+  // function:
+  for (auto *U : F->users()) {
+    CallInst *Call = dyn_cast<CallInst>(U);
+    if (!Call || Call->getFunction() != F || Call->getCalledFunction() != F)
+      continue;
+    auto *CallBB = Call->getParent();
+    auto *Predecessor = CallBB->getSinglePredecessor();
+    // Only handle the case when the callsite has a single predecessor:
+    if (!Predecessor)
+      continue;
+
+    auto *Br = dyn_cast<BranchInst>(Predecessor->getTerminator());
+    if (!Br || Br->isUnconditional())
+      continue;
+    // Check if the Br condition is the same Cmp instr we are investigating:
+    if (Br->getCondition() != &Cmp)
+      continue;
+    // Check if there are any arg of the recursive callsite is affecting the cmp
+    // instr:
+    bool ArgFound = false;
+    Value *FuncArg = nullptr, *CallArg = nullptr;
+    for (unsigned ArgNum = 0;
+         ArgNum < F->arg_size() && ArgNum < Call->arg_size(); ArgNum++) {
+      FuncArg = F->getArg(ArgNum);
+      CallArg = Call->getArgOperand(ArgNum);
+      if (FuncArg == CmpOp && CallArg != CmpOp) {
+        ArgFound = true;
+        break;
+      }
+    }
+    if (!ArgFound)
+      continue;
+    // Now we have a recursive call that is guarded by a cmp instruction.
+    // Check if this cmp can be simplified:
+    SimplifyQuery SQ(DL, dyn_cast<Instruction>(CallArg));
+    DomConditionCache DC;
+    DC.registerBranch(Br);
+    SQ.DC = &DC;
+    if (DT.root_size() == 0) {
+      // Dominator tree was never constructed for any function yet.
+      DT.recalculate(*F);
+    } else if (DT.getRoot()->getParent() != F) {
+      // Dominator tree was constructed for a different function, recalculate
+      // it for the current function.
+      DT.recalculate(*F);
+    }
+    SQ.DT = &DT;
+    Value *SimplifiedInstruction = llvm::simplifyInstructionWithOperands(
+        cast<CmpInst>(&Cmp), {CallArg, Cmp.getOperand(1)}, SQ);
+    if (auto *ConstVal = dyn_cast_or_null<ConstantInt>(SimplifiedInstruction)) {
+      bool IsTrueSuccessor = CallBB == Br->getSuccessor(0);
+      // Make sure that the BB of the recursive call is NOT the next successor
+      // of the icmp. In other words, make sure that the recursion depth is 1.
+      if ((ConstVal->isOne() && !IsTrueSuccessor) ||
+          (ConstVal->isZero() && IsTrueSuccessor)) {
+        SimplifiedValues[&Cmp] = ConstVal;
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 /// Simplify \p I if its operands are constants and update SimplifiedValues.
 bool CallAnalyzer::simplifyInstruction(Instruction &I) {
   SmallVector<Constant *> COps;
@@ -2058,6 +2135,10 @@ bool CallAnalyzer::visitCmpInst(CmpInst &I) {
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
   // First try to handle simplified comparisons.
   if (simplifyInstruction(I))
+    return true;
+
+  // Try to handle comparison that can be simplified using ValueTracking.
+  if (simplifyCmpInstForRecCall(I))
     return true;
 
   if (I.getOpcode() == Instruction::FCmp)
@@ -2508,7 +2589,7 @@ bool CallAnalyzer::visitSwitchInst(SwitchInst &SI) {
   unsigned NumCaseCluster =
       TTI.getEstimatedNumberOfCaseClusters(SI, JumpTableSize, PSI, BFI);
 
-  onFinalizeSwitch(JumpTableSize, NumCaseCluster, SI.defaultDestUndefined());
+  onFinalizeSwitch(JumpTableSize, NumCaseCluster, SI.defaultDestUnreachable());
   return false;
 }
 
@@ -2870,8 +2951,7 @@ InlineResult CallAnalyzer::analyze() {
 
     // If we're unable to select a particular successor, just count all of
     // them.
-    for (BasicBlock *Succ : successors(BB))
-      BBWorklist.insert(Succ);
+    BBWorklist.insert_range(successors(BB));
 
     onBlockAnalyzed(BB);
   }
@@ -3296,9 +3376,12 @@ InlineCostAnnotationPrinterPass::run(Function &F,
       [&](Function &F) -> AssumptionCache & {
     return FAM.getResult<AssumptionAnalysis>(F);
   };
-  Module *M = F.getParent();
-  ProfileSummaryInfo PSI(*M);
-  TargetTransformInfo TTI(M->getDataLayout());
+
+  auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+  ProfileSummaryInfo *PSI =
+      MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+  const TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
+
   // FIXME: Redesign the usage of InlineParams to expand the scope of this pass.
   // In the current implementation, the type of InlineParams doesn't matter as
   // the pass serves only for verification of inliner's decisions.
@@ -3313,7 +3396,7 @@ InlineCostAnnotationPrinterPass::run(Function &F,
           continue;
         OptimizationRemarkEmitter ORE(CalledFunction);
         InlineCostCallAnalyzer ICCA(*CalledFunction, *CB, Params, TTI,
-                                    GetAssumptionCache, nullptr, nullptr, &PSI,
+                                    GetAssumptionCache, nullptr, nullptr, PSI,
                                     &ORE);
         ICCA.analyze();
         OS << "      Analyzing call of " << CalledFunction->getName()

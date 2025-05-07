@@ -137,10 +137,7 @@ public:
 
   /// This removes the specified instruction from
   /// our various maps and marks it for deletion.
-  void markInstructionForDeletion(Instruction *I) {
-    VN.erase(I);
-    InstrsToErase.push_back(I);
-  }
+  void salvageAndRemoveInstruction(Instruction *I);
 
   DominatorTree &getDominatorTree() const { return *DT; }
   AAResults *getAliasAnalysis() const { return VN.getAliasAnalysis(); }
@@ -157,14 +154,14 @@ public:
   /// as an efficient mechanism to determine the expression-wise equivalence of
   /// two values.
   class ValueTable {
-    DenseMap<Value *, uint32_t> valueNumbering;
-    DenseMap<Expression, uint32_t> expressionNumbering;
+    DenseMap<Value *, uint32_t> ValueNumbering;
+    DenseMap<Expression, uint32_t> ExpressionNumbering;
 
     // Expressions is the vector of Expression. ExprIdx is the mapping from
     // value number to the index of Expression in Expressions. We use it
     // instead of a DenseMap because filling such mapping is faster than
     // filling a DenseMap and the compile time is a little better.
-    uint32_t nextExprNumber = 0;
+    uint32_t NextExprNumber = 0;
 
     std::vector<Expression> Expressions;
     std::vector<uint32_t> ExprIdx;
@@ -181,7 +178,7 @@ public:
     MemoryDependenceResults *MD = nullptr;
     DominatorTree *DT = nullptr;
 
-    uint32_t nextValueNumber = 1;
+    uint32_t NextValueNumber = 1;
 
     Expression createExpr(Instruction *I);
     Expression createCmpExpr(unsigned Opcode, CmpInst::Predicate Predicate,
@@ -190,11 +187,11 @@ public:
     Expression createGEPExpr(GetElementPtrInst *GEP);
     uint32_t lookupOrAddCall(CallInst *C);
     uint32_t phiTranslateImpl(const BasicBlock *BB, const BasicBlock *PhiBlock,
-                              uint32_t Num, GVNPass &Gvn);
+                              uint32_t Num, GVNPass &GVN);
     bool areCallValsEqual(uint32_t Num, uint32_t NewNum, const BasicBlock *Pred,
-                          const BasicBlock *PhiBlock, GVNPass &Gvn);
-    std::pair<uint32_t, bool> assignExpNewValueNum(Expression &exp);
-    bool areAllValsInBB(uint32_t num, const BasicBlock *BB, GVNPass &Gvn);
+                          const BasicBlock *PhiBlock, GVNPass &GVN);
+    std::pair<uint32_t, bool> assignExpNewValueNum(Expression &Exp);
+    bool areAllValsInBB(uint32_t Num, const BasicBlock *BB, GVNPass &GVN);
 
   public:
     ValueTable();
@@ -208,17 +205,17 @@ public:
     uint32_t lookupOrAddCmp(unsigned Opcode, CmpInst::Predicate Pred,
                             Value *LHS, Value *RHS);
     uint32_t phiTranslate(const BasicBlock *BB, const BasicBlock *PhiBlock,
-                          uint32_t Num, GVNPass &Gvn);
+                          uint32_t Num, GVNPass &GVN);
     void eraseTranslateCacheEntry(uint32_t Num, const BasicBlock &CurrBlock);
     bool exists(Value *V) const;
-    void add(Value *V, uint32_t num);
+    void add(Value *V, uint32_t Num);
     void clear();
-    void erase(Value *v);
+    void erase(Value *V);
     void setAliasAnalysis(AAResults *A) { AA = A; }
     AAResults *getAliasAnalysis() const { return AA; }
     void setMemDep(MemoryDependenceResults *M) { MD = M; }
     void setDomTree(DominatorTree *D) { DT = D; }
-    uint32_t getNextUnusedValueNumber() { return nextValueNumber; }
+    uint32_t getNextUnusedValueNumber() { return NextValueNumber; }
     void verifyRemoved(const Value *) const;
   };
 
@@ -306,7 +303,6 @@ private:
   // propagate to any successors. Entries added mid-block are applied
   // to the remaining instructions in the block.
   SmallMapVector<Value *, Value *, 4> ReplaceOperandsWithMap;
-  SmallVector<Instruction *, 8> InstrsToErase;
 
   // Map the block to reversed postorder traversal number. It is used to
   // find back edge easily.
@@ -327,9 +323,9 @@ private:
                OptimizationRemarkEmitter *ORE, MemorySSA *MSSA = nullptr);
 
   // List of critical edges to be split between iterations.
-  SmallVector<std::pair<Instruction *, unsigned>, 4> toSplit;
+  SmallVector<std::pair<Instruction *, unsigned>, 4> ToSplit;
 
-  // Helper functions of redundant load elimination
+  // Helper functions of redundant load elimination.
   bool processLoad(LoadInst *L);
   bool processNonLocalLoad(LoadInst *L);
   bool processAssumeIntrinsic(AssumeInst *II);
@@ -367,16 +363,16 @@ private:
       MapVector<BasicBlock *, Value *> &AvailableLoads,
       MapVector<BasicBlock *, LoadInst *> *CriticalEdgePredAndLoad);
 
-  // Other helper routines
+  // Other helper routines.
   bool processInstruction(Instruction *I);
   bool processBlock(BasicBlock *BB);
-  void dump(DenseMap<uint32_t, Value *> &d) const;
+  void dump(DenseMap<uint32_t, Value *> &Map) const;
   bool iterateOnFunction(Function &F);
   bool performPRE(Function &F);
   bool performScalarPRE(Instruction *I);
   bool performScalarPREInsertion(Instruction *Instr, BasicBlock *Pred,
                                  BasicBlock *Curr, unsigned int ValNo);
-  Value *findLeader(const BasicBlock *BB, uint32_t num);
+  Value *findLeader(const BasicBlock *BB, uint32_t Num);
   void cleanupGlobalSets();
   void removeInstruction(Instruction *I);
   void verifyRemoved(const Instruction *I) const;

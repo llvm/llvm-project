@@ -140,6 +140,20 @@ static void orderValue(const Value *V, OrderMap &OM) {
 static OrderMap orderModule(const Module *M) {
   OrderMap OM;
 
+  auto orderConstantValue = [&OM](const Value *V) {
+    if (isa<Constant>(V) || isa<InlineAsm>(V))
+      orderValue(V, OM);
+  };
+
+  auto OrderConstantFromMetadata = [&](Metadata *MD) {
+    if (const auto *VAM = dyn_cast<ValueAsMetadata>(MD)) {
+      orderConstantValue(VAM->getValue());
+    } else if (const auto *AL = dyn_cast<DIArgList>(MD)) {
+      for (const auto *VAM : AL->getArgs())
+        orderConstantValue(VAM->getValue());
+    }
+  };
+
   for (const GlobalVariable &G : M->globals()) {
     if (G.hasInitializer())
       if (!isa<GlobalValue>(G.getInitializer()))
@@ -171,6 +185,16 @@ static OrderMap orderModule(const Module *M) {
     for (const BasicBlock &BB : F) {
       orderValue(&BB, OM);
       for (const Instruction &I : BB) {
+        // Debug records can contain Value references, that can then contain
+        // Values disconnected from the rest of the Value hierachy, if wrapped
+        // in some kind of constant-expression. Find and order any Values that
+        // are wrapped in debug-info.
+        for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
+          OrderConstantFromMetadata(DVR.getRawLocation());
+          if (DVR.isDbgAssign())
+            OrderConstantFromMetadata(DVR.getRawAddress());
+        }
+
         for (const Value *Op : I.operands()) {
           Op = skipMetadataWrapper(Op);
           if ((isa<Constant>(*Op) && !isa<GlobalValue>(*Op)) ||
@@ -1894,6 +1918,7 @@ struct MDFieldPrinter {
   void printEmissionKind(StringRef Name, DICompileUnit::DebugEmissionKind EK);
   void printNameTableKind(StringRef Name,
                           DICompileUnit::DebugNameTableKind NTK);
+  void printFixedPointKind(StringRef Name, DIFixedPointType::FixedPointKind V);
 };
 
 } // end anonymous namespace
@@ -2030,6 +2055,11 @@ void MDFieldPrinter::printNameTableKind(StringRef Name,
   Out << FS << Name << ": " << DICompileUnit::nameTableKindString(NTK);
 }
 
+void MDFieldPrinter::printFixedPointKind(StringRef Name,
+                                         DIFixedPointType::FixedPointKind V) {
+  Out << FS << Name << ": " << DIFixedPointType::fixedPointKindString(V);
+}
+
 template <class IntTy, class Stringifier>
 void MDFieldPrinter::printDwarfEnum(StringRef Name, IntTy Value,
                                     Stringifier toString, bool ShouldSkipZero) {
@@ -2073,6 +2103,8 @@ static void writeDILocation(raw_ostream &Out, const DILocation *DL,
   Printer.printMetadata("inlinedAt", DL->getRawInlinedAt());
   Printer.printBool("isImplicitCode", DL->isImplicitCode(),
                     /* Default */ false);
+  Printer.printInt("atomGroup", DL->getAtomGroup());
+  Printer.printInt<unsigned>("atomRank", DL->getAtomRank());
   Out << ")";
 }
 
@@ -2199,6 +2231,29 @@ static void writeDIBasicType(raw_ostream &Out, const DIBasicType *N,
   Out << ")";
 }
 
+static void writeDIFixedPointType(raw_ostream &Out, const DIFixedPointType *N,
+                                  AsmWriterContext &) {
+  Out << "!DIFixedPointType(";
+  MDFieldPrinter Printer(Out);
+  if (N->getTag() != dwarf::DW_TAG_base_type)
+    Printer.printTag(N);
+  Printer.printString("name", N->getName());
+  Printer.printInt("size", N->getSizeInBits());
+  Printer.printInt("align", N->getAlignInBits());
+  Printer.printDwarfEnum("encoding", N->getEncoding(),
+                         dwarf::AttributeEncodingString);
+  Printer.printDIFlags("flags", N->getFlags());
+  Printer.printFixedPointKind("kind", N->getKind());
+  if (N->isRational()) {
+    bool IsUnsigned = !N->isSigned();
+    Printer.printAPInt("numerator", N->getNumerator(), IsUnsigned, false);
+    Printer.printAPInt("denominator", N->getDenominator(), IsUnsigned, false);
+  } else {
+    Printer.printInt("factor", N->getFactor());
+  }
+  Out << ")";
+}
+
 static void writeDIStringType(raw_ostream &Out, const DIStringType *N,
                               AsmWriterContext &WriterCtx) {
   Out << "!DIStringType(";
@@ -2308,6 +2363,7 @@ static void writeDICompositeType(raw_ostream &Out, const DICompositeType *N,
     Printer.printDwarfEnum("enumKind", *EnumKind, dwarf::EnumKindString,
                            /*ShouldSkipZero=*/false);
 
+  Printer.printMetadata("bitStride", N->getRawBitStride());
   Out << ")";
 }
 
@@ -3172,7 +3228,7 @@ void AssemblyWriter::printModuleSummaryIndex() {
 
   // Print the TypeIdCompatibleVtableMap entries.
   for (auto &TId : TheIndex->typeIdCompatibleVtableMap()) {
-    auto GUID = GlobalValue::getGUID(TId.first);
+    auto GUID = GlobalValue::getGUIDAssumingExternalLinkage(TId.first);
     Out << "^" << Machine.getTypeIdCompatibleVtableSlot(TId.first)
         << " = typeidCompatibleVTable: (name: \"" << TId.first << "\"";
     printTypeIdCompatibleVtableSummary(TId.second);
@@ -4942,13 +4998,9 @@ void AssemblyWriter::printUseListOrder(const Value *V,
     Out << " ";
     writeOperand(V, true);
   }
-  Out << ", { ";
 
   assert(Shuffle.size() >= 2 && "Shuffle too small");
-  Out << Shuffle[0];
-  for (unsigned I = 1, E = Shuffle.size(); I != E; ++I)
-    Out << ", " << Shuffle[I];
-  Out << " }\n";
+  Out << ", { " << llvm::interleaved(Shuffle) << " }\n";
 }
 
 void AssemblyWriter::printUseLists(const Function *F) {

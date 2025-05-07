@@ -129,8 +129,14 @@ func.func @nvvm_shfl_pred(
 
 // CHECK-LABEL: @nvvm_vote(
 func.func @nvvm_vote(%arg0 : i32, %arg1 : i1) -> i32 {
-  // CHECK: nvvm.vote.ballot.sync %{{.*}}, %{{.*}} : i32
-  %0 = nvvm.vote.ballot.sync %arg0, %arg1 : i32
+  // CHECK: nvvm.vote.sync ballot %{{.*}}, %{{.*}} -> i32
+  %0 = nvvm.vote.sync ballot %arg0, %arg1 -> i32
+  // CHECK: nvvm.vote.sync all %{{.*}}, %{{.*}} -> i1
+  %1 = nvvm.vote.sync all %arg0, %arg1 -> i1
+  // CHECK: nvvm.vote.sync any %{{.*}}, %{{.*}} -> i1
+  %2 = nvvm.vote.sync any %arg0, %arg1 -> i1
+  // CHECK: nvvm.vote.sync uni %{{.*}}, %{{.*}} -> i1
+  %3 = nvvm.vote.sync uni %arg0, %arg1 -> i1
   llvm.return %0 : i32
 }
 
@@ -561,6 +567,15 @@ func.func @match_sync(%val32: i32, %val64: i64, %thread_mask: i32) {
   // CHECK: nvvm.match.sync all %{{.*}}, %{{.*}} : i64 -> !llvm.struct<(i32, i1)>
   %3 = nvvm.match.sync all %thread_mask, %val64 : i64 -> !llvm.struct<(i32, i1)>
   return 
+}
+
+// CHECK-LABEL: @st_bulk
+func.func @st_bulk(%addr_gen: !llvm.ptr, %addr_shared: !llvm.ptr<3>, %size: i64) {
+  // CHECK:   nvvm.st.bulk %{{.*}}, size = %{{.*}} : !llvm.ptr
+  nvvm.st.bulk %addr_gen, size = %size, init = 0 : !llvm.ptr
+  // CHECK:   nvvm.st.bulk %{{.*}}, size = %{{.*}} : !llvm.ptr<3>
+  nvvm.st.bulk %addr_shared, size = %size, init = 0 : !llvm.ptr<3>
+  return
 }
 
 // -----

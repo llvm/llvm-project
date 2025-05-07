@@ -677,8 +677,8 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
   LLVM_DEBUG(dbgs() << "Analysis finished:\n"
                     << "UnrolledCost: " << UnrolledCost << ", "
                     << "RolledDynamicCost: " << RolledDynamicCost << "\n");
-  return {{unsigned(*UnrolledCost.getValue()),
-           unsigned(*RolledDynamicCost.getValue())}};
+  return {{unsigned(UnrolledCost.getValue()),
+           unsigned(RolledDynamicCost.getValue())}};
 }
 
 UnrollCostEstimator::UnrollCostEstimator(
@@ -729,7 +729,7 @@ bool UnrollCostEstimator::canUnroll() const {
 uint64_t UnrollCostEstimator::getUnrolledLoopSize(
     const TargetTransformInfo::UnrollingPreferences &UP,
     unsigned CountOverwrite) const {
-  unsigned LS = *LoopSize.getValue();
+  unsigned LS = LoopSize.getValue();
   assert(LS >= UP.BEInsns && "LoopSize should not be less than BEInsns!");
   if (CountOverwrite)
     return static_cast<uint64_t>(LS - UP.BEInsns) * CountOverwrite + UP.BEInsns;
@@ -946,8 +946,8 @@ bool llvm::computeUnrollCount(
   // case it's not permitted to also specify an explicit unroll count.
   if (PP.PeelCount) {
     if (UnrollCount.getNumOccurrences() > 0) {
-      report_fatal_error("Cannot specify both explicit peel count and "
-                         "explicit unroll count", /*GenCrashDiag=*/false);
+      reportFatalUsageError("Cannot specify both explicit peel count and "
+                            "explicit unroll count");
     }
     UP.Count = 1;
     UP.Runtime = false;

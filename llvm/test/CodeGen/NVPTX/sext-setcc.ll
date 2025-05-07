@@ -16,8 +16,8 @@ define <2 x i16> @sext_setcc_v2i1_to_v2i16(ptr %p) {
 ; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
 ; CHECK-NEXT:    setp.eq.s16 %p1, %rs1, 0;
 ; CHECK-NEXT:    setp.eq.s16 %p2, %rs2, 0;
-; CHECK-NEXT:    selp.s16 %rs3, -1, 0, %p2;
-; CHECK-NEXT:    selp.s16 %rs4, -1, 0, %p1;
+; CHECK-NEXT:    selp.b16 %rs3, -1, 0, %p2;
+; CHECK-NEXT:    selp.b16 %rs4, -1, 0, %p1;
 ; CHECK-NEXT:    mov.b32 %r2, {%rs4, %rs3};
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
@@ -55,11 +55,11 @@ define <4 x i8> @sext_setcc_v4i1_to_v4i8(ptr %p) {
 ; CHECK-NEXT:    cvt.u16.u32 %rs7, %r5;
 ; CHECK-NEXT:    and.b16 %rs8, %rs7, 255;
 ; CHECK-NEXT:    setp.eq.s16 %p4, %rs8, 0;
-; CHECK-NEXT:    selp.s32 %r6, -1, 0, %p4;
-; CHECK-NEXT:    selp.s32 %r7, -1, 0, %p3;
+; CHECK-NEXT:    selp.b32 %r6, -1, 0, %p4;
+; CHECK-NEXT:    selp.b32 %r7, -1, 0, %p3;
 ; CHECK-NEXT:    prmt.b32 %r8, %r7, %r6, 0x3340U;
-; CHECK-NEXT:    selp.s32 %r9, -1, 0, %p2;
-; CHECK-NEXT:    selp.s32 %r10, -1, 0, %p1;
+; CHECK-NEXT:    selp.b32 %r9, -1, 0, %p2;
+; CHECK-NEXT:    selp.b32 %r10, -1, 0, %p1;
 ; CHECK-NEXT:    prmt.b32 %r11, %r10, %r9, 0x3340U;
 ; CHECK-NEXT:    prmt.b32 %r12, %r11, %r8, 0x5410U;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r12;

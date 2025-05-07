@@ -107,6 +107,14 @@ MultiplexExternalSemaSource::hasExternalDefinitions(const Decl *D) {
   return EK_ReplyHazy;
 }
 
+bool MultiplexExternalSemaSource::wasThisDeclarationADefinition(
+    const FunctionDecl *FD) {
+  for (const auto &S : Sources)
+    if (S->wasThisDeclarationADefinition(FD))
+      return true;
+  return false;
+}
+
 bool MultiplexExternalSemaSource::FindExternalVisibleDeclsByName(
     const DeclContext *DC, DeclarationName Name,
     const DeclContext *OriginalDC) {

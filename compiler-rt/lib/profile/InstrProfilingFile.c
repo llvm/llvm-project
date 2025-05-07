@@ -234,7 +234,7 @@ COMPILER_RT_VISIBILITY extern int64_t INSTR_PROF_PROFILE_BITMAP_BIAS_VAR
 #endif
 static const int ContinuousModeSupported = 1;
 static const int UseBiasVar = 1;
-/* TODO: If there are two DSOs, the second DSO initilization will truncate the
+/* TODO: If there are two DSOs, the second DSO initialization will truncate the
  * first profile file. */
 static const char *FileOpenMode = "w+b";
 /* This symbol is defined by the compiler when runtime counter relocation is
@@ -438,7 +438,7 @@ static int mmapProfileForMerging(FILE *ProfileFile, uint64_t ProfileFileSize,
 }
 
 /* Read profile data in \c ProfileFile and merge with in-memory
-   profile counters. Returns -1 if there is fatal error, otheriwse
+   profile counters. Returns -1 if there is fatal error, otherwise
    0 is returned. Returning 0 does not mean merge is actually
    performed. If merge is actually done, *MergeDone is set to 1.
 */
@@ -850,8 +850,9 @@ static int parseFilenamePattern(const char *FilenamePat,
         __llvm_profile_set_page_size(getpagesize());
         __llvm_profile_enable_continuous_mode();
 #else
-        PROF_WARN("%s", "Continous mode is currently only supported for Mach-O,"
-                        " ELF and COFF formats.");
+        PROF_WARN("%s",
+                  "Continuous mode is currently only supported for Mach-O,"
+                  " ELF and COFF formats.");
         return -1;
 #endif
       } else {
@@ -1273,6 +1274,7 @@ COMPILER_RT_VISIBILITY int __llvm_profile_set_file_object(FILE *File,
   return 0;
 }
 
+#ifndef __APPLE__
 int __llvm_write_custom_profile(const char *Target,
                                 const __llvm_profile_data *DataBegin,
                                 const __llvm_profile_data *DataEnd,
@@ -1381,5 +1383,6 @@ int __llvm_write_custom_profile(const char *Target,
 
   return ReturnValue;
 }
+#endif
 
 #endif

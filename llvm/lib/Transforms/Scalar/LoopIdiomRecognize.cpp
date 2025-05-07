@@ -780,7 +780,7 @@ bool LoopIdiomRecognize::processLoopMemCpy(MemCpyInst *MCI,
     return false;
 
   // If we're not allowed to hack on memcpy, we fail.
-  if ((!HasMemcpy && !isa<MemCpyInlineInst>(MCI)) || DisableLIRP::Memcpy)
+  if ((!HasMemcpy && !MCI->isForceInlined()) || DisableLIRP::Memcpy)
     return false;
 
   Value *Dest = MCI->getDest();
@@ -1267,7 +1267,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
   // FIXME: until llvm.memcpy.inline supports dynamic sizes, we need to
   // conservatively bail here, since otherwise we may have to transform
   // llvm.memcpy.inline into llvm.memcpy which is illegal.
-  if (isa<MemCpyInlineInst>(TheStore))
+  if (auto *MCI = dyn_cast<MemCpyInst>(TheStore); MCI && MCI->isForceInlined())
     return false;
 
   // The trip count of the loop and the base pointer of the addrec SCEV is
@@ -1656,7 +1656,7 @@ public:
       // We only want RecAddExpr with recurrence step that is constant. This
       // is good enough for all the idioms we want to recognize. Later we expand
       // and materialize the recurrence as {base,+,a} -> (base + a * strlen)
-      if (!dyn_cast<SCEVConstant>(AddRecEv->getStepRecurrence(*SE)))
+      if (!isa<SCEVConstant>(AddRecEv->getStepRecurrence(*SE)))
         return false;
     }
 
@@ -1745,7 +1745,11 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
     return false;
 
   BasicBlock *Preheader = CurLoop->getLoopPreheader();
+  BasicBlock *LoopBody = *CurLoop->block_begin();
   BasicBlock *LoopExitBB = CurLoop->getExitBlock();
+  BranchInst *LoopTerm = dyn_cast<BranchInst>(LoopBody->getTerminator());
+  assert(Preheader && LoopBody && LoopExitBB && LoopTerm &&
+         "Should be verified to be valid by StrlenVerifier");
 
   if (Verifier.OpWidth == 8) {
     if (DisableLIRP::Strlen)
@@ -1804,6 +1808,17 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
   // up by later passes
   for (PHINode *PN : Cleanup)
     RecursivelyDeleteDeadPHINode(PN);
+
+  // LoopDeletion only delete invariant loops with known trip-count. We can
+  // update the condition so it will reliablely delete the invariant loop
+  assert(LoopTerm->getNumSuccessors() == 2 &&
+         (LoopTerm->getSuccessor(0) == LoopBody ||
+          LoopTerm->getSuccessor(1) == LoopBody) &&
+         "loop body must have a successor that is it self");
+  ConstantInt *NewLoopCond = LoopTerm->getSuccessor(0) == LoopBody
+                                 ? Builder.getFalse()
+                                 : Builder.getTrue();
+  LoopTerm->setCondition(NewLoopCond);
   SE->forgetLoop(CurLoop);
 
   ++NumStrLen;
@@ -2746,14 +2761,11 @@ static bool detectShiftUntilBitTestIdiom(Loop *CurLoop, Value *&BaseX,
                              m_LoopInvariant(m_Shl(m_One(), m_Value(BitPos)),
                                              CurLoop))));
   };
-  auto MatchConstantBitMask = [&]() {
-    return ICmpInst::isEquality(Pred) && match(CmpRHS, m_Zero()) &&
-           match(CmpLHS, m_And(m_Value(CurrX),
-                               m_CombineAnd(m_Value(BitMask), m_Power2()))) &&
-           (BitPos = ConstantExpr::getExactLogBase2(cast<Constant>(BitMask)));
-  };
+
   auto MatchDecomposableConstantBitMask = [&]() {
-    auto Res = llvm::decomposeBitTestICmp(CmpLHS, CmpRHS, Pred);
+    auto Res = llvm::decomposeBitTestICmp(
+        CmpLHS, CmpRHS, Pred, /*LookThroughTrunc=*/true,
+        /*AllowNonZeroC=*/false, /*DecomposeAnd=*/true);
     if (Res && Res->Mask.isPowerOf2()) {
       assert(ICmpInst::isEquality(Res->Pred));
       Pred = Res->Pred;
@@ -2765,8 +2777,7 @@ static bool detectShiftUntilBitTestIdiom(Loop *CurLoop, Value *&BaseX,
     return false;
   };
 
-  if (!MatchVariableBitMask() && !MatchConstantBitMask() &&
-      !MatchDecomposableConstantBitMask()) {
+  if (!MatchVariableBitMask() && !MatchDecomposableConstantBitMask()) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE " Bad backedge comparison.\n");
     return false;
   }

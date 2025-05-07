@@ -36,7 +36,7 @@ static_library("Passes") {
     "LongJmp.cpp",
     "LoopInversionPass.cpp",
     "MCF.cpp",
-    "NonPacProtectedRetAnalysis.cpp",
+    "PAuthGadgetScanner.cpp",
     "PLTCall.cpp",
     "PatchEntries.cpp",
     "PettisAndHansen.cpp",

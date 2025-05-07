@@ -31,10 +31,12 @@
 // CHECK-NEXT:     "NumTimesZ3SpendsTooMuchTimeOnASingleEQClass": "{{[0-9]+}}",
 // CHECK-NEXT:     "NumTimesZ3TimedOut": "{{[0-9]+}}",
 // CHECK-NEXT:     "NumZ3QueriesDone": "{{[0-9]+}}",
+// CHECK-NEXT:     "TimeSpentSolvingZ3Queries": "{{[0-9]+}}",
 // CHECK-NEXT:     "MaxBugClassSize": "{{[0-9]+}}",
 // CHECK-NEXT:     "MaxCFGSize": "{{[0-9]+}}",
 // CHECK-NEXT:     "MaxQueueSize": "{{[0-9]+}}",
 // CHECK-NEXT:     "MaxReachableSize": "{{[0-9]+}}",
+// CHECK-NEXT:     "MaxTimeSpentSolvingZ3Queries": "{{[0-9]+}}",
 // CHECK-NEXT:     "MaxValidBugClassSize": "{{[0-9]+}}",
 // CHECK-NEXT:     "PathRunningTime": "{{[0-9]+}}"
 // CHECK-NEXT:   },
@@ -64,10 +66,12 @@
 // CHECK-NEXT:     "NumTimesZ3SpendsTooMuchTimeOnASingleEQClass": "{{[0-9]+}}",
 // CHECK-NEXT:     "NumTimesZ3TimedOut": "{{[0-9]+}}",
 // CHECK-NEXT:     "NumZ3QueriesDone": "{{[0-9]+}}",
+// CHECK-NEXT:     "TimeSpentSolvingZ3Queries": "{{[0-9]+}}",
 // CHECK-NEXT:     "MaxBugClassSize": "{{[0-9]+}}",
 // CHECK-NEXT:     "MaxCFGSize": "{{[0-9]+}}",
 // CHECK-NEXT:     "MaxQueueSize": "{{[0-9]+}}",
 // CHECK-NEXT:     "MaxReachableSize": "{{[0-9]+}}",
+// CHECK-NEXT:     "MaxTimeSpentSolvingZ3Queries": "{{[0-9]+}}",
 // CHECK-NEXT:     "MaxValidBugClassSize": "{{[0-9]+}}",
 // CHECK-NEXT:     "PathRunningTime": "{{[0-9]+}}"
 // CHECK-NEXT:   }

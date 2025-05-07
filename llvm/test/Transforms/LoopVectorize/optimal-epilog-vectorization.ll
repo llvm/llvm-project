@@ -30,15 +30,14 @@ define dso_local void @f1(ptr noalias %aa, ptr noalias %bb, ptr noalias %cc, i32
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[BB:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[BB:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[CC:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[CC:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[TMP3]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd fast <4 x float> [[WIDE_LOAD]], [[WIDE_LOAD2]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[AA:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[AA:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[TMP6]], i32 0
 ; CHECK-NEXT:    store <4 x float> [[TMP5]], ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -58,15 +57,14 @@ define dso_local void @f1(ptr noalias %aa, ptr noalias %bb, ptr noalias %cc, i32
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
 ; CHECK-NEXT:    [[INDEX6:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT9:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX6]], 0
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[BB]], i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[BB]], i64 [[INDEX6]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr [[TMP10]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x float>, ptr [[TMP11]], align 4
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds float, ptr [[CC]], i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds float, ptr [[CC]], i64 [[INDEX6]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[TMP12]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x float>, ptr [[TMP13]], align 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = fadd fast <4 x float> [[WIDE_LOAD7]], [[WIDE_LOAD8]]
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[AA]], i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[AA]], i64 [[INDEX6]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[TMP15]], i32 0
 ; CHECK-NEXT:    store <4 x float> [[TMP14]], ptr [[TMP16]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[INDEX6]], 4
@@ -178,10 +176,8 @@ define dso_local signext i32 @f2(ptr noalias %A, ptr noalias %B, i32 signext %n)
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = trunc i64 [[INDEX]] to i32
-; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP10:%.*]] = xor i32 [[TMP8]], -1
+; CHECK-NEXT:    [[TMP10:%.*]] = xor i32 [[OFFSET_IDX]], -1
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[TMP10]], [[N]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = sext i32 [[TMP11]] to i64
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 [[TMP12]]
@@ -190,7 +186,7 @@ define dso_local signext i32 @f2(ptr noalias %A, ptr noalias %B, i32 signext %n)
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP15]], align 4
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x float> [[WIDE_LOAD]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP16:%.*]] = fadd fast <4 x float> [[REVERSE]], splat (float 1.000000e+00)
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds float, ptr [[TMP17]], i32 0
 ; CHECK-NEXT:    store <4 x float> [[TMP16]], ptr [[TMP18]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -212,10 +208,8 @@ define dso_local signext i32 @f2(ptr noalias %A, ptr noalias %B, i32 signext %n)
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
 ; CHECK-NEXT:    [[INDEX7:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT11:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[INDEX7]], 0
 ; CHECK-NEXT:    [[OFFSET_IDX8:%.*]] = trunc i64 [[INDEX7]] to i32
-; CHECK-NEXT:    [[TMP20:%.*]] = add i32 [[OFFSET_IDX8]], 0
-; CHECK-NEXT:    [[TMP22:%.*]] = xor i32 [[TMP20]], -1
+; CHECK-NEXT:    [[TMP22:%.*]] = xor i32 [[OFFSET_IDX8]], -1
 ; CHECK-NEXT:    [[TMP23:%.*]] = add i32 [[TMP22]], [[N]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = sext i32 [[TMP23]] to i64
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP24]]
@@ -224,7 +218,7 @@ define dso_local signext i32 @f2(ptr noalias %A, ptr noalias %B, i32 signext %n)
 ; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <4 x float>, ptr [[TMP27]], align 4
 ; CHECK-NEXT:    [[REVERSE10:%.*]] = shufflevector <4 x float> [[WIDE_LOAD9]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP28:%.*]] = fadd fast <4 x float> [[REVERSE10]], splat (float 1.000000e+00)
-; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP21]]
+; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX7]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr inbounds float, ptr [[TMP29]], i32 0
 ; CHECK-NEXT:    store <4 x float> [[TMP28]], ptr [[TMP30]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT11]] = add nuw i64 [[INDEX7]], 4
@@ -331,8 +325,7 @@ define void @f3(ptr noalias %A, i64 %n) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    store <4 x i8> splat (i8 1), ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -352,8 +345,7 @@ define void @f3(ptr noalias %A, i64 %n) {
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
 ; CHECK-NEXT:    [[INDEX5:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT6:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX5]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i32 0
 ; CHECK-NEXT:    store <4 x i8> splat (i8 1), ptr [[TMP6]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT6]] = add nuw i64 [[INDEX5]], 4
@@ -390,8 +382,7 @@ define void @f3(ptr noalias %A, i64 %n) {
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       vector.body:
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[TMP0]]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i32 0
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    store <4 x i8> splat (i8 1), ptr [[TMP2]], align 1
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -411,8 +402,7 @@ define void @f3(ptr noalias %A, i64 %n) {
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       vec.epilog.vector.body:
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX5:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT6:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX5]], 0
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP4]]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX5]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i32 0
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    store <2 x i8> splat (i8 1), ptr [[TMP6]], align 1
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX_NEXT6]] = add nuw i64 [[INDEX5]], 2
@@ -486,8 +476,7 @@ define void @induction_resume_value_requires_non_trivial_scev_expansion(ptr %dst
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[DST:%.*]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[DST:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i32 0
 ; CHECK-NEXT:    store <4 x i8> [[VEC_IND]], ptr [[TMP6]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -517,8 +506,7 @@ define void @induction_resume_value_requires_non_trivial_scev_expansion(ptr %dst
 ; CHECK-NEXT:    [[INDEX7:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT18:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND15:%.*]] = phi <4 x i8> [ [[INDUCTION12]], [[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT16:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX17:%.*]] = add i64 1, [[INDEX7]]
-; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[OFFSET_IDX17]], 0
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[OFFSET_IDX17]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[TMP11]], i32 0
 ; CHECK-NEXT:    store <4 x i8> [[VEC_IND15]], ptr [[TMP12]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT18]] = add nuw i64 [[INDEX7]], 4
@@ -576,8 +564,7 @@ define void @induction_resume_value_requires_non_trivial_scev_expansion(ptr %dst
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP4:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[DST:%.*]], i64 [[TMP4]]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[DST:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i32 0
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    store <4 x i8> [[VEC_IND]], ptr [[TMP6]], align 1
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -607,8 +594,7 @@ define void @induction_resume_value_requires_non_trivial_scev_expansion(ptr %dst
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX7:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT18:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[VEC_IND15:%.*]] = phi <2 x i8> [ [[INDUCTION12]], [[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT16:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[OFFSET_IDX17:%.*]] = add i64 1, [[INDEX7]]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP10:%.*]] = add i64 [[OFFSET_IDX17]], 0
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[TMP10]]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[OFFSET_IDX17]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[TMP11]], i32 0
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    store <2 x i8> [[VEC_IND15]], ptr [[TMP12]], align 1
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX_NEXT18]] = add nuw i64 [[INDEX7]], 2
@@ -679,9 +665,8 @@ define void @f4(ptr noalias %A, i32 signext %n) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <4 x i32> [[VEC_IND]] to <4 x i8>
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 0
 ; CHECK-NEXT:    store <4 x i8> [[TMP1]], ptr [[TMP3]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -707,9 +692,8 @@ define void @f4(ptr noalias %A, i32 signext %n) {
 ; CHECK:       vec.epilog.vector.body:
 ; CHECK-NEXT:    [[INDEX6:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT9:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND7:%.*]] = phi <4 x i32> [ [[INDUCTION]], [[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT8:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX6]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = trunc <4 x i32> [[VEC_IND7]] to <4 x i8>
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i32 0
 ; CHECK-NEXT:    store <4 x i8> [[TMP7]], ptr [[TMP9]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[INDEX6]], 4
@@ -749,9 +733,8 @@ define void @f4(ptr noalias %A, i32 signext %n) {
 ; CHECK-PROFITABLE-BY-DEFAULT:       vector.body:
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP1:%.*]] = trunc <4 x i32> [[VEC_IND]] to <4 x i8>
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[TMP0]]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 0
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    store <4 x i8> [[TMP1]], ptr [[TMP3]], align 1
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -777,9 +760,8 @@ define void @f4(ptr noalias %A, i32 signext %n) {
 ; CHECK-PROFITABLE-BY-DEFAULT:       vec.epilog.vector.body:
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX6:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT9:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[VEC_IND7:%.*]] = phi <2 x i32> [ [[INDUCTION]], [[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT8:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX6]], 0
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP7:%.*]] = trunc <2 x i32> [[VEC_IND7]] to <2 x i8>
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP6]]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX6]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i32 0
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    store <2 x i8> [[TMP7]], ptr [[TMP9]], align 1
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[INDEX6]], 2

@@ -47,6 +47,9 @@ module {
     %21 = cir.load %20 : !cir.ptr<!s16i>, !s16i
     %22 = cir.cast(integral, %21 : !s16i), !u64i
     // CHECK: %[[TMP:[0-9]+]] = llvm.sext %{{[0-9]+}} : i16 to i64
+    %33 = cir.cast(int_to_bool, %arg1 : !s32i), !cir.bool
+    // CHECK: %[[#ZERO:]] = llvm.mlir.constant(0 : i32) : i32
+    // CHECK: %[[#CMP:]] = llvm.icmp "ne" %arg1, %[[#ZERO]] : i32
 
     // Pointer casts.
     cir.store %16, %6 : !s64i, !cir.ptr<!s64i>

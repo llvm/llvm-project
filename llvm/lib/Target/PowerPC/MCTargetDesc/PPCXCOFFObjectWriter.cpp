@@ -40,8 +40,7 @@ llvm::createPPCXCOFFObjectWriter(bool Is64Bit) {
 
 std::pair<uint8_t, uint8_t> PPCXCOFFObjectWriter::getRelocTypeAndSignSize(
     const MCValue &Target, const MCFixup &Fixup, bool IsPCRel) const {
-  const auto Specifier =
-      Target.isAbsolute() ? PPCMCExpr::VK_None : getSpecifier(Target.getSymA());
+  const auto Specifier = Target.getSpecifier();
   // People from AIX OS team says AIX link editor does not care about
   // the sign bit in the relocation entry "most" of the time.
   // The system assembler seems to set the sign bit on relocation entry

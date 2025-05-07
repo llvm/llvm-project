@@ -33,7 +33,7 @@ using namespace llvm;
 #define DEBUG_TYPE "m68k-mc-inst-lower"
 
 M68kMCInstLower::M68kMCInstLower(MachineFunction &MF, M68kAsmPrinter &AP)
-    : Ctx(MF.getContext()), MF(MF), TM(MF.getTarget()), MAI(*TM.getMCAsmInfo()),
+    : Ctx(AP.OutContext), MF(MF), TM(MF.getTarget()), MAI(*TM.getMCAsmInfo()),
       AsmPrinter(AP) {}
 
 MCSymbol *

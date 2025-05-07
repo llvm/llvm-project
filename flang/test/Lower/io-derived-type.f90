@@ -101,6 +101,7 @@ program p
   use m
   character*3 ccc(4)
   namelist /nnn/ jjj, ccc
+  type(t) :: y(5)
 
   ! CHECK:   fir.call @_QMmPtest1
   call test1
@@ -115,6 +116,16 @@ program p
   ! CHECK:   %[[V_100:[0-9]+]] = fir.convert %[[V_99]] : (!fir.ref<tuple<i64, !fir.ref<!fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>>) -> !fir.ref<none>
   ! CHECK:   %[[V_101:[0-9]+]] = fir.call @_FortranAioOutputDerivedType(%{{.*}}, %[[V_98]], %[[V_100]]) fastmath<contract> : (!fir.ref<i8>, !fir.box<none>, !fir.ref<none>) -> i1
   print *, 'main, should call wft: ', t(4)
+
+  ! CHECK:   %[[V_33:[0-9]+]] = fir.shape %c2{{.*}} : (index) -> !fir.shape<1>
+  ! CHECK:   %[[V_34:[0-9]+]] = hlfir.designate %{{.*}}#0 (%c2{{.*}}:%c3{{.*}}:%c1{{.*}})  shape %[[V_33]] : (!fir.ref<!fir.array<5x!fir.type<_QMmTt{n:i32}>>>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<2x!fir.type<_QMmTt{n:i32}>>>
+  ! CHECK:   %[[V_35:[0-9]+]] = fir.shape %c2{{.*}} : (index) -> !fir.shape<1>
+  ! CHECK:   %[[V_36:[0-9]+]] = fir.embox %[[V_34]](%[[V_35]]) : (!fir.ref<!fir.array<2x!fir.type<_QMmTt{n:i32}>>>, !fir.shape<1>) -> !fir.box<!fir.array<2x!fir.type<_QMmTt{n:i32}>>>
+  ! CHECK:   %[[V_37:[0-9]+]] = fir.convert %[[V_36]] : (!fir.box<!fir.array<2x!fir.type<_QMmTt{n:i32}>>>) -> !fir.box<none>
+  ! CHECK:   %[[V_38:[0-9]+]] = fir.address_of(@_QQF.nonTbpDefinedIoTable) : !fir.ref<tuple<i64, !fir.ref<!fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>>
+  ! CHECK:   %[[V_39:[0-9]+]] = fir.convert %[[V_38]] : (!fir.ref<tuple<i64, !fir.ref<!fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>>) -> !fir.ref<none>
+  ! CHECK:   %[[V_40:[0-9]+]] = fir.call @_FortranAioOutputDerivedType(%{{.*}}, %[[V_37]], %[[V_39]]) fastmath<contract> : (!fir.ref<i8>, !fir.box<none>, !fir.ref<none>) -> i1
+  print *, y(2:3)
 end
 
 ! CHECK: fir.global linkonce @_QQMmFtest1.nonTbpDefinedIoTable.list constant : !fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>

@@ -193,8 +193,7 @@ public:
   void CodeCompleteObjCForCollection(Scope *S, DeclGroupPtrTy IterationVar);
   void CodeCompleteObjCSelector(Scope *S,
                                 ArrayRef<const IdentifierInfo *> SelIdents);
-  void
-  CodeCompleteObjCProtocolReferences(ArrayRef<IdentifierLocPair> Protocols);
+  void CodeCompleteObjCProtocolReferences(ArrayRef<IdentifierLoc> Protocols);
   void CodeCompleteObjCProtocolDecl(Scope *S);
   void CodeCompleteObjCInterfaceDecl(Scope *S);
   void CodeCompleteObjCClassForwardDecl(Scope *S);

@@ -5,16 +5,12 @@ define void @test(i1 %c, ptr %arg) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[ARG2_2:%.*]] = getelementptr inbounds i8, ptr [[ARG:%.*]], i64 24
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[ARG]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr [[ARG2_2]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> [[TMP1]], <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <5 x i64> @llvm.masked.load.v5i64.p0(ptr [[ARG:%.*]], i32 8, <5 x i1> <i1 true, i1 true, i1 false, i1 true, i1 true>, <5 x i64> poison)
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <5 x i64> [[TMP1]], <5 x i64> poison, <4 x i32> <i32 0, i32 1, i32 3, i32 4>
 ; CHECK-NEXT:    br label [[JOIN:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[ARG_2:%.*]] = getelementptr inbounds i8, ptr [[ARG]], i64 24
-; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x i64>, ptr [[ARG]], align 8
-; CHECK-NEXT:    [[TMP9:%.*]] = load <2 x i64>, ptr [[ARG_2]], align 8
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x i64> [[TMP9]], <2 x i64> [[TMP7]], <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+; CHECK-NEXT:    [[TMP3:%.*]] = call <5 x i64> @llvm.masked.load.v5i64.p0(ptr [[ARG]], i32 8, <5 x i1> <i1 true, i1 true, i1 false, i1 true, i1 true>, <5 x i64> poison)
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <5 x i64> [[TMP3]], <5 x i64> poison, <4 x i32> <i32 0, i32 1, i32 3, i32 4>
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
 ; CHECK-NEXT:    [[TMP13:%.*]] = phi <4 x i64> [ [[TMP6]], [[IF]] ], [ [[TMP12]], [[ELSE]] ]

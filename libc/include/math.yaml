@@ -34,6 +34,13 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+    name: acospif16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: asin
     standards:
       - stdc
@@ -59,6 +66,13 @@ functions:
     return_type: float
     arguments:
       - type: float
+  - name: asinhf16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: atan
     standards:
       - stdc
@@ -86,6 +100,14 @@ functions:
     arguments:
       - type: long double
       - type: long double
+  - name: atan2f128
+    standards:
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: atanf
     standards:
       - stdc
@@ -98,6 +120,13 @@ functions:
     return_type: float
     arguments:
       - type: float
+  - name: atanhf16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: canonicalize
     standards:
       - stdc
@@ -1388,6 +1417,14 @@ functions:
     arguments:
       - type: float
       - type: float
+  - name: hypotf16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: ilogb
     standards:
       - stdc

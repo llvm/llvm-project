@@ -604,7 +604,7 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
   bool HasComputedGoto = false;
   if (!TailBB.empty()) {
     HasIndirectbr = TailBB.back().isIndirectBranch();
-    HasComputedGoto = TailBB.back().isComputedGoto();
+    HasComputedGoto = TailBB.terminatorIsComputedGoto();
   }
 
   if (HasIndirectbr && PreRegAlloc)
@@ -751,8 +751,8 @@ bool TailDuplicator::canCompletelyDuplicateBB(MachineBasicBlock &BB) {
 bool TailDuplicator::duplicateSimpleBB(
     MachineBasicBlock *TailBB, SmallVectorImpl<MachineBasicBlock *> &TDBBs,
     const DenseSet<Register> &UsedByPhi) {
-  SmallPtrSet<MachineBasicBlock *, 8> Succs(TailBB->succ_begin(),
-                                            TailBB->succ_end());
+  SmallPtrSet<MachineBasicBlock *, 8> Succs(llvm::from_range,
+                                            TailBB->successors());
   SmallVector<MachineBasicBlock *, 8> Preds(TailBB->predecessors());
   bool Changed = false;
   for (MachineBasicBlock *PredBB : Preds) {

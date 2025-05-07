@@ -24,6 +24,9 @@ subroutine acc_update
 ! CHECK: acc.update dataOperands(%[[DEVPTR_A]] : !fir.ref<!fir.array<10x10xf32>>) attributes {ifPresent}{{$}}
 ! CHECK: acc.update_host accPtr(%[[DEVPTR_A]] : !fir.ref<!fir.array<10x10xf32>>) to varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) {name = "a", structured = false}
 
+  !$acc update host(a) if_present if_present
+! CHECK: acc.update dataOperands(%{{.*}} : !fir.ref<!fir.array<10x10xf32>>) attributes {ifPresent}{{$}}
+
   !$acc update self(a)
 ! CHECK: %[[DEVPTR_A:.*]] = acc.getdeviceptr varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {dataClause = #acc<data_clause acc_update_self>, name = "a", structured = false}
 ! CHECK: acc.update dataOperands(%[[DEVPTR_A]] : !fir.ref<!fir.array<10x10xf32>>){{$}}

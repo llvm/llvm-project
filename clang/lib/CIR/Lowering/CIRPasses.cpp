@@ -37,6 +37,7 @@ mlir::LogicalResult runCIRToCIRPasses(mlir::ModuleOp theModule,
 namespace mlir {
 
 void populateCIRPreLoweringPasses(OpPassManager &pm) {
+  pm.addPass(createHoistAllocasPass());
   pm.addPass(createCIRFlattenCFGPass());
 }
 

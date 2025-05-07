@@ -59,7 +59,7 @@ static bool runFrontend(StringRef ProgName, Twine Label, bool Verbose,
   // headers.
   std::vector<std::string> Args = {ProgName.data(), "-target",
                                    Ctx.Slice->getTriple().str().c_str()};
-  llvm::copy(InitialArgs, std::back_inserter(Args));
+  llvm::append_range(Args, InitialArgs);
   Args.push_back(InputFile);
 
   // Create & run invocation.

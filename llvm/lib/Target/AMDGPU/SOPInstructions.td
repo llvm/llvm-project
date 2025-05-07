@@ -663,14 +663,16 @@ let SubtargetPredicate = isGFX12Plus in {
   }
 
   // The higher 32-bits of the inputs contain the sign extension bits.
-  def S_MUL_I64_I32_PSEUDO : SPseudoInstSI <
-    (outs SReg_64:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1)
-  >;
+  let hasSideEffects = 0 in {
+    def S_MUL_I64_I32_PSEUDO : SPseudoInstSI <
+      (outs SReg_64:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1)
+    >;
 
-  // The higher 32-bits of the inputs are zero.
-  def S_MUL_U64_U32_PSEUDO : SPseudoInstSI <
-    (outs SReg_64:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1)
-  >;
+    // The higher 32-bits of the inputs are zero.
+    def S_MUL_U64_U32_PSEUDO : SPseudoInstSI <
+      (outs SReg_64:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1)
+    >;
+  }
 
 } // End SubtargetPredicate = isGFX12Plus
 
@@ -1924,6 +1926,20 @@ def : ScalarNot2Pat<S_ORN2_B32, or, i16>;
 def : ScalarNot2Pat<S_ORN2_B32, or, v2i16>;
 def : ScalarNot2Pat<S_ORN2_B64, or, v4i16>;
 def : ScalarNot2Pat<S_ORN2_B64, or, v2i32>;
+
+let WaveSizePredicate = isWave32 in {
+def : GCNPat<
+  (i1 (not (or_oneuse i1:$src0, i1:$src1))),
+  (S_NOR_B32 i1:$src0, i1:$src1)
+>;
+}
+
+let WaveSizePredicate = isWave64 in {
+def : GCNPat<
+  (i1 (not (or_oneuse i1:$src0, i1:$src1))),
+  (S_NOR_B64 i1:$src0, i1:$src1)
+>;
+}
 
 //===----------------------------------------------------------------------===//
 // Target-specific instruction encodings.

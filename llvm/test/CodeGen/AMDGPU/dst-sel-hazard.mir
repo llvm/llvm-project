@@ -3,6 +3,8 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx9-4-generic -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefix=HAZARD %s
 # RUN: llc -mtriple=amdgcn -mcpu=gfx90a -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefix=NOHAZARD %s
 
+# RUN: llc -mtriple=amdgcn -mcpu=gfx90a -passes post-RA-hazard-rec -o - %s | FileCheck -check-prefix=NOHAZARD %s
+
 ---
 name:            sdwa_opsel_hazard
 body:            |

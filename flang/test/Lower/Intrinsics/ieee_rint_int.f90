@@ -81,13 +81,13 @@ program p
   ! CHECK:       %[[V_163:[0-9]+]] = arith.cmpf one, %[[V_50]], %[[V_61]] fastmath<contract> : f32
   ! CHECK:       fir.if %[[V_163]] {
   ! CHECK:         %[[V_165:[0-9]+]] = fir.call @_FortranAMapException(%c32{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:         %[[V_166:[0-9]+]] = fir.call @feraiseexcept(%[[V_165]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:                             fir.call {{.*}}feraiseexcept(%[[V_165]]) fastmath<contract> : (i32)
   ! CHECK:       }
   ! CHECK:       %[[V_164:[0-9]+]] = fir.convert %[[V_61]] : (f32) -> i32
   ! CHECK:       fir.result %[[V_164]] : i32
   ! CHECK:     } else {
   ! CHECK:       %[[V_163:[0-9]+]] = fir.call @_FortranAMapException(%c1{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:       %[[V_164:[0-9]+]] = fir.call @feraiseexcept(%[[V_163]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:                           fir.call {{.*}}feraiseexcept(%[[V_163]]) fastmath<contract> : (i32)
   ! CHECK:       %[[V_165:[0-9]+]] = arith.select %[[V_64]], %c2147483647{{.*}}, %c-2147483648{{.*}} : i32
   ! CHECK:       fir.result %[[V_165]] : i32
   ! CHECK:     }
@@ -142,13 +142,13 @@ program p
   ! CHECK:       %[[V_163:[0-9]+]] = arith.cmpf one, %[[V_85]], %[[V_97]] fastmath<contract> : f16
   ! CHECK:       fir.if %[[V_163]] {
   ! CHECK:         %[[V_165:[0-9]+]] = fir.call @_FortranAMapException(%c32{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:         %[[V_166:[0-9]+]] = fir.call @feraiseexcept(%[[V_165]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:                             fir.call {{.*}}feraiseexcept(%[[V_165]]) fastmath<contract> : (i32)
   ! CHECK:       }
   ! CHECK:       %[[V_164:[0-9]+]] = fir.convert %[[V_97]] : (f16) -> i64
   ! CHECK:       fir.result %[[V_164]] : i64
   ! CHECK:     } else {
   ! CHECK:       %[[V_163:[0-9]+]] = fir.call @_FortranAMapException(%c1{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:       %[[V_164:[0-9]+]] = fir.call @feraiseexcept(%[[V_163]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:                           fir.call {{.*}}feraiseexcept(%[[V_163]]) fastmath<contract> : (i32)
   ! CHECK:       %[[V_165:[0-9]+]] = arith.select %[[V_100]], %c9223372036854775807{{.*}}, %c-9223372036854775808{{.*}} : i64
   ! CHECK:       fir.result %[[V_165]] : i64
   ! CHECK:     }
@@ -167,7 +167,7 @@ program p
   ! CHECK:     %[[V_108:[0-9]+]] = arith.cmpf one, %[[V_104]], %[[V_107]] fastmath<contract> : bf16
   ! CHECK:     fir.if %[[V_108]] {
   ! CHECK:       %[[V_163:[0-9]+]] = fir.call @_FortranAMapException(%c32{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:       %[[V_164:[0-9]+]] = fir.call @feraiseexcept(%[[V_163]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:                           fir.call {{.*}}feraiseexcept(%[[V_163]]) fastmath<contract> : (i32)
   ! CHECK:     }
   ! CHECK:     hlfir.assign %[[V_107]] to %[[V_31]]#0 : bf16, !fir.ref<bf16>
   y3 = ieee_rint(x3)
@@ -197,13 +197,13 @@ program p
   ! CHECK:       %[[V_163:[0-9]+]] = arith.cmpf one, %[[V_111]], %[[V_123]] fastmath<contract> : bf16
   ! CHECK:       fir.if %[[V_163]] {
   ! CHECK:         %[[V_165:[0-9]+]] = fir.call @_FortranAMapException(%c32{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:         %[[V_166:[0-9]+]] = fir.call @feraiseexcept(%[[V_165]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:                             fir.call {{.*}}feraiseexcept(%[[V_165]]) fastmath<contract> : (i32)
   ! CHECK:       }
   ! CHECK:       %[[V_164:[0-9]+]] = fir.convert %[[V_123]] : (bf16) -> i128
   ! CHECK:       fir.result %[[V_164]] : i128
   ! CHECK:     } else {
   ! CHECK:       %[[V_163:[0-9]+]] = fir.call @_FortranAMapException(%c1{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:       %[[V_164:[0-9]+]] = fir.call @feraiseexcept(%[[V_163]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:                           fir.call {{.*}}feraiseexcept(%[[V_163]]) fastmath<contract> : (i32)
   ! CHECK:       %[[V_165:[0-9]+]] = arith.select %[[V_126]], %c170141183460469231731687303715884105727{{.*}}, %c-170141183460469231731687303715884105728{{.*}} : i128
   ! CHECK:       fir.result %[[V_165]] : i128
   ! CHECK:     }
@@ -229,7 +229,7 @@ program p
   ! CHECK:     %[[V_142:[0-9]+]] = arith.cmpf one, %[[V_139]], %[[V_141]] fastmath<contract> : f32
   ! CHECK:     fir.if %[[V_142]] {
   ! CHECK:       %[[V_163:[0-9]+]] = fir.call @_FortranAMapException(%c32{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:       %[[V_164:[0-9]+]] = fir.call @feraiseexcept(%[[V_163]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:                           fir.call {{.*}}feraiseexcept(%[[V_163]]) fastmath<contract> : (i32)
   ! CHECK:     }
   ! CHECK:     hlfir.assign %[[V_141]] to %[[V_33]]#0 : f32, !fir.ref<f32>
   y8 = ieee_rint(x8)
@@ -258,13 +258,13 @@ program p
   ! CHECK:       %[[V_163:[0-9]+]] = arith.cmpf one, %[[V_145]], %[[V_156]] fastmath<contract> : f32
   ! CHECK:       fir.if %[[V_163]] {
   ! CHECK:         %[[V_165:[0-9]+]] = fir.call @_FortranAMapException(%c32{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:         %[[V_166:[0-9]+]] = fir.call @feraiseexcept(%[[V_165]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:                             fir.call {{.*}}feraiseexcept(%[[V_165]]) fastmath<contract> : (i32)
   ! CHECK:       }
   ! CHECK:       %[[V_164:[0-9]+]] = fir.convert %[[V_156]] : (f32) -> i16
   ! CHECK:       fir.result %[[V_164]] : i16
   ! CHECK:     } else {
   ! CHECK:       %[[V_163:[0-9]+]] = fir.call @_FortranAMapException(%c1{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:       %[[V_164:[0-9]+]] = fir.call @feraiseexcept(%[[V_163]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:                           fir.call {{.*}}feraiseexcept(%[[V_163]]) fastmath<contract> : (i32)
   ! CHECK:       %[[V_165:[0-9]+]] = arith.select %[[V_159]], %c32767{{.*}}, %c-32768{{.*}} : i16
   ! CHECK:       fir.result %[[V_165]] : i16
   ! CHECK:     }

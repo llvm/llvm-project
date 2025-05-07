@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes=verify -S | FileCheck %s
 
 define i32 @test_align(i32 %a, i32 %b) {
-; CHECK-LABEL: define i32 @test_align(
+; CHECK-LABEL: define alignstack(8) i32 @test_align(
 ; CHECK-SAME: i32 alignstack(8) [[A:%.*]], i32 alignstack(16) [[B:%.*]]) {
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -123,6 +123,4 @@ define void @test_cluster_dim() {
 ; CHECK: attributes #[[ATTR7]] = { "nvvm.maxntid"="1,1,100" }
 ; CHECK: attributes #[[ATTR8]] = { "nvvm.reqntid"="31,32,33" }
 ; CHECK: attributes #[[ATTR9]] = { "nvvm.cluster_dim"="101,102,103" }
-;.
-; CHECK: [[META0:![0-9]+]] = !{ptr @test_align, !"align", i32 8}
 ;.

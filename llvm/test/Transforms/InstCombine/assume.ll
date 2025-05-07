@@ -1009,6 +1009,31 @@ define i1 @not_cond_use(i8 %x) {
   ret i1 %rval
 }
 
+define i1 @assume_trunc_nuw_eq_one(i8 %x) {
+; CHECK-LABEL: @assume_trunc_nuw_eq_one(
+; CHECK-NEXT:    [[A:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A]])
+; CHECK-NEXT:    ret i1 true
+;
+  %a = trunc nuw i8 %x to i1
+  call void @llvm.assume(i1 %a)
+  %q = icmp eq i8 %x, 1
+  ret i1 %q
+}
+
+define i1 @neg_assume_trunc_eq_one(i8 %x) {
+; CHECK-LABEL: @neg_assume_trunc_eq_one(
+; CHECK-NEXT:    [[A:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A]])
+; CHECK-NEXT:    [[Q:%.*]] = icmp eq i8 [[X]], 1
+; CHECK-NEXT:    ret i1 [[Q]]
+;
+  %a = trunc i8 %x to i1
+  call void @llvm.assume(i1 %a)
+  %q = icmp eq i8 %x, 1
+  ret i1 %q
+}
+
 declare void @use(i1)
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 

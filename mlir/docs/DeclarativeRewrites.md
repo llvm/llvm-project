@@ -704,8 +704,8 @@ For example, we can write
 def HasNoUseOf: Constraint<CPred<"$_self.use_empty()">, "has no use">;
 
 def HasSameElementType : Constraint<
-    CPred<"$0.cast<ShapedType>().getElementType() == "
-          "$1.cast<ShapedType>().getElementType()">,
+    CPred<"cast<ShapedType>($0).getElementType() == "
+          "cast<ShapedType>($1).getElementType()">,
     "has same element type">;
 
 def : Pattern<(TwoResultOp:$results $input),

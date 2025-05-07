@@ -77,6 +77,11 @@ LLVM_LIBC_FUNCTION(double, sin, (double x)) {
     // Inf or NaN
     if (LIBC_UNLIKELY(x_e > 2 * FPBits::EXP_BIAS)) {
       // sin(+-Inf) = NaN
+      if (xbits.is_signaling_nan()) {
+        fputil::raise_except_if_required(FE_INVALID);
+        return FPBits::quiet_nan().get_val();
+      }
+
       if (xbits.get_mantissa() == 0) {
         fputil::set_errno_if_required(EDOM);
         fputil::raise_except_if_required(FE_INVALID);
@@ -158,7 +163,7 @@ LLVM_LIBC_FUNCTION(double, sin, (double x)) {
   Float128 sin_k_f128 = get_sin_k(k);
   Float128 cos_k_f128 = get_sin_k(k + 64);
 
-  // sin(x) = sin((k * pi/128 + u)
+  // sin(x) = sin(k * pi/128 + u)
   //        = sin(u) * cos(k*pi/128) + cos(u) * sin(k*pi/128)
   Float128 r = fputil::quick_add(fputil::quick_mul(sin_k_f128, cos_u),
                                  fputil::quick_mul(cos_k_f128, sin_u));

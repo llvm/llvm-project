@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/clc.h>
-#include <math/clc_exp10.h>
+#include <clc/math/clc_exp10.h>
 
-#define __CLC_FUNC exp10
-#define __CLC_BODY <clc_sw_unary.inc>
+#define FUNCTION exp10
+#define __CLC_BODY <clc/shared/unary_def.inc>
 #include <clc/math/gentype.inc>

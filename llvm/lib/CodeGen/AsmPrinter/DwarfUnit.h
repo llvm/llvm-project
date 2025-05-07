@@ -343,6 +343,7 @@ private:
   void addIntAsBlock(DIE &Die, dwarf::Attribute Attribute, const APInt &Val);
 
   void constructTypeDIE(DIE &Buffer, const DIBasicType *BTy);
+  void constructTypeDIE(DIE &Buffer, const DIFixedPointType *BTy);
   void constructTypeDIE(DIE &Buffer, const DIStringType *BTy);
   void constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy);
   void constructTypeDIE(DIE &Buffer, const DISubroutineType *CTy);

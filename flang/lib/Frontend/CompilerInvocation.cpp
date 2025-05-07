@@ -158,6 +158,32 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
   return true;
 }
 
+static void parseDoConcurrentMapping(Fortran::frontend::CodeGenOptions &opts,
+                                     llvm::opt::ArgList &args,
+                                     clang::DiagnosticsEngine &diags) {
+  llvm::opt::Arg *arg =
+      args.getLastArg(clang::driver::options::OPT_fdo_concurrent_to_openmp_EQ);
+  if (!arg)
+    return;
+
+  using DoConcurrentMappingKind =
+      Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind;
+  std::optional<DoConcurrentMappingKind> val =
+      llvm::StringSwitch<std::optional<DoConcurrentMappingKind>>(
+          arg->getValue())
+          .Case("none", DoConcurrentMappingKind::DCMK_None)
+          .Case("host", DoConcurrentMappingKind::DCMK_Host)
+          .Case("device", DoConcurrentMappingKind::DCMK_Device)
+          .Default(std::nullopt);
+
+  if (!val.has_value()) {
+    diags.Report(clang::diag::err_drv_invalid_value)
+        << arg->getAsString(args) << arg->getValue();
+  }
+
+  opts.setDoConcurrentMapping(val.value());
+}
+
 static bool parseVectorLibArg(Fortran::frontend::CodeGenOptions &opts,
                               llvm::opt::ArgList &args,
                               clang::DiagnosticsEngine &diags) {
@@ -169,7 +195,7 @@ static bool parseVectorLibArg(Fortran::frontend::CodeGenOptions &opts,
   std::optional<VectorLibrary> val =
       llvm::StringSwitch<std::optional<VectorLibrary>>(arg->getValue())
           .Case("Accelerate", VectorLibrary::Accelerate)
-          .Case("LIBMVEC", VectorLibrary::LIBMVEC)
+          .Case("libmvec", VectorLibrary::LIBMVEC)
           .Case("MASSV", VectorLibrary::MASSV)
           .Case("SVML", VectorLibrary::SVML)
           .Case("SLEEF", VectorLibrary::SLEEF)
@@ -246,6 +272,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (args.getLastArg(clang::driver::options::OPT_vectorize_loops))
     opts.VectorizeLoop = 1;
 
+  if (args.getLastArg(clang::driver::options::OPT_vectorize_slp))
+    opts.VectorizeSLP = 1;
+
   if (args.hasFlag(clang::driver::options::OPT_floop_versioning,
                    clang::driver::options::OPT_fno_loop_versioning, false))
     opts.LoopVersioning = 1;
@@ -280,6 +309,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   for (auto *a :
        args.filtered(clang::driver::options::OPT_fembed_offload_object_EQ))
     opts.OffloadObjects.push_back(a->getValue());
+
+  if (args.hasArg(clang::driver::options::OPT_finstrument_functions))
+    opts.InstrumentFunctions = 1;
 
   // -flto=full/thin option.
   if (const llvm::opt::Arg *a =
@@ -430,6 +462,8 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::driver::options::OPT_funderscoring, false)) {
     opts.Underscoring = 0;
   }
+
+  parseDoConcurrentMapping(opts, args, diags);
 }
 
 /// Parses all target input arguments and populates the target
@@ -1077,8 +1111,8 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   unsigned numErrorsBefore = diags.getNumErrors();
   llvm::Triple t(res.getTargetOpts().triple);
 
-  // By default OpenMP is set to 1.1 version
-  res.getLangOpts().OpenMPVersion = 11;
+  // By default OpenMP is set to 3.1 version
+  res.getLangOpts().OpenMPVersion = 31;
   res.getFrontendOpts().features.Enable(
       Fortran::common::LanguageFeature::OpenMP);
   if (int Version = getLastArgIntValue(
@@ -1136,22 +1170,16 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     if (args.hasArg(clang::driver::options::OPT_no_offloadlib))
       res.getLangOpts().NoGPULib = 1;
   }
-
-  switch (llvm::Triple(res.getTargetOpts().triple).getArch()) {
-  case llvm::Triple::nvptx:
-  case llvm::Triple::nvptx64:
-  case llvm::Triple::amdgcn:
+  if (llvm::Triple(res.getTargetOpts().triple).isGPU()) {
     if (!res.getLangOpts().OpenMPIsTargetDevice) {
       const unsigned diagID = diags.getCustomDiagID(
           clang::DiagnosticsEngine::Error,
-          "OpenMP AMDGPU/NVPTX is only prepared to deal with device code.");
+          "OpenMP GPU is only prepared to deal with device code.");
       diags.Report(diagID);
     }
     res.getLangOpts().OpenMPIsGPU = 1;
-    break;
-  default:
+  } else {
     res.getLangOpts().OpenMPIsGPU = 0;
-    break;
   }
 
   // Get the OpenMP target triples if any.
@@ -1173,10 +1201,8 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
       if (tt.getArch() == llvm::Triple::UnknownArch ||
           !(tt.getArch() == llvm::Triple::aarch64 || tt.isPPC() ||
             tt.getArch() == llvm::Triple::systemz ||
-            tt.getArch() == llvm::Triple::nvptx ||
-            tt.getArch() == llvm::Triple::nvptx64 || tt.isAMDGCN() ||
             tt.getArch() == llvm::Triple::x86 ||
-            tt.getArch() == llvm::Triple::x86_64))
+            tt.getArch() == llvm::Triple::x86_64 || tt.isGPU()))
         diags.Report(clang::diag::err_drv_invalid_omp_target)
             << arg->getValue(i);
       else if (getArchPtrSize(t) != getArchPtrSize(tt))
@@ -1452,6 +1478,19 @@ bool CompilerInvocation::createFromArgs(
   if (!args.hasFlag(clang::driver::options::OPT_frealloc_lhs,
                     clang::driver::options::OPT_fno_realloc_lhs, true))
     invoc.loweringOpts.setReallocateLHS(false);
+
+  invoc.loweringOpts.setRepackArrays(
+      args.hasFlag(clang::driver::options::OPT_frepack_arrays,
+                   clang::driver::options::OPT_fno_repack_arrays,
+                   /*default=*/false));
+  invoc.loweringOpts.setStackRepackArrays(
+      args.hasFlag(clang::driver::options::OPT_fstack_repack_arrays,
+                   clang::driver::options::OPT_fno_stack_repack_arrays,
+                   /*default=*/false));
+  if (auto *arg = args.getLastArg(
+          clang::driver::options::OPT_frepack_arrays_contiguity_EQ))
+    invoc.loweringOpts.setRepackArraysWhole(arg->getValue() ==
+                                            llvm::StringRef{"whole"});
 
   success &= parseFrontendArgs(invoc.getFrontendOpts(), args, diags);
   parseTargetArgs(invoc.getTargetOpts(), args);

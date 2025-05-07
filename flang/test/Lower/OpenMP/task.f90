@@ -93,7 +93,7 @@ subroutine task_depend_non_int()
   character(len = 15) :: x
   integer, allocatable :: y
   complex :: z
-  !CHECK: omp.task depend(taskdependin -> %{{.+}} : !fir.ref<!fir.char<1,15>>, taskdependin -> %{{.+}} : !fir.ref<!fir.box<!fir.heap<i32>>>, taskdependin ->  %{{.+}} : !fir.ref<complex<f32>>) {
+  !CHECK: omp.task depend(taskdependin -> %{{.+}} : !fir.ref<!fir.char<1,15>>, taskdependin -> %{{.+}} : !fir.heap<i32>, taskdependin ->  %{{.+}} : !fir.ref<complex<f32>>) {
   !$omp task depend(in : x, y, z)
   !CHECK: omp.terminator
   !$omp end task
@@ -157,6 +157,23 @@ subroutine task_depend_multi_task()
   !CHECK: omp.terminator
   !$omp end task
 end subroutine task_depend_multi_task
+
+subroutine task_depend_box(array)
+  integer :: array(:)
+  !CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %{{.*}} : (!fir.box<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
+  !CHECK: omp.task depend(taskdependin -> %[[BOX_ADDR]] : !fir.ref<!fir.array<?xi32>>)
+  !$omp task depend(in: array)
+  !$omp end task
+end subroutine
+
+subroutine task_depend_mutable_box(alloc)
+  integer, allocatable :: alloc
+  !CHECK: %[[LOAD:.*]] = fir.load %{{.*}} : !fir.ref<!fir.box<!fir.heap<i32>>>
+  !CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
+  !CHECK: omp.task depend(taskdependin -> %[[BOX_ADDR]] : !fir.heap<i32>)
+  !$omp task depend(in: alloc)
+  !$omp end task
+end subroutine
 
 !===============================================================================
 ! `private` clause

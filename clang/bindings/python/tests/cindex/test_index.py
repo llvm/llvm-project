@@ -7,7 +7,7 @@ if "CLANG_LIBRARY_PATH" in os.environ:
 
 import unittest
 
-inputs_dir = os.path.join(os.path.dirname(__file__), "INPUTS")
+INPUTS_DIR = os.path.join(os.path.dirname(__file__), "INPUTS")
 
 
 class TestIndex(unittest.TestCase):
@@ -19,7 +19,7 @@ class TestIndex(unittest.TestCase):
     def test_parse(self):
         index = Index.create()
         self.assertIsInstance(index, Index)
-        tu = index.parse(os.path.join(inputs_dir, "hello.cpp"))
+        tu = index.parse(os.path.join(INPUTS_DIR, "hello.cpp"))
         self.assertIsInstance(tu, TranslationUnit)
-        tu = index.parse(None, ["-c", os.path.join(inputs_dir, "hello.cpp")])
+        tu = index.parse(None, ["-c", os.path.join(INPUTS_DIR, "hello.cpp")])
         self.assertIsInstance(tu, TranslationUnit)

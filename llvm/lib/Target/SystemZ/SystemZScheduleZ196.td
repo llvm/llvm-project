@@ -705,12 +705,12 @@ def : InstRW<[], (instregex "Insn.*")>;
 //===----------------------------------------------------------------------===//
 
 // Load zero
-def : InstRW<[WLat1, FXU, NormalGr], (instregex "LZ(DR|ER)$")>;
+def : InstRW<[WLat1, FXU, NormalGr], (instregex "LZ(DR|ER|ER_16)$")>;
 def : InstRW<[WLat2, FXU2, GroupAlone2], (instregex "LZXR$")>;
 
 // Load
-def : InstRW<[WLat1, FXU, NormalGr], (instregex "LER$")>;
-def : InstRW<[WLat1, FXU, NormalGr], (instregex "LD(R|R32|GR)$")>;
+def : InstRW<[WLat1, FXU, NormalGr], (instregex "LER(16)?$")>;
+def : InstRW<[WLat1, FXU, NormalGr], (instregex "LD(R|R16|R32|GR)$")>;
 def : InstRW<[WLat3, FXU, NormalGr], (instregex "LGDR$")>;
 def : InstRW<[WLat2, FXU2, GroupAlone2], (instregex "LXR$")>;
 
@@ -719,20 +719,20 @@ def : InstRW<[WLat9, WLat9, FPU, NormalGr], (instregex "LT(E|D)BR$")>;
 def : InstRW<[WLat10, WLat10, FPU4, GroupAlone], (instregex "LTXBR$")>;
 
 // Copy sign
-def : InstRW<[WLat5, FXU2, GroupAlone], (instregex "CPSDR(d|s)(d|s)$")>;
+def : InstRW<[WLat5, FXU2, GroupAlone], (instregex "CPSDR(d|s|h)(d|s|h)$")>;
 
 //===----------------------------------------------------------------------===//
 // FP: Load instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[LSULatency, LSU, NormalGr], (instregex "L(E|D)(Y|E32)?$")>;
+def : InstRW<[LSULatency, LSU, NormalGr], (instregex "L(E16|E|D)(Y|E32)?$")>;
 def : InstRW<[LSULatency, LSU, NormalGr], (instregex "LX$")>;
 
 //===----------------------------------------------------------------------===//
 // FP: Store instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[WLat1, FXU, LSU, NormalGr], (instregex "ST(E|D)(Y)?$")>;
+def : InstRW<[WLat1, FXU, LSU, NormalGr], (instregex "ST(E16|E|D)(Y)?$")>;
 def : InstRW<[WLat1, FXU, LSU, NormalGr], (instregex "STX$")>;
 
 //===----------------------------------------------------------------------===//
@@ -771,7 +771,7 @@ def : InstRW<[WLat12, WLat12, FXU, FPU2, GroupAlone], (instregex "CL(F|G)XBR$")>
 
 // Load Complement / Negative / Positive
 def : InstRW<[WLat7, WLat7, FPU, NormalGr], (instregex "L(C|N|P)(E|D)BR$")>;
-def : InstRW<[WLat1, FXU, NormalGr], (instregex "L(C|N|P)DFR(_32)?$")>;
+def : InstRW<[WLat1, FXU, NormalGr], (instregex "L(C|N|P)DFR(_32|_16)?$")>;
 def : InstRW<[WLat10, WLat10, FPU4, GroupAlone], (instregex "L(C|N|P)XBR$")>;
 
 // Square root

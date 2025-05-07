@@ -106,11 +106,6 @@ private:
     Show(x.u);
     Outdent();
   }
-  template <typename T> void Show(const evaluate::Variable<T> &x) {
-    Indent("variable");
-    Show(x.u);
-    Outdent();
-  }
   void Show(const evaluate::DescriptorInquiry &x);
   void Show(const evaluate::SpecificIntrinsic &);
   void Show(const evaluate::ProcedureDesignator &x);

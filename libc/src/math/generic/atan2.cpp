@@ -8,6 +8,7 @@
 
 #include "src/math/atan2.h"
 #include "atan_utils.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/double_double.h"
 #include "src/__support/FPUtil/multiply_add.h"
@@ -111,8 +112,11 @@ LLVM_LIBC_FUNCTION(double, atan2, (double y, double x)) {
   // Check for exceptional cases, whether inputs are 0, inf, nan, or close to
   // overflow, or close to underflow.
   if (LIBC_UNLIKELY(max_exp > 0x7ffU - 128U || min_exp < 128U)) {
-    if (x_bits.is_nan() || y_bits.is_nan())
+    if (x_bits.is_nan() || y_bits.is_nan()) {
+      if (x_bits.is_signaling_nan() || y_bits.is_signaling_nan())
+        fputil::raise_except_if_required(FE_INVALID);
       return FPBits::quiet_nan().get_val();
+    }
     unsigned x_except = x == 0.0 ? 0 : (FPBits(x_abs).is_inf() ? 2 : 1);
     unsigned y_except = y == 0.0 ? 0 : (FPBits(y_abs).is_inf() ? 2 : 1);
 

@@ -25,7 +25,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Mutex>
-class _LIBCPP_TEMPLATE_VIS unique_lock {
+class unique_lock {
 public:
   typedef _Mutex mutex_type;
 

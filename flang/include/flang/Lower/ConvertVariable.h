@@ -134,10 +134,11 @@ mlir::Value genInitialDataTarget(Fortran::lower::AbstractConverter &,
                                  const SomeExpr &initialTarget,
                                  bool couldBeInEquivalence = false);
 
-/// Call \p genInit to generate code inside \p global initializer region.
-void createGlobalInitialization(
-    fir::FirOpBuilder &builder, fir::GlobalOp global,
-    std::function<void(fir::FirOpBuilder &)> genInit);
+/// Create the global op and its init if it has one
+fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
+                           const Fortran::lower::pft::Variable &var,
+                           llvm::StringRef globalName, mlir::StringAttr linkage,
+                           cuf::DataAttributeAttr dataAttr = {});
 
 /// Generate address \p addr inside an initializer.
 fir::ExtendedValue
@@ -194,8 +195,8 @@ fir::ExtendedValue genPackArray(Fortran::lower::AbstractConverter &converter,
 /// to the given symbol, generate fir.unpack_array operation
 /// that reverts the effect of fir.pack_array.
 /// \p def is expected to be hlfir.declare operation.
-void genUnpackArray(fir::FirOpBuilder &builder, mlir::Location loc,
-                    fir::FortranVariableOpInterface def,
+void genUnpackArray(Fortran::lower::AbstractConverter &converter,
+                    mlir::Location loc, fir::FortranVariableOpInterface def,
                     const Fortran::semantics::Symbol &sym);
 
 } // namespace lower

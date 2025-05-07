@@ -175,8 +175,8 @@ raw_ostream &operator<<(raw_ostream &OS, const MCInstReference &);
 
 namespace PAuthGadgetScanner {
 
-class PacRetAnalysis;
-struct State;
+class SrcSafetyAnalysis;
+struct SrcState;
 
 /// Description of a gadget kind that can be detected. Intended to be
 /// statically allocated to be attached to reports by reference.
@@ -212,7 +212,7 @@ struct GadgetReport : public Report {
   // The particular kind of gadget that is detected.
   const GadgetKind &Kind;
   // The set of registers related to this gadget report (possibly empty).
-  SmallVector<MCPhysReg> AffectedRegisters;
+  SmallVector<MCPhysReg, 1> AffectedRegisters;
   // The instructions that clobber the affected registers.
   // There is no one-to-one correspondence with AffectedRegisters: for example,
   // the same register can be overwritten by different instructions in different
@@ -220,9 +220,8 @@ struct GadgetReport : public Report {
   SmallVector<MCInstReference> OverwritingInstrs;
 
   GadgetReport(const GadgetKind &Kind, MCInstReference Location,
-               const BitVector &AffectedRegisters)
-      : Report(Location), Kind(Kind),
-        AffectedRegisters(AffectedRegisters.set_bits()) {}
+               MCPhysReg AffectedRegister)
+      : Report(Location), Kind(Kind), AffectedRegisters({AffectedRegister}) {}
 
   void generateReport(raw_ostream &OS, const BinaryContext &BC) const override;
 
@@ -249,6 +248,9 @@ struct FunctionAnalysisResult {
 };
 
 class Analysis : public BinaryFunctionPass {
+  /// Only search for pac-ret violations.
+  bool PacRetGadgetsOnly;
+
   void runOnFunction(BinaryFunction &Function,
                      MCPlusBuilder::AllocatorIdTy AllocatorId);
   FunctionAnalysisResult findGadgets(BinaryFunction &BF,
@@ -262,7 +264,8 @@ class Analysis : public BinaryFunctionPass {
   std::mutex AnalysisResultsMutex;
 
 public:
-  explicit Analysis() : BinaryFunctionPass(false) {}
+  explicit Analysis(bool PacRetGadgetsOnly)
+      : BinaryFunctionPass(false), PacRetGadgetsOnly(PacRetGadgetsOnly) {}
 
   const char *getName() const override { return "pauth-gadget-scanner"; }
 

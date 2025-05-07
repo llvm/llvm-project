@@ -93,14 +93,14 @@
 ;; notcold again.
 ; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-min-ave-lifetime-access-density-hot-threshold=0 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL
 
-; MEMPROFMATCHINFO: MemProf notcold context with id 1093248920606587996 has total profiled size 10 is matched
-; MEMPROFMATCHINFO: MemProf notcold context with id 5725971306423925017 has total profiled size 10 is matched
-; MEMPROFMATCHINFO: MemProf notcold context with id 6792096022461663180 has total profiled size 10 is matched
-; MEMPROFMATCHINFO: MemProf cold context with id 8525406123785421946 has total profiled size 10 is matched
-; MEMPROFMATCHINFO: MemProf cold context with id 11714230664165068698 has total profiled size 10 is matched
-; MEMPROFMATCHINFO: MemProf cold context with id 15737101490731057601 has total profiled size 10 is matched
-; MEMPROFMATCHINFO: MemProf cold context with id 16342802530253093571 has total profiled size 10 is matched
-; MEMPROFMATCHINFO: MemProf cold context with id 18254812774972004394 has total profiled size 10 is matched
+; MEMPROFMATCHINFO: MemProf notcold context with id 1093248920606587996 has total profiled size 10 is matched with 1 frames
+; MEMPROFMATCHINFO: MemProf notcold context with id 5725971306423925017 has total profiled size 10 is matched with 1 frames
+; MEMPROFMATCHINFO: MemProf notcold context with id 6792096022461663180 has total profiled size 10 is matched with 1 frames
+; MEMPROFMATCHINFO: MemProf cold context with id 8525406123785421946 has total profiled size 10 is matched with 1 frames
+; MEMPROFMATCHINFO: MemProf cold context with id 11714230664165068698 has total profiled size 10 is matched with 1 frames
+; MEMPROFMATCHINFO: MemProf cold context with id 15737101490731057601 has total profiled size 10 is matched with 1 frames
+; MEMPROFMATCHINFO: MemProf cold context with id 16342802530253093571 has total profiled size 10 is matched with 1 frames
+; MEMPROFMATCHINFO: MemProf cold context with id 18254812774972004394 has total profiled size 10 is matched with 1 frames
 ; MEMPROFMATCHINFO: MemProf callsite match for inline call stack 748269490701775343
 ; MEMPROFMATCHINFO: MemProf callsite match for inline call stack 1544787832369987002
 ; MEMPROFMATCHINFO: MemProf callsite match for inline call stack 2061451396820446691

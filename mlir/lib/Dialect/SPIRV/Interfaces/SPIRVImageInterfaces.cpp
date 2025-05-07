@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
+#include "mlir/IR/OpDefinition.h"
+
+#include "mlir/Dialect/SPIRV/Interfaces/SPIRVImageInterfaces.h"
 
 using namespace mlir;
 

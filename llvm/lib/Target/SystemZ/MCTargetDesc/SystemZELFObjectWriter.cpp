@@ -156,9 +156,7 @@ unsigned SystemZELFObjectWriter::getRelocType(MCContext &Ctx,
                                               bool IsPCRel) const {
   SMLoc Loc = Fixup.getLoc();
   unsigned Kind = Fixup.getKind();
-  if (Kind >= FirstLiteralRelocationKind)
-    return Kind - FirstLiteralRelocationKind;
-  auto Specifier = SystemZMCExpr::Specifier(Target.getAccessVariant());
+  auto Specifier = SystemZMCExpr::Specifier(Target.getSpecifier());
   switch (Specifier) {
   case SystemZMCExpr::VK_INDNTPOFF:
   case SystemZMCExpr::VK_NTPOFF:
@@ -166,8 +164,8 @@ unsigned SystemZELFObjectWriter::getRelocType(MCContext &Ctx,
   case SystemZMCExpr::VK_TLSLD:
   case SystemZMCExpr::VK_TLSLDM:
   case SystemZMCExpr::VK_DTPOFF:
-    if (auto *S = Target.getSymA())
-      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
+    if (auto *SA = Target.getAddSym())
+      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;
@@ -220,7 +218,7 @@ unsigned SystemZELFObjectWriter::getRelocType(MCContext &Ctx,
 bool SystemZELFObjectWriter::needsRelocateWithSymbol(const MCValue &V,
                                                      const MCSymbol &Sym,
                                                      unsigned Type) const {
-  switch (getSpecifier(V.getSymA())) {
+  switch (V.getSpecifier()) {
   case SystemZMCExpr::VK_GOT:
   case SystemZMCExpr::VK_PLT:
     return true;

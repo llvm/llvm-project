@@ -17,7 +17,7 @@ namespace Fortran::runtime::io {
 RT_OFFLOAD_API_GROUP_BEGIN
 
 // In output statement, add a space between numbers and characters.
-static RT_API_ATTRS void addSpaceBeforeCharacter(IoStatementState &io) {
+static RT_API_ATTRS void AddSpaceBeforeCharacter(IoStatementState &io) {
   if (auto *list{io.get_if<ListDirectedStatementState<Direction::Output>>()}) {
     list->set_lastWasUndelimitedCharacter(false);
   }
@@ -29,7 +29,7 @@ static RT_API_ATTRS void addSpaceBeforeCharacter(IoStatementState &io) {
 template <int LOG2_BASE>
 static RT_API_ATTRS bool EditBOZOutput(IoStatementState &io,
     const DataEdit &edit, const unsigned char *data0, std::size_t bytes) {
-  addSpaceBeforeCharacter(io);
+  AddSpaceBeforeCharacter(io);
   int digits{static_cast<int>((bytes * 8) / LOG2_BASE)};
   int get{static_cast<int>(bytes * 8) - digits * LOG2_BASE};
   if (get > 0) {
@@ -110,27 +110,11 @@ static RT_API_ATTRS bool EditBOZOutput(IoStatementState &io,
 template <int KIND>
 bool RT_API_ATTRS EditIntegerOutput(IoStatementState &io, const DataEdit &edit,
     common::HostSignedIntType<8 * KIND> n, bool isSigned) {
-  addSpaceBeforeCharacter(io);
-  char buffer[130], *end{&buffer[sizeof buffer]}, *p{end};
-  bool isNegative{isSigned && n < 0};
-  using Unsigned = common::HostUnsignedIntType<8 * KIND>;
-  Unsigned un{static_cast<Unsigned>(n)};
-  int signChars{0};
+  AddSpaceBeforeCharacter(io);
   switch (edit.descriptor) {
   case DataEdit::ListDirected:
   case 'G':
   case 'I':
-    if (isNegative) {
-      un = -un;
-    }
-    if (isNegative || (edit.modes.editingFlags & signPlus)) {
-      signChars = 1; // '-' or '+'
-    }
-    while (un > 0) {
-      auto quotient{un / 10u};
-      *--p = '0' + static_cast<int>(un - Unsigned{10} * quotient);
-      un = quotient;
-    }
     break;
   case 'B':
     return EditBOZOutput<1>(
@@ -152,7 +136,22 @@ bool RT_API_ATTRS EditIntegerOutput(IoStatementState &io, const DataEdit &edit,
         edit.descriptor);
     return false;
   }
-
+  char buffer[130], *end{&buffer[sizeof buffer]}, *p{end};
+  bool isNegative{isSigned && n < 0};
+  using Unsigned = common::HostUnsignedIntType<8 * KIND>;
+  Unsigned un{static_cast<Unsigned>(n)};
+  int signChars{0};
+  if (isNegative) {
+    un = -un;
+  }
+  if (isNegative || (edit.modes.editingFlags & signPlus)) {
+    signChars = 1; // '-' or '+'
+  }
+  while (un > 0) {
+    auto quotient{un / 10u};
+    *--p = '0' + static_cast<int>(un - Unsigned{10} * quotient);
+    un = quotient;
+  }
   int digits = end - p;
   int leadingZeroes{0};
   int editWidth{edit.width.value_or(0)};
@@ -181,6 +180,13 @@ bool RT_API_ATTRS EditIntegerOutput(IoStatementState &io, const DataEdit &edit,
       return false;
     }
     leadingSpaces = 1;
+  } else if (!edit.width) {
+    // Bare 'I' and 'G' are interpreted with various default widths in the
+    // compilers that support them, so there's always some leading space
+    // after column 1.
+    if (io.GetConnectionState().positionInRecord > 0) {
+      leadingSpaces = 1;
+    }
   }
   return EmitRepeated(io, ' ', leadingSpaces) &&
       EmitAscii(io, n < 0 ? "-" : "+", signChars) &&
@@ -291,7 +297,7 @@ static RT_API_ATTRS bool IsInfOrNaN(const char *p, int length) {
 template <int KIND>
 RT_API_ATTRS bool RealOutputEditing<KIND>::EditEorDOutput(
     const DataEdit &edit) {
-  addSpaceBeforeCharacter(io_);
+  AddSpaceBeforeCharacter(io_);
   int editDigits{edit.digits.value_or(0)}; // 'd' field
   int editWidth{edit.width.value_or(0)}; // 'w' field
   int significantDigits{editDigits};
@@ -427,7 +433,7 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditEorDOutput(
 // 13.7.2.3.2 in F'2018
 template <int KIND>
 RT_API_ATTRS bool RealOutputEditing<KIND>::EditFOutput(const DataEdit &edit) {
-  addSpaceBeforeCharacter(io_);
+  AddSpaceBeforeCharacter(io_);
   int fracDigits{edit.digits.value_or(0)}; // 'd' field
   const int editWidth{edit.width.value_or(0)}; // 'w' field
   enum decimal::FortranRounding rounding{edit.modes.round};
@@ -702,7 +708,7 @@ RT_API_ATTRS auto RealOutputEditing<KIND>::ConvertToHexadecimal(
 
 template <int KIND>
 RT_API_ATTRS bool RealOutputEditing<KIND>::EditEXOutput(const DataEdit &edit) {
-  addSpaceBeforeCharacter(io_);
+  AddSpaceBeforeCharacter(io_);
   int editDigits{edit.digits.value_or(0)}; // 'd' field
   int significantDigits{editDigits + 1};
   int flags{0};

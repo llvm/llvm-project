@@ -492,99 +492,70 @@ def SDTRVVVecReduce : SDTypeProfile<1, 6, [
   SDTCisVT<6, XLenVT>
 ]>;
 
-def riscv_add_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
-                                       node:$E),
-                                  (riscv_add_vl node:$A, node:$B, node:$C,
-                                                node:$D, node:$E), [{
-  return N->hasOneUse();
-}]>;
-
-def riscv_sub_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
-                                       node:$E),
-                                  (riscv_sub_vl node:$A, node:$B, node:$C,
-                                                node:$D, node:$E), [{
-  return N->hasOneUse();
-}]>;
-
-def riscv_mul_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
-                                       node:$E),
-                                  (riscv_mul_vl node:$A, node:$B, node:$C,
-                                                node:$D, node:$E), [{
-  return N->hasOneUse();
-}]>;
-
-def riscv_vwmul_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
+let HasOneUse = 1 in {
+  def riscv_add_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
                                          node:$E),
-                                    (riscv_vwmul_vl node:$A, node:$B, node:$C,
-                                                    node:$D, node:$E), [{
-  return N->hasOneUse();
-}]>;
-
-def riscv_vwmulu_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
-                                          node:$E),
-                                     (riscv_vwmulu_vl node:$A, node:$B, node:$C,
-                                                      node:$D, node:$E), [{
-  return N->hasOneUse();
-}]>;
-
-def riscv_vwmulsu_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
+                                    (riscv_add_vl node:$A, node:$B, node:$C,
+                                                  node:$D, node:$E)>;
+  def riscv_or_vl_is_add_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
+                                               node:$E),
+                                          (riscv_or_vl node:$A, node:$B, node:$C,
+                                                       node:$D, node:$E), [{
+    if (N->getFlags().hasDisjoint())
+      return true;
+    KnownBits Known0 = CurDAG->computeKnownBits(N->getOperand(0), 0);
+    KnownBits Known1 = CurDAG->computeKnownBits(N->getOperand(1), 0);
+    return KnownBits::haveNoCommonBitsSet(Known0, Known1);
+  }]>;
+  def riscv_sub_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
+                                         node:$E),
+                                    (riscv_sub_vl node:$A, node:$B, node:$C,
+                                                  node:$D, node:$E)>;
+  def riscv_mul_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
+                                         node:$E),
+                                    (riscv_mul_vl node:$A, node:$B, node:$C,
+                                                  node:$D, node:$E)>;
+  def riscv_vwmul_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
                                            node:$E),
-                                      (riscv_vwmulsu_vl node:$A, node:$B, node:$C,
-                                                        node:$D, node:$E), [{
-  return N->hasOneUse();
-}]>;
-
-def riscv_sext_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C),
-                           (riscv_sext_vl node:$A, node:$B, node:$C), [{
-  return N->hasOneUse();
-}]>;
-
-def riscv_zext_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C),
-                           (riscv_zext_vl node:$A, node:$B, node:$C), [{
-  return N->hasOneUse();
-}]>;
-
-def riscv_ext_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C),
-                          (riscv_ext_vl node:$A, node:$B, node:$C), [{
-  return N->hasOneUse();
-}]>;
-
-def riscv_fpextend_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C),
-                           (riscv_fpextend_vl node:$A, node:$B, node:$C), [{
-  return N->hasOneUse();
-}]>;
+                                      (riscv_vwmul_vl node:$A, node:$B, node:$C,
+                                                      node:$D, node:$E)>;
+  def riscv_vwmulu_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
+                                            node:$E),
+                                       (riscv_vwmulu_vl node:$A, node:$B, node:$C,
+                                                        node:$D, node:$E)>;
+  def riscv_vwmulsu_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
+                                             node:$E),
+                                        (riscv_vwmulsu_vl node:$A, node:$B, node:$C,
+                                                          node:$D, node:$E)>;
+  def riscv_sext_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C),
+                             (riscv_sext_vl node:$A, node:$B, node:$C)>;
+  def riscv_zext_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C),
+                             (riscv_zext_vl node:$A, node:$B, node:$C)>;
+  def riscv_ext_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C),
+                            (riscv_ext_vl node:$A, node:$B, node:$C)>;
+  def riscv_fpextend_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C),
+                             (riscv_fpextend_vl node:$A, node:$B, node:$C)>;
+  def riscv_vfmadd_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
+                                            node:$E),
+                                       (riscv_vfmadd_vl node:$A, node:$B,
+                                            node:$C, node:$D, node:$E)>;
+  def riscv_vfnmadd_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
+                                             node:$E),
+                                        (riscv_vfnmadd_vl node:$A, node:$B,
+                                             node:$C, node:$D, node:$E)>;
+  def riscv_vfmsub_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
+                                            node:$E),
+                                       (riscv_vfmsub_vl node:$A, node:$B,
+                                            node:$C, node:$D, node:$E)>;
+  def riscv_vfnmsub_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
+                                             node:$E),
+                                        (riscv_vfnmsub_vl node:$A, node:$B,
+                                             node:$C, node:$D, node:$E)>;
+} // HasOneUse = 1
 
 def riscv_fpextend_vl_sameuser : PatFrag<(ops node:$A, node:$B, node:$C),
                                  (riscv_fpextend_vl node:$A, node:$B, node:$C), [{
   return !N->use_empty() && all_equal(N->users());
-}]>;
-
-def riscv_vfmadd_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
-                                          node:$E),
-                                     (riscv_vfmadd_vl node:$A, node:$B,
-                                          node:$C, node:$D, node:$E), [{
-  return N->hasOneUse();
-}]>;
-
-def riscv_vfnmadd_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
-                                           node:$E),
-                                      (riscv_vfnmadd_vl node:$A, node:$B,
-                                           node:$C, node:$D, node:$E), [{
-  return N->hasOneUse();
-}]>;
-
-def riscv_vfmsub_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
-                                          node:$E),
-                                     (riscv_vfmsub_vl node:$A, node:$B,
-                                          node:$C, node:$D, node:$E), [{
-  return N->hasOneUse();
-}]>;
-
-def riscv_vfnmsub_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
-                                           node:$E),
-                                      (riscv_vfnmsub_vl node:$A, node:$B,
-                                           node:$C, node:$D, node:$E), [{
-  return N->hasOneUse();
 }]>;
 
 foreach kind = ["ADD", "UMAX", "SMAX", "UMIN", "SMIN", "AND", "OR", "XOR",
@@ -1765,42 +1736,6 @@ multiclass VPatFPMulAddVL_VV_VF_RM<SDPatternOperator vop, string instruction_nam
   }
 }
 
-multiclass VPatFPMulAccVL_VV_VF<PatFrag vop, string instruction_name> {
-  foreach vti = AllFloatVectors in {
-  defvar suffix = vti.LMul.MX;
-  let Predicates = GetVTypePredicates<vti>.Predicates in {
-    def : Pat<(riscv_vmerge_vl (vti.Mask VMV0:$vm),
-                           (vti.Vector (vop vti.RegClass:$rs1, vti.RegClass:$rs2,
-                            vti.RegClass:$rd, (vti.Mask true_mask), VLOpFrag)),
-                            vti.RegClass:$rd, vti.RegClass:$rd, VLOpFrag),
-              (!cast<Instruction>(instruction_name#"_VV_"# suffix #"_MASK")
-                   vti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
-                   (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW, TU_MU)>;
-    def : Pat<(riscv_vmerge_vl (vti.Mask VMV0:$vm),
-                           (vti.Vector (vop (SplatFPOp vti.ScalarRegClass:$rs1), vti.RegClass:$rs2,
-                            vti.RegClass:$rd, (vti.Mask true_mask), VLOpFrag)),
-                            vti.RegClass:$rd, vti.RegClass:$rd, VLOpFrag),
-              (!cast<Instruction>(instruction_name#"_V" # vti.ScalarSuffix # "_" # suffix # "_MASK")
-                   vti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
-                   (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW, TU_MU)>;
-    def : Pat<(riscv_vmerge_vl (vti.Mask VMV0:$vm),
-                           (vti.Vector (vop vti.RegClass:$rs1, vti.RegClass:$rs2,
-                            vti.RegClass:$rd, (vti.Mask true_mask), VLOpFrag)),
-                            vti.RegClass:$rd, undef, VLOpFrag),
-              (!cast<Instruction>(instruction_name#"_VV_"# suffix #"_MASK")
-                   vti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
-                   (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
-    def : Pat<(riscv_vmerge_vl (vti.Mask VMV0:$vm),
-                           (vti.Vector (vop (SplatFPOp vti.ScalarRegClass:$rs1), vti.RegClass:$rs2,
-                            vti.RegClass:$rd, (vti.Mask true_mask), VLOpFrag)),
-                            vti.RegClass:$rd, undef, VLOpFrag),
-              (!cast<Instruction>(instruction_name#"_V" # vti.ScalarSuffix # "_" # suffix # "_MASK")
-                   vti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
-                   (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
-    }
-  }
-}
-
 multiclass VPatFPMulAccVL_VV_VF_RM<PatFrag vop, string instruction_name> {
   foreach vti = AllFloatVectors in {
   defvar suffix = vti.LMul.MX # "_E" # vti.SEW;
@@ -2054,6 +1989,41 @@ foreach vtiToWti = AllWidenableIntVectors in {
                (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
   }
 }
+
+// DAGCombiner::hoistLogicOpWithSameOpcodeHands may hoist disjoint ors
+// to (ext (or disjoint (a, b)))
+multiclass VPatWidenOrDisjointVL_VV_VX<SDNode extop, string instruction_name> {
+  foreach vtiToWti = AllWidenableIntVectors in {
+    defvar vti = vtiToWti.Vti;
+    defvar wti = vtiToWti.Wti;
+    let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
+                                 GetVTypePredicates<wti>.Predicates) in {
+      def : Pat<(wti.Vector
+                  (extop
+                    (vti.Vector
+                      (riscv_or_vl_is_add_oneuse
+                        vti.RegClass:$rs2, vti.RegClass:$rs1,
+                        undef, srcvalue, srcvalue)),
+                    VMV0:$vm, VLOpFrag)),
+                (!cast<Instruction>(instruction_name#"_VV_"#vti.LMul.MX#"_MASK")
+                 (wti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs2,
+                 vti.RegClass:$rs1, VMV0:$vm, GPR:$vl, vti.Log2SEW, TA_MA)>;
+       def : Pat<(wti.Vector
+                   (extop
+                     (vti.Vector
+                       (riscv_or_vl_is_add_oneuse
+                         vti.RegClass:$rs2, (SplatPat (XLenVT GPR:$rs1)),
+                         undef, srcvalue, srcvalue)),
+                     VMV0:$vm, VLOpFrag)),
+                (!cast<Instruction>(instruction_name#"_VX_"#vti.LMul.MX#"_MASK")
+                 (wti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs2,
+                 GPR:$rs1, VMV0:$vm, GPR:$vl, vti.Log2SEW, TA_MA)>;
+    }
+  }
+}
+
+defm : VPatWidenOrDisjointVL_VV_VX<riscv_sext_vl, "PseudoVWADD">;
+defm : VPatWidenOrDisjointVL_VV_VX<riscv_zext_vl, "PseudoVWADDU">;
 
 // 11.3. Vector Integer Extension
 defm : VPatExtendVL_V<riscv_zext_vl, "PseudoVZEXT", "VF2",

@@ -61,25 +61,26 @@ struct RemoveRedundantBranches : public OpRewritePattern<BrOp> {
   }
 };
 
-struct RemoveEmptyScope
-    : public OpRewritePattern<ScopeOp>::SplitMatchAndRewrite {
-  using SplitMatchAndRewrite::SplitMatchAndRewrite;
+struct RemoveEmptyScope : public OpRewritePattern<ScopeOp> {
+  using OpRewritePattern<ScopeOp>::OpRewritePattern;
 
-  LogicalResult match(ScopeOp op) const final {
+  LogicalResult matchAndRewrite(ScopeOp op,
+                                PatternRewriter &rewriter) const final {
     // TODO: Remove this logic once CIR uses MLIR infrastructure to remove
     // trivially dead operations
-    if (op.isEmpty())
+    if (op.isEmpty()) {
+      rewriter.eraseOp(op);
       return success();
+    }
 
     Region &region = op.getScopeRegion();
-    if (region.getBlocks().front().getOperations().size() == 1)
-      return success(isa<YieldOp>(region.getBlocks().front().front()));
+    if (region.getBlocks().front().getOperations().size() == 1 &&
+        isa<YieldOp>(region.getBlocks().front().front())) {
+      rewriter.eraseOp(op);
+      return success();
+    }
 
     return failure();
-  }
-
-  void rewrite(ScopeOp op, PatternRewriter &rewriter) const final {
-    rewriter.eraseOp(op);
   }
 };
 

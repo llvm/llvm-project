@@ -365,8 +365,7 @@ FunctionPropertiesUpdater::FunctionPropertiesUpdater(
   // finish().
   Successors.erase(&CallSiteBB);
 
-  for (const auto *BB : Successors)
-    LikelyToChangeBBs.insert(BB);
+  LikelyToChangeBBs.insert_range(Successors);
 
   // Commit the change. While some of the BBs accounted for above may play dual
   // role - e.g. caller's entry BB may be the same as the callsite BB - set

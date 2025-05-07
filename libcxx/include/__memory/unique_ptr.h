@@ -63,7 +63,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS default_delete {
+struct default_delete {
   static_assert(!is_function<_Tp>::value, "default_delete cannot be instantiated for function types");
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR default_delete() _NOEXCEPT = default;
@@ -79,7 +79,7 @@ struct _LIBCPP_TEMPLATE_VIS default_delete {
 };
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS default_delete<_Tp[]> {
+struct default_delete<_Tp[]> {
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR default_delete() _NOEXCEPT = default;
 
   template <class _Up, __enable_if_t<is_convertible<_Up (*)[], _Tp (*)[]>::value, int> = 0>
@@ -127,7 +127,7 @@ struct __unique_ptr_deleter_sfinae<_Deleter&> {
 #endif
 
 template <class _Tp, class _Dp = default_delete<_Tp> >
-class _LIBCPP_UNIQUE_PTR_TRIVIAL_ABI _LIBCPP_TEMPLATE_VIS unique_ptr {
+class _LIBCPP_UNIQUE_PTR_TRIVIAL_ABI unique_ptr {
 public:
   typedef _Tp element_type;
   typedef _Dp deleter_type;
@@ -396,7 +396,7 @@ private:
 };
 
 template <class _Tp, class _Dp>
-class _LIBCPP_UNIQUE_PTR_TRIVIAL_ABI _LIBCPP_TEMPLATE_VIS unique_ptr<_Tp[], _Dp> {
+class _LIBCPP_UNIQUE_PTR_TRIVIAL_ABI unique_ptr<_Tp[], _Dp> {
 public:
   typedef _Tp element_type;
   typedef _Dp deleter_type;
@@ -788,13 +788,13 @@ void make_unique_for_overwrite(_Args&&...) = delete;
 #endif // _LIBCPP_STD_VER >= 20
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS hash;
+struct hash;
 
 template <class _Tp, class _Dp>
 #ifdef _LIBCPP_CXX03_LANG
-struct _LIBCPP_TEMPLATE_VIS hash<unique_ptr<_Tp, _Dp> >
+struct hash<unique_ptr<_Tp, _Dp> >
 #else
-struct _LIBCPP_TEMPLATE_VIS hash<__enable_hash_helper< unique_ptr<_Tp, _Dp>, typename unique_ptr<_Tp, _Dp>::pointer> >
+struct hash<__enable_hash_helper< unique_ptr<_Tp, _Dp>, typename unique_ptr<_Tp, _Dp>::pointer> >
 #endif
 {
 #if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)

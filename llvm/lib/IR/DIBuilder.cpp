@@ -38,7 +38,7 @@ DIBuilder::DIBuilder(Module &m, bool AllowUnresolvedNodes, DICompileUnit *CU)
     if (const auto &IMs = CUNode->getImportedEntities())
       ImportedModules.assign(IMs.begin(), IMs.end());
     if (const auto &MNs = CUNode->getMacros())
-      AllMacrosPerParent.insert({nullptr, {MNs.begin(), MNs.end()}});
+      AllMacrosPerParent.insert({nullptr, {llvm::from_range, MNs}});
   }
 }
 
@@ -270,6 +270,37 @@ DIBasicType *DIBuilder::createBasicType(StringRef Name, uint64_t SizeInBits,
   assert(!Name.empty() && "Unable to create type without name");
   return DIBasicType::get(VMContext, dwarf::DW_TAG_base_type, Name, SizeInBits,
                           0, Encoding, NumExtraInhabitants, Flags);
+}
+
+DIFixedPointType *
+DIBuilder::createBinaryFixedPointType(StringRef Name, uint64_t SizeInBits,
+                                      uint32_t AlignInBits, unsigned Encoding,
+                                      DINode::DIFlags Flags, int Factor) {
+  return DIFixedPointType::get(VMContext, dwarf::DW_TAG_base_type, Name,
+                               SizeInBits, AlignInBits, Encoding, Flags,
+                               DIFixedPointType::FixedPointBinary, Factor,
+                               APInt(), APInt());
+}
+
+DIFixedPointType *
+DIBuilder::createDecimalFixedPointType(StringRef Name, uint64_t SizeInBits,
+                                       uint32_t AlignInBits, unsigned Encoding,
+                                       DINode::DIFlags Flags, int Factor) {
+  return DIFixedPointType::get(VMContext, dwarf::DW_TAG_base_type, Name,
+                               SizeInBits, AlignInBits, Encoding, Flags,
+                               DIFixedPointType::FixedPointDecimal, Factor,
+                               APInt(), APInt());
+}
+
+DIFixedPointType *
+DIBuilder::createRationalFixedPointType(StringRef Name, uint64_t SizeInBits,
+                                        uint32_t AlignInBits, unsigned Encoding,
+                                        DINode::DIFlags Flags, APInt Numerator,
+                                        APInt Denominator) {
+  return DIFixedPointType::get(VMContext, dwarf::DW_TAG_base_type, Name,
+                               SizeInBits, AlignInBits, Encoding, Flags,
+                               DIFixedPointType::FixedPointRational, 0,
+                               Numerator, Denominator);
 }
 
 DIStringType *DIBuilder::createStringType(StringRef Name, uint64_t SizeInBits) {
@@ -611,7 +642,7 @@ DICompositeType *DIBuilder::createArrayType(
     PointerUnion<DIExpression *, DIVariable *> DL,
     PointerUnion<DIExpression *, DIVariable *> AS,
     PointerUnion<DIExpression *, DIVariable *> AL,
-    PointerUnion<DIExpression *, DIVariable *> RK) {
+    PointerUnion<DIExpression *, DIVariable *> RK, Metadata *BitStride) {
   auto *R = DICompositeType::get(
       VMContext, dwarf::DW_TAG_array_type, Name, File, LineNumber,
       getNonCompileUnitScope(Scope), Ty, Size, AlignInBits, 0, DINode::FlagZero,
@@ -623,7 +654,8 @@ DICompositeType *DIBuilder::createArrayType(
       isa<DIExpression *>(AL) ? (Metadata *)cast<DIExpression *>(AL)
                               : (Metadata *)cast<DIVariable *>(AL),
       isa<DIExpression *>(RK) ? (Metadata *)cast<DIExpression *>(RK)
-                              : (Metadata *)cast<DIVariable *>(RK));
+                              : (Metadata *)cast<DIVariable *>(RK),
+      nullptr, nullptr, 0, BitStride);
   trackIfUnresolved(R);
   return R;
 }

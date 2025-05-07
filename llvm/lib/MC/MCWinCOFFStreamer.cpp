@@ -287,7 +287,8 @@ void MCWinCOFFStreamer::emitCOFFSafeSEH(MCSymbol const *Symbol) {
     return;
 
   MCSection *SXData = getContext().getObjectFileInfo()->getSXDataSection();
-  changeSection(SXData);
+  pushSection();
+  switchSection(SXData);
   SXData->ensureMinAlignment(Align(4));
 
   insert(getContext().allocFragment<MCSymbolIdFragment>(Symbol));
@@ -298,6 +299,7 @@ void MCWinCOFFStreamer::emitCOFFSafeSEH(MCSymbol const *Symbol) {
   // function. Go ahead and oblige it here.
   CSymbol->setType(COFF::IMAGE_SYM_DTYPE_FUNCTION
                    << COFF::SCT_COMPLEX_TYPE_SHIFT);
+  popSection();
 }
 
 void MCWinCOFFStreamer::emitCOFFSymbolIndex(MCSymbol const *Symbol) {
@@ -436,17 +438,6 @@ void MCWinCOFFStreamer::emitWeakReference(MCSymbol *AliasS,
   getAssembler().registerSymbol(*Symbol);
   Alias->setVariableValue(MCSymbolRefExpr::create(
       Symbol, MCSymbolRefExpr::VK_WEAKREF, getContext()));
-}
-
-void MCWinCOFFStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
-                                     uint64_t Size, Align ByteAlignment,
-                                     SMLoc Loc) {
-  llvm_unreachable("not implemented");
-}
-
-void MCWinCOFFStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
-                                       uint64_t Size, Align ByteAlignment) {
-  llvm_unreachable("not implemented");
 }
 
 // TODO: Implement this if you want to emit .comment section in COFF obj files.

@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/clc.h>
+#include <clc/math/clc_tanpi.h>
 
-#include <math/clc_tanpi.h>
+#define FUNCTION tanpi
+#define __CLC_BODY <clc/shared/unary_def.inc>
 
-#define __CLC_FUNC tanpi
-#define __CLC_BODY <clc_sw_unary.inc>
 #include <clc/math/gentype.inc>

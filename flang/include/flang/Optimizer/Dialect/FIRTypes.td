@@ -77,24 +77,24 @@ def fir_BoxType : FIR_Type<"Box", "box", [], "BaseBoxType"> {
     to) whether the entity is an array, its size, or what type it has.
   }];
 
-  let parameters = (ins "mlir::Type":$eleTy);
+  let parameters = (ins "mlir::Type":$eleTy, "bool":$isVolatile);
 
   let skipDefaultBuilders = 1;
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
-        "mlir::Type":$eleTy), [{
-      return Base::get(eleTy.getContext(), eleTy);
+        "mlir::Type":$eleTy, CArg<"bool", "false">:$isVolatile), [{
+      return Base::get(eleTy.getContext(), eleTy, isVolatile);
     }]>,
   ];
 
   let extraClassDeclaration = [{
     mlir::Type getElementType() const { return getEleTy(); }
+    bool isVolatile() const { return getIsVolatile(); }
   }];
 
   let genVerifyDecl = 1;
-
-  let assemblyFormat = "`<` $eleTy `>`";
+  let hasCustomAssemblyFormat = 1;
 }
 
 def fir_CharacterType : FIR_Type<"Character", "char"> {
@@ -146,16 +146,20 @@ def fir_ClassType : FIR_Type<"Class", "class", [], "BaseBoxType"> {
     is equivalent to a fir.box type with a dynamic type.
   }];
 
-  let parameters = (ins "mlir::Type":$eleTy);
+  let parameters = (ins "mlir::Type":$eleTy, "bool":$isVolatile);
 
   let builders = [
-    TypeBuilderWithInferredContext<(ins "mlir::Type":$eleTy), [{
-      return $_get(eleTy.getContext(), eleTy);
+    TypeBuilderWithInferredContext<(ins "mlir::Type":$eleTy, CArg<"bool", "false">:$isVolatile), [{
+      return $_get(eleTy.getContext(), eleTy, isVolatile);
     }]>
   ];
 
+  let extraClassDeclaration = [{
+    bool isVolatile() const { return getIsVolatile(); }
+  }];
+
   let genVerifyDecl = 1;
-  let assemblyFormat = "`<` $eleTy `>`";
+  let hasCustomAssemblyFormat = 1;
 }
 
 def fir_FieldType : FIR_Type<"Field", "field"> {
@@ -361,20 +365,26 @@ def fir_ReferenceType : FIR_Type<"Reference", "ref"> {
 
   let description = [{
     The type of a reference to an entity in memory.
+
+    References can be volatile. Any ops taking an operand of a volatile
+    reference must set their memory effects appropriately. Accesses of
+    volatile references are currently modeled as read and write effects
+    to a specific memory resource.
   }];
 
-  let parameters = (ins "mlir::Type":$eleTy);
+  let parameters = (ins "mlir::Type":$eleTy, "bool":$isVolatile);
 
   let skipDefaultBuilders = 1;
 
   let builders = [
-    TypeBuilderWithInferredContext<(ins "mlir::Type":$elementType), [{
-      return Base::get(elementType.getContext(), elementType);
+    TypeBuilderWithInferredContext<(ins "mlir::Type":$elementType, CArg<"bool", "false">:$isVolatile), [{
+      return Base::get(elementType.getContext(), elementType, isVolatile);
     }]>,
   ];
 
   let extraClassDeclaration = [{
     mlir::Type getElementType() const { return getEleTy(); }
+    bool isVolatile() const { return getIsVolatile(); }
   }];
 
   let genVerifyDecl = 1;

@@ -75,3 +75,21 @@ namespace PR12884_fixed {
 
   A<int>::C::x a; // ok
 }
+
+namespace preserve_keyword {
+  template <class T> struct A {
+    using type = T;
+  };
+
+  template <class T> using B = A<T>::type*; // precxx17-warning {{missing 'typename'}}
+  void *t1 = *B<int>(); // expected-error {{lvalue of type 'A<int>::type' (aka 'int')}}
+
+  template <class T> using C = typename A<T>::type*;
+  void *t2 = *C<int>(); // expected-error {{lvalue of type 'typename A<int>::type' (aka 'int')}}
+
+  using D = A<int>::type*;
+  void *t3 = *D(); // expected-error {{lvalue of type 'A<int>::type' (aka 'int')}}
+
+  using D = typename A<int>::type*;
+  void *t4 = *D(); // expected-error {{lvalue of type 'typename A<int>::type' (aka 'int')}}
+} // namespace preserve_keyword

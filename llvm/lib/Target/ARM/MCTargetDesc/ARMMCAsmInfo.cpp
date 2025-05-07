@@ -101,7 +101,8 @@ ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple) {
   }
 
   // foo(plt) instead of foo@plt
-  UseParensForSymbolVariant = true;
+  UseAtForSpecifier = false;
+  UseParensForSpecifier = true;
 
   initializeVariantKinds(variantKindDescs);
 }
@@ -148,7 +149,8 @@ ARMCOFFMCAsmInfoGNU::ARMCOFFMCAsmInfoGNU() {
   SupportsDebugInformation = true;
   ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
-  UseParensForSymbolVariant = true;
+  UseAtForSpecifier = false;
+  UseParensForSpecifier = true;
 
   DwarfRegNumForCFI = false;
 

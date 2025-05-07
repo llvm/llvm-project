@@ -39,13 +39,15 @@
 
 #define DEBUG_TYPE "avr-asm-printer"
 
-namespace llvm {
+using namespace llvm;
+
+namespace {
 
 /// An AVR assembly code printer.
 class AVRAsmPrinter : public AsmPrinter {
 public:
   AVRAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)), MRI(*TM.getMCRegisterInfo()) {}
+      : AsmPrinter(TM, std::move(Streamer), ID), MRI(*TM.getMCRegisterInfo()) {}
 
   StringRef getPassName() const override { return "AVR Assembly Printer"; }
 
@@ -59,7 +61,8 @@ public:
 
   void emitInstruction(const MachineInstr *MI) override;
 
-  const MCExpr *lowerConstant(const Constant *CV) override;
+  const MCExpr *lowerConstant(const Constant *CV, const Constant *BaseCV,
+                              uint64_t Offset) override;
 
   void emitXXStructor(const DataLayout &DL, const Constant *CV) override;
 
@@ -67,10 +70,14 @@ public:
 
   void emitStartOfAsmFile(Module &M) override;
 
+  static char ID;
+
 private:
   const MCRegisterInfo &MRI;
   bool EmittedStructorSymbolAttrs = false;
 };
+
+} // namespace
 
 void AVRAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNo,
                                  raw_ostream &O) {
@@ -199,7 +206,9 @@ void AVRAsmPrinter::emitInstruction(const MachineInstr *MI) {
   EmitToStreamer(*OutStreamer, I);
 }
 
-const MCExpr *AVRAsmPrinter::lowerConstant(const Constant *CV) {
+const MCExpr *AVRAsmPrinter::lowerConstant(const Constant *CV,
+                                           const Constant *BaseCV,
+                                           uint64_t Offset) {
   MCContext &Ctx = OutContext;
 
   if (const GlobalValue *GV = dyn_cast<GlobalValue>(CV)) {
@@ -210,7 +219,7 @@ const MCExpr *AVRAsmPrinter::lowerConstant(const Constant *CV) {
     }
   }
 
-  return AsmPrinter::lowerConstant(CV);
+  return AsmPrinter::lowerConstant(CV, BaseCV, Offset);
 }
 
 void AVRAsmPrinter::emitXXStructor(const DataLayout &DL, const Constant *CV) {
@@ -321,8 +330,11 @@ void AVRAsmPrinter::emitStartOfAsmFile(Module &M) {
         MCConstantExpr::create(SubTM->getIORegRAMPZ(), MMI->getContext()));
 }
 
-} // end of namespace llvm
+char AVRAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(AVRAsmPrinter, "avr-asm-printer", "AVR Assembly Printer", false,
+                false)
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRAsmPrinter() {
-  llvm::RegisterAsmPrinter<llvm::AVRAsmPrinter> X(llvm::getTheAVRTarget());
+  llvm::RegisterAsmPrinter<AVRAsmPrinter> X(getTheAVRTarget());
 }

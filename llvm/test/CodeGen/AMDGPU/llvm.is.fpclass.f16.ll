@@ -77,42 +77,17 @@ define amdgpu_kernel void @sgpr_isnan_f16(ptr addrspace(1) %out, half %x) {
 ; GFX10CHECK-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX10CHECK-NEXT:    s_endpgm
 ;
-; GFX11SELDAG-TRUE16-LABEL: sgpr_isnan_f16:
-; GFX11SELDAG-TRUE16:       ; %bb.0:
-; GFX11SELDAG-TRUE16-NEXT:    s_clause 0x1
-; GFX11SELDAG-TRUE16-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; GFX11SELDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11SELDAG-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11SELDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s2
-; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s2, v0.l, 3
-; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s2
-; GFX11SELDAG-TRUE16-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX11SELDAG-TRUE16-NEXT:    s_endpgm
-;
-; GFX11SELDAG-FAKE16-LABEL: sgpr_isnan_f16:
-; GFX11SELDAG-FAKE16:       ; %bb.0:
-; GFX11SELDAG-FAKE16-NEXT:    s_clause 0x1
-; GFX11SELDAG-FAKE16-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; GFX11SELDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11SELDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s2, s2, 3
-; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
-; GFX11SELDAG-FAKE16-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11SELDAG-FAKE16-NEXT:    s_endpgm
-;
-; GFX11GLISEL-LABEL: sgpr_isnan_f16:
-; GFX11GLISEL:       ; %bb.0:
-; GFX11GLISEL-NEXT:    s_clause 0x1
-; GFX11GLISEL-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; GFX11GLISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11GLISEL-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11GLISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11GLISEL-NEXT:    v_cmp_class_f16_e64 s2, s2, 3
-; GFX11GLISEL-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
-; GFX11GLISEL-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11GLISEL-NEXT:    s_endpgm
+; GFX11CHECK-LABEL: sgpr_isnan_f16:
+; GFX11CHECK:       ; %bb.0:
+; GFX11CHECK-NEXT:    s_clause 0x1
+; GFX11CHECK-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s2, s2, 3
+; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
+; GFX11CHECK-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11CHECK-NEXT:    s_endpgm
   %result = call i1 @llvm.is.fpclass.f16(half %x, i32 3)
   %sext = sext i1 %result to i32
   store i32 %sext, ptr addrspace(1) %out, align 4
@@ -1341,10 +1316,10 @@ define <2 x i1> @isnan_v2f16(<2 x half> %x) nounwind {
 ; GFX11SELDAG-TRUE16-LABEL: isnan_v2f16:
 ; GFX11SELDAG-TRUE16:       ; %bb.0:
 ; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11SELDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX11SELDAG-TRUE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v0.l, v0.l
-; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX11SELDAG-TRUE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v1.l, v1.l
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v0.h, v0.h
+; GFX11SELDAG-TRUE16-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
 ; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1499,11 +1474,10 @@ define <3 x i1> @isnan_v3f16(<3 x half> %x) nounwind {
 ; GFX11SELDAG-TRUE16-LABEL: isnan_v3f16:
 ; GFX11SELDAG-TRUE16:       ; %bb.0:
 ; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11SELDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v0.h, v0.h
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
 ; GFX11SELDAG-TRUE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v0.l, v0.l
 ; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX11SELDAG-TRUE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v2.l, v2.l
-; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
 ; GFX11SELDAG-TRUE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v1.l, v1.l
 ; GFX11SELDAG-TRUE16-NEXT:    v_mov_b32_e32 v1, v3
 ; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
@@ -1690,15 +1664,14 @@ define <4 x i1> @isnan_v4f16(<4 x half> %x) nounwind {
 ; GFX11SELDAG-TRUE16-LABEL: isnan_v4f16:
 ; GFX11SELDAG-TRUE16:       ; %bb.0:
 ; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v0.h, v0.h
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
 ; GFX11SELDAG-TRUE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v0.l, v0.l
-; GFX11SELDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
-; GFX11SELDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
 ; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11SELDAG-TRUE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v1.l, v1.l
 ; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
-; GFX11SELDAG-TRUE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v4.l, v4.l
-; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
-; GFX11SELDAG-TRUE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v3.l, v3.l
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v1.h, v1.h
+; GFX11SELDAG-TRUE16-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
 ; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -4313,4 +4286,5 @@ attributes #0 = { "denormal-fp-math"="ieee,preserve-sign" }
 ; Maybe daz
 attributes #1 = { "denormal-fp-math"="ieee,dynamic" }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; GFX11GLISEL: {{.*}}
 ; GFX11SELDAG: {{.*}}

@@ -622,7 +622,7 @@ shardedBlockArgumentTypes(Block &block,
       block.getArguments(), std::back_inserter(res),
       [&symbolTableCollection](BlockArgument arg) {
         auto rankedTensorArg = dyn_cast<TypedValue<RankedTensorType>>(arg);
-        if (!rankedTensorArg) {
+        if (!rankedTensorArg || rankedTensorArg.getType().getRank() == 0) {
           return arg.getType();
         }
 
@@ -672,7 +672,7 @@ static std::vector<MeshSharding> getOperandShardings(Operation &op) {
   llvm::transform(op.getOperands(), std::back_inserter(res), [](Value operand) {
     TypedValue<RankedTensorType> rankedTensor =
         dyn_cast<TypedValue<RankedTensorType>>(operand);
-    if (!rankedTensor) {
+    if (!rankedTensor || rankedTensor.getType().getRank() == 0) {
       return MeshSharding();
     }
 
@@ -689,20 +689,33 @@ static std::vector<MeshSharding> getOperandShardings(Operation &op) {
 static std::vector<MeshSharding> getResultShardings(Operation &op) {
   std::vector<MeshSharding> res;
   res.reserve(op.getNumResults());
-  llvm::transform(op.getResults(), std::back_inserter(res),
-                  [](OpResult result) {
-                    TypedValue<RankedTensorType> rankedTensor =
-                        dyn_cast<TypedValue<RankedTensorType>>(result);
-                    if (!rankedTensor) {
-                      return MeshSharding();
-                    }
-                    if (!result.hasOneUse()) {
-                      return MeshSharding();
-                    }
-                    Operation *userOp = *result.getUsers().begin();
-                    ShardOp shardOp = llvm::cast<ShardOp>(userOp);
-                    return MeshSharding(shardOp.getSharding());
-                  });
+  llvm::transform(
+      op.getResults(), std::back_inserter(res), [&op](OpResult result) {
+        if (!result.hasOneUse() || result.use_empty()) {
+          return MeshSharding();
+        }
+        TypedValue<RankedTensorType> rankedTensor =
+            dyn_cast<TypedValue<RankedTensorType>>(result);
+        if (!rankedTensor) {
+          return MeshSharding();
+        }
+        Operation *userOp = *result.getUsers().begin();
+        ShardOp shardOp = llvm::dyn_cast<ShardOp>(userOp);
+        if (shardOp) {
+          return MeshSharding(shardOp.getSharding());
+        }
+        if (rankedTensor.getType().getRank() == 0) {
+          // This is a 0d tensor result without explicit sharding.
+          // Find mesh symbol from operands, if any.
+          // Shardings without mesh are not always fully supported yet.
+          for (auto operand : op.getOperands()) {
+            if (auto sharding = operand.getDefiningOp<ShardingOp>()) {
+              return MeshSharding(sharding.getMeshAttr());
+            }
+          }
+        }
+        return MeshSharding();
+      });
   return res;
 }
 

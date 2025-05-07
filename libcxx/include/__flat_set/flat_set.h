@@ -11,16 +11,16 @@
 #define _LIBCPP___FLAT_SET_FLAT_SET_H
 
 #include <__algorithm/lexicographical_compare_three_way.h>
+#include <__algorithm/lower_bound.h>
 #include <__algorithm/min.h>
 #include <__algorithm/ranges_adjacent_find.h>
 #include <__algorithm/ranges_equal.h>
 #include <__algorithm/ranges_inplace_merge.h>
-#include <__algorithm/ranges_lower_bound.h>
 #include <__algorithm/ranges_partition_point.h>
 #include <__algorithm/ranges_sort.h>
 #include <__algorithm/ranges_unique.h>
-#include <__algorithm/ranges_upper_bound.h>
 #include <__algorithm/remove_if.h>
+#include <__algorithm/upper_bound.h>
 #include <__assert>
 #include <__compare/synth_three_way.h>
 #include <__concepts/swappable.h>
@@ -28,6 +28,7 @@
 #include <__cstddef/ptrdiff_t.h>
 #include <__flat_map/sorted_unique.h>
 #include <__flat_set/ra_iterator.h>
+#include <__flat_set/utils.h>
 #include <__functional/invoke.h>
 #include <__functional/is_transparent.h>
 #include <__functional/operations.h>
@@ -81,6 +82,8 @@ template <class _Key, class _Compare = less<_Key>, class _KeyContainer = vector<
 class flat_set {
   template <class, class, class>
   friend class flat_set;
+
+  friend __flat_set_utils;
 
   static_assert(is_same_v<_Key, typename _KeyContainer::value_type>);
   static_assert(!is_same_v<_KeyContainer, std::vector<bool>>, "vector<bool> is not a sequence container");
@@ -382,7 +385,7 @@ public:
   template <class _Kp>
     requires(__is_transparent_v<_Compare> && is_constructible_v<value_type, _Kp>)
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(_Kp&& __x) {
-    return emplace(std::forward<_Kp>(__x));
+    return __emplace(std::forward<_Kp>(__x));
   }
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __hint, const value_type& __x) {
     return emplace_hint(__hint, __x);
@@ -395,7 +398,7 @@ public:
   template <class _Kp>
     requires(__is_transparent_v<_Compare> && is_constructible_v<value_type, _Kp>)
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __hint, _Kp&& __x) {
-    return emplace_hint(__hint, std::forward<_Kp>(__x));
+    return __emplace_hint(__hint, std::forward<_Kp>(__x));
   }
 
   template <class _InputIterator>
@@ -531,43 +534,47 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const key_type& __x) {
-    return iterator(ranges::lower_bound(std::as_const(__keys_), __x, __compare_));
+    const auto& __keys = __keys_;
+    return iterator(std::lower_bound(__keys.begin(), __keys.end(), __x, __compare_));
   }
 
   _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const key_type& __x) const {
-    return const_iterator(ranges::lower_bound(__keys_, __x, __compare_));
+    return const_iterator(std::lower_bound(__keys_.begin(), __keys_.end(), __x, __compare_));
   }
 
   template <class _Kp>
     requires __is_transparent_v<_Compare>
   _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const _Kp& __x) {
-    return iterator(ranges::lower_bound(std::as_const(__keys_), __x, __compare_));
+    const auto& __keys = __keys_;
+    return iterator(std::lower_bound(__keys.begin(), __keys.end(), __x, __compare_));
   }
 
   template <class _Kp>
     requires __is_transparent_v<_Compare>
   _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const _Kp& __x) const {
-    return const_iterator(ranges::lower_bound(__keys_, __x, __compare_));
+    return const_iterator(std::lower_bound(__keys_.begin(), __keys_.end(), __x, __compare_));
   }
 
   _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const key_type& __x) {
-    return iterator(ranges::upper_bound(std::as_const(__keys_), __x, __compare_));
+    const auto& __keys = __keys_;
+    return iterator(std::upper_bound(__keys.begin(), __keys.end(), __x, __compare_));
   }
 
   _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const key_type& __x) const {
-    return const_iterator(ranges::upper_bound(__keys_, __x, __compare_));
+    return const_iterator(std::upper_bound(__keys_.begin(), __keys_.end(), __x, __compare_));
   }
 
   template <class _Kp>
     requires __is_transparent_v<_Compare>
   _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const _Kp& __x) {
-    return iterator(ranges::upper_bound(std::as_const(__keys_), __x, __compare_));
+    const auto& __keys = __keys_;
+    return iterator(std::upper_bound(__keys.begin(), __keys.end(), __x, __compare_));
   }
 
   template <class _Kp>
     requires __is_transparent_v<_Compare>
   _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const _Kp& __x) const {
-    return const_iterator(ranges::upper_bound(__keys_, __x, __compare_));
+    return const_iterator(std::upper_bound(__keys_.begin(), __keys_.end(), __x, __compare_));
   }
 
   _LIBCPP_HIDE_FROM_ABI pair<iterator, iterator> equal_range(const key_type& __x) {
@@ -615,31 +622,11 @@ private:
     __keys_.erase(__dup_start, __keys_.end());
   }
 
-  template <class _InputIterator>
-  _LIBCPP_HIDE_FROM_ABI void __append(_InputIterator __first, _InputIterator __last) {
-    __keys_.insert(__keys_.end(), std::move(__first), std::move(__last));
-  }
-
-  template <class _Range>
-  _LIBCPP_HIDE_FROM_ABI void __append(_Range&& __rng) {
-    if constexpr (requires { __keys_.insert_range(__keys_.end(), std::forward<_Range>(__rng)); }) {
-      // C++23 Sequence Container should have insert_range member function
-      // Note that not all Sequence Containers provide append_range.
-      __keys_.insert_range(__keys_.end(), std::forward<_Range>(__rng));
-    } else if constexpr (ranges::common_range<_Range>) {
-      __keys_.insert(__keys_.end(), ranges::begin(__rng), ranges::end(__rng));
-    } else {
-      for (auto&& __x : __rng) {
-        __keys_.insert(__keys_.end(), std::forward<decltype(__x)>(__x));
-      }
-    }
-  }
-
   template <bool _WasSorted, class... _Args>
   _LIBCPP_HIDE_FROM_ABI void __append_sort_merge_unique(_Args&&... __args) {
     auto __on_failure    = std::__make_exception_guard([&]() noexcept { clear() /* noexcept */; });
     size_type __old_size = size();
-    __append(std::forward<_Args>(__args)...);
+    __flat_set_utils::__append(*this, std::forward<_Args>(__args)...);
     if (size() != __old_size) {
       if constexpr (!_WasSorted) {
         ranges::sort(__keys_.begin() + __old_size, __keys_.end(), __compare_);
@@ -668,7 +655,7 @@ private:
   template <class _Self, class _Kp>
   _LIBCPP_HIDE_FROM_ABI static auto __equal_range_impl(_Self&& __self, const _Kp& __key) {
     using __iter = _If<is_const_v<__libcpp_remove_reference_t<_Self>>, const_iterator, iterator>;
-    auto __it    = ranges::lower_bound(__self.__keys_, __key, __self.__compare_);
+    auto __it    = std::lower_bound(__self.__keys_.begin(), __self.__keys_.end(), __key, __self.__compare_);
     auto __last  = __self.__keys_.end();
     if (__it == __last || __self.__compare_(__key, *__it)) {
       return std::make_pair(__iter(__it), __iter(__it));
@@ -676,23 +663,11 @@ private:
     return std::make_pair(__iter(__it), __iter(std::next(__it)));
   }
 
-  template <class _KeyArg>
-  _LIBCPP_HIDE_FROM_ABI iterator __emplace_exact_pos(const_iterator __it, _KeyArg&& __key) {
-    auto __on_failure = std::__make_exception_guard([&]() noexcept {
-      if constexpr (!__container_traits<_KeyContainer>::__emplacement_has_strong_exception_safety_guarantee) {
-        clear() /* noexcept */;
-      }
-    });
-    auto __key_it     = __keys_.emplace(__it.__base(), std::forward<_KeyArg>(__key));
-    __on_failure.__complete();
-    return iterator(std::move(__key_it));
-  }
-
   template <class _Kp>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __emplace(_Kp&& __key) {
     auto __it = lower_bound(__key);
     if (__it == end() || __compare_(__key, *__it)) {
-      return pair<iterator, bool>(__emplace_exact_pos(__it, std::forward<_Kp>(__key)), true);
+      return pair<iterator, bool>(__flat_set_utils::__emplace_exact_pos(*this, __it, std::forward<_Kp>(__key)), true);
     } else {
       return pair<iterator, bool>(std::move(__it), false);
     }
@@ -713,7 +688,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI iterator __emplace_hint(const_iterator __hint, _Kp&& __key) {
     if (__is_hint_correct(__hint, __key)) {
       if (__hint == cend() || __compare_(__key, *__hint)) {
-        return __emplace_exact_pos(__hint, std::forward<_Kp>(__key));
+        return __flat_set_utils::__emplace_exact_pos(*this, __hint, std::forward<_Kp>(__key));
       } else {
         // we already have an equal key
         return __hint;

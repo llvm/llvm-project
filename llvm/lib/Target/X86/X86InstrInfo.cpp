@@ -53,6 +53,8 @@ using namespace llvm;
 #define GET_INSTRINFO_CTOR_DTOR
 #include "X86GenInstrInfo.inc"
 
+extern cl::opt<bool> X86EnableAPXForRelocation;
+
 static cl::opt<bool>
     NoFusing("disable-spill-fusing",
              cl::desc("Disable fusing of spill code into instructions"),
@@ -102,22 +104,8 @@ X86InstrInfo::getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
   if (X86II::canUseApxExtendedReg(MCID))
     return RC;
 
-  switch (RC->getID()) {
-  default:
-    return RC;
-  case X86::GR8RegClassID:
-    return &X86::GR8_NOREX2RegClass;
-  case X86::GR16RegClassID:
-    return &X86::GR16_NOREX2RegClass;
-  case X86::GR32RegClassID:
-    return &X86::GR32_NOREX2RegClass;
-  case X86::GR64RegClassID:
-    return &X86::GR64_NOREX2RegClass;
-  case X86::GR32_NOSPRegClassID:
-    return &X86::GR32_NOREX2_NOSPRegClass;
-  case X86::GR64_NOSPRegClassID:
-    return &X86::GR64_NOREX2_NOSPRegClass;
-  }
+  const X86RegisterInfo *RI = Subtarget.getRegisterInfo();
+  return RI->constrainRegClassToNonRex2(RC);
 }
 
 bool X86InstrInfo::isCoalescableExtInstr(const MachineInstr &MI,
@@ -1035,12 +1023,11 @@ inline static bool isTruncatedShiftCountForLEA(unsigned ShAmt) {
   return ShAmt < 4 && ShAmt > 0;
 }
 
-static bool findRedundantFlagInstr(MachineInstr &CmpInstr,
-                                   MachineInstr &CmpValDefInstr,
-                                   const MachineRegisterInfo *MRI,
-                                   MachineInstr **AndInstr,
-                                   const TargetRegisterInfo *TRI,
-                                   bool &NoSignFlag, bool &ClearsOverflowFlag) {
+static bool
+findRedundantFlagInstr(MachineInstr &CmpInstr, MachineInstr &CmpValDefInstr,
+                       const MachineRegisterInfo *MRI, MachineInstr **AndInstr,
+                       const TargetRegisterInfo *TRI, const X86Subtarget &ST,
+                       bool &NoSignFlag, bool &ClearsOverflowFlag) {
   if (!(CmpValDefInstr.getOpcode() == X86::SUBREG_TO_REG &&
         CmpInstr.getOpcode() == X86::TEST64rr) &&
       !(CmpValDefInstr.getOpcode() == X86::COPY &&
@@ -1103,7 +1090,8 @@ static bool findRedundantFlagInstr(MachineInstr &CmpInstr,
   if (VregDefInstr->getParent() != CmpValDefInstr.getParent())
     return false;
 
-  if (X86::isAND(VregDefInstr->getOpcode())) {
+  if (X86::isAND(VregDefInstr->getOpcode()) &&
+      (!ST.hasNF() || VregDefInstr->modifiesRegister(X86::EFLAGS, TRI))) {
     // Get a sequence of instructions like
     //   %reg = and* ...                    // Set EFLAGS
     //   ...                                // EFLAGS not changed
@@ -4748,8 +4736,8 @@ bool X86InstrInfo::getMemOperandsWithOffsetWidth(
   // FIXME: Relying on memoperands() may not be right thing to do here. Check
   // with X86 maintainers, and fix it accordingly. For now, it is ok, since
   // there is no use of `Width` for X86 back-end at the moment.
-  Width =
-      !MemOp.memoperands_empty() ? MemOp.memoperands().front()->getSize() : 0;
+  Width = !MemOp.memoperands_empty() ? MemOp.memoperands().front()->getSize()
+                                     : LocationSize::precise(0);
   BaseOps.push_back(BaseOp);
   return true;
 }
@@ -4875,10 +4863,6 @@ bool X86InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
   case X86::CMP32ri:
   case X86::CMP16ri:
   case X86::CMP8ri:
-  case X86::CCMP64ri32:
-  case X86::CCMP32ri:
-  case X86::CCMP16ri:
-  case X86::CCMP8ri:
     SrcReg = MI.getOperand(0).getReg();
     SrcReg2 = 0;
     if (MI.getOperand(1).isImm()) {
@@ -4975,18 +4959,6 @@ bool X86InstrInfo::isRedundantFlagInstr(const MachineInstr &FlagI,
       return true;
     }
     return false;
-  }
-  case X86::CCMP64ri32:
-  case X86::CCMP32ri:
-  case X86::CCMP16ri:
-  case X86::CCMP8ri: {
-    // The CCMP instruction should not be optimized if the scc/dfv in it is not
-    // same as the one in previous CCMP instruction.
-    if ((FlagI.getOpcode() != OI.getOpcode()) ||
-        (OI.getOperand(2).getImm() != FlagI.getOperand(2).getImm()) ||
-        (OI.getOperand(3).getImm() != FlagI.getOperand(3).getImm()))
-      return false;
-    [[fallthrough]];
   }
   case X86::CMP64ri32:
   case X86::CMP32ri:
@@ -5433,7 +5405,7 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         MachineInstr *AndInstr = nullptr;
         if (IsCmpZero &&
             findRedundantFlagInstr(CmpInstr, Inst, MRI, &AndInstr, TRI,
-                                   NoSignFlag, ClearsOverflowFlag)) {
+                                   Subtarget, NoSignFlag, ClearsOverflowFlag)) {
           assert(AndInstr != nullptr && X86::isAND(AndInstr->getOpcode()));
           MI = AndInstr;
           break;
@@ -5480,8 +5452,16 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
           continue;
         }
 
+        // For the instructions are ADDrm/ADDmr with relocation, we'll skip the
+        // optimization for replacing non-NF with NF. This is to keep backward
+        // compatiblity with old version of linkers without APX relocation type
+        // support on Linux OS.
+        bool IsWithReloc = X86EnableAPXForRelocation
+                               ? false
+                               : isAddMemInstrWithRelocation(Inst);
+
         // Try to replace non-NF with NF instructions.
-        if (HasNF && Inst.registerDefIsDead(X86::EFLAGS, TRI)) {
+        if (HasNF && Inst.registerDefIsDead(X86::EFLAGS, TRI) && !IsWithReloc) {
           unsigned NewOp = X86::getNFVariant(Inst.getOpcode());
           if (!NewOp)
             return false;
@@ -5714,47 +5694,6 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
       MBB->addLiveIn(X86::EFLAGS);
   }
   return true;
-}
-
-/// Try to remove the load by folding it to a register
-/// operand at the use. We fold the load instructions if load defines a virtual
-/// register, the virtual register is used once in the same BB, and the
-/// instructions in-between do not load or store, and have no side effects.
-MachineInstr *X86InstrInfo::optimizeLoadInstr(MachineInstr &MI,
-                                              const MachineRegisterInfo *MRI,
-                                              Register &FoldAsLoadDefReg,
-                                              MachineInstr *&DefMI) const {
-  // Check whether we can move DefMI here.
-  DefMI = MRI->getVRegDef(FoldAsLoadDefReg);
-  assert(DefMI);
-  bool SawStore = false;
-  if (!DefMI->isSafeToMove(SawStore))
-    return nullptr;
-
-  // Collect information about virtual register operands of MI.
-  SmallVector<unsigned, 1> SrcOperandIds;
-  for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-    MachineOperand &MO = MI.getOperand(i);
-    if (!MO.isReg())
-      continue;
-    Register Reg = MO.getReg();
-    if (Reg != FoldAsLoadDefReg)
-      continue;
-    // Do not fold if we have a subreg use or a def.
-    if (MO.getSubReg() || MO.isDef())
-      return nullptr;
-    SrcOperandIds.push_back(i);
-  }
-  if (SrcOperandIds.empty())
-    return nullptr;
-
-  // Check whether we can fold the def into SrcOperandId.
-  if (MachineInstr *FoldMI = foldMemoryOperand(MI, SrcOperandIds, *DefMI)) {
-    FoldAsLoadDefReg = 0;
-    return FoldMI;
-  }
-
-  return nullptr;
 }
 
 /// \returns true if the instruction can be changed to COPY when imm is 0.
@@ -6280,7 +6219,7 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     }
     if (MI.getOpcode() == X86::AVX512_256_SET0) {
       // No VLX so we must reference a zmm.
-      unsigned ZReg =
+      MCRegister ZReg =
           TRI->getMatchingSuperReg(SrcReg, X86::sub_ymm, &X86::VR512RegClass);
       MIB->getOperand(0).setReg(ZReg);
     }
@@ -9002,7 +8941,7 @@ bool X86InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
       Opcode == X86::PLDTILECFGV)
     return true;
 
-  // Frame setup and destory can't be scheduled around.
+  // Frame setup and destroy can't be scheduled around.
   if (MI.getFlag(MachineInstr::FrameSetup) ||
       MI.getFlag(MachineInstr::FrameDestroy))
     return true;

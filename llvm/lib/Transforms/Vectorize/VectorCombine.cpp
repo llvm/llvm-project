@@ -33,6 +33,7 @@
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include <numeric>
 #include <queue>
+#include <set>
 
 #define DEBUG_TYPE "vector-combine"
 #include "llvm/Transforms/Utils/InstructionWorklist.h"
@@ -1294,7 +1295,6 @@ static void analyzeCostOfVecReduction(const IntrinsicInst &II,
   }
   CostAfterReduction = TTI.getArithmeticReductionCost(ReductionOpc, VecRedTy,
                                                       std::nullopt, CostKind);
-  return;
 }
 
 bool VectorCombine::foldBinopOfReductions(Instruction &I) {
@@ -1437,6 +1437,7 @@ static ScalarizationResult canScalarizeAccess(VectorType *VecTy, Value *Idx,
   // This is the number of elements of fixed vector types,
   // or the minimum number of elements of scalable vector types.
   uint64_t NumElements = VecTy->getElementCount().getKnownMinValue();
+  unsigned IntWidth = Idx->getType()->getScalarSizeInBits();
 
   if (auto *C = dyn_cast<ConstantInt>(Idx)) {
     if (C->getValue().ult(NumElements))
@@ -1444,7 +1445,10 @@ static ScalarizationResult canScalarizeAccess(VectorType *VecTy, Value *Idx,
     return ScalarizationResult::unsafe();
   }
 
-  unsigned IntWidth = Idx->getType()->getScalarSizeInBits();
+  // Always unsafe if the index type can't handle all inbound values.
+  if (!llvm::isUIntN(IntWidth, NumElements))
+    return ScalarizationResult::unsafe();
+
   APInt Zero(IntWidth, 0);
   APInt MaxElts(IntWidth, NumElements);
   ConstantRange ValidIndices(Zero, MaxElts);
@@ -2050,8 +2054,8 @@ bool VectorCombine::foldShuffleOfSelects(Instruction &I) {
        (SI0FOp->getFastMathFlags() != SI1FOp->getFastMathFlags())))
     return false;
 
-  auto *SrcVecTy = dyn_cast<FixedVectorType>(T1->getType());
-  auto *DstVecTy = dyn_cast<FixedVectorType>(I.getType());
+  auto *SrcVecTy = cast<FixedVectorType>(T1->getType());
+  auto *DstVecTy = cast<FixedVectorType>(I.getType());
   auto SK = TargetTransformInfo::SK_PermuteTwoSrc;
   auto SelOp = Instruction::Select;
   InstructionCost OldCost = TTI.getCmpSelInstrCost(

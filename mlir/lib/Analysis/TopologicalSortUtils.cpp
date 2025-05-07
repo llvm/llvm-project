@@ -116,11 +116,8 @@ bool mlir::computeTopologicalSorting(
     return true;
 
   // The set of operations that have not yet been scheduled.
-  DenseSet<Operation *> unscheduledOps;
-
   // Mark all operations as unscheduled.
-  for (Operation *op : ops)
-    unscheduledOps.insert(op);
+  DenseSet<Operation *> unscheduledOps(llvm::from_range, ops);
 
   unsigned nextScheduledOp = 0;
 

@@ -6775,3 +6775,42 @@ define i32 @prng_poison_i32() {
   %prng = call i32 @llvm.amdgcn.prng.b32(i32 poison)
   ret i32 %prng
 }
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.ds.bpermute
+; --------------------------------------------------------------------
+
+define amdgpu_kernel void @ds_bpermute_uniform_src(ptr addrspace(1) %out, i32 %lane) {
+; CHECK-LABEL: @ds_bpermute_uniform_src(
+; CHECK-NEXT:    store i32 7, ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.ds.bpermute(i32 %lane, i32 7)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @ds_bpermute_constant_lane(ptr addrspace(1) %out, i32 %src) {
+; CHECK-LABEL: @ds_bpermute_constant_lane(
+; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[SRC:%.*]], i32 7)
+; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.ds.bpermute(i32 28, i32 %src)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @ds_bpermute_uniform_lane(ptr addrspace(1) %out, i32 %lanearg, i32 %src) {
+; CHECK-LABEL: @ds_bpermute_uniform_lane(
+; CHECK-NEXT:    [[LANE:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[LANEARG:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[LANE]], 2
+; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[SRC:%.*]], i32 [[TMP1]])
+; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %lane = call i32 @llvm.amdgcn.readfirstlane(i32 %lanearg)
+  %v = call i32 @llvm.amdgcn.ds.bpermute(i32 %lane, i32 %src)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}

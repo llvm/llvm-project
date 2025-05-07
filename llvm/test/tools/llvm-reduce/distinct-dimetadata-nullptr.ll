@@ -1,7 +1,7 @@
 ; Test checking that distinct metadata reduction pass handles null pointers properly.
 ; This test will lead to a crash if nullptrs inside distinct metadata are not handled correctly, in this case inside DICompileUnit
 
-; RUN: llvm-reduce --delta-passes=distinct-metadata --aggressive-named-md-reduction --test FileCheck --test-arg %s --test-arg --input-file %s -o %t
+; RUN: llvm-reduce -abort-on-invalid-reduction --delta-passes=distinct-metadata --aggressive-named-md-reduction --test FileCheck --test-arg %s --test-arg --input-file %s -o %t
 ; CHECK: {{.*}}distinct !DICompileUnit{{.*}}
 
 

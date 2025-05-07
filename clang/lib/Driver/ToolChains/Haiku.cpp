@@ -123,8 +123,8 @@ void haiku::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // AddRunTimeLibs).
     if (D.IsFlangMode() &&
         !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
-      addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
-      addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
+      ToolChain.addFortranRuntimeLibraryPath(Args, CmdArgs);
+      ToolChain.addFortranRuntimeLibs(Args, CmdArgs);
     }
 
     if (NeedsSanitizerDeps)

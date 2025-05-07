@@ -2276,6 +2276,19 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
   // failure.
   llvm::BasicBlock *DefaultBlock = createBasicBlock("sw.default");
   SwitchInsn = Builder.CreateSwitch(CondV, DefaultBlock);
+  if (HLSLControlFlowAttr != HLSLControlFlowHintAttr::SpellingNotCalculated) {
+    llvm::MDBuilder MDHelper(CGM.getLLVMContext());
+    llvm::ConstantInt *BranchHintConstant =
+        HLSLControlFlowAttr ==
+                HLSLControlFlowHintAttr::Spelling::Microsoft_branch
+            ? llvm::ConstantInt::get(CGM.Int32Ty, 1)
+            : llvm::ConstantInt::get(CGM.Int32Ty, 2);
+    llvm::Metadata *Vals[] = {MDHelper.createString("hlsl.controlflow.hint"),
+                              MDHelper.createConstant(BranchHintConstant)};
+    SwitchInsn->setMetadata("hlsl.controlflow.hint",
+                            llvm::MDNode::get(CGM.getLLVMContext(), Vals));
+  }
+
   if (PGO.haveRegionCounts()) {
     // Walk the SwitchCase list to find how many there are.
     uint64_t DefaultCount = 0;

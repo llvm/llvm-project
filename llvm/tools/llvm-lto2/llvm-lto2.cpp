@@ -199,9 +199,6 @@ static cl::opt<bool>
     AllVtablesHaveTypeInfos("all-vtables-have-type-infos", cl::Hidden,
                             cl::desc("All vtables have type infos"));
 
-extern cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat;
-extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
-
 static void check(Error E, std::string Msg) {
   if (!E)
     return;
@@ -236,14 +233,6 @@ static int usage() {
 
 static int run(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv, "Resolution-based LTO test harness");
-  // Load bitcode into the new debug info format by default.
-  if (LoadBitcodeIntoNewDbgInfoFormat == cl::boolOrDefault::BOU_UNSET)
-    LoadBitcodeIntoNewDbgInfoFormat = cl::boolOrDefault::BOU_TRUE;
-
-  // Since llvm-lto2 collects multiple IR modules together, for simplicity's
-  // sake we disable the "PreserveInputDbgFormat" flag to enforce a single debug
-  // info format.
-  PreserveInputDbgFormat = cl::boolOrDefault::BOU_FALSE;
 
   // FIXME: Workaround PR30396 which means that a symbol can appear
   // more than once if it is defined in module-level assembly and
@@ -326,8 +315,7 @@ static int run(int argc, char **argv) {
 
   Conf.OptLevel = OptLevel - '0';
   Conf.Freestanding = EnableFreestanding;
-  for (auto &PluginFN : PassPlugins)
-    Conf.PassPlugins.push_back(PluginFN);
+  llvm::append_range(Conf.PassPlugins, PassPlugins);
   if (auto Level = CodeGenOpt::parseLevel(CGOptLevel)) {
     Conf.CGOptLevel = *Level;
   } else {
@@ -455,7 +443,9 @@ static int run(int argc, char **argv) {
 
   auto AddBuffer = [&](size_t Task, const Twine &ModuleName,
                        std::unique_ptr<MemoryBuffer> MB) {
-    *AddStream(Task, ModuleName)->OS << MB->getBuffer();
+    auto Stream = AddStream(Task, ModuleName);
+    *Stream->OS << MB->getBuffer();
+    check(Stream->commit(), "Failed to commit cache");
   };
 
   FileCache Cache;

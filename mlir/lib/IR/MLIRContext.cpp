@@ -268,8 +268,7 @@ public:
 
 public:
   MLIRContextImpl(bool threadingIsEnabled)
-      : threadingIsEnabled(threadingIsEnabled),
-        distinctAttributeAllocator(threadingIsEnabled) {
+      : threadingIsEnabled(threadingIsEnabled) {
     if (threadingIsEnabled) {
       ownedThreadPool = std::make_unique<llvm::DefaultThreadPool>();
       threadPool = ownedThreadPool.get();
@@ -597,7 +596,6 @@ void MLIRContext::disableMultithreading(bool disable) {
   // Update the threading mode for each of the uniquers.
   impl->affineUniquer.disableMultithreading(disable);
   impl->attributeUniquer.disableMultithreading(disable);
-  impl->distinctAttributeAllocator.disableMultiThreading(disable);
   impl->typeUniquer.disableMultithreading(disable);
 
   // Destroy thread pool (stop all threads) if it is no longer needed, or create
@@ -717,10 +715,6 @@ MLIRContext::getRegisteredOperationsByDialect(StringRef dialectName) {
 
 bool MLIRContext::isOperationRegistered(StringRef name) {
   return RegisteredOperationName::lookup(name, this).has_value();
-}
-
-void MLIRContext::disableThreadLocalStorage(bool disable) {
-  getImpl().distinctAttributeAllocator.disableThreadLocalStorage(disable);
 }
 
 void Dialect::addType(TypeID typeID, AbstractType &&typeInfo) {
