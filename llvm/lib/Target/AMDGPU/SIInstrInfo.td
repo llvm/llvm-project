@@ -1570,7 +1570,6 @@ class PackedIntInputModsMatchClass <int opSize> : AsmOperandClass {
 
 def PackedF16InputModsMatchClass : PackedFPInputModsMatchClass<16>;
 def PackedI16InputModsMatchClass : PackedIntInputModsMatchClass<16>;
-//def PackedF32InputModsMatchClass : PackedFPInputModsMatchClass<32>;
 def PackedVGPRF32InputModsMatchClass : PackedVGPRFPInputModsMatchClass<32>;
 
 class PackedFPInputMods <PackedFPInputModsMatchClass matchClass> : InputMods <matchClass> {
