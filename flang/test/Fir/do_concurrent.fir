@@ -90,3 +90,22 @@ func.func @dc_2d_reduction(%i_lb: index, %i_ub: index, %i_st: index,
 // CHECK:             fir.store %[[J_IV_CVT]] to %[[J]] : !fir.ref<i32>
 // CHECK:           }
 // CHECK:         }
+
+
+fir.local {type = local} @local_privatizer : i32
+
+// CHECK:   fir.local {type = local} @[[LOCAL_PRIV_SYM:local_privatizer]] : i32
+
+fir.local {type = local_init} @local_init_privatizer : i32 copy {
+^bb0(%arg0: !fir.ref<i32>, %arg1: !fir.ref<i32>):
+    %0 = fir.load %arg0 : !fir.ref<i32>
+    fir.store %0 to %arg1 : !fir.ref<i32>
+    fir.yield(%arg1 : !fir.ref<i32>)
+}
+
+// CHECK:   fir.local {type = local_init} @[[LOCAL_INIT_PRIV_SYM:local_init_privatizer]] : i32
+// CHECK:   ^bb0(%[[ORIG_VAL:.*]]: !fir.ref<i32>, %[[LOCAL_VAL:.*]]: !fir.ref<i32>):
+// CHECK:      %[[ORIG_VAL_LD:.*]] = fir.load %[[ORIG_VAL]]
+// CHECK:      fir.store %[[ORIG_VAL_LD]] to %[[LOCAL_VAL]] : !fir.ref<i32>
+// CHECK:      fir.yield(%[[LOCAL_VAL]] : !fir.ref<i32>)
+// CHECK:   }
