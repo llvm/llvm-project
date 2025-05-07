@@ -1961,6 +1961,37 @@ LogicalResult SubgroupMmaComputeOp::verify() {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// GPU_SubgroupMmaRotateOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult SubgroupMmaRotateOp::verify() {
+  auto resultType = dyn_cast<MMAMatrixType>(getResult().getType());
+  if (!resultType)
+    return emitOpError("result must be a gpu.mma_matrix type");
+
+  ArrayRef<int64_t> shape = resultType.getShape();
+  int64_t rows = shape[0];
+  int64_t cols = shape[1];
+  int64_t maxOffset = rows * cols - 1;
+
+  auto offsetValue = getOffset().getDefiningOp<arith::ConstantOp>();
+  if (!offsetValue)
+    return emitOpError("offset must be a constant integer");
+
+  auto offsetAttr = dyn_cast<IntegerAttr>(offsetValue.getValue());
+  if (!offsetAttr)
+    return emitOpError("offset must be an integer attribute");
+
+  int64_t offset = offsetAttr.getInt();
+  if (offset < 0 || offset > maxOffset)
+    return emitOpError() << "offset " << offset
+                         << " is out of bounds for matrix shape " << rows << "x"
+                         << cols;
+
+  return success();
+}
+
 LogicalResult MemcpyOp::fold(FoldAdaptor adaptor,
                              SmallVectorImpl<::mlir::OpFoldResult> &results) {
   return memref::foldMemRefCast(*this);
