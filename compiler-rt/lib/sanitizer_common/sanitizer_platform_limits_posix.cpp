@@ -779,15 +779,11 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   unsigned IOCTL_SOUND_PCM_WRITE_FILTER = SOUND_PCM_WRITE_FILTER;
 #endif // SOUND_VERSION
   unsigned IOCTL_TCFLSH = TCFLSH;
-  unsigned IOCTL_TCGETA = TCGETA;
 #    if SANITIZER_TERMIOS_IOCTL_CONSTANTS
   unsigned IOCTL_TCGETS = TCGETS;
 #    endif
   unsigned IOCTL_TCSBRK = TCSBRK;
   unsigned IOCTL_TCSBRKP = TCSBRKP;
-  unsigned IOCTL_TCSETA = TCSETA;
-  unsigned IOCTL_TCSETAF = TCSETAF;
-  unsigned IOCTL_TCSETAW = TCSETAW;
 #    if SANITIZER_TERMIOS_IOCTL_CONSTANTS
   unsigned IOCTL_TCSETS = TCSETS;
   unsigned IOCTL_TCSETSF = TCSETSF;
