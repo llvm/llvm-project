@@ -531,7 +531,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
   // Count the number of bits set in each lane and reduce the result to a scalar
   case VPInstruction::PopCount: {
     Value *Op = State.get(getOperand(0));
-    auto *VT = Op->getType();
+    Type *VT = Op->getType();
     Value *Cnt = Op;
 
     // i1 vectors can just use the add reduction. Bigger elements need a ctpop
@@ -3647,7 +3647,7 @@ void VPAliasLaneMaskRecipe::print(raw_ostream &O, const Twine &Indent,
                                   VPSlotTracker &SlotTracker) const {
   O << Indent << "EMIT ";
   getVPSingleValue()->printAsOperand(O, SlotTracker);
-  O << " = alias lane mask ";
+  O << " = ALIAS-LANE-MASK ";
   getSourceValue()->printAsOperand(O, SlotTracker);
   O << ", ";
   getSinkValue()->printAsOperand(O, SlotTracker);

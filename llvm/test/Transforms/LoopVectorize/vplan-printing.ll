@@ -1058,6 +1058,35 @@ exit:
   ret void
 }
 
+define dso_local void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
+entry:
+  %cmp11 = icmp sgt i32 %n, 0
+  br i1 %cmp11, label %for.body.preheader, label %for.cond.cleanup
+
+for.body.preheader:                               ; preds = %entry
+  %wide.trip.count = zext nneg i32 %n to i64
+  br label %for.body
+
+for.cond.cleanup.loopexit:                        ; preds = %for.body
+  br label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+  ret void
+
+for.body:                                         ; preds = %for.body.preheader, %for.body
+  %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds i8, ptr %a, i64 %indvars.iv
+  %0 = load i8, ptr %arrayidx, align 1
+  %arrayidx2 = getelementptr inbounds i8, ptr %b, i64 %indvars.iv
+  %1 = load i8, ptr %arrayidx2, align 1
+  %add = add i8 %1, %0
+  %arrayidx6 = getelementptr inbounds i8, ptr %c, i64 %indvars.iv
+  store i8 %add, ptr %arrayidx6, align 1
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
+  br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body
+}
+
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}
 
