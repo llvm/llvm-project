@@ -166,6 +166,12 @@ DECLARE_TSAN_FUNCTION(AnnotateNewMemory, const char *, int,
                       const volatile void *, size_t)
 DECLARE_TSAN_FUNCTION(__tsan_func_entry, const void *)
 DECLARE_TSAN_FUNCTION(__tsan_func_exit)
+DECLARE_TSAN_FUNCTION(AnnotateRWLockCreate, const char *, int,
+                      const volatile void *)
+DECLARE_TSAN_FUNCTION(AnnotateRWLockDestroy, const char *, int,
+                      const volatile void *)
+DECLARE_TSAN_FUNCTION(AnnotateRWLockAcquired, const char *, int,
+                      const volatile void *, size_t)
 DECLARE_TSAN_FUNCTION(AnnotateRWLockReleased, const char *, int,
                       const volatile void *, size_t)
 }
@@ -193,7 +199,14 @@ DECLARE_TSAN_FUNCTION(AnnotateRWLockReleased, const char *, int,
 #define TsanFreeMemory(addr, size)                                             \
   AnnotateNewMemory(__FILE__, __LINE__, addr, size)
 
-#define TsanRWLockRelease(mutex, isw)                                          \
+// Locks
+#define TsanRWLockCreate(mutex)                                          \
+  AnnotateRWLockCreate(__FILE__, __LINE__, mutex)
+#define TsanRWLockDestroy(mutex)                                          \
+  AnnotateRWLockDestroy(__FILE__, __LINE__, mutex)
+#define TsanRWLockAcquired(mutex, isw)                                          \
+  AnnotateRWLockAcquired(__FILE__, __LINE__, mutex, isw)
+#define TsanRWLockReleased(mutex, isw)                                          \
   AnnotateRWLockReleased(__FILE__, __LINE__, mutex, isw)
 #endif
 
@@ -1111,6 +1124,24 @@ static void ompt_tsan_dependences(ompt_data_t *task_data,
   }
 }
 
+static void ompt_tsan_lock_init(ompt_mutex_t kind, unsigned int hint, unsigned int impl, ompt_wait_id_t wait_id, const void * codeptr_ra) {
+    TsanFuncEntry(codeptr_ra);
+    LocksMutex.lock();
+    std::mutex &Lock = Locks[wait_id].mu;
+    LocksMutex.unlock();
+    TsanRWLockCreate(&Lock);
+  TsanFuncExit();
+}
+
+static void ompt_tsan_lock_destroy(ompt_mutex_t kind, ompt_wait_id_t wait_id, const void * codeptr_ra) {
+    TsanFuncEntry(codeptr_ra);
+    LocksMutex.lock();
+    std::mutex &Lock = Locks[wait_id].mu;
+    LocksMutex.unlock();
+    TsanRWLockDestroy(&Lock);
+    TsanFuncExit();
+}
+
 /// OMPT event callbacks for handling locking.
 static void ompt_tsan_mutex_acquired(ompt_mutex_t kind, ompt_wait_id_t wait_id,
                                      const void *codeptr_ra) {
@@ -1126,6 +1157,7 @@ static void ompt_tsan_mutex_acquired(ompt_mutex_t kind, ompt_wait_id_t wait_id,
 
   Lock.lock();
   TsanHappensAfter(&Lock);
+  TsanRWLockAcquired(&Lock, 1);
   TsanFuncExit();
 }
 
@@ -1137,9 +1169,7 @@ static void ompt_tsan_mutex_released(ompt_mutex_t kind, ompt_wait_id_t wait_id,
   auto lock_owner = Locks[wait_id].thread_id;
   LocksMutex.unlock();
   TsanHappensBefore(&Lock);
-
-  if (lock_owner != ompt_get_thread_data()->value)
-    TsanRWLockRelease(&wait_id, 1);
+  TsanRWLockReleased(&Lock, 1);
 
   Lock.unlock();
   TsanFuncExit();
@@ -1215,6 +1245,15 @@ static int ompt_tsan_initialize(ompt_function_lookup_t lookup, int device_num,
   findTsanFunction(__tsan_func_entry, (void (*)(const void *)));
   findTsanFunction(__tsan_func_exit, (void (*)(void)));
   findTsanFunction(
+      AnnotateRWLockCreate,
+      (void (*)(const char *, int, const volatile void *)));
+  findTsanFunction(
+      AnnotateRWLockDestroy,
+      (void (*)(const char *, int, const volatile void *)));
+  findTsanFunction(
+      AnnotateRWLockAcquired,
+      (void (*)(const char *, int, const volatile void *, size_t)));
+  findTsanFunction(
       AnnotateRWLockReleased,
       (void (*)(const char *, int, const volatile void *, size_t)));
 
@@ -1231,6 +1270,8 @@ static int ompt_tsan_initialize(ompt_function_lookup_t lookup, int device_num,
 
   SET_CALLBACK_T(mutex_acquired, mutex);
   SET_CALLBACK_T(mutex_released, mutex);
+  SET_CALLBACK_T(lock_init, mutex_acquire);
+  SET_CALLBACK_T(lock_destroy, mutex);
   SET_OPTIONAL_CALLBACK_T(reduction, sync_region, hasReductionCallback,
                           ompt_set_never);
 
