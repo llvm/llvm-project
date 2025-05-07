@@ -59,33 +59,32 @@ int main(int argc, char** argv) {
           ->Arg(1024)
           ->Arg(8192);
     };
-#define BENCH(generate_data, name)                                                                                     \
-  do {                                                                                                                 \
-    auto gen1 = [](auto size) { return generate_data<int>(size); };                                                    \
-    auto gen2 = [](auto size) {                                                                                        \
-      auto data = generate_data<int>(size);                                                                            \
-      std::vector<support::NonIntegral> real_data(data.begin(), data.end());                                           \
-      return real_data;                                                                                                \
-    };                                                                                                                 \
-    bm.operator()<std::vector<int>>("std::stable_sort(vector<int>) (" #name ")", std_stable_sort, gen1);               \
-    bm.operator()<std::vector<support::NonIntegral>>(                                                                  \
-        "std::stable_sort(vector<NonIntegral>) (" #name ")", std_stable_sort, gen2);                                   \
-    bm.operator()<std::deque<int>>("std::stable_sort(deque<int>) (" #name ")", std_stable_sort, gen1);                 \
-                                                                                                                       \
-    bm.operator()<std::vector<int>>("rng::stable_sort(vector<int>) (" #name ")", std::ranges::stable_sort, gen1);      \
-    bm.operator()<std::vector<support::NonIntegral>>(                                                                  \
-        "rng::stable_sort(vector<NonIntegral>) (" #name ")", std::ranges::stable_sort, gen2);                          \
-    bm.operator()<std::deque<int>>("rng::stable_sort(deque<int>) (" #name ")", std::ranges::stable_sort, gen1);        \
-  } while (false)
 
-    BENCH(support::quicksort_adversarial_data, "qsort adversarial");
-    BENCH(support::ascending_sorted_data, "ascending");
-    BENCH(support::descending_sorted_data, "descending");
-    BENCH(support::pipe_organ_data, "pipe-organ");
-    BENCH(support::heap_data, "heap");
-    BENCH(support::shuffled_data, "shuffled");
-    BENCH(support::single_element_data, "repeated");
-#undef BENCH
+    auto register_bm = [&](auto generate, std::string variant) {
+      auto gen2 = [generate](auto size) {
+        std::vector<int> data = generate(size);
+        std::vector<support::NonIntegral> real_data(data.begin(), data.end());
+        return real_data;
+      };
+      auto name = [variant](std::string op) { return op + " (" + variant + ")"; };
+      bm.operator()<std::vector<int>>(name("std::stable_sort(vector<int>)"), std_stable_sort, generate);
+      bm.operator()<std::vector<support::NonIntegral>>(
+          name("std::stable_sort(vector<NonIntegral>)"), std_stable_sort, gen2);
+      bm.operator()<std::deque<int>>(name("std::stable_sort(deque<int>)"), std_stable_sort, generate);
+
+      bm.operator()<std::vector<int>>(name("rng::stable_sort(vector<int>)"), std::ranges::stable_sort, generate);
+      bm.operator()<std::vector<support::NonIntegral>>(
+          name("rng::stable_sort(vector<NonIntegral>)"), std::ranges::stable_sort, gen2);
+      bm.operator()<std::deque<int>>(name("rng::stable_sort(deque<int>)"), std::ranges::stable_sort, generate);
+    };
+
+    register_bm(support::quicksort_adversarial_data<int>, "qsort adversarial");
+    register_bm(support::ascending_sorted_data<int>, "ascending");
+    register_bm(support::descending_sorted_data<int>, "descending");
+    register_bm(support::pipe_organ_data<int>, "pipe-organ");
+    register_bm(support::heap_data<int>, "heap");
+    register_bm(support::shuffled_data<int>, "shuffled");
+    register_bm(support::single_element_data<int>, "repeated");
   }
 
   // Benchmark {std,ranges}::stable_sort when memory allocation fails. The algorithm must fall back to
@@ -125,35 +124,32 @@ int main(int argc, char** argv) {
           ->Arg(1024)
           ->Arg(8192);
     };
-#define BENCH(generate_data, name)                                                                                     \
-  do {                                                                                                                 \
-    auto gen1 = [](auto size) { return generate_data<int>(size); };                                                    \
-    auto gen2 = [](auto size) {                                                                                        \
-      auto data = generate_data<int>(size);                                                                            \
-      std::vector<support::NonIntegral> real_data(data.begin(), data.end());                                           \
-      return real_data;                                                                                                \
-    };                                                                                                                 \
-    bm.operator()<std::vector<int>>("std::stable_sort(vector<int>) (alloc fails, " #name ")", std_stable_sort, gen1);  \
-    bm.operator()<std::vector<support::NonIntegral>>(                                                                  \
-        "std::stable_sort(vector<NonIntegral>) (alloc fails, " #name ")", std_stable_sort, gen2);                      \
-    bm.operator()<std::deque<int>>("std::stable_sort(deque<int>) (alloc fails, " #name ")", std_stable_sort, gen1);    \
-                                                                                                                       \
-    bm.operator()<std::vector<int>>(                                                                                   \
-        "rng::stable_sort(vector<int>) (alloc fails, " #name ")", std::ranges::stable_sort, gen1);                     \
-    bm.operator()<std::vector<support::NonIntegral>>(                                                                  \
-        "rng::stable_sort(vector<NonIntegral>) (alloc fails, " #name ")", std::ranges::stable_sort, gen2);             \
-    bm.operator()<std::deque<int>>(                                                                                    \
-        "rng::stable_sort(deque<int>) (alloc fails, " #name ")", std::ranges::stable_sort, gen1);                      \
-  } while (false)
 
-    BENCH(support::quicksort_adversarial_data, "qsort adversarial");
-    BENCH(support::ascending_sorted_data, "ascending");
-    BENCH(support::descending_sorted_data, "descending");
-    BENCH(support::pipe_organ_data, "pipe-organ");
-    BENCH(support::heap_data, "heap");
-    BENCH(support::shuffled_data, "shuffled");
-    BENCH(support::single_element_data, "repeated");
-#undef BENCH
+    auto register_bm = [&](auto generate, std::string variant) {
+      auto gen2 = [generate](auto size) {
+        std::vector<int> data = generate(size);
+        std::vector<support::NonIntegral> real_data(data.begin(), data.end());
+        return real_data;
+      };
+      auto name = [variant](std::string op) { return op + " (alloc fails, " + variant + ")"; };
+      bm.operator()<std::vector<int>>(name("std::stable_sort(vector<int>)"), std_stable_sort, generate);
+      bm.operator()<std::vector<support::NonIntegral>>(
+          name("std::stable_sort(vector<NonIntegral>)"), std_stable_sort, gen2);
+      bm.operator()<std::deque<int>>(name("std::stable_sort(deque<int>)"), std_stable_sort, generate);
+
+      bm.operator()<std::vector<int>>(name("rng::stable_sort(vector<int>)"), std::ranges::stable_sort, generate);
+      bm.operator()<std::vector<support::NonIntegral>>(
+          name("rng::stable_sort(vector<NonIntegral>)"), std::ranges::stable_sort, gen2);
+      bm.operator()<std::deque<int>>(name("rng::stable_sort(deque<int>)"), std::ranges::stable_sort, generate);
+    };
+
+    register_bm(support::quicksort_adversarial_data<int>, "qsort adversarial");
+    register_bm(support::ascending_sorted_data<int>, "ascending");
+    register_bm(support::descending_sorted_data<int>, "descending");
+    register_bm(support::pipe_organ_data<int>, "pipe-organ");
+    register_bm(support::heap_data<int>, "heap");
+    register_bm(support::shuffled_data<int>, "shuffled");
+    register_bm(support::single_element_data<int>, "repeated");
   }
 
   benchmark::Initialize(&argc, argv);

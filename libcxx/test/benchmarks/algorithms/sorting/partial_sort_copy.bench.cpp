@@ -50,37 +50,37 @@ int main(int argc, char** argv) {
           ->Arg(1024)
           ->Arg(8192);
     };
-#define BENCH(generate_data, name)                                                                                     \
-  do {                                                                                                                 \
-    auto gen1 = [](auto size) { return generate_data<int>(size); };                                                    \
-    auto gen2 = [](auto size) {                                                                                        \
-      auto data = generate_data<int>(size);                                                                            \
-      std::vector<support::NonIntegral> real_data(data.begin(), data.end());                                           \
-      return real_data;                                                                                                \
-    };                                                                                                                 \
-    bm.operator()<std::vector<int>>("std::partial_sort_copy(vector<int>) (" #name ")", std_partial_sort_copy, gen1);   \
-    bm.operator()<std::vector<support::NonIntegral>>(                                                                  \
-        "std::partial_sort_copy(vector<NonIntegral>) (" #name ")", std_partial_sort_copy, gen2);                       \
-    bm.operator()<std::deque<int>>("std::partial_sort_copy(deque<int>) (" #name ")", std_partial_sort_copy, gen1);     \
-    bm.operator()<std::list<int>>("std::partial_sort_copy(list<int>) (" #name ")", std_partial_sort_copy, gen1);       \
-                                                                                                                       \
-    bm.operator()<std::vector<int>>(                                                                                   \
-        "rng::partial_sort_copy(vector<int>) (" #name ")", std::ranges::partial_sort_copy, gen1);                      \
-    bm.operator()<std::vector<support::NonIntegral>>(                                                                  \
-        "rng::partial_sort_copy(vector<NonIntegral>) (" #name ")", std::ranges::partial_sort_copy, gen2);              \
-    bm.operator()<std::deque<int>>(                                                                                    \
-        "rng::partial_sort_copy(deque<int>) (" #name ")", std::ranges::partial_sort_copy, gen1);                       \
-    bm.operator()<std::list<int>>(                                                                                     \
-        "rng::partial_sort_copy(list<int>) (" #name ")", std::ranges::partial_sort_copy, gen1);                        \
-  } while (false)
 
-    BENCH(support::quicksort_adversarial_data, "qsort adversarial");
-    BENCH(support::ascending_sorted_data, "ascending");
-    BENCH(support::descending_sorted_data, "descending");
-    BENCH(support::pipe_organ_data, "pipe-organ");
-    BENCH(support::heap_data, "heap");
-    BENCH(support::shuffled_data, "shuffled");
-    BENCH(support::single_element_data, "repeated");
+    auto register_bm = [&](auto generate, std::string variant) {
+      auto gen2 = [generate](auto size) {
+        std::vector<int> data = generate(size);
+        std::vector<support::NonIntegral> real_data(data.begin(), data.end());
+        return real_data;
+      };
+      auto name = [variant](std::string op) { return op + " (" + variant + ")"; };
+      bm.operator()<std::vector<int>>(name("std::partial_sort_copy(vector<int>)"), std_partial_sort_copy, generate);
+      bm.operator()<std::vector<support::NonIntegral>>(
+          name("std::partial_sort_copy(vector<NonIntegral>)"), std_partial_sort_copy, gen2);
+      bm.operator()<std::deque<int>>(name("std::partial_sort_copy(deque<int>)"), std_partial_sort_copy, generate);
+      bm.operator()<std::list<int>>(name("std::partial_sort_copy(list<int>)"), std_partial_sort_copy, generate);
+
+      bm.operator()<std::vector<int>>(
+          name("rng::partial_sort_copy(vector<int>)"), std::ranges::partial_sort_copy, generate);
+      bm.operator()<std::vector<support::NonIntegral>>(
+          name("rng::partial_sort_copy(vector<NonIntegral>)"), std::ranges::partial_sort_copy, gen2);
+      bm.operator()<std::deque<int>>(
+          name("rng::partial_sort_copy(deque<int>)"), std::ranges::partial_sort_copy, generate);
+      bm.operator()<std::list<int>>(
+          name("rng::partial_sort_copy(list<int>)"), std::ranges::partial_sort_copy, generate);
+    };
+
+    register_bm(support::quicksort_adversarial_data<int>, "qsort adversarial");
+    register_bm(support::ascending_sorted_data<int>, "ascending");
+    register_bm(support::descending_sorted_data<int>, "descending");
+    register_bm(support::pipe_organ_data<int>, "pipe-organ");
+    register_bm(support::heap_data<int>, "heap");
+    register_bm(support::shuffled_data<int>, "shuffled");
+    register_bm(support::single_element_data<int>, "repeated");
   }
 
   benchmark::Initialize(&argc, argv);
