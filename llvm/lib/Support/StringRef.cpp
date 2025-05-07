@@ -409,6 +409,9 @@ static unsigned GetAutoSenseRadix(StringRef &Str) {
 
 bool llvm::consumeUnsignedInteger(StringRef &Str, unsigned Radix,
                                   unsigned long long &Result) {
+  // Consume the + value
+  Str.consume_front("+");
+
   // Autosense radix if not specified.
   if (Radix == 0)
     Radix = GetAutoSenseRadix(Str);
