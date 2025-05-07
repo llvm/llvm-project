@@ -97,20 +97,14 @@ DEFINE_LIBUNWIND_FUNCTION("#__unw_getcontext")
   mov    x0, #0                 // return UNW_ESUCCESS
   ret
 
-  .globl "#unw_getcontext"
-  .set "#unw_getcontext", "#__unw_getcontext"
   .weak_anti_dep __unw_getcontext
   .set __unw_getcontext, "#__unw_getcontext"
-  .weak_anti_dep unw_getcontext
-  .set unw_getcontext, "#unw_getcontext"
 
   .section .hybmp$x,"yi"
   .symidx "#__unw_getcontext"
   .symidx $ientry_thunk$cdecl$i8$i8
   .word 1
   .text
-
-  EXPORT_SYMBOL(unw_getcontext)
 
 #elif defined(__x86_64__)
 
@@ -1228,7 +1222,13 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
 
 #endif
 
-#ifndef __arm64ec__
+#ifdef __arm64ec__
+  .globl "#unw_getcontext"
+  .set "#unw_getcontext", "#__unw_getcontext"
+  .weak_anti_dep unw_getcontext
+  .set unw_getcontext, "#unw_getcontext"
+  EXPORT_SYMBOL(unw_getcontext)
+#else
   WEAK_ALIAS(__unw_getcontext, unw_getcontext)
 #endif
 
