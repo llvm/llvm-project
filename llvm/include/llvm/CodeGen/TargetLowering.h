@@ -3024,7 +3024,7 @@ public:
   /// by referencing its sub-register AX.
   /// Targets must return false when FromTy <= ToTy.
   virtual bool isTruncateFree(Type *FromTy, Type *ToTy) const {
-    return isTruncateFree(EVT::getEVT(FromTy), EVT::getEVT(ToTy)); 
+    return isTruncateFree(EVT::getEVT(FromTy), EVT::getEVT(ToTy));
   }
 
   /// Return true if a truncation from FromTy to ToTy is permitted when deciding
