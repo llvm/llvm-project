@@ -174,6 +174,11 @@ struct InstrumentationCaches {
 struct IRTCallDescription {
   IRTCallDescription(InstrumentationOpportunity &IConf, Type *RetTy = nullptr);
 
+  std::pair<std::string, std::string> createCBodies() const;
+
+  std::pair<std::string, std::string>
+  createCSignature(const InstrumentationConfig &IConf) const;
+
   FunctionType *createLLVMSignature(InstrumentationConfig &IConf,
                                     LLVMContext &Ctx, const DataLayout &DL,
                                     bool ForceIndirection);
@@ -346,6 +351,9 @@ struct InstrumentationConfig {
   InstrumentationConfig() : SS(StringAllocator) {
     RuntimePrefix = BaseConfigurationOpportunity::getStringOption(
         *this, "runtime_prefix", "The runtime API prefix.", "__instrumentor_");
+    RuntimeStubsFile = BaseConfigurationOpportunity::getStringOption(
+        *this, "runtime_stubs_file",
+        "The file into which runtime stubs should be written.", "test.c");
     TargetRegex = BaseConfigurationOpportunity::getStringOption(
         *this, "target_regex",
         "Regular expression to be matched against the module target. "
@@ -373,6 +381,7 @@ struct InstrumentationConfig {
   SmallVector<BaseConfigurationOpportunity *> BaseConfigurationOpportunities;
 
   BaseConfigurationOpportunity *RuntimePrefix;
+  BaseConfigurationOpportunity *RuntimeStubsFile;
   BaseConfigurationOpportunity *TargetRegex;
   BaseConfigurationOpportunity *HostEnabled;
   BaseConfigurationOpportunity *GPUEnabled;
