@@ -8,7 +8,6 @@
 
 #include "Handler/RequestHandler.h"
 #include "DAP.h"
-#include "EventHelper.h"
 #include "Handler/ResponseHandler.h"
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
@@ -163,7 +162,7 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
   dap.target.GetProcess().Continue();
 
   // Now that the actual target is just starting (i.e. exec was just invoked),
-  // we return the debugger to its sync state.
+  // we return the debugger to its async state.
   scope_sync_mode.reset();
 
   // If sending the notification failed, the launcher should be dead by now and
@@ -239,46 +238,34 @@ llvm::Error BaseRequestHandler::LaunchProcess(
   launch_info.SetLaunchFlags(flags | lldb::eLaunchFlagDebug |
                              lldb::eLaunchFlagStopAtEntry);
 
-  {
-    // Perform the launch in synchronous mode so that we don't have to worry
-    // about process state changes during the launch.
+  if (arguments.runInTerminal) {
+    if (llvm::Error err = RunInTerminal(dap, arguments))
+      return err;
+  } else if (launchCommands.empty()) {
+    lldb::SBError error;
+    // Disable async events so the launch will be successful when we return from
+    // the launch call and the launch will happen synchronously
     ScopeSyncMode scope_sync_mode(dap.debugger);
+    dap.target.Launch(launch_info, error);
+    if (error.Fail())
+      return llvm::make_error<DAPError>(error.GetCString());
+  } else {
+    // Set the launch info so that run commands can access the configured
+    // launch details.
+    dap.target.SetLaunchInfo(launch_info);
+    if (llvm::Error err = dap.RunLaunchCommands(launchCommands))
+      return err;
 
-    if (arguments.runInTerminal) {
-      if (llvm::Error err = RunInTerminal(dap, arguments))
-        return err;
-    } else if (launchCommands.empty()) {
-      lldb::SBError error;
-      dap.target.Launch(launch_info, error);
-      if (error.Fail())
-        return llvm::make_error<DAPError>(error.GetCString());
-    } else {
-      // Set the launch info so that run commands can access the configured
-      // launch details.
-      dap.target.SetLaunchInfo(launch_info);
-      if (llvm::Error err = dap.RunLaunchCommands(launchCommands))
-        return err;
-
-      // The custom commands might have created a new target so we should use
-      // the selected target after these commands are run.
-      dap.target = dap.debugger.GetSelectedTarget();
-    }
+    // The custom commands might have created a new target so we should use the
+    // selected target after these commands are run.
+    dap.target = dap.debugger.GetSelectedTarget();
+    // Make sure the process is launched and stopped at the entry point before
+    // proceeding as the launch commands are not run using the synchronous
+    // mode.
+    lldb::SBError error = dap.WaitForProcessToStop(arguments.timeout);
+    if (error.Fail())
+      return llvm::make_error<DAPError>(error.GetCString());
   }
-
-  // Make sure the process is launched and stopped at the entry point before
-  // proceeding.
-  lldb::SBError error = dap.WaitForProcessToStop(arguments.timeout);
-  if (error.Fail())
-    return llvm::make_error<DAPError>(error.GetCString());
-
-  // Clients can request a baseline of currently existing threads after
-  // we acknowledge the configurationDone request.
-  // Client requests the baseline of currently existing threads after
-  // a successful or attach by sending a 'threads' request
-  // right after receiving the configurationDone response.
-  // Obtain the list of threads before we resume the process
-  dap.initial_thread_list =
-      GetThreads(dap.target.GetProcess(), dap.thread_format);
 
   return llvm::Error::success();
 }
