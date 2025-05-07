@@ -1894,14 +1894,9 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
         // Try to use shuffle-of-operand in place of an operand:
         // bo X, Y --> bo (shuf X), Y
         // bo X, Y --> bo X, (shuf Y)
-
-        Value *OtherOp = MatchShufAsOp0 ? Y : X;
-        if (!OtherOp->hasUseList())
-          return nullptr;
-
         BinaryOperator::BinaryOps Opcode = BO->getOpcode();
         Value *ShufOp = MatchShufAsOp0 ? X : Y;
-
+        Value *OtherOp = MatchShufAsOp0 ? Y : X;
         for (User *U : OtherOp->users()) {
           ArrayRef<int> Mask;
           auto Shuf = m_Shuffle(m_Specific(ShufOp), m_Value(), m_Mask(Mask));
