@@ -46,8 +46,9 @@ public:
     MemLPub = *NewValue;
   }
 
-protected:
+private:
   void set5(long *NewValue) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: function 'set5' can be mistakenly used in order to change the reference 'MemL' instead of the value of it
     MemL = *NewValue;
   }
 };

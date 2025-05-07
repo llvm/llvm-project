@@ -6,7 +6,7 @@ bugprone-misleading-setter-of-reference
 Finds setter-like member functions that take a pointer parameter and set a
 reference member of the same class with the pointed value.
 
-The check detects public member functions that take a single pointer parameter,
+The check detects member functions that take a single pointer parameter,
 and contain a single expression statement that dereferences the parameter and
 assigns the result to a data member with a reference type.
 

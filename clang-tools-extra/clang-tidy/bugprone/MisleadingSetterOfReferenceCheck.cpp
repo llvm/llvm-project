@@ -35,7 +35,7 @@ void MisleadingSetterOfReferenceCheck::registerMatchers(MatchFinder *Finder) {
                    anyOf(has(BinaryOpAssign), has(CXXOperatorCallAssign)));
   auto BadSetFunction =
       cxxMethodDecl(
-          parameterCountIs(1), isPublic(),
+          parameterCountIs(1),
           hasParameter(
               0,
               parmVarDecl(hasType(hasCanonicalType(pointerType(pointee(qualType(
