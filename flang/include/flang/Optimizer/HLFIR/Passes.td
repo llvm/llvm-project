@@ -69,4 +69,8 @@ def InlineHLFIRAssign : Pass<"inline-hlfir-assign"> {
   let summary = "Inline hlfir.assign operations";
 }
 
+def PropagateFortranVariableAttributes : Pass<"propagate-fortran-attrs"> {
+  let summary = "Propagate FortranVariableFlagsAttr attributes through HLFIR";
+}
+
 #endif //FORTRAN_DIALECT_HLFIR_PASSES

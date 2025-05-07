@@ -313,6 +313,7 @@ def hlfir_ParentComponentOp : hlfir_Op<"parent_comp", [AttrSizedOperandSegments,
     std::optional<fir::FortranVariableFlagsEnum> getFortranAttrs() const {
       return std::nullopt;
     }
+    void setFortranAttrs(fir::FortranVariableFlagsEnum flags) {}
   }];
 
   let results = (outs AnyFortranVariable);
@@ -1078,6 +1079,7 @@ def hlfir_NullOp : hlfir_Op<"null", [NoMemoryEffect, fir_FortranVariableOpInterf
     std::optional<fir::FortranVariableFlagsEnum> getFortranAttrs() const {
       return std::nullopt;
     }
+    void setFortranAttrs(fir::FortranVariableFlagsEnum flags) {}
     mlir::Value getShape() const {return mlir::Value{};}
     mlir::OperandRange getExplicitTypeParams() const {
       // Return an empty range.
@@ -1766,6 +1768,7 @@ def hlfir_ForallIndexOp : hlfir_Op<"forall_index", [fir_FortranVariableOpInterfa
     std::optional<fir::FortranVariableFlagsEnum> getFortranAttrs() const {
       return std::nullopt;
     }
+    void setFortranAttrs(fir::FortranVariableFlagsEnum flags) {}
     mlir::Value getShape() const {return mlir::Value{};}
     mlir::OperandRange getExplicitTypeParams() const {
       // Return an empty range.
