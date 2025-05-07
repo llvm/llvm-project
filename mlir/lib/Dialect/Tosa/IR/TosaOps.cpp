@@ -3518,65 +3518,6 @@ std::optional<SmallVector<int64_t, 4>> ApplyScaleOp::getShapeForUnroll() {
   return std::nullopt;
 }
 
-// parse and print of IfOp refer to the implementation of SCF dialect.
-ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
-  // Create the regions for 'then'.
-  result.regions.reserve(2);
-  Region *thenRegion = result.addRegion();
-  Region *elseRegion = result.addRegion();
-
-  auto &builder = parser.getBuilder();
-  OpAsmParser::UnresolvedOperand cond;
-  // Create a i1 tensor type for the boolean condition.
-  Type i1Type = RankedTensorType::get({}, builder.getIntegerType(1));
-  if (parser.parseOperand(cond) ||
-      parser.resolveOperand(cond, i1Type, result.operands))
-    return failure();
-  // Parse optional results type list.
-  if (parser.parseOptionalArrowTypeList(result.types))
-    return failure();
-  // Parse the 'then' region.
-  if (parser.parseRegion(*thenRegion, /*arguments=*/{}, /*argTypes=*/{}))
-    return failure();
-
-  // If we find an 'else' keyword then parse the 'else' region.
-  if (!parser.parseOptionalKeyword("else")) {
-    if (parser.parseRegion(*elseRegion, /*arguments=*/{}, /*argTypes=*/{}))
-      return failure();
-  }
-
-  // Parse the optional attribute list.
-  if (parser.parseOptionalAttrDict(result.attributes))
-    return failure();
-  return success();
-}
-
-void IfOp::print(OpAsmPrinter &p) {
-  bool printBlockTerminators = false;
-
-  p << " " << getCondition();
-  if (!getResults().empty()) {
-    p << " -> (" << getResultTypes() << ")";
-    // Print yield explicitly if the op defines values.
-    printBlockTerminators = true;
-  }
-  p << ' ';
-  p.printRegion(getThenGraph(),
-                /*printEntryBlockArgs=*/false,
-                /*printBlockTerminators=*/printBlockTerminators);
-
-  // Print the 'else' regions if it exists and has a block.
-  auto &elseRegion = getElseGraph();
-  if (!elseRegion.empty()) {
-    p << " else ";
-    p.printRegion(elseRegion,
-                  /*printEntryBlockArgs=*/false,
-                  /*printBlockTerminators=*/printBlockTerminators);
-  }
-
-  p.printOptionalAttrDict((*this)->getAttrs());
-}
-
 LogicalResult IfOp::verify() {
   if (errorIfTypeOrShapeMismatch(*this, getThenGraph().front().getArguments(),
                                  "'then_graph' arguments", getInputList(),

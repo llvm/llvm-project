@@ -1121,12 +1121,14 @@ func.func @if_test_simple(%arg0 : tensor<f32>, %arg1 : tensor<f32>, %arg2 : tens
   %b = tosa.log %arg1 : (tensor<f32>) -> tensor<f32>
 
   // CHECK: tosa.cond_if
-  // CHECK: -> (tensor<f32>)
-  %0 = tosa.cond_if %arg2 -> (tensor<f32>) {
-    tosa.yield %a : tensor<f32>
-  } else {
-    tosa.yield %b : tensor<f32>
-  }
+  // CHECK: -> tensor<f32>
+  %0 = "tosa.cond_if"(%arg2, %a, %b) ({
+  ^bb0(%a1: tensor<f32>, %b1: tensor<f32>):
+    tosa.yield %a1 : tensor<f32>
+  },  {
+  ^bb0(%a1: tensor<f32>, %b1: tensor<f32>):
+    tosa.yield %b1 : tensor<f32>
+  }) : (tensor<i1>, tensor<f32>, tensor<f32>) -> tensor<f32>
   return
 }
 
@@ -1135,12 +1137,14 @@ func.func @if_test_simple(%arg0 : tensor<f32>, %arg1 : tensor<f32>, %arg2 : tens
 // CHECK-LABEL: @if_test_dynamic
 func.func @if_test_dynamic(%arg0 : tensor<2xf32>, %arg1 : tensor<3xf32>, %arg2 : tensor<i1>) -> () {
   // CHECK: tosa.cond_if
-  // CHECK: -> (tensor<?xf32>)
-  %0 = tosa.cond_if %arg2 -> (tensor<?xf32>) {
-    tosa.yield %arg0 : tensor<2xf32>
-  } else {
-    tosa.yield %arg1 : tensor<3xf32>
-  }
+  // CHECK: -> tensor<?xf32>
+  %0 = "tosa.cond_if"(%arg2, %arg0, %arg1) ({
+  ^bb0(%a: tensor<2xf32>, %b: tensor<3xf32>):
+    tosa.yield %a : tensor<2xf32>
+  },  {
+  ^bb0(%a: tensor<2xf32>, %b: tensor<3xf32>):
+    tosa.yield %b : tensor<3xf32>
+  }) : (tensor<i1>, tensor<2xf32>, tensor<3xf32>) -> tensor<?xf32>
   return
 }
 
@@ -1149,12 +1153,14 @@ func.func @if_test_dynamic(%arg0 : tensor<2xf32>, %arg1 : tensor<3xf32>, %arg2 :
 // CHECK-LABEL: @if_test_unranked
 func.func @if_test_unranked(%arg0 : tensor<f32>, %arg1 : tensor<3xf32>, %arg2 : tensor<i1>) -> () {
   // CHECK: tosa.cond_if
-  // CHECK: -> (tensor<*xf32>)
-  %0 = tosa.cond_if %arg2 -> (tensor<*xf32>) {
-    tosa.yield %arg0 : tensor<f32>
-  } else {
-    tosa.yield %arg1 : tensor<3xf32>
-  }
+  // CHECK: -> tensor<*xf32>
+  %0 = "tosa.cond_if"(%arg2, %arg0, %arg1) ({
+  ^bb0(%a: tensor<f32>, %b: tensor<3xf32>):
+    tosa.yield %a : tensor<f32>
+  },  {
+  ^bb0(%a: tensor<f32>, %b: tensor<3xf32>):
+    tosa.yield %b : tensor<3xf32>
+  }) : (tensor<i1>, tensor<f32>, tensor<3xf32>) -> tensor<*xf32>
   return
 }
 
@@ -1163,14 +1169,16 @@ func.func @if_test_unranked(%arg0 : tensor<f32>, %arg1 : tensor<3xf32>, %arg2 : 
 // CHECK-LABEL: @if_test_propagate
 func.func @if_test_propagate(%arg0 : tensor<f32>, %arg1 : tensor<f32>, %arg2 : tensor<i1>) -> () {
   // CHECK: tosa.cond_if
-  // CHECK: -> (tensor<f32>)
-  %0 = tosa.cond_if %arg2 -> (tensor<f32>) {
-    %1 = tosa.add %arg0, %arg1 : (tensor<f32>, tensor<f32>) -> tensor<f32>
+  // CHECK: -> tensor<f32>
+  %0 = "tosa.cond_if"(%arg2, %arg0, %arg1) ({
+  ^bb0(%a: tensor<f32>, %b: tensor<f32>):
+    %1 = tosa.add %a, %b : (tensor<f32>, tensor<f32>) -> tensor<f32>
     tosa.yield %1 : tensor<f32>
-  } else {
-    %1 = tosa.sub %arg0, %arg1 : (tensor<f32>, tensor<f32>) -> tensor<f32>
+  },  {
+  ^bb0(%a: tensor<f32>, %b: tensor<f32>):
+    %1 = tosa.sub %a, %b : (tensor<f32>, tensor<f32>) -> tensor<f32>
     tosa.yield %1 : tensor<f32>
-  }
+  }) : (tensor<i1>, tensor<f32>, tensor<f32>) -> tensor<f32>
   return
 }
 
