@@ -21,12 +21,10 @@ def fetch_diff(owner, repo, pr_number):
     return response.text
 
 def run_clang_tidy_diff(diff_text):
-    print("🎯 Running clang-tidy-diff on changed lines...")
-    try:
-        result = subprocess.run(
+   result = subprocess.run(
     [
         "python3", CLANG_TIDY_DIFF_PATH,
-        "-p", "1",
+        "-p", "/ptmp/jay/new/llvm-project-checks/build",  # add this
         "-quiet",
         "-j", "4",
         "-clang-tidy-binary", "/ptmp/jay/new/llvm-project-checks/build/bin/clang-tidy"
@@ -36,6 +34,7 @@ def run_clang_tidy_diff(diff_text):
     stderr=subprocess.PIPE,
     check=False,
 )
+
         print(result.stdout.decode("utf-8"))
         if result.stderr:
             print("⚠️ Errors/Warnings:", result.stderr.decode("utf-8"), file=sys.stderr)
