@@ -1930,14 +1930,12 @@ public:
 
   // TODO: Remove once VPWidenIntOrFpInduction is fully expanded in
   // convertToConcreteRecipes.
-  VPValue *getStepVector() { return getOperand(3); }
-  const VPValue *getStepVector() const { return getOperand(3); }
-  void setStepVector(VPValue *V) {
-    assert(cast<VPInstructionWithType>(getStepVector()->getDefiningRecipe())
-                   ->getOpcode() == VPInstruction::StepVector &&
-           cast<VPInstructionWithType>(V->getDefiningRecipe())->getOpcode() ==
-               VPInstruction::StepVector);
-    setOperand(3, V);
+  VPInstructionWithType *getStepVector() {
+    auto *StepVector =
+        cast<VPInstructionWithType>(getOperand(3)->getDefiningRecipe());
+    assert(StepVector->getOpcode() == VPInstruction::StepVector &&
+           "step vector operand must be a VPInstruction::StepVector");
+    return StepVector;
   }
 
   VPValue *getSplatVFValue() {

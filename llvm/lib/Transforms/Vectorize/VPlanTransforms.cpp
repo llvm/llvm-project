@@ -1224,13 +1224,14 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
     auto *NewStep = Plan.getOrAddLiveIn(ConstantInt::get(NewIVTy, 1));
     WideIV->setStepValue(NewStep);
     // TODO: Remove once VPWidenIntOrFpInductionRecipe is fully expanded.
-    auto *OldStepVector = cast<VPInstructionWithType>(
-        WideIV->getStepVector()->getDefiningRecipe());
-    assert(OldStepVector->getOpcode() == VPInstruction::StepVector);
+    VPInstructionWithType *OldStepVector = WideIV->getStepVector();
+    assert(OldStepVector->getNumUsers() == 1 &&
+           "step vector should only be used by single "
+           "VPWidenIntOrFpInductionRecipe");
     auto *NewStepVector = new VPInstructionWithType(
         VPInstruction::StepVector, {}, NewIVTy, OldStepVector->getDebugLoc());
-    NewStepVector->insertAfter(WideIV->getStepVector()->getDefiningRecipe());
-    WideIV->setStepVector(NewStepVector);
+    NewStepVector->insertAfter(OldStepVector->getDefiningRecipe());
+    OldStepVector->replaceAllUsesWith(NewStepVector);
     OldStepVector->eraseFromParent();
 
     auto *NewBTC = new VPWidenCastRecipe(
@@ -2601,9 +2602,6 @@ void VPlanTransforms::materializeStepVectors(VPlan &Plan) {
     if (!IVR)
       continue;
 
-    // Infer an up-to-date type since
-    // optimizeVectorInductionWidthForTCAndVFUF may have truncated the start
-    // and step values.
     Type *Ty = IVR->getPHINode()->getType();
     if (TruncInst *Trunc = IVR->getTruncInst())
       Ty = Trunc->getType();
@@ -2613,7 +2611,8 @@ void VPlanTransforms::materializeStepVectors(VPlan &Plan) {
     VPBuilder Builder(Plan.getVectorPreheader());
     VPInstruction *StepVector = Builder.createNaryOp(
         VPInstruction::StepVector, {}, Ty, {}, IVR->getDebugLoc());
-    assert(IVR->getNumOperands() == 3);
+    assert(IVR->getNumOperands() == 3 &&
+           "can only add step vector before unrolling");
     IVR->addOperand(StepVector);
   }
 }
