@@ -51,6 +51,70 @@ static Value getValueFromOpFoldResult(OpBuilder &rewriter, Location loc,
   return cast<Value>(in);
 }
 
+static bool hasDynamicDim(ArrayRef<OpFoldResult> dims) {
+  for (auto &&dim : dims) {
+    auto constant = getConstantIntValue(dim);
+    if (!constant || *constant < 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+static OpFoldResult computeStaticShape(OpBuilder &builder, Location loc,
+                                       ArrayRef<OpFoldResult> dims,
+                                       ArrayRef<OpFoldResult> strides) {
+  // max(dims[i] * strides[i]) for i = 0, 1, ..., n-1
+  int64_t maxSize = 1;
+  for (auto &&[dim, stride] : llvm::zip(dims, strides)) {
+    AffineExpr s0, s1;
+    bindSymbols(builder.getContext(), s0, s1);
+    OpFoldResult size = affine::makeComposedFoldedAffineApply(
+        builder, loc, s0 * s1, ArrayRef<OpFoldResult>{dim, stride});
+    auto constant = getConstantIntValue(size);
+    assert(constant && "expected constant value");
+    maxSize = *constant;
+  }
+  return builder.getIndexAttr(maxSize);
+}
+
+static OpFoldResult computeDynamicShape(OpBuilder &builder, Location loc,
+                                        ArrayRef<OpFoldResult> dims,
+                                        ArrayRef<OpFoldResult> strides) {
+
+  SmallVector<AffineExpr> symbols(2 * dims.size());
+  bindSymbolsList(builder.getContext(), MutableArrayRef{symbols});
+  SmallVector<AffineExpr> productExpressions;
+  SmallVector<Value> values;
+  size_t symbolIndex = 0;
+  for (auto &&[dim, stride] : llvm::zip(dims, strides)) {
+    AffineExpr dimExpr = symbols[symbolIndex++];
+    AffineExpr strideExpr = symbols[symbolIndex++];
+    productExpressions.push_back(dimExpr * strideExpr);
+    values.push_back(getValueFromOpFoldResult(builder, loc, dim));
+    values.push_back(getValueFromOpFoldResult(builder, loc, stride));
+  }
+
+  AffineMap maxMap = AffineMap::get(0, symbols.size(), productExpressions,
+                                    builder.getContext());
+  Value maxValue =
+      builder.create<affine::AffineMaxOp>(loc, maxMap, values).getResult();
+  return maxValue;
+}
+
+/// Given dimension size [d1, d2, ...] and strides [s1, s2, ...], compute the
+/// span of the memref.
+static OpFoldResult computeSpan(OpBuilder &builder, Location loc,
+                                ArrayRef<OpFoldResult> dims,
+                                ArrayRef<OpFoldResult> strides) {
+  assert(dims.size() == strides.size() &&
+         "number of dimensions and strides should be equal");
+  if (hasDynamicDim(dims) || hasDynamicDim(strides)) {
+    return computeDynamicShape(builder, loc, dims, strides);
+  }
+  return computeStaticShape(builder, loc, dims, strides);
+}
+
 /// Returns a collapsed memref and the linearized index to access the element
 /// at the specified indices.
 static std::pair<Value, Value> getFlattenMemrefAndOffset(OpBuilder &rewriter,
@@ -82,10 +146,12 @@ static std::pair<Value, Value> getFlattenMemrefAndOffset(OpBuilder &rewriter,
       rewriter.create<memref::ReinterpretCastOp>(
           loc, source,
           /* offset = */ linearizedInfo.linearizedOffset,
-          /* shapes = */ ArrayRef<OpFoldResult>{linearizedInfo.linearizedSize},
+          /* shapes = */
+          ArrayRef<OpFoldResult>{computeSpan(
+              rewriter, loc, stridedMetadata.getConstifiedMixedSizes(),
+              stridedMetadata.getConstifiedMixedStrides())},
           /* strides = */
-          ArrayRef<OpFoldResult>{
-              stridedMetadata.getConstifiedMixedStrides().back()}),
+          ArrayRef<OpFoldResult>{rewriter.getIndexAttr(1)}),
       getValueFromOpFoldResult(rewriter, loc, linearizedIndices));
 }
 
