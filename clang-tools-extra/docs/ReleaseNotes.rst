@@ -166,6 +166,11 @@ Changes in existing checks
   <clang-tidy/checks/cert/err33-c>` check by fixing false positives when
   a function name is just prefixed with a targeted function name.
 
+- Improved :doc:`cppcoreguidelines-rvalue-reference-param-not-moved
+  <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check
+  by adding a flag to specify the function used for moving instead of
+  ``std::move``.
+
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check by adding the option
   `AllowedTypes`, that excludes specified types from const-correctness
@@ -218,11 +223,6 @@ Changes in existing checks
   <clang-tidy/checks/performance/unnecessary-value-param>` check performance by
   tolerating fix-it breaking compilation when functions is used as pointers
   to avoid matching usage of functions within the current compilation unit.
-
-- Improved :doc:`cppcoreguidelines-rvalue-reference-param-not-moved
-  <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check
-  by adding a flag to specify the function used for moving instead of
-  ``std::move``.
 
 Removed checks
 ^^^^^^^^^^^^^^
