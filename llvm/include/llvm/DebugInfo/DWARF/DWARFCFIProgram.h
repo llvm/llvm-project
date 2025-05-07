@@ -1,5 +1,13 @@
-#ifndef LLVM_DEBUGINFO_DWARF_DWARFDEBUGCFIPROGRAM_H
-#define LLVM_DEBUGINFO_DWARF_DWARFDEBUGCFIPROGRAM_H
+//===- DWARFCFIProgram.h ----------------------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_DEBUGINFO_DWARF_DWARFCFIPROGRAM_H
+#define LLVM_DEBUGINFO_DWARF_DWARFCFIPROGRAM_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
@@ -62,8 +70,7 @@ public:
   CFIProgram(uint64_t CodeAlignmentFactor, int64_t DataAlignmentFactor,
              Triple::ArchType Arch)
       : CodeAlignmentFactor(CodeAlignmentFactor),
-        DataAlignmentFactor(DataAlignmentFactor),
-        Arch(Arch) {}
+        DataAlignmentFactor(DataAlignmentFactor), Arch(Arch) {}
 
   /// Parse and store a sequence of CFI instructions from Data,
   /// starting at *Offset and ending at EndOffset. *Offset is updated
@@ -148,4 +155,4 @@ private:
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_DWARF_DWARFDEBUGCFIPROGRAM_H
+#endif // LLVM_DEBUGINFO_DWARF_DWARFCFIPROGRAM_H

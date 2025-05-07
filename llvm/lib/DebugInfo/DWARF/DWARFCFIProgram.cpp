@@ -1,4 +1,4 @@
-//===- DWARFDebugFrame.h - Parsing of .debug_frame ------------------------===//
+//===- DWARFCFIProgram.cpp - Parsing the cfi-portions of .debug_frame -----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -34,7 +34,6 @@ static void printRegister(raw_ostream &OS, DIDumpOptions DumpOpts,
   }
   OS << "reg" << RegNum;
 }
-
 
 // See DWARF standard v3, section 7.23
 const uint8_t DWARF_CFI_PRIMARY_OPCODE_MASK = 0xc0;
@@ -379,7 +378,7 @@ void CFIProgram::printOperand(raw_ostream &OS, DIDumpOptions DumpOpts,
     if (!OpcodeName.empty())
       OS << " " << OpcodeName;
     else
-      OS << format(" Opcode %x",  Opcode);
+      OS << format(" Opcode %x", Opcode);
     break;
   }
   case OT_None:
@@ -408,13 +407,13 @@ void CFIProgram::printOperand(raw_ostream &OS, DIDumpOptions DumpOpts,
     if (DataAlignmentFactor)
       OS << format(" %" PRId64, int64_t(Operand) * DataAlignmentFactor);
     else
-      OS << format(" %" PRId64 "*data_alignment_factor" , int64_t(Operand));
+      OS << format(" %" PRId64 "*data_alignment_factor", int64_t(Operand));
     break;
   case OT_UnsignedFactDataOffset:
     if (DataAlignmentFactor)
       OS << format(" %" PRId64, Operand * DataAlignmentFactor);
     else
-      OS << format(" %" PRId64 "*data_alignment_factor" , Operand);
+      OS << format(" %" PRId64 "*data_alignment_factor", Operand);
     break;
   case OT_Register:
     OS << ' ';
