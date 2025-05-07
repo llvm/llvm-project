@@ -149,13 +149,9 @@ FuncUnwinders::GetEHFrameUnwindPlan(Target &target) {
     return m_unwind_plan_eh_frame_sp;
 
   m_tried_unwind_plan_eh_frame = true;
-  if (m_range.GetBaseAddress().IsValid()) {
-    DWARFCallFrameInfo *eh_frame = m_unwind_table.GetEHFrameInfo();
-    if (eh_frame) {
-      auto plan_sp = std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
-      if (eh_frame->GetUnwindPlan(m_range, *plan_sp))
-        m_unwind_plan_eh_frame_sp = std::move(plan_sp);
-    }
+  if (m_addr.IsValid()) {
+    if (DWARFCallFrameInfo *eh_frame = m_unwind_table.GetEHFrameInfo())
+      m_unwind_plan_eh_frame_sp = eh_frame->GetUnwindPlan(m_ranges, m_addr);
   }
   return m_unwind_plan_eh_frame_sp;
 }
@@ -167,13 +163,10 @@ FuncUnwinders::GetDebugFrameUnwindPlan(Target &target) {
     return m_unwind_plan_debug_frame_sp;
 
   m_tried_unwind_plan_debug_frame = true;
-  if (m_range.GetBaseAddress().IsValid()) {
-    DWARFCallFrameInfo *debug_frame = m_unwind_table.GetDebugFrameInfo();
-    if (debug_frame) {
-      auto plan_sp = std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
-      if (debug_frame->GetUnwindPlan(m_range, *plan_sp))
-        m_unwind_plan_debug_frame_sp = std::move(plan_sp);
-    }
+  if (!m_ranges.empty()) {
+    if (DWARFCallFrameInfo *debug_frame = m_unwind_table.GetDebugFrameInfo())
+      m_unwind_plan_debug_frame_sp =
+          debug_frame->GetUnwindPlan(m_ranges, m_addr);
   }
   return m_unwind_plan_debug_frame_sp;
 }
