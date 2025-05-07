@@ -87,6 +87,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Pass.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -155,6 +156,7 @@ class GlobalMergeImpl {
   const TargetMachine *TM = nullptr;
   GlobalMergeOptions Opt;
   bool IsMachO = false;
+  bool IsAIX = false;
 
 private:
   bool doMerge(SmallVectorImpl<GlobalVariable *> &Globals, Module &M,
@@ -674,7 +676,9 @@ bool GlobalMergeImpl::run(Module &M) {
   if (!EnableGlobalMerge)
     return false;
 
-  IsMachO = M.getTargetTriple().isOSBinFormatMachO();
+  Triple T(M.getTargetTriple());
+  IsMachO = T.isOSBinFormatMachO();
+  IsAIX = T.isOSBinFormatXCOFF();
 
   auto &DL = M.getDataLayout();
   MapVector<std::pair<unsigned, StringRef>, SmallVector<GlobalVariable *, 0>>
@@ -715,6 +719,14 @@ bool GlobalMergeImpl::run(Module &M) {
     // Ignore all 'special' globals.
     if (GV.getName().starts_with("llvm.") ||
         GV.getName().starts_with(".llvm.") || Section == "llvm.metadata")
+      continue;
+
+    // Do not merge profiling counters as it will prevent us from breaking
+    // the __llvm_prf_cnts section into subsections, which in turn creates
+    // extra symbol dependencies that can break otherwise valid link steps.
+    if (IsAIX && TM && TM->getFunctionSections() && GV.hasSection() &&
+        Section.starts_with(
+            getInstrProfSectionName(IPSK_cnts, Triple::XCOFF, false)))
       continue;
 
     // Ignore all "required" globals:
