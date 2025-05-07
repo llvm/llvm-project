@@ -2455,6 +2455,11 @@ bool isIncludeFile(llvm::StringRef Line) {
 }
 
 bool allowImplicitCompletion(llvm::StringRef Content, unsigned Offset) {
+  // Check if we're inside an empty template argument list
+  if (Content.size() > 2 && Content[Offset - 1] == '<' &&
+      Content[Offset] == '>')
+    return true;
+
   // Look at last line before completion point only.
   Content = Content.take_front(Offset);
   auto Pos = Content.rfind('\n');
