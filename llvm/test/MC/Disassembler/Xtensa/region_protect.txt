@@ -1,50 +1,46 @@
-# RUN: llvm-mc -triple=xtensa -mattr=+density -disassemble %s | FileCheck -check-prefixes=CHECK-DENSITY %s
+# RUN: llvm-mc -triple=xtensa -mattr=+regprotect -disassemble %s | FileCheck -check-prefixes=CHECK-REGPROTECT %s
 # RUN: not llvm-mc -triple=xtensa -disassemble %s 2>&1 | FileCheck --implicit-check-not=warning: -check-prefixes=CHECK-CORE %s
 
 ## Verify that binary code is correctly disassembled with
-## code density option enabled. Also verify that dissasembling without
-## density option generates warnings.
+## region protection option enabled. Also verify that dissasembling without
+## region protection option generates warnings.
 
-[0x4a, 0x23]
-# CHECK-DENSITY: add.n  a2, a3, a4
+[0x00,0xc3,0x50]
+# CHECK-REGPROTECT: idtlb a3
 # CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
 
-[0x3b, 0x23]
-# CHECK-DENSITY: addi.n a2, a3, 3
+[0x00,0x43,0x50]
+# CHECK-REGPROTECT: iitlb a3
 # CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
 
-[0x9c, 0x03]
-# CHECK-DENSITY: beqz.n a3, . +20
+[0x30,0xd4,0x50]
+# CHECK-REGPROTECT: pdtlb a3, a4
 # CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
 
-[0xcc, 0xe3]
-# CHECK-DENSITY: bnez.n a3, . +18
+[0x30,0x54,0x50]
+# CHECK-REGPROTECT: pitlb a3, a4
 # CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
 
-[0x6d, 0xf0]
-# CHECK-DENSITY: ill.n
+[0x30,0xb4,0x50]
+# CHECK-REGPROTECT: rdtlb0 a3, a4
 # CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
 
-[0x28, 0x33]
-# CHECK-DENSITY: l32i.n a2, a3, 12
+[0x30,0xf4,0x50]
+# CHECK-REGPROTECT: rdtlb1 a3, a4
 # CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
 
-[0x2d, 0x03]
-# CHECK-DENSITY: mov.n  a2, a3
+[0x30,0x34,0x50]
+# CHECK-REGPROTECT: ritlb0 a3, a4
 # CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
 
-[0x0d, 0xf0]
-# CHECK-DENSITY: ret.n
+[0x30,0x74,0x50]
+# CHECK-REGPROTECT: ritlb1 a3, a4
 # CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
 
-[0x29, 0x33]
-# CHECK-DENSITY: s32i.n a2, a3, 12
+[0x30,0xe4,0x50]
+# CHECK-REGPROTECT: wdtlb a3, a4
 # CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
 
-[0x6c, 0x02]
-# CHECK-DENSITY: movi.n a2, -32
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
-
-[0x3d, 0xf0]
-# CHECK-DENSITY: nop.n
+[0x30,0x64,0x50]
+# CHECK-REGPROTECT: witlb a3, a4
 # CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding

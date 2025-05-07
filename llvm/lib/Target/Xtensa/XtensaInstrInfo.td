@@ -994,13 +994,13 @@ let Predicates = [HasRegionProtection] in {
   def IDTLB : RRR_Inst<0x00, 0x00, 0x05, (outs), (ins AR:$s),
                      "idtlb\t$s", []> {
     let r = 0xC;
-	let t = 0x0;
+	  let t = 0x0;
   }
 
-  def IITLB : RRR_Inst<0x00, 0x00, 0x05, (outs AR:$t), (ins AR:$s),
+  def IITLB : RRR_Inst<0x00, 0x00, 0x05, (outs), (ins AR:$s),
                      "iitlb\t$s", []> {
     let r = 0x4;
-	let t = 0x0;
+	  let t = 0x0;
   }
 
   def PDTLB : RRR_Inst<0x00, 0x00, 0x05, (outs AR:$t), (ins AR:$s),

@@ -116,7 +116,7 @@ def MR23 :  RegisterClass<"Xtensa", [i32], 32, (add M2, M3)>;
 def MR   :  RegisterClass<"Xtensa", [i32], 32, (add MR01, MR23)>;
 
 def SR :  RegisterClass<"Xtensa", [i32], 32, (add
-  LBEG, LEND, LCOUNT, SAR, BREG, LITBASE, MR, WINDOWBASE, WINDOWSTART,
+  LBEG, LEND, LCOUNT, SAR, BREG, LITBASE, ACCLO, ACCHI, MR, WINDOWBASE, WINDOWSTART,
   MEMCTL, VECBASE, MISC0, MISC1, MISC2, MISC3)>;
 
 //===----------------------------------------------------------------------===//

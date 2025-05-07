@@ -87,6 +87,13 @@ bool Xtensa::checkRegister(MCRegister RegNo, const FeatureBitset &FeatureBits) {
     return FeatureBits[Xtensa::FeatureExtendedL32R];
   case Xtensa::MEMCTL:
     return FeatureBits[Xtensa::FeatureDataCache];
+  case Xtensa::ACCLO:
+  case Xtensa::ACCHI:
+  case Xtensa::M0:
+  case Xtensa::M1:
+  case Xtensa::M2:
+  case Xtensa::M3:
+    return FeatureBits[Xtensa::FeatureMAC16];
   case Xtensa::MISC0:
   case Xtensa::MISC1:
   case Xtensa::MISC2:
