@@ -45,22 +45,22 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
                                             const MCFixup &Fixup,
                                             bool IsPCRel) const {
   switch (Target.getSpecifier()) {
-  case SparcMCExpr::VK_TLS_GD_HI22:
-  case SparcMCExpr::VK_TLS_GD_LO10:
-  case SparcMCExpr::VK_TLS_GD_ADD:
-  case SparcMCExpr::VK_TLS_LDM_HI22:
-  case SparcMCExpr::VK_TLS_LDM_LO10:
-  case SparcMCExpr::VK_TLS_LDM_ADD:
-  case SparcMCExpr::VK_TLS_LDO_HIX22:
-  case SparcMCExpr::VK_TLS_LDO_LOX10:
-  case SparcMCExpr::VK_TLS_LDO_ADD:
-  case SparcMCExpr::VK_TLS_IE_HI22:
-  case SparcMCExpr::VK_TLS_IE_LO10:
-  case SparcMCExpr::VK_TLS_IE_LD:
-  case SparcMCExpr::VK_TLS_IE_LDX:
-  case SparcMCExpr::VK_TLS_IE_ADD:
-  case SparcMCExpr::VK_TLS_LE_HIX22:
-  case SparcMCExpr::VK_TLS_LE_LOX10:
+  case ELF::R_SPARC_TLS_GD_HI22:
+  case ELF::R_SPARC_TLS_GD_LO10:
+  case ELF::R_SPARC_TLS_GD_ADD:
+  case ELF::R_SPARC_TLS_LDM_HI22:
+  case ELF::R_SPARC_TLS_LDM_LO10:
+  case ELF::R_SPARC_TLS_LDM_ADD:
+  case ELF::R_SPARC_TLS_LDO_HIX22:
+  case ELF::R_SPARC_TLS_LDO_LOX10:
+  case ELF::R_SPARC_TLS_LDO_ADD:
+  case ELF::R_SPARC_TLS_IE_HI22:
+  case ELF::R_SPARC_TLS_IE_LO10:
+  case ELF::R_SPARC_TLS_IE_LD:
+  case ELF::R_SPARC_TLS_IE_LDX:
+  case ELF::R_SPARC_TLS_IE_ADD:
+  case ELF::R_SPARC_TLS_LE_HIX22:
+  case ELF::R_SPARC_TLS_LE_LOX10:
     if (auto *SA = Target.getAddSym())
       cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
     break;
@@ -75,7 +75,7 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
     return Kind;
 
   if (const SparcMCExpr *SExpr = dyn_cast<SparcMCExpr>(Fixup.getValue())) {
-    if (SExpr->getSpecifier() == SparcMCExpr::VK_R_DISP32)
+    if (SExpr->getSpecifier() == ELF::R_SPARC_DISP32)
       return ELF::R_SPARC_DISP32;
   }
 
@@ -87,17 +87,14 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
     case FK_Data_2:                  return ELF::R_SPARC_DISP16;
     case FK_Data_4:                  return ELF::R_SPARC_DISP32;
     case FK_Data_8:                  return ELF::R_SPARC_DISP64;
-    case Sparc::fixup_sparc_call30:  return ELF::R_SPARC_WDISP30;
-    case Sparc::fixup_sparc_br22:    return ELF::R_SPARC_WDISP22;
-    case Sparc::fixup_sparc_br19:    return ELF::R_SPARC_WDISP19;
-    case Sparc::fixup_sparc_br16:
-      return ELF::R_SPARC_WDISP16;
-    case Sparc::fixup_sparc_pc22:    return ELF::R_SPARC_PC22;
-    case Sparc::fixup_sparc_pc10:    return ELF::R_SPARC_PC10;
-    case Sparc::fixup_sparc_wplt30:  return ELF::R_SPARC_WPLT30;
+    case Sparc::fixup_sparc_call30:
+      if (Ctx.getObjectFileInfo()->isPositionIndependent())
+        return ELF::R_SPARC_WPLT30;
+      return ELF::R_SPARC_WDISP30;
     }
   }
 
+  // clang-format off
   switch(Fixup.getTargetKind()) {
   default:
     llvm_unreachable("Unimplemented fixup -> relocation");
@@ -116,21 +113,8 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
     if (Ctx.getObjectFileInfo()->isPositionIndependent())
       return ELF::R_SPARC_GOT13;
     return ELF::R_SPARC_13;
-
-  case Sparc::fixup_sparc_hi22:  return ELF::R_SPARC_HI22;
-  case Sparc::fixup_sparc_lo10:  return ELF::R_SPARC_LO10;
-  case Sparc::fixup_sparc_h44:   return ELF::R_SPARC_H44;
-  case Sparc::fixup_sparc_m44:   return ELF::R_SPARC_M44;
-  case Sparc::fixup_sparc_l44:   return ELF::R_SPARC_L44;
-  case Sparc::fixup_sparc_hh:    return ELF::R_SPARC_HH22;
-  case Sparc::fixup_sparc_hm:    return ELF::R_SPARC_HM10;
-  case Sparc::fixup_sparc_lm:    return ELF::R_SPARC_LM22;
-  case Sparc::fixup_sparc_hix22:         return ELF::R_SPARC_HIX22;
-  case Sparc::fixup_sparc_lox10:         return ELF::R_SPARC_LOX10;
-  case Sparc::fixup_sparc_gotdata_hix22: return ELF::R_SPARC_GOTDATA_HIX22;
-  case Sparc::fixup_sparc_gotdata_lox10: return ELF::R_SPARC_GOTDATA_LOX10;
-  case Sparc::fixup_sparc_gotdata_op:    return ELF::R_SPARC_GOTDATA_OP;
   }
+  // clang-format on
 
   return ELF::R_SPARC_NONE;
 }

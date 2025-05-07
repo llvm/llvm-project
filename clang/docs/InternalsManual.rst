@@ -276,7 +276,7 @@ Description:
   diagnostic instead of having to do things textually.  The selected string
   does undergo formatting.
 
-**"enum_select format**
+**"enum_select" format**
 
 Example:
   ``unknown frobbling of a %enum_select<FrobbleKind>{%VarDecl{variable declaration}|%FuncDecl{function declaration}}0 when blarging``

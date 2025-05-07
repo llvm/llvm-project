@@ -3997,8 +3997,6 @@ Error BitcodeReader::rememberAndSkipFunctionBodies() {
   // finished the parse greedily.
   assert(SeenValueSymbolTable);
 
-  SmallVector<uint64_t, 64> Record;
-
   while (true) {
     Expected<llvm::BitstreamEntry> MaybeEntry = Stream.advance();
     if (!MaybeEntry)

@@ -3,9 +3,11 @@
 
 // Check sparc-sun-solaris2.11, 32bit
 // RUN: %clang -### %s --target=sparc-sun-solaris2.11 -fuse-ld= \
+// RUN:     -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK-LD-SPARC32,CHECK-LD %s
 // RUN: %clang -### %s --target=sparc-sun-solaris2.11 -fuse-ld=gld \
+// RUN:     -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK-LD-SPARC32,CHECK-GLD %s
 // CHECK-LD-SPARC32-NOT: warning:
@@ -29,6 +31,7 @@
 
 // Check sparc-sun-solaris2.11, 64bit
 // RUN: %clang -m64 -### %s 2>&1 --target=sparc-sun-solaris2.11 \
+// RUN:     -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/solaris_sparc_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-SPARC64 %s
 // CHECK-LD-SPARC64-NOT: warning:
@@ -50,6 +53,7 @@
 
 // Check i386-pc-solaris2.11, 32bit
 // RUN: %clang -### %s 2>&1 --target=i386-pc-solaris2.11 \
+// RUN:     -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/solaris_x86_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-X32 %s
 // CHECK-LD-X32-NOT: warning:
@@ -72,6 +76,7 @@
 // Check i386-pc-solaris2.11, 64bit
 // RUN: %clang -m64 -### %s 2>&1 \
 // RUN:     --target=i386-pc-solaris2.11 \
+// RUN:     -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/solaris_x86_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-X64 %s
 // CHECK-LD-X64-NOT: warning:
@@ -94,6 +99,7 @@
 // Check the right -l flags are present with -shared
 // RUN: %clang -### %s -shared 2>&1 \
 // RUN:     --target=sparc-sun-solaris2.11 \
+// RUN:     -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/solaris_sparc_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-SPARC32-SHARED %s
 // CHECK-SPARC32-SHARED: "{{.*}}ld{{(.exe)?}}"
@@ -103,7 +109,7 @@
 
 /// Check that -static-libgcc is supported.
 // RUN: %clang -### %s --target=sparc-sun-solaris2.11 \
-// RUN:     -static-libgcc \
+// RUN:     -static-libgcc -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK-STATIC-LIBGCC %s
 // CHECK-STATIC-LIBGCC-NOT: warning: argument unused during compilation: '-static-libgcc'
@@ -112,15 +118,19 @@
 
 // Check that libm is only linked with clang++.
 // RUN: %clang -### %s --target=sparc-sun-solaris2.11 \
+// RUN:     -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NOLIBM %s
 // RUN: %clang -### %s -shared --target=sparc-sun-solaris2.11 \
+// RUN:     -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NOLIBM %s
 // RUN: %clangxx -### %s --target=sparc-sun-solaris2.11 \
+// RUN:     -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-LIBM %s
 // RUN: %clangxx -### %s -shared --target=sparc-sun-solaris2.11 \
+// RUN:     -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-LIBM %s
 // CHECK-LIBM: "-lm"
@@ -128,35 +138,45 @@
 
 // Check the right ld flags are present with -pie.
 // RUN: %clang --target=sparc-sun-solaris2.11 -### %s -pie -fuse-ld= \
+// RUN:     -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PIE-LD %s
 // RUN: %clang --target=sparc-sun-solaris2.11 -### %s -pie -fuse-ld=gld \
+// RUN:     -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PIE-GLD %s
 // RUN: %clang --target=sparc-sun-solaris2.11 -### %s -no-pie -fuse-ld= \
+// RUN:     -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NOPIE-LD %s
 // RUN: %clang --target=sparc-sun-solaris2.11 -### %s -no-pie -fuse-ld=gld \
+// RUN:     -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NOPIE-GLD %s
 
 // Check that -shared/-r/-static disable PIE.
 // RUN: %clang --target=sparc-sun-solaris2.11 -### %s -shared -pie -fuse-ld= \
+// RUN:     -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NOPIE-LD %s
 // RUN: %clang --target=sparc-sun-solaris2.11 -### %s -shared -pie -fuse-ld=gld \
+// RUN:     -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NOPIE-GLD %s
 // RUN: %clang --target=sparc-sun-solaris2.11 -### %s -r -pie -fuse-ld= \
+// RUN:     -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NOPIE-LD %s
 // RUN: %clang --target=sparc-sun-solaris2.11 -### %s -r -pie -fuse-ld=gld \
+// RUN:     -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NOPIE-GLD %s
 // RUN: %clang --target=sparc-sun-solaris2.11 -### %s -static -pie -fuse-ld= \
+// RUN:     -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NOPIE-LD %s
 // RUN: %clang --target=sparc-sun-solaris2.11 -### %s -static -pie -fuse-ld=gld \
+// RUN:     -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NOPIE-GLD %s
 
@@ -167,6 +187,7 @@
 
 // -r suppresses default -l and crt*.o, values-*.o like -nostdlib.
 // RUN: %clang -### %s --target=sparc-sun-solaris2.11 -r 2>&1 \
+// RUN:     -rtlib=platform --unwindlib=platform \
 // RUN:   | FileCheck %s --check-prefix=CHECK-RELOCATABLE
 // CHECK-RELOCATABLE:     "-L
 // CHECK-RELOCATABLE:     "-r"
@@ -177,15 +198,19 @@
 
 // Check that crt{begin,end}S.o is linked with -shared/-pie.
 // RUN: %clang --target=sparc-sun-solaris2.11 -### %s \
+// RUN:        -rtlib=platform --unwindlib=platform \
 // RUN:        --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NOCRTS %s
 // RUN: %clang --target=sparc-sun-solaris2.11 -### %s -shared \
+// RUN:        -rtlib=platform --unwindlib=platform \
 // RUN:        --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-CRTS %s
 // RUN: %clang --target=sparc-sun-solaris2.11 -### %s -no-pie \
+// RUN:        -rtlib=platform --unwindlib=platform \
 // RUN:        --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NOCRTS %s
 // RUN: %clang --target=sparc-sun-solaris2.11 -### %s -pie \
+// RUN:        -rtlib=platform --unwindlib=platform \
 // RUN:        --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-CRTS %s
 // CHECK-CRTS: crtbeginS.o
@@ -197,12 +222,15 @@
 
 // Check sparc-sun-solaris2.11, 32bit
 // RUN: %clang --target=sparc-sun-solaris2.11 -### %s \
+// RUN:        -rtlib=platform --unwindlib=platform \
 // RUN:        --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NOCRTFASTMATH-SPARC32 %s
 // RUN: %clang --target=sparc-sun-solaris2.11 -### %s -ffast-math \
+// RUN:        -rtlib=platform --unwindlib=platform \
 // RUN:        --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-CRTFASTMATH-SPARC32 %s
 // RUN: %clang --target=sparc-sun-solaris2.11 -### %s -ffp-model=fast \
+// RUN:        -rtlib=platform --unwindlib=platform \
 // RUN:        --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-CRTFASTMATH-SPARC32 %s
 // CHECK-CRTFASTMATH-SPARC32: "-isysroot" "[[SYSROOT:[^"]+]]"
@@ -211,9 +239,11 @@
 
 // Check sparc-pc-solaris2.11, 64bit
 // RUN: %clang -m64 --target=sparc-sun-solaris2.11 -### %s \
+// RUN:        -rtlib=platform --unwindlib=platform \
 // RUN:        --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NOCRTFASTMATH-SPARC64 %s
 // RUN: %clang -m64 --target=sparc-sun-solaris2.11 -### %s -ffast-math \
+// RUN:        -rtlib=platform --unwindlib=platform \
 // RUN:        --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-CRTFASTMATH-SPARC64 %s
 // CHECK-CRTFASTMATH-SPARC64: "-isysroot" "[[SYSROOT:[^"]+]]"
@@ -222,9 +252,11 @@
 
 // Check i386-pc-solaris2.11, 32bit
 // RUN: %clang --target=i386-pc-solaris2.11 -### %s \
+// RUN:        -rtlib=platform --unwindlib=platform \
 // RUN:        --sysroot=%S/Inputs/solaris_x86_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NOCRTFASTMATH-X32 %s
 // RUN: %clang --target=i386-pc-solaris2.11 -### %s -ffast-math \
+// RUN:        -rtlib=platform --unwindlib=platform \
 // RUN:        --sysroot=%S/Inputs/solaris_x86_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-CRTFASTMATH-X32 %s
 // CHECK-CRTFASTMATH-X32: "-isysroot" "[[SYSROOT:[^"]+]]"
@@ -233,9 +265,11 @@
 
 // Check i386-pc-solaris2.11, 64bit
 // RUN: %clang -m64 --target=i386-pc-solaris2.11 -### %s \
+// RUN:        -rtlib=platform --unwindlib=platform \
 // RUN:        --sysroot=%S/Inputs/solaris_x86_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NOCRTFASTMATH-X64 %s
 // RUN: %clang -m64 --target=i386-pc-solaris2.11 -### %s -ffast-math \
+// RUN:        -rtlib=platform --unwindlib=platform \
 // RUN:        --sysroot=%S/Inputs/solaris_x86_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-CRTFASTMATH-X64 %s
 // CHECK-CRTFASTMATH-X64: "-isysroot" "[[SYSROOT:[^"]+]]"

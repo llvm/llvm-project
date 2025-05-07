@@ -1,6 +1,7 @@
-// RUN: %clang_cc1 -fsyntax-only -verify=c,both -Wjump-bypasses-init %s
+// RUN: %clang_cc1 -fsyntax-only -verify=c,both -Wjump-misses-init %s
 // RUN: %clang_cc1 -fsyntax-only -verify=c,both -Wc++-compat %s
 // RUN: %clang_cc1 -fsyntax-only -verify=good %s
+// RUN: %clang_cc1 -fsyntax-only -verify=good -fms-compatibility %s
 // RUN: %clang_cc1 -fsyntax-only -verify=cxx,both -x c++ %s
 // good-no-diagnostics
 

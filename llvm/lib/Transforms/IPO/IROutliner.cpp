@@ -2296,7 +2296,6 @@ void IROutliner::deduplicateExtractedSections(
   fillOverallFunction(M, CurrentGroup, OutputStoreBBs, FuncsToRemove,
                       OutputMappings);
 
-  std::vector<Value *> SortedKeys;
   for (unsigned Idx = 1; Idx < CurrentGroup.Regions.size(); Idx++) {
     CurrentOS = CurrentGroup.Regions[Idx];
     AttributeFuncs::mergeAttributesForOutlining(*CurrentGroup.OutlinedFunction,

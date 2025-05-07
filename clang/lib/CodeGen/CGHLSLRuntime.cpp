@@ -446,7 +446,6 @@ static void gatherFunctions(SmallVectorImpl<Function *> &Fns, llvm::Module &M,
   // HLSL neither supports priorities or COMDat values, so we will check those
   // in an assert but not handle them.
 
-  llvm::SmallVector<Function *> CtorFns;
   for (const auto &Ctor : CA->operands()) {
     if (isa<ConstantAggregateZero>(Ctor))
       continue;

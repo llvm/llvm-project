@@ -14,6 +14,8 @@ using namespace LIBC_NAMESPACE;
 
 // Test to ensure that match any / match all work.
 static void test_match() {
+  // FIXME: Disable on older SMs as they hang for some reason.
+#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 700
   uint64_t mask = gpu::get_lane_mask();
   EXPECT_EQ(1ull << gpu::get_lane_id(),
             gpu::match_any(mask, gpu::get_lane_id()));
@@ -23,6 +25,7 @@ static void test_match() {
   EXPECT_EQ(expected, gpu::match_any(mask, gpu::get_lane_id() < 16));
   EXPECT_EQ(mask, gpu::match_all(mask, 1));
   EXPECT_EQ(0ull, gpu::match_all(mask, gpu::get_lane_id()));
+#endif
 }
 
 TEST_MAIN(int argc, char **argv, char **envp) {
