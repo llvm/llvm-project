@@ -213,7 +213,7 @@ bool GetStackAddressInformation(uptr addr, uptr access_size,
 
 #if SANITIZER_PPC64V1 || SANITIZER_AIX
   // On PowerPC64 ELFv1 or AIX, the address of a function actually points to a
-  // three-doubleword (or three-word for 32-bit AIX) data structure with 
+  // three-doubleword (or three-word for 32-bit AIX) data structure with
   // the first field containing the address of the function's code.
   descr->frame_pc = *reinterpret_cast<uptr *>(descr->frame_pc);
 #endif
