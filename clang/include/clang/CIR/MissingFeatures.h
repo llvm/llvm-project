@@ -111,6 +111,10 @@ struct MissingFeatures {
   // Unary operator handling
   static bool opUnaryPromotionType() { return false; }
 
+  // SwitchOp handling
+  static bool foldCascadingCases() { return false; }
+  static bool foldRangeCase() { return false; }
+
   // Clang early optimizations or things defered to LLVM lowering.
   static bool mayHaveIntegerOverflow() { return false; }
   static bool shouldReverseUnaryCondOnBoolExpr() { return false; }
@@ -176,7 +180,6 @@ struct MissingFeatures {
   static bool targetSpecificCXXABI() { return false; }
   static bool moduleNameHash() { return false; }
   static bool setDSOLocal() { return false; }
-  static bool foldCaseStmt() { return false; }
   static bool constantFoldSwitchStatement() { return false; }
   static bool cudaSupport() { return false; }
   static bool maybeHandleStaticInExternC() { return false; }
