@@ -283,39 +283,43 @@ uint32_t Block::GetRangeIndexContainingAddress(const Address &addr) {
   return m_ranges.FindEntryIndexThatContains(file_addr - func_file_addr);
 }
 
+static AddressRange ToAddressRange(const Address &func_addr,
+                                   const Block::Range &block_range) {
+  assert(func_addr.GetModule());
+  return AddressRange(func_addr.GetFileAddress() + block_range.base,
+                      block_range.size,
+                      func_addr.GetModule()->GetSectionList());
+}
+
 bool Block::GetRangeAtIndex(uint32_t range_idx, AddressRange &range) {
   if (range_idx >= m_ranges.GetSize())
     return false;
 
-  Function &function = GetFunction();
-  const Range &vm_range = m_ranges.GetEntryRef(range_idx);
-  range.GetBaseAddress() = function.GetAddress();
-  range.GetBaseAddress().Slide(vm_range.GetRangeBase());
-  range.SetByteSize(vm_range.GetByteSize());
+  Address addr = GetFunction().GetAddress();
+  if (!addr.GetModule())
+    return false;
+
+  range = ToAddressRange(addr, m_ranges.GetEntryRef(range_idx));
   return true;
 }
 
 AddressRanges Block::GetRanges() {
+  Address addr = GetFunction().GetAddress();
+  if (!addr.GetModule())
+    return {};
+
   AddressRanges ranges;
-  Function &function = GetFunction();
-  for (size_t i = 0, e = m_ranges.GetSize(); i < e; ++i) {
-    ranges.emplace_back();
-    auto &range = ranges.back();
-    const Range &vm_range = m_ranges.GetEntryRef(i);
-    range.GetBaseAddress() = function.GetAddress();
-    range.GetBaseAddress().Slide(vm_range.GetRangeBase());
-    range.SetByteSize(vm_range.GetByteSize());
-  }
+  for (size_t i = 0, e = m_ranges.GetSize(); i < e; ++i)
+    ranges.push_back(ToAddressRange(addr, m_ranges.GetEntryRef(i)));
   return ranges;
 }
 
 bool Block::GetStartAddress(Address &addr) {
-  if (m_ranges.IsEmpty())
+  Address func_addr = GetFunction().GetAddress();
+  if (!func_addr.GetModule() || m_ranges.IsEmpty())
     return false;
 
-  Function &function = GetFunction();
-  addr = function.GetAddress();
-  addr.Slide(m_ranges.GetEntryRef(0).GetRangeBase());
+  addr = ToAddressRange(func_addr, m_ranges.GetEntryRef(0)).GetBaseAddress();
   return true;
 }
 
