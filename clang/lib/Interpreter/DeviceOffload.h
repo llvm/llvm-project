@@ -28,8 +28,7 @@ class IncrementalCUDADeviceParser : public IncrementalParser {
 
 public:
   IncrementalCUDADeviceParser(
-      std::unique_ptr<CompilerInstance> DeviceInstance,
-      CompilerInstance &HostInstance,
+      CompilerInstance &DeviceInstance, CompilerInstance &HostInstance,
       llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS,
       llvm::Error &Err, const std::list<PartialTranslationUnit> &PTUs);
 
@@ -42,7 +41,6 @@ public:
   ~IncrementalCUDADeviceParser();
 
 protected:
-  std::unique_ptr<CompilerInstance> DeviceCI;
   int SMVersion;
   llvm::SmallString<1024> PTXCode;
   llvm::SmallVector<char, 1024> FatbinContent;

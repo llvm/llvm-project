@@ -109,7 +109,12 @@ def pfalse: PatFrag<(ops), (HexagonPFALSE)>;
 def pnot:   PatFrag<(ops node:$Pu), (xor node:$Pu, ptrue)>;
 
 def: Pat<(v8i1 (HexagonPFALSE)), (C2_tfrrp (A2_tfrsi (i32 0)))>;
+def: Pat<(v4i1 (HexagonPFALSE)), (C2_tfrrp (A2_tfrsi (i32 0)))>;
+def: Pat<(v2i1 (HexagonPFALSE)), (C2_tfrrp (A2_tfrsi (i32 0)))>;
+
 def: Pat<(v8i1 (HexagonPTRUE)), (C2_tfrrp (A2_tfrsi (i32 -1)))>;
+def: Pat<(v4i1 (HexagonPTRUE)), (C2_tfrrp (A2_tfrsi (i32 -1)))>;
+def: Pat<(v2i1 (HexagonPTRUE)), (C2_tfrrp (A2_tfrsi (i32 -1)))>;
 
 def valign: PatFrag<(ops node:$Vt, node:$Vs, node:$Ru),
                     (HexagonVALIGN node:$Vt, node:$Vs, node:$Ru)>;

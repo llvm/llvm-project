@@ -67,20 +67,18 @@
 using namespace clang;
 
 CompilerInstance::CompilerInstance(
+    std::shared_ptr<CompilerInvocation> Invocation,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     ModuleCache *ModCache)
     : ModuleLoader(/*BuildingModule=*/ModCache),
-      Invocation(new CompilerInvocation()),
+      Invocation(std::move(Invocation)),
       ModCache(ModCache ? ModCache : createCrossProcessModuleCache()),
-      ThePCHContainerOperations(std::move(PCHContainerOps)) {}
+      ThePCHContainerOperations(std::move(PCHContainerOps)) {
+  assert(this->Invocation && "Invocation must not be null");
+}
 
 CompilerInstance::~CompilerInstance() {
   assert(OutputFiles.empty() && "Still output files in flight?");
-}
-
-void CompilerInstance::setInvocation(
-    std::shared_ptr<CompilerInvocation> Value) {
-  Invocation = std::move(Value);
 }
 
 bool CompilerInstance::shouldBuildGlobalModuleIndex() const {
@@ -582,13 +580,13 @@ struct ReadModuleNames : ASTReaderListener {
     ModuleMap &MM = PP.getHeaderSearchInfo().getModuleMap();
     for (const std::string &LoadedModule : LoadedModules)
       MM.cacheModuleLoad(*PP.getIdentifierInfo(LoadedModule),
-                         MM.findModule(LoadedModule));
+                         MM.findOrLoadModule(LoadedModule));
     LoadedModules.clear();
   }
 
   void markAllUnavailable() {
     for (const std::string &LoadedModule : LoadedModules) {
-      if (Module *M = PP.getHeaderSearchInfo().getModuleMap().findModule(
+      if (Module *M = PP.getHeaderSearchInfo().getModuleMap().findOrLoadModule(
               LoadedModule)) {
         M->HasIncompatibleModuleFile = true;
 
@@ -1210,11 +1208,10 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
   // CompilerInstance::CompilerInstance is responsible for finalizing the
   // buffers to prevent use-after-frees.
   auto InstancePtr = std::make_unique<CompilerInstance>(
-      getPCHContainerOperations(), &getModuleCache());
+      std::move(Invocation), getPCHContainerOperations(), &getModuleCache());
   auto &Instance = *InstancePtr;
 
-  auto &Inv = *Invocation;
-  Instance.setInvocation(std::move(Invocation));
+  auto &Inv = Instance.getInvocation();
 
   if (ThreadSafeConfig) {
     Instance.createFileManager(ThreadSafeConfig->getVFS());
@@ -1289,7 +1286,7 @@ bool CompilerInstance::compileModule(SourceLocation ImportLoc,
 
   // Execute the action to actually build the module in-place. Use a separate
   // thread so that we get a stack large enough.
-  bool Crashed = !llvm::CrashRecoveryContext().RunSafelyOnThread(
+  bool Crashed = !llvm::CrashRecoveryContext().RunSafelyOnNewStack(
       [&]() {
         GenerateModuleFromModuleMapAction Action;
         Instance.ExecuteAction(Action);

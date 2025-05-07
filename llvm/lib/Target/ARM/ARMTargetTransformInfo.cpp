@@ -901,8 +901,8 @@ InstructionCost ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
 
 InstructionCost ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
                                                TTI::TargetCostKind CostKind,
-                                               unsigned Index, Value *Op0,
-                                               Value *Op1) const {
+                                               unsigned Index, const Value *Op0,
+                                               const Value *Op1) const {
   // Penalize inserting into an D-subregister. We end up with a three times
   // lower estimated throughput on swift.
   if (ST->hasSlowLoadDSubregister() && Opcode == Instruction::InsertElement &&
@@ -2436,7 +2436,6 @@ static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
 
   // Next, check that all instructions can be tail-predicated.
   PredicatedScalarEvolution PSE = LAI->getPSE();
-  SmallVector<Instruction *, 16> LoadStores;
   int ICmpCount = 0;
 
   for (BasicBlock *BB : L->blocks()) {

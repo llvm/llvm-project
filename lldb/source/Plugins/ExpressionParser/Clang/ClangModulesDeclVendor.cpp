@@ -325,7 +325,7 @@ bool ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
       auto file = HS.lookupModuleMapFile(*dir, is_framework);
       if (!file)
         return error();
-      if (!HS.loadModuleMapFile(*file, is_system))
+      if (!HS.parseAndLoadModuleMapFile(*file, is_system))
         return error();
     }
   }
@@ -731,13 +731,11 @@ ClangModulesDeclVendor::Create(Target &target) {
   invocation->getPreprocessorOpts().addRemappedFile(ModuleImportBufferName,
                                                     source_buffer.release());
 
-  std::unique_ptr<clang::CompilerInstance> instance(
-      new clang::CompilerInstance);
+  auto instance = std::make_unique<clang::CompilerInstance>(invocation);
 
   // Make sure clang uses the same VFS as LLDB.
   instance->createFileManager(FileSystem::Instance().GetVirtualFileSystem());
   instance->setDiagnostics(diagnostics_engine.get());
-  instance->setInvocation(invocation);
 
   std::unique_ptr<clang::FrontendAction> action(new clang::SyntaxOnlyAction);
 
