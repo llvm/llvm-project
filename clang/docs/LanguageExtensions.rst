@@ -1860,7 +1860,7 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_trivially_copyable`` (C++, GNU, Microsoft)
 * ``__is_trivially_destructible`` (C++, MSVC 2013)
 * ``__is_trivially_relocatable`` (Clang) (Deprecated,
-   use ``__builtin_is_cpp_trivially_relocatable`` instead).
+  use ``__builtin_is_cpp_trivially_relocatable`` instead).
   Returns true if moving an object
   of the given type, and then destroying the source object, is known to be
   functionally equivalent to copying the underlying bytes and then dropping the
