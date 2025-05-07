@@ -2116,7 +2116,7 @@ void JumpThreadingPass::cloneInstructions(ValueToValueMapTy &ValueMapping,
     if (const DebugLoc &DL = New->getDebugLoc())
       mapAtomInstance(DL, ValueMapping);
 
-      if (RetargetDbgValueIfPossible(New))
+    if (RetargetDbgValueIfPossible(New))
       continue;
 
     // Remap operands to patch up intra-block references.
