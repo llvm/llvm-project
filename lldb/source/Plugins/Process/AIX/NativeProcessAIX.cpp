@@ -19,7 +19,7 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
-
+#include <sys/procfs.h>
 #include "NativeThreadAIX.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 //#include "Plugins/Process/Utility/LinuxProcMaps.h"
@@ -79,6 +79,7 @@ using namespace lldb_private;
 using namespace lldb_private::process_aix;
 using namespace llvm;
 
+typedef std::function<bool(llvm::Expected<MemoryRegionInfo>)> AIXMapCallback;
 // Private bits we only need internally.
 
 static bool ProcessVmReadvSupported() {
@@ -988,13 +989,6 @@ Status NativeProcessAIX::GetMemoryRegionInfo(lldb::addr_t load_addr,
   for (auto it = m_mem_region_cache.begin(); it != m_mem_region_cache.end();
        ++it) {
     MemoryRegionInfo &proc_entry_info = it->first;
-
-    // Sanity check assumption that /proc/{pid}/maps entries are ascending.
-    assert((proc_entry_info.GetRange().GetRangeBase() >= prev_base_address) &&
-           "descending /proc/pid/maps entries detected, unexpected");
-    prev_base_address = proc_entry_info.GetRange().GetRangeBase();
-    UNUSED_IF_ASSERT_DISABLED(prev_base_address);
-
     // If the target address comes before this entry, indicate distance to next
     // region.
     if (load_addr < proc_entry_info.GetRange().GetRangeBase()) {
@@ -1029,9 +1023,59 @@ Status NativeProcessAIX::GetMemoryRegionInfo(lldb::addr_t load_addr,
   return error;
 }
 
+// Parsing the AIX map file /proc/PID/map
+// The map file contains an array of prmap structures
+// which has all the information like size, startaddress, object name, permissions
+bool ParseAIXMapRegions(const char *aix_map, AIXMapCallback const &callback) {
+  MemoryRegionInfo region;
+  struct prmap *prmapData = (struct prmap *)aix_map;
+  struct prmap *entry;
+  uint32_t perm_flag;
+
+  for(entry = prmapData;!(entry->pr_size == 0 && entry->pr_vaddr == NULL); entry++) {
+    const char *o_name = aix_map + entry->pr_pathoff;  
+    lldb::addr_t start_address = (lldb::addr_t )entry->pr_vaddr;
+    lldb::addr_t end_address = start_address + entry->pr_size; 
+    region.GetRange().SetRangeBase(start_address);
+    region.GetRange().SetRangeEnd(end_address);
+    region.SetMapped(MemoryRegionInfo::OptionalBool::eYes);
+    perm_flag = entry->pr_mflags;
+    
+    if(perm_flag & MA_READ)
+        region.SetReadable(MemoryRegionInfo::OptionalBool::eYes);
+    else
+        region.SetReadable(MemoryRegionInfo::OptionalBool::eNo);
+
+   if(perm_flag & MA_WRITE)
+        region.SetWritable(MemoryRegionInfo::OptionalBool::eYes);
+   else
+        region.SetWritable(MemoryRegionInfo::OptionalBool::eNo);
+
+   if(perm_flag & MA_EXEC)
+       region.SetExecutable(MemoryRegionInfo::OptionalBool::eYes);
+   else
+       region.SetExecutable(MemoryRegionInfo::OptionalBool::eNo);
+
+   if((perm_flag & MA_SLIBTEXT) || (perm_flag & MA_SLIBDATA))
+       region.SetShared(MemoryRegionInfo::OptionalBool::eYes);
+   else if ((perm_flag & MA_PLIBTEXT) || (perm_flag & MA_PLIBDATA))
+       region.SetShared(MemoryRegionInfo::OptionalBool::eNo);
+   else 
+       region.SetShared(MemoryRegionInfo::OptionalBool::eDontKnow);
+
+   if(o_name)
+        region.SetName(o_name);
+
+    callback(region);
+    region.Clear();
+  }
+
+  return true;
+}
+
+
 Status NativeProcessAIX::PopulateMemoryRegionCache() {
   Log *log = GetLog(POSIXLog::Process);
-
   // If our cache is empty, pull the latest.  There should always be at least
   // one memory region if memory region handling is supported.
   if (!m_mem_region_cache.empty()) {
@@ -1041,7 +1085,7 @@ Status NativeProcessAIX::PopulateMemoryRegionCache() {
   }
 
   Status Result;
-#if 0
+
   AIXMapCallback callback = [&](llvm::Expected<MemoryRegionInfo> Info) {
     if (Info) {
       FileSpec file_spec(Info->GetName().GetCString());
@@ -1050,26 +1094,17 @@ Status NativeProcessAIX::PopulateMemoryRegionCache() {
       return true;
     }
 
-    Result = Info.takeError();
+    Result = Status::FromError(Info.takeError());
     m_supports_mem_region = LazyBool::eLazyBoolNo;
     LLDB_LOG(log, "failed to parse proc maps: {0}", Result);
     return false;
   };
 
-  // AIX kernel since 2.6.14 has /proc/{pid}/smaps
-  // if CONFIG_PROC_PAGE_MONITOR is enabled
-  auto BufferOrError = getProcFile(GetID(), GetCurrentThreadID(), "smaps");
-  if (BufferOrError)
-    ParseAIXSMapRegions(BufferOrError.get()->getBuffer(), callback);
-  else {
-    BufferOrError = getProcFile(GetID(), GetCurrentThreadID(), "maps");
-    if (!BufferOrError) {
-      m_supports_mem_region = LazyBool::eLazyBoolNo;
-      return BufferOrError.getError();
-    }
-
-    ParseAIXMapRegions(BufferOrError.get()->getBuffer(), callback);
-  }
+  auto BufferOrError = getProcFile(GetID(), "map");
+  if (BufferOrError) {
+    std::unique_ptr<llvm::MemoryBuffer> MapBuffer = std::move(*BufferOrError);
+    ParseAIXMapRegions(MapBuffer->getBufferStart(), callback);
+  } 
 
   if (Result.Fail())
     return Result;
@@ -1090,7 +1125,7 @@ Status NativeProcessAIX::PopulateMemoryRegionCache() {
 
   // We support memory retrieval, remember that.
   m_supports_mem_region = LazyBool::eLazyBoolYes;
-#endif
+
   return Status();
 }
 
