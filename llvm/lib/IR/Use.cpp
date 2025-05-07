@@ -19,15 +19,11 @@ void Use::swap(Use &RHS) {
   std::swap(Next, RHS.Next);
   std::swap(Prev, RHS.Prev);
 
-  if (Prev)
-    *Prev = this;
-
+  *Prev = this;
   if (Next)
     Next->Prev = &Next;
 
-  if (RHS.Prev)
-    *RHS.Prev = &RHS;
-
+  *RHS.Prev = &RHS;
   if (RHS.Next)
     RHS.Next->Prev = &RHS.Next;
 }
