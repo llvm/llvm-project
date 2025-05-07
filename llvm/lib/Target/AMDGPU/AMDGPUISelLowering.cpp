@@ -4165,22 +4165,23 @@ SDValue AMDGPUTargetLowering::performSraCombine(SDNode *N,
   SDLoc SL(N);
   unsigned RHSVal = RHS->getZExtValue();
 
-  // (sra i64:x, 32) -> build_pair x, (sra hi_32(x), 31)
-  if (RHSVal == 32) {
+  // For C >= 32
+  // (sra i64:x, C) -> build_pair (sra hi_32(x), C - 32), (sra hi_32(x), 31)
+  if (32 <= RHSVal) {
     SDValue Hi = getHiHalf64(N->getOperand(0), DAG);
-    SDValue NewShift = DAG.getNode(ISD::SRA, SL, MVT::i32, Hi,
-                                   DAG.getConstant(31, SL, MVT::i32));
+    SDValue HiShift = DAG.getNode(ISD::SRA, SL, MVT::i32, Hi,
+                                  DAG.getConstant(31, SL, MVT::i32));
+    SDValue LoShift;
 
-    SDValue BuildVec = DAG.getBuildVector(MVT::v2i32, SL, {Hi, NewShift});
-    return DAG.getNode(ISD::BITCAST, SL, MVT::i64, BuildVec);
-  }
+    if (RHSVal == 63)
+      LoShift = HiShift;
+    else if (RHSVal == 32)
+      LoShift = Hi;
+    else
+      LoShift = DAG.getNode(ISD::SRA, SL, MVT::i32, Hi,
+                            DAG.getConstant(RHSVal - 32, SL, MVT::i32));
 
-  // (sra i64:x, 63) -> build_pair (sra hi_32(x), 31), (sra hi_32(x), 31)
-  if (RHSVal == 63) {
-    SDValue Hi = getHiHalf64(N->getOperand(0), DAG);
-    SDValue NewShift = DAG.getNode(ISD::SRA, SL, MVT::i32, Hi,
-                                   DAG.getConstant(31, SL, MVT::i32));
-    SDValue BuildVec = DAG.getBuildVector(MVT::v2i32, SL, {NewShift, NewShift});
+    SDValue BuildVec = DAG.getBuildVector(MVT::v2i32, SL, {LoShift, HiShift});
     return DAG.getNode(ISD::BITCAST, SL, MVT::i64, BuildVec);
   }
 
