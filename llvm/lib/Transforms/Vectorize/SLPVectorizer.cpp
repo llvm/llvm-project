@@ -10068,17 +10068,17 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
     return true;
   };
 
-  ScalarsVectorizationLegality SVL =
+  ScalarsVectorizationLegality Legality =
       getScalarsVectorizationLegality(VL, Depth, UserTreeIdx);
-  const InstructionsState &S = SVL.getInstructionsState();
-  if (!SVL.isLegal()) {
-    if (SVL.trySplitVectorize()) {
+  const InstructionsState &S = Legality.getInstructionsState();
+  if (!Legality.isLegal()) {
+    if (Legality.trySplitVectorize()) {
       auto [MainOp, AltOp] = getMainAltOpsNoStateVL(VL);
       // Last chance to try to vectorize alternate node.
       if (MainOp && AltOp && TrySplitNode(InstructionsState(MainOp, AltOp)))
         return;
     }
-    if (SVL.tryToFindDuplicates())
+    if (Legality.tryToFindDuplicates())
       tryToFindDuplicates(VL, ReuseShuffleIndices, *TTI, *TLI, S, UserTreeIdx);
 
     newGatherTreeEntry(VL, S, UserTreeIdx, ReuseShuffleIndices);
