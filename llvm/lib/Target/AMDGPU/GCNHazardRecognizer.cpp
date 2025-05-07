@@ -3044,9 +3044,8 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
     return false;
 
   const Register HazardReg = HazardDef->getReg();
-  auto *HazardRegRC = TRI->getPhysRegBaseClass(HazardReg);
-  bool IsSGPR32 = (HazardRegRC == TRI->getSGPRClassForBitWidth(32)) ||
-                  HazardReg == AMDGPU::VCC_LO || HazardReg == AMDGPU::VCC_HI;
+  bool IsSGPR32 = (AMDGPU::SReg_32RegClass.contains(HazardReg) ||
+                   HazardReg == AMDGPU::VCC_LO || HazardReg == AMDGPU::VCC_HI);
 
   // Setup to track writes to individual SGPRs
   if (IsSGPR32) {
@@ -3055,7 +3054,7 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
     InitialState.HazardSGPRs.insert(AMDGPU::VCC_LO);
     InitialState.HazardSGPRs.insert(AMDGPU::VCC_HI);
   } else {
-    assert(HazardRegRC && HazardRegRC == TRI->getSGPRClassForBitWidth(64));
+    assert(AMDGPU::SReg_64RegClass.contains(HazardReg));
     InitialState.HazardSGPRs.insert(TRI->getSubReg(HazardReg, AMDGPU::sub0));
     InitialState.HazardSGPRs.insert(TRI->getSubReg(HazardReg, AMDGPU::sub1));
   }
