@@ -841,15 +841,16 @@ template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, allocator_type&>& __v) {
   __annotate_delete();
-  auto __new_begin = __v.__begin_ - (__end_ - __begin_);
+  auto __new_begin = __v.begin() - size();
   std::__uninitialized_allocator_relocate(
       this->__alloc_, std::__to_address(__begin_), std::__to_address(__end_), std::__to_address(__new_begin));
-  __v.__begin_ = __new_begin;
+  __v.__data_.__begin_ = __new_begin;
   __end_       = __begin_; // All the objects have been destroyed by relocating them.
-  std::swap(this->__begin_, __v.__begin_);
-  std::swap(this->__end_, __v.__end_);
-  std::swap(this->__cap_, __v.__cap_);
-  __v.__first_ = __v.__begin_;
+
+  std::swap(this->__begin_, __v.__data_.__begin_);
+  std::swap(this->__end_, __v.__data_.__end_);
+  std::swap(this->__cap_, __v.__data_.__cap_);
+  __v.__data_.__first_ = __v.begin();
   __annotate_new(size());
 }
 
@@ -861,25 +862,25 @@ template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::pointer
 vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, allocator_type&>& __v, pointer __p) {
   __annotate_delete();
-  pointer __ret = __v.__begin_;
+  pointer __ret = __v.begin();
 
   // Relocate [__p, __end_) first to avoid having a hole in [__begin_, __end_)
   // in case something in [__begin_, __p) throws.
   std::__uninitialized_allocator_relocate(
-      this->__alloc_, std::__to_address(__p), std::__to_address(__end_), std::__to_address(__v.__end_));
-  __v.__end_ += (__end_ - __p);
+      this->__alloc_, std::__to_address(__p), std::__to_address(__end_), std::__to_address(__v.end()));
+  auto __relocated_so_far = __end_ - __p;
+  __v.__data_.__update_sentinel(__v.end() + __relocated_so_far);
   __end_           = __p; // The objects in [__p, __end_) have been destroyed by relocating them.
-  auto __new_begin = __v.__begin_ - (__p - __begin_);
+  auto __new_begin = __v.begin() - (__p - __begin_);
 
   std::__uninitialized_allocator_relocate(
       this->__alloc_, std::__to_address(__begin_), std::__to_address(__p), std::__to_address(__new_begin));
-  __v.__begin_ = __new_begin;
+  __v.__data_.__begin_ = __new_begin;
   __end_       = __begin_; // All the objects have been destroyed by relocating them.
-
-  std::swap(this->__begin_, __v.__begin_);
-  std::swap(this->__end_, __v.__end_);
-  std::swap(this->__cap_, __v.__cap_);
-  __v.__first_ = __v.__begin_;
+  std::swap(this->__begin_, __v.__data_.__begin_);
+  std::swap(this->__end_, __v.__data_.__end_);
+  std::swap(this->__cap_, __v.__data_.__cap_);
+  __v.__data_.__first_ = __v.begin();
   __annotate_new(size());
   return __ret;
 }
@@ -1127,8 +1128,9 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::pointer
 vector<_Tp, _Allocator>::__emplace_back_slow_path(_Args&&... __args) {
   __split_buffer<value_type, allocator_type&> __v(__recommend(size() + 1), size(), this->__alloc_);
   //    __v.emplace_back(std::forward<_Args>(__args)...);
-  __alloc_traits::construct(this->__alloc_, std::__to_address(__v.__end_), std::forward<_Args>(__args)...);
-  __v.__end_++;
+  pointer __end = __v.end();
+  __alloc_traits::construct(this->__alloc_, std::__to_address(__end), std::forward<_Args>(__args)...);
+  __v.__data_.__update_sentinel(++__end);
   __swap_out_circular_buffer(__v);
   return this->__end_;
 }
@@ -1303,14 +1305,14 @@ vector<_Tp, _Allocator>::__insert_with_sentinel(const_iterator __position, _Inpu
     __split_buffer<value_type, allocator_type&> __merged(
         __recommend(size() + __v.size()), __off, __alloc_); // has `__off` positions available at the front
     std::__uninitialized_allocator_relocate(
-        __alloc_, std::__to_address(__old_last), std::__to_address(this->__end_), std::__to_address(__merged.__end_));
+        __alloc_, std::__to_address(__old_last), std::__to_address(this->__end_), std::__to_address(__merged.end()));
     __guard.__complete(); // Release the guard once objects in [__old_last_, __end_) have been successfully relocated.
-    __merged.__end_ += this->__end_ - __old_last;
+    __merged.__data_.__update_sentinel(__merged.end() + (this->__end_ - __old_last));
     this->__end_ = __old_last;
     std::__uninitialized_allocator_relocate(
-        __alloc_, std::__to_address(__v.__begin_), std::__to_address(__v.__end_), std::__to_address(__merged.__end_));
-    __merged.__end_ += __v.size();
-    __v.__end_ = __v.__begin_;
+        __alloc_, std::__to_address(__v.begin()), std::__to_address(__v.end()), std::__to_address(__merged.end()));
+    __merged.__data_.__update_sentinel(__merged.size() + __v.size());
+    __v.__data_.__update_sentinel(__v.begin());
     __p        = __swap_out_circular_buffer(__merged, __p);
   }
   return __make_iter(__p);
