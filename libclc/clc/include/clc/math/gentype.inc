@@ -57,6 +57,8 @@
 #define __CLC_CONVERT_UINTN __CLC_XCONCAT(__clc_convert_, __CLC_UINTN)
 #define __CLC_CONVERT_ULONGN __CLC_XCONCAT(__clc_convert_, __CLC_ULONGN)
 
+#define __CLC_CONVERT_BIT_INTN __CLC_XCONCAT(__clc_convert_, __CLC_BIT_INTN)
+
 // See definitions of __CLC_S_GENTYPE/__CLC_U_GENTYPE below, which depend on the
 // specific size of floating-point type. These are the signed and unsigned
 // integers of the same bitwidth and element count as the GENTYPE. They match
@@ -71,8 +73,8 @@
 #if (!defined(__HALF_ONLY) && !defined(__DOUBLE_ONLY))
 #define __CLC_SCALAR_GENTYPE float
 #define __CLC_FPSIZE 32
-#define __CLC_FP_LIT(x) x##F
-#define __CLC_GENTYPE_NAN FLT_NAN
+#define __CLC_FP_LIT(x) (__CLC_GENTYPE) x##F
+#define __CLC_GENTYPE_NAN (__CLC_GENTYPE) FLT_NAN
 
 #define __CLC_S_GENTYPE __CLC_XCONCAT(int, __CLC_VECSIZE)
 #define __CLC_U_GENTYPE __CLC_XCONCAT(uint, __CLC_VECSIZE)
@@ -147,8 +149,8 @@
 
 #define __CLC_SCALAR_GENTYPE double
 #define __CLC_FPSIZE 64
-#define __CLC_FP_LIT(x) (x)
-#define __CLC_GENTYPE_NAN DBL_NAN
+#define __CLC_FP_LIT(x) (__CLC_GENTYPE)(x)
+#define __CLC_GENTYPE_NAN (__CLC_GENTYPE) DBL_NAN
 
 #define __CLC_S_GENTYPE __CLC_XCONCAT(long, __CLC_VECSIZE)
 #define __CLC_U_GENTYPE __CLC_XCONCAT(ulong, __CLC_VECSIZE)
@@ -223,8 +225,8 @@
 
 #define __CLC_SCALAR_GENTYPE half
 #define __CLC_FPSIZE 16
-#define __CLC_FP_LIT(x) x##H
-#define __CLC_GENTYPE_NAN HALF_NAN
+#define __CLC_FP_LIT(x) (__CLC_GENTYPE) x##H
+#define __CLC_GENTYPE_NAN (__CLC_GENTYPE) HALF_NAN
 
 #define __CLC_S_GENTYPE __CLC_XCONCAT(short, __CLC_VECSIZE)
 #define __CLC_U_GENTYPE __CLC_XCONCAT(ushort, __CLC_VECSIZE)
@@ -328,6 +330,8 @@
 #undef __CLC_CONVERT_USHORTN
 #undef __CLC_CONVERT_UINTN
 #undef __CLC_CONVERT_ULONGN
+
+#undef __CLC_CONVERT_BIT_INTN
 
 #undef __CLC_ULONGN
 #undef __CLC_UINTN
