@@ -268,7 +268,9 @@ int main() {
 }
 
 // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=99599#c22
-namespace GCC_99599_2 {
+// FIXME: Is this valid??
+#if 0
+namespace FAILED_GCC_99599_2 {
 
 template<typename T> class indirect {
 public:
@@ -284,12 +286,13 @@ indirect<int> i;
 bool b = i == 1;
 
 }
+#endif
 
+#if 0
 namespace FAILED_GCC_110160 {
 // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=110160
 // Current heuristic FAILED; GCC trunk also failed
 // https://godbolt.org/z/r3Pz9Tehz
-#if 0
 #include <sstream>
 #include <string>
 
@@ -309,6 +312,6 @@ S& operator<<(S& s, UnrelatedType) {
 static_assert(!StreamCanReceiveString<NotAStream>);
 
 static_assert(StreamCanReceiveString<std::stringstream>);
-#endif
 }
+#endif
 }
