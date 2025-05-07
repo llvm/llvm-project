@@ -44,13 +44,13 @@ multiclass VPseudoVQDOT_VV_VX {
 }
 
 // TODO: Add pseudo and patterns for vqdotus.vx
+// TODO: Add isCommutable for VQDOT and VQDOTU
 let Predicates = [HasStdExtZvqdotq], mayLoad = 0, mayStore = 0,
     hasSideEffects = 0 in {
   defm PseudoVQDOT : VPseudoVQDOT_VV_VX;
   defm PseudoVQDOTU : VPseudoVQDOT_VV_VX;
   defm PseudoVQDOTSU : VPseudoVQDOT_VV_VX;
 }
-
 
 defvar AllE32Vectors = [VI32MF2, VI32M1, VI32M2, VI32M4, VI32M8];
 defm : VPatBinaryVL_VV_VX<riscv_vqdot_vl, "PseudoVQDOT", AllE32Vectors>;
