@@ -137,23 +137,23 @@ later:
 
 // CHECK-LABEL: @_Z34explicit_private_address_space_ptrv(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[PLONG:%.*]] = alloca i64, align 8, addrspace(5)
-// CHECK-NEXT:    [[PLONGP:%.*]] = alloca ptr, align 8, addrspace(5)
-// CHECK-NEXT:    [[PLONGP_B:%.*]] = alloca ptr addrspace(5), align 4, addrspace(5)
-// CHECK-NEXT:    [[PLONG_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[PLONG]] to ptr
-// CHECK-NEXT:    [[PLONGP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[PLONGP]] to ptr
-// CHECK-NEXT:    [[PLONGP_B_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[PLONGP_B]] to ptr
-// CHECK-NEXT:    store ptr [[PLONG_ASCAST]], ptr [[PLONGP_ASCAST]], align 8
-// CHECK-NEXT:    [[PLONG_ASCAST_ASCAST:%.*]] = addrspacecast ptr [[PLONG_ASCAST]] to ptr addrspace(5)
-// CHECK-NEXT:    store ptr addrspace(5) [[PLONG_ASCAST_ASCAST]], ptr [[PLONGP_B_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PLONGP_ASCAST]], align 8
-// CHECK-NEXT:    store i64 8, ptr [[TMP0]], align 8
+// CHECK-NEXT:    [[VAR:%.*]] = alloca i64, align 8, addrspace(5)
+// CHECK-NEXT:    [[ALLOCA_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[ALLOCA_ADDR_AS_PRIVATE:%.*]] = alloca ptr addrspace(5), align 4, addrspace(5)
+// CHECK-NEXT:    [[VAR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VAR]] to ptr
+// CHECK-NEXT:    [[ALLOCA_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ALLOCA_ADDR]] to ptr
+// CHECK-NEXT:    [[ALLOCA_ADDR_AS_PRIVATE_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ALLOCA_ADDR_AS_PRIVATE]] to ptr
+// CHECK-NEXT:    store ptr [[VAR_ASCAST]], ptr [[ALLOCA_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[VAR_ASCAST_ASCAST:%.*]] = addrspacecast ptr [[VAR_ASCAST]] to ptr addrspace(5)
+// CHECK-NEXT:    store ptr addrspace(5) [[VAR_ASCAST_ASCAST]], ptr [[ALLOCA_ADDR_AS_PRIVATE_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(5), ptr [[ALLOCA_ADDR_AS_PRIVATE_ASCAST]], align 4
+// CHECK-NEXT:    store i64 8, ptr addrspace(5) [[TMP0]], align 8
 // CHECK-NEXT:    ret void
 //
 void explicit_private_address_space_ptr() {
-  long plong;
-  long *plongp = &plong;
+  long var;
+  long *alloca_addr = &var;
 
-  __private long *plongp_b = (__private long *)&plong;
-  *plongp = 8;
+  __private long *alloca_addr_as_private = (__private long *)&var;
+  *alloca_addr_as_private = 8;
 }
