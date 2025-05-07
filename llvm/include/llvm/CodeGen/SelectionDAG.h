@@ -924,16 +924,18 @@ public:
   /// Example: shuffle A, B, <0,5,2,7> -> shuffle B, A, <4,1,6,3>
   SDValue getCommutedVectorShuffle(const ShuffleVectorSDNode &SV);
 
-  /// Insert SubVec into the lowest sub-vector of Vec.
-  SDValue getInsertLowSubvector(const SDLoc &DL, SDValue Vec, SDValue SubVec) {
+  /// Insert \p SubVec into the \p Idx sub-vector of \p Vec.
+  SDValue getInsertSubvector(const SDLoc &DL, SDValue Vec, SDValue SubVec,
+                             unsigned Idx) {
     return getNode(ISD::INSERT_SUBVECTOR, DL, Vec.getValueType(), Vec, SubVec,
-                   getVectorIdxConstant(0, DL));
+                   getVectorIdxConstant(Idx, DL));
   }
 
-  /// Return the lowest VT typed sub-vector of Vec.
-  SDValue getExtractLowSubvector(const SDLoc &DL, EVT VT, SDValue Vec) {
+  /// Return the \p VT typed sub-vector of \p Vec at \p Idx
+  SDValue getExtractSubvector(const SDLoc &DL, EVT VT, SDValue Vec,
+                              unsigned Idx) {
     return getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Vec,
-                   getVectorIdxConstant(0, DL));
+                   getVectorIdxConstant(Idx, DL));
   }
 
   /// Convert Op, which must be of float type, to the
