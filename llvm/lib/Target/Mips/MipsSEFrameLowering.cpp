@@ -426,10 +426,12 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
   if (StackSize == 0 && !MFI.adjustsStack()) return;
 
   CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::NoFlags);
+  bool NeedsDwarfCFI = MF.needsFrameMoves();
 
   // Adjust stack.
   TII.adjustStackPtr(SP, -StackSize, MBB, MBBI);
-  CFIBuilder.buildDefCFAOffset(StackSize);
+  if (NeedsDwarfCFI)
+    CFIBuilder.buildDefCFAOffset(StackSize);
 
   if (MF.getFunction().hasFnAttribute("interrupt"))
     emitInterruptPrologueStub(MF, MBB);
@@ -441,7 +443,7 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
   std::advance(MBBI, CSI.size());
   CFIBuilder.setInsertPoint(MBBI);
 
-  if (!CSI.empty()) {
+  if (NeedsDwarfCFI) {
     // Iterate over list of callee-saved registers and emit .cfi_offset
     // directives.
     for (const CalleeSavedInfo &I : CSI) {
@@ -485,10 +487,12 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
                               Register());
     }
 
-    // Emit .cfi_offset directives for eh data registers.
-    for (int I = 0; I < 4; ++I) {
-      int64_t Offset = MFI.getObjectOffset(MipsFI->getEhDataRegFI(I));
-      CFIBuilder.buildOffset(ABI.GetEhDataReg(I), Offset);
+    if (NeedsDwarfCFI) {
+      // Emit .cfi_offset directives for eh data registers.
+      for (int I = 0; I < 4; ++I) {
+        int64_t Offset = MFI.getObjectOffset(MipsFI->getEhDataRegFI(I));
+        CFIBuilder.buildOffset(ABI.GetEhDataReg(I), Offset);
+      }
     }
   }
 
@@ -498,7 +502,8 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
     BuildMI(MBB, MBBI, dl, TII.get(MOVE), FP).addReg(SP).addReg(ZERO)
       .setMIFlag(MachineInstr::FrameSetup);
 
-    CFIBuilder.buildDefCFARegister(FP);
+    if (NeedsDwarfCFI)
+      CFIBuilder.buildDefCFARegister(FP);
 
     if (RegInfo.hasStackRealignment(MF)) {
       // addiu $Reg, $zero, -MaxAlignment
