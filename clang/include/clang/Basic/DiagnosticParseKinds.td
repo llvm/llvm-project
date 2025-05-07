@@ -1065,11 +1065,23 @@ def ext_ms_abstract_keyword : ExtWarn<
   "'abstract' keyword is a Microsoft extension">,
   InGroup<MicrosoftAbstract>;
 
+def ext_relocatable_keyword : ExtWarn<
+  "'%select{trivially_relocatable_if_eligible|replaceable_if_eligible}0' "
+  "keyword is a C++2c extension">,
+  InGroup<CXX26>;
+def warn_relocatable_keyword  : Warning<
+  "'%select{trivially_relocatable|replaceable}0_if_eligible' "
+  "keyword is incompatible with standards before C++2c">,
+  DefaultIgnore, InGroup<CXXPre26Compat>;
+
 def err_access_specifier_interface : Error<
   "interface types cannot specify '%select{private|protected}0' access">;
 
 def err_duplicate_class_virt_specifier : Error<
   "class already marked '%0'">;
+
+def err_duplicate_class_relocation_specifier : Error<
+  "class already marked '%select{trivially_relocatable_if_eligible|replaceable_if_eligible}0'">;
 
 def err_duplicate_virt_specifier : Error<
   "class member already marked '%0'">;
@@ -1668,6 +1680,8 @@ def err_omp_expected_colon : Error<"missing ':' in %0">;
 def err_omp_missing_comma : Error< "missing ',' after %0">;
 def err_omp_expected_context_selector
     : Error<"expected valid context selector in %0">;
+def warn_omp_default_deprecated : Warning<"'default' clause for"
+  " 'metadirective' is deprecated; use 'otherwise' instead">, InGroup<Deprecated>;
 def err_omp_requires_out_inout_depend_type : Error<
   "reserved locator 'omp_all_memory' requires 'out' or 'inout' "
   "dependency types">;
@@ -1836,8 +1850,11 @@ def err_hlsl_virtual_function
 def err_hlsl_virtual_inheritance
     : Error<"virtual inheritance is unsupported in HLSL">;
 
-// HLSL Root Siganture diagnostic messages
+// HLSL Root Signature Parser Diagnostics
 def err_hlsl_unexpected_end_of_params
     : Error<"expected %0 to denote end of parameters, or, another valid parameter of %1">;
+def err_hlsl_rootsig_repeat_param : Error<"specified the same parameter '%0' multiple times">;
+def err_hlsl_rootsig_missing_param : Error<"did not specify mandatory parameter '%0'">;
+def err_hlsl_number_literal_overflow : Error<"integer literal is too large to be represented as a 32-bit %select{signed |}0 integer type">;
 
 } // end of Parser diagnostics

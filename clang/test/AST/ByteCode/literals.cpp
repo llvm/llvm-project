@@ -1357,6 +1357,30 @@ namespace VolatileReads {
   const volatile int b = 1;
   static_assert(b, ""); // both-error {{not an integral constant expression}} \
                         // both-note {{read of volatile-qualified type 'const volatile int' is not allowed in a constant expression}}
+
+
+  constexpr int a = 12;
+  constexpr volatile int c = (volatile int&)a; // both-error {{must be initialized by a constant expression}} \
+                                               // both-note {{read of volatile-qualified type 'volatile int'}}
+
+  volatile constexpr int n1 = 0; // both-note {{here}}
+  volatile const int n2 = 0; // both-note {{here}}
+  constexpr int m1 = n1; // both-error {{constant expression}} \
+                         // both-note {{read of volatile-qualified type 'const volatile int'}}
+  constexpr int m2 = n2; // both-error {{constant expression}} \
+                         // both-note {{read of volatile-qualified type 'const volatile int'}}
+  constexpr int m1b = const_cast<const int&>(n1); // both-error {{constant expression}} \
+                                                  // both-note {{read of volatile object 'n1'}}
+  constexpr int m2b = const_cast<const int&>(n2); // both-error {{constant expression}} \
+                                                  // both-note {{read of volatile object 'n2'}}
+
+  struct S {
+    constexpr S(int=0) : i(1) {}
+    int i;
+  };
+  constexpr volatile S vs; // both-note {{here}}
+  static_assert(const_cast<int&>(vs.i), ""); // both-error {{constant expression}} \
+                                             // both-note {{read of volatile object 'vs'}}
 }
 #if __cplusplus >= 201703L
 namespace {

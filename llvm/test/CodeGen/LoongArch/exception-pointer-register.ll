@@ -28,13 +28,13 @@ define void @caller(ptr %p) personality ptr @__gxx_personality_v0 {
 ; LA32-NEXT:  # %bb.1: # %bb2
 ; LA32-NEXT:  .Ltmp0:
 ; LA32-NEXT:    move $a0, $fp
-; LA32-NEXT:    bl %plt(bar)
+; LA32-NEXT:    bl bar
 ; LA32-NEXT:  .Ltmp1:
 ; LA32-NEXT:    b .LBB0_3
 ; LA32-NEXT:  .LBB0_2: # %bb1
 ; LA32-NEXT:  .Ltmp2:
 ; LA32-NEXT:    move $a0, $fp
-; LA32-NEXT:    bl %plt(foo)
+; LA32-NEXT:    bl foo
 ; LA32-NEXT:  .Ltmp3:
 ; LA32-NEXT:  .LBB0_3: # %end2
 ; LA32-NEXT:    ld.w $s0, $sp, 4 # 4-byte Folded Reload
@@ -48,7 +48,7 @@ define void @caller(ptr %p) personality ptr @__gxx_personality_v0 {
 ; LA32-NEXT:    move $a0, $fp
 ; LA32-NEXT:    bl callee
 ; LA32-NEXT:    move $a0, $s0
-; LA32-NEXT:    bl %plt(_Unwind_Resume)
+; LA32-NEXT:    bl _Unwind_Resume
 ;
 ; LA64-LABEL: caller:
 ; LA64:       # %bb.0: # %entry

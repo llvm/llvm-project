@@ -60,6 +60,7 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/TargetParser/Triple.h"
 
+#include <cassert>
 #include <cctype>
 #include <cinttypes>
 #include <cstdio>
@@ -122,7 +123,16 @@ constexpr Definition g_function_child_entries[] = {
     Definition("pc-offset", EntryType::FunctionPCOffset),
     Definition("initial-function", EntryType::FunctionInitial),
     Definition("changed", EntryType::FunctionChanged),
-    Definition("is-optimized", EntryType::FunctionIsOptimized)};
+    Definition("is-optimized", EntryType::FunctionIsOptimized),
+    Definition("scope", EntryType::FunctionScope),
+    Definition("basename", EntryType::FunctionBasename),
+    Definition("template-arguments", EntryType::FunctionTemplateArguments),
+    Definition("formatted-arguments", EntryType::FunctionFormattedArguments),
+    Definition("return-left", EntryType::FunctionReturnLeft),
+    Definition("return-right", EntryType::FunctionReturnRight),
+    Definition("qualifiers", EntryType::FunctionQualifiers),
+    Definition("suffix", EntryType::FunctionSuffix),
+};
 
 constexpr Definition g_line_child_entries[] = {
     Entry::DefinitionWithChildren("file", EntryType::LineEntryFile,
@@ -266,34 +276,57 @@ constexpr Definition g_top_level_entries[] = {
                                   g_var_child_entries, true),
     Entry::DefinitionWithChildren("progress", EntryType::Invalid,
                                   g_progress_child_entries),
+    Definition("separator", EntryType::Separator),
 };
 
 constexpr Definition g_root = Entry::DefinitionWithChildren(
     "<root>", EntryType::Root, g_top_level_entries);
 
+FormatEntity::Entry::Entry(Type t, const char *s, const char *f)
+    : string(s ? s : ""), printf_format(f ? f : ""), children_stack({{}}),
+      type(t) {}
+
 FormatEntity::Entry::Entry(llvm::StringRef s)
-    : string(s.data(), s.size()), printf_format(), children(),
-      type(Type::String) {}
+    : string(s.data(), s.size()), children_stack({{}}), type(Type::String) {}
 
 FormatEntity::Entry::Entry(char ch)
-    : string(1, ch), printf_format(), children(), type(Type::String) {}
+    : string(1, ch), printf_format(), children_stack({{}}), type(Type::String) {
+}
+
+std::vector<Entry> &FormatEntity::Entry::GetChildren() {
+  assert(level < children_stack.size());
+  return children_stack[level];
+}
 
 void FormatEntity::Entry::AppendChar(char ch) {
-  if (children.empty() || children.back().type != Entry::Type::String)
-    children.push_back(Entry(ch));
+  auto &entries = GetChildren();
+  if (entries.empty() || entries.back().type != Entry::Type::String)
+    entries.push_back(Entry(ch));
   else
-    children.back().string.append(1, ch);
+    entries.back().string.append(1, ch);
 }
 
 void FormatEntity::Entry::AppendText(const llvm::StringRef &s) {
-  if (children.empty() || children.back().type != Entry::Type::String)
-    children.push_back(Entry(s));
+  auto &entries = GetChildren();
+  if (entries.empty() || entries.back().type != Entry::Type::String)
+    entries.push_back(Entry(s));
   else
-    children.back().string.append(s.data(), s.size());
+    entries.back().string.append(s.data(), s.size());
 }
 
 void FormatEntity::Entry::AppendText(const char *cstr) {
   return AppendText(llvm::StringRef(cstr));
+}
+
+void FormatEntity::Entry::AppendEntry(const Entry &&entry) {
+  auto &entries = GetChildren();
+  entries.push_back(entry);
+}
+
+void FormatEntity::Entry::StartAlternative() {
+  assert(type == Entry::Type::Scope);
+  children_stack.emplace_back();
+  level++;
 }
 
 #define ENUM_TO_CSTR(eee)                                                      \
@@ -352,6 +385,14 @@ const char *FormatEntity::Entry::TypeToCString(Type t) {
     ENUM_TO_CSTR(FunctionNameWithArgs);
     ENUM_TO_CSTR(FunctionNameNoArgs);
     ENUM_TO_CSTR(FunctionMangledName);
+    ENUM_TO_CSTR(FunctionScope);
+    ENUM_TO_CSTR(FunctionBasename);
+    ENUM_TO_CSTR(FunctionTemplateArguments);
+    ENUM_TO_CSTR(FunctionFormattedArguments);
+    ENUM_TO_CSTR(FunctionReturnLeft);
+    ENUM_TO_CSTR(FunctionReturnRight);
+    ENUM_TO_CSTR(FunctionQualifiers);
+    ENUM_TO_CSTR(FunctionSuffix);
     ENUM_TO_CSTR(FunctionAddrOffset);
     ENUM_TO_CSTR(FunctionAddrOffsetConcrete);
     ENUM_TO_CSTR(FunctionLineOffset);
@@ -367,6 +408,7 @@ const char *FormatEntity::Entry::TypeToCString(Type t) {
     ENUM_TO_CSTR(CurrentPCArrow);
     ENUM_TO_CSTR(ProgressCount);
     ENUM_TO_CSTR(ProgressMessage);
+    ENUM_TO_CSTR(Separator);
   }
   return "???";
 }
@@ -386,8 +428,9 @@ void FormatEntity::Entry::Dump(Stream &s, int depth) const {
   if (deref)
     s.Printf("deref = true, ");
   s.EOL();
-  for (const auto &child : children) {
-    child.Dump(s, depth + 1);
+  for (const auto &children : children_stack) {
+    for (const auto &child : children)
+      child.Dump(s, depth + 1);
   }
 }
 
@@ -1165,8 +1208,9 @@ static bool PrintFunctionNameWithArgs(Stream &s,
   ExecutionContextScope *exe_scope =
       exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
 
-  const char *cstr =
-      sc.GetPossiblyInlinedFunctionName(Mangled::ePreferDemangled);
+  const char *cstr = sc.GetPossiblyInlinedFunctionName()
+                         .GetName(Mangled::ePreferDemangled)
+                         .AsCString();
   if (!cstr)
     return false;
 
@@ -1184,7 +1228,8 @@ static bool PrintFunctionNameWithArgs(Stream &s,
   return true;
 }
 
-static bool HandleFunctionNameWithArgs(Stream &s,const ExecutionContext *exe_ctx,
+static bool HandleFunctionNameWithArgs(Stream &s,
+                                       const ExecutionContext *exe_ctx,
                                        const SymbolContext &sc) {
   Language *language_plugin = nullptr;
   bool language_plugin_handled = false;
@@ -1216,6 +1261,35 @@ static bool HandleFunctionNameWithArgs(Stream &s,const ExecutionContext *exe_ctx
   s.PutCString(cstr);
 
   return true;
+}
+
+static bool FormatFunctionNameForLanguage(Stream &s,
+                                          const ExecutionContext *exe_ctx,
+                                          const SymbolContext *sc) {
+  assert(sc);
+
+  Language *language_plugin = nullptr;
+  if (sc->function)
+    language_plugin = Language::FindPlugin(sc->function->GetLanguage());
+  else if (sc->symbol)
+    language_plugin = Language::FindPlugin(sc->symbol->GetLanguage());
+
+  if (!language_plugin)
+    return false;
+
+  const auto *format = language_plugin->GetFunctionNameFormat();
+  if (!format)
+    return false;
+
+  StreamString name_stream;
+  const bool success =
+      FormatEntity::Format(*format, name_stream, sc, exe_ctx, /*addr=*/nullptr,
+                           /*valobj=*/nullptr, /*function_changed=*/false,
+                           /*initial_function=*/false);
+  if (success)
+    s << name_stream.GetString();
+
+  return success;
 }
 
 bool FormatEntity::FormatStringRef(const llvm::StringRef &format_str, Stream &s,
@@ -1258,7 +1332,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return true;
 
   case Entry::Type::Root:
-    for (const auto &child : entry.children) {
+    for (const auto &child : entry.children_stack[0]) {
       if (!Format(child, s, sc, exe_ctx, addr, valobj, function_changed,
                   initial_function)) {
         return false; // If any item of root fails, then the formatting fails
@@ -1272,19 +1346,26 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
 
   case Entry::Type::Scope: {
     StreamString scope_stream;
-    bool success = false;
-    for (const auto &child : entry.children) {
-      success = Format(child, scope_stream, sc, exe_ctx, addr, valobj,
-                       function_changed, initial_function);
-      if (!success)
-        break;
+    auto format_children = [&](const std::vector<Entry> &children) {
+      scope_stream.Clear();
+      for (const auto &child : children) {
+        if (!Format(child, scope_stream, sc, exe_ctx, addr, valobj,
+                    function_changed, initial_function))
+          return false;
+      }
+      return true;
+    };
+
+    for (auto &children : entry.children_stack) {
+      if (format_children(children)) {
+        s.Write(scope_stream.GetString().data(),
+                scope_stream.GetString().size());
+        return true;
+      }
     }
-    // Only if all items in a scope succeed, then do we print the output into
-    // the main stream
-    if (success)
-      s.Write(scope_stream.GetString().data(), scope_stream.GetString().size());
-  }
+
     return true; // Scopes always successfully print themselves
+  }
 
   case Entry::Type::Variable:
   case Entry::Type::VariableSynthetic:
@@ -1709,8 +1790,9 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
       return true;
     }
 
-    const char *name = sc->GetPossiblyInlinedFunctionName(
-        Mangled::NamePreference::ePreferDemangled);
+    const char *name = sc->GetPossiblyInlinedFunctionName()
+                           .GetName(Mangled::NamePreference::ePreferDemangled)
+                           .AsCString();
     if (!name)
       return false;
 
@@ -1741,8 +1823,10 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
       return true;
     }
 
-    const char *name = sc->GetPossiblyInlinedFunctionName(
-        Mangled::NamePreference::ePreferDemangledWithoutArguments);
+    const char *name =
+        sc->GetPossiblyInlinedFunctionName()
+            .GetName(Mangled::NamePreference::ePreferDemangledWithoutArguments)
+            .AsCString();
     if (!name)
       return false;
 
@@ -1751,19 +1835,43 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return true;
   }
 
+  case Entry::Type::FunctionScope:
+  case Entry::Type::FunctionBasename:
+  case Entry::Type::FunctionTemplateArguments:
+  case Entry::Type::FunctionFormattedArguments:
+  case Entry::Type::FunctionReturnRight:
+  case Entry::Type::FunctionReturnLeft:
+  case Entry::Type::FunctionSuffix:
+  case Entry::Type::FunctionQualifiers: {
+    Language *language_plugin = nullptr;
+    if (sc->function)
+      language_plugin = Language::FindPlugin(sc->function->GetLanguage());
+    else if (sc->symbol)
+      language_plugin = Language::FindPlugin(sc->symbol->GetLanguage());
+
+    if (!language_plugin)
+      return false;
+
+    return language_plugin->HandleFrameFormatVariable(*sc, exe_ctx, entry.type,
+                                                      s);
+  }
+
   case Entry::Type::FunctionNameWithArgs: {
     if (!sc)
       return false;
 
+    if (FormatFunctionNameForLanguage(s, exe_ctx, sc))
+      return true;
+
     return HandleFunctionNameWithArgs(s, exe_ctx, *sc);
   }
-
   case Entry::Type::FunctionMangledName: {
     if (!sc)
       return false;
 
-    const char *name = sc->GetPossiblyInlinedFunctionName(
-        Mangled::NamePreference::ePreferMangled);
+    const char *name = sc->GetPossiblyInlinedFunctionName()
+                           .GetName(Mangled::NamePreference::ePreferMangled)
+                           .AsCString();
     if (!name)
       return false;
 
@@ -1886,7 +1994,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     if (Target *target = Target::GetTargetFromContexts(exe_ctx, sc)) {
       if (auto progress = target->GetDebugger().GetCurrentProgressReport()) {
         if (progress->total != UINT64_MAX) {
-          s.Format("[{0}/{1}]", progress->completed, progress->total);
+          s.Format("[{0:N}/{1:N}]", progress->completed, progress->total);
           return true;
         }
       }
@@ -1899,6 +2007,13 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
         s.PutCString(progress->message);
         return true;
       }
+    }
+    return false;
+
+  case Entry::Type::Separator:
+    if (Target *target = Target::GetTargetFromContexts(exe_ctx, sc)) {
+      s << target->GetDebugger().GetSeparator();
+      return true;
     }
     return false;
   }
@@ -2040,7 +2155,7 @@ static Status ParseInternal(llvm::StringRef &format, Entry &parent_entry,
                             uint32_t depth) {
   Status error;
   while (!format.empty() && error.Success()) {
-    const size_t non_special_chars = format.find_first_of("${}\\");
+    const size_t non_special_chars = format.find_first_of("${}\\|");
 
     if (non_special_chars == llvm::StringRef::npos) {
       // No special characters, just string bytes so add them and we are done
@@ -2076,6 +2191,14 @@ static Status ParseInternal(llvm::StringRef &format, Entry &parent_entry,
             format
                 .drop_front(); // Skip the '}' as we are at the end of the scope
       return error;
+
+    case '|':
+      format = format.drop_front(); // Skip the '|'
+      if (parent_entry.type == Entry::Type::Scope)
+        parent_entry.StartAlternative();
+      else
+        parent_entry.AppendChar('|');
+      break;
 
     case '\\': {
       format = format.drop_front(); // Skip the '\' character
@@ -2387,7 +2510,6 @@ static void AddMatches(const Definition *def, const llvm::StringRef &prefix,
   const size_t n = def->num_children;
   if (n > 0) {
     for (size_t i = 0; i < n; ++i) {
-      std::string match = prefix.str();
       if (match_prefix.empty())
         matches.AppendString(MakeMatch(prefix, def->children[i].name));
       else if (strncmp(def->children[i].name, match_prefix.data(),

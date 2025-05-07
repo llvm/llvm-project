@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CODEGENTYPES_H
 #define LLVM_CLANG_LIB_CODEGEN_CODEGENTYPES_H
 
+#include "ABIInfo.h"
 #include "CIRGenFunctionInfo.h"
 #include "CIRGenRecordLayout.h"
 
@@ -45,6 +46,8 @@ class CIRGenTypes {
   CIRGenModule &cgm;
   clang::ASTContext &astContext;
   CIRGenBuilderTy &builder;
+
+  const ABIInfo &theABIInfo;
 
   /// Contains the CIR type for any converted RecordDecl.
   llvm::DenseMap<const clang::Type *, std::unique_ptr<CIRGenRecordLayout>>
@@ -86,7 +89,13 @@ public:
   mlir::MLIRContext &getMLIRContext() const;
   clang::ASTContext &getASTContext() const { return astContext; }
 
+  bool isRecordLayoutComplete(const clang::Type *ty) const;
   bool noRecordsBeingLaidOut() const { return recordsBeingLaidOut.empty(); }
+  bool isRecordBeingLaidOut(const clang::Type *ty) const {
+    return recordsBeingLaidOut.count(ty);
+  }
+
+  const ABIInfo &getABIInfo() const { return theABIInfo; }
 
   /// Convert a Clang type into a mlir::Type.
   mlir::Type convertType(clang::QualType type);
@@ -99,6 +108,8 @@ public:
   std::string getRecordTypeName(const clang::RecordDecl *,
                                 llvm::StringRef suffix);
 
+  const CIRGenRecordLayout &getCIRGenRecordLayout(const clang::RecordDecl *rd);
+
   /// Convert type T into an mlir::Type. This differs from convertType in that
   /// it is used to convert to the memory representation for a type. For
   /// example, the scalar representation for bool is i1, but the memory
@@ -110,9 +121,12 @@ public:
   /// LLVM zeroinitializer.
   bool isZeroInitializable(clang::QualType ty);
 
-  const CIRGenFunctionInfo &arrangeFreeFunctionCall();
+  const CIRGenFunctionInfo &arrangeFreeFunctionCall(const CallArgList &args,
+                                                    const FunctionType *fnType);
 
-  const CIRGenFunctionInfo &arrangeCIRFunctionInfo();
+  const CIRGenFunctionInfo &
+  arrangeCIRFunctionInfo(CanQualType returnType,
+                         llvm::ArrayRef<clang::CanQualType> argTypes);
 };
 
 } // namespace clang::CIRGen

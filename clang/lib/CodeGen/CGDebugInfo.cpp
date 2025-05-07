@@ -2018,17 +2018,8 @@ CGDebugInfo::getOrCreateMethodType(const CXXMethodDecl *Method,
   return getOrCreateInstanceMethodType(ThisType, Func, Unit);
 }
 
-llvm::DISubroutineType *CGDebugInfo::getOrCreateMethodTypeForDestructor(
-    const CXXMethodDecl *Method, llvm::DIFile *Unit, QualType FNType) {
-  const FunctionProtoType *Func = FNType->getAs<FunctionProtoType>();
-  // skip the first param since it is also this
-  return getOrCreateInstanceMethodType(Method->getThisType(), Func, Unit, true);
-}
-
-llvm::DISubroutineType *
-CGDebugInfo::getOrCreateInstanceMethodType(QualType ThisPtr,
-                                           const FunctionProtoType *Func,
-                                           llvm::DIFile *Unit, bool SkipFirst) {
+llvm::DISubroutineType *CGDebugInfo::getOrCreateInstanceMethodType(
+    QualType ThisPtr, const FunctionProtoType *Func, llvm::DIFile *Unit) {
   FunctionProtoType::ExtProtoInfo EPI = Func->getExtProtoInfo();
   Qualifiers &Qc = EPI.TypeQuals;
   Qc.removeConst();
@@ -2068,7 +2059,7 @@ CGDebugInfo::getOrCreateInstanceMethodType(QualType ThisPtr,
   }
 
   // Copy rest of the arguments.
-  for (unsigned i = (SkipFirst ? 2 : 1), e = Args.size(); i != e; ++i)
+  for (unsigned i = 1, e = Args.size(); i != e; ++i)
     Elts.push_back(Args[i]);
 
   // Attach FlagObjectPointer to the explicit "this" parameter.
@@ -4380,12 +4371,6 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateFunctionType(const Decl *D,
     // Create fake but valid subroutine type. Otherwise -verify would fail, and
     // subprogram DIE will miss DW_AT_decl_file and DW_AT_decl_line fields.
     return DBuilder.createSubroutineType(DBuilder.getOrCreateTypeArray({}));
-
-  if (const auto *Method = dyn_cast<CXXDestructorDecl>(D)) {
-    // Read method type from 'FnType' because 'D.getType()' does not cover
-    // implicit arguments for destructors.
-    return getOrCreateMethodTypeForDestructor(Method, F, FnType);
-  }
 
   if (const auto *Method = dyn_cast<CXXMethodDecl>(D))
     return getOrCreateMethodType(Method, F);

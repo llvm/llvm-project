@@ -113,7 +113,8 @@ mlir::bufferization::dropEquivalentBufferResults(ModuleOp module) {
     }
 
     // Update function.
-    funcOp.eraseResults(erasedResultIndices);
+    if (failed(funcOp.eraseResults(erasedResultIndices)))
+      return failure();
     returnOp.getOperandsMutable().assign(newReturnValues);
 
     // Update function calls.

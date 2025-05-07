@@ -931,8 +931,7 @@ bool RetainCountChecker::evalCall(const CallEvent &Call,
     if (RetVal.isUnknown() ||
         (hasTrustedImplementationAnnotation && !ResultTy.isNull())) {
       SValBuilder &SVB = C.getSValBuilder();
-      RetVal =
-          SVB.conjureSymbolVal(nullptr, CE, LCtx, ResultTy, C.blockCount());
+      RetVal = SVB.conjureSymbolVal(Call, C.blockCount());
     }
 
     // Bind the value.

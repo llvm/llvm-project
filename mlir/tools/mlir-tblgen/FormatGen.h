@@ -338,29 +338,56 @@ public:
   }
 };
 
+/// Base class for a directive that contains references to elements of type `T`
+/// in a vector.
+template <DirectiveElement::Kind DirectiveKind, typename T>
+class VectorDirectiveBase : public DirectiveElementBase<DirectiveKind> {
+public:
+  using Base = VectorDirectiveBase<DirectiveKind, T>;
+
+  VectorDirectiveBase(std::vector<T> &&elems) : elems(std::move(elems)) {}
+
+  /// Get the elements contained in this directive.
+  ArrayRef<T> getElements() const { return elems; }
+
+  /// Get the number of elements.
+  unsigned getNumElements() const { return elems.size(); }
+
+  /// Take all of the elements from this directive.
+  std::vector<T> takeElements() { return std::move(elems); }
+
+protected:
+  /// The elements captured by this directive.
+  std::vector<T> elems;
+};
+
 /// This class represents a custom format directive that is implemented by the
 /// user in C++. The directive accepts a list of arguments that is passed to the
 /// C++ function.
-class CustomDirective : public DirectiveElementBase<DirectiveElement::Custom> {
+class CustomDirective
+    : public VectorDirectiveBase<DirectiveElement::Custom, FormatElement *> {
 public:
+  using Base::Base;
   /// Create a custom directive with a name and list of arguments.
   CustomDirective(StringRef name, std::vector<FormatElement *> &&arguments)
-      : name(name), arguments(std::move(arguments)) {}
+      : Base(std::move(arguments)), name(name) {}
 
   /// Get the custom directive name.
   StringRef getName() const { return name; }
 
-  /// Get the arguments to the custom directive.
-  ArrayRef<FormatElement *> getArguments() const { return arguments; }
+  template <typename T>
+  FailureOr<T *> getFrontAs() const {
+    if (getNumElements() != 1)
+      return failure();
+    if (T *elem = dyn_cast<T>(getElements()[0]))
+      return elem;
+    return failure();
+  }
 
 private:
   /// The name of the custom directive. The name is used to call two C++
   /// methods: `parse{name}` and `print{name}` with the given arguments.
   StringRef name;
-  /// The arguments with which to call the custom functions. These are either
-  /// variables (for which the functions are responsible for populating) or
-  /// references to variables.
-  std::vector<FormatElement *> arguments;
 };
 
 /// This class represents a reference directive. This directive can be used to

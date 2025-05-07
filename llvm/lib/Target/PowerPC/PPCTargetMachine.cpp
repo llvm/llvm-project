@@ -144,6 +144,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
   initializeGlobalISel(PR);
   initializePPCCTRLoopsPass(PR);
   initializePPCDAGToDAGISelLegacyPass(PR);
+  initializePPCLinuxAsmPrinterPass(PR);
+  initializePPCAIXAsmPrinterPass(PR);
 }
 
 static bool isLittleEndianTriple(const Triple &T) {
@@ -604,7 +606,7 @@ void PPCPassConfig::addPreEmitPass2() {
 
 TargetTransformInfo
 PPCTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(PPCTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<PPCTTIImpl>(this, F));
 }
 
 bool PPCTargetMachine::isLittleEndian() const {

@@ -65,6 +65,13 @@ if (current_toolchain == default_toolchain) {
     values = []
   }
 
+  write_cmake_config("write_modulemap") {
+    input = "module.modulemap.in"
+    output = "$libcxx_generated_include_dir/module.modulemap"
+    values =
+        [ "LIBCXX_CONFIG_SITE_MODULE_ENTRY=textual header \"__config_site\"" ]
+  }
+
   copy("copy_headers") {
     sources = [
       "__algorithm/adjacent_find.h",
@@ -1485,7 +1492,6 @@ if (current_toolchain == default_toolchain) {
       "__type_traits/is_member_pointer.h",
       "__type_traits/is_nothrow_assignable.h",
       "__type_traits/is_nothrow_constructible.h",
-      "__type_traits/is_nothrow_convertible.h",
       "__type_traits/is_nothrow_destructible.h",
       "__type_traits/is_null_pointer.h",
       "__type_traits/is_object.h",
@@ -1677,7 +1683,6 @@ if (current_toolchain == default_toolchain) {
       "mdspan",
       "memory",
       "memory_resource",
-      "module.modulemap",
       "mutex",
       "new",
       "numbers",
@@ -1732,6 +1737,7 @@ if (current_toolchain == default_toolchain) {
     deps = [
       ":write_assertion_handler",
       ":write_config_site",
+      ":write_modulemap",
     ]
     if (target_os != "mac" && target_os != "win") {
       # libcxx/cmake/Modules/HandleLibCXXABI.cmake sets

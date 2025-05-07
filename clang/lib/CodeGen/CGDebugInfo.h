@@ -249,14 +249,9 @@ class CGDebugInfo {
   /// to get a method type which includes \c this pointer.
   llvm::DISubroutineType *getOrCreateMethodType(const CXXMethodDecl *Method,
                                                 llvm::DIFile *F);
-
-  llvm::DISubroutineType *
-  getOrCreateMethodTypeForDestructor(const CXXMethodDecl *Method,
-                                     llvm::DIFile *F, QualType FNType);
-
   llvm::DISubroutineType *
   getOrCreateInstanceMethodType(QualType ThisPtr, const FunctionProtoType *Func,
-                                llvm::DIFile *Unit, bool SkipFirst = false);
+                                llvm::DIFile *Unit);
   llvm::DISubroutineType *
   getOrCreateFunctionType(const Decl *D, QualType FnType, llvm::DIFile *F);
   /// \return debug info descriptor for vtable.

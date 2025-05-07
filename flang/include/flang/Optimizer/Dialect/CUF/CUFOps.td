@@ -18,6 +18,7 @@ include "flang/Optimizer/Dialect/CUF/CUFDialect.td"
 include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.td"
 include "flang/Optimizer/Dialect/FIRTypes.td"
 include "flang/Optimizer/Dialect/FIRAttr.td"
+include "mlir/Dialect/GPU/IR/GPUBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/IR/BuiltinAttributes.td"
@@ -199,7 +200,7 @@ def cuf_KernelLaunchOp : cuf_Op<"kernel_launch", [CallOpInterface,
 
   let arguments = (ins SymbolRefAttr:$callee, I32:$grid_x, I32:$grid_y,
       I32:$grid_z, I32:$block_x, I32:$block_y, I32:$block_z,
-      Optional<I32>:$bytes, Optional<AnyIntegerType>:$stream,
+      Optional<I32>:$bytes, Optional<fir_ReferenceType>:$stream,
       Variadic<AnyType>:$args, OptionalAttr<DictArrayAttr>:$arg_attrs,
       OptionalAttr<DictArrayAttr>:$res_attrs);
 
@@ -236,6 +237,8 @@ def cuf_KernelLaunchOp : cuf_Op<"kernel_launch", [CallOpInterface,
           *this, getNbNoArgOperand(), getArgs().size() - 1);
     }
   }];
+
+  let hasVerifier = 1;
 }
 
 def cuf_KernelOp : cuf_Op<"kernel", [AttrSizedOperandSegments,
@@ -251,24 +254,19 @@ def cuf_KernelOp : cuf_Op<"kernel", [AttrSizedOperandSegments,
     represented by a 0 constant value.
   }];
 
-  let arguments = (ins
-    Variadic<I32>:$grid, // empty means `*`
-    Variadic<I32>:$block, // empty means `*`
-    Optional<I32>:$stream,
-    Variadic<Index>:$lowerbound,
-    Variadic<Index>:$upperbound,
-    Variadic<Index>:$step,
-    OptionalAttr<I64Attr>:$n,
-    Variadic<AnyType>:$reduceOperands,
-    OptionalAttr<ArrayAttr>:$reduceAttrs
-  );
+  let arguments = (ins Variadic<I32>:$grid, // empty means `*`
+      Variadic<I32>:$block,                 // empty means `*`
+      Optional<fir_ReferenceType>:$stream, Variadic<Index>:$lowerbound,
+      Variadic<Index>:$upperbound, Variadic<Index>:$step,
+      OptionalAttr<I64Attr>:$n, Variadic<AnyType>:$reduceOperands,
+      OptionalAttr<ArrayAttr>:$reduceAttrs);
 
   let regions = (region AnyRegion:$region);
 
   let assemblyFormat = [{
     `<` `<` `<` custom<CUFKernelValues>($grid, type($grid)) `,` 
                 custom<CUFKernelValues>($block, type($block))
-        ( `,` `stream` `=` $stream^ )? `>` `>` `>`
+        ( `,` `stream` `=` $stream^ `:` qualified(type($stream)))? `>` `>` `>`
         ( `reduce` `(` $reduceOperands^ `:` type($reduceOperands) `:` $reduceAttrs `)` )?
         custom<CUFKernelLoopControl>($region, $lowerbound, type($lowerbound),
             $upperbound, type($upperbound), $step, type($step))
@@ -368,6 +366,27 @@ def cuf_SharedMemoryOp
       CArg<"mlir::ValueRange", "{}">:$typeparams,
       CArg<"mlir::ValueRange", "{}">:$shape,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
+}
+
+def cuf_StreamCastOp : cuf_Op<"stream_cast", [NoMemoryEffect]> {
+  let summary = "Adapt a stream value to a GPU async token";
+
+  let description = [{
+    Cast a stream object reference as a GPU async token. This is useful to be
+    able to connect the stream representation of CUDA Fortran and the async
+    mechanism of the GPU dialect.
+    Later in the lowering this will become a no op.
+  }];
+
+  let arguments = (ins AnyTypeOf<[fir_ReferenceType, LLVM_AnyPointer]>:$stream);
+
+  let results = (outs GPU_AsyncToken:$token);
+
+  let assemblyFormat = [{
+    $stream attr-dict `:` type($stream)
+  }];
+
+  let hasVerifier = 1;
 }
 
 #endif // FORTRAN_DIALECT_CUF_CUF_OPS

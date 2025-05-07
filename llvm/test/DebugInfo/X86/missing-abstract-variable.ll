@@ -37,7 +37,7 @@
 ; CHECK-NOT: DW_TAG
 ; CHECK:     DW_AT_name ("b")
 ; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:       DW_TAG_lexical_block
+; CHECK:       [[LB_DECL:.*]]: DW_TAG_lexical_block
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:   DW_TAG_variable
 ; CHECK-NOT: DW_TAG
@@ -82,7 +82,9 @@
 
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:     DW_TAG_lexical_block
-; CHECK-NOT: {{DW_TAG|NULL}}
+; CHECK-NOT:   {{DW_TAG|NULL}}
+; CHECK:       DW_AT_abstract_origin {{.*}}[[LB_DECL]]
+; CHECK-NOT:   {{DW_TAG|NULL}}
 ; CHECK:       DW_TAG_variable
 ; CHECK-NOT: DW_TAG
 ; CHECK:         DW_AT_abstract_origin {{.*}} "s"

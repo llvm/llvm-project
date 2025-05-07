@@ -262,11 +262,8 @@ static SanitizerMask setGroupBits(SanitizerMask Kinds) {
 }
 
 // Computes the sanitizer mask as:
-//     Default + Arguments (in or out)
+//     Default + Arguments (in or out) + AlwaysIn - AlwaysOut
 // with arguments parsed from left to right.
-//
-// Error messages are printed if the AlwaysIn or AlwaysOut invariants are
-// violated, but the caller must enforce these invariants themselves.
 static SanitizerMask
 parseSanitizeArgs(const Driver &D, const llvm::opt::ArgList &Args,
                   bool DiagnoseErrors, SanitizerMask Default,
@@ -316,6 +313,9 @@ parseSanitizeArgs(const Driver &D, const llvm::opt::ArgList &Args,
     }
   }
 
+  Output |= AlwaysIn;
+  Output &= ~AlwaysOut;
+
   return Output;
 }
 
@@ -325,10 +325,6 @@ static SanitizerMask parseSanitizeTrapArgs(const Driver &D,
   SanitizerMask AlwaysTrap; // Empty
   SanitizerMask NeverTrap = ~(setGroupBits(TrappingSupported));
 
-  // N.B. We do *not* enforce NeverTrap. This maintains the behavior of
-  // '-fsanitize=undefined -fsanitize-trap=undefined'
-  // (clang/test/Driver/fsanitize.c ), which is that vptr is not enabled at all
-  // (not even in recover mode) in order to avoid the need for a ubsan runtime.
   return parseSanitizeArgs(D, Args, DiagnoseErrors, TrappingDefault, AlwaysTrap,
                            NeverTrap, options::OPT_fsanitize_trap_EQ,
                            options::OPT_fno_sanitize_trap_EQ);
@@ -727,8 +723,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       D, Args, DiagnoseErrors, RecoverableByDefault, AlwaysRecoverable,
       Unrecoverable, options::OPT_fsanitize_recover_EQ,
       options::OPT_fno_sanitize_recover_EQ);
-  RecoverableKinds |= AlwaysRecoverable;
-  RecoverableKinds &= ~Unrecoverable;
   RecoverableKinds &= Kinds;
 
   TrappingKinds &= Kinds;
@@ -855,12 +849,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       D.Diag(clang::diag::err_drv_argument_not_allowed_with)
           << "-fsanitize-minimal-runtime"
           << lastArgumentForMask(D, Args, IncompatibleMask);
-
-    SanitizerMask NonTrappingCfi = Kinds & SanitizerKind::CFI & ~TrappingKinds;
-    if (NonTrappingCfi && DiagnoseErrors)
-      D.Diag(clang::diag::err_drv_argument_only_allowed_with)
-          << "fsanitize-minimal-runtime"
-          << "fsanitize-trap=cfi";
   }
 
   for (const auto *Arg : Args.filtered(
@@ -1040,10 +1028,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     StableABI = Args.hasFlag(options::OPT_fsanitize_stable_abi,
                              options::OPT_fno_sanitize_stable_abi, false);
 
-    AsanUseAfterScope = Args.hasFlag(
-        options::OPT_fsanitize_address_use_after_scope,
-        options::OPT_fno_sanitize_address_use_after_scope, AsanUseAfterScope);
-
     AsanPoisonCustomArrayCookie = Args.hasFlag(
         options::OPT_fsanitize_address_poison_custom_array_cookie,
         options::OPT_fno_sanitize_address_poison_custom_array_cookie,
@@ -1105,7 +1089,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     }
 
   } else {
-    AsanUseAfterScope = false;
     // -fsanitize=pointer-compare/pointer-subtract requires -fsanitize=address.
     SanitizerMask DetectInvalidPointerPairs =
         SanitizerKind::PointerCompare | SanitizerKind::PointerSubtract;
@@ -1117,6 +1100,14 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                                      SanitizerKind::PointerSubtract)
           << "-fsanitize=address";
     }
+  }
+
+  if (AllAddedKinds & (SanitizerKind::Address | SanitizerKind::KernelAddress)) {
+    AsanUseAfterScope = Args.hasFlag(
+        options::OPT_fsanitize_address_use_after_scope,
+        options::OPT_fno_sanitize_address_use_after_scope, AsanUseAfterScope);
+  } else {
+    AsanUseAfterScope = false;
   }
 
   if (AllAddedKinds & SanitizerKind::HWAddress) {

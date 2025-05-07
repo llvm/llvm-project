@@ -361,6 +361,12 @@ def load_glue : PatFrag <(ops node:$ptr), (unindexedload_glue node:$ptr)> {
   let IsNonExtLoad = 1;
 }
 
+def atomic_load_nonext_glue :
+  PatFrag<(ops node:$ptr), (AMDGPUatomic_ld_glue node:$ptr)> {
+  let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
+  let IsNonExtLoad = true;
+}
+
 def atomic_load_zext_glue :
   PatFrag<(ops node:$ptr), (AMDGPUatomic_ld_glue node:$ptr)> {
   let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
@@ -373,26 +379,26 @@ def atomic_load_sext_glue :
   let IsSignExtLoad = true;
 }
 
-def atomic_load_8_glue : PatFrag<(ops node:$ptr),
-  (AMDGPUatomic_ld_glue node:$ptr)> {
-  let IsAtomic = 1;
-  let MemoryVT = i8;
+def atomic_load_aext_glue :
+  PatFrag<(ops node:$ptr), (AMDGPUatomic_ld_glue node:$ptr)> {
+  let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
+  let IsAnyExtLoad = true;
 }
 
-def atomic_load_16_glue : PatFrag<(ops node:$ptr),
-  (AMDGPUatomic_ld_glue node:$ptr)> {
+def atomic_load_nonext_16_glue : PatFrag<(ops node:$ptr),
+  (atomic_load_nonext_glue node:$ptr)> {
   let IsAtomic = 1;
   let MemoryVT = i16;
 }
 
-def atomic_load_32_glue : PatFrag<(ops node:$ptr),
-  (AMDGPUatomic_ld_glue node:$ptr)> {
+def atomic_load_nonext_32_glue : PatFrag<(ops node:$ptr),
+  (atomic_load_nonext_glue node:$ptr)> {
   let IsAtomic = 1;
   let MemoryVT = i32;
 }
 
-def atomic_load_64_glue : PatFrag<(ops node:$ptr),
-  (AMDGPUatomic_ld_glue node:$ptr)> {
+def atomic_load_nonext_64_glue : PatFrag<(ops node:$ptr),
+  (atomic_load_nonext_glue node:$ptr)> {
   let IsAtomic = 1;
   let MemoryVT = i64;
 }
@@ -409,6 +415,12 @@ def atomic_load_sext_8_glue : PatFrag<(ops node:$ptr),
   let MemoryVT = i8;
 }
 
+def atomic_load_aext_8_glue : PatFrag<(ops node:$ptr),
+  (atomic_load_aext_glue node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i8;
+}
+
 def atomic_load_zext_16_glue : PatFrag<(ops node:$ptr),
   (atomic_load_zext_glue node:$ptr)> {
   let IsAtomic = 1;
@@ -417,6 +429,12 @@ def atomic_load_zext_16_glue : PatFrag<(ops node:$ptr),
 
 def atomic_load_sext_16_glue : PatFrag<(ops node:$ptr),
   (atomic_load_sext_glue node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i16;
+}
+
+def atomic_load_aext_16_glue : PatFrag<(ops node:$ptr),
+  (atomic_load_aext_glue node:$ptr)> {
   let IsAtomic = 1;
   let MemoryVT = i16;
 }
@@ -494,23 +512,25 @@ def load_align16_local_m0 : PatFrag<(ops node:$ptr),
 }
 
 let IsAtomic = 1, AddressSpaces = LoadAddress_local.AddrSpaces in {
-def atomic_load_8_local_m0 : PatFrag<(ops node:$ptr),
-                                      (atomic_load_8_glue node:$ptr)>;
-def atomic_load_16_local_m0 : PatFrag<(ops node:$ptr),
-                                      (atomic_load_16_glue node:$ptr)>;
-def atomic_load_32_local_m0 : PatFrag<(ops node:$ptr),
-                                      (atomic_load_32_glue node:$ptr)>;
-def atomic_load_64_local_m0 : PatFrag<(ops node:$ptr),
-                                       (atomic_load_64_glue node:$ptr)>;
+def atomic_load_nonext_16_local_m0 : PatFrag<(ops node:$ptr),
+                                      (atomic_load_nonext_16_glue node:$ptr)>;
+def atomic_load_nonext_32_local_m0 : PatFrag<(ops node:$ptr),
+                                      (atomic_load_nonext_32_glue node:$ptr)>;
+def atomic_load_nonext_64_local_m0 : PatFrag<(ops node:$ptr),
+                                       (atomic_load_nonext_64_glue node:$ptr)>;
 
 def atomic_load_zext_8_local_m0 : PatFrag<(ops node:$ptr),
                                       (atomic_load_zext_8_glue node:$ptr)>;
 def atomic_load_sext_8_local_m0 : PatFrag<(ops node:$ptr),
                                       (atomic_load_sext_8_glue node:$ptr)>;
+def atomic_load_aext_8_local_m0 : PatFrag<(ops node:$ptr),
+                                      (atomic_load_aext_8_glue node:$ptr)>;
 def atomic_load_zext_16_local_m0 : PatFrag<(ops node:$ptr),
                                       (atomic_load_zext_16_glue node:$ptr)>;
 def atomic_load_sext_16_local_m0 : PatFrag<(ops node:$ptr),
                                       (atomic_load_sext_16_glue node:$ptr)>;
+def atomic_load_aext_16_local_m0 : PatFrag<(ops node:$ptr),
+                                      (atomic_load_aext_16_glue node:$ptr)>;
 } // End let AddressSpaces = LoadAddress_local.AddrSpaces
 
 
@@ -544,14 +564,12 @@ def truncstorei8_glue : PatFrag<(ops node:$val, node:$ptr),
                            (truncstore_glue node:$val, node:$ptr)> {
   let IsStore = 1;
   let MemoryVT = i8;
-  let IsTruncStore = 1;
 }
 
 def truncstorei16_glue : PatFrag<(ops node:$val, node:$ptr),
                            (truncstore_glue node:$val, node:$ptr)> {
   let IsStore = 1;
   let MemoryVT = i16;
-  let IsTruncStore = 1;
 }
 
 let IsStore = 1, AddressSpaces = StoreAddress_local.AddrSpaces in {
@@ -951,7 +969,7 @@ def MFMALdScaleXForm : SDNodeXForm<timm, [{
 def is_canonicalized : PatLeaf<(fAny srcvalue:$src), [{
   const SITargetLowering &Lowering =
       *static_cast<const SITargetLowering *>(getTargetLowering());
-  return Lowering.isCanonicalized(*CurDAG, SDValue(N, 0));
+  return Lowering.isCanonicalized(*CurDAG, Op);
 }]> {
   let GISelPredicateCode = [{
     const SITargetLowering *TLI = static_cast<const SITargetLowering *>(
@@ -1532,6 +1550,10 @@ class PackedFPInputModsMatchClass <int opSize> : AsmOperandClass {
   let PredicateMethod = "isPackedFP"#opSize#"InputMods";
 }
 
+class PackedVGPRFPInputModsMatchClass <int opSize> : PackedFPInputModsMatchClass<opSize> {
+  let PredicateMethod = "isPackedVGPRFP"#opSize#"InputMods";
+}
+
 class PackedIntInputModsMatchClass <int opSize> : AsmOperandClass {
   let Name = "PackedInt"#opSize#"InputMods";
   let ParserMethod = "parseRegOrImm";
@@ -1541,7 +1563,7 @@ class PackedIntInputModsMatchClass <int opSize> : AsmOperandClass {
 
 def PackedF16InputModsMatchClass : PackedFPInputModsMatchClass<16>;
 def PackedI16InputModsMatchClass : PackedIntInputModsMatchClass<16>;
-def PackedF32InputModsMatchClass : PackedFPInputModsMatchClass<32>;
+def PackedVGPRF32InputModsMatchClass : PackedVGPRFPInputModsMatchClass<32>;
 
 class PackedFPInputMods <PackedFPInputModsMatchClass matchClass> : InputMods <matchClass> {
   let PrintMethod = "printOperandAndFPInputMods";
@@ -1553,7 +1575,7 @@ class PackedIntInputMods <PackedIntInputModsMatchClass matchClass> : InputMods <
 
 def PackedF16InputMods : PackedFPInputMods<PackedF16InputModsMatchClass>;
 def PackedI16InputMods : PackedIntInputMods<PackedI16InputModsMatchClass>;
-def PackedF32InputMods : PackedFPInputMods<PackedF32InputModsMatchClass>;
+def PackedVGPRF32InputMods : PackedFPInputMods<PackedVGPRF32InputModsMatchClass>;
 
 def MFMALdScaleModifierOp : TImmLeaf<i32, [{
   return isUInt<2>(Imm);

@@ -41,6 +41,7 @@ class CXXRecordDecl;
 class Decl;
 class IncrementalExecutor;
 class IncrementalParser;
+class IncrementalCUDADeviceParser;
 
 /// Create a pre-configured \c CompilerInstance for incremental processing.
 class IncrementalCompilerBuilder {
@@ -93,7 +94,10 @@ class Interpreter {
   std::unique_ptr<IncrementalExecutor> IncrExecutor;
 
   // An optional parser for CUDA offloading
-  std::unique_ptr<IncrementalParser> DeviceParser;
+  std::unique_ptr<IncrementalCUDADeviceParser> DeviceParser;
+
+  // An optional action for CUDA offloading
+  std::unique_ptr<IncrementalAction> DeviceAct;
 
   /// List containing information about each incrementally parsed piece of code.
   std::list<PartialTranslationUnit> PTUs;
@@ -111,6 +115,9 @@ class Interpreter {
 
   /// Compiler instance performing the incremental compilation.
   std::unique_ptr<CompilerInstance> CI;
+
+  /// An optional compiler instance for CUDA offloading
+  std::unique_ptr<CompilerInstance> DeviceCI;
 
 protected:
   // Derived classes can use an extended interface of the Interpreter.
@@ -175,10 +182,11 @@ private:
   llvm::Expected<Expr *> ExtractValueFromExpr(Expr *E);
   llvm::Expected<llvm::orc::ExecutorAddr> CompileDtorCall(CXXRecordDecl *CXXRD);
 
-  CodeGenerator *getCodeGen() const;
-  std::unique_ptr<llvm::Module> GenModule();
+  CodeGenerator *getCodeGen(IncrementalAction *Action = nullptr) const;
+  std::unique_ptr<llvm::Module> GenModule(IncrementalAction *Action = nullptr);
   PartialTranslationUnit &RegisterPTU(TranslationUnitDecl *TU,
-                                      std::unique_ptr<llvm::Module> M = {});
+                                      std::unique_ptr<llvm::Module> M = {},
+                                      IncrementalAction *Action = nullptr);
 
   // A cache for the compiled destructors used to for de-allocation of managed
   // clang::Values.

@@ -259,14 +259,14 @@ def LZCNT     : VISInstFormat<0b000010111, (outs I64Regs:$rd),
                    (ins I64Regs:$rs2), "lzcnt $rs2, $rd">;
 
 let rs1 = 0 in {
-def MOVSTOSW : VISInstFormat<0b100010011, (outs I64Regs:$rd),
-                   (ins DFPRegs:$rs2), "movstosw $rs2, $rd">;
-def MOVSTOUW : VISInstFormat<0b100010001, (outs I64Regs:$rd),
-                   (ins DFPRegs:$rs2), "movstouw $rs2, $rd">;
+def MOVSTOSW : VISInstFormat<0b100010011, (outs IntRegs:$rd),
+                   (ins FPRegs:$rs2), "movstosw $rs2, $rd">;
+def MOVSTOUW : VISInstFormat<0b100010001, (outs IntRegs:$rd),
+                   (ins FPRegs:$rs2), "movstouw $rs2, $rd">;
 def MOVDTOX  : VISInstFormat<0b100010000, (outs I64Regs:$rd),
                    (ins DFPRegs:$rs2), "movdtox $rs2, $rd">;
-def MOVWTOS  :  VISInstFormat<0b100011001, (outs DFPRegs:$rd),
-                   (ins I64Regs:$rs2), "movwtos $rs2, $rd">;
+def MOVWTOS  :  VISInstFormat<0b100011001, (outs FPRegs:$rd),
+                   (ins IntRegs:$rs2), "movwtos $rs2, $rd">;
 def MOVXTOD  :  VISInstFormat<0b100011000, (outs DFPRegs:$rd),
                    (ins I64Regs:$rs2), "movxtod $rs2, $rd">;
 }
@@ -294,4 +294,39 @@ def : Pat<(f32 fpnegimm0), (FNEGS (FZEROS))>;
 // VIS3 instruction patterns.
 let Predicates = [HasVIS3] in {
 def : Pat<(i64 (adde i64:$lhs, i64:$rhs)), (ADDXCCC $lhs, $rhs)>;
+
+def : Pat<(i64 (mulhu i64:$lhs, i64:$rhs)), (UMULXHI $lhs, $rhs)>;
+// Signed "MULXHI".
+// Based on the formula presented in OSA2011 §7.140, but with bitops to select
+// the values to be added.
+// TODO: This expansion should probably be moved to DAG legalization phase.
+def : Pat<(i64 (mulhs i64:$lhs, i64:$rhs)),
+      (SUBrr (UMULXHI $lhs, $rhs),
+             (ADDrr (ANDrr (SRAXri $lhs, 63), $rhs),
+                    (ANDrr (SRAXri $rhs, 63), $lhs)))>;
+
+def : Pat<(i64 (ctlz i64:$src)), (LZCNT $src)>;
+def : Pat<(i64 (ctlz_zero_undef i64:$src)), (LZCNT $src)>;
+// 32-bit LZCNT.
+// The zero extension will leave us with 32 extra leading zeros,
+// so we need to compensate for it.
+// FIXME remove this when the codegen supports using 64-bit values directly
+// in V8+ mode.
+def : Pat<(i32 (ctlz i32:$src)), (ADDri (LZCNT (SRLri $src, 0)), (i32 -32))>;
+def : Pat<(i32 (ctlz_zero_undef i32:$src)), (ADDri (LZCNT (SRLri $src, 0)), (i32 -32))>;
+
+def : Pat<(i32 (bitconvert f32:$src)), (MOVSTOUW $src)>;
+def : Pat<(i64 (zanyext (i32 (bitconvert f32:$src)))), (MOVSTOUW $src)>;
+def : Pat<(i64 (sext (i32 (bitconvert f32:$src)))), (MOVSTOSW $src)>;
+def : Pat<(f32 (bitconvert i32:$src)), (MOVWTOS $src)>;
+def : Pat<(i64 (bitconvert f64:$src)), (MOVDTOX $src)>;
+def : Pat<(f64 (bitconvert i64:$src)), (MOVXTOD $src)>;
+
+// OP-then-neg FP operations.
+// TODO handle equivalent patterns like `rs1*-rs2`.
+def : Pat<(f32 (fneg (fadd f32:$rs1, f32:$rs2))), (FNADDS $rs1, $rs2)>;
+def : Pat<(f64 (fneg (fadd f64:$rs1, f64:$rs2))), (FNADDD $rs1, $rs2)>;
+def : Pat<(f32 (fneg (fmul f32:$rs1, f32:$rs2))), (FNMULS $rs1, $rs2)>;
+def : Pat<(f64 (fneg (fmul f64:$rs1, f64:$rs2))), (FNMULD $rs1, $rs2)>;
+def : Pat<(f64 (fneg (fmul (fpextend f32:$rs1), (fpextend f32:$rs2)))), (FNSMULD $rs1, $rs2)>;
 } // Predicates = [HasVIS3]

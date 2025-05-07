@@ -11,12 +11,10 @@
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
-#include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
@@ -177,7 +175,6 @@ struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
     // It computes the multiplied sizes of all dimensions instead of taking
     // the maximum of each dimension size * stride.
     SmallVector<AffineExpr> productExpressions;
-    SmallVector<Value> productResults;
     unsigned sourceRank = cast<ShapedType>(src.getType()).getRank();
 
     SmallVector<AffineExpr> symbols(2 * sourceRank);
@@ -225,15 +222,12 @@ struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
     Value isOutofBounds = rewriter.create<arith::CmpIOp>(
         loc, arith::CmpIPredicate::ult, delta, vectorSizeOffset);
 
-    // 2) check if (detla_bytes % (32 / elementBitwidth) != 0)
-    Value deltaBytes = rewriter.create<arith::MulIOp>(
-        loc, delta,
-        rewriter.create<arith::ConstantIndexOp>(loc, elementBitWidth / 8));
+    // 2) check if (detla % elements_per_word != 0)
     Value elementsPerWord = rewriter.create<arith::ConstantIndexOp>(
         loc, llvm::divideCeil(32, elementBitWidth));
     Value isNotWordAligned = rewriter.create<arith::CmpIOp>(
         loc, arith::CmpIPredicate::ne,
-        rewriter.create<arith::RemUIOp>(loc, deltaBytes, elementsPerWord),
+        rewriter.create<arith::RemUIOp>(loc, delta, elementsPerWord),
         rewriter.create<arith::ConstantIndexOp>(loc, 0));
 
     // We take the fallback of transfer_read default lowering only it is both
