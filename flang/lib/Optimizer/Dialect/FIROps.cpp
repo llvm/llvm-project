@@ -4993,7 +4993,7 @@ llvm::LogicalResult fir::LocalitySpecifierOp::verifyRegions() {
 
   if (dsType == LocalitySpecifierType::LocalInit && getCopyRegion().empty())
     return emitError(
-        "`local_init` specifier require at least a `copy` region.");
+        "`local_init` specifiers require at least a `copy` region.");
 
   if (dsType == LocalitySpecifierType::LocalInit &&
       failed(verifyRegion(getCopyRegion(), /*expectedNumArgs=*/2, "copy",

@@ -3490,7 +3490,7 @@ def YieldOp : fir_Op<"yield",
      ParentOneOf<["LocalitySpecifierOp"]>]> {
   let summary = "loop yield and termination operation";
   let description = [{
-    "fir.yield" yields SSA values from the fir dialect op region and
+    "fir.yield" yields SSA values from a fir dialect op region and
     terminates the region. The semantics of how the values are yielded is
     defined by the parent operation.
   }];
@@ -3537,7 +3537,7 @@ def fir_LocalitySpecifierOp : fir_Op<"local", [IsolatedFromAbove]> {
 
     * `local(x)` for "allocatables" would be emitted as:
     ```
-    fir.local {type = local} @x.privatizer : !some.type init {
+    fir.local {type = local} @x.localizer : !some.type init {
     ^bb0(%arg0: !fir.ref<!some.type>, %arg1: !fir.ref<!some.type>):
     // initialize %arg1, using %arg0 as a mold for allocations.
     // For example if %arg0 is a heap allocated array with a runtime determined
