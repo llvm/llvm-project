@@ -90,6 +90,8 @@ public:
       return cir::FPAttr::getZero(ty);
     if (auto arrTy = mlir::dyn_cast<cir::ArrayType>(ty))
       return cir::ZeroAttr::get(arrTy);
+    if (auto vecTy = mlir::dyn_cast<cir::VectorType>(ty))
+      return cir::ZeroAttr::get(vecTy);
     if (auto ptrTy = mlir::dyn_cast<cir::PointerType>(ty))
       return getConstNullPtrAttr(ptrTy);
     if (auto recordTy = mlir::dyn_cast<cir::RecordType>(ty))
@@ -166,8 +168,7 @@ public:
   mlir::TypedAttr getConstPtrAttr(mlir::Type type, int64_t value) {
     auto valueAttr = mlir::IntegerAttr::get(
         mlir::IntegerType::get(type.getContext(), 64), value);
-    return cir::ConstPtrAttr::get(
-        getContext(), mlir::cast<cir::PointerType>(type), valueAttr);
+    return cir::ConstPtrAttr::get(type, valueAttr);
   }
 
   mlir::Value createAlloca(mlir::Location loc, cir::PointerType addrType,
@@ -214,14 +215,14 @@ public:
   //===--------------------------------------------------------------------===//
 
   cir::CallOp createCallOp(mlir::Location loc, mlir::SymbolRefAttr callee,
-                           mlir::Type returnType) {
-    auto op = create<cir::CallOp>(loc, callee, returnType);
-    return op;
+                           mlir::Type returnType, mlir::ValueRange operands) {
+    return create<cir::CallOp>(loc, callee, returnType, operands);
   }
 
-  cir::CallOp createCallOp(mlir::Location loc, cir::FuncOp callee) {
+  cir::CallOp createCallOp(mlir::Location loc, cir::FuncOp callee,
+                           mlir::ValueRange operands) {
     return createCallOp(loc, mlir::SymbolRefAttr::get(callee),
-                        callee.getFunctionType().getReturnType());
+                        callee.getFunctionType().getReturnType(), operands);
   }
 
   //===--------------------------------------------------------------------===//

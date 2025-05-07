@@ -1422,7 +1422,18 @@ bool DeclContext::Encloses(const DeclContext *DC) const {
     return getPrimaryContext()->Encloses(DC);
 
   for (; DC; DC = DC->getParent())
-    if (!isa<LinkageSpecDecl>(DC) && !isa<ExportDecl>(DC) &&
+    if (!isa<LinkageSpecDecl, ExportDecl>(DC) &&
+        DC->getPrimaryContext() == this)
+      return true;
+  return false;
+}
+
+bool DeclContext::LexicallyEncloses(const DeclContext *DC) const {
+  if (getPrimaryContext() != this)
+    return getPrimaryContext()->LexicallyEncloses(DC);
+
+  for (; DC; DC = DC->getLexicalParent())
+    if (!isa<LinkageSpecDecl, ExportDecl>(DC) &&
         DC->getPrimaryContext() == this)
       return true;
   return false;
@@ -2138,8 +2149,7 @@ void DeclContext::makeDeclVisibleInContextImpl(NamedDecl *D, bool Internal) {
   // have already checked the external source.
   if (!Internal)
     if (ExternalASTSource *Source = getParentASTContext().getExternalSource())
-      if (hasExternalVisibleStorage() &&
-          Map->find(D->getDeclName()) == Map->end())
+      if (hasExternalVisibleStorage() && !Map->contains(D->getDeclName()))
         Source->FindExternalVisibleDeclsByName(this, D->getDeclName(),
                                                D->getDeclContext());
 

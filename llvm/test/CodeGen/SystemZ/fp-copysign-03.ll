@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z16 \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,Z16
 ;
-; Test copysign intrinsics with half.
+; Test copysign intrinsics.
 
 declare half @llvm.copysign.f16(half, half)
 declare float @llvm.copysign.f32(float, float)
@@ -43,53 +43,25 @@ define half @f2(half %a, double %b) {
 }
 
 ; Test copysign with an f16 result and f128 sign argument.
-; TODO: Let the DAGCombiner remove the fp_round.
 define half @f3(half %a, fp128 %b) {
 ; Z10-LABEL: f3:
 ; Z10:       # %bb.0:
-; Z10-NEXT:    stmg %r14, %r15, 112(%r15)
-; Z10-NEXT:    .cfi_offset %r14, -48
-; Z10-NEXT:    .cfi_offset %r15, -40
-; Z10-NEXT:    aghi %r15, -184
-; Z10-NEXT:    .cfi_def_cfa_offset 344
-; Z10-NEXT:    std %f8, 176(%r15) # 8-byte Spill
-; Z10-NEXT:    .cfi_offset %f8, -168
 ; Z10-NEXT:    ld %f1, 0(%r2)
 ; Z10-NEXT:    ld %f3, 8(%r2)
-; Z10-NEXT:    ler %f8, %f0
-; Z10-NEXT:    la %r2, 160(%r15)
-; Z10-NEXT:    std %f1, 160(%r15)
-; Z10-NEXT:    std %f3, 168(%r15)
-; Z10-NEXT:    brasl %r14, __trunctfhf2@PLT
-; Z10-NEXT:    cpsdr %f0, %f0, %f8
-; Z10-NEXT:    ld %f8, 176(%r15) # 8-byte Reload
-; Z10-NEXT:    lmg %r14, %r15, 296(%r15)
+; Z10-NEXT:    cpsdr %f0, %f1, %f0
 ; Z10-NEXT:    br %r14
 ;
 ; Z16-LABEL: f3:
 ; Z16:       # %bb.0:
-; Z16-NEXT:    stmg %r14, %r15, 112(%r15)
-; Z16-NEXT:    .cfi_offset %r14, -48
-; Z16-NEXT:    .cfi_offset %r15, -40
-; Z16-NEXT:    aghi %r15, -184
-; Z16-NEXT:    .cfi_def_cfa_offset 344
-; Z16-NEXT:    std %f8, 176(%r15) # 8-byte Spill
-; Z16-NEXT:    .cfi_offset %f8, -168
-; Z16-NEXT:    ldr %f8, %f0
-; Z16-NEXT:    vl %v0, 0(%r2), 3
-; Z16-NEXT:    la %r2, 160(%r15)
-; Z16-NEXT:    vst %v0, 160(%r15), 3
-; Z16-NEXT:    brasl %r14, __trunctfhf2@PLT
-; Z16-NEXT:    cpsdr %f0, %f0, %f8
-; Z16-NEXT:    ld %f8, 176(%r15) # 8-byte Reload
-; Z16-NEXT:    lmg %r14, %r15, 296(%r15)
+; Z16-NEXT:    vl %v1, 0(%r2), 3
+; Z16-NEXT:    cpsdr %f0, %f1, %f0
 ; Z16-NEXT:    br %r14
   %bh = fptrunc fp128 %b to half
   %res = call half @llvm.copysign.f16(half %a, half %bh)
   ret half %res
 }
 
-; Test copysign with an f32 result and half sign argument.
+; Test copysign with an f32 result and f16 sign argument.
 define float @f4(float %a, half %b) {
 ; CHECK-LABEL: f4:
 ; CHECK:       # %bb.0:
@@ -100,9 +72,49 @@ define float @f4(float %a, half %b) {
   ret float %res
 }
 
-; Test copysign with an f64 result and half sign argument.
-define double @f5(double %a, half %b) {
+; Test copysign with an f32 result and f32 sign argument.
+define float @f5(float %a, float %b) {
 ; CHECK-LABEL: f5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cpsdr %f0, %f2, %f0
+; CHECK-NEXT:    br %r14
+  %res = call float @llvm.copysign.f32(float %a, float %b)
+  ret float %res
+}
+
+; Test copysign with an f32 result and f64 sign argument.
+define float @f6(float %a, double %b) {
+; CHECK-LABEL: f6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cpsdr %f0, %f2, %f0
+; CHECK-NEXT:    br %r14
+  %bf = fptrunc double %b to float
+  %res = call float @llvm.copysign.f32(float %a, float %bf)
+  ret float %res
+}
+
+; Test copysign with an f32 result and f128 sign argument.
+define float @f7(float %a, fp128 %b) {
+; Z10-LABEL: f7:
+; Z10:       # %bb.0:
+; Z10-NEXT:    ld %f1, 0(%r2)
+; Z10-NEXT:    ld %f3, 8(%r2)
+; Z10-NEXT:    cpsdr %f0, %f1, %f0
+; Z10-NEXT:    br %r14
+;
+; Z16-LABEL: f7:
+; Z16:       # %bb.0:
+; Z16-NEXT:    vl %v1, 0(%r2), 3
+; Z16-NEXT:    cpsdr %f0, %f1, %f0
+; Z16-NEXT:    br %r14
+  %bf = fptrunc fp128 %b to float
+  %res = call float @llvm.copysign.f32(float %a, float %bf)
+  ret float %res
+}
+
+; Test copysign with an f64 result and f16 sign argument.
+define double @f8(double %a, half %b) {
+; CHECK-LABEL: f8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cpsdr %f0, %f2, %f0
 ; CHECK-NEXT:    br %r14
@@ -111,9 +123,49 @@ define double @f5(double %a, half %b) {
   ret double %res
 }
 
-; Test copysign with an f128 result and half sign argument.
-define fp128 @f6(fp128 %a, half %b) {
-; Z10-LABEL: f6:
+; Test copysign with an f64 result and f32 sign argument.
+define double @f9(double %a, float %b) {
+; CHECK-LABEL: f9:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cpsdr %f0, %f2, %f0
+; CHECK-NEXT:    br %r14
+  %bd = fpext float %b to double
+  %res = call double @llvm.copysign.f64(double %a, double %bd)
+  ret double %res
+}
+
+; Test copysign with an f64 result and f64 sign argument.
+define double @f10(double %a, double %b) {
+; CHECK-LABEL: f10:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cpsdr %f0, %f2, %f0
+; CHECK-NEXT:    br %r14
+  %res = call double @llvm.copysign.f64(double %a, double %b)
+  ret double %res
+}
+
+; Test copysign with an f64 result and f128 sign argument.
+define double @f11(double %a, fp128 %b) {
+; Z10-LABEL: f11:
+; Z10:       # %bb.0:
+; Z10-NEXT:    ld %f1, 0(%r2)
+; Z10-NEXT:    ld %f3, 8(%r2)
+; Z10-NEXT:    cpsdr %f0, %f1, %f0
+; Z10-NEXT:    br %r14
+;
+; Z16-LABEL: f11:
+; Z16:       # %bb.0:
+; Z16-NEXT:    vl %v1, 0(%r2), 3
+; Z16-NEXT:    cpsdr %f0, %f1, %f0
+; Z16-NEXT:    br %r14
+  %bd = fptrunc fp128 %b to double
+  %res = call double @llvm.copysign.f64(double %a, double %bd)
+  ret double %res
+}
+
+; Test copysign with an f128 result and f16 sign argument.
+define fp128 @f12(fp128 %a, half %b) {
+; Z10-LABEL: f12:
 ; Z10:       # %bb.0:
 ; Z10-NEXT:    ld %f1, 0(%r3)
 ; Z10-NEXT:    ld %f3, 8(%r3)
@@ -122,24 +174,117 @@ define fp128 @f6(fp128 %a, half %b) {
 ; Z10-NEXT:    std %f3, 8(%r2)
 ; Z10-NEXT:    br %r14
 ;
-; Z16-LABEL: f6:
+; Z16-LABEL: f12:
 ; Z16:       # %bb.0:
 ; Z16-NEXT:    aghi %r15, -168
 ; Z16-NEXT:    .cfi_def_cfa_offset 328
 ; Z16-NEXT:    vl %v1, 0(%r3), 3
 ; Z16-NEXT:    vsteh %v0, 164(%r15), 0
 ; Z16-NEXT:    tm 164(%r15), 128
-; Z16-NEXT:    je .LBB6_2
+; Z16-NEXT:    je .LBB12_2
 ; Z16-NEXT:  # %bb.1:
 ; Z16-NEXT:    wflnxb %v0, %v1
-; Z16-NEXT:    j .LBB6_3
-; Z16-NEXT:  .LBB6_2:
+; Z16-NEXT:    j .LBB12_3
+; Z16-NEXT:  .LBB12_2:
 ; Z16-NEXT:    wflpxb %v0, %v1
-; Z16-NEXT:  .LBB6_3:
+; Z16-NEXT:  .LBB12_3:
 ; Z16-NEXT:    vst %v0, 0(%r2), 3
 ; Z16-NEXT:    aghi %r15, 168
 ; Z16-NEXT:    br %r14
-  %bd = fpext half %b to fp128
-  %res = call fp128 @llvm.copysign.f128(fp128 %a, fp128 %bd)
+  %b128 = fpext half %b to fp128
+  %res = call fp128 @llvm.copysign.f128(fp128 %a, fp128 %b128)
+  ret fp128 %res
+}
+
+; Test copysign with an f128 result and f32 sign argument.
+define fp128 @f13(fp128 %a, float %b) {
+; Z10-LABEL: f13:
+; Z10:       # %bb.0:
+; Z10-NEXT:    ld %f1, 0(%r3)
+; Z10-NEXT:    ld %f3, 8(%r3)
+; Z10-NEXT:    cpsdr %f1, %f0, %f1
+; Z10-NEXT:    std %f1, 0(%r2)
+; Z10-NEXT:    std %f3, 8(%r2)
+; Z10-NEXT:    br %r14
+;
+; Z16-LABEL: f13:
+; Z16:       # %bb.0:
+; Z16-NEXT:    vl %v1, 0(%r3), 3
+; Z16-NEXT:    vlgvf %r0, %v0, 0
+; Z16-NEXT:    tmlh %r0, 32768
+; Z16-NEXT:    je .LBB13_2
+; Z16-NEXT:  # %bb.1:
+; Z16-NEXT:    wflnxb %v0, %v1
+; Z16-NEXT:    vst %v0, 0(%r2), 3
+; Z16-NEXT:    br %r14
+; Z16-NEXT:  .LBB13_2:
+; Z16-NEXT:    wflpxb %v0, %v1
+; Z16-NEXT:    vst %v0, 0(%r2), 3
+; Z16-NEXT:    br %r14
+  %b128 = fpext float %b to fp128
+  %res = call fp128 @llvm.copysign.f128(fp128 %a, fp128 %b128)
+  ret fp128 %res
+}
+
+; Test copysign with an f128 result and f64 sign argument.
+define fp128 @f14(fp128 %a, double %b) {
+; Z10-LABEL: f14:
+; Z10:       # %bb.0:
+; Z10-NEXT:    ld %f1, 0(%r3)
+; Z10-NEXT:    ld %f3, 8(%r3)
+; Z10-NEXT:    cpsdr %f1, %f0, %f1
+; Z10-NEXT:    std %f1, 0(%r2)
+; Z10-NEXT:    std %f3, 8(%r2)
+; Z10-NEXT:    br %r14
+;
+; Z16-LABEL: f14:
+; Z16:       # %bb.0:
+; Z16-NEXT:    vl %v1, 0(%r3), 3
+; Z16-NEXT:    lgdr %r0, %f0
+; Z16-NEXT:    tmhh %r0, 32768
+; Z16-NEXT:    je .LBB14_2
+; Z16-NEXT:  # %bb.1:
+; Z16-NEXT:    wflnxb %v0, %v1
+; Z16-NEXT:    vst %v0, 0(%r2), 3
+; Z16-NEXT:    br %r14
+; Z16-NEXT:  .LBB14_2:
+; Z16-NEXT:    wflpxb %v0, %v1
+; Z16-NEXT:    vst %v0, 0(%r2), 3
+; Z16-NEXT:    br %r14
+  %b128 = fpext double %b to fp128
+  %res = call fp128 @llvm.copysign.f128(fp128 %a, fp128 %b128)
+  ret fp128 %res
+}
+
+; Test copysign with an f128 result and f128 sign argument.
+define fp128 @f15(fp128 %a, fp128 %b) {
+; Z10-LABEL: f15:
+; Z10:       # %bb.0:
+; Z10-NEXT:    ld %f0, 0(%r3)
+; Z10-NEXT:    ld %f2, 8(%r3)
+; Z10-NEXT:    ld %f1, 0(%r4)
+; Z10-NEXT:    ld %f3, 8(%r4)
+; Z10-NEXT:    cpsdr %f0, %f1, %f0
+; Z10-NEXT:    std %f0, 0(%r2)
+; Z10-NEXT:    std %f2, 8(%r2)
+; Z10-NEXT:    br %r14
+;
+; Z16-LABEL: f15:
+; Z16:       # %bb.0:
+; Z16-NEXT:    larl %r1, .LCPI15_0
+; Z16-NEXT:    vl %v1, 0(%r4), 3
+; Z16-NEXT:    vl %v2, 0(%r1), 3
+; Z16-NEXT:    vl %v0, 0(%r3), 3
+; Z16-NEXT:    vtm %v1, %v2
+; Z16-NEXT:    je .LBB15_2
+; Z16-NEXT:  # %bb.1:
+; Z16-NEXT:    wflnxb %v0, %v0
+; Z16-NEXT:    vst %v0, 0(%r2), 3
+; Z16-NEXT:    br %r14
+; Z16-NEXT:  .LBB15_2:
+; Z16-NEXT:    wflpxb %v0, %v0
+; Z16-NEXT:    vst %v0, 0(%r2), 3
+; Z16-NEXT:    br %r14
+  %res = call fp128 @llvm.copysign.f128(fp128 %a, fp128 %b)
   ret fp128 %res
 }

@@ -316,3 +316,9 @@ namespace ZeroSizedArray {
   }
   static_assert(foo() == 1);
 }
+namespace VoidCast {
+  constexpr int a = 12;
+  constexpr const int *b = &a;
+  constexpr int *f = (int*)(void*)b; // all-error {{must be initialized by a constant expression}} \
+                                     // all-note {{cast from 'void *' is not allowed in a constant expression}}
+}

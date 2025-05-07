@@ -17,6 +17,7 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/CharUnits.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ExprCXX.h"
@@ -865,7 +866,7 @@ ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
   // Exceptions aren't allowed in CUDA device code.
   if (getLangOpts().CUDA)
     CUDA().DiagIfDeviceCode(OpLoc, diag::err_cuda_device_exceptions)
-        << "throw" << llvm::to_underlying(CUDA().CurrentTarget());
+        << "throw" << CUDA().CurrentTarget();
 
   if (getCurScope() && getCurScope()->isOpenMPSimdDirectiveScope())
     Diag(OpLoc, diag::err_omp_simd_region_cannot_use_stmt) << "throw";
@@ -2055,15 +2056,15 @@ Sema::ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal,
             //   shall be a converted constant expression (5.19) of type std::size_t
             //   and shall evaluate to a strictly positive value.
             llvm::APSInt Value(Context.getIntWidth(Context.getSizeType()));
-            Array.NumElts
-             = CheckConvertedConstantExpression(NumElts, Context.getSizeType(), Value,
-                                                CCEK_ArrayBound)
-                 .get();
-          } else {
             Array.NumElts =
-                VerifyIntegerConstantExpression(
-                    NumElts, nullptr, diag::err_new_array_nonconst, AllowFold)
+                CheckConvertedConstantExpression(NumElts, Context.getSizeType(),
+                                                 Value, CCEKind::ArrayBound)
                     .get();
+          } else {
+            Array.NumElts = VerifyIntegerConstantExpression(
+                                NumElts, nullptr, diag::err_new_array_nonconst,
+                                AllowFoldKind::Allow)
+                                .get();
           }
           if (!Array.NumElts)
             return ExprError();
@@ -2431,7 +2432,8 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   if (CheckArgsForPlaceholders(PlacementArgs))
     return ExprError();
 
-  AllocationFunctionScope Scope = UseGlobal ? AFS_Global : AFS_Both;
+  AllocationFunctionScope Scope = UseGlobal ? AllocationFunctionScope::Global
+                                            : AllocationFunctionScope::Both;
   SourceRange AllocationParameterRange = Range;
   if (PlacementLParen.isValid() && PlacementRParen.isValid())
     AllocationParameterRange = SourceRange(PlacementLParen, PlacementRParen);
@@ -2452,8 +2454,9 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   SmallVector<Expr *, 8> AllPlaceArgs;
   if (OperatorNew) {
     auto *Proto = OperatorNew->getType()->castAs<FunctionProtoType>();
-    VariadicCallType CallType = Proto->isVariadic() ? VariadicFunction
-                                                    : VariadicDoesNotApply;
+    VariadicCallType CallType = Proto->isVariadic()
+                                    ? VariadicCallType::Function
+                                    : VariadicCallType::DoesNotApply;
 
     // We've already converted the placement args, just fill in any default
     // arguments. Skip the first parameter because we don't have a corresponding
@@ -2905,9 +2908,11 @@ bool Sema::FindAllocationFunctions(
     FunctionDecl *&OperatorDelete, bool Diagnose) {
   // --- Choosing an allocation function ---
   // C++ 5.3.4p8 - 14 & 18
-  // 1) If looking in AFS_Global scope for allocation functions, only look in
-  //    the global scope. Else, if AFS_Class, only look in the scope of the
-  //    allocated class. If AFS_Both, look in both.
+  // 1) If looking in AllocationFunctionScope::Global scope for allocation
+  // functions, only look in
+  //    the global scope. Else, if AllocationFunctionScope::Class, only look in
+  //    the scope of the allocated class. If AllocationFunctionScope::Both, look
+  //    in both.
   // 2) If an array size is given, look for operator new[], else look for
   //   operator new.
   // 3) The first argument is always size_t. Append the arguments from the
@@ -2980,7 +2985,8 @@ bool Sema::FindAllocationFunctions(
     //   function's name is looked up in the global scope. Otherwise, if the
     //   allocated type is a class type T or array thereof, the allocation
     //   function's name is looked up in the scope of T.
-    if (AllocElemType->isRecordType() && NewScope != AFS_Global)
+    if (AllocElemType->isRecordType() &&
+        NewScope != AllocationFunctionScope::Global)
       LookupQualifiedName(R, AllocElemType->getAsCXXRecordDecl());
 
     // We can see ambiguity here if the allocation function is found in
@@ -2992,7 +2998,7 @@ bool Sema::FindAllocationFunctions(
     //   a class type, the allocation function's name is looked up in the
     //   global scope.
     if (R.empty()) {
-      if (NewScope == AFS_Class)
+      if (NewScope == AllocationFunctionScope::Class)
         return true;
 
       LookupQualifiedName(R, Context.getTranslationUnitDecl());
@@ -3042,7 +3048,8 @@ bool Sema::FindAllocationFunctions(
   //   the allocated type is not a class type or array thereof, the
   //   deallocation function's name is looked up in the global scope.
   LookupResult FoundDelete(*this, DeleteName, StartLoc, LookupOrdinaryName);
-  if (AllocElemType->isRecordType() && DeleteScope != AFS_Global) {
+  if (AllocElemType->isRecordType() &&
+      DeleteScope != AllocationFunctionScope::Global) {
     auto *RD =
         cast<CXXRecordDecl>(AllocElemType->castAs<RecordType>()->getDecl());
     LookupQualifiedName(FoundDelete, RD);
@@ -3064,10 +3071,16 @@ bool Sema::FindAllocationFunctions(
     Filter.done();
   }
 
+  auto GetRedeclContext = [](Decl *D) {
+    return D->getDeclContext()->getRedeclContext();
+  };
+
+  DeclContext *OperatorNewContext = GetRedeclContext(OperatorNew);
+
   bool FoundGlobalDelete = FoundDelete.empty();
   bool IsClassScopedTypeAwareNew =
       isTypeAwareAllocation(IAP.PassTypeIdentity) &&
-      OperatorNew->getDeclContext()->isRecord();
+      OperatorNewContext->isRecord();
   auto DiagnoseMissingTypeAwareCleanupOperator = [&](bool IsPlacementOperator) {
     assert(isTypeAwareAllocation(IAP.PassTypeIdentity));
     if (Diagnose) {
@@ -3075,7 +3088,7 @@ bool Sema::FindAllocationFunctions(
           << OperatorNew->getDeclName() << IsPlacementOperator << DeleteName;
       Diag(OperatorNew->getLocation(), diag::note_type_aware_operator_declared)
           << OperatorNew->isTypeAwareOperatorNewOrDelete()
-          << OperatorNew->getDeclName() << OperatorNew->getDeclContext();
+          << OperatorNew->getDeclName() << OperatorNewContext;
     }
   };
   if (IsClassScopedTypeAwareNew && FoundDelete.empty()) {
@@ -3085,7 +3098,7 @@ bool Sema::FindAllocationFunctions(
   if (FoundDelete.empty()) {
     FoundDelete.clear(LookupOrdinaryName);
 
-    if (DeleteScope == AFS_Class)
+    if (DeleteScope == AllocationFunctionScope::Class)
       return true;
 
     DeclareGlobalNewDelete();
@@ -3218,6 +3231,7 @@ bool Sema::FindAllocationFunctions(
   //   deallocation function will be called.
   if (Matches.size() == 1) {
     OperatorDelete = Matches[0].second;
+    DeclContext *OperatorDeleteContext = GetRedeclContext(OperatorDelete);
     bool FoundTypeAwareOperator =
         OperatorDelete->isTypeAwareOperatorNewOrDelete() ||
         OperatorNew->isTypeAwareOperatorNewOrDelete();
@@ -3225,8 +3239,7 @@ bool Sema::FindAllocationFunctions(
       bool MismatchedTypeAwareness =
           OperatorDelete->isTypeAwareOperatorNewOrDelete() !=
           OperatorNew->isTypeAwareOperatorNewOrDelete();
-      bool MismatchedContext =
-          OperatorDelete->getDeclContext() != OperatorNew->getDeclContext();
+      bool MismatchedContext = OperatorDeleteContext != OperatorNewContext;
       if (MismatchedTypeAwareness || MismatchedContext) {
         FunctionDecl *Operators[] = {OperatorDelete, OperatorNew};
         bool TypeAwareOperatorIndex =
@@ -3235,16 +3248,15 @@ bool Sema::FindAllocationFunctions(
             << Operators[TypeAwareOperatorIndex]->getDeclName()
             << isPlacementNew
             << Operators[!TypeAwareOperatorIndex]->getDeclName()
-            << Operators[TypeAwareOperatorIndex]->getDeclContext();
+            << GetRedeclContext(Operators[TypeAwareOperatorIndex]);
         Diag(OperatorNew->getLocation(),
              diag::note_type_aware_operator_declared)
             << OperatorNew->isTypeAwareOperatorNewOrDelete()
-            << OperatorNew->getDeclName() << OperatorNew->getDeclContext();
+            << OperatorNew->getDeclName() << OperatorNewContext;
         Diag(OperatorDelete->getLocation(),
              diag::note_type_aware_operator_declared)
             << OperatorDelete->isTypeAwareOperatorNewOrDelete()
-            << OperatorDelete->getDeclName()
-            << OperatorDelete->getDeclContext();
+            << OperatorDelete->getDeclName() << OperatorDeleteContext;
       }
     }
 
@@ -3596,9 +3608,8 @@ FunctionDecl *Sema::FindDeallocationFunctionForDestructor(SourceLocation Loc,
 
   // If there's no class-specific operator delete, look up the global
   // non-array delete.
-  QualType RecordType = Context.getRecordType(RD);
-  IDP.PassAlignment =
-      alignedAllocationModeFromBool(hasNewExtendedAlignment(*this, RecordType));
+  IDP.PassAlignment = alignedAllocationModeFromBool(
+      hasNewExtendedAlignment(*this, DeallocType));
   IDP.PassSize = SizedDeallocationMode::Yes;
   return FindUsualDeallocationFunction(Loc, IDP, Name);
 }
@@ -4612,11 +4623,13 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     llvm_unreachable("bad conversion");
 
   case ImplicitConversionSequence::BadConversion:
-    Sema::AssignConvertType ConvTy =
+    AssignConvertType ConvTy =
         CheckAssignmentConstraints(From->getExprLoc(), ToType, From->getType());
     bool Diagnosed = DiagnoseAssignmentResult(
-        ConvTy == Compatible ? Incompatible : ConvTy, From->getExprLoc(),
-        ToType, From->getType(), From, Action);
+        ConvTy == AssignConvertType::Compatible
+            ? AssignConvertType::Incompatible
+            : ConvTy,
+        From->getExprLoc(), ToType, From->getType(), From, Action);
     assert(Diagnosed && "failed to diagnose bad conversion"); (void)Diagnosed;
     return ExprError();
   }
@@ -5124,13 +5137,13 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
 
   case ICK_TransparentUnionConversion: {
     ExprResult FromRes = From;
-    Sema::AssignConvertType ConvTy =
-      CheckTransparentUnionArgumentConstraints(ToType, FromRes);
+    AssignConvertType ConvTy =
+        CheckTransparentUnionArgumentConstraints(ToType, FromRes);
     if (FromRes.isInvalid())
       return ExprError();
     From = FromRes.get();
-    assert ((ConvTy == Sema::Compatible) &&
-            "Improper transparent union conversion");
+    assert((ConvTy == AssignConvertType::Compatible) &&
+           "Improper transparent union conversion");
     (void)ConvTy;
     break;
   }
@@ -5411,6 +5424,15 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
     return !S.RequireCompleteType(
         Loc, ArgTy, diag::err_incomplete_type_used_in_type_trait_expr);
 
+  // has_unique_object_representations<T>
+  // remove_all_extents_t<T> shall be a complete type or cv void (LWG4113).
+  case UTT_HasUniqueObjectRepresentations:
+    ArgTy = QualType(ArgTy->getBaseElementTypeUnsafe(), 0);
+    if (ArgTy->isVoidType())
+      return true;
+    return !S.RequireCompleteType(
+        Loc, ArgTy, diag::err_incomplete_type_used_in_type_trait_expr);
+
   // C++1z [meta.unary.prop]:
   //   remove_all_extents_t<T> shall be a complete type or cv void.
   case UTT_IsTrivial:
@@ -5423,6 +5445,8 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   // impose the same constraints.
   case UTT_IsTriviallyRelocatable:
   case UTT_IsTriviallyEqualityComparable:
+  case UTT_IsCppTriviallyRelocatable:
+  case UTT_IsReplaceable:
   case UTT_CanPassInRegs:
   // Per the GCC type traits documentation, T shall be a complete type, cv void,
   // or an array of unknown bound. But GCC actually imposes the same constraints
@@ -5438,13 +5462,8 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_HasTrivialCopy:
   case UTT_HasTrivialDestructor:
   case UTT_HasVirtualDestructor:
-  // has_unique_object_representations<T> when T is an array is defined in terms
-  // of has_unique_object_representations<remove_all_extents_t<T>>, so the base
-  // type needs to be complete even if the type is an incomplete array type.
-  case UTT_HasUniqueObjectRepresentations:
     ArgTy = QualType(ArgTy->getBaseElementTypeUnsafe(), 0);
     [[fallthrough]];
-
   // C++1z [meta.unary.prop]:
   //   T shall be a complete type, cv void, or an array of unknown bound.
   case UTT_IsDestructible:
@@ -5570,6 +5589,100 @@ static bool isTriviallyEqualityComparableType(Sema &S, QualType Type, SourceLoca
 
   return S.getASTContext().hasUniqueObjectRepresentations(
       CanonicalType, /*CheckIfTriviallyCopyable=*/false);
+}
+
+static bool IsCXXTriviallyRelocatableType(Sema &S, const CXXRecordDecl *RD) {
+  if (std::optional<ASTContext::CXXRecordDeclRelocationInfo> Info =
+          S.getASTContext().getRelocationInfoForCXXRecord(RD))
+    return Info->IsRelocatable;
+  ASTContext::CXXRecordDeclRelocationInfo Info =
+      S.CheckCXX2CRelocatableAndReplaceable(RD);
+  S.getASTContext().setRelocationInfoForCXXRecord(RD, Info);
+  return Info.IsRelocatable;
+}
+
+bool Sema::IsCXXTriviallyRelocatableType(QualType Type) {
+
+  QualType BaseElementType = getASTContext().getBaseElementType(Type);
+
+  if (Type->isVariableArrayType())
+    return false;
+
+  if (BaseElementType.hasNonTrivialObjCLifetime())
+    return false;
+
+  if (BaseElementType.hasAddressDiscriminatedPointerAuth())
+    return false;
+
+  if (BaseElementType->isIncompleteType())
+    return false;
+
+  if (BaseElementType->isScalarType() || BaseElementType->isVectorType())
+    return true;
+
+  if (const auto *RD = BaseElementType->getAsCXXRecordDecl())
+    return ::IsCXXTriviallyRelocatableType(*this, RD);
+
+  return false;
+}
+
+static bool IsCXXReplaceableType(Sema &S, const CXXRecordDecl *RD) {
+  if (std::optional<ASTContext::CXXRecordDeclRelocationInfo> Info =
+          S.getASTContext().getRelocationInfoForCXXRecord(RD))
+    return Info->IsReplaceable;
+  ASTContext::CXXRecordDeclRelocationInfo Info =
+      S.CheckCXX2CRelocatableAndReplaceable(RD);
+  S.getASTContext().setRelocationInfoForCXXRecord(RD, Info);
+  return Info.IsReplaceable;
+}
+
+bool Sema::IsCXXReplaceableType(QualType Type) {
+  if (Type.isConstQualified() || Type.isVolatileQualified())
+    return false;
+
+  if (Type->isVariableArrayType())
+    return false;
+
+  QualType BaseElementType =
+      getASTContext().getBaseElementType(Type.getUnqualifiedType());
+  if (BaseElementType->isIncompleteType())
+    return false;
+  if (BaseElementType->isScalarType())
+    return true;
+  if (const auto *RD = BaseElementType->getAsCXXRecordDecl())
+    return ::IsCXXReplaceableType(*this, RD);
+  return false;
+}
+
+static bool IsTriviallyRelocatableType(Sema &SemaRef, QualType T) {
+  QualType BaseElementType = SemaRef.getASTContext().getBaseElementType(T);
+
+  if (BaseElementType->isIncompleteType())
+    return false;
+  if (!BaseElementType->isObjectType())
+    return false;
+
+  if (T.hasAddressDiscriminatedPointerAuth())
+    return false;
+
+  if (const auto *RD = BaseElementType->getAsCXXRecordDecl();
+      RD && !RD->isPolymorphic() && IsCXXTriviallyRelocatableType(SemaRef, RD))
+    return true;
+
+  if (const auto *RD = BaseElementType->getAsRecordDecl())
+    return RD->canPassInRegisters();
+
+  if (BaseElementType.isTriviallyCopyableType(SemaRef.getASTContext()))
+    return true;
+
+  switch (T.isNonTrivialToPrimitiveDestructiveMove()) {
+  case QualType::PCK_Trivial:
+    return !T.isDestructedType();
+  case QualType::PCK_ARCStrong:
+    return true;
+  default:
+    return false;
+  }
 }
 
 static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
@@ -5991,9 +6104,13 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
   case UTT_HasUniqueObjectRepresentations:
     return C.hasUniqueObjectRepresentations(T);
   case UTT_IsTriviallyRelocatable:
-    return T.isTriviallyRelocatableType(C);
+    return IsTriviallyRelocatableType(Self, T);
   case UTT_IsBitwiseCloneable:
     return T.isBitwiseCloneableType(C);
+  case UTT_IsCppTriviallyRelocatable:
+    return Self.IsCXXTriviallyRelocatableType(T);
+  case UTT_IsReplaceable:
+    return Self.IsCXXReplaceableType(T);
   case UTT_CanPassInRegs:
     if (CXXRecordDecl *RD = T->getAsCXXRecordDecl(); RD && !T.hasQualifiers())
       return RD->canPassInRegisters();
@@ -6147,9 +6264,8 @@ static APValue EvaluateSizeTTypeTrait(Sema &S, TypeTrait Kind,
       S.Diag(KWLoc, diag::err_arg_is_not_destructurable) << T << ArgRange;
       return APValue();
     }
-    llvm::APSInt V =
-        S.getASTContext().MakeIntValue(*Size, S.getASTContext().getSizeType());
-    return APValue{V};
+    return APValue(
+        S.getASTContext().MakeIntValue(*Size, S.getASTContext().getSizeType()));
     break;
   }
   default:
@@ -7192,7 +7308,7 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
         Context.hasSameType(LHSType, RHSType)
             ? Context.getCommonSugaredType(LHSType, RHSType)
             : UsualArithmeticConversions(LHS, RHS, QuestionLoc,
-                                         ACK_Conditional);
+                                         ArithConvKind::Conditional);
 
     if (ResultElementTy->isEnumeralType()) {
       Diag(QuestionLoc, diag::err_conditional_vector_operand_type)
@@ -7264,8 +7380,9 @@ QualType Sema::CheckSizelessVectorConditionalTypes(ExprResult &Cond,
     }
     ResultType = LHSType;
   } else if (LHSBT || RHSBT) {
-    ResultType = CheckSizelessVectorOperands(
-        LHS, RHS, QuestionLoc, /*IsCompAssign*/ false, ACK_Conditional);
+    ResultType = CheckSizelessVectorOperands(LHS, RHS, QuestionLoc,
+                                             /*IsCompAssign*/ false,
+                                             ArithConvKind::Conditional);
     if (ResultType.isNull())
       return QualType();
   } else {
@@ -7277,8 +7394,8 @@ QualType Sema::CheckSizelessVectorConditionalTypes(ExprResult &Cond,
     if (Context.hasSameType(LHSType, RHSType))
       ResultElementTy = LHSType;
     else
-      ResultElementTy =
-          UsualArithmeticConversions(LHS, RHS, QuestionLoc, ACK_Conditional);
+      ResultElementTy = UsualArithmeticConversions(LHS, RHS, QuestionLoc,
+                                                   ArithConvKind::Conditional);
 
     if (ResultElementTy->isEnumeralType()) {
       Diag(QuestionLoc, diag::err_conditional_vector_operand_type)
@@ -7566,8 +7683,8 @@ QualType Sema::CXXCheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
   //      the usual arithmetic conversions are performed to bring them to a
   //      common type, and the result is of that type.
   if (LTy->isArithmeticType() && RTy->isArithmeticType()) {
-    QualType ResTy =
-        UsualArithmeticConversions(LHS, RHS, QuestionLoc, ACK_Conditional);
+    QualType ResTy = UsualArithmeticConversions(LHS, RHS, QuestionLoc,
+                                                ArithConvKind::Conditional);
     if (LHS.isInvalid() || RHS.isInvalid())
       return QualType();
     if (ResTy.isNull()) {
@@ -9120,16 +9237,16 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
       // error would get diagnosed when the lambda becomes capture ready.
       QualType CaptureType, DeclRefType;
       SourceLocation ExprLoc = VarExpr->getExprLoc();
-      if (S.tryCaptureVariable(Var, ExprLoc, S.TryCapture_Implicit,
-                          /*EllipsisLoc*/ SourceLocation(),
-                          /*BuildAndDiagnose*/false, CaptureType,
-                          DeclRefType, nullptr)) {
+      if (S.tryCaptureVariable(Var, ExprLoc, TryCaptureKind::Implicit,
+                               /*EllipsisLoc*/ SourceLocation(),
+                               /*BuildAndDiagnose*/ false, CaptureType,
+                               DeclRefType, nullptr)) {
         // We will never be able to capture this variable, and we need
         // to be able to in any and all instantiations, so diagnose it.
-        S.tryCaptureVariable(Var, ExprLoc, S.TryCapture_Implicit,
-                          /*EllipsisLoc*/ SourceLocation(),
-                          /*BuildAndDiagnose*/true, CaptureType,
-                          DeclRefType, nullptr);
+        S.tryCaptureVariable(Var, ExprLoc, TryCaptureKind::Implicit,
+                             /*EllipsisLoc*/ SourceLocation(),
+                             /*BuildAndDiagnose*/ true, CaptureType,
+                             DeclRefType, nullptr);
       }
     }
   });
@@ -9664,17 +9781,16 @@ StmtResult Sema::ActOnFinishFullStmt(Stmt *FullStmt) {
   return MaybeCreateStmtWithCleanups(FullStmt);
 }
 
-Sema::IfExistsResult
-Sema::CheckMicrosoftIfExistsSymbol(Scope *S,
-                                   CXXScopeSpec &SS,
+IfExistsResult
+Sema::CheckMicrosoftIfExistsSymbol(Scope *S, CXXScopeSpec &SS,
                                    const DeclarationNameInfo &TargetNameInfo) {
   DeclarationName TargetName = TargetNameInfo.getName();
   if (!TargetName)
-    return IER_DoesNotExist;
+    return IfExistsResult::DoesNotExist;
 
   // If the name itself is dependent, then the result is dependent.
   if (TargetName.isDependentName())
-    return IER_Dependent;
+    return IfExistsResult::Dependent;
 
   // Do the redeclaration lookup in the current scope.
   LookupResult R(*this, TargetNameInfo, Sema::LookupAnyName,
@@ -9683,33 +9799,34 @@ Sema::CheckMicrosoftIfExistsSymbol(Scope *S,
   R.suppressDiagnostics();
 
   switch (R.getResultKind()) {
-  case LookupResult::Found:
-  case LookupResult::FoundOverloaded:
-  case LookupResult::FoundUnresolvedValue:
-  case LookupResult::Ambiguous:
-    return IER_Exists;
+  case LookupResultKind::Found:
+  case LookupResultKind::FoundOverloaded:
+  case LookupResultKind::FoundUnresolvedValue:
+  case LookupResultKind::Ambiguous:
+    return IfExistsResult::Exists;
 
-  case LookupResult::NotFound:
-    return IER_DoesNotExist;
+  case LookupResultKind::NotFound:
+    return IfExistsResult::DoesNotExist;
 
-  case LookupResult::NotFoundInCurrentInstantiation:
-    return IER_Dependent;
+  case LookupResultKind::NotFoundInCurrentInstantiation:
+    return IfExistsResult::Dependent;
   }
 
   llvm_unreachable("Invalid LookupResult Kind!");
 }
 
-Sema::IfExistsResult
-Sema::CheckMicrosoftIfExistsSymbol(Scope *S, SourceLocation KeywordLoc,
-                                   bool IsIfExists, CXXScopeSpec &SS,
-                                   UnqualifiedId &Name) {
+IfExistsResult Sema::CheckMicrosoftIfExistsSymbol(Scope *S,
+                                                  SourceLocation KeywordLoc,
+                                                  bool IsIfExists,
+                                                  CXXScopeSpec &SS,
+                                                  UnqualifiedId &Name) {
   DeclarationNameInfo TargetNameInfo = GetNameFromUnqualifiedId(Name);
 
   // Check for an unexpanded parameter pack.
   auto UPPC = IsIfExists ? UPPC_IfExists : UPPC_IfNotExists;
   if (DiagnoseUnexpandedParameterPack(SS, UPPC) ||
       DiagnoseUnexpandedParameterPack(TargetNameInfo, UPPC))
-    return IER_Error;
+    return IfExistsResult::Error;
 
   return CheckMicrosoftIfExistsSymbol(S, SS, TargetNameInfo);
 }

@@ -26,6 +26,7 @@ using namespace ompx;
 // These flags are copied from "llvm/Frontend/OpenMP/OMPDeviceConstants.h" and
 // must be kept in-sync.
 enum OMPTgtExecModeFlags : unsigned char {
+  OMP_TGT_EXEC_MODE_BARE = 0,
   OMP_TGT_EXEC_MODE_GENERIC = 1 << 0,
   OMP_TGT_EXEC_MODE_SPMD = 1 << 1,
   OMP_TGT_EXEC_MODE_GENERIC_SPMD =

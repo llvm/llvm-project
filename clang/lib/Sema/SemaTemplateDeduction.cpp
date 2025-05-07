@@ -6605,8 +6605,6 @@ bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
     llvm_unreachable("Unexpected Result");
   }
 
-  SmallVector<TemplateArgument, 4> DeducedArgs(Deduced.begin(), Deduced.end());
-
   TemplateDeductionResult TDK;
   runWithSufficientStackSpace(Info.getLocation(), [&] {
     TDK = ::FinishTemplateArgumentDeduction(

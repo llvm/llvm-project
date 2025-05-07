@@ -198,12 +198,6 @@ public:
 
   bool isVariadic() const { return Variadic; }
 
-  unsigned getBuiltinID() const { return BuiltinID; }
-
-  bool isBuiltin() const { return getBuiltinID() != 0; }
-
-  bool isUnevaluatedBuiltin() const;
-
   unsigned getNumParams() const { return ParamTypes.size(); }
 
   /// Returns the number of parameter this function takes when it's called,
@@ -298,7 +292,6 @@ private:
   bool Defined = false;
   bool Variadic = false;
   bool Virtual = false;
-  unsigned BuiltinID = 0;
 
 public:
   /// Dumps the disassembled bytecode to \c llvm::errs().

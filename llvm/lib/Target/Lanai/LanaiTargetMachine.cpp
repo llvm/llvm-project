@@ -67,7 +67,7 @@ LanaiTargetMachine::LanaiTargetMachine(
 
 TargetTransformInfo
 LanaiTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(LanaiTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<LanaiTTIImpl>(this, F));
 }
 
 MachineFunctionInfo *LanaiTargetMachine::createMachineFunctionInfo(

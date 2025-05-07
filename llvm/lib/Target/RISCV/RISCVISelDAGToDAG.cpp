@@ -2599,6 +2599,8 @@ static bool isWorthFoldingAdd(SDValue Add) {
     if (User->getOpcode() == ISD::ATOMIC_STORE &&
         cast<AtomicSDNode>(User)->getVal() == Add)
       return false;
+    if (isStrongerThanMonotonic(cast<MemSDNode>(User)->getSuccessOrdering()))
+      return false;
   }
 
   return true;
@@ -3202,6 +3204,23 @@ bool RISCVDAGToDAGISel::selectSHXADD_UWOp(SDValue N, unsigned ShAmt,
   }
 
   return false;
+}
+
+bool RISCVDAGToDAGISel::selectNegImm(SDValue N, SDValue &Val) {
+  if (!isa<ConstantSDNode>(N) || !N.hasOneUse())
+    return false;
+  int64_t Imm = cast<ConstantSDNode>(N)->getSExtValue();
+  if (isInt<32>(Imm))
+    return false;
+  int OrigImmCost = RISCVMatInt::getIntMatCost(APInt(64, Imm), 64, *Subtarget,
+                                               /*CompressionCost=*/true);
+  int NegImmCost = RISCVMatInt::getIntMatCost(APInt(64, -Imm), 64, *Subtarget,
+                                              /*CompressionCost=*/true);
+  if (OrigImmCost <= NegImmCost)
+    return false;
+
+  Val = selectImm(CurDAG, SDLoc(N), N->getSimpleValueType(0), -Imm, *Subtarget);
+  return true;
 }
 
 bool RISCVDAGToDAGISel::selectInvLogicImm(SDValue N, SDValue &Val) {

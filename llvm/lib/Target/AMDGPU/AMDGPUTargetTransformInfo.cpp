@@ -834,8 +834,8 @@ GCNTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
 
 InstructionCost GCNTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
                                                TTI::TargetCostKind CostKind,
-                                               unsigned Index, Value *Op0,
-                                               Value *Op1) const {
+                                               unsigned Index, const Value *Op0,
+                                               const Value *Op1) const {
   switch (Opcode) {
   case Instruction::ExtractElement:
   case Instruction::InsertElement: {
@@ -941,7 +941,7 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
   // atomic operation refers to the same address in each thread, then each
   // thread after the first sees the value written by the previous thread as
   // original value.
-  if (isa<AtomicRMWInst>(V) || isa<AtomicCmpXchgInst>(V))
+  if (isa<AtomicRMWInst, AtomicCmpXchgInst>(V))
     return true;
 
   if (const IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(V)) {
@@ -1277,9 +1277,9 @@ static unsigned adjustInliningThresholdUsingCallee(const CallBase *CB,
   // The penalty cost is computed relative to the cost of instructions and does
   // not model any storage costs.
   adjustThreshold += std::max(0, SGPRsInUse - NrOfSGPRUntilSpill) *
-                     *ArgStackCost.getValue() * InlineConstants::getInstrCost();
+                     ArgStackCost.getValue() * InlineConstants::getInstrCost();
   adjustThreshold += std::max(0, VGPRsInUse - NrOfVGPRUntilSpill) *
-                     *ArgStackCost.getValue() * InlineConstants::getInstrCost();
+                     ArgStackCost.getValue() * InlineConstants::getInstrCost();
   return adjustThreshold;
 }
 

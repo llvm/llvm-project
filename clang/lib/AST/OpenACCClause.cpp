@@ -865,7 +865,7 @@ void OpenACCClausePrinter::VisitReductionClause(
 
 void OpenACCClausePrinter::VisitWaitClause(const OpenACCWaitClause &C) {
   OS << "wait";
-  if (!C.getLParenLoc().isInvalid()) {
+  if (C.hasExprs()) {
     OS << "(";
     if (C.hasDevNumExpr()) {
       OS << "devnum: ";

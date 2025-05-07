@@ -582,7 +582,7 @@ void AArch64TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
 TargetTransformInfo
 AArch64TargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(AArch64TTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<AArch64TTIImpl>(this, F));
 }
 
 TargetPassConfig *AArch64TargetMachine::createPassConfig(PassManagerBase &PM) {

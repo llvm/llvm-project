@@ -1614,6 +1614,8 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
   taskdata->td_flags.freed = 0;
 #if OMPX_TASKGRAPH
   taskdata->td_flags.onced = 0;
+  taskdata->is_taskgraph = 0;
+  taskdata->tdg = nullptr;
 #endif
   KMP_ATOMIC_ST_RLX(&taskdata->td_incomplete_child_tasks, 0);
   // start at one because counts current task and children
@@ -5452,7 +5454,6 @@ bool __kmpc_omp_has_task_team(kmp_int32 gtid) {
 
 #if OMPX_TASKGRAPH
 // __kmp_find_tdg: identify a TDG through its ID
-// gtid:   Global Thread ID
 // tdg_id: ID of the TDG
 // returns: If a TDG corresponding to this ID is found and not
 // its initial state, return the pointer to it, otherwise nullptr
@@ -5505,7 +5506,7 @@ void __kmp_print_tdg_dot(kmp_tdg_info_t *tdg, kmp_int32 gtid) {
   KA_TRACE(10, ("__kmp_print_tdg_dot(exit): T#%d tdg_id=%d \n", gtid, tdg_id));
 }
 
-// __kmp_start_record: launch the execution of a previous
+// __kmp_exec_tdg: launch the execution of a previous
 // recorded TDG
 // gtid:   Global Thread ID
 // tdg:    ID of the TDG

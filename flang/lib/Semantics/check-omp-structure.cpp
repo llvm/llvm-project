@@ -867,8 +867,6 @@ void OmpStructureChecker::CheckSIMDNest(const parser::OpenMPConstruct &c) {
   //  The only OpenMP constructs that can be encountered during execution of
   // a simd region are the `atomic` construct, the `loop` construct, the `simd`
   // construct and the `ordered` construct with the `simd` clause.
-  // TODO:  Expand the check to include `LOOP` construct as well when it is
-  // supported.
 
   // Check if the parent context has the SIMD clause
   // Please note that we use GetContext() instead of GetContextParent()
@@ -911,14 +909,15 @@ void OmpStructureChecker::CheckSIMDNest(const parser::OpenMPConstruct &c) {
               }
             }
           },
-          // Allowing SIMD construct
+          // Allowing SIMD and loop construct
           [&](const parser::OpenMPLoopConstruct &c) {
             const auto &beginLoopDir{
                 std::get<parser::OmpBeginLoopDirective>(c.t)};
             const auto &beginDir{
                 std::get<parser::OmpLoopDirective>(beginLoopDir.t)};
             if ((beginDir.v == llvm::omp::Directive::OMPD_simd) ||
-                (beginDir.v == llvm::omp::Directive::OMPD_do_simd)) {
+                (beginDir.v == llvm::omp::Directive::OMPD_do_simd) ||
+                (beginDir.v == llvm::omp::Directive::OMPD_loop)) {
               eligibleSIMD = true;
             }
           },
@@ -1712,6 +1711,28 @@ void OmpStructureChecker::Enter(const parser::OpenMPDeclarativeAllocate &x) {
   const auto &objectList{std::get<parser::OmpObjectList>(x.t)};
   PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_allocate);
   const auto &clauseList{std::get<parser::OmpClauseList>(x.t)};
+  SymbolSourceMap currSymbols;
+  GetSymbolsInObjectList(objectList, currSymbols);
+  for (auto &[symbol, source] : currSymbols) {
+    if (IsPointer(*symbol)) {
+      context_.Say(source,
+          "List item '%s' in ALLOCATE directive must not have POINTER "
+          "attribute"_err_en_US,
+          source.ToString());
+    }
+    if (IsDummy(*symbol)) {
+      context_.Say(source,
+          "List item '%s' in ALLOCATE directive must not be a dummy "
+          "argument"_err_en_US,
+          source.ToString());
+    }
+    if (symbol->GetUltimate().has<AssocEntityDetails>()) {
+      context_.Say(source,
+          "List item '%s' in ALLOCATE directive must not be an associate "
+          "name"_err_en_US,
+          source.ToString());
+    }
+  }
   for (const auto &clause : clauseList.v) {
     CheckAlignValue(clause);
   }
@@ -3262,6 +3283,12 @@ CHECK_SIMPLE_CLAUSE(Align, OMPC_align)
 CHECK_SIMPLE_CLAUSE(Compare, OMPC_compare)
 CHECK_SIMPLE_CLAUSE(OmpxAttribute, OMPC_ompx_attribute)
 CHECK_SIMPLE_CLAUSE(Weak, OMPC_weak)
+CHECK_SIMPLE_CLAUSE(AcqRel, OMPC_acq_rel)
+CHECK_SIMPLE_CLAUSE(Acquire, OMPC_acquire)
+CHECK_SIMPLE_CLAUSE(Relaxed, OMPC_relaxed)
+CHECK_SIMPLE_CLAUSE(Release, OMPC_release)
+CHECK_SIMPLE_CLAUSE(SeqCst, OMPC_seq_cst)
+CHECK_SIMPLE_CLAUSE(Fail, OMPC_fail)
 
 CHECK_REQ_SCALAR_INT_CLAUSE(NumTeams, OMPC_num_teams)
 CHECK_REQ_SCALAR_INT_CLAUSE(NumThreads, OMPC_num_threads)
@@ -3272,53 +3299,6 @@ CHECK_REQ_SCALAR_INT_CLAUSE(ThreadLimit, OMPC_thread_limit)
 CHECK_REQ_CONSTANT_SCALAR_INT_CLAUSE(Collapse, OMPC_collapse)
 CHECK_REQ_CONSTANT_SCALAR_INT_CLAUSE(Safelen, OMPC_safelen)
 CHECK_REQ_CONSTANT_SCALAR_INT_CLAUSE(Simdlen, OMPC_simdlen)
-
-void OmpStructureChecker::Enter(const parser::OmpClause::AcqRel &) {
-  if (!isFailClause)
-    CheckAllowedClause(llvm::omp::Clause::OMPC_acq_rel);
-}
-
-void OmpStructureChecker::Enter(const parser::OmpClause::Acquire &) {
-  if (!isFailClause)
-    CheckAllowedClause(llvm::omp::Clause::OMPC_acquire);
-}
-
-void OmpStructureChecker::Enter(const parser::OmpClause::Release &) {
-  if (!isFailClause)
-    CheckAllowedClause(llvm::omp::Clause::OMPC_release);
-}
-
-void OmpStructureChecker::Enter(const parser::OmpClause::Relaxed &) {
-  if (!isFailClause)
-    CheckAllowedClause(llvm::omp::Clause::OMPC_relaxed);
-}
-
-void OmpStructureChecker::Enter(const parser::OmpClause::SeqCst &) {
-  if (!isFailClause)
-    CheckAllowedClause(llvm::omp::Clause::OMPC_seq_cst);
-}
-
-void OmpStructureChecker::Enter(const parser::OmpClause::Fail &) {
-  assert(!isFailClause && "Unexpected FAIL clause inside a FAIL clause?");
-  isFailClause = true;
-  CheckAllowedClause(llvm::omp::Clause::OMPC_fail);
-}
-
-void OmpStructureChecker::Leave(const parser::OmpClause::Fail &) {
-  assert(isFailClause && "Expected to be inside a FAIL clause here");
-  isFailClause = false;
-}
-
-void OmpStructureChecker::Enter(const parser::OmpFailClause &) {
-  assert(!isFailClause && "Unexpected FAIL clause inside a FAIL clause?");
-  isFailClause = true;
-  CheckAllowedClause(llvm::omp::Clause::OMPC_fail);
-}
-
-void OmpStructureChecker::Leave(const parser::OmpFailClause &) {
-  assert(isFailClause && "Expected to be inside a FAIL clause here");
-  isFailClause = false;
-}
 
 // Restrictions specific to each clause are implemented apart from the
 // generalized restrictions.
@@ -4591,10 +4571,18 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Update &x) {
   llvm::omp::Directive dir{GetContext().directive};
   unsigned version{context_.langOptions().OpenMPVersion};
 
-  auto *depType{std::get_if<parser::OmpDependenceType>(&x.v.u)};
-  auto *taskType{std::get_if<parser::OmpTaskDependenceType>(&x.v.u)};
-  assert(((depType == nullptr) != (taskType == nullptr)) &&
-      "Unexpected alternative in update clause");
+  const parser::OmpDependenceType *depType{nullptr};
+  const parser::OmpTaskDependenceType *taskType{nullptr};
+  if (auto &maybeUpdate{x.v}) {
+    depType = std::get_if<parser::OmpDependenceType>(&maybeUpdate->u);
+    taskType = std::get_if<parser::OmpTaskDependenceType>(&maybeUpdate->u);
+  }
+
+  if (!depType && !taskType) {
+    assert(dir == llvm::omp::Directive::OMPD_atomic &&
+        "Unexpected alternative in update clause");
+    return;
+  }
 
   if (depType) {
     CheckDependenceType(depType->v);

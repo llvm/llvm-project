@@ -392,9 +392,25 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
 
   Tokens = annotate("return s.operator int *();");
   ASSERT_EQ(Tokens.size(), 10u) << Tokens;
-  EXPECT_TOKEN(Tokens[3], tok::kw_operator, TT_FunctionDeclarationName);
+  // Not TT_FunctionDeclarationName.
+  EXPECT_TOKEN(Tokens[3], tok::kw_operator, TT_Unknown);
   EXPECT_TOKEN(Tokens[5], tok::star, TT_PointerOrReference);
-  EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_FunctionDeclarationLParen);
+  // Not TT_FunctionDeclarationLParen.
+  EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_Unknown);
+
+  Tokens = annotate("B &b = x.operator B &();");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[8], tok::amp, TT_PointerOrReference);
+
+  Tokens = annotate("int8_t *a = MacroCall(int8_t, width * height * length);");
+  ASSERT_EQ(Tokens.size(), 16u) << Tokens;
+  EXPECT_TOKEN(Tokens[9], tok::star, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[11], tok::star, TT_BinaryOperator);
+
+  Tokens = annotate("float foo[3] = {M * H * H, H * M * H, H * H * M};");
+  ASSERT_EQ(Tokens.size(), 27u) << Tokens;
+  EXPECT_TOKEN(Tokens[16], tok::star, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[22], tok::star, TT_BinaryOperator);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {
@@ -1084,6 +1100,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsOverloadedOperators) {
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::identifier, TT_FunctionDeclarationName);
   EXPECT_TOKEN(Tokens[7], tok::l_paren, TT_OverloadedOperatorLParen);
+
+  Tokens = annotate("using std::operator==;");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  // Not TT_FunctionDeclarationName.
+  EXPECT_TOKEN(Tokens[3], tok::kw_operator, TT_Unknown);
 }
 
 TEST_F(TokenAnnotatorTest, OverloadedOperatorInTemplate) {
@@ -2165,6 +2186,16 @@ TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
   // FIXME:
   // EXPECT_TOKEN(Tokens[13], tok::l_paren, TT_LambdaDefinitionLParen);
   EXPECT_TOKEN(Tokens[17], tok::l_brace, TT_LambdaLBrace);
+
+  Tokens = annotate("auto foo{(std::function<int()>)[] { return 0; }};");
+  ASSERT_EQ(Tokens.size(), 23u) << Tokens;
+  EXPECT_TOKEN(Tokens[13], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[15], tok::l_brace, TT_LambdaLBrace);
+
+  Tokens = annotate("auto foo{(int (*)())[] { return 0; }};");
+  ASSERT_EQ(Tokens.size(), 21u) << Tokens;
+  EXPECT_TOKEN(Tokens[11], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[13], tok::l_brace, TT_LambdaLBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsFunctionAnnotations) {
@@ -3084,6 +3115,27 @@ TEST_F(TokenAnnotatorTest, CSharpNullableTypes) {
   EXPECT_TOKEN(Tokens[1], tok::question, TT_ConditionalExpr);
 }
 
+TEST_F(TokenAnnotatorTest, CSharpGenericTypeConstraint) {
+  auto Tokens = annotate("namespace A {\n"
+                         "  delegate T MyDelegate<T>()\n"
+                         "      where T : new();\n"
+                         "}",
+                         getGoogleStyle(FormatStyle::LK_CSharp));
+  ASSERT_EQ(Tokens.size(), 20u) << Tokens;
+  EXPECT_TOKEN(Tokens[18], tok::r_brace, TT_NamespaceRBrace);
+}
+
+TEST_F(TokenAnnotatorTest, CSharpNewModifier) {
+  auto Tokens = annotate("new public class NestedC {\n"
+                         "  public int x = 100;\n"
+                         "}",
+                         getGoogleStyle(FormatStyle::LK_CSharp));
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::identifier, TT_ClassHeadName);
+  EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_ClassLBrace);
+  EXPECT_TOKEN(Tokens[11], tok::r_brace, TT_ClassRBrace);
+}
+
 TEST_F(TokenAnnotatorTest, UnderstandsLabels) {
   auto Tokens = annotate("{ x: break; }");
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
@@ -3973,6 +4025,12 @@ TEST_F(TokenAnnotatorTest, IdentifierPackage) {
   auto Tokens = annotate("auto package;");
   ASSERT_EQ(Tokens.size(), 4u) << Tokens;
   EXPECT_FALSE(Tokens[0]->isObjCAccessSpecifier());
+}
+
+TEST_F(TokenAnnotatorTest, UserDefinedLiteral) {
+  auto Tokens = annotate("auto dollars = 2_$;");
+  ASSERT_EQ(Tokens.size(), 6u) << Tokens;
+  EXPECT_EQ(Tokens[3]->TokenText, "2_$");
 }
 
 } // namespace

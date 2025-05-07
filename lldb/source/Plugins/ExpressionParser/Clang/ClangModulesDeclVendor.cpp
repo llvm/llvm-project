@@ -330,7 +330,7 @@ bool ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
     }
   }
   if (!HS.lookupModule(module.path.front().GetStringRef())) {
-    error_stream.Printf("error: Header search couldn't locate module %s\n",
+    error_stream.Printf("error: Header search couldn't locate module '%s'\n",
                         module.path.front().AsCString());
     return false;
   }
@@ -731,18 +731,16 @@ ClangModulesDeclVendor::Create(Target &target) {
   invocation->getPreprocessorOpts().addRemappedFile(ModuleImportBufferName,
                                                     source_buffer.release());
 
-  std::unique_ptr<clang::CompilerInstance> instance(
-      new clang::CompilerInstance);
+  auto instance = std::make_unique<clang::CompilerInstance>(invocation);
 
   // Make sure clang uses the same VFS as LLDB.
   instance->createFileManager(FileSystem::Instance().GetVirtualFileSystem());
   instance->setDiagnostics(diagnostics_engine.get());
-  instance->setInvocation(invocation);
 
   std::unique_ptr<clang::FrontendAction> action(new clang::SyntaxOnlyAction);
 
   instance->setTarget(clang::TargetInfo::CreateTargetInfo(
-      *diagnostics_engine, instance->getInvocation().TargetOpts));
+      *diagnostics_engine, instance->getInvocation().getTargetOpts()));
 
   if (!instance->hasTarget())
     return nullptr;

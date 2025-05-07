@@ -48,7 +48,7 @@ using MutableSymbolVector = std::vector<MutableSymbolRef>;
 
 // Mixin for details with OpenMP declarative constructs.
 class WithOmpDeclarative {
-  using OmpAtomicOrderType = common::OmpAtomicDefaultMemOrderType;
+  using OmpAtomicOrderType = common::OmpMemoryOrderType;
 
 public:
   ENUM_CLASS(RequiresFlag, ReverseOffload, UnifiedAddress, UnifiedSharedMemory,

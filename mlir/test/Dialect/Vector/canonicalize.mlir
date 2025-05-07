@@ -8,6 +8,7 @@ func.func @create_vector_mask_to_constant_mask() -> (vector<4x3xi1>) {
   %0 = vector.create_mask %c3, %c2 : vector<4x3xi1>
   return %0 : vector<4x3xi1>
 }
+
 // -----
 
 // CHECK-LABEL: create_scalable_vector_mask_to_constant_mask
@@ -164,6 +165,33 @@ func.func @extract_scalar_poison_idx(%a: vector<4x5xf32>) -> f32 {
   %0 = vector.extract %a[-1, 0] : f32 from vector<4x5xf32>
   return %0 : f32
 }
+
+// -----
+
+// Similar to the test above, but the index is not a static constant.
+
+// CHECK-LABEL: @extract_scalar_poison_idx_non_cst
+func.func @extract_scalar_poison_idx_non_cst(%a: vector<4x5xf32>) -> f32 {
+  // CHECK-NEXT: %[[UB:.*]] = ub.poison : f32
+  //  CHECK-NOT: vector.extract
+  // CHECK-NEXT: return %[[UB]] : f32
+  %c_neg_1 = arith.constant -1 : index
+  %0 = vector.extract %a[%c_neg_1, 0] : f32 from vector<4x5xf32>
+  return %0 : f32
+}
+
+// -----
+
+// Similar to test above, but now the index is out-of-bounds.
+
+// CHECK-LABEL: @no_fold_extract_scalar_oob_idx
+func.func @no_fold_extract_scalar_oob_idx(%a: vector<4x5xf32>) -> f32 {
+  //  CHECK: vector.extract
+  %c_neg_2 = arith.constant -2 : index
+  %0 = vector.extract %a[%c_neg_2, 0] : f32 from vector<4x5xf32>
+  return %0 : f32
+}
+
 
 // -----
 
@@ -950,10 +978,9 @@ func.func @insert_no_fold_scalar_to_0d(%v: vector<f32>) -> vector<f32> {
 
 // -----
 
-// CHECK-LABEL: dont_fold_expand_collapse
-//       CHECK:   %[[A:.*]] = vector.shape_cast %{{.*}} : vector<1x1x64xf32> to vector<1x1x8x8xf32>
-//       CHECK:   %[[B:.*]] = vector.shape_cast %{{.*}} : vector<1x1x8x8xf32> to vector<8x8xf32>
-//       CHECK:   return %[[B]] : vector<8x8xf32>
+// CHECK-LABEL: fold_expand_collapse
+//       CHECK:   %[[A:.*]] = vector.shape_cast %{{.*}} : vector<1x1x64xf32> to vector<8x8xf32>
+//       CHECK:   return %[[A]] : vector<8x8xf32>
 func.func @dont_fold_expand_collapse(%arg0: vector<1x1x64xf32>) -> vector<8x8xf32> {
     %0 = vector.shape_cast %arg0 : vector<1x1x64xf32> to vector<1x1x8x8xf32>
     %1 = vector.shape_cast %0 : vector<1x1x8x8xf32> to vector<8x8xf32>
@@ -3035,7 +3062,6 @@ func.func @insert_vector_poison(%a: vector<4x8xf32>)
   return %1 : vector<4x8xf32>
 }
 
-
 // -----
 
 // CHECK-LABEL: @insert_scalar_poison_idx
@@ -3057,6 +3083,34 @@ func.func @insert_vector_poison_idx(%a: vector<4x5xf32>, %b: vector<5xf32>)
   //  CHECK-NOT: vector.insert
   // CHECK-NEXT: return %[[UB]] : vector<4x5xf32>
   %0 = vector.insert %b, %a[-1] : vector<5xf32> into vector<4x5xf32>
+  return %0 : vector<4x5xf32>
+}
+
+// -----
+
+// Similar to the test above, but the index is not a static constant.
+
+// CHECK-LABEL: @insert_vector_poison_idx_non_cst
+func.func @insert_vector_poison_idx_non_cst(%a: vector<4x5xf32>, %b: vector<5xf32>)
+    -> vector<4x5xf32> {
+  // CHECK-NEXT: %[[UB:.*]] = ub.poison : vector<4x5xf32>
+  //  CHECK-NOT: vector.insert
+  // CHECK-NEXT: return %[[UB]] : vector<4x5xf32>
+  %c_neg_1 = arith.constant -1 : index
+  %0 = vector.insert %b, %a[%c_neg_1] : vector<5xf32> into vector<4x5xf32>
+  return %0 : vector<4x5xf32>
+}
+
+// -----
+
+// Similar to test above, but now the index is out-of-bounds.
+
+// CHECK-LABEL: @no_fold_insert_scalar_idx_oob
+func.func @no_fold_insert_scalar_idx_oob(%a: vector<4x5xf32>, %b: vector<5xf32>)
+    -> vector<4x5xf32> {
+  //  CHECK: vector.insert
+  %c_neg_2 = arith.constant -2 : index
+  %0 = vector.insert %b, %a[%c_neg_2] : vector<5xf32> into vector<4x5xf32>
   return %0 : vector<4x5xf32>
 }
 
@@ -3310,42 +3364,4 @@ func.func @fold_insert_constant_indices(%arg : vector<4x1xi32>) -> vector<4x1xi3
   %1 = arith.constant 1 : i32
   %res = vector.insert %1, %arg[%0, %0] : i32 into vector<4x1xi32>
   return %res : vector<4x1xi32>
-}
-
-// -----
-
-// Check that out of bounds indices are not folded for vector.insert.
-
-// CHECK-LABEL: @fold_insert_oob
-//  CHECK-SAME:   %[[ARG:.*]]: vector<4x1x2xi32>) -> vector<4x1x2xi32> {
-//       CHECK:   %[[OOB1:.*]] = arith.constant -2 : index
-//       CHECK:   %[[OOB2:.*]] = arith.constant 2 : index
-//       CHECK:   %[[VAL:.*]] = arith.constant 1 : i32
-//       CHECK:   %[[RES:.*]] = vector.insert %[[VAL]], %[[ARG]] [0, %[[OOB1]], %[[OOB2]]] : i32 into vector<4x1x2xi32>
-//       CHECK:   return %[[RES]] : vector<4x1x2xi32>
-func.func @fold_insert_oob(%arg : vector<4x1x2xi32>) -> vector<4x1x2xi32> {
-  %c0 = arith.constant 0 : index
-  %c-2 = arith.constant -2 : index
-  %c2 = arith.constant 2 : index
-  %c1 = arith.constant 1 : i32
-  %res = vector.insert %c1, %arg[%c0, %c-2, %c2] : i32 into vector<4x1x2xi32>
-  return %res : vector<4x1x2xi32>
-}
-
-// -----
-
-// Check that out of bounds indices are not folded for vector.extract.
-
-// CHECK-LABEL: @fold_extract_oob
-//  CHECK-SAME:   %[[ARG:.*]]: vector<4x1x2xi32>) -> i32 {
-//       CHECK:   %[[OOB1:.*]] = arith.constant -2 : index
-//       CHECK:   %[[OOB2:.*]] = arith.constant 2 : index
-//       CHECK:   %[[RES:.*]] = vector.extract %[[ARG]][0, %[[OOB1]], %[[OOB2]]] : i32 from vector<4x1x2xi32>
-//       CHECK:   return %[[RES]] : i32
-func.func @fold_extract_oob(%arg : vector<4x1x2xi32>) -> i32 {
-  %c0 = arith.constant 0 : index
-  %c-2 = arith.constant -2 : index
-  %c2 = arith.constant 2 : index
-  %res = vector.extract %arg[%c0, %c-2, %c2] : i32 from vector<4x1x2xi32>
-  return %res : i32
 }
