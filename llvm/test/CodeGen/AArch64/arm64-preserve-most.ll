@@ -29,7 +29,7 @@ define preserve_mostcc void @preserve_most() {
 define dso_local void @normal_cc_caller() {
 entry:
   %v = alloca i32, align 4
-  call void asm sideeffect "mov x9, $0", "n,~{x9}"(i32 48879) #2
+  call void asm sideeffect "mov x9, $0", "N,~{x9}"(i32 48879) #2
   call preserve_mostcc void @preserve_most()
   %0 = load i32, ptr %v, align 4
   %1 = call i32 asm sideeffect "mov ${0:w}, w9", "=r,r"(i32 %0) #2
