@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_Cygwin_H
-#define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_Cygwin_H
+#ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_CYGWIN_H
+#define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_CYGWIN_H
 
 #include "Gnu.h"
 #include "clang/Driver/ToolChain.h"
@@ -33,4 +33,4 @@ public:
 } // end namespace driver
 } // end namespace clang
 
-#endif // LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_Cygwin_H
+#endif // LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_CYGWIN_H
