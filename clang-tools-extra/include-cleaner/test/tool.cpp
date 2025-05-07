@@ -6,11 +6,11 @@ int x = foo();
 //      CHANGE: - "foobar.h"
 // CHANGE-NEXT: + "foo.h"
 
-//         RUN: clang-include-cleaner -remove=0 -print=changes %s -- -I%S/Inputs/ | FileCheck --check-prefix=INSERT %s
+//         RUN: clang-include-cleaner -disable-remove -print=changes %s -- -I%S/Inputs/ | FileCheck --check-prefix=INSERT %s
 //  INSERT-NOT: - "foobar.h"
 //      INSERT: + "foo.h"
 
-//         RUN: clang-include-cleaner -insert=0 -print=changes %s -- -I%S/Inputs/ | FileCheck --check-prefix=REMOVE %s
+//         RUN: clang-include-cleaner -disable-insert -print=changes %s -- -I%S/Inputs/ | FileCheck --check-prefix=REMOVE %s
 //      REMOVE: - "foobar.h"
 //  REMOVE-NOT: + "foo.h"
 
@@ -58,3 +58,16 @@ int x = foo();
 //        RUN: FileCheck --match-full-lines --check-prefix=EDIT3 %s < %t.cpp
 //      EDIT3: #include "foo.h"
 //  EDIT3-NOT: {{^}}#include "foobar.h"{{$}}
+
+//        RUN: clang-include-cleaner -insert=false -print=changes %s -- -I%S/Inputs/ 2>&1 | \
+//        RUN: FileCheck --check-prefix=DEPRECATED-INSERT %s
+// DEPRECATED-INSERT: warning: '-insert=0' is deprecated in favor of '-disable-insert'. The old flag was confusing since it suggested that inserts were disabled by default, when they were actually enabled.
+
+//       RUN: clang-include-cleaner -remove=false -print=changes %s -- -I%S/Inputs/ 2>&1 | \
+//       RUN: FileCheck --check-prefix=DEPRECATED-REMOVE %s
+// DEPRECATED-REMOVE: warning: '-remove=0' is deprecated in favor of '-disable-remove'. The old flag was confusing since it suggested that removes were disabled by default, when they were actually enabled.
+
+//       RUN: clang-include-cleaner -insert=false -remove=false -print=changes %s -- -I%S/Inputs/ 2>&1 | \
+//       RUN: FileCheck --check-prefix=DEPRECATED-BOTH %s
+// DEPRECATED-BOTH: warning: '-insert=0' is deprecated in favor of '-disable-insert'. The old flag was confusing since it suggested that inserts were disabled by default, when they were actually enabled.
+// DEPRECATED-BOTH: warning: '-remove=0' is deprecated in favor of '-disable-remove'. The old flag was confusing since it suggested that removes were disabled by default, when they were actually enabled.

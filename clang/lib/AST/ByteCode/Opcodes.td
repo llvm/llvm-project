@@ -414,6 +414,8 @@ def CheckLiteralType : Opcode {
   let Args = [ArgTypePtr];
 }
 
+def CheckArraySize : Opcode { let Args = [ArgUint64]; }
+
 // [] -> [Value]
 def GetGlobal : AccessOpcode;
 def GetGlobalUnchecked : AccessOpcode;

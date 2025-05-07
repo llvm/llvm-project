@@ -3579,129 +3579,112 @@ bool TypeSystemClang::IsPossibleDynamicType(lldb::opaque_compiler_type_t type,
                                             CompilerType *dynamic_pointee_type,
                                             bool check_cplusplus,
                                             bool check_objc) {
-  clang::QualType pointee_qual_type;
-  if (type) {
-    clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
-    bool success = false;
-    const clang::Type::TypeClass type_class = qual_type->getTypeClass();
-    switch (type_class) {
-    case clang::Type::Builtin:
-      if (check_objc &&
-          llvm::cast<clang::BuiltinType>(qual_type)->getKind() ==
-              clang::BuiltinType::ObjCId) {
-        if (dynamic_pointee_type)
-          dynamic_pointee_type->SetCompilerType(weak_from_this(), type);
-        return true;
-      }
-      break;
-
-    case clang::Type::ObjCObjectPointer:
-      if (check_objc) {
-        if (const auto *objc_pointee_type =
-                qual_type->getPointeeType().getTypePtrOrNull()) {
-          if (const auto *objc_object_type =
-                  llvm::dyn_cast_or_null<clang::ObjCObjectType>(
-                      objc_pointee_type)) {
-            if (objc_object_type->isObjCClass())
-              return false;
-          }
-        }
-        if (dynamic_pointee_type)
-          dynamic_pointee_type->SetCompilerType(
-              weak_from_this(),
-              llvm::cast<clang::ObjCObjectPointerType>(qual_type)
-                  ->getPointeeType()
-                  .getAsOpaquePtr());
-        return true;
-      }
-      break;
-
-    case clang::Type::Pointer:
-      pointee_qual_type =
-          llvm::cast<clang::PointerType>(qual_type)->getPointeeType();
-      success = true;
-      break;
-
-    case clang::Type::LValueReference:
-    case clang::Type::RValueReference:
-      pointee_qual_type =
-          llvm::cast<clang::ReferenceType>(qual_type)->getPointeeType();
-      success = true;
-      break;
-
-    default:
-      break;
-    }
-
-    if (success) {
-      // Check to make sure what we are pointing too is a possible dynamic C++
-      // type We currently accept any "void *" (in case we have a class that
-      // has been watered down to an opaque pointer) and virtual C++ classes.
-      const clang::Type::TypeClass pointee_type_class =
-          pointee_qual_type.getCanonicalType()->getTypeClass();
-      switch (pointee_type_class) {
-      case clang::Type::Builtin:
-        switch (llvm::cast<clang::BuiltinType>(pointee_qual_type)->getKind()) {
-        case clang::BuiltinType::UnknownAny:
-        case clang::BuiltinType::Void:
-          if (dynamic_pointee_type)
-            dynamic_pointee_type->SetCompilerType(
-                weak_from_this(), pointee_qual_type.getAsOpaquePtr());
-          return true;
-        default:
-          break;
-        }
-        break;
-
-      case clang::Type::Record:
-        if (check_cplusplus) {
-          clang::CXXRecordDecl *cxx_record_decl =
-              pointee_qual_type->getAsCXXRecordDecl();
-          if (cxx_record_decl) {
-            bool is_complete = cxx_record_decl->isCompleteDefinition();
-
-            if (is_complete)
-              success = cxx_record_decl->isDynamicClass();
-            else {
-              if (std::optional<ClangASTMetadata> metadata =
-                      GetMetadata(cxx_record_decl))
-                success = metadata->GetIsDynamicCXXType();
-              else {
-                is_complete = GetType(pointee_qual_type).GetCompleteType();
-                if (is_complete)
-                  success = cxx_record_decl->isDynamicClass();
-                else
-                  success = false;
-              }
-            }
-
-            if (success) {
-              if (dynamic_pointee_type)
-                dynamic_pointee_type->SetCompilerType(
-                    weak_from_this(), pointee_qual_type.getAsOpaquePtr());
-              return true;
-            }
-          }
-        }
-        break;
-
-      case clang::Type::ObjCObject:
-      case clang::Type::ObjCInterface:
-        if (check_objc) {
-          if (dynamic_pointee_type)
-            dynamic_pointee_type->SetCompilerType(
-                weak_from_this(), pointee_qual_type.getAsOpaquePtr());
-          return true;
-        }
-        break;
-
-      default:
-        break;
-      }
-    }
-  }
   if (dynamic_pointee_type)
     dynamic_pointee_type->Clear();
+  if (!type)
+    return false;
+
+  auto set_dynamic_pointee_type = [&](clang::QualType type) {
+    if (dynamic_pointee_type)
+      dynamic_pointee_type->SetCompilerType(weak_from_this(),
+                                            type.getAsOpaquePtr());
+  };
+
+  clang::QualType pointee_qual_type;
+  clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
+  switch (qual_type->getTypeClass()) {
+  case clang::Type::Builtin:
+    if (check_objc && llvm::cast<clang::BuiltinType>(qual_type)->getKind() ==
+                          clang::BuiltinType::ObjCId) {
+      set_dynamic_pointee_type(qual_type);
+      return true;
+    }
+    return false;
+
+  case clang::Type::ObjCObjectPointer:
+    if (!check_objc)
+      return false;
+    if (const auto *objc_pointee_type =
+            qual_type->getPointeeType().getTypePtrOrNull()) {
+      if (const auto *objc_object_type =
+              llvm::dyn_cast_or_null<clang::ObjCObjectType>(
+                  objc_pointee_type)) {
+        if (objc_object_type->isObjCClass())
+          return false;
+      }
+    }
+    set_dynamic_pointee_type(
+        llvm::cast<clang::ObjCObjectPointerType>(qual_type)->getPointeeType());
+    return true;
+
+  case clang::Type::Pointer:
+    pointee_qual_type =
+        llvm::cast<clang::PointerType>(qual_type)->getPointeeType();
+    break;
+
+  case clang::Type::LValueReference:
+  case clang::Type::RValueReference:
+    pointee_qual_type =
+        llvm::cast<clang::ReferenceType>(qual_type)->getPointeeType();
+    break;
+
+  default:
+    return false;
+  }
+
+  // Check to make sure what we are pointing to is a possible dynamic C++ type
+  // We currently accept any "void *" (in case we have a class that has been
+  // watered down to an opaque pointer) and virtual C++ classes.
+  switch (pointee_qual_type.getCanonicalType()->getTypeClass()) {
+  case clang::Type::Builtin:
+    switch (llvm::cast<clang::BuiltinType>(pointee_qual_type)->getKind()) {
+    case clang::BuiltinType::UnknownAny:
+    case clang::BuiltinType::Void:
+      set_dynamic_pointee_type(pointee_qual_type);
+      return true;
+    default:
+      return false;
+    }
+
+  case clang::Type::Record: {
+    if (!check_cplusplus)
+      return false;
+    clang::CXXRecordDecl *cxx_record_decl =
+        pointee_qual_type->getAsCXXRecordDecl();
+    if (!cxx_record_decl)
+      return false;
+
+    bool success;
+    if (cxx_record_decl->isCompleteDefinition())
+      success = cxx_record_decl->isDynamicClass();
+    else {
+      std::optional<ClangASTMetadata> metadata = GetMetadata(cxx_record_decl);
+      std::optional<bool> is_dynamic =
+          metadata ? metadata->GetIsDynamicCXXType() : std::nullopt;
+      if (is_dynamic)
+        success = *is_dynamic;
+      else if (GetType(pointee_qual_type).GetCompleteType())
+        success = cxx_record_decl->isDynamicClass();
+      else
+        success = false;
+    }
+
+    if (success)
+      set_dynamic_pointee_type(pointee_qual_type);
+    return success;
+  }
+
+  case clang::Type::ObjCObject:
+  case clang::Type::ObjCInterface:
+    if (check_objc) {
+      set_dynamic_pointee_type(pointee_qual_type);
+      return true;
+    }
+    break;
+
+  default:
+    break;
+  }
   return false;
 }
 
@@ -6896,46 +6879,6 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
           name, omit_empty_base_classes, child_indexes);
     } break;
 
-    case clang::Type::ConstantArray: {
-      //                const clang::ConstantArrayType *array =
-      //                llvm::cast<clang::ConstantArrayType>(parent_qual_type.getTypePtr());
-      //                const uint64_t element_count =
-      //                array->getSize().getLimitedValue();
-      //
-      //                if (idx < element_count)
-      //                {
-      //                    std::pair<uint64_t, unsigned> field_type_info =
-      //                    ast->getTypeInfo(array->getElementType());
-      //
-      //                    char element_name[32];
-      //                    ::snprintf (element_name, sizeof (element_name),
-      //                    "%s[%u]", parent_name ? parent_name : "", idx);
-      //
-      //                    child_name.assign(element_name);
-      //                    assert(field_type_info.first % 8 == 0);
-      //                    child_byte_size = field_type_info.first / 8;
-      //                    child_byte_offset = idx * child_byte_size;
-      //                    return array->getElementType().getAsOpaquePtr();
-      //                }
-    } break;
-
-    //        case clang::Type::MemberPointerType:
-    //            {
-    //                MemberPointerType *mem_ptr_type =
-    //                llvm::cast<MemberPointerType>(qual_type.getTypePtr());
-    //                clang::QualType pointee_type =
-    //                mem_ptr_type->getPointeeType();
-    //
-    //                if (TypeSystemClang::IsAggregateType
-    //                (pointee_type.getAsOpaquePtr()))
-    //                {
-    //                    return GetIndexOfChildWithName (ast,
-    //                                                    mem_ptr_type->getPointeeType().getAsOpaquePtr(),
-    //                                                    name);
-    //                }
-    //            }
-    //            break;
-    //
     case clang::Type::LValueReference:
     case clang::Type::RValueReference: {
       const clang::ReferenceType *reference_type =
@@ -6969,7 +6912,7 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
 // doesn't descend into the children, but only looks one level deep and name
 // matches can include base class names.
 
-uint32_t
+llvm::Expected<uint32_t>
 TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
                                          llvm::StringRef name,
                                          bool omit_empty_base_classes) {
@@ -7075,46 +7018,6 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
           name, omit_empty_base_classes);
     } break;
 
-    case clang::Type::ConstantArray: {
-      //                const clang::ConstantArrayType *array =
-      //                llvm::cast<clang::ConstantArrayType>(parent_qual_type.getTypePtr());
-      //                const uint64_t element_count =
-      //                array->getSize().getLimitedValue();
-      //
-      //                if (idx < element_count)
-      //                {
-      //                    std::pair<uint64_t, unsigned> field_type_info =
-      //                    ast->getTypeInfo(array->getElementType());
-      //
-      //                    char element_name[32];
-      //                    ::snprintf (element_name, sizeof (element_name),
-      //                    "%s[%u]", parent_name ? parent_name : "", idx);
-      //
-      //                    child_name.assign(element_name);
-      //                    assert(field_type_info.first % 8 == 0);
-      //                    child_byte_size = field_type_info.first / 8;
-      //                    child_byte_offset = idx * child_byte_size;
-      //                    return array->getElementType().getAsOpaquePtr();
-      //                }
-    } break;
-
-    //        case clang::Type::MemberPointerType:
-    //            {
-    //                MemberPointerType *mem_ptr_type =
-    //                llvm::cast<MemberPointerType>(qual_type.getTypePtr());
-    //                clang::QualType pointee_type =
-    //                mem_ptr_type->getPointeeType();
-    //
-    //                if (TypeSystemClang::IsAggregateType
-    //                (pointee_type.getAsOpaquePtr()))
-    //                {
-    //                    return GetIndexOfChildWithName (ast,
-    //                                                    mem_ptr_type->getPointeeType().getAsOpaquePtr(),
-    //                                                    name);
-    //                }
-    //            }
-    //            break;
-    //
     case clang::Type::LValueReference:
     case clang::Type::RValueReference: {
       const clang::ReferenceType *reference_type =
@@ -7135,23 +7038,6 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
       if (pointee_type.IsAggregateType()) {
         return pointee_type.GetIndexOfChildWithName(name,
                                                     omit_empty_base_classes);
-      } else {
-        //                    if (parent_name)
-        //                    {
-        //                        child_name.assign(1, '*');
-        //                        child_name += parent_name;
-        //                    }
-        //
-        //                    // We have a pointer to an simple type
-        //                    if (idx == 0)
-        //                    {
-        //                        std::pair<uint64_t, unsigned> clang_type_info
-        //                        = ast->getTypeInfo(pointee_type);
-        //                        assert(clang_type_info.first % 8 == 0);
-        //                        child_byte_size = clang_type_info.first / 8;
-        //                        child_byte_offset = 0;
-        //                        return pointee_type.getAsOpaquePtr();
-        //                    }
       }
     } break;
 
@@ -7159,7 +7045,8 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
       break;
     }
   }
-  return UINT32_MAX;
+  return llvm::createStringError("Type has no child named '%s'",
+                                 name.str().c_str());
 }
 
 CompilerType

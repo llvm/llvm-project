@@ -20,7 +20,7 @@
 # RUN: %lld -dylib -install_name @rpath/two/three/libCee.dylib %t/c.o -o %t/cc/two/three/libCee.dylib 
 # RUN: %lld -dylib -install_name @rpath/two/three/libBee.dylib -L%t/cc/two/three -sub_library libCee -lCee %t/b.o -o %t/bb/two/three/libBee.dylib -rpath %t/cc
 # RUN: %lld -dylib -install_name @rpath/two/three/libAee.dylib -L%t/bb/two/three -sub_library libBee -lBee %t/a.o -o %t/aa/two/three/libAee.dylib -rpath %t/aa
-# RUN: %lld %t/main.o  -L%t/aa/two/three -lAee -o a.out -rpath %t/aa -rpath %t/bb -rpath %t/cc
+# RUN: %lld %t/main.o  -L%t/aa/two/three -lAee -o %t/a.out -rpath %t/aa -rpath %t/bb -rpath %t/cc
 
 #--- c.s
 .text

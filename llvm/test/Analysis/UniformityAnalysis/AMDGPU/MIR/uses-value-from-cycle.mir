@@ -1,9 +1,10 @@
 # RUN: llc -mtriple=amdgcn-- -mcpu=gfx1030 -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn-- -mcpu=gfx1030 -passes='print<machine-uniformity>' -filetype=null %s 2>&1 | FileCheck %s
 ---
 name:            f1
 tracksRegLiveness: true
 body:             |
-  ; CHECK-LABEL: MachineUniformityInfo for function: f1
+  ; CHECK-LABEL: MachineUniformityInfo for function:  @f1
   bb.1:
     %3:_(s32) = G_CONSTANT i32 0
     %25:_(s32) = G_IMPLICIT_DEF

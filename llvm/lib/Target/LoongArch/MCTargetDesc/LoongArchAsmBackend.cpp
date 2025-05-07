@@ -12,6 +12,7 @@
 
 #include "LoongArchAsmBackend.h"
 #include "LoongArchFixupKinds.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
@@ -26,6 +27,12 @@
 #define DEBUG_TYPE "loongarch-asmbackend"
 
 using namespace llvm;
+
+LoongArchAsmBackend::LoongArchAsmBackend(const MCSubtargetInfo &STI,
+                                         uint8_t OSABI, bool Is64Bit,
+                                         const MCTargetOptions &Options)
+    : MCAsmBackend(llvm::endianness::little, ELF::R_LARCH_RELAX), STI(STI),
+      OSABI(OSABI), Is64Bit(Is64Bit), TargetOptions(Options) {}
 
 std::optional<MCFixupKind>
 LoongArchAsmBackend::getFixupKind(StringRef Name) const {
