@@ -111,7 +111,7 @@ bool AMDGPUIndexingInfoWrapper::runOnMachineFunction(MachineFunction &MF) {
 
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
   unsigned LaneSharedSize = MFI.getLaneSharedVGPRSize() / 4u;
-  IndexingInfo.LaneSharedSize = LaneSharedSize;
+  IndexingInfo = AMDGPUIndexingInfo(LaneSharedSize);
   AnalysisImpl Impl(*ST.getRegisterInfo(), MF.getRegInfo(),
                     IndexingInfo.LaneSharedIdxInfos,
                     IndexingInfo.PrivateObjectIdxInfos, LaneSharedSize);
