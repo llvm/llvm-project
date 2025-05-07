@@ -2669,6 +2669,57 @@ void acc::LoopOp::addAuto(MLIRContext *context,
                                                   effectiveDeviceTypes));
 }
 
+void acc::LoopOp::setCollapseForDeviceTypes(
+    MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes,
+    llvm::APInt value) {
+  llvm::SmallVector<mlir::Attribute> newValues;
+  llvm::SmallVector<mlir::Attribute> newDeviceTypes;
+
+  assert((getCollapseAttr() == nullptr) ==
+         (getCollapseDeviceTypeAttr() == nullptr));
+  assert(value.getBitWidth() == 64);
+
+  if (getCollapseAttr()) {
+    for (const auto &existing :
+         llvm::zip_equal(getCollapseAttr(), getCollapseDeviceTypeAttr())) {
+      newValues.push_back(std::get<0>(existing));
+      newDeviceTypes.push_back(std::get<1>(existing));
+    }
+  }
+
+  if (effectiveDeviceTypes.empty()) {
+    // If the effective device-types list is empty, this is before there are any
+    // being applied by device_type, so this should be added as a 'none'.
+    newValues.push_back(
+        mlir::IntegerAttr::get(mlir::IntegerType::get(context, 64), value));
+    newDeviceTypes.push_back(
+        acc::DeviceTypeAttr::get(context, DeviceType::None));
+  } else {
+    for (DeviceType DT : effectiveDeviceTypes) {
+      newValues.push_back(
+          mlir::IntegerAttr::get(mlir::IntegerType::get(context, 64), value));
+      newDeviceTypes.push_back(acc::DeviceTypeAttr::get(context, DT));
+    }
+  }
+
+  setCollapseAttr(ArrayAttr::get(context, newValues));
+  setCollapseDeviceTypeAttr(ArrayAttr::get(context, newDeviceTypes));
+}
+
+void acc::LoopOp::setTileForDeviceTypes(
+    MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes,
+    ValueRange values) {
+  llvm::SmallVector<int32_t> segments;
+  if (getTileOperandsSegments())
+    llvm::copy(*getTileOperandsSegments(), std::back_inserter(segments));
+
+  setTileOperandsDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getTileOperandsDeviceTypeAttr(), effectiveDeviceTypes, values,
+      getTileOperandsMutable(), segments));
+
+  setTileOperandsSegments(segments);
+}
+
 //===----------------------------------------------------------------------===//
 // DataOp
 //===----------------------------------------------------------------------===//

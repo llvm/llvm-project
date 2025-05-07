@@ -4210,6 +4210,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Dest, *this);
   }
 
+  case Builtin::BI__builtin_trivially_relocate:
   case Builtin::BImemmove:
   case Builtin::BI__builtin_memmove: {
     Address Dest = EmitPointerWithAlignment(E->getArg(0));

@@ -45,6 +45,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFTarget() {
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
+  initializeBPFAsmPrinterPass(PR);
   initializeBPFCheckAndAdjustIRPass(PR);
   initializeBPFMIPeepholePass(PR);
   initializeBPFMIPreEmitPeepholePass(PR);

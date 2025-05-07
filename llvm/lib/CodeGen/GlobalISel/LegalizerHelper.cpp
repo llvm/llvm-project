@@ -6136,6 +6136,7 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case TargetOpcode::G_INTRINSIC_ROUND:
   case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
   case TargetOpcode::G_INTRINSIC_TRUNC:
+  case TargetOpcode::G_BITREVERSE:
   case TargetOpcode::G_BSWAP:
   case TargetOpcode::G_FCANONICALIZE:
   case TargetOpcode::G_SEXT_INREG:

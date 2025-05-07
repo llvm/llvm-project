@@ -1133,9 +1133,6 @@ public:
   /// Return true if this is a trivially copyable type
   bool isTriviallyCopyConstructibleType(const ASTContext &Context) const;
 
-  /// Return true if this is a trivially relocatable type.
-  bool isTriviallyRelocatableType(const ASTContext &Context) const;
-
   /// Returns true if it is a class and it might be dynamic.
   bool mayBeDynamicClass() const;
 

@@ -2223,7 +2223,7 @@ private:
   __annotate_contiguous_container(const void* __old_mid, const void* __new_mid) const {
     (void)__old_mid;
     (void)__new_mid;
-#  if _LIBCPP_HAS_ASAN && _LIBCPP_INSTRUMENTED_WITH_ASAN
+#  if _LIBCPP_INSTRUMENTED_WITH_ASAN
 #    if defined(__APPLE__)
     // TODO: remove after addressing issue #96099 (https://github.com/llvm/llvm-project/issues/96099)
     if (!__is_long())
@@ -2234,34 +2234,19 @@ private:
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_new(size_type __current_size) const _NOEXCEPT {
-    (void)__current_size;
-#  if _LIBCPP_HAS_ASAN && _LIBCPP_INSTRUMENTED_WITH_ASAN
-    if (!__libcpp_is_constant_evaluated())
-      __annotate_contiguous_container(data() + capacity() + 1, data() + __current_size + 1);
-#  endif
+    __annotate_contiguous_container(data() + capacity() + 1, data() + __current_size + 1);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_delete() const _NOEXCEPT {
-#  if _LIBCPP_HAS_ASAN && _LIBCPP_INSTRUMENTED_WITH_ASAN
-    if (!__libcpp_is_constant_evaluated())
-      __annotate_contiguous_container(data() + size() + 1, data() + capacity() + 1);
-#  endif
+    __annotate_contiguous_container(data() + size() + 1, data() + capacity() + 1);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_increase(size_type __n) const _NOEXCEPT {
-    (void)__n;
-#  if _LIBCPP_HAS_ASAN && _LIBCPP_INSTRUMENTED_WITH_ASAN
-    if (!__libcpp_is_constant_evaluated())
-      __annotate_contiguous_container(data() + size() + 1, data() + size() + 1 + __n);
-#  endif
+    __annotate_contiguous_container(data() + size() + 1, data() + size() + 1 + __n);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_shrink(size_type __old_size) const _NOEXCEPT {
-    (void)__old_size;
-#  if _LIBCPP_HAS_ASAN && _LIBCPP_INSTRUMENTED_WITH_ASAN
-    if (!__libcpp_is_constant_evaluated())
-      __annotate_contiguous_container(data() + __old_size + 1, data() + size() + 1);
-#  endif
+    __annotate_contiguous_container(data() + __old_size + 1, data() + size() + 1);
   }
 
   // Disable ASan annotations and enable them again when going out of scope. It is assumed that the string is in a valid

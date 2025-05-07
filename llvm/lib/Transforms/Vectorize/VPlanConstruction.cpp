@@ -125,34 +125,14 @@ VPBasicBlock *PlainCFGBuilder::getOrCreateVPBB(BasicBlock *BB) {
 // Return true if \p Val is considered an external definition. An external
 // definition is either:
 // 1. A Value that is not an Instruction. This will be refined in the future.
-// 2. An Instruction that is outside of the CFG snippet represented in VPlan,
-// i.e., is not part of: a) the loop nest, b) outermost loop PH and, c)
-// outermost loop exits.
+// 2. An Instruction that is outside of the IR region represented in VPlan,
+// i.e., is not part of the loop nest.
 bool PlainCFGBuilder::isExternalDef(Value *Val) {
   // All the Values that are not Instructions are considered external
   // definitions for now.
   Instruction *Inst = dyn_cast<Instruction>(Val);
   if (!Inst)
     return true;
-
-  BasicBlock *InstParent = Inst->getParent();
-  assert(InstParent && "Expected instruction parent.");
-
-  // Check whether Instruction definition is in loop PH.
-  BasicBlock *PH = TheLoop->getLoopPreheader();
-  assert(PH && "Expected loop pre-header.");
-
-  if (InstParent == PH)
-    // Instruction definition is in outermost loop PH.
-    return false;
-
-  // Check whether Instruction definition is in a loop exit.
-  SmallVector<BasicBlock *> ExitBlocks;
-  TheLoop->getExitBlocks(ExitBlocks);
-  if (is_contained(ExitBlocks, InstParent)) {
-    // Instruction definition is in outermost loop exit.
-    return false;
-  }
 
   // Check whether Instruction definition is in loop body.
   return !TheLoop->contains(Inst);
@@ -579,7 +559,7 @@ void VPlanTransforms::prepareForVectorization(VPlan &Plan, Type *InductionTy,
 void VPlanTransforms::createLoopRegions(VPlan &Plan) {
   VPDominatorTree VPDT;
   VPDT.recalculate(Plan);
-  for (VPBlockBase *HeaderVPB : vp_depth_first_shallow(Plan.getEntry()))
+  for (VPBlockBase *HeaderVPB : vp_post_order_shallow(Plan.getEntry()))
     if (canonicalHeaderAndLatch(HeaderVPB, VPDT))
       createLoopRegion(Plan, HeaderVPB);
 

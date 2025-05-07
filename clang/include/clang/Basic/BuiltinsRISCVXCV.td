@@ -21,8 +21,8 @@ let Attributes = [NoThrow, Const] in {
 //===----------------------------------------------------------------------===//
 // XCValu extension.
 //===----------------------------------------------------------------------===//
-def alu_slet  : RISCVXCVBuiltin<"int(int, int)", "xcvalu">;
-def alu_sletu : RISCVXCVBuiltin<"int(unsigned int, unsigned int)", "xcvalu">;
+def alu_sle   : RISCVXCVBuiltin<"int(int, int)", "xcvalu">;
+def alu_sleu  : RISCVXCVBuiltin<"int(unsigned int, unsigned int)", "xcvalu">;
 def alu_exths : RISCVXCVBuiltin<"int(int)", "xcvalu">;
 def alu_exthz : RISCVXCVBuiltin<"unsigned int(unsigned int)", "xcvalu">;
 def alu_extbs : RISCVXCVBuiltin<"int(int)", "xcvalu">;

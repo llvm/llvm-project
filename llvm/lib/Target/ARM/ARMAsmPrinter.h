@@ -29,7 +29,10 @@ namespace ARM {
 }
 
 class LLVM_LIBRARY_VISIBILITY ARMAsmPrinter : public AsmPrinter {
+public:
+  static char ID;
 
+private:
   /// Subtarget - Keep a pointer to the ARMSubtarget around so that we can
   /// make the right decision when printing asm code for different targets.
   const ARMSubtarget *Subtarget;
@@ -152,6 +155,7 @@ public:
   /// the .s file.
   void emitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) override;
 };
+
 } // end namespace llvm
 
 #endif
