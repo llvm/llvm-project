@@ -209,6 +209,11 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .legalForCartesianProduct(allIntScalarsAndVectors)
       .legalIf(extendedScalarsAndVectorsProduct);
 
+  getActionDefinitionsBuilder(G_FFREXP)
+      .legalForCartesianProduct(allFloatScalarsAndVectors,
+                                {s32, v2s32, v3s32, v4s32, v8s32, v16s32})
+      .clampScalar(1, s32, s32);
+
   // Extensions.
   getActionDefinitionsBuilder({G_TRUNC, G_ZEXT, G_SEXT, G_ANYEXT})
       .legalForCartesianProduct(allScalarsAndVectors)
