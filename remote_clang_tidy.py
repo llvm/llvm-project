@@ -1,12 +1,12 @@
 import requests
 import subprocess
-import json
+import yaml
 import os
 
-# Function to load configuration details from the JSON file
+# Function to load configuration details from the YAML file
 def load_config(config_file):
     with open(config_file, 'r') as f:
-        config = json.load(f)
+        config = yaml.safe_load(f)
     return config
 
 # Function to fetch diff data from GitHub using the API
@@ -45,14 +45,15 @@ def run_clang_tidy_diff(diff_data, clang_tidy_path="./clang-tidy-diff.py"):
             print("clang-tidy output:\n", stdout.decode())
 
 # Main function to integrate everything
-def main(config_file="config.json"):
+def main(config_file="config.yaml"):
     # Step 1: Load configuration from the config file
     try:
         config = load_config(config_file)
-        owner = config['owner']
-        repo = config['repo']
-        pull_number = config['pull_number']
-        github_token = config['github_token']
+        project = config['project']  # Access 'project' section from YAML
+        owner = project['owner']  # Access 'owner' inside 'project'
+        repo = project['repo']  # Access 'repo' inside 'project'
+        pull_number = project['pr_number']  # Access 'pr_number' inside 'project'
+        github_token = project['github_token']  # Access 'github_token' inside 'project'
     except Exception as e:
         print(f"Error loading configuration: {e}")
         return
@@ -69,4 +70,4 @@ def main(config_file="config.json"):
         print(f"Error: {e}")
 
 if __name__ == '__main__':
-    main(config_file="config.json")
+    main(config_file="config.yaml")
