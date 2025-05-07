@@ -16,6 +16,7 @@
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -43,19 +44,19 @@ static cl::opt<bool> EnableEVLIndVarSimplify(
 namespace {
 struct EVLIndVarSimplifyImpl {
   ScalarEvolution &SE;
+  OptimizationRemarkEmitter *ORE = nullptr;
 
-  explicit EVLIndVarSimplifyImpl(LoopStandardAnalysisResults &LAR)
-      : SE(LAR.SE) {}
-
-  explicit EVLIndVarSimplifyImpl(ScalarEvolution &SE) : SE(SE) {}
+  EVLIndVarSimplifyImpl(LoopStandardAnalysisResults &LAR,
+                        OptimizationRemarkEmitter *ORE)
+      : SE(LAR.SE), ORE(ORE) {}
 
   // Returns true if modify the loop.
   bool run(Loop &L);
 };
 } // anonymous namespace
 
-// Returns the constant part of vectorization factor from the induction
-// variable's step value SCEV expression.
+/// Returns the constant part of vectorization factor from the induction
+/// variable's step value SCEV expression.
 static uint32_t getVFFromIndVar(const SCEV *Step, const Function &F) {
   if (!Step)
     return 0U;
@@ -113,8 +114,17 @@ bool EVLIndVarSimplifyImpl::run(Loop &L) {
   InductionDescriptor IVD;
   PHINode *IndVar = L.getInductionVariable(SE);
   if (!IndVar || !L.getInductionDescriptor(SE, IVD)) {
+    const char *Reason = (IndVar ? "induction descriptor is not available"
+                                 : "cannot recognize induction variable");
     LLVM_DEBUG(dbgs() << "Cannot retrieve IV from loop " << L.getName()
-                      << "\n");
+                      << " because" << Reason << "\n");
+    if (ORE) {
+      ORE->emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "MissingIndVar",
+                                        L.getStartLoc(), L.getHeader())
+               << "Cannot retrieve IV because " << ore::NV("Reason", Reason);
+      });
+    }
     return false;
   }
 
@@ -205,6 +215,22 @@ bool EVLIndVarSimplifyImpl::run(Loop &L) {
     return false;
 
   LLVM_DEBUG(dbgs() << "Using " << *EVLIndVar << " for EVL-based IndVar\n");
+  if (ORE) {
+    ORE->emit([&]() {
+      DebugLoc DL;
+      BasicBlock *Region = nullptr;
+      if (auto *I = dyn_cast<Instruction>(EVLIndVar)) {
+        DL = I->getDebugLoc();
+        Region = I->getParent();
+      } else {
+        DL = L.getStartLoc();
+        Region = L.getHeader();
+      }
+      return OptimizationRemark(DEBUG_TYPE, "UseEVLIndVar", DL, Region)
+             << "Using " << ore::NV("EVLIndVar", EVLIndVar)
+             << " for EVL-based IndVar";
+    });
+  }
 
   // Create an EVL-based comparison and replace the branch to use it as
   // predicate.
@@ -240,7 +266,12 @@ bool EVLIndVarSimplifyImpl::run(Loop &L) {
 PreservedAnalyses EVLIndVarSimplifyPass::run(Loop &L, LoopAnalysisManager &LAM,
                                              LoopStandardAnalysisResults &AR,
                                              LPMUpdater &U) {
-  if (EVLIndVarSimplifyImpl(AR).run(L))
+  Function &F = *L.getHeader()->getParent();
+  auto &FAMProxy = LAM.getResult<FunctionAnalysisManagerLoopProxy>(L, AR);
+  OptimizationRemarkEmitter *ORE =
+      FAMProxy.getCachedResult<OptimizationRemarkEmitterAnalysis>(F);
+
+  if (EVLIndVarSimplifyImpl(AR, ORE).run(L))
     return PreservedAnalyses::allInSet<CFGAnalyses>();
   return PreservedAnalyses::all();
 }
