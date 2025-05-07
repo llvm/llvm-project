@@ -70,9 +70,8 @@ struct TestXeGPUUnrollingPatterns
             }
           }
 
-          if (isa<xegpu::DpasOp>(op)) {
+          if (isa<xegpu::DpasOp>(op))
             return SmallVector<int64_t>{8, 16, 16};
-          }
 
           return std::nullopt;
         });
