@@ -51,7 +51,8 @@ template <class ConstantClass> struct ConstantAggrKeyType;
 /// Since they can be in use by unrelated modules (and are never based on
 /// GlobalValues), it never makes sense to RAUW them.
 ///
-/// These do not have use lists. It is illegal to inspect the uses.
+/// These do not have use lists. It is illegal to inspect the uses. These behave
+/// as if they have no uses (i.e. use_empty() is always true).
 class ConstantData : public Constant {
   constexpr static IntrusiveOperandsAllocMarker AllocMarker{0};
 
