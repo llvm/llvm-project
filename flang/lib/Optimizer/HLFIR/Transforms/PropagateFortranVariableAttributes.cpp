@@ -40,13 +40,16 @@ public:
 
 class Propagator {
 public:
-  Propagator() {}
-
   void process(mlir::Operation *op);
 
 private:
   static bool isContiguous(mlir::Operation *op) {
-    if (mlir::isa<fir::AllocaOp, fir::AllocMemOp>(op))
+    // Treat data allocations as contiguous, so that we can propagate
+    // the continuity from them. Allocations of fir.box must not be treated
+    // as contiguous.
+    if (mlir::isa<fir::AllocaOp, fir::AllocMemOp>(op) &&
+        !mlir::isa<fir::BaseBoxType>(
+            fir::unwrapRefType(op->getResult(0).getType())))
       return true;
     auto varOp = mlir::dyn_cast<fir::FortranVariableOpInterface>(op);
     if (!varOp)

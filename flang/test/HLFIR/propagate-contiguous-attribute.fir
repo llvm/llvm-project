@@ -252,3 +252,24 @@ func.func @_QPtest6(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x", fi
   hlfir.assign %103 to %104 : !fir.box<!fir.array<11xf32>>, !fir.box<!fir.array<11xf32>>
   return
 }
+
+// -----
+
+// Make sure contiguous attribute is not set on hlfir.declare:
+//subroutine test7()
+//  real, pointer :: x(:)
+//end subroutine test7
+
+func.func @_QPtest7() {
+  %c0 = arith.constant 0 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>> {bindc_name = "x", uniq_name = "_QFtest7Ex"}
+  %2 = fir.zero_bits !fir.ptr<!fir.array<?xf32>>
+  %3 = fir.shape %c0 : (index) -> !fir.shape<1>
+  %4 = fir.embox %2(%3) : (!fir.ptr<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
+  fir.store %4 to %1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+  %5:2 = hlfir.declare %1 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest7Ex"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
+  return
+}
+// CHECK-LABEL:   func.func @_QPtest7(
+// CHECK-NOT: contiguous
