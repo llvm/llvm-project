@@ -11,18 +11,17 @@ declare target("spirv.VulkanBuffer", [0 x i32], 12, 1) @llvm.spv.resource.handle
 
 ; CHECK: OpDecorate [[BufferVar:%.+]] DescriptorSet 0
 ; CHECK: OpDecorate [[BufferVar]] Binding 0
-; CHECK: OpMemberDecorate [[BufferType:%.+]] 0 Offset 0
-; CHECK: OpDecorate [[BufferType]] Block
+; CHECK: OpDecorate [[BufferType:%.+]] Block
+; CHECK: OpMemberDecorate [[BufferType]] 0 Offset 0
 ; CHECK: OpMemberDecorate [[BufferType]] 0 NonWritable
 ; CHECK: OpDecorate [[RWBufferVar:%.+]] DescriptorSet 0
 ; CHECK: OpDecorate [[RWBufferVar]] Binding 1
-; CHECK: OpDecorate [[ArrayType:%.+]] ArrayStride 4
-; CHECK: OpMemberDecorate [[RWBufferType:%.+]] 0 Offset 0
-; CHECK: OpDecorate [[RWBufferType]] Block
+; CHECK: OpDecorate [[RWBufferType:%.+]] Block
+; CHECK: OpMemberDecorate [[RWBufferType]] 0 Offset 0
 
 
 ; CHECK: [[int:%[0-9]+]] = OpTypeInt 32 0
-; CHECK: [[ArrayType]] = OpTypeRuntimeArray
+; CHECK: [[ArrayType:%.+]] = OpTypeRuntimeArray
 ; CHECK: [[RWBufferType]] = OpTypeStruct [[ArrayType]]
 ; CHECK: [[RWBufferPtrType:%.+]] = OpTypePointer StorageBuffer [[RWBufferType]]
 ; CHECK: [[BufferType]] = OpTypeStruct [[ArrayType]]

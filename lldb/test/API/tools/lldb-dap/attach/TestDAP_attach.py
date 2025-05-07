@@ -27,6 +27,8 @@ def spawn_and_wait(program, delay):
 @skip
 class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
     def set_and_hit_breakpoint(self, continueToExit=True):
+        self.dap_server.wait_for_stopped()
+
         source = "main.c"
         breakpoint1_line = line_number(source, "// breakpoint 1")
         lines = [breakpoint1_line]
@@ -51,7 +53,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
-        self.attach(pid=self.process.pid)
+        self.attach(pid=self.process.pid, stopOnAttach=True)
         self.set_and_hit_breakpoint(continueToExit=True)
 
     @skipIfNetBSD  # Hangs on NetBSD as well
@@ -69,7 +71,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         popen = self.spawnSubprocess(program, [pid_file_path])
         lldbutil.wait_for_file_on_target(self, pid_file_path)
 
-        self.attach(program=program)
+        self.attach(program=program, stopOnAttach=True)
         self.set_and_hit_breakpoint(continueToExit=True)
 
     @skipUnlessDarwin
@@ -89,7 +91,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
             ),
         )
         self.spawn_thread.start()
-        self.attach(program=program, waitFor=True)
+        self.attach(program=program, stopOnAttach=True, waitFor=True)
         self.set_and_hit_breakpoint(continueToExit=True)
 
     @skipIfNetBSD  # Hangs on NetBSD as well
@@ -131,6 +133,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         terminateCommands = ["expr 4+2"]
         self.attach(
             program=program,
+            stopOnAttach=True,
             attachCommands=attachCommands,
             initCommands=initCommands,
             preRunCommands=preRunCommands,
@@ -199,6 +202,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         terminateCommands = ["expr 4+2"]
         self.attach(
             program=program,
+            stopOnAttach=True,
             attachCommands=attachCommands,
             terminateCommands=terminateCommands,
             disconnectAutomatically=False,
