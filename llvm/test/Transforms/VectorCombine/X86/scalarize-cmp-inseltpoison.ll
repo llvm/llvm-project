@@ -165,8 +165,6 @@ define <2 x i1> @constant_op1_i64_not_undef_lane(i64 %x) {
   ret <2 x i1> %r
 }
 
-; negative test - load prevents the transform
-
 define <2 x i1> @constant_op1_i64_load(ptr %p) {
 ; SSE-LABEL: @constant_op1_i64_load(
 ; SSE-NEXT:    [[LD:%.*]] = load i64, ptr [[P:%.*]], align 8
