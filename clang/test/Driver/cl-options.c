@@ -250,10 +250,11 @@
 // RUN: not %clang_cl /source-charset:utf-16 -### -- %s 2>&1 | FileCheck -check-prefix=source-charset-utf-16 %s
 // source-charset-utf-16: invalid value 'utf-16' in '/source-charset:utf-16'
 
-// /execution-charset: should warn on everything except UTF-8.
-// RUN: not %clang_cl /execution-charset:utf-16 -### -- %s 2>&1 | FileCheck -check-prefix=execution-charset-utf-16 %s
-// execution-charset-utf-16: invalid value 'utf-16' in '/execution-charset:utf-16'
+// /execution-charset: should warn on invalid charsets.
+// RUN: %clang_cl /execution-charset:invalid-charset -### -- %s 2>&1 | FileCheck -check-prefix=execution-charset-invalid %s
+// execution-charset-invalid: invalid value 'invalid-charset' in '/execution-charset:invalid-charset'
 //
+
 // RUN: %clang_cl /Umymacro -### -- %s 2>&1 | FileCheck -check-prefix=U %s
 // RUN: %clang_cl /U mymacro -### -- %s 2>&1 | FileCheck -check-prefix=U %s
 // U: "-U" "mymacro"

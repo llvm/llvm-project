@@ -134,7 +134,8 @@ static unsigned ProcessCharEscape(const char *ThisTokBegin,
                                   FullSourceLoc Loc, unsigned CharWidth,
                                   DiagnosticsEngine *Diags,
                                   const LangOptions &Features,
-                                  StringLiteralEvalMethod EvalMethod) {
+                                  StringLiteralEvalMethod EvalMethod,
+                                  llvm::TextEncodingConverter *Converter) {
   const char *EscapeBegin = ThisTokBuf;
   bool Delimited = false;
   bool EndDelimiterFound = false;
@@ -146,6 +147,8 @@ static unsigned ProcessCharEscape(const char *ThisTokBegin,
   // that would have been \", which would not have been the end of string.
   unsigned ResultChar = *ThisTokBuf++;
   char Escape = ResultChar;
+  bool Translate = true;
+  bool Invalid = false;
   switch (ResultChar) {
   // These map to themselves.
   case '\\': case '\'': case '"': case '?': break;
@@ -186,6 +189,7 @@ static unsigned ProcessCharEscape(const char *ThisTokBegin,
     ResultChar = 11;
     break;
   case 'x': { // Hex escape.
+    Translate = false;
     ResultChar = 0;
     if (ThisTokBuf != ThisTokEnd && *ThisTokBuf == '{') {
       Delimited = true;
@@ -249,6 +253,7 @@ static unsigned ProcessCharEscape(const char *ThisTokBegin,
   case '4': case '5': case '6': case '7': {
     // Octal escapes.
     --ThisTokBuf;
+    Translate = false;
     ResultChar = 0;
 
     // Octal escapes are a series of octal digits with maximum length 3.
@@ -334,6 +339,7 @@ static unsigned ProcessCharEscape(const char *ThisTokBegin,
         << std::string(1, ResultChar);
     break;
   default:
+    Invalid = true;
     if (!Diags)
       break;
 
@@ -367,6 +373,15 @@ static unsigned ProcessCharEscape(const char *ThisTokBegin,
     HadError = true;
   }
 
+  if (Translate && Converter) {
+    // Invalid escapes are written as '?' and then translated.
+    char ByteChar = Invalid ? '?' : ResultChar;
+    SmallString<8> ResultCharConv;
+    Converter->convert(StringRef(&ByteChar, 1), ResultCharConv);
+    assert(ResultCharConv.size() == 1 &&
+           "Char size increased after translation");
+    ResultChar = ResultCharConv[0];
+  }
   return ResultChar;
 }
 
@@ -1751,6 +1766,7 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
   HadError = false;
 
   Kind = kind;
+  LiteralConverter *LiteralConv = &PP.getLiteralConverter();
 
   const char *TokBegin = begin;
 
@@ -1817,6 +1833,10 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
     largest_character_for_kind = 0x7Fu;
   }
 
+  llvm::TextEncodingConverter *Converter = nullptr;
+  if (!isUTFLiteral(Kind) && LiteralConv)
+    Converter = LiteralConv->getConverter(ToExecCharset);
+
   while (begin != end) {
     // Is this a span of non-escape characters?
     if (begin[0] != '\\') {
@@ -1854,6 +1874,16 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
             HadError = true;
             PP.Diag(Loc, diag::err_character_too_large);
           }
+          if (!HadError && Converter) {
+            assert(Kind != tok::wide_char_constant &&
+                   "Wide character translation not supported");
+            char ByteChar = *tmp_out_start;
+            SmallString<1> ConvertedChar;
+            Converter->convert(StringRef(&ByteChar, 1), ConvertedChar);
+            assert(ConvertedChar.size() == 1 &&
+                   "Char size increased after translation");
+            *tmp_out_start = ConvertedChar[0];
+          }
         }
       }
 
@@ -1861,16 +1891,35 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
     }
     // Is this a Universal Character Name escape?
     if (begin[1] == 'u' || begin[1] == 'U' || begin[1] == 'N') {
-      unsigned short UcnLen = 0;
-      if (!ProcessUCNEscape(TokBegin, begin, end, *buffer_begin, UcnLen,
-                            FullSourceLoc(Loc, PP.getSourceManager()),
-                            &PP.getDiagnostics(), PP.getLangOpts(), true)) {
-        HadError = true;
-      } else if (*buffer_begin > largest_character_for_kind) {
-        HadError = true;
-        PP.Diag(Loc, diag::err_character_too_large);
+      if (Converter == nullptr) {
+        unsigned short UcnLen = 0;
+        if (!ProcessUCNEscape(TokBegin, begin, end, *buffer_begin, UcnLen,
+                              FullSourceLoc(Loc, PP.getSourceManager()),
+                              &PP.getDiagnostics(), PP.getLangOpts(), true)) {
+          HadError = true;
+        } else if (*buffer_begin > largest_character_for_kind) {
+          HadError = true;
+          PP.Diag(Loc, diag::err_character_too_large);
+        }
+      } else {
+        char Cp[8];
+        char *ResultPtr = Cp;
+        unsigned CharByteWidth = 1;
+        EncodeUCNEscape(TokBegin, begin, end, ResultPtr, HadError,
+                        FullSourceLoc(Loc, PP.getSourceManager()),
+                        CharByteWidth, &PP.getDiagnostics(), PP.getLangOpts());
+        if (!HadError) {
+          SmallString<8> CpConv;
+          Converter->convert(StringRef(Cp), CpConv);
+          if (CpConv.size() > 1) {
+            HadError = true;
+            PP.Diag(Loc, diag::err_character_too_large);
+          } else {
+            memcpy(Cp, CpConv.data(), CpConv.size());
+            *buffer_begin = *Cp;
+          }
+        }
       }
-
       ++buffer_begin;
       continue;
     }
@@ -1879,7 +1928,7 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
         ProcessCharEscape(TokBegin, begin, end, HadError,
                           FullSourceLoc(Loc, PP.getSourceManager()), CharWidth,
                           &PP.getDiagnostics(), PP.getLangOpts(),
-                          StringLiteralEvalMethod::Evaluated);
+                          StringLiteralEvalMethod::Evaluated, nullptr);
     *buffer_begin++ = result;
   }
 
@@ -1989,16 +2038,18 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
 ///
 StringLiteralParser::StringLiteralParser(ArrayRef<Token> StringToks,
                                          Preprocessor &PP,
-                                         StringLiteralEvalMethod EvalMethod)
+                                         StringLiteralEvalMethod EvalMethod,
+                                         ConversionAction Action)
     : SM(PP.getSourceManager()), Features(PP.getLangOpts()),
       Target(PP.getTargetInfo()), Diags(&PP.getDiagnostics()),
-      MaxTokenLength(0), SizeBound(0), CharByteWidth(0), Kind(tok::unknown),
-      ResultPtr(ResultBuf.data()), EvalMethod(EvalMethod), hadError(false),
-      Pascal(false) {
-  init(StringToks);
+      LiteralConv(&PP.getLiteralConverter()), MaxTokenLength(0), SizeBound(0),
+      CharByteWidth(0), Kind(tok::unknown), ResultPtr(ResultBuf.data()),
+      EvalMethod(EvalMethod), hadError(false), Pascal(false) {
+  init(StringToks, Action);
 }
 
-void StringLiteralParser::init(ArrayRef<Token> StringToks){
+void StringLiteralParser::init(ArrayRef<Token> StringToks,
+                               ConversionAction Action) {
   // The literal token may have come from an invalid source location (e.g. due
   // to a PCH error), in which case the token length will be 0.
   if (StringToks.empty() || StringToks[0].getLength() < 2)
@@ -2089,6 +2140,10 @@ void StringLiteralParser::init(ArrayRef<Token> StringToks){
   Pascal = false;
 
   SourceLocation UDSuffixTokLoc;
+
+  llvm::TextEncodingConverter *Converter = nullptr;
+  if (!isUTFLiteral(Kind) && LiteralConv)
+    Converter = LiteralConv->getConverter(Action);
 
   for (unsigned i = 0, e = StringToks.size(); i != e; ++i) {
     const char *ThisTokBuf = &TokenBuf[0];
@@ -2203,6 +2258,16 @@ void StringLiteralParser::init(ArrayRef<Token> StringToks){
         if (CopyStringFragment(StringToks[i], ThisTokBegin, BeforeCRLF))
           hadError = true;
 
+        if (!hadError && Converter) {
+          assert(Kind != tok::wide_string_literal &&
+                 "Wide character translation not supported");
+          SmallString<256> CpConv;
+          int ResultLength = BeforeCRLF.size() * CharByteWidth;
+          char *Cp = ResultPtr - ResultLength;
+          Converter->convert(StringRef(Cp, ResultLength), CpConv);
+          memcpy(Cp, CpConv.data(), ResultLength);
+          ResultPtr = Cp + CpConv.size();
+        }
         // Point into the \n inside the \r\n sequence and operate on the
         // remaining portion of the literal.
         RemainingTokenSpan = AfterCRLF.substr(1);
@@ -2237,26 +2302,45 @@ void StringLiteralParser::init(ArrayRef<Token> StringToks){
             ++ThisTokBuf;
           } while (ThisTokBuf != ThisTokEnd && ThisTokBuf[0] != '\\');
 
+          int Length = ThisTokBuf - InStart;
           // Copy the character span over.
           if (CopyStringFragment(StringToks[i], ThisTokBegin,
                                  StringRef(InStart, ThisTokBuf - InStart)))
             hadError = true;
+
+          if (!hadError && Converter) {
+            assert(Kind != tok::wide_string_literal &&
+                   "Wide character translation not supported");
+            SmallString<256> CpConv;
+            int ResultLength = Length * CharByteWidth;
+            char *Cp = ResultPtr - ResultLength;
+            Converter->convert(StringRef(Cp, ResultLength), CpConv);
+            memcpy(Cp, CpConv.data(), ResultLength);
+            ResultPtr = Cp + CpConv.size();
+          }
           continue;
         }
         // Is this a Universal Character Name escape?
         if (ThisTokBuf[1] == 'u' || ThisTokBuf[1] == 'U' ||
             ThisTokBuf[1] == 'N') {
-          EncodeUCNEscape(ThisTokBegin, ThisTokBuf, ThisTokEnd,
-                          ResultPtr, hadError,
+          char *Cp = ResultPtr;
+          EncodeUCNEscape(ThisTokBegin, ThisTokBuf, ThisTokEnd, ResultPtr,
+                          hadError,
                           FullSourceLoc(StringToks[i].getLocation(), SM),
                           CharByteWidth, Diags, Features);
+          if (!hadError && Converter) {
+            SmallString<8> CpConv;
+            Converter->convert(StringRef(Cp), CpConv);
+            memcpy(Cp, CpConv.data(), CpConv.size());
+            ResultPtr = Cp + CpConv.size();
+          }
           continue;
         }
         // Otherwise, this is a non-UCN escape character.  Process it.
-        unsigned ResultChar =
-            ProcessCharEscape(ThisTokBegin, ThisTokBuf, ThisTokEnd, hadError,
-                              FullSourceLoc(StringToks[i].getLocation(), SM),
-                              CharByteWidth * 8, Diags, Features, EvalMethod);
+        unsigned ResultChar = ProcessCharEscape(
+            ThisTokBegin, ThisTokBuf, ThisTokEnd, hadError,
+            FullSourceLoc(StringToks[i].getLocation(), SM), CharByteWidth * 8,
+            Diags, Features, EvalMethod, Converter);
 
         if (CharByteWidth == 4) {
           // FIXME: Make the type of the result buffer correct instead of
@@ -2454,7 +2538,8 @@ unsigned StringLiteralParser::getOffsetOfStringByte(const Token &Tok,
     } else {
       ProcessCharEscape(SpellingStart, SpellingPtr, SpellingEnd, HadError,
                         FullSourceLoc(Tok.getLocation(), SM), CharByteWidth * 8,
-                        Diags, Features, StringLiteralEvalMethod::Evaluated);
+                        Diags, Features, StringLiteralEvalMethod::Evaluated,
+                        nullptr);
       --ByteNo;
     }
     assert(!HadError && "This method isn't valid on erroneous strings");
