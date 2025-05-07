@@ -41,6 +41,10 @@ void populateAffineExpandIndexOpsPatterns(RewritePatternSet &patterns);
 /// `affine.apply` representations.
 void populateAffineExpandIndexOpsAsAffinePatterns(RewritePatternSet &patterns);
 
+/// Insert pattern to remove single iteration loop. The pattern will detect
+/// single iteration loops based on the range returned ValueBoundsOpInterface.
+void populateRemoveSingleIterationLoopPattern(RewritePatternSet &patterns);
+
 /// Helper function to rewrite `op`'s affine map and reorder its operands such
 /// that they are in increasing order of hoistability (i.e. the least hoistable)
 /// operands come first in the operand list.
