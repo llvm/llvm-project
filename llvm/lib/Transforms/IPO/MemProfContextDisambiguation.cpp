@@ -5242,6 +5242,7 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
           assert(AI != FS->allocs().end());
           auto &AllocNode = *(AI++);
 
+#ifndef NDEBUG
           // Sanity check that the MIB stack ids match between the summary and
           // instruction metadata.
           auto MIBIter = AllocNode.MIBs.begin();
@@ -5276,6 +5277,7 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
             }
             MIBIter++;
           }
+#endif
 
           // Perform cloning if not yet done.
           CloneFuncIfNeeded(/*NumClones=*/AllocNode.Versions.size());
