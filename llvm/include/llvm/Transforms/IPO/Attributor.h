@@ -1343,8 +1343,7 @@ struct InformationCache {
 
   /// Return all functions that might be called indirectly, only valid for
   /// closed world modules (see isClosedWorldModule).
-  const ArrayRef<Function *>
-  getIndirectlyCallableFunctions(Attributor &A) const;
+  ArrayRef<Function *> getIndirectlyCallableFunctions(Attributor &A) const;
 
   /// Return the flat address space if the associated target has.
   std::optional<unsigned> getFlatAddressSpace() const;
