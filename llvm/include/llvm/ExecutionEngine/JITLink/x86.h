@@ -1,4 +1,4 @@
-//=== i386.h - Generic JITLink i386 edge kinds, utilities -*- C++ -*-===//
+//===----- x86.h - Generic JITLink x86 edge kinds, utilities ----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,19 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Generic utilities for graphs representing i386 objects.
+// Generic utilities for graphs representing x86 objects.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_JITLINK_I386_H
-#define LLVM_EXECUTIONENGINE_JITLINK_I386_H
+#ifndef LLVM_EXECUTIONENGINE_JITLINK_X86_H
+#define LLVM_EXECUTIONENGINE_JITLINK_X86_H
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/JITLink/TableManager.h"
 
-namespace llvm::jitlink::i386 {
-/// Represets i386 fixups
-enum EdgeKind_i386 : Edge::Kind {
+namespace llvm::jitlink::x86 {
+
+/// Represets x86 fixups
+enum EdgeKind_x86 : Edge::Kind {
 
   /// A plain 32-bit pointer value relocation.
   ///
@@ -174,7 +175,7 @@ enum EdgeKind_i386 : Edge::Kind {
   BranchPCRel32ToPtrJumpStubBypassable,
 };
 
-/// Returns a string name for the given i386 edge. For debugging purposes
+/// Returns a string name for the given x86 edge. For debugging purposes
 /// only
 const char *getEdgeKindName(Edge::Kind K);
 
@@ -249,13 +250,13 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
   return Error::success();
 }
 
-/// i386 pointer size.
+/// x86 pointer size.
 constexpr uint32_t PointerSize = 4;
 
-/// i386 null pointer content.
+/// x86 null pointer content.
 extern const char NullPointerContent[PointerSize];
 
-/// i386 pointer jump stub content.
+/// x86 pointer jump stub content.
 ///
 /// Contains the instruction sequence for an indirect jump via an in-memory
 /// pointer:
@@ -406,6 +407,6 @@ public:
 /// target
 Error optimizeGOTAndStubAccesses(LinkGraph &G);
 
-} // namespace llvm::jitlink::i386
+} // namespace llvm::jitlink::x86
 
-#endif // LLVM_EXECUTIONENGINE_JITLINK_I386_H
+#endif // LLVM_EXECUTIONENGINE_JITLINK_X86_H
