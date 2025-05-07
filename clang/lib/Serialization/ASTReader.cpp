@@ -4952,7 +4952,8 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName, ModuleKind Type,
       ImportedModule &M = Loaded[I];
       if (M.Mod->Kind == MK_ImplicitModule &&
           M.Mod->InputFilesValidationTimestamp < HSOpts.BuildSessionTimestamp)
-        updateModuleTimestamp(M.Mod->FileName);
+        getModuleManager().getModuleCache().updateModuleTimestamp(
+            M.Mod->FileName);
     }
   }
 
