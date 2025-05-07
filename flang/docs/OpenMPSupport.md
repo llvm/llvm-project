@@ -64,4 +64,4 @@ Note : No distinction is made between the support in Parser/Semantics, MLIR, Low
 | target teams distribute parallel loop simd construct       | P      | device, reduction, dist_schedule and linear clauses are not supported |
 
 ## OpenMP 3.1, OpenMP 2.5, OpenMP 1.1
-All features except a few corner cases in atomic (complex type, different but compatible types in lhs and rhs), threadprivate (character type) constructs/clauses are supported.
+All features except a few corner cases in atomic (complex type, different but compatible types in lhs and rhs) are supported.
