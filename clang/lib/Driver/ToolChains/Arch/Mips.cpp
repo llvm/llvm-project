@@ -255,6 +255,12 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     D.Diag(diag::err_drv_unsupported_noabicalls_pic);
   }
 
+  if (CPUName == "i6500" || CPUName == "i6400") {
+    // MIPS cpu i6400 and i6500 support MSA (Mips SIMD Architecture)
+    // by default.
+    Features.push_back("+msa");
+  }
+
   if (!UseAbiCalls)
     Features.push_back("+noabicalls");
   else
