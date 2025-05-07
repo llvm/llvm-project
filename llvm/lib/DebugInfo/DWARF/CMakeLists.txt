@@ -2,6 +2,7 @@ add_llvm_component_library(LLVMDebugInfoDWARF
   DWARFAbbreviationDeclaration.cpp
   DWARFAddressRange.cpp
   DWARFAcceleratorTable.cpp
+  DWARFCFIProgram.cpp
   DWARFCompileUnit.cpp
   DWARFContext.cpp
   DWARFDataExtractor.cpp
