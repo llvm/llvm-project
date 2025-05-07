@@ -535,25 +535,25 @@ let Predicates = [MMA, IsNotISAFuture] in {
 }
 
 let Predicates = [MMA, IsISAFuture], isCodeGenOnly = 1 in {
-  // For Future and up XXMFACCW and XXMTACCW will not have patterns.
   // On Future CPU the wacc registers no longer overlap with the vsr registers
-  // and so register allocation would have to know to match 4 vsr registers
-  // with one wacc register.
-  // On top of that Future CPU has a more convenient way to move between vsrs
-  // and wacc registers using xxextfdmr512 and xxinstdmr512.
-  def XXMFACCW :
-    XForm_AT3<31, 0, 177, (outs wacc:$ATo), (ins wacc:$AT), "xxmfacc $AT",
-              IIC_VecGeneral, []>,
+  // so register allocation need to match 4 vsr registers with one wacc
+  // register. XXMTACC/XXFACC will be aliased to these new instructions.
+  def DMXXMFACC:
+    XForm_AT3<31, 0, 177, (outs wacc:$ATo), (ins wacc:$AT), "dmxxmfacc $AT",
+              IIC_VecGeneral,
+              [(set v512i1:$ATo, (int_ppc_mma_xxmfacc v512i1:$AT))]>,
               RegConstraint<"$ATo = $AT">, NoEncode<"$ATo">;
-  def XXMTACCW :
-    XForm_AT3<31, 1, 177, (outs wacc:$AT), (ins wacc:$ATi), "xxmtacc $AT",
-              IIC_VecGeneral, []>,
+  def DMXXMTACC:
+    XForm_AT3<31, 1, 177, (outs wacc:$AT), (ins wacc:$ATi), "dmxxmtacc $AT",
+              IIC_VecGeneral,
+              [(set v512i1:$AT, (int_ppc_mma_xxmtacc v512i1:$ATi))]>,
               RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
 
   let isAsCheapAsAMove = 1, isReMaterializable = 1 in {
-    def XXSETACCZW :
-      XForm_AT3<31, 3, 177, (outs wacc:$AT), (ins), "xxsetaccz $AT",
-                IIC_VecGeneral, [(set v512i1:$AT, (int_ppc_mma_xxsetaccz))]>;
+    def DMXXSETACCZ:
+      XForm_AT3<31, 3, 177, (outs wacc:$AT), (ins), "dmxxsetaccz $AT",
+                IIC_VecGeneral,
+                [(set v512i1:$AT, (int_ppc_mma_xxsetaccz))]>;
   }
 
   def XVI8GER4WSPP :
@@ -570,6 +570,12 @@ let Predicates = [MMA, IsISAFuture], isCodeGenOnly = 1 in {
     def RESTORE_WACC: PPCEmitTimePseudo<(outs wacc:$AT), (ins memrix16:$src),
                                         "#RESTORE_WACC", []>;
   }
+}
+
+let Predicates = [MMA, IsISAFuture] in {
+  def : InstAlias<"dmxxmmfacc $AT ", (XXMFACC acc:$AT)>;
+  def : InstAlias<"dmxxmmtacc $AT ", (XXMTACC acc:$AT)>;
+  def : InstAlias<"dmxxsetaccz $AT ", (XXSETACCZ acc:$AT)>;
 }
 
 let Predicates = [MMA, PrefixInstrs, IsNotISAFuture] in {
@@ -1093,5 +1099,5 @@ let Predicates = [MMA, IsISAFuture] in {
   def : Pat<(v512i1 (int_ppc_mma_assemble_acc v16i8:$vs1, v16i8:$vs0,
                                               v16i8:$vs3, v16i8:$vs2)),
             (DMXXINSTDMR512 ConcatsMMA.VecsToVecPair0, ConcatsMMA.VecsToVecPair1)>;
-  def : Pat<(v512i1 immAllZerosV), (XXSETACCZW)>;
+  def : Pat<(v512i1 immAllZerosV), (DMXXSETACCZ)>;
 }
