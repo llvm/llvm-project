@@ -17,6 +17,7 @@
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <cstdint>
 #include <string>
@@ -70,8 +71,6 @@ private:
   int getOpaqueValue() const { return ID; }
 };
 
-using FileIDAndOffset = std::pair<FileID, unsigned>;
-
 /// Encodes a location in the source. The SourceManager can decode this
 /// to get at the full include stack, line and column information.
 ///
@@ -95,13 +94,14 @@ class SourceLocation {
   friend class SourceLocationEncoding;
 
 public:
-  using UIntTy = uint32_t;
-  using IntTy = int32_t;
+  using UIntTy = uint64_t;
+  using IntTy = int64_t;
+  static constexpr unsigned Bits = 40;
 
 private:
-  UIntTy ID = 0;
+  uint64_t ID = 0;
 
-  enum : UIntTy { MacroIDBit = 1ULL << (8 * sizeof(UIntTy) - 1) };
+  enum : UIntTy { MacroIDBit = 1ULL << (Bits - 1) };
 
 public:
   bool isFileID() const  { return (ID & MacroIDBit) == 0; }
@@ -160,6 +160,24 @@ public:
     return X;
   }
 
+  static SourceLocation getFromRawEncoding32(const SourceManager &SM,
+                                             uint32_t Encoding32);
+
+  bool getRawEncoding32(uint32_t &Result) const {
+    // A mask that isolates this check to the required range higher of bits.
+    static constexpr uint64_t RangeMask = llvm::maskTrailingOnes<uint64_t>(Bits - 32) << 31;
+
+    // Check if the ID can be safely compressed to a 32-bit integer.
+    // The truncation is only possible if all higher bits of the ID are all identical:
+    //   all 0s for the local offset, or all 1s for loaded offset
+    if ((ID ^ (ID << 1)) & RangeMask)
+      return false; // won't fit
+    uint32_t Lower31Bits = ID & llvm::maskTrailingOnes<uint32_t>(31);
+    // Restore the top macro bit.
+    Result = Lower31Bits | ((ID & MacroIDBit) >> (Bits - 32));
+    return true;
+  }
+
   /// When a SourceLocation itself cannot be used, this returns
   /// an (opaque) pointer encoding for it.
   ///
@@ -210,6 +228,7 @@ inline bool operator<=(const SourceLocation &LHS, const SourceLocation &RHS) {
 inline bool operator>=(const SourceLocation &LHS, const SourceLocation &RHS) {
   return LHS.getRawEncoding() >= RHS.getRawEncoding();
 }
+using FileIDAndOffset = std::pair<FileID, SourceLocation::UIntTy>;
 
 /// A trivial tuple used to represent a source range.
 class SourceRange {

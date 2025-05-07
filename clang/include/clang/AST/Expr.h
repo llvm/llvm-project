@@ -1175,6 +1175,8 @@ public:
 /// context.
 class OpaqueValueExpr : public Expr {
   friend class ASTStmtReader;
+
+  SourceLocation Loc;
   Expr *SourceExpr;
 
 public:
@@ -1182,7 +1184,7 @@ public:
                   ExprObjectKind OK = OK_Ordinary, Expr *SourceExpr = nullptr)
       : Expr(OpaqueValueExprClass, T, VK, OK), SourceExpr(SourceExpr) {
     setIsUnique(false);
-    OpaqueValueExprBits.Loc = Loc;
+    this->Loc = Loc;
     setDependence(computeDependence(this));
   }
 
@@ -1195,7 +1197,7 @@ public:
     : Expr(OpaqueValueExprClass, Empty) {}
 
   /// Retrieve the location of this expression.
-  SourceLocation getLocation() const { return OpaqueValueExprBits.Loc; }
+  SourceLocation getLocation() const { return Loc; }
 
   SourceLocation getBeginLoc() const LLVM_READONLY {
     return SourceExpr ? SourceExpr->getBeginLoc() : getLocation();
@@ -1269,6 +1271,9 @@ class DeclRefExpr final
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
   friend TrailingObjects;
+  
+      /// The location of the declaration name itself.
+      SourceLocation Loc;
 
   /// The declaration that we are referencing.
   ValueDecl *D;
@@ -1341,13 +1346,13 @@ public:
     return DeclarationNameInfo(getDecl()->getDeclName(), getLocation(), DNLoc);
   }
 
-  SourceLocation getLocation() const { return DeclRefExprBits.Loc; }
-  void setLocation(SourceLocation L) { DeclRefExprBits.Loc = L; }
+  SourceLocation getLocation() const { return Loc; }
+  void setLocation(SourceLocation L) { Loc = L; }
 
   SourceLocation getBeginLoc() const {
     if (hasQualifier())
       return getQualifierLoc().getBeginLoc();
-    return DeclRefExprBits.Loc;
+    return Loc;
   }
 
   SourceLocation getEndLoc() const LLVM_READONLY;
@@ -2003,7 +2008,8 @@ class PredefinedExpr final
       private llvm::TrailingObjects<PredefinedExpr, Stmt *> {
   friend class ASTStmtReader;
   friend TrailingObjects;
-
+   /// The location of this PredefinedExpr.
+   SourceLocation Loc;
   // PredefinedExpr is optionally followed by a single trailing
   // "Stmt *" for the predefined identifier. It is present if and only if
   // hasFunctionName() is true and is always a "StringLiteral *".
@@ -2041,8 +2047,8 @@ public:
 
   bool isTransparent() const { return PredefinedExprBits.IsTransparent; }
 
-  SourceLocation getLocation() const { return PredefinedExprBits.Loc; }
-  void setLocation(SourceLocation L) { PredefinedExprBits.Loc = L; }
+  SourceLocation getLocation() const { return Loc; }
+  void setLocation(SourceLocation L) { Loc = L; }
 
   StringLiteral *getFunctionName() {
     return hasFunctionName()
@@ -2240,6 +2246,7 @@ public:
 class UnaryOperator final
     : public Expr,
       private llvm::TrailingObjects<UnaryOperator, FPOptionsOverride> {
+  SourceLocation Loc;
   Stmt *Val;
 
   FPOptionsOverride &getTrailingFPFeatures() {
@@ -2284,8 +2291,8 @@ public:
   void setSubExpr(Expr *E) { Val = E; }
 
   /// getOperatorLoc - Return the location of the operator.
-  SourceLocation getOperatorLoc() const { return UnaryOperatorBits.Loc; }
-  void setOperatorLoc(SourceLocation L) { UnaryOperatorBits.Loc = L; }
+  SourceLocation getOperatorLoc() const { return Loc; }
+  void setOperatorLoc(SourceLocation L) { Loc = L; }
 
   /// Returns true if the unary operator can cause an overflow. For instance,
   ///   signed int i = INT_MAX; i++;
@@ -2718,6 +2725,7 @@ public:
 /// ArraySubscriptExpr - [C99 6.5.2.1] Array Subscripting.
 class ArraySubscriptExpr : public Expr {
   enum { LHS, RHS, END_EXPR };
+  SourceLocation RBracketLoc;
   Stmt *SubExprs[END_EXPR];
 
   bool lhsIsBase() const { return getRHS()->getType()->isIntegerType(); }
@@ -2728,7 +2736,7 @@ public:
       : Expr(ArraySubscriptExprClass, t, VK, OK) {
     SubExprs[LHS] = lhs;
     SubExprs[RHS] = rhs;
-    ArrayOrMatrixSubscriptExprBits.RBracketLoc = rbracketloc;
+    this->RBracketLoc = rbracketloc;
     setDependence(computeDependence(this));
   }
 
@@ -2765,10 +2773,10 @@ public:
   SourceLocation getEndLoc() const { return getRBracketLoc(); }
 
   SourceLocation getRBracketLoc() const {
-    return ArrayOrMatrixSubscriptExprBits.RBracketLoc;
+    return RBracketLoc;
   }
   void setRBracketLoc(SourceLocation L) {
-    ArrayOrMatrixSubscriptExprBits.RBracketLoc = L;
+    RBracketLoc = L;
   }
 
   SourceLocation getExprLoc() const LLVM_READONLY {
@@ -2796,6 +2804,7 @@ public:
 /// exist during the initial construction of the AST.
 class MatrixSubscriptExpr : public Expr {
   enum { BASE, ROW_IDX, COLUMN_IDX, END_EXPR };
+  SourceLocation RBracketLoc;
   Stmt *SubExprs[END_EXPR];
 
 public:
@@ -2806,7 +2815,7 @@ public:
     SubExprs[BASE] = Base;
     SubExprs[ROW_IDX] = RowIdx;
     SubExprs[COLUMN_IDX] = ColumnIdx;
-    ArrayOrMatrixSubscriptExprBits.RBracketLoc = RBracketLoc;
+    this->RBracketLoc = RBracketLoc;
     setDependence(computeDependence(this));
   }
 
@@ -2847,10 +2856,10 @@ public:
   }
 
   SourceLocation getRBracketLoc() const {
-    return ArrayOrMatrixSubscriptExprBits.RBracketLoc;
+    return RBracketLoc;
   }
   void setRBracketLoc(SourceLocation L) {
-    ArrayOrMatrixSubscriptExprBits.RBracketLoc = L;
+    RBracketLoc = L;
   }
 
   static bool classof(const Stmt *T) {
@@ -2875,9 +2884,6 @@ public:
 class CallExpr : public Expr {
   enum { FN = 0, PREARGS_START = 1 };
 
-  /// The number of arguments in the call expression.
-  unsigned NumArgs;
-
   /// The location of the right parentheses. This has a different meaning for
   /// the derived classes of CallExpr.
   SourceLocation RParenLoc;
@@ -2897,19 +2903,19 @@ class CallExpr : public Expr {
   //
   // * An optional of type FPOptionsOverride.
   //
-  // CallExpr subclasses are asssumed to be 32 bytes or less, and CallExpr
+  // CallExpr subclasses are asssumed to be 40 bytes or less, and CallExpr
   // itself is 24 bytes. To avoid having to recompute or store the offset of the
-  // trailing objects, we put it at 32 bytes (such that it is suitable for all
+  // trailing objects, we put it at 40 bytes (such that it is suitable for all
   // subclasses) We use the 8 bytes gap left for instances of CallExpr to store
   // the begin source location, which has a significant impact on perf as
   // getBeginLoc is assumed to be cheap.
   // The layourt is as follow:
-  // CallExpr | Begin | 4 bytes left | Trailing Objects
+  // CallExpr | Begin | 8 bytes left | Trailing Objects
   // CXXMemberCallExpr | Trailing Objects
   // A bit in CallExprBitfields indicates if source locations are present.
 
 protected:
-  static constexpr unsigned OffsetToTrailingObjects = 32;
+  static constexpr unsigned OffsetToTrailingObjects = 40;
   template <typename T>
   static constexpr unsigned
   sizeToAllocateForCallExprSubclass(unsigned SizeOfTrailingObjects) {
@@ -3063,7 +3069,7 @@ public:
   }
 
   /// getNumArgs - Return the number of actual arguments to this call.
-  unsigned getNumArgs() const { return NumArgs; }
+  unsigned getNumArgs() const { return CallExprBits.NumArgs; }
 
   /// Retrieve the call arguments.
   Expr **getArgs() {
@@ -3111,13 +3117,13 @@ public:
   void shrinkNumArgs(unsigned NewNumArgs) {
     assert((NewNumArgs <= getNumArgs()) &&
            "shrinkNumArgs cannot increase the number of arguments!");
-    NumArgs = NewNumArgs;
+    CallExprBits.NumArgs = NewNumArgs;
   }
 
   /// Bluntly set a new number of arguments without doing any checks whatsoever.
   /// Only used during construction of a CallExpr in a few places in Sema.
   /// FIXME: Find a way to remove it.
-  void setNumArgsUnsafe(unsigned NewNumArgs) { NumArgs = NewNumArgs; }
+  void setNumArgsUnsafe(unsigned NewNumArgs) { CallExprBits.NumArgs = NewNumArgs; }
 
   typedef ExprIterator arg_iterator;
   typedef ConstExprIterator const_arg_iterator;
@@ -3302,6 +3308,8 @@ class MemberExpr final
 
   /// MemberLoc - This is the location of the member name.
   SourceLocation MemberLoc;
+  
+  SourceLocation OperatorLoc;
 
   size_t numTrailingObjects(OverloadToken<NestedNameSpecifierLoc>) const {
     return hasQualifier();
@@ -3464,7 +3472,7 @@ public:
                                MemberLoc, MemberDNLoc);
   }
 
-  SourceLocation getOperatorLoc() const { return MemberExprBits.OperatorLoc; }
+  SourceLocation getOperatorLoc() const { return OperatorLoc; }
 
   bool isArrow() const { return MemberExprBits.IsArrow; }
   void setArrow(bool A) { MemberExprBits.IsArrow = A; }
@@ -3958,6 +3966,7 @@ public:
 class BinaryOperator : public Expr {
   enum { LHS, RHS, END_EXPR };
   Stmt *SubExprs[END_EXPR];
+  SourceLocation OpLoc;
 
 public:
   typedef BinaryOperatorKind Opcode;
@@ -3997,8 +4006,8 @@ public:
                                 ExprObjectKind OK, SourceLocation opLoc,
                                 FPOptionsOverride FPFeatures);
   SourceLocation getExprLoc() const { return getOperatorLoc(); }
-  SourceLocation getOperatorLoc() const { return BinaryOperatorBits.OpLoc; }
-  void setOperatorLoc(SourceLocation L) { BinaryOperatorBits.OpLoc = L; }
+  SourceLocation getOperatorLoc() const { return OpLoc; }
+  void setOperatorLoc(SourceLocation L) { OpLoc = L; }
 
   Opcode getOpcode() const {
     return static_cast<Opcode>(BinaryOperatorBits.Opc);
@@ -6099,7 +6108,8 @@ class GenericSelectionExpr final
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
   friend TrailingObjects;
-
+  /// The location of the "_Generic".
+  SourceLocation GenericLoc;
   /// The number of association expressions and the index of the result
   /// expression in the case where the generic selection expression is not
   /// result-dependent. The result index is equal to ResultDependentIndex
@@ -6449,7 +6459,7 @@ public:
   }
 
   SourceLocation getGenericLoc() const {
-    return GenericSelectionExprBits.GenericLoc;
+    return GenericLoc;
   }
   SourceLocation getDefaultLoc() const { return DefaultLoc; }
   SourceLocation getRParenLoc() const { return RParenLoc; }

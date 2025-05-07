@@ -17,6 +17,8 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <string>
@@ -47,6 +49,27 @@ static_assert(std::is_trivially_destructible_v<SourceLocation>,
 static_assert(std::is_trivially_destructible_v<SourceRange>,
               "SourceRange must be trivially destructible because it is "
               "used in unions");
+
+SourceLocation SourceLocation::getFromRawEncoding32(const SourceManager &SM,
+                                                    uint32_t Encoding32) {
+  uint32_t Lower31Bits = Encoding32 & llvm::maskTrailingOnes<uint32_t>(31);
+  uint64_t MacroBit =
+      (static_cast<uint64_t>(Encoding32) & llvm::maskLeadingOnes<uint32_t>(1))
+      << (Bits - 32);
+
+  if (Lower31Bits < SM.getNextLocalOffset()) {
+    // This is local offset, 32-to-64 offset mapping is identical.
+    UIntTy Raw64 = Lower31Bits | MacroBit;
+    return getFromRawEncoding(Raw64);
+  }
+  // Offset of loaded source location.
+  //   2^63 -> 2^31
+  //   2^63 - 1 -> 2^31 - 1
+  static constexpr uint64_t RangeMask =
+      llvm::maskTrailingOnes<uint64_t>(Bits - 32) << 31;
+  UIntTy Raw64 = (RangeMask + Lower31Bits) | MacroBit;
+  return getFromRawEncoding(Raw64);
+}
 
 unsigned SourceLocation::getHashValue() const {
   return llvm::DenseMapInfo<UIntTy>::getHashValue(ID);

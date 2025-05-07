@@ -1022,7 +1022,7 @@ void ASTDeclWriter::VisitObjCTypeParamDecl(ObjCTypeParamDecl *D) {
 }
 
 void ASTDeclWriter::VisitObjCContainerDecl(ObjCContainerDecl *D) {
-  static_assert(DeclContext::NumObjCContainerDeclBits == 64,
+  static_assert(DeclContext::NumObjCContainerDeclBits == 13,
                 "You need to update the serializer after you change the "
                 "ObjCContainerDeclBits");
 

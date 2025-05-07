@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Serialization/SourceLocationEncoding.h"
+#include "llvm/Support/MathExtras.h"
 
 #include "gtest/gtest.h"
 #include <climits>
@@ -31,11 +32,13 @@ void roundTrip(SourceLocation::UIntTy Loc,
   SourceLocation::UIntTy DecodedEncoded =
       SourceLocationEncoding::decode(ActualEncoded).first.getRawEncoding();
   ASSERT_EQ(DecodedEncoded, Loc) << "Decoding " << ActualEncoded;
-}
+} 
 
 constexpr SourceLocation::UIntTy MacroBit =
-    1 << (sizeof(SourceLocation::UIntTy) * CHAR_BIT - 1);
-constexpr SourceLocation::UIntTy Big = MacroBit >> 1;
+    1ull << (SourceLocation::Bits - 1);
+constexpr SourceLocation::UIntTy Big = 1ull << (SourceLocation::Bits - 2);
+constexpr SourceLocation::UIntTy Biggest =
+    llvm::maskTrailingOnes<uint64_t>(SourceLocation::Bits - 1);
 
 TEST(SourceLocationEncoding, Individual) {
   roundTrip(1, 2);
@@ -46,6 +49,8 @@ TEST(SourceLocationEncoding, Individual) {
   roundTrip(Big + 1);
   roundTrip(MacroBit | Big);
   roundTrip(MacroBit | (Big + 1));
+  roundTrip(Biggest);
+  roundTrip(MacroBit | Biggest);
 }
 
 } // namespace

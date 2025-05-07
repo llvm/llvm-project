@@ -209,7 +209,7 @@ void ASTStmtReader::VisitAttributedStmt(AttributedStmt *S) {
   assert(NumAttrs == Attrs.size());
   std::copy(Attrs.begin(), Attrs.end(), S->getAttrArrayPtr());
   S->SubStmt = Record.readSubStmt();
-  S->AttributedStmtBits.AttrLoc = readSourceLocation();
+  S->AttrLoc = readSourceLocation();
 }
 
 void ASTStmtReader::VisitIfStmt(IfStmt *S) {
@@ -843,7 +843,7 @@ void ASTStmtReader::VisitRequiresExpr(RequiresExpr *E) {
   VisitExpr(E);
   unsigned NumLocalParameters = Record.readInt();
   unsigned NumRequirements = Record.readInt();
-  E->RequiresExprBits.RequiresKWLoc = Record.readSourceLocation();
+  E->RequiresKWLoc = Record.readSourceLocation();
   E->RequiresExprBits.IsSatisfied = Record.readInt();
   E->Body = Record.readDeclAs<RequiresExprBodyDecl>();
   llvm::SmallVector<ParmVarDecl *, 4> LocalParameters;
@@ -1071,7 +1071,7 @@ void ASTStmtReader::VisitMemberExpr(MemberExpr *E) {
   E->MemberExprBits.HadMultipleCandidates = CurrentUnpackingBits->getNextBit();
   E->MemberExprBits.NonOdrUseReason =
       CurrentUnpackingBits->getNextBits(/*Width=*/2);
-  E->MemberExprBits.OperatorLoc = Record.readSourceLocation();
+  E->OperatorLoc = Record.readSourceLocation();
 
   if (HasQualifier)
     new (E->getTrailingObjects<NestedNameSpecifierLoc>())
@@ -1410,7 +1410,7 @@ void ASTStmtReader::VisitGenericSelectionExpr(GenericSelectionExpr *E) {
   assert(NumAssocs == E->getNumAssocs() && "Wrong NumAssocs!");
   E->IsExprPredicate = Record.readInt();
   E->ResultIndex = Record.readInt();
-  E->GenericSelectionExprBits.GenericLoc = readSourceLocation();
+  E->GenericLoc = readSourceLocation();
   E->DefaultLoc = readSourceLocation();
   E->RParenLoc = readSourceLocation();
 
@@ -1756,7 +1756,7 @@ void ASTStmtReader::VisitCXXConstructExpr(CXXConstructExpr *E) {
   E->CXXConstructExprBits.ZeroInitialization = Record.readInt();
   E->CXXConstructExprBits.ConstructionKind = Record.readInt();
   E->CXXConstructExprBits.IsImmediateEscalating = Record.readInt();
-  E->CXXConstructExprBits.Loc = readSourceLocation();
+  E->Loc = readSourceLocation();
   E->Constructor = readDeclAs<CXXConstructorDecl>();
   E->ParenOrBraceRange = readSourceRange();
 
@@ -1880,7 +1880,7 @@ void ASTStmtReader::VisitCXXThisExpr(CXXThisExpr *E) {
 
 void ASTStmtReader::VisitCXXThrowExpr(CXXThrowExpr *E) {
   VisitExpr(E);
-  E->CXXThrowExprBits.ThrowLoc = readSourceLocation();
+  E->ThrowLoc = readSourceLocation();
   E->Operand = Record.readSubExpr();
   E->CXXThrowExprBits.IsThrownVariableInScope = Record.readInt();
 }
@@ -1889,7 +1889,7 @@ void ASTStmtReader::VisitCXXDefaultArgExpr(CXXDefaultArgExpr *E) {
   VisitExpr(E);
   E->Param = readDeclAs<ParmVarDecl>();
   E->UsedContext = readDeclAs<DeclContext>();
-  E->CXXDefaultArgExprBits.Loc = readSourceLocation();
+  E->Loc = readSourceLocation();
   E->CXXDefaultArgExprBits.HasRewrittenInit = Record.readInt();
   if (E->CXXDefaultArgExprBits.HasRewrittenInit)
     *E->getTrailingObjects() = Record.readSubExpr();
@@ -1900,7 +1900,7 @@ void ASTStmtReader::VisitCXXDefaultInitExpr(CXXDefaultInitExpr *E) {
   E->CXXDefaultInitExprBits.HasRewrittenInit = Record.readInt();
   E->Field = readDeclAs<FieldDecl>();
   E->UsedContext = readDeclAs<DeclContext>();
-  E->CXXDefaultInitExprBits.Loc = readSourceLocation();
+  E->Loc = readSourceLocation();
   if (E->CXXDefaultInitExprBits.HasRewrittenInit)
     *E->getTrailingObjects() = Record.readSubExpr();
 }
@@ -1914,7 +1914,7 @@ void ASTStmtReader::VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *E) {
 void ASTStmtReader::VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *E) {
   VisitExpr(E);
   E->TypeInfo = readTypeSourceInfo();
-  E->CXXScalarValueInitExprBits.RParenLoc = readSourceLocation();
+  E->RParenLoc = readSourceLocation();
 }
 
 void ASTStmtReader::VisitCXXNewExpr(CXXNewExpr *E) {
@@ -1964,7 +1964,7 @@ void ASTStmtReader::VisitCXXDeleteExpr(CXXDeleteExpr *E) {
   E->CXXDeleteExprBits.UsualArrayDeleteWantsSize = Record.readInt();
   E->OperatorDelete = readDeclAs<FunctionDecl>();
   E->Argument = Record.readSubExpr();
-  E->CXXDeleteExprBits.Loc = readSourceLocation();
+  E->Loc = readSourceLocation();
 }
 
 void ASTStmtReader::VisitCXXPseudoDestructorExpr(CXXPseudoDestructorExpr *E) {
@@ -2040,7 +2040,7 @@ void ASTStmtReader::VisitCXXDependentScopeMemberExpr(
   else
     E->Base = nullptr;
 
-  E->CXXDependentScopeMemberExprBits.OperatorLoc = readSourceLocation();
+  E->OperatorLoc = readSourceLocation();
 
   if (HasFirstQualifierFoundInScope)
     *E->getTrailingObjects<NamedDecl *>() = readDeclAs<NamedDecl>();
@@ -2227,7 +2227,7 @@ void ASTStmtReader::VisitSubstNonTypeTemplateParmExpr(
   E->Index = CurrentUnpackingBits->getNextBits(/*Width=*/12);
   E->PackIndex = Record.readUnsignedOrNone().toInternalRepresentation();
   E->Final = CurrentUnpackingBits->getNextBit();
-  E->SubstNonTypeTemplateParmExprBits.NameLoc = readSourceLocation();
+  E->NameLoc = readSourceLocation();
   E->Replacement = Record.readSubExpr();
 }
 
@@ -2305,7 +2305,7 @@ void ASTStmtReader::VisitCXXParenListInitExpr(CXXParenListInitExpr *E) {
 void ASTStmtReader::VisitOpaqueValueExpr(OpaqueValueExpr *E) {
   VisitExpr(E);
   E->SourceExpr = Record.readSubExpr();
-  E->OpaqueValueExprBits.Loc = readSourceLocation();
+  E->Loc = readSourceLocation();
   E->setIsUnique(Record.readInt());
 }
 
