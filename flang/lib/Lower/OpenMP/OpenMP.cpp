@@ -3816,6 +3816,13 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   TODO(converter.getCurrentLocation(), "OpenMP ASSUMES declaration");
 }
 
+static void
+genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+       semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
+       const parser::OmpDeclareVariantDirective &declareVariantDirective) {
+  TODO(converter.getCurrentLocation(), "OmpDeclareVariantDirective");
+}
+
 static void genOMP(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
