@@ -580,7 +580,7 @@ Bug Fixes to Compiler Builtins
 - ``__is_trivially_relocatable`` has been deprecated, and uses should be replaced by
   ``__builtin_is_cpp_trivially_relocatable``.
   Note that, it is generally unsafe to ``memcpy`` non-trivially copyable types that
-  are ``__builtin_is_cpp_trivially_relocatable``. It is recommanded to use
+  are ``__builtin_is_cpp_trivially_relocatable``. It is recommended to use
   ``__builtin_trivially_relocate`` instead.
 
 Bug Fixes to Attribute Support
