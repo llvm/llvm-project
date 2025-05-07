@@ -76,7 +76,7 @@
 "`P2422R1 <https://wg21.link/P2422R1>`__","Remove ``nodiscard`` annotations from the standard library specification","2024-06 (St. Louis)","|Complete|","19","``nodiscard`` attributes were kept as a conforming extension"
 "`P2300R10 <https://wg21.link/P2300R10>`__","``std::execution``","2024-06 (St. Louis)","","",""
 "","","","","",""
-"`P3136R1 <https://wg21.link/P3136R1>`__","Retiring niebloids","2024-11 (Wrocław)","","",""
+"`P3136R1 <https://wg21.link/P3136R1>`__","Retiring niebloids","2024-11 (Wrocław)","|Complete|","14",""
 "`P3138R5 <https://wg21.link/P3138R5>`__","``views::cache_latest``","2024-11 (Wrocław)","","",""
 "`P3379R0 <https://wg21.link/P3379R0>`__","Constrain ``std::expected`` equality operators","2024-11 (Wrocław)","","",""
 "`P2862R1 <https://wg21.link/P2862R1>`__","``text_encoding::name()`` should never return null values","2024-11 (Wrocław)","","",""
