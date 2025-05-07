@@ -17,47 +17,46 @@
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
-  class StringRef;
-  class Twine;
+class StringRef;
+class Twine;
 
-  /// An error handler callback.
-  typedef void (*fatal_error_handler_t)(void *user_data,
-                                        const char *reason,
-                                        bool gen_crash_diag);
+/// An error handler callback.
+typedef void (*fatal_error_handler_t)(void *user_data, const char *reason,
+                                      bool gen_crash_diag);
 
-  /// install_fatal_error_handler - Installs a new error handler to be used
-  /// whenever a serious (non-recoverable) error is encountered by LLVM.
-  ///
-  /// If no error handler is installed the default is to print the error message
-  /// to stderr, and call exit(1).  If an error handler is installed then it is
-  /// the handler's responsibility to log the message, it will no longer be
-  /// printed to stderr.  If the error handler returns, then exit(1) will be
-  /// called.
-  ///
-  /// It is dangerous to naively use an error handler which throws an exception.
-  /// Even though some applications desire to gracefully recover from arbitrary
-  /// faults, blindly throwing exceptions through unfamiliar code isn't a way to
-  /// achieve this.
-  ///
-  /// \param user_data - An argument which will be passed to the install error
-  /// handler.
-  void install_fatal_error_handler(fatal_error_handler_t handler,
-                                   void *user_data = nullptr);
+/// install_fatal_error_handler - Installs a new error handler to be used
+/// whenever a serious (non-recoverable) error is encountered by LLVM.
+///
+/// If no error handler is installed the default is to print the error message
+/// to stderr, and call exit(1).  If an error handler is installed then it is
+/// the handler's responsibility to log the message, it will no longer be
+/// printed to stderr.  If the error handler returns, then exit(1) will be
+/// called.
+///
+/// It is dangerous to naively use an error handler which throws an exception.
+/// Even though some applications desire to gracefully recover from arbitrary
+/// faults, blindly throwing exceptions through unfamiliar code isn't a way to
+/// achieve this.
+///
+/// \param user_data - An argument which will be passed to the install error
+/// handler.
+void install_fatal_error_handler(fatal_error_handler_t handler,
+                                 void *user_data = nullptr);
 
-  /// Restores default error handling behaviour.
-  void remove_fatal_error_handler();
+/// Restores default error handling behaviour.
+void remove_fatal_error_handler();
 
-  /// ScopedFatalErrorHandler - This is a simple helper class which just
-  /// calls install_fatal_error_handler in its constructor and
-  /// remove_fatal_error_handler in its destructor.
-  struct ScopedFatalErrorHandler {
-    explicit ScopedFatalErrorHandler(fatal_error_handler_t handler,
-                                     void *user_data = nullptr) {
-      install_fatal_error_handler(handler, user_data);
-    }
+/// ScopedFatalErrorHandler - This is a simple helper class which just
+/// calls install_fatal_error_handler in its constructor and
+/// remove_fatal_error_handler in its destructor.
+struct ScopedFatalErrorHandler {
+  explicit ScopedFatalErrorHandler(fatal_error_handler_t handler,
+                                   void *user_data = nullptr) {
+    install_fatal_error_handler(handler, user_data);
+  }
 
-    ~ScopedFatalErrorHandler() { remove_fatal_error_handler(); }
-  };
+  ~ScopedFatalErrorHandler() { remove_fatal_error_handler(); }
+};
 
 /// @deprecated Use reportFatalInternalError() or reportFatalUsageError()
 /// instead.
@@ -139,10 +138,10 @@ void install_out_of_memory_new_handler();
 /// This function calls abort(), and prints the optional message to stderr.
 /// Use the llvm_unreachable macro (that adds location info), instead of
 /// calling this function directly.
-[[noreturn]] void
-llvm_unreachable_internal(const char *msg = nullptr, const char *file = nullptr,
-                          unsigned line = 0);
-}
+[[noreturn]] void llvm_unreachable_internal(const char *msg = nullptr,
+                                            const char *file = nullptr,
+                                            unsigned line = 0);
+} // namespace llvm
 
 /// Marks that the current location is not supposed to be reachable.
 /// In !NDEBUG builds, prints the message and location info to stderr.
@@ -162,7 +161,7 @@ llvm_unreachable_internal(const char *msg = nullptr, const char *file = nullptr,
 /// diagnostics for unreachable code paths, and allows compilers to omit
 /// unnecessary code.
 #ifndef NDEBUG
-#define llvm_unreachable(msg) \
+#define llvm_unreachable(msg)                                                  \
   ::llvm::llvm_unreachable_internal(msg, __FILE__, __LINE__)
 #elif !defined(LLVM_BUILTIN_UNREACHABLE)
 #define llvm_unreachable(msg) ::llvm::llvm_unreachable_internal()
