@@ -78,7 +78,7 @@
 "","","","","",""
 "`P3136R1 <https://wg21.link/P3136R1>`__","Retiring niebloids","2024-11 (Wrocław)","|Complete|","14",""
 "`P3138R5 <https://wg21.link/P3138R5>`__","``views::cache_latest``","2024-11 (Wrocław)","","",""
-"`P3379R0 <https://wg21.link/P3379R0>`__","Constrain ``std::expected`` equality operators","2024-11 (Wrocław)","","",""
+"`P3379R0 <https://wg21.link/P3379R0>`__","Constrain ``std::expected`` equality operators","2024-11 (Wrocław)","|Complete|","21",""
 "`P2862R1 <https://wg21.link/P2862R1>`__","``text_encoding::name()`` should never return null values","2024-11 (Wrocław)","","",""
 "`P2897R7 <https://wg21.link/P2897R7>`__","``aligned_accessor``: An ``mdspan`` accessor expressing pointer over-alignment","2024-11 (Wrocław)","|Complete|","21",""
 "`P3355R1 <https://wg21.link/P3355R1>`__","Fix ``submdspan`` for C++26","2024-11 (Wrocław)","","",""
