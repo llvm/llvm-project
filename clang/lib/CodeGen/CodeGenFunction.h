@@ -3358,6 +3358,17 @@ public:
                      SanitizerSet SkippedChecks = SanitizerSet(),
                      llvm::Value *ArraySize = nullptr);
 
+  /// Returns debug info, with additional annotation if enabled by
+  /// CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo[CheckKindOrdinal].
+  llvm::DILocation *
+  SanitizerAnnotateDebugInfo(SanitizerKind::SanitizerOrdinal CheckKindOrdinal);
+
+  /// Converts the CFITypeCheckKind into SanitizerKind::SanitizerOrdinal and
+  /// llvm::SanitizerStatKind.
+  void ParseCFITypeCheckKind(CFITypeCheckKind TCK,
+                             SanitizerKind::SanitizerOrdinal &M,
+                             llvm::SanitizerStatKind &SSK);
+
   /// Emit a check that \p Base points into an array object, which
   /// we can access at index \p Index. \p Accessed should be \c false if we
   /// this expression is used as an lvalue, for instance in "&Arr[Idx]".

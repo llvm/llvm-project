@@ -1217,6 +1217,30 @@ void CodeGenFunction::EmitBoundsCheck(const Expr *E, const Expr *Base,
   EmitBoundsCheckImpl(E, Bound, Index, IndexType, IndexedType, Accessed);
 }
 
+llvm::DILocation *CodeGenFunction::SanitizerAnnotateDebugInfo(
+    SanitizerKind::SanitizerOrdinal CheckKindOrdinal) {
+  StringRef Label;
+  switch (CheckKindOrdinal) {
+#define SANITIZER(NAME, ID)                                                    \
+  case SanitizerKind::SO_##ID:                                                 \
+    Label = "__ubsan_check_" NAME;                                             \
+    break;
+#include "clang/Basic/Sanitizers.def"
+  default:
+    llvm_unreachable("unexpected sanitizer kind");
+  }
+
+  llvm::DILocation *CheckDI = Builder.getCurrentDebugLocation();
+  // TODO: deprecate ClArrayBoundsPseudoFn
+  if (((ClArrayBoundsPseudoFn &&
+        CheckKindOrdinal == SanitizerKind::SO_ArrayBounds) ||
+       CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo.has(CheckKindOrdinal)) &&
+      CheckDI) {
+    CheckDI = getDebugInfo()->CreateSyntheticInlineAt(CheckDI, Label);
+  }
+  return CheckDI;
+}
+
 void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
                                           llvm::Value *Index,
                                           QualType IndexType,
@@ -1225,7 +1249,6 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
     return;
 
   SanitizerScope SanScope(this);
-
   auto CheckKind = SanitizerKind::SO_ArrayBounds;
   ApplyDebugLocation ApplyTrapDI(*this, SanitizerAnnotateDebugInfo(CheckKind));
 
@@ -3971,6 +3994,8 @@ void CodeGenFunction::EmitCfiCheckFail() {
                          {Addr, AllVtables}),
       IntPtrTy);
 
+  // TODO: the instructions above are not annotated with debug info. It is
+  // inconvenient to do so because we hadn't determined the SanitizerKind yet.
   const std::pair<int, SanitizerKind::SanitizerOrdinal> CheckKinds[] = {
       {CFITCK_VCall, SanitizerKind::SO_CFIVCall},
       {CFITCK_NVCall, SanitizerKind::SO_CFINVCall},
@@ -3981,6 +4006,9 @@ void CodeGenFunction::EmitCfiCheckFail() {
   for (auto CheckKindOrdinalPair : CheckKinds) {
     int Kind = CheckKindOrdinalPair.first;
     SanitizerKind::SanitizerOrdinal Ordinal = CheckKindOrdinalPair.second;
+
+    ApplyDebugLocation ApplyTrapDI(*this, SanitizerAnnotateDebugInfo(Ordinal));
+
     llvm::Value *Cond =
         Builder.CreateICmpNE(CheckKind, llvm::ConstantInt::get(Int8Ty, Kind));
     if (CGM.getLangOpts().Sanitize.has(Ordinal))
@@ -6315,6 +6343,8 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
       (!TargetDecl || !isa<FunctionDecl>(TargetDecl))) {
     SanitizerScope SanScope(this);
     EmitSanitizerStatReport(llvm::SanStat_CFI_ICall);
+    ApplyDebugLocation ApplyTrapDI(
+        *this, SanitizerAnnotateDebugInfo(SanitizerKind::SO_CFIICall));
 
     llvm::Metadata *MD;
     if (CGM.getCodeGenOpts().SanitizeCfiICallGeneralizePointers)

@@ -2814,6 +2814,10 @@ void CodeGenFunction::EmitVTablePtrCheckForCall(const CXXRecordDecl *RD,
   if (!SanOpts.has(SanitizerKind::CFICastStrict))
     RD = LeastDerivedClassWithSameLayout(RD);
 
+  SanitizerKind::SanitizerOrdinal Ordinal;
+  llvm::SanitizerStatKind SSK;
+  ParseCFITypeCheckKind(TCK, Ordinal, SSK);
+  ApplyDebugLocation ApplyTrapDI(*this, SanitizerAnnotateDebugInfo(Ordinal));
   EmitVTablePtrCheck(RD, VTable, TCK, Loc);
 }
 
@@ -2835,6 +2839,11 @@ void CodeGenFunction::EmitVTablePtrCheckForCast(QualType T, Address Derived,
 
   if (!SanOpts.has(SanitizerKind::CFICastStrict))
     ClassDecl = LeastDerivedClassWithSameLayout(ClassDecl);
+
+  SanitizerKind::SanitizerOrdinal Ordinal;
+  llvm::SanitizerStatKind SSK;
+  ParseCFITypeCheckKind(TCK, Ordinal, SSK);
+  ApplyDebugLocation ApplyTrapDI(*this, SanitizerAnnotateDebugInfo(Ordinal));
 
   llvm::BasicBlock *ContBlock = nullptr;
 
@@ -2871,7 +2880,6 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
     return;
 
   auto [M, SSK] = SanitizerInfoFromCFICheckKind(TCK);
-
   std::string TypeName = RD->getQualifiedNameAsString();
   if (getContext().getNoSanitizeList().containsType(
           SanitizerMask::bitPosToMask(M), TypeName))
@@ -2937,6 +2945,8 @@ llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
   SanitizerScope SanScope(this);
 
   EmitSanitizerStatReport(llvm::SanStat_CFI_VCall);
+  ApplyDebugLocation ApplyTrapDI(
+      *this, SanitizerAnnotateDebugInfo(SanitizerKind::SO_CFIVCall));
 
   llvm::Metadata *MD =
       CGM.CreateMetadataIdentifierForType(QualType(RD->getTypeForDecl(), 0));
