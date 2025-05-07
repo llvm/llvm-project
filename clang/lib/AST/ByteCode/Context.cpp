@@ -27,13 +27,17 @@ Context::~Context() {}
 
 bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
   assert(Stk.empty());
-  Function *Func = P->getFunction(FD);
-  if (!Func || !Func->hasBody())
-    Func = Compiler<ByteCodeEmitter>(*this, *P).compileFunc(FD);
 
+  // Get a function handle.
+  const Function *Func = getOrCreateFunction(FD);
   if (!Func)
     return false;
 
+  // Compile the function.
+  Compiler<ByteCodeEmitter>(*this, *P).compileFunc(
+      FD, const_cast<Function *>(Func));
+
+  // And run it.
   if (!Run(Parent, Func))
     return false;
 
@@ -130,6 +134,85 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
   return true;
 }
 
+template <typename ResultT>
+bool Context::evaluateStringRepr(State &Parent, const Expr *SizeExpr,
+                                 const Expr *PtrExpr, ResultT &Result) {
+  assert(Stk.empty());
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+
+  // Evaluate size value.
+  APValue SizeValue;
+  if (!evaluateAsRValue(Parent, SizeExpr, SizeValue))
+    return false;
+
+  if (!SizeValue.isInt())
+    return false;
+  uint64_t Size = SizeValue.getInt().getZExtValue();
+
+  auto PtrRes = C.interpretAsPointer(PtrExpr, [&](const Pointer &Ptr) {
+    if (Size == 0) {
+      if constexpr (std::is_same_v<ResultT, APValue>)
+        Result = APValue(APValue::UninitArray{}, 0, 0);
+      return true;
+    }
+
+    if (!Ptr.isLive() || !Ptr.getFieldDesc()->isPrimitiveArray())
+      return false;
+
+    // Must be char.
+    if (Ptr.getFieldDesc()->getElemSize() != 1 /*bytes*/)
+      return false;
+
+    if (Size > Ptr.getNumElems()) {
+      Parent.FFDiag(SizeExpr, diag::note_constexpr_access_past_end) << AK_Read;
+      Size = Ptr.getNumElems();
+    }
+
+    if constexpr (std::is_same_v<ResultT, APValue>) {
+      QualType CharTy = PtrExpr->getType()->getPointeeType();
+      Result = APValue(APValue::UninitArray{}, Size, Size);
+      for (uint64_t I = 0; I != Size; ++I) {
+        if (std::optional<APValue> ElemVal =
+                Ptr.atIndex(I).toRValue(*this, CharTy))
+          Result.getArrayInitializedElt(I) = *ElemVal;
+        else
+          return false;
+      }
+    } else {
+      assert((std::is_same_v<ResultT, std::string>));
+      if (Size < Result.max_size())
+        Result.resize(Size);
+      Result.assign(reinterpret_cast<const char *>(Ptr.getRawAddress()), Size);
+    }
+
+    return true;
+  });
+
+  if (PtrRes.isInvalid()) {
+    C.cleanup();
+    Stk.clear();
+    return false;
+  }
+
+  return true;
+}
+
+bool Context::evaluateCharRange(State &Parent, const Expr *SizeExpr,
+                                const Expr *PtrExpr, APValue &Result) {
+  assert(SizeExpr);
+  assert(PtrExpr);
+
+  return evaluateStringRepr(Parent, SizeExpr, PtrExpr, Result);
+}
+
+bool Context::evaluateCharRange(State &Parent, const Expr *SizeExpr,
+                                const Expr *PtrExpr, std::string &Result) {
+  assert(SizeExpr);
+  assert(PtrExpr);
+
+  return evaluateStringRepr(Parent, SizeExpr, PtrExpr, Result);
+}
+
 const LangOptions &Context::getLangOpts() const { return Ctx.getLangOpts(); }
 
 std::optional<PrimType> Context::classify(QualType T) const {
@@ -185,7 +268,7 @@ std::optional<PrimType> Context::classify(QualType T) const {
 
   if (T->isFunctionPointerType() || T->isFunctionReferenceType() ||
       T->isFunctionType() || T->isBlockPointerType())
-    return PT_FnPtr;
+    return PT_Ptr;
 
   if (T->isPointerOrReferenceType() || T->isObjCObjectPointerType())
     return PT_Ptr;
@@ -215,14 +298,11 @@ const llvm::fltSemantics &Context::getFloatSemantics(QualType T) const {
 bool Context::Run(State &Parent, const Function *Func) {
 
   {
-    InterpState State(Parent, *P, Stk, *this);
-    State.Current = new InterpFrame(State, Func, /*Caller=*/nullptr, CodePtr(),
-                                    Func->getArgSize());
+    InterpState State(Parent, *P, Stk, *this, Func);
     if (Interpret(State)) {
       assert(Stk.empty());
       return true;
     }
-
     // State gets destroyed here, so the Stk.clear() below doesn't accidentally
     // remove values the State's destructor might access.
   }
@@ -269,20 +349,149 @@ Context::getOverridingFunction(const CXXRecordDecl *DynamicDecl,
   return nullptr;
 }
 
-const Function *Context::getOrCreateFunction(const FunctionDecl *FD) {
-  assert(FD);
-  const Function *Func = P->getFunction(FD);
-  bool IsBeingCompiled = Func && Func->isDefined() && !Func->isFullyCompiled();
-  bool WasNotDefined = Func && !Func->isConstexpr() && !Func->isDefined();
+const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
+  assert(FuncDecl);
+  FuncDecl = FuncDecl->getMostRecentDecl();
 
-  if (IsBeingCompiled)
+  if (const Function *Func = P->getFunction(FuncDecl))
     return Func;
 
-  if (!Func || WasNotDefined) {
-    if (auto F = Compiler<ByteCodeEmitter>(*this, *P).compileFunc(FD))
-      Func = F;
+  // Manually created functions that haven't been assigned proper
+  // parameters yet.
+  if (!FuncDecl->param_empty() && !FuncDecl->param_begin())
+    return nullptr;
+
+  bool IsLambdaStaticInvoker = false;
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl);
+      MD && MD->isLambdaStaticInvoker()) {
+    // For a lambda static invoker, we might have to pick a specialized
+    // version if the lambda is generic. In that case, the picked function
+    // will *NOT* be a static invoker anymore. However, it will still
+    // be a non-static member function, this (usually) requiring an
+    // instance pointer. We suppress that later in this function.
+    IsLambdaStaticInvoker = true;
+
+    const CXXRecordDecl *ClosureClass = MD->getParent();
+    assert(ClosureClass->captures_begin() == ClosureClass->captures_end());
+    if (ClosureClass->isGenericLambda()) {
+      const CXXMethodDecl *LambdaCallOp = ClosureClass->getLambdaCallOperator();
+      assert(MD->isFunctionTemplateSpecialization() &&
+             "A generic lambda's static-invoker function must be a "
+             "template specialization");
+      const TemplateArgumentList *TAL = MD->getTemplateSpecializationArgs();
+      FunctionTemplateDecl *CallOpTemplate =
+          LambdaCallOp->getDescribedFunctionTemplate();
+      void *InsertPos = nullptr;
+      const FunctionDecl *CorrespondingCallOpSpecialization =
+          CallOpTemplate->findSpecialization(TAL->asArray(), InsertPos);
+      assert(CorrespondingCallOpSpecialization);
+      FuncDecl = CorrespondingCallOpSpecialization;
+    }
+  }
+  // Set up argument indices.
+  unsigned ParamOffset = 0;
+  SmallVector<PrimType, 8> ParamTypes;
+  SmallVector<unsigned, 8> ParamOffsets;
+  llvm::DenseMap<unsigned, Function::ParamDescriptor> ParamDescriptors;
+
+  // If the return is not a primitive, a pointer to the storage where the
+  // value is initialized in is passed as the first argument. See 'RVO'
+  // elsewhere in the code.
+  QualType Ty = FuncDecl->getReturnType();
+  bool HasRVO = false;
+  if (!Ty->isVoidType() && !classify(Ty)) {
+    HasRVO = true;
+    ParamTypes.push_back(PT_Ptr);
+    ParamOffsets.push_back(ParamOffset);
+    ParamOffset += align(primSize(PT_Ptr));
   }
 
+  // If the function decl is a member decl, the next parameter is
+  // the 'this' pointer. This parameter is pop()ed from the
+  // InterpStack when calling the function.
+  bool HasThisPointer = false;
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl)) {
+    if (!IsLambdaStaticInvoker) {
+      HasThisPointer = MD->isInstance();
+      if (MD->isImplicitObjectMemberFunction()) {
+        ParamTypes.push_back(PT_Ptr);
+        ParamOffsets.push_back(ParamOffset);
+        ParamOffset += align(primSize(PT_Ptr));
+      }
+    }
+
+    if (isLambdaCallOperator(MD)) {
+      // The parent record needs to be complete, we need to know about all
+      // the lambda captures.
+      if (!MD->getParent()->isCompleteDefinition())
+        return nullptr;
+      llvm::DenseMap<const ValueDecl *, FieldDecl *> LC;
+      FieldDecl *LTC;
+
+      MD->getParent()->getCaptureFields(LC, LTC);
+
+      if (MD->isStatic() && !LC.empty()) {
+        // Static lambdas cannot have any captures. If this one does,
+        // it has already been diagnosed and we can only ignore it.
+        return nullptr;
+      }
+    }
+  }
+
+  // Assign descriptors to all parameters.
+  // Composite objects are lowered to pointers.
+  for (const ParmVarDecl *PD : FuncDecl->parameters()) {
+    std::optional<PrimType> T = classify(PD->getType());
+    PrimType PT = T.value_or(PT_Ptr);
+    Descriptor *Desc = P->createDescriptor(PD, PT);
+    ParamDescriptors.insert({ParamOffset, {PT, Desc}});
+    ParamOffsets.push_back(ParamOffset);
+    ParamOffset += align(primSize(PT));
+    ParamTypes.push_back(PT);
+  }
+
+  // Create a handle over the emitted code.
+  assert(!P->getFunction(FuncDecl));
+  const Function *Func = P->createFunction(
+      FuncDecl, ParamOffset, std::move(ParamTypes), std::move(ParamDescriptors),
+      std::move(ParamOffsets), HasThisPointer, HasRVO, IsLambdaStaticInvoker);
+  return Func;
+}
+
+const Function *Context::getOrCreateObjCBlock(const BlockExpr *E) {
+  const BlockDecl *BD = E->getBlockDecl();
+  // Set up argument indices.
+  unsigned ParamOffset = 0;
+  SmallVector<PrimType, 8> ParamTypes;
+  SmallVector<unsigned, 8> ParamOffsets;
+  llvm::DenseMap<unsigned, Function::ParamDescriptor> ParamDescriptors;
+
+  // Assign descriptors to all parameters.
+  // Composite objects are lowered to pointers.
+  for (const ParmVarDecl *PD : BD->parameters()) {
+    std::optional<PrimType> T = classify(PD->getType());
+    PrimType PT = T.value_or(PT_Ptr);
+    Descriptor *Desc = P->createDescriptor(PD, PT);
+    ParamDescriptors.insert({ParamOffset, {PT, Desc}});
+    ParamOffsets.push_back(ParamOffset);
+    ParamOffset += align(primSize(PT));
+    ParamTypes.push_back(PT);
+  }
+
+  if (BD->hasCaptures())
+    return nullptr;
+
+  // Create a handle over the emitted code.
+  Function *Func =
+      P->createFunction(E, ParamOffset, std::move(ParamTypes),
+                        std::move(ParamDescriptors), std::move(ParamOffsets),
+                        /*HasThisPointer=*/false, /*HasRVO=*/false,
+                        /*IsLambdaStaticInvoker=*/false);
+
+  assert(Func);
+  Func->setDefined(true);
+  // We don't compile the BlockDecl code at all right now.
+  Func->setIsFullyCompiled(true);
   return Func;
 }
 
@@ -319,4 +528,10 @@ unsigned Context::collectBaseOffset(const RecordDecl *BaseDecl,
 
 const Record *Context::getRecord(const RecordDecl *D) const {
   return P->getOrCreateRecord(D);
+}
+
+bool Context::isUnevaluatedBuiltin(unsigned ID) {
+  return ID == Builtin::BI__builtin_classify_type ||
+         ID == Builtin::BI__builtin_os_log_format_buffer_size ||
+         ID == Builtin::BI__builtin_constant_p || ID == Builtin::BI__noop;
 }

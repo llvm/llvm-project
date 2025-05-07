@@ -191,30 +191,6 @@ void MCStreamer::emitSymbolValue(const MCSymbol *Sym, unsigned Size,
     emitCOFFSecRel32(Sym, /*Offset=*/0);
 }
 
-void MCStreamer::emitDTPRel64Value(const MCExpr *Value) {
-  report_fatal_error("unsupported directive in streamer");
-}
-
-void MCStreamer::emitDTPRel32Value(const MCExpr *Value) {
-  report_fatal_error("unsupported directive in streamer");
-}
-
-void MCStreamer::emitTPRel64Value(const MCExpr *Value) {
-  report_fatal_error("unsupported directive in streamer");
-}
-
-void MCStreamer::emitTPRel32Value(const MCExpr *Value) {
-  report_fatal_error("unsupported directive in streamer");
-}
-
-void MCStreamer::emitGPRel64Value(const MCExpr *Value) {
-  report_fatal_error("unsupported directive in streamer");
-}
-
-void MCStreamer::emitGPRel32Value(const MCExpr *Value) {
-  report_fatal_error("unsupported directive in streamer");
-}
-
 /// Emit NumBytes bytes worth of the value specified by FillValue.
 /// This implements directives such as '.space'.
 void MCStreamer::emitFill(uint64_t NumBytes, uint8_t FillValue) {
@@ -262,7 +238,7 @@ void MCStreamer::emitCFIMTETaggedFrame() {
 void MCStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
                                        unsigned Column, unsigned Flags,
                                        unsigned Isa, unsigned Discriminator,
-                                       StringRef FileName) {
+                                       StringRef FileName, StringRef Comment) {
   getContext().setCurrentDwarfLoc(FileNo, Line, Column, Flags, Isa,
                                   Discriminator);
 }
@@ -1013,6 +989,36 @@ void MCStreamer::emitWinCFIEndProlog(SMLoc Loc) {
   CurFrame->PrologEnd = Label;
 }
 
+void MCStreamer::emitWinCFIBeginEpilogue(SMLoc Loc) {
+  WinEH::FrameInfo *CurFrame = EnsureValidWinFrameInfo(Loc);
+  if (!CurFrame)
+    return;
+
+  if (!CurFrame->PrologEnd)
+    return getContext().reportError(
+        Loc, "starting epilogue (.seh_startepilogue) before prologue has ended "
+             "(.seh_endprologue) in " +
+                 CurFrame->Function->getName());
+
+  InEpilogCFI = true;
+  CurrentEpilog = emitCFILabel();
+}
+
+void MCStreamer::emitWinCFIEndEpilogue(SMLoc Loc) {
+  WinEH::FrameInfo *CurFrame = EnsureValidWinFrameInfo(Loc);
+  if (!CurFrame)
+    return;
+
+  if (!InEpilogCFI)
+    return getContext().reportError(Loc, "Stray .seh_endepilogue in " +
+                                             CurFrame->Function->getName());
+
+  InEpilogCFI = false;
+  MCSymbol *Label = emitCFILabel();
+  CurFrame->EpilogMap[CurrentEpilog].End = Label;
+  CurrentEpilog = nullptr;
+}
+
 void MCStreamer::emitCOFFSafeSEH(MCSymbol const *Symbol) {}
 
 void MCStreamer::emitCOFFSymbolIndex(MCSymbol const *Symbol) {}
@@ -1199,7 +1205,6 @@ void MCStreamer::emitAbsoluteSymbolDiffAsULEB128(const MCSymbol *Hi,
 }
 
 void MCStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {}
-void MCStreamer::emitThumbFunc(MCSymbol *Func) {}
 void MCStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {}
 void MCStreamer::beginCOFFSymbolDef(const MCSymbol *Symbol) {
   llvm_unreachable("this directive only supported on COFF targets");
@@ -1257,6 +1262,8 @@ void MCStreamer::emitELFSymverDirective(const MCSymbol *OriginalSym,
                                         StringRef Name, bool KeepOriginalSym) {}
 void MCStreamer::emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                        Align ByteAlignment) {}
+void MCStreamer::emitZerofill(MCSection *, MCSymbol *, uint64_t, Align, SMLoc) {
+}
 void MCStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
                                 uint64_t Size, Align ByteAlignment) {}
 void MCStreamer::changeSection(MCSection *Section, uint32_t) {

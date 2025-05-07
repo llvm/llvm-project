@@ -12,6 +12,7 @@ write_cmake_config("version") {
     "CLANG_VERSION_MAJOR=$llvm_version_major",
     "CLANG_VERSION_MINOR=$llvm_version_minor",
     "CLANG_VERSION_PATCHLEVEL=$llvm_version_patch",
+    "MAX_CLANG_ABI_COMPAT_VERSION=$llvm_version_major",
   ]
 }
 
@@ -48,16 +49,36 @@ foreach(diag_group, diag_groups) {
     ]
     td_file = "Diagnostic.td"
   }
+
+  clang_tablegen("Diagnostic${diag_group}CompatIDs") {
+    args = [
+      "-gen-clang-diags-compat-ids",
+      "-clang-component=${diag_group}",
+    ]
+    td_file = "Diagnostic.td"
+  }
+
+  clang_tablegen("Diagnostic${diag_group}Interface") {
+    args = [
+      "-gen-clang-diags-iface",
+      "-clang-component=${diag_group}",
+    ]
+    td_file = "Diagnostic.td"
+  }
 }
 group("diags_tablegen") {
-  # DiagnosticGroups and DiagnosticIndexName are intentionally not part of this
-  # group.  Much of clang depends on the DiagKinds.inc files transitively,
-  # but almost nothing needs DiagnosticGroups.inc or DiagnosticIndexName.inc.
+  # DiagnosticGroups, DiagnosticIndexName, DiagnosticAllCompatIDs are
+  # intentionally not part of this group.  Much of clang depends on the
+  # DiagKinds.inc files transitively, but almost nothing needs
+  # DiagnosticGroups.inc, DiagnosticIndexName.inc, or
+  # DiagnosticAllCompatIDs.inc.
   public_deps = []
   foreach(diag_group, diag_groups) {
     public_deps += [
         ":Diagnostic${diag_group}Kinds",
         ":Diagnostic${diag_group}Enums",
+        ":Diagnostic${diag_group}CompatIDs",
+        ":Diagnostic${diag_group}Interface",
     ]
   }
 }
@@ -72,11 +93,21 @@ clang_tablegen("DiagnosticIndexName") {
   td_file = "Diagnostic.td"
 }
 
+clang_tablegen("DiagnosticAllCompatIDs") {
+  args = [ "-gen-clang-diags-compat-ids" ]
+  td_file = "Diagnostic.td"
+}
+
 # Attributes
 
 clang_tablegen("AttrList") {
   args = [ "-gen-clang-attr-list" ]
   td_file = "Attr.td"
+}
+
+clang_tablegen("AttrParsedAttrList") {
+  args = [ "-gen-clang-attr-parsed-attr-list" ]
+  td_file = "../Basic/Attr.td"
 }
 
 clang_tablegen("AttrSubMatchRulesList") {
@@ -94,11 +125,28 @@ clang_tablegen("AttrHasAttributeImpl") {
   td_file = "Attr.td"
 }
 
+clang_tablegen("CXX11AttributeInfo") {
+  args = [ "-gen-cxx11-attribute-info" ]
+  td_file = "../Basic/Attr.td"
+}
+
 clang_tablegen("Builtins") {
   args = [ "-gen-clang-builtins" ]
 }
 
 clang_tablegen("BuiltinsBPF") {
+  args = [ "-gen-clang-builtins" ]
+}
+
+clang_tablegen("BuiltinsDirectX") {
+  args = [ "-gen-clang-builtins" ]
+}
+
+clang_tablegen("BuiltinsHexagon") {
+  args = [ "-gen-clang-builtins" ]
+}
+
+clang_tablegen("BuiltinsNVPTX") {
   args = [ "-gen-clang-builtins" ]
 }
 
@@ -116,6 +164,10 @@ clang_tablegen("BuiltinsX86") {
 
 clang_tablegen("BuiltinsX86_64") {
   args = [ "-gen-clang-builtins" ]
+}
+
+clang_tablegen("BuiltinTemplates") {
+  args = [ "-gen-clang-builtin-templates" ]
 }
 
 # ARM CDE, MVE, and NEON.

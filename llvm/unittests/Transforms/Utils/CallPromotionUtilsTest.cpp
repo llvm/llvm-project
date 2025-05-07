@@ -507,9 +507,11 @@ define i32 @f4() !guid !3 {
 )IR");
 
   const char *Profile = R"json(
+  { "Contexts":
     [
     {
       "Guid": 1000,
+      "TotalRootEntryCount": 1,
       "Counters": [1],
       "Callsites": [
         [{ "Guid": 1001,
@@ -524,6 +526,7 @@ define i32 @f4() !guid !3 {
     },
     {
       "Guid": 1005,
+      "TotalRootEntryCount": 1,
       "Counters": [2],
       "Callsites": [
         [{ "Guid": 1000,
@@ -537,7 +540,7 @@ define i32 @f4() !guid !3 {
                 },
                 { "Guid": 1003,
                   "Counters": [103]
-                }]]}]]}]
+                }]]}]]}]}
     )json";
 
   llvm::unittest::TempFile ProfileFile("ctx_profile", "", "", /*Unique=*/true);
@@ -572,33 +575,36 @@ define i32 @f4() !guid !3 {
   CtxProfAnalysisPrinterPass Printer(OS);
   Printer.run(*M, MAM);
   const char *Expected = R"yaml(
-- Guid:            1000
-  Counters:        [ 1, 11, 22 ]
-  Callsites:
-    - - Guid:            1001
-        Counters:        [ 10 ]
-      - Guid:            1003
-        Counters:        [ 12 ]
-    - - Guid:            1002
-        Counters:        [ 11 ]
-        Callsites:
-          - - Guid:            1004
-              Counters:        [ 13 ]
-- Guid:            1005
-  Counters:        [ 2 ]
-  Callsites:
-    - - Guid:            1000
-        Counters:        [ 1, 102, 204 ]
-        Callsites:
-          - - Guid:            1001
-              Counters:        [ 101 ]
-            - Guid:            1003
-              Counters:        [ 103 ]
-          - - Guid:            1002
-              Counters:        [ 102 ]
-              Callsites:
-                - - Guid:            1004
-                    Counters:        [ 104 ]
+Contexts:
+  - Guid:            1000
+    TotalRootEntryCount: 1
+    Counters:        [ 1, 11, 22 ]
+    Callsites:
+      - - Guid:            1001
+          Counters:        [ 10 ]
+        - Guid:            1003
+          Counters:        [ 12 ]
+      - - Guid:            1002
+          Counters:        [ 11 ]
+          Callsites:
+            - - Guid:            1004
+                Counters:        [ 13 ]
+  - Guid:            1005
+    TotalRootEntryCount: 1
+    Counters:        [ 2 ]
+    Callsites:
+      - - Guid:            1000
+          Counters:        [ 1, 102, 204 ]
+          Callsites:
+            - - Guid:            1001
+                Counters:        [ 101 ]
+              - Guid:            1003
+                Counters:        [ 103 ]
+            - - Guid:            1002
+                Counters:        [ 102 ]
+                Callsites:
+                  - - Guid:            1004
+                      Counters:        [ 104 ]
 )yaml";
   EXPECT_EQ(Expected, Str);
 }

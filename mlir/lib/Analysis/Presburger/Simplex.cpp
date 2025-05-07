@@ -1507,8 +1507,8 @@ Simplex Simplex::makeProduct(const Simplex &a, const Simplex &b) {
   auto concat = [](ArrayRef<Unknown> v, ArrayRef<Unknown> w) {
     SmallVector<Unknown, 8> result;
     result.reserve(v.size() + w.size());
-    result.insert(result.end(), v.begin(), v.end());
-    result.insert(result.end(), w.begin(), w.end());
+    llvm::append_range(result, v);
+    llvm::append_range(result, w);
     return result;
   };
   result.con = concat(a.con, b.con);

@@ -35,7 +35,6 @@ enum Fixups {
   reloc_global_offset_table,                 // 32-bit, relative to the start
                                              // of the instruction. Used only
                                              // for _GLOBAL_OFFSET_TABLE_.
-  reloc_global_offset_table8,                // 64-bit variant.
   reloc_branch_4byte_pcrel,                  // 32-bit PC relative branch.
   // Marker
   LastTargetFixupKind,

@@ -130,6 +130,14 @@ template <typename A> common::IfNoLvalue<Expr<ResultType<A>>, A> AsExpr(A &&x) {
   return Expr<ResultType<A>>{std::move(x)};
 }
 
+template <typename T, typename U = typename Relational<T>::Result>
+Expr<U> AsExpr(Relational<T> &&x) {
+  // The variant in Expr<Type<TypeCategory::Logical, KIND>> only contains
+  // Relational<SomeType>, not other Relational<T>s. Wrap the Relational<T>
+  // in Relational<SomeType> before creating Expr<>.
+  return Expr<U>(Relational<SomeType>{std::move(x)});
+}
+
 template <typename T> Expr<T> AsExpr(Expr<T> &&x) {
   static_assert(IsSpecificIntrinsicType<T>);
   return std::move(x);
@@ -321,28 +329,38 @@ template <typename A> const Symbol *ExtractBareLenParameter(const A &expr) {
 // of a substring or complex part.
 template <typename A>
 common::IfNoLvalue<std::optional<DataRef>, A> ExtractDataRef(
-    const A &, bool intoSubstring, bool intoComplexPart) {
-  return std::nullopt; // default base case
+    const A &x, bool intoSubstring, bool intoComplexPart) {
+  if constexpr (common::HasMember<decltype(x), decltype(DataRef::u)>) {
+    return DataRef{x};
+  } else {
+    return std::nullopt; // default base case
+  }
+}
+
+std::optional<DataRef> ExtractSubstringBase(const Substring &);
+
+inline std::optional<DataRef> ExtractDataRef(const Substring &x,
+    bool intoSubstring = false, bool intoComplexPart = false) {
+  if (intoSubstring) {
+    return ExtractSubstringBase(x);
+  } else {
+    return std::nullopt;
+  }
+}
+inline std::optional<DataRef> ExtractDataRef(const ComplexPart &x,
+    bool intoSubstring = false, bool intoComplexPart = false) {
+  if (intoComplexPart) {
+    return x.complex();
+  } else {
+    return std::nullopt;
+  }
 }
 template <typename T>
 std::optional<DataRef> ExtractDataRef(const Designator<T> &d,
     bool intoSubstring = false, bool intoComplexPart = false) {
   return common::visit(
       [=](const auto &x) -> std::optional<DataRef> {
-        if constexpr (common::HasMember<decltype(x), decltype(DataRef::u)>) {
-          return DataRef{x};
-        }
-        if constexpr (std::is_same_v<std::decay_t<decltype(x)>, Substring>) {
-          if (intoSubstring) {
-            return ExtractSubstringBase(x);
-          }
-        }
-        if constexpr (std::is_same_v<std::decay_t<decltype(x)>, ComplexPart>) {
-          if (intoComplexPart) {
-            return x.complex();
-          }
-        }
-        return std::nullopt; // w/o "else" to dodge bogus g++ 8.1 warning
+        return ExtractDataRef(x, intoSubstring, intoComplexPart);
       },
       d.u);
 }
@@ -375,8 +393,6 @@ std::optional<DataRef> ExtractDataRef(
 }
 std::optional<DataRef> ExtractDataRef(const ActualArgument &,
     bool intoSubstring = false, bool intoComplexPart = false);
-
-std::optional<DataRef> ExtractSubstringBase(const Substring &);
 
 // Predicate: is an expression is an array element reference?
 template <typename T>
@@ -456,9 +472,13 @@ struct ExtractCoindexedObjectHelper {
   }
 };
 
+static inline std::optional<CoarrayRef> ExtractCoarrayRef(const DataRef &x) {
+  return ExtractCoindexedObjectHelper{}(x);
+}
+
 template <typename A> std::optional<CoarrayRef> ExtractCoarrayRef(const A &x) {
   if (auto dataRef{ExtractDataRef(x, true)}) {
-    return ExtractCoindexedObjectHelper{}(*dataRef);
+    return ExtractCoarrayRef(*dataRef);
   } else {
     return ExtractCoindexedObjectHelper{}(x);
   }
@@ -1051,9 +1071,11 @@ bool IsProcedurePointer(const Expr<SomeType> &);
 bool IsProcedure(const Expr<SomeType> &);
 bool IsProcedurePointerTarget(const Expr<SomeType> &);
 bool IsBareNullPointer(const Expr<SomeType> *); // NULL() w/o MOLD= or type
-bool IsNullObjectPointer(const Expr<SomeType> &);
-bool IsNullProcedurePointer(const Expr<SomeType> &);
-bool IsNullPointer(const Expr<SomeType> &);
+bool IsNullObjectPointer(const Expr<SomeType> *); // NULL() or NULL(objptr)
+bool IsNullProcedurePointer(const Expr<SomeType> *); // NULL() or NULL(procptr)
+bool IsNullPointer(const Expr<SomeType> *); // NULL() or NULL(pointer)
+bool IsNullAllocatable(const Expr<SomeType> *); // NULL(allocatable)
+bool IsNullPointerOrAllocatable(const Expr<SomeType> *); // NULL of any form
 bool IsObjectPointer(const Expr<SomeType> &);
 
 // Can Expr be passed as absent to an optional dummy argument.
@@ -1295,6 +1317,18 @@ inline bool IsCUDADeviceSymbol(const Symbol &sym) {
   return false;
 }
 
+inline bool IsCUDAManagedOrUnifiedSymbol(const Symbol &sym) {
+  if (const auto *details =
+          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
+    if (details->cudaDataAttr() &&
+        (*details->cudaDataAttr() == common::CUDADataAttr::Managed ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Unified)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // Get the number of distinct symbols with CUDA device
 // attribute in the expression.
 template <typename A> inline int GetNbOfCUDADeviceSymbols(const A &expr) {
@@ -1307,10 +1341,40 @@ template <typename A> inline int GetNbOfCUDADeviceSymbols(const A &expr) {
   return symbols.size();
 }
 
+// Get the number of distinct symbols with CUDA managed or unified
+// attribute in the expression.
+template <typename A>
+inline int GetNbOfCUDAManagedOrUnifiedSymbols(const A &expr) {
+  semantics::UnorderedSymbolSet symbols;
+  for (const Symbol &sym : CollectCudaSymbols(expr)) {
+    if (IsCUDAManagedOrUnifiedSymbol(sym)) {
+      symbols.insert(sym);
+    }
+  }
+  return symbols.size();
+}
+
 // Check if any of the symbols part of the expression has a CUDA device
 // attribute.
 template <typename A> inline bool HasCUDADeviceAttrs(const A &expr) {
   return GetNbOfCUDADeviceSymbols(expr) > 0;
+}
+
+// Check if any of the symbols part of the lhs or rhs expression has a CUDA
+// device attribute.
+template <typename A, typename B>
+inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
+  int lhsNbManagedSymbols = {GetNbOfCUDAManagedOrUnifiedSymbols(lhs)};
+  int rhsNbManagedSymbols = {GetNbOfCUDAManagedOrUnifiedSymbols(rhs)};
+  int rhsNbSymbols{GetNbOfCUDADeviceSymbols(rhs)};
+
+  // Special case where only managed or unifed symbols are involved. This is
+  // performed on the host.
+  if (lhsNbManagedSymbols == 1 && rhsNbManagedSymbols == 1 &&
+      rhsNbSymbols == 1) {
+    return false;
+  }
+  return HasCUDADeviceAttrs(lhs) || rhsNbSymbols > 0;
 }
 
 /// Check if the expression is a mix of host and device variables that require
@@ -1409,8 +1473,8 @@ inline bool IsAssumedSizeArray(const Symbol &symbol) {
 // In a SELECT RANK construct, ResolveAssociations() stops at a
 // RANK(n) or RANK(*) case symbol, but traverses the selector for
 // RANK DEFAULT.
-const Symbol &ResolveAssociations(const Symbol &);
-const Symbol &GetAssociationRoot(const Symbol &);
+const Symbol &ResolveAssociations(const Symbol &, bool stopAtTypeGuard = false);
+const Symbol &GetAssociationRoot(const Symbol &, bool stopAtTypeGuard = false);
 
 const Symbol *FindCommonBlockContaining(const Symbol &);
 int CountLenParameters(const DerivedTypeSpec &);

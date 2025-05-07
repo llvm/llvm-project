@@ -2234,12 +2234,12 @@ inline const APInt &umax(const APInt &A, const APInt &B) {
 }
 
 /// Determine the absolute difference of two APInts considered to be signed.
-inline const APInt abds(const APInt &A, const APInt &B) {
+inline APInt abds(const APInt &A, const APInt &B) {
   return A.sge(B) ? (A - B) : (B - A);
 }
 
 /// Determine the absolute difference of two APInts considered to be unsigned.
-inline const APInt abdu(const APInt &A, const APInt &B) {
+inline APInt abdu(const APInt &A, const APInt &B) {
   return A.uge(B) ? (A - B) : (B - A);
 }
 
@@ -2262,6 +2262,10 @@ APInt mulhs(const APInt &C1, const APInt &C2);
 /// Performs (2*N)-bit multiplication on zero-extended operands.
 /// Returns the high N bits of the multiplication result.
 APInt mulhu(const APInt &C1, const APInt &C2);
+
+/// Compute X^N for N>=0.
+/// 0^0 is supported and returns 1.
+APInt pow(const APInt &X, int64_t N);
 
 /// Compute GCD of two unsigned APInt values.
 ///

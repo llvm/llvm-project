@@ -12,7 +12,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 // N[Table[Log[2, 1 + x], {x, 0/64, 63/64, 1/64}], 40]
-alignas(64) const double LOG_P1_LOG2[LOG_P1_SIZE] = {
+alignas(8) const double LOG_P1_LOG2[LOG_P1_SIZE] = {
     0x0.0000000000000p+0, 0x1.6e79685c2d22ap-6, 0x1.6bad3758efd87p-5,
     0x1.0eb389fa29f9bp-4, 0x1.663f6fac91316p-4, 0x1.bc84240adabbap-4,
     0x1.08c588cda79e4p-3, 0x1.32ae9e278ae1ap-3, 0x1.5c01a39fbd688p-3,
@@ -38,7 +38,7 @@ alignas(64) const double LOG_P1_LOG2[LOG_P1_SIZE] = {
 };
 
 // N[Table[1/(1 + x), {x, 0/64, 63/64, 1/64}], 40]
-alignas(64) const double LOG_P1_1_OVER[LOG_P1_SIZE] = {
+alignas(8) const double LOG_P1_1_OVER[LOG_P1_SIZE] = {
     0x1.0000000000000p+0, 0x1.f81f81f81f820p-1, 0x1.f07c1f07c1f08p-1,
     0x1.e9131abf0b767p-1, 0x1.e1e1e1e1e1e1ep-1, 0x1.dae6076b981dbp-1,
     0x1.d41d41d41d41dp-1, 0x1.cd85689039b0bp-1, 0x1.c71c71c71c71cp-1,
@@ -64,11 +64,11 @@ alignas(64) const double LOG_P1_1_OVER[LOG_P1_SIZE] = {
 
 // Taylos series expansion for Log[2, 1 + x] splitted to EVEN AND ODD numbers
 // K_LOG2_ODD starts from x^3
-alignas(64) const
+alignas(8) const
     double K_LOG2_ODD[4] = {0x1.ec709dc3a03fdp-2, 0x1.2776c50ef9bfep-2,
                             0x1.a61762a7aded9p-3, 0x1.484b13d7c02a9p-3};
 
-alignas(64) const
+alignas(8) const
     double K_LOG2_EVEN[4] = {-0x1.71547652b82fep-1, -0x1.71547652b82fep-2,
                              -0x1.ec709dc3a03fdp-3, -0x1.2776c50ef9bfep-3};
 

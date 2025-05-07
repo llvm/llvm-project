@@ -491,8 +491,8 @@ define <4 x float> @test_v16f32_0_1_3_6 (<16 x float> %v) {
 ; ALL-LABEL: test_v16f32_0_1_3_6:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [0,1,3,6]
-; ALL-NEXT:    vpermps %zmm0, %zmm1, %zmm0
-; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; ALL-NEXT:    vpermps %ymm0, %ymm1, %ymm0
+; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    retq
   %res = shufflevector <16 x float> %v, <16 x float> poison, <4 x i32> <i32 0, i32 1, i32 3, i32 6>

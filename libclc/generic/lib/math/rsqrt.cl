@@ -1,22 +1,15 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include <clc/clc.h>
-#include <clc/clcmacro.h>
+#include <clc/math/clc_rsqrt.h>
 
-_CLC_OVERLOAD _CLC_DEF float rsqrt(float x)
-{
-    return 1.0f / sqrt(x);
-}
+#define FUNCTION rsqrt
+#define __CLC_BODY <clc/shared/unary_def.inc>
 
-_CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, float, rsqrt, float);
-
-#ifdef cl_khr_fp64
-
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable
-
-_CLC_OVERLOAD _CLC_DEF double rsqrt(double x)
-{
-    return 1.0 / sqrt(x);
-}
-
-_CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, rsqrt, double);
-
-#endif
+#include <clc/math/gentype.inc>

@@ -106,10 +106,13 @@ private:
 
 class AbstractListFrontEnd : public SyntheticChildrenFrontEnd {
 public:
-  size_t GetIndexOfChildWithName(ConstString name) override {
-    return ExtractIndexFromString(name.GetCString());
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
+    size_t idx = ExtractIndexFromString(name.GetCString());
+    if (idx == UINT32_MAX)
+      return llvm::createStringError("Type has no child named '%s'",
+                                     name.AsCString());
+    return idx;
   }
-  bool MightHaveChildren() override { return true; }
   lldb::ChildCacheState Update() override;
 
 protected:

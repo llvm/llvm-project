@@ -10,6 +10,7 @@ static_library("ProfileData") {
   ]
   sources = [
     "GCOV.cpp",
+    "IndexedMemProfData.cpp",
     "InstrProf.cpp",
     "InstrProfCorrelator.cpp",
     "InstrProfReader.cpp",

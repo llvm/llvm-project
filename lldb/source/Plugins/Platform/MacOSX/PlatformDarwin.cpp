@@ -42,6 +42,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Timer.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
@@ -650,8 +651,8 @@ BreakpointSP PlatformDarwin::SetThreadCreationBreakpoint(Target &target) {
       "start_wqthread", "_pthread_wqthread", "_pthread_start",
   };
 
-  static const char *g_bp_modules[] = {"libsystem_c.dylib",
-                                       "libSystem.B.dylib"};
+  static const char *g_bp_modules[] = {"libsystem_c.dylib", "libSystem.B.dylib",
+                                       "libsystem_pthread.dylib"};
 
   FileSpecList bp_modules;
   for (size_t i = 0; i < std::size(g_bp_modules); i++) {
@@ -1083,7 +1084,7 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
   if (!version.empty() && sdk_type != XcodeSDK::Type::Linux &&
       sdk_type != XcodeSDK::Type::XROS) {
 #define OPTION(PREFIX_OFFSET, NAME_OFFSET, VAR, ...)                           \
-  llvm::StringRef opt_##VAR = &OptionStrTable[NAME_OFFSET];                    \
+  llvm::StringRef opt_##VAR = OptionStrTable[NAME_OFFSET];                     \
   (void)opt_##VAR;
 #include "clang/Driver/Options.inc"
 #undef OPTION
@@ -1336,33 +1337,6 @@ lldb_private::Status PlatformDarwin::FindBundleBinaryInExecSearchPaths(
   return Status();
 }
 
-std::string PlatformDarwin::FindComponentInPath(llvm::StringRef path,
-                                                llvm::StringRef component) {
-  auto begin = llvm::sys::path::begin(path);
-  auto end = llvm::sys::path::end(path);
-  for (auto it = begin; it != end; ++it) {
-    if (it->contains(component)) {
-      llvm::SmallString<128> buffer;
-      llvm::sys::path::append(buffer, begin, ++it,
-                              llvm::sys::path::Style::posix);
-      return buffer.str().str();
-    }
-  }
-  return {};
-}
-
-FileSpec PlatformDarwin::GetCurrentToolchainDirectory() {
-  if (FileSpec fspec = HostInfo::GetShlibDir())
-    return FileSpec(FindComponentInPath(fspec.GetPath(), ".xctoolchain"));
-  return {};
-}
-
-FileSpec PlatformDarwin::GetCurrentCommandLineToolsDirectory() {
-  if (FileSpec fspec = HostInfo::GetShlibDir())
-    return FileSpec(FindComponentInPath(fspec.GetPath(), "CommandLineTools"));
-  return {};
-}
-
 llvm::Triple::OSType PlatformDarwin::GetHostOSType() {
 #if !defined(__APPLE__)
   return llvm::Triple::MacOSX;
@@ -1423,6 +1397,9 @@ PlatformDarwin::ResolveSDKPathFromDebugInfo(Module &module) {
                       llvm::toString(sdk_or_err.takeError())));
 
   auto [sdk, _] = std::move(*sdk_or_err);
+
+  if (FileSystem::Instance().Exists(sdk.GetSysroot()))
+    return sdk.GetSysroot().GetPath();
 
   auto path_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk});
   if (!path_or_err)

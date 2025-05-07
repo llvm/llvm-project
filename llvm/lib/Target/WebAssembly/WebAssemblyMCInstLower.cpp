@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyMCInstLower.h"
+#include "MCTargetDesc/WebAssemblyMCExpr.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
 #include "Utils/WebAssemblyTypeUtilities.h"
@@ -34,7 +35,7 @@ using namespace llvm;
 
 // This disables the removal of registers when lowering into MC, as required
 // by some current tests.
-cl::opt<bool>
+static cl::opt<bool>
     WasmKeepRegisters("wasm-keep-registers", cl::Hidden,
                       cl::desc("WebAssembly: output stack registers in"
                                " instruction output for test purposes only."),
@@ -91,32 +92,32 @@ MCSymbol *WebAssemblyMCInstLower::GetExternalSymbolSymbol(
 
 MCOperand WebAssemblyMCInstLower::lowerSymbolOperand(const MachineOperand &MO,
                                                      MCSymbol *Sym) const {
-  MCSymbolRefExpr::VariantKind Kind = MCSymbolRefExpr::VK_None;
+  auto Spec = WebAssembly::S_None;
   unsigned TargetFlags = MO.getTargetFlags();
 
   switch (TargetFlags) {
     case WebAssemblyII::MO_NO_FLAG:
       break;
     case WebAssemblyII::MO_GOT_TLS:
-      Kind = MCSymbolRefExpr::VK_WASM_GOT_TLS;
+      Spec = WebAssembly::S_GOT_TLS;
       break;
     case WebAssemblyII::MO_GOT:
-      Kind = MCSymbolRefExpr::VK_GOT;
+      Spec = WebAssembly::S_GOT;
       break;
     case WebAssemblyII::MO_MEMORY_BASE_REL:
-      Kind = MCSymbolRefExpr::VK_WASM_MBREL;
+      Spec = WebAssembly::S_MBREL;
       break;
     case WebAssemblyII::MO_TLS_BASE_REL:
-      Kind = MCSymbolRefExpr::VK_WASM_TLSREL;
+      Spec = WebAssembly::S_TLSREL;
       break;
     case WebAssemblyII::MO_TABLE_BASE_REL:
-      Kind = MCSymbolRefExpr::VK_WASM_TBREL;
+      Spec = WebAssembly::S_TBREL;
       break;
     default:
       llvm_unreachable("Unknown target flag on GV operand");
   }
 
-  const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Kind, Ctx);
+  const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Spec, Ctx);
 
   if (MO.getOffset() != 0) {
     const auto *WasmSym = cast<MCSymbolWasm>(Sym);
@@ -149,7 +150,7 @@ MCOperand WebAssemblyMCInstLower::lowerTypeIndexOperand(
   WasmSym->setSignature(Signature);
   WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
   const MCExpr *Expr =
-      MCSymbolRefExpr::create(WasmSym, MCSymbolRefExpr::VK_WASM_TYPEINDEX, Ctx);
+      MCSymbolRefExpr::create(WasmSym, WebAssembly::S_TYPEINDEX, Ctx);
   return MCOperand::createExpr(Expr);
 }
 
@@ -169,6 +170,13 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
 
   const MCInstrDesc &Desc = MI->getDesc();
   unsigned NumVariadicDefs = MI->getNumExplicitDefs() - Desc.getNumDefs();
+  const MachineFunction *MF = MI->getMF();
+  const auto &TLI =
+      *MF->getSubtarget<WebAssemblySubtarget>().getTargetLowering();
+  wasm::ValType PtrTy = TLI.getPointerTy(MF->getDataLayout()) == MVT::i32
+                            ? wasm::ValType::I32
+                            : wasm::ValType::I64;
+
   for (unsigned I = 0, E = MI->getNumOperands(); I != E; ++I) {
     const MachineOperand &MO = MI->getOperand(I);
 
@@ -234,12 +242,12 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
             //    return type of the parent function.
             // 2. (catch_ref ...) clause in try_table instruction. Currently all
             //    tags we support (cpp_exception and c_longjmp) throws a single
-            //    i32, so the multivalue signature for this case will be (i32,
-            //    exnref). Having MO_CATCH_BLOCK_SIG target flags means this is
-            //    a destination of a catch_ref.
-            if (MO.getTargetFlags() == WebAssemblyII::MO_CATCH_BLOCK_SIG)
-              Returns = {wasm::ValType::I32, wasm::ValType::EXNREF};
-            else
+            //    pointer, so the multivalue signature for this case will be
+            //    (ptr, exnref). Having MO_CATCH_BLOCK_SIG target flags means
+            //    this is a destination of a catch_ref.
+            if (MO.getTargetFlags() == WebAssemblyII::MO_CATCH_BLOCK_SIG) {
+              Returns = {PtrTy, wasm::ValType::EXNREF};
+            } else
               getFunctionReturns(MI, Returns);
             MCOp = lowerTypeIndexOperand(std::move(Returns),
                                          SmallVector<wasm::ValType, 4>());

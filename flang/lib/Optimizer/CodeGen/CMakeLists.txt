@@ -1,9 +1,9 @@
 add_flang_library(FIRCodeGen
   BoxedProcedure.cpp
-  CGOps.cpp
   CodeGen.cpp
   CodeGenOpenMP.cpp
   FIROpPatterns.cpp
+  LowerRepackArrays.cpp
   PreCGRewrite.cpp
   TBAABuilder.cpp
   Target.cpp
@@ -11,20 +11,23 @@ add_flang_library(FIRCodeGen
   TypeConverter.cpp
 
   DEPENDS
+  CUFAttrs
   FIRDialect
   FIROptCodeGenPassIncGen
   CGOpsIncGen
 
   LINK_LIBS
+  CUFAttrs
   FIRAnalysis
   FIRBuilder
+  FIRCodeGenDialect
   FIRDialect
   FIRDialectSupport
+  FIROpenACCSupport
+  FIROpenMPSupport
   FIRSupport
 
   LINK_COMPONENTS
-  AsmParser
-  AsmPrinter
   Remarks
   TargetParser
 

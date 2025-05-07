@@ -56,7 +56,7 @@ class LiveRegMatrix {
 
   // Cached register mask interference info.
   unsigned RegMaskTag = 0;
-  unsigned RegMaskVirtReg = 0;
+  Register RegMaskVirtReg;
   BitVector RegMaskUsable;
 
   LiveRegMatrix()
@@ -161,7 +161,7 @@ public:
   /// Use MCRegUnitIterator to enumerate all regunits in the desired PhysReg.
   /// This returns a reference to an internal Query data structure that is only
   /// valid until the next query() call.
-  LiveIntervalUnion::Query &query(const LiveRange &LR, MCRegister RegUnit);
+  LiveIntervalUnion::Query &query(const LiveRange &LR, MCRegUnit RegUnit);
 
   /// Directly access the live interval unions per regunit.
   /// This returns an array indexed by the regunit number.

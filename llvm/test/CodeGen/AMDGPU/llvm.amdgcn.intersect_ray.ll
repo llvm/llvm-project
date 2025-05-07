@@ -3,9 +3,12 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1013 -verify-machineinstrs < %s | FileCheck -check-prefixes=PRE-GFX12,GFX10,GFX1013 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -check-prefixes=PRE-GFX12,GFX10,GFX1030 %s
 ; RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1012 -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERR %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=PRE-GFX12,GFX11 %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12,GFX12-SDAG %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12,GFX12-GISEL %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -verify-machineinstrs < %s | FileCheck -check-prefixes=PRE-GFX12,GFX11,GFX11-TRUE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -verify-machineinstrs < %s | FileCheck -check-prefixes=PRE-GFX12,GFX11,GFX11-FAKE16 %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 -mattr=+real-true16 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12,GFX12-SDAG,GFX12-SDAG-TRUE16 %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 -mattr=-real-true16 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12,GFX12-SDAG,GFX12-SDAG-FAKE16 %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 -mattr=+real-true16 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12,GFX12-GISEL,GFX12-GISEL-TRUE16 %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 -mattr=-real-true16 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12,GFX12-GISEL,GFX12-GISEL-FAKE16 %s
 
 ; uint4 llvm.amdgcn.image.bvh.intersect.ray.i32.v4f32(uint node_ptr, float ray_extent, float3 ray_origin, float3 ray_dir, float3 ray_inv_dir, uint4 texture_descr)
 ; uint4 llvm.amdgcn.image.bvh.intersect.ray.i32.v4f16(uint node_ptr, float ray_extent, float3 ray_origin, half3 ray_dir, half3 ray_inv_dir, uint4 texture_descr)
@@ -33,13 +36,13 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray(i32 %node_ptr, float %ray_
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
-  %ray_origin0 = insertelement <3 x float> undef, float %ray_origin_x, i32 0
+  %ray_origin0 = insertelement <3 x float> poison, float %ray_origin_x, i32 0
   %ray_origin1 = insertelement <3 x float> %ray_origin0, float %ray_origin_y, i32 1
   %ray_origin = insertelement <3 x float> %ray_origin1, float %ray_origin_z, i32 2
-  %ray_dir0 = insertelement <3 x float> undef, float %ray_dir_x, i32 0
+  %ray_dir0 = insertelement <3 x float> poison, float %ray_dir_x, i32 0
   %ray_dir1 = insertelement <3 x float> %ray_dir0, float %ray_dir_y, i32 1
   %ray_dir = insertelement <3 x float> %ray_dir1, float %ray_dir_z, i32 2
-  %ray_inv_dir0 = insertelement <3 x float> undef, float %ray_inv_dir_x, i32 0
+  %ray_inv_dir0 = insertelement <3 x float> poison, float %ray_inv_dir_x, i32 0
   %ray_inv_dir1 = insertelement <3 x float> %ray_inv_dir0, float %ray_inv_dir_y, i32 1
   %ray_inv_dir = insertelement <3 x float> %ray_inv_dir1, float %ray_inv_dir_z, i32 2
   %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f32(i32 %node_ptr, float %ray_extent, <3 x float> %ray_origin, <3 x float> %ray_dir, <3 x float> %ray_inv_dir, <4 x i32> %tdescr)
@@ -69,67 +72,138 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray_a16(i32 inreg %node_ptr, f
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
-; GFX11-LABEL: image_bvh_intersect_ray_a16:
-; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
-; GFX11-NEXT:    s_lshr_b32 s2, s7, 16
-; GFX11-NEXT:    s_lshr_b32 s3, s5, 16
-; GFX11-NEXT:    v_dual_mov_b32 v6, s0 :: v_dual_mov_b32 v7, s1
-; GFX11-NEXT:    s_pack_ll_b32_b16 s2, s3, s2
-; GFX11-NEXT:    s_pack_ll_b32_b16 s3, s5, s7
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    v_dual_mov_b32 v2, s4 :: v_dual_mov_b32 v3, s3
-; GFX11-NEXT:    s_pack_ll_b32_b16 s4, s6, s8
-; GFX11-NEXT:    v_dual_mov_b32 v4, s2 :: v_dual_mov_b32 v5, s4
-; GFX11-NEXT:    s_mov_b32 s15, s12
-; GFX11-NEXT:    s_mov_b32 s14, s11
-; GFX11-NEXT:    s_mov_b32 s13, s10
-; GFX11-NEXT:    s_mov_b32 s12, s9
-; GFX11-NEXT:    image_bvh_intersect_ray v[0:3], [v6, v7, v[0:2], v[3:5]], s[12:15] a16
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    ; return to shader part epilog
+; GFX11-TRUE16-LABEL: image_bvh_intersect_ray_a16:
+; GFX11-TRUE16:       ; %bb.0: ; %main_body
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
+; GFX11-TRUE16-NEXT:    s_lshr_b32 s2, s7, 16
+; GFX11-TRUE16-NEXT:    s_lshr_b32 s3, s5, 16
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, s4
+; GFX11-TRUE16-NEXT:    s_pack_ll_b32_b16 s2, s3, s2
+; GFX11-TRUE16-NEXT:    s_mov_b32 s3, s6
+; GFX11-TRUE16-NEXT:    s_mov_b32 s4, s5
+; GFX11-TRUE16-NEXT:    s_mov_b32 s5, s7
+; GFX11-TRUE16-NEXT:    s_mov_b32 s6, s8
+; GFX11-TRUE16-NEXT:    s_pack_ll_b32_b16 s4, s4, s5
+; GFX11-TRUE16-NEXT:    s_pack_ll_b32_b16 s3, s3, s6
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v3, s4 :: v_dual_mov_b32 v4, s2
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v5, s3 :: v_dual_mov_b32 v6, s0
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v7, s1
+; GFX11-TRUE16-NEXT:    s_mov_b32 s15, s12
+; GFX11-TRUE16-NEXT:    s_mov_b32 s14, s11
+; GFX11-TRUE16-NEXT:    s_mov_b32 s13, s10
+; GFX11-TRUE16-NEXT:    s_mov_b32 s12, s9
+; GFX11-TRUE16-NEXT:    image_bvh_intersect_ray v[0:3], [v6, v7, v[0:2], v[3:5]], s[12:15] a16
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
-; GFX12-SDAG-LABEL: image_bvh_intersect_ray_a16:
-; GFX12-SDAG:       ; %bb.0: ; %main_body
-; GFX12-SDAG-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
-; GFX12-SDAG-NEXT:    s_lshr_b32 s2, s7, 16
-; GFX12-SDAG-NEXT:    s_lshr_b32 s3, s5, 16
-; GFX12-SDAG-NEXT:    v_dual_mov_b32 v6, s0 :: v_dual_mov_b32 v7, s1
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
-; GFX12-SDAG-NEXT:    s_pack_ll_b32_b16 s2, s3, s2
-; GFX12-SDAG-NEXT:    s_pack_ll_b32_b16 s3, s5, s7
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
-; GFX12-SDAG-NEXT:    v_dual_mov_b32 v2, s4 :: v_dual_mov_b32 v3, s3
-; GFX12-SDAG-NEXT:    s_pack_ll_b32_b16 s4, s6, s8
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
-; GFX12-SDAG-NEXT:    v_dual_mov_b32 v4, s2 :: v_dual_mov_b32 v5, s4
-; GFX12-SDAG-NEXT:    s_mov_b32 s15, s12
-; GFX12-SDAG-NEXT:    s_mov_b32 s14, s11
-; GFX12-SDAG-NEXT:    s_mov_b32 s13, s10
-; GFX12-SDAG-NEXT:    s_mov_b32 s12, s9
-; GFX12-SDAG-NEXT:    image_bvh_intersect_ray v[0:3], [v6, v7, v[0:2], v[3:5]], s[12:15] a16
-; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-SDAG-NEXT:    ; return to shader part epilog
+; GFX11-FAKE16-LABEL: image_bvh_intersect_ray_a16:
+; GFX11-FAKE16:       ; %bb.0: ; %main_body
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
+; GFX11-FAKE16-NEXT:    s_lshr_b32 s2, s7, 16
+; GFX11-FAKE16-NEXT:    s_lshr_b32 s3, s5, 16
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v6, s0 :: v_dual_mov_b32 v7, s1
+; GFX11-FAKE16-NEXT:    s_pack_ll_b32_b16 s2, s3, s2
+; GFX11-FAKE16-NEXT:    s_pack_ll_b32_b16 s3, s5, s7
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v2, s4 :: v_dual_mov_b32 v3, s3
+; GFX11-FAKE16-NEXT:    s_pack_ll_b32_b16 s4, s6, s8
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v4, s2 :: v_dual_mov_b32 v5, s4
+; GFX11-FAKE16-NEXT:    s_mov_b32 s15, s12
+; GFX11-FAKE16-NEXT:    s_mov_b32 s14, s11
+; GFX11-FAKE16-NEXT:    s_mov_b32 s13, s10
+; GFX11-FAKE16-NEXT:    s_mov_b32 s12, s9
+; GFX11-FAKE16-NEXT:    image_bvh_intersect_ray v[0:3], [v6, v7, v[0:2], v[3:5]], s[12:15] a16
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    ; return to shader part epilog
 ;
-; GFX12-GISEL-LABEL: image_bvh_intersect_ray_a16:
-; GFX12-GISEL:       ; %bb.0: ; %main_body
-; GFX12-GISEL-NEXT:    s_mov_b32 s20, s2
-; GFX12-GISEL-NEXT:    s_mov_b32 s22, s4
-; GFX12-GISEL-NEXT:    s_pack_ll_b32_b16 s4, s7, s5
-; GFX12-GISEL-NEXT:    s_mov_b32 s21, s3
-; GFX12-GISEL-NEXT:    s_pack_hh_b32_b16 s5, s7, s5
-; GFX12-GISEL-NEXT:    s_pack_ll_b32_b16 s6, s8, s6
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s20 :: v_dual_mov_b32 v1, s21
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v2, s22 :: v_dual_mov_b32 v3, s4
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v6, s0 :: v_dual_mov_b32 v7, s1
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v4, s5 :: v_dual_mov_b32 v5, s6
-; GFX12-GISEL-NEXT:    s_mov_b32 s16, s9
-; GFX12-GISEL-NEXT:    s_mov_b32 s17, s10
-; GFX12-GISEL-NEXT:    s_mov_b32 s18, s11
-; GFX12-GISEL-NEXT:    s_mov_b32 s19, s12
-; GFX12-GISEL-NEXT:    image_bvh_intersect_ray v[0:3], [v6, v7, v[0:2], v[3:5]], s[16:19] a16
-; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-GISEL-NEXT:    ; return to shader part epilog
+; GFX12-SDAG-TRUE16-LABEL: image_bvh_intersect_ray_a16:
+; GFX12-SDAG-TRUE16:       ; %bb.0: ; %main_body
+; GFX12-SDAG-TRUE16-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
+; GFX12-SDAG-TRUE16-NEXT:    s_lshr_b32 s2, s7, 16
+; GFX12-SDAG-TRUE16-NEXT:    s_lshr_b32 s3, s5, 16
+; GFX12-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v2, s4
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-TRUE16-NEXT:    s_pack_ll_b32_b16 s2, s3, s2
+; GFX12-SDAG-TRUE16-NEXT:    s_mov_b32 s3, s6
+; GFX12-SDAG-TRUE16-NEXT:    s_mov_b32 s4, s5
+; GFX12-SDAG-TRUE16-NEXT:    s_mov_b32 s5, s7
+; GFX12-SDAG-TRUE16-NEXT:    s_mov_b32 s6, s8
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-TRUE16-NEXT:    s_pack_ll_b32_b16 s4, s4, s5
+; GFX12-SDAG-TRUE16-NEXT:    s_pack_ll_b32_b16 s3, s3, s6
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-TRUE16-NEXT:    v_dual_mov_b32 v3, s4 :: v_dual_mov_b32 v4, s2
+; GFX12-SDAG-TRUE16-NEXT:    v_dual_mov_b32 v5, s3 :: v_dual_mov_b32 v6, s0
+; GFX12-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v7, s1
+; GFX12-SDAG-TRUE16-NEXT:    s_mov_b32 s15, s12
+; GFX12-SDAG-TRUE16-NEXT:    s_mov_b32 s14, s11
+; GFX12-SDAG-TRUE16-NEXT:    s_mov_b32 s13, s10
+; GFX12-SDAG-TRUE16-NEXT:    s_mov_b32 s12, s9
+; GFX12-SDAG-TRUE16-NEXT:    image_bvh_intersect_ray v[0:3], [v6, v7, v[0:2], v[3:5]], s[12:15] a16
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX12-SDAG-FAKE16-LABEL: image_bvh_intersect_ray_a16:
+; GFX12-SDAG-FAKE16:       ; %bb.0: ; %main_body
+; GFX12-SDAG-FAKE16-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
+; GFX12-SDAG-FAKE16-NEXT:    s_lshr_b32 s2, s7, 16
+; GFX12-SDAG-FAKE16-NEXT:    s_lshr_b32 s3, s5, 16
+; GFX12-SDAG-FAKE16-NEXT:    v_dual_mov_b32 v6, s0 :: v_dual_mov_b32 v7, s1
+; GFX12-SDAG-FAKE16-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-FAKE16-NEXT:    s_pack_ll_b32_b16 s2, s3, s2
+; GFX12-SDAG-FAKE16-NEXT:    s_pack_ll_b32_b16 s3, s5, s7
+; GFX12-SDAG-FAKE16-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-FAKE16-NEXT:    v_dual_mov_b32 v2, s4 :: v_dual_mov_b32 v3, s3
+; GFX12-SDAG-FAKE16-NEXT:    s_pack_ll_b32_b16 s4, s6, s8
+; GFX12-SDAG-FAKE16-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-FAKE16-NEXT:    v_dual_mov_b32 v4, s2 :: v_dual_mov_b32 v5, s4
+; GFX12-SDAG-FAKE16-NEXT:    s_mov_b32 s15, s12
+; GFX12-SDAG-FAKE16-NEXT:    s_mov_b32 s14, s11
+; GFX12-SDAG-FAKE16-NEXT:    s_mov_b32 s13, s10
+; GFX12-SDAG-FAKE16-NEXT:    s_mov_b32 s12, s9
+; GFX12-SDAG-FAKE16-NEXT:    image_bvh_intersect_ray v[0:3], [v6, v7, v[0:2], v[3:5]], s[12:15] a16
+; GFX12-SDAG-FAKE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-FAKE16-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-TRUE16-LABEL: image_bvh_intersect_ray_a16:
+; GFX12-GISEL-TRUE16:       ; %bb.0: ; %main_body
+; GFX12-GISEL-TRUE16-NEXT:    s_mov_b32 s20, s2
+; GFX12-GISEL-TRUE16-NEXT:    s_mov_b32 s22, s4
+; GFX12-GISEL-TRUE16-NEXT:    s_pack_ll_b32_b16 s4, s7, s5
+; GFX12-GISEL-TRUE16-NEXT:    s_mov_b32 s21, s3
+; GFX12-GISEL-TRUE16-NEXT:    s_pack_ll_b32_b16 s6, s8, s6
+; GFX12-GISEL-TRUE16-NEXT:    s_mov_b32 s5, s4
+; GFX12-GISEL-TRUE16-NEXT:    v_dual_mov_b32 v0, s20 :: v_dual_mov_b32 v1, s21
+; GFX12-GISEL-TRUE16-NEXT:    v_dual_mov_b32 v2, s22 :: v_dual_mov_b32 v3, s4
+; GFX12-GISEL-TRUE16-NEXT:    v_dual_mov_b32 v6, s0 :: v_dual_mov_b32 v7, s1
+; GFX12-GISEL-TRUE16-NEXT:    v_dual_mov_b32 v4, s5 :: v_dual_mov_b32 v5, s6
+; GFX12-GISEL-TRUE16-NEXT:    s_mov_b32 s16, s9
+; GFX12-GISEL-TRUE16-NEXT:    s_mov_b32 s17, s10
+; GFX12-GISEL-TRUE16-NEXT:    s_mov_b32 s18, s11
+; GFX12-GISEL-TRUE16-NEXT:    s_mov_b32 s19, s12
+; GFX12-GISEL-TRUE16-NEXT:    image_bvh_intersect_ray v[0:3], [v6, v7, v[0:2], v[3:5]], s[16:19] a16
+; GFX12-GISEL-TRUE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-FAKE16-LABEL: image_bvh_intersect_ray_a16:
+; GFX12-GISEL-FAKE16:       ; %bb.0: ; %main_body
+; GFX12-GISEL-FAKE16-NEXT:    s_mov_b32 s20, s2
+; GFX12-GISEL-FAKE16-NEXT:    s_mov_b32 s22, s4
+; GFX12-GISEL-FAKE16-NEXT:    s_pack_ll_b32_b16 s4, s7, s5
+; GFX12-GISEL-FAKE16-NEXT:    s_mov_b32 s21, s3
+; GFX12-GISEL-FAKE16-NEXT:    s_pack_hh_b32_b16 s5, s7, s5
+; GFX12-GISEL-FAKE16-NEXT:    s_pack_ll_b32_b16 s6, s8, s6
+; GFX12-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v0, s20 :: v_dual_mov_b32 v1, s21
+; GFX12-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v2, s22 :: v_dual_mov_b32 v3, s4
+; GFX12-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v6, s0 :: v_dual_mov_b32 v7, s1
+; GFX12-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v4, s5 :: v_dual_mov_b32 v5, s6
+; GFX12-GISEL-FAKE16-NEXT:    s_mov_b32 s16, s9
+; GFX12-GISEL-FAKE16-NEXT:    s_mov_b32 s17, s10
+; GFX12-GISEL-FAKE16-NEXT:    s_mov_b32 s18, s11
+; GFX12-GISEL-FAKE16-NEXT:    s_mov_b32 s19, s12
+; GFX12-GISEL-FAKE16-NEXT:    image_bvh_intersect_ray v[0:3], [v6, v7, v[0:2], v[3:5]], s[16:19] a16
+; GFX12-GISEL-FAKE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-FAKE16-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f16(i32 %node_ptr, float %ray_extent, <3 x float> %ray_origin, <3 x half> %ray_dir, <3 x half> %ray_inv_dir, <4 x i32> %tdescr)
   %r = bitcast <4 x i32> %v to <4 x float>
@@ -152,13 +226,13 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray(<2 x i32> %node_ptr_vec,
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
   %node_ptr = bitcast <2 x i32> %node_ptr_vec to i64
-  %ray_origin0 = insertelement <3 x float> undef, float %ray_origin_x, i32 0
+  %ray_origin0 = insertelement <3 x float> poison, float %ray_origin_x, i32 0
   %ray_origin1 = insertelement <3 x float> %ray_origin0, float %ray_origin_y, i32 1
   %ray_origin = insertelement <3 x float> %ray_origin1, float %ray_origin_z, i32 2
-  %ray_dir0 = insertelement <3 x float> undef, float %ray_dir_x, i32 0
+  %ray_dir0 = insertelement <3 x float> poison, float %ray_dir_x, i32 0
   %ray_dir1 = insertelement <3 x float> %ray_dir0, float %ray_dir_y, i32 1
   %ray_dir = insertelement <3 x float> %ray_dir1, float %ray_dir_z, i32 2
-  %ray_inv_dir0 = insertelement <3 x float> undef, float %ray_inv_dir_x, i32 0
+  %ray_inv_dir0 = insertelement <3 x float> poison, float %ray_inv_dir_x, i32 0
   %ray_inv_dir1 = insertelement <3 x float> %ray_inv_dir0, float %ray_inv_dir_y, i32 1
   %ray_inv_dir = insertelement <3 x float> %ray_inv_dir1, float %ray_inv_dir_z, i32 2
   %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f32(i64 %node_ptr, float %ray_extent, <3 x float> %ray_origin, <3 x float> %ray_dir, <3 x float> %ray_inv_dir, <4 x i32> %tdescr)
@@ -189,70 +263,142 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_a16(i64 inreg %node_ptr,
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
-; GFX11-LABEL: image_bvh64_intersect_ray_a16:
-; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_dual_mov_b32 v0, s3 :: v_dual_mov_b32 v1, s4
-; GFX11-NEXT:    v_dual_mov_b32 v2, s5 :: v_dual_mov_b32 v7, s1
-; GFX11-NEXT:    s_lshr_b32 s3, s6, 16
-; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s6, s8
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    v_dual_mov_b32 v6, s0 :: v_dual_mov_b32 v3, s1
-; GFX11-NEXT:    s_lshr_b32 s0, s8, 16
-; GFX11-NEXT:    v_mov_b32_e32 v8, s2
-; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s3, s0
-; GFX11-NEXT:    s_pack_ll_b32_b16 s3, s7, s9
-; GFX11-NEXT:    v_dual_mov_b32 v4, s0 :: v_dual_mov_b32 v5, s3
-; GFX11-NEXT:    s_mov_b32 s15, s13
-; GFX11-NEXT:    s_mov_b32 s14, s12
-; GFX11-NEXT:    s_mov_b32 s13, s11
-; GFX11-NEXT:    s_mov_b32 s12, s10
-; GFX11-NEXT:    image_bvh64_intersect_ray v[0:3], [v[6:7], v8, v[0:2], v[3:5]], s[12:15] a16
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    ; return to shader part epilog
+; GFX11-TRUE16-LABEL: image_bvh64_intersect_ray_a16:
+; GFX11-TRUE16:       ; %bb.0: ; %main_body
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, s3 :: v_dual_mov_b32 v1, s4
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v6, s0
+; GFX11-TRUE16-NEXT:    s_lshr_b32 s0, s8, 16
+; GFX11-TRUE16-NEXT:    s_lshr_b32 s3, s6, 16
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v2, s5 :: v_dual_mov_b32 v7, s1
+; GFX11-TRUE16-NEXT:    s_pack_ll_b32_b16 s0, s3, s0
+; GFX11-TRUE16-NEXT:    s_mov_b32 s1, s7
+; GFX11-TRUE16-NEXT:    s_mov_b32 s3, s6
+; GFX11-TRUE16-NEXT:    s_mov_b32 s4, s8
+; GFX11-TRUE16-NEXT:    s_mov_b32 s5, s9
+; GFX11-TRUE16-NEXT:    s_pack_ll_b32_b16 s3, s3, s4
+; GFX11-TRUE16-NEXT:    s_pack_ll_b32_b16 s1, s1, s5
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v3, s3 :: v_dual_mov_b32 v4, s0
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v5, s1 :: v_dual_mov_b32 v8, s2
+; GFX11-TRUE16-NEXT:    s_mov_b32 s15, s13
+; GFX11-TRUE16-NEXT:    s_mov_b32 s14, s12
+; GFX11-TRUE16-NEXT:    s_mov_b32 s13, s11
+; GFX11-TRUE16-NEXT:    s_mov_b32 s12, s10
+; GFX11-TRUE16-NEXT:    image_bvh64_intersect_ray v[0:3], [v[6:7], v8, v[0:2], v[3:5]], s[12:15] a16
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
-; GFX12-SDAG-LABEL: image_bvh64_intersect_ray_a16:
-; GFX12-SDAG:       ; %bb.0: ; %main_body
-; GFX12-SDAG-NEXT:    v_dual_mov_b32 v0, s3 :: v_dual_mov_b32 v1, s4
-; GFX12-SDAG-NEXT:    v_dual_mov_b32 v2, s5 :: v_dual_mov_b32 v7, s1
-; GFX12-SDAG-NEXT:    s_lshr_b32 s3, s6, 16
-; GFX12-SDAG-NEXT:    s_pack_ll_b32_b16 s1, s6, s8
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
-; GFX12-SDAG-NEXT:    v_dual_mov_b32 v6, s0 :: v_dual_mov_b32 v3, s1
-; GFX12-SDAG-NEXT:    s_lshr_b32 s0, s8, 16
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v8, s2
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
-; GFX12-SDAG-NEXT:    s_pack_ll_b32_b16 s0, s3, s0
-; GFX12-SDAG-NEXT:    s_pack_ll_b32_b16 s3, s7, s9
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
-; GFX12-SDAG-NEXT:    v_dual_mov_b32 v4, s0 :: v_dual_mov_b32 v5, s3
-; GFX12-SDAG-NEXT:    s_mov_b32 s15, s13
-; GFX12-SDAG-NEXT:    s_mov_b32 s14, s12
-; GFX12-SDAG-NEXT:    s_mov_b32 s13, s11
-; GFX12-SDAG-NEXT:    s_mov_b32 s12, s10
-; GFX12-SDAG-NEXT:    image_bvh64_intersect_ray v[0:3], [v[6:7], v8, v[0:2], v[3:5]], s[12:15] a16
-; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-SDAG-NEXT:    ; return to shader part epilog
+; GFX11-FAKE16-LABEL: image_bvh64_intersect_ray_a16:
+; GFX11-FAKE16:       ; %bb.0: ; %main_body
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v0, s3 :: v_dual_mov_b32 v1, s4
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v2, s5 :: v_dual_mov_b32 v7, s1
+; GFX11-FAKE16-NEXT:    s_lshr_b32 s3, s6, 16
+; GFX11-FAKE16-NEXT:    s_pack_ll_b32_b16 s1, s6, s8
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v6, s0 :: v_dual_mov_b32 v3, s1
+; GFX11-FAKE16-NEXT:    s_lshr_b32 s0, s8, 16
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v8, s2
+; GFX11-FAKE16-NEXT:    s_pack_ll_b32_b16 s0, s3, s0
+; GFX11-FAKE16-NEXT:    s_pack_ll_b32_b16 s3, s7, s9
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v4, s0 :: v_dual_mov_b32 v5, s3
+; GFX11-FAKE16-NEXT:    s_mov_b32 s15, s13
+; GFX11-FAKE16-NEXT:    s_mov_b32 s14, s12
+; GFX11-FAKE16-NEXT:    s_mov_b32 s13, s11
+; GFX11-FAKE16-NEXT:    s_mov_b32 s12, s10
+; GFX11-FAKE16-NEXT:    image_bvh64_intersect_ray v[0:3], [v[6:7], v8, v[0:2], v[3:5]], s[12:15] a16
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    ; return to shader part epilog
 ;
-; GFX12-GISEL-LABEL: image_bvh64_intersect_ray_a16:
-; GFX12-GISEL:       ; %bb.0: ; %main_body
-; GFX12-GISEL-NEXT:    s_mov_b32 s20, s3
-; GFX12-GISEL-NEXT:    s_mov_b32 s21, s4
-; GFX12-GISEL-NEXT:    s_pack_ll_b32_b16 s4, s8, s6
-; GFX12-GISEL-NEXT:    s_mov_b32 s22, s5
-; GFX12-GISEL-NEXT:    s_pack_hh_b32_b16 s5, s8, s6
-; GFX12-GISEL-NEXT:    s_pack_ll_b32_b16 s6, s9, s7
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s20 :: v_dual_mov_b32 v3, s4
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v7, s1 :: v_dual_mov_b32 v6, s0
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v8, s2 :: v_dual_mov_b32 v1, s21
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v2, s22 :: v_dual_mov_b32 v5, s6
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v4, s5
-; GFX12-GISEL-NEXT:    s_mov_b32 s16, s10
-; GFX12-GISEL-NEXT:    s_mov_b32 s17, s11
-; GFX12-GISEL-NEXT:    s_mov_b32 s18, s12
-; GFX12-GISEL-NEXT:    s_mov_b32 s19, s13
-; GFX12-GISEL-NEXT:    image_bvh64_intersect_ray v[0:3], [v[6:7], v8, v[0:2], v[3:5]], s[16:19] a16
-; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-GISEL-NEXT:    ; return to shader part epilog
+; GFX12-SDAG-TRUE16-LABEL: image_bvh64_intersect_ray_a16:
+; GFX12-SDAG-TRUE16:       ; %bb.0: ; %main_body
+; GFX12-SDAG-TRUE16-NEXT:    v_dual_mov_b32 v0, s3 :: v_dual_mov_b32 v1, s4
+; GFX12-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v6, s0
+; GFX12-SDAG-TRUE16-NEXT:    s_lshr_b32 s0, s8, 16
+; GFX12-SDAG-TRUE16-NEXT:    s_lshr_b32 s3, s6, 16
+; GFX12-SDAG-TRUE16-NEXT:    v_dual_mov_b32 v2, s5 :: v_dual_mov_b32 v7, s1
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-TRUE16-NEXT:    s_pack_ll_b32_b16 s0, s3, s0
+; GFX12-SDAG-TRUE16-NEXT:    s_mov_b32 s1, s7
+; GFX12-SDAG-TRUE16-NEXT:    s_mov_b32 s3, s6
+; GFX12-SDAG-TRUE16-NEXT:    s_mov_b32 s4, s8
+; GFX12-SDAG-TRUE16-NEXT:    s_mov_b32 s5, s9
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-TRUE16-NEXT:    s_pack_ll_b32_b16 s3, s3, s4
+; GFX12-SDAG-TRUE16-NEXT:    s_pack_ll_b32_b16 s1, s1, s5
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-TRUE16-NEXT:    v_dual_mov_b32 v3, s3 :: v_dual_mov_b32 v4, s0
+; GFX12-SDAG-TRUE16-NEXT:    v_dual_mov_b32 v5, s1 :: v_dual_mov_b32 v8, s2
+; GFX12-SDAG-TRUE16-NEXT:    s_mov_b32 s15, s13
+; GFX12-SDAG-TRUE16-NEXT:    s_mov_b32 s14, s12
+; GFX12-SDAG-TRUE16-NEXT:    s_mov_b32 s13, s11
+; GFX12-SDAG-TRUE16-NEXT:    s_mov_b32 s12, s10
+; GFX12-SDAG-TRUE16-NEXT:    image_bvh64_intersect_ray v[0:3], [v[6:7], v8, v[0:2], v[3:5]], s[12:15] a16
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX12-SDAG-FAKE16-LABEL: image_bvh64_intersect_ray_a16:
+; GFX12-SDAG-FAKE16:       ; %bb.0: ; %main_body
+; GFX12-SDAG-FAKE16-NEXT:    v_dual_mov_b32 v0, s3 :: v_dual_mov_b32 v1, s4
+; GFX12-SDAG-FAKE16-NEXT:    v_dual_mov_b32 v2, s5 :: v_dual_mov_b32 v7, s1
+; GFX12-SDAG-FAKE16-NEXT:    s_lshr_b32 s3, s6, 16
+; GFX12-SDAG-FAKE16-NEXT:    s_pack_ll_b32_b16 s1, s6, s8
+; GFX12-SDAG-FAKE16-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-FAKE16-NEXT:    v_dual_mov_b32 v6, s0 :: v_dual_mov_b32 v3, s1
+; GFX12-SDAG-FAKE16-NEXT:    s_lshr_b32 s0, s8, 16
+; GFX12-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v8, s2
+; GFX12-SDAG-FAKE16-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-FAKE16-NEXT:    s_pack_ll_b32_b16 s0, s3, s0
+; GFX12-SDAG-FAKE16-NEXT:    s_pack_ll_b32_b16 s3, s7, s9
+; GFX12-SDAG-FAKE16-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-FAKE16-NEXT:    v_dual_mov_b32 v4, s0 :: v_dual_mov_b32 v5, s3
+; GFX12-SDAG-FAKE16-NEXT:    s_mov_b32 s15, s13
+; GFX12-SDAG-FAKE16-NEXT:    s_mov_b32 s14, s12
+; GFX12-SDAG-FAKE16-NEXT:    s_mov_b32 s13, s11
+; GFX12-SDAG-FAKE16-NEXT:    s_mov_b32 s12, s10
+; GFX12-SDAG-FAKE16-NEXT:    image_bvh64_intersect_ray v[0:3], [v[6:7], v8, v[0:2], v[3:5]], s[12:15] a16
+; GFX12-SDAG-FAKE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-FAKE16-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-TRUE16-LABEL: image_bvh64_intersect_ray_a16:
+; GFX12-GISEL-TRUE16:       ; %bb.0: ; %main_body
+; GFX12-GISEL-TRUE16-NEXT:    s_mov_b32 s21, s4
+; GFX12-GISEL-TRUE16-NEXT:    s_pack_ll_b32_b16 s4, s8, s6
+; GFX12-GISEL-TRUE16-NEXT:    s_mov_b32 s20, s3
+; GFX12-GISEL-TRUE16-NEXT:    s_mov_b32 s22, s5
+; GFX12-GISEL-TRUE16-NEXT:    s_pack_ll_b32_b16 s6, s9, s7
+; GFX12-GISEL-TRUE16-NEXT:    s_mov_b32 s5, s4
+; GFX12-GISEL-TRUE16-NEXT:    v_dual_mov_b32 v0, s20 :: v_dual_mov_b32 v3, s4
+; GFX12-GISEL-TRUE16-NEXT:    v_dual_mov_b32 v7, s1 :: v_dual_mov_b32 v6, s0
+; GFX12-GISEL-TRUE16-NEXT:    v_dual_mov_b32 v8, s2 :: v_dual_mov_b32 v1, s21
+; GFX12-GISEL-TRUE16-NEXT:    v_dual_mov_b32 v2, s22 :: v_dual_mov_b32 v5, s6
+; GFX12-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v4, s5
+; GFX12-GISEL-TRUE16-NEXT:    s_mov_b32 s16, s10
+; GFX12-GISEL-TRUE16-NEXT:    s_mov_b32 s17, s11
+; GFX12-GISEL-TRUE16-NEXT:    s_mov_b32 s18, s12
+; GFX12-GISEL-TRUE16-NEXT:    s_mov_b32 s19, s13
+; GFX12-GISEL-TRUE16-NEXT:    image_bvh64_intersect_ray v[0:3], [v[6:7], v8, v[0:2], v[3:5]], s[16:19] a16
+; GFX12-GISEL-TRUE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-FAKE16-LABEL: image_bvh64_intersect_ray_a16:
+; GFX12-GISEL-FAKE16:       ; %bb.0: ; %main_body
+; GFX12-GISEL-FAKE16-NEXT:    s_mov_b32 s20, s3
+; GFX12-GISEL-FAKE16-NEXT:    s_mov_b32 s21, s4
+; GFX12-GISEL-FAKE16-NEXT:    s_pack_ll_b32_b16 s4, s8, s6
+; GFX12-GISEL-FAKE16-NEXT:    s_mov_b32 s22, s5
+; GFX12-GISEL-FAKE16-NEXT:    s_pack_hh_b32_b16 s5, s8, s6
+; GFX12-GISEL-FAKE16-NEXT:    s_pack_ll_b32_b16 s6, s9, s7
+; GFX12-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v0, s20 :: v_dual_mov_b32 v3, s4
+; GFX12-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v7, s1 :: v_dual_mov_b32 v6, s0
+; GFX12-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v8, s2 :: v_dual_mov_b32 v1, s21
+; GFX12-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v2, s22 :: v_dual_mov_b32 v5, s6
+; GFX12-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v4, s5
+; GFX12-GISEL-FAKE16-NEXT:    s_mov_b32 s16, s10
+; GFX12-GISEL-FAKE16-NEXT:    s_mov_b32 s17, s11
+; GFX12-GISEL-FAKE16-NEXT:    s_mov_b32 s18, s12
+; GFX12-GISEL-FAKE16-NEXT:    s_mov_b32 s19, s13
+; GFX12-GISEL-FAKE16-NEXT:    image_bvh64_intersect_ray v[0:3], [v[6:7], v8, v[0:2], v[3:5]], s[16:19] a16
+; GFX12-GISEL-FAKE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-FAKE16-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f16(i64 %node_ptr, float %ray_extent, <3 x float> %ray_origin, <3 x half> %ray_dir, <3 x half> %ray_inv_dir, <4 x i32> %tdescr)
   %r = bitcast <4 x i32> %v to <4 x float>
@@ -352,9 +498,10 @@ define amdgpu_kernel void @image_bvh_intersect_ray_nsa_reassign(ptr %p_node_ptr,
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v4, 4.0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    v_add_co_u32 v0, s0, s0, v2
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, 0, s0
 ; GFX12-SDAG-NEXT:    v_add_co_u32 v2, s0, s2, v2
+; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-SDAG-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s0
 ; GFX12-SDAG-NEXT:    flat_load_b32 v9, v[0:1]
 ; GFX12-SDAG-NEXT:    flat_load_b32 v10, v[2:3]
@@ -387,11 +534,12 @@ define amdgpu_kernel void @image_bvh_intersect_ray_nsa_reassign(ptr %p_node_ptr,
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-GISEL-NEXT:    s_mov_b32 s0, 0
 ; GFX12-GISEL-NEXT:    s_mov_b32 s1, 1.0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
-; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
-; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
+; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; GFX12-GISEL-NEXT:    flat_load_b32 v9, v[0:1]
 ; GFX12-GISEL-NEXT:    flat_load_b32 v10, v[2:3]
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
@@ -409,17 +557,17 @@ main_body:
   %node_ptr = load i32, ptr %gep_node_ptr, align 4
   %gep_ray = getelementptr inbounds float, ptr %p_ray, i32 %lid
   %ray_extent = load float, ptr %gep_ray, align 4
-  %ray_origin0 = insertelement <3 x float> undef, float 0.0, i32 0
+  %ray_origin0 = insertelement <3 x float> poison, float 0.0, i32 0
   %ray_origin1 = insertelement <3 x float> %ray_origin0, float 1.0, i32 1
   %ray_origin = insertelement <3 x float> %ray_origin1, float 2.0, i32 2
-  %ray_dir0 = insertelement <3 x float> undef, float 3.0, i32 0
+  %ray_dir0 = insertelement <3 x float> poison, float 3.0, i32 0
   %ray_dir1 = insertelement <3 x float> %ray_dir0, float 4.0, i32 1
   %ray_dir = insertelement <3 x float> %ray_dir1, float 5.0, i32 2
-  %ray_inv_dir0 = insertelement <3 x float> undef, float 6.0, i32 0
+  %ray_inv_dir0 = insertelement <3 x float> poison, float 6.0, i32 0
   %ray_inv_dir1 = insertelement <3 x float> %ray_inv_dir0, float 7.0, i32 1
   %ray_inv_dir = insertelement <3 x float> %ray_inv_dir1, float 8.0, i32 2
   %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f32(i32 %node_ptr, float %ray_extent, <3 x float> %ray_origin, <3 x float> %ray_dir, <3 x float> %ray_inv_dir, <4 x i32> %tdescr)
-  store <4 x i32> %v, ptr undef
+  store <4 x i32> %v, ptr poison
   ret void
 }
 
@@ -503,9 +651,10 @@ define amdgpu_kernel void @image_bvh_intersect_ray_a16_nsa_reassign(ptr %p_node_
 ; GFX12-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    v_add_co_u32 v0, s0, s0, v2
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, 0, s0
 ; GFX12-SDAG-NEXT:    v_add_co_u32 v2, s0, s2, v2
+; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-SDAG-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s0
 ; GFX12-SDAG-NEXT:    flat_load_b32 v6, v[0:1]
 ; GFX12-SDAG-NEXT:    flat_load_b32 v7, v[2:3]
@@ -533,11 +682,12 @@ define amdgpu_kernel void @image_bvh_intersect_ray_a16_nsa_reassign(ptr %p_node_
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-GISEL-NEXT:    s_mov_b32 s0, 0
 ; GFX12-GISEL-NEXT:    s_mov_b32 s1, 1.0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
-; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
-; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
+; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; GFX12-GISEL-NEXT:    flat_load_b32 v6, v[0:1]
 ; GFX12-GISEL-NEXT:    flat_load_b32 v7, v[2:3]
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
@@ -555,17 +705,17 @@ main_body:
   %node_ptr = load i32, ptr %gep_node_ptr, align 4
   %gep_ray = getelementptr inbounds float, ptr %p_ray, i32 %lid
   %ray_extent = load float, ptr %gep_ray, align 4
-  %ray_origin0 = insertelement <3 x float> undef, float 0.0, i32 0
+  %ray_origin0 = insertelement <3 x float> poison, float 0.0, i32 0
   %ray_origin1 = insertelement <3 x float> %ray_origin0, float 1.0, i32 1
   %ray_origin = insertelement <3 x float> %ray_origin1, float 2.0, i32 2
-  %ray_dir0 = insertelement <3 x half> undef, half 3.0, i32 0
+  %ray_dir0 = insertelement <3 x half> poison, half 3.0, i32 0
   %ray_dir1 = insertelement <3 x half> %ray_dir0, half 4.0, i32 1
   %ray_dir = insertelement <3 x half> %ray_dir1, half 5.0, i32 2
-  %ray_inv_dir0 = insertelement <3 x half> undef, half 6.0, i32 0
+  %ray_inv_dir0 = insertelement <3 x half> poison, half 6.0, i32 0
   %ray_inv_dir1 = insertelement <3 x half> %ray_inv_dir0, half 7.0, i32 1
   %ray_inv_dir = insertelement <3 x half> %ray_inv_dir1, half 8.0, i32 2
   %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f16(i32 %node_ptr, float %ray_extent, <3 x float> %ray_origin, <3 x half> %ray_dir, <3 x half> %ray_inv_dir, <4 x i32> %tdescr)
-  store <4 x i32> %v, ptr undef
+  store <4 x i32> %v, ptr poison
   ret void
 }
 
@@ -700,9 +850,9 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_nsa_reassign(ptr %p_ray, <4
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v5, s10 :: v_dual_mov_b32 v0, s6
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX12-GISEL-NEXT:    s_mov_b32 s6, 2.0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
-; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX12-GISEL-NEXT:    flat_load_b32 v11, v[0:1]
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
@@ -716,17 +866,17 @@ main_body:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep_ray = getelementptr inbounds float, ptr %p_ray, i32 %lid
   %ray_extent = load float, ptr %gep_ray, align 4
-  %ray_origin0 = insertelement <3 x float> undef, float 0.0, i32 0
+  %ray_origin0 = insertelement <3 x float> poison, float 0.0, i32 0
   %ray_origin1 = insertelement <3 x float> %ray_origin0, float 1.0, i32 1
   %ray_origin = insertelement <3 x float> %ray_origin1, float 2.0, i32 2
-  %ray_dir0 = insertelement <3 x float> undef, float 3.0, i32 0
+  %ray_dir0 = insertelement <3 x float> poison, float 3.0, i32 0
   %ray_dir1 = insertelement <3 x float> %ray_dir0, float 4.0, i32 1
   %ray_dir = insertelement <3 x float> %ray_dir1, float 5.0, i32 2
-  %ray_inv_dir0 = insertelement <3 x float> undef, float 6.0, i32 0
+  %ray_inv_dir0 = insertelement <3 x float> poison, float 6.0, i32 0
   %ray_inv_dir1 = insertelement <3 x float> %ray_inv_dir0, float 7.0, i32 1
   %ray_inv_dir = insertelement <3 x float> %ray_inv_dir1, float 8.0, i32 2
   %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f32(i64 1111111111111, float %ray_extent, <3 x float> %ray_origin, <3 x float> %ray_dir, <3 x float> %ray_inv_dir, <4 x i32> %tdescr)
-  store <4 x i32> %v, ptr undef
+  store <4 x i32> %v, ptr poison
   ret void
 }
 
@@ -850,9 +1000,9 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_a16_nsa_reassign(ptr %p_ray
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s6 :: v_dual_mov_b32 v1, s7
 ; GFX12-GISEL-NEXT:    s_mov_b32 s6, 2.0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
-; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX12-GISEL-NEXT:    flat_load_b32 v8, v[0:1]
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
@@ -866,17 +1016,17 @@ main_body:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep_ray = getelementptr inbounds float, ptr %p_ray, i32 %lid
   %ray_extent = load float, ptr %gep_ray, align 4
-  %ray_origin0 = insertelement <3 x float> undef, float 0.0, i32 0
+  %ray_origin0 = insertelement <3 x float> poison, float 0.0, i32 0
   %ray_origin1 = insertelement <3 x float> %ray_origin0, float 1.0, i32 1
   %ray_origin = insertelement <3 x float> %ray_origin1, float 2.0, i32 2
-  %ray_dir0 = insertelement <3 x half> undef, half 3.0, i32 0
+  %ray_dir0 = insertelement <3 x half> poison, half 3.0, i32 0
   %ray_dir1 = insertelement <3 x half> %ray_dir0, half 4.0, i32 1
   %ray_dir = insertelement <3 x half> %ray_dir1, half 5.0, i32 2
-  %ray_inv_dir0 = insertelement <3 x half> undef, half 6.0, i32 0
+  %ray_inv_dir0 = insertelement <3 x half> poison, half 6.0, i32 0
   %ray_inv_dir1 = insertelement <3 x half> %ray_inv_dir0, half 7.0, i32 1
   %ray_inv_dir = insertelement <3 x half> %ray_inv_dir1, half 8.0, i32 2
   %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f16(i64 1111111111110, float %ray_extent, <3 x float> %ray_origin, <3 x half> %ray_dir, <3 x half> %ray_inv_dir, <4 x i32> %tdescr)
-  store <4 x i32> %v, ptr undef
+  store <4 x i32> %v, ptr poison
   ret void
 }
 

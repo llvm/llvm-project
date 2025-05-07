@@ -261,6 +261,11 @@ static cl::opt<bool>
     GCEmptyBlocks("gc-empty-basic-blocks", cl::init(false), cl::Hidden,
                   cl::desc("Enable garbage-collecting empty basic blocks"));
 
+static cl::opt<bool>
+    SplitStaticData("split-static-data", cl::Hidden, cl::init(false),
+                    cl::desc("Split static data sections into hot and cold "
+                             "sections using profile information"));
+
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.
 /// i.e. -disable-mypass=false has no effect.
@@ -319,7 +324,7 @@ static IdentifyingPassPtr overridePass(AnalysisID StandardID,
   if (StandardID == &MachineLICMID)
     return applyDisable(TargetID, DisablePostRAMachineLICM);
 
-  if (StandardID == &MachineSinkingID)
+  if (StandardID == &MachineSinkingLegacyID)
     return applyDisable(TargetID, DisableMachineSink);
 
   if (StandardID == &PostRAMachineSinkingID)
@@ -579,17 +584,18 @@ TargetPassConfig::TargetPassConfig(TargetMachine &TM, PassManagerBase &PM)
     : ImmutablePass(ID), PM(&PM), TM(&TM) {
   Impl = new PassConfigImpl();
 
+  PassRegistry &PR = *PassRegistry::getPassRegistry();
   // Register all target independent codegen passes to activate their PassIDs,
   // including this pass itself.
-  initializeCodeGen(*PassRegistry::getPassRegistry());
+  initializeCodeGen(PR);
 
   // Also register alias analysis passes required by codegen passes.
-  initializeBasicAAWrapperPassPass(*PassRegistry::getPassRegistry());
-  initializeAAResultsWrapperPassPass(*PassRegistry::getPassRegistry());
+  initializeBasicAAWrapperPassPass(PR);
+  initializeAAResultsWrapperPassPass(PR);
 
-  if (EnableIPRA.getNumOccurrences())
+  if (EnableIPRA.getNumOccurrences()) {
     TM.Options.EnableIPRA = EnableIPRA;
-  else {
+  } else {
     // If not explicitly specified, use target default.
     TM.Options.EnableIPRA |= TM.useIPRA();
   }
@@ -1012,7 +1018,7 @@ bool TargetPassConfig::addCoreISelPasses() {
   if (Selector != SelectorType::GlobalISel || !isGlobalISelAbortEnabled())
     DebugifyIsSafe = false;
 
-  // Add instruction selector passes.
+  // Add instruction selector passes for global isel if enabled.
   if (Selector == SelectorType::GlobalISel) {
     SaveAndRestore SavedAddingMachinePasses(AddingMachinePasses, true);
     if (addIRTranslator())
@@ -1034,18 +1040,19 @@ bool TargetPassConfig::addCoreISelPasses() {
 
     if (addGlobalInstructionSelect())
       return true;
+  }
 
-    // Pass to reset the MachineFunction if the ISel failed.
+  // Pass to reset the MachineFunction if the ISel failed. Outside of the above
+  // if so that the verifier is not added to it.
+  if (Selector == SelectorType::GlobalISel)
     addPass(createResetMachineFunctionPass(
         reportDiagnosticWhenGlobalISelFallback(), isGlobalISelAbortEnabled()));
 
-    // Provide a fallback path when we do not want to abort on
-    // not-yet-supported input.
-    if (!isGlobalISelAbortEnabled() && addInstSelector())
+  // Run the SDAG InstSelector, providing a fallback path when we do not want to
+  // abort on not-yet-supported input.
+  if (Selector != SelectorType::GlobalISel || !isGlobalISelAbortEnabled())
+    if (addInstSelector())
       return true;
-
-  } else if (addInstSelector())
-    return true;
 
   // Expand pseudo-instructions emitted by ISel. Don't run the verifier before
   // FinalizeISel.
@@ -1064,7 +1071,7 @@ bool TargetPassConfig::addISelPasses() {
   PM->add(createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
   addPass(createPreISelIntrinsicLoweringPass());
   addPass(createExpandLargeDivRemPass());
-  addPass(createExpandLargeFpConvertPass());
+  addPass(createExpandFpPass());
   addIRPasses();
   addCodeGenPrepare();
   addPassesToHandleExceptions();
@@ -1229,13 +1236,9 @@ void TargetPassConfig::addMachinePasses() {
     addPass(createMIRAddFSDiscriminatorsPass(
         sampleprof::FSDiscriminatorPass::PassLast));
 
-  // Machine function splitter uses the basic block sections feature.
-  // When used along with `-basic-block-sections=`, the basic-block-sections
-  // feature takes precedence. This means functions eligible for
-  // basic-block-sections optimizations (`=all`, or `=list=` with function
-  // included in the list profile) will get that optimization instead.
   if (TM->Options.EnableMachineFunctionSplitter ||
-      EnableMachineFunctionSplitter) {
+      EnableMachineFunctionSplitter || SplitStaticData ||
+      TM->Options.EnableStaticDataPartitioning) {
     const std::string ProfileFile = getFSProfileFile(TM);
     if (!ProfileFile.empty()) {
       if (EnableFSDiscriminator) {
@@ -1250,7 +1253,23 @@ void TargetPassConfig::addMachinePasses() {
                "performance.\n";
       }
     }
+  }
+
+  // Machine function splitter uses the basic block sections feature.
+  // When used along with `-basic-block-sections=`, the basic-block-sections
+  // feature takes precedence. This means functions eligible for
+  // basic-block-sections optimizations (`=all`, or `=list=` with function
+  // included in the list profile) will get that optimization instead.
+  if (TM->Options.EnableMachineFunctionSplitter ||
+      EnableMachineFunctionSplitter)
     addPass(createMachineFunctionSplitterPass());
+
+  if (SplitStaticData || TM->Options.EnableStaticDataPartitioning) {
+    // The static data splitter pass is a machine function pass. and
+    // static data annotator pass is a module-wide pass. See the file comment
+    // in StaticDataAnnotator.cpp for the motivation.
+    addPass(createStaticDataSplitterPass());
+    addPass(createStaticDataAnnotatorPass());
   }
   // We run the BasicBlockSections pass if either we need BB sections or BB
   // address map (or both).
@@ -1308,7 +1327,7 @@ void TargetPassConfig::addMachineSSAOptimization() {
   addPass(&EarlyMachineLICMID);
   addPass(&MachineCSELegacyID);
 
-  addPass(&MachineSinkingID);
+  addPass(&MachineSinkingLegacyID);
 
   addPass(&PeepholeOptimizerLegacyID);
   // Clean-up the dead code that may have been generated by peephole

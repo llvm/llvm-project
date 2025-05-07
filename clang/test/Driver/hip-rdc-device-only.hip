@@ -88,7 +88,7 @@
 // COMMON-SAME: {{.*}} {{".*a.cu"}}
 
 // COMMON: "{{.*}}clang-offload-bundler" "-type={{(bc|ll)}}"
-// COMMON-SAME: "-targets=hip-amdgcn-amd-amdhsa-gfx803,hip-amdgcn-amd-amdhsa-gfx900"
+// COMMON-SAME: "-targets=hip-amdgcn-amd-amdhsa-unknown-gfx803,hip-amdgcn-amd-amdhsa-unknown-gfx900"
 // COMMON-SAME: "-output=a-hip-amdgcn-amd-amdhsa.{{(bc|ll)}}"
 
 // COMMON: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
@@ -118,7 +118,7 @@
 // COMMON-SAME: {{.*}} {{".*b.hip"}}
 
 // COMMON: "{{.*}}clang-offload-bundler" "-type={{(bc|ll)}}"
-// COMMON-SAME: "-targets=hip-amdgcn-amd-amdhsa-gfx803,hip-amdgcn-amd-amdhsa-gfx900"
+// COMMON-SAME: "-targets=hip-amdgcn-amd-amdhsa-unknown-gfx803,hip-amdgcn-amd-amdhsa-unknown-gfx900"
 // COMMON-SAME: "-output=b-hip-amdgcn-amd-amdhsa.{{(bc|ll)}}"
 
 // SAVETEMP: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
@@ -148,7 +148,7 @@
 // SAVETEMP-SAME: {{.*}} "-o" {{"a.*.ll"}} "-x" "ir" [[A_GFX900_TMP_BC]]
 
 // SAVETEMP: "{{.*}}clang-offload-bundler" "-type=ll"
-// SAVETEMP-SAME: "-targets=hip-amdgcn-amd-amdhsa-gfx803,hip-amdgcn-amd-amdhsa-gfx900"
+// SAVETEMP-SAME: "-targets=hip-amdgcn-amd-amdhsa-unknown-gfx803,hip-amdgcn-amd-amdhsa-unknown-gfx900"
 // SAVETEMP-SAME: "-output=a-hip-amdgcn-amd-amdhsa.ll"
 
 // SAVETEMP: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
@@ -178,7 +178,7 @@
 // SAVETEMP-SAME: {{.*}} "-o" {{"b.*.ll"}} "-x" "ir" [[B_GFX900_TMP_BC]]
 
 // SAVETEMP: "{{.*}}clang-offload-bundler" "-type=ll"
-// SAVETEMP-SAME: "-targets=hip-amdgcn-amd-amdhsa-gfx803,hip-amdgcn-amd-amdhsa-gfx900"
+// SAVETEMP-SAME: "-targets=hip-amdgcn-amd-amdhsa-unknown-gfx803,hip-amdgcn-amd-amdhsa-unknown-gfx900"
 // SAVETEMP-SAME: "-output=b-hip-amdgcn-amd-amdhsa.ll"
 
 // FAIL: error: cannot specify -o when generating multiple output files

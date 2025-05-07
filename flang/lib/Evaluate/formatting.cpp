@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Evaluate/formatting.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Evaluate/call.h"
 #include "flang/Evaluate/constant.h"
 #include "flang/Evaluate/expression.h"
@@ -16,6 +15,7 @@
 #include "flang/Parser/characters.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
+#include "flang/Support/Fortran.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace Fortran::evaluate {
@@ -129,7 +129,8 @@ llvm::raw_ostream &Constant<Type<TypeCategory::Character, KIND>>::AsFortran(
 llvm::raw_ostream &EmitVar(llvm::raw_ostream &o, const Symbol &symbol,
     std::optional<parser::CharBlock> name = std::nullopt) {
   const auto &renamings{symbol.owner().context().moduleFileOutputRenamings()};
-  if (auto iter{renamings.find(&symbol)}; iter != renamings.end()) {
+  if (auto iter{renamings.find(&symbol.GetUltimate())};
+      iter != renamings.end()) {
     return o << iter->second.ToString();
   } else if (name) {
     return o << name->ToString();

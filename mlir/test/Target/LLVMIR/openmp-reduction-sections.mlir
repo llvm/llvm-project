@@ -50,9 +50,13 @@ llvm.func @sections_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attributes {fir.in
 // CHECK:         %[[VAL_20:.*]] = alloca float, align 4
 // CHECK:         %[[VAL_21:.*]] = alloca [1 x ptr], align 8
 // CHECK:         br label %[[VAL_22:.*]]
-// CHECK:       omp.par.region:                                   ; preds = %[[PAR_ENTRY]]
+
+// CHECK:       [[VAL_22]]:
+// CHECK:         br label %[[PAR_REG:omp.par.region]]
+
+// CHECK:       [[PAR_REG]]:                                   ; preds = %[[VAL_22]]
 // CHECK:         br label %[[VAL_25:.*]]
-// CHECK:       omp.par.region1:                                  ; preds = %[[VAL_22]]
+// CHECK:       omp.par.region1:                                  ; preds = %[[PAR_REG]]
 // CHECK:         br label %[[VAL_26:.*]]
 
 // CHECK:       [[RED_INIT:omp.reduction.init]]:
@@ -140,7 +144,7 @@ llvm.func @sections_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attributes {fir.in
 // CHECK:       omp_section_loop.inc:                             ; preds = %[[VAL_59]]
 // CHECK:         %[[VAL_35]] = add nuw i32 %[[VAL_34]], 1
 // CHECK:         br label %[[VAL_32]]
-// CHECK:       omp.par.outlined.exit.exitStub:                   ; preds = %[[VAL_54]]
+// CHECK:       omp.par.exit.exitStub:                            ; preds = %[[VAL_54]]
 // CHECK:         ret void
 // CHECK:         %[[VAL_70:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_71:.*]], i64 0, i64 0
 // CHECK:         %[[VAL_72:.*]] = load ptr, ptr %[[VAL_70]], align 8

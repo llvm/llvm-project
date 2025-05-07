@@ -802,23 +802,6 @@ define float @maxnum_f32(float %a, float %b) nounwind {
   ret float %1
 }
 
-; TODO: FMINNAN and FMAXNAN aren't handled in
-; SelectionDAGLegalize::ExpandNode.
-
-; declare float @llvm.minimum.f32(float, float)
-
-; define float @fminimum_f32(float %a, float %b) nounwind {
-;   %1 = call float @llvm.minimum.f32(float %a, float %b)
-;   ret float %1
-; }
-
-; declare float @llvm.maximum.f32(float, float)
-
-; define float @fmaximum_f32(float %a, float %b) nounwind {
-;   %1 = call float @llvm.maximum.f32(float %a, float %b)
-;   ret float %1
-; }
-
 declare float @llvm.copysign.f32(float, float)
 
 define float @copysign_f32(float %a, float %b) nounwind {

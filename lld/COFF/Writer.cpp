@@ -76,14 +76,8 @@ static unsigned char dosProgram[] = {
 };
 static_assert(sizeof(dosProgram) % 8 == 0,
               "DOSProgram size must be multiple of 8");
-
-static const int dosStubSize = sizeof(dos_header) + sizeof(dosProgram);
-static_assert(dosStubSize % 8 == 0, "DOSStub size must be multiple of 8");
-static const uint32_t coffHeaderOffset = dosStubSize + sizeof(PEMagic);
-static const uint32_t peHeaderOffset =
-    coffHeaderOffset + sizeof(coff_file_header);
-static const uint32_t dataDirOffset64 =
-    peHeaderOffset + sizeof(pe32plus_header);
+static_assert((sizeof(dos_header) + sizeof(dosProgram)) % 8 == 0,
+              "DOSStub size must be multiple of 8");
 
 static const int numberOfDataDirectory = 16;
 
@@ -210,16 +204,18 @@ struct ChunkRange {
 class Writer {
 public:
   Writer(COFFLinkerContext &c)
-      : buffer(c.e.outputBuffer), delayIdata(c), edata(c), ctx(c) {}
+      : buffer(c.e.outputBuffer), delayIdata(c), ctx(c) {}
   void run();
 
 private:
+  void calculateStubDependentSizes();
   void createSections();
   void createMiscChunks();
   void createImportTables();
   void appendImportThunks();
   void locateImportTables();
   void createExportTable();
+  void mergeSection(const std::map<StringRef, StringRef>::value_type &p);
   void mergeSections();
   void sortECChunks();
   void appendECImportTables();
@@ -244,6 +240,7 @@ private:
   void createRuntimePseudoRelocs();
   void createECChunks();
   void insertCtorDtorSymbols();
+  void insertBssDataStartEndSymbols();
   void markSymbolsWithRelocations(ObjFile *file, SymbolRVASet &usedSymbols);
   void createGuardCFTables();
   void markSymbolsForRVATable(ObjFile *file,
@@ -293,12 +290,9 @@ private:
   IdataContents idata;
   Chunk *importTableStart = nullptr;
   uint64_t importTableSize = 0;
-  Chunk *edataStart = nullptr;
-  Chunk *edataEnd = nullptr;
   Chunk *iatStart = nullptr;
   uint64_t iatSize = 0;
   DelayLoadContents delayIdata;
-  EdataContents edata;
   bool setNoSEHCharacteristic = false;
   uint32_t tlsAlignment = 0;
 
@@ -315,8 +309,14 @@ private:
   uint64_t sizeOfImage;
   uint64_t sizeOfHeaders;
 
+  uint32_t dosStubSize;
+  uint32_t coffHeaderOffset;
+  uint32_t peHeaderOffset;
+  uint32_t dataDirOffset64;
+
   OutputSection *textSec;
   OutputSection *hexpthkSec;
+  OutputSection *bssSec;
   OutputSection *rdataSec;
   OutputSection *buildidSec;
   OutputSection *dataSec;
@@ -345,6 +345,9 @@ private:
 
   // x86_64 .pdata sections on ARM64EC/ARM64X targets.
   ChunkRange hybridPdata;
+
+  // CHPE metadata symbol on ARM64C target.
+  DefinedRegular *chpeSym = nullptr;
 
   COFFLinkerContext &ctx;
 };
@@ -401,6 +404,12 @@ void OutputSection::writeHeaderTo(uint8_t *buf, bool isDebug) {
 
 void OutputSection::addContributingPartialSection(PartialSection *sec) {
   contribSections.push_back(sec);
+}
+
+void OutputSection::splitECChunks() {
+  llvm::stable_sort(chunks, [=](const Chunk *a, const Chunk *b) {
+    return (a->getMachine() != ARM64) < (b->getMachine() != ARM64);
+  });
 }
 
 // Check whether the target address S is in range from a relocation
@@ -575,7 +584,7 @@ bool Writer::createThunks(OutputSection *os, int margin) {
 
 // Create a code map for CHPE metadata.
 void Writer::createECCodeMap() {
-  if (!ctx.symtabEC)
+  if (!ctx.symtab.isEC())
     return;
 
   // Clear the map in case we were're recomputing the map after adding
@@ -611,8 +620,7 @@ void Writer::createECCodeMap() {
 
   closeRange();
 
-  Symbol *tableCountSym =
-      ctx.symtabEC->findUnderscore("__hybrid_code_map_count");
+  Symbol *tableCountSym = ctx.symtab.findUnderscore("__hybrid_code_map_count");
   cast<DefinedAbsolute>(tableCountSym)->setVA(codeMap.size());
 }
 
@@ -728,10 +736,8 @@ void Writer::writePEChecksum() {
   uint32_t *buf = (uint32_t *)buffer->getBufferStart();
   uint32_t size = (uint32_t)(buffer->getBufferSize());
 
-  coff_file_header *coffHeader =
-      (coff_file_header *)((uint8_t *)buf + dosStubSize + sizeof(PEMagic));
-  pe32_header *peHeader =
-      (pe32_header *)((uint8_t *)coffHeader + sizeof(coff_file_header));
+  pe32_header *peHeader = (pe32_header *)((uint8_t *)buf + coffHeaderOffset +
+                                          sizeof(coff_file_header));
 
   uint64_t sum = 0;
   uint32_t count = size;
@@ -762,6 +768,7 @@ void Writer::run() {
     llvm::TimeTraceScope timeScope("Write PE");
     ScopedTimer t1(ctx.codeLayoutTimer);
 
+    calculateStubDependentSizes();
     if (ctx.config.machine == ARM64X)
       ctx.dynamicRelocs = make<DynamicRelocsChunk>();
     createImportTables();
@@ -1035,6 +1042,17 @@ void Writer::sortSections() {
       sortBySectionOrder(it.second->chunks);
 }
 
+void Writer::calculateStubDependentSizes() {
+  if (ctx.config.dosStub)
+    dosStubSize = alignTo(ctx.config.dosStub->getBufferSize(), 8);
+  else
+    dosStubSize = sizeof(dos_header) + sizeof(dosProgram);
+
+  coffHeaderOffset = dosStubSize + sizeof(PEMagic);
+  peHeaderOffset = coffHeaderOffset + sizeof(coff_file_header);
+  dataDirOffset64 = peHeaderOffset + sizeof(pe32plus_header);
+}
+
 // Create output section objects and add them to OutputSections.
 void Writer::createSections() {
   llvm::TimeTraceScope timeScope("Output sections");
@@ -1061,7 +1079,7 @@ void Writer::createSections() {
   textSec = createSection(".text", code | r | x);
   if (isArm64EC(ctx.config.machine))
     hexpthkSec = createSection(".hexpthk", code | r | x);
-  createSection(".bss", bss | r | w);
+  bssSec = createSection(".bss", bss | r | w);
   rdataSec = createSection(".rdata", data | r);
   buildidSec = createSection(".buildid", data | r);
   dataSec = createSection(".data", data | r | w);
@@ -1146,6 +1164,11 @@ void Writer::createSections() {
     sec->addContributingPartialSection(pSec);
   }
 
+  if (ctx.hybridSymtab) {
+    if (OutputSection *sec = findSection(".CRT"))
+      sec->splitECChunks();
+  }
+
   // Finally, move some output sections to the end.
   auto sectionOrder = [&](const OutputSection *s) {
     // Move DISCARDABLE (or non-memory-mapped) sections to the end of file
@@ -1184,10 +1207,12 @@ void Writer::createMiscChunks() {
   }
 
   // Create thunks for locally-dllimported symbols.
-  if (!ctx.symtab.localImportChunks.empty()) {
-    for (Chunk *c : ctx.symtab.localImportChunks)
-      rdataSec->addChunk(c);
-  }
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    if (!symtab.localImportChunks.empty()) {
+      for (Chunk *c : symtab.localImportChunks)
+        rdataSec->addChunk(c);
+    }
+  });
 
   // Create Debug Information Chunks
   debugInfoSec = config->mingw ? buildidSec : rdataSec;
@@ -1206,9 +1231,11 @@ void Writer::createMiscChunks() {
     // if we're ultimately not going to write CodeView data to the PDB.
     buildId = make<CVDebugRecordChunk>(ctx);
     debugRecords.emplace_back(COFF::IMAGE_DEBUG_TYPE_CODEVIEW, buildId);
-    if (Symbol *buildidSym = ctx.symtab.findUnderscore("__buildid"))
-      replaceSymbol<DefinedSynthetic>(buildidSym, buildidSym->getName(),
-                                      buildId, 4);
+    ctx.forEachSymtab([&](SymbolTable &symtab) {
+      if (Symbol *buildidSym = symtab.findUnderscore("__buildid"))
+        replaceSymbol<DefinedSynthetic>(buildidSym, buildidSym->getName(),
+                                        buildId, 4);
+    });
   }
 
   if (config->cetCompat) {
@@ -1235,8 +1262,10 @@ void Writer::createMiscChunks() {
   if (config->autoImport)
     createRuntimePseudoRelocs();
 
-  if (config->mingw)
+  if (config->mingw) {
     insertCtorDtorSymbols();
+    insertBssDataStartEndSymbols();
+  }
 }
 
 // Create .idata section for the DLL-imported symbol table.
@@ -1253,16 +1282,16 @@ void Writer::createImportTables() {
       continue;
 
     std::string dll = StringRef(file->dllName).lower();
-    if (ctx.config.dllOrder.count(dll) == 0)
-      ctx.config.dllOrder[dll] = ctx.config.dllOrder.size();
+    ctx.config.dllOrder.try_emplace(dll, ctx.config.dllOrder.size());
 
     if (file->impSym && !isa<DefinedImportData>(file->impSym))
-      Fatal(ctx) << file->impSym << " was replaced";
+      Fatal(ctx) << file->symtab.printSymbol(file->impSym) << " was replaced";
     DefinedImportData *impSym = cast_or_null<DefinedImportData>(file->impSym);
     if (ctx.config.delayLoads.count(StringRef(file->dllName).lower())) {
       if (!file->thunkSym)
         Fatal(ctx) << "cannot delay-load " << toString(file)
-                   << " due to import of data: " << impSym;
+                   << " due to import of data: "
+                   << file->symtab.printSymbol(impSym);
       delayIdata.add(impSym);
     } else {
       idata.add(impSym);
@@ -1281,7 +1310,8 @@ void Writer::appendImportThunks() {
 
     if (file->thunkSym) {
       if (!isa<DefinedImportThunk>(file->thunkSym))
-        Fatal(ctx) << file->thunkSym << " was replaced";
+        Fatal(ctx) << file->symtab.printSymbol(file->thunkSym)
+                   << " was replaced";
       auto *chunk = cast<DefinedImportThunk>(file->thunkSym)->getChunk();
       if (chunk->live)
         textSec->addChunk(chunk);
@@ -1289,7 +1319,8 @@ void Writer::appendImportThunks() {
 
     if (file->auxThunkSym) {
       if (!isa<DefinedImportThunk>(file->auxThunkSym))
-        Fatal(ctx) << file->auxThunkSym << " was replaced";
+        Fatal(ctx) << file->symtab.printSymbol(file->auxThunkSym)
+                   << " was replaced";
       auto *chunk = cast<DefinedImportThunk>(file->auxThunkSym)->getChunk();
       if (chunk->live)
         textSec->addChunk(chunk);
@@ -1300,8 +1331,7 @@ void Writer::appendImportThunks() {
   }
 
   if (!delayIdata.empty()) {
-    Defined *helper = cast<Defined>(ctx.config.delayLoadHelper);
-    delayIdata.create(helper);
+    delayIdata.create();
     for (Chunk *c : delayIdata.getChunks())
       didatSec->addChunk(c);
     for (Chunk *c : delayIdata.getDataChunks())
@@ -1322,20 +1352,46 @@ void Writer::createExportTable() {
   if (!edataSec->chunks.empty()) {
     // Allow using a custom built export table from input object files, instead
     // of having the linker synthesize the tables.
-    if (ctx.config.hadExplicitExports)
-      Warn(ctx) << "literal .edata sections override exports";
-  } else if (!ctx.config.exports.empty()) {
-    for (Chunk *c : edata.chunks)
-      edataSec->addChunk(c);
+    if (!ctx.hybridSymtab) {
+      ctx.symtab.edataStart = edataSec->chunks.front();
+      ctx.symtab.edataEnd = edataSec->chunks.back();
+    } else {
+      // On hybrid target, split EC and native chunks.
+      llvm::stable_sort(edataSec->chunks, [=](const Chunk *a, const Chunk *b) {
+        return (a->getMachine() != ARM64) < (b->getMachine() != ARM64);
+      });
+
+      for (auto chunk : edataSec->chunks) {
+        if (chunk->getMachine() != ARM64) {
+          ctx.symtab.edataStart = chunk;
+          ctx.symtab.edataEnd = edataSec->chunks.back();
+          break;
+        }
+
+        if (!ctx.hybridSymtab->edataStart)
+          ctx.hybridSymtab->edataStart = chunk;
+        ctx.hybridSymtab->edataEnd = chunk;
+      }
+    }
   }
-  if (!edataSec->chunks.empty()) {
-    edataStart = edataSec->chunks.front();
-    edataEnd = edataSec->chunks.back();
-  }
-  // Warn on exported deleting destructor.
-  for (auto e : ctx.config.exports)
-    if (e.sym && e.sym->getName().starts_with("??_G"))
-      Warn(ctx) << "export of deleting dtor: " << e.sym;
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    if (symtab.edataStart) {
+      if (symtab.hadExplicitExports)
+        Warn(ctx) << "literal .edata sections override exports";
+    } else if (!symtab.exports.empty()) {
+      std::vector<Chunk *> edataChunks;
+      createEdataChunks(symtab, edataChunks);
+      for (Chunk *c : edataChunks)
+        edataSec->addChunk(c);
+      symtab.edataStart = edataChunks.front();
+      symtab.edataEnd = edataChunks.back();
+    }
+
+    // Warn on exported deleting destructor.
+    for (auto e : symtab.exports)
+      if (e.sym && e.sym->getName().starts_with("??_G"))
+        Warn(ctx) << "export of deleting dtor: " << toString(ctx, *e.sym);
+  });
 }
 
 void Writer::removeUnusedSections() {
@@ -1515,6 +1571,30 @@ void Writer::createSymbolAndStringTable() {
   fileSize = alignTo(fileOff, ctx.config.fileAlign);
 }
 
+void Writer::mergeSection(const std::map<StringRef, StringRef>::value_type &p) {
+  StringRef toName = p.second;
+  if (p.first == toName)
+    return;
+  StringSet<> names;
+  while (true) {
+    if (!names.insert(toName).second)
+      Fatal(ctx) << "/merge: cycle found for section '" << p.first << "'";
+    auto i = ctx.config.merge.find(toName);
+    if (i == ctx.config.merge.end())
+      break;
+    toName = i->second;
+  }
+  OutputSection *from = findSection(p.first);
+  OutputSection *to = findSection(toName);
+  if (!from)
+    return;
+  if (!to) {
+    from->name = toName;
+    return;
+  }
+  to->merge(from);
+}
+
 void Writer::mergeSections() {
   llvm::TimeTraceScope timeScope("Merge sections");
   if (!pdataSec->chunks.empty()) {
@@ -1543,28 +1623,16 @@ void Writer::mergeSections() {
   }
 
   for (auto &p : ctx.config.merge) {
-    StringRef toName = p.second;
-    if (p.first == toName)
-      continue;
-    StringSet<> names;
-    while (true) {
-      if (!names.insert(toName).second)
-        Fatal(ctx) << "/merge: cycle found for section '" << p.first << "'";
-      auto i = ctx.config.merge.find(toName);
-      if (i == ctx.config.merge.end())
-        break;
-      toName = i->second;
-    }
-    OutputSection *from = findSection(p.first);
-    OutputSection *to = findSection(toName);
-    if (!from)
-      continue;
-    if (!to) {
-      from->name = toName;
-      continue;
-    }
-    to->merge(from);
+    if (p.first != ".bss")
+      mergeSection(p);
   }
+
+  // Because .bss contains all zeros, it should be merged at the end of
+  // whatever section it is being merged into (usually .data) so that the image
+  // need not actually contain all of the zeros.
+  auto it = ctx.config.merge.find(".bss");
+  if (it != ctx.config.merge.end())
+    mergeSection(*it);
 }
 
 // EC targets may have chunks of various architectures mixed together at this
@@ -1668,21 +1736,37 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   // When run under Windows, the loader looks at AddressOfNewExeHeader and uses
   // the PE header instead.
   Configuration *config = &ctx.config;
+
   uint8_t *buf = buffer->getBufferStart();
   auto *dos = reinterpret_cast<dos_header *>(buf);
-  buf += sizeof(dos_header);
-  dos->Magic[0] = 'M';
-  dos->Magic[1] = 'Z';
-  dos->UsedBytesInTheLastPage = dosStubSize % 512;
-  dos->FileSizeInPages = divideCeil(dosStubSize, 512);
-  dos->HeaderSizeInParagraphs = sizeof(dos_header) / 16;
-
-  dos->AddressOfRelocationTable = sizeof(dos_header);
-  dos->AddressOfNewExeHeader = dosStubSize;
 
   // Write DOS program.
-  memcpy(buf, dosProgram, sizeof(dosProgram));
-  buf += sizeof(dosProgram);
+  if (config->dosStub) {
+    memcpy(buf, config->dosStub->getBufferStart(),
+           config->dosStub->getBufferSize());
+    // MS link.exe accepts an invalid `e_lfanew` (AddressOfNewExeHeader) and
+    // updates it automatically. Replicate the same behaviour.
+    dos->AddressOfNewExeHeader = alignTo(config->dosStub->getBufferSize(), 8);
+    // Unlike MS link.exe, LLD accepts non-8-byte-aligned stubs.
+    // In that case, we add zero paddings ourselves.
+    buf += alignTo(config->dosStub->getBufferSize(), 8);
+  } else {
+    buf += sizeof(dos_header);
+    dos->Magic[0] = 'M';
+    dos->Magic[1] = 'Z';
+    dos->UsedBytesInTheLastPage = dosStubSize % 512;
+    dos->FileSizeInPages = divideCeil(dosStubSize, 512);
+    dos->HeaderSizeInParagraphs = sizeof(dos_header) / 16;
+
+    dos->AddressOfRelocationTable = sizeof(dos_header);
+    dos->AddressOfNewExeHeader = dosStubSize;
+
+    memcpy(buf, dosProgram, sizeof(dosProgram));
+    buf += sizeof(dosProgram);
+  }
+
+  // Make sure DOS stub is aligned to 8 bytes at this point
+  assert((buf - buffer->getBufferStart()) % 8 == 0);
 
   // Write PE magic
   memcpy(buf, PEMagic, sizeof(PEMagic));
@@ -1692,16 +1776,8 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   assert(coffHeaderOffset == buf - buffer->getBufferStart());
   auto *coff = reinterpret_cast<coff_file_header *>(buf);
   buf += sizeof(*coff);
-  switch (config->machine) {
-  case ARM64EC:
-    coff->Machine = AMD64;
-    break;
-  case ARM64X:
-    coff->Machine = ARM64;
-    break;
-  default:
-    coff->Machine = config->machine;
-  }
+  SymbolTable &symtab = ctx.hybridSymtab ? *ctx.hybridSymtab : ctx.symtab;
+  coff->Machine = symtab.isEC() ? AMD64 : symtab.machine;
   coff->NumberOfSections = ctx.outputSections.size();
   coff->Characteristics = IMAGE_FILE_EXECUTABLE_IMAGE;
   if (config->largeAddressAware)
@@ -1748,7 +1824,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   pe->SizeOfImage = sizeOfImage;
   pe->SizeOfHeaders = sizeOfHeaders;
   if (!config->noEntry) {
-    Defined *entry = cast<Defined>(ctx.symtab.entry);
+    Defined *entry = cast<Defined>(symtab.entry);
     pe->AddressOfEntryPoint = entry->getRVA();
     // Pointer to thumb code must have the LSB set, so adjust it.
     if (config->machine == ARMNT)
@@ -1792,10 +1868,11 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
          dataDirOffset64 == buf - buffer->getBufferStart());
   auto *dir = reinterpret_cast<data_directory *>(buf);
   buf += sizeof(*dir) * numberOfDataDirectory;
-  if (edataStart) {
-    dir[EXPORT_TABLE].RelativeVirtualAddress = edataStart->getRVA();
-    dir[EXPORT_TABLE].Size =
-        edataEnd->getRVA() + edataEnd->getSize() - edataStart->getRVA();
+  if (symtab.edataStart) {
+    dir[EXPORT_TABLE].RelativeVirtualAddress = symtab.edataStart->getRVA();
+    dir[EXPORT_TABLE].Size = symtab.edataEnd->getRVA() +
+                             symtab.edataEnd->getSize() -
+                             symtab.edataStart->getRVA();
   }
   if (importTableStart) {
     dir[IMPORT_TABLE].RelativeVirtualAddress = importTableStart->getRVA();
@@ -1826,7 +1903,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
     dir[BASE_RELOCATION_TABLE].RelativeVirtualAddress = relocSec->getRVA();
     dir[BASE_RELOCATION_TABLE].Size = relocSize;
   }
-  if (Symbol *sym = ctx.symtab.findUnderscore("_tls_used")) {
+  if (Symbol *sym = symtab.findUnderscore("_tls_used")) {
     if (Defined *b = dyn_cast<Defined>(sym)) {
       dir[TLS_TABLE].RelativeVirtualAddress = b->getRVA();
       dir[TLS_TABLE].Size = config->is64()
@@ -1838,10 +1915,10 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
     dir[DEBUG_DIRECTORY].RelativeVirtualAddress = debugDirectory->getRVA();
     dir[DEBUG_DIRECTORY].Size = debugDirectory->getSize();
   }
-  if (ctx.symtab.loadConfigSym) {
+  if (symtab.loadConfigSym) {
     dir[LOAD_CONFIG_TABLE].RelativeVirtualAddress =
-        ctx.symtab.loadConfigSym->getRVA();
-    dir[LOAD_CONFIG_TABLE].Size = ctx.symtab.loadConfigSize;
+        symtab.loadConfigSym->getRVA();
+    dir[LOAD_CONFIG_TABLE].Size = symtab.loadConfigSize;
   }
   if (!delayIdata.empty()) {
     dir[DELAY_IMPORT_DESCRIPTOR].RelativeVirtualAddress =
@@ -1928,9 +2005,16 @@ static void maybeAddAddressTakenFunction(SymbolRVASet &addressTakenSyms,
     // Common is always data, so it is ignored.
     break;
   case Symbol::DefinedAbsoluteKind:
-  case Symbol::DefinedSyntheticKind:
     // Absolute is never code, synthetic generally isn't and usually isn't
     // determinable.
+    break;
+  case Symbol::DefinedSyntheticKind:
+    // For EC export thunks, mark both the thunk itself and its target.
+    if (auto expChunk = dyn_cast_or_null<ECExportThunkChunk>(
+            cast<Defined>(s)->getChunk())) {
+      addSymbolToRVASet(addressTakenSyms, cast<Defined>(s));
+      addSymbolToRVASet(addressTakenSyms, expChunk->target);
+    }
     break;
   case Symbol::LazyArchiveKind:
   case Symbol::LazyObjectKind:
@@ -1996,9 +2080,11 @@ void Writer::createGuardCFTables() {
     // with /guard:cf.
     for (ObjFile *file : ctx.objFileInstances) {
       if (file->hasGuardCF()) {
-        Symbol *flagSym = ctx.symtab.findUnderscore("__guard_flags");
-        cast<DefinedAbsolute>(flagSym)->setVA(
-            uint32_t(GuardFlags::CF_INSTRUMENTED));
+        ctx.forEachSymtab([&](SymbolTable &symtab) {
+          Symbol *flagSym = symtab.findUnderscore("__guard_flags");
+          cast<DefinedAbsolute>(flagSym)->setVA(
+              uint32_t(GuardFlags::CF_INSTRUMENTED));
+        });
         break;
       }
     }
@@ -2034,11 +2120,11 @@ void Writer::createGuardCFTables() {
   ctx.forEachSymtab([&](SymbolTable &symtab) {
     if (symtab.entry)
       maybeAddAddressTakenFunction(addressTakenSyms, symtab.entry);
-  });
 
-  // Mark exported symbols in executable sections as address-taken.
-  for (Export &e : config->exports)
-    maybeAddAddressTakenFunction(addressTakenSyms, e.sym);
+    // Mark exported symbols in executable sections as address-taken.
+    for (Export &e : symtab.exports)
+      maybeAddAddressTakenFunction(addressTakenSyms, e.sym);
+  });
 
   // For each entry in the .giats table, check if it has a corresponding load
   // thunk (e.g. because the DLL that defines it will be delay-loaded) and, if
@@ -2080,8 +2166,10 @@ void Writer::createGuardCFTables() {
     guardFlags |= uint32_t(GuardFlags::CF_LONGJUMP_TABLE_PRESENT);
   if (config->guardCF & GuardCFLevel::EHCont)
     guardFlags |= uint32_t(GuardFlags::EH_CONTINUATION_TABLE_PRESENT);
-  Symbol *flagSym = ctx.symtab.findUnderscore("__guard_flags");
-  cast<DefinedAbsolute>(flagSym)->setVA(guardFlags);
+  ctx.forEachSymtab([guardFlags](SymbolTable &symtab) {
+    Symbol *flagSym = symtab.findUnderscore("__guard_flags");
+    cast<DefinedAbsolute>(flagSym)->setVA(guardFlags);
+  });
 }
 
 // Take a list of input sections containing symbol table indices and add those
@@ -2152,19 +2240,20 @@ void Writer::maybeAddRVATable(SymbolRVASet tableSymbols, StringRef tableSym,
     tableChunk = make<RVATableChunk>(std::move(tableSymbols));
   rdataSec->addChunk(tableChunk);
 
-  Symbol *t = ctx.symtab.findUnderscore(tableSym);
-  Symbol *c = ctx.symtab.findUnderscore(countSym);
-  replaceSymbol<DefinedSynthetic>(t, t->getName(), tableChunk);
-  cast<DefinedAbsolute>(c)->setVA(tableChunk->getSize() / (hasFlag ? 5 : 4));
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    Symbol *t = symtab.findUnderscore(tableSym);
+    Symbol *c = symtab.findUnderscore(countSym);
+    replaceSymbol<DefinedSynthetic>(t, t->getName(), tableChunk);
+    cast<DefinedAbsolute>(c)->setVA(tableChunk->getSize() / (hasFlag ? 5 : 4));
+  });
 }
 
 // Create CHPE metadata chunks.
 void Writer::createECChunks() {
-  SymbolTable *symtab = ctx.symtabEC;
-  if (!symtab)
+  if (!ctx.symtab.isEC())
     return;
 
-  for (Symbol *s : symtab->expSymbols) {
+  for (Symbol *s : ctx.symtab.expSymbols) {
     auto sym = dyn_cast<Defined>(s);
     if (!sym || !sym->getChunk())
       continue;
@@ -2183,9 +2272,9 @@ void Writer::createECChunks() {
       // we should use the #foo$hp_target symbol as the redirection target.
       // First, try to look up the $hp_target symbol. If it can't be found,
       // assume it's a regular function and look for #foo instead.
-      Symbol *targetSym = symtab->find((targetName + "$hp_target").str());
+      Symbol *targetSym = ctx.symtab.find((targetName + "$hp_target").str());
       if (!targetSym)
-        targetSym = symtab->find(targetName);
+        targetSym = ctx.symtab.find(targetName);
       Defined *t = dyn_cast_or_null<Defined>(targetSym);
       if (t && isArm64EC(t->getChunk()->getMachine()))
         exportThunks.push_back({chunk, t});
@@ -2194,20 +2283,20 @@ void Writer::createECChunks() {
 
   auto codeMapChunk = make<ECCodeMapChunk>(codeMap);
   rdataSec->addChunk(codeMapChunk);
-  Symbol *codeMapSym = symtab->findUnderscore("__hybrid_code_map");
+  Symbol *codeMapSym = ctx.symtab.findUnderscore("__hybrid_code_map");
   replaceSymbol<DefinedSynthetic>(codeMapSym, codeMapSym->getName(),
                                   codeMapChunk);
 
   CHPECodeRangesChunk *ranges = make<CHPECodeRangesChunk>(exportThunks);
   rdataSec->addChunk(ranges);
   Symbol *rangesSym =
-      symtab->findUnderscore("__x64_code_ranges_to_entry_points");
+      ctx.symtab.findUnderscore("__x64_code_ranges_to_entry_points");
   replaceSymbol<DefinedSynthetic>(rangesSym, rangesSym->getName(), ranges);
 
   CHPERedirectionChunk *entryPoints = make<CHPERedirectionChunk>(exportThunks);
   a64xrmSec->addChunk(entryPoints);
   Symbol *entryPointsSym =
-      symtab->findUnderscore("__arm64x_redirection_metadata");
+      ctx.symtab.findUnderscore("__arm64x_redirection_metadata");
   replaceSymbol<DefinedSynthetic>(entryPointsSym, entryPointsSym->getName(),
                                   entryPoints);
 }
@@ -2217,49 +2306,53 @@ void Writer::createECChunks() {
 // uses for fixing them up, and provide the synthetic symbols that the
 // runtime uses for finding the table.
 void Writer::createRuntimePseudoRelocs() {
-  std::vector<RuntimePseudoReloc> rels;
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    std::vector<RuntimePseudoReloc> rels;
 
-  for (Chunk *c : ctx.driver.getChunks()) {
-    auto *sc = dyn_cast<SectionChunk>(c);
-    if (!sc || !sc->live)
-      continue;
-    // Don't create pseudo relocations for sections that won't be
-    // mapped at runtime.
-    if (sc->header->Characteristics & IMAGE_SCN_MEM_DISCARDABLE)
-      continue;
-    sc->getRuntimePseudoRelocs(rels);
-  }
+    for (Chunk *c : ctx.driver.getChunks()) {
+      auto *sc = dyn_cast<SectionChunk>(c);
+      if (!sc || !sc->live || &sc->file->symtab != &symtab)
+        continue;
+      // Don't create pseudo relocations for sections that won't be
+      // mapped at runtime.
+      if (sc->header->Characteristics & IMAGE_SCN_MEM_DISCARDABLE)
+        continue;
+      sc->getRuntimePseudoRelocs(rels);
+    }
 
-  if (!ctx.config.pseudoRelocs) {
-    // Not writing any pseudo relocs; if some were needed, error out and
-    // indicate what required them.
-    for (const RuntimePseudoReloc &rpr : rels)
-      Err(ctx) << "automatic dllimport of " << rpr.sym->getName() << " in "
-               << toString(rpr.target->file) << " requires pseudo relocations";
-    return;
-  }
+    if (!ctx.config.pseudoRelocs) {
+      // Not writing any pseudo relocs; if some were needed, error out and
+      // indicate what required them.
+      for (const RuntimePseudoReloc &rpr : rels)
+        Err(ctx) << "automatic dllimport of " << rpr.sym->getName() << " in "
+                 << toString(rpr.target->file)
+                 << " requires pseudo relocations";
+      return;
+    }
 
-  if (!rels.empty()) {
-    Log(ctx) << "Writing " << rels.size() << " runtime pseudo relocations";
-    const char *symbolName = "_pei386_runtime_relocator";
-    Symbol *relocator = ctx.symtab.findUnderscore(symbolName);
-    if (!relocator)
-      Err(ctx)
-          << "output image has runtime pseudo relocations, but the function "
-          << symbolName
-          << " is missing; it is needed for fixing the relocations at runtime";
-  }
+    if (!rels.empty()) {
+      Log(ctx) << "Writing " << Twine(rels.size())
+               << " runtime pseudo relocations";
+      const char *symbolName = "_pei386_runtime_relocator";
+      Symbol *relocator = symtab.findUnderscore(symbolName);
+      if (!relocator)
+        Err(ctx)
+            << "output image has runtime pseudo relocations, but the function "
+            << symbolName
+            << " is missing; it is needed for fixing the relocations at "
+               "runtime";
+    }
 
-  PseudoRelocTableChunk *table = make<PseudoRelocTableChunk>(rels);
-  rdataSec->addChunk(table);
-  EmptyChunk *endOfList = make<EmptyChunk>();
-  rdataSec->addChunk(endOfList);
+    PseudoRelocTableChunk *table = make<PseudoRelocTableChunk>(rels);
+    rdataSec->addChunk(table);
+    EmptyChunk *endOfList = make<EmptyChunk>();
+    rdataSec->addChunk(endOfList);
 
-  Symbol *headSym = ctx.symtab.findUnderscore("__RUNTIME_PSEUDO_RELOC_LIST__");
-  Symbol *endSym =
-      ctx.symtab.findUnderscore("__RUNTIME_PSEUDO_RELOC_LIST_END__");
-  replaceSymbol<DefinedSynthetic>(headSym, headSym->getName(), table);
-  replaceSymbol<DefinedSynthetic>(endSym, endSym->getName(), endOfList);
+    Symbol *headSym = symtab.findUnderscore("__RUNTIME_PSEUDO_RELOC_LIST__");
+    Symbol *endSym = symtab.findUnderscore("__RUNTIME_PSEUDO_RELOC_LIST_END__");
+    replaceSymbol<DefinedSynthetic>(headSym, headSym->getName(), table);
+    replaceSymbol<DefinedSynthetic>(endSym, endSym->getName(), endOfList);
+  });
 }
 
 // MinGW specific.
@@ -2268,21 +2361,53 @@ void Writer::createRuntimePseudoRelocs() {
 // There's a symbol pointing to the start sentinel pointer, __CTOR_LIST__
 // and __DTOR_LIST__ respectively.
 void Writer::insertCtorDtorSymbols() {
-  AbsolutePointerChunk *ctorListHead = make<AbsolutePointerChunk>(ctx, -1);
-  AbsolutePointerChunk *ctorListEnd = make<AbsolutePointerChunk>(ctx, 0);
-  AbsolutePointerChunk *dtorListHead = make<AbsolutePointerChunk>(ctx, -1);
-  AbsolutePointerChunk *dtorListEnd = make<AbsolutePointerChunk>(ctx, 0);
-  ctorsSec->insertChunkAtStart(ctorListHead);
-  ctorsSec->addChunk(ctorListEnd);
-  dtorsSec->insertChunkAtStart(dtorListHead);
-  dtorsSec->addChunk(dtorListEnd);
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    AbsolutePointerChunk *ctorListHead = make<AbsolutePointerChunk>(symtab, -1);
+    AbsolutePointerChunk *ctorListEnd = make<AbsolutePointerChunk>(symtab, 0);
+    AbsolutePointerChunk *dtorListHead = make<AbsolutePointerChunk>(symtab, -1);
+    AbsolutePointerChunk *dtorListEnd = make<AbsolutePointerChunk>(symtab, 0);
+    ctorsSec->insertChunkAtStart(ctorListHead);
+    ctorsSec->addChunk(ctorListEnd);
+    dtorsSec->insertChunkAtStart(dtorListHead);
+    dtorsSec->addChunk(dtorListEnd);
 
-  Symbol *ctorListSym = ctx.symtab.findUnderscore("__CTOR_LIST__");
-  Symbol *dtorListSym = ctx.symtab.findUnderscore("__DTOR_LIST__");
-  replaceSymbol<DefinedSynthetic>(ctorListSym, ctorListSym->getName(),
-                                  ctorListHead);
-  replaceSymbol<DefinedSynthetic>(dtorListSym, dtorListSym->getName(),
-                                  dtorListHead);
+    Symbol *ctorListSym = symtab.findUnderscore("__CTOR_LIST__");
+    Symbol *dtorListSym = symtab.findUnderscore("__DTOR_LIST__");
+    replaceSymbol<DefinedSynthetic>(ctorListSym, ctorListSym->getName(),
+                                    ctorListHead);
+    replaceSymbol<DefinedSynthetic>(dtorListSym, dtorListSym->getName(),
+                                    dtorListHead);
+  });
+
+  if (ctx.hybridSymtab) {
+    ctorsSec->splitECChunks();
+    dtorsSec->splitECChunks();
+  }
+}
+
+// MinGW (really, Cygwin) specific.
+// The Cygwin startup code uses __data_start__ __data_end__ __bss_start__
+// and __bss_end__ to know what to copy during fork emulation.
+void Writer::insertBssDataStartEndSymbols() {
+  if (!dataSec->chunks.empty()) {
+    Symbol *dataStartSym = ctx.symtab.find("__data_start__");
+    Symbol *dataEndSym = ctx.symtab.find("__data_end__");
+    Chunk *endChunk = dataSec->chunks.back();
+    replaceSymbol<DefinedSynthetic>(dataStartSym, dataStartSym->getName(),
+                                    dataSec->chunks.front());
+    replaceSymbol<DefinedSynthetic>(dataEndSym, dataEndSym->getName(), endChunk,
+                                    endChunk->getSize());
+  }
+
+  if (!bssSec->chunks.empty()) {
+    Symbol *bssStartSym = ctx.symtab.find("__bss_start__");
+    Symbol *bssEndSym = ctx.symtab.find("__bss_end__");
+    Chunk *endChunk = bssSec->chunks.back();
+    replaceSymbol<DefinedSynthetic>(bssStartSym, bssStartSym->getName(),
+                                    bssSec->chunks.front());
+    replaceSymbol<DefinedSynthetic>(bssEndSym, bssEndSym->getName(), endChunk,
+                                    endChunk->getSize());
+  }
 }
 
 // Handles /section options to allow users to overwrite
@@ -2300,8 +2425,7 @@ void Writer::setSectionPermissions() {
 
 // Set symbols used by ARM64EC metadata.
 void Writer::setECSymbols() {
-  SymbolTable *symtab = ctx.symtabEC;
-  if (!symtab)
+  if (!ctx.symtab.isEC())
     return;
 
   llvm::stable_sort(exportThunks, [](const std::pair<Chunk *, Defined *> &a,
@@ -2309,49 +2433,87 @@ void Writer::setECSymbols() {
     return a.first->getRVA() < b.first->getRVA();
   });
 
-  Symbol *rfeTableSym = symtab->findUnderscore("__arm64x_extra_rfe_table");
+  ChunkRange &chpePdata = ctx.hybridSymtab ? hybridPdata : pdata;
+  Symbol *rfeTableSym = ctx.symtab.findUnderscore("__arm64x_extra_rfe_table");
   replaceSymbol<DefinedSynthetic>(rfeTableSym, "__arm64x_extra_rfe_table",
-                                  pdata.first);
+                                  chpePdata.first);
 
-  if (pdata.first) {
+  if (chpePdata.first) {
     Symbol *rfeSizeSym =
-        symtab->findUnderscore("__arm64x_extra_rfe_table_size");
+        ctx.symtab.findUnderscore("__arm64x_extra_rfe_table_size");
     cast<DefinedAbsolute>(rfeSizeSym)
-        ->setVA(pdata.last->getRVA() + pdata.last->getSize() -
-                pdata.first->getRVA());
+        ->setVA(chpePdata.last->getRVA() + chpePdata.last->getSize() -
+                chpePdata.first->getRVA());
   }
 
   Symbol *rangesCountSym =
-      symtab->findUnderscore("__x64_code_ranges_to_entry_points_count");
+      ctx.symtab.findUnderscore("__x64_code_ranges_to_entry_points_count");
   cast<DefinedAbsolute>(rangesCountSym)->setVA(exportThunks.size());
 
   Symbol *entryPointCountSym =
-      symtab->findUnderscore("__arm64x_redirection_metadata_count");
+      ctx.symtab.findUnderscore("__arm64x_redirection_metadata_count");
   cast<DefinedAbsolute>(entryPointCountSym)->setVA(exportThunks.size());
 
-  Symbol *iatSym = symtab->findUnderscore("__hybrid_auxiliary_iat");
+  Symbol *iatSym = ctx.symtab.findUnderscore("__hybrid_auxiliary_iat");
   replaceSymbol<DefinedSynthetic>(iatSym, "__hybrid_auxiliary_iat",
                                   idata.auxIat.empty() ? nullptr
                                                        : idata.auxIat.front());
 
-  Symbol *iatCopySym = symtab->findUnderscore("__hybrid_auxiliary_iat_copy");
+  Symbol *iatCopySym = ctx.symtab.findUnderscore("__hybrid_auxiliary_iat_copy");
   replaceSymbol<DefinedSynthetic>(
       iatCopySym, "__hybrid_auxiliary_iat_copy",
       idata.auxIatCopy.empty() ? nullptr : idata.auxIatCopy.front());
 
   Symbol *delayIatSym =
-      symtab->findUnderscore("__hybrid_auxiliary_delayload_iat");
+      ctx.symtab.findUnderscore("__hybrid_auxiliary_delayload_iat");
   replaceSymbol<DefinedSynthetic>(
       delayIatSym, "__hybrid_auxiliary_delayload_iat",
       delayIdata.getAuxIat().empty() ? nullptr
                                      : delayIdata.getAuxIat().front());
 
   Symbol *delayIatCopySym =
-      symtab->findUnderscore("__hybrid_auxiliary_delayload_iat_copy");
+      ctx.symtab.findUnderscore("__hybrid_auxiliary_delayload_iat_copy");
   replaceSymbol<DefinedSynthetic>(
       delayIatCopySym, "__hybrid_auxiliary_delayload_iat_copy",
       delayIdata.getAuxIatCopy().empty() ? nullptr
                                          : delayIdata.getAuxIatCopy().front());
+
+  if (ctx.hybridSymtab) {
+    // For the hybrid image, set the alternate entry point to the EC entry
+    // point. In the hybrid view, it is swapped to the native entry point
+    // using ARM64X relocations.
+    if (auto altEntrySym = cast_or_null<Defined>(ctx.symtab.entry)) {
+      // If the entry is an EC export thunk, use its target instead.
+      if (auto thunkChunk =
+              dyn_cast<ECExportThunkChunk>(altEntrySym->getChunk()))
+        altEntrySym = thunkChunk->target;
+      ctx.symtab.findUnderscore("__arm64x_native_entrypoint")
+          ->replaceKeepingName(altEntrySym, sizeof(SymbolUnion));
+    }
+
+    if (ctx.symtab.edataStart)
+      ctx.dynamicRelocs->set(
+          dataDirOffset64 + EXPORT_TABLE * sizeof(data_directory) +
+              offsetof(data_directory, Size),
+          ctx.symtab.edataEnd->getRVA() - ctx.symtab.edataStart->getRVA() +
+              ctx.symtab.edataEnd->getSize());
+    if (hybridPdata.first) {
+      ctx.dynamicRelocs->set(
+          dataDirOffset64 + EXCEPTION_TABLE * sizeof(data_directory) +
+              offsetof(data_directory, Size),
+          hybridPdata.last->getRVA() - hybridPdata.first->getRVA() +
+              hybridPdata.last->getSize());
+      if (chpeSym) {
+        size_t size = 0;
+        if (pdata.first)
+          size = pdata.last->getRVA() + pdata.last->getSize() -
+                 pdata.first->getRVA();
+        ctx.dynamicRelocs->set(chpeSym->getRVA() +
+                                   offsetof(chpe_metadata, ExtraRFETableSize),
+                               size);
+      }
+    }
+  }
 }
 
 // Write section contents to a mmap'ed file.
@@ -2586,23 +2748,77 @@ void Writer::createDynamicRelocs() {
                          coffHeaderOffset + offsetof(coff_file_header, Machine),
                          AMD64);
 
-  if (ctx.symtab.entry != ctx.hybridSymtab->entry)
+  if (ctx.symtab.entry != ctx.hybridSymtab->entry ||
+      pdata.first != hybridPdata.first) {
+    chpeSym = cast_or_null<DefinedRegular>(
+        ctx.symtab.findUnderscore("__chpe_metadata"));
+    if (!chpeSym)
+      Warn(ctx) << "'__chpe_metadata' is missing for ARM64X target";
+  }
+
+  if (ctx.symtab.entry != ctx.hybridSymtab->entry) {
     ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
                            peHeaderOffset +
                                offsetof(pe32plus_header, AddressOfEntryPoint),
-                           cast_or_null<Defined>(ctx.hybridSymtab->entry));
+                           cast_or_null<Defined>(ctx.symtab.entry));
+
+    // Swap the alternate entry point in the CHPE metadata.
+    if (chpeSym)
+      ctx.dynamicRelocs->add(
+          IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+          Arm64XRelocVal(chpeSym, offsetof(chpe_metadata, AlternateEntryPoint)),
+          cast_or_null<Defined>(ctx.hybridSymtab->entry));
+  }
+
+  if (ctx.symtab.edataStart != ctx.hybridSymtab->edataStart) {
+    ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+                           dataDirOffset64 +
+                               EXPORT_TABLE * sizeof(data_directory) +
+                               offsetof(data_directory, RelativeVirtualAddress),
+                           ctx.symtab.edataStart);
+    // The Size value is assigned after addresses are finalized.
+    ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+                           dataDirOffset64 +
+                               EXPORT_TABLE * sizeof(data_directory) +
+                               offsetof(data_directory, Size));
+  }
+
+  if (pdata.first != hybridPdata.first) {
+    ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+                           dataDirOffset64 +
+                               EXCEPTION_TABLE * sizeof(data_directory) +
+                               offsetof(data_directory, RelativeVirtualAddress),
+                           hybridPdata.first);
+    // The Size value is assigned after addresses are finalized.
+    ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+                           dataDirOffset64 +
+                               EXCEPTION_TABLE * sizeof(data_directory) +
+                               offsetof(data_directory, Size));
+
+    // Swap ExtraRFETable in the CHPE metadata.
+    if (chpeSym) {
+      ctx.dynamicRelocs->add(
+          IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+          Arm64XRelocVal(chpeSym, offsetof(chpe_metadata, ExtraRFETable)),
+          pdata.first);
+      // The Size value is assigned after addresses are finalized.
+      ctx.dynamicRelocs->add(
+          IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+          Arm64XRelocVal(chpeSym, offsetof(chpe_metadata, ExtraRFETableSize)));
+    }
+  }
 
   // Set the hybrid load config to the EC load config.
   ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
                          dataDirOffset64 +
                              LOAD_CONFIG_TABLE * sizeof(data_directory) +
                              offsetof(data_directory, RelativeVirtualAddress),
-                         ctx.hybridSymtab->loadConfigSym);
+                         ctx.symtab.loadConfigSym);
   ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
                          dataDirOffset64 +
                              LOAD_CONFIG_TABLE * sizeof(data_directory) +
                              offsetof(data_directory, Size),
-                         ctx.hybridSymtab->loadConfigSize);
+                         ctx.symtab.loadConfigSize);
 }
 
 PartialSection *Writer::createPartialSection(StringRef name,
@@ -2713,15 +2929,14 @@ void Writer::prepareLoadConfig(SymbolTable &symtab, T *loadConfig) {
     // On ARM64X, only the EC version of the load config contains
     // CHPEMetadataPointer. Copy its value to the native load config.
     if (ctx.hybridSymtab && !symtab.isEC() &&
-        ctx.hybridSymtab->loadConfigSize >=
+        ctx.symtab.loadConfigSize >=
             offsetof(T, CHPEMetadataPointer) + sizeof(T::CHPEMetadataPointer)) {
       OutputSection *sec =
-          ctx.getOutputSection(ctx.hybridSymtab->loadConfigSym->getChunk());
+          ctx.getOutputSection(ctx.symtab.loadConfigSym->getChunk());
       uint8_t *secBuf = buffer->getBufferStart() + sec->getFileOff();
       auto hybridLoadConfig =
           reinterpret_cast<const coff_load_configuration64 *>(
-              secBuf +
-              (ctx.hybridSymtab->loadConfigSym->getRVA() - sec->getRVA()));
+              secBuf + (ctx.symtab.loadConfigSym->getRVA() - sec->getRVA()));
       loadConfig->CHPEMetadataPointer = hybridLoadConfig->CHPEMetadataPointer;
     }
   }

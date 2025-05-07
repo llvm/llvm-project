@@ -590,10 +590,11 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
                                               : isEpilogProfitable(L);
 
   if (ULO.Runtime &&
-      !UnrollRuntimeLoopRemainder(
-          L, ULO.Count, ULO.AllowExpensiveTripCount, EpilogProfitability,
-          ULO.UnrollRemainder, ULO.ForgetAllSCEV, LI, SE, DT, AC, TTI,
-          PreserveLCSSA, ULO.SCEVExpansionBudget, RemainderLoop)) {
+      !UnrollRuntimeLoopRemainder(L, ULO.Count, ULO.AllowExpensiveTripCount,
+                                  EpilogProfitability, ULO.UnrollRemainder,
+                                  ULO.ForgetAllSCEV, LI, SE, DT, AC, TTI,
+                                  PreserveLCSSA, ULO.SCEVExpansionBudget,
+                                  ULO.RuntimeUnrollMultiExit, RemainderLoop)) {
     if (ULO.Force)
       ULO.Runtime = false;
     else {
@@ -683,8 +684,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   // share the same exit blocks). We'll keep track of loops for which we can
   // break this so that later we can re-simplify them.
   SmallSetVector<Loop *, 4> LoopsToSimplify;
-  for (Loop *SubLoop : *L)
-    LoopsToSimplify.insert(SubLoop);
+  LoopsToSimplify.insert_range(*L);
 
   // When a FSDiscriminator is enabled, we don't need to add the multiply
   // factors to the discriminators.
@@ -997,7 +997,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
                                     /*PredecessorWithTwoSuccessors=*/false,
                                     DTUToUse ? nullptr : DT)) {
         // Dest has been folded into Fold. Update our worklists accordingly.
-        std::replace(Latches.begin(), Latches.end(), Dest, Fold);
+        llvm::replace(Latches, Dest, Fold);
         llvm::erase(UnrolledLoopBlocks, Dest);
       }
     }

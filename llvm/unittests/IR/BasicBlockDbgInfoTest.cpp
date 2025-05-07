@@ -224,9 +224,8 @@ TEST(BasicBlockDbgInfoTest, MarkerOperations) {
   EXPECT_EQ(BB.size(), 1u);
   EXPECT_EQ(Marker2->StoredDbgRecords.size(), 2u);
   // They should also be in the correct order.
-  SmallVector<DbgRecord *, 2> DVRs;
-  for (DbgRecord &DVR : Marker2->getDbgRecordRange())
-    DVRs.push_back(&DVR);
+  SmallVector<DbgRecord *, 2> DVRs(
+      llvm::make_pointer_range(Marker2->getDbgRecordRange()));
   EXPECT_EQ(DVRs[0], DVR1);
   EXPECT_EQ(DVRs[1], DVR2);
 
@@ -363,7 +362,7 @@ TEST(BasicBlockDbgInfoTest, HeadBitOperations) {
   EXPECT_EQ(CInst->getNextNode(), DInst);
 
   // Move back.
-  CInst->moveBefore(BInst);
+  CInst->moveBefore(BInst->getIterator());
   EXPECT_EQ(&*BB.begin(), DInst);
 
   // Current order of insts: "D -> C -> B -> Ret". DbgVariableRecords on "D".
@@ -577,9 +576,8 @@ protected:
 
   bool CheckDVROrder(Instruction *I,
                      SmallVector<DbgVariableRecord *> CheckVals) {
-    SmallVector<DbgRecord *> Vals;
-    for (DbgRecord &D : I->getDbgRecordRange())
-      Vals.push_back(&D);
+    SmallVector<DbgRecord *> Vals(
+        llvm::make_pointer_range(I->getDbgRecordRange()));
 
     EXPECT_EQ(Vals.size(), CheckVals.size());
     if (Vals.size() != CheckVals.size())
@@ -1259,7 +1257,7 @@ TEST(BasicBlockDbgInfoTest, RemoveInstAndReinsert) {
   EXPECT_EQ(std::distance(R3.begin(), R3.end()), 2u);
 
   // Re-insert and re-insert.
-  AddInst->insertAfter(SubInst);
+  AddInst->insertAfter(SubInst->getIterator());
   Entry.reinsertInstInDbgRecords(AddInst, Pos);
   // We should be back into a position of having one DbgVariableRecord on add
   // and ret.
@@ -1331,7 +1329,7 @@ TEST(BasicBlockDbgInfoTest, RemoveInstAndReinsertForOneDbgVariableRecord) {
   EXPECT_EQ(std::distance(R2.begin(), R2.end()), 1u);
 
   // Re-insert and re-insert.
-  AddInst->insertAfter(SubInst);
+  AddInst->insertAfter(SubInst->getIterator());
   Entry.reinsertInstInDbgRecords(AddInst, Pos);
   // We should be back into a position of having one DbgVariableRecord on the
   // AddInst.

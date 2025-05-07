@@ -90,8 +90,8 @@ bool DINodeAttr::classof(Attribute attr) {
 
 bool DIScopeAttr::classof(Attribute attr) {
   return llvm::isa<DICommonBlockAttr, DICompileUnitAttr, DICompositeTypeAttr,
-                   DIFileAttr, DILocalScopeAttr, DIModuleAttr, DINamespaceAttr>(
-      attr);
+                   DIDerivedTypeAttr, DIFileAttr, DILocalScopeAttr,
+                   DIModuleAttr, DINamespaceAttr>(attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -270,11 +270,9 @@ Attribute ConstantRangeAttr::parse(AsmParser &parser, Type odsType) {
   if (parser.parseInteger(lower) || parser.parseComma() ||
       parser.parseInteger(upper) || parser.parseGreater())
     return Attribute{};
-  // For some reason, 0 is always parsed as 64-bits, fix that if needed.
-  if (lower.isZero())
-    lower = lower.sextOrTrunc(bitWidth);
-  if (upper.isZero())
-    upper = upper.sextOrTrunc(bitWidth);
+  // Non-positive numbers may use more bits than `bitWidth`
+  lower = lower.sextOrTrunc(bitWidth);
+  upper = upper.sextOrTrunc(bitWidth);
   return parser.getChecked<ConstantRangeAttr>(loc, parser.getContext(), lower,
                                               upper);
 }
@@ -376,4 +374,33 @@ TargetFeaturesAttr TargetFeaturesAttr::featuresAt(Operation *op) {
     return {};
   return parentFunction.getOperation()->getAttrOfType<TargetFeaturesAttr>(
       getAttributeName());
+}
+
+LogicalResult
+ModuleFlagAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                       LLVM::ModFlagBehavior flagBehavior, StringAttr key,
+                       Attribute value) {
+  if (key == LLVMDialect::getModuleFlagKeyCGProfileName()) {
+    auto arrayAttr = dyn_cast<ArrayAttr>(value);
+    if ((!arrayAttr) || (!llvm::all_of(arrayAttr, [](Attribute attr) {
+          return isa<ModuleFlagCGProfileEntryAttr>(attr);
+        })))
+      return emitError()
+             << "'CG Profile' key expects an array of '#llvm.cgprofile_entry'";
+    return success();
+  }
+
+  if (key == LLVMDialect::getModuleFlagKeyProfileSummaryName()) {
+    if (!isa<ModuleFlagProfileSummaryAttr>(value))
+      return emitError() << "'ProfileSummary' key expects a "
+                            "'#llvm.profile_summary' attribute";
+    return success();
+  }
+
+  if (isa<IntegerAttr, StringAttr>(value))
+    return success();
+
+  return emitError() << "only integer and string values are currently "
+                        "supported for unknown key '"
+                     << key << "'";
 }

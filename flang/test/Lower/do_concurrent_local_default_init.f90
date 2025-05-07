@@ -29,7 +29,7 @@ end subroutine
 ! CHECK-SAME:                           %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>> {fir.bindc_name = "p"}) {
 ! CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>
 ! CHECK:           %[[VAL_7:.*]] = fir.box_elesize %[[VAL_6]] : (!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>) -> index
-! CHECK:           fir.do_loop
+! CHECK:           fir.do_concurrent.loop
 ! CHECK:             %[[VAL_16:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>> {bindc_name = "p", pinned, uniq_name = "_QFtest_ptrEp"}
 ! CHECK:             %[[VAL_17:.*]] = fir.zero_bits !fir.ptr<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:             %[[VAL_18:.*]] = arith.constant 0 : index
@@ -43,10 +43,10 @@ end subroutine
 ! CHECK:         }
 
 ! CHECK-LABEL:   func.func @_QPtest_default_init(
-! CHECK:           fir.do_loop
+! CHECK:           fir.do_concurrent.loop
 ! CHECK:             %[[VAL_26:.*]] = fir.alloca !fir.type<_QFtest_default_initTt{i:i32}> {bindc_name = "a", pinned, uniq_name = "_QFtest_default_initEa"}
 ! CHECK:             %[[VAL_27:.*]] = fir.embox %[[VAL_26]] : (!fir.ref<!fir.type<_QFtest_default_initTt{i:i32}>>) -> !fir.box<!fir.type<_QFtest_default_initTt{i:i32}>>
 ! CHECK:             %[[VAL_30:.*]] = fir.convert %[[VAL_27]] : (!fir.box<!fir.type<_QFtest_default_initTt{i:i32}>>) -> !fir.box<none>
-! CHECK:             %[[VAL_32:.*]] = fir.call @_FortranAInitialize(%[[VAL_30]], {{.*}}
+! CHECK:             fir.call @_FortranAInitialize(%[[VAL_30]], {{.*}}
 ! CHECK:             %[[VAL_33:.*]]:2 = hlfir.declare %[[VAL_26]] {uniq_name = "_QFtest_default_initEa"} : (!fir.ref<!fir.type<_QFtest_default_initTt{i:i32}>>) -> (!fir.ref<!fir.type<_QFtest_default_initTt{i:i32}>>, !fir.ref<!fir.type<_QFtest_default_initTt{i:i32}>>)
 ! CHECK:           }

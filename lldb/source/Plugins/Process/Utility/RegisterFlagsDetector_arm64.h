@@ -61,6 +61,7 @@ private:
   static Fields DetectMTECtrlFields(uint64_t hwcap, uint64_t hwcap2);
   static Fields DetectSVCRFields(uint64_t hwcap, uint64_t hwcap2);
   static Fields DetectFPMRFields(uint64_t hwcap, uint64_t hwcap2);
+  static Fields DetectGCSFeatureFields(uint64_t hwcap, uint64_t hwcap2);
 
   struct RegisterEntry {
     RegisterEntry(llvm::StringRef name, unsigned size, DetectorFn detector)
@@ -70,13 +71,15 @@ private:
     llvm::StringRef m_name;
     RegisterFlags m_flags;
     DetectorFn m_detector;
-  } m_registers[6] = {
+  } m_registers[8] = {
       RegisterEntry("cpsr", 4, DetectCPSRFields),
       RegisterEntry("fpsr", 4, DetectFPSRFields),
       RegisterEntry("fpcr", 4, DetectFPCRFields),
       RegisterEntry("mte_ctrl", 8, DetectMTECtrlFields),
       RegisterEntry("svcr", 8, DetectSVCRFields),
       RegisterEntry("fpmr", 8, DetectFPMRFields),
+      RegisterEntry("gcs_features_enabled", 8, DetectGCSFeatureFields),
+      RegisterEntry("gcs_features_locked", 8, DetectGCSFeatureFields),
   };
 
   // Becomes true once field detection has been run for all registers.

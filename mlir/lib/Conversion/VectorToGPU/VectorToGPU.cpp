@@ -132,7 +132,7 @@ static std::optional<int64_t> getStaticallyKnownRowStride(ShapedType type) {
     return 0;
   int64_t offset = 0;
   SmallVector<int64_t, 2> strides;
-  if (failed(getStridesAndOffset(memrefType, strides, offset)) ||
+  if (failed(memrefType.getStridesAndOffset(strides, offset)) ||
       strides.back() != 1)
     return std::nullopt;
   int64_t stride = strides[strides.size() - 2];
@@ -318,7 +318,7 @@ getSliceContract(Operation *op,
     // Compute and insert the backwardSlice starting from currentOp.
     backwardSlice.clear();
     getBackwardSlice(currentOp, &backwardSlice, backwardSliceOptions);
-    slice.insert(backwardSlice.begin(), backwardSlice.end());
+    slice.insert_range(backwardSlice);
 
     // Compute and insert the forwardSlice starting from currentOp.
     forwardSlice.clear();
@@ -334,7 +334,7 @@ getSliceContract(Operation *op,
     } else {
       getForwardSlice(currentOp, &forwardSlice, forwardSliceOptions);
     }
-    slice.insert(forwardSlice.begin(), forwardSlice.end());
+    slice.insert_range(forwardSlice);
     ++currentIndex;
   }
   return slice;
@@ -374,7 +374,7 @@ static SetVector<Operation *> getOpToConvert(mlir::Operation *op,
         }))
       return;
 
-    opToConvert.insert(dependentOps.begin(), dependentOps.end());
+    opToConvert.insert_range(dependentOps);
   });
   // Sort the operations so that we can convert them in topological order.
   return topologicalSort(opToConvert);
@@ -784,7 +784,6 @@ createNonLdMatrixLoads(RewriterBase &rewriter, vector::TransferReadOp op,
   }
 
   Value laneId = rewriter.create<gpu::LaneIdOp>(loc, /*upperBound=*/nullptr);
-  SmallVector<Value, 4> elements;
 
   // This is the individual element type.
   Type loadedElType = regInfo->registerLLVMType;

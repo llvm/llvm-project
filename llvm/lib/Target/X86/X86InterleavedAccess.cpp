@@ -829,10 +829,8 @@ bool X86TargetLowering::lowerInterleavedStore(StoreInst *SI,
 
   // Holds the indices of SVI that correspond to the starting index of each
   // interleaved shuffle.
-  SmallVector<unsigned, 4> Indices;
   auto Mask = SVI->getShuffleMask();
-  for (unsigned i = 0; i < Factor; i++)
-    Indices.push_back(Mask[i]);
+  SmallVector<unsigned, 4> Indices(Mask.take_front(Factor));
 
   ArrayRef<ShuffleVectorInst *> Shuffles = ArrayRef(SVI);
 

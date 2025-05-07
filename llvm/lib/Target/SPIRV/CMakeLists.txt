@@ -10,6 +10,8 @@ tablegen(LLVM SPIRVGenRegisterBank.inc -gen-register-bank)
 tablegen(LLVM SPIRVGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM SPIRVGenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM SPIRVGenTables.inc -gen-searchable-tables)
+tablegen(LLVM SPIRVGenPreLegalizeGICombiner.inc -gen-global-isel-combiner
+              -combiners="SPIRVPreLegalizerCombiner")
 
 add_public_tablegen_target(SPIRVCommonTableGen)
 
@@ -25,6 +27,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVInstrInfo.cpp
   SPIRVInstructionSelector.cpp
   SPIRVStripConvergentIntrinsics.cpp
+  SPIRVLegalizePointerCast.cpp
   SPIRVMergeRegionExitTargets.cpp
   SPIRVISelLowering.cpp
   SPIRVLegalizerInfo.cpp
@@ -33,6 +36,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVModuleAnalysis.cpp
   SPIRVStructurizer.cpp
   SPIRVPreLegalizer.cpp
+  SPIRVPreLegalizerCombiner.cpp
   SPIRVPostLegalizer.cpp
   SPIRVPrepareFunctions.cpp
   SPIRVRegisterBankInfo.cpp

@@ -90,7 +90,7 @@ entry:
   %xor = xor i32 %a, %b
   %r0.val = xor i32 %xor, -1
   %r1.val = add i32 %xor, %a
-  %ins0 = insertelement <2 x i32> undef, i32 %r0.val, i32 0
+  %ins0 = insertelement <2 x i32> poison, i32 %r0.val, i32 0
   %ins1 = insertelement <2 x i32> %ins0, i32 %r1.val, i32 1
   ret <2 x i32> %ins1
 }
@@ -118,13 +118,11 @@ define amdgpu_ps i64 @scalar_xnor_v4i16_one_use(<4 x i16> inreg %a, <4 x i16> in
 ; GFX7-NEXT:    s_xor_b64 s[2:3], s[2:3], s[6:7]
 ; GFX7-NEXT:    s_lshl_b32 s1, s1, 16
 ; GFX7-NEXT:    s_and_b32 s0, s0, 0xffff
-; GFX7-NEXT:    s_mov_b32 s8, -1
 ; GFX7-NEXT:    s_or_b32 s0, s1, s0
 ; GFX7-NEXT:    s_lshl_b32 s1, s3, 16
 ; GFX7-NEXT:    s_and_b32 s2, s2, 0xffff
-; GFX7-NEXT:    s_mov_b32 s9, s8
 ; GFX7-NEXT:    s_or_b32 s1, s1, s2
-; GFX7-NEXT:    s_xor_b64 s[0:1], s[0:1], s[8:9]
+; GFX7-NEXT:    s_xor_b64 s[0:1], s[0:1], -1
 ; GFX7-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: scalar_xnor_v4i16_one_use:
@@ -198,7 +196,7 @@ define amdgpu_ps <2 x i64> @scalar_xnor_i64_mul_use(i64 inreg %a, i64 inreg %b) 
   %xor = xor i64 %a, %b
   %r0.val = xor i64 %xor, -1
   %r1.val = add i64 %xor, %a
-  %ins0 = insertelement <2 x i64> undef, i64 %r0.val, i32 0
+  %ins0 = insertelement <2 x i64> poison, i64 %r0.val, i32 0
   %ins1 = insertelement <2 x i64> %ins0, i64 %r1.val, i32 1
   ret <2 x i64> %ins1
 }

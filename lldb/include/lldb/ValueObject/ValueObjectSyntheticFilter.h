@@ -37,7 +37,7 @@ class ValueObjectSynthetic : public ValueObject {
 public:
   ~ValueObjectSynthetic() override;
 
-  std::optional<uint64_t> GetByteSize() override;
+  llvm::Expected<uint64_t> GetByteSize() override;
 
   ConstString GetTypeName() override;
 
@@ -57,7 +57,7 @@ public:
   lldb::ValueObjectSP GetChildMemberWithName(llvm::StringRef name,
                                              bool can_create = true) override;
 
-  size_t GetIndexOfChildWithName(llvm::StringRef name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) override;
 
   lldb::ValueObjectSP
   GetDynamicValue(lldb::DynamicValueType valueType) override;

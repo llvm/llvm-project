@@ -24,6 +24,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/APSIntType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/BasicValueFactory.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
@@ -192,18 +193,22 @@ DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const Stmt *stmt,
                                                    const LocationContext *LCtx,
                                                    QualType type,
                                                    unsigned visitCount) {
-  if (type->isNullPtrType())
-    return makeZeroVal(type);
+  return conjureSymbolVal(/*symbolTag=*/nullptr, stmt, LCtx, type, visitCount);
+}
 
-  if (!SymbolManager::canSymbolicate(type))
-    return UnknownVal();
+DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const CallEvent &call,
+                                                   unsigned visitCount,
+                                                   const void *symbolTag) {
+  return conjureSymbolVal(symbolTag, call.getOriginExpr(),
+                          call.getLocationContext(), visitCount);
+}
 
-  SymbolRef sym = SymMgr.conjureSymbol(stmt, LCtx, type, visitCount);
-
-  if (Loc::isLocType(type))
-    return loc::MemRegionVal(MemMgr.getSymbolicRegion(sym));
-
-  return nonloc::SymbolVal(sym);
+DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const CallEvent &call,
+                                                   QualType type,
+                                                   unsigned visitCount,
+                                                   const void *symbolTag) {
+  return conjureSymbolVal(symbolTag, call.getOriginExpr(),
+                          call.getLocationContext(), type, visitCount);
 }
 
 DefinedSVal SValBuilder::getConjuredHeapSymbolVal(const Expr *E,
@@ -368,7 +373,10 @@ std::optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
 
   case Stmt::TypeTraitExprClass: {
     const auto *TE = cast<TypeTraitExpr>(E);
-    return makeTruthVal(TE->getValue(), TE->getType());
+    if (TE->isStoredAsBoolean())
+      return makeTruthVal(TE->getBoolValue(), TE->getType());
+    assert(TE->getAPValue().isInt() && "APValue type not supported");
+    return makeIntVal(TE->getAPValue().getInt());
   }
 
   case Stmt::IntegerLiteralClass:

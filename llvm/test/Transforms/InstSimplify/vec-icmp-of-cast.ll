@@ -174,3 +174,12 @@ define <2 x i1> @icmp_slt_sext_is_true_false(<2 x i8> %x) {
   %cmp = icmp slt <2 x i32> %xext, <i32 257, i32 -450>
   ret <2 x i1> %cmp
 }
+
+define <vscale x 4 x i1> @icmp_ult_sext_scalable_splat_is_true(<vscale x 4 x i8> %x) {
+; CHECK-LABEL: @icmp_ult_sext_scalable_splat_is_true(
+; CHECK-NEXT:    ret <vscale x 4 x i1> splat (i1 true)
+;
+  %s = sext <vscale x 4 x i8> %x to <vscale x 4 x i64>
+  %cmp = icmp slt <vscale x 4 x i64> %s, splat (i64 257)
+  ret <vscale x 4 x i1> %cmp
+}

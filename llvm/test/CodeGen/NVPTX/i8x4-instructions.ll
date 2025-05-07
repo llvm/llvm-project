@@ -913,7 +913,7 @@ define <4 x i8> @test_select(<4 x i8> %a, <4 x i8> %b, i1 zeroext %c) #0 {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u8 %rs1, [test_select_param_2];
 ; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
-; CHECK-NEXT:    setp.eq.b16 %p1, %rs2, 1;
+; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
 ; CHECK-NEXT:    ld.param.u32 %r2, [test_select_param_1];
 ; CHECK-NEXT:    ld.param.u32 %r1, [test_select_param_0];
 ; CHECK-NEXT:    selp.b32 %r3, %r1, %r2, %p1;
@@ -1141,7 +1141,7 @@ define <4 x i8> @test_bitcast_float_to_4xi8(float %a) #0 {
 ; CHECK-LABEL: test_bitcast_float_to_4xi8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .f32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [test_bitcast_float_to_4xi8_param_0];
@@ -1169,7 +1169,7 @@ define float @test_bitcast_4xi8_to_float(<4 x i8> %a) #0 {
 ; CHECK-LABEL: test_bitcast_4xi8_to_float(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .f32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u32 %r1, [test_bitcast_4xi8_to_float_param_0];
@@ -1412,7 +1412,7 @@ define void @test_srem_v3i8(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    prmt.b32 %r10, %r11, %r12, 0x3340U;
 ; CHECK-NEXT:    prmt.b32 %r13, %r9, %r10, 0x5410U;
 ; CHECK-NEXT:    rem.s16 %rs17, %rs5, %rs10;
-; CHECK-NEXT:    { .reg .b16 tmp; mov.b32 {%rs18, tmp}, %r13; }
+; CHECK-NEXT:    mov.b32 {%rs18, _}, %r13;
 ; CHECK-NEXT:    st.u8 [%rd3], %rs18;
 ; CHECK-NEXT:    shr.u16 %rs19, %rs18, 8;
 ; CHECK-NEXT:    st.u8 [%rd3+1], %rs19;
@@ -1451,11 +1451,11 @@ define void @test_sext_v4i1_to_v4i8(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    bfe.u32 %r9, %r2, 24, 8;
 ; CHECK-NEXT:    bfe.u32 %r10, %r1, 24, 8;
 ; CHECK-NEXT:    setp.hi.u32 %p4, %r10, %r9;
-; CHECK-NEXT:    selp.s32 %r11, -1, 0, %p4;
-; CHECK-NEXT:    selp.s32 %r12, -1, 0, %p3;
+; CHECK-NEXT:    selp.b32 %r11, -1, 0, %p4;
+; CHECK-NEXT:    selp.b32 %r12, -1, 0, %p3;
 ; CHECK-NEXT:    prmt.b32 %r13, %r12, %r11, 0x3340U;
-; CHECK-NEXT:    selp.s32 %r14, -1, 0, %p2;
-; CHECK-NEXT:    selp.s32 %r15, -1, 0, %p1;
+; CHECK-NEXT:    selp.b32 %r14, -1, 0, %p2;
+; CHECK-NEXT:    selp.b32 %r15, -1, 0, %p1;
 ; CHECK-NEXT:    prmt.b32 %r16, %r15, %r14, 0x3340U;
 ; CHECK-NEXT:    prmt.b32 %r17, %r16, %r13, 0x5410U;
 ; CHECK-NEXT:    st.u32 [%rd3], %r17;

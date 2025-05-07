@@ -11,45 +11,31 @@ define linkonce_odr void @_ZN1y2beEPiRK1vPmPS1_(<8 x i8> %0, ptr %agg.tmp.i) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    mov b1, v0.b[7]
+; CHECK-NEXT:    mov b2, v0.b[6]
+; CHECK-NEXT:    stur b0, [sp, #15]
+; CHECK-NEXT:    stur b0, [sp, #14]
+; CHECK-NEXT:    stur b0, [sp, #13]
+; CHECK-NEXT:    stur b0, [sp, #12]
+; CHECK-NEXT:    stur b1, [sp, #7]
+; CHECK-NEXT:    mov b1, v0.b[5]
+; CHECK-NEXT:    stur b2, [sp, #6]
+; CHECK-NEXT:    mov b2, v0.b[4]
+; CHECK-NEXT:    stur b0, [sp, #11]
+; CHECK-NEXT:    stur b0, [sp, #10]
+; CHECK-NEXT:    stur b1, [sp, #5]
+; CHECK-NEXT:    mov b1, v0.b[3]
+; CHECK-NEXT:    stur b0, [sp, #9]
+; CHECK-NEXT:    stur b2, [sp, #4]
+; CHECK-NEXT:    mov b2, v0.b[2]
+; CHECK-NEXT:    str b0, [sp]
+; CHECK-NEXT:    mov b0, v0.b[1]
+; CHECK-NEXT:    stur b1, [sp, #3]
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    orr x9, x8, #0xf
-; CHECK-NEXT:    orr x10, x8, #0xe
-; CHECK-NEXT:    st1 { v0.b }[0], [x8]
-; CHECK-NEXT:    st1 { v0.b }[15], [x9]
-; CHECK-NEXT:    orr x9, x8, #0xc
-; CHECK-NEXT:    st1 { v0.b }[12], [x9]
-; CHECK-NEXT:    orr x9, x8, #0x8
-; CHECK-NEXT:    st1 { v0.b }[8], [x9]
-; CHECK-NEXT:    orr x9, x8, #0x7
-; CHECK-NEXT:    st1 { v0.b }[7], [x9]
-; CHECK-NEXT:    orr x9, x8, #0x6
-; CHECK-NEXT:    st1 { v0.b }[6], [x9]
-; CHECK-NEXT:    orr x9, x8, #0x4
-; CHECK-NEXT:    st1 { v0.b }[4], [x9]
-; CHECK-NEXT:    orr x9, x8, #0x3
-; CHECK-NEXT:    st1 { v0.b }[3], [x9]
-; CHECK-NEXT:    orr x9, x8, #0x2
-; CHECK-NEXT:    st1 { v0.b }[14], [x10]
-; CHECK-NEXT:    mov w10, #13 // =0xd
-; CHECK-NEXT:    st1 { v0.b }[2], [x9]
-; CHECK-NEXT:    orr x9, x8, #0x1
-; CHECK-NEXT:    st1 { v0.b }[1], [x9]
-; CHECK-NEXT:    orr x9, x8, x10
-; CHECK-NEXT:    mov w10, #11 // =0xb
-; CHECK-NEXT:    st1 { v0.b }[13], [x9]
-; CHECK-NEXT:    orr x9, x8, x10
-; CHECK-NEXT:    mov w10, #10 // =0xa
-; CHECK-NEXT:    st1 { v0.b }[11], [x9]
-; CHECK-NEXT:    orr x9, x8, x10
-; CHECK-NEXT:    mov w10, #9 // =0x9
-; CHECK-NEXT:    st1 { v0.b }[10], [x9]
-; CHECK-NEXT:    orr x9, x8, x10
-; CHECK-NEXT:    st1 { v0.b }[9], [x9]
-; CHECK-NEXT:    mov w9, #5 // =0x5
-; CHECK-NEXT:    orr x8, x8, x9
-; CHECK-NEXT:    st1 { v0.b }[5], [x8]
+; CHECK-NEXT:    stur b2, [sp, #2]
+; CHECK-NEXT:    stur b0, [sp, #8]
+; CHECK-NEXT:    stur b0, [sp, #1]
 ; CHECK-NEXT:    ldr q0, [sp]
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    add sp, sp, #16

@@ -416,16 +416,15 @@ define void @test13(<8 x i32> %0, ptr %out0, ptr %out1, ptr %out2) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i32> @llvm.vector.insert.v32i32.v8i32(<32 x i32> poison, <8 x i32> [[TMP0:%.*]], i64 0)
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <32 x i32> [[TMP1]], <32 x i32> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <32 x i32> [[TMP1]], <32 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <32 x i32> [[TMP1]], <32 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    br label [[FOR_END_LOOPEXIT:%.*]]
 ; CHECK:       for.end.loopexit:
-; CHECK-NEXT:    [[TMP5:%.*]] = phi <16 x i32> [ [[TMP4]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v16i32(<16 x i32> [[TMP5]], i64 12)
+; CHECK-NEXT:    [[TMP4:%.*]] = phi <16 x i32> [ [[TMP3]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v16i32(<16 x i32> [[TMP4]], i64 4)
 ; CHECK-NEXT:    [[OR0:%.*]] = or <4 x i32> [[TMP6]], zeroinitializer
 ; CHECK-NEXT:    store <4 x i32> [[OR0]], ptr [[OUT0:%.*]], align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v16i32(<16 x i32> [[TMP4]], i64 0)
+; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v16i32(<16 x i32> [[TMP3]], i64 0)
 ; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr [[OUT1:%.*]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v16i32(<16 x i32> [[TMP4]], i64 8)
+; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v16i32(<16 x i32> [[TMP3]], i64 12)
 ; CHECK-NEXT:    store <4 x i32> [[TMP8]], ptr [[OUT2:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -456,11 +455,10 @@ define void @test14(<8 x i1> %0) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext <16 x i1> [[TMP2]] to <16 x i16>
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <16 x i16> [[TMP3]], <16 x i16> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <16 x i16> [[TMP3]], <16 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <16 x i16> [[TMP3]], <16 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    br label [[FOR_END_LOOPEXIT:%.*]]
 ; CHECK:       for.end.loopexit:
-; CHECK-NEXT:    [[TMP7:%.*]] = phi <16 x i16> [ [[TMP6]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x i16> @llvm.vector.extract.v4i16.v16i16(<16 x i16> [[TMP7]], i64 12)
+; CHECK-NEXT:    [[TMP6:%.*]] = phi <16 x i16> [ [[TMP5]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x i16> @llvm.vector.extract.v4i16.v16i16(<16 x i16> [[TMP6]], i64 4)
 ; CHECK-NEXT:    [[OR0:%.*]] = or <4 x i16> [[TMP8]], zeroinitializer
 ; CHECK-NEXT:    ret void
 ;
@@ -480,4 +478,45 @@ for.end.loopexit:
   %phi3 = phi <4 x i16> [ %4, %entry ]
   %or0 = or <4 x i16> %phi1, zeroinitializer
   ret void
+}
+
+define i32 @test15() {
+; CHECK-LABEL: @test15(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr null, i64 480
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr null, i64 160
+; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x float>, ptr [[TMP1]], align 16
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr [[TMP1]], align 16
+; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr null, align 16
+; CHECK-NEXT:    [[TMP4:%.*]] = call <16 x float> @llvm.vector.insert.v16f32.v4f32(<16 x float> poison, <4 x float> zeroinitializer, i64 0)
+; CHECK-NEXT:    [[TMP5:%.*]] = call <16 x float> @llvm.vector.insert.v16f32.v4f32(<16 x float> [[TMP4]], <4 x float> zeroinitializer, i64 4)
+; CHECK-NEXT:    [[TMP6:%.*]] = call <16 x float> @llvm.vector.insert.v16f32.v4f32(<16 x float> [[TMP5]], <4 x float> zeroinitializer, i64 8)
+; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x float> @llvm.vector.insert.v16f32.v4f32(<16 x float> [[TMP6]], <4 x float> zeroinitializer, i64 12)
+; CHECK-NEXT:    [[TMP8:%.*]] = call <16 x float> @llvm.vector.insert.v16f32.v4f32(<16 x float> poison, <4 x float> zeroinitializer, i64 8)
+; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x float> @llvm.vector.insert.v16f32.v4f32(<16 x float> [[TMP8]], <4 x float> zeroinitializer, i64 12)
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <8 x float> [[TMP2]], <8 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <16 x float> [[TMP10]], <16 x float> [[TMP9]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+; CHECK-NEXT:    [[TMP12:%.*]] = fadd <16 x float> [[TMP7]], [[TMP11]]
+; CHECK-NEXT:    store <16 x float> [[TMP12]], ptr [[TMP0]], align 16
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %0 = getelementptr i8, ptr null, i64 512
+  %1 = getelementptr i8, ptr null, i64 528
+  %2 = getelementptr i8, ptr null, i64 480
+  %3 = getelementptr i8, ptr null, i64 496
+  %4 = getelementptr i8, ptr null, i64 160
+  %5 = load <4 x float>, ptr %4, align 16
+  %6 = getelementptr i8, ptr null, i64 176
+  %7 = load <4 x float>, ptr %6, align 16
+  store <4 x float> %5, ptr null, align 16
+  %8 = fadd <4 x float> zeroinitializer, %5
+  %9 = fadd <4 x float> zeroinitializer, %7
+  store <4 x float> %8, ptr %2, align 16
+  store <4 x float> %9, ptr %3, align 16
+  %10 = fadd <4 x float> zeroinitializer, zeroinitializer
+  %11 = fadd <4 x float> zeroinitializer, zeroinitializer
+  store <4 x float> %10, ptr %0, align 16
+  store <4 x float> %11, ptr %1, align 16
+  ret i32 0
 }

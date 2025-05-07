@@ -52,8 +52,8 @@ using namespace llvm;
   FMA3GROUP_PACKED_WIDTHS_Z(Name, PH, Attrs) \
   FMA3GROUP_PACKED_WIDTHS_ALL(Name, PS, Attrs)
 
-#define FMA3GROUP_PACKED_BF16(Name, Attrs) \
-  FMA3GROUP_PACKED_WIDTHS_Z(Name, NEPBF16, Attrs)
+#define FMA3GROUP_PACKED_BF16(Name, Attrs)                                     \
+  FMA3GROUP_PACKED_WIDTHS_Z(Name, BF16, Attrs)
 
 #define FMA3GROUP_SCALAR_WIDTHS_Z(Name, Suf, Attrs) \
   FMA3GROUP(Name, Suf##Zm, Attrs) \
@@ -92,10 +92,10 @@ static const X86InstrFMA3Group Groups[] = {
   FMA3GROUP_MASKED(Name, Type##Z256##Suf, Attrs) \
   FMA3GROUP_MASKED(Name, Type##Z##Suf, Attrs)
 
-#define FMA3GROUP_PACKED_AVX512_ALL(Name, Suf, Attrs) \
-  FMA3GROUP_PACKED_AVX512_WIDTHS(Name, NEPBF16, Suf, Attrs) \
-  FMA3GROUP_PACKED_AVX512_WIDTHS(Name, PD, Suf, Attrs) \
-  FMA3GROUP_PACKED_AVX512_WIDTHS(Name, PH, Suf, Attrs) \
+#define FMA3GROUP_PACKED_AVX512_ALL(Name, Suf, Attrs)                          \
+  FMA3GROUP_PACKED_AVX512_WIDTHS(Name, BF16, Suf, Attrs)                       \
+  FMA3GROUP_PACKED_AVX512_WIDTHS(Name, PD, Suf, Attrs)                         \
+  FMA3GROUP_PACKED_AVX512_WIDTHS(Name, PH, Suf, Attrs)                         \
   FMA3GROUP_PACKED_AVX512_WIDTHS(Name, PS, Suf, Attrs)
 
 #define FMA3GROUP_PACKED_AVX512_DHS(Name, Suf, Attrs) \
@@ -103,12 +103,9 @@ static const X86InstrFMA3Group Groups[] = {
   FMA3GROUP_PACKED_AVX512_WIDTHS(Name, PH, Suf, Attrs) \
   FMA3GROUP_PACKED_AVX512_WIDTHS(Name, PS, Suf, Attrs)
 
-#define FMA3GROUP_PACKED_AVX512_ROUND(Name, Suf, Attrs)                        \
-  FMA3GROUP_MASKED(Name, PDZ256##Suf, Attrs)                                   \
-  FMA3GROUP_MASKED(Name, PDZ##Suf, Attrs)                                      \
-  FMA3GROUP_MASKED(Name, PHZ256##Suf, Attrs)                                   \
-  FMA3GROUP_MASKED(Name, PHZ##Suf, Attrs)                                      \
-  FMA3GROUP_MASKED(Name, PSZ256##Suf, Attrs)                                   \
+#define FMA3GROUP_PACKED_AVX512_ROUND(Name, Suf, Attrs) \
+  FMA3GROUP_MASKED(Name, PDZ##Suf, Attrs) \
+  FMA3GROUP_MASKED(Name, PHZ##Suf, Attrs) \
   FMA3GROUP_MASKED(Name, PSZ##Suf, Attrs)
 
 #define FMA3GROUP_SCALAR_AVX512_ROUND(Name, Suf, Attrs) \

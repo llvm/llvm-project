@@ -76,6 +76,11 @@ public:
     propagateIfChanged(lattice, lattice->setKnownToUnknown());
   }
 
+  /// Visit an operation. If this analysis can confirm that lattice content
+  /// of lattice anchors around operation are necessarily identical, join
+  /// them into the same equivalent class.
+  void buildOperationEquivalentLatticeAnchor(Operation *op) override;
+
   const bool assumeFuncReads;
 };
 } // namespace
@@ -139,6 +144,13 @@ LogicalResult NextAccessAnalysis::visitOperation(Operation *op,
   }
   propagateIfChanged(before, result);
   return success();
+}
+
+void NextAccessAnalysis::buildOperationEquivalentLatticeAnchor(Operation *op) {
+  if (isMemoryEffectFree(op)) {
+    unionLatticeAnchors<NextAccess>(getProgramPointBefore(op),
+                                    getProgramPointAfter(op));
+  }
 }
 
 void NextAccessAnalysis::visitCallControlFlowTransfer(

@@ -357,6 +357,10 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   setOperationAction(ISD::FCOPYSIGN,          MVT::f64,   Custom);
   setOperationAction(ISD::FP_TO_SINT,         MVT::i32,   Custom);
 
+  if (Subtarget.hasMips32r2() ||
+      getTargetMachine().getTargetTriple().isOSLinux())
+    setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Custom);
+
   // Lower fmin/fmax/fclass operations for MIPS R6.
   if (Subtarget.hasMips32r6()) {
     setOperationAction(ISD::FMINNUM_IEEE, MVT::f32, Legal);
@@ -517,7 +521,8 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   setOperationAction(ISD::TRAP, MVT::Other, Legal);
 
   setTargetDAGCombine({ISD::SDIVREM, ISD::UDIVREM, ISD::SELECT, ISD::AND,
-                       ISD::OR, ISD::ADD, ISD::SUB, ISD::AssertZext, ISD::SHL});
+                       ISD::OR, ISD::ADD, ISD::SUB, ISD::AssertZext, ISD::SHL,
+                       ISD::SIGN_EXTEND});
 
   if (Subtarget.isGP64bit())
     setMaxAtomicSizeInBitsSupported(64);
@@ -1004,7 +1009,7 @@ static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
       return DAG.getNode(
           MipsISD::Ins, DL, N->getValueType(0),
           isConstCase
-              ? DAG.getConstant(CN1->getSExtValue() >> SMPos0, DL, ValTy)
+              ? DAG.getSignedConstant(CN1->getSExtValue() >> SMPos0, DL, ValTy)
               : SrlX,
           DAG.getConstant(SMPos0, DL, MVT::i32),
           DAG.getConstant(ValTy.getSizeInBits() / 8 < 8 ? SMSize0 & 31
@@ -1138,13 +1143,21 @@ static SDValue performADDCombine(SDNode *N, SelectionDAG &DAG,
     return SDValue();
   }
 
+  // When loading from a jump table, push the Lo node to the position that
+  // allows folding it into a load immediate.
   // (add v0, (add v1, abs_lo(tjt))) => (add (add v0, v1), abs_lo(tjt))
-  SDValue Add = N->getOperand(1);
-
-  if (Add.getOpcode() != ISD::ADD)
+  // (add (add abs_lo(tjt), v1), v0) => (add (add v0, v1), abs_lo(tjt))
+  SDValue InnerAdd = N->getOperand(1);
+  SDValue Index = N->getOperand(0);
+  if (InnerAdd.getOpcode() != ISD::ADD)
+    std::swap(InnerAdd, Index);
+  if (InnerAdd.getOpcode() != ISD::ADD)
     return SDValue();
 
-  SDValue Lo = Add.getOperand(1);
+  SDValue Lo = InnerAdd.getOperand(0);
+  SDValue Other = InnerAdd.getOperand(1);
+  if (Lo.getOpcode() != MipsISD::Lo)
+    std::swap(Lo, Other);
 
   if ((Lo.getOpcode() != MipsISD::Lo) ||
       (Lo.getOperand(0).getOpcode() != ISD::TargetJumpTable))
@@ -1153,8 +1166,7 @@ static SDValue performADDCombine(SDNode *N, SelectionDAG &DAG,
   EVT ValTy = N->getValueType(0);
   SDLoc DL(N);
 
-  SDValue Add1 = DAG.getNode(ISD::ADD, DL, ValTy, N->getOperand(0),
-                             Add.getOperand(0));
+  SDValue Add1 = DAG.getNode(ISD::ADD, DL, ValTy, Index, Other);
   return DAG.getNode(ISD::ADD, DL, ValTy, Add1, Lo);
 }
 
@@ -1210,6 +1222,37 @@ static SDValue performSHLCombine(SDNode *N, SelectionDAG &DAG,
                      DAG.getConstant(SMSize, DL, MVT::i32));
 }
 
+static SDValue performSignExtendCombine(SDNode *N, SelectionDAG &DAG,
+                                        TargetLowering::DAGCombinerInfo &DCI,
+                                        const MipsSubtarget &Subtarget) {
+  if (DCI.Level != AfterLegalizeDAG || !Subtarget.isGP64bit()) {
+    return SDValue();
+  }
+
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+
+  // Pattern match XOR.
+  // $dst = sign_extend (xor (trunc $src, i32), imm)
+  // => $dst = xor (signext_inreg $src, i32), imm
+  if (N0.getOpcode() == ISD::XOR &&
+      N0.getOperand(0).getOpcode() == ISD::TRUNCATE &&
+      N0.getOperand(1).getOpcode() == ISD::Constant) {
+    SDValue TruncateSource = N0.getOperand(0).getOperand(0);
+    auto *ConstantOperand = dyn_cast<ConstantSDNode>(N0->getOperand(1));
+
+    SDValue FirstOperand =
+        DAG.getNode(ISD::SIGN_EXTEND_INREG, SDLoc(N0), VT, TruncateSource,
+                    DAG.getValueType(N0.getOperand(0).getValueType()));
+
+    int64_t ConstImm = ConstantOperand->getSExtValue();
+    return DAG.getNode(ISD::XOR, SDLoc(N0), VT, FirstOperand,
+                       DAG.getConstant(ConstImm, SDLoc(N0), VT));
+  }
+
+  return SDValue();
+}
+
 SDValue  MipsTargetLowering::PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
   const {
   SelectionDAG &DAG = DCI.DAG;
@@ -1235,6 +1278,8 @@ SDValue  MipsTargetLowering::PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
     return performSHLCombine(N, DAG, DCI, Subtarget);
   case ISD::SUB:
     return performSUBCombine(N, DAG, DCI, Subtarget);
+  case ISD::SIGN_EXTEND:
+    return performSignExtendCombine(N, DAG, DCI, Subtarget);
   }
 
   return SDValue();
@@ -1308,6 +1353,8 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
   case ISD::STORE:              return lowerSTORE(Op, DAG);
   case ISD::EH_DWARF_CFA:       return lowerEH_DWARF_CFA(Op, DAG);
   case ISD::FP_TO_SINT:         return lowerFP_TO_SINT(Op, DAG);
+  case ISD::READCYCLECOUNTER:
+    return lowerREADCYCLECOUNTER(Op, DAG);
   }
   return SDValue();
 }
@@ -2089,6 +2136,44 @@ MachineBasicBlock *MipsTargetLowering::emitAtomicCmpSwapPartword(
   return exitMBB;
 }
 
+SDValue MipsTargetLowering::lowerREADCYCLECOUNTER(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  SmallVector<SDValue, 3> Results;
+  SDLoc DL(Op);
+  MachineFunction &MF = DAG.getMachineFunction();
+  unsigned RdhwrOpc, DestReg;
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
+
+  if (PtrVT == MVT::i64) {
+    RdhwrOpc = Mips::RDHWR64;
+    DestReg = MF.getRegInfo().createVirtualRegister(getRegClassFor(MVT::i64));
+    SDNode *Rdhwr = DAG.getMachineNode(RdhwrOpc, DL, MVT::i64, MVT::Glue,
+                                       DAG.getRegister(Mips::HWR2, MVT::i32),
+                                       DAG.getTargetConstant(0, DL, MVT::i32));
+    SDValue Chain = DAG.getCopyToReg(DAG.getEntryNode(), DL, DestReg,
+                                     SDValue(Rdhwr, 0), SDValue(Rdhwr, 1));
+    SDValue ResNode =
+        DAG.getCopyFromReg(Chain, DL, DestReg, MVT::i64, Chain.getValue(1));
+    Results.push_back(ResNode);
+    Results.push_back(ResNode.getValue(1));
+  } else {
+    RdhwrOpc = Mips::RDHWR;
+    DestReg = MF.getRegInfo().createVirtualRegister(getRegClassFor(MVT::i32));
+    SDNode *Rdhwr = DAG.getMachineNode(RdhwrOpc, DL, MVT::i32, MVT::Glue,
+                                       DAG.getRegister(Mips::HWR2, MVT::i32),
+                                       DAG.getTargetConstant(0, DL, MVT::i32));
+    SDValue Chain = DAG.getCopyToReg(DAG.getEntryNode(), DL, DestReg,
+                                     SDValue(Rdhwr, 0), SDValue(Rdhwr, 1));
+    SDValue ResNode =
+        DAG.getCopyFromReg(Chain, DL, DestReg, MVT::i32, Chain.getValue(1));
+    Results.push_back(DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, ResNode,
+                                  DAG.getConstant(0, DL, MVT::i32)));
+    Results.push_back(ResNode.getValue(1));
+  }
+
+  return DAG.getMergeValues(Results, DL);
+}
+
 SDValue MipsTargetLowering::lowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
   // The first operand is the chain, the second is the condition, the third is
   // the block to branch to if the condition is true.
@@ -2145,6 +2230,14 @@ SDValue MipsTargetLowering::lowerGlobalAddress(SDValue Op,
   EVT Ty = Op.getValueType();
   GlobalAddressSDNode *N = cast<GlobalAddressSDNode>(Op);
   const GlobalValue *GV = N->getGlobal();
+
+  if (GV->hasDLLImportStorageClass()) {
+    assert(Subtarget.isTargetWindows() &&
+           "Windows is the only supported COFF target");
+    return getDllimportVariable(
+        N, SDLoc(N), Ty, DAG, DAG.getEntryNode(),
+        MachinePointerInfo::getGOT(DAG.getMachineFunction()));
+  }
 
   if (!isPositionIndependent()) {
     const MipsTargetObjectFile *TLOF =
@@ -3341,7 +3434,6 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   SDValue StackPtr =
       DAG.getCopyFromReg(Chain, DL, ABI.IsN64() ? Mips::SP_64 : Mips::SP,
                          getPointerTy(DAG.getDataLayout()));
-
   std::deque<std::pair<unsigned, SDValue>> RegsToPass;
   SmallVector<SDValue, 8> MemOpChains;
 
@@ -3501,7 +3593,14 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
 
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
-    if (IsPIC) {
+    if (Subtarget.isTargetCOFF() &&
+        G->getGlobal()->hasDLLImportStorageClass()) {
+      assert(Subtarget.isTargetWindows() &&
+             "Windows is the only supported COFF target");
+      auto PtrInfo = MachinePointerInfo();
+      Callee = DAG.getLoad(Ty, DL, Chain,
+                           getDllimportSymbol(G, SDLoc(G), Ty, DAG), PtrInfo);
+    } else if (IsPIC) {
       const GlobalValue *Val = G->getGlobal();
       InternalLinkage = Val->hasInternalLinkage();
 
@@ -3864,10 +3963,10 @@ bool
 MipsTargetLowering::CanLowerReturn(CallingConv::ID CallConv,
                                    MachineFunction &MF, bool IsVarArg,
                                    const SmallVectorImpl<ISD::OutputArg> &Outs,
-                                   LLVMContext &Context) const {
+                                   LLVMContext &Context, const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   MipsCCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
-  return CCInfo.CheckReturn(Outs, RetCC_Mips);
+  return CCInfo.CheckCallReturn(Outs, RetCC_Mips, RetTy);
 }
 
 bool MipsTargetLowering::shouldSignExtendTypeInLibCall(Type *Ty,
@@ -4408,13 +4507,27 @@ bool MipsTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   return Imm.isZero();
 }
 
+bool MipsTargetLowering::isLegalICmpImmediate(int64_t Imm) const {
+  return isInt<16>(Imm);
+}
+
+bool MipsTargetLowering::isLegalAddImmediate(int64_t Imm) const {
+  return isInt<16>(Imm);
+}
+
 unsigned MipsTargetLowering::getJumpTableEncoding() const {
-
-  // FIXME: For space reasons this should be: EK_GPRel32BlockAddress.
-  if (ABI.IsN64() && isPositionIndependent())
+  if (!isPositionIndependent())
+    return MachineJumpTableInfo::EK_BlockAddress;
+  if (ABI.IsN64())
     return MachineJumpTableInfo::EK_GPRel64BlockAddress;
+  return MachineJumpTableInfo::EK_GPRel32BlockAddress;
+}
 
-  return TargetLowering::getJumpTableEncoding();
+SDValue MipsTargetLowering::getPICJumpTableRelocBase(SDValue Table,
+                                                     SelectionDAG &DAG) const {
+  if (!isPositionIndependent())
+    return Table;
+  return DAG.getGLOBAL_OFFSET_TABLE(getPointerTy(DAG.getDataLayout()));
 }
 
 bool MipsTargetLowering::useSoftFloat() const {
@@ -4574,7 +4687,7 @@ void MipsTargetLowering::writeVarArgRegs(std::vector<SDValue> &OutChains,
                                          SDValue Chain, const SDLoc &DL,
                                          SelectionDAG &DAG,
                                          CCState &State) const {
-  ArrayRef<MCPhysReg> ArgRegs = ABI.GetVarArgRegs();
+  ArrayRef<MCPhysReg> ArgRegs = ABI.getVarArgRegs(Subtarget.isGP64bit());
   unsigned Idx = State.getFirstUnallocated(ArgRegs);
   unsigned RegSizeInBytes = Subtarget.getGPRSizeInBytes();
   MVT RegTy = MVT::getIntegerVT(RegSizeInBytes * 8);

@@ -27,7 +27,16 @@ def CIR_Dialect : Dialect {
   let useDefaultAttributePrinterParser = 0;
   let useDefaultTypePrinterParser = 0;
 
+  // Enable constant materialization for the CIR dialect. This generates a
+  // declaration for the cir::CIRDialect::materializeConstant function. This
+  // hook is necessary for canonicalization to properly handle attributes
+  // returned by fold methods, allowing them to be materialized as constant
+  // operations in the IR.
+  let hasConstantMaterializer = 1;
+
   let extraClassDeclaration = [{
+    static llvm::StringRef getTripleAttrName() { return "cir.triple"; }
+
     void registerAttributes();
     void registerTypes();
 

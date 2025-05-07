@@ -725,18 +725,18 @@ void Output::blockScalarString(StringRef &S) {
   if (!StateStack.empty())
     newLineCheck();
   output(" |");
-  outputNewLine();
 
   unsigned Indent = StateStack.empty() ? 1 : StateStack.size();
 
   auto Buffer = MemoryBuffer::getMemBuffer(S, "", false);
   for (line_iterator Lines(*Buffer, false); !Lines.is_at_end(); ++Lines) {
+    outputNewLine();
     for (unsigned I = 0; I < Indent; ++I) {
       output("  ");
     }
     output(*Lines);
-    outputNewLine();
   }
+  outputUpToEndOfLine("");
 }
 
 void Output::scalarTag(std::string &Tag) {
@@ -749,6 +749,8 @@ void Output::scalarTag(std::string &Tag) {
 
 void Output::setError(const Twine &message) {
 }
+
+std::error_code Output::error() { return {}; }
 
 bool Output::canElideEmptySequence() {
   // Normally, with an optional key/value where the value is an empty sequence,

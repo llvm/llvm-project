@@ -1,3 +1,4 @@
+!REQUIRES: flang-supports-f128-math
 !RUN: %flang_fc1 -fdebug-dump-symbols %s | FileCheck %s
 module m
   interface

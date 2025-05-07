@@ -36,7 +36,7 @@
 
 using namespace llvm;
 
-static cl::opt<bool> UseDerefAtPointSemantics(
+cl::opt<bool> UseDerefAtPointSemantics(
     "use-dereferenceable-at-point-semantics", cl::Hidden, cl::init(false),
     cl::desc("Deref attributes and metadata infer facts at definition only"));
 
@@ -98,9 +98,10 @@ Value::~Value() {
     dbgs() << "While deleting: " << *VTy << " %" << getName() << "\n";
     for (auto *U : users())
       dbgs() << "Use still stuck around after Def is destroyed:" << *U << "\n";
+
+    llvm_unreachable("Uses remain when a value is destroyed!");
   }
 #endif
-  assert(materialized_use_empty() && "Uses remain when a value is destroyed!");
 
   // If this value is named, destroy the name.  This should not be in a symtab
   // at this point.
@@ -215,20 +216,19 @@ void Value::dropDroppableUsesIn(User &Usr) {
 }
 
 void Value::dropDroppableUse(Use &U) {
-  U.removeFromList();
   if (auto *Assume = dyn_cast<AssumeInst>(U.getUser())) {
     unsigned OpNo = U.getOperandNo();
     if (OpNo == 0)
       U.set(ConstantInt::getTrue(Assume->getContext()));
     else {
-      U.set(UndefValue::get(U.get()->getType()));
+      U.set(PoisonValue::get(U.get()->getType()));
       CallInst::BundleOpInfo &BOI = Assume->getBundleOpInfoForOperand(OpNo);
       BOI.Tag = Assume->getContext().pImpl->getOrInsertBundleTag("ignore");
     }
     return;
   }
 
-  llvm_unreachable("unkown droppable use");
+  llvm_unreachable("unknown droppable use");
 }
 
 bool Value::isUsedInBasicBlock(const BasicBlock *BB) const {
@@ -441,7 +441,6 @@ void Value::takeName(Value *V) {
     ST->reinsertValue(this);
 }
 
-#ifndef NDEBUG
 std::string Value::getNameOrAsOperand() const {
   if (!getName().empty())
     return std::string(getName());
@@ -451,7 +450,6 @@ std::string Value::getNameOrAsOperand() const {
   printAsOperand(OS, false);
   return OS.str();
 }
-#endif
 
 void Value::assertModuleIsMaterializedImpl() const {
 #ifndef NDEBUG
@@ -714,7 +712,8 @@ const Value *Value::stripPointerCastsForAliasAnalysis() const {
 const Value *Value::stripAndAccumulateConstantOffsets(
     const DataLayout &DL, APInt &Offset, bool AllowNonInbounds,
     bool AllowInvariantGroup,
-    function_ref<bool(Value &, APInt &)> ExternalAnalysis) const {
+    function_ref<bool(Value &, APInt &)> ExternalAnalysis,
+    bool LookThroughIntToPtr) const {
   if (!getType()->isPtrOrPtrVectorTy())
     return this;
 
@@ -775,6 +774,24 @@ const Value *Value::stripAndAccumulateConstantOffsets(
           V = RV;
         if (AllowInvariantGroup && Call->isLaunderOrStripInvariantGroup())
           V = Call->getArgOperand(0);
+    } else if (auto *Int2Ptr = dyn_cast<Operator>(V)) {
+      // Try to accumulate across (inttoptr (add (ptrtoint p), off)).
+      if (!AllowNonInbounds || !LookThroughIntToPtr || !Int2Ptr ||
+          Int2Ptr->getOpcode() != Instruction::IntToPtr ||
+          Int2Ptr->getOperand(0)->getType()->getScalarSizeInBits() != BitWidth)
+        return V;
+
+      auto *Add = dyn_cast<AddOperator>(Int2Ptr->getOperand(0));
+      if (!Add)
+        return V;
+
+      auto *Ptr2Int = dyn_cast<PtrToIntOperator>(Add->getOperand(0));
+      auto *CI = dyn_cast<ConstantInt>(Add->getOperand(1));
+      if (!Ptr2Int || !CI)
+        return V;
+
+      Offset += CI->getValue();
+      V = Ptr2Int->getOperand(0);
     }
     assert(V->getType()->isPtrOrPtrVectorTy() && "Unexpected operand type!");
   } while (Visited.insert(V).second);

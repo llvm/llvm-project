@@ -249,16 +249,16 @@ bool SemaARM::BuiltinARMSpecialReg(unsigned BuiltinID, CallExpr *TheCall,
       }
     }
 
-    SmallVector<int, 5> Ranges;
+    SmallVector<int, 5> FieldBitWidths;
     if (FiveFields)
-      Ranges.append({IsAArch64Builtin ? 1 : 15, 7, 15, 15, 7});
+      FieldBitWidths.append({IsAArch64Builtin ? 2 : 4, 3, 4, 4, 3});
     else
-      Ranges.append({15, 7, 15});
+      FieldBitWidths.append({4, 3, 4});
 
     for (unsigned i = 0; i < Fields.size(); ++i) {
       int IntField;
       ValidString &= !Fields[i].getAsInteger(10, IntField);
-      ValidString &= (IntField >= 0 && IntField <= Ranges[i]);
+      ValidString &= (IntField >= 0 && IntField < (1 << FieldBitWidths[i]));
     }
 
     if (!ValidString)
@@ -352,6 +352,8 @@ static QualType getNeonEltType(NeonTypeFlags Flags, ASTContext &Context,
     return Context.DoubleTy;
   case NeonTypeFlags::BFloat16:
     return Context.BFloat16Ty;
+  case NeonTypeFlags::MFloat8:
+    return Context.MFloat8Ty;
   }
   llvm_unreachable("Invalid NeonTypeFlag!");
 }
@@ -622,20 +624,6 @@ static bool checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
   return true;
 }
 
-static bool hasArmZAState(const FunctionDecl *FD) {
-  const auto *T = FD->getType()->getAs<FunctionProtoType>();
-  return (T && FunctionType::getArmZAState(T->getAArch64SMEAttributes()) !=
-                   FunctionType::ARM_None) ||
-         (FD->hasAttr<ArmNewAttr>() && FD->getAttr<ArmNewAttr>()->isNewZA());
-}
-
-static bool hasArmZT0State(const FunctionDecl *FD) {
-  const auto *T = FD->getType()->getAs<FunctionProtoType>();
-  return (T && FunctionType::getArmZT0State(T->getAArch64SMEAttributes()) !=
-                   FunctionType::ARM_None) ||
-         (FD->hasAttr<ArmNewAttr>() && FD->getAttr<ArmNewAttr>()->isNewZT0());
-}
-
 static ArmSMEState getSMEState(unsigned BuiltinID) {
   switch (BuiltinID) {
   default:
@@ -648,7 +636,8 @@ static ArmSMEState getSMEState(unsigned BuiltinID) {
 
 bool SemaARM::CheckSMEBuiltinFunctionCall(unsigned BuiltinID,
                                           CallExpr *TheCall) {
-  if (const FunctionDecl *FD = SemaRef.getCurFunctionDecl()) {
+  if (const FunctionDecl *FD =
+          SemaRef.getCurFunctionDecl(/*AllowLambda=*/true)) {
     std::optional<ArmStreamingType> BuiltinType;
 
     switch (BuiltinID) {
@@ -688,7 +677,8 @@ bool SemaARM::CheckSMEBuiltinFunctionCall(unsigned BuiltinID,
 
 bool SemaARM::CheckSVEBuiltinFunctionCall(unsigned BuiltinID,
                                           CallExpr *TheCall) {
-  if (const FunctionDecl *FD = SemaRef.getCurFunctionDecl()) {
+  if (const FunctionDecl *FD =
+          SemaRef.getCurFunctionDecl(/*AllowLambda=*/true)) {
     std::optional<ArmStreamingType> BuiltinType;
 
     switch (BuiltinID) {
@@ -717,23 +707,20 @@ bool SemaARM::CheckSVEBuiltinFunctionCall(unsigned BuiltinID,
 bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
                                            unsigned BuiltinID,
                                            CallExpr *TheCall) {
-  if (const FunctionDecl *FD = SemaRef.getCurFunctionDecl()) {
+  if (const FunctionDecl *FD =
+          SemaRef.getCurFunctionDecl(/*AllowLambda=*/true)) {
+    std::optional<ArmStreamingType> BuiltinType;
 
     switch (BuiltinID) {
     default:
       break;
-#define GET_NEON_BUILTINS
-#define TARGET_BUILTIN(id, ...) case NEON::BI##id:
-#define BUILTIN(id, ...) case NEON::BI##id:
+#define GET_NEON_STREAMING_COMPAT_FLAG
 #include "clang/Basic/arm_neon.inc"
-      if (checkArmStreamingBuiltin(SemaRef, TheCall, FD, ArmNonStreaming,
-                                   BuiltinID))
-        return true;
-      break;
-#undef TARGET_BUILTIN
-#undef BUILTIN
-#undef GET_NEON_BUILTINS
+#undef GET_NEON_STREAMING_COMPAT_FLAG
     }
+    if (BuiltinType &&
+        checkArmStreamingBuiltin(SemaRef, TheCall, FD, *BuiltinType, BuiltinID))
+      return true;
   }
 
   llvm::APSInt Result;
@@ -779,7 +766,7 @@ bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
     if (HasConstPtr)
       EltTy = EltTy.withConst();
     QualType LHSTy = getASTContext().getPointerType(EltTy);
-    Sema::AssignConvertType ConvTy;
+    AssignConvertType ConvTy;
     ConvTy = SemaRef.CheckSingleAssignmentConstraints(LHSTy, RHS);
     if (RHS.isInvalid())
       return true;
@@ -1122,7 +1109,10 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
   default: return false;
   case AArch64::BI__builtin_arm_dmb:
   case AArch64::BI__builtin_arm_dsb:
-  case AArch64::BI__builtin_arm_isb: l = 0; u = 15; break;
+  case AArch64::BI__builtin_arm_isb:
+    l = 0;
+    u = 15;
+    break;
   case AArch64::BI__builtin_arm_tcancel: l = 0; u = 65535; break;
   }
 
@@ -1191,7 +1181,7 @@ void SemaARM::handleBuiltinAliasAttr(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  IdentifierInfo *Ident = AL.getArgAsIdent(0)->Ident;
+  IdentifierInfo *Ident = AL.getArgAsIdent(0)->getIdentifierInfo();
   unsigned BuiltinID = Ident->getBuiltinID();
   StringRef AliasName = cast<FunctionDecl>(D)->getIdentifier()->getName();
 
@@ -1320,12 +1310,36 @@ void SemaARM::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  const TargetInfo &TI = getASTContext().getTargetInfo();
-  if (TI.hasFeature("vfp"))
-    Diag(D->getLocation(), diag::warn_arm_interrupt_vfp_clobber);
+  if (!D->hasAttr<ARMSaveFPAttr>()) {
+    const TargetInfo &TI = getASTContext().getTargetInfo();
+    if (TI.hasFeature("vfp"))
+      Diag(D->getLocation(), diag::warn_arm_interrupt_vfp_clobber);
+  }
 
   D->addAttr(::new (getASTContext())
                  ARMInterruptAttr(getASTContext(), AL, Kind));
+}
+
+void SemaARM::handleInterruptSaveFPAttr(Decl *D, const ParsedAttr &AL) {
+  // Go ahead and add ARMSaveFPAttr because handleInterruptAttr() checks for
+  // it when deciding to issue a diagnostic about clobbering floating point
+  // registers, which ARMSaveFPAttr prevents.
+  D->addAttr(::new (SemaRef.Context) ARMSaveFPAttr(SemaRef.Context, AL));
+  SemaRef.ARM().handleInterruptAttr(D, AL);
+
+  // If ARM().handleInterruptAttr() failed, remove ARMSaveFPAttr.
+  if (!D->hasAttr<ARMInterruptAttr>()) {
+    D->dropAttr<ARMSaveFPAttr>();
+    return;
+  }
+
+  // If VFP not enabled, remove ARMSaveFPAttr but leave ARMInterruptAttr.
+  bool VFP = SemaRef.Context.getTargetInfo().hasFeature("vfp");
+
+  if (!VFP) {
+    SemaRef.Diag(D->getLocation(), diag::warn_arm_interrupt_save_fp_without_vfp_unit);
+    D->dropAttr<ARMSaveFPAttr>();
+  }
 }
 
 // Check if the function definition uses any AArch64 SME features without

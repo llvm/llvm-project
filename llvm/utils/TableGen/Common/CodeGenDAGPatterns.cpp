@@ -24,6 +24,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -217,10 +218,8 @@ bool TypeSetByHwMode::operator==(const TypeSetByHwMode &VTS) const {
     return false;
 
   SmallSet<unsigned, 4> Modes;
-  for (auto &I : *this)
-    Modes.insert(I.first);
-  for (const auto &I : VTS)
-    Modes.insert(I.first);
+  Modes.insert_range(llvm::make_first_range(*this));
+  Modes.insert_range(llvm::make_first_range(VTS));
 
   if (HaveDefault) {
     // Both sets have default mode.
@@ -912,7 +911,7 @@ std::string TreePredicateFn::getPredCode() const {
 
   if (!isLoad() && !isStore() && !isAtomic() && getMemoryVT())
     PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                    "MemoryVT requires IsLoad or IsStore");
+                    "MemoryVT requires IsLoad or IsStore or IsAtomic");
 
   if (!isLoad() && !isStore()) {
     if (isUnindexed())
@@ -935,22 +934,19 @@ std::string TreePredicateFn::getPredCode() const {
         getMinAlignment() < 1)
       PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
                       "IsLoad cannot be used by itself");
-  } else {
+  } else if (!isAtomic()) {
     if (isNonExtLoad())
       PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsNonExtLoad requires IsLoad");
+                      "IsNonExtLoad requires IsLoad or IsAtomic");
     if (isAnyExtLoad())
       PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsAnyExtLoad requires IsLoad");
-
-    if (!isAtomic()) {
-      if (isSignExtLoad())
-        PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                        "IsSignExtLoad requires IsLoad or IsAtomic");
-      if (isZeroExtLoad())
-        PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                        "IsZeroExtLoad requires IsLoad or IsAtomic");
-    }
+                      "IsAnyExtLoad requires IsLoad or IsAtomic");
+    if (isSignExtLoad())
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "IsSignExtLoad requires IsLoad or IsAtomic");
+    if (isZeroExtLoad())
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "IsZeroExtLoad requires IsLoad or IsAtomic");
   }
 
   if (isStore()) {
@@ -969,11 +965,12 @@ std::string TreePredicateFn::getPredCode() const {
   }
 
   if (isAtomic()) {
-    if (getMemoryVT() == nullptr && !isAtomicOrderingMonotonic() &&
-        getAddressSpaces() == nullptr &&
+    if (getMemoryVT() == nullptr && getAddressSpaces() == nullptr &&
         // FIXME: Should atomic loads be IsLoad, IsAtomic, or both?
-        !isZeroExtLoad() && !isSignExtLoad() && !isAtomicOrderingAcquire() &&
-        !isAtomicOrderingRelease() && !isAtomicOrderingAcquireRelease() &&
+        !isNonExtLoad() && !isAnyExtLoad() && !isZeroExtLoad() &&
+        !isSignExtLoad() && !isAtomicOrderingMonotonic() &&
+        !isAtomicOrderingAcquire() && !isAtomicOrderingRelease() &&
+        !isAtomicOrderingAcquireRelease() &&
         !isAtomicOrderingSequentiallyConsistent() &&
         !isAtomicOrderingAcquireOrStronger() &&
         !isAtomicOrderingReleaseOrStronger() &&
@@ -1077,9 +1074,27 @@ std::string TreePredicateFn::getPredCode() const {
         "if (isReleaseOrStronger(cast<AtomicSDNode>(N)->getMergedOrdering())) "
         "return false;\n";
 
-  // TODO: Handle atomic sextload/zextload normally when ATOMIC_LOAD is removed.
-  if (isAtomic() && (isZeroExtLoad() || isSignExtLoad()))
-    Code += "return false;\n";
+  if (isAtomic()) {
+    if ((isNonExtLoad() + isAnyExtLoad() + isSignExtLoad() + isZeroExtLoad()) >
+        1)
+      PrintFatalError(
+          getOrigPatFragRecord()->getRecord()->getLoc(),
+          "IsNonExtLoad, IsAnyExtLoad, IsSignExtLoad, and IsZeroExtLoad are "
+          "mutually exclusive");
+
+    if (isNonExtLoad())
+      Code += "if (cast<AtomicSDNode>(N)->getExtensionType() != "
+              "ISD::NON_EXTLOAD) return false;\n";
+    if (isAnyExtLoad())
+      Code += "if (cast<AtomicSDNode>(N)->getExtensionType() != ISD::EXTLOAD) "
+              "return false;\n";
+    if (isSignExtLoad())
+      Code += "if (cast<AtomicSDNode>(N)->getExtensionType() != ISD::SEXTLOAD) "
+              "return false;\n";
+    if (isZeroExtLoad())
+      Code += "if (cast<AtomicSDNode>(N)->getExtensionType() != ISD::ZEXTLOAD) "
+              "return false;\n";
+  }
 
   if (isLoad() || isStore()) {
     StringRef SDNodeName = isLoad() ? "LoadSDNode" : "StoreSDNode";
@@ -1129,9 +1144,9 @@ std::string TreePredicateFn::getPredCode() const {
   }
 
   if (hasNoUse())
-    Code += "if (!SDValue(N, 0).use_empty()) return false;\n";
+    Code += "if (N->hasAnyUseOfValue(0)) return false;\n";
   if (hasOneUse())
-    Code += "if (!SDValue(N, 0).hasOneUse()) return false;\n";
+    Code += "if (!N->hasNUsesOfValue(1, 0)) return false;\n";
 
   std::string PredicateCode =
       std::string(PatFragRec->getRecord()->getValueAsString("PredicateCode"));
@@ -1360,11 +1375,11 @@ std::string TreePredicateFn::getCodeToRunOnSDNode() const {
 
     std::string Result = ("    " + getImmType() + " Imm = ").str();
     if (immCodeUsesAPFloat())
-      Result += "cast<ConstantFPSDNode>(Node)->getValueAPF();\n";
+      Result += "cast<ConstantFPSDNode>(Op.getNode())->getValueAPF();\n";
     else if (immCodeUsesAPInt())
-      Result += "Node->getAsAPIntVal();\n";
+      Result += "Op->getAsAPIntVal();\n";
     else
-      Result += "cast<ConstantSDNode>(Node)->getSExtValue();\n";
+      Result += "cast<ConstantSDNode>(Op.getNode())->getSExtValue();\n";
     return Result + ImmCode;
   }
 
@@ -1395,9 +1410,9 @@ std::string TreePredicateFn::getCodeToRunOnSDNode() const {
 
   std::string Result;
   if (ClassName == "SDNode")
-    Result = "    SDNode *N = Node;\n";
+    Result = "    SDNode *N = Op.getNode();\n";
   else
-    Result = "    auto *N = cast<" + ClassName.str() + ">(Node);\n";
+    Result = "    auto *N = cast<" + ClassName.str() + ">(Op.getNode());\n";
 
   return (Twine(Result) + "    (void)N;\n" + getPredCode()).str();
 }
@@ -1537,21 +1552,19 @@ SDTypeConstraint::SDTypeConstraint(const Record *R, const CodeGenHwModes &CGH) {
     ConstraintType = SDTCisVec;
   } else if (R->isSubClassOf("SDTCisSameAs")) {
     ConstraintType = SDTCisSameAs;
-    x.SDTCisSameAs_Info.OtherOperandNum = R->getValueAsInt("OtherOperandNum");
+    OtherOperandNo = R->getValueAsInt("OtherOperandNum");
   } else if (R->isSubClassOf("SDTCisVTSmallerThanOp")) {
     ConstraintType = SDTCisVTSmallerThanOp;
-    x.SDTCisVTSmallerThanOp_Info.OtherOperandNum =
-        R->getValueAsInt("OtherOperandNum");
+    OtherOperandNo = R->getValueAsInt("OtherOperandNum");
   } else if (R->isSubClassOf("SDTCisOpSmallerThanOp")) {
     ConstraintType = SDTCisOpSmallerThanOp;
-    x.SDTCisOpSmallerThanOp_Info.BigOperandNum =
-        R->getValueAsInt("BigOperandNum");
+    OtherOperandNo = R->getValueAsInt("BigOperandNum");
   } else if (R->isSubClassOf("SDTCisEltOfVec")) {
     ConstraintType = SDTCisEltOfVec;
-    x.SDTCisEltOfVec_Info.OtherOperandNum = R->getValueAsInt("OtherOpNum");
+    OtherOperandNo = R->getValueAsInt("OtherOpNum");
   } else if (R->isSubClassOf("SDTCisSubVecOfVec")) {
     ConstraintType = SDTCisSubVecOfVec;
-    x.SDTCisSubVecOfVec_Info.OtherOperandNum = R->getValueAsInt("OtherOpNum");
+    OtherOperandNo = R->getValueAsInt("OtherOpNum");
   } else if (R->isSubClassOf("SDTCVecEltisVT")) {
     ConstraintType = SDTCVecEltisVT;
     VVT = getValueTypeByHwMode(R->getValueAsDef("VT"), CGH);
@@ -1566,12 +1579,10 @@ SDTypeConstraint::SDTypeConstraint(const Record *R, const CodeGenHwModes &CGH) {
     }
   } else if (R->isSubClassOf("SDTCisSameNumEltsAs")) {
     ConstraintType = SDTCisSameNumEltsAs;
-    x.SDTCisSameNumEltsAs_Info.OtherOperandNum =
-        R->getValueAsInt("OtherOperandNum");
+    OtherOperandNo = R->getValueAsInt("OtherOperandNum");
   } else if (R->isSubClassOf("SDTCisSameSizeAs")) {
     ConstraintType = SDTCisSameSizeAs;
-    x.SDTCisSameSizeAs_Info.OtherOperandNum =
-        R->getValueAsInt("OtherOperandNum");
+    OtherOperandNo = R->getValueAsInt("OtherOperandNum");
   } else {
     PrintFatalError(R->getLoc(),
                     "Unrecognized SDTypeConstraint '" + R->getName() + "'!\n");
@@ -1632,7 +1643,7 @@ bool SDTypeConstraint::ApplyTypeConstraint(TreePatternNode &N,
   case SDTCisSameAs: {
     unsigned OResNo = 0;
     TreePatternNode &OtherNode =
-        getOperandNum(x.SDTCisSameAs_Info.OtherOperandNum, N, NodeInfo, OResNo);
+        getOperandNum(OtherOperandNo, N, NodeInfo, OResNo);
     return (int)NodeToApply.UpdateNodeType(ResNo, OtherNode.getExtType(OResNo),
                                            TP) |
            (int)OtherNode.UpdateNodeType(OResNo, NodeToApply.getExtType(ResNo),
@@ -1654,23 +1665,23 @@ bool SDTypeConstraint::ApplyTypeConstraint(TreePatternNode &N,
     TypeSetByHwMode TypeListTmp(VVT);
 
     unsigned OResNo = 0;
-    TreePatternNode &OtherNode = getOperandNum(
-        x.SDTCisVTSmallerThanOp_Info.OtherOperandNum, N, NodeInfo, OResNo);
+    TreePatternNode &OtherNode =
+        getOperandNum(OtherOperandNo, N, NodeInfo, OResNo);
 
     return TI.EnforceSmallerThan(TypeListTmp, OtherNode.getExtType(OResNo),
                                  /*SmallIsVT*/ true);
   }
   case SDTCisOpSmallerThanOp: {
     unsigned BResNo = 0;
-    TreePatternNode &BigOperand = getOperandNum(
-        x.SDTCisOpSmallerThanOp_Info.BigOperandNum, N, NodeInfo, BResNo);
+    TreePatternNode &BigOperand =
+        getOperandNum(OtherOperandNo, N, NodeInfo, BResNo);
     return TI.EnforceSmallerThan(NodeToApply.getExtType(ResNo),
                                  BigOperand.getExtType(BResNo));
   }
   case SDTCisEltOfVec: {
     unsigned VResNo = 0;
-    TreePatternNode &VecOperand = getOperandNum(
-        x.SDTCisEltOfVec_Info.OtherOperandNum, N, NodeInfo, VResNo);
+    TreePatternNode &VecOperand =
+        getOperandNum(OtherOperandNo, N, NodeInfo, VResNo);
     // Filter vector types out of VecOperand that don't have the right element
     // type.
     return TI.EnforceVectorEltTypeIs(VecOperand.getExtType(VResNo),
@@ -1678,8 +1689,8 @@ bool SDTypeConstraint::ApplyTypeConstraint(TreePatternNode &N,
   }
   case SDTCisSubVecOfVec: {
     unsigned VResNo = 0;
-    TreePatternNode &BigVecOperand = getOperandNum(
-        x.SDTCisSubVecOfVec_Info.OtherOperandNum, N, NodeInfo, VResNo);
+    TreePatternNode &BigVecOperand =
+        getOperandNum(OtherOperandNo, N, NodeInfo, VResNo);
 
     // Filter vector types out of BigVecOperand that don't have the
     // right subvector type.
@@ -1691,20 +1702,72 @@ bool SDTypeConstraint::ApplyTypeConstraint(TreePatternNode &N,
   }
   case SDTCisSameNumEltsAs: {
     unsigned OResNo = 0;
-    TreePatternNode &OtherNode = getOperandNum(
-        x.SDTCisSameNumEltsAs_Info.OtherOperandNum, N, NodeInfo, OResNo);
+    TreePatternNode &OtherNode =
+        getOperandNum(OtherOperandNo, N, NodeInfo, OResNo);
     return TI.EnforceSameNumElts(OtherNode.getExtType(OResNo),
                                  NodeToApply.getExtType(ResNo));
   }
   case SDTCisSameSizeAs: {
     unsigned OResNo = 0;
-    TreePatternNode &OtherNode = getOperandNum(
-        x.SDTCisSameSizeAs_Info.OtherOperandNum, N, NodeInfo, OResNo);
+    TreePatternNode &OtherNode =
+        getOperandNum(OtherOperandNo, N, NodeInfo, OResNo);
     return TI.EnforceSameSize(OtherNode.getExtType(OResNo),
                               NodeToApply.getExtType(ResNo));
   }
   }
   llvm_unreachable("Invalid ConstraintType!");
+}
+
+bool llvm::operator==(const SDTypeConstraint &LHS,
+                      const SDTypeConstraint &RHS) {
+  if (std::tie(LHS.OperandNo, LHS.ConstraintType) !=
+      std::tie(RHS.OperandNo, RHS.ConstraintType))
+    return false;
+  switch (LHS.ConstraintType) {
+  case SDTypeConstraint::SDTCisVT:
+  case SDTypeConstraint::SDTCVecEltisVT:
+    return LHS.VVT == RHS.VVT;
+  case SDTypeConstraint::SDTCisPtrTy:
+  case SDTypeConstraint::SDTCisInt:
+  case SDTypeConstraint::SDTCisFP:
+  case SDTypeConstraint::SDTCisVec:
+    break;
+  case SDTypeConstraint::SDTCisSameAs:
+  case SDTypeConstraint::SDTCisVTSmallerThanOp:
+  case SDTypeConstraint::SDTCisOpSmallerThanOp:
+  case SDTypeConstraint::SDTCisEltOfVec:
+  case SDTypeConstraint::SDTCisSubVecOfVec:
+  case SDTypeConstraint::SDTCisSameNumEltsAs:
+  case SDTypeConstraint::SDTCisSameSizeAs:
+    return LHS.OtherOperandNo == RHS.OtherOperandNo;
+  }
+  return true;
+}
+
+bool llvm::operator<(const SDTypeConstraint &LHS, const SDTypeConstraint &RHS) {
+  if (std::tie(LHS.OperandNo, LHS.ConstraintType) !=
+      std::tie(RHS.OperandNo, RHS.ConstraintType))
+    return std::tie(LHS.OperandNo, LHS.ConstraintType) <
+           std::tie(RHS.OperandNo, RHS.ConstraintType);
+  switch (LHS.ConstraintType) {
+  case SDTypeConstraint::SDTCisVT:
+  case SDTypeConstraint::SDTCVecEltisVT:
+    return LHS.VVT < RHS.VVT;
+  case SDTypeConstraint::SDTCisPtrTy:
+  case SDTypeConstraint::SDTCisInt:
+  case SDTypeConstraint::SDTCisFP:
+  case SDTypeConstraint::SDTCisVec:
+    break;
+  case SDTypeConstraint::SDTCisSameAs:
+  case SDTypeConstraint::SDTCisVTSmallerThanOp:
+  case SDTypeConstraint::SDTCisOpSmallerThanOp:
+  case SDTypeConstraint::SDTCisEltOfVec:
+  case SDTypeConstraint::SDTCisSubVecOfVec:
+  case SDTypeConstraint::SDTCisSameNumEltsAs:
+  case SDTypeConstraint::SDTCisSameSizeAs:
+    return LHS.OtherOperandNo < RHS.OtherOperandNo;
+  }
+  return false;
 }
 
 // Update the node type to match an instruction operand or result as specified
@@ -1797,6 +1860,14 @@ SDNodeInfo::SDNodeInfo(const Record *R, const CodeGenHwModes &CGH) : Def(R) {
 
   // Parse the properties.
   Properties = parseSDPatternOperatorProperties(R);
+  IsStrictFP = R->getValueAsBit("IsStrictFP");
+
+  std::optional<int64_t> MaybeTSFlags =
+      R->getValueAsBitsInit("TSFlags")->convertInitializerToInt();
+  if (!MaybeTSFlags)
+    PrintFatalError(R->getLoc(), "Invalid TSFlags");
+  assert(isUInt<32>(*MaybeTSFlags) && "TSFlags bit width out of sync");
+  TSFlags = *MaybeTSFlags;
 
   // Parse the type constraints.
   for (const Record *R : TypeProfile->getValueAsListOfDefs("Constraints"))
@@ -3147,13 +3218,8 @@ bool TreePattern::InferAllTypes(
 
 void TreePattern::print(raw_ostream &OS) const {
   OS << getRecord()->getName();
-  if (!Args.empty()) {
-    OS << "(";
-    ListSeparator LS;
-    for (const std::string &Arg : Args)
-      OS << LS << Arg;
-    OS << ")";
-  }
+  if (!Args.empty())
+    OS << '(' << llvm::interleaved(Args) << ')';
   OS << ": ";
 
   if (Trees.size() > 1)
@@ -3265,8 +3331,7 @@ void CodeGenDAGPatterns::ParsePatternFragments(bool OutFrags) {
     std::vector<std::string> &Args = P->getArgList();
     // Copy the args so we can take StringRefs to them.
     auto ArgsCopy = Args;
-    SmallDenseSet<StringRef, 4> OperandsSet;
-    OperandsSet.insert(ArgsCopy.begin(), ArgsCopy.end());
+    SmallDenseSet<StringRef, 4> OperandsSet(llvm::from_range, ArgsCopy);
 
     if (OperandsSet.count(""))
       P->error("Cannot have unnamed 'node' values in pattern fragment!");
@@ -4083,23 +4148,19 @@ void CodeGenDAGPatterns::InferInstructionFlags() {
 
   // If requested by the target, guess any undefined properties.
   if (Target.guessInstructionProperties()) {
-    for (unsigned i = 0, e = Instructions.size(); i != e; ++i) {
-      CodeGenInstruction *InstInfo =
-          const_cast<CodeGenInstruction *>(Instructions[i]);
+    for (const CodeGenInstruction *InstInfo : Instructions) {
       if (InstInfo->InferredFrom)
         continue;
       // The mayLoad and mayStore flags default to false.
       // Conservatively assume hasSideEffects if it wasn't explicit.
       if (InstInfo->hasSideEffects_Unset)
-        InstInfo->hasSideEffects = true;
+        const_cast<CodeGenInstruction *>(InstInfo)->hasSideEffects = true;
     }
     return;
   }
 
   // Complain about any flags that are still undefined.
-  for (unsigned i = 0, e = Instructions.size(); i != e; ++i) {
-    CodeGenInstruction *InstInfo =
-        const_cast<CodeGenInstruction *>(Instructions[i]);
+  for (const CodeGenInstruction *InstInfo : Instructions) {
     if (InstInfo->InferredFrom)
       continue;
     if (InstInfo->hasSideEffects_Unset)

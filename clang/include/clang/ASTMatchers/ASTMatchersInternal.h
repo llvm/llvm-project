@@ -871,30 +871,19 @@ IteratorT matchesFirstInPointerRange(const MatcherT &Matcher, IteratorT Start,
   return End;
 }
 
-template <typename T, std::enable_if_t<!std::is_base_of<FunctionDecl, T>::value>
-                          * = nullptr>
-inline bool isDefaultedHelper(const T *) {
+template <typename T> inline bool isDefaultedHelper(const T *FD) {
+  if constexpr (std::is_base_of_v<FunctionDecl, T>)
+    return FD->isDefaulted();
   return false;
-}
-inline bool isDefaultedHelper(const FunctionDecl *FD) {
-  return FD->isDefaulted();
 }
 
 // Metafunction to determine if type T has a member called getDecl.
-template <typename Ty>
-class has_getDecl {
-  using yes = char[1];
-  using no = char[2];
+template <typename T>
+using check_has_getDecl = decltype(std::declval<T &>().getDecl());
 
-  template <typename Inner>
-  static yes& test(Inner *I, decltype(I->getDecl()) * = nullptr);
-
-  template <typename>
-  static no& test(...);
-
-public:
-  static const bool value = sizeof(test<Ty>(nullptr)) == sizeof(yes);
-};
+template <typename T>
+static constexpr bool has_getDecl =
+    llvm::is_detected<check_has_getDecl, T>::value;
 
 /// Matches overloaded operators with a specific name.
 ///
@@ -1733,9 +1722,10 @@ public:
 template <typename T, typename ValueT>
 class ValueEqualsMatcher : public SingleNodeMatcherInterface<T> {
   static_assert(std::is_base_of<CharacterLiteral, T>::value ||
-                std::is_base_of<CXXBoolLiteralExpr, T>::value ||
-                std::is_base_of<FloatingLiteral, T>::value ||
-                std::is_base_of<IntegerLiteral, T>::value,
+                    std::is_base_of<CXXBoolLiteralExpr, T>::value ||
+                    std::is_base_of<FloatingLiteral, T>::value ||
+                    std::is_base_of<IntegerLiteral, T>::value ||
+                    std::is_base_of<FixedPointLiteral, T>::value,
                 "the node must have a getValue method");
 
 public:
@@ -1804,7 +1794,7 @@ private:
 ///
 /// Used to implement the \c loc() matcher.
 class TypeLocTypeMatcher : public MatcherInterface<TypeLoc> {
-  DynTypedMatcher InnerMatcher;
+  Matcher<QualType> InnerMatcher;
 
 public:
   explicit TypeLocTypeMatcher(const Matcher<QualType> &InnerMatcher)
@@ -1814,8 +1804,7 @@ public:
                BoundNodesTreeBuilder *Builder) const override {
     if (!Node)
       return false;
-    return this->InnerMatcher.matches(DynTypedNode::create(Node.getType()),
-                                      Finder, Builder);
+    return this->InnerMatcher.matches(Node.getType(), Finder, Builder);
   }
 };
 

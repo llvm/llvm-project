@@ -12,13 +12,17 @@
 #include "llvm/SandboxIR/Utils.h"
 #include "llvm/SandboxIR/Value.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/InstrMaps.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
 
 namespace llvm::sandboxir {
 
-#define DEBUG_TYPE "SBVec:Legality"
-
 #ifndef NDEBUG
+void ShuffleMask::dump() const {
+  print(dbgs());
+  dbgs() << "\n";
+}
+
 void LegalityResult::dump() const {
   print(dbgs());
   dbgs() << "\n";
@@ -110,7 +114,15 @@ LegalityAnalysis::notVectorizableBasedOnOpcodesAndTypes(
       return std::nullopt;
     return ResultReason::DiffOpcodes;
   }
-  case Instruction::Opcode::Select:
+  case Instruction::Opcode::Select: {
+    auto *Sel0 = cast<SelectInst>(Bndl[0]);
+    auto *Cond0 = Sel0->getCondition();
+    if (VecUtils::getNumLanes(Cond0) != VecUtils::getNumLanes(Sel0))
+      // TODO: For now we don't vectorize if the lanes in the condition don't
+      // match those of the select instruction.
+      return ResultReason::Unimplemented;
+    return std::nullopt;
+  }
   case Instruction::Opcode::FNeg:
   case Instruction::Opcode::Add:
   case Instruction::Opcode::FAdd:
@@ -177,26 +189,54 @@ LegalityAnalysis::notVectorizableBasedOnOpcodesAndTypes(
   return std::nullopt;
 }
 
-#ifndef NDEBUG
-static void dumpBndl(ArrayRef<Value *> Bndl) {
-  for (auto *V : Bndl)
-    dbgs() << *V << "\n";
+CollectDescr
+LegalityAnalysis::getHowToCollectValues(ArrayRef<Value *> Bndl) const {
+  SmallVector<CollectDescr::ExtractElementDescr, 4> Vec;
+  Vec.reserve(Bndl.size());
+  for (auto [Elm, V] : enumerate(Bndl)) {
+    if (auto *VecOp = IMaps.getVectorForOrig(V)) {
+      // If there is a vector containing `V`, then get the lane it came from.
+      std::optional<int> ExtractIdxOpt = IMaps.getOrigLane(VecOp, V);
+      // This could be a vector, like <2 x float> in which case the mask needs
+      // to enumerate all lanes.
+      for (unsigned Ln = 0, Lanes = VecUtils::getNumLanes(V); Ln != Lanes; ++Ln)
+        Vec.emplace_back(VecOp, ExtractIdxOpt ? *ExtractIdxOpt + Ln : -1);
+    } else {
+      Vec.emplace_back(V);
+    }
+  }
+  return CollectDescr(std::move(Vec));
 }
-#endif // NDEBUG
 
 const LegalityResult &LegalityAnalysis::canVectorize(ArrayRef<Value *> Bndl,
                                                      bool SkipScheduling) {
   // If Bndl contains values other than instructions, we need to Pack.
-  if (any_of(Bndl, [](auto *V) { return !isa<Instruction>(V); })) {
-    LLVM_DEBUG(dbgs() << "Not vectorizing: Not Instructions:\n";
-               dumpBndl(Bndl););
+  if (any_of(Bndl, [](auto *V) { return !isa<Instruction>(V); }))
     return createLegalityResult<Pack>(ResultReason::NotInstructions);
+  // Pack if not in the same BB.
+  auto *BB = cast<Instruction>(Bndl[0])->getParent();
+  if (any_of(drop_begin(Bndl),
+             [BB](auto *V) { return cast<Instruction>(V)->getParent() != BB; }))
+    return createLegalityResult<Pack>(ResultReason::DiffBBs);
+  // Pack if instructions repeat, i.e., require some sort of broadcast.
+  SmallPtrSet<Value *, 8> Unique(llvm::from_range, Bndl);
+  if (Unique.size() != Bndl.size())
+    return createLegalityResult<Pack>(ResultReason::RepeatedInstrs);
+
+  auto CollectDescrs = getHowToCollectValues(Bndl);
+  if (CollectDescrs.hasVectorInputs()) {
+    if (auto ValueShuffleOpt = CollectDescrs.getSingleInput()) {
+      auto [Vec, Mask] = *ValueShuffleOpt;
+      if (Mask.isIdentity())
+        return createLegalityResult<DiamondReuse>(Vec);
+      return createLegalityResult<DiamondReuseWithShuffle>(Vec, Mask);
+    }
+    return createLegalityResult<DiamondReuseMultiInput>(
+        std::move(CollectDescrs));
   }
 
   if (auto ReasonOpt = notVectorizableBasedOnOpcodesAndTypes(Bndl))
     return createLegalityResult<Pack>(*ReasonOpt);
-
-  // TODO: Check for existing vectors containing values in Bndl.
 
   if (!SkipScheduling) {
     // TODO: Try to remove the IBndl vector.
@@ -209,5 +249,10 @@ const LegalityResult &LegalityAnalysis::canVectorize(ArrayRef<Value *> Bndl,
   }
 
   return createLegalityResult<Widen>();
+}
+
+void LegalityAnalysis::clear() {
+  Sched.clear();
+  IMaps.clear();
 }
 } // namespace llvm::sandboxir

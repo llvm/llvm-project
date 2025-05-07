@@ -102,9 +102,11 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86ReturnThunksPass(PR);
   initializeX86DAGToDAGISelLegacyPass(PR);
   initializeX86ArgumentStackSlotPassPass(PR);
+  initializeX86AsmPrinterPass(PR);
   initializeX86FixupInstTuningPassPass(PR);
   initializeX86FixupVectorConstantsPassPass(PR);
   initializeX86DynAllocaExpanderPass(PR);
+  initializeX86SuppressAPXForRelocationPassPass(PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -374,13 +376,27 @@ bool X86TargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
 
 void X86TargetMachine::reset() { SubtargetMap.clear(); }
 
+ScheduleDAGInstrs *
+X86TargetMachine::createMachineScheduler(MachineSchedContext *C) const {
+  ScheduleDAGMILive *DAG = createGenericSchedLive(C);
+  DAG->addMutation(createX86MacroFusionDAGMutation());
+  return DAG;
+}
+
+ScheduleDAGInstrs *
+X86TargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
+  ScheduleDAGMI *DAG = createGenericSchedPostRA(C);
+  DAG->addMutation(createX86MacroFusionDAGMutation());
+  return DAG;
+}
+
 //===----------------------------------------------------------------------===//
 // X86 TTI query.
 //===----------------------------------------------------------------------===//
 
 TargetTransformInfo
 X86TargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(X86TTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<X86TTIImpl>(this, F));
 }
 
 //===----------------------------------------------------------------------===//
@@ -397,20 +413,6 @@ public:
 
   X86TargetMachine &getX86TargetMachine() const {
     return getTM<X86TargetMachine>();
-  }
-
-  ScheduleDAGInstrs *
-  createMachineScheduler(MachineSchedContext *C) const override {
-    ScheduleDAGMILive *DAG = createGenericSchedLive(C);
-    DAG->addMutation(createX86MacroFusionDAGMutation());
-    return DAG;
-  }
-
-  ScheduleDAGInstrs *
-  createPostMachineScheduler(MachineSchedContext *C) const override {
-    ScheduleDAGMI *DAG = createGenericSchedPostRA(C);
-    DAG->addMutation(createX86MacroFusionDAGMutation());
-    return DAG;
   }
 
   void addIRPasses() override;
@@ -559,6 +561,8 @@ void X86PassConfig::addPreRegAlloc() {
     addPass(createX86AvoidStoreForwardingBlocks());
   }
 
+  addPass(createX86SuppressAPXForRelocationPass());
+
   addPass(createX86SpeculativeLoadHardeningPass());
   addPass(createX86FlagsCopyLoweringPass());
   addPass(createX86DynAllocaExpander());
@@ -647,7 +651,7 @@ void X86PassConfig::addPreEmitPass2() {
     // Identify valid longjmp targets for Windows Control Flow Guard.
     addPass(createCFGuardLongjmpPass());
     // Identify valid eh continuation targets for Windows EHCont Guard.
-    addPass(createEHContGuardCatchretPass());
+    addPass(createEHContGuardTargetsPass());
   }
   addPass(createX86LoadValueInjectionRetHardeningPass());
 

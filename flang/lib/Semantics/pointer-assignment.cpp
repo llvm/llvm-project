@@ -154,6 +154,9 @@ bool PointerAssignmentChecker::CheckLeftHandSide(const SomeExpr &lhs) {
   } else if (evaluate::IsAssumedRank(lhs)) {
     Say("The left-hand side of a pointer assignment must not be an assumed-rank dummy argument"_err_en_US);
     return false;
+  } else if (evaluate::ExtractCoarrayRef(lhs)) { // F'2023 C1027
+    Say("The left-hand side of a pointer assignment must not be coindexed"_err_en_US);
+    return false;
   } else {
     return true;
   }
@@ -177,21 +180,21 @@ bool PointerAssignmentChecker::Check(const SomeExpr &rhs) {
     Say("An array section with a vector subscript may not be a pointer target"_err_en_US);
     return false;
   }
-  if (ExtractCoarrayRef(rhs)) { // C1026
+  if (ExtractCoarrayRef(rhs)) { // F'2023 C1029
     Say("A coindexed object may not be a pointer target"_err_en_US);
     return false;
   }
   if (!common::visit([&](const auto &x) { return Check(x); }, rhs.u)) {
     return false;
   }
-  if (IsNullPointer(rhs)) {
+  if (IsNullPointer(&rhs)) {
     return true;
   }
   if (lhs_ && IsProcedure(*lhs_)) {
     return true;
   }
   if (const auto *pureProc{FindPureProcedureContaining(scope_)}) {
-    if (pointerComponentLHS_) { // C1594(4) is a hard error
+    if (pointerComponentLHS_) { // F'2023 C15104(4) is a hard error
       if (const Symbol * object{FindExternallyVisibleObject(rhs, *pureProc)}) {
         if (auto *msg{Say(
                 "Externally visible object '%s' may not be associated with pointer component '%s' in a pure procedure"_err_en_US,
@@ -357,6 +360,20 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
     } else {
       Say(std::get<MessageFormattedText>(*msg));
     }
+  }
+
+  // Show warnings after errors
+
+  // 8.5.20(3) A pointer should have the VOLATILE attribute if its target has
+  // the VOLATILE attribute
+  // 8.5.20(4) If an object has the VOLATILE attribute, then all of its
+  // subobjects also have the VOLATILE attribute.
+  if (!isVolatile_ && base->attrs().test(Attr::VOLATILE)) {
+    Warn(common::UsageWarning::NonVolatilePointerToVolatile,
+        "VOLATILE target associated with non-VOLATILE pointer"_warn_en_US);
+  }
+
+  if (msg) {
     return false;
   } else {
     context_.NoteDefinedSymbol(*base);

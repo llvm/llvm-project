@@ -318,7 +318,6 @@ void MCELFStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
                                   SMLoc Loc) {
   if (isBundleLocked())
     report_fatal_error("Emitting values inside a locked bundle is forbidden");
-  fixSymbolsInTLSFixups(Value);
   MCObjectStreamer::emitValueImpl(Value, Size, Loc);
 }
 
@@ -351,93 +350,6 @@ void MCELFStreamer::emitIdent(StringRef IdentString) {
   popSection();
 }
 
-void MCELFStreamer::fixSymbolsInTLSFixups(const MCExpr *expr) {
-  switch (expr->getKind()) {
-  case MCExpr::Target:
-    cast<MCTargetExpr>(expr)->fixELFSymbolsInTLSFixups(getAssembler());
-    break;
-  case MCExpr::Constant:
-    break;
-
-  case MCExpr::Binary: {
-    const MCBinaryExpr *be = cast<MCBinaryExpr>(expr);
-    fixSymbolsInTLSFixups(be->getLHS());
-    fixSymbolsInTLSFixups(be->getRHS());
-    break;
-  }
-
-  case MCExpr::SymbolRef: {
-    const MCSymbolRefExpr &symRef = *cast<MCSymbolRefExpr>(expr);
-    switch (symRef.getKind()) {
-    default:
-      return;
-    case MCSymbolRefExpr::VK_GOTTPOFF:
-    case MCSymbolRefExpr::VK_INDNTPOFF:
-    case MCSymbolRefExpr::VK_NTPOFF:
-    case MCSymbolRefExpr::VK_GOTNTPOFF:
-    case MCSymbolRefExpr::VK_TLSCALL:
-    case MCSymbolRefExpr::VK_TLSDESC:
-    case MCSymbolRefExpr::VK_TLSGD:
-    case MCSymbolRefExpr::VK_TLSLD:
-    case MCSymbolRefExpr::VK_TLSLDM:
-    case MCSymbolRefExpr::VK_TPOFF:
-    case MCSymbolRefExpr::VK_TPREL:
-    case MCSymbolRefExpr::VK_DTPOFF:
-    case MCSymbolRefExpr::VK_DTPREL:
-    case MCSymbolRefExpr::VK_PPC_DTPMOD:
-    case MCSymbolRefExpr::VK_PPC_TPREL_LO:
-    case MCSymbolRefExpr::VK_PPC_TPREL_HI:
-    case MCSymbolRefExpr::VK_PPC_TPREL_HA:
-    case MCSymbolRefExpr::VK_PPC_TPREL_HIGH:
-    case MCSymbolRefExpr::VK_PPC_TPREL_HIGHA:
-    case MCSymbolRefExpr::VK_PPC_TPREL_HIGHER:
-    case MCSymbolRefExpr::VK_PPC_TPREL_HIGHERA:
-    case MCSymbolRefExpr::VK_PPC_TPREL_HIGHEST:
-    case MCSymbolRefExpr::VK_PPC_TPREL_HIGHESTA:
-    case MCSymbolRefExpr::VK_PPC_DTPREL_LO:
-    case MCSymbolRefExpr::VK_PPC_DTPREL_HI:
-    case MCSymbolRefExpr::VK_PPC_DTPREL_HA:
-    case MCSymbolRefExpr::VK_PPC_DTPREL_HIGH:
-    case MCSymbolRefExpr::VK_PPC_DTPREL_HIGHA:
-    case MCSymbolRefExpr::VK_PPC_DTPREL_HIGHER:
-    case MCSymbolRefExpr::VK_PPC_DTPREL_HIGHERA:
-    case MCSymbolRefExpr::VK_PPC_DTPREL_HIGHEST:
-    case MCSymbolRefExpr::VK_PPC_DTPREL_HIGHESTA:
-    case MCSymbolRefExpr::VK_PPC_GOT_TPREL:
-    case MCSymbolRefExpr::VK_PPC_GOT_TPREL_LO:
-    case MCSymbolRefExpr::VK_PPC_GOT_TPREL_HI:
-    case MCSymbolRefExpr::VK_PPC_GOT_TPREL_HA:
-    case MCSymbolRefExpr::VK_PPC_GOT_TPREL_PCREL:
-    case MCSymbolRefExpr::VK_PPC_GOT_DTPREL:
-    case MCSymbolRefExpr::VK_PPC_GOT_DTPREL_LO:
-    case MCSymbolRefExpr::VK_PPC_GOT_DTPREL_HI:
-    case MCSymbolRefExpr::VK_PPC_GOT_DTPREL_HA:
-    case MCSymbolRefExpr::VK_PPC_TLS:
-    case MCSymbolRefExpr::VK_PPC_TLS_PCREL:
-    case MCSymbolRefExpr::VK_PPC_GOT_TLSGD:
-    case MCSymbolRefExpr::VK_PPC_GOT_TLSGD_LO:
-    case MCSymbolRefExpr::VK_PPC_GOT_TLSGD_HI:
-    case MCSymbolRefExpr::VK_PPC_GOT_TLSGD_HA:
-    case MCSymbolRefExpr::VK_PPC_GOT_TLSGD_PCREL:
-    case MCSymbolRefExpr::VK_PPC_TLSGD:
-    case MCSymbolRefExpr::VK_PPC_GOT_TLSLD:
-    case MCSymbolRefExpr::VK_PPC_GOT_TLSLD_LO:
-    case MCSymbolRefExpr::VK_PPC_GOT_TLSLD_HI:
-    case MCSymbolRefExpr::VK_PPC_GOT_TLSLD_HA:
-    case MCSymbolRefExpr::VK_PPC_TLSLD:
-      break;
-    }
-    getAssembler().registerSymbol(symRef.getSymbol());
-    cast<MCSymbolELF>(symRef.getSymbol()).setType(ELF::STT_TLS);
-    break;
-  }
-
-  case MCExpr::Unary:
-    fixSymbolsInTLSFixups(cast<MCUnaryExpr>(expr)->getSubExpr());
-    break;
-  }
-}
-
 void MCELFStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE,
                                            uint64_t Offset) {
   const MCSymbol *S = &SRE->getSymbol();
@@ -450,8 +362,7 @@ void MCELFStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE,
     }
     S = S->getSection().getBeginSymbol();
     S->setUsedInReloc();
-    SRE = MCSymbolRefExpr::create(S, MCSymbolRefExpr::VK_None, getContext(),
-                                  SRE->getLoc());
+    SRE = MCSymbolRefExpr::create(S, getContext(), SRE->getLoc());
   }
   const MCConstantExpr *MCOffset = MCConstantExpr::create(Offset, getContext());
   if (std::optional<std::pair<bool, std::string>> Err =
@@ -479,15 +390,6 @@ void MCELFStreamer::finalizeCGProfile() {
     Offset += sizeof(uint64_t);
   }
   popSection();
-}
-
-void MCELFStreamer::emitInstToFragment(const MCInst &Inst,
-                                       const MCSubtargetInfo &STI) {
-  this->MCObjectStreamer::emitInstToFragment(Inst, STI);
-  MCRelaxableFragment &F = *cast<MCRelaxableFragment>(getCurrentFragment());
-
-  for (auto &Fixup : F.getFixups())
-    fixSymbolsInTLSFixups(Fixup.getValue());
 }
 
 // A fragment can only have one Subtarget, and when bundling is enabled we
@@ -551,10 +453,8 @@ void MCELFStreamer::emitInstToData(const MCInst &Inst,
                                            DF->getFixups(), STI);
 
   auto Fixups = MutableArrayRef(DF->getFixups()).slice(FixupStartIndex);
-  for (auto &Fixup : Fixups) {
+  for (auto &Fixup : Fixups)
     Fixup.setOffset(Fixup.getOffset() + CodeOffset);
-    fixSymbolsInTLSFixups(Fixup.getValue());
-  }
 
   DF->setHasInstructions(STI);
   if (!Fixups.empty() && Fixups.back().getTargetKind() ==
@@ -614,25 +514,6 @@ void MCELFStreamer::finishImpl() {
   emitFrames(nullptr);
 
   this->MCObjectStreamer::finishImpl();
-}
-
-void MCELFStreamer::emitThumbFunc(MCSymbol *Func) {
-  llvm_unreachable("Generic ELF doesn't support this directive");
-}
-
-void MCELFStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
-  llvm_unreachable("ELF doesn't support this directive");
-}
-
-void MCELFStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
-                                 uint64_t Size, Align ByteAlignment,
-                                 SMLoc Loc) {
-  llvm_unreachable("ELF doesn't support this directive");
-}
-
-void MCELFStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
-                                   uint64_t Size, Align ByteAlignment) {
-  llvm_unreachable("ELF doesn't support this directive");
 }
 
 void MCELFStreamer::setAttributeItem(unsigned Attribute, unsigned Value,
@@ -696,8 +577,8 @@ MCELFStreamer::getAttributeItem(unsigned Attribute) {
   return nullptr;
 }
 
-size_t
-MCELFStreamer::calculateContentSize(SmallVector<AttributeItem, 64> &AttrsVec) {
+size_t MCELFStreamer::calculateContentSize(
+    SmallVector<AttributeItem, 64> &AttrsVec) const {
   size_t Result = 0;
   for (const AttributeItem &Item : AttrsVec) {
     switch (Item.Type) {
@@ -781,6 +662,67 @@ void MCELFStreamer::createAttributesSection(
   }
 
   AttrsVec.clear();
+}
+
+void MCELFStreamer::createAttributesWithSubsection(
+    MCSection *&AttributeSection, const Twine &Section, unsigned Type,
+    SmallVector<AttributeSubSection, 64> &SubSectionVec) {
+  // <format-version: 'A'>
+  // [ <uint32: subsection-length> NTBS: vendor-name
+  //   <bytes: vendor-data>
+  // ]*
+  // vendor-data expends to:
+  // <uint8: optional> <uint8: parameter type> <attribute>*
+  if (0 == SubSectionVec.size()) {
+    return;
+  }
+
+  // Switch section to AttributeSection or get/create the section.
+  if (AttributeSection) {
+    switchSection(AttributeSection);
+  } else {
+    AttributeSection = getContext().getELFSection(Section, Type, 0);
+    switchSection(AttributeSection);
+
+    // Format version
+    emitInt8(0x41);
+  }
+
+  for (AttributeSubSection &SubSection : SubSectionVec) {
+    // subsection-length + vendor-name + '\0'
+    const size_t VendorHeaderSize = 4 + SubSection.VendorName.size() + 1;
+    // optional + parameter-type
+    const size_t VendorParameters = 1 + 1;
+    const size_t ContentsSize = calculateContentSize(SubSection.Content);
+
+    emitInt32(VendorHeaderSize + VendorParameters + ContentsSize);
+    emitBytes(SubSection.VendorName);
+    emitInt8(0); // '\0'
+    emitInt8(SubSection.IsOptional);
+    emitInt8(SubSection.ParameterType);
+
+    for (AttributeItem &Item : SubSection.Content) {
+      emitULEB128IntValue(Item.Tag);
+      switch (Item.Type) {
+      default:
+        assert(0 && "Invalid attribute type");
+        break;
+      case AttributeItem::NumericAttribute:
+        emitULEB128IntValue(Item.IntValue);
+        break;
+      case AttributeItem::TextAttribute:
+        emitBytes(Item.StringValue);
+        emitInt8(0); // '\0'
+        break;
+      case AttributeItem::NumericAndTextAttributes:
+        emitULEB128IntValue(Item.IntValue);
+        emitBytes(Item.StringValue);
+        emitInt8(0); // '\0'
+        break;
+      }
+    }
+  }
+  SubSectionVec.clear();
 }
 
 MCStreamer *llvm::createELFStreamer(MCContext &Context,

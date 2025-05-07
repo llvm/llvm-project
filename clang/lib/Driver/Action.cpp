@@ -27,8 +27,8 @@ const char *Action::getClassName(ActionClass AC) {
   case PrecompileJobClass: return "precompiler";
   case ExtractAPIJobClass:
     return "api-extractor";
-  case AnalyzeJobClass: return "analyzer";
-  case MigrateJobClass: return "migrator";
+  case AnalyzeJobClass:
+    return "analyzer";
   case CompileJobClass: return "compiler";
   case BackendJobClass: return "backend";
   case AssembleJobClass: return "assembler";
@@ -50,6 +50,8 @@ const char *Action::getClassName(ActionClass AC) {
     return "static-lib-linker";
   case BinaryAnalyzeJobClass:
     return "binary-analyzer";
+  case BinaryTranslatorJobClass:
+    return "binary-translator";
   }
 
   llvm_unreachable("invalid class");
@@ -373,11 +375,6 @@ void AnalyzeJobAction::anchor() {}
 AnalyzeJobAction::AnalyzeJobAction(Action *Input, types::ID OutputType)
     : JobAction(AnalyzeJobClass, Input, OutputType) {}
 
-void MigrateJobAction::anchor() {}
-
-MigrateJobAction::MigrateJobAction(Action *Input, types::ID OutputType)
-    : JobAction(MigrateJobClass, Input, OutputType) {}
-
 void CompileJobAction::anchor() {}
 
 CompileJobAction::CompileJobAction(Action *Input, types::ID OutputType)
@@ -464,3 +461,9 @@ void BinaryAnalyzeJobAction::anchor() {}
 
 BinaryAnalyzeJobAction::BinaryAnalyzeJobAction(Action *Input, types::ID Type)
     : JobAction(BinaryAnalyzeJobClass, Input, Type) {}
+
+void BinaryTranslatorJobAction::anchor() {}
+
+BinaryTranslatorJobAction::BinaryTranslatorJobAction(Action *Input,
+                                                     types::ID Type)
+    : JobAction(BinaryTranslatorJobClass, Input, Type) {}

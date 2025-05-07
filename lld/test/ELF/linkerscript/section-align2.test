@@ -1,7 +1,7 @@
 # REQUIRES: aarch64
 ## Test ALIGN and its interaction with explicit output section addresses.
 
-# RUN: echo '.globl _start; _start: ret; .data.rel.ro; .balign 8; .byte 0; .data; .byte 0; \
+# RUN: echo '.globl _start; _start: ret; .section .data.rel.ro,"aw"; .balign 8; .byte 0; .data; .byte 0; \
 # RUN:   .section .data2,"aw"; .balign 8; .byte 0; \
 # RUN:   .section .data3,"aw"; .balign 32; .byte 0; \
 # RUN:   .bss; .balign 32; .byte 0' | \

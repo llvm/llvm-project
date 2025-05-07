@@ -128,6 +128,7 @@ on support follow.
      ``Shvstvecd``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Smaia``         Supported
      ``Smcdeleg``      Supported
+     ``Smcntrpmf``     Supported
      ``Smcsrind``      Supported
      ``Smdbltrp``      Supported
      ``Smepmp``        Supported
@@ -179,6 +180,7 @@ on support follow.
      ``Zcb``           Supported
      ``Zcd``           Supported
      ``Zcf``           Supported
+     ``Zclsd``         Assembly Support
      ``Zcmop``         Supported
      ``Zcmp``          Supported
      ``Zcmt``          Assembly Support
@@ -195,6 +197,7 @@ on support follow.
      ``Zicbop``        Supported
      ``Zicboz``        Assembly Support
      ``Ziccamoa``      Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Ziccamoc``      Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Ziccif``        Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Zicclsm``       Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Ziccrse``       Supported (`See note <#riscv-profiles-extensions-note>`__)
@@ -205,6 +208,7 @@ on support follow.
      ``Zihintntl``     Supported
      ``Zihintpause``   Assembly Support
      ``Zihpm``         (`See Note <#riscv-i2p1-note>`__)
+     ``Zilsd``         Assembly Support
      ``Zimop``         Supported
      ``Zkn``           Supported
      ``Zknd``          Supported (`See note <#riscv-scalar-crypto-note2>`__)
@@ -295,7 +299,7 @@ Supported
 
 .. _riscv-profiles-extensions-note:
 
-``Za128rs``, ``Za64rs``, ``Zama16b``, ``Zic64b``, ``Ziccamoa``, ``Ziccif``, ``Zicclsm``, ``Ziccrse``, ``Shcounterenvw``, ``Shgatpa``, ``Shtvala``, ``Shvsatpa``, ``Shvstvala``, ``Shvstvecd``, ``Ssccptr``, ``Sscounterenw``, ``Ssstateen``, ``Ssstrict``, ``Sstvala``, ``Sstvecd``, ``Ssu64xl``, ``Svade``, ``Svbare``
+``Za128rs``, ``Za64rs``, ``Zama16b``, ``Zic64b``, ``Ziccamoa``, ``Ziccamoc``, ``Ziccif``, ``Zicclsm``, ``Ziccrse``, ``Shcounterenvw``, ``Shgatpa``, ``Shtvala``, ``Shvsatpa``, ``Shvstvala``, ``Shvstvecd``, ``Ssccptr``, ``Sscounterenw``, ``Ssstateen``, ``Ssstrict``, ``Sstvala``, ``Sstvecd``, ``Ssu64xl``, ``Svade``, ``Svbare``
   These extensions are defined as part of the `RISC-V Profiles specification <https://github.com/riscv/riscv-profiles/releases/tag/v1.0>`__.  They do not introduce any new features themselves, but instead describe existing hardware features.
 
 .. _riscv-zacas-note:
@@ -335,6 +339,9 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-svukte``
   LLVM implements the `0.3 draft specification <https://github.com/riscv/riscv-isa-manual/pull/1564>`__.
 
+``experimental-zvqdotq``
+  LLVM implements the `0.0.1 draft specification <https://github.com/riscv/riscv-dot-product/releases/tag/v0.0.1>`__.
+
 To use an experimental extension from `clang`, you must add `-menable-experimental-extensions` to the command line, and specify the exact version of the experimental extension you are using.  To use an experimental extension with LLVM's internal developer tools (e.g. `llc`, `llvm-objdump`, `llvm-mc`), you must prefix the extension name with `experimental-`.  Note that you don't need to specify the version with internal tools, and shouldn't include the `experimental-` prefix with `clang`.
 
 Vendor Extensions
@@ -342,7 +349,7 @@ Vendor Extensions
 
 Vendor extensions are extensions which are not standardized by RISC-V International, and are instead defined by a hardware vendor.  The term vendor extension roughly parallels the definition of a `non-standard` extension from Section 1.3 of the Volume I: RISC-V Unprivileged ISA specification.  In particular, we expect to eventually accept both `custom` extensions and `non-conforming` extensions.
 
-Inclusion of a vendor extension will be considered on a case by case basis.  All proposals should be brought to the bi-weekly RISCV sync calls for discussion.  For a general idea of the factors likely to be considered, please see the `Clang documentation <https://clang.llvm.org/get_involved.html>`__.
+Inclusion of a vendor extension will be considered on a case by case basis.  All proposals should be brought to the bi-weekly RISC-V sync calls for discussion.  For a general idea of the factors likely to be considered, please see the `Clang documentation <https://clang.llvm.org/get_involved.html>`__.
 
 It is our intention to follow the naming conventions described in `riscv-non-isa/riscv-toolchain-conventions <https://github.com/riscv-non-isa/riscv-toolchain-conventions#conventions-for-vendor-extensions>`__.  Exceptions to this naming will need to be strongly motivated.
 
@@ -429,11 +436,20 @@ The current vendor extensions supported are:
 ``Xwchc``
   LLVM implements `the custom compressed opcodes present in some QingKe cores` by WCH / Nanjing Qinheng Microelectronics. The vendor refers to these opcodes by the name "XW".
 
+``experimental-Xqccmp``
+  LLVM implements `version 0.1 of the 16-bit Push/Pop instructions and double-moves extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqccmp_extension-0.1.0>`__ by Qualcomm. All instructions are prefixed with `qc.` as described in the specification.
+
 ``experimental-Xqcia``
-  LLVM implements `version 0.2 of the Qualcomm uC Arithmetic extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
+  LLVM implements `version 0.4 of the Qualcomm uC Arithmetic extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
 
 ``experimental-Xqciac``
-  LLVM implements `version 0.2 of the Qualcomm uC Load-Store Address Calculation extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
+  LLVM implements `version 0.3 of the Qualcomm uC Load-Store Address Calculation extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
+
+``experimental-Xqcibi``
+  LLVM implements `version 0.2 of the Qualcomm uC Branch Immediate extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
+
+``experimental-Xqcibm``
+  LLVM implements `version 0.4 of the Qualcomm uC Bit Manipulation extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
 
 ``experimental-Xqcicli``
   LLVM implements `version 0.2 of the Qualcomm uC Conditional Load Immediate extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
@@ -447,14 +463,50 @@ The current vendor extensions supported are:
 ``experimental-Xqcicsr``
   LLVM implements `version 0.2 of the Qualcomm uC CSR extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
 
+``experimental-Xqciio``
+  LLVM implements `version 0.1 of the Qualcomm uC External Input Output extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
+
 ``experimental-Xqciint``
-  LLVM implements `version 0.2 of the Qualcomm uC Interrupts extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
+  LLVM implements `version 0.4 of the Qualcomm uC Interrupts extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
+
+``experimental-Xqcilb``
+  LLVM implements `version 0.2 of the Qualcomm uC Long Branch extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
+
+``experimental-Xqcili``
+  LLVM implements `version 0.2 of the Qualcomm uC Load Large Immediate extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
+
+``experimental-Xqcilia``
+  LLVM implements `version 0.2 of the Qualcomm uC Large Immediate Arithmetic extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
+
+``experimental-Xqcilo``
+  LLVM implements `version 0.2 of the Qualcomm uC Large Offset Load Store extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
 
 ``experimental-Xqcilsm``
   LLVM implements `version 0.2 of the Qualcomm uC Load Store Multiple extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
 
+``experimental-Xqcisim``
+  LLVM implements `version 0.2 of the Qualcomm uC Simulation Hint extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
+
 ``experimental-Xqcisls``
   LLVM implements `version 0.2 of the Qualcomm uC Scaled Load Store extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
+
+``experimental-Xqcisync``
+  LLVM implements `version 0.2 of the Qualcomm uC Sync Delay extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
+
+``Xmipscmov``
+  LLVM implements conditional move for the `p8700 processor <https://mips.com/products/hardware/p8700/>` by MIPS.
+
+``Xmipslsp``
+  LLVM implements load/store pair instructions for the `p8700 processor <https://mips.com/products/hardware/p8700/>` by MIPS.
+
+``experimental-XRivosVisni``
+  LLVM implements `version 0.1 of the Rivos Vector Integer Small New Instructions extension specification <https://github.com/rivosinc/rivos-custom-extensions>`__.
+
+``experimental-XRivosVizip``
+  LLVM implements `version 0.1 of the Rivos Vector Register Zips extension specification <https://github.com/rivosinc/rivos-custom-extensions>`__.
+
+``XAndesPerf``
+  LLVM implements `version 5.0.0 of the Andes Performance Extension specification <https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf>` by Andes Technology. All instructions are prefixed with `nds.` as described in the specification.
 
 Experimental C Intrinsics
 =========================

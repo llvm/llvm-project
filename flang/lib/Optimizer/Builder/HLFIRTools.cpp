@@ -16,6 +16,7 @@
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Builder/Runtime/Allocatable.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Support/LLVM.h"
@@ -95,24 +96,6 @@ getExplicitLbounds(fir::FortranVariableOpInterface var) {
   return {};
 }
 
-static void
-genLboundsAndExtentsFromBox(mlir::Location loc, fir::FirOpBuilder &builder,
-                            hlfir::Entity boxEntity,
-                            llvm::SmallVectorImpl<mlir::Value> &lbounds,
-                            llvm::SmallVectorImpl<mlir::Value> *extents) {
-  assert(mlir::isa<fir::BaseBoxType>(boxEntity.getType()) && "must be a box");
-  mlir::Type idxTy = builder.getIndexType();
-  const int rank = boxEntity.getRank();
-  for (int i = 0; i < rank; ++i) {
-    mlir::Value dim = builder.createIntegerConstant(loc, idxTy, i);
-    auto dimInfo = builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy,
-                                                  boxEntity, dim);
-    lbounds.push_back(dimInfo.getLowerBound());
-    if (extents)
-      extents->push_back(dimInfo.getExtent());
-  }
-}
-
 static llvm::SmallVector<mlir::Value>
 getNonDefaultLowerBounds(mlir::Location loc, fir::FirOpBuilder &builder,
                          hlfir::Entity entity) {
@@ -128,8 +111,8 @@ getNonDefaultLowerBounds(mlir::Location loc, fir::FirOpBuilder &builder,
   if (entity.isMutableBox())
     entity = hlfir::derefPointersAndAllocatables(loc, builder, entity);
   llvm::SmallVector<mlir::Value> lowerBounds;
-  genLboundsAndExtentsFromBox(loc, builder, entity, lowerBounds,
-                              /*extents=*/nullptr);
+  fir::factory::genDimInfoFromBox(builder, loc, entity, &lowerBounds,
+                                  /*extents=*/nullptr, /*strides=*/nullptr);
   return lowerBounds;
 }
 
@@ -186,14 +169,24 @@ static fir::CharBoxValue genUnboxChar(mlir::Location loc,
   return {addr, len};
 }
 
+// To maximize chances of identifying usage of a same variables in the IR,
+// always return the hlfirBase result of declare/associate if it is a raw
+// pointer.
+static mlir::Value getFirBaseHelper(mlir::Value hlfirBase,
+                                    mlir::Value firBase) {
+  if (fir::isa_ref_type(hlfirBase.getType()))
+    return hlfirBase;
+  return firBase;
+}
+
 mlir::Value hlfir::Entity::getFirBase() const {
   if (fir::FortranVariableOpInterface variable = getIfVariableInterface()) {
     if (auto declareOp =
             mlir::dyn_cast<hlfir::DeclareOp>(variable.getOperation()))
-      return declareOp.getOriginalBase();
+      return getFirBaseHelper(declareOp.getBase(), declareOp.getOriginalBase());
     if (auto associateOp =
             mlir::dyn_cast<hlfir::AssociateOp>(variable.getOperation()))
-      return associateOp.getFirBase();
+      return getFirBaseHelper(associateOp.getBase(), associateOp.getFirBase());
   }
   return getBase();
 }
@@ -218,6 +211,25 @@ bool hlfir::Entity::mayHaveNonDefaultLowerBounds() const {
     return hlfir::Entity{convert.getValue()}.mayHaveNonDefaultLowerBounds();
   // TODO: Embox and Rebox do not have hlfir variable interface, but are
   // easy to reason about.
+  return true;
+}
+
+mlir::Operation *traverseConverts(mlir::Operation *op) {
+  while (auto convert = llvm::dyn_cast_or_null<fir::ConvertOp>(op))
+    op = convert.getValue().getDefiningOp();
+  return op;
+}
+
+bool hlfir::Entity::mayBeOptional() const {
+  if (!isVariable())
+    return false;
+  // TODO: introduce a fir type to better identify optionals.
+  if (mlir::Operation *op = traverseConverts(getDefiningOp())) {
+    if (auto varIface = llvm::dyn_cast<fir::FortranVariableOpInterface>(op))
+      return varIface.isOptional();
+    return !llvm::isa<fir::AllocaOp, fir::AllocMemOp, fir::ReboxOp,
+                      fir::EmboxOp, fir::LoadOp>(op);
+  }
   return true;
 }
 
@@ -330,26 +342,56 @@ mlir::Value hlfir::genVariableBoxChar(mlir::Location loc,
                                           lengths[0]);
 }
 
+static hlfir::Entity changeBoxAttributes(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         hlfir::Entity var,
+                                         fir::BaseBoxType forceBoxType) {
+  assert(llvm::isa<fir::BaseBoxType>(var.getType()) && "expect box type");
+  // Propagate lower bounds.
+  mlir::Value shift;
+  llvm::SmallVector<mlir::Value> lbounds =
+      getNonDefaultLowerBounds(loc, builder, var);
+  if (!lbounds.empty())
+    shift = builder.genShift(loc, lbounds);
+  auto rebox = builder.create<fir::ReboxOp>(loc, forceBoxType, var, shift,
+                                            /*slice=*/nullptr);
+  return hlfir::Entity{rebox};
+}
+
 hlfir::Entity hlfir::genVariableBox(mlir::Location loc,
                                     fir::FirOpBuilder &builder,
-                                    hlfir::Entity var) {
+                                    hlfir::Entity var,
+                                    fir::BaseBoxType forceBoxType) {
   assert(var.isVariable() && "must be a variable");
   var = hlfir::derefPointersAndAllocatables(loc, builder, var);
-  if (mlir::isa<fir::BaseBoxType>(var.getType()))
-    return var;
+  if (mlir::isa<fir::BaseBoxType>(var.getType())) {
+    if (!forceBoxType || forceBoxType == var.getType())
+      return var;
+    return changeBoxAttributes(loc, builder, var, forceBoxType);
+  }
   // Note: if the var is not a fir.box/fir.class at that point, it has default
   // lower bounds and is not polymorphic.
   mlir::Value shape =
       var.isArray() ? hlfir::genShape(loc, builder, var) : mlir::Value{};
   llvm::SmallVector<mlir::Value> typeParams;
-  auto maybeCharType =
-      mlir::dyn_cast<fir::CharacterType>(var.getFortranElementType());
+  mlir::Type elementType =
+      forceBoxType ? fir::getFortranElementType(forceBoxType.getEleTy())
+                   : var.getFortranElementType();
+  auto maybeCharType = mlir::dyn_cast<fir::CharacterType>(elementType);
   if (!maybeCharType || maybeCharType.hasDynamicLen())
     hlfir::genLengthParameters(loc, builder, var, typeParams);
   mlir::Value addr = var.getBase();
   if (mlir::isa<fir::BoxCharType>(var.getType()))
     addr = genVariableRawAddress(loc, builder, var);
-  mlir::Type boxType = fir::BoxType::get(var.getElementOrSequenceType());
+  const bool isVolatile = fir::isa_volatile_type(var.getType());
+  mlir::Type boxType =
+      fir::BoxType::get(var.getElementOrSequenceType(), isVolatile);
+  if (forceBoxType) {
+    boxType = forceBoxType;
+    mlir::Type baseType =
+        fir::ReferenceType::get(fir::unwrapRefType(forceBoxType.getEleTy()));
+    addr = builder.createConvert(loc, baseType, addr);
+  }
   auto embox =
       builder.create<fir::EmboxOp>(loc, boxType, addr, shape,
                                    /*slice=*/mlir::Value{}, typeParams);
@@ -754,15 +796,16 @@ mlir::Type hlfir::getVariableElementType(hlfir::Entity variable) {
   if (variable.isScalar())
     return variable.getType();
   mlir::Type eleTy = variable.getFortranElementType();
+  const bool isVolatile = fir::isa_volatile_type(variable.getType());
   if (variable.isPolymorphic())
-    return fir::ClassType::get(eleTy);
+    return fir::ClassType::get(eleTy, isVolatile);
   if (auto charType = mlir::dyn_cast<fir::CharacterType>(eleTy)) {
     if (charType.hasDynamicLen())
       return fir::BoxCharType::get(charType.getContext(), charType.getFKind());
   } else if (fir::isRecordWithTypeParameters(eleTy)) {
-    return fir::BoxType::get(eleTy);
+    return fir::BoxType::get(eleTy, isVolatile);
   }
-  return fir::ReferenceType::get(eleTy);
+  return fir::ReferenceType::get(eleTy, isVolatile);
 }
 
 mlir::Type hlfir::getEntityElementType(hlfir::Entity entity) {
@@ -963,9 +1006,69 @@ llvm::SmallVector<mlir::Value> hlfir::genLoopNestWithReductions(
   return outerLoop->getResults();
 }
 
+template <typename Lambda>
+static fir::ExtendedValue
+conditionallyEvaluate(mlir::Location loc, fir::FirOpBuilder &builder,
+                      mlir::Value condition, const Lambda &genIfTrue) {
+  mlir::OpBuilder::InsertPoint insertPt = builder.saveInsertionPoint();
+
+  // Evaluate in some region that will be moved into the actual ifOp (the actual
+  // ifOp can only be created when the result types are known).
+  auto badIfOp = builder.create<fir::IfOp>(loc, condition.getType(), condition,
+                                           /*withElseRegion=*/false);
+  mlir::Block *preparationBlock = &badIfOp.getThenRegion().front();
+  builder.setInsertionPointToStart(preparationBlock);
+  fir::ExtendedValue result = genIfTrue();
+  fir::ResultOp resultOp = result.match(
+      [&](const fir::CharBoxValue &box) -> fir::ResultOp {
+        return builder.create<fir::ResultOp>(
+            loc, mlir::ValueRange{box.getAddr(), box.getLen()});
+      },
+      [&](const mlir::Value &addr) -> fir::ResultOp {
+        return builder.create<fir::ResultOp>(loc, addr);
+      },
+      [&](const auto &) -> fir::ResultOp {
+        TODO(loc, "unboxing non scalar optional fir.box");
+      });
+  builder.restoreInsertionPoint(insertPt);
+
+  // Create actual fir.if operation.
+  auto ifOp =
+      builder.create<fir::IfOp>(loc, resultOp->getOperandTypes(), condition,
+                                /*withElseRegion=*/true);
+  // Move evaluation into Then block,
+  preparationBlock->moveBefore(&ifOp.getThenRegion().back());
+  ifOp.getThenRegion().back().erase();
+  // Create absent result in the Else block.
+  builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+  llvm::SmallVector<mlir::Value> absentValues;
+  for (mlir::Type resTy : ifOp->getResultTypes()) {
+    if (fir::isa_ref_type(resTy) || fir::isa_box_type(resTy))
+      absentValues.emplace_back(builder.create<fir::AbsentOp>(loc, resTy));
+    else
+      absentValues.emplace_back(builder.create<fir::ZeroOp>(loc, resTy));
+  }
+  builder.create<fir::ResultOp>(loc, absentValues);
+  badIfOp->erase();
+
+  // Build fir::ExtendedValue from the result values.
+  builder.setInsertionPointAfter(ifOp);
+  return result.match(
+      [&](const fir::CharBoxValue &box) -> fir::ExtendedValue {
+        return fir::CharBoxValue{ifOp.getResult(0), ifOp.getResult(1)};
+      },
+      [&](const mlir::Value &) -> fir::ExtendedValue {
+        return ifOp.getResult(0);
+      },
+      [&](const auto &) -> fir::ExtendedValue {
+        TODO(loc, "unboxing non scalar optional fir.box");
+      });
+}
+
 static fir::ExtendedValue translateVariableToExtendedValue(
     mlir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity variable,
-    bool forceHlfirBase = false, bool contiguousHint = false) {
+    bool forceHlfirBase = false, bool contiguousHint = false,
+    bool keepScalarOptionalBoxed = false) {
   assert(variable.isVariable() && "must be a variable");
   // When going towards FIR, use the original base value to avoid
   // introducing descriptors at runtime when they are not required.
@@ -984,11 +1087,30 @@ static fir::ExtendedValue translateVariableToExtendedValue(
     const bool contiguous = variable.isSimplyContiguous() || contiguousHint;
     const bool isAssumedRank = variable.isAssumedRank();
     if (!contiguous || variable.isPolymorphic() ||
-        variable.isDerivedWithLengthParameters() || variable.isOptional() ||
-        isAssumedRank) {
+        variable.isDerivedWithLengthParameters() || isAssumedRank) {
       llvm::SmallVector<mlir::Value> nonDefaultLbounds;
       if (!isAssumedRank)
         nonDefaultLbounds = getNonDefaultLowerBounds(loc, builder, variable);
+      return fir::BoxValue(base, nonDefaultLbounds,
+                           getExplicitTypeParams(variable));
+    }
+    if (variable.mayBeOptional()) {
+      if (!keepScalarOptionalBoxed && variable.isScalar()) {
+        mlir::Value isPresent = builder.create<fir::IsPresentOp>(
+            loc, builder.getI1Type(), variable);
+        return conditionallyEvaluate(
+            loc, builder, isPresent, [&]() -> fir::ExtendedValue {
+              mlir::Value base = genVariableRawAddress(loc, builder, variable);
+              if (variable.isCharacter()) {
+                mlir::Value len =
+                    genCharacterVariableLength(loc, builder, variable);
+                return fir::CharBoxValue{base, len};
+              }
+              return base;
+            });
+      }
+      llvm::SmallVector<mlir::Value> nonDefaultLbounds =
+          getNonDefaultLowerBounds(loc, builder, variable);
       return fir::BoxValue(base, nonDefaultLbounds,
                            getExplicitTypeParams(variable));
     }
@@ -1013,8 +1135,8 @@ static fir::ExtendedValue translateVariableToExtendedValue(
       variable.mayHaveNonDefaultLowerBounds()) {
     // This special case avoids generating two sets of identical
     // fir.box_dim to get both the lower bounds and extents.
-    genLboundsAndExtentsFromBox(loc, builder, variable, nonDefaultLbounds,
-                                &extents);
+    fir::factory::genDimInfoFromBox(builder, loc, variable, &nonDefaultLbounds,
+                                    &extents, /*strides=*/nullptr);
   } else {
     extents = getVariableExtents(loc, builder, variable);
     nonDefaultLbounds = getNonDefaultLowerBounds(loc, builder, variable);
@@ -1035,10 +1157,12 @@ hlfir::translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
 
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 hlfir::translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
-                                hlfir::Entity entity, bool contiguousHint) {
+                                hlfir::Entity entity, bool contiguousHint,
+                                bool keepScalarOptionalBoxed) {
   if (entity.isVariable())
     return {translateVariableToExtendedValue(loc, builder, entity, false,
-                                             contiguousHint),
+                                             contiguousHint,
+                                             keepScalarOptionalBoxed),
             std::nullopt};
 
   if (entity.isProcedure()) {
@@ -1094,7 +1218,9 @@ hlfir::convertToBox(mlir::Location loc, fir::FirOpBuilder &builder,
   if (entity.isProcedurePointer())
     entity = hlfir::derefPointersAndAllocatables(loc, builder, entity);
 
-  auto [exv, cleanup] = translateToExtendedValue(loc, builder, entity);
+  auto [exv, cleanup] =
+      translateToExtendedValue(loc, builder, entity, /*contiguousHint=*/false,
+                               /*keepScalarOptionalBoxed=*/true);
   // Procedure entities should not go through createBoxValue that embox
   // object entities. Return the fir.boxproc directly.
   if (entity.isProcedure())
@@ -1420,4 +1546,65 @@ hlfir::Entity hlfir::loadElementAt(mlir::Location loc,
                                    mlir::ValueRange oneBasedIndices) {
   return loadTrivialScalar(loc, builder,
                            getElementAt(loc, builder, entity, oneBasedIndices));
+}
+
+llvm::SmallVector<mlir::Value, Fortran::common::maxRank>
+hlfir::genExtentsVector(mlir::Location loc, fir::FirOpBuilder &builder,
+                        hlfir::Entity entity) {
+  entity = hlfir::derefPointersAndAllocatables(loc, builder, entity);
+  mlir::Value shape = hlfir::genShape(loc, builder, entity);
+  llvm::SmallVector<mlir::Value, Fortran::common::maxRank> extents =
+      hlfir::getExplicitExtentsFromShape(shape, builder);
+  if (shape.getUses().empty())
+    shape.getDefiningOp()->erase();
+  return extents;
+}
+
+hlfir::Entity hlfir::gen1DSection(mlir::Location loc,
+                                  fir::FirOpBuilder &builder,
+                                  hlfir::Entity array, int64_t dim,
+                                  mlir::ArrayRef<mlir::Value> lbounds,
+                                  mlir::ArrayRef<mlir::Value> extents,
+                                  mlir::ValueRange oneBasedIndices,
+                                  mlir::ArrayRef<mlir::Value> typeParams) {
+  assert(array.isVariable() && "array must be a variable");
+  assert(dim > 0 && dim <= array.getRank() && "invalid dim number");
+  mlir::Value one =
+      builder.createIntegerConstant(loc, builder.getIndexType(), 1);
+  hlfir::DesignateOp::Subscripts subscripts;
+  unsigned indexId = 0;
+  for (int i = 0; i < array.getRank(); ++i) {
+    if (i == dim - 1) {
+      mlir::Value ubound = genUBound(loc, builder, lbounds[i], extents[i], one);
+      subscripts.emplace_back(
+          hlfir::DesignateOp::Triplet{lbounds[i], ubound, one});
+    } else {
+      mlir::Value index =
+          genUBound(loc, builder, lbounds[i], oneBasedIndices[indexId++], one);
+      subscripts.emplace_back(index);
+    }
+  }
+  mlir::Value sectionShape =
+      builder.create<fir::ShapeOp>(loc, extents[dim - 1]);
+
+  // The result type is one of:
+  //   !fir.box/class<!fir.array<NxT>>
+  //   !fir.box/class<!fir.array<?xT>>
+  //
+  // We could use !fir.ref<!fir.array<NxT>> when the whole dimension's
+  // size is known and it is the leading dimension, but let it be simple
+  // for the time being.
+  auto seqType =
+      mlir::cast<fir::SequenceType>(array.getElementOrSequenceType());
+  int64_t dimExtent = seqType.getShape()[dim - 1];
+  mlir::Type sectionType =
+      fir::SequenceType::get({dimExtent}, seqType.getEleTy());
+  sectionType = fir::wrapInClassOrBoxType(sectionType, array.isPolymorphic());
+
+  auto designate = builder.create<hlfir::DesignateOp>(
+      loc, sectionType, array, /*component=*/"", /*componentShape=*/nullptr,
+      subscripts,
+      /*substring=*/mlir::ValueRange{}, /*complexPartAttr=*/std::nullopt,
+      sectionShape, typeParams);
+  return hlfir::Entity{designate.getResult()};
 }

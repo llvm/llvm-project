@@ -211,7 +211,7 @@ template <class... Types>
 // clang-format on
 
 #if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
-#  include <__cxx03/tuple>
+#  include <__cxx03/__config>
 #else
 #  include <__compare/common_comparison_category.h>
 #  include <__compare/ordering.h>
@@ -257,6 +257,7 @@ template <class... Types>
 #  include <__type_traits/maybe_const.h>
 #  include <__type_traits/nat.h>
 #  include <__type_traits/negation.h>
+#  include <__type_traits/remove_cv.h>
 #  include <__type_traits/remove_cvref.h>
 #  include <__type_traits/remove_reference.h>
 #  include <__type_traits/unwrap_ref.h>
@@ -390,7 +391,7 @@ public:
 };
 
 template <size_t _Ip, class _Hp>
-class __tuple_leaf<_Ip, _Hp, true> : private _Hp {
+class __tuple_leaf<_Ip, _Hp, true> : private __remove_cv_t<_Hp> {
 public:
   _LIBCPP_CONSTEXPR_SINCE_CXX14 __tuple_leaf& operator=(const __tuple_leaf&) = delete;
 
@@ -534,7 +535,7 @@ __memberwise_forward_assign(_Dest& __dest, _Source&& __source, __tuple_types<_Up
 }
 
 template <class... _Tp>
-class _LIBCPP_TEMPLATE_VIS tuple {
+class _LIBCPP_NO_SPECIALIZATIONS tuple {
   typedef __tuple_impl<typename __make_tuple_indices<sizeof...(_Tp)>::type, _Tp...> _BaseT;
 
   _BaseT __base_;
@@ -1004,8 +1005,12 @@ public:
 #    endif // _LIBCPP_STD_VER >= 23
 };
 
+_LIBCPP_DIAGNOSTIC_PUSH
+#    if __has_warning("-Winvalid-specialization")
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Winvalid-specialization")
+#    endif
 template <>
-class _LIBCPP_TEMPLATE_VIS tuple<> {
+class tuple<> {
 public:
   constexpr tuple() _NOEXCEPT = default;
   template <class _Alloc>
@@ -1021,18 +1026,19 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr void swap(const tuple&) const noexcept {}
 #    endif
 };
+_LIBCPP_DIAGNOSTIC_POP
 
 #    if _LIBCPP_STD_VER >= 23
 template <class... _TTypes, class... _UTypes, template <class> class _TQual, template <class> class _UQual>
   requires requires { typename tuple<common_reference_t<_TQual<_TTypes>, _UQual<_UTypes>>...>; }
 struct basic_common_reference<tuple<_TTypes...>, tuple<_UTypes...>, _TQual, _UQual> {
-  using type = tuple<common_reference_t<_TQual<_TTypes>, _UQual<_UTypes>>...>;
+  using type _LIBCPP_NODEBUG = tuple<common_reference_t<_TQual<_TTypes>, _UQual<_UTypes>>...>;
 };
 
 template <class... _TTypes, class... _UTypes>
   requires requires { typename tuple<common_type_t<_TTypes, _UTypes>...>; }
 struct common_type<tuple<_TTypes...>, tuple<_UTypes...>> {
-  using type = tuple<common_type_t<_TTypes, _UTypes>...>;
+  using type _LIBCPP_NODEBUG = tuple<common_type_t<_TTypes, _UTypes>...>;
 };
 #    endif // _LIBCPP_STD_VER >= 23
 
@@ -1360,7 +1366,7 @@ tuple_cat(_Tuple0&& __t0, _Tuples&&... __tpls) {
 }
 
 template <class... _Tp, class _Alloc>
-struct _LIBCPP_TEMPLATE_VIS uses_allocator<tuple<_Tp...>, _Alloc> : true_type {};
+struct uses_allocator<tuple<_Tp...>, _Alloc> : true_type {};
 
 #    if _LIBCPP_STD_VER >= 17
 #      define _LIBCPP_NOEXCEPT_RETURN(...)                                                                             \

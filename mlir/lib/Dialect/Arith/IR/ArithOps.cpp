@@ -207,11 +207,6 @@ void arith::ConstantOp::getAsmResultNames(
 /// or float like.
 LogicalResult arith::ConstantOp::verify() {
   auto type = getType();
-  // The value's type must match the return type.
-  if (getValue().getType() != type) {
-    return emitOpError() << "value type " << getValue().getType()
-                         << " must match return type: " << type;
-  }
   // Integer values must be signless.
   if (llvm::isa<IntegerType>(type) &&
       !llvm::cast<IntegerType>(type).isSignless())
@@ -1518,6 +1513,27 @@ LogicalResult arith::TruncIOp::verify() {
 /// can be represented without precision loss.
 OpFoldResult arith::TruncFOp::fold(FoldAdaptor adaptor) {
   auto resElemType = cast<FloatType>(getElementTypeOrSelf(getType()));
+  if (auto extOp = getOperand().getDefiningOp<arith::ExtFOp>()) {
+    Value src = extOp.getIn();
+    auto srcType = cast<FloatType>(getElementTypeOrSelf(src.getType()));
+    auto intermediateType =
+        cast<FloatType>(getElementTypeOrSelf(extOp.getType()));
+    // Check if the srcType is representable in the intermediateType.
+    if (llvm::APFloatBase::isRepresentableBy(
+            srcType.getFloatSemantics(),
+            intermediateType.getFloatSemantics())) {
+      // truncf(extf(a)) -> truncf(a)
+      if (srcType.getWidth() > resElemType.getWidth()) {
+        setOperand(src);
+        return getResult();
+      }
+
+      // truncf(extf(a)) -> a
+      if (srcType == resElemType)
+        return src;
+    }
+  }
+
   const llvm::fltSemantics &targetSemantics = resElemType.getFloatSemantics();
   return constFoldCastOp<FloatAttr, FloatAttr>(
       adaptor.getOperands(), getType(),
@@ -1740,10 +1756,8 @@ bool arith::BitcastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   if (!areValidCastInputsAndOutputs(inputs, outputs))
     return false;
 
-  auto srcType =
-      getTypeIfLikeOrMemRef<IntegerType, IndexType, FloatType>(inputs.front());
-  auto dstType =
-      getTypeIfLikeOrMemRef<IntegerType, IndexType, FloatType>(outputs.front());
+  auto srcType = getTypeIfLikeOrMemRef<IntegerType, FloatType>(inputs.front());
+  auto dstType = getTypeIfLikeOrMemRef<IntegerType, FloatType>(outputs.front());
   if (!srcType || !dstType)
     return false;
 
@@ -1762,6 +1776,10 @@ OpFoldResult arith::BitcastOp::fold(FoldAdaptor adaptor) {
   /// Other shaped types unhandled.
   if (llvm::isa<ShapedType>(resType))
     return {};
+
+  /// Bitcast poison.
+  if (llvm::isa<ub::PoisonAttr>(operand))
+    return ub::PoisonAttr::get(getContext());
 
   /// Bitcast integer or float to integer or float.
   APInt bits = llvm::isa<FloatAttr>(operand)
@@ -1867,6 +1885,18 @@ OpFoldResult arith::CmpIOp::fold(FoldAdaptor adaptor) {
           getPredicate() == arith::CmpIPredicate::ne)
         return extOp.getOperand();
     }
+
+    // arith.cmpi ne, %val, %zero : i1 -> %val
+    if (getElementTypeOrSelf(getLhs().getType()).isInteger(1) &&
+        getPredicate() == arith::CmpIPredicate::ne)
+      return getLhs();
+  }
+
+  if (matchPattern(adaptor.getRhs(), m_One())) {
+    // arith.cmpi eq, %val, %one : i1 -> %val
+    if (getElementTypeOrSelf(getLhs().getType()).isInteger(1) &&
+        getPredicate() == arith::CmpIPredicate::eq)
+      return getLhs();
   }
 
   // Move constant to the right side.

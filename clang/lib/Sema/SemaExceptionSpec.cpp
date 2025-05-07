@@ -89,7 +89,7 @@ ExprResult Sema::ActOnNoexceptSpec(Expr *NoexceptExpr,
 
   llvm::APSInt Result;
   ExprResult Converted = CheckConvertedConstantExpression(
-      NoexceptExpr, Context.BoolTy, Result, CCEK_Noexcept);
+      NoexceptExpr, Context.BoolTy, Result, CCEKind::Noexcept);
 
   if (Converted.isInvalid()) {
     EST = EST_NoexceptFalse;
@@ -1068,7 +1068,7 @@ static CanThrowResult canVarDeclThrow(Sema &Self, const VarDecl *VD) {
 
   // If this is a decomposition declaration, bindings might throw.
   if (auto *DD = dyn_cast<DecompositionDecl>(VD))
-    for (auto *B : DD->bindings())
+    for (auto *B : DD->flat_bindings())
       if (auto *HD = B->getHoldingVar())
         CT = mergeCanThrow(CT, canVarDeclThrow(Self, HD));
 
@@ -1407,6 +1407,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Stmt::OpenACCEnterDataConstructClass:
   case Stmt::OpenACCExitDataConstructClass:
   case Stmt::OpenACCWaitConstructClass:
+  case Stmt::OpenACCCacheConstructClass:
   case Stmt::OpenACCInitConstructClass:
   case Stmt::OpenACCShutdownConstructClass:
   case Stmt::OpenACCSetConstructClass:
@@ -1424,9 +1425,11 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Stmt::OpenACCCombinedConstructClass:
   case Stmt::OpenACCDataConstructClass:
   case Stmt::OpenACCHostDataConstructClass:
+  case Stmt::OpenACCAtomicConstructClass:
   case Stmt::AttributedStmtClass:
   case Stmt::BreakStmtClass:
   case Stmt::CapturedStmtClass:
+  case Stmt::SYCLKernelCallStmtClass:
   case Stmt::CaseStmtClass:
   case Stmt::CompoundStmtClass:
   case Stmt::ContinueStmtClass:
@@ -1485,6 +1488,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Stmt::OMPSectionsDirectiveClass:
   case Stmt::OMPSimdDirectiveClass:
   case Stmt::OMPTileDirectiveClass:
+  case Stmt::OMPStripeDirectiveClass:
   case Stmt::OMPUnrollDirectiveClass:
   case Stmt::OMPReverseDirectiveClass:
   case Stmt::OMPInterchangeDirectiveClass:

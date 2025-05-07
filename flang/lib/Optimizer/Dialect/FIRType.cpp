@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/ISO_Fortran_binding_wrapper.h"
+#include "flang/Common/ISO_Fortran_binding_wrapper.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
@@ -20,6 +20,7 @@
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -74,6 +75,21 @@ bool verifySameLists(llvm::ArrayRef<RecordType::TypePair> a1,
                      llvm::ArrayRef<RecordType::TypePair> a2) {
   // FIXME: do we need to allow for any variance here?
   return a1 == a2;
+}
+
+static llvm::StringRef getVolatileKeyword() { return "volatile"; }
+
+static mlir::ParseResult parseOptionalCommaAndKeyword(mlir::AsmParser &parser,
+                                                      mlir::StringRef keyword,
+                                                      bool &parsedKeyword) {
+  if (!parser.parseOptionalComma()) {
+    if (parser.parseKeyword(keyword))
+      return mlir::failure();
+    parsedKeyword = true;
+    return mlir::success();
+  }
+  parsedKeyword = false;
+  return mlir::success();
 }
 
 RecordType verifyDerived(mlir::AsmParser &parser, RecordType derivedTy,
@@ -210,7 +226,22 @@ mlir::Type getDerivedType(mlir::Type ty) {
           return seq.getEleTy();
         return p.getEleTy();
       })
+      .Case<fir::BaseBoxType>(
+          [](auto p) { return getDerivedType(p.getEleTy()); })
       .Default([](mlir::Type t) { return t; });
+}
+
+mlir::Type updateTypeWithVolatility(mlir::Type type, bool isVolatile) {
+  // If we already have the volatility we asked for, return the type unchanged.
+  if (fir::isa_volatile_type(type) == isVolatile)
+    return type;
+  return mlir::TypeSwitch<mlir::Type, mlir::Type>(type)
+      .Case<fir::BoxType, fir::ClassType, fir::ReferenceType>(
+          [&](auto ty) -> mlir::Type {
+            using TYPE = decltype(ty);
+            return TYPE::get(ty.getEleTy(), isVolatile);
+          })
+      .Default([&](mlir::Type t) -> mlir::Type { return t; });
 }
 
 mlir::Type dyn_cast_ptrEleTy(mlir::Type t) {
@@ -405,6 +436,7 @@ bool isRecordWithDescriptorMember(mlir::Type ty) {
   ty = unwrapSequenceType(ty);
   if (auto recTy = mlir::dyn_cast<fir::RecordType>(ty))
     for (auto [field, memTy] : recTy.getTypeList()) {
+      memTy = unwrapSequenceType(memTy);
       if (mlir::isa<fir::BaseBoxType>(memTy))
         return true;
       if (mlir::isa<fir::RecordType>(memTy) &&
@@ -423,6 +455,11 @@ mlir::Type unwrapAllRefAndSeqType(mlir::Type ty) {
       return ty;
     ty = nt;
   }
+}
+
+mlir::Type getFortranElementType(mlir::Type ty) {
+  return fir::unwrapSequenceType(
+      fir::unwrapPassByRefType(fir::unwrapRefType(ty)));
 }
 
 mlir::Type unwrapSeqOrBoxedSeqType(mlir::Type ty) {
@@ -547,70 +584,92 @@ std::string getTypeAsString(mlir::Type ty, const fir::KindMapping &kindMap,
   llvm::raw_string_ostream name{buf};
   if (!prefix.empty())
     name << "_";
-  while (ty) {
-    if (fir::isa_trivial(ty)) {
-      if (mlir::isa<mlir::IndexType>(ty)) {
-        name << "idx";
-      } else if (ty.isIntOrIndex()) {
-        name << 'i' << ty.getIntOrFloatBitWidth();
-      } else if (mlir::isa<mlir::FloatType>(ty)) {
-        name << 'f' << ty.getIntOrFloatBitWidth();
-      } else if (auto cplxTy = mlir::dyn_cast_or_null<mlir::ComplexType>(ty)) {
-        name << 'z';
-        auto floatTy = mlir::cast<mlir::FloatType>(cplxTy.getElementType());
-        name << floatTy.getWidth();
-      } else if (auto logTy = mlir::dyn_cast_or_null<fir::LogicalType>(ty)) {
-        name << 'l' << kindMap.getLogicalBitsize(logTy.getFKind());
+
+  std::function<void(mlir::Type)> appendTypeName = [&](mlir::Type ty) {
+    while (ty) {
+      if (fir::isa_trivial(ty)) {
+        if (mlir::isa<mlir::IndexType>(ty)) {
+          name << "idx";
+        } else if (ty.isIntOrIndex()) {
+          name << 'i' << ty.getIntOrFloatBitWidth();
+        } else if (mlir::isa<mlir::FloatType>(ty)) {
+          name << 'f' << ty.getIntOrFloatBitWidth();
+        } else if (auto cplxTy =
+                       mlir::dyn_cast_or_null<mlir::ComplexType>(ty)) {
+          name << 'z';
+          auto floatTy = mlir::cast<mlir::FloatType>(cplxTy.getElementType());
+          name << floatTy.getWidth();
+        } else if (auto logTy = mlir::dyn_cast_or_null<fir::LogicalType>(ty)) {
+          name << 'l' << kindMap.getLogicalBitsize(logTy.getFKind());
+        } else {
+          llvm::report_fatal_error("unsupported type");
+        }
+        break;
+      } else if (mlir::isa<mlir::NoneType>(ty)) {
+        name << "none";
+        break;
+      } else if (auto charTy = mlir::dyn_cast_or_null<fir::CharacterType>(ty)) {
+        name << 'c' << kindMap.getCharacterBitsize(charTy.getFKind());
+        if (charTy.getLen() == fir::CharacterType::unknownLen())
+          name << "xU";
+        else if (charTy.getLen() != fir::CharacterType::singleton())
+          name << "x" << charTy.getLen();
+        break;
+      } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(ty)) {
+        for (auto extent : seqTy.getShape()) {
+          if (extent == fir::SequenceType::getUnknownExtent())
+            name << "Ux";
+          else
+            name << extent << 'x';
+        }
+        ty = seqTy.getEleTy();
+      } else if (auto refTy = mlir::dyn_cast_or_null<fir::ReferenceType>(ty)) {
+        name << "ref_";
+        ty = refTy.getEleTy();
+      } else if (auto ptrTy = mlir::dyn_cast_or_null<fir::PointerType>(ty)) {
+        name << "ptr_";
+        ty = ptrTy.getEleTy();
+      } else if (auto ptrTy =
+                     mlir::dyn_cast_or_null<fir::LLVMPointerType>(ty)) {
+        name << "llvmptr_";
+        ty = ptrTy.getEleTy();
+      } else if (auto heapTy = mlir::dyn_cast_or_null<fir::HeapType>(ty)) {
+        name << "heap_";
+        ty = heapTy.getEleTy();
+      } else if (auto classTy = mlir::dyn_cast_or_null<fir::ClassType>(ty)) {
+        name << "class_";
+        ty = classTy.getEleTy();
+      } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BoxType>(ty)) {
+        name << "box_";
+        ty = boxTy.getEleTy();
+      } else if (auto boxcharTy =
+                     mlir::dyn_cast_or_null<fir::BoxCharType>(ty)) {
+        name << "boxchar_";
+        ty = boxcharTy.getEleTy();
+      } else if (auto boxprocTy =
+                     mlir::dyn_cast_or_null<fir::BoxProcType>(ty)) {
+        name << "boxproc_";
+        auto procTy = mlir::dyn_cast<mlir::FunctionType>(boxprocTy.getEleTy());
+        assert(procTy.getNumResults() <= 1 &&
+               "function type with more than one result");
+        for (const auto &result : procTy.getResults())
+          appendTypeName(result);
+        name << "_args";
+        for (const auto &arg : procTy.getInputs()) {
+          name << '_';
+          appendTypeName(arg);
+        }
+        break;
+      } else if (auto recTy = mlir::dyn_cast_or_null<fir::RecordType>(ty)) {
+        name << "rec_" << recTy.getName();
+        break;
       } else {
         llvm::report_fatal_error("unsupported type");
       }
-      break;
-    } else if (mlir::isa<mlir::NoneType>(ty)) {
-      name << "none";
-      break;
-    } else if (auto charTy = mlir::dyn_cast_or_null<fir::CharacterType>(ty)) {
-      name << 'c' << kindMap.getCharacterBitsize(charTy.getFKind());
-      if (charTy.getLen() == fir::CharacterType::unknownLen())
-        name << "xU";
-      else if (charTy.getLen() != fir::CharacterType::singleton())
-        name << "x" << charTy.getLen();
-      break;
-    } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(ty)) {
-      for (auto extent : seqTy.getShape()) {
-        if (extent == fir::SequenceType::getUnknownExtent())
-          name << "Ux";
-        else
-          name << extent << 'x';
-      }
-      ty = seqTy.getEleTy();
-    } else if (auto refTy = mlir::dyn_cast_or_null<fir::ReferenceType>(ty)) {
-      name << "ref_";
-      ty = refTy.getEleTy();
-    } else if (auto ptrTy = mlir::dyn_cast_or_null<fir::PointerType>(ty)) {
-      name << "ptr_";
-      ty = ptrTy.getEleTy();
-    } else if (auto ptrTy = mlir::dyn_cast_or_null<fir::LLVMPointerType>(ty)) {
-      name << "llvmptr_";
-      ty = ptrTy.getEleTy();
-    } else if (auto heapTy = mlir::dyn_cast_or_null<fir::HeapType>(ty)) {
-      name << "heap_";
-      ty = heapTy.getEleTy();
-    } else if (auto classTy = mlir::dyn_cast_or_null<fir::ClassType>(ty)) {
-      name << "class_";
-      ty = classTy.getEleTy();
-    } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BoxType>(ty)) {
-      name << "box_";
-      ty = boxTy.getEleTy();
-    } else if (auto boxcharTy = mlir::dyn_cast_or_null<fir::BoxCharType>(ty)) {
-      name << "boxchar_";
-      ty = boxcharTy.getEleTy();
-    } else if (auto recTy = mlir::dyn_cast_or_null<fir::RecordType>(ty)) {
-      name << "rec_" << recTy.getName();
-      break;
-    } else {
-      llvm::report_fatal_error("unsupported type");
     }
-  }
+  };
+
+  appendTypeName(ty);
   return buf;
 }
 
@@ -620,8 +679,13 @@ mlir::Type changeElementType(mlir::Type type, mlir::Type newElementType,
       .Case<fir::SequenceType>([&](fir::SequenceType seqTy) -> mlir::Type {
         return fir::SequenceType::get(seqTy.getShape(), newElementType);
       })
-      .Case<fir::PointerType, fir::HeapType, fir::ReferenceType,
-            fir::ClassType>([&](auto t) -> mlir::Type {
+      .Case<fir::ReferenceType, fir::ClassType>([&](auto t) -> mlir::Type {
+        using FIRT = decltype(t);
+        auto newEleTy =
+            changeElementType(t.getEleTy(), newElementType, turnBoxIntoClass);
+        return FIRT::get(newEleTy, t.isVolatile());
+      })
+      .Case<fir::PointerType, fir::HeapType>([&](auto t) -> mlir::Type {
         using FIRT = decltype(t);
         return FIRT::get(
             changeElementType(t.getEleTy(), newElementType, turnBoxIntoClass));
@@ -630,8 +694,8 @@ mlir::Type changeElementType(mlir::Type type, mlir::Type newElementType,
         mlir::Type newInnerType =
             changeElementType(t.getEleTy(), newElementType, false);
         if (turnBoxIntoClass)
-          return fir::ClassType::get(newInnerType);
-        return fir::BoxType::get(newInnerType);
+          return fir::ClassType::get(newInnerType, t.isVolatile());
+        return fir::BoxType::get(newInnerType, t.isVolatile());
       })
       .Default([&](mlir::Type t) -> mlir::Type {
         assert((fir::isa_trivial(t) || llvm::isa<fir::RecordType>(t) ||
@@ -672,6 +736,13 @@ bool fir::isa_unknown_size_box(mlir::Type t) {
   return false;
 }
 
+bool fir::isa_volatile_type(mlir::Type t) {
+  return llvm::TypeSwitch<mlir::Type, bool>(t)
+      .Case<fir::ReferenceType, fir::BoxType, fir::ClassType>(
+          [](auto t) { return t.isVolatile(); })
+      .Default([](mlir::Type) { return false; });
+}
+
 //===----------------------------------------------------------------------===//
 // BoxProcType
 //===----------------------------------------------------------------------===//
@@ -709,9 +780,31 @@ static bool cannotBePointerOrHeapElementType(mlir::Type eleTy) {
 // BoxType
 //===----------------------------------------------------------------------===//
 
+// `box` `<` type (`, volatile` $volatile^)? `>`
+mlir::Type fir::BoxType::parse(mlir::AsmParser &parser) {
+  mlir::Type eleTy;
+  auto location = parser.getCurrentLocation();
+  auto *context = parser.getContext();
+  bool isVolatile = false;
+  if (parser.parseLess() || parser.parseType(eleTy))
+    return {};
+  if (parseOptionalCommaAndKeyword(parser, getVolatileKeyword(), isVolatile))
+    return {};
+  if (parser.parseGreater())
+    return {};
+  return parser.getChecked<fir::BoxType>(location, context, eleTy, isVolatile);
+}
+
+void fir::BoxType::print(mlir::AsmPrinter &printer) const {
+  printer << "<" << getEleTy();
+  if (isVolatile())
+    printer << ", " << getVolatileKeyword();
+  printer << '>';
+}
+
 llvm::LogicalResult
 fir::BoxType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-                     mlir::Type eleTy) {
+                     mlir::Type eleTy, bool isVolatile) {
   if (mlir::isa<fir::BaseBoxType>(eleTy))
     return emitError() << "invalid element type\n";
   // TODO
@@ -778,9 +871,32 @@ void fir::CharacterType::print(mlir::AsmPrinter &printer) const {
 // ClassType
 //===----------------------------------------------------------------------===//
 
+// `class` `<` type (`, volatile` $volatile^)? `>`
+mlir::Type fir::ClassType::parse(mlir::AsmParser &parser) {
+  mlir::Type eleTy;
+  auto location = parser.getCurrentLocation();
+  auto *context = parser.getContext();
+  bool isVolatile = false;
+  if (parser.parseLess() || parser.parseType(eleTy))
+    return {};
+  if (parseOptionalCommaAndKeyword(parser, getVolatileKeyword(), isVolatile))
+    return {};
+  if (parser.parseGreater())
+    return {};
+  return parser.getChecked<fir::ClassType>(location, context, eleTy,
+                                           isVolatile);
+}
+
+void fir::ClassType::print(mlir::AsmPrinter &printer) const {
+  printer << "<" << getEleTy();
+  if (isVolatile())
+    printer << ", " << getVolatileKeyword();
+  printer << '>';
+}
+
 llvm::LogicalResult
 fir::ClassType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-                       mlir::Type eleTy) {
+                       mlir::Type eleTy, bool isVolatile) {
   if (mlir::isa<fir::RecordType, fir::SequenceType, fir::HeapType,
                 fir::PointerType, mlir::NoneType, mlir::IntegerType,
                 mlir::FloatType, fir::CharacterType, fir::LogicalType,
@@ -1028,18 +1144,32 @@ unsigned fir::RecordType::getFieldIndex(llvm::StringRef ident) {
 // ReferenceType
 //===----------------------------------------------------------------------===//
 
-// `ref` `<` type `>`
+// `ref` `<` type (`, volatile` $volatile^)? `>`
 mlir::Type fir::ReferenceType::parse(mlir::AsmParser &parser) {
-  return parseTypeSingleton<fir::ReferenceType>(parser);
+  auto location = parser.getCurrentLocation();
+  auto *context = parser.getContext();
+  mlir::Type eleTy;
+  bool isVolatile = false;
+  if (parser.parseLess() || parser.parseType(eleTy))
+    return {};
+  if (parseOptionalCommaAndKeyword(parser, getVolatileKeyword(), isVolatile))
+    return {};
+  if (parser.parseGreater())
+    return {};
+  return parser.getChecked<fir::ReferenceType>(location, context, eleTy,
+                                               isVolatile);
 }
 
 void fir::ReferenceType::print(mlir::AsmPrinter &printer) const {
-  printer << "<" << getEleTy() << '>';
+  printer << "<" << getEleTy();
+  if (isVolatile())
+    printer << ", " << getVolatileKeyword();
+  printer << '>';
 }
 
 llvm::LogicalResult fir::ReferenceType::verify(
-    llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-    mlir::Type eleTy) {
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError, mlir::Type eleTy,
+    bool isVolatile) {
   if (mlir::isa<ShapeType, ShapeShiftType, SliceType, FieldType, LenType,
                 ReferenceType, TypeDescType>(eleTy))
     return emitError() << "cannot build a reference to type: " << eleTy << '\n';
@@ -1290,14 +1420,20 @@ changeTypeShape(mlir::Type type,
           return fir::SequenceType::get(*newShape, seqTy.getEleTy());
         return seqTy.getEleTy();
       })
-      .Case<fir::PointerType, fir::HeapType, fir::ReferenceType, fir::BoxType,
-            fir::ClassType>([&](auto t) -> mlir::Type {
+      .Case<fir::ReferenceType, fir::BoxType, fir::ClassType>(
+          [&](auto t) -> mlir::Type {
+            using FIRT = decltype(t);
+            return FIRT::get(changeTypeShape(t.getEleTy(), newShape),
+                             t.isVolatile());
+          })
+      .Case<fir::PointerType, fir::HeapType>([&](auto t) -> mlir::Type {
         using FIRT = decltype(t);
         return FIRT::get(changeTypeShape(t.getEleTy(), newShape));
       })
       .Default([&](mlir::Type t) -> mlir::Type {
         assert((fir::isa_trivial(t) || llvm::isa<fir::RecordType>(t) ||
-                llvm::isa<mlir::NoneType>(t)) &&
+                llvm::isa<mlir::NoneType>(t) ||
+                llvm::isa<fir::CharacterType>(t)) &&
                "unexpected FIR leaf type");
         if (newShape)
           return fir::SequenceType::get(*newShape, t);
@@ -1352,6 +1488,10 @@ bool fir::BaseBoxType::isAssumedRank() const {
   return false;
 }
 
+bool fir::BaseBoxType::isPointer() const {
+  return llvm::isa<fir::PointerType>(getEleTy());
+}
+
 //===----------------------------------------------------------------------===//
 // FIROpsDialect
 //===----------------------------------------------------------------------===//
@@ -1364,23 +1504,12 @@ void FIROpsDialect::registerTypes() {
            TypeDescType, fir::VectorType, fir::DummyScopeType>();
   fir::ReferenceType::attachInterface<
       OpenMPPointerLikeModel<fir::ReferenceType>>(*getContext());
-  fir::ReferenceType::attachInterface<
-      OpenACCPointerLikeModel<fir::ReferenceType>>(*getContext());
-
   fir::PointerType::attachInterface<OpenMPPointerLikeModel<fir::PointerType>>(
       *getContext());
-  fir::PointerType::attachInterface<OpenACCPointerLikeModel<fir::PointerType>>(
-      *getContext());
-
   fir::HeapType::attachInterface<OpenMPPointerLikeModel<fir::HeapType>>(
       *getContext());
-  fir::HeapType::attachInterface<OpenACCPointerLikeModel<fir::HeapType>>(
-      *getContext());
-
   fir::LLVMPointerType::attachInterface<
       OpenMPPointerLikeModel<fir::LLVMPointerType>>(*getContext());
-  fir::LLVMPointerType::attachInterface<
-      OpenACCPointerLikeModel<fir::LLVMPointerType>>(*getContext());
 }
 
 std::optional<std::pair<uint64_t, unsigned short>>

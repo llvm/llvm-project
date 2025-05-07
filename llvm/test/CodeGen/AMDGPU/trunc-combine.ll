@@ -43,9 +43,9 @@ define i16 @trunc_bitcast_v2i32_to_i16(<2 x i32> %bar) {
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, 4, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
-  %load0 = load i32, ptr addrspace(1) undef
+  %load0 = load i32, ptr addrspace(1) poison
   %load1 = load i32, ptr addrspace(1) null
-  %insert.0 = insertelement <2 x i32> undef, i32 %load0, i32 0
+  %insert.0 = insertelement <2 x i32> poison, i32 %load0, i32 0
   %insert.1 = insertelement <2 x i32> %insert.0, i32 99, i32 1
   %bc = bitcast <2 x i32> %insert.1 to i64
   %trunc = trunc i64 %bc to i16
@@ -72,9 +72,9 @@ define i16 @trunc_bitcast_v2f32_to_i16(<2 x float> %bar) {
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, 4, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
-  %load0 = load float, ptr addrspace(1) undef
+  %load0 = load float, ptr addrspace(1) poison
   %load1 = load float, ptr addrspace(1) null
-  %insert.0 = insertelement <2 x float> undef, float %load0, i32 0
+  %insert.0 = insertelement <2 x float> poison, float %load0, i32 0
   %insert.1 = insertelement <2 x float> %insert.0, float 4.0, i32 1
   %bc = bitcast <2 x float> %insert.1 to i64
   %trunc = trunc i64 %bc to i16
@@ -119,20 +119,20 @@ define amdgpu_kernel void @truncate_high_elt_extract_vector(ptr addrspace(1) noc
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
 bb:
-  %tmp = getelementptr inbounds <2 x i16>, ptr addrspace(1) %arg, i64 undef
+  %tmp = getelementptr inbounds <2 x i16>, ptr addrspace(1) %arg, i64 0
   %tmp3 = load <2 x i16>, ptr addrspace(1) %tmp, align 4
-  %tmp4 = getelementptr inbounds <2 x i16>, ptr addrspace(1) %arg1, i64 undef
+  %tmp4 = getelementptr inbounds <2 x i16>, ptr addrspace(1) %arg1, i64 0
   %tmp5 = load <2 x i16>, ptr addrspace(1) %tmp4, align 4
   %tmp6 = sext <2 x i16> %tmp3 to <2 x i32>
   %tmp7 = sext <2 x i16> %tmp5 to <2 x i32>
   %tmp8 = extractelement <2 x i32> %tmp6, i64 0
   %tmp9 = extractelement <2 x i32> %tmp7, i64 0
   %tmp10 = mul nsw i32 %tmp9, %tmp8
-  %tmp11 = insertelement <2 x i32> undef, i32 %tmp10, i32 0
-  %tmp12 = insertelement <2 x i32> %tmp11, i32 undef, i32 1
+  %tmp11 = insertelement <2 x i32> poison, i32 %tmp10, i32 0
+  %tmp12 = insertelement <2 x i32> %tmp11, i32 poison, i32 1
   %tmp13 = lshr <2 x i32> %tmp12, <i32 16, i32 16>
   %tmp14 = trunc <2 x i32> %tmp13 to <2 x i16>
-  %tmp15 = getelementptr inbounds <2 x i16>, ptr addrspace(1) %arg2, i64 undef
+  %tmp15 = getelementptr inbounds <2 x i16>, ptr addrspace(1) %arg2, i64 0
   store <2 x i16> %tmp14, ptr addrspace(1) %tmp15, align 4
   ret void
 }
@@ -154,5 +154,337 @@ define <2 x i16> @trunc_v2i64_arg_to_v2i16(<2 x i64> %arg0) #0 {
 ; VI-NEXT:    v_perm_b32 v0, v0, v2, s4
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %trunc = trunc <2 x i64> %arg0 to <2 x i16>
+  ret <2 x i16> %trunc
+}
+
+; Test for regression where an unnecessary v_alignbit_b32 was inserted
+; on the final result, due to losing the fact that the upper half of
+; the lhs vector was undef.
+define <2 x i16> @vector_trunc_high_bits_undef_lshr_lhs_alignbit_regression(i32 %arg0) {
+; SI-LABEL: vector_trunc_high_bits_undef_lshr_lhs_alignbit_regression:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; SI-NEXT:    v_mov_b32_e32 v1, 0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: vector_trunc_high_bits_undef_lshr_lhs_alignbit_regression:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %undef.hi.elt = insertelement <2 x i32> poison, i32 %arg0, i32 0
+  %lshr = lshr <2 x i32> %undef.hi.elt, splat (i32 16)
+  %trunc = trunc <2 x i32> %lshr to <2 x i16>
+  ret <2 x i16> %trunc
+}
+
+define <2 x i16> @vector_trunc_high_bits_undef_lshr_rhs_alignbit_regression(i32 %arg0) {
+; SI-LABEL: vector_trunc_high_bits_undef_lshr_rhs_alignbit_regression:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_lshr_b32_e32 v0, 16, v0
+; SI-NEXT:    v_mov_b32_e32 v1, 0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: vector_trunc_high_bits_undef_lshr_rhs_alignbit_regression:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_lshrrev_b32_e64 v0, v0, 16
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %undef.hi.elt = insertelement <2 x i32> poison, i32 %arg0, i32 0
+  %lshr = lshr <2 x i32> splat (i32 16), %undef.hi.elt
+  %trunc = trunc <2 x i32> %lshr to <2 x i16>
+  ret <2 x i16> %trunc
+}
+
+define <2 x i16> @vector_trunc_high_bits_undef_ashr_lhs_alignbit_regression(i32 %arg0) {
+; SI-LABEL: vector_trunc_high_bits_undef_ashr_lhs_alignbit_regression:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; SI-NEXT:    v_mov_b32_e32 v1, 0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: vector_trunc_high_bits_undef_ashr_lhs_alignbit_regression:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %undef.hi.elt = insertelement <2 x i32> poison, i32 %arg0, i32 0
+  %ashr = ashr <2 x i32> %undef.hi.elt, splat (i32 16)
+  %trunc = trunc <2 x i32> %ashr to <2 x i16>
+  ret <2 x i16> %trunc
+}
+
+define <2 x i16> @vector_trunc_high_bits_undef_ashr_rhs_alignbit_regression(i32 %arg0) {
+; SI-LABEL: vector_trunc_high_bits_undef_ashr_rhs_alignbit_regression:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_ashr_i32_e32 v0, -4, v0
+; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; SI-NEXT:    v_mov_b32_e32 v1, 0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: vector_trunc_high_bits_undef_ashr_rhs_alignbit_regression:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_ashrrev_i32_e64 v0, v0, -4
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %undef.hi.elt = insertelement <2 x i32> poison, i32 %arg0, i32 0
+  %lshr = ashr <2 x i32> splat (i32 -4), %undef.hi.elt
+  %trunc = trunc <2 x i32> %lshr to <2 x i16>
+  ret <2 x i16> %trunc
+}
+
+define <2 x i16> @vector_trunc_high_bits_undef_add_lhs_alignbit_regression(i32 %arg0) {
+; SI-LABEL: vector_trunc_high_bits_undef_add_lhs_alignbit_regression:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_add_i32_e32 v0, vcc, 16, v0
+; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; SI-NEXT:    v_mov_b32_e32 v1, 0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: vector_trunc_high_bits_undef_add_lhs_alignbit_regression:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_add_u32_e32 v0, vcc, 16, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %undef.hi.elt = insertelement <2 x i32> poison, i32 %arg0, i32 0
+  %lshr = add <2 x i32> %undef.hi.elt, splat (i32 16)
+  %trunc = trunc <2 x i32> %lshr to <2 x i16>
+  ret <2 x i16> %trunc
+}
+
+define <2 x i16> @vector_trunc_high_bits_undef_shl_rhs_alignbit_regression(i32 %arg0) {
+; SI-LABEL: vector_trunc_high_bits_undef_shl_rhs_alignbit_regression:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_lshl_b32_e32 v0, 2, v0
+; SI-NEXT:    v_and_b32_e32 v0, 0xfffe, v0
+; SI-NEXT:    v_mov_b32_e32 v1, 0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: vector_trunc_high_bits_undef_shl_rhs_alignbit_regression:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_lshlrev_b32_e64 v0, v0, 2
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %undef.hi.elt = insertelement <2 x i32> poison, i32 %arg0, i32 0
+  %lshr = shl <2 x i32> splat (i32 2), %undef.hi.elt
+  %trunc = trunc <2 x i32> %lshr to <2 x i16>
+  ret <2 x i16> %trunc
+}
+
+define <2 x i16> @vector_trunc_high_bits_undef_sub_lhs_alignbit_regression(i32 %arg0) {
+; SI-LABEL: vector_trunc_high_bits_undef_sub_lhs_alignbit_regression:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_add_i32_e32 v0, vcc, -16, v0
+; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; SI-NEXT:    v_mov_b32_e32 v1, 0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: vector_trunc_high_bits_undef_sub_lhs_alignbit_regression:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_add_u32_e32 v0, vcc, -16, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %undef.hi.elt = insertelement <2 x i32> poison, i32 %arg0, i32 0
+  %lshr = sub <2 x i32> %undef.hi.elt, splat (i32 16)
+  %trunc = trunc <2 x i32> %lshr to <2 x i16>
+  ret <2 x i16> %trunc
+}
+
+define <2 x i16> @vector_trunc_high_bits_undef_or_lhs_alignbit_regression(i32 %arg0) {
+; SI-LABEL: vector_trunc_high_bits_undef_or_lhs_alignbit_regression:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_or_b32_e32 v0, 0xffff0011, v0
+; SI-NEXT:    v_mov_b32_e32 v1, 0xffff
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: vector_trunc_high_bits_undef_or_lhs_alignbit_regression:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_or_b32_e32 v0, 0xffff0011, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %undef.hi.elt = insertelement <2 x i32> poison, i32 %arg0, i32 0
+  %lshr = or <2 x i32> %undef.hi.elt, splat (i32 17)
+  %trunc = trunc <2 x i32> %lshr to <2 x i16>
+  ret <2 x i16> %trunc
+}
+
+define <2 x i16> @vector_trunc_high_bits_undef_xor_lhs_alignbit_regression(i32 %arg0) {
+; SI-LABEL: vector_trunc_high_bits_undef_xor_lhs_alignbit_regression:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_xor_b32_e32 v0, 17, v0
+; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; SI-NEXT:    v_mov_b32_e32 v1, 0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: vector_trunc_high_bits_undef_xor_lhs_alignbit_regression:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_xor_b32_e32 v0, 17, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %undef.hi.elt = insertelement <2 x i32> poison, i32 %arg0, i32 0
+  %lshr = xor <2 x i32> %undef.hi.elt, splat (i32 17)
+  %trunc = trunc <2 x i32> %lshr to <2 x i16>
+  ret <2 x i16> %trunc
+}
+
+define <2 x i16> @vector_trunc_high_bits_undef_shl_lhs_alignbit_regression(i32 %arg0) {
+; SI-LABEL: vector_trunc_high_bits_undef_shl_lhs_alignbit_regression:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; SI-NEXT:    v_and_b32_e32 v0, 0xfffc, v0
+; SI-NEXT:    v_mov_b32_e32 v1, 0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: vector_trunc_high_bits_undef_shl_lhs_alignbit_regression:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_lshlrev_b16_e32 v0, 2, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %undef.hi.elt = insertelement <2 x i32> poison, i32 %arg0, i32 0
+  %shl = shl <2 x i32> %undef.hi.elt, splat (i32 2)
+  %trunc = trunc <2 x i32> %shl to <2 x i16>
+  ret <2 x i16> %trunc
+}
+
+define <2 x i16> @vector_trunc_high_bits_undef_mul_lhs_alignbit_regression(i32 %arg0) {
+; SI-LABEL: vector_trunc_high_bits_undef_mul_lhs_alignbit_regression:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_mul_lo_u32 v0, v0, 18
+; SI-NEXT:    v_mov_b32_e32 v1, 0
+; SI-NEXT:    v_and_b32_e32 v0, 0xfffe, v0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: vector_trunc_high_bits_undef_mul_lhs_alignbit_regression:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_mul_lo_u32 v0, v0, 18
+; VI-NEXT:    v_and_b32_e32 v0, 0xfffe, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %undef.hi.elt = insertelement <2 x i32> poison, i32 %arg0, i32 0
+  %lshr = mul <2 x i32> %undef.hi.elt, splat (i32 18)
+  %trunc = trunc <2 x i32> %lshr to <2 x i16>
+  ret <2 x i16> %trunc
+}
+
+define <2 x i16> @vector_trunc_high_bits_undef_sdiv_lhs_alignbit_regression(i32 %arg0) {
+; SI-LABEL: vector_trunc_high_bits_undef_sdiv_lhs_alignbit_regression:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0x38e38e39
+; SI-NEXT:    v_mul_hi_i32 v0, v0, s4
+; SI-NEXT:    v_lshrrev_b32_e32 v1, 31, v0
+; SI-NEXT:    v_lshrrev_b32_e32 v0, 2, v0
+; SI-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
+; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; SI-NEXT:    v_mov_b32_e32 v1, 0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: vector_trunc_high_bits_undef_sdiv_lhs_alignbit_regression:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_mov_b32 s4, 0x38e38e39
+; VI-NEXT:    v_mul_hi_i32 v0, v0, s4
+; VI-NEXT:    v_lshrrev_b32_e32 v1, 31, v0
+; VI-NEXT:    v_ashrrev_i32_e32 v0, 2, v0
+; VI-NEXT:    v_add_u32_e32 v0, vcc, v0, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %undef.hi.elt = insertelement <2 x i32> poison, i32 %arg0, i32 0
+  %lshr = sdiv <2 x i32> %undef.hi.elt, splat (i32 18)
+  %trunc = trunc <2 x i32> %lshr to <2 x i16>
+  ret <2 x i16> %trunc
+}
+
+define <2 x i16> @vector_trunc_high_bits_undef_srem_lhs_alignbit_regression(i32 %arg0) {
+; SI-LABEL: vector_trunc_high_bits_undef_srem_lhs_alignbit_regression:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0x38e38e39
+; SI-NEXT:    v_mul_hi_i32 v1, v0, s4
+; SI-NEXT:    v_lshrrev_b32_e32 v2, 31, v1
+; SI-NEXT:    v_lshrrev_b32_e32 v1, 2, v1
+; SI-NEXT:    v_add_i32_e32 v1, vcc, v1, v2
+; SI-NEXT:    v_mul_lo_u32 v1, v1, 18
+; SI-NEXT:    v_sub_i32_e32 v0, vcc, v0, v1
+; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; SI-NEXT:    v_mov_b32_e32 v1, 0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: vector_trunc_high_bits_undef_srem_lhs_alignbit_regression:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_mov_b32 s4, 0x38e38e39
+; VI-NEXT:    v_mul_hi_i32 v1, v0, s4
+; VI-NEXT:    v_lshrrev_b32_e32 v2, 31, v1
+; VI-NEXT:    v_ashrrev_i32_e32 v1, 2, v1
+; VI-NEXT:    v_add_u32_e32 v1, vcc, v1, v2
+; VI-NEXT:    v_mul_lo_u32 v1, v1, 18
+; VI-NEXT:    v_sub_u32_e32 v0, vcc, v0, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %undef.hi.elt = insertelement <2 x i32> poison, i32 %arg0, i32 0
+  %lshr = srem <2 x i32> %undef.hi.elt, splat (i32 18)
+  %trunc = trunc <2 x i32> %lshr to <2 x i16>
+  ret <2 x i16> %trunc
+}
+
+
+define <2 x i16> @vector_trunc_high_bits_undef_udiv_lhs_alignbit_regression(i32 %arg0) {
+; SI-LABEL: vector_trunc_high_bits_undef_udiv_lhs_alignbit_regression:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0x38e38e39
+; SI-NEXT:    v_mul_hi_u32 v0, v0, s4
+; SI-NEXT:    v_mov_b32_e32 v1, 0
+; SI-NEXT:    v_bfe_u32 v0, v0, 2, 16
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: vector_trunc_high_bits_undef_udiv_lhs_alignbit_regression:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_mov_b32 s4, 0x38e38e39
+; VI-NEXT:    v_mul_hi_u32 v0, v0, s4
+; VI-NEXT:    v_lshrrev_b32_e32 v0, 2, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %undef.hi.elt = insertelement <2 x i32> poison, i32 %arg0, i32 0
+  %lshr = udiv <2 x i32> %undef.hi.elt, splat (i32 18)
+  %trunc = trunc <2 x i32> %lshr to <2 x i16>
+  ret <2 x i16> %trunc
+}
+
+define <2 x i16> @vector_trunc_high_bits_undef_urem_lhs_alignbit_regression(i32 %arg0) {
+; SI-LABEL: vector_trunc_high_bits_undef_urem_lhs_alignbit_regression:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0x38e38e39
+; SI-NEXT:    v_mul_hi_u32 v1, v0, s4
+; SI-NEXT:    v_lshrrev_b32_e32 v1, 2, v1
+; SI-NEXT:    v_mul_lo_u32 v1, v1, 18
+; SI-NEXT:    v_sub_i32_e32 v0, vcc, v0, v1
+; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; SI-NEXT:    v_mov_b32_e32 v1, 0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: vector_trunc_high_bits_undef_urem_lhs_alignbit_regression:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_mov_b32 s4, 0x38e38e39
+; VI-NEXT:    v_mul_hi_u32 v1, v0, s4
+; VI-NEXT:    v_lshrrev_b32_e32 v1, 2, v1
+; VI-NEXT:    v_mul_lo_u32 v1, v1, 18
+; VI-NEXT:    v_sub_u32_e32 v0, vcc, v0, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %undef.hi.elt = insertelement <2 x i32> poison, i32 %arg0, i32 0
+  %lshr = urem <2 x i32> %undef.hi.elt, splat (i32 18)
+  %trunc = trunc <2 x i32> %lshr to <2 x i16>
   ret <2 x i16> %trunc
 }

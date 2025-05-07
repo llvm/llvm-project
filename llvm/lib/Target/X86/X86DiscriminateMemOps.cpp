@@ -113,8 +113,8 @@ bool X86DiscriminateMemOps::runOnMachineFunction(MachineFunction &MF) {
       if (BypassPrefetchInstructions && IsPrefetchOpcode(MI.getDesc().Opcode))
         continue;
       Location Loc = diToLocation(DI);
-      MemOpDiscriminators[Loc] =
-          std::max(MemOpDiscriminators[Loc], DI->getBaseDiscriminator());
+      unsigned &Disc = MemOpDiscriminators[Loc];
+      Disc = std::max(Disc, DI->getBaseDiscriminator());
     }
   }
 

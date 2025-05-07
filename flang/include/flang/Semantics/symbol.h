@@ -10,11 +10,11 @@
 #define FORTRAN_SEMANTICS_SYMBOL_H_
 
 #include "type.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/reference.h"
 #include "flang/Common/visit.h"
 #include "flang/Semantics/module-dependences.h"
+#include "flang/Support/Fortran.h"
 #include "llvm/ADT/DenseMapInfo.h"
 
 #include <array>
@@ -48,7 +48,7 @@ using MutableSymbolVector = std::vector<MutableSymbolRef>;
 
 // Mixin for details with OpenMP declarative constructs.
 class WithOmpDeclarative {
-  using OmpAtomicOrderType = common::OmpAtomicDefaultMemOrderType;
+  using OmpAtomicOrderType = common::OmpMemoryOrderType;
 
 public:
   ENUM_CLASS(RequiresFlag, ReverseOffload, UnifiedAddress, UnifiedSharedMemory,
@@ -329,9 +329,11 @@ public:
   }
   bool IsAssumedSize() const { return rank_.value_or(0) == isAssumedSize; }
   bool IsAssumedRank() const { return rank_.value_or(0) == isAssumedRank; }
+  bool isTypeGuard() const { return isTypeGuard_; }
   void set_rank(int rank);
   void set_IsAssumedSize();
   void set_IsAssumedRank();
+  void set_isTypeGuard(bool yes = true);
 
 private:
   MaybeExpr expr_;
@@ -340,6 +342,7 @@ private:
   static constexpr int isAssumedSize{-1}; // RANK(*)
   static constexpr int isAssumedRank{-2}; // RANK DEFAULT
   std::optional<int> rank_;
+  bool isTypeGuard_{false}; // TYPE IS or CLASS IS, but not CLASS(DEFAULT)
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const AssocEntityDetails &);
 
@@ -605,12 +608,12 @@ private:
 class UseErrorDetails {
 public:
   UseErrorDetails(const UseDetails &);
-  UseErrorDetails &add_occurrence(const SourceName &, const Scope &);
-  using listType = std::list<std::pair<SourceName, const Scope *>>;
-  const listType occurrences() const { return occurrences_; };
+  UseErrorDetails &add_occurrence(const SourceName &, const Symbol &);
+  using ListType = std::list<std::pair<SourceName, const Symbol *>>;
+  const ListType occurrences() const { return occurrences_; };
 
 private:
-  listType occurrences_;
+  ListType occurrences_;
 };
 
 // A symbol host-associated from an enclosing scope.
@@ -751,12 +754,12 @@ public:
       // OpenMP data-copying attribute
       OmpCopyIn, OmpCopyPrivate,
       // OpenMP miscellaneous flags
-      OmpCommonBlock, OmpReduction, OmpAligned, OmpNontemporal, OmpAllocate,
-      OmpDeclarativeAllocateDirective, OmpExecutableAllocateDirective,
-      OmpDeclareSimd, OmpDeclareTarget, OmpThreadprivate, OmpDeclareReduction,
-      OmpFlushed, OmpCriticalLock, OmpIfSpecified, OmpNone, OmpPreDetermined,
-      OmpImplicit, OmpDependObject, OmpInclusiveScan, OmpExclusiveScan,
-      OmpInScanReduction);
+      OmpCommonBlock, OmpReduction, OmpInReduction, OmpAligned, OmpNontemporal,
+      OmpAllocate, OmpDeclarativeAllocateDirective,
+      OmpExecutableAllocateDirective, OmpDeclareSimd, OmpDeclareTarget,
+      OmpThreadprivate, OmpDeclareReduction, OmpFlushed, OmpCriticalLock,
+      OmpIfSpecified, OmpNone, OmpPreDetermined, OmpImplicit, OmpDependObject,
+      OmpInclusiveScan, OmpExclusiveScan, OmpInScanReduction);
   using Flags = common::EnumSet<Flag, Flag_enumSize>;
 
   const Scope &owner() const { return *owner_; }

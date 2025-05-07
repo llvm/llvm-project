@@ -7,7 +7,6 @@
 // RUN: %clang_cc1 -std=c++2c -fcxx-exceptions -verify %s
 
 //
-// RUN: %clang_cc1 -std=c++17 -fcxx-exceptions -fno-relaxed-template-template-args -DNO_RELAXED_TEMPLATE_TEMPLATE_ARGS=1 -verify %s
 // RUN: %clang_cc1 -std=c++17 -fcxx-exceptions -DCONCEPTS_TS=1 -verify %s
 // RUN: %clang_cc1 -std=c++14 -fno-rtti -fno-threadsafe-statics -verify %s -DNO_EXCEPTIONS -DNO_RTTI -DNO_THREADSAFE_STATICS
 // RUN: %clang_cc1 -std=c++14 -fchar8_t -DNO_EXCEPTIONS -DCHAR8_T -verify %s
@@ -230,7 +229,7 @@
 #error "wrong value for __cpp_aggregate_bases"
 #endif
 
-#if check(structured_bindings, 0, 0, 0, 202403L, 202403L, 202403L, 202403L)
+#if check(structured_bindings, 0, 0, 0, 202411L, 202411L, 202411L, 202411L)
 #error "wrong value for __cpp_structured_bindings"
 #endif
 
@@ -239,9 +238,7 @@
 #error "wrong value for __cpp_nontype_template_args"
 #endif
 
-#if !defined(NO_RELAXED_TEMPLATE_TEMPLATE_ARGS) \
-    ? check(template_template_args, 201611, 201611, 201611, 201611, 201611, 201611, 201611) \
-    : check(template_template_args, 0, 0, 0, 0, 0, 0, 0)
+#if check(template_template_args, 201611, 201611, 201611, 201611, 201611, 201611, 201611)
 #error "wrong value for __cpp_template_template_args"
 #endif
 
@@ -317,7 +314,7 @@
 #error "wrong value for __cpp_lambdas"
 #endif
 
-#if check(constexpr, 0, 200704, 201304, 201603, 201907, 202211, 202406L)
+#if check(constexpr, 0, 200704, 201304, 201603, 202002, 202211, 202406L)
 #error "wrong value for __cpp_constexpr"
 #endif
 

@@ -617,34 +617,34 @@ public:
 
   /// If this is a sequential container of integers (of any size), return the
   /// specified element in the low bits of a uint64_t.
-  uint64_t getElementAsInteger(unsigned i) const;
+  uint64_t getElementAsInteger(uint64_t i) const;
 
   /// If this is a sequential container of integers (of any size), return the
   /// specified element as an APInt.
-  APInt getElementAsAPInt(unsigned i) const;
+  APInt getElementAsAPInt(uint64_t i) const;
 
   /// If this is a sequential container of floating point type, return the
   /// specified element as an APFloat.
-  APFloat getElementAsAPFloat(unsigned i) const;
+  APFloat getElementAsAPFloat(uint64_t i) const;
 
   /// If this is an sequential container of floats, return the specified element
   /// as a float.
-  float getElementAsFloat(unsigned i) const;
+  float getElementAsFloat(uint64_t i) const;
 
   /// If this is an sequential container of doubles, return the specified
   /// element as a double.
-  double getElementAsDouble(unsigned i) const;
+  double getElementAsDouble(uint64_t i) const;
 
   /// Return a Constant for a specified index's element.
   /// Note that this has to compute a new constant to return, so it isn't as
   /// efficient as getElementAsInteger/Float/Double.
-  Constant *getElementAsConstant(unsigned i) const;
+  Constant *getElementAsConstant(uint64_t i) const;
 
   /// Return the element type of the array/vector.
   Type *getElementType() const;
 
   /// Return the number of elements in the array or vector.
-  unsigned getNumElements() const;
+  uint64_t getNumElements() const;
 
   /// Return the size (in bytes) of each element in the array/vector.
   /// The size of the elements is known to be a multiple of one byte.
@@ -684,7 +684,7 @@ public:
   }
 
 private:
-  const char *getElementPointer(unsigned Elt) const;
+  const char *getElementPointer(uint64_t Elt) const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -893,9 +893,9 @@ public:
 class BlockAddress final : public Constant {
   friend class Constant;
 
-  constexpr static IntrusiveOperandsAllocMarker AllocMarker{2};
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{1};
 
-  BlockAddress(Function *F, BasicBlock *BB);
+  BlockAddress(Type *Ty, BasicBlock *BB);
 
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
 
@@ -912,6 +912,11 @@ public:
   /// block must be embedded into a function.
   static BlockAddress *get(BasicBlock *BB);
 
+  /// Return a BlockAddress for the specified basic block, which may not be
+  /// part of a function. The specified type must match the type of the function
+  /// the block will be inserted into.
+  static BlockAddress *get(Type *Ty, BasicBlock *BB);
+
   /// Lookup an existing \c BlockAddress constant for the given BasicBlock.
   ///
   /// \returns 0 if \c !BB->hasAddressTaken(), otherwise the \c BlockAddress.
@@ -920,8 +925,8 @@ public:
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
-  Function *getFunction() const { return (Function *)Op<0>().get(); }
-  BasicBlock *getBasicBlock() const { return (BasicBlock *)Op<1>().get(); }
+  BasicBlock *getBasicBlock() const { return cast<BasicBlock>(Op<0>().get()); }
+  Function *getFunction() const { return getBasicBlock()->getParent(); }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
@@ -931,7 +936,7 @@ public:
 
 template <>
 struct OperandTraits<BlockAddress>
-    : public FixedNumOperandTraits<BlockAddress, 2> {};
+    : public FixedNumOperandTraits<BlockAddress, 1> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(BlockAddress, Value)
 
@@ -1143,8 +1148,6 @@ public:
                           bool HasNSW = false);
   static Constant *getSub(Constant *C1, Constant *C2, bool HasNUW = false,
                           bool HasNSW = false);
-  static Constant *getMul(Constant *C1, Constant *C2, bool HasNUW = false,
-                          bool HasNSW = false);
   static Constant *getXor(Constant *C1, Constant *C2);
   static Constant *getTrunc(Constant *C, Type *Ty, bool OnlyIfReduced = false);
   static Constant *getPtrToInt(Constant *C, Type *Ty,
@@ -1172,14 +1175,6 @@ public:
 
   static Constant *getNUWSub(Constant *C1, Constant *C2) {
     return getSub(C1, C2, true, false);
-  }
-
-  static Constant *getNSWMul(Constant *C1, Constant *C2) {
-    return getMul(C1, C2, false, true);
-  }
-
-  static Constant *getNUWMul(Constant *C1, Constant *C2) {
-    return getMul(C1, C2, true, false);
   }
 
   /// If C is a scalar/fixed width vector of known powers of 2, then this

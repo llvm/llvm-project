@@ -14,22 +14,22 @@
 #ifndef __AVX10_2_512MINMAXINTRIN_H
 #define __AVX10_2_512MINMAXINTRIN_H
 
-#define _mm512_minmaxne_pbh(A, B, C)                                           \
-  ((__m512bh)__builtin_ia32_vminmaxnepbf16512(                                 \
-      (__v32bf)(__m512bh)(A), (__v32bf)(__m512bh)(A), (int)(C)))
+#define _mm512_minmax_pbh(A, B, C)                                             \
+  ((__m512bh)__builtin_ia32_vminmaxbf16512((__v32bf)(__m512bh)(A),             \
+                                           (__v32bf)(__m512bh)(A), (int)(C)))
 
-#define _mm512_mask_minmaxne_pbh(W, U, A, B, C)                                \
+#define _mm512_mask_minmax_pbh(W, U, A, B, C)                                  \
   ((__m512bh)__builtin_ia32_selectpbf_512(                                     \
       (__mmask32)(U),                                                          \
-      (__v32bf)_mm512_minmaxne_pbh((__v32bf)(__m512bh)(A),                     \
-                                   (__v32bf)(__m512bh)(B), (int)(C)),          \
+      (__v32bf)_mm512_minmax_pbh((__v32bf)(__m512bh)(A),                       \
+                                 (__v32bf)(__m512bh)(B), (int)(C)),            \
       (__v32bf)(__m512bh)(W)))
 
-#define _mm512_maskz_minmaxne_pbh(U, A, B, C)                                  \
+#define _mm512_maskz_minmax_pbh(U, A, B, C)                                    \
   ((__m512bh)__builtin_ia32_selectpbf_512(                                     \
       (__mmask32)(U),                                                          \
-      (__v32bf)_mm512_minmaxne_pbh((__v32bf)(__m512bh)(A),                     \
-                                   (__v32bf)(__m512bh)(B), (int)(C)),          \
+      (__v32bf)_mm512_minmax_pbh((__v32bf)(__m512bh)(A),                       \
+                                 (__v32bf)(__m512bh)(B), (int)(C)),            \
       (__v32bf) __builtin_bit_cast(__m512bh, _mm512_setzero_ps())))
 
 #define _mm512_minmax_pd(A, B, C)                                              \

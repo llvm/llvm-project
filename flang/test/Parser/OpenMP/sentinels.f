@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -fopenmp -E %s | FileCheck %s
+! RUN: %flang_fc1 -E %s | FileCheck %s
 ! CHECK:      program main
 ! CHECK:       interface
 ! CHECK:        subroutine sub(a, b)
@@ -39,4 +39,34 @@ c    $This is a comment line
 C $   This is a comment line
 c $   his is a comment line
 * $   This is a comment line
+
+! Test non-space/non-number char in columns 3-5, for initial lines.
+! CHECK-NOT:  "comment"
+c$x   PRINT *, "comment"
+c$ +  PRINT *, "comment"
+c$  * PRINT *, "comment"
+
+! Test non-space/non-number char in columns 3-5, for continuation lines.
+! CHECK:      "msg1"
+! CHECK-NOT:  "comment"
+c$ x  PRINT *, "comment"
+c$1  &         , "comment"
+c$ x &         , "comment"
+c$  +&         , "comment"
+
+c$    PRINT *, "msg1"
+c$1  &         , "comment"
+c$ x &         , "comment"
+c$  +&         , "comment"
+
+! Test valid chars in initial and continuation lines.
+! CHECK: !$ 20 PRINT *, "msg2"
+! CHECK: !$ & , "msg3"
+c$ 20 PRINT *, "msg2"
+c$   &         , "msg3"
+
+! CHECK: !$ PRINT *, "msg4",
+! CHECK: !$ & "msg5"
+c$   0PRINT *, "msg4",
+c$   +         "msg5"
       end

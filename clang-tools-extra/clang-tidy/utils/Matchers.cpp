@@ -18,8 +18,9 @@ bool NotIdenticalStatementsPredicate::operator()(
 }
 
 MatchesAnyListedTypeNameMatcher::MatchesAnyListedTypeNameMatcher(
-    llvm::ArrayRef<StringRef> NameList)
-    : NameMatchers(NameList.begin(), NameList.end()) {}
+    llvm::ArrayRef<StringRef> NameList, bool CanonicalTypes)
+    : NameMatchers(NameList.begin(), NameList.end()),
+      CanonicalTypes(CanonicalTypes) {}
 
 MatchesAnyListedTypeNameMatcher::~MatchesAnyListedTypeNameMatcher() = default;
 
@@ -32,7 +33,7 @@ bool MatchesAnyListedTypeNameMatcher::matches(
 
   PrintingPolicy PrintingPolicyWithSuppressedTag(
       Finder->getASTContext().getLangOpts());
-  PrintingPolicyWithSuppressedTag.PrintCanonicalTypes = true;
+  PrintingPolicyWithSuppressedTag.PrintAsCanonical = CanonicalTypes;
   PrintingPolicyWithSuppressedTag.SuppressElaboration = true;
   PrintingPolicyWithSuppressedTag.SuppressScope = false;
   PrintingPolicyWithSuppressedTag.SuppressTagKeyword = true;

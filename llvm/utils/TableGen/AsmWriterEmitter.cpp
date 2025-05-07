@@ -869,9 +869,6 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
   DenseMap<const Record *, unsigned> MCOpPredicateMap;
 
   for (auto &Aliases : AliasMap) {
-    // Collection of instruction alias rules. May contain ambiguous rules.
-    std::vector<IAPrinter> IAPs;
-
     for (auto &Alias : Aliases.second) {
       const CodeGenInstAlias &CGA = Alias.first;
       unsigned LastOpNo = CGA.ResultInstOperandIndex.size();
@@ -967,12 +964,11 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
             IAP.addOperand(ROName, MIOpNum, PrintMethodIdx);
 
             // There might be an additional predicate on the MCOperand
-            unsigned Entry = MCOpPredicateMap[Rec];
+            unsigned &Entry = MCOpPredicateMap[Rec];
             if (!Entry) {
               if (!Rec->isValueUnset("MCOperandPredicate")) {
                 MCOpPredicates.push_back(Rec);
                 Entry = MCOpPredicates.size();
-                MCOpPredicateMap[Rec] = Entry;
               } else
                 break; // No conditions on this operand at all
             }

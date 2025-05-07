@@ -4,6 +4,20 @@
 
 mesh.mesh @mesh_1d(shape = 2)
 
+// CHECK-LABEL: func @return_sharding
+func.func @return_sharding(
+  // CHECK-SAME: [[ARG:%.*]]: tensor<1xf32>
+  %arg0: tensor<2xf32>
+// CHECK-SAME: ) -> (tensor<1xf32>, !mesh.sharding) {
+) -> (tensor<2xf32>, !mesh.sharding) {
+  %ssharding_annotated = mesh.sharding @mesh_1d split_axes = [[0]] : !mesh.sharding
+  %sharding_annotated = mesh.shard %arg0 to %ssharding_annotated  : tensor<2xf32>
+  // CHECK-NEXT: [[vsharding:%.*]] = mesh.sharding @mesh_1d split_axes = {{\[\[}}0]] : !mesh.sharding
+  %r = mesh.get_sharding %sharding_annotated : tensor<2xf32> -> !mesh.sharding
+  // CHECK-NEXT: return [[ARG]], [[vsharding]] : tensor<1xf32>, !mesh.sharding
+  return %sharding_annotated, %r : tensor<2xf32>, !mesh.sharding
+}
+
 // CHECK-LABEL: func @full_replication
 func.func @full_replication(
   // CHECK-SAME: %[[ARG:.*]]: tensor<2xi8>
@@ -162,7 +176,7 @@ func.func @multiple_chained_ops(
   %4 = mesh.shard %3 to %s4  annotate_for_users : tensor<2xi8>
   // CHECK: %[[ABS2:.*]] = tosa.abs %[[RESHARD2]] : (tensor<2xi8>) -> tensor<2xi8>
   %5 = tosa.abs %4 : (tensor<2xi8>) -> tensor<2xi8>
-  // CHECK: %[[RESHARD3:.*]] = mesh.all_slice %[[ABS2]] on @mesh_1d mesh_axes = [0] slice_axis = 0 : 
+  // CHECK: %[[RESHARD3:.*]] = mesh.all_slice %[[ABS2]] on @mesh_1d mesh_axes = [0] slice_axis = 0 :
   // CHECK-SAME: tensor<2xi8> -> tensor<1xi8>
   %s6 = mesh.sharding @mesh_1d split_axes = [[]] : !mesh.sharding
   %6 = mesh.shard %5 to %s6  : tensor<2xi8>
@@ -193,7 +207,11 @@ mesh.mesh @mesh_1d_4(shape = 4)
 // CHECK-LABEL: func @ew_chain_with_halo
 func.func @ew_chain_with_halo(
   // CHECK-SAME: %[[IN1:[A-Za-z0-9_]+]]: tensor<5x16xf32>
-  %arg0: tensor<8x16xf32>)
+  %arg0: tensor<8x16xf32>,
+  // CHECK-SAME: %[[IN2:[A-Za-z0-9_]+]]: tensor<1xf32>
+  %arg1: tensor<1xf32>,
+  // CHECK-SAME: %[[IN3:[A-Za-z0-9_]+]]: tensor<1xf32>
+  %arg2: tensor<1xf32>)
   // CHECK-SAME: -> tensor<5x16xf32>
    -> tensor<8x16xf32> {
   %ssharding_annotated = mesh.sharding @mesh_1d_4 split_axes = [[0]] halo_sizes = [2, 1] : !mesh.sharding
@@ -210,8 +228,11 @@ func.func @ew_chain_with_halo(
   %sharding_annotated_2 = mesh.shard %1 to %ssharding_annotated_2  : tensor<8x16xf32>
   %ssharding_annotated_4 = mesh.sharding @mesh_1d_4 split_axes = [[0]] halo_sizes = [2, 1] : !mesh.sharding
   %sharding_annotated_4 = mesh.shard %sharding_annotated_2 to %ssharding_annotated_4  annotate_for_users : tensor<8x16xf32>
-  // CHECK-NEXT: %[[TMP3:.*]] = tosa.negate %[[TMP2]] : (tensor<5x16xf32>) -> tensor<5x16xf32>
-  %2 = tosa.negate %sharding_annotated_4 : (tensor<8x16xf32>) -> tensor<8x16xf32>
+  // CHECK-NEXT: %[[TMP3:.*]] = tosa.negate %[[TMP2]], %[[IN2]], %[[IN3]] : (tensor<5x16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<5x16xf32>
+  %sharding_1 = mesh.sharding @mesh_1d_4 split_axes = [[]] : !mesh.sharding
+  %zero_point_1 = mesh.shard %arg1 to %sharding_1 annotate_for_users : tensor<1xf32>
+  %zero_point_2 = mesh.shard %arg2 to %sharding_1 annotate_for_users : tensor<1xf32>
+  %2 = tosa.negate %sharding_annotated_4, %zero_point_1, %zero_point_2 : (tensor<8x16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<8x16xf32>
   %ssharding_annotated_5 = mesh.sharding @mesh_1d_4 split_axes = [[0]] halo_sizes = [2, 1] : !mesh.sharding
   %sharding_annotated_5 = mesh.shard %2 to %ssharding_annotated_5  : tensor<8x16xf32>
   %ssharding_annotated_6 = mesh.sharding @mesh_1d_4 split_axes = [[0]] halo_sizes = [2, 1] : !mesh.sharding

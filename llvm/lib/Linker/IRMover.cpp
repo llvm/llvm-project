@@ -80,7 +80,6 @@ public:
   /// Return the mapped type to use for the specified input type from the
   /// source module.
   Type *get(Type *SrcTy);
-  Type *get(Type *SrcTy, SmallPtrSet<StructType *, 8> &Visited);
 
   FunctionType *get(FunctionType *T) {
     return cast<FunctionType>(get((Type *)T));
@@ -232,11 +231,6 @@ Error TypeMapTy::linkDefinedTypeBodies() {
 }
 
 Type *TypeMapTy::get(Type *Ty) {
-  SmallPtrSet<StructType *, 8> Visited;
-  return get(Ty, Visited);
-}
-
-Type *TypeMapTy::get(Type *Ty, SmallPtrSet<StructType *, 8> &Visited) {
   // If we already have an entry for this type, return it.
   Type **Entry = &MappedTypes[Ty];
   if (*Entry)
@@ -252,11 +246,6 @@ Type *TypeMapTy::get(Type *Ty, SmallPtrSet<StructType *, 8> &Visited) {
              "mapping to a source type");
     }
 #endif
-
-    if (!Visited.insert(cast<StructType>(Ty)).second) {
-      StructType *DTy = StructType::create(Ty->getContext());
-      return *Entry = DTy;
-    }
   }
 
   // If this is not a recursive type, then just map all of the elements and
@@ -272,7 +261,7 @@ Type *TypeMapTy::get(Type *Ty, SmallPtrSet<StructType *, 8> &Visited) {
   bool AnyChange = false;
   ElementTypes.resize(Ty->getNumContainedTypes());
   for (unsigned I = 0, E = Ty->getNumContainedTypes(); I != E; ++I) {
-    ElementTypes[I] = get(Ty->getContainedType(I), Visited);
+    ElementTypes[I] = get(Ty->getContainedType(I));
     AnyChange |= ElementTypes[I] != Ty->getContainedType(I);
   }
 
@@ -296,9 +285,6 @@ Type *TypeMapTy::get(Type *Ty, SmallPtrSet<StructType *, 8> &Visited) {
   case Type::FixedVectorTyID:
     return *Entry = VectorType::get(ElementTypes[0],
                                     cast<VectorType>(Ty)->getElementCount());
-  case Type::PointerTyID:
-    return *Entry = PointerType::get(ElementTypes[0],
-                                     cast<PointerType>(Ty)->getAddressSpace());
   case Type::FunctionTyID:
     return *Entry = FunctionType::get(ElementTypes[0],
                                       ArrayRef(ElementTypes).slice(1),
@@ -972,8 +958,6 @@ IRLinker::linkAppendingVarProto(GlobalVariable *DstGV,
   NG->copyAttributesFrom(SrcGV);
   forceRenaming(NG, SrcGV->getName());
 
-  Constant *Ret = ConstantExpr::getBitCast(NG, TypeMap.get(SrcGV->getType()));
-
   Mapper.scheduleMapAppendingVariable(
       *NG,
       (DstGV && !DstGV->isDeclaration()) ? DstGV->getInitializer() : nullptr,
@@ -985,7 +969,7 @@ IRLinker::linkAppendingVarProto(GlobalVariable *DstGV,
     RAUWWorklist.push_back(std::make_pair(DstGV, NG));
   }
 
-  return Ret;
+  return NG;
 }
 
 bool IRLinker::shouldLink(GlobalValue *DGV, GlobalValue &SGV) {
@@ -1247,6 +1231,7 @@ Error IRLinker::linkModuleFlagsMetadata() {
 
   // Check for module flag for updates before do anything.
   UpgradeModuleFlags(*SrcM);
+  UpgradeNVVMAnnotations(*SrcM);
 
   // If the destination module doesn't have module flags yet, then just copy
   // over the source module's flags.
@@ -1588,11 +1573,11 @@ Error IRLinker::run() {
       !SrcTriple.isCompatibleWith(DstTriple))
     emitWarning("Linking two modules of different target triples: '" +
                 SrcM->getModuleIdentifier() + "' is '" +
-                SrcM->getTargetTriple() + "' whereas '" +
-                DstM.getModuleIdentifier() + "' is '" + DstM.getTargetTriple() +
-                "'\n");
+                SrcM->getTargetTriple().str() + "' whereas '" +
+                DstM.getModuleIdentifier() + "' is '" +
+                DstM.getTargetTriple().str() + "'\n");
 
-  DstM.setTargetTriple(SrcTriple.merge(DstTriple));
+  DstM.setTargetTriple(Triple(SrcTriple.merge(DstTriple)));
 
   // Loop over all of the linked values to compute type mappings.
   computeTypeMapping();
@@ -1655,6 +1640,8 @@ Error IRLinker::run() {
     if (GV.hasAppendingLinkage())
       continue;
     Value *NewValue = Mapper.mapValue(GV);
+    if (FoundError)
+      return std::move(*FoundError);
     if (NewValue) {
       auto *NewGV = dyn_cast<GlobalVariable>(NewValue->stripPointerCasts());
       if (NewGV) {
@@ -1691,8 +1678,7 @@ StructType *IRMover::StructTypeKeyInfo::getTombstoneKey() {
 }
 
 unsigned IRMover::StructTypeKeyInfo::getHashValue(const KeyTy &Key) {
-  return hash_combine(hash_combine_range(Key.ETypes.begin(), Key.ETypes.end()),
-                      Key.IsPacked);
+  return hash_combine(hash_combine_range(Key.ETypes), Key.IsPacked);
 }
 
 unsigned IRMover::StructTypeKeyInfo::getHashValue(const StructType *ST) {
@@ -1769,7 +1755,5 @@ Error IRMover::move(std::unique_ptr<Module> Src,
   IRLinker TheIRLinker(Composite, SharedMDs, IdentifiedStructTypes,
                        std::move(Src), ValuesToLink, std::move(AddLazyFor),
                        IsPerformingImport);
-  Error E = TheIRLinker.run();
-  Composite.dropTriviallyDeadConstantArrays();
-  return E;
+  return TheIRLinker.run();
 }

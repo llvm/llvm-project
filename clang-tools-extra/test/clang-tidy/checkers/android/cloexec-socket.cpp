@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s android-cloexec-socket %t
+// RUN: %check_clang_tidy --match-partial-fixes %s android-cloexec-socket %t
 
 #define SOCK_STREAM 1
 #define SOCK_DGRAM 2

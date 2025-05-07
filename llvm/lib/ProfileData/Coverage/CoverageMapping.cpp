@@ -618,7 +618,7 @@ unsigned CounterMappingContext::getMaxCounterID(const Counter &C) const {
 void FunctionRecordIterator::skipOtherFiles() {
   while (Current != Records.end() && !Filename.empty() &&
          Filename != Current->Filenames[0])
-    ++Current;
+    advanceOne();
   if (Current == Records.end())
     *this = FunctionRecordIterator();
 }
@@ -933,8 +933,7 @@ Error CoverageMapping::loadFunctionRecord(
   }
 
   // Don't create records for (filenames, function) pairs we've already seen.
-  auto FilenamesHash = hash_combine_range(Record.Filenames.begin(),
-                                          Record.Filenames.end());
+  auto FilenamesHash = hash_combine_range(Record.Filenames);
   if (!RecordProvenance[FilenamesHash].insert(hash_value(OrigFuncName)).second)
     return Error::success();
 

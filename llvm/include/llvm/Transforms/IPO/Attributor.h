@@ -1208,7 +1208,8 @@ struct InformationCache {
         TargetTriple(M.getTargetTriple()) {
     if (UseExplorer)
       Explorer = new (Allocator) MustBeExecutedContextExplorer(
-          /* ExploreInterBlock */ true, /* ExploreCFGForward */ true,
+          /* ExploreInterBlock */
+          true, /* ExploreCFGForward */ true,
           /* ExploreCFGBackward */ true,
           /* LIGetter */
           [&](const Function &F) { return AG.getAnalysis<LoopAnalysis>(F); },
@@ -1338,14 +1339,11 @@ struct InformationCache {
   bool stackIsAccessibleByOtherThreads() { return !targetIsGPU(); }
 
   /// Return true if the target is a GPU.
-  bool targetIsGPU() {
-    return TargetTriple.isAMDGPU() || TargetTriple.isNVPTX();
-  }
+  bool targetIsGPU() { return TargetTriple.isGPU(); }
 
   /// Return all functions that might be called indirectly, only valid for
   /// closed world modules (see isClosedWorldModule).
-  const ArrayRef<Function *>
-  getIndirectlyCallableFunctions(Attributor &A) const;
+  ArrayRef<Function *> getIndirectlyCallableFunctions(Attributor &A) const;
 
   /// Return the flat address space if the associated target has.
   std::optional<unsigned> getFlatAddressSpace() const;
@@ -1954,8 +1952,12 @@ struct Attributor {
 private:
   /// Helper to check \p Attrs for \p AK, if not found, check if \p
   /// AAType::isImpliedByIR is true, and if not, create AAType for \p IRP.
+  /// If \p SkipHasAttrCheck is true, don't check whether the attribute is set
+  /// first. This should be used if only some values of a complex IR attribute
+  /// imply the AAType.
   template <Attribute::AttrKind AK, typename AAType>
-  void checkAndQueryIRAttr(const IRPosition &IRP, AttributeSet Attrs);
+  void checkAndQueryIRAttr(const IRPosition &IRP, AttributeSet Attrs,
+                           bool SkipHasAttrCheck = false);
 
   /// Helper to apply \p CB on all attributes of type \p AttrDescs of \p IRP.
   template <typename DescTy>
@@ -4355,7 +4357,7 @@ struct AAInstanceInfo : public StateWrapper<BooleanState, AbstractAttribute> {
 /// An abstract interface for all nocapture attributes.
 struct AANoCapture
     : public IRAttribute<
-          Attribute::NoCapture,
+          Attribute::Captures,
           StateWrapper<BitIntegerState<uint16_t, 7, 0>, AbstractAttribute>,
           AANoCapture> {
   AANoCapture(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
@@ -5098,8 +5100,7 @@ private:
       indicatePessimisticFixpoint();
       return;
     }
-    for (const MemberTy &C : R.Set)
-      Set.insert(C);
+    Set.insert_range(R.Set);
     UndefIsContained |= R.undefIsContained();
     checkAndInvalidate();
   }
@@ -6513,7 +6514,7 @@ bool hasAssumedIRAttr(Attributor &A, const AbstractAttribute *QueryingAA,
     CASE(NoUnwind, AANoUnwind, );
     CASE(WillReturn, AAWillReturn, );
     CASE(NoFree, AANoFree, );
-    CASE(NoCapture, AANoCapture, );
+    CASE(Captures, AANoCapture, );
     CASE(NoRecurse, AANoRecurse, );
     CASE(NoReturn, AANoReturn, );
     CASE(NoSync, AANoSync, );

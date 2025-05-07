@@ -32,7 +32,9 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Scalar/LowerConstantIntrinsics.h"
+#include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
+#include "llvm/Transforms/Utils/LowerVectorIntrinsics.h"
 
 using namespace llvm;
 
@@ -232,6 +234,60 @@ static bool canEmitLibcall(const TargetMachine *TM, Function *F,
   return TLI->getLibcallName(LC) != nullptr;
 }
 
+// Return a value appropriate for use with the memset_pattern16 libcall, if
+// possible and if we know how. (Adapted from equivalent helper in
+// LoopIdiomRecognize).
+static Constant *getMemSetPattern16Value(MemSetPatternInst *Inst,
+                                         const TargetLibraryInfo &TLI) {
+  // TODO: This could check for UndefValue because it can be merged into any
+  // other valid pattern.
+
+  // Don't emit libcalls if a non-default address space is being used.
+  if (Inst->getRawDest()->getType()->getPointerAddressSpace() != 0)
+    return nullptr;
+
+  Value *V = Inst->getValue();
+  Type *VTy = V->getType();
+  const DataLayout &DL = Inst->getDataLayout();
+  Module *M = Inst->getModule();
+
+  if (!isLibFuncEmittable(M, &TLI, LibFunc_memset_pattern16))
+    return nullptr;
+
+  // If the value isn't a constant, we can't promote it to being in a constant
+  // array.  We could theoretically do a store to an alloca or something, but
+  // that doesn't seem worthwhile.
+  Constant *C = dyn_cast<Constant>(V);
+  if (!C || isa<ConstantExpr>(C))
+    return nullptr;
+
+  // Only handle simple values that are a power of two bytes in size.
+  uint64_t Size = DL.getTypeSizeInBits(VTy);
+  if (!DL.typeSizeEqualsStoreSize(VTy) || !isPowerOf2_64(Size))
+    return nullptr;
+
+  // Don't care enough about darwin/ppc to implement this.
+  if (DL.isBigEndian())
+    return nullptr;
+
+  // Convert to size in bytes.
+  Size /= 8;
+
+  // TODO: If CI is larger than 16-bytes, we can try slicing it in half to see
+  // if the top and bottom are the same (e.g. for vectors and large integers).
+  if (Size > 16)
+    return nullptr;
+
+  // If the constant is exactly 16 bytes, just use it.
+  if (Size == 16)
+    return C;
+
+  // Otherwise, we'll use an array of the constants.
+  uint64_t ArraySize = 16 / Size;
+  ArrayType *AT = ArrayType::get(V->getType(), ArraySize);
+  return ConstantArray::get(AT, std::vector<Constant *>(ArraySize, C));
+}
+
 // TODO: Handle atomic memcpy and memcpy.inline
 // TODO: Pass ScalarEvolution
 bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
@@ -263,7 +319,7 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
       // Only expand llvm.memcpy.inline with non-constant length in this
       // codepath, leaving the current SelectionDAG expansion for constant
       // length memcpy intrinsics undisturbed.
-      auto *Memcpy = cast<MemCpyInlineInst>(Inst);
+      auto *Memcpy = cast<MemCpyInst>(Inst);
       if (isa<ConstantInt>(Memcpy->getLength()))
         break;
 
@@ -311,7 +367,7 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
       // Only expand llvm.memset.inline with non-constant length in this
       // codepath, leaving the current SelectionDAG expansion for constant
       // length memset intrinsics undisturbed.
-      auto *Memset = cast<MemSetInlineInst>(Inst);
+      auto *Memset = cast<MemSetInst>(Inst);
       if (isa<ConstantInt>(Memset->getLength()))
         break;
 
@@ -322,7 +378,57 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
     }
     case Intrinsic::experimental_memset_pattern: {
       auto *Memset = cast<MemSetPatternInst>(Inst);
-      expandMemSetPatternAsLoop(Memset);
+      const TargetLibraryInfo &TLI = LookupTLI(*Memset->getFunction());
+      Constant *PatternValue = getMemSetPattern16Value(Memset, TLI);
+      if (!PatternValue) {
+        // If it isn't possible to emit a memset_pattern16 libcall, expand to
+        // a loop instead.
+        expandMemSetPatternAsLoop(Memset);
+        Changed = true;
+        Memset->eraseFromParent();
+        break;
+      }
+      // FIXME: There is currently no profitability calculation for emitting
+      // the libcall vs expanding the memset.pattern directly.
+      IRBuilder<> Builder(Inst);
+      Module *M = Memset->getModule();
+      const DataLayout &DL = Memset->getDataLayout();
+
+      Type *DestPtrTy = Memset->getRawDest()->getType();
+      Type *SizeTTy = TLI.getSizeTType(*M);
+      StringRef FuncName = "memset_pattern16";
+      FunctionCallee MSP = getOrInsertLibFunc(M, TLI, LibFunc_memset_pattern16,
+                                              Builder.getVoidTy(), DestPtrTy,
+                                              Builder.getPtrTy(), SizeTTy);
+      inferNonMandatoryLibFuncAttrs(M, FuncName, TLI);
+
+      // Otherwise we should form a memset_pattern16.  PatternValue is known
+      // to be an constant array of 16-bytes. Put the value into a mergable
+      // global.
+      assert(Memset->getRawDest()->getType()->getPointerAddressSpace() == 0 &&
+             "Should have skipped if non-zero AS");
+      GlobalVariable *GV = new GlobalVariable(
+          *M, PatternValue->getType(), /*isConstant=*/true,
+          GlobalValue::PrivateLinkage, PatternValue, ".memset_pattern");
+      GV->setUnnamedAddr(
+          GlobalValue::UnnamedAddr::Global); // Ok to merge these.
+      // TODO: Consider relaxing alignment requirement.
+      GV->setAlignment(Align(16));
+      Value *PatternPtr = GV;
+      Value *NumBytes = Builder.CreateMul(
+          TLI.getAsSizeT(DL.getTypeAllocSize(Memset->getValue()->getType()),
+                         *M),
+          Builder.CreateZExtOrTrunc(Memset->getLength(), SizeTTy));
+      CallInst *MemsetPattern16Call =
+          Builder.CreateCall(MSP, {Memset->getRawDest(), PatternPtr, NumBytes});
+      MemsetPattern16Call->setAAMetadata(Memset->getAAMetadata());
+      // Preserve any call site attributes on the destination pointer
+      // argument (e.g. alignment).
+      AttrBuilder ArgAttrs(Memset->getContext(),
+                           Memset->getAttributes().getParamAttrs(0));
+      MemsetPattern16Call->setAttributes(
+          MemsetPattern16Call->getAttributes().addParamAttributes(
+              Memset->getContext(), 0, ArgAttrs));
       Changed = true;
       Memset->eraseFromParent();
       break;
@@ -452,6 +558,19 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
       break;
     case Intrinsic::objc_sync_exit:
       Changed |= lowerObjCCall(F, "objc_sync_exit");
+      break;
+    case Intrinsic::exp:
+    case Intrinsic::exp2:
+      Changed |= forEachCall(F, [&](CallInst *CI) {
+        Type *Ty = CI->getArgOperand(0)->getType();
+        if (!isa<ScalableVectorType>(Ty))
+          return false;
+        const TargetLowering *TL = TM->getSubtargetImpl(F)->getTargetLowering();
+        unsigned Op = TL->IntrinsicIDToISD(F.getIntrinsicID());
+        if (!TL->isOperationExpand(Op, EVT::getEVT(Ty)))
+          return false;
+        return lowerUnaryVectorIntrinsicAsLoop(M, CI);
+      });
       break;
     }
   }

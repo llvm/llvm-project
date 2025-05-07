@@ -47,10 +47,13 @@ enum ActionType {
   GenClangBasicReader,
   GenClangBasicWriter,
   GenClangBuiltins,
+  GenClangBuiltinTemplates,
+  GenClangDiagsCompatIDs,
   GenClangDiagsDefs,
   GenClangDiagsEnums,
   GenClangDiagGroups,
   GenClangDiagsIndexName,
+  GenClangDiagsInterface,
   GenClangCommentNodes,
   GenClangDeclNodes,
   GenClangStmtNodes,
@@ -69,6 +72,7 @@ enum ActionType {
   GenClangOpenCLBuiltins,
   GenClangOpenCLBuiltinHeader,
   GenClangOpenCLBuiltinTests,
+  GenCXX11AttributeInfo,
   GenArmNeon,
   GenArmFP16,
   GenArmBF16,
@@ -172,6 +176,10 @@ cl::opt<ActionType> Action(
                    "Generate clang attribute traverser"),
         clEnumValN(GenClangBuiltins, "gen-clang-builtins",
                    "Generate clang builtins list"),
+        clEnumValN(GenClangBuiltinTemplates, "gen-clang-builtin-templates",
+                   "Generate clang builtins list"),
+        clEnumValN(GenClangDiagsCompatIDs, "gen-clang-diags-compat-ids",
+                   "Generate Clang diagnostic compatibility ids"),
         clEnumValN(GenClangDiagsDefs, "gen-clang-diags-defs",
                    "Generate Clang diagnostics definitions"),
         clEnumValN(GenClangDiagsEnums, "gen-clang-diags-enums",
@@ -180,6 +188,8 @@ cl::opt<ActionType> Action(
                    "Generate Clang diagnostic groups"),
         clEnumValN(GenClangDiagsIndexName, "gen-clang-diags-index-name",
                    "Generate Clang diagnostic name index"),
+        clEnumValN(GenClangDiagsInterface, "gen-clang-diags-iface",
+                   "Generate Clang diagnostic interface headers"),
         clEnumValN(GenClangBasicReader, "gen-clang-basic-reader",
                    "Generate Clang BasicReader classes"),
         clEnumValN(GenClangBasicWriter, "gen-clang-basic-writer",
@@ -228,6 +238,8 @@ cl::opt<ActionType> Action(
                    "Generate OpenCL builtin header"),
         clEnumValN(GenClangOpenCLBuiltinTests, "gen-clang-opencl-builtin-tests",
                    "Generate OpenCL builtin declaration tests"),
+        clEnumValN(GenCXX11AttributeInfo, "gen-cxx11-attribute-info",
+                   "Generate CXX11 attributes info"),
         clEnumValN(GenArmNeon, "gen-arm-neon", "Generate arm_neon.h for clang"),
         clEnumValN(GenArmFP16, "gen-arm-fp16", "Generate arm_fp16.h for clang"),
         clEnumValN(GenArmBF16, "gen-arm-bf16", "Generate arm_bf16.h for clang"),
@@ -336,6 +348,9 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
   case GenClangAttrSubjectMatchRulesParserStringSwitches:
     EmitClangAttrSubjectMatchRulesParserStringSwitches(Records, OS);
     break;
+  case GenCXX11AttributeInfo:
+    EmitCXX11AttributeInfo(Records, OS);
+    break;
   case GenClangAttrImpl:
     EmitClangAttrImpl(Records, OS);
     break;
@@ -387,6 +402,12 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
   case GenClangBuiltins:
     EmitClangBuiltins(Records, OS);
     break;
+  case GenClangBuiltinTemplates:
+    EmitClangBuiltinTemplates(Records, OS);
+    break;
+  case GenClangDiagsCompatIDs:
+    EmitClangDiagsCompatIDs(Records, OS, ClangComponent);
+    break;
   case GenClangDiagsDefs:
     EmitClangDiagsDefs(Records, OS, ClangComponent);
     break;
@@ -398,6 +419,9 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
     break;
   case GenClangDiagsIndexName:
     EmitClangDiagsIndexName(Records, OS);
+    break;
+  case GenClangDiagsInterface:
+    EmitClangDiagsInterface(OS, ClangComponent);
     break;
   case GenClangCommentNodes:
     EmitClangASTNodes(Records, OS, CommentNodeClassName, "");

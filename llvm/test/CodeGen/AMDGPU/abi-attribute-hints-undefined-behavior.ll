@@ -25,18 +25,18 @@ define void @parent_func_missing_inputs() #0 {
 ; FIXEDABI-NEXT:    v_writelane_b32 v40, s16, 2
 ; FIXEDABI-NEXT:    s_addk_i32 s32, 0x400
 ; FIXEDABI-NEXT:    v_writelane_b32 v40, s30, 0
-; FIXEDABI-NEXT:    v_writelane_b32 v40, s31, 1
 ; FIXEDABI-NEXT:    s_getpc_b64 s[16:17]
 ; FIXEDABI-NEXT:    s_add_u32 s16, s16, requires_all_inputs@rel32@lo+4
 ; FIXEDABI-NEXT:    s_addc_u32 s17, s17, requires_all_inputs@rel32@hi+12
+; FIXEDABI-NEXT:    v_writelane_b32 v40, s31, 1
 ; FIXEDABI-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; FIXEDABI-NEXT:    v_readlane_b32 s31, v40, 1
 ; FIXEDABI-NEXT:    v_readlane_b32 s30, v40, 0
+; FIXEDABI-NEXT:    s_mov_b32 s32, s33
 ; FIXEDABI-NEXT:    v_readlane_b32 s4, v40, 2
 ; FIXEDABI-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; FIXEDABI-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
 ; FIXEDABI-NEXT:    s_mov_b64 exec, s[6:7]
-; FIXEDABI-NEXT:    s_addk_i32 s32, 0xfc00
 ; FIXEDABI-NEXT:    s_mov_b32 s33, s4
 ; FIXEDABI-NEXT:    s_waitcnt vmcnt(0)
 ; FIXEDABI-NEXT:    s_setpc_b64 s[30:31]
@@ -49,21 +49,21 @@ define amdgpu_kernel void @parent_kernel_missing_inputs() #0 {
 ; FIXEDABI-SDAG:       ; %bb.0:
 ; FIXEDABI-SDAG-NEXT:    s_add_i32 s4, s4, s9
 ; FIXEDABI-SDAG-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; FIXEDABI-SDAG-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; FIXEDABI-SDAG-NEXT:    s_add_u32 s0, s0, s9
+; FIXEDABI-SDAG-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; FIXEDABI-SDAG-NEXT:    s_addc_u32 s1, s1, 0
 ; FIXEDABI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; FIXEDABI-SDAG-NEXT:    v_or_b32_e32 v0, v0, v1
-; FIXEDABI-SDAG-NEXT:    s_addc_u32 s1, s1, 0
+; FIXEDABI-SDAG-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; FIXEDABI-SDAG-NEXT:    s_mov_b32 s14, s8
+; FIXEDABI-SDAG-NEXT:    s_getpc_b64 s[4:5]
+; FIXEDABI-SDAG-NEXT:    s_add_u32 s4, s4, requires_all_inputs@rel32@lo+4
+; FIXEDABI-SDAG-NEXT:    s_addc_u32 s5, s5, requires_all_inputs@rel32@hi+12
 ; FIXEDABI-SDAG-NEXT:    v_or_b32_e32 v31, v0, v2
 ; FIXEDABI-SDAG-NEXT:    s_mov_b64 s[8:9], 0
 ; FIXEDABI-SDAG-NEXT:    s_mov_b32 s12, s6
 ; FIXEDABI-SDAG-NEXT:    s_mov_b32 s13, s7
 ; FIXEDABI-SDAG-NEXT:    s_mov_b32 s32, 0
-; FIXEDABI-SDAG-NEXT:    s_mov_b32 flat_scratch_lo, s5
-; FIXEDABI-SDAG-NEXT:    s_getpc_b64 s[4:5]
-; FIXEDABI-SDAG-NEXT:    s_add_u32 s4, s4, requires_all_inputs@rel32@lo+4
-; FIXEDABI-SDAG-NEXT:    s_addc_u32 s5, s5, requires_all_inputs@rel32@hi+12
 ; FIXEDABI-SDAG-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; FIXEDABI-SDAG-NEXT:    s_endpgm
 ;
@@ -71,21 +71,21 @@ define amdgpu_kernel void @parent_kernel_missing_inputs() #0 {
 ; FIXEDABI-GISEL:       ; %bb.0:
 ; FIXEDABI-GISEL-NEXT:    s_add_i32 s4, s4, s9
 ; FIXEDABI-GISEL-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; FIXEDABI-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; FIXEDABI-GISEL-NEXT:    s_add_u32 s0, s0, s9
+; FIXEDABI-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; FIXEDABI-GISEL-NEXT:    s_addc_u32 s1, s1, 0
 ; FIXEDABI-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
 ; FIXEDABI-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 20, v2
-; FIXEDABI-GISEL-NEXT:    s_addc_u32 s1, s1, 0
+; FIXEDABI-GISEL-NEXT:    s_mov_b32 flat_scratch_lo, s5
 ; FIXEDABI-GISEL-NEXT:    s_mov_b32 s14, s8
 ; FIXEDABI-GISEL-NEXT:    v_or_b32_e32 v31, v0, v1
+; FIXEDABI-GISEL-NEXT:    s_getpc_b64 s[4:5]
+; FIXEDABI-GISEL-NEXT:    s_add_u32 s4, s4, requires_all_inputs@rel32@lo+4
+; FIXEDABI-GISEL-NEXT:    s_addc_u32 s5, s5, requires_all_inputs@rel32@hi+12
 ; FIXEDABI-GISEL-NEXT:    s_mov_b64 s[8:9], 0
 ; FIXEDABI-GISEL-NEXT:    s_mov_b32 s12, s6
 ; FIXEDABI-GISEL-NEXT:    s_mov_b32 s13, s7
 ; FIXEDABI-GISEL-NEXT:    s_mov_b32 s32, 0
-; FIXEDABI-GISEL-NEXT:    s_mov_b32 flat_scratch_lo, s5
-; FIXEDABI-GISEL-NEXT:    s_getpc_b64 s[4:5]
-; FIXEDABI-GISEL-NEXT:    s_add_u32 s4, s4, requires_all_inputs@rel32@lo+4
-; FIXEDABI-GISEL-NEXT:    s_addc_u32 s5, s5, requires_all_inputs@rel32@hi+12
 ; FIXEDABI-GISEL-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; FIXEDABI-GISEL-NEXT:    s_endpgm
   call void @requires_all_inputs()
@@ -135,6 +135,9 @@ define amdgpu_kernel void @marked_kernel_use_workitem_id(ptr addrspace(1) %ptr) 
 ; FIXEDABI-LABEL: marked_kernel_use_workitem_id:
 ; FIXEDABI:       ; %bb.0:
 ; FIXEDABI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; FIXEDABI-NEXT:    s_add_i32 s6, s6, s11
+; FIXEDABI-NEXT:    s_mov_b32 flat_scratch_lo, s7
+; FIXEDABI-NEXT:    s_lshr_b32 flat_scratch_hi, s6, 8
 ; FIXEDABI-NEXT:    s_waitcnt lgkmcnt(0)
 ; FIXEDABI-NEXT:    v_mov_b32_e32 v4, s1
 ; FIXEDABI-NEXT:    v_mov_b32_e32 v3, s0
@@ -181,16 +184,19 @@ define amdgpu_kernel void @marked_kernel_use_workgroup_id(ptr addrspace(1) %ptr)
 ; FIXEDABI-LABEL: marked_kernel_use_workgroup_id:
 ; FIXEDABI:       ; %bb.0:
 ; FIXEDABI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; FIXEDABI-NEXT:    v_mov_b32_e32 v2, s6
+; FIXEDABI-NEXT:    s_add_i32 s6, s6, s11
+; FIXEDABI-NEXT:    s_mov_b32 flat_scratch_lo, s7
+; FIXEDABI-NEXT:    s_lshr_b32 flat_scratch_hi, s6, 8
+; FIXEDABI-NEXT:    v_mov_b32_e32 v2, s8
 ; FIXEDABI-NEXT:    s_waitcnt lgkmcnt(0)
 ; FIXEDABI-NEXT:    v_mov_b32_e32 v0, s0
 ; FIXEDABI-NEXT:    v_mov_b32_e32 v1, s1
 ; FIXEDABI-NEXT:    flat_store_dword v[0:1], v2
 ; FIXEDABI-NEXT:    s_waitcnt vmcnt(0)
-; FIXEDABI-NEXT:    v_mov_b32_e32 v2, s7
+; FIXEDABI-NEXT:    v_mov_b32_e32 v2, s9
 ; FIXEDABI-NEXT:    flat_store_dword v[0:1], v2
 ; FIXEDABI-NEXT:    s_waitcnt vmcnt(0)
-; FIXEDABI-NEXT:    v_mov_b32_e32 v2, s8
+; FIXEDABI-NEXT:    v_mov_b32_e32 v2, s10
 ; FIXEDABI-NEXT:    flat_store_dword v[0:1], v2
 ; FIXEDABI-NEXT:    s_waitcnt vmcnt(0)
 ; FIXEDABI-NEXT:    s_endpgm
@@ -238,6 +244,9 @@ define void @marked_func_use_other_sgpr(ptr addrspace(1) %ptr) #0 {
 define amdgpu_kernel void @marked_kernel_use_other_sgpr(ptr addrspace(1) %ptr) #0 {
 ; FIXEDABI-LABEL: marked_kernel_use_other_sgpr:
 ; FIXEDABI:       ; %bb.0:
+; FIXEDABI-NEXT:    s_add_i32 s6, s6, s11
+; FIXEDABI-NEXT:    s_mov_b32 flat_scratch_lo, s7
+; FIXEDABI-NEXT:    s_lshr_b32 flat_scratch_hi, s6, 8
 ; FIXEDABI-NEXT:    s_add_u32 s0, s4, 8
 ; FIXEDABI-NEXT:    flat_load_ubyte v0, v[0:1] glc
 ; FIXEDABI-NEXT:    s_addc_u32 s1, s5, 0
@@ -261,7 +270,10 @@ define amdgpu_kernel void @marked_kernel_use_other_sgpr(ptr addrspace(1) %ptr) #
 define amdgpu_kernel void @marked_kernel_nokernargs_implicitarg_ptr() #0 {
 ; FIXEDABI-LABEL: marked_kernel_nokernargs_implicitarg_ptr:
 ; FIXEDABI:       ; %bb.0:
+; FIXEDABI-NEXT:    s_add_i32 s4, s4, s9
 ; FIXEDABI-NEXT:    v_mov_b32_e32 v0, 0
+; FIXEDABI-NEXT:    s_mov_b32 flat_scratch_lo, s5
+; FIXEDABI-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
 ; FIXEDABI-NEXT:    v_mov_b32_e32 v1, 0
 ; FIXEDABI-NEXT:    flat_load_ubyte v0, v[0:1] glc
 ; FIXEDABI-NEXT:    s_endpgm
@@ -340,7 +352,7 @@ define void @is_shared_requires_queue_ptr(ptr %ptr) #0 {
 ; FIXEDABI-NEXT:    s_setpc_b64 s[30:31]
   %is.shared = call i1 @llvm.amdgcn.is.shared(ptr %ptr)
   %zext = zext i1 %is.shared to i32
-  store volatile i32 %zext, ptr addrspace(1) undef
+  store volatile i32 %zext, ptr addrspace(1) poison
   ret void
 }
 
@@ -358,7 +370,7 @@ define void @is_private_requires_queue_ptr(ptr %ptr) #0 {
 ; FIXEDABI-NEXT:    s_setpc_b64 s[30:31]
   %is.private = call i1 @llvm.amdgcn.is.private(ptr %ptr)
   %zext = zext i1 %is.private to i32
-  store volatile i32 %zext, ptr addrspace(1) undef
+  store volatile i32 %zext, ptr addrspace(1) poison
   ret void
 }
 
@@ -383,6 +395,12 @@ define void @debugtrap_requires_queue() #0 {
   unreachable
 }
 
+; FIXME: Broken in globalisel
+; define void @ubsantrap_requires_queue() #0 {
+;   call void @llvm.ubsantrap(i8 0)
+;   unreachable
+; }
+
 declare i32 @llvm.amdgcn.workitem.id.x()
 declare i32 @llvm.amdgcn.workitem.id.y()
 declare i32 @llvm.amdgcn.workitem.id.z()
@@ -400,5 +418,3 @@ declare void @llvm.debugtrap()
 
 attributes #0 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-work-group-id-x" "amdgpu-no-work-group-id-y" "amdgpu-no-work-group-id-z" "amdgpu-no-work-item-id-x" "amdgpu-no-work-item-id-y" "amdgpu-no-work-item-id-z" }
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

@@ -20,6 +20,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # errno.h entrypoints
     libc.src.errno.errno
 
+    # poll.h entrypoints
+    libc.src.poll.poll
+
     # string.h entrypoints
     libc.src.string.memccpy
     libc.src.string.memchr
@@ -153,6 +156,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.ldiv
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
+    libc.src.stdlib.memalignment
     libc.src.stdlib.qsort
     libc.src.stdlib.qsort_r
     libc.src.stdlib.strtod
@@ -181,6 +185,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # libc.src.sys.epoll.epoll_pwait
     # libc.src.sys.epoll.epoll_pwait2
 
+    # sys/time.h entrypoints
+    libc.src.sys.time.setitimer
+    libc.src.sys.time.getitimer
 )
 
 if(LLVM_LIBC_FULL_BUILD)
@@ -215,7 +222,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.complex.cproj
     libc.src.complex.cprojf
     libc.src.complex.cprojl
-    
+
     # fenv.h entrypoints
     libc.src.fenv.feclearexcept
     libc.src.fenv.fedisableexcept
@@ -237,10 +244,12 @@ set(TARGET_LIBM_ENTRYPOINTS
     # math.h entrypoints
     libc.src.math.acosf
     libc.src.math.acoshf
+    libc.src.math.asin
     libc.src.math.asinf
     libc.src.math.asinhf
     libc.src.math.atan2
     libc.src.math.atan2f
+    libc.src.math.atan
     libc.src.math.atanf
     libc.src.math.atanhf
     libc.src.math.cbrt
@@ -268,7 +277,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fabs
     libc.src.math.fabsf
     libc.src.math.fabsl
-    libc.src.math.fadd 
+    libc.src.math.fadd
     libc.src.math.faddl
     libc.src.math.fadd
     libc.src.math.fdim

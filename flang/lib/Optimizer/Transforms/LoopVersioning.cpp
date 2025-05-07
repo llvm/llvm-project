@@ -40,7 +40,7 @@
 ///       could be part of the cost analysis above.
 //===----------------------------------------------------------------------===//
 
-#include "flang/ISO_Fortran_binding_wrapper.h"
+#include "flang/Common/ISO_Fortran_binding_wrapper.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Inquiry.h"
@@ -184,13 +184,28 @@ getRankAndElementSize(const fir::KindMapping &kindMap,
   return {0, 0};
 }
 
-/// if a value comes from a fir.declare, follow it to the original source,
-/// otherwise return the value
-static mlir::Value unwrapFirDeclare(mlir::Value val) {
-  // fir.declare is for source code variables. We don't have declares of
-  // declares
-  if (fir::DeclareOp declare = val.getDefiningOp<fir::DeclareOp>())
-    return declare.getMemref();
+/// If a value comes from a fir.declare of fir.pack_array,
+/// follow it to the original source, otherwise return the value.
+static mlir::Value unwrapPassThroughOps(mlir::Value val) {
+  // Instead of unwrapping fir.declare, we may try to start
+  // the analysis in this pass from fir.declare's instead
+  // of the function entry block arguments. This way the loop
+  // versioning would work even after FIR inlining.
+  while (true) {
+    if (fir::DeclareOp declare = val.getDefiningOp<fir::DeclareOp>()) {
+      val = declare.getMemref();
+      continue;
+    }
+    // fir.pack_array might be met before fir.declare - this is how
+    // it is orifinally generated.
+    // It might also be met after fir.declare - after the optimization
+    // passes that sink fir.pack_array closer to the uses.
+    if (auto packArray = val.getDefiningOp<fir::PackArrayOp>()) {
+      val = packArray.getArray();
+      continue;
+    }
+    break;
+  }
   return val;
 }
 
@@ -242,7 +257,7 @@ static mlir::Value unwrapReboxOp(mlir::Value val) {
 /// normalize a value (removing fir.declare and fir.rebox) so that we can
 /// more conveniently spot values which came from function arguments
 static mlir::Value normaliseVal(mlir::Value val) {
-  return unwrapFirDeclare(unwrapReboxOp(val));
+  return unwrapPassThroughOps(unwrapReboxOp(val));
 }
 
 /// some FIR operations accept a fir.shape, a fir.shift or a fir.shapeshift.
@@ -312,8 +327,8 @@ void LoopVersioningPass::runOnOperation() {
   mlir::ModuleOp module = func->getParentOfType<mlir::ModuleOp>();
   fir::KindMapping kindMap = fir::getKindMapping(module);
   mlir::SmallVector<ArgInfo, 4> argsOfInterest;
-  std::optional<mlir::DataLayout> dl =
-      fir::support::getOrSetDataLayout(module, /*allowDefaultLayout=*/false);
+  std::optional<mlir::DataLayout> dl = fir::support::getOrSetMLIRDataLayout(
+      module, /*allowDefaultLayout=*/false);
   if (!dl)
     mlir::emitError(module.getLoc(),
                     "data layout attribute is required to perform " DEBUG_TYPE

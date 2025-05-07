@@ -30,7 +30,7 @@ template <class _Tp>
 using __decay_t _LIBCPP_NODEBUG = __decay(_Tp);
 
 template <class _Tp>
-struct decay {
+struct _LIBCPP_NO_SPECIALIZATIONS decay {
   using type _LIBCPP_NODEBUG = __decay_t<_Tp>;
 };
 
@@ -50,12 +50,12 @@ public:
 };
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS decay {
+struct decay {
 private:
   using _Up _LIBCPP_NODEBUG = __libcpp_remove_reference_t<_Tp>;
 
 public:
-  using type _LIBCPP_NODEBUG = typename __decay<_Up, __libcpp_is_referenceable<_Up>::value>::type;
+  using type _LIBCPP_NODEBUG = typename __decay<_Up, __is_referenceable_v<_Up> >::type;
 };
 
 template <class _Tp>

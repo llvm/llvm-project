@@ -92,7 +92,7 @@
 // COBALT-100: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "neoverse-n2"
 
 // RUN: %clang --target=aarch64 -mcpu=grace -### -c %s 2>&1 | FileCheck -check-prefix=GRACE %s
-// GRACE: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "neoverse-v2"
+// GRACE: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "grace"
 
 // ================== Check whether -mcpu and -mtune accept mixed-case values.
 // RUN: %clang --target=aarch64 -mcpu=Cortex-a53 -### -c %s 2>&1 | FileCheck -check-prefix=CASE-INSENSITIVE-CA53 %s

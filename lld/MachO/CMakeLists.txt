@@ -50,6 +50,7 @@ add_lld_library(lldMachO
   Object
   Option
   Passes
+  ProfileData
   Support
   TargetParser
   TextAPI

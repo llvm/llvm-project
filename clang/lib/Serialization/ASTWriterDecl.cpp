@@ -28,6 +28,20 @@ using namespace clang;
 using namespace serialization;
 
 //===----------------------------------------------------------------------===//
+// Utility functions
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+// Helper function that returns true if the decl passed in the argument is
+// a defintion in dependent contxt.
+template <typename DT> bool isDefinitionInDependentContext(DT *D) {
+  return D->isDependentContext() && D->isThisDeclarationADefinition();
+}
+
+} // namespace
+
+//===----------------------------------------------------------------------===//
 // Declaration serialization
 //===----------------------------------------------------------------------===//
 
@@ -132,6 +146,7 @@ namespace clang {
     void VisitFriendTemplateDecl(FriendTemplateDecl *D);
     void VisitStaticAssertDecl(StaticAssertDecl *D);
     void VisitBlockDecl(BlockDecl *D);
+    void VisitOutlinedFunctionDecl(OutlinedFunctionDecl *D);
     void VisitCapturedDecl(CapturedDecl *D);
     void VisitEmptyDecl(EmptyDecl *D);
     void VisitLifetimeExtendedTemporaryDecl(LifetimeExtendedTemporaryDecl *D);
@@ -160,6 +175,9 @@ namespace clang {
     void VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D);
     void VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D);
     void VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D);
+
+    void VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D);
+    void VisitOpenACCRoutineDecl(OpenACCRoutineDecl *D);
 
     /// Add an Objective-C type parameter list to the given record.
     void AddObjCTypeParamList(ObjCTypeParamList *typeParams) {
@@ -312,28 +330,82 @@ namespace clang {
   };
 }
 
+// When building a C++20 module interface unit or a partition unit, a
+// strong definition in the module interface is provided by the
+// compilation of that unit, not by its users. (Inline variables are still
+// emitted in module users.)
+static bool shouldVarGenerateHereOnly(const VarDecl *VD) {
+  if (VD->getStorageDuration() != SD_Static)
+    return false;
+
+  if (VD->getDescribedVarTemplate())
+    return false;
+
+  Module *M = VD->getOwningModule();
+  if (!M)
+    return false;
+
+  M = M->getTopLevelModule();
+  ASTContext &Ctx = VD->getASTContext();
+  if (!M->isInterfaceOrPartition() &&
+      (!VD->hasAttr<DLLExportAttr>() ||
+       !Ctx.getLangOpts().BuildingPCHWithObjectFile))
+    return false;
+
+  return Ctx.GetGVALinkageForVariable(VD) >= GVA_StrongExternal;
+}
+
+static bool shouldFunctionGenerateHereOnly(const FunctionDecl *FD) {
+  if (FD->isDependentContext())
+    return false;
+
+  ASTContext &Ctx = FD->getASTContext();
+  auto Linkage = Ctx.GetGVALinkageForFunction(FD);
+  if (Ctx.getLangOpts().ModulesCodegen ||
+      (FD->hasAttr<DLLExportAttr>() &&
+       Ctx.getLangOpts().BuildingPCHWithObjectFile))
+    // Under -fmodules-codegen, codegen is performed for all non-internal,
+    // non-always_inline functions, unless they are available elsewhere.
+    if (!FD->hasAttr<AlwaysInlineAttr>() && Linkage != GVA_Internal &&
+        Linkage != GVA_AvailableExternally)
+      return true;
+
+  Module *M = FD->getOwningModule();
+  if (!M)
+    return false;
+
+  M = M->getTopLevelModule();
+  if (M->isInterfaceOrPartition())
+    if (Linkage >= GVA_StrongExternal)
+      return true;
+
+  return false;
+}
+
 bool clang::CanElideDeclDef(const Decl *D) {
   if (auto *FD = dyn_cast<FunctionDecl>(D)) {
-    if (FD->isInlined() || FD->isConstexpr())
+    if (FD->isInlined() || FD->isConstexpr() || FD->isConsteval())
       return false;
 
-    if (FD->isDependentContext())
-      return false;
-
-    if (FD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
+    // If the function should be generated somewhere else, we shouldn't elide
+    // it.
+    if (!shouldFunctionGenerateHereOnly(FD))
       return false;
   }
 
   if (auto *VD = dyn_cast<VarDecl>(D)) {
-    if (!VD->getDeclContext()->getRedeclContext()->isFileContext() ||
-        VD->isInline() || VD->isConstexpr() || isa<ParmVarDecl>(VD) ||
-        // Constant initialized variable may not affect the ABI, but they
-        // may be used in constant evaluation in the frontend, so we have
-        // to remain them.
-        VD->hasConstantInitialization())
+    if (VD->getDeclContext()->isDependentContext())
       return false;
 
-    if (VD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
+    // Constant initialized variable may not affect the ABI, but they
+    // may be used in constant evaluation in the frontend, so we have
+    // to remain them.
+    if (VD->hasConstantInitialization() || VD->isConstexpr())
+      return false;
+
+    // If the variable should be generated somewhere else, we shouldn't elide
+    // it.
+    if (!shouldVarGenerateHereOnly(VD))
       return false;
   }
 
@@ -656,7 +728,9 @@ void ASTDeclWriter::VisitDeclaratorDecl(DeclaratorDecl *D) {
   if (D->hasExtInfo()) {
     DeclaratorDecl::ExtInfo *Info = D->getExtInfo();
     Record.AddQualifierInfo(*Info);
-    Record.AddStmt(Info->TrailingRequiresClause);
+    Record.AddStmt(
+        const_cast<Expr *>(Info->TrailingRequiresClause.ConstraintExpr));
+    Record.writeUnsignedOrNone(Info->TrailingRequiresClause.ArgPackSubstIndex);
   }
   // The location information is deferred until the end of the record.
   Record.AddTypeRef(D->getTypeSourceInfo() ? D->getTypeSourceInfo()->getType()
@@ -664,7 +738,7 @@ void ASTDeclWriter::VisitDeclaratorDecl(DeclaratorDecl *D) {
 }
 
 void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
-  static_assert(DeclContext::NumFunctionDeclBits == 44,
+  static_assert(DeclContext::NumFunctionDeclBits == 45,
                 "You need to update the serializer after you change the "
                 "FunctionDeclBits");
 
@@ -770,8 +844,11 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   FunctionDeclBits.addBit(D->hasImplicitReturnZero());
   FunctionDeclBits.addBit(D->isMultiVersion());
   FunctionDeclBits.addBit(D->isLateTemplateParsed());
+  FunctionDeclBits.addBit(D->isInstantiatedFromMemberTemplate());
   FunctionDeclBits.addBit(D->FriendConstraintRefersToEnclosingTemplate());
   FunctionDeclBits.addBit(D->usesSEHTry());
+  FunctionDeclBits.addBit(D->isDestroyingOperatorDelete());
+  FunctionDeclBits.addBit(D->isTypeAwareOperatorNewOrDelete());
   Record.push_back(FunctionDeclBits);
 
   Record.AddSourceLocation(D->getEndLoc());
@@ -800,14 +877,14 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   }
 
   if (D->getFriendObjectKind()) {
-    // For a function defined inline within a class template, we have to force
-    // the canonical definition to be the one inside the canonical definition of
-    // the template. Remember this relation to deserialize them together.
-    if (auto *RD = dyn_cast<CXXRecordDecl>(D->getLexicalParent()))
-      if (RD->isDependentContext() && RD->isThisDeclarationADefinition()) {
-        Writer.RelatedDeclsMap[Writer.GetDeclRef(RD)].push_back(
-            Writer.GetDeclRef(D));
-      }
+    // For a friend function defined inline within a class template, we have to
+    // force the definition to be the one inside the definition of the template
+    // class. Remember this relation to deserialize them together.
+    if (auto *RD = dyn_cast<CXXRecordDecl>(D->getLexicalParent());
+        RD && isDefinitionInDependentContext(RD)) {
+      Writer.RelatedDeclsMap[Writer.GetDeclRef(RD)].push_back(
+          Writer.GetDeclRef(D));
+    }
   }
 
   Record.push_back(D->param_size());
@@ -831,6 +908,9 @@ void ASTDeclWriter::VisitCXXDeductionGuideDecl(CXXDeductionGuideDecl *D) {
   Record.AddDeclRef(D->Ctor);
   VisitFunctionDecl(D);
   Record.push_back(static_cast<unsigned char>(D->getDeductionCandidateKind()));
+  Record.AddDeclRef(D->getSourceDeductionGuide());
+  Record.push_back(
+      static_cast<unsigned char>(D->getSourceDeductionGuideKind()));
   Code = serialization::DECL_CXX_DEDUCTION_GUIDE;
 }
 
@@ -1161,19 +1241,7 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
   VarDeclBits.addBits(llvm::to_underlying(D->getLinkageInternal()),
                       /*BitWidth=*/3);
 
-  bool ModulesCodegen = false;
-  if (Writer.WritingModule && D->getStorageDuration() == SD_Static &&
-      !D->getDescribedVarTemplate()) {
-    // When building a C++20 module interface unit or a partition unit, a
-    // strong definition in the module interface is provided by the
-    // compilation of that unit, not by its users. (Inline variables are still
-    // emitted in module users.)
-    ModulesCodegen = (Writer.WritingModule->isInterfaceOrPartition() ||
-                      (D->hasAttr<DLLExportAttr>() &&
-                       Writer.getLangOpts().BuildingPCHWithObjectFile)) &&
-                     Record.getASTContext().GetGVALinkageForVariable(D) >=
-                         GVA_StrongExternal;
-  }
+  bool ModulesCodegen = shouldVarGenerateHereOnly(D);
   VarDeclBits.addBit(ModulesCodegen);
 
   VarDeclBits.addBits(D->getStorageClass(), /*BitWidth=*/3);
@@ -1377,6 +1445,16 @@ void ASTDeclWriter::VisitBlockDecl(BlockDecl *D) {
   Code = serialization::DECL_BLOCK;
 }
 
+void ASTDeclWriter::VisitOutlinedFunctionDecl(OutlinedFunctionDecl *D) {
+  Record.push_back(D->getNumParams());
+  VisitDecl(D);
+  for (unsigned I = 0; I < D->getNumParams(); ++I)
+    Record.AddDeclRef(D->getParam(I));
+  Record.push_back(D->isNothrow() ? 1 : 0);
+  Record.AddStmt(D->getBody());
+  Code = serialization::DECL_OUTLINEDFUNCTION;
+}
+
 void ASTDeclWriter::VisitCapturedDecl(CapturedDecl *CD) {
   Record.push_back(CD->getNumParams());
   VisitDecl(CD);
@@ -1439,7 +1517,7 @@ void ASTDeclWriter::VisitNamespaceDecl(NamespaceDecl *D) {
         D->getParent()->getRedeclContext()->getPrimaryContext());
     if (Parent->isFromASTFile() || isa<TranslationUnitDecl>(Parent)) {
       Writer.DeclUpdates[Parent].push_back(
-          ASTWriter::DeclUpdate(UPD_CXX_ADDED_ANONYMOUS_NAMESPACE, D));
+          ASTWriter::DeclUpdate(DeclUpdateKind::CXXAddedAnonymousNamespace, D));
     }
   }
 }
@@ -1572,9 +1650,10 @@ void ASTDeclWriter::VisitCXXRecordDecl(CXXRecordDecl *D) {
     } else {
       Record.push_back(0);
     }
-    // For lambdas inside canonical FunctionDecl remember the mapping.
-    if (auto FD = llvm::dyn_cast_or_null<FunctionDecl>(D->getDeclContext());
-        FD && FD->isCanonicalDecl()) {
+    // For lambdas inside template functions, remember the mapping to
+    // deserialize them together.
+    if (auto *FD = llvm::dyn_cast_or_null<FunctionDecl>(D->getDeclContext());
+        FD && isDefinitionInDependentContext(FD)) {
       Writer.RelatedDeclsMap[Writer.GetDeclRef(FD)].push_back(
           Writer.GetDeclRef(D));
     }
@@ -1651,7 +1730,7 @@ void ASTDeclWriter::VisitCXXConstructorDecl(CXXConstructorDecl *D) {
                 "CXXConstructorDeclBits");
 
   Record.push_back(D->getTrailingAllocKind());
-  addExplicitSpecifier(D->getExplicitSpecifier(), Record);
+  addExplicitSpecifier(D->getExplicitSpecifierInternal(), Record);
   if (auto Inherited = D->getInheritedConstructor()) {
     Record.AddDeclRef(Inherited.getShadowDecl());
     Record.AddDeclRef(Inherited.getConstructor());
@@ -1814,6 +1893,7 @@ void ASTDeclWriter::VisitClassTemplateSpecializationDecl(
   Record.AddTemplateArgumentList(&D->getTemplateArgs());
   Record.AddSourceLocation(D->getPointOfInstantiation());
   Record.push_back(D->getSpecializationKind());
+  Record.push_back(D->hasStrictPackMatch());
   Record.push_back(D->isCanonicalDecl());
 
   if (D->isCanonicalDecl()) {
@@ -1960,9 +2040,8 @@ void ASTDeclWriter::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
     if (CR)
       Record.AddConceptReference(CR);
     Record.AddStmt(TC->getImmediatelyDeclaredConstraint());
-    Record.push_back(D->isExpandedParameterPack());
-    if (D->isExpandedParameterPack())
-      Record.push_back(D->getNumExpansionParameters());
+    Record.writeUnsignedOrNone(TC->getArgPackSubstIndex());
+    Record.writeUnsignedOrNone(D->getNumExpansionParameters());
   }
 
   bool OwnsDefaultArg = D->hasDefaultArgument() &&
@@ -1985,8 +2064,7 @@ void ASTDeclWriter::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
   // For an expanded parameter pack, record the number of expansion types here
   // so that it's easier for deserialization to allocate the right amount of
   // memory.
-  Expr *TypeConstraint = D->getPlaceholderTypeConstraint();
-  Record.push_back(!!TypeConstraint);
+  Record.push_back(D->hasPlaceholderTypeConstraint());
   if (D->isExpandedParameterPack())
     Record.push_back(D->getNumExpansionTypes());
 
@@ -1994,8 +2072,9 @@ void ASTDeclWriter::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
   // TemplateParmPosition.
   Record.push_back(D->getDepth());
   Record.push_back(D->getPosition());
-  if (TypeConstraint)
-    Record.AddStmt(TypeConstraint);
+
+  if (D->hasPlaceholderTypeConstraint())
+    Record.AddStmt(D->getPlaceholderTypeConstraint());
 
   if (D->isExpandedParameterPack()) {
     for (unsigned I = 0, N = D->getNumExpansionTypes(); I != N; ++I) {
@@ -2068,6 +2147,8 @@ void ASTDeclWriter::VisitDeclContext(DeclContext *DC) {
 
   uint64_t LexicalOffset = 0;
   uint64_t VisibleOffset = 0;
+  uint64_t ModuleLocalOffset = 0;
+  uint64_t TULocalOffset = 0;
 
   if (Writer.isGeneratingReducedBMI() && isa<NamespaceDecl>(DC) &&
       cast<NamespaceDecl>(DC)->isFromExplicitGlobalModule()) {
@@ -2078,12 +2159,15 @@ void ASTDeclWriter::VisitDeclContext(DeclContext *DC) {
   } else {
     LexicalOffset =
         Writer.WriteDeclContextLexicalBlock(Record.getASTContext(), DC);
-    VisibleOffset =
-        Writer.WriteDeclContextVisibleBlock(Record.getASTContext(), DC);
+    Writer.WriteDeclContextVisibleBlock(Record.getASTContext(), DC,
+                                        VisibleOffset, ModuleLocalOffset,
+                                        TULocalOffset);
   }
 
   Record.AddOffset(LexicalOffset);
   Record.AddOffset(VisibleOffset);
+  Record.AddOffset(ModuleLocalOffset);
+  Record.AddOffset(TULocalOffset);
 }
 
 const Decl *ASTWriter::getFirstLocalDecl(const Decl *D) {
@@ -2220,6 +2304,27 @@ void ASTDeclWriter::VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D) {
 void ASTDeclWriter::VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D) {
   VisitVarDecl(D);
   Code = serialization::DECL_OMP_CAPTUREDEXPR;
+}
+
+void ASTDeclWriter::VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D) {
+  Record.writeUInt32(D->clauses().size());
+  VisitDecl(D);
+  Record.writeEnum(D->DirKind);
+  Record.AddSourceLocation(D->DirectiveLoc);
+  Record.AddSourceLocation(D->EndLoc);
+  Record.writeOpenACCClauseList(D->clauses());
+  Code = serialization::DECL_OPENACC_DECLARE;
+}
+void ASTDeclWriter::VisitOpenACCRoutineDecl(OpenACCRoutineDecl *D) {
+  Record.writeUInt32(D->clauses().size());
+  VisitDecl(D);
+  Record.writeEnum(D->DirKind);
+  Record.AddSourceLocation(D->DirectiveLoc);
+  Record.AddSourceLocation(D->EndLoc);
+  Record.AddSourceRange(D->ParensLoc);
+  Record.AddStmt(D->FuncRef);
+  Record.writeOpenACCClauseList(D->clauses());
+  Code = serialization::DECL_OPENACC_ROUTINE;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2438,6 +2543,8 @@ void ASTWriter::WriteDeclAbbrevs() {
   // DC
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // LexicalOffset
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // VisibleOffset
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // ModuleLocalOffset
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // TULocalOffset
   DeclEnumAbbrev = Stream.EmitAbbrev(std::move(Abv));
 
   // Abbreviation for DECL_RECORD
@@ -2475,7 +2582,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   // RecordDecl
   Abv->Add(BitCodeAbbrevOp(
       BitCodeAbbrevOp::Fixed,
-      13)); // Packed Record Decl Bits: FlexibleArrayMember,
+      14)); // Packed Record Decl Bits: FlexibleArrayMember,
             // AnonymousStructUnion, hasObjectMember, hasVolatileMember,
             // isNonTrivialToPrimitiveDefaultInitialize,
             // isNonTrivialToPrimitiveCopy, isNonTrivialToPrimitiveDestroy,
@@ -2490,6 +2597,8 @@ void ASTWriter::WriteDeclAbbrevs() {
   // DC
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // LexicalOffset
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // VisibleOffset
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // ModuleLocalOffset
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // TULocalOffset
   DeclRecordAbbrev = Stream.EmitAbbrev(std::move(Abv));
 
   // Abbreviation for DECL_PARM_VAR
@@ -2828,6 +2937,16 @@ void ASTWriter::WriteDeclAbbrevs() {
   DeclContextVisibleLookupAbbrev = Stream.EmitAbbrev(std::move(Abv));
 
   Abv = std::make_shared<BitCodeAbbrev>();
+  Abv->Add(BitCodeAbbrevOp(serialization::DECL_CONTEXT_MODULE_LOCAL_VISIBLE));
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
+  DeclModuleLocalVisibleLookupAbbrev = Stream.EmitAbbrev(std::move(Abv));
+
+  Abv = std::make_shared<BitCodeAbbrev>();
+  Abv->Add(BitCodeAbbrevOp(serialization::DECL_CONTEXT_TU_LOCAL_VISIBLE));
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
+  DeclTULocalLookupAbbrev = Stream.EmitAbbrev(std::move(Abv));
+
+  Abv = std::make_shared<BitCodeAbbrev>();
   Abv->Add(BitCodeAbbrevOp(serialization::DECL_SPECIALIZATIONS));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
   DeclSpecializationsAbbrev = Stream.EmitAbbrev(std::move(Abv));
@@ -2938,32 +3057,7 @@ void ASTRecordWriter::AddFunctionDefinition(const FunctionDecl *FD) {
   Writer->ClearSwitchCaseIDs();
 
   assert(FD->doesThisDeclarationHaveABody());
-  bool ModulesCodegen = false;
-  if (!FD->isDependentContext()) {
-    std::optional<GVALinkage> Linkage;
-    if (Writer->WritingModule &&
-        Writer->WritingModule->isInterfaceOrPartition()) {
-      // When building a C++20 module interface unit or a partition unit, a
-      // strong definition in the module interface is provided by the
-      // compilation of that unit, not by its users. (Inline functions are still
-      // emitted in module users.)
-      Linkage = getASTContext().GetGVALinkageForFunction(FD);
-      ModulesCodegen = *Linkage >= GVA_StrongExternal;
-    }
-    if (Writer->getLangOpts().ModulesCodegen ||
-        (FD->hasAttr<DLLExportAttr>() &&
-         Writer->getLangOpts().BuildingPCHWithObjectFile)) {
-
-      // Under -fmodules-codegen, codegen is performed for all non-internal,
-      // non-always_inline functions, unless they are available elsewhere.
-      if (!FD->hasAttr<AlwaysInlineAttr>()) {
-        if (!Linkage)
-          Linkage = getASTContext().GetGVALinkageForFunction(FD);
-        ModulesCodegen =
-            *Linkage != GVA_Internal && *Linkage != GVA_AvailableExternally;
-      }
-    }
-  }
+  bool ModulesCodegen = shouldFunctionGenerateHereOnly(FD);
   Record->push_back(ModulesCodegen);
   if (ModulesCodegen)
     Writer->AddDeclRef(FD, Writer->ModularCodegenDecls);

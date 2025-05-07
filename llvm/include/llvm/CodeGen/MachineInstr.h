@@ -15,6 +15,7 @@
 #ifndef LLVM_CODEGEN_MACHINEINSTR_H
 #define LLVM_CODEGEN_MACHINEINSTR_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/PointerSumType.h"
 #include "llvm/ADT/ilist.h"
@@ -42,9 +43,10 @@ class DILabel;
 class Instruction;
 class MDNode;
 class AAResults;
-template <typename T> class ArrayRef;
+class BatchAAResults;
 class DIExpression;
 class DILocalVariable;
+class LiveRegUnits;
 class MachineBasicBlock;
 class MachineFunction;
 class MachineRegisterInfo;
@@ -338,6 +340,13 @@ private:
     return Op.isReg() && Op.isUse();
   }
 
+  MutableArrayRef<MachineOperand> operands_impl() {
+    return {Operands, NumOperands};
+  }
+  ArrayRef<MachineOperand> operands_impl() const {
+    return {Operands, NumOperands};
+  }
+
 public:
   MachineInstr(const MachineInstr &) = delete;
   MachineInstr &operator=(const MachineInstr &) = delete;
@@ -578,18 +587,12 @@ public:
   unsigned getNumOperands() const { return NumOperands; }
 
   /// Returns the total number of operands which are debug locations.
-  unsigned getNumDebugOperands() const {
-    return std::distance(debug_operands().begin(), debug_operands().end());
-  }
+  unsigned getNumDebugOperands() const { return size(debug_operands()); }
 
-  const MachineOperand& getOperand(unsigned i) const {
-    assert(i < getNumOperands() && "getOperand() out of range!");
-    return Operands[i];
+  const MachineOperand &getOperand(unsigned i) const {
+    return operands_impl()[i];
   }
-  MachineOperand& getOperand(unsigned i) {
-    assert(i < getNumOperands() && "getOperand() out of range!");
-    return Operands[i];
-  }
+  MachineOperand &getOperand(unsigned i) { return operands_impl()[i]; }
 
   MachineOperand &getDebugOperand(unsigned Index) {
     assert(Index < getNumDebugOperands() && "getDebugOperand() out of range!");
@@ -610,26 +613,12 @@ public:
 
   /// Returns a range of all of the operands that correspond to a debug use of
   /// \p Reg.
-  template <typename Operand, typename Instruction>
-  static iterator_range<
-      filter_iterator<Operand *, std::function<bool(Operand &Op)>>>
-  getDebugOperandsForReg(Instruction *MI, Register Reg) {
-    std::function<bool(Operand & Op)> OpUsesReg(
-        [Reg](Operand &Op) { return Op.isReg() && Op.getReg() == Reg; });
-    return make_filter_range(MI->debug_operands(), OpUsesReg);
-  }
   iterator_range<filter_iterator<const MachineOperand *,
                                  std::function<bool(const MachineOperand &Op)>>>
-  getDebugOperandsForReg(Register Reg) const {
-    return MachineInstr::getDebugOperandsForReg<const MachineOperand,
-                                                const MachineInstr>(this, Reg);
-  }
+  getDebugOperandsForReg(Register Reg) const;
   iterator_range<filter_iterator<MachineOperand *,
                                  std::function<bool(MachineOperand &Op)>>>
-  getDebugOperandsForReg(Register Reg) {
-    return MachineInstr::getDebugOperandsForReg<MachineOperand, MachineInstr>(
-        this, Reg);
-  }
+  getDebugOperandsForReg(Register Reg);
 
   bool isDebugOperand(const MachineOperand *Op) const {
     return Op >= adl_begin(debug_operands()) && Op <= adl_end(debug_operands());
@@ -679,8 +668,17 @@ public:
   unsigned getNumExplicitDefs() const;
 
   /// iterator/begin/end - Iterate over all operands of a machine instruction.
+
+  // The operands must always be in the following order:
+  // - explicit reg defs,
+  // - other explicit operands (reg uses, immediates, etc.),
+  // - implicit reg defs
+  // - implicit reg uses
   using mop_iterator = MachineOperand *;
   using const_mop_iterator = const MachineOperand *;
+
+  using mop_range = iterator_range<mop_iterator>;
+  using const_mop_range = iterator_range<const_mop_iterator>;
 
   mop_iterator operands_begin() { return Operands; }
   mop_iterator operands_end() { return Operands + NumOperands; }
@@ -688,92 +686,82 @@ public:
   const_mop_iterator operands_begin() const { return Operands; }
   const_mop_iterator operands_end() const { return Operands + NumOperands; }
 
-  iterator_range<mop_iterator> operands() {
-    return make_range(operands_begin(), operands_end());
+  mop_range operands() { return operands_impl(); }
+  const_mop_range operands() const { return operands_impl(); }
+
+  mop_range explicit_operands() {
+    return operands_impl().take_front(getNumExplicitOperands());
   }
-  iterator_range<const_mop_iterator> operands() const {
-    return make_range(operands_begin(), operands_end());
+  const_mop_range explicit_operands() const {
+    return operands_impl().take_front(getNumExplicitOperands());
   }
-  iterator_range<mop_iterator> explicit_operands() {
-    return make_range(operands_begin(),
-                      operands_begin() + getNumExplicitOperands());
+  mop_range implicit_operands() {
+    return operands_impl().drop_front(getNumExplicitOperands());
   }
-  iterator_range<const_mop_iterator> explicit_operands() const {
-    return make_range(operands_begin(),
-                      operands_begin() + getNumExplicitOperands());
-  }
-  iterator_range<mop_iterator> implicit_operands() {
-    return make_range(explicit_operands().end(), operands_end());
-  }
-  iterator_range<const_mop_iterator> implicit_operands() const {
-    return make_range(explicit_operands().end(), operands_end());
-  }
-  /// Returns a range over all operands that are used to determine the variable
-  /// location for this DBG_VALUE instruction.
-  iterator_range<mop_iterator> debug_operands() {
-    assert((isDebugValueLike()) && "Must be a debug value instruction.");
-    return isNonListDebugValue()
-               ? make_range(operands_begin(), operands_begin() + 1)
-               : make_range(operands_begin() + 2, operands_end());
-  }
-  /// \copydoc debug_operands()
-  iterator_range<const_mop_iterator> debug_operands() const {
-    assert((isDebugValueLike()) && "Must be a debug value instruction.");
-    return isNonListDebugValue()
-               ? make_range(operands_begin(), operands_begin() + 1)
-               : make_range(operands_begin() + 2, operands_end());
-  }
-  /// Returns a range over all explicit operands that are register definitions.
-  /// Implicit definition are not included!
-  iterator_range<mop_iterator> defs() {
-    return make_range(operands_begin(),
-                      operands_begin() + getNumExplicitDefs());
-  }
-  /// \copydoc defs()
-  iterator_range<const_mop_iterator> defs() const {
-    return make_range(operands_begin(),
-                      operands_begin() + getNumExplicitDefs());
-  }
-  /// Returns a range that includes all operands which may be register uses.
-  /// This may include unrelated operands which are not register uses.
-  iterator_range<mop_iterator> uses() {
-    return make_range(operands_begin() + getNumExplicitDefs(), operands_end());
-  }
-  /// \copydoc uses()
-  iterator_range<const_mop_iterator> uses() const {
-    return make_range(operands_begin() + getNumExplicitDefs(), operands_end());
-  }
-  iterator_range<mop_iterator> explicit_uses() {
-    return make_range(operands_begin() + getNumExplicitDefs(),
-                      operands_begin() + getNumExplicitOperands());
-  }
-  iterator_range<const_mop_iterator> explicit_uses() const {
-    return make_range(operands_begin() + getNumExplicitDefs(),
-                      operands_begin() + getNumExplicitOperands());
+  const_mop_range implicit_operands() const {
+    return operands_impl().drop_front(getNumExplicitOperands());
   }
 
-  using filtered_mop_iterator =
-      filter_iterator<mop_iterator, bool (*)(const MachineOperand &)>;
-  using filtered_const_mop_iterator =
-      filter_iterator<const_mop_iterator, bool (*)(const MachineOperand &)>;
+  /// Returns all operands that are used to determine the variable
+  /// location for this DBG_VALUE instruction.
+  mop_range debug_operands() {
+    assert(isDebugValueLike() && "Must be a debug value instruction.");
+    return isNonListDebugValue() ? operands_impl().take_front(1)
+                                 : operands_impl().drop_front(2);
+  }
+  /// \copydoc debug_operands()
+  const_mop_range debug_operands() const {
+    assert(isDebugValueLike() && "Must be a debug value instruction.");
+    return isNonListDebugValue() ? operands_impl().take_front(1)
+                                 : operands_impl().drop_front(2);
+  }
+  /// Returns all explicit operands that are register definitions.
+  /// Implicit definition are not included!
+  mop_range defs() { return operands_impl().take_front(getNumExplicitDefs()); }
+  /// \copydoc defs()
+  const_mop_range defs() const {
+    return operands_impl().take_front(getNumExplicitDefs());
+  }
+  /// Returns all operands which may be register uses.
+  /// This may include unrelated operands which are not register uses.
+  mop_range uses() { return operands_impl().drop_front(getNumExplicitDefs()); }
+  /// \copydoc uses()
+  const_mop_range uses() const {
+    return operands_impl().drop_front(getNumExplicitDefs());
+  }
+  mop_range explicit_uses() {
+    return operands_impl()
+        .take_front(getNumExplicitOperands())
+        .drop_front(getNumExplicitDefs());
+  }
+  const_mop_range explicit_uses() const {
+    return operands_impl()
+        .take_front(getNumExplicitOperands())
+        .drop_front(getNumExplicitDefs());
+  }
+
+  using filtered_mop_range = iterator_range<
+      filter_iterator<mop_iterator, bool (*)(const MachineOperand &)>>;
+  using filtered_const_mop_range = iterator_range<
+      filter_iterator<const_mop_iterator, bool (*)(const MachineOperand &)>>;
 
   /// Returns an iterator range over all operands that are (explicit or
   /// implicit) register defs.
-  iterator_range<filtered_mop_iterator> all_defs() {
+  filtered_mop_range all_defs() {
     return make_filter_range(operands(), opIsRegDef);
   }
   /// \copydoc all_defs()
-  iterator_range<filtered_const_mop_iterator> all_defs() const {
+  filtered_const_mop_range all_defs() const {
     return make_filter_range(operands(), opIsRegDef);
   }
 
   /// Returns an iterator range over all operands that are (explicit or
   /// implicit) register uses.
-  iterator_range<filtered_mop_iterator> all_uses() {
+  filtered_mop_range all_uses() {
     return make_filter_range(uses(), opIsRegUse);
   }
   /// \copydoc all_uses()
-  iterator_range<filtered_const_mop_iterator> all_uses() const {
+  filtered_const_mop_range all_uses() const {
     return make_filter_range(uses(), opIsRegUse);
   }
 
@@ -1743,6 +1731,18 @@ public:
   /// defined registers were dead.
   bool wouldBeTriviallyDead() const;
 
+  /// Check whether an MI is dead. If \p LivePhysRegs is provided, it is assumed
+  /// to be at the position of MI and will be used to check the Liveness of
+  /// physical register defs. If \p LivePhysRegs is not provided, this will
+  /// pessimistically assume any PhysReg def is live.
+  /// For trivially dead instructions (i.e. those without hard to model effects
+  /// / wouldBeTriviallyDead), this checks deadness by analyzing defs of the
+  /// MachineInstr. If the instruction wouldBeTriviallyDead, and  all the defs
+  /// either have dead flags or have no uses, then the instruction is said to be
+  /// dead.
+  bool isDead(const MachineRegisterInfo &MRI,
+              LiveRegUnits *LivePhysRegs = nullptr) const;
+
   /// Returns true if this instruction's memory access aliases the memory
   /// access of Other.
   //
@@ -1753,6 +1753,8 @@ public:
   /// @param AA Optional alias analysis, used to compare memory operands.
   /// @param Other MachineInstr to check aliasing against.
   /// @param UseTBAA Whether to pass TBAA information to alias analysis.
+  bool mayAlias(BatchAAResults *AA, const MachineInstr &Other,
+                bool UseTBAA) const;
   bool mayAlias(AAResults *AA, const MachineInstr &Other, bool UseTBAA) const;
 
   /// Return true if this instruction may have an ordered

@@ -55,9 +55,7 @@ public:
   // from the only other place it can be: the template argument.
   lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override;
-
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
   ValueObject *m_start = nullptr; ///< First element of span. Held, not owned.
@@ -104,8 +102,12 @@ lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::Update() {
   m_element_type = data_type_finder_sp->GetCompilerType().GetPointeeType();
 
   // Get element size.
-  if (std::optional<uint64_t> size = m_element_type.GetByteSize(nullptr)) {
-    m_element_size = *size;
+  llvm::Expected<uint64_t> size_or_err = m_element_type.GetByteSize(nullptr);
+  if (!size_or_err)
+    LLDB_LOG_ERRORV(GetLog(LLDBLog::DataFormatters), size_or_err.takeError(),
+                    "{0}");
+  else {
+    m_element_size = *size_or_err;
 
     // Get data.
     if (m_element_size > 0) {
@@ -119,23 +121,24 @@ lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::Update() {
     } else if (auto arg =
                    m_backend.GetCompilerType().GetIntegralTemplateArgument(1)) {
 
-      m_num_elements = arg->value.getLimitedValue();
+      m_num_elements = arg->value.GetAPSInt().getLimitedValue();
     }
   }
 
   return lldb::ChildCacheState::eReuse;
 }
 
-bool lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::
-    MightHaveChildren() {
-  return true;
-}
-
-size_t lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
+llvm::Expected<size_t> lldb_private::formatters::
+    LibcxxStdSpanSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
   if (!m_start)
-    return UINT32_MAX;
-  return ExtractIndexFromString(name.GetCString());
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
+  size_t idx = ExtractIndexFromString(name.GetCString());
+  if (idx == UINT32_MAX) {
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
+  }
+  return idx;
 }
 
 lldb_private::SyntheticChildrenFrontEnd *

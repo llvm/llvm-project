@@ -107,7 +107,7 @@ static void getBackwardSliceImpl(Operation *op,
       // into us. For now, just bail.
       if (parentOp && backwardSlice->count(parentOp) == 0) {
         assert(parentOp->getNumRegions() == 1 &&
-               parentOp->getRegion(0).getBlocks().size() == 1);
+               llvm::hasSingleElement(parentOp->getRegion(0).getBlocks()));
         getBackwardSliceImpl(parentOp, backwardSlice, options);
       }
     } else {
@@ -171,12 +171,12 @@ mlir::getSlice(Operation *op, const BackwardSliceOptions &backwardSliceOptions,
     // Compute and insert the backwardSlice starting from currentOp.
     backwardSlice.clear();
     getBackwardSlice(currentOp, &backwardSlice, backwardSliceOptions);
-    slice.insert(backwardSlice.begin(), backwardSlice.end());
+    slice.insert_range(backwardSlice);
 
     // Compute and insert the forwardSlice starting from currentOp.
     forwardSlice.clear();
     getForwardSlice(currentOp, &forwardSlice, forwardSliceOptions);
-    slice.insert(forwardSlice.begin(), forwardSlice.end());
+    slice.insert_range(forwardSlice);
     ++currentIndex;
   }
   return topologicalSort(slice);
@@ -197,8 +197,7 @@ static bool dependsOnCarriedVals(Value value,
 
   // Check that none of the operands of the operations in the backward slice are
   // loop iteration arguments, and neither is the value itself.
-  SmallPtrSet<Value, 8> iterCarriedValSet(iterCarriedArgs.begin(),
-                                          iterCarriedArgs.end());
+  SmallPtrSet<Value, 8> iterCarriedValSet(llvm::from_range, iterCarriedArgs);
   if (iterCarriedValSet.contains(value))
     return true;
 

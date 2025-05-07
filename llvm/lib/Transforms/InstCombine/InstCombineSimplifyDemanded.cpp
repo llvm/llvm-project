@@ -1039,11 +1039,14 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
         APInt DemandedMaskLHS(DemandedMask.lshr(ShiftAmt));
         APInt DemandedMaskRHS(DemandedMask.shl(BitWidth - ShiftAmt));
         if (I->getOperand(0) != I->getOperand(1)) {
-          if (SimplifyDemandedBits(I, 0, DemandedMaskLHS, LHSKnown,
-                                   Depth + 1, Q) ||
+          if (SimplifyDemandedBits(I, 0, DemandedMaskLHS, LHSKnown, Depth + 1,
+                                   Q) ||
               SimplifyDemandedBits(I, 1, DemandedMaskRHS, RHSKnown, Depth + 1,
-                                   Q))
+                                   Q)) {
+            // Range attribute may no longer hold.
+            I->dropPoisonGeneratingReturnAttributes();
             return I;
+          }
         } else { // fshl is a rotate
           // Avoid converting rotate into funnel shift.
           // Only simplify if one operand is constant.
@@ -1956,9 +1959,11 @@ static Constant *getFPClassConstant(Type *Ty, FPClassTest Mask) {
   }
 }
 
-Value *InstCombinerImpl::SimplifyDemandedUseFPClass(
-    Value *V, const FPClassTest DemandedMask, KnownFPClass &Known,
-    unsigned Depth, Instruction *CxtI) {
+Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
+                                                    FPClassTest DemandedMask,
+                                                    KnownFPClass &Known,
+                                                    unsigned Depth,
+                                                    Instruction *CxtI) {
   assert(Depth <= MaxAnalysisRecursionDepth && "Limit Search Depth");
   Type *VTy = V->getType();
 
@@ -1982,7 +1987,12 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(
   if (!I->hasOneUse())
     return nullptr;
 
-  // TODO: Should account for nofpclass/FastMathFlags on current instruction
+  if (auto *FPOp = dyn_cast<FPMathOperator>(I)) {
+    if (FPOp->hasNoNaNs())
+      DemandedMask &= ~fcNan;
+    if (FPOp->hasNoInfs())
+      DemandedMask &= ~fcInf;
+  }
   switch (I->getOpcode()) {
   case Instruction::FNeg: {
     if (SimplifyDemandedFPClass(I, 0, llvm::fneg(DemandedMask), Known,
@@ -2010,13 +2020,13 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(
       if (SimplifyDemandedFPClass(I, 0, DemandedMaskAnySign, Known, Depth + 1))
         return I;
 
-      if ((DemandedMask & fcPositive) == fcNone) {
+      if ((DemandedMask & fcNegative) == DemandedMask) {
         // Roundabout way of replacing with fneg(fabs)
         I->setOperand(1, ConstantFP::get(VTy, -1.0));
         return I;
       }
 
-      if ((DemandedMask & fcNegative) == fcNone) {
+      if ((DemandedMask & fcPositive) == DemandedMask) {
         // Roundabout way of replacing with fabs
         I->setOperand(1, ConstantFP::getZero(VTy));
         return I;

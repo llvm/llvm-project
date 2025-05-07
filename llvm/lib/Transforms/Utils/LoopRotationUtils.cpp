@@ -553,8 +553,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
         std::pair<std::pair<hash_code, DILocalVariable *>, DIExpression *>;
     auto makeHash = [](auto *D) -> DbgIntrinsicHash {
       auto VarLocOps = D->location_ops();
-      return {{hash_combine_range(VarLocOps.begin(), VarLocOps.end()),
-               D->getVariable()},
+      return {{hash_combine_range(VarLocOps), D->getVariable()},
               D->getExpression()};
     };
 
@@ -650,7 +649,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
 
         NextDbgInsts = I->getDbgRecordRange();
 
-        Inst->moveBefore(LoopEntryBranch);
+        Inst->moveBefore(LoopEntryBranch->getIterator());
 
         ++NumInstrsHoisted;
         continue;
@@ -658,7 +657,10 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
 
       // Otherwise, create a duplicate of the instruction.
       Instruction *C = Inst->clone();
-      C->insertBefore(LoopEntryBranch);
+      if (const DebugLoc &DL = C->getDebugLoc())
+        mapAtomInstance(DL, ValueMap);
+
+      C->insertBefore(LoopEntryBranch->getIterator());
 
       ++NumInstrsDuplicated;
 

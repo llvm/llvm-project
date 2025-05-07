@@ -4,7 +4,6 @@
 
 # Tests for LLVM libc strings.h functions.
 
-load("//libc:libc_build_rules.bzl", "libc_support_library")
 load("//libc/test:libc_test_rules.bzl", "libc_test")
 
 package(default_visibility = ["//visibility:public"])
@@ -14,11 +13,9 @@ licenses(["notice"])
 libc_test(
     name = "bcopy_test",
     srcs = ["bcopy_test.cpp"],
-    libc_function_deps = [
-        "//libc:bcopy",
-    ],
     deps = [
         "//libc:__support_cpp_span",
+        "//libc:bcopy",
         "//libc/test/UnitTest:memory_matcher",
         "//libc/test/src/string:memory_check_utils",
     ],
@@ -27,10 +24,8 @@ libc_test(
 libc_test(
     name = "bcmp_test",
     srcs = ["bcmp_test.cpp"],
-    libc_function_deps = [
-        "//libc:bcmp",
-    ],
     deps = [
+        "//libc:bcmp",
         "//libc/test/UnitTest:test_logger",
         "//libc/test/src/string:memory_check_utils",
     ],
@@ -39,10 +34,8 @@ libc_test(
 libc_test(
     name = "bzero_test",
     srcs = ["bzero_test.cpp"],
-    libc_function_deps = [
-        "//libc:bzero",
-    ],
     deps = [
+        "//libc:bzero",
         "//libc/test/src/string:memory_check_utils",
     ],
 )

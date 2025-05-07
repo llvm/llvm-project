@@ -13,6 +13,7 @@
 #include "clang/Driver/Job.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/TargetParser/Triple.h"
+#include <regex>
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
@@ -173,6 +174,39 @@ bool isLegalValidatorVersion(StringRef ValVersionStr, const Driver &D) {
   return true;
 }
 
+std::string getSpirvExtArg(ArrayRef<std::string> SpvExtensionArgs) {
+  if (SpvExtensionArgs.empty()) {
+    return "-spirv-ext=all";
+  }
+
+  std::string LlvmOption =
+      (Twine("-spirv-ext=+") + SpvExtensionArgs.front()).str();
+  SpvExtensionArgs = SpvExtensionArgs.slice(1);
+  for (auto Extension : SpvExtensionArgs) {
+    LlvmOption = (Twine(LlvmOption) + ",+" + Extension).str();
+  }
+  return LlvmOption;
+}
+
+bool isValidSPIRVExtensionName(const std::string &str) {
+  std::regex pattern("SPV_[a-zA-Z0-9_]+");
+  return std::regex_match(str, pattern);
+}
+
+// SPIRV extension names are of the form `SPV_[a-zA-Z0-9_]+`. We want to
+// disallow obviously invalid names to avoid issues when parsing `spirv-ext`.
+bool checkExtensionArgsAreValid(ArrayRef<std::string> SpvExtensionArgs,
+                                const Driver &Driver) {
+  bool AllValid = true;
+  for (auto Extension : SpvExtensionArgs) {
+    if (!isValidSPIRVExtensionName(Extension)) {
+      Driver.Diag(diag::err_drv_invalid_value)
+          << "-fspv_extension" << Extension;
+      AllValid = false;
+    }
+  }
+  return AllValid;
+}
 } // namespace
 
 void tools::hlsl::Validator::ConstructJob(Compilation &C, const JobAction &JA,
@@ -186,14 +220,28 @@ void tools::hlsl::Validator::ConstructJob(Compilation &C, const JobAction &JA,
   ArgStringList CmdArgs;
   assert(Inputs.size() == 1 && "Unable to handle multiple inputs.");
   const InputInfo &Input = Inputs[0];
-  assert(Input.isFilename() && "Unexpected verify input");
-  // Grabbing the output of the earlier cc1 run.
   CmdArgs.push_back(Input.getFilename());
-  // Use the same name as output.
   CmdArgs.push_back("-o");
-  CmdArgs.push_back(Input.getFilename());
+  CmdArgs.push_back(Output.getFilename());
 
   const char *Exec = Args.MakeArgString(DxvPath);
+  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
+                                         Exec, CmdArgs, Inputs, Input));
+}
+
+void tools::hlsl::MetalConverter::ConstructJob(
+    Compilation &C, const JobAction &JA, const InputInfo &Output,
+    const InputInfoList &Inputs, const ArgList &Args,
+    const char *LinkingOutput) const {
+  std::string MSCPath = getToolChain().GetProgramPath("metal-shaderconverter");
+  ArgStringList CmdArgs;
+  assert(Inputs.size() == 1 && "Unable to handle multiple inputs.");
+  const InputInfo &Input = Inputs[0];
+  CmdArgs.push_back(Input.getFilename());
+  CmdArgs.push_back("-o");
+  CmdArgs.push_back(Output.getFilename());
+
+  const char *Exec = Args.MakeArgString(MSCPath);
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
                                          Exec, CmdArgs, Inputs, Input));
 }
@@ -214,6 +262,10 @@ Tool *clang::driver::toolchains::HLSLToolChain::getTool(
     if (!Validator)
       Validator.reset(new tools::hlsl::Validator(*this));
     return Validator.get();
+  case Action::BinaryTranslatorJobClass:
+    if (!MetalConverter)
+      MetalConverter.reset(new tools::hlsl::MetalConverter(*this));
+    return MetalConverter.get();
   default:
     return ToolChain::getTool(AC);
   }
@@ -235,7 +287,6 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
   for (Arg *A : Args) {
     if (A->getOption().getID() == options::OPT_dxil_validator_version) {
       StringRef ValVerStr = A->getValue();
-      std::string ErrorMsg;
       if (!isLegalValidatorVersion(ValVerStr, getDriver()))
         continue;
     }
@@ -283,6 +334,17 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
     DAL->append(A);
   }
 
+  if (getArch() == llvm::Triple::spirv) {
+    std::vector<std::string> SpvExtensionArgs =
+        Args.getAllArgValues(options::OPT_fspv_extension_EQ);
+    if (checkExtensionArgsAreValid(SpvExtensionArgs, getDriver())) {
+      std::string LlvmOption = getSpirvExtArg(SpvExtensionArgs);
+      DAL->AddSeparateArg(nullptr, Opts.getOption(options::OPT_mllvm),
+                          LlvmOption);
+    }
+    Args.claimAllArgs(options::OPT_fspv_extension_EQ);
+  }
+
   if (!DAL->hasArg(options::OPT_O_Group)) {
     DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_O), "3");
   }
@@ -291,6 +353,9 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
 }
 
 bool HLSLToolChain::requiresValidation(DerivedArgList &Args) const {
+  if (!Args.hasArg(options::OPT_dxc_Fo))
+    return false;
+
   if (Args.getLastArg(options::OPT_dxc_disable_validation))
     return false;
 
@@ -299,5 +364,23 @@ bool HLSLToolChain::requiresValidation(DerivedArgList &Args) const {
     return true;
 
   getDriver().Diag(diag::warn_drv_dxc_missing_dxv);
+  return false;
+}
+
+bool HLSLToolChain::requiresBinaryTranslation(DerivedArgList &Args) const {
+  return Args.hasArg(options::OPT_metal) && Args.hasArg(options::OPT_dxc_Fo);
+}
+
+bool HLSLToolChain::isLastJob(DerivedArgList &Args,
+                              Action::ActionClass AC) const {
+  bool HasTranslation = requiresBinaryTranslation(Args);
+  bool HasValidation = requiresValidation(Args);
+  // If translation and validation are not required, we should only have one
+  // action.
+  if (!HasTranslation && !HasValidation)
+    return true;
+  if ((HasTranslation && AC == Action::BinaryTranslatorJobClass) ||
+      (!HasTranslation && HasValidation && AC == Action::BinaryAnalyzeJobClass))
+    return true;
   return false;
 }

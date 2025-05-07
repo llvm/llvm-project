@@ -60,10 +60,6 @@ coff::operator<<(const COFFSyncStream &s,
   return s;
 }
 
-const COFFSyncStream &coff::operator<<(const COFFSyncStream &s, Symbol *sym) {
-  return s << maybeDemangleSymbol(s.ctx, sym->getName());
-}
-
 namespace coff {
 
 void Symbol::computeName() {
@@ -100,7 +96,6 @@ bool Symbol::isLive() const {
   return true;
 }
 
-// MinGW specific.
 void Symbol::replaceKeepingName(Symbol *other, size_t size) {
   StringRef origName = getName();
   memcpy(this, other, size);

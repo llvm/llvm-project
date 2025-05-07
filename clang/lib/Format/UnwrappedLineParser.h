@@ -167,10 +167,12 @@ private:
   void parseAccessSpecifier();
   bool parseEnum();
   bool parseStructLike();
-  bool parseRequires();
+  bool parseRequires(bool SeenEqual);
   void parseRequiresClause(FormatToken *RequiresToken);
   void parseRequiresExpression(FormatToken *RequiresToken);
   void parseConstraintExpression();
+  void parseCppExportBlock();
+  void parseNamespaceOrExportBlock(unsigned AddLevels);
   void parseJavaEnumBody();
   // Parses a record (aka class) as a top level element. If ParseAsExpr is true,
   // parses the record as a child block, i.e. if the class declaration is an
@@ -296,8 +298,11 @@ private:
   // Since the next token might already be in a new unwrapped line, we need to
   // store the comments belonging to that token.
   SmallVector<FormatToken *, 1> CommentsBeforeNextToken;
+
   FormatToken *FormatTok = nullptr;
-  bool MustBreakBeforeNextToken;
+
+  // Has just finished parsing a preprocessor line.
+  bool AtEndOfPPLine;
 
   // The parsed lines. Only added to through \c CurrentLines.
   SmallVector<UnwrappedLine, 8> Lines;

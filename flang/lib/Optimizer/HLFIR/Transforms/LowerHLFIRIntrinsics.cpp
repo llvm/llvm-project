@@ -121,8 +121,14 @@ protected:
         // simplified since the fir.box lowered here are now guarenteed to
         // contain the local lower bounds thanks to the hlfir.declare (the extra
         // rebox can be removed).
-        auto [exv, cleanup] =
-            hlfir::translateToExtendedValue(loc, builder, entity);
+        // When taking arguments as descriptors, the runtime expect absent
+        // OPTIONAL to be a nullptr to a descriptor, lowering has already
+        // prepared such descriptors as needed, hence set
+        // keepScalarOptionalBoxed to avoid building descriptors with a null
+        // address for them.
+        auto [exv, cleanup] = hlfir::translateToExtendedValue(
+            loc, builder, entity, /*contiguous=*/false,
+            /*keepScalarOptionalBoxed=*/true);
         if (cleanup)
           cleanupFns.push_back(*cleanup);
         ret.emplace_back(exv);
@@ -494,6 +500,41 @@ class CShiftOpConversion : public HlfirIntrinsicConversion<hlfir::CShiftOp> {
   }
 };
 
+class ReshapeOpConversion : public HlfirIntrinsicConversion<hlfir::ReshapeOp> {
+  using HlfirIntrinsicConversion<hlfir::ReshapeOp>::HlfirIntrinsicConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(hlfir::ReshapeOp reshape,
+                  mlir::PatternRewriter &rewriter) const override {
+    fir::FirOpBuilder builder{rewriter, reshape.getOperation()};
+    const mlir::Location &loc = reshape->getLoc();
+
+    llvm::SmallVector<IntrinsicArgument, 4> inArgs;
+    mlir::Value array = reshape.getArray();
+    inArgs.push_back({array, array.getType()});
+    mlir::Value shape = reshape.getShape();
+    inArgs.push_back({shape, shape.getType()});
+    mlir::Type noneType = builder.getNoneType();
+    mlir::Value pad = reshape.getPad();
+    inArgs.push_back({pad, pad ? pad.getType() : noneType});
+    mlir::Value order = reshape.getOrder();
+    inArgs.push_back({order, order ? order.getType() : noneType});
+
+    auto *argLowering = fir::getIntrinsicArgumentLowering("reshape");
+    llvm::SmallVector<fir::ExtendedValue, 4> args =
+        lowerArguments(reshape, inArgs, rewriter, argLowering);
+
+    mlir::Type scalarResultType =
+        hlfir::getFortranElementType(reshape.getType());
+
+    auto [resultExv, mustBeFreed] =
+        fir::genIntrinsicCall(builder, loc, "reshape", scalarResultType, args);
+
+    processReturnValue(reshape, resultExv, mustBeFreed, builder, rewriter);
+    return mlir::success();
+  }
+};
+
 class LowerHLFIRIntrinsics
     : public hlfir::impl::LowerHLFIRIntrinsicsBase<LowerHLFIRIntrinsics> {
 public:
@@ -501,13 +542,12 @@ public:
     mlir::ModuleOp module = this->getOperation();
     mlir::MLIRContext *context = &getContext();
     mlir::RewritePatternSet patterns(context);
-    patterns
-        .insert<MatmulOpConversion, MatmulTransposeOpConversion,
-                AllOpConversion, AnyOpConversion, SumOpConversion,
-                ProductOpConversion, TransposeOpConversion, CountOpConversion,
-                DotProductOpConversion, MaxvalOpConversion, MinvalOpConversion,
-                MinlocOpConversion, MaxlocOpConversion, CShiftOpConversion>(
-            context);
+    patterns.insert<
+        MatmulOpConversion, MatmulTransposeOpConversion, AllOpConversion,
+        AnyOpConversion, SumOpConversion, ProductOpConversion,
+        TransposeOpConversion, CountOpConversion, DotProductOpConversion,
+        MaxvalOpConversion, MinvalOpConversion, MinlocOpConversion,
+        MaxlocOpConversion, CShiftOpConversion, ReshapeOpConversion>(context);
 
     // While conceptually this pass is performing dialect conversion, we use
     // pattern rewrites here instead of dialect conversion because this pass
@@ -517,8 +557,8 @@ public:
     // Pattern rewriting only requires that the resulting IR is still valid
     mlir::GreedyRewriteConfig config;
     // Prevent the pattern driver from merging blocks
-    config.enableRegionSimplification =
-        mlir::GreedySimplifyRegionLevel::Disabled;
+    config.setRegionSimplificationLevel(
+        mlir::GreedySimplifyRegionLevel::Disabled);
 
     if (mlir::failed(
             mlir::applyPatternsGreedily(module, std::move(patterns), config))) {

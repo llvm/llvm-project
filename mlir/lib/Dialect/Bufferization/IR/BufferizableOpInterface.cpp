@@ -107,7 +107,23 @@ Region *AnalysisState::getEnclosingRepetitiveRegion(
   return region;
 }
 
-void AnalysisState::resetCache() { enclosingRepetitiveRegionCache.clear(); }
+bool AnalysisState::insideMutuallyExclusiveRegions(Operation *op0,
+                                                   Operation *op1) {
+  auto key = std::make_pair(op0, op1);
+  if (auto iter = insideMutuallyExclusiveRegionsCache.find(key);
+      iter != insideMutuallyExclusiveRegionsCache.end())
+    return iter->second;
+  bool result = ::mlir::insideMutuallyExclusiveRegions(op0, op1);
+  // Populate results for both orderings of the ops.
+  insideMutuallyExclusiveRegionsCache[key] = result;
+  insideMutuallyExclusiveRegionsCache[std::make_pair(op1, op0)] = result;
+  return result;
+}
+
+void AnalysisState::resetCache() {
+  enclosingRepetitiveRegionCache.clear();
+  insideMutuallyExclusiveRegionsCache.clear();
+}
 
 Region *bufferization::getNextEnclosingRepetitiveRegion(
     Region *region, const BufferizationOptions &options) {

@@ -16,14 +16,12 @@ libc_test(
         "exception_status_test.cpp",
         "excepts.h",
     ],
-    libc_function_deps = [
+    deps = [
+        "//libc:__support_fputil_fenv_impl",
         "//libc:feclearexcept",
         "//libc:feraiseexcept",
         "//libc:fesetexcept",
         "//libc:fetestexcept",
-    ],
-    deps = [
-        "//libc:__support_fputil_fenv_impl",
         "//libc:hdr_fenv_macros",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
@@ -35,11 +33,9 @@ libc_test(
         "excepts.h",
         "rounding_mode_test.cpp",
     ],
-    libc_function_deps = [
+    deps = [
         "//libc:fegetround",
         "//libc:fesetround",
-    ],
-    deps = [
         "//libc:hdr_fenv_macros",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
@@ -51,16 +47,14 @@ libc_test(
         "enabled_exceptions_test.cpp",
         "excepts.h",
     ],
-    libc_function_deps = [
-        "//libc:feclearexcept",
-        "//libc:feraiseexcept",
-        "//libc:fetestexcept",
-    ],
     tags = ["nosan"],
     deps = [
         "//libc:__support_common",
         "//libc:__support_fputil_fenv_impl",
         "//libc:__support_macros_properties_architectures",
+        "//libc:feclearexcept",
+        "//libc:feraiseexcept",
+        "//libc:fetestexcept",
         "//libc:hdr_fenv_macros",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
@@ -72,14 +66,12 @@ libc_test(
         "excepts.h",
         "feholdexcept_test.cpp",
     ],
-    libc_function_deps = [
-        "//libc:feholdexcept",
-    ],
     tags = ["nosan"],
     deps = [
         "//libc:__support_common",
         "//libc:__support_fputil_fenv_impl",
         "//libc:__support_macros_properties_architectures",
+        "//libc:feholdexcept",
         "//libc:hdr_fenv_macros",
         "//libc:types_fenv_t",
         "//libc/test/UnitTest:fp_test_helpers",
@@ -92,13 +84,11 @@ libc_test(
         "exception_flags_test.cpp",
         "excepts.h",
     ],
-    libc_function_deps = [
+    deps = [
+        "//libc:__support_fputil_fenv_impl",
         "//libc:fegetexceptflag",
         "//libc:fesetexceptflag",
         "//libc:fetestexceptflag",
-    ],
-    deps = [
-        "//libc:__support_fputil_fenv_impl",
         "//libc:hdr_fenv_macros",
         "//libc:types_fexcept_t",
         "//libc/test/UnitTest:fp_test_helpers",
@@ -111,11 +101,9 @@ libc_test(
         "excepts.h",
         "feclearexcept_test.cpp",
     ],
-    libc_function_deps = [
-        "//libc:feclearexcept",
-    ],
     deps = [
         "//libc:__support_fputil_fenv_impl",
+        "//libc:feclearexcept",
         "//libc:hdr_fenv_macros",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
@@ -127,14 +115,12 @@ libc_test(
         "excepts.h",
         "feenableexcept_test.cpp",
     ],
-    libc_function_deps = [
-        "//libc:fedisableexcept",
-        "//libc:feenableexcept",
-        "//libc:fegetexcept",
-    ],
     deps = [
         "//libc:__support_common",
         "//libc:__support_macros_properties_architectures",
+        "//libc:fedisableexcept",
+        "//libc:feenableexcept",
+        "//libc:fegetexcept",
         "//libc:hdr_fenv_macros",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
@@ -146,11 +132,9 @@ libc_test(
         "excepts.h",
         "feupdateenv_test.cpp",
     ],
-    libc_function_deps = [
-        "//libc:feupdateenv",
-    ],
     deps = [
         "//libc:__support_fputil_fenv_impl",
+        "//libc:feupdateenv",
         "//libc:hdr_fenv_macros",
         "//libc:types_fenv_t",
         "//libc/test/UnitTest:fp_test_helpers",
@@ -163,15 +147,13 @@ libc_test(
         "excepts.h",
         "getenv_and_setenv_test.cpp",
     ],
-    libc_function_deps = [
+    deps = [
+        "//libc:__support_fputil_fenv_impl",
+        "//libc:__support_macros_properties_os",
         "//libc:fegetenv",
         "//libc:fegetround",
         "//libc:fesetenv",
         "//libc:fesetround",
-    ],
-    deps = [
-        "//libc:__support_fputil_fenv_impl",
-        "//libc:__support_macros_properties_os",
         "//libc:hdr_fenv_macros",
         "//libc:types_fenv_t",
         "//libc/test/UnitTest:fp_test_helpers",

@@ -96,22 +96,6 @@ public:
 
   bool operator!() const { return impl == nullptr; }
 
-  template <typename... Tys>
-  [[deprecated("Use mlir::isa<U>() instead")]]
-  bool isa() const;
-  template <typename... Tys>
-  [[deprecated("Use mlir::isa_and_nonnull<U>() instead")]]
-  bool isa_and_nonnull() const;
-  template <typename U>
-  [[deprecated("Use mlir::dyn_cast<U>() instead")]]
-  U dyn_cast() const;
-  template <typename U>
-  [[deprecated("Use mlir::dyn_cast_or_null<U>() instead")]]
-  U dyn_cast_or_null() const;
-  template <typename U>
-  [[deprecated("Use mlir::cast<U>() instead")]]
-  U cast() const;
-
   /// Return a unique identifier for the concrete type. This is used to support
   /// dynamic type casting.
   TypeID getTypeID() { return impl->getAbstractType().getTypeID(); }
@@ -125,17 +109,6 @@ public:
   // Convenience predicates.  This is only for floating point types,
   // derived types should use isa/dyn_cast.
   bool isIndex() const;
-  bool isFloat4E2M1FN() const;
-  bool isFloat6E2M3FN() const;
-  bool isFloat6E3M2FN() const;
-  bool isFloat8E5M2() const;
-  bool isFloat8E4M3() const;
-  bool isFloat8E4M3FN() const;
-  bool isFloat8E5M2FNUZ() const;
-  bool isFloat8E4M3FNUZ() const;
-  bool isFloat8E4M3B11FNUZ() const;
-  bool isFloat8E3M4() const;
-  bool isFloat8E8M0FNU() const;
   bool isBF16() const;
   bool isF16() const;
   bool isTF32() const;
@@ -143,6 +116,9 @@ public:
   bool isF64() const;
   bool isF80() const;
   bool isF128() const;
+  /// Return true if this is an float type (with the specified width).
+  bool isFloat() const;
+  bool isFloat(unsigned width) const;
 
   /// Return true if this is an integer type (with the specified width).
   bool isInteger() const;
@@ -325,31 +301,6 @@ using IsMutable = detail::StorageUserTrait::IsMutable<ConcreteType>;
 // Make Type hashable.
 inline ::llvm::hash_code hash_value(Type arg) {
   return DenseMapInfo<const Type::ImplType *>::getHashValue(arg.impl);
-}
-
-template <typename... Tys>
-bool Type::isa() const {
-  return llvm::isa<Tys...>(*this);
-}
-
-template <typename... Tys>
-bool Type::isa_and_nonnull() const {
-  return llvm::isa_and_present<Tys...>(*this);
-}
-
-template <typename U>
-U Type::dyn_cast() const {
-  return llvm::dyn_cast<U>(*this);
-}
-
-template <typename U>
-U Type::dyn_cast_or_null() const {
-  return llvm::dyn_cast_or_null<U>(*this);
-}
-
-template <typename U>
-U Type::cast() const {
-  return llvm::cast<U>(*this);
 }
 
 } // namespace mlir

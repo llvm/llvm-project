@@ -770,7 +770,7 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
     // instruction in the block.
     auto *TI = BBToCheck.getTerminator();
     bool isUnreachable = isa<UnreachableInst>(TI);
-    return !isUnreachable || BBToCheck.getFirstNonPHIOrDbg() != TI;
+    return !isUnreachable || &*BBToCheck.getFirstNonPHIOrDbg() != TI;
   };
 
   SmallVector<int, 4> ExitCaseIndices;
@@ -2762,7 +2762,6 @@ static BranchInst *turnSelectIntoBranch(SelectInst *SI, DominatorTree &DT,
 static BranchInst *turnGuardIntoBranch(IntrinsicInst *GI, Loop &L,
                                        DominatorTree &DT, LoopInfo &LI,
                                        MemorySSAUpdater *MSSAU) {
-  SmallVector<DominatorTree::UpdateType, 4> DTUpdates;
   LLVM_DEBUG(dbgs() << "Turning " << *GI << " into a branch.\n");
   BasicBlock *CheckBB = GI->getParent();
 
@@ -2786,7 +2785,7 @@ static BranchInst *turnGuardIntoBranch(IntrinsicInst *GI, Loop &L,
   if (MSSAU)
     MSSAU->moveAllAfterSpliceBlocks(CheckBB, GuardedBlock, GI);
 
-  GI->moveBefore(DeoptBlockTerm);
+  GI->moveBefore(DeoptBlockTerm->getIterator());
   GI->setArgOperand(0, ConstantInt::getFalse(GI->getContext()));
 
   if (MSSAU) {
@@ -3303,8 +3302,8 @@ static bool isSafeForNoNTrivialUnswitching(Loop &L, LoopInfo &LI) {
   // FIXME: We should teach SplitBlock to handle this and remove this
   // restriction.
   for (auto *ExitBB : ExitBlocks) {
-    auto *I = ExitBB->getFirstNonPHI();
-    if (isa<CleanupPadInst>(I) || isa<CatchSwitchInst>(I)) {
+    auto It = ExitBB->getFirstNonPHIIt();
+    if (isa<CleanupPadInst>(It) || isa<CatchSwitchInst>(It)) {
       LLVM_DEBUG(dbgs() << "Cannot unswitch because of cleanuppad/catchswitch "
                            "in exit block\n");
       return false;
@@ -3641,14 +3640,12 @@ static bool unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI,
     }
     // Next check all loops nested within L.
     SmallVector<const Loop *, 4> Worklist;
-    Worklist.insert(Worklist.end(), L->getSubLoops().begin(),
-                    L->getSubLoops().end());
+    llvm::append_range(Worklist, L->getSubLoops());
     while (!Worklist.empty()) {
       auto *CurLoop = Worklist.pop_back_val();
       if (!PSI->isColdBlock(CurLoop->getHeader(), BFI))
         return false;
-      Worklist.insert(Worklist.end(), CurLoop->getSubLoops().begin(),
-                      CurLoop->getSubLoops().end());
+      llvm::append_range(Worklist, CurLoop->getSubLoops());
     }
     return true;
   };

@@ -121,7 +121,7 @@ private:
 } // namespace
 
 TypeSanitizer::TypeSanitizer(Module &M)
-    : TargetTriple(Triple(M.getTargetTriple())),
+    : TargetTriple(M.getTargetTriple()),
       AnonNameRegex("^_ZTS.*N[1-9][0-9]*_GLOBAL__N") {
   const DataLayout &DL = M.getDataLayout();
   IntptrTy = DL.getIntPtrType(M.getContext());
@@ -497,13 +497,8 @@ void collectMemAccessInfo(
       if (CallInst *CI = dyn_cast<CallInst>(&Inst))
         maybeMarkSanitizerLibraryCallNoBuiltin(CI, &TLI);
 
-      if (isa<MemIntrinsic>(Inst)) {
+      if (isa<MemIntrinsic, LifetimeIntrinsic>(Inst))
         MemTypeResetInsts.push_back(&Inst);
-      } else if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
-        if (II->getIntrinsicID() == Intrinsic::lifetime_start ||
-            II->getIntrinsicID() == Intrinsic::lifetime_end)
-          MemTypeResetInsts.push_back(&Inst);
-      }
     } else if (isa<AllocaInst>(Inst)) {
       MemTypeResetInsts.push_back(&Inst);
     }
@@ -598,7 +593,7 @@ bool TypeSanitizer::instrumentWithShadowUpdate(
 
   Value *ShadowDataInt = convertToShadowDataInt(IRB, Ptr, IntptrTy, PtrShift,
                                                 ShadowBase, AppMemMask);
-  Type *Int8PtrPtrTy = PointerType::get(IRB.getPtrTy(), 0);
+  Type *Int8PtrPtrTy = PointerType::get(IRB.getContext(), 0);
   Value *ShadowData =
       IRB.CreateIntToPtr(ShadowDataInt, Int8PtrPtrTy, "shadow.ptr");
 
@@ -819,11 +814,7 @@ bool TypeSanitizer::instrumentMemInst(Value *V, Instruction *ShadowBase,
           NeedsMemMove = isa<MemMoveInst>(MTI);
         }
       }
-    } else if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-      if (II->getIntrinsicID() != Intrinsic::lifetime_start &&
-          II->getIntrinsicID() != Intrinsic::lifetime_end)
-        return false;
-
+    } else if (auto *II = dyn_cast<LifetimeIntrinsic>(I)) {
       Size = II->getArgOperand(0);
       Dest = II->getArgOperand(1);
     } else if (auto *AI = dyn_cast<AllocaInst>(I)) {

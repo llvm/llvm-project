@@ -81,6 +81,15 @@ namespace llvm {
     // marker instruction.
     CALL_RVMARKER,
 
+    /// The same as ISD::CopyFromReg except that this node makes it explicit
+    /// that it may lower to an x87 FPU stack pop. Optimizations should be more
+    /// cautious when handling this node than a normal CopyFromReg to avoid
+    /// removing a required FPU stack pop. A key requirement is optimizations
+    /// should not optimize any users of a chain that contains a
+    /// POP_FROM_X87_REG to use a chain from a point earlier than the
+    /// POP_FROM_X87_REG (which may remove a required FPU stack pop).
+    POP_FROM_X87_REG,
+
     /// X86 compare and logical compare instructions.
     CMP,
     FCMP,
@@ -625,26 +634,26 @@ namespace llvm {
 
     MPSADBW,
 
-    VCVTNE2PH2BF8,
-    VCVTNE2PH2BF8S,
-    VCVTNE2PH2HF8,
-    VCVTNE2PH2HF8S,
+    VCVT2PH2BF8,
+    VCVT2PH2BF8S,
+    VCVT2PH2HF8,
+    VCVT2PH2HF8S,
     VCVTBIASPH2BF8,
     VCVTBIASPH2BF8S,
     VCVTBIASPH2HF8,
     VCVTBIASPH2HF8S,
-    VCVTNEPH2BF8,
-    VCVTNEPH2BF8S,
-    VCVTNEPH2HF8,
-    VCVTNEPH2HF8S,
+    VCVTPH2BF8,
+    VCVTPH2BF8S,
+    VCVTPH2HF8,
+    VCVTPH2HF8S,
     VMCVTBIASPH2BF8,
     VMCVTBIASPH2BF8S,
     VMCVTBIASPH2HF8,
     VMCVTBIASPH2HF8S,
-    VMCVTNEPH2BF8,
-    VMCVTNEPH2BF8S,
-    VMCVTNEPH2HF8,
-    VMCVTNEPH2HF8S,
+    VMCVTPH2BF8,
+    VMCVTPH2BF8S,
+    VMCVTPH2HF8,
+    VMCVTPH2HF8S,
     VCVTHF82PH,
 
     // Compress and expand.
@@ -1328,8 +1337,8 @@ namespace llvm {
                                    unsigned Depth) const override;
 
     bool isTargetCanonicalConstantNode(SDValue Op) const override {
-      // Peek through bitcasts/extracts/inserts to see if we have a broadcast
-      // vector from memory.
+      // Peek through bitcasts/extracts/inserts to see if we have a vector
+      // load/broadcast from memory.
       while (Op.getOpcode() == ISD::BITCAST ||
              Op.getOpcode() == ISD::EXTRACT_SUBVECTOR ||
              (Op.getOpcode() == ISD::INSERT_SUBVECTOR &&
@@ -1337,6 +1346,9 @@ namespace llvm {
         Op = Op.getOperand(Op.getOpcode() == ISD::INSERT_SUBVECTOR ? 1 : 0);
 
       return Op.getOpcode() == X86ISD::VBROADCAST_LOAD ||
+             Op.getOpcode() == X86ISD::SUBV_BROADCAST_LOAD ||
+             (Op.getOpcode() == ISD::LOAD &&
+              getTargetConstantFromLoad(cast<LoadSDNode>(Op))) ||
              TargetLowering::isTargetCanonicalConstantNode(Op);
     }
 
@@ -1492,8 +1504,9 @@ namespace llvm {
 
     /// Return true if we believe it is correct and profitable to reduce the
     /// load node to a smaller type.
-    bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy,
-                               EVT NewVT) const override;
+    bool
+    shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy, EVT NewVT,
+                          std::optional<unsigned> ByteOffset) const override;
 
     /// Return true if the specified scalar FP type is computed in an SSE
     /// register, not on the X87 floating point stack.
@@ -1603,6 +1616,10 @@ namespace llvm {
     unsigned getVectorTypeBreakdownForCallingConv(
         LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
         unsigned &NumIntermediates, MVT &RegisterVT) const override;
+
+    bool functionArgumentNeedsConsecutiveRegisters(
+        Type *Ty, CallingConv::ID CallConv, bool isVarArg,
+        const DataLayout &DL) const override;
 
     bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
 
@@ -1803,7 +1820,8 @@ namespace llvm {
     bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                         bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &Outs,
-                        LLVMContext &Context) const override;
+                        LLVMContext &Context,
+                        const Type *RetTy) const override;
 
     const MCPhysReg *getScratchRegisters(CallingConv::ID CC) const override;
     ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;

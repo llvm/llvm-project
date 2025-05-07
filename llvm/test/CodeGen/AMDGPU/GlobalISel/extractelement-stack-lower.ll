@@ -28,7 +28,8 @@ define i32 @v_extract_v64i32_varidx(ptr addrspace(1) %ptr, i32 %idx) {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v2, 2, v2
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
-; GFX12-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX12-NEXT:    s_wait_alu 0xfffd
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX12-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -60,7 +61,8 @@ define i16 @v_extract_v128i16_varidx(ptr addrspace(1) %ptr, i32 %idx) {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v2, 1, v2
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
-; GFX12-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX12-NEXT:    s_wait_alu 0xfffd
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX12-NEXT:    global_load_u16 v0, v[0:1], off
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -92,7 +94,8 @@ define i64 @v_extract_v32i64_varidx(ptr addrspace(1) %ptr, i32 %idx) {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v2, 3, v2
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
-; GFX12-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX12-NEXT:    s_wait_alu 0xfffd
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX12-NEXT:    global_load_b64 v[0:1], v[0:1], off
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]

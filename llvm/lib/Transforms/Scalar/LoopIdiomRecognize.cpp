@@ -20,8 +20,7 @@
 //
 // TODO List:
 //
-// Future loop memory idioms to recognize:
-//   memcmp, strlen, etc.
+// Future loop memory idioms to recognize: memcmp, etc.
 //
 // This could recognize common matrix multiplies and dot product idioms and
 // replace them with calls to BLAS (if linked in??).
@@ -33,6 +32,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -97,6 +97,7 @@ using namespace llvm;
 STATISTIC(NumMemSet, "Number of memset's formed from loop stores");
 STATISTIC(NumMemCpy, "Number of memcpy's formed from loop load+stores");
 STATISTIC(NumMemMove, "Number of memmove's formed from loop load+stores");
+STATISTIC(NumStrLen, "Number of strlen's and wcslen's formed from loop loads");
 STATISTIC(
     NumShiftUntilBitTest,
     "Number of uncountable loops recognized as 'shift until bitttest' idiom");
@@ -125,6 +126,22 @@ static cl::opt<bool, true>
                                "not convert loop(s) to memcpy."),
                       cl::location(DisableLIRP::Memcpy), cl::init(false),
                       cl::ReallyHidden);
+
+bool DisableLIRP::Strlen;
+static cl::opt<bool, true>
+    DisableLIRPStrlen("disable-loop-idiom-strlen",
+                      cl::desc("Proceed with loop idiom recognize pass, but do "
+                               "not convert loop(s) to strlen."),
+                      cl::location(DisableLIRP::Strlen), cl::init(false),
+                      cl::ReallyHidden);
+
+bool DisableLIRP::Wcslen;
+static cl::opt<bool, true>
+    EnableLIRPWcslen("disable-loop-idiom-wcslen",
+                     cl::desc("Proceed with loop idiom recognize pass, "
+                              "enable conversion of loop(s) to wcslen."),
+                     cl::location(DisableLIRP::Wcslen), cl::init(false),
+                     cl::ReallyHidden);
 
 static cl::opt<bool> UseLIRCodeSizeHeurs(
     "use-lir-code-size-heurs",
@@ -246,6 +263,7 @@ private:
 
   bool recognizeShiftUntilBitTest();
   bool recognizeShiftUntilZero();
+  bool recognizeAndInsertStrLen();
 
   /// @}
 };
@@ -295,7 +313,8 @@ bool LoopIdiomRecognize::runOnLoop(Loop *L) {
 
   // Disable loop idiom recognition if the function's name is a common idiom.
   StringRef Name = L->getHeader()->getParent()->getName();
-  if (Name == "memset" || Name == "memcpy")
+  if (Name == "memset" || Name == "memcpy" || Name == "strlen" ||
+      Name == "wcslen")
     return false;
 
   // Determine if code size heuristics need to be applied.
@@ -719,7 +738,7 @@ bool LoopIdiomRecognize::processLoopStores(SmallVectorImpl<StoreInst *> &SL,
                                 MaybeAlign(HeadStore->getAlign()), StoredVal,
                                 HeadStore, AdjacentStores, StoreEv, BECount,
                                 IsNegStride)) {
-      TransformedStores.insert(AdjacentStores.begin(), AdjacentStores.end());
+      TransformedStores.insert_range(AdjacentStores);
       Changed = true;
     }
   }
@@ -761,7 +780,7 @@ bool LoopIdiomRecognize::processLoopMemCpy(MemCpyInst *MCI,
     return false;
 
   // If we're not allowed to hack on memcpy, we fail.
-  if ((!HasMemcpy && !isa<MemCpyInlineInst>(MCI)) || DisableLIRP::Memcpy)
+  if ((!HasMemcpy && !MCI->isForceInlined()) || DisableLIRP::Memcpy)
     return false;
 
   Value *Dest = MCI->getDest();
@@ -1248,7 +1267,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
   // FIXME: until llvm.memcpy.inline supports dynamic sizes, we need to
   // conservatively bail here, since otherwise we may have to transform
   // llvm.memcpy.inline into llvm.memcpy which is illegal.
-  if (isa<MemCpyInlineInst>(TheStore))
+  if (auto *MCI = dyn_cast<MemCpyInst>(TheStore); MCI && MCI->isForceInlined())
     return false;
 
   // The trip count of the loop and the base pointer of the addrec SCEV is
@@ -1358,7 +1377,29 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
     return Changed;
   }
 
+  bool IsAtomic = TheStore->isAtomic() || TheLoad->isAtomic();
   bool UseMemMove = IsMemCpy ? Verifier.IsSameObject : LoopAccessStore;
+
+  if (IsAtomic) {
+    // For now don't support unordered atomic memmove.
+    if (UseMemMove)
+      return Changed;
+
+    // We cannot allow unaligned ops for unordered load/store, so reject
+    // anything where the alignment isn't at least the element size.
+    assert((StoreAlign && LoadAlign) &&
+           "Expect unordered load/store to have align.");
+    if (*StoreAlign < StoreSize || *LoadAlign < StoreSize)
+      return Changed;
+
+    // If the element.atomic memcpy is not lowered into explicit
+    // loads/stores later, then it will be lowered into an element-size
+    // specific lib call. If the lib call doesn't exist for our store size, then
+    // we shouldn't generate the memcpy.
+    if (StoreSize > TTI->getAtomicMemIntrinsicMaxElementSize())
+      return Changed;
+  }
+
   if (UseMemMove)
     if (!Verifier.loadAndStoreMayFormMemmove(StoreSize, IsNegStride, *TheLoad,
                                              IsMemCpy))
@@ -1387,7 +1428,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
   // Check whether to generate an unordered atomic memcpy:
   //  If the load or store are atomic, then they must necessarily be unordered
   //  by previous checks.
-  if (!TheStore->isAtomic() && !TheLoad->isAtomic()) {
+  if (!IsAtomic) {
     if (UseMemMove)
       NewCall = Builder.CreateMemMove(
           StoreBasePtr, StoreAlign, LoadBasePtr, LoadAlign, NumBytes,
@@ -1398,23 +1439,6 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
                                NumBytes, /*isVolatile=*/false, AATags.TBAA,
                                AATags.TBAAStruct, AATags.Scope, AATags.NoAlias);
   } else {
-    // For now don't support unordered atomic memmove.
-    if (UseMemMove)
-      return Changed;
-    // We cannot allow unaligned ops for unordered load/store, so reject
-    // anything where the alignment isn't at least the element size.
-    assert((StoreAlign && LoadAlign) &&
-           "Expect unordered load/store to have align.");
-    if (*StoreAlign < StoreSize || *LoadAlign < StoreSize)
-      return Changed;
-
-    // If the element.atomic memcpy is not lowered into explicit
-    // loads/stores later, then it will be lowered into an element-size
-    // specific lib call. If the lib call doesn't exist for our store size, then
-    // we shouldn't generate the memcpy.
-    if (StoreSize > TTI->getAtomicMemIntrinsicMaxElementSize())
-      return Changed;
-
     // Create the call.
     // Note that unordered atomic loads/stores are *required* by the spec to
     // have an alignment but non-atomic loads/stores may not.
@@ -1489,7 +1513,7 @@ bool LoopIdiomRecognize::runOnNoncountableLoop() {
 
   return recognizePopcount() || recognizeAndInsertFFS() ||
          recognizeShiftUntilBitTest() || recognizeShiftUntilZero() ||
-         recognizeShiftUntilLessThan();
+         recognizeShiftUntilLessThan() || recognizeAndInsertStrLen();
 }
 
 /// Check if the given conditional branch is based on the comparison between
@@ -1507,7 +1531,7 @@ static Value *matchCondition(BranchInst *BI, BasicBlock *LoopEntry,
   if (!Cond)
     return nullptr;
 
-  ConstantInt *CmpZero = dyn_cast<ConstantInt>(Cond->getOperand(1));
+  auto *CmpZero = dyn_cast<ConstantInt>(Cond->getOperand(1));
   if (!CmpZero || !CmpZero->isZero())
     return nullptr;
 
@@ -1522,6 +1546,290 @@ static Value *matchCondition(BranchInst *BI, BasicBlock *LoopEntry,
     return Cond->getOperand(0);
 
   return nullptr;
+}
+
+namespace {
+
+class StrlenVerifier {
+public:
+  explicit StrlenVerifier(const Loop *CurLoop, ScalarEvolution *SE,
+                          const TargetLibraryInfo *TLI)
+      : CurLoop(CurLoop), SE(SE), TLI(TLI) {}
+
+  bool isValidStrlenIdiom() {
+    // Give up if the loop has multiple blocks, multiple backedges, or
+    // multiple exit blocks
+    if (CurLoop->getNumBackEdges() != 1 || CurLoop->getNumBlocks() != 1 ||
+        !CurLoop->getUniqueExitBlock())
+      return false;
+
+    // It should have a preheader and a branch instruction.
+    BasicBlock *Preheader = CurLoop->getLoopPreheader();
+    if (!Preheader)
+      return false;
+
+    BranchInst *EntryBI = dyn_cast<BranchInst>(Preheader->getTerminator());
+    if (!EntryBI)
+      return false;
+
+    // The loop exit must be conditioned on an icmp with 0 the null terminator.
+    // The icmp operand has to be a load on some SSA reg that increments
+    // by 1 in the loop.
+    BasicBlock *LoopBody = *CurLoop->block_begin();
+
+    // Skip if the body is too big as it most likely is not a strlen idiom.
+    if (!LoopBody || LoopBody->size() >= 15)
+      return false;
+
+    BranchInst *LoopTerm = dyn_cast<BranchInst>(LoopBody->getTerminator());
+    Value *LoopCond = matchCondition(LoopTerm, LoopBody);
+    if (!LoopCond)
+      return false;
+
+    LoadInst *LoopLoad = dyn_cast<LoadInst>(LoopCond);
+    if (!LoopLoad || LoopLoad->getPointerAddressSpace() != 0)
+      return false;
+
+    OperandType = LoopLoad->getType();
+    if (!OperandType || !OperandType->isIntegerTy())
+      return false;
+
+    // See if the pointer expression is an AddRec with constant step a of form
+    // ({n,+,a}) where a is the width of the char type.
+    Value *IncPtr = LoopLoad->getPointerOperand();
+    const SCEVAddRecExpr *LoadEv =
+        dyn_cast<SCEVAddRecExpr>(SE->getSCEV(IncPtr));
+    if (!LoadEv || LoadEv->getLoop() != CurLoop || !LoadEv->isAffine())
+      return false;
+    LoadBaseEv = LoadEv->getStart();
+
+    LLVM_DEBUG(dbgs() << "pointer load scev: " << *LoadEv << "\n");
+
+    const SCEVConstant *Step =
+        dyn_cast<SCEVConstant>(LoadEv->getStepRecurrence(*SE));
+    if (!Step)
+      return false;
+
+    unsigned StepSize = 0;
+    StepSizeCI = dyn_cast<ConstantInt>(Step->getValue());
+    if (!StepSizeCI)
+      return false;
+    StepSize = StepSizeCI->getZExtValue();
+
+    // Verify that StepSize is consistent with platform char width.
+    OpWidth = OperandType->getIntegerBitWidth();
+    unsigned WcharSize = TLI->getWCharSize(*LoopLoad->getModule());
+    if (OpWidth != StepSize * 8)
+      return false;
+    if (OpWidth != 8 && OpWidth != 16 && OpWidth != 32)
+      return false;
+    if (OpWidth >= 16)
+      if (OpWidth != WcharSize * 8)
+        return false;
+
+    // Scan every instruction in the loop to ensure there are no side effects.
+    for (Instruction &I : *LoopBody)
+      if (I.mayHaveSideEffects())
+        return false;
+
+    BasicBlock *LoopExitBB = CurLoop->getExitBlock();
+    if (!LoopExitBB)
+      return false;
+
+    for (PHINode &PN : LoopExitBB->phis()) {
+      if (!SE->isSCEVable(PN.getType()))
+        return false;
+
+      const SCEV *Ev = SE->getSCEV(&PN);
+      if (!Ev)
+        return false;
+
+      LLVM_DEBUG(dbgs() << "loop exit phi scev: " << *Ev << "\n");
+
+      // Since we verified that the loop trip count will be a valid strlen
+      // idiom, we can expand all lcssa phi with {n,+,1} as (n + strlen) and use
+      // SCEVExpander materialize the loop output.
+      const SCEVAddRecExpr *AddRecEv = dyn_cast<SCEVAddRecExpr>(Ev);
+      if (!AddRecEv || !AddRecEv->isAffine())
+        return false;
+
+      // We only want RecAddExpr with recurrence step that is constant. This
+      // is good enough for all the idioms we want to recognize. Later we expand
+      // and materialize the recurrence as {base,+,a} -> (base + a * strlen)
+      if (!isa<SCEVConstant>(AddRecEv->getStepRecurrence(*SE)))
+        return false;
+    }
+
+    return true;
+  }
+
+public:
+  const Loop *CurLoop;
+  ScalarEvolution *SE;
+  const TargetLibraryInfo *TLI;
+
+  unsigned OpWidth;
+  ConstantInt *StepSizeCI;
+  const SCEV *LoadBaseEv;
+  Type *OperandType;
+};
+
+} // namespace
+
+/// The Strlen Idiom we are trying to detect has the following structure
+///
+/// preheader:
+///   ...
+///   br label %body, ...
+///
+/// body:
+///   ... ; %0 is incremented by a gep
+///   %1 = load i8, ptr %0, align 1
+///   %2 = icmp eq i8 %1, 0
+///   br i1 %2, label %exit, label %body
+///
+/// exit:
+///   %lcssa = phi [%0, %body], ...
+///
+/// We expect the strlen idiom to have a load of a character type that
+/// is compared against '\0', and such load pointer operand must have scev
+/// expression of the form {%str,+,c} where c is a ConstantInt of the
+/// appropiate character width for the idiom, and %str is the base of the string
+/// And, that all lcssa phis have the form {...,+,n} where n is a constant,
+///
+/// When transforming the output of the strlen idiom, the lccsa phi are
+/// expanded using SCEVExpander as {base scev,+,a} -> (base scev + a * strlen)
+/// and all subsequent uses are replaced. For example,
+///
+/// \code{.c}
+///     const char* base = str;
+///     while (*str != '\0')
+///         ++str;
+///     size_t result = str - base;
+/// \endcode
+///
+/// will be transformed as follows: The idiom will be replaced by a strlen
+/// computation to compute the address of the null terminator of the string.
+///
+/// \code{.c}
+///     const char* base = str;
+///     const char* end = base + strlen(str);
+///     size_t result = end - base;
+/// \endcode
+///
+/// In the case we index by an induction variable, as long as the induction
+/// variable has a constant int increment, we can replace all such indvars
+/// with the closed form computation of strlen
+///
+/// \code{.c}
+///     size_t i = 0;
+///     while (str[i] != '\0')
+///         ++i;
+///     size_t result = i;
+/// \endcode
+///
+/// Will be replaced by
+///
+/// \code{.c}
+///     size_t i = 0 + strlen(str);
+///     size_t result = i;
+/// \endcode
+///
+bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
+  if (DisableLIRP::All)
+    return false;
+
+  StrlenVerifier Verifier(CurLoop, SE, TLI);
+
+  if (!Verifier.isValidStrlenIdiom())
+    return false;
+
+  BasicBlock *Preheader = CurLoop->getLoopPreheader();
+  BasicBlock *LoopBody = *CurLoop->block_begin();
+  BasicBlock *LoopExitBB = CurLoop->getExitBlock();
+  BranchInst *LoopTerm = dyn_cast<BranchInst>(LoopBody->getTerminator());
+  assert(Preheader && LoopBody && LoopExitBB && LoopTerm &&
+         "Should be verified to be valid by StrlenVerifier");
+
+  if (Verifier.OpWidth == 8) {
+    if (DisableLIRP::Strlen)
+      return false;
+    if (!isLibFuncEmittable(Preheader->getModule(), TLI, LibFunc_strlen))
+      return false;
+  } else {
+    if (DisableLIRP::Wcslen)
+      return false;
+    if (!isLibFuncEmittable(Preheader->getModule(), TLI, LibFunc_wcslen))
+      return false;
+  }
+
+  IRBuilder<> Builder(Preheader->getTerminator());
+  SCEVExpander Expander(*SE, Preheader->getModule()->getDataLayout(),
+                        "strlen_idiom");
+  Value *MaterialzedBase = Expander.expandCodeFor(
+      Verifier.LoadBaseEv, Verifier.LoadBaseEv->getType(),
+      Builder.GetInsertPoint());
+
+  Value *StrLenFunc = nullptr;
+  if (Verifier.OpWidth == 8) {
+    StrLenFunc = emitStrLen(MaterialzedBase, Builder, *DL, TLI);
+  } else {
+    StrLenFunc = emitWcsLen(MaterialzedBase, Builder, *DL, TLI);
+  }
+  assert(StrLenFunc && "Failed to emit strlen function.");
+
+  const SCEV *StrlenEv = SE->getSCEV(StrLenFunc);
+  SmallVector<PHINode *, 4> Cleanup;
+  for (PHINode &PN : LoopExitBB->phis()) {
+    // We can now materialize the loop output as all phi have scev {base,+,a}.
+    // We expand the phi as:
+    //   %strlen = call i64 @strlen(%str)
+    //   %phi.new = base expression + step * %strlen
+    const SCEV *Ev = SE->getSCEV(&PN);
+    const SCEVAddRecExpr *AddRecEv = dyn_cast<SCEVAddRecExpr>(Ev);
+    const SCEVConstant *Step =
+        dyn_cast<SCEVConstant>(AddRecEv->getStepRecurrence(*SE));
+    const SCEV *Base = AddRecEv->getStart();
+
+    // It is safe to truncate to base since if base is narrower than size_t
+    // the equivalent user code will have to truncate anyways.
+    const SCEV *NewEv = SE->getAddExpr(
+        Base, SE->getMulExpr(Step, SE->getTruncateOrSignExtend(
+                                       StrlenEv, Base->getType())));
+
+    Value *MaterializedPHI = Expander.expandCodeFor(NewEv, NewEv->getType(),
+                                                    Builder.GetInsertPoint());
+    Expander.clear();
+    PN.replaceAllUsesWith(MaterializedPHI);
+    Cleanup.push_back(&PN);
+  }
+
+  // All LCSSA Loop Phi are dead, the left over dead loop body can be cleaned
+  // up by later passes
+  for (PHINode *PN : Cleanup)
+    RecursivelyDeleteDeadPHINode(PN);
+
+  // LoopDeletion only delete invariant loops with known trip-count. We can
+  // update the condition so it will reliablely delete the invariant loop
+  assert(LoopTerm->getNumSuccessors() == 2 &&
+         (LoopTerm->getSuccessor(0) == LoopBody ||
+          LoopTerm->getSuccessor(1) == LoopBody) &&
+         "loop body must have a successor that is it self");
+  ConstantInt *NewLoopCond = LoopTerm->getSuccessor(0) == LoopBody
+                                 ? Builder.getFalse()
+                                 : Builder.getTrue();
+  LoopTerm->setCondition(NewLoopCond);
+  SE->forgetLoop(CurLoop);
+
+  ++NumStrLen;
+  LLVM_DEBUG(dbgs() << "  Formed strlen idiom: " << *StrLenFunc << "\n");
+  ORE.emit([&]() {
+    return OptimizationRemark(DEBUG_TYPE, "recognizeAndInsertStrLen",
+                              CurLoop->getStartLoc(), Preheader)
+           << "Transformed " << StrLenFunc->getName() << " loop idiom";
+  });
+
+  return true;
 }
 
 /// Check if the given conditional branch is based on an unsigned less-than
@@ -1641,8 +1949,8 @@ static bool detectShiftUntilLessThanIdiom(Loop *CurLoop, const DataLayout &DL,
   //       plus "cnt0". Currently it is not optimized.
   //       This step could be used to detect POPCNT instruction:
   //       cnt.next = cnt + (x.next & 1)
-  for (Instruction &Inst : llvm::make_range(
-           LoopEntry->getFirstNonPHI()->getIterator(), LoopEntry->end())) {
+  for (Instruction &Inst :
+       llvm::make_range(LoopEntry->getFirstNonPHIIt(), LoopEntry->end())) {
     if (Inst.getOpcode() != Instruction::Add)
       continue;
 
@@ -1745,8 +2053,8 @@ static bool detectPopcountIdiom(Loop *CurLoop, BasicBlock *PreCondBB,
   // step 4: Find the instruction which count the population: cnt2 = cnt1 + 1
   {
     CountInst = nullptr;
-    for (Instruction &Inst : llvm::make_range(
-             LoopEntry->getFirstNonPHI()->getIterator(), LoopEntry->end())) {
+    for (Instruction &Inst :
+         llvm::make_range(LoopEntry->getFirstNonPHIIt(), LoopEntry->end())) {
       if (Inst.getOpcode() != Instruction::Add)
         continue;
 
@@ -1869,8 +2177,8 @@ static bool detectShiftUntilZeroIdiom(Loop *CurLoop, const DataLayout &DL,
   //       plus "cnt0". Currently it is not optimized.
   //       This step could be used to detect POPCNT instruction:
   //       cnt.next = cnt + (x.next & 1)
-  for (Instruction &Inst : llvm::make_range(
-           LoopEntry->getFirstNonPHI()->getIterator(), LoopEntry->end())) {
+  for (Instruction &Inst :
+       llvm::make_range(LoopEntry->getFirstNonPHIIt(), LoopEntry->end())) {
     if (Inst.getOpcode() != Instruction::Add)
       continue;
 
@@ -2453,14 +2761,11 @@ static bool detectShiftUntilBitTestIdiom(Loop *CurLoop, Value *&BaseX,
                              m_LoopInvariant(m_Shl(m_One(), m_Value(BitPos)),
                                              CurLoop))));
   };
-  auto MatchConstantBitMask = [&]() {
-    return ICmpInst::isEquality(Pred) && match(CmpRHS, m_Zero()) &&
-           match(CmpLHS, m_And(m_Value(CurrX),
-                               m_CombineAnd(m_Value(BitMask), m_Power2()))) &&
-           (BitPos = ConstantExpr::getExactLogBase2(cast<Constant>(BitMask)));
-  };
+
   auto MatchDecomposableConstantBitMask = [&]() {
-    auto Res = llvm::decomposeBitTestICmp(CmpLHS, CmpRHS, Pred);
+    auto Res = llvm::decomposeBitTestICmp(
+        CmpLHS, CmpRHS, Pred, /*LookThroughTrunc=*/true,
+        /*AllowNonZeroC=*/false, /*DecomposeAnd=*/true);
     if (Res && Res->Mask.isPowerOf2()) {
       assert(ICmpInst::isEquality(Res->Pred));
       Pred = Res->Pred;
@@ -2472,8 +2777,7 @@ static bool detectShiftUntilBitTestIdiom(Loop *CurLoop, Value *&BaseX,
     return false;
   };
 
-  if (!MatchVariableBitMask() && !MatchConstantBitMask() &&
-      !MatchDecomposableConstantBitMask()) {
+  if (!MatchVariableBitMask() && !MatchDecomposableConstantBitMask()) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE " Bad backedge comparison.\n");
     return false;
   }

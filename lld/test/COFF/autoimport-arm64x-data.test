@@ -1,0 +1,75 @@
+# REQUIRES: aarch64
+RUN: split-file %s %t.dir && cd %t.dir
+
+RUN: llvm-lib -machine:arm64x -out:libtest.a -defArm64Native:test.def -def:test.def
+RUN: llvm-mc -triple=arm64ec-windows-gnu arm64ec.s -filetype=obj -o arm64ec.obj
+RUN: llvm-mc -triple=aarch64-windows-gnu aarch64.s -filetype=obj -o aarch64.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %S/Inputs/loadconfig-arm64ec.s -o loadconfig-arm64ec.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows %S/Inputs/loadconfig-arm64.s -o loadconfig-arm64.obj
+
+RUN: lld-link -machine:arm64x -out:out.dll -dll -noentry arm64ec.obj aarch64.obj libtest.a loadconfig-arm64.obj loadconfig-arm64ec.obj -lldmingw
+
+RUN: llvm-readobj --coff-imports out.dll | FileCheck -check-prefix=IMPORTS %s
+RUN: llvm-objdump -s out.dll | FileCheck --check-prefix=CONTENTS %s
+
+IMPORTS:      Import {
+IMPORTS-NEXT:   Name: test.dll
+IMPORTS-NEXT:   ImportLookupTableRVA: 0x5{{.*}}
+IMPORTS-NEXT:   ImportAddressTableRVA: 0x4000
+IMPORTS-NEXT:   Symbol: variable (0)
+IMPORTS-NEXT: }
+IMPORTS-NEXT: HybridObject {
+IMPORTS:        Import {
+IMPORTS-NEXT:     Name: test.dll
+IMPORTS-NEXT:     ImportLookupTableRVA: 0x5{{.*}}
+IMPORTS-NEXT:     ImportAddressTableRVA: 0x4000
+IMPORTS-NEXT:     Symbol: variable (0)
+IMPORTS-NEXT:   }
+IMPORTS-NEXT: }
+
+Native ARM64 runtime pseudo relocation list header at 0x5164, consisting of 0x0, 0x0, 0x1.
+The runtime pseudo relocation is from an aarch64.obj object file, with import from 0x4000,
+applied at 0x9018 with a size of 64 bits. ARM64EC runtime pseudo relocation list header at
+0x517c, consisting of 0x0, 0x0, 0x1. The runtime pseudo relocation is from arm64ec.obj
+object file, with import from 0x4000, applied at 0x9000 with a size of 64 bits.
+
+CONTENTS: Contents of section .rdata:
+CONTENTS:  180005160 00300000 00000000 00000000 01000000
+CONTENTS:  180005170 00400000 18900000 40000000 00000000
+CONTENTS:  180005180 00000000 01000000 00400000 00900000
+CONTENTS:  180005190 40000000
+
+CONTENTS:      Contents of section .test:
+CONTENTS-NEXT:  180009000 00400080 01000000 7c510080 01000000
+CONTENTS-NEXT:  180009010 94510080 01000000 00400080 01000000
+CONTENTS-NEXT:  180009020 64510080 01000000 7c510080 01000000
+
+#--- arm64ec.s
+    .text
+    .global "#_pei386_runtime_relocator"
+"#_pei386_runtime_relocator":
+    ret
+
+    .weak_anti_dep _pei386_runtime_relocator
+.set _pei386_runtime_relocator,"#_pei386_runtime_relocator"
+
+    .section .test,"dr"
+    .quad variable
+    .quad __RUNTIME_PSEUDO_RELOC_LIST__
+    .quad __RUNTIME_PSEUDO_RELOC_LIST_END__
+
+#--- aarch64.s
+    .text
+    .global _pei386_runtime_relocator
+_pei386_runtime_relocator:
+    ret
+
+    .section .test,"dr"
+    .quad variable
+    .quad __RUNTIME_PSEUDO_RELOC_LIST__
+    .quad __RUNTIME_PSEUDO_RELOC_LIST_END__
+
+#--- test.def
+LIBRARY test.dll
+EXPORTS
+    variable DATA

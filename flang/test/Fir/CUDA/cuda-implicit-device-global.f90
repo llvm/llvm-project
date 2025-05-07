@@ -308,3 +308,37 @@ fir.global linkonce_odr @_QM__mod1E.n.cptr constant : !fir.char<1,4> {
 // CHECK-DAG: fir.global linkonce_odr @_QM__mod1E.c.__builtin_c_devptr
 // CHECK-DAG: fir.global linkonce_odr @_QM__mod1E.dt.__builtin_c_devptr
 // CHECK-DAG: fir.global linkonce_odr @_QM__mod1E.n.__builtin_c_devptr
+
+// -----
+
+// Variables with initialization are promoted to non constant global.
+// 
+// attributes(global) subroutine kernel4()
+//   integer :: a = 4
+// end subroutine 
+
+func.func @_QPkernel4() attributes {cuf.proc_attr = #cuf.cuda_proc<global>} {
+  %0 = fir.address_of(@_QFkernel4Ea) : !fir.ref<i32>
+  return
+}
+fir.global internal @_QFkernel4Ea : i32 {
+  %c4_i32 = arith.constant 4 : i32
+  fir.has_value %c4_i32 : i32
+}
+
+// CHECK-LABEL: fir.global internal @_QFkernel4Ea : i32
+// CHECK-LABEL: gpu.module @cuda_device_mod
+// CHECK: fir.global internal @_QFkernel4Ea : i32
+
+// -----
+
+fir.global @_QMiso_c_bindingECc_alert constant : !fir.char<1>
+func.func @_QMcudafor_lib_internalsPfoo() attributes {cuf.proc_attr = #cuf.cuda_proc<global>} {
+  %19 = fir.address_of(@_QMiso_c_bindingECc_alert) : !fir.ref<!fir.char<1>>
+  %c1 = arith.constant 1 : index
+  %20 = fir.declare %19 typeparams %c1 {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QMiso_c_bindingECc_alert"} : (!fir.ref<!fir.char<1>>, index) -> !fir.ref<!fir.char<1>>
+ return
+}
+
+// CHECK-LABEL: gpu.module @cuda_device_mod
+// CHECK-NOT: _QMiso_c_bindingECc_alert

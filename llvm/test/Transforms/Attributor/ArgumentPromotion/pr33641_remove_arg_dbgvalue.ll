@@ -2,8 +2,6 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor -attributor-manifest-internal  -attributor-annotate-decl-cs  -S < %s | FileCheck %s --check-prefixes=CHECK,TUNIT
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,CGSCC
 
-; RUN: opt -aa-pipeline=basic-aa -passes=attributor -attributor-manifest-internal  -attributor-annotate-decl-cs  -S < %s --try-experimental-debuginfo-iterators | FileCheck %s --check-prefixes=CHECK,TUNIT
-; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s --try-experimental-debuginfo-iterators | FileCheck %s --check-prefixes=CHECK,CGSCC
 
 ; Fix for PR33641. ArgumentPromotion removed the argument to bar but left the call to
 ; dbg.value which still used the removed argument.
@@ -29,7 +27,7 @@ define void @foo() {
 define internal void @bar(%p_t %p)  {
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@bar
-; CGSCC-SAME: (ptr nocapture nofree readnone [[P:%.*]]) #[[ATTR0]] {
+; CGSCC-SAME: (ptr nofree readnone captures(none) [[P:%.*]]) #[[ATTR0]] {
 ; CGSCC-NEXT:      #dbg_value(ptr [[P]], [[META3:![0-9]+]], !DIExpression(), [[META5:![0-9]+]])
 ; CGSCC-NEXT:    ret void
 ;

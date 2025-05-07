@@ -11,7 +11,7 @@ void test0() {
 namespace radar8446940 {
 extern "C" void abort();
 
-int main () {
+void main () {
   char x[1];
   char *y = x ? : 0;
 

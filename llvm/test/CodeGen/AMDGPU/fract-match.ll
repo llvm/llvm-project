@@ -13,17 +13,19 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=tahiti < %s | FileCheck -check-prefixes=GCN,GFX6 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=kaveri < %s | FileCheck -check-prefixes=GCN,GFX7 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX8 %s
-; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GCN,GFX11 %s
-; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 < %s | FileCheck -check-prefixes=GFX12 %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GCN,GFX11,GFX11-TRUE16 %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GCN,GFX11,GFX11-FAKE16 %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX12,GFX12-TRUE16 %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX12,GFX12-FAKE16 %s
 
 ; Test patterns to match v_fract_* instructions.
 
 ; Expansion as it appears in the library with the extra output for
 ; floor. We can fold in the nan check into the instruction, but the
 ; inf check must remain.
-define float @safe_math_fract_f32(float %x, ptr addrspace(1) nocapture writeonly %ip) {
+define float @safe_math_fract_f32(float %x, ptr addrspace(1) writeonly captures(none) %ip) {
 ; GFX6-IR-LABEL: define float @safe_math_fract_f32
-; GFX6-IR-SAME: (float [[X:%.*]], ptr addrspace(1) nocapture writeonly [[IP:%.*]]) #[[ATTR0:[0-9]+]] {
+; GFX6-IR-SAME: (float [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0:[0-9]+]] {
 ; GFX6-IR-NEXT:  entry:
 ; GFX6-IR-NEXT:    [[FLOOR:%.*]] = tail call float @llvm.floor.f32(float [[X]])
 ; GFX6-IR-NEXT:    [[SUB:%.*]] = fsub float [[X]], [[FLOOR]]
@@ -37,7 +39,7 @@ define float @safe_math_fract_f32(float %x, ptr addrspace(1) nocapture writeonly
 ; GFX6-IR-NEXT:    ret float [[COND6]]
 ;
 ; IR-FRACT-LABEL: define float @safe_math_fract_f32
-; IR-FRACT-SAME: (float [[X:%.*]], ptr addrspace(1) nocapture writeonly [[IP:%.*]]) #[[ATTR0:[0-9]+]] {
+; IR-FRACT-SAME: (float [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IR-FRACT-NEXT:  entry:
 ; IR-FRACT-NEXT:    [[FLOOR:%.*]] = tail call float @llvm.floor.f32(float [[X]])
 ; IR-FRACT-NEXT:    [[COND:%.*]] = call float @llvm.amdgcn.fract.f32(float [[X]])
@@ -115,7 +117,7 @@ define float @safe_math_fract_f32(float %x, ptr addrspace(1) nocapture writeonly
 ; GFX12-NEXT:    v_fract_f32_e32 v3, v0
 ; GFX12-NEXT:    v_cmp_neq_f32_e64 vcc_lo, 0x7f800000, |v0|
 ; GFX12-NEXT:    v_floor_f32_e32 v4, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc_lo
 ; GFX12-NEXT:    global_store_b32 v[1:2], v4, off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -132,9 +134,9 @@ entry:
   ret float %cond6
 }
 
-define float @safe_math_fract_f32_noinf_check(float %x, ptr addrspace(1) nocapture writeonly %ip) {
+define float @safe_math_fract_f32_noinf_check(float %x, ptr addrspace(1) writeonly captures(none) %ip) {
 ; GFX6-IR-LABEL: define float @safe_math_fract_f32_noinf_check
-; GFX6-IR-SAME: (float [[X:%.*]], ptr addrspace(1) nocapture writeonly [[IP:%.*]]) #[[ATTR0]] {
+; GFX6-IR-SAME: (float [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
 ; GFX6-IR-NEXT:  entry:
 ; GFX6-IR-NEXT:    [[FLOOR:%.*]] = tail call float @llvm.floor.f32(float [[X]])
 ; GFX6-IR-NEXT:    [[SUB:%.*]] = fsub float [[X]], [[FLOOR]]
@@ -145,7 +147,7 @@ define float @safe_math_fract_f32_noinf_check(float %x, ptr addrspace(1) nocaptu
 ; GFX6-IR-NEXT:    ret float [[COND]]
 ;
 ; IR-FRACT-LABEL: define float @safe_math_fract_f32_noinf_check
-; IR-FRACT-SAME: (float [[X:%.*]], ptr addrspace(1) nocapture writeonly [[IP:%.*]]) #[[ATTR0]] {
+; IR-FRACT-SAME: (float [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
 ; IR-FRACT-NEXT:  entry:
 ; IR-FRACT-NEXT:    [[FLOOR:%.*]] = tail call float @llvm.floor.f32(float [[X]])
 ; IR-FRACT-NEXT:    [[COND:%.*]] = call float @llvm.amdgcn.fract.f32(float [[X]])
@@ -220,9 +222,9 @@ entry:
 }
 
 ; Cannot match fract without a nan check or no-nans.
-define float @no_nan_check_math_fract_f32(float %x, ptr addrspace(1) nocapture writeonly %ip) {
+define float @no_nan_check_math_fract_f32(float %x, ptr addrspace(1) writeonly captures(none) %ip) {
 ; IR-LABEL: define float @no_nan_check_math_fract_f32
-; IR-SAME: (float [[X:%.*]], ptr addrspace(1) nocapture writeonly [[IP:%.*]]) #[[ATTR0:[0-9]+]] {
+; IR-SAME: (float [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[FLOOR:%.*]] = tail call float @llvm.floor.f32(float [[X]])
 ; IR-NEXT:    [[SUB:%.*]] = fsub float [[X]], [[FLOOR]]
@@ -301,10 +303,11 @@ define float @no_nan_check_math_fract_f32(float %x, ptr addrspace(1) nocapture w
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_floor_f32_e32 v3, v0
 ; GFX12-NEXT:    v_cmp_neq_f32_e64 vcc_lo, 0x7f800000, |v0|
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_sub_f32_e32 v4, v0, v3
 ; GFX12-NEXT:    global_store_b32 v[1:2], v3, off
 ; GFX12-NEXT:    v_min_num_f32_e32 v4, 0x3f7fffff, v4
+; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc_lo
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -1423,6 +1426,7 @@ define float @wrong_commuted_nan_select_f32(float %x) {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_sub_f32_e32 v1, v0, v1
 ; GFX12-NEXT:    v_min_num_f32_e32 v1, 0x3f7fffff, v1
+; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -1484,21 +1488,37 @@ define half @basic_fract_f16_nonan(half nofpclass(nan) %x) {
 ; GFX8-NEXT:    v_fract_f16_e32 v0, v0
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: basic_fract_f16_nonan:
-; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_fract_f16_e32 v0, v0
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: basic_fract_f16_nonan:
+; GFX11-TRUE16:       ; %bb.0: ; %entry
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_fract_f16_e32 v0.l, v0.l
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX12-LABEL: basic_fract_f16_nonan:
-; GFX12:       ; %bb.0: ; %entry
-; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_samplecnt 0x0
-; GFX12-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_fract_f16_e32 v0, v0
-; GFX12-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-FAKE16-LABEL: basic_fract_f16_nonan:
+; GFX11-FAKE16:       ; %bb.0: ; %entry
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_fract_f16_e32 v0, v0
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-TRUE16-LABEL: basic_fract_f16_nonan:
+; GFX12-TRUE16:       ; %bb.0: ; %entry
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-TRUE16-NEXT:    v_fract_f16_e32 v0.l, v0.l
+; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-FAKE16-LABEL: basic_fract_f16_nonan:
+; GFX12-FAKE16:       ; %bb.0: ; %entry
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-FAKE16-NEXT:    v_fract_f16_e32 v0, v0
+; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %floor = tail call half @llvm.floor.f16(half %x)
   %sub = fsub half %x, %floor
@@ -1572,29 +1592,51 @@ define <2 x half> @basic_fract_v2f16_nonan(<2 x half> nofpclass(nan) %x) {
 ; GFX8-NEXT:    v_pack_b32_f16 v0, v1, v0
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: basic_fract_v2f16_nonan:
-; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-NEXT:    v_fract_f16_e32 v0, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_fract_f16_e32 v1, v1
-; GFX11-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: basic_fract_v2f16_nonan:
+; GFX11-TRUE16:       ; %bb.0: ; %entry
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_fract_f16_e32 v0.l, v0.l
+; GFX11-TRUE16-NEXT:    v_fract_f16_e32 v0.h, v0.h
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX12-LABEL: basic_fract_v2f16_nonan:
-; GFX12:       ; %bb.0: ; %entry
-; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_samplecnt 0x0
-; GFX12-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX12-NEXT:    v_fract_f16_e32 v0, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_fract_f16_e32 v1, v1
-; GFX12-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX12-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-FAKE16-LABEL: basic_fract_v2f16_nonan:
+; GFX11-FAKE16:       ; %bb.0: ; %entry
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX11-FAKE16-NEXT:    v_fract_f16_e32 v0, v0
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    v_fract_f16_e32 v1, v1
+; GFX11-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-TRUE16-LABEL: basic_fract_v2f16_nonan:
+; GFX12-TRUE16:       ; %bb.0: ; %entry
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-TRUE16-NEXT:    v_fract_f16_e32 v0.l, v0.l
+; GFX12-TRUE16-NEXT:    v_fract_f16_e32 v0.h, v0.h
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
+; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-FAKE16-LABEL: basic_fract_v2f16_nonan:
+; GFX12-FAKE16:       ; %bb.0: ; %entry
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX12-FAKE16-NEXT:    v_fract_f16_e32 v0, v0
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-FAKE16-NEXT:    v_fract_f16_e32 v1, v1
+; GFX12-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
+; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %floor = tail call <2 x half> @llvm.floor.v2f16(<2 x half> %x)
   %sub = fsub <2 x half> %x, %floor
@@ -1668,9 +1710,9 @@ entry:
   ret double %min
 }
 
-define half @safe_math_fract_f16_noinf_check(half %x, ptr addrspace(1) nocapture writeonly %ip) {
+define half @safe_math_fract_f16_noinf_check(half %x, ptr addrspace(1) writeonly captures(none) %ip) {
 ; GFX6-IR-LABEL: define half @safe_math_fract_f16_noinf_check
-; GFX6-IR-SAME: (half [[X:%.*]], ptr addrspace(1) nocapture writeonly [[IP:%.*]]) #[[ATTR0]] {
+; GFX6-IR-SAME: (half [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
 ; GFX6-IR-NEXT:  entry:
 ; GFX6-IR-NEXT:    [[FLOOR:%.*]] = tail call half @llvm.floor.f16(half [[X]])
 ; GFX6-IR-NEXT:    [[SUB:%.*]] = fsub half [[X]], [[FLOOR]]
@@ -1681,7 +1723,7 @@ define half @safe_math_fract_f16_noinf_check(half %x, ptr addrspace(1) nocapture
 ; GFX6-IR-NEXT:    ret half [[COND]]
 ;
 ; GFX7-IR-LABEL: define half @safe_math_fract_f16_noinf_check
-; GFX7-IR-SAME: (half [[X:%.*]], ptr addrspace(1) nocapture writeonly [[IP:%.*]]) #[[ATTR0]] {
+; GFX7-IR-SAME: (half [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
 ; GFX7-IR-NEXT:  entry:
 ; GFX7-IR-NEXT:    [[FLOOR:%.*]] = tail call half @llvm.floor.f16(half [[X]])
 ; GFX7-IR-NEXT:    [[SUB:%.*]] = fsub half [[X]], [[FLOOR]]
@@ -1692,7 +1734,7 @@ define half @safe_math_fract_f16_noinf_check(half %x, ptr addrspace(1) nocapture
 ; GFX7-IR-NEXT:    ret half [[COND]]
 ;
 ; IR-LEGALF16-LABEL: define half @safe_math_fract_f16_noinf_check
-; IR-LEGALF16-SAME: (half [[X:%.*]], ptr addrspace(1) nocapture writeonly [[IP:%.*]]) #[[ATTR0]] {
+; IR-LEGALF16-SAME: (half [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
 ; IR-LEGALF16-NEXT:  entry:
 ; IR-LEGALF16-NEXT:    [[FLOOR:%.*]] = tail call half @llvm.floor.f16(half [[X]])
 ; IR-LEGALF16-NEXT:    [[COND:%.*]] = call half @llvm.amdgcn.fract.f16(half [[X]])
@@ -1746,25 +1788,45 @@ define half @safe_math_fract_f16_noinf_check(half %x, ptr addrspace(1) nocapture
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: safe_math_fract_f16_noinf_check:
-; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_floor_f16_e32 v3, v0
-; GFX11-NEXT:    v_fract_f16_e32 v0, v0
-; GFX11-NEXT:    global_store_b16 v[1:2], v3, off
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: safe_math_fract_f16_noinf_check:
+; GFX11-TRUE16:       ; %bb.0: ; %entry
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_floor_f16_e32 v0.h, v0.l
+; GFX11-TRUE16-NEXT:    v_fract_f16_e32 v0.l, v0.l
+; GFX11-TRUE16-NEXT:    global_store_d16_hi_b16 v[1:2], v0, off
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX12-LABEL: safe_math_fract_f16_noinf_check:
-; GFX12:       ; %bb.0: ; %entry
-; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_samplecnt 0x0
-; GFX12-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_floor_f16_e32 v3, v0
-; GFX12-NEXT:    v_fract_f16_e32 v0, v0
-; GFX12-NEXT:    global_store_b16 v[1:2], v3, off
-; GFX12-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-FAKE16-LABEL: safe_math_fract_f16_noinf_check:
+; GFX11-FAKE16:       ; %bb.0: ; %entry
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_floor_f16_e32 v3, v0
+; GFX11-FAKE16-NEXT:    v_fract_f16_e32 v0, v0
+; GFX11-FAKE16-NEXT:    global_store_b16 v[1:2], v3, off
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-TRUE16-LABEL: safe_math_fract_f16_noinf_check:
+; GFX12-TRUE16:       ; %bb.0: ; %entry
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-TRUE16-NEXT:    v_floor_f16_e32 v0.h, v0.l
+; GFX12-TRUE16-NEXT:    v_fract_f16_e32 v0.l, v0.l
+; GFX12-TRUE16-NEXT:    global_store_d16_hi_b16 v[1:2], v0, off
+; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-FAKE16-LABEL: safe_math_fract_f16_noinf_check:
+; GFX12-FAKE16:       ; %bb.0: ; %entry
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-FAKE16-NEXT:    v_floor_f16_e32 v3, v0
+; GFX12-FAKE16-NEXT:    v_fract_f16_e32 v0, v0
+; GFX12-FAKE16-NEXT:    global_store_b16 v[1:2], v3, off
+; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %floor = tail call half @llvm.floor.f16(half %x)
   %sub = fsub half %x, %floor
@@ -1775,9 +1837,9 @@ entry:
   ret half %cond
 }
 
-define double @safe_math_fract_f64_noinf_check(double %x, ptr addrspace(1) nocapture writeonly %ip) {
+define double @safe_math_fract_f64_noinf_check(double %x, ptr addrspace(1) writeonly captures(none) %ip) {
 ; GFX6-IR-LABEL: define double @safe_math_fract_f64_noinf_check
-; GFX6-IR-SAME: (double [[X:%.*]], ptr addrspace(1) nocapture writeonly [[IP:%.*]]) #[[ATTR0]] {
+; GFX6-IR-SAME: (double [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
 ; GFX6-IR-NEXT:  entry:
 ; GFX6-IR-NEXT:    [[FLOOR:%.*]] = tail call double @llvm.floor.f64(double [[X]])
 ; GFX6-IR-NEXT:    [[SUB:%.*]] = fsub double [[X]], [[FLOOR]]
@@ -1788,7 +1850,7 @@ define double @safe_math_fract_f64_noinf_check(double %x, ptr addrspace(1) nocap
 ; GFX6-IR-NEXT:    ret double [[COND]]
 ;
 ; IR-FRACT-LABEL: define double @safe_math_fract_f64_noinf_check
-; IR-FRACT-SAME: (double [[X:%.*]], ptr addrspace(1) nocapture writeonly [[IP:%.*]]) #[[ATTR0]] {
+; IR-FRACT-SAME: (double [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
 ; IR-FRACT-NEXT:  entry:
 ; IR-FRACT-NEXT:    [[FLOOR:%.*]] = tail call double @llvm.floor.f64(double [[X]])
 ; IR-FRACT-NEXT:    [[COND:%.*]] = call double @llvm.amdgcn.fract.f64(double [[X]])
@@ -1998,9 +2060,9 @@ entry:
   ret float %cond
 }
 
-define <2 x float> @safe_math_fract_v2f32(<2 x float> %x, ptr addrspace(1) nocapture writeonly %ip) {
+define <2 x float> @safe_math_fract_v2f32(<2 x float> %x, ptr addrspace(1) writeonly captures(none) %ip) {
 ; GFX6-IR-LABEL: define <2 x float> @safe_math_fract_v2f32
-; GFX6-IR-SAME: (<2 x float> [[X:%.*]], ptr addrspace(1) nocapture writeonly [[IP:%.*]]) #[[ATTR0]] {
+; GFX6-IR-SAME: (<2 x float> [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
 ; GFX6-IR-NEXT:  entry:
 ; GFX6-IR-NEXT:    [[FLOOR:%.*]] = tail call <2 x float> @llvm.floor.v2f32(<2 x float> [[X]])
 ; GFX6-IR-NEXT:    [[SUB:%.*]] = fsub <2 x float> [[X]], [[FLOOR]]
@@ -2014,7 +2076,7 @@ define <2 x float> @safe_math_fract_v2f32(<2 x float> %x, ptr addrspace(1) nocap
 ; GFX6-IR-NEXT:    ret <2 x float> [[COND6]]
 ;
 ; IR-FRACT-LABEL: define <2 x float> @safe_math_fract_v2f32
-; IR-FRACT-SAME: (<2 x float> [[X:%.*]], ptr addrspace(1) nocapture writeonly [[IP:%.*]]) #[[ATTR0]] {
+; IR-FRACT-SAME: (<2 x float> [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
 ; IR-FRACT-NEXT:  entry:
 ; IR-FRACT-NEXT:    [[FLOOR:%.*]] = tail call <2 x float> @llvm.floor.v2f32(<2 x float> [[X]])
 ; IR-FRACT-NEXT:    [[TMP0:%.*]] = extractelement <2 x float> [[X]], i64 0
@@ -2118,10 +2180,11 @@ define <2 x float> @safe_math_fract_v2f32(<2 x float> %x, ptr addrspace(1) nocap
 ; GFX12-NEXT:    v_fract_f32_e32 v7, v1
 ; GFX12-NEXT:    v_floor_f32_e32 v4, v0
 ; GFX12-NEXT:    v_floor_f32_e32 v5, v1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX12-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-NEXT:    v_cndmask_b32_e64 v0, v6, 0, s0
 ; GFX12-NEXT:    v_cmp_class_f32_e64 s0, v1, 0x204
 ; GFX12-NEXT:    global_store_b64 v[2:3], v[4:5], off
+; GFX12-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-NEXT:    v_cndmask_b32_e64 v1, v7, 0, s0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -2137,9 +2200,9 @@ entry:
   ret <2 x float> %cond6
 }
 
-define double @safe_math_fract_f64(double %x, ptr addrspace(1) nocapture writeonly %ip) {
+define double @safe_math_fract_f64(double %x, ptr addrspace(1) writeonly captures(none) %ip) {
 ; GFX6-IR-LABEL: define double @safe_math_fract_f64
-; GFX6-IR-SAME: (double [[X:%.*]], ptr addrspace(1) nocapture writeonly [[IP:%.*]]) #[[ATTR0]] {
+; GFX6-IR-SAME: (double [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
 ; GFX6-IR-NEXT:  entry:
 ; GFX6-IR-NEXT:    [[FLOOR:%.*]] = tail call double @llvm.floor.f64(double [[X]])
 ; GFX6-IR-NEXT:    [[SUB:%.*]] = fsub double [[X]], [[FLOOR]]
@@ -2153,7 +2216,7 @@ define double @safe_math_fract_f64(double %x, ptr addrspace(1) nocapture writeon
 ; GFX6-IR-NEXT:    ret double [[COND6]]
 ;
 ; IR-FRACT-LABEL: define double @safe_math_fract_f64
-; IR-FRACT-SAME: (double [[X:%.*]], ptr addrspace(1) nocapture writeonly [[IP:%.*]]) #[[ATTR0]] {
+; IR-FRACT-SAME: (double [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
 ; IR-FRACT-NEXT:  entry:
 ; IR-FRACT-NEXT:    [[FLOOR:%.*]] = tail call double @llvm.floor.f64(double [[X]])
 ; IR-FRACT-NEXT:    [[COND:%.*]] = call double @llvm.amdgcn.fract.f64(double [[X]])
@@ -2247,7 +2310,7 @@ define double @safe_math_fract_f64(double %x, ptr addrspace(1) nocapture writeon
 ; GFX12-NEXT:    v_fract_f64_e32 v[4:5], v[0:1]
 ; GFX12-NEXT:    v_cmp_neq_f64_e64 vcc_lo, 0x7ff00000, |v[0:1]|
 ; GFX12-NEXT:    v_floor_f64_e32 v[6:7], v[0:1]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    v_dual_cndmask_b32 v0, 0, v4 :: v_dual_cndmask_b32 v1, 0, v5
 ; GFX12-NEXT:    global_store_b64 v[2:3], v[6:7], off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -2264,9 +2327,9 @@ entry:
   ret double %cond6
 }
 
-define half @safe_math_fract_f16(half %x, ptr addrspace(1) nocapture writeonly %ip) {
+define half @safe_math_fract_f16(half %x, ptr addrspace(1) writeonly captures(none) %ip) {
 ; GFX6-IR-LABEL: define half @safe_math_fract_f16
-; GFX6-IR-SAME: (half [[X:%.*]], ptr addrspace(1) nocapture writeonly [[IP:%.*]]) #[[ATTR0]] {
+; GFX6-IR-SAME: (half [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
 ; GFX6-IR-NEXT:  entry:
 ; GFX6-IR-NEXT:    [[FLOOR:%.*]] = tail call half @llvm.floor.f16(half [[X]])
 ; GFX6-IR-NEXT:    [[SUB:%.*]] = fsub half [[X]], [[FLOOR]]
@@ -2280,7 +2343,7 @@ define half @safe_math_fract_f16(half %x, ptr addrspace(1) nocapture writeonly %
 ; GFX6-IR-NEXT:    ret half [[COND6]]
 ;
 ; GFX7-IR-LABEL: define half @safe_math_fract_f16
-; GFX7-IR-SAME: (half [[X:%.*]], ptr addrspace(1) nocapture writeonly [[IP:%.*]]) #[[ATTR0]] {
+; GFX7-IR-SAME: (half [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
 ; GFX7-IR-NEXT:  entry:
 ; GFX7-IR-NEXT:    [[FLOOR:%.*]] = tail call half @llvm.floor.f16(half [[X]])
 ; GFX7-IR-NEXT:    [[SUB:%.*]] = fsub half [[X]], [[FLOOR]]
@@ -2294,7 +2357,7 @@ define half @safe_math_fract_f16(half %x, ptr addrspace(1) nocapture writeonly %
 ; GFX7-IR-NEXT:    ret half [[COND6]]
 ;
 ; IR-LEGALF16-LABEL: define half @safe_math_fract_f16
-; IR-LEGALF16-SAME: (half [[X:%.*]], ptr addrspace(1) nocapture writeonly [[IP:%.*]]) #[[ATTR0]] {
+; IR-LEGALF16-SAME: (half [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
 ; IR-LEGALF16-NEXT:  entry:
 ; IR-LEGALF16-NEXT:    [[FLOOR:%.*]] = tail call half @llvm.floor.f16(half [[X]])
 ; IR-LEGALF16-NEXT:    [[COND:%.*]] = call half @llvm.amdgcn.fract.f16(half [[X]])
@@ -2362,31 +2425,57 @@ define half @safe_math_fract_f16(half %x, ptr addrspace(1) nocapture writeonly %
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: safe_math_fract_f16:
-; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_fract_f16_e32 v3, v0
-; GFX11-NEXT:    v_cmp_neq_f16_e64 vcc_lo, 0x7c00, |v0|
-; GFX11-NEXT:    v_floor_f16_e32 v4, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc_lo
-; GFX11-NEXT:    global_store_b16 v[1:2], v4, off
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: safe_math_fract_f16:
+; GFX11-TRUE16:       ; %bb.0: ; %entry
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_fract_f16_e32 v0.h, v0.l
+; GFX11-TRUE16-NEXT:    v_cmp_neq_f16_e64 s0, 0x7c00, |v0.l|
+; GFX11-TRUE16-NEXT:    v_floor_f16_e32 v3.l, v0.l
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0, v0.h, s0
+; GFX11-TRUE16-NEXT:    global_store_b16 v[1:2], v3, off
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX12-LABEL: safe_math_fract_f16:
-; GFX12:       ; %bb.0: ; %entry
-; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_samplecnt 0x0
-; GFX12-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_fract_f16_e32 v3, v0
-; GFX12-NEXT:    v_cmp_neq_f16_e64 vcc_lo, 0x7c00, |v0|
-; GFX12-NEXT:    v_floor_f16_e32 v4, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX12-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc_lo
-; GFX12-NEXT:    global_store_b16 v[1:2], v4, off
-; GFX12-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-FAKE16-LABEL: safe_math_fract_f16:
+; GFX11-FAKE16:       ; %bb.0: ; %entry
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_fract_f16_e32 v3, v0
+; GFX11-FAKE16-NEXT:    v_cmp_neq_f16_e64 vcc_lo, 0x7c00, |v0|
+; GFX11-FAKE16-NEXT:    v_floor_f16_e32 v4, v0
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX11-FAKE16-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc_lo
+; GFX11-FAKE16-NEXT:    global_store_b16 v[1:2], v4, off
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-TRUE16-LABEL: safe_math_fract_f16:
+; GFX12-TRUE16:       ; %bb.0: ; %entry
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-TRUE16-NEXT:    v_fract_f16_e32 v0.h, v0.l
+; GFX12-TRUE16-NEXT:    v_cmp_neq_f16_e64 s0, 0x7c00, |v0.l|
+; GFX12-TRUE16-NEXT:    v_floor_f16_e32 v3.l, v0.l
+; GFX12-TRUE16-NEXT:    s_wait_alu 0xf1ff
+; GFX12-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0, v0.h, s0
+; GFX12-TRUE16-NEXT:    global_store_b16 v[1:2], v3, off
+; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-FAKE16-LABEL: safe_math_fract_f16:
+; GFX12-FAKE16:       ; %bb.0: ; %entry
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-FAKE16-NEXT:    v_fract_f16_e32 v3, v0
+; GFX12-FAKE16-NEXT:    v_cmp_neq_f16_e64 vcc_lo, 0x7c00, |v0|
+; GFX12-FAKE16-NEXT:    v_floor_f16_e32 v4, v0
+; GFX12-FAKE16-NEXT:    s_wait_alu 0xfffd
+; GFX12-FAKE16-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc_lo
+; GFX12-FAKE16-NEXT:    global_store_b16 v[1:2], v4, off
+; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %floor = tail call half @llvm.floor.f16(half %x)
   %sub = fsub half %x, %floor
@@ -2400,9 +2489,9 @@ entry:
   ret half %cond6
 }
 
-define <2 x half> @safe_math_fract_v2f16(<2 x half> %x, ptr addrspace(1) nocapture writeonly %ip) {
+define <2 x half> @safe_math_fract_v2f16(<2 x half> %x, ptr addrspace(1) writeonly captures(none) %ip) {
 ; GFX6-IR-LABEL: define <2 x half> @safe_math_fract_v2f16
-; GFX6-IR-SAME: (<2 x half> [[X:%.*]], ptr addrspace(1) nocapture writeonly [[IP:%.*]]) #[[ATTR0]] {
+; GFX6-IR-SAME: (<2 x half> [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
 ; GFX6-IR-NEXT:  entry:
 ; GFX6-IR-NEXT:    [[FLOOR:%.*]] = tail call <2 x half> @llvm.floor.v2f16(<2 x half> [[X]])
 ; GFX6-IR-NEXT:    [[SUB:%.*]] = fsub <2 x half> [[X]], [[FLOOR]]
@@ -2416,7 +2505,7 @@ define <2 x half> @safe_math_fract_v2f16(<2 x half> %x, ptr addrspace(1) nocaptu
 ; GFX6-IR-NEXT:    ret <2 x half> [[COND6]]
 ;
 ; GFX7-IR-LABEL: define <2 x half> @safe_math_fract_v2f16
-; GFX7-IR-SAME: (<2 x half> [[X:%.*]], ptr addrspace(1) nocapture writeonly [[IP:%.*]]) #[[ATTR0]] {
+; GFX7-IR-SAME: (<2 x half> [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
 ; GFX7-IR-NEXT:  entry:
 ; GFX7-IR-NEXT:    [[FLOOR:%.*]] = tail call <2 x half> @llvm.floor.v2f16(<2 x half> [[X]])
 ; GFX7-IR-NEXT:    [[SUB:%.*]] = fsub <2 x half> [[X]], [[FLOOR]]
@@ -2430,7 +2519,7 @@ define <2 x half> @safe_math_fract_v2f16(<2 x half> %x, ptr addrspace(1) nocaptu
 ; GFX7-IR-NEXT:    ret <2 x half> [[COND6]]
 ;
 ; IR-LEGALF16-LABEL: define <2 x half> @safe_math_fract_v2f16
-; IR-LEGALF16-SAME: (<2 x half> [[X:%.*]], ptr addrspace(1) nocapture writeonly [[IP:%.*]]) #[[ATTR0]] {
+; IR-LEGALF16-SAME: (<2 x half> [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
 ; IR-LEGALF16-NEXT:  entry:
 ; IR-LEGALF16-NEXT:    [[FLOOR:%.*]] = tail call <2 x half> @llvm.floor.v2f16(<2 x half> [[X]])
 ; IR-LEGALF16-NEXT:    [[TMP0:%.*]] = extractelement <2 x half> [[X]], i64 0
@@ -2535,47 +2624,89 @@ define <2 x half> @safe_math_fract_v2f16(<2 x half> %x, ptr addrspace(1) nocaptu
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: safe_math_fract_v2f16:
-; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
-; GFX11-NEXT:    v_fract_f16_e32 v6, v0
-; GFX11-NEXT:    v_floor_f16_e32 v5, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_fract_f16_e32 v4, v3
-; GFX11-NEXT:    v_cmp_class_f16_e64 s0, v3, 0x204
-; GFX11-NEXT:    v_floor_f16_e32 v7, v3
-; GFX11-NEXT:    v_cndmask_b32_e64 v3, v4, 0, s0
-; GFX11-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x204
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_pack_b32_f16 v4, v5, v7
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, v6, 0, s0
-; GFX11-NEXT:    global_store_b32 v[1:2], v4, off
-; GFX11-NEXT:    v_pack_b32_f16 v0, v0, v3
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: safe_math_fract_v2f16:
+; GFX11-TRUE16:       ; %bb.0: ; %entry
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_fract_f16_e32 v3.l, v0.l
+; GFX11-TRUE16-NEXT:    v_fract_f16_e32 v3.h, v0.h
+; GFX11-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.h, 0x204
+; GFX11-TRUE16-NEXT:    v_cmp_class_f16_e64 s1, v0.l, 0x204
+; GFX11-TRUE16-NEXT:    v_floor_f16_e32 v0.h, v0.h
+; GFX11-TRUE16-NEXT:    v_floor_f16_e32 v0.l, v0.l
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v3.h, v3.h, 0, s0
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v3.l, v3.l, 0, s1
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v4, v0.l, v0.h
+; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v0, v3.l, v3.h
+; GFX11-TRUE16-NEXT:    global_store_b32 v[1:2], v4, off
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX12-LABEL: safe_math_fract_v2f16:
-; GFX12:       ; %bb.0: ; %entry
-; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_samplecnt 0x0
-; GFX12-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
-; GFX12-NEXT:    v_fract_f16_e32 v6, v0
-; GFX12-NEXT:    v_floor_f16_e32 v5, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_fract_f16_e32 v4, v3
-; GFX12-NEXT:    v_cmp_class_f16_e64 s0, v3, 0x204
-; GFX12-NEXT:    v_floor_f16_e32 v7, v3
-; GFX12-NEXT:    v_cndmask_b32_e64 v3, v4, 0, s0
-; GFX12-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x204
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_pack_b32_f16 v4, v5, v7
-; GFX12-NEXT:    v_cndmask_b32_e64 v0, v6, 0, s0
-; GFX12-NEXT:    global_store_b32 v[1:2], v4, off
-; GFX12-NEXT:    v_pack_b32_f16 v0, v0, v3
-; GFX12-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-FAKE16-LABEL: safe_math_fract_v2f16:
+; GFX11-FAKE16:       ; %bb.0: ; %entry
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
+; GFX11-FAKE16-NEXT:    v_fract_f16_e32 v6, v0
+; GFX11-FAKE16-NEXT:    v_floor_f16_e32 v5, v0
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX11-FAKE16-NEXT:    v_fract_f16_e32 v4, v3
+; GFX11-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v3, 0x204
+; GFX11-FAKE16-NEXT:    v_floor_f16_e32 v7, v3
+; GFX11-FAKE16-NEXT:    v_cndmask_b32_e64 v3, v4, 0, s0
+; GFX11-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x204
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-FAKE16-NEXT:    v_pack_b32_f16 v4, v5, v7
+; GFX11-FAKE16-NEXT:    v_cndmask_b32_e64 v0, v6, 0, s0
+; GFX11-FAKE16-NEXT:    global_store_b32 v[1:2], v4, off
+; GFX11-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v3
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-TRUE16-LABEL: safe_math_fract_v2f16:
+; GFX12-TRUE16:       ; %bb.0: ; %entry
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-TRUE16-NEXT:    v_fract_f16_e32 v3.l, v0.l
+; GFX12-TRUE16-NEXT:    v_fract_f16_e32 v3.h, v0.h
+; GFX12-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.h, 0x204
+; GFX12-TRUE16-NEXT:    v_cmp_class_f16_e64 s1, v0.l, 0x204
+; GFX12-TRUE16-NEXT:    v_floor_f16_e32 v0.h, v0.h
+; GFX12-TRUE16-NEXT:    v_floor_f16_e32 v0.l, v0.l
+; GFX12-TRUE16-NEXT:    s_wait_alu 0xf1ff
+; GFX12-TRUE16-NEXT:    v_cndmask_b16 v3.h, v3.h, 0, s0
+; GFX12-TRUE16-NEXT:    v_cndmask_b16 v3.l, v3.l, 0, s1
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-TRUE16-NEXT:    v_pack_b32_f16 v4, v0.l, v0.h
+; GFX12-TRUE16-NEXT:    v_pack_b32_f16 v0, v3.l, v3.h
+; GFX12-TRUE16-NEXT:    global_store_b32 v[1:2], v4, off
+; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-FAKE16-LABEL: safe_math_fract_v2f16:
+; GFX12-FAKE16:       ; %bb.0: ; %entry
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-FAKE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
+; GFX12-FAKE16-NEXT:    v_fract_f16_e32 v6, v0
+; GFX12-FAKE16-NEXT:    v_floor_f16_e32 v5, v0
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX12-FAKE16-NEXT:    v_fract_f16_e32 v4, v3
+; GFX12-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v3, 0x204
+; GFX12-FAKE16-NEXT:    v_floor_f16_e32 v7, v3
+; GFX12-FAKE16-NEXT:    s_wait_alu 0xf1ff
+; GFX12-FAKE16-NEXT:    v_cndmask_b32_e64 v3, v4, 0, s0
+; GFX12-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x204
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX12-FAKE16-NEXT:    v_pack_b32_f16 v4, v5, v7
+; GFX12-FAKE16-NEXT:    s_wait_alu 0xf1ff
+; GFX12-FAKE16-NEXT:    v_cndmask_b32_e64 v0, v6, 0, s0
+; GFX12-FAKE16-NEXT:    global_store_b32 v[1:2], v4, off
+; GFX12-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v3
+; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %floor = tail call <2 x half> @llvm.floor.v2f16(<2 x half> %x)
   %sub = fsub <2 x half> %x, %floor
@@ -2589,9 +2720,9 @@ entry:
   ret <2 x half> %cond6
 }
 
-define <2 x double> @safe_math_fract_v2f64(<2 x double> %x, ptr addrspace(1) nocapture writeonly %ip) {
+define <2 x double> @safe_math_fract_v2f64(<2 x double> %x, ptr addrspace(1) writeonly captures(none) %ip) {
 ; GFX6-IR-LABEL: define <2 x double> @safe_math_fract_v2f64
-; GFX6-IR-SAME: (<2 x double> [[X:%.*]], ptr addrspace(1) nocapture writeonly [[IP:%.*]]) #[[ATTR0]] {
+; GFX6-IR-SAME: (<2 x double> [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
 ; GFX6-IR-NEXT:  entry:
 ; GFX6-IR-NEXT:    [[FLOOR:%.*]] = tail call <2 x double> @llvm.floor.v2f64(<2 x double> [[X]])
 ; GFX6-IR-NEXT:    [[SUB:%.*]] = fsub <2 x double> [[X]], [[FLOOR]]
@@ -2605,7 +2736,7 @@ define <2 x double> @safe_math_fract_v2f64(<2 x double> %x, ptr addrspace(1) noc
 ; GFX6-IR-NEXT:    ret <2 x double> [[COND6]]
 ;
 ; IR-FRACT-LABEL: define <2 x double> @safe_math_fract_v2f64
-; IR-FRACT-SAME: (<2 x double> [[X:%.*]], ptr addrspace(1) nocapture writeonly [[IP:%.*]]) #[[ATTR0]] {
+; IR-FRACT-SAME: (<2 x double> [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
 ; IR-FRACT-NEXT:  entry:
 ; IR-FRACT-NEXT:    [[FLOOR:%.*]] = tail call <2 x double> @llvm.floor.v2f64(<2 x double> [[X]])
 ; IR-FRACT-NEXT:    [[TMP0:%.*]] = extractelement <2 x double> [[X]], i64 0
@@ -2733,6 +2864,7 @@ define <2 x double> @safe_math_fract_v2f64(<2 x double> %x, ptr addrspace(1) noc
 ; GFX12-NEXT:    v_cmp_class_f64_e64 s1, v[2:3], 0x204
 ; GFX12-NEXT:    v_floor_f64_e32 v[8:9], v[2:3]
 ; GFX12-NEXT:    v_floor_f64_e32 v[6:7], v[0:1]
+; GFX12-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-NEXT:    v_cndmask_b32_e64 v0, v10, 0, s0
 ; GFX12-NEXT:    v_cndmask_b32_e64 v1, v11, 0, s0
 ; GFX12-NEXT:    v_cndmask_b32_e64 v2, v12, 0, s1

@@ -100,9 +100,7 @@ public:
   VEAsmBackend(const Target &T)
       : MCAsmBackend(llvm::endianness::little), TheTarget(T) {}
 
-  unsigned getNumFixupKinds() const override { return VE::NumTargetFixupKinds; }
-
-  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
+  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override {
     const static MCFixupKindInfo Infos[VE::NumTargetFixupKinds] = {
         // name, offset, bits, flags
         {"fixup_ve_reflong", 0, 32, 0},
@@ -126,7 +124,7 @@ public:
     if (Kind < FirstTargetFixupKind)
       return MCAsmBackend::getFixupKindInfo(Kind);
 
-    assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+    assert(unsigned(Kind - FirstTargetFixupKind) < VE::NumTargetFixupKinds &&
            "Invalid kind!");
     return Infos[Kind - FirstTargetFixupKind];
   }

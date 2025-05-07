@@ -30,7 +30,7 @@ The following requirements are shared on all platforms.
 If you want to run the test suite, you'll need to build LLDB with Python
 scripting support.
 
-* `Python <http://www.python.org/>`_
+* `Python <http://www.python.org/>`_ 3.8 or later.
 * `SWIG <http://swig.org/>`_ 4 or later.
 
 If you are on FreeBSD or NetBSD, you will need to install ``gmake`` for building
@@ -62,7 +62,7 @@ CMake configuration error.
 +-------------------+--------------------------------------------------------------+--------------------------+
 | Libxml2           | XML                                                          | ``LLDB_ENABLE_LIBXML2``  |
 +-------------------+--------------------------------------------------------------+--------------------------+
-| Python            | Python scripting. >= 3.0 is required, >= 3.8 is recommended. | ``LLDB_ENABLE_PYTHON``   |
+| Python            | Python scripting. >= 3.8 is required.                        | ``LLDB_ENABLE_PYTHON``   |
 +-------------------+--------------------------------------------------------------+--------------------------+
 | Lua               | Lua scripting. Lua 5.3 and 5.4 are supported.                | ``LLDB_ENABLE_LUA``      |
 +-------------------+--------------------------------------------------------------+--------------------------+
@@ -340,7 +340,7 @@ On macOS the LLDB test suite requires libc++. Either add
   code-signed with identity ``lldb_codesign`` (see :ref:`CodeSigning`).
 * ``LLDB_USE_SYSTEM_DEBUGSERVER:BOOL``: Use the system's debugserver, so lldb is
   functional without setting up code-signing.
-
+* ``LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS:BOOL``: Detect missing packages or modules at configuration time.
 
 .. _CMakeCaches:
 

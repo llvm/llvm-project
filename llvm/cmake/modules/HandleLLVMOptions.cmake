@@ -199,11 +199,15 @@ endif()
 string(TOUPPER "${LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING}" uppercase_LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING)
 
 if( uppercase_LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING STREQUAL "COVERAGE" )
-  set( ENABLE_DEBUGLOC_COVERAGE_TRACKING 1 )
+  set( LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING 1 )
 elseif( uppercase_LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING STREQUAL "DISABLED" OR NOT DEFINED LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING )
   # The DISABLED setting is default and requires no additional defines.
 else()
   message(FATAL_ERROR "Unknown value for LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING: \"${LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING}\"!")
+endif()
+
+if(LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS)
+  add_compile_definitions(EXPERIMENTAL_KEY_INSTRUCTIONS)
 endif()
 
 if( LLVM_REVERSE_ITERATION )
@@ -312,7 +316,7 @@ endif()
 
 # Pass -Wl,-z,defs. This makes sure all symbols are defined. Otherwise a DSO
 # build might work on ELF but fail on MachO/COFF.
-if(NOT (CMAKE_SYSTEM_NAME MATCHES "Darwin|FreeBSD|OpenBSD|DragonFly|AIX|OS390" OR
+if(NOT (CMAKE_SYSTEM_NAME MATCHES "Darwin|FreeBSD|OpenBSD|DragonFly|AIX|OS390|Emscripten" OR
         WIN32 OR CYGWIN) AND
    NOT LLVM_USE_SANITIZER)
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,defs")
@@ -688,7 +692,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   append("-Werror=unguarded-availability-new" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 endif()
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND LLVM_ENABLE_LTO)
   # LLVM data structures like llvm::User and llvm::MDNode rely on
   # the value of object storage persisting beyond the lifetime of the
   # object (#24952).  This is not standard compliant and causes a runtime
@@ -877,6 +881,11 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
 
   # The LLVM libraries have no stable C++ API, so -Wnoexcept-type is not useful.
   append("-Wno-noexcept-type" CMAKE_CXX_FLAGS)
+
+  # LLVM has a policy of including virtual "anchor" functions to control
+  # where the vtable is emitted. In `final` classes, these are exactly what
+  # this warning detects: unnecessary virtual methods.
+  add_flag_if_supported("-Wno-unnecessary-virtual-specifier" CXX_SUPPORTS_UNNECESSARY_VIRTUAL_FLAG)
 
   if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     append("-Wnon-virtual-dtor" CMAKE_CXX_FLAGS)
@@ -1212,7 +1221,7 @@ if (CLANG_CL AND (LLVM_BUILD_INSTRUMENTED OR LLVM_USE_SANITIZER))
   endif()
   file(TO_CMAKE_PATH "${clang_compiler_rt_file}" clang_compiler_rt_file)
   get_filename_component(clang_runtime_dir "${clang_compiler_rt_file}" DIRECTORY)
-  prepend("/libpath:\"${clang_runtime_dir}\""
+  prepend("${CMAKE_CXX_LINKER_WRAPPER_FLAG}/libpath:\"${clang_runtime_dir}\""
     CMAKE_EXE_LINKER_FLAGS
     CMAKE_MODULE_LINKER_FLAGS
     CMAKE_SHARED_LINKER_FLAGS)
@@ -1285,7 +1294,7 @@ elseif(LLVM_ENABLE_LTO)
   endif()
 endif()
 
-if(LLVM_ENABLE_FATLTO AND UNIX AND NOT APPLE)
+if(LLVM_ENABLE_FATLTO AND ((UNIX AND NOT APPLE) OR FUCHSIA))
   append("-ffat-lto-objects" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   if(NOT LINKER_IS_LLD_LINK)
     append("-ffat-lto-objects" CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS)

@@ -1,0 +1,277 @@
+# RUN: llc --mtriple=hexagon -run-pass=hwloops %s -o - | FileCheck %s
+
+# CHECK-LABEL: name: f
+# CHECK: [[R1:%[0-9]+]]:predregs = C2_cmpgti [[R0:%[0-9]+]], 0
+# CHECK: [[R3:%[0-9]+]]:intregs = C2_muxir [[R1:%[0-9]+]], [[R2:%[0-9]+]], 1
+# CHECK-LABEL: name: g
+# CHECK: [[R1:%[0-9]+]]:predregs = C2_cmpgti [[R0:%[0-9]+]], 0
+# CHECK: [[R3:%[0-9]+]]:intregs = C2_muxir [[R1:%[0-9]+]], [[R2:%[0-9]+]], 1
+--- |
+  @a = dso_local global [255 x ptr] zeroinitializer, align 8
+
+  ; Function Attrs: minsize nofree norecurse nosync nounwind optsize memory(write, argmem: none, inaccessiblemem: none)
+  define dso_local void @f(i32 noundef %m) local_unnamed_addr #0 {
+  entry:
+    %cond = tail call i32 @llvm.smax.i32(i32 %m, i32 2)
+    %0 = add nsw i32 %cond, -4
+    %1 = shl i32 %cond, 3
+    %cgep = getelementptr i8, ptr @a, i32 %1
+    %cgep36 = bitcast ptr @a to ptr
+    br label %do.body
+
+  do.body:                                          ; preds = %do.body, %entry
+    %lsr.iv1 = phi ptr [ %cgep4, %do.body ], [ %cgep, %entry ]
+    %lsr.iv = phi i32 [ %lsr.iv.next, %do.body ], [ %0, %entry ]
+    %sh.0 = phi i32 [ 256, %entry ], [ %shr, %do.body ]
+    %shr = lshr i32 %sh.0, 1
+    %cgep5 = getelementptr inbounds [255 x ptr], ptr %cgep36, i32 0, i32 %shr
+    store ptr %lsr.iv1, ptr %cgep5, align 4, !tbaa !5
+    %lsr.iv.next = add nsw i32 %lsr.iv, 4
+    %cmp1 = icmp samesign ult i32 %lsr.iv.next, 1073741836
+    %cgep4 = getelementptr i8, ptr %lsr.iv1, i32 32
+    br i1 %cmp1, label %do.body, label %do.end, !llvm.loop !9
+
+  do.end:                                           ; preds = %do.body
+    ret void
+  }
+
+  ; Function Attrs: minsize nofree norecurse nosync nounwind optsize memory(write, argmem: none, inaccessiblemem: none)
+  define dso_local void @g(i32 noundef %m) local_unnamed_addr #0 {
+  entry:
+    %0 = add i32 %m, -4
+    %1 = shl i32 %m, 3
+    %cgep = getelementptr i8, ptr @a, i32 %1
+    %cgep36 = bitcast ptr @a to ptr
+    br label %do.body
+
+  do.body:                                          ; preds = %do.body, %entry
+    %lsr.iv1 = phi ptr [ %cgep4, %do.body ], [ %cgep, %entry ]
+    %lsr.iv = phi i32 [ %lsr.iv.next, %do.body ], [ %0, %entry ]
+    %sh.0 = phi i32 [ 256, %entry ], [ %shr, %do.body ]
+    %shr = lshr i32 %sh.0, 1
+    %cgep5 = getelementptr inbounds [255 x ptr], ptr %cgep36, i32 0, i32 %shr
+    store ptr %lsr.iv1, ptr %cgep5, align 4, !tbaa !5
+    %lsr.iv.next = add i32 %lsr.iv, 4
+    %cmp = icmp slt i32 %lsr.iv.next, 1073741836
+    %cgep4 = getelementptr i8, ptr %lsr.iv1, i32 32
+    br i1 %cmp, label %do.body, label %do.end, !llvm.loop !11
+
+  do.end:                                           ; preds = %do.body
+    ret void
+  }
+
+  ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+  declare i32 @llvm.smax.i32(i32, i32) #1
+
+  !llvm.module.flags = !{!0, !1, !2, !3}
+  !0 = !{i32 1, !"wchar_size", i32 4}
+  !1 = !{i32 8, !"PIC Level", i32 2}
+  !2 = !{i32 7, !"PIE Level", i32 2}
+  !3 = !{i32 7, !"frame-pointer", i32 2}
+  !5 = !{!6, !6, i64 0}
+  !6 = !{!"any pointer", !7, i64 0}
+  !7 = !{!"omnipotent char", !8, i64 0}
+  !8 = !{!"Simple C/C++ TBAA"}
+  !9 = distinct !{!9, !10}
+  !10 = !{!"llvm.loop.mustprogress"}
+  !11 = distinct !{!11, !10}
+
+...
+---
+name:            f
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+noPhis:          false
+isSSA:           true
+noVRegs:         false
+hasFakeUses:     false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: intregs, preferred-register: '', flags: [  ] }
+  - { id: 1, class: intregs, preferred-register: '', flags: [  ] }
+  - { id: 2, class: intregs, preferred-register: '', flags: [  ] }
+  - { id: 3, class: intregs, preferred-register: '', flags: [  ] }
+  - { id: 4, class: intregs, preferred-register: '', flags: [  ] }
+  - { id: 5, class: intregs, preferred-register: '', flags: [  ] }
+  - { id: 6, class: intregs, preferred-register: '', flags: [  ] }
+  - { id: 7, class: intregs, preferred-register: '', flags: [  ] }
+  - { id: 8, class: intregs, preferred-register: '', flags: [  ] }
+  - { id: 9, class: intregs, preferred-register: '', flags: [  ] }
+  - { id: 10, class: intregs, preferred-register: '', flags: [  ] }
+  - { id: 11, class: intregs, preferred-register: '', flags: [  ] }
+  - { id: 12, class: intregs, preferred-register: '', flags: [  ] }
+  - { id: 13, class: predregs, preferred-register: '', flags: [  ] }
+  - { id: 14, class: predregs, preferred-register: '', flags: [  ] }
+  - { id: 15, class: intregs, preferred-register: '', flags: [  ] }
+liveins:
+  - { reg: '$r0', virtual-reg: '%9' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  isCalleeSavedInfoValid: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+    liveins: $r0
+
+    %9:intregs = COPY $r0
+    %11:intregs = A2_tfrsi 2
+    %12:intregs = A2_max %9, %11
+    %0:intregs = nsw A2_addi %12, -4
+    %1:intregs = S4_addi_asl_ri @a, %12, 3
+    %2:intregs = A2_tfrsi @a
+    %10:intregs = A2_tfrsi 256
+
+  bb.1.do.body:
+    successors: %bb.1(0x7c000000), %bb.2(0x04000000)
+
+    %3:intregs = PHI %1, %bb.0, %8, %bb.1
+    %4:intregs = PHI %0, %bb.0, %7, %bb.1
+    %5:intregs = PHI %10, %bb.0, %15, %bb.1
+    %15:intregs = S2_extractu %5, 8, 1
+    S4_storeri_rr %2, %15, 2, %3 :: (store (s32) into %ir.cgep5, !tbaa !5)
+    %7:intregs = nsw A2_addi %4, 4
+    %13:predregs = C2_cmpgtui %7, 1073741835
+    %8:intregs = A2_addi %3, 32
+    J2_jumpf %13, %bb.1, implicit-def dead $pc
+    J2_jump %bb.2, implicit-def dead $pc
+
+  bb.2.do.end:
+    PS_jmpret $r31, implicit-def dead $pc
+
+...
+---
+name:            g
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+noPhis:          false
+isSSA:           true
+noVRegs:         false
+hasFakeUses:     false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: intregs, preferred-register: '', flags: [  ] }
+  - { id: 1, class: intregs, preferred-register: '', flags: [  ] }
+  - { id: 2, class: intregs, preferred-register: '', flags: [  ] }
+  - { id: 3, class: intregs, preferred-register: '', flags: [  ] }
+  - { id: 4, class: intregs, preferred-register: '', flags: [  ] }
+  - { id: 5, class: intregs, preferred-register: '', flags: [  ] }
+  - { id: 6, class: intregs, preferred-register: '', flags: [  ] }
+  - { id: 7, class: intregs, preferred-register: '', flags: [  ] }
+  - { id: 8, class: intregs, preferred-register: '', flags: [  ] }
+  - { id: 9, class: intregs, preferred-register: '', flags: [  ] }
+  - { id: 10, class: intregs, preferred-register: '', flags: [  ] }
+  - { id: 11, class: predregs, preferred-register: '', flags: [  ] }
+  - { id: 12, class: predregs, preferred-register: '', flags: [  ] }
+  - { id: 13, class: intregs, preferred-register: '', flags: [  ] }
+liveins:
+  - { reg: '$r0', virtual-reg: '%9' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  isCalleeSavedInfoValid: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+    liveins: $r0
+
+    %9:intregs = COPY $r0
+    %0:intregs = A2_addi %9, -4
+    %1:intregs = S4_addi_asl_ri @a, %9, 3
+    %2:intregs = A2_tfrsi @a
+    %10:intregs = A2_tfrsi 256
+
+  bb.1.do.body:
+    successors: %bb.1(0x7c000000), %bb.2(0x04000000)
+
+    %3:intregs = PHI %1, %bb.0, %8, %bb.1
+    %4:intregs = PHI %0, %bb.0, %7, %bb.1
+    %5:intregs = PHI %10, %bb.0, %13, %bb.1
+    %13:intregs = S2_extractu %5, 8, 1
+    S4_storeri_rr %2, %13, 2, %3 :: (store (s32) into %ir.cgep5, !tbaa !5)
+    %7:intregs = A2_addi %4, 4
+    %11:predregs = C2_cmpgti %7, 1073741835
+    %8:intregs = A2_addi %3, 32
+    J2_jumpf %11, %bb.1, implicit-def dead $pc
+    J2_jump %bb.2, implicit-def dead $pc
+
+  bb.2.do.end:
+    PS_jmpret $r31, implicit-def dead $pc
+
+...

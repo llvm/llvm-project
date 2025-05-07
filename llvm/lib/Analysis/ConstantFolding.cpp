@@ -943,18 +943,21 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
 
   // If the base value for this address is a literal integer value, fold the
   // getelementptr to the resulting integer value casted to the pointer type.
-  APInt BasePtr(BitWidth, 0);
+  APInt BasePtr(DL.getPointerTypeSizeInBits(Ptr->getType()), 0);
   if (auto *CE = dyn_cast<ConstantExpr>(Ptr)) {
     if (CE->getOpcode() == Instruction::IntToPtr) {
       if (auto *Base = dyn_cast<ConstantInt>(CE->getOperand(0)))
-        BasePtr = Base->getValue().zextOrTrunc(BitWidth);
+        BasePtr = Base->getValue().zextOrTrunc(BasePtr.getBitWidth());
     }
   }
 
   auto *PTy = cast<PointerType>(Ptr->getType());
   if ((Ptr->isNullValue() || BasePtr != 0) &&
       !DL.isNonIntegralPointerType(PTy)) {
-    Constant *C = ConstantInt::get(Ptr->getContext(), Offset + BasePtr);
+    // If the index size is smaller than the pointer size, add to the low
+    // bits only.
+    BasePtr.insertBits(BasePtr.trunc(BitWidth) + Offset, 0);
+    Constant *C = ConstantInt::get(Ptr->getContext(), BasePtr);
     return ConstantExpr::getIntToPtr(C, ResTy);
   }
 
@@ -1120,7 +1123,8 @@ ConstantFoldConstantImpl(const Constant *C, const DataLayout &DL,
 
 } // end anonymous namespace
 
-Constant *llvm::ConstantFoldInstruction(Instruction *I, const DataLayout &DL,
+Constant *llvm::ConstantFoldInstruction(const Instruction *I,
+                                        const DataLayout &DL,
                                         const TargetLibraryInfo *TLI) {
   // Handle PHI nodes quickly here...
   if (auto *PN = dyn_cast<PHINode>(I)) {
@@ -1153,7 +1157,7 @@ Constant *llvm::ConstantFoldInstruction(Instruction *I, const DataLayout &DL,
 
   // Scan the operand list, checking to see if they are all constants, if so,
   // hand off to ConstantFoldInstOperandsImpl.
-  if (!all_of(I->operands(), [](Use &U) { return isa<Constant>(U); }))
+  if (!all_of(I->operands(), [](const Use &U) { return isa<Constant>(U); }))
     return nullptr;
 
   SmallDenseMap<Constant *, Constant *> FoldedOps;
@@ -1174,7 +1178,7 @@ Constant *llvm::ConstantFoldConstant(const Constant *C, const DataLayout &DL,
   return ConstantFoldConstantImpl(C, DL, TLI, FoldedOps);
 }
 
-Constant *llvm::ConstantFoldInstOperands(Instruction *I,
+Constant *llvm::ConstantFoldInstOperands(const Instruction *I,
                                          ArrayRef<Constant *> Ops,
                                          const DataLayout &DL,
                                          const TargetLibraryInfo *TLI,
@@ -1258,11 +1262,16 @@ Constant *llvm::ConstantFoldCompareInstOperands(
     if (Ops0->getType()->isPointerTy() && !ICmpInst::isSigned(Predicate)) {
       unsigned IndexWidth = DL.getIndexTypeSizeInBits(Ops0->getType());
       APInt Offset0(IndexWidth, 0);
-      Value *Stripped0 =
-          Ops0->stripAndAccumulateInBoundsConstantOffsets(DL, Offset0);
+      bool IsEqPred = ICmpInst::isEquality(Predicate);
+      Value *Stripped0 = Ops0->stripAndAccumulateConstantOffsets(
+          DL, Offset0, /*AllowNonInbounds=*/IsEqPred,
+          /*AllowInvariantGroup=*/false, /*ExternalAnalysis=*/nullptr,
+          /*LookThroughIntToPtr=*/IsEqPred);
       APInt Offset1(IndexWidth, 0);
-      Value *Stripped1 =
-          Ops1->stripAndAccumulateInBoundsConstantOffsets(DL, Offset1);
+      Value *Stripped1 = Ops1->stripAndAccumulateConstantOffsets(
+          DL, Offset1, /*AllowNonInbounds=*/IsEqPred,
+          /*AllowInvariantGroup=*/false, /*ExternalAnalysis=*/nullptr,
+          /*LookThroughIntToPtr=*/IsEqPred);
       if (Stripped0 == Stripped1)
         return ConstantInt::getBool(
             Ops0->getContext(),
@@ -1643,6 +1652,8 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::sin:
   case Intrinsic::cos:
   case Intrinsic::sincos:
+  case Intrinsic::sinh:
+  case Intrinsic::cosh:
   case Intrinsic::pow:
   case Intrinsic::powi:
   case Intrinsic::ldexp:
@@ -2505,6 +2516,10 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
         return ConstantFoldFP(sin, APF, Ty);
       case Intrinsic::cos:
         return ConstantFoldFP(cos, APF, Ty);
+      case Intrinsic::sinh:
+        return ConstantFoldFP(sinh, APF, Ty);
+      case Intrinsic::cosh:
+        return ConstantFoldFP(cosh, APF, Ty);
       case Intrinsic::sqrt:
         return ConstantFoldFP(sqrt, APF, Ty);
       case Intrinsic::amdgcn_cos:
@@ -3939,6 +3954,9 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
       case LibFunc_log10:
       case LibFunc_log10f:
         return Op.isNaN() || (!Op.isZero() && !Op.isNegative());
+
+      case LibFunc_ilogb:
+        return !Op.isNaN() && !Op.isZero() && !Op.isInfinity();
 
       case LibFunc_expl:
       case LibFunc_exp:

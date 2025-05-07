@@ -25,9 +25,9 @@ entry:
   %u64 = alloca i64, align 8
 ; CHECK-DAG: .reg .b64 %rd<
   %f32 = alloca float, align 4
-; CHECK-DAG: .reg .f32 %f<
+; CHECK-DAG: .reg .b32 %f<
   %f64 = alloca double, align 8
-; CHECK-DAG: .reg .f64 %fd<
+; CHECK-DAG: .reg .b64 %fd<
 
 ; Verify that we use correct register types.
   store i8 1, ptr %s8, align 1

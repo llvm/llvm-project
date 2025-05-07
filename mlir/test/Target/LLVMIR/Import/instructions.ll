@@ -471,11 +471,15 @@ define void @atomic_rmw(ptr %ptr1, i32 %val1, ptr %ptr2, float %val2) {
   %18 = atomicrmw usub_cond ptr %ptr1, i32 %val1 acquire
   ; CHECK:  llvm.atomicrmw usub_sat %[[PTR1]], %[[VAL1]] acquire
   %19 = atomicrmw usub_sat ptr %ptr1, i32 %val1 acquire
+  ; CHECK:  llvm.atomicrmw fmaximum %[[PTR2]], %[[VAL2]] acquire
+  %20 = atomicrmw fmaximum ptr %ptr2, float %val2 acquire
+  ; CHECK:  llvm.atomicrmw fminimum %[[PTR2]], %[[VAL2]] acquire
+  %21 = atomicrmw fminimum ptr %ptr2, float %val2 acquire
 
   ; CHECK:  llvm.atomicrmw volatile
   ; CHECK-SAME:  syncscope("singlethread")
   ; CHECK-SAME:  {alignment = 8 : i64}
-  %20 = atomicrmw volatile udec_wrap ptr %ptr1, i32 %val1 syncscope("singlethread") acquire, align 8
+  %22 = atomicrmw volatile udec_wrap ptr %ptr1, i32 %val1 syncscope("singlethread") acquire, align 8
   ret void
 }
 
@@ -557,6 +561,25 @@ define void @gep_static_idx(ptr %ptr) {
 
 ; // -----
 
+; CHECK-LABEL: @gep_no_wrap_flags
+; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
+define void @gep_no_wrap_flags(ptr %ptr) {
+  ; CHECK: %[[IDX:.+]] = llvm.mlir.constant(7 : i32)
+  ; CHECK: llvm.getelementptr inbounds %[[PTR]][%[[IDX]]] : (!llvm.ptr, i32) -> !llvm.ptr, f32
+  %1 = getelementptr inbounds float, ptr %ptr, i32 7
+  ; CHECK: llvm.getelementptr nusw %[[PTR]][%[[IDX]]] : (!llvm.ptr, i32) -> !llvm.ptr, f32
+  %2 = getelementptr nusw float, ptr %ptr, i32 7
+  ; CHECK: llvm.getelementptr nuw %[[PTR]][%[[IDX]]] : (!llvm.ptr, i32) -> !llvm.ptr, f32
+  %3 = getelementptr nuw float, ptr %ptr, i32 7
+  ; CHECK: llvm.getelementptr nusw|nuw %[[PTR]][%[[IDX]]] : (!llvm.ptr, i32) -> !llvm.ptr, f32
+  %4 = getelementptr nusw nuw float, ptr %ptr, i32 7
+  ; CHECK: llvm.getelementptr inbounds|nuw %[[PTR]][%[[IDX]]] : (!llvm.ptr, i32) -> !llvm.ptr, f32
+  %5 = getelementptr inbounds nuw float, ptr %ptr, i32 7
+  ret void
+}
+
+; // -----
+
 ; CHECK: @varargs(...)
 declare void @varargs(...)
 
@@ -565,6 +588,31 @@ declare void @varargs(...)
 define void @varargs_call(i32 %0) {
   ; CHECK:  llvm.call @varargs(%[[ARG1]]) vararg(!llvm.func<void (...)>) : (i32) -> ()
   call void (...) @varargs(i32 %0)
+  ret void
+}
+
+; // -----
+
+; CHECK: @varargs(...)
+declare void @varargs(...)
+
+; CHECK-LABEL: @varargs_call
+; CHECK-SAME:  %[[ARG1:[a-zA-Z0-9]+]]
+define void @varargs_call(i32 %0) {
+  ; CHECK:  llvm.call @varargs(%[[ARG1]]) vararg(!llvm.func<void (...)>) : (i32) -> ()
+  call void @varargs(i32 %0)
+  ret void
+}
+
+; // -----
+
+; CHECK: @varargs(...)
+declare void @varargs(...)
+
+; CHECK-LABEL: @empty_varargs_call
+define void @empty_varargs_call() {
+  ; CHECK:  llvm.call @varargs() vararg(!llvm.func<void (...)>) : () -> ()
+  call void @varargs()
   ret void
 }
 
@@ -675,5 +723,39 @@ define void @fence() {
   fence syncscope("agent") seq_cst
   fence release
   fence syncscope("") seq_cst
+  ret void
+}
+
+; // -----
+
+; CHECK-LABEL: @f
+define void @f() personality ptr @__gxx_personality_v0 {
+entry:
+; CHECK: llvm.invoke @g() to ^bb1 unwind ^bb2 vararg(!llvm.func<void (...)>) : () -> ()
+  invoke void @g() to label %bb1 unwind label %bb2
+bb1:
+  ret void
+bb2:
+  %0 = landingpad i32 cleanup
+  unreachable
+}
+
+declare void @g(...)
+
+declare i32 @__gxx_personality_v0(...)
+
+; // -----
+
+; CHECK-LABEL: llvm.func @incompatible_call_and_callee_types
+define void @incompatible_call_and_callee_types() {
+  ; CHECK: %[[CST:.*]] = llvm.mlir.constant(0 : i64) : i64
+  ; CHECK: %[[TARGET:.*]] = llvm.mlir.addressof @callee : !llvm.ptr
+  ; CHECK: llvm.call %[[TARGET]](%[[CST]]) : !llvm.ptr, (i64) -> ()
+  call void @callee(i64 0)
+  ; CHECK: llvm.return
+  ret void
+}
+
+define void @callee({ptr, i64}, i32) {
   ret void
 }

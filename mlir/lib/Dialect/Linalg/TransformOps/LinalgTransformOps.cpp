@@ -265,7 +265,16 @@ void transform::ApplyFoldAddIntoDestPatternsOp::populatePatterns(
 void transform::ApplyPadVectorizationPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   linalg::populatePadOpVectorizationPatterns(patterns);
-  linalg::populateInsertSliceVectorizationPatterns(patterns);
+}
+
+void transform::ApplyFoldIntoPackAndUnpackPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::populateFoldIntoPackAndUnpackPatterns(patterns);
+}
+
+void transform::ApplyFoldPackUnpackIntoEmptyPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::populateFoldPackUnpackIntoTensorEmptyPatterns(patterns);
 }
 
 //===----------------------------------------------------------------------===//
@@ -583,6 +592,7 @@ transform::FuseOp::apply(transform::TransformRewriter &rewriter,
     RewritePatternSet patterns(context);
     tensor::ExtractSliceOp::getCanonicalizationPatterns(patterns, context);
     tensor::populateMergeConsecutiveInsertExtractSlicePatterns(patterns);
+    tensor::populateBubbleUpExtractSliceOpPatterns(patterns);
     tileAndFuseOptions.cleanupPatterns = std::move(patterns);
   }
 
@@ -975,8 +985,7 @@ transform::FuseIntoContainingOp::apply(transform::TransformRewriter &rewriter,
 
   // Helper function to find the next producer that should be fused. Take any
   // producer that has a use inside the containing op.
-  SetVector<Operation *> remainingProducers(producerOps.begin(),
-                                            producerOps.end());
+  SetVector<Operation *> remainingProducers(llvm::from_range, producerOps);
   auto getNextProducer = [&]() -> FailureOr<Operation *> {
     for (const auto &it : enumerate(remainingProducers)) {
       Operation *producerOp = it.value();
@@ -1167,11 +1176,76 @@ LogicalResult transform::InterchangeOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// LinalgCopyToMemrefOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::LinalgCopyToMemrefOp::applyToOne(
+    transform::TransformRewriter &rewriter, Operation *targetOp,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+
+  // Check if the target can be converted.
+  if (!isa<linalg::CopyOp>(targetOp)) {
+    DiagnosedSilenceableFailure diag =
+        emitSilenceableError() << "only linalg.copy target ops are supported";
+    diag.attachNote(targetOp->getLoc()) << "target op";
+    return diag;
+  }
+
+  auto copyOp = dyn_cast<linalg::CopyOp>(targetOp);
+  if (!copyOp.hasPureBufferSemantics()) {
+    DiagnosedSilenceableFailure diag =
+        emitSilenceableError()
+        << "cannot transform a linalg.copy on tensors into a memref.copy";
+    diag.attachNote(targetOp->getLoc()) << "target op";
+    return diag;
+  }
+
+  SmallVector<Value> inputs = copyOp.getInputs();
+  SmallVector<Value> outputs = copyOp.getOutputs();
+  assert(inputs.size() == 1 && "expected linalg copy op with one input");
+  assert(outputs.size() == 1 && "expected memref copy op with one output");
+  Value input = inputs.front();
+  Value output = outputs.front();
+
+  // linalg.copy supports different element types on source/dest whereas
+  // memref.copy does not, so we must check that the source and dest types can
+  // be handled by memref.copy and otherwise reject the transformation.
+  if (!dyn_cast<ShapedType>(input.getType())) {
+    DiagnosedSilenceableFailure diag =
+        emitSilenceableError()
+        << "cannot transform a linalg.copy which input has no shape";
+    diag.attachNote(targetOp->getLoc()) << "target op";
+    return diag;
+  }
+
+  // linalg.copy destination must be a shaped type.
+  assert(dyn_cast<ShapedType>(output.getType()));
+
+  if (cast<ShapedType>(input.getType()).getElementType() !=
+      cast<ShapedType>(output.getType()).getElementType()) {
+    DiagnosedSilenceableFailure diag =
+        emitSilenceableError()
+        << "cannot transform a linalg.copy with different source and "
+           "destination element types ";
+    diag.attachNote(targetOp->getLoc()) << "target op";
+    return diag;
+  }
+
+  // Target can be converted, do it.
+  auto memrefCopyOp =
+      rewriter.replaceOpWithNewOp<memref::CopyOp>(targetOp, input, output);
+
+  results.push_back(memrefCopyOp);
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
 // LowerPackOp
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure transform::LowerPackOp::applyToOne(
-    transform::TransformRewriter &rewriter, tensor::PackOp target,
+    transform::TransformRewriter &rewriter, linalg::PackOp target,
     transform::ApplyToEachResultList &transformResults,
     transform::TransformState &state) {
   rewriter.setInsertionPoint(target);
@@ -1193,7 +1267,7 @@ DiagnosedSilenceableFailure transform::LowerPackOp::applyToOne(
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure transform::LowerUnPackOp::applyToOne(
-    transform::TransformRewriter &rewriter, tensor::UnPackOp target,
+    transform::TransformRewriter &rewriter, linalg::UnPackOp target,
     transform::ApplyToEachResultList &transformResults,
     transform::TransformState &state) {
   rewriter.setInsertionPoint(target);
@@ -1241,8 +1315,7 @@ transform::MatchOp::apply(transform::TransformRewriter &rewriter,
                           transform::TransformState &state) {
   llvm::StringSet<> strs;
   if (getOps().has_value())
-    strs.insert(getOps()->getAsValueRange<StringAttr>().begin(),
-                getOps()->getAsValueRange<StringAttr>().end());
+    strs.insert_range(getOps()->getAsValueRange<StringAttr>());
 
   auto payloadOps = state.getPayloadOps(getTarget());
   if (!llvm::hasSingleElement(payloadOps)) {
@@ -1623,7 +1696,7 @@ bool isValidPackingPermutation(
     RelayoutOpTy op, ArrayRef<int64_t> permutation,
     OuterOrInnerPerm outerOrInnerPerm = OuterOrInnerPerm::Outer) {
   static_assert(
-      llvm::is_one_of<RelayoutOpTy, tensor::PackOp, tensor::UnPackOp>::value,
+      llvm::is_one_of<RelayoutOpTy, linalg::PackOp, linalg::UnPackOp>::value,
       "applies to only pack or unpack operations");
   if (!op || permutation.empty())
     return true;
@@ -1632,7 +1705,7 @@ bool isValidPackingPermutation(
     return permutation.size() == innerRank && isPermutationVector(permutation);
   // op.getOuterDimsPerm() may be empty, in which case it is identity.
   // Don't rely on it.
-  if (std::is_same<RelayoutOpTy, tensor::PackOp>::value) {
+  if (std::is_same<RelayoutOpTy, linalg::PackOp>::value) {
     return permutation.size() == op.getSourceRank() &&
            isPermutationVector(permutation);
   }
@@ -1666,11 +1739,11 @@ transform::PackTransposeOp::apply(transform::TransformRewriter &rewriter,
   }
 
   // Step 2.2. Fail on wrong type.
-  auto packOp = dyn_cast<tensor::PackOp>(*packOrUnpackOps.begin());
-  auto unPackOp = dyn_cast<tensor::UnPackOp>(*packOrUnpackOps.begin());
+  auto packOp = dyn_cast<linalg::PackOp>(*packOrUnpackOps.begin());
+  auto unPackOp = dyn_cast<linalg::UnPackOp>(*packOrUnpackOps.begin());
   if ((!packOp && !unPackOp)) {
     return emitSilenceableError() << "requires target to map to a "
-                                     "tensor.pack or tensor.unpack";
+                                     "linalg.pack or linalg.unpack";
   }
   LinalgOp linalgOpTarget = dyn_cast<LinalgOp>(*linalgOps.begin());
   if (!linalgOpTarget)
@@ -1695,7 +1768,7 @@ transform::PackTransposeOp::apply(transform::TransformRewriter &rewriter,
     assert(!packOp && "packOp must be null on entry when unPackOp is not null");
     OpOperand *packUse = linalgOp.getDpsInitOperand(
         cast<OpResult>(unPackOp.getSource()).getResultNumber());
-    packOp = dyn_cast_or_null<tensor::PackOp>(packUse->get().getDefiningOp());
+    packOp = dyn_cast_or_null<linalg::PackOp>(packUse->get().getDefiningOp());
     if (!packOp || !packOp.getResult().hasOneUse())
       return emitSilenceableError() << "could not find matching pack op";
   }
@@ -2215,7 +2288,6 @@ transform::ScalarizeOp::applyToOne(transform::TransformRewriter &rewriter,
     }
     return tileSizes;
   });
-  SmallVector<int64_t> emptyTileSizes;
   rewriter.setInsertionPoint(target);
   FailureOr<scf::SCFTilingResult> maybeTilingResult = tileUsingSCF(
       rewriter, cast<TilingInterface>(target.getOperation()), tilingOptions);
@@ -2274,7 +2346,6 @@ transform::RewriteInDestinationPassingStyleOp::applyToOne(
     transform::TransformRewriter &rewriter, Operation *target,
     transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
-  SmallVector<Operation *> res;
   rewriter.setInsertionPoint(target);
   FailureOr<Operation *> maybeResult =
       TypeSwitch<Operation *, FailureOr<Operation *>>(target)
@@ -3504,9 +3575,6 @@ transform::VectorizeChildrenAndApplyPatternsOp::applyToOne(
 
   patterns.add<CopyVectorizationPattern>(ctx);
 
-  // Add misc. vectorization patterns (e.g. for tensor.insert_slice)
-  linalg::populateInsertSliceVectorizationPatterns(patterns);
-
   if (getVectorizePadding()) {
     linalg::populatePadOpVectorizationPatterns(patterns);
     // This creates an alternative path for lowering tensor.pad - by
@@ -3516,9 +3584,9 @@ transform::VectorizeChildrenAndApplyPatternsOp::applyToOne(
   vector::populateVectorStepLoweringPatterns(patterns);
 
   TrackingListener listener(state, *this);
-  GreedyRewriteConfig config;
-  config.listener = &listener;
-  if (failed(applyPatternsGreedily(target, std::move(patterns), config)))
+  if (failed(
+          applyPatternsGreedily(target, std::move(patterns),
+                                GreedyRewriteConfig().setListener(&listener))))
     return emitDefaultDefiniteFailure(target);
 
   results.push_back(target);

@@ -188,7 +188,6 @@ struct ConvertMemRefAllocation final : OpConversionPattern<OpTy> {
 
     Location loc = op.getLoc();
     OpFoldResult zero = rewriter.getIndexAttr(0);
-    SmallVector<OpFoldResult> indices(currentType.getRank(), zero);
 
     // Get linearized type.
     int srcBits = currentType.getElementType().getIntOrFloatBitWidth();
@@ -632,7 +631,7 @@ void memref::populateMemRefNarrowTypeEmulationConversions(
         // Currently only handle innermost stride being 1, checking
         SmallVector<int64_t> strides;
         int64_t offset;
-        if (failed(getStridesAndOffset(ty, strides, offset)))
+        if (failed(ty.getStridesAndOffset(strides, offset)))
           return nullptr;
         if (!strides.empty() && strides.back() != 1)
           return nullptr;

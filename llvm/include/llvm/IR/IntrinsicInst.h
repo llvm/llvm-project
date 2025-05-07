@@ -1107,100 +1107,6 @@ public:
   }
 };
 
-// The common base class for the atomic memset/memmove/memcpy intrinsics
-// i.e. llvm.element.unordered.atomic.memset/memcpy/memmove
-class AtomicMemIntrinsic : public MemIntrinsicBase<AtomicMemIntrinsic> {
-private:
-  enum { ARG_ELEMENTSIZE = 3 };
-
-public:
-  Value *getRawElementSizeInBytes() const {
-    return const_cast<Value *>(getArgOperand(ARG_ELEMENTSIZE));
-  }
-
-  ConstantInt *getElementSizeInBytesCst() const {
-    return cast<ConstantInt>(getRawElementSizeInBytes());
-  }
-
-  uint32_t getElementSizeInBytes() const {
-    return getElementSizeInBytesCst()->getZExtValue();
-  }
-
-  void setElementSizeInBytes(Constant *V) {
-    assert(V->getType() == Type::getInt8Ty(getContext()) &&
-           "setElementSizeInBytes called with value of wrong type!");
-    setArgOperand(ARG_ELEMENTSIZE, V);
-  }
-
-  static bool classof(const IntrinsicInst *I) {
-    switch (I->getIntrinsicID()) {
-    case Intrinsic::memcpy_element_unordered_atomic:
-    case Intrinsic::memmove_element_unordered_atomic:
-    case Intrinsic::memset_element_unordered_atomic:
-      return true;
-    default:
-      return false;
-    }
-  }
-  static bool classof(const Value *V) {
-    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
-  }
-};
-
-/// This class represents atomic memset intrinsic
-// i.e. llvm.element.unordered.atomic.memset
-class AtomicMemSetInst : public MemSetBase<AtomicMemIntrinsic> {
-public:
-  static bool classof(const IntrinsicInst *I) {
-    return I->getIntrinsicID() == Intrinsic::memset_element_unordered_atomic;
-  }
-  static bool classof(const Value *V) {
-    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
-  }
-};
-
-// This class wraps the atomic memcpy/memmove intrinsics
-// i.e. llvm.element.unordered.atomic.memcpy/memmove
-class AtomicMemTransferInst : public MemTransferBase<AtomicMemIntrinsic> {
-public:
-  static bool classof(const IntrinsicInst *I) {
-    switch (I->getIntrinsicID()) {
-    case Intrinsic::memcpy_element_unordered_atomic:
-    case Intrinsic::memmove_element_unordered_atomic:
-      return true;
-    default:
-      return false;
-    }
-  }
-  static bool classof(const Value *V) {
-    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
-  }
-};
-
-/// This class represents the atomic memcpy intrinsic
-/// i.e. llvm.element.unordered.atomic.memcpy
-class AtomicMemCpyInst : public AtomicMemTransferInst {
-public:
-  static bool classof(const IntrinsicInst *I) {
-    return I->getIntrinsicID() == Intrinsic::memcpy_element_unordered_atomic;
-  }
-  static bool classof(const Value *V) {
-    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
-  }
-};
-
-/// This class represents the atomic memmove intrinsic
-/// i.e. llvm.element.unordered.atomic.memmove
-class AtomicMemMoveInst : public AtomicMemTransferInst {
-public:
-  static bool classof(const IntrinsicInst *I) {
-    return I->getIntrinsicID() == Intrinsic::memmove_element_unordered_atomic;
-  }
-  static bool classof(const Value *V) {
-    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
-  }
-};
-
 /// This is the common base class for memset/memcpy/memmove.
 class MemIntrinsic : public MemIntrinsicBase<MemIntrinsic> {
 private:
@@ -1214,6 +1120,16 @@ public:
   bool isVolatile() const { return !getVolatileCst()->isZero(); }
 
   void setVolatile(Constant *V) { setArgOperand(ARG_VOLATILE, V); }
+
+  bool isForceInlined() const {
+    switch (getIntrinsicID()) {
+    case Intrinsic::memset_inline:
+    case Intrinsic::memcpy_inline:
+      return true;
+    default:
+      return false;
+    }
+  }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I) {
@@ -1245,18 +1161,6 @@ public:
     default:
       return false;
     }
-  }
-  static bool classof(const Value *V) {
-    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
-  }
-};
-
-/// This class wraps the llvm.memset.inline intrinsic.
-class MemSetInlineInst : public MemSetInst {
-public:
-  // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const IntrinsicInst *I) {
-    return I->getIntrinsicID() == Intrinsic::memset_inline;
   }
   static bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
@@ -1342,29 +1246,31 @@ public:
   }
 };
 
-/// This class wraps the llvm.memcpy.inline intrinsic.
-class MemCpyInlineInst : public MemCpyInst {
-public:
-  // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const IntrinsicInst *I) {
-    return I->getIntrinsicID() == Intrinsic::memcpy_inline;
-  }
-  static bool classof(const Value *V) {
-    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
-  }
-};
-
 // The common base class for any memset/memmove/memcpy intrinsics;
 // whether they be atomic or non-atomic.
 // i.e. llvm.element.unordered.atomic.memset/memcpy/memmove
 //  and llvm.memset/memcpy/memmove
 class AnyMemIntrinsic : public MemIntrinsicBase<AnyMemIntrinsic> {
+private:
+  enum { ARG_ELEMENTSIZE = 3 };
+
 public:
   bool isVolatile() const {
     // Only the non-atomic intrinsics can be volatile
     if (auto *MI = dyn_cast<MemIntrinsic>(this))
       return MI->isVolatile();
     return false;
+  }
+
+  bool isAtomic() const {
+    switch (getIntrinsicID()) {
+    case Intrinsic::memcpy_element_unordered_atomic:
+    case Intrinsic::memmove_element_unordered_atomic:
+    case Intrinsic::memset_element_unordered_atomic:
+      return true;
+    default:
+      return false;
+    }
   }
 
   static bool classof(const IntrinsicInst *I) {
@@ -1384,6 +1290,16 @@ public:
   }
   static bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+
+  Value *getRawElementSizeInBytes() const {
+    assert(isAtomic());
+    return const_cast<Value *>(getArgOperand(ARG_ELEMENTSIZE));
+  }
+
+  uint32_t getElementSizeInBytes() const {
+    assert(isAtomic());
+    return cast<ConstantInt>(getRawElementSizeInBytes())->getZExtValue();
   }
 };
 
@@ -1882,6 +1798,11 @@ public:
   bool isLoop() const {
     return getIntrinsicID() == Intrinsic::experimental_convergence_loop;
   }
+
+  static ConvergenceControlInst *CreateAnchor(BasicBlock &BB);
+  static ConvergenceControlInst *CreateEntry(BasicBlock &BB);
+  static ConvergenceControlInst *CreateLoop(BasicBlock &BB,
+                                            ConvergenceControlInst *Parent);
 };
 
 } // end namespace llvm

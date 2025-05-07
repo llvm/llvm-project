@@ -48,7 +48,7 @@ protected:
       TargetOpts(new TargetOptions)
   {
     TargetOpts->Triple = "x86_64-apple-darwin11.1.0";
-    Target = TargetInfo::CreateTargetInfo(Diags, TargetOpts);
+    Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
   }
 
   std::unique_ptr<Preprocessor> CreatePP(StringRef Source,
@@ -57,11 +57,11 @@ protected:
         llvm::MemoryBuffer::getMemBuffer(Source);
     SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
 
-    HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
-                            Diags, LangOpts, Target.get());
+    HeaderSearchOptions HSOpts;
+    HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
+    PreprocessorOptions PPOpts;
     std::unique_ptr<Preprocessor> PP = std::make_unique<Preprocessor>(
-        std::make_shared<PreprocessorOptions>(), Diags, LangOpts, SourceMgr,
-        HeaderInfo, ModLoader,
+        PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
         /*IILookup =*/nullptr,
         /*OwnsHeaderSearch =*/false);
     PP->Initialize(*Target);
@@ -638,6 +638,41 @@ TEST_F(LexerTest, FindNextTokenIncludingComments) {
   EXPECT_THAT(GeneratedByNextToken,
               ElementsAre("abcd", "=", "0", ";", "// A comment.", "int", "xyz",
                           "=", "abcd", ";"));
+}
+
+TEST_F(LexerTest, FindPreviousToken) {
+  Lex("int abcd = 0;\n"
+      "// A comment.\n"
+      "int xyz = abcd;\n");
+  std::vector<std::string> GeneratedByPrevToken;
+  SourceLocation Loc = SourceMgr.getLocForEndOfFile(SourceMgr.getMainFileID());
+  while (true) {
+    auto T = Lexer::findPreviousToken(Loc, SourceMgr, LangOpts, false);
+    if (!T.has_value())
+      break;
+    GeneratedByPrevToken.push_back(getSourceText(*T, *T));
+    Loc = Lexer::GetBeginningOfToken(T->getLocation(), SourceMgr, LangOpts);
+  }
+  EXPECT_THAT(GeneratedByPrevToken, ElementsAre(";", "abcd", "=", "xyz", "int",
+                                                ";", "0", "=", "abcd", "int"));
+}
+
+TEST_F(LexerTest, FindPreviousTokenIncludingComments) {
+  Lex("int abcd = 0;\n"
+      "// A comment.\n"
+      "int xyz = abcd;\n");
+  std::vector<std::string> GeneratedByPrevToken;
+  SourceLocation Loc = SourceMgr.getLocForEndOfFile(SourceMgr.getMainFileID());
+  while (true) {
+    auto T = Lexer::findPreviousToken(Loc, SourceMgr, LangOpts, true);
+    if (!T.has_value())
+      break;
+    GeneratedByPrevToken.push_back(getSourceText(*T, *T));
+    Loc = Lexer::GetBeginningOfToken(T->getLocation(), SourceMgr, LangOpts);
+  }
+  EXPECT_THAT(GeneratedByPrevToken,
+              ElementsAre(";", "abcd", "=", "xyz", "int", "// A comment.", ";",
+                          "0", "=", "abcd", "int"));
 }
 
 TEST_F(LexerTest, CreatedFIDCountForPredefinedBuffer) {

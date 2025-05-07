@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Common/Fortran.h"
 #include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
@@ -15,6 +14,7 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Runtime/allocatable.h"
+#include "flang/Support/Fortran.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/Pass.h"
@@ -32,17 +32,24 @@ static void processAddrOfOp(fir::AddrOfOp addrOfOp,
                             mlir::SymbolTable &symbolTable,
                             llvm::DenseSet<fir::GlobalOp> &candidates,
                             bool recurseInGlobal) {
+
+  // Check if there is a real use of the global.
+  if (addrOfOp.getOperation()->hasOneUse()) {
+    mlir::OpOperand &addrUse = *addrOfOp.getOperation()->getUses().begin();
+    if (mlir::isa<fir::DeclareOp>(addrUse.getOwner()) &&
+        addrUse.getOwner()->use_empty())
+      return;
+  }
+
   if (auto globalOp = symbolTable.lookup<fir::GlobalOp>(
           addrOfOp.getSymbol().getRootReference().getValue())) {
     // TO DO: limit candidates to non-scalars. Scalars appear to have been
     // folded in already.
-    if (globalOp.getConstant()) {
-      if (recurseInGlobal)
-        globalOp.walk([&](fir::AddrOfOp op) {
-          processAddrOfOp(op, symbolTable, candidates, recurseInGlobal);
-        });
-      candidates.insert(globalOp);
-    }
+    if (recurseInGlobal)
+      globalOp.walk([&](fir::AddrOfOp op) {
+        processAddrOfOp(op, symbolTable, candidates, recurseInGlobal);
+      });
+    candidates.insert(globalOp);
   }
 }
 

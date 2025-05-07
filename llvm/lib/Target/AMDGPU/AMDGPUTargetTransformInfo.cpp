@@ -107,9 +107,9 @@ AMDGPUTTIImpl::AMDGPUTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
       ST(static_cast<const GCNSubtarget *>(TM->getSubtargetImpl(F))),
       TLI(ST->getTargetLowering()) {}
 
-void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
-                                            TTI::UnrollingPreferences &UP,
-                                            OptimizationRemarkEmitter *ORE) {
+void AMDGPUTTIImpl::getUnrollingPreferences(
+    Loop *L, ScalarEvolution &SE, TTI::UnrollingPreferences &UP,
+    OptimizationRemarkEmitter *ORE) const {
   const Function &F = *L->getHeader()->getParent();
   UP.Threshold =
       F.getFnAttributeAsParsedInteger("amdgpu-unroll-threshold", 300);
@@ -270,11 +270,11 @@ void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
 }
 
 void AMDGPUTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
-                                          TTI::PeelingPreferences &PP) {
+                                          TTI::PeelingPreferences &PP) const {
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 
-int64_t AMDGPUTTIImpl::getMaxMemIntrinsicInlineSizeThreshold() const {
+uint64_t AMDGPUTTIImpl::getMaxMemIntrinsicInlineSizeThreshold() const {
   return 1024;
 }
 
@@ -412,12 +412,10 @@ bool GCNTTIImpl::isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes,
   return isLegalToVectorizeMemChain(ChainSizeInBytes, Alignment, AddrSpace);
 }
 
-int64_t GCNTTIImpl::getMaxMemIntrinsicInlineSizeThreshold() const {
+uint64_t GCNTTIImpl::getMaxMemIntrinsicInlineSizeThreshold() const {
   return 1024;
 }
 
-// FIXME: Should we use narrower types for local/region, or account for when
-// unaligned access is legal?
 Type *GCNTTIImpl::getMemcpyLoopLoweringType(
     LLVMContext &Context, Value *Length, unsigned SrcAddrSpace,
     unsigned DestAddrSpace, Align SrcAlign, Align DestAlign,
@@ -426,29 +424,12 @@ Type *GCNTTIImpl::getMemcpyLoopLoweringType(
   if (AtomicElementSize)
     return Type::getIntNTy(Context, *AtomicElementSize * 8);
 
-  Align MinAlign = std::min(SrcAlign, DestAlign);
-
-  // A (multi-)dword access at an address == 2 (mod 4) will be decomposed by the
-  // hardware into byte accesses. If you assume all alignments are equally
-  // probable, it's more efficient on average to use short accesses for this
-  // case.
-  if (MinAlign == Align(2))
-    return Type::getInt16Ty(Context);
-
-  // Not all subtargets have 128-bit DS instructions, and we currently don't
-  // form them by default.
-  if (SrcAddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
-      SrcAddrSpace == AMDGPUAS::REGION_ADDRESS ||
-      DestAddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
-      DestAddrSpace == AMDGPUAS::REGION_ADDRESS) {
-    return FixedVectorType::get(Type::getInt32Ty(Context), 2);
-  }
-
-  // Global memory works best with 16-byte accesses.
+  // 16-byte accesses achieve the highest copy throughput.
   // If the operation has a fixed known length that is large enough, it is
   // worthwhile to return an even wider type and let legalization lower it into
-  // multiple accesses, effectively unrolling the memcpy loop. Private memory
-  // also hits this, although accesses may be decomposed.
+  // multiple accesses, effectively unrolling the memcpy loop.
+  // We also rely on legalization to decompose into smaller accesses for
+  // subtargets and address spaces where it is necessary.
   //
   // Don't unroll if Length is not a constant, since unrolling leads to worse
   // performance for length values that are smaller or slightly larger than the
@@ -473,26 +454,22 @@ void GCNTTIImpl::getMemcpyLoopResidualLoweringType(
         OpsOut, Context, RemainingBytes, SrcAddrSpace, DestAddrSpace, SrcAlign,
         DestAlign, AtomicCpySize);
 
-  Align MinAlign = std::min(SrcAlign, DestAlign);
+  Type *I32x4Ty = FixedVectorType::get(Type::getInt32Ty(Context), 4);
+  while (RemainingBytes >= 16) {
+    OpsOut.push_back(I32x4Ty);
+    RemainingBytes -= 16;
+  }
 
-  if (MinAlign != Align(2)) {
-    Type *I32x4Ty = FixedVectorType::get(Type::getInt32Ty(Context), 4);
-    while (RemainingBytes >= 16) {
-      OpsOut.push_back(I32x4Ty);
-      RemainingBytes -= 16;
-    }
+  Type *I64Ty = Type::getInt64Ty(Context);
+  while (RemainingBytes >= 8) {
+    OpsOut.push_back(I64Ty);
+    RemainingBytes -= 8;
+  }
 
-    Type *I64Ty = Type::getInt64Ty(Context);
-    while (RemainingBytes >= 8) {
-      OpsOut.push_back(I64Ty);
-      RemainingBytes -= 8;
-    }
-
-    Type *I32Ty = Type::getInt32Ty(Context);
-    while (RemainingBytes >= 4) {
-      OpsOut.push_back(I32Ty);
-      RemainingBytes -= 4;
-    }
+  Type *I32Ty = Type::getInt32Ty(Context);
+  while (RemainingBytes >= 4) {
+    OpsOut.push_back(I32Ty);
+    RemainingBytes -= 4;
   }
 
   Type *I16Ty = Type::getInt16Ty(Context);
@@ -508,7 +485,7 @@ void GCNTTIImpl::getMemcpyLoopResidualLoweringType(
   }
 }
 
-unsigned GCNTTIImpl::getMaxInterleaveFactor(ElementCount VF) {
+unsigned GCNTTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
   // Disable unrolling if the loop is not vectorized.
   // TODO: Enable this again.
   if (VF.isScalar())
@@ -546,8 +523,7 @@ bool GCNTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
 InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args,
-    const Instruction *CxtI) {
+    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
@@ -725,7 +701,7 @@ static bool intrinsicHasPackedVectorBenefit(Intrinsic::ID ID) {
 
 InstructionCost
 GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                                  TTI::TargetCostKind CostKind) {
+                                  TTI::TargetCostKind CostKind) const {
   if (ICA.getID() == Intrinsic::fabs)
     return 0;
 
@@ -795,7 +771,7 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
 InstructionCost GCNTTIImpl::getCFInstrCost(unsigned Opcode,
                                            TTI::TargetCostKind CostKind,
-                                           const Instruction *I) {
+                                           const Instruction *I) const {
   assert((I == nullptr || I->getOpcode() == Opcode) &&
          "Opcode should reflect passed instruction.");
   const bool SCost =
@@ -826,7 +802,7 @@ InstructionCost GCNTTIImpl::getCFInstrCost(unsigned Opcode,
 InstructionCost
 GCNTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
                                        std::optional<FastMathFlags> FMF,
-                                       TTI::TargetCostKind CostKind) {
+                                       TTI::TargetCostKind CostKind) const {
   if (TTI::requiresOrderedReduction(FMF))
     return BaseT::getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
 
@@ -844,7 +820,7 @@ GCNTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
 InstructionCost
 GCNTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
                                    FastMathFlags FMF,
-                                   TTI::TargetCostKind CostKind) {
+                                   TTI::TargetCostKind CostKind) const {
   EVT OrigTy = TLI->getValueType(DL, Ty);
 
   // Computes cost on targets that have packed math instructions(which support
@@ -858,8 +834,8 @@ GCNTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
 
 InstructionCost GCNTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
                                                TTI::TargetCostKind CostKind,
-                                               unsigned Index, Value *Op0,
-                                               Value *Op1) {
+                                               unsigned Index, const Value *Op0,
+                                               const Value *Op1) const {
   switch (Opcode) {
   case Instruction::ExtractElement:
   case Instruction::InsertElement: {
@@ -965,7 +941,7 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
   // atomic operation refers to the same address in each thread, then each
   // thread after the first sees the value written by the previous thread as
   // original value.
-  if (isa<AtomicRMWInst>(V) || isa<AtomicCmpXchgInst>(V))
+  if (isa<AtomicRMWInst, AtomicCmpXchgInst>(V))
     return true;
 
   if (const IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(V)) {
@@ -1148,7 +1124,7 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                            TTI::TargetCostKind CostKind,
                                            int Index, VectorType *SubTp,
                                            ArrayRef<const Value *> Args,
-                                           const Instruction *CxtI) {
+                                           const Instruction *CxtI) const {
   if (!isa<FixedVectorType>(VT))
     return BaseT::getShuffleCost(Kind, VT, Mask, CostKind, Index, SubTp);
 
@@ -1301,9 +1277,9 @@ static unsigned adjustInliningThresholdUsingCallee(const CallBase *CB,
   // The penalty cost is computed relative to the cost of instructions and does
   // not model any storage costs.
   adjustThreshold += std::max(0, SGPRsInUse - NrOfSGPRUntilSpill) *
-                     *ArgStackCost.getValue() * InlineConstants::getInstrCost();
+                     ArgStackCost.getValue() * InlineConstants::getInstrCost();
   adjustThreshold += std::max(0, VGPRsInUse - NrOfVGPRUntilSpill) *
-                     *ArgStackCost.getValue() * InlineConstants::getInstrCost();
+                     ArgStackCost.getValue() * InlineConstants::getInstrCost();
   return adjustThreshold;
 }
 
@@ -1393,12 +1369,12 @@ unsigned GCNTTIImpl::getCallerAllocaCost(const CallBase *CB,
 
 void GCNTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                          TTI::UnrollingPreferences &UP,
-                                         OptimizationRemarkEmitter *ORE) {
+                                         OptimizationRemarkEmitter *ORE) const {
   CommonTTI.getUnrollingPreferences(L, SE, UP, ORE);
 }
 
 void GCNTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
-                                       TTI::PeelingPreferences &PP) {
+                                       TTI::PeelingPreferences &PP) const {
   CommonTTI.getPeelingPreferences(L, SE, PP);
 }
 
@@ -1429,4 +1405,20 @@ unsigned GCNTTIImpl::getPrefetchDistance() const {
 
 bool GCNTTIImpl::shouldPrefetchAddressSpace(unsigned AS) const {
   return AMDGPU::isFlatGlobalAddrSpace(AS);
+}
+
+void GCNTTIImpl::collectKernelLaunchBounds(
+    const Function &F,
+    SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {
+  SmallVector<unsigned> MaxNumWorkgroups = ST->getMaxNumWorkGroups(F);
+  LB.push_back({"amdgpu-max-num-workgroups[0]", MaxNumWorkgroups[0]});
+  LB.push_back({"amdgpu-max-num-workgroups[1]", MaxNumWorkgroups[1]});
+  LB.push_back({"amdgpu-max-num-workgroups[2]", MaxNumWorkgroups[2]});
+  std::pair<unsigned, unsigned> FlatWorkGroupSize =
+      ST->getFlatWorkGroupSizes(F);
+  LB.push_back({"amdgpu-flat-work-group-size[0]", FlatWorkGroupSize.first});
+  LB.push_back({"amdgpu-flat-work-group-size[1]", FlatWorkGroupSize.second});
+  std::pair<unsigned, unsigned> WavesPerEU = ST->getWavesPerEU(F);
+  LB.push_back({"amdgpu-waves-per-eu[0]", WavesPerEU.first});
+  LB.push_back({"amdgpu-waves-per-eu[1]", WavesPerEU.second});
 }

@@ -1,9 +1,15 @@
-! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir -fcuda %s -o - | FileCheck %s
 
 ! Test CUDA Fortran specific type
 
 module cudafct
   use __fortran_builtins, only : c_devptr => __builtin_c_devptr
+  
+  type :: t1
+    type(c_devptr) :: devp
+    integer :: a
+  end type
+
 contains
   function c_devloc(x)
     use iso_c_binding, only: c_loc
@@ -12,6 +18,10 @@ contains
     real, target, device :: x
     c_devloc%cptr = c_loc(x)
   end function
+
+  attributes(device) function get_t1()
+    type(t1) :: get_t1
+  end
 end
 
 subroutine sub1()
@@ -37,12 +47,37 @@ subroutine sub2()
 end
 
 ! CHECK-LABEL: func.func @_QPsub2()
-! CHECK: %[[X:.*]]:2 = hlfir.declare %{{.*}} {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFsub2Ex"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
-! CHECK: %[[CPTR:.*]] = fir.field_index cptr, !fir.type<_QM__fortran_builtinsT__builtin_c_devptr{{[<]?}}{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}{{[>]?}}>
-! CHECK: %[[CPTR_COORD:.*]] = fir.coordinate_of %{{.*}}#1, %[[CPTR]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{{[<]?}}{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}{{[>]?}}>>, !fir.field) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>
-! CHECK: %[[ADDRESS:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
-! CHECK: %[[ADDRESS_COORD:.*]] = fir.coordinate_of %[[CPTR_COORD]], %[[ADDRESS]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+! CHECK: %[[X:.*]] = fir.declare %{{.*}} {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFsub2Ex"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+! CHECK: %[[CPTR_COORD:.*]] = fir.coordinate_of %{{.*}}, cptr : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{{[<]?}}{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}{{[>]?}}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>
+! CHECK: %[[ADDRESS_COORD:.*]] = fir.coordinate_of %[[CPTR_COORD]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK: %[[ADDRESS_LOADED:.*]] = fir.load %[[ADDRESS_COORD]] : !fir.ref<i64>
 ! CHECK: %[[ADDRESS_IDX:.*]] = fir.convert %[[ADDRESS_LOADED]] : (i64) -> !fir.ptr<!fir.array<?xf32>>
 ! CHECK: %[[EMBOX:.*]] = fir.embox %[[ADDRESS_IDX]](%{{.*}}) : (!fir.ptr<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
-! CHECK: fir.store %[[EMBOX]] to %[[X]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+! CHECK: fir.store %[[EMBOX]] to %[[X]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+
+attributes(global) subroutine assign_c_devptr(p, a)
+  use __fortran_builtins, only: c_devloc => __builtin_c_devloc
+  use __fortran_builtins, only: c_devptr => __builtin_c_devptr
+  type (c_devptr), device :: p
+  complex :: a(10)
+  p = c_devloc(a(1))
+end subroutine
+
+! CHECK-LABEL: func.func @_QPassign_c_devptr
+! CHECK: %[[P:.*]] = fir.declare %arg0 dummy_scope %{{.*}} {data_attr = #cuf.cuda<device>, uniq_name = "_QFassign_c_devptrEp"}
+! CHECK: %[[C_DEVLOC_RES:.*]] = fir.declare %15 {uniq_name = ".tmp.intrinsic_result"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>>
+! CHECK: %[[RES_CPTR_COORD:.*]] = fir.coordinate_of %[[C_DEVLOC_RES]], cptr : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>
+! CHECK: %[[P_CPTR_COORD:.*]] = fir.coordinate_of %[[P]], cptr : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>
+! CHECK: %[[RES_ADDR_COORD:.*]] = fir.coordinate_of %[[RES_CPTR_COORD]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
+! CHECK: %[[P_ADDR_COORD:.*]] = fir.coordinate_of %[[P_CPTR_COORD]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
+! CHECK: %[[ADDR:.*]] = fir.load %[[RES_ADDR_COORD]] : !fir.ref<i64>
+! CHECK: fir.store %[[ADDR]] to %[[P_ADDR_COORD]] : !fir.ref<i64>
+
+attributes(global) subroutine assign_nested_c_devptr(p, a)
+  use cudafct
+  type(t1), device :: p
+  p = get_t1()
+end subroutine
+
+! CHECK-LABEL: func.func @_QPassign_nested_c_devptr
+! CHECK-NOT: fir.call @_FortranAAssign

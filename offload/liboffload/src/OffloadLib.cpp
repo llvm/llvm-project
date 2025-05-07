@@ -11,10 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "OffloadImpl.hpp"
+#include "llvm/Support/raw_ostream.h"
 #include <OffloadAPI.h>
 #include <OffloadPrint.hpp>
-
-#include <iostream>
 
 llvm::StringSet<> &errorStrs() {
   static llvm::StringSet<> ErrorStrs;
@@ -36,9 +35,13 @@ OffloadConfig &offloadConfig() {
   return Config;
 }
 
-// Pull in the declarations for the implementation funtions. The actual entry
+namespace llvm {
+namespace offload {
+// Pull in the declarations for the implementation functions. The actual entry
 // points in this file wrap these.
 #include "OffloadImplFuncDecls.inc"
+} // namespace offload
+} // namespace llvm
 
 // Pull in the tablegen'd entry point definitions.
 #include "OffloadEntryPoints.inc"

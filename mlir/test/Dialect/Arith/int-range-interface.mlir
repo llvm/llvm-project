@@ -1,4 +1,4 @@
-// RUN: mlir-opt -int-range-optimizations -canonicalize %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -int-range-optimizations -canonicalize %s | FileCheck %s
 
 // CHECK-LABEL: func @add_min_max
 // CHECK: %[[c3:.*]] = arith.constant 3 : index
@@ -1011,5 +1011,23 @@ func.func @zero_trip_loop2() {
   scf.for %arg0 = %idx1 to %idx1 step %idxm1 {
     %138 = index.floordivs %arg0, %arg0
   }
+  return
+}
+
+// CHECK-LABEL: @noninteger_operation_result
+func.func @noninteger_operation_result(%lb: index, %ub: index, %step: index, %cond: i1) {
+  %c1_i32 = arith.constant 1 : i32
+
+  %0 = "some_fp_op"() : () -> f32
+  // CHECK: [[OUTS:%.*]]:2 = scf.for
+  %outs:2 = scf.for %i = %lb to %ub step %step iter_args(%a = %c1_i32, %b = %0) -> (i32, f32) {
+    %1:2 = "some_op"() : () -> (i32, f32)
+    scf.yield %1#0, %1#1 : i32, f32
+  }
+
+  // CHECK: [[RESULT:%.*]] = arith.select %{{.*}}, %c1_i32, [[OUTS]]#0
+  %result = arith.select %cond, %c1_i32, %outs#0 : i32
+  // CHECK: "use"([[RESULT]], [[OUTS]]#1)
+  "use"(%result, %outs#1) : (i32, f32) -> ()
   return
 }

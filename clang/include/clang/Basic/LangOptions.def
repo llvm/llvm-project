@@ -160,9 +160,7 @@ LANGOPT(GNUAsm            , 1, 1, "GNU-style inline assembly")
 LANGOPT(Coroutines        , 1, 0, "C++20 coroutines")
 LANGOPT(CoroAlignedAllocation, 1, 0, "prefer Aligned Allocation according to P2014 Option 2")
 LANGOPT(DllExportInlines  , 1, 1, "dllexported classes dllexport inline methods")
-LANGOPT(RelaxedTemplateTemplateArgs, 1, 1, "C++17 relaxed matching of template template arguments")
 LANGOPT(ExperimentalLibrary, 1, 0, "enable unstable and experimental library features")
-LANGOPT(RetainSubstTemplateTypeParmTypeAstNodes, 1, 0, "retain SubstTemplateTypeParmType nodes in the AST's representation of alias template specializations")
 
 LANGOPT(PointerAuthIntrinsics, 1, 0, "pointer authentication intrinsics")
 LANGOPT(PointerAuthCalls  , 1, 0, "function pointer authentication")
@@ -239,7 +237,7 @@ BENIGN_LANGOPT(NoSignedZero      , 1, 0, "Permit Floating Point optimization wit
 BENIGN_LANGOPT(AllowRecip        , 1, 0, "Permit Floating Point reciprocal")
 BENIGN_LANGOPT(ApproxFunc        , 1, 0, "Permit Floating Point approximation")
 
-ENUM_LANGOPT(ComplexRange, ComplexRangeKind, 2, CX_None, "Enable use of range reduction for complex arithmetics.")
+ENUM_LANGOPT(ComplexRange, ComplexRangeKind, 3, CX_None, "Enable use of range reduction for complex arithmetics.")
 
 BENIGN_LANGOPT(ObjCGCBitmapPrint , 1, 0, "printing of GC's bitmap layout for __weak/__strong ivars")
 
@@ -366,6 +364,7 @@ LANGOPT(ObjCDisableDirectMethodsForTesting, 1, 0,
 LANGOPT(CFProtectionBranch , 1, 0, "Control-Flow Branch Protection enabled")
 ENUM_LANGOPT(CFBranchLabelScheme, CFBranchLabelSchemeKind, 2, CFBranchLabelSchemeKind::Default,
              "Control-Flow Branch Protection Label Scheme")
+LANGOPT(CFProtectionReturn, 1, 0, "Control-Flow Return Protection enabled")
 LANGOPT(FakeAddressSpaceMap , 1, 0, "OpenCL fake address space map")
 ENUM_LANGOPT(AddressSpaceMapMangling , AddrSpaceMapMangling, 2, ASMM_Target, "OpenCL address space map mangling mode")
 LANGOPT(IncludeDefaultHeader, 1, 0, "Include default header file for OpenCL")
@@ -407,6 +406,7 @@ VALUE_LANGOPT(TrivialAutoVarInitMaxSize, 32, 0,
              "stop trivial automatic variable initialization if var size exceeds the specified size (in bytes). Must be greater than 0.")
 ENUM_LANGOPT(SignedOverflowBehavior, SignedOverflowBehaviorTy, 2, SOB_Undefined,
              "signed integer overflow handling")
+LANGOPT(PointerOverflowDefined, 1, 0, "make pointer overflow defined")
 ENUM_LANGOPT(ThreadModel  , ThreadModelKind, 2, ThreadModelKind::POSIX, "Thread Model")
 
 BENIGN_LANGOPT(ArrowDepth, 32, 256,
@@ -514,7 +514,7 @@ VALUE_LANGOPT(FuchsiaAPILevel, 32, 0, "Fuchsia API level")
 // on large _BitInts.
 BENIGN_VALUE_LANGOPT(MaxBitIntWidth, 32, 128, "Maximum width of a _BitInt")
 
-COMPATIBLE_LANGOPT(IncrementalExtensions, 1, 0, " True if we want to process statements"
+COMPATIBLE_LANGOPT(IncrementalExtensions, 1, 0, "True if we want to process statements "
         "on the global scope, ignore EOF token and continue later on (thus "
         "avoid tearing the Lexer and etc. down). Controlled by "
         "-fincremental-extensions.")
@@ -531,6 +531,8 @@ BENIGN_LANGOPT(CheckConstexprFunctionBodies, 1, 1,
                "be used in a constant expression.")
 
 LANGOPT(BoundsSafety, 1, 0, "Bounds safety extension for C")
+
+LANGOPT(PreserveVec3Type, 1, 0, "Preserve 3-component vector type")
 
 #undef LANGOPT
 #undef COMPATIBLE_LANGOPT

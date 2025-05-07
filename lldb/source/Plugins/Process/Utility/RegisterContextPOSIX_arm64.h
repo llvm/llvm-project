@@ -59,6 +59,7 @@ protected:
   bool IsSME(unsigned reg) const;
   bool IsMTE(unsigned reg) const;
   bool IsFPMR(unsigned reg) const;
+  bool IsGCS(unsigned reg) const;
 
   bool IsSVEZ(unsigned reg) const { return m_register_info_up->IsSVEZReg(reg); }
   bool IsSVEP(unsigned reg) const { return m_register_info_up->IsSVEPReg(reg); }

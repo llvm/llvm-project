@@ -81,7 +81,7 @@ static cl::opt<std::string> ModuleSummaryDotFile(
     cl::desc("File to emit dot graph of new summary into"));
 
 static cl::opt<bool> EnableMemProfIndirectCallSupport(
-    "enable-memprof-indirect-call-support", cl::init(false), cl::Hidden,
+    "enable-memprof-indirect-call-support", cl::init(true), cl::Hidden,
     cl::desc(
         "Enable MemProf support for summarizing and cloning indirect calls"));
 
@@ -222,7 +222,8 @@ static void addIntrinsicToSummary(
     auto *TypeId = dyn_cast<MDString>(TypeMDVal->getMetadata());
     if (!TypeId)
       break;
-    GlobalValue::GUID Guid = GlobalValue::getGUID(TypeId->getString());
+    GlobalValue::GUID Guid =
+        GlobalValue::getGUIDAssumingExternalLinkage(TypeId->getString());
 
     // Produce a summary from type.test intrinsics. We only summarize type.test
     // intrinsics that are used other than by an llvm.assume intrinsic.
@@ -250,7 +251,8 @@ static void addIntrinsicToSummary(
     auto *TypeId = dyn_cast<MDString>(TypeMDVal->getMetadata());
     if (!TypeId)
       break;
-    GlobalValue::GUID Guid = GlobalValue::getGUID(TypeId->getString());
+    GlobalValue::GUID Guid =
+        GlobalValue::getGUIDAssumingExternalLinkage(TypeId->getString());
 
     SmallVector<DevirtCallSite, 4> DevirtCalls;
     SmallVector<Instruction *, 4> LoadedPtrs;
@@ -521,7 +523,6 @@ static void computeFunctionSummary(
       auto *MemProfMD = I.getMetadata(LLVMContext::MD_memprof);
       if (MemProfMD) {
         std::vector<MIBInfo> MIBs;
-        std::vector<uint64_t> TotalSizes;
         std::vector<std::vector<ContextTotalSize>> ContextSizeInfos;
         for (auto &MDOp : MemProfMD->operands()) {
           auto *MIBMD = cast<const MDNode>(MDOp);
@@ -637,12 +638,10 @@ static void computeFunctionSummary(
     // All new reference edges inserted in two loops below are either
     // read or write only. They will be grouped in the end of RefEdges
     // vector, so we can use a single integer value to identify them.
-    for (const auto &VI : LoadRefEdges)
-      RefEdges.insert(VI);
+    RefEdges.insert_range(LoadRefEdges);
 
     unsigned FirstWORef = RefEdges.size();
-    for (const auto &VI : StoreRefEdges)
-      RefEdges.insert(VI);
+    RefEdges.insert_range(StoreRefEdges);
 
     Refs = RefEdges.takeVector();
     for (; RefCnt < FirstWORef; ++RefCnt)
@@ -906,7 +905,8 @@ static void computeAliasSummary(ModuleSummaryIndex &Index, const GlobalAlias &A,
 
 // Set LiveRoot flag on entries matching the given value name.
 static void setLiveRoot(ModuleSummaryIndex &Index, StringRef Name) {
-  if (ValueInfo VI = Index.getValueInfo(GlobalValue::getGUID(Name)))
+  if (ValueInfo VI =
+          Index.getValueInfo(GlobalValue::getGUIDAssumingExternalLinkage(Name)))
     for (const auto &Summary : VI.getSummaryList())
       Summary->setLive(true);
 }
@@ -1158,9 +1158,7 @@ ModulePass *llvm::createModuleSummaryIndexWrapperPass() {
 }
 
 ModuleSummaryIndexWrapperPass::ModuleSummaryIndexWrapperPass()
-    : ModulePass(ID) {
-  initializeModuleSummaryIndexWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+    : ModulePass(ID) {}
 
 bool ModuleSummaryIndexWrapperPass::runOnModule(Module &M) {
   auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
@@ -1198,10 +1196,7 @@ char ImmutableModuleSummaryIndexWrapperPass::ID = 0;
 
 ImmutableModuleSummaryIndexWrapperPass::ImmutableModuleSummaryIndexWrapperPass(
     const ModuleSummaryIndex *Index)
-    : ImmutablePass(ID), Index(Index) {
-  initializeImmutableModuleSummaryIndexWrapperPassPass(
-      *PassRegistry::getPassRegistry());
-}
+    : ImmutablePass(ID), Index(Index) {}
 
 void ImmutableModuleSummaryIndexWrapperPass::getAnalysisUsage(
     AnalysisUsage &AU) const {

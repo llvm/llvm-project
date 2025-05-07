@@ -5,7 +5,7 @@
 
   divu $25,$11
 # CHECK-NOTRAP: bnez $11, $tmp0           # encoding: [0x15,0x60,A,A]
-# CHECK-NOTRAP:                           # fixup A - offset: 0, value: ($tmp0)-4, kind: fixup_Mips_PC16
+# CHECK-NOTRAP:                           # fixup A - offset: 0, value: $tmp0-4, kind: fixup_Mips_PC16
 # CHECK-NOTRAP: divu $zero, $25, $11      # encoding: [0x03,0x2b,0x00,0x1b]
 # CHECK-NOTRAP: break 7                   # encoding: [0x00,0x07,0x00,0x0d]
 # CHECK-NOTRAP: $tmp0:
@@ -13,7 +13,7 @@
 
   divu $24,$12
 # CHECK-NOTRAP: bnez $12, $tmp1           # encoding: [0x15,0x80,A,A]
-# CHECK-NOTRAP:                           # fixup A - offset: 0, value: ($tmp1)-4, kind: fixup_Mips_PC16
+# CHECK-NOTRAP:                           # fixup A - offset: 0, value: $tmp1-4, kind: fixup_Mips_PC16
 # CHECK-NOTRAP: divu $zero, $24, $12      # encoding: [0x03,0x0c,0x00,0x1b]
 # CHECK-NOTRAP: break 7                   # encoding: [0x00,0x07,0x00,0x0d]
 # CHECK-NOTRAP: $tmp1:
@@ -30,7 +30,7 @@
 
    divu $4,$5,$6
 # CHECK-NOTRAP: bnez $6, $tmp2             # encoding: [0x14,0xc0,A,A]
-# CHECK-NOTRAP:                            # fixup A - offset: 0, value: ($tmp2)-4, kind: fixup_Mips_PC16
+# CHECK-NOTRAP:                            # fixup A - offset: 0, value: $tmp2-4, kind: fixup_Mips_PC16
 # CHECK-NOTRAP: divu $zero, $5, $6         # encoding: [0x00,0xa6,0x00,0x1b]
 # CHECK-NOTRAP: break 7                    # encoding: [0x00,0x07,0x00,0x0d]
 # CHECK-NOTRAP: $tmp2:
