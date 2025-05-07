@@ -55,11 +55,33 @@ export void foo() {
 // CHECK-SAME: i32 noundef %0, i32 noundef %1, i32 noundef %2, i32 noundef %3)
 // CHECK-NEXT: ret void
 
-// Buf2 initialization part 1 - FIXME: constructor with implicit binding does not exist yet; 
-// the global init function currently calls the default RWByteAddressBuffer C1 constructor
-// CHECK: define internal void @__cxx_global_var_init.1()
+// Buf2 initialization part 1 - global init function that calls RWByteAddressBuffer C1 constructor with implicit binding
+// CHECK: define internal void @__cxx_global_var_init.1() #0 {
 // CHECK-NEXT: entry:
-// CHECK-NEXT: call void @_ZN4hlsl19RWByteAddressBufferC1Ev(ptr noundef nonnull align 4 dereferenceable(4) @_ZL4Buf2)
+// CHECK-NEXT: call void @_ZN4hlsl19RWByteAddressBufferC1Ejijj(ptr noundef nonnull align 4 dereferenceable(4) @_ZL4Buf2,
+// CHECK-SAME: i32 noundef 0, i32 noundef 1, i32 noundef 0, i32 noundef 0)
+
+// Buf2 initialization part 2 - body of RWByteAddressBuffer C1 constructor with implicit binding that calls the C2 constructor
+// CHECK: define linkonce_odr void @_ZN4hlsl19RWByteAddressBufferC1Ejijj(ptr noundef nonnull align 4 dereferenceable(4) %this,
+// CHECK-SAME: i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, i32 noundef %order_id)
+// CHECK-NEXT: entry:
+// CHECK-NEXT: %this.addr = alloca ptr, align 4
+// CHECK-NEXT: %spaceNo.addr = alloca i32, align 4
+// CHECK-NEXT: %range.addr = alloca i32, align 4
+// CHECK-NEXT: %index.addr = alloca i32, align 4
+// CHECK-NEXT: %order_id.addr = alloca i32, align 4
+// CHECK-NEXT: store ptr %this, ptr %this.addr, align 4
+// CHECK-NEXT: store i32 %spaceNo, ptr %spaceNo.addr, align 4
+// CHECK-NEXT: store i32 %range, ptr %range.addr, align 4
+// CHECK-NEXT: store i32 %index, ptr %index.addr, align 4
+// CHECK-NEXT: store i32 %order_id, ptr %order_id.addr, align 4
+// CHECK-NEXT: %this1 = load ptr, ptr %this.addr, align 4
+// CHECK-NEXT: %0 = load i32, ptr %spaceNo.addr, align 4
+// CHECK-NEXT: %1 = load i32, ptr %range.addr, align 4
+// CHECK-NEXT: %2 = load i32, ptr %index.addr, align 4
+// CHECK-NEXT: %3 = load i32, ptr %order_id.addr, align 4
+// CHECK-NEXT: call void @_ZN4hlsl19RWByteAddressBufferC2Ejijj(ptr noundef nonnull align 4 dereferenceable(4) %this1, i32 noundef %0, i32 noundef %1, i32 noundef %2, i32 noundef %3) #4
+// CHECK-NEXT: ret void
 
 // Buf3 initialization part 1 - local variable declared in function foo() is initialized by 
 // RasterizerOrderedByteAddressBuffer C1 default constructor
@@ -102,6 +124,31 @@ export void foo() {
 // CHECK-DXIL-SAME: i32 %1, i32 %0, i32 %2, i32 %3, i1 false)
 // CHECK-NEXT: %__handle = getelementptr inbounds nuw %"class.hlsl::ByteAddressBuffer", ptr %this1, i32 0, i32 0
 // CHECK-DXIL-NEXT: store target("dx.RawBuffer", i8, 0, 0) %4, ptr %__handle, align 4
+// CHECK-NEXT: ret void
+
+// Buf2 initialization part 3 - body of RWByteAddressBuffer C2 constructor with implicit binding that initializes
+// handle with @llvm.dx.resource.handlefromimplicitbinding
+// CHECK: define linkonce_odr void @_ZN4hlsl19RWByteAddressBufferC2Ejijj(ptr noundef nonnull align 4 dereferenceable(4) %this,
+// CHECK-SAME: i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, i32 noundef %order_id) unnamed_addr #1 align 2 {
+// CHECK-NEXT: entry:
+// CHECK-NEXT: %this.addr = alloca ptr, align 4
+// CHECK-NEXT: %spaceNo.addr = alloca i32, align 4
+// CHECK-NEXT: %range.addr = alloca i32, align 4
+// CHECK-NEXT: %index.addr = alloca i32, align 4
+// CHECK-NEXT: %order_id.addr = alloca i32, align 4
+// CHECK-NEXT: store ptr %this, ptr %this.addr, align 4
+// CHECK-NEXT: store i32 %spaceNo, ptr %spaceNo.addr, align 4
+// CHECK-NEXT: store i32 %range, ptr %range.addr, align 4
+// CHECK-NEXT: store i32 %index, ptr %index.addr, align 4
+// CHECK-NEXT: store i32 %order_id, ptr %order_id.addr, align 4
+// CHECK-NEXT: %this1 = load ptr, ptr %this.addr, align 4
+// CHECK-NEXT: %0 = load i32, ptr %spaceNo.addr, align 4
+// CHECK-NEXT: %1 = load i32, ptr %range.addr, align 4
+// CHECK-NEXT: %2 = load i32, ptr %index.addr, align 4
+// CHECK-NEXT: %3 = load i32, ptr %order_id.addr, align 4
+// CHECK-NEXT: %4 = call target("dx.RawBuffer", i8, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_i8_1_0t(i32 %3, i32 %0, i32 %1, i32 %2, i1 false)
+// CHECK-NEXT: %__handle = getelementptr inbounds nuw %"class.hlsl::RWByteAddressBuffer", ptr %this1, i32 0, i32 0
+// CHECK-NEXT: store target("dx.RawBuffer", i8, 1, 0) %4, ptr %__handle, align 4
 // CHECK-NEXT: ret void
 
 // Buf3 initialization part 3 - body of RasterizerOrderedByteAddressBuffer default C2 constructor that

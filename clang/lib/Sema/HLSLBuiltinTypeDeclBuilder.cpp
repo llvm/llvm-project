@@ -668,6 +668,26 @@ BuiltinTypeDeclBuilder::addHandleConstructorFromBinding() {
       .finalize();
 }
 
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addHandleConstructorFromImplicitBinding() {
+  if (Record->isCompleteDefinition())
+    return *this;
+
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+  ASTContext &AST = SemaRef.getASTContext();
+  QualType HandleType = getResourceHandleField()->getType();
+
+  return BuiltinTypeMethodBuilder(*this, "", AST.VoidTy, false, true)
+      .addParam("spaceNo", AST.UnsignedIntTy)
+      .addParam("range", AST.IntTy)
+      .addParam("index", AST.UnsignedIntTy)
+      .addParam("order_id", AST.UnsignedIntTy)
+      .callBuiltin("__builtin_hlsl_resource_handlefromimplicitbinding",
+                   HandleType, PH::Handle, PH::_0, PH::_1, PH::_2, PH::_3)
+      .assign(PH::Handle, PH::LastStmt)
+      .finalize();
+}
+
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addArraySubscriptOperators() {
   ASTContext &AST = Record->getASTContext();
   DeclarationName Subscript =
