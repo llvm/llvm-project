@@ -90,6 +90,7 @@ TEST(Host, LaunchProcessSetsArgv0) {
   ASSERT_THAT(exit_status.get_future().get(), 0);
 }
 
+#ifdef LLVM_ON_UNIX
 TEST(Host, LaunchProcessDuplicatesHandle) {
   static constexpr llvm::StringLiteral test_msg("Hello subprocess!");
 
@@ -129,3 +130,4 @@ TEST(Host, LaunchProcessDuplicatesHandle) {
   ASSERT_THAT_EXPECTED(bytes_read, llvm::Succeeded());
   ASSERT_EQ(llvm::StringRef(msg, *bytes_read), test_msg);
 }
+#endif
