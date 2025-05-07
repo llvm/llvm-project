@@ -3590,7 +3590,7 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
     // instructions into EdgeBB.  We know that there will be no uses of the
     // cloned instructions outside of EdgeBB.
     BasicBlock::iterator InsertPt = EdgeBB->getFirstInsertionPt();
-    DenseMap<Value *, Value *> TranslateMap; // Track translated values.
+    ValueToValueMapTy TranslateMap; // Track translated values.
     TranslateMap[Cond] = CB;
 
     // RemoveDIs: track instructions that we optimise away while folding, so
@@ -3610,11 +3610,11 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
         N->setName(BBI->getName() + ".c");
 
       // Update operands due to translation.
-      for (Use &Op : N->operands()) {
-        DenseMap<Value *, Value *>::iterator PI = TranslateMap.find(Op);
-        if (PI != TranslateMap.end())
-          Op = PI->second;
-      }
+      // Key Instructions: Remap all the atom groups.
+      if (const DebugLoc &DL = BBI->getDebugLoc())
+        mapAtomInstance(DL, TranslateMap);
+      RemapInstruction(N, TranslateMap,
+                       RF_IgnoreMissingLocals | RF_NoModuleLevelChanges);
 
       // Check for trivial simplification.
       if (Value *V = simplifyInstruction(N, {DL, nullptr, nullptr, AC})) {

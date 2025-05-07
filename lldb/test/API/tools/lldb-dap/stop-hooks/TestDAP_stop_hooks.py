@@ -19,7 +19,7 @@ class TestDAP_stop_hooks(lldbdap_testcase.DAPTestCaseBase):
         self.build_and_launch(program, stopOnEntry=True, preRunCommands=preRunCommands)
 
         # The first stop is on entry.
-        self.dap_server.wait_for_stopped()
+        self.continue_to_next_stop()
 
         breakpoint_ids = self.set_function_breakpoints(["main"])
         # This request hangs if the race happens, because, in that case, the

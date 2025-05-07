@@ -1,3 +1,6 @@
+! Fails until we update the pass to use the `fir.do_concurrent` op.
+! XFAIL: *
+
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-to-openmp=host %s -o - \
 ! RUN:   | FileCheck %s
 

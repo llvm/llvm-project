@@ -86,6 +86,7 @@ const char SanCovPCsSectionName[] = "sancov_pcs";
 const char SanCovCFsSectionName[] = "sancov_cfs";
 const char SanCovCallbackGateSectionName[] = "sancov_gate";
 
+const char SanCovStackDepthCallbackName[] = "__sanitizer_cov_stack_depth";
 const char SanCovLowestStackName[] = "__sancov_lowest_stack";
 const char SanCovCallbackGateName[] = "__sancov_should_track";
 
@@ -152,6 +153,12 @@ static cl::opt<bool> ClStackDepth("sanitizer-coverage-stack-depth",
                                   cl::desc("max stack depth tracing"),
                                   cl::Hidden);
 
+static cl::opt<int> ClStackDepthCallbackMin(
+    "sanitizer-coverage-stack-depth-callback-min",
+    cl::desc("max stack depth tracing should use callback and only when "
+             "stack depth more than specified"),
+    cl::Hidden);
+
 static cl::opt<bool>
     ClCollectCF("sanitizer-coverage-control-flow",
                 cl::desc("collect control flow for each function"), cl::Hidden);
@@ -202,6 +209,8 @@ SanitizerCoverageOptions OverrideFromCL(SanitizerCoverageOptions Options) {
   Options.PCTable |= ClCreatePCTable;
   Options.NoPrune |= !ClPruneBlocks;
   Options.StackDepth |= ClStackDepth;
+  Options.StackDepthCallbackMin = std::max(Options.StackDepthCallbackMin,
+                                           ClStackDepthCallbackMin.getValue());
   Options.TraceLoads |= ClLoadTracing;
   Options.TraceStores |= ClStoreTracing;
   Options.GatedCallbacks |= ClGatedCallbacks;
@@ -271,6 +280,7 @@ private:
   DomTreeCallback DTCallback;
   PostDomTreeCallback PDTCallback;
 
+  FunctionCallee SanCovStackDepthCallback;
   FunctionCallee SanCovTracePCIndir;
   FunctionCallee SanCovTracePC, SanCovTracePCGuard;
   std::array<FunctionCallee, 4> SanCovTraceCmpFunction;
@@ -513,6 +523,9 @@ bool ModuleSanitizerCoverage::instrumentModule() {
   SanCovTracePC = M.getOrInsertFunction(SanCovTracePCName, VoidTy);
   SanCovTracePCGuard =
       M.getOrInsertFunction(SanCovTracePCGuardName, VoidTy, PtrTy);
+
+  SanCovStackDepthCallback =
+      M.getOrInsertFunction(SanCovStackDepthCallbackName, VoidTy);
 
   for (auto &F : M)
     instrumentFunction(F);
@@ -1078,22 +1091,65 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
     Store->setNoSanitizeMetadata();
   }
   if (Options.StackDepth && IsEntryBB && !IsLeafFunc) {
-    // Check stack depth.  If it's the deepest so far, record it.
     Module *M = F.getParent();
-    auto FrameAddrPtr = IRB.CreateIntrinsic(
-        Intrinsic::frameaddress,
-        IRB.getPtrTy(M->getDataLayout().getAllocaAddrSpace()),
-        {Constant::getNullValue(Int32Ty)});
-    auto FrameAddrInt = IRB.CreatePtrToInt(FrameAddrPtr, IntptrTy);
-    auto LowestStack = IRB.CreateLoad(IntptrTy, SanCovLowestStack);
-    auto IsStackLower = IRB.CreateICmpULT(FrameAddrInt, LowestStack);
-    auto ThenTerm = SplitBlockAndInsertIfThen(
-        IsStackLower, &*IP, false,
-        MDBuilder(IRB.getContext()).createUnlikelyBranchWeights());
-    IRBuilder<> ThenIRB(ThenTerm);
-    auto Store = ThenIRB.CreateStore(FrameAddrInt, SanCovLowestStack);
-    LowestStack->setNoSanitizeMetadata();
-    Store->setNoSanitizeMetadata();
+    const DataLayout &DL = M->getDataLayout();
+
+    if (Options.StackDepthCallbackMin) {
+      // In callback mode, only add call when stack depth reaches minimum.
+      uint32_t EstimatedStackSize = 0;
+      // If dynamic alloca found, always add call.
+      bool HasDynamicAlloc = false;
+      // Find an insertion point after last "alloca".
+      llvm::Instruction *InsertBefore = nullptr;
+
+      // Examine all allocas in the basic block. since we're too early
+      // to have results from Intrinsic::frameaddress, we have to manually
+      // estimate the stack size.
+      for (auto &I : BB) {
+        if (auto *AI = dyn_cast<AllocaInst>(&I)) {
+          // Move potential insertion point past the "alloca".
+          InsertBefore = AI->getNextNode();
+
+          // Make an estimate on the stack usage.
+          if (AI->isStaticAlloca()) {
+            uint32_t Bytes = DL.getTypeAllocSize(AI->getAllocatedType());
+            if (AI->isArrayAllocation()) {
+              if (const ConstantInt *arraySize =
+                      dyn_cast<ConstantInt>(AI->getArraySize())) {
+                Bytes *= arraySize->getZExtValue();
+              } else {
+                HasDynamicAlloc = true;
+              }
+            }
+            EstimatedStackSize += Bytes;
+          } else {
+            HasDynamicAlloc = true;
+          }
+        }
+      }
+
+      if (HasDynamicAlloc ||
+          EstimatedStackSize >= Options.StackDepthCallbackMin) {
+        if (InsertBefore)
+          IRB.SetInsertPoint(InsertBefore);
+        IRB.CreateCall(SanCovStackDepthCallback)->setCannotMerge();
+      }
+    } else {
+      // Check stack depth.  If it's the deepest so far, record it.
+      auto FrameAddrPtr = IRB.CreateIntrinsic(
+          Intrinsic::frameaddress, IRB.getPtrTy(DL.getAllocaAddrSpace()),
+          {Constant::getNullValue(Int32Ty)});
+      auto FrameAddrInt = IRB.CreatePtrToInt(FrameAddrPtr, IntptrTy);
+      auto LowestStack = IRB.CreateLoad(IntptrTy, SanCovLowestStack);
+      auto IsStackLower = IRB.CreateICmpULT(FrameAddrInt, LowestStack);
+      auto ThenTerm = SplitBlockAndInsertIfThen(
+          IsStackLower, &*IP, false,
+          MDBuilder(IRB.getContext()).createUnlikelyBranchWeights());
+      IRBuilder<> ThenIRB(ThenTerm);
+      auto Store = ThenIRB.CreateStore(FrameAddrInt, SanCovLowestStack);
+      LowestStack->setNoSanitizeMetadata();
+      Store->setNoSanitizeMetadata();
+    }
   }
 }
 
