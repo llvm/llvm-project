@@ -14,7 +14,7 @@ kernel void foo(global int *p) { *p = 1; }
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK: Function Attrs: convergent norecurse nounwind
+// CHECK: Function Attrs: alwaysinline convergent norecurse nounwind
 // CHECK-LABEL: define dso_local void @__clang_ocl_kern_imp_foo(
 // CHECK-SAME: ptr addrspace(1) noundef align 4 [[P:%.*]]) #[[ATTR1:[0-9]+]] !kernel_arg_addr_space [[META3]] !kernel_arg_access_qual [[META4]] !kernel_arg_type [[META5]] !kernel_arg_base_type [[META5]] !kernel_arg_type_qual [[META6]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -27,5 +27,21 @@ kernel void foo(global int *p) { *p = 1; }
 //
 //.
 // CHECK: attributes #[[ATTR0]] = { convergent norecurse nounwind "amdgpu-cluster-dims"="0,0,0" "amdgpu-flat-work-group-size"="1,256" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx1250" "target-features"="+16-bit-insts,+ashr-pk-insts,+atomic-buffer-global-pk-add-f16-insts,+atomic-buffer-pk-add-bf16-inst,+atomic-ds-pk-add-16-insts,+atomic-fadd-rtn-insts,+atomic-flat-pk-add-16-insts,+atomic-global-pk-add-bf16-inst,+bf16-cvt-insts,+bf16-pk-insts,+bf16-trans-insts,+bitop3-insts,+ci-insts,+dl-insts,+dot7-insts,+dot8-insts,+dpp,+fp8-conversion-insts,+fp8e5m3-insts,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx12-insts,+gfx1250-insts,+gfx8-insts,+gfx9-insts,+permlane16-swap,+prng-inst,+tanh-insts,+tensor-cvt-lut-insts,+transpose-load-f4f6-insts,+vmem-pref-insts,+wavefrontsize32" "uniform-work-group-size"="false" }
-// CHECK: attributes #[[ATTR1]] = { convergent norecurse nounwind "amdgpu-cluster-dims"="0,0,0" "amdgpu-flat-work-group-size"="1,256" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx1250" "target-features"="+16-bit-insts,+ashr-pk-insts,+atomic-buffer-global-pk-add-f16-insts,+atomic-buffer-pk-add-bf16-inst,+atomic-ds-pk-add-16-insts,+atomic-fadd-rtn-insts,+atomic-flat-pk-add-16-insts,+atomic-global-pk-add-bf16-inst,+bf16-cvt-insts,+bf16-pk-insts,+bf16-trans-insts,+bitop3-insts,+ci-insts,+dl-insts,+dot7-insts,+dot8-insts,+dpp,+fp8-conversion-insts,+fp8e5m3-insts,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx12-insts,+gfx1250-insts,+gfx8-insts,+gfx9-insts,+permlane16-swap,+prng-inst,+tanh-insts,+tensor-cvt-lut-insts,+transpose-load-f4f6-insts,+vmem-pref-insts,+wavefrontsize32" }
+// CHECK: attributes #[[ATTR1]] = { alwaysinline convergent norecurse nounwind "amdgpu-cluster-dims"="0,0,0" "amdgpu-flat-work-group-size"="1,256" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx1250" "target-features"="+16-bit-insts,+ashr-pk-insts,+atomic-buffer-global-pk-add-f16-insts,+atomic-buffer-pk-add-bf16-inst,+atomic-ds-pk-add-16-insts,+atomic-fadd-rtn-insts,+atomic-flat-pk-add-16-insts,+atomic-global-pk-add-bf16-inst,+bf16-cvt-insts,+bf16-pk-insts,+bf16-trans-insts,+bitop3-insts,+ci-insts,+dl-insts,+dot7-insts,+dot8-insts,+dpp,+fp8-conversion-insts,+fp8e5m3-insts,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx12-insts,+gfx1250-insts,+gfx8-insts,+gfx9-insts,+permlane16-swap,+prng-inst,+tanh-insts,+tensor-cvt-lut-insts,+transpose-load-f4f6-insts,+vmem-pref-insts,+wavefrontsize32" }
 // CHECK: attributes #[[ATTR2]] = { convergent nounwind }
+//.
+// CHECK: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
+// CHECK: [[META1:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+// CHECK: [[META2:![0-9]+]] = !{i32 2, i32 0}
+// CHECK: [[META3]] = !{i32 1}
+// CHECK: [[META4]] = !{!"none"}
+// CHECK: [[META5]] = !{!"int*"}
+// CHECK: [[META6]] = !{!""}
+// CHECK: [[TBAA7]] = !{[[META8:![0-9]+]], [[META8]], i64 0}
+// CHECK: [[META8]] = !{!"p1 int", [[META9:![0-9]+]], i64 0}
+// CHECK: [[META9]] = !{!"any pointer", [[META10:![0-9]+]], i64 0}
+// CHECK: [[META10]] = !{!"omnipotent char", [[META11:![0-9]+]], i64 0}
+// CHECK: [[META11]] = !{!"Simple C/C++ TBAA"}
+// CHECK: [[TBAA12]] = !{[[META13:![0-9]+]], [[META13]], i64 0}
+// CHECK: [[META13]] = !{!"int", [[META10]], i64 0}
+//.
