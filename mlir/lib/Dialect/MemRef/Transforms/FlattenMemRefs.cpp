@@ -73,7 +73,7 @@ static OpFoldResult computeStaticShape(OpBuilder &builder, Location loc,
         builder, loc, s0 * s1, ArrayRef<OpFoldResult>{dim, stride});
     auto constant = getConstantIntValue(size);
     assert(constant && "expected constant value");
-    maxSize = *constant;
+    maxSize = std::max(maxSize, *constant);
   }
   return builder.getIndexAttr(maxSize);
 }
@@ -104,7 +104,7 @@ static OpFoldResult computeDynamicShape(OpBuilder &builder, Location loc,
 
 /// Given dimension size [d1, d2, ...] and strides [s1, s2, ...], compute the
 /// span of the memref.
-static OpFoldResult computeSpan(OpBuilder &builder, Location loc,
+static OpFoldResult computeSize(OpBuilder &builder, Location loc,
                                 ArrayRef<OpFoldResult> dims,
                                 ArrayRef<OpFoldResult> strides) {
   assert(dims.size() == strides.size() &&
@@ -147,7 +147,7 @@ static std::pair<Value, Value> getFlattenMemrefAndOffset(OpBuilder &rewriter,
           loc, source,
           /* offset = */ linearizedInfo.linearizedOffset,
           /* shapes = */
-          ArrayRef<OpFoldResult>{computeSpan(
+          ArrayRef<OpFoldResult>{computeSize(
               rewriter, loc, stridedMetadata.getConstifiedMixedSizes(),
               stridedMetadata.getConstifiedMixedStrides())},
           /* strides = */
