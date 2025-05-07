@@ -209,7 +209,7 @@ void ModuleDepCollector::addOutputPaths(CowCompilerInvocation &CI,
 void dependencies::resetBenignCodeGenOptions(frontend::ActionKind ProgramAction,
                                              const LangOptions &LangOpts,
                                              CodeGenOptions &CGOpts) {
-  // Reset to default-constructed values (not necessarily empty) to avoid leaking build-specific data.
+  // Reset to default-constructed values to avoid leaking build-specific data.
   if (ProgramAction == frontend::GenerateModule) {
     CGOpts.MainFileName = {};
     CGOpts.DwarfDebugFlags = {};
