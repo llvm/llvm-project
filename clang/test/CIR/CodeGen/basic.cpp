@@ -102,6 +102,43 @@ size_type max_size() {
 // CHECK:   %3 = cir.cast(integral, %2 : !s32i), !u64i
 // CHECK:   %4 = cir.const #cir.int<8> : !u64i
 // CHECK:   %5 = cir.binop(div, %3, %4) : !u64i
+// CHECK:   cir.store %5, %0 : !u64i, !cir.ptr<!u64i>
+// CHECK:   %6 = cir.load %0 : !cir.ptr<!u64i>, !u64i
+// CHECK:   cir.return %6 : !u64i
+// CHECK:   }
+
+enum A {
+  A_one,
+  A_two
+};
+A a;
+
+// CHECK:   cir.global external @a = #cir.int<0> : !u32i
+
+enum B : int;
+B b;
+
+// CHECK:   cir.global external @b = #cir.int<0> : !s32i
+
+enum C : int {
+  C_one,
+  C_two
+};
+C c;
+
+// CHECK:   cir.global external @c = #cir.int<0> : !s32i
+
+enum class D : int;
+D d;
+
+// CHECK:   cir.global external @d = #cir.int<0> : !s32i
+
+enum E {
+  D_one = -1
+};
+enum E e;
+
+// CHECK:   cir.global external @e = #cir.int<0> : !s32i
 
 void ref_arg(int &x) {
   int y = x;

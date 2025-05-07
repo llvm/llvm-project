@@ -176,6 +176,7 @@ struct MissingFeatures {
   static bool targetSpecificCXXABI() { return false; }
   static bool moduleNameHash() { return false; }
   static bool setDSOLocal() { return false; }
+  static bool updateCompletedType() { return false; }
   static bool foldCaseStmt() { return false; }
   static bool constantFoldSwitchStatement() { return false; }
   static bool cudaSupport() { return false; }
