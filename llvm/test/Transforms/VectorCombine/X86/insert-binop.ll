@@ -8,16 +8,10 @@ declare void @usef(<4 x float>)
 ; Eliminating an insert is profitable.
 
 define <16 x i8> @ins0_ins0_add(i8 %x, i8 %y) {
-; SSE-LABEL: @ins0_ins0_add(
-; SSE-NEXT:    [[I0:%.*]] = insertelement <16 x i8> undef, i8 [[X:%.*]], i32 0
-; SSE-NEXT:    [[I1:%.*]] = insertelement <16 x i8> undef, i8 [[Y:%.*]], i32 0
-; SSE-NEXT:    [[R:%.*]] = add <16 x i8> [[I0]], [[I1]]
-; SSE-NEXT:    ret <16 x i8> [[R]]
-;
-; AVX-LABEL: @ins0_ins0_add(
-; AVX-NEXT:    [[R_SCALAR:%.*]] = add i8 [[X:%.*]], [[Y:%.*]]
-; AVX-NEXT:    [[R:%.*]] = insertelement <16 x i8> undef, i8 [[R_SCALAR]], i64 0
-; AVX-NEXT:    ret <16 x i8> [[R]]
+; CHECK-LABEL: @ins0_ins0_add(
+; CHECK-NEXT:    [[R_SCALAR:%.*]] = add i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = insertelement <16 x i8> undef, i8 [[R_SCALAR]], i64 0
+; CHECK-NEXT:    ret <16 x i8> [[R]]
 ;
   %i0 = insertelement <16 x i8> undef, i8 %x, i32 0
   %i1 = insertelement <16 x i8> undef, i8 %y, i32 0

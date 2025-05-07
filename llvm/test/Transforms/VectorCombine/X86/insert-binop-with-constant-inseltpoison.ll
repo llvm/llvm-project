@@ -3,15 +3,10 @@
 ; RUN: opt < %s -passes=vector-combine -S -mtriple=x86_64-- -mattr=AVX2 | FileCheck %s --check-prefixes=CHECK,AVX
 
 define <2 x i64> @add_constant(i64 %x) {
-; SSE-LABEL: @add_constant(
-; SSE-NEXT:    [[INS:%.*]] = insertelement <2 x i64> poison, i64 [[X:%.*]], i32 0
-; SSE-NEXT:    [[BO:%.*]] = add <2 x i64> [[INS]], <i64 42, i64 undef>
-; SSE-NEXT:    ret <2 x i64> [[BO]]
-;
-; AVX-LABEL: @add_constant(
-; AVX-NEXT:    [[BO_SCALAR:%.*]] = add i64 [[X:%.*]], 42
-; AVX-NEXT:    [[BO:%.*]] = insertelement <2 x i64> poison, i64 [[BO_SCALAR]], i64 0
-; AVX-NEXT:    ret <2 x i64> [[BO]]
+; CHECK-LABEL: @add_constant(
+; CHECK-NEXT:    [[BO_SCALAR:%.*]] = add i64 [[X:%.*]], 42
+; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> poison, i64 [[BO_SCALAR]], i64 0
+; CHECK-NEXT:    ret <2 x i64> [[BO]]
 ;
   %ins = insertelement <2 x i64> poison, i64 %x, i32 0
   %bo = add <2 x i64> %ins, <i64 42, i64 undef>
@@ -19,15 +14,10 @@ define <2 x i64> @add_constant(i64 %x) {
 }
 
 define <2 x i64> @add_constant_not_undef_lane(i64 %x) {
-; SSE-LABEL: @add_constant_not_undef_lane(
-; SSE-NEXT:    [[INS:%.*]] = insertelement <2 x i64> poison, i64 [[X:%.*]], i32 0
-; SSE-NEXT:    [[BO:%.*]] = add <2 x i64> [[INS]], <i64 42, i64 -42>
-; SSE-NEXT:    ret <2 x i64> [[BO]]
-;
-; AVX-LABEL: @add_constant_not_undef_lane(
-; AVX-NEXT:    [[BO_SCALAR:%.*]] = add i64 [[X:%.*]], 42
-; AVX-NEXT:    [[BO:%.*]] = insertelement <2 x i64> poison, i64 [[BO_SCALAR]], i64 0
-; AVX-NEXT:    ret <2 x i64> [[BO]]
+; CHECK-LABEL: @add_constant_not_undef_lane(
+; CHECK-NEXT:    [[BO_SCALAR:%.*]] = add i64 [[X:%.*]], 42
+; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> poison, i64 [[BO_SCALAR]], i64 0
+; CHECK-NEXT:    ret <2 x i64> [[BO]]
 ;
   %ins = insertelement <2 x i64> poison, i64 %x, i32 0
   %bo = add <2 x i64> %ins, <i64 42, i64 -42>
@@ -489,15 +479,10 @@ define <2 x i64> @sdiv_constant_op1_not_undef_lane(i64 %x) {
 }
 
 define <2 x i64> @and_constant(i64 %x) {
-; SSE-LABEL: @and_constant(
-; SSE-NEXT:    [[INS:%.*]] = insertelement <2 x i64> poison, i64 [[X:%.*]], i32 0
-; SSE-NEXT:    [[BO:%.*]] = and <2 x i64> [[INS]], <i64 42, i64 undef>
-; SSE-NEXT:    ret <2 x i64> [[BO]]
-;
-; AVX-LABEL: @and_constant(
-; AVX-NEXT:    [[BO_SCALAR:%.*]] = and i64 [[X:%.*]], 42
-; AVX-NEXT:    [[BO:%.*]] = insertelement <2 x i64> poison, i64 [[BO_SCALAR]], i64 0
-; AVX-NEXT:    ret <2 x i64> [[BO]]
+; CHECK-LABEL: @and_constant(
+; CHECK-NEXT:    [[BO_SCALAR:%.*]] = and i64 [[X:%.*]], 42
+; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> poison, i64 [[BO_SCALAR]], i64 0
+; CHECK-NEXT:    ret <2 x i64> [[BO]]
 ;
   %ins = insertelement <2 x i64> poison, i64 %x, i32 0
   %bo = and <2 x i64> %ins, <i64 42, i64 undef>
@@ -505,15 +490,10 @@ define <2 x i64> @and_constant(i64 %x) {
 }
 
 define <2 x i64> @and_constant_not_undef_lane(i64 %x) {
-; SSE-LABEL: @and_constant_not_undef_lane(
-; SSE-NEXT:    [[INS:%.*]] = insertelement <2 x i64> poison, i64 [[X:%.*]], i32 0
-; SSE-NEXT:    [[BO:%.*]] = and <2 x i64> [[INS]], <i64 42, i64 -42>
-; SSE-NEXT:    ret <2 x i64> [[BO]]
-;
-; AVX-LABEL: @and_constant_not_undef_lane(
-; AVX-NEXT:    [[BO_SCALAR:%.*]] = and i64 [[X:%.*]], 42
-; AVX-NEXT:    [[BO:%.*]] = insertelement <2 x i64> poison, i64 [[BO_SCALAR]], i64 0
-; AVX-NEXT:    ret <2 x i64> [[BO]]
+; CHECK-LABEL: @and_constant_not_undef_lane(
+; CHECK-NEXT:    [[BO_SCALAR:%.*]] = and i64 [[X:%.*]], 42
+; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> poison, i64 [[BO_SCALAR]], i64 0
+; CHECK-NEXT:    ret <2 x i64> [[BO]]
 ;
   %ins = insertelement <2 x i64> poison, i64 %x, i32 0
   %bo = and <2 x i64> %ins, <i64 42, i64 -42>
@@ -543,15 +523,10 @@ define <2 x i64> @or_constant_not_undef_lane(i64 %x) {
 }
 
 define <2 x i64> @xor_constant(i64 %x) {
-; SSE-LABEL: @xor_constant(
-; SSE-NEXT:    [[INS:%.*]] = insertelement <2 x i64> poison, i64 [[X:%.*]], i32 0
-; SSE-NEXT:    [[BO:%.*]] = xor <2 x i64> [[INS]], <i64 42, i64 undef>
-; SSE-NEXT:    ret <2 x i64> [[BO]]
-;
-; AVX-LABEL: @xor_constant(
-; AVX-NEXT:    [[BO_SCALAR:%.*]] = xor i64 [[X:%.*]], 42
-; AVX-NEXT:    [[BO:%.*]] = insertelement <2 x i64> poison, i64 [[BO_SCALAR]], i64 0
-; AVX-NEXT:    ret <2 x i64> [[BO]]
+; CHECK-LABEL: @xor_constant(
+; CHECK-NEXT:    [[BO_SCALAR:%.*]] = xor i64 [[X:%.*]], 42
+; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> poison, i64 [[BO_SCALAR]], i64 0
+; CHECK-NEXT:    ret <2 x i64> [[BO]]
 ;
   %ins = insertelement <2 x i64> poison, i64 %x, i32 0
   %bo = xor <2 x i64> %ins, <i64 42, i64 undef>
@@ -559,15 +534,10 @@ define <2 x i64> @xor_constant(i64 %x) {
 }
 
 define <2 x i64> @xor_constant_not_undef_lane(i64 %x) {
-; SSE-LABEL: @xor_constant_not_undef_lane(
-; SSE-NEXT:    [[INS:%.*]] = insertelement <2 x i64> poison, i64 [[X:%.*]], i32 0
-; SSE-NEXT:    [[BO:%.*]] = xor <2 x i64> [[INS]], <i64 42, i64 -42>
-; SSE-NEXT:    ret <2 x i64> [[BO]]
-;
-; AVX-LABEL: @xor_constant_not_undef_lane(
-; AVX-NEXT:    [[BO_SCALAR:%.*]] = xor i64 [[X:%.*]], 42
-; AVX-NEXT:    [[BO:%.*]] = insertelement <2 x i64> poison, i64 [[BO_SCALAR]], i64 0
-; AVX-NEXT:    ret <2 x i64> [[BO]]
+; CHECK-LABEL: @xor_constant_not_undef_lane(
+; CHECK-NEXT:    [[BO_SCALAR:%.*]] = xor i64 [[X:%.*]], 42
+; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> poison, i64 [[BO_SCALAR]], i64 0
+; CHECK-NEXT:    ret <2 x i64> [[BO]]
 ;
   %ins = insertelement <2 x i64> poison, i64 %x, i32 0
   %bo = xor <2 x i64> %ins, <i64 42, i64 -42>

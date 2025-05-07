@@ -8,16 +8,10 @@ declare void @usef(<4 x float>)
 ; Eliminating an insert is profitable.
 
 define <16 x i1> @ins0_ins0_i8(i8 %x, i8 %y) {
-; SSE-LABEL: @ins0_ins0_i8(
-; SSE-NEXT:    [[I0:%.*]] = insertelement <16 x i8> undef, i8 [[X:%.*]], i32 0
-; SSE-NEXT:    [[I1:%.*]] = insertelement <16 x i8> undef, i8 [[Y:%.*]], i32 0
-; SSE-NEXT:    [[R:%.*]] = icmp eq <16 x i8> [[I0]], [[I1]]
-; SSE-NEXT:    ret <16 x i1> [[R]]
-;
-; AVX-LABEL: @ins0_ins0_i8(
-; AVX-NEXT:    [[R_SCALAR:%.*]] = icmp eq i8 [[X:%.*]], [[Y:%.*]]
-; AVX-NEXT:    [[R:%.*]] = insertelement <16 x i1> undef, i1 [[R_SCALAR]], i64 0
-; AVX-NEXT:    ret <16 x i1> [[R]]
+; CHECK-LABEL: @ins0_ins0_i8(
+; CHECK-NEXT:    [[R_SCALAR:%.*]] = icmp eq i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = insertelement <16 x i1> undef, i1 [[R_SCALAR]], i64 0
+; CHECK-NEXT:    ret <16 x i1> [[R]]
 ;
   %i0 = insertelement <16 x i8> undef, i8 %x, i32 0
   %i1 = insertelement <16 x i8> undef, i8 %y, i32 0
@@ -296,15 +290,10 @@ define <4 x float> @vec_select_use2(<4 x float> %x, <4 x float> %y, float %a) {
 }
 
 define <4 x i1> @vector_of_pointers(ptr %t1) {
-; SSE-LABEL: @vector_of_pointers(
-; SSE-NEXT:    [[T5:%.*]] = insertelement <4 x ptr> undef, ptr [[T1:%.*]], i32 0
-; SSE-NEXT:    [[T6:%.*]] = icmp ne <4 x ptr> [[T5]], zeroinitializer
-; SSE-NEXT:    ret <4 x i1> [[T6]]
-;
-; AVX-LABEL: @vector_of_pointers(
-; AVX-NEXT:    [[T6_SCALAR:%.*]] = icmp ne ptr [[T1:%.*]], null
-; AVX-NEXT:    [[T6:%.*]] = insertelement <4 x i1> undef, i1 [[T6_SCALAR]], i64 0
-; AVX-NEXT:    ret <4 x i1> [[T6]]
+; CHECK-LABEL: @vector_of_pointers(
+; CHECK-NEXT:    [[T6_SCALAR:%.*]] = icmp ne ptr [[T1:%.*]], null
+; CHECK-NEXT:    [[T6:%.*]] = insertelement <4 x i1> undef, i1 [[T6_SCALAR]], i64 0
+; CHECK-NEXT:    ret <4 x i1> [[T6]]
 ;
   %t5 = insertelement <4 x ptr> undef, ptr %t1, i32 0
   %t6 = icmp ne <4 x ptr> %t5, zeroinitializer

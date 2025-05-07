@@ -19,6 +19,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -1088,20 +1089,25 @@ bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
     VectorOpCost = TTI.getArithmeticInstrCost(Opcode, VecTy, CostKind);
   }
 
+  // Fold the vector constants in the original vectors into a new base vector.
+  Value *NewVecC =
+      IsCmp ? ConstantFoldCompareInstOperands(Pred, VecC0, VecC1, *DL)
+            : ConstantFoldBinaryOpOperands((Instruction::BinaryOps)Opcode,
+                                           VecC0, VecC1, *DL);
+
   // Get cost estimate for the insert element. This cost will factor into
   // both sequences.
-  InstructionCost InsertCost = TTI.getVectorInstrCost(
-      Instruction::InsertElement, VecTy, CostKind, Index);
+  InstructionCost InsertCostNewVecC = TTI.getVectorInstrCost(
+      Instruction::InsertElement, VecTy, CostKind, Index, NewVecC);
   InstructionCost InsertCostV0 = TTI.getVectorInstrCost(
       Instruction::InsertElement, VecTy, CostKind, Index, VecC0, V0);
   InstructionCost InsertCostV1 = TTI.getVectorInstrCost(
       Instruction::InsertElement, VecTy, CostKind, Index, VecC1, V1);
   InstructionCost OldCost = (IsConst0 ? 0 : InsertCostV0) +
                             (IsConst1 ? 0 : InsertCostV1) + VectorOpCost;
-  InstructionCost NewCost = ScalarOpCost + InsertCost +
+  InstructionCost NewCost = ScalarOpCost + InsertCostNewVecC +
                             (IsConst0 ? 0 : !Ins0->hasOneUse() * InsertCostV0) +
                             (IsConst1 ? 0 : !Ins1->hasOneUse() * InsertCostV1);
-
   // We want to scalarize unless the vector variant actually has lower cost.
   if (OldCost < NewCost || !NewCost.isValid())
     return false;
@@ -1130,10 +1136,11 @@ bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
   if (auto *ScalarInst = dyn_cast<Instruction>(Scalar))
     ScalarInst->copyIRFlags(&I);
 
-  // Fold the vector constants in the original vectors into a new base vector.
-  Value *NewVecC =
-      IsCmp ? Builder.CreateCmp(Pred, VecC0, VecC1)
-            : Builder.CreateBinOp((Instruction::BinaryOps)Opcode, VecC0, VecC1);
+  // Create a new base vector in case the constant folding failed.
+  if (!NewVecC)
+    NewVecC = IsCmp ? Builder.CreateCmp(Pred, VecC0, VecC1)
+                    : Builder.CreateBinOp((Instruction::BinaryOps)Opcode, VecC0,
+                                          VecC1);
   Value *Insert = Builder.CreateInsertElement(NewVecC, Scalar, Index);
   replaceValue(I, *Insert);
   return true;
