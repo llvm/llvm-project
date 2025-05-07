@@ -61,7 +61,7 @@ bool GIMatchTableExecutor::executeMatchTable(
   // Bypass the flag check on the instruction, and only look at the MCInstrDesc.
   bool NoFPException = !State.MIs[0]->getDesc().mayRaiseFPException();
 
-  const uint16_t Flags = State.MIs[0]->getFlags();
+  const uint32_t Flags = State.MIs[0]->getFlags();
 
   enum RejectAction { RejectAndGiveUp, RejectAndResume };
   auto handleReject = [&]() -> RejectAction {
@@ -80,7 +80,7 @@ bool GIMatchTableExecutor::executeMatchTable(
     for (auto MIB : OutMIs) {
       // Set the NoFPExcept flag when no original matched instruction could
       // raise an FP exception, but the new instruction potentially might.
-      uint16_t MIBFlags = Flags | MIB.getInstr()->getFlags();
+      uint32_t MIBFlags = Flags | MIB.getInstr()->getFlags();
       if (NoFPException && MIB->mayRaiseFPException())
         MIBFlags |= MachineInstr::NoFPExcept;
       if (Observer)
