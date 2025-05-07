@@ -2702,6 +2702,26 @@ static std::optional<Instruction *> instCombinePTrue(InstCombiner &IC,
   return std::nullopt;
 }
 
+static std::optional<Instruction *> instCombineSVEUxt(InstCombiner &IC,
+                                                      IntrinsicInst &II,
+                                                      unsigned NumBits) {
+  Value *Passthru = II.getOperand(0);
+  Value *Pg = II.getOperand(1);
+  Value *Op = II.getOperand(2);
+
+  // Convert UXT[BHW] to AND.
+  if (isa<UndefValue>(Passthru) || isAllActivePredicate(Pg)) {
+    auto *Ty = cast<VectorType>(II.getType());
+    auto MaskValue = APInt::getLowBitsSet(Ty->getScalarSizeInBits(), NumBits);
+    auto *Mask = ConstantInt::get(Ty, MaskValue);
+    auto *And = IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_and_u, {Ty},
+                                           {Pg, Op, Mask});
+    return IC.replaceInstUsesWith(II, And);
+  }
+
+  return std::nullopt;
+}
+
 std::optional<Instruction *>
 AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                      IntrinsicInst &II) const {
@@ -2801,6 +2821,12 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVEInsr(IC, II);
   case Intrinsic::aarch64_sve_ptrue:
     return instCombinePTrue(IC, II);
+  case Intrinsic::aarch64_sve_uxtb:
+    return instCombineSVEUxt(IC, II, 8);
+  case Intrinsic::aarch64_sve_uxth:
+    return instCombineSVEUxt(IC, II, 16);
+  case Intrinsic::aarch64_sve_uxtw:
+    return instCombineSVEUxt(IC, II, 32);
   }
 
   return std::nullopt;
@@ -3798,7 +3824,7 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
         return false;
       for (auto &[S, U, L] : ScalarUserAndIdx) {
         for (auto *U : S->users()) {
-          if (UserToExtractIdx.find(U) != UserToExtractIdx.end()) {
+          if (UserToExtractIdx.contains(U)) {
             auto *FMul = cast<BinaryOperator>(U);
             auto *Op0 = FMul->getOperand(0);
             auto *Op1 = FMul->getOperand(1);

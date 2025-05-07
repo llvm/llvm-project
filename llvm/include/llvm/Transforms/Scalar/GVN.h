@@ -137,10 +137,7 @@ public:
 
   /// This removes the specified instruction from
   /// our various maps and marks it for deletion.
-  void markInstructionForDeletion(Instruction *I) {
-    VN.erase(I);
-    InstrsToErase.push_back(I);
-  }
+  void salvageAndRemoveInstruction(Instruction *I);
 
   DominatorTree &getDominatorTree() const { return *DT; }
   AAResults *getAliasAnalysis() const { return VN.getAliasAnalysis(); }
@@ -306,7 +303,6 @@ private:
   // propagate to any successors. Entries added mid-block are applied
   // to the remaining instructions in the block.
   SmallMapVector<Value *, Value *, 4> ReplaceOperandsWithMap;
-  SmallVector<Instruction *, 8> InstrsToErase;
 
   // Map the block to reversed postorder traversal number. It is used to
   // find back edge easily.
