@@ -3829,8 +3829,6 @@ void CGObjCGNU::GenerateClass(const ObjCImplementationDecl *OID) {
   } else {
     SuperClass = llvm::ConstantPointerNull::get(PtrToInt8Ty);
   }
-  // Empty vector used to construct empty method lists
-  SmallVector<llvm::Constant*, 1>  empty;
   // Generate the method and instance variable lists
   llvm::Constant *MethodList = GenerateMethodList(ClassName, "",
       InstanceMethods, false);

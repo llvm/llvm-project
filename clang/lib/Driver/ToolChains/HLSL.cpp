@@ -287,7 +287,6 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
   for (Arg *A : Args) {
     if (A->getOption().getID() == options::OPT_dxil_validator_version) {
       StringRef ValVerStr = A->getValue();
-      std::string ErrorMsg;
       if (!isLegalValidatorVersion(ValVerStr, getDriver()))
         continue;
     }

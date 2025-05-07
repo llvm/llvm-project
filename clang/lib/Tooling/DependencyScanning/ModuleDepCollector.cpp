@@ -600,7 +600,6 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
                                         llvm::vfs::FileSystem &VFS) {
   llvm::HashBuilder<llvm::TruncatedBLAKE3<16>, llvm::endianness::native>
       HashBuilder;
-  SmallString<32> Scratch;
 
   auto FormatHash = [&](llvm::BLAKE3Result<16> Hash) {
     std::array<uint64_t, 2> Words;
