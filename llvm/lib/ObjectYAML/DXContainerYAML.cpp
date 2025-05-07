@@ -377,7 +377,7 @@ void MappingTraits<DXContainerYAML::RootSignatureYamlDesc>::mapping(
   IO.mapRequired("NumStaticSamplers", S.NumStaticSamplers);
   IO.mapRequired("StaticSamplersOffset", S.StaticSamplersOffset);
   IO.mapRequired("Parameters", S.Parameters);
-  IO.mapRequired("Samplers", S.StaticSamplers);
+  IO.mapOptional("Samplers", S.StaticSamplers);
 #define ROOT_ELEMENT_FLAG(Num, Val) IO.mapOptional(#Val, S.Val, false);
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 }
