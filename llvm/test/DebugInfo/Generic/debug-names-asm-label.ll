@@ -10,7 +10,6 @@
 ; CHECK: .debug_names contents:
 ; CHECK: String: {{.*}} "bar"
 
-; There should be no verification errors for both files.
 ; VERIFY: No errors.
 
 ; Input generated from the following C++ code using
