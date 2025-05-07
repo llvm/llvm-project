@@ -5,8 +5,8 @@
 
 define i32 @test1(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[INNER:%.*]] = or i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[OUTER:%.*]] = or i32 [[INNER]], 5
+; CHECK-NEXT:    [[INNER:%.*]] = or disjoint i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[OUTER:%.*]] = or disjoint i32 [[INNER]], 5
 ; CHECK-NEXT:    ret i32 [[OUTER]]
 ;
   %inner = or disjoint i32 %x, 5
@@ -16,7 +16,7 @@ define i32 @test1(i32 %x, i32 %y) {
 
 define i32 @test2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[INNER:%.*]] = or i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[INNER:%.*]] = or disjoint i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[OUTER:%.*]] = or i32 [[INNER]], 5
 ; CHECK-NEXT:    ret i32 [[OUTER]]
 ;
