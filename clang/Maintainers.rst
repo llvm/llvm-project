@@ -51,6 +51,14 @@ Clang LLVM IR generation
 | Anton Korobeynikov
 | anton\@korobeynikov.info (email), asl (Phabricator), asl (GitHub)
 
+Clang MLIR generation
+~~~~~~~~~~~~~~~~~~~~~
+| Andy Kaylor
+| akaylor\@nvidia.com (email), AndyKaylor (Discord), AndyKaylor (GitHub)
+
+| Bruno Cardoso Lopes
+| bruno.cardoso\@gmail.com (email), sonicsprawl (Discord), bcardosolopes (GitHub)
+
 
 Analysis & CFG
 ~~~~~~~~~~~~~~
