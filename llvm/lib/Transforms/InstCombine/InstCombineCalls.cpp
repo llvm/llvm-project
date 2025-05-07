@@ -2300,6 +2300,18 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return BitOp;
     }
 
+    // fshl(X, X, Neg(Y)) --> fshr(X, X, Y)
+    // fshr(X, X, Neg(Y)) --> fshl(X, X, Y)
+    // if BitWidth is a power-of-2
+    Value *Y;
+    if (Op0 == Op1 && isPowerOf2_32(BitWidth) &&
+        match(II->getArgOperand(2), m_Neg(m_Value(Y)))) {
+      Module *Mod = II->getModule();
+      Function *OppositeShift = Intrinsic::getOrInsertDeclaration(
+          Mod, IID == Intrinsic::fshl ? Intrinsic::fshr : Intrinsic::fshl, Ty);
+      return CallInst::Create(OppositeShift, {Op0, Op1, Y});
+    }
+
     // fshl(X, 0, Y) --> shl(X, and(Y, BitWidth - 1)) if bitwidth is a
     // power-of-2
     if (IID == Intrinsic::fshl && isPowerOf2_32(BitWidth) &&
