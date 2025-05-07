@@ -392,6 +392,38 @@ public:
       return clauseNotImplemented(clause);
     }
   }
+
+  void VisitWorkerClause(const OpenACCWorkerClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::LoopOp>) {
+      if (clause.hasIntExpr())
+        operation.addWorkerNumOperand(builder.getContext(),
+                                      createIntExpr(clause.getIntExpr()),
+                                      lastDeviceTypeValues);
+      else
+        operation.addEmptyWorker(builder.getContext(), lastDeviceTypeValues);
+
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Combined constructs remain.
+      return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitVectorClause(const OpenACCVectorClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::LoopOp>) {
+      if (clause.hasIntExpr())
+        operation.addVectorOperand(builder.getContext(),
+                                   createIntExpr(clause.getIntExpr()),
+                                   lastDeviceTypeValues);
+      else
+        operation.addEmptyVector(builder.getContext(), lastDeviceTypeValues);
+
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Combined constructs remain.
+      return clauseNotImplemented(clause);
+    }
+  }
 };
 
 template <typename OpTy>
