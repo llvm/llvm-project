@@ -83,7 +83,8 @@ size_t GDBRemoteCommunication::SendAck() {
   ConnectionStatus status = eConnectionStatusSuccess;
   char ch = '+';
   const size_t bytes_written = WriteAll(&ch, 1, status, nullptr);
-  LLDB_LOGF(log, "<%4" PRIu64 "> send packet: %c", (uint64_t)bytes_written, ch);
+  LLDB_LOGF(log, "%p <%4" PRIu64 "> send packet: %c", static_cast<void *>(this), 
+            (uint64_t)bytes_written, ch);
   m_history.AddPacket(ch, GDBRemotePacket::ePacketTypeSend, bytes_written);
   return bytes_written;
 }
@@ -93,7 +94,8 @@ size_t GDBRemoteCommunication::SendNack() {
   ConnectionStatus status = eConnectionStatusSuccess;
   char ch = '-';
   const size_t bytes_written = WriteAll(&ch, 1, status, nullptr);
-  LLDB_LOGF(log, "<%4" PRIu64 "> send packet: %c", (uint64_t)bytes_written, ch);
+  LLDB_LOGF(log, "%p <%4" PRIu64 "> send packet: %c", static_cast<void *>(this),
+            (uint64_t)bytes_written, ch);
   m_history.AddPacket(ch, GDBRemotePacket::ePacketTypeSend, bytes_written);
   return bytes_written;
 }
@@ -164,7 +166,8 @@ GDBRemoteCommunication::SendRawPacketNoLock(llvm::StringRef packet,
       if (binary_start_offset) {
         StreamString strm;
         // Print non binary data header
-        strm.Printf("<%4" PRIu64 "> send packet: %.*s", (uint64_t)bytes_written,
+        strm.Printf("%p <%4" PRIu64 "> send packet: %.*s", 
+                    static_cast<void *>(this), (uint64_t)bytes_written,
                     (int)binary_start_offset, packet_data);
         const uint8_t *p;
         // Print binary data exactly as sent
@@ -175,8 +178,9 @@ GDBRemoteCommunication::SendRawPacketNoLock(llvm::StringRef packet,
         strm.Printf("%*s", (int)3, p);
         log->PutString(strm.GetString());
       } else
-        LLDB_LOGF(log, "<%4" PRIu64 "> send packet: %.*s",
-                  (uint64_t)bytes_written, (int)packet_length, packet_data);
+        LLDB_LOGF(log, "%p <%4" PRIu64 "> send packet: %.*s", 
+                  static_cast<void *>(this), (uint64_t)bytes_written, 
+                  (int)packet_length, packet_data);
     }
 
     m_history.AddPacket(packet.str(), packet_length,
@@ -736,12 +740,13 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
           StreamString strm;
           // Packet header...
           if (CompressionIsEnabled())
-            strm.Printf("<%4" PRIu64 ":%" PRIu64 "> read packet: %c",
-                        (uint64_t)original_packet_size, (uint64_t)total_length,
-                        m_bytes[0]);
-          else
-            strm.Printf("<%4" PRIu64 "> read packet: %c",
+            strm.Printf("%p <%4" PRIu64 ":%" PRIu64 "> read packet: %c",
+                        static_cast<void *>(this), (uint64_t)original_packet_size, 
                         (uint64_t)total_length, m_bytes[0]);
+          else
+            strm.Printf("%p <%4" PRIu64 "> read packet: %c", 
+                        static_cast<void *>(this), (uint64_t)total_length, 
+                        m_bytes[0]);
           for (size_t i = content_start; i < content_end; ++i) {
             // Remove binary escaped bytes when displaying the packet...
             const char ch = m_bytes[i];
@@ -760,13 +765,14 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
           log->PutString(strm.GetString());
         } else {
           if (CompressionIsEnabled())
-            LLDB_LOGF(log, "<%4" PRIu64 ":%" PRIu64 "> read packet: %.*s",
-                      (uint64_t)original_packet_size, (uint64_t)total_length,
-                      (int)(total_length), m_bytes.c_str());
-          else
-            LLDB_LOGF(log, "<%4" PRIu64 "> read packet: %.*s",
-                      (uint64_t)total_length, (int)(total_length),
+            LLDB_LOGF(log, "%p <%4" PRIu64 ":%" PRIu64 "> read packet: %.*s",
+                      static_cast<void *>(this), (uint64_t)original_packet_size, 
+                      (uint64_t)total_length, (int)(total_length), 
                       m_bytes.c_str());
+          else
+            LLDB_LOGF(log, "%p <%4" PRIu64 "> read packet: %.*s", 
+                      static_cast<void *>(this), (uint64_t)total_length, 
+                      (int)(total_length), m_bytes.c_str());
         }
       }
 
