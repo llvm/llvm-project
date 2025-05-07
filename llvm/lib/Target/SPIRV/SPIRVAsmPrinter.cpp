@@ -50,7 +50,8 @@ class SPIRVAsmPrinter : public AsmPrinter {
 public:
   explicit SPIRVAsmPrinter(TargetMachine &TM,
                            std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)), ST(nullptr), TII(nullptr) {}
+      : AsmPrinter(TM, std::move(Streamer), ID), ST(nullptr), TII(nullptr) {}
+  static char ID;
   bool ModuleSectionsEmitted;
   const SPIRVSubtarget *ST;
   const SPIRVInstrInfo *TII;
@@ -634,6 +635,11 @@ bool SPIRVAsmPrinter::doInitialization(Module &M) {
   // We need to call the parent's one explicitly.
   return AsmPrinter::doInitialization(M);
 }
+
+char SPIRVAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(SPIRVAsmPrinter, "spirv-asm-printer", "SPIRV Assembly Printer",
+                false, false)
 
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVAsmPrinter() {
