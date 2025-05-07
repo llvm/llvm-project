@@ -26,6 +26,7 @@ class Pass;
 extern char &HexagonCopyHoistingID;
 extern char &HexagonExpandCondsetsID;
 extern char &HexagonTfrCleanupID;
+void initializeHexagonAsmPrinterPass(PassRegistry &);
 void initializeHexagonBitSimplifyPass(PassRegistry &);
 void initializeHexagonBranchRelaxationPass(PassRegistry &);
 void initializeHexagonCFGOptimizerPass(PassRegistry &);
