@@ -754,6 +754,13 @@ TEST_F(TokenAnnotatorTest, UnderstandsNonTemplateAngleBrackets) {
   ASSERT_EQ(Tokens.size(), 27u) << Tokens;
   EXPECT_TOKEN(Tokens[7], tok::less, TT_BinaryOperator);
   EXPECT_TOKEN(Tokens[20], tok::greater, TT_BinaryOperator);
+
+  Tokens = annotate("bool foo = a < b && (c * d) > e;");
+  ASSERT_EQ(Tokens.size(), 16u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::less, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[6], tok::ampamp, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[9], tok::star, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[12], tok::greater, TT_BinaryOperator);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsTemplateTemplateParameters) {
