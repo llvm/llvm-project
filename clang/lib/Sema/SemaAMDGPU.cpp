@@ -375,7 +375,8 @@ Expr *SemaAMDGPU::ExpandAMDGPUPredicateBI(CallExpr *CE) {
   auto Loc = CE->getExprLoc();
 
   if (!CE->getBuiltinCallee())
-    return IntegerLiteral::Create(Ctx, False, BoolTy, Loc);
+    return *ExpandedPredicates.insert(
+        IntegerLiteral::Create(Ctx, False, BoolTy, Loc)).first;
 
   auto P = false;
   auto BI = CE->getBuiltinCallee();
@@ -398,7 +399,7 @@ Expr *SemaAMDGPU::ExpandAMDGPUPredicateBI(CallExpr *CE) {
     }
     if (Ctx.getTargetInfo().getTriple().isSPIRV()) {
       CE->setType(BoolTy);
-      return CE;
+      return *ExpandedPredicates.insert(CE).first;
     }
 
     if (auto TID = Ctx.getTargetInfo().getTargetID())
@@ -412,7 +413,7 @@ Expr *SemaAMDGPU::ExpandAMDGPUPredicateBI(CallExpr *CE) {
 
     if (Ctx.getTargetInfo().getTriple().isSPIRV()) {
       CE->setType(BoolTy);
-      return CE;
+      return *ExpandedPredicates.insert(CE).first;
     }
 
     auto *FD = cast<FunctionDecl>(Arg->getReferencedDeclOfCallee());
@@ -424,6 +425,11 @@ Expr *SemaAMDGPU::ExpandAMDGPUPredicateBI(CallExpr *CE) {
     P = Builtin::evaluateRequiredTargetFeatures(RF, CF);
   }
 
-  return IntegerLiteral::Create(Ctx, P ? True : False, BoolTy, Loc);
+  return *ExpandedPredicates.insert(
+      IntegerLiteral::Create(Ctx, P ? True : False, BoolTy, Loc)).first;
+}
+
+bool SemaAMDGPU::IsPredicate(Expr *E) const {
+  return ExpandedPredicates.contains(E);
 }
 } // namespace clang

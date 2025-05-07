@@ -13312,4 +13312,6 @@ def err_amdgcn_predicate_type_needs_explicit_bool_cast
     : Error<"%0 must be explicitly cast to %1; however, please note that this "
             "is almost always an error and that it prevents the effective "
             "guarding of target dependent code, and thus should be avoided">;
+def note_amdgcn_protected_by_predicate
+    : Note<"jump enters statement controlled by AMDGPU feature predicate">;
 } // end of sema component.

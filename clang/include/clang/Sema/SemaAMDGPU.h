@@ -15,12 +15,15 @@
 
 #include "clang/AST/ASTFwd.h"
 #include "clang/Sema/SemaBase.h"
+#include "llvm/ADT/SmallPtrSet.h"
 
 namespace clang {
 class AttributeCommonInfo;
+class Expr;
 class ParsedAttr;
 
 class SemaAMDGPU : public SemaBase {
+  llvm::SmallPtrSet<Expr *, 32> ExpandedPredicates;
 public:
   SemaAMDGPU(Sema &S);
 
@@ -68,6 +71,7 @@ public:
   /// Expand a valid use of the feature identification builtins into its
   /// corresponding sequence of instructions.
   Expr *ExpandAMDGPUPredicateBI(CallExpr *CE);
+  bool IsPredicate(Expr *E) const;
 };
 } // namespace clang
 
