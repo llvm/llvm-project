@@ -107,6 +107,10 @@ TEST(Host, LaunchProcessDuplicatesHandle) {
   Pipe pipe;
   ASSERT_THAT_ERROR(pipe.CreateNew(/*child_process_inherit=*/false).takeError(),
                     llvm::Succeeded());
+  SCOPED_TRACE(llvm::formatv("Pipe handles are: {0}/{1}",
+                             (uint64_t)pipe.GetReadPipe(),
+                             (uint64_t)pipe.GetWritePipe())
+                   .str());
   ProcessLaunchInfo info;
   info.SetExecutableFile(FileSpec(TestMainArgv0),
                          /*add_exe_file_as_first_arg=*/true);
