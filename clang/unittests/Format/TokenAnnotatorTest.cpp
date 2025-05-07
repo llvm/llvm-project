@@ -411,6 +411,12 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   ASSERT_EQ(Tokens.size(), 27u) << Tokens;
   EXPECT_TOKEN(Tokens[16], tok::star, TT_BinaryOperator);
   EXPECT_TOKEN(Tokens[22], tok::star, TT_BinaryOperator);
+
+  Tokens = annotate("NSError *__autoreleasing *foo;",
+                    getLLVMStyle(FormatStyle::LK_ObjC));
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::star, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {
