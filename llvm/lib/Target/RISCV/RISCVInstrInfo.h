@@ -242,7 +242,7 @@ public:
                                        unsigned OpIdx1,
                                        unsigned OpIdx2) const override;
 
-  bool optimizeInstruction(MachineInstr &MI) const override;
+  bool simplifyInstruction(MachineInstr &MI) const override;
 
   MachineInstr *convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
                                       LiveIntervals *LIS) const override;
