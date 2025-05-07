@@ -19,7 +19,7 @@ define dso_local void @foo(i32 noundef signext %flag) nounwind {
 ; LA32-NEXT:    andi $a0, $a0, 1
 ; LA32-NEXT:    bnez $a0, .LBB0_4
 ; LA32-NEXT:  # %bb.3: # %if.then2
-; LA32-NEXT:    b %plt(bug)
+; LA32-NEXT:    b bug
 ; LA32-NEXT:  .LBB0_4: # %if.end3
 ; LA32-NEXT:    ret
 ;
