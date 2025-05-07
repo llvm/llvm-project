@@ -116,7 +116,7 @@ protected:
 
 private:
   Type *VTy;
-  Use *UseList = nullptr;
+  Use *UseList;
 
   friend class ValueAsMetadata; // Allow access to IsUsedByMD.
   friend class ValueHandleBase; // Allow access to HasValueHandle.
@@ -339,25 +339,20 @@ public:
 #endif
   }
 
-  /// Check if this Value has a use-list.
-  bool hasUseList() const { return !isa<ConstantData>(this); }
-
   bool use_empty() const {
     assertModuleIsMaterialized();
     return UseList == nullptr;
   }
 
-  bool materialized_use_empty() const { return UseList == nullptr; }
+  bool materialized_use_empty() const {
+    return UseList == nullptr;
+  }
 
   using use_iterator = use_iterator_impl<Use>;
   using const_use_iterator = use_iterator_impl<const Use>;
 
-  use_iterator materialized_use_begin() {
-    assert(hasUseList());
-    return use_iterator(UseList);
-  }
+  use_iterator materialized_use_begin() { return use_iterator(UseList); }
   const_use_iterator materialized_use_begin() const {
-    assert(hasUseList());
     return const_use_iterator(UseList);
   }
   use_iterator use_begin() {
@@ -385,17 +380,16 @@ public:
     return materialized_uses();
   }
 
-  bool user_empty() const { return use_empty(); }
+  bool user_empty() const {
+    assertModuleIsMaterialized();
+    return UseList == nullptr;
+  }
 
   using user_iterator = user_iterator_impl<User>;
   using const_user_iterator = user_iterator_impl<const User>;
 
-  user_iterator materialized_user_begin() {
-    assert(hasUseList());
-    return user_iterator(UseList);
-  }
+  user_iterator materialized_user_begin() { return user_iterator(UseList); }
   const_user_iterator materialized_user_begin() const {
-    assert(hasUseList());
     return const_user_iterator(UseList);
   }
   user_iterator user_begin() {
@@ -435,7 +429,7 @@ public:
   ///
   /// This is specialized because it is a common request and does not require
   /// traversing the whole use list.
-  bool hasOneUse() const { return UseList && hasSingleElement(uses()); }
+  bool hasOneUse() const { return hasSingleElement(uses()); }
 
   /// Return true if this Value has exactly N uses.
   bool hasNUses(unsigned N) const;
@@ -497,8 +491,6 @@ public:
   static void dropDroppableUse(Use &U);
 
   /// Check if this value is used in the specified basic block.
-  ///
-  /// Not supported for ConstantData.
   bool isUsedInBasicBlock(const BasicBlock *BB) const;
 
   /// This method computes the number of uses of this Value.
@@ -508,10 +500,7 @@ public:
   unsigned getNumUses() const;
 
   /// This method should only be used by the Use class.
-  void addUse(Use &U) {
-    if (UseList || hasUseList())
-      U.addToList(&UseList);
-  }
+  void addUse(Use &U) { U.addToList(&UseList); }
 
   /// Concrete subclass of this.
   ///
@@ -899,10 +888,9 @@ inline raw_ostream &operator<<(raw_ostream &OS, const Value &V) {
 }
 
 void Use::set(Value *V) {
-  removeFromList();
+  if (Val) removeFromList();
   Val = V;
-  if (V)
-    V->addUse(*this);
+  if (V) V->addUse(*this);
 }
 
 Value *Use::operator=(Value *RHS) {

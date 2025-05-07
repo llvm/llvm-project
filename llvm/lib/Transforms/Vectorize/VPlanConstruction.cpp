@@ -559,7 +559,7 @@ void VPlanTransforms::prepareForVectorization(VPlan &Plan, Type *InductionTy,
 void VPlanTransforms::createLoopRegions(VPlan &Plan) {
   VPDominatorTree VPDT;
   VPDT.recalculate(Plan);
-  for (VPBlockBase *HeaderVPB : vp_depth_first_shallow(Plan.getEntry()))
+  for (VPBlockBase *HeaderVPB : vp_post_order_shallow(Plan.getEntry()))
     if (canonicalHeaderAndLatch(HeaderVPB, VPDT))
       createLoopRegion(Plan, HeaderVPB);
 

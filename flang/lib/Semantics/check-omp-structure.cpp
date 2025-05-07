@@ -1628,6 +1628,16 @@ void OmpStructureChecker::Leave(const parser::OpenMPDeclareSimdConstruct &) {
   dirContext_.pop_back();
 }
 
+void OmpStructureChecker::Enter(const parser::OmpDeclareVariantDirective &x) {
+  const auto &dir{std::get<parser::Verbatim>(x.t)};
+  PushContextAndClauseSets(
+      dir.source, llvm::omp::Directive::OMPD_declare_variant);
+}
+
+void OmpStructureChecker::Leave(const parser::OmpDeclareVariantDirective &) {
+  dirContext_.pop_back();
+}
+
 void OmpStructureChecker::Enter(const parser::OpenMPDepobjConstruct &x) {
   const auto &dirName{std::get<parser::OmpDirectiveName>(x.v.t)};
   PushContextAndClauseSets(dirName.source, llvm::omp::Directive::OMPD_depobj);
