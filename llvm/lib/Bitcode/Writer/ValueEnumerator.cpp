@@ -230,9 +230,6 @@ static void predictValueUseListOrderImpl(const Value *V, const Function *F,
 
 static void predictValueUseListOrder(const Value *V, const Function *F,
                                      OrderMap &OM, UseListOrderStack &Stack) {
-  if (!V->hasUseList())
-    return;
-
   auto &IDPair = OM[V];
   assert(IDPair.first && "Unmapped value");
   if (IDPair.second)

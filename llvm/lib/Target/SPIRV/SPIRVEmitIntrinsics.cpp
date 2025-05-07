@@ -1124,8 +1124,7 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
       continue;
     Value *OpTyVal = getNormalizedPoisonValue(KnownElemTy);
     Type *OpTy = Op->getType();
-    if (Op->hasUseList() &&
-        (!Ty || AskTy || isUntypedPointerTy(Ty) || isTodoType(Op))) {
+    if (!Ty || AskTy || isUntypedPointerTy(Ty) || isTodoType(Op)) {
       Type *PrevElemTy = GR->findDeducedElementType(Op);
       GR->addDeducedElementType(Op, normalizeType(KnownElemTy));
       // check if KnownElemTy is complete
@@ -1475,36 +1474,34 @@ void SPIRVEmitIntrinsics::replacePointerOperandWithPtrCast(
   // Do not emit new spv_ptrcast if equivalent one already exists or when
   // spv_assign_ptr_type already targets this pointer with the same element
   // type.
-  if (Pointer->hasUseList()) {
-    for (auto User : Pointer->users()) {
-      auto *II = dyn_cast<IntrinsicInst>(User);
-      if (!II ||
-          (II->getIntrinsicID() != Intrinsic::spv_assign_ptr_type &&
-           II->getIntrinsicID() != Intrinsic::spv_ptrcast) ||
-          II->getOperand(0) != Pointer)
-        continue;
+  for (auto User : Pointer->users()) {
+    auto *II = dyn_cast<IntrinsicInst>(User);
+    if (!II ||
+        (II->getIntrinsicID() != Intrinsic::spv_assign_ptr_type &&
+         II->getIntrinsicID() != Intrinsic::spv_ptrcast) ||
+        II->getOperand(0) != Pointer)
+      continue;
 
-      // There is some spv_ptrcast/spv_assign_ptr_type already targeting this
-      // pointer.
-      FirstPtrCastOrAssignPtrType = false;
-      if (II->getOperand(1) != VMD ||
-          dyn_cast<ConstantInt>(II->getOperand(2))->getSExtValue() !=
-              AddressSpace)
-        continue;
+    // There is some spv_ptrcast/spv_assign_ptr_type already targeting this
+    // pointer.
+    FirstPtrCastOrAssignPtrType = false;
+    if (II->getOperand(1) != VMD ||
+        dyn_cast<ConstantInt>(II->getOperand(2))->getSExtValue() !=
+            AddressSpace)
+      continue;
 
-      // The spv_ptrcast/spv_assign_ptr_type targeting this pointer is of the
-      // same element type and address space.
-      if (II->getIntrinsicID() != Intrinsic::spv_ptrcast)
-        return;
-
-      // This must be a spv_ptrcast, do not emit new if this one has the same BB
-      // as I. Otherwise, search for other spv_ptrcast/spv_assign_ptr_type.
-      if (II->getParent() != I->getParent())
-        continue;
-
-      I->setOperand(OperandToReplace, II);
+    // The spv_ptrcast/spv_assign_ptr_type targeting this pointer is of the same
+    // element type and address space.
+    if (II->getIntrinsicID() != Intrinsic::spv_ptrcast)
       return;
-    }
+
+    // This must be a spv_ptrcast, do not emit new if this one has the same BB
+    // as I. Otherwise, search for other spv_ptrcast/spv_assign_ptr_type.
+    if (II->getParent() != I->getParent())
+      continue;
+
+    I->setOperand(OperandToReplace, II);
+    return;
   }
 
   if (isa<Instruction>(Pointer) || isa<Argument>(Pointer)) {
@@ -2493,13 +2490,10 @@ bool SPIRVEmitIntrinsics::postprocessTypes(Module &M) {
         }
       }
     }
-
-    if (Op->hasUseList()) {
-      for (User *U : Op->users()) {
-        Instruction *Inst = dyn_cast<Instruction>(U);
-        if (Inst && !isa<IntrinsicInst>(Inst))
-          ToProcess[Inst].insert(Op);
-      }
+    for (User *U : Op->users()) {
+      Instruction *Inst = dyn_cast<Instruction>(U);
+      if (Inst && !isa<IntrinsicInst>(Inst))
+        ToProcess[Inst].insert(Op);
     }
   }
   if (TodoTypeSz == 0)
