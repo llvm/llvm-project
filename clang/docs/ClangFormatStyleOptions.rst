@@ -3976,6 +3976,47 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+.. _EnumTrailingComma:
+
+**EnumTrailingComma** (``EnumTrailingCommaStyle``) :versionbadge:`clang-format 21` :ref:`¶ <EnumTrailingComma>`
+  Insert a comma (if missing) or remove the comma at the end of an ``enum``
+  enumerator list.
+
+  .. warning::
+
+   Setting this option to any value other than ``Leave`` could lead to
+   incorrect code formatting due to clang-format's lack of complete semantic
+   information. As such, extra care should be taken to review code changes
+   made by this option.
+
+  Possible values:
+
+  * ``ETC_Leave`` (in configuration: ``Leave``)
+    Don't insert or remove trailing commas.
+
+    .. code-block:: c++
+
+      enum { a, b, c, };
+      enum Color { red, green, blue };
+
+  * ``ETC_Insert`` (in configuration: ``Insert``)
+    Insert trailing commas.
+
+    .. code-block:: c++
+
+      enum { a, b, c, };
+      enum Color { red, green, blue, };
+
+  * ``ETC_Remove`` (in configuration: ``Remove``)
+    Remove trailing commas.
+
+    .. code-block:: c++
+
+      enum { a, b, c };
+      enum Color { red, green, blue };
+
+
+
 .. _ExperimentalAutoDetectBinPacking:
 
 **ExperimentalAutoDetectBinPacking** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <ExperimentalAutoDetectBinPacking>`
@@ -5153,6 +5194,29 @@ the configuration (without a prefix: ``Auto``).
 **ObjCSpaceBeforeProtocolList** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <ObjCSpaceBeforeProtocolList>`
   Add a space in front of an Objective-C protocol list, i.e. use
   ``Foo <Protocol>`` instead of ``Foo<Protocol>``.
+
+.. _OneLineFormatOffRegex:
+
+**OneLineFormatOffRegex** (``String``) :versionbadge:`clang-format 21` :ref:`¶ <OneLineFormatOffRegex>`
+  A regular expression that describes markers for turning formatting off for
+  one line. If it matches a comment that is the only token of a line,
+  clang-format skips the comment and the next line. Otherwise, clang-format
+  skips lines containing a matched token.
+
+  .. code-block:: c++
+
+     // OneLineFormatOffRegex: ^(// NOLINT|logger$)
+     // results in the output below:
+     int a;
+     int b ;  // NOLINT
+     int c;
+      // NOLINTNEXTLINE
+     int d ;
+     int e;
+     s = "// NOLINT";
+      logger() ;
+     logger2();
+     my_logger();
 
 .. _PPIndentWidth:
 

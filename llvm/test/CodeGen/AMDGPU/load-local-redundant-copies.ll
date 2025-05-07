@@ -66,39 +66,38 @@ define amdgpu_vs void @test_3(i32 inreg %arg1, i32 inreg %arg2, ptr addrspace(8)
 ; CHECK-NEXT:    s_mov_b32 s6, s4
 ; CHECK-NEXT:    s_mov_b32 s5, s3
 ; CHECK-NEXT:    s_mov_b32 s4, s2
-; CHECK-NEXT:    v_add_i32_e32 v0, vcc, 20, v1
-; CHECK-NEXT:    v_add_i32_e32 v3, vcc, 16, v1
-; CHECK-NEXT:    v_add_i32_e32 v4, vcc, 12, v1
-; CHECK-NEXT:    v_add_i32_e32 v5, vcc, 8, v1
-; CHECK-NEXT:    v_add_i32_e32 v8, vcc, 4, v1
+; CHECK-NEXT:    v_add_i32_e32 v0, vcc, 12, v1
+; CHECK-NEXT:    v_add_i32_e32 v3, vcc, 8, v1
+; CHECK-NEXT:    v_add_i32_e32 v4, vcc, 4, v1
+; CHECK-NEXT:    v_add_i32_e32 v6, vcc, 20, v1
+; CHECK-NEXT:    v_add_i32_e32 v7, vcc, 16, v1
 ; CHECK-NEXT:    v_mov_b32_e32 v9, s0
-; CHECK-NEXT:    v_add_i32_e32 v10, vcc, 20, v2
-; CHECK-NEXT:    v_add_i32_e32 v11, vcc, 16, v2
+; CHECK-NEXT:    v_add_i32_e32 v10, vcc, 12, v2
+; CHECK-NEXT:    v_add_i32_e32 v11, vcc, 8, v2
 ; CHECK-NEXT:    s_mov_b32 m0, -1
-; CHECK-NEXT:    ds_read_b32 v7, v3
-; CHECK-NEXT:    ds_read_b32 v6, v4
-; CHECK-NEXT:    ds_read_b32 v5, v5
-; CHECK-NEXT:    ds_read_b32 v4, v8
-; CHECK-NEXT:    ds_read_b32 v8, v0
+; CHECK-NEXT:    ds_read_b32 v5, v3
+; CHECK-NEXT:    ds_read_b32 v4, v4
+; CHECK-NEXT:    ds_read_b32 v8, v6
+; CHECK-NEXT:    ds_read_b32 v7, v7
+; CHECK-NEXT:    ds_read_b32 v6, v0
 ; CHECK-NEXT:    ds_read_b32 v3, v1
-; CHECK-NEXT:    v_add_i32_e32 v1, vcc, 12, v2
-; CHECK-NEXT:    v_add_i32_e32 v12, vcc, 8, v2
-; CHECK-NEXT:    v_add_i32_e32 v13, vcc, 4, v2
+; CHECK-NEXT:    v_add_i32_e32 v0, vcc, 4, v2
+; CHECK-NEXT:    v_add_i32_e32 v1, vcc, 20, v2
+; CHECK-NEXT:    v_add_i32_e32 v12, vcc, 16, v2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    tbuffer_store_format_xyzw v[3:6], v9, s[4:7], s1 format:[BUF_DATA_FORMAT_32_32_32,BUF_NUM_FORMAT_UINT] idxen offset:264 glc slc
 ; CHECK-NEXT:    tbuffer_store_format_xy v[7:8], v9, s[4:7], s1 format:[BUF_DATA_FORMAT_INVALID,BUF_NUM_FORMAT_UINT] idxen offset:280 glc slc
-; CHECK-NEXT:    ds_read_b32 v0, v11
 ; CHECK-NEXT:    s_waitcnt expcnt(1)
-; CHECK-NEXT:    ds_read_b32 v5, v1
-; CHECK-NEXT:    ds_read_b32 v4, v12
-; CHECK-NEXT:    ds_read_b32 v3, v13
+; CHECK-NEXT:    ds_read_b32 v4, v11
+; CHECK-NEXT:    ds_read_b32 v3, v0
+; CHECK-NEXT:    ds_read_b32 v1, v1
+; CHECK-NEXT:    ds_read_b32 v0, v12
+; CHECK-NEXT:    ds_read_b32 v5, v10
 ; CHECK-NEXT:    ds_read_b32 v2, v2
-; CHECK-NEXT:    ds_read_b32 v1, v10
-; CHECK-NEXT:    s_waitcnt lgkmcnt(5)
+; CHECK-NEXT:    s_waitcnt lgkmcnt(2)
 ; CHECK-NEXT:    exp mrt0 off, off, off, off
-; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
-; CHECK-NEXT:    tbuffer_store_format_xyzw v[2:5], v9, s[4:7], s1 format:[BUF_DATA_FORMAT_32_32_32,BUF_NUM_FORMAT_UINT] idxen offset:240 glc slc
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    tbuffer_store_format_xyzw v[2:5], v9, s[4:7], s1 format:[BUF_DATA_FORMAT_32_32_32,BUF_NUM_FORMAT_UINT] idxen offset:240 glc slc
 ; CHECK-NEXT:    tbuffer_store_format_xy v[0:1], v9, s[4:7], s1 format:[BUF_DATA_FORMAT_INVALID,BUF_NUM_FORMAT_UINT] idxen offset:256 glc slc
 ; CHECK-NEXT:    s_endpgm
   %load1 = load <6 x float>, ptr addrspace(3) %arg5, align 4

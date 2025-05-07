@@ -45,6 +45,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -95,9 +96,11 @@ class AArch64AsmPrinter : public AsmPrinter {
       SectionToImportedFunctionCalls;
 
 public:
+  static char ID;
+
   AArch64AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)), MCInstLowering(OutContext, *this),
-        FM(*this) {}
+      : AsmPrinter(TM, std::move(Streamer), ID),
+        MCInstLowering(OutContext, *this), FM(*this) {}
 
   StringRef getPassName() const override { return "AArch64 Assembly Printer"; }
 
@@ -112,7 +115,8 @@ public:
   const MCExpr *lowerBlockAddressConstant(const BlockAddress &BA) override;
 
   void emitStartOfAsmFile(Module &M) override;
-  void emitJumpTableInfo() override;
+  void emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
+                         ArrayRef<unsigned> JumpTableIndices) override;
   std::tuple<const MCSymbol *, uint64_t, const MCSymbol *,
              codeview::JumpTableEntrySize>
   getCodeViewJumpTableInfo(int JTI, const MachineInstr *BranchInstr,
@@ -226,6 +230,12 @@ public:
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
+    if (auto *PSIW = getAnalysisIfAvailable<ProfileSummaryInfoWrapperPass>())
+      PSI = &PSIW->getPSI();
+    if (auto *SDPIW =
+            getAnalysisIfAvailable<StaticDataProfileInfoWrapperPass>())
+      SDPI = &SDPIW->getStaticDataProfileInfo();
+
     AArch64FI = MF.getInfo<AArch64FunctionInfo>();
     STI = &MF.getSubtarget<AArch64Subtarget>();
 
@@ -254,7 +264,9 @@ public:
     return false;
   }
 
-  const MCExpr *lowerConstant(const Constant *CV) override;
+  const MCExpr *lowerConstant(const Constant *CV,
+                              const Constant *BaseCV = nullptr,
+                              uint64_t Offset = 0) override;
 
 private:
   void printOperand(const MachineInstr *MI, unsigned OpNum, raw_ostream &O);
@@ -919,19 +931,17 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
       // Intentionally load the GOT entry and branch to it, rather than possibly
       // late binding the function, which may clobber the registers before we
       // have a chance to save them.
-      EmitToStreamer(
-          MCInstBuilder(AArch64::ADRP)
-              .addReg(AArch64::X16)
-              .addExpr(AArch64MCExpr::create(
-                  HwasanTagMismatchRef, AArch64MCExpr::VariantKind::VK_GOT_PAGE,
-                  OutContext)));
-      EmitToStreamer(
-          MCInstBuilder(AArch64::LDRXui)
-              .addReg(AArch64::X16)
-              .addReg(AArch64::X16)
-              .addExpr(AArch64MCExpr::create(
-                  HwasanTagMismatchRef, AArch64MCExpr::VariantKind::VK_GOT_LO12,
-                  OutContext)));
+      EmitToStreamer(MCInstBuilder(AArch64::ADRP)
+                         .addReg(AArch64::X16)
+                         .addExpr(AArch64MCExpr::create(
+                             HwasanTagMismatchRef, AArch64MCExpr::VK_GOT_PAGE,
+                             OutContext)));
+      EmitToStreamer(MCInstBuilder(AArch64::LDRXui)
+                         .addReg(AArch64::X16)
+                         .addReg(AArch64::X16)
+                         .addExpr(AArch64MCExpr::create(
+                             HwasanTagMismatchRef, AArch64MCExpr::VK_GOT_LO12,
+                             OutContext)));
       EmitToStreamer(MCInstBuilder(AArch64::BR).addReg(AArch64::X16));
     }
   }
@@ -1283,19 +1293,26 @@ void AArch64AsmPrinter::PrintDebugValueComment(const MachineInstr *MI,
   printOperand(MI, NOps - 2, OS);
 }
 
-void AArch64AsmPrinter::emitJumpTableInfo() {
-  const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo();
-  if (!MJTI) return;
-
-  const std::vector<MachineJumpTableEntry> &JT = MJTI->getJumpTables();
-  if (JT.empty()) return;
-
+void AArch64AsmPrinter::emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
+                                          ArrayRef<unsigned> JumpTableIndices) {
+  // Fast return if there is nothing to emit to avoid creating empty sections.
+  if (JumpTableIndices.empty())
+    return;
   const TargetLoweringObjectFile &TLOF = getObjFileLowering();
-  MCSection *ReadOnlySec = TLOF.getSectionForJumpTable(MF->getFunction(), TM);
+  const auto &F = MF->getFunction();
+  ArrayRef<MachineJumpTableEntry> JT = MJTI.getJumpTables();
+
+  MCSection *ReadOnlySec = nullptr;
+  if (TM.Options.EnableStaticDataPartitioning) {
+    ReadOnlySec =
+        TLOF.getSectionForJumpTable(F, TM, &JT[JumpTableIndices.front()]);
+  } else {
+    ReadOnlySec = TLOF.getSectionForJumpTable(F, TM);
+  }
   OutStreamer->switchSection(ReadOnlySec);
 
   auto AFI = MF->getInfo<AArch64FunctionInfo>();
-  for (unsigned JTI = 0, e = JT.size(); JTI != e; ++JTI) {
+  for (unsigned JTI : JumpTableIndices) {
     const std::vector<MachineBasicBlock*> &JTBBs = JT[JTI].MBBs;
 
     // If this jump table was deleted, ignore it.
@@ -1381,22 +1398,21 @@ void AArch64AsmPrinter::emitFunctionEntryLabel() {
       return Sym;
     };
 
-    if (MCSymbol *UnmangledSym =
-            getSymbolFromMetadata("arm64ec_unmangled_name")) {
-      MCSymbol *ECMangledSym = getSymbolFromMetadata("arm64ec_ecmangled_name");
-
-      if (ECMangledSym) {
-        // An external function, emit the alias from the unmangled symbol to
-        // mangled symbol name and the alias from the mangled symbol to guest
-        // exit thunk.
+    SmallVector<MDNode *> UnmangledNames;
+    MF->getFunction().getMetadata("arm64ec_unmangled_name", UnmangledNames);
+    for (MDNode *Node : UnmangledNames) {
+      StringRef NameStr = cast<MDString>(Node->getOperand(0))->getString();
+      MCSymbol *UnmangledSym = MMI->getContext().getOrCreateSymbol(NameStr);
+      if (std::optional<std::string> MangledName =
+              getArm64ECMangledFunctionName(UnmangledSym->getName())) {
+        MCSymbol *ECMangledSym =
+            MMI->getContext().getOrCreateSymbol(*MangledName);
         emitFunctionAlias(UnmangledSym, ECMangledSym);
-        emitFunctionAlias(ECMangledSym, CurrentFnSym);
-      } else {
-        // A function implementation, emit the alias from the unmangled symbol
-        // to mangled symbol name.
-        emitFunctionAlias(UnmangledSym, CurrentFnSym);
       }
     }
+    if (MCSymbol *ECMangledSym =
+            getSymbolFromMetadata("arm64ec_ecmangled_name"))
+      emitFunctionAlias(ECMangledSym, CurrentFnSym);
   }
 }
 
@@ -3498,14 +3514,21 @@ void AArch64AsmPrinter::emitMachOIFuncStubHelperBody(Module &M,
                      .addReg(AArch64::X16));
 }
 
-const MCExpr *AArch64AsmPrinter::lowerConstant(const Constant *CV) {
+const MCExpr *AArch64AsmPrinter::lowerConstant(const Constant *CV,
+                                               const Constant *BaseCV,
+                                               uint64_t Offset) {
   if (const GlobalValue *GV = dyn_cast<GlobalValue>(CV)) {
     return MCSymbolRefExpr::create(MCInstLowering.GetGlobalValueSymbol(GV, 0),
                                    OutContext);
   }
 
-  return AsmPrinter::lowerConstant(CV);
+  return AsmPrinter::lowerConstant(CV, BaseCV, Offset);
 }
+
+char AArch64AsmPrinter::ID = 0;
+
+INITIALIZE_PASS(AArch64AsmPrinter, "aarch64-asm-printer",
+                "AArch64 Assmebly Printer", false, false)
 
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64AsmPrinter() {

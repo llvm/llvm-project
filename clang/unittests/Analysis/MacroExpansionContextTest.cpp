@@ -39,7 +39,7 @@ protected:
         Diags(DiagID, DiagOpts.get(), new IgnoringDiagConsumer()),
         SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions()) {
     TargetOpts->Triple = "x86_64-pc-linux-unknown";
-    Target = TargetInfo::CreateTargetInfo(Diags, TargetOpts);
+    Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
     LangOpts.CPlusPlus20 = 1; // For __VA_OPT__
   }
 
@@ -60,11 +60,10 @@ protected:
     SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
     HeaderSearchOptions HSOpts;
     TrivialModuleLoader ModLoader;
+    PreprocessorOptions PPOpts;
     HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
-    Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
-                    SourceMgr, HeaderInfo, ModLoader,
-                    /*IILookup =*/nullptr,
-                    /*OwnsHeaderSearch =*/false);
+    Preprocessor PP(PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
+                    /*IILookup=*/nullptr, /*OwnsHeaderSearch=*/false);
 
     PP.Initialize(*Target);
     auto Ctx = std::make_unique<MacroExpansionContext>(LangOpts);

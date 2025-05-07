@@ -15,7 +15,7 @@ kIsWindows = sys.platform in ["win32", "cygwin"]
 
 
 class GoogleTest(TestFormat):
-    def __init__(self, test_sub_dirs, test_suffix, run_under=[]):
+    def __init__(self, test_sub_dirs, test_suffix, run_under=[], test_prefix=None):
         self.seen_executables = set()
         self.test_sub_dirs = str(test_sub_dirs).split(";")
 
@@ -26,6 +26,7 @@ class GoogleTest(TestFormat):
 
         # Also check for .py files for testing purposes.
         self.test_suffixes = {exe_suffix, test_suffix + ".py"}
+        self.test_prefixes = {test_prefix} if test_prefix else None
         self.run_under = run_under
 
     def get_num_tests(self, path, litConfig, localConfig):
@@ -55,7 +56,9 @@ class GoogleTest(TestFormat):
             dir_path = os.path.join(source_path, subdir)
             if not os.path.isdir(dir_path):
                 continue
-            for fn in lit.util.listdir_files(dir_path, suffixes=self.test_suffixes):
+            for fn in lit.util.listdir_files(
+                dir_path, suffixes=self.test_suffixes, prefixes=self.test_prefixes
+            ):
                 # Discover the tests in this executable.
                 execpath = os.path.join(source_path, subdir, fn)
                 if execpath in self.seen_executables:

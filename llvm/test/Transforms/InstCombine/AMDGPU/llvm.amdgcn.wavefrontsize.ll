@@ -39,7 +39,7 @@ define amdgpu_kernel void @fold_and_optimize_wavefrontsize(ptr addrspace(1) noca
 ; OPT-SAME: ptr addrspace(1) captures(none) [[ARG:%.*]]) {
 ; OPT-NEXT:  [[BB:.*:]]
 ; OPT-NEXT:    [[TMP:%.*]] = tail call i32 @llvm.amdgcn.wavefrontsize() #[[ATTR1]]
-; OPT-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP]], 32
+; OPT-NEXT:    [[TMP1:%.*]] = icmp samesign ugt i32 [[TMP]], 32
 ; OPT-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 2, i32 1
 ; OPT-NEXT:    store i32 [[TMP2]], ptr addrspace(1) [[ARG]], align 4
 ; OPT-NEXT:    ret void
@@ -69,7 +69,7 @@ define amdgpu_kernel void @fold_and_optimize_if_wavefrontsize(ptr addrspace(1) n
 ; OPT-SAME: ptr addrspace(1) captures(none) [[ARG:%.*]]) {
 ; OPT-NEXT:  [[BB:.*:]]
 ; OPT-NEXT:    [[TMP:%.*]] = tail call i32 @llvm.amdgcn.wavefrontsize() #[[ATTR1]]
-; OPT-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP]], 32
+; OPT-NEXT:    [[TMP1:%.*]] = icmp samesign ugt i32 [[TMP]], 32
 ; OPT-NEXT:    br i1 [[TMP1]], label %[[BB2:.*]], label %[[BB3:.*]]
 ; OPT:       [[BB2]]:
 ; OPT-NEXT:    store i32 1, ptr addrspace(1) [[ARG]], align 4

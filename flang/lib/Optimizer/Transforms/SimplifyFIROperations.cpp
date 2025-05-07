@@ -75,27 +75,50 @@ mlir::LogicalResult IsContiguousBoxCoversion::matchAndRewrite(
     fir::IsContiguousBoxOp op, mlir::PatternRewriter &rewriter) const {
   mlir::Location loc = op.getLoc();
   fir::FirOpBuilder builder(rewriter, op.getOperation());
-  // TODO: support preferInlineImplementation.
-  bool doInline = options.preferInlineImplementation && false;
-  if (!doInline) {
-    // Generate Fortran runtime call.
-    mlir::Value result;
-    if (op.getInnermost()) {
-      mlir::Value one =
-          builder.createIntegerConstant(loc, builder.getI32Type(), 1);
-      result =
-          fir::runtime::genIsContiguousUpTo(builder, loc, op.getBox(), one);
-    } else {
-      result = fir::runtime::genIsContiguous(builder, loc, op.getBox());
+  mlir::Value box = op.getBox();
+
+  if (options.preferInlineImplementation) {
+    auto boxType = mlir::cast<fir::BaseBoxType>(box.getType());
+    unsigned rank = fir::getBoxRank(boxType);
+
+    // If rank is one, or 'innermost' attribute is set and
+    // it is not a scalar, then generate a simple comparison
+    // for the leading dimension: (stride == elem_size || extent == 0).
+    //
+    // The scalar cases are supposed to be optimized by the canonicalization.
+    if (rank == 1 || (op.getInnermost() && rank > 0)) {
+      mlir::Type idxTy = builder.getIndexType();
+      auto eleSize = builder.create<fir::BoxEleSizeOp>(loc, idxTy, box);
+      mlir::Value zero = fir::factory::createZeroValue(builder, loc, idxTy);
+      auto dimInfo =
+          builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy, box, zero);
+      mlir::Value stride = dimInfo.getByteStride();
+      mlir::Value pred1 = builder.create<mlir::arith::CmpIOp>(
+          loc, mlir::arith::CmpIPredicate::eq, eleSize, stride);
+      mlir::Value extent = dimInfo.getExtent();
+      mlir::Value pred2 = builder.create<mlir::arith::CmpIOp>(
+          loc, mlir::arith::CmpIPredicate::eq, extent, zero);
+      mlir::Value result =
+          builder.create<mlir::arith::OrIOp>(loc, pred1, pred2);
+      result = builder.createConvert(loc, op.getType(), result);
+      rewriter.replaceOp(op, result);
+      return mlir::success();
     }
-    result = builder.createConvert(loc, op.getType(), result);
-    rewriter.replaceOp(op, result);
-    return mlir::success();
+    // TODO: support arrays with multiple dimensions.
   }
 
-  // Generate inline implementation.
-  TODO(loc, "inline IsContiguousBoxOp");
-  return mlir::failure();
+  // Generate Fortran runtime call.
+  mlir::Value result;
+  if (op.getInnermost()) {
+    mlir::Value one =
+        builder.createIntegerConstant(loc, builder.getI32Type(), 1);
+    result = fir::runtime::genIsContiguousUpTo(builder, loc, box, one);
+  } else {
+    result = fir::runtime::genIsContiguous(builder, loc, box);
+  }
+  result = builder.createConvert(loc, op.getType(), result);
+  rewriter.replaceOp(op, result);
+  return mlir::success();
 }
 
 /// Generate a call to Size runtime function or an inline
@@ -182,7 +205,8 @@ void SimplifyFIROperationsPass::runOnOperation() {
   fir::populateSimplifyFIROperationsPatterns(patterns,
                                              preferInlineImplementation);
   mlir::GreedyRewriteConfig config;
-  config.enableRegionSimplification = mlir::GreedySimplifyRegionLevel::Disabled;
+  config.setRegionSimplificationLevel(
+      mlir::GreedySimplifyRegionLevel::Disabled);
 
   if (mlir::failed(
           mlir::applyPatternsGreedily(module, std::move(patterns), config))) {

@@ -46,7 +46,7 @@ static StringRef getLineCommentIndentPrefix(StringRef Comment,
   static constexpr StringRef KnownTextProtoPrefixes[] = {"####", "###", "##",
                                                          "//", "#"};
   ArrayRef<StringRef> KnownPrefixes(KnownCStylePrefixes);
-  if (Style.Language == FormatStyle::LK_TextProto)
+  if (Style.isTextProto())
     KnownPrefixes = KnownTextProtoPrefixes;
 
   assert(
@@ -576,7 +576,7 @@ BreakableBlockComment::BreakableBlockComment(
   IndentAtLineBreak = std::max<unsigned>(IndentAtLineBreak, Decoration.size());
 
   // Detect a multiline jsdoc comment and set DelimitersOnNewline in that case.
-  if (Style.isJavaScript() || Style.Language == FormatStyle::LK_Java) {
+  if (Style.isJavaScript() || Style.isJava()) {
     if ((Lines[0] == "*" || Lines[0].starts_with("* ")) && Lines.size() > 1) {
       // This is a multiline jsdoc comment.
       DelimitersOnNewline = true;
@@ -694,7 +694,7 @@ const llvm::StringSet<>
 };
 
 unsigned BreakableBlockComment::getContentIndent(unsigned LineIndex) const {
-  if (Style.Language != FormatStyle::LK_Java && !Style.isJavaScript())
+  if (!Style.isJava() && !Style.isJavaScript())
     return 0;
   // The content at LineIndex 0 of a comment like:
   // /** line 0 */

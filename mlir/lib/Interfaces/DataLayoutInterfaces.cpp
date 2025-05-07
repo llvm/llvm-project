@@ -402,7 +402,6 @@ static DataLayoutSpecInterface getCombinedDataLayout(Operation *leaf) {
   assert((isa<ModuleOp, DataLayoutOpInterface>(leaf)) &&
          "expected an op with data layout spec");
 
-  SmallVector<DataLayoutOpInterface> opsWithLayout;
   SmallVector<DataLayoutSpecInterface> specs;
   collectParentLayouts(leaf, specs);
 
@@ -736,8 +735,8 @@ std::optional<Attribute> mlir::DataLayout::getDevicePropertyValue(
 //===----------------------------------------------------------------------===//
 
 void DataLayoutSpecInterface::bucketEntriesByType(
-    DenseMap<TypeID, DataLayoutEntryList> &types,
-    DenseMap<StringAttr, DataLayoutEntryInterface> &ids) {
+    llvm::MapVector<TypeID, DataLayoutEntryList> &types,
+    llvm::MapVector<StringAttr, DataLayoutEntryInterface> &ids) {
   for (DataLayoutEntryInterface entry : getEntries()) {
     if (auto type = llvm::dyn_cast_if_present<Type>(entry.getKey()))
       types[type.getTypeID()].push_back(entry);
@@ -755,8 +754,8 @@ LogicalResult mlir::detail::verifyDataLayoutSpec(DataLayoutSpecInterface spec,
 
   // Second, dispatch verifications of entry groups to types or dialects they
   // are associated with.
-  DenseMap<TypeID, DataLayoutEntryList> types;
-  DenseMap<StringAttr, DataLayoutEntryInterface> ids;
+  llvm::MapVector<TypeID, DataLayoutEntryList> types;
+  llvm::MapVector<StringAttr, DataLayoutEntryInterface> ids;
   spec.bucketEntriesByType(types, ids);
 
   for (const auto &kvp : types) {

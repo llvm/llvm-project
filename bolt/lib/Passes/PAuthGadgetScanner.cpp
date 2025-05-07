@@ -172,7 +172,7 @@ public:
 /// * RET (which is implicitly RET X30) is a protected return if and only if
 ///   X30 is safe-to-dereference - the state computed for sub- and
 ///   super-registers is not inspected.
-struct State {
+struct SrcState {
   /// A BitVector containing the registers that are either safe at function
   /// entry and were not clobbered yet, or those not clobbered since being
   /// authenticated.
@@ -186,12 +186,12 @@ struct State {
   std::vector<SmallPtrSet<const MCInst *, 4>> LastInstWritingReg;
 
   /// Construct an empty state.
-  State() {}
+  SrcState() {}
 
-  State(unsigned NumRegs, unsigned NumRegsToTrack)
+  SrcState(unsigned NumRegs, unsigned NumRegsToTrack)
       : SafeToDerefRegs(NumRegs), LastInstWritingReg(NumRegsToTrack) {}
 
-  State &merge(const State &StateIn) {
+  SrcState &merge(const SrcState &StateIn) {
     if (StateIn.empty())
       return *this;
     if (empty())
@@ -208,11 +208,11 @@ struct State {
   /// neither safe, nor unsafe ones.
   bool empty() const { return SafeToDerefRegs.empty(); }
 
-  bool operator==(const State &RHS) const {
+  bool operator==(const SrcState &RHS) const {
     return SafeToDerefRegs == RHS.SafeToDerefRegs &&
            LastInstWritingReg == RHS.LastInstWritingReg;
   }
-  bool operator!=(const State &RHS) const { return !((*this) == RHS); }
+  bool operator!=(const SrcState &RHS) const { return !((*this) == RHS); }
 };
 
 static void printLastInsts(
@@ -228,8 +228,8 @@ static void printLastInsts(
   }
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const State &S) {
-  OS << "pacret-state<";
+raw_ostream &operator<<(raw_ostream &OS, const SrcState &S) {
+  OS << "src-state<";
   if (S.empty()) {
     OS << "empty";
   } else {
@@ -240,18 +240,18 @@ raw_ostream &operator<<(raw_ostream &OS, const State &S) {
   return OS;
 }
 
-class PacStatePrinter {
+class SrcStatePrinter {
 public:
-  void print(raw_ostream &OS, const State &State) const;
-  explicit PacStatePrinter(const BinaryContext &BC) : BC(BC) {}
+  void print(raw_ostream &OS, const SrcState &State) const;
+  explicit SrcStatePrinter(const BinaryContext &BC) : BC(BC) {}
 
 private:
   const BinaryContext &BC;
 };
 
-void PacStatePrinter::print(raw_ostream &OS, const State &S) const {
+void SrcStatePrinter::print(raw_ostream &OS, const SrcState &S) const {
   RegStatePrinter RegStatePrinter(BC);
-  OS << "pacret-state<";
+  OS << "src-state<";
   if (S.empty()) {
     assert(S.SafeToDerefRegs.empty());
     assert(S.LastInstWritingReg.empty());
@@ -265,19 +265,19 @@ void PacStatePrinter::print(raw_ostream &OS, const State &S) const {
   OS << ">";
 }
 
-class PacRetAnalysis
-    : public DataflowAnalysis<PacRetAnalysis, State, /*Backward=*/false,
-                              PacStatePrinter> {
+class SrcSafetyAnalysis
+    : public DataflowAnalysis<SrcSafetyAnalysis, SrcState, /*Backward=*/false,
+                              SrcStatePrinter> {
   using Parent =
-      DataflowAnalysis<PacRetAnalysis, State, false, PacStatePrinter>;
+      DataflowAnalysis<SrcSafetyAnalysis, SrcState, false, SrcStatePrinter>;
   friend Parent;
 
 public:
-  PacRetAnalysis(BinaryFunction &BF, MCPlusBuilder::AllocatorIdTy AllocId,
-                 const std::vector<MCPhysReg> &RegsToTrackInstsFor)
+  SrcSafetyAnalysis(BinaryFunction &BF, MCPlusBuilder::AllocatorIdTy AllocId,
+                    const std::vector<MCPhysReg> &RegsToTrackInstsFor)
       : Parent(BF, AllocId), NumRegs(BF.getBinaryContext().MRI->getNumRegs()),
         RegsToTrackInstsFor(RegsToTrackInstsFor) {}
-  virtual ~PacRetAnalysis() {}
+  virtual ~SrcSafetyAnalysis() {}
 
 protected:
   const unsigned NumRegs;
@@ -285,12 +285,12 @@ protected:
   /// must compute which the last set of instructions writing to it are.
   const TrackedRegisters RegsToTrackInstsFor;
 
-  SmallPtrSet<const MCInst *, 4> &lastWritingInsts(State &S,
+  SmallPtrSet<const MCInst *, 4> &lastWritingInsts(SrcState &S,
                                                    MCPhysReg Reg) const {
     unsigned Index = RegsToTrackInstsFor.getIndex(Reg);
     return S.LastInstWritingReg[Index];
   }
-  const SmallPtrSet<const MCInst *, 4> &lastWritingInsts(const State &S,
+  const SmallPtrSet<const MCInst *, 4> &lastWritingInsts(const SrcState &S,
                                                          MCPhysReg Reg) const {
     unsigned Index = RegsToTrackInstsFor.getIndex(Reg);
     return S.LastInstWritingReg[Index];
@@ -298,30 +298,30 @@ protected:
 
   void preflight() {}
 
-  State createEntryState() {
-    State S(NumRegs, RegsToTrackInstsFor.getNumTrackedRegisters());
+  SrcState createEntryState() {
+    SrcState S(NumRegs, RegsToTrackInstsFor.getNumTrackedRegisters());
     for (MCPhysReg Reg : BC.MIB->getTrustedLiveInRegs())
       S.SafeToDerefRegs |= BC.MIB->getAliases(Reg, /*OnlySmaller=*/true);
     return S;
   }
 
-  State getStartingStateAtBB(const BinaryBasicBlock &BB) {
+  SrcState getStartingStateAtBB(const BinaryBasicBlock &BB) {
     if (BB.isEntryPoint())
       return createEntryState();
 
-    return State();
+    return SrcState();
   }
 
-  State getStartingStateAtPoint(const MCInst &Point) { return State(); }
+  SrcState getStartingStateAtPoint(const MCInst &Point) { return SrcState(); }
 
-  void doConfluence(State &StateOut, const State &StateIn) {
-    PacStatePrinter P(BC);
+  void doConfluence(SrcState &StateOut, const SrcState &StateIn) {
+    SrcStatePrinter P(BC);
     LLVM_DEBUG({
-      dbgs() << " PacRetAnalysis::Confluence(\n";
-      dbgs() << "   State 1: ";
+      dbgs() << "  SrcSafetyAnalysis::Confluence(\n";
+      dbgs() << "    State 1: ";
       P.print(dbgs(), StateOut);
       dbgs() << "\n";
-      dbgs() << "   State 2: ";
+      dbgs() << "    State 2: ";
       P.print(dbgs(), StateIn);
       dbgs() << ")\n";
     });
@@ -329,16 +329,59 @@ protected:
     StateOut.merge(StateIn);
 
     LLVM_DEBUG({
-      dbgs() << "   merged state: ";
+      dbgs() << "    merged state: ";
       P.print(dbgs(), StateOut);
       dbgs() << "\n";
     });
   }
 
-  State computeNext(const MCInst &Point, const State &Cur) {
-    PacStatePrinter P(BC);
+  BitVector getClobberedRegs(const MCInst &Point) const {
+    BitVector Clobbered(NumRegs, false);
+    // Assume a call can clobber all registers, including callee-saved
+    // registers. There's a good chance that callee-saved registers will be
+    // saved on the stack at some point during execution of the callee.
+    // Therefore they should also be considered as potentially modified by an
+    // attacker/written to.
+    // Also, not all functions may respect the AAPCS ABI rules about
+    // caller/callee-saved registers.
+    if (BC.MIB->isCall(Point))
+      Clobbered.set();
+    else
+      BC.MIB->getClobberedRegs(Point, Clobbered);
+    return Clobbered;
+  }
+
+  // Returns all registers that can be treated as if they are written by an
+  // authentication instruction.
+  SmallVector<MCPhysReg> getRegsMadeSafeToDeref(const MCInst &Point,
+                                                const SrcState &Cur) const {
+    SmallVector<MCPhysReg> Regs;
+    const MCPhysReg NoReg = BC.MIB->getNoRegister();
+
+    // A signed pointer can be authenticated, or
+    ErrorOr<MCPhysReg> AutReg = BC.MIB->getAuthenticatedReg(Point);
+    if (AutReg && *AutReg != NoReg)
+      Regs.push_back(*AutReg);
+
+    // ... a safe address can be materialized, or
+    MCPhysReg NewAddrReg = BC.MIB->getMaterializedAddressRegForPtrAuth(Point);
+    if (NewAddrReg != NoReg)
+      Regs.push_back(NewAddrReg);
+
+    // ... an address can be updated in a safe manner, producing the result
+    // which is as trusted as the input address.
+    if (auto DstAndSrc = BC.MIB->analyzeAddressArithmeticsForPtrAuth(Point)) {
+      if (Cur.SafeToDerefRegs[DstAndSrc->second])
+        Regs.push_back(DstAndSrc->first);
+    }
+
+    return Regs;
+  }
+
+  SrcState computeNext(const MCInst &Point, const SrcState &Cur) {
+    SrcStatePrinter P(BC);
     LLVM_DEBUG({
-      dbgs() << " PacRetAnalysis::ComputeNext(";
+      dbgs() << "  SrcSafetyAnalysis::ComputeNext(";
       BC.InstPrinter->printInst(&const_cast<MCInst &>(Point), 0, "", *BC.STI,
                                 dbgs());
       dbgs() << ", ";
@@ -352,22 +395,19 @@ protected:
     if (Cur.empty()) {
       LLVM_DEBUG(
           { dbgs() << "Skipping computeNext(Point, Cur) as Cur is empty.\n"; });
-      return State();
+      return SrcState();
     }
 
-    State Next = Cur;
-    BitVector Clobbered(NumRegs, false);
-    // Assume a call can clobber all registers, including callee-saved
-    // registers. There's a good chance that callee-saved registers will be
-    // saved on the stack at some point during execution of the callee.
-    // Therefore they should also be considered as potentially modified by an
-    // attacker/written to.
-    // Also, not all functions may respect the AAPCS ABI rules about
-    // caller/callee-saved registers.
-    if (BC.MIB->isCall(Point))
-      Clobbered.set();
-    else
-      BC.MIB->getClobberedRegs(Point, Clobbered);
+    // First, compute various properties of the instruction, taking the state
+    // before its execution into account, if necessary.
+
+    BitVector Clobbered = getClobberedRegs(Point);
+    SmallVector<MCPhysReg> NewSafeToDerefRegs =
+        getRegsMadeSafeToDeref(Point, Cur);
+
+    // Then, compute the state after this instruction is executed.
+    SrcState Next = Cur;
+
     Next.SafeToDerefRegs.reset(Clobbered);
     // Keep track of this instruction if it writes to any of the registers we
     // need to track that for:
@@ -375,21 +415,22 @@ protected:
       if (Clobbered[Reg])
         lastWritingInsts(Next, Reg) = {&Point};
 
-    ErrorOr<MCPhysReg> AutReg = BC.MIB->getAuthenticatedReg(Point);
-    if (AutReg && *AutReg != BC.MIB->getNoRegister()) {
-      // The sub-registers of *AutReg are also trusted now, but not its
-      // super-registers (as they retain untrusted register units).
-      BitVector AuthenticatedSubregs =
-          BC.MIB->getAliases(*AutReg, /*OnlySmaller=*/true);
-      for (MCPhysReg Reg : AuthenticatedSubregs.set_bits()) {
-        Next.SafeToDerefRegs.set(Reg);
-        if (RegsToTrackInstsFor.isTracked(Reg))
-          lastWritingInsts(Next, Reg).clear();
-      }
+    // After accounting for clobbered registers in general, override the state
+    // according to authentication and other *special cases* of clobbering.
+
+    // The sub-registers are also safe-to-dereference now, but not their
+    // super-registers (as they retain untrusted register units).
+    BitVector NewSafeSubregs(NumRegs);
+    for (MCPhysReg SafeReg : NewSafeToDerefRegs)
+      NewSafeSubregs |= BC.MIB->getAliases(SafeReg, /*OnlySmaller=*/true);
+    for (MCPhysReg Reg : NewSafeSubregs.set_bits()) {
+      Next.SafeToDerefRegs.set(Reg);
+      if (RegsToTrackInstsFor.isTracked(Reg))
+        lastWritingInsts(Next, Reg).clear();
     }
 
     LLVM_DEBUG({
-      dbgs() << "  .. result: (";
+      dbgs() << "    .. result: (";
       P.print(dbgs(), Next);
       dbgs() << ")\n";
     });
@@ -397,18 +438,18 @@ protected:
     return Next;
   }
 
-  StringRef getAnnotationName() const { return StringRef("PacRetAnalysis"); }
+  StringRef getAnnotationName() const { return StringRef("SrcSafetyAnalysis"); }
 
 public:
   std::vector<MCInstReference>
-  getLastClobberingInsts(const MCInst Ret, BinaryFunction &BF,
+  getLastClobberingInsts(const MCInst &Inst, BinaryFunction &BF,
                          const ArrayRef<MCPhysReg> UsedDirtyRegs) const {
     if (RegsToTrackInstsFor.empty())
       return {};
-    auto MaybeState = getStateAt(Ret);
+    auto MaybeState = getStateBefore(Inst);
     if (!MaybeState)
-      llvm_unreachable("Expected State to be present");
-    const State &S = *MaybeState;
+      llvm_unreachable("Expected state to be present");
+    const SrcState &S = *MaybeState;
     // Due to aliasing registers, multiple registers may have been tracked.
     std::set<const MCInst *> LastWritingInsts;
     for (MCPhysReg TrackedReg : UsedDirtyRegs) {
@@ -427,7 +468,7 @@ public:
 
 static std::shared_ptr<Report>
 shouldReportReturnGadget(const BinaryContext &BC, const MCInstReference &Inst,
-                         const State &S) {
+                         const SrcState &S) {
   static const GadgetKind RetKind("non-protected ret found");
   if (!BC.MIB->isReturn(Inst))
     return nullptr;
@@ -453,15 +494,41 @@ shouldReportReturnGadget(const BinaryContext &BC, const MCInstReference &Inst,
   return std::make_shared<GadgetReport>(RetKind, Inst, RetReg);
 }
 
+static std::shared_ptr<Report>
+shouldReportCallGadget(const BinaryContext &BC, const MCInstReference &Inst,
+                       const SrcState &S) {
+  static const GadgetKind CallKind("non-protected call found");
+  if (!BC.MIB->isIndirectCall(Inst) && !BC.MIB->isIndirectBranch(Inst))
+    return nullptr;
+
+  bool IsAuthenticated = false;
+  MCPhysReg DestReg =
+      BC.MIB->getRegUsedAsIndirectBranchDest(Inst, IsAuthenticated);
+  if (IsAuthenticated)
+    return nullptr;
+
+  assert(DestReg != BC.MIB->getNoRegister());
+  LLVM_DEBUG({
+    traceInst(BC, "Found call inst", Inst);
+    traceReg(BC, "Call destination reg", DestReg);
+    traceRegMask(BC, "SafeToDerefRegs", S.SafeToDerefRegs);
+  });
+  if (S.SafeToDerefRegs[DestReg])
+    return nullptr;
+
+  return std::make_shared<GadgetReport>(CallKind, Inst, DestReg);
+}
+
 FunctionAnalysisResult
 Analysis::findGadgets(BinaryFunction &BF,
                       MCPlusBuilder::AllocatorIdTy AllocatorId) {
   FunctionAnalysisResult Result;
 
-  PacRetAnalysis PRA(BF, AllocatorId, {});
+  SrcSafetyAnalysis PRA(BF, AllocatorId, {});
+  LLVM_DEBUG({ dbgs() << "Running src register safety analysis...\n"; });
   PRA.run();
   LLVM_DEBUG({
-    dbgs() << " After PacRetAnalysis:\n";
+    dbgs() << "After src register safety analysis:\n";
     BF.dump();
   });
 
@@ -469,7 +536,7 @@ Analysis::findGadgets(BinaryFunction &BF,
   for (BinaryBasicBlock &BB : BF) {
     for (int64_t I = 0, E = BB.size(); I < E; ++I) {
       MCInstReference Inst(&BB, I);
-      const State &S = *PRA.getStateAt(Inst);
+      const SrcState &S = *PRA.getStateBefore(Inst);
 
       // If non-empty state was never propagated from the entry basic block
       // to Inst, assume it to be unreachable and report a warning.
@@ -480,6 +547,12 @@ Analysis::findGadgets(BinaryFunction &BF,
       }
 
       if (auto Report = shouldReportReturnGadget(BC, Inst, S))
+        Result.Diagnostics.push_back(Report);
+
+      if (PacRetGadgetsOnly)
+        continue;
+
+      if (auto Report = shouldReportCallGadget(BC, Inst, S))
         Result.Diagnostics.push_back(Report);
     }
   }
@@ -498,10 +571,12 @@ void Analysis::computeDetailedInfo(BinaryFunction &BF,
   std::vector<MCPhysReg> RegsToTrackVec(RegsToTrack.begin(), RegsToTrack.end());
 
   // Re-compute the analysis with register tracking.
-  PacRetAnalysis PRWIA(BF, AllocatorId, RegsToTrackVec);
+  SrcSafetyAnalysis PRWIA(BF, AllocatorId, RegsToTrackVec);
+  LLVM_DEBUG(
+      { dbgs() << "\nRunning detailed src register safety analysis...\n"; });
   PRWIA.run();
   LLVM_DEBUG({
-    dbgs() << " After detailed PacRetAnalysis:\n";
+    dbgs() << "After detailed src register safety analysis:\n";
     BF.dump();
   });
 

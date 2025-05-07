@@ -1062,8 +1062,7 @@ static SmallVector<unsigned, 4> getInputSegmentList(ShuffleMask SM,
       Segs.set(M >> Shift);
   }
 
-  for (unsigned B : Segs.set_bits())
-    SegList.push_back(B);
+  llvm::append_range(SegList, Segs.set_bits());
   return SegList;
 }
 
@@ -1270,11 +1269,11 @@ OpRef HvxSelector::packs(ShuffleMask SM, OpRef Va, OpRef Vb,
     return OpRef::fail();
 
   if (Vb.isUndef()) {
-    std::copy(SM.Mask.begin(), SM.Mask.end(), NewMask.begin());
+    llvm::copy(SM.Mask, NewMask.begin());
     return Va;
   }
   if (Va.isUndef()) {
-    std::copy(SM.Mask.begin(), SM.Mask.end(), NewMask.begin());
+    llvm::copy(SM.Mask, NewMask.begin());
     ShuffleVectorSDNode::commuteMask(NewMask);
     return Vb;
   }

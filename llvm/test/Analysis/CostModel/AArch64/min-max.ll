@@ -195,10 +195,10 @@ define void @smax() {
 define void @minnum16() {
 ; CHECK-NOF16-LABEL: 'minnum16'
 ; CHECK-NOF16-NEXT:  Cost Model: Found costs of 1 for: %f16 = call half @llvm.minnum.f16(half undef, half undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 4 for: %V2f16 = call <2 x half> @llvm.minnum.v2f16(<2 x half> undef, <2 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 10 for: %V4f16 = call <4 x half> @llvm.minnum.v4f16(<4 x half> undef, <4 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 22 for: %V8f16 = call <8 x half> @llvm.minnum.v8f16(<8 x half> undef, <8 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 44 for: %V16f16 = call <16 x half> @llvm.minnum.v16f16(<16 x half> undef, <16 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:4 SizeLat:4 for: %V2f16 = call <2 x half> @llvm.minnum.v2f16(<2 x half> undef, <2 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:7 Lat:10 SizeLat:10 for: %V4f16 = call <4 x half> @llvm.minnum.v4f16(<4 x half> undef, <4 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:15 Lat:22 SizeLat:22 for: %V8f16 = call <8 x half> @llvm.minnum.v8f16(<8 x half> undef, <8 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:44 CodeSize:30 Lat:44 SizeLat:44 for: %V16f16 = call <16 x half> @llvm.minnum.v16f16(<16 x half> undef, <16 x half> undef)
 ; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-F16-LABEL: 'minnum16'
@@ -220,10 +220,10 @@ define void @minnum16() {
 define void @maxnum16() {
 ; CHECK-NOF16-LABEL: 'maxnum16'
 ; CHECK-NOF16-NEXT:  Cost Model: Found costs of 1 for: %f16 = call half @llvm.maxnum.f16(half undef, half undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 4 for: %V2f16 = call <2 x half> @llvm.maxnum.v2f16(<2 x half> undef, <2 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 10 for: %V4f16 = call <4 x half> @llvm.maxnum.v4f16(<4 x half> undef, <4 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 22 for: %V8f16 = call <8 x half> @llvm.maxnum.v8f16(<8 x half> undef, <8 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 44 for: %V16f16 = call <16 x half> @llvm.maxnum.v16f16(<16 x half> undef, <16 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:4 SizeLat:4 for: %V2f16 = call <2 x half> @llvm.maxnum.v2f16(<2 x half> undef, <2 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:7 Lat:10 SizeLat:10 for: %V4f16 = call <4 x half> @llvm.maxnum.v4f16(<4 x half> undef, <4 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:15 Lat:22 SizeLat:22 for: %V8f16 = call <8 x half> @llvm.maxnum.v8f16(<8 x half> undef, <8 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:44 CodeSize:30 Lat:44 SizeLat:44 for: %V16f16 = call <16 x half> @llvm.maxnum.v16f16(<16 x half> undef, <16 x half> undef)
 ; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-F16-LABEL: 'maxnum16'
@@ -288,10 +288,10 @@ define void @maxnum() {
 define void @minimum16() {
 ; CHECK-NOF16-LABEL: 'minimum16'
 ; CHECK-NOF16-NEXT:  Cost Model: Found costs of 1 for: %f16 = call half @llvm.minimum.f16(half undef, half undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 4 for: %V2f16 = call <2 x half> @llvm.minimum.v2f16(<2 x half> undef, <2 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 10 for: %V4f16 = call <4 x half> @llvm.minimum.v4f16(<4 x half> undef, <4 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 22 for: %V8f16 = call <8 x half> @llvm.minimum.v8f16(<8 x half> undef, <8 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 44 for: %V16f16 = call <16 x half> @llvm.minimum.v16f16(<16 x half> undef, <16 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:4 SizeLat:4 for: %V2f16 = call <2 x half> @llvm.minimum.v2f16(<2 x half> undef, <2 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:7 Lat:10 SizeLat:10 for: %V4f16 = call <4 x half> @llvm.minimum.v4f16(<4 x half> undef, <4 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:15 Lat:22 SizeLat:22 for: %V8f16 = call <8 x half> @llvm.minimum.v8f16(<8 x half> undef, <8 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:44 CodeSize:30 Lat:44 SizeLat:44 for: %V16f16 = call <16 x half> @llvm.minimum.v16f16(<16 x half> undef, <16 x half> undef)
 ; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-F16-LABEL: 'minimum16'
@@ -313,10 +313,10 @@ define void @minimum16() {
 define void @maximum16() {
 ; CHECK-NOF16-LABEL: 'maximum16'
 ; CHECK-NOF16-NEXT:  Cost Model: Found costs of 1 for: %f16 = call half @llvm.maximum.f16(half undef, half undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 4 for: %V2f16 = call <2 x half> @llvm.maximum.v2f16(<2 x half> undef, <2 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 10 for: %V4f16 = call <4 x half> @llvm.maximum.v4f16(<4 x half> undef, <4 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 22 for: %V8f16 = call <8 x half> @llvm.maximum.v8f16(<8 x half> undef, <8 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 44 for: %V16f16 = call <16 x half> @llvm.maximum.v16f16(<16 x half> undef, <16 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:4 SizeLat:4 for: %V2f16 = call <2 x half> @llvm.maximum.v2f16(<2 x half> undef, <2 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:7 Lat:10 SizeLat:10 for: %V4f16 = call <4 x half> @llvm.maximum.v4f16(<4 x half> undef, <4 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:15 Lat:22 SizeLat:22 for: %V8f16 = call <8 x half> @llvm.maximum.v8f16(<8 x half> undef, <8 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:44 CodeSize:30 Lat:44 SizeLat:44 for: %V16f16 = call <16 x half> @llvm.maximum.v16f16(<16 x half> undef, <16 x half> undef)
 ; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-F16-LABEL: 'maximum16'

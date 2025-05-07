@@ -223,13 +223,13 @@ TableGen provides "bang operators" that have a wide variety of uses:
                : !div         !empty       !eq          !exists      !filter
                : !find        !foldl       !foreach     !ge          !getdagarg
                : !getdagname  !getdagop    !gt          !head        !if
-               : !initialized !interleave  !isa         !le          !listconcat
-               : !listflatten !listremove  !listsplat   !logtwo      !lt
-               : !match       !mul         !ne          !not         !or
-               : !range       !repr        !setdagarg   !setdagname  !setdagop
-               : !shl         !size        !sra         !srl         !strconcat
-               : !sub         !subst       !substr      !tail        !tolower
-               : !toupper     !xor
+               : !initialized !instances   !interleave  !isa         !le
+               : !listconcat  !listflatten !listremove  !listsplat   !logtwo
+               : !lt          !match       !mul         !ne          !not
+               : !or          !range       !repr        !setdagarg   !setdagname
+               : !setdagop    !shl         !size        !sra         !srl
+               : !strconcat   !sub         !subst       !substr      !tail
+               : !tolower     !toupper     !xor
 
 The ``!cond`` operator has a slightly different
 syntax compared to other bang operators, so it is defined separately:
@@ -1835,6 +1835,15 @@ and non-0 as true.
 ``!initialized(``\ *a*\ ``)``
   This operator produces 1 if *a* is not the uninitialized value (``?``) and 0
   otherwise.
+
+``!instances<``\ *type*\ ``>([``\ *regex*\ ``])``
+    This operator produces a list of records whose type is *type*. If *regex*
+    is provided, only records whose name matches the regular expression *regex*
+    will be included. The format of *regex* is ERE (Extended POSIX Regular
+    Expressions).
+
+    If ``!instances`` is in a class/multiclass/foreach, only these records of
+    *type* that have been instantiated will be considered.
 
 ``!interleave(``\ *list*\ ``,`` *delim*\ ``)``
     This operator concatenates the items in the *list*, interleaving the

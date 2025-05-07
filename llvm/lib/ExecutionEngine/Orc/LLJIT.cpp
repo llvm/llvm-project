@@ -57,8 +57,7 @@ Function *addHelperAndWrapper(Module &M, StringRef WrapperName,
   std::vector<Type *> HelperArgTypes;
   for (auto *Arg : HelperPrefixArgs)
     HelperArgTypes.push_back(Arg->getType());
-  for (auto *T : WrapperFnType->params())
-    HelperArgTypes.push_back(T);
+  llvm::append_range(HelperArgTypes, WrapperFnType->params());
   auto *HelperFnType =
       FunctionType::get(WrapperFnType->getReturnType(), HelperArgTypes, false);
   auto *HelperFn = Function::Create(HelperFnType, GlobalValue::ExternalLinkage,
@@ -72,8 +71,7 @@ Function *addHelperAndWrapper(Module &M, StringRef WrapperName,
   IRBuilder<> IB(EntryBlock);
 
   std::vector<Value *> HelperArgs;
-  for (auto *Arg : HelperPrefixArgs)
-    HelperArgs.push_back(Arg);
+  llvm::append_range(HelperArgs, HelperPrefixArgs);
   for (auto &Arg : WrapperFn->args())
     HelperArgs.push_back(&Arg);
   auto *HelperResult = IB.CreateCall(HelperFn, HelperArgs);

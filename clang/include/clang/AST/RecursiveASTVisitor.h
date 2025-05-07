@@ -795,7 +795,6 @@ bool RecursiveASTVisitor<Derived>::TraverseNestedNameSpecifier(
     return true;
 
   case NestedNameSpecifier::TypeSpec:
-  case NestedNameSpecifier::TypeSpecWithTemplate:
     TRY_TO(TraverseType(QualType(NNS->getAsType(), 0)));
   }
 
@@ -820,7 +819,6 @@ bool RecursiveASTVisitor<Derived>::TraverseNestedNameSpecifierLoc(
     return true;
 
   case NestedNameSpecifier::TypeSpec:
-  case NestedNameSpecifier::TypeSpecWithTemplate:
     TRY_TO(TraverseTypeLoc(NNS.getTypeLoc()));
     break;
   }
@@ -1172,7 +1170,8 @@ DEF_TRAVERSE_TYPE(DependentNameType,
                   { TRY_TO(TraverseNestedNameSpecifier(T->getQualifier())); })
 
 DEF_TRAVERSE_TYPE(DependentTemplateSpecializationType, {
-  TRY_TO(TraverseNestedNameSpecifier(T->getQualifier()));
+  const DependentTemplateStorage &S = T->getDependentTemplateName();
+  TRY_TO(TraverseNestedNameSpecifier(S.getQualifier()));
   TRY_TO(TraverseTemplateArguments(T->template_arguments()));
 })
 
@@ -2254,8 +2253,10 @@ bool RecursiveASTVisitor<Derived>::TraverseFunctionHelper(FunctionDecl *D) {
   }
 
   // Visit the trailing requires clause, if any.
-  if (Expr *TrailingRequiresClause = D->getTrailingRequiresClause()) {
-    TRY_TO(TraverseStmt(TrailingRequiresClause));
+  if (const AssociatedConstraint &TrailingRequiresClause =
+          D->getTrailingRequiresClause()) {
+    TRY_TO(TraverseStmt(
+        const_cast<Expr *>(TrailingRequiresClause.ConstraintExpr)));
   }
 
   if (CXXConstructorDecl *Ctor = dyn_cast<CXXConstructorDecl>(D)) {
@@ -2769,7 +2770,8 @@ DEF_TRAVERSE_STMT(LambdaExpr, {
 
     if (S->hasExplicitResultType())
       TRY_TO(TraverseTypeLoc(Proto.getReturnLoc()));
-    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getTrailingRequiresClause());
+    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(
+        const_cast<Expr *>(S->getTrailingRequiresClause().ConstraintExpr));
 
     TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getBody());
   }

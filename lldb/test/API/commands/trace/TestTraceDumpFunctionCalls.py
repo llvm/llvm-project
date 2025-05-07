@@ -133,6 +133,7 @@ m.out`bar() + 30 at multi_thread.cpp:19:3 to 20:6  [5, 61831]
             ],
         )
 
+    @skipIfNoIntelPT
     def testInlineFunctionCalls(self):
         self.expect(
             "file " + os.path.join(self.getSourceDir(), "inline-function", "a.out")
@@ -194,6 +195,7 @@ a.out`main + 25 at inline.cpp:16:14 to 16:14  [28, 28]"""
             ],
         )
 
+    @skipIfNoIntelPT
     def testIncompleteInlineFunctionCalls(self):
         self.expect(
             "file " + os.path.join(self.getSourceDir(), "inline-function", "a.out")

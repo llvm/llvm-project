@@ -144,7 +144,6 @@ public:
     case NestedNameSpecifier::Global:
       return true;
     case NestedNameSpecifier::TypeSpec:
-    case NestedNameSpecifier::TypeSpecWithTemplate:
     case NestedNameSpecifier::Super:
     case NestedNameSpecifier::Identifier:
       return false;

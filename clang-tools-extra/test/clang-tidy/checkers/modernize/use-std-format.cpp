@@ -1,10 +1,10 @@
-// RUN: %check_clang_tidy \
+// RUN: %check_clang_tidy --match-partial-fixes \
 // RUN:   -std=c++20 %s modernize-use-std-format %t -- \
 // RUN:   -config="{CheckOptions: {modernize-use-std-format.StrictMode: true}}" \
 // RUN:   -- -isystem %clang_tidy_headers \
 // RUN:      -DPRI_CMDLINE_MACRO="\"s\"" \
 // RUN:      -D__PRI_CMDLINE_MACRO="\"s\""
-// RUN: %check_clang_tidy \
+// RUN: %check_clang_tidy --match-partial-fixes \
 // RUN:   -std=c++20 %s modernize-use-std-format %t -- \
 // RUN:   -config="{CheckOptions: {modernize-use-std-format.StrictMode: false}}" \
 // RUN:   -- -isystem %clang_tidy_headers \

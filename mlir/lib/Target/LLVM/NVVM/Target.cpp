@@ -26,7 +26,8 @@
 #include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 
-#include "llvm/Config/llvm-config.h"
+#include "llvm/ADT/ScopeExit.h"
+#include "llvm/Config/Targets.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -673,6 +674,7 @@ NVPTXSerializer::moduleToObject(llvm::Module &llvmModule) {
   llvm::Timer moduleToObjectTimer(
       "moduleToObjectTimer",
       "Timer for perf llvm-ir -> isa and isa -> binary.");
+  auto clear = llvm::make_scope_exit([&]() { moduleToObjectTimer.clear(); });
   // Return LLVM IR if the compilation target is `offload`.
 #define DEBUG_TYPE "serialize-to-llvm"
   LLVM_DEBUG({
@@ -722,12 +724,8 @@ NVPTXSerializer::moduleToObject(llvm::Module &llvmModule) {
 #undef DEBUG_TYPE
 
   // Return PTX if the compilation target is `assembly`.
-  if (targetOptions.getCompilationTarget() ==
-      gpu::CompilationTarget::Assembly) {
-    // Make sure to include the null terminator.
-    StringRef bin(serializedISA->c_str(), serializedISA->size() + 1);
-    return SmallVector<char, 0>(bin.begin(), bin.end());
-  }
+  if (targetOptions.getCompilationTarget() == gpu::CompilationTarget::Assembly)
+    return SmallVector<char, 0>(serializedISA->begin(), serializedISA->end());
 
   std::optional<SmallVector<char, 0>> result;
   moduleToObjectTimer.startTimer();

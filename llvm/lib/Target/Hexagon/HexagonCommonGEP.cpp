@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Hexagon.h"
+
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/GraphTraits.h"
@@ -58,12 +60,6 @@ static cl::opt<bool> OptEnableInv("commgep-inv", cl::init(true), cl::Hidden);
 static cl::opt<bool> OptEnableConst("commgep-const", cl::init(true),
                                     cl::Hidden);
 
-namespace llvm {
-
-  void initializeHexagonCommonGEPPass(PassRegistry&);
-
-} // end namespace llvm
-
 namespace {
 
   struct GepNode;
@@ -97,9 +93,7 @@ namespace {
   public:
     static char ID;
 
-    HexagonCommonGEP() : FunctionPass(ID) {
-      initializeHexagonCommonGEPPass(*PassRegistry::getPassRegistry());
-    }
+    HexagonCommonGEP() : FunctionPass(ID) {}
 
     bool runOnFunction(Function &F) override;
     StringRef getPassName() const override { return "Hexagon Common GEP"; }

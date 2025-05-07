@@ -108,7 +108,7 @@ RUN choco install -y handle
 
 RUN pip3 install pywin32 buildbot-worker==2.8.4
 
-ARG RUNNER_VERSION=2.322.0
+ARG RUNNER_VERSION=2.323.0
 ENV RUNNER_VERSION=$RUNNER_VERSION
 
 RUN powershell -Command \

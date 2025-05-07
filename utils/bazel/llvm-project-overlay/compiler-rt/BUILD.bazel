@@ -67,11 +67,11 @@ cc_library(
         "lib/orc/error.h",
         "lib/orc/executor_address.h",
         "lib/orc/executor_symbol_def.h",
-        "lib/orc/rtti.h",
         "lib/orc/interval_map.h",
         "lib/orc/interval_set.h",
         "lib/orc/jit_dispatch.h",
         "lib/orc/record_section_tracker.h",
+        "lib/orc/rtti.h",
         "lib/orc/simple_packed_serialization.h",
         "lib/orc/stl_extras.h",
         "lib/orc/string_pool.h",
@@ -86,8 +86,8 @@ cc_library(
     srcs = [
         "lib/orc/debug.cpp",
         "lib/orc/dlfcn_wrapper.cpp",
-        "lib/orc/rtti.cpp",
         "lib/orc/log_error_to_stderr.cpp",
+        "lib/orc/rtti.cpp",
         "lib/orc/run_program_wrapper.cpp",
     ] + select({
         "@platforms//os:macos": [

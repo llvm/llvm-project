@@ -295,6 +295,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   FormatStyle Style = {};
   Style.Language = FormatStyle::LK_Cpp;
   CHECK_PARSE("CommentPragmas: '// abc$'", CommentPragmas, "// abc$");
+  CHECK_PARSE("OneLineFormatOffRegex: // ab$", OneLineFormatOffRegex, "// ab$");
 
   Style.QualifierAlignment = FormatStyle::QAS_Right;
   CHECK_PARSE("QualifierAlignment: Leave", QualifierAlignment,
@@ -519,6 +520,14 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               EmptyLineBeforeAccessModifier, FormatStyle::ELBAMS_LogicalBlock);
   CHECK_PARSE("EmptyLineBeforeAccessModifier: Always",
               EmptyLineBeforeAccessModifier, FormatStyle::ELBAMS_Always);
+
+  Style.EnumTrailingComma = FormatStyle::ETC_Insert;
+  CHECK_PARSE("EnumTrailingComma: Leave", EnumTrailingComma,
+              FormatStyle::ETC_Leave);
+  CHECK_PARSE("EnumTrailingComma: Insert", EnumTrailingComma,
+              FormatStyle::ETC_Insert);
+  CHECK_PARSE("EnumTrailingComma: Remove", EnumTrailingComma,
+              FormatStyle::ETC_Remove);
 
   Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
   CHECK_PARSE("AlignAfterOpenBracket: Align", AlignAfterOpenBracket,
@@ -1228,6 +1237,26 @@ TEST(ConfigParseTest, ParsesConfigurationWithLanguages) {
               "IndentWidth: 56\n"
               "...\n",
               IndentWidth, 56u);
+}
+
+TEST(ConfigParseTest, AllowCppForC) {
+  FormatStyle Style = {};
+  Style.Language = FormatStyle::LK_C;
+  EXPECT_EQ(parseConfiguration("Language: Cpp", &Style), ParseError::Success);
+
+  CHECK_PARSE("---\n"
+              "IndentWidth: 4\n"
+              "---\n"
+              "Language: Cpp\n"
+              "IndentWidth: 8\n",
+              IndentWidth, 8u);
+
+  EXPECT_EQ(parseConfiguration("---\n"
+                               "Language: ObjC\n"
+                               "---\n"
+                               "Language: Cpp\n",
+                               &Style),
+            ParseError::Success);
 }
 
 TEST(ConfigParseTest, UsesLanguageForBasedOnStyle) {

@@ -10,9 +10,6 @@ load(":libc_configure_options.bzl", "LIBC_CONFIGURE_OPTIONS")
 load(":libc_namespace.bzl", "LIBC_NAMESPACE")
 load(":platforms.bzl", "PLATFORM_CPU_X86_64")
 
-def libc_internal_target(name):
-    return name + ".__internal__"
-
 def libc_common_copts():
     root_label = Label(":libc")
     libc_include_path = paths.join(root_label.workspace_root, root_label.package)
@@ -44,53 +41,23 @@ def libc_release_copts():
     })
     return copts + platform_copts
 
-def _libc_library(name, copts = [], deps = [], local_defines = [], **kwargs):
+def _libc_library(name, **kwargs):
     """Internal macro to serve as a base for all other libc library rules.
 
     Args:
       name: Target name.
-      copts: The special compiler options for the target.
-      deps: The list of target dependencies if any.
-      local_defines: The list of target local_defines if any.
       **kwargs: All other attributes relevant for the cc_library rule.
     """
 
+    for attr in ["copts", "local_defines"]:
+        if attr in kwargs:
+            fail("disallowed attribute: '{}' in rule: '{}'".format(attr, name))
     native.cc_library(
         name = name,
-        copts = copts + libc_common_copts(),
-        local_defines = local_defines + LIBC_CONFIGURE_OPTIONS,
-        deps = deps,
+        copts = libc_common_copts(),
+        local_defines = LIBC_CONFIGURE_OPTIONS,
         linkstatic = 1,
         **kwargs
-    )
-
-def _libc_library_filegroups(
-        name,
-        is_function,
-        srcs = [],
-        hdrs = [],
-        textual_hdrs = [],
-        deps = [],
-        # We're not using kwargs, but instead explicitly list all possible
-        # arguments that can be passed to libc_support_library or
-        # libc_function macros. This is done to limit the configurability
-        # and ensure the consistent and tightly controlled set of flags
-        # (see libc_common_copts and libc_release_copts above) is used to build
-        # libc code both for tests and for release configuration.
-        target_compatible_with = None):  # @unused
-    """Internal macro to collect sources and headers required to build a library.
-    """
-
-    # filegroups created from "libc_function" macro has an extra "_fn" in their
-    # name to ensure that no other libc target can depend on libc_function.
-    prefix = name + ("_fn" if is_function else "")
-    native.filegroup(
-        name = prefix + "_srcs",
-        srcs = srcs + hdrs + [dep + "_srcs" for dep in deps],
-    )
-    native.filegroup(
-        name = prefix + "_textual_hdrs",
-        srcs = textual_hdrs + [dep + "_textual_hdrs" for dep in deps],
     )
 
 # A convenience function which should be used to list all libc support libraries.
@@ -98,30 +65,104 @@ def _libc_library_filegroups(
 # libc_support_library.
 def libc_support_library(name, **kwargs):
     _libc_library(name = name, **kwargs)
-    _libc_library_filegroups(name = name, is_function = False, **kwargs)
 
 def libc_function(name, **kwargs):
     """Add target for a libc function.
 
     This macro creates an internal cc_library that can be used to test this
-    function, and creates filegroups required to include this function into
-    a release build of libc.
+    function.
 
     Args:
-      name: Target name. It is normally the name of the function this target is
-            for.
+      name: Target name. Typically the name of the function this target is for.
       **kwargs: Other attributes relevant for a cc_library. For example, deps.
     """
 
-    # Build "internal" library with a function, the target has ".__internal__" suffix and contains
-    # C++ functions in the "LIBC_NAMESPACE" namespace. This allows us to test the function in the
+    # Builds "internal" library with a function, exposed as a C++ function in
+    # the "LIBC_NAMESPACE" namespace. This allows us to test the function in the
     # presence of another libc.
-    _libc_library(
-        name = libc_internal_target(name),
-        **kwargs
+    _libc_library(name = name, **kwargs)
+
+LibcLibraryInfo = provider(
+    "All source files and textual headers for building a particular library.",
+    fields = ["srcs", "textual_hdrs"],
+)
+
+def _get_libc_info_aspect_impl(
+        target,  # @unused
+        ctx):
+    maybe_srcs = getattr(ctx.rule.attr, "srcs", [])
+    maybe_hdrs = getattr(ctx.rule.attr, "hdrs", [])
+    maybe_textual_hdrs = getattr(ctx.rule.attr, "textual_hdrs", [])
+    maybe_deps = getattr(ctx.rule.attr, "deps", [])
+    return LibcLibraryInfo(
+        srcs = depset(
+            transitive = [
+                dep[LibcLibraryInfo].srcs
+                for dep in maybe_deps
+                if LibcLibraryInfo in dep
+            ] + [
+                src.files
+                for src in maybe_srcs + maybe_hdrs
+            ],
+        ),
+        textual_hdrs = depset(
+            transitive = [
+                dep[LibcLibraryInfo].textual_hdrs
+                for dep in maybe_deps
+                if LibcLibraryInfo in dep
+            ] + [
+                hdr.files
+                for hdr in maybe_textual_hdrs
+            ],
+        ),
     )
 
-    _libc_library_filegroups(name = name, is_function = True, **kwargs)
+_get_libc_info_aspect = aspect(
+    implementation = _get_libc_info_aspect_impl,
+    attr_aspects = ["deps"],
+)
+
+def _libc_srcs_filegroup_impl(ctx):
+    srcs = depset(transitive = [
+        fn[LibcLibraryInfo].srcs
+        for fn in ctx.attr.libs
+    ])
+    if ctx.attr.enforce_headers_only:
+        paths = [f.short_path for f in srcs.to_list() if f.extension != "h"]
+        if paths:
+            fail("Unexpected non-header files: {}".format(paths))
+    return DefaultInfo(files = srcs)
+
+_libc_srcs_filegroup = rule(
+    doc = "Returns all sources for building the specified libraries.",
+    implementation = _libc_srcs_filegroup_impl,
+    attrs = {
+        "libs": attr.label_list(
+            mandatory = True,
+            aspects = [_get_libc_info_aspect],
+        ),
+        "enforce_headers_only": attr.bool(default = False),
+    },
+)
+
+def _libc_textual_hdrs_filegroup_impl(ctx):
+    return DefaultInfo(
+        files = depset(transitive = [
+            fn[LibcLibraryInfo].textual_hdrs
+            for fn in ctx.attr.libs
+        ]),
+    )
+
+_libc_textual_hdrs_filegroup = rule(
+    doc = "Returns all textual headers for compiling the specified libraries.",
+    implementation = _libc_textual_hdrs_filegroup_impl,
+    attrs = {
+        "libs": attr.label_list(
+            mandatory = True,
+            aspects = [_get_libc_info_aspect],
+        ),
+    },
+)
 
 def libc_release_library(
         name,
@@ -138,15 +179,18 @@ def libc_release_library(
         **kwargs: Other arguments relevant to cc_library.
     """
 
-    # Combine all sources into a single filegroup to avoid repeated sources error.
-    native.filegroup(
+    _libc_srcs_filegroup(
         name = name + "_srcs",
-        srcs = [function + "_fn_srcs" for function in libc_functions],
+        libs = libc_functions,
     )
 
+    _libc_textual_hdrs_filegroup(
+        name = name + "_textual_hdrs",
+        libs = libc_functions,
+    )
     native.cc_library(
         name = name + "_textual_hdr_library",
-        textual_hdrs = [function + "_fn_textual_hdrs" for function in libc_functions],
+        textual_hdrs = [":" + name + "_textual_hdrs"],
     )
 
     weak_attributes = [
@@ -162,6 +206,45 @@ def libc_release_library(
         deps = [
             ":" + name + "_textual_hdr_library",
         ],
+        **kwargs
+    )
+
+def libc_header_library(name, hdrs, deps = [], **kwargs):
+    """Creates a header-only library to share libc functionality.
+
+    Args:
+      name: Name of the cc_library target.
+      hdrs: List of headers to be shared.
+      deps: The list of libc_support_library dependencies if any.
+      **kwargs: All other attributes relevant for the cc_library rule.
+    """
+
+    _libc_srcs_filegroup(
+        name = name + "_hdr_deps",
+        libs = deps,
+        enforce_headers_only = True,
+    )
+
+    _libc_textual_hdrs_filegroup(
+        name = name + "_textual_hdrs",
+        libs = deps,
+    )
+    native.cc_library(
+        name = name + "_textual_hdr_library",
+        textual_hdrs = [":" + name + "_textual_hdrs"],
+    )
+
+    native.cc_library(
+        name = name,
+        hdrs = hdrs,
+        # We put _hdr_deps in srcs, as they are not a part of this cc_library
+        # interface, but instead are used to implement shared headers.
+        srcs = [":" + name + "_hdr_deps"],
+        deps = [":" + name + "_textual_hdr_library"],
+        # copts don't really matter, since it's a header-only library, but we
+        # need proper -I flags for header validation, which are specified in
+        # libc_common_copts().
+        copts = libc_common_copts(),
         **kwargs
     )
 

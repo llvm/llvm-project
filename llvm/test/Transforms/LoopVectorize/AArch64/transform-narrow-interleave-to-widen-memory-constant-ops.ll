@@ -13,9 +13,8 @@ define void @test_add_double_same_const_args_1(ptr %res, ptr noalias %A, ptr noa
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <4 x double>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <4 x double> [[WIDE_VEC]], <4 x double> poison, <2 x i32> <i32 0, i32 2>
@@ -27,7 +26,7 @@ define void @test_add_double_same_const_args_1(ptr %res, ptr noalias %A, ptr noa
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[STRIDED_VEC3]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x double> [[STRIDED_VEC1]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[STRIDED_VEC4]], splat (double 1.000000e+00)
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RES]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RES]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RES]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x double> [[TMP10]], <4 x double> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
@@ -74,9 +73,8 @@ define void @test_add_double_same_const_args_2(ptr %res, ptr noalias %A, ptr noa
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <4 x double>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <4 x double> [[WIDE_VEC]], <4 x double> poison, <2 x i32> <i32 0, i32 2>
@@ -88,7 +86,7 @@ define void @test_add_double_same_const_args_2(ptr %res, ptr noalias %A, ptr noa
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> splat (double 1.000000e+00), [[STRIDED_VEC3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x double> splat (double 1.000000e+00), [[STRIDED_VEC1]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x double> splat (double 1.000000e+00), [[STRIDED_VEC4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RES]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RES]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RES]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x double> [[TMP10]], <4 x double> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
@@ -135,9 +133,8 @@ define void @test_add_double_mixed_const_args(ptr %res, ptr noalias %A, ptr noal
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <4 x double>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <4 x double> [[WIDE_VEC]], <4 x double> poison, <2 x i32> <i32 0, i32 2>
@@ -149,7 +146,7 @@ define void @test_add_double_mixed_const_args(ptr %res, ptr noalias %A, ptr noal
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> splat (double 1.000000e+00), [[STRIDED_VEC3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x double> splat (double 2.000000e+00), [[STRIDED_VEC1]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x double> splat (double 2.000000e+00), [[STRIDED_VEC4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RES]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RES]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RES]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x double> [[TMP10]], <4 x double> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>

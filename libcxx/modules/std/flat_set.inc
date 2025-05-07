@@ -19,13 +19,11 @@ export namespace std {
 
   // [flat.set.erasure], erasure for flat_­set
   using std::erase_if;
-#endif // _LIBCPP_STD_VER >= 23
 
-#if 0
   // [flat.multiset], class template flat_­multiset
   using std::flat_multiset;
 
   using std::sorted_equivalent;
   using std::sorted_equivalent_t;
-#endif
+#endif // _LIBCPP_STD_VER >= 23
 } // namespace std

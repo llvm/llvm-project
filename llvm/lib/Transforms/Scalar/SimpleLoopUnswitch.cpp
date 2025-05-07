@@ -2762,7 +2762,6 @@ static BranchInst *turnSelectIntoBranch(SelectInst *SI, DominatorTree &DT,
 static BranchInst *turnGuardIntoBranch(IntrinsicInst *GI, Loop &L,
                                        DominatorTree &DT, LoopInfo &LI,
                                        MemorySSAUpdater *MSSAU) {
-  SmallVector<DominatorTree::UpdateType, 4> DTUpdates;
   LLVM_DEBUG(dbgs() << "Turning " << *GI << " into a branch.\n");
   BasicBlock *CheckBB = GI->getParent();
 
@@ -3641,14 +3640,12 @@ static bool unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI,
     }
     // Next check all loops nested within L.
     SmallVector<const Loop *, 4> Worklist;
-    Worklist.insert(Worklist.end(), L->getSubLoops().begin(),
-                    L->getSubLoops().end());
+    llvm::append_range(Worklist, L->getSubLoops());
     while (!Worklist.empty()) {
       auto *CurLoop = Worklist.pop_back_val();
       if (!PSI->isColdBlock(CurLoop->getHeader(), BFI))
         return false;
-      Worklist.insert(Worklist.end(), CurLoop->getSubLoops().begin(),
-                      CurLoop->getSubLoops().end());
+      llvm::append_range(Worklist, CurLoop->getSubLoops());
     }
     return true;
   };

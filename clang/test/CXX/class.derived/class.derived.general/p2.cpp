@@ -63,7 +63,7 @@ namespace CurrentInstantiation {
   struct A0<T>::B5<U>::C3 : A0, B5 { };
 
   template<typename T>
-  struct A0<T*> { // expected-note 2{{definition of 'A0<type-parameter-0-0 *>' is not complete until the closing '}'}}
+  struct A0<T*> { // expected-note 2{{definition of 'A0<T *>' is not complete until the closing '}'}}
     struct B0 : A0 { }; // expected-error {{base class has incomplete type}}
 
     template<typename U>

@@ -7,15 +7,17 @@
 #include <sanitizer/hwasan_interface.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/auxv.h>
 #include <sys/mman.h>
 
 static volatile char sink;
 extern void *__hwasan_shadow_memory_dynamic_address;
 
 int main(int argc, char **argv) {
-  void *high_addr = (char *)__hwasan_shadow_memory_dynamic_address - 0x1000;
-  void *r = mmap(high_addr, 4096, PROT_READ, MAP_FIXED | MAP_ANON | MAP_PRIVATE,
-                 -1, 0);
+  size_t page_size = getauxval(AT_PAGESZ);
+  void *high_addr = (char *)__hwasan_shadow_memory_dynamic_address - page_size;
+  void *r = mmap(high_addr, page_size, PROT_READ,
+                 MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0);
   if (r == MAP_FAILED) {
     fprintf(stderr, "Failed to mmap\n");
     abort();

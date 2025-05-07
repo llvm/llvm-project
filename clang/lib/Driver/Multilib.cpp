@@ -60,9 +60,7 @@ void Multilib::print(raw_ostream &OS) const {
 bool Multilib::operator==(const Multilib &Other) const {
   // Check whether the flags sets match
   // allowing for the match to be order invariant
-  llvm::StringSet<> MyFlags;
-  for (const auto &Flag : Flags)
-    MyFlags.insert(Flag);
+  llvm::StringSet<> MyFlags(llvm::from_range, Flags);
 
   for (const auto &Flag : Other.Flags)
     if (!MyFlags.contains(Flag))
@@ -272,9 +270,7 @@ bool MultilibSet::select(
 
 llvm::StringSet<>
 MultilibSet::expandFlags(const Multilib::flags_list &InFlags) const {
-  llvm::StringSet<> Result;
-  for (const auto &F : InFlags)
-    Result.insert(F);
+  llvm::StringSet<> Result(llvm::from_range, InFlags);
   for (const FlagMatcher &M : FlagMatchers) {
     std::string RegexString(M.Match);
 

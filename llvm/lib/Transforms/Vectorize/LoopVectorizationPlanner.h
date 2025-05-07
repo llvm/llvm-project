@@ -172,6 +172,17 @@ public:
           new VPInstruction(Opcode, Operands, *FMFs, DL, Name));
     return createInstruction(Opcode, Operands, DL, Name);
   }
+  VPInstruction *createNaryOp(unsigned Opcode,
+                              std::initializer_list<VPValue *> Operands,
+                              Type *ResultTy,
+                              std::optional<FastMathFlags> FMFs = {},
+                              DebugLoc DL = {}, const Twine &Name = "") {
+    if (FMFs)
+      return tryInsertInstruction(new VPInstructionWithType(
+          Opcode, Operands, ResultTy, *FMFs, DL, Name));
+    return tryInsertInstruction(
+        new VPInstructionWithType(Opcode, Operands, ResultTy, DL, Name));
+  }
 
   VPInstruction *createOverflowingOp(unsigned Opcode,
                                      std::initializer_list<VPValue *> Operands,
@@ -249,10 +260,10 @@ public:
         new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step, Name));
   }
 
-  VPScalarCastRecipe *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
-                                       Type *ResultTy, DebugLoc DL) {
+  VPInstruction *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
+                                  Type *ResultTy, DebugLoc DL) {
     return tryInsertInstruction(
-        new VPScalarCastRecipe(Opcode, Op, ResultTy, DL));
+        new VPInstructionWithType(Opcode, Op, ResultTy, DL));
   }
 
   VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,
@@ -262,10 +273,11 @@ public:
 
   VPScalarIVStepsRecipe *
   createScalarIVSteps(Instruction::BinaryOps InductionOpcode,
-                      FPMathOperator *FPBinOp, VPValue *IV, VPValue *Step) {
+                      FPMathOperator *FPBinOp, VPValue *IV, VPValue *Step,
+                      VPValue *VF, DebugLoc DL) {
     return tryInsertInstruction(new VPScalarIVStepsRecipe(
-        IV, Step, InductionOpcode,
-        FPBinOp ? FPBinOp->getFastMathFlags() : FastMathFlags()));
+        IV, Step, VF, InductionOpcode,
+        FPBinOp ? FPBinOp->getFastMathFlags() : FastMathFlags(), DL));
   }
 
   //===--------------------------------------------------------------------===//
@@ -534,13 +546,13 @@ private:
   /// Returns true if the per-lane cost of VectorizationFactor A is lower than
   /// that of B.
   bool isMoreProfitable(const VectorizationFactor &A,
-                        const VectorizationFactor &B) const;
+                        const VectorizationFactor &B, bool HasTail) const;
 
   /// Returns true if the per-lane cost of VectorizationFactor A is lower than
   /// that of B in the context of vectorizing a loop with known \p MaxTripCount.
   bool isMoreProfitable(const VectorizationFactor &A,
                         const VectorizationFactor &B,
-                        const unsigned MaxTripCount) const;
+                        const unsigned MaxTripCount, bool HasTail) const;
 
   /// Determines if we have the infrastructure to vectorize the loop and its
   /// epilogue, assuming the main loop is vectorized by \p VF.

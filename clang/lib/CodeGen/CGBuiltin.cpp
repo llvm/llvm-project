@@ -10,49 +10,32 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CGBuiltin.h"
 #include "ABIInfo.h"
 #include "CGCUDARuntime.h"
 #include "CGCXXABI.h"
+#include "CGDebugInfo.h"
 #include "CGObjCRuntime.h"
 #include "CGOpenCLRuntime.h"
 #include "CGRecordLayout.h"
 #include "CGValue.h"
-#include "CGBuiltin.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "ConstantEmitter.h"
 #include "PatternInit.h"
 #include "TargetInfo.h"
-#include "clang/AST/ASTContext.h"
-#include "clang/AST/Attr.h"
-#include "clang/AST/Decl.h"
-#include "clang/AST/Expr.h"
 #include "clang/AST/OSLog.h"
-#include "clang/AST/OperationKinds.h"
 #include "clang/AST/StmtVisitor.h"
-#include "clang/AST/Type.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
-#include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
-#include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/APInt.h"
-#include "llvm/ADT/FloatingPointMode.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsX86.h"
-#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/MatrixBuilder.h"
-#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/Support/ConvertUTF.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ScopedPrinter.h"
-#include <numeric>
 #include <optional>
 #include <utility>
 
@@ -87,6 +70,8 @@ static Value *EmitTargetArchBuiltinExpr(CodeGenFunction *CGF,
   case llvm::Triple::bpfeb:
   case llvm::Triple::bpfel:
     return CGF->EmitBPFBuiltinExpr(BuiltinID, E);
+  case llvm::Triple::dxil:
+    return CGF->EmitDirectXBuiltinExpr(BuiltinID, E);
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:
     return CGF->EmitX86BuiltinExpr(BuiltinID, E);
@@ -1964,7 +1949,6 @@ RValue CodeGenFunction::emitBuiltinOSLogFormat(const CallExpr &E) {
   analyze_os_log::OSLogBufferLayout Layout;
   analyze_os_log::computeOSLogBufferLayout(Ctx, &E, Layout);
   Address BufAddr = EmitPointerWithAlignment(E.getArg(0));
-  llvm::SmallVector<llvm::Value *, 4> RetainableOperands;
 
   // Ignore argument 1, the format string. It is not currently used.
   CallArgList Args;
@@ -3833,6 +3817,22 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Result);
   }
 
+  case Builtin::BI__builtin_elementwise_maxnum: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Result = Builder.CreateBinaryIntrinsic(llvm::Intrinsic::maxnum, Op0,
+                                                  Op1, nullptr, "elt.maxnum");
+    return RValue::get(Result);
+  }
+
+  case Builtin::BI__builtin_elementwise_minnum: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Result = Builder.CreateBinaryIntrinsic(llvm::Intrinsic::minnum, Op0,
+                                                  Op1, nullptr, "elt.minnum");
+    return RValue::get(Result);
+  }
+
   case Builtin::BI__builtin_elementwise_maximum: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     Value *Op1 = EmitScalarExpr(E->getArg(1));
@@ -4210,6 +4210,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Dest, *this);
   }
 
+  case Builtin::BI__builtin_trivially_relocate:
   case Builtin::BImemmove:
   case Builtin::BI__builtin_memmove: {
     Address Dest = EmitPointerWithAlignment(E->getArg(0));

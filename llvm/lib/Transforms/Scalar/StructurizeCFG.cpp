@@ -612,25 +612,28 @@ void StructurizeCFG::insertConditions(bool Loops) {
     BasicBlock *SuccTrue = Term->getSuccessor(0);
     BasicBlock *SuccFalse = Term->getSuccessor(1);
 
+    PhiInserter.Initialize(Boolean, "");
+    PhiInserter.AddAvailableValue(Loops ? SuccFalse : Parent, Default);
+
     BBPredicates &Preds = Loops ? LoopPreds[SuccFalse] : Predicates[SuccTrue];
 
-    if (Preds.size() == 1 && Preds.begin()->first == Parent) {
-      auto &PI = Preds.begin()->second;
-      Term->setCondition(PI.Pred);
-      CondBranchWeights::setMetadata(*Term, PI.Weights);
-    } else {
-      PhiInserter.Initialize(Boolean, "");
-      PhiInserter.AddAvailableValue(Loops ? SuccFalse : Parent, Default);
+    NearestCommonDominator Dominator(DT);
+    Dominator.addBlock(Parent);
 
-      NearestCommonDominator Dominator(DT);
-      Dominator.addBlock(Parent);
-
-      for (auto [BB, PI] : Preds) {
-        assert(BB != Parent);
-        PhiInserter.AddAvailableValue(BB, PI.Pred);
-        Dominator.addAndRememberBlock(BB);
+    PredInfo ParentInfo{nullptr, std::nullopt};
+    for (auto [BB, PI] : Preds) {
+      if (BB == Parent) {
+        ParentInfo = PI;
+        break;
       }
+      PhiInserter.AddAvailableValue(BB, PI.Pred);
+      Dominator.addAndRememberBlock(BB);
+    }
 
+    if (ParentInfo.Pred) {
+      Term->setCondition(ParentInfo.Pred);
+      CondBranchWeights::setMetadata(*Term, ParentInfo.Weights);
+    } else {
       if (!Dominator.resultIsRememberedBlock())
         PhiInserter.AddAvailableValue(Dominator.result(), Default);
 
@@ -737,12 +740,10 @@ void StructurizeCFG::findUndefBlocks(
     if (!VisitedBlock.insert(Current).second)
       continue;
 
-    if (FlowSet.contains(Current)) {
-      for (auto P : predecessors(Current))
-        Stack.push_back(P);
-    } else if (!Incomings.contains(Current)) {
+    if (FlowSet.contains(Current))
+      llvm::append_range(Stack, predecessors(Current));
+    else if (!Incomings.contains(Current))
       UndefBlks.push_back(Current);
-    }
   }
 }
 
@@ -819,8 +820,7 @@ void StructurizeCFG::setPhiValues() {
 
     // Get the undefined blocks shared by all the phi nodes.
     if (!BlkPhis.empty()) {
-      for (const auto &VI : BlkPhis.front().second)
-        Incomings.insert(VI.first);
+      Incomings.insert_range(llvm::make_first_range(BlkPhis.front().second));
       findUndefBlocks(To, Incomings, UndefBlks);
     }
 

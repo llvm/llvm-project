@@ -17,6 +17,7 @@
 
 #include "llvm/CodeGen/EarlyIfConversion.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SparseSet.h"
@@ -31,6 +32,7 @@
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineTraceMetrics.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -162,6 +164,11 @@ private:
 
   /// Insert selects and rewrite PHI operands to use them.
   void rewritePHIOperands();
+
+  /// If virtual register has "killed" flag in TBB and FBB basic blocks, remove
+  /// the flag in TBB instruction.
+  void clearRepeatedKillFlagsFromTBB(MachineBasicBlock *TBB,
+                                     MachineBasicBlock *FBB);
 
 public:
   /// init - Initialize per-function data structures.
@@ -675,6 +682,31 @@ void SSAIfConv::rewritePHIOperands() {
   }
 }
 
+void SSAIfConv::clearRepeatedKillFlagsFromTBB(MachineBasicBlock *TBB,
+                                              MachineBasicBlock *FBB) {
+  assert(TBB != FBB);
+
+  // Collect virtual registers killed in FBB.
+  SmallDenseSet<Register> FBBKilledRegs;
+  for (MachineInstr &MI : FBB->instrs()) {
+    for (MachineOperand &MO : MI.operands()) {
+      if (MO.isReg() && MO.isKill() && MO.getReg().isVirtual())
+        FBBKilledRegs.insert(MO.getReg());
+    }
+  }
+
+  if (FBBKilledRegs.empty())
+    return;
+
+  // Find the same killed registers in TBB and clear kill flags for them.
+  for (MachineInstr &MI : TBB->instrs()) {
+    for (MachineOperand &MO : MI.operands()) {
+      if (MO.isReg() && MO.isKill() && FBBKilledRegs.contains(MO.getReg()))
+        MO.setIsKill(false);
+    }
+  }
+}
+
 /// convertIf - Execute the if conversion after canConvertIf has determined the
 /// feasibility.
 ///
@@ -689,6 +721,13 @@ void SSAIfConv::convertIf(SmallVectorImpl<MachineBasicBlock *> &RemoveBlocks,
     ++NumTrianglesConv;
   else
     ++NumDiamondsConv;
+
+  // If both blocks are going to be merged into Head, remove "killed" flag in
+  // TBB for registers, which are killed in TBB and FBB. Otherwise, register
+  // will be killed twice in Head after splice. Register killed twice is an
+  // incorrect MIR.
+  if (TBB != Tail && FBB != Tail)
+    clearRepeatedKillFlagsFromTBB(TBB, FBB);
 
   // Move all instructions into Head, except for the terminators.
   if (TBB != Tail) {

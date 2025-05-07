@@ -67,7 +67,8 @@ def err_drv_no_cuda_libdevice : Error<
   "libdevice">;
 
 def err_drv_no_rocm_device_lib : Error<
-  "cannot find ROCm device library%select{| for %1| for ABI version %1}0; provide its path via "
+  "cannot find ROCm device library%select{| for %1| for ABI version %1"
+  "%select{|, which requires ROCm %3 or higher}2}0; provide its path via "
   "'--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build "
   "without ROCm device library">;
 def err_drv_no_hip_runtime : Error<
@@ -395,8 +396,14 @@ def err_drv_print_header_env_var : Error<
   "environment variable CC_PRINT_HEADERS_%select{FORMAT|FILTERING}0 has invalid value %1">;
 def err_drv_print_header_env_var_combination : Error<
   "unsupported combination: CC_PRINT_HEADERS_FORMAT=%0 and CC_PRINT_HEADERS_FILTERING=%1">;
-def err_drv_print_header_env_var_combination_cc1 : Error<
+def err_drv_print_header_env_var_invalid_format : Error<
+  "environment variable CC_PRINT_HEADERS_FORMAT=%0 requires a compatible value for CC_PRINT_HEADERS_FILTERING">;
+def err_drv_print_header_cc1_invalid_combination : Error<
   "unsupported combination: -header-include-format=%0 and -header-include-filtering=%1">;
+def err_drv_print_header_cc1_invalid_filtering : Error<
+  "-header-include-filtering=%0 requires a compatible value for -header-include-format">;
+def err_drv_print_header_cc1_invalid_format : Error<
+  "-header-include-format=%0 requires a compatible value for -header-include-filtering">;
 
 def warn_O4_is_O3 : Warning<"-O4 is equivalent to -O3">, InGroup<Deprecated>;
 def warn_drv_optimization_value : Warning<"optimization level '%0' is not supported; using '%1%2' instead">,
@@ -849,4 +856,9 @@ def warn_missing_include_dirs : Warning<
 
 def err_drv_malformed_warning_suppression_mapping : Error<
   "failed to process suppression mapping file '%0': %1">;
+
+def warn_drv_openacc_without_cir
+    : Warning<"OpenACC directives will result in no runtime behavior; use "
+              "-fclangir to enable runtime effect">,
+      InGroup<SourceUsesOpenACC>;
 }

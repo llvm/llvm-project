@@ -113,13 +113,10 @@ public:
 
 class CIRToLLVMConstantOpLowering
     : public mlir::OpConversionPattern<cir::ConstantOp> {
-  mlir::DataLayout const &dataLayout;
-
 public:
   CIRToLLVMConstantOpLowering(const mlir::TypeConverter &typeConverter,
-                              mlir::MLIRContext *context,
-                              mlir::DataLayout const &dataLayout)
-      : OpConversionPattern(typeConverter, context), dataLayout(dataLayout) {
+                              mlir::MLIRContext *context)
+      : OpConversionPattern(typeConverter, context) {
     setHasBoundedRewriteRecursion();
   }
 
@@ -140,6 +137,16 @@ public:
 
   mlir::LogicalResult
   matchAndRewrite(cir::FuncOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMGetGlobalOpLowering
+    : public mlir::OpConversionPattern<cir::GetGlobalOp> {
+public:
+  using mlir::OpConversionPattern<cir::GetGlobalOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::GetGlobalOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;
 };
 
@@ -189,6 +196,39 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMCmpOpLowering : public mlir::OpConversionPattern<cir::CmpOp> {
+public:
+  CIRToLLVMCmpOpLowering(const mlir::TypeConverter &typeConverter,
+                         mlir::MLIRContext *context)
+      : OpConversionPattern(typeConverter, context) {
+    setHasBoundedRewriteRecursion();
+  }
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::CmpOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMShiftOpLowering
+    : public mlir::OpConversionPattern<cir::ShiftOp> {
+public:
+  using mlir::OpConversionPattern<cir::ShiftOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::ShiftOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMSelectOpLowering
+    : public mlir::OpConversionPattern<cir::SelectOp> {
+public:
+  using mlir::OpConversionPattern<cir::SelectOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::SelectOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMBrOpLowering : public mlir::OpConversionPattern<cir::BrOp> {
 public:
   using mlir::OpConversionPattern<cir::BrOp>::OpConversionPattern;
@@ -198,12 +238,68 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMGetMemberOpLowering
+    : public mlir::OpConversionPattern<cir::GetMemberOp> {
+public:
+  using mlir::OpConversionPattern<cir::GetMemberOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::GetMemberOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMTrapOpLowering : public mlir::OpConversionPattern<cir::TrapOp> {
 public:
   using mlir::OpConversionPattern<cir::TrapOp>::OpConversionPattern;
 
   mlir::LogicalResult
   matchAndRewrite(cir::TrapOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMPtrStrideOpLowering
+    : public mlir::OpConversionPattern<cir::PtrStrideOp> {
+  mlir::DataLayout const &dataLayout;
+
+public:
+  CIRToLLVMPtrStrideOpLowering(const mlir::TypeConverter &typeConverter,
+                               mlir::MLIRContext *context,
+                               mlir::DataLayout const &dataLayout)
+      : OpConversionPattern(typeConverter, context), dataLayout(dataLayout) {}
+  using mlir::OpConversionPattern<cir::PtrStrideOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::PtrStrideOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMStackSaveOpLowering
+    : public mlir::OpConversionPattern<cir::StackSaveOp> {
+public:
+  using mlir::OpConversionPattern<cir::StackSaveOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::StackSaveOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMStackRestoreOpLowering
+    : public mlir::OpConversionPattern<cir::StackRestoreOp> {
+public:
+  using OpConversionPattern<cir::StackRestoreOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::StackRestoreOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override;
+};
+
+class CIRToLLVMVecCreateOpLowering
+    : public mlir::OpConversionPattern<cir::VecCreateOp> {
+public:
+  using mlir::OpConversionPattern<cir::VecCreateOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::VecCreateOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;
 };
 

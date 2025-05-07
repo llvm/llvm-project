@@ -38,6 +38,7 @@
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_object.h>
 #include <__type_traits/is_reference.h>
+#include <__type_traits/is_referenceable.h>
 #include <__type_traits/maybe_const.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/forward.h>
@@ -63,7 +64,7 @@ concept __regular_invocable_with_range_ref = regular_invocable<_Fn, range_refere
 template <class _View, class _Fn>
 concept __transform_view_constraints =
     view<_View> && is_object_v<_Fn> && regular_invocable<_Fn&, range_reference_t<_View>> &&
-    __can_reference<invoke_result_t<_Fn&, range_reference_t<_View>>>;
+    __is_referenceable_v<invoke_result_t<_Fn&, range_reference_t<_View>>>;
 
 #  if _LIBCPP_STD_VER >= 23
 template <input_range _View, move_constructible _Fn>

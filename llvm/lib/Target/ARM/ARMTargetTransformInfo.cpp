@@ -318,7 +318,7 @@ std::optional<Value *> ARMTTIImpl::simplifyDemandedVectorEltsIntrinsic(
 }
 
 InstructionCost ARMTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
-                                          TTI::TargetCostKind CostKind) {
+                                          TTI::TargetCostKind CostKind) const {
   assert(Ty->isIntegerTy());
 
  unsigned Bits = Ty->getPrimitiveSizeInBits();
@@ -353,7 +353,8 @@ InstructionCost ARMTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
 // Constants smaller than 256 fit in the immediate field of
 // Thumb1 instructions so we return a zero cost and 1 otherwise.
 InstructionCost ARMTTIImpl::getIntImmCodeSizeCost(unsigned Opcode, unsigned Idx,
-                                                  const APInt &Imm, Type *Ty) {
+                                                  const APInt &Imm,
+                                                  Type *Ty) const {
   if (Imm.isNonNegative() && Imm.getLimitedValue() < 256)
     return 0;
 
@@ -412,7 +413,7 @@ static bool isFPSatMinMaxPattern(Instruction *Inst, const APInt &Imm) {
 InstructionCost ARMTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
                                               const APInt &Imm, Type *Ty,
                                               TTI::TargetCostKind CostKind,
-                                              Instruction *Inst) {
+                                              Instruction *Inst) const {
   // Division by a constant can be turned into multiplication, but only if we
   // know it's constant. So it's not so much that the immediate is cheap (it's
   // not), but that the alternative is worse.
@@ -482,7 +483,7 @@ InstructionCost ARMTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
 
 InstructionCost ARMTTIImpl::getCFInstrCost(unsigned Opcode,
                                            TTI::TargetCostKind CostKind,
-                                           const Instruction *I) {
+                                           const Instruction *I) const {
   if (CostKind == TTI::TCK_RecipThroughput &&
       (ST->hasNEON() || ST->hasMVEIntegerOps())) {
     // FIXME: The vectorizer is highly sensistive to the cost of these
@@ -498,7 +499,7 @@ InstructionCost ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                                              Type *Src,
                                              TTI::CastContextHint CCH,
                                              TTI::TargetCostKind CostKind,
-                                             const Instruction *I) {
+                                             const Instruction *I) const {
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 
@@ -900,8 +901,8 @@ InstructionCost ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
 
 InstructionCost ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
                                                TTI::TargetCostKind CostKind,
-                                               unsigned Index, Value *Op0,
-                                               Value *Op1) {
+                                               unsigned Index, const Value *Op0,
+                                               const Value *Op1) const {
   // Penalize inserting into an D-subregister. We end up with a three times
   // lower estimated throughput on swift.
   if (ST->hasSlowLoadDSubregister() && Opcode == Instruction::InsertElement &&
@@ -940,7 +941,7 @@ InstructionCost ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
 InstructionCost ARMTTIImpl::getCmpSelInstrCost(
     unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
     TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
-    TTI::OperandValueInfo Op2Info, const Instruction *I) {
+    TTI::OperandValueInfo Op2Info, const Instruction *I) const {
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
 
   // Thumb scalar code size cost for select.
@@ -1085,7 +1086,7 @@ InstructionCost ARMTTIImpl::getCmpSelInstrCost(
 
 InstructionCost ARMTTIImpl::getAddressComputationCost(Type *Ty,
                                                       ScalarEvolution *SE,
-                                                      const SCEV *Ptr) {
+                                                      const SCEV *Ptr) const {
   // Address computations in vectorized code with non-consecutive addresses will
   // likely result in more instructions compared to scalar code where the
   // computation can more often be merged into the index mode. The resulting
@@ -1105,7 +1106,7 @@ InstructionCost ARMTTIImpl::getAddressComputationCost(Type *Ty,
   return BaseT::getAddressComputationCost(Ty, SE, Ptr);
 }
 
-bool ARMTTIImpl::isProfitableLSRChainElement(Instruction *I) {
+bool ARMTTIImpl::isProfitableLSRChainElement(Instruction *I) const {
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
     // If a VCTP is part of a chain, it's already profitable and shouldn't be
     // optimized, else LSR may block tail-predication.
@@ -1122,7 +1123,8 @@ bool ARMTTIImpl::isProfitableLSRChainElement(Instruction *I) {
   return false;
 }
 
-bool ARMTTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment) {
+bool ARMTTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment,
+                                   unsigned /*AddressSpace*/) const {
   if (!EnableMaskedLoadStores || !ST->hasMVEIntegerOps())
     return false;
 
@@ -1142,7 +1144,7 @@ bool ARMTTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment) {
          (EltWidth == 16 && Alignment >= 2) || (EltWidth == 8);
 }
 
-bool ARMTTIImpl::isLegalMaskedGather(Type *Ty, Align Alignment) {
+bool ARMTTIImpl::isLegalMaskedGather(Type *Ty, Align Alignment) const {
   if (!EnableMaskedGatherScatters || !ST->hasMVEIntegerOps())
     return false;
 
@@ -1167,8 +1169,8 @@ int ARMTTIImpl::getNumMemOps(const IntrinsicInst *I) const {
       return -1;
 
     const unsigned Size = C->getValue().getZExtValue();
-    const Align DstAlign = *MC->getDestAlign();
-    const Align SrcAlign = *MC->getSourceAlign();
+    const Align DstAlign = MC->getDestAlign().valueOrOne();
+    const Align SrcAlign = MC->getSourceAlign().valueOrOne();
 
     MOp = MemOp::Copy(Size, /*DstAlignCanChange*/ false, DstAlign, SrcAlign,
                       /*IsVolatile*/ false);
@@ -1182,7 +1184,7 @@ int ARMTTIImpl::getNumMemOps(const IntrinsicInst *I) const {
       return -1;
 
     const unsigned Size = C->getValue().getZExtValue();
-    const Align DstAlign = *MS->getDestAlign();
+    const Align DstAlign = MS->getDestAlign().valueOrOne();
 
     MOp = MemOp::Set(Size, /*DstAlignCanChange*/ false, DstAlign,
                      /*IsZeroMemset*/ false, /*IsVolatile*/ false);
@@ -1220,7 +1222,7 @@ int ARMTTIImpl::getNumMemOps(const IntrinsicInst *I) const {
   return -1;
 }
 
-InstructionCost ARMTTIImpl::getMemcpyCost(const Instruction *I) {
+InstructionCost ARMTTIImpl::getMemcpyCost(const Instruction *I) const {
   int NumOps = getNumMemOps(cast<IntrinsicInst>(I));
 
   // To model the cost of a library call, we assume 1 for the call, and
@@ -1235,7 +1237,7 @@ InstructionCost ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                            TTI::TargetCostKind CostKind,
                                            int Index, VectorType *SubTp,
                                            ArrayRef<const Value *> Args,
-                                           const Instruction *CxtI) {
+                                           const Instruction *CxtI) const {
   Kind = improveShuffleKindFromMask(Kind, Mask, Tp, Index, SubTp);
   // Treat extractsubvector as single op permutation.
   bool IsExtractSubvector = Kind == TTI::SK_ExtractSubvector;
@@ -1348,8 +1350,7 @@ InstructionCost ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 InstructionCost ARMTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args,
-    const Instruction *CxtI) {
+    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
   int ISDOpcode = TLI->InstructionOpcodeToISD(Opcode);
   if (ST->isThumb() && CostKind == TTI::TCK_CodeSize && Ty->isIntegerTy(1)) {
     // Make operations on i1 relatively expensive as this often involves
@@ -1544,11 +1545,11 @@ InstructionCost ARMTTIImpl::getArithmeticInstrCost(
 }
 
 InstructionCost ARMTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
-                                            MaybeAlign Alignment,
+                                            Align Alignment,
                                             unsigned AddressSpace,
                                             TTI::TargetCostKind CostKind,
                                             TTI::OperandValueInfo OpInfo,
-                                            const Instruction *I) {
+                                            const Instruction *I) const {
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return 1;
@@ -1558,8 +1559,7 @@ InstructionCost ARMTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
     return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                   CostKind);
 
-  if (ST->hasNEON() && Src->isVectorTy() &&
-      (Alignment && *Alignment != Align(16)) &&
+  if (ST->hasNEON() && Src->isVectorTy() && Alignment != Align(16) &&
       cast<VectorType>(Src)->getElementType()->isDoubleTy()) {
     // Unaligned loads/stores are extremely inefficient.
     // We need 4 uops for vst.1/vld.1 vs 1uop for vldr/vstr.
@@ -1593,11 +1593,13 @@ InstructionCost ARMTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 InstructionCost
 ARMTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                                   unsigned AddressSpace,
-                                  TTI::TargetCostKind CostKind) {
+                                  TTI::TargetCostKind CostKind) const {
   if (ST->hasMVEIntegerOps()) {
-    if (Opcode == Instruction::Load && isLegalMaskedLoad(Src, Alignment))
+    if (Opcode == Instruction::Load &&
+        isLegalMaskedLoad(Src, Alignment, AddressSpace))
       return ST->getMVEVectorCostFactor(CostKind);
-    if (Opcode == Instruction::Store && isLegalMaskedStore(Src, Alignment))
+    if (Opcode == Instruction::Store &&
+        isLegalMaskedStore(Src, Alignment, AddressSpace))
       return ST->getMVEVectorCostFactor(CostKind);
   }
   if (!isa<FixedVectorType>(Src))
@@ -1611,7 +1613,7 @@ ARMTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
 InstructionCost ARMTTIImpl::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
-    bool UseMaskForCond, bool UseMaskForGaps) {
+    bool UseMaskForCond, bool UseMaskForGaps) const {
   assert(Factor >= 2 && "Invalid interleave factor");
   assert(isa<VectorType>(VecTy) && "Expect a vector type");
 
@@ -1651,7 +1653,7 @@ InstructionCost ARMTTIImpl::getInterleavedMemoryOpCost(
 
 InstructionCost ARMTTIImpl::getGatherScatterOpCost(
     unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
-    Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) {
+    Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) const {
   using namespace PatternMatch;
   if (!ST->hasMVEIntegerOps() || !EnableMaskedGatherScatters)
     return BaseT::getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
@@ -1756,7 +1758,7 @@ InstructionCost ARMTTIImpl::getGatherScatterOpCost(
 InstructionCost
 ARMTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
                                        std::optional<FastMathFlags> FMF,
-                                       TTI::TargetCostKind CostKind) {
+                                       TTI::TargetCostKind CostKind) const {
 
   EVT ValVT = TLI->getValueType(DL, ValTy);
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
@@ -1841,7 +1843,7 @@ ARMTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
 
 InstructionCost ARMTTIImpl::getExtendedReductionCost(
     unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *ValTy,
-    std::optional<FastMathFlags> FMF, TTI::TargetCostKind CostKind) {
+    std::optional<FastMathFlags> FMF, TTI::TargetCostKind CostKind) const {
   EVT ValVT = TLI->getValueType(DL, ValTy);
   EVT ResVT = TLI->getValueType(DL, ResTy);
 
@@ -1876,7 +1878,7 @@ InstructionCost ARMTTIImpl::getExtendedReductionCost(
 InstructionCost
 ARMTTIImpl::getMulAccReductionCost(bool IsUnsigned, Type *ResTy,
                                    VectorType *ValTy,
-                                   TTI::TargetCostKind CostKind) {
+                                   TTI::TargetCostKind CostKind) const {
   EVT ValVT = TLI->getValueType(DL, ValTy);
   EVT ResVT = TLI->getValueType(DL, ResTy);
 
@@ -1903,7 +1905,7 @@ ARMTTIImpl::getMulAccReductionCost(bool IsUnsigned, Type *ResTy,
 InstructionCost
 ARMTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
                                    FastMathFlags FMF,
-                                   TTI::TargetCostKind CostKind) {
+                                   TTI::TargetCostKind CostKind) const {
   EVT ValVT = TLI->getValueType(DL, Ty);
 
   // In general floating point reductions are a series of elementwise
@@ -1962,7 +1964,7 @@ ARMTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
 
 InstructionCost
 ARMTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                                  TTI::TargetCostKind CostKind) {
+                                  TTI::TargetCostKind CostKind) const {
   unsigned Opc = ICA.getID();
   switch (Opc) {
   case Intrinsic::get_active_lane_mask:
@@ -2106,7 +2108,7 @@ ARMTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }
 
-bool ARMTTIImpl::isLoweredToCall(const Function *F) {
+bool ARMTTIImpl::isLoweredToCall(const Function *F) const {
   if (!F->isIntrinsic())
     return BaseT::isLoweredToCall(F);
 
@@ -2168,7 +2170,7 @@ bool ARMTTIImpl::isLoweredToCall(const Function *F) {
   return BaseT::isLoweredToCall(F);
 }
 
-bool ARMTTIImpl::maybeLoweredToCall(Instruction &I) {
+bool ARMTTIImpl::maybeLoweredToCall(Instruction &I) const {
   unsigned ISD = TLI->InstructionOpcodeToISD(I.getOpcode());
   EVT VT = TLI->getValueType(DL, I.getType(), true);
   if (TLI->getOperationAction(ISD, VT) == TargetLowering::LibCall)
@@ -2258,7 +2260,7 @@ bool ARMTTIImpl::maybeLoweredToCall(Instruction &I) {
 bool ARMTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
                                           AssumptionCache &AC,
                                           TargetLibraryInfo *LibInfo,
-                                          HardwareLoopInfo &HWLoopInfo) {
+                                          HardwareLoopInfo &HWLoopInfo) const {
   // Low-overhead branches are only supported in the 'low-overhead branch'
   // extension of v8.1-m.
   if (!ST->hasLOB() || DisableLowOverheadLoops) {
@@ -2434,7 +2436,6 @@ static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
 
   // Next, check that all instructions can be tail-predicated.
   PredicatedScalarEvolution PSE = LAI->getPSE();
-  SmallVector<Instruction *, 16> LoadStores;
   int ICmpCount = 0;
 
   for (BasicBlock *BB : L->blocks()) {
@@ -2491,7 +2492,7 @@ static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
   return true;
 }
 
-bool ARMTTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) {
+bool ARMTTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) const {
   if (!EnableTailPredication) {
     LLVM_DEBUG(dbgs() << "Tail-predication not enabled.\n");
     return false;
@@ -2557,7 +2558,7 @@ ARMTTIImpl::getPreferredTailFoldingStyle(bool IVUpdateMayOverflow) const {
 }
 void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                          TTI::UnrollingPreferences &UP,
-                                         OptimizationRemarkEmitter *ORE) {
+                                         OptimizationRemarkEmitter *ORE) const {
   // Enable Upper bound unrolling universally, providing that we do not see an
   // active lane mask, which will be better kept as a loop to become tail
   // predicated than to be conditionally unrolled.
@@ -2686,17 +2687,17 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
 }
 
 void ARMTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
-                                       TTI::PeelingPreferences &PP) {
+                                       TTI::PeelingPreferences &PP) const {
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 
-bool ARMTTIImpl::preferInLoopReduction(unsigned Opcode, Type *Ty) const {
+bool ARMTTIImpl::preferInLoopReduction(RecurKind Kind, Type *Ty) const {
   if (!ST->hasMVEIntegerOps())
     return false;
 
   unsigned ScalarBits = Ty->getScalarSizeInBits();
-  switch (Opcode) {
-  case Instruction::Add:
+  switch (Kind) {
+  case RecurKind::Add:
     return ScalarBits <= 64;
   default:
     return false;

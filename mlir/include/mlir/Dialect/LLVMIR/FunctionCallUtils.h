@@ -33,40 +33,53 @@ class LLVMFuncOp;
 /// implemented separately (e.g. as part of a support runtime library or as part
 /// of the libc).
 /// Failure if an unexpected version of function is found.
-FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintI64Fn(Operation *moduleOp);
-FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintU64Fn(Operation *moduleOp);
-FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintF16Fn(Operation *moduleOp);
-FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintBF16Fn(Operation *moduleOp);
-FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintF32Fn(Operation *moduleOp);
-FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintF64Fn(Operation *moduleOp);
+FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintI64Fn(OpBuilder &b,
+                                                     Operation *moduleOp);
+FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintU64Fn(OpBuilder &b,
+                                                     Operation *moduleOp);
+FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintF16Fn(OpBuilder &b,
+                                                     Operation *moduleOp);
+FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintBF16Fn(OpBuilder &b,
+                                                      Operation *moduleOp);
+FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintF32Fn(OpBuilder &b,
+                                                     Operation *moduleOp);
+FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintF64Fn(OpBuilder &b,
+                                                     Operation *moduleOp);
 /// Declares a function to print a C-string.
 /// If a custom runtime function is defined via `runtimeFunctionName`, it must
 /// have the signature void(char const*). The default function is `printString`.
 FailureOr<LLVM::LLVMFuncOp>
-lookupOrCreatePrintStringFn(Operation *moduleOp,
+lookupOrCreatePrintStringFn(OpBuilder &b, Operation *moduleOp,
                             std::optional<StringRef> runtimeFunctionName = {});
-FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintOpenFn(Operation *moduleOp);
-FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintCloseFn(Operation *moduleOp);
-FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintCommaFn(Operation *moduleOp);
-FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintNewlineFn(Operation *moduleOp);
-FailureOr<LLVM::LLVMFuncOp> lookupOrCreateMallocFn(Operation *moduleOp,
-                                                   Type indexType);
-FailureOr<LLVM::LLVMFuncOp> lookupOrCreateAlignedAllocFn(Operation *moduleOp,
-                                                         Type indexType);
-FailureOr<LLVM::LLVMFuncOp> lookupOrCreateFreeFn(Operation *moduleOp);
-FailureOr<LLVM::LLVMFuncOp> lookupOrCreateGenericAllocFn(Operation *moduleOp,
-                                                         Type indexType);
+FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintOpenFn(OpBuilder &b,
+                                                      Operation *moduleOp);
+FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintCloseFn(OpBuilder &b,
+                                                       Operation *moduleOp);
+FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintCommaFn(OpBuilder &b,
+                                                       Operation *moduleOp);
+FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintNewlineFn(OpBuilder &b,
+                                                         Operation *moduleOp);
 FailureOr<LLVM::LLVMFuncOp>
-lookupOrCreateGenericAlignedAllocFn(Operation *moduleOp, Type indexType);
-FailureOr<LLVM::LLVMFuncOp> lookupOrCreateGenericFreeFn(Operation *moduleOp);
+lookupOrCreateMallocFn(OpBuilder &b, Operation *moduleOp, Type indexType);
 FailureOr<LLVM::LLVMFuncOp>
-lookupOrCreateMemRefCopyFn(Operation *moduleOp, Type indexType,
+lookupOrCreateAlignedAllocFn(OpBuilder &b, Operation *moduleOp, Type indexType);
+FailureOr<LLVM::LLVMFuncOp> lookupOrCreateFreeFn(OpBuilder &b,
+                                                 Operation *moduleOp);
+FailureOr<LLVM::LLVMFuncOp>
+lookupOrCreateGenericAllocFn(OpBuilder &b, Operation *moduleOp, Type indexType);
+FailureOr<LLVM::LLVMFuncOp>
+lookupOrCreateGenericAlignedAllocFn(OpBuilder &b, Operation *moduleOp,
+                                    Type indexType);
+FailureOr<LLVM::LLVMFuncOp> lookupOrCreateGenericFreeFn(OpBuilder &b,
+                                                        Operation *moduleOp);
+FailureOr<LLVM::LLVMFuncOp>
+lookupOrCreateMemRefCopyFn(OpBuilder &b, Operation *moduleOp, Type indexType,
                            Type unrankedDescriptorType);
 
 /// Create a FuncOp with signature `resultType`(`paramTypes`)` and name `name`.
 /// Return a failure if the FuncOp found has unexpected signature.
 FailureOr<LLVM::LLVMFuncOp>
-lookupOrCreateFn(Operation *moduleOp, StringRef name,
+lookupOrCreateFn(OpBuilder &b, Operation *moduleOp, StringRef name,
                  ArrayRef<Type> paramTypes = {}, Type resultType = {},
                  bool isVarArg = false, bool isReserved = false);
 

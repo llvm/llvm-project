@@ -144,12 +144,14 @@ foreach Ext = DExts in {
                                      "fcvt.wu.d">,
                    Sched<[WriteFCvtF64ToI32, ReadFCvtF64ToI32]>;
 
-  defm FCVT_D_W : FPUnaryOp_r_frmlegacy_m<0b1101001, 0b00000, Ext, Ext.PrimaryTy, GPR,
-                                          "fcvt.d.w">,
+  let mayRaiseFPException = 0 in
+  defm FCVT_D_W : FPUnaryOp_r_frmlegacy_m<0b1101001, 0b00000, Ext,
+                                          Ext.PrimaryTy, GPR, "fcvt.d.w">,
                   Sched<[WriteFCvtI32ToF64, ReadFCvtI32ToF64]>;
 
-  defm FCVT_D_WU : FPUnaryOp_r_frmlegacy_m<0b1101001, 0b00001, Ext, Ext.PrimaryTy, GPR,
-                                           "fcvt.d.wu">,
+  let mayRaiseFPException = 0 in
+  defm FCVT_D_WU : FPUnaryOp_r_frmlegacy_m<0b1101001, 0b00001, Ext,
+                                           Ext.PrimaryTy, GPR, "fcvt.d.wu">,
                    Sched<[WriteFCvtI32ToF64, ReadFCvtI32ToF64]>;
 } // foreach Ext = DExts
 

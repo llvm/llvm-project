@@ -262,6 +262,45 @@ if ( clspv-- IN_LIST LIBCLC_TARGETS_TO_BUILD OR clspv64-- IN_LIST LIBCLC_TARGETS
   set_target_properties( generate-clspv-convert.cl PROPERTIES FOLDER "libclc/Sourcegenning" )
 endif()
 
+set_source_files_properties(
+  # CLC builtins
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_cos.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_divide.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_exp10.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_exp2.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_exp.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_log10.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_log2.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_log.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_powr.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_recip.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_rsqrt.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_sin.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_sqrt.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_tan.cl
+  # Target-specific CLC builtins
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/amdgpu/math/clc_native_exp2.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/amdgpu/math/clc_native_exp.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/amdgpu/math/clc_native_log10.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/r600/math/clc_native_rsqrt.cl
+  # OpenCL builtins
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_cos.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_divide.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_exp.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_exp10.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_exp2.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_log.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_log10.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_log2.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_powr.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_recip.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_rsqrt.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_sin.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_sqrt.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_tan.cl
+  PROPERTIES COMPILE_OPTIONS -fapprox-func
+)
+
 enable_testing()
 
 foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
@@ -372,6 +411,9 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     set( LIBCLC_ARCH_OBJFILE_DIR "${LIBCLC_OBJFILE_DIR}/${arch_suffix}" )
     file( MAKE_DIRECTORY ${LIBCLC_ARCH_OBJFILE_DIR} )
 
+    # Build for OpenCL 3.0 independently of the target or device.
+    list( APPEND build_flags -cl-std=CL3.0 )
+
     string( TOUPPER "CLC_${MACRO_ARCH}" CLC_TARGET_DEFINE )
 
     list( APPEND build_flags
@@ -399,8 +441,6 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 
     list( APPEND build_flags
       -I${CMAKE_CURRENT_SOURCE_DIR}/generic/include
-      # FIXME: Fix libclc to not require disabling this noisy warning
-      -Wno-bitwise-conditional-parentheses
     )
 
     add_libclc_builtin_set(

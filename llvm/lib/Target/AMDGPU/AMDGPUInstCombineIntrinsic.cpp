@@ -103,7 +103,7 @@ static bool canSafelyConvertTo16Bit(Value &V, bool IsFloat) {
 // Convert a value to 16-bit.
 static Value *convertTo16Bit(Value &V, InstCombiner::BuilderTy &Builder) {
   Type *VTy = V.getType();
-  if (isa<FPExtInst>(&V) || isa<SExtInst>(&V) || isa<ZExtInst>(&V))
+  if (isa<FPExtInst, SExtInst, ZExtInst>(&V))
     return cast<Instruction>(&V)->getOperand(0);
   if (VTy->isIntegerTy())
     return Builder.CreateIntCast(&V, Type::getInt16Ty(V.getContext()), false);
@@ -729,6 +729,29 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     break;
   }
+  case Intrinsic::amdgcn_cvt_off_f32_i4: {
+    Value* Arg = II.getArgOperand(0);
+    Type *Ty = II.getType();
+
+    if (isa<PoisonValue>(Arg))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(Ty));
+
+    if(IC.getSimplifyQuery().isUndefValue(Arg))
+      return IC.replaceInstUsesWith(II, Constant::getNullValue(Ty));
+
+    ConstantInt *CArg = dyn_cast<ConstantInt>(II.getArgOperand(0));
+    if (!CArg)
+      break;
+
+    // Tabulated 0.0625 * (sext (CArg & 0xf)).
+    constexpr size_t ResValsSize = 16;
+    static constexpr float ResVals[ResValsSize] = {
+        0.0,  0.0625,  0.125,  0.1875,  0.25,  0.3125,  0.375,  0.4375,
+        -0.5, -0.4375, -0.375, -0.3125, -0.25, -0.1875, -0.125, -0.0625};
+    Constant *Res =
+        ConstantFP::get(Ty, ResVals[CArg->getZExtValue() & (ResValsSize - 1)]);
+    return IC.replaceInstUsesWith(II, Res);
+  }
   case Intrinsic::amdgcn_ubfe:
   case Intrinsic::amdgcn_sbfe: {
     // Decompose simple cases into standard shifts.
@@ -1138,9 +1161,11 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   }
   case Intrinsic::amdgcn_permlane64:
   case Intrinsic::amdgcn_readfirstlane:
-  case Intrinsic::amdgcn_readlane: {
-    // If the first argument is uniform these intrinsics return it unchanged.
-    const Use &Src = II.getArgOperandUse(0);
+  case Intrinsic::amdgcn_readlane:
+  case Intrinsic::amdgcn_ds_bpermute: {
+    // If the data argument is uniform these intrinsics return it unchanged.
+    unsigned SrcIdx = IID == Intrinsic::amdgcn_ds_bpermute ? 1 : 0;
+    const Use &Src = II.getArgOperandUse(SrcIdx);
     if (isTriviallyUniform(Src))
       return IC.replaceInstUsesWith(II, Src.get());
 
@@ -1149,7 +1174,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return &II;
 
     // readfirstlane.ty0 (bitcast ty1 x to ty0) -> bitcast (readfirstlane.ty1)
-    if (auto *BC = dyn_cast<BitCastInst>(Src); BC && BC->hasOneUse()) {
+    if (auto *BC = dyn_cast<BitCastInst>(Src);
+        BC && BC->hasOneUse() && IID != Intrinsic::amdgcn_ds_bpermute) {
       Value *BCSrc = BC->getOperand(0);
 
       // TODO: Handle this for update_dpp, mov_ddp8, and all permlane variants.
@@ -1169,6 +1195,22 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         CallInst *NewCall = IC.Builder.CreateCall(Remangled, Args, OpBundles);
         NewCall->takeName(&II);
         return new BitCastInst(NewCall, II.getType());
+      }
+    }
+
+    // If the lane argument of bpermute is uniform, change it to readlane. This
+    // generates better code and can enable further optimizations because
+    // readlane is AlwaysUniform.
+    if (IID == Intrinsic::amdgcn_ds_bpermute) {
+      const Use &Lane = II.getArgOperandUse(0);
+      if (isTriviallyUniform(Lane)) {
+        Value *NewLane = IC.Builder.CreateLShr(Lane, 2);
+        Function *NewDecl = Intrinsic::getOrInsertDeclaration(
+            II.getModule(), Intrinsic::amdgcn_readlane, II.getType());
+        II.setCalledFunction(NewDecl);
+        II.setOperand(0, Src);
+        II.setOperand(1, NewLane);
+        return &II;
       }
     }
 
@@ -1398,14 +1440,14 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (Src0Ty->getNumElements() > Src0NumElts) {
       Src0 = IC.Builder.CreateExtractVector(
           FixedVectorType::get(Src0Ty->getElementType(), Src0NumElts), Src0,
-          IC.Builder.getInt64(0));
+          uint64_t(0));
       MadeChange = true;
     }
 
     if (Src1Ty->getNumElements() > Src1NumElts) {
       Src1 = IC.Builder.CreateExtractVector(
           FixedVectorType::get(Src1Ty->getElementType(), Src1NumElts), Src1,
-          IC.Builder.getInt64(0));
+          uint64_t(0));
       MadeChange = true;
     }
 

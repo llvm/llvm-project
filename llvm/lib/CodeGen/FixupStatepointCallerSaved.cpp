@@ -242,8 +242,7 @@ public:
     ReservedSlots.clear();
     if (EHPad)
       if (auto It = GlobalIndices.find(EHPad); It != GlobalIndices.end())
-        for (auto &RSP : It->second)
-          ReservedSlots.insert(RSP.second);
+        ReservedSlots.insert_range(llvm::make_second_range(It->second));
   }
 
   // Get frame index to spill the register.

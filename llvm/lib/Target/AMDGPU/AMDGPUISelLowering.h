@@ -215,9 +215,8 @@ public:
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
   bool ShouldShrinkFPConstant(EVT VT) const override;
-  bool shouldReduceLoadWidth(SDNode *Load,
-                             ISD::LoadExtType ExtType,
-                             EVT ExtVT) const override;
+  bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtType, EVT ExtVT,
+                             std::optional<unsigned> ByteOffset) const override;
 
   bool isLoadBitCastBeneficial(EVT, EVT, const SelectionDAG &DAG,
                                const MachineMemOperand &MMO) const final;
@@ -315,15 +314,14 @@ public:
                                            const SelectionDAG &DAG,
                                            unsigned Depth = 0) const override;
 
-  unsigned computeNumSignBitsForTargetInstr(GISelKnownBits &Analysis,
+  unsigned computeNumSignBitsForTargetInstr(GISelValueTracking &Analysis,
                                             Register R,
                                             const APInt &DemandedElts,
                                             const MachineRegisterInfo &MRI,
                                             unsigned Depth = 0) const override;
 
-  bool isKnownNeverNaNForTargetNode(SDValue Op,
-                                    const SelectionDAG &DAG,
-                                    bool SNaN = false,
+  bool isKnownNeverNaNForTargetNode(SDValue Op, const APInt &DemandedElts,
+                                    const SelectionDAG &DAG, bool SNaN = false,
                                     unsigned Depth = 0) const override;
 
   bool isReassocProfitable(MachineRegisterInfo &MRI, Register N0,

@@ -1151,8 +1151,7 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
     SmallVector<PointerIntPair<Value *, 1, bool>> Worklist = {{Insn, true}};
     SmallPtrSet<Value *, 8> Visited;
     while (!Worklist.empty()) {
-      auto [V, IsPositive] = Worklist.back();
-      Worklist.pop_back();
+      auto [V, IsPositive] = Worklist.pop_back_val();
       if (!Visited.insert(V).second)
         continue;
 
@@ -1168,7 +1167,7 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
       // the latter case, we will attempt to separately identify the complex
       // operation from here in order to create a shared
       // ComplexDeinterleavingCompositeNode.
-      if (I != Insn && I->getNumUses() > 1) {
+      if (I != Insn && I->hasNUsesOrMore(2)) {
         LLVM_DEBUG(dbgs() << "Found potential sub-expression: " << *I << "\n");
         Addends.emplace_back(I, IsPositive);
         continue;
@@ -1638,7 +1637,6 @@ bool ComplexDeinterleavingGraph::collectPotentialReductions(BasicBlock *B) {
   if (Br->getSuccessor(0) != B && Br->getSuccessor(1) != B)
     return false;
 
-  SmallVector<PHINode *> PHIs;
   for (auto &PHI : B->phis()) {
     if (PHI.getNumIncomingValues() != 2)
       continue;
@@ -1793,8 +1791,7 @@ bool ComplexDeinterleavingGraph::checkNodes() {
   // Extract all instructions that are used by all XCMLA/XCADD/ADD/SUB/NEG
   // chains
   while (!Worklist.empty()) {
-    auto *I = Worklist.back();
-    Worklist.pop_back();
+    auto *I = Worklist.pop_back_val();
 
     if (!AllInstructions.insert(I).second)
       continue;
@@ -1808,7 +1805,6 @@ bool ComplexDeinterleavingGraph::checkNodes() {
   }
 
   // Find instructions that have users outside of chain
-  SmallVector<Instruction *, 2> OuterInstructions;
   for (auto *I : AllInstructions) {
     // Skip root nodes
     if (RootToNode.count(I))
@@ -1828,8 +1824,7 @@ bool ComplexDeinterleavingGraph::checkNodes() {
   // that somehow connect to those instructions.
   SmallPtrSet<Instruction *, 16> Visited;
   while (!Worklist.empty()) {
-    auto *I = Worklist.back();
-    Worklist.pop_back();
+    auto *I = Worklist.pop_back_val();
     if (!Visited.insert(I).second)
       continue;
 
@@ -2332,8 +2327,9 @@ void ComplexDeinterleavingGraph::replaceNodes() {
     } else if (RootNode->Operation ==
                ComplexDeinterleavingOperation::ReductionSingle) {
       auto *RootInst = cast<Instruction>(RootNode->Real);
-      ReductionInfo[RootInst].first->removeIncomingValue(BackEdge);
-      DeadInstrRoots.push_back(ReductionInfo[RootInst].second);
+      auto &Info = ReductionInfo[RootInst];
+      Info.first->removeIncomingValue(BackEdge);
+      DeadInstrRoots.push_back(Info.second);
     } else {
       assert(R && "Unable to find replacement for RootInstruction");
       DeadInstrRoots.push_back(RootInstruction);

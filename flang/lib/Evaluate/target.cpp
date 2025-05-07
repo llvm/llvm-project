@@ -8,6 +8,7 @@
 
 #include "flang/Evaluate/target.h"
 #include "flang/Common/template.h"
+#include "flang/Common/type-kinds.h"
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/type.h"
 
@@ -19,21 +20,11 @@ TargetCharacteristics::TargetCharacteristics() {
   auto enableCategoryKinds{[this](TypeCategory category) {
     for (int kind{1}; kind <= maxKind; ++kind) {
       if (CanSupportType(category, kind)) {
-        auto byteSize{static_cast<std::size_t>(kind)};
-        if (category == TypeCategory::Real ||
-            category == TypeCategory::Complex) {
-          if (kind == 3) {
-            // non-IEEE 16-bit format (truncated 32-bit)
-            byteSize = 2;
-          } else if (kind == 10) {
-            // x87 floating-point
-            // Follow gcc precedent for "long double"
-            byteSize = 16;
-          }
-        }
+        auto byteSize{
+            static_cast<std::size_t>(common::TypeSizeInBytes(category, kind))};
         std::size_t align{byteSize};
         if (category == TypeCategory::Complex) {
-          byteSize = 2 * byteSize;
+          align /= 2;
         }
         EnableType(category, kind, byteSize, align);
       }
@@ -53,7 +44,7 @@ TargetCharacteristics::TargetCharacteristics() {
 
 bool TargetCharacteristics::CanSupportType(
     TypeCategory category, std::int64_t kind) {
-  return IsValidKindOfIntrinsicType(category, kind);
+  return common::IsValidKindOfIntrinsicType(category, kind);
 }
 
 bool TargetCharacteristics::EnableType(common::TypeCategory category,

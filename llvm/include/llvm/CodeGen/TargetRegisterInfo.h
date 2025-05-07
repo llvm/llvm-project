@@ -467,10 +467,7 @@ public:
 
   /// Returns true if Reg contains RegUnit.
   bool hasRegUnit(MCRegister Reg, MCRegUnit RegUnit) const {
-    for (MCRegUnit Unit : regunits(Reg))
-      if (Unit == RegUnit)
-        return true;
-    return false;
+    return llvm::is_contained(regunits(Reg), RegUnit);
   }
 
   /// Returns the original SrcReg unless it is the target of a copy-like
@@ -1193,21 +1190,6 @@ public:
   shouldUseLastChanceRecoloringForVirtReg(const MachineFunction &MF,
                                           const LiveInterval &VirtReg) const {
     return true;
-  }
-
-  /// Deferred spilling delays the spill insertion of a virtual register
-  /// after every other allocation. By deferring the spilling, it is
-  /// sometimes possible to eliminate that spilling altogether because
-  /// something else could have been eliminated, thus leaving some space
-  /// for the virtual register.
-  /// However, this comes with a compile time impact because it adds one
-  /// more stage to the greedy register allocator.
-  /// This method is used to decide whether \p VirtReg should use the deferred
-  /// spilling stage instead of being spilled right away.
-  virtual bool
-  shouldUseDeferredSpillingForVirtReg(const MachineFunction &MF,
-                                      const LiveInterval &VirtReg) const {
-    return false;
   }
 
   /// When prioritizing live ranges in register allocation, if this hook returns

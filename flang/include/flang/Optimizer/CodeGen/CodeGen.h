@@ -26,6 +26,7 @@ struct NameUniquer;
 #define GEN_PASS_DECL_CODEGENREWRITE
 #define GEN_PASS_DECL_TARGETREWRITEPASS
 #define GEN_PASS_DECL_BOXEDPROCEDUREPASS
+#define GEN_PASS_DECL_LOWERREPACKARRAYSPASS
 #include "flang/Optimizer/CodeGen/CGPasses.h.inc"
 
 /// FIR to LLVM translation pass options.

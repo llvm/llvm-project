@@ -117,11 +117,6 @@ struct ParseStatementInfo {
 /// The concrete assembly parser instance.
 class AsmParser : public MCAsmParser {
 private:
-  AsmLexer Lexer;
-  MCContext &Ctx;
-  MCStreamer &Out;
-  const MCAsmInfo &MAI;
-  SourceMgr &SrcMgr;
   SourceMgr::DiagHandlerTy SavedDiagHandler;
   void *SavedDiagContext;
   std::unique_ptr<MCAsmParserExtension> PlatformParser;
@@ -221,11 +216,6 @@ public:
 
   /// @name MCAsmParser Interface
   /// {
-
-  SourceMgr &getSourceManager() override { return SrcMgr; }
-  MCAsmLexer &getLexer() override { return Lexer; }
-  MCContext &getContext() override { return Ctx; }
-  MCStreamer &getStreamer() override { return Out; }
 
   CodeViewContext &getCVContext() { return Ctx.getCVContext(); }
 
@@ -680,8 +670,6 @@ private:
   bool parseEscapedString(std::string &Data) override;
   bool parseAngleBracketString(std::string &Data) override;
 
-  const MCExpr *applySpecifier(const MCExpr *E, uint32_t Variant);
-
   // Macro-like directives
   MCAsmMacro *parseMacroLikeBody(SMLoc DirectiveLoc);
   void instantiateMacroLikeBody(MCAsmMacro *M, SMLoc DirectiveLoc,
@@ -769,12 +757,10 @@ extern MCAsmParserExtension *createWasmAsmParser();
 
 } // end namespace llvm
 
-enum { DEFAULT_ADDRSPACE = 0 };
-
 AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
                      const MCAsmInfo &MAI, unsigned CB = 0)
-    : Lexer(MAI), Ctx(Ctx), Out(Out), MAI(MAI), SrcMgr(SM),
-      CurBuffer(CB ? CB : SM.getMainFileID()), MacrosEnabledFlag(true) {
+    : MCAsmParser(Ctx, Out, SM, MAI), CurBuffer(CB ? CB : SM.getMainFileID()),
+      MacrosEnabledFlag(true) {
   HadError = false;
   // Save the old handler.
   SavedDiagHandler = SrcMgr.getDiagHandler();
@@ -991,20 +977,19 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
   // While we have input, parse each statement.
   while (Lexer.isNot(AsmToken::Eof)) {
     ParseStatementInfo Info(&AsmStrRewrites);
-    bool Parsed = parseStatement(Info, nullptr);
+    bool HasError = parseStatement(Info, nullptr);
 
     // If we have a Lexer Error we are on an Error Token. Load in Lexer Error
     // for printing ErrMsg via Lex() only if no (presumably better) parser error
     // exists.
-    if (Parsed && !hasPendingError() && Lexer.getTok().is(AsmToken::Error)) {
+    if (HasError && !hasPendingError() && Lexer.getTok().is(AsmToken::Error))
       Lex();
-    }
 
     // parseStatement returned true so may need to emit an error.
     printPendingErrors();
 
     // Skipping to the next line if needed.
-    if (Parsed && !getLexer().isAtStartOfStatement())
+    if (HasError && !getLexer().justConsumedEOL())
       eatToEndOfStatement();
   }
 
@@ -1191,9 +1176,9 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
         return false;
       }
     }
-    // Parse symbol variant
+    // Parse an optional relocation specifier.
     std::pair<StringRef, StringRef> Split;
-    if (!MAI.useParensForSymbolVariant()) {
+    if (MAI.useAtForSpecifier()) {
       if (FirstTokenKind == AsmToken::String) {
         if (Lexer.is(AsmToken::At)) {
           Lex(); // eat @
@@ -1204,11 +1189,11 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
 
           Split = std::make_pair(Identifier, VName);
         }
-      } else {
+      } else if (Lexer.getAllowAtInIdentifier()) {
         Split = Identifier.split('@');
       }
-    } else if (Lexer.is(AsmToken::LParen)) {
-      Lex(); // eat '('.
+    } else if (MAI.useParensForSpecifier() &&
+               parseOptionalToken(AsmToken::LParen)) {
       StringRef VName;
       parseIdentifier(VName);
       if (parseRParen())
@@ -1231,7 +1216,7 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
       if (MaybeVariant) {
         SymbolName = Split.first;
         Variant = MCSymbolRefExpr::VariantKind(*MaybeVariant);
-      } else if (MAI.doesAllowAtInName() && !MAI.useParensForSymbolVariant()) {
+      } else if (MAI.doesAllowAtInName()) {
         Variant = MCSymbolRefExpr::VK_None;
       } else {
         return Error(SMLoc::getFromPointer(Split.second.begin()),
@@ -1352,7 +1337,7 @@ bool AsmParser::parseExpression(const MCExpr *&Res) {
   return parseExpression(Res, EndLoc);
 }
 
-const MCExpr *AsmParser::applySpecifier(const MCExpr *E, uint32_t Spec) {
+const MCExpr *MCAsmParser::applySpecifier(const MCExpr *E, uint32_t Spec) {
   // Ask the target implementation about this expression first.
   const MCExpr *NewE = getTargetParser().applySpecifier(E, Spec, Ctx);
   if (NewE)
@@ -1443,6 +1428,23 @@ static std::string angleBracketString(StringRef AltMacroStr) {
   return Res;
 }
 
+bool MCAsmParser::parseAtSpecifier(const MCExpr *&Res, SMLoc &EndLoc) {
+  if (parseOptionalToken(AsmToken::At)) {
+    if (getLexer().isNot(AsmToken::Identifier))
+      return TokError("expected specifier following '@'");
+
+    auto Spec = MAI.getSpecifierForName(getTok().getIdentifier());
+    if (!Spec)
+      return TokError("invalid specifier '@" + getTok().getIdentifier() + "'");
+
+    const MCExpr *ModifiedRes = applySpecifier(Res, *Spec);
+    if (ModifiedRes)
+      Res = ModifiedRes;
+    Lex();
+  }
+  return false;
+}
+
 /// Parse an expression and return it.
 ///
 ///  expr ::= expr &&,|| expr               -> lowest.
@@ -1463,7 +1465,7 @@ bool AsmParser::parseExpression(const MCExpr *&Res, SMLoc &EndLoc) {
   // As a special case, we support 'a op b @ modifier' by rewriting the
   // expression to include the modifier. This is inefficient, but in general we
   // expect users to use 'a@modifier op b'.
-  if (parseOptionalToken(AsmToken::At)) {
+  if (Lexer.getAllowAtInIdentifier() && parseOptionalToken(AsmToken::At)) {
     if (Lexer.isNot(AsmToken::Identifier))
       return TokError("unexpected symbol modifier following '@'");
 
@@ -1767,11 +1769,9 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     // Treat '}' as a valid identifier in this context.
     Lex();
     IDVal = "}";
-  } else if (Lexer.is(AsmToken::Star) &&
-             getTargetParser().starIsStartOfStatement()) {
-    // Accept '*' as a valid start of statement.
+  } else if (getTargetParser().tokenIsStartOfStatement(ID.getKind())) {
     Lex();
-    IDVal = "*";
+    IDVal = ID.getString();
   } else if (parseIdentifier(IDVal)) {
     if (!TheCondState.Ignore) {
       Lex(); // always eat a token
@@ -3144,7 +3144,7 @@ bool AsmParser::parseDirectiveValue(StringRef IDVal, unsigned Size) {
   auto parseOp = [&]() -> bool {
     const MCExpr *Value;
     SMLoc ExprLoc = getLexer().getLoc();
-    if (checkForValidSection() || parseExpression(Value))
+    if (checkForValidSection() || getTargetParser().parseDataExpr(Value))
       return true;
     // Special case constant expressions to match code generator.
     if (const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(Value)) {
@@ -5282,9 +5282,9 @@ bool AsmParser::parseDirectiveIfdef(SMLoc DirectiveLoc, bool expect_defined) {
     MCSymbol *Sym = getContext().lookupSymbol(Name);
 
     if (expect_defined)
-      TheCondState.CondMet = (Sym && !Sym->isUndefined(false));
+      TheCondState.CondMet = (Sym && !Sym->isUndefined());
     else
-      TheCondState.CondMet = (!Sym || Sym->isUndefined(false));
+      TheCondState.CondMet = (!Sym || Sym->isUndefined());
     TheCondState.Ignore = !TheCondState.CondMet;
   }
 
@@ -6360,8 +6360,7 @@ bool parseAssignmentExpression(StringRef Name, bool allow_redef,
     // FIXME: Diagnose assignment to protected identifier (e.g., register name).
     if (Value->isSymbolUsedInExpression(Sym))
       return Parser.Error(EqualLoc, "Recursive use of '" + Name + "'");
-    else if (Sym->isUndefined(/*SetUsed*/ false) && !Sym->isUsed() &&
-             !Sym->isVariable())
+    else if (Sym->isUndefined() && !Sym->isUsed() && !Sym->isVariable())
       ; // Allow redefinitions of undefined symbols only used in directives.
     else if (Sym->isVariable() && !Sym->isUsed() && allow_redef)
       ; // Allow redefinitions of variables that haven't yet been used.

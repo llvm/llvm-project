@@ -86,8 +86,8 @@ def Tosa_VariableOp : Tosa_Op<"variable", []> {
   let summary = "Defines a variable";
 
   let description = [{
-    Defines a new TOSA variable. This is a mutable value.
-    Modifications are expressed using read/write semantics.
+    Defines a new TOSA variable. This is a persistent mutable value across multiple
+    TOSA graph invocations. Modifications are expressed using read/write semantics.
   }];
 
   let arguments = (ins
@@ -106,21 +106,23 @@ def Tosa_VariableOp : Tosa_Op<"variable", []> {
     attr-dict
     custom<TypeOrAttr>($type, $initial_value)
   }];
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
-// Operator: variable.write
+// Operator: variable_write
 //===----------------------------------------------------------------------===//
-def Tosa_VariableWriteOp : Tosa_Op<"variable.write", []> {
+def Tosa_VariableWriteOp : Tosa_Op<"variable_write", []> {
   let summary = "write_buffer operator";
 
   let description = [{
-    Assigns a value to pseudo-buffer resource holding a mutable tensor.
+    Assigns a value to the pseudo-buffer resource holding a persistent mutable tensor.
   }];
 
   let arguments = (ins
     SymbolNameAttr:$name,
-    AnyType:$value
+    Tosa_Tensor:$input1
   );
 
   list<Availability> availability = [
@@ -129,18 +131,20 @@ def Tosa_VariableWriteOp : Tosa_Op<"variable.write", []> {
   ];
 
   let assemblyFormat = [{
-    $name attr-dict `,` $value `:` type($value)
+    $name attr-dict `,` $input1 `:` type($input1)
   }];
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
-// Operator: variable.read
+// Operator: variable_read
 //===----------------------------------------------------------------------===//
-def Tosa_VariableReadOp : Tosa_Op<"variable.read", []> {
+def Tosa_VariableReadOp : Tosa_Op<"variable_read", []> {
   let summary = "read_buffer operator";
 
   let description = [{
-    Reads the value from a pseudo-buffer resource holding a mutable tensor.
+    Reads the value from a pseudo-buffer resource holding a persistent mutable tensor.
   }];
 
   let arguments = (ins
@@ -148,7 +152,7 @@ def Tosa_VariableReadOp : Tosa_Op<"variable.read", []> {
   );
 
   let results = (outs
-    AnyType:$value
+    Tosa_Tensor:$output1
   );
 
   list<Availability> availability = [
@@ -157,8 +161,10 @@ def Tosa_VariableReadOp : Tosa_Op<"variable.read", []> {
   ];
 
   let assemblyFormat = [{
-    $name attr-dict `:` type($value)
+    $name attr-dict `:` type($output1)
   }];
+
+  let hasVerifier = 1;
 }
 
 #endif // TOSA_UTIL_OPS

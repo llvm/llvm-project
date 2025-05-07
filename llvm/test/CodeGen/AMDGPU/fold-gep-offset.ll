@@ -36,7 +36,7 @@ define i32 @flat_offset_maybe_oob(ptr %p, i32 %i) {
 ; GFX10-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; GFX10-NEXT:    v_lshlrev_b64 v[2:3], 2, v[2:3]
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
-; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v3, vcc_lo
+; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
 ; GFX10-NEXT:    flat_load_dword v0, v[0:1] offset:12
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -57,8 +57,8 @@ define i32 @flat_offset_maybe_oob(ptr %p, i32 %i) {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b64 v[2:3], 2, v[2:3]
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v3, vcc_lo
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
 ; GFX11-NEXT:    flat_load_b32 v0, v[0:1] offset:12
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -75,10 +75,9 @@ define i32 @flat_offset_maybe_oob(ptr %p, i32 %i) {
 ; GFX12-NEXT:    v_lshlrev_b64_e32 v[2:3], 2, v[2:3]
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
 ; GFX12-NEXT:    s_wait_alu 0xfffd
-; GFX12-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v3, vcc_lo
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
 ; GFX12-NEXT:    flat_load_b32 v0, v[0:1] offset:12
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %idx = add nsw i32 %i, 3
   %arrayidx = getelementptr inbounds i32, ptr %p, i32 %idx

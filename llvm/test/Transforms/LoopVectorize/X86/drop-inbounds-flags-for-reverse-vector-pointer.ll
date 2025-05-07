@@ -21,7 +21,7 @@ define i1 @fn(ptr %nno) #0 {
 ; CHECK-NEXT:    [[VEC_IV:%.*]] = add <4 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3>
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <4 x i64> [[VEC_IV]], splat (i64 10)
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i64> [[VEC_IND]], splat (i64 1)
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i64> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne <4 x i64> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw i32, ptr [[NNO]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[TMP23]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[TMP5]], i32 -3
@@ -30,7 +30,6 @@ define i1 @fn(ptr %nno) #0 {
 ; CHECK-NEXT:    [[REVERSE1:%.*]] = shufflevector <4 x i32> [[WIDE_MASKED_LOAD]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl <4 x i32> [[REVERSE1]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP8:%.*]] = urem <4 x i32> [[TMP7]], splat (i32 10)
-; CHECK-NEXT:    [[TMP9:%.*]] = xor <4 x i1> [[TMP3]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP10:%.*]] = select <4 x i1> [[TMP1]], <4 x i1> [[TMP9]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP10]], <4 x i32> [[REVERSE1]], <4 x i32> [[TMP8]]
 ; CHECK-NEXT:    [[TMP11]] = or <4 x i32> [[PREDPHI]], [[VEC_PHI]]
@@ -41,10 +40,10 @@ define i1 @fn(ptr %nno) #0 {
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP12]])
-; CHECK-NEXT:    br i1 true, label [[FOR_END36:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ -2, [[MIDDLE_BLOCK]] ], [ 10, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP14]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 10, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY20:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC35:%.*]] ]
@@ -63,7 +62,7 @@ define i1 @fn(ptr %nno) #0 {
 ; CHECK-NEXT:    [[SUM_1]] = or i32 [[REM27_PN]], [[SUM_01]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
 ; CHECK-NEXT:    [[CMP19_NOT:%.*]] = icmp eq i64 [[INDVARS_IV]], 0
-; CHECK-NEXT:    br i1 [[CMP19_NOT]], label [[FOR_END36]], label [[FOR_BODY20]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP19_NOT]], label [[EXIT]], label [[FOR_BODY20]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[SUM_1_LCSSA:%.*]] = phi i32 [ [[SUM_1]], [[FOR_INC35]] ], [ [[TMP14]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[CMP41:%.*]] = icmp eq i32 [[SUM_1_LCSSA]], 0

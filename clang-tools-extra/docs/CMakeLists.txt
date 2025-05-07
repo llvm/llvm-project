@@ -46,14 +46,6 @@ if (DOXYGEN_FOUND)
       set(clang_tools_doxygen_qhp_cust_filter_attrs "")
     endif()
 
-    option(LLVM_DOXYGEN_SVG
-      "Use svg instead of png files for doxygen graphs." OFF)
-    if (LLVM_DOXYGEN_SVG)
-      set(DOT_IMAGE_FORMAT "svg")
-    else()
-      set(DOT_IMAGE_FORMAT "png")
-    endif()
-
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/doxygen.cfg.in
       ${CMAKE_CURRENT_BINARY_DIR}/doxygen.cfg @ONLY)
 
@@ -71,7 +63,6 @@ if (DOXYGEN_FOUND)
     set(clang_tools_doxygen_qhelpgenerator_path)
     set(clang_tools_doxygen_qhp_cust_filter_name)
     set(clang_tools_doxygen_qhp_cust_filter_attrs)
-    set(DOT_IMAGE_FORMAT)
 
     add_custom_target(doxygen-clang-tools
       COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/doxygen.cfg

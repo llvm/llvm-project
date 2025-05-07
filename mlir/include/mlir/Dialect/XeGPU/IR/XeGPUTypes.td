@@ -17,7 +17,8 @@ def XeGPU_IntType: AnyTypeOf<[I1, I8, I16, I32, I64, SI1, SI8, SI16, SI32, SI64,
 def XeGPU_FloatType: AnyTypeOf<[F16, F32, F64, BF16, TF32]>;
 def XeGPU_ScalarType: AnyTypeOf<[XeGPU_IntType, XeGPU_FloatType]>;
 def XeGPU_BaseAddrType: AnyTypeOf<[Non0RankedMemRefOf<[XeGPU_ScalarType]>, UI64, UI32, I64, I32]>;
-def XeGPU_DpasOpType: VectorOfRankAndType<[2, 3], [XeGPU_ScalarType]>;
+def XeGPU_DpasOprType: VectorOfRankAndType<[1, 2, 3], [XeGPU_ScalarType]>;
+def XeGPU_DpasResType: VectorOfRankAndType<[1, 2], [XeGPU_ScalarType]>;
 def XeGPU_OffsetType: VectorOfRankAndType<[1], [Index]>;
 def XeGPU_MaskType: AnyTypeOf<[VectorOfRankAndType<[1], [I1]>, I1]>;
 def XeGPU_ValueType: AnyTypeOf<[VectorOfRankAndType<[1,2,3,4], [XeGPU_ScalarType]>, XeGPU_ScalarType]>;
@@ -34,27 +35,24 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
         [ShapedTypeInterface], "::mlir::TensorType"> {
   let summary = "TensorDesc describing regions of interested data.";
   let description = [{
-    TensorDesc is a type designed to describe regions of the interested data as well as some
-    features that are unique to Intel hardware. Different with the builtin tensor type in MLIR,
-    it essentially only contains the meta data, and doesn't hold the data by itself. It is designed
-    to mainly support 2D block load/store and DPAS (matrix multiplication instruction) on Intel GPU.
-    It encodes the following information:
+    TensorDesc is a type designed to describe regions of interest in data, as well as some features
+    unique to Intel hardware. Unlike the built-in tensor type in MLIR, it essentially contains only
+    metadata and does not hold the data itself. It is primarily designed to support 2D block load/store
+    and DPAS (matrix multiplication instruction) on Intel GPUs. It encodes the following information:
 
-    * shape:  the sizes/shape of the intereted data block, e.g., 8x16 means 8 rows
+    * shape:  the sizes/shape of the interested data block, e.g., 8x16 means 8 rows
               and each row contains 16 contiguous data element. The rows could be
-              either contiguous or not, depends on whether the encoding attribute
-              is set or not.
+              either contiguous or not, depends on the encoding attribute. If the
+              encoding is a BlockTensorDescAttr, rows are contiguous. If the encoding
+              is a ScatterTensorDescAttr, rows are not necessary to be contiguous. If
+              encoding is not set, it is considered as a default BlockTensorDescAttr.
+
     * element_type: the data type of the data element, e.g., f16, f32.
 
-    Similar to the builtin tensor, it also provides an optinal attribute to encoding
-    the following information via the TensorDescAttr object:
-    * memory_space (xegpu::MemorySpace): [optional] where the data is located,
-                global memory or shared memory. It is default to Global.
-    * array_length (int): [optional] The number of contiguous blocks with size as `shape`,
-               that will be loaded by block load at a time. It is default to 1.
-    * boundary_check (bool): [optional] indicates whether the operation detects the boundary
-                and pads with zero for out-of-boundary access. It is default to do boundary check.
-
+    Similar to the built-in tensor, it also provides optional attributes for encoding
+    additional information via either BlockTensorDescAttr or ScatterTensorDescAttr, or
+    supporting Workgroup, Subgroup, and workitem (or SIMT) level programmings via the
+    Layout attribute. Please check their definition for details.
 
     Syntax:
 
@@ -63,7 +61,9 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     element-type ::= float-type | integer-type | index-type
     dim-list := (static-dim-list `x`)?
     static-dim-list ::= decimal-literal `x` decimal-literal
-    attr-list = (, memory_space = value)? (, arr_len = value)? (, boundary_check = value)? (, scattered = value)? (, sg_map `<` wi_layout = value, wi_data = value `>`)?
+    attr-list = (, encoding-attr)? (, layout-attr)?
+    enconding-attr = (, memory_space = value)? (, arr_len = value)? (, boundary_check = value)? (, scattered = value)?
+    layout-attr = (, layout `<`sg_layout = value, sg_data = value, inst_data = value, lane_layout = value, lane_data = value, order = value`>`)?
     ```
 
     Examples:
@@ -78,15 +78,28 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     // A TensorDesc with 8x16 f32 elements for a memory region in shared memory space.
     xegpu.tensor_desc<8x16xf32, #xegpu.tdesc_attr<memory_space = slm>>
 
-    // A TensorDesc with a sg_map
-    xegpu.tensor_desc<8x16xf32, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>>
+    // A 1D TensorDesc with a layout for subgroup level programming, each lane access two continuous elements
+    xegpu.tensor_desc<32xf32, #xegpu.layout<lane_layout = [16], lane_data = [2]>>
+
+    // A 1D TensorDesc with a layout for subgroup level programming, each lane access two elements with stride = 16
+    xegpu.tensor_desc<32xf32, #xegpu.layout<lane_layout = [16], lane_data = [1]>>
+
+    // A TensorDesc with a layout for subgroup level programming
+    xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+
+    // A TensorDesc with a layout for workgroup level programming
+    xegpu.tensor_desc<32x64xf32, #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>>
+
+    // A TensorDesc with a layout for workgroup level programming without lane_layout and lane_data
+    xegpu.tensor_desc<32x64xf32, #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16]>>
+
     ```
   }];
 
   let parameters = (ins ArrayRefParameter<"int64_t">: $shape,
                         "mlir::Type": $elementType,
                         OptionalParameter<"mlir::Attribute">: $encoding,
-                        OptionalParameter<"mlir::Attribute">: $sg_map);
+                        OptionalParameter<"mlir::Attribute">: $layout);
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
@@ -95,13 +108,13 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
       CArg<"int", "1">: $array_length,
       CArg<"bool", "true">: $boundary_check,
       CArg<"xegpu::MemorySpace", "xegpu::MemorySpace::Global">:$memory_space,
-      CArg<"mlir::Attribute", "mlir::Attribute()">:$sg_map)>,
+      CArg<"mlir::Attribute", "mlir::Attribute()">:$layout)>,
     TypeBuilderWithInferredContext<(ins
       "llvm::ArrayRef<int64_t>": $shape,
       "mlir::Type": $elementType,
       CArg<"int", "1">: $chunk_size,
       CArg<"xegpu::MemorySpace", "xegpu::MemorySpace::Global">:$memory_space,
-      CArg<"mlir::Attribute", "mlir::Attribute()">:$sg_map)>
+      CArg<"mlir::Attribute", "mlir::Attribute()">:$layout)>
   ];
 
   let extraClassDeclaration = [{
@@ -127,8 +140,8 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
       return llvm::dyn_cast_if_present<ScatterTensorDescAttr>(getEncoding());
     }
 
-    SGMapAttr getSGMapAttr() const {
-      return llvm::dyn_cast_if_present<SGMapAttr>(getSgMap());
+    LayoutAttr getLayoutAttr() const {
+      return llvm::dyn_cast_if_present<LayoutAttr>(getLayout());
     }
 
     xegpu::MemorySpace getMemorySpace() const {
@@ -176,11 +189,6 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
         return scatter_attr.getChunkSize().getInt();
       return 1;
     }
-
-    // This returns a vector type that represents the fragment of data owned by
-    // a work item in SIMT mode if this tensor descriptor is used in a XeGPU
-    // load/store operation.
-    FailureOr<VectorType> getDistributedVectorType();
   }];
 
   let hasCustomAssemblyFormat = true;

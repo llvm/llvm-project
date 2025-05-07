@@ -49,11 +49,15 @@ struct HypotfChecker : public virtual LIBC_NAMESPACE::testing::Test {
   }
 };
 
-using LlvmLibcHypotfExhaustiveTest = LlvmLibcExhaustiveMathTest<HypotfChecker>;
+using LlvmLibcHypotfExhaustiveTest =
+    LlvmLibcExhaustiveMathTest<HypotfChecker, /*Increment=*/1>;
 
 // Range of the first input: [2^23, 2^24];
 static constexpr uint32_t START = (23U + 127U) << 23;
-static constexpr uint32_t STOP = (24U + 127U) << 23;
+// static constexpr uint32_t STOP = (24U + 127U) << 23;
+// Use a smaller range for automated tests, since the full range takes too long
+// and should only be run manually.
+static constexpr uint32_t STOP = ((23U + 127U) << 23) + 1024U;
 
 TEST_F(LlvmLibcHypotfExhaustiveTest, PositiveRange) {
   test_full_range_all_roundings(START, STOP);

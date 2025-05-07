@@ -846,6 +846,26 @@ define <32 x i8> @concat_pshufb_unnecessary(<16 x i8> %a0, <16 x i8> %a1, <16 x 
   ret <32 x i8> %res
 }
 
+define <8 x float> @demandedelts_vpermps(<8 x float> %a0, <8 x float> %a1) {
+; AVX2-LABEL: demandedelts_vpermps:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,1,1,0]
+; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; AVX2-NEXT:    ret{{[l|q]}}
+;
+; AVX512-LABEL: demandedelts_vpermps:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm2 = [3,1,1,0,20,21,22,23]
+; AVX512-NEXT:    vpermt2ps %zmm1, %zmm2, %zmm0
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512-NEXT:    ret{{[l|q]}}
+  %lo = call <8 x float> @llvm.x86.avx2.permps(<8 x float> %a0, <8 x i32> <i32 3, i32 1, i32 1, i32 0, i32 0, i32 0, i32 7, i32 7>)
+  %hi = shufflevector <8 x float> %lo, <8 x float> %a1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
+  ret <8 x float> %hi
+}
+
 define <8 x i32> @constant_fold_permd() {
 ; AVX2-LABEL: constant_fold_permd:
 ; AVX2:       # %bb.0:

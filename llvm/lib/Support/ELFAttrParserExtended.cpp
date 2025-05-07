@@ -103,6 +103,8 @@ Error ELFExtendedAttrParser::parse(ArrayRef<uint8_t> Section,
 
   // Get format-version
   uint8_t FormatVersion = De.getU8(Cursor);
+  if (!Cursor)
+    return Cursor.takeError();
   if (ELFAttrs::Format_Version != FormatVersion)
     return createStringError(errc::invalid_argument,
                              "unrecognized format-version: 0x" +
@@ -110,19 +112,39 @@ Error ELFExtendedAttrParser::parse(ArrayRef<uint8_t> Section,
 
   while (!De.eof(Cursor)) {
     uint32_t ExtBASubsectionLength = De.getU32(Cursor);
-    // Minimal valid Extended Build Attributes subsection header size is at
+    if (!Cursor)
+      return Cursor.takeError();
+    // Minimal valid Extended Build Attributes subsection size is at
     // least 8: length(4) name(at least a single char + null) optionality(1) and
     // type(1)
-    if (ExtBASubsectionLength < 8)
+    // Extended Build Attributes subsection has to fit inside the section.
+    if (ExtBASubsectionLength < 8 ||
+        ExtBASubsectionLength > (Section.size() - Cursor.tell() + 4))
       return createStringError(
           errc::invalid_argument,
           "invalid Extended Build Attributes subsection size at offset: " +
               utohexstr(Cursor.tell() - 4));
 
     StringRef VendorName = De.getCStrRef(Cursor);
+    if (!Cursor)
+      return Cursor.takeError();
     uint8_t IsOptional = De.getU8(Cursor);
+    if (!Cursor)
+      return Cursor.takeError();
+    if (!(0 == IsOptional || 1 == IsOptional))
+      return createStringError(
+          errc::invalid_argument,
+          "\ninvalid Optionality at offset " + utohexstr(Cursor.tell() - 4) +
+              ": " + utohexstr(IsOptional) + " (Options are 1|0)");
     StringRef IsOptionalStr = IsOptional ? "optional" : "required";
     uint8_t Type = De.getU8(Cursor);
+    if (!Cursor)
+      return Cursor.takeError();
+    if (!(0 == Type || 1 == Type))
+      return createStringError(errc::invalid_argument,
+                               "\ninvalid Type at offset " +
+                                   utohexstr(Cursor.tell() - 4) + ": " +
+                                   utohexstr(Type) + " (Options are 1|0)");
     StringRef TypeStr = Type ? "ntbs" : "uleb128";
 
     BuildAttributeSubSection BASubSection;
@@ -144,12 +166,14 @@ Error ELFExtendedAttrParser::parse(ArrayRef<uint8_t> Section,
     // Offset in Section
     uint64_t OffsetInSection = Cursor.tell();
     // Size: 4 bytes, Vendor Name: VendorName.size() + 1 (null termination),
-    // optionality: 1, size: 1
+    // optionality: 1, type: 1
     uint32_t BytesAllButAttributes = 4 + (VendorName.size() + 1) + 1 + 1;
     while (Cursor.tell() <
            (OffsetInSection + ExtBASubsectionLength - BytesAllButAttributes)) {
 
       uint64_t Tag = De.getULEB128(Cursor);
+      if (!Cursor)
+        return Cursor.takeError();
 
       StringRef TagName = getTagName(VendorName, Tag);
 
@@ -157,10 +181,14 @@ Error ELFExtendedAttrParser::parse(ArrayRef<uint8_t> Section,
       std::string ValueStr = "";
       if (Type) { // type==1 --> ntbs
         ValueStr = De.getCStrRef(Cursor);
+        if (!Cursor)
+          return Cursor.takeError();
         if (Sw)
           Sw->printString("" != TagName ? TagName : utostr(Tag), ValueStr);
       } else { // type==0 --> uleb128
         ValueInt = De.getULEB128(Cursor);
+        if (!Cursor)
+          return Cursor.takeError();
         if (Sw)
           Sw->printNumber("" != TagName ? TagName : utostr(Tag), ValueInt);
       }

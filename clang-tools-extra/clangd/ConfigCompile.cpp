@@ -439,8 +439,7 @@ struct FragmentCompiler {
           [Normalized(std::move(Normalized))](const Params &, Config &C) {
             if (C.Diagnostics.SuppressAll)
               return;
-            for (llvm::StringRef N : Normalized)
-              C.Diagnostics.Suppress.insert(N);
+            C.Diagnostics.Suppress.insert_range(Normalized);
           });
 
     if (F.UnusedIncludes) {
@@ -536,7 +535,7 @@ struct FragmentCompiler {
     }
     if (Filters->empty())
       return std::nullopt;
-    auto Filter = [Filters](llvm::StringRef Path) {
+    auto Filter = [Filters = std::move(Filters)](llvm::StringRef Path) {
       for (auto &Regex : *Filters)
         if (Regex.match(Path))
           return true;

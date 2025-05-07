@@ -57,7 +57,8 @@ public:
   uint32_t Type;
 
 private:
-  /// Relocations added by optimizations can be optional.
+  /// Relocations added by optimizations can be optional, meaning they can be
+  /// omitted under certain circumstances.
   bool Optional = false;
 
 public:
@@ -72,9 +73,9 @@ public:
   /// Return size in bytes of the given relocation \p Type.
   static size_t getSizeForType(uint32_t Type);
 
-  /// Some relocations added by optimizations are optional, meaning they can be
-  /// omitted under certain circumstances.
   void setOptional() { Optional = true; }
+
+  bool isOptional() { return Optional; }
 
   /// Return size of this relocation.
   size_t getSize() const { return getSizeForType(Type); }
@@ -84,6 +85,9 @@ public:
 
   /// Adjust value depending on relocation type (make it PC relative or not).
   static uint64_t encodeValue(uint32_t Type, uint64_t Value, uint64_t PC);
+
+  /// Return true if there are enough bits to encode the relocation value.
+  static bool canEncodeValue(uint32_t Type, uint64_t Value, uint64_t PC);
 
   /// Extract current relocated value from binary contents. This is used for
   /// RISC architectures where values are encoded in specific bits depending

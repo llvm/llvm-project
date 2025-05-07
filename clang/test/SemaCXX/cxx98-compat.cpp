@@ -14,6 +14,16 @@ namespace std {
   };
 }
 
+void test_other_auto_spellings() {
+  __auto_type x = 0; // Ok
+  decltype(auto) y = 0; // expected-warning {{'decltype' type specifier is incompatible with C++98}}
+#ifndef CXX14COMPAT
+  // expected-warning@-2 {{'decltype(auto)' type specifier is a C++14 extension}}
+#else
+  // expected-warning@-4 {{'decltype(auto)' type specifier is incompatible with C++ standards before C++14}}
+#endif
+}
+
 template<typename ...T>  // expected-warning {{variadic templates are incompatible with C++98}}
 class Variadic1 {};
 

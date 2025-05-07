@@ -2201,6 +2201,90 @@ func.func @omp_cancel_sections() -> () {
   return
 }
 
+func.func @omp_cancel_taskgroup() -> () {
+  omp.taskgroup {
+    omp.task {
+      // CHECK: omp.cancel cancellation_construct_type(taskgroup)
+      omp.cancel cancellation_construct_type(taskgroup)
+      // CHECK: omp.terminator
+      omp.terminator
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+func.func @omp_taskloop_cancel_taskgroup(%lb : index, %ub : index, %step : index) {
+  omp.taskloop {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      // CHECK: omp.cancel cancellation_construct_type(taskgroup)
+      omp.cancel cancellation_construct_type(taskgroup)
+      // CHECK: omp.yield
+      omp.yield
+    }
+  }
+  return
+}
+
+func.func @omp_cancel_parallel_nested(%if_cond : i1) -> () {
+  omp.parallel {
+    scf.if %if_cond {
+      // CHECK: omp.cancel cancellation_construct_type(parallel)
+      omp.cancel cancellation_construct_type(parallel)
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+func.func @omp_cancel_wsloop_nested(%lb : index, %ub : index, %step : index,
+                                    %if_cond : i1) {
+  omp.wsloop {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      scf.if %if_cond {
+        // CHECK: omp.cancel cancellation_construct_type(loop)
+        omp.cancel cancellation_construct_type(loop)
+      }
+      // CHECK: omp.yield
+      omp.yield
+    }
+  }
+  return
+}
+
+func.func @omp_cancel_sections_nested(%if_cond : i1) -> () {
+  omp.sections {
+    omp.section {
+      scf.if %if_cond {
+        // CHECK: omp.cancel cancellation_construct_type(sections)
+        omp.cancel cancellation_construct_type(sections)
+      }
+      omp.terminator
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+func.func @omp_cancel_taskgroup_nested(%if_cond : i1) -> () {
+  omp.taskgroup {
+    omp.task {
+      scf.if %if_cond {
+        // CHECK: omp.cancel cancellation_construct_type(taskgroup)
+        omp.cancel cancellation_construct_type(taskgroup)
+      }
+      // CHECK: omp.terminator
+      omp.terminator
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
 func.func @omp_cancellationpoint_parallel() -> () {
   omp.parallel {
     // CHECK: omp.cancellation_point cancellation_construct_type(parallel)
@@ -2233,6 +2317,77 @@ func.func @omp_cancellationpoint_sections() -> () {
       omp.cancellation_point cancellation_construct_type(sections)
       // CHECK: omp.cancel cancellation_construct_type(sections)
       omp.cancel cancellation_construct_type(sections)
+      omp.terminator
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+func.func @omp_cancellationpoint_taskgroup() -> () {
+  omp.taskgroup {
+    omp.task {
+      // CHECK: omp.cancellation_point cancellation_construct_type(taskgroup)
+      omp.cancellation_point cancellation_construct_type(taskgroup)
+      // CHECK: omp.cancel cancellation_construct_type(taskgroup)
+      omp.cancel cancellation_construct_type(taskgroup)
+      // CHECK: omp.terminator
+      omp.terminator
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+func.func @omp_cancellationpoint_parallel_nested(%if_cond : i1) -> () {
+  omp.parallel {
+    scf.if %if_cond {
+      // CHECK: omp.cancellation_point cancellation_construct_type(parallel)
+      omp.cancellation_point cancellation_construct_type(parallel)
+    }
+    omp.terminator
+  }
+  return
+}
+
+func.func @omp_cancellationpoint_wsloop_nested(%lb : index, %ub : index, %step : index, %if_cond : i1) {
+  omp.wsloop {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      scf.if %if_cond {
+        // CHECK: omp.cancellation_point cancellation_construct_type(loop)
+        omp.cancellation_point cancellation_construct_type(loop)
+      }
+      // CHECK: omp.yield
+      omp.yield
+    }
+  }
+  return
+}
+
+func.func @omp_cancellationpoint_sections_nested(%if_cond : i1) -> () {
+  omp.sections {
+    omp.section {
+      scf.if %if_cond {
+        // CHECK: omp.cancellation_point cancellation_construct_type(sections)
+        omp.cancellation_point cancellation_construct_type(sections)
+      }
+      omp.terminator
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+func.func @omp_cancellationpoint_taskgroup_nested(%if_cond : i1) -> () {
+  omp.taskgroup {
+    omp.task {
+      scf.if %if_cond {
+        // CHECK: omp.cancellation_point cancellation_construct_type(taskgroup)
+        omp.cancellation_point cancellation_construct_type(taskgroup)
+      }
       omp.terminator
     }
     // CHECK: omp.terminator
@@ -2865,12 +3020,45 @@ func.func @omp_target_host_eval(%x : i32) {
   }
 
   // CHECK: omp.target host_eval(%{{.*}} -> %[[HOST_ARG:.*]] : i32) {
+  // CHECK: omp.parallel num_threads(%[[HOST_ARG]] : i32) {
+  // CHECK: omp.wsloop {
+  // CHECK: omp.loop_nest
+  omp.target host_eval(%x -> %arg0 : i32) {
+    %y = arith.constant 2 : i32
+    omp.parallel num_threads(%arg0 : i32) {
+      omp.wsloop {
+        omp.loop_nest (%iv) : i32 = (%y) to (%y) step (%y) {
+          omp.yield
+        }
+      }
+      omp.terminator
+    }
+    omp.terminator
+  }
+
+  // CHECK: omp.target host_eval(%{{.*}} -> %[[HOST_ARG:.*]] : i32) {
   // CHECK: omp.teams {
   // CHECK: omp.distribute {
   // CHECK: omp.loop_nest (%{{.*}}) : i32 = (%[[HOST_ARG]]) to (%[[HOST_ARG]]) step (%[[HOST_ARG]]) {
   omp.target host_eval(%x -> %arg0 : i32) {
     omp.teams {
       omp.distribute {
+        omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
+          omp.yield
+        }
+      }
+      omp.terminator
+    }
+    omp.terminator
+  }
+
+  // CHECK: omp.target host_eval(%{{.*}} -> %[[HOST_ARG:.*]] : i32) {
+  // CHECK: omp.teams {
+  // CHECK: omp.loop {
+  // CHECK: omp.loop_nest (%{{.*}}) : i32 = (%[[HOST_ARG]]) to (%[[HOST_ARG]]) step (%[[HOST_ARG]]) {
+  omp.target host_eval(%x -> %arg0 : i32) {
+    omp.teams {
+      omp.loop {
         omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
           omp.yield
         }

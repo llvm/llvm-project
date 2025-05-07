@@ -30,8 +30,7 @@ bool MipsCCState::isF128SoftLibCall(const char *CallSym) {
   // Check that LibCalls is sorted alphabetically.
   auto Comp = [](const char *S1, const char *S2) { return strcmp(S1, S2) < 0; };
   assert(llvm::is_sorted(LibCalls, Comp));
-  return std::binary_search(std::begin(LibCalls), std::end(LibCalls), CallSym,
-                            Comp);
+  return llvm::binary_search(LibCalls, CallSym, Comp);
 }
 
 /// This function returns true if Ty is fp128, {f128} or i128 which was

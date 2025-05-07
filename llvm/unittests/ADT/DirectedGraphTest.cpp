@@ -271,7 +271,7 @@ TEST(DirectedGraphTest, SCC) {
   using NodeListTy = SmallPtrSet<DGTestNode *, 3>;
   SmallVector<NodeListTy, 4> ListOfSCCs;
   for (auto &SCC : make_range(scc_begin(&DG), scc_end(&DG)))
-    ListOfSCCs.push_back(NodeListTy(SCC.begin(), SCC.end()));
+    ListOfSCCs.push_back(NodeListTy(llvm::from_range, SCC));
 
   EXPECT_TRUE(ListOfSCCs.size() == 2);
 

@@ -101,6 +101,7 @@ end program
 
 ! ALL-NEXT: PolymorphicOpConversion
 ! ALL-NEXT: AssumedRankOpConversion
+! ALL-NEXT: LowerRepackArraysPass
 ! ALL-NEXT: SimplifyFIROperations
 ! O2-NEXT:  AddAliasTags
 

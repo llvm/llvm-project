@@ -186,3 +186,19 @@ namespace arrays {
     // expected-error@-1 {{lvalue of type 'const volatile volatile B1[1]' (aka 'const volatile volatile int[1]')}}
   } // namespace balanced_qualifiers
 } // namespace arrays
+
+namespace member_pointers {
+  template <class T> struct W {
+    X1 a;
+    Y1 b;
+  };
+  struct W1 : W<X2> {};
+  struct W2 : W<Y2> {};
+
+  N t1 = 0 ? &W<X2>::a : &W<Y2>::b;
+  // expected-error@-1 {{rvalue of type 'B1 W<B2>::*'}}
+
+  // FIXME: adjusted MemberPointer does not preserve qualifier
+  N t3 = 0 ? &W1::a : &W2::b;
+  // expected-error@-1 {{rvalue of type 'B1 W<void>::*'}}
+} // namespace member_pointers

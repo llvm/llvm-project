@@ -16,22 +16,22 @@ foo: # ASM-LABEL: foo:
   nop
 1:
   nop
-  .reloc 1b, R_MIPS_NONE, foo       # ASM-32: .reloc ($tmp0), R_MIPS_NONE, foo
+  .reloc 1b, R_MIPS_NONE, foo       # ASM-32: .reloc $tmp0, R_MIPS_NONE, foo
                                     # ASM-64: .reloc .Ltmp0, R_MIPS_NONE, foo
   nop
-  .reloc 1f, R_MIPS_32, foo         # ASM-32: .reloc ($tmp1), R_MIPS_32, foo
+  .reloc 1f, R_MIPS_32, foo         # ASM-32: .reloc $tmp1, R_MIPS_32, foo
                                     # ASM-64: .reloc .Ltmp1, R_MIPS_32, foo
 1:
   nop
-  .reloc 1f, R_MIPS_CALL16, foo     # ASM-32: .reloc ($tmp2), R_MIPS_CALL16, foo
+  .reloc 1f, R_MIPS_CALL16, foo     # ASM-32: .reloc $tmp2, R_MIPS_CALL16, foo
                                     # ASM-64: .reloc .Ltmp2, R_MIPS_CALL16, foo
 1:
   nop
-  .reloc 2f, R_MIPS_GOT_DISP, foo   # ASM-32: .reloc ($tmp3), R_MIPS_GOT_DISP, foo
+  .reloc 2f, R_MIPS_GOT_DISP, foo   # ASM-32: .reloc $tmp3, R_MIPS_GOT_DISP, foo
                                     # ASM-64: .reloc .Ltmp3, R_MIPS_GOT_DISP, foo
   nop
 
-  .reloc 3f, R_MIPS_GOT_PAGE, foo   # ASM-32: .reloc ($tmp4), R_MIPS_GOT_PAGE, foo
+  .reloc 3f, R_MIPS_GOT_PAGE, foo   # ASM-32: .reloc $tmp4, R_MIPS_GOT_PAGE, foo
                                     # ASM-64: .reloc .Ltmp4, R_MIPS_GOT_PAGE, foo
   nop
 bar:

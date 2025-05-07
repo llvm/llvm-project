@@ -53,7 +53,7 @@ int RTDEF(CUFAllocatableAllocate)(Descriptor &desc, int64_t stream,
   }
   // Perform the standard allocation.
   int stat{RTNAME(AllocatableAllocate)(
-      desc, hasStat, errMsg, sourceFile, sourceLine)};
+      desc, stream, hasStat, errMsg, sourceFile, sourceLine)};
   if (pinned) {
     // Set pinned according to stat. More infrastructre is needed to set it
     // closer to the actual allocation call.

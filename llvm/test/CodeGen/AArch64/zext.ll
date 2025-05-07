@@ -447,7 +447,7 @@ define <3 x i64> @zext_v3i10_v3i64(<3 x i10> %a) {
 ; CHECK-SD-NEXT:    mov w8, #1023 // =0x3ff
 ; CHECK-SD-NEXT:    dup v2.2d, x8
 ; CHECK-SD-NEXT:    mov v0.s[1], w1
-; CHECK-SD-NEXT:    ushll v3.2d, v1.2s, #0
+; CHECK-SD-NEXT:    zip1 v3.2s, v1.2s, v1.2s
 ; CHECK-SD-NEXT:    ushll v0.2d, v0.2s, #0
 ; CHECK-SD-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-SD-NEXT:    and v2.8b, v3.8b, v2.8b

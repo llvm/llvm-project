@@ -1114,8 +1114,10 @@ private:
     assert((!LI.isSimple() || LI.getType()->isSingleValueType()) &&
            "All simple FCA loads should have been pre-split");
 
+    // If there is a load with an unknown offset, we can still perform store
+    // to load forwarding for other known-offset loads.
     if (!IsOffsetKnown)
-      return PI.setAborted(&LI);
+      return PI.setEscapedReadOnly(&LI);
 
     TypeSize Size = DL.getTypeStoreSize(LI.getType());
     if (Size.isScalable())
@@ -3876,7 +3878,7 @@ private:
       for (Instruction *I : FakeUses) {
         IRB.SetInsertPoint(I);
         for (auto *V : Components)
-          IRB.CreateIntrinsic(Intrinsic::fake_use, {}, {V});
+          IRB.CreateIntrinsic(Intrinsic::fake_use, {V});
         I->eraseFromParent();
       }
     }
@@ -5498,45 +5500,14 @@ bool SROA::propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS) {
   // that do not overlap with any before them. The slices are sorted by
   // increasing beginOffset. We don't use AS.partitions(), as it will use a more
   // sophisticated algorithm that takes splittable slices into account.
-  auto PartitionBegin = AS.begin();
-  auto PartitionEnd = PartitionBegin;
-  uint64_t BeginOffset = PartitionBegin->beginOffset();
-  uint64_t EndOffset = PartitionBegin->endOffset();
-  while (PartitionBegin != AS.end()) {
-    bool AllSameAndValid = true;
-    SmallVector<Instruction *> Insts;
-    Type *PartitionType = nullptr;
-    while (PartitionEnd != AS.end() &&
-           (PartitionEnd->beginOffset() < EndOffset ||
-            PartitionEnd->endOffset() <= EndOffset)) {
-      if (AllSameAndValid) {
-        AllSameAndValid &= PartitionEnd->beginOffset() == BeginOffset &&
-                           PartitionEnd->endOffset() == EndOffset;
-        Instruction *User =
-            cast<Instruction>(PartitionEnd->getUse()->getUser());
-        if (auto *LI = dyn_cast<LoadInst>(User)) {
-          Type *UserTy = LI->getType();
-          // LoadAndStorePromoter requires all the types to be the same.
-          if (!LI->isSimple() || (PartitionType && UserTy != PartitionType))
-            AllSameAndValid = false;
-          PartitionType = UserTy;
-          Insts.push_back(User);
-        } else if (auto *SI = dyn_cast<StoreInst>(User)) {
-          Type *UserTy = SI->getValueOperand()->getType();
-          if (!SI->isSimple() || (PartitionType && UserTy != PartitionType))
-            AllSameAndValid = false;
-          PartitionType = UserTy;
-          Insts.push_back(User);
-        } else if (!isAssumeLikeIntrinsic(User)) {
-          AllSameAndValid = false;
-        }
-      }
-      EndOffset = std::max(EndOffset, PartitionEnd->endOffset());
-      ++PartitionEnd;
-    }
+  LLVM_DEBUG(dbgs() << "Attempting to propagate values on " << AI << "\n");
+  bool AllSameAndValid = true;
+  Type *PartitionType = nullptr;
+  SmallVector<Instruction *> Insts;
+  uint64_t BeginOffset = 0;
+  uint64_t EndOffset = 0;
 
-    // So long as all the slices start and end offsets matched, update loads to
-    // the values stored in the partition.
+  auto Flush = [&]() {
     if (AllSameAndValid && !Insts.empty()) {
       LLVM_DEBUG(dbgs() << "Propagate values on slice [" << BeginOffset << ", "
                         << EndOffset << ")\n");
@@ -5546,14 +5517,56 @@ bool SROA::propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS) {
       BasicLoadAndStorePromoter Promoter(Insts, SSA, PartitionType);
       Promoter.run(Insts);
     }
+    AllSameAndValid = true;
+    PartitionType = nullptr;
+    Insts.clear();
+  };
 
-    // Step on to the next partition.
-    PartitionBegin = PartitionEnd;
-    if (PartitionBegin == AS.end())
-      break;
-    BeginOffset = PartitionBegin->beginOffset();
-    EndOffset = PartitionBegin->endOffset();
+  for (Slice &S : AS) {
+    auto *User = cast<Instruction>(S.getUse()->getUser());
+    if (isAssumeLikeIntrinsic(User)) {
+      LLVM_DEBUG({
+        dbgs() << "Ignoring slice: ";
+        AS.print(dbgs(), &S);
+      });
+      continue;
+    }
+    if (S.beginOffset() >= EndOffset) {
+      Flush();
+      BeginOffset = S.beginOffset();
+      EndOffset = S.endOffset();
+    } else if (S.beginOffset() != BeginOffset || S.endOffset() != EndOffset) {
+      if (AllSameAndValid) {
+        LLVM_DEBUG({
+          dbgs() << "Slice does not match range [" << BeginOffset << ", "
+                 << EndOffset << ")";
+          AS.print(dbgs(), &S);
+        });
+        AllSameAndValid = false;
+      }
+      EndOffset = std::max(EndOffset, S.endOffset());
+      continue;
+    }
+
+    if (auto *LI = dyn_cast<LoadInst>(User)) {
+      Type *UserTy = LI->getType();
+      // LoadAndStorePromoter requires all the types to be the same.
+      if (!LI->isSimple() || (PartitionType && UserTy != PartitionType))
+        AllSameAndValid = false;
+      PartitionType = UserTy;
+      Insts.push_back(User);
+    } else if (auto *SI = dyn_cast<StoreInst>(User)) {
+      Type *UserTy = SI->getValueOperand()->getType();
+      if (!SI->isSimple() || (PartitionType && UserTy != PartitionType))
+        AllSameAndValid = false;
+      PartitionType = UserTy;
+      Insts.push_back(User);
+    } else {
+      AllSameAndValid = false;
+    }
   }
+
+  Flush();
   return true;
 }
 

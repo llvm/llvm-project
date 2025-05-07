@@ -13,6 +13,7 @@
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBFileSpecList.h"
 #include "lldb/API/SBFrame.h"
+#include "lldb/API/SBMutex.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBValue.h"
@@ -20,30 +21,34 @@
 #include <cassert>
 #include <cctype>
 #include <cstdlib>
+#include <mutex>
 #include <utility>
 
 namespace lldb_dap {
 
 SourceBreakpoint::SourceBreakpoint(DAP &dap, const llvm::json::Object &obj)
     : Breakpoint(dap, obj),
-      logMessage(GetString(obj, "logMessage").value_or("").str()),
-      line(
+      m_log_message(GetString(obj, "logMessage").value_or("").str()),
+      m_line(
           GetInteger<uint64_t>(obj, "line").value_or(LLDB_INVALID_LINE_NUMBER)),
-      column(GetInteger<uint64_t>(obj, "column")
-                 .value_or(LLDB_INVALID_COLUMN_NUMBER)) {}
+      m_column(GetInteger<uint64_t>(obj, "column")
+                   .value_or(LLDB_INVALID_COLUMN_NUMBER)) {}
 
 void SourceBreakpoint::SetBreakpoint(const llvm::StringRef source_path) {
+  lldb::SBMutex lock = m_dap.GetAPIMutex();
+  std::lock_guard<lldb::SBMutex> guard(lock);
+
   lldb::SBFileSpecList module_list;
-  bp = dap.target.BreakpointCreateByLocation(source_path.str().c_str(), line,
-                                             column, 0, module_list);
-  if (!logMessage.empty())
+  m_bp = m_dap.target.BreakpointCreateByLocation(
+      source_path.str().c_str(), m_line, m_column, 0, module_list);
+  if (!m_log_message.empty())
     SetLogMessage();
   Breakpoint::SetBreakpoint();
 }
 
 void SourceBreakpoint::UpdateBreakpoint(const SourceBreakpoint &request_bp) {
-  if (logMessage != request_bp.logMessage) {
-    logMessage = request_bp.logMessage;
+  if (m_log_message != request_bp.m_log_message) {
+    m_log_message = request_bp.m_log_message;
     SetLogMessage();
   }
   BreakpointBase::UpdateBreakpoint(request_bp);
@@ -52,13 +57,13 @@ void SourceBreakpoint::UpdateBreakpoint(const SourceBreakpoint &request_bp) {
 lldb::SBError SourceBreakpoint::AppendLogMessagePart(llvm::StringRef part,
                                                      bool is_expr) {
   if (is_expr) {
-    logMessageParts.emplace_back(part, is_expr);
+    m_log_message_parts.emplace_back(part, is_expr);
   } else {
     std::string formatted;
     lldb::SBError error = FormatLogText(part, formatted);
     if (error.Fail())
       return error;
-    logMessageParts.emplace_back(formatted, is_expr);
+    m_log_message_parts.emplace_back(formatted, is_expr);
   }
   return lldb::SBError();
 }
@@ -195,7 +200,7 @@ lldb::SBError SourceBreakpoint::FormatLogText(llvm::StringRef text,
 // The function tries to parse logMessage into a list of LogMessageParts
 // for easy later access in BreakpointHitCallback.
 void SourceBreakpoint::SetLogMessage() {
-  logMessageParts.clear();
+  m_log_message_parts.clear();
 
   // Contains unmatched open curly braces indices.
   std::vector<int> unmatched_curly_braces;
@@ -209,10 +214,10 @@ void SourceBreakpoint::SetLogMessage() {
   // Part1 - parse matched_curly_braces_ranges.
   // locating all curly braced expression ranges in logMessage.
   // The algorithm takes care of nested and imbalanced curly braces.
-  for (size_t i = 0; i < logMessage.size(); ++i) {
-    if (logMessage[i] == '{') {
+  for (size_t i = 0; i < m_log_message.size(); ++i) {
+    if (m_log_message[i] == '{') {
       unmatched_curly_braces.push_back(i);
-    } else if (logMessage[i] == '}') {
+    } else if (m_log_message[i] == '}') {
       if (unmatched_curly_braces.empty())
         // Nothing to match.
         continue;
@@ -252,7 +257,7 @@ void SourceBreakpoint::SetLogMessage() {
     size_t raw_text_len = curly_braces_range.first - last_raw_text_start;
     if (raw_text_len > 0) {
       error = AppendLogMessagePart(
-          llvm::StringRef(logMessage.c_str() + last_raw_text_start,
+          llvm::StringRef(m_log_message.c_str() + last_raw_text_start,
                           raw_text_len),
           /*is_expr=*/false);
       if (error.Fail()) {
@@ -265,7 +270,7 @@ void SourceBreakpoint::SetLogMessage() {
     assert(curly_braces_range.second > curly_braces_range.first);
     size_t expr_len = curly_braces_range.second - curly_braces_range.first - 1;
     error = AppendLogMessagePart(
-        llvm::StringRef(logMessage.c_str() + curly_braces_range.first + 1,
+        llvm::StringRef(m_log_message.c_str() + curly_braces_range.first + 1,
                         expr_len),
         /*is_expr=*/true);
     if (error.Fail()) {
@@ -277,10 +282,10 @@ void SourceBreakpoint::SetLogMessage() {
   }
   // Trailing raw text after close curly brace.
   assert(last_raw_text_start >= 0);
-  if (logMessage.size() > (size_t)last_raw_text_start) {
+  if (m_log_message.size() > (size_t)last_raw_text_start) {
     error = AppendLogMessagePart(
-        llvm::StringRef(logMessage.c_str() + last_raw_text_start,
-                        logMessage.size() - last_raw_text_start),
+        llvm::StringRef(m_log_message.c_str() + last_raw_text_start,
+                        m_log_message.size() - last_raw_text_start),
         /*is_expr=*/false);
     if (error.Fail()) {
       NotifyLogMessageError(error.GetCString());
@@ -288,13 +293,13 @@ void SourceBreakpoint::SetLogMessage() {
     }
   }
 
-  bp.SetCallback(BreakpointHitCallback, this);
+  m_bp.SetCallback(BreakpointHitCallback, this);
 }
 
 void SourceBreakpoint::NotifyLogMessageError(llvm::StringRef error) {
   std::string message = "Log message has error: ";
   message += error;
-  dap.SendOutput(OutputType::Console, message);
+  m_dap.SendOutput(OutputType::Console, message);
 }
 
 /*static*/
@@ -309,7 +314,7 @@ bool SourceBreakpoint::BreakpointHitCallback(
 
   std::string output;
   for (const SourceBreakpoint::LogMessagePart &messagePart :
-       bp->logMessageParts) {
+       bp->m_log_message_parts) {
     if (messagePart.is_expr) {
       // Try local frame variables first before fall back to expression
       // evaluation
@@ -319,16 +324,16 @@ bool SourceBreakpoint::BreakpointHitCallback(
           frame.GetValueForVariablePath(expr, lldb::eDynamicDontRunTarget);
       if (value.GetError().Fail())
         value = frame.EvaluateExpression(expr);
-      output +=
-          VariableDescription(value, bp->dap.enable_auto_variable_summaries)
-              .display_value;
+      output += VariableDescription(
+                    value, bp->m_dap.configuration.enableAutoVariableSummaries)
+                    .display_value;
     } else {
       output += messagePart.text;
     }
   }
   if (!output.empty() && output.back() != '\n')
     output.push_back('\n'); // Ensure log message has line break.
-  bp->dap.SendOutput(OutputType::Console, output.c_str());
+  bp->m_dap.SendOutput(OutputType::Console, output.c_str());
 
   // Do not stop.
   return false;

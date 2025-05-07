@@ -140,7 +140,7 @@ void CSEDriver::replaceUsesAndDelete(ScopedMapTy &knownValues, Operation *op,
     if (auto *rewriteListener =
             dyn_cast_if_present<RewriterBase::Listener>(rewriter.getListener()))
       rewriteListener->notifyOperationReplaced(op, existing);
-    // Replace all uses, but do not remote the operation yet. This does not
+    // Replace all uses, but do not remove the operation yet. This does not
     // notify the listener because the original op is not erased.
     rewriter.replaceAllUsesWith(op->getResults(), existing->getResults());
     opsToErase.push_back(op);
@@ -156,7 +156,7 @@ void CSEDriver::replaceUsesAndDelete(ScopedMapTy &knownValues, Operation *op,
         if (all_of(v.getUses(), wasVisited))
           rewriteListener->notifyOperationReplaced(op, existing);
 
-    // Replace all uses, but do not remote the operation yet. This does not
+    // Replace all uses, but do not remove the operation yet. This does not
     // notify the listener because the original op is not erased.
     rewriter.replaceUsesWithIf(op->getResults(), existing->getResults(),
                                wasVisited);

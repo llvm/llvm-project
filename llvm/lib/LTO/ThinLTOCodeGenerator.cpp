@@ -295,7 +295,8 @@ addUsedSymbolToPreservedGUID(const lto::InputFile &File,
                              DenseSet<GlobalValue::GUID> &PreservedGUID) {
   for (const auto &Sym : File.symbols()) {
     if (Sym.isUsed())
-      PreservedGUID.insert(GlobalValue::getGUID(Sym.getIRName()));
+      PreservedGUID.insert(
+          GlobalValue::getGUIDAssumingExternalLinkage(Sym.getIRName()));
   }
 }
 
@@ -308,8 +309,9 @@ static void computeGUIDPreservedSymbols(const lto::InputFile &File,
   // compute the GUID for the symbol.
   for (const auto &Sym : File.symbols()) {
     if (PreservedSymbols.count(Sym.getName()) && !Sym.getIRName().empty())
-      GUIDs.insert(GlobalValue::getGUID(GlobalValue::getGlobalIdentifier(
-          Sym.getIRName(), GlobalValue::ExternalLinkage, "")));
+      GUIDs.insert(GlobalValue::getGUIDAssumingExternalLinkage(
+          GlobalValue::getGlobalIdentifier(Sym.getIRName(),
+                                           GlobalValue::ExternalLinkage, "")));
   }
 }
 
@@ -1057,8 +1059,7 @@ void ThinLTOCodeGenerator::run() {
   std::map<ValueInfo, std::vector<VTableSlotSummary>> LocalWPDTargetsMap;
   std::set<GlobalValue::GUID> ExportedGUIDs;
   runWholeProgramDevirtOnIndex(*Index, ExportedGUIDs, LocalWPDTargetsMap);
-  for (auto GUID : ExportedGUIDs)
-    GUIDPreservedSymbols.insert(GUID);
+  GUIDPreservedSymbols.insert_range(ExportedGUIDs);
 
   // Compute prevailing symbols
   DenseMap<GlobalValue::GUID, const GlobalValueSummary *> PrevailingCopy;
