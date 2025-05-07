@@ -82,9 +82,6 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char> {
   using off_type   = streamoff;
   using pos_type   = streampos;
   using state_type = mbstate_t;
-#if _LIBCPP_STD_VER >= 20
-  using comparison_category = strong_ordering;
-#endif
 
   static inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 void
   assign(char_type& __c1, const char_type& __c2) _NOEXCEPT {
@@ -175,9 +172,6 @@ struct __char_traits_base {
   using int_type   = _IntT;
   using off_type   = streamoff;
   using state_type = mbstate_t;
-#if _LIBCPP_STD_VER >= 20
-  using comparison_category = strong_ordering;
-#endif
 
   // There are different aliases for the different char types, but they are all aliases to this type
   using pos_type = fpos<mbstate_t>;
