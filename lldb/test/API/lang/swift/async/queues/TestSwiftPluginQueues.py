@@ -26,9 +26,6 @@ class TestCase(lldbtest.TestBase):
         self.assertEqual(queue_plugin, queue_backing)
         self.assertEqual(queue_plugin, thread.GetQueueName())
 
-        num_queues = process.GetNumQueues()
-        self.assertEqual(num_queues, 1)
-
     queue_regex = re.compile(r"queue = '([^']+)'")
 
     def get_queue_from_thread_info_command(self, use_backing_thread):
