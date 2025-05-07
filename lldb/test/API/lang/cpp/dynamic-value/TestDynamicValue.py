@@ -279,3 +279,54 @@ class DynamicValueTestCase(TestBase):
             "frame var -d run-target --ptr-depth=1 --show-types a",
             substrs=["(B *) a", "m_b_value = 10"],
         )
+
+    @no_debug_info_test
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24663")
+    @expectedFailureDarwin  # dynamic loader unloads modules
+    def test_from_core_file(self):
+        """Test fetching C++ dynamic values from core files. Specifically, test
+        that we can determine the dynamic type of the value if the core file
+        does not contain the type vtable."""
+        self.build()
+        lldbutil.run_to_name_breakpoint(self, "take_A")
+
+        # Get the address of our object and its vtable
+        a = self.frame().FindVariable("a")
+        self.assertSuccess(a.GetError())
+        vtable = a.GetVTable()
+        self.assertSuccess(vtable.GetError())
+        a = a.GetValueAsAddress()
+        vtable = vtable.GetValueAsAddress()
+
+        # Create a core file which will only contain the memory region
+        # containing `a`. The object is on the stack, so this will automatically
+        # include the stack of the main thread.
+        core = self.getBuildArtifact("a.dmp")
+        options = lldb.SBSaveCoreOptions()
+        options.SetPluginName("minidump")
+        options.SetStyle(lldb.eSaveCoreCustomOnly)
+        options.SetOutputFile(lldb.SBFileSpec(core))
+        region = lldb.SBMemoryRegionInfo()
+        self.assertSuccess(self.process().GetMemoryRegionInfo(a, region))
+        self.assertSuccess(options.AddMemoryRegionToSave(region))
+
+        # Save the core file and load it.
+        self.assertSuccess(self.process().SaveCore(options))
+        self.process().Kill()
+        error = lldb.SBError()
+        self.target().LoadCore(core, error)
+        self.assertSuccess(error)
+
+        # Sanity check -- the process should be able to read the object but not
+        # its vtable..
+        self.process().ReadPointerFromMemory(a, error)
+        self.assertSuccess(error)
+        self.process().ReadPointerFromMemory(vtable, error)
+        self.assertTrue(error.Fail())
+
+        # .. but we should still be able to see the dynamic type by reading the
+        # vtable from the executable file.
+        self.expect(
+            "frame var -d run-target --ptr-depth=1 --show-types a",
+            substrs=["(B *) a", "m_b_value = 10"],
+        )
