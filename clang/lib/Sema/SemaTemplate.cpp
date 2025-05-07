@@ -4372,8 +4372,43 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
   // Produce a placeholder value if the specialization is dependent.
   if (Template->getDeclContext()->isDependentContext() ||
       TemplateSpecializationType::anyDependentTemplateArguments(
-          TemplateArgs, CTAI.CanonicalConverted))
+          TemplateArgs, CTAI.CanonicalConverted)) {
+    if (ParsingInitForAutoVars.empty())
+      return DeclResult();
+
+    auto IsSameTemplateArg = [&](const TemplateArgument &Arg1,
+                                 const TemplateArgument &Arg2) {
+      return Context.isSameTemplateArgument(Arg1, Arg2);
+    };
+
+    if (VarDecl *Var = Template->getTemplatedDecl();
+        ParsingInitForAutoVars.count(Var) &&
+        llvm::equal(
+            CTAI.CanonicalConverted,
+            Template->getTemplateParameters()->getInjectedTemplateArgs(Context),
+            IsSameTemplateArg)) {
+      Diag(TemplateNameLoc,
+           diag::err_auto_variable_cannot_appear_in_own_initializer)
+          << diag::ParsingInitFor::VarTemplate << Var << Var->getType();
+      return true;
+    }
+
+    SmallVector<VarTemplatePartialSpecializationDecl *, 4> PartialSpecs;
+    Template->getPartialSpecializations(PartialSpecs);
+    for (VarTemplatePartialSpecializationDecl *Partial : PartialSpecs)
+      if (ParsingInitForAutoVars.count(Partial) &&
+          llvm::equal(CTAI.CanonicalConverted,
+                      Partial->getTemplateArgs().asArray(),
+                      IsSameTemplateArg)) {
+        Diag(TemplateNameLoc,
+             diag::err_auto_variable_cannot_appear_in_own_initializer)
+            << diag::ParsingInitFor::VarTemplatePartialSpec << Partial
+            << Partial->getType();
+        return true;
+      }
+
     return DeclResult();
+  }
 
   // Find the variable template specialization declaration that
   // corresponds to these arguments.
@@ -4381,6 +4416,20 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
   if (VarTemplateSpecializationDecl *Spec =
           Template->findSpecialization(CTAI.CanonicalConverted, InsertPos)) {
     checkSpecializationReachability(TemplateNameLoc, Spec);
+    if (Spec->getType()->isUndeducedType()) {
+      if (ParsingInitForAutoVars.count(Spec))
+        Diag(TemplateNameLoc,
+             diag::err_auto_variable_cannot_appear_in_own_initializer)
+            << diag::ParsingInitFor::VarTemplateExplicitSpec << Spec
+            << Spec->getType();
+      else
+        // We are substituting the initializer of this variable template
+        // specialization.
+        Diag(TemplateNameLoc, diag::err_var_template_spec_type_depends_on_self)
+            << Spec << Spec->getType();
+
+      return true;
+    }
     // If we already have a variable template specialization, return it.
     return Spec;
   }
