@@ -1335,7 +1335,6 @@ def AVSrc_64 : AVSrcOperand<AV_64, "OPW64">;
 def AVSrc_128 : AVSrcOperand<AV_128, "OPW128">;
 def AVSrc_192 : AVSrcOperand<AV_192, "OPW192">;
 def AVSrc_256 : AVSrcOperand<AV_256, "OPW256">;
-def AVSrc_512 : AVSrcOperand<AV_512, "OPW512">;
 
 class AVDstOperand<RegisterClass regClass, string width>
   : AVOperand<regClass, "decodeAV10", width>;
