@@ -1781,6 +1781,7 @@ private:
   bool validateMIMGD16(const MCInst &Inst);
   bool validateMIMGDim(const MCInst &Inst, const OperandVector &Operands);
   bool validateMIMGMSAA(const MCInst &Inst);
+  bool validateMIMGR128(const MCInst &Inst, const OperandVector &Operands);
   bool validateOpSel(const MCInst &Inst);
   bool validateTrue16OpSel(const MCInst &Inst);
   bool validateNeg(const MCInst &Inst, AMDGPU::OpName OpName);
@@ -3974,6 +3975,64 @@ bool AMDGPUAsmParser::validateMIMGAddrSize(const MCInst &Inst,
   return false;
 }
 
+bool AMDGPUAsmParser::validateMIMGR128(const MCInst &Inst,
+                                       const OperandVector &Operands) {
+  const unsigned Opc = Inst.getOpcode();
+  const MCInstrDesc &Desc = MII.get(Opc);
+
+  if ((Desc.TSFlags & MIMGFlags) == 0)
+    return true;
+
+  // image_bvh_intersect_ray instructions only support 128b RSRC reg
+  if (AMDGPU::getMIMGBaseOpcode(Opc)->BVH)
+    return true;
+
+  AMDGPU::OpName RSrcOpName = (Desc.TSFlags & SIInstrFlags::MIMG)
+                                  ? AMDGPU::OpName::srsrc
+                                  : AMDGPU::OpName::rsrc;
+  int SrsrcIdx = AMDGPU::getNamedOperandIdx(Opc, RSrcOpName);
+  assert(SrsrcIdx != -1);
+
+  auto RsrcReg = Inst.getOperand(SrsrcIdx).getReg();
+
+  unsigned SrsrcRegSize = 4;
+  if (getMRI()->getRegClass(AMDGPU::SReg_256_XNULLRegClassID).contains(RsrcReg))
+    SrsrcRegSize = 8;
+  else {
+    switch (RsrcReg.id()) {
+    case TTMP0_TTMP1_TTMP2_TTMP3_TTMP4_TTMP5_TTMP6_TTMP7_vi:
+    case TTMP4_TTMP5_TTMP6_TTMP7_TTMP8_TTMP9_TTMP10_TTMP11_vi:
+    case TTMP8_TTMP9_TTMP10_TTMP11_TTMP12_TTMP13_TTMP14_TTMP15_vi:
+    case TTMP0_TTMP1_TTMP2_TTMP3_TTMP4_TTMP5_TTMP6_TTMP7_gfx9plus:
+    case TTMP4_TTMP5_TTMP6_TTMP7_TTMP8_TTMP9_TTMP10_TTMP11_gfx9plus:
+    case TTMP8_TTMP9_TTMP10_TTMP11_TTMP12_TTMP13_TTMP14_TTMP15_gfx9plus:
+      SrsrcRegSize = 8;
+      break;
+    default:
+      break;
+    }
+  }
+
+  int R128Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::r128);
+  bool IsR128 =
+      (hasMIMG_R128() && R128Idx != -1 && Inst.getOperand(R128Idx).getImm());
+
+  if (SrsrcRegSize == 8 && IsR128) {
+    auto Loc = getImmLoc(AMDGPUOperand::ImmTyR128A16, Operands);
+    Error(Loc, "r128 not allowed with 256-bit RSRC reg");
+    return false;
+  } else if (SrsrcRegSize == 4 && !IsR128) {
+    auto Loc = getInstLoc(Operands);
+    if (hasMIMG_R128())
+      Error(Loc,
+            "the RSRC reg should be 256-bit, or the r128 flag is required");
+    else
+      Error(Loc, "operands are not valid for this GPU or mode");
+    return false;
+  }
+  return true;
+}
+
 bool AMDGPUAsmParser::validateMIMGAtomicDMask(const MCInst &Inst) {
 
   const unsigned Opc = Inst.getOpcode();
@@ -5191,6 +5250,9 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
           "invalid dim; must be MSAA type");
     return false;
   }
+  if (!validateMIMGR128(Inst, Operands))
+    return false;
+
   if (!validateMIMGDataSize(Inst, IDLoc)) {
     return false;
   }
@@ -9786,13 +9848,6 @@ unsigned AMDGPUAsmParser::validateTargetOperandClass(MCParsedAsmOperand &Op,
   case MCK_SReg_256:
   case MCK_SReg_512:
     return Operand.isNull() ? Match_Success : Match_InvalidOperand;
-  case MCK_SReg_RSRC: {
-    if (Operand.isReg())
-      if (Operand.isRegClass(SReg_128_XNULLRegClassID) ||
-          Operand.isRegClass(SReg_256_XNULLRegClassID))
-        return Match_Success;
-    return Match_InvalidOperand;
-  }
   default:
     return Match_InvalidOperand;
   }
