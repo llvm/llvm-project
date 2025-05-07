@@ -411,15 +411,18 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
   VPBlockBase *LatchExitVPB = LatchVPBB->getSingleSuccessor();
   assert(LatchExitVPB && "Latch expected to be left with a single successor");
 
-  // Use a temporary placeholder between LatchVPBB and LatchExitVPB, to
-  // preserve the original predecessor/successor order of the blocks.
-  auto *PlaceHolder = Plan.createVPBasicBlock("Region place holder");
-  VPBlockUtils::insertOnEdge(LatchVPBB, LatchExitVPB, PlaceHolder);
-  VPBlockUtils::disconnectBlocks(LatchVPBB, PlaceHolder);
-  VPBlockUtils::connectBlocks(PreheaderVPBB, PlaceHolder);
+  // Create an empty region first and insert it between PreheaderVPBB and
+  // LatchExitVPB, taking care to preserve the original predecessor & successor
+  // order of blocks. Set region entry and exiting after both HeaderVPB and
+  // LatchVPBB have been disconnected from their predecessors/successors.
+  auto *R = Plan.createVPRegionBlock("", false /*isReplicator*/);
 
-  auto *R = Plan.createVPRegionBlock(HeaderVPB, LatchVPBB, "",
-                                     false /*isReplicator*/);
+  VPBlockUtils::insertOnEdge(LatchVPBB, LatchExitVPB, R);
+  VPBlockUtils::disconnectBlocks(LatchVPBB, R);
+  VPBlockUtils::connectBlocks(PreheaderVPBB, R);
+  R->setEntry(HeaderVPB);
+  R->setExiting(LatchVPBB);
+
   // All VPBB's reachable shallowly from HeaderVPB belong to the current region,
   // except the exit blocks reachable via non-latch exiting blocks.
   SmallPtrSet<VPBlockBase *, 2> ExitBlocks(Plan.getExitBlocks().begin(),
@@ -427,13 +430,6 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
   for (VPBlockBase *VPBB : vp_depth_first_shallow(HeaderVPB))
     if (!ExitBlocks.contains(VPBB))
       VPBB->setParent(R);
-
-  // Have R replace PlaceHolder as successor of Preheader.
-  VPBlockUtils::insertOnEdge(PreheaderVPBB, PlaceHolder, R);
-  VPBlockUtils::disconnectBlocks(R, PlaceHolder);
-  // Have R replace PlaceHolder as predecessor of Exit.
-  VPBlockUtils::insertOnEdge(PlaceHolder, LatchExitVPB, R);
-  VPBlockUtils::disconnectBlocks(PlaceHolder, R);
 }
 
 // Add the necessary canonical IV and branch recipes required to control the
