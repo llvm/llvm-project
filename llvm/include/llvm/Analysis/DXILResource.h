@@ -16,6 +16,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DXILABI.h"
 
 namespace llvm {
@@ -286,40 +287,41 @@ private:
   dxil::ResourceKind Kind;
 
 public:
-  ResourceTypeInfo(TargetExtType *HandleTy, const dxil::ResourceClass RC,
-                   const dxil::ResourceKind Kind);
+  LLVM_ABI ResourceTypeInfo(TargetExtType *HandleTy,
+                            const dxil::ResourceClass RC,
+                            const dxil::ResourceKind Kind);
   ResourceTypeInfo(TargetExtType *HandleTy)
       : ResourceTypeInfo(HandleTy, {}, dxil::ResourceKind::Invalid) {}
 
   TargetExtType *getHandleTy() const { return HandleTy; }
-  StructType *createElementStruct();
+  LLVM_ABI StructType *createElementStruct();
 
   // Conditions to check before accessing specific views.
-  bool isUAV() const;
-  bool isCBuffer() const;
-  bool isSampler() const;
-  bool isStruct() const;
-  bool isTyped() const;
-  bool isFeedback() const;
-  bool isMultiSample() const;
+  LLVM_ABI bool isUAV() const;
+  LLVM_ABI bool isCBuffer() const;
+  LLVM_ABI bool isSampler() const;
+  LLVM_ABI bool isStruct() const;
+  LLVM_ABI bool isTyped() const;
+  LLVM_ABI bool isFeedback() const;
+  LLVM_ABI bool isMultiSample() const;
 
   // Views into the type.
-  UAVInfo getUAV() const;
-  uint32_t getCBufferSize(const DataLayout &DL) const;
-  dxil::SamplerType getSamplerType() const;
-  StructInfo getStruct(const DataLayout &DL) const;
-  TypedInfo getTyped() const;
-  dxil::SamplerFeedbackType getFeedbackType() const;
-  uint32_t getMultiSampleCount() const;
+  LLVM_ABI UAVInfo getUAV() const;
+  LLVM_ABI uint32_t getCBufferSize(const DataLayout &DL) const;
+  LLVM_ABI dxil::SamplerType getSamplerType() const;
+  LLVM_ABI StructInfo getStruct(const DataLayout &DL) const;
+  LLVM_ABI TypedInfo getTyped() const;
+  LLVM_ABI dxil::SamplerFeedbackType getFeedbackType() const;
+  LLVM_ABI uint32_t getMultiSampleCount() const;
 
   dxil::ResourceClass getResourceClass() const { return RC; }
   dxil::ResourceKind getResourceKind() const { return Kind; }
 
-  bool operator==(const ResourceTypeInfo &RHS) const;
+  LLVM_ABI bool operator==(const ResourceTypeInfo &RHS) const;
   bool operator!=(const ResourceTypeInfo &RHS) const { return !(*this == RHS); }
-  bool operator<(const ResourceTypeInfo &RHS) const;
+  LLVM_ABI bool operator<(const ResourceTypeInfo &RHS) const;
 
-  void print(raw_ostream &OS, const DataLayout &DL) const;
+  LLVM_ABI void print(raw_ostream &OS, const DataLayout &DL) const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -378,10 +380,11 @@ public:
   StringRef getName() const { return Symbol ? Symbol->getName() : ""; }
 
   bool hasSymbol() const { return Symbol; }
-  GlobalVariable *createSymbol(Module &M, StructType *Ty, StringRef Name = "");
-  MDTuple *getAsMetadata(Module &M, dxil::ResourceTypeInfo &RTI) const;
+  LLVM_ABI GlobalVariable *createSymbol(Module &M, StructType *Ty,
+                                        StringRef Name = "");
+  LLVM_ABI MDTuple *getAsMetadata(Module &M, dxil::ResourceTypeInfo &RTI) const;
 
-  std::pair<uint32_t, uint32_t>
+  LLVM_ABI std::pair<uint32_t, uint32_t>
   getAnnotateProps(Module &M, dxil::ResourceTypeInfo &RTI) const;
 
   bool operator==(const ResourceInfo &RHS) const {
@@ -393,8 +396,8 @@ public:
     return Binding < RHS.Binding;
   }
 
-  void print(raw_ostream &OS, dxil::ResourceTypeInfo &RTI,
-             const DataLayout &DL) const;
+  LLVM_ABI void print(raw_ostream &OS, dxil::ResourceTypeInfo &RTI,
+                      const DataLayout &DL) const;
 };
 
 } // namespace dxil
@@ -405,8 +408,8 @@ class DXILResourceTypeMap {
   DenseMap<TargetExtType *, dxil::ResourceTypeInfo> Infos;
 
 public:
-  bool invalidate(Module &M, const PreservedAnalyses &PA,
-                  ModuleAnalysisManager::Invalidator &Inv);
+  LLVM_ABI bool invalidate(Module &M, const PreservedAnalyses &PA,
+                           ModuleAnalysisManager::Invalidator &Inv);
 
   dxil::ResourceTypeInfo &operator[](TargetExtType *Ty) {
     auto It = Infos.find(Ty);
@@ -433,7 +436,7 @@ public:
   }
 };
 
-class DXILResourceTypeWrapperPass : public ImmutablePass {
+class LLVM_ABI DXILResourceTypeWrapperPass : public ImmutablePass {
   DXILResourceTypeMap DRTM;
 
   virtual void anchor();
@@ -446,7 +449,7 @@ public:
   const DXILResourceTypeMap &getResourceTypeMap() const { return DRTM; }
 };
 
-ModulePass *createDXILResourceTypeWrapperPassPass();
+LLVM_ABI ModulePass *createDXILResourceTypeWrapperPassPass();
 
 //===----------------------------------------------------------------------===//
 
@@ -532,8 +535,8 @@ public:
     return make_range(sampler_begin(), sampler_end());
   }
 
-  void print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
-             const DataLayout &DL) const;
+  LLVM_ABI void print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
+                      const DataLayout &DL) const;
 
   friend class DXILResourceAnalysis;
   friend class DXILResourceWrapperPass;
@@ -548,7 +551,7 @@ public:
   using Result = DXILResourceMap;
 
   /// Gather resource info for the module \c M.
-  DXILResourceMap run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI DXILResourceMap run(Module &M, ModuleAnalysisManager &AM);
 };
 
 /// Printer pass for the \c DXILResourceAnalysis results.
@@ -558,12 +561,12 @@ class DXILResourcePrinterPass : public PassInfoMixin<DXILResourcePrinterPass> {
 public:
   explicit DXILResourcePrinterPass(raw_ostream &OS) : OS(OS) {}
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
   static bool isRequired() { return true; }
 };
 
-class DXILResourceWrapperPass : public ModulePass {
+class LLVM_ABI DXILResourceWrapperPass : public ModulePass {
   std::unique_ptr<DXILResourceMap> Map;
   DXILResourceTypeMap *DRTM;
 
@@ -584,7 +587,7 @@ public:
   void dump() const;
 };
 
-ModulePass *createDXILResourceWrapperPassPass();
+LLVM_ABI ModulePass *createDXILResourceWrapperPassPass();
 
 } // namespace llvm
 
