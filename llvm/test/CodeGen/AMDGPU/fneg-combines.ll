@@ -254,8 +254,8 @@ define amdgpu_ps float @fneg_fadd_0(float inreg %tmp2, float inreg %tmp6, <4 x i
 ; GCN-NSZ-DAG: v_mul_f32_e32 [[D:v[0-9]+]], 0, [[A]]
 ; GCN-NSZ-DAG: v_cmp_ngt_f32_e32 {{.*}}, s{{[0-9]+}}, [[D]]
 ; GCN-NSZ-DAG: v_cndmask_b32_e64 [[E:v[0-9]+]], -[[D]], v{{[0-9]+}},
-; GCN-NSZ-DAG: v_cmp_nlt_f32_e32 {{.*}}, 0
-; GCN-NSZ-DAG: v_cndmask_b32_e64 v{{[0-9]+}}, [[C]], 0,
+; GCN-NSZ-DAG: v_cmp_lt_f32_e32 {{.*}}, 0
+; GCN-NSZ-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 0, v{{[0-9]+}}, vcc
 define amdgpu_ps float @fneg_fadd_0_nsz(float inreg %tmp2, float inreg %tmp6, <4 x i32> %arg) local_unnamed_addr #2 {
 .entry:
   %tmp7 = fdiv afn float 1.000000e+00, %tmp6
