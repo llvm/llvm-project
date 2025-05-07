@@ -9840,17 +9840,16 @@ class InstructionsCompatibilityAnalysis {
       // again.
       const unsigned IndexIdx = 1;
       Type *VL0Ty = VL0->getOperand(IndexIdx)->getType();
-      Type *Ty = all_of(VL,
-                        [VL0Ty](Value *V) {
-                          auto *GEP = dyn_cast<GetElementPtrInst>(V);
-                          if (!GEP)
-                            return true;
-                          return VL0Ty == GEP->getOperand(IndexIdx)->getType();
-                        })
-                     ? VL0Ty
-                     : DL.getIndexType(cast<GetElementPtrInst>(VL0)
-                                           ->getPointerOperandType()
-                                           ->getScalarType());
+      Type *Ty =
+          all_of(VL,
+                 [VL0Ty](Value *V) {
+                   auto *GEP = dyn_cast<GetElementPtrInst>(V);
+                   return !GEP || VL0Ty == GEP->getOperand(IndexIdx)->getType();
+                 })
+              ? VL0Ty
+              : DL.getIndexType(cast<GetElementPtrInst>(VL0)
+                                    ->getPointerOperandType()
+                                    ->getScalarType());
       for (auto [Idx, V] : enumerate(VL)) {
         auto *GEP = dyn_cast<GetElementPtrInst>(V);
         if (!GEP) {
