@@ -754,12 +754,12 @@ public:
       // OpenMP data-copying attribute
       OmpCopyIn, OmpCopyPrivate,
       // OpenMP miscellaneous flags
-      OmpCommonBlock, OmpReduction, OmpAligned, OmpNontemporal, OmpAllocate,
-      OmpDeclarativeAllocateDirective, OmpExecutableAllocateDirective,
-      OmpDeclareSimd, OmpDeclareTarget, OmpThreadprivate, OmpDeclareReduction,
-      OmpFlushed, OmpCriticalLock, OmpIfSpecified, OmpNone, OmpPreDetermined,
-      OmpImplicit, OmpDependObject, OmpInclusiveScan, OmpExclusiveScan,
-      OmpInScanReduction);
+      OmpCommonBlock, OmpReduction, OmpInReduction, OmpAligned, OmpNontemporal,
+      OmpAllocate, OmpDeclarativeAllocateDirective,
+      OmpExecutableAllocateDirective, OmpDeclareSimd, OmpDeclareTarget,
+      OmpThreadprivate, OmpDeclareReduction, OmpFlushed, OmpCriticalLock,
+      OmpIfSpecified, OmpNone, OmpPreDetermined, OmpImplicit, OmpDependObject,
+      OmpInclusiveScan, OmpExclusiveScan, OmpInScanReduction);
   using Flags = common::EnumSet<Flag, Flag_enumSize>;
 
   const Scope &owner() const { return *owner_; }
