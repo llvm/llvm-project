@@ -67,6 +67,11 @@ public:
 
   void LowerGETPCXAndEmitMCInsts(const MachineInstr *MI,
                                  const MCSubtargetInfo &STI);
+
+  MCOperand lowerOperand(const MachineOperand &MO) const;
+
+private:
+  void lowerToMCInst(const MachineInstr *MI, MCInst &OutMI);
 };
 } // end of anonymous namespace
 
@@ -255,6 +260,68 @@ void SparcAsmPrinter::LowerGETPCXAndEmitMCInsts(const MachineInstr *MI,
   EmitADD(*OutStreamer, MCRegOP, RegO7, MCRegOP, STI);
 }
 
+MCOperand SparcAsmPrinter::lowerOperand(const MachineOperand &MO) const {
+  switch (MO.getType()) {
+  default:
+    llvm_unreachable("unknown operand type");
+    break;
+  case MachineOperand::MO_Register:
+    if (MO.isImplicit())
+      break;
+    return MCOperand::createReg(MO.getReg());
+
+  case MachineOperand::MO_Immediate:
+    return MCOperand::createImm(MO.getImm());
+
+  case MachineOperand::MO_MachineBasicBlock:
+  case MachineOperand::MO_GlobalAddress:
+  case MachineOperand::MO_BlockAddress:
+  case MachineOperand::MO_ExternalSymbol:
+  case MachineOperand::MO_ConstantPoolIndex: {
+    SparcMCExpr::Specifier Kind = (SparcMCExpr::Specifier)MO.getTargetFlags();
+    const MCSymbol *Symbol = nullptr;
+    switch (MO.getType()) {
+    default:
+      llvm_unreachable("");
+    case MachineOperand::MO_MachineBasicBlock:
+      Symbol = MO.getMBB()->getSymbol();
+      break;
+    case MachineOperand::MO_GlobalAddress:
+      Symbol = getSymbol(MO.getGlobal());
+      break;
+    case MachineOperand::MO_BlockAddress:
+      Symbol = GetBlockAddressSymbol(MO.getBlockAddress());
+      break;
+    case MachineOperand::MO_ExternalSymbol:
+      Symbol = GetExternalSymbolSymbol(MO.getSymbolName());
+      break;
+    case MachineOperand::MO_ConstantPoolIndex:
+      Symbol = GetCPISymbol(MO.getIndex());
+      break;
+    }
+
+    const MCExpr *expr = MCSymbolRefExpr::create(Symbol, OutContext);
+    if (Kind)
+      expr = SparcMCExpr::create(Kind, expr, OutContext);
+    return MCOperand::createExpr(expr);
+  }
+
+  case MachineOperand::MO_RegisterMask:
+    break;
+  }
+  return MCOperand();
+}
+
+void SparcAsmPrinter::lowerToMCInst(const MachineInstr *MI, MCInst &OutMI) {
+  OutMI.setOpcode(MI->getOpcode());
+
+  for (const MachineOperand &MO : MI->operands()) {
+    MCOperand MCOp = lowerOperand(MO);
+    if (MCOp.isValid())
+      OutMI.addOperand(MCOp);
+  }
+}
+
 void SparcAsmPrinter::emitInstruction(const MachineInstr *MI) {
   Sparc_MC::verifyInstructionPredicates(MI->getOpcode(),
                                         getSubtargetInfo().getFeatureBits());
@@ -278,7 +345,7 @@ void SparcAsmPrinter::emitInstruction(const MachineInstr *MI) {
   MachineBasicBlock::const_instr_iterator E = MI->getParent()->instr_end();
   do {
     MCInst TmpInst;
-    LowerSparcMachineInstrToMCInst(&*I, TmpInst, *this);
+    lowerToMCInst(&*I, TmpInst);
     EmitToStreamer(*OutStreamer, TmpInst);
   } while ((++I != E) && I->isInsideBundle()); // Delay slot check.
 }
