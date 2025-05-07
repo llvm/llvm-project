@@ -408,31 +408,31 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
 
   VPBlockUtils::disconnectBlocks(PreheaderVPBB, HeaderVPB);
   VPBlockUtils::disconnectBlocks(LatchVPBB, HeaderVPB);
-  VPBlockBase *Succ = LatchVPBB->getSingleSuccessor();
-  assert(Succ && "Latch expected to be left with a single successor");
+  VPBlockBase *LatchExitVPB = LatchVPBB->getSingleSuccessor();
+  assert(LatchExitVPB && "Latch expected to be left with a single successor");
 
-  // Use a temporary placeholder between LatchVPBB and its successor, to
+  // Use a temporary placeholder between LatchVPBB and LatchExitVPB, to
   // preserve the original predecessor/successor order of the blocks.
   auto *PlaceHolder = Plan.createVPBasicBlock("Region place holder");
-  VPBlockUtils::insertOnEdge(LatchVPBB, Succ, PlaceHolder);
+  VPBlockUtils::insertOnEdge(LatchVPBB, LatchExitVPB, PlaceHolder);
   VPBlockUtils::disconnectBlocks(LatchVPBB, PlaceHolder);
   VPBlockUtils::connectBlocks(PreheaderVPBB, PlaceHolder);
 
   auto *R = Plan.createVPRegionBlock(HeaderVPB, LatchVPBB, "",
                                      false /*isReplicator*/);
   // All VPBB's reachable shallowly from HeaderVPB belong to the current region,
-  // except the exit blocks reachable via non-latch exiting blocks,
+  // except the exit blocks reachable via non-latch exiting blocks.
   SmallPtrSet<VPBlockBase *, 2> ExitBlocks(Plan.getExitBlocks().begin(),
                                            Plan.getExitBlocks().end());
   for (VPBlockBase *VPBB : vp_depth_first_shallow(HeaderVPB))
     if (!ExitBlocks.contains(VPBB))
       VPBB->setParent(R);
 
-  VPBlockUtils::insertBlockAfter(R, PreheaderVPBB);
-  VPBlockUtils::insertOnEdge(PlaceHolder, Succ, R);
-
-  // Remove placeholder block.
+  // Have R replace PlaceHolder as successor of Preheader.
+  VPBlockUtils::insertOnEdge(PreheaderVPBB, PlaceHolder, R);
   VPBlockUtils::disconnectBlocks(R, PlaceHolder);
+  // Have R replace PlaceHolder as predecessor of Exit.
+  VPBlockUtils::insertOnEdge(PlaceHolder, LatchExitVPB, R);
   VPBlockUtils::disconnectBlocks(PlaceHolder, R);
 }
 
@@ -500,10 +500,10 @@ void VPlanTransforms::prepareForVectorization(VPlan &Plan, Type *InductionTy,
                         cast<VPBasicBlock>(LatchVPB), InductionTy, IVDL);
 
   // Disconnect all edges to exit blocks other than from the middle block.
-  // TODO: VPlans with early exits should be explicitly converted to a form only
-  // exiting via the latch here, including adjusting the exit condition, instead
-  // of simplify disconnecting the edges and adjusting the VPlan later.
-  for (VPBlockBase *EB : to_vector(Plan.getExitBlocks())) {
+  // TODO: VPlans with early exits should be explicitly converted to a form
+  // exiting only via the latch here, including adjusting the exit condition,
+  // instead of simply disconnecting the edges and adjusting the VPlan later.
+  for (VPBlockBase *EB : Plan.getExitBlocks()) {
     for (VPBlockBase *Pred : to_vector(EB->getPredecessors())) {
       if (Pred == MiddleVPBB)
         continue;
