@@ -422,13 +422,11 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
   R->setEntry(HeaderVPB);
   R->setExiting(LatchVPBB);
 
-  // All VPBB's reachable shallowly from HeaderVPB belong to the current region,
-  // except the exit blocks reachable via non-latch exiting blocks.
+  // All VPBB's reachable shallowly from HeaderVPB belong to the current region.
   SmallPtrSet<VPBlockBase *, 2> ExitBlocks(Plan.getExitBlocks().begin(),
                                            Plan.getExitBlocks().end());
   for (VPBlockBase *VPBB : vp_depth_first_shallow(HeaderVPB))
-    if (!ExitBlocks.contains(VPBB))
-      VPBB->setParent(R);
+    VPBB->setParent(R);
 }
 
 // Add the necessary canonical IV and branch recipes required to control the
@@ -546,7 +544,8 @@ void VPlanTransforms::prepareForVectorization(VPlan &Plan, Type *InductionTy,
     return;
   }
 
-  // The connection order corresponds to the operands of the conditional branch.
+  // The connection order corresponds to the operands of the conditional branch,
+  // with the middle block already connected to the exit block.
   VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
 
   auto *ScalarLatchTerm = TheLoop->getLoopLatch()->getTerminator();
