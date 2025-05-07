@@ -324,7 +324,7 @@ static GenericOp packGenericOp(RewriterBase &rewriter, GenericOp genericOp,
     indexingMaps.push_back(packedIndexingMap);
   }
 
-  // If The pack and unpack op can be folded:
+  // If the pack and unpack op can be folded:
   // 1) use unpack op source op for operand to fold unpack -> pack sequence.
   // 2) init tensor of the generic op can be replaced by the destination of the
   // pack op.
@@ -469,7 +469,7 @@ bubbleUpPackOpThroughGenericOp(RewriterBase &rewriter, linalg::PackOp packOp,
                             .getDefiningOp<tensor::EmptyOp>()) {
     dest = packOpDest;
   }
-  // Here pack(unpack) isn't naively foldable because the unpack op can be from
+  // pack(unpack) isn't naively foldable because the unpack op can be from
   // an arbitrary domain so we need to keep both.
   return packGenericOp(rewriter, genericOp, dest, packedOutIndexingMap,
                        *packInfo, /*isFoldableUnpackPack=*/false);
