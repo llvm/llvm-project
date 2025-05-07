@@ -53,7 +53,7 @@ static inline Type *checkType(Type *Ty) {
 Value::Value(Type *ty, unsigned scid)
     : SubclassID(scid), HasValueHandle(0), SubclassOptionalData(0),
       SubclassData(0), NumUserOperands(0), IsUsedByMD(false), HasName(false),
-      HasMetadata(false), VTy(checkType(ty)), UseList(nullptr) {
+      HasMetadata(false), VTy(checkType(ty)) {
   static_assert(ConstantFirstVal == 0, "!(SubclassID < ConstantFirstVal)");
   // FIXME: Why isn't this in the subclass gunk??
   // Note, we cannot call isa<CallInst> before the CallInst has been
@@ -148,10 +148,14 @@ void Value::destroyValueName() {
 }
 
 bool Value::hasNUses(unsigned N) const {
+  if (!hasUseList())
+    return Uses.Count == N;
   return hasNItems(use_begin(), use_end(), N);
 }
 
 bool Value::hasNUsesOrMore(unsigned N) const {
+  if (!hasUseList())
+    return Uses.Count >= N;
   return hasNItemsOrMore(use_begin(), use_end(), N);
 }
 
@@ -232,6 +236,8 @@ void Value::dropDroppableUse(Use &U) {
 }
 
 bool Value::isUsedInBasicBlock(const BasicBlock *BB) const {
+  assert(hasUseList() && "ConstantData has no use-list");
+
   // This can be computed either by scanning the instructions in BB, or by
   // scanning the use list of this Value. Both lists can be very long, but
   // usually one is quite short.
@@ -253,6 +259,9 @@ bool Value::isUsedInBasicBlock(const BasicBlock *BB) const {
 }
 
 unsigned Value::getNumUses() const {
+  if (!hasUseList())
+    return Uses.Count;
+
   return (unsigned)std::distance(use_begin(), use_end());
 }
 
@@ -499,6 +508,7 @@ static bool contains(Value *Expr, Value *V) {
 #endif // NDEBUG
 
 void Value::doRAUW(Value *New, ReplaceMetadataUses ReplaceMetaUses) {
+  assert(hasUseList() && "Cannot replace constant data");
   assert(New && "Value::replaceAllUsesWith(<null>) is invalid!");
   assert(!contains(New, this) &&
          "this->replaceAllUsesWith(expr(this)) is NOT valid!");
@@ -512,7 +522,7 @@ void Value::doRAUW(Value *New, ReplaceMetadataUses ReplaceMetaUses) {
     ValueAsMetadata::handleRAUW(this, New);
 
   while (!materialized_use_empty()) {
-    Use &U = *UseList;
+    Use &U = *Uses.List;
     // Must handle Constants specially, we cannot call replaceUsesOfWith on a
     // constant because they are uniqued.
     if (auto *C = dyn_cast<Constant>(U.getUser())) {
@@ -844,7 +854,7 @@ bool Value::canBeFreed() const {
   // which is why we need the explicit opt in on a per collector basis.
   if (!F->hasGC())
     return true;
-  
+
   const auto &GCName = F->getGC();
   if (GCName == "statepoint-example") {
     auto *PT = cast<PointerType>(this->getType());
@@ -1092,12 +1102,12 @@ const Value *Value::DoPHITranslation(const BasicBlock *CurBB,
 LLVMContext &Value::getContext() const { return VTy->getContext(); }
 
 void Value::reverseUseList() {
-  if (!UseList || !UseList->Next)
+  if (!Uses.List || !Uses.List->Next || !hasUseList())
     // No need to reverse 0 or 1 uses.
     return;
 
-  Use *Head = UseList;
-  Use *Current = UseList->Next;
+  Use *Head = Uses.List;
+  Use *Current = Uses.List->Next;
   Head->Next = nullptr;
   while (Current) {
     Use *Next = Current->Next;
@@ -1106,8 +1116,8 @@ void Value::reverseUseList() {
     Head = Current;
     Current = Next;
   }
-  UseList = Head;
-  Head->Prev = &UseList;
+  Uses.List = Head;
+  Head->Prev = &Uses.List;
 }
 
 bool Value::isSwiftError() const {
