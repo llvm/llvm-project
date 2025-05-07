@@ -66,7 +66,7 @@ public:
 
   std::unique_ptr<llvm::AdvisoryLock> getLock(StringRef Filename) override {
     auto &CompilationMutex = [&]() -> std::shared_mutex & {
-      std::lock_guard Lock(Entries.Mutex);
+      std::lock_guard<std::mutex> Lock(Entries.Mutex);
       auto &Entry = Entries.Map[Filename];
       if (!Entry)
         Entry = std::make_unique<ModuleCacheEntry>();
@@ -77,7 +77,7 @@ public:
 
   std::time_t getModuleTimestamp(StringRef Filename) override {
     auto &Timestamp = [&]() -> std::atomic<std::time_t> & {
-      std::lock_guard Lock(Entries.Mutex);
+      std::lock_guard<std::mutex> Lock(Entries.Mutex);
       auto &Entry = Entries.Map[Filename];
       if (!Entry)
         Entry = std::make_unique<ModuleCacheEntry>();
@@ -90,7 +90,7 @@ public:
   void updateModuleTimestamp(StringRef Filename) override {
     // Note: This essentially replaces FS contention with mutex contention.
     auto &Timestamp = [&]() -> std::atomic<std::time_t> & {
-      std::lock_guard Lock(Entries.Mutex);
+      std::lock_guard<std::mutex> Lock(Entries.Mutex);
       auto &Entry = Entries.Map[Filename];
       if (!Entry)
         Entry = std::make_unique<ModuleCacheEntry>();
