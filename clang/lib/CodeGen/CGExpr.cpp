@@ -5813,7 +5813,7 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
 }
 
 static GlobalDecl getGlobalDeclForDirectCall(const FunctionDecl *FD) {
-  if (FD->hasAttr<OpenCLKernelAttr>())
+  if (FD->hasAttr<DeviceKernelAttr>())
     return GlobalDecl(FD, KernelReferenceKind::Stub);
   return GlobalDecl(FD);
 }
@@ -6235,7 +6235,7 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
   const auto *FnType = cast<FunctionType>(PointeeType);
 
   if (const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl);
-      FD && FD->hasAttr<OpenCLKernelAttr>())
+      FD && FD->hasAttr<DeviceKernelAttr>())
     CGM.getTargetCodeGenInfo().setOCLKernelStubCallingConvention(FnType);
 
   // If we are checking indirect calls and this call is indirect, check that the

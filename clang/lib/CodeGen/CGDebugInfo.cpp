@@ -1589,9 +1589,8 @@ static unsigned getDwarfCC(CallingConv CC) {
     return llvm::dwarf::DW_CC_LLVM_IntelOclBicc;
   case CC_SpirFunction:
     return llvm::dwarf::DW_CC_LLVM_SpirFunction;
-  case CC_OpenCLKernel:
-  case CC_AMDGPUKernelCall:
-    return llvm::dwarf::DW_CC_LLVM_OpenCLKernel;
+  case CC_DeviceKernel:
+    return llvm::dwarf::DW_CC_LLVM_DeviceKernel;
   case CC_Swift:
     return llvm::dwarf::DW_CC_LLVM_Swift;
   case CC_SwiftAsync:

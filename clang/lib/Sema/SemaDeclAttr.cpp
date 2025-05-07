@@ -5087,8 +5087,8 @@ static void handleGlobalAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (FD->isInlineSpecified() && !S.getLangOpts().CUDAIsDevice)
     S.Diag(FD->getBeginLoc(), diag::warn_kern_is_inline) << FD;
 
-  if (AL.getKind() == ParsedAttr::AT_NVPTXKernel)
-    D->addAttr(::new (S.Context) NVPTXKernelAttr(S.Context, AL));
+  if (AL.getKind() == ParsedAttr::AT_DeviceKernel)
+    D->addAttr(::new (S.Context) DeviceKernelAttr(S.Context, AL));
   else
     D->addAttr(::new (S.Context) CUDAGlobalAttr(S.Context, AL));
   // In host compilation the kernel is emitted as a stub function, which is
@@ -5223,9 +5223,11 @@ static void handleCallConvAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   case ParsedAttr::AT_AArch64SVEPcs:
     D->addAttr(::new (S.Context) AArch64SVEPcsAttr(S.Context, AL));
     return;
-  case ParsedAttr::AT_AMDGPUKernelCall:
-    D->addAttr(::new (S.Context) AMDGPUKernelCallAttr(S.Context, AL));
+  case ParsedAttr::AT_DeviceKernel: {
+    // The attribute should already be applied.
+    assert(D->hasAttr<DeviceKernelAttr>() && "Expected attribute");
     return;
+  }
   case ParsedAttr::AT_IntelOclBicc:
     D->addAttr(::new (S.Context) IntelOclBiccAttr(S.Context, AL));
     return;
@@ -5266,6 +5268,33 @@ static void handleCallConvAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   default:
     llvm_unreachable("unexpected attribute kind");
   }
+}
+
+static void handleDeviceKernelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  const auto *FD = dyn_cast_or_null<FunctionDecl>(D);
+  bool IsFunctionTemplate = FD && FD->getDescribedFunctionTemplate();
+  if (S.getLangOpts().SYCLIsDevice) {
+    if (!IsFunctionTemplate) {
+      S.Diag(AL.getLoc(), diag::warn_attribute_wrong_decl_type_str)
+          << AL << AL.isRegularKeywordAttribute() << "function templates";
+    } else {
+      S.SYCL().handleKernelAttr(D, AL);
+    }
+  } else if (DeviceKernelAttr::isSYCLSpelling(AL)) {
+    S.Diag(AL.getLoc(), diag::warn_attribute_ignored) << AL;
+  } else if (S.getASTContext().getTargetInfo().getTriple().isNVPTX()) {
+    handleGlobalAttr(S, D, AL);
+  } else {
+    // OpenCL C++ will throw a more specific error.
+    if (!S.getLangOpts().OpenCLCPlusPlus && (!FD || IsFunctionTemplate)) {
+      S.Diag(AL.getLoc(), diag::err_attribute_wrong_decl_type_str)
+          << AL << AL.isRegularKeywordAttribute() << "functions";
+    }
+    handleSimpleAttribute<DeviceKernelAttr>(S, D, AL);
+  }
+  // Make sure we validate the CC with the target
+  // and warn/error if necessary.
+  handleCallConvAttr(S, D, AL);
 }
 
 static void handleSuppressAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -5429,9 +5458,6 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
   case ParsedAttr::AT_AArch64SVEPcs:
     CC = CC_AArch64SVEPCS;
     break;
-  case ParsedAttr::AT_AMDGPUKernelCall:
-    CC = CC_AMDGPUKernelCall;
-    break;
   case ParsedAttr::AT_RegCall:
     CC = CC_X86RegCall;
     break;
@@ -5501,6 +5527,11 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
     }
     CC = static_cast<CallingConv>(CallingConv::CC_RISCVVLSCall_32 +
                                   llvm::Log2_64(ABIVLen) - 5);
+    break;
+  }
+  case ParsedAttr::AT_DeviceKernel: {
+    // Validation was handled in handleDeviceKernelAttr.
+    CC = CC_DeviceKernel;
     break;
   }
   default: llvm_unreachable("unexpected attribute kind");
@@ -7106,9 +7137,6 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_EnumExtensibility:
     handleEnumExtensibilityAttr(S, D, AL);
     break;
-  case ParsedAttr::AT_SYCLKernel:
-    S.SYCL().handleKernelAttr(D, AL);
-    break;
   case ParsedAttr::AT_SYCLKernelEntryPoint:
     S.SYCL().handleKernelEntryPointAttr(D, AL);
     break;
@@ -7133,7 +7161,6 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_CalledOnce:
     handleCalledOnceAttr(S, D, AL);
     break;
-  case ParsedAttr::AT_NVPTXKernel:
   case ParsedAttr::AT_CUDAGlobal:
     handleGlobalAttr(S, D, AL);
     break;
@@ -7397,12 +7424,14 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_PreserveAll:
   case ParsedAttr::AT_AArch64VectorPcs:
   case ParsedAttr::AT_AArch64SVEPcs:
-  case ParsedAttr::AT_AMDGPUKernelCall:
   case ParsedAttr::AT_M68kRTD:
   case ParsedAttr::AT_PreserveNone:
   case ParsedAttr::AT_RISCVVectorCC:
   case ParsedAttr::AT_RISCVVLSCC:
     handleCallConvAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_DeviceKernel:
+    handleDeviceKernelAttr(S, D, AL);
     break;
   case ParsedAttr::AT_Suppress:
     handleSuppressAttr(S, D, AL);
@@ -7713,9 +7742,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
 
 static bool isKernelDecl(Decl *D) {
   const FunctionType *FnTy = D->getFunctionType();
-  return D->hasAttr<OpenCLKernelAttr>() ||
-         (FnTy && FnTy->getCallConv() == CallingConv::CC_AMDGPUKernelCall) ||
-         D->hasAttr<CUDAGlobalAttr>() || D->getAttr<NVPTXKernelAttr>();
+  return D->hasAttr<DeviceKernelAttr>() ||
+         (FnTy && FnTy->getCallConv() == CallingConv::CC_DeviceKernel) ||
+         D->hasAttr<CUDAGlobalAttr>();
 }
 
 void Sema::ProcessDeclAttributeList(
@@ -7742,7 +7771,7 @@ void Sema::ProcessDeclAttributeList(
   // good to have a way to specify "these attributes must appear as a group",
   // for these. Additionally, it would be good to have a way to specify "these
   // attribute must never appear as a group" for attributes like cold and hot.
-  if (!(D->hasAttr<OpenCLKernelAttr>() ||
+  if (!(D->hasAttr<DeviceKernelAttr>() ||
         (D->hasAttr<CUDAGlobalAttr>() &&
          Context.getTargetInfo().getTriple().isSPIRV()))) {
     // These attributes cannot be applied to a non-kernel function.

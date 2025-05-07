@@ -227,7 +227,7 @@ void SPIRVTargetCodeGenInfo::setCUDAKernelCallingConvention(
   // Convert HIP kernels to SPIR-V kernels.
   if (getABIInfo().getContext().getLangOpts().HIP) {
     FT = getABIInfo().getContext().adjustFunctionType(
-        FT, FT->getExtInfo().withCallingConv(CC_OpenCLKernel));
+        FT, FT->getExtInfo().withCallingConv(CC_DeviceKernel));
     return;
   }
 }

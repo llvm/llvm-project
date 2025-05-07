@@ -337,7 +337,7 @@ WindowsMipsTargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_X86VectorCall:
     return CCCR_Ignore;
   case CC_C:
-  case CC_OpenCLKernel:
+  case CC_DeviceKernel:
   case CC_PreserveMost:
   case CC_PreserveAll:
   case CC_Swift:

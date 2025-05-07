@@ -190,8 +190,9 @@ def FunctionPointer : SubsetSubject<DeclBase,
                                     "functions pointers">;
 
 def OpenCLKernelFunction
-    : SubsetSubject<Function, [{S->hasAttr<OpenCLKernelAttr>()}],
-                    "kernel functions">;
+    : SubsetSubject<Function, [{S->getASTContext().getLangOpts().OpenCL &&
+                               S->hasAttr<DeviceKernelAttr>()}],
+                               "kernel functions">;
 
 // HasFunctionProto is a more strict version of FunctionLike, so it should
 // never be specified in a Subjects list along with FunctionLike (due to the
@@ -1498,12 +1499,6 @@ def CUDAGridConstant : InheritableAttr {
   let Documentation = [CUDAGridConstantAttrDocs];
 }
 
-def NVPTXKernel : InheritableAttr, TargetSpecificAttr<TargetNVPTX> {
-  let Spellings = [Clang<"nvptx_kernel">];
-  let Subjects = SubjectList<[Function]>;
-  let Documentation = [Undocumented];
-}
-
 def HIPManaged : InheritableAttr {
   let Spellings = [GNU<"managed">, Declspec<"__managed__">];
   let Subjects = SubjectList<[Var]>;
@@ -1538,11 +1533,44 @@ def CUDAShared : InheritableAttr {
 }
 def : MutualExclusions<[CUDAConstant, CUDAShared, HIPManaged]>;
 
-def SYCLKernel : InheritableAttr {
-  let Spellings = [Clang<"sycl_kernel">];
-  let Subjects = SubjectList<[FunctionTmpl]>;
-  let LangOpts = [SYCLDevice];
+def DeviceKernel : DeclOrTypeAttr {
+  let Spellings = [Clang<"device_kernel">, Clang<"sycl_kernel">,
+                   Clang<"nvptx_kernel">, Clang<"amdgpu_kernel">,
+                   CustomKeyword<"__kernel">, CustomKeyword<"kernel">];
+  let LangOpts = [];
   let Documentation = [SYCLKernelDocs];
+  let AdditionalMembers =
+  [{
+   inline bool isAMDGPUSpelling() const {
+     return isAMDGPUSpelling(*this);
+   }
+   template<typename T>
+   static inline bool isAMDGPUSpelling(const T& Attr) {
+     return Attr.getAttrName()->getName() == "amdgpu_kernel";
+   }
+   inline bool isNVPTXSpelling() const {
+     return isNVPTXSpelling(*this);
+   }
+   template<typename T>
+   static inline bool isNVPTXSpelling(const T& Attr) {
+     return Attr.getAttrName()->getName() == "nvptx_kernel";
+   }
+   inline bool isOpenCLSpelling() const {
+     return isOpenCLSpelling(*this);
+   }
+   template<typename T>
+   static inline bool isOpenCLSpelling(const T& Attr) {
+   return Attr.getAttrName()->getName() == "kernel" ||
+          Attr.getAttrName()->getName() == "__kernel";
+   }
+   inline bool isSYCLSpelling() const {
+     return isSYCLSpelling(*this);
+   }
+   template<typename T>
+   static inline bool isSYCLSpelling(const T& Attr) {
+     return Attr.getAttrName()->getName() == "sycl_kernel";
+   }
+}];
 }
 
 def SYCLKernelEntryPoint : InheritableAttr {
@@ -1606,15 +1634,6 @@ def Blocking : TypeAttr {
 def Allocating : TypeAttr {
   let Spellings = [Clang<"allocating">];
   let Documentation = [AllocatingDocs];
-}
-
-// Similar to CUDA, OpenCL attributes do not receive a [[]] spelling because
-// the specification does not expose them with one currently.
-def OpenCLKernel : InheritableAttr {
-  let Spellings = [CustomKeyword<"__kernel">, CustomKeyword<"kernel">];
-  let Subjects = SubjectList<[Function], ErrorDiag>;
-  let Documentation = [Undocumented];
-  let SimpleHandler = 1;
 }
 
 def OpenCLUnrollHint : StmtAttr {
@@ -2349,11 +2368,6 @@ def AMDGPUMaxNumWorkGroups : InheritableAttr {
   let Args = [ExprArgument<"MaxNumWorkGroupsX">, ExprArgument<"MaxNumWorkGroupsY", 1>, ExprArgument<"MaxNumWorkGroupsZ", 1>];
   let Documentation = [AMDGPUMaxNumWorkGroupsDocs];
   let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
-}
-
-def AMDGPUKernelCall : DeclOrTypeAttr {
-  let Spellings = [Clang<"amdgpu_kernel">];
-  let Documentation = [Undocumented];
 }
 
 def BPFPreserveAccessIndex : InheritableAttr,
