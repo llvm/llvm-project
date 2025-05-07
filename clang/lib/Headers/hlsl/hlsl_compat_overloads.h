@@ -158,6 +158,42 @@ namespace hlsl {
     return fn((float4)V1, (float4)V2, (float4)V3);                             \
   }
 
+#define _DXC_COMPAT_BINARY_VECTOR_SCALAR_OVERLOADS(fn)                         \
+  template <typename T, uint N>                                                \
+  constexpr __detail::enable_if_t<(N > 1 && N <= 4), vector<T, N>> fn(         \
+      vector<T, N> V1, T V2) {                                                 \
+    return fn(V1, (vector<T, N>)V2);                                           \
+  }                                                                            \
+  template <typename T, uint N>                                                \
+  constexpr __detail::enable_if_t<(N > 1 && N <= 4), vector<T, N>> fn(         \
+      T V1, vector<T, N> V2) {                                                 \
+    return fn((vector<T, N>)V1, V2);                                           \
+  }
+
+#define _DXC_COMPAT_TERNARY_VECTOR_SCALAR_OVERLOADS(fn)                        \
+  template <typename T, uint N>                                                \
+  constexpr __detail::enable_if_t<(N > 1 && N <= 4), vector<T, N>> fn(         \
+      T V1, vector<T, N> V2, vector<T, N> V3) {                                \
+    return fn((vector<T, N>)V1, V2, V3);                                       \
+  }                                                                            \
+  template <typename T, uint N>                                                \
+  constexpr __detail::enable_if_t<(N > 1 && N <= 4), vector<T, N>> fn(         \
+      vector<T, N> V1, T V2, vector<T, N> V3) {                                \
+    return fn(V1, (vector<T, N>)V2, V3);                                       \
+  }                                                                            \
+  template <typename T, uint N>                                                \
+  constexpr __detail::enable_if_t<(N > 1 && N <= 4), vector<T, N>> fn(         \
+      vector<T, N> V1, vector<T, N> V2, T V3) {                                \
+    return fn(V1, V2, (vector<T, N>)V3);                                       \
+  }
+
+#define _DXC_COMPAT_TERNARY_SINGLE_VECTOR_SCALAR_OVERLOADS(fn)                 \
+  template <typename T, uint N>                                                \
+  constexpr __detail::enable_if_t<(N > 1 && N <= 4), vector<T, N>> fn(         \
+      vector<T, N> V1, T V2, T V3) {                                           \
+    return fn(V1, (vector<T, N>)V2, (vector<T, N>)V3);                         \
+  }
+
 //===----------------------------------------------------------------------===//
 // acos builtins overloads
 //===----------------------------------------------------------------------===//
@@ -197,23 +233,8 @@ _DXC_COMPAT_UNARY_INTEGER_OVERLOADS(ceil)
 // clamp builtins overloads
 //===----------------------------------------------------------------------===//
 
-template <typename T, uint N>
-constexpr __detail::enable_if_t<(N > 1 && N <= 4), vector<T, N>>
-clamp(vector<T, N> p0, vector<T, N> p1, T p2) {
-  return clamp(p0, p1, (vector<T, N>)p2);
-}
-
-template <typename T, uint N>
-constexpr __detail::enable_if_t<(N > 1 && N <= 4), vector<T, N>>
-clamp(vector<T, N> p0, T p1, vector<T, N> p2) {
-  return clamp(p0, (vector<T, N>)p1, p2);
-}
-
-template <typename T, uint N>
-constexpr __detail::enable_if_t<(N > 1 && N <= 4), vector<T, N>>
-clamp(vector<T, N> p0, T p1, T p2) {
-  return clamp(p0, (vector<T, N>)p1, (vector<T, N>)p2);
-}
+_DXC_COMPAT_TERNARY_VECTOR_SCALAR_OVERLOADS(clamp)
+_DXC_COMPAT_TERNARY_SINGLE_VECTOR_SCALAR_OVERLOADS(clamp)
 
 //===----------------------------------------------------------------------===//
 // cos builtins overloads
@@ -235,6 +256,22 @@ _DXC_COMPAT_UNARY_INTEGER_OVERLOADS(cosh)
 
 _DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(degrees)
 _DXC_COMPAT_UNARY_INTEGER_OVERLOADS(degrees)
+
+//===----------------------------------------------------------------------===//
+// dot builtins overloads
+//===----------------------------------------------------------------------===//
+
+template <typename T, uint N>
+constexpr __detail::enable_if_t<(N > 1 && N <= 4), T> dot(
+    vector<T, N> V1, T V2) {
+  return dot(V1, (vector<T, N>)V2);
+}
+
+template <typename T, uint N>
+constexpr __detail::enable_if_t<(N > 1 && N <= 4), T> dot(
+    T V1, vector<T, N> V2) {
+  return dot((vector<T, N>)V1, V2);
+}
 
 //===----------------------------------------------------------------------===//
 // exp builtins overloads
@@ -277,14 +314,10 @@ constexpr bool4 isinf(double4 V) { return isinf((float4)V); }
 // lerp builtins overloads
 //===----------------------------------------------------------------------===//
 
-template <typename T, uint N>
-constexpr __detail::enable_if_t<(N > 1 && N <= 4), vector<T, N>>
-lerp(vector<T, N> x, vector<T, N> y, T s) {
-  return lerp(x, y, (vector<T, N>)s);
-}
-
 _DXC_COMPAT_TERNARY_DOUBLE_OVERLOADS(lerp)
 _DXC_COMPAT_TERNARY_INTEGER_OVERLOADS(lerp)
+_DXC_COMPAT_TERNARY_VECTOR_SCALAR_OVERLOADS(lerp)
+_DXC_COMPAT_TERNARY_SINGLE_VECTOR_SCALAR_OVERLOADS(lerp)
 
 //===----------------------------------------------------------------------===//
 // log builtins overloads
@@ -311,33 +344,13 @@ _DXC_COMPAT_UNARY_INTEGER_OVERLOADS(log2)
 // max builtins overloads
 //===----------------------------------------------------------------------===//
 
-template <typename T, uint N>
-constexpr __detail::enable_if_t<(N > 1 && N <= 4), vector<T, N>>
-max(vector<T, N> p0, T p1) {
-  return max(p0, (vector<T, N>)p1);
-}
-
-template <typename T, uint N>
-constexpr __detail::enable_if_t<(N > 1 && N <= 4), vector<T, N>>
-max(T p0, vector<T, N> p1) {
-  return max((vector<T, N>)p0, p1);
-}
+_DXC_COMPAT_BINARY_VECTOR_SCALAR_OVERLOADS(max)
 
 //===----------------------------------------------------------------------===//
 // min builtins overloads
 //===----------------------------------------------------------------------===//
 
-template <typename T, uint N>
-constexpr __detail::enable_if_t<(N > 1 && N <= 4), vector<T, N>>
-min(vector<T, N> p0, T p1) {
-  return min(p0, (vector<T, N>)p1);
-}
-
-template <typename T, uint N>
-constexpr __detail::enable_if_t<(N > 1 && N <= 4), vector<T, N>>
-min(T p0, vector<T, N> p1) {
-  return min((vector<T, N>)p0, p1);
-}
+_DXC_COMPAT_BINARY_VECTOR_SCALAR_OVERLOADS(min)
 
 //===----------------------------------------------------------------------===//
 // normalize builtins overloads
@@ -352,6 +365,7 @@ _DXC_COMPAT_UNARY_INTEGER_OVERLOADS(normalize)
 
 _DXC_COMPAT_BINARY_DOUBLE_OVERLOADS(pow)
 _DXC_COMPAT_BINARY_INTEGER_OVERLOADS(pow)
+_DXC_COMPAT_BINARY_VECTOR_SCALAR_OVERLOADS(pow)
 
 //===----------------------------------------------------------------------===//
 // rsqrt builtins overloads
