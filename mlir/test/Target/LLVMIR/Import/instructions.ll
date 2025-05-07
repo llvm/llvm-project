@@ -743,3 +743,19 @@ bb2:
 declare void @g(...)
 
 declare i32 @__gxx_personality_v0(...)
+
+; // -----
+
+; CHECK-LABEL: llvm.func @incompatible_call_and_callee_types
+define void @incompatible_call_and_callee_types() {
+  ; CHECK: %[[CST:.*]] = llvm.mlir.constant(0 : i64) : i64
+  ; CHECK: %[[TARGET:.*]] = llvm.mlir.addressof @callee : !llvm.ptr
+  ; CHECK: llvm.call %[[TARGET]](%[[CST]]) : !llvm.ptr, (i64) -> ()
+  call void @callee(i64 0)
+  ; CHECK: llvm.return
+  ret void
+}
+
+define void @callee({ptr, i64}, i32) {
+  ret void
+}
