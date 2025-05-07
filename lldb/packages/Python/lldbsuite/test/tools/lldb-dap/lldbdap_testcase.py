@@ -340,7 +340,7 @@ class DAPTestCaseBase(TestBase):
         exitCommands=None,
         attachCommands=None,
         coreFile=None,
-        stopOnAttach=True,
+        stopOnAttach=False,
         disconnectAutomatically=True,
         terminateCommands=None,
         postRunCommands=None,
