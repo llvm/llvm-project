@@ -66,15 +66,25 @@ Error LaunchRequestHandler::Run(const LaunchRequestArguments &arguments) const {
 }
 
 void LaunchRequestHandler::PostRun() const {
-  if (dap.target.GetProcess().IsValid()) {
-    // Attach happens when launching with runInTerminal.
-    SendProcessEvent(dap, dap.is_attach ? Attach : Launch);
+  if (!dap.target.GetProcess().IsValid())
+    return;
 
-    if (dap.stop_at_entry)
-      SendThreadStoppedEvent(dap);
-    else
-      dap.target.GetProcess().Continue();
-  }
+  // Clients can request a baseline of currently existing threads after
+  // we acknowledge the configurationDone request.
+  // Client requests the baseline of currently existing threads after
+  // a successful or attach by sending a 'threads' request
+  // right after receiving the configurationDone response.
+  // Obtain the list of threads before we resume the process
+  dap.initial_thread_list =
+      GetThreads(dap.target.GetProcess(), dap.thread_format);
+
+  // Attach happens when launching with runInTerminal.
+  SendProcessEvent(dap, dap.is_attach ? Attach : Launch);
+
+  if (dap.stop_at_entry)
+    SendThreadStoppedEvent(dap);
+  else
+    dap.target.GetProcess().Continue();
 }
 
 } // namespace lldb_dap

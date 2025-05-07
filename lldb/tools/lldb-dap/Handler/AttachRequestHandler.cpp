@@ -78,34 +78,7 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
     // Perform the launch in synchronous mode so that we don't have to worry
     // about process state changes during the launch.
     ScopeSyncMode scope_sync_mode(dap.debugger);
-    if (args.attachCommands.empty()) {
-      // No "attachCommands", just attach normally.
-      if (args.coreFile.empty()) {
-        if (args.gdbRemotePort != LLDB_DAP_INVALID_PORT) {
-          // If port is specified and pid is not.
-          lldb::SBListener listener = dap.debugger.GetListener();
-
-          // If the user hasn't provided the hostname property, default
-          // localhost being used.
-          std::string connect_url =
-              llvm::formatv("connect://{0}:", args.gdbRemoteHostname);
-          connect_url += std::to_string(args.gdbRemotePort);
-          dap.target.ConnectRemote(listener, connect_url.c_str(), "gdb-remote",
-                                   error);
-        } else {
-          // Attach by pid or process name.
-          lldb::SBAttachInfo attach_info;
-          if (args.pid != LLDB_INVALID_PROCESS_ID)
-            attach_info.SetProcessID(args.pid);
-          else if (!dap.configuration.program.empty())
-            attach_info.SetExecutable(dap.configuration.program.data());
-          attach_info.SetWaitForLaunch(args.waitFor, false /*async*/);
-          dap.target.Attach(attach_info, error);
-        }
-      } else {
-        dap.target.LoadCore(args.coreFile.data(), error);
-      }
-    } else {
+    if (!args.attachCommands.empty()) {
       // We have "attachCommands" that are a set of commands that are expected
       // to execute the commands after which a process should be created. If
       // there is no valid process after running these commands, we have failed.
@@ -115,6 +88,28 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
       // The custom commands might have created a new target so we should use
       // the selected target after these commands are run.
       dap.target = dap.debugger.GetSelectedTarget();
+    } else if (!args.coreFile.empty()) {
+      dap.target.LoadCore(args.coreFile.data(), error);
+    } else if (args.gdbRemotePort != LLDB_DAP_INVALID_PORT) {
+      // If port is specified and pid is not.
+      lldb::SBListener listener = dap.debugger.GetListener();
+
+      // If the user hasn't provided the hostname property, default
+      // localhost being used.
+      std::string connect_url =
+          llvm::formatv("connect://{0}:", args.gdbRemoteHostname);
+      connect_url += std::to_string(args.gdbRemotePort);
+      dap.target.ConnectRemote(listener, connect_url.c_str(), "gdb-remote",
+                               error);
+    } else {
+      // Attach by pid or process name.
+      lldb::SBAttachInfo attach_info;
+      if (args.pid != LLDB_INVALID_PROCESS_ID)
+        attach_info.SetProcessID(args.pid);
+      else if (!dap.configuration.program.empty())
+        attach_info.SetExecutable(dap.configuration.program.data());
+      attach_info.SetWaitForLaunch(args.waitFor, false /*async*/);
+      dap.target.Attach(attach_info, error);
     }
   }
 
