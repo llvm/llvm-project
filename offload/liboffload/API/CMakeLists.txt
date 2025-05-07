@@ -21,7 +21,7 @@ if (CLANG_FORMAT)
     add_custom_command(TARGET OffloadGenerate POST_BUILD COMMAND ${CMAKE_COMMAND}
         -E copy_if_different ${FILES_TO_COPY} ${GEN_DIR})
     add_custom_command(TARGET OffloadGenerate POST_BUILD COMMAND ${CMAKE_COMMAND}
-        -E copy_if_different OffloadErrcodes.inc "${LIBOFFLOAD_ROOT}/../plugins-nextgen/common/include/OffloadErrcodes.inc")
+        -E copy_if_different OffloadErrcodes.inc "${LIBOMPTARGET_INCLUDE_DIR}/Shared/OffloadErrcodes.inc")
 else()
     message(WARNING "clang-format was not found, so the OffloadGenerate target\
         will not be available. Offload will still build, but you will not be\

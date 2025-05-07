@@ -13,9 +13,9 @@ using namespace llvm;
 using namespace llvm::omp::target::plugin;
 
 namespace {
-// FIXME: This class is only here to support the transition to llvm::Error. It
-// will be removed once this transition is complete. Clients should prefer to
-// deal with the Error value directly, rather than converting to error_code.
+// OffloadError inherits from llvm::StringError which requires a
+// std::error_code. Once/if that requirement is removed, then this
+// std::error_code machinery can be removed.
 class OffloadErrorCategory : public std::error_category {
 public:
   const char *name() const noexcept override { return "llvm.offload"; }
@@ -24,7 +24,7 @@ public:
 #define OFFLOAD_ERRC(Name, Desc, Value)                                        \
   case ErrorCode::Name:                                                        \
     return #Desc;
-#include "OffloadErrcodes.inc"
+#include "Shared/OffloadErrcodes.inc"
 #undef OFFLOAD_ERRC
     }
     llvm_unreachable("Unrecognized offload ErrorCode");
