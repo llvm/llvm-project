@@ -135,9 +135,9 @@ SparcMCExpr::Specifier SparcMCExpr::parseSpecifier(StringRef name) {
       .Default(VK_None);
 }
 
-Sparc::Fixups SparcMCExpr::getFixupKind(SparcMCExpr::Specifier S) {
+uint16_t SparcMCExpr::getFixupKind() const {
   // clang-format off
-  switch (S) {
+  switch (specifier) {
   default: llvm_unreachable("Unhandled SparcMCExpr::Specifier");
   case VK_LO:            return Sparc::fixup_sparc_lo10;
   case VK_HI:            return Sparc::fixup_sparc_hi22;
@@ -149,9 +149,9 @@ Sparc::Fixups SparcMCExpr::getFixupKind(SparcMCExpr::Specifier S) {
   case VK_LM:            return Sparc::fixup_sparc_lm;
   case VK_PC22:          return Sparc::fixup_sparc_pc22;
   case VK_PC10:          return Sparc::fixup_sparc_pc10;
-  case VK_GOT22:         return Sparc::fixup_sparc_got22;
-  case VK_GOT10:         return Sparc::fixup_sparc_got10;
-  case VK_GOT13:         return Sparc::fixup_sparc_got13;
+  case VK_GOT22:         return ELF::R_SPARC_GOT22;
+  case VK_GOT10:         return ELF::R_SPARC_GOT10;
+  case VK_GOT13:         return ELF::R_SPARC_GOT13;
   case VK_13:            return Sparc::fixup_sparc_13;
   case VK_WPLT30:        return Sparc::fixup_sparc_wplt30;
   case VK_WDISP30:       return Sparc::fixup_sparc_call30;
