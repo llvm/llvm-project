@@ -387,7 +387,7 @@ public:
     return (Desc.TSFlags & X86II::OpPrefixMask) == X86II::PD;
   }
 
-  bool shouldRecordCodeRelocation(uint64_t RelType) const override {
+  bool shouldRecordCodeRelocation(uint32_t RelType) const override {
     switch (RelType) {
     case ELF::R_X86_64_8:
     case ELF::R_X86_64_16:
@@ -1605,7 +1605,7 @@ public:
     return true;
   }
 
-  InstructionListType createIndirectPltCall(const MCInst &DirectCall,
+  InstructionListType createIndirectPLTCall(MCInst &&DirectCall,
                                             const MCSymbol *TargetLocation,
                                             MCContext *Ctx) override {
     assert((DirectCall.getOpcode() == X86::CALL64pcrel32 ||
@@ -1796,17 +1796,7 @@ public:
     if (!Op.isExpr())
       return nullptr;
 
-    auto *SymExpr = dyn_cast<MCSymbolRefExpr>(Op.getExpr());
-    if (!SymExpr || SymExpr->getKind() != MCSymbolRefExpr::VK_None)
-      return nullptr;
-
-    return &SymExpr->getSymbol();
-  }
-
-  // This is the same as the base class, but since we are overriding one of
-  // getTargetSymbol's signatures above, we need to override all of them.
-  const MCSymbol *getTargetSymbol(const MCExpr *Expr) const override {
-    return &cast<const MCSymbolRefExpr>(Expr)->getSymbol();
+    return MCPlusBuilder::getTargetSymbol(Op.getExpr());
   }
 
   bool analyzeBranch(InstructionIterator Begin, InstructionIterator End,
@@ -1866,13 +1856,23 @@ public:
     return true;
   }
 
+  /// Analyzes PIC-style jump table code template and return identified
+  /// IndirectBranchType, MemLocInstr (all cases) and FixedEntryLoadInstr
+  /// (POSSIBLE_PIC_FIXED_BRANCH case).
   template <typename Itr>
-  std::pair<IndirectBranchType, MCInst *>
+  std::tuple<IndirectBranchType, MCInst *, MCInst *>
   analyzePICJumpTable(Itr II, Itr IE, MCPhysReg R1, MCPhysReg R2) const {
     // Analyze PIC-style jump table code template:
     //
     //    lea PIC_JUMP_TABLE(%rip), {%r1|%r2}     <- MemLocInstr
     //    mov ({%r1|%r2}, %index, 4), {%r2|%r1}
+    //    add %r2, %r1
+    //    jmp *%r1
+    //
+    // or a fixed indirect jump template:
+    //
+    //    movslq En(%rip), {%r2|%r1}              <- FixedEntryLoadInstr
+    //    lea PIC_JUMP_TABLE(%rip), {%r1|%r2}     <- MemLocInstr
     //    add %r2, %r1
     //    jmp *%r1
     //
@@ -1916,8 +1916,13 @@ public:
              MO.SegRegNum == X86::NoRegister;
     };
     LLVM_DEBUG(dbgs() << "Checking for PIC jump table\n");
-    MCInst *MemLocInstr = nullptr;
-    const MCInst *MovInstr = nullptr;
+    MCInst *FirstInstr = nullptr;
+    MCInst *SecondInstr = nullptr;
+    enum {
+      NOMATCH = 0,
+      MATCH_JUMP_TABLE,
+      MATCH_FIXED_BRANCH,
+    } MatchingState = NOMATCH;
     while (++II != IE) {
       MCInst &Instr = *II;
       const MCInstrDesc &InstrDesc = Info->get(Instr.getOpcode());
@@ -1926,68 +1931,76 @@ public:
         // Ignore instructions that don't affect R1, R2 registers.
         continue;
       }
-      if (!MovInstr) {
-        // Expect to see MOV instruction.
-        if (!isMOVSX64rm32(Instr)) {
-          LLVM_DEBUG(dbgs() << "MOV instruction expected.\n");
+      const bool IsMOVSXInstr = isMOVSX64rm32(Instr);
+      const bool IsLEAInstr = isLEA64r(Instr);
+      if (MatchingState == NOMATCH) {
+        if (IsMOVSXInstr)
+          MatchingState = MATCH_JUMP_TABLE;
+        else if (IsLEAInstr)
+          MatchingState = MATCH_FIXED_BRANCH;
+        else
           break;
-        }
 
-        // Check if it's setting %r1 or %r2. In canonical form it sets %r2.
-        // If it sets %r1 - rename the registers so we have to only check
-        // a single form.
-        unsigned MovDestReg = Instr.getOperand(0).getReg();
-        if (MovDestReg != R2)
+        // Check if the first instruction is setting %r1 or %r2. In canonical
+        // form lea sets %r1 and mov sets %r2. If it's the opposite - rename so
+        // we have to only check a single form.
+        unsigned DestReg = Instr.getOperand(0).getReg();
+        MCPhysReg &ExpectReg = MatchingState == MATCH_JUMP_TABLE ? R2 : R1;
+        if (DestReg != ExpectReg)
           std::swap(R1, R2);
-        if (MovDestReg != R2) {
-          LLVM_DEBUG(dbgs() << "MOV instruction expected to set %r2\n");
+        if (DestReg != ExpectReg)
           break;
-        }
 
-        // Verify operands for MOV.
+        // Verify operands
         std::optional<X86MemOperand> MO = evaluateX86MemoryOperand(Instr);
         if (!MO)
           break;
-        if (!isIndexed(*MO, R1))
-          // POSSIBLE_PIC_JUMP_TABLE
+        if ((MatchingState == MATCH_JUMP_TABLE && isIndexed(*MO, R1)) ||
+            (MatchingState == MATCH_FIXED_BRANCH && isRIPRel(*MO)))
+          FirstInstr = &Instr;
+        else
           break;
-        MovInstr = &Instr;
       } else {
-        if (!InstrDesc.hasDefOfPhysReg(Instr, R1, *RegInfo))
+        unsigned ExpectReg = MatchingState == MATCH_JUMP_TABLE ? R1 : R2;
+        if (!InstrDesc.hasDefOfPhysReg(Instr, ExpectReg, *RegInfo))
           continue;
-        if (!isLEA64r(Instr)) {
-          LLVM_DEBUG(dbgs() << "LEA instruction expected\n");
+        if ((MatchingState == MATCH_JUMP_TABLE && !IsLEAInstr) ||
+            (MatchingState == MATCH_FIXED_BRANCH && !IsMOVSXInstr))
           break;
-        }
-        if (Instr.getOperand(0).getReg() != R1) {
-          LLVM_DEBUG(dbgs() << "LEA instruction expected to set %r1\n");
+        if (Instr.getOperand(0).getReg() != ExpectReg)
           break;
-        }
 
-        // Verify operands for LEA.
+        // Verify operands.
         std::optional<X86MemOperand> MO = evaluateX86MemoryOperand(Instr);
         if (!MO)
           break;
         if (!isRIPRel(*MO))
           break;
-        MemLocInstr = &Instr;
+        SecondInstr = &Instr;
         break;
       }
     }
 
-    if (!MemLocInstr)
-      return std::make_pair(IndirectBranchType::UNKNOWN, nullptr);
+    if (!SecondInstr)
+      return std::make_tuple(IndirectBranchType::UNKNOWN, nullptr, nullptr);
 
+    if (MatchingState == MATCH_FIXED_BRANCH) {
+      LLVM_DEBUG(dbgs() << "checking potential fixed indirect branch\n");
+      return std::make_tuple(IndirectBranchType::POSSIBLE_PIC_FIXED_BRANCH,
+                             FirstInstr, SecondInstr);
+    }
     LLVM_DEBUG(dbgs() << "checking potential PIC jump table\n");
-    return std::make_pair(IndirectBranchType::POSSIBLE_PIC_JUMP_TABLE,
-                          MemLocInstr);
+    return std::make_tuple(IndirectBranchType::POSSIBLE_PIC_JUMP_TABLE,
+                           SecondInstr, nullptr);
   }
 
-  IndirectBranchType analyzeIndirectBranch(
-      MCInst &Instruction, InstructionIterator Begin, InstructionIterator End,
-      const unsigned PtrSize, MCInst *&MemLocInstrOut, unsigned &BaseRegNumOut,
-      unsigned &IndexRegNumOut, int64_t &DispValueOut,
-      const MCExpr *&DispExprOut, MCInst *&PCRelBaseOut) const override {
+  IndirectBranchType
+  analyzeIndirectBranch(MCInst &Instruction, InstructionIterator Begin,
+                        InstructionIterator End, const unsigned PtrSize,
+                        MCInst *&MemLocInstrOut, unsigned &BaseRegNumOut,
+                        unsigned &IndexRegNumOut, int64_t &DispValueOut,
+                        const MCExpr *&DispExprOut, MCInst *&PCRelBaseOut,
+                        MCInst *&FixedEntryLoadInst) const override {
     // Try to find a (base) memory location from where the address for
     // the indirect branch is loaded. For X86-64 the memory will be specified
     // in the following format:
@@ -2014,6 +2027,7 @@ public:
     IndexRegNumOut = X86::NoRegister;
     DispValueOut = 0;
     DispExprOut = nullptr;
+    FixedEntryLoadInst = nullptr;
 
     std::reverse_iterator<InstructionIterator> II(End);
     std::reverse_iterator<InstructionIterator> IE(Begin);
@@ -2046,7 +2060,8 @@ public:
           unsigned R2 = PrevInstr.getOperand(2).getReg();
           if (R1 == R2)
             return IndirectBranchType::UNKNOWN;
-          std::tie(Type, MemLocInstr) = analyzePICJumpTable(PrevII, IE, R1, R2);
+          std::tie(Type, MemLocInstr, FixedEntryLoadInst) =
+              analyzePICJumpTable(PrevII, IE, R1, R2);
           break;
         }
         return IndirectBranchType::UNKNOWN;
@@ -2089,6 +2104,8 @@ public:
     case IndirectBranchType::POSSIBLE_PIC_JUMP_TABLE:
       if (MO->ScaleImm != 1 || MO->BaseRegNum != RIPRegister)
         return IndirectBranchType::UNKNOWN;
+      break;
+    case IndirectBranchType::POSSIBLE_PIC_FIXED_BRANCH:
       break;
     default:
       if (MO->ScaleImm != PtrSize)
@@ -2409,15 +2426,27 @@ public:
     return Code;
   }
 
+  InstructionListType createCmpJNE(MCPhysReg RegNo, int64_t Imm,
+                                   const MCSymbol *Target,
+                                   MCContext *Ctx) const override {
+    InstructionListType Code;
+    Code.emplace_back(MCInstBuilder(X86::CMP64ri8).addReg(RegNo).addImm(Imm));
+    Code.emplace_back(MCInstBuilder(X86::JCC_1)
+                          .addExpr(MCSymbolRefExpr::create(
+                              Target, MCSymbolRefExpr::VK_None, *Ctx))
+                          .addImm(X86::COND_NE));
+    return Code;
+  }
+
   std::optional<Relocation>
   createRelocation(const MCFixup &Fixup,
                    const MCAsmBackend &MAB) const override {
-    const MCFixupKindInfo &FKI = MAB.getFixupKindInfo(Fixup.getKind());
+    MCFixupKindInfo FKI = MAB.getFixupKindInfo(Fixup.getKind());
 
     assert(FKI.TargetOffset == 0 && "0-bit relocation offset expected");
     const uint64_t RelOffset = Fixup.getOffset();
 
-    uint64_t RelType;
+    uint32_t RelType;
     if (FKI.Flags & MCFixupKindInfo::FKF_IsPCRel) {
       switch (FKI.TargetSize) {
       default:
@@ -2445,7 +2474,7 @@ public:
 
   bool replaceImmWithSymbolRef(MCInst &Inst, const MCSymbol *Symbol,
                                int64_t Addend, MCContext *Ctx, int64_t &Value,
-                               uint64_t RelType) const override {
+                               uint32_t RelType) const override {
     unsigned ImmOpNo = -1U;
 
     for (unsigned Index = 0; Index < MCPlus::getNumPrimeOperands(Inst);
@@ -3238,12 +3267,6 @@ public:
                                              MCContext *Ctx) override {
     InstructionListType Insts(1);
     createUncondBranch(Insts[0], TgtSym, Ctx);
-    return Insts;
-  }
-
-  InstructionListType createDummyReturnFunction(MCContext *Ctx) const override {
-    InstructionListType Insts(1);
-    createReturn(Insts[0]);
     return Insts;
   }
 

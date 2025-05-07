@@ -7,10 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: no-threads
-// UNSUPPORTED: c++03, c++11
-
-// Until we drop support for the synchronization library in C++11/14/17
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // <latch>
 

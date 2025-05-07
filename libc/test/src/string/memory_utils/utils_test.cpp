@@ -7,10 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/array.h"
+#include "src/__support/macros/config.h"
 #include "src/string/memory_utils/utils.h"
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 using UINT = uintptr_t;
 
@@ -46,11 +47,11 @@ TEST(LlvmLibcUtilsTest, DistanceToAlignDown) {
 TEST(LlvmLibcUtilsTest, Adjust2) {
   char a, b;
   const size_t base_size = 10;
-  for (ptrdiff_t I = -2; I < 2; ++I) {
+  for (uintptr_t I = 0; I < 4; ++I) {
     auto *p1 = &a;
     auto *p2 = &b;
     size_t size = base_size;
-    adjust(I, p1, p2, size);
+    adjust(static_cast<ptrdiff_t>(I), p1, p2, size);
     EXPECT_EQ(intptr_t(p1), intptr_t(&a + I));
     EXPECT_EQ(intptr_t(p2), intptr_t(&b + I));
     EXPECT_EQ(size, base_size - I);
@@ -137,4 +138,4 @@ TEST(LlvmLibcUtilsTest, LoadStoreAligned) {
   }
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

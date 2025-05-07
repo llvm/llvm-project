@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_VECTOR_UTILS_VECTORUTILS_H_
 #define MLIR_DIALECT_VECTOR_UTILS_VECTORUTILS_H_
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
@@ -101,6 +102,29 @@ bool isContiguousSlice(MemRefType memrefType, VectorType vectorType);
 std::optional<StaticTileOffsetRange>
 createUnrollIterator(VectorType vType, int64_t targetRank = 1);
 
+/// Returns a functor (int64_t -> Value) which returns a constant vscale
+/// multiple.
+///
+/// Example:
+/// ```c++
+/// auto createVscaleMultiple = makeVscaleConstantBuilder(rewriter, loc);
+/// auto c4Vscale = createVscaleMultiple(4); // 4 * vector.vscale
+/// ```
+inline auto makeVscaleConstantBuilder(PatternRewriter &rewriter, Location loc) {
+  Value vscale = nullptr;
+  return [loc, vscale, &rewriter](int64_t multiplier) mutable {
+    if (!vscale)
+      vscale = rewriter.create<vector::VectorScaleOp>(loc);
+    return rewriter.create<arith::MulIOp>(
+        loc, vscale, rewriter.create<arith::ConstantIndexOp>(loc, multiplier));
+  };
+}
+
+/// Returns a range over the dims (size and scalability) of a VectorType.
+inline auto getDims(VectorType vType) {
+  return llvm::zip_equal(vType.getShape(), vType.getScalableDims());
+}
+
 /// A wrapper for getMixedSizes for vector.transfer_read and
 /// vector.transfer_write Ops (for source and destination, respectively).
 ///
@@ -187,21 +211,18 @@ public:
 /// are not linearizable.
 bool isLinearizableVector(VectorType type);
 
-/// Create a TransferReadOp from `source` with static shape `readShape`. If the
-/// vector type for the read is not the same as the type of `source`, then a
-/// mask is created on the read, if use of mask is specified or the bounds on a
-/// dimension are different.
+/// Creates a TransferReadOp from `source`.
 ///
-/// `useInBoundsInsteadOfMasking` if false, the inBoundsVal values are set
-/// properly, based on
-///   the rank dimensions of the source and destination tensors. And that is
-///   what determines if masking is done.
+/// The shape of the vector to read is specified via `inputVectorSizes`. If the
+/// shape of the output vector differs from the shape of the value being read,
+/// masking is used to avoid out-of-bounds accesses. Set
+/// `useInBoundsInsteadOfMasking` to `true` to use the "in_bounds" attribute
+/// instead of explicit masks.
 ///
-/// Note that the internal `vector::TransferReadOp` always read at indices zero
-/// for each dimension of the passed in tensor.
+/// Note: all read offsets are set to 0.
 Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
-                             ArrayRef<int64_t> readShape, Value padValue,
-                             bool useInBoundsInsteadOfMasking);
+                             ArrayRef<int64_t> inputVectorSizes, Value padValue,
+                             bool useInBoundsInsteadOfMasking = false);
 
 /// Returns success if `inputVectorSizes` is a valid masking configuraion for
 /// given `shape`, i.e., it meets:

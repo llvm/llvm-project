@@ -1,7 +1,7 @@
 ; All OpVariable instructions in a function must be the first instructions in the first block
 
-; RUN: llc -O0 -mtriple=spirv-unknown-linux %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-linux %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -O0 -mtriple=spirv32-unknown-linux %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-linux %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV: OpFunction
 ; CHECK-SPIRV-NEXT: OpLabel

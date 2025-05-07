@@ -10,7 +10,7 @@ fmv.x.w s0, s1 # CHECK: :[[@LINE]]:13: error: invalid operand for instruction
 fadd.d t1, t3, t5 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zdinx' (Double in Integer){{$}}
 
 # Invalid register names
-fadd.d a100, a2, a3 # CHECK: :[[@LINE]]:8: error: invalid operand for instruction
+fadd.s a100, a2, a3 # CHECK: :[[@LINE]]:8: error: invalid operand for instruction
 fsgnjn.s a100, a2, a3 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
 
 # Rounding mode when a register is expected
@@ -22,4 +22,7 @@ fmsub.s x14, x15, x16, x17, 0 # CHECK: :[[@LINE]]:29: error: operand must be a v
 fnmsub.s x18, x19, x20, x21, 0b111 # CHECK: :[[@LINE]]:30: error: operand must be a valid floating point rounding mode mnemonic
 
 # Using 'Zdinx' instructions for an 'Zfinx'-only target
-fadd.d t0, t1, t2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zdinx' (Double in Integer){{$}}
+# odd registers report incorrect registers
+fadd.d t0, t1, t2 # CHECK: :[[@LINE]]:8: error: double precision floating point operands must use even numbered X register
+# even registers report the required extension
+fadd.d t3, t1, t5 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zdinx' (Double in Integer){{$}}

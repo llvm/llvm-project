@@ -6,6 +6,14 @@
 // RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,cxx17,cxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++23
 // RUN: %clang_cc1 -fsyntax-only -verify=expected,since-cxx26,cxx17,cxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++2c
 
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,precxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++98 -fexperimental-new-constant-interpreter -DNEW_INTERP
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,precxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++11 -fexperimental-new-constant-interpreter -DNEW_INTERP
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,precxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++14 -fexperimental-new-constant-interpreter -DNEW_INTERP
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,cxx17,precxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++17 -fexperimental-new-constant-interpreter -DNEW_INTERP
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,cxx17,cxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++20 -fexperimental-new-constant-interpreter -DNEW_INTERP
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,cxx17,cxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++23 -fexperimental-new-constant-interpreter -DNEW_INTERP
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,since-cxx26,cxx17,cxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++2c -fexperimental-new-constant-interpreter -DNEW_INTERP
+
 // FIXME Location is (frontend)
 // cxx17-note@*:* {{candidate function not viable: requires 2 arguments, but 3 were provided}}
 
@@ -243,7 +251,7 @@ void loadEngineFor() {
 }
 
 template <class T> struct TBase {
-  void* operator new(T size, int); // expected-error {{'operator new' cannot take a dependent type as first parameter; use size_t}}
+  void* operator new(T size, int); // expected-error {{'operator new' cannot take a dependent type as its 1st parameter; use size_t}}
 };
 
 TBase<int> t1;
@@ -458,7 +466,7 @@ namespace TemplateDestructors {
 
 namespace DeleteParam {
   struct X {
-    void operator delete(X*); // expected-error{{first parameter of 'operator delete' must have type 'void *'}}
+    void operator delete(X*); // expected-error{{1st parameter of 'operator delete' must have type 'void *'}}
   };
 
   struct Y {
@@ -531,6 +539,22 @@ namespace PR10504 {
   };
   void f(A *x) { delete x; } // expected-warning {{delete called on 'PR10504::A' that is abstract but has non-virtual destructor}}
 }
+
+#if __cplusplus >= 201103L
+enum GH99278_1 {
+    zero = decltype(delete static_cast<GH99278_1*>(nullptr), 0){}
+    // expected-warning@-1 {{expression with side effects has no effect in an unevaluated context}}
+};
+template <typename = void>
+struct GH99278_2 {
+  union b {};
+  struct c {
+    c() { delete d; }
+    b *d;
+  } f;
+};
+GH99278_2<void> e;
+#endif
 
 struct PlacementArg {};
 inline void *operator new[](size_t, const PlacementArg &) throw () {
@@ -653,10 +677,22 @@ int *fail = dependent_array_size("hello"); // expected-note {{instantiation of}}
 // FIXME: Our behavior here is incredibly inconsistent. GCC allows
 // constant-folding in array bounds in new-expressions.
 int (*const_fold)[12] = new int[3][&const_fold + 12 - &const_fold];
-#if __cplusplus >= 201402L
+#if __cplusplus >= 201402L && !defined(NEW_INTERP)
 // expected-error@-2 {{array size is not a constant expression}}
 // expected-note@-3 {{cannot refer to element 12 of non-array}}
-#elif __cplusplus < 201103L
+#elif __cplusplus < 201103L && !defined(NEW_INTERP)
 // expected-error@-5 {{cannot allocate object of variably modified type}}
 // expected-warning@-6 {{variable length arrays in C++ are a Clang extension}}
+#endif
+#ifdef NEW_INTERP
+#if __cplusplus >= 201402L
+// expected-error@-10 {{array size is not a constant expression}}
+// expected-note@-11 {{cannot refer to element 12 of non-array}}
+#elif __cplusplus >= 201103L
+// expected-error@-13 {{only the first dimension of an allocated array may have dynamic size}}
+// expected-note@-14 {{cannot refer to element 12 of non-array}}
+#else
+// expected-error@-16 {{only the first dimension of an allocated array may have dynamic size}}
+// expected-note@-17 {{cannot refer to element 12 of non-array}}
+#endif
 #endif

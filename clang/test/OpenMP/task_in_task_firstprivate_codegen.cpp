@@ -15,8 +15,8 @@ int main() {
   double var = 0;
   // Check that var is firstprivatized in the outermost task.
   // CHECK: [[BASE:%.+]] = call ptr @__kmpc_omp_task_alloc(ptr @{{.+}}, i32 {{.+}}, i32 1, i64 48, i64 1, ptr @{{.+}})
-  // CHECK: [[PRIVS:%.+]] = getelementptr inbounds %{{.+}}, ptr [[BASE]], i32 0, i32 1
-  // CHECK: [[VAR_FP:%.+]] = getelementptr inbounds %{{.+}}, ptr [[PRIVS]], i32 0, i32 0
+  // CHECK: [[PRIVS:%.+]] = getelementptr inbounds nuw %{{.+}}, ptr [[BASE]], i32 0, i32 1
+  // CHECK: [[VAR_FP:%.+]] = getelementptr inbounds nuw %{{.+}}, ptr [[PRIVS]], i32 0, i32 0
   // CHECK: [[VAR_VAL:%.+]] = load double, ptr %{{.+}},
   // CHECK: store double [[VAR_VAL]], ptr [[VAR_FP]],
   // CHECK: call i32 @__kmpc_omp_task(ptr @{{.+}}, i32 %{{.+}}, ptr [[BASE]])

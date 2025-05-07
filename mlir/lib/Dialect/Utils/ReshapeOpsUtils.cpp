@@ -42,12 +42,12 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
   while (sourceDim < sourceShape.size()) {
     unsigned targetDim = reassociationMap.size();
     // If we have mapped all the target dimensions stop and handle the remaining
-    // tail of size-1 dimensions explictly.
+    // tail of size-1 dimensions explicitly.
     if (targetDim == targetShape.size())
       break;
 
     int64_t currTargetShape = targetShape[targetDim];
-    while (sourceDim < sourceShape.size() &&
+    while (sourceDim < (sourceShape.size() - 1) &&
            sourceShape[sourceDim] != ShapedType::kDynamic &&
            prodOfCollapsedDims * sourceShape[sourceDim] < currTargetShape) {
       prodOfCollapsedDims *= sourceShape[sourceDim];
@@ -158,7 +158,7 @@ unsigned getMaxPosOfType(ArrayRef<ReassociationExprs> exprArrays) {
 }
 
 ArrayAttr mlir::getReassociationIndicesAttribute(
-    OpBuilder &b, ArrayRef<ReassociationIndices> reassociation) {
+    Builder &b, ArrayRef<ReassociationIndices> reassociation) {
   SmallVector<Attribute, 4> reassociationAttr =
       llvm::to_vector<4>(llvm::map_range(
           reassociation, [&](const ReassociationIndices &indices) -> Attribute {
@@ -482,4 +482,14 @@ PackingMetadata mlir::computePackingMetadata(int64_t packedRank,
     ++i;
   }
   return res;
+}
+
+OpFoldResult mlir::reshapeConstantSource(DenseElementsAttr source,
+                                         TensorType result,
+                                         std::optional<Attribute> cst) {
+  if (source && source.isSplat() && result.hasStaticShape() &&
+      (!cst.has_value() || source.getSplatValue<Attribute>() == cst.value()))
+    return source.resizeSplat(result);
+
+  return {};
 }

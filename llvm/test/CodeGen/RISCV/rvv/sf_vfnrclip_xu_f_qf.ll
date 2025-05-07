@@ -13,10 +13,8 @@ declare <vscale x 1 x i8> @llvm.riscv.sf.vfnrclip.xu.f.qf.nxv1i8.nxv1f32.iXLen(
 define <vscale x 1 x i8> @intrinsic_sf_vfnrclip_xu_f_qf_nxv1i8_nxv1f32(<vscale x 1 x float> %0, float %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_sf_vfnrclip_xu_f_qf_nxv1i8_nxv1f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    sf.vfnrclip.xu.f.qf v9, v8, fa0
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
 entry:
@@ -24,7 +22,7 @@ entry:
     <vscale x 1 x i8> undef,
     <vscale x 1 x float> %0,
     float %1,
-    iXLen 0, iXLen %2)
+    iXLen 7, iXLen %2)
 
   ret <vscale x 1 x i8> %a
 }

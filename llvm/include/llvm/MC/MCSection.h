@@ -68,7 +68,6 @@ public:
       F = F->Next;
       return *this;
     }
-    iterator operator++(int) { return iterator(F->Next); }
   };
 
   struct FragList {
@@ -182,7 +181,6 @@ public:
   FragList *curFragList() const { return CurFragList; }
   iterator begin() const { return iterator(CurFragList->Head); }
   iterator end() const { return {}; }
-  bool empty() const { return !CurFragList->Head; }
 
   void dump() const;
 

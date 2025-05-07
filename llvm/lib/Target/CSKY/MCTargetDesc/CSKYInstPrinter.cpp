@@ -82,7 +82,7 @@ void CSKYInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   printAnnotation(O, Annot);
 }
 
-void CSKYInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) const {
+void CSKYInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) {
   if (PrintBranchImmAsAddress)
     O << getRegisterName(Reg, ABIRegNames ? CSKY::ABIRegAltName
                                           : CSKY::NoRegAltName);
@@ -98,9 +98,7 @@ void CSKYInstPrinter::printFPRRegName(raw_ostream &O, unsigned RegNo) const {
 }
 
 void CSKYInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
-                                   const MCSubtargetInfo &STI, raw_ostream &O,
-                                   const char *Modifier) {
-  assert((Modifier == 0 || Modifier[0] == 0) && "No modifiers supported");
+                                   const MCSubtargetInfo &STI, raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNo);
 
   if (MO.isReg()) {

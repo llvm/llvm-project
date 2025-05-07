@@ -89,6 +89,7 @@ public:
 // TODO: this shouldn't be needed after we unify the attribute generation, i.e.
 // --gen-attr-* and --gen-attrdef-*.
 using cconv::CConv;
+using tailcallkind::TailCallKind;
 using linkage::Linkage;
 } // namespace LLVM
 } // namespace mlir

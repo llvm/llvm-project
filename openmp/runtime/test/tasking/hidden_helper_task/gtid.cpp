@@ -43,7 +43,7 @@ struct anon {
 };
 }
 
-kmp_int32 __kmp_hidden_helper_threads_num;
+static kmp_int32 __kmp_hidden_helper_threads_num;
 
 kmp_int32 omp_task_entry(kmp_int32 gtid, kmp_task_t_with_privates *task) {
   auto shareds = reinterpret_cast<anon *>(task->task.shareds);

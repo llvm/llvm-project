@@ -62,7 +62,6 @@
 #include "llvm/Transforms/Utils/LoopVersioning.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <cassert>
-#include <functional>
 #include <list>
 #include <tuple>
 #include <utility>
@@ -144,7 +143,7 @@ public:
   /// Moves this partition into \p Other.  This partition becomes empty
   /// after this.
   void moveTo(InstPartition &Other) {
-    Other.Set.insert(Set.begin(), Set.end());
+    Other.Set.insert_range(Set);
     Set.clear();
     Other.DepCycle |= DepCycle;
   }
@@ -386,14 +385,13 @@ public:
 
     // Merge the member of an equivalence class into its class leader.  This
     // makes the members empty.
-    for (ToBeMergedT::iterator I = ToBeMerged.begin(), E = ToBeMerged.end();
-         I != E; ++I) {
-      if (!I->isLeader())
+    for (const auto &C : ToBeMerged) {
+      if (!C->isLeader())
         continue;
 
-      auto PartI = I->getData();
-      for (auto *PartJ : make_range(std::next(ToBeMerged.member_begin(I)),
-                                   ToBeMerged.member_end())) {
+      auto PartI = C->getData();
+      for (auto *PartJ : make_range(std::next(ToBeMerged.member_begin(*C)),
+                                    ToBeMerged.member_end())) {
         PartJ->moveTo(*PartI);
       }
     }
@@ -965,11 +963,10 @@ private:
 
 } // end anonymous namespace
 
-/// Shared implementation between new and old PMs.
 static bool runImpl(Function &F, LoopInfo *LI, DominatorTree *DT,
                     ScalarEvolution *SE, OptimizationRemarkEmitter *ORE,
                     LoopAccessInfoManager &LAIs) {
-  // Build up a worklist of inner-loops to vectorize. This is necessary as the
+  // Build up a worklist of inner-loops to distribute. This is necessary as the
   // act of distributing a loop creates new loops and can invalidate iterators
   // across the loops.
   SmallVector<Loop *, 8> Worklist;

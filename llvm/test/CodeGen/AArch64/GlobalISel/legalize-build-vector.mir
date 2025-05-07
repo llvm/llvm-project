@@ -141,8 +141,7 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: widen_v2s8
     ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY [[DEF]](s32)
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[DEF]](s32)
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[DEF]](s32), [[DEF]](s32)
     ; CHECK-NEXT: $d0 = COPY [[BUILD_VECTOR]](<2 x s32>)
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(s8) = G_IMPLICIT_DEF

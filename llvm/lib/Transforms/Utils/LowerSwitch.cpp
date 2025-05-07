@@ -38,9 +38,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include <algorithm>
 #include <cassert>
-#include <cstdint>
 #include <iterator>
 #include <vector>
 
@@ -369,7 +367,7 @@ void ProcessSwitchInst(SwitchInst *SI,
   const unsigned NumSimpleCases = Clusterify(Cases, SI);
   IntegerType *IT = cast<IntegerType>(SI->getCondition()->getType());
   const unsigned BitWidth = IT->getBitWidth();
-  // Explictly use higher precision to prevent unsigned overflow where
+  // Explicitly use higher precision to prevent unsigned overflow where
   // `UnsignedMax - 0 + 1 == 0`
   APInt UnsignedZero(BitWidth + 1, 0);
   APInt UnsignedMax = APInt::getMaxValue(BitWidth);
@@ -390,7 +388,7 @@ void ProcessSwitchInst(SwitchInst *SI,
   ConstantInt *UpperBound = nullptr;
   bool DefaultIsUnreachableFromSwitch = false;
 
-  if (isa<UnreachableInst>(Default->getFirstNonPHIOrDbg())) {
+  if (SI->defaultDestUnreachable()) {
     // Make the bounds tightly fitted around the case value range, because we
     // know that the value passed to the switch must be exactly one of the case
     // values.

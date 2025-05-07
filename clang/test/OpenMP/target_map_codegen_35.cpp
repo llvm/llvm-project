@@ -84,7 +84,7 @@ void ref_map() {
   // CK35-DAG: [[SZ]] = sub i64 [[B_BEGIN_INTPTR:%.+]], [[S_INTPTR:%.+]]
   // CK35-DAG: [[S_INTPTR]] = ptrtoint ptr [[S_VOID:%.+]] to i64
   // CK35-DAG: [[B_BEGIN_INTPTR]] = ptrtoint ptr [[B_BEGIN_VOID:%.+]] to i64
-  // CK35-DAG: [[B_ADDR:%.+]] = getelementptr inbounds %class.S, ptr [[S_ADDR]], i32 0, i32 1
+  // CK35-DAG: [[B_ADDR:%.+]] = getelementptr inbounds nuw %class.S, ptr [[S_ADDR]], i32 0, i32 1
 
   // pass MEMBER_OF_1 | TO {&s, &s.b+1, ((ptr)(&s+1)-(ptr)(&s.b+1))} to copy the data of remainder of s.
 
@@ -117,7 +117,7 @@ void ref_map() {
   // CK35-DAG: store ptr [[B_ADDR:%.+]], ptr [[P3]],
 
   // CK35-DAG: [[B_ADDR]] = load ptr, ptr [[B_REF:%.+]],
-  // CK35-DAG: [[B_REF]] = getelementptr inbounds %class.S, ptr [[S_ADDR]], i32 0, i32 1
+  // CK35-DAG: [[B_REF]] = getelementptr inbounds nuw %class.S, ptr [[S_ADDR]], i32 0, i32 1
 
   #pragma omp target map(to: s, s.b)
   s.foo();
@@ -150,7 +150,7 @@ void ref_map() {
   // CK35-DAG: [[SZ]] = sub i64 [[SB_1_INTPTR:%.+]], [[SB_INTPTR:%.+]]
   // CK35-DAG: [[SB_1_INTPTR]] = ptrtoint ptr [[SB_1_VOID:%.+]] to i64
   // CK35-DAG: [[SB_INTPTR]] = ptrtoint ptr [[SB_VOID:%.+]] to i64
-  // CK35-DAG: [[SB_ADDR:%.+]] = getelementptr inbounds %class.S, ptr [[S_ADDR]], i32 0, i32 1
+  // CK35-DAG: [[SB_ADDR:%.+]] = getelementptr inbounds nuw %class.S, ptr [[S_ADDR]], i32 0, i32 1
   // CK35-DAG: [[SB_1:%.+]] = getelementptr ptr, ptr [[SB_ADDR]], i{{.+}} 1
 
   // pass MEMBER_OF_1 | PTR_AND_OBJ | FROM {&s, &s.b, 8|4} to copy the data of s.c.

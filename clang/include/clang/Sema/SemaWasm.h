@@ -13,14 +13,13 @@
 #ifndef LLVM_CLANG_SEMA_SEMAWASM_H
 #define LLVM_CLANG_SEMA_SEMAWASM_H
 
-#include "clang/AST/Attr.h"
-#include "clang/AST/DeclBase.h"
-#include "clang/AST/Expr.h"
-#include "clang/Basic/TargetInfo.h"
-#include "clang/Sema/ParsedAttr.h"
+#include "clang/AST/ASTFwd.h"
 #include "clang/Sema/SemaBase.h"
 
 namespace clang {
+class ParsedAttr;
+class TargetInfo;
+
 class SemaWasm : public SemaBase {
 public:
   SemaWasm(Sema &S);

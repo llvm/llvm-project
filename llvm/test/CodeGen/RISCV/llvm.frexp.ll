@@ -61,9 +61,11 @@ define { half, i32 } @test_frexp_f16_i32(half %a) nounwind {
 ; RV32IZFINXZDINX-NEXT:    addi a1, sp, 8
 ; RV32IZFINXZDINX-NEXT:    call frexpf
 ; RV32IZFINXZDINX-NEXT:    call __truncsfhf2
+; RV32IZFINXZDINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
 ; RV32IZFINXZDINX-NEXT:    lw a1, 8(sp)
 ; RV32IZFINXZDINX-NEXT:    lui a2, 1048560
 ; RV32IZFINXZDINX-NEXT:    or a0, a0, a2
+; RV32IZFINXZDINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
 ; RV32IZFINXZDINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
@@ -76,9 +78,11 @@ define { half, i32 } @test_frexp_f16_i32(half %a) nounwind {
 ; RV64IZFINXZDINX-NEXT:    mv a1, sp
 ; RV64IZFINXZDINX-NEXT:    call frexpf
 ; RV64IZFINXZDINX-NEXT:    call __truncsfhf2
+; RV64IZFINXZDINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
 ; RV64IZFINXZDINX-NEXT:    ld a1, 0(sp)
 ; RV64IZFINXZDINX-NEXT:    lui a2, 1048560
 ; RV64IZFINXZDINX-NEXT:    or a0, a0, a2
+; RV64IZFINXZDINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
 ; RV64IZFINXZDINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV64IZFINXZDINX-NEXT:    ret
@@ -157,8 +161,10 @@ define half @test_frexp_f16_i32_only_use_fract(half %a) nounwind {
 ; RV32IZFINXZDINX-NEXT:    addi a1, sp, 8
 ; RV32IZFINXZDINX-NEXT:    call frexpf
 ; RV32IZFINXZDINX-NEXT:    call __truncsfhf2
+; RV32IZFINXZDINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
 ; RV32IZFINXZDINX-NEXT:    lui a1, 1048560
 ; RV32IZFINXZDINX-NEXT:    or a0, a0, a1
+; RV32IZFINXZDINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
 ; RV32IZFINXZDINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
@@ -171,8 +177,10 @@ define half @test_frexp_f16_i32_only_use_fract(half %a) nounwind {
 ; RV64IZFINXZDINX-NEXT:    mv a1, sp
 ; RV64IZFINXZDINX-NEXT:    call frexpf
 ; RV64IZFINXZDINX-NEXT:    call __truncsfhf2
+; RV64IZFINXZDINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
 ; RV64IZFINXZDINX-NEXT:    lui a1, 1048560
 ; RV64IZFINXZDINX-NEXT:    or a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
 ; RV64IZFINXZDINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV64IZFINXZDINX-NEXT:    ret
@@ -535,50 +543,42 @@ define i32 @test_frexp_f32_i32_only_use_exp(float %a) nounwind {
 define { <4 x float>, <4 x i32> } @test_frexp_v4f32_v4i32(<4 x float> %a) nounwind {
 ; RV32IFD-LABEL: test_frexp_v4f32_v4i32:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi sp, sp, -64
-; RV32IFD-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    sw s0, 56(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs0, 48(sp) # 8-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs1, 40(sp) # 8-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs2, 32(sp) # 8-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs3, 24(sp) # 8-byte Folded Spill
+; RV32IFD-NEXT:    addi sp, sp, -48
+; RV32IFD-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    sw s0, 40(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    fsd fs0, 32(sp) # 8-byte Folded Spill
+; RV32IFD-NEXT:    fsd fs1, 24(sp) # 8-byte Folded Spill
+; RV32IFD-NEXT:    fsd fs2, 16(sp) # 8-byte Folded Spill
+; RV32IFD-NEXT:    fsd fs3, 8(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    fmv.s fs0, fa3
 ; RV32IFD-NEXT:    fmv.s fs1, fa2
 ; RV32IFD-NEXT:    fmv.s fs2, fa1
 ; RV32IFD-NEXT:    mv s0, a0
-; RV32IFD-NEXT:    addi a0, sp, 8
+; RV32IFD-NEXT:    addi a0, a0, 16
 ; RV32IFD-NEXT:    call frexpf
 ; RV32IFD-NEXT:    fmv.s fs3, fa0
-; RV32IFD-NEXT:    addi a0, sp, 12
+; RV32IFD-NEXT:    addi a0, s0, 20
 ; RV32IFD-NEXT:    fmv.s fa0, fs2
 ; RV32IFD-NEXT:    call frexpf
 ; RV32IFD-NEXT:    fmv.s fs2, fa0
-; RV32IFD-NEXT:    addi a0, sp, 16
+; RV32IFD-NEXT:    addi a0, s0, 24
 ; RV32IFD-NEXT:    fmv.s fa0, fs1
 ; RV32IFD-NEXT:    call frexpf
 ; RV32IFD-NEXT:    fmv.s fs1, fa0
-; RV32IFD-NEXT:    addi a0, sp, 20
+; RV32IFD-NEXT:    addi a0, s0, 28
 ; RV32IFD-NEXT:    fmv.s fa0, fs0
 ; RV32IFD-NEXT:    call frexpf
-; RV32IFD-NEXT:    lw a0, 20(sp)
-; RV32IFD-NEXT:    lw a1, 16(sp)
-; RV32IFD-NEXT:    lw a2, 12(sp)
-; RV32IFD-NEXT:    lw a3, 8(sp)
-; RV32IFD-NEXT:    sw a0, 28(s0)
-; RV32IFD-NEXT:    sw a1, 24(s0)
-; RV32IFD-NEXT:    sw a2, 20(s0)
-; RV32IFD-NEXT:    sw a3, 16(s0)
-; RV32IFD-NEXT:    fsw fa0, 12(s0)
-; RV32IFD-NEXT:    fsw fs1, 8(s0)
-; RV32IFD-NEXT:    fsw fs2, 4(s0)
 ; RV32IFD-NEXT:    fsw fs3, 0(s0)
-; RV32IFD-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    fld fs0, 48(sp) # 8-byte Folded Reload
-; RV32IFD-NEXT:    fld fs1, 40(sp) # 8-byte Folded Reload
-; RV32IFD-NEXT:    fld fs2, 32(sp) # 8-byte Folded Reload
-; RV32IFD-NEXT:    fld fs3, 24(sp) # 8-byte Folded Reload
-; RV32IFD-NEXT:    addi sp, sp, 64
+; RV32IFD-NEXT:    fsw fs2, 4(s0)
+; RV32IFD-NEXT:    fsw fs1, 8(s0)
+; RV32IFD-NEXT:    fsw fa0, 12(s0)
+; RV32IFD-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
+; RV32IFD-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
+; RV32IFD-NEXT:    fld fs0, 32(sp) # 8-byte Folded Reload
+; RV32IFD-NEXT:    fld fs1, 24(sp) # 8-byte Folded Reload
+; RV32IFD-NEXT:    fld fs2, 16(sp) # 8-byte Folded Reload
+; RV32IFD-NEXT:    fld fs3, 8(sp) # 8-byte Folded Reload
+; RV32IFD-NEXT:    addi sp, sp, 48
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: test_frexp_v4f32_v4i32:
@@ -608,18 +608,18 @@ define { <4 x float>, <4 x i32> } @test_frexp_v4f32_v4i32(<4 x float> %a) nounwi
 ; RV64IFD-NEXT:    addi a0, sp, 24
 ; RV64IFD-NEXT:    fmv.s fa0, fs0
 ; RV64IFD-NEXT:    call frexpf
-; RV64IFD-NEXT:    ld a0, 24(sp)
-; RV64IFD-NEXT:    ld a1, 16(sp)
-; RV64IFD-NEXT:    ld a2, 8(sp)
-; RV64IFD-NEXT:    ld a3, 0(sp)
-; RV64IFD-NEXT:    sw a0, 28(s0)
-; RV64IFD-NEXT:    sw a1, 24(s0)
-; RV64IFD-NEXT:    sw a2, 20(s0)
-; RV64IFD-NEXT:    sw a3, 16(s0)
-; RV64IFD-NEXT:    fsw fa0, 12(s0)
-; RV64IFD-NEXT:    fsw fs1, 8(s0)
-; RV64IFD-NEXT:    fsw fs2, 4(s0)
+; RV64IFD-NEXT:    ld a0, 0(sp)
+; RV64IFD-NEXT:    ld a1, 8(sp)
+; RV64IFD-NEXT:    ld a2, 16(sp)
+; RV64IFD-NEXT:    ld a3, 24(sp)
+; RV64IFD-NEXT:    sw a0, 16(s0)
+; RV64IFD-NEXT:    sw a1, 20(s0)
+; RV64IFD-NEXT:    sw a2, 24(s0)
+; RV64IFD-NEXT:    sw a3, 28(s0)
 ; RV64IFD-NEXT:    fsw fs3, 0(s0)
+; RV64IFD-NEXT:    fsw fs2, 4(s0)
+; RV64IFD-NEXT:    fsw fs1, 8(s0)
+; RV64IFD-NEXT:    fsw fa0, 12(s0)
 ; RV64IFD-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    fld fs0, 56(sp) # 8-byte Folded Reload
@@ -631,52 +631,44 @@ define { <4 x float>, <4 x i32> } @test_frexp_v4f32_v4i32(<4 x float> %a) nounwi
 ;
 ; RV32IZFINXZDINX-LABEL: test_frexp_v4f32_v4i32:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -48
-; RV32IZFINXZDINX-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
-; RV32IZFINXZDINX-NEXT:    sw s0, 40(sp) # 4-byte Folded Spill
-; RV32IZFINXZDINX-NEXT:    sw s1, 36(sp) # 4-byte Folded Spill
-; RV32IZFINXZDINX-NEXT:    sw s2, 32(sp) # 4-byte Folded Spill
-; RV32IZFINXZDINX-NEXT:    sw s3, 28(sp) # 4-byte Folded Spill
-; RV32IZFINXZDINX-NEXT:    sw s4, 24(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, -32
+; RV32IZFINXZDINX-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
 ; RV32IZFINXZDINX-NEXT:    mv s0, a4
 ; RV32IZFINXZDINX-NEXT:    mv s1, a3
 ; RV32IZFINXZDINX-NEXT:    mv s2, a2
 ; RV32IZFINXZDINX-NEXT:    mv a2, a1
 ; RV32IZFINXZDINX-NEXT:    mv s3, a0
-; RV32IZFINXZDINX-NEXT:    addi a1, sp, 8
+; RV32IZFINXZDINX-NEXT:    addi a1, a0, 16
 ; RV32IZFINXZDINX-NEXT:    mv a0, a2
 ; RV32IZFINXZDINX-NEXT:    call frexpf
 ; RV32IZFINXZDINX-NEXT:    mv s4, a0
-; RV32IZFINXZDINX-NEXT:    addi a1, sp, 12
+; RV32IZFINXZDINX-NEXT:    addi a1, s3, 20
 ; RV32IZFINXZDINX-NEXT:    mv a0, s2
 ; RV32IZFINXZDINX-NEXT:    call frexpf
 ; RV32IZFINXZDINX-NEXT:    mv s2, a0
-; RV32IZFINXZDINX-NEXT:    addi a1, sp, 16
+; RV32IZFINXZDINX-NEXT:    addi a1, s3, 24
 ; RV32IZFINXZDINX-NEXT:    mv a0, s1
 ; RV32IZFINXZDINX-NEXT:    call frexpf
 ; RV32IZFINXZDINX-NEXT:    mv s1, a0
-; RV32IZFINXZDINX-NEXT:    addi a1, sp, 20
+; RV32IZFINXZDINX-NEXT:    addi a1, s3, 28
 ; RV32IZFINXZDINX-NEXT:    mv a0, s0
 ; RV32IZFINXZDINX-NEXT:    call frexpf
-; RV32IZFINXZDINX-NEXT:    lw a1, 20(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 16(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a4, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 28(s3)
-; RV32IZFINXZDINX-NEXT:    sw a2, 24(s3)
-; RV32IZFINXZDINX-NEXT:    sw a3, 20(s3)
-; RV32IZFINXZDINX-NEXT:    sw a4, 16(s3)
-; RV32IZFINXZDINX-NEXT:    sw a0, 12(s3)
-; RV32IZFINXZDINX-NEXT:    sw s1, 8(s3)
-; RV32IZFINXZDINX-NEXT:    sw s2, 4(s3)
 ; RV32IZFINXZDINX-NEXT:    sw s4, 0(s3)
-; RV32IZFINXZDINX-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
-; RV32IZFINXZDINX-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
-; RV32IZFINXZDINX-NEXT:    lw s1, 36(sp) # 4-byte Folded Reload
-; RV32IZFINXZDINX-NEXT:    lw s2, 32(sp) # 4-byte Folded Reload
-; RV32IZFINXZDINX-NEXT:    lw s3, 28(sp) # 4-byte Folded Reload
-; RV32IZFINXZDINX-NEXT:    lw s4, 24(sp) # 4-byte Folded Reload
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 48
+; RV32IZFINXZDINX-NEXT:    sw s2, 4(s3)
+; RV32IZFINXZDINX-NEXT:    sw s1, 8(s3)
+; RV32IZFINXZDINX-NEXT:    sw a0, 12(s3)
+; RV32IZFINXZDINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINX-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINX-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINX-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINX-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINX-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, 32
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: test_frexp_v4f32_v4i32:
@@ -708,18 +700,18 @@ define { <4 x float>, <4 x i32> } @test_frexp_v4f32_v4i32(<4 x float> %a) nounwi
 ; RV64IZFINXZDINX-NEXT:    addi a1, sp, 24
 ; RV64IZFINXZDINX-NEXT:    mv a0, s0
 ; RV64IZFINXZDINX-NEXT:    call frexpf
-; RV64IZFINXZDINX-NEXT:    ld a1, 24(sp)
-; RV64IZFINXZDINX-NEXT:    ld a2, 16(sp)
-; RV64IZFINXZDINX-NEXT:    ld a3, 8(sp)
-; RV64IZFINXZDINX-NEXT:    ld a4, 0(sp)
-; RV64IZFINXZDINX-NEXT:    sw a1, 28(s3)
-; RV64IZFINXZDINX-NEXT:    sw a2, 24(s3)
-; RV64IZFINXZDINX-NEXT:    sw a3, 20(s3)
-; RV64IZFINXZDINX-NEXT:    sw a4, 16(s3)
-; RV64IZFINXZDINX-NEXT:    sw a0, 12(s3)
-; RV64IZFINXZDINX-NEXT:    sw s1, 8(s3)
-; RV64IZFINXZDINX-NEXT:    sw s2, 4(s3)
+; RV64IZFINXZDINX-NEXT:    ld a1, 0(sp)
+; RV64IZFINXZDINX-NEXT:    ld a2, 8(sp)
+; RV64IZFINXZDINX-NEXT:    ld a3, 16(sp)
+; RV64IZFINXZDINX-NEXT:    ld a4, 24(sp)
+; RV64IZFINXZDINX-NEXT:    sw a1, 16(s3)
+; RV64IZFINXZDINX-NEXT:    sw a2, 20(s3)
+; RV64IZFINXZDINX-NEXT:    sw a3, 24(s3)
+; RV64IZFINXZDINX-NEXT:    sw a4, 28(s3)
 ; RV64IZFINXZDINX-NEXT:    sw s4, 0(s3)
+; RV64IZFINXZDINX-NEXT:    sw s2, 4(s3)
+; RV64IZFINXZDINX-NEXT:    sw s1, 8(s3)
+; RV64IZFINXZDINX-NEXT:    sw a0, 12(s3)
 ; RV64IZFINXZDINX-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; RV64IZFINXZDINX-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
 ; RV64IZFINXZDINX-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload
@@ -738,38 +730,38 @@ define { <4 x float>, <4 x i32> } @test_frexp_v4f32_v4i32(<4 x float> %a) nounwi
 ; RV32I-NEXT:    sw s2, 32(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s3, 28(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s4, 24(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    lw s0, 12(a1)
-; RV32I-NEXT:    lw s1, 8(a1)
-; RV32I-NEXT:    lw s2, 4(a1)
 ; RV32I-NEXT:    lw a2, 0(a1)
+; RV32I-NEXT:    lw s0, 4(a1)
+; RV32I-NEXT:    lw s1, 8(a1)
+; RV32I-NEXT:    lw s2, 12(a1)
 ; RV32I-NEXT:    mv s3, a0
 ; RV32I-NEXT:    addi a1, sp, 8
 ; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:    call frexpf
 ; RV32I-NEXT:    mv s4, a0
 ; RV32I-NEXT:    addi a1, sp, 12
-; RV32I-NEXT:    mv a0, s2
+; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    call frexpf
-; RV32I-NEXT:    mv s2, a0
+; RV32I-NEXT:    mv s0, a0
 ; RV32I-NEXT:    addi a1, sp, 16
 ; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    call frexpf
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    addi a1, sp, 20
-; RV32I-NEXT:    mv a0, s0
+; RV32I-NEXT:    mv a0, s2
 ; RV32I-NEXT:    call frexpf
 ; RV32I-NEXT:    lw a1, 8(sp)
 ; RV32I-NEXT:    lw a2, 12(sp)
 ; RV32I-NEXT:    lw a3, 16(sp)
 ; RV32I-NEXT:    lw a4, 20(sp)
-; RV32I-NEXT:    sw a0, 12(s3)
-; RV32I-NEXT:    sw s1, 8(s3)
-; RV32I-NEXT:    sw s2, 4(s3)
 ; RV32I-NEXT:    sw s4, 0(s3)
-; RV32I-NEXT:    sw a4, 28(s3)
-; RV32I-NEXT:    sw a3, 24(s3)
-; RV32I-NEXT:    sw a2, 20(s3)
+; RV32I-NEXT:    sw s0, 4(s3)
+; RV32I-NEXT:    sw s1, 8(s3)
+; RV32I-NEXT:    sw a0, 12(s3)
 ; RV32I-NEXT:    sw a1, 16(s3)
+; RV32I-NEXT:    sw a2, 20(s3)
+; RV32I-NEXT:    sw a3, 24(s3)
+; RV32I-NEXT:    sw a4, 28(s3)
 ; RV32I-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 36(sp) # 4-byte Folded Reload
@@ -788,38 +780,38 @@ define { <4 x float>, <4 x i32> } @test_frexp_v4f32_v4i32(<4 x float> %a) nounwi
 ; RV64I-NEXT:    sd s2, 32(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s3, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s4, 16(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    lw s0, 24(a1)
-; RV64I-NEXT:    lw s1, 16(a1)
-; RV64I-NEXT:    lw s2, 8(a1)
 ; RV64I-NEXT:    lw a2, 0(a1)
+; RV64I-NEXT:    lw s0, 8(a1)
+; RV64I-NEXT:    lw s1, 16(a1)
+; RV64I-NEXT:    lw s2, 24(a1)
 ; RV64I-NEXT:    mv s3, a0
 ; RV64I-NEXT:    mv a1, sp
 ; RV64I-NEXT:    mv a0, a2
 ; RV64I-NEXT:    call frexpf
 ; RV64I-NEXT:    mv s4, a0
 ; RV64I-NEXT:    addi a1, sp, 4
-; RV64I-NEXT:    mv a0, s2
+; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    call frexpf
-; RV64I-NEXT:    mv s2, a0
+; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    addi a1, sp, 8
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    call frexpf
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    addi a1, sp, 12
-; RV64I-NEXT:    mv a0, s0
+; RV64I-NEXT:    mv a0, s2
 ; RV64I-NEXT:    call frexpf
 ; RV64I-NEXT:    lw a1, 0(sp)
 ; RV64I-NEXT:    lw a2, 4(sp)
 ; RV64I-NEXT:    lw a3, 8(sp)
 ; RV64I-NEXT:    lw a4, 12(sp)
-; RV64I-NEXT:    sw a0, 12(s3)
-; RV64I-NEXT:    sw s1, 8(s3)
-; RV64I-NEXT:    sw s2, 4(s3)
 ; RV64I-NEXT:    sw s4, 0(s3)
-; RV64I-NEXT:    sw a4, 28(s3)
-; RV64I-NEXT:    sw a3, 24(s3)
-; RV64I-NEXT:    sw a2, 20(s3)
+; RV64I-NEXT:    sw s0, 4(s3)
+; RV64I-NEXT:    sw s1, 8(s3)
+; RV64I-NEXT:    sw a0, 12(s3)
 ; RV64I-NEXT:    sw a1, 16(s3)
+; RV64I-NEXT:    sw a2, 20(s3)
+; RV64I-NEXT:    sw a3, 24(s3)
+; RV64I-NEXT:    sw a4, 28(s3)
 ; RV64I-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
@@ -860,10 +852,10 @@ define <4 x float> @test_frexp_v4f32_v4i32_only_use_fract(<4 x float> %a) nounwi
 ; RV32IFD-NEXT:    addi a0, sp, 20
 ; RV32IFD-NEXT:    fmv.s fa0, fs0
 ; RV32IFD-NEXT:    call frexpf
-; RV32IFD-NEXT:    fsw fa0, 12(s0)
-; RV32IFD-NEXT:    fsw fs1, 8(s0)
-; RV32IFD-NEXT:    fsw fs2, 4(s0)
 ; RV32IFD-NEXT:    fsw fs3, 0(s0)
+; RV32IFD-NEXT:    fsw fs2, 4(s0)
+; RV32IFD-NEXT:    fsw fs1, 8(s0)
+; RV32IFD-NEXT:    fsw fa0, 12(s0)
 ; RV32IFD-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    fld fs0, 48(sp) # 8-byte Folded Reload
@@ -900,10 +892,10 @@ define <4 x float> @test_frexp_v4f32_v4i32_only_use_fract(<4 x float> %a) nounwi
 ; RV64IFD-NEXT:    addi a0, sp, 24
 ; RV64IFD-NEXT:    fmv.s fa0, fs0
 ; RV64IFD-NEXT:    call frexpf
-; RV64IFD-NEXT:    fsw fa0, 12(s0)
-; RV64IFD-NEXT:    fsw fs1, 8(s0)
-; RV64IFD-NEXT:    fsw fs2, 4(s0)
 ; RV64IFD-NEXT:    fsw fs3, 0(s0)
+; RV64IFD-NEXT:    fsw fs2, 4(s0)
+; RV64IFD-NEXT:    fsw fs1, 8(s0)
+; RV64IFD-NEXT:    fsw fa0, 12(s0)
 ; RV64IFD-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    fld fs0, 56(sp) # 8-byte Folded Reload
@@ -942,10 +934,10 @@ define <4 x float> @test_frexp_v4f32_v4i32_only_use_fract(<4 x float> %a) nounwi
 ; RV32IZFINXZDINX-NEXT:    addi a1, sp, 20
 ; RV32IZFINXZDINX-NEXT:    mv a0, s0
 ; RV32IZFINXZDINX-NEXT:    call frexpf
-; RV32IZFINXZDINX-NEXT:    sw a0, 12(s3)
-; RV32IZFINXZDINX-NEXT:    sw s1, 8(s3)
-; RV32IZFINXZDINX-NEXT:    sw s2, 4(s3)
 ; RV32IZFINXZDINX-NEXT:    sw s4, 0(s3)
+; RV32IZFINXZDINX-NEXT:    sw s2, 4(s3)
+; RV32IZFINXZDINX-NEXT:    sw s1, 8(s3)
+; RV32IZFINXZDINX-NEXT:    sw a0, 12(s3)
 ; RV32IZFINXZDINX-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; RV32IZFINXZDINX-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
 ; RV32IZFINXZDINX-NEXT:    lw s1, 36(sp) # 4-byte Folded Reload
@@ -984,10 +976,10 @@ define <4 x float> @test_frexp_v4f32_v4i32_only_use_fract(<4 x float> %a) nounwi
 ; RV64IZFINXZDINX-NEXT:    addi a1, sp, 24
 ; RV64IZFINXZDINX-NEXT:    mv a0, s0
 ; RV64IZFINXZDINX-NEXT:    call frexpf
-; RV64IZFINXZDINX-NEXT:    sw a0, 12(s3)
-; RV64IZFINXZDINX-NEXT:    sw s1, 8(s3)
-; RV64IZFINXZDINX-NEXT:    sw s2, 4(s3)
 ; RV64IZFINXZDINX-NEXT:    sw s4, 0(s3)
+; RV64IZFINXZDINX-NEXT:    sw s2, 4(s3)
+; RV64IZFINXZDINX-NEXT:    sw s1, 8(s3)
+; RV64IZFINXZDINX-NEXT:    sw a0, 12(s3)
 ; RV64IZFINXZDINX-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; RV64IZFINXZDINX-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
 ; RV64IZFINXZDINX-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload
@@ -1006,30 +998,30 @@ define <4 x float> @test_frexp_v4f32_v4i32_only_use_fract(<4 x float> %a) nounwi
 ; RV32I-NEXT:    sw s2, 32(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s3, 28(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s4, 24(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    lw s0, 12(a1)
-; RV32I-NEXT:    lw s1, 8(a1)
-; RV32I-NEXT:    lw s2, 4(a1)
 ; RV32I-NEXT:    lw a2, 0(a1)
+; RV32I-NEXT:    lw s0, 4(a1)
+; RV32I-NEXT:    lw s1, 8(a1)
+; RV32I-NEXT:    lw s2, 12(a1)
 ; RV32I-NEXT:    mv s3, a0
 ; RV32I-NEXT:    addi a1, sp, 8
 ; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:    call frexpf
 ; RV32I-NEXT:    mv s4, a0
 ; RV32I-NEXT:    addi a1, sp, 12
-; RV32I-NEXT:    mv a0, s2
+; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    call frexpf
-; RV32I-NEXT:    mv s2, a0
+; RV32I-NEXT:    mv s0, a0
 ; RV32I-NEXT:    addi a1, sp, 16
 ; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    call frexpf
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    addi a1, sp, 20
-; RV32I-NEXT:    mv a0, s0
+; RV32I-NEXT:    mv a0, s2
 ; RV32I-NEXT:    call frexpf
-; RV32I-NEXT:    sw a0, 12(s3)
-; RV32I-NEXT:    sw s1, 8(s3)
-; RV32I-NEXT:    sw s2, 4(s3)
 ; RV32I-NEXT:    sw s4, 0(s3)
+; RV32I-NEXT:    sw s0, 4(s3)
+; RV32I-NEXT:    sw s1, 8(s3)
+; RV32I-NEXT:    sw a0, 12(s3)
 ; RV32I-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 36(sp) # 4-byte Folded Reload
@@ -1048,30 +1040,30 @@ define <4 x float> @test_frexp_v4f32_v4i32_only_use_fract(<4 x float> %a) nounwi
 ; RV64I-NEXT:    sd s2, 32(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s3, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s4, 16(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    lw s0, 24(a1)
-; RV64I-NEXT:    lw s1, 16(a1)
-; RV64I-NEXT:    lw s2, 8(a1)
 ; RV64I-NEXT:    lw a2, 0(a1)
+; RV64I-NEXT:    lw s0, 8(a1)
+; RV64I-NEXT:    lw s1, 16(a1)
+; RV64I-NEXT:    lw s2, 24(a1)
 ; RV64I-NEXT:    mv s3, a0
 ; RV64I-NEXT:    mv a1, sp
 ; RV64I-NEXT:    mv a0, a2
 ; RV64I-NEXT:    call frexpf
 ; RV64I-NEXT:    mv s4, a0
 ; RV64I-NEXT:    addi a1, sp, 4
-; RV64I-NEXT:    mv a0, s2
+; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    call frexpf
-; RV64I-NEXT:    mv s2, a0
+; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    addi a1, sp, 8
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    call frexpf
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    addi a1, sp, 12
-; RV64I-NEXT:    mv a0, s0
+; RV64I-NEXT:    mv a0, s2
 ; RV64I-NEXT:    call frexpf
-; RV64I-NEXT:    sw a0, 12(s3)
-; RV64I-NEXT:    sw s1, 8(s3)
-; RV64I-NEXT:    sw s2, 4(s3)
 ; RV64I-NEXT:    sw s4, 0(s3)
+; RV64I-NEXT:    sw s0, 4(s3)
+; RV64I-NEXT:    sw s1, 8(s3)
+; RV64I-NEXT:    sw a0, 12(s3)
 ; RV64I-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
@@ -1088,41 +1080,34 @@ define <4 x float> @test_frexp_v4f32_v4i32_only_use_fract(<4 x float> %a) nounwi
 define <4 x i32> @test_frexp_v4f32_v4i32_only_use_exp(<4 x float> %a) nounwind {
 ; RV32IFD-LABEL: test_frexp_v4f32_v4i32_only_use_exp:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi sp, sp, -48
-; RV32IFD-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    sw s0, 40(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs0, 32(sp) # 8-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs1, 24(sp) # 8-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs2, 16(sp) # 8-byte Folded Spill
-; RV32IFD-NEXT:    fmv.s fs0, fa3
-; RV32IFD-NEXT:    fmv.s fs1, fa2
-; RV32IFD-NEXT:    fmv.s fs2, fa1
+; RV32IFD-NEXT:    addi sp, sp, -32
+; RV32IFD-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    fsd fs0, 16(sp) # 8-byte Folded Spill
+; RV32IFD-NEXT:    fsd fs1, 8(sp) # 8-byte Folded Spill
+; RV32IFD-NEXT:    fsd fs2, 0(sp) # 8-byte Folded Spill
+; RV32IFD-NEXT:    fmv.s fs0, fa2
+; RV32IFD-NEXT:    fmv.s fs1, fa1
+; RV32IFD-NEXT:    fmv.s fs2, fa0
 ; RV32IFD-NEXT:    mv s0, a0
-; RV32IFD-NEXT:    mv a0, sp
+; RV32IFD-NEXT:    addi a0, a0, 12
+; RV32IFD-NEXT:    fmv.s fa0, fa3
 ; RV32IFD-NEXT:    call frexpf
-; RV32IFD-NEXT:    addi a0, sp, 4
-; RV32IFD-NEXT:    fmv.s fa0, fs2
-; RV32IFD-NEXT:    call frexpf
-; RV32IFD-NEXT:    addi a0, sp, 8
-; RV32IFD-NEXT:    fmv.s fa0, fs1
-; RV32IFD-NEXT:    call frexpf
-; RV32IFD-NEXT:    addi a0, sp, 12
+; RV32IFD-NEXT:    addi a0, s0, 8
 ; RV32IFD-NEXT:    fmv.s fa0, fs0
 ; RV32IFD-NEXT:    call frexpf
-; RV32IFD-NEXT:    lw a0, 12(sp)
-; RV32IFD-NEXT:    lw a1, 8(sp)
-; RV32IFD-NEXT:    lw a2, 4(sp)
-; RV32IFD-NEXT:    lw a3, 0(sp)
-; RV32IFD-NEXT:    sw a0, 12(s0)
-; RV32IFD-NEXT:    sw a1, 8(s0)
-; RV32IFD-NEXT:    sw a2, 4(s0)
-; RV32IFD-NEXT:    sw a3, 0(s0)
-; RV32IFD-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    fld fs0, 32(sp) # 8-byte Folded Reload
-; RV32IFD-NEXT:    fld fs1, 24(sp) # 8-byte Folded Reload
-; RV32IFD-NEXT:    fld fs2, 16(sp) # 8-byte Folded Reload
-; RV32IFD-NEXT:    addi sp, sp, 48
+; RV32IFD-NEXT:    addi a0, s0, 4
+; RV32IFD-NEXT:    fmv.s fa0, fs1
+; RV32IFD-NEXT:    call frexpf
+; RV32IFD-NEXT:    fmv.s fa0, fs2
+; RV32IFD-NEXT:    mv a0, s0
+; RV32IFD-NEXT:    call frexpf
+; RV32IFD-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IFD-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32IFD-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
+; RV32IFD-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
+; RV32IFD-NEXT:    fld fs2, 0(sp) # 8-byte Folded Reload
+; RV32IFD-NEXT:    addi sp, sp, 32
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: test_frexp_v4f32_v4i32_only_use_exp:
@@ -1148,14 +1133,14 @@ define <4 x i32> @test_frexp_v4f32_v4i32_only_use_exp(<4 x float> %a) nounwind {
 ; RV64IFD-NEXT:    addi a0, sp, 32
 ; RV64IFD-NEXT:    fmv.s fa0, fs0
 ; RV64IFD-NEXT:    call frexpf
-; RV64IFD-NEXT:    ld a0, 32(sp)
-; RV64IFD-NEXT:    ld a1, 24(sp)
-; RV64IFD-NEXT:    ld a2, 16(sp)
-; RV64IFD-NEXT:    ld a3, 8(sp)
-; RV64IFD-NEXT:    sw a0, 12(s0)
-; RV64IFD-NEXT:    sw a1, 8(s0)
-; RV64IFD-NEXT:    sw a2, 4(s0)
-; RV64IFD-NEXT:    sw a3, 0(s0)
+; RV64IFD-NEXT:    ld a0, 8(sp)
+; RV64IFD-NEXT:    ld a1, 16(sp)
+; RV64IFD-NEXT:    ld a2, 24(sp)
+; RV64IFD-NEXT:    ld a3, 32(sp)
+; RV64IFD-NEXT:    sw a0, 0(s0)
+; RV64IFD-NEXT:    sw a1, 4(s0)
+; RV64IFD-NEXT:    sw a2, 8(s0)
+; RV64IFD-NEXT:    sw a3, 12(s0)
 ; RV64IFD-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    fld fs0, 56(sp) # 8-byte Folded Reload
@@ -1166,43 +1151,34 @@ define <4 x i32> @test_frexp_v4f32_v4i32_only_use_exp(<4 x float> %a) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: test_frexp_v4f32_v4i32_only_use_exp:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -48
-; RV32IZFINXZDINX-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
-; RV32IZFINXZDINX-NEXT:    sw s0, 40(sp) # 4-byte Folded Spill
-; RV32IZFINXZDINX-NEXT:    sw s1, 36(sp) # 4-byte Folded Spill
-; RV32IZFINXZDINX-NEXT:    sw s2, 32(sp) # 4-byte Folded Spill
-; RV32IZFINXZDINX-NEXT:    sw s3, 28(sp) # 4-byte Folded Spill
-; RV32IZFINXZDINX-NEXT:    mv s0, a4
-; RV32IZFINXZDINX-NEXT:    mv s1, a3
-; RV32IZFINXZDINX-NEXT:    mv s2, a2
-; RV32IZFINXZDINX-NEXT:    mv a2, a1
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, -32
+; RV32IZFINXZDINX-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    mv s0, a3
+; RV32IZFINXZDINX-NEXT:    mv s1, a2
+; RV32IZFINXZDINX-NEXT:    mv s2, a1
 ; RV32IZFINXZDINX-NEXT:    mv s3, a0
-; RV32IZFINXZDINX-NEXT:    addi a1, sp, 12
-; RV32IZFINXZDINX-NEXT:    mv a0, a2
+; RV32IZFINXZDINX-NEXT:    addi a1, a0, 12
+; RV32IZFINXZDINX-NEXT:    mv a0, a4
 ; RV32IZFINXZDINX-NEXT:    call frexpf
-; RV32IZFINXZDINX-NEXT:    addi a1, sp, 16
-; RV32IZFINXZDINX-NEXT:    mv a0, s2
-; RV32IZFINXZDINX-NEXT:    call frexpf
-; RV32IZFINXZDINX-NEXT:    addi a1, sp, 20
-; RV32IZFINXZDINX-NEXT:    mv a0, s1
-; RV32IZFINXZDINX-NEXT:    call frexpf
-; RV32IZFINXZDINX-NEXT:    addi a1, sp, 24
+; RV32IZFINXZDINX-NEXT:    addi a1, s3, 8
 ; RV32IZFINXZDINX-NEXT:    mv a0, s0
 ; RV32IZFINXZDINX-NEXT:    call frexpf
-; RV32IZFINXZDINX-NEXT:    lw a0, 24(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 20(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 16(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a0, 12(s3)
-; RV32IZFINXZDINX-NEXT:    sw a1, 8(s3)
-; RV32IZFINXZDINX-NEXT:    sw a2, 4(s3)
-; RV32IZFINXZDINX-NEXT:    sw a3, 0(s3)
-; RV32IZFINXZDINX-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
-; RV32IZFINXZDINX-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
-; RV32IZFINXZDINX-NEXT:    lw s1, 36(sp) # 4-byte Folded Reload
-; RV32IZFINXZDINX-NEXT:    lw s2, 32(sp) # 4-byte Folded Reload
-; RV32IZFINXZDINX-NEXT:    lw s3, 28(sp) # 4-byte Folded Reload
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 48
+; RV32IZFINXZDINX-NEXT:    addi a1, s3, 4
+; RV32IZFINXZDINX-NEXT:    mv a0, s1
+; RV32IZFINXZDINX-NEXT:    call frexpf
+; RV32IZFINXZDINX-NEXT:    mv a0, s2
+; RV32IZFINXZDINX-NEXT:    mv a1, s3
+; RV32IZFINXZDINX-NEXT:    call frexpf
+; RV32IZFINXZDINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINX-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINX-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINX-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINX-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, 32
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: test_frexp_v4f32_v4i32_only_use_exp:
@@ -1230,14 +1206,14 @@ define <4 x i32> @test_frexp_v4f32_v4i32_only_use_exp(<4 x float> %a) nounwind {
 ; RV64IZFINXZDINX-NEXT:    addi a1, sp, 32
 ; RV64IZFINXZDINX-NEXT:    mv a0, s0
 ; RV64IZFINXZDINX-NEXT:    call frexpf
-; RV64IZFINXZDINX-NEXT:    ld a0, 32(sp)
-; RV64IZFINXZDINX-NEXT:    ld a1, 24(sp)
-; RV64IZFINXZDINX-NEXT:    ld a2, 16(sp)
-; RV64IZFINXZDINX-NEXT:    ld a3, 8(sp)
-; RV64IZFINXZDINX-NEXT:    sw a0, 12(s3)
-; RV64IZFINXZDINX-NEXT:    sw a1, 8(s3)
-; RV64IZFINXZDINX-NEXT:    sw a2, 4(s3)
-; RV64IZFINXZDINX-NEXT:    sw a3, 0(s3)
+; RV64IZFINXZDINX-NEXT:    ld a0, 8(sp)
+; RV64IZFINXZDINX-NEXT:    ld a1, 16(sp)
+; RV64IZFINXZDINX-NEXT:    ld a2, 24(sp)
+; RV64IZFINXZDINX-NEXT:    ld a3, 32(sp)
+; RV64IZFINXZDINX-NEXT:    sw a0, 0(s3)
+; RV64IZFINXZDINX-NEXT:    sw a1, 4(s3)
+; RV64IZFINXZDINX-NEXT:    sw a2, 8(s3)
+; RV64IZFINXZDINX-NEXT:    sw a3, 12(s3)
 ; RV64IZFINXZDINX-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; RV64IZFINXZDINX-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
 ; RV64IZFINXZDINX-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload
@@ -1254,31 +1230,31 @@ define <4 x i32> @test_frexp_v4f32_v4i32_only_use_exp(<4 x float> %a) nounwind {
 ; RV32I-NEXT:    sw s1, 36(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s2, 32(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s3, 28(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    lw s0, 12(a1)
-; RV32I-NEXT:    lw s1, 8(a1)
-; RV32I-NEXT:    lw s2, 4(a1)
 ; RV32I-NEXT:    lw a2, 0(a1)
+; RV32I-NEXT:    lw s0, 4(a1)
+; RV32I-NEXT:    lw s1, 8(a1)
+; RV32I-NEXT:    lw s2, 12(a1)
 ; RV32I-NEXT:    mv s3, a0
 ; RV32I-NEXT:    addi a1, sp, 12
 ; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:    call frexpf
 ; RV32I-NEXT:    addi a1, sp, 16
-; RV32I-NEXT:    mv a0, s2
+; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    call frexpf
 ; RV32I-NEXT:    addi a1, sp, 20
 ; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    call frexpf
 ; RV32I-NEXT:    addi a1, sp, 24
-; RV32I-NEXT:    mv a0, s0
+; RV32I-NEXT:    mv a0, s2
 ; RV32I-NEXT:    call frexpf
-; RV32I-NEXT:    lw a0, 24(sp)
-; RV32I-NEXT:    lw a1, 20(sp)
-; RV32I-NEXT:    lw a2, 16(sp)
-; RV32I-NEXT:    lw a3, 12(sp)
-; RV32I-NEXT:    sw a0, 12(s3)
-; RV32I-NEXT:    sw a1, 8(s3)
-; RV32I-NEXT:    sw a2, 4(s3)
-; RV32I-NEXT:    sw a3, 0(s3)
+; RV32I-NEXT:    lw a0, 12(sp)
+; RV32I-NEXT:    lw a1, 16(sp)
+; RV32I-NEXT:    lw a2, 20(sp)
+; RV32I-NEXT:    lw a3, 24(sp)
+; RV32I-NEXT:    sw a0, 0(s3)
+; RV32I-NEXT:    sw a1, 4(s3)
+; RV32I-NEXT:    sw a2, 8(s3)
+; RV32I-NEXT:    sw a3, 12(s3)
 ; RV32I-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 36(sp) # 4-byte Folded Reload
@@ -1295,31 +1271,31 @@ define <4 x i32> @test_frexp_v4f32_v4i32_only_use_exp(<4 x float> %a) nounwind {
 ; RV64I-NEXT:    sd s1, 40(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 32(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s3, 24(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    lw s0, 24(a1)
-; RV64I-NEXT:    lw s1, 16(a1)
-; RV64I-NEXT:    lw s2, 8(a1)
 ; RV64I-NEXT:    lw a2, 0(a1)
+; RV64I-NEXT:    lw s0, 8(a1)
+; RV64I-NEXT:    lw s1, 16(a1)
+; RV64I-NEXT:    lw s2, 24(a1)
 ; RV64I-NEXT:    mv s3, a0
 ; RV64I-NEXT:    addi a1, sp, 8
 ; RV64I-NEXT:    mv a0, a2
 ; RV64I-NEXT:    call frexpf
 ; RV64I-NEXT:    addi a1, sp, 12
-; RV64I-NEXT:    mv a0, s2
+; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    call frexpf
 ; RV64I-NEXT:    addi a1, sp, 16
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    call frexpf
 ; RV64I-NEXT:    addi a1, sp, 20
-; RV64I-NEXT:    mv a0, s0
+; RV64I-NEXT:    mv a0, s2
 ; RV64I-NEXT:    call frexpf
-; RV64I-NEXT:    lw a0, 20(sp)
-; RV64I-NEXT:    lw a1, 16(sp)
-; RV64I-NEXT:    lw a2, 12(sp)
-; RV64I-NEXT:    lw a3, 8(sp)
-; RV64I-NEXT:    sw a0, 12(s3)
-; RV64I-NEXT:    sw a1, 8(s3)
-; RV64I-NEXT:    sw a2, 4(s3)
-; RV64I-NEXT:    sw a3, 0(s3)
+; RV64I-NEXT:    lw a0, 8(sp)
+; RV64I-NEXT:    lw a1, 12(sp)
+; RV64I-NEXT:    lw a2, 16(sp)
+; RV64I-NEXT:    lw a3, 20(sp)
+; RV64I-NEXT:    sw a0, 0(s3)
+; RV64I-NEXT:    sw a1, 4(s3)
+; RV64I-NEXT:    sw a2, 8(s3)
+; RV64I-NEXT:    sw a3, 12(s3)
 ; RV64I-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
@@ -1389,8 +1365,8 @@ define { double, i32 } @test_frexp_f64_i32(double %a) nounwind {
 ; RV32I-NEXT:    mv a1, a3
 ; RV32I-NEXT:    call frexp
 ; RV32I-NEXT:    lw a2, 4(sp)
-; RV32I-NEXT:    sw a1, 4(s0)
 ; RV32I-NEXT:    sw a0, 0(s0)
+; RV32I-NEXT:    sw a1, 4(s0)
 ; RV32I-NEXT:    sw a2, 8(s0)
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
@@ -1572,27 +1548,27 @@ define { fp128, i32 } @test_frexp_f128_i32(fp128 %a) nounwind {
 ; RV32IFD-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
 ; RV32IFD-NEXT:    sw s0, 40(sp) # 4-byte Folded Spill
 ; RV32IFD-NEXT:    lw a3, 0(a1)
-; RV32IFD-NEXT:    lw a2, 4(a1)
-; RV32IFD-NEXT:    lw a4, 8(a1)
-; RV32IFD-NEXT:    lw a1, 12(a1)
+; RV32IFD-NEXT:    lw a4, 4(a1)
+; RV32IFD-NEXT:    lw a5, 8(a1)
+; RV32IFD-NEXT:    lw a6, 12(a1)
 ; RV32IFD-NEXT:    mv s0, a0
-; RV32IFD-NEXT:    sw a1, 12(sp)
-; RV32IFD-NEXT:    sw a4, 8(sp)
-; RV32IFD-NEXT:    sw a2, 4(sp)
 ; RV32IFD-NEXT:    addi a0, sp, 16
 ; RV32IFD-NEXT:    mv a1, sp
 ; RV32IFD-NEXT:    addi a2, sp, 36
 ; RV32IFD-NEXT:    sw a3, 0(sp)
+; RV32IFD-NEXT:    sw a4, 4(sp)
+; RV32IFD-NEXT:    sw a5, 8(sp)
+; RV32IFD-NEXT:    sw a6, 12(sp)
 ; RV32IFD-NEXT:    call frexpl
 ; RV32IFD-NEXT:    lw a0, 36(sp)
-; RV32IFD-NEXT:    lw a1, 28(sp)
-; RV32IFD-NEXT:    lw a2, 24(sp)
-; RV32IFD-NEXT:    lw a3, 20(sp)
-; RV32IFD-NEXT:    lw a4, 16(sp)
-; RV32IFD-NEXT:    sw a1, 12(s0)
-; RV32IFD-NEXT:    sw a2, 8(s0)
-; RV32IFD-NEXT:    sw a3, 4(s0)
-; RV32IFD-NEXT:    sw a4, 0(s0)
+; RV32IFD-NEXT:    lw a1, 16(sp)
+; RV32IFD-NEXT:    lw a2, 20(sp)
+; RV32IFD-NEXT:    lw a3, 24(sp)
+; RV32IFD-NEXT:    lw a4, 28(sp)
+; RV32IFD-NEXT:    sw a1, 0(s0)
+; RV32IFD-NEXT:    sw a2, 4(s0)
+; RV32IFD-NEXT:    sw a3, 8(s0)
+; RV32IFD-NEXT:    sw a4, 12(s0)
 ; RV32IFD-NEXT:    sw a0, 16(s0)
 ; RV32IFD-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
@@ -1611,8 +1587,8 @@ define { fp128, i32 } @test_frexp_f128_i32(fp128 %a) nounwind {
 ; RV64IFD-NEXT:    mv a1, a3
 ; RV64IFD-NEXT:    call frexpl
 ; RV64IFD-NEXT:    lw a2, 12(sp)
-; RV64IFD-NEXT:    sd a1, 8(s0)
 ; RV64IFD-NEXT:    sd a0, 0(s0)
+; RV64IFD-NEXT:    sd a1, 8(s0)
 ; RV64IFD-NEXT:    sw a2, 16(s0)
 ; RV64IFD-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
@@ -1625,27 +1601,27 @@ define { fp128, i32 } @test_frexp_f128_i32(fp128 %a) nounwind {
 ; RV32IZFINXZDINX-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
 ; RV32IZFINXZDINX-NEXT:    sw s0, 40(sp) # 4-byte Folded Spill
 ; RV32IZFINXZDINX-NEXT:    lw a3, 0(a1)
-; RV32IZFINXZDINX-NEXT:    lw a2, 4(a1)
-; RV32IZFINXZDINX-NEXT:    lw a4, 8(a1)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(a1)
+; RV32IZFINXZDINX-NEXT:    lw a4, 4(a1)
+; RV32IZFINXZDINX-NEXT:    lw a5, 8(a1)
+; RV32IZFINXZDINX-NEXT:    lw a6, 12(a1)
 ; RV32IZFINXZDINX-NEXT:    mv s0, a0
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a4, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a2, 4(sp)
 ; RV32IZFINXZDINX-NEXT:    addi a0, sp, 16
 ; RV32IZFINXZDINX-NEXT:    mv a1, sp
 ; RV32IZFINXZDINX-NEXT:    addi a2, sp, 36
 ; RV32IZFINXZDINX-NEXT:    sw a3, 0(sp)
+; RV32IZFINXZDINX-NEXT:    sw a4, 4(sp)
+; RV32IZFINXZDINX-NEXT:    sw a5, 8(sp)
+; RV32IZFINXZDINX-NEXT:    sw a6, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    call frexpl
 ; RV32IZFINXZDINX-NEXT:    lw a0, 36(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 28(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 24(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 20(sp)
-; RV32IZFINXZDINX-NEXT:    lw a4, 16(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(s0)
-; RV32IZFINXZDINX-NEXT:    sw a2, 8(s0)
-; RV32IZFINXZDINX-NEXT:    sw a3, 4(s0)
-; RV32IZFINXZDINX-NEXT:    sw a4, 0(s0)
+; RV32IZFINXZDINX-NEXT:    lw a1, 16(sp)
+; RV32IZFINXZDINX-NEXT:    lw a2, 20(sp)
+; RV32IZFINXZDINX-NEXT:    lw a3, 24(sp)
+; RV32IZFINXZDINX-NEXT:    lw a4, 28(sp)
+; RV32IZFINXZDINX-NEXT:    sw a1, 0(s0)
+; RV32IZFINXZDINX-NEXT:    sw a2, 4(s0)
+; RV32IZFINXZDINX-NEXT:    sw a3, 8(s0)
+; RV32IZFINXZDINX-NEXT:    sw a4, 12(s0)
 ; RV32IZFINXZDINX-NEXT:    sw a0, 16(s0)
 ; RV32IZFINXZDINX-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; RV32IZFINXZDINX-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
@@ -1664,8 +1640,8 @@ define { fp128, i32 } @test_frexp_f128_i32(fp128 %a) nounwind {
 ; RV64IZFINXZDINX-NEXT:    mv a1, a3
 ; RV64IZFINXZDINX-NEXT:    call frexpl
 ; RV64IZFINXZDINX-NEXT:    lw a2, 12(sp)
-; RV64IZFINXZDINX-NEXT:    sd a1, 8(s0)
 ; RV64IZFINXZDINX-NEXT:    sd a0, 0(s0)
+; RV64IZFINXZDINX-NEXT:    sd a1, 8(s0)
 ; RV64IZFINXZDINX-NEXT:    sw a2, 16(s0)
 ; RV64IZFINXZDINX-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64IZFINXZDINX-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
@@ -1678,27 +1654,27 @@ define { fp128, i32 } @test_frexp_f128_i32(fp128 %a) nounwind {
 ; RV32I-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s0, 40(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    lw a3, 0(a1)
-; RV32I-NEXT:    lw a2, 4(a1)
-; RV32I-NEXT:    lw a4, 8(a1)
-; RV32I-NEXT:    lw a1, 12(a1)
+; RV32I-NEXT:    lw a4, 4(a1)
+; RV32I-NEXT:    lw a5, 8(a1)
+; RV32I-NEXT:    lw a6, 12(a1)
 ; RV32I-NEXT:    mv s0, a0
-; RV32I-NEXT:    sw a1, 12(sp)
-; RV32I-NEXT:    sw a4, 8(sp)
-; RV32I-NEXT:    sw a2, 4(sp)
 ; RV32I-NEXT:    addi a0, sp, 16
 ; RV32I-NEXT:    mv a1, sp
 ; RV32I-NEXT:    addi a2, sp, 36
 ; RV32I-NEXT:    sw a3, 0(sp)
+; RV32I-NEXT:    sw a4, 4(sp)
+; RV32I-NEXT:    sw a5, 8(sp)
+; RV32I-NEXT:    sw a6, 12(sp)
 ; RV32I-NEXT:    call frexpl
 ; RV32I-NEXT:    lw a0, 36(sp)
-; RV32I-NEXT:    lw a1, 28(sp)
-; RV32I-NEXT:    lw a2, 24(sp)
-; RV32I-NEXT:    lw a3, 20(sp)
-; RV32I-NEXT:    lw a4, 16(sp)
-; RV32I-NEXT:    sw a1, 12(s0)
-; RV32I-NEXT:    sw a2, 8(s0)
-; RV32I-NEXT:    sw a3, 4(s0)
-; RV32I-NEXT:    sw a4, 0(s0)
+; RV32I-NEXT:    lw a1, 16(sp)
+; RV32I-NEXT:    lw a2, 20(sp)
+; RV32I-NEXT:    lw a3, 24(sp)
+; RV32I-NEXT:    lw a4, 28(sp)
+; RV32I-NEXT:    sw a1, 0(s0)
+; RV32I-NEXT:    sw a2, 4(s0)
+; RV32I-NEXT:    sw a3, 8(s0)
+; RV32I-NEXT:    sw a4, 12(s0)
 ; RV32I-NEXT:    sw a0, 16(s0)
 ; RV32I-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
@@ -1717,8 +1693,8 @@ define { fp128, i32 } @test_frexp_f128_i32(fp128 %a) nounwind {
 ; RV64I-NEXT:    mv a1, a3
 ; RV64I-NEXT:    call frexpl
 ; RV64I-NEXT:    lw a2, 12(sp)
-; RV64I-NEXT:    sd a1, 8(s0)
 ; RV64I-NEXT:    sd a0, 0(s0)
+; RV64I-NEXT:    sd a1, 8(s0)
 ; RV64I-NEXT:    sw a2, 16(s0)
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
@@ -1735,26 +1711,26 @@ define fp128 @test_frexp_f128_i32_only_use_fract(fp128 %a) nounwind {
 ; RV32IFD-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
 ; RV32IFD-NEXT:    sw s0, 40(sp) # 4-byte Folded Spill
 ; RV32IFD-NEXT:    lw a3, 0(a1)
-; RV32IFD-NEXT:    lw a2, 4(a1)
-; RV32IFD-NEXT:    lw a4, 8(a1)
-; RV32IFD-NEXT:    lw a1, 12(a1)
+; RV32IFD-NEXT:    lw a4, 4(a1)
+; RV32IFD-NEXT:    lw a5, 8(a1)
+; RV32IFD-NEXT:    lw a6, 12(a1)
 ; RV32IFD-NEXT:    mv s0, a0
-; RV32IFD-NEXT:    sw a1, 12(sp)
-; RV32IFD-NEXT:    sw a4, 8(sp)
-; RV32IFD-NEXT:    sw a2, 4(sp)
 ; RV32IFD-NEXT:    addi a0, sp, 16
 ; RV32IFD-NEXT:    mv a1, sp
 ; RV32IFD-NEXT:    addi a2, sp, 36
 ; RV32IFD-NEXT:    sw a3, 0(sp)
+; RV32IFD-NEXT:    sw a4, 4(sp)
+; RV32IFD-NEXT:    sw a5, 8(sp)
+; RV32IFD-NEXT:    sw a6, 12(sp)
 ; RV32IFD-NEXT:    call frexpl
-; RV32IFD-NEXT:    lw a0, 28(sp)
-; RV32IFD-NEXT:    lw a1, 24(sp)
-; RV32IFD-NEXT:    lw a2, 20(sp)
-; RV32IFD-NEXT:    lw a3, 16(sp)
-; RV32IFD-NEXT:    sw a0, 12(s0)
-; RV32IFD-NEXT:    sw a1, 8(s0)
-; RV32IFD-NEXT:    sw a2, 4(s0)
-; RV32IFD-NEXT:    sw a3, 0(s0)
+; RV32IFD-NEXT:    lw a0, 16(sp)
+; RV32IFD-NEXT:    lw a1, 20(sp)
+; RV32IFD-NEXT:    lw a2, 24(sp)
+; RV32IFD-NEXT:    lw a3, 28(sp)
+; RV32IFD-NEXT:    sw a0, 0(s0)
+; RV32IFD-NEXT:    sw a1, 4(s0)
+; RV32IFD-NEXT:    sw a2, 8(s0)
+; RV32IFD-NEXT:    sw a3, 12(s0)
 ; RV32IFD-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 48
@@ -1776,26 +1752,26 @@ define fp128 @test_frexp_f128_i32_only_use_fract(fp128 %a) nounwind {
 ; RV32IZFINXZDINX-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
 ; RV32IZFINXZDINX-NEXT:    sw s0, 40(sp) # 4-byte Folded Spill
 ; RV32IZFINXZDINX-NEXT:    lw a3, 0(a1)
-; RV32IZFINXZDINX-NEXT:    lw a2, 4(a1)
-; RV32IZFINXZDINX-NEXT:    lw a4, 8(a1)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(a1)
+; RV32IZFINXZDINX-NEXT:    lw a4, 4(a1)
+; RV32IZFINXZDINX-NEXT:    lw a5, 8(a1)
+; RV32IZFINXZDINX-NEXT:    lw a6, 12(a1)
 ; RV32IZFINXZDINX-NEXT:    mv s0, a0
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a4, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a2, 4(sp)
 ; RV32IZFINXZDINX-NEXT:    addi a0, sp, 16
 ; RV32IZFINXZDINX-NEXT:    mv a1, sp
 ; RV32IZFINXZDINX-NEXT:    addi a2, sp, 36
 ; RV32IZFINXZDINX-NEXT:    sw a3, 0(sp)
+; RV32IZFINXZDINX-NEXT:    sw a4, 4(sp)
+; RV32IZFINXZDINX-NEXT:    sw a5, 8(sp)
+; RV32IZFINXZDINX-NEXT:    sw a6, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    call frexpl
-; RV32IZFINXZDINX-NEXT:    lw a0, 28(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 24(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 20(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 16(sp)
-; RV32IZFINXZDINX-NEXT:    sw a0, 12(s0)
-; RV32IZFINXZDINX-NEXT:    sw a1, 8(s0)
-; RV32IZFINXZDINX-NEXT:    sw a2, 4(s0)
-; RV32IZFINXZDINX-NEXT:    sw a3, 0(s0)
+; RV32IZFINXZDINX-NEXT:    lw a0, 16(sp)
+; RV32IZFINXZDINX-NEXT:    lw a1, 20(sp)
+; RV32IZFINXZDINX-NEXT:    lw a2, 24(sp)
+; RV32IZFINXZDINX-NEXT:    lw a3, 28(sp)
+; RV32IZFINXZDINX-NEXT:    sw a0, 0(s0)
+; RV32IZFINXZDINX-NEXT:    sw a1, 4(s0)
+; RV32IZFINXZDINX-NEXT:    sw a2, 8(s0)
+; RV32IZFINXZDINX-NEXT:    sw a3, 12(s0)
 ; RV32IZFINXZDINX-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; RV32IZFINXZDINX-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
 ; RV32IZFINXZDINX-NEXT:    addi sp, sp, 48
@@ -1817,26 +1793,26 @@ define fp128 @test_frexp_f128_i32_only_use_fract(fp128 %a) nounwind {
 ; RV32I-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s0, 40(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    lw a3, 0(a1)
-; RV32I-NEXT:    lw a2, 4(a1)
-; RV32I-NEXT:    lw a4, 8(a1)
-; RV32I-NEXT:    lw a1, 12(a1)
+; RV32I-NEXT:    lw a4, 4(a1)
+; RV32I-NEXT:    lw a5, 8(a1)
+; RV32I-NEXT:    lw a6, 12(a1)
 ; RV32I-NEXT:    mv s0, a0
-; RV32I-NEXT:    sw a1, 12(sp)
-; RV32I-NEXT:    sw a4, 8(sp)
-; RV32I-NEXT:    sw a2, 4(sp)
 ; RV32I-NEXT:    addi a0, sp, 16
 ; RV32I-NEXT:    mv a1, sp
 ; RV32I-NEXT:    addi a2, sp, 36
 ; RV32I-NEXT:    sw a3, 0(sp)
+; RV32I-NEXT:    sw a4, 4(sp)
+; RV32I-NEXT:    sw a5, 8(sp)
+; RV32I-NEXT:    sw a6, 12(sp)
 ; RV32I-NEXT:    call frexpl
-; RV32I-NEXT:    lw a0, 28(sp)
-; RV32I-NEXT:    lw a1, 24(sp)
-; RV32I-NEXT:    lw a2, 20(sp)
-; RV32I-NEXT:    lw a3, 16(sp)
-; RV32I-NEXT:    sw a0, 12(s0)
-; RV32I-NEXT:    sw a1, 8(s0)
-; RV32I-NEXT:    sw a2, 4(s0)
-; RV32I-NEXT:    sw a3, 0(s0)
+; RV32I-NEXT:    lw a0, 16(sp)
+; RV32I-NEXT:    lw a1, 20(sp)
+; RV32I-NEXT:    lw a2, 24(sp)
+; RV32I-NEXT:    lw a3, 28(sp)
+; RV32I-NEXT:    sw a0, 0(s0)
+; RV32I-NEXT:    sw a1, 4(s0)
+; RV32I-NEXT:    sw a2, 8(s0)
+; RV32I-NEXT:    sw a3, 12(s0)
 ; RV32I-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 48
@@ -1862,16 +1838,16 @@ define i32 @test_frexp_f128_i32_only_use_exp(fp128 %a) nounwind {
 ; RV32IFD-NEXT:    addi sp, sp, -48
 ; RV32IFD-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
 ; RV32IFD-NEXT:    lw a3, 0(a0)
-; RV32IFD-NEXT:    lw a1, 4(a0)
-; RV32IFD-NEXT:    lw a2, 8(a0)
-; RV32IFD-NEXT:    lw a0, 12(a0)
-; RV32IFD-NEXT:    sw a0, 20(sp)
-; RV32IFD-NEXT:    sw a2, 16(sp)
-; RV32IFD-NEXT:    sw a1, 12(sp)
+; RV32IFD-NEXT:    lw a4, 4(a0)
+; RV32IFD-NEXT:    lw a5, 8(a0)
+; RV32IFD-NEXT:    lw a6, 12(a0)
 ; RV32IFD-NEXT:    addi a0, sp, 24
 ; RV32IFD-NEXT:    addi a1, sp, 8
 ; RV32IFD-NEXT:    addi a2, sp, 40
 ; RV32IFD-NEXT:    sw a3, 8(sp)
+; RV32IFD-NEXT:    sw a4, 12(sp)
+; RV32IFD-NEXT:    sw a5, 16(sp)
+; RV32IFD-NEXT:    sw a6, 20(sp)
 ; RV32IFD-NEXT:    call frexpl
 ; RV32IFD-NEXT:    lw a0, 40(sp)
 ; RV32IFD-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
@@ -1894,16 +1870,16 @@ define i32 @test_frexp_f128_i32_only_use_exp(fp128 %a) nounwind {
 ; RV32IZFINXZDINX-NEXT:    addi sp, sp, -48
 ; RV32IZFINXZDINX-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
 ; RV32IZFINXZDINX-NEXT:    lw a3, 0(a0)
-; RV32IZFINXZDINX-NEXT:    lw a1, 4(a0)
-; RV32IZFINXZDINX-NEXT:    lw a2, 8(a0)
-; RV32IZFINXZDINX-NEXT:    lw a0, 12(a0)
-; RV32IZFINXZDINX-NEXT:    sw a0, 20(sp)
-; RV32IZFINXZDINX-NEXT:    sw a2, 16(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
+; RV32IZFINXZDINX-NEXT:    lw a4, 4(a0)
+; RV32IZFINXZDINX-NEXT:    lw a5, 8(a0)
+; RV32IZFINXZDINX-NEXT:    lw a6, 12(a0)
 ; RV32IZFINXZDINX-NEXT:    addi a0, sp, 24
 ; RV32IZFINXZDINX-NEXT:    addi a1, sp, 8
 ; RV32IZFINXZDINX-NEXT:    addi a2, sp, 40
 ; RV32IZFINXZDINX-NEXT:    sw a3, 8(sp)
+; RV32IZFINXZDINX-NEXT:    sw a4, 12(sp)
+; RV32IZFINXZDINX-NEXT:    sw a5, 16(sp)
+; RV32IZFINXZDINX-NEXT:    sw a6, 20(sp)
 ; RV32IZFINXZDINX-NEXT:    call frexpl
 ; RV32IZFINXZDINX-NEXT:    lw a0, 40(sp)
 ; RV32IZFINXZDINX-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
@@ -1926,16 +1902,16 @@ define i32 @test_frexp_f128_i32_only_use_exp(fp128 %a) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -48
 ; RV32I-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    lw a3, 0(a0)
-; RV32I-NEXT:    lw a1, 4(a0)
-; RV32I-NEXT:    lw a2, 8(a0)
-; RV32I-NEXT:    lw a0, 12(a0)
-; RV32I-NEXT:    sw a0, 20(sp)
-; RV32I-NEXT:    sw a2, 16(sp)
-; RV32I-NEXT:    sw a1, 12(sp)
+; RV32I-NEXT:    lw a4, 4(a0)
+; RV32I-NEXT:    lw a5, 8(a0)
+; RV32I-NEXT:    lw a6, 12(a0)
 ; RV32I-NEXT:    addi a0, sp, 24
 ; RV32I-NEXT:    addi a1, sp, 8
 ; RV32I-NEXT:    addi a2, sp, 40
 ; RV32I-NEXT:    sw a3, 8(sp)
+; RV32I-NEXT:    sw a4, 12(sp)
+; RV32I-NEXT:    sw a5, 16(sp)
+; RV32I-NEXT:    sw a6, 20(sp)
 ; RV32I-NEXT:    call frexpl
 ; RV32I-NEXT:    lw a0, 40(sp)
 ; RV32I-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload

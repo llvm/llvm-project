@@ -1,18 +1,11 @@
-set(LLVM_LINK_COMPONENTS
-  FrontendOpenMP
-  Support
-  )
-
 add_clang_unittest(SemaTests
   ExternalSemaSourceTest.cpp
   CodeCompleteTest.cpp
+  HeuristicResolverTest.cpp
   GslOwnerPointerInference.cpp
   SemaLookupTest.cpp
   SemaNoloadLookupTest.cpp
-  )
-
-clang_target_link_libraries(SemaTests
-  PRIVATE
+  CLANG_LIBS
   clangAST
   clangASTMatchers
   clangBasic
@@ -21,11 +14,11 @@ clang_target_link_libraries(SemaTests
   clangSema
   clangSerialization
   clangTooling
-  )
-
-target_link_libraries(SemaTests
-  PRIVATE
+  LINK_LIBS
   LLVMTestingAnnotations
   LLVMTestingSupport
   clangTesting
+  LLVM_COMPONENTS
+  FrontendOpenMP
+  Support
   )

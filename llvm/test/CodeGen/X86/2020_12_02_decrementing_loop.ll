@@ -4,7 +4,7 @@
 define i32 @test_01(ptr %p, i64 %len, i32 %x) {
 ; CHECK-LABEL: test_01:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_1: ## %loop
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    subq $1, %rsi
@@ -44,7 +44,7 @@ failure:                                          ; preds = %backedge
 define i32 @test_01a(ptr %p, i64 %len, i32 %x) {
 ; CHECK-LABEL: test_01a:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB1_1: ## %loop
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    subq $1, %rsi
@@ -84,7 +84,7 @@ failure:                                          ; preds = %backedge
 define i32 @test_02(ptr %p, i64 %len, i32 %x) {
 ; CHECK-LABEL: test_02:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB2_1: ## %loop
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    subq $1, %rsi
@@ -126,7 +126,7 @@ failure:                                          ; preds = %backedge
 define i32 @test_03(ptr %p, i64 %len, i32 %x) {
 ; CHECK-LABEL: test_03:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB3_1: ## %loop
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    subq $1, %rsi
@@ -165,7 +165,7 @@ failure:                                          ; preds = %backedge
   unreachable
 }
 
-define void @test_04() {
+define void @test_04(i32 %arg) {
 ; CHECK-LABEL: test_04:
 ; CHECK:       ## %bb.0: ## %bb
 ; CHECK-NEXT:    ud2
@@ -175,7 +175,7 @@ bb:
 bb1:                                              ; preds = %bb10, %bb
   %tmp = phi i64 [ 1, %bb ], [ %tmp2, %bb10 ]
   %tmp2 = add nuw nsw i64 %tmp, 1
-  br i1 undef, label %bb21, label %bb7
+  br i1 poison, label %bb21, label %bb7
 
 bb7:                                              ; preds = %bb1
   %tmp8 = add nsw i64 %tmp, -1
@@ -187,7 +187,7 @@ bb10:                                             ; preds = %bb16
   br label %bb1
 
 bb11:                                             ; preds = %bb16, %bb7
-  switch i32 undef, label %bb19 [
+  switch i32 %arg, label %bb19 [
     i32 0, label %bb17
     i32 1, label %bb16
     i32 2, label %bb15
@@ -205,7 +205,7 @@ bb15:                                             ; preds = %bb11
   unreachable
 
 bb16:                                             ; preds = %bb11
-  br i1 undef, label %bb10, label %bb11
+  br i1 poison, label %bb10, label %bb11
 
 bb17:                                             ; preds = %bb11
   unreachable

@@ -427,7 +427,8 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
       if (Instruction *R = FoldOpIntoSelect(I, SI))
         return R;
 
-  if (Constant *CUI = dyn_cast<Constant>(Op1))
+  Constant *CUI;
+  if (match(Op1, m_ImmConstant(CUI)))
     if (Instruction *Res = FoldShiftByConstant(Op0, CUI, I))
       return Res;
 
@@ -510,6 +511,21 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
 
   if (match(Op1, m_Or(m_Value(), m_SpecificInt(BitWidth - 1))))
     return replaceOperand(I, 1, ConstantInt::get(Ty, BitWidth - 1));
+
+  Instruction *CmpIntr;
+  if ((I.getOpcode() == Instruction::LShr ||
+       I.getOpcode() == Instruction::AShr) &&
+      match(Op0, m_OneUse(m_Instruction(CmpIntr))) &&
+      isa<CmpIntrinsic>(CmpIntr) &&
+      match(Op1, m_SpecificInt(Ty->getScalarSizeInBits() - 1))) {
+    Value *Cmp =
+        Builder.CreateICmp(cast<CmpIntrinsic>(CmpIntr)->getLTPredicate(),
+                           CmpIntr->getOperand(0), CmpIntr->getOperand(1));
+    return CastInst::Create(I.getOpcode() == Instruction::LShr
+                                ? Instruction::ZExt
+                                : Instruction::SExt,
+                            Cmp, Ty);
+  }
 
   return nullptr;
 }
@@ -667,7 +683,7 @@ static Value *foldShiftedShift(BinaryOperator *InnerShift, unsigned OuterShAmt,
     Value *And = Builder.CreateAnd(InnerShift->getOperand(0),
                                    ConstantInt::get(ShType, Mask));
     if (auto *AndI = dyn_cast<Instruction>(And)) {
-      AndI->moveBefore(InnerShift);
+      AndI->moveBefore(InnerShift->getIterator());
       AndI->takeName(InnerShift);
     }
     return And;
@@ -975,6 +991,12 @@ static bool setShiftFlags(BinaryOperator &I, const SimplifyQuery &Q) {
 
     // shr (shl X, Y), Y
     if (match(I.getOperand(0), m_Shl(m_Value(), m_Specific(I.getOperand(1))))) {
+      I.setIsExact();
+      return true;
+    }
+    // Infer 'exact' flag if shift amount is cttz(x) on the same operand.
+    if (match(I.getOperand(1), m_Intrinsic<Intrinsic::cttz>(
+                                   m_Specific(I.getOperand(0)), m_Value()))) {
       I.setIsExact();
       return true;
     }
@@ -1463,6 +1485,11 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
         Value *Signbit = Builder.CreateLShr(X, ShAmtC);
         return BinaryOperator::CreateAnd(Signbit, X);
       }
+
+      // lshr iN (X - 1) & ~X, N-1 --> zext (X == 0)
+      if (match(Op0, m_OneUse(m_c_And(m_Add(m_Value(X), m_AllOnes()),
+                                      m_Not(m_Deferred(X))))))
+        return new ZExtInst(Builder.CreateIsNull(X), Ty);
     }
 
     Instruction *TruncSrc;
@@ -1592,6 +1619,22 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
   if (Instruction *Overflow = foldLShrOverflowBit(I))
     return Overflow;
 
+  // Transform ((pow2 << x) >> cttz(pow2 << y)) -> ((1 << x) >> y)
+  Value *Shl0_Op0, *Shl0_Op1, *Shl1_Op1;
+  BinaryOperator *Shl1;
+  if (match(Op0, m_Shl(m_Value(Shl0_Op0), m_Value(Shl0_Op1))) &&
+      match(Op1, m_Intrinsic<Intrinsic::cttz>(m_BinOp(Shl1))) &&
+      match(Shl1, m_Shl(m_Specific(Shl0_Op0), m_Value(Shl1_Op1))) &&
+      isKnownToBeAPowerOfTwo(Shl0_Op0, /*OrZero=*/true, 0, &I)) {
+    auto *Shl0 = cast<BinaryOperator>(Op0);
+    bool HasNUW = Shl0->hasNoUnsignedWrap() && Shl1->hasNoUnsignedWrap();
+    bool HasNSW = Shl0->hasNoSignedWrap() && Shl1->hasNoSignedWrap();
+    if (HasNUW || HasNSW) {
+      Value *NewShl = Builder.CreateShl(ConstantInt::get(Shl1->getType(), 1),
+                                        Shl0_Op1, "", HasNUW, HasNSW);
+      return BinaryOperator::CreateLShr(NewShl, Shl1_Op1);
+    }
+  }
   return nullptr;
 }
 
@@ -1739,6 +1782,11 @@ Instruction *InstCombinerImpl::visitAShr(BinaryOperator &I) {
       Value *Y;
       if (match(Op0, m_OneUse(m_NSWSub(m_Value(X), m_Value(Y)))))
         return new SExtInst(Builder.CreateICmpSLT(X, Y), Ty);
+
+      // ashr iN (X - 1) & ~X, N-1 --> sext (X == 0)
+      if (match(Op0, m_OneUse(m_c_And(m_Add(m_Value(X), m_AllOnes()),
+                                      m_Not(m_Deferred(X))))))
+        return new SExtInst(Builder.CreateIsNull(X), Ty);
     }
 
     const APInt *MulC;

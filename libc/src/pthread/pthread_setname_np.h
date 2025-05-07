@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_SETNAME_NP_H
 #define LLVM_LIBC_SRC_PTHREAD_PTHREAD_SETNAME_NP_H
 
+#include "src/__support/macros/config.h"
 #include <pthread.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int pthread_setname_np(pthread_t, const char *name);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_SETNAME_NP_H

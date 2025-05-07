@@ -25,7 +25,7 @@ __device__ void test_arg(__bf16 *out, __bf16 in) {
 __device__ __bf16 test_ret( __bf16 in) {
 // CHECK:        ld.param.b16    %[[R:rs[0-9]+]], [_Z8test_retDF16b_param_0];
   return in;
-// CHECK:        st.param.b16    [func_retval0+0], %[[R]]
+// CHECK:        st.param.b16    [func_retval0], %[[R]]
 // CHECK:        ret;
 }
 
@@ -35,15 +35,15 @@ __device__ __bf16 external_func( __bf16 in);
 // CHECK:        .param .align 2 .b8 _Z9test_callDF16b_param_0[2]
 __device__ __bf16 test_call( __bf16 in) {
 // CHECK:        ld.param.b16    %[[R:rs[0-9]+]], [_Z9test_callDF16b_param_0];
-// CHECK:        st.param.b16    [param0+0], %[[R]];
+// CHECK:        st.param.b16    [param0], %[[R]];
 // CHECK:        .param .align 2 .b8 retval0[2];
 // CHECK:        call.uni (retval0),
 // CHECK-NEXT:   _Z13external_funcDF16b,
 // CHECK-NEXT:   (
 // CHECK-NEXT:   param0
 // CHECK-NEXT    );
-// CHECK:        ld.param.b16    %[[RET:rs[0-9]+]], [retval0+0];
+// CHECK:        ld.param.b16    %[[RET:rs[0-9]+]], [retval0];
   return external_func(in);
-// CHECK:        st.param.b16    [func_retval0+0], %[[RET]]
+// CHECK:        st.param.b16    [func_retval0], %[[RET]]
 // CHECK:        ret;
 }

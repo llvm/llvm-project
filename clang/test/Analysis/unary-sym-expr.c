@@ -11,9 +11,9 @@ int test(int x, int y) {
   clang_analyzer_dump(-x);       // expected-warning{{-reg_$0<int x>}}
   clang_analyzer_dump(~x);       // expected-warning{{~reg_$0<int x>}}
   int z = x + y;
-  clang_analyzer_dump(-z);       // expected-warning{{-((reg_$0<int x>) + (reg_$1<int y>))}}
-  clang_analyzer_dump(-(x + y)); // expected-warning{{-((reg_$0<int x>) + (reg_$1<int y>))}}
-  clang_analyzer_dump(-x + y);   // expected-warning{{(-reg_$0<int x>) + (reg_$1<int y>)}}
+  clang_analyzer_dump(-z);       // expected-warning{{-((reg_$0<int x>) + (reg_$3<int y>))}}
+  clang_analyzer_dump(-(x + y)); // expected-warning{{-((reg_$0<int x>) + (reg_$3<int y>))}}
+  clang_analyzer_dump(-x + y);   // expected-warning{{(-reg_$0<int x>) + (reg_$3<int y>)}}
 
   if (-x == 0) {
     clang_analyzer_eval(-x == 0); // expected-warning{{TRUE}}
@@ -29,12 +29,39 @@ int test(int x, int y) {
   return 42;
 }
 
-void test_svalbuilder_simplification(int x, int y) {
+void test_svalbuilder_simplification_add(int x, int y) {
   if (x + y != 3)
     return;
   clang_analyzer_eval(-(x + y) == -3); // expected-warning{{TRUE}}
-  // FIXME Commutativity is not supported yet.
-  clang_analyzer_eval(-(y + x) == -3); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(-(y + x) == -3); // expected-warning{{TRUE}}
+}
+
+void test_svalbuilder_simplification_mul(int x, int y) {
+  if (x * y != 3)
+    return;
+  clang_analyzer_eval(-(x * y) == -3); // expected-warning{{TRUE}}
+  clang_analyzer_eval(-(y * x) == -3); // expected-warning{{TRUE}}
+}
+
+void test_svalbuilder_simplification_and(int x, int y) {
+  if ((x & y) != 3)
+    return;
+  clang_analyzer_eval(-(x & y) == -3); // expected-warning{{TRUE}}
+  clang_analyzer_eval(-(y & x) == -3); // expected-warning{{TRUE}}
+}
+
+void test_svalbuilder_simplification_or(int x, int y) {
+  if ((x | y) != 3)
+    return;
+  clang_analyzer_eval(-(x | y) == -3); // expected-warning{{TRUE}}
+  clang_analyzer_eval(-(y | x) == -3); // expected-warning{{TRUE}}
+}
+
+void test_svalbuilder_simplification_xor(int x, int y) {
+  if ((x ^ y) != 3)
+    return;
+  clang_analyzer_eval(-(x ^ y) == -3); // expected-warning{{TRUE}}
+  clang_analyzer_eval(-(y ^ x) == -3); // expected-warning{{TRUE}}
 }
 
 int test_fp(int flag) {

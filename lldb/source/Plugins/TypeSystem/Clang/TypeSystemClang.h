@@ -22,6 +22,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTFwd.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
@@ -29,6 +30,7 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallVector.h"
 
+#include "Plugins/ExpressionParser/Clang/ClangASTMetadata.h"
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Symbol/CompilerType.h"
@@ -45,12 +47,12 @@ class PDBASTParser;
 namespace clang {
 class FileManager;
 class HeaderSearch;
+class HeaderSearchOptions;
 class ModuleMap;
 } // namespace clang
 
 namespace lldb_private {
 
-class ClangASTMetadata;
 class ClangASTSource;
 class Declaration;
 
@@ -191,11 +193,11 @@ public:
   void SetMetadataAsUserID(const clang::Decl *decl, lldb::user_id_t user_id);
   void SetMetadataAsUserID(const clang::Type *type, lldb::user_id_t user_id);
 
-  void SetMetadata(const clang::Decl *object, ClangASTMetadata &meta_data);
+  void SetMetadata(const clang::Decl *object, ClangASTMetadata meta_data);
 
-  void SetMetadata(const clang::Type *object, ClangASTMetadata &meta_data);
-  ClangASTMetadata *GetMetadata(const clang::Decl *object);
-  ClangASTMetadata *GetMetadata(const clang::Type *object);
+  void SetMetadata(const clang::Type *object, ClangASTMetadata meta_data);
+  std::optional<ClangASTMetadata> GetMetadata(const clang::Decl *object);
+  std::optional<ClangASTMetadata> GetMetadata(const clang::Type *object);
 
   void SetCXXRecordDeclAccess(const clang::CXXRecordDecl *object,
                               clang::AccessSpecifier access);
@@ -325,13 +327,13 @@ public:
                                                bool is_framework = false,
                                                bool is_explicit = false);
 
-  CompilerType CreateRecordType(clang::DeclContext *decl_ctx,
-                                OptionalClangModuleID owning_module,
-                                lldb::AccessType access_type,
-                                llvm::StringRef name, int kind,
-                                lldb::LanguageType language,
-                                ClangASTMetadata *metadata = nullptr,
-                                bool exports_symbols = false);
+  CompilerType
+  CreateRecordType(clang::DeclContext *decl_ctx,
+                   OptionalClangModuleID owning_module,
+                   lldb::AccessType access_type, llvm::StringRef name, int kind,
+                   lldb::LanguageType language,
+                   std::optional<ClangASTMetadata> metadata = std::nullopt,
+                   bool exports_symbols = false);
 
   class TemplateParameterInfos {
   public:
@@ -455,11 +457,10 @@ public:
 
   bool BaseSpecifierIsEmpty(const clang::CXXBaseSpecifier *b);
 
-  CompilerType CreateObjCClass(llvm::StringRef name,
-                               clang::DeclContext *decl_ctx,
-                               OptionalClangModuleID owning_module,
-                               bool isForwardDecl, bool isInternal,
-                               ClangASTMetadata *metadata = nullptr);
+  CompilerType
+  CreateObjCClass(llvm::StringRef name, clang::DeclContext *decl_ctx,
+                  OptionalClangModuleID owning_module, bool isInternal,
+                  std::optional<ClangASTMetadata> metadata = std::nullopt);
 
   // Returns a mask containing bits from the TypeSystemClang::eTypeXXX
   // enumerations
@@ -490,23 +491,21 @@ public:
                              const char *name, const CompilerType &param_type,
                              int storage, bool add_decl = false);
 
-  void SetFunctionParameters(clang::FunctionDecl *function_decl,
-                             llvm::ArrayRef<clang::ParmVarDecl *> params);
-
   CompilerType CreateBlockPointerType(const CompilerType &function_type);
 
   // Array Types
 
   CompilerType CreateArrayType(const CompilerType &element_type,
-                               size_t element_count, bool is_vector);
+                               std::optional<size_t> element_count,
+                               bool is_vector);
 
   // Enumeration Types
-  CompilerType CreateEnumerationType(llvm::StringRef name,
-                                     clang::DeclContext *decl_ctx,
-                                     OptionalClangModuleID owning_module,
-                                     const Declaration &decl,
-                                     const CompilerType &integer_qual_type,
-                                     bool is_scoped);
+  CompilerType CreateEnumerationType(
+      llvm::StringRef name, clang::DeclContext *decl_ctx,
+      OptionalClangModuleID owning_module, const Declaration &decl,
+      const CompilerType &integer_qual_type, bool is_scoped,
+      std::optional<clang::EnumExtensibilityAttr::Kind> enum_kind =
+          std::nullopt);
 
   // Integer type functions
 
@@ -615,8 +614,9 @@ public:
   static clang::NamespaceDecl *
   DeclContextGetAsNamespaceDecl(const CompilerDeclContext &dc);
 
-  static ClangASTMetadata *DeclContextGetMetaData(const CompilerDeclContext &dc,
-                                                  const clang::Decl *object);
+  static std::optional<ClangASTMetadata>
+  DeclContextGetMetaData(const CompilerDeclContext &dc,
+                         const clang::Decl *object);
 
   static clang::ASTContext *
   DeclContextGetTypeSystemClang(const CompilerDeclContext &dc);
@@ -828,15 +828,17 @@ public:
 
   const llvm::fltSemantics &GetFloatTypeSemantics(size_t byte_size) override;
 
-  std::optional<uint64_t> GetByteSize(lldb::opaque_compiler_type_t type,
-                                      ExecutionContextScope *exe_scope) {
-    if (std::optional<uint64_t> bit_size = GetBitSize(type, exe_scope))
-      return (*bit_size + 7) / 8;
-    return std::nullopt;
+  llvm::Expected<uint64_t> GetByteSize(lldb::opaque_compiler_type_t type,
+                                       ExecutionContextScope *exe_scope) {
+    auto bit_size_or_err = GetBitSize(type, exe_scope);
+    if (!bit_size_or_err)
+      return bit_size_or_err.takeError();
+    return (*bit_size_or_err + 7) / 8;
   }
 
-  std::optional<uint64_t> GetBitSize(lldb::opaque_compiler_type_t type,
-                                     ExecutionContextScope *exe_scope) override;
+  llvm::Expected<uint64_t>
+  GetBitSize(lldb::opaque_compiler_type_t type,
+             ExecutionContextScope *exe_scope) override;
 
   lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type,
                              uint64_t &count) override;
@@ -898,9 +900,10 @@ public:
 
   // Lookup a child given a name. This function will match base class names and
   // member member names in "clang_type" only, not descendants.
-  uint32_t GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
-                                   llvm::StringRef name,
-                                   bool omit_empty_base_classes) override;
+  llvm::Expected<uint32_t>
+  GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
+                          llvm::StringRef name,
+                          bool omit_empty_base_classes) override;
 
   // Lookup a child member given a name. This function will match member names
   // only and will descend into "clang_type" children in search for the first
@@ -975,6 +978,24 @@ public:
   SetFloatingInitializerForVariable(clang::VarDecl *var,
                                     const llvm::APFloat &init_value);
 
+  /// For each parameter type of \c prototype, creates a \c clang::ParmVarDecl
+  /// whose \c clang::DeclContext is \c context.
+  ///
+  /// \param[in] context Non-null \c clang::FunctionDecl which will be the \c
+  /// clang::DeclContext of each parameter created/returned by this function.
+  /// \param[in] prototype The \c clang::FunctionProtoType of \c context.
+  /// \param[in] param_names The ith element of this vector contains the name
+  /// of the ith parameter. This parameter may be unnamed, in which case the
+  /// ith entry in \c param_names is an empty string. This vector is either
+  /// empty, or will have an entry for *each* parameter of the prototype
+  /// regardless of whether a parameter is unnamed or not.
+  ///
+  /// \returns A list of newly created of non-null \c clang::ParmVarDecl (one
+  /// for each parameter of \c prototype).
+  llvm::SmallVector<clang::ParmVarDecl *> CreateParameterDeclarations(
+      clang::FunctionDecl *context, const clang::FunctionProtoType &prototype,
+      const llvm::SmallVector<llvm::StringRef> &param_names);
+
   clang::CXXMethodDecl *AddMethodToCXXRecordType(
       lldb::opaque_compiler_type_t type, llvm::StringRef name,
       const char *mangled_name, const CompilerType &method_type,
@@ -1003,7 +1024,7 @@ public:
                                    const char *property_setter_name,
                                    const char *property_getter_name,
                                    uint32_t property_attributes,
-                                   ClangASTMetadata *metadata);
+                                   ClangASTMetadata metadata);
 
   static clang::ObjCMethodDecl *AddMethodToObjCObjectType(
       const CompilerType &type,
@@ -1024,7 +1045,7 @@ public:
   // Modifying Enumeration types
   clang::EnumConstantDecl *AddEnumerationValueToEnumerationType(
       const CompilerType &enum_type, const Declaration &decl, const char *name,
-      int64_t enum_value, uint32_t enum_value_bit_size);
+      uint64_t enum_value, uint32_t enum_value_bit_size);
   clang::EnumConstantDecl *AddEnumerationValueToEnumerationType(
       const CompilerType &enum_type, const Declaration &decl, const char *name,
       const llvm::APSInt &value);
@@ -1147,10 +1168,6 @@ public:
 
   bool SetDeclIsForcefullyCompleted(const clang::TagDecl *td);
 
-  /// Return the template parameters (including surrounding <>) in string form.
-  std::string
-  PrintTemplateParams(const TemplateParameterInfos &template_param_infos);
-
 private:
   /// Returns the PrintingPolicy used when generating the internal type names.
   /// These type names are mostly used for the formatter selection.
@@ -1172,6 +1189,9 @@ private:
   /// on creation of a new instance.
   void LogCreation() const;
 
+  llvm::Expected<uint64_t> GetObjCBitSize(clang::QualType qual_type,
+                                          ExecutionContextScope *exe_scope);
+
   // Classes that inherit from TypeSystemClang can see and modify these
   std::string m_target_triple;
   std::unique_ptr<clang::ASTContext> m_ast_up;
@@ -1185,6 +1205,7 @@ private:
   std::unique_ptr<clang::IdentifierTable> m_identifier_table_up;
   std::unique_ptr<clang::SelectorTable> m_selector_table_up;
   std::unique_ptr<clang::Builtin::Context> m_builtins_up;
+  std::unique_ptr<clang::HeaderSearchOptions> m_header_search_opts_up;
   std::unique_ptr<clang::HeaderSearch> m_header_search_up;
   std::unique_ptr<clang::ModuleMap> m_module_map_up;
   std::unique_ptr<DWARFASTParserClang> m_dwarf_ast_parser_up;

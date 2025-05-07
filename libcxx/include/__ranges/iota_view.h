@@ -68,7 +68,7 @@ struct __get_wider_signed {
 };
 
 template <class _Start>
-using _IotaDiffT =
+using _IotaDiffT _LIBCPP_NODEBUG =
     typename _If< (!integral<_Start> || sizeof(iter_difference_t<_Start>) > sizeof(_Start)),
                   type_identity<iter_difference_t<_Start>>,
                   __get_wider_signed<_Start> >::type;
@@ -343,6 +343,8 @@ public:
   {
     return __iterator{__bound_sentinel_};
   }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr bool empty() const { return __value_ == __bound_sentinel_; }
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
     requires(same_as<_Start, _BoundSentinel> && __advanceable<_Start>) ||

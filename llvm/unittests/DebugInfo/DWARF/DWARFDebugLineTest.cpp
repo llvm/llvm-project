@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "DwarfGenerator.h"
 #include "DwarfUtils.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
@@ -1558,7 +1558,6 @@ TEST_F(DebugLineBasicFixture, VerboseOutput) {
   raw_string_ostream OS(Output);
   Parser.parseNext(RecordRecoverable, RecordUnrecoverable, &OS,
                    /*Verbose=*/true);
-  OS.flush();
   StringRef OutputRef(Output);
 
   size_t Pos = 0;
@@ -1805,7 +1804,6 @@ struct TruncatedOpcodeFixtureBase : public CommonFixture {
     raw_string_ostream OS(Output);
     Parser.parseNext(RecordRecoverable, RecordUnrecoverable, &OS,
                      /*Verbose=*/true);
-    OS.flush();
 
     std::string LinePrefix =
         ("0x0000002f: 0" + Twine::utohexstr(OpcodeValue) + " ").str();
@@ -2037,4 +2035,117 @@ TEST_F(DebugLineBasicFixture, PrintPathsProperly) {
   EXPECT_THAT(Result.c_str(), MatchesRegex("a dir.b dir.b file"));
 }
 
+/// Test that lookupAddressRange correctly filters rows based on
+/// a statement-sequence offset (simulating DW_AT_LLVM_stmt_sequence).
+///
+/// This test verifies that:
+/// 1. When a statement-sequence offset is provided, lookupAddressRange
+///    only returns rows from the sequence starting at that offset.
+/// 2. When an invalid statement-sequence offset is provided, no rows
+///    are returned.
+/// 3. When no statement-sequence offset is provided, all matching rows
+///    in the table are returned.
+///
+/// We build a line table with two sequences at the same address range
+/// but different line numbers. Then we try lookups with various statement-
+/// sequence offsets to check the filtering logic.
+TEST_F(DebugLineBasicFixture, LookupAddressRangeWithStmtSequenceOffset) {
+  if (!setupGenerator())
+    GTEST_SKIP();
+
+  // Create a line table that has two sequences covering [0x1000, 0x1004).
+  // Each sequence has two rows: addresses at 0x1000 and 0x1004, but
+  // they differ by line numbers (100 vs. 200, etc.).
+  //
+  // We'll pretend the first sequence starts at offset 0x2e in the line table,
+  // the second at 0x42, and we'll also test an invalid offset 0x66.
+
+  LineTable &LT = Gen->addLineTable();
+
+  // First sequence at offset 0x2e: addresses 0x1000(Ln=100), 0x1004(Ln=101)
+  LT.addExtendedOpcode(9, DW_LNE_set_address, {{0x1000U, LineTable::Quad}});
+  LT.addStandardOpcode(DW_LNS_set_prologue_end, {});
+  // Advance the line register by 99 (so line=100) and copy.
+  LT.addStandardOpcode(DW_LNS_advance_line, {{99, LineTable::SLEB}});
+  LT.addStandardOpcode(DW_LNS_copy, {});
+  // 0x4b is a special opcode: address += 4, line += 1 (so line=101).
+  LT.addByte(0x4b);
+  // End this sequence.
+  LT.addExtendedOpcode(1, DW_LNE_end_sequence, {});
+
+  // Second sequence at offset 0x42: addresses 0x1000(Ln=200), 0x1004(Ln=201)
+  LT.addExtendedOpcode(9, DW_LNE_set_address, {{0x1000U, LineTable::Quad}});
+  LT.addStandardOpcode(DW_LNS_set_prologue_end, {});
+  LT.addStandardOpcode(DW_LNS_advance_line, {{199, LineTable::SLEB}});
+  LT.addStandardOpcode(DW_LNS_copy, {});
+  // 0x4b again: address += 4, line += 1 (so line=201).
+  LT.addByte(0x4b);
+  // End this second sequence.
+  LT.addExtendedOpcode(1, DW_LNE_end_sequence, {});
+
+  // Generate the DWARF data.
+  generate();
+
+  // Parse the line table.
+  auto ExpectedLineTable =
+      Line.getOrParseLineTable(LineData, /*Offset=*/0, *Context,
+                               /*DwarfUnit=*/nullptr, RecordRecoverable);
+  ASSERT_THAT_EXPECTED(ExpectedLineTable, Succeeded());
+  const auto *Table = *ExpectedLineTable;
+
+  // The table should have two sequences, each starting at our chosen offsets.
+  ASSERT_EQ(Table->Sequences.size(), 2u);
+
+  // 1) Try looking up with an invalid offset (simulating an invalid
+  //    DW_AT_LLVM_stmt_sequence). We expect no rows.
+  {
+    std::vector<uint32_t> Rows;
+    bool Found = Table->lookupAddressRange(
+        {0x1000, object::SectionedAddress::UndefSection}, /*Size=*/1, Rows,
+        /*StmtSequenceOffset=*/0x66); // invalid offset
+    EXPECT_FALSE(Found);
+    EXPECT_TRUE(Rows.empty());
+  }
+
+  // 2) Look up using the offset 0x2e (our first sequence). We expect
+  //    to get the rows from that sequence only (which for 0x1000 is row #0).
+  {
+    std::vector<uint32_t> Rows;
+    bool Found = Table->lookupAddressRange(
+        {0x1000, object::SectionedAddress::UndefSection}, /*Size=*/1, Rows,
+        /*StmtSequenceOffset=*/0x2e);
+    EXPECT_TRUE(Found);
+    ASSERT_EQ(Rows.size(), 1u);
+    // The first sequence's first row is index 0.
+    EXPECT_EQ(Rows[0], 0u);
+  }
+
+  // 3) Look up using the offset 0x42 (second sequence). For address 0x1000
+  //    in that second sequence, we should see row #2.
+  {
+    std::vector<uint32_t> Rows;
+    bool Found = Table->lookupAddressRange(
+        {0x1000, object::SectionedAddress::UndefSection}, /*Size=*/1, Rows,
+        /*StmtSequenceOffset=*/0x42);
+    EXPECT_TRUE(Found);
+    ASSERT_EQ(Rows.size(), 1u);
+    // The second sequence's first row is index 2 in the table.
+    EXPECT_EQ(Rows[0], 3u);
+  }
+
+  // 4) Look up with no statement-sequence offset specified.
+  //    We should get rows from both sequences for address 0x1000.
+  {
+    std::vector<uint32_t> Rows;
+    bool Found = Table->lookupAddressRange(
+        {0x1000, object::SectionedAddress::UndefSection}, /*Size=*/1, Rows,
+        std::nullopt /* no filter */);
+    EXPECT_TRUE(Found);
+    // The first sequence's row is #0, second's row is #2, so both should
+    // appear.
+    ASSERT_EQ(Rows.size(), 2u);
+    EXPECT_EQ(Rows[0], 0u);
+    EXPECT_EQ(Rows[1], 3u);
+  }
+}
 } // end anonymous namespace

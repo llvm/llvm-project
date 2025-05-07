@@ -8,22 +8,22 @@ template<typename T> struct A {
 template<typename T> struct B : A<T> {
   using A<T>::f;
   using A<T>::N; // expected-error{{dependent using declaration resolved to type without 'typename'}}
-  
+
   using A<T>::foo; // expected-error{{no member named 'foo'}}
-  using A<double>::f; // expected-error{{using declaration refers into 'A<double>::', which is not a base class of 'B<int>'}}
+  using A<double>::f; // expected-error{{using declaration refers into 'A<double>', which is not a base class of 'B<int>'}}
 };
 
 B<int> a; // expected-note{{in instantiation of template class 'B<int>' requested here}}
 
 template<typename T> struct C : A<T> {
   using A<T>::f;
-  
+
   void f() { };
 };
 
 template <typename T> struct D : A<T> {
   using A<T>::f;
-  
+
   void f();
 };
 

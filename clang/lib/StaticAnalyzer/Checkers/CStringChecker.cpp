@@ -16,6 +16,7 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
+#include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -337,7 +338,8 @@ public:
                          const Stmt *S, StringRef WarningMsg) const;
   void emitAdditionOverflowBug(CheckerContext &C, ProgramStateRef State) const;
   void emitUninitializedReadBug(CheckerContext &C, ProgramStateRef State,
-                                const Expr *E, StringRef Msg) const;
+                                const Expr *E, const MemRegion *R,
+                                StringRef Msg) const;
   ProgramStateRef checkAdditionOverflow(CheckerContext &C,
                                             ProgramStateRef state,
                                             NonLoc left,
@@ -474,7 +476,8 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
     OS << "The first element of the ";
     printIdxWithOrdinalSuffix(OS, Buffer.ArgumentIndex + 1);
     OS << " argument is undefined";
-    emitUninitializedReadBug(C, State, Buffer.Expression, OS.str());
+    emitUninitializedReadBug(C, State, Buffer.Expression,
+                             FirstElementVal->getAsRegion(), OS.str());
     return nullptr;
   }
 
@@ -538,13 +541,16 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
     OS << ") in the ";
     printIdxWithOrdinalSuffix(OS, Buffer.ArgumentIndex + 1);
     OS << " argument is undefined";
-    emitUninitializedReadBug(C, State, Buffer.Expression, OS.str());
+    emitUninitializedReadBug(C, State, Buffer.Expression,
+                             LastElementVal.getAsRegion(), OS.str());
     return nullptr;
   }
   return State;
 }
-
-// FIXME: This was originally copied from ArrayBoundChecker.cpp. Refactor?
+// FIXME: The root of this logic was copied from the old checker
+// alpha.security.ArrayBound (which is removed within this commit).
+// It should be refactored to use the different, more sophisticated bounds
+// checking logic used by the new checker ``security.ArrayBound``.
 ProgramStateRef CStringChecker::CheckLocation(CheckerContext &C,
                                               ProgramStateRef state,
                                               AnyArgExpr Buffer, SVal Element,
@@ -818,7 +824,7 @@ void CStringChecker::emitNullArgBug(CheckerContext &C, ProgramStateRef State,
 
 void CStringChecker::emitUninitializedReadBug(CheckerContext &C,
                                               ProgramStateRef State,
-                                              const Expr *E,
+                                              const Expr *E, const MemRegion *R,
                                               StringRef Msg) const {
   if (ExplodedNode *N = C.generateErrorNode(State)) {
     if (!BT_UninitRead)
@@ -831,6 +837,7 @@ void CStringChecker::emitUninitializedReadBug(CheckerContext &C,
                     Report->getLocation());
     Report->addRange(E->getSourceRange());
     bugreporter::trackExpressionValue(N, E, *Report);
+    Report->addVisitor<NoStoreFuncVisitor>(R->castAs<SubRegion>());
     C.emitReport(std::move(Report));
   }
 }
@@ -1020,8 +1027,8 @@ SVal CStringChecker::getCStringLengthForRegion(CheckerContext &C,
       BasicValueFactory &BVF = svalBuilder.getBasicValueFactory();
       const llvm::APSInt &maxValInt = BVF.getMaxValue(sizeTy);
       llvm::APSInt fourInt = APSIntType(maxValInt).getValue(4);
-      const llvm::APSInt *maxLengthInt = BVF.evalAPSInt(BO_Div, maxValInt,
-                                                        fourInt);
+      std::optional<APSIntPtr> maxLengthInt =
+          BVF.evalAPSInt(BO_Div, maxValInt, fourInt);
       NonLoc maxLength = svalBuilder.makeIntVal(*maxLengthInt);
       SVal evalLength = svalBuilder.evalBinOpNN(state, BO_LE, *strLn, maxLength,
                                                 svalBuilder.getConditionType());
@@ -1507,8 +1514,7 @@ void CStringChecker::evalCopyCommon(CheckerContext &C, const CallEvent &Call,
       // If we don't know how much we copied, we can at least
       // conjure a return value for later.
       if (lastElement.isUnknown())
-        lastElement = C.getSValBuilder().conjureSymbolVal(
-            nullptr, Call.getOriginExpr(), LCtx, C.blockCount());
+        lastElement = C.getSValBuilder().conjureSymbolVal(Call, C.blockCount());
 
       // The byte after the last byte copied is the return value.
       state = state->BindExpr(Call.getOriginExpr(), LCtx, lastElement);
@@ -1658,8 +1664,7 @@ void CStringChecker::evalMemcmp(CheckerContext &C, const CallEvent &Call,
     State = CheckBufferAccess(C, State, Left, Size, AccessKind::read, CK);
     if (State) {
       // The return value is the comparison result, which we don't know.
-      SVal CmpV = Builder.conjureSymbolVal(nullptr, Call.getOriginExpr(), LCtx,
-                                           C.blockCount());
+      SVal CmpV = Builder.conjureSymbolVal(Call, C.blockCount());
       State = State->BindExpr(Call.getOriginExpr(), LCtx, CmpV);
       C.addTransition(State);
     }
@@ -1762,8 +1767,7 @@ void CStringChecker::evalstrLengthCommon(CheckerContext &C,
       // no guarantee the full string length will actually be returned.
       // All we know is the return value is the min of the string length
       // and the limit. This is better than nothing.
-      result = C.getSValBuilder().conjureSymbolVal(
-          nullptr, Call.getOriginExpr(), LCtx, C.blockCount());
+      result = C.getSValBuilder().conjureSymbolVal(Call, C.blockCount());
       NonLoc resultNL = result.castAs<NonLoc>();
 
       if (strLengthNL) {
@@ -1786,8 +1790,7 @@ void CStringChecker::evalstrLengthCommon(CheckerContext &C,
     // If we don't know the length of the string, conjure a return
     // value, so it can be used in constraints, at least.
     if (result.isUnknown()) {
-      result = C.getSValBuilder().conjureSymbolVal(
-          nullptr, Call.getOriginExpr(), LCtx, C.blockCount());
+      result = C.getSValBuilder().conjureSymbolVal(Call, C.blockCount());
     }
   }
 
@@ -2254,8 +2257,7 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallEvent &Call,
     // If this is a stpcpy-style copy, but we were unable to check for a buffer
     // overflow, we still need a result. Conjure a return value.
     if (ReturnEnd && Result.isUnknown()) {
-      Result = svalBuilder.conjureSymbolVal(nullptr, Call.getOriginExpr(), LCtx,
-                                            C.blockCount());
+      Result = svalBuilder.conjureSymbolVal(Call, C.blockCount());
     }
   }
   // Set the return value.
@@ -2354,8 +2356,7 @@ void CStringChecker::evalStrcmpCommon(CheckerContext &C, const CallEvent &Call,
   const StringLiteral *RightStrLiteral =
       getCStringLiteral(C, state, Right.Expression, RightVal);
   bool canComputeResult = false;
-  SVal resultVal = svalBuilder.conjureSymbolVal(nullptr, Call.getOriginExpr(),
-                                                LCtx, C.blockCount());
+  SVal resultVal = svalBuilder.conjureSymbolVal(Call, C.blockCount());
 
   if (LeftStrLiteral && RightStrLiteral) {
     StringRef LeftStrRef = LeftStrLiteral->getString();
@@ -2460,16 +2461,13 @@ void CStringChecker::evalStrsep(CheckerContext &C,
 
     // Overwrite the search string pointer. The new value is either an address
     // further along in the same string, or NULL if there are no more tokens.
-    State =
-        State->bindLoc(*SearchStrLoc,
-                       SVB.conjureSymbolVal(getTag(), Call.getOriginExpr(),
-                                            LCtx, CharPtrTy, C.blockCount()),
-                       LCtx);
+    State = State->bindLoc(*SearchStrLoc,
+                           SVB.conjureSymbolVal(Call, C.blockCount(), getTag()),
+                           LCtx);
   } else {
     assert(SearchStrVal.isUnknown());
     // Conjure a symbolic value. It's the best we can do.
-    Result = SVB.conjureSymbolVal(nullptr, Call.getOriginExpr(), LCtx,
-                                  C.blockCount());
+    Result = SVB.conjureSymbolVal(Call, C.blockCount());
   }
 
   // Set the return value, and finish.
@@ -2512,8 +2510,7 @@ void CStringChecker::evalStdCopyCommon(CheckerContext &C,
 
   SValBuilder &SVB = C.getSValBuilder();
 
-  SVal ResultVal =
-      SVB.conjureSymbolVal(nullptr, Call.getOriginExpr(), LCtx, C.blockCount());
+  SVal ResultVal = SVB.conjureSymbolVal(Call, C.blockCount());
   State = State->BindExpr(Call.getOriginExpr(), LCtx, ResultVal);
 
   C.addTransition(State);

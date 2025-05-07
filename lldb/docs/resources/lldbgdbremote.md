@@ -1403,6 +1403,12 @@ For instance, with a macOS process which has nothing mapped in the first
 The lack of `permissions:` indicates that none of read/write/execute are valid
 for this region.
 
+The stub must include `permissions:` key-value on all memory ranges
+that are valid to access in the inferior process -- the lack of
+`permissions:` means that this is an inaccessible (no page table
+entries exist, in a system using VM) memory range.  If a stub cannot
+determine actual permissions, return `rwx`.
+
 **Priority To Implement:** Medium
 
 This is nice to have, but it isn't necessary. It helps LLDB
@@ -2405,6 +2411,11 @@ Return value may optionally be followed by a comma and the base16
 value of errno if unlink failed.
 
 ## "x" - Binary memory read
+
+> **Warning:** The format of this packet was decided before GDB 16
+> introduced its own format for `x`. Future versions of LLDB may not
+> support the format described here, and new code should produce and
+> expect the format used by GDB.
 
 Like the `m` (read) and `M` (write) packets, this is a partner to the
 `X` (write binary data) packet, `x`.

@@ -48,7 +48,7 @@ define double @maxnum_double(double %x, double %y) {
 ; LA32F-NEXT:    .cfi_def_cfa_offset 16
 ; LA32F-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32F-NEXT:    .cfi_offset 1, -4
-; LA32F-NEXT:    bl %plt(fmax)
+; LA32F-NEXT:    bl fmax
 ; LA32F-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32F-NEXT:    addi.w $sp, $sp, 16
 ; LA32F-NEXT:    ret
@@ -66,7 +66,8 @@ define double @maxnum_double(double %x, double %y) {
 ; LA64F-NEXT:    .cfi_def_cfa_offset 16
 ; LA64F-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64F-NEXT:    .cfi_offset 1, -8
-; LA64F-NEXT:    bl %plt(fmax)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(fmax)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64F-NEXT:    addi.d $sp, $sp, 16
 ; LA64F-NEXT:    ret
@@ -120,7 +121,7 @@ define double @minnum_double(double %x, double %y) {
 ; LA32F-NEXT:    .cfi_def_cfa_offset 16
 ; LA32F-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32F-NEXT:    .cfi_offset 1, -4
-; LA32F-NEXT:    bl %plt(fmin)
+; LA32F-NEXT:    bl fmin
 ; LA32F-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32F-NEXT:    addi.w $sp, $sp, 16
 ; LA32F-NEXT:    ret
@@ -138,7 +139,8 @@ define double @minnum_double(double %x, double %y) {
 ; LA64F-NEXT:    .cfi_def_cfa_offset 16
 ; LA64F-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64F-NEXT:    .cfi_offset 1, -8
-; LA64F-NEXT:    bl %plt(fmin)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(fmin)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64F-NEXT:    addi.d $sp, $sp, 16
 ; LA64F-NEXT:    ret

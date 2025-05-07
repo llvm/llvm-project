@@ -31,11 +31,6 @@ static cl::opt<unsigned> VExtractThreshold(
     "hexagon-vextract-threshold", cl::Hidden, cl::init(1),
     cl::desc("Threshold for triggering vextract replacement"));
 
-namespace llvm {
-  void initializeHexagonVExtractPass(PassRegistry& Registry);
-  FunctionPass *createHexagonVExtract();
-}
-
 namespace {
   class HexagonVExtract : public MachineFunctionPass {
   public:
@@ -166,7 +161,6 @@ bool HexagonVExtract::runOnMachineFunction(MachineFunction &MF) {
       assert(ExtI->getOperand(1).getReg() == VecR);
 
       MachineBasicBlock &ExtB = *ExtI->getParent();
-      DebugLoc DL = ExtI->getDebugLoc();
       Register BaseR = EmitAddr(ExtB, ExtI, ExtI->getDebugLoc(), FI,
                                 SR == 0 ? 0 : VecSize/2);
 

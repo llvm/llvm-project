@@ -13,6 +13,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/IR/Constant.h"
@@ -25,15 +26,15 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <iterator>
 #include <optional>
 
 #define DEBUG_TYPE "cgscc"
 
 using namespace llvm;
+
+STATISTIC(LargestCGSCC, "Number of functions in the largest SCC");
 
 // Explicit template instantiations and specialization definitions for core
 // template typedefs.
@@ -83,6 +84,8 @@ PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,
     // pass, skip its execution completely if asked to (callback returns false).
     if (!PI.runBeforePass(*Pass, *C))
       continue;
+
+    LargestCGSCC.updateMax(C->size());
 
     PreservedAnalyses PassPA = Pass->run(*C, AM, G, UR);
 
@@ -150,9 +153,8 @@ ModuleToPostOrderCGSCCPassAdaptor::run(Module &M, ModuleAnalysisManager &AM) {
   SmallPriorityWorklist<LazyCallGraph::RefSCC *, 1> RCWorklist;
   SmallPriorityWorklist<LazyCallGraph::SCC *, 1> CWorklist;
 
-  // Keep sets for invalidated SCCs and RefSCCs that should be skipped when
+  // Keep sets for invalidated SCCs that should be skipped when
   // iterating off the worklists.
-  SmallPtrSet<LazyCallGraph::RefSCC *, 4> InvalidRefSCCSet;
   SmallPtrSet<LazyCallGraph::SCC *, 4> InvalidSCCSet;
 
   SmallDenseSet<std::pair<LazyCallGraph::Node *, LazyCallGraph::SCC *>, 4>
@@ -161,7 +163,6 @@ ModuleToPostOrderCGSCCPassAdaptor::run(Module &M, ModuleAnalysisManager &AM) {
   SmallVector<Function *, 4> DeadFunctions;
 
   CGSCCUpdateResult UR = {CWorklist,
-                          InvalidRefSCCSet,
                           InvalidSCCSet,
                           nullptr,
                           PreservedAnalyses::all(),
@@ -194,11 +195,6 @@ ModuleToPostOrderCGSCCPassAdaptor::run(Module &M, ModuleAnalysisManager &AM) {
 
     do {
       LazyCallGraph::RefSCC *RC = RCWorklist.pop_back_val();
-      if (InvalidRefSCCSet.count(RC)) {
-        LLVM_DEBUG(dbgs() << "Skipping an invalid RefSCC...\n");
-        continue;
-      }
-
       assert(CWorklist.empty() &&
              "Should always start with an empty SCC worklist");
 
@@ -519,9 +515,7 @@ PreservedAnalyses CGSCCToFunctionPassAdaptor::run(LazyCallGraph::SCC &C,
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
 
-  SmallVector<LazyCallGraph::Node *, 4> Nodes;
-  for (LazyCallGraph::Node &N : C)
-    Nodes.push_back(&N);
+  SmallVector<LazyCallGraph::Node *, 4> Nodes(llvm::make_pointer_range(C));
 
   // The SCC may get split while we are optimizing functions due to deleting
   // edges. If this happens, the current SCC can shift, so keep track of
@@ -1075,8 +1069,7 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
 
   // We added a ref edge earlier for new call edges, promote those to call edges
   // alongside PromotedRefTargets.
-  for (Node *E : NewCallEdges)
-    PromotedRefTargets.insert(E);
+  PromotedRefTargets.insert_range(NewCallEdges);
 
   // Now promote ref edges into call edges.
   for (Node *CallTarget : PromotedRefTargets) {
@@ -1172,7 +1165,6 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
   }
 
   assert(!UR.InvalidatedSCCs.count(C) && "Invalidated the current SCC!");
-  assert(!UR.InvalidatedRefSCCs.count(RC) && "Invalidated the current RefSCC!");
   assert(&C->getOuterRefSCC() == RC && "Current SCC not in current RefSCC!");
 
   // Record the current SCC for higher layers of the CGSCC pass manager now that

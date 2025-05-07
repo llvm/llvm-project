@@ -42,7 +42,7 @@ std::initializer_list<id> foo1() {
 
 // CHECK: define{{.*}} void @_Z4foo1v(ptr {{.*}} %[[AGG_RESULT:.*]])
 // CHECK: store ptr @[[REFTMP]], ptr %[[AGG_RESULT]]
-// CHECK: %[[SIZE:.*]] = getelementptr inbounds i8, ptr %[[AGG_RESULT]], i32 4
+// CHECK: %[[SIZE:.*]] = getelementptr inbounds nuw i8, ptr %[[AGG_RESULT]], i32 4
 // CHECK: store i32 2, ptr %[[SIZE]]
 // CHECK: ret void
 

@@ -19,14 +19,10 @@
 
 #include "PPCXCOFFStreamer.h"
 #include "PPCMCCodeEmitter.h"
-#include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
-#include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCObjectWriter.h"
-#include "llvm/MC/MCSectionXCOFF.h"
-#include "llvm/MC/MCSymbolXCOFF.h"
 #include "llvm/MC/TargetRegistry.h"
 
 using namespace llvm;
@@ -68,11 +64,11 @@ void PPCXCOFFStreamer::emitInstruction(const MCInst &Inst,
   emitPrefixedInstruction(Inst, STI);
 }
 
-MCXCOFFStreamer *
-llvm::createPPCXCOFFStreamer(MCContext &Context,
-                             std::unique_ptr<MCAsmBackend> MAB,
-                             std::unique_ptr<MCObjectWriter> OW,
-                             std::unique_ptr<MCCodeEmitter> Emitter) {
-  return new PPCXCOFFStreamer(Context, std::move(MAB), std::move(OW),
+MCStreamer *
+llvm::createPPCXCOFFStreamer(const Triple &, MCContext &C,
+                             std::unique_ptr<MCAsmBackend> &&MAB,
+                             std::unique_ptr<MCObjectWriter> &&OW,
+                             std::unique_ptr<MCCodeEmitter> &&Emitter) {
+  return new PPCXCOFFStreamer(C, std::move(MAB), std::move(OW),
                               std::move(Emitter));
 }

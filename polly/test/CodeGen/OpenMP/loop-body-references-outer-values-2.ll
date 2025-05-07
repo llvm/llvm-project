@@ -6,7 +6,7 @@
 ; AST: for (int c0 = 0; c0 <= 1023; c0 += 1)
 ; AST:   Stmt_for_i(c0);
 
-; IR: getelementptr inbounds { ptr }, ptr %polly.par.userContext, i32 0, i32 0
+; IR: getelementptr inbounds nuw { ptr }, ptr %polly.par.userContext, i32 0, i32 0
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

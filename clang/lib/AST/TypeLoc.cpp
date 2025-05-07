@@ -428,8 +428,10 @@ TypeSpecifierType BuiltinTypeLoc::getWrittenTypeSpec() const {
 #include "clang/Basic/RISCVVTypes.def"
 #define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLIntangibleTypes.def"
   case BuiltinType::BuiltinFn:
   case BuiltinType::IncompleteMatrixIdx:
   case BuiltinType::ArraySection:
@@ -544,36 +546,47 @@ void UnaryTransformTypeLoc::initializeLocal(ASTContext &Context,
         Context.getTrivialTypeSourceInfo(getTypePtr()->getBaseType(), Loc));
 }
 
+template <class TL>
+static void initializeElaboratedKeyword(TL T, SourceLocation Loc) {
+  T.setElaboratedKeywordLoc(T.getTypePtr()->getKeyword() !=
+                                    ElaboratedTypeKeyword::None
+                                ? Loc
+                                : SourceLocation());
+}
+
+static NestedNameSpecifierLoc
+initializeQualifier(ASTContext &Context, NestedNameSpecifier *Qualifier,
+                    SourceLocation Loc) {
+  if (!Qualifier)
+    return NestedNameSpecifierLoc();
+  NestedNameSpecifierLocBuilder Builder;
+  Builder.MakeTrivial(Context, Qualifier, Loc);
+  return Builder.getWithLocInContext(Context);
+}
+
 void ElaboratedTypeLoc::initializeLocal(ASTContext &Context,
                                         SourceLocation Loc) {
   if (isEmpty())
     return;
-  setElaboratedKeywordLoc(Loc);
-  NestedNameSpecifierLocBuilder Builder;
-  Builder.MakeTrivial(Context, getTypePtr()->getQualifier(), Loc);
-  setQualifierLoc(Builder.getWithLocInContext(Context));
+  initializeElaboratedKeyword(*this, Loc);
+  setQualifierLoc(
+      initializeQualifier(Context, getTypePtr()->getQualifier(), Loc));
 }
 
 void DependentNameTypeLoc::initializeLocal(ASTContext &Context,
                                            SourceLocation Loc) {
-  setElaboratedKeywordLoc(Loc);
-  NestedNameSpecifierLocBuilder Builder;
-  Builder.MakeTrivial(Context, getTypePtr()->getQualifier(), Loc);
-  setQualifierLoc(Builder.getWithLocInContext(Context));
+  initializeElaboratedKeyword(*this, Loc);
+  setQualifierLoc(
+      initializeQualifier(Context, getTypePtr()->getQualifier(), Loc));
   setNameLoc(Loc);
 }
 
 void
 DependentTemplateSpecializationTypeLoc::initializeLocal(ASTContext &Context,
                                                         SourceLocation Loc) {
-  setElaboratedKeywordLoc(Loc);
-  if (getTypePtr()->getQualifier()) {
-    NestedNameSpecifierLocBuilder Builder;
-    Builder.MakeTrivial(Context, getTypePtr()->getQualifier(), Loc);
-    setQualifierLoc(Builder.getWithLocInContext(Context));
-  } else {
-    setQualifierLoc(NestedNameSpecifierLoc());
-  }
+  initializeElaboratedKeyword(*this, Loc);
+  setQualifierLoc(initializeQualifier(
+      Context, getTypePtr()->getDependentTemplateName().getQualifier(), Loc));
   setTemplateKeywordLoc(Loc);
   setTemplateNameLoc(Loc);
   setLAngleLoc(Loc);
@@ -721,6 +734,11 @@ namespace {
     }
 
     TypeLoc VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc T) {
+      return Visit(T.getWrappedLoc());
+    }
+
+    TypeLoc
+    VisitHLSLAttributedResourceTypeLoc(HLSLAttributedResourceTypeLoc T) {
       return Visit(T.getWrappedLoc());
     }
 

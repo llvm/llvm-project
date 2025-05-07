@@ -51,6 +51,8 @@ Operation *PassExecutionAction::getOp() const {
                          : llvm::dyn_cast_if_present<Operation *>(irUnits[0]);
 }
 
+MLIR_DEFINE_EXPLICIT_TYPE_ID(::mlir::PassExecutionAction)
+
 //===----------------------------------------------------------------------===//
 // Pass
 //===----------------------------------------------------------------------===//
@@ -66,7 +68,6 @@ LogicalResult Pass::initializeOptions(
   std::string errStr;
   llvm::raw_string_ostream os(errStr);
   if (failed(passOptions.parseFromString(options, os))) {
-    os.flush();
     return errorHandler(errStr);
   }
   return success();
@@ -679,16 +680,16 @@ LogicalResult OpToOpPassAdaptor::tryMergeInto(MLIRContext *ctx,
   mgrs.clear();
 
   // After coalescing, sort the pass managers within rhs by name.
-  auto compareFn = [](const OpPassManager *lhs, const OpPassManager *rhs) {
+  auto compareFn = [](const OpPassManager &lhs, const OpPassManager &rhs) {
     // Order op-specific pass managers first and op-agnostic pass managers last.
-    if (std::optional<StringRef> lhsName = lhs->getOpName()) {
-      if (std::optional<StringRef> rhsName = rhs->getOpName())
-        return lhsName->compare(*rhsName);
-      return -1; // lhs(op-specific) < rhs(op-agnostic)
+    if (std::optional<StringRef> lhsName = lhs.getOpName()) {
+      if (std::optional<StringRef> rhsName = rhs.getOpName())
+        return *lhsName < *rhsName;
+      return true; // lhs(op-specific) < rhs(op-agnostic)
     }
-    return 1; // lhs(op-agnostic) > rhs(op-specific)
+    return false; // lhs(op-agnostic) > rhs(op-specific)
   };
-  llvm::array_pod_sort(rhs.mgrs.begin(), rhs.mgrs.end(), compareFn);
+  std::sort(rhs.mgrs.begin(), rhs.mgrs.end(), compareFn);
   return success();
 }
 
@@ -700,7 +701,7 @@ std::string OpToOpPassAdaptor::getAdaptorName() {
     os << '\'' << pm.getOpAnchorName() << '\'';
   });
   os << ']';
-  return os.str();
+  return name;
 }
 
 void OpToOpPassAdaptor::runOnOperation() {
@@ -733,7 +734,7 @@ void OpToOpPassAdaptor::runOnOperationImpl(bool verifyPasses) {
         unsigned initGeneration = mgr->impl->initializationGeneration;
         if (failed(runPipeline(*mgr, &op, am.nest(&op), verifyPasses,
                                initGeneration, instrumentor, &parentInfo)))
-          return signalPassFailure();
+          signalPassFailure();
       }
     }
   }
@@ -800,7 +801,8 @@ void OpToOpPassAdaptor::runOnOperationAsyncImpl(bool verifyPasses) {
   // An atomic failure variable for the async executors.
   std::vector<std::atomic<bool>> activePMs(asyncExecutors.size());
   std::fill(activePMs.begin(), activePMs.end(), false);
-  auto processFn = [&](OpPMInfo &opInfo) {
+  std::atomic<bool> hasFailure = false;
+  parallelForEach(context, opInfos, [&](OpPMInfo &opInfo) {
     // Find an executor for this operation.
     auto it = llvm::find_if(activePMs, [](std::atomic<bool> &isActive) {
       bool expectedInactive = false;
@@ -813,14 +815,15 @@ void OpToOpPassAdaptor::runOnOperationAsyncImpl(bool verifyPasses) {
     LogicalResult pipelineResult = runPipeline(
         pm, opInfo.op, opInfo.am, verifyPasses,
         pm.impl->initializationGeneration, instrumentor, &parentInfo);
+    if (failed(pipelineResult))
+      hasFailure.store(true);
 
     // Reset the active bit for this pass manager.
     activePMs[pmIndex].store(false);
-    return pipelineResult;
-  };
+  });
 
   // Signal a failure if any of the executors failed.
-  if (failed(failableParallelForEach(context, opInfos, processFn)))
+  if (hasFailure)
     signalPassFailure();
 }
 
@@ -938,11 +941,9 @@ AnalysisManager AnalysisManager::nestImmediate(Operation *op) {
   assert(impl->getOperation() == op->getParentOp() &&
          "expected immediate child operation");
 
-  auto it = impl->childAnalyses.find(op);
-  if (it == impl->childAnalyses.end())
-    it = impl->childAnalyses
-             .try_emplace(op, std::make_unique<NestedAnalysisMap>(op, impl))
-             .first;
+  auto [it, inserted] = impl->childAnalyses.try_emplace(op);
+  if (inserted)
+    it->second = std::make_unique<NestedAnalysisMap>(op, impl);
   return {it->second.get()};
 }
 

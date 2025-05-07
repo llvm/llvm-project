@@ -16,7 +16,7 @@ struct NamedBitfields {
 };
 
 // CHECK-LABEL: _Z4copyP14NamedBitfieldsS0_
-// CHECK-SAME: ptr nocapture noundef writeonly [[A1:%.*]], ptr nocapture noundef readonly [[A2:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ptr noundef writeonly captures(none) initializes((0, 16)) [[A1:%.*]], ptr noundef readonly captures(none) [[A2:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) [[A1]], ptr noundef nonnull align 8 dereferenceable(16) [[A2]], i64 16, i1 false), !tbaa.struct [[TBAA_STRUCT2:![0-9]+]]
 // CHECK-NEXT:    ret void

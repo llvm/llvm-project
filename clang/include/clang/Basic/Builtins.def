@@ -101,3 +101,4 @@
 //                      M_0, ..., M_k as payload
 //  z -> this is a function in (possibly-versioned) namespace std
 //  E -> this function can be constant evaluated by Clang frontend
+//  G -> this is a C++20 consteval function

@@ -96,7 +96,7 @@ bool areStatementsIdentical(const Stmt *FirstStmt, const Stmt *SecondStmt,
   if (FirstStmt == SecondStmt)
     return true;
 
-  if (FirstStmt->getStmtClass() != FirstStmt->getStmtClass())
+  if (FirstStmt->getStmtClass() != SecondStmt->getStmtClass())
     return false;
 
   if (isa<Expr>(FirstStmt) && isa<Expr>(SecondStmt)) {

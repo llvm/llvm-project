@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 %s -fsyntax-only --embed-dir=%S/Inputs -verify -Wno-c23-extensions
 // RUN: %clang_cc1 %s -fsyntax-only --embed-dir=%S/Inputs -verify -fexperimental-new-constant-interpreter -Wno-c23-extensions
+// expected-no-diagnostics
 
 constexpr int value(int a, int b) {
   return a + b;
@@ -46,7 +47,7 @@ int array[
 static_assert(sizeof(array) / sizeof(int) == 'j');
 
 constexpr int comma_expr = (
-#embed <jk.txt> // expected-warning {{left operand of comma operator has no effect}}
+#embed <jk.txt>
 );
 static_assert(comma_expr == 'k');
 
@@ -95,3 +96,11 @@ struct ST {};
 ST<
 #embed <jk.txt> limit(1)
 > st;
+
+struct HasCharArray { unsigned char h[10]; };
+struct Wrapper { int a; struct HasCharArray d;  };
+constexpr struct Wrapper W = {
+#embed "numbers.txt"
+};
+
+static_assert(W.d.h[2] == '3');

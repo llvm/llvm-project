@@ -345,8 +345,9 @@ include_cleaner::Includes convertIncludes(const ParsedAST &AST) {
     // which is based on FileManager::getCanonicalName(ParentDir).
     auto FE = SM.getFileManager().getFileRef(Inc.Resolved);
     if (!FE) {
-      elog("IncludeCleaner: Failed to get an entry for resolved path {0}: {1}",
-           Inc.Resolved, FE.takeError());
+      elog("IncludeCleaner: Failed to get an entry for resolved path '{0}' "
+           "from include {1} : {2}",
+           Inc.Resolved, Inc.Written, FE.takeError());
       continue;
     }
     TransformedInc.Resolved = *FE;
@@ -399,6 +400,26 @@ computeIncludeCleanerFindings(ParsedAST &AST, bool AnalyzeAngledIncludes) {
 
         if (Satisfied || Providers.empty() ||
             Ref.RT != include_cleaner::RefType::Explicit)
+          return;
+
+        // Check if we have any headers with the same spelling, in edge cases
+        // like `#include_next "foo.h"`, the user can't ever include the
+        // physical foo.h, but can have a spelling that refers to it.
+        // We postpone this check because spelling a header for every usage is
+        // expensive.
+        std::string Spelling = include_cleaner::spellHeader(
+            {Providers.front(), AST.getPreprocessor().getHeaderSearchInfo(),
+             MainFile});
+        for (auto *Inc :
+             ConvertedIncludes.match(include_cleaner::Header{Spelling})) {
+          Satisfied = true;
+          auto HeaderID =
+              AST.getIncludeStructure().getID(&Inc->Resolved->getFileEntry());
+          assert(HeaderID.has_value() &&
+                 "ConvertedIncludes only contains resolved includes.");
+          Used.insert(*HeaderID);
+        }
+        if (Satisfied)
           return;
 
         // We actually always want to map usages to their spellings, but

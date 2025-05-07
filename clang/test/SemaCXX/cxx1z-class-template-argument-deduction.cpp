@@ -19,12 +19,15 @@ template<typename T> constexpr bool has_type(T&) { return true; }
 
 std::initializer_list il1 = {1, 2, 3, 4, 5};
 auto il2 = std::initializer_list{1, 2, 3, 4};
-auto il3 = std::initializer_list{il1};
+auto il3 = std::initializer_list(il1);
 auto il4 = std::initializer_list{il1, il1, il1};
 static_assert(has_type<std::initializer_list<int>>(il1));
 static_assert(has_type<std::initializer_list<int>>(il2));
 static_assert(has_type<std::initializer_list<int>>(il3));
 static_assert(has_type<std::initializer_list<std::initializer_list<int>>>(il4));
+
+auto il5 = std::initializer_list{il1};
+// expected-error@-1 {{no viable conversion from 'std::initializer_list<int>' to 'const int'}}
 
 template<typename T> struct vector {
   template<typename Iter> vector(Iter, Iter);
@@ -110,9 +113,9 @@ namespace dependent {
   };
   template<typename T> void f() {
     typename T::X tx = 0;
-    typename T::Y ty = 0;
+    typename T::Y ty = 0; // expected-warning {{class template argument deduction for alias templates is a C++20 extension}}
   }
-  template void f<B>();
+  template void f<B>(); // expected-note {{in instantiation of function template specialization 'dependent::f<dependent::B>' requested here}}
 
   template<typename T> struct C { C(T); };
   template<typename T> C(T) -> C<T>;

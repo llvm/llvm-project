@@ -9,7 +9,6 @@
 #include "ForwardingReferenceOverloadCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include <algorithm>
 
 using namespace clang::ast_matchers;
 
@@ -19,14 +18,14 @@ namespace {
 // Check if the given type is related to std::enable_if.
 AST_MATCHER(QualType, isEnableIf) {
   auto CheckTemplate = [](const TemplateSpecializationType *Spec) {
-    if (!Spec || !Spec->getTemplateName().getAsTemplateDecl()) {
+    if (!Spec)
       return false;
-    }
-    const NamedDecl *TypeDecl =
-        Spec->getTemplateName().getAsTemplateDecl()->getTemplatedDecl();
-    return TypeDecl->isInStdNamespace() &&
-           (TypeDecl->getName() == "enable_if" ||
-            TypeDecl->getName() == "enable_if_t");
+
+    const TemplateDecl *TDecl = Spec->getTemplateName().getAsTemplateDecl();
+
+    return TDecl && TDecl->isInStdNamespace() &&
+           (TDecl->getName() == "enable_if" ||
+            TDecl->getName() == "enable_if_t");
   };
   const Type *BaseType = Node.getTypePtr();
   // Case: pointer or reference to enable_if.

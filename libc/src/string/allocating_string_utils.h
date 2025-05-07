@@ -11,13 +11,13 @@
 
 #include "src/__support/CPP/new.h"
 #include "src/__support/CPP/optional.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/macros/config.h" // LIBC_NAMESPACE_DECL
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "src/string/string_utils.h"
 
 #include <stddef.h> // For size_t
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 LIBC_INLINE cpp::optional<char *> strdup(const char *src) {
@@ -33,6 +33,6 @@ LIBC_INLINE cpp::optional<char *> strdup(const char *src) {
 }
 
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STRING_ALLOCATING_STRING_UTILS_H

@@ -587,7 +587,7 @@ define <2 x double> @fma_const_fmul_one2(<2 x double> %b) {
 
 define <2 x double> @fma_nan_and_const_0(<2 x double> %b) {
 ; CHECK-LABEL: @fma_nan_and_const_0(
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>
+; CHECK-NEXT:    ret <2 x double> splat (double 0x7FF8000000000000)
 ;
   %res = call nnan nsz <2 x double> @llvm.fma.v2f64(<2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>, <2 x double> <double 0.0000000129182, double 0.000009123>, <2 x double> %b)
   ret <2 x double> %res
@@ -595,7 +595,7 @@ define <2 x double> @fma_nan_and_const_0(<2 x double> %b) {
 
 define <2 x double> @fma_nan_and_const_1(<2 x double> %b) {
 ; CHECK-LABEL: @fma_nan_and_const_1(
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>
+; CHECK-NEXT:    ret <2 x double> splat (double 0x7FF8000000000000)
 ;
   %res = call nnan nsz <2 x double> @llvm.fma.v2f64(<2 x double> <double 0.0000000129182, double 0.000009123>, <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>, <2 x double> %b)
   ret <2 x double> %res
@@ -603,7 +603,7 @@ define <2 x double> @fma_nan_and_const_1(<2 x double> %b) {
 
 define <2 x double> @fma_nan_and_const_2(<2 x double> %b) {
 ; CHECK-LABEL: @fma_nan_and_const_2(
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>
+; CHECK-NEXT:    ret <2 x double> splat (double 0x7FF8000000000000)
 ;
   %res = call nnan nsz <2 x double> @llvm.fma.v2f64(<2 x double> <double 0.0000000129182, double 0.000009123>, <2 x double> %b, <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>)
   ret <2 x double> %res
@@ -611,7 +611,7 @@ define <2 x double> @fma_nan_and_const_2(<2 x double> %b) {
 
 define <2 x double> @fma_undef_0(<2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: @fma_undef_0(
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>
+; CHECK-NEXT:    ret <2 x double> splat (double 0x7FF8000000000000)
 ;
   %res = call nnan nsz <2 x double> @llvm.fma.v2f64(<2 x double> <double undef, double undef>, <2 x double> %b, <2 x double> %c)
   ret <2 x double> %res
@@ -619,7 +619,7 @@ define <2 x double> @fma_undef_0(<2 x double> %b, <2 x double> %c) {
 
 define <2 x double> @fma_undef_1(<2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: @fma_undef_1(
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>
+; CHECK-NEXT:    ret <2 x double> splat (double 0x7FF8000000000000)
 ;
   %res = call nnan nsz <2 x double> @llvm.fma.v2f64(<2 x double> %b, <2 x double> <double undef, double undef>, <2 x double> %c)
   ret <2 x double> %res
@@ -627,7 +627,7 @@ define <2 x double> @fma_undef_1(<2 x double> %b, <2 x double> %c) {
 
 define <2 x double> @fma_undef_2(<2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: @fma_undef_2(
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>
+; CHECK-NEXT:    ret <2 x double> splat (double 0x7FF8000000000000)
 ;
   %res = call nnan nsz <2 x double> @llvm.fma.v2f64(<2 x double> %b, <2 x double> %c, <2 x double> <double undef, double undef>)
   ret <2 x double> %res
@@ -663,14 +663,14 @@ define <2 x double> @fma_partial_undef_2(<2 x double> %b, <2 x double> %c) {
 
 define <2 x double> @fma_nan_0(<2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: @fma_nan_0(
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>
+; CHECK-NEXT:    ret <2 x double> splat (double 0x7FF8000000000000)
 ;
   %res = call nnan nsz <2 x double> @llvm.fma.v2f64(<2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>, <2 x double> %b, <2 x double> %c)
   ret <2 x double> %res
 }
 define <2 x double> @fma_nan_1(<2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: @fma_nan_1(
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>
+; CHECK-NEXT:    ret <2 x double> splat (double 0x7FF8000000000000)
 ;
   %res = call nnan nsz <2 x double> @llvm.fma.v2f64(<2 x double> %b, <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>, <2 x double> %c)
   ret <2 x double> %res
@@ -678,7 +678,7 @@ define <2 x double> @fma_nan_1(<2 x double> %b, <2 x double> %c) {
 
 define <2 x double> @fma_nan_2(<2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: @fma_nan_2(
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>
+; CHECK-NEXT:    ret <2 x double> splat (double 0x7FF8000000000000)
 ;
   %res = call nnan nsz <2 x double> @llvm.fma.v2f64(<2 x double> %b, <2 x double> %c, <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>)
   ret <2 x double> %res
@@ -695,7 +695,7 @@ define <2 x double> @fmuladd_const_fmul(<2 x double> %b) {
 
 define <2 x double> @fmuladd_nan_and_const_0(<2 x double> %b) {
 ; CHECK-LABEL: @fmuladd_nan_and_const_0(
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>
+; CHECK-NEXT:    ret <2 x double> splat (double 0x7FF8000000000000)
 ;
   %res = call nnan nsz <2 x double> @llvm.fmuladd.v2f64(<2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>, <2 x double> <double 0.0000000129182, double 0.000009123>, <2 x double> %b)
   ret <2 x double> %res
@@ -703,7 +703,7 @@ define <2 x double> @fmuladd_nan_and_const_0(<2 x double> %b) {
 
 define <2 x double> @fmuladd_nan_and_const_1(<2 x double> %b) {
 ; CHECK-LABEL: @fmuladd_nan_and_const_1(
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>
+; CHECK-NEXT:    ret <2 x double> splat (double 0x7FF8000000000000)
 ;
   %res = call nnan nsz <2 x double> @llvm.fmuladd.v2f64(<2 x double> <double 0.0000000129182, double 0.000009123>, <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>, <2 x double> %b)
   ret <2 x double> %res
@@ -711,7 +711,7 @@ define <2 x double> @fmuladd_nan_and_const_1(<2 x double> %b) {
 
 define <2 x double> @fmuladd_nan_and_const_2(<2 x double> %b) {
 ; CHECK-LABEL: @fmuladd_nan_and_const_2(
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>
+; CHECK-NEXT:    ret <2 x double> splat (double 0x7FF8000000000000)
 ;
   %res = call nnan nsz <2 x double> @llvm.fmuladd.v2f64(<2 x double> <double 0.0000000129182, double 0.000009123>, <2 x double> %b, <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>)
   ret <2 x double> %res
@@ -719,7 +719,7 @@ define <2 x double> @fmuladd_nan_and_const_2(<2 x double> %b) {
 
 define <2 x double> @fmuladd_nan_0(<2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: @fmuladd_nan_0(
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>
+; CHECK-NEXT:    ret <2 x double> splat (double 0x7FF8000000000000)
 ;
   %res = call nnan nsz <2 x double> @llvm.fmuladd.v2f64(<2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>, <2 x double> %b, <2 x double> %c)
   ret <2 x double> %res
@@ -727,7 +727,7 @@ define <2 x double> @fmuladd_nan_0(<2 x double> %b, <2 x double> %c) {
 
 define <2 x double> @fmuladd_nan_1(<2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: @fmuladd_nan_1(
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>
+; CHECK-NEXT:    ret <2 x double> splat (double 0x7FF8000000000000)
 ;
   %res = call nnan nsz <2 x double> @llvm.fmuladd.v2f64(<2 x double> %b, <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>, <2 x double> %c)
   ret <2 x double> %res
@@ -735,7 +735,7 @@ define <2 x double> @fmuladd_nan_1(<2 x double> %b, <2 x double> %c) {
 
 define <2 x double> @fmuladd_undef_0(<2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: @fmuladd_undef_0(
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>
+; CHECK-NEXT:    ret <2 x double> splat (double 0x7FF8000000000000)
 ;
   %res = call nnan nsz <2 x double> @llvm.fmuladd.v2f64(<2 x double> <double undef, double undef>, <2 x double> %b, <2 x double> %c)
   ret <2 x double> %res
@@ -743,7 +743,7 @@ define <2 x double> @fmuladd_undef_0(<2 x double> %b, <2 x double> %c) {
 
 define <2 x double> @fmuladd_undef_1(<2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: @fmuladd_undef_1(
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>
+; CHECK-NEXT:    ret <2 x double> splat (double 0x7FF8000000000000)
 ;
   %res = call nnan nsz <2 x double> @llvm.fmuladd.v2f64(<2 x double> %b, <2 x double> <double undef, double undef>, <2 x double> %c)
   ret <2 x double> %res
@@ -751,7 +751,7 @@ define <2 x double> @fmuladd_undef_1(<2 x double> %b, <2 x double> %c) {
 
 define <2 x double> @fmuladd_undef_2(<2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: @fmuladd_undef_2(
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>
+; CHECK-NEXT:    ret <2 x double> splat (double 0x7FF8000000000000)
 ;
   %res = call nnan nsz <2 x double> @llvm.fmuladd.v2f64(<2 x double> %b, <2 x double> %c, <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>)
   ret <2 x double> %res
@@ -855,4 +855,69 @@ define <2 x float> @fma_unary_shuffle_ops_uses(<2 x float> %x, <2 x float> %y, <
   call void @use_vec(<2 x float> %c)
   %r = call <2 x float> @llvm.fma.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c)
   ret <2 x float> %r
+}
+
+define half @fma_negone(half %x, half %y) {
+; CHECK-LABEL: @fma_negone(
+; CHECK-NEXT:    [[SUB:%.*]] = fsub half [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    ret half [[SUB]]
+;
+  %sub = call half @llvm.fma.f16(half %x, half -1.0, half %y)
+  ret half %sub
+}
+
+define half @fmuladd_negone(half %x, half %y) {
+; CHECK-LABEL: @fmuladd_negone(
+; CHECK-NEXT:    [[SUB:%.*]] = fsub half [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    ret half [[SUB]]
+;
+  %sub = call half @llvm.fmuladd.f16(half %x, half -1.0, half %y)
+  ret half %sub
+}
+
+define half @fma_negone_fmf(half %x, half %y) {
+; CHECK-LABEL: @fma_negone_fmf(
+; CHECK-NEXT:    [[SUB:%.*]] = fsub nnan ninf nsz half [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    ret half [[SUB]]
+;
+  %sub = call nnan ninf nsz half @llvm.fma.f16(half %x, half -1.0, half %y)
+  ret half %sub
+}
+
+define half @fmuladd_negone_fmf(half %x, half %y) {
+; CHECK-LABEL: @fmuladd_negone_fmf(
+; CHECK-NEXT:    [[SUB:%.*]] = fsub nnan ninf nsz half [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    ret half [[SUB]]
+;
+  %sub = call nnan ninf nsz half @llvm.fmuladd.f16(half %x, half -1.0, half %y)
+  ret half %sub
+}
+
+define <2 x half> @fma_negone_vec(<2 x half> %x, <2 x half> %y) {
+; CHECK-LABEL: @fma_negone_vec(
+; CHECK-NEXT:    [[SUB:%.*]] = fsub <2 x half> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    ret <2 x half> [[SUB]]
+;
+  %sub = call <2 x half> @llvm.fma.v2f16(<2 x half> %x, <2 x half> splat(half -1.0), <2 x half> %y)
+  ret <2 x half> %sub
+}
+
+define <2 x half> @fma_negone_vec_partial_undef(<2 x half> %x, <2 x half> %y) {
+; CHECK-LABEL: @fma_negone_vec_partial_undef(
+; CHECK-NEXT:    [[SUB:%.*]] = call <2 x half> @llvm.fma.v2f16(<2 x half> [[X:%.*]], <2 x half> <half undef, half 0xHBC00>, <2 x half> [[Y:%.*]])
+; CHECK-NEXT:    ret <2 x half> [[SUB]]
+;
+  %sub = call <2 x half> @llvm.fma.v2f16(<2 x half> %x, <2 x half> <half undef, half -1.0>, <2 x half> %y)
+  ret <2 x half> %sub
+}
+
+; negative tests
+
+define half @fma_non_negone(half %x, half %y) {
+; CHECK-LABEL: @fma_non_negone(
+; CHECK-NEXT:    [[SUB:%.*]] = call half @llvm.fma.f16(half [[X:%.*]], half 0xHBE00, half [[Y:%.*]])
+; CHECK-NEXT:    ret half [[SUB]]
+;
+  %sub = call half @llvm.fma.f16(half %x, half -1.5, half %y)
+  ret half %sub
 }

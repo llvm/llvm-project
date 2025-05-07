@@ -123,4 +123,7 @@ OpFoldResult createFoldedDimOp(OpBuilder &b, Location loc, Value val,
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.h.inc"
 
+#define GET_OP_CLASSES
+#include "mlir/Dialect/Linalg/IR/LinalgRelayoutOps.h.inc"
+
 #endif // MLIR_DIALECT_LINALG_IR_LINALG_H

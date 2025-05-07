@@ -14,6 +14,7 @@
 #include "CodeGenTypeCache.h"
 #include "llvm/Analysis/Utils/Local.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/GEPNoWrapFlags.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Type.h"
 
@@ -63,21 +64,25 @@ class CGBuilderTy : public CGBuilderBaseTy {
   Address createConstGEP2_32(Address Addr, unsigned Idx0, unsigned Idx1,
                              const llvm::Twine &Name) {
     const llvm::DataLayout &DL = BB->getDataLayout();
-    llvm::GetElementPtrInst *GEP;
+    llvm::Value *V;
     if (IsInBounds)
-      GEP = cast<llvm::GetElementPtrInst>(CreateConstInBoundsGEP2_32(
-          Addr.getElementType(), emitRawPointerFromAddress(Addr), Idx0, Idx1,
-          Name));
+      V = CreateConstInBoundsGEP2_32(Addr.getElementType(),
+                                     emitRawPointerFromAddress(Addr), Idx0,
+                                     Idx1, Name);
     else
-      GEP = cast<llvm::GetElementPtrInst>(CreateConstGEP2_32(
-          Addr.getElementType(), emitRawPointerFromAddress(Addr), Idx0, Idx1,
-          Name));
+      V = CreateConstGEP2_32(Addr.getElementType(),
+                             emitRawPointerFromAddress(Addr), Idx0, Idx1, Name);
     llvm::APInt Offset(
         DL.getIndexSizeInBits(Addr.getType()->getPointerAddressSpace()), 0,
         /*isSigned=*/true);
-    if (!GEP->accumulateConstantOffset(DL, Offset))
-      llvm_unreachable("offset of GEP with constants is always computable");
-    return Address(GEP, GEP->getResultElementType(),
+    if (!llvm::GEPOperator::accumulateConstantOffset(
+            Addr.getElementType(), {getInt32(Idx0), getInt32(Idx1)}, DL,
+            Offset))
+      llvm_unreachable(
+          "accumulateConstantOffset with constant indices should not fail.");
+    llvm::Type *ElementTy = llvm::GetElementPtrInst::getIndexedType(
+        Addr.getElementType(), {Idx0, Idx1});
+    return Address(V, ElementTy,
                    Addr.getAlignment().alignmentAtOffset(
                        CharUnits::fromQuantity(Offset.getSExtValue())),
                    IsInBounds ? Addr.isKnownNonNull() : NotKnownNonNull);
@@ -190,8 +195,8 @@ public:
                               const llvm::Twine &Name = "") {
     if (!Addr.hasOffset())
       return Address(CreateAddrSpaceCast(Addr.getBasePointer(), Ty, Name),
-                     ElementTy, Addr.getAlignment(), nullptr,
-                     Addr.isKnownNonNull());
+                     ElementTy, Addr.getAlignment(), Addr.getPointerAuthInfo(),
+                     /*Offset=*/nullptr, Addr.isKnownNonNull());
     // Eagerly force a raw address if these is an offset.
     return RawAddress(
         CreateAddrSpaceCast(Addr.emitRawPointer(*getCGF()), Ty, Name),
@@ -210,10 +215,10 @@ public:
   /// Given
   ///   %addr = {T1, T2...}* ...
   /// produce
-  ///   %name = getelementptr inbounds %addr, i32 0, i32 index
+  ///   %name = getelementptr inbounds nuw %addr, i32 0, i32 index
   ///
   /// This API assumes that drilling into a struct like this is always an
-  /// inbounds operation.
+  /// inbounds and nuw operation.
   using CGBuilderBaseTy::CreateStructGEP;
   Address CreateStructGEP(Address Addr, unsigned Index,
                           const llvm::Twine &Name = "") {
@@ -334,9 +339,10 @@ public:
 
   Address CreateGEP(Address Addr, ArrayRef<llvm::Value *> IdxList,
                     llvm::Type *ElementType, CharUnits Align,
-                    const Twine &Name = "") {
+                    const Twine &Name = "",
+                    llvm::GEPNoWrapFlags NW = llvm::GEPNoWrapFlags::none()) {
     llvm::Value *Ptr = emitRawPointerFromAddress(Addr);
-    return RawAddress(CreateGEP(Addr.getElementType(), Ptr, IdxList, Name),
+    return RawAddress(CreateGEP(Addr.getElementType(), Ptr, IdxList, Name, NW),
                       ElementType, Align);
   }
 

@@ -9,6 +9,7 @@
 #ifndef TYPE_DETAIL_H_
 #define TYPE_DETAIL_H_
 
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/TypeSupport.h"
 #include "mlir/IR/Types.h"
@@ -206,11 +207,10 @@ struct UniformQuantizedPerAxisTypeStorage : public QuantizedTypeStorage {
     unsigned getHashValue() const {
       int64_t *scalesCast = llvm::bit_cast<int64_t *>(scales.data());
       ArrayRef<int64_t> scalesBits(scalesCast, scales.size());
-      return llvm::hash_combine(
-          flags, storageType, expressedType,
-          llvm::hash_combine_range(scalesBits.begin(), scalesBits.end()),
-          llvm::hash_combine_range(zeroPoints.begin(), zeroPoints.end()),
-          storageTypeMin, storageTypeMax);
+      return llvm::hash_combine(flags, storageType, expressedType,
+                                llvm::hash_combine_range(scalesBits),
+                                llvm::hash_combine_range(zeroPoints),
+                                storageTypeMin, storageTypeMax);
     }
   };
 
@@ -251,6 +251,125 @@ struct UniformQuantizedPerAxisTypeStorage : public QuantizedTypeStorage {
   const int64_t *zeroPointElements;
   unsigned quantParamsSize;
   int32_t quantizedDimension;
+};
+
+struct UniformQuantizedSubChannelTypeStorage : public QuantizedTypeStorage {
+  struct KeyTy {
+    KeyTy(unsigned flags, Type storageType, Type expressedType,
+          DenseElementsAttr scales, DenseElementsAttr zeroPoints,
+          ArrayRef<int32_t> quantizedDimensions, ArrayRef<int64_t> blockSizes,
+          int64_t storageTypeMin, int64_t storageTypeMax)
+        : flags(flags), storageType(storageType), expressedType(expressedType),
+          scales(scales), zeroPoints(zeroPoints),
+          quantizedDimensions(quantizedDimensions), blockSizes(blockSizes),
+          storageTypeMin(storageTypeMin), storageTypeMax(storageTypeMax) {}
+    /// Flags corresponding to the bitmapped enum QuantizationFlags::FlagValue.
+    unsigned flags;
+
+    // Integral type for the storage point representation.
+    Type storageType;
+
+    // Floating point type that the quantized type approximates.
+    Type expressedType;
+
+    DenseElementsAttr scales;
+    DenseElementsAttr zeroPoints;
+    ArrayRef<int32_t> quantizedDimensions;
+    ArrayRef<int64_t> blockSizes;
+    int64_t storageTypeMin;
+    int64_t storageTypeMax;
+
+    DenseElementsAttr getScales() const { return scales; }
+
+    DenseElementsAttr getZeroPoints() const { return zeroPoints; }
+
+    // Check for equality of two structures that share KeyTy data members
+    // (by name).
+    template <typename T, typename U>
+    static bool genericIsEqual(const T &lhs, const U &rhs) {
+      return lhs.flags == rhs.flags && lhs.storageType == rhs.storageType &&
+             lhs.expressedType == rhs.expressedType &&
+             lhs.scales == rhs.scales && lhs.zeroPoints == rhs.zeroPoints &&
+             lhs.quantizedDimensions == rhs.quantizedDimensions &&
+             lhs.blockSizes == rhs.blockSizes &&
+             lhs.storageTypeMin == rhs.storageTypeMin &&
+             lhs.storageTypeMax == rhs.storageTypeMax;
+    }
+
+    bool operator==(const KeyTy &other) const {
+      return genericIsEqual(*this, other);
+    }
+
+    unsigned getHashValue() const {
+      // Hash the scalar attributes.
+      unsigned hash = llvm::hash_combine(flags, storageType, expressedType,
+                                         storageTypeMin, storageTypeMax);
+
+      // Hash the scales.
+      for (auto scaleAttr : scales.getValues<APFloat>()) {
+        hash = llvm::hash_combine(
+            hash, llvm::bit_cast<int64_t>(scaleAttr.convertToDouble()));
+      }
+
+      // Hash the zero points.  (Assumed to be integers, adjust if needed).
+      for (auto zeroPointAttr : zeroPoints.getValues<APInt>()) {
+        hash = llvm::hash_combine(hash, zeroPointAttr.getSExtValue());
+      }
+
+      // Hash the quantized dimensions and block sizes.
+      hash = llvm::hash_combine(hash,
+                                llvm::hash_combine_range(quantizedDimensions),
+                                llvm::hash_combine_range(blockSizes));
+
+      return hash;
+    }
+  };
+
+  // We pass scales and zeroPoints in directly rather than relying on KeyTy
+  // because we have to create new reallocated versions in `construct` below.
+  UniformQuantizedSubChannelTypeStorage(const KeyTy &key,
+                                        DenseElementsAttr scales,
+                                        DenseElementsAttr zeroPoints,
+                                        ArrayRef<int32_t> quantizedDimensions,
+                                        ArrayRef<int64_t> blockSizes)
+      : QuantizedTypeStorage(key.flags, key.storageType, key.expressedType,
+                             key.storageTypeMin, key.storageTypeMax),
+        scales(scales), zeroPoints(zeroPoints),
+        quantizedDimensions(quantizedDimensions), blockSizes(blockSizes) {}
+
+  bool operator==(const KeyTy &key) const {
+    return KeyTy::genericIsEqual(*this, key);
+  }
+
+  /// Construction.
+  static UniformQuantizedSubChannelTypeStorage *
+  construct(TypeStorageAllocator &allocator, const KeyTy &key) {
+    DenseElementsAttr scales = key.scales;
+    DenseElementsAttr zeroPoints = key.zeroPoints;
+    ArrayRef<int32_t> quantizedDimensions =
+        allocator.copyInto(key.quantizedDimensions);
+    ArrayRef<int64_t> blockSizes = allocator.copyInto(key.blockSizes);
+    return new (allocator.allocate<UniformQuantizedSubChannelTypeStorage>())
+        UniformQuantizedSubChannelTypeStorage(key, scales, zeroPoints,
+                                              quantizedDimensions, blockSizes);
+  }
+
+  static unsigned hashKey(const KeyTy &key) { return key.getHashValue(); }
+
+  DenseElementsAttr getScales() const { return scales; }
+
+  DenseElementsAttr getZeroPoints() const { return zeroPoints; }
+
+  ArrayRef<int32_t> getQuantizedDimensions() const {
+    return quantizedDimensions;
+  }
+
+  ArrayRef<int64_t> getBlockSizes() const { return blockSizes; }
+
+  DenseElementsAttr scales;
+  DenseElementsAttr zeroPoints;
+  ArrayRef<int32_t> quantizedDimensions;
+  ArrayRef<int64_t> blockSizes;
 };
 
 struct CalibratedQuantizedTypeStorage : public QuantizedTypeStorage {

@@ -1,8 +1,8 @@
 // RUN: mlir-opt --no-implicit-module \
-// RUN:     --pass-pipeline='any(buffer-deallocation)' --verify-diagnostics \
+// RUN:     --pass-pipeline='any(test-function-pass)' --verify-diagnostics \
 // RUN:     --split-input-file %s
 
-// Note: "buffer-deallocation" is a function pass. Any other function pass could
+// Note: "test-function-pass" is a function pass. Any other function pass could
 // be used for this test.
 
 // expected-error@below {{trying to schedule a pass on an operation not marked as 'IsolatedFromAbove'}}

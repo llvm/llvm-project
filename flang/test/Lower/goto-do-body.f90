@@ -48,7 +48,7 @@ subroutine sub1()
 ! CHECK:    fir.store %[[TMP8]] to %[[TRIP]] : !fir.ref<i32>
 ! CHECK:    %[[TMP9:.*]] = fir.load %[[I]] : !fir.ref<i32>
 ! CHECK:    %[[C1_4:.*]] = arith.constant 1 : i32
-! CHECK:    %[[TMP10:.*]] = arith.addi %[[TMP9]], %[[C1_4]] : i32
+! CHECK:    %[[TMP10:.*]] = arith.addi %[[TMP9]], %[[C1_4]] overflow<nsw> : i32
 ! CHECK:    fir.store %[[TMP10]] to %[[I]] : !fir.ref<i32>
 ! CHECK:    cf.br ^[[HEADER]]
   end do
@@ -90,9 +90,9 @@ subroutine sub2()
 ! CHECK:    %[[C2_2:.*]] = arith.constant 2 : i32
 ! CHECK:    %[[C3_2:.*]] = arith.constant 3 : i32
 ! CHECK:    %[[TMP2:.*]] = fir.load %[[J]] : !fir.ref<i32>
-! CHECK:    %[[TMP3:.*]] = arith.muli %[[C3_2]], %[[TMP2]] : i32
+! CHECK:    %[[TMP3:.*]] = arith.muli %[[C3_2]], %[[TMP2]] overflow<nsw> : i32
 ! CHECK:    %[[C8_1:.*]] = arith.constant 8 : i32
-! CHECK:    %[[STEP:.*]] = arith.subi %[[TMP3]], %[[C8_1]] : i32
+! CHECK:    %[[STEP:.*]] = arith.subi %[[TMP3]], %[[C8_1]] overflow<nsw> : i32
 ! CHECK:    fir.store %[[STEP]] to %[[STEP_VAR:.*]] : !fir.ref<i32>
 ! CHECK:    %[[TMP4:.*]] = arith.subi %[[C2_2]], %[[C1_1]] : i32
 ! CHECK:    %[[TMP5:.*]] = arith.addi %[[TMP4]], %[[STEP]] : i32
@@ -115,7 +115,7 @@ subroutine sub2()
 ! CHECK:    fir.store %[[TMP10]] to %[[TRIP]] : !fir.ref<i32>
 ! CHECK:    %[[TMP11:.*]] = fir.load %[[I]] : !fir.ref<i32>
 ! CHECK:    %[[STEP_VAL:.*]] = fir.load %[[STEP_VAR]] : !fir.ref<i32>
-! CHECK:    %[[TMP12:.*]] = arith.addi %[[TMP11]], %[[STEP_VAL]] : i32
+! CHECK:    %[[TMP12:.*]] = arith.addi %[[TMP11]], %[[STEP_VAL]] overflow<nsw> : i32
 ! CHECK:    fir.store %[[TMP12]] to %[[I]] : !fir.ref<i32>
 ! CHECK:    cf.br ^[[HEADER]]
   end do

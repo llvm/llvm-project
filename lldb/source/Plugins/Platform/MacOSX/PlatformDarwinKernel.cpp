@@ -126,8 +126,10 @@ PlatformSP PlatformDarwinKernel::CreateInstance(bool force,
       case llvm::Triple::MacOSX:
       case llvm::Triple::IOS:
       case llvm::Triple::WatchOS:
+      case llvm::Triple::XROS:
       case llvm::Triple::TvOS:
       case llvm::Triple::BridgeOS:
+      case llvm::Triple::DriverKit:
         break;
       // Only accept "vendor" for vendor if the host is Apple and it "unknown"
       // wasn't specified (it was just returned because it was NOT specified)
@@ -329,6 +331,8 @@ void PlatformDarwinKernel::CollectKextAndKernelDirectories() {
                                "/Platforms/AppleTVOS.platform/Developer/SDKs");
     AddSDKSubdirsToSearchPaths(developer_dir +
                                "/Platforms/WatchOS.platform/Developer/SDKs");
+    AddSDKSubdirsToSearchPaths(developer_dir +
+                               "/Platforms/XROS.platform/Developer/SDKs");
     AddSDKSubdirsToSearchPaths(developer_dir +
                                "/Platforms/BridgeOS.platform/Developer/SDKs");
   }
@@ -810,8 +814,8 @@ Status PlatformDarwinKernel::GetSharedModuleKernel(
         // append ".dSYM" to the filename for the SymbolFile.
         FileSpecList search_paths =
             process->GetTarget().GetDebugFileSearchPaths();
-        FileSpec dsym_fspec =
-            PluginManager::LocateExecutableSymbolFile(kern_spec, search_paths);
+        FileSpec dsym_fspec = PluginManager::LocateExecutableSymbolFile(
+            kern_spec, search_paths, module_sp->GetSymbolLocatorStatistics());
         if (FileSystem::Instance().Exists(dsym_fspec))
           module_sp->SetSymbolFileFileSpec(dsym_fspec);
         if (did_create_ptr)

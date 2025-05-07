@@ -38,7 +38,7 @@ bool Operand::isExplicit() const { return Info; }
 
 bool Operand::isImplicit() const { return !Info; }
 
-bool Operand::isImplicitReg() const { return ImplicitReg; }
+bool Operand::isImplicitReg() const { return ImplicitReg.isValid(); }
 
 bool Operand::isDef() const { return IsDef; }
 
@@ -49,6 +49,8 @@ bool Operand::isReg() const { return Tracker; }
 bool Operand::isTied() const { return TiedToIndex.has_value(); }
 
 bool Operand::isVariable() const { return VariableIndex.has_value(); }
+
+bool Operand::isEarlyClobber() const { return IsEarlyClobber; }
 
 bool Operand::isMemory() const {
   return isExplicit() &&
@@ -64,7 +66,7 @@ unsigned Operand::getTiedToIndex() const { return *TiedToIndex; }
 
 unsigned Operand::getVariableIndex() const { return *VariableIndex; }
 
-unsigned Operand::getImplicitReg() const {
+MCRegister Operand::getImplicitReg() const {
   assert(ImplicitReg);
   return ImplicitReg;
 }
@@ -95,11 +97,12 @@ Instruction::Instruction(const MCInstrDesc *Description, StringRef Name,
                          const BitVector *ImplDefRegs,
                          const BitVector *ImplUseRegs,
                          const BitVector *AllDefRegs,
-                         const BitVector *AllUseRegs)
+                         const BitVector *AllUseRegs,
+                         const BitVector *NonMemoryRegs)
     : Description(*Description), Name(Name), Operands(std::move(Operands)),
       Variables(std::move(Variables)), ImplDefRegs(*ImplDefRegs),
       ImplUseRegs(*ImplUseRegs), AllDefRegs(*AllDefRegs),
-      AllUseRegs(*AllUseRegs) {}
+      AllUseRegs(*AllUseRegs), NonMemoryRegs(*NonMemoryRegs) {}
 
 std::unique_ptr<Instruction>
 Instruction::create(const MCInstrInfo &InstrInfo,
@@ -114,6 +117,8 @@ Instruction::create(const MCInstrInfo &InstrInfo,
     Operand Operand;
     Operand.Index = OpIndex;
     Operand.IsDef = (OpIndex < Description->getNumDefs());
+    Operand.IsEarlyClobber =
+        (Description->getOperandConstraint(OpIndex, MCOI::EARLY_CLOBBER) != -1);
     // TODO(gchatelet): Handle isLookupPtrRegClass.
     if (OpInfo.RegClass >= 0)
       Operand.Tracker = &RATC.getRegisterClass(OpInfo.RegClass);
@@ -166,6 +171,8 @@ Instruction::create(const MCInstrInfo &InstrInfo,
   BitVector ImplUseRegs = RATC.emptyRegisters();
   BitVector AllDefRegs = RATC.emptyRegisters();
   BitVector AllUseRegs = RATC.emptyRegisters();
+  BitVector NonMemoryRegs = RATC.emptyRegisters();
+
   for (const auto &Op : Operands) {
     if (Op.isReg()) {
       const auto &AliasingBits = Op.getRegisterAliasing().aliasedBits();
@@ -177,6 +184,8 @@ Instruction::create(const MCInstrInfo &InstrInfo,
         ImplDefRegs |= AliasingBits;
       if (Op.isUse() && Op.isImplicit())
         ImplUseRegs |= AliasingBits;
+      if (Op.isUse() && !Op.isMemory())
+        NonMemoryRegs |= AliasingBits;
     }
   }
   // Can't use make_unique because constructor is private.
@@ -185,7 +194,8 @@ Instruction::create(const MCInstrInfo &InstrInfo,
       std::move(Variables), BVC.getUnique(std::move(ImplDefRegs)),
       BVC.getUnique(std::move(ImplUseRegs)),
       BVC.getUnique(std::move(AllDefRegs)),
-      BVC.getUnique(std::move(AllUseRegs))));
+      BVC.getUnique(std::move(AllUseRegs)),
+      BVC.getUnique(std::move(NonMemoryRegs))));
 }
 
 const Operand &Instruction::getPrimaryOperand(const Variable &Var) const {
@@ -237,6 +247,12 @@ bool Instruction::hasTiedRegisters() const {
 bool Instruction::hasAliasingRegisters(
     const BitVector &ForbiddenRegisters) const {
   return anyCommonExcludingForbidden(AllDefRegs, AllUseRegs,
+                                     ForbiddenRegisters);
+}
+
+bool Instruction::hasAliasingNotMemoryRegisters(
+    const BitVector &ForbiddenRegisters) const {
+  return anyCommonExcludingForbidden(AllDefRegs, NonMemoryRegs,
                                      ForbiddenRegisters);
 }
 

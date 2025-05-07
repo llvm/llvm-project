@@ -159,6 +159,17 @@ BlockT *LoopBase<BlockT, LoopT>::getUniqueExitBlock() const {
   return getExitBlockHelper(this, true).first;
 }
 
+template <class BlockT, class LoopT>
+BlockT *LoopBase<BlockT, LoopT>::getUniqueLatchExitBlock() const {
+  BlockT *Latch = getLoopLatch();
+  assert(Latch && "Latch block must exists");
+  auto IsExitBlock = [this](BlockT *BB, bool AllowRepeats) -> BlockT * {
+    assert(!AllowRepeats && "Unexpected parameter value.");
+    return !contains(BB) ? BB : nullptr;
+  };
+  return find_singleton<BlockT>(children<BlockT *>(Latch), IsExitBlock);
+}
+
 /// getExitEdges - Return all pairs of (_inside_block_,_outside_block_).
 template <class BlockT, class LoopT>
 void LoopBase<BlockT, LoopT>::getExitEdges(
@@ -593,7 +604,7 @@ void LoopInfoBase<BlockT, LoopT>::analyze(const DomTreeBase<BlockT> &DomTree) {
 template <class BlockT, class LoopT>
 SmallVector<LoopT *, 4>
 LoopInfoBase<BlockT, LoopT>::getLoopsInPreorder() const {
-  SmallVector<LoopT *, 4> PreOrderLoops, PreOrderWorklist;
+  SmallVector<LoopT *, 4> PreOrderLoops;
   // The outer-most loop actually goes into the result in the same relative
   // order as we walk it. But LoopInfo stores the top level loops in reverse
   // program order so for here we reverse it to get forward program order.

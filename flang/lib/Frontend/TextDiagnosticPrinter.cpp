@@ -39,13 +39,14 @@ static void printRemarkOption(llvm::raw_ostream &os,
                               clang::DiagnosticsEngine::Level level,
                               const clang::Diagnostic &info) {
   llvm::StringRef opt =
-      clang::DiagnosticIDs::getWarningOptionForDiag(info.getID());
+      info.getDiags()->getDiagnosticIDs()->getWarningOptionForDiag(
+          info.getID());
   if (!opt.empty()) {
     // We still need to check if the level is a Remark since, an unknown option
     // warning could be printed i.e. [-Wunknown-warning-option]
     os << " [" << (level == clang::DiagnosticsEngine::Remark ? "-R" : "-W")
        << opt;
-    llvm::StringRef optValue = info.getDiags()->getFlagValue();
+    llvm::StringRef optValue = info.getFlagValue();
     if (!optValue.empty())
       os << "=" << optValue;
     os << ']';

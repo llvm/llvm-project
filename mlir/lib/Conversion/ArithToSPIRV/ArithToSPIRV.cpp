@@ -27,7 +27,7 @@
 #include <memory>
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTARITHTOSPIRV
+#define GEN_PASS_DEF_CONVERTARITHTOSPIRVPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -807,6 +807,25 @@ struct TruncIPattern final : public OpConversionPattern<arith::TruncIOp> {
 // TypeCastingOp
 //===----------------------------------------------------------------------===//
 
+static std::optional<spirv::FPRoundingMode>
+convertArithRoundingModeToSPIRV(arith::RoundingMode roundingMode) {
+  switch (roundingMode) {
+  case arith::RoundingMode::downward:
+    return spirv::FPRoundingMode::RTN;
+  case arith::RoundingMode::to_nearest_even:
+    return spirv::FPRoundingMode::RTE;
+  case arith::RoundingMode::toward_zero:
+    return spirv::FPRoundingMode::RTZ;
+  case arith::RoundingMode::upward:
+    return spirv::FPRoundingMode::RTP;
+  case arith::RoundingMode::to_nearest_away:
+    // SPIR-V FPRoundingMode decoration has no ties-away-from-zero mode
+    // (as of SPIR-V 1.6)
+    return std::nullopt;
+  }
+  llvm_unreachable("Unhandled rounding mode");
+}
+
 /// Converts type-casting standard operations to SPIR-V operations.
 template <typename Op, typename SPIRVOp>
 struct TypeCastingOpPattern final : public OpConversionPattern<Op> {
@@ -815,8 +834,7 @@ struct TypeCastingOpPattern final : public OpConversionPattern<Op> {
   LogicalResult
   matchAndRewrite(Op op, typename Op::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    assert(adaptor.getOperands().size() == 1);
-    Type srcType = adaptor.getOperands().front().getType();
+    Type srcType = llvm::getSingleElement(adaptor.getOperands()).getType();
     Type dstType = this->getTypeConverter()->convertType(op.getType());
     if (!dstType)
       return getTypeConversionFailure(rewriter, op);
@@ -829,16 +847,27 @@ struct TypeCastingOpPattern final : public OpConversionPattern<Op> {
       // Then we can just erase this operation by forwarding its operand.
       rewriter.replaceOp(op, adaptor.getOperands().front());
     } else {
-      rewriter.template replaceOpWithNewOp<SPIRVOp>(op, dstType,
-                                                    adaptor.getOperands());
+      // Compute new rounding mode (if any).
+      std::optional<spirv::FPRoundingMode> rm = std::nullopt;
       if (auto roundingModeOp =
               dyn_cast<arith::ArithRoundingModeInterface>(*op)) {
         if (arith::RoundingModeAttr roundingMode =
                 roundingModeOp.getRoundingModeAttr()) {
-          // TODO: Perform rounding mode attribute conversion and attach to new
-          // operation when defined in the dialect.
-          return failure();
+          if (!(rm =
+                    convertArithRoundingModeToSPIRV(roundingMode.getValue()))) {
+            return rewriter.notifyMatchFailure(
+                op->getLoc(),
+                llvm::formatv("unsupported rounding mode '{0}'", roundingMode));
+          }
         }
+      }
+      // Create replacement op and attach rounding mode attribute (if any).
+      auto newOp = rewriter.template replaceOpWithNewOp<SPIRVOp>(
+          op, dstType, adaptor.getOperands());
+      if (rm) {
+        newOp->setAttr(
+            getDecorationString(spirv::Decoration::FPRoundingMode),
+            spirv::FPRoundingModeAttr::get(rewriter.getContext(), *rm));
       }
     }
     return success();
@@ -1236,7 +1265,7 @@ public:
 //===----------------------------------------------------------------------===//
 
 void mlir::arith::populateArithToSPIRVPatterns(
-    SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns) {
+    const SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns) {
   // clang-format off
   patterns.add<
     ConstantCompositeOpPattern,
@@ -1311,7 +1340,9 @@ void mlir::arith::populateArithToSPIRVPatterns(
 
 namespace {
 struct ConvertArithToSPIRVPass
-    : public impl::ConvertArithToSPIRVBase<ConvertArithToSPIRVPass> {
+    : public impl::ConvertArithToSPIRVPassBase<ConvertArithToSPIRVPass> {
+  using Base::Base;
+
   void runOnOperation() override {
     Operation *op = getOperation();
     spirv::TargetEnvAttr targetAttr = spirv::lookupTargetEnvOrDefault(op);
@@ -1337,7 +1368,3 @@ struct ConvertArithToSPIRVPass
   }
 };
 } // namespace
-
-std::unique_ptr<OperationPass<>> mlir::arith::createConvertArithToSPIRVPass() {
-  return std::make_unique<ConvertArithToSPIRVPass>();
-}

@@ -70,9 +70,9 @@ namespace test_complex_int_ref_mutable {
     const _Complex int &x = y;
     takeABlock(^{ takeItByValue(x); });
     // CHECK:      [[R:%.*]] = load i32, ptr @_ZN28test_complex_int_ref_mutable1yE
-    // CHECK-NEXT: [[I:%.*]] = load i32, ptr getelementptr inbounds ({ i32, i32 }, ptr @_ZN28test_complex_int_ref_mutable1yE, i32 0, i32 1)
-    // CHECK-NEXT: [[RSLOT:%.*]] = getelementptr inbounds { i32, i32 }, ptr [[CSLOT:%.*]], i32 0, i32 0
-    // CHECK-NEXT: [[ISLOT:%.*]] = getelementptr inbounds { i32, i32 }, ptr [[CSLOT]], i32 0, i32 1
+    // CHECK-NEXT: [[I:%.*]] = load i32, ptr getelementptr inbounds nuw ({ i32, i32 }, ptr @_ZN28test_complex_int_ref_mutable1yE, i32 0, i32 1)
+    // CHECK-NEXT: [[RSLOT:%.*]] = getelementptr inbounds nuw { i32, i32 }, ptr [[CSLOT:%.*]], i32 0, i32 0
+    // CHECK-NEXT: [[ISLOT:%.*]] = getelementptr inbounds nuw { i32, i32 }, ptr [[CSLOT]], i32 0, i32 1
     // CHECK-NEXT: store i32 [[R]], ptr [[RSLOT]]
     // CHECK-NEXT: store i32 [[I]], ptr [[ISLOT]]
     // CHECK-NEXT: [[CVAL:%.*]] = load i64, ptr [[CSLOT]],
@@ -100,8 +100,8 @@ namespace test_block_in_lambda {
   // CHECK-LABEL:    define internal void @"_ZZN20test_block_in_lambda4testENS_1AEENK3$_0clEv"(
   // CHECK:      [[BLOCK:%.*]] = alloca [[BLOCK_T:<{.*}>]], align 8
   // CHECK:      [[THIS:%.*]] = load ptr, ptr
-  // CHECK:      [[BLOCK_CAPTURED:%.*]] = getelementptr inbounds [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 5
-  // CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds [[LAMBDA_T:%.*]], ptr [[THIS]], i32 0, i32 0
+  // CHECK:      [[BLOCK_CAPTURED:%.*]] = getelementptr inbounds nuw [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 5
+  // CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds nuw [[LAMBDA_T:%.*]], ptr [[THIS]], i32 0, i32 0
   // CHECK-NEXT: call void @_ZN20test_block_in_lambda1AC1ERKS0_(ptr {{[^,]*}} [[BLOCK_CAPTURED]], ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[T1]])
   // CHECK-NEXT: call void @_ZN20test_block_in_lambda9takeBlockEU13block_pointerFvvE(ptr noundef [[BLOCK]])
   // CHECK-NEXT: call void @_ZN20test_block_in_lambda1AD1Ev(ptr {{[^,]*}} [[BLOCK_CAPTURED]])

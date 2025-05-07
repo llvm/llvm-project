@@ -25,6 +25,7 @@
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Expression/Expression.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
+#include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/PathMappingList.h"
@@ -34,8 +35,10 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/RealpathPrefixes.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-public.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace lldb_private {
 
@@ -113,9 +116,19 @@ public:
 
   void SetDisableSTDIO(bool b);
 
+  llvm::StringRef GetLaunchWorkingDirectory() const;
+
+  bool GetParallelModuleLoad() const;
+
   const char *GetDisassemblyFlavor() const;
 
+  const char *GetDisassemblyCPU() const;
+
+  const char *GetDisassemblyFeatures() const;
+
   InlineStrategy GetInlineStrategy() const;
+
+  RealpathPrefixes GetSourceRealpathPrefixes() const;
 
   llvm::StringRef GetArg0() const;
 
@@ -140,6 +153,8 @@ public:
   bool GetSkipPrologue() const;
 
   PathMappingList &GetSourcePathMap() const;
+
+  PathMappingList &GetObjectPathMap() const;
 
   bool GetAutoSourceMapRelative() const;
 
@@ -244,6 +259,10 @@ public:
 
   bool GetInjectLocalVariables(ExecutionContext *exe_ctx) const;
 
+  bool GetUseDIL(ExecutionContext *exe_ctx) const;
+
+  void SetUseDIL(ExecutionContext *exe_ctx, bool b);
+
   void SetRequireHardwareBreakpoints(bool b);
 
   bool GetRequireHardwareBreakpoints() const;
@@ -314,6 +333,14 @@ public:
 
   void SetLanguage(lldb::LanguageType language_type) {
     m_language = SourceLanguage(language_type);
+  }
+
+  void SetPreferredSymbolContexts(SymbolContextList contexts) {
+    m_preferred_lookup_contexts = std::move(contexts);
+  }
+
+  const SymbolContextList &GetPreferredSymbolContexts() const {
+    return m_preferred_lookup_contexts;
   }
 
   /// Set the language using a pair of language code and version as
@@ -484,6 +511,11 @@ private:
   // originates
   mutable std::string m_pound_line_file;
   mutable uint32_t m_pound_line_line = 0;
+
+  /// During expression evaluation, any SymbolContext in this list will be
+  /// used for symbol/function lookup before any other context (except for
+  /// the module corresponding to the current frame).
+  SymbolContextList m_preferred_lookup_contexts;
 };
 
 // Target
@@ -1135,9 +1167,13 @@ public:
                              Address &pointer_addr,
                              bool force_live_memory = false);
 
-  SectionLoadList &GetSectionLoadList() {
-    return m_section_load_history.GetCurrentSectionLoadList();
-  }
+  bool HasLoadedSections();
+
+  lldb::addr_t GetSectionLoadAddress(const lldb::SectionSP &section_sp);
+
+  void ClearSectionLoadList();
+
+  void DumpSectionLoadList(Stream &s);
 
   static Target *GetTargetFromContexts(const ExecutionContext *exe_ctx_ptr,
                                        const SymbolContext *sc_ptr);
@@ -1202,7 +1238,8 @@ public:
   bool ResolveFileAddress(lldb::addr_t load_addr, Address &so_addr);
 
   bool ResolveLoadAddress(lldb::addr_t load_addr, Address &so_addr,
-                          uint32_t stop_id = SectionLoadHistory::eStopIDNow);
+                          uint32_t stop_id = SectionLoadHistory::eStopIDNow,
+                          bool allow_section_end = false);
 
   bool SetSectionLoadAddress(const lldb::SectionSP &section,
                              lldb::addr_t load_addr,
@@ -1218,6 +1255,10 @@ public:
                           lldb::addr_t load_addr);
 
   void ClearAllLoadedSections();
+
+  lldb_private::SummaryStatisticsSP GetSummaryStatisticsSPForProviderName(
+      lldb_private::TypeSummaryImpl &summary_provider);
+  lldb_private::SummaryStatisticsCache &GetSummaryStatisticsCache();
 
   /// Set the \a Trace object containing processor trace information of this
   /// target.
@@ -1292,6 +1333,7 @@ public:
     enum class StopHookResult : uint32_t {
       KeepStopped = 0,
       RequestContinue,
+      NoPreference,
       AlreadyContinued
     };
 
@@ -1328,6 +1370,12 @@ public:
 
     bool GetAutoContinue() const { return m_auto_continue; }
 
+    void SetRunAtInitialStop(bool at_initial_stop) {
+      m_at_initial_stop = at_initial_stop;
+    }
+
+    bool GetRunAtInitialStop() const { return m_at_initial_stop; }
+
     void GetDescription(Stream &s, lldb::DescriptionLevel level) const;
     virtual void GetSubclassDescription(Stream &s,
                                         lldb::DescriptionLevel level) const = 0;
@@ -1338,6 +1386,7 @@ public:
     std::unique_ptr<ThreadSpec> m_thread_spec_up;
     bool m_active = true;
     bool m_auto_continue = false;
+    bool m_at_initial_stop = true;
 
     StopHook(lldb::TargetSP target_sp, lldb::user_id_t uid);
   };
@@ -1382,8 +1431,7 @@ public:
     /// This holds the dictionary of keys & values that can be used to
     /// parametrize any given callback's behavior.
     StructuredDataImpl m_extra_args;
-    /// This holds the python callback object.
-    StructuredData::GenericSP m_implementation_sp;
+    lldb::ScriptedStopHookInterfaceSP m_interface_sp;
 
     /// Use CreateStopHook to make a new empty stop hook. The GetCommandPointer
     /// and fill it with commands, and SetSpecifier to set the specifier shared
@@ -1405,7 +1453,9 @@ public:
 
   // Runs the stop hooks that have been registered for this target.
   // Returns true if the stop hooks cause the target to resume.
-  bool RunStopHooks();
+  // Pass at_initial_stop if this is the stop where lldb gains
+  // control over the process for the first time.
+  bool RunStopHooks(bool at_initial_stop = false);
 
   size_t GetStopHookSize();
 
@@ -1552,6 +1602,7 @@ protected:
   std::string m_label;
   ModuleList m_images; ///< The list of images for this process (shared
                        /// libraries and anything dynamically loaded).
+  SummaryStatisticsCache m_summary_statistics_cache;
   SectionLoadHistory m_section_load_history;
   BreakpointList m_breakpoint_list;
   BreakpointList m_internal_breakpoint_list;
@@ -1615,6 +1666,8 @@ public:
   llvm::json::Value
   ReportStatistics(const lldb_private::StatisticsOptions &options);
 
+  void ResetStatistics();
+
   TargetStats &GetStatistics() { return m_stats; }
 
 protected:
@@ -1644,6 +1697,10 @@ protected:
 
   Target(const Target &) = delete;
   const Target &operator=(const Target &) = delete;
+
+  SectionLoadList &GetSectionLoadList() {
+    return m_section_load_history.GetCurrentSectionLoadList();
+  }
 };
 
 } // namespace lldb_private

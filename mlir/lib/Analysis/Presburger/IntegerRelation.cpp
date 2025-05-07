@@ -32,7 +32,10 @@
 #include <cassert>
 #include <functional>
 #include <memory>
+#include <numeric>
 #include <optional>
+#include <sstream>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -511,10 +514,10 @@ void IntegerRelation::getLowerAndUpperBoundIndices(
       continue;
     if (atIneq(r, pos) >= 1) {
       // Lower bound.
-      lbIndices->push_back(r);
+      lbIndices->emplace_back(r);
     } else if (atIneq(r, pos) <= -1) {
       // Upper bound.
-      ubIndices->push_back(r);
+      ubIndices->emplace_back(r);
     }
   }
 
@@ -528,7 +531,7 @@ void IntegerRelation::getLowerAndUpperBoundIndices(
       continue;
     if (containsConstraintDependentOnRange(r, /*isEq=*/true))
       continue;
-    eqIndices->push_back(r);
+    eqIndices->emplace_back(r);
   }
 }
 
@@ -561,22 +564,18 @@ void IntegerRelation::clearAndCopyFrom(const IntegerRelation &other) {
   *this = other;
 }
 
-// Searches for a constraint with a non-zero coefficient at `colIdx` in
-// equality (isEq=true) or inequality (isEq=false) constraints.
-// Returns true and sets row found in search in `rowIdx`, false otherwise.
-bool IntegerRelation::findConstraintWithNonZeroAt(unsigned colIdx, bool isEq,
-                                                  unsigned *rowIdx) const {
+std::optional<unsigned>
+IntegerRelation::findConstraintWithNonZeroAt(unsigned colIdx, bool isEq) const {
   assert(colIdx < getNumCols() && "position out of bounds");
   auto at = [&](unsigned rowIdx) -> DynamicAPInt {
     return isEq ? atEq(rowIdx, colIdx) : atIneq(rowIdx, colIdx);
   };
   unsigned e = isEq ? getNumEqualities() : getNumInequalities();
-  for (*rowIdx = 0; *rowIdx < e; ++(*rowIdx)) {
-    if (at(*rowIdx) != 0) {
-      return true;
-    }
+  for (unsigned rowIdx = 0; rowIdx < e; ++rowIdx) {
+    if (at(rowIdx) != 0)
+      return rowIdx;
   }
-  return false;
+  return std::nullopt;
 }
 
 void IntegerRelation::normalizeConstraintsByGCD() {
@@ -791,7 +790,7 @@ IntMatrix IntegerRelation::getBoundedDirections() const {
   // processes all the inequalities.
   for (unsigned i = 0, e = getNumInequalities(); i < e; ++i) {
     if (simplex.isBoundedAlongConstraint(i))
-      boundedIneqs.push_back(i);
+      boundedIneqs.emplace_back(i);
   }
 
   // The direction vector is given by the coefficients and does not include the
@@ -1085,31 +1084,30 @@ unsigned IntegerRelation::gaussianEliminateVars(unsigned posStart,
   unsigned pivotCol = 0;
   for (pivotCol = posStart; pivotCol < posLimit; ++pivotCol) {
     // Find a row which has a non-zero coefficient in column 'j'.
-    unsigned pivotRow;
-    if (!findConstraintWithNonZeroAt(pivotCol, /*isEq=*/true, &pivotRow)) {
-      // No pivot row in equalities with non-zero at 'pivotCol'.
-      if (!findConstraintWithNonZeroAt(pivotCol, /*isEq=*/false, &pivotRow)) {
-        // If inequalities are also non-zero in 'pivotCol', it can be
-        // eliminated.
-        continue;
-      }
-      break;
+    std::optional<unsigned> pivotRow =
+        findConstraintWithNonZeroAt(pivotCol, /*isEq=*/true);
+    // No pivot row in equalities with non-zero at 'pivotCol'.
+    if (!pivotRow) {
+      // If inequalities are also non-zero in 'pivotCol', it can be eliminated.
+      if ((pivotRow = findConstraintWithNonZeroAt(pivotCol, /*isEq=*/false)))
+        break;
+      continue;
     }
 
     // Eliminate variable at 'pivotCol' from each equality row.
     for (unsigned i = 0, e = getNumEqualities(); i < e; ++i) {
-      eliminateFromConstraint(this, i, pivotRow, pivotCol, posStart,
+      eliminateFromConstraint(this, i, *pivotRow, pivotCol, posStart,
                               /*isEq=*/true);
       equalities.normalizeRow(i);
     }
 
     // Eliminate variable at 'pivotCol' from each inequality row.
     for (unsigned i = 0, e = getNumInequalities(); i < e; ++i) {
-      eliminateFromConstraint(this, i, pivotRow, pivotCol, posStart,
+      eliminateFromConstraint(this, i, *pivotRow, pivotCol, posStart,
                               /*isEq=*/false);
       inequalities.normalizeRow(i);
     }
-    removeEquality(pivotRow);
+    removeEquality(*pivotRow);
     gcdTightenInequalities();
   }
   // Update position limit based on number eliminated.
@@ -1122,31 +1120,31 @@ unsigned IntegerRelation::gaussianEliminateVars(unsigned posStart,
 bool IntegerRelation::gaussianEliminate() {
   gcdTightenInequalities();
   unsigned firstVar = 0, vars = getNumVars();
-  unsigned nowDone, eqs, pivotRow;
+  unsigned nowDone, eqs;
+  std::optional<unsigned> pivotRow;
   for (nowDone = 0, eqs = getNumEqualities(); nowDone < eqs; ++nowDone) {
     // Finds the first non-empty column.
     for (; firstVar < vars; ++firstVar) {
-      if (!findConstraintWithNonZeroAt(firstVar, true, &pivotRow))
-        continue;
-      break;
+      if ((pivotRow = findConstraintWithNonZeroAt(firstVar, /*isEq=*/true)))
+        break;
     }
     // The matrix has been normalized to row echelon form.
     if (firstVar >= vars)
       break;
 
     // The first pivot row found is below where it should currently be placed.
-    if (pivotRow > nowDone) {
-      equalities.swapRows(pivotRow, nowDone);
-      pivotRow = nowDone;
+    if (*pivotRow > nowDone) {
+      equalities.swapRows(*pivotRow, nowDone);
+      *pivotRow = nowDone;
     }
 
     // Normalize all lower equations and all inequalities.
     for (unsigned i = nowDone + 1; i < eqs; ++i) {
-      eliminateFromConstraint(this, i, pivotRow, firstVar, 0, true);
+      eliminateFromConstraint(this, i, *pivotRow, firstVar, 0, true);
       equalities.normalizeRow(i);
     }
     for (unsigned i = 0, ineqs = getNumInequalities(); i < ineqs; ++i) {
-      eliminateFromConstraint(this, i, pivotRow, firstVar, 0, false);
+      eliminateFromConstraint(this, i, *pivotRow, firstVar, 0, false);
       inequalities.normalizeRow(i);
     }
     gcdTightenInequalities();
@@ -1515,7 +1513,7 @@ void IntegerRelation::addLocalFloorDiv(ArrayRef<DynamicAPInt> dividend,
 
   appendVar(VarKind::Local);
 
-  SmallVector<DynamicAPInt, 8> dividendCopy(dividend.begin(), dividend.end());
+  SmallVector<DynamicAPInt, 8> dividendCopy(dividend);
   dividendCopy.insert(dividendCopy.end() - 1, DynamicAPInt(0));
   addInequality(
       getDivLowerBound(dividendCopy, divisor, dividendCopy.size() - 2));
@@ -1523,25 +1521,19 @@ void IntegerRelation::addLocalFloorDiv(ArrayRef<DynamicAPInt> dividend,
       getDivUpperBound(dividendCopy, divisor, dividendCopy.size() - 2));
 }
 
-/// Finds an equality that equates the specified variable to a constant.
-/// Returns the position of the equality row. If 'symbolic' is set to true,
-/// symbols are also treated like a constant, i.e., an affine function of the
-/// symbols is also treated like a constant. Returns -1 if such an equality
-/// could not be found.
-static int findEqualityToConstant(const IntegerRelation &cst, unsigned pos,
-                                  bool symbolic = false) {
-  assert(pos < cst.getNumVars() && "invalid position");
-  for (unsigned r = 0, e = cst.getNumEqualities(); r < e; r++) {
-    DynamicAPInt v = cst.atEq(r, pos);
+int IntegerRelation::findEqualityToConstant(unsigned pos, bool symbolic) const {
+  assert(pos < getNumVars() && "invalid position");
+  for (unsigned r = 0, e = getNumEqualities(); r < e; r++) {
+    DynamicAPInt v = atEq(r, pos);
     if (v * v != 1)
       continue;
     unsigned c;
-    unsigned f = symbolic ? cst.getNumDimVars() : cst.getNumVars();
+    unsigned f = symbolic ? getNumDimVars() : getNumVars();
     // This checks for zeros in all positions other than 'pos' in [0, f)
     for (c = 0; c < f; c++) {
       if (c == pos)
         continue;
-      if (cst.atEq(r, c) != 0) {
+      if (atEq(r, c) != 0) {
         // Dependent on another variable.
         break;
       }
@@ -1556,7 +1548,7 @@ static int findEqualityToConstant(const IntegerRelation &cst, unsigned pos,
 LogicalResult IntegerRelation::constantFoldVar(unsigned pos) {
   assert(pos < getNumVars() && "invalid position");
   int rowIdx;
-  if ((rowIdx = findEqualityToConstant(*this, pos)) == -1)
+  if ((rowIdx = findEqualityToConstant(pos)) == -1)
     return failure();
 
   // atEq(rowIdx, pos) is either -1 or 1.
@@ -1595,12 +1587,13 @@ std::optional<DynamicAPInt> IntegerRelation::getConstantBoundOnDimSize(
 
   // Find an equality for 'pos'^th variable that equates it to some function
   // of the symbolic variables (+ constant).
-  int eqPos = findEqualityToConstant(*this, pos, /*symbolic=*/true);
+  int eqPos = findEqualityToConstant(pos, /*symbolic=*/true);
   if (eqPos != -1) {
     auto eq = getEquality(eqPos);
-    // If the equality involves a local var, punt for now.
-    // TODO: this can be handled in the future by using the explicit
-    // representation of the local vars.
+    // If the equality involves a local var, we do not handle it.
+    // FlatLinearConstraints can instead be used to detect the local variable as
+    // an affine function (potentially div/mod) of other variables and use
+    // affine expressions/maps to represent output.
     if (!std::all_of(eq.begin() + getNumDimAndSymbolVars(), eq.end() - 1,
                      [](const DynamicAPInt &coeff) { return coeff == 0; }))
       return std::nullopt;
@@ -1721,7 +1714,7 @@ IntegerRelation::computeConstantLowerOrUpperBound(unsigned pos) {
   projectOut(0, pos);
   projectOut(1, getNumVars() - 1);
   // Check if there's an equality equating the '0'^th variable to a constant.
-  int eqRowIdx = findEqualityToConstant(*this, 0, /*symbolic=*/false);
+  int eqRowIdx = findEqualityToConstant(/*pos=*/0, /*symbolic=*/false);
   if (eqRowIdx != -1)
     // atEq(rowIdx, 0) is either -1 or 1.
     return -atEq(eqRowIdx, getNumCols() - 1) / atEq(eqRowIdx, 0);
@@ -1981,13 +1974,13 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
   for (unsigned r = 0, e = getNumInequalities(); r < e; r++) {
     if (atIneq(r, pos) == 0) {
       // Var does not appear in bound.
-      nbIndices.push_back(r);
+      nbIndices.emplace_back(r);
     } else if (atIneq(r, pos) >= 1) {
       // Lower bound.
-      lbIndices.push_back(r);
+      lbIndices.emplace_back(r);
     } else {
       // Upper bound.
-      ubIndices.push_back(r);
+      ubIndices.emplace_back(r);
     }
   }
 
@@ -2028,8 +2021,8 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
           continue;
         assert(lbCoeff >= 1 && ubCoeff >= 1 && "bounds wrongly identified");
         DynamicAPInt lcm = llvm::lcm(lbCoeff, ubCoeff);
-        ineq.push_back(atIneq(ubPos, l) * (lcm / ubCoeff) +
-                       atIneq(lbPos, l) * (lcm / lbCoeff));
+        ineq.emplace_back(atIneq(ubPos, l) * (lcm / ubCoeff) +
+                          atIneq(lbPos, l) * (lcm / lbCoeff));
         assert(lcm > 0 && "lcm should be positive!");
         if (lcm != 1)
           allLCMsAreOne = false;
@@ -2057,7 +2050,7 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
     for (unsigned l = 0, e = getNumCols(); l < e; l++) {
       if (l == pos)
         continue;
-      ineq.push_back(atIneq(nbPos, l));
+      ineq.emplace_back(atIneq(nbPos, l));
     }
     newRel.addInequality(ineq);
   }
@@ -2072,7 +2065,7 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
     for (unsigned l = 0, e = getNumCols(); l < e; l++) {
       if (l == pos)
         continue;
-      eq.push_back(atEq(r, l));
+      eq.emplace_back(atEq(r, l));
     }
     newRel.addEquality(eq);
   }
@@ -2264,8 +2257,8 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
                    std::negate<DynamicAPInt>());
     std::copy(maxUb.begin(), maxUb.end(), newUb.begin() + getNumDimVars());
 
-    boundingLbs.push_back(newLb);
-    boundingUbs.push_back(newUb);
+    boundingLbs.emplace_back(newLb);
+    boundingUbs.emplace_back(newUb);
   }
 
   // Clear all constraints and add the lower/upper bounds for the bounding box.
@@ -2287,9 +2280,8 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
 }
 
 bool IntegerRelation::isColZero(unsigned pos) const {
-  unsigned rowPos;
-  return !findConstraintWithNonZeroAt(pos, /*isEq=*/false, &rowPos) &&
-         !findConstraintWithNonZeroAt(pos, /*isEq=*/true, &rowPos);
+  return !findConstraintWithNonZeroAt(pos, /*isEq=*/false) &&
+         !findConstraintWithNonZeroAt(pos, /*isEq=*/true);
 }
 
 /// Find positions of inequalities and equalities that do not have a coefficient
@@ -2309,7 +2301,7 @@ static void getIndependentConstraints(const IntegerRelation &cst, unsigned pos,
         break;
     }
     if (c == pos + num)
-      nbIneqIndices.push_back(r);
+      nbIneqIndices.emplace_back(r);
   }
 
   for (unsigned r = 0, e = cst.getNumEqualities(); r < e; r++) {
@@ -2320,7 +2312,7 @@ static void getIndependentConstraints(const IntegerRelation &cst, unsigned pos,
         break;
     }
     if (c == pos + num)
-      nbEqIndices.push_back(r);
+      nbEqIndices.emplace_back(r);
   }
 }
 
@@ -2367,10 +2359,8 @@ bool IntegerRelation::removeDuplicateConstraints() {
   hashTable.insert({row, 0});
   for (unsigned k = 1; k < ineqs; ++k) {
     row = getInequality(k).drop_back();
-    if (!hashTable.contains(row)) {
-      hashTable.insert({row, k});
+    if (hashTable.try_emplace(row, k).second)
       continue;
-    }
 
     // For identical cases, keep only the smaller part of the constant term.
     unsigned l = hashTable[row];
@@ -2591,19 +2581,26 @@ void IntegerRelation::mergeAndCompose(const IntegerRelation &other) {
 void IntegerRelation::print(raw_ostream &os) const {
   assert(hasConsistentState());
   printSpace(os);
+  PrintTableMetrics ptm = {0, 0, "-"};
+  for (unsigned i = 0, e = getNumEqualities(); i < e; ++i)
+    for (unsigned j = 0, f = getNumCols(); j < f; ++j)
+      updatePrintMetrics<DynamicAPInt>(atEq(i, j), ptm);
+  for (unsigned i = 0, e = getNumInequalities(); i < e; ++i)
+    for (unsigned j = 0, f = getNumCols(); j < f; ++j)
+      updatePrintMetrics<DynamicAPInt>(atIneq(i, j), ptm);
+  // Print using PrintMetrics.
+  constexpr unsigned kMinSpacing = 1;
   for (unsigned i = 0, e = getNumEqualities(); i < e; ++i) {
-    os << " ";
     for (unsigned j = 0, f = getNumCols(); j < f; ++j) {
-      os << atEq(i, j) << "\t";
+      printWithPrintMetrics<DynamicAPInt>(os, atEq(i, j), kMinSpacing, ptm);
     }
-    os << "= 0\n";
+    os << "  = 0\n";
   }
   for (unsigned i = 0, e = getNumInequalities(); i < e; ++i) {
-    os << " ";
     for (unsigned j = 0, f = getNumCols(); j < f; ++j) {
-      os << atIneq(i, j) << "\t";
+      printWithPrintMetrics<DynamicAPInt>(os, atIneq(i, j), kMinSpacing, ptm);
     }
-    os << ">= 0\n";
+    os << " >= 0\n";
   }
   os << '\n';
 }

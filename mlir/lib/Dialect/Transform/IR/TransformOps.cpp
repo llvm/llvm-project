@@ -41,6 +41,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/InterleavedRange.h"
 #include <optional>
 
 #define DEBUG_TYPE "transform-dialect"
@@ -393,16 +394,16 @@ DiagnosedSilenceableFailure transform::ApplyPatternsOp::applyToOne(
 
   // Configure the GreedyPatternRewriteDriver.
   GreedyRewriteConfig config;
-  config.listener =
-      static_cast<RewriterBase::Listener *>(rewriter.getListener());
+  config.setListener(
+      static_cast<RewriterBase::Listener *>(rewriter.getListener()));
   FrozenRewritePatternSet frozenPatterns(std::move(patterns));
 
-  config.maxIterations = getMaxIterations() == static_cast<uint64_t>(-1)
-                             ? GreedyRewriteConfig::kNoLimit
-                             : getMaxIterations();
-  config.maxNumRewrites = getMaxNumRewrites() == static_cast<uint64_t>(-1)
+  config.setMaxIterations(getMaxIterations() == static_cast<uint64_t>(-1)
                               ? GreedyRewriteConfig::kNoLimit
-                              : getMaxNumRewrites();
+                              : getMaxIterations());
+  config.setMaxNumRewrites(getMaxNumRewrites() == static_cast<uint64_t>(-1)
+                               ? GreedyRewriteConfig::kNoLimit
+                               : getMaxNumRewrites());
 
   // Apply patterns and CSE repetitively until a fixpoint is reached. If no CSE
   // was requested, apply the greedy pattern rewrite only once. (The greedy
@@ -417,7 +418,7 @@ DiagnosedSilenceableFailure transform::ApplyPatternsOp::applyToOne(
     if (target->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
       // Op is isolated from above. Apply patterns and also perform region
       // simplification.
-      result = applyPatternsAndFoldGreedily(target, frozenPatterns, config);
+      result = applyPatternsGreedily(target, frozenPatterns, config);
     } else {
       // Manually gather list of ops because the other
       // GreedyPatternRewriteDriver overloads only accepts ops that are isolated
@@ -429,7 +430,7 @@ DiagnosedSilenceableFailure transform::ApplyPatternsOp::applyToOne(
         if (target != nestedOp)
           ops.push_back(nestedOp);
       });
-      result = applyOpPatternsAndFold(ops, frozenPatterns, config);
+      result = applyOpPatternsGreedily(ops, frozenPatterns, config);
     }
 
     // A failure typically indicates that the pattern application did not
@@ -1396,11 +1397,11 @@ transform::ForeachOp::apply(transform::TransformRewriter &rewriter,
   SmallVector<SmallVector<MappedValue>> payloads;
   detail::prepareValueMappings(payloads, getTargets(), state);
   size_t numIterations = payloads.empty() ? 0 : payloads.front().size();
-  bool isZipShortest = getZipShortest();
+  bool withZipShortest = getWithZipShortest();
 
   // In case of `zip_shortest`, set the number of iterations to the
   // smallest payload in the targets.
-  if (isZipShortest) {
+  if (withZipShortest) {
     numIterations =
         llvm::min_element(payloads, [&](const SmallVector<MappedValue> &A,
                                         const SmallVector<MappedValue> &B) {
@@ -1414,7 +1415,7 @@ transform::ForeachOp::apply(transform::TransformRewriter &rewriter,
   // As we will be "zipping" over them, check all payloads have the same size.
   // `zip_shortest` adjusts all payloads to the same size, so skip this check
   // when true.
-  for (size_t argIdx = 1; !isZipShortest && argIdx < payloads.size();
+  for (size_t argIdx = 1; !withZipShortest && argIdx < payloads.size();
        argIdx++) {
     if (payloads[argIdx].size() != numIterations) {
       return emitSilenceableError()
@@ -1588,10 +1589,8 @@ transform::GetParentOp::apply(transform::TransformRewriter &rewriter,
       }
     }
     if (getDeduplicate()) {
-      if (!resultSet.contains(parent)) {
+      if (resultSet.insert(parent).second)
         parents.push_back(parent);
-        resultSet.insert(parent);
-      }
     } else {
       parents.push_back(parent);
     }
@@ -1969,7 +1968,7 @@ transform::MatchParamCmpIOp::apply(transform::TransformRewriter &rewriter,
     std::string str;
     llvm::raw_string_ostream os(str);
     value.print(os, /*isSigned=*/true);
-    return os.str();
+    return str;
   };
 
   ArrayRef<Attribute> params = state.getParams(getParam());
@@ -2074,7 +2073,7 @@ transform::MergeHandlesOp::apply(transform::TransformRewriter &rewriter,
       return DiagnosedSilenceableFailure::success();
     }
 
-    SetVector<Operation *> uniqued(operations.begin(), operations.end());
+    SetVector<Operation *> uniqued(llvm::from_range, operations);
     results.set(llvm::cast<OpResult>(getResult()), uniqued.getArrayRef());
     return DiagnosedSilenceableFailure::success();
   }
@@ -2088,7 +2087,7 @@ transform::MergeHandlesOp::apply(transform::TransformRewriter &rewriter,
       return DiagnosedSilenceableFailure::success();
     }
 
-    SetVector<Attribute> uniqued(attrs.begin(), attrs.end());
+    SetVector<Attribute> uniqued(llvm::from_range, attrs);
     results.setParams(cast<OpResult>(getResult()), uniqued.getArrayRef());
     return DiagnosedSilenceableFailure::success();
   }
@@ -2104,7 +2103,7 @@ transform::MergeHandlesOp::apply(transform::TransformRewriter &rewriter,
     return DiagnosedSilenceableFailure::success();
   }
 
-  SetVector<Value> uniqued(payloadValues.begin(), payloadValues.end());
+  SetVector<Value> uniqued(llvm::from_range, payloadValues);
   results.setValues(cast<OpResult>(getResult()), uniqued.getArrayRef());
   return DiagnosedSilenceableFailure::success();
 }
@@ -2417,32 +2416,62 @@ DiagnosedSilenceableFailure
 transform::SplitHandleOp::apply(transform::TransformRewriter &rewriter,
                                 transform::TransformResults &results,
                                 transform::TransformState &state) {
-  int64_t numPayloadOps = llvm::range_size(state.getPayloadOps(getHandle()));
+  int64_t numPayloads =
+      llvm::TypeSwitch<Type, int64_t>(getHandle().getType())
+          .Case<TransformHandleTypeInterface>([&](auto x) {
+            return llvm::range_size(state.getPayloadOps(getHandle()));
+          })
+          .Case<TransformValueHandleTypeInterface>([&](auto x) {
+            return llvm::range_size(state.getPayloadValues(getHandle()));
+          })
+          .Case<TransformParamTypeInterface>([&](auto x) {
+            return llvm::range_size(state.getParams(getHandle()));
+          })
+          .Default([](auto x) {
+            llvm_unreachable("unknown transform dialect type interface");
+            return -1;
+          });
+
   auto produceNumOpsError = [&]() {
     return emitSilenceableError()
            << getHandle() << " expected to contain " << this->getNumResults()
-           << " payload ops but it contains " << numPayloadOps
-           << " payload ops";
+           << " payloads but it contains " << numPayloads << " payloads";
   };
 
   // Fail if there are more payload ops than results and no overflow result was
   // specified.
-  if (numPayloadOps > getNumResults() && !getOverflowResult().has_value())
+  if (numPayloads > getNumResults() && !getOverflowResult().has_value())
     return produceNumOpsError();
 
   // Fail if there are more results than payload ops. Unless:
   // - "fail_on_payload_too_small" is set to "false", or
   // - "pass_through_empty_handle" is set to "true" and there are 0 payload ops.
-  if (numPayloadOps < getNumResults() && getFailOnPayloadTooSmall() &&
-      (numPayloadOps != 0 || !getPassThroughEmptyHandle()))
+  if (numPayloads < getNumResults() && getFailOnPayloadTooSmall() &&
+      (numPayloads != 0 || !getPassThroughEmptyHandle()))
     return produceNumOpsError();
 
-  // Distribute payload ops.
-  SmallVector<SmallVector<Operation *, 1>> resultHandles(getNumResults(), {});
+  // Distribute payloads.
+  SmallVector<SmallVector<MappedValue, 1>> resultHandles(getNumResults(), {});
   if (getOverflowResult())
-    resultHandles[*getOverflowResult()].reserve(numPayloadOps -
-                                                getNumResults());
-  for (auto &&en : llvm::enumerate(state.getPayloadOps(getHandle()))) {
+    resultHandles[*getOverflowResult()].reserve(numPayloads - getNumResults());
+
+  auto container = [&]() {
+    if (isa<TransformHandleTypeInterface>(getHandle().getType())) {
+      return llvm::map_to_vector(
+          state.getPayloadOps(getHandle()),
+          [](Operation *op) -> MappedValue { return op; });
+    }
+    if (isa<TransformValueHandleTypeInterface>(getHandle().getType())) {
+      return llvm::map_to_vector(state.getPayloadValues(getHandle()),
+                                 [](Value v) -> MappedValue { return v; });
+    }
+    assert(isa<TransformParamTypeInterface>(getHandle().getType()) &&
+           "unsupported kind of transform dialect type");
+    return llvm::map_to_vector(state.getParams(getHandle()),
+                               [](Attribute a) -> MappedValue { return a; });
+  }();
+
+  for (auto &&en : llvm::enumerate(container)) {
     int64_t resultNum = en.index();
     if (resultNum >= getNumResults())
       resultNum = *getOverflowResult();
@@ -2451,7 +2480,8 @@ transform::SplitHandleOp::apply(transform::TransformRewriter &rewriter,
 
   // Set transform op results.
   for (auto &&it : llvm::enumerate(resultHandles))
-    results.set(llvm::cast<OpResult>(getResult(it.index())), it.value());
+    results.setMappedValues(llvm::cast<OpResult>(getResult(it.index())),
+                            it.value());
 
   return DiagnosedSilenceableFailure::success();
 }
@@ -2468,6 +2498,15 @@ LogicalResult transform::SplitHandleOp::verify() {
   if (getOverflowResult().has_value() &&
       !(*getOverflowResult() < getNumResults()))
     return emitOpError("overflow_result is not a valid result index");
+
+  for (Type resultType : getResultTypes()) {
+    if (implementSameTransformInterface(getHandle().getType(), resultType))
+      continue;
+
+    return emitOpError("expects result types to implement the same transform "
+                       "interface as the operand type");
+  }
+
   return success();
 }
 
@@ -2592,11 +2631,8 @@ static void printSequenceOpOperands(OpAsmPrinter &printer, Operation *op,
     printer << "(";
 
   printer << rootType;
-  if (hasExtras) {
-    printer << ", ";
-    llvm::interleaveComma(extraBindingTypes, printer.getStream());
-    printer << ")";
-  }
+  if (hasExtras)
+    printer << ", " << llvm::interleaved(extraBindingTypes) << ')';
 }
 
 /// Returns `true` if the given op operand may be consuming the handle value in
@@ -2802,6 +2838,7 @@ transform::PrintOp::apply(transform::TransformRewriter &rewriter,
     llvm::outs() << "top-level ]]]\n";
     state.getTopLevel()->print(llvm::outs(), printFlags);
     llvm::outs() << "\n";
+    llvm::outs().flush();
     return DiagnosedSilenceableFailure::success();
   }
 
@@ -2811,6 +2848,7 @@ transform::PrintOp::apply(transform::TransformRewriter &rewriter,
     llvm::outs() << "\n";
   }
 
+  llvm::outs().flush();
   return DiagnosedSilenceableFailure::success();
 }
 

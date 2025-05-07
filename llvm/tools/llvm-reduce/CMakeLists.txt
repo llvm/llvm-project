@@ -31,6 +31,7 @@ add_llvm_tool(llvm-reduce
   deltas/ReduceAttributes.cpp
   deltas/ReduceBasicBlocks.cpp
   deltas/ReduceDIMetadata.cpp
+  deltas/ReduceDistinctMetadata.cpp
   deltas/ReduceDbgRecords.cpp
   deltas/ReduceFunctionBodies.cpp
   deltas/ReduceFunctions.cpp
@@ -53,10 +54,12 @@ add_llvm_tool(llvm-reduce
   deltas/ReduceInstructionsMIR.cpp
   deltas/ReduceInstructionFlagsMIR.cpp
   deltas/ReduceIRReferences.cpp
+  deltas/ReduceValuesToReturn.cpp
   deltas/ReduceVirtualRegisters.cpp
   deltas/ReduceRegisterMasks.cpp
   deltas/ReduceRegisterDefs.cpp
   deltas/ReduceRegisterUses.cpp
+  deltas/ReduceTargetFeaturesAttr.cpp
   deltas/ReduceUsingSimplifyCFG.cpp
   deltas/RunIRPasses.cpp
   deltas/SimplifyInstructions.cpp

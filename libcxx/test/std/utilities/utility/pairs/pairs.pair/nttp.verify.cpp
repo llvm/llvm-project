@@ -7,12 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: clang-17
 
 // <utility>
 
 // LWG-3382 NTTP for pair and array:
 // pair<T, U> is a structural type ([temp.param]) if T and U are both structural types.
+
+// This deprecated ABI switch makes pair a non-structural type.
+// XFAIL: libcpp-deprecated-abi-disable-pair-trivial-copy-ctor
 
 #include <utility>
 
@@ -72,7 +74,7 @@ using H = test<std::pair<NotALiteral, NotALiteral>{}>;
 // expected-error@-1 {{non-type template parameter has non-literal type 'std::pair<NotALiteral, NotALiteral>'}}
 
 using I = test<std::pair<std::string, std::string>{}>;
-// expected-error@-1 {{type 'std::pair<string, string>' (aka 'std::pair<std::string, std::string>') of non-type template parameter is not a structural type}}
+// expected-error-re@-1 {{type 'std::pair<{{(std::)?}}string, {{(std::)?}}string>'{{( \(aka 'std::pair<std::string, std::string>'\))?}} of non-type template parameter is not a structural type}}
 } // namespace test_ctad
 
 namespace test_auto {

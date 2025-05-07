@@ -45,7 +45,8 @@ func.func @elementsattr_floattype1() -> () {
 // -----
 
 func.func @elementsattr_floattype2() -> () {
-  // expected-error@+1 {{expected floating-point elements, but parsed integer}}
+  // expected-error@below {{unexpected decimal integer literal for a floating point value}}
+  // expected-note@below {{add a trailing dot to make the literal a float}}
   "foo"(){bar = dense<[4]> : tensor<1xf32>} : () -> ()
 }
 
@@ -59,6 +60,21 @@ func.func @elementsattr_toolarge1() -> () {
 
 // expected-error@+1 {{parsed zero elements, but type ('tensor<i64>') expected at least 1}}
 #attr = dense<> : tensor<i64>
+
+// -----
+
+// expected-error@+1 {{parsed 1 elements, but type ('complex<i64>') expected 2 elements}}
+#attr = dense<0> : tensor<2xcomplex<i64>>
+
+// -----
+
+// expected-error@+1 {{parsed 2 elements, but type ('tensor<2xcomplex<i64>>') expected 4 elements}}
+#attr = dense<[0, 1]> : tensor<2xcomplex<i64>>
+
+// -----
+
+// expected-error@+1 {{parsed 3 elements, but type ('tensor<2xcomplex<i64>>') expected 4 elements}}
+#attr = dense<[0, (0, 1)]> : tensor<2xcomplex<i64>>
 
 // -----
 
@@ -108,6 +124,20 @@ func.func @invalid_tensor_literal() {
 
 // -----
 
+func.func @invalid_sparse_indices() {
+  // expected-error @+1 {{expected integer elements, but parsed floating-point}}
+  "foo"(){bar = sparse<0.5, 1> : tensor<1xi16>} : () -> ()
+}
+
+// -----
+
+func.func @invalid_sparse_values() {
+  // expected-error @+1 {{expected integer elements, but parsed floating-point}}
+  "foo"(){bar = sparse<0, 1.1> : tensor<1xi16>} : () -> ()
+}
+
+// -----
+
 func.func @hexadecimal_float_leading_minus() {
   // expected-error @+1 {{hexadecimal float literal should not have a leading minus}}
   "foo"() {value = -0x7fff : f16} : () -> ()
@@ -138,21 +168,22 @@ func.func @float_in_int_tensor() {
 // -----
 
 func.func @float_in_bool_tensor() {
-  // expected-error @+1 {{expected integer elements, but parsed floating-point}}
+  // expected-error@below {{expected integer elements, but parsed floating-point}}
   "foo"() {bar = dense<[true, 42.0]> : tensor<2xi1>} : () -> ()
 }
 
 // -----
 
 func.func @decimal_int_in_float_tensor() {
-  // expected-error @+1 {{expected floating-point elements, but parsed integer}}
+  // expected-error@below {{unexpected decimal integer literal for a floating point value}}
+  // expected-note@below {{add a trailing dot to make the literal a float}}
   "foo"() {bar = dense<[42, 42.0]> : tensor<2xf32>} : () -> ()
 }
 
 // -----
 
 func.func @bool_in_float_tensor() {
-  // expected-error @+1 {{expected floating-point elements, but parsed integer}}
+  // expected-error @+1 {{expected floating point literal}}
   "foo"() {bar = dense<[42.0, true]> : tensor<2xf32>} : () -> ()
 }
 
@@ -589,3 +620,48 @@ func.func @duplicate_dictionary_attr_key() {
 #attr1 = distinct[0]<43 : i32>
 
 // -----
+
+// Make sure the error is not printed on the return.
+func.func @print_error_on_correct_line() {
+  %0 = arith.constant
+    // expected-error@below {{elements literal must be a shaped type}} 
+    dense<[3]> : i32
+  return
+}
+
+// -----
+
+// Make sure the error is not printed on the return.
+func.func @print_error_on_correct_line() {
+  %0 = arith.constant 
+    // expected-error@below {{elements literal must be a shaped type}}
+    sparse<
+     [
+       [0, 1, 2, 3],
+       [1, 1, 2, 3],
+       [1, 2, 2, 3],
+       [1, 2, 3, 4]
+     ],
+     [1, 1, 1, 1] > : i32
+  return
+}
+
+// -----
+
+// Make sure the error is not printed on the return.
+func.func @print_error_on_correct_line() {
+  %0 = arith.constant 
+    // expected-error@below {{elements literal must be a shaped type}}
+    sparse <> : i32
+  return
+}
+
+// -----
+
+// Prevent assertions when parsing a dense attribute expected to be a string 
+// but encountering a different type. 
+func.func @expect_to_parse_literal() {
+  // expected-error@below {{expected string token, got 23}}
+  %0 = arith.constant dense<[23]> : tensor<1x!unknown<>>
+  return
+}

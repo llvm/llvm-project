@@ -1,14 +1,8 @@
 ; Test for handling of asm constraints in MSan instrumentation.
-; RUN: opt < %s -msan-check-access-address=0 -msan-handle-asm-conservative=0 -S -passes=msan 2>&1 | \
-; RUN:   FileCheck %s
-; RUN: opt < %s -msan-check-access-address=0 -S -passes=msan 2>&1 | \
-; RUN:   FileCheck --check-prefixes=CHECK,USER-CONS %s
-; RUN: opt < %s -msan-kernel=1 -msan-check-access-address=0                    \
-; RUN:   -msan-handle-asm-conservative=0 -S -passes=msan 2>&1 | FileCheck      \
-; RUN:   --check-prefixes=CHECK,KMSAN %s
-; RUN: opt < %s -msan-kernel=1 -msan-check-access-address=0                    \
-; RUN:   -msan-handle-asm-conservative=1 -S -passes=msan 2>&1 | FileCheck      \
-; RUN:   --check-prefixes=CHECK,KMSAN,CHECK-CONS %s
+; RUN: opt < %s -msan-check-access-address=0 -msan-handle-asm-conservative=0 -S -passes=msan 2>&1 | FileCheck %s
+; RUN: opt < %s -msan-check-access-address=0 -S -passes=msan 2>&1 | FileCheck --check-prefixes=CHECK,USER-CONS %s
+; RUN: opt < %s -msan-kernel=1 -msan-check-access-address=0 -msan-handle-asm-conservative=0 -S -passes=msan 2>&1 | FileCheck --check-prefixes=CHECK,KMSAN %s
+; RUN: opt < %s -msan-kernel=1 -msan-check-access-address=0 -msan-handle-asm-conservative=1 -S -passes=msan 2>&1 | FileCheck --check-prefixes=CHECK,KMSAN,CHECK-CONS %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

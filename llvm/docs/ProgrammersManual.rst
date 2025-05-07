@@ -164,20 +164,20 @@ rarely have to include this file directly).
   efficient to use the ``InstVisitor`` class to dispatch over the instruction
   type directly.
 
-``isa_and_nonnull<>``:
-  The ``isa_and_nonnull<>`` operator works just like the ``isa<>`` operator,
+``isa_and_present<>``:
+  The ``isa_and_present<>`` operator works just like the ``isa<>`` operator,
   except that it allows for a null pointer as an argument (which it then
   returns false).  This can sometimes be useful, allowing you to combine several
   null checks into one.
 
-``cast_or_null<>``:
-  The ``cast_or_null<>`` operator works just like the ``cast<>`` operator,
+``cast_if_present<>``:
+  The ``cast_if_present<>`` operator works just like the ``cast<>`` operator,
   except that it allows for a null pointer as an argument (which it then
   propagates).  This can sometimes be useful, allowing you to combine several
   null checks into one.
 
-``dyn_cast_or_null<>``:
-  The ``dyn_cast_or_null<>`` operator works just like the ``dyn_cast<>``
+``dyn_cast_if_present<>``:
+  The ``dyn_cast_if_present<>`` operator works just like the ``dyn_cast<>``
   operator, except that it allows for a null pointer as an argument (which it
   then propagates).  This can sometimes be useful, allowing you to combine
   several null checks into one.
@@ -437,6 +437,15 @@ that should never be entered if the program invariants hold:
       llvm_unreachable("X should be Foo or Bar here");
   }
 
+Additionally, ``reportFatalInternalError`` can be used to report invariant
+violations even in builds that do not enable assertions:
+
+.. code-block:: c++
+
+  if (VerifyFooAnalysis && !Foo.verify()) {
+    reportFatalInternalError("Analysis 'foo' not preserved");
+  }
+
 Recoverable Errors
 ^^^^^^^^^^^^^^^^^^
 
@@ -452,9 +461,9 @@ recovery.
    While it would be ideal to use this error handling scheme throughout
    LLVM, there are places where this hasn't been practical to apply. In
    situations where you absolutely must emit a non-programmatic error and
-   the ``Error`` model isn't workable you can call ``report_fatal_error``,
-   which will call installed error handlers, print a message, and abort the
-   program. The use of `report_fatal_error` in this case is discouraged.
+   the ``Error`` model isn't workable you can call ``reportFatalUsageError``,
+   which will call installed error handlers, print a message, and exit the
+   program. The use of `reportFatalUsageError` in this case is discouraged.
 
 Recoverable errors are modeled using LLVM's ``Error`` scheme. This scheme
 represents errors using function return values, similar to classic C integer
@@ -590,14 +599,14 @@ semantics.  For example:
 
 This third form works with any type that can be assigned to from ``T&&``. This
 can be useful if the ``Expected<T>`` value needs to be stored an already-declared
-``Optional<T>``. For example:
+``std::optional<T>``. For example:
 
 .. code-block:: c++
 
   Expected<StringRef> extractClassName(StringRef Definition);
   struct ClassData {
     StringRef Definition;
-    Optional<StringRef> LazyName;
+    std::optional<StringRef> LazyName;
     ...
     Error initialize() {
       if (auto Err = extractClassName(Path).moveInto(LazyName))
@@ -1363,7 +1372,7 @@ Whatever code you want that control, use ``DebugCounter::shouldExecute`` to cont
     I->eraseFromParent();
 
 That's all you have to do. Now, using opt, you can control when this code triggers using
-the '``--debug-counter``' Options.To specify when to execute the codepath.
+the '``--debug-counter``' Options. To specify when to execute the codepath.
 
 .. code-block:: none
 
@@ -1392,6 +1401,7 @@ How to use reduce-chunk-list:
 First, Figure out the number of calls to the debug counter you want to minimize.
 To do so, run the compilation command causing you want to minimize with `-print-debug-counter` adding a `-mllvm` if needed.
 Than find the line with the counter of interest. it should look like:
+
 .. code-block:: none
 
   my-counter               : {5678,empty}
@@ -1400,6 +1410,7 @@ The number of calls to `my-counter` is 5678
 
 Than Find the minimum set of chunks that is interesting, with `reduce-chunk-list`.
 Build a reproducer script like:
+
 .. code-block:: bash
 
   #! /bin/bash
@@ -3356,15 +3367,15 @@ the ``PassManager.h`` system, and there is a more detailed introduction to it
 by Sean Parent in several of his talks and papers:
 
 #. `Inheritance Is The Base Class of Evil
-   <http://channel9.msdn.com/Events/GoingNative/2013/Inheritance-Is-The-Base-Class-of-Evil>`_
+   <https://learn.microsoft.com/en-us/shows/goingnative-2013/inheritance-base-class-of-evil>`_
    - The GoingNative 2013 talk describing this technique, and probably the best
    place to start.
 #. `Value Semantics and Concepts-based Polymorphism
    <http://www.youtube.com/watch?v=_BpMYeUFXv8>`_ - The C++Now! 2012 talk
    describing this technique in more detail.
 #. `Sean Parent's Papers and Presentations
-   <http://github.com/sean-parent/sean-parent.github.com/wiki/Papers-and-Presentations>`_
-   - A GitHub project full of links to slides, video, and sometimes code.
+   <https://sean-parent.stlab.cc/papers-and-presentations>`_
+   - Links to slides, videos, and sometimes code.
 
 When deciding between creating a type hierarchy (with either tagged or virtual
 dispatch) and using templates or concepts-based polymorphism, consider whether

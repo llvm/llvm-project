@@ -70,15 +70,16 @@ namespace llvm {
     /*implicit*/ ArrayRef(std::nullopt_t) {}
 
     /// Construct an ArrayRef from a single element.
-    /*implicit*/ ArrayRef(const T &OneElt)
-      : Data(&OneElt), Length(1) {}
+    /*implicit*/ ArrayRef(const T &OneElt LLVM_LIFETIME_BOUND)
+        : Data(&OneElt), Length(1) {}
 
     /// Construct an ArrayRef from a pointer and length.
-    constexpr /*implicit*/ ArrayRef(const T *data, size_t length)
+    constexpr /*implicit*/ ArrayRef(const T *data LLVM_LIFETIME_BOUND,
+                                    size_t length)
         : Data(data), Length(length) {}
 
     /// Construct an ArrayRef from a range.
-    constexpr ArrayRef(const T *begin, const T *end)
+    constexpr ArrayRef(const T *begin LLVM_LIFETIME_BOUND, const T *end)
         : Data(begin), Length(end - begin) {
       assert(begin <= end);
     }
@@ -103,7 +104,8 @@ namespace llvm {
 
     /// Construct an ArrayRef from a C array.
     template <size_t N>
-    /*implicit*/ constexpr ArrayRef(const T (&Arr)[N]) : Data(Arr), Length(N) {}
+    /*implicit*/ constexpr ArrayRef(const T (&Arr LLVM_LIFETIME_BOUND)[N])
+        : Data(Arr), Length(N) {}
 
     /// Construct an ArrayRef from a std::initializer_list.
 #if LLVM_GNUC_PREREQ(9, 0, 0)
@@ -113,7 +115,8 @@ namespace llvm {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winit-list-lifetime"
 #endif
-    constexpr /*implicit*/ ArrayRef(const std::initializer_list<T> &Vec)
+    constexpr /*implicit*/ ArrayRef(
+        std::initializer_list<T> Vec LLVM_LIFETIME_BOUND)
         : Data(Vec.begin() == Vec.end() ? (T *)nullptr : Vec.begin()),
           Length(Vec.size()) {}
 #if LLVM_GNUC_PREREQ(9, 0, 0)
@@ -145,6 +148,14 @@ namespace llvm {
              std::enable_if_t<std::is_convertible<U *const *, T const *>::value>
                  * = nullptr)
         : Data(Vec.data()), Length(Vec.size()) {}
+
+    /// Construct an ArrayRef<T> from iterator_range<U*>. This uses SFINAE
+    /// to ensure that this is only used for iterator ranges over plain pointer
+    /// iterators.
+    template <typename U, typename = std::enable_if_t<
+                              std::is_convertible_v<U *const *, T *const *>>>
+    ArrayRef(const iterator_range<U *> &Range)
+        : Data(Range.begin()), Length(llvm::size(Range)) {}
 
     /// @}
     /// @name Simple Operations
@@ -198,7 +209,7 @@ namespace llvm {
     }
 
     /// slice(n) - Chop off the first N elements of the array.
-    ArrayRef<T> slice(size_t N) const { return slice(N, size() - N); }
+    ArrayRef<T> slice(size_t N) const { return drop_front(N); }
 
     /// Drop the first \p N elements of the array.
     ArrayRef<T> drop_front(size_t N = 1) const {
@@ -559,7 +570,7 @@ namespace llvm {
   /// @}
 
   template <typename T> hash_code hash_value(ArrayRef<T> S) {
-    return hash_combine_range(S.begin(), S.end());
+    return hash_combine_range(S);
   }
 
   // Provide DenseMapInfo for ArrayRefs.

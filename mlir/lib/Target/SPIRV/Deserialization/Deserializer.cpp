@@ -155,7 +155,7 @@ LogicalResult spirv::Deserializer::processHeader() {
 LogicalResult
 spirv::Deserializer::processCapability(ArrayRef<uint32_t> operands) {
   if (operands.size() != 1)
-    return emitError(unknownLoc, "OpMemoryModel must have one parameter");
+    return emitError(unknownLoc, "OpCapability must have one parameter");
 
   auto cap = spirv::symbolizeCapability(operands[0]);
   if (!cap)
@@ -226,6 +226,28 @@ spirv::Deserializer::processMemoryModel(ArrayRef<uint32_t> operands) {
   return success();
 }
 
+template <typename AttrTy, typename EnumAttrTy, typename EnumTy>
+LogicalResult deserializeCacheControlDecoration(
+    Location loc, OpBuilder &opBuilder,
+    DenseMap<uint32_t, NamedAttrList> &decorations, ArrayRef<uint32_t> words,
+    StringAttr symbol, StringRef decorationName, StringRef cacheControlKind) {
+  if (words.size() != 4) {
+    return emitError(loc, "OpDecoration with ")
+           << decorationName << "needs a cache control integer literal and a "
+           << cacheControlKind << " cache control literal";
+  }
+  unsigned cacheLevel = words[2];
+  auto cacheControlAttr = static_cast<EnumTy>(words[3]);
+  auto value = opBuilder.getAttr<AttrTy>(cacheLevel, cacheControlAttr);
+  SmallVector<Attribute> attrs;
+  if (auto attrList =
+          llvm::dyn_cast_or_null<ArrayAttr>(decorations[words[0]].get(symbol)))
+    llvm::append_range(attrs, attrList);
+  attrs.push_back(value);
+  decorations[words[0]].set(symbol, opBuilder.getArrayAttr(attrs));
+  return success();
+}
+
 LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
   // TODO: This function should also be auto-generated. For now, since only a
   // few decorations are processed/handled in a meaningful manner, going with a
@@ -249,6 +271,15 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
     decorations[words[0]].set(
         symbol, FPFastMathModeAttr::get(opBuilder.getContext(),
                                         static_cast<FPFastMathMode>(words[2])));
+    break;
+  case spirv::Decoration::FPRoundingMode:
+    if (words.size() != 3) {
+      return emitError(unknownLoc, "OpDecorate with ")
+             << decorationName << " needs a single integer literal";
+    }
+    decorations[words[0]].set(
+        symbol, FPRoundingModeAttr::get(opBuilder.getContext(),
+                                        static_cast<FPRoundingMode>(words[2])));
     break;
   case spirv::Decoration::DescriptorSet:
   case spirv::Decoration::Binding:
@@ -310,6 +341,7 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
   case spirv::Decoration::Restrict:
   case spirv::Decoration::RestrictPointer:
   case spirv::Decoration::NoContraction:
+  case spirv::Decoration::Constant:
     if (words.size() != 2) {
       return emitError(unknownLoc, "OpDecoration with ")
              << decorationName << "needs a single target <id>";
@@ -329,6 +361,24 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
     decorations[words[0]].set(
         symbol, opBuilder.getI32IntegerAttr(static_cast<int32_t>(words[2])));
     break;
+  case spirv::Decoration::CacheControlLoadINTEL: {
+    LogicalResult res = deserializeCacheControlDecoration<
+        CacheControlLoadINTELAttr, LoadCacheControlAttr, LoadCacheControl>(
+        unknownLoc, opBuilder, decorations, words, symbol, decorationName,
+        "load");
+    if (failed(res))
+      return res;
+    break;
+  }
+  case spirv::Decoration::CacheControlStoreINTEL: {
+    LogicalResult res = deserializeCacheControlDecoration<
+        CacheControlStoreINTELAttr, StoreCacheControlAttr, StoreCacheControl>(
+        unknownLoc, opBuilder, decorations, words, symbol, decorationName,
+        "store");
+    if (failed(res))
+      return res;
+    break;
+  }
   default:
     return emitError(unknownLoc, "unhandled Decoration : '") << decorationName;
   }
@@ -843,8 +893,6 @@ LogicalResult spirv::Deserializer::processType(spirv::Opcode opcode,
     return processCooperativeMatrixTypeKHR(operands);
   case spirv::Opcode::OpTypeFunction:
     return processFunctionType(operands);
-  case spirv::Opcode::OpTypeJointMatrixINTEL:
-    return processJointMatrixType(operands);
   case spirv::Opcode::OpTypeImage:
     return processImageType(operands);
   case spirv::Opcode::OpTypeSampledImage:
@@ -1013,40 +1061,6 @@ LogicalResult spirv::Deserializer::processCooperativeMatrixTypeKHR(
 
   typeMap[operands[0]] =
       spirv::CooperativeMatrixType::get(elementTy, rows, columns, *scope, *use);
-  return success();
-}
-
-LogicalResult
-spirv::Deserializer::processJointMatrixType(ArrayRef<uint32_t> operands) {
-  if (operands.size() != 6) {
-    return emitError(unknownLoc, "OpTypeJointMatrix must have element "
-                                 "type and row x column parameters");
-  }
-
-  Type elementTy = getType(operands[1]);
-  if (!elementTy) {
-    return emitError(unknownLoc, "OpTypeJointMatrix references undefined <id> ")
-           << operands[1];
-  }
-
-  auto scope = spirv::symbolizeScope(getConstantInt(operands[5]).getInt());
-  if (!scope) {
-    return emitError(unknownLoc,
-                     "OpTypeJointMatrix references undefined scope <id> ")
-           << operands[5];
-  }
-  auto matrixLayout =
-      spirv::symbolizeMatrixLayout(getConstantInt(operands[4]).getInt());
-  if (!matrixLayout) {
-    return emitError(unknownLoc,
-                     "OpTypeJointMatrix references undefined scope <id> ")
-           << operands[4];
-  }
-  unsigned rows = getConstantInt(operands[2]).getInt();
-  unsigned columns = getConstantInt(operands[3]).getInt();
-
-  typeMap[operands[0]] = spirv::JointMatrixINTELType::get(
-      elementTy, scope.value(), rows, columns, matrixLayout.value());
   return success();
 }
 
@@ -1313,7 +1327,8 @@ LogicalResult spirv::Deserializer::processConstant(ArrayRef<uint32_t> operands,
       } words = {operands[2], operands[3]};
       value = APInt(64, llvm::bit_cast<uint64_t>(words), /*isSigned=*/true);
     } else if (bitwidth <= 32) {
-      value = APInt(bitwidth, operands[2], /*isSigned=*/true);
+      value = APInt(bitwidth, operands[2], /*isSigned=*/true,
+                    /*implicitTrunc=*/true);
     }
 
     auto attr = opBuilder.getIntegerAttr(intType, value);
@@ -1977,6 +1992,35 @@ LogicalResult ControlFlowStructurizer::structurize() {
                                     ArrayRef<Value>(blockArgs));
   }
 
+  // Values defined inside the selection region that need to be yielded outside
+  // the region.
+  SmallVector<Value> valuesToYield;
+  // Outside uses of values that were sunk into the selection region. Those uses
+  // will be replaced with values returned by the SelectionOp.
+  SmallVector<Value> outsideUses;
+
+  // Move block arguments of the original block (`mergeBlock`) into the merge
+  // block inside the selection (`body.back()`). Values produced by block
+  // arguments will be yielded by the selection region. We do not update uses or
+  // erase original block arguments yet. It will be done later in the code.
+  //
+  // Code below is not executed for loops as it would interfere with the logic
+  // above. Currently block arguments in the merge block are not supported, but
+  // instead, the code above copies those arguments from the header block into
+  // the merge block. As such, running the code would yield those copied
+  // arguments that is most likely not a desired behaviour. This may need to be
+  // revisited in the future.
+  if (!isLoop)
+    for (BlockArgument blockArg : mergeBlock->getArguments()) {
+      // Create new block arguments in the last block ("merge block") of the
+      // selection region. We create one argument for each argument in
+      // `mergeBlock`. This new value will need to be yielded, and the original
+      // value replaced, so add them to appropriate vectors.
+      body.back().addArgument(blockArg.getType(), blockArg.getLoc());
+      valuesToYield.push_back(body.back().getArguments().back());
+      outsideUses.push_back(blockArg);
+    }
+
   // All the blocks cloned into the SelectionOp/LoopOp's region can now be
   // cleaned up.
   LLVM_DEBUG(logger.startLine() << "[cf] cleaning up blocks after clone\n");
@@ -1985,17 +2029,91 @@ LogicalResult ControlFlowStructurizer::structurize() {
   for (auto *block : constructBlocks)
     block->dropAllReferences();
 
+  // All internal uses should be removed from original blocks by now, so
+  // whatever is left is an outside use and will need to be yielded from
+  // the newly created selection / loop region.
+  for (Block *block : constructBlocks) {
+    for (Operation &op : *block) {
+      if (!op.use_empty())
+        for (Value result : op.getResults()) {
+          valuesToYield.push_back(mapper.lookupOrNull(result));
+          outsideUses.push_back(result);
+        }
+    }
+    for (BlockArgument &arg : block->getArguments()) {
+      if (!arg.use_empty()) {
+        valuesToYield.push_back(mapper.lookupOrNull(arg));
+        outsideUses.push_back(arg);
+      }
+    }
+  }
+
+  assert(valuesToYield.size() == outsideUses.size());
+
+  // If we need to yield any values from the selection / loop region we will
+  // take care of it here.
+  if (!valuesToYield.empty()) {
+    LLVM_DEBUG(logger.startLine()
+               << "[cf] yielding values from the selection / loop region\n");
+
+    // Update `mlir.merge` with values to be yield.
+    auto mergeOps = body.back().getOps<spirv::MergeOp>();
+    Operation *merge = llvm::getSingleElement(mergeOps);
+    assert(merge);
+    merge->setOperands(valuesToYield);
+
+    // MLIR does not allow changing the number of results of an operation, so
+    // we create a new SelectionOp / LoopOp with required list of results and
+    // move the region from the initial SelectionOp / LoopOp. The initial
+    // operation is then removed. Since we move the region to the new op all
+    // links between blocks and remapping we have previously done should be
+    // preserved.
+    builder.setInsertionPoint(&mergeBlock->front());
+
+    Operation *newOp = nullptr;
+
+    if (isLoop)
+      newOp = builder.create<spirv::LoopOp>(
+          location, TypeRange(ValueRange(outsideUses)),
+          static_cast<spirv::LoopControl>(control));
+    else
+      newOp = builder.create<spirv::SelectionOp>(
+          location, TypeRange(ValueRange(outsideUses)),
+          static_cast<spirv::SelectionControl>(control));
+
+    newOp->getRegion(0).takeBody(body);
+
+    // Remove initial op and swap the pointer to the newly created one.
+    op->erase();
+    op = newOp;
+
+    // Update all outside uses to use results of the SelectionOp / LoopOp and
+    // remove block arguments from the original merge block.
+    for (unsigned i = 0, e = outsideUses.size(); i != e; ++i)
+      outsideUses[i].replaceAllUsesWith(op->getResult(i));
+
+    // We do not support block arguments in loop merge block. Also running this
+    // function with loop would break some of the loop specific code above
+    // dealing with block arguments.
+    if (!isLoop)
+      mergeBlock->eraseArguments(0, mergeBlock->getNumArguments());
+  }
+
   // Check that whether some op in the to-be-erased blocks still has uses. Those
   // uses come from blocks that won't be sinked into the SelectionOp/LoopOp's
   // region. We cannot handle such cases given that once a value is sinked into
-  // the SelectionOp/LoopOp's region, there is no escape for it:
-  // SelectionOp/LooOp does not support yield values right now.
+  // the SelectionOp/LoopOp's region, there is no escape for it.
   for (auto *block : constructBlocks) {
     for (Operation &op : *block)
       if (!op.use_empty())
-        return op.emitOpError(
-            "failed control flow structurization: it has uses outside of the "
-            "enclosing selection/loop construct");
+        return op.emitOpError("failed control flow structurization: value has "
+                              "uses outside of the "
+                              "enclosing selection/loop construct");
+    for (BlockArgument &arg : block->getArguments())
+      if (!arg.use_empty())
+        return emitError(arg.getLoc(), "failed control flow structurization: "
+                                       "block argument has uses outside of the "
+                                       "enclosing selection/loop construct");
   }
 
   // Then erase all old blocks.
@@ -2005,37 +2123,75 @@ LogicalResult ControlFlowStructurizer::structurize() {
     // selection/loop. If so, they will be recorded within blockMergeInfo.
     // We need to update the pointers there to the newly remapped ones so we can
     // continue structurizing them later.
+    //
+    // We need to walk each block as constructBlocks do not include blocks
+    // internal to ops already structured within those blocks. It is not
+    // fully clear to me why the mergeInfo of blocks (yet to be structured)
+    // inside already structured selections/loops get invalidated and needs
+    // updating, however the following example code can cause a crash (depending
+    // on the structuring order), when the most inner selection is being
+    // structured after the outer selection and loop have been already
+    // structured:
+    //
+    //  spirv.mlir.for {
+    //    // ...
+    //    spirv.mlir.selection {
+    //      // ..
+    //      // A selection region that hasn't been yet structured!
+    //      // ..
+    //    }
+    //    // ...
+    //  }
+    //
+    // If the loop gets structured after the outer selection, but before the
+    // inner selection. Moving the already structured selection inside the loop
+    // will invalidate the mergeInfo of the region that is not yet structured.
+    // Just going over constructBlocks will not check and updated header blocks
+    // inside the already structured selection region. Walking block fixes that.
+    //
+    // TODO: If structuring was done in a fixed order starting with inner
+    // most constructs this most likely not be an issue and the whole code
+    // section could be removed. However, with the current non-deterministic
+    // order this is not possible.
+    //
     // TODO: The asserts in the following assumes input SPIR-V blob forms
     // correctly nested selection/loop constructs. We should relax this and
     // support error cases better.
-    auto it = blockMergeInfo.find(block);
-    if (it != blockMergeInfo.end()) {
-      // Use the original location for nested selection/loop ops.
-      Location loc = it->second.loc;
+    auto updateMergeInfo = [&](Block *block) -> WalkResult {
+      auto it = blockMergeInfo.find(block);
+      if (it != blockMergeInfo.end()) {
+        // Use the original location for nested selection/loop ops.
+        Location loc = it->second.loc;
 
-      Block *newHeader = mapper.lookupOrNull(block);
-      if (!newHeader)
-        return emitError(loc, "failed control flow structurization: nested "
-                              "loop header block should be remapped!");
-
-      Block *newContinue = it->second.continueBlock;
-      if (newContinue) {
-        newContinue = mapper.lookupOrNull(newContinue);
-        if (!newContinue)
+        Block *newHeader = mapper.lookupOrNull(block);
+        if (!newHeader)
           return emitError(loc, "failed control flow structurization: nested "
-                                "loop continue block should be remapped!");
+                                "loop header block should be remapped!");
+
+        Block *newContinue = it->second.continueBlock;
+        if (newContinue) {
+          newContinue = mapper.lookupOrNull(newContinue);
+          if (!newContinue)
+            return emitError(loc, "failed control flow structurization: nested "
+                                  "loop continue block should be remapped!");
+        }
+
+        Block *newMerge = it->second.mergeBlock;
+        if (Block *mappedTo = mapper.lookupOrNull(newMerge))
+          newMerge = mappedTo;
+
+        // The iterator should be erased before adding a new entry into
+        // blockMergeInfo to avoid iterator invalidation.
+        blockMergeInfo.erase(it);
+        blockMergeInfo.try_emplace(newHeader, loc, it->second.control, newMerge,
+                                   newContinue);
       }
 
-      Block *newMerge = it->second.mergeBlock;
-      if (Block *mappedTo = mapper.lookupOrNull(newMerge))
-        newMerge = mappedTo;
+      return WalkResult::advance();
+    };
 
-      // The iterator should be erased before adding a new entry into
-      // blockMergeInfo to avoid iterator invalidation.
-      blockMergeInfo.erase(it);
-      blockMergeInfo.try_emplace(newHeader, loc, it->second.control, newMerge,
-                                 newContinue);
-    }
+    if (block->walk(updateMergeInfo).wasInterrupted())
+      return failure();
 
     // The structured selection/loop's entry block does not have arguments.
     // If the function's header block is also part of the structured control
@@ -2143,6 +2299,52 @@ LogicalResult spirv::Deserializer::wireUpBlockArgument() {
   return success();
 }
 
+LogicalResult spirv::Deserializer::splitConditionalBlocks() {
+  // Create a copy, so we can modify keys in the original.
+  BlockMergeInfoMap blockMergeInfoCopy = blockMergeInfo;
+  for (auto it = blockMergeInfoCopy.begin(), e = blockMergeInfoCopy.end();
+       it != e; ++it) {
+    auto &[block, mergeInfo] = *it;
+
+    // Skip processing loop regions. For loop regions continueBlock is non-null.
+    if (mergeInfo.continueBlock)
+      continue;
+
+    if (!block->mightHaveTerminator())
+      continue;
+
+    Operation *terminator = block->getTerminator();
+    assert(terminator);
+
+    if (!isa<spirv::BranchConditionalOp>(terminator))
+      continue;
+
+    // Check if the current header block is a merge block of another construct.
+    bool splitHeaderMergeBlock = false;
+    for (const auto &[_, mergeInfo] : blockMergeInfo) {
+      if (mergeInfo.mergeBlock == block)
+        splitHeaderMergeBlock = true;
+    }
+
+    // Do not split a block that only contains a conditional branch, unless it
+    // is also a merge block of another construct - in that case we want to
+    // split the block. We do not want two constructs to share header / merge
+    // block.
+    if (!llvm::hasSingleElement(*block) || splitHeaderMergeBlock) {
+      Block *newBlock = block->splitBlock(terminator);
+      OpBuilder builder(block, block->end());
+      builder.create<spirv::BranchOp>(block->getParent()->getLoc(), newBlock);
+
+      // After splitting we need to update the map to use the new block as a
+      // header.
+      blockMergeInfo.erase(block);
+      blockMergeInfo.try_emplace(newBlock, mergeInfo);
+    }
+  }
+
+  return success();
+}
+
 LogicalResult spirv::Deserializer::structurizeControlFlow() {
   LLVM_DEBUG({
     logger.startLine()
@@ -2150,6 +2352,18 @@ LogicalResult spirv::Deserializer::structurizeControlFlow() {
     logger.indent();
   });
 
+  LLVM_DEBUG({
+    logger.startLine() << "[cf] split conditional blocks\n";
+    logger.startLine() << "\n";
+  });
+
+  if (failed(splitConditionalBlocks())) {
+    return failure();
+  }
+
+  // TODO: This loop is non-deterministic. Iteration order may vary between runs
+  // for the same shader as the key to the map is a pointer. See:
+  // https://github.com/llvm/llvm-project/issues/128547
   while (!blockMergeInfo.empty()) {
     Block *headerBlock = blockMergeInfo.begin()->first;
     BlockMergeInfo mergeInfo = blockMergeInfo.begin()->second;
@@ -2162,7 +2376,7 @@ LogicalResult spirv::Deserializer::structurizeControlFlow() {
 
     auto *mergeBlock = mergeInfo.mergeBlock;
     assert(mergeBlock && "merge block cannot be nullptr");
-    if (!mergeBlock->args_empty())
+    if (mergeInfo.continueBlock && !mergeBlock->args_empty())
       return emitError(unknownLoc, "OpPhi in loop merge block unimplemented");
     LLVM_DEBUG({
       logger.startLine() << "[cf] merge block " << mergeBlock << ":\n";

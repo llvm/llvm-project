@@ -8,8 +8,7 @@
 define <vscale x 4 x i32> @test_post_ld1_insert(ptr %a, ptr %ptr, i64 %inc) {
 ; CHECK-LABEL: test_post_ld1_insert:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    ldr s0, [x0]
 ; CHECK-NEXT:    add x8, x0, x2, lsl #2
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    ret

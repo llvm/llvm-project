@@ -229,9 +229,8 @@ public:
   }
 
   const MachineInstrBuilder &add(ArrayRef<MachineOperand> MOs) const {
-    for (const MachineOperand &MO : MOs) {
+    for (const MachineOperand &MO : MOs)
       MI->addOperand(*MF, MO);
-    }
     return *this;
   }
 
@@ -537,10 +536,10 @@ MachineInstr *buildDbgValueForSpill(MachineBasicBlock &BB,
                                     MachineBasicBlock::iterator I,
                                     const MachineInstr &Orig, int FrameIndex,
                                     Register SpillReg);
-MachineInstr *
-buildDbgValueForSpill(MachineBasicBlock &BB, MachineBasicBlock::iterator I,
-                      const MachineInstr &Orig, int FrameIndex,
-                      SmallVectorImpl<const MachineOperand *> &SpilledOperands);
+MachineInstr *buildDbgValueForSpill(
+    MachineBasicBlock &BB, MachineBasicBlock::iterator I,
+    const MachineInstr &Orig, int FrameIndex,
+    const SmallVectorImpl<const MachineOperand *> &SpilledOperands);
 
 /// Update a DBG_VALUE whose value has been spilled to FrameIndex. Useful when
 /// modifying an instruction in place while iterating over a basic block.

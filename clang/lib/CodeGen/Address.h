@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_ADDRESS_H
 #define LLVM_CLANG_LIB_CODEGEN_ADDRESS_H
 
+#include "CGPointerAuthInfo.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Type.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -108,6 +109,22 @@ public:
 
 /// Like RawAddress, an abstract representation of an aligned address, but the
 /// pointer contained in this class is possibly signed.
+///
+/// This is designed to be an IR-level abstraction, carrying just the
+/// information necessary to perform IR operations on an address like loads and
+/// stores.  In particular, it doesn't carry C type information or allow the
+/// representation of things like bit-fields; clients working at that level
+/// should generally be using `LValue`.
+///
+/// An address may be either *raw*, meaning that it's an ordinary machine
+/// pointer, or *signed*, meaning that the pointer carries an embedded
+/// pointer-authentication signature. Representing signed pointers directly in
+/// this abstraction allows the authentication to be delayed as long as possible
+/// without forcing IRGen to use totally different code paths for signed and
+/// unsigned values or to separately propagate signature information through
+/// every API that manipulates addresses. Pointer arithmetic on signed addresses
+/// (e.g. drilling down to a struct field) is accumulated into a separate offset
+/// which is applied when the address is finally accessed.
 class Address {
   friend class CGBuilderTy;
 
@@ -121,7 +138,11 @@ class Address {
 
   CharUnits Alignment;
 
-  /// Offset from the base pointer.
+  /// The ptrauth information needed to authenticate the base pointer.
+  CGPointerAuthInfo PtrAuthInfo;
+
+  /// Offset from the base pointer. This is non-null only when the base
+  /// pointer is signed.
   llvm::Value *Offset = nullptr;
 
   llvm::Value *emitRawPointerSlow(CodeGenFunction &CGF) const;
@@ -140,12 +161,14 @@ public:
   }
 
   Address(llvm::Value *BasePtr, llvm::Type *ElementType, CharUnits Alignment,
-          llvm::Value *Offset, KnownNonNull_t IsKnownNonNull = NotKnownNonNull)
+          CGPointerAuthInfo PtrAuthInfo, llvm::Value *Offset,
+          KnownNonNull_t IsKnownNonNull = NotKnownNonNull)
       : Pointer(BasePtr, IsKnownNonNull), ElementType(ElementType),
-        Alignment(Alignment), Offset(Offset) {}
+        Alignment(Alignment), PtrAuthInfo(PtrAuthInfo), Offset(Offset) {}
 
   Address(RawAddress RawAddr)
-      : Pointer(RawAddr.isValid() ? RawAddr.getPointer() : nullptr),
+      : Pointer(RawAddr.isValid() ? RawAddr.getPointer() : nullptr,
+                RawAddr.isValid() ? RawAddr.isKnownNonNull() : NotKnownNonNull),
         ElementType(RawAddr.isValid() ? RawAddr.getElementType() : nullptr),
         Alignment(RawAddr.isValid() ? RawAddr.getAlignment()
                                     : CharUnits::Zero()) {}
@@ -174,10 +197,7 @@ public:
 
   /// Return the type of the pointer value.
   llvm::PointerType *getType() const {
-    return llvm::PointerType::get(
-        ElementType,
-        llvm::cast<llvm::PointerType>(Pointer.getPointer()->getType())
-            ->getAddressSpace());
+    return llvm::cast<llvm::PointerType>(Pointer.getPointer()->getType());
   }
 
   /// Return the type of the values stored in this address.
@@ -192,12 +212,17 @@ public:
   /// Return the IR name of the pointer value.
   llvm::StringRef getName() const { return Pointer.getPointer()->getName(); }
 
+  const CGPointerAuthInfo &getPointerAuthInfo() const { return PtrAuthInfo; }
+  void setPointerAuthInfo(const CGPointerAuthInfo &Info) { PtrAuthInfo = Info; }
+
   // This function is called only in CGBuilderBaseTy::CreateElementBitCast.
   void setElementType(llvm::Type *Ty) {
     assert(hasOffset() &&
            "this funcion shouldn't be called when there is no offset");
     ElementType = Ty;
   }
+
+  bool isSigned() const { return PtrAuthInfo.isSigned(); }
 
   /// Whether the pointer is known not to be null.
   KnownNonNull_t isKnownNonNull() const {
@@ -215,10 +240,15 @@ public:
 
   llvm::Value *getOffset() const { return Offset; }
 
+  Address getResignedAddress(const CGPointerAuthInfo &NewInfo,
+                             CodeGenFunction &CGF) const;
+
   /// Return the pointer contained in this class after authenticating it and
   /// adding offset to it if necessary.
   llvm::Value *emitRawPointer(CodeGenFunction &CGF) const {
-    return getBasePointer();
+    if (!isSigned())
+      return getBasePointer();
+    return emitRawPointerSlow(CGF);
   }
 
   /// Return address with different pointer, but same element type and
@@ -240,7 +270,8 @@ public:
   /// alignment.
   Address withElementType(llvm::Type *ElemTy) const {
     if (!hasOffset())
-      return Address(getBasePointer(), ElemTy, getAlignment(), nullptr,
+      return Address(getBasePointer(), ElemTy, getAlignment(),
+                     getPointerAuthInfo(), /*Offset=*/nullptr,
                      isKnownNonNull());
     Address A(*this);
     A.ElementType = ElemTy;

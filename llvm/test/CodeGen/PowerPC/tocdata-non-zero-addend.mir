@@ -46,6 +46,7 @@ frameInfo:
 machineFunctionInfo: {}
 body:             |
   bb.0.entry:
+    liveins: $x3, $x2
     %0:g8rc = LBZ8 @x + 2, $x2 :: (dereferenceable load (s8) from @x + 2, align 2, basealign 4)
     $x3 = COPY %0
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -62,6 +63,7 @@ frameInfo:
 machineFunctionInfo: {}
 body:             |
   bb.0.entry:
+    liveins: $x3, $x2
     %0:g8rc = LBZ8 @y + 1, $x2 :: (dereferenceable load (s8) from @y + 1, basealign 4)
     $x3 = COPY %0
     BLR8 implicit $lr8, implicit $rm, implicit $x3

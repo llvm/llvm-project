@@ -88,38 +88,13 @@ MatchVerifier<NodeType>::match(const std::string &Code,
 
   StringRef FileName;
   switch (L) {
-  case Lang_C89:
-    Args.push_back("-std=c89");
-    FileName = "input.c";
+#define TESTLANGUAGE(lang, version, std_flag, version_index)                   \
+  case Lang_##lang##version:                                                   \
+    Args.push_back("-std=" #std_flag);                                         \
+    FileName = getFilenameForTesting(Lang_##lang##version);                    \
     break;
-  case Lang_C99:
-    Args.push_back("-std=c99");
-    FileName = "input.c";
-    break;
-  case Lang_CXX03:
-    Args.push_back("-std=c++03");
-    FileName = "input.cc";
-    break;
-  case Lang_CXX11:
-    Args.push_back("-std=c++11");
-    FileName = "input.cc";
-    break;
-  case Lang_CXX14:
-    Args.push_back("-std=c++14");
-    FileName = "input.cc";
-    break;
-  case Lang_CXX17:
-    Args.push_back("-std=c++17");
-    FileName = "input.cc";
-    break;
-  case Lang_CXX20:
-    Args.push_back("-std=c++20");
-    FileName = "input.cc";
-    break;
-  case Lang_CXX23:
-    Args.push_back("-std=c++23");
-    FileName = "input.cc";
-    break;
+#include "clang/Testing/TestLanguage.def"
+
   case Lang_OpenCL:
     Args.push_back("-cl-no-stdinc");
     FileName = "input.cl";

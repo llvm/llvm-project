@@ -106,11 +106,11 @@ struct Derived : Base {
 
 void method() {
   // CHECK: %agg.tmp.ensured = alloca %"struct.GH60166::Derived"
-  // CHECK: %0 = getelementptr inbounds { ptr, ptr, ptr }, ptr %agg.tmp.ensured, i32 0, i32 0
+  // CHECK: %0 = getelementptr inbounds nuw { ptr, ptr, ptr }, ptr %agg.tmp.ensured, i32 0, i32 0
   // CHECK: store ptr null, ptr %0, align 8
-  // CHECK: %1 = getelementptr inbounds { ptr, ptr, ptr }, ptr %agg.tmp.ensured, i32 0, i32 1
+  // CHECK: %1 = getelementptr inbounds nuw { ptr, ptr, ptr }, ptr %agg.tmp.ensured, i32 0, i32 1
   // CHECK: store ptr null, ptr %1, align 8
-  // CHECK: %2 = getelementptr inbounds { ptr, ptr, ptr }, ptr %agg.tmp.ensured, i32 0, i32 2
+  // CHECK: %2 = getelementptr inbounds nuw { ptr, ptr, ptr }, ptr %agg.tmp.ensured, i32 0, i32 2
   // CHECK: store ptr null, ptr %2, align 8
    (void)Derived();
 }

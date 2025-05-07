@@ -15,7 +15,6 @@
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblyTargetMachine.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCContext.h"
 using namespace llvm;
@@ -43,6 +42,8 @@ bool WebAssembly::mayThrow(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case WebAssembly::THROW:
   case WebAssembly::THROW_S:
+  case WebAssembly::THROW_REF:
+  case WebAssembly::THROW_REF_S:
   case WebAssembly::RETHROW:
   case WebAssembly::RETHROW_S:
     return true;
@@ -115,7 +116,7 @@ MCSymbolWasm *WebAssembly::getOrCreateFunctionTableSymbol(
     Sym->setUndefined();
   }
   // MVP object files can't have symtab entries for tables.
-  if (!(Subtarget && Subtarget->hasReferenceTypes()))
+  if (!(Subtarget && Subtarget->hasCallIndirectOverlong()))
     Sym->setOmitFromLinkingSection();
   return Sym;
 }
@@ -134,13 +135,13 @@ MCSymbolWasm *WebAssembly::getOrCreateFuncrefCallTableSymbol(
     // modules define the table.
     Sym->setWeak(true);
 
-    wasm::WasmLimits Limits = {0, 1, 1};
+    wasm::WasmLimits Limits = {0, 1, 1, 0};
     wasm::WasmTableType TableType = {wasm::ValType::FUNCREF, Limits};
     Sym->setType(wasm::WASM_SYMBOL_TYPE_TABLE);
     Sym->setTableType(TableType);
   }
   // MVP object files can't have symtab entries for tables.
-  if (!(Subtarget && Subtarget->hasReferenceTypes()))
+  if (!(Subtarget && Subtarget->hasCallIndirectOverlong()))
     Sym->setOmitFromLinkingSection();
   return Sym;
 }

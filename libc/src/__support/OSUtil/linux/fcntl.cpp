@@ -9,17 +9,20 @@
 #include "src/__support/OSUtil/fcntl.h"
 
 #include "hdr/fcntl_macros.h"
+#include "hdr/types/off_t.h"
 #include "hdr/types/struct_f_owner_ex.h"
 #include "hdr/types/struct_flock.h"
 #include "hdr/types/struct_flock64.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 
 #include <stdarg.h>
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE::internal {
+namespace LIBC_NAMESPACE_DECL {
+namespace internal {
 
 int fcntl(int fd, int cmd, void *arg) {
 #if SYS_fcntl
@@ -30,7 +33,8 @@ int fcntl(int fd, int cmd, void *arg) {
 #error "fcntl and fcntl64 syscalls not available."
 #endif
 
-  switch (cmd) {
+  int new_cmd = cmd;
+  switch (new_cmd) {
   case F_OFD_SETLKW: {
     struct flock *flk = reinterpret_cast<struct flock *>(arg);
     // convert the struct to a flock64
@@ -41,7 +45,8 @@ int fcntl(int fd, int cmd, void *arg) {
     flk64.l_len = flk->l_len;
     flk64.l_pid = flk->l_pid;
     // create a syscall
-    return LIBC_NAMESPACE::syscall_impl<int>(FCNTL_SYSCALL_ID, fd, cmd, &flk64);
+    return LIBC_NAMESPACE::syscall_impl<int>(FCNTL_SYSCALL_ID, fd, new_cmd,
+                                             &flk64);
   }
   case F_OFD_GETLK:
   case F_OFD_SETLK: {
@@ -54,8 +59,8 @@ int fcntl(int fd, int cmd, void *arg) {
     flk64.l_len = flk->l_len;
     flk64.l_pid = flk->l_pid;
     // create a syscall
-    int retVal =
-        LIBC_NAMESPACE::syscall_impl<int>(FCNTL_SYSCALL_ID, fd, cmd, &flk64);
+    int retVal = LIBC_NAMESPACE::syscall_impl<int>(FCNTL_SYSCALL_ID, fd,
+                                                   new_cmd, &flk64);
     // On failure, return
     if (retVal == -1)
       return -1;
@@ -83,17 +88,32 @@ int fcntl(int fd, int cmd, void *arg) {
     libc_errno = -ret;
     return -1;
   }
-  // The general case
-  default: {
-    int retVal = LIBC_NAMESPACE::syscall_impl<int>(
-        FCNTL_SYSCALL_ID, fd, cmd, reinterpret_cast<void *>(arg));
-    if (retVal >= 0) {
-      return retVal;
-    }
-    libc_errno = -retVal;
-    return -1;
+#ifdef SYS_fcntl64
+  case F_GETLK: {
+    if constexpr (FCNTL_SYSCALL_ID == SYS_fcntl64)
+      new_cmd = F_GETLK64;
+    break;
   }
+  case F_SETLK: {
+    if constexpr (FCNTL_SYSCALL_ID == SYS_fcntl64)
+      new_cmd = F_SETLK64;
+    break;
   }
+  case F_SETLKW: {
+    if constexpr (FCNTL_SYSCALL_ID == SYS_fcntl64)
+      new_cmd = F_SETLKW64;
+    break;
+  }
+#endif
+  }
+  int retVal = LIBC_NAMESPACE::syscall_impl<int>(FCNTL_SYSCALL_ID, fd, new_cmd,
+                                                 reinterpret_cast<void *>(arg));
+  if (retVal >= 0) {
+    return retVal;
+  }
+  libc_errno = -retVal;
+  return -1;
 }
 
-} // namespace LIBC_NAMESPACE::internal
+} // namespace internal
+} // namespace LIBC_NAMESPACE_DECL

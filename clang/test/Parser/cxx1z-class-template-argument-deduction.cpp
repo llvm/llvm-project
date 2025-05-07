@@ -39,7 +39,7 @@ namespace template_template_arg_pack {
   template<typename...> struct YP {};
 
   struct Z { template<typename T> struct Q {}; }; // expected-note 2{{here}}
-  
+
   template<typename T> using ZId = Z;
 
   template<typename ...Ts> struct A {
@@ -152,7 +152,7 @@ namespace decl {
   A a;
   A b = 0;
   const A c = 0;
-  A (parens) = 0; // expected-error {{cannot use parentheses when declaring variable with deduced class template specialization type}}
+  A (parens) = 0;
   A *p = 0; // expected-error {{cannot form pointer to deduced class template specialization type}}
   A &r = *p; // expected-error {{cannot form reference to deduced class template specialization type}}
   A arr[3] = 0; // expected-error {{cannot form array of deduced class template specialization type}}
@@ -179,7 +179,7 @@ namespace typename_specifier {
   }
   typename ::A a = 0;
   const typename ::A b = 0;
-  typename ::A (parens) = 0; // expected-error {{cannot use parentheses when declaring variable with deduced class template specialization type}}
+  typename ::A (parens) = 0;
   typename ::A *p = 0; // expected-error {{cannot form pointer to deduced class template specialization type}}
   typename ::A &r = *p; // expected-error {{cannot form reference to deduced class template specialization type}}
   typename ::A arr[3] = 0; // expected-error {{cannot form array of deduced class template specialization type}}
@@ -217,7 +217,7 @@ namespace typename_specifier {
 }
 
 namespace parenthesized {
-  template<typename T> struct X { X(T); };                    
+  template<typename T> struct X { X(T); };
   auto n = (X([]{}));
 }
 
@@ -254,4 +254,16 @@ template <typename T> struct vector{};
 void f() {
   GH57495::vector.d; // expected-error {{cannot use dot operator on a type}}
 }
+}
+
+namespace GH107887 {
+
+namespace a {
+template <class> struct pair; // expected-note 3{{declared here}}
+}
+template <class T2> pair() -> pair<T2>;   // expected-error 2{{no template named 'pair'}} \
+                                          // expected-error {{deduction guide must be declared in the same scope}} \
+                                          // expected-error {{cannot be deduced}} \
+                                          // expected-note {{non-deducible template parameter 'T2'}}
+
 }

@@ -38,7 +38,6 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CommandLine.h"
@@ -209,7 +208,7 @@ namespace {
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineBlockFrequencyInfo>();
+      AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
       AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
       AU.addRequired<ProfileSummaryInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
@@ -270,10 +269,9 @@ namespace {
     bool IfConvertForkedDiamond(BBInfo &BBI, IfcvtKind Kind,
                               unsigned NumDups1, unsigned NumDups2,
                               bool TClobbers, bool FClobbers);
-    void PredicateBlock(BBInfo &BBI,
-                        MachineBasicBlock::iterator E,
+    void PredicateBlock(BBInfo &BBI, MachineBasicBlock::iterator E,
                         SmallVectorImpl<MachineOperand> &Cond,
-                        SmallSet<MCPhysReg, 4> *LaterRedefs = nullptr);
+                        SmallSet<MCRegister, 4> *LaterRedefs = nullptr);
     void CopyAndPredicateBlock(BBInfo &ToBBI, BBInfo &FromBBI,
                                SmallVectorImpl<MachineOperand> &Cond,
                                bool IgnoreBr = false);
@@ -444,7 +442,8 @@ bool IfConverter::runOnMachineFunction(MachineFunction &MF) {
   TLI = ST.getTargetLowering();
   TII = ST.getInstrInfo();
   TRI = ST.getRegisterInfo();
-  MBFIWrapper MBFI(getAnalysis<MachineBlockFrequencyInfo>());
+  MBFIWrapper MBFI(
+      getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI());
   MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
   ProfileSummaryInfo *PSI =
       &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
@@ -1834,9 +1833,9 @@ bool IfConverter::IfConvertDiamondCommon(
   }
   while (NumDups1 != 0) {
     // Since this instruction is going to be deleted, update call
-    // site info state if the instruction is call instruction.
-    if (DI2->shouldUpdateCallSiteInfo())
-      MBB2.getParent()->eraseCallSiteInfo(&*DI2);
+    // info state if the instruction is call instruction.
+    if (DI2->shouldUpdateAdditionalCallInfo())
+      MBB2.getParent()->eraseAdditionalCallInfo(&*DI2);
 
     ++DI2;
     if (DI2 == MBB2.end())
@@ -1883,9 +1882,9 @@ bool IfConverter::IfConvertDiamondCommon(
     --DI1;
 
     // Since this instruction is going to be deleted, update call
-    // site info state if the instruction is call instruction.
-    if (DI1->shouldUpdateCallSiteInfo())
-      MBB1.getParent()->eraseCallSiteInfo(&*DI1);
+    // info state if the instruction is call instruction.
+    if (DI1->shouldUpdateAdditionalCallInfo())
+      MBB1.getParent()->eraseAdditionalCallInfo(&*DI1);
 
     // skip dbg_value instructions
     if (!DI1->isDebugInstr())
@@ -1926,13 +1925,13 @@ bool IfConverter::IfConvertDiamondCommon(
   // generate:
   //   sub    r0, r1, #1
   //   addne  r0, r1, #1
-  SmallSet<MCPhysReg, 4> RedefsByFalse;
-  SmallSet<MCPhysReg, 4> ExtUses;
+  SmallSet<MCRegister, 4> RedefsByFalse;
+  SmallSet<MCRegister, 4> ExtUses;
   if (TII->isProfitableToUnpredicate(MBB1, MBB2)) {
     for (const MachineInstr &FI : make_range(MBB2.begin(), DI2)) {
       if (FI.isDebugInstr())
         continue;
-      SmallVector<MCPhysReg, 4> Defs;
+      SmallVector<MCRegister, 4> Defs;
       for (const MachineOperand &MO : FI.operands()) {
         if (!MO.isReg())
           continue;
@@ -1944,16 +1943,13 @@ bool IfConverter::IfConvertDiamondCommon(
         } else if (!RedefsByFalse.count(Reg)) {
           // These are defined before ctrl flow reach the 'false' instructions.
           // They cannot be modified by the 'true' instructions.
-          for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg))
-            ExtUses.insert(SubReg);
+          ExtUses.insert_range(TRI->subregs_inclusive(Reg));
         }
       }
 
-      for (MCPhysReg Reg : Defs) {
-        if (!ExtUses.count(Reg)) {
-          for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg))
-            RedefsByFalse.insert(SubReg);
-        }
+      for (MCRegister Reg : Defs) {
+        if (!ExtUses.contains(Reg))
+          RedefsByFalse.insert_range(TRI->subregs_inclusive(Reg));
       }
     }
   }
@@ -2094,9 +2090,9 @@ bool IfConverter::IfConvertDiamond(BBInfo &BBI, IfcvtKind Kind,
 }
 
 static bool MaySpeculate(const MachineInstr &MI,
-                         SmallSet<MCPhysReg, 4> &LaterRedefs) {
+                         SmallSet<MCRegister, 4> &LaterRedefs) {
   bool SawStore = true;
-  if (!MI.isSafeToMove(nullptr, SawStore))
+  if (!MI.isSafeToMove(SawStore))
     return false;
 
   for (const MachineOperand &MO : MI.operands()) {
@@ -2114,10 +2110,9 @@ static bool MaySpeculate(const MachineInstr &MI,
 
 /// Predicate instructions from the start of the block to the specified end with
 /// the specified condition.
-void IfConverter::PredicateBlock(BBInfo &BBI,
-                                 MachineBasicBlock::iterator E,
+void IfConverter::PredicateBlock(BBInfo &BBI, MachineBasicBlock::iterator E,
                                  SmallVectorImpl<MachineOperand> &Cond,
-                                 SmallSet<MCPhysReg, 4> *LaterRedefs) {
+                                 SmallSet<MCRegister, 4> *LaterRedefs) {
   bool AnyUnpred = false;
   bool MaySpec = LaterRedefs != nullptr;
   for (MachineInstr &I : make_range(BBI.BB->begin(), E)) {
@@ -2169,9 +2164,9 @@ void IfConverter::CopyAndPredicateBlock(BBInfo &ToBBI, BBInfo &FromBBI,
       break;
 
     MachineInstr *MI = MF.CloneMachineInstr(&I);
-    // Make a copy of the call site info.
-    if (I.isCandidateForCallSiteEntry())
-      MF.copyCallSiteInfo(&I, MI);
+    // Make a copy of the call info.
+    if (I.isCandidateForAdditionalCallInfo())
+      MF.copyAdditionalCallInfo(&I, MI);
 
     ToBBI.BB->insert(ToBBI.BB->end(), MI);
     ToBBI.NonPredSize++;

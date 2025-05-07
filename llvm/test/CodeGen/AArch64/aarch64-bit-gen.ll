@@ -76,7 +76,7 @@ define <1 x i32> @test_bit_v1i32(<1 x i32> %A, <1 x i32> %B, <1 x i32> %C) {
 ; CHECK-GI-NEXT:    and w9, w8, w9
 ; CHECK-GI-NEXT:    bic w8, w10, w8
 ; CHECK-GI-NEXT:    orr w8, w9, w8
-; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    mov v0.s[0], w8
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %and = and <1 x i32> %C, %B
@@ -202,9 +202,8 @@ define <4 x i32> @test_bit_sink_operand(<4 x i32> %src, <4 x i32> %dst, <4 x i32
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #32
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-SD-NEXT:    cmp w0, #0
+; CHECK-SD-NEXT:    add w8, w0, w0, lsr #31
 ; CHECK-SD-NEXT:    mov w9, wzr
-; CHECK-SD-NEXT:    cinc w8, w0, lt
 ; CHECK-SD-NEXT:    asr w8, w8, #1
 ; CHECK-SD-NEXT:  .LBB11_1: // %do.body
 ; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1

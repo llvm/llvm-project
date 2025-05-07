@@ -64,7 +64,7 @@ define i16 @n3(i8 %x) {
 
 define <2 x i16> @t4_vec_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @t4_vec_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i8> [[X:%.*]], <i8 4, i8 4>
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i8> [[X:%.*]], splat (i8 4)
 ; CHECK-NEXT:    [[C:%.*]] = sext <2 x i8> [[TMP1]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[C]]
 ;
@@ -76,7 +76,7 @@ define <2 x i16> @t4_vec_splat(<2 x i8> %x) {
 
 define <2 x i16> @t5_vec_poison(<2 x i8> %x) {
 ; CHECK-LABEL: @t5_vec_poison(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i8> [[X:%.*]], <i8 4, i8 4>
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i8> [[X:%.*]], splat (i8 4)
 ; CHECK-NEXT:    [[C:%.*]] = sext <2 x i8> [[TMP1]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[C]]
 ;
@@ -143,7 +143,7 @@ define <2 x i16> @t9_extrause1_vec_poison(<2 x i8> %x) {
 ; CHECK-LABEL: @t9_extrause1_vec_poison(
 ; CHECK-NEXT:    [[A:%.*]] = lshr <2 x i8> [[X:%.*]], <i8 4, i8 poison>
 ; CHECK-NEXT:    call void @usevec8(<2 x i8> [[A]])
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i8> [[X]], <i8 4, i8 4>
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i8> [[X]], splat (i8 4)
 ; CHECK-NEXT:    [[C:%.*]] = sext <2 x i8> [[TMP1]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[C]]
 ;
@@ -188,7 +188,7 @@ define <2 x i16> @t11_extrause2_vec_poison(<2 x i8> %x) {
 
 define <2 x i10> @wide_source_shifted_signbit(<2 x i32> %x) {
 ; CHECK-LABEL: @wide_source_shifted_signbit(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i32> [[X:%.*]], <i32 24, i32 24>
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i32> [[X:%.*]], splat (i32 24)
 ; CHECK-NEXT:    [[C:%.*]] = trunc nsw <2 x i32> [[TMP1]] to <2 x i10>
 ; CHECK-NEXT:    ret <2 x i10> [[C]]
 ;

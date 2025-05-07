@@ -402,16 +402,17 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
     IndexExprs.push_back(SE->getSCEV(Index));
   // Replace the I-th index with LHS.
   IndexExprs[I] = SE->getSCEV(LHS);
+  Type *GEPArgType = SE->getEffectiveSCEVType(GEP->getOperand(I)->getType());
+  Type *LHSType = SE->getEffectiveSCEVType(LHS->getType());
+  size_t LHSSize = DL->getTypeSizeInBits(LHSType).getFixedValue();
+  size_t GEPArgSize = DL->getTypeSizeInBits(GEPArgType).getFixedValue();
   if (isKnownNonNegative(LHS, SimplifyQuery(*DL, DT, AC, GEP)) &&
-      DL->getTypeSizeInBits(LHS->getType()).getFixedValue() <
-          DL->getTypeSizeInBits(GEP->getOperand(I)->getType())
-              .getFixedValue()) {
+      LHSSize < GEPArgSize) {
     // Zero-extend LHS if it is non-negative. InstCombine canonicalizes sext to
     // zext if the source operand is proved non-negative. We should do that
     // consistently so that CandidateExpr more likely appears before. See
     // @reassociate_gep_assume for an example of this canonicalization.
-    IndexExprs[I] =
-        SE->getZeroExtendExpr(IndexExprs[I], GEP->getOperand(I)->getType());
+    IndexExprs[I] = SE->getZeroExtendExpr(IndexExprs[I], GEPArgType);
   }
   const SCEV *CandidateExpr = SE->getGEPExpr(cast<GEPOperator>(GEP),
                                              IndexExprs);
@@ -421,10 +422,7 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
     return nullptr;
 
   IRBuilder<> Builder(GEP);
-  // Candidate does not necessarily have the same pointer type as GEP. Use
-  // bitcast or pointer cast to make sure they have the same type, so that the
-  // later RAUW doesn't complain.
-  Candidate = Builder.CreateBitOrPointerCast(Candidate, GEP->getType());
+  // Candidate should have the same pointer type as GEP.
   assert(Candidate->getType() == GEP->getType());
 
   // NewGEP = (char *)Candidate + RHS * sizeof(IndexedType)
@@ -565,14 +563,24 @@ NaryReassociatePass::findClosestMatchingDominator(const SCEV *CandidateExpr,
   // optimization makes the algorithm O(n).
   while (!Candidates.empty()) {
     // Candidates stores WeakTrackingVHs, so a candidate can be nullptr if it's
-    // removed
-    // during rewriting.
-    if (Value *Candidate = Candidates.back()) {
+    // removed during rewriting.
+    if (Value *Candidate = Candidates.pop_back_val()) {
       Instruction *CandidateInstruction = cast<Instruction>(Candidate);
-      if (DT->dominates(CandidateInstruction, Dominatee))
-        return CandidateInstruction;
+      if (!DT->dominates(CandidateInstruction, Dominatee))
+        continue;
+
+      // Make sure that the instruction is safe to reuse without introducing
+      // poison.
+      SmallVector<Instruction *> DropPoisonGeneratingInsts;
+      if (!SE->canReuseInstruction(CandidateExpr, CandidateInstruction,
+                                   DropPoisonGeneratingInsts))
+        continue;
+
+      for (Instruction *I : DropPoisonGeneratingInsts)
+        I->dropPoisonGeneratingAnnotations();
+
+      return CandidateInstruction;
     }
-    Candidates.pop_back();
   }
   return nullptr;
 }
@@ -603,15 +611,15 @@ Value *NaryReassociatePass::tryReassociateMinOrMax(Instruction *I,
   Value *A = nullptr, *B = nullptr;
   MaxMinT m_MaxMin(m_Value(A), m_Value(B));
 
+  if (!match(LHS, m_MaxMin))
+    return nullptr;
+
   if (LHS->hasNUsesOrMore(3) ||
       // The optimization is profitable only if LHS can be removed in the end.
       // In other words LHS should be used (directly or indirectly) by I only.
-      llvm::any_of(LHS->users(),
-                    [&](auto *U) {
-                      return U != I &&
-                             !(U->hasOneUser() && *U->users().begin() == I);
-                    }) ||
-      !match(LHS, m_MaxMin))
+      llvm::any_of(LHS->users(), [&](auto *U) {
+        return U != I && !(U->hasOneUser() && *U->users().begin() == I);
+      }))
     return nullptr;
 
   auto tryCombination = [&](Value *A, const SCEV *AExpr, Value *B,

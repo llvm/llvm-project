@@ -20,7 +20,7 @@
 
 # CHECK:       (lldb) disassemble
 # CHECK-NEXT: command-disassemble-process.exe`main:
-# CHECK-NEXT:     0x4002 <+0>: addb   %al, (%rcx)
+# CHECK-NEXT:     0x4002 <+0>: jmp    0x4004 ; <+2>
 # CHECK-NEXT: ->  0x4004 <+2>: addb   %al, (%rdx)
 # CHECK-NEXT:     0x4006 <+4>: addb   %al, (%rbx)
 # CHECK-NEXT:     0x4008 <+6>: addb   %al, (%rsi)
@@ -32,7 +32,7 @@
 # CHECK-NEXT:     0x400a:      addb   %al, (%rdi)
 # CHECK-NEXT: (lldb) disassemble --frame
 # CHECK-NEXT: command-disassemble-process.exe`main:
-# CHECK-NEXT:     0x4002 <+0>: addb   %al, (%rcx)
+# CHECK-NEXT:     0x4002 <+0>: jmp    0x4004 ; <+2>
 # CHECK-NEXT: ->  0x4004 <+2>: addb   %al, (%rdx)
 # CHECK-NEXT:     0x4006 <+4>: addb   %al, (%rbx)
 # CHECK-NEXT:     0x4008 <+6>: addb   %al, (%rsi)
@@ -44,13 +44,13 @@
 # CHECK-NEXT:     0x400a:      addb   %al, (%rdi)
 # CHECK-NEXT: (lldb) disassemble --address 0x4004
 # CHECK-NEXT: command-disassemble-process.exe`main:
-# CHECK-NEXT:     0x4002 <+0>: addb   %al, (%rcx)
+# CHECK-NEXT:     0x4002 <+0>: jmp    0x4004 ; <+2>
 # CHECK-NEXT: ->  0x4004 <+2>: addb   %al, (%rdx)
 # CHECK-NEXT:     0x4006 <+4>: addb   %al, (%rbx)
 # CHECK-NEXT:     0x4008 <+6>: addb   %al, (%rsi)
 # CHECK-NEXT: (lldb) disassemble --count 7
 # CHECK-NEXT: command-disassemble-process.exe`main:
-# CHECK-NEXT:     0x4002 <+0>: addb   %al, (%rcx)
+# CHECK-NEXT:     0x4002 <+0>: jmp    0x4004 ; <+2>
 # CHECK-NEXT: ->  0x4004 <+2>: addb   %al, (%rdx)
 # CHECK-NEXT:     0x4006 <+4>: addb   %al, (%rbx)
 # CHECK-NEXT:     0x4008 <+6>: addb   %al, (%rsi)
@@ -81,32 +81,32 @@ Sections:
   - Name:            .text
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
-    Address:         0x0000000000004000
+    Address:         0x0000000000000000
     AddressAlign:    0x0000000000001000
-    Content:         00000001000200030006000700080009000A000B000E000F00100011001200130016001700180019001A001B001E001F00200021002200230026002700280029002A002B002E002F
+    Content:         0000EB00000200030006000700080009000A000B000E000F00100011001200130016001700180019001A001B001E001F00200021002200230026002700280029002A002B002E002F
     Size:            0x10000
   - Name:            .note.gnu.build-id
     Type:            SHT_NOTE
     Flags:           [ SHF_ALLOC ]
-    Address:         0x0000000000005000
+    Address:         0x0000000000001000
     AddressAlign:    0x0000000000001000
     Content:         040000000800000003000000474E5500DEADBEEFBAADF00D
 Symbols:
   - Name:            main
     Type:            STT_FUNC
     Section:         .text
-    Value:           0x0000000000004002
+    Value:           0x0000000000000002
     Size:            [[MAIN_SIZE]]
 ProgramHeaders:
   - Type: PT_LOAD
     Flags: [ PF_X, PF_R ]
-    VAddr: 0x4000
+    VAddr: 0x0000
     Align: 0x1000
     FirstSec: .text
     LastSec:  .text
   - Type: PT_LOAD
     Flags: [ PF_W, PF_R ]
-    VAddr: 0x5000
+    VAddr: 0x1000
     Align: 0x1000
     FirstSec: .note.gnu.build-id
     LastSec: .note.gnu.build-id

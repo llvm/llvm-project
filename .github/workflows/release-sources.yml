@@ -16,6 +16,10 @@ on:
         description: Release Version
         required: true
         type: string
+    secrets:
+      RELEASE_TASKS_USER_TOKEN:
+        description: "Secret used to check user permissions."
+        required: false
   # Run on pull_requests for testing purposes.
   pull_request:
     paths:
@@ -43,11 +47,11 @@ jobs:
     outputs:
       ref: ${{ steps.inputs.outputs.ref }}
       export-args: ${{ steps.inputs.outputs.export-args }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - id: inputs
         run: |
-          ref=${{ inputs.release-version || github.sha }}
+          ref=${{ (inputs.release-version && format('llvmorg-{0}', inputs.release-version)) || github.sha }}
           if [ -n "${{ inputs.release-version }}" ]; then
             export_args="-release ${{ inputs.release-version }} -final"
           else
@@ -59,7 +63,7 @@ jobs:
   release-sources:
     name: Package Release Sources
     if: github.repository_owner == 'llvm'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs:
       - inputs
     permissions:

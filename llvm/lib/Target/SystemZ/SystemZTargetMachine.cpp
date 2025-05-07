@@ -40,6 +40,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZTarget() {
   // Register the target.
   RegisterTargetMachine<SystemZTargetMachine> X(getTheSystemZTarget());
   auto &PR = *PassRegistry::getPassRegistry();
+  initializeSystemZAsmPrinterPass(PR);
   initializeSystemZElimComparePass(PR);
   initializeSystemZShortenInstPass(PR);
   initializeSystemZLongBranchPass(PR);
@@ -48,6 +49,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZTarget() {
   initializeSystemZPostRewritePass(PR);
   initializeSystemZTDCPassPass(PR);
   initializeSystemZDAGToDAGISelLegacyPass(PR);
+  initializeSystemZCopyPhysRegsPass(PR);
 }
 
 static std::string computeDataLayout(const Triple &TT) {
@@ -58,6 +60,14 @@ static std::string computeDataLayout(const Triple &TT) {
 
   // Data mangling.
   Ret += DataLayout::getManglingComponent(TT);
+
+  // Special features for z/OS.
+  if (TT.isOSzOS()) {
+    if (TT.isArch64Bit()) {
+      // Custom address space for ptr32.
+      Ret += "-p1:32:32";
+    }
+  }
 
   // Make sure that global data has at least 16 bits of alignment by
   // default, so that we can refer to it using LARL.  We don't have any
@@ -150,7 +160,7 @@ SystemZTargetMachine::SystemZTargetMachine(const Target &T, const Triple &TT,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL, bool JIT)
-    : LLVMTargetMachine(
+    : CodeGenTargetMachineImpl(
           T, computeDataLayout(TT), TT, CPU, FS, Options,
           getEffectiveRelocModel(RM),
           getEffectiveSystemZCodeModel(CM, getEffectiveRelocModel(RM), JIT),
@@ -197,6 +207,12 @@ SystemZTargetMachine::getSubtargetImpl(const Function &F) const {
   return I.get();
 }
 
+ScheduleDAGInstrs *
+SystemZTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
+  return new ScheduleDAGMI(C, std::make_unique<SystemZPostRASchedStrategy>(C),
+                           /*RemoveKillFlags=*/true);
+}
+
 namespace {
 
 /// SystemZ Code Generator Pass Configuration Options.
@@ -207,13 +223,6 @@ public:
 
   SystemZTargetMachine &getSystemZTargetMachine() const {
     return getTM<SystemZTargetMachine>();
-  }
-
-  ScheduleDAGInstrs *
-  createPostMachineScheduler(MachineSchedContext *C) const override {
-    return new ScheduleDAGMI(C,
-                             std::make_unique<SystemZPostRASchedStrategy>(C),
-                             /*RemoveKillFlags=*/true);
   }
 
   void addIRPasses() override;
@@ -249,7 +258,7 @@ bool SystemZPassConfig::addInstSelector() {
 }
 
 bool SystemZPassConfig::addILPOpts() {
-  addPass(&EarlyIfConverterID);
+  addPass(&EarlyIfConverterLegacyID);
 
   if (EnableMachineCombinerPass)
     addPass(&MachineCombinerID);
@@ -324,7 +333,7 @@ TargetPassConfig *SystemZTargetMachine::createPassConfig(PassManagerBase &PM) {
 
 TargetTransformInfo
 SystemZTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(SystemZTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<SystemZTTIImpl>(this, F));
 }
 
 MachineFunctionInfo *SystemZTargetMachine::createMachineFunctionInfo(

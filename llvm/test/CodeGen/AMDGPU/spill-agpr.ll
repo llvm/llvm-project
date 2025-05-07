@@ -111,7 +111,7 @@ define amdgpu_kernel void @max_6regs_used_8a(ptr addrspace(1) %arg) #4 {
   %mai.in = load <4 x float>, ptr addrspace(1) %gep
   %mai.out = tail call <4 x float> @llvm.amdgcn.mfma.f32.4x4x1f32(float 1.0, float 1.0, <4 x float> %mai.in, i32 0, i32 0, i32 0)
   store <4 x float> %mai.out, ptr addrspace(1) %gep
-  store volatile <4 x float> %a4, ptr addrspace(1) undef
+  store volatile <4 x float> %a4, ptr addrspace(1) poison
   call void asm sideeffect "; use $0", "v"(float %v0);
   ret void
 }
@@ -121,7 +121,7 @@ declare <16 x float> @llvm.amdgcn.mfma.f32.16x16x1f32(float, float, <16 x float>
 declare <4 x float> @llvm.amdgcn.mfma.f32.4x4x1f32(float, float, <4 x float>, i32, i32, i32)
 declare <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float, float, <32 x float>, i32, i32, i32)
 
-attributes #1 = { nounwind "amdgpu-num-vgpr"="10" }
-attributes #2 = { nounwind "amdgpu-num-vgpr"="12" }
-attributes #3 = { nounwind "amdgpu-num-vgpr"="32" }
-attributes #4 = { nounwind "amdgpu-num-vgpr"="6" }
+attributes #1 = { nounwind "amdgpu-num-vgpr"="10" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
+attributes #2 = { nounwind "amdgpu-num-vgpr"="12" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
+attributes #3 = { nounwind "amdgpu-num-vgpr"="32" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
+attributes #4 = { nounwind "amdgpu-num-vgpr"="6" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }

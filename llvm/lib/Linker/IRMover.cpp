@@ -34,6 +34,12 @@
 #include <utility>
 using namespace llvm;
 
+/// Most of the errors produced by this module are inconvertible StringErrors.
+/// This convenience function lets us return one of those more easily.
+static Error stringErr(const Twine &T) {
+  return make_error<StringError>(T, inconvertibleErrorCode());
+}
+
 //===----------------------------------------------------------------------===//
 // TypeMap implementation.
 //===----------------------------------------------------------------------===//
@@ -69,14 +75,11 @@ public:
 
   /// Produce a body for an opaque type in the dest module from a type
   /// definition in the source module.
-  void linkDefinedTypeBodies();
+  Error linkDefinedTypeBodies();
 
   /// Return the mapped type to use for the specified input type from the
   /// source module.
   Type *get(Type *SrcTy);
-  Type *get(Type *SrcTy, SmallPtrSet<StructType *, 8> &Visited);
-
-  void finishType(StructType *DTy, StructType *STy, ArrayRef<Type *> ETypes);
 
   FunctionType *get(FunctionType *T) {
     return cast<FunctionType>(get((Type *)T));
@@ -207,7 +210,7 @@ bool TypeMapTy::areTypesIsomorphic(Type *DstTy, Type *SrcTy) {
   return true;
 }
 
-void TypeMapTy::linkDefinedTypeBodies() {
+Error TypeMapTy::linkDefinedTypeBodies() {
   SmallVector<Type *, 16> Elements;
   for (StructType *SrcSTy : SrcDefinitionsToResolve) {
     StructType *DstSTy = cast<StructType>(MappedTypes[SrcSTy]);
@@ -218,33 +221,16 @@ void TypeMapTy::linkDefinedTypeBodies() {
     for (unsigned I = 0, E = Elements.size(); I != E; ++I)
       Elements[I] = get(SrcSTy->getElementType(I));
 
-    DstSTy->setBody(Elements, SrcSTy->isPacked());
+    if (auto E = DstSTy->setBodyOrError(Elements, SrcSTy->isPacked()))
+      return E;
     DstStructTypesSet.switchToNonOpaque(DstSTy);
   }
   SrcDefinitionsToResolve.clear();
   DstResolvedOpaqueTypes.clear();
-}
-
-void TypeMapTy::finishType(StructType *DTy, StructType *STy,
-                           ArrayRef<Type *> ETypes) {
-  DTy->setBody(ETypes, STy->isPacked());
-
-  // Steal STy's name.
-  if (STy->hasName()) {
-    SmallString<16> TmpName = STy->getName();
-    STy->setName("");
-    DTy->setName(TmpName);
-  }
-
-  DstStructTypesSet.addNonOpaque(DTy);
+  return Error::success();
 }
 
 Type *TypeMapTy::get(Type *Ty) {
-  SmallPtrSet<StructType *, 8> Visited;
-  return get(Ty, Visited);
-}
-
-Type *TypeMapTy::get(Type *Ty, SmallPtrSet<StructType *, 8> &Visited) {
   // If we already have an entry for this type, return it.
   Type **Entry = &MappedTypes[Ty];
   if (*Entry)
@@ -260,11 +246,6 @@ Type *TypeMapTy::get(Type *Ty, SmallPtrSet<StructType *, 8> &Visited) {
              "mapping to a source type");
     }
 #endif
-
-    if (!Visited.insert(cast<StructType>(Ty)).second) {
-      StructType *DTy = StructType::create(Ty->getContext());
-      return *Entry = DTy;
-    }
   }
 
   // If this is not a recursive type, then just map all of the elements and
@@ -280,21 +261,13 @@ Type *TypeMapTy::get(Type *Ty, SmallPtrSet<StructType *, 8> &Visited) {
   bool AnyChange = false;
   ElementTypes.resize(Ty->getNumContainedTypes());
   for (unsigned I = 0, E = Ty->getNumContainedTypes(); I != E; ++I) {
-    ElementTypes[I] = get(Ty->getContainedType(I), Visited);
+    ElementTypes[I] = get(Ty->getContainedType(I));
     AnyChange |= ElementTypes[I] != Ty->getContainedType(I);
   }
 
-  // If we found our type while recursively processing stuff, just use it.
+  // Refresh Entry after recursively processing stuff.
   Entry = &MappedTypes[Ty];
-  if (*Entry) {
-    if (auto *DTy = dyn_cast<StructType>(*Entry)) {
-      if (DTy->isOpaque()) {
-        auto *STy = cast<StructType>(Ty);
-        finishType(DTy, STy, ElementTypes);
-      }
-    }
-    return *Entry;
-  }
+  assert(!*Entry && "Recursive type!");
 
   // If all of the element types mapped directly over and the type is not
   // a named struct, then the type is usable as-is.
@@ -312,9 +285,6 @@ Type *TypeMapTy::get(Type *Ty, SmallPtrSet<StructType *, 8> &Visited) {
   case Type::FixedVectorTyID:
     return *Entry = VectorType::get(ElementTypes[0],
                                     cast<VectorType>(Ty)->getElementCount());
-  case Type::PointerTyID:
-    return *Entry = PointerType::get(ElementTypes[0],
-                                     cast<PointerType>(Ty)->getAddressSpace());
   case Type::FunctionTyID:
     return *Entry = FunctionType::get(ElementTypes[0],
                                       ArrayRef(ElementTypes).slice(1),
@@ -342,8 +312,17 @@ Type *TypeMapTy::get(Type *Ty, SmallPtrSet<StructType *, 8> &Visited) {
       return *Entry = Ty;
     }
 
-    StructType *DTy = StructType::create(Ty->getContext());
-    finishType(DTy, STy, ElementTypes);
+    StructType *DTy =
+        StructType::create(Ty->getContext(), ElementTypes, "", STy->isPacked());
+
+    // Steal STy's name.
+    if (STy->hasName()) {
+      SmallString<16> TmpName = STy->getName();
+      STy->setName("");
+      DTy->setName(TmpName);
+    }
+
+    DstStructTypesSet.addNonOpaque(DTy);
     return *Entry = DTy;
   }
   }
@@ -437,12 +416,6 @@ class IRLinker {
   void setError(Error E) {
     if (E)
       FoundError = std::move(E);
-  }
-
-  /// Most of the errors produced by this module are inconvertible StringErrors.
-  /// This convenience function lets us return one of those more easily.
-  Error stringErr(const Twine &T) {
-    return make_error<StringError>(T, inconvertibleErrorCode());
   }
 
   /// Entry point for mapping values and alternate context for mapping aliases.
@@ -595,11 +568,15 @@ Value *IRLinker::materialize(Value *V, bool ForIndirectSymbol) {
   if (!SGV)
     return nullptr;
 
+  // If SGV is from dest, it was already materialized when dest was loaded.
+  if (SGV->getParent() == &DstM)
+    return nullptr;
+
   // When linking a global from other modules than source & dest, skip
   // materializing it because it would be mapped later when its containing
   // module is linked. Linking it now would potentially pull in many types that
   // may not be mapped properly.
-  if (SGV->getParent() != &DstM && SGV->getParent() != SrcM.get())
+  if (SGV->getParent() != SrcM.get())
     return nullptr;
 
   Expected<Constant *> NewProto = linkGlobalValueProto(SGV, ForIndirectSymbol);
@@ -871,7 +848,7 @@ void IRLinker::computeTypeMapping() {
 
   // Now that we have discovered all of the type equivalences, get a body for
   // any 'opaque' types in the dest module that are now resolved.
-  TypeMap.linkDefinedTypeBodies();
+  setError(TypeMap.linkDefinedTypeBodies());
 }
 
 static void getArrayElements(const Constant *C,
@@ -981,8 +958,6 @@ IRLinker::linkAppendingVarProto(GlobalVariable *DstGV,
   NG->copyAttributesFrom(SrcGV);
   forceRenaming(NG, SrcGV->getName());
 
-  Constant *Ret = ConstantExpr::getBitCast(NG, TypeMap.get(SrcGV->getType()));
-
   Mapper.scheduleMapAppendingVariable(
       *NG,
       (DstGV && !DstGV->isDeclaration()) ? DstGV->getInitializer() : nullptr,
@@ -994,7 +969,7 @@ IRLinker::linkAppendingVarProto(GlobalVariable *DstGV,
     RAUWWorklist.push_back(std::make_pair(DstGV, NG));
   }
 
-  return Ret;
+  return NG;
 }
 
 bool IRLinker::shouldLink(GlobalValue *DGV, GlobalValue &SGV) {
@@ -1192,8 +1167,8 @@ void IRLinker::prepareCompileUnitsForImport() {
   // When importing for ThinLTO, prevent importing of types listed on
   // the DICompileUnit that we don't need a copy of in the importing
   // module. They will be emitted by the originating module.
-  for (unsigned I = 0, E = SrcCompileUnits->getNumOperands(); I != E; ++I) {
-    auto *CU = cast<DICompileUnit>(SrcCompileUnits->getOperand(I));
+  for (MDNode *N : SrcCompileUnits->operands()) {
+    auto *CU = cast<DICompileUnit>(N);
     assert(CU && "Expected valid compile unit");
     // Enums, macros, and retained types don't need to be listed on the
     // imported DICompileUnit. This means they will only be imported
@@ -1256,6 +1231,7 @@ Error IRLinker::linkModuleFlagsMetadata() {
 
   // Check for module flag for updates before do anything.
   UpgradeModuleFlags(*SrcM);
+  UpgradeNVVMAnnotations(*SrcM);
 
   // If the destination module doesn't have module flags yet, then just copy
   // over the source module's flags.
@@ -1371,8 +1347,7 @@ Error IRLinker::linkModuleFlagsMetadata() {
         return dyn_cast<MDTuple>(DstValue);
       ArrayRef<MDOperand> DstOperands = DstValue->operands();
       MDTuple *New = MDTuple::getDistinct(
-          DstM.getContext(),
-          SmallVector<Metadata *, 4>(DstOperands.begin(), DstOperands.end()));
+          DstM.getContext(), SmallVector<Metadata *, 4>(DstOperands));
       Metadata *FlagOps[] = {DstOp->getOperand(0), ID, New};
       MDNode *Flag = MDTuple::getDistinct(DstM.getContext(), FlagOps);
       DstModFlags->setOperand(DstIndex, Flag);
@@ -1440,11 +1415,15 @@ Error IRLinker::linkModuleFlagsMetadata() {
       llvm_unreachable("not possible");
     case Module::Error: {
       // Emit an error if the values differ.
-      if (SrcOp->getOperand(2) != DstOp->getOperand(2))
-        return stringErr("linking module flags '" + ID->getString() +
-                         "': IDs have conflicting values in '" +
-                         SrcM->getModuleIdentifier() + "' and '" +
-                         DstM.getModuleIdentifier() + "'");
+      if (SrcOp->getOperand(2) != DstOp->getOperand(2)) {
+        std::string Str;
+        raw_string_ostream(Str)
+            << "linking module flags '" << ID->getString()
+            << "': IDs have conflicting values: '" << *SrcOp->getOperand(2)
+            << "' from " << SrcM->getModuleIdentifier() << ", and '"
+            << *DstOp->getOperand(2) << "' from " + DstM.getModuleIdentifier();
+        return stringErr(Str);
+      }
       continue;
     }
     case Module::Warning: {
@@ -1568,10 +1547,6 @@ Error IRLinker::run() {
   bool EnableDLWarning = true;
   bool EnableTripleWarning = true;
   if (SrcTriple.isNVPTX() && DstTriple.isNVPTX()) {
-    std::string ModuleId = SrcM->getModuleIdentifier();
-    StringRef FileName = llvm::sys::path::filename(ModuleId);
-    bool SrcIsLibDevice =
-        FileName.starts_with("libdevice") && FileName.ends_with(".10.bc");
     bool SrcHasLibDeviceDL =
         (SrcM->getDataLayoutStr().empty() ||
          SrcM->getDataLayoutStr() == "e-i64:64-v16:16-v32:32-n16:32:64");
@@ -1582,8 +1557,8 @@ Error IRLinker::run() {
                                   SrcTriple.getOSName() == "gpulibs") ||
                                  (SrcTriple.getVendorName() == "unknown" &&
                                   SrcTriple.getOSName() == "unknown");
-    EnableTripleWarning = !(SrcIsLibDevice && SrcHasLibDeviceTriple);
-    EnableDLWarning = !(SrcIsLibDevice && SrcHasLibDeviceDL);
+    EnableTripleWarning = !SrcHasLibDeviceTriple;
+    EnableDLWarning = !(SrcHasLibDeviceTriple && SrcHasLibDeviceDL);
   }
 
   if (EnableDLWarning && (SrcM->getDataLayout() != DstM.getDataLayout())) {
@@ -1598,11 +1573,11 @@ Error IRLinker::run() {
       !SrcTriple.isCompatibleWith(DstTriple))
     emitWarning("Linking two modules of different target triples: '" +
                 SrcM->getModuleIdentifier() + "' is '" +
-                SrcM->getTargetTriple() + "' whereas '" +
-                DstM.getModuleIdentifier() + "' is '" + DstM.getTargetTriple() +
-                "'\n");
+                SrcM->getTargetTriple().str() + "' whereas '" +
+                DstM.getModuleIdentifier() + "' is '" +
+                DstM.getTargetTriple().str() + "'\n");
 
-  DstM.setTargetTriple(SrcTriple.merge(DstTriple));
+  DstM.setTargetTriple(Triple(SrcTriple.merge(DstTriple)));
 
   // Loop over all of the linked values to compute type mappings.
   computeTypeMapping();
@@ -1665,6 +1640,8 @@ Error IRLinker::run() {
     if (GV.hasAppendingLinkage())
       continue;
     Value *NewValue = Mapper.mapValue(GV);
+    if (FoundError)
+      return std::move(*FoundError);
     if (NewValue) {
       auto *NewGV = dyn_cast<GlobalVariable>(NewValue->stripPointerCasts());
       if (NewGV) {
@@ -1701,8 +1678,7 @@ StructType *IRMover::StructTypeKeyInfo::getTombstoneKey() {
 }
 
 unsigned IRMover::StructTypeKeyInfo::getHashValue(const KeyTy &Key) {
-  return hash_combine(hash_combine_range(Key.ETypes.begin(), Key.ETypes.end()),
-                      Key.IsPacked);
+  return hash_combine(hash_combine_range(Key.ETypes), Key.IsPacked);
 }
 
 unsigned IRMover::StructTypeKeyInfo::getHashValue(const StructType *ST) {
@@ -1779,7 +1755,5 @@ Error IRMover::move(std::unique_ptr<Module> Src,
   IRLinker TheIRLinker(Composite, SharedMDs, IdentifiedStructTypes,
                        std::move(Src), ValuesToLink, std::move(AddLazyFor),
                        IsPerformingImport);
-  Error E = TheIRLinker.run();
-  Composite.dropTriviallyDeadConstantArrays();
-  return E;
+  return TheIRLinker.run();
 }

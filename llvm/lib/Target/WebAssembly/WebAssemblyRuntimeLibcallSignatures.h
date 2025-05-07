@@ -16,7 +16,7 @@
 
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 
 namespace llvm {
 

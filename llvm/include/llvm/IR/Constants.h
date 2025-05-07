@@ -51,6 +51,8 @@ template <class ConstantClass> struct ConstantAggrKeyType;
 /// Since they can be in use by unrelated modules (and are never based on
 /// GlobalValues), it never makes sense to RAUW them.
 class ConstantData : public Constant {
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{0};
+
   friend class Constant;
 
   Value *handleOperandChangeImpl(Value *From, Value *To) {
@@ -58,9 +60,9 @@ class ConstantData : public Constant {
   }
 
 protected:
-  explicit ConstantData(Type *Ty, ValueTy VT) : Constant(Ty, VT, nullptr, 0) {}
+  explicit ConstantData(Type *Ty, ValueTy VT) : Constant(Ty, VT, AllocMarker) {}
 
-  void *operator new(size_t S) { return User::operator new(S, 0); }
+  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
 
 public:
   void operator delete(void *Ptr) { User::operator delete(Ptr); }
@@ -399,7 +401,8 @@ public:
 /// use operands.
 class ConstantAggregate : public Constant {
 protected:
-  ConstantAggregate(Type *T, ValueTy VT, ArrayRef<Constant *> V);
+  ConstantAggregate(Type *T, ValueTy VT, ArrayRef<Constant *> V,
+                    AllocInfo AllocInfo);
 
 public:
   /// Transparently provide more efficient getOperand methods.
@@ -425,7 +428,7 @@ class ConstantArray final : public ConstantAggregate {
   friend struct ConstantAggrKeyType<ConstantArray>;
   friend class Constant;
 
-  ConstantArray(ArrayType *T, ArrayRef<Constant *> Val);
+  ConstantArray(ArrayType *T, ArrayRef<Constant *> Val, AllocInfo AllocInfo);
 
   void destroyConstantImpl();
   Value *handleOperandChangeImpl(Value *From, Value *To);
@@ -457,7 +460,7 @@ class ConstantStruct final : public ConstantAggregate {
   friend struct ConstantAggrKeyType<ConstantStruct>;
   friend class Constant;
 
-  ConstantStruct(StructType *T, ArrayRef<Constant *> Val);
+  ConstantStruct(StructType *T, ArrayRef<Constant *> Val, AllocInfo AllocInfo);
 
   void destroyConstantImpl();
   Value *handleOperandChangeImpl(Value *From, Value *To);
@@ -509,7 +512,7 @@ class ConstantVector final : public ConstantAggregate {
   friend struct ConstantAggrKeyType<ConstantVector>;
   friend class Constant;
 
-  ConstantVector(VectorType *T, ArrayRef<Constant *> Val);
+  ConstantVector(VectorType *T, ArrayRef<Constant *> Val, AllocInfo AllocInfo);
 
   void destroyConstantImpl();
   Value *handleOperandChangeImpl(Value *From, Value *To);
@@ -614,34 +617,34 @@ public:
 
   /// If this is a sequential container of integers (of any size), return the
   /// specified element in the low bits of a uint64_t.
-  uint64_t getElementAsInteger(unsigned i) const;
+  uint64_t getElementAsInteger(uint64_t i) const;
 
   /// If this is a sequential container of integers (of any size), return the
   /// specified element as an APInt.
-  APInt getElementAsAPInt(unsigned i) const;
+  APInt getElementAsAPInt(uint64_t i) const;
 
   /// If this is a sequential container of floating point type, return the
   /// specified element as an APFloat.
-  APFloat getElementAsAPFloat(unsigned i) const;
+  APFloat getElementAsAPFloat(uint64_t i) const;
 
   /// If this is an sequential container of floats, return the specified element
   /// as a float.
-  float getElementAsFloat(unsigned i) const;
+  float getElementAsFloat(uint64_t i) const;
 
   /// If this is an sequential container of doubles, return the specified
   /// element as a double.
-  double getElementAsDouble(unsigned i) const;
+  double getElementAsDouble(uint64_t i) const;
 
   /// Return a Constant for a specified index's element.
   /// Note that this has to compute a new constant to return, so it isn't as
   /// efficient as getElementAsInteger/Float/Double.
-  Constant *getElementAsConstant(unsigned i) const;
+  Constant *getElementAsConstant(uint64_t i) const;
 
   /// Return the element type of the array/vector.
   Type *getElementType() const;
 
   /// Return the number of elements in the array or vector.
-  unsigned getNumElements() const;
+  uint64_t getNumElements() const;
 
   /// Return the size (in bytes) of each element in the array/vector.
   /// The size of the elements is known to be a multiple of one byte.
@@ -681,7 +684,7 @@ public:
   }
 
 private:
-  const char *getElementPointer(unsigned Elt) const;
+  const char *getElementPointer(uint64_t Elt) const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -890,9 +893,11 @@ public:
 class BlockAddress final : public Constant {
   friend class Constant;
 
-  BlockAddress(Function *F, BasicBlock *BB);
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{1};
 
-  void *operator new(size_t S) { return User::operator new(S, 2); }
+  BlockAddress(Type *Ty, BasicBlock *BB);
+
+  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
 
   void destroyConstantImpl();
   Value *handleOperandChangeImpl(Value *From, Value *To);
@@ -907,6 +912,11 @@ public:
   /// block must be embedded into a function.
   static BlockAddress *get(BasicBlock *BB);
 
+  /// Return a BlockAddress for the specified basic block, which may not be
+  /// part of a function. The specified type must match the type of the function
+  /// the block will be inserted into.
+  static BlockAddress *get(Type *Ty, BasicBlock *BB);
+
   /// Lookup an existing \c BlockAddress constant for the given BasicBlock.
   ///
   /// \returns 0 if \c !BB->hasAddressTaken(), otherwise the \c BlockAddress.
@@ -915,8 +925,8 @@ public:
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
-  Function *getFunction() const { return (Function *)Op<0>().get(); }
-  BasicBlock *getBasicBlock() const { return (BasicBlock *)Op<1>().get(); }
+  BasicBlock *getBasicBlock() const { return cast<BasicBlock>(Op<0>().get()); }
+  Function *getFunction() const { return getBasicBlock()->getParent(); }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
@@ -926,7 +936,7 @@ public:
 
 template <>
 struct OperandTraits<BlockAddress>
-    : public FixedNumOperandTraits<BlockAddress, 2> {};
+    : public FixedNumOperandTraits<BlockAddress, 1> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(BlockAddress, Value)
 
@@ -936,9 +946,11 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(BlockAddress, Value)
 class DSOLocalEquivalent final : public Constant {
   friend class Constant;
 
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{1};
+
   DSOLocalEquivalent(GlobalValue *GV);
 
-  void *operator new(size_t S) { return User::operator new(S, 1); }
+  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
 
   void destroyConstantImpl();
   Value *handleOperandChangeImpl(Value *From, Value *To);
@@ -973,9 +985,11 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(DSOLocalEquivalent, Value)
 class NoCFIValue final : public Constant {
   friend class Constant;
 
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{1};
+
   NoCFIValue(GlobalValue *GV);
 
-  void *operator new(size_t S) { return User::operator new(S, 1); }
+  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
 
   void destroyConstantImpl();
   Value *handleOperandChangeImpl(Value *From, Value *To);
@@ -1013,10 +1027,12 @@ class ConstantPtrAuth final : public Constant {
   friend struct ConstantPtrAuthKeyType;
   friend class Constant;
 
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{4};
+
   ConstantPtrAuth(Constant *Ptr, ConstantInt *Key, ConstantInt *Disc,
                   Constant *AddrDisc);
 
-  void *operator new(size_t s) { return User::operator new(s, 4); }
+  void *operator new(size_t s) { return User::operator new(s, AllocMarker); }
 
   void destroyConstantImpl();
   Value *handleOperandChangeImpl(Value *From, Value *To);
@@ -1056,6 +1072,19 @@ public:
     return !getAddrDiscriminator()->isNullValue();
   }
 
+  /// A constant value for the address discriminator which has special
+  /// significance to ctors/dtors lowering. Regular address discrimination can't
+  /// be applied for them since uses of llvm.global_{c|d}tors are disallowed
+  /// (see Verifier::visitGlobalVariable) and we can't emit getelementptr
+  /// expressions referencing these special arrays.
+  enum { AddrDiscriminator_CtorsDtors = 1 };
+
+  /// Whether the address uses a special address discriminator.
+  /// These discriminators can't be used in real pointer-auth values; they
+  /// can only be used in "prototype" values that indicate how some real
+  /// schema is supposed to be produced.
+  bool hasSpecialAddressDiscriminator(uint64_t Value) const;
+
   /// Check whether an authentication operation with key \p Key and (possibly
   /// blended) discriminator \p Discriminator is known to be compatible with
   /// this ptrauth signed pointer.
@@ -1089,8 +1118,8 @@ class ConstantExpr : public Constant {
   Value *handleOperandChangeImpl(Value *From, Value *To);
 
 protected:
-  ConstantExpr(Type *ty, unsigned Opcode, Use *Ops, unsigned NumOps)
-      : Constant(ty, ConstantExprVal, Ops, NumOps) {
+  ConstantExpr(Type *ty, unsigned Opcode, AllocInfo AllocInfo)
+      : Constant(ty, ConstantExprVal, AllocInfo) {
     // Operation type (an Instruction opcode) is stored as the SubclassData.
     setValueSubclassData(Opcode);
   }
@@ -1118,8 +1147,6 @@ public:
   static Constant *getAdd(Constant *C1, Constant *C2, bool HasNUW = false,
                           bool HasNSW = false);
   static Constant *getSub(Constant *C1, Constant *C2, bool HasNUW = false,
-                          bool HasNSW = false);
-  static Constant *getMul(Constant *C1, Constant *C2, bool HasNUW = false,
                           bool HasNSW = false);
   static Constant *getXor(Constant *C1, Constant *C2);
   static Constant *getTrunc(Constant *C, Type *Ty, bool OnlyIfReduced = false);
@@ -1150,14 +1177,6 @@ public:
     return getSub(C1, C2, true, false);
   }
 
-  static Constant *getNSWMul(Constant *C1, Constant *C2) {
-    return getMul(C1, C2, false, true);
-  }
-
-  static Constant *getNUWMul(Constant *C1, Constant *C2) {
-    return getMul(C1, C2, true, false);
-  }
-
   /// If C is a scalar/fixed width vector of known powers of 2, then this
   /// function returns a new scalar/fixed width vector obtained from logBase2
   /// of C. Undef vector elements are set to zero.
@@ -1186,8 +1205,11 @@ public:
   /// Return the absorbing element for the given binary
   /// operation, i.e. a constant C such that X op C = C and C op X = C for
   /// every X.  For example, this returns zero for integer multiplication.
-  /// It returns null if the operator doesn't have an absorbing element.
-  static Constant *getBinOpAbsorber(unsigned Opcode, Type *Ty);
+  /// If AllowLHSConstant is true, the LHS operand is a constant C that must be
+  /// defined as C op X = C. It returns null if the operator doesn't have
+  /// an absorbing element.
+  static Constant *getBinOpAbsorber(unsigned Opcode, Type *Ty,
+                                    bool AllowLHSConstant = false);
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Constant);
@@ -1368,7 +1390,7 @@ private:
 
 template <>
 struct OperandTraits<ConstantExpr>
-    : public VariadicOperandTraits<ConstantExpr, 1> {};
+    : public VariadicOperandTraits<ConstantExpr> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ConstantExpr, Constant)
 

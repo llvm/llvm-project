@@ -2,10 +2,18 @@
 
 import os
 from builtins import range
+from dataclasses import dataclass
 from functools import reduce
-from typing import Any, Dict, List  # Needed for python 3.8 compatibility.
+from typing import (
+    Any,
+    Dict,
+    List,  # Needed for python 3.8 compatibility.
+    NewType,
+    Optional,
+)
 import functools
 import json
+from libcxx.header_information import module_c_headers, module_headers, header_restrictions, headers_not_available, libcxx_root
 
 
 def get_libcxx_paths():
@@ -90,6 +98,11 @@ feature_test_macros = [
             "headers": ["memory"],
         },
         {
+            "name": "__cpp_lib_aligned_accessor",
+            "values": {"c++26": 202411},
+            "headers": ["mdspan"],
+        },
+        {
             "name": "__cpp_lib_allocate_at_least",
             "values": {
                 # Note LWG3887 Version macro for allocate_at_least
@@ -162,7 +175,6 @@ feature_test_macros = [
             "name": "__cpp_lib_atomic_float",
             "values": {"c++20": 201711},
             "headers": ["atomic"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_atomic_is_always_lock_free",
@@ -184,7 +196,6 @@ feature_test_macros = [
             "name": "__cpp_lib_atomic_ref",
             "values": {"c++20": 201806},
             "headers": ["atomic"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_atomic_shared_ptr",
@@ -208,8 +219,8 @@ feature_test_macros = [
             "name": "__cpp_lib_barrier",
             "values": {"c++20": 201907},
             "headers": ["barrier"],
-            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && _LIBCPP_AVAILABILITY_HAS_SYNC",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)",
+            "libcxx_guard": "_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC",
         },
         {
             "name": "__cpp_lib_bind_back",
@@ -281,7 +292,7 @@ feature_test_macros = [
                 "string_view",
             ],
             "test_suite_guard": "defined(__cpp_char8_t)",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_CHAR8_T)",
+            "libcxx_guard": "_LIBCPP_HAS_CHAR8_T",
         },
         {
             "name": "__cpp_lib_chrono",
@@ -315,7 +326,7 @@ feature_test_macros = [
             "name": "__cpp_lib_constexpr_algorithms",
             "values": {
                 "c++20": 201806,
-                # "c++26": 202306, # P2562R1 constexpr Stable Sorting
+                "c++26": 202306,
             },
             "headers": ["algorithm", "utility"],
         },
@@ -359,6 +370,13 @@ feature_test_macros = [
             "name": "__cpp_lib_constexpr_memory",
             "values": {"c++20": 201811, "c++23": 202202},
             "headers": ["memory"],
+        },
+        {
+            "name": "__cpp_lib_constexpr_new",
+            "values": {"c++26": 202406},  # P2747R2 constexpr placement new
+            "headers": ["new"],
+            "test_suite_guard": "!defined(_LIBCPP_ABI_VCRUNTIME)",
+            "libcxx_guard": "!defined(_LIBCPP_ABI_VCRUNTIME)",
         },
         {
             "name": "__cpp_lib_constexpr_numeric",
@@ -496,16 +514,23 @@ feature_test_macros = [
             "name": "__cpp_lib_filesystem",
             "values": {"c++17": 201703},
             "headers": ["filesystem"],
-            "test_suite_guard": "!defined(_LIBCPP_VERSION) || (!defined(_LIBCPP_HAS_NO_FILESYSTEM) && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_FILESYSTEM) && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_FILESYSTEM && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)",
+            "libcxx_guard": "_LIBCPP_HAS_FILESYSTEM && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY",
+        },
+        {
+            "name": "__cpp_lib_flat_map",
+            "values": {"c++23": 202207},
+            "headers": ["flat_map"],
+        },
+        {
+            "name": "__cpp_lib_flat_set",
+            "values": {"c++23": 202207},
+            "headers": ["flat_set"],
         },
         {
             "name": "__cpp_lib_format",
             "values": {
-                # "c++20": 201907 Not implemented P1361R2 Integration of chrono with text formatting
-                # "c++20": 202106 Fully implemented
-                # "c++20": 202110 Not implemented P2372R3 Fixing locale handling in chrono formatters
-                "c++20": 202106,
+                "c++20": 202110,
                 # "c++23": 202207, Not implemented P2419R2 Clarify handling of encodings in localized formatting of chrono types
                 # "c++26": 202306, P2637R3 Member Visit (implemented)
                 # "c++26": 202311, P2918R2 Runtime format strings II (implemented)
@@ -515,7 +540,11 @@ feature_test_macros = [
             # 202305 P2757R3 Type-checking format args
             # 202306 P2637R3 Member Visit
             "headers": ["format"],
-            "unimplemented": True,
+            # Trying to use `std::format` where to_chars floating-point is not
+            # available causes compilation errors, even with non floating-point types.
+            # https://github.com/llvm/llvm-project/issues/125353
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT",
+            "libcxx_guard": "_LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT",
         },
         {
             "name": "__cpp_lib_format_path",
@@ -617,8 +646,8 @@ feature_test_macros = [
             "name": "__cpp_lib_fstream_native_handle",
             "values": {"c++26": 202306},  # P1759R6 Native handles and file streams
             "headers": ["fstream"],
-            "test_suite_guard": "!defined(_LIBCPP_VERSION) || (!defined(_LIBCPP_HAS_NO_FILESYSTEM) && !defined(_LIBCPP_HAS_NO_LOCALIZATION))",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_FILESYSTEM) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION)",
+            "libcxx_guard": "_LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION",
         },
         {
             "name": "__cpp_lib_function_ref",
@@ -680,6 +709,12 @@ feature_test_macros = [
             "headers": ["forward_list", "list", "vector"],
         },
         {
+            "name": "__cpp_lib_inplace_vector",
+            "values": {"c++26": 202406},  # P0843R14 inplace_vector
+            "headers": ["inplace_vector"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_int_pow2",
             "values": {"c++20": 202002},
             "headers": ["bit"],
@@ -735,6 +770,13 @@ feature_test_macros = [
             "headers": ["type_traits"],
         },
         {
+            "name": "__cpp_lib_is_implicit_lifetime",
+            "values": {"c++23": 202302},
+            "headers": ["type_traits"],
+            "test_suite_guard": "__has_builtin(__builtin_is_implicit_lifetime)",
+            "libcxx_guard": "__has_builtin(__builtin_is_implicit_lifetime)",
+        },
+        {
             "name": "__cpp_lib_is_invocable",
             "values": {"c++17": 201703},
             "headers": ["type_traits"],
@@ -767,9 +809,23 @@ feature_test_macros = [
             "headers": ["type_traits"],
         },
         {
+            "name": "__cpp_lib_is_sufficiently_aligned",
+            "values": {"c++26": 202411},
+            "headers": ["memory"],
+        },
+        {
             "name": "__cpp_lib_is_swappable",
             "values": {"c++17": 201603},
             "headers": ["type_traits"],
+        },
+        {
+            "name": "__cpp_lib_is_virtual_base_of",
+            "values": {
+                "c++26": 202406  # P2985R0 A type trait for detecting virtual base classes
+            },
+            "headers": ["type_traits"],
+            "test_suite_guard": "__has_builtin(__builtin_is_virtual_base_of)",
+            "libcxx_guard": "__has_builtin(__builtin_is_virtual_base_of)",
         },
         {
             "name": "__cpp_lib_is_within_lifetime",
@@ -785,15 +841,15 @@ feature_test_macros = [
             "name": "__cpp_lib_jthread",
             "values": {"c++20": 201911},
             "headers": ["stop_token", "thread"],
-            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN) && _LIBCPP_AVAILABILITY_HAS_SYNC",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)",
+            "libcxx_guard": "_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC",
         },
         {
             "name": "__cpp_lib_latch",
             "values": {"c++20": 201907},
             "headers": ["latch"],
-            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && _LIBCPP_AVAILABILITY_HAS_SYNC",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)",
+            "libcxx_guard": "_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC",
         },
         {
             "name": "__cpp_lib_launder",
@@ -851,7 +907,10 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_mdspan",
-            "values": {"c++23": 202207},
+            "values": {
+                "c++23": 202207,
+                "c++26": 202406,  # P2389R2 dextents Index Type Parameter
+            },
             "headers": ["mdspan"],
         },
         {
@@ -904,7 +963,7 @@ feature_test_macros = [
             "name": "__cpp_lib_not_fn",
             "values": {
                 "c++17": 201603,
-                # "c++26": 202306, # P2714R1 Bind front and back to NTTP callables
+                "c++26": 202306,  # P2714R1 Bind front and back to NTTP callables
             },
             "headers": ["functional"],
         },
@@ -915,8 +974,18 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_optional",
-            "values": {"c++17": 201606, "c++23": 202110},
+            "values": {
+                "c++17": 201606,
+                "c++20": 202106,  # P2231R1 Missing constexpr in std::optional and std::variant
+                "c++23": 202110,  # P0798R8 Monadic operations for std::optional + LWG3621 Remove feature-test macro __cpp_lib_monadic_optional
+            },
             "headers": ["optional"],
+        },
+        {
+            "name": "__cpp_lib_optional_range_support",
+            "values": {"c++26": 202406},  # P3168R2 Give std::optional Range Support
+            "headers": ["optional"],
+            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_out_ptr",
@@ -925,12 +994,20 @@ feature_test_macros = [
                 "c++26": 202311,  # P2833R2 Freestanding Library: inout expected span
             },
             "headers": ["memory"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_parallel_algorithm",
             "values": {"c++17": 201603},
             "headers": ["algorithm", "numeric"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_philox_engine",
+            "values": {
+                "c++26": 202406
+            },  # P2075R6 Philox as an extension of the C++ RNG engines
+            # Note the paper mentions 202310L as value, which differs from the typical procedure.
+            "headers": ["random"],
             "unimplemented": True,
         },
         {
@@ -945,19 +1022,28 @@ feature_test_macros = [
             "values": {
                 "c++23": 202207,
                 # "c++26": 202403, # P3107R5: Permit an efficient implementation of std::print
+                # "c++26": 202406, # P3235R3 std::print more types faster with less memory
             },
             "headers": ["ostream", "print"],
+            # Trying to use `std::print` where to_chars floating-point is not
+            # available causes compilation errors, even with non floating-point types.
+            # https://github.com/llvm/llvm-project/issues/125353
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT",
+            "libcxx_guard": "_LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT",
         },
         {
             "name": "__cpp_lib_quoted_string_io",
             "values": {"c++14": 201304},
             "headers": ["iomanip"],
-            "test_suite_guard": "!defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_LOCALIZATION",
+            "libcxx_guard": "_LIBCPP_HAS_LOCALIZATION",
         },
         {
             "name": "__cpp_lib_ranges",
-            "values": {"c++20": 202207},
+            "values": {
+                "c++20": 202110,  # P2415R2 What is a view?
+                "c++23": 202406,  # P2997R1 Removing the common reference requirement from the indirectly invocable concepts (implemented as a DR against C++20)
+            },
             "headers": ["algorithm", "functional", "iterator", "memory", "ranges"],
         },
         {
@@ -997,10 +1083,14 @@ feature_test_macros = [
             "headers": ["algorithm"],
         },
         {
+            "name": "__cpp_lib_ranges_find_last",
+            "values": {"c++23": 202207},
+            "headers": ["algorithm"],
+        },
+        {
             "name": "__cpp_lib_ranges_iota",
             "values": {"c++23": 202202},
             "headers": ["numeric"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ranges_join_with",
@@ -1093,22 +1183,28 @@ feature_test_macros = [
             "name": "__cpp_lib_scoped_lock",
             "values": {"c++17": 201703},
             "headers": ["mutex"],
-            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS",
+            "libcxx_guard": "_LIBCPP_HAS_THREADS",
         },
         {
             "name": "__cpp_lib_semaphore",
             "values": {"c++20": 201907},
             "headers": ["semaphore"],
-            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && _LIBCPP_AVAILABILITY_HAS_SYNC",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)",
+            "libcxx_guard": "_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC",
+        },
+        {
+            "name": "__cpp_lib_senders",
+            "values": {"c++26": 202406},  # P2300R10 std::execution
+            "headers": ["execution"],
+            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_shared_mutex",
             "values": {"c++17": 201505},
             "headers": ["shared_mutex"],
-            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS",
+            "libcxx_guard": "_LIBCPP_HAS_THREADS",
         },
         {
             "name": "__cpp_lib_shared_ptr_arrays",
@@ -1124,8 +1220,8 @@ feature_test_macros = [
             "name": "__cpp_lib_shared_timed_mutex",
             "values": {"c++14": 201402},
             "headers": ["shared_mutex"],
-            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS",
+            "libcxx_guard": "_LIBCPP_HAS_THREADS",
         },
         {
             "name": "__cpp_lib_shift",
@@ -1136,7 +1232,6 @@ feature_test_macros = [
             "name": "__cpp_lib_smart_ptr_for_overwrite",
             "values": {"c++20": 202002},
             "headers": ["memory"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_smart_ptr_owner_equality",
@@ -1224,7 +1319,7 @@ feature_test_macros = [
             "values": {
                 "c++17": 201606,
                 "c++20": 201803,
-                # "c++26": 202403, # P2591R5: Concatenation of strings and string views
+                "c++26": 202403,  # P2591R5: Concatenation of strings and string views
             },
             "headers": ["string", "string_view"],
         },
@@ -1241,8 +1336,8 @@ feature_test_macros = [
             "name": "__cpp_lib_syncbuf",
             "values": {"c++20": 201803},
             "headers": ["syncstream"],
-            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM",
+            "libcxx_guard": "_LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM",
         },
         {
             "name": "__cpp_lib_text_encoding",
@@ -1254,8 +1349,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_three_way_comparison",
-            "values": {"c++20": 201711},
-            # {"c++20": 201907} # P1614R2 The Mothership has Landed (see P1902R1 Missing feature-test macros 2017-2019)
+            "values": {"c++20": 201907},
             "headers": ["compare"],
         },
         {
@@ -1351,8 +1445,8 @@ feature_test_macros = [
             "name": "__cpp_lib_variant",
             "values": {
                 "c++17": 202102,  # std::visit for classes derived from std::variant
-                # "c++20": 202106,  # Fully constexpr std::variant
-                # "c++26": 202306,  # Member visit (implemented)
+                "c++20": 202106,  # P2231R1 Missing constexpr in std::optional and std::variant
+                "c++26": 202306,  # P2637R3 Member visit
             },
             "headers": ["variant"],
         },
@@ -1571,15 +1665,20 @@ def produce_version_header():
 
 */
 
-#include <__config>
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/version>
+#else
+#  include <__config>
 
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#  pragma GCC system_header
-#endif
+#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#    pragma GCC system_header
+#  endif
 
 // clang-format off
 
 {cxx_macros}
+
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 // clang-format on
 
@@ -1601,45 +1700,45 @@ def produce_version_header():
 
 test_types = {
     "undefined": """
-# ifdef {name}
-#   error "{name} should not be defined before {std_first}"
-# endif
+#  ifdef {name}
+#    error "{name} should not be defined before {std_first}"
+#  endif
 """,
     "test_suite_guard": """
-# if {test_suite_guard}
-#   ifndef {name}
-#     error "{name} should be defined in {std}"
-#   endif
-#   if {name} != {value}
-#     error "{name} should have the value {value} in {std}"
-#   endif
-# else
-#   ifdef {name}
-#     error "{name} should not be defined when the requirement '{test_suite_guard}' is not met!"
-#   endif
-# endif
+#  if {test_suite_guard}
+#    ifndef {name}
+#      error "{name} should be defined in {std}"
+#    endif
+#    if {name} != {value}
+#      error "{name} should have the value {value} in {std}"
+#    endif
+#  else
+#    ifdef {name}
+#      error "{name} should not be defined when the requirement '{test_suite_guard}' is not met!"
+#    endif
+#  endif
 """,
     "unimplemented": """
-# if !defined(_LIBCPP_VERSION)
-#   ifndef {name}
-#     error "{name} should be defined in {std}"
-#   endif
-#   if {name} != {value}
-#     error "{name} should have the value {value} in {std}"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef {name}
-#     error "{name} should not be defined because it is unimplemented in libc++!"
-#   endif
-# endif
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef {name}
+#      error "{name} should be defined in {std}"
+#    endif
+#    if {name} != {value}
+#      error "{name} should have the value {value} in {std}"
+#    endif
+#  else
+#    ifdef {name}
+#      error "{name} should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
 """,
     "defined": """
-# ifndef {name}
-#   error "{name} should be defined in {std}"
-# endif
-# if {name} != {value}
-#   error "{name} should have the value {value} in {std}"
-# endif
+#  ifndef {name}
+#    error "{name} should be defined in {std}"
+#  endif
+#  if {name} != {value}
+#    error "{name} should have the value {value} in {std}"
+#  endif
 """,
 }
 
@@ -1739,28 +1838,27 @@ def produce_tests():
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+
 // WARNING: This test was generated by {script_name}
 // and should not be edited manually.
-//
-// clang-format off
 {markup}
 // <{header}>
 
 // Test the feature test macros defined by <{header}>
 
-{synopsis}
+// clang-format off
 
 #include <{header}>
 #include "test_macros.h"
 
 {cxx_tests}
 
+// clang-format on
+
 """.format(
             script_name=script_name,
             header=h,
             markup=("\n{}\n".format(markup) if markup else ""),
-            synopsis=generate_synopsis(test_list),
             cxx_tests=generate_std_tests(test_list),
         )
         test_name = "{header}.version.compile.pass.cpp".format(header=h)
@@ -1870,9 +1968,28 @@ Status
         f.write(doc_str)
 
 
+Std = NewType("Std", str)  # Standard version number
+Ftm = NewType("Ftm", str)  # The name of a feature test macro
+Value = NewType("Value", str)  # The value of a feature test macro including the L suffix
+
+@dataclass
+class Metadata:
+    headers: List[str] = None
+    test_suite_guard: str = None
+    libcxx_guard: str = None
+
+
+@dataclass
+class VersionHeader:
+    value: Value = None
+    implemented: bool = None
+    need_undef: bool = None
+    condition: str = None
+
+
 def get_ftms(
-    data, std_dialects: List[str], use_implemented_status: bool
-) -> Dict[str, Dict[str, Any]]:
+    data, std_dialects: List[Std], use_implemented_status: bool
+) -> Dict[Ftm, Dict[Std, Optional[Value]]]:
     """Impementation for FeatureTestMacros.(standard|implemented)_ftms()."""
     result = dict()
     for feature in data:
@@ -1903,10 +2020,62 @@ def get_ftms(
                         else:
                             break
 
-                entry[std] = last
+                if last:
+                    entry[std] = last
         result[feature["name"]] = entry
 
     return result
+
+
+def generate_version_header_dialect_block(data: Dict[Ftm, VersionHeader]) -> str:
+    """Generates the contents of the version header for a dialect.
+
+    This generates the contents of a
+      #if  _LIBCPP_STD_VER >= XY
+      #endif // _LIBCPP_STD_VER >= XY
+    block.
+    """
+    result = ""
+    for element in data:
+        for ftm, entry in element.items():
+            if not entry.implemented:
+                # When a FTM is not implemented don't add the guards
+                # or undefine the (possibly) defined macro.
+                result += f"// define {ftm} {entry.value}\n"
+            else:
+                need_undef = entry.need_undef
+                if entry.condition:
+                    result += f"#  if {entry.condition}\n"
+                    if entry.need_undef:
+                        result += f"#    undef {ftm}\n"
+                    result += f"#    define {ftm} {entry.value}\n"
+                    result += f"#  endif\n"
+                else:
+                    if entry.need_undef:
+                        result += f"#  undef {ftm}\n"
+                    result += f"#  define {ftm} {entry.value}\n"
+
+    return result
+
+
+def generate_version_header_implementation(
+    data: Dict[Std, Dict[Ftm, VersionHeader]]
+) -> str:
+    """Generates the body of the version header."""
+
+    template = """#if _LIBCPP_STD_VER >= {dialect}
+{feature_test_macros}#endif // _LIBCPP_STD_VER >= {dialect}"""
+
+    result = []
+    for std, ftms in data.items():
+        result.append(
+            template.format(
+                dialect=std,
+                feature_test_macros=generate_version_header_dialect_block(ftms),
+            )
+        )
+
+    return "\n\n".join(result)
 
 
 class FeatureTestMacros:
@@ -2005,10 +2174,11 @@ class FeatureTestMacros:
 
     def __init__(self, filename: str):
         """Initializes the class with the JSON data in the file 'filename'."""
-        self.__data = json.load(open(filename))
+        with open(filename) as f:
+            self.__data = json.load(f)
 
     @functools.cached_property
-    def std_dialects(self) -> List[str]:
+    def std_dialects(self) -> List[Std]:
         """Returns the C++ dialects avaiable.
 
         The available dialects are based on the 'c++xy' keys found the 'values'
@@ -2027,44 +2197,132 @@ class FeatureTestMacros:
         return sorted(list(dialects))
 
     @functools.cached_property
-    def standard_ftms(self) -> Dict[str, Dict[str, Any]]:
+    def standard_ftms(self) -> Dict[Ftm, Dict[Std, Optional[Value]]]:
         """Returns the FTM versions per dialect in the Standard.
 
         This function does not use the 'implemented' flag. The output contains
         the versions used in the Standard. When a FTM in libc++ is not
         implemented according to the Standard to output may opt to show the
         expected value.
-
-        The result is a dict with the following content
-        - key: Name of the feature test macro.
-        - value: A dict with the following content:
-          * key: The version of the C++ dialect.
-          * value: The value of the feature-test macro.
         """
         return get_ftms(self.__data, self.std_dialects, False)
 
     @functools.cached_property
-    def implemented_ftms(self) -> Dict[str, Dict[str, Any]]:
+    def implemented_ftms(self) -> Dict[Ftm, Dict[Std, Optional[Value]]]:
         """Returns the FTM versions per dialect implemented in libc++.
 
         Unlike `get_std_dialect_versions` this function uses the 'implemented'
         flag. This returns the actual implementation status in libc++.
-
-        The result is a dict with the following content
-        - key: Name of the feature test macro.
-        - value: A dict with the following content:
-          * key: The version of the C++ dialect.
-          * value: The value of the feature-test macro. When a feature-test
-            macro is not implemented its value is None.
         """
 
         return get_ftms(self.__data, self.std_dialects, True)
+
+    def is_implemented(self, ftm: Ftm, std: Std) -> bool:
+        """Has the FTM `ftm` been implemented in the dialect `std`?"""
+
+        # When a paper for C++20 has not been implemented in libc++, then there will be no
+        # FTM entry in implemented_ftms for C++23 and later. Similarly, a paper like <format>
+        # has no entry in standard_ftms for e.g. C++11.
+        if not std in self.implemented_ftms[ftm].keys() or not std in self.standard_ftms[ftm].keys():
+            return False
+
+        return self.implemented_ftms[ftm][std] == self.standard_ftms[ftm][std]
+
+
+    @functools.cached_property
+    def ftm_metadata(self) -> Dict[Ftm, Metadata]:
+        """Returns the metadata of the FTMs defined in the Standard.
+
+        The metadata does not depend on the C++ dialect used.
+        """
+        result = dict()
+        for feature in self.__data:
+            result[feature["name"]] = Metadata(
+                feature["headers"],
+                feature.get("test_suite_guard", None),
+                feature.get("libcxx_guard", None),
+            )
+
+        return result
+
+    @property
+    def version_header_implementation(self) -> Dict[Std, Dict[Ftm, VersionHeader]]:
+        """Generates the body of the version header."""
+        result = dict()
+        for std in self.std_dialects:
+            result[get_std_number(std)] = list()
+
+        for ftm, values in self.standard_ftms.items():
+            last_value = None
+            last_entry = None
+            for std, value in values.items():
+                # When a newer Standard does not change the value of the macro
+                # there is no need to redefine it with the same value.
+                if last_value and value == last_value:
+                    continue
+                last_value = value
+
+                implemented = self.is_implemented(ftm, std)
+                entry = VersionHeader(
+                    value,
+                    implemented,
+                    last_entry is not None and last_entry.implemented and implemented,
+                    self.ftm_metadata[ftm].libcxx_guard,
+                )
+
+                last_entry = entry
+                result[get_std_number(std)].append(dict({ftm: entry}))
+
+        return result
+
+    @property
+    def version_header(self) -> str:
+        """Generates the version header."""
+        template = """// -*- C++ -*-
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef _LIBCPP_VERSIONH
+#define _LIBCPP_VERSIONH
+
+#include <__config>
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
+{feature_test_macros}
+
+#endif // _LIBCPP_VERSIONH
+"""
+        return template.format(
+            feature_test_macros=generate_version_header_implementation(
+                self.version_header_implementation
+            )
+        )
 
 
 def main():
     produce_version_header()
     produce_tests()
     produce_docs()
+
+    # Example how to use the new version header generation function to generate
+    # the file.
+    if False:
+        ftm = FeatureTestMacros(
+            os.path.join(
+                source_root, "test", "libcxx", "feature_test_macro", "test_data.json"
+            )
+        )
+        version_header_path = os.path.join(include_path, "version")
+        with open(version_header_path, "w", newline="\n") as f:
+            f.write(ftm.version_header)
 
 
 if __name__ == "__main__":

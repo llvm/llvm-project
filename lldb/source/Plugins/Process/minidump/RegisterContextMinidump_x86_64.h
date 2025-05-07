@@ -153,6 +153,11 @@ struct MinidumpContext_x86_64 {
   llvm::support::ulittle64_t last_branch_from_rip;
   llvm::support::ulittle64_t last_exception_to_rip;
   llvm::support::ulittle64_t last_exception_from_rip;
+
+  // LLDB can save core files and save extra information that isn't available
+  // from Google breakpad, or similar, minidump files.
+  llvm::support::ulittle64_t fs_base;
+  llvm::support::ulittle64_t gs_base;
 };
 
 // For context_flags. These values indicate the type of
@@ -168,9 +173,10 @@ enum class MinidumpContext_x86_64_Flags : uint32_t {
   FloatingPoint = x86_64_Flag | 0x00000008,
   DebugRegisters = x86_64_Flag | 0x00000010,
   XState = x86_64_Flag | 0x00000040,
+  LLDBSpecific = x86_64_Flag | 0x80000000,
 
   Full = Control | Integer | FloatingPoint,
-  All = Full | Segments | DebugRegisters,
+  All = Full | Segments | DebugRegisters | LLDBSpecific,
 
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ All)
 };

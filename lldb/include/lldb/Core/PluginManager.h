@@ -10,7 +10,9 @@
 #define LLDB_CORE_PLUGINMANAGER_H
 
 #include "lldb/Core/Architecture.h"
+#include "lldb/Interpreter/Interfaces/ScriptedInterfaceUsages.h"
 #include "lldb/Symbol/TypeSystem.h"
+#include "lldb/Target/Statistics.h"
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
@@ -21,6 +23,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <vector>
 
 #define LLDB_PLUGIN_DEFINE_ADV(ClassName, PluginName)                          \
   namespace lldb_private {                                                     \
@@ -45,6 +48,12 @@ namespace lldb_private {
 class CommandInterpreter;
 class Debugger;
 class StringList;
+
+struct RegisteredPluginInfo {
+  llvm::StringRef name = "";
+  llvm::StringRef description = "";
+  bool enabled = false;
+};
 
 class PluginManager {
 public:
@@ -133,8 +142,10 @@ public:
   GetOperatingSystemCreateCallbackForPluginName(llvm::StringRef name);
 
   // Language
-  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
-                             LanguageCreateInstance create_callback);
+  static bool
+  RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                 LanguageCreateInstance create_callback,
+                 DebuggerInitializeCallback debugger_init_callback = nullptr);
 
   static bool UnregisterPlugin(LanguageCreateInstance create_callback);
 
@@ -167,6 +178,12 @@ public:
   static SystemRuntimeCreateInstance
   GetSystemRuntimeCreateCallbackAtIndex(uint32_t idx);
 
+  static std::vector<RegisteredPluginInfo> GetSystemRuntimePluginInfo();
+
+  // Modify the enabled state of a SystemRuntime plugin.
+  // Returns false if the plugin name is not found.
+  static bool SetSystemRuntimePluginEnabled(llvm::StringRef name, bool enabled);
+
   // ObjectFile
   static bool
   RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
@@ -177,6 +194,8 @@ public:
                  DebuggerInitializeCallback debugger_init_callback = nullptr);
 
   static bool UnregisterPlugin(ObjectFileCreateInstance create_callback);
+
+  static bool IsRegisteredObjectFilePluginName(llvm::StringRef name);
 
   static ObjectFileCreateInstance
   GetObjectFileCreateCallbackAtIndex(uint32_t idx);
@@ -191,9 +210,7 @@ public:
   GetObjectFileCreateMemoryCallbackForPluginName(llvm::StringRef name);
 
   static Status SaveCore(const lldb::ProcessSP &process_sp,
-                         const FileSpec &outfile,
-                         lldb::SaveCoreStyle &core_style,
-                         llvm::StringRef plugin_name);
+                         lldb_private::SaveCoreOptions &core_options);
 
   // ObjectContainer
   static bool RegisterPlugin(
@@ -363,11 +380,13 @@ public:
   static SymbolLocatorCreateInstance
   GetSymbolLocatorCreateCallbackAtIndex(uint32_t idx);
 
-  static ModuleSpec LocateExecutableObjectFile(const ModuleSpec &module_spec);
+  static ModuleSpec LocateExecutableObjectFile(const ModuleSpec &module_spec,
+                                               StatisticsMap &map);
 
   static FileSpec
   LocateExecutableSymbolFile(const ModuleSpec &module_spec,
-                             const FileSpecList &default_search_paths);
+                             const FileSpecList &default_search_paths,
+                             StatisticsMap &map);
 
   static bool DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
                                           Status &error,
@@ -487,6 +506,25 @@ public:
 
   static LanguageSet GetAllTypeSystemSupportedLanguagesForExpressions();
 
+  // Scripted Interface
+  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                             ScriptedInterfaceCreateInstance create_callback,
+                             lldb::ScriptLanguage language,
+                             ScriptedInterfaceUsages usages);
+
+  static bool UnregisterPlugin(ScriptedInterfaceCreateInstance create_callback);
+
+  static uint32_t GetNumScriptedInterfaces();
+
+  static llvm::StringRef GetScriptedInterfaceNameAtIndex(uint32_t idx);
+
+  static llvm::StringRef GetScriptedInterfaceDescriptionAtIndex(uint32_t idx);
+
+  static lldb::ScriptLanguage GetScriptedInterfaceLanguageAtIndex(uint32_t idx);
+
+  static ScriptedInterfaceUsages
+  GetScriptedInterfaceUsagesAtIndex(uint32_t idx);
+
   // REPL
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                              REPLCreateInstance create_callback,
@@ -578,6 +616,14 @@ public:
                                     llvm::StringRef setting_name);
 
   static bool CreateSettingForStructuredDataPlugin(
+      Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
+      llvm::StringRef description, bool is_global_property);
+
+  static lldb::OptionValuePropertiesSP
+  GetSettingForCPlusPlusLanguagePlugin(Debugger &debugger,
+                                       llvm::StringRef setting_name);
+
+  static bool CreateSettingForCPlusPlusLanguagePlugin(
       Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
       llvm::StringRef description, bool is_global_property);
 };

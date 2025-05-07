@@ -13,12 +13,18 @@
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/CallingConv.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "NVPTX-aa"
+
+static cl::opt<unsigned> TraverseAddressSpacesLimit(
+    "nvptx-traverse-address-aliasing-limit", cl::Hidden,
+    cl::desc("Depth limit for finding address space through traversal"),
+    cl::init(6));
 
 AnalysisKey NVPTXAA::Key;
 
@@ -39,12 +45,28 @@ ImmutablePass *llvm::createNVPTXExternalAAWrapperPass() {
   return new NVPTXExternalAAWrapper();
 }
 
-NVPTXAAWrapperPass::NVPTXAAWrapperPass() : ImmutablePass(ID) {
-  initializeNVPTXAAWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+NVPTXAAWrapperPass::NVPTXAAWrapperPass() : ImmutablePass(ID) {}
 
 void NVPTXAAWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
+}
+
+static unsigned getAddressSpace(const Value *V, unsigned MaxLookup) {
+  // Find the first non-generic address space traversing the UD chain.
+  // It is undefined behaviour if a pointer belongs to more than one
+  // non-overlapping address spaces along a valid execution path.
+  auto GetAS = [](const Value *V) -> unsigned {
+    if (const auto *PTy = dyn_cast<PointerType>(V->getType()))
+      return PTy->getAddressSpace();
+    return ADDRESS_SPACE_GENERIC;
+  };
+  while (MaxLookup-- && GetAS(V) == ADDRESS_SPACE_GENERIC) {
+    const Value *NewV = getUnderlyingObject(V, 1);
+    if (NewV == V)
+      break;
+    V = NewV;
+  }
+  return GetAS(V);
 }
 
 static AliasResult::Kind getAliasResult(unsigned AS1, unsigned AS2) {
@@ -64,14 +86,20 @@ static AliasResult::Kind getAliasResult(unsigned AS1, unsigned AS2) {
   // TODO: cvta.param is not yet supported. We need to change aliasing
   // rules once it is added.
 
+  // Distributed shared memory aliases with shared memory.
+  if (((AS1 == ADDRESS_SPACE_SHARED) &&
+       (AS2 == ADDRESS_SPACE_SHARED_CLUSTER)) ||
+      ((AS1 == ADDRESS_SPACE_SHARED_CLUSTER) && (AS2 == ADDRESS_SPACE_SHARED)))
+    return AliasResult::MayAlias;
+
   return (AS1 == AS2 ? AliasResult::MayAlias : AliasResult::NoAlias);
 }
 
 AliasResult NVPTXAAResult::alias(const MemoryLocation &Loc1,
                                  const MemoryLocation &Loc2, AAQueryInfo &AAQI,
                                  const Instruction *) {
-  unsigned AS1 = Loc1.Ptr->getType()->getPointerAddressSpace();
-  unsigned AS2 = Loc2.Ptr->getType()->getPointerAddressSpace();
+  unsigned AS1 = getAddressSpace(Loc1.Ptr, TraverseAddressSpacesLimit);
+  unsigned AS2 = getAddressSpace(Loc2.Ptr, TraverseAddressSpacesLimit);
 
   return getAliasResult(AS1, AS2);
 }
@@ -87,12 +115,34 @@ static bool isConstOrParam(unsigned AS) {
 ModRefInfo NVPTXAAResult::getModRefInfoMask(const MemoryLocation &Loc,
                                             AAQueryInfo &AAQI,
                                             bool IgnoreLocals) {
-  if (isConstOrParam(Loc.Ptr->getType()->getPointerAddressSpace()))
-    return ModRefInfo::NoModRef;
-
-  const Value *Base = getUnderlyingObject(Loc.Ptr);
-  if (isConstOrParam(Base->getType()->getPointerAddressSpace()))
+  if (isConstOrParam(getAddressSpace(Loc.Ptr, TraverseAddressSpacesLimit)))
     return ModRefInfo::NoModRef;
 
   return ModRefInfo::ModRef;
+}
+
+MemoryEffects NVPTXAAResult::getMemoryEffects(const CallBase *Call,
+                                              AAQueryInfo &AAQI) {
+  // Inline assembly with no side-effect or memory clobbers should not
+  // indirectly access memory in the PTX specification.
+  if (const auto *IA = dyn_cast<InlineAsm>(Call->getCalledOperand())) {
+    // Volatile is translated as side-effects.
+    if (IA->hasSideEffects())
+      return MemoryEffects::unknown();
+
+    for (const InlineAsm::ConstraintInfo &Constraint : IA->ParseConstraints()) {
+      // Indirect constraints (e.g. =*m) are unsupported in inline PTX.
+      if (Constraint.isIndirect)
+        return MemoryEffects::unknown();
+
+      // Memory clobbers prevent optimization.
+      if ((Constraint.Type & InlineAsm::ConstraintPrefix::isClobber) &&
+          any_of(Constraint.Codes,
+                 [](const auto &Code) { return Code == "{memory}"; }))
+        return MemoryEffects::unknown();
+    }
+    return MemoryEffects::none();
+  }
+
+  return MemoryEffects::unknown();
 }

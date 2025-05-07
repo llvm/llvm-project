@@ -311,7 +311,7 @@ def int_arm_isb : ClangBuiltin<"__builtin_arm_isb">, MSBuiltin<"__isb">,
 // VFP
 
 def int_arm_get_fpscr : ClangBuiltin<"__builtin_arm_get_fpscr">,
-                       DefaultAttrsIntrinsic<[llvm_i32_ty], [], []>;
+                       DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrReadMem]>;
 def int_arm_set_fpscr : ClangBuiltin<"__builtin_arm_set_fpscr">,
                        DefaultAttrsIntrinsic<[], [llvm_i32_ty], []>;
 def int_arm_vcvtr : DefaultAttrsIntrinsic<[llvm_float_ty],
@@ -1362,6 +1362,7 @@ def int_arm_mve_vqmovn_predicated: DefaultAttrsIntrinsic<[llvm_anyvector_ty],
     llvm_i32_ty /* unsigned output */, llvm_i32_ty /* unsigned input */,
     llvm_i32_ty /* top half */, llvm_anyvector_ty /* pred */], [IntrNoMem]>;
 
+// fma_predicated returns the add operand for disabled lanes.
 def int_arm_mve_fma_predicated: DefaultAttrsIntrinsic<[llvm_anyvector_ty],
    [LLVMMatchType<0> /* mult op #1 */, LLVMMatchType<0> /* mult op #2 */,
     LLVMMatchType<0> /* addend */, llvm_anyvector_ty /* pred */], [IntrNoMem]>;

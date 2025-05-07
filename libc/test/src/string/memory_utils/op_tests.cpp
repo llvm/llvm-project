@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "memory_check_utils.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/os.h"
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT64
 #include "src/string/memory_utils/op_aarch64.h"
 #include "src/string/memory_utils/op_builtin.h"
@@ -15,7 +17,7 @@
 #include "src/string/memory_utils/op_x86.h"
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 template <typename T> struct has_head_tail {
   template <typename C> static char sfinae(decltype(&C::head_tail));
@@ -172,7 +174,7 @@ TYPED_TEST(LlvmLibcOpTest, Memset, MemsetImplementations) {
     static constexpr auto HeadTailImpl = SetAdaptor<Impl::head_tail>;
     Buffer DstBuffer(2 * kSize);
     for (size_t size = kSize; size < 2 * kSize; ++size) {
-      const char value = size % 10;
+      const uint8_t value = size % 10;
       auto dst = DstBuffer.span().subspan(0, size);
       ASSERT_TRUE(CheckMemset<HeadTailImpl>(dst, value, size));
     }
@@ -183,13 +185,20 @@ TYPED_TEST(LlvmLibcOpTest, Memset, MemsetImplementations) {
       static constexpr auto LoopImpl = SetAdaptor<Impl::loop_and_tail>;
       Buffer DstBuffer(3 * kSize);
       for (size_t size = kSize; size < 3 * kSize; ++size) {
-        const char value = size % 10;
+        const uint8_t value = size % 10;
         auto dst = DstBuffer.span().subspan(0, size);
         ASSERT_TRUE((CheckMemset<LoopImpl>(dst, value, size)));
       }
     }
   }
 }
+
+#ifdef LIBC_TARGET_ARCH_IS_X86_64
+// Prevent GCC warning due to ignored __aligned__ attributes when passing x86
+// SIMD types as template arguments.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-attributes"
+#endif // LIBC_TARGET_ARCH_IS_X86_64
 
 using BcmpImplementations = testing::TypeList<
 #ifdef LIBC_TARGET_ARCH_IS_X86_64
@@ -222,6 +231,10 @@ using BcmpImplementations = testing::TypeList<
     generic::BcmpSequence<uint8_t, uint8_t>,
     generic::BcmpSequence<uint8_t, uint8_t, uint8_t>, //
     generic::Bcmp<uint8_t>>;
+
+#ifdef LIBC_TARGET_ARCH_IS_X86_64
+#pragma GCC diagnostic pop
+#endif // LIBC_TARGET_ARCH_IS_X86_64
 
 // Adapt CheckBcmp signature to op implementation signatures.
 template <auto FnImpl>
@@ -274,8 +287,15 @@ TYPED_TEST(LlvmLibcOpTest, Bcmp, BcmpImplementations) {
   }
 }
 
-using MemcmpImplementations = testing::TypeList<
 #ifdef LIBC_TARGET_ARCH_IS_X86_64
+// Prevent GCC warning due to ignored __aligned__ attributes when passing x86
+// SIMD types as template arguments.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-attributes"
+#endif // LIBC_TARGET_ARCH_IS_X86_64
+
+using MemcmpImplementations = testing::TypeList<
+#if defined(LIBC_TARGET_ARCH_IS_X86_64) && !defined(LIBC_TARGET_OS_IS_WINDOWS)
 #ifdef __SSE2__
     generic::Memcmp<__m128i>, //
 #endif
@@ -302,6 +322,10 @@ using MemcmpImplementations = testing::TypeList<
     generic::MemcmpSequence<uint8_t, uint8_t>,
     generic::MemcmpSequence<uint8_t, uint8_t, uint8_t>,
     generic::Memcmp<uint8_t>>;
+
+#ifdef LIBC_TARGET_ARCH_IS_X86_64
+#pragma GCC diagnostic pop
+#endif // LIBC_TARGET_ARCH_IS_X86_64
 
 TYPED_TEST(LlvmLibcOpTest, Memcmp, MemcmpImplementations) {
   using Impl = ParamType;
@@ -344,4 +368,4 @@ TYPED_TEST(LlvmLibcOpTest, Memcmp, MemcmpImplementations) {
   }
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

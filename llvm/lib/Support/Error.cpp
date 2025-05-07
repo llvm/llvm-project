@@ -174,6 +174,13 @@ void report_fatal_error(Error Err, bool GenCrashDiag) {
   report_fatal_error(Twine(ErrMsg), GenCrashDiag);
 }
 
+void reportFatalInternalError(Error Err) {
+  report_fatal_error(std::move(Err), /*GenCrashDiag=*/true);
+}
+void reportFatalUsageError(Error Err) {
+  report_fatal_error(std::move(Err), /*GenCrashDiag=*/false);
+}
+
 } // end namespace llvm
 
 LLVMErrorTypeId LLVMGetErrorTypeId(LLVMErrorRef Err) {
@@ -181,6 +188,12 @@ LLVMErrorTypeId LLVMGetErrorTypeId(LLVMErrorRef Err) {
 }
 
 void LLVMConsumeError(LLVMErrorRef Err) { consumeError(unwrap(Err)); }
+
+
+
+void LLVMCantFail(LLVMErrorRef Err) {
+  cantFail(unwrap(Err));
+}
 
 char *LLVMGetErrorMessage(LLVMErrorRef Err) {
   std::string Tmp = toString(unwrap(Err));

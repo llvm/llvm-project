@@ -23,7 +23,7 @@ AST_MATCHER(StringLiteral, isOrdinary) { return Node.isOrdinary(); }
 } // namespace
 
 UseStdPrintCheck::UseStdPrintCheck(StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
+    : ClangTidyCheck(Name, Context), PP(nullptr),
       StrictMode(Options.getLocalOrGlobal("StrictMode", false)),
       PrintfLikeFunctions(utils::options::parseStringList(
           Options.get("PrintfLikeFunctions", ""))),
@@ -68,6 +68,7 @@ void UseStdPrintCheck::registerPPCallbacks(const SourceManager &SM,
                                            Preprocessor *PP,
                                            Preprocessor *ModuleExpanderPP) {
   IncludeInserter.registerPreprocessor(PP);
+  this->PP = PP;
 }
 
 static clang::ast_matchers::StatementMatcher
@@ -95,16 +96,12 @@ unusedReturnValue(clang::ast_matchers::StatementMatcher MatchedCallExpr) {
 }
 
 void UseStdPrintCheck::registerMatchers(MatchFinder *Finder) {
-  auto CharPointerType =
-      hasType(pointerType(pointee(matchers::isSimpleChar())));
   if (!PrintfLikeFunctions.empty())
     Finder->addMatcher(
         unusedReturnValue(
             callExpr(argumentCountAtLeast(1),
                      hasArgument(0, stringLiteral(isOrdinary())),
-                     callee(functionDecl(unless(cxxMethodDecl()),
-                                         hasParameter(0, CharPointerType),
-                                         matchers::matchesAnyListedName(
+                     callee(functionDecl(matchers::matchesAnyListedName(
                                              PrintfLikeFunctions))
                                 .bind("func_decl")))
                 .bind("printf")),
@@ -115,9 +112,7 @@ void UseStdPrintCheck::registerMatchers(MatchFinder *Finder) {
         unusedReturnValue(
             callExpr(argumentCountAtLeast(2),
                      hasArgument(1, stringLiteral(isOrdinary())),
-                     callee(functionDecl(unless(cxxMethodDecl()),
-                                         hasParameter(1, CharPointerType),
-                                         matchers::matchesAnyListedName(
+                     callee(functionDecl(matchers::matchesAnyListedName(
                                              FprintfLikeFunctions))
                                 .bind("func_decl")))
                 .bind("fprintf")),
@@ -136,8 +131,10 @@ void UseStdPrintCheck::check(const MatchFinder::MatchResult &Result) {
   utils::FormatStringConverter::Configuration ConverterConfig;
   ConverterConfig.StrictMode = StrictMode;
   ConverterConfig.AllowTrailingNewlineRemoval = true;
+  assert(PP && "Preprocessor should be set by registerPPCallbacks");
   utils::FormatStringConverter Converter(
-      Result.Context, Printf, FormatArgOffset, ConverterConfig, getLangOpts());
+      Result.Context, Printf, FormatArgOffset, ConverterConfig, getLangOpts(),
+      *Result.SourceManager, *PP);
   const Expr *PrintfCall = Printf->getCallee();
   const StringRef ReplacementFunction = Converter.usePrintNewlineFunction()
                                             ? ReplacementPrintlnFunction
@@ -156,7 +153,7 @@ void UseStdPrintCheck::check(const MatchFinder::MatchResult &Result) {
       << ReplacementFunction << OldFunction->getIdentifier();
 
   Diag << FixItHint::CreateReplacement(
-      CharSourceRange::getTokenRange(PrintfCall->getBeginLoc(),
+      CharSourceRange::getTokenRange(PrintfCall->getExprLoc(),
                                      PrintfCall->getEndLoc()),
       ReplacementFunction);
   Converter.applyFixes(Diag, *Result.SourceManager);

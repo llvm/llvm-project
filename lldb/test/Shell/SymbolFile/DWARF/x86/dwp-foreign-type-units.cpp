@@ -1,6 +1,4 @@
 // REQUIRES: lld
-// Is flaky on Windows.
-// UNSUPPORTED: system-windows
 
 // This test will make a type that will be compiled differently into two
 // different .dwo files in a type unit with the same type hash, but with
@@ -30,7 +28,7 @@
 // RUN:   -o "type lookup IntegerType" \
 // RUN:   -o "type lookup FloatType" \
 // RUN:   -o "type lookup CustomType" \
-// RUN:   -b %t | FileCheck %s --check-prefix=NODWP
+// RUN:   -b %t | FileCheck %s --check-prefix=NODWP --match-full-lines
 // NODWP: (lldb) type lookup IntegerType
 // NODWP-DAG: int
 // NODWP-DAG: unsigned int

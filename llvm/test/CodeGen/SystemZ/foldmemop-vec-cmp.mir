@@ -94,7 +94,7 @@ body:             |
 
 # CDB can't be used if one operand is a VR64 (and not FP64).
 # CHECK-LABEL: fun2:
-# CHECK:      ld      %f0, 160(%r15)                  # 8-byte Folded Reload
+# CHECK:      ld      %f0, 160(%r15)                  # 8-byte Reload
 # CHECK-NEXT: wfcdb   %v16, %f0
 ---
 name:            fun2
@@ -204,7 +204,7 @@ body:             |
 
 # CEB can't be used if one operand is a VR32 (and not FP32).
 # CHECK-LABEL: fun5:
-# CHECK:      lde     %f0, 164(%r15)                  # 4-byte Folded Reload
+# CHECK:      lde     %f0, 164(%r15)                  # 4-byte Reload
 # CHECK-NEXT: wfcsb   %v16, %f0
 ---
 name:            fun5
@@ -314,7 +314,7 @@ body:             |
 
 # KDB can't be used if one operand is a VR64 (and not FP64).
 # CHECK-LABEL: fun8:
-# CHECK:      ld      %f0, 160(%r15)                  # 8-byte Folded Reload
+# CHECK:      ld      %f0, 160(%r15)                  # 8-byte Reload
 # CHECK-NEXT: wfkdb   %v16, %f0
 ---
 name:            fun8
@@ -424,7 +424,7 @@ body:             |
 
 # CEB can't be used if one operand is a VR32 (and not FP32).
 # CHECK-LABEL: fun11:
-# CHECK:      lde     %f0, 164(%r15)                  # 4-byte Folded Reload
+# CHECK:      lde     %f0, 164(%r15)                  # 4-byte Reload
 # CHECK-NEXT: wfksb   %v16, %f0
 ---
 name:            fun11

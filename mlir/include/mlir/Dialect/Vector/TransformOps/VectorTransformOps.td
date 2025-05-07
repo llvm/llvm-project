@@ -32,7 +32,8 @@ def ApplyVectorToLLVMConversionPatternsOp : Op<Transform_Dialect,
 
   let arguments = (ins
       DefaultValuedAttr<BoolAttr, "false">:$reassociate_fp_reductions,
-      DefaultValuedAttr<BoolAttr, "true">:$force_32bit_vector_indices);
+      DefaultValuedAttr<BoolAttr, "true">:$force_32bit_vector_indices,
+      DefaultValuedAttr<BoolAttr, "false">:$use_vector_alignment);
   let assemblyFormat = "attr-dict";
 }
 
@@ -63,6 +64,22 @@ def ApplyRankReducingSubviewPatternsOp : Op<Transform_Dialect,
     These patterns have the effect of rewriting a vector.transfer with unit
     dimensions into a rank-reduced version thanks to subview operations.
     This is complemented by shape_cast folding patterns.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyDropUnitDimWithShapeCastPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.drop_unit_dims_with_shape_cast",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+     Apply vector patterns to fold unit dims with vector.shape_cast Ops:
+      - DropUnitDimFromElementwiseOps
+      - DropUnitDimsFromScfForOp
+      - DropUnitDimsFromTransposeOp
+
+    Excludes patterns for vector.transfer Ops. This is complemented by
+    shape_cast folding patterns.
   }];
 
   let assemblyFormat = "attr-dict";
@@ -410,7 +427,7 @@ def ApplyFoldElementwiseToVectorPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.elementwise_to_vector",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
-    Collect a set of patterns that fold elementwise op on vectors to the vector 
+    Collect a set of patterns that fold elementwise op on vectors to the vector
     dialect.
   }];
 
@@ -426,11 +443,61 @@ def ApplyVectorReductionToContractPatternsOp : Op<Transform_Dialect,
       - CombineContractBroadcast
       - CombineContractABTranspose
       - CombineContractResultTranspose
-      - ReorderCastOpsOnBroadcast
       - ReorderElementwiseOpsOnTranspose
+      - ReorderElementwiseOpsOnBroadcast
+      - ReorderCastOpsOnBroadcast
 
     These patterns have the effect of rewriting a vector.multi_reduce into a
     vector.contract.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplySinkVectorPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.sink_ops",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Patterns that remove redundant Vector Ops by re-ordering them with
+    e.g. elementwise Ops.
+
+    Example:
+    ```
+    %at = vector.transpose %a, [1, 0]: vector<4x2xf32> to vector<2x4xf32>
+    %bt = vector.transpose %b, [1, 0]: vector<4x2xf32> to vector<2x4xf32>
+    %r = arith.addf %at, %bt : vector<2x4xf32>
+    ```
+    gets converted to:
+    ```
+    %0 = arith.addf %a, %b : vector<4x2xf32>
+    %r = vector.transpose %0, [1, 0] : vector<2x4xf32>
+    ```
+    At the moment, these patterns are limited to vector.broadcast,
+    vector.transpose and vector.extract.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplySinkVectorMemPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.sink_mem_ops",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Patterns that replace redundant Vector Ops (followed by
+    `vector.load`/`vector.store`) with either vector.load/vector.store or
+    `memref.load`/`memref.store`. Currently limited to 1-element vectors.
+
+    Example:
+    ```
+    vector.load %arg0[%arg1] : memref<?xf32>, vector<4xf32>
+    vector.extract %0[1] : f32 from vector<4xf32>
+    ```
+    Gets converted to:
+    ```
+    %c1 = arith.constant 1 : index
+    %0 = arith.addi %arg1, %c1 overflow<nsw> : index
+    %1 = memref.load %arg0[%0] : memref<?xf32>
+    ```
   }];
 
   let assemblyFormat = "attr-dict";

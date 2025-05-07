@@ -30,6 +30,7 @@
 #include "mlir/Parser/Parser.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Pass/PassRegistry.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Support/Timing.h"
 #include "mlir/Support/ToolUtilities.h"
@@ -40,6 +41,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Regex.h"
@@ -107,16 +109,32 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
         cl::desc("IRDL file to register before processing the input"),
         cl::location(irdlFileFlag), cl::init(""), cl::value_desc("filename"));
 
-    static cl::opt<bool, /*ExternalStorage=*/true> enableDebuggerHook(
-        "mlir-enable-debugger-hook",
-        cl::desc("Enable Debugger hook for debugging MLIR Actions"),
-        cl::location(enableDebuggerActionHookFlag), cl::init(false));
+    static cl::opt<VerbosityLevel, /*ExternalStorage=*/true>
+        diagnosticVerbosityLevel(
+            "mlir-diagnostic-verbosity-level",
+            cl::desc("Choose level of diagnostic information"),
+            cl::location(diagnosticVerbosityLevelFlag),
+            cl::init(VerbosityLevel::ErrorsWarningsAndRemarks),
+            cl::values(
+                clEnumValN(VerbosityLevel::ErrorsOnly, "errors", "Errors only"),
+                clEnumValN(VerbosityLevel::ErrorsAndWarnings, "warnings",
+                           "Errors and warnings"),
+                clEnumValN(VerbosityLevel::ErrorsWarningsAndRemarks, "remarks",
+                           "Errors, warnings and remarks")));
+
+    static cl::opt<bool, /*ExternalStorage=*/true> disableDiagnosticNotes(
+        "mlir-disable-diagnostic-notes", cl::desc("Disable diagnostic notes."),
+        cl::location(disableDiagnosticNotesFlag), cl::init(false));
 
     static cl::opt<bool, /*ExternalStorage=*/true> explicitModule(
         "no-implicit-module",
         cl::desc("Disable implicit addition of a top-level module op during "
                  "parsing"),
         cl::location(useExplicitModuleFlag), cl::init(false));
+
+    static cl::opt<bool, /*ExternalStorage=*/true> listPasses(
+        "list-passes", cl::desc("Print the list of registered passes and exit"),
+        cl::location(listPassesFlag), cl::init(false));
 
     static cl::opt<bool, /*ExternalStorage=*/true> runReproducer(
         "run-reproducer", cl::desc("Run the pipeline stored in the reproducer"),
@@ -128,7 +146,8 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
         cl::location(showDialectsFlag), cl::init(false));
 
     static cl::opt<std::string, /*ExternalStorage=*/true> splitInputFile{
-        "split-input-file", llvm::cl::ValueOptional,
+        "split-input-file",
+        llvm::cl::ValueOptional,
         cl::callback([&](const std::string &str) {
           // Implicit value: use default marker if flag was used without value.
           if (str.empty())
@@ -136,23 +155,44 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
         }),
         cl::desc("Split the input file into chunks using the given or "
                  "default marker and process each chunk independently"),
-        cl::location(splitInputFileFlag), cl::init("")};
+        cl::location(splitInputFileFlag),
+        cl::init("")};
 
     static cl::opt<std::string, /*ExternalStorage=*/true> outputSplitMarker(
         "output-split-marker",
         cl::desc("Split marker to use for merging the ouput"),
         cl::location(outputSplitMarkerFlag), cl::init(kDefaultSplitMarker));
 
-    static cl::opt<bool, /*ExternalStorage=*/true> verifyDiagnostics(
-        "verify-diagnostics",
-        cl::desc("Check that emitted diagnostics match "
-                 "expected-* lines on the corresponding line"),
-        cl::location(verifyDiagnosticsFlag), cl::init(false));
+    static cl::opt<SourceMgrDiagnosticVerifierHandler::Level,
+                   /*ExternalStorage=*/true>
+        verifyDiagnostics{
+            "verify-diagnostics", llvm::cl::ValueOptional,
+            cl::desc("Check that emitted diagnostics match expected-* lines on "
+                     "the corresponding line"),
+            cl::location(verifyDiagnosticsFlag),
+            cl::values(
+                clEnumValN(SourceMgrDiagnosticVerifierHandler::Level::All,
+                           "all",
+                           "Check all diagnostics (expected, unexpected, "
+                           "near-misses)"),
+                // Implicit value: when passed with no arguments, e.g.
+                // `--verify-diagnostics` or `--verify-diagnostics=`.
+                clEnumValN(SourceMgrDiagnosticVerifierHandler::Level::All, "",
+                           "Check all diagnostics (expected, unexpected, "
+                           "near-misses)"),
+                clEnumValN(
+                    SourceMgrDiagnosticVerifierHandler::Level::OnlyExpected,
+                    "only-expected", "Check only expected diagnostics"))};
 
     static cl::opt<bool, /*ExternalStorage=*/true> verifyPasses(
         "verify-each",
         cl::desc("Run the verifier after each transformation pass"),
         cl::location(verifyPassesFlag), cl::init(true));
+
+    static cl::opt<bool, /*ExternalStorage=*/true> disableVerifyOnParsing(
+        "mlir-very-unsafe-disable-verifier-on-parsing",
+        cl::desc("Disable the verifier on parsing (very unsafe)"),
+        cl::location(disableVerifierOnParsingFlag), cl::init(false));
 
     static cl::opt<bool, /*ExternalStorage=*/true> verifyRoundtrip(
         "verify-roundtrip",
@@ -196,6 +236,43 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
   /// Pointer to static dialectPlugins variable in constructor, needed by
   /// setDialectPluginsCallback(DialectRegistry&).
   cl::list<std::string> *dialectPlugins = nullptr;
+};
+
+/// A scoped diagnostic handler that suppresses certain diagnostics based on
+/// the verbosity level and whether the diagnostic is a note.
+class DiagnosticFilter : public ScopedDiagnosticHandler {
+public:
+  DiagnosticFilter(MLIRContext *ctx, VerbosityLevel verbosityLevel,
+                   bool showNotes = true)
+      : ScopedDiagnosticHandler(ctx) {
+    setHandler([verbosityLevel, showNotes](Diagnostic &diag) {
+      auto severity = diag.getSeverity();
+      switch (severity) {
+      case DiagnosticSeverity::Error:
+        // failure indicates that the error is not handled by the filter and
+        // goes through to the default handler. Therefore, the error can be
+        // successfully printed.
+        return failure();
+      case DiagnosticSeverity::Warning:
+        if (verbosityLevel == VerbosityLevel::ErrorsOnly)
+          return success();
+        else
+          return failure();
+      case DiagnosticSeverity::Remark:
+        if (verbosityLevel == VerbosityLevel::ErrorsOnly ||
+            verbosityLevel == VerbosityLevel::ErrorsAndWarnings)
+          return success();
+        else
+          return failure();
+      case DiagnosticSeverity::Note:
+        if (showNotes)
+          return failure();
+        else
+          return success();
+      }
+      llvm_unreachable("Unknown diagnostic severity");
+    });
+  }
 };
 } // namespace
 
@@ -305,10 +382,9 @@ static LogicalResult doVerifyRoundTrip(Operation *op,
                 OpPrintingFlags().printGenericOpForm().enableDebugInfo());
     }
     FallbackAsmResourceMap fallbackResourceMap;
-    ParserConfig parseConfig(&roundtripContext, /*verifyAfterParse=*/true,
+    ParserConfig parseConfig(&roundtripContext, config.shouldVerifyOnParsing(),
                              &fallbackResourceMap);
-    roundtripModule =
-        parseSourceString<Operation *>(ostream.str(), parseConfig);
+    roundtripModule = parseSourceString<Operation *>(buffer, parseConfig);
     if (!roundtripModule) {
       op->emitOpError() << "failed to parse " << testType
                         << " content back, cannot verify round-trip.\n";
@@ -373,7 +449,7 @@ performActions(raw_ostream &os,
   // untouched.
   PassReproducerOptions reproOptions;
   FallbackAsmResourceMap fallbackResourceMap;
-  ParserConfig parseConfig(context, /*verifyAfterParse=*/true,
+  ParserConfig parseConfig(context, config.shouldVerifyOnParsing(),
                            &fallbackResourceMap);
   if (config.shouldRunReproducer())
     reproOptions.attachResourceParser(parseConfig);
@@ -470,10 +546,14 @@ static LogicalResult processBuffer(raw_ostream &os,
   // otherwise just perform the actions without worrying about it.
   if (!config.shouldVerifyDiagnostics()) {
     SourceMgrDiagnosticHandler sourceMgrHandler(*sourceMgr, &context);
+    DiagnosticFilter diagnosticFilter(&context,
+                                      config.getDiagnosticVerbosityLevel(),
+                                      config.shouldShowNotes());
     return performActions(os, sourceMgr, &context, config);
   }
 
-  SourceMgrDiagnosticVerifierHandler sourceMgrHandler(*sourceMgr, &context);
+  SourceMgrDiagnosticVerifierHandler sourceMgrHandler(
+      *sourceMgr, &context, config.verifyDiagnosticsLevel());
 
   // Do any processing requested by command line flags.  We don't care whether
   // these actions succeed or fail, we only care what diagnostics they produce
@@ -522,12 +602,20 @@ static LogicalResult printRegisteredDialects(DialectRegistry &registry) {
   return success();
 }
 
+static LogicalResult printRegisteredPassesAndReturn() {
+  mlir::printRegisteredPasses();
+  return success();
+}
+
 LogicalResult mlir::MlirOptMain(llvm::raw_ostream &outputStream,
                                 std::unique_ptr<llvm::MemoryBuffer> buffer,
                                 DialectRegistry &registry,
                                 const MlirOptMainConfig &config) {
   if (config.shouldShowDialects())
     return printRegisteredDialects(registry);
+
+  if (config.shouldListPasses())
+    return printRegisteredPassesAndReturn();
 
   // The split-input-file mode is a very specific mode that slices the file
   // up into small pieces and checks each independently.
@@ -564,6 +652,9 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv,
 
   if (config.shouldShowDialects())
     return printRegisteredDialects(registry);
+
+  if (config.shouldListPasses())
+    return printRegisteredPassesAndReturn();
 
   // When reading from stdin and the input is a tty, it is often a user mistake
   // and the process "appears to be stuck". Print a message to let the user know

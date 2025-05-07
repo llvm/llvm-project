@@ -15,8 +15,7 @@
 #define LLVM_ANALYSIS_LOOPACCESSANALYSIS_H
 
 #include "llvm/ADT/EquivalenceClasses.h"
-#include "llvm/Analysis/LoopAnalysisManager.h"
-#include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include <optional>
 #include <variant>
@@ -26,11 +25,8 @@ namespace llvm {
 class AAResults;
 class DataLayout;
 class Loop;
-class LoopAccessInfo;
 class raw_ostream;
-class SCEV;
-class SCEVUnionPredicate;
-class Value;
+class TargetTransformInfo;
 
 /// Collection of parameters shared beetween the Loop Vectorizer and the
 /// Loop Access Analysis.
@@ -199,9 +195,8 @@ public:
   /// Check whether the dependencies between the accesses are safe.
   ///
   /// Only checks sets with elements in \p CheckDeps.
-  bool areDepsSafe(DepCandidates &AccessSets, MemAccessInfoList &CheckDeps,
-                   const DenseMap<Value *, SmallVector<const Value *, 16>>
-                       &UnderlyingObjects);
+  bool areDepsSafe(const DepCandidates &AccessSets,
+                   const MemAccessInfoList &CheckDeps);
 
   /// No memory dependence was encountered that would inhibit
   /// vectorization.
@@ -219,6 +214,21 @@ public:
   /// simultaneously, multiplied by the size of the element in bits.
   uint64_t getMaxSafeVectorWidthInBits() const {
     return MaxSafeVectorWidthInBits;
+  }
+
+  /// Return true if there are no store-load forwarding dependencies.
+  bool isSafeForAnyStoreLoadForwardDistances() const {
+    return MaxStoreLoadForwardSafeDistanceInBits ==
+           std::numeric_limits<uint64_t>::max();
+  }
+
+  /// Return safe power-of-2 number of elements, which do not prevent store-load
+  /// forwarding, multiplied by the size of the elements in bits.
+  uint64_t getStoreLoadForwardSafeDistanceInBits() const {
+    assert(!isSafeForAnyStoreLoadForwardDistances() &&
+           "Expected the distance, that prevent store-load forwarding, to be "
+           "set.");
+    return MaxStoreLoadForwardSafeDistanceInBits;
   }
 
   /// In same cases when the dependency check fails we can still
@@ -269,7 +279,8 @@ public:
 
   const Loop *getInnermostLoop() const { return InnermostLoop; }
 
-  DenseMap<const SCEV *, std::pair<const SCEV *, const SCEV *>> &
+  DenseMap<std::pair<const SCEV *, Type *>,
+           std::pair<const SCEV *, const SCEV *>> &
   getPointerBounds() {
     return PointerBounds;
   }
@@ -308,6 +319,11 @@ private:
   /// restrictive.
   uint64_t MaxSafeVectorWidthInBits = -1U;
 
+  /// Maximum power-of-2 number of elements, which do not prevent store-load
+  /// forwarding, multiplied by the size of the elements in bits.
+  uint64_t MaxStoreLoadForwardSafeDistanceInBits =
+      std::numeric_limits<uint64_t>::max();
+
   /// If we see a non-constant dependence distance we can still try to
   /// vectorize this loop with runtime checks.
   bool FoundNonConstantDistanceDependence = false;
@@ -334,7 +350,12 @@ private:
 
   /// Mapping of SCEV expressions to their expanded pointer bounds (pair of
   /// start and end pointer expressions).
-  DenseMap<const SCEV *, std::pair<const SCEV *, const SCEV *>> PointerBounds;
+  DenseMap<std::pair<const SCEV *, Type *>,
+           std::pair<const SCEV *, const SCEV *>>
+      PointerBounds;
+
+  /// Cache for the loop guards of InnermostLoop.
+  std::optional<ScalarEvolution::LoopGuards> LoopGuards;
 
   /// Check whether there is a plausible dependence between the two
   /// accesses.
@@ -348,18 +369,16 @@ private:
   /// element access it records this distance in \p MinDepDistBytes (if this
   /// distance is smaller than any other distance encountered so far).
   /// Otherwise, this function returns true signaling a possible dependence.
-  Dependence::DepType
-  isDependent(const MemAccessInfo &A, unsigned AIdx, const MemAccessInfo &B,
-              unsigned BIdx,
-              const DenseMap<Value *, SmallVector<const Value *, 16>>
-                  &UnderlyingObjects);
+  Dependence::DepType isDependent(const MemAccessInfo &A, unsigned AIdx,
+                                  const MemAccessInfo &B, unsigned BIdx);
 
   /// Check whether the data dependence could prevent store-load
   /// forwarding.
   ///
   /// \return false if we shouldn't vectorize at all or avoid larger
   /// vectorization factors by limiting MinDepDistBytes.
-  bool couldPreventStoreLoadForward(uint64_t Distance, uint64_t TypeByteSize);
+  bool couldPreventStoreLoadForward(uint64_t Distance, uint64_t TypeByteSize,
+                                    unsigned CommonStride = 0);
 
   /// Updates the current safety status with \p S. We can go from Safe to
   /// either PossiblySafeWithRtChecks or Unsafe and from
@@ -368,16 +387,28 @@ private:
 
   struct DepDistanceStrideAndSizeInfo {
     const SCEV *Dist;
-    uint64_t StrideA;
-    uint64_t StrideB;
+
+    /// Strides here are scaled; i.e. in bytes, taking the size of the
+    /// underlying type into account.
+    uint64_t MaxStride;
+    std::optional<uint64_t> CommonStride;
+
+    bool ShouldRetryWithRuntimeCheck;
+
+    /// TypeByteSize is either the common store size of both accesses, or 0 when
+    /// store sizes mismatch.
     uint64_t TypeByteSize;
+
     bool AIsWrite;
     bool BIsWrite;
 
-    DepDistanceStrideAndSizeInfo(const SCEV *Dist, uint64_t StrideA,
-                                 uint64_t StrideB, uint64_t TypeByteSize,
-                                 bool AIsWrite, bool BIsWrite)
-        : Dist(Dist), StrideA(StrideA), StrideB(StrideB),
+    DepDistanceStrideAndSizeInfo(const SCEV *Dist, uint64_t MaxStride,
+                                 std::optional<uint64_t> CommonStride,
+                                 bool ShouldRetryWithRuntimeCheck,
+                                 uint64_t TypeByteSize, bool AIsWrite,
+                                 bool BIsWrite)
+        : Dist(Dist), MaxStride(MaxStride), CommonStride(CommonStride),
+          ShouldRetryWithRuntimeCheck(ShouldRetryWithRuntimeCheck),
           TypeByteSize(TypeByteSize), AIsWrite(AIsWrite), BIsWrite(BIsWrite) {}
   };
 
@@ -386,14 +417,13 @@ private:
   /// there's no dependence or the analysis fails. Outlined to lambda to limit
   /// he scope of various temporary variables, like A/BPtr, StrideA/BPtr and
   /// others. Returns either the dependence result, if it could already be
-  /// determined, or a struct containing (Distance, Stride, TypeSize, AIsWrite,
-  /// BIsWrite).
+  /// determined, or a DepDistanceStrideAndSizeInfo struct, noting that
+  /// TypeByteSize could be 0 when store sizes mismatch, and this should be
+  /// checked in the caller.
   std::variant<Dependence::DepType, DepDistanceStrideAndSizeInfo>
-  getDependenceDistanceStrideAndSize(
-      const MemAccessInfo &A, Instruction *AInst, const MemAccessInfo &B,
-      Instruction *BInst,
-      const DenseMap<Value *, SmallVector<const Value *, 16>>
-          &UnderlyingObjects);
+  getDependenceDistanceStrideAndSize(const MemAccessInfo &A, Instruction *AInst,
+                                     const MemAccessInfo &B,
+                                     Instruction *BInst);
 };
 
 class RuntimePointerChecking;
@@ -402,14 +432,15 @@ class RuntimePointerChecking;
 struct RuntimeCheckingPtrGroup {
   /// Create a new pointer checking group containing a single
   /// pointer, with index \p Index in RtCheck.
-  RuntimeCheckingPtrGroup(unsigned Index, RuntimePointerChecking &RtCheck);
+  RuntimeCheckingPtrGroup(unsigned Index,
+                          const RuntimePointerChecking &RtCheck);
 
   /// Tries to add the pointer recorded in RtCheck at index
   /// \p Index to this pointer checking group. We can only add a pointer
   /// to a checking group if we will still be able to get
   /// the upper and lower bounds of the check. Returns true in case
   /// of success, false otherwise.
-  bool addPointer(unsigned Index, RuntimePointerChecking &RtCheck);
+  bool addPointer(unsigned Index, const RuntimePointerChecking &RtCheck);
   bool addPointer(unsigned Index, const SCEV *Start, const SCEV *End,
                   unsigned AS, bool NeedsFreeze, ScalarEvolution &SE);
 
@@ -486,8 +517,11 @@ public:
   /// Reset the state of the pointer runtime information.
   void reset() {
     Need = false;
+    CanUseDiffCheck = true;
     Pointers.clear();
     Checks.clear();
+    DiffChecks.clear();
+    CheckingGroups.clear();
   }
 
   /// Insert a pointer and calculate the start and end SCEVs.
@@ -715,8 +749,8 @@ public:
 private:
   /// Analyze the loop. Returns true if all memory access in the loop can be
   /// vectorized.
-  bool analyzeLoop(AAResults *AA, LoopInfo *LI, const TargetLibraryInfo *TLI,
-                   DominatorTree *DT);
+  bool analyzeLoop(AAResults *AA, const LoopInfo *LI,
+                   const TargetLibraryInfo *TLI, DominatorTree *DT);
 
   /// Check if the structure of the loop allows it to be analyzed by this
   /// pass.
@@ -727,8 +761,8 @@ private:
   /// LAA does not directly emits the remarks.  Instead it stores it which the
   /// client can retrieve and presents as its own analysis
   /// (e.g. -Rpass-analysis=loop-vectorize).
-  OptimizationRemarkAnalysis &recordAnalysis(StringRef RemarkName,
-                                             Instruction *Instr = nullptr);
+  OptimizationRemarkAnalysis &
+  recordAnalysis(StringRef RemarkName, const Instruction *Instr = nullptr);
 
   /// Collect memory access with loop invariant strides.
   ///
@@ -794,7 +828,8 @@ replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
                           Value *Ptr);
 
 /// If the pointer has a constant stride return it in units of the access type
-/// size.  Otherwise return std::nullopt.
+/// size. If the pointer is loop-invariant, return 0. Otherwise return
+/// std::nullopt.
 ///
 /// Ensure that it does not wrap in the address space, assuming the predicate
 /// associated with \p PSE is true.
@@ -842,6 +877,25 @@ bool sortPtrAccesses(ArrayRef<Value *> VL, Type *ElemTy, const DataLayout &DL,
 /// This is a simple API that does not depend on the analysis pass.
 bool isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
                          ScalarEvolution &SE, bool CheckType = true);
+
+/// Calculate Start and End points of memory access.
+/// Let's assume A is the first access and B is a memory access on N-th loop
+/// iteration. Then B is calculated as:
+///   B = A + Step*N .
+/// Step value may be positive or negative.
+/// N is a calculated back-edge taken count:
+///     N = (TripCount > 0) ? RoundDown(TripCount -1 , VF) : 0
+/// Start and End points are calculated in the following way:
+/// Start = UMIN(A, B) ; End = UMAX(A, B) + SizeOfElt,
+/// where SizeOfElt is the size of single memory access in bytes.
+///
+/// There is no conflict when the intervals are disjoint:
+/// NoConflict = (P2.Start >= P1.End) || (P1.Start >= P2.End)
+std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
+    const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy, const SCEV *MaxBECount,
+    ScalarEvolution *SE,
+    DenseMap<std::pair<const SCEV *, Type *>,
+             std::pair<const SCEV *, const SCEV *>> *PointerBounds);
 
 class LoopAccessInfoManager {
   /// The cache.

@@ -180,6 +180,8 @@ class SourceCoverageView {
   /// on display.
   std::vector<InstantiationView> InstantiationSubViews;
 
+  bool BinaryCounters;
+
   /// Get the first uncovered line number for the source file.
   unsigned getFirstUncoveredLineNo();
 
@@ -266,6 +268,14 @@ protected:
   /// digits.
   static std::string formatCount(uint64_t N);
 
+  uint64_t BinaryCount(uint64_t N) const {
+    return (N && BinaryCounters ? 1 : N);
+  }
+
+  std::string formatBinaryCount(uint64_t N) const {
+    return formatCount(BinaryCount(N));
+  }
+
   /// Check if region marker output is expected for a line.
   bool shouldRenderRegionMarkers(const LineCoverageStats &LCS) const;
 
@@ -276,7 +286,9 @@ protected:
                      const CoverageViewOptions &Options,
                      CoverageData &&CoverageInfo)
       : SourceName(SourceName), File(File), Options(Options),
-        CoverageInfo(std::move(CoverageInfo)) {}
+        CoverageInfo(std::move(CoverageInfo)),
+        BinaryCounters(Options.BinaryCounters ||
+                       CoverageInfo.getSingleByteCoverage()) {}
 
 public:
   static std::unique_ptr<SourceCoverageView>

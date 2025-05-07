@@ -52,7 +52,7 @@ static Value castBuffer(OpBuilder &b, Value buffer, Type type) {
 static bool doesNotAliasExternalValue(Value value, Region *region,
                                       ValueRange exceptions,
                                       const OneShotAnalysisState &state) {
-  assert(region->getBlocks().size() == 1 &&
+  assert(llvm::hasSingleElement(region->getBlocks()) &&
          "expected region with single block");
   bool result = true;
   state.applyOnAliases(value, [&](Value alias) {
@@ -203,7 +203,8 @@ struct ExecuteRegionOpInterface
     for (const auto &it : llvm::enumerate(executeRegionOp->getResultTypes())) {
       if (isa<TensorType>(it.value())) {
         newResults.push_back(rewriter.create<bufferization::ToTensorOp>(
-            executeRegionOp.getLoc(), newOp->getResult(it.index())));
+            executeRegionOp.getLoc(), it.value(),
+            newOp->getResult(it.index())));
       } else {
         newResults.push_back(newOp->getResult(it.index()));
       }
@@ -391,7 +392,6 @@ struct IndexSwitchOpInterface
     int64_t resultNum = cast<OpResult>(value).getResultNumber();
 
     // Helper function to get buffer type of a case.
-    SmallVector<BaseMemRefType> yieldedTypes;
     auto getYieldedBufferType = [&](Block &b) -> FailureOr<BaseMemRefType> {
       auto yieldOp = cast<scf::YieldOp>(b.getTerminator());
       Value yieldedValue = yieldOp->getOperand(resultNum);
@@ -485,15 +485,17 @@ getBuffers(RewriterBase &rewriter, const MutableOperandRange &operands,
 /// ToTensorOps, so that the block body can be moved over to the new op.
 static SmallVector<Value>
 getBbArgReplacements(RewriterBase &rewriter, Block::BlockArgListType bbArgs,
+                     Block::BlockArgListType oldBbArgs,
                      const DenseSet<int64_t> &tensorIndices) {
   SmallVector<Value> result;
   for (const auto &it : llvm::enumerate(bbArgs)) {
     size_t idx = it.index();
     Value val = it.value();
     if (tensorIndices.contains(idx)) {
-      result.push_back(
-          rewriter.create<bufferization::ToTensorOp>(val.getLoc(), val)
-              .getResult());
+      result.push_back(rewriter
+                           .create<bufferization::ToTensorOp>(
+                               val.getLoc(), oldBbArgs[idx].getType(), val)
+                           .getResult());
     } else {
       result.push_back(val);
     }
@@ -649,7 +651,7 @@ struct ForOpInterface
     if (failed(bufferizableOp.resolveTensorOpOperandConflicts(rewriter, state)))
       return failure();
 
-    if (!state.getOptions().enforceAliasingInvariants)
+    if (state.getOptions().copyBeforeWrite)
       return success();
 
     // According to the `getAliasing...` implementations, a bufferized OpResult
@@ -762,7 +764,8 @@ struct ForOpInterface
     // iter_args of the new loop in ToTensorOps.
     rewriter.setInsertionPointToStart(loopBody);
     SmallVector<Value> iterArgs =
-        getBbArgReplacements(rewriter, newForOp.getRegionIterArgs(), indices);
+        getBbArgReplacements(rewriter, newForOp.getRegionIterArgs(),
+                             forOp.getRegionIterArgs(), indices);
     iterArgs.insert(iterArgs.begin(), newForOp.getInductionVar());
 
     // Move loop body to new loop.
@@ -889,7 +892,7 @@ struct WhileOpInterface
     if (failed(bufferizableOp.resolveTensorOpOperandConflicts(rewriter, state)))
       return failure();
 
-    if (!state.getOptions().enforceAliasingInvariants)
+    if (state.getOptions().copyBeforeWrite)
       return success();
 
     // According to the `getAliasing...` implementations, a bufferized OpResult
@@ -998,16 +1001,18 @@ struct WhileOpInterface
     // The old block uses tensors, so wrap the (memref) bbArgs of the new block
     // in ToTensorOps.
     rewriter.setInsertionPointToStart(newBeforeBody);
-    SmallVector<Value> newBeforeArgs = getBbArgReplacements(
-        rewriter, newWhileOp.getBeforeArguments(), indicesBefore);
+    SmallVector<Value> newBeforeArgs =
+        getBbArgReplacements(rewriter, newWhileOp.getBeforeArguments(),
+                             whileOp.getBeforeArguments(), indicesBefore);
     rewriter.mergeBlocks(whileOp.getBeforeBody(), newBeforeBody, newBeforeArgs);
 
     // Set up new iter_args and move the loop body block to the new op.
     // The old block uses tensors, so wrap the (memref) bbArgs of the new block
     // in ToTensorOps.
     rewriter.setInsertionPointToStart(newAfterBody);
-    SmallVector<Value> newAfterArgs = getBbArgReplacements(
-        rewriter, newWhileOp.getAfterArguments(), indicesAfter);
+    SmallVector<Value> newAfterArgs =
+        getBbArgReplacements(rewriter, newWhileOp.getAfterArguments(),
+                             whileOp.getAfterArguments(), indicesAfter);
     rewriter.mergeBlocks(whileOp.getAfterBody(), newAfterBody, newAfterArgs);
 
     // Replace loop results.
@@ -1180,18 +1185,6 @@ struct YieldOpInterface
   }
 };
 
-/// Return `true` if the given loop may have 0 iterations.
-bool mayHaveZeroIterations(scf::ForallOp forallOp) {
-  for (auto [lb, ub] : llvm::zip(forallOp.getMixedLowerBound(),
-                                 forallOp.getMixedUpperBound())) {
-    std::optional<int64_t> lbConst = getConstantIntValue(lb);
-    std::optional<int64_t> ubConst = getConstantIntValue(ub);
-    if (!lbConst.has_value() || !ubConst.has_value() || *lbConst >= *ubConst)
-      return true;
-  }
-  return false;
-}
-
 /// Bufferization of ForallOp. This also bufferizes the terminator of the
 /// region. There are op interfaces for the terminators (InParallelOp
 /// and ParallelInsertSliceOp), but these are only used during analysis. Not
@@ -1201,17 +1194,11 @@ struct ForallOpInterface
                                                     ForallOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
-    auto forallOp = cast<ForallOp>(op);
-
-    // If the loop has zero iterations, the results of the op are their
-    // corresponding shared_outs, meaning that the shared_outs bufferize to a
-    // read.
-    if (mayHaveZeroIterations(forallOp))
-      return true;
-
-    // scf::ForallOp alone doesn't bufferize to a memory read, one of the
-    // uses of its matching bbArg may.
-    return state.isValueRead(forallOp.getTiedBlockArgument(&opOperand));
+    // All tensor operands to `scf.forall` are `shared_outs` and all
+    // shared outs are assumed to be read by the loop. This does not
+    // account for the case where the entire value is over-written,
+    // but being conservative here.
+    return true;
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
@@ -1253,8 +1240,8 @@ struct ForallOpInterface
              forallOp.getBody()->getArguments().drop_front(rank), buffers)) {
       BlockArgument bbArg = std::get<0>(it);
       Value buffer = std::get<1>(it);
-      Value bufferAsTensor =
-          rewriter.create<ToTensorOp>(forallOp.getLoc(), buffer);
+      Value bufferAsTensor = rewriter.create<ToTensorOp>(
+          forallOp.getLoc(), bbArg.getType(), buffer);
       bbArg.replaceAllUsesWith(bufferAsTensor);
     }
 

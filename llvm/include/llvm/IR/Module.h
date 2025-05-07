@@ -31,6 +31,7 @@
 #include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
@@ -62,7 +63,7 @@ class VersionTuple;
 /// constant references to global variables in the module.  When a global
 /// variable is destroyed, it should have no entries in the GlobalList.
 /// The main container class for the LLVM Intermediate Representation.
-class LLVM_EXTERNAL_VISIBILITY Module {
+class LLVM_ABI Module {
   /// @name Types And Enumerations
   /// @{
 public:
@@ -158,11 +159,6 @@ public:
   /// converted result in MFB.
   static bool isValidModFlagBehavior(Metadata *MD, ModFlagBehavior &MFB);
 
-  /// Check if the given module flag metadata represents a valid module flag,
-  /// and store the flag behavior, the key string and the value metadata.
-  static bool isValidModuleFlag(const MDNode &ModFlag, ModFlagBehavior &MFB,
-                                MDString *&Key, Metadata *&Val);
-
   struct ModuleFlagEntry {
     ModFlagBehavior Behavior;
     MDString *Key;
@@ -194,8 +190,10 @@ private:
   std::string ModuleID;           ///< Human readable identifier for the module
   std::string SourceFileName;     ///< Original source file name for module,
                                   ///< recorded in bitcode.
-  std::string TargetTriple;       ///< Platform target triple Module compiled on
-                                  ///< Format: (arch)(sub)-(vendor)-(sys0-(abi)
+  /// Platform target triple Module compiled on
+  /// Format: (arch)(sub)-(vendor)-(sys)-(abi)
+  // FIXME: Default construction is not the same as empty triple :(
+  Triple TargetTriple = Triple("");
   NamedMDSymTabType NamedMDSymTab;  ///< NamedMDNode names.
   DataLayout DL;                  ///< DataLayout associated with the module
   StringMap<unsigned>
@@ -206,6 +204,9 @@ private:
                              ///< based on unnamed types. The combination of
                              ///< ID and FunctionType maps to the extension that
                              ///< is used to make the intrinsic name unique.
+
+  /// llvm.module.flags metadata
+  NamedMDNode *ModuleFlags = nullptr;
 
   friend class Constant;
 
@@ -258,9 +259,12 @@ public:
   /// The module destructor. This will dropAllReferences.
   ~Module();
 
-/// @}
-/// @name Module Level Accessors
-/// @{
+  /// Move assignment.
+  Module &operator=(Module &&Other);
+
+  /// @}
+  /// @name Module Level Accessors
+  /// @{
 
   /// Get the module identifier which is, essentially, the name of the module.
   /// @returns the module identifier as a string
@@ -293,8 +297,7 @@ public:
   const DataLayout &getDataLayout() const { return DL; }
 
   /// Get the target triple which is a string describing the target host.
-  /// @returns a string containing the target triple.
-  const std::string &getTargetTriple() const { return TargetTriple; }
+  const Triple &getTargetTriple() const { return TargetTriple; }
 
   /// Get the global data context.
   /// @returns LLVMContext - a container for LLVM's global information
@@ -337,7 +340,7 @@ public:
   void setDataLayout(const DataLayout &Other);
 
   /// Set the target triple.
-  void setTargetTriple(StringRef T) { TargetTriple = std::string(T); }
+  void setTargetTriple(Triple T) { TargetTriple = std::move(T); }
 
   /// Set the module-scope inline assembly blocks.
   /// A trailing newline is added if the input doesn't have one.
@@ -502,7 +505,7 @@ public:
 
   /// Return the first NamedMDNode in the module with the specified name. This
   /// method returns null if a NamedMDNode with the specified name is not found.
-  NamedMDNode *getNamedMetadata(const Twine &Name) const;
+  NamedMDNode *getNamedMetadata(StringRef Name) const;
 
   /// Return the named MDNode in the module with the specified name. This method
   /// returns a new NamedMDNode if a NamedMDNode with the specified name is not
@@ -533,7 +536,7 @@ public:
 
   /// Returns the NamedMDNode in the module that represents module-level flags.
   /// This method returns null if there are no module-level flags.
-  NamedMDNode *getModuleFlagsMetadata() const;
+  NamedMDNode *getModuleFlagsMetadata() const { return ModuleFlags; }
 
   /// Returns the NamedMDNode in the module that represents module-level flags.
   /// If module-level flags aren't found, it creates the named metadata that
@@ -874,15 +877,6 @@ public:
   }
 /// @}
 
-  /// Destroy ConstantArrays in LLVMContext if they are not used.
-  /// ConstantArrays constructed during linking can cause quadratic memory
-  /// explosion. Releasing all unused constants can cause a 20% LTO compile-time
-  /// slowdown for a large application.
-  ///
-  /// NOTE: Constants are currently owned by LLVMContext. This can then only
-  /// be called where all uses of the LLVMContext are understood.
-  void dropTriviallyDeadConstantArrays();
-
 /// @name Utility functions for printing and dumping Module objects
 /// @{
 
@@ -960,10 +954,10 @@ public:
   /// @name Utility function for querying and setting the large data threshold
   /// @{
 
-  /// Returns the code model (tiny, small, kernel, medium or large model)
+  /// Returns the large data threshold.
   std::optional<uint64_t> getLargeDataThreshold() const;
 
-  /// Set the code model (tiny, small, kernel, medium or large)
+  /// Set the large data threshold.
   void setLargeDataThreshold(uint64_t Threshold);
   /// @}
 
@@ -1064,6 +1058,9 @@ public:
 
   /// Set the target variant version build SDK version metadata.
   void setDarwinTargetVariantSDKVersion(VersionTuple Version);
+
+  /// Returns target-abi from MDString, null if target-abi is absent.
+  StringRef getTargetABIFromMD();
 };
 
 /// Given "llvm.used" or "llvm.compiler.used" as a global name, collect the

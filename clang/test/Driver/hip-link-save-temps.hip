@@ -39,10 +39,10 @@
 // CHECK-NOT: {{".*/opt"}}
 // CHECK-NOT: {{".*/llc"}}
 // CHECK: "{{.*lld.*}}" {{.*}} "-plugin-opt=-amdgpu-internalize-symbols"
-// CHECK-SAME: "-o" "a.out-hip-amdgcn-amd-amdhsa-gfx900" "obj1-hip-amdgcn-amd-amdhsa-gfx900.o" "obj2-hip-amdgcn-amd-amdhsa-gfx900.o"
+// CHECK-SAME: "-o" "[[HIPFB1:.+]]" "obj1-hip-amdgcn-amd-amdhsa-gfx900.o" "obj2-hip-amdgcn-amd-amdhsa-gfx900.o"
 // CHECK: "{{.*lld.*}}" {{.*}} "-plugin-opt=-amdgpu-internalize-symbols"
-// CHECK-SAME: "-o" "a.out-hip-amdgcn-amd-amdhsa-gfx906" "obj1-hip-amdgcn-amd-amdhsa-gfx906.o" "obj2-hip-amdgcn-amd-amdhsa-gfx906.o"
-// CHECK: {{".*llvm-mc.*"}} "-o" "[[OBJBUNDLE:.*.o]]" "{{.*}}.mcin" "--filetype=obj"
+// CHECK-SAME: "-o" "[[HIPFB2:.+]]" "obj1-hip-amdgcn-amd-amdhsa-gfx906.o" "obj2-hip-amdgcn-amd-amdhsa-gfx906.o"
+// CHECK: "{{.*clang.*}}" "-target" "x86_64-unknown-linux-gnu" "-o" "[[OBJBUNDLE:.+.o]]" "-x" "assembler" "{{.*}}.mcin" "-c"
 // OUT: "{{.*ld.*}}" {{.*}} "-o" "executable" {{.*}} "[[OBJBUNDLE]]"
 // NOUT: "{{.*ld.*}}" {{.*}} "-o" "a.out" {{.*}} "[[OBJBUNDLE]]"
 // SLO: "{{.*llvm-ar.*}}" "rcsD" "libTest.a" {{.*}} "[[OBJBUNDLE]]"

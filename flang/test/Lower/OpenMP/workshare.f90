@@ -6,7 +6,7 @@ subroutine sb1(arr)
   integer :: arr(:)
 !CHECK: omp.parallel  {
   !$omp parallel
-!CHECK: omp.single  {
+!CHECK: omp.workshare {
   !$omp workshare
     arr = 0
   !$omp end workshare
@@ -20,7 +20,7 @@ subroutine sb2(arr)
   integer :: arr(:)
 !CHECK: omp.parallel  {
   !$omp parallel
-!CHECK: omp.single nowait {
+!CHECK: omp.workshare nowait {
   !$omp workshare
     arr = 0
   !$omp end workshare nowait
@@ -33,7 +33,7 @@ end subroutine
 subroutine sb3(arr)
   integer :: arr(:)
 !CHECK: omp.parallel  {
-!CHECK: omp.single  {
+!CHECK: omp.workshare  {
   !$omp parallel workshare
     arr = 0
   !$omp end parallel workshare

@@ -4,7 +4,7 @@
 define void @foo(ptr noalias nocapture %t0, ptr noalias nocapture readonly %t1) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr [[T1:%.*]], align 1, !tbaa [[TBAA0:![0-9]+]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult <8 x i8> [[TMP2]], <i8 64, i8 64, i8 64, i8 64, i8 64, i8 64, i8 64, i8 64>
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult <8 x i8> [[TMP2]], splat (i8 64)
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub <8 x i8> zeroinitializer, [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <8 x i1> [[TMP3]], <8 x i8> [[TMP2]], <8 x i8> [[TMP4]]
 ; CHECK-NEXT:    store <8 x i8> [[TMP5]], ptr [[T0:%.*]], align 1, !tbaa [[TBAA0]]

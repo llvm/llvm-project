@@ -120,7 +120,7 @@ public:
 private:
   friend class SBProcess;
   friend class SBMemoryRegionInfoList;
-
+  friend class SBSaveCoreOptions;
   friend class lldb_private::ScriptInterpreter;
 
   lldb_private::MemoryRegionInfo &ref();

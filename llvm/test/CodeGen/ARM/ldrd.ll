@@ -168,7 +168,7 @@ define void @ldrd_postupdate_inc(ptr %p0) "frame-pointer"="all" {
 ; NORMAL: strd r1, r2, [r0], #-8
 ; CONSERVATIVE-NOT: strd
 ; CHECK: bx lr
-define ptr @strd_postupdate_dec(ptr %p0, i32 %v0, i32 %v1) "frame-pointer"="all" {
+define ptr @strd_postupdate_dec(ptr %p0, i32 %v0, i32 %v1) "frame-pointer"="none" {
   %p0.1 = getelementptr i32, ptr %p0, i32 1
   store i32 %v0, ptr %p0
   store i32 %v1, ptr %p0.1
@@ -180,7 +180,7 @@ define ptr @strd_postupdate_dec(ptr %p0, i32 %v0, i32 %v1) "frame-pointer"="all"
 ; NORMAL: strd r1, r2, [r0], #8
 ; CONSERVATIVE-NOT: strd
 ; CHECK: bx lr
-define ptr @strd_postupdate_inc(ptr %p0, i32 %v0, i32 %v1) "frame-pointer"="all" {
+define ptr @strd_postupdate_inc(ptr %p0, i32 %v0, i32 %v1) "frame-pointer"="none" {
   %p0.1 = getelementptr i32, ptr %p0, i32 1
   store i32 %v0, ptr %p0
   store i32 %v1, ptr %p0.1

@@ -51,7 +51,7 @@ define void @pr97452_scalable_vf1_for_no_live_out(ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[L]] = load i64, ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[IV]]
-; CHECK-NEXT:    store i64 [[L]], ptr [[GEP_DST]], align 8
+; CHECK-NEXT:    store i64 [[FOR]], ptr [[GEP_DST]], align 8
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 22
 ; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
@@ -67,7 +67,7 @@ loop:
   %gep = getelementptr inbounds i64, ptr %src, i64 %iv
   %l = load i64, ptr %gep, align 8
   %gep.dst = getelementptr inbounds i64, ptr %dst, i64 %iv
-  store i64 %l, ptr %gep.dst
+  store i64 %for, ptr %gep.dst
   %ec = icmp eq i64 %iv, 22
   br i1 %ec, label %exit, label %loop
 

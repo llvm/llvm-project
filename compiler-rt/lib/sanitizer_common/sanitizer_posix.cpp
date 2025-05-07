@@ -130,8 +130,8 @@ static void *MmapFixedImpl(uptr fixed_addr, uptr size, bool tolerate_enomem,
     if (tolerate_enomem && reserrno == ENOMEM)
       return nullptr;
     char mem_type[40];
-    internal_snprintf(mem_type, sizeof(mem_type), "memory at address 0x%zx",
-                      fixed_addr);
+    internal_snprintf(mem_type, sizeof(mem_type), "memory at address %p",
+                      (void *)fixed_addr);
     ReportMmapFailureAndDie(size, mem_type, "allocate", reserrno);
   }
   IncreaseTotalMmap(size);
@@ -353,7 +353,15 @@ bool ShouldMockFailureToOpen(const char *path) {
          internal_strncmp(path, "/proc/", 6) == 0;
 }
 
-#if SANITIZER_LINUX && !SANITIZER_ANDROID && !SANITIZER_GO
+bool OpenReadsVaArgs(int oflag) {
+#  ifdef O_TMPFILE
+  return (oflag & (O_CREAT | O_TMPFILE)) != 0;
+#  else
+  return (oflag & O_CREAT) != 0;
+#  endif
+}
+
+#  if SANITIZER_LINUX && !SANITIZER_ANDROID && !SANITIZER_GO
 int GetNamedMappingFd(const char *name, uptr size, int *flags) {
   if (!common_flags()->decorate_proc_maps || !name)
     return -1;

@@ -4,7 +4,6 @@ add_mlir_dialect_library(MLIRLLVMDialect
   IR/FunctionCallUtils.cpp
   IR/LLVMAttrs.cpp
   IR/LLVMDialect.cpp
-  IR/LLVMInlining.cpp
   IR/LLVMInterfaces.cpp
   IR/LLVMMemorySlot.cpp
   IR/LLVMTypes.cpp
@@ -62,6 +61,7 @@ add_mlir_dialect_library(MLIRNVVMDialect
   MLIRIR
   MLIRLLVMDialect
   MLIRSideEffectInterfaces
+  MLIRInferIntRangeInterface
   )
 
 add_mlir_dialect_library(MLIRROCDLDialect

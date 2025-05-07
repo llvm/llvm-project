@@ -75,35 +75,6 @@ using namespace llvm;
 
 MipsRegisterBankInfo::MipsRegisterBankInfo(const TargetRegisterInfo &TRI) {}
 
-const RegisterBank &
-MipsRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
-                                             LLT) const {
-  using namespace Mips;
-
-  switch (RC.getID()) {
-  case Mips::GPR32RegClassID:
-  case Mips::CPU16Regs_and_GPRMM16ZeroRegClassID:
-  case Mips::GPRMM16MovePPairFirstRegClassID:
-  case Mips::CPU16Regs_and_GPRMM16MovePPairSecondRegClassID:
-  case Mips::GPRMM16MoveP_and_CPU16Regs_and_GPRMM16ZeroRegClassID:
-  case Mips::GPRMM16MovePPairFirst_and_GPRMM16MovePPairSecondRegClassID:
-  case Mips::SP32RegClassID:
-  case Mips::GP32RegClassID:
-    return getRegBank(Mips::GPRBRegBankID);
-  case Mips::FGRCCRegClassID:
-  case Mips::FGR32RegClassID:
-  case Mips::FGR64RegClassID:
-  case Mips::AFGR64RegClassID:
-  case Mips::MSA128BRegClassID:
-  case Mips::MSA128HRegClassID:
-  case Mips::MSA128WRegClassID:
-  case Mips::MSA128DRegClassID:
-    return getRegBank(Mips::FPRBRegBankID);
-  default:
-    llvm_unreachable("Register class not supported");
-  }
-}
-
 // Instructions where use operands are floating point registers.
 // Def operands are general purpose.
 static bool isFloatingPointOpcodeUse(unsigned Opc) {

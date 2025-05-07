@@ -11,15 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Utils/CommandLineOpts.h"
-#include "llvm/Support/VCSRevision.h"
+#include "VCSVersion.inc"
 
 using namespace llvm;
 
 namespace llvm {
 namespace bolt {
 const char *BoltRevision =
-#ifdef LLVM_REVISION
-    LLVM_REVISION;
+#ifdef BOLT_REVISION
+    BOLT_REVISION;
 #else
     "<unknown>";
 #endif
@@ -29,6 +29,7 @@ const char *BoltRevision =
 namespace opts {
 
 bool HeatmapMode = false;
+bool BinaryAnalysisMode = false;
 
 cl::OptionCategory BoltCategory("BOLT generic options");
 cl::OptionCategory BoltDiffCategory("BOLTDIFF generic options");
@@ -38,6 +39,7 @@ cl::OptionCategory BoltOutputCategory("Output options");
 cl::OptionCategory AggregatorCategory("Data aggregation options");
 cl::OptionCategory BoltInstrCategory("BOLT instrumentation options");
 cl::OptionCategory HeatmapCategory("Heatmap options");
+cl::OptionCategory BinaryAnalysisCategory("BinaryAnalysis options");
 
 cl::opt<unsigned> AlignText("align-text",
                             cl::desc("alignment of .text section"), cl::Hidden,
@@ -78,6 +80,12 @@ cl::opt<bool> EqualizeBBCounts(
              "in non-LBR and shrink wrapping)"),
     cl::ZeroOrMore, cl::init(false), cl::Hidden, cl::cat(BoltOptCategory));
 
+llvm::cl::opt<bool> ForcePatch(
+    "force-patch",
+    llvm::cl::desc("force patching of original entry points to ensure "
+                   "execution follows only the new/optimized code."),
+    llvm::cl::Hidden, llvm::cl::cat(BoltCategory));
+
 cl::opt<bool> RemoveSymtab("remove-symtab", cl::desc("Remove .symtab section"),
                            cl::cat(BoltCategory));
 
@@ -103,6 +111,12 @@ cl::opt<unsigned long long> HeatmapMaxAddress(
 cl::opt<unsigned long long> HeatmapMinAddress(
     "min-address", cl::init(0x0),
     cl::desc("minimum address considered valid for heatmap (default 0)"),
+    cl::Optional, cl::cat(HeatmapCategory));
+
+cl::opt<bool> HeatmapPrintMappings(
+    "print-mappings", cl::init(false),
+    cl::desc("print mappings in the legend, between characters/blocks and text "
+             "sections (default false)"),
     cl::Optional, cl::cat(HeatmapCategory));
 
 cl::opt<bool> HotData("hot-data",
@@ -168,6 +182,10 @@ cl::opt<ProfileFormatKind> ProfileFormat(
 cl::opt<std::string> SaveProfile("w",
                                  cl::desc("save recorded profile to a file"),
                                  cl::cat(BoltOutputCategory));
+
+cl::opt<bool> ShowDensity("show-density",
+                          cl::desc("show profile density details"),
+                          cl::Optional, cl::cat(AggregatorCategory));
 
 cl::opt<bool> SplitEH("split-eh", cl::desc("split C++ exception handling code"),
                       cl::Hidden, cl::cat(BoltOptCategory));

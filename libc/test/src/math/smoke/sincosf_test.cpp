@@ -13,7 +13,6 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <errno.h>
 #include <stdint.h>
 
 using LlvmLibcSinCosfTest = LIBC_NAMESPACE::testing::FPTest<float>;
@@ -21,6 +20,11 @@ using LlvmLibcSinCosfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 TEST_F(LlvmLibcSinCosfTest, SpecialNumbers) {
   LIBC_NAMESPACE::libc_errno = 0;
   float sin, cos;
+
+  LIBC_NAMESPACE::sincosf(sNaN, &sin, &cos);
+  EXPECT_FP_EQ(aNaN, cos);
+  EXPECT_FP_EQ(aNaN, sin);
+  EXPECT_MATH_ERRNO(0);
 
   LIBC_NAMESPACE::sincosf(aNaN, &sin, &cos);
   EXPECT_FP_EQ(aNaN, cos);
