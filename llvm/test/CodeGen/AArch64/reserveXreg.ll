@@ -1,5 +1,5 @@
-;; Check if manually reserved registers are excluded
-;; from being saved by the function prolog/epilog.
+;; Check if manually reserved registers are always excluded from being saved by
+;; the function prolog/epilog, even for callee-saved ones, as per GCC behavior.
 ;; X19(BP, LLVM specific), X29(FP), X30(LP), X31(SP) are special so
 ;; they are not checked.
 
