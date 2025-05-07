@@ -2743,7 +2743,28 @@ public:
     Put("\n");
     EndOpenMP();
   }
-
+  void Unparse(const OmpAppendArgsClause::OmpAppendOp &x) {
+    Put("INTEROP(");
+    Walk(x.v, ",");
+    Put(")");
+  }
+  void Unparse(const OmpAppendArgsClause &x) { Walk(x.v, ","); }
+  void Unparse(const OmpAdjustArgsClause &x) {
+    Walk(std::get<OmpAdjustArgsClause::OmpAdjustOp>(x.t).v);
+    Put(":");
+    Walk(std::get<parser::OmpObjectList>(x.t));
+  }
+  void Unparse(const OmpDeclareVariantDirective &x) {
+    BeginOpenMP();
+    Word("!$OMP DECLARE VARIANT ");
+    Put("(");
+    Walk(std::get<std::optional<Name>>(x.t), ":");
+    Walk(std::get<Name>(x.t));
+    Put(")");
+    Walk(std::get<OmpClauseList>(x.t));
+    Put("\n");
+    EndOpenMP();
+  }
   void Unparse(const OpenMPInteropConstruct &x) {
     BeginOpenMP();
     Word("!$OMP INTEROP");
@@ -3042,6 +3063,7 @@ public:
   WALK_NESTED_ENUM(InquireSpec::LogVar, Kind)
   WALK_NESTED_ENUM(ProcedureStmt, Kind) // R1506
   WALK_NESTED_ENUM(UseStmt, ModuleNature) // R1410
+  WALK_NESTED_ENUM(OmpAdjustArgsClause::OmpAdjustOp, Value) // OMP adjustop
   WALK_NESTED_ENUM(OmpAtClause, ActionTime) // OMP at
   WALK_NESTED_ENUM(OmpBindClause, Binding) // OMP bind
   WALK_NESTED_ENUM(OmpProcBindClause, AffinityPolicy) // OMP proc_bind
