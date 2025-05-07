@@ -1872,14 +1872,15 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     // 8to64
     setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv16i8, Custom);
 
-    // USDOT
-    setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv8i64, Custom);
-    setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv16i32, Custom);
-
-    setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv4i64, Custom);
-    setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv8i32, Custom);
-    setPartialReduceMLAAction(MVT::nxv8i16, MVT::nxv16i16, Custom);
-    setPartialReduceMLAAction(MVT::nxv16i8, MVT::nxv32i8, Custom);
+    if (Subtarget->hasMatMulInt8()) {
+      // USDOT
+      setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv8i64, Custom);
+      setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv16i32, Custom);
+      setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv4i64, Custom);
+      setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv8i32, Custom);
+      setPartialReduceMLAAction(MVT::nxv8i16, MVT::nxv16i16, Custom);
+      setPartialReduceMLAAction(MVT::nxv16i8, MVT::nxv32i8, Custom);
+    }
   }
 
   // Handle operations that are only available in non-streaming SVE mode.
@@ -29495,21 +29496,24 @@ SDValue AArch64TargetLowering::LowerVECTOR_HISTOGRAM(SDValue Op,
   return Scatter;
 }
 
-/// If a PARTIAL_REDUCE_MLA node comes in with an accumulator-input type pairing
-/// of nxv2i64/nxv16i8, we cannot directly lower it to a (u|s)dot. We can
-/// however still make use of the dot product instruction by instead
-/// accumulating over two steps: nxv16i8 -> nxv4i32 -> nxv2i64.
 SDValue
 AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
                                                SelectionDAG &DAG) const {
-  SDLoc DL(Op);
+  if (SDValue UsdotNode = LowerPARTIAL_REDUCE_MLAToUSDOT(Op, DAG))
+    return UsdotNode;
 
-  SDValue Acc = Op.getOperand(0);
   SDValue LHS = Op.getOperand(1);
-  SDValue RHS = Op.getOperand(2);
   EVT ResultVT = Op.getValueType();
-  assert(ResultVT == MVT::nxv2i64 && LHS.getValueType() == MVT::nxv16i8);
+  /// If a PARTIAL_REDUCE_MLA node comes in with an accumulator-input type
+  /// pairing of nxv2i64/nxv16i8, we cannot directly lower it to a (u|s)dot. We
+  /// can however still make use of the dot product instruction by instead
+  /// accumulating over two steps: nxv16i8 -> nxv4i32 -> nxv2i64.
+  if (ResultVT != MVT::nxv2i64 || LHS.getValueType() != MVT::nxv16i8)
+    return SDValue();
 
+  SDLoc DL(Op);
+  SDValue Acc = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(2);
   SDValue DotNode = DAG.getNode(Op.getOpcode(), DL, MVT::nxv4i32,
                                 DAG.getConstant(0, DL, MVT::nxv4i32), LHS, RHS);
 
@@ -29529,13 +29533,13 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
   return DAG.getNode(ISD::ADD, DL, ResultVT, Acc, Extended);
 }
 
-// Lower PARTIAL_REDUCE_*MLA(Acc, MUL(ZEXT(MulOpLHS), SEXT(MulOpRHS)), Splat 1)
-// to USDOT(Acc, MulOpLHS, MulOpRHS)
-// Lower PARTIAL_REDUCE_*MLA(Acc, MUL(SEXT(MulOpLHS), ZEXT(MulOpRHS)), Splat 1)
-// to USDOT(Acc, MulOpRHS, MulOpLHS)
+// partial.reduce.umla(acc, mul(zext(mulOpLHS), sext(mulOpRHS)), splat(1))
+// -> USDOT(acc, mulOpLHS, mulOpRHS)
+// partial.reduce.smla(acc, mul(sext(mulOpLHS), zext(mulOpRHS)), splat(1))
+// -> USDOT(acc, mulOpRHS, mulOpLHS)
 SDValue
 AArch64TargetLowering::LowerPARTIAL_REDUCE_MLAToUSDOT(SDValue Op,
-                                               SelectionDAG &DAG) const {
+                                                      SelectionDAG &DAG) const {
   bool Scalable = Op.getValueType().isScalableVector();
   auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
   if (Scalable && !Subtarget.isSVEorStreamingSVEAvailable())
@@ -29591,7 +29595,7 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLAToUSDOT(SDValue Op,
   // Don't want this to be split because there is no nxv2i64 version of usdot
   if ((AccVT == MVT::nxv4i64 && MulOpLHSVT == MVT::nxv16i8) ||
       (AccVT == MVT::v4i64 && MulOpLHSVT == MVT::v16i8)) {
-    EVT AccVTI32 = (AccVT.isScalableVector()) ? MVT::nxv4i32 : MVT::v4i32;
+    EVT AccVTI32 = AccVT.isScalableVector() ? MVT::nxv4i32 : MVT::v4i32;
 
     SDValue DotI32 =
         DAG.getNode(Opcode, DL, AccVTI32, DAG.getConstant(0, DL, AccVTI32),
