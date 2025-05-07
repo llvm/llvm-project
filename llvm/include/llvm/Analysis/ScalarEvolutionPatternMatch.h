@@ -58,6 +58,8 @@ template <typename Class> struct class_match {
   template <typename ITy> bool match(ITy *V) const { return isa<Class>(V); }
 };
 
+inline class_match<const SCEV> m_SCEV() { return class_match<const SCEV>(); }
+
 template <typename Class> struct bind_ty {
   Class *&VR;
 
@@ -92,6 +94,41 @@ struct specificscev_ty {
 
 /// Match if we have a specific specified SCEV.
 inline specificscev_ty m_Specific(const SCEV *S) { return S; }
+
+template <typename Class> struct cst_match {
+  Class CV;
+
+  cst_match(Class Op0) : CV(Op0) {}
+
+  bool match(const SCEV *S) const {
+    assert((isa<SCEVCouldNotCompute>(S) || !S->getType()->isVectorTy()) &&
+           "no vector types expected from SCEVs");
+    auto *C = dyn_cast<SCEVConstant>(S);
+    return C && C->getAPInt() == CV;
+  }
+};
+
+/// Match an SCEV constant with a plain unsigned integer.
+inline cst_match<uint64_t> m_SCEVConstant(uint64_t V) { return V; }
+
+struct bind_cst_ty {
+  const APInt *&CR;
+
+  bind_cst_ty(const APInt *&Op0) : CR(Op0) {}
+
+  bool match(const SCEV *S) const {
+    assert((isa<SCEVCouldNotCompute>(S) || !S->getType()->isVectorTy()) &&
+           "no vector types expected from SCEVs");
+    auto *C = dyn_cast<SCEVConstant>(S);
+    if (!C)
+      return false;
+    CR = &C->getAPInt();
+    return true;
+  }
+};
+
+/// Match an SCEV constant and bind it to an APInt.
+inline bind_cst_ty m_SCEVConstant(const APInt *&C) { return C; }
 
 /// Match a unary SCEV.
 template <typename SCEVTy, typename Op0_t> struct SCEVUnaryExpr_match {
@@ -149,6 +186,17 @@ m_scev_Add(const Op0_t &Op0, const Op1_t &Op1) {
   return m_scev_Binary<SCEVAddExpr>(Op0, Op1);
 }
 
+template <typename Op0_t, typename Op1_t>
+inline SCEVBinaryExpr_match<SCEVMulExpr, Op0_t, Op1_t>
+m_scev_Mul(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_scev_Binary<SCEVMulExpr>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline SCEVBinaryExpr_match<SCEVUDivExpr, Op0_t, Op1_t>
+m_scev_UDiv(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_scev_Binary<SCEVUDivExpr>(Op0, Op1);
+}
 } // namespace SCEVPatternMatch
 } // namespace llvm
 

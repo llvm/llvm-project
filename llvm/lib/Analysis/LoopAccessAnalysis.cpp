@@ -30,6 +30,7 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -65,6 +66,7 @@
 #include <vector>
 
 using namespace llvm;
+using namespace llvm::SCEVPatternMatch;
 
 #define DEBUG_TYPE "loop-accesses"
 
@@ -811,8 +813,8 @@ getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
   const SCEV *Step = AR->getStepRecurrence(*PSE.getSE());
 
   // Calculate the pointer stride and check if it is constant.
-  const SCEVConstant *C = dyn_cast<SCEVConstant>(Step);
-  if (!C) {
+  const APInt *APStepVal;
+  if (!match(Step, m_SCEVConstant(APStepVal))) {
     LLVM_DEBUG({
       dbgs() << "LAA: Bad stride - Not a constant strided ";
       if (Ptr)
@@ -825,13 +827,12 @@ getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
   const auto &DL = Lp->getHeader()->getDataLayout();
   TypeSize AllocSize = DL.getTypeAllocSize(AccessTy);
   int64_t Size = AllocSize.getFixedValue();
-  const APInt &APStepVal = C->getAPInt();
 
   // Huge step value - give up.
-  if (APStepVal.getBitWidth() > 64)
+  if (APStepVal->getBitWidth() > 64)
     return std::nullopt;
 
-  int64_t StepVal = APStepVal.getSExtValue();
+  int64_t StepVal = APStepVal->getSExtValue();
 
   // Strided access.
   int64_t Stride = StepVal / Size;
@@ -2061,11 +2062,10 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
           DL, SE, *(PSE.getSymbolicMaxBackedgeTakenCount()), *Dist, MaxStride))
     return Dependence::NoDep;
 
-  const SCEVConstant *ConstDist = dyn_cast<SCEVConstant>(Dist);
-
   // Attempt to prove strided accesses independent.
-  if (ConstDist) {
-    uint64_t Distance = ConstDist->getAPInt().abs().getZExtValue();
+  const APInt *ConstDist = nullptr;
+  if (match(Dist, m_SCEVConstant(ConstDist))) {
+    uint64_t Distance = ConstDist->abs().getZExtValue();
 
     // If the distance between accesses and their strides are known constants,
     // check whether the accesses interlace each other.
@@ -2111,9 +2111,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
         FoundNonConstantDistanceDependence |= ShouldRetryWithRuntimeCheck;
         return Dependence::Unknown;
       }
-      if (!HasSameSize ||
-          couldPreventStoreLoadForward(
-              ConstDist->getAPInt().abs().getZExtValue(), TypeByteSize)) {
+      if (!HasSameSize || couldPreventStoreLoadForward(
+                              ConstDist->abs().getZExtValue(), TypeByteSize)) {
         LLVM_DEBUG(
             dbgs() << "LAA: Forward but may prevent st->ld forwarding\n");
         return Dependence::ForwardButPreventsForwarding;
@@ -2864,20 +2863,8 @@ static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *L
 
   // Strip off the size of access multiplication if we are still analyzing the
   // pointer.
-  if (OrigPtr == Ptr) {
-    if (auto *M = dyn_cast<SCEVMulExpr>(V)) {
-      auto *StepConst = dyn_cast<SCEVConstant>(M->getOperand(0));
-      if (!StepConst)
-        return nullptr;
-
-      auto StepVal = StepConst->getAPInt().trySExtValue();
-      // Bail out on a non-unit pointer access size.
-      if (!StepVal || StepVal != 1)
-        return nullptr;
-
-      V = M->getOperand(1);
-    }
-  }
+  if (OrigPtr == Ptr)
+    match(V, m_scev_Mul(m_SCEVConstant(1), m_SCEV(V)));
 
   // Note that the restriction after this loop invariant check are only
   // profitability restrictions.
