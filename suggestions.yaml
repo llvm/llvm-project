@@ -1,0 +1,19 @@
+llvm-include-order:
+  - Ensure includes follow LLVM style: system headers first, then LLVM, then project-specific.
+readability-function-cognitive-complexity:
+  - Break large functions into smaller units.
+  - Reduce nesting and use early returns.
+modernize-use-nullptr:
+  - Replace NULL or 0 with nullptr.
+modernize-loop-convert:
+  - Use range-based loops for simpler and cleaner code.
+modernize-use-auto:
+  - Use 'auto' where types are obvious to improve readability.
+bugprone-branch-clone:
+  - Eliminate duplicated conditional branches.
+clang-analyzer-deadcode.DeadStores:
+  - Remove assignments to variables that are never used.
+performance-unnecessary-value-param:
+  - Pass large objects by const reference instead of by value.
+readability-identifier-naming:
+  - Use consistent naming conventions as per project guidelines.
