@@ -817,7 +817,7 @@ findInsertBlock(MachineInstr &DefMI, Register Reg, MachineDominatorTree *DT,
   for (MachineInstr &UseMI : MRI.use_nodbg_instructions(Reg)) {
     BBSet.insert(UseMI.getParent());
   }
-  if (BBSet.size() == 0)
+  if (BBSet.empty())
     return nullptr;
 
   MachineBasicBlock *BB = *BBSet.begin();
