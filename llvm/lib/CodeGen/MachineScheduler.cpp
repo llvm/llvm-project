@@ -74,6 +74,14 @@ using namespace llvm;
 
 #define DEBUG_TYPE "machine-scheduler"
 
+STATISTIC(NumInstrsInSourceOrderPreRA,
+          "Number of instructions in source order after pre-RA scheduling");
+STATISTIC(NumInstrsInSourceOrderPostRA,
+          "Number of instructions in source order after post-RA scheduling");
+STATISTIC(NumInstrsScheduledPreRA,
+          "Number of instructions scheduled by pre-RA scheduler");
+STATISTIC(NumInstrsScheduledPostRA,
+          "Number of instructions scheduled by post-RA scheduler");
 STATISTIC(NumClustered, "Number of load/store pairs clustered");
 
 namespace llvm {
@@ -3505,6 +3513,9 @@ void GenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
     RegionPolicy.OnlyBottomUp = false;
     RegionPolicy.OnlyTopDown = false;
   }
+
+  BotIdx = NumRegionInstrs - 1;
+  this->NumRegionInstrs = NumRegionInstrs;
 }
 
 void GenericScheduler::dumpPolicy() const {
@@ -3981,6 +3992,18 @@ SUnit *GenericScheduler::pickNode(bool &IsTopNode) {
 
   LLVM_DEBUG(dbgs() << "Scheduling SU(" << SU->NodeNum << ") "
                     << *SU->getInstr());
+
+  if (IsTopNode) {
+    if (SU->NodeNum == TopIdx++)
+      ++NumInstrsInSourceOrderPreRA;
+  } else {
+    assert(BotIdx < NumRegionInstrs && "out of bounds");
+    if (SU->NodeNum == BotIdx--)
+      ++NumInstrsInSourceOrderPreRA;
+  }
+
+  NumInstrsScheduledPreRA += 1;
+
   return SU;
 }
 
@@ -4104,6 +4127,9 @@ void PostGenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
     RegionPolicy.OnlyBottomUp = false;
     RegionPolicy.OnlyTopDown = false;
   }
+
+  BotIdx = NumRegionInstrs - 1;
+  this->NumRegionInstrs = NumRegionInstrs;
 }
 
 void PostGenericScheduler::registerRoots() {
@@ -4323,6 +4349,18 @@ SUnit *PostGenericScheduler::pickNode(bool &IsTopNode) {
 
   LLVM_DEBUG(dbgs() << "Scheduling SU(" << SU->NodeNum << ") "
                     << *SU->getInstr());
+
+  if (IsTopNode) {
+    if (SU->NodeNum == TopIdx++)
+      ++NumInstrsInSourceOrderPostRA;
+  } else {
+    assert(BotIdx < NumRegionInstrs && "out of bounds");
+    if (SU->NodeNum == BotIdx--)
+      ++NumInstrsInSourceOrderPostRA;
+  }
+
+  NumInstrsScheduledPostRA += 1;
+
   return SU;
 }
 
