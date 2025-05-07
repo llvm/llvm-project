@@ -97,20 +97,14 @@ void PrettyStackTraceParserEntry::print(raw_ostream &OS) const {
 /// the file is parsed.  This inserts the parsed decls into the translation unit
 /// held by Ctx.
 ///
-void clang::ParseAST(Preprocessor &PP, ASTConsumer *Consumer,
-                     ASTContext &Ctx, bool PrintStats,
-                     TranslationUnitKind TUKind,
-                     CodeCompleteConsumer *CompletionConsumer,
-                     bool SkipFunctionBodies) {
+void clang::parseast( Preprocessor&pp,ASTConsumer*consumer,ASTContext&ctx,bool printstats ,TranslationUnitKind tukind,CodeCompleteConsumer*completionconsumer,bool skipfunctionbodies){
 
-  std::unique_ptr<Sema> S(
-      new Sema(PP, Ctx, *Consumer, TUKind, CompletionConsumer));
-
-  // Recover resources if we crash before exiting this method.
-  llvm::CrashRecoveryContextCleanupRegistrar<Sema> CleanupSema(S.get());
-
-  ParseAST(*S.get(), PrintStats, SkipFunctionBodies);
-}
+  std::unique_ptr< sema > s( new Sema( pp,ctx,*consumer ,tukind,completionconsumer ) ) ;
+  
+  llvm::CrashRecoveryContextCleanupRegistrar< Sema > cleanupsema( s.get( ) ) ;
+  
+   ParseAST(* s.get( ) ,printstats ,skipfunctionbodies ) ; }
+  
 
 void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
   // Collect global stats on Decls/Stmts (until we have a module streamer).
