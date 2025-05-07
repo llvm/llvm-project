@@ -375,8 +375,9 @@ Expr *SemaAMDGPU::ExpandAMDGPUPredicateBI(CallExpr *CE) {
   auto Loc = CE->getExprLoc();
 
   if (!CE->getBuiltinCallee())
-    return *ExpandedPredicates.insert(
-        IntegerLiteral::Create(Ctx, False, BoolTy, Loc)).first;
+    return *ExpandedPredicates
+                .insert(IntegerLiteral::Create(Ctx, False, BoolTy, Loc))
+                .first;
 
   auto P = false;
   auto BI = CE->getBuiltinCallee();
@@ -425,8 +426,10 @@ Expr *SemaAMDGPU::ExpandAMDGPUPredicateBI(CallExpr *CE) {
     P = Builtin::evaluateRequiredTargetFeatures(RF, CF);
   }
 
-  return *ExpandedPredicates.insert(
-      IntegerLiteral::Create(Ctx, P ? True : False, BoolTy, Loc)).first;
+  return *ExpandedPredicates
+              .insert(
+                  IntegerLiteral::Create(Ctx, P ? True : False, BoolTy, Loc))
+              .first;
 }
 
 bool SemaAMDGPU::IsPredicate(Expr *E) const {

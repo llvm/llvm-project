@@ -24,6 +24,7 @@ class ParsedAttr;
 
 class SemaAMDGPU : public SemaBase {
   llvm::SmallPtrSet<Expr *, 32> ExpandedPredicates;
+
 public:
   SemaAMDGPU(Sema &S);
 
