@@ -934,7 +934,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     std::optional<StringRef> OptVal =
         llvm::StringSwitch<std::optional<StringRef>>(ArgVecLib->getValue())
             .Case("Accelerate", "Accelerate")
-            .Case("libmvec", "LIBMVEC-X86")
+            .Case("libmvec", "LIBMVEC")
             .Case("MASSV", "MASSV")
             .Case("SVML", "SVML")
             .Case("SLEEF", "sleefgnuabi")
