@@ -937,7 +937,7 @@ Status ProcessGDBRemote::HandleConnectionRequest(const GPUActions &gpu_action) {
   if (error.Fail())
     return error;
   if (!process_sp)
-    return Status::FromErrorString("invalid process after conneting");
+    return Status::FromErrorString("invalid process after connecting");
 
   GetTarget().SetGPUPluginTarget(gpu_action.plugin_name, 
                                  process_sp->GetTarget().shared_from_this());
