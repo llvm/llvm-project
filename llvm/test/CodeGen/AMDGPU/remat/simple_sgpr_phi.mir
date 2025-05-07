@@ -1,0 +1,304 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -mattr=+wavefrontsize32 -verify-machineinstrs %s -o - -run-pass=amdgpu-hot-block-remat -amdgpu-remat-enable-hot-block-remat-aggressive-sgpr | FileCheck %s
+
+# This test simply checks that GCNDownwardRPTracker does not crash when PHIs are present
+# CHECK: S_ENDPGM
+
+
+--- |
+  define amdgpu_ps void @main() {
+    ret void
+  }
+...
+---
+name:            main
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    ; To inflate vgpr count
+    %v0:vreg_1024 = IMPLICIT_DEF
+    %v1:vreg_1024 = IMPLICIT_DEF
+    %v2:vreg_1024 = IMPLICIT_DEF
+    %v3:vreg_1024 = IMPLICIT_DEF
+
+    ; Defs
+    %t0:sgpr_32 = S_NOT_B32 0, implicit-def $scc
+    %t2:sgpr_32 = S_NOT_B32 1, implicit-def $scc
+    %t4:sgpr_32 = S_NOT_B32 2, implicit-def $scc
+    %t6:sgpr_32 = S_NOT_B32 3, implicit-def $scc
+    %t8:sgpr_32 = S_NOT_B32 4, implicit-def $scc
+    %t10:sgpr_32 = S_NOT_B32 5, implicit-def $scc
+    %t12:sgpr_32 = S_NOT_B32 6, implicit-def $scc
+    %t14:sgpr_32 = S_NOT_B32 7, implicit-def $scc
+    %t16:sgpr_32 = S_NOT_B32 8, implicit-def $scc
+    %t18:sgpr_32 = S_NOT_B32 9, implicit-def $scc
+    %t20:sgpr_32 = S_NOT_B32 10, implicit-def $scc
+    %t22:sgpr_32 = S_NOT_B32 11, implicit-def $scc
+    %t24:sgpr_32 = S_NOT_B32 12, implicit-def $scc
+    %t26:sgpr_32 = S_NOT_B32 13, implicit-def $scc
+    %t28:sgpr_32 = S_NOT_B32 14, implicit-def $scc
+    %t30:sgpr_32 = S_NOT_B32 15, implicit-def $scc
+    %t32:sgpr_32 = S_NOT_B32 16, implicit-def $scc
+    %t34:sgpr_32 = S_NOT_B32 17, implicit-def $scc
+    %t36:sgpr_32 = S_NOT_B32 18, implicit-def $scc
+    %t38:sgpr_32 = S_NOT_B32 19, implicit-def $scc
+    %t40:sgpr_32 = S_NOT_B32 20, implicit-def $scc
+    %t42:sgpr_32 = S_NOT_B32 21, implicit-def $scc
+    %t44:sgpr_32 = S_NOT_B32 22, implicit-def $scc
+    %t46:sgpr_32 = S_NOT_B32 23, implicit-def $scc
+    %t48:sgpr_32 = S_NOT_B32 24, implicit-def $scc
+    %t50:sgpr_32 = S_NOT_B32 25, implicit-def $scc
+    %t52:sgpr_32 = S_NOT_B32 26, implicit-def $scc
+    %t54:sgpr_32 = S_NOT_B32 27, implicit-def $scc
+    %t56:sgpr_32 = S_NOT_B32 28, implicit-def $scc
+    %t58:sgpr_32 = S_NOT_B32 29, implicit-def $scc
+    %t60:sgpr_32 = S_NOT_B32 30, implicit-def $scc
+    %t62:sgpr_32 = S_NOT_B32 31, implicit-def $scc
+    %t64:sgpr_32 = S_NOT_B32 32, implicit-def $scc
+    %t66:sgpr_32 = S_NOT_B32 33, implicit-def $scc
+    %t68:sgpr_32 = S_NOT_B32 34, implicit-def $scc
+    %t70:sgpr_32 = S_NOT_B32 35, implicit-def $scc
+    %t72:sgpr_32 = S_NOT_B32 36, implicit-def $scc
+    %t74:sgpr_32 = S_NOT_B32 37, implicit-def $scc
+    %t76:sgpr_32 = S_NOT_B32 38, implicit-def $scc
+    %t78:sgpr_32 = S_NOT_B32 39, implicit-def $scc
+    %t80:sgpr_32 = S_NOT_B32 40, implicit-def $scc
+    %t82:sgpr_32 = S_NOT_B32 41, implicit-def $scc
+    %t84:sgpr_32 = S_NOT_B32 42, implicit-def $scc
+    %t86:sgpr_32 = S_NOT_B32 43, implicit-def $scc
+    %t88:sgpr_32 = S_NOT_B32 44, implicit-def $scc
+    %t90:sgpr_32 = S_NOT_B32 45, implicit-def $scc
+    %t92:sgpr_32 = S_NOT_B32 46, implicit-def $scc
+    %t94:sgpr_32 = S_NOT_B32 47, implicit-def $scc
+    %t96:sgpr_32 = S_NOT_B32 48, implicit-def $scc
+    %t98:sgpr_32 = S_NOT_B32 49, implicit-def $scc
+    %t100:sgpr_32 = S_NOT_B32 50, implicit-def $scc
+    %t102:sgpr_32 = S_NOT_B32 51, implicit-def $scc
+    %t104:sgpr_32 = S_NOT_B32 52, implicit-def $scc
+    %t106:sgpr_32 = S_NOT_B32 53, implicit-def $scc
+    %t108:sgpr_32 = S_NOT_B32 54, implicit-def $scc
+    %t110:sgpr_32 = S_NOT_B32 55, implicit-def $scc
+    %t112:sgpr_32 = S_NOT_B32 56, implicit-def $scc
+    %t114:sgpr_32 = S_NOT_B32 57, implicit-def $scc
+    %t116:sgpr_32 = S_NOT_B32 58, implicit-def $scc
+    %t118:sgpr_32 = S_NOT_B32 59, implicit-def $scc
+    %t120:sgpr_32 = S_NOT_B32 60, implicit-def $scc
+    %t122:sgpr_32 = S_NOT_B32 61, implicit-def $scc
+    %t124:sgpr_32 = S_NOT_B32 62, implicit-def $scc
+    %t126:sgpr_32 = S_NOT_B32 63, implicit-def $scc
+    %t128:sgpr_32 = S_NOT_B32 64, implicit-def $scc
+    %t130:sgpr_32 = S_NOT_B32 65, implicit-def $scc
+    %t132:sgpr_32 = S_NOT_B32 66, implicit-def $scc
+    %t134:sgpr_32 = S_NOT_B32 67, implicit-def $scc
+    %t136:sgpr_32 = S_NOT_B32 68, implicit-def $scc
+    %t138:sgpr_32 = S_NOT_B32 69, implicit-def $scc
+    %t140:sgpr_32 = S_NOT_B32 70, implicit-def $scc
+    %t142:sgpr_32 = S_NOT_B32 71, implicit-def $scc
+    %t144:sgpr_32 = S_NOT_B32 72, implicit-def $scc
+    %t146:sgpr_32 = S_NOT_B32 73, implicit-def $scc
+    %t148:sgpr_32 = S_NOT_B32 74, implicit-def $scc
+    %t150:sgpr_32 = S_NOT_B32 75, implicit-def $scc
+    %t152:sgpr_32 = S_NOT_B32 76, implicit-def $scc
+    %t154:sgpr_32 = S_NOT_B32 77, implicit-def $scc
+    %t156:sgpr_32 = S_NOT_B32 78, implicit-def $scc
+    %t158:sgpr_32 = S_NOT_B32 79, implicit-def $scc
+    %t160:sgpr_32 = S_NOT_B32 80, implicit-def $scc
+    %t162:sgpr_32 = S_NOT_B32 81, implicit-def $scc
+    %t164:sgpr_32 = S_NOT_B32 82, implicit-def $scc
+    %t166:sgpr_32 = S_NOT_B32 83, implicit-def $scc
+    %t168:sgpr_32 = S_NOT_B32 84, implicit-def $scc
+    %t170:sgpr_32 = S_NOT_B32 85, implicit-def $scc
+    %t172:sgpr_32 = S_NOT_B32 86, implicit-def $scc
+    %t174:sgpr_32 = S_NOT_B32 87, implicit-def $scc
+    %t176:sgpr_32 = S_NOT_B32 88, implicit-def $scc
+    %t178:sgpr_32 = S_NOT_B32 89, implicit-def $scc
+    %t180:sgpr_32 = S_NOT_B32 90, implicit-def $scc
+    %t182:sgpr_32 = S_NOT_B32 91, implicit-def $scc
+    %t184:sgpr_32 = S_NOT_B32 92, implicit-def $scc
+    %t186:sgpr_32 = S_NOT_B32 93, implicit-def $scc
+    %t188:sgpr_32 = S_NOT_B32 94, implicit-def $scc
+    %t190:sgpr_32 = S_NOT_B32 95, implicit-def $scc
+    %t192:sgpr_32 = S_NOT_B32 96, implicit-def $scc
+    %t194:sgpr_32 = S_NOT_B32 97, implicit-def $scc
+    %t196:sgpr_32 = S_NOT_B32 98, implicit-def $scc
+    %t198:sgpr_32 = S_NOT_B32 99, implicit-def $scc
+    %t200:sgpr_32 = S_NOT_B32 100, implicit-def $scc
+    %t202:sgpr_32 = S_NOT_B32 101, implicit-def $scc
+    %t204:sgpr_32 = S_NOT_B32 102, implicit-def $scc
+    %t206:sgpr_32 = S_NOT_B32 103, implicit-def $scc
+    %t208:sgpr_32 = S_NOT_B32 104, implicit-def $scc
+    %t210:sgpr_32 = S_NOT_B32 105, implicit-def $scc
+    %t212:sgpr_32 = S_NOT_B32 106, implicit-def $scc
+    %t214:sgpr_32 = S_NOT_B32 107, implicit-def $scc
+    %t216:sgpr_32 = S_NOT_B32 108, implicit-def $scc
+    %t218:sgpr_32 = S_NOT_B32 109, implicit-def $scc
+    %t220:sgpr_32 = S_NOT_B32 110, implicit-def $scc
+    %t222:sgpr_32 = S_NOT_B32 111, implicit-def $scc
+    %t224:sgpr_32 = S_NOT_B32 112, implicit-def $scc
+    %t226:sgpr_32 = S_NOT_B32 113, implicit-def $scc
+    %t228:sgpr_32 = S_NOT_B32 114, implicit-def $scc
+    %t230:sgpr_32 = S_NOT_B32 115, implicit-def $scc
+    %t232:sgpr_32 = S_NOT_B32 116, implicit-def $scc
+    %t234:sgpr_32 = S_NOT_B32 117, implicit-def $scc
+    %t236:sgpr_32 = S_NOT_B32 118, implicit-def $scc
+    %t238:sgpr_32 = S_NOT_B32 119, implicit-def $scc
+    %t240:sgpr_32 = S_NOT_B32 120, implicit-def $scc
+    %t242:sgpr_32 = S_NOT_B32 121, implicit-def $scc
+    %t244:sgpr_32 = S_NOT_B32 122, implicit-def $scc
+    %t246:sgpr_32 = S_NOT_B32 123, implicit-def $scc
+    %t248:sgpr_32 = S_NOT_B32 124, implicit-def $scc
+    %t250:sgpr_32 = S_NOT_B32 125, implicit-def $scc
+    %t252:sgpr_32 = S_NOT_B32 126, implicit-def $scc
+    %t254:sgpr_32 = S_NOT_B32 127, implicit-def $scc
+
+
+    ; Branch
+    %cmp:sreg_32_xm0 = V_CMP_GT_F32_e64 0, 0, 0, %v0.sub0, 0, implicit $exec, implicit $mode
+    $exec_lo = S_MOV_B32_term %cmp:sreg_32_xm0
+    S_CBRANCH_EXECZ %bb.2, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:  
+    successors: %bb.2
+    %s0:sgpr_32 = IMPLICIT_DEF
+    S_BRANCH %bb.2
+
+  bb.2:
+    %phi0:sgpr_32 = PHI %t0, %bb.0, %s0, %bb.1
+    %phi2:sgpr_32 = PHI %t2, %bb.0, %s0, %bb.1
+    %phi4:sgpr_32 = PHI %t4, %bb.0, %s0, %bb.1
+    %phi6:sgpr_32 = PHI %t6, %bb.0, %s0, %bb.1
+    %phi8:sgpr_32 = PHI %t8, %bb.0, %s0, %bb.1
+    %phi10:sgpr_32 = PHI %t10, %bb.0, %s0, %bb.1
+    %phi12:sgpr_32 = PHI %t12, %bb.0, %s0, %bb.1
+    %phi14:sgpr_32 = PHI %t14, %bb.0, %s0, %bb.1
+    %phi16:sgpr_32 = PHI %t16, %bb.0, %s0, %bb.1
+    %phi18:sgpr_32 = PHI %t18, %bb.0, %s0, %bb.1
+    %phi20:sgpr_32 = PHI %t20, %bb.0, %s0, %bb.1
+    %phi22:sgpr_32 = PHI %t22, %bb.0, %s0, %bb.1
+    %phi24:sgpr_32 = PHI %t24, %bb.0, %s0, %bb.1
+    %phi26:sgpr_32 = PHI %t26, %bb.0, %s0, %bb.1
+    %phi28:sgpr_32 = PHI %t28, %bb.0, %s0, %bb.1
+    %phi30:sgpr_32 = PHI %t30, %bb.0, %s0, %bb.1
+    %phi32:sgpr_32 = PHI %t32, %bb.0, %s0, %bb.1
+    %phi34:sgpr_32 = PHI %t34, %bb.0, %s0, %bb.1
+    %phi36:sgpr_32 = PHI %t36, %bb.0, %s0, %bb.1
+    %phi38:sgpr_32 = PHI %t38, %bb.0, %s0, %bb.1
+    %phi40:sgpr_32 = PHI %t40, %bb.0, %s0, %bb.1
+    %phi42:sgpr_32 = PHI %t42, %bb.0, %s0, %bb.1
+    %phi44:sgpr_32 = PHI %t44, %bb.0, %s0, %bb.1
+    %phi46:sgpr_32 = PHI %t46, %bb.0, %s0, %bb.1
+    %phi48:sgpr_32 = PHI %t48, %bb.0, %s0, %bb.1
+    %phi50:sgpr_32 = PHI %t50, %bb.0, %s0, %bb.1
+    %phi52:sgpr_32 = PHI %t52, %bb.0, %s0, %bb.1
+    %phi54:sgpr_32 = PHI %t54, %bb.0, %s0, %bb.1
+    %phi56:sgpr_32 = PHI %t56, %bb.0, %s0, %bb.1
+    %phi58:sgpr_32 = PHI %t58, %bb.0, %s0, %bb.1
+    %phi60:sgpr_32 = PHI %t60, %bb.0, %s0, %bb.1
+    %phi62:sgpr_32 = PHI %t62, %bb.0, %s0, %bb.1
+    %phi64:sgpr_32 = PHI %t64, %bb.0, %s0, %bb.1
+    %phi66:sgpr_32 = PHI %t66, %bb.0, %s0, %bb.1
+    %phi68:sgpr_32 = PHI %t68, %bb.0, %s0, %bb.1
+    %phi70:sgpr_32 = PHI %t70, %bb.0, %s0, %bb.1
+    %phi72:sgpr_32 = PHI %t72, %bb.0, %s0, %bb.1
+    %phi74:sgpr_32 = PHI %t74, %bb.0, %s0, %bb.1
+    %phi76:sgpr_32 = PHI %t76, %bb.0, %s0, %bb.1
+    %phi78:sgpr_32 = PHI %t78, %bb.0, %s0, %bb.1
+    %phi80:sgpr_32 = PHI %t80, %bb.0, %s0, %bb.1
+    %phi82:sgpr_32 = PHI %t82, %bb.0, %s0, %bb.1
+    %phi84:sgpr_32 = PHI %t84, %bb.0, %s0, %bb.1
+    %phi86:sgpr_32 = PHI %t86, %bb.0, %s0, %bb.1
+    %phi88:sgpr_32 = PHI %t88, %bb.0, %s0, %bb.1
+    %phi90:sgpr_32 = PHI %t90, %bb.0, %s0, %bb.1
+    %phi92:sgpr_32 = PHI %t92, %bb.0, %s0, %bb.1
+    %phi94:sgpr_32 = PHI %t94, %bb.0, %s0, %bb.1
+    %phi96:sgpr_32 = PHI %t96, %bb.0, %s0, %bb.1
+    %phi98:sgpr_32 = PHI %t98, %bb.0, %s0, %bb.1
+    %phi100:sgpr_32 = PHI %t100, %bb.0, %s0, %bb.1
+    %phi102:sgpr_32 = PHI %t102, %bb.0, %s0, %bb.1
+    %phi104:sgpr_32 = PHI %t104, %bb.0, %s0, %bb.1
+    %phi106:sgpr_32 = PHI %t106, %bb.0, %s0, %bb.1
+    %phi108:sgpr_32 = PHI %t108, %bb.0, %s0, %bb.1
+    %phi110:sgpr_32 = PHI %t110, %bb.0, %s0, %bb.1
+    %phi112:sgpr_32 = PHI %t112, %bb.0, %s0, %bb.1
+    %phi114:sgpr_32 = PHI %t114, %bb.0, %s0, %bb.1
+    %phi116:sgpr_32 = PHI %t116, %bb.0, %s0, %bb.1
+    %phi118:sgpr_32 = PHI %t118, %bb.0, %s0, %bb.1
+    %phi120:sgpr_32 = PHI %t120, %bb.0, %s0, %bb.1
+    %phi122:sgpr_32 = PHI %t122, %bb.0, %s0, %bb.1
+    %phi124:sgpr_32 = PHI %t124, %bb.0, %s0, %bb.1
+    %phi126:sgpr_32 = PHI %t126, %bb.0, %s0, %bb.1
+    %phi128:sgpr_32 = PHI %t128, %bb.0, %s0, %bb.1
+    %phi130:sgpr_32 = PHI %t130, %bb.0, %s0, %bb.1
+    %phi132:sgpr_32 = PHI %t132, %bb.0, %s0, %bb.1
+    %phi134:sgpr_32 = PHI %t134, %bb.0, %s0, %bb.1
+    %phi136:sgpr_32 = PHI %t136, %bb.0, %s0, %bb.1
+    %phi138:sgpr_32 = PHI %t138, %bb.0, %s0, %bb.1
+    %phi140:sgpr_32 = PHI %t140, %bb.0, %s0, %bb.1
+    %phi142:sgpr_32 = PHI %t142, %bb.0, %s0, %bb.1
+    %phi144:sgpr_32 = PHI %t144, %bb.0, %s0, %bb.1
+    %phi146:sgpr_32 = PHI %t146, %bb.0, %s0, %bb.1
+    %phi148:sgpr_32 = PHI %t148, %bb.0, %s0, %bb.1
+    %phi150:sgpr_32 = PHI %t150, %bb.0, %s0, %bb.1
+    %phi152:sgpr_32 = PHI %t152, %bb.0, %s0, %bb.1
+    %phi154:sgpr_32 = PHI %t154, %bb.0, %s0, %bb.1
+    %phi156:sgpr_32 = PHI %t156, %bb.0, %s0, %bb.1
+    %phi158:sgpr_32 = PHI %t158, %bb.0, %s0, %bb.1
+    %phi160:sgpr_32 = PHI %t160, %bb.0, %s0, %bb.1
+    %phi162:sgpr_32 = PHI %t162, %bb.0, %s0, %bb.1
+    %phi164:sgpr_32 = PHI %t164, %bb.0, %s0, %bb.1
+    %phi166:sgpr_32 = PHI %t166, %bb.0, %s0, %bb.1
+    %phi168:sgpr_32 = PHI %t168, %bb.0, %s0, %bb.1
+    %phi170:sgpr_32 = PHI %t170, %bb.0, %s0, %bb.1
+    %phi172:sgpr_32 = PHI %t172, %bb.0, %s0, %bb.1
+    %phi174:sgpr_32 = PHI %t174, %bb.0, %s0, %bb.1
+    %phi176:sgpr_32 = PHI %t176, %bb.0, %s0, %bb.1
+    %phi178:sgpr_32 = PHI %t178, %bb.0, %s0, %bb.1
+    %phi180:sgpr_32 = PHI %t180, %bb.0, %s0, %bb.1
+    %phi182:sgpr_32 = PHI %t182, %bb.0, %s0, %bb.1
+    %phi184:sgpr_32 = PHI %t184, %bb.0, %s0, %bb.1
+    %phi186:sgpr_32 = PHI %t186, %bb.0, %s0, %bb.1
+    %phi188:sgpr_32 = PHI %t188, %bb.0, %s0, %bb.1
+    %phi190:sgpr_32 = PHI %t190, %bb.0, %s0, %bb.1
+    %phi192:sgpr_32 = PHI %t192, %bb.0, %s0, %bb.1
+    %phi194:sgpr_32 = PHI %t194, %bb.0, %s0, %bb.1
+    %phi196:sgpr_32 = PHI %t196, %bb.0, %s0, %bb.1
+    %phi198:sgpr_32 = PHI %t198, %bb.0, %s0, %bb.1
+    %phi200:sgpr_32 = PHI %t200, %bb.0, %s0, %bb.1
+    %phi202:sgpr_32 = PHI %t202, %bb.0, %s0, %bb.1
+    %phi204:sgpr_32 = PHI %t204, %bb.0, %s0, %bb.1
+    %phi206:sgpr_32 = PHI %t206, %bb.0, %s0, %bb.1
+    %phi208:sgpr_32 = PHI %t208, %bb.0, %s0, %bb.1
+    %phi210:sgpr_32 = PHI %t210, %bb.0, %s0, %bb.1
+    %phi212:sgpr_32 = PHI %t212, %bb.0, %s0, %bb.1
+    %phi214:sgpr_32 = PHI %t214, %bb.0, %s0, %bb.1
+    %phi216:sgpr_32 = PHI %t216, %bb.0, %s0, %bb.1
+    %phi218:sgpr_32 = PHI %t218, %bb.0, %s0, %bb.1
+    %phi220:sgpr_32 = PHI %t220, %bb.0, %s0, %bb.1
+    %phi222:sgpr_32 = PHI %t222, %bb.0, %s0, %bb.1
+    %phi224:sgpr_32 = PHI %t224, %bb.0, %s0, %bb.1
+    %phi226:sgpr_32 = PHI %t226, %bb.0, %s0, %bb.1
+    %phi228:sgpr_32 = PHI %t228, %bb.0, %s0, %bb.1
+    %phi230:sgpr_32 = PHI %t230, %bb.0, %s0, %bb.1
+    %phi232:sgpr_32 = PHI %t232, %bb.0, %s0, %bb.1
+    %phi234:sgpr_32 = PHI %t234, %bb.0, %s0, %bb.1
+    %phi236:sgpr_32 = PHI %t236, %bb.0, %s0, %bb.1
+    %phi238:sgpr_32 = PHI %t238, %bb.0, %s0, %bb.1
+    %phi240:sgpr_32 = PHI %t240, %bb.0, %s0, %bb.1
+    %phi242:sgpr_32 = PHI %t242, %bb.0, %s0, %bb.1
+    %phi244:sgpr_32 = PHI %t244, %bb.0, %s0, %bb.1
+    %phi246:sgpr_32 = PHI %t246, %bb.0, %s0, %bb.1
+    %phi248:sgpr_32 = PHI %t248, %bb.0, %s0, %bb.1
+    %phi250:sgpr_32 = PHI %t250, %bb.0, %s0, %bb.1
+    %phi252:sgpr_32 = PHI %t252, %bb.0, %s0, %bb.1
+    %phi254:sgpr_32 = PHI %t254, %bb.0, %s0, %bb.1
+
+
+    ; Some uses to inflate vgpr count
+    KILL %v0
+    KILL %v1
+    KILL %v2
+    KILL %v3
+    S_ENDPGM 0
+...
+    

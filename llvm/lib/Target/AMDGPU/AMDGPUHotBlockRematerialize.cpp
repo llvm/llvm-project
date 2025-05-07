@@ -32,7 +32,7 @@
 using namespace llvm;
 
 static cl::opt<bool>
-    EnableAggressive("amdgpu-remat-enable-hot-block-remat-aggressive");
+    EnableAggressiveSgpr("amdgpu-remat-enable-hot-block-remat-aggressive-sgpr");
 static cl::opt<unsigned> TargetOccupancy("amdgpu-remat-target-occupancy");
 
 namespace {
@@ -114,12 +114,14 @@ public:
   void applyCloneRemat(RematNode &Node, std::vector<BlockLiveInfo> &HotBlocks,
                        MachineDominatorTree *DT, MachineRegisterInfo &MRI,
                        SlotIndexes *SlotIndexes, const SIRegisterInfo *SIRI,
-                       const SIInstrInfo *SIII, MachineFunction &MF);
+                       const SIInstrInfo *SIII, LiveIntervals *LIS,
+                       MachineFunction &MF);
   void applyRemat(MapVector<Register, RematNode> &RematMap,
                   std::vector<BlockLiveInfo> &HotBlocks,
                   MachineDominatorTree *DT, llvm::SlotIndexes *SlotIndexes,
                   MachineRegisterInfo &MRI, const SIRegisterInfo *SIRI,
-                  const SIInstrInfo *SIII, MachineFunction &MF);
+                  const SIInstrInfo *SIII, LiveIntervals *LIS,
+                  MachineFunction &MF);
   bool hotBlockRemat(MachineFunction &MF, MachineLoopInfo *MLI,
                      LiveIntervals *LIS, MachineDominatorTree *DT,
                      MachinePostDominatorTree *PDT, bool &IsNearTarget);
@@ -140,12 +142,12 @@ public:
 MachineBasicBlock::iterator adjustInsertPointToAvoidSccSmash(
     MachineInstr *InstructionToMove, MachineBasicBlock *MBB,
     MachineBasicBlock::iterator CurrentInsertPoint, MachineRegisterInfo &MRI,
-    const SIRegisterInfo *SIRI, const SIInstrInfo *SIII) {
+    const SIRegisterInfo *SIRI, const SIInstrInfo *SIII, LiveIntervals *LIS) {
   const bool WillSmashScc =
       InstructionToMove->modifiesRegister(AMDGPU::SCC, SIRI);
   if (WillSmashScc) {
     CurrentInsertPoint = llvm::findOrCreateInsertionPointForSccDef(
-        MBB, CurrentInsertPoint, SIRI, SIII, &MRI);
+        MBB, CurrentInsertPoint, SIRI, SIII, &MRI, LIS);
   }
 
   return CurrentInsertPoint;
@@ -236,7 +238,7 @@ void AMDGPUHotBlockRematerialize::applyCloneRemat(
     RematNode &Node, std::vector<BlockLiveInfo> &HotBlocks,
     MachineDominatorTree *DT, MachineRegisterInfo &MRI,
     SlotIndexes *SlotIndexes, const SIRegisterInfo *SIRI,
-    const SIInstrInfo *SIII, MachineFunction &MF) {
+    const SIInstrInfo *SIII, LiveIntervals *LIS, MachineFunction &MF) {
   Register Reg = Node.Reg;
   MachineInstr *DefMI = MRI.getUniqueVRegDef(Reg);
 
@@ -289,7 +291,7 @@ void AMDGPUHotBlockRematerialize::applyCloneRemat(
     }
 
     MachineBasicBlock::iterator InsertPoint = adjustInsertPointToAvoidSccSmash(
-        DefMI, InsertPointMI->getParent(), InsertPointMI, MRI, SIRI, SIII);
+        DefMI, InsertPointMI->getParent(), InsertPointMI, MRI, SIRI, SIII, LIS);
 
     for (MachineMemOperand *MO : DefMI->memoperands()) {
       NewDef->addMemOperand(MF, MO);
@@ -310,8 +312,6 @@ void AMDGPUHotBlockRematerialize::applyCloneRemat(
         updateUsers(Reg, NewReg, IsSubRegDef, UserMIs);
       }
     }
-
-    llvm::removeUnusedLanes(*NewDef.getInstr(), MRI, SIRI, SIII, SlotIndexes);
   }
   if (MRI.use_empty(Reg)) {
     SlotIndexes->removeSingleMachineInstrFromMaps(*DefMI);
@@ -320,8 +320,8 @@ void AMDGPUHotBlockRematerialize::applyCloneRemat(
 
 void applyOneDefOneUseRemat(RematNode &Node, MachineRegisterInfo &MRI,
                             SlotIndexes *SlotIndexes,
-                            const SIRegisterInfo *SIRI,
-                            const SIInstrInfo *SIII) {
+                            const SIRegisterInfo *SIRI, const SIInstrInfo *SIII,
+                            LiveIntervals *LIS) {
   MachineInstr *DefMI = Node.DefMI;
   MachineInstr *InsertPointMI = Node.InsertPointMI;
   MachineBasicBlock *MBB = nullptr;
@@ -337,7 +337,7 @@ void applyOneDefOneUseRemat(RematNode &Node, MachineRegisterInfo &MRI,
   }
 
   InsertPoint = adjustInsertPointToAvoidSccSmash(DefMI, MBB, InsertPoint, MRI,
-                                                 SIRI, SIII);
+                                                 SIRI, SIII, LIS);
 
   // Move instruction to new location.
   DefMI->removeFromParent();
@@ -352,7 +352,8 @@ void AMDGPUHotBlockRematerialize::applyRemat(
     MapVector<Register, RematNode> &RematMap,
     std::vector<BlockLiveInfo> &HotBlocks, MachineDominatorTree *DT,
     llvm::SlotIndexes *SlotIndexes, MachineRegisterInfo &MRI,
-    const SIRegisterInfo *SIRI, const SIInstrInfo *SIII, MachineFunction &MF) {
+    const SIRegisterInfo *SIRI, const SIInstrInfo *SIII, LiveIntervals *LIS,
+    MachineFunction &MF) {
   std::vector<RematNode> UpdateList;
   for (auto &It : RematMap)
     UpdateList.emplace_back(It.second);
@@ -368,9 +369,10 @@ void AMDGPUHotBlockRematerialize::applyRemat(
 
   for (RematNode &Node : UpdateList) {
     if (Node.Kind == RematNode::RematKind::OneDefOneUse)
-      applyOneDefOneUseRemat(Node, MRI, SlotIndexes, SIRI, SIII);
+      applyOneDefOneUseRemat(Node, MRI, SlotIndexes, SIRI, SIII, LIS);
     else if (Node.Kind == RematNode::RematKind::Clone)
-      applyCloneRemat(Node, HotBlocks, DT, MRI, SlotIndexes, SIRI, SIII, MF);
+      applyCloneRemat(Node, HotBlocks, DT, MRI, SlotIndexes, SIRI, SIII, LIS,
+                      MF);
   }
 }
 
@@ -617,11 +619,6 @@ bool isImplicitDefUse(MachineInstr *DefMI, MachineInstr *UseMI) {
   return false;
 }
 
-static unsigned AlignToSgprAllocationGranularity(const GCNSubtarget *ST,
-                                                 unsigned SgprCount) {
-  return llvm::alignTo(SgprCount, ST->getSGPRAllocGranule());
-}
-
 bool nearSgprSpill(unsigned MaxSPressure, const GCNSubtarget *ST,
                    MachineFunction &MF) {
   unsigned MaxSGPR = ST->getAddressableNumSGPRs();
@@ -720,7 +717,7 @@ int rematGainInBits(MachineInstr *DefMI, Register Reg,
     if (IsSingleDef) {
       // The reg might share with other candidates,  check It here.
       // Count share reg in getReducedSize.
-      if (EnableAggressive) {
+      if (EnableAggressiveSgpr) {
         // In case of aggressive remat, treat multi use reg as shared reg and
         // ignore size of shared reg.
         if (!MRI.hasOneNonDBGUse(Reg))
@@ -858,7 +855,7 @@ bool isUsedByPhi(MachineInstr *DefMI, MachineRegisterInfo &MRI) {
   return false;
 }
 
-bool isSafeToMove(MachineInstr *DefMI, MachineRegisterInfo &MRI) {
+bool isSafeToMoveOrClone(MachineInstr *DefMI, MachineRegisterInfo &MRI) {
   // Do not move PHI nodes
   if (isUsedByPhi(DefMI, MRI))
     return false;
@@ -869,7 +866,7 @@ bool isSafeToMove(MachineInstr *DefMI, MachineRegisterInfo &MRI) {
     MachineOperand &Op = DefMI->getOperand(I);
     if (!Op.isReg())
       continue;
-    if (!MRI.getUniqueVRegDef(Op.getReg()) &&
+    if (!Op.getReg().isPhysical() && !MRI.getUniqueVRegDef(Op.getReg()) &&
         !llvm::isSub0Sub1SingleDef(Op.getReg(), MRI)) {
       return false;
     }
@@ -1065,7 +1062,7 @@ int filterRematCandiates(std::vector<RematNode> *OutRematList,
       continue;
 
     MachineInstr *DefMI = Node.DefMI;
-    if (!isSafeToMove(DefMI, MRI)) {
+    if (!isSafeToMoveOrClone(DefMI, MRI)) {
       OutPinnedRegSet->insert(Reg);
       continue;
     }
@@ -1083,7 +1080,7 @@ int filterRematCandiates(std::vector<RematNode> *OutRematList,
         continue;
 
       MachineInstr *DefMI = Node.DefMI;
-      if (!isSafeToMove(DefMI, MRI)) {
+      if (!isSafeToMoveOrClone(DefMI, MRI)) {
         OutPinnedRegSet->insert(Reg);
         continue;
       }
@@ -1149,6 +1146,12 @@ int getReducedSize(const MapVector<Register, RematNode> &RematMap,
   return ReducedSize;
 }
 
+static unsigned getNumLanesIn32BitReg(bool IsVgpr) {
+  const TargetRegisterClass *RC =
+      IsVgpr ? &AMDGPU::VGPR_32RegClass : &AMDGPU::SGPR_32RegClass;
+  return RC->LaneMask.getNumLanes();
+}
+
 // Calculate the amount of OVERLAPPING register pressure among all
 // the instructions in `ReducedInsts`. E.g for:
 //    x = COPY a:sgpr_32
@@ -1157,7 +1160,6 @@ int getReducedSize(const MapVector<Register, RematNode> &RematMap,
 int getSharedReducedSize(const InstSet &ReducedInsts, bool IsVGPR,
                          const MachineRegisterInfo &MRI,
                          const SIRegisterInfo *SIRI) {
-
   int SharedSize = 0;
   DenseMap<unsigned, LaneBitmask> SharedRegMaskMap;
   for (MachineInstr *DefMI : ReducedInsts) {
@@ -1182,8 +1184,9 @@ int getSharedReducedSize(const InstSet &ReducedInsts, bool IsVGPR,
         continue;
 
       const TargetRegisterClass *OpRC = MRI.getRegClass(Reg);
-      int MOSize = SIRI->getRegSizeInBits(*OpRC) >> 5;
-      unsigned Mask;
+      const int MOSize = SIRI->getRegSizeInBits(*OpRC) >> 5;
+
+      unsigned Mask = 0;
       // FIXME: Lane mask is now in the granularity of 16-bit lanes.
       if (unsigned SubIdx = MO.getSubReg()) {
         OpRC = SIRI->getSubRegisterClass(OpRC, SubIdx);
@@ -1210,7 +1213,9 @@ int getSharedReducedSize(const InstSet &ReducedInsts, bool IsVGPR,
       }
     }
   }
-  return SharedSize;
+
+  const unsigned NumLanesPerReg = getNumLanesIn32BitReg(IsVGPR);
+  return SharedSize / NumLanesPerReg;
 }
 
 void dumpRematMap(MapVector<Register, RematNode> &RematMap,
@@ -1280,7 +1285,7 @@ bool AMDGPUHotBlockRematerialize::hotBlockRemat(MachineFunction &MF,
   {
     int InitialRematSCnt = Status.MaxSPressure - Status.TargetSLimit;
     // when agressive sgpr remat, reserve some for allocation lost.
-    if (EnableAggressive)
+    if (EnableAggressiveSgpr)
       InitialRematSCnt += SgprLimitBias;
 
     bool InitialIsSGPRSpill = false;
@@ -1402,7 +1407,7 @@ bool AMDGPUHotBlockRematerialize::hotBlockRemat(MachineFunction &MF,
           RematCnt += Node.Size;
           // Stop if the size had reached the required amount, unless
           // aggressive is set.
-          if (RematCnt > RematSCnt && !EnableAggressive)
+          if (RematCnt > RematSCnt && !EnableAggressiveSgpr)
             break;
         }
         NewRematSCnt = 0;
@@ -1512,7 +1517,7 @@ bool AMDGPUHotBlockRematerialize::hotBlockRemat(MachineFunction &MF,
 
   if (!SRematMap.empty()) {
     IsUpdated = true;
-    applyRemat(SRematMap, HotBlocks, DT, SlotIndexes, MRI, SIRI, SIII, MF);
+    applyRemat(SRematMap, HotBlocks, DT, SlotIndexes, MRI, SIRI, SIII, LIS, MF);
     LLVM_DEBUG(llvm::dbgs() << "after hotremat"; MF.print(dbgs()););
   }
 

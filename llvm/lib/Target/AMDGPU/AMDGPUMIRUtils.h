@@ -21,6 +21,7 @@
 namespace llvm {
 
 class LiveInterval;
+class LiveIntervals;
 class SlotIndexes;
 class MachineRegisterInfo;
 class SIRegisterInfo;
@@ -38,8 +39,7 @@ bool isSub0Sub1SingleDef(unsigned Reg, const llvm::MachineRegisterInfo &MRI);
 using LiveSet = llvm::DenseMap<unsigned, llvm::LaneBitmask>;
 void dumpLiveSet(const LiveSet &LiveSet, const llvm::SIRegisterInfo *SIRI);
 
-bool isSccLiveAt(llvm::MachineBasicBlock *MBB,
-                 llvm::MachineBasicBlock::iterator MI);
+bool isSccLiveAt(const MachineInstr &MI, LiveIntervals *LIS);
 
 // An enum used to pass additional constraints to
 // `FindOrCreateInsertionPointForSccDef()`. This will further
@@ -66,7 +66,7 @@ enum SccDefInsertPointConstraintFlags {
 llvm::MachineBasicBlock::iterator findOrCreateInsertionPointForSccDef(
     llvm::MachineBasicBlock *MBB, llvm::MachineBasicBlock::iterator BeforeInst,
     const llvm::TargetRegisterInfo *TRI, const llvm::SIInstrInfo *TII,
-    llvm::MachineRegisterInfo *MRI,
+    llvm::MachineRegisterInfo *MRI, LiveIntervals *LIS,
     SccDefInsertPointConstraintFlags Constraints =
         SccDefInsertPointConstraintFlags::None);
 
