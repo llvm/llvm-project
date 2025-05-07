@@ -505,6 +505,9 @@ Improvements to Clang's diagnostics
 - ``-Wreserved-identifier`` now fires on reserved parameter names in a function
   declaration which is not a definition.
 
+- Several compatibility diagnostics that were incorrectly being grouped under
+  ``-Wpre-c++20-compat`` are now part of ``-Wc++20-compat``. (#GH138775)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
