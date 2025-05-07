@@ -5619,6 +5619,9 @@ SDValue DAGTypeLegalizer::WidenVecRes_Unary(SDNode *N) {
   SDValue InOp = GetWidenedVector(N->getOperand(0));
   if (N->getNumOperands() == 1)
     return DAG.getNode(N->getOpcode(), SDLoc(N), WidenVT, InOp, N->getFlags());
+  if (N->getOpcode() == ISD::AssertNoFPClass)
+    return DAG.getNode(N->getOpcode(), SDLoc(N), WidenVT, InOp,
+                       N->getOperand(1), N->getFlags());
 
   assert(N->getNumOperands() == 3 && "Unexpected number of operands!");
   assert(N->isVPOpcode() && "Expected VP opcode");
