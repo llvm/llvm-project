@@ -1,6 +1,7 @@
 ; RUN: opt -passes=simplifycfg -S --preserve-ll-uselistorder %s | FileCheck %s
 ; REQUIRES: x86-registered-target
 ; CHECK-LABEL: @n
+; CHECK: uselistorder i16 0, { 3, 2, 4, 1, 5, 0, 6 }
 
 ; Note: test was added in an effort to ensure determinism when updating memoryssa. See PR42574.
 ; If the uselistorder check becomes no longer relevant, the test can be disabled or removed.
