@@ -186,6 +186,8 @@ public:
             llvm::cast<mlir::SymbolRefAttr>(localizerSym);
         fir::LocalitySpecifierOp localizer = findLocalizer(loop, localizerName);
 
+        // TODO Should this be a heap allocation instead? For now, we allocate
+        // on the stack for each loop iteration.
         mlir::Value localAlloc =
             rewriter.create<fir::AllocaOp>(loop.getLoc(), localizer.getType());
 
@@ -210,6 +212,9 @@ public:
         }
 
         rewriter.replaceAllUsesWith(localArg, localAlloc);
+
+        // TODO localizers with `init` and `dealloc` regions are not handled
+        // yet.
       }
 
       loop.getRegion().front().eraseArguments(loop.getNumInductionVars(),
