@@ -157,6 +157,25 @@ DXContainerYAML::RootSignatureYamlDesc::create(
 
     RootSigDesc.Parameters.push_back(NewP);
   }
+
+  for (const auto &S : Data.samplers()) {
+    StaticSamplerYamlDesc NewS;
+    NewS.Filter = S.Filter;
+    NewS.AddressU = S.AddressU;
+    NewS.AddressV = S.AddressV;
+    NewS.AddressW = S.AddressW;
+    NewS.MipLODBias = S.MipLODBias;
+    NewS.MaxAnisotropy = S.MaxAnisotropy;
+    NewS.ComparisonFunc = S.ComparisonFunc;
+    NewS.BorderColor = S.BorderColor;
+    NewS.MinLOD = S.MinLOD;
+    NewS.MaxLOD = S.MaxLOD;
+    NewS.ShaderRegister = S.ShaderRegister;
+    NewS.RegisterSpace = S.RegisterSpace;
+    NewS.ShaderVisibility = S.ShaderVisibility;
+
+    RootSigDesc.StaticSamplers.push_back(NewS);
+  }
 #define ROOT_ELEMENT_FLAG(Num, Val)                                            \
   RootSigDesc.Val =                                                            \
       (Flags & llvm::to_underlying(dxbc::RTS0::RootElementFlag::Val)) > 0;
@@ -426,6 +445,24 @@ void MappingTraits<llvm::DXContainerYAML::RootParameterYamlDesc>::mapping(
     P.Data = Table;
   } break;
   }
+}
+
+void MappingTraits<llvm::DXContainerYAML::StaticSamplerYamlDesc>::mapping(
+    IO &IO, llvm::DXContainerYAML::StaticSamplerYamlDesc &S) {
+
+  IO.mapRequired("Filter", S.Filter);
+  IO.mapRequired("AddressU", S.AddressU);
+  IO.mapRequired("AddressV", S.AddressV);
+  IO.mapRequired("AddressW", S.AddressW);
+  IO.mapRequired("MipLODBias", S.MipLODBias);
+  IO.mapRequired("MaxAnisotropy", S.MaxAnisotropy);
+  IO.mapRequired("ComparisonFunc", S.ComparisonFunc);
+  IO.mapRequired("BorderColor", S.BorderColor);
+  IO.mapRequired("MinLOD", S.MinLOD);
+  IO.mapRequired("MaxLOD", S.MaxLOD);
+  IO.mapRequired("ShaderRegister", S.ShaderRegister);
+  IO.mapRequired("RegisterSpace", S.RegisterSpace);
+  IO.mapRequired("ShaderVisibility", S.ShaderVisibility);
 }
 
 void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,

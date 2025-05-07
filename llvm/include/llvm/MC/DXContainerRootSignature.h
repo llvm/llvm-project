@@ -120,6 +120,7 @@ struct RootSignatureDesc {
   uint32_t StaticSamplersOffset = 0u;
   uint32_t NumStaticSamplers = 0u;
   mcdxbc::RootParametersContainer ParametersContainer;
+  SmallVector<dxbc::RTS0::v0::StaticSampler> StaticSamplers;
 
   void write(raw_ostream &OS) const;
 

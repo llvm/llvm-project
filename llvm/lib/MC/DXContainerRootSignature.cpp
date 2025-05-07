@@ -8,8 +8,10 @@
 
 #include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Support/EndianStream.h"
+#include <cstddef>
 #include <cstdint>
 #include <variant>
 
@@ -65,7 +67,8 @@ static void rewriteOffsetToCurrentByte(raw_svector_ostream &Stream,
 size_t RootSignatureDesc::getSize() const {
   size_t Size =
       sizeof(dxbc::RTS0::v0::RootSignatureHeader) +
-      ParametersContainer.size() * sizeof(dxbc::RTS0::v0::RootParameterHeader);
+      ParametersContainer.size() * sizeof(dxbc::RTS0::v0::RootParameterHeader) +
+      StaticSamplers.size() * sizeof(dxbc::RTS0::v0::StaticSampler);
 
   for (const auto &I : ParametersContainer) {
     std::optional<ParametersView> P = ParametersContainer.getParameter(&I);
@@ -176,6 +179,21 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
         }
       }
     }
+  }
+  for (const auto &S : StaticSamplers) {
+    support::endian::write(BOS, S.Filter, llvm::endianness::little);
+    support::endian::write(BOS, S.AddressU, llvm::endianness::little);
+    support::endian::write(BOS, S.AddressV, llvm::endianness::little);
+    support::endian::write(BOS, S.AddressW, llvm::endianness::little);
+    support::endian::write(BOS, S.MipLODBias, llvm::endianness::little);
+    support::endian::write(BOS, S.MaxAnisotropy, llvm::endianness::little);
+    support::endian::write(BOS, S.ComparisonFunc, llvm::endianness::little);
+    support::endian::write(BOS, S.BorderColor, llvm::endianness::little);
+    support::endian::write(BOS, S.MinLOD, llvm::endianness::little);
+    support::endian::write(BOS, S.MaxLOD, llvm::endianness::little);
+    support::endian::write(BOS, S.ShaderRegister, llvm::endianness::little);
+    support::endian::write(BOS, S.RegisterSpace, llvm::endianness::little);
+    support::endian::write(BOS, S.ShaderVisibility, llvm::endianness::little);
   }
   assert(Storage.size() == getSize());
   OS.write(Storage.data(), Storage.size());
