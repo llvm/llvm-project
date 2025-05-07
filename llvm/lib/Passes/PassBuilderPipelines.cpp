@@ -98,6 +98,7 @@
 #include "llvm/Transforms/Scalar/IndVarSimplify.h"
 #include "llvm/Transforms/Scalar/InferAlignment.h"
 #include "llvm/Transforms/Scalar/InstSimplifyPass.h"
+#include "llvm/Transforms/Scalar/IsolatePath.h"
 #include "llvm/Transforms/Scalar/JumpTableToSwitch.h"
 #include "llvm/Transforms/Scalar/JumpThreading.h"
 #include "llvm/Transforms/Scalar/LICM.h"
@@ -597,6 +598,10 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
     FPM.addPass(
         SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
   }
+
+  // Isolate paths with undefined behavior. At this point, all inlinable
+  // functions should be inlined and constants propagated.
+  FPM.addPass(IsolatePathPass());
 
   // Speculative execution if the target has divergent branches; otherwise nop.
   FPM.addPass(SpeculativeExecutionPass(/* OnlyIfDivergentTarget =*/true));

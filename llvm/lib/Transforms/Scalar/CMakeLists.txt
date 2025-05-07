@@ -24,6 +24,7 @@ add_llvm_component_library(LLVMScalarOpts
   InferAddressSpaces.cpp
   InferAlignment.cpp
   InstSimplifyPass.cpp
+  IsolatePath.cpp
   JumpThreading.cpp
   JumpTableToSwitch.cpp
   LICM.cpp
