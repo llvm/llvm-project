@@ -1,10 +1,13 @@
 import { DebugProtocol } from "@vscode/debugprotocol";
 import * as vscode from "vscode";
 
+/** A helper type for mapping event types to their corresponding data type. */
+// prettier-ignore
 interface EventMap {
-  module: DebugProtocol.ModuleEvent;
+  "module": DebugProtocol.ModuleEvent;
 }
 
+/** A type assertion to check if a ProtocolMessage is an event or if it is a specific event. */
 function isEvent(
   message: DebugProtocol.ProtocolMessage,
 ): message is DebugProtocol.Event;
@@ -22,11 +25,23 @@ function isEvent(
   );
 }
 
+/** Tracks lldb-dap sessions for data visualizers. */
 export class DebugSessionTracker
   implements vscode.DebugAdapterTrackerFactory, vscode.Disposable
 {
+  /**
+   * Tracks active modules for each debug sessions.
+   *
+   * The modules are kept in an array to maintain the load order of the modules.
+   */
   private modules = new Map<vscode.DebugSession, DebugProtocol.Module[]>();
   private modulesChanged = new vscode.EventEmitter<void>();
+
+  /**
+   * Fired when modules are changed for any active debug session.
+   *
+   * Use `debugSessionModules` to retieve the active modules for a given debug session.
+   */
   onDidChangeModules: vscode.Event<void> = this.modulesChanged.event;
 
   dispose() {
@@ -43,12 +58,19 @@ export class DebugSessionTracker
     };
   }
 
+  /**
+   * Retrieves the modules for the given debug session.
+   *
+   * Modules are returned in load order.
+   */
   debugSessionModules(session: vscode.DebugSession): DebugProtocol.Module[] {
     return this.modules.get(session) ?? [];
   }
 
+  /** Clear information from the active session. */
   private onExit(session: vscode.DebugSession) {
     this.modules.delete(session);
+    this.modulesChanged.fire();
   }
 
   private onDidSendMessage(

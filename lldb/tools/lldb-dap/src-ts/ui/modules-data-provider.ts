@@ -2,7 +2,8 @@ import * as vscode from "vscode";
 import { DebugProtocol } from "@vscode/debugprotocol";
 import { DebugSessionTracker } from "../debug-session-tracker";
 
-export class ModuleDataProvider
+/** A tree data provider for listing loaded modules for the active debug session. */
+export class ModulesDataProvider
   implements vscode.TreeDataProvider<DebugProtocol.Module>
 {
   private changeTreeData = new vscode.EventEmitter<void>();

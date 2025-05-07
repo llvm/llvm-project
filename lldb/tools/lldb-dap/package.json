@@ -768,8 +768,8 @@
     "views": {
       "debug": [
         {
-          "id": "lldb-dap.modulesExplorer",
-          "name": "LLDB Modules Explorer",
+          "id": "lldb-dap.modules",
+          "name": "Modules",
           "when": "inDebugMode && debugType == 'lldb-dap'",
           "icon": "$(symbol-module)"
         }
