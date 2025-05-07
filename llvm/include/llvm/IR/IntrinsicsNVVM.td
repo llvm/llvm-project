@@ -1663,6 +1663,13 @@ let TargetPrefix = "nvvm" in {
       def int_nvvm_ # type # _to_f16x2 # suffix : CVT_I16_TO_F16X2<type, suffix>;
     }
   }
+
+  // FP4 conversions.
+  foreach relu = ["", "_relu"] in {
+    defvar suffix = !strconcat("_rn", relu);
+    def int_nvvm_ff_to_e2m1x2 # suffix # _satfinite : CVT_FF_TO_I16<"e2m1x2", !strconcat(suffix, "_satfinite")>;
+    def int_nvvm_e2m1x2_to_f16x2 # suffix : CVT_I16_TO_F16X2<"e2m1x2", suffix>;
+  }
   
   // UE8M0x2 conversions.
   foreach rmode = ["_rz", "_rp"] in {
