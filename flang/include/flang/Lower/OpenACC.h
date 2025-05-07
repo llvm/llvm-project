@@ -24,7 +24,7 @@ class StringRef;
 namespace mlir {
 namespace func {
 class FuncOp;
-}
+} // namespace func
 class Location;
 class Type;
 class ModuleOp;
@@ -34,7 +34,7 @@ class Value;
 
 namespace fir {
 class FirOpBuilder;
-}
+} // namespace fir
 
 namespace Fortran {
 namespace evaluate {

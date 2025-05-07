@@ -1088,7 +1088,7 @@ void AccAttributeVisitor::AddRoutineInfoToSymbol(
           if (Symbol * sym{ResolveFctName(*name)}) {
             Symbol &ultimate{sym->GetUltimate()};
             for (auto &device : currentDevices) {
-              device->set_bindName(SymbolRef(ultimate));
+              device->set_bindName(SymbolRef{ultimate});
             }
           } else {
             context_.Say((*name).source,
