@@ -1356,9 +1356,12 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       else if (Name.consume_front("atomic.load."))
         // nvvm.atomic.load.add.{f32,f64}.p
         // nvvm.atomic.load.{inc,dec}.32.p
-        Expand = Name.starts_with("add.f32.p") ||
-                 Name.starts_with("add.f64.p") ||
-                 Name.starts_with("inc.32.p") || Name.starts_with("dec.32.p");
+        Expand = StringSwitch<bool>(Name)
+                     .StartsWith("add.f32.p", true)
+                     .StartsWith("add.f64.p", true)
+                     .StartsWith("inc.32.p", true)
+                     .StartsWith("dec.32.p", true)
+                     .Default(false);
       else if (Name.consume_front("bitcast."))
         // nvvm.bitcast.{f2i,i2f,ll2d,d2ll}
         Expand =
