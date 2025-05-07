@@ -42,7 +42,7 @@ Address CIRGenFunction::emitAddrOfFieldStorage(Address base,
   mlir::Location loc = getLoc(field->getLocation());
 
   mlir::Type fieldType = convertType(field->getType());
-  auto fieldPtr = cir::PointerType::get(builder.getContext(), fieldType);
+  auto fieldPtr = cir::PointerType::get(fieldType);
   // For most cases fieldName is the same as field->getName() but for lambdas,
   // which do not currently carry the name, so it can be passed down from the
   // CaptureStmt.
