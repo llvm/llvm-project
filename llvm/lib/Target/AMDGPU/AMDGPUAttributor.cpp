@@ -1406,15 +1406,15 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
 
     for (auto &I : instructions(F)) {
       Value *Ptr = nullptr;
-      if (auto *LI = dyn_cast<LoadInst>(&I)) {
+      if (auto *LI = dyn_cast<LoadInst>(&I))
         Ptr = LI->getPointerOperand();
-      } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
+      else if (auto *SI = dyn_cast<StoreInst>(&I))
         Ptr = SI->getPointerOperand();
-      } else if (auto *RMW = dyn_cast<AtomicRMWInst>(&I)) {
+      else if (auto *RMW = dyn_cast<AtomicRMWInst>(&I))
         Ptr = RMW->getPointerOperand();
-      } else if (auto *CmpX = dyn_cast<AtomicCmpXchgInst>(&I)) {
+      else if (auto *CmpX = dyn_cast<AtomicCmpXchgInst>(&I))
         Ptr = CmpX->getPointerOperand();
-      }
+
       if (Ptr) {
         A.getOrCreateAAFor<AAAddressSpace>(IRPosition::value(*Ptr));
         A.getOrCreateAAFor<AANoAliasAddrSpace>(IRPosition::value(*Ptr));

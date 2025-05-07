@@ -2,6 +2,8 @@
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-attributor %s | FileCheck %s
 
 @gptr = protected addrspace(1) externally_initialized global i32 0, align 4
+@gptr2 = protected addrspace(5) externally_initialized global i32 0, align 4
+@gptr3 = protected addrspace(3) externally_initialized global i32 0, align 4
 
 define amdgpu_kernel void @no_alias_addr_space_select(ptr addrspace(3) %sptr, i1 %cond1, i1 %cond2, i32 %val, i32 %offset) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @no_alias_addr_space_select(
@@ -488,6 +490,119 @@ bb.2.end:
   %atomicrmw.min = atomicrmw volatile min ptr %ptr2, i32 20 monotonic, align 4
   %atomicrmw.umax = atomicrmw umax ptr %ptr2, i32 21 syncscope("singlethread") monotonic, align 4
   %atomicrmw.umin = atomicrmw volatile umin ptr %ptr2, i32 22 syncscope("singlethread") monotonic, align 4
+  ret void
+}
+
+define internal void @callee_no_alias_addr_space_select(ptr %ptr1, ptr %ptr2, ptr %ptr3, i1 %cond1, i1 %cond2, i32 %val) #0 {
+; CHECK-LABEL: define internal void @callee_no_alias_addr_space_select(
+; CHECK-SAME: ptr [[PTR1:%.*]], ptr [[PTR2:%.*]], ptr [[PTR3:%.*]], i1 [[COND1:%.*]], i1 [[COND2:%.*]], i32 [[VAL:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:    [[PTR4:%.*]] = select i1 [[COND1]], ptr addrspacecast (ptr addrspace(1) @gptr to ptr), ptr addrspacecast (ptr addrspace(5) @gptr2 to ptr)
+; CHECK-NEXT:    [[PTR5:%.*]] = select i1 [[COND2]], ptr [[PTR4]], ptr addrspacecast (ptr addrspace(3) @gptr3 to ptr)
+; CHECK-NEXT:    store i32 [[VAL]], ptr [[PTR5]], align 4, !noalias.addrspace [[META0]]
+; CHECK-NEXT:    [[ATOMICRMW_XCHG:%.*]] = atomicrmw xchg ptr [[PTR5]], i32 12 monotonic, align 4, !noalias.addrspace [[META0]]
+; CHECK-NEXT:    [[ATOMICRMW_ADD:%.*]] = atomicrmw add ptr [[PTR5]], i32 13 monotonic, align 4, !noalias.addrspace [[META0]]
+; CHECK-NEXT:    [[ATOMICRMW_SUB:%.*]] = atomicrmw sub ptr [[PTR5]], i32 14 monotonic, align 4, !noalias.addrspace [[META0]]
+; CHECK-NEXT:    [[ATOMICRMW_AND:%.*]] = atomicrmw and ptr [[PTR5]], i32 15 monotonic, align 4, !noalias.addrspace [[META0]]
+; CHECK-NEXT:    [[ATOMICRMW_NAND:%.*]] = atomicrmw nand ptr [[PTR5]], i32 16 monotonic, align 4, !noalias.addrspace [[META0]]
+; CHECK-NEXT:    [[ATOMICRMW_OR:%.*]] = atomicrmw or ptr [[PTR5]], i32 17 monotonic, align 4, !noalias.addrspace [[META0]]
+; CHECK-NEXT:    [[ATOMICRMW_XOR:%.*]] = atomicrmw xor ptr [[PTR5]], i32 18 monotonic, align 4, !noalias.addrspace [[META0]]
+; CHECK-NEXT:    [[ATOMICRMW_MAX:%.*]] = atomicrmw max ptr [[PTR5]], i32 19 monotonic, align 4, !noalias.addrspace [[META0]]
+; CHECK-NEXT:    [[ATOMICRMW_MIN:%.*]] = atomicrmw volatile min ptr [[PTR5]], i32 20 monotonic, align 4, !noalias.addrspace [[META0]]
+; CHECK-NEXT:    [[ATOMICRMW_UMAX:%.*]] = atomicrmw umax ptr [[PTR5]], i32 21 syncscope("singlethread") monotonic, align 4, !noalias.addrspace [[META0]]
+; CHECK-NEXT:    [[ATOMICRMW_UMIN:%.*]] = atomicrmw volatile umin ptr [[PTR5]], i32 22 syncscope("singlethread") monotonic, align 4, !noalias.addrspace [[META0]]
+; CHECK-NEXT:    ret void
+;
+  %ptr4 = select i1 %cond1, ptr %ptr1, ptr %ptr2
+  %ptr5 = select i1 %cond2, ptr %ptr4, ptr %ptr3
+  store i32 %val, ptr %ptr5
+  %atomicrmw.xchg = atomicrmw xchg ptr %ptr5, i32 12 monotonic, align 4
+  %atomicrmw.add = atomicrmw add ptr %ptr5, i32 13 monotonic, align 4
+  %atomicrmw.sub = atomicrmw sub ptr %ptr5, i32 14 monotonic, align 4
+  %atomicrmw.and = atomicrmw and ptr %ptr5, i32 15 monotonic, align 4
+  %atomicrmw.nand = atomicrmw nand ptr %ptr5, i32 16 monotonic, align 4
+  %atomicrmw.or = atomicrmw or ptr %ptr5, i32 17 monotonic, align 4
+  %atomicrmw.xor = atomicrmw xor ptr %ptr5, i32 18 monotonic, align 4
+  %atomicrmw.max = atomicrmw max ptr %ptr5, i32 19 monotonic, align 4
+  %atomicrmw.min = atomicrmw volatile min ptr %ptr5, i32 20 monotonic, align 4
+  %atomicrmw.umax = atomicrmw umax ptr %ptr5, i32 21 syncscope("singlethread") monotonic, align 4
+  %atomicrmw.umin = atomicrmw volatile umin ptr %ptr5, i32 22 syncscope("singlethread") monotonic, align 4
+  ret void
+}
+
+define internal void @callee_alias_addr_space_branch(ptr %ptr1, ptr %ptr2, ptr %ptr3, i1 %cond1, i1 %cond2, i32 %val, i32 %offset) #0 {
+; CHECK-LABEL: define internal void @callee_alias_addr_space_branch(
+; CHECK-SAME: ptr [[PTR1:%.*]], ptr [[PTR2:%.*]], ptr [[PTR3:%.*]], i1 [[COND1:%.*]], i1 [[COND2:%.*]], i32 [[VAL:%.*]], i32 [[OFFSET:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    br i1 [[COND1]], label %[[BB_1_TRUE:.*]], label %[[BB_1_FALSE:.*]]
+; CHECK:       [[BB_1_TRUE]]:
+; CHECK-NEXT:    br label %[[BB_1_END:.*]]
+; CHECK:       [[BB_1_FALSE]]:
+; CHECK-NEXT:    br label %[[BB_1_END]]
+; CHECK:       [[BB_1_END]]:
+; CHECK-NEXT:    [[PTR4:%.*]] = phi ptr [ addrspacecast (ptr addrspace(1) @gptr to ptr), %[[BB_1_TRUE]] ], [ addrspacecast (ptr addrspace(5) @gptr2 to ptr), %[[BB_1_FALSE]] ]
+; CHECK-NEXT:    br i1 [[COND2]], label %[[BB_2_TRUE:.*]], label %[[BB_2_END:.*]]
+; CHECK:       [[BB_2_TRUE]]:
+; CHECK-NEXT:    br label %[[BB_2_END]]
+; CHECK:       [[BB_2_END]]:
+; CHECK-NEXT:    [[PTR5:%.*]] = phi ptr [ [[PTR4]], %[[BB_1_END]] ], [ addrspacecast (ptr addrspace(3) @gptr3 to ptr), %[[BB_2_TRUE]] ]
+; CHECK-NEXT:    store i32 [[VAL]], ptr [[PTR5]], align 4, !noalias.addrspace [[META0]]
+; CHECK-NEXT:    [[ATOMICRMW_XCHG:%.*]] = atomicrmw xchg ptr [[PTR5]], i32 12 monotonic, align 4, !noalias.addrspace [[META0]]
+; CHECK-NEXT:    [[ATOMICRMW_ADD:%.*]] = atomicrmw add ptr [[PTR5]], i32 13 monotonic, align 4, !noalias.addrspace [[META0]]
+; CHECK-NEXT:    [[ATOMICRMW_SUB:%.*]] = atomicrmw sub ptr [[PTR5]], i32 14 monotonic, align 4, !noalias.addrspace [[META0]]
+; CHECK-NEXT:    [[ATOMICRMW_AND:%.*]] = atomicrmw and ptr [[PTR5]], i32 15 monotonic, align 4, !noalias.addrspace [[META0]]
+; CHECK-NEXT:    [[ATOMICRMW_NAND:%.*]] = atomicrmw nand ptr [[PTR5]], i32 16 monotonic, align 4, !noalias.addrspace [[META0]]
+; CHECK-NEXT:    [[ATOMICRMW_OR:%.*]] = atomicrmw or ptr [[PTR5]], i32 17 monotonic, align 4, !noalias.addrspace [[META0]]
+; CHECK-NEXT:    [[ATOMICRMW_XOR:%.*]] = atomicrmw xor ptr [[PTR5]], i32 18 monotonic, align 4, !noalias.addrspace [[META0]]
+; CHECK-NEXT:    [[ATOMICRMW_MAX:%.*]] = atomicrmw max ptr [[PTR5]], i32 19 monotonic, align 4, !noalias.addrspace [[META0]]
+; CHECK-NEXT:    [[ATOMICRMW_MIN:%.*]] = atomicrmw volatile min ptr [[PTR5]], i32 20 monotonic, align 4, !noalias.addrspace [[META0]]
+; CHECK-NEXT:    [[ATOMICRMW_UMAX:%.*]] = atomicrmw umax ptr [[PTR5]], i32 21 syncscope("singlethread") monotonic, align 4, !noalias.addrspace [[META0]]
+; CHECK-NEXT:    [[ATOMICRMW_UMIN:%.*]] = atomicrmw volatile umin ptr [[PTR5]], i32 22 syncscope("singlethread") monotonic, align 4, !noalias.addrspace [[META0]]
+; CHECK-NEXT:    ret void
+;
+  br i1 %cond1, label %bb.1.true, label %bb.1.false
+bb.1.true:
+  br label %bb.1.end
+
+bb.1.false:
+  br label %bb.1.end
+
+bb.1.end:
+  %ptr4 = phi ptr [ %ptr1, %bb.1.true ], [ %ptr2, %bb.1.false ]
+  br i1 %cond2, label %bb.2.true, label %bb.2.end
+
+bb.2.true:
+  br label %bb.2.end
+
+bb.2.end:
+  %ptr5 = phi ptr [ %ptr4, %bb.1.end ], [ %ptr3, %bb.2.true ]
+  store i32 %val, ptr %ptr5
+  %atomicrmw.xchg = atomicrmw xchg ptr %ptr5, i32 12 monotonic, align 4
+  %atomicrmw.add = atomicrmw add ptr %ptr5, i32 13 monotonic, align 4
+  %atomicrmw.sub = atomicrmw sub ptr %ptr5, i32 14 monotonic, align 4
+  %atomicrmw.and = atomicrmw and ptr %ptr5, i32 15 monotonic, align 4
+  %atomicrmw.nand = atomicrmw nand ptr %ptr5, i32 16 monotonic, align 4
+  %atomicrmw.or = atomicrmw or ptr %ptr5, i32 17 monotonic, align 4
+  %atomicrmw.xor = atomicrmw xor ptr %ptr5, i32 18 monotonic, align 4
+  %atomicrmw.max = atomicrmw max ptr %ptr5, i32 19 monotonic, align 4
+  %atomicrmw.min = atomicrmw volatile min ptr %ptr5, i32 20 monotonic, align 4
+  %atomicrmw.umax = atomicrmw umax ptr %ptr5, i32 21 syncscope("singlethread") monotonic, align 4
+  %atomicrmw.umin = atomicrmw volatile umin ptr %ptr5, i32 22 syncscope("singlethread") monotonic, align 4
+  ret void
+}
+
+define amdgpu_kernel void @kernal_call_func(i1 %cond1, i1 %cond2, i32 %val) #0 {
+; CHECK-LABEL: define amdgpu_kernel void @kernal_call_func(
+; CHECK-SAME: i1 [[COND1:%.*]], i1 [[COND2:%.*]], i32 [[VAL:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:    [[LPTR:%.*]] = alloca i32, align 4, addrspace(5)
+; CHECK-NEXT:    call void @callee_no_alias_addr_space_select(ptr addrspacecast (ptr addrspace(1) @gptr to ptr), ptr addrspacecast (ptr addrspace(5) @gptr2 to ptr), ptr addrspacecast (ptr addrspace(3) @gptr3 to ptr), i1 [[COND1]], i1 [[COND2]], i32 [[VAL]])
+; CHECK-NEXT:    call void @callee_alias_addr_space_branch(ptr addrspacecast (ptr addrspace(1) @gptr to ptr), ptr addrspacecast (ptr addrspace(5) @gptr2 to ptr), ptr addrspacecast (ptr addrspace(3) @gptr3 to ptr), i1 [[COND1]], i1 [[COND2]], i32 [[VAL]])
+; CHECK-NEXT:    ret void
+;
+  %lptr = alloca i32, align 4, addrspace(5)
+  %a = addrspacecast ptr addrspace(1) @gptr to ptr
+  %b = addrspacecast ptr addrspace(5) @gptr2 to ptr
+  %c = addrspacecast ptr addrspace(3) @gptr3 to ptr
+  call void @callee_no_alias_addr_space_select(ptr %a, ptr %b, ptr %c, i1 %cond1, i1 %cond2, i32 %val)
+  call void @callee_alias_addr_space_branch(ptr %a, ptr %b, ptr %c, i1 %cond1, i1 %cond2, i32 %val)
   ret void
 }
 

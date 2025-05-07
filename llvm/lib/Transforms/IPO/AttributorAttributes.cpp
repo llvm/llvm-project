@@ -12791,18 +12791,18 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
     assert(getAssociatedType()->isPtrOrPtrVectorTy() &&
            "Associated value is not a pointer");
 
-    if (!A.getInfoCache().getFlatAddressSpace().has_value()) {
-      resetASRanges(A);
+    resetASRanges(A);
+
+    auto FlatAS = A.getInfoCache().getFlatAddressSpace();
+    if (!FlatAS.has_value()) {
       indicatePessimisticFixpoint();
       return;
     }
 
-    unsigned FlatAS = A.getInfoCache().getFlatAddressSpace().value();
-    resetASRanges(A);
-    removeAS(FlatAS);
+    removeAS(FlatAS.value());
 
     unsigned AS = getAssociatedType()->getPointerAddressSpace();
-    if (AS != FlatAS) {
+    if (AS != FlatAS.value()) {
       removeAS(AS);
       indicateOptimisticFixpoint();
     }
@@ -12817,7 +12817,8 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
         return true;
       // Handle argument in flat address space only has addrspace cast uses
       if (auto *Arg = dyn_cast<Argument>(&Obj)) {
-        if (Arg->getType()->getPointerAddressSpace() == FlatAS) {
+        if (Arg->getType()->getPointerAddressSpace() == FlatAS &&
+            getAssociatedFunction()->hasKernelCallingConv()) {
           for (auto *U : Arg->users()) {
             auto *ASCI = dyn_cast<AddrSpaceCastInst>(U);
             if (!ASCI)
@@ -12851,23 +12852,23 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
 
   /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
-    if (!A.getInfoCache().getFlatAddressSpace().has_value())
+    auto FlatAS = A.getInfoCache().getFlatAddressSpace();
+    if (!FlatAS.has_value())
       return ChangeStatus::UNCHANGED;
 
-    unsigned FlatAS = A.getInfoCache().getFlatAddressSpace().value();
     unsigned AS = getAssociatedType()->getPointerAddressSpace();
-    if (AS != FlatAS)
+    if (AS != FlatAS.value())
       return ChangeStatus::UNCHANGED;
 
     LLVMContext &Ctx = getAssociatedValue().getContext();
-    llvm::MDNode *NoAliasASNode = nullptr;
+    MDNode *NoAliasASNode = nullptr;
     MDBuilder MDB(Ctx);
     for (auto range : ASRanges) {
       if (NoAliasASNode == nullptr) {
         NoAliasASNode =
             MDB.createRange(APInt(32, range.first), APInt(32, range.second));
       } else {
-        llvm::MDNode *ASRange =
+        MDNode *ASRange =
             MDB.createRange(APInt(32, range.first), APInt(32, range.second));
         NoAliasASNode = MDNode::getMostGenericRange(NoAliasASNode, ASRange);
       }
@@ -12918,12 +12919,14 @@ private:
       if (it->first == AS) {
         uint32_t Upper = it->second;
         ASRanges.erase(it);
-        ASRanges.push_back(std::pair(AS + 1, Upper));
+        if (AS + 1 < Upper)
+          ASRanges.push_back(std::pair(AS + 1, Upper));
         return;
       } else if (it->second - 1 == AS) {
         uint32_t Lower = it->first;
         ASRanges.erase(it);
-        ASRanges.push_back(std::pair(Lower, AS));
+        if (Lower < AS)
+          ASRanges.push_back(std::pair(Lower, AS));
         return;
       } else if (it->first < AS && AS < it->second - 1) {
         uint32_t Upper = it->second;
