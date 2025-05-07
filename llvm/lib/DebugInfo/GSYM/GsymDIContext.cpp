@@ -81,14 +81,11 @@ GsymDIContext::getLineInfoForAddress(object::SectionedAddress Address,
     // No debug info for this, we just had a symbol from the symbol table.
 
     // FIXME Demangle in case of DINameKind::ShortName
-    if (Specifier.FNKind != DINameKind::None) {
+    if (Specifier.FNKind != DINameKind::None)
       LineInfo.FunctionName = Result.FuncName.str();
-    }
-  } else {
-    if (!fillLineInfoFromLocation(Result.Locations.front(), Specifier,
-                                  LineInfo))
-      return {};
-  }
+  } else if (!fillLineInfoFromLocation(Result.Locations.front(), Specifier,
+                                       LineInfo))
+    return {};
 
   LineInfo.StartAddress = Result.FuncRange.start();
 
@@ -165,5 +162,5 @@ std::vector<DILocal>
 GsymDIContext::getLocalsForAddress(object::SectionedAddress Address) {
   // We can't implement this, there's no such information in the GSYM file.
 
-  return std::vector<DILocal>();
+  return {};
 }
