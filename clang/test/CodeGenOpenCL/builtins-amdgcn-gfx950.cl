@@ -1141,11 +1141,9 @@ void test_cvt_scalef32_pk_fp4_f16(global unsigned int* out, half2 src, float sca
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // CHECK-NEXT:    [[SRC_ADDR:%.*]] = alloca <2 x bfloat>, align 4, addrspace(5)
 // CHECK-NEXT:    [[SCALE_ADDR:%.*]] = alloca float, align 4, addrspace(5)
-// CHECK-NEXT:    [[OLD_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
 // CHECK-NEXT:    store <2 x bfloat> [[SRC:%.*]], ptr addrspace(5) [[SRC_ADDR]], align 4
 // CHECK-NEXT:    store float [[SCALE:%.*]], ptr addrspace(5) [[SCALE_ADDR]], align 4
-// CHECK-NEXT:    store i32 [[OLD:%.*]], ptr addrspace(5) [[OLD_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[TMP0]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load <2 x bfloat>, ptr addrspace(5) [[SRC_ADDR]], align 4
@@ -1176,7 +1174,7 @@ void test_cvt_scalef32_pk_fp4_f16(global unsigned int* out, half2 src, float sca
 // CHECK-NEXT:    store i32 [[TMP22]], ptr addrspace(1) [[TMP23]], align 4
 // CHECK-NEXT:    ret void
 //
-void test_cvt_scalef32_pk_fp4_bf16(global unsigned int* out, bfloat2 src, float scale, uint old)
+void test_cvt_scalef32_pk_fp4_bf16(global unsigned int* out, bfloat2 src, float scale)
 {
   *out = __builtin_amdgcn_cvt_scalef32_pk_fp4_bf16(*out, src, scale, 0);
   *out = __builtin_amdgcn_cvt_scalef32_pk_fp4_bf16(*out, src, scale, 1);

@@ -42,7 +42,10 @@ public:
 
 private:
   /// Destructor - Only for zap()
-  ~Use() { removeFromList(); }
+  ~Use() {
+    if (Val)
+      removeFromList();
+  }
 
   /// Constructor
   Use(User *Parent) : Parent(Parent) {}
@@ -93,15 +96,9 @@ private:
   }
 
   void removeFromList() {
-    if (Prev) {
-      *Prev = Next;
-      if (Next) {
-        Next->Prev = Prev;
-        Next = nullptr;
-      }
-
-      Prev = nullptr;
-    }
+    *Prev = Next;
+    if (Next)
+      Next->Prev = Prev;
   }
 };
 
