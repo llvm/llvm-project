@@ -5003,7 +5003,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
 
   switch (type->getTypeClass()) {
 #define NON_CANONICAL_TYPE(Class, Parent)                                      \
-  // We'll only see canonical types here.                                      \
+  /* We'll only see canonical types here. */                                   \
   case Type::Class:                                                            \
     llvm_unreachable("non-canonical type");
 #define TYPE(Class, Parent)
