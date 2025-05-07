@@ -246,7 +246,7 @@ void initializePostRASchedulerLegacyPass(PassRegistry &);
 void initializePreISelIntrinsicLoweringLegacyPassPass(PassRegistry &);
 void initializePrintFunctionPassWrapperPass(PassRegistry &);
 void initializePrintModulePassWrapperPass(PassRegistry &);
-void initializeProcessImplicitDefsPass(PassRegistry &);
+void initializeProcessImplicitDefsLegacyPass(PassRegistry &);
 void initializeProfileSummaryInfoWrapperPassPass(PassRegistry &);
 void initializePromoteLegacyPassPass(PassRegistry &);
 void initializeRABasicPass(PassRegistry &);
