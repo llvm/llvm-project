@@ -322,6 +322,13 @@ enum SteppingGranularity : unsigned {
 bool fromJSON(const llvm::json::Value &, SteppingGranularity &,
               llvm::json::Path);
 
+/// Provides formatting information for a value.
+struct ValueFormat {
+  /// Display the value in hex.
+  std::optional<bool> hex;
+};
+bool fromJSON(const llvm::json::Value &, ValueFormat &, llvm::json::Path);
+
 } // namespace lldb_dap::protocol
 
 #endif
