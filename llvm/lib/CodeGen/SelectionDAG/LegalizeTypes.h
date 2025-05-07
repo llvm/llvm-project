@@ -80,7 +80,9 @@ private:
   /// Pretend all of this node's results are legal.
   bool IgnoreNodeResults(SDNode *N) const {
     return N->getOpcode() == ISD::TargetConstant ||
-           N->getOpcode() == ISD::Register;
+           N->getOpcode() == ISD::Register ||
+           (N->getOpcode() == ISD::AssertNoFPClass &&
+            IgnoreNodeResults(N->getOperand(0).getNode()));
   }
 
   // Bijection from SDValue to unique id. As each created node gets a
@@ -796,6 +798,8 @@ private:
   //===--------------------------------------------------------------------===//
 
   SDValue GetSoftPromotedHalf(SDValue Op) {
+    while (Op.getNode()->getOpcode() == ISD::AssertNoFPClass)
+      Op = Op.getNode()->getOperand(0);
     TableId &PromotedId = SoftPromotedHalfs[getTableId(Op)];
     SDValue PromotedOp = getSDValue(PromotedId);
     assert(PromotedOp.getNode() && "Operand wasn't promoted?");
