@@ -4,19 +4,19 @@
 #define N 10
 class Sum {
   int val;
+
 public:
   Sum(int v = 0) : val(v) {}
-  Sum operator+(const Sum& rhs) const {
-    return Sum(val + rhs.val);
-  }
-  Sum& operator+=(const Sum& rhs) {
+  Sum operator+(const Sum &rhs) const { return Sum(val + rhs.val); }
+  Sum &operator+=(const Sum &rhs) {
     val += rhs.val;
     return *this;
   }
 };
-#pragma omp declare reduction(sum_reduction : Sum : omp_out += omp_in) initializer(omp_priv = Sum(0))
+#pragma omp declare reduction(sum_reduction:Sum : omp_out += omp_in)           \
+    initializer(omp_priv = Sum(0))
 
-void func_red(){
+void func_red() {
   Sum result(0);
   Sum array[N];
 
@@ -24,36 +24,50 @@ void func_red(){
     array[i] = Sum(i);
   }
 
-  #pragma omp parallel private(result)  num_threads(4)
+#pragma omp parallel private(result) num_threads(4)
   {
-  #pragma omp  for reduction(sum_reduction:result)
-  for (int i = 0; i < N; i++) {
-    result = result + array[i];
-  }
+#pragma omp for reduction(sum_reduction : result)
+    for (int i = 0; i < N; i++) {
+      result = result + array[i];
+    }
   }
 }
 
-void do_red(int n, int *v, int &sum_v)
- {
-         sum_v = 0;
-        #pragma omp for reduction(original(private),+: sum_v)
-        for (int i = 0; i < n; i++)
-        {
-                sum_v += v[i];
-        }
- }
- int main(void)
- {
-        int v[N];
-         for (int i = 0; i < N; i++)
-         v[i] = i;
-         #pragma omp parallel num_threads(4)
-         {
-                int s_v;
-                do_red(N, v, s_v);
-         }
-        return 0;
- }
+void do_red(int n, int *v, int &sum_v) {
+  sum_v = 0;
+#pragma omp for reduction(original(private), + : sum_v)
+  for (int i = 0; i < n; i++) {
+    sum_v += v[i];
+  }
+}
+void do_red_extended(int n, int *v, int &sum_v, int &prod_v) {
+  sum_v = 0;
+  prod_v = 1;
+
+#pragma omp for reduction(original(private), + : sum_v)                        \
+    reduction(original(private), * : prod_v)
+  for (int i = 0; i < n; i++) {
+    sum_v += v[i];
+    prod_v *= v[i];
+  }
+}
+int main(void) {
+  int v[N];
+  for (int i = 0; i < N; i++)
+    v[i] = i;
+#pragma omp parallel num_threads(4)
+  {
+    int s_v;
+    do_red(N, v, s_v);
+  }
+
+  int sum_v_ext = 0, prod_v_ext = 1;
+#pragma omp parallel num_threads(4)
+  {
+    do_red_extended(N, v, sum_v_ext, prod_v_ext);
+  }
+  return 0;
+}
 //.
 // CHECK: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 // CHECK: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 514, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
@@ -65,6 +79,7 @@ void do_red(int n, int *v, int &sum_v)
 // CHECK: @.gomp_critical_user_.reduction_critical.var = common global [8 x i32] zeroinitializer, align 8
 // CHECK: @[[GLOB4:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 66, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
 // CHECK: @.omp.reduction..internal_private_var.1 = common global i32 0, align 4
+// CHECK: @.omp.reduction..internal_private_var.2 = common global i32 0, align 4
 //.
 // CHECK-LABEL: define dso_local void @_Z8func_redv(
 // CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
@@ -214,11 +229,10 @@ void do_red(int n, int *v, int &sum_v)
 // CHECK-NEXT:    call void @__kmpc_end_reduce(ptr @[[GLOB2]], i32 [[TMP2]], ptr @.gomp_critical_user_.reduction.var)
 // CHECK-NEXT:    br [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK:       [[_OMP_REDUCTION_DEFAULT:.*:]]
-// CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
 // CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[TMP2]], 0
 // CHECK-NEXT:    br i1 [[TMP13]], label %[[INIT:.*]], label %[[INIT_END:.*]]
 // CHECK:       [[INIT]]:
-// CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 @.omp.reduction..internal_private_var, i8 0, i64 4, i1 false)
+// CHECK-NEXT:    call void @_ZN3SumC1Ei(ptr noundef nonnull align 4 dereferenceable(4) @.omp.reduction..internal_private_var, i32 noundef 0)
 // CHECK-NEXT:    br label %[[INIT_END]]
 // CHECK:       [[INIT_END]]:
 // CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
@@ -445,7 +459,6 @@ void do_red(int n, int *v, int &sum_v)
 // CHECK-NEXT:    call void @__kmpc_end_reduce(ptr @[[GLOB2]], i32 [[TMP0]], ptr @.gomp_critical_user_.reduction.var)
 // CHECK-NEXT:    br [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK:       [[_OMP_REDUCTION_DEFAULT:.*:]]
-// CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP0]])
 // CHECK-NEXT:    [[TMP28:%.*]] = icmp eq i32 [[TMP0]], 0
 // CHECK-NEXT:    br i1 [[TMP28]], label %[[INIT:.*]], label %[[INIT_END:.*]]
 // CHECK:       [[INIT]]:
@@ -489,12 +502,233 @@ void do_red(int n, int *v, int &sum_v)
 // CHECK-NEXT:    ret void
 //
 //
+// CHECK-LABEL: define dso_local void @_Z15do_red_extendediPiRiS0_(
+// CHECK-SAME: i32 noundef [[N:%.*]], ptr noundef [[V:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[SUM_V:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[PROD_V:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[SUM_V_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[PROD_V_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[TMP:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[_TMP1:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[_TMP2:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[DOTCAPTURE_EXPR_3:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[SUM_V5:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[_TMP6:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[PROD_V7:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[_TMP8:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[I9:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [2 x ptr], align 8
+// CHECK-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[_TMP19:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB3]])
+// CHECK-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4
+// CHECK-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 8
+// CHECK-NEXT:    store ptr [[SUM_V]], ptr [[SUM_V_ADDR]], align 8
+// CHECK-NEXT:    store ptr [[PROD_V]], ptr [[PROD_V_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[SUM_V_ADDR]], align 8
+// CHECK-NEXT:    store i32 0, ptr [[TMP1]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[PROD_V_ADDR]], align 8
+// CHECK-NEXT:    store i32 1, ptr [[TMP2]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_V_ADDR]], align 8
+// CHECK-NEXT:    store ptr [[TMP3]], ptr [[TMP]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[PROD_V_ADDR]], align 8
+// CHECK-NEXT:    store ptr [[TMP4]], ptr [[_TMP1]], align 8
+// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[N_ADDR]], align 4
+// CHECK-NEXT:    store i32 [[TMP5]], ptr [[DOTCAPTURE_EXPR_]], align 4
+// CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
+// CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP6]], 0
+// CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
+// CHECK-NEXT:    [[SUB4:%.*]] = sub nsw i32 [[DIV]], 1
+// CHECK-NEXT:    store i32 [[SUB4]], ptr [[DOTCAPTURE_EXPR_3]], align 4
+// CHECK-NEXT:    store i32 0, ptr [[I]], align 4
+// CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
+// CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP7]]
+// CHECK-NEXT:    br i1 [[CMP]], label %[[OMP_PRECOND_THEN:.*]], label %[[OMP_PRECOND_END:.*]]
+// CHECK:       [[OMP_PRECOND_THEN]]:
+// CHECK-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
+// CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_3]], align 4
+// CHECK-NEXT:    store i32 [[TMP8]], ptr [[DOTOMP_UB]], align 4
+// CHECK-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
+// CHECK-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
+// CHECK-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[TMP]], align 8
+// CHECK-NEXT:    store i32 0, ptr [[SUM_V5]], align 4
+// CHECK-NEXT:    store ptr [[SUM_V5]], ptr [[_TMP6]], align 8
+// CHECK-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[_TMP1]], align 8
+// CHECK-NEXT:    store i32 1, ptr [[PROD_V7]], align 4
+// CHECK-NEXT:    store ptr [[PROD_V7]], ptr [[_TMP8]], align 8
+// CHECK-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB1]], i32 [[TMP0]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
+// CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+// CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_3]], align 4
+// CHECK-NEXT:    [[CMP10:%.*]] = icmp sgt i32 [[TMP11]], [[TMP12]]
+// CHECK-NEXT:    br i1 [[CMP10]], label %[[COND_TRUE:.*]], label %[[COND_FALSE:.*]]
+// CHECK:       [[COND_TRUE]]:
+// CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_3]], align 4
+// CHECK-NEXT:    br label %[[COND_END:.*]]
+// CHECK:       [[COND_FALSE]]:
+// CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+// CHECK-NEXT:    br label %[[COND_END]]
+// CHECK:       [[COND_END]]:
+// CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP13]], %[[COND_TRUE]] ], [ [[TMP14]], %[[COND_FALSE]] ]
+// CHECK-NEXT:    store i32 [[COND]], ptr [[DOTOMP_UB]], align 4
+// CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
+// CHECK-NEXT:    store i32 [[TMP15]], ptr [[DOTOMP_IV]], align 4
+// CHECK-NEXT:    br label %[[OMP_INNER_FOR_COND:.*]]
+// CHECK:       [[OMP_INNER_FOR_COND]]:
+// CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+// CHECK-NEXT:    [[CMP11:%.*]] = icmp sle i32 [[TMP16]], [[TMP17]]
+// CHECK-NEXT:    br i1 [[CMP11]], label %[[OMP_INNER_FOR_BODY:.*]], label %[[OMP_INNER_FOR_END:.*]]
+// CHECK:       [[OMP_INNER_FOR_BODY]]:
+// CHECK-NEXT:    [[TMP18:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP18]], 1
+// CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
+// CHECK-NEXT:    store i32 [[ADD]], ptr [[I9]], align 4
+// CHECK-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[V_ADDR]], align 8
+// CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr [[I9]], align 4
+// CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP20]] to i64
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[TMP19]], i64 [[IDXPROM]]
+// CHECK-NEXT:    [[TMP21:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+// CHECK-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[_TMP6]], align 8
+// CHECK-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP22]], align 4
+// CHECK-NEXT:    [[ADD12:%.*]] = add nsw i32 [[TMP23]], [[TMP21]]
+// CHECK-NEXT:    store i32 [[ADD12]], ptr [[TMP22]], align 4
+// CHECK-NEXT:    [[TMP24:%.*]] = load ptr, ptr [[V_ADDR]], align 8
+// CHECK-NEXT:    [[TMP25:%.*]] = load i32, ptr [[I9]], align 4
+// CHECK-NEXT:    [[IDXPROM13:%.*]] = sext i32 [[TMP25]] to i64
+// CHECK-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i32, ptr [[TMP24]], i64 [[IDXPROM13]]
+// CHECK-NEXT:    [[TMP26:%.*]] = load i32, ptr [[ARRAYIDX14]], align 4
+// CHECK-NEXT:    [[TMP27:%.*]] = load ptr, ptr [[_TMP8]], align 8
+// CHECK-NEXT:    [[TMP28:%.*]] = load i32, ptr [[TMP27]], align 4
+// CHECK-NEXT:    [[MUL15:%.*]] = mul nsw i32 [[TMP28]], [[TMP26]]
+// CHECK-NEXT:    store i32 [[MUL15]], ptr [[TMP27]], align 4
+// CHECK-NEXT:    br label %[[OMP_BODY_CONTINUE:.*]]
+// CHECK:       [[OMP_BODY_CONTINUE]]:
+// CHECK-NEXT:    br label %[[OMP_INNER_FOR_INC:.*]]
+// CHECK:       [[OMP_INNER_FOR_INC]]:
+// CHECK-NEXT:    [[TMP29:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// CHECK-NEXT:    [[ADD16:%.*]] = add nsw i32 [[TMP29]], 1
+// CHECK-NEXT:    store i32 [[ADD16]], ptr [[DOTOMP_IV]], align 4
+// CHECK-NEXT:    br label %[[OMP_INNER_FOR_COND]]
+// CHECK:       [[OMP_INNER_FOR_END]]:
+// CHECK-NEXT:    br label %[[OMP_LOOP_EXIT:.*]]
+// CHECK:       [[OMP_LOOP_EXIT]]:
+// CHECK-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP30:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
+// CHECK-NEXT:    store ptr [[SUM_V5]], ptr [[TMP30]], align 8
+// CHECK-NEXT:    [[TMP31:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 1
+// CHECK-NEXT:    store ptr [[PROD_V7]], ptr [[TMP31]], align 8
+// CHECK-NEXT:    [[TMP32:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2]], i32 [[TMP0]], i32 2, i64 16, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_Z15do_red_extendediPiRiS0_.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
+// CHECK-NEXT:    switch i32 [[TMP32]], [[DOTOMP_REDUCTION_DEFAULT:label %.*]] [
+// CHECK-NEXT:      i32 1, [[DOTOMP_REDUCTION_CASE1:label %.*]]
+// CHECK-NEXT:      i32 2, label %[[DOTOMP_REDUCTION_CASE2:.*]]
+// CHECK-NEXT:    ]
+// CHECK:       [[_OMP_REDUCTION_CASE1:.*:]]
+// CHECK-NEXT:    [[TMP33:%.*]] = load i32, ptr [[TMP9]], align 4
+// CHECK-NEXT:    [[TMP34:%.*]] = load i32, ptr [[SUM_V5]], align 4
+// CHECK-NEXT:    [[ADD17:%.*]] = add nsw i32 [[TMP33]], [[TMP34]]
+// CHECK-NEXT:    store i32 [[ADD17]], ptr [[TMP9]], align 4
+// CHECK-NEXT:    [[TMP35:%.*]] = load i32, ptr [[TMP10]], align 4
+// CHECK-NEXT:    [[TMP36:%.*]] = load i32, ptr [[PROD_V7]], align 4
+// CHECK-NEXT:    [[MUL18:%.*]] = mul nsw i32 [[TMP35]], [[TMP36]]
+// CHECK-NEXT:    store i32 [[MUL18]], ptr [[TMP10]], align 4
+// CHECK-NEXT:    call void @__kmpc_end_reduce(ptr @[[GLOB2]], i32 [[TMP0]], ptr @.gomp_critical_user_.reduction.var)
+// CHECK-NEXT:    br [[DOTOMP_REDUCTION_DEFAULT]]
+// CHECK:       [[_OMP_REDUCTION_CASE2:.*:]]
+// CHECK-NEXT:    [[TMP37:%.*]] = load i32, ptr [[SUM_V5]], align 4
+// CHECK-NEXT:    [[TMP38:%.*]] = atomicrmw add ptr [[TMP9]], i32 [[TMP37]] monotonic, align 4
+// CHECK-NEXT:    [[TMP39:%.*]] = load i32, ptr [[PROD_V7]], align 4
+// CHECK-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic i32, ptr [[TMP10]] monotonic, align 4
+// CHECK-NEXT:    br label %[[ATOMIC_CONT:.*]]
+// CHECK:       [[ATOMIC_CONT]]:
+// CHECK-NEXT:    [[TMP40:%.*]] = phi i32 [ [[ATOMIC_LOAD]], %[[DOTOMP_REDUCTION_CASE2]] ], [ [[TMP45:%.*]], %[[ATOMIC_CONT]] ]
+// CHECK-NEXT:    store i32 [[TMP40]], ptr [[_TMP19]], align 4
+// CHECK-NEXT:    [[TMP41:%.*]] = load i32, ptr [[_TMP19]], align 4
+// CHECK-NEXT:    [[TMP42:%.*]] = load i32, ptr [[PROD_V7]], align 4
+// CHECK-NEXT:    [[MUL20:%.*]] = mul nsw i32 [[TMP41]], [[TMP42]]
+// CHECK-NEXT:    store i32 [[MUL20]], ptr [[ATOMIC_TEMP]], align 4
+// CHECK-NEXT:    [[TMP43:%.*]] = load i32, ptr [[ATOMIC_TEMP]], align 4
+// CHECK-NEXT:    [[TMP44:%.*]] = cmpxchg ptr [[TMP10]], i32 [[TMP40]], i32 [[TMP43]] monotonic monotonic, align 4
+// CHECK-NEXT:    [[TMP45]] = extractvalue { i32, i1 } [[TMP44]], 0
+// CHECK-NEXT:    [[TMP46:%.*]] = extractvalue { i32, i1 } [[TMP44]], 1
+// CHECK-NEXT:    br i1 [[TMP46]], label %[[ATOMIC_EXIT:.*]], label %[[ATOMIC_CONT]]
+// CHECK:       [[ATOMIC_EXIT]]:
+// CHECK-NEXT:    call void @__kmpc_end_reduce(ptr @[[GLOB2]], i32 [[TMP0]], ptr @.gomp_critical_user_.reduction.var)
+// CHECK-NEXT:    br [[DOTOMP_REDUCTION_DEFAULT]]
+// CHECK:       [[_OMP_REDUCTION_DEFAULT:.*:]]
+// CHECK-NEXT:    [[TMP47:%.*]] = icmp eq i32 [[TMP0]], 0
+// CHECK-NEXT:    br i1 [[TMP47]], label %[[INIT:.*]], label %[[INIT_END:.*]]
+// CHECK:       [[INIT]]:
+// CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 @.omp.reduction..internal_private_var.2, i8 0, i64 4, i1 false)
+// CHECK-NEXT:    br label %[[INIT_END]]
+// CHECK:       [[INIT_END]]:
+// CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP0]])
+// CHECK-NEXT:    call void @__kmpc_critical(ptr @[[GLOB3]], i32 [[TMP0]], ptr @.gomp_critical_user_.reduction_critical.var)
+// CHECK-NEXT:    [[TMP48:%.*]] = load i32, ptr @.omp.reduction..internal_private_var.2, align 4
+// CHECK-NEXT:    [[TMP49:%.*]] = load i32, ptr [[TMP9]], align 4
+// CHECK-NEXT:    [[ADD21:%.*]] = add nsw i32 [[TMP48]], [[TMP49]]
+// CHECK-NEXT:    store i32 [[ADD21]], ptr @.omp.reduction..internal_private_var.2, align 4
+// CHECK-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB3]], i32 [[TMP0]], ptr @.gomp_critical_user_.reduction_critical.var)
+// CHECK-NEXT:    call void @__kmpc_critical(ptr @[[GLOB3]], i32 [[TMP0]], ptr @.gomp_critical_user_.reduction_critical.var)
+// CHECK-NEXT:    [[TMP50:%.*]] = load i32, ptr @.omp.reduction..internal_private_var.2, align 4
+// CHECK-NEXT:    [[TMP51:%.*]] = load i32, ptr [[TMP10]], align 4
+// CHECK-NEXT:    [[MUL22:%.*]] = mul nsw i32 [[TMP50]], [[TMP51]]
+// CHECK-NEXT:    store i32 [[MUL22]], ptr @.omp.reduction..internal_private_var.2, align 4
+// CHECK-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB3]], i32 [[TMP0]], ptr @.gomp_critical_user_.reduction_critical.var)
+// CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP52:%.*]] = load i32, ptr @.omp.reduction..internal_private_var.2, align 4
+// CHECK-NEXT:    store i32 [[TMP52]], ptr [[TMP9]], align 4
+// CHECK-NEXT:    store i32 [[TMP52]], ptr [[TMP10]], align 4
+// CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP0]])
+// CHECK-NEXT:    br label %[[OMP_PRECOND_END]]
+// CHECK:       [[OMP_PRECOND_END]]:
+// CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB4]], i32 [[TMP0]])
+// CHECK-NEXT:    ret void
+//
+//
+// CHECK-LABEL: define internal void @_Z15do_red_extendediPiRiS0_.omp.reduction.reduction_func(
+// CHECK-SAME: ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR5]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[DOTADDR1:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
+// CHECK-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR1]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[DOTADDR1]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP3]], i64 0, i64 0
+// CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP2]], i64 0, i64 0
+// CHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
+// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP3]], i64 0, i64 1
+// CHECK-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[TMP8]], align 8
+// CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP2]], i64 0, i64 1
+// CHECK-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[TMP10]], align 8
+// CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP7]], align 4
+// CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[TMP5]], align 4
+// CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP12]], [[TMP13]]
+// CHECK-NEXT:    store i32 [[ADD]], ptr [[TMP7]], align 4
+// CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[TMP11]], align 4
+// CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[TMP9]], align 4
+// CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP14]], [[TMP15]]
+// CHECK-NEXT:    store i32 [[MUL]], ptr [[TMP11]], align 4
+// CHECK-NEXT:    ret void
+//
+//
 // CHECK-LABEL: define dso_local noundef i32 @main(
 // CHECK-SAME: ) #[[ATTR8:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[V:%.*]] = alloca [10 x i32], align 16
 // CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[SUM_V_EXT:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[PROD_V_EXT:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB3]])
 // CHECK-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK-NEXT:    store i32 0, ptr [[I]], align 4
@@ -518,6 +752,10 @@ void do_red(int n, int *v, int &sum_v)
 // CHECK:       [[FOR_END]]:
 // CHECK-NEXT:    call void @__kmpc_push_num_threads(ptr @[[GLOB3]], i32 [[TMP0]], i32 4)
 // CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 1, ptr @main.omp_outlined, ptr [[V]])
+// CHECK-NEXT:    store i32 0, ptr [[SUM_V_EXT]], align 4
+// CHECK-NEXT:    store i32 1, ptr [[PROD_V_EXT]], align 4
+// CHECK-NEXT:    call void @__kmpc_push_num_threads(ptr @[[GLOB3]], i32 [[TMP0]], i32 4)
+// CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 3, ptr @main.omp_outlined.3, ptr [[V]], ptr [[SUM_V_EXT]], ptr [[PROD_V_EXT]])
 // CHECK-NEXT:    ret i32 0
 //
 //

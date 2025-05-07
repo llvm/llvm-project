@@ -4974,11 +4974,6 @@ void CGOpenMPRuntime::emitPrivateReduction(
   llvm::Value *BarrierLoc = emitUpdateLocation(CGF, Loc, OMP_ATOMIC_REDUCE);
   llvm::Value *BarrierArgs[] = {BarrierLoc, ThreadId};
 
-  // First barrier to ensure all threads are ready.
-  CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                          CGM.getModule(), OMPRTL___kmpc_barrier),
-                      BarrierArgs);
-  // Initialize the shared variable by the master thread.
   llvm::BasicBlock *InitBB = CGF.createBasicBlock("init");
   llvm::BasicBlock *InitEndBB = CGF.createBasicBlock("init.end");
 
@@ -4989,6 +4984,18 @@ void CGOpenMPRuntime::emitPrivateReduction(
   CGF.EmitBlock(InitBB);
 
   auto EmitSharedInit = [&]() {
+    if (UDR) { // Check if it's a User-Defined Reduction
+      if (const Expr *UDRInitExpr = UDR->getInitializer()) {
+        // Use the initializer from the OMPDeclareReductionDecl
+        CGF.EmitAnyExprToMem(UDRInitExpr, SharedResult,
+                             PrivateType.getQualifiers(), true);
+      } else {
+        // EmitNullInitialization handles default construction for C++ classes
+        // and zeroing for scalars, which is a reasonable default.
+        CGF.EmitNullInitialization(SharedResult, PrivateType);
+      }
+      return; // UDR initialization handled
+    }
     if (const auto *DRE = dyn_cast<DeclRefExpr>(Privates[0])) {
       if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
         const Expr *InitExpr = VD->getInit();
