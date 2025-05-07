@@ -35,7 +35,7 @@ void func1(int *x) {
 // CHECK-NEXT:    store ptr [[LV1_ASCAST]], ptr [[LP1_ASCAST]], align 8
 // CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [100 x i32], ptr [[LA_ASCAST]], i64 0, i64 0
 // CHECK-NEXT:    store ptr [[ARRAYDECAY]], ptr [[LP2_ASCAST]], align 8
-// CHECK-NEXT:    call void @_Z5func1Pi(ptr noundef [[LV1_ASCAST]])
+// CHECK-NEXT:    call void @_Z5func1Pi(ptr noundef [[LV1_ASCAST]]) #[[ATTR2:[0-9]+]]
 // CHECK-NEXT:    store i32 4, ptr [[LVC_ASCAST]], align 4
 // CHECK-NEXT:    store i32 4, ptr [[LV1_ASCAST]], align 4
 // CHECK-NEXT:    ret void
@@ -64,7 +64,25 @@ void destroy(int x);
 class A {
 int x;
 public:
+// CHECK-LABEL: @_ZN1AC1Ev(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[THIS_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[THIS_ADDR]] to ptr
+// CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    call void @_ZN1AC2Ev(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]]) #[[ATTR2]]
+// CHECK-NEXT:    ret void
+//
   A():x(0) {}
+// CHECK-LABEL: @_ZN1AD1Ev(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[THIS_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[THIS_ADDR]] to ptr
+// CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    call void @_ZN1AD2Ev(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]]) #[[ATTR3:[0-9]+]]
+// CHECK-NEXT:    ret void
+//
   ~A() {
    destroy(x);
   }
@@ -74,8 +92,8 @@ public:
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A:%.*]] = alloca [[CLASS_A:%.*]], align 4, addrspace(5)
 // CHECK-NEXT:    [[A_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A]] to ptr
-// CHECK-NEXT:    call void @_ZN1AC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[A_ASCAST]])
-// CHECK-NEXT:    call void @_ZN1AD1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[A_ASCAST]])
+// CHECK-NEXT:    call void @_ZN1AC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[A_ASCAST]]) #[[ATTR2]]
+// CHECK-NEXT:    call void @_ZN1AD1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[A_ASCAST]]) #[[ATTR3]]
 // CHECK-NEXT:    ret void
 //
 void func3() {
@@ -87,7 +105,7 @@ void func3() {
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[X_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X_ADDR]] to ptr
 // CHECK-NEXT:    store i32 [[X:%.*]], ptr [[X_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    call void @_Z5func1Pi(ptr noundef [[X_ADDR_ASCAST]])
+// CHECK-NEXT:    call void @_Z5func1Pi(ptr noundef [[X_ADDR_ASCAST]]) #[[ATTR2]]
 // CHECK-NEXT:    ret void
 //
 void func4(int x) {
@@ -123,7 +141,7 @@ extern void use(int *);
 // CHECK-NEXT:    [[X_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X]] to ptr
 // CHECK-NEXT:    br label [[LATER:%.*]]
 // CHECK:       later:
-// CHECK-NEXT:    call void @_Z3usePi(ptr noundef [[X_ASCAST]])
+// CHECK-NEXT:    call void @_Z3usePi(ptr noundef [[X_ASCAST]]) #[[ATTR2]]
 // CHECK-NEXT:    ret void
 //
 void func7() {
