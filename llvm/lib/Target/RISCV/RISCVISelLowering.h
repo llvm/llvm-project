@@ -416,12 +416,7 @@ enum NodeType : unsigned {
   RI_VUNZIP2A_VL,
   RI_VUNZIP2B_VL,
 
-  // zvqdot instructions with additional passthru, mask and VL operands
-  VQDOT_VL,
-  VQDOTU_VL,
-  VQDOTSU_VL,
-
-  LAST_VL_VECTOR_OP = VQDOTSU_VL,
+  LAST_VL_VECTOR_OP = RI_VUNZIP2B_VL,
 
   // XRivosVisni
   // VEXTRACT matches the semantics of ri.vextract.x.v. The result is always
