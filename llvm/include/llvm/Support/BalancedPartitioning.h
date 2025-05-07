@@ -39,9 +39,9 @@
 #ifndef LLVM_SUPPORT_BALANCED_PARTITIONING_H
 #define LLVM_SUPPORT_BALANCED_PARTITIONING_H
 
-#include "llvm/Support/Compiler.h"
 #include "raw_ostream.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Compiler.h"
 
 #include <atomic>
 #include <condition_variable>
@@ -194,7 +194,7 @@ private:
 protected:
   /// Compute the move gain for uniform log-gap cost
   LLVM_ABI static float moveGain(const BPFunctionNode &N, bool FromLeftToRight,
-                        const SignaturesT &Signatures);
+                                 const SignaturesT &Signatures);
   friend class BalancedPartitioningTest_MoveGain_Test;
 };
 

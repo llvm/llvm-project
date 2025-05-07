@@ -31,7 +31,8 @@ LLVM_ABI void RunInterruptHandlers();
 /// This function registers signal handlers to ensure that if a signal gets
 /// delivered that the named file is removed.
 /// Remove a file if a fatal signal occurs.
-LLVM_ABI bool RemoveFileOnSignal(StringRef Filename, std::string *ErrMsg = nullptr);
+LLVM_ABI bool RemoveFileOnSignal(StringRef Filename,
+                                 std::string *ErrMsg = nullptr);
 
 /// This function removes a file from the list of files to be removed on
 /// signal delivery.
@@ -46,7 +47,7 @@ LLVM_ABI void DontRemoveFileOnSignal(StringRef Filename);
 /// \param DisableCrashReporting if \c true, disable the normal crash
 ///        reporting mechanisms on the underlying operating system.
 LLVM_ABI void PrintStackTraceOnErrorSignal(StringRef Argv0,
-                                  bool DisableCrashReporting = false);
+                                           bool DisableCrashReporting = false);
 
 /// Disable all system dialog boxes that appear when the process crashes.
 LLVM_ABI void DisableSystemDialogsOnCrash();

@@ -13,10 +13,10 @@
 #ifndef LLVM_SUPPORT_PROGRAM_H
 #define LLVM_SUPPORT_PROGRAM_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include <chrono>
@@ -77,7 +77,7 @@ struct ProcessStatistics {
 /// \returns The fully qualified path to the first \p Name in \p Paths if it
 ///   exists. \p Name if \p Name has slashes in it. Otherwise an error.
 LLVM_ABI ErrorOr<std::string> findProgramByName(StringRef Name,
-                                       ArrayRef<StringRef> Paths = {});
+                                                ArrayRef<StringRef> Paths = {});
 
 // These functions change the specified standard stream (stdin or stdout) mode
 // based on the Flags. They return errc::success if the specified stream was
@@ -161,12 +161,12 @@ LLVM_ABI ProcessInfo ExecuteNoWait(
 /// Return true if the given arguments fit within system-specific
 /// argument length limits.
 LLVM_ABI bool commandLineFitsWithinSystemLimits(StringRef Program,
-                                       ArrayRef<StringRef> Args);
+                                                ArrayRef<StringRef> Args);
 
 /// Return true if the given arguments fit within system-specific
 /// argument length limits.
 LLVM_ABI bool commandLineFitsWithinSystemLimits(StringRef Program,
-                                       ArrayRef<const char *> Args);
+                                                ArrayRef<const char *> Args);
 
 /// File encoding options when writing contents that a non-UTF8 tool will
 /// read (on Windows systems). For UNIX, we always use UTF-8.
@@ -209,27 +209,27 @@ writeFileWithEncoding(StringRef FileName, StringRef Contents,
 /// \li 0 if the child process has not changed state.
 /// \note Users of this function should always check the ReturnCode member of
 /// the \see ProcessInfo returned from this function.
-LLVM_ABI ProcessInfo
-Wait(const ProcessInfo &PI, ///< The child process that should be waited on.
-     std::optional<unsigned> SecondsToWait, ///< If std::nullopt, waits until
-     ///< child has terminated.
-     ///< If a value, this specifies the amount of time to wait for the child
-     ///< process. If the time expires, and \p Polling is false, the child is
-     ///< killed and this < function returns. If the time expires and \p
-     ///< Polling is true, the child is resumed.
-     ///<
-     ///< If zero, this function will perform a non-blocking
-     ///< wait on the child process.
-     std::string *ErrMsg = nullptr, ///< If non-zero, provides a pointer to a
-     ///< string instance in which error messages will be returned. If the
-     ///< string is non-empty upon return an error occurred while invoking the
-     ///< program.
-     std::optional<ProcessStatistics> *ProcStat =
-         nullptr, ///< If non-zero, provides
-     /// a pointer to a structure in which process execution statistics will
-     /// be stored.
+LLVM_ABI ProcessInfo Wait(
+    const ProcessInfo &PI, ///< The child process that should be waited on.
+    std::optional<unsigned> SecondsToWait, ///< If std::nullopt, waits until
+    ///< child has terminated.
+    ///< If a value, this specifies the amount of time to wait for the child
+    ///< process. If the time expires, and \p Polling is false, the child is
+    ///< killed and this < function returns. If the time expires and \p
+    ///< Polling is true, the child is resumed.
+    ///<
+    ///< If zero, this function will perform a non-blocking
+    ///< wait on the child process.
+    std::string *ErrMsg = nullptr, ///< If non-zero, provides a pointer to a
+    ///< string instance in which error messages will be returned. If the
+    ///< string is non-empty upon return an error occurred while invoking the
+    ///< program.
+    std::optional<ProcessStatistics> *ProcStat =
+        nullptr, ///< If non-zero, provides
+    /// a pointer to a structure in which process execution statistics will
+    /// be stored.
 
-     bool Polling = false ///< If true, do not kill the process on timeout.
+    bool Polling = false ///< If true, do not kill the process on timeout.
 );
 
 /// Print a command argument, and optionally quote it.
@@ -240,7 +240,8 @@ LLVM_ABI void printArg(llvm::raw_ostream &OS, StringRef Arg, bool Quote);
 /// to build a single flat command line appropriate for calling CreateProcess
 /// on
 /// Windows.
-LLVM_ABI ErrorOr<std::wstring> flattenWindowsCommandLine(ArrayRef<StringRef> Args);
+LLVM_ABI ErrorOr<std::wstring>
+flattenWindowsCommandLine(ArrayRef<StringRef> Args);
 #endif
 } // namespace sys
 } // namespace llvm

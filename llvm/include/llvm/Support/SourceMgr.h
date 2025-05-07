@@ -15,8 +15,8 @@
 #ifndef LLVM_SUPPORT_SOURCEMGR_H
 #define LLVM_SUPPORT_SOURCEMGR_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"
 #include <vector>
@@ -173,8 +173,8 @@ public:
   /// If no file is found, this returns 0, otherwise it returns the buffer ID
   /// of the stacked file. The full path to the included file can be found in
   /// \p IncludedFile.
-  LLVM_ABI unsigned AddIncludeFile(const std::string &Filename, SMLoc IncludeLoc,
-                          std::string &IncludedFile);
+  LLVM_ABI unsigned AddIncludeFile(const std::string &Filename,
+                                   SMLoc IncludeLoc, std::string &IncludedFile);
 
   /// Search for a file with the specified name in the current directory or in
   /// one of the IncludeDirs, and try to open it **without** adding to the
@@ -200,40 +200,40 @@ public:
 
   /// Find the line and column number for the specified location in the
   /// specified file. This is not a fast method.
-  LLVM_ABI std::pair<unsigned, unsigned> getLineAndColumn(SMLoc Loc,
-                                                 unsigned BufferID = 0) const;
+  LLVM_ABI std::pair<unsigned, unsigned>
+  getLineAndColumn(SMLoc Loc, unsigned BufferID = 0) const;
 
   /// Get a string with the \p SMLoc filename and line number
   /// formatted in the standard style.
-  LLVM_ABI std::string getFormattedLocationNoOffset(SMLoc Loc,
-                                           bool IncludePath = false) const;
+  LLVM_ABI std::string
+  getFormattedLocationNoOffset(SMLoc Loc, bool IncludePath = false) const;
 
   /// Given a line and column number in a mapped buffer, turn it into an SMLoc.
   /// This will return a null SMLoc if the line/column location is invalid.
   LLVM_ABI SMLoc FindLocForLineAndColumn(unsigned BufferID, unsigned LineNo,
-                                unsigned ColNo);
+                                         unsigned ColNo);
 
   /// Emit a message about the specified location with the specified string.
   ///
   /// \param ShowColors Display colored messages if output is a terminal and
   /// the default error handler is used.
-  LLVM_ABI void PrintMessage(raw_ostream &OS, SMLoc Loc, DiagKind Kind, const Twine &Msg,
-                    ArrayRef<SMRange> Ranges = {},
-                    ArrayRef<SMFixIt> FixIts = {},
-                    bool ShowColors = true) const;
+  LLVM_ABI void PrintMessage(raw_ostream &OS, SMLoc Loc, DiagKind Kind,
+                             const Twine &Msg, ArrayRef<SMRange> Ranges = {},
+                             ArrayRef<SMFixIt> FixIts = {},
+                             bool ShowColors = true) const;
 
   /// Emits a diagnostic to llvm::errs().
   LLVM_ABI void PrintMessage(SMLoc Loc, DiagKind Kind, const Twine &Msg,
-                    ArrayRef<SMRange> Ranges = {},
-                    ArrayRef<SMFixIt> FixIts = {},
-                    bool ShowColors = true) const;
+                             ArrayRef<SMRange> Ranges = {},
+                             ArrayRef<SMFixIt> FixIts = {},
+                             bool ShowColors = true) const;
 
   /// Emits a manually-constructed diagnostic to the given output stream.
   ///
   /// \param ShowColors Display colored messages if output is a terminal and
   /// the default error handler is used.
   LLVM_ABI void PrintMessage(raw_ostream &OS, const SMDiagnostic &Diagnostic,
-                    bool ShowColors = true) const;
+                             bool ShowColors = true) const;
 
   /// Return an SMDiagnostic at the specified location with the specified
   /// string.
@@ -241,8 +241,8 @@ public:
   /// \param Msg If non-null, the kind of message (e.g., "error") which is
   /// prefixed to the message.
   LLVM_ABI SMDiagnostic GetMessage(SMLoc Loc, DiagKind Kind, const Twine &Msg,
-                          ArrayRef<SMRange> Ranges = {},
-                          ArrayRef<SMFixIt> FixIts = {}) const;
+                                   ArrayRef<SMRange> Ranges = {},
+                                   ArrayRef<SMFixIt> FixIts = {}) const;
 
   /// Prints the names of included files and the line of the file they were
   /// included from. A diagnostic handler can use this before printing its
@@ -298,10 +298,11 @@ public:
       : Filename(filename), LineNo(-1), ColumnNo(-1), Kind(Knd), Message(Msg) {}
 
   // Diagnostic with a location.
-  LLVM_ABI SMDiagnostic(const SourceMgr &sm, SMLoc L, StringRef FN, int Line, int Col,
-               SourceMgr::DiagKind Kind, StringRef Msg, StringRef LineStr,
-               ArrayRef<std::pair<unsigned, unsigned>> Ranges,
-               ArrayRef<SMFixIt> FixIts = {});
+  LLVM_ABI SMDiagnostic(const SourceMgr &sm, SMLoc L, StringRef FN, int Line,
+                        int Col, SourceMgr::DiagKind Kind, StringRef Msg,
+                        StringRef LineStr,
+                        ArrayRef<std::pair<unsigned, unsigned>> Ranges,
+                        ArrayRef<SMFixIt> FixIts = {});
 
   const SourceMgr *getSourceMgr() const { return SM; }
   SMLoc getLoc() const { return Loc; }
@@ -317,8 +318,9 @@ public:
 
   ArrayRef<SMFixIt> getFixIts() const { return FixIts; }
 
-  LLVM_ABI void print(const char *ProgName, raw_ostream &S, bool ShowColors = true,
-             bool ShowKindLabel = true, bool ShowLocation = true) const;
+  LLVM_ABI void print(const char *ProgName, raw_ostream &S,
+                      bool ShowColors = true, bool ShowKindLabel = true,
+                      bool ShowLocation = true) const;
 };
 
 } // end namespace llvm

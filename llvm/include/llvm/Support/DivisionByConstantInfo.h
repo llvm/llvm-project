@@ -13,8 +13,8 @@
 #ifndef LLVM_SUPPORT_DIVISIONBYCONSTANTINFO_H
 #define LLVM_SUPPORT_DIVISIONBYCONSTANTINFO_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

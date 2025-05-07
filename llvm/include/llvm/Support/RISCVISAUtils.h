@@ -13,8 +13,8 @@
 #ifndef LLVM_SUPPORT_RISCVISAUTILS_H
 #define LLVM_SUPPORT_RISCVISAUTILS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include <map>
 #include <string>
 

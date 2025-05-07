@@ -14,12 +14,12 @@
 #ifndef LLVM_SUPPORT_VIRTUALFILESYSTEM_H
 #define LLVM_SUPPORT_VIRTUALFILESYSTEM_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Chrono.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
@@ -71,16 +71,17 @@ public:
   Status() = default;
   LLVM_ABI Status(const llvm::sys::fs::file_status &Status);
   LLVM_ABI Status(const Twine &Name, llvm::sys::fs::UniqueID UID,
-         llvm::sys::TimePoint<> MTime, uint32_t User, uint32_t Group,
-         uint64_t Size, llvm::sys::fs::file_type Type,
-         llvm::sys::fs::perms Perms);
+                  llvm::sys::TimePoint<> MTime, uint32_t User, uint32_t Group,
+                  uint64_t Size, llvm::sys::fs::file_type Type,
+                  llvm::sys::fs::perms Perms);
 
   /// Get a copy of a Status with a different size.
   LLVM_ABI static Status copyWithNewSize(const Status &In, uint64_t NewSize);
   /// Get a copy of a Status with a different name.
-  LLVM_ABI static Status copyWithNewName(const Status &In, const Twine &NewName);
+  LLVM_ABI static Status copyWithNewName(const Status &In,
+                                         const Twine &NewName);
   LLVM_ABI static Status copyWithNewName(const llvm::sys::fs::file_status &In,
-                                const Twine &NewName);
+                                         const Twine &NewName);
 
   /// Returns the name that should be used for this file or directory.
   StringRef getName() const { return Name; }
@@ -234,7 +235,7 @@ class recursive_directory_iterator {
 
 public:
   LLVM_ABI recursive_directory_iterator(FileSystem &FS, const Twine &Path,
-                               std::error_code &EC);
+                                        std::error_code &EC);
 
   /// Construct an 'end' iterator.
   recursive_directory_iterator() = default;
@@ -264,7 +265,7 @@ public:
 
 /// The virtual file system interface.
 class LLVM_ABI FileSystem : public llvm::ThreadSafeRefCountedBase<FileSystem>,
-                   public RTTIExtends<FileSystem, RTTIRoot> {
+                            public RTTIExtends<FileSystem, RTTIRoot> {
 public:
   static const char ID;
   virtual ~FileSystem();
@@ -389,7 +390,8 @@ LLVM_ABI std::unique_ptr<FileSystem> createPhysicalFileSystem();
 /// top-most (most recently added) directory are used.  When there is a file
 /// that exists in more than one file system, the file in the top-most file
 /// system overrides the other(s).
-class LLVM_ABI OverlayFileSystem : public RTTIExtends<OverlayFileSystem, FileSystem> {
+class LLVM_ABI OverlayFileSystem
+    : public RTTIExtends<OverlayFileSystem, FileSystem> {
   using FileSystemList = SmallVector<IntrusiveRefCntPtr<FileSystem>, 1>;
 
   /// The stack of file systems, implemented as a list in order of
@@ -449,7 +451,8 @@ protected:
 /// By default, this delegates all calls to the underlying file system. This
 /// is useful when derived file systems want to override some calls and still
 /// proxy other calls.
-class LLVM_ABI ProxyFileSystem : public RTTIExtends<ProxyFileSystem, FileSystem> {
+class LLVM_ABI ProxyFileSystem
+    : public RTTIExtends<ProxyFileSystem, FileSystem> {
 public:
   static const char ID;
   explicit ProxyFileSystem(IntrusiveRefCntPtr<FileSystem> FS)
@@ -535,7 +538,8 @@ public:
 } // namespace detail
 
 /// An in-memory file system.
-class LLVM_ABI InMemoryFileSystem : public RTTIExtends<InMemoryFileSystem, FileSystem> {
+class LLVM_ABI InMemoryFileSystem
+    : public RTTIExtends<InMemoryFileSystem, FileSystem> {
   std::unique_ptr<detail::InMemoryDirectory> Root;
   std::string WorkingDirectory;
   bool UseNormalizedPaths = true;
@@ -924,7 +928,7 @@ public:
 
   public:
     LLVM_ABI LookupResult(Entry *E, sys::path::const_iterator Start,
-                 sys::path::const_iterator End);
+                          sys::path::const_iterator End);
 
     /// If the found Entry maps the input path to a path in the external
     /// file system (i.e. it is a FileEntry or DirectoryRemapEntry), returns

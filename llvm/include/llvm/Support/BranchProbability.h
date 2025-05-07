@@ -56,7 +56,7 @@ public:
   static BranchProbability getRaw(uint32_t N) { return BranchProbability(N); }
   // Create a BranchProbability object from 64-bit integers.
   LLVM_ABI static BranchProbability getBranchProbability(uint64_t Numerator,
-                                                uint64_t Denominator);
+                                                         uint64_t Denominator);
 
   // Normalize given probabilties so that the sum of them becomes approximate
   // one.

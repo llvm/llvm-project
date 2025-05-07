@@ -9,7 +9,6 @@ namespace locale {
 
 LLVM_ABI int columnWidth(StringRef s);
 LLVM_ABI bool isPrint(int c);
-
 }
 }
 }

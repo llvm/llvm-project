@@ -69,10 +69,10 @@
 #ifndef LLVM_SUPPORT_MUSTACHE
 #define LLVM_SUPPORT_MUSTACHE
 
-#include "llvm/Support/Compiler.h"
 #include "Error.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/StringSaver.h"
 #include <functional>

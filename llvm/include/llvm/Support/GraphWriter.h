@@ -22,10 +22,10 @@
 #ifndef LLVM_SUPPORT_GRAPHWRITER_H
 #define LLVM_SUPPORT_GRAPHWRITER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
@@ -59,7 +59,7 @@ enum Name {
 } // end namespace GraphProgram
 
 LLVM_ABI bool DisplayGraph(StringRef Filename, bool wait = true,
-                  GraphProgram::Name program = GraphProgram::DOT);
+                           GraphProgram::Name program = GraphProgram::DOT);
 
 template<typename GraphType>
 class GraphWriter {

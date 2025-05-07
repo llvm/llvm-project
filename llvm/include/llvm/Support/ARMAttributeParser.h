@@ -9,9 +9,9 @@
 #ifndef LLVM_SUPPORT_ARMATTRIBUTEPARSER_H
 #define LLVM_SUPPORT_ARMATTRIBUTEPARSER_H
 
-#include "llvm/Support/Compiler.h"
 #include "ARMBuildAttributes.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ELFAttrParserCompact.h"
 #include "llvm/Support/Error.h"
 

@@ -12,8 +12,8 @@
 #ifndef LLVM_SUPPORT_SPECIALCASELIST_H
 #define LLVM_SUPPORT_SPECIALCASELIST_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/Regex.h"
 #include <memory>
@@ -76,8 +76,8 @@ public:
          std::string &Error);
   /// Parses the special case list from a memory buffer. On failure, returns
   /// 0 and writes an error message to string.
-  LLVM_ABI static std::unique_ptr<SpecialCaseList> create(const MemoryBuffer *MB,
-                                                 std::string &Error);
+  LLVM_ABI static std::unique_ptr<SpecialCaseList>
+  create(const MemoryBuffer *MB, std::string &Error);
   /// Parses the special case list entries from files. On failure, reports a
   /// fatal error.
   LLVM_ABI static std::unique_ptr<SpecialCaseList>
@@ -91,7 +91,7 @@ public:
   /// \endcode
   /// where @Query satisfies the glob <E> in a given @Section.
   LLVM_ABI bool inSection(StringRef Section, StringRef Prefix, StringRef Query,
-                 StringRef Category = StringRef()) const;
+                          StringRef Category = StringRef()) const;
 
   /// Returns the line number corresponding to the special case list entry if
   /// the special case list contains a line
@@ -101,14 +101,15 @@ public:
   /// where @Query satisfies the glob <E> in a given @Section.
   /// Returns zero if there is no exclusion entry corresponding to this
   /// expression.
-  LLVM_ABI unsigned inSectionBlame(StringRef Section, StringRef Prefix, StringRef Query,
-                          StringRef Category = StringRef()) const;
+  LLVM_ABI unsigned inSectionBlame(StringRef Section, StringRef Prefix,
+                                   StringRef Query,
+                                   StringRef Category = StringRef()) const;
 
 protected:
   // Implementations of the create*() functions that can also be used by derived
   // classes.
   LLVM_ABI bool createInternal(const std::vector<std::string> &Paths,
-                      vfs::FileSystem &VFS, std::string &Error);
+                               vfs::FileSystem &VFS, std::string &Error);
   LLVM_ABI bool createInternal(const MemoryBuffer *MB, std::string &Error);
 
   SpecialCaseList() = default;
@@ -118,7 +119,8 @@ protected:
   /// Represents a set of globs and their line numbers
   class Matcher {
   public:
-    LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber, bool UseRegex);
+    LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber,
+                          bool UseRegex);
     // Returns the line number in the source file that this query matches to.
     // Returns zero if no match is found.
     LLVM_ABI unsigned match(StringRef Query) const;
@@ -140,15 +142,16 @@ protected:
   StringMap<Section> Sections;
 
   LLVM_ABI Expected<Section *> addSection(StringRef SectionStr, unsigned LineNo,
-                                 bool UseGlobs = true);
+                                          bool UseGlobs = true);
 
   /// Parses just-constructed SpecialCaseList entries from a memory buffer.
   LLVM_ABI bool parse(const MemoryBuffer *MB, std::string &Error);
 
   // Helper method for derived classes to search by Prefix, Query, and Category
   // once they have already resolved a section entry.
-  LLVM_ABI unsigned inSectionBlame(const SectionEntries &Entries, StringRef Prefix,
-                          StringRef Query, StringRef Category) const;
+  LLVM_ABI unsigned inSectionBlame(const SectionEntries &Entries,
+                                   StringRef Prefix, StringRef Query,
+                                   StringRef Category) const;
 };
 
 }  // namespace llvm

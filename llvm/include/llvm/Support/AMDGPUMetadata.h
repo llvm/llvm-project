@@ -15,8 +15,8 @@
 #ifndef LLVM_SUPPORT_AMDGPUMETADATA_H
 #define LLVM_SUPPORT_AMDGPUMETADATA_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <string>
 #include <system_error>

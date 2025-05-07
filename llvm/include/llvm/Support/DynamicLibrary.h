@@ -68,16 +68,16 @@ public:
   ///
   /// It is safe to call this function multiple times for the same library.
   /// Open a dynamic library permanently.
-  LLVM_ABI static DynamicLibrary getPermanentLibrary(const char *filename,
-                                            std::string *errMsg = nullptr);
+  LLVM_ABI static DynamicLibrary
+  getPermanentLibrary(const char *filename, std::string *errMsg = nullptr);
 
   /// Registers an externally loaded library. The library will be unloaded
   /// when the program terminates.
   ///
   /// It is safe to call this function multiple times for the same library,
   /// though ownership is only taken if there was no error.
-  LLVM_ABI static DynamicLibrary addPermanentLibrary(void *handle,
-                                            std::string *errMsg = nullptr);
+  LLVM_ABI static DynamicLibrary
+  addPermanentLibrary(void *handle, std::string *errMsg = nullptr);
 
   /// This function permanently loads the dynamic library at the given path.
   /// Use this instead of getPermanentLibrary() when you won't need to get
@@ -100,7 +100,7 @@ public:
   ///
   /// It is safe to call this function multiple times for the same library.
   LLVM_ABI static DynamicLibrary getLibrary(const char *FileName,
-                                   std::string *Err = nullptr);
+                                            std::string *Err = nullptr);
 
   /// This function closes the dynamic library at the given path, using the
   /// library close operation of the host operating system, and there is no

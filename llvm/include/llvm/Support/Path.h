@@ -15,9 +15,9 @@
 #ifndef LLVM_SUPPORT_PATH_H
 #define LLVM_SUPPORT_PATH_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include <iterator>
 
@@ -85,7 +85,7 @@ class const_iterator
 
 public:
   reference operator*() const { return Component; }
-  LLVM_ABI const_iterator &operator++();    // preincrement
+  LLVM_ABI const_iterator &operator++(); // preincrement
   LLVM_ABI bool operator==(const const_iterator &RHS) const;
 
   /// Difference in bytes between this and RHS.
@@ -110,7 +110,7 @@ class reverse_iterator
 
 public:
   reference operator*() const { return Component; }
-  LLVM_ABI reverse_iterator &operator++();    // preincrement
+  LLVM_ABI reverse_iterator &operator++(); // preincrement
   LLVM_ABI bool operator==(const reverse_iterator &RHS) const;
 
   /// Difference in bytes between this and RHS.
@@ -121,7 +121,7 @@ public:
 /// @param path Input path.
 /// @returns Iterator initialized with the first component of \a path.
 LLVM_ABI const_iterator begin(StringRef path LLVM_LIFETIME_BOUND,
-                     Style style = Style::native);
+                              Style style = Style::native);
 
 /// Get end iterator over \a path.
 /// @param path Input path.
@@ -132,7 +132,7 @@ LLVM_ABI const_iterator end(StringRef path LLVM_LIFETIME_BOUND);
 /// @param path Input path.
 /// @returns Iterator initialized with the first reverse component of \a path.
 LLVM_ABI reverse_iterator rbegin(StringRef path LLVM_LIFETIME_BOUND,
-                        Style style = Style::native);
+                                 Style style = Style::native);
 
 /// Get reverse end iterator over \a path.
 /// @param path Input path.
@@ -155,7 +155,8 @@ LLVM_ABI reverse_iterator rend(StringRef path LLVM_LIFETIME_BOUND);
 /// @endcode
 ///
 /// @param path A path that is modified to not have a file component.
-LLVM_ABI void remove_filename(SmallVectorImpl<char> &path, Style style = Style::native);
+LLVM_ABI void remove_filename(SmallVectorImpl<char> &path,
+                              Style style = Style::native);
 
 /// Replace the file extension of \a path with \a extension.
 ///
@@ -169,8 +170,9 @@ LLVM_ABI void remove_filename(SmallVectorImpl<char> &path, Style style = Style::
 /// @param extension The extension to be added. It may be empty. It may also
 ///                  optionally start with a '.', if it does not, one will be
 ///                  prepended.
-LLVM_ABI void replace_extension(SmallVectorImpl<char> &path, const Twine &extension,
-                       Style style = Style::native);
+LLVM_ABI void replace_extension(SmallVectorImpl<char> &path,
+                                const Twine &extension,
+                                Style style = Style::native);
 
 /// Replace matching path prefix with another path.
 ///
@@ -194,16 +196,16 @@ LLVM_ABI void replace_extension(SmallVectorImpl<char> &path, const Twine &extens
 /// @param style The style used to match the prefix. Exact match using
 /// Posix style, case/separator insensitive match for Windows style.
 /// @result true if \a Path begins with OldPrefix
-LLVM_ABI bool replace_path_prefix(SmallVectorImpl<char> &Path, StringRef OldPrefix,
-                         StringRef NewPrefix,
-                         Style style = Style::native);
+LLVM_ABI bool replace_path_prefix(SmallVectorImpl<char> &Path,
+                                  StringRef OldPrefix, StringRef NewPrefix,
+                                  Style style = Style::native);
 
 /// Remove redundant leading "./" pieces and consecutive separators.
 ///
 /// @param path Input path.
 /// @result The cleaned-up \a path.
 LLVM_ABI StringRef remove_leading_dotslash(StringRef path LLVM_LIFETIME_BOUND,
-                                  Style style = Style::native);
+                                           Style style = Style::native);
 
 /// In-place remove any './' and optionally '../' components from a path.
 ///
@@ -211,8 +213,9 @@ LLVM_ABI StringRef remove_leading_dotslash(StringRef path LLVM_LIFETIME_BOUND,
 /// @param remove_dot_dot specify if '../' (except for leading "../") should be
 /// removed
 /// @result True if path was changed
-LLVM_ABI bool remove_dots(SmallVectorImpl<char> &path, bool remove_dot_dot = false,
-                 Style style = Style::native);
+LLVM_ABI bool remove_dots(SmallVectorImpl<char> &path,
+                          bool remove_dot_dot = false,
+                          Style style = Style::native);
 
 /// Append to path.
 ///
@@ -225,12 +228,12 @@ LLVM_ABI bool remove_dots(SmallVectorImpl<char> &path, bool remove_dot_dot = fal
 /// @param path Set to \a path + \a component.
 /// @param a The component to be appended to \a path.
 LLVM_ABI void append(SmallVectorImpl<char> &path, const Twine &a,
-                                         const Twine &b = "",
-                                         const Twine &c = "",
-                                         const Twine &d = "");
+                     const Twine &b = "", const Twine &c = "",
+                     const Twine &d = "");
 
 LLVM_ABI void append(SmallVectorImpl<char> &path, Style style, const Twine &a,
-            const Twine &b = "", const Twine &c = "", const Twine &d = "");
+                     const Twine &b = "", const Twine &c = "",
+                     const Twine &d = "");
 
 /// Append to path.
 ///
@@ -244,7 +247,7 @@ LLVM_ABI void append(SmallVectorImpl<char> &path, Style style, const Twine &a,
 /// @param begin Start of components to append.
 /// @param end One past the end of components to append.
 LLVM_ABI void append(SmallVectorImpl<char> &path, const_iterator begin,
-            const_iterator end, Style style = Style::native);
+                     const_iterator end, Style style = Style::native);
 
 /// @}
 /// @name Transforms (or some other better name)
@@ -257,7 +260,7 @@ LLVM_ABI void append(SmallVectorImpl<char> &path, const_iterator begin,
 /// @param path A path that is transformed to native format.
 /// @param result Holds the result of the transformation.
 LLVM_ABI void native(const Twine &path, SmallVectorImpl<char> &result,
-            Style style = Style::native);
+                     Style style = Style::native);
 
 /// Convert path to the native form in place. This is used to give paths to
 /// users and operating system calls in the platform's normal way. For example,
@@ -283,7 +286,8 @@ inline void make_preferred(SmallVectorImpl<char> &path,
 /// @result The result of replacing backslashes with forward slashes if Windows.
 /// On Unix, this function is a no-op because backslashes are valid path
 /// chracters.
-LLVM_ABI std::string convert_to_slash(StringRef path, Style style = Style::native);
+LLVM_ABI std::string convert_to_slash(StringRef path,
+                                      Style style = Style::native);
 
 /// @}
 /// @name Lexical Observers
@@ -300,7 +304,7 @@ LLVM_ABI std::string convert_to_slash(StringRef path, Style style = Style::nativ
 /// @param path Input path.
 /// @result The root name of \a path if it has one, otherwise "".
 LLVM_ABI StringRef root_name(StringRef path LLVM_LIFETIME_BOUND,
-                    Style style = Style::native);
+                             Style style = Style::native);
 
 /// Get root directory.
 ///
@@ -314,7 +318,7 @@ LLVM_ABI StringRef root_name(StringRef path LLVM_LIFETIME_BOUND,
 /// @result The root directory of \a path if it has one, otherwise
 ///               "".
 LLVM_ABI StringRef root_directory(StringRef path LLVM_LIFETIME_BOUND,
-                         Style style = Style::native);
+                                  Style style = Style::native);
 
 /// Get root path.
 ///
@@ -323,7 +327,7 @@ LLVM_ABI StringRef root_directory(StringRef path LLVM_LIFETIME_BOUND,
 /// @param path Input path.
 /// @result The root path of \a path if it has one, otherwise "".
 LLVM_ABI StringRef root_path(StringRef path LLVM_LIFETIME_BOUND,
-                    Style style = Style::native);
+                             Style style = Style::native);
 
 /// Get relative path.
 ///
@@ -336,7 +340,7 @@ LLVM_ABI StringRef root_path(StringRef path LLVM_LIFETIME_BOUND,
 /// @param path Input path.
 /// @result The path starting after root_path if one exists, otherwise "".
 LLVM_ABI StringRef relative_path(StringRef path LLVM_LIFETIME_BOUND,
-                        Style style = Style::native);
+                                 Style style = Style::native);
 
 /// Get parent path.
 ///
@@ -349,7 +353,7 @@ LLVM_ABI StringRef relative_path(StringRef path LLVM_LIFETIME_BOUND,
 /// @param path Input path.
 /// @result The parent path of \a path if one exists, otherwise "".
 LLVM_ABI StringRef parent_path(StringRef path LLVM_LIFETIME_BOUND,
-                      Style style = Style::native);
+                               Style style = Style::native);
 
 /// Get filename.
 ///
@@ -364,7 +368,7 @@ LLVM_ABI StringRef parent_path(StringRef path LLVM_LIFETIME_BOUND,
 /// @result The filename part of \a path. This is defined as the last component
 ///         of \a path. Similar to the POSIX "basename" utility.
 LLVM_ABI StringRef filename(StringRef path LLVM_LIFETIME_BOUND,
-                   Style style = Style::native);
+                            Style style = Style::native);
 
 /// Get stem.
 ///
@@ -382,7 +386,8 @@ LLVM_ABI StringRef filename(StringRef path LLVM_LIFETIME_BOUND,
 ///
 /// @param path Input path.
 /// @result The stem of \a path.
-LLVM_ABI StringRef stem(StringRef path LLVM_LIFETIME_BOUND, Style style = Style::native);
+LLVM_ABI StringRef stem(StringRef path LLVM_LIFETIME_BOUND,
+                        Style style = Style::native);
 
 /// Get extension.
 ///
@@ -399,7 +404,7 @@ LLVM_ABI StringRef stem(StringRef path LLVM_LIFETIME_BOUND, Style style = Style:
 /// @param path Input path.
 /// @result The extension of \a path.
 LLVM_ABI StringRef extension(StringRef path LLVM_LIFETIME_BOUND,
-                    Style style = Style::native);
+                             Style style = Style::native);
 
 /// Check whether the given char is a path separator on the host OS.
 ///
@@ -421,7 +426,8 @@ LLVM_ABI StringRef get_separator(Style style = Style::native);
 /// (e.g., TEMP on Windows, TMPDIR on *nix) to specify a temporary directory.
 ///
 /// @param result Holds the resulting path name.
-LLVM_ABI void system_temp_directory(bool erasedOnReboot, SmallVectorImpl<char> &result);
+LLVM_ABI void system_temp_directory(bool erasedOnReboot,
+                                    SmallVectorImpl<char> &result);
 
 /// Get the user's home directory.
 ///
@@ -457,7 +463,8 @@ LLVM_ABI bool has_root_name(const Twine &path, Style style = Style::native);
 ///
 /// @param path Input path.
 /// @result True if the path has a root directory, false otherwise.
-LLVM_ABI bool has_root_directory(const Twine &path, Style style = Style::native);
+LLVM_ABI bool has_root_directory(const Twine &path,
+                                 Style style = Style::native);
 
 /// Has root path?
 ///

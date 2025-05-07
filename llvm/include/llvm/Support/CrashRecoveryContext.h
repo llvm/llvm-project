@@ -9,8 +9,8 @@
 #ifndef LLVM_SUPPORT_CRASHRECOVERYCONTEXT_H
 #define LLVM_SUPPORT_CRASHRECOVERYCONTEXT_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class CrashRecoveryContextCleanup;
@@ -92,7 +92,8 @@ public:
   ///
   /// On Darwin, if PRIO_DARWIN_BG is set on the calling thread, it will be
   /// propagated to the new thread as well.
-  LLVM_ABI bool RunSafelyOnThread(function_ref<void()>, unsigned RequestedStackSize = 0);
+  LLVM_ABI bool RunSafelyOnThread(function_ref<void()>,
+                                  unsigned RequestedStackSize = 0);
   bool RunSafelyOnThread(void (*Fn)(void*), void *UserData,
                          unsigned RequestedStackSize = 0) {
     return RunSafelyOnThread([&]() { Fn(UserData); }, RequestedStackSize);

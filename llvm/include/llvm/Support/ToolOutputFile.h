@@ -55,7 +55,7 @@ public:
   /// This constructor's arguments are passed to raw_fd_ostream's
   /// constructor.
   LLVM_ABI ToolOutputFile(StringRef Filename, std::error_code &EC,
-                 sys::fs::OpenFlags Flags);
+                          sys::fs::OpenFlags Flags);
 
   LLVM_ABI ToolOutputFile(StringRef Filename, int FD);
 

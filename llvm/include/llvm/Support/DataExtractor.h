@@ -9,8 +9,8 @@
 #ifndef LLVM_SUPPORT_DATAEXTRACTOR_H
 #define LLVM_SUPPORT_DATAEXTRACTOR_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Error.h"
 
@@ -162,7 +162,8 @@ public:
   ///     pointed to by \a offset_ptr is out of bounds, or if the
   ///     offset plus the length of the C string is out of bounds,
   ///     a default-initialized StringRef will be returned.
-  LLVM_ABI StringRef getCStrRef(uint64_t *OffsetPtr, Error *Err = nullptr) const;
+  LLVM_ABI StringRef getCStrRef(uint64_t *OffsetPtr,
+                                Error *Err = nullptr) const;
 
   /// Extract a C string (as a StringRef) from the location given by the cursor.
   /// In case of an extraction error, or if the cursor is already in an error
@@ -201,8 +202,9 @@ public:
   ///     pointed to by \a OffsetPtr is out of bounds, or if the
   ///     offset plus the length of the C string is out of bounds,
   ///     a default-initialized StringRef will be returned.
-  LLVM_ABI StringRef getFixedLengthString(uint64_t *OffsetPtr,
-      uint64_t Length, StringRef TrimChars = {"\0", 1}) const;
+  LLVM_ABI StringRef getFixedLengthString(uint64_t *OffsetPtr, uint64_t Length,
+                                          StringRef TrimChars = {"\0",
+                                                                 1}) const;
 
   /// Extract a fixed number of bytes from the specified offset.
   ///
@@ -232,7 +234,7 @@ public:
   ///     \a OffsetPtr is out of bounds, or if the offset plus the length
   ///     is out of bounds, a default-initialized StringRef will be returned.
   LLVM_ABI StringRef getBytes(uint64_t *OffsetPtr, uint64_t Length,
-                     Error *Err = nullptr) const;
+                              Error *Err = nullptr) const;
 
   /// Extract a fixed number of bytes from the location given by the cursor. In
   /// case of an extraction error, or if the cursor is already in an error
@@ -272,7 +274,7 @@ public:
   ///     The unsigned integer value that was extracted, or zero on
   ///     failure.
   LLVM_ABI uint64_t getUnsigned(uint64_t *offset_ptr, uint32_t byte_size,
-                       Error *Err = nullptr) const;
+                                Error *Err = nullptr) const;
 
   /// Extract an unsigned integer of the given size from the location given by
   /// the cursor. In case of an extraction error, or if the cursor is already in
@@ -382,7 +384,8 @@ public:
   /// @return
   ///     \a dst if all values were properly extracted and copied,
   ///     NULL otherise.
-  LLVM_ABI uint8_t *getU8(uint64_t *offset_ptr, uint8_t *dst, uint32_t count) const;
+  LLVM_ABI uint8_t *getU8(uint64_t *offset_ptr, uint8_t *dst,
+                          uint32_t count) const;
 
   /// Extract \a Count uint8_t values from the location given by the cursor and
   /// store them into the destination buffer. In case of an extraction error, or
@@ -456,7 +459,8 @@ public:
   /// @return
   ///     \a dst if all values were properly extracted and copied,
   ///     NULL otherise.
-  LLVM_ABI uint16_t *getU16(uint64_t *offset_ptr, uint16_t *dst, uint32_t count) const;
+  LLVM_ABI uint16_t *getU16(uint64_t *offset_ptr, uint16_t *dst,
+                            uint32_t count) const;
 
   /// Extract a 24-bit unsigned value from \a *offset_ptr and return it
   /// in a uint32_t.
@@ -536,7 +540,8 @@ public:
   /// @return
   ///     \a dst if all values were properly extracted and copied,
   ///     NULL otherise.
-  LLVM_ABI uint32_t *getU32(uint64_t *offset_ptr, uint32_t *dst, uint32_t count) const;
+  LLVM_ABI uint32_t *getU32(uint64_t *offset_ptr, uint32_t *dst,
+                            uint32_t count) const;
 
   /// Extract a uint64_t value from \a *offset_ptr.
   ///
@@ -588,7 +593,8 @@ public:
   /// @return
   ///     \a dst if all values were properly extracted and copied,
   ///     NULL otherise.
-  LLVM_ABI uint64_t *getU64(uint64_t *offset_ptr, uint64_t *dst, uint32_t count) const;
+  LLVM_ABI uint64_t *getU64(uint64_t *offset_ptr, uint64_t *dst,
+                            uint32_t count) const;
 
   /// Extract a signed LEB128 value from \a *offset_ptr.
   ///
@@ -641,7 +647,8 @@ public:
   ///
   /// @return
   ///     The extracted unsigned integer value.
-  LLVM_ABI uint64_t getULEB128(uint64_t *offset_ptr, llvm::Error *Err = nullptr) const;
+  LLVM_ABI uint64_t getULEB128(uint64_t *offset_ptr,
+                               llvm::Error *Err = nullptr) const;
 
   /// Extract an unsigned LEB128 value from the location given by the cursor.
   /// In case of an extraction error, or if the cursor is already in an error

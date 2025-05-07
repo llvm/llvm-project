@@ -22,7 +22,7 @@ enum class COMThreadingMode { SingleThreaded, MultiThreaded };
 class InitializeCOMRAII {
 public:
   LLVM_ABI explicit InitializeCOMRAII(COMThreadingMode Threading,
-                             bool SpeedOverMemory = false);
+                                      bool SpeedOverMemory = false);
   LLVM_ABI ~InitializeCOMRAII();
 
 private:

@@ -13,9 +13,9 @@
 #ifndef LLVM_SUPPORT_THREADPOOL_H
 #define LLVM_SUPPORT_THREADPOOL_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/RWMutex.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/thread.h"

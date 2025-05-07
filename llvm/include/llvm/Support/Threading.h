@@ -140,7 +140,8 @@ constexpr bool llvm_is_multithreaded() { return LLVM_ENABLE_THREADS; }
 
     /// Finds the CPU socket where a thread should go. Returns 'std::nullopt' if
     /// the thread shall remain on the actual CPU socket.
-    LLVM_ABI std::optional<unsigned> compute_cpu_socket(unsigned ThreadPoolNum) const;
+    LLVM_ABI std::optional<unsigned>
+    compute_cpu_socket(unsigned ThreadPoolNum) const;
   };
 
   /// Build a strategy from a number of threads as a string provided in \p Num.

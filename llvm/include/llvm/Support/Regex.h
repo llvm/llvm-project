@@ -16,8 +16,8 @@
 #ifndef LLVM_SUPPORT_REGEX_H
 #define LLVM_SUPPORT_REGEX_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/Support/Compiler.h"
 #include <string>
 
 struct llvm_regex;
@@ -82,8 +82,9 @@ namespace llvm {
     /// as a non-empty string. If there is no error, it will be an empty string.
     ///
     /// This returns true on a successful match.
-    LLVM_ABI bool match(StringRef String, SmallVectorImpl<StringRef> *Matches = nullptr,
-               std::string *Error = nullptr) const;
+    LLVM_ABI bool match(StringRef String,
+                        SmallVectorImpl<StringRef> *Matches = nullptr,
+                        std::string *Error = nullptr) const;
 
     /// sub - Return the result of replacing the first match of the regex in
     /// \p String with the \p Repl string. Backreferences like "\0" and "\g<1>"
@@ -97,7 +98,7 @@ namespace llvm {
     /// backreferences, trailing backslashes) will be recorded as a non-empty
     /// string. If there is no error, it will be an empty string.
     LLVM_ABI std::string sub(StringRef Repl, StringRef String,
-                    std::string *Error = nullptr) const;
+                             std::string *Error = nullptr) const;
 
     /// If this function returns true, ^Str$ is an extended regular
     /// expression that matches Str and only Str.

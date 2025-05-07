@@ -136,14 +136,16 @@ inline std::pair<uint64_t, int16_t> getProduct64(uint64_t LHS, uint64_t RHS) {
 /// Implemented with long division.
 ///
 /// \pre \c Dividend and \c Divisor are non-zero.
-LLVM_ABI std::pair<uint64_t, int16_t> divide64(uint64_t Dividend, uint64_t Divisor);
+LLVM_ABI std::pair<uint64_t, int16_t> divide64(uint64_t Dividend,
+                                               uint64_t Divisor);
 
 /// Divide two 32-bit integers to create a 32-bit scaled number.
 ///
 /// Implemented with one 64-bit integer divide/remainder pair.
 ///
 /// \pre \c Dividend and \c Divisor are non-zero.
-LLVM_ABI std::pair<uint32_t, int16_t> divide32(uint32_t Dividend, uint32_t Divisor);
+LLVM_ABI std::pair<uint32_t, int16_t> divide32(uint32_t Dividend,
+                                               uint32_t Divisor);
 
 /// Divide two 32-bit numbers to create a 32-bit scaled number.
 ///
@@ -423,10 +425,10 @@ public:
   static constexpr int DefaultPrecision = 10;
 
   LLVM_ABI static void dump(uint64_t D, int16_t E, int Width);
-  LLVM_ABI static raw_ostream &print(raw_ostream &OS, uint64_t D, int16_t E, int Width,
-                            unsigned Precision);
+  LLVM_ABI static raw_ostream &print(raw_ostream &OS, uint64_t D, int16_t E,
+                                     int Width, unsigned Precision);
   LLVM_ABI static std::string toString(uint64_t D, int16_t E, int Width,
-                              unsigned Precision);
+                                       unsigned Precision);
   static int countLeadingZeros32(uint32_t N) { return llvm::countl_zero(N); }
   static int countLeadingZeros64(uint64_t N) { return llvm::countl_zero(N); }
   static uint64_t getHalf(uint64_t N) { return (N >> 1) + (N & 1); }

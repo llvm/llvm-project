@@ -14,9 +14,9 @@
 #ifndef LLVM_SUPPORT_MODREF_H
 #define LLVM_SUPPORT_MODREF_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {

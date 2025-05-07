@@ -55,7 +55,8 @@ template <class InputBytes> std::string encodeBase64(InputBytes const &Bytes) {
   return Buffer;
 }
 
-LLVM_ABI llvm::Error decodeBase64(llvm::StringRef Input, std::vector<char> &Output);
+LLVM_ABI llvm::Error decodeBase64(llvm::StringRef Input,
+                                  std::vector<char> &Output);
 
 } // end namespace llvm
 
