@@ -213,7 +213,7 @@ private:
       // For systems without PAC, this is a No-op but with PAC, it is
       // safer to check the existing key state and then disable/enable them.
       // Hence the guard placed for switching.
-      unsigned long pac_keys = 0;
+      unsigned long PacKeys = 0;
       if (prctl(PR_PAC_GET_ENABLED_KEYS, &pac_keys, 0, 0, 0) < 0) {
         return "Failed to get PAC key status";
       }
@@ -221,7 +221,7 @@ private:
       // Disable all PAC keys. Note that while we expect the measurements to
       // be the same with PAC keys disabled, they could potentially be lower
       // since authentication checks are bypassed.
-      if (pac_keys != 0) {
+      if (PacKeys != 0) {
         if (prctl(PR_PAC_SET_ENABLED_KEYS,
                   PR_PAC_APIAKEY | PR_PAC_APIBKEY | PR_PAC_APDAKEY |
                       PR_PAC_APDBKEY, // all keys
