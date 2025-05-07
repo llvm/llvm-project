@@ -5,7 +5,7 @@ target datalayout = "e-p:64:64"
 
 ;; Constant propagation should be agnostic towards sections.
 ;; Also the new global should be in the original vtable's section.
-; CHECK: [[VT1DATA:@[^ ]*]] = private constant { [8 x i8], [3 x ptr], [0 x i8] } { [8 x i8] c"\00\00\01\00\00\00\03\00", [3 x ptr] [ptr @vf0i1, ptr @vf1i8, ptr @vf1i32], [0 x i8] zeroinitializer }, section "vt1sec", !type [[T8:![0-9]+]]
+; CHECK: [[VT1DATA:@[^ ]*]] = private constant { [8 x i8], [3 x ptr], [0 x i8] } { [8 x i8] c"\00\00\00\00\00\00\03\00", [3 x ptr] [ptr @vf0i1, ptr @vf1i8, ptr @vf1i32], [0 x i8] zeroinitializer }, section "vt1sec", !type [[T8:![0-9]+]]
 @vt1 = constant [3 x ptr] [
 ptr @vf0i1,
 ptr @vf1i8,
@@ -14,19 +14,22 @@ ptr @vf1i32
 
 ;; This represents a normal vtable using the default ABI alignments.
 ;; For this test, the pointers are 64-bit aligned.
-; CHECK: [[VT2DATA:@[^ ]*]] = private constant { [8 x i8], [3 x ptr], [0 x i8] } { [8 x i8] c"\00\00\02\00\00\00\02\01", [3 x ptr] [ptr @vf1i1, ptr @vf0i8, ptr @vf2i32], [0 x i8] zeroinitializer }, !type [[T8]]
+; CHECK: [[VT2DATA:@[^ ]*]] = private constant { [8 x i8], [3 x ptr], [0 x i8] } { [8 x i8] c"\00\00\00\00\00\00\02\01", [3 x ptr] [ptr @vf1i1, ptr @vf0i8, ptr @vf2i32], [0 x i8] zeroinitializer }, !type [[T8]]
 @vt2 = constant [3 x ptr] [
 ptr @vf1i1,
 ptr @vf0i8,
 ptr @vf2i32
 ], !type !0
 
-;; This represents an underaligned vtable.
+;; This represents an underaligned vtable. This prevents constant propagation
+;; for any function returning an integer larger than this alignment. This and
+;; other vtables cannot store a 32-bit integer at the same offset because we
+;; cannot guarantee that a load from this vtable will be suitably aligned.
 ;;
 ;; All the functions returning i8s and i1s should still be constant-propagated
 ;; because we can still do an aligned load regardless of where the 1-byte aligned
 ;; vtable is.
-; CHECK: [[VT3DATA:@[^ ]*]] = private constant { [6 x i8], [3 x ptr], [0 x i8] } { [6 x i8] c"\03\00\00\00\03\00", [3 x ptr] [ptr @vf0i1, ptr @vf1i8, ptr @vf3i32], [0 x i8] zeroinitializer }, align 1, !type [[T5:![0-9]+]]
+; CHECK: [[VT3DATA:@[^ ]*]] = private constant { [2 x i8], [3 x ptr], [0 x i8] } { [2 x i8] c"\03\00", [3 x ptr] [ptr @vf0i1, ptr @vf1i8, ptr @vf3i32], [0 x i8] zeroinitializer }, align 1, !type [[T5:![0-9]+]]
 @vt3 = constant [3 x ptr] [
 ptr @vf0i1,
 ptr @vf1i8,
@@ -34,7 +37,8 @@ ptr @vf3i32
 ], align 1, !type !0
 
 ;; This represents an overaligned vtable.
-; CHECK: [[VT4DATA:@[^ ]*]] = private constant { [16 x i8], [3 x ptr], [0 x i8] } { [16 x i8] c"\00\00\00\00\00\00\00\00\00\00\04\00\00\00\02\01", [3 x ptr] [ptr @vf1i1, ptr @vf0i8, ptr @vf4i32], [0 x i8] zeroinitializer },  align 16, !type [[T16:![0-9]+]]
+;; Although all the integers in this test can fit within an integer less than the 16 
+; CHECK: [[VT4DATA:@[^ ]*]] = private constant { [16 x i8], [3 x ptr], [0 x i8] } { [16 x i8] c"\00\00\00\00\00\00\00\00\00\00\00\00\00\00\02\01", [3 x ptr] [ptr @vf1i1, ptr @vf0i8, ptr @vf4i32], [0 x i8] zeroinitializer },  align 16, !type [[T16:![0-9]+]]
 @vt4 = constant [3 x ptr] [
 ptr @vf1i1,
 ptr @vf0i8,
@@ -60,7 +64,7 @@ ptr @vf6i64
 ], !type !1
 
 ;; Test relative vtables
-; CHECK:      [[VT6RELDATA:@[^ ]*]] = private constant { [12 x i8], [3 x i32], [0 x i8] } { [12 x i8] c"\00\00\00\0B\05\00\00\00\00\00\00\00", [3 x i32] [
+; CHECK:      [[VT6RELDATA:@[^ ]*]] = private constant { [4 x i8], [3 x i32], [0 x i8] } { [4 x i8] c"\00\00\00\0B", [3 x i32] [
 ; CHECK-SAME:     i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent @vf0i1 to i64), i64 ptrtoint (ptr @vt6_rel to i64)) to i32),
 ; CHECK-SAME:     i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent @vf10i8 to i64), i64 ptrtoint (ptr @vt6_rel to i64)) to i32),
 ; CHECK-SAME:     i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent @vf5i64 to i64), i64 ptrtoint (ptr @vt6_rel to i64)) to i32)
@@ -71,7 +75,7 @@ i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent @vf10i8 to i64), i64 
 i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent @vf5i64 to i64), i64 ptrtoint (ptr @vt6_rel to i64)) to i32)
 ], !type !2
 
-; CHECK:      [[VT7RELDATA:@[^ ]*]] = private constant { [12 x i8], [3 x i32], [0 x i8] } { [12 x i8] c"\00\00\00\0A\06\00\00\00\00\00\00\00", [3 x i32] [
+; CHECK:      [[VT7RELDATA:@[^ ]*]] = private constant { [4 x i8], [3 x i32], [0 x i8] } { [4 x i8] c"\00\00\00\0A", [3 x i32] [
 ; CHECK-SAME:     i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent @vf1i1 to i64), i64 ptrtoint (ptr @vt7_rel to i64)) to i32),
 ; CHECK-SAME:     i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent @vf9i8 to i64), i64 ptrtoint (ptr @vt7_rel to i64)) to i32),
 ; CHECK-SAME:     i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent @vf6i64 to i64), i64 ptrtoint (ptr @vt7_rel to i64)) to i32)
@@ -84,12 +88,12 @@ i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent @vf6i64 to i64), i64 
 
 ; CHECK: @vt1 = alias [3 x ptr], getelementptr inbounds ({ [8 x i8], [3 x ptr], [0 x i8] }, ptr [[VT1DATA]], i32 0, i32 1)
 ; CHECK: @vt2 = alias [3 x ptr], getelementptr inbounds ({ [8 x i8], [3 x ptr], [0 x i8] }, ptr [[VT2DATA]], i32 0, i32 1)
-; CHECK: @vt3 = alias [3 x ptr], getelementptr inbounds ({ [6 x i8], [3 x ptr], [0 x i8] }, ptr [[VT3DATA]], i32 0, i32 1)
+; CHECK: @vt3 = alias [3 x ptr], getelementptr inbounds ({ [2 x i8], [3 x ptr], [0 x i8] }, ptr [[VT3DATA]], i32 0, i32 1)
 ; CHECK: @vt4 = alias [3 x ptr], getelementptr inbounds ({ [16 x i8], [3 x ptr], [0 x i8] }, ptr [[VT4DATA]], i32 0, i32 1)
 ; CHECK: @vt6 = alias [3 x ptr], getelementptr inbounds ({ [16 x i8], [3 x ptr], [0 x i8] }, ptr [[VT6DATA]], i32 0, i32 1)
 ; CHECK: @vt7 = alias [3 x ptr], getelementptr inbounds ({ [16 x i8], [3 x ptr], [0 x i8] }, ptr [[VT7DATA]], i32 0, i32 1)
-; CHECK: @vt6_rel = alias [3 x i32], getelementptr inbounds ({ [12 x i8], [3 x i32], [0 x i8] }, ptr [[VT6RELDATA]], i32 0, i32 1)
-; CHECK: @vt7_rel = alias [3 x i32], getelementptr inbounds ({ [12 x i8], [3 x i32], [0 x i8] }, ptr [[VT7RELDATA]], i32 0, i32 1)
+; CHECK: @vt6_rel = alias [3 x i32], getelementptr inbounds ({ [4 x i8], [3 x i32], [0 x i8] }, ptr [[VT6RELDATA]], i32 0, i32 1)
+; CHECK: @vt7_rel = alias [3 x i32], getelementptr inbounds ({ [4 x i8], [3 x i32], [0 x i8] }, ptr [[VT7RELDATA]], i32 0, i32 1)
 
 define i1 @vf0i1(ptr %this) readnone {
   ret i1 0
@@ -176,6 +180,8 @@ define i8 @call2(ptr %obj) {
   ; CHECK: ret i8 [[VTLOAD]]
 }
 
+;; We never constant propagate this since the i32 cannot reliabely loaded
+;; without misalignment from all "typeid" vtables (due to the `align 1` vtable).
 ; CHECK: define i32 @call3(
 define i32 @call3(ptr %obj) {
   %vtable = load ptr, ptr %obj
@@ -185,9 +191,10 @@ define i32 @call3(ptr %obj) {
   %fptr = load ptr, ptr %fptrptr
   %result = call i32 %fptr(ptr %obj)
   ret i32 %result
-  ; CHECK: [[VTGEP2:%[^ ]*]] = getelementptr i8, ptr %vtable, i32 -6
-  ; CHECK: [[VTLOAD:%[^ ]*]] = load i32, ptr [[VTGEP2]]
-  ; CHECK: ret i32 [[VTLOAD]]
+  ; CHECK: [[FPTRPTR:%.*]] = getelementptr [3 x ptr], ptr %vtable, i32 0, i32 2
+  ; CHECK: [[FPTR:%.*]] = load ptr, ptr [[FPTRPTR]], align 8
+  ; CHECK: [[RES:%.*]] = call i32 [[FPTR]](ptr %obj)
+  ; CHECK: ret i32 [[RES]]
 }
 
 ; CHECK: define i1 @call4(
@@ -251,9 +258,9 @@ define i64 @call5_rel(ptr %obj) {
   %fptr = call ptr @llvm.load.relative.i32(ptr %vtable, i32 8)
   %result = call i64 %fptr(ptr %obj)
   ret i64 %result
-  ; CHECK: [[VTGEP2:%[^ ]*]] = getelementptr i8, ptr %vtable, i32 -8
-  ; CHECK: [[VTLOAD:%[^ ]*]] = load i64, ptr [[VTGEP2]]
-  ; CHECK: ret i64 [[VTLOAD]]
+  ; CHECK: [[FPTR:%.*]] = call ptr @llvm.load.relative.i32(ptr %vtable, i32 8)
+  ; CHECK: [[RES:%.*]] = call i64 [[FPTR]](ptr %obj)
+  ; CHECK: ret i64 [[RES]]
 }
 
 ; CHECK: define i8 @call6_rel(
@@ -264,7 +271,7 @@ define i8 @call6_rel(ptr %obj) {
   %fptr = call ptr @llvm.load.relative.i32(ptr %vtable, i32 4)
   %result = call i8 %fptr(ptr %obj)
   ret i8 %result
-  ; CHECK: [[VTGEP2:%[^ ]*]] = getelementptr i8, ptr %vtable, i32 -9
+  ; CHECK: [[VTGEP2:%[^ ]*]] = getelementptr i8, ptr %vtable, i32 -1
   ; CHECK: [[VTLOAD:%[^ ]*]] = load i8, ptr [[VTGEP2]]
   ; CHECK: ret i8 [[VTLOAD]]
 }
@@ -275,10 +282,10 @@ declare void @__cxa_pure_virtual()
 declare ptr @llvm.load.relative.i32(ptr, i32)
 
 ; CHECK: [[T8]] = !{i32 8, !"typeid"}
-; CHECK: [[T5]] = !{i32 6, !"typeid"}
+; CHECK: [[T5]] = !{i32 2, !"typeid"}
 ; CHECK: [[T16]] = !{i32 16, !"typeid"}
 ; CHECK: [[T1]] = !{i32 16, !"typeid2"}
-; CHECK: [[TREL]] = !{i32 12, !"typeid3"}
+; CHECK: [[TREL]] = !{i32 4, !"typeid3"}
 
 !0 = !{i32 0, !"typeid"}
 !1 = !{i32 0, !"typeid2"}
