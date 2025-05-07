@@ -499,17 +499,14 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   filterBinaryMMapInfo();
   prepareToParse("events", MainEventsPPI, ErrorCallback);
 
+  if (opts::BasicAggregation ? parseBasicEvents() : parseBranchEvents())
+    errs() << "PERF2BOLT: failed to parse samples\n";
+
   if (opts::HeatmapMode) {
-    if (std::error_code EC = printLBRHeatMap()) {
-      errs() << "ERROR: failed to print heat map: " << EC.message() << '\n';
-      exit(1);
-    }
+    if (std::error_code EC = printLBRHeatMap())
+      return errorCodeToError(EC);
     exit(0);
   }
-
-  if ((!opts::BasicAggregation && parseBranchEvents()) ||
-      (opts::BasicAggregation && parseBasicEvents()))
-    errs() << "PERF2BOLT: failed to parse samples\n";
 
   // Special handling for memory events
   if (prepareToParse("mem events", MemEventsPPI, MemEventsErrorCallback))
@@ -567,15 +564,14 @@ void DataAggregator::processProfile(BinaryContext &BC) {
   processMemEvents();
 
   // Mark all functions with registered events as having a valid profile.
-  const auto Flags = opts::BasicAggregation ? BinaryFunction::PF_SAMPLE
-                                            : BinaryFunction::PF_LBR;
   for (auto &BFI : BC.getBinaryFunctions()) {
     BinaryFunction &BF = BFI.second;
-    FuncBranchData *FBD = getBranchData(BF);
-    if (FBD || getFuncSampleData(BF.getNames())) {
-      BF.markProfiled(Flags);
-      if (FBD)
-        BF.RawBranchCount = FBD->getNumExecutedBranches();
+    if (FuncBranchData *FBD = getBranchData(BF)) {
+      BF.markProfiled(BinaryFunction::PF_LBR);
+      BF.RawSampleCount = FBD->getNumExecutedBranches();
+    } else if (FuncSampleData *FSD = getFuncSampleData(BF.getNames())) {
+      BF.markProfiled(BinaryFunction::PF_SAMPLE);
+      BF.RawSampleCount = FSD->getSamples();
     }
   }
 
@@ -632,10 +628,18 @@ StringRef DataAggregator::getLocationName(const BinaryFunction &Func,
 
 bool DataAggregator::doSample(BinaryFunction &OrigFunc, uint64_t Address,
                               uint64_t Count) {
+  // To record executed bytes, use basic block size as is regardless of BAT.
+  uint64_t BlockSize = 0;
+  if (BinaryBasicBlock *BB = OrigFunc.getBasicBlockContainingOffset(
+          Address - OrigFunc.getAddress()))
+    BlockSize = BB->getOriginalSize();
+
   BinaryFunction *ParentFunc = getBATParentFunction(OrigFunc);
   BinaryFunction &Func = ParentFunc ? *ParentFunc : OrigFunc;
-  if (ParentFunc || (BAT && !BAT->isBATFunction(OrigFunc.getAddress())))
+  if (ParentFunc || (BAT && !BAT->isBATFunction(Func.getAddress())))
     NumColdSamples += Count;
+  // Attach executed bytes to parent function in case of cold fragment.
+  Func.SampleCountInBytes += Count * BlockSize;
 
   auto I = NamesToSamples.find(Func.getOneName());
   if (I == NamesToSamples.end()) {
@@ -720,23 +724,6 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
                : isReturn(Func.disassembleInstructionAtOffset(Offset));
   };
 
-  // Returns whether \p Offset in \p Func may be a call continuation excluding
-  // entry points and landing pads.
-  auto checkCallCont = [&](const BinaryFunction &Func, const uint64_t Offset) {
-    // No call continuation at a function start.
-    if (!Offset)
-      return false;
-
-    // FIXME: support BAT case where the function might be in empty state
-    // (split fragments declared non-simple).
-    if (!Func.hasCFG())
-      return false;
-
-    // The offset should not be an entry point or a landing pad.
-    const BinaryBasicBlock *ContBB = Func.getBasicBlockAtOffset(Offset);
-    return ContBB && !ContBB->isEntryPoint() && !ContBB->isLandingPad();
-  };
-
   // Mutates \p Addr to an offset into the containing function, performing BAT
   // offset translation and parent lookup.
   //
@@ -749,8 +736,7 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
 
     Addr -= Func->getAddress();
 
-    bool IsRetOrCallCont =
-        IsFrom ? checkReturn(*Func, Addr) : checkCallCont(*Func, Addr);
+    bool IsRet = IsFrom && checkReturn(*Func, Addr);
 
     if (BAT)
       Addr = BAT->translate(Func->getAddress(), Addr, IsFrom);
@@ -761,24 +747,16 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
       NumColdSamples += Count;
 
     if (!ParentFunc)
-      return std::pair{Func, IsRetOrCallCont};
+      return std::pair{Func, IsRet};
 
-    return std::pair{ParentFunc, IsRetOrCallCont};
+    return std::pair{ParentFunc, IsRet};
   };
 
-  uint64_t ToOrig = To;
   auto [FromFunc, IsReturn] = handleAddress(From, /*IsFrom*/ true);
-  auto [ToFunc, IsCallCont] = handleAddress(To, /*IsFrom*/ false);
+  auto [ToFunc, _] = handleAddress(To, /*IsFrom*/ false);
   if (!FromFunc && !ToFunc)
     return false;
 
-  // Record call to continuation trace.
-  if (NeedsConvertRetProfileToCallCont && FromFunc != ToFunc &&
-      (IsReturn || IsCallCont)) {
-    LBREntry First{ToOrig - 1, ToOrig - 1, false};
-    LBREntry Second{ToOrig, ToOrig, false};
-    return doTrace(First, Second, Count);
-  }
   // Ignore returns.
   if (IsReturn)
     return true;
@@ -1235,21 +1213,14 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   ErrorOr<StringRef> TypeOrErr = parseString(FieldSeparator);
   if (std::error_code EC = TypeOrErr.getError())
     return EC;
-  // Pre-aggregated profile with branches and fallthroughs needs to convert
-  // return profile into call to continuation fall-through.
-  auto Type = AggregatedLBREntry::BRANCH;
-  if (TypeOrErr.get() == "B") {
-    NeedsConvertRetProfileToCallCont = true;
+  auto Type = AggregatedLBREntry::TRACE;
+  if (LLVM_LIKELY(TypeOrErr.get() == "T")) {
+  } else if (TypeOrErr.get() == "B") {
     Type = AggregatedLBREntry::BRANCH;
   } else if (TypeOrErr.get() == "F") {
-    NeedsConvertRetProfileToCallCont = true;
     Type = AggregatedLBREntry::FT;
   } else if (TypeOrErr.get() == "f") {
-    NeedsConvertRetProfileToCallCont = true;
     Type = AggregatedLBREntry::FT_EXTERNAL_ORIGIN;
-  } else if (TypeOrErr.get() == "T") {
-    // Trace is expanded into B and [Ff]
-    Type = AggregatedLBREntry::TRACE;
   } else {
     reportError("expected T, B, F or f");
     return make_error_code(llvm::errc::io_error);
@@ -1334,53 +1305,6 @@ std::error_code DataAggregator::printLBRHeatMap() {
   }
   Heatmap HM(opts::HeatmapBlock, opts::HeatmapMinAddress,
              opts::HeatmapMaxAddress, getTextSections(BC));
-  uint64_t NumTotalSamples = 0;
-
-  if (opts::BasicAggregation) {
-    while (hasData()) {
-      ErrorOr<PerfBasicSample> SampleRes = parseBasicSample();
-      if (std::error_code EC = SampleRes.getError()) {
-        if (EC == errc::no_such_process)
-          continue;
-        return EC;
-      }
-      PerfBasicSample &Sample = SampleRes.get();
-      HM.registerAddress(Sample.PC);
-      NumTotalSamples++;
-    }
-    outs() << "HEATMAP: read " << NumTotalSamples << " basic samples\n";
-  } else {
-    while (hasData()) {
-      ErrorOr<PerfBranchSample> SampleRes = parseBranchSample();
-      if (std::error_code EC = SampleRes.getError()) {
-        if (EC == errc::no_such_process)
-          continue;
-        return EC;
-      }
-
-      PerfBranchSample &Sample = SampleRes.get();
-
-      // LBRs are stored in reverse execution order. NextLBR refers to the next
-      // executed branch record.
-      const LBREntry *NextLBR = nullptr;
-      for (const LBREntry &LBR : Sample.LBR) {
-        if (NextLBR) {
-          // Record fall-through trace.
-          const uint64_t TraceFrom = LBR.To;
-          const uint64_t TraceTo = NextLBR->From;
-          ++FallthroughLBRs[Trace(TraceFrom, TraceTo)].InternCount;
-        }
-        NextLBR = &LBR;
-      }
-      if (!Sample.LBR.empty()) {
-        HM.registerAddress(Sample.LBR.front().To);
-        HM.registerAddress(Sample.LBR.back().From);
-      }
-      NumTotalSamples += Sample.LBR.size();
-    }
-    outs() << "HEATMAP: read " << NumTotalSamples << " LBR samples\n";
-    outs() << "HEATMAP: " << FallthroughLBRs.size() << " unique traces\n";
-  }
 
   if (!NumTotalSamples) {
     if (opts::BasicAggregation) {
@@ -1396,6 +1320,8 @@ std::error_code DataAggregator::printLBRHeatMap() {
 
   outs() << "HEATMAP: building heat map...\n";
 
+  for (const auto &[PC, Hits] : BasicSamples)
+    HM.registerAddress(PC, Hits);
   for (const auto &LBR : FallthroughLBRs) {
     const Trace &Trace = LBR.first;
     const FTInfo &Info = LBR.second;
@@ -1445,7 +1371,10 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
       const uint64_t TraceTo = NextLBR->From;
       const BinaryFunction *TraceBF =
           getBinaryFunctionContainingAddress(TraceFrom);
-      if (TraceBF && TraceBF->containsAddress(TraceTo)) {
+      if (opts::HeatmapMode) {
+        FTInfo &Info = FallthroughLBRs[Trace(TraceFrom, TraceTo)];
+        ++Info.InternCount;
+      } else if (TraceBF && TraceBF->containsAddress(TraceTo)) {
         FTInfo &Info = FallthroughLBRs[Trace(TraceFrom, TraceTo)];
         if (TraceBF->containsAddress(LBR.From))
           ++Info.InternCount;
@@ -1479,6 +1408,11 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
     }
     NextLBR = &LBR;
 
+    if (opts::HeatmapMode) {
+      TakenBranchInfo &Info = BranchLBRs[Trace(LBR.From, LBR.To)];
+      ++Info.TakenCount;
+      continue;
+    }
     uint64_t From = getBinaryFunctionContainingAddress(LBR.From) ? LBR.From : 0;
     uint64_t To = getBinaryFunctionContainingAddress(LBR.To) ? LBR.To : 0;
     if (!From && !To)
@@ -1486,6 +1420,10 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
     TakenBranchInfo &Info = BranchLBRs[Trace(From, To)];
     ++Info.TakenCount;
     Info.MispredCount += LBR.Mispred;
+  }
+  if (opts::HeatmapMode && !Sample.LBR.empty()) {
+    ++BasicSamples[Sample.LBR.front().To];
+    ++BasicSamples[Sample.LBR.back().From];
   }
 }
 
@@ -1663,6 +1601,7 @@ std::error_code DataAggregator::parseBasicEvents() {
 
     if (!Sample->PC)
       continue;
+    ++NumTotalSamples;
 
     if (BinaryFunction *BF = getBinaryFunctionContainingAddress(Sample->PC))
       BF->setHasProfileAvailable();
@@ -1670,6 +1609,7 @@ std::error_code DataAggregator::parseBasicEvents() {
     ++BasicSamples[Sample->PC];
     EventNames.insert(Sample->EventName);
   }
+  outs() << "PERF2BOLT: read " << NumTotalSamples << " basic samples\n";
 
   return std::error_code();
 }
@@ -1682,7 +1622,6 @@ void DataAggregator::processBasicEvents() {
   for (auto &Sample : BasicSamples) {
     const uint64_t PC = Sample.first;
     const uint64_t HitCount = Sample.second;
-    NumTotalSamples += HitCount;
     BinaryFunction *Func = getBinaryFunctionContainingAddress(PC);
     if (!Func) {
       OutOfRangeSamples += HitCount;
@@ -1691,7 +1630,6 @@ void DataAggregator::processBasicEvents() {
 
     doSample(*Func, PC, HitCount);
   }
-  outs() << "PERF2BOLT: read " << NumTotalSamples << " samples\n";
 
   printBasicSamplesDiagnostics(OutOfRangeSamples);
 }
