@@ -78,29 +78,6 @@ std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
 
   // Adjust linearizedIndices and size by the scale factor (dstBits / srcBits).
   int64_t scaler = dstBits / srcBits;
-
-  // If all strides and sizes are constant, we can compute the result
-  // directly without creating the AffineMaxOp.
-  int64_t constResult = 0;
-  int64_t constStride = 0;
-  int64_t constSize = 0;
-  bool isAllConstant = true;
-  for (unsigned i = 0; i < sourceRank; ++i) {
-    if (auto constantStride = getConstantIntValue(strides[i])) {
-      constStride = *constantStride;
-    } else {
-      isAllConstant = false;
-      break;
-    }
-    if (auto constantSize = getConstantIntValue(sizes[i])) {
-      constSize = *constantSize;
-    } else {
-      isAllConstant = false;
-      break;
-    }
-    constResult = std::max(constResult, constStride * constSize / scaler);
-  }
-
   size_t symbolIndex = 0;
   SmallVector<Value> values;
   SmallVector<AffineExpr> productExpressions;
@@ -129,10 +106,11 @@ std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
       builder.getContext());
 
   OpFoldResult linearizedSize;
-  if (isAllConstant) {
-    linearizedSize = builder.getIndexAttr(constResult);
+  Value totalSize =
+      builder.createOrFold<affine::AffineMaxOp>(loc, maxMap, values);
+  if (auto constantSize = getConstantIntValue(totalSize)) {
+    linearizedSize = builder.getIndexAttr(*constantSize);
   } else {
-    Value totalSize = builder.create<affine::AffineMaxOp>(loc, maxMap, values);
     linearizedSize = totalSize;
   }
 
