@@ -515,7 +515,6 @@ public:
                            const AttributeList &FuncAttributes) const override;
   EVT getOptimalMemOpType(const MemOp &Op,
                           const AttributeList &FuncAttributes) const override;
-  bool isTruncateFree(Type *, Type *) const override;
   bool isTruncateFree(EVT, EVT) const override;
 
   bool shouldFormOverflowOp(unsigned Opcode, EVT VT,

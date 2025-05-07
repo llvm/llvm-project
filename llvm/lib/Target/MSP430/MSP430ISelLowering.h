@@ -113,7 +113,6 @@ namespace llvm {
     /// isTruncateFree - Return true if it's free to truncate a value of type
     /// Ty1 to type Ty2. e.g. On msp430 it's free to truncate a i16 value in
     /// register R15W to i8 by referencing its sub-register R15B.
-    bool isTruncateFree(Type *Ty1, Type *Ty2) const override;
     bool isTruncateFree(EVT VT1, EVT VT2) const override;
 
     /// isZExtFree - Return true if any actual instruction that defines a value

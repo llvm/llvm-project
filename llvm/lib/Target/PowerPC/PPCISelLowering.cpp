@@ -18047,15 +18047,6 @@ bool PPCTargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
   unsigned BitSize = Ty->getPrimitiveSizeInBits();
   return !(BitSize == 0 || BitSize > 64);
 }
-
-bool PPCTargetLowering::isTruncateFree(Type *Ty1, Type *Ty2) const {
-  if (!Ty1->isIntegerTy() || !Ty2->isIntegerTy())
-    return false;
-  unsigned NumBits1 = Ty1->getPrimitiveSizeInBits();
-  unsigned NumBits2 = Ty2->getPrimitiveSizeInBits();
-  return NumBits1 == 64 && NumBits2 == 32;
-}
-
 bool PPCTargetLowering::isTruncateFree(EVT VT1, EVT VT2) const {
   if (!VT1.isInteger() || !VT2.isInteger())
     return false;
