@@ -9,6 +9,7 @@ add_llvm_component_library(LLVMInstrumentation
   MemProfiler.cpp
   MemorySanitizer.cpp
   NumericalStabilitySanitizer.cpp
+  IRSanitizer.cpp
   IndirectCallPromotion.cpp
   InstrProfiling.cpp
   KCFI.cpp
