@@ -34,6 +34,7 @@ class SanitizerArgs {
   std::vector<std::string> CoverageIgnorelistFiles;
   std::vector<std::string> BinaryMetadataIgnorelistFiles;
   int CoverageFeatures = 0;
+  int CoverageStackDepthCallbackMin = 0;
   int BinaryMetadataFeatures = 0;
   int OverflowPatternExclusions = 0;
   int MsanTrackOrigins = 0;
