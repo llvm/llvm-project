@@ -205,7 +205,7 @@ C Language Changes
   ``-Wunterminated-string-initialization``. However, this diagnostic is not
   silenced by the ``nonstring`` attribute as these initializations are always
   incompatible with C++.
-- Added ``-Wjump-bypasses-init``, which is off by default and grouped under
+- Added ``-Wjump-misses-init``, which is off by default and grouped under
   ``-Wc++-compat``. It diagnoses when a jump (``goto`` to its label, ``switch``
   to its ``case``) will bypass the initialization of a local variable, which is
   invalid in C++.
