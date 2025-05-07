@@ -224,11 +224,14 @@ public:
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class ContinueRequestHandler : public LegacyRequestHandler {
+class ContinueRequestHandler
+    : public RequestHandler<protocol::ContinueArguments,
+                            llvm::Expected<protocol::ContinueResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "continue"; }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::ContinueResponseBody>
+  Run(const protocol::ContinueArguments &args) const override;
 };
 
 class ConfigurationDoneRequestHandler : public LegacyRequestHandler {
