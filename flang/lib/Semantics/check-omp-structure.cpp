@@ -3168,8 +3168,8 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
                                                         &objs,
                                                     std::string clause) {
             for (const auto &obj : objs.v) {
-              if (const parser::Name *objName{
-                      parser::Unwrap<parser::Name>(obj)}) {
+              if (const parser::Name *
+                  objName{parser::Unwrap<parser::Name>(obj)}) {
                 if (&objName->symbol->GetUltimate() == eventHandleSym) {
                   context_.Say(GetContext().clauseSource,
                       "A variable: `%s` that appears in a DETACH clause cannot appear on %s clause on the same construct"_err_en_US,
