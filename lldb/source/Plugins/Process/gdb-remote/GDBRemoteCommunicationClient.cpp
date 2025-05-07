@@ -424,7 +424,7 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
         m_uses_native_signals = eLazyBoolYes;
       else if (x == "binary-upload+")
         m_x_packet_state = xPacketState::Prefixed;
-      else if (x == "gpu-plugins")
+      else if (x == "gpu-plugins+")
         m_supports_gpu_plugins = eLazyBoolYes;
       else if (x == "ReverseContinue+")
         m_supports_reverse_continue = eLazyBoolYes;

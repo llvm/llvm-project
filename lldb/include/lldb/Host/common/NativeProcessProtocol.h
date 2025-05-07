@@ -273,7 +273,8 @@ public:
     memory_tagging = (1u << 6),
     savecore = (1u << 7),
     siginfo_read = (1u << 8),
-    json_dynamic_loader = (1u << 9),
+    gpu_plugins = (1u << 9),
+    json_dynamic_loader = (1u << 10),
 
     LLVM_MARK_AS_BITMASK_ENUM(json_dynamic_loader)
   };

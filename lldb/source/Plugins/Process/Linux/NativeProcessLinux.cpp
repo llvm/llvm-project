@@ -330,7 +330,7 @@ NativeProcessLinux::Manager::GetSupportedExtensions() const {
   NativeProcessLinux::Extension supported =
       Extension::multiprocess | Extension::fork | Extension::vfork |
       Extension::pass_signals | Extension::auxv | Extension::libraries_svr4 |
-      Extension::siginfo_read;
+      Extension::siginfo_read | Extension::gpu_plugins;
 
 #ifdef __aarch64__
   // At this point we do not have a process so read auxv directly.
