@@ -11648,26 +11648,12 @@ static void DiagnoseFloatingImpCast(Sema &S, Expr *E, QualType T,
 }
 
 static void CheckCommaOperand(Sema &S, Expr *E, QualType T, SourceLocation CC,
-                              bool Check) {
+                              bool ExtraCheckForImplicitConversion) {
   E = E->IgnoreParenImpCasts();
   AnalyzeImplicitConversions(S, E, CC);
 
-  if (Check && E->getType() != T)
+  if (ExtraCheckForImplicitConversion && E->getType() != T)
     S.CheckImplicitConversion(E, T, CC);
-}
-
-/// Analyze the given comma operator. The basic idea behind the analysis is to
-/// analyze the left and right operands slightly differently. The left operand
-/// needs to check whether the operand itself has an implicit conversion, but
-/// not whether the left operand induces an implicit conversion for the entire
-/// comma expression itself. This is similar to how CheckConditionalOperand
-/// behaves; it's as-if the correct operand were directly used for the implicit
-/// conversion check.
-static void AnalyzeCommaOperator(Sema &S, BinaryOperator *E, QualType T) {
-  assert(E->isCommaOp() && "Must be a comma operator");
-
-  CheckCommaOperand(S, E->getLHS(), T, E->getOperatorLoc(), false);
-  CheckCommaOperand(S, E->getRHS(), T, E->getOperatorLoc(), true);
 }
 
 /// Analyze the given compound assignment for the possible losing of
@@ -12514,7 +12500,15 @@ static void AnalyzeImplicitConversions(
         S.Diag(BO->getBeginLoc(), diag::note_cast_operand_to_int);
       }
     } else if (BO->isCommaOp() && !S.getLangOpts().CPlusPlus) {
-      AnalyzeCommaOperator(S, BO, T);
+      /// Analyze the given comma operator. The basic idea behind the analysis
+      /// is to analyze the left and right operands slightly differently. The
+      /// left operand needs to check whether the operand itself has an implicit
+      /// conversion, but not whether the left operand induces an implicit
+      /// conversion for the entire comma expression itself. This is similar to
+      /// how CheckConditionalOperand behaves; it's as-if the correct operand
+      /// were directly used for the implicit conversion check.
+      CheckCommaOperand(S, BO->getLHS(), T, BO->getOperatorLoc(), false);
+      CheckCommaOperand(S, BO->getRHS(), T, BO->getOperatorLoc(), true);
       return;
     }
 
