@@ -2858,9 +2858,23 @@ static void genAtomicUpdateStatement(
     lower::StatementContext atomicStmtCtx;
     mlir::Value rhsExpr = fir::getBase(converter.genExprValue(
         *semantics::GetExpr(assignmentStmtExpr), atomicStmtCtx));
-    mlir::Value convertResult =
-        firOpBuilder.createConvert(currentLocation, varType, rhsExpr);
-    firOpBuilder.create<mlir::omp::YieldOp>(currentLocation, convertResult);
+    mlir::Type exprType = fir::unwrapRefType(rhsExpr.getType());
+    if (fir::isa_complex(exprType) && !fir::isa_complex(varType)) {
+      // Emit an additional `ExtractValueOp` if the expression is of complex
+      // type
+      auto extract = firOpBuilder.create<fir::ExtractValueOp>(
+          currentLocation,
+          mlir::cast<mlir::ComplexType>(exprType).getElementType(), rhsExpr,
+          firOpBuilder.getArrayAttr(
+              firOpBuilder.getIntegerAttr(firOpBuilder.getIndexType(), 0)));
+      mlir::Value convertResult = firOpBuilder.create<fir::ConvertOp>(
+          currentLocation, varType, extract);
+      firOpBuilder.create<mlir::omp::YieldOp>(currentLocation, convertResult);
+    } else {
+      mlir::Value convertResult =
+          firOpBuilder.createConvert(currentLocation, varType, rhsExpr);
+      firOpBuilder.create<mlir::omp::YieldOp>(currentLocation, convertResult);
+    }
     converter.resetExprOverrides();
   }
   firOpBuilder.setInsertionPointAfter(atomicUpdateOp);

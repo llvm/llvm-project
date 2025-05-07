@@ -20,6 +20,8 @@ program OmpAtomicUpdate
 !CHECK: %[[VAL_C_DECLARE:.*]]:2 = hlfir.declare %[[VAL_C_ADDRESS]] {{.*}}
 !CHECK: %[[VAL_D_ADDRESS:.*]] = fir.address_of(@_QFEd) : !fir.ref<i32>
 !CHECK: %[[VAL_D_DECLARE:.*]]:2 = hlfir.declare %[[VAL_D_ADDRESS]] {{.}}
+!CHECK: %[[VAL_G_ADDRESS:.*]] = fir.alloca complex<f32> {bindc_name = "g", uniq_name = "_QFEg"}
+!CHECK: %[[VAL_G_DECLARE:.*]]:2 = hlfir.declare %[[VAL_G_ADDRESS]] {uniq_name = "_QFEg"} : (!fir.ref<complex<f32>>) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
 !CHECK: %[[VAL_i1_ALLOCA:.*]] = fir.alloca i8 {bindc_name = "i1", uniq_name = "_QFEi1"}
 !CHECK: %[[VAL_i1_DECLARE:.*]]:2 = hlfir.declare %[[VAL_i1_ALLOCA]] {{.*}}
 !CHECK: %[[VAL_c5:.*]] = arith.constant 5 : index
@@ -40,6 +42,7 @@ program OmpAtomicUpdate
     integer, target :: c, d
     integer(1) :: i1
     integer, dimension(5) :: k
+    complex :: g
 
 !CHECK: %[[EMBOX:.*]] = fir.embox %[[VAL_C_DECLARE]]#0 : (!fir.ref<i32>) -> !fir.box<!fir.ptr<i32>>
 !CHECK: fir.store %[[EMBOX]] to %[[VAL_A_DECLARE]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
@@ -200,4 +203,19 @@ program OmpAtomicUpdate
 !CHECK:  }
   !$omp atomic update
     x = x + sum([ (y+2, y=1, z) ])
+
+!CHECK: %[[LOAD:.*]] = fir.load %[[VAL_G_DECLARE]]#0 : !fir.ref<complex<f32>>
+!CHECK: omp.atomic.update %[[VAL_W_DECLARE]]#0 : !fir.ref<i32> {
+!CHECK: ^bb0(%[[ARG:.*]]: i32):
+!CHECK: %[[CVT:.*]] = fir.convert %[[ARG]] : (i32) -> f32
+!CHECK: %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+!CHECK: %[[UNDEF:.*]] = fir.undefined complex<f32>
+!CHECK: %[[IDX1:.*]] = fir.insert_value %[[UNDEF]], %[[CVT]], [0 : index] : (complex<f32>, f32) -> complex<f32>
+!CHECK: %[[IDX2:.*]] = fir.insert_value %[[IDX1]], %[[CST]], [1 : index] : (complex<f32>, f32) -> complex<f32>
+!CHECK: %[[ADD:.*]] = fir.addc %[[IDX2]], %[[LOAD]] {fastmath = #arith.fastmath<contract>} : complex<f32>
+!CHECK: %[[EXT:.*]] = fir.extract_value %[[ADD]], [0 : index] : (complex<f32>) -> f32
+!CHECK: %[[RESULT:.*]] = fir.convert %[[EXT]] : (f32) -> i32
+!CHECK: omp.yield(%[[RESULT]] : i32)
+  !$omp atomic update
+    w = w + g  
 end program OmpAtomicUpdate
