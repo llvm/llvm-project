@@ -296,29 +296,29 @@ static void SaveFilteredNewMIBNodes(std::vector<Metadata *> &NewMIBNodes,
   // recursion step). If so, none of the not-cold MIB nodes added for the
   // immediate callers need to be kept. If not, we keep the first (created
   // for the immediate caller) not-cold MIB node.
-  unsigned LongestNonCold = 0;
+  bool LongerNotColdContextKept = false;
   for (auto *MIB : NewMIBNodes) {
     auto MIBMD = cast<MDNode>(MIB);
     if (getMIBAllocType(MIBMD) == AllocationType::Cold)
       continue;
     MDNode *StackMD = getMIBStackNode(MIBMD);
     assert(StackMD);
-    auto ContextLength = StackMD->getNumOperands();
-    if (ContextLength > LongestNonCold)
-      LongestNonCold = ContextLength;
+    if (StackMD->getNumOperands() > CallerContextLength) {
+      LongerNotColdContextKept = true;
+      break;
+    }
   }
   // Don't need to emit any for the immediate caller if we already have
   // longer overlapping contexts;
-  bool KeepFirstNewNotCold = LongestNonCold == CallerContextLength;
+  bool KeepFirstNewNotCold = !LongerNotColdContextKept;
   auto NewColdMIBNodes = make_filter_range(NewMIBNodes, [&](const Metadata *M) {
     auto MIBMD = cast<MDNode>(M);
     // Only keep cold contexts and first (longest non-cold context).
     if (getMIBAllocType(MIBMD) != AllocationType::Cold) {
       MDNode *StackMD = getMIBStackNode(MIBMD);
       assert(StackMD);
-      auto ContextLength = StackMD->getNumOperands();
       // Keep any already kept for longer contexts.
-      if (ContextLength > CallerContextLength)
+      if (StackMD->getNumOperands() > CallerContextLength)
         return true;
       // Otherwise keep the first one added by the immediate caller if there
       // were no longer contexts.
