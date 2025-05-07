@@ -1057,11 +1057,6 @@ struct OpWithBodyGenInfo {
     return *this;
   }
 
-  OpWithBodyGenInfo &setSkipDspStep2(bool value) {
-    skipDspStep2 = value;
-    return *this;
-  }
-
   OpWithBodyGenInfo &setEntryBlockArgs(const EntryBlockArgs *value) {
     blockArgs = value;
     return *this;
@@ -1093,8 +1088,6 @@ struct OpWithBodyGenInfo {
   const List<Clause> *clauses = nullptr;
   /// [in] if provided, processes the construct's data-sharing attributes.
   DataSharingProcessor *dsp = nullptr;
-  /// [in] if true, skip DataSharingProcessor::processStep2
-  bool skipDspStep2 = false;
   /// [in] if provided, it is used to create the op's region entry block. It is
   /// overriden when a \see genRegionEntryCB is provided. This is only valid for
   /// operations implementing the \see mlir::omp::BlockArgOpenMPOpInterface.
@@ -1247,7 +1240,7 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
     // loop (this may not make sense in production code, but a user could
     // write that and we should handle it).
     firOpBuilder.setInsertionPoint(term);
-    if (privatize && !info.skipDspStep2) {
+    if (privatize) {
       // DataSharingProcessor::processStep2() may create operations before/after
       // the one passed as argument. We need to treat loop wrappers and their
       // nested loop as a unit, so we need to pass the bottom level wrapper (if
@@ -2169,10 +2162,8 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
         OpWithBodyGenInfo(converter, symTable, semaCtx, loc, nestedEval,
                           llvm::omp::Directive::OMPD_section)
             .setClauses(&sectionQueue.begin()->clauses)
-            .setEntryBlockArgs(&args)
             .setDataSharingProcessor(&dsp)
-            // lastprivate is handled differently for SECTIONS, see below
-            .setSkipDspStep2(true),
+            .setEntryBlockArgs(&args),
         sectionQueue, sectionQueue.begin());
   }
 
