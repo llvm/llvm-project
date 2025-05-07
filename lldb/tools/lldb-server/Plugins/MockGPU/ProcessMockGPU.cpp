@@ -210,5 +210,5 @@ ProcessMockGPU::Manager::Attach(
 
 ProcessMockGPU::Extension
 ProcessMockGPU::Manager::GetSupportedExtensions() const {
-  return Extension::json_dynamic_loader;
+  return Extension::gpu_dyld;
 }

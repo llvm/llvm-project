@@ -4339,8 +4339,8 @@ std::vector<std::string> GDBRemoteCommunicationServerLLGS::HandleFeatures(
     ret.push_back("qSaveCore+");
   if (bool(plugin_features & Extension::gpu_plugins))
     ret.push_back("gpu-plugins+");
-  if (bool(plugin_features & Extension::json_dynamic_loader))
-    ret.push_back("jGPUPluginGetDynamicLoaderLibraryInfo+");
+  if (bool(plugin_features & Extension::gpu_dyld))
+    ret.push_back("gpu-dyld+");
 
   // check for client features
   m_extensions_supported = {};
