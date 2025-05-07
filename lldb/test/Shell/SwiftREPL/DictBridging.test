@@ -55,7 +55,7 @@ let d_objc1 = NSArray(object: [:] as [NSNumber: NSNumber] as NSDictionary)
 // Verbatim bridging
 let d_objc2 = NSArray(object: [1: 2] as [NSNumber: NSNumber] as NSDictionary)
 // DICT-LABEL: d_objc2: NSArray = 1 element {
-// DICT-NEXT:    [0] = 1 key/value pair {
+// DICT:          = 1 key/value pair {
 // DICT-NEXT:      [0] = {
 // DICT-NEXT:        key = Int64(1)
 // DICT-NEXT:        value = Int64(2)
@@ -66,8 +66,9 @@ let d_objc2 = NSArray(object: [1: 2] as [NSNumber: NSNumber] as NSDictionary)
 // Non-verbatim bridging
 let d_objc3 = NSArray(object: [1: 2] as [Int: Int] as NSDictionary)
 // DICT-LABEL: d_objc3: NSArray = 1 element {
-// DICT-NEXT:    [0] = 1 key/value pair {
-// DICT-NEXT:      [0] = (key = 1, value = 2)
+// DICT:         = 1 key/value pair {
+// DICT:           key = 1
+// DICT:           value = 2
 // DICT-NEXT:    }
 // DICT-NEXT:  }
 

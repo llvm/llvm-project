@@ -44,7 +44,7 @@ let s_objc1 = NSArray(object: [] as Set<NSNumber> as NSSet)
 // Verbatim bridging
 let s_objc2 = NSArray(object: [1] as Set<NSNumber> as NSSet)
 // SET-LABEL: s_objc2: NSArray = 1 element {
-// SET-NEXT:    [0] = 1 value {
+// SET:         = 1 value {
 // SET-NEXT:      [0] = Int64(1)
 // SET-NEXT:    }
 // SET-NEXT:  }
@@ -52,7 +52,7 @@ let s_objc2 = NSArray(object: [1] as Set<NSNumber> as NSSet)
 // Non-verbatim bridging
 let s_objc3 = NSArray(object: [1] as Set<Int> as NSSet)
 // SET-LABEL: s_objc3: NSArray = 1 element {
-// SET-NEXT:    [0] = 1 value {
+// SET:         = 1 value {
 // SET-NEXT:      [0] = 1
 // SET-NEXT:    }
 // SET-NEXT:  }

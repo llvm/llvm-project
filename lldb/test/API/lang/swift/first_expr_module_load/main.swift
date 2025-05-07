@@ -5,9 +5,10 @@ protocol MyProtocol {
 }
 
 extension MyProtocol {
-    func foo() -> String {
-        return "\(self)" //%self.expect('expr -d run -- self', substrs=['NSAttributedString'])
-    }
+  func foo() -> String {
+    print("break here")
+    return "\(self)"
+  }
 }
 
 extension NSAttributedString: MyProtocol {}

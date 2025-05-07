@@ -996,7 +996,7 @@ SwiftASTContext::SwiftASTContext()
 }
 #endif
 
-SwiftASTContext::SwiftASTContext(std::string description,
+SwiftASTContext::SwiftASTContext(std::string description, ModuleSP module_sp,
                                  TypeSystemSwiftTypeRefSP typeref_typesystem)
     : TypeSystemSwift(), m_typeref_typesystem(typeref_typesystem),
       m_compiler_invocation_ap(new swift::CompilerInvocation()),
@@ -1006,6 +1006,7 @@ SwiftASTContext::SwiftASTContext(std::string description,
       "Swift AST context instantiation is disabled!");
 
   m_description = description;
+  m_module = module_sp.get();
 
   // Set the clang modules cache path.
   m_compiler_invocation_ap->setClangModuleCachePath(
@@ -2441,7 +2442,8 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
   // If there is a target this may be a fallback scratch context.
   std::shared_ptr<SwiftASTContext> swift_ast_sp(
       static_cast<SwiftASTContext *>(new SwiftASTContextForModule(
-          m_description, typeref_typesystem.GetTypeSystemSwiftTypeRef())));
+          m_description, module.shared_from_this(),
+          typeref_typesystem.GetTypeSystemSwiftTypeRef())));
   bool suppress_config_log = false;
   auto defer_log =
       llvm::make_scope_exit([swift_ast_sp, &suppress_config_log] {
@@ -2454,7 +2456,6 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
 
   // This is a module AST context, mark it as such.
   swift_ast_sp->m_is_scratch_context = false;
-  swift_ast_sp->m_module = &module;
   swift_ast_sp->GetLanguageOptions().EnableAccessControl = false;
   swift_ast_sp->GetLanguageOptions().EnableCXXInterop =
       module.IsSwiftCxxInteropEnabled();
@@ -2791,7 +2792,8 @@ SwiftASTContext::CreateInstance(const SymbolContext &sc,
       return {};
     }
     swift_ast_sp.reset(new SwiftASTContextForExpressions(
-        m_description, typeref_typesystem.GetTypeSystemSwiftTypeRef()));
+        m_description, module_sp,
+        typeref_typesystem.GetTypeSystemSwiftTypeRef()));
     // This is a scratch AST context, mark it as such.
     swift_ast_sp->m_is_scratch_context = true;
     auto &lang_opts = swift_ast_sp->GetLanguageOptions();
@@ -2806,10 +2808,10 @@ SwiftASTContext::CreateInstance(const SymbolContext &sc,
     }
     swift_ast_sp.reset(
         static_cast<SwiftASTContext *>(new SwiftASTContextForModule(
-            m_description, typeref_typesystem.GetTypeSystemSwiftTypeRef())));
+            m_description, module_sp,
+            typeref_typesystem.GetTypeSystemSwiftTypeRef())));
     // This is a module AST context, mark it as such.
     swift_ast_sp->m_is_scratch_context = false;
-    swift_ast_sp->m_module = module_sp.get();
     auto &lang_opts = swift_ast_sp->GetLanguageOptions();
     lang_opts.EnableAccessControl = false;
     lang_opts.EnableCXXInterop = ShouldEnableCXXInterop(cu);
@@ -4705,14 +4707,10 @@ CompilerType SwiftASTContext::GetAsClangType(ConstString mangled_name) {
   // that look like they might be come from Objective-C (or C) as
   // Clang types. LLDB's Objective-C part is very robust against
   // malformed object pointers, so this isn't very risky.
-  auto ts = GetTypeSystemSwiftTypeRef();
-  if (!ts)
-    return {};
-  Module *module = ts->GetModule();
-  if (!module)
+  if (!m_module)
     return {};
   auto type_system_or_err =
-      module->GetTypeSystemForLanguage(eLanguageTypeObjC);
+      m_module->GetTypeSystemForLanguage(eLanguageTypeObjC);
   if (!type_system_or_err) {
     llvm::consumeError(type_system_or_err.takeError());
     return {};
@@ -4724,11 +4722,16 @@ CompilerType SwiftASTContext::GetAsClangType(ConstString mangled_name) {
     return {};
   DWARFASTParserClang *clang_ast_parser =
       static_cast<DWARFASTParserClang *>(clang_ctx->GetDWARFParser());
+
+  SymbolContext sc;
+  m_module->CalculateSymbolContext(&sc);
   CompilerType clang_type;
   CompilerType imported_type = GetCompilerType(mangled_name);
-  if (auto ts =
-          imported_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>())
-    ts->IsImportedType(imported_type.GetOpaqueQualType(), &clang_type);
+  if (auto ts = imported_type.GetTypeSystem()
+                    .dyn_cast_or_null<TypeSystemSwiftTypeRef>())
+    if (ts->IsImportedType(imported_type.GetOpaqueQualType(), nullptr))
+      if (TypeSP result = ts->LookupClangType(mangled_name, sc))
+        clang_type = result->GetForwardCompilerType();
 
   // Import the Clang type into the Clang context.
   if (!clang_type)
@@ -8940,8 +8943,9 @@ SwiftASTContext::GetASTVectorForModule(const Module *module) {
 }
 
 SwiftASTContextForExpressions::SwiftASTContextForExpressions(
-    std::string description, TypeSystemSwiftTypeRefSP typeref_typesystem)
-    : SwiftASTContext(std::move(description), typeref_typesystem) {
+    std::string description, ModuleSP module_sp,
+    TypeSystemSwiftTypeRefSP typeref_typesystem)
+    : SwiftASTContext(std::move(description), module_sp, typeref_typesystem) {
   assert(llvm::isa<TypeSystemSwiftTypeRefForExpressions>(
       m_typeref_typesystem.lock().get()));
 }
