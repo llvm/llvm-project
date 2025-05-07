@@ -133,69 +133,60 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
     dap.SendOutput(OutputType::Console,
                    llvm::StringRef(attach_msg, attach_msg_len));
   }
+  if (attachCommands.empty()) {
+    // No "attachCommands", just attach normally.
 
-  {
-    // Perform the launch in synchronous mode so that we don't have to worry
-    // about process state changes during the launch.
+    // Disable async events so the attach will be successful when we return from
+    // the launch call and the launch will happen synchronously
     ScopeSyncMode scope_sync_mode(dap.debugger);
-    if (attachCommands.empty()) {
-      // No "attachCommands", just attach normally.
-      if (core_file.empty()) {
-        if ((pid != LLDB_INVALID_PROCESS_ID) &&
-            (gdb_remote_port != invalid_port)) {
-          // If both pid and port numbers are specified.
-          error.SetErrorString("The user can't specify both pid and port");
-        } else if (gdb_remote_port != invalid_port) {
-          // If port is specified and pid is not.
-          lldb::SBListener listener = dap.debugger.GetListener();
 
-          // If the user hasn't provided the hostname property, default
-          // localhost being used.
-          std::string connect_url =
-              llvm::formatv("connect://{0}:", gdb_remote_hostname);
-          connect_url += std::to_string(gdb_remote_port);
-          dap.target.ConnectRemote(listener, connect_url.c_str(), "gdb-remote",
-                                   error);
-        } else {
-          // Attach by pid or process name.
-          lldb::SBAttachInfo attach_info;
-          if (pid != LLDB_INVALID_PROCESS_ID)
-            attach_info.SetProcessID(pid);
-          else if (dap.configuration.program.has_value())
-            attach_info.SetExecutable(dap.configuration.program->data());
-          attach_info.SetWaitForLaunch(wait_for, false /*async*/);
-          dap.target.Attach(attach_info, error);
-        }
+    if (core_file.empty()) {
+      if ((pid != LLDB_INVALID_PROCESS_ID) &&
+          (gdb_remote_port != invalid_port)) {
+        // If both pid and port numbers are specified.
+        error.SetErrorString("The user can't specify both pid and port");
+      } else if (gdb_remote_port != invalid_port) {
+        // If port is specified and pid is not.
+        lldb::SBListener listener = dap.debugger.GetListener();
+
+        // If the user hasn't provided the hostname property, default localhost
+        // being used.
+        std::string connect_url =
+            llvm::formatv("connect://{0}:", gdb_remote_hostname);
+        connect_url += std::to_string(gdb_remote_port);
+        dap.target.ConnectRemote(listener, connect_url.c_str(), "gdb-remote",
+                                 error);
       } else {
-        dap.target.LoadCore(core_file.data(), error);
+        // Attach by pid or process name.
+        lldb::SBAttachInfo attach_info;
+        if (pid != LLDB_INVALID_PROCESS_ID)
+          attach_info.SetProcessID(pid);
+        else if (dap.configuration.program.has_value())
+          attach_info.SetExecutable(dap.configuration.program->data());
+        attach_info.SetWaitForLaunch(wait_for, false /*async*/);
+        dap.target.Attach(attach_info, error);
       }
     } else {
-      // We have "attachCommands" that are a set of commands that are expected
-      // to execute the commands after which a process should be created. If
-      // there is no valid process after running these commands, we have failed.
-      if (llvm::Error err = dap.RunAttachCommands(attachCommands)) {
-        response["success"] = false;
-        EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
-        dap.SendJSON(llvm::json::Value(std::move(response)));
-        return;
-      }
-      // The custom commands might have created a new target so we should use
-      // the selected target after these commands are run.
-      dap.target = dap.debugger.GetSelectedTarget();
+      dap.target.LoadCore(core_file.data(), error);
     }
+  } else {
+    // We have "attachCommands" that are a set of commands that are expected
+    // to execute the commands after which a process should be created. If there
+    // is no valid process after running these commands, we have failed.
+    if (llvm::Error err = dap.RunAttachCommands(attachCommands)) {
+      response["success"] = false;
+      EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
+      dap.SendJSON(llvm::json::Value(std::move(response)));
+      return;
+    }
+    // The custom commands might have created a new target so we should use the
+    // selected target after these commands are run.
+    dap.target = dap.debugger.GetSelectedTarget();
+
+    // Make sure the process is attached and stopped before proceeding as the
+    // the launch commands are not run using the synchronous mode.
+    error = dap.WaitForProcessToStop(std::chrono::seconds(timeout_seconds));
   }
-
-  // Make sure the process is attached and stopped.
-  error = dap.WaitForProcessToStop(std::chrono::seconds(timeout_seconds));
-
-  // Clients can request a baseline of currently existing threads after
-  // we acknowledge the configurationDone request.
-  // Client requests the baseline of currently existing threads after
-  // a successful or attach by sending a 'threads' request
-  // right after receiving the configurationDone response.
-  // Obtain the list of threads before we resume the process
-  dap.initial_thread_list =
-      GetThreads(dap.target.GetProcess(), dap.thread_format);
 
   if (error.Success() && core_file.empty()) {
     auto attached_pid = dap.target.GetProcess().GetProcessID();
@@ -215,17 +206,9 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
   }
 
   dap.SendJSON(llvm::json::Value(std::move(response)));
-
-  // FIXME: Move this into PostRun.
   if (error.Success()) {
-    if (dap.target.GetProcess().IsValid()) {
-      SendProcessEvent(dap, Attach);
-
-      if (dap.stop_at_entry)
-        SendThreadStoppedEvent(dap);
-      else
-        dap.target.GetProcess().Continue();
-    }
+    SendProcessEvent(dap, Attach);
+    dap.SendJSON(CreateEventObject("initialized"));
   }
 }
 
