@@ -421,13 +421,12 @@ def CXX11WarnSuggestOverride : DiagGroup<"suggest-override">;
 def WarnUnnecessaryVirtualSpecifier : DiagGroup<"unnecessary-virtual-specifier"> {
   code Documentation = [{
 Warns when a ``final`` class contains a virtual method (including virtual
-destructors). Since ``final`` classes cannot be subclassed, their methods
-cannot be overridden, and hence the ``virtual`` specifier is useless.
+destructors) that does not override anything. Since ``final`` classes cannot
+be subclassed, their methods cannot be overridden, so there is no point to
+introducing new ``virtual`` methods.
 
 The warning also detects virtual methods in classes whose destructor is
 ``final``, for the same reason.
-
-The warning does not fire on virtual methods which are also marked ``override``.
   }];
 }
 
@@ -1164,6 +1163,7 @@ def Extra : DiagGroup<"extra", [
     FUseLdPath,
     CastFunctionTypeMismatch,
     InitStringTooLongMissingNonString,
+    WarnUnnecessaryVirtualSpecifier,
   ]>;
 
 def Most : DiagGroup<"most", [
