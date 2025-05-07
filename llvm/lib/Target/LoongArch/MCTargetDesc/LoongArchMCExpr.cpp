@@ -63,8 +63,6 @@ StringRef LoongArchMCExpr::getSpecifierName(uint16_t S) {
   switch (S) {
   default:
     llvm_unreachable("Invalid ELF symbol kind");
-  case ELF::R_LARCH_B26:
-    return "plt";
   case ELF::R_LARCH_B16:
     return "b16";
   case ELF::R_LARCH_B21:
