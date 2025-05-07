@@ -751,6 +751,17 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       options::OPT_fno_sanitize_ignorelist,
       clang::diag::err_drv_malformed_sanitizer_ignorelist, DiagnoseErrors);
 
+  // Verify that -fsanitize-coverage-stack-depth-callback-min is >= 0.
+  if (Arg *A = Args.getLastArg(
+          options::OPT_fsanitize_coverage_stack_depth_callback_min_EQ)) {
+    StringRef S = A->getValue();
+    if (S.getAsInteger(0, CoverageStackDepthCallbackMin) ||
+        CoverageStackDepthCallbackMin < 0) {
+      if (DiagnoseErrors)
+        D.Diag(clang::diag::err_drv_invalid_value) << A->getAsString(Args) << S;
+    }
+  }
+
   // Parse -f[no-]sanitize-memory-track-origins[=level] options.
   if (AllAddedKinds & SanitizerKind::Memory) {
     if (Arg *A =
@@ -849,12 +860,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       D.Diag(clang::diag::err_drv_argument_not_allowed_with)
           << "-fsanitize-minimal-runtime"
           << lastArgumentForMask(D, Args, IncompatibleMask);
-
-    SanitizerMask NonTrappingCfi = Kinds & SanitizerKind::CFI & ~TrappingKinds;
-    if (NonTrappingCfi && DiagnoseErrors)
-      D.Diag(clang::diag::err_drv_argument_only_allowed_with)
-          << "-fsanitize-minimal-runtime"
-          << "-fsanitize-trap=cfi";
   }
 
   for (const auto *Arg : Args.filtered(
@@ -1034,10 +1039,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     StableABI = Args.hasFlag(options::OPT_fsanitize_stable_abi,
                              options::OPT_fno_sanitize_stable_abi, false);
 
-    AsanUseAfterScope = Args.hasFlag(
-        options::OPT_fsanitize_address_use_after_scope,
-        options::OPT_fno_sanitize_address_use_after_scope, AsanUseAfterScope);
-
     AsanPoisonCustomArrayCookie = Args.hasFlag(
         options::OPT_fsanitize_address_poison_custom_array_cookie,
         options::OPT_fno_sanitize_address_poison_custom_array_cookie,
@@ -1099,7 +1100,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     }
 
   } else {
-    AsanUseAfterScope = false;
     // -fsanitize=pointer-compare/pointer-subtract requires -fsanitize=address.
     SanitizerMask DetectInvalidPointerPairs =
         SanitizerKind::PointerCompare | SanitizerKind::PointerSubtract;
@@ -1111,6 +1111,14 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                                      SanitizerKind::PointerSubtract)
           << "-fsanitize=address";
     }
+  }
+
+  if (AllAddedKinds & (SanitizerKind::Address | SanitizerKind::KernelAddress)) {
+    AsanUseAfterScope = Args.hasFlag(
+        options::OPT_fsanitize_address_use_after_scope,
+        options::OPT_fno_sanitize_address_use_after_scope, AsanUseAfterScope);
+  } else {
+    AsanUseAfterScope = false;
   }
 
   if (AllAddedKinds & SanitizerKind::HWAddress) {
@@ -1271,6 +1279,11 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
       Args, CmdArgs, "-fsanitize-coverage-allowlist=", CoverageAllowlistFiles);
   addSpecialCaseListOpt(Args, CmdArgs, "-fsanitize-coverage-ignorelist=",
                         CoverageIgnorelistFiles);
+
+  if (CoverageStackDepthCallbackMin)
+    CmdArgs.push_back(
+        Args.MakeArgString("-fsanitize-coverage-stack-depth-callback-min=" +
+                           Twine(CoverageStackDepthCallbackMin)));
 
   if (!GPUSanitize) {
     // Translate available BinaryMetadataFeatures to corresponding clang-cc1

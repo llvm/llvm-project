@@ -680,6 +680,10 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
       } else {
         llvm_unreachable("Unknown handle type for spv_resource_getpointer.");
       }
+    } else if (II && II->getIntrinsicID() ==
+                         Intrinsic::spv_generic_cast_to_ptr_explicit) {
+      Ty = deduceElementTypeHelper(CI->getArgOperand(0), Visited,
+                                   UnknownElemTypeI8);
     } else if (Function *CalledF = CI->getCalledFunction()) {
       std::string DemangledName =
           getOclOrSpirvBuiltinDemangledName(CalledF->getName());

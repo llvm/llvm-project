@@ -216,7 +216,7 @@ public:
       erase(MI);
       return nullptr;
     }
-    assert(Defs.find(MI) != Defs.end() && Defs.find(MI)->second == HandleMF);
+    assert(Defs.contains(MI) && Defs.find(MI)->second == HandleMF);
     return MI;
   }
   Register find(SPIRV::IRHandle Handle, const MachineFunction *MF) {

@@ -2482,8 +2482,9 @@ bool ASTNodeImporter::IsStructuralMatch(Decl *From, Decl *To, bool Complain,
   }
 
   StructuralEquivalenceContext Ctx(
-      Importer.getFromContext(), Importer.getToContext(),
-      Importer.getNonEquivalentDecls(), getStructuralEquivalenceKind(Importer),
+      Importer.getToContext().getLangOpts(), Importer.getFromContext(),
+      Importer.getToContext(), Importer.getNonEquivalentDecls(),
+      getStructuralEquivalenceKind(Importer),
       /*StrictTypeSpelling=*/false, Complain, /*ErrorOnTagTypeMismatch=*/false,
       IgnoreTemplateParmDepth);
   return Ctx.IsEquivalent(From, To);
@@ -2627,11 +2628,12 @@ ExpectedDecl ASTNodeImporter::VisitNamespaceDecl(NamespaceDecl *D) {
   if (!Name) {
     // This is an anonymous namespace. Adopt an existing anonymous
     // namespace if we can.
-    // FIXME: Not testable.
-    if (auto *TU = dyn_cast<TranslationUnitDecl>(DC))
+    DeclContext *EnclosingDC = DC->getEnclosingNamespaceContext();
+    if (auto *TU = dyn_cast<TranslationUnitDecl>(EnclosingDC))
       MergeWithNamespace = TU->getAnonymousNamespace();
     else
-      MergeWithNamespace = cast<NamespaceDecl>(DC)->getAnonymousNamespace();
+      MergeWithNamespace =
+          cast<NamespaceDecl>(EnclosingDC)->getAnonymousNamespace();
   } else {
     SmallVector<NamedDecl *, 4> ConflictingDecls;
     auto FoundDecls = Importer.findDeclsInToCtx(DC, Name);
@@ -4341,7 +4343,8 @@ static bool IsEquivalentFriend(ASTImporter &Importer, FriendDecl *FD1,
 
   ASTImporter::NonEquivalentDeclSet NonEquivalentDecls;
   StructuralEquivalenceContext Ctx(
-      FD1->getASTContext(), FD2->getASTContext(), NonEquivalentDecls,
+      Importer.getToContext().getLangOpts(), FD1->getASTContext(),
+      FD2->getASTContext(), NonEquivalentDecls,
       StructuralEquivalenceKind::Default,
       /* StrictTypeSpelling = */ false, /* Complain = */ false);
   return Ctx.IsEquivalent(FD1, FD2);
@@ -10540,8 +10543,8 @@ bool ASTImporter::IsStructurallyEquivalent(QualType From, QualType To,
     }
   }
 
-  StructuralEquivalenceContext Ctx(FromContext, ToContext, NonEquivalentDecls,
-                                   getStructuralEquivalenceKind(*this), false,
-                                   Complain);
+  StructuralEquivalenceContext Ctx(
+      getToContext().getLangOpts(), FromContext, ToContext, NonEquivalentDecls,
+      getStructuralEquivalenceKind(*this), false, Complain);
   return Ctx.IsEquivalent(From, To);
 }

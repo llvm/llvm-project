@@ -409,7 +409,6 @@ MeshSharding getSharding(OpResult result, const ShardingOption &shardingOption,
 
   // process the split axes
   for (auto it : llvm::enumerate(map.getResults())) {
-    SmallVector<MeshAxis> tmp_axes;
     AffineExpr expr = it.value();
     // `expr` must be an `AffineDimExpr` because `map` is verified by
     // isProjectedPermutation

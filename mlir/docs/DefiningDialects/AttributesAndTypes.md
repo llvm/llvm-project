@@ -842,9 +842,9 @@ if they are not present.
 
 ###### `struct` Directive
 
-The `struct` directive accepts a list of variables to capture and will generate
-a parser and printer for a comma-separated list of key-value pairs. If an
-optional parameter is included in the `struct`, it can be elided. The variables
+The `struct` directive accepts a list of variables or directives to capture and 
+will generate a parser and printer for a comma-separated list of key-value pairs. 
+If an optional parameter is included in the `struct`, it can be elided. The variables
 are printed in the order they are specified in the argument list **but can be
 parsed in any order**. For example:
 
@@ -875,6 +875,13 @@ assembly format of `` `<` struct(params) `>` `` will result in:
 
 The order in which the parameters are printed is the order in which they are
 declared in the attribute's or type's `parameter` list.
+
+Passing `custom<Foo>($variable)` allows providing a custom printer and parser
+for the encapsulated variable. Check the
+[custom and ref directive](#custom-and-ref-directive) section for more
+information about how to define the printer and parser functions. Note that a
+custom directive within a struct directive can only encapsulate a single
+variable.
 
 ###### `custom` and `ref` directive
 

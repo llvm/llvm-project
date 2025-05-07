@@ -24,6 +24,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -910,7 +911,7 @@ std::string TreePredicateFn::getPredCode() const {
 
   if (!isLoad() && !isStore() && !isAtomic() && getMemoryVT())
     PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                    "MemoryVT requires IsLoad or IsStore");
+                    "MemoryVT requires IsLoad or IsStore or IsAtomic");
 
   if (!isLoad() && !isStore()) {
     if (isUnindexed())
@@ -933,22 +934,19 @@ std::string TreePredicateFn::getPredCode() const {
         getMinAlignment() < 1)
       PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
                       "IsLoad cannot be used by itself");
-  } else {
+  } else if (!isAtomic()) {
     if (isNonExtLoad())
       PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsNonExtLoad requires IsLoad");
+                      "IsNonExtLoad requires IsLoad or IsAtomic");
     if (isAnyExtLoad())
       PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsAnyExtLoad requires IsLoad");
-
-    if (!isAtomic()) {
-      if (isSignExtLoad())
-        PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                        "IsSignExtLoad requires IsLoad or IsAtomic");
-      if (isZeroExtLoad())
-        PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                        "IsZeroExtLoad requires IsLoad or IsAtomic");
-    }
+                      "IsAnyExtLoad requires IsLoad or IsAtomic");
+    if (isSignExtLoad())
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "IsSignExtLoad requires IsLoad or IsAtomic");
+    if (isZeroExtLoad())
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "IsZeroExtLoad requires IsLoad or IsAtomic");
   }
 
   if (isStore()) {
@@ -967,11 +965,12 @@ std::string TreePredicateFn::getPredCode() const {
   }
 
   if (isAtomic()) {
-    if (getMemoryVT() == nullptr && !isAtomicOrderingMonotonic() &&
-        getAddressSpaces() == nullptr &&
+    if (getMemoryVT() == nullptr && getAddressSpaces() == nullptr &&
         // FIXME: Should atomic loads be IsLoad, IsAtomic, or both?
-        !isZeroExtLoad() && !isSignExtLoad() && !isAtomicOrderingAcquire() &&
-        !isAtomicOrderingRelease() && !isAtomicOrderingAcquireRelease() &&
+        !isNonExtLoad() && !isAnyExtLoad() && !isZeroExtLoad() &&
+        !isSignExtLoad() && !isAtomicOrderingMonotonic() &&
+        !isAtomicOrderingAcquire() && !isAtomicOrderingRelease() &&
+        !isAtomicOrderingAcquireRelease() &&
         !isAtomicOrderingSequentiallyConsistent() &&
         !isAtomicOrderingAcquireOrStronger() &&
         !isAtomicOrderingReleaseOrStronger() &&
@@ -1075,9 +1074,27 @@ std::string TreePredicateFn::getPredCode() const {
         "if (isReleaseOrStronger(cast<AtomicSDNode>(N)->getMergedOrdering())) "
         "return false;\n";
 
-  // TODO: Handle atomic sextload/zextload normally when ATOMIC_LOAD is removed.
-  if (isAtomic() && (isZeroExtLoad() || isSignExtLoad()))
-    Code += "return false;\n";
+  if (isAtomic()) {
+    if ((isNonExtLoad() + isAnyExtLoad() + isSignExtLoad() + isZeroExtLoad()) >
+        1)
+      PrintFatalError(
+          getOrigPatFragRecord()->getRecord()->getLoc(),
+          "IsNonExtLoad, IsAnyExtLoad, IsSignExtLoad, and IsZeroExtLoad are "
+          "mutually exclusive");
+
+    if (isNonExtLoad())
+      Code += "if (cast<AtomicSDNode>(N)->getExtensionType() != "
+              "ISD::NON_EXTLOAD) return false;\n";
+    if (isAnyExtLoad())
+      Code += "if (cast<AtomicSDNode>(N)->getExtensionType() != ISD::EXTLOAD) "
+              "return false;\n";
+    if (isSignExtLoad())
+      Code += "if (cast<AtomicSDNode>(N)->getExtensionType() != ISD::SEXTLOAD) "
+              "return false;\n";
+    if (isZeroExtLoad())
+      Code += "if (cast<AtomicSDNode>(N)->getExtensionType() != ISD::ZEXTLOAD) "
+              "return false;\n";
+  }
 
   if (isLoad() || isStore()) {
     StringRef SDNodeName = isLoad() ? "LoadSDNode" : "StoreSDNode";
@@ -1358,11 +1375,11 @@ std::string TreePredicateFn::getCodeToRunOnSDNode() const {
 
     std::string Result = ("    " + getImmType() + " Imm = ").str();
     if (immCodeUsesAPFloat())
-      Result += "cast<ConstantFPSDNode>(Node)->getValueAPF();\n";
+      Result += "cast<ConstantFPSDNode>(Op.getNode())->getValueAPF();\n";
     else if (immCodeUsesAPInt())
-      Result += "Node->getAsAPIntVal();\n";
+      Result += "Op->getAsAPIntVal();\n";
     else
-      Result += "cast<ConstantSDNode>(Node)->getSExtValue();\n";
+      Result += "cast<ConstantSDNode>(Op.getNode())->getSExtValue();\n";
     return Result + ImmCode;
   }
 
@@ -1393,9 +1410,9 @@ std::string TreePredicateFn::getCodeToRunOnSDNode() const {
 
   std::string Result;
   if (ClassName == "SDNode")
-    Result = "    SDNode *N = Node;\n";
+    Result = "    SDNode *N = Op.getNode();\n";
   else
-    Result = "    auto *N = cast<" + ClassName.str() + ">(Node);\n";
+    Result = "    auto *N = cast<" + ClassName.str() + ">(Op.getNode());\n";
 
   return (Twine(Result) + "    (void)N;\n" + getPredCode()).str();
 }
@@ -3201,13 +3218,8 @@ bool TreePattern::InferAllTypes(
 
 void TreePattern::print(raw_ostream &OS) const {
   OS << getRecord()->getName();
-  if (!Args.empty()) {
-    OS << "(";
-    ListSeparator LS;
-    for (const std::string &Arg : Args)
-      OS << LS << Arg;
-    OS << ")";
-  }
+  if (!Args.empty())
+    OS << '(' << llvm::interleaved(Args) << ')';
   OS << ": ";
 
   if (Trees.size() > 1)

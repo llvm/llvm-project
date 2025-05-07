@@ -1,0 +1,10 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!s32i = !cir.int<s, 32>
+
+module  {
+
+// expected-error @below {{unsupported element type for CIR vector}}
+cir.global external @vec_b = #cir.zero : !cir.vector<4 x !cir.array<!s32i x 10>>
+
+}

@@ -875,22 +875,16 @@ static Value *foldSignedTruncationCheck(ICmpInst *ICmp0, ICmpInst *ICmp1,
                            APInt &UnsetBitsMask) -> bool {
     CmpPredicate Pred = ICmp->getPredicate();
     // Can it be decomposed into  icmp eq (X & Mask), 0  ?
-    auto Res =
-        llvm::decomposeBitTestICmp(ICmp->getOperand(0), ICmp->getOperand(1),
-                                   Pred, /*LookThroughTrunc=*/false);
+    auto Res = llvm::decomposeBitTestICmp(
+        ICmp->getOperand(0), ICmp->getOperand(1), Pred,
+        /*LookThroughTrunc=*/false, /*AllowNonZeroC=*/false,
+        /*DecomposeAnd=*/true);
     if (Res && Res->Pred == ICmpInst::ICMP_EQ) {
       X = Res->X;
       UnsetBitsMask = Res->Mask;
       return true;
     }
 
-    // Is it  icmp eq (X & Mask), 0  already?
-    const APInt *Mask;
-    if (match(ICmp, m_ICmp(Pred, m_And(m_Value(X), m_APInt(Mask)), m_Zero())) &&
-        Pred == ICmpInst::ICMP_EQ) {
-      UnsetBitsMask = *Mask;
-      return true;
-    }
     return false;
   };
 
@@ -1848,34 +1842,49 @@ Instruction *InstCombinerImpl::foldCastedBitwiseLogic(BinaryOperator &I) {
   if (CastOpcode != Cast1->getOpcode())
     return nullptr;
 
-  // If the source types do not match, but the casts are matching extends, we
-  // can still narrow the logic op.
-  if (SrcTy != Cast1->getSrcTy()) {
-    Value *X, *Y;
-    if (match(Cast0, m_OneUse(m_ZExtOrSExt(m_Value(X)))) &&
-        match(Cast1, m_OneUse(m_ZExtOrSExt(m_Value(Y))))) {
-      // Cast the narrower source to the wider source type.
-      unsigned XNumBits = X->getType()->getScalarSizeInBits();
-      unsigned YNumBits = Y->getType()->getScalarSizeInBits();
-      if (XNumBits < YNumBits)
+  // Can't fold it profitably if no one of casts has one use.
+  if (!Cast0->hasOneUse() && !Cast1->hasOneUse())
+    return nullptr;
+
+  Value *X, *Y;
+  if (match(Cast0, m_ZExtOrSExt(m_Value(X))) &&
+      match(Cast1, m_ZExtOrSExt(m_Value(Y)))) {
+    // Cast the narrower source to the wider source type.
+    unsigned XNumBits = X->getType()->getScalarSizeInBits();
+    unsigned YNumBits = Y->getType()->getScalarSizeInBits();
+    if (XNumBits != YNumBits) {
+      // Cast the narrower source to the wider source type only if both of casts
+      // have one use to avoid creating an extra instruction.
+      if (!Cast0->hasOneUse() || !Cast1->hasOneUse())
+        return nullptr;
+
+      // If the source types do not match, but the casts are matching extends,
+      // we can still narrow the logic op.
+      if (XNumBits < YNumBits) {
         X = Builder.CreateCast(CastOpcode, X, Y->getType());
-      else
+      } else if (YNumBits < XNumBits) {
         Y = Builder.CreateCast(CastOpcode, Y, X->getType());
-      // Do the logic op in the intermediate width, then widen more.
-      Value *NarrowLogic = Builder.CreateBinOp(LogicOpc, X, Y);
-      return CastInst::Create(CastOpcode, NarrowLogic, DestTy);
+      }
     }
 
-    // Give up for other cast opcodes.
-    return nullptr;
+    // Do the logic op in the intermediate width, then widen more.
+    Value *NarrowLogic = Builder.CreateBinOp(LogicOpc, X, Y, I.getName());
+    auto *Disjoint = dyn_cast<PossiblyDisjointInst>(&I);
+    auto *NewDisjoint = dyn_cast<PossiblyDisjointInst>(NarrowLogic);
+    if (Disjoint && NewDisjoint)
+      NewDisjoint->setIsDisjoint(Disjoint->isDisjoint());
+    return CastInst::Create(CastOpcode, NarrowLogic, DestTy);
   }
+
+  // If the src type of casts are different, give up for other cast opcodes.
+  if (SrcTy != Cast1->getSrcTy())
+    return nullptr;
 
   Value *Cast0Src = Cast0->getOperand(0);
   Value *Cast1Src = Cast1->getOperand(0);
 
   // fold logic(cast(A), cast(B)) -> cast(logic(A, B))
-  if ((Cast0->hasOneUse() || Cast1->hasOneUse()) &&
-      shouldOptimizeCast(Cast0) && shouldOptimizeCast(Cast1)) {
+  if (shouldOptimizeCast(Cast0) && shouldOptimizeCast(Cast1)) {
     Value *NewOp = Builder.CreateBinOp(LogicOpc, Cast0Src, Cast1Src,
                                        I.getName());
     return CastInst::Create(CastOpcode, NewOp, DestTy);
@@ -3512,6 +3521,23 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
       }
     }
   }
+
+  // (X & ExpMask) != 0 && (X & ExpMask) != ExpMask -> isnormal(X)
+  // (X & ExpMask) == 0 || (X & ExpMask) == ExpMask -> !isnormal(X)
+  Value *X;
+  const APInt *MaskC;
+  if (LHS0 == RHS0 && PredL == PredR &&
+      PredL == (IsAnd ? ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ) &&
+      !I.getFunction()->hasFnAttribute(Attribute::NoImplicitFloat) &&
+      LHS->hasOneUse() && RHS->hasOneUse() &&
+      match(LHS0, m_And(m_ElementWiseBitCast(m_Value(X)), m_APInt(MaskC))) &&
+      X->getType()->getScalarType()->isIEEELikeFPTy() &&
+      APFloat(X->getType()->getScalarType()->getFltSemantics(), *MaskC)
+          .isPosInfinity() &&
+      ((LHSC->isZero() && *RHSC == *MaskC) ||
+       (RHSC->isZero() && *LHSC == *MaskC)))
+    return Builder.createIsFPClass(X, IsAnd ? FPClassTest::fcNormal
+                                            : ~FPClassTest::fcNormal);
 
   return foldAndOrOfICmpsUsingRanges(LHS, RHS, IsAnd);
 }

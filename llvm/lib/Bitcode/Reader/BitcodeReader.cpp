@@ -1356,6 +1356,10 @@ static AtomicRMWInst::BinOp getDecodedRMWOperation(unsigned Val) {
   case bitc::RMW_FSUB: return AtomicRMWInst::FSub;
   case bitc::RMW_FMAX: return AtomicRMWInst::FMax;
   case bitc::RMW_FMIN: return AtomicRMWInst::FMin;
+  case bitc::RMW_FMAXIMUM:
+    return AtomicRMWInst::FMaximum;
+  case bitc::RMW_FMINIMUM:
+    return AtomicRMWInst::FMinimum;
   case bitc::RMW_UINC_WRAP:
     return AtomicRMWInst::UIncWrap;
   case bitc::RMW_UDEC_WRAP:
@@ -1649,7 +1653,7 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
               FwdBBs[BBID] = BasicBlock::Create(Context);
             BB = FwdBBs[BBID];
           }
-          C = BlockAddress::get(Fn, BB);
+          C = BlockAddress::get(Fn->getType(), BB);
           break;
         }
         case BitcodeConstant::ConstantStructOpcode: {
@@ -3992,8 +3996,6 @@ Error BitcodeReader::rememberAndSkipFunctionBodies() {
   // An old bitcode file with the symbol table at the end would have
   // finished the parse greedily.
   assert(SeenValueSymbolTable);
-
-  SmallVector<uint64_t, 64> Record;
 
   while (true) {
     Expected<llvm::BitstreamEntry> MaybeEntry = Stream.advance();
@@ -7166,10 +7168,10 @@ void ModuleSummaryIndexBitcodeReader::setValueGUID(
     StringRef SourceFileName) {
   std::string GlobalId =
       GlobalValue::getGlobalIdentifier(ValueName, Linkage, SourceFileName);
-  auto ValueGUID = GlobalValue::getGUID(GlobalId);
+  auto ValueGUID = GlobalValue::getGUIDAssumingExternalLinkage(GlobalId);
   auto OriginalNameID = ValueGUID;
   if (GlobalValue::isLocalLinkage(Linkage))
-    OriginalNameID = GlobalValue::getGUID(ValueName);
+    OriginalNameID = GlobalValue::getGUIDAssumingExternalLinkage(ValueName);
   if (PrintSummaryGUIDs)
     dbgs() << "GUID " << ValueGUID << "(" << OriginalNameID << ") is "
            << ValueName << "\n";

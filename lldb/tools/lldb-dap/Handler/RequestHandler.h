@@ -71,7 +71,8 @@ protected:
   // runInTerminal if applicable. It doesn't do any of the additional
   // initialization and bookkeeping stuff that is needed for `request_launch`.
   // This way we can reuse the process launching logic for RestartRequest too.
-  lldb::SBError LaunchProcess(const llvm::json::Object &request) const;
+  llvm::Error
+  LaunchProcess(const protocol::LaunchRequestArguments &request) const;
 
   // Check if the step-granularity is `instruction`.
   bool HasInstructionGranularity(const llvm::json::Object &request) const;
@@ -163,12 +164,21 @@ class RequestHandler : public BaseRequestHandler {
     }
 
     dap.Send(response);
+
+    PostRun();
   };
 
   virtual Resp Run(const Args &) const = 0;
 
+  /// A hook for a request handler to run additional operations after the
+  /// request response is sent but before the next request handler.
+  virtual void PostRun() const {};
+
   protocol::ErrorResponseBody ToResponse(llvm::Error err) const {
     protocol::ErrorMessage error_message;
+    // Default to showing the user errors unless otherwise specified by a
+    // DAPError.
+    error_message.showUser = true;
     error_message.sendTelemetry = false;
     if (llvm::Error unhandled = llvm::handleErrors(
             std::move(err), [&](const DAPError &E) -> llvm::Error {
@@ -178,8 +188,9 @@ class RequestHandler : public BaseRequestHandler {
               error_message.url = E.getURL();
               error_message.urlLabel = E.getURLLabel();
               return llvm::Error::success();
-            }))
+            })) {
       error_message.format = llvm::toString(std::move(unhandled));
+    }
     protocol::ErrorResponseBody body;
     body.error = error_message;
     return body;
@@ -273,11 +284,15 @@ public:
   Run(const protocol::InitializeRequestArguments &args) const override;
 };
 
-class LaunchRequestHandler : public LegacyRequestHandler {
+class LaunchRequestHandler
+    : public RequestHandler<protocol::LaunchRequestArguments,
+                            protocol::LaunchResponseBody> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "launch"; }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Error
+  Run(const protocol::LaunchRequestArguments &arguments) const override;
+  void PostRun() const override;
 };
 
 class RestartRequestHandler : public LegacyRequestHandler {
@@ -316,11 +331,12 @@ public:
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class StepOutRequestHandler : public LegacyRequestHandler {
+class StepOutRequestHandler : public RequestHandler<protocol::StepOutArguments,
+                                                    protocol::StepOutResponse> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "stepOut"; }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Error Run(const protocol::StepOutArguments &args) const override;
 };
 
 class SetBreakpointsRequestHandler : public LegacyRequestHandler {
@@ -414,17 +430,20 @@ public:
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class SetVariableRequestHandler : public LegacyRequestHandler {
+class SetVariableRequestHandler final
+    : public RequestHandler<protocol::SetVariableArguments,
+                            llvm::Expected<protocol::SetVariableResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "setVariable"; }
   FeatureSet GetSupportedFeatures() const override {
     return {protocol::eAdapterFeatureSetVariable};
   }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::SetVariableResponseBody>
+  Run(const protocol::SetVariableArguments &args) const override;
 };
 
-class SourceRequestHandler
+class SourceRequestHandler final
     : public RequestHandler<protocol::SourceArguments,
                             llvm::Expected<protocol::SourceResponseBody>> {
 public:

@@ -505,8 +505,8 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   // The preamble of parallel code interacts different than normal code with
   // e.g., scalar initialization. Therefore, we ensure the parallel code is
   // separated from the last basic block.
-  BasicBlock *ParBB = SplitBlock(Builder.GetInsertBlock(),
-                                 &*Builder.GetInsertPoint(), &DT, &LI);
+  BasicBlock *ParBB =
+      SplitBlock(Builder.GetInsertBlock(), Builder.GetInsertPoint(), &DT, &LI);
   ParBB->setName("polly.parallel.for");
   Builder.SetInsertPoint(ParBB, ParBB->begin());
 
@@ -711,9 +711,9 @@ void IslNodeBuilder::createIf(__isl_take isl_ast_node *If) {
   LLVMContext &Context = F->getContext();
 
   BasicBlock *CondBB = SplitBlock(Builder.GetInsertBlock(),
-                                  &*Builder.GetInsertPoint(), GenDT, GenLI);
+                                  Builder.GetInsertPoint(), GenDT, GenLI);
   CondBB->setName("polly.cond");
-  BasicBlock *MergeBB = SplitBlock(CondBB, &CondBB->front(), GenDT, GenLI);
+  BasicBlock *MergeBB = SplitBlock(CondBB, CondBB->begin(), GenDT, GenLI);
   MergeBB->setName("polly.merge");
   BasicBlock *ThenBB = BasicBlock::Create(Context, "polly.then", F);
   BasicBlock *ElseBB = BasicBlock::Create(Context, "polly.else", F);
@@ -1111,10 +1111,10 @@ Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
     Cond = Builder.CreateIsNotNull(Cond);
 
   BasicBlock *CondBB = SplitBlock(Builder.GetInsertBlock(),
-                                  &*Builder.GetInsertPoint(), GenDT, GenLI);
+                                  Builder.GetInsertPoint(), GenDT, GenLI);
   CondBB->setName("polly.preload.cond");
 
-  BasicBlock *MergeBB = SplitBlock(CondBB, &CondBB->front(), GenDT, GenLI);
+  BasicBlock *MergeBB = SplitBlock(CondBB, CondBB->begin(), GenDT, GenLI);
   MergeBB->setName("polly.preload.merge");
 
   Function *F = Builder.GetInsertBlock()->getParent();
@@ -1353,7 +1353,7 @@ bool IslNodeBuilder::preloadInvariantLoads() {
     return true;
 
   BasicBlock *PreLoadBB = SplitBlock(Builder.GetInsertBlock(),
-                                     &*Builder.GetInsertPoint(), GenDT, GenLI);
+                                     Builder.GetInsertPoint(), GenDT, GenLI);
   PreLoadBB->setName("polly.preload.begin");
   Builder.SetInsertPoint(PreLoadBB, PreLoadBB->begin());
 
@@ -1401,7 +1401,7 @@ Value *IslNodeBuilder::generateSCEV(const SCEV *Expr) {
   /// insert location remains valid.
   assert(Builder.GetInsertBlock()->end() != Builder.GetInsertPoint() &&
          "Insert location points after last valid instruction");
-  Instruction *InsertLocation = &*Builder.GetInsertPoint();
+  BasicBlock::iterator InsertLocation = Builder.GetInsertPoint();
 
   return expandCodeFor(S, SE, Builder.GetInsertBlock()->getParent(), *GenSE, DL,
                        "polly", Expr, Expr->getType(), InsertLocation,

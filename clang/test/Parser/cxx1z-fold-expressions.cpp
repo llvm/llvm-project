@@ -52,9 +52,11 @@ template<typename ...T> void as_operand_of_cast(int a, T ...t) {
 
 // fold-operator can be '>' or '>>'.
 template <int... N> constexpr bool greaterThan() { return (N > ...); }
+// expected-error@-1 {{comparison in fold expression}}
+
 template <int... N> constexpr int rightShift() { return (N >> ...); }
 
-static_assert(greaterThan<2, 1>());
+static_assert(greaterThan<2, 1>()); // expected-note {{in instantiation}}
 static_assert(rightShift<10, 1>() == 5);
 
 template <auto V> constexpr auto Identity = V;

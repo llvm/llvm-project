@@ -44,12 +44,6 @@ bool llvm::hasAliasUse(Function &F) {
     });
 }
 
-bool llvm::hasAliasOrBlockAddressUse(Function &F) {
-  return any_of(F.users(), [](User *U) {
-    return isa<GlobalAlias, GlobalIFunc, BlockAddress>(U);
-  });
-}
-
 void llvm::simpleSimplifyCFG(Function &F, ArrayRef<BasicBlock *> BBs,
                              bool FoldBlockIntoPredecessor) {
 
@@ -79,7 +73,7 @@ void llvm::simpleSimplifyCFG(Function &F, ArrayRef<BasicBlock *> BBs,
   for (BasicBlock *BB : Unreachable) {
     for (BasicBlock *Successor : successors(&*BB))
       if (Visited.count(Successor))
-        Successor->removePredecessor(&*BB);
+        Successor->removePredecessor(&*BB, /*KeepOneInputPHIs=*/true);
     BB->dropAllReferences();
   }
 

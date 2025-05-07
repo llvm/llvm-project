@@ -621,8 +621,8 @@ static bool loadModuleMapForModuleBuild(CompilerInstance &CI, bool IsSystem,
   }
 
   // Load the module map file.
-  if (HS.loadModuleMapFile(*ModuleMap, IsSystem, ModuleMapID, &Offset,
-                           PresumedModuleMapFile))
+  if (HS.parseAndLoadModuleMapFile(*ModuleMap, IsSystem, ModuleMapID, &Offset,
+                                   PresumedModuleMapFile))
     return true;
 
   if (SrcMgr.getBufferOrFake(ModuleMapID).getBufferSize() == Offset)
@@ -780,8 +780,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
         InputFile, CI.getPCHContainerReader(), ASTUnit::LoadPreprocessorOnly,
-        ASTDiags, CI.getFileSystemOpts(),
-        /*HeaderSearchOptions=*/nullptr);
+        ASTDiags, CI.getFileSystemOpts(), CI.getHeaderSearchOpts());
     if (!AST)
       return false;
 
@@ -848,8 +847,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
         InputFile, CI.getPCHContainerReader(), ASTUnit::LoadEverything, Diags,
-        CI.getFileSystemOpts(), CI.getHeaderSearchOptsPtr(),
-        CI.getLangOptsPtr());
+        CI.getFileSystemOpts(), CI.getHeaderSearchOpts(), &CI.getLangOpts());
 
     if (!AST)
       return false;
@@ -1079,8 +1077,8 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   // If we were asked to load any module map files, do so now.
   for (const auto &Filename : CI.getFrontendOpts().ModuleMapFiles) {
     if (auto File = CI.getFileManager().getOptionalFileRef(Filename))
-      CI.getPreprocessor().getHeaderSearchInfo().loadModuleMapFile(
-          *File, /*IsSystem*/false);
+      CI.getPreprocessor().getHeaderSearchInfo().parseAndLoadModuleMapFile(
+          *File, /*IsSystem*/ false);
     else
       CI.getDiagnostics().Report(diag::err_module_map_not_found) << Filename;
   }

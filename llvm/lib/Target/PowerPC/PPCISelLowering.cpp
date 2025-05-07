@@ -11146,6 +11146,116 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getMergeValues(RetOps, dl);
   }
 
+  case Intrinsic::ppc_mma_dmxxextfdmr512: {
+    assert(Subtarget.isISAFuture() && "dmxxextfdmr512 requires ISA Future");
+    auto *Idx = dyn_cast<ConstantSDNode>(Op.getOperand(2));
+    assert(Idx && (Idx->getSExtValue() == 0 || Idx->getSExtValue() == 1) &&
+           "Specify P of 0 or 1 for lower or upper 512 bytes");
+    unsigned HiLo = Idx->getSExtValue();
+    unsigned Opcode;
+    unsigned Subx;
+    if (HiLo == 0) {
+      Opcode = PPC::DMXXEXTFDMR512;
+      Subx = PPC::sub_wacc_lo;
+    } else {
+      Opcode = PPC::DMXXEXTFDMR512_HI;
+      Subx = PPC::sub_wacc_hi;
+    }
+    SDValue Subreg(
+        DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, dl, MVT::v512i1,
+                           Op.getOperand(1),
+                           DAG.getTargetConstant(Subx, dl, MVT::i32)),
+        0);
+    EVT ReturnTypes[] = {MVT::v256i1, MVT::v256i1};
+    return SDValue(DAG.getMachineNode(Opcode, dl, ReturnTypes, Subreg), 0);
+  }
+
+  case Intrinsic::ppc_mma_dmxxextfdmr256: {
+    assert(Subtarget.isISAFuture() && "dmxxextfdmr256 requires ISA Future");
+    auto *Idx = dyn_cast<ConstantSDNode>(Op.getOperand(2));
+    assert(Idx && (Idx->getSExtValue() >= 0 || Idx->getSExtValue() <= 3) &&
+           "Specify a dmr row pair 0-3");
+    unsigned IdxVal = Idx->getSExtValue();
+    unsigned Subx;
+    switch (IdxVal) {
+    case 0:
+      Subx = PPC::sub_dmrrowp0;
+      break;
+    case 1:
+      Subx = PPC::sub_dmrrowp1;
+      break;
+    case 2:
+      Subx = PPC::sub_wacc_hi_then_sub_dmrrowp0;
+      break;
+    case 3:
+      Subx = PPC::sub_wacc_hi_then_sub_dmrrowp1;
+      break;
+    }
+    SDValue Subreg(
+        DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, dl, MVT::v256i1,
+                           Op.getOperand(1),
+                           DAG.getTargetConstant(Subx, dl, MVT::i32)),
+        0);
+    SDValue P = DAG.getTargetConstant(IdxVal, dl, MVT::i32);
+    return SDValue(
+        DAG.getMachineNode(PPC::DMXXEXTFDMR256, dl, MVT::v256i1, {Subreg, P}),
+        0);
+  }
+
+  case Intrinsic::ppc_mma_dmxxinstdmr512: {
+    assert(Subtarget.isISAFuture() && "dmxxinstdmr512 requires ISA Future");
+    auto *Idx = dyn_cast<ConstantSDNode>(Op.getOperand(4));
+    assert(Idx && (Idx->getSExtValue() == 0 || Idx->getSExtValue() == 1) &&
+           "Specify P of 0 or 1 for lower or upper 512 bytes");
+    unsigned HiLo = Idx->getSExtValue();
+    unsigned Opcode;
+    unsigned Subx;
+    if (HiLo == 0) {
+      Opcode = PPC::DMXXINSTDMR512;
+      Subx = PPC::sub_wacc_lo;
+    } else {
+      Opcode = PPC::DMXXINSTDMR512_HI;
+      Subx = PPC::sub_wacc_hi;
+    }
+    SDValue Ops[] = {Op.getOperand(2), Op.getOperand(3)};
+    SDValue Wacc = SDValue(DAG.getMachineNode(Opcode, dl, MVT::v512i1, Ops), 0);
+    SDValue SubReg = DAG.getTargetConstant(Subx, dl, MVT::i32);
+    return SDValue(DAG.getMachineNode(PPC::INSERT_SUBREG, dl, MVT::v1024i1,
+                                      Op.getOperand(1), Wacc, SubReg),
+                   0);
+  }
+
+  case Intrinsic::ppc_mma_dmxxinstdmr256: {
+    assert(Subtarget.isISAFuture() && "dmxxinstdmr256 requires ISA Future");
+    auto *Idx = dyn_cast<ConstantSDNode>(Op.getOperand(3));
+    assert(Idx && (Idx->getSExtValue() >= 0 || Idx->getSExtValue() <= 3) &&
+           "Specify a dmr row pair 0-3");
+    unsigned IdxVal = Idx->getSExtValue();
+    unsigned Subx;
+    switch (IdxVal) {
+    case 0:
+      Subx = PPC::sub_dmrrowp0;
+      break;
+    case 1:
+      Subx = PPC::sub_dmrrowp1;
+      break;
+    case 2:
+      Subx = PPC::sub_wacc_hi_then_sub_dmrrowp0;
+      break;
+    case 3:
+      Subx = PPC::sub_wacc_hi_then_sub_dmrrowp1;
+      break;
+    }
+    SDValue SubReg = DAG.getTargetConstant(Subx, dl, MVT::i32);
+    SDValue P = DAG.getTargetConstant(IdxVal, dl, MVT::i32);
+    SDValue Ops[] = {Op.getOperand(2), P};
+    SDValue DMRRowp = SDValue(
+        DAG.getMachineNode(PPC::DMXXINSTDMR256, dl, MVT::v256i1, Ops), 0);
+    return SDValue(DAG.getMachineNode(PPC::INSERT_SUBREG, dl, MVT::v1024i1,
+                                      Op.getOperand(1), DMRRowp, SubReg),
+                   0);
+  }
+
   case Intrinsic::ppc_mma_xxmfacc:
   case Intrinsic::ppc_mma_xxmtacc: {
     // Allow pre-isa-future subtargets to lower as normal.
@@ -12213,7 +12323,7 @@ SDValue PPCTargetLowering::LowerADDSUBO_CARRY(SDValue Op,
   Opc = IsAdd ? PPCISD::ADDE : PPCISD::SUBE;
   if (!IsAdd)
     CarryOp = DAG.getNode(ISD::XOR, DL, CarryOp.getValueType(), CarryOp,
-                          DAG.getAllOnesConstant(DL, CarryOp.getValueType()));
+                          DAG.getConstant(1UL, DL, CarryOp.getValueType()));
   CarryOp = ConvertCarryValueToCarryFlag(VT, CarryOp, DAG, Subtarget);
   SDValue Sum = DAG.getNode(Opc, DL, DAG.getVTList(VT, MVT::i32),
                             Op.getOperand(0), Op.getOperand(1), CarryOp);
@@ -16452,13 +16562,16 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
                                     MemVT.getSizeInBits());
       SDValue Const64 = DAG.getConstant(Val64, dl, MVT::i64);
 
-      // DAG.getTruncStore() can't be used here because it doesn't accept
-      // the general (base + offset) addressing mode.
-      // So we use UpdateNodeOperands and setTruncatingStore instead.
-      DAG.UpdateNodeOperands(N, N->getOperand(0), Const64, N->getOperand(2),
-                             N->getOperand(3));
-      cast<StoreSDNode>(N)->setTruncatingStore(true);
-      return SDValue(N, 0);
+      auto *ST = cast<StoreSDNode>(N);
+      SDValue NewST = DAG.getStore(ST->getChain(), dl, Const64,
+                                   ST->getBasePtr(), ST->getOffset(), MemVT,
+                                   ST->getMemOperand(), ST->getAddressingMode(),
+                                   /*IsTruncating=*/true);
+      // Note we use CombineTo here to prevent DAGCombiner from visiting the
+      // new store which will change the constant by removing non-demanded bits.
+      return ST->isUnindexed()
+                 ? DCI.CombineTo(N, NewST, /*AddTo=*/false)
+                 : DCI.CombineTo(N, NewST, NewST.getValue(1), /*AddTo=*/false);
     }
 
     // For little endian, VSX stores require generating xxswapd/lxvd2x.

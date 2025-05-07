@@ -1580,14 +1580,19 @@ static DylibFile *findDylib(StringRef path, DylibFile *umbrella,
   // Search order:
   // 1. Install name basename in -F / -L directories.
   {
+    // Framework names can be in multiple formats:
+    // - Foo.framework/Foo
+    // - Foo.framework/Versions/A/Foo
     StringRef stem = path::stem(path);
-    SmallString<128> frameworkName;
-    path::append(frameworkName, path::Style::posix, stem + ".framework", stem);
-    bool isFramework = path.ends_with(frameworkName);
-    if (isFramework) {
+    SmallString<128> frameworkName("/");
+    frameworkName += stem;
+    frameworkName += ".framework/";
+    size_t i = path.rfind(frameworkName);
+    if (i != StringRef::npos) {
+      StringRef frameworkPath = path.substr(i + 1);
       for (StringRef dir : config->frameworkSearchPaths) {
         SmallString<128> candidate = dir;
-        path::append(candidate, frameworkName);
+        path::append(candidate, frameworkPath);
         if (std::optional<StringRef> dylibPath =
                 resolveDylibPath(candidate.str()))
           return loadDylib(*dylibPath, umbrella);
@@ -1624,6 +1629,17 @@ static DylibFile *findDylib(StringRef path, DylibFile *umbrella,
     path = newPath;
   } else if (path.starts_with("@rpath/")) {
     for (StringRef rpath : umbrella->rpaths) {
+      newPath.clear();
+      if (rpath.consume_front("@loader_path/")) {
+        fs::real_path(umbrella->getName(), newPath);
+        path::remove_filename(newPath);
+      }
+      path::append(newPath, rpath, path.drop_front(strlen("@rpath/")));
+      if (std::optional<StringRef> dylibPath = resolveDylibPath(newPath.str()))
+        return loadDylib(*dylibPath, umbrella);
+    }
+    // If not found in umbrella, try the rpaths specified via -rpath too.
+    for (StringRef rpath : config->runtimePaths) {
       newPath.clear();
       if (rpath.consume_front("@loader_path/")) {
         fs::real_path(umbrella->getName(), newPath);
@@ -1678,9 +1694,16 @@ static bool isImplicitlyLinked(StringRef path) {
 void DylibFile::loadReexport(StringRef path, DylibFile *umbrella,
                          const InterfaceFile *currentTopLevelTapi) {
   DylibFile *reexport = findDylib(path, umbrella, currentTopLevelTapi);
-  if (!reexport)
-    error(toString(this) + ": unable to locate re-export with install name " +
-          path);
+  if (!reexport) {
+    // If not found in umbrella, retry since some rpaths might have been
+    // defined in "this" dylib (which contains the LC_REEXPORT_DYLIB cmd) and
+    // not in the umbrella.
+    DylibFile *reexport2 = findDylib(path, this, currentTopLevelTapi);
+    if (!reexport2) {
+      error(toString(this) + ": unable to locate re-export with install name " +
+            path);
+    }
+  }
 }
 
 DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,

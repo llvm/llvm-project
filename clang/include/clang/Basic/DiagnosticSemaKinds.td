@@ -496,6 +496,10 @@ def warn_unused_lambda_capture: Warning<"lambda capture %0 is not "
   "%select{used|required to be captured for this use}1">,
   InGroup<UnusedLambdaCapture>, DefaultIgnore;
 
+def warn_decl_hidden_in_cpp : Warning<
+  "%select{struct|union|enum}0 defined within a struct or union is not visible "
+  "in C++">, InGroup<HiddenCppDecl>, DefaultIgnore;
+
 def warn_reserved_extern_symbol: Warning<
   "identifier %0 is reserved because %select{"
   "<ERROR>|" // ReservedIdentifierStatus::NotReserved
@@ -2522,9 +2526,14 @@ def note_implicit_deduction_guide : Note<"implicit deduction guide declared as '
 def warn_cxx98_compat_auto_type_specifier : Warning<
   "'auto' type specifier is incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
-def err_auto_variable_cannot_appear_in_own_initializer : Error<
-  "variable %0 declared with deduced type %1 "
-  "cannot appear in its own initializer">;
+def err_auto_variable_cannot_appear_in_own_initializer
+    : Error<
+          "%enum_select<ParsingInitFor>{%Var{variable}|"
+          "%VarTemplate{variable template}|"
+          "%VarTemplatePartialSpec{variable template partial specialization}|"
+          "%VarTemplateExplicitSpec{variable template explicit "
+          "specialization}}0 %1 "
+          "declared with deduced type %2 cannot appear in its own initializer">;
 def err_binding_cannot_appear_in_own_initializer : Error<
   "binding %0 cannot appear in the initializer of its own "
   "decomposition declaration">;
@@ -3800,6 +3809,9 @@ def err_attribute_weakref_without_alias : Error<
   "weakref declaration of %0 must also have an alias attribute">;
 def err_alias_not_supported_on_darwin : Error <
   "aliases are not supported on darwin">;
+def warn_attribute_non_character_array : Warning<
+  "%0%select{ attribute|}1 only applies to fields or variables of character "
+  "array type; type is %2">, InGroup<IgnoredAttributes>;
 def warn_attribute_wrong_decl_type_str : Warning<
   "%0%select{ attribute|}1 only applies to %2">, InGroup<IgnoredAttributes>;
 def err_attribute_wrong_decl_type_str : Error<
@@ -4310,7 +4322,10 @@ def warn_impcast_string_literal_to_bool : Warning<
   InGroup<StringConversion>, DefaultIgnore;
 def warn_impcast_different_enum_types : Warning<
   "implicit conversion from enumeration type %0 to different enumeration type "
-  "%1">, InGroup<EnumConversion>;
+  "%1">, InGroup<ImplicitEnumEnumCast>;
+def warn_impcast_int_to_enum : Warning<
+  "implicit conversion from %0 to enumeration type %1 is invalid in C++">,
+  InGroup<ImplicitIntToEnumCast>, DefaultIgnore;
 def warn_impcast_bool_to_null_pointer : Warning<
     "initialization of pointer of type %0 to null from a constant boolean "
     "expression">, InGroup<BoolConversion>;
@@ -5292,6 +5307,9 @@ def err_template_member_noparams : Error<
   "extraneous 'template<>' in declaration of member %0">;
 def err_template_tag_noparams : Error<
   "extraneous 'template<>' in declaration of %0 %1">;
+def err_var_template_spec_type_depends_on_self : Error<
+  "the type of variable template specialization %0 declared with deduced type "
+  "%1 depends on itself">;
 
 def warn_unqualified_call_to_std_cast_function : Warning<
   "unqualified call to '%0'">, InGroup<DiagGroup<"unqualified-std-cast-call">>;
@@ -6397,6 +6415,15 @@ def err_initializer_string_for_char_array_too_long : Error<
 def ext_initializer_string_for_char_array_too_long : ExtWarn<
   "initializer-string for char array is too long">,
   InGroup<ExcessInitializers>;
+def warn_initializer_string_for_char_array_too_long_no_nonstring : Warning<
+  "initializer-string for character array is too long, array size is %0 but "
+  "initializer has size %1 (including the null terminating character); did you "
+  "mean to use the 'nonstring' attribute?">,
+  InGroup<InitStringTooLongMissingNonString>, DefaultIgnore;
+def warn_initializer_string_for_char_array_too_long_for_cpp : Warning<
+  "initializer-string for character array is too long for C++, array size is "
+  "%0 but initializer has size %1 (including the null terminating character)">,
+  InGroup<InitStringTooLongForCpp>, DefaultIgnore;
 def warn_missing_field_initializers : Warning<
   "missing field %0 initializer">,
   InGroup<MissingFieldInitializers>, DefaultIgnore;
@@ -6522,6 +6549,16 @@ def warn_missing_braces : Warning<
   "suggest braces around initialization of subobject">,
   InGroup<MissingBraces>, DefaultIgnore;
 
+// This diagnostic exists only to determine whether -Wc++-compat was explicitly
+// enabled. This allows us to tell the difference between when a diagnostic was
+// enabled by default, was enabled because its subgroup was enabled, or enabled
+// because the -Wc++-compat superset was enabled, generally for purposes of
+// deciding whether to emit "and is incompatible with C++" on diagnostics which
+// are useful in C alone as well as for compatibility checks.
+def warn_cxx_compat_hack_fake_diagnostic_do_not_emit : Warning<
+  "if you see this diagnostic, a Clang developer has made a mistake">,
+  InGroup<CXXCompat>, DefaultIgnore;
+
 def err_redefinition_of_label : Error<"redefinition of label %0">;
 def err_undeclared_label_use : Error<"use of undeclared label %0">;
 def err_goto_ms_asm_label : Error<
@@ -6542,11 +6579,17 @@ def ext_goto_into_protected_scope : ExtWarn<
 def warn_cxx98_compat_goto_into_protected_scope : Warning<
   "jump from this goto statement to its label is incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
+def warn_cpp_compat_goto_into_protected_scope : Warning<
+  "jump from this goto statement to its label is incompatible with C++">,
+  InGroup<JumpBypassesInit>, DefaultIgnore;
 def err_switch_into_protected_scope : Error<
   "cannot jump from switch statement to this case label">;
 def warn_cxx98_compat_switch_into_protected_scope : Warning<
   "jump from switch statement to this case label is incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
+def warn_cpp_compat_switch_into_protected_scope : Warning<
+  "jump from switch statement to this case label is incompatible with C++">,
+  InGroup<JumpBypassesInit>, DefaultIgnore;
 def err_indirect_goto_without_addrlabel : Error<
   "indirect goto in function with no address-of-label expressions">;
 def err_indirect_goto_in_protected_scope : Error<
@@ -6554,6 +6597,10 @@ def err_indirect_goto_in_protected_scope : Error<
 def warn_cxx98_compat_indirect_goto_in_protected_scope : Warning<
   "jump from this %select{indirect|asm}0 goto statement to one of its possible targets "
   "is incompatible with C++98">, InGroup<CXX98Compat>, DefaultIgnore;
+def warn_cpp_compat_indirect_goto_in_protected_scope : Warning<
+  "jump from this %select{indirect|asm}0 goto statement to one of its possible "
+  "targets is incompatible with C++">,
+  InGroup<JumpBypassesInit>, DefaultIgnore;
 def note_indirect_goto_target : Note<
   "possible target of %select{indirect|asm}0 goto statement">;
 def note_protected_by_variable_init : Note<
@@ -7185,6 +7232,11 @@ def warn_consecutive_comparison : Warning<
   "chained comparison 'X %0 Y %1 Z' does not behave the same as a mathematical expression">,
   InGroup<Parentheses>, DefaultError;
 
+def warn_comparison_in_fold_expression : Warning<
+  "comparison in fold expression would evaluate to '(X %0 Y) %0 Z' "
+  "which does not behave the same as a mathematical expression">,
+  InGroup<Parentheses>, DefaultError;
+
 def warn_enum_constant_in_bool_context : Warning<
   "converting the enum constant to a boolean">,
   InGroup<IntInBoolContext>, DefaultIgnore;
@@ -7436,6 +7488,9 @@ def err_tentative_def_incomplete_type : Error<
 def warn_tentative_incomplete_array : Warning<
   "tentative array definition assumed to have one element">,
   InGroup<DiagGroup<"tentative-definition-array">>;
+def warn_cxx_compat_tentative_definition : Warning<
+  "duplicate declaration of %0 is invalid in C++">,
+  InGroup<TentativeDefnCompat>, DefaultIgnore;
 def err_typecheck_incomplete_array_needs_initializer : Error<
   "definition of variable with array type needs an explicit size "
   "or an initializer">;
@@ -8197,6 +8252,22 @@ def err_address_space_qualified_new : Error<
 def err_address_space_qualified_delete : Error<
   "'delete' cannot delete objects of type %0 in address space '%1'">;
 
+def note_default_init_const_member : Note<
+  "member %0 declared 'const' here">;
+def warn_default_init_const_field : Warning<
+  "default initialization of an object of type %0 with const member is "
+  "incompatible with C++">, InGroup<DefaultConstInitField>, DefaultIgnore;
+def warn_default_init_const : Warning<
+  "default initialization of an object of type %0 is incompatible with C++">,
+  InGroup<DefaultConstInitVar>, DefaultIgnore;
+def warn_default_init_const_field_unsafe : Warning<
+  "default initialization of an object of type %0 with const member leaves the "
+  "object uninitialized%select{| and is incompatible with C++}1">,
+  InGroup<DefaultConstInitFieldUnsafe>;
+def warn_default_init_const_unsafe : Warning<
+  "default initialization of an object of type %0 leaves the object "
+  "uninitialized%select{| and is incompatible with C++}1">,
+  InGroup<DefaultConstInitVarUnsafe>;
 def err_default_init_const : Error<
   "default initialization of an object of const type %0"
   "%select{| without a user-provided default constructor}1">;
@@ -12601,6 +12672,11 @@ def err_builtin_invalid_arg_type: Error<
   "%plural{0:|: }3"
   "%plural{[0,3]:type|:types}1 (was %4)">;
 
+def err_builtin_trivially_relocate_invalid_arg_type: Error <
+  "first%select{||| and second}0 argument%select{|||s}0 to "
+  "'__builtin_trivially_relocate' must be"
+  " %select{a pointer|non-const|relocatable|of the same type}0">;
+
 def err_builtin_matrix_disabled: Error<
   "matrix types extension is disabled. Pass -fenable-matrix to enable it">;
 def err_matrix_index_not_integer: Error<
@@ -12753,7 +12829,9 @@ def err_riscv_builtin_invalid_lmul : Error<
 def err_riscv_type_requires_extension : Error<
   "RISC-V type %0 requires the '%1' extension">;
 def err_riscv_attribute_interrupt_requires_extension : Error<
-  "RISC-V interrupt attribute '%0' requires extension '%1'">;
+  "RISC-V 'interrupt' attribute '%0' requires extension '%1'">;
+def err_riscv_attribute_interrupt_invalid_combination : Error<
+  "RISC-V 'interrupt' attribute contains invalid combination of interrupt types">;
 
 def err_std_source_location_impl_not_found : Error<
   "'std::source_location::__impl' was not found; it must be defined before '__builtin_source_location' is called">;
@@ -12944,7 +13022,10 @@ def err_acc_clause_appertainment
 def err_acc_duplicate_clause_disallowed
     : Error<"OpenACC '%1' clause cannot appear more than once on a '%0' "
             "directive">;
-def note_acc_previous_clause_here : Note<"previous clause is here">;
+def note_acc_previous_clause_here : Note<"previous '%0' clause is here">;
+def note_acc_active_applies_clause_here
+    : Note<"%enum_select<ACCDeviceTypeApp>{%Active{active}|%Applies{which "
+           "applies to}}0 '%1' clause here">;
 def note_acc_previous_expr_here : Note<"previous expression is here">;
 def note_acc_previous_reference : Note<"previous reference is here">;
 def err_acc_branch_in_out_compute_construct
@@ -13030,6 +13111,9 @@ def err_acc_clause_routine_one_of_in_region
 def err_acc_clause_since_last_device_type
     : Error<"OpenACC '%0' clause cannot appear more than once%select{| in a "
             "'device_type' region}2 on a '%1' directive">;
+def err_acc_clause_conflicts_prev_dev_type
+    : Error<"OpenACC '%0' clause applies to 'device_type' '%1', which "
+            "conflicts with previous '%0' clause">;
 
 def err_acc_reduction_num_gangs_conflict
     : Error<"OpenACC '%1' clause %select{|with more than 1 argument }0may not "
@@ -13192,7 +13276,7 @@ def err_acc_duplicate_bind
             "permitted to refer to the same function">;
 def err_acc_duplicate_unnamed_bind
     : Error<"OpenACC 'bind' clause on a declaration must bind to the same name "
-            "as previous bind clauses">;
+            "as previous 'bind' clauses">;
 def warn_acc_confusing_routine_name
     : Warning<"OpenACC 'routine' directive with a name refers to a function "
               "with the same name as the function on the following line; this "

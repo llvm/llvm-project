@@ -3,7 +3,7 @@
 //
 // RUN: mlir-opt %s \
 // RUN: | mlir-opt -gpu-lower-to-nvvm-pipeline="cubin-format=%gpu_compilation_format" \
-// RUN: | CUDA_MODULE_LOADING=EAGER mlir-runner \
+// RUN: | env CUDA_MODULE_LOADING=EAGER mlir-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \
 // RUN:   --entry-point-result=void

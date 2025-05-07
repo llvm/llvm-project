@@ -339,23 +339,23 @@ void Sema::ActOnPragmaOptionsAlign(PragmaOptionsAlignKind Kind,
   switch (Kind) {
     // For most of the platforms we support, native and natural are the same.
     // With XL, native is the same as power, natural means something else.
-  case POAK_Native:
-  case POAK_Power:
+  case PragmaOptionsAlignKind::Native:
+  case PragmaOptionsAlignKind::Power:
     Action = Sema::PSK_Push_Set;
     break;
-  case POAK_Natural:
+  case PragmaOptionsAlignKind::Natural:
     Action = Sema::PSK_Push_Set;
     ModeVal = AlignPackInfo::Natural;
     break;
 
     // Note that '#pragma options align=packed' is not equivalent to attribute
     // packed, it has a different precedence relative to attribute aligned.
-  case POAK_Packed:
+  case PragmaOptionsAlignKind::Packed:
     Action = Sema::PSK_Push_Set;
     ModeVal = AlignPackInfo::Packed;
     break;
 
-  case POAK_Mac68k:
+  case PragmaOptionsAlignKind::Mac68k:
     // Check if the target supports this.
     if (!this->Context.getTargetInfo().hasAlignMac68kSupport()) {
       Diag(PragmaLoc, diag::err_pragma_options_align_mac68k_target_unsupported);
@@ -364,7 +364,7 @@ void Sema::ActOnPragmaOptionsAlign(PragmaOptionsAlignKind Kind,
     Action = Sema::PSK_Push_Set;
     ModeVal = AlignPackInfo::Mac68k;
     break;
-  case POAK_Reset:
+  case PragmaOptionsAlignKind::Reset:
     // Reset just pops the top of the stack, or resets the current alignment to
     // default.
     Action = Sema::PSK_Pop;
@@ -393,21 +393,21 @@ void Sema::ActOnPragmaClangSection(SourceLocation PragmaLoc,
   PragmaClangSection *CSec;
   int SectionFlags = ASTContext::PSF_Read;
   switch (SecKind) {
-    case PragmaClangSectionKind::PCSK_BSS:
+    case PragmaClangSectionKind::BSS:
       CSec = &PragmaClangBSSSection;
       SectionFlags |= ASTContext::PSF_Write | ASTContext::PSF_ZeroInit;
       break;
-    case PragmaClangSectionKind::PCSK_Data:
+    case PragmaClangSectionKind::Data:
       CSec = &PragmaClangDataSection;
       SectionFlags |= ASTContext::PSF_Write;
       break;
-    case PragmaClangSectionKind::PCSK_Rodata:
+    case PragmaClangSectionKind::Rodata:
       CSec = &PragmaClangRodataSection;
       break;
-    case PragmaClangSectionKind::PCSK_Relro:
+    case PragmaClangSectionKind::Relro:
       CSec = &PragmaClangRelroSection;
       break;
-    case PragmaClangSectionKind::PCSK_Text:
+    case PragmaClangSectionKind::Text:
       CSec = &PragmaClangTextSection;
       SectionFlags |= ASTContext::PSF_Execute;
       break;
@@ -415,7 +415,7 @@ void Sema::ActOnPragmaClangSection(SourceLocation PragmaLoc,
       llvm_unreachable("invalid clang section kind");
   }
 
-  if (Action == PragmaClangSectionAction::PCSA_Clear) {
+  if (Action == PragmaClangSectionAction::Clear) {
     CSec->Valid = false;
     return;
   }

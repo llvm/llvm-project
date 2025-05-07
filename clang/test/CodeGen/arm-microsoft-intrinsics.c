@@ -4,6 +4,27 @@
 // RUN: not %clang_cc1 -triple armv7-eabi -Werror -S -o /dev/null %s 2>&1 \
 // RUN:    | FileCheck %s -check-prefix CHECK-EABI
 
+void check__dmb(void) {
+  __dmb(0);
+}
+
+// CHECK-MSVC: @llvm.arm.dmb(i32 0)
+// CHECK-EABI: error: call to undeclared function '__dmb'
+
+void check__dsb(void) {
+  __dsb(0);
+}
+
+// CHECK-MSVC: @llvm.arm.dsb(i32 0)
+// CHECK-EABI: error: call to undeclared function '__dsb'
+
+void check__isb(void) {
+  __isb(0);
+}
+
+// CHECK-MSVC: @llvm.arm.isb(i32 0)
+// CHECK-EABI: error: call to undeclared function '__isb'
+
 __INT64_TYPE__ check__ldrexd(void) {
   __INT64_TYPE__ i64;
   return __ldrexd(&i64);

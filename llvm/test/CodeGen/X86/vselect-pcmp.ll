@@ -1558,7 +1558,7 @@ define void @store_blend_load_v16i16(ptr %a0, ptr %a1, ptr %a2) {
 ; XOP-NEXT:    vmovdqa (%rdi), %ymm0
 ; XOP-NEXT:    vbroadcastss {{.*#+}} xmm1 = [7,7,7,7,7,7,7,7]
 ; XOP-NEXT:    vpcomltuw 16(%rdi), %xmm1, %xmm2
-; XOP-NEXT:    vpcomltuw (%rdi), %xmm1, %xmm1
+; XOP-NEXT:    vpcomgtuw %xmm1, %xmm0, %xmm1
 ; XOP-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
 ; XOP-NEXT:    vpcmov %ymm1, (%rsi), %ymm0, %ymm0
 ; XOP-NEXT:    vmovdqa %ymm0, (%rdx)
@@ -1627,7 +1627,7 @@ define void @store_blend_load_v32i8(ptr %a0, ptr %a1, ptr %a2) {
 ; XOP-NEXT:    vmovdqa (%rdi), %ymm0
 ; XOP-NEXT:    vbroadcastss {{.*#+}} xmm1 = [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]
 ; XOP-NEXT:    vpcomltub 16(%rdi), %xmm1, %xmm2
-; XOP-NEXT:    vpcomltub (%rdi), %xmm1, %xmm1
+; XOP-NEXT:    vpcomgtub %xmm1, %xmm0, %xmm1
 ; XOP-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
 ; XOP-NEXT:    vpcmov %ymm1, (%rsi), %ymm0, %ymm0
 ; XOP-NEXT:    vmovdqa %ymm0, (%rdx)

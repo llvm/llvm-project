@@ -229,7 +229,12 @@ static DenseMap<CachedHashStringRef, DylibFile *> loadedDylibs;
 
 DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
                             bool isBundleLoader, bool explicitlyLinked) {
-  CachedHashStringRef path(mbref.getBufferIdentifier());
+  // Frameworks can be found from different symlink paths, so resolve
+  // symlinks before looking up in the dylib cache.
+  SmallString<128> realPath;
+  std::error_code err = fs::real_path(mbref.getBufferIdentifier(), realPath);
+  CachedHashStringRef path(!err ? uniqueSaver().save(StringRef(realPath))
+                                : mbref.getBufferIdentifier());
   DylibFile *&file = loadedDylibs[path];
   if (file) {
     if (explicitlyLinked)
