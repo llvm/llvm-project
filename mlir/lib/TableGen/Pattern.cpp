@@ -303,6 +303,12 @@ std::string SymbolInfoMap::SymbolInfo::getValueAndRangeUse(
   case Kind::Operand: {
     assert(index < 0);
     auto *operand = cast<NamedTypeConstraint *>(op->getArg(getArgIndex()));
+    if (operand->isOptional()) {
+      auto repl =
+          formatv(fmt, formatv("({0}.empty() ? Value() : *{0}.begin())", name));
+      LLVM_DEBUG(dbgs() << repl << " (OptionalOperand)\n");
+      return std::string(repl);
+    }
     // If this operand is variadic and this SymbolInfo doesn't have a range
     // index, then return the full variadic operand_range. Otherwise, return
     // the value itself.
