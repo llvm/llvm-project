@@ -177,8 +177,8 @@ extern char &SIShrinkInstructionsLegacyID;
 void initializeSIFixSGPRCopiesLegacyPass(PassRegistry &);
 extern char &SIFixSGPRCopiesLegacyID;
 
-void initializeSIConvertWaveSizeLegacyPass(PassRegistry &);
-extern char &SIConvertWaveSizeLegacyID;
+void initializeAMDGPUConvertWaveSizeLegacyPass(PassRegistry &);
+extern char &AMDGPUConvertWaveSizeLegacyID;
 
 void initializeSIFixVGPRCopiesLegacyPass(PassRegistry &);
 extern char &SIFixVGPRCopiesID;
