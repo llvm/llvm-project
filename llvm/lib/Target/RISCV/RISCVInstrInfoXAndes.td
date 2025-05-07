@@ -308,8 +308,7 @@ class NDSRVInstSDGP<bits<3> funct3, string opcodestr>
 class NDSRVInstVFPMAD<bits<6> funct6, string opcodestr>
     : RVInst<(outs VR:$vd), (ins VR:$vs2, FPR32:$rs1, VMaskOp:$vm),
              opcodestr # "." # "vf", "$vd, $rs1, $vs2$vm", [], InstFormatR>,
-      SchedTernaryMC<"WriteVFMulAddF", "ReadVFMulAddV", "ReadVFMulAddF",
-                     "ReadVFWMulAddV"> {
+      SchedBinaryMC<"WriteVFALUF", "ReadVFALUV", "ReadVFALUF"> {
   bits<5> vs2;
   bits<5> rs1;
   bits<5> vd;
