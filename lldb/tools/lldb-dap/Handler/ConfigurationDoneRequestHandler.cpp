@@ -47,11 +47,21 @@ namespace lldb_dap {
 
 void ConfigurationDoneRequestHandler::operator()(
     const llvm::json::Object &request) const {
-  dap.SetConfigurationDone();
-
   llvm::json::Object response;
   FillResponse(request, response);
   dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.configuration_done_sent = true;
+  if (dap.stop_at_entry)
+    SendThreadStoppedEvent(dap);
+  else {
+    // Client requests the baseline of currently existing threads after
+    // a successful launch or attach by sending a 'threads' request
+    // right after receiving the configurationDone response.
+    // Obtain the list of threads before we resume the process
+    dap.initial_thread_list =
+        GetThreads(dap.target.GetProcess(), dap.thread_format);
+    dap.target.GetProcess().Continue();
+  }
 }
 
 } // namespace lldb_dap

@@ -222,7 +222,7 @@ void SendContinuedEvent(DAP &dap) {
 
   // If the focus thread is not set then we haven't reported any thread status
   // to the client, so nothing to report.
-  if (!dap.configuration_done || dap.focus_tid == LLDB_INVALID_THREAD_ID) {
+  if (!dap.configuration_done_sent || dap.focus_tid == LLDB_INVALID_THREAD_ID) {
     return;
   }
 

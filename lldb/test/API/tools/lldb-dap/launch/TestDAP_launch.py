@@ -88,8 +88,8 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         """
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program, stopOnEntry=True)
-
-        stopped_events = self.dap_server.wait_for_stopped()
+        self.set_function_breakpoints(["main"])
+        stopped_events = self.continue_to_next_stop()
         for stopped_event in stopped_events:
             if "body" in stopped_event:
                 body = stopped_event["body"]
