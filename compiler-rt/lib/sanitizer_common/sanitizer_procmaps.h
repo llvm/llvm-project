@@ -25,6 +25,7 @@
 #  include "sanitizer_linux.h"
 #  include "sanitizer_mac.h"
 #  include "sanitizer_mutex.h"
+#  include "sanitizer_aix.h"
 
 namespace __sanitizer {
 
