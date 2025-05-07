@@ -523,7 +523,7 @@ bool PPCTargetInfo::initFeatureMap(
   std::optional<llvm::StringMap<bool>> FeaturesOpt =
       llvm::PPC::getPPCDefaultTargetFeatures(TheTriple,
                                              llvm::PPC::normalizeCPUName(CPU));
-  if (FeaturesOpt.has_value())
+  if (FeaturesOpt)
     Features = FeaturesOpt.value();
 
   if (!ppcUserFeaturesCheck(Diags, FeaturesVec))

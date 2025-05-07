@@ -37,6 +37,14 @@ struct BasicSubtargetFeatureKV {
   const char *Key;                      ///< K-V key string
   unsigned Value;                       ///< K-V integer value
   FeatureBitArray Implies;              ///< K-V bit mask
+};
+
+/// Used to provide key value pairs for feature and CPU bit flags.
+struct SubtargetFeatureKV {
+  const char *Key;         ///< K-V key string
+  const char *Desc;        ///< Help descriptor
+  unsigned Value;          ///< K-V integer value
+  FeatureBitArray Implies; ///< K-V bit mask
 
   /// Compare routine for std::lower_bound
   bool operator<(StringRef S) const {
@@ -44,19 +52,9 @@ struct BasicSubtargetFeatureKV {
   }
 
   /// Compare routine for std::is_sorted.
-  bool operator<(const BasicSubtargetFeatureKV &Other) const {
+  bool operator<(const SubtargetFeatureKV &Other) const {
     return StringRef(Key) < StringRef(Other.Key);
   }
-  BasicSubtargetFeatureKV(const char *Key, unsigned Value,
-                          FeatureBitArray Implies)
-      : Key(Key), Value(Value), Implies(Implies) {}
-};
-
-struct SubtargetFeatureKV : BasicSubtargetFeatureKV {
-  const char *Desc; ///< Help descriptor
-  SubtargetFeatureKV(const char *Key, const char *Desc, unsigned Value,
-                     FeatureBitArray Implies)
-      : BasicSubtargetFeatureKV(Key, Value, Implies), Desc(Desc) {}
 };
 
 //===----------------------------------------------------------------------===//
@@ -70,16 +68,20 @@ struct BasicSubtargetSubTypeKV {
   bool operator<(StringRef S) const {
     return StringRef(Key) < S;
   }
-
-  /// Compare routine for std::is_sorted.
-  bool operator<(const BasicSubtargetSubTypeKV &Other) const {
-    return StringRef(Key) < StringRef(Other.Key);
-  }
 };
 
-struct SubtargetSubTypeKV : BasicSubtargetSubTypeKV {
+struct SubtargetSubTypeKV {
+  const char *Key;             ///< K-V key string
+  FeatureBitArray Implies;     ///< K-V bit mask
   FeatureBitArray TuneImplies; ///< K-V bit mask
   const MCSchedModel *SchedModel;
+
+  /// Compare routine for std::lower_bound
+  bool operator<(StringRef S) const { return StringRef(Key) < S; }
+  /// Compare routine for std::is_sorted.
+  bool operator<(const SubtargetSubTypeKV &Other) const {
+    return StringRef(Key) < StringRef(Other.Key);
+  }
 };
 
 std::optional<llvm::StringMap<bool>>

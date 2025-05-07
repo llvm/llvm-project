@@ -43,6 +43,7 @@ add_llvm_component_library(LLVMTargetParser
 
   LINK_COMPONENTS
   Support
+  MC
 
   DEPENDS
   ARMTargetParserTableGen
