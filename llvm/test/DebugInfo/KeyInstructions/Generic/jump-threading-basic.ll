@@ -1,18 +1,18 @@
 ; RUN: opt %s --passes=jump-threading -S -o - -S | FileCheck %s
 
 ;;        +-> T1 -+
-;;        |       v      +-> T2
+;;        |       v      +-> T2.
 ;; Entry -+       Merge -+
-;;        |       ^      +-> F2
+;;        |       ^      +-> F2.
 ;;        +-> F1 -+
 ;;
 ;; Thread T1 -> T2 and F1 -> F2 through Merge.
 ;;
-;;        +-> T1
+;;        +-> T1 (+ Merge + T2).
 ;;        |
 ;; Entry -+
 ;;        |
-;;        +-> F1
+;;        +-> F1 (+ Merge + F2).
 ;;
 ;; Check the duplicated instructions atoms are remapped.
 
