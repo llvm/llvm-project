@@ -450,6 +450,14 @@ int DataAggregator::prepareToParse(StringRef Name, PerfProcessInfo &Process,
 Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   this->BC = &BC;
 
+  if (std::optional<StringRef> FileBuildID = BC.getFileBuildID()) {
+    outs() << "BOLT-INFO: binary build-id is:     " << *FileBuildID << "\n";
+    processFileBuildID(*FileBuildID);
+  } else {
+    errs() << "BOLT-WARNING: build-id will not be checked because we could "
+              "not read one from input binary\n";
+  }
+
   auto ErrorCallback = [](int ReturnCode, StringRef ErrBuf) {
     errs() << "PERF-ERROR: return code " << ReturnCode << "\n" << ErrBuf;
     exit(1);
@@ -466,14 +474,6 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
     if (std::error_code EC = parsePreAggregated())
       return errorCodeToError(EC);
     goto heatmap;
-  }
-
-  if (std::optional<StringRef> FileBuildID = BC.getFileBuildID()) {
-    outs() << "BOLT-INFO: binary build-id is:     " << *FileBuildID << "\n";
-    processFileBuildID(*FileBuildID);
-  } else {
-    errs() << "BOLT-WARNING: build-id will not be checked because we could "
-              "not read one from input binary\n";
   }
 
   if (BC.IsLinuxKernel) {
