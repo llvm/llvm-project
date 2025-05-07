@@ -16,7 +16,6 @@ _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wtautological-constant-out-of-range-compare")
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace {
-// Whitespace change DO NOT MERGE
 
 // handle all next_prime(i) for i in [1, 210), special case 0
 const unsigned small_primes[] = {
