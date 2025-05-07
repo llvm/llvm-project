@@ -42,22 +42,23 @@ void populateXeGPUFoldAliasOpsPatterns(RewritePatternSet &patterns);
 /// Appends patterns for XeGPU SIMT distribution into `patterns`.
 void populateXeGPUSubgroupDistributePatterns(RewritePatternSet &patterns);
 
-/// Collect a set of pattern to unroll xegpu operations to a smaller shapes.
+/// Collect a set of patterns to unroll xegpu operations to a smaller shapes.
 /// Users can control whether an operation to be unrolled or not, as well as
-/// the its target shape via `options` structure. (via setting filterConstraint
+/// its target shape via `options` structure. (via setting filterConstraint
 /// and nativeShape respectively, both of them are function refs taking `op` as
 /// the input).
 /// An `op` is unrolled to the `targetShape` as follows, for each of its
 /// operands:
 ///   1. the unrolled type `unrolledType` and number of unrolled instances
 ///   `numUnrolledInstances` are computed from the `targetShape`.
-///   2. ExtractStridedSlice are created to break-up the vector operands. And
-///   BuildinUnrealizedCastop are created to break-up the TensorDesc operands.
+///   2. pack each operand. ExtractStridedSlice are created to break-up the
+///   vector operands. And BuiltinUnrealizedCastop are created to break-up
+///    the TensorDesc operands.
 ///   3. the original op is cloned `numUnrolledInstances` times, once for each
 ///   result.
-///   4. InsertStridedSlice are inserted for VectorType result, and
-///   BuildinUnrealizedCastOp are inserted for TensorDescType result to
-///   re-assemble the slices into the original shape.
+///   4. unpack the results. InsertStridedSlice are inserted for VectorType
+///   result, and BuiltinUnrealizedCastOp are inserted for TensorDescType result
+///   to re-assemble the slices into the original shape.
 void populateXeGPUUnrollPatterns(RewritePatternSet &patterns,
                                  const UnrollOptions &options);
 

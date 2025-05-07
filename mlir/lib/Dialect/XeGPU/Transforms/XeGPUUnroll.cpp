@@ -105,7 +105,7 @@ protected:
   Value unpack(ValueRange srcs, Type destTy, llvm::ArrayRef<int64_t> blockSize,
                Location loc, PatternRewriter &rewriter) const {
     if (auto vecTy = dyn_cast<VectorType>(destTy)) {
-      assert(vecTy.getRank() == 2 && blockSize.size() == 2 &&
+      assert(vecTy.getRank() == (int64_t)blockSize.size() &&
              "Expecting blockSize size to match the rank of destTy.");
       auto shape = vecTy.getShape();
       auto zeroAttr = rewriter.getZeroAttr(vecTy.getElementType());
@@ -141,7 +141,7 @@ protected:
                                 llvm::ArrayRef<int64_t> blockSize, Location loc,
                                 PatternRewriter &rewriter) const {
     if (auto vecTy = dyn_cast<VectorType>(src.getType())) {
-      assert(vecTy.getRank() == 2 && blockSize.size() == 2 &&
+      assert(vecTy.getRank() == (int64_t)blockSize.size() &&
              "Expecting blockSize size to match the rank of src.");
       auto shape = vecTy.getShape();
       llvm::SmallVector<Value> results;
@@ -338,10 +338,6 @@ struct UnrollStoreNdOp : public UnrollPattern<xegpu::StoreNdOp> {
     auto valueTy = op.getValueType();
     auto tdescTy = op.getTensorDescType();
     auto shape = tdescTy.getShape();
-
-    // TODO: enable 1D block tensor desc
-    if (tdescTy.getRank() != 2)
-      return failure();
 
     auto maybeTargetShape = getTargetShape(op);
     if (!maybeTargetShape || llvm::equal(*maybeTargetShape, shape))
