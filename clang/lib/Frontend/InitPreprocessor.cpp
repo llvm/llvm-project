@@ -772,6 +772,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   Builder.defineMacro("__cpp_pack_indexing", "202311L");
   Builder.defineMacro("__cpp_deleted_function", "202403L");
   Builder.defineMacro("__cpp_variadic_friend", "202403L");
+  // Builder.defineMacro("__cpp_trivial_relocatability", "202502L");
 
   if (LangOpts.Char8)
     Builder.defineMacro("__cpp_char8_t", "202207L");
@@ -974,7 +975,6 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
 
     if (LangOpts.ObjCRuntime.getKind() == ObjCRuntime::GNUstep) {
       auto version = LangOpts.ObjCRuntime.getVersion();
-      std::string versionString = "1";
       // Don't rely on the tuple argument, because we can be asked to target
       // later ABIs than we actually support, so clamp these values to those
       // currently supported

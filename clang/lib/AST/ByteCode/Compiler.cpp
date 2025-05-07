@@ -866,12 +866,14 @@ bool Compiler<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
 
   // Assignments require us to evalute the RHS first.
   if (BO->getOpcode() == BO_Assign) {
-    // We don't support assignments in C.
-    if (!Ctx.getLangOpts().CPlusPlus)
-      return this->emitInvalid(BO);
 
     if (!visit(RHS) || !visit(LHS))
       return false;
+
+    // We don't support assignments in C.
+    if (!Ctx.getLangOpts().CPlusPlus && !this->emitInvalid(BO))
+      return false;
+
     if (!this->emitFlip(*LT, *RT, BO))
       return false;
   } else {
@@ -2367,8 +2369,19 @@ bool Compiler<Emitter>::VisitAbstractConditionalOperator(
       return false;
   }
 
-  if (!this->visitBool(Condition))
+  if (!this->visitBool(Condition)) {
+    // If the condition failed and we're checking for undefined behavior
+    // (which only happens with EvalEmitter) check the TrueExpr and FalseExpr
+    // as well.
+    if (this->checkingForUndefinedBehavior()) {
+      if (!this->discard(TrueExpr))
+        return false;
+      if (!this->discard(FalseExpr))
+        return false;
+    }
     return false;
+  }
+
   if (!this->jumpFalse(LabelFalse))
     return false;
   if (!visitChildExpr(TrueExpr))

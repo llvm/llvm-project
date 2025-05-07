@@ -52,7 +52,7 @@ static unsigned typeToAddressSpace(const Type *Ty) {
   if (auto *ExtTy = dyn_cast<TargetExtType>(Ty);
       ExtTy && isTypedPointerWrapper(ExtTy))
     return ExtTy->getIntParameter(0);
-  report_fatal_error("Unable to convert LLVM type to SPIRVType", true);
+  reportFatalInternalError("Unable to convert LLVM type to SPIRVType");
 }
 
 #ifndef NDEBUG

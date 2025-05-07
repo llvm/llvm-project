@@ -312,6 +312,18 @@ module {
     llvm.return
   }
 
+  llvm.func @instrument_function_entry_function() attributes {instrument_function_entry = "__cyg_profile_func_enter"} {
+    // CHECK: @instrument_function_entry_function
+    // CHECK-SAME: attributes {instrument_function_entry = "__cyg_profile_func_enter"}
+    llvm.return
+  }
+
+  llvm.func @instrument_function_exit_function() attributes {instrument_function_exit = "__cyg_profile_func_exit"} {
+    // CHECK: @instrument_function_exit_function
+    // CHECK-SAME: attributes {instrument_function_exit = "__cyg_profile_func_exit"}
+    llvm.return
+  }
+
   llvm.func @nounwind_function() attributes {no_unwind} {
     // CHECK: @nounwind_function
     // CHECK-SAME: attributes {no_unwind}

@@ -6650,7 +6650,7 @@ bool DeclarationVisitor::Pre(const parser::BasedPointer &) {
 
 void DeclarationVisitor::Post(const parser::BasedPointer &bp) {
   const parser::ObjectName &pointerName{std::get<0>(bp.t)};
-  auto *pointer{FindSymbol(pointerName)};
+  auto *pointer{FindInScope(pointerName)};
   if (!pointer) {
     pointer = &MakeSymbol(pointerName, ObjectEntityDetails{});
   } else if (!ConvertToObjectEntity(*pointer)) {

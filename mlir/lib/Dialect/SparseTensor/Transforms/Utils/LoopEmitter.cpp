@@ -955,10 +955,6 @@ std::pair<Operation *, Value> sparse_tensor::genCoIteration(
   // Generates loop body.
   builder.setInsertionPointToStart(after);
   ValueRange aArgs = after->getArguments();
-  // Since some LoopCondKind might need extra checks to filter out invalid
-  // iterations, we maintains another array to hold the iteration arguments to
-  // yield if the checks fails.
-  SmallVector<Value> nextArgs(aArgs.begin(), aArgs.end());
 
   for (SparseIterator *it : spIters) {
     aArgs = it->linkNewScope(aArgs);

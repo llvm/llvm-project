@@ -53,7 +53,7 @@ bool IsConstantOffsetFromGlobal(Constant *C, GlobalValue *&GV, APInt &Offset,
 /// Note that this fails if not all of the operands are constant.  Otherwise,
 /// this function can only fail when attempting to fold instructions like loads
 /// and stores, which have no constant expression form.
-Constant *ConstantFoldInstruction(Instruction *I, const DataLayout &DL,
+Constant *ConstantFoldInstruction(const Instruction *I, const DataLayout &DL,
                                   const TargetLibraryInfo *TLI = nullptr);
 
 /// ConstantFoldConstant - Fold the constant using the specified DataLayout.
@@ -74,7 +74,8 @@ Constant *ConstantFoldConstant(const Constant *C, const DataLayout &DL,
 /// all uses of the original operation are replaced by the constant-folded
 /// result. The \p AllowNonDeterministic parameter controls whether this is
 /// allowed.
-Constant *ConstantFoldInstOperands(Instruction *I, ArrayRef<Constant *> Ops,
+Constant *ConstantFoldInstOperands(const Instruction *I,
+                                   ArrayRef<Constant *> Ops,
                                    const DataLayout &DL,
                                    const TargetLibraryInfo *TLI = nullptr,
                                    bool AllowNonDeterministic = true);

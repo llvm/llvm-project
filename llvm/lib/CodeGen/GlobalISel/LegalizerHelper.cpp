@@ -2060,7 +2060,6 @@ void LegalizerHelper::moreElementsVectorDst(MachineInstr &MI, LLT WideTy,
 void LegalizerHelper::moreElementsVectorSrc(MachineInstr &MI, LLT MoreTy,
                                             unsigned OpIdx) {
   MachineOperand &MO = MI.getOperand(OpIdx);
-  SmallVector<Register, 8> Regs;
   MO.setReg(MIRBuilder.buildPadVectorWithUndefElements(MoreTy, MO).getReg(0));
 }
 
@@ -2151,7 +2150,6 @@ LegalizerHelper::widenScalarMergeValues(MachineInstr &MI, unsigned TypeIdx,
   const int GCD = std::gcd(SrcSize, WideSize);
   LLT GCDTy = LLT::scalar(GCD);
 
-  SmallVector<Register, 8> Parts;
   SmallVector<Register, 8> NewMergeRegs;
   SmallVector<Register, 8> Unmerges;
   LLT WideDstTy = LLT::scalar(NumMerge * WideSize);
@@ -5500,9 +5498,8 @@ LegalizerHelper::fewerElementsBitcast(MachineInstr &MI, unsigned int TypeIdx,
 
   // Build new smaller bitcast instructions
   // Not supporting Leftover types for now but will have to
-  for (unsigned i = 0; i < SrcVRegs.size(); i++)
-    BitcastVRegs.push_back(
-        MIRBuilder.buildBitcast(NarrowTy, SrcVRegs[i]).getReg(0));
+  for (Register Reg : SrcVRegs)
+    BitcastVRegs.push_back(MIRBuilder.buildBitcast(NarrowTy, Reg).getReg(0));
 
   MIRBuilder.buildMergeLikeInstr(DstReg, BitcastVRegs);
   MI.eraseFromParent();
@@ -6139,6 +6136,7 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case TargetOpcode::G_INTRINSIC_ROUND:
   case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
   case TargetOpcode::G_INTRINSIC_TRUNC:
+  case TargetOpcode::G_BITREVERSE:
   case TargetOpcode::G_BSWAP:
   case TargetOpcode::G_FCANONICALIZE:
   case TargetOpcode::G_SEXT_INREG:
@@ -6644,7 +6642,6 @@ LegalizerHelper::narrowScalarExtract(MachineInstr &MI, unsigned TypeIdx,
   int NumParts = SizeOp1 / NarrowSize;
 
   SmallVector<Register, 2> SrcRegs, DstRegs;
-  SmallVector<uint64_t, 2> Indexes;
   extractParts(MI.getOperand(1).getReg(), NarrowTy, NumParts, SrcRegs,
                MIRBuilder, MRI);
 
@@ -6704,7 +6701,6 @@ LegalizerHelper::narrowScalarInsert(MachineInstr &MI, unsigned TypeIdx,
     return UnableToLegalize;
 
   SmallVector<Register, 2> SrcRegs, LeftoverRegs, DstRegs;
-  SmallVector<uint64_t, 2> Indexes;
   LLT RegTy = MRI.getType(MI.getOperand(0).getReg());
   LLT LeftoverTy;
   extractParts(MI.getOperand(1).getReg(), RegTy, NarrowTy, LeftoverTy, SrcRegs,
@@ -7383,9 +7379,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerTRUNC(MachineInstr &MI) {
       InterTy = SplitSrcTy.changeElementSize(DstTy.getScalarSizeInBits() * 2);
     else
       InterTy = SplitSrcTy.changeElementSize(DstTy.getScalarSizeInBits());
-    for (unsigned I = 0; I < SplitSrcs.size(); ++I) {
-      SplitSrcs[I] = MIRBuilder.buildTrunc(InterTy, SplitSrcs[I]).getReg(0);
-    }
+    for (Register &Src : SplitSrcs)
+      Src = MIRBuilder.buildTrunc(InterTy, Src).getReg(0);
 
     // Combine the new truncates into one vector
     auto Merge = MIRBuilder.buildMergeLikeInstr(

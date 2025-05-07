@@ -2270,16 +2270,18 @@ def : GCNPat <
 
 // FIXME: Remove VGPRImm. Should be inferrable from register bank.
 
-foreach vt = [i32, p3, p5, p6, p2] in {
-  def : GCNPat <
-    (VGPRImm<(vt imm)>:$imm),
-    (V_MOV_B32_e32 imm:$imm)
-  >;
+foreach vt = Reg32Types.types in {
+  if !and(!not(vt.isVector), !not(vt.isFP)) then {
+    def : GCNPat <
+      (VGPRImm<(vt imm)>:$imm),
+      (V_MOV_B32_e32 imm:$imm)
+    >;
 
-  def : GCNPat <
-    (vt imm:$imm),
-    (S_MOV_B32 imm:$imm)
-  >;
+    def : GCNPat <
+      (vt imm:$imm),
+      (S_MOV_B32 imm:$imm)
+    >;
+  }
 }
 
 // FIXME: The register bank of the frame index should depend on the
@@ -3861,7 +3863,7 @@ def : AMDGPUPat <
 >;
 
 def uint5Bits : PatLeaf<(i32 VGPR_32:$width), [{
-  return CurDAG->computeKnownBits(SDValue(N, 0)).countMaxActiveBits() <= 5;
+  return CurDAG->computeKnownBits(Op).countMaxActiveBits() <= 5;
 }]>;
 
 // x & (-1 >> (bitwidth - y))
@@ -4508,9 +4510,3 @@ def V_ILLEGAL : Enc32, InstSI<(outs), (ins), "v_illegal"> {
   let hasSideEffects = 1;
   let SubtargetPredicate = isGFX10Plus;
 }
-
-// FIXME: Would be nice if we could set the register class for the destination
-// register too.
-def IMP_DEF_FROM_INTRINSIC: Pat<
-  (i32 (int_amdgcn_dead)), (IMPLICIT_DEF)>;
-

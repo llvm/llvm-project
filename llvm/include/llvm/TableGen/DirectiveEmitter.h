@@ -107,10 +107,6 @@ public:
 
   StringRef getName() const { return Def->getValueAsString("name"); }
 
-  StringRef getAlternativeName() const {
-    return Def->getValueAsString("alternativeName");
-  }
-
   // Returns the name of the directive formatted for output. Whitespace are
   // replaced with underscores.
   std::string getFormattedName() const {

@@ -2737,7 +2737,6 @@ NewGVN::makePossiblePHIOfOps(Instruction *I,
   if (!isCycleFree(I))
     return nullptr;
 
-  SmallPtrSet<const Value *, 8> ProcessedPHIs;
   // TODO: We don't do phi translation on memory accesses because it's
   // complicated. For a load, we'd need to be able to simulate a new memoryuse,
   // which we don't have a good way of doing ATM.

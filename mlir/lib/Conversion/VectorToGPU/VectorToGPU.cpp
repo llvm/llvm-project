@@ -784,7 +784,6 @@ createNonLdMatrixLoads(RewriterBase &rewriter, vector::TransferReadOp op,
   }
 
   Value laneId = rewriter.create<gpu::LaneIdOp>(loc, /*upperBound=*/nullptr);
-  SmallVector<Value, 4> elements;
 
   // This is the individual element type.
   Type loadedElType = regInfo->registerLLVMType;

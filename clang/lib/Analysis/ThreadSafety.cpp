@@ -119,7 +119,7 @@ private:
   /// Exclusive or shared.
   LockKind LKind : 8;
 
-  // How it was acquired.
+  /// How it was acquired.
   SourceKind Source : 8;
 
   /// Where it was acquired.
@@ -1011,8 +1011,8 @@ private:
               SourceLocation loc, ThreadSafetyHandler *Handler) const {
     if (FSet.findLock(FactMan, Cp)) {
       FSet.removeLock(FactMan, Cp);
-      FSet.addLock(FactMan, std::make_unique<LockableFactEntry>(
-                                !Cp, LK_Exclusive, loc));
+      FSet.addLock(FactMan,
+                   std::make_unique<LockableFactEntry>(!Cp, LK_Exclusive, loc));
     } else if (Handler) {
       SourceLocation PrevLoc;
       if (const FactEntry *Neg = FSet.findLock(FactMan, !Cp))

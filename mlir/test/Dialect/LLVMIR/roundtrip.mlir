@@ -1033,3 +1033,12 @@ llvm.func @blockaddr_fn() {
 // CHECK-NEXT:  llvm.br ^bb1
 // CHECK-NEXT:^bb1:
 // CHECK-NEXT:  llvm.blocktag <id = 0>
+
+llvm.func @callintrin_voidret(%arg0: vector<8xi8>, %arg1: vector<8xi8>, %arg2: vector<8xi8>, %arg3: !llvm.ptr) {
+  llvm.call_intrinsic "llvm.aarch64.neon.st3.v8i8.p0"(%arg0, %arg1, %arg2, %arg3) : (vector<8xi8>, vector<8xi8>, vector<8xi8>, !llvm.ptr) -> ()
+  llvm.return
+}
+llvm.func @llvm.aarch64.neon.st3.v8i8.p0(vector<8xi8>, vector<8xi8>, vector<8xi8>, !llvm.ptr)
+
+// CHECK-LABEL: llvm.func @callintrin_voidret
+// CHECK-NEXT: llvm.call_intrinsic "llvm.aarch64.neon.st3.v8i8.p0"(%arg0, %arg1, %arg2, %arg3) : (vector<8xi8>, vector<8xi8>, vector<8xi8>, !llvm.ptr) -> ()

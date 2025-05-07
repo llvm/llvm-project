@@ -1133,9 +1133,6 @@ public:
   /// Return true if this is a trivially copyable type
   bool isTriviallyCopyConstructibleType(const ASTContext &Context) const;
 
-  /// Return true if this is a trivially relocatable type.
-  bool isTriviallyRelocatableType(const ASTContext &Context) const;
-
   /// Returns true if it is a class and it might be dynamic.
   bool mayBeDynamicClass() const;
 
@@ -3602,6 +3599,9 @@ public:
   }
 
   NestedNameSpecifier *getQualifier() const { return Qualifier; }
+  /// Note: this can trigger extra deserialization when external AST sources are
+  /// used. Prefer `getCXXRecordDecl()` unless you really need the most recent
+  /// decl.
   CXXRecordDecl *getMostRecentCXXRecordDecl() const;
 
   bool isSugared() const;
@@ -3610,7 +3610,10 @@ public:
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getPointeeType(), getQualifier(), getMostRecentCXXRecordDecl());
+    // FIXME: `getMostRecentCXXRecordDecl()` should be possible to use here,
+    // however when external AST sources are used it causes nondeterminism
+    // issues (see https://github.com/llvm/llvm-project/pull/137910).
+    Profile(ID, getPointeeType(), getQualifier(), getCXXRecordDecl());
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, QualType Pointee,
@@ -3620,6 +3623,9 @@ public:
   static bool classof(const Type *T) {
     return T->getTypeClass() == MemberPointer;
   }
+
+private:
+  CXXRecordDecl *getCXXRecordDecl() const;
 };
 
 /// Capture whether this is a normal array (e.g. int X[4])

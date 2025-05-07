@@ -2275,10 +2275,10 @@ bool Parser::NameAfterArrowIsNonType() {
   Sema::NameClassification Classification =
       Actions.ClassifyName(getCurScope(), SS, Name, NameLoc, Next, &CCC);
   switch (Classification.getKind()) {
-  case Sema::NC_OverloadSet:
-  case Sema::NC_NonType:
-  case Sema::NC_VarTemplate:
-  case Sema::NC_FunctionTemplate:
+  case NameClassificationKind::OverloadSet:
+  case NameClassificationKind::NonType:
+  case NameClassificationKind::VarTemplate:
+  case NameClassificationKind::FunctionTemplate:
     return true;
   default:
     break;

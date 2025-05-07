@@ -84,6 +84,7 @@
 #include "llvm/CodeGen/SanitizerBinaryMetadata.h"
 #include "llvm/CodeGen/SelectOptimize.h"
 #include "llvm/CodeGen/ShadowStackGCLowering.h"
+#include "llvm/CodeGen/ShrinkWrap.h"
 #include "llvm/CodeGen/SjLjEHPrepare.h"
 #include "llvm/CodeGen/StackColoring.h"
 #include "llvm/CodeGen/StackFrameLayoutAnalysisPass.h"
@@ -93,6 +94,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TwoAddressInstructionPass.h"
 #include "llvm/CodeGen/UnreachableBlockElim.h"
+#include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/CodeGen/WasmEHPrepare.h"
 #include "llvm/CodeGen/WinEHPrepare.h"
 #include "llvm/CodeGen/XRayInstrumentation.h"
@@ -1115,7 +1117,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addRegAllocPass(
       addPass(RAGreedyPass());
       break;
     default:
-      report_fatal_error("register allocator not supported yet", false);
+      reportFatalUsageError("register allocator not supported yet");
     }
     return;
   }

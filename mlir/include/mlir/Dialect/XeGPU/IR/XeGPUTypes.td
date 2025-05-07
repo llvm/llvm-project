@@ -189,11 +189,6 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
         return scatter_attr.getChunkSize().getInt();
       return 1;
     }
-
-    // This returns a vector type that represents the fragment of data owned by
-    // a work item in SIMT mode if this tensor descriptor is used in a XeGPU
-    // load/store operation.
-    FailureOr<VectorType> getDistributedVectorType();
   }];
 
   let hasCustomAssemblyFormat = true;

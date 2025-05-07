@@ -93,7 +93,7 @@ define i64 @convert_float_to_i64(float %a) nounwind {
 ; LA32F:       # %bb.0:
 ; LA32F-NEXT:    addi.w $sp, $sp, -16
 ; LA32F-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32F-NEXT:    bl %plt(__fixsfdi)
+; LA32F-NEXT:    bl __fixsfdi
 ; LA32F-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32F-NEXT:    addi.w $sp, $sp, 16
 ; LA32F-NEXT:    ret
@@ -102,7 +102,7 @@ define i64 @convert_float_to_i64(float %a) nounwind {
 ; LA32D:       # %bb.0:
 ; LA32D-NEXT:    addi.w $sp, $sp, -16
 ; LA32D-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32D-NEXT:    bl %plt(__fixsfdi)
+; LA32D-NEXT:    bl __fixsfdi
 ; LA32D-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32D-NEXT:    addi.w $sp, $sp, 16
 ; LA32D-NEXT:    ret
@@ -247,7 +247,7 @@ define i64 @convert_float_to_u64(float %a) nounwind {
 ; LA32F:       # %bb.0:
 ; LA32F-NEXT:    addi.w $sp, $sp, -16
 ; LA32F-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32F-NEXT:    bl %plt(__fixunssfdi)
+; LA32F-NEXT:    bl __fixunssfdi
 ; LA32F-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32F-NEXT:    addi.w $sp, $sp, 16
 ; LA32F-NEXT:    ret
@@ -256,7 +256,7 @@ define i64 @convert_float_to_u64(float %a) nounwind {
 ; LA32D:       # %bb.0:
 ; LA32D-NEXT:    addi.w $sp, $sp, -16
 ; LA32D-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32D-NEXT:    bl %plt(__fixunssfdi)
+; LA32D-NEXT:    bl __fixunssfdi
 ; LA32D-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32D-NEXT:    addi.w $sp, $sp, 16
 ; LA32D-NEXT:    ret
@@ -389,7 +389,7 @@ define float @convert_i64_to_float(i64 %a) nounwind {
 ; LA32F:       # %bb.0:
 ; LA32F-NEXT:    addi.w $sp, $sp, -16
 ; LA32F-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32F-NEXT:    bl %plt(__floatdisf)
+; LA32F-NEXT:    bl __floatdisf
 ; LA32F-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32F-NEXT:    addi.w $sp, $sp, 16
 ; LA32F-NEXT:    ret
@@ -398,7 +398,7 @@ define float @convert_i64_to_float(i64 %a) nounwind {
 ; LA32D:       # %bb.0:
 ; LA32D-NEXT:    addi.w $sp, $sp, -16
 ; LA32D-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32D-NEXT:    bl %plt(__floatdisf)
+; LA32D-NEXT:    bl __floatdisf
 ; LA32D-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32D-NEXT:    addi.w $sp, $sp, 16
 ; LA32D-NEXT:    ret
@@ -534,7 +534,7 @@ define float @convert_u64_to_float(i64 %a) nounwind {
 ; LA32F:       # %bb.0:
 ; LA32F-NEXT:    addi.w $sp, $sp, -16
 ; LA32F-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32F-NEXT:    bl %plt(__floatundisf)
+; LA32F-NEXT:    bl __floatundisf
 ; LA32F-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32F-NEXT:    addi.w $sp, $sp, 16
 ; LA32F-NEXT:    ret
@@ -543,7 +543,7 @@ define float @convert_u64_to_float(i64 %a) nounwind {
 ; LA32D:       # %bb.0:
 ; LA32D-NEXT:    addi.w $sp, $sp, -16
 ; LA32D-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32D-NEXT:    bl %plt(__floatundisf)
+; LA32D-NEXT:    bl __floatundisf
 ; LA32D-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32D-NEXT:    addi.w $sp, $sp, 16
 ; LA32D-NEXT:    ret

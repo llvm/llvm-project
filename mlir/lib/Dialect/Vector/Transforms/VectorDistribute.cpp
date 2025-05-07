@@ -878,8 +878,6 @@ struct WarpOpForwardOperand : public WarpDistributionPattern {
   using Base::Base;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    SmallVector<Type> resultTypes;
-    SmallVector<Value> yieldValues;
     auto yield = cast<gpu::YieldOp>(
         warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
     Value valForwarded;
