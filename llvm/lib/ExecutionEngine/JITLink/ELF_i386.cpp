@@ -110,9 +110,10 @@ private:
   }
 };
 
-template <typename ELFT>
-class ELFLinkGraphBuilder_i386 : public ELFLinkGraphBuilder<ELFT> {
+class ELFLinkGraphBuilder_i386 : public ELFLinkGraphBuilder<object::ELF32LE> {
 private:
+  using ELFT = object::ELF32LE;
+
   static Expected<i386::EdgeKind_i386> getRelocationKind(const uint32_t Type) {
     using namespace i386;
     switch (Type) {
@@ -253,9 +254,9 @@ createLinkGraphFromELFObject_i386(MemoryBufferRef ObjectBuffer,
 
   auto &ELFObjFile = cast<object::ELFObjectFile<object::ELF32LE>>(**ELFObj);
 
-  return ELFLinkGraphBuilder_i386<object::ELF32LE>(
-             (*ELFObj)->getFileName(), ELFObjFile.getELFFile(), std::move(SSP),
-             (*ELFObj)->makeTriple(), std::move(*Features))
+  return ELFLinkGraphBuilder_i386((*ELFObj)->getFileName(),
+                                  ELFObjFile.getELFFile(), std::move(SSP),
+                                  (*ELFObj)->makeTriple(), std::move(*Features))
       .buildGraph();
 }
 
