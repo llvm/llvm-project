@@ -77,11 +77,20 @@ sethi %lm(sym), %l0
 # ASM-NEXT: sethi %gdop_hix22(sym), %l1
 # ASM-NEXT: or %l1, %gdop_lox10(sym), %l1
 # ASM-NEXT: ldx [%l7+%l1], %l2, %gdop(sym)
-# OBJDUMP: R_SPARC_HIX22 sym
-# OBJDUMP: R_SPARC_LOX10 sym
-# OBJDUMP: R_SPARC_GOTDATA_OP_HIX22 sym
-# OBJDUMP: R_SPARC_GOTDATA_OP_LOX10 sym
-# OBJDUMP: R_SPARC_GOTDATA_OP sym
+# OBJDUMP:      sethi 0x3fffff, %g0
+# OBJDUMP-NEXT: xor %g0, -0x400, %g0
+# OBJDUMP-NEXT: sethi 0x0, %g1
+# OBJDUMP-NEXT:   R_SPARC_HIX22 sym
+# OBJDUMP-NEXT: xor %g1, 0x0, %g1
+# OBJDUMP-NEXT:   R_SPARC_LOX10 sym
+# OBJDUMP-NEXT: sethi 0x0, %l1
+# OBJDUMP-NEXT:   R_SPARC_GOTDATA_OP_HIX22 sym
+# OBJDUMP-NEXT: or %l1, 0x0, %l1
+# OBJDUMP-NEXT:   R_SPARC_GOTDATA_OP_LOX10 sym
+# OBJDUMP-NEXT: ldx [%l7+%l1], %l2
+# OBJDUMP-NEXT:   R_SPARC_GOTDATA_OP sym
+sethi %hix(zero), %g0
+xor %g0, %lox(zero), %g0
 sethi %hix(sym), %g1
 xor %g1, %lox(sym), %g1
 sethi %gdop_hix22(sym), %l1
@@ -89,6 +98,8 @@ or %l1, %gdop_lox10(sym), %l1
 ldx [%l7 + %l1], %l2, %gdop(sym)
 
 .set abs, 0xfedcba98
+.set abs48, 0xfedcba987654
+zero = 0
 
 ## FIXME: Don't emit GOT relocations when -position-independent is specified.
 # NOPIC:      sethi 0x3fb72e, %o0
@@ -104,12 +115,12 @@ xor %o0, %lo(-0x12345678), %o1
 ld [%o0 + seven], %o0
 seven = 7
 
-# OBJDUMP:      sethi 0x3fb, %o0
-# OBJDUMP-NEXT: or %o0, 0x1cb, %o0
-# OBJDUMP-NEXT: ld [%o0+0xa98], %o0
-sethi %h44(abs), %o0
-or %o0, %m44(abs), %o0
-ld [%o0 + %l44(abs)], %o0
+# OBJDUMP:      sethi 0x3b72ea, %o0
+# OBJDUMP-NEXT: or %o0, 0x187, %o0
+# OBJDUMP-NEXT: ld [%o0+0x654], %o0
+sethi %h44(abs48), %o0
+or %o0, %m44(abs48), %o0
+ld [%o0 + %l44(abs48)], %o0
 
 # OBJDUMP-NEXT: sethi 0x0, %o0
 # OBJDUMP-NEXT: sethi 0x3fb72e, %o0

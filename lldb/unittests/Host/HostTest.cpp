@@ -9,8 +9,10 @@
 #include "lldb/Host/Host.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Host/FileSystem.h"
+#include "lldb/Host/Pipe.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Utility/ProcessInfo.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Testing/Support/Error.h"
@@ -86,4 +88,40 @@ TEST(Host, LaunchProcessSetsArgv0) {
   });
   ASSERT_THAT_ERROR(Host::LaunchProcess(info).takeError(), Succeeded());
   ASSERT_THAT(exit_status.get_future().get(), 0);
+}
+
+TEST(Host, LaunchProcessDuplicatesHandle) {
+  static constexpr llvm::StringLiteral test_msg("Hello subprocess!");
+
+  SubsystemRAII<FileSystem> subsystems;
+
+  if (test_arg) {
+    Pipe pipe(LLDB_INVALID_PIPE, (lldb::pipe_t)test_arg.getValue());
+    llvm::Expected<size_t> bytes_written =
+        pipe.Write(test_msg.data(), test_msg.size());
+    if (bytes_written && *bytes_written == test_msg.size())
+      exit(0);
+    exit(1);
+  }
+  Pipe pipe;
+  ASSERT_THAT_ERROR(pipe.CreateNew(/*child_process_inherit=*/false).takeError(),
+                    llvm::Succeeded());
+  ProcessLaunchInfo info;
+  info.SetExecutableFile(FileSpec(TestMainArgv0),
+                         /*add_exe_file_as_first_arg=*/true);
+  info.GetArguments().AppendArgument(
+      "--gtest_filter=Host.LaunchProcessDuplicatesHandle");
+  info.GetArguments().AppendArgument(
+      ("--test-arg=" + llvm::Twine((uint64_t)pipe.GetWritePipe())).str());
+  info.AppendDuplicateFileAction((uint64_t)pipe.GetWritePipe(),
+                                 (uint64_t)pipe.GetWritePipe());
+  info.SetMonitorProcessCallback(&ProcessLaunchInfo::NoOpMonitorCallback);
+  ASSERT_THAT_ERROR(Host::LaunchProcess(info).takeError(), llvm::Succeeded());
+  pipe.CloseWriteFileDescriptor();
+
+  char msg[100];
+  llvm::Expected<size_t> bytes_read =
+      pipe.Read(msg, sizeof(msg), std::chrono::seconds(10));
+  ASSERT_THAT_EXPECTED(bytes_read, llvm::Succeeded());
+  ASSERT_EQ(llvm::StringRef(msg, *bytes_read), test_msg);
 }
