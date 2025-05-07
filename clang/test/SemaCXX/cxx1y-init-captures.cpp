@@ -9,25 +9,24 @@ namespace variadic_expansion {
       return a;
     }() ...); // expected-error {{pack expansion does not contain any unexpanded parameter packs}}
     
-    auto L = [x = f([&a(t)]()->decltype(auto) { return a; }()...)]() { return x; }; // expected-error {{pack expansion does not contain any unexpanded parameter packs}} expected-error {{use of undeclared identifier 'x'}} expected-error {{invalid initializer type for lambda capture}}
+    auto L = [x = undeclared_var()]() { return x; }; // expected-error {{use of undeclared identifier 'undeclared_var'}}
     const int y = 10;
     auto M = [x = y, 
                 &z = y](T& ... t) { }; 
     auto N = [x = y, 
                 &z = y, n = f(t...), 
-                o = f([&a(t)](T& ... t)->decltype(auto) { return a; }(t...)...), t...](T& ... s) { // expected-error {{pack expansion does not contain any unexpanded parameter packs}} expected-error {{invalid initializer type for lambda capture}}
+                o = undeclared_var(), t...](T& ... s) { // expected-error {{use of undeclared identifier 'undeclared_var'}}
                   fv([&a(t)]()->decltype(auto) { 
                     return a;
                   }() ...); // expected-error {{pack expansion does not contain any unexpanded parameter packs}}
                 };                 
     auto N2 = [x = y, 
                &z = y, n = f(t...), 
-                o = f([&a(t)](T& ... t)->decltype(auto) { return a; }(t...)...)](T& ... s) { // expected-error {{pack expansion does not contain any unexpanded parameter packs}} expected-error {{invalid initializer type for lambda capture}}
-                  fv([&a(t)]()->decltype(auto) { 
+               o = undeclared_var(), &t...](T& ... s) { // expected-error {{use of undeclared identifier 'undeclared_var'}}
+                  fv([&a(t), &t...]() -> decltype(auto) { 
                     return a;
                   }() ...); // expected-error {{pack expansion does not contain any unexpanded parameter packs}}
-                };                 
-
+                };
   }
 
   void h(int i, char c) { g(i, c); }
