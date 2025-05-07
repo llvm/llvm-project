@@ -127,7 +127,7 @@ public:
     NoLibrary,  // Don't use any vector library.
     Accelerate, // Use Accelerate framework.
     DarwinLibSystemM, // Use Darwin's libsystem_m.
-    LIBMVEC_X86,      // GLIBC Vector Math library.
+    LIBMVEC,          // GLIBC Vector Math library.
     MASSV,            // IBM MASS vector library.
     SVML,             // Intel short vector math library.
     SLEEFGNUABI, // SLEEF - SIMD Library for Evaluating Elementary Functions.
