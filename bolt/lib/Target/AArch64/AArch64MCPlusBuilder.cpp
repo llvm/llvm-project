@@ -19,6 +19,7 @@
 #include "Utils/AArch64BaseInfo.h"
 #include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryFunction.h"
+#include "bolt/Core/MCInstUtils.h"
 #include "bolt/Core/MCPlusBuilder.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
@@ -393,81 +394,58 @@ public:
 
     // Iterate over the instructions of BB in reverse order, matching opcodes
     // and operands.
-    MCPhysReg TestedReg = 0;
-    MCPhysReg ScratchReg = 0;
+
     auto It = BB.end();
-    auto StepAndGetOpcode = [&It, &BB]() -> int {
-      if (It == BB.begin())
-        return -1;
-      --It;
-      return It->getOpcode();
+    auto StepBack = [&]() {
+      while (It != BB.begin()) {
+        --It;
+        if (!isCFI(*It))
+          return true;
+      }
+      return false;
     };
-
-    switch (StepAndGetOpcode()) {
-    default:
-      // Not matched the branch instruction.
+    // Step to the last non-CFI instruction.
+    if (!StepBack())
       return std::nullopt;
-    case AArch64::Bcc:
-      // Bcc EQ, .Lon_success
-      if (It->getOperand(0).getImm() != AArch64CC::EQ)
-        return std::nullopt;
-      // Not checking .Lon_success (see above).
 
-      // SUBSXrs XZR, TestedReg, ScratchReg, 0 (used by "CMP reg, reg" alias)
-      if (StepAndGetOpcode() != AArch64::SUBSXrs ||
-          It->getOperand(0).getReg() != AArch64::XZR ||
-          It->getOperand(3).getImm() != 0)
+    using namespace llvm::bolt::MCInstMatcher;
+    Reg TestedReg;
+    Reg ScratchReg;
+
+    if (matchInst(*It, AArch64::Bcc, Imm(AArch64CC::EQ) /*, .Lon_success*/)) {
+      if (!StepBack() || !matchInst(*It, AArch64::SUBSXrs, Reg(AArch64::XZR),
+                                    TestedReg, ScratchReg, Imm(0)))
         return std::nullopt;
-      TestedReg = It->getOperand(1).getReg();
-      ScratchReg = It->getOperand(2).getReg();
 
       // Either XPAC(I|D) ScratchReg, ScratchReg
       // or     XPACLRI
-      switch (StepAndGetOpcode()) {
-      default:
+      if (!StepBack())
         return std::nullopt;
-      case AArch64::XPACLRI:
+      if (matchInst(*It, AArch64::XPACLRI)) {
         // No operands to check, but using XPACLRI forces TestedReg to be X30.
-        if (TestedReg != AArch64::LR)
+        if (TestedReg.get() != AArch64::LR)
           return std::nullopt;
-        break;
-      case AArch64::XPACI:
-      case AArch64::XPACD:
-        if (It->getOperand(0).getReg() != ScratchReg ||
-            It->getOperand(1).getReg() != ScratchReg)
-          return std::nullopt;
-        break;
+      } else if (!matchInst(*It, AArch64::XPACI, ScratchReg, ScratchReg) &&
+                 !matchInst(*It, AArch64::XPACD, ScratchReg, ScratchReg)) {
+        return std::nullopt;
       }
 
-      // ORRXrs ScratchReg, XZR, TestedReg, 0 (used by "MOV reg, reg" alias)
-      if (StepAndGetOpcode() != AArch64::ORRXrs)
-        return std::nullopt;
-      if (It->getOperand(0).getReg() != ScratchReg ||
-          It->getOperand(1).getReg() != AArch64::XZR ||
-          It->getOperand(2).getReg() != TestedReg ||
-          It->getOperand(3).getImm() != 0)
+      if (!StepBack() || !matchInst(*It, AArch64::ORRXrs, ScratchReg,
+                                    Reg(AArch64::XZR), TestedReg, Imm(0)))
         return std::nullopt;
 
-      return std::make_pair(TestedReg, &*It);
-
-    case AArch64::TBZX:
-      // TBZX ScratchReg, 62, .Lon_success
-      ScratchReg = It->getOperand(0).getReg();
-      if (It->getOperand(1).getImm() != 62)
-        return std::nullopt;
-      // Not checking .Lon_success (see above).
-
-      // EORXrs ScratchReg, TestedReg, TestedReg, 1
-      if (StepAndGetOpcode() != AArch64::EORXrs)
-        return std::nullopt;
-      TestedReg = It->getOperand(1).getReg();
-      if (It->getOperand(0).getReg() != ScratchReg ||
-          It->getOperand(2).getReg() != TestedReg ||
-          It->getOperand(3).getImm() != 1)
-        return std::nullopt;
-
-      return std::make_pair(TestedReg, &*It);
+      return std::make_pair(TestedReg.get(), &*It);
     }
+
+    if (matchInst(*It, AArch64::TBZX, ScratchReg, Imm(62) /*, .Lon_success*/)) {
+      if (!StepBack() || !matchInst(*It, AArch64::EORXrs, Reg(ScratchReg),
+                                    TestedReg, TestedReg, Imm(1)))
+        return std::nullopt;
+
+      return std::make_pair(TestedReg.get(), &*It);
+    }
+
+    return std::nullopt;
   }
 
   std::optional<MCPhysReg> getAuthCheckedReg(const MCInst &Inst,
