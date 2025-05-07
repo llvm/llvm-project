@@ -1,52 +1,72 @@
-
-import subprocess
-import sys
-import re
 import requests
-import yaml
-# === Load config.yaml ===
-with open("config.yaml", "r") as f:
-    config = yaml.safe_load(f)
-# === Configuration ===
-PR_NUMBER = str(config["project"]["pr_number"])
-OWNER = config["project"]["owner"]
-REPO = config["project"]["repo"]
-headers = {
-    "Accept": "application/vnd.github.v3.diff"
-}
-# === Fetch PR Diff ===
-url = f"https://api.github.com/repos/{OWNER}/{REPO}/pulls/{PR_NUMBER}"
-diff_url = f"{url}.diff"
-print(f"📥 Fetching diff from {diff_url}")
-resp = requests.get(diff_url, headers=headers)
-if resp.status_code != 200:
-    print(f"❌ Failed to fetch PR diff: {resp.status_code} {resp.text}")
-    sys.exit(1)
-diff_text = resp.text
-if not diff_text.strip():
-    print("✅ No changes in the PR.")
-    sys.exit(0)
-# === Run clang-tidy-diff.py on diff from stdin ===
-print("🧼 Running clang-tidy-diff.py on PR diff...")
-# Adjust if clang-tidy-diff.py is in a different path
-clang_tidy_diff_path = "./clang-tidy-diff.py"
-result = subprocess.run(
-    ["python3", clang_tidy_diff_path, "-p1"],
-    input=diff_text,
-    text=True,
-    capture_output=True
-)
-# === Output Results ===
-if result.returncode == 0 and not result.stdout.strip():
-    print("✅ No clang-tidy issues detected!")
-    sys.exit(0)
-else:
-    print("🚨 Issues detected:")
-    print("\n================= Diff Before clang-tidy =================")
-    print(diff_text)
-    print("\n================= Suggested Fixes =================")
-    print(result.stdout)
-    if result.stderr:
-        print("\n⚠️ Error while running clang-tidy:")
-        print(result.stderr)
-    sys.exit(1)
+import subprocess
+import json
+import os
+
+# Function to load configuration details from the JSON file
+def load_config(config_file):
+    with open(config_file, 'r') as f:
+        config = json.load(f)
+    return config
+
+# Function to fetch diff data from GitHub using the API
+def fetch_diff_from_github(owner, repo, pull_number, token):
+    """Fetch the diff for the pull request using GitHub API."""
+    url = f'https://api.github.com/repos/{owner}/{repo}/pulls/{pull_number}/files'
+    headers = {'Authorization': f'token {token}'}
+    response = requests.get(url, headers=headers)
+    
+    if response.status_code == 200:
+        # Extracting the diff for each file changed in the pull request
+        diff_data = []
+        for file in response.json():
+            if 'patch' in file:
+                diff_data.append(file['patch'])
+        return "\n".join(diff_data)
+    else:
+        raise Exception(f"Failed to fetch diff: {response.status_code} {response.text}")
+
+# Function to run clang-tidy-diff.py on the provided diff data
+def run_clang_tidy_diff(diff_data, clang_tidy_path="./clang-tidy-diff.py"):
+    """Run clang-tidy-diff on the provided diff data."""
+    # Create a temporary file to hold the diff content
+    with open("temp_diff.patch", "w") as diff_file:
+        diff_file.write(diff_data)
+    
+    # Run the clang-tidy-diff script with the diff file
+    command = ['python3', clang_tidy_path]
+    with open("temp_diff.patch", "r") as diff_file:
+        process = subprocess.Popen(command, stdin=diff_file, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = process.communicate()
+        
+        if process.returncode != 0:
+            print("Error:", stderr.decode())
+        else:
+            print("clang-tidy output:\n", stdout.decode())
+
+# Main function to integrate everything
+def main(config_file="config.json"):
+    # Step 1: Load configuration from the config file
+    try:
+        config = load_config(config_file)
+        owner = config['owner']
+        repo = config['repo']
+        pull_number = config['pull_number']
+        github_token = config['github_token']
+    except Exception as e:
+        print(f"Error loading configuration: {e}")
+        return
+
+    # Step 2: Fetch the diff data from GitHub API
+    try:
+        diff_data = fetch_diff_from_github(owner, repo, pull_number, github_token)
+        if diff_data:
+            # Step 3: Pass the diff to clang-tidy-diff.py script
+            run_clang_tidy_diff(diff_data)
+        else:
+            print("No changes found in the pull request.")
+    except Exception as e:
+        print(f"Error: {e}")
+
+if __name__ == '__main__':
+    main(config_file="config.json")
