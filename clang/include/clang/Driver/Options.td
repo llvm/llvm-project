@@ -3244,6 +3244,13 @@ def fmodules_disable_diagnostic_validation : Flag<["-"], "fmodules-disable-diagn
   Group<i_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Disable validation of the diagnostic options when loading the module">,
   MarshallingInfoNegativeFlag<HeaderSearchOpts<"ModulesValidateDiagnosticOptions">>;
+defm modules_force_validate_user_headers : BoolOption<"f", "modules-force-validate-user-headers",
+  HeaderSearchOpts<"ModulesForceValidateUserHeaders">, DefaultTrue,
+  PosFlag<SetTrue, [], [], "Force">,
+  NegFlag<SetFalse, [], [CC1Option], "Do not force">,
+  BothFlags<[], [ClangOption],
+            " validation of user headers when repeatedly loading a module file within single build session">>,
+  Group<i_Group>;
 defm modules_validate_system_headers : BoolOption<"f", "modules-validate-system-headers",
   HeaderSearchOpts<"ModulesValidateSystemHeaders">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
