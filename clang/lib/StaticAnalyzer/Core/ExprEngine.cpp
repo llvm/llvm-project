@@ -2565,9 +2565,10 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
     // since we are currently at the block entrance and the current reference
     // would be stale.  Ideally, we should pass on the terminator of the CFG
     // block, but the terminator cannot be referred as a CFG element.
-    // Here we just pass the current stale block.
-    ProgramStateRef WidenedState = getWidenedLoopState(
-        Pred->getState(), LCtx, BlockCount, getCFGElementRef());
+    // Here we just pass the the first CFG element in the block.
+    ProgramStateRef WidenedState =
+        getWidenedLoopState(Pred->getState(), LCtx, BlockCount,
+                            *nodeBuilder.getContext().getBlock()->ref_begin());
     nodeBuilder.generateNode(WidenedState, Pred);
     return;
   }
