@@ -60,7 +60,7 @@ struct CommentInfo {
   // the vector.
   bool operator<(const CommentInfo &Other) const;
 
-  // TODO: The Kind field should be an enum, so we can switch on it easily
+  // TODO: The Kind field should be an enum, so we can switch on it easily.
   SmallString<16>
       Kind; // Kind of comment (FullComment, ParagraphComment, TextComment,
             // InlineCommandComment, HTMLStartTagComment, HTMLEndTagComment,
