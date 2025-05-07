@@ -8,6 +8,7 @@
 
 #include "flang/Support/OpenMP-utils.h"
 
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/OpDefinition.h"
 
 namespace Fortran::common::openmp {
@@ -46,5 +47,36 @@ mlir::Block *genEntryBlock(mlir::OpBuilder &builder, const EntryBlockArgs &args,
   extractTypeLoc(args.useDevicePtr.vars);
 
   return builder.createBlock(&region, {}, types, locs);
+}
+
+mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
+    mlir::Location loc, mlir::Value baseAddr, mlir::Value varPtrPtr,
+    llvm::StringRef name, llvm::ArrayRef<mlir::Value> bounds,
+    llvm::ArrayRef<mlir::Value> members, mlir::ArrayAttr membersIndex,
+    uint64_t mapType, mlir::omp::VariableCaptureKind mapCaptureType,
+    mlir::Type retTy, bool partialMap, mlir::FlatSymbolRefAttr mapperId) {
+
+  if (auto boxTy = llvm::dyn_cast<fir::BaseBoxType>(baseAddr.getType())) {
+    baseAddr = builder.create<fir::BoxAddrOp>(loc, baseAddr);
+    retTy = baseAddr.getType();
+  }
+
+  mlir::TypeAttr varType = mlir::TypeAttr::get(
+      llvm::cast<mlir::omp::PointerLikeType>(retTy).getElementType());
+
+  // For types with unknown extents such as <2x?xi32> we discard the incomplete
+  // type info and only retain the base type. The correct dimensions are later
+  // recovered through the bounds info.
+  if (auto seqType = llvm::dyn_cast<fir::SequenceType>(varType.getValue()))
+    if (seqType.hasDynamicExtents())
+      varType = mlir::TypeAttr::get(seqType.getEleTy());
+
+  mlir::omp::MapInfoOp op =
+      builder.create<mlir::omp::MapInfoOp>(loc, retTy, baseAddr, varType,
+          builder.getIntegerAttr(builder.getIntegerType(64, false), mapType),
+          builder.getAttr<mlir::omp::VariableCaptureKindAttr>(mapCaptureType),
+          varPtrPtr, members, membersIndex, bounds, mapperId,
+          builder.getStringAttr(name), builder.getBoolAttr(partialMap));
+  return op;
 }
 } // namespace Fortran::common::openmp

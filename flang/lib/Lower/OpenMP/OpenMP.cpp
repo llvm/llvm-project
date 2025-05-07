@@ -1432,7 +1432,7 @@ static void genBodyOfTargetOp(
           mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
         }
 
-        mlir::Value mapOp = createMapInfoOp(
+        mlir::Value mapOp = Fortran::common::openmp::createMapInfoOp(
             firOpBuilder, copyVal.getLoc(), copyVal,
             /*varPtrPtr=*/mlir::Value{}, name.str(), bounds,
             /*members=*/llvm::SmallVector<mlir::Value>{},
@@ -2401,7 +2401,7 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
           mlir::NameLoc::get(mlir::StringAttr::get(firOpBuilder.getContext(),
                                                    sym.name().ToString()),
                              baseOp.getLoc());
-      mlir::Value mapOp = createMapInfoOp(
+      mlir::Value mapOp = Fortran::common::openmp::createMapInfoOp(
           firOpBuilder, location, baseOp, /*varPtrPtr=*/mlir::Value{},
           name.str(), bounds, /*members=*/{},
           /*membersIndex=*/mlir::ArrayAttr{},
