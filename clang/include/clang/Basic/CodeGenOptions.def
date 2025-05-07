@@ -306,6 +306,7 @@ CODEGENOPT(SanitizeCoveragePCTable, 1, 0) ///< Create a PC Table.
 CODEGENOPT(SanitizeCoverageControlFlow, 1, 0) ///< Collect control flow
 CODEGENOPT(SanitizeCoverageNoPrune, 1, 0) ///< Disable coverage pruning.
 CODEGENOPT(SanitizeCoverageStackDepth, 1, 0) ///< Enable max stack depth tracing
+VALUE_CODEGENOPT(SanitizeCoverageStackDepthCallbackMin , 32, 0) ///< Enable stack depth tracing callbacks.
 CODEGENOPT(SanitizeCoverageTraceLoads, 1, 0) ///< Enable tracing of loads.
 CODEGENOPT(SanitizeCoverageTraceStores, 1, 0) ///< Enable tracing of stores.
 CODEGENOPT(SanitizeBinaryMetadataCovered, 1, 0) ///< Emit PCs for covered functions.

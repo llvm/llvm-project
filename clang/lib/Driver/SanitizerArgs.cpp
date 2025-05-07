@@ -754,6 +754,17 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       options::OPT_fno_sanitize_ignorelist,
       clang::diag::err_drv_malformed_sanitizer_ignorelist, DiagnoseErrors);
 
+  // Verify that -fsanitize-coverage-stack-depth-callback-min is >= 0.
+  if (Arg *A = Args.getLastArg(
+          options::OPT_fsanitize_coverage_stack_depth_callback_min_EQ)) {
+    StringRef S = A->getValue();
+    if (S.getAsInteger(0, CoverageStackDepthCallbackMin) ||
+        CoverageStackDepthCallbackMin < 0) {
+      if (DiagnoseErrors)
+        D.Diag(clang::diag::err_drv_invalid_value) << A->getAsString(Args) << S;
+    }
+  }
+
   // Parse -f[no-]sanitize-memory-track-origins[=level] options.
   if (AllAddedKinds & SanitizerKind::Memory) {
     if (Arg *A =
@@ -1271,6 +1282,11 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
       Args, CmdArgs, "-fsanitize-coverage-allowlist=", CoverageAllowlistFiles);
   addSpecialCaseListOpt(Args, CmdArgs, "-fsanitize-coverage-ignorelist=",
                         CoverageIgnorelistFiles);
+
+  if (CoverageStackDepthCallbackMin)
+    CmdArgs.push_back(
+        Args.MakeArgString("-fsanitize-coverage-stack-depth-callback-min=" +
+                           Twine(CoverageStackDepthCallbackMin)));
 
   if (!GPUSanitize) {
     // Translate available BinaryMetadataFeatures to corresponding clang-cc1
