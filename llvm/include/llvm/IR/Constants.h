@@ -50,8 +50,6 @@ template <class ConstantClass> struct ConstantAggrKeyType;
 /// These constants have no operands; they represent their data directly.
 /// Since they can be in use by unrelated modules (and are never based on
 /// GlobalValues), it never makes sense to RAUW them.
-///
-/// These do not have use lists. It is illegal to inspect the uses.
 class ConstantData : public Constant {
   constexpr static IntrusiveOperandsAllocMarker AllocMarker{0};
 

@@ -56,8 +56,6 @@ Makes programs 10x faster by doing Special New Thing.
 Changes to the LLVM IR
 ----------------------
 
-* It is no longer permitted to inspect the uses of ConstantData
-
 * The `nocapture` attribute has been replaced by `captures(none)`.
 * The constant expression variants of the following instructions have been
   removed:
