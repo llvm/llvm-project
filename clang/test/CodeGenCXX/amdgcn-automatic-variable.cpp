@@ -133,3 +133,27 @@ later:
   use(&x);
 }
 
+#define __private __attribute__((opencl_private))
+
+// CHECK-LABEL: @_Z34explicit_private_address_space_ptrv(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[PLONG:%.*]] = alloca i64, align 8, addrspace(5)
+// CHECK-NEXT:    [[PLONGP:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[PLONGP_B:%.*]] = alloca ptr addrspace(5), align 4, addrspace(5)
+// CHECK-NEXT:    [[PLONG_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[PLONG]] to ptr
+// CHECK-NEXT:    [[PLONGP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[PLONGP]] to ptr
+// CHECK-NEXT:    [[PLONGP_B_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[PLONGP_B]] to ptr
+// CHECK-NEXT:    store ptr [[PLONG_ASCAST]], ptr [[PLONGP_ASCAST]], align 8
+// CHECK-NEXT:    [[PLONG_ASCAST_ASCAST:%.*]] = addrspacecast ptr [[PLONG_ASCAST]] to ptr addrspace(5)
+// CHECK-NEXT:    store ptr addrspace(5) [[PLONG_ASCAST_ASCAST]], ptr [[PLONGP_B_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PLONGP_ASCAST]], align 8
+// CHECK-NEXT:    store i64 8, ptr [[TMP0]], align 8
+// CHECK-NEXT:    ret void
+//
+void explicit_private_address_space_ptr() {
+  long plong;
+  long *plongp = &plong;
+
+  __private long *plongp_b = (__private long *)&plong;
+  *plongp = 8;
+}
