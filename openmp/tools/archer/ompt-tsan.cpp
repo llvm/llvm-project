@@ -166,14 +166,14 @@ DECLARE_TSAN_FUNCTION(AnnotateNewMemory, const char *, int,
                       const volatile void *, size_t)
 DECLARE_TSAN_FUNCTION(__tsan_func_entry, const void *)
 DECLARE_TSAN_FUNCTION(__tsan_func_exit)
-DECLARE_TSAN_FUNCTION(AnnotateRWLockCreate, const char *, int,
-                      const volatile void *)
-DECLARE_TSAN_FUNCTION(AnnotateRWLockDestroy, const char *, int,
-                      const volatile void *)
-DECLARE_TSAN_FUNCTION(AnnotateRWLockAcquired, const char *, int,
-                      const volatile void *, size_t)
-DECLARE_TSAN_FUNCTION(AnnotateRWLockReleased, const char *, int,
-                      const volatile void *, size_t)
+DECLARE_TSAN_FUNCTION(AnnotateRWLockCreatePC, const char *, int,
+                      const volatile void *, const void *)
+DECLARE_TSAN_FUNCTION(AnnotateRWLockDestroyPC, const char *, int,
+                      const volatile void *, const void *)
+DECLARE_TSAN_FUNCTION(AnnotateRWLockAcquiredPC, const char *, int,
+                      const volatile void *, size_t, const void *)
+DECLARE_TSAN_FUNCTION(AnnotateRWLockReleasedPC, const char *, int,
+                      const volatile void *, size_t, const void *)
 }
 
 // This marker is used to define a happens-before arc. The race detector will
@@ -200,13 +200,14 @@ DECLARE_TSAN_FUNCTION(AnnotateRWLockReleased, const char *, int,
   AnnotateNewMemory(__FILE__, __LINE__, addr, size)
 
 // Locks
-#define TsanRWLockCreate(mutex) AnnotateRWLockCreate(__FILE__, __LINE__, mutex)
-#define TsanRWLockDestroy(mutex)                                               \
-  AnnotateRWLockDestroy(__FILE__, __LINE__, mutex)
-#define TsanRWLockAcquired(mutex, isw)                                         \
-  AnnotateRWLockAcquired(__FILE__, __LINE__, mutex, isw)
-#define TsanRWLockReleased(mutex, isw)                                         \
-  AnnotateRWLockReleased(__FILE__, __LINE__, mutex, isw)
+#define TsanRWLockCreate(mutex, pc)                                            \
+  AnnotateRWLockCreatePC(__FILE__, __LINE__, mutex, pc)
+#define TsanRWLockDestroy(mutex, pc)                                           \
+  AnnotateRWLockDestroyPC(__FILE__, __LINE__, mutex, pc)
+#define TsanRWLockAcquired(mutex, isw, pc)                                     \
+  AnnotateRWLockAcquiredPC(__FILE__, __LINE__, mutex, isw, pc)
+#define TsanRWLockReleased(mutex, isw, pc)                                     \
+  AnnotateRWLockReleasedPC(__FILE__, __LINE__, mutex, isw, pc)
 #endif
 
 // Function entry/exit
@@ -615,11 +616,7 @@ static inline TaskData *ToTaskData(ompt_data_t *task_data) {
 }
 
 /// Store a mutex for each wait_id to resolve race condition with callbacks.
-struct LockInfo {
-  std::mutex mu;
-  uint64_t thread_id;
-};
-static std::unordered_map<ompt_wait_id_t, LockInfo> Locks;
+static std::unordered_map<ompt_wait_id_t, std::mutex> Locks;
 static std::mutex LocksMutex;
 
 static void ompt_tsan_thread_begin(ompt_thread_t thread_type,
@@ -1126,22 +1123,18 @@ static void ompt_tsan_dependences(ompt_data_t *task_data,
 static void ompt_tsan_lock_init(ompt_mutex_t kind, unsigned int hint,
                                 unsigned int impl, ompt_wait_id_t wait_id,
                                 const void *codeptr_ra) {
-  TsanFuncEntry(codeptr_ra);
   LocksMutex.lock();
-  std::mutex &Lock = Locks[wait_id].mu;
+  std::mutex &Lock = Locks[wait_id];
   LocksMutex.unlock();
-  TsanRWLockCreate(&Lock);
-  TsanFuncExit();
+  TsanRWLockCreate(&Lock, codeptr_ra);
 }
 
 static void ompt_tsan_lock_destroy(ompt_mutex_t kind, ompt_wait_id_t wait_id,
                                    const void *codeptr_ra) {
-  TsanFuncEntry(codeptr_ra);
   LocksMutex.lock();
-  std::mutex &Lock = Locks[wait_id].mu;
+  std::mutex &Lock = Locks[wait_id];
   LocksMutex.unlock();
-  TsanRWLockDestroy(&Lock);
-  TsanFuncExit();
+  TsanRWLockDestroy(&Lock, codeptr_ra);
 }
 
 /// OMPT event callbacks for handling locking.
@@ -1151,30 +1144,24 @@ static void ompt_tsan_mutex_acquired(ompt_mutex_t kind, ompt_wait_id_t wait_id,
   // Acquire our own lock to make sure that
   // 1. the previous release has finished.
   // 2. the next acquire doesn't start before we have finished our release.
-  TsanFuncEntry(codeptr_ra);
   LocksMutex.lock();
-  std::mutex &Lock = Locks[wait_id].mu;
-  Locks[wait_id].thread_id = ompt_get_thread_data()->value;
+  std::mutex &Lock = Locks[wait_id];
   LocksMutex.unlock();
 
   Lock.lock();
   TsanHappensAfter(&Lock);
-  TsanRWLockAcquired(&Lock, 1);
-  TsanFuncExit();
+  TsanRWLockAcquired(&Lock, 1, codeptr_ra);
 }
 
 static void ompt_tsan_mutex_released(ompt_mutex_t kind, ompt_wait_id_t wait_id,
                                      const void *codeptr_ra) {
-  TsanFuncEntry(codeptr_ra);
   LocksMutex.lock();
-  std::mutex &Lock = Locks[wait_id].mu;
-  auto lock_owner = Locks[wait_id].thread_id;
+  std::mutex &Lock = Locks[wait_id];
   LocksMutex.unlock();
   TsanHappensBefore(&Lock);
-  TsanRWLockReleased(&Lock, 1);
+  TsanRWLockReleased(&Lock, 1, codeptr_ra);
 
   Lock.unlock();
-  TsanFuncExit();
 }
 
 // callback , signature , variable to store result , required support level
@@ -1246,16 +1233,18 @@ static int ompt_tsan_initialize(ompt_function_lookup_t lookup, int device_num,
       (void (*)(const char *, int, const volatile void *, size_t)));
   findTsanFunction(__tsan_func_entry, (void (*)(const void *)));
   findTsanFunction(__tsan_func_exit, (void (*)(void)));
-  findTsanFunction(AnnotateRWLockCreate,
-                   (void (*)(const char *, int, const volatile void *)));
-  findTsanFunction(AnnotateRWLockDestroy,
-                   (void (*)(const char *, int, const volatile void *)));
   findTsanFunction(
-      AnnotateRWLockAcquired,
-      (void (*)(const char *, int, const volatile void *, size_t)));
+      AnnotateRWLockCreatePC,
+      (void (*)(const char *, int, const volatile void *, const void *)));
   findTsanFunction(
-      AnnotateRWLockReleased,
-      (void (*)(const char *, int, const volatile void *, size_t)));
+      AnnotateRWLockDestroyPC,
+      (void (*)(const char *, int, const volatile void *, const void *)));
+  findTsanFunction(AnnotateRWLockAcquiredPC,
+                   (void (*)(const char *, int, const volatile void *, size_t,
+                             const void *)));
+  findTsanFunction(AnnotateRWLockReleasedPC,
+                   (void (*)(const char *, int, const volatile void *, size_t,
+                             const void *)));
 
   SET_CALLBACK(thread_begin);
   SET_CALLBACK(thread_end);

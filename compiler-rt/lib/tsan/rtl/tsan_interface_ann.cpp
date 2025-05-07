@@ -170,9 +170,16 @@ void INTERFACE_ATTRIBUTE AnnotateCondVarWait(char *f, int l, uptr cv,
                                              uptr lock) {
 }
 
+// TODO: deduplicate PC code
 void INTERFACE_ATTRIBUTE AnnotateRWLockCreate(char *f, int l, uptr m) {
   SCOPED_ANNOTATION(AnnotateRWLockCreate);
   MutexCreate(thr, pc, m, MutexFlagWriteReentrant);
+}
+
+void INTERFACE_ATTRIBUTE AnnotateRWLockCreatePC(char *f, int l, uptr m,
+                                                uptr xpc) {
+  SCOPED_ANNOTATION(AnnotateRWLockCreate);
+  MutexCreate(thr, xpc, m, MutexFlagWriteReentrant);
 }
 
 void INTERFACE_ATTRIBUTE AnnotateRWLockCreateStatic(char *f, int l, uptr m) {
@@ -180,9 +187,21 @@ void INTERFACE_ATTRIBUTE AnnotateRWLockCreateStatic(char *f, int l, uptr m) {
   MutexCreate(thr, pc, m, MutexFlagWriteReentrant | MutexFlagLinkerInit);
 }
 
+void INTERFACE_ATTRIBUTE AnnotateRWLockCreateStaticPC(char *f, int l, uptr m,
+                                                      uptr xpc) {
+  SCOPED_ANNOTATION(AnnotateRWLockCreateStatic);
+  MutexCreate(thr, xpc, m, MutexFlagWriteReentrant | MutexFlagLinkerInit);
+}
+
 void INTERFACE_ATTRIBUTE AnnotateRWLockDestroy(char *f, int l, uptr m) {
   SCOPED_ANNOTATION(AnnotateRWLockDestroy);
   MutexDestroy(thr, pc, m);
+}
+
+void INTERFACE_ATTRIBUTE AnnotateRWLockDestroyPC(char *f, int l, uptr m,
+                                                 uptr xpc) {
+  SCOPED_ANNOTATION(AnnotateRWLockDestroy);
+  MutexDestroy(thr, xpc, m);
 }
 
 void INTERFACE_ATTRIBUTE AnnotateRWLockAcquired(char *f, int l, uptr m,
@@ -194,6 +213,15 @@ void INTERFACE_ATTRIBUTE AnnotateRWLockAcquired(char *f, int l, uptr m,
     MutexPostReadLock(thr, pc, m, MutexFlagDoPreLockOnPostLock);
 }
 
+void INTERFACE_ATTRIBUTE AnnotateRWLockAcquiredPC(char *f, int l, uptr m,
+                                                  uptr is_w, uptr xpc) {
+  SCOPED_ANNOTATION(AnnotateRWLockAcquired);
+  if (is_w)
+    MutexPostLock(thr, xpc, m, MutexFlagDoPreLockOnPostLock);
+  else
+    MutexPostReadLock(thr, xpc, m, MutexFlagDoPreLockOnPostLock);
+}
+
 void INTERFACE_ATTRIBUTE AnnotateRWLockReleased(char *f, int l, uptr m,
                                                 uptr is_w) {
   SCOPED_ANNOTATION(AnnotateRWLockReleased);
@@ -201,6 +229,15 @@ void INTERFACE_ATTRIBUTE AnnotateRWLockReleased(char *f, int l, uptr m,
     MutexUnlock(thr, pc, m);
   else
     MutexReadUnlock(thr, pc, m);
+}
+
+void INTERFACE_ATTRIBUTE AnnotateRWLockReleasedPC(char *f, int l, uptr m,
+                                                  uptr is_w, uptr xpc) {
+  SCOPED_ANNOTATION(AnnotateRWLockReleased);
+  if (is_w)
+    MutexUnlock(thr, xpc, m);
+  else
+    MutexReadUnlock(thr, xpc, m);
 }
 
 void INTERFACE_ATTRIBUTE AnnotateTraceMemory(char *f, int l, uptr mem) {
