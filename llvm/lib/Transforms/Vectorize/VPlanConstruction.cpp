@@ -416,7 +416,6 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
   // order of blocks. Set region entry and exiting after both HeaderVPB and
   // LatchVPBB have been disconnected from their predecessors/successors.
   auto *R = Plan.createVPRegionBlock("", false /*isReplicator*/);
-
   VPBlockUtils::insertOnEdge(LatchVPBB, LatchExitVPB, R);
   VPBlockUtils::disconnectBlocks(LatchVPBB, R);
   VPBlockUtils::connectBlocks(PreheaderVPBB, R);
@@ -481,9 +480,10 @@ void VPlanTransforms::prepareForVectorization(VPlan &Plan, Type *InductionTy,
   VPBlockUtils::insertBlockAfter(VecPreheader, Plan.getEntry());
 
   VPBasicBlock *MiddleVPBB = Plan.createVPBasicBlock("middle.block");
-  // Canonical LatchVPB has header block as last successor. If it has another
-  // successor, the latter is an exit block - insert middle block on its edge.
-  // Otherwise, add middle block as another successor retaining header as last.
+  // The canonical LatchVPB has the header block as last successor. If it has
+  // another successor, this successor is an exit block - insert middle block on
+  // its edge. Otherwise, add middle block as another successor retaining header
+  // as last.
   if (LatchVPB->getNumSuccessors() == 2) {
     VPBlockBase *LatchExitVPB = LatchVPB->getSuccessors()[0];
     VPBlockUtils::insertOnEdge(LatchVPB, LatchExitVPB, MiddleVPBB);
