@@ -288,16 +288,15 @@ Your options are as follows:
    in ``llvm/llvm-project``.
 
 .. note::
-   When not using user branches, GitHub will not display proper diffs for
+   When using the second approach, GitHub will not display proper diffs for
    subsequent PRs in a stack. Instead, it will show a combined diff that
    includes all commits from earlier PRs.
 
-   As described in the first option above, in such cases it is the PR author’s
-   responsibility to clearly indicate which commits are relevant to the
-   current PR. For example: “The first N commits are from the base PR.”
+   As described above, it is the PR author’s responsibility to clearly indicate
+   which commits are relevant to the current PR.
+   For example: “The first N commits are from the base PR.”
 
-   You can avoid this issue by using user branches directly in the
-   ``llvm/llvm-project`` repository.
+   You can avoid this issue by using the first or the third approach.
 
 
 Using Graphite for stacked Pull Requests
