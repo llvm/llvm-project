@@ -206,16 +206,14 @@ public:
                << "\n";
       Source<DeclContext *> FromDC(
           cast<DeclContext>(From)->getPrimaryContext());
-      if (FromOrigins.count(FromDC) &&
-          Parent.HasImporterForOrigin(*FromOrigins.at(FromDC).AST)) {
+      if (auto It = FromOrigins.find(FromDC);
+          It != FromOrigins.end() &&
+          Parent.HasImporterForOrigin(*It->second.AST)) {
         if (LoggingEnabled)
-          logs() << "(ExternalASTMerger*)" << (void*)&Parent
-                 << " forced origin (DeclContext*)"
-                 << (void*)FromOrigins.at(FromDC).DC
-                 << ", (ASTContext*)"
-                 << (void*)FromOrigins.at(FromDC).AST
-                 << "\n";
-        Parent.ForceRecordOrigin(ToDC, FromOrigins.at(FromDC));
+          logs() << "(ExternalASTMerger*)" << (void *)&Parent
+                 << " forced origin (DeclContext*)" << (void *)It->second.DC
+                 << ", (ASTContext*)" << (void *)It->second.AST << "\n";
+        Parent.ForceRecordOrigin(ToDC, It->second);
       } else {
         if (LoggingEnabled)
           logs() << "(ExternalASTMerger*)" << (void*)&Parent
@@ -276,8 +274,8 @@ bool ExternalASTMerger::HasImporterForOrigin(ASTContext &OriginContext) {
 template <typename CallbackType>
 void ExternalASTMerger::ForEachMatchingDC(const DeclContext *DC,
                                           CallbackType Callback) {
-  if (Origins.count(DC)) {
-    ExternalASTMerger::DCOrigin Origin = Origins[DC];
+  if (auto It = Origins.find(DC); It != Origins.end()) {
+    ExternalASTMerger::DCOrigin Origin = It->second;
     LazyASTImporter &Importer = LazyImporterForOrigin(*this, *Origin.AST);
     Callback(Importer, Importer.GetReverse(), Origin.DC);
   } else {
@@ -471,8 +469,9 @@ static bool importSpecializationsIfNeeded(Decl *D, ASTImporter *Importer) {
   return false;
 }
 
-bool ExternalASTMerger::FindExternalVisibleDeclsByName(const DeclContext *DC,
-                                                       DeclarationName Name) {
+bool ExternalASTMerger::FindExternalVisibleDeclsByName(
+    const DeclContext *DC, DeclarationName Name,
+    const DeclContext *OriginalDC) {
   llvm::SmallVector<NamedDecl *, 1> Decls;
   llvm::SmallVector<Candidate, 4> Candidates;
 

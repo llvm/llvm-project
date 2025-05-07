@@ -129,7 +129,7 @@ class DynamicValueTestCase(TestBase):
         self.expect(
             "frame var -d run-target --ptr-depth=2 --show-types anotherA.m_client_A",
             "frame var finds its way into a child member",
-            patterns=["\(B \*\)"],
+            patterns=[r"\(B \*\)"],
         )
 
         # Now make sure we also get it right for a reference as well:
@@ -170,7 +170,7 @@ class DynamicValueTestCase(TestBase):
         self.assertTrue(reallyA_value)
         reallyA_loc = int(reallyA_value.GetLocation(), 16)
 
-        # Finally continue to doSomething again, and make sure we get the right value for anotherA,
+        # Continue to doSomething again, and make sure we get the right value for anotherA,
         # which this time around is just an "A".
 
         threads = lldbutil.continue_to_breakpoint(process, do_something_bpt)
@@ -183,6 +183,19 @@ class DynamicValueTestCase(TestBase):
         anotherA_loc = int(anotherA_value.GetValue(), 16)
         self.assertEqual(anotherA_loc, reallyA_loc)
         self.assertEqual(anotherA_value.GetTypeName().find("B"), -1)
+
+        # Finally do the same with a B in an anonymous namespace.
+        threads = lldbutil.continue_to_breakpoint(process, do_something_bpt)
+        self.assertEqual(len(threads), 1)
+        thread = threads[0]
+
+        frame = thread.GetFrameAtIndex(0)
+        anotherA_value = frame.FindVariable("anotherA", use_dynamic)
+        self.assertTrue(anotherA_value)
+        self.assertIn("B", anotherA_value.GetTypeName())
+        anon_b_value = anotherA_value.GetChildMemberWithName("m_anon_b_value")
+        self.assertTrue(anon_b_value)
+        self.assertEqual(anon_b_value.GetValueAsSigned(), 47)
 
     def examine_value_object_of_this_ptr(
         self, this_static, this_dynamic, dynamic_location
@@ -253,3 +266,16 @@ class DynamicValueTestCase(TestBase):
         contained_b_static_addr = int(contained_b_static.GetValue(), 16)
 
         self.assertLess(contained_b_addr, contained_b_static_addr)
+
+    @no_debug_info_test
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24663")
+    def test_from_forward_decl(self):
+        """Test fetching C++ dynamic values forward-declared types. It's
+        imperative that this is a separate test so that we don't end up parsing
+        a definition of A from somewhere else."""
+        self.build()
+        lldbutil.run_to_name_breakpoint(self, "take_A")
+        self.expect(
+            "frame var -d run-target --ptr-depth=1 --show-types a",
+            substrs=["(B *) a", "m_b_value = 10"],
+        )

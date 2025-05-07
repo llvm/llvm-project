@@ -366,6 +366,8 @@ AddressClass ObjectFile::GetAddressClass(addr_t file_addr) {
           case eSectionTypeDWARFAppleObjC:
           case eSectionTypeDWARFGNUDebugAltLink:
           case eSectionTypeCTF:
+          case eSectionTypeLLDBFormatters:
+          case eSectionTypeLLDBTypeSummaries:
           case eSectionTypeSwiftModules:
             return AddressClass::eDebug;
           case eSectionTypeEHFrame:
@@ -644,8 +646,7 @@ ObjectFile::GetLoadableData(Target &target) {
   for (size_t i = 0; i < section_count; ++i) {
     LoadableData loadable;
     SectionSP section_sp = section_list->GetSectionAtIndex(i);
-    loadable.Dest =
-        target.GetSectionLoadList().GetSectionLoadAddress(section_sp);
+    loadable.Dest = target.GetSectionLoadAddress(section_sp);
     if (loadable.Dest == LLDB_INVALID_ADDRESS)
       continue;
     // We can skip sections like bss
@@ -733,10 +734,9 @@ void llvm::format_provider<ObjectFile::Strata>::format(
   }
 }
 
-
-Symtab *ObjectFile::GetSymtab() {
+Symtab *ObjectFile::GetSymtab(bool can_create) {
   ModuleSP module_sp(GetModule());
-  if (module_sp) {
+  if (module_sp && can_create) {
     // We can't take the module lock in ObjectFile::GetSymtab() or we can
     // deadlock in DWARF indexing when any file asks for the symbol table from
     // an object file. This currently happens in the preloading of symbols in
@@ -772,6 +772,15 @@ uint32_t ObjectFile::GetCacheHash() {
   strm.Format("{0}-{1}-{2}", m_file, GetType(), GetStrata());
   m_cache_hash = llvm::djbHash(strm.GetString());
   return *m_cache_hash;
+}
+
+std::string ObjectFile::GetObjectName() const {
+  if (ModuleSP module_sp = GetModule())
+    if (ConstString object_name = module_sp->GetObjectName())
+      return llvm::formatv("{0}({1})", GetFileSpec().GetFilename().GetString(),
+                           object_name.GetString())
+          .str();
+  return GetFileSpec().GetFilename().GetString();
 }
 
 namespace llvm {

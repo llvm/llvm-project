@@ -9,13 +9,15 @@
 #ifndef LLDB_SOURCE_PLUGINS_OBJECTFILE_SaveCoreOPTIONS_H
 #define LLDB_SOURCE_PLUGINS_OBJECTFILE_SaveCoreOPTIONS_H
 
+#include "lldb/Target/ThreadCollection.h"
 #include "lldb/Utility/FileSpec.h"
-#include "lldb/lldb-forward.h"
-#include "lldb/lldb-types.h"
+#include "lldb/Utility/RangeMap.h"
 
 #include <optional>
 #include <string>
 #include <unordered_set>
+
+using MemoryRanges = lldb_private::RangeVector<lldb::addr_t, lldb::addr_t>;
 
 namespace lldb_private {
 
@@ -38,8 +40,14 @@ public:
   Status AddThread(lldb::ThreadSP thread_sp);
   bool RemoveThread(lldb::ThreadSP thread_sp);
   bool ShouldThreadBeSaved(lldb::tid_t tid) const;
+  bool HasSpecifiedThreads() const;
 
   Status EnsureValidConfiguration(lldb::ProcessSP process_sp) const;
+  const MemoryRanges &GetCoreFileMemoryRanges() const;
+
+  void AddMemoryRegionToSave(const lldb_private::MemoryRegionInfo &region);
+
+  lldb_private::ThreadCollection::collection GetThreadsToSave() const;
 
   void Clear();
 
@@ -51,6 +59,7 @@ private:
   std::optional<lldb::SaveCoreStyle> m_style;
   lldb::ProcessSP m_process_sp;
   std::unordered_set<lldb::tid_t> m_threads_to_save;
+  MemoryRanges m_regions_to_save;
 };
 } // namespace lldb_private
 

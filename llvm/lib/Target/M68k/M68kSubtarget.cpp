@@ -115,7 +115,7 @@ M68kSubtarget &M68kSubtarget::initializeSubtargetDependencies(
 //  ---------------------+------------+------------+------------+-------------
 //                branch |   pc-rel   |   pc-rel   |   pc-rel   |   pc-rel
 //  ---------------------+------------+------------+------------+-------------
-//           call global |    @PLT    |    @PLT    |    @PLT    |    @PLT
+//           call global |  absolute  |    @PLT    |  absolute  |    @PLT
 //  ---------------------+------------+------------+------------+-------------
 //         call internal |   pc-rel   |   pc-rel   |   pc-rel   |   pc-rel
 //  ---------------------+------------+------------+------------+-------------
@@ -127,6 +127,24 @@ M68kSubtarget &M68kSubtarget::initializeSubtargetDependencies(
 //  ---------------------+------------+------------+------------+-------------
 //      data global big* |   pc-rel   |  @GOTPCREL |  absolute  |  @GOTPCREL
 //  ---------------------+------------+------------+------------+-------------
+//                       |          Large          |
+//                       +-------------------------+
+//                       |   Static   |    PIC     |
+//  ---------------------+------------+------------+
+//                branch |  absolute  |   pc-rel   |
+//  ---------------------+------------+------------+
+//           call global |  absolute  |    @PLT    |
+//  ---------------------+------------+------------+
+//         call internal |  absolute  |   pc-rel   |
+//  ---------------------+------------+------------+
+//            data local |  absolute  |  @GOTOFF   |
+//  ---------------------+------------+------------+
+//       data local big* |  absolute  |  @GOTOFF   |
+//  ---------------------+------------+------------+
+//           data global |  absolute  |  @GOTOFF   |
+//  ---------------------+------------+------------+
+//      data global big* |  absolute  |  @GOTOFF   |
+//  ---------------------+------------+------------+
 //
 // * Big data potentially cannot be reached within 16 bit offset and requires
 //   special handling for old(x00 and x10) CPUs. Normally these symbols go into
@@ -142,8 +160,22 @@ M68kSubtarget &M68kSubtarget::initializeSubtargetDependencies(
 /// Classify a blockaddress reference for the current subtarget according to how
 /// we should reference it in a non-pcrel context.
 unsigned char M68kSubtarget::classifyBlockAddressReference() const {
-  // Unless we start to support Large Code Model branching is always pc-rel
-  return M68kII::MO_PC_RELATIVE_ADDRESS;
+  switch (TM.getCodeModel()) {
+  default:
+    llvm_unreachable("Unsupported code model");
+  case CodeModel::Small:
+  case CodeModel::Kernel:
+  case CodeModel::Medium: {
+    return M68kII::MO_PC_RELATIVE_ADDRESS;
+  }
+  case CodeModel::Large: {
+    if (isPositionIndependent()) {
+      return M68kII::MO_PC_RELATIVE_ADDRESS;
+    } else {
+      return M68kII::MO_ABSOLUTE_ADDRESS;
+    }
+  }
+  }
 }
 
 unsigned char
@@ -168,6 +200,13 @@ M68kSubtarget::classifyLocalReference(const GlobalValue *GV) const {
       if (atLeastM68020()) {
         return M68kII::MO_PC_RELATIVE_ADDRESS;
       }
+      return M68kII::MO_ABSOLUTE_ADDRESS;
+    }
+  }
+  case CodeModel::Large: {
+    if (isPositionIndependent()) {
+      return M68kII::MO_GOTOFF;
+    } else {
       return M68kII::MO_ABSOLUTE_ADDRESS;
     }
   }
@@ -212,6 +251,12 @@ unsigned char M68kSubtarget::classifyGlobalReference(const GlobalValue *GV,
 
     return M68kII::MO_ABSOLUTE_ADDRESS;
   }
+  case CodeModel::Large: {
+    if (isPositionIndependent())
+      return M68kII::MO_GOTOFF;
+
+    return M68kII::MO_ABSOLUTE_ADDRESS;
+  }
   }
 }
 
@@ -221,7 +266,8 @@ unsigned M68kSubtarget::getJumpTableEncoding() const {
     // the potential delta between the jump target and table base can be larger
     // than displacement field, which is True for older CPUs(16 bit disp)
     // in Medium model(can have large data way beyond 16 bit).
-    if (TM.getCodeModel() == CodeModel::Medium && !atLeastM68020())
+    if ((TM.getCodeModel() == CodeModel::Medium && !atLeastM68020()) ||
+        TM.getCodeModel() == CodeModel::Large)
       return MachineJumpTableInfo::EK_Custom32;
 
     return MachineJumpTableInfo::EK_LabelDifference32;

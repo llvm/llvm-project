@@ -26,7 +26,7 @@ void basic_test() {
     typedef std::set<int> C;
     typedef C::value_type V;
     C m = {10, 8};
-    m = {1, 2, 3, 4, 5, 6};
+    m   = {1, 2, 3, 4, 5, 6};
     assert(m.size() == 6);
     assert(std::distance(m.begin(), m.end()) == 6);
     C::const_iterator i = m.cbegin();
@@ -41,7 +41,7 @@ void basic_test() {
     typedef std::set<int, std::less<int>, min_allocator<int> > C;
     typedef C::value_type V;
     C m = {10, 8};
-    m = {1, 2, 3, 4, 5, 6};
+    m   = {1, 2, 3, 4, 5, 6};
     assert(m.size() == 6);
     assert(std::distance(m.begin(), m.end()) == 6);
     C::const_iterator i = m.cbegin();

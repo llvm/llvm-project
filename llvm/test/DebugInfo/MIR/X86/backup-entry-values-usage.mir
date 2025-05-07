@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=livedebugvalues -emit-call-site-info -march=x86-64 -o - \
+# RUN: llc -run-pass=livedebugvalues -emit-call-site-info -o - \
 # RUN:    %s  -experimental-debug-variable-locations=false | FileCheck %s
 
 ## Test from PR47628.

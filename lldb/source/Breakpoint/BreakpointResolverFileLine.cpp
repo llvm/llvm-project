@@ -46,14 +46,16 @@ BreakpointResolverSP BreakpointResolverFileLine::CreateFromStructuredData(
   success = options_dict.GetValueForKeyAsString(GetKey(OptionNames::FileName),
                                                 filename);
   if (!success) {
-    error.SetErrorString("BRFL::CFSD: Couldn't find filename entry.");
+    error =
+        Status::FromErrorString("BRFL::CFSD: Couldn't find filename entry.");
     return nullptr;
   }
 
   success = options_dict.GetValueForKeyAsInteger(
       GetKey(OptionNames::LineNumber), line);
   if (!success) {
-    error.SetErrorString("BRFL::CFSD: Couldn't find line number entry.");
+    error =
+        Status::FromErrorString("BRFL::CFSD: Couldn't find line number entry.");
     return nullptr;
   }
 
@@ -67,21 +69,24 @@ BreakpointResolverSP BreakpointResolverFileLine::CreateFromStructuredData(
   success = options_dict.GetValueForKeyAsBoolean(GetKey(OptionNames::Inlines),
                                                  check_inlines);
   if (!success) {
-    error.SetErrorString("BRFL::CFSD: Couldn't find check inlines entry.");
+    error = Status::FromErrorString(
+        "BRFL::CFSD: Couldn't find check inlines entry.");
     return nullptr;
   }
 
   success = options_dict.GetValueForKeyAsBoolean(
       GetKey(OptionNames::SkipPrologue), skip_prologue);
   if (!success) {
-    error.SetErrorString("BRFL::CFSD: Couldn't find skip prologue entry.");
+    error = Status::FromErrorString(
+        "BRFL::CFSD: Couldn't find skip prologue entry.");
     return nullptr;
   }
 
   success = options_dict.GetValueForKeyAsBoolean(
       GetKey(OptionNames::ExactMatch), exact_match);
   if (!success) {
-    error.SetErrorString("BRFL::CFSD: Couldn't find exact match entry.");
+    error =
+        Status::FromErrorString("BRFL::CFSD: Couldn't find exact match entry.");
     return nullptr;
   }
 
@@ -134,21 +139,23 @@ void BreakpointResolverFileLine::FilterContexts(SymbolContextList &sc_list) {
     if (!sc.block)
       continue;
 
-    FileSpec file;
+    SupportFileSP file_sp;
     uint32_t line;
     const Block *inline_block = sc.block->GetContainingInlinedBlock();
     if (inline_block) {
       const Declaration &inline_declaration = inline_block->GetInlinedFunctionInfo()->GetDeclaration();
       if (!inline_declaration.IsValid())
         continue;
-      file = inline_declaration.GetFile();
+      file_sp = std::make_shared<SupportFile>(inline_declaration.GetFile());
       line = inline_declaration.GetLine();
     } else if (sc.function)
-      sc.function->GetStartLineSourceInfo(file, line);
+      sc.function->GetStartLineSourceInfo(file_sp, line);
     else
       continue;
 
-    if (file != sc.line_entry.GetFile()) {
+    if (!file_sp ||
+        !file_sp->Equal(*sc.line_entry.file_sp,
+                        SupportFile::eEqualFileSpecAndChecksumIfSet)) {
       LLDB_LOG(log, "unexpected symbol context file {0}",
                sc.line_entry.GetFile());
       continue;
@@ -185,7 +192,8 @@ void BreakpointResolverFileLine::FilterContexts(SymbolContextList &sc_list) {
     const int decl_line_is_too_late_fudge = 1;
     if (line &&
         m_location_spec.GetLine() < line - decl_line_is_too_late_fudge) {
-      LLDB_LOG(log, "removing symbol context at {0}:{1}", file, line);
+      LLDB_LOG(log, "removing symbol context at {0}:{1}",
+               file_sp->GetSpecOnly(), line);
       sc_list.RemoveContextAtIndex(i);
       --i;
     }

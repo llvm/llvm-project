@@ -209,8 +209,8 @@ public:
   unsigned short SchedClass;     // enum identifying instr sched class
   unsigned char NumImplicitUses; // Num of regs implicitly used
   unsigned char NumImplicitDefs; // Num of regs implicitly defined
-  unsigned short ImplicitOffset; // Offset to start of implicit op list
   unsigned short OpInfoOffset;   // Offset to info about operands
+  unsigned int ImplicitOffset;   // Offset to start of implicit op list
   uint64_t Flags;                // Flags identifying machine instr class
   uint64_t TSFlags;              // Target Specific Flag values
 
@@ -584,13 +584,13 @@ public:
 
   /// Return true if this instruction implicitly
   /// uses the specified physical register.
-  bool hasImplicitUseOfPhysReg(unsigned Reg) const {
+  bool hasImplicitUseOfPhysReg(MCRegister Reg) const {
     return is_contained(implicit_uses(), Reg);
   }
 
   /// Return true if this instruction implicitly
   /// defines the specified physical register.
-  bool hasImplicitDefOfPhysReg(unsigned Reg,
+  bool hasImplicitDefOfPhysReg(MCRegister Reg,
                                const MCRegisterInfo *MRI = nullptr) const;
 
   /// Return the scheduling class for this instruction.  The
@@ -617,7 +617,7 @@ public:
 
   /// Return true if this instruction defines the specified physical
   /// register, either explicitly or implicitly.
-  bool hasDefOfPhysReg(const MCInst &MI, unsigned Reg,
+  bool hasDefOfPhysReg(const MCInst &MI, MCRegister Reg,
                        const MCRegisterInfo &RI) const;
 };
 

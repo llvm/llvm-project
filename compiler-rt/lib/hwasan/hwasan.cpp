@@ -357,8 +357,6 @@ __attribute__((constructor(0))) void __hwasan_init() {
   hwasan_init_is_running = 1;
   SanitizerToolName = "HWAddressSanitizer";
 
-  InitTlsSize();
-
   CacheBinaryName();
   InitializeFlags();
 
@@ -366,6 +364,8 @@ __attribute__((constructor(0))) void __hwasan_init() {
   SetCheckUnwindCallback(CheckUnwind);
 
   __sanitizer_set_report_path(common_flags()->log_path);
+
+  InitializePlatformEarly();
 
   AndroidTestTlsSlot();
 

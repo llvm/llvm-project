@@ -106,9 +106,7 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]].sub_32
-    ; CHECK-NEXT: [[ORRWrr:%[0-9]+]]:gpr32 = ORRWrr $wzr, [[COPY1]]
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[ORRWrr]], %subreg.sub_32
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32sp = COPY [[SUBREG_TO_REG]].sub_32
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32sp = COPY [[COPY]].sub_32
     ; CHECK-NEXT: [[ADDWri:%[0-9]+]]:gpr32sp = ADDWri [[COPY2]], 1, 0
     ; CHECK-NEXT: $w0 = COPY [[ADDWri]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0

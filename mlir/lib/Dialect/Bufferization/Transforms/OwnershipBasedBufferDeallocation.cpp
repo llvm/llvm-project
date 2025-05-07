@@ -30,7 +30,7 @@
 
 namespace mlir {
 namespace bufferization {
-#define GEN_PASS_DEF_OWNERSHIPBASEDBUFFERDEALLOCATION
+#define GEN_PASS_DEF_OWNERSHIPBASEDBUFFERDEALLOCATIONPASS
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
 } // namespace bufferization
 } // namespace mlir
@@ -824,7 +824,7 @@ FailureOr<Operation *> BufferDeallocation::handleInterface(CallOpInterface op) {
   // the function is referenced by SSA value instead of a Symbol, it's assumed
   // to be public. (And we cannot easily change the type of the SSA value
   // anyway.)
-  Operation *funcOp = op.resolveCallable(state.getSymbolTable());
+  Operation *funcOp = op.resolveCallableInTable(state.getSymbolTable());
   bool isPrivate = false;
   if (auto symbol = dyn_cast_or_null<SymbolOpInterface>(funcOp))
     isPrivate = symbol.isPrivate() && !symbol.isDeclaration();
@@ -1019,14 +1019,10 @@ namespace {
 /// into the right positions. Furthermore, it inserts additional clones if
 /// necessary. It uses the algorithm described at the top of the file.
 struct OwnershipBasedBufferDeallocationPass
-    : public bufferization::impl::OwnershipBasedBufferDeallocationBase<
+    : public bufferization::impl::OwnershipBasedBufferDeallocationPassBase<
           OwnershipBasedBufferDeallocationPass> {
-  OwnershipBasedBufferDeallocationPass() = default;
-  OwnershipBasedBufferDeallocationPass(DeallocationOptions options)
-      : OwnershipBasedBufferDeallocationPass() {
-    this->privateFuncDynamicOwnership.setValue(
-        options.privateFuncDynamicOwnership);
-  }
+  using Base::Base;
+
   void runOnOperation() override {
     DeallocationOptions options;
     options.privateFuncDynamicOwnership = privateFuncDynamicOwnership;
@@ -1059,14 +1055,4 @@ bufferization::deallocateBuffersOwnershipBased(FunctionOpInterface op,
 
   // Place all required temporary clone and dealloc nodes.
   return deallocation.deallocate(op);
-}
-
-//===----------------------------------------------------------------------===//
-// OwnershipBasedBufferDeallocationPass construction
-//===----------------------------------------------------------------------===//
-
-std::unique_ptr<Pass>
-mlir::bufferization::createOwnershipBasedBufferDeallocationPass(
-    DeallocationOptions options) {
-  return std::make_unique<OwnershipBasedBufferDeallocationPass>(options);
 }

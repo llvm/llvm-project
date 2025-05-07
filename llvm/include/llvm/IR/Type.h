@@ -165,8 +165,8 @@ public:
   bool isPPC_FP128Ty() const { return getTypeID() == PPC_FP128TyID; }
 
   /// Return true if this is a well-behaved IEEE-like type, which has a IEEE
-  /// compatible layout as defined by APFloat::isIEEE(), and does not have
-  /// non-IEEE values, such as x86_fp80's unnormal values.
+  /// compatible layout, and does not have non-IEEE values, such as x86_fp80's
+  /// unnormal values.
   bool isIEEELikeFPTy() const {
     switch (getTypeID()) {
     case DoubleTyID:
@@ -206,7 +206,20 @@ public:
   bool isScalableTargetExtTy() const;
 
   /// Return true if this is a type whose size is a known multiple of vscale.
+  bool isScalableTy(SmallPtrSetImpl<const Type *> &Visited) const;
   bool isScalableTy() const;
+
+  /// Return true if this type is or contains a target extension type that
+  /// disallows being used as a global.
+  bool
+  containsNonGlobalTargetExtType(SmallPtrSetImpl<const Type *> &Visited) const;
+  bool containsNonGlobalTargetExtType() const;
+
+  /// Return true if this type is or contains a target extension type that
+  /// disallows being used as a local.
+  bool
+  containsNonLocalTargetExtType(SmallPtrSetImpl<const Type *> &Visited) const;
+  bool containsNonLocalTargetExtType() const;
 
   /// Return true if this is a FP type or a vector of FP.
   bool isFPOrFPVectorTy() const { return getScalarType()->isFloatingPointTy(); }
@@ -250,10 +263,6 @@ public:
   /// True if this is an instance of PointerType.
   bool isPointerTy() const { return getTypeID() == PointerTyID; }
 
-  /// True if this is an instance of an opaque PointerType.
-  LLVM_DEPRECATED("Use isPointerTy() instead", "isPointerTy")
-  bool isOpaquePointerTy() const { return isPointerTy(); };
-
   /// Return true if this is a pointer type or a vector of pointer types.
   bool isPtrOrPtrVectorTy() const { return getScalarType()->isPointerTy(); }
 
@@ -261,6 +270,9 @@ public:
   inline bool isVectorTy() const {
     return getTypeID() == ScalableVectorTyID || getTypeID() == FixedVectorTyID;
   }
+
+  // True if this is an instance of TargetExtType of RISC-V vector tuple.
+  bool isRISCVVectorTupleTy() const;
 
   /// Return true if this type could be converted with a lossless BitCast to
   /// type 'Ty'. For example, i8* to i32*. BitCasts are valid for types of the
@@ -274,9 +286,7 @@ public:
 
   /// Return true if the type is "first class", meaning it is a valid type for a
   /// Value.
-  bool isFirstClassType() const {
-    return getTypeID() != FunctionTyID && getTypeID() != VoidTyID;
-  }
+  bool isFirstClassType() const;
 
   /// Return true if the type is a valid type for a register in codegen. This
   /// includes all first-class types except struct and array types.
@@ -333,10 +343,6 @@ public:
   /// floating-point types. If the FP type does not have a stable mantissa (e.g.
   /// ppc long double), this method returns -1.
   int getFPMantissaWidth() const;
-
-  /// Return whether the type is IEEE compatible, as defined by the eponymous
-  /// method in APFloat.
-  bool isIEEE() const;
 
   /// If this is a vector type, return the element type, otherwise return
   /// 'this'.
@@ -402,14 +408,6 @@ public:
   }
 
   inline StringRef getTargetExtName() const;
-
-  /// Only use this method in code that is not reachable with opaque pointers,
-  /// or part of deprecated methods that will be removed as part of the opaque
-  /// pointers transition.
-  [[deprecated("Pointers no longer have element types")]]
-  Type *getNonOpaquePointerElementType() const {
-    llvm_unreachable("Pointers no longer have element types");
-  }
 
   /// Given vector type, change the element type,
   /// whilst keeping the old number of elements.
@@ -480,8 +478,9 @@ public:
   static Type *getWasm_FuncrefTy(LLVMContext &C);
 
   /// Return a pointer to the current type. This is equivalent to
-  /// PointerType::get(Foo, AddrSpace).
+  /// PointerType::get(Ctx, AddrSpace).
   /// TODO: Remove this after opaque pointer transition is complete.
+  LLVM_DEPRECATED("Use PointerType::get instead", "PointerType::get")
   PointerType *getPointerTo(unsigned AddrSpace = 0) const;
 
 private:

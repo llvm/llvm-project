@@ -18,7 +18,7 @@ func.func @entry() {
 }
 
 func.func @test_deinterleave() {
-  %step_vector = llvm.intr.experimental.stepvector : vector<[4]xi8>
+  %step_vector = llvm.intr.stepvector : vector<[4]xi8>
   vector.print %step_vector : vector<[4]xi8>
   // CHECK: ( 0, 1, 2, 3, 4, 5, 6, 7 )
   %v1, %v2 = vector.deinterleave %step_vector : vector<[4]xi8> -> vector<[2]xi8>

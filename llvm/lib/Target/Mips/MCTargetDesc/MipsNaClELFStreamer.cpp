@@ -16,7 +16,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Mips.h"
 #include "MipsELFStreamer.h"
 #include "MipsMCNaCl.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -98,7 +97,7 @@ private:
     }
   }
 
-  void emitMask(unsigned AddrReg, unsigned MaskReg,
+  void emitMask(MCRegister AddrReg, unsigned MaskReg,
                 const MCSubtargetInfo &STI) {
     MCInst MaskInst;
     MaskInst.setOpcode(Mips::AND);
@@ -111,7 +110,7 @@ private:
   // Sandbox indirect branch or return instruction by inserting mask operation
   // before it.
   void sandboxIndirectJump(const MCInst &MI, const MCSubtargetInfo &STI) {
-    unsigned AddrReg = MI.getOperand(0).getReg();
+    MCRegister AddrReg = MI.getOperand(0).getReg();
 
     emitBundleLock(false);
     emitMask(AddrReg, IndirectBranchMaskReg, STI);
@@ -127,13 +126,13 @@ private:
     emitBundleLock(false);
     if (MaskBefore) {
       // Sandbox memory access.
-      unsigned BaseReg = MI.getOperand(AddrIdx).getReg();
+      MCRegister BaseReg = MI.getOperand(AddrIdx).getReg();
       emitMask(BaseReg, LoadStoreStackMaskReg, STI);
     }
     MipsELFStreamer::emitInstruction(MI, STI);
     if (MaskAfter) {
       // Sandbox SP change.
-      unsigned SPReg = MI.getOperand(0).getReg();
+      MCRegister SPReg = MI.getOperand(0).getReg();
       assert((Mips::SP == SPReg) && "Unexpected stack-pointer register.");
       emitMask(SPReg, LoadStoreStackMaskReg, STI);
     }
@@ -183,7 +182,7 @@ public:
       // Start the sandboxing sequence by emitting call.
       emitBundleLock(true);
       if (IsIndirectCall) {
-        unsigned TargetReg = Inst.getOperand(1).getReg();
+        MCRegister TargetReg = Inst.getOperand(1).getReg();
         emitMask(TargetReg, IndirectBranchMaskReg, STI);
       }
       MipsELFStreamer::emitInstruction(Inst, STI);
@@ -254,7 +253,7 @@ bool isBasePlusOffsetMemoryAccess(unsigned Opcode, unsigned *AddrIdx,
   }
 }
 
-bool baseRegNeedsLoadStoreMask(unsigned Reg) {
+bool baseRegNeedsLoadStoreMask(MCRegister Reg) {
   // The contents of SP and thread pointer register do not require masking.
   return Reg != Mips::SP && Reg != Mips::T8;
 }

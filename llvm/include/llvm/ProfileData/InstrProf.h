@@ -28,6 +28,7 @@
 #include "llvm/Support/BalancedPartitioning.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
@@ -56,6 +57,37 @@ class InstrProfSymtab;
 class Instruction;
 class MDNode;
 class Module;
+
+// A struct to define how the data stream should be patched. For Indexed
+// profiling, only uint64_t data type is needed.
+struct PatchItem {
+  uint64_t Pos;         // Where to patch.
+  ArrayRef<uint64_t> D; // An array of source data.
+};
+
+// A wrapper class to abstract writer stream with support of bytes
+// back patching.
+class ProfOStream {
+public:
+  ProfOStream(raw_fd_ostream &FD);
+  ProfOStream(raw_string_ostream &STR);
+
+  [[nodiscard]] uint64_t tell() const;
+  void write(uint64_t V);
+  void write32(uint32_t V);
+  void writeByte(uint8_t V);
+
+  // \c patch can only be called when all data is written and flushed.
+  // For raw_string_ostream, the patch is done on the target string
+  // directly and it won't be reflected in the stream's internal buffer.
+  void patch(ArrayRef<PatchItem> P);
+
+  // If \c OS is an instance of \c raw_fd_ostream, this field will be
+  // true. Otherwise, \c OS will be an raw_string_ostream.
+  bool IsFDOStream;
+  raw_ostream &OS;
+  support::endian::Writer LE;
+};
 
 enum InstrProfSectKind {
 #define INSTR_PROF_SECT_ENTRY(Kind, SectNameCommon, SectNameCoff, Prefix) Kind,
@@ -180,6 +212,10 @@ inline StringRef getInstrProfBitmapBiasVarName() {
 
 /// Return the marker used to separate PGO names during serialization.
 inline StringRef getInstrProfNameSeparator() { return "\01"; }
+
+/// Determines whether module targets a GPU eligable for PGO
+/// instrumentation
+bool isGPUProfTarget(const Module &M);
 
 /// Please use getIRPGOFuncName for LLVM IR instrumentation. This function is
 /// for front-end (Clang, etc) instrumentation.
@@ -340,7 +376,9 @@ enum class InstrProfKind {
   MemProf = 0x40,
   // A temporal profile.
   TemporalProfile = 0x80,
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/TemporalProfile)
+  // A profile with loop entry basic blocks instrumentation.
+  LoopEntriesInstrumentation = 0x100,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/LoopEntriesInstrumentation)
 };
 
 const std::error_category &instrprof_category();
@@ -500,7 +538,8 @@ private:
   // name-set = {PGOFuncName} union {getCanonicalName(PGOFuncName)}
   // - In MD5NameMap: <MD5Hash(name), name> for name in name-set
   // - In MD5FuncMap: <MD5Hash(name), &F> for name in name-set
-  Error addFuncWithName(Function &F, StringRef PGOFuncName);
+  // The canonical name is only added if \c AddCanonical is true.
+  Error addFuncWithName(Function &F, StringRef PGOFuncName, bool AddCanonical);
 
   // Add the vtable into the symbol table, by creating the following
   // map entries:
@@ -556,7 +595,9 @@ public:
   /// decls from module \c M. This interface is used by transformation
   /// passes such as indirect function call promotion. Variable \c InLTO
   /// indicates if this is called from LTO optimization passes.
-  Error create(Module &M, bool InLTO = false);
+  /// A canonical name, removing non-__uniq suffixes, is added if
+  /// \c AddCanonical is true.
+  Error create(Module &M, bool InLTO = false, bool AddCanonical = true);
 
   /// Create InstrProfSymtab from a set of names iteratable from
   /// \p IterRange. This interface is used by IndexedProfReader.
@@ -955,7 +996,7 @@ private:
   ArrayRef<InstrProfValueSiteRecord>
   getValueSitesForKind(uint32_t ValueKind) const {
     if (!ValueData)
-      return std::nullopt;
+      return {};
     assert(IPVK_First <= ValueKind && ValueKind <= IPVK_Last &&
            "Unknown value kind!");
     return (*ValueData)[ValueKind - IPVK_First];

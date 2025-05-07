@@ -17,7 +17,6 @@
 #include "X86ISelLowering.h"
 #include "X86InstrInfo.h"
 #include "X86SelectionDAGInfo.h"
-#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/TargetParser/Triple.h"
@@ -114,6 +113,7 @@ public:
                const X86TargetMachine &TM, MaybeAlign StackAlignOverride,
                unsigned PreferVectorWidthOverride,
                unsigned RequiredVectorWidth);
+  ~X86Subtarget() override;
 
   const X86TargetLowering *getTargetLowering() const override {
     return &TLInfo;
@@ -263,6 +263,11 @@ public:
     return hasBWI() && useAVX512Regs();
   }
 
+  // Returns true if the destination register of a BSF/BSR instruction is
+  // not touched if the source register is zero.
+  // NOTE: i32->i64 implicit zext isn't guaranteed by BSR/BSF pass through.
+  bool hasBitScanPassThrough() const { return is64Bit(); }
+
   bool isXRaySupported() const override { return is64Bit(); }
 
   /// Use clflush if we have SSE2 or we're on x86-64 (even if we asked for
@@ -274,6 +279,9 @@ public:
   /// no-sse2). There isn't any reason to disable it if the target processor
   /// supports it.
   bool hasMFence() const { return hasSSE2() || is64Bit(); }
+
+  /// Avoid use of `mfence` for`fence seq_cst`, and instead use `lock or`.
+  bool avoidMFence() const { return is64Bit(); }
 
   const Triple &getTargetTriple() const { return TargetTriple; }
 
@@ -319,7 +327,11 @@ public:
 
   bool isTargetCygMing() const { return TargetTriple.isOSCygMing(); }
 
+  bool isUEFI() const { return TargetTriple.isUEFI(); }
+
   bool isOSWindows() const { return TargetTriple.isOSWindows(); }
+
+  bool isTargetUEFI64() const { return Is64Bit && isUEFI(); }
 
   bool isTargetWin64() const { return Is64Bit && isOSWindows(); }
 
@@ -340,6 +352,7 @@ public:
     case CallingConv::C:
     case CallingConv::Fast:
     case CallingConv::Tail:
+      return isTargetWin64() || isTargetUEFI64();
     case CallingConv::Swift:
     case CallingConv::SwiftTail:
     case CallingConv::X86_FastCall:

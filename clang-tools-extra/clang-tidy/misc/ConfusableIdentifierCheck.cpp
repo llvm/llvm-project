@@ -66,9 +66,9 @@ static llvm::SmallString<64U> skeleton(StringRef Name) {
     }
 
     StringRef Key(Prev, Curr - Prev);
-    auto Where = llvm::lower_bound(ConfusableEntries, CodePoint,
-                                   [](decltype(ConfusableEntries[0]) x,
-                                      UTF32 y) { return x.codepoint < y; });
+    auto *Where = llvm::lower_bound(ConfusableEntries, CodePoint,
+                                    [](decltype(ConfusableEntries[0]) X,
+                                       UTF32 Y) { return X.codepoint < Y; });
     if (Where == std::end(ConfusableEntries) || CodePoint != Where->codepoint) {
       Skeleton.append(Prev, Curr);
     } else {
@@ -137,11 +137,11 @@ static bool mayShadow(const NamedDecl *ND0,
 const ConfusableIdentifierCheck::ContextInfo *
 ConfusableIdentifierCheck::getContextInfo(const DeclContext *DC) {
   const DeclContext *PrimaryContext = DC->getPrimaryContext();
-  auto It = ContextInfos.find(PrimaryContext);
-  if (It != ContextInfos.end())
+  auto [It, Inserted] = ContextInfos.try_emplace(PrimaryContext);
+  if (!Inserted)
     return &It->second;
 
-  ContextInfo &Info = ContextInfos[PrimaryContext];
+  ContextInfo &Info = It->second;
   Info.PrimaryContext = PrimaryContext;
   Info.NonTransparentContext = PrimaryContext;
 

@@ -16,7 +16,7 @@
 #include "llvm/Analysis/LazyBlockFrequencyInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
-#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
@@ -31,7 +31,6 @@
 #include "llvm/IR/Function.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CodeGenCoverage.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Target/TargetMachine.h"
@@ -57,7 +56,7 @@ INITIALIZE_PASS_BEGIN(InstructionSelect, DEBUG_TYPE,
                       "Select target instructions out of generic instructions",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_DEPENDENCY(GISelKnownBitsAnalysis)
+INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysis)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LazyBlockFrequencyInfoPass)
 INITIALIZE_PASS_END(InstructionSelect, DEBUG_TYPE,
@@ -75,19 +74,25 @@ InstructionSelect::InstructionSelect(CodeGenOptLevel OL, char &PassID)
 /// a non-obvious limitation for selector implementers. Therefore, to allow
 /// deletion of arbitrary instructions, we detect this case and continue
 /// selection with the predecessor of the deleted instruction.
-class InstructionSelect::MIIteratorMaintainer
-    : public MachineFunction::Delegate {
+class InstructionSelect::MIIteratorMaintainer : public GISelChangeObserver {
 #ifndef NDEBUG
   SmallSetVector<const MachineInstr *, 32> CreatedInstrs;
 #endif
 public:
   MachineBasicBlock::reverse_iterator MII;
 
-  void MF_HandleInsertion(MachineInstr &MI) override {
+  void changingInstr(MachineInstr &MI) override {
+    llvm_unreachable("InstructionSelect does not track changed instructions!");
+  }
+  void changedInstr(MachineInstr &MI) override {
+    llvm_unreachable("InstructionSelect does not track changed instructions!");
+  }
+
+  void createdInstr(MachineInstr &MI) override {
     LLVM_DEBUG(dbgs() << "Creating:  " << MI; CreatedInstrs.insert(&MI));
   }
 
-  void MF_HandleRemoval(MachineInstr &MI) override {
+  void erasingInstr(MachineInstr &MI) override {
     LLVM_DEBUG(dbgs() << "Erasing:   " << MI; CreatedInstrs.remove(&MI));
     if (MII.getInstrIterator().getNodePtr() == &MI) {
       // If the iterator points to the MI that will be erased (i.e. the MI prior
@@ -115,8 +120,8 @@ public:
 
 void InstructionSelect::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
-  AU.addRequired<GISelKnownBitsAnalysis>();
-  AU.addPreserved<GISelKnownBitsAnalysis>();
+  AU.addRequired<GISelValueTrackingAnalysis>();
+  AU.addPreserved<GISelValueTrackingAnalysis>();
 
   if (OptLevel != CodeGenOptLevel::None) {
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
@@ -141,7 +146,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
   OptLevel = MF.getFunction().hasOptNone() ? CodeGenOptLevel::None
                                            : MF.getTarget().getOptLevel();
 
-  KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
+  VT = &getAnalysis<GISelValueTrackingAnalysis>().get(MF);
   if (OptLevel != CodeGenOptLevel::None) {
     PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
     if (PSI && PSI->hasProfileSummary())
@@ -157,7 +162,7 @@ bool InstructionSelect::selectMachineFunction(MachineFunction &MF) {
 
   const TargetPassConfig &TPC = *ISel->TPC;
   CodeGenCoverage CoverageInfo;
-  ISel->setupMF(MF, KB, &CoverageInfo, PSI, BFI);
+  ISel->setupMF(MF, VT, &CoverageInfo, PSI, BFI);
 
   // An optimization remark emitter. Used to report failures.
   MachineOptimizationRemarkEmitter MORE(MF, /*MBFI=*/nullptr);
@@ -190,8 +195,11 @@ bool InstructionSelect::selectMachineFunction(MachineFunction &MF) {
     // GISelChangeObserver, because we do not want notifications about changed
     // instructions. This prevents significant compile-time regressions from
     // e.g. constrainOperandRegClass().
+    GISelObserverWrapper AllObservers;
     MIIteratorMaintainer MIIMaintainer;
-    RAIIDelegateInstaller DelInstaller(MF, &MIIMaintainer);
+    AllObservers.addObserver(&MIIMaintainer);
+    RAIIDelegateInstaller DelInstaller(MF, &AllObservers);
+    ISel->AllObservers = &AllObservers;
 
     for (MachineBasicBlock *MBB : post_order(&MF)) {
       ISel->CurMBB = MBB;

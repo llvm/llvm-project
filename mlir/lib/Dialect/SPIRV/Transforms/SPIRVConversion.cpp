@@ -29,7 +29,6 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "mlir/Transforms/OneToNTypeConversion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -206,7 +205,7 @@ getTypeNumBytes(const SPIRVConversionOptions &options, Type type) {
     int64_t offset;
     SmallVector<int64_t, 4> strides;
     if (!memRefType.hasStaticShape() ||
-        failed(getStridesAndOffset(memRefType, strides, offset)))
+        failed(memRefType.getStridesAndOffset(strides, offset)))
       return std::nullopt;
 
     // To get the size of the memref object in memory, the total size is the
@@ -292,6 +291,8 @@ convertScalarType(const spirv::TargetEnv &targetEnv,
 }
 
 /// Converts a sub-byte integer `type` to i32 regardless of target environment.
+/// Returns a nullptr for unsupported integer types, including non sub-byte
+/// types.
 ///
 /// Note that we don't recognize sub-byte types in `spirv::ScalarType` and use
 /// the above given that these sub-byte types are not supported at all in
@@ -299,6 +300,10 @@ convertScalarType(const spirv::TargetEnv &targetEnv,
 /// supported integer types.
 static Type convertSubByteIntegerType(const SPIRVConversionOptions &options,
                                       IntegerType type) {
+  if (type.getWidth() > 8) {
+    LLVM_DEBUG(llvm::dbgs() << "not a subbyte type\n");
+    return nullptr;
+  }
   if (options.subByteTypeStorage != SPIRVSubByteTypeStorage::Packed) {
     LLVM_DEBUG(llvm::dbgs() << "unsupported sub-byte storage kind\n");
     return nullptr;
@@ -348,6 +353,9 @@ convertVectorType(const spirv::TargetEnv &targetEnv,
     }
 
     Type elementType = convertSubByteIntegerType(options, intType);
+    if (!elementType)
+      return nullptr;
+
     if (type.getRank() <= 1 && type.getNumElements() == 1)
       return elementType;
 
@@ -659,9 +667,9 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
 /// This function is meant to handle the **compute** side; so it does not
 /// involve storage classes in its logic. The storage side is expected to be
 /// handled by MemRef conversion logic.
-static std::optional<Value> castToSourceType(const spirv::TargetEnv &targetEnv,
-                                             OpBuilder &builder, Type type,
-                                             ValueRange inputs, Location loc) {
+static Value castToSourceType(const spirv::TargetEnv &targetEnv,
+                              OpBuilder &builder, Type type, ValueRange inputs,
+                              Location loc) {
   // We can only cast one value in SPIR-V.
   if (inputs.size() != 1) {
     auto castOp = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
@@ -924,7 +932,8 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointToStart(&entryBlock);
 
-    OneToNTypeMapping oneToNTypeMapping(fnType.getInputs());
+    TypeConverter::SignatureConversion oneToNTypeMapping(
+        fnType.getInputs().size());
 
     // For arguments that are of illegal types and require unrolling.
     // `unrolledInputNums` stores the indices of arguments that result from
@@ -1064,7 +1073,8 @@ struct ReturnOpVectorUnroll final : OpRewritePattern<func::ReturnOp> {
       return failure();
 
     FunctionType fnType = funcOp.getFunctionType();
-    OneToNTypeMapping oneToNTypeMapping(fnType.getResults());
+    TypeConverter::SignatureConversion oneToNTypeMapping(
+        fnType.getResults().size());
     Location loc = returnOp.getLoc();
 
     // For the new return op.
@@ -1216,7 +1226,7 @@ Value mlir::spirv::getVulkanElementPtr(const SPIRVTypeConverter &typeConverter,
 
   int64_t offset;
   SmallVector<int64_t, 4> strides;
-  if (failed(getStridesAndOffset(baseType, strides, offset)) ||
+  if (failed(baseType.getStridesAndOffset(strides, offset)) ||
       llvm::is_contained(strides, ShapedType::kDynamic) ||
       ShapedType::isDynamic(offset)) {
     return nullptr;
@@ -1247,7 +1257,7 @@ Value mlir::spirv::getOpenCLElementPtr(const SPIRVTypeConverter &typeConverter,
 
   int64_t offset;
   SmallVector<int64_t, 4> strides;
-  if (failed(getStridesAndOffset(baseType, strides, offset)) ||
+  if (failed(baseType.getStridesAndOffset(strides, offset)) ||
       llvm::is_contained(strides, ShapedType::kDynamic) ||
       ShapedType::isDynamic(offset)) {
     return nullptr;
@@ -1343,9 +1353,9 @@ LogicalResult mlir::spirv::unrollVectorsInSignatures(Operation *op) {
   // We only want to apply signature conversion once to the existing func ops.
   // Without specifying strictMode, the greedy pattern rewriter will keep
   // looking for newly created func ops.
-  GreedyRewriteConfig config;
-  config.strictMode = GreedyRewriteStrictness::ExistingOps;
-  return applyPatternsAndFoldGreedily(op, std::move(patterns), config);
+  return applyPatternsGreedily(op, std::move(patterns),
+                               GreedyRewriteConfig().setStrictness(
+                                   GreedyRewriteStrictness::ExistingOps));
 }
 
 LogicalResult mlir::spirv::unrollVectorsInFuncBodies(Operation *op) {
@@ -1357,7 +1367,7 @@ LogicalResult mlir::spirv::unrollVectorsInFuncBodies(Operation *op) {
     auto options = vector::UnrollVectorOptions().setNativeShapeFn(
         [](auto op) { return mlir::spirv::getNativeVectorShape(op); });
     populateVectorUnrollPatterns(patterns, options);
-    if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
+    if (failed(applyPatternsGreedily(op, std::move(patterns))))
       return failure();
   }
 
@@ -1365,11 +1375,10 @@ LogicalResult mlir::spirv::unrollVectorsInFuncBodies(Operation *op) {
   // further transformations to canonicalize/cancel.
   {
     RewritePatternSet patterns(context);
-    auto options = vector::VectorTransformsOptions().setVectorTransposeLowering(
-        vector::VectorTransposeLowering::EltWise);
-    vector::populateVectorTransposeLoweringPatterns(patterns, options);
+    vector::populateVectorTransposeLoweringPatterns(
+        patterns, vector::VectorTransposeLowering::EltWise);
     vector::populateVectorShapeCastLoweringPatterns(patterns);
-    if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
+    if (failed(applyPatternsGreedily(op, std::move(patterns))))
       return failure();
   }
 
@@ -1394,7 +1403,7 @@ LogicalResult mlir::spirv::unrollVectorsInFuncBodies(Operation *op) {
     vector::BroadcastOp::getCanonicalizationPatterns(patterns, context);
     vector::ShapeCastOp::getCanonicalizationPatterns(patterns, context);
 
-    if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
+    if (failed(applyPatternsGreedily(op, std::move(patterns))))
       return failure();
   }
   return success();
@@ -1459,7 +1468,7 @@ SPIRVTypeConverter::SPIRVTypeConverter(spirv::TargetEnvAttr targetAttr,
   addTargetMaterialization([](OpBuilder &builder, Type type, ValueRange inputs,
                               Location loc) {
     auto cast = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
-    return std::optional<Value>(cast.getResult(0));
+    return cast.getResult(0);
   });
 }
 
@@ -1573,8 +1582,8 @@ bool SPIRVConversionTarget::isLegalOp(Operation *op) {
 // Public functions for populating patterns
 //===----------------------------------------------------------------------===//
 
-void mlir::populateBuiltinFuncToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
-                                              RewritePatternSet &patterns) {
+void mlir::populateBuiltinFuncToSPIRVPatterns(
+    const SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns) {
   patterns.add<FuncOpConversion>(typeConverter, patterns.getContext());
 }
 

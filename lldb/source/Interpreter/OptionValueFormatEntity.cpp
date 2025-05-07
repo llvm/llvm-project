@@ -61,7 +61,7 @@ void OptionValueFormatEntity::DumpValue(const ExecutionContext *exe_ctx,
 }
 
 llvm::json::Value
-OptionValueFormatEntity::ToJSON(const ExecutionContext *exe_ctx) {
+OptionValueFormatEntity::ToJSON(const ExecutionContext *exe_ctx) const {
   std::string escaped;
   EscapeBackticks(m_current_format, escaped);
   return escaped;
@@ -89,7 +89,7 @@ Status OptionValueFormatEntity::SetValueFromString(llvm::StringRef value_str,
       if (first_char == '"' || first_char == '\'') {
         const size_t trimmed_len = trimmed_value_str.size();
         if (trimmed_len == 1 || value_str[trimmed_len - 1] != first_char) {
-          error.SetErrorString("mismatched quotes");
+          error = Status::FromErrorString("mismatched quotes");
           return error;
         }
         value_str = trimmed_value_str.substr(1, trimmed_len - 2);

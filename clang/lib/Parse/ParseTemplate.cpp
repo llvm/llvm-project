@@ -13,7 +13,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/Parse/ParseDiagnostic.h"
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
@@ -179,6 +179,13 @@ Parser::DeclGroupPtrTy Parser::ParseTemplateDeclarationOrSpecialization(
       Context, TemplateInfo, ParsingTemplateParams, DeclEnd, AccessAttrs, AS);
 }
 
+Parser::DeclGroupPtrTy Parser::ParseTemplateDeclarationOrSpecialization(
+    DeclaratorContext Context, SourceLocation &DeclEnd, AccessSpecifier AS) {
+  ParsedAttributes AccessAttrs(AttrFactory);
+  return ParseTemplateDeclarationOrSpecialization(Context, DeclEnd, AccessAttrs,
+                                                  AS);
+}
+
 /// Parse a single declaration that declares a template,
 /// template specialization, or explicit instantiation of a template.
 ///
@@ -193,7 +200,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclarationAfterTemplate(
     DeclaratorContext Context, ParsedTemplateInfo &TemplateInfo,
     ParsingDeclRAIIObject &DiagsFromTParams, SourceLocation &DeclEnd,
     ParsedAttributes &AccessAttrs, AccessSpecifier AS) {
-  assert(TemplateInfo.Kind != ParsedTemplateInfo::NonTemplate &&
+  assert(TemplateInfo.Kind != ParsedTemplateKind::NonTemplate &&
          "Template information required");
 
   if (Tok.is(tok::kw_static_assert)) {
@@ -243,7 +250,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclarationAfterTemplate(
         getCurScope(), AS, DS, ParsedAttributesView::none(),
         TemplateInfo.TemplateParams ? *TemplateInfo.TemplateParams
                                     : MultiTemplateParamsArg(),
-        TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation,
+        TemplateInfo.Kind == ParsedTemplateKind::ExplicitInstantiation,
         AnonRecord);
     Actions.ActOnDefinedDeclarationSpecifier(Decl);
     assert(!AnonRecord &&
@@ -256,7 +263,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclarationAfterTemplate(
     Actions.ActOnDefinedDeclarationSpecifier(DS.getRepAsDecl());
 
   // Move the attributes from the prefix into the DS.
-  if (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation)
+  if (TemplateInfo.Kind == ParsedTemplateKind::ExplicitInstantiation)
     ProhibitAttributes(DeclAttrs);
 
   return ParseDeclGroup(DS, Context, DeclAttrs, TemplateInfo, &DeclEnd);
@@ -271,7 +278,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclarationAfterTemplate(
 Decl *
 Parser::ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,
                                SourceLocation &DeclEnd) {
-  assert(TemplateInfo.Kind != ParsedTemplateInfo::NonTemplate &&
+  assert(TemplateInfo.Kind != ParsedTemplateKind::NonTemplate &&
          "Template information required");
   assert(Tok.is(tok::kw_concept) &&
          "ParseConceptDefinition must be called when at a 'concept' keyword");
@@ -331,6 +338,8 @@ Parser::ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,
   if (!TryConsumeToken(tok::equal)) {
     Diag(Tok.getLocation(), diag::err_expected) << tok::equal;
     SkipUntil(tok::semi);
+    if (D)
+      D->setInvalidDecl();
     return nullptr;
   }
 
@@ -338,6 +347,8 @@ Parser::ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,
       Actions.CorrectDelayedTyposInExpr(ParseConstraintExpression());
   if (ConstraintExprResult.isInvalid()) {
     SkipUntil(tok::semi);
+    if (D)
+      D->setInvalidDecl();
     return nullptr;
   }
 
@@ -959,7 +970,7 @@ Parser::ParseNonTypeTemplateParameter(unsigned Depth, unsigned Position) {
       ++CurTemplateDepthTracker;
       EnterExpressionEvaluationContext ConstantEvaluated(
           Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
-      DefaultArg = Actions.CorrectDelayedTyposInExpr(ParseInitializer());
+      DefaultArg = Actions.ActOnConstantExpression(ParseInitializer());
       if (DefaultArg.isInvalid())
         SkipUntil(tok::comma, tok::greater, StopAtSemi | StopBeforeMatch);
     }
@@ -1495,7 +1506,7 @@ ParsedTemplateArgument Parser::ParseTemplateArgument() {
     Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated,
     /*LambdaContextDecl=*/nullptr,
     /*ExprContext=*/Sema::ExpressionEvaluationContextRecord::EK_TemplateArgument);
-  if (isCXXTypeId(TypeIdAsTemplateArgument)) {
+  if (isCXXTypeId(TentativeCXXTypeIdContext::AsTemplateArgument)) {
     TypeResult TypeArg = ParseTypeName(
         /*Range=*/nullptr, DeclaratorContext::TemplateArg);
     return Actions.ActOnTemplateTypeArgument(TypeArg);
@@ -1522,7 +1533,8 @@ ParsedTemplateArgument Parser::ParseTemplateArgument() {
   if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace))
     ExprArg = ParseBraceInitializer();
   else
-    ExprArg = ParseConstantExpressionInExprEvalContext(MaybeTypeCast);
+    ExprArg =
+        ParseConstantExpressionInExprEvalContext(TypeCastState::MaybeTypeCast);
   if (ExprArg.isInvalid() || !ExprArg.get()) {
     return ParsedTemplateArgument();
   }

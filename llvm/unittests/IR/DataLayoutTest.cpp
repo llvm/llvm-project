@@ -21,45 +21,6 @@ namespace {
 
 class DataLayoutTest : public ::testing::Test {};
 
-// TODO: Split into multiple TESTs.
-TEST(DataLayoutTest, ParseErrors) {
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("^"),
-      FailedWithMessage("Unknown specifier in datalayout string"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("m:v"),
-      FailedWithMessage("Unknown mangling in datalayout string"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("n0"),
-      FailedWithMessage("Zero width native integer type in datalayout string"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("m"),
-      FailedWithMessage("Expected mangling specifier in datalayout string"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("m."),
-      FailedWithMessage("Unexpected trailing characters after mangling "
-                        "specifier in datalayout string"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse(":32"),
-      FailedWithMessage(
-          "Expected token before separator in datalayout string"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("A16777216"),
-      FailedWithMessage("Invalid address space, must be a 24-bit integer"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("G16777216"),
-      FailedWithMessage("Invalid address space, must be a 24-bit integer"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("P16777216"),
-      FailedWithMessage("Invalid address space, must be a 24-bit integer"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("Fi24"),
-      FailedWithMessage("Alignment is neither 0 nor a power of 2"));
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("S24"),
-      FailedWithMessage("Alignment is neither 0 nor a power of 2"));
-}
-
 TEST(DataLayout, LayoutStringFormat) {
   for (StringRef Str : {"", "e", "m:e", "m:e-e"})
     EXPECT_THAT_EXPECTED(DataLayout::parse(Str), Succeeded());
@@ -68,6 +29,122 @@ TEST(DataLayout, LayoutStringFormat) {
     EXPECT_THAT_EXPECTED(
         DataLayout::parse(Str),
         FailedWithMessage("empty specification is not allowed"));
+}
+
+TEST(DataLayoutTest, InvalidSpecifier) {
+  EXPECT_THAT_EXPECTED(DataLayout::parse("^"),
+                       FailedWithMessage("unknown specifier '^'"));
+  EXPECT_THAT_EXPECTED(DataLayout::parse("I8:8"),
+                       FailedWithMessage("unknown specifier 'I'"));
+  EXPECT_THAT_EXPECTED(DataLayout::parse("e-X"),
+                       FailedWithMessage("unknown specifier 'X'"));
+  EXPECT_THAT_EXPECTED(DataLayout::parse("p0:32:32-64"),
+                       FailedWithMessage("unknown specifier '6'"));
+}
+
+TEST(DataLayoutTest, ParseEndianness) {
+  EXPECT_THAT_EXPECTED(DataLayout::parse("e"), Succeeded());
+  EXPECT_THAT_EXPECTED(DataLayout::parse("E"), Succeeded());
+
+  for (StringRef Str : {"ee", "e0", "e:0", "E0:E", "El", "E:B"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("malformed specification, must be just 'e' or 'E'"));
+}
+
+TEST(DataLayoutTest, ParseMangling) {
+  for (StringRef Str : {"m:a", "m:e", "m:l", "m:m", "m:o", "m:w", "m:x"})
+    EXPECT_THAT_EXPECTED(DataLayout::parse(Str), Succeeded());
+
+  for (StringRef Str : {"m", "ms:m", "m:"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage(
+            "malformed specification, must be of the form \"m:<mangling>\""));
+
+  for (StringRef Str : {"m:ms", "m:E", "m:0"})
+    EXPECT_THAT_EXPECTED(DataLayout::parse(Str),
+                         FailedWithMessage("unknown mangling mode"));
+}
+
+TEST(DataLayoutTest, ParseStackNaturalAlign) {
+  for (StringRef Str : {"S8", "S32768"})
+    EXPECT_THAT_EXPECTED(DataLayout::parse(Str), Succeeded());
+
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("S"),
+      FailedWithMessage(
+          "malformed specification, must be of the form \"S<size>\""));
+
+  for (StringRef Str : {"SX", "S0x20", "S65536"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("stack natural alignment must be a 16-bit integer"));
+
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("S0"),
+      FailedWithMessage("stack natural alignment must be non-zero"));
+
+  for (StringRef Str : {"S1", "S7", "S24", "S65535"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("stack natural alignment must be a power of two "
+                          "times the byte width"));
+}
+
+TEST(DataLayoutTest, ParseAddrSpace) {
+  for (StringRef Str : {"P0", "A0", "G0", "P1", "A1", "G1", "P16777215",
+                        "A16777215", "G16777215"})
+    EXPECT_THAT_EXPECTED(DataLayout::parse(Str), Succeeded());
+
+  for (StringRef Str : {"P", "A", "G"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage(("malformed specification, must be of the form \"" +
+                           Twine(Str.front()) + "<address space>\"")
+                              .str()));
+
+  for (StringRef Str : {"Px", "A0x1", "G16777216"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("address space must be a 24-bit integer"));
+}
+
+TEST(DataLayoutTest, ParseFuncPtrSpec) {
+  for (StringRef Str : {"Fi8", "Fn16", "Fi32768", "Fn32768"})
+    EXPECT_THAT_EXPECTED(DataLayout::parse(Str), Succeeded());
+
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("F"),
+      FailedWithMessage(
+          "malformed specification, must be of the form \"F<type><abi>\""));
+
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("FN"),
+      FailedWithMessage("unknown function pointer alignment type 'N'"));
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("F32"),
+      FailedWithMessage("unknown function pointer alignment type '3'"));
+
+  for (StringRef Str : {"Fi", "Fn"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("ABI alignment component cannot be empty"));
+
+  for (StringRef Str : {"Fii", "Fn32x", "Fi65536", "Fn65536"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("ABI alignment must be a 16-bit integer"));
+
+  for (StringRef Str : {"Fi0", "Fn0"})
+    EXPECT_THAT_EXPECTED(DataLayout::parse(Str),
+                         FailedWithMessage("ABI alignment must be non-zero"));
+
+  for (StringRef Str : {"Fi12", "Fn24"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage(
+            "ABI alignment must be a power of two times the byte width"));
 }
 
 class DataLayoutPrimitiveSpecificationTest
@@ -80,7 +157,7 @@ public:
 
   std::string format(StringRef Str) const {
     std::string Res = Str.str();
-    std::replace(Res.begin(), Res.end(), '!', Specifier);
+    llvm::replace(Res, '!', Specifier);
     return Res;
   }
 };
@@ -326,6 +403,21 @@ TEST(DataLayout, ParsePointerSpec) {
         FailedWithMessage("index size cannot be larger than the pointer size"));
 }
 
+TEST(DataLayoutTest, ParseNativeIntegersSpec) {
+  for (StringRef Str : {"n1", "n1:8", "n24:12:16777215"})
+    EXPECT_THAT_EXPECTED(DataLayout::parse(Str), Succeeded());
+
+  for (StringRef Str : {"n", "n1:", "n:8", "n16::32"})
+    EXPECT_THAT_EXPECTED(DataLayout::parse(Str),
+                         FailedWithMessage("size component cannot be empty"));
+
+  for (StringRef Str : {"n0", "n0x8:16", "n8:0", "n16:0:32", "n16777216",
+                        "n16:16777216", "n32:64:16777216"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("size must be a non-zero 24-bit integer"));
+}
+
 TEST(DataLayout, ParseNonIntegralAddrSpace) {
   for (StringRef Str : {"ni:1", "ni:16777215", "ni:1:16777215"})
     EXPECT_THAT_EXPECTED(DataLayout::parse(Str), Succeeded());
@@ -350,6 +442,21 @@ TEST(DataLayout, ParseNonIntegralAddrSpace) {
     EXPECT_THAT_EXPECTED(
         DataLayout::parse(Str),
         FailedWithMessage("address space 0 cannot be non-integral"));
+}
+
+TEST(DataLayout, GetStackAlignment) {
+  DataLayout Default;
+  EXPECT_FALSE(Default.getStackAlignment().has_value());
+
+  std::pair<StringRef, Align> Cases[] = {
+      {"S8", Align(1)},
+      {"S64", Align(8)},
+      {"S32768", Align(4096)},
+  };
+  for (auto [Layout, Val] : Cases) {
+    DataLayout DL = cantFail(DataLayout::parse(Layout));
+    EXPECT_EQ(DL.getStackAlignment(), Val) << Layout;
+  }
 }
 
 TEST(DataLayout, GetPointerSizeInBits) {
@@ -494,12 +601,12 @@ TEST(DataLayoutTest, FunctionPtrAlign) {
   EXPECT_EQ(MaybeAlign(2), DataLayout("Fn16").getFunctionPtrAlign());
   EXPECT_EQ(MaybeAlign(4), DataLayout("Fn32").getFunctionPtrAlign());
   EXPECT_EQ(MaybeAlign(8), DataLayout("Fn64").getFunctionPtrAlign());
-  EXPECT_EQ(DataLayout::FunctionPtrAlignType::Independent, \
-      DataLayout("").getFunctionPtrAlignType());
-  EXPECT_EQ(DataLayout::FunctionPtrAlignType::Independent, \
-      DataLayout("Fi8").getFunctionPtrAlignType());
-  EXPECT_EQ(DataLayout::FunctionPtrAlignType::MultipleOfFunctionAlign, \
-      DataLayout("Fn8").getFunctionPtrAlignType());
+  EXPECT_EQ(DataLayout::FunctionPtrAlignType::Independent,
+            DataLayout("").getFunctionPtrAlignType());
+  EXPECT_EQ(DataLayout::FunctionPtrAlignType::Independent,
+            DataLayout("Fi8").getFunctionPtrAlignType());
+  EXPECT_EQ(DataLayout::FunctionPtrAlignType::MultipleOfFunctionAlign,
+            DataLayout("Fn8").getFunctionPtrAlignType());
   EXPECT_EQ(DataLayout("Fi8"), DataLayout("Fi8"));
   EXPECT_NE(DataLayout("Fi8"), DataLayout("Fi16"));
   EXPECT_NE(DataLayout("Fi8"), DataLayout("Fn8"));

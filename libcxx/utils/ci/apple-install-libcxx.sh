@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 
 set -e
 
@@ -119,7 +119,9 @@ for arch in ${architectures}; do
     step "Building shims to make libc++ compatible with the system libc++ on Apple platforms when running the tests"
     shims_library="${build_dir}/${arch}/apple-system-shims.a"
     # Note that this doesn't need to match the Standard version used to build the rest of the library.
-    xcrun clang++ -c -std=c++2b -target ${target} "${llvm_root}/libcxxabi/src/vendor/apple/shims.cpp" -static -o "${shims_library}"
+    # Also note that we explicitly enable sized deallocation when building the shims to ensure that we provide as
+    # many symbols as possible.
+    xcrun clang++ -c -std=c++2b -fsized-deallocation -target ${target} "${llvm_root}/libcxxabi/src/vendor/apple/shims.cpp" -static -o "${shims_library}"
 
     step "Building libc++.dylib and libc++abi.dylib for architecture ${arch}"
     xcrun cmake -S "${llvm_root}/runtimes" \
@@ -129,7 +131,6 @@ for arch in ${architectures}; do
                 -C "${llvm_root}/libcxx/cmake/caches/Apple.cmake" \
                 -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
                 -DCMAKE_INSTALL_PREFIX="${build_dir}/${arch}-install" \
-                -DCMAKE_INSTALL_NAME_DIR="/usr/lib" \
                 -DCMAKE_OSX_ARCHITECTURES="${arch}" \
                 -DLIBCXXABI_LIBRARY_VERSION="${version}" \
                 -DLIBCXX_LIBRARY_VERSION="${version}" \

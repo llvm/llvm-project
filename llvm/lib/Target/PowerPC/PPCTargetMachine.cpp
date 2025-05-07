@@ -20,7 +20,6 @@
 #include "PPCTargetObjectFile.h"
 #include "PPCTargetTransformInfo.h"
 #include "TargetInfo/PowerPCTargetInfo.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
@@ -100,11 +99,6 @@ static cl::opt<bool>
                   cl::desc("Expand eligible cr-logical binary ops to branches"),
                   cl::init(true), cl::Hidden);
 
-static cl::opt<bool> MergeStringPool(
-    "ppc-merge-string-pool",
-    cl::desc("Merge all of the strings in a module into one pool"),
-    cl::init(true), cl::Hidden);
-
 static cl::opt<bool> EnablePPCGenScalarMASSEntries(
     "enable-ppc-gen-scalar-mass", cl::init(false),
     cl::desc("Enable lowering math functions to their corresponding MASS "
@@ -141,7 +135,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
   initializePPCBSelPass(PR);
   initializePPCBranchCoalescingPass(PR);
   initializePPCBoolRetToIntPass(PR);
-  initializePPCExpandISELPass(PR);
   initializePPCPreEmitPeepholePass(PR);
   initializePPCTLSDynamicCallPass(PR);
   initializePPCMIPeepholePass(PR);
@@ -151,7 +144,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
   initializeGlobalISel(PR);
   initializePPCCTRLoopsPass(PR);
   initializePPCDAGToDAGISelLegacyPass(PR);
-  initializePPCMergeStringPoolPass(PR);
+  initializePPCLinuxAsmPrinterPass(PR);
+  initializePPCAIXAsmPrinterPass(PR);
 }
 
 static bool isLittleEndianTriple(const Triple &T) {
@@ -193,7 +187,7 @@ static std::string getDataLayoutString(const Triple &T) {
 
   // PPC64 has 32 and 64 bit registers, PPC32 has only 32 bit ones.
   if (is64Bit)
-    Ret += "-n32:64";
+    Ret += "-i128:128-n32:64";
   else
     Ret += "-n32";
 
@@ -348,18 +342,18 @@ static ScheduleDAGInstrs *createPPCPostMachineScheduler(
 
 // The FeatureString here is a little subtle. We are modifying the feature
 // string with what are (currently) non-function specific overrides as it goes
-// into the LLVMTargetMachine constructor and then using the stored value in the
-// Subtarget constructor below it.
+// into the CodeGenTargetMachineImpl constructor and then using the stored value
+// in the Subtarget constructor below it.
 PPCTargetMachine::PPCTargetMachine(const Target &T, const Triple &TT,
                                    StringRef CPU, StringRef FS,
                                    const TargetOptions &Options,
                                    std::optional<Reloc::Model> RM,
                                    std::optional<CodeModel::Model> CM,
                                    CodeGenOptLevel OL, bool JIT)
-    : LLVMTargetMachine(T, getDataLayoutString(TT), TT, CPU,
-                        computeFSAdditions(FS, OL, TT), Options,
-                        getEffectiveRelocModel(TT, RM),
-                        getEffectivePPCCodeModel(TT, CM, JIT), OL),
+    : CodeGenTargetMachineImpl(T, getDataLayoutString(TT), TT, CPU,
+                               computeFSAdditions(FS, OL, TT), Options,
+                               getEffectiveRelocModel(TT, RM),
+                               getEffectivePPCCodeModel(TT, CM, JIT), OL),
       TLOF(createTLOF(getTargetTriple())),
       TargetABI(computeTargetABI(TT, Options)),
       Endianness(isLittleEndianTriple(TT) ? Endian::LITTLE : Endian::BIG) {
@@ -411,6 +405,16 @@ PPCTargetMachine::getSubtargetImpl(const Function &F) const {
   return I.get();
 }
 
+ScheduleDAGInstrs *
+PPCTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
+  return createPPCMachineScheduler(C);
+}
+
+ScheduleDAGInstrs *
+PPCTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
+  return createPPCPostMachineScheduler(C);
+}
+
 //===----------------------------------------------------------------------===//
 // Pass Pipeline Configuration
 //===----------------------------------------------------------------------===//
@@ -446,15 +450,6 @@ public:
   bool addLegalizeMachineIR() override;
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
-
-  ScheduleDAGInstrs *
-  createMachineScheduler(MachineSchedContext *C) const override {
-    return createPPCMachineScheduler(C);
-  }
-  ScheduleDAGInstrs *
-  createPostMachineScheduler(MachineSchedContext *C) const override {
-    return createPPCPostMachineScheduler(C);
-  }
 };
 
 } // end anonymous namespace
@@ -504,13 +499,9 @@ bool PPCPassConfig::addPreISel() {
   // Specifying the command line option overrides the AIX default.
   if ((EnableGlobalMerge.getNumOccurrences() > 0)
           ? EnableGlobalMerge
-          : (TM->getTargetTriple().isOSAIX() &&
-             getOptLevel() != CodeGenOptLevel::None))
-    addPass(
-        createGlobalMergePass(TM, GlobalMergeMaxOffset, false, false, true));
-
-  if (MergeStringPool && getOptLevel() != CodeGenOptLevel::None)
-    addPass(createPPCMergeStringPoolPass());
+          : getOptLevel() != CodeGenOptLevel::None)
+    addPass(createGlobalMergePass(TM, GlobalMergeMaxOffset, false, false, true,
+                                  true));
 
   if (!DisableInstrFormPrep && getOptLevel() != CodeGenOptLevel::None)
     addPass(createPPCLoopInstrFormPrepPass(getPPCTargetMachine()));
@@ -522,7 +513,7 @@ bool PPCPassConfig::addPreISel() {
 }
 
 bool PPCPassConfig::addILPOpts() {
-  addPass(&EarlyIfConverterID);
+  addPass(&EarlyIfConverterLegacyID);
 
   if (EnableMachineCombinerPass)
     addPass(&MachineCombinerID);
@@ -572,7 +563,6 @@ void PPCPassConfig::addMachineSSAOptimization() {
 
 void PPCPassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None) {
-    initializePPCVSXFMAMutatePass(*PassRegistry::getPassRegistry());
     insertPass(VSXFMAMutateEarly ? &RegisterCoalescerID : &MachineSchedulerID,
                &PPCVSXFMAMutateID);
   }
@@ -600,7 +590,6 @@ void PPCPassConfig::addPreSched2() {
 
 void PPCPassConfig::addPreEmitPass() {
   addPass(createPPCPreEmitPeepholePass());
-  addPass(createPPCExpandISELPass());
 
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createPPCEarlyReturnPass());
@@ -617,7 +606,7 @@ void PPCPassConfig::addPreEmitPass2() {
 
 TargetTransformInfo
 PPCTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(PPCTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<PPCTTIImpl>(this, F));
 }
 
 bool PPCTargetMachine::isLittleEndian() const {

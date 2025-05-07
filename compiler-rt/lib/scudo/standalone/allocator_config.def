@@ -31,6 +31,9 @@
 #ifndef SECONDARY_REQUIRED_TEMPLATE_TYPE
 #define SECONDARY_REQUIRED_TEMPLATE_TYPE(...)
 #endif
+#ifndef SECONDARY_OPTIONAL
+#define SECONDARY_OPTIONAL(...)
+#endif
 #ifndef SECONDARY_CACHE_OPTIONAL
 #define SECONDARY_CACHE_OPTIONAL(...)
 #endif
@@ -78,6 +81,10 @@ PRIMARY_REQUIRED(const s32, MaxReleaseToOsIntervalMs)
 
 // PRIMARY_OPTIONAL(TYPE, NAME, DEFAULT)
 //
+
+// Enables/disables primary block caching. Batch class still caches.
+PRIMARY_OPTIONAL(const bool, EnableBlockCache, true)
+
 // The scale of a compact pointer. E.g., Ptr = Base + (CompactPtr << Scale).
 PRIMARY_OPTIONAL(const uptr, CompactPtrScale, SCUDO_MIN_ALIGNMENT_LOG)
 
@@ -109,6 +116,11 @@ PRIMARY_OPTIONAL_TYPE(CompactPtrT, uptr)
 // Defines the type of Secondary Cache to use.
 SECONDARY_REQUIRED_TEMPLATE_TYPE(CacheT)
 
+// SECONDARY_OPTIONAL(TYPE, NAME, DEFAULT)
+//
+// Add one guard page at the front and back for each allocation.
+SECONDARY_OPTIONAL(const bool, EnableGuardPages, true)
+
 // SECONDARY_CACHE_OPTIONAL(TYPE, NAME, DEFAULT)
 //
 // Defines the type of cache used by the Secondary. Some additional
@@ -122,6 +134,7 @@ SECONDARY_CACHE_OPTIONAL(const s32, MaxReleaseToOsIntervalMs, INT32_MAX)
 SECONDARY_CACHE_OPTIONAL(const s32, DefaultReleaseToOsIntervalMs, INT32_MIN)
 
 #undef SECONDARY_CACHE_OPTIONAL
+#undef SECONDARY_OPTIONAL
 #undef SECONDARY_REQUIRED_TEMPLATE_TYPE
 #undef PRIMARY_OPTIONAL_TYPE
 #undef PRIMARY_OPTIONAL

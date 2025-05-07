@@ -36,8 +36,11 @@ ASAN_FLAG(int, max_redzone, 2048,
 ASAN_FLAG(
     bool, debug, false,
     "If set, prints some debugging information and does additional checks.")
-ASAN_FLAG(bool, report_globals, true,
-          "If set, detect and report errors on globals .")
+ASAN_FLAG(
+    int, report_globals, 1,
+    "Controls the way to handle globals (0 - don't detect buffer overflow on "
+    "globals, 1 - detect buffer overflow, 2 - print data about registered "
+    "globals).")
 ASAN_FLAG(bool, check_initialization_order, false,
           "If set, attempts to catch initialization order issues.")
 ASAN_FLAG(
@@ -113,6 +116,9 @@ ASAN_FLAG(bool, poison_partial, true,
           "stack buffers.")
 ASAN_FLAG(bool, poison_array_cookie, true,
           "Poison (or not) the array cookie after operator new[].")
+ASAN_FLAG(int, poison_history_size, 0,
+          "[EXPERIMENTAL] Number of most recent memory poisoning calls for "
+          "which the stack traces will be recorded.")
 
 // Turn off alloc/dealloc mismatch checker on Mac and Windows for now.
 // https://github.com/google/sanitizers/issues/131

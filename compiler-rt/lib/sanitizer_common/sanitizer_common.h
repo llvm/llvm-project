@@ -83,8 +83,8 @@ int TgKill(pid_t pid, tid_t tid, int sig);
 uptr GetThreadSelf();
 void GetThreadStackTopAndBottom(bool at_initialization, uptr *stack_top,
                                 uptr *stack_bottom);
-void GetThreadStackAndTls(bool main, uptr *stk_addr, uptr *stk_size,
-                          uptr *tls_addr, uptr *tls_size);
+void GetThreadStackAndTls(bool main, uptr *stk_begin, uptr *stk_end,
+                          uptr *tls_begin, uptr *tls_end);
 
 // Memory management
 void *MmapOrDie(uptr size, const char *mem_type, bool raw_report = false);
@@ -268,7 +268,15 @@ class ScopedErrorReportLock {
 extern uptr stoptheworld_tracer_pid;
 extern uptr stoptheworld_tracer_ppid;
 
+// Returns true if the entire range can be read.
 bool IsAccessibleMemoryRange(uptr beg, uptr size);
+// Attempts to copy `n` bytes from memory range starting at `src` to `dest`.
+// Returns true if the entire range can be read. Returns `false` if any part of
+// the source range cannot be read, in which case the contents of `dest` are
+// undefined.
+bool TryMemCpy(void *dest, const void *src, uptr n);
+// Copies accessible memory, and zero fill inaccessible.
+void MemCpyAccessible(void *dest, const void *src, uptr n);
 
 // Error report formatting.
 const char *StripPathPrefix(const char *filepath,
@@ -919,7 +927,6 @@ typedef void (*RangeIteratorCallback)(uptr begin, uptr end, void *arg);
 
 enum AndroidApiLevel {
   ANDROID_NOT_ANDROID = 0,
-  ANDROID_KITKAT = 19,
   ANDROID_LOLLIPOP_MR1 = 22,
   ANDROID_POST_LOLLIPOP = 23
 };

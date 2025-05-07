@@ -2,11 +2,11 @@
 ;
 ; RUN: rm -rf %t
 ; RUN: split-file %s %t
-; RUN: llvm-ctxprof-util fromJSON --input=%t/profile.json --output=%t/profile.ctxprofdata
-; RUN: not opt -passes='require<ctx-prof-analysis>,print<ctx-prof-analysis>' \
-; RUN:   %t/example.ll -S 2>&1 | FileCheck %s --check-prefix=NO-FILE
+; RUN: llvm-ctxprof-util fromYAML --input=%t/profile.yaml --output=%t/profile.ctxprofdata
+; RUN: opt -passes='require<ctx-prof-analysis>,print<ctx-prof-analysis>' -ctx-profile-printer-level=everything \
+; RUN:   %t/example.ll -S 2>&1 | FileCheck %s --check-prefix=NO-CTX
 
-; RUN: not opt -passes='require<ctx-prof-analysis>,print<ctx-prof-analysis>' \
+; RUN: not opt -passes='require<ctx-prof-analysis>,print<ctx-prof-analysis>' -ctx-profile-printer-level=everything \
 ; RUN:   -use-ctx-profile=does_not_exist.ctxprofdata %t/example.ll -S 2>&1 | FileCheck %s --check-prefix=NO-FILE
 
 ; RUN: opt -module-summary -passes='thinlto-pre-link<O2>' \
@@ -14,78 +14,56 @@
 
 ; RUN: opt -module-summary -passes='thinlto-pre-link<O2>' -use-ctx-profile=%t/profile.ctxprofdata \
 ; RUN:  %t/example.ll -S -o %t/prelink.ll
-; RUN: opt -passes='require<ctx-prof-analysis>,print<ctx-prof-analysis>' \
+; RUN: opt -passes='require<ctx-prof-analysis>,print<ctx-prof-analysis>' -ctx-profile-printer-level=everything \
 ; RUN:   -use-ctx-profile=%t/profile.ctxprofdata %t/prelink.ll -S 2> %t/output.txt
 ; RUN: diff %t/expected-profile-output.txt %t/output.txt
 
 ; NO-FILE: error: could not open contextual profile file
+; NO-CTX: No contextual profile was provided
 ;
 ; This is the reference profile, laid out in the format the json formatter will
 ; output it from opt.
-;--- profile.json
-[
-  {
-    "Counters": [
-      9
-    ],
-    "Guid": 12341
-  },
-  {
-    "Counters": [
-      5
-    ],
-    "Guid": 12074870348631550642
-  },
-  {
-    "Callsites": [
-      [
-        {
-          "Counters": [
-            6,
-            7
-          ],
-          "Guid": 728453322856651412
-        }
-      ]
-    ],
-    "Counters": [
-      1
-    ],
-    "Guid": 11872291593386833696
-  }
-]
+;--- profile.yaml
+Contexts:
+  - Guid: 12341
+    TotalRootEntryCount: 90
+    Counters: [9]
+  - Guid: 12074870348631550642
+    TotalRootEntryCount: 24
+    Counters: [5]
+  - Guid: 11872291593386833696
+    TotalRootEntryCount: 4
+    Counters: [1]
+    Callsites:  -
+                  - Guid: 728453322856651412
+                    Counters: [6, 7]
 ;--- expected-profile-output.txt
 Function Info:
 4909520559318251808 : an_entrypoint. MaxCounterID: 2. MaxCallsiteID: 1
-12074870348631550642 : another_entrypoint_no_callees. MaxCounterID: 1. MaxCallsiteID: 0
 11872291593386833696 : foo. MaxCounterID: 1. MaxCallsiteID: 1
+12074870348631550642 : another_entrypoint_no_callees. MaxCounterID: 1. MaxCallsiteID: 0
 
 Current Profile:
-[
-  {
-    "Callsites": [
-      [
-        {
-          "Counters": [
-            6,
-            7
-          ],
-          "Guid": 728453322856651412
-        }
-      ]
-    ],
-    "Counters": [
-      1
-    ],
-    "Guid": 11872291593386833696
-  },
-  {
-    "Counters": [
-      5
-    ],
-    "Guid": 12074870348631550642
-  }
-]
+
+Contexts:
+  - Guid:            12341
+    TotalRootEntryCount: 90
+    Counters:        [ 9 ]
+  - Guid:            11872291593386833696
+    TotalRootEntryCount: 4
+    Counters:        [ 1 ]
+    Callsites:
+      - - Guid:            728453322856651412
+          Counters:        [ 6, 7 ]
+  - Guid:            12074870348631550642
+    TotalRootEntryCount: 24
+    Counters:        [ 5 ]
+
+Flat Profile:
+12341 : 810 
+728453322856651412 : 24 28 
+11872291593386833696 : 4 
+12074870348631550642 : 120 
 ;--- example.ll
 declare void @bar()
 

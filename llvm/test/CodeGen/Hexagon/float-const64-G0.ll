@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-small-data-threshold=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-small-data-threshold=0 < %s | FileCheck %s
 ;
 ; Check that no CONST64's are emitted for a -G0, mv5 compile
 ; CHECK-NOT: CONST

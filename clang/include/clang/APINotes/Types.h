@@ -425,6 +425,14 @@ class ParamInfo : public VariableInfo {
   LLVM_PREFERRED_TYPE(bool)
   unsigned NoEscape : 1;
 
+  /// Whether lifetimebound was specified.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned LifetimeboundSpecified : 1;
+
+  /// Whether the this parameter has the 'lifetimebound' attribute.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned Lifetimebound : 1;
+
   /// A biased RetainCountConventionKind, where 0 means "unspecified".
   ///
   /// Only relevant for out-parameters.
@@ -432,16 +440,25 @@ class ParamInfo : public VariableInfo {
 
 public:
   ParamInfo()
-      : NoEscapeSpecified(false), NoEscape(false), RawRetainCountConvention() {}
+      : NoEscapeSpecified(false), NoEscape(false),
+        LifetimeboundSpecified(false), Lifetimebound(false),
+        RawRetainCountConvention() {}
 
   std::optional<bool> isNoEscape() const {
-    if (!NoEscapeSpecified)
-      return std::nullopt;
-    return NoEscape;
+    return NoEscapeSpecified ? std::optional<bool>(NoEscape) : std::nullopt;
   }
   void setNoEscape(std::optional<bool> Value) {
     NoEscapeSpecified = Value.has_value();
     NoEscape = Value.value_or(false);
+  }
+
+  std::optional<bool> isLifetimebound() const {
+    return LifetimeboundSpecified ? std::optional<bool>(Lifetimebound)
+                                  : std::nullopt;
+  }
+  void setLifetimebound(std::optional<bool> Value) {
+    LifetimeboundSpecified = Value.has_value();
+    Lifetimebound = Value.value_or(false);
   }
 
   std::optional<RetainCountConventionKind> getRetainCountConvention() const {
@@ -463,6 +480,11 @@ public:
       NoEscape = RHS.NoEscape;
     }
 
+    if (!LifetimeboundSpecified && RHS.LifetimeboundSpecified) {
+      LifetimeboundSpecified = true;
+      Lifetimebound = RHS.Lifetimebound;
+    }
+
     if (!RawRetainCountConvention)
       RawRetainCountConvention = RHS.RawRetainCountConvention;
 
@@ -478,6 +500,8 @@ inline bool operator==(const ParamInfo &LHS, const ParamInfo &RHS) {
   return static_cast<const VariableInfo &>(LHS) == RHS &&
          LHS.NoEscapeSpecified == RHS.NoEscapeSpecified &&
          LHS.NoEscape == RHS.NoEscape &&
+         LHS.LifetimeboundSpecified == RHS.LifetimeboundSpecified &&
+         LHS.Lifetimebound == RHS.Lifetimebound &&
          LHS.RawRetainCountConvention == RHS.RawRetainCountConvention;
 }
 
@@ -517,6 +541,9 @@ public:
 
   /// The result type of this function, as a C type.
   std::string ResultType;
+
+  /// Ownership convention for return value
+  std::string SwiftReturnOwnership;
 
   /// The function parameters.
   std::vector<ParamInfo> Params;
@@ -598,7 +625,8 @@ inline bool operator==(const FunctionInfo &LHS, const FunctionInfo &RHS) {
          LHS.NumAdjustedNullable == RHS.NumAdjustedNullable &&
          LHS.NullabilityPayload == RHS.NullabilityPayload &&
          LHS.ResultType == RHS.ResultType && LHS.Params == RHS.Params &&
-         LHS.RawRetainCountConvention == RHS.RawRetainCountConvention;
+         LHS.RawRetainCountConvention == RHS.RawRetainCountConvention &&
+         LHS.SwiftReturnOwnership == RHS.SwiftReturnOwnership;
 }
 
 inline bool operator!=(const FunctionInfo &LHS, const FunctionInfo &RHS) {
@@ -615,6 +643,8 @@ public:
   /// Whether this is a required initializer.
   LLVM_PREFERRED_TYPE(bool)
   unsigned RequiredInit : 1;
+
+  std::optional<ParamInfo> Self;
 
   ObjCMethodInfo() : DesignatedInit(false), RequiredInit(false) {}
 
@@ -637,7 +667,7 @@ public:
 inline bool operator==(const ObjCMethodInfo &LHS, const ObjCMethodInfo &RHS) {
   return static_cast<const FunctionInfo &>(LHS) == RHS &&
          LHS.DesignatedInit == RHS.DesignatedInit &&
-         LHS.RequiredInit == RHS.RequiredInit;
+         LHS.RequiredInit == RHS.RequiredInit && LHS.Self == RHS.Self;
 }
 
 inline bool operator!=(const ObjCMethodInfo &LHS, const ObjCMethodInfo &RHS) {
@@ -666,7 +696,19 @@ public:
 class CXXMethodInfo : public FunctionInfo {
 public:
   CXXMethodInfo() {}
+
+  std::optional<ParamInfo> This;
+
+  LLVM_DUMP_METHOD void dump(llvm::raw_ostream &OS);
 };
+
+inline bool operator==(const CXXMethodInfo &LHS, const CXXMethodInfo &RHS) {
+  return static_cast<const FunctionInfo &>(LHS) == RHS && LHS.This == RHS.This;
+}
+
+inline bool operator!=(const CXXMethodInfo &LHS, const CXXMethodInfo &RHS) {
+  return !(LHS == RHS);
+}
 
 /// Describes API notes data for an enumerator.
 class EnumConstantInfo : public CommonEntityInfo {
@@ -686,6 +728,11 @@ class TagInfo : public CommonTypeInfo {
   LLVM_PREFERRED_TYPE(bool)
   unsigned SwiftCopyable : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned SwiftEscapableSpecified : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned SwiftEscapable : 1;
+
 public:
   std::optional<std::string> SwiftImportAs;
   std::optional<std::string> SwiftRetainOp;
@@ -698,7 +745,8 @@ public:
 
   TagInfo()
       : HasFlagEnum(0), IsFlagEnum(0), SwiftCopyableSpecified(false),
-        SwiftCopyable(false) {}
+        SwiftCopyable(false), SwiftEscapableSpecified(false),
+        SwiftEscapable(false) {}
 
   std::optional<bool> isFlagEnum() const {
     if (HasFlagEnum)
@@ -717,6 +765,16 @@ public:
   void setSwiftCopyable(std::optional<bool> Value) {
     SwiftCopyableSpecified = Value.has_value();
     SwiftCopyable = Value.value_or(false);
+  }
+
+  std::optional<bool> isSwiftEscapable() const {
+    return SwiftEscapableSpecified ? std::optional<bool>(SwiftEscapable)
+                                   : std::nullopt;
+  }
+
+  void setSwiftEscapable(std::optional<bool> Value) {
+    SwiftEscapableSpecified = Value.has_value();
+    SwiftEscapable = Value.value_or(false);
   }
 
   TagInfo &operator|=(const TagInfo &RHS) {
@@ -741,6 +799,9 @@ public:
     if (!SwiftCopyableSpecified)
       setSwiftCopyable(RHS.isSwiftCopyable());
 
+    if (!SwiftEscapableSpecified)
+      setSwiftEscapable(RHS.isSwiftEscapable());
+
     return *this;
   }
 
@@ -757,6 +818,7 @@ inline bool operator==(const TagInfo &LHS, const TagInfo &RHS) {
          LHS.SwiftConformance == RHS.SwiftConformance &&
          LHS.isFlagEnum() == RHS.isFlagEnum() &&
          LHS.isSwiftCopyable() == RHS.isSwiftCopyable() &&
+         LHS.isSwiftEscapable() == RHS.isSwiftEscapable() &&
          LHS.EnumExtensibility == RHS.EnumExtensibility;
 }
 

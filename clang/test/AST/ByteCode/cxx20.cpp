@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fexperimental-new-constant-interpreter -std=c++20 -verify=both,expected -fcxx-exceptions %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexperimental-new-constant-interpreter -std=c++20 -verify=both,expected -fcxx-exceptions %s -DNEW_INTERP
 // RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -verify=both,ref -fcxx-exceptions %s
 
 void test_alignas_operand() {
@@ -99,7 +99,7 @@ constexpr int f() {
 static_assert(f());
 #endif
 
-/// Distinct literals have disctinct addresses.
+/// Distinct literals have distinct addresses.
 /// see https://github.com/llvm/llvm-project/issues/58754
 constexpr auto foo(const char *p) { return p; }
 constexpr auto p1 = "test1";
@@ -108,22 +108,24 @@ constexpr auto p2 = "test2";
 constexpr bool b1 = foo(p1) == foo(p1);
 static_assert(b1);
 
-constexpr bool b2 = foo(p1) == foo(p2); // ref-error {{must be initialized by a constant expression}} \
-                                        // ref-note {{comparison of addresses of literals}} \
-                                        // ref-note {{declared here}}
-static_assert(!b2); // ref-error {{not an integral constant expression}} \
-                    // ref-note {{not a constant expression}}
+constexpr bool b2 = foo(p1) == foo(p2);
+static_assert(!b2);
 
 constexpr auto name1() { return "name1"; }
 constexpr auto name2() { return "name2"; }
 
-constexpr auto b3 = name1() == name1();
-static_assert(b3);
-constexpr auto b4 = name1() == name2(); // ref-error {{must be initialized by a constant expression}} \
-                                        // ref-note {{has unspecified value}} \
-                                        // ref-note {{declared here}}
-static_assert(!b4); // ref-error {{not an integral constant expression}} \
-                    // ref-note {{not a constant expression}}
+constexpr auto b3 = name1() == name1(); // ref-error {{must be initialized by a constant expression}} \
+                                        // ref-note {{comparison of addresses of potentially overlapping literals}}
+constexpr auto b4 = name1() == name2();
+static_assert(!b4);
+
+constexpr auto bar(const char *p) { return p + __builtin_strlen(p); }
+constexpr auto b5 = bar(p1) == p1;
+static_assert(!b5);
+constexpr auto b6 = bar(p1) == ""; // ref-error {{must be initialized by a constant expression}} \
+                                   // ref-note {{comparison of addresses of potentially overlapping literals}}
+constexpr auto b7 = bar(p1) + 1 == ""; // both-error {{must be initialized by a constant expression}} \
+                                       // both-note {{comparison against pointer '&"test1"[6]' that points past the end of a complete object has unspecified value}}
 
 namespace UninitializedFields {
   class A {
@@ -596,8 +598,6 @@ namespace ImplicitFunction {
                                     // both-note {{in call to 'callMe()'}}
 }
 
-/// FIXME: Unfortunately, the similar tests in test/SemaCXX/{compare-cxx2a.cpp use member pointers,
-/// which we don't support yet.
 namespace std {
   class strong_ordering {
   public:
@@ -634,6 +634,8 @@ namespace ThreeWayCmp {
   constexpr int k = (1 <=> 1, 0); // both-warning {{comparison result unused}}
   static_assert(k== 0, "");
 
+  static_assert(__builtin_nanf("") <=> __builtin_nanf("") == -127, "");
+
   /// Pointers.
   constexpr int a[] = {1,2,3};
   constexpr int b[] = {1,2,3};
@@ -641,7 +643,7 @@ namespace ThreeWayCmp {
   constexpr const int *pa2 = &a[2];
   constexpr const int *pb1 = &b[1];
   static_assert(pa1 <=> pb1 != 0, ""); // both-error {{not an integral constant expression}} \
-                                       // both-note {{has unspecified value}} \
+                                       // both-note {{has unspecified value}}
   static_assert(pa1 <=> pa1 == 0, "");
   static_assert(pa1 <=> pa2 == -1, "");
   static_assert(pa2 <=> pa1 == 1, "");
@@ -900,4 +902,98 @@ namespace VirtDtor {
   }
 
   static_assert(test('C', 'B'));
+}
+
+namespace TemporaryInNTTP {
+  template<auto n> struct B { /* ... */ };
+  struct J1 {
+    J1 *self=this;
+  };
+  /// FIXME: The bytecode interpreter emits a different diagnostic here.
+  /// The current interpreter creates a fake MaterializeTemporaryExpr (see EvaluateAsConstantExpr)
+  /// which is later used as the LValueBase of the created APValue.
+  B<J1{}> j1;  // ref-error {{pointer to temporary object is not allowed in a template argument}} \
+               // expected-error {{non-type template argument is not a constant expression}} \
+               // expected-note {{pointer to temporary is not a constant expression}} \
+               // expected-note {{created here}}
+  B<2> j2; /// Ok.
+}
+
+namespace LocalDestroy {
+  /// This is reduced from a libc++ test case.
+  /// The local f.TI.copied points to the local variable Copied, and we used to
+  /// destroy Copied before f, causing problems later on when a DeadBlock had a
+  /// pointer pointing to it that was already destroyed.
+  struct TrackInitialization {
+    bool *copied_;
+  };
+  struct TrackingPred : TrackInitialization {
+    constexpr TrackingPred(bool *copied) : TrackInitialization(copied) {}
+  };
+  struct F {
+    const TrackingPred &TI;
+  };
+  constexpr int f() {
+    bool Copied = false;
+    TrackingPred TI(&Copied);
+    F f{TI};
+    return 1;
+  }
+  static_assert(f() == 1);
+}
+
+namespace PseudoDtor {
+  constexpr int f1() {
+   using T = int;
+   int a = 0;
+   a.~T();
+   return a; // both-note {{read of object outside its lifetime}}
+  }
+  static_assert(f1() == 0); // both-error {{not an integral constant expression}} \
+                            // both-note {{in call to}}
+
+  constexpr int f2() {
+   using T = int;
+   int a = 0;
+   a.~T();
+   a = 0; // both-note {{assignment to object outside its lifetime}}
+   return a;
+  }
+  static_assert(f2() == 0); // both-error {{not an integral constant expression}} \
+                            // both-note {{in call to}}
+
+#ifdef NEW_INTERP
+  /// FIXME: Currently crashes with the current interpreter, see https://github.com/llvm/llvm-project/issues/53741
+  constexpr int f3() {
+   using T = int;
+   0 .~T();
+   return 0;
+  }
+  static_assert(f3() == 0);
+#endif
+}
+
+namespace NastyChar {
+  struct nasty_char {
+    template <typename T> friend auto operator<=>(T, T) = delete;
+    template <typename T> friend void operator+(T &&) = delete;
+    template <typename T> friend void operator-(T &&) = delete;
+    template <typename T> friend void operator&(T &&) = delete;
+
+    char c;
+  };
+
+
+  template <unsigned N> struct ToNastyChar {
+    constexpr ToNastyChar(const char (&r)[N]) {
+      for (unsigned I = 0; I != N; ++I)
+        text[I] = nasty_char{r[I]};
+    }
+    nasty_char text[N];
+  };
+
+  template <unsigned N> ToNastyChar(const char (&)[N]) -> ToNastyChar<N>;
+
+  template <ToNastyChar t> constexpr auto to_nasty_char() { return t; }
+  constexpr auto result = to_nasty_char<"12345">();
 }

@@ -13,80 +13,79 @@
 #ifndef ORC_RT_WRAPPER_FUNCTION_UTILS_H
 #define ORC_RT_WRAPPER_FUNCTION_UTILS_H
 
-#include "orc_rt/c_api.h"
-#include "common.h"
 #include "error.h"
 #include "executor_address.h"
+#include "orc_rt/c_api.h"
 #include "simple_packed_serialization.h"
 #include <type_traits>
 
-namespace __orc_rt {
+namespace orc_rt {
 
-/// C++ wrapper function result: Same as CWrapperFunctionResult but
+/// C++ wrapper function result: Same as orc_rt_WrapperFunctionResult but
 /// auto-releases memory.
 class WrapperFunctionResult {
 public:
   /// Create a default WrapperFunctionResult.
-  WrapperFunctionResult() { orc_rt_CWrapperFunctionResultInit(&R); }
+  WrapperFunctionResult() { orc_rt_WrapperFunctionResultInit(&R); }
 
-  /// Create a WrapperFunctionResult from a CWrapperFunctionResult. This
+  /// Create a WrapperFunctionResult from a WrapperFunctionResult. This
   /// instance takes ownership of the result object and will automatically
   /// call dispose on the result upon destruction.
-  WrapperFunctionResult(orc_rt_CWrapperFunctionResult R) : R(R) {}
+  WrapperFunctionResult(orc_rt_WrapperFunctionResult R) : R(R) {}
 
   WrapperFunctionResult(const WrapperFunctionResult &) = delete;
   WrapperFunctionResult &operator=(const WrapperFunctionResult &) = delete;
 
   WrapperFunctionResult(WrapperFunctionResult &&Other) {
-    orc_rt_CWrapperFunctionResultInit(&R);
+    orc_rt_WrapperFunctionResultInit(&R);
     std::swap(R, Other.R);
   }
 
   WrapperFunctionResult &operator=(WrapperFunctionResult &&Other) {
-    orc_rt_CWrapperFunctionResult Tmp;
-    orc_rt_CWrapperFunctionResultInit(&Tmp);
+    orc_rt_WrapperFunctionResult Tmp;
+    orc_rt_WrapperFunctionResultInit(&Tmp);
     std::swap(Tmp, Other.R);
     std::swap(R, Tmp);
     return *this;
   }
 
-  ~WrapperFunctionResult() { orc_rt_DisposeCWrapperFunctionResult(&R); }
+  ~WrapperFunctionResult() { orc_rt_DisposeWrapperFunctionResult(&R); }
 
   /// Relinquish ownership of and return the
-  /// orc_rt_CWrapperFunctionResult.
-  orc_rt_CWrapperFunctionResult release() {
-    orc_rt_CWrapperFunctionResult Tmp;
-    orc_rt_CWrapperFunctionResultInit(&Tmp);
+  /// orc_rt_WrapperFunctionResult.
+  orc_rt_WrapperFunctionResult release() {
+    orc_rt_WrapperFunctionResult Tmp;
+    orc_rt_WrapperFunctionResultInit(&Tmp);
     std::swap(R, Tmp);
     return Tmp;
   }
 
   /// Get a pointer to the data contained in this instance.
-  char *data() { return orc_rt_CWrapperFunctionResultData(&R); }
+  char *data() { return orc_rt_WrapperFunctionResultData(&R); }
 
   /// Returns the size of the data contained in this instance.
-  size_t size() const { return orc_rt_CWrapperFunctionResultSize(&R); }
+  size_t size() const { return orc_rt_WrapperFunctionResultSize(&R); }
 
   /// Returns true if this value is equivalent to a default-constructed
   /// WrapperFunctionResult.
-  bool empty() const { return orc_rt_CWrapperFunctionResultEmpty(&R); }
+  bool empty() const { return orc_rt_WrapperFunctionResultEmpty(&R); }
 
   /// Create a WrapperFunctionResult with the given size and return a pointer
   /// to the underlying memory.
   static WrapperFunctionResult allocate(size_t Size) {
     WrapperFunctionResult R;
-    R.R = orc_rt_CWrapperFunctionResultAllocate(Size);
+    R.R = orc_rt_WrapperFunctionResultAllocate(Size);
     return R;
   }
 
   /// Copy from the given char range.
   static WrapperFunctionResult copyFrom(const char *Source, size_t Size) {
-    return orc_rt_CreateCWrapperFunctionResultFromRange(Source, Size);
+    return orc_rt_CreateWrapperFunctionResultFromRange(Source, Size);
   }
 
   /// Copy from the given null-terminated string (includes the null-terminator).
   static WrapperFunctionResult copyFrom(const char *Source) {
-    return orc_rt_CreateCWrapperFunctionResultFromString(Source);
+    return orc_rt_CreateWrapperFunctionResultFromString(Source);
   }
 
   /// Copy from the given std::string (includes the null terminator).
@@ -96,7 +95,7 @@ public:
 
   /// Create an out-of-band error by copying the given string.
   static WrapperFunctionResult createOutOfBandError(const char *Msg) {
-    return orc_rt_CreateCWrapperFunctionResultFromOutOfBandError(Msg);
+    return orc_rt_CreateWrapperFunctionResultFromOutOfBandError(Msg);
   }
 
   /// Create an out-of-band error by copying the given string.
@@ -117,11 +116,11 @@ public:
   /// If this value is an out-of-band error then this returns the error message,
   /// otherwise returns nullptr.
   const char *getOutOfBandError() const {
-    return orc_rt_CWrapperFunctionResultGetOutOfBandError(&R);
+    return orc_rt_WrapperFunctionResultGetOutOfBandError(&R);
   }
 
 private:
-  orc_rt_CWrapperFunctionResult R;
+  orc_rt_WrapperFunctionResult R;
 };
 
 namespace detail {
@@ -288,30 +287,22 @@ private:
   using ResultSerializer = detail::ResultSerializer<SPSRetTagT, RetT>;
 
 public:
-  template <typename RetT, typename... ArgTs>
-  static Error call(const void *FnTag, RetT &Result, const ArgTs &...Args) {
+  template <typename DispatchFn, typename RetT, typename... ArgTs>
+  static Error call(DispatchFn &&Dispatch, RetT &Result, const ArgTs &...Args) {
 
     // RetT might be an Error or Expected value. Set the checked flag now:
     // we don't want the user to have to check the unused result if this
     // operation fails.
     detail::ResultDeserializer<SPSRetTagT, RetT>::makeSafe(Result);
 
-    // Since the functions cannot be zero/unresolved on Windows, the following
-    // reference taking would always be non-zero, thus generating a compiler
-    // warning otherwise.
-#if !defined(_WIN32)
-    if (ORC_RT_UNLIKELY(!&__orc_rt_jit_dispatch_ctx))
-      return make_error<StringError>("__orc_rt_jit_dispatch_ctx not set");
-    if (ORC_RT_UNLIKELY(!&__orc_rt_jit_dispatch))
-      return make_error<StringError>("__orc_rt_jit_dispatch not set");
-#endif
     auto ArgBuffer =
         WrapperFunctionResult::fromSPSArgs<SPSArgList<SPSTagTs...>>(Args...);
     if (const char *ErrMsg = ArgBuffer.getOutOfBandError())
       return make_error<StringError>(ErrMsg);
 
-    WrapperFunctionResult ResultBuffer = __orc_rt_jit_dispatch(
-        &__orc_rt_jit_dispatch_ctx, FnTag, ArgBuffer.data(), ArgBuffer.size());
+    WrapperFunctionResult ResultBuffer =
+        Dispatch(ArgBuffer.data(), ArgBuffer.size());
+
     if (auto ErrMsg = ResultBuffer.getOutOfBandError())
       return make_error<StringError>(ErrMsg);
 
@@ -347,10 +338,11 @@ template <typename... SPSTagTs>
 class WrapperFunction<void(SPSTagTs...)>
     : private WrapperFunction<SPSEmpty(SPSTagTs...)> {
 public:
-  template <typename... ArgTs>
-  static Error call(const void *FnTag, const ArgTs &...Args) {
+  template <typename DispatchFn, typename... ArgTs>
+  static Error call(DispatchFn &&Dispatch, const ArgTs &...Args) {
     SPSEmpty BE;
-    return WrapperFunction<SPSEmpty(SPSTagTs...)>::call(FnTag, BE, Args...);
+    return WrapperFunction<SPSEmpty(SPSTagTs...)>::call(
+        std::forward<DispatchFn>(Dispatch), BE, Args...);
   }
 
   using WrapperFunction<SPSEmpty(SPSTagTs...)>::handle;
@@ -438,7 +430,7 @@ public:
   /// Run call returning raw WrapperFunctionResult.
   WrapperFunctionResult run() const {
     using FnTy =
-        orc_rt_CWrapperFunctionResult(const char *ArgData, size_t ArgSize);
+        orc_rt_WrapperFunctionResult(const char *ArgData, size_t ArgSize);
     return WrapperFunctionResult(
         FnAddr.toPtr<FnTy *>()(ArgData.data(), ArgData.size()));
   }
@@ -504,6 +496,6 @@ public:
   }
 };
 
-} // end namespace __orc_rt
+} // namespace orc_rt
 
 #endif // ORC_RT_WRAPPER_FUNCTION_UTILS_H

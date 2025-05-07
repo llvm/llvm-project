@@ -10,16 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ARMTargetMachine.h"
 #include "ARMTargetTransformInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/CommandLine.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "arm-selectiondag-info"
 
-cl::opt<TPLoop::MemTransfer> EnableMemtransferTPLoop(
+static cl::opt<TPLoop::MemTransfer> EnableMemtransferTPLoop(
     "arm-memtransfer-tploop", cl::Hidden,
     cl::desc("Control conversion of memcpy to "
              "Tail predicated loops (WLSTP)"),
@@ -31,6 +29,11 @@ cl::opt<TPLoop::MemTransfer> EnableMemtransferTPLoop(
                clEnumValN(TPLoop::Allow, "allow",
                           "Allow (may be subject to certain conditions) "
                           "conversion of memcpy to TP loop.")));
+
+bool ARMSelectionDAGInfo::isTargetMemoryOpcode(unsigned Opcode) const {
+  return Opcode >= ARMISD::FIRST_MEMORY_OPCODE &&
+         Opcode <= ARMISD::LAST_MEMORY_OPCODE;
+}
 
 // Emit, if possible, a specialized version of the given Libcall. Typically this
 // means selecting the appropriately aligned version, but we also convert memset

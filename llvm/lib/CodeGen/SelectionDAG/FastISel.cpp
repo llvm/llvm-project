@@ -101,7 +101,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -157,7 +156,8 @@ bool FastISel::lowerArguments() {
 }
 
 /// Return the defined register if this instruction defines exactly one
-/// virtual register and uses no other virtual registers. Otherwise return 0.
+/// virtual register and uses no other virtual registers. Otherwise return
+/// Register();
 static Register findLocalRegDef(MachineInstr &MI) {
   Register RegDef;
   for (const MachineOperand &MO : MI.operands()) {
@@ -316,7 +316,7 @@ Register FastISel::materializeConstant(const Value *V, MVT VT) {
     if (!selectOperator(Op, Op->getOpcode()))
       if (!isa<Instruction>(Op) ||
           !fastSelectInstruction(cast<Instruction>(Op)))
-        return 0;
+        return Register();
     Reg = lookUpRegForValue(Op);
   } else if (isa<UndefValue>(V)) {
     Reg = createResultReg(TLI.getRegClassFor(VT));
@@ -381,14 +381,13 @@ void FastISel::updateValueMap(const Value *I, Register Reg, unsigned NumRegs) {
   }
 }
 
-Register FastISel::getRegForGEPIndex(const Value *Idx) {
+Register FastISel::getRegForGEPIndex(MVT PtrVT, const Value *Idx) {
   Register IdxN = getRegForValue(Idx);
   if (!IdxN)
     // Unhandled operand. Halt "fast" selection and bail.
     return Register();
 
   // If the index is smaller or larger than intptr_t, truncate or extend it.
-  MVT PtrVT = TLI.getPointerTy(DL);
   EVT IdxVT = EVT::getEVT(Idx->getType(), /*HandleUnknown=*/false);
   if (IdxVT.bitsLT(PtrVT)) {
     IdxN = fastEmit_r(IdxVT.getSimpleVT(), PtrVT, ISD::SIGN_EXTEND, IdxN);
@@ -544,7 +543,8 @@ bool FastISel::selectGetElementPtr(const User *I) {
   uint64_t TotalOffs = 0;
   // FIXME: What's a good SWAG number for MaxOffs?
   uint64_t MaxOffs = 2048;
-  MVT VT = TLI.getPointerTy(DL);
+  MVT VT = TLI.getValueType(DL, I->getType()).getSimpleVT();
+
   for (gep_type_iterator GTI = gep_type_begin(I), E = gep_type_end(I);
        GTI != E; ++GTI) {
     const Value *Idx = GTI.getOperand();
@@ -585,7 +585,7 @@ bool FastISel::selectGetElementPtr(const User *I) {
 
       // N = N + Idx * ElementSize;
       uint64_t ElementSize = GTI.getSequentialElementStride(DL);
-      Register IdxN = getRegForGEPIndex(Idx);
+      Register IdxN = getRegForGEPIndex(VT, Idx);
       if (!IdxN) // Unhandled operand. Halt "fast" selection and bail.
         return false;
 
@@ -1002,7 +1002,7 @@ bool FastISel::lowerCallTo(CallLoweringInfo &CLI) {
   GetReturnInfo(CLI.CallConv, CLI.RetTy, getReturnAttrs(CLI), Outs, TLI, DL);
 
   bool CanLowerReturn = TLI.CanLowerReturn(
-      CLI.CallConv, *FuncInfo.MF, CLI.IsVarArg, Outs, CLI.RetTy->getContext());
+      CLI.CallConv, *FuncInfo.MF, CLI.IsVarArg, Outs, CLI.RetTy->getContext(), CLI.RetTy);
 
   // FIXME: sret demotion isn't supported yet - bail out.
   if (!CanLowerReturn)
@@ -1079,7 +1079,7 @@ bool FastISel::lowerCallTo(CallLoweringInfo &CLI) {
       // For ByVal, alignment should come from FE. BE will guess if this info
       // is not there, but there are cases it cannot get right.
       if (!MemAlign)
-        MemAlign = Align(TLI.getByValTypeAlignment(Arg.IndirectType, DL));
+        MemAlign = TLI.getByValTypeAlignment(Arg.IndirectType, DL);
       Flags.setByValSize(FrameSize);
     } else if (!MemAlign) {
       MemAlign = DL.getABITypeAlign(Arg.Ty);
@@ -1230,7 +1230,7 @@ void FastISel::handleDbgInfo(const Instruction *II) {
     }
 
     if (!Res)
-      LLVM_DEBUG(dbgs() << "Dropping debug-info for " << DVR << "\n";);
+      LLVM_DEBUG(dbgs() << "Dropping debug-info for " << DVR << "\n");
   }
 }
 
@@ -1457,13 +1457,17 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
 
   case Intrinsic::launder_invariant_group:
   case Intrinsic::strip_invariant_group:
-  case Intrinsic::expect: {
+  case Intrinsic::expect:
+  case Intrinsic::expect_with_probability: {
     Register ResultReg = getRegForValue(II->getArgOperand(0));
     if (!ResultReg)
       return false;
     updateValueMap(II, ResultReg);
     return true;
   }
+  case Intrinsic::fake_use:
+    // At -O0, we don't need fake use, so just ignore it.
+    return true;
   case Intrinsic::experimental_stackmap:
     return selectStackmap(II);
   case Intrinsic::experimental_patchpoint_void:
@@ -1766,7 +1770,7 @@ bool FastISel::selectExtractValue(const User *U) {
   Type *AggTy = Op0->getType();
 
   // Get the base result register.
-  unsigned ResultReg;
+  Register ResultReg;
   DenseMap<const Value *, Register>::iterator I = FuncInfo.ValueMap.find(Op0);
   if (I != FuncInfo.ValueMap.end())
     ResultReg = I->second;
@@ -1782,7 +1786,8 @@ bool FastISel::selectExtractValue(const User *U) {
   ComputeValueVTs(TLI, DL, AggTy, AggValueVTs);
 
   for (unsigned i = 0; i < VTIndex; i++)
-    ResultReg += TLI.getNumRegisters(FuncInfo.Fn->getContext(), AggValueVTs[i]);
+    ResultReg = ResultReg.id() +
+                TLI.getNumRegisters(FuncInfo.Fn->getContext(), AggValueVTs[i]);
 
   updateValueMap(EVI, ResultReg);
   return true;
@@ -1848,11 +1853,14 @@ bool FastISel::selectOperator(const User *I, unsigned Opcode) {
     return false;
   }
 
-  case Instruction::Unreachable:
-    if (TM.Options.TrapUnreachable)
-      return fastEmit_(MVT::Other, MVT::Other, ISD::TRAP) != 0;
-    else
+  case Instruction::Unreachable: {
+    auto UI = cast<UnreachableInst>(I);
+    if (!UI->shouldLowerToTrap(TM.Options.TrapUnreachable,
+                               TM.Options.NoTrapAfterNoreturn))
       return true;
+
+    return fastEmit_(MVT::Other, MVT::Other, ISD::TRAP) != 0;
+  }
 
   case Instruction::Alloca:
     // FunctionLowering has the static-sized case covered.
@@ -1938,36 +1946,36 @@ bool FastISel::fastLowerIntrinsicCall(const IntrinsicInst * /*II*/) {
   return false;
 }
 
-unsigned FastISel::fastEmit_(MVT, MVT, unsigned) { return 0; }
+Register FastISel::fastEmit_(MVT, MVT, unsigned) { return Register(); }
 
-unsigned FastISel::fastEmit_r(MVT, MVT, unsigned, unsigned /*Op0*/) {
-  return 0;
+Register FastISel::fastEmit_r(MVT, MVT, unsigned, Register /*Op0*/) {
+  return Register();
 }
 
-unsigned FastISel::fastEmit_rr(MVT, MVT, unsigned, unsigned /*Op0*/,
-                               unsigned /*Op1*/) {
-  return 0;
+Register FastISel::fastEmit_rr(MVT, MVT, unsigned, Register /*Op0*/,
+                               Register /*Op1*/) {
+  return Register();
 }
 
-unsigned FastISel::fastEmit_i(MVT, MVT, unsigned, uint64_t /*Imm*/) {
-  return 0;
+Register FastISel::fastEmit_i(MVT, MVT, unsigned, uint64_t /*Imm*/) {
+  return Register();
 }
 
-unsigned FastISel::fastEmit_f(MVT, MVT, unsigned,
+Register FastISel::fastEmit_f(MVT, MVT, unsigned,
                               const ConstantFP * /*FPImm*/) {
-  return 0;
+  return Register();
 }
 
-unsigned FastISel::fastEmit_ri(MVT, MVT, unsigned, unsigned /*Op0*/,
+Register FastISel::fastEmit_ri(MVT, MVT, unsigned, Register /*Op0*/,
                                uint64_t /*Imm*/) {
-  return 0;
+  return Register();
 }
 
 /// This method is a wrapper of fastEmit_ri. It first tries to emit an
 /// instruction with an immediate operand using fastEmit_ri.
 /// If that fails, it materializes the immediate into a register and try
 /// fastEmit_rr instead.
-Register FastISel::fastEmit_ri_(MVT VT, unsigned Opcode, unsigned Op0,
+Register FastISel::fastEmit_ri_(MVT VT, unsigned Opcode, Register Op0,
                                 uint64_t Imm, MVT ImmType) {
   // If this is a multiply by a power of two, emit this as a shift left.
   if (Opcode == ISD::MUL && isPowerOf2_64(Imm)) {
@@ -1983,7 +1991,7 @@ Register FastISel::fastEmit_ri_(MVT VT, unsigned Opcode, unsigned Op0,
   // in-range.
   if ((Opcode == ISD::SHL || Opcode == ISD::SRA || Opcode == ISD::SRL) &&
       Imm >= VT.getSizeInBits())
-    return 0;
+    return Register();
 
   // First check if immediate type is legal. If not, we can't use the ri form.
   Register ResultReg = fastEmit_ri(VT, VT, Opcode, Op0, Imm);
@@ -1997,7 +2005,7 @@ Register FastISel::fastEmit_ri_(MVT VT, unsigned Opcode, unsigned Op0,
         IntegerType::get(FuncInfo.Fn->getContext(), VT.getSizeInBits());
     MaterialReg = getRegForValue(ConstantInt::get(ITy, Imm));
     if (!MaterialReg)
-      return 0;
+      return Register();
   }
   return fastEmit_rr(VT, VT, Opcode, Op0, MaterialReg);
 }
@@ -2033,7 +2041,7 @@ Register FastISel::fastEmitInst_(unsigned MachineInstOpcode,
 }
 
 Register FastISel::fastEmitInst_r(unsigned MachineInstOpcode,
-                                  const TargetRegisterClass *RC, unsigned Op0) {
+                                  const TargetRegisterClass *RC, Register Op0) {
   const MCInstrDesc &II = TII.get(MachineInstOpcode);
 
   Register ResultReg = createResultReg(RC);
@@ -2054,8 +2062,8 @@ Register FastISel::fastEmitInst_r(unsigned MachineInstOpcode,
 }
 
 Register FastISel::fastEmitInst_rr(unsigned MachineInstOpcode,
-                                   const TargetRegisterClass *RC, unsigned Op0,
-                                   unsigned Op1) {
+                                   const TargetRegisterClass *RC, Register Op0,
+                                   Register Op1) {
   const MCInstrDesc &II = TII.get(MachineInstOpcode);
 
   Register ResultReg = createResultReg(RC);
@@ -2078,8 +2086,8 @@ Register FastISel::fastEmitInst_rr(unsigned MachineInstOpcode,
 }
 
 Register FastISel::fastEmitInst_rrr(unsigned MachineInstOpcode,
-                                    const TargetRegisterClass *RC, unsigned Op0,
-                                    unsigned Op1, unsigned Op2) {
+                                    const TargetRegisterClass *RC, Register Op0,
+                                    Register Op1, Register Op2) {
   const MCInstrDesc &II = TII.get(MachineInstOpcode);
 
   Register ResultReg = createResultReg(RC);
@@ -2105,7 +2113,7 @@ Register FastISel::fastEmitInst_rrr(unsigned MachineInstOpcode,
 }
 
 Register FastISel::fastEmitInst_ri(unsigned MachineInstOpcode,
-                                   const TargetRegisterClass *RC, unsigned Op0,
+                                   const TargetRegisterClass *RC, Register Op0,
                                    uint64_t Imm) {
   const MCInstrDesc &II = TII.get(MachineInstOpcode);
 
@@ -2128,7 +2136,7 @@ Register FastISel::fastEmitInst_ri(unsigned MachineInstOpcode,
 }
 
 Register FastISel::fastEmitInst_rii(unsigned MachineInstOpcode,
-                                    const TargetRegisterClass *RC, unsigned Op0,
+                                    const TargetRegisterClass *RC, Register Op0,
                                     uint64_t Imm1, uint64_t Imm2) {
   const MCInstrDesc &II = TII.get(MachineInstOpcode);
 
@@ -2173,8 +2181,8 @@ Register FastISel::fastEmitInst_f(unsigned MachineInstOpcode,
 }
 
 Register FastISel::fastEmitInst_rri(unsigned MachineInstOpcode,
-                                    const TargetRegisterClass *RC, unsigned Op0,
-                                    unsigned Op1, uint64_t Imm) {
+                                    const TargetRegisterClass *RC, Register Op0,
+                                    Register Op1, uint64_t Imm) {
   const MCInstrDesc &II = TII.get(MachineInstOpcode);
 
   Register ResultReg = createResultReg(RC);
@@ -2215,11 +2223,10 @@ Register FastISel::fastEmitInst_i(unsigned MachineInstOpcode,
   return ResultReg;
 }
 
-Register FastISel::fastEmitInst_extractsubreg(MVT RetVT, unsigned Op0,
+Register FastISel::fastEmitInst_extractsubreg(MVT RetVT, Register Op0,
                                               uint32_t Idx) {
   Register ResultReg = createResultReg(TLI.getRegClassFor(RetVT));
-  assert(Register::isVirtualRegister(Op0) &&
-         "Cannot yet extract from physregs");
+  assert(Op0.isVirtual() && "Cannot yet extract from physregs");
   const TargetRegisterClass *RC = MRI.getRegClass(Op0);
   MRI.constrainRegClass(Op0, TRI.getSubClassWithSubReg(RC, Idx));
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
@@ -2229,7 +2236,7 @@ Register FastISel::fastEmitInst_extractsubreg(MVT RetVT, unsigned Op0,
 
 /// Emit MachineInstrs to compute the value of Op with all but the least
 /// significant bit set to zero.
-Register FastISel::fastEmitZExtFromI1(MVT VT, unsigned Op0) {
+Register FastISel::fastEmitZExtFromI1(MVT VT, Register Op0) {
   return fastEmit_ri(VT, VT, ISD::AND, Op0, 1);
 }
 
@@ -2293,7 +2300,7 @@ bool FastISel::handlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB) {
         FuncInfo.PHINodesToUpdate.resize(FuncInfo.OrigNumPHINodesToUpdate);
         return false;
       }
-      FuncInfo.PHINodesToUpdate.push_back(std::make_pair(&*MBBI++, Reg));
+      FuncInfo.PHINodesToUpdate.emplace_back(&*MBBI++, Reg);
       MIMD = {};
     }
   }

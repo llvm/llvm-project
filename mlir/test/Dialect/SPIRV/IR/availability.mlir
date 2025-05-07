@@ -233,3 +233,48 @@ func.func @udot_acc_sat_vector_4xi16_i64(%a: vector<4xi16>, %acc: i64) -> i64 {
   %r = spirv.UDotAccSat %a, %a, %acc: vector<4xi16> -> i64
   return %r: i64
 }
+
+//===----------------------------------------------------------------------===//
+// Primitive ops
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: emit_vertex
+func.func @emit_vertex() -> () {
+  // CHECK: min version: v1.0
+  // CHECK: max version: v1.6
+  // CHECK: capabilities: [ [Geometry] ]
+  spirv.EmitVertex
+  return
+}
+
+// CHECK-LABEL: end_primitive
+func.func @end_primitive() -> () {
+  // CHECK: min version: v1.0
+  // CHECK: max version: v1.6
+  // CHECK: capabilities: [ [Geometry] ]
+  spirv.EndPrimitive
+  return
+}
+
+//===----------------------------------------------------------------------===//
+// Mesh ops
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: emit_mesh_tasks
+func.func @emit_mesh_tasks(%0 : i32) -> () {
+  // CHECK: min version: v1.4
+  // CHECK: max version: v1.6
+  // CHECK: extensions: [ [SPV_EXT_mesh_shader] ]
+  // CHECK: capabilities: [ [MeshShadingEXT] ]
+  spirv.EXT.EmitMeshTasks %0, %0, %0 : i32, i32, i32
+}
+
+// CHECK-LABEL: set_mesh_outputs
+func.func @set_mesh_outputs(%0 : i32, %1 : i32) -> () {
+  // CHECK: min version: v1.4
+  // CHECK: max version: v1.6
+  // CHECK: extensions: [ [SPV_EXT_mesh_shader] ]
+  // CHECK: capabilities: [ [MeshShadingEXT] ]
+  spirv.EXT.SetMeshOutputs %0, %1 : i32, i32
+  spirv.Return
+}

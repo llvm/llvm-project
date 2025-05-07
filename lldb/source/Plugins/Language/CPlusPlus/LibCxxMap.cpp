@@ -9,14 +9,14 @@
 #include "LibCxx.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include <cstdint>
@@ -197,11 +197,11 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override;
-
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
+  llvm::Expected<uint32_t> CalculateNumChildrenForOldCompressedPairLayout();
+
   /// Returns the ValueObject for the __tree_node type that
   /// holds the key/value pair of the node at index \ref idx.
   ///
@@ -235,9 +235,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override;
-
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
   ~LibCxxMapIteratorSyntheticFrontEnd() override = default;
 
@@ -254,6 +252,27 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
     Update();
 }
 
+llvm::Expected<uint32_t>
+lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
+    CalculateNumChildrenForOldCompressedPairLayout() {
+  ValueObjectSP node_sp(m_tree->GetChildMemberWithName("__pair3_"));
+  if (!node_sp)
+    return 0;
+
+  if (!isOldCompressedPairLayout(*node_sp))
+    return llvm::createStringError("Unexpected std::map layout: expected "
+                                   "old __compressed_pair layout.");
+
+  node_sp = GetFirstValueOfLibCXXCompressedPair(*node_sp);
+
+  if (!node_sp)
+    return 0;
+
+  m_count = node_sp->GetValueAsUnsigned(0);
+
+  return m_count;
+}
+
 llvm::Expected<uint32_t> lldb_private::formatters::
     LibcxxStdMapSyntheticFrontEnd::CalculateNumChildren() {
   if (m_count != UINT32_MAX)
@@ -262,17 +281,12 @@ llvm::Expected<uint32_t> lldb_private::formatters::
   if (m_tree == nullptr)
     return 0;
 
-  ValueObjectSP size_node(m_tree->GetChildMemberWithName("__pair3_"));
-  if (!size_node)
-    return 0;
+  if (auto node_sp = m_tree->GetChildMemberWithName("__size_")) {
+    m_count = node_sp->GetValueAsUnsigned(0);
+    return m_count;
+  }
 
-  size_node = GetFirstValueOfLibCXXCompressedPair(*size_node);
-
-  if (!size_node)
-    return 0;
-
-  m_count = size_node->GetValueAsUnsigned(0);
-  return m_count;
+  return CalculateNumChildrenForOldCompressedPairLayout();
 }
 
 ValueObjectSP
@@ -371,6 +385,7 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::Update() {
   m_tree = m_backend.GetChildMemberWithName("__tree_").get();
   if (!m_tree)
     return lldb::ChildCacheState::eRefetch;
+
   m_root_node = m_tree->GetChildMemberWithName("__begin_node_").get();
   m_node_ptr_type =
       m_tree->GetCompilerType().GetDirectNestedTypeWithName("__node_pointer");
@@ -378,14 +393,14 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-bool lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
-    MightHaveChildren() {
-  return true;
-}
-
-size_t lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
+llvm::Expected<size_t> lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
-  return ExtractIndexFromString(name.GetCString());
+  size_t idx = ExtractIndexFromString(name.GetCString());
+  if (idx == UINT32_MAX) {
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
+  }
+  return idx;
 }
 
 SyntheticChildrenFrontEnd *
@@ -478,15 +493,12 @@ lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::GetChildAtIndex(
   return m_pair_sp->GetChildAtIndex(idx);
 }
 
-bool lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::
-    MightHaveChildren() {
-  return true;
-}
-
-size_t lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::
+llvm::Expected<size_t>
+lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (!m_pair_sp)
-    return UINT32_MAX;
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
 
   return m_pair_sp->GetIndexOfChildWithName(name);
 }

@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/TokenKinds.h"
-#include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/Designator.h"
@@ -436,22 +436,22 @@ ExprResult Parser::createEmbedExpr() {
   ASTContext &Context = Actions.getASTContext();
   SourceLocation StartLoc = ConsumeAnnotationToken();
   if (Data->BinaryData.size() == 1) {
-    Res = IntegerLiteral::Create(Context,
-                                 llvm::APInt(CHAR_BIT, Data->BinaryData.back()),
-                                 Context.UnsignedCharTy, StartLoc);
+    Res = IntegerLiteral::Create(
+        Context, llvm::APInt(CHAR_BIT, (unsigned char)Data->BinaryData.back()),
+        Context.UnsignedCharTy, StartLoc);
   } else {
     auto CreateStringLiteralFromStringRef = [&](StringRef Str, QualType Ty) {
       llvm::APSInt ArraySize =
           Context.MakeIntValue(Str.size(), Context.getSizeType());
       QualType ArrayTy = Context.getConstantArrayType(
           Ty, ArraySize, nullptr, ArraySizeModifier::Normal, 0);
-      return StringLiteral::Create(Context, Str, StringLiteralKind::Ordinary,
+      return StringLiteral::Create(Context, Str, StringLiteralKind::Binary,
                                    false, ArrayTy, StartLoc);
     };
 
     StringLiteral *BinaryDataArg = CreateStringLiteralFromStringRef(
         Data->BinaryData, Context.UnsignedCharTy);
-    Res = Actions.ActOnEmbedExpr(StartLoc, BinaryDataArg);
+    Res = Actions.ActOnEmbedExpr(StartLoc, BinaryDataArg, Data->FileName);
   }
   return Res;
 }
@@ -487,7 +487,7 @@ ExprResult Parser::ParseBraceInitializer() {
                           : diag::ext_c_empty_initializer);
     }
     // Match the '}'.
-    return Actions.ActOnInitList(LBraceLoc, std::nullopt, ConsumeBrace());
+    return Actions.ActOnInitList(LBraceLoc, {}, ConsumeBrace());
   }
 
   // Enter an appropriate expression evaluation context for an initializer list.
@@ -595,17 +595,17 @@ bool Parser::ParseMicrosoftIfExistsBraceInitializer(ExprVector &InitExprs,
   }
 
   switch (Result.Behavior) {
-  case IEB_Parse:
+  case IfExistsBehavior::Parse:
     // Parse the declarations below.
     break;
 
-  case IEB_Dependent:
+  case IfExistsBehavior::Dependent:
     Diag(Result.KeywordLoc, diag::warn_microsoft_dependent_exists)
       << Result.IsIfExists;
     // Fall through to skip.
     [[fallthrough]];
 
-  case IEB_Skip:
+  case IfExistsBehavior::Skip:
     Braces.skipToEnd();
     return false;
   }

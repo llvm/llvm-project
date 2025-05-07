@@ -12,8 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceInstructionsMIR.h"
-#include "Delta.h"
-
 #include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -65,7 +63,7 @@ static bool shouldNotRemoveInstruction(const TargetInstrInfo &TII,
 
 static void extractInstrFromFunction(Oracle &O, MachineFunction &MF) {
   MachineDominatorTree MDT;
-  MDT.calculate(MF);
+  MDT.recalculate(MF);
 
   auto MRI = &MF.getRegInfo();
   SetVector<MachineInstr *> ToDelete;
@@ -151,13 +149,10 @@ static void extractInstrFromFunction(Oracle &O, MachineFunction &MF) {
     MI->eraseFromParent();
 }
 
-static void extractInstrFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::reduceInstructionsMIRDeltaPass(Oracle &O,
+                                          ReducerWorkItem &WorkItem) {
   for (const Function &F : WorkItem.getModule()) {
     if (MachineFunction *MF = WorkItem.MMI->getMachineFunction(F))
       extractInstrFromFunction(O, *MF);
   }
-}
-
-void llvm::reduceInstructionsMIRDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractInstrFromModule, "Reducing Instructions");
 }

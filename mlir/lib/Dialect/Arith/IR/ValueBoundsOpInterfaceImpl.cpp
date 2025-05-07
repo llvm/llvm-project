@@ -75,6 +75,20 @@ struct MulIOpInterface
   }
 };
 
+struct FloorDivSIOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<FloorDivSIOpInterface,
+                                                   FloorDivSIOp> {
+  void populateBoundsForIndexValue(Operation *op, Value value,
+                                   ValueBoundsConstraintSet &cstr) const {
+    auto divSIOp = cast<FloorDivSIOp>(op);
+    assert(value == divSIOp.getResult() && "invalid value");
+
+    AffineExpr lhs = cstr.getExpr(divSIOp.getLhs());
+    AffineExpr rhs = cstr.getExpr(divSIOp.getRhs());
+    cstr.bound(value) == lhs.floorDiv(rhs);
+  }
+};
+
 struct SelectOpInterface
     : public ValueBoundsOpInterface::ExternalModel<SelectOpInterface,
                                                    SelectOp> {
@@ -107,9 +121,10 @@ struct SelectOpInterface
     // If trueValue <= falseValue:
     // * result <= falseValue
     // * result >= trueValue
-    if (cstr.compare(/*lhs=*/{trueValue, dim},
-                     ValueBoundsConstraintSet::ComparisonOperator::LE,
-                     /*rhs=*/{falseValue, dim})) {
+    if (cstr.populateAndCompare(
+            /*lhs=*/{trueValue, dim},
+            ValueBoundsConstraintSet::ComparisonOperator::LE,
+            /*rhs=*/{falseValue, dim})) {
       if (dim) {
         cstr.bound(value)[*dim] >= cstr.getExpr(trueValue, dim);
         cstr.bound(value)[*dim] <= cstr.getExpr(falseValue, dim);
@@ -121,9 +136,10 @@ struct SelectOpInterface
     // If falseValue <= trueValue:
     // * result <= trueValue
     // * result >= falseValue
-    if (cstr.compare(/*lhs=*/{falseValue, dim},
-                     ValueBoundsConstraintSet::ComparisonOperator::LE,
-                     /*rhs=*/{trueValue, dim})) {
+    if (cstr.populateAndCompare(
+            /*lhs=*/{falseValue, dim},
+            ValueBoundsConstraintSet::ComparisonOperator::LE,
+            /*rhs=*/{trueValue, dim})) {
       if (dim) {
         cstr.bound(value)[*dim] >= cstr.getExpr(falseValue, dim);
         cstr.bound(value)[*dim] <= cstr.getExpr(trueValue, dim);
@@ -155,6 +171,7 @@ void mlir::arith::registerValueBoundsOpInterfaceExternalModels(
     arith::ConstantOp::attachInterface<arith::ConstantOpInterface>(*ctx);
     arith::SubIOp::attachInterface<arith::SubIOpInterface>(*ctx);
     arith::MulIOp::attachInterface<arith::MulIOpInterface>(*ctx);
+    arith::FloorDivSIOp::attachInterface<arith::FloorDivSIOpInterface>(*ctx);
     arith::SelectOp::attachInterface<arith::SelectOpInterface>(*ctx);
   });
 }

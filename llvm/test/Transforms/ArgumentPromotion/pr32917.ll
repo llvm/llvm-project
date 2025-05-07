@@ -13,13 +13,13 @@ define i32 @fn2() local_unnamed_addr {
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP3]], i64 -4
 ; CHECK-NEXT:    [[DOTVAL:%.*]] = load i32, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    call fastcc void @fn1(i32 [[DOTVAL]])
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 0
 ;
   %1 = load i32, ptr @b, align 4
   %2 = sext i32 %1 to i64
   %3 = inttoptr i64 %2 to ptr
   call fastcc void @fn1(ptr %3)
-  ret i32 undef
+  ret i32 0
 }
 
 define internal fastcc void @fn1(ptr nocapture readonly) unnamed_addr {

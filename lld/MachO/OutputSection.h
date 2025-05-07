@@ -37,6 +37,7 @@ public:
   enum Kind {
     ConcatKind,
     SyntheticKind,
+    TextKind,
   };
 
   OutputSection(Kind kind, StringRef name) : name(name), sectionKind(kind) {}

@@ -40,7 +40,6 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/ObjCARC.h"
@@ -65,7 +64,7 @@ namespace {
 
 class ObjCARCContract {
   bool Changed;
-  bool CFGChanged;
+  bool CFGChanged = false;
   AAResults *AA;
   DominatorTree *DT;
   ProvenanceAnalysis PA;
@@ -380,15 +379,7 @@ void ObjCARCContract::tryToContractReleaseIntoStoreStrong(
                    << "            Retain:  " << *Retain << "\n"
                    << "            Load:    " << *Load << "\n");
 
-  LLVMContext &C = Release->getContext();
-  Type *I8X = PointerType::getUnqual(Type::getInt8Ty(C));
-  Type *I8XX = PointerType::getUnqual(I8X);
-
-  Value *Args[] = { Load->getPointerOperand(), New };
-  if (Args[0]->getType() != I8XX)
-    Args[0] = new BitCastInst(Args[0], I8XX, "", Store->getIterator());
-  if (Args[1]->getType() != I8X)
-    Args[1] = new BitCastInst(Args[1], I8X, "", Store->getIterator());
+  Value *Args[] = {Load->getPointerOperand(), New};
   Function *Decl = EP.get(ARCRuntimeEntryPointKind::StoreStrong);
   CallInst *StoreStrong = objcarc::createCallInstWithColors(
       Decl, Args, "", Store->getIterator(), BlockColors);
@@ -476,8 +467,8 @@ bool ObjCARCContract::tryToPeepholeInstruction(
                          RVInstMarker->getString(),
                          /*Constraints=*/"", /*hasSideEffects=*/true);
 
-      objcarc::createCallInstWithColors(IA, std::nullopt, "",
-                                        Inst->getIterator(), BlockColors);
+      objcarc::createCallInstWithColors(IA, {}, "", Inst->getIterator(),
+                                        BlockColors);
     }
   decline_rv_optimization:
     return false;
@@ -636,7 +627,7 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
             // block with a catchswitch has no insertion point. Keep going up
             // the dominator tree until we find a non-catchswitch.
             BasicBlock *InsertBB = IncomingBB;
-            while (isa<CatchSwitchInst>(InsertBB->getFirstNonPHI())) {
+            while (isa<CatchSwitchInst>(InsertBB->getFirstNonPHIIt())) {
               InsertBB = DT->getNode(InsertBB)->getIDom()->getBlock();
             }
 
@@ -669,7 +660,6 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
     };
 
     Value *Arg = cast<CallInst>(Inst)->getArgOperand(0);
-    Value *OrigArg = Arg;
 
     // TODO: Change this to a do-while.
     for (;;) {
@@ -695,24 +685,6 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
         }
         break;
       }
-    }
-
-    // Replace bitcast users of Arg that are dominated by Inst.
-    SmallVector<BitCastInst *, 2> BitCastUsers;
-
-    // Add all bitcast users of the function argument first.
-    for (User *U : OrigArg->users())
-      if (auto *BC = dyn_cast<BitCastInst>(U))
-        BitCastUsers.push_back(BC);
-
-    // Replace the bitcasts with the call return. Iterate until list is empty.
-    while (!BitCastUsers.empty()) {
-      auto *BC = BitCastUsers.pop_back_val();
-      for (User *U : BC->users())
-        if (auto *B = dyn_cast<BitCastInst>(U))
-          BitCastUsers.push_back(B);
-
-      ReplaceArgUses(BC);
     }
   }
 

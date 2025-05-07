@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___ALGORITHM_RANGES_COPY_IF_H
 #define _LIBCPP___ALGORITHM_RANGES_COPY_IF_H
 
+#include <__algorithm/copy_if.h>
 #include <__algorithm/in_out_result.h>
 #include <__config>
 #include <__functional/identity.h>
@@ -37,18 +38,6 @@ template <class _Ip, class _Op>
 using copy_if_result = in_out_result<_Ip, _Op>;
 
 struct __copy_if {
-  template <class _InIter, class _Sent, class _OutIter, class _Proj, class _Pred>
-  _LIBCPP_HIDE_FROM_ABI static constexpr copy_if_result<_InIter, _OutIter>
-  __copy_if_impl(_InIter __first, _Sent __last, _OutIter __result, _Pred& __pred, _Proj& __proj) {
-    for (; __first != __last; ++__first) {
-      if (std::invoke(__pred, std::invoke(__proj, *__first))) {
-        *__result = *__first;
-        ++__result;
-      }
-    }
-    return {std::move(__first), std::move(__result)};
-  }
-
   template <input_iterator _Iter,
             sentinel_for<_Iter> _Sent,
             weakly_incrementable _OutIter,
@@ -57,7 +46,8 @@ struct __copy_if {
     requires indirectly_copyable<_Iter, _OutIter>
   _LIBCPP_HIDE_FROM_ABI constexpr copy_if_result<_Iter, _OutIter>
   operator()(_Iter __first, _Sent __last, _OutIter __result, _Pred __pred, _Proj __proj = {}) const {
-    return __copy_if_impl(std::move(__first), std::move(__last), std::move(__result), __pred, __proj);
+    auto __res = std::__copy_if(std::move(__first), std::move(__last), std::move(__result), __pred, __proj);
+    return {std::move(__res.first), std::move(__res.second)};
   }
 
   template <input_range _Range,
@@ -67,7 +57,8 @@ struct __copy_if {
     requires indirectly_copyable<iterator_t<_Range>, _OutIter>
   _LIBCPP_HIDE_FROM_ABI constexpr copy_if_result<borrowed_iterator_t<_Range>, _OutIter>
   operator()(_Range&& __r, _OutIter __result, _Pred __pred, _Proj __proj = {}) const {
-    return __copy_if_impl(ranges::begin(__r), ranges::end(__r), std::move(__result), __pred, __proj);
+    auto __res = std::__copy_if(ranges::begin(__r), ranges::end(__r), std::move(__result), __pred, __proj);
+    return {std::move(__res.first), std::move(__res.second)};
   }
 };
 

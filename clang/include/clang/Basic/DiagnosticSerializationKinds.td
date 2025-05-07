@@ -51,9 +51,9 @@ def note_pch_vfsoverlay_files : Note<"%select{PCH|current translation unit}0 has
 def note_pch_vfsoverlay_empty : Note<"%select{PCH|current translation unit}0 has no VFS overlays">;
 
 def err_ast_file_version_too_old : Error<
-    "%select{PCH|module|AST}0 file '%1' uses an older PCH format that is no longer supported">;
+    "%select{PCH|module|AST}0 file '%1' uses an older format that is no longer supported">;
 def err_ast_file_version_too_new : Error<
-    "%select{PCH|module|AST}0 file '%1' uses a newer PCH format that cannot be read">;
+    "%select{PCH|module|AST}0 file '%1' uses a newer format that cannot be read">;
 def err_ast_file_different_branch : Error<
     "%select{PCH|module|AST}0 file '%1' built from a different branch (%2) than the compiler (%3)">;
 def err_ast_file_with_compiler_errors : Error<
@@ -75,8 +75,7 @@ def err_module_file_not_module : Error<
 def err_module_file_missing_top_level_submodule : Error<
   "module file '%0' is missing its top-level submodule">, DefaultFatal;
 def note_module_file_conflict : Note<
-  "this is generally caused by modules with the same name found in multiple "
-  "paths">;
+  "compiled from '%0' and '%1'">;
 
 def remark_module_import : Remark<
   "importing module '%0'%select{| into '%3'}2 from '%1'">,
@@ -133,6 +132,17 @@ def warn_module_system_bit_conflict : Warning<
   "module file '%0' was validated as a system module and is now being imported "
   "as a non-system module; any difference in diagnostic options will be ignored">,
   InGroup<ModuleConflict>;
+
+def warn_decls_in_multiple_modules : Warning<
+  "declaration %0 is detected to be defined in multiple module units, first is from '%1' and second is from '%2'; "
+  "the compiler may not be good at merging the definitions. ">,
+  InGroup<DiagGroup<"decls-in-multiple-modules">>,
+  DefaultIgnore;
+
+def warn_module_file_mapping_mismatch
+    : Warning<"loaded module file '%0' conflicts with imported file '%1'">,
+      InGroup<DiagGroup<"module-file-mapping-mismatch">>,
+      DefaultIgnore;
 
 def err_failed_to_find_module_file : Error<
   "failed to find module file for module '%0'">;

@@ -23,6 +23,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/raw_ostream.h"
+#include <array>
 #include <cassert>
 #include <map>
 #include <memory>
@@ -818,6 +819,7 @@ public:
   virtual NodeKind getNodeKind() = 0;
 
   virtual void setError(const Twine &) = 0;
+  virtual std::error_code error() = 0;
   virtual void setAllowUnknownKeys(bool Allow);
 
   template <typename T>
@@ -899,11 +901,12 @@ public:
   }
 
   template <typename T, typename Context>
-  std::enable_if_t<has_SequenceTraits<T>::value, void>
-  mapOptionalWithContext(const char *Key, T &Val, Context &Ctx) {
-    // omit key/value instead of outputting empty sequence
-    if (this->canElideEmptySequence() && !(Val.begin() != Val.end()))
-      return;
+  void mapOptionalWithContext(const char *Key, T &Val, Context &Ctx) {
+    if constexpr (has_SequenceTraits<T>::value) {
+      // omit key/value instead of outputting empty sequence
+      if (this->canElideEmptySequence() && Val.begin() == Val.end())
+        return;
+    }
     this->processKey(Key, Val, false, Ctx);
   }
 
@@ -912,12 +915,6 @@ public:
                               Context &Ctx) {
     this->processKeyWithDefault(Key, Val, std::optional<T>(),
                                 /*Required=*/false, Ctx);
-  }
-
-  template <typename T, typename Context>
-  std::enable_if_t<!has_SequenceTraits<T>::value, void>
-  mapOptionalWithContext(const char *Key, T &Val, Context &Ctx) {
-    this->processKey(Key, Val, false, Ctx);
   }
 
   template <typename T, typename Context, typename DefaultT>
@@ -1103,22 +1100,18 @@ yamlize(IO &io, T &Val, bool, Context &Ctx) {
 }
 
 template <typename T, typename Context>
-std::enable_if_t<!has_MappingEnumInputTraits<T, Context>::value, bool>
-yamlizeMappingEnumInput(IO &io, T &Val) {
+bool yamlizeMappingEnumInput(IO &io, T &Val) {
+  if constexpr (has_MappingEnumInputTraits<T, Context>::value) {
+    if (io.outputting())
+      return false;
+
+    io.beginEnumScalar();
+    MappingTraits<T>::enumInput(io, Val);
+    bool Matched = !io.matchEnumFallback();
+    io.endEnumScalar();
+    return Matched;
+  }
   return false;
-}
-
-template <typename T, typename Context>
-std::enable_if_t<has_MappingEnumInputTraits<T, Context>::value, bool>
-yamlizeMappingEnumInput(IO &io, T &Val) {
-  if (io.outputting())
-    return false;
-
-  io.beginEnumScalar();
-  MappingTraits<T>::enumInput(io, Val);
-  bool Matched = !io.matchEnumFallback();
-  io.endEnumScalar();
-  return Matched;
 }
 
 template <typename T, typename Context>
@@ -1447,7 +1440,7 @@ public:
   ~Input() override;
 
   // Check if there was an syntax or semantic error during parsing.
-  std::error_code error();
+  std::error_code error() override;
 
 private:
   bool outputting() const override;
@@ -1630,6 +1623,7 @@ public:
   void scalarTag(std::string &) override;
   NodeKind getNodeKind() override;
   void setError(const Twine &message) override;
+  std::error_code error() override;
   bool canElideEmptySequence() override;
 
   // These are only used by operator<<. They could be private
@@ -2005,6 +1999,11 @@ struct SequenceTraits<
     std::vector<T>,
     std::enable_if_t<CheckIsBool<SequenceElementTraits<T>::flow>::value>>
     : SequenceTraitsImpl<std::vector<T>, SequenceElementTraits<T>::flow> {};
+template <typename T, size_t N>
+struct SequenceTraits<
+    std::array<T, N>,
+    std::enable_if_t<CheckIsBool<SequenceElementTraits<T>::flow>::value>>
+    : SequenceTraitsImpl<std::array<T, N>, SequenceElementTraits<T>::flow> {};
 template <typename T, unsigned N>
 struct SequenceTraits<
     SmallVector<T, N>,
@@ -2081,6 +2080,15 @@ template <typename T> struct StdMapStringCustomMappingTraitsImpl {
 #define LLVM_YAML_DECLARE_MAPPING_TRAITS(Type)                                 \
   namespace llvm {                                                             \
   namespace yaml {                                                             \
+  template <> struct LLVM_ABI MappingTraits<Type> {                            \
+    static void mapping(IO &IO, Type &Obj);                                    \
+  };                                                                           \
+  }                                                                            \
+  }
+
+#define LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(Type)                         \
+  namespace llvm {                                                             \
+  namespace yaml {                                                             \
   template <> struct MappingTraits<Type> {                                     \
     static void mapping(IO &IO, Type &Obj);                                    \
   };                                                                           \
@@ -2090,7 +2098,7 @@ template <typename T> struct StdMapStringCustomMappingTraitsImpl {
 #define LLVM_YAML_DECLARE_ENUM_TRAITS(Type)                                    \
   namespace llvm {                                                             \
   namespace yaml {                                                             \
-  template <> struct ScalarEnumerationTraits<Type> {                           \
+  template <> struct LLVM_ABI ScalarEnumerationTraits<Type> {                  \
     static void enumeration(IO &io, Type &Value);                              \
   };                                                                           \
   }                                                                            \
@@ -2099,7 +2107,7 @@ template <typename T> struct StdMapStringCustomMappingTraitsImpl {
 #define LLVM_YAML_DECLARE_BITSET_TRAITS(Type)                                  \
   namespace llvm {                                                             \
   namespace yaml {                                                             \
-  template <> struct ScalarBitSetTraits<Type> {                                \
+  template <> struct LLVM_ABI ScalarBitSetTraits<Type> {                       \
     static void bitset(IO &IO, Type &Options);                                 \
   };                                                                           \
   }                                                                            \
@@ -2108,7 +2116,7 @@ template <typename T> struct StdMapStringCustomMappingTraitsImpl {
 #define LLVM_YAML_DECLARE_SCALAR_TRAITS(Type, MustQuote)                       \
   namespace llvm {                                                             \
   namespace yaml {                                                             \
-  template <> struct ScalarTraits<Type> {                                      \
+  template <> struct LLVM_ABI ScalarTraits<Type> {                             \
     static void output(const Type &Value, void *ctx, raw_ostream &Out);        \
     static StringRef input(StringRef Scalar, void *ctxt, Type &Value);         \
     static QuotingType mustQuote(StringRef) { return MustQuote; }              \

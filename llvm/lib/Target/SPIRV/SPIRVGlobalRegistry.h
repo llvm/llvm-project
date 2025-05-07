@@ -17,7 +17,7 @@
 #define LLVM_LIB_TARGET_SPIRV_SPIRVTYPEMANAGER_H
 
 #include "MCTargetDesc/SPIRVBaseInfo.h"
-#include "SPIRVDuplicatesTracker.h"
+#include "SPIRVIRMapping.h"
 #include "SPIRVInstrInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/IR/Constant.h"
@@ -27,7 +27,7 @@ namespace llvm {
 class SPIRVSubtarget;
 using SPIRVType = const MachineInstr;
 
-class SPIRVGlobalRegistry {
+class SPIRVGlobalRegistry : public SPIRVIRMapping {
   // Registers holding values which have types associated with them.
   // Initialized upon VReg definition in IRTranslator.
   // Do not confuse this with DuplicatesTracker as DT maps Type* to <MF, Reg>
@@ -36,9 +36,6 @@ class SPIRVGlobalRegistry {
   // type-declaring ones).
   DenseMap<const MachineFunction *, DenseMap<Register, SPIRVType *>>
       VRegToTypeMap;
-
-  // Map LLVM Type* to <MF, Reg>
-  SPIRVGeneralDuplicatesTracker DT;
 
   DenseMap<SPIRVType *, const Type *> SPIRVToLLVMType;
 
@@ -55,14 +52,15 @@ class SPIRVGlobalRegistry {
   // created during substitution of aggregate arguments
   // (see `SPIRVPrepareFunctions::removeAggregateTypesFromSignature()`)
   DenseMap<Value *, Type *> MutatedAggRet;
-
-  // Look for an equivalent of the newType in the map. Return the equivalent
-  // if it's found, otherwise insert newType to the map and return the type.
-  const MachineInstr *checkSpecialInstr(const SPIRV::SpecialTypeDescriptor &TD,
-                                        MachineIRBuilder &MIRBuilder);
+  // map an instruction to its value's attributes (type, name)
+  DenseMap<MachineInstr *, std::pair<Type *, std::string>> ValueAttrs;
 
   SmallPtrSet<const Type *, 4> TypesInProcessing;
   DenseMap<const Type *, SPIRVType *> ForwardPointerTypes;
+
+  // Stores for each function the last inserted SPIR-V Type.
+  // See: SPIRVGlobalRegistry::createOpType.
+  DenseMap<const MachineFunction *, MachineInstr *> LastInsertedTypeMap;
 
   // if a function returns a pointer, this is to map it into TypedPointerType
   DenseMap<const Function *, TypedPointerType *> FunResPointerTypes;
@@ -83,68 +81,46 @@ class SPIRVGlobalRegistry {
   // Intrinsic::spv_assign_ptr_type instructions.
   DenseMap<Value *, CallInst *> AssignPtrTypeInstr;
 
+  // Maps OpVariable and OpFunction-related v-regs to its LLVM IR definition.
+  DenseMap<std::pair<const MachineFunction *, Register>, const Value *> Reg2GO;
+
+  // map of aliasing decorations to aliasing metadata
+  std::unordered_map<const MDNode *, MachineInstr *> AliasInstMDMap;
+
   // Add a new OpTypeXXX instruction without checking for duplicates.
   SPIRVType *createSPIRVType(const Type *Type, MachineIRBuilder &MIRBuilder,
-                             SPIRV::AccessQualifier::AccessQualifier AQ =
-                                 SPIRV::AccessQualifier::ReadWrite,
-                             bool EmitIR = true);
+                             SPIRV::AccessQualifier::AccessQualifier AQ,
+                             bool EmitIR);
   SPIRVType *findSPIRVType(const Type *Ty, MachineIRBuilder &MIRBuilder,
-                           SPIRV::AccessQualifier::AccessQualifier accessQual =
-                               SPIRV::AccessQualifier::ReadWrite,
-                           bool EmitIR = true);
+                           SPIRV::AccessQualifier::AccessQualifier accessQual,
+                           bool EmitIR);
   SPIRVType *
   restOfCreateSPIRVType(const Type *Type, MachineIRBuilder &MIRBuilder,
                         SPIRV::AccessQualifier::AccessQualifier AccessQual,
                         bool EmitIR);
+
+  // Internal function creating the an OpType at the correct position in the
+  // function by tweaking the passed "MIRBuilder" insertion point and restoring
+  // it to the correct position. "Op" should be the function creating the
+  // specific OpType you need, and should return the newly created instruction.
+  SPIRVType *createOpType(MachineIRBuilder &MIRBuilder,
+                          std::function<MachineInstr *(MachineIRBuilder &)> Op);
 
 public:
   SPIRVGlobalRegistry(unsigned PointerSize);
 
   MachineFunction *CurMF;
 
-  void add(const Constant *C, MachineFunction *MF, Register R) {
-    DT.add(C, MF, R);
-  }
-
-  void add(const GlobalVariable *GV, MachineFunction *MF, Register R) {
-    DT.add(GV, MF, R);
-  }
-
-  void add(const Function *F, MachineFunction *MF, Register R) {
-    DT.add(F, MF, R);
-  }
-
-  void add(const Argument *Arg, MachineFunction *MF, Register R) {
-    DT.add(Arg, MF, R);
-  }
-
-  void add(const MachineInstr *MI, MachineFunction *MF, Register R) {
-    DT.add(MI, MF, R);
-  }
-
-  Register find(const MachineInstr *MI, MachineFunction *MF) {
-    return DT.find(MI, MF);
-  }
-
-  Register find(const Constant *C, MachineFunction *MF) {
-    return DT.find(C, MF);
-  }
-
-  Register find(const GlobalVariable *GV, MachineFunction *MF) {
-    return DT.find(GV, MF);
-  }
-
-  Register find(const Function *F, MachineFunction *MF) {
-    return DT.find(F, MF);
-  }
-
-  void buildDepsGraph(std::vector<SPIRV::DTSortableEntry *> &Graph,
-                      MachineModuleInfo *MMI = nullptr) {
-    DT.buildDepsGraph(Graph, MMI);
-  }
-
   void setBound(unsigned V) { Bound = V; }
   unsigned getBound() { return Bound; }
+
+  void addGlobalObject(const Value *V, const MachineFunction *MF, Register R) {
+    Reg2GO[std::make_pair(MF, R)] = V;
+  }
+  const Value *getGlobalObject(const MachineFunction *MF, Register R) {
+    auto It = Reg2GO.find(std::make_pair(MF, R));
+    return It == Reg2GO.end() ? nullptr : It->second;
+  }
 
   // Add a record to the map of function return pointer types.
   void addReturnType(const Function *ArgF, TypedPointerType *DerivedTy) {
@@ -166,6 +142,15 @@ public:
     auto It = AssignPtrTypeInstr.find(Val);
     return It == AssignPtrTypeInstr.end() ? nullptr : It->second;
   }
+  // - Find a record and update its key or add a new record, if found.
+  void updateIfExistAssignPtrTypeInstr(Value *OldVal, Value *NewVal,
+                                       bool DeleteOld) {
+    if (CallInst *CI = findAssignPtrTypeInstr(OldVal)) {
+      if (DeleteOld)
+        AssignPtrTypeInstr.erase(OldVal);
+      AssignPtrTypeInstr[NewVal] = CI;
+    }
+  }
 
   // A registry of mutated values
   // (see `SPIRVPrepareFunctions::removeAggregateTypesFromSignature()`):
@@ -177,6 +162,21 @@ public:
     return It == MutatedAggRet.end() ? nullptr : It->second;
   }
 
+  // A registry of value's attributes (type, name)
+  // - Add a record.
+  void addValueAttrs(MachineInstr *Key, std::pair<Type *, std::string> Val) {
+    ValueAttrs[Key] = Val;
+  }
+  // - Find a record.
+  bool findValueAttrs(const MachineInstr *Key, Type *&Ty, StringRef &Name) {
+    auto It = ValueAttrs.find(Key);
+    if (It == ValueAttrs.end())
+      return false;
+    Ty = It->second.first;
+    Name = It->second.second;
+    return true;
+  }
+
   // Deduced element types of untyped pointers and composites:
   // - Add a record to the map of deduced element types.
   void addDeducedElementType(Value *Val, Type *Ty) { DeducedElTys[Val] = Ty; }
@@ -184,6 +184,15 @@ public:
   Type *findDeducedElementType(const Value *Val) {
     auto It = DeducedElTys.find(Val);
     return It == DeducedElTys.end() ? nullptr : It->second;
+  }
+  // - Find a record and update its key or add a new record, if found.
+  void updateIfExistDeducedElementType(Value *OldVal, Value *NewVal,
+                                       bool DeleteOld) {
+    if (Type *Ty = findDeducedElementType(OldVal)) {
+      if (DeleteOld)
+        DeducedElTys.erase(OldVal);
+      DeducedElTys[NewVal] = Ty;
+    }
   }
   // - Add a record to the map of deduced composite types.
   void addDeducedCompositeType(Value *Val, Type *Ty) {
@@ -255,11 +264,7 @@ public:
 
   // Add a record about forward function call.
   void addForwardCall(const Function *F, MachineInstr *MI) {
-    auto It = ForwardCalls.find(F);
-    if (It == ForwardCalls.end())
-      ForwardCalls[F] = {MI};
-    else
-      It->second.insert(MI);
+    ForwardCalls[F].insert(MI);
   }
 
   // Map a Function to the vector of machine instructions that represents
@@ -273,9 +278,8 @@ public:
   // and map it to the given VReg by creating an ASSIGN_TYPE instruction.
   SPIRVType *assignTypeToVReg(const Type *Type, Register VReg,
                               MachineIRBuilder &MIRBuilder,
-                              SPIRV::AccessQualifier::AccessQualifier AQ =
-                                  SPIRV::AccessQualifier::ReadWrite,
-                              bool EmitIR = true);
+                              SPIRV::AccessQualifier::AccessQualifier AQ,
+                              bool EmitIR);
   SPIRVType *assignIntTypeToVReg(unsigned BitWidth, Register VReg,
                                  MachineInstr &I, const SPIRVInstrInfo &TII);
   SPIRVType *assignFloatTypeToVReg(unsigned BitWidth, Register VReg,
@@ -287,7 +291,7 @@ public:
   // In cases where the SPIR-V type is already known, this function can be
   // used to map it to the given VReg via an ASSIGN_TYPE instruction.
   void assignSPIRVTypeToVReg(SPIRVType *Type, Register VReg,
-                             MachineFunction &MF);
+                             const MachineFunction &MF);
 
   // Either generate a new OpTypeXXX instruction or return an existing one
   // corresponding to the given LLVM IR type.
@@ -296,9 +300,8 @@ public:
   // want to emit extra IR instructions there.
   SPIRVType *getOrCreateSPIRVType(const Type *Type,
                                   MachineIRBuilder &MIRBuilder,
-                                  SPIRV::AccessQualifier::AccessQualifier AQ =
-                                      SPIRV::AccessQualifier::ReadWrite,
-                                  bool EmitIR = true);
+                                  SPIRV::AccessQualifier::AccessQualifier AQ,
+                                  bool EmitIR);
 
   const Type *getTypeForSPIRVType(const SPIRVType *Ty) const {
     auto Res = SPIRVToLLVMType.find(Ty);
@@ -315,7 +318,7 @@ public:
   // corresponding to the given string containing the name of the builtin type.
   // Return nullptr if unable to recognize SPIRV type name from `TypeStr`.
   SPIRVType *getOrCreateSPIRVTypeByName(
-      StringRef TypeStr, MachineIRBuilder &MIRBuilder,
+      StringRef TypeStr, MachineIRBuilder &MIRBuilder, bool EmitIR,
       SPIRV::StorageClass::StorageClass SC = SPIRV::StorageClass::Function,
       SPIRV::AccessQualifier::AccessQualifier AQ =
           SPIRV::AccessQualifier::ReadWrite);
@@ -327,6 +330,9 @@ public:
   // functions.
   SPIRVType *getSPIRVTypeForVReg(Register VReg,
                                  const MachineFunction *MF = nullptr) const;
+
+  // Return the result type of the instruction defining the register.
+  SPIRVType *getResultType(Register VReg, MachineFunction *MF = nullptr);
 
   // Whether the given VReg has a SPIR-V type mapped to it yet.
   bool hasSPIRVTypeForVReg(Register VReg) const {
@@ -363,6 +369,12 @@ public:
   unsigned getScalarOrVectorComponentCount(Register VReg) const;
   unsigned getScalarOrVectorComponentCount(SPIRVType *Type) const;
 
+  // Return the component type in a vector if the argument is associated with
+  // a vector type. Returns the argument itself for other types, and nullptr
+  // for a missing type.
+  SPIRVType *getScalarOrVectorComponentType(Register VReg) const;
+  SPIRVType *getScalarOrVectorComponentType(SPIRVType *Type) const;
+
   // For vectors or scalars of booleans, integers and floats, return the scalar
   // type's bitwidth. Otherwise calls llvm_unreachable().
   unsigned getScalarOrVectorBitWidth(const SPIRVType *Type) const;
@@ -381,6 +393,8 @@ public:
 
   // Gets the storage class of the pointer type assigned to this vreg.
   SPIRV::StorageClass::StorageClass getPointerStorageClass(Register VReg) const;
+  SPIRV::StorageClass::StorageClass
+  getPointerStorageClass(const SPIRVType *Type) const;
 
   // Return the number of bits SPIR-V pointers and size_t variables require.
   unsigned getPointerSize() const { return PointerSize; }
@@ -389,6 +403,10 @@ public:
   // OpBitcast instruction
   bool isBitcastCompatible(const SPIRVType *Type1,
                            const SPIRVType *Type2) const;
+
+  // Informs about removal of the machine instruction and invalidates data
+  // structures referring this instruction.
+  void invalidateMachineInstr(MachineInstr *MI);
 
 private:
   SPIRVType *getOpTypeBool(MachineIRBuilder &MIRBuilder);
@@ -407,13 +425,14 @@ private:
                              MachineIRBuilder &MIRBuilder);
 
   SPIRVType *getOpTypeArray(uint32_t NumElems, SPIRVType *ElemType,
-                            MachineIRBuilder &MIRBuilder, bool EmitIR = true);
+                            MachineIRBuilder &MIRBuilder, bool EmitIR);
 
   SPIRVType *getOpTypeOpaque(const StructType *Ty,
                              MachineIRBuilder &MIRBuilder);
 
   SPIRVType *getOpTypeStruct(const StructType *Ty, MachineIRBuilder &MIRBuilder,
-                             bool EmitIR = true);
+                             SPIRV::AccessQualifier::AccessQualifier AccQual,
+                             bool EmitIR);
 
   SPIRVType *getOpTypePointer(SPIRV::StorageClass::StorageClass SC,
                               SPIRVType *ElemType, MachineIRBuilder &MIRBuilder,
@@ -430,12 +449,6 @@ private:
   getOrCreateSpecialType(const Type *Ty, MachineIRBuilder &MIRBuilder,
                          SPIRV::AccessQualifier::AccessQualifier AccQual);
 
-  std::tuple<Register, ConstantInt *, bool> getOrCreateConstIntReg(
-      uint64_t Val, SPIRVType *SpvType, MachineIRBuilder *MIRBuilder,
-      MachineInstr *I = nullptr, const SPIRVInstrInfo *TII = nullptr);
-  std::tuple<Register, ConstantFP *, bool, unsigned> getOrCreateConstFloatReg(
-      APFloat Val, SPIRVType *SpvType, MachineIRBuilder *MIRBuilder,
-      MachineInstr *I = nullptr, const SPIRVInstrInfo *TII = nullptr);
   SPIRVType *finishCreatingSPIRVType(const Type *LLVMTy, SPIRVType *SpirvType);
   Register getOrCreateBaseRegister(Constant *Val, MachineInstr &I,
                                    SPIRVType *SpvType,
@@ -453,15 +466,31 @@ private:
                                          Constant *CA, unsigned BitWidth,
                                          unsigned ElemCnt);
 
+  // Returns a pointer to a SPIR-V pointer type with the given base type and
+  // storage class. It is the responsibility of the caller to make sure the
+  // decorations on the base type are valid for the given storage class. For
+  // example, it has the correct offset and stride decorations.
+  SPIRVType *
+  getOrCreateSPIRVPointerTypeInternal(SPIRVType *BaseType,
+                                      MachineIRBuilder &MIRBuilder,
+                                      SPIRV::StorageClass::StorageClass SC);
+
 public:
   Register buildConstantInt(uint64_t Val, MachineIRBuilder &MIRBuilder,
-                            SPIRVType *SpvType = nullptr, bool EmitIR = true);
+                            SPIRVType *SpvType, bool EmitIR,
+                            bool ZeroAsNull = true);
   Register getOrCreateConstInt(uint64_t Val, MachineInstr &I,
                                SPIRVType *SpvType, const SPIRVInstrInfo &TII,
                                bool ZeroAsNull = true);
+  Register createConstInt(const ConstantInt *CI, MachineInstr &I,
+                          SPIRVType *SpvType, const SPIRVInstrInfo &TII,
+                          bool ZeroAsNull);
   Register getOrCreateConstFP(APFloat Val, MachineInstr &I, SPIRVType *SpvType,
                               const SPIRVInstrInfo &TII,
                               bool ZeroAsNull = true);
+  Register createConstFP(const ConstantFP *CF, MachineInstr &I,
+                         SPIRVType *SpvType, const SPIRVInstrInfo &TII,
+                         bool ZeroAsNull);
   Register buildConstantFP(APFloat Val, MachineIRBuilder &MIRBuilder,
                            SPIRVType *SpvType = nullptr);
 
@@ -475,13 +504,12 @@ public:
                                     SPIRVType *SpvType,
                                     const SPIRVInstrInfo &TII);
   Register getOrCreateConsIntVector(uint64_t Val, MachineIRBuilder &MIRBuilder,
-                                    SPIRVType *SpvType, bool EmitIR = true);
+                                    SPIRVType *SpvType, bool EmitIR);
   Register getOrCreateConstNullPtr(MachineIRBuilder &MIRBuilder,
                                    SPIRVType *SpvType);
   Register buildConstantSampler(Register Res, unsigned AddrMode, unsigned Param,
                                 unsigned FilerMode,
-                                MachineIRBuilder &MIRBuilder,
-                                SPIRVType *SpvType);
+                                MachineIRBuilder &MIRBuilder);
   Register getOrCreateUndef(MachineInstr &I, SPIRVType *SpvType,
                             const SPIRVInstrInfo &TII);
   Register buildGlobalVariable(Register Reg, SPIRVType *BaseType,
@@ -492,6 +520,9 @@ public:
                                SPIRV::LinkageType::LinkageType LinkageType,
                                MachineIRBuilder &MIRBuilder,
                                bool IsInstSelector);
+  Register getOrCreateGlobalVariableWithBinding(const SPIRVType *VarType,
+                                                uint32_t Set, uint32_t Binding,
+                                                MachineIRBuilder &MIRBuilder);
 
   // Convenient helpers for getting types with check for duplicates.
   SPIRVType *getOrCreateSPIRVIntegerType(unsigned BitWidth,
@@ -503,12 +534,14 @@ public:
                                   unsigned SPIRVOPcode, Type *LLVMTy);
   SPIRVType *getOrCreateSPIRVFloatType(unsigned BitWidth, MachineInstr &I,
                                        const SPIRVInstrInfo &TII);
-  SPIRVType *getOrCreateSPIRVBoolType(MachineIRBuilder &MIRBuilder);
+  SPIRVType *getOrCreateSPIRVBoolType(MachineIRBuilder &MIRBuilder,
+                                      bool EmitIR);
   SPIRVType *getOrCreateSPIRVBoolType(MachineInstr &I,
                                       const SPIRVInstrInfo &TII);
   SPIRVType *getOrCreateSPIRVVectorType(SPIRVType *BaseType,
                                         unsigned NumElements,
-                                        MachineIRBuilder &MIRBuilder);
+                                        MachineIRBuilder &MIRBuilder,
+                                        bool EmitIR);
   SPIRVType *getOrCreateSPIRVVectorType(SPIRVType *BaseType,
                                         unsigned NumElements, MachineInstr &I,
                                         const SPIRVInstrInfo &TII);
@@ -516,12 +549,35 @@ public:
                                        unsigned NumElements, MachineInstr &I,
                                        const SPIRVInstrInfo &TII);
 
-  SPIRVType *getOrCreateSPIRVPointerType(
-      SPIRVType *BaseType, MachineIRBuilder &MIRBuilder,
-      SPIRV::StorageClass::StorageClass SClass = SPIRV::StorageClass::Function);
-  SPIRVType *getOrCreateSPIRVPointerType(
-      SPIRVType *BaseType, MachineInstr &I, const SPIRVInstrInfo &TII,
-      SPIRV::StorageClass::StorageClass SClass = SPIRV::StorageClass::Function);
+  // Returns a pointer to a SPIR-V pointer type with the given base type and
+  // storage class. The base type will be translated to a SPIR-V type, and the
+  // appropriate layout decorations will be added to the base type.
+  SPIRVType *getOrCreateSPIRVPointerType(const Type *BaseType,
+                                         MachineIRBuilder &MIRBuilder,
+                                         SPIRV::StorageClass::StorageClass SC);
+  SPIRVType *getOrCreateSPIRVPointerType(const Type *BaseType, MachineInstr &I,
+                                         SPIRV::StorageClass::StorageClass SC);
+
+  // Returns a pointer to a SPIR-V pointer type with the given base type and
+  // storage class. It is the responsibility of the caller to make sure the
+  // decorations on the base type are valid for the given storage class. For
+  // example, it has the correct offset and stride decorations.
+  SPIRVType *getOrCreateSPIRVPointerType(SPIRVType *BaseType,
+                                         MachineIRBuilder &MIRBuilder,
+                                         SPIRV::StorageClass::StorageClass SC);
+
+  // Returns a pointer to a SPIR-V pointer type that is the same as `PtrType`
+  // except the stroage class has been changed to `SC`. It is the responsibility
+  // of the caller to be sure that the original and new storage class have the
+  // same layout requirements.
+  SPIRVType *changePointerStorageClass(SPIRVType *PtrType,
+                                       SPIRV::StorageClass::StorageClass SC,
+                                       MachineInstr &I);
+
+  SPIRVType *getOrCreateVulkanBufferType(MachineIRBuilder &MIRBuilder,
+                                         Type *ElemType,
+                                         SPIRV::StorageClass::StorageClass SC,
+                                         bool IsWritable, bool EmitIr = false);
 
   SPIRVType *
   getOrCreateOpTypeImage(MachineIRBuilder &MIRBuilder, SPIRVType *SampledType,
@@ -538,7 +594,8 @@ public:
                                        const TargetExtType *ExtensionType,
                                        const SPIRVType *ElemType,
                                        uint32_t Scope, uint32_t Rows,
-                                       uint32_t Columns, uint32_t Use);
+                                       uint32_t Columns, uint32_t Use,
+                                       bool EmitIR);
   SPIRVType *
   getOrCreateOpTypePipe(MachineIRBuilder &MIRBuilder,
                         SPIRV::AccessQualifier::AccessQualifier AccQual);
@@ -550,6 +607,26 @@ public:
   SPIRVType *getOrCreateOpTypeByOpcode(const Type *Ty,
                                        MachineIRBuilder &MIRBuilder,
                                        unsigned Opcode);
+
+  SPIRVType *getOrCreateUnknownType(const Type *Ty,
+                                    MachineIRBuilder &MIRBuilder,
+                                    unsigned Opcode,
+                                    const ArrayRef<MCOperand> Operands);
+
+  const TargetRegisterClass *getRegClass(SPIRVType *SpvType) const;
+  LLT getRegType(SPIRVType *SpvType) const;
+
+  MachineInstr *getOrAddMemAliasingINTELInst(MachineIRBuilder &MIRBuilder,
+                                             const MDNode *AliasingListMD);
+  void buildMemAliasingOpDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
+                                  uint32_t Dec, const MDNode *GVarMD);
+  // Replace all uses of a |Old| with |New| updates the global registry type
+  // mappings.
+  void replaceAllUsesWith(Value *Old, Value *New, bool DeleteOld = true);
+
+  void buildAssignType(IRBuilder<> &B, Type *Ty, Value *Arg);
+  void buildAssignPtr(IRBuilder<> &B, Type *ElemTy, Value *Arg);
+  void updateAssignType(CallInst *AssignCI, Value *Arg, Value *OfType);
 };
 } // end namespace llvm
 #endif // LLLVM_LIB_TARGET_SPIRV_SPIRVTYPEMANAGER_H

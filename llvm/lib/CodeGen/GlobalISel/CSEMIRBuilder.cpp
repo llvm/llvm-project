@@ -73,17 +73,23 @@ bool CSEMIRBuilder::canPerformCSEForOpc(unsigned Opc) const {
 void CSEMIRBuilder::profileDstOp(const DstOp &Op,
                                  GISelInstProfileBuilder &B) const {
   switch (Op.getDstOpKind()) {
-  case DstOp::DstType::Ty_RC:
+  case DstOp::DstType::Ty_RC: {
     B.addNodeIDRegType(Op.getRegClass());
     break;
+  }
   case DstOp::DstType::Ty_Reg: {
     // Regs can have LLT&(RB|RC). If those exist, profile them as well.
     B.addNodeIDReg(Op.getReg());
     break;
   }
-  default:
+  case DstOp::DstType::Ty_LLT: {
     B.addNodeIDRegType(Op.getLLTTy(*getMRI()));
     break;
+  }
+  case DstOp::DstType::Ty_VRegAttrs: {
+    B.addNodeIDRegType(Op.getVRegAttrs());
+    break;
+  }
   }
 }
 
@@ -183,10 +189,12 @@ MachineInstrBuilder CSEMIRBuilder::buildInstr(unsigned Opc,
     assert(SrcOps.size() == 3 && "Invalid sources");
     assert(DstOps.size() == 1 && "Invalid dsts");
     LLT SrcTy = SrcOps[1].getLLTTy(*getMRI());
+    LLT DstTy = DstOps[0].getLLTTy(*getMRI());
+    auto BoolExtOp = getBoolExtOp(SrcTy.isVector(), false);
 
-    if (std::optional<SmallVector<APInt>> Cst =
-            ConstantFoldICmp(SrcOps[0].getPredicate(), SrcOps[1].getReg(),
-                             SrcOps[2].getReg(), *getMRI())) {
+    if (std::optional<SmallVector<APInt>> Cst = ConstantFoldICmp(
+            SrcOps[0].getPredicate(), SrcOps[1].getReg(), SrcOps[2].getReg(),
+            DstTy.getScalarSizeInBits(), BoolExtOp, *getMRI())) {
       if (SrcTy.isVector())
         return buildBuildVectorConstant(DstOps[0], *Cst);
       return buildConstant(DstOps[0], Cst->front());

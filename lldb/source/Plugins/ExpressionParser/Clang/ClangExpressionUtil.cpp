@@ -8,9 +8,9 @@
 
 #include "ClangExpressionUtil.h"
 
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 namespace lldb_private {
 namespace ClangExpressionUtil {

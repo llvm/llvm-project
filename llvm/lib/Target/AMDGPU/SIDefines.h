@@ -396,7 +396,7 @@ enum CPol {
   TH_NT = 1,     // non-temporal
   TH_HT = 2,     // high-temporal
   TH_LU = 3,     // last use
-  TH_RT_WB = 3,  // regular (CU, SE), high-temporal with write-back (MALL)
+  TH_WB = 3,     // regular (CU, SE), high-temporal with write-back (MALL)
   TH_NT_RT = 4,  // non-temporal (CU, SE), regular (MALL)
   TH_RT_NT = 5,  // regular (CU, SE), non-temporal (MALL)
   TH_NT_HT = 6,  // non-temporal (CU, SE), high-temporal (MALL)
@@ -542,7 +542,7 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_EXCP_FLAG_USER = 18,
   ID_TRAP_CTRL = 19,
 
-  // GFX940 specific registers
+  // GFX94* specific registers
   ID_XCC_ID = 20,
   ID_SQ_PERF_SNAPSHOT_DATA = 21,
   ID_SQ_PERF_SNAPSHOT_DATA1 = 22,
@@ -552,6 +552,7 @@ enum Id { // HwRegCode, (6) [5:0]
 
 enum Offset : unsigned { // Offset, (5) [10:6]
   OFFSET_MEM_VIOL = 8,
+  OFFSET_ME_ID = 8, // in HW_ID2
 };
 
 enum ModeRegisterMasks : uint32_t {
@@ -841,9 +842,12 @@ enum Id : unsigned { // id of symbolic names
   ID_BITMASK_PERM,
   ID_SWAP,
   ID_REVERSE,
-  ID_BROADCAST
+  ID_BROADCAST,
+  ID_FFT,
+  ID_ROTATE
 };
 
+// clang-format off
 enum EncBits : unsigned {
 
   // swizzle mode encodings
@@ -853,6 +857,14 @@ enum EncBits : unsigned {
 
   BITMASK_PERM_ENC      = 0x0000,
   BITMASK_PERM_ENC_MASK = 0x8000,
+
+  FFT_MODE_ENC          = 0xE000,
+
+  ROTATE_MODE_ENC       = 0xC000,
+  FFT_ROTATE_MODE_MASK  = 0xF000,
+
+  ROTATE_MODE_LO        = 0xC000,
+  FFT_MODE_LO           = 0xE000,
 
   // QUAD_PERM encodings
 
@@ -869,8 +881,21 @@ enum EncBits : unsigned {
 
   BITMASK_AND_SHIFT     = 0,
   BITMASK_OR_SHIFT      = 5,
-  BITMASK_XOR_SHIFT     = 10
+  BITMASK_XOR_SHIFT     = 10,
+
+  // FFT encodings
+
+  FFT_SWIZZLE_MASK      = 0x1F,
+  FFT_SWIZZLE_MAX       = 0x1F,
+
+  // ROTATE encodings
+  ROTATE_MAX_SIZE       = 0x1F,
+  ROTATE_DIR_SHIFT      = 10, // bit position of rotate direction
+  ROTATE_DIR_MASK       = 0x1,
+  ROTATE_SIZE_SHIFT     = 5, // bit position of rotate size
+  ROTATE_SIZE_MASK      = ROTATE_MAX_SIZE,
 };
+// clang-format on
 
 } // namespace Swizzle
 
@@ -1024,6 +1049,18 @@ enum Offset_COV5 : unsigned {
 
 } // namespace ImplicitArg
 
+namespace MFMAScaleFormats {
+// Enum value used in cbsz/blgp for F8F6F4 MFMA operations to select the matrix
+// format.
+enum MFMAScaleFormats {
+  FP8_E4M3 = 0,
+  FP8_E5M2 = 1,
+  FP6_E2M3 = 2,
+  FP6_E3M2 = 3,
+  FP4_E2M1 = 4
+};
+} // namespace MFMAScaleFormats
+
 namespace VirtRegFlag {
 // Virtual register flags used for various target specific handlings during
 // codegen.
@@ -1038,7 +1075,13 @@ enum Register_Flag : uint8_t {
 
 namespace AMDGPU {
 namespace Barrier {
+
 enum Type { TRAP = -2, WORKGROUP = -1 };
+
+enum {
+  BARRIER_SCOPE_WORKGROUP = 0,
+};
+
 } // namespace Barrier
 } // namespace AMDGPU
 

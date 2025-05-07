@@ -17,7 +17,7 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(int, getchar, ()) {
   char buf[1];
   auto result = read_from_stdin(buf, sizeof(buf));
-  if (result < 0)
+  if (result <= 0)
     return EOF;
   return buf[0];
 }

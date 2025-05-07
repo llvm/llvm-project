@@ -65,12 +65,9 @@ static void visit(Operation *op, DenseSet<Operation *> &visited) {
   if (!isa<PatternOp>(op->getParentOp()) || isa<RewriteOp>(op))
     return;
 
-  // Ignore if already visited.
-  if (visited.contains(op))
+  // Ignore if already visited.  Otherwise, mark as visited.
+  if (!visited.insert(op).second)
     return;
-
-  // Mark as visited.
-  visited.insert(op);
 
   // Traverse the operands / parent.
   TypeSwitch<Operation *>(op)
@@ -390,7 +387,7 @@ LogicalResult PatternOp::verifyRegions() {
 void PatternOp::build(OpBuilder &builder, OperationState &state,
                       std::optional<uint16_t> benefit,
                       std::optional<StringRef> name) {
-  build(builder, state, builder.getI16IntegerAttr(benefit ? *benefit : 0),
+  build(builder, state, builder.getI16IntegerAttr(benefit.value_or(0)),
         name ? builder.getStringAttr(*name) : StringAttr());
   state.regions[0]->emplaceBlock();
 }

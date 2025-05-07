@@ -28,7 +28,20 @@ namespace llvm {
   class LLLexer {
     const char *CurPtr;
     StringRef CurBuf;
-    SMDiagnostic &ErrorInfo;
+
+    enum class ErrorPriority {
+      None,   // No error message present.
+      Parser, // Errors issued by parser.
+      Lexer,  // Errors issued by lexer.
+    };
+
+    struct ErrorInfo {
+      ErrorPriority Priority = ErrorPriority::None;
+      SMDiagnostic &Error;
+
+      explicit ErrorInfo(SMDiagnostic &Error) : Error(Error) {}
+    } ErrorInfo;
+
     SourceMgr &SM;
     LLVMContext &Context;
 
@@ -66,8 +79,13 @@ namespace llvm {
       IgnoreColonInIdentifiers = val;
     }
 
-    bool Error(LocTy ErrorLoc, const Twine &Msg) const;
-    bool Error(const Twine &Msg) const { return Error(getLoc(), Msg); }
+    // This returns true as a convenience for the parser functions that return
+    // true on error.
+    bool ParseError(LocTy ErrorLoc, const Twine &Msg) {
+      Error(ErrorLoc, Msg, ErrorPriority::Parser);
+      return true;
+    }
+    bool ParseError(const Twine &Msg) { return ParseError(getLoc(), Msg); }
 
     void Warning(LocTy WarningLoc, const Twine &Msg) const;
     void Warning(const Twine &Msg) const { return Warning(getLoc(), Msg); }
@@ -77,6 +95,7 @@ namespace llvm {
 
     int getNextChar();
     void SkipLineComment();
+    bool SkipCComment();
     lltok::Kind ReadString(lltok::Kind kind);
     bool ReadVarName();
 
@@ -97,7 +116,15 @@ namespace llvm {
     uint64_t atoull(const char *Buffer, const char *End);
     uint64_t HexIntToVal(const char *Buffer, const char *End);
     void HexToIntPair(const char *Buffer, const char *End, uint64_t Pair[2]);
-    void FP80HexToIntPair(const char *Buffer, const char *End, uint64_t Pair[2]);
+    void FP80HexToIntPair(const char *Buffer, const char *End,
+                          uint64_t Pair[2]);
+
+    void Error(LocTy ErrorLoc, const Twine &Msg, ErrorPriority Origin);
+
+    void LexError(LocTy ErrorLoc, const Twine &Msg) {
+      Error(ErrorLoc, Msg, ErrorPriority::Lexer);
+    }
+    void LexError(const Twine &Msg) { LexError(getLoc(), Msg); }
   };
 } // end namespace llvm
 

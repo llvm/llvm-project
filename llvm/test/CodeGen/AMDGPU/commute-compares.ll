@@ -699,12 +699,12 @@ define amdgpu_kernel void @commute_uno_2.0_f64(ptr addrspace(1) %out, ptr addrsp
 ; GCN-LABEL: {{^}}commute_frameindex:
 ; XGCN: v_cmp_eq_u32_e32 vcc, 0, v{{[0-9]+}}
 
-; GCN: v_mov_b32_e32 [[FI:v[0-9]+]], 0{{$}}
-; GCN: v_cmp_eq_u32_e32 vcc, v{{[0-9]+}}, [[FI]]
+; GCN: s_mov_b32 [[FI:s[0-9]+]], 0{{$}}
+; GCN: v_cmp_eq_u32_e32 vcc,  [[FI]], v{{[0-9]+}}
 define amdgpu_kernel void @commute_frameindex(ptr addrspace(1) nocapture %out) #0 {
 entry:
   %stack0 = alloca i32, addrspace(5)
-  %ptr0 = load volatile ptr addrspace(5), ptr addrspace(1) undef
+  %ptr0 = load volatile ptr addrspace(5), ptr addrspace(1) poison
   %eq = icmp eq ptr addrspace(5) %ptr0, %stack0
   %ext = zext i1 %eq to i32
   store volatile i32 %ext, ptr addrspace(1) %out

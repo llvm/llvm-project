@@ -6,6 +6,7 @@
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1150 -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1151 -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1152 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1153 -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa -emit-llvm -o - %s | FileCheck %s
 
 typedef unsigned int uint;
@@ -50,6 +51,10 @@ void test_s_wait_event_export_ready() {
 
 // CHECK-LABEL: @test_global_add_f32
 // CHECK: = atomicrmw fadd ptr addrspace(1) %addr, float %x syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+}}, !amdgpu.ignore.denormal.mode !{{[0-9]+$}}
+#if !defined(__SPIRV__)
 void test_global_add_f32(float *rtn, global float *addr, float x) {
+#else
+void test_global_add_f32(float *rtn, __attribute__((address_space(1))) float *addr, float x) {
+#endif
   *rtn = __builtin_amdgcn_global_atomic_fadd_f32(addr, x);
 }

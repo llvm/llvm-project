@@ -21,7 +21,6 @@
 #include "SIISelLowering.h"
 #include "SIInstrInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #define GET_SUBTARGETINFO_HEADER
@@ -49,6 +48,9 @@ public:
   };
 
 private:
+  /// SelectionDAGISel related APIs.
+  std::unique_ptr<const SelectionDAGTargetInfo> TSInfo;
+
   /// GlobalISel related APIs.
   std::unique_ptr<AMDGPUCallLowering> CallLoweringInfo;
   std::unique_ptr<InlineAsmLowering> InlineAsmLoweringInfo;
@@ -76,6 +78,7 @@ protected:
   bool BackOffBarrier = false;
   bool UnalignedScratchAccess = false;
   bool UnalignedAccessMode = false;
+  bool RelaxedBufferOOBMode = false;
   bool HasApertureRegs = false;
   bool SupportsXNACK = false;
   bool KernargPreload = false;
@@ -106,6 +109,7 @@ protected:
   bool GFX9Insts = false;
   bool GFX90AInsts = false;
   bool GFX940Insts = false;
+  bool GFX950Insts = false;
   bool GFX10Insts = false;
   bool GFX11Insts = false;
   bool GFX12Insts = false;
@@ -155,9 +159,12 @@ protected:
   bool HasDot9Insts = false;
   bool HasDot10Insts = false;
   bool HasDot11Insts = false;
+  bool HasDot12Insts = false;
+  bool HasDot13Insts = false;
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
   bool HasFP8ConversionInsts = false;
+  bool HasCvtFP8Vop1Bug = false;
   bool HasPkFmacF16Inst = false;
   bool HasAtomicFMinFMaxF32GlobalInsts = false;
   bool HasAtomicFMinFMaxF64GlobalInsts = false;
@@ -178,11 +185,15 @@ protected:
   bool HasDefaultComponentZero = false;
   bool HasAgentScopeFineGrainedRemoteMemoryAtomics = false;
   bool HasDefaultComponentBroadcast = false;
+  bool HasXF32Insts = false;
   /// The maximum number of instructions that may be placed within an S_CLAUSE,
   /// which is one greater than the maximum argument to S_CLAUSE. A value of 0
   /// indicates a lack of S_CLAUSE support.
   unsigned MaxHardClauseLength = 0;
   bool SupportsSRAMECC = false;
+  bool DynamicVGPR = false;
+  bool DynamicVGPRBlockSize32 = false;
+  bool HasVMemToLDSLoad = false;
 
   // This should not be used directly. 'TargetID' tracks the dynamic settings
   // for SRAMECC.
@@ -215,14 +226,18 @@ protected:
   bool HasPackedTID = false;
   bool ScalarizeGlobal = false;
   bool HasSALUFloatInsts = false;
-  bool HasVGPRSingleUseHintInsts = false;
   bool HasPseudoScalarTrans = false;
   bool HasRestrictedSOffset = false;
-
+  bool HasBitOp3Insts = false;
+  bool HasPrngInst = false;
+  bool HasBVHDualAndBVH8Insts = false;
+  bool HasPermlane16Swap = false;
+  bool HasPermlane32Swap = false;
   bool HasVcmpxPermlaneHazard = false;
   bool HasVMEMtoScalarWriteHazard = false;
   bool HasSMEMtoVectorWriteHazard = false;
   bool HasInstFwdPrefetchBug = false;
+  bool HasSafeSmemPrefetch = false;
   bool HasVcmpxExecWARHazard = false;
   bool HasLdsBranchVmemWARHazard = false;
   bool HasNSAtoVMEMBug = false;
@@ -237,15 +252,21 @@ protected:
   bool HasMADIntraFwdBug = false;
   bool HasVOPDInsts = false;
   bool HasVALUTransUseHazard = false;
-  bool HasForceStoreSC0SC1 = false;
   bool HasRequiredExportPriority = false;
+  bool HasVmemWriteVgprInOrder = false;
+  bool HasAshrPkInsts = false;
+  bool HasMinimum3Maximum3F32 = false;
+  bool HasMinimum3Maximum3F16 = false;
+  bool HasMinimum3Maximum3PKF16 = false;
+  bool HasLshlAddU64Inst = false;
+  bool HasPointSampleAccel = false;
 
   bool RequiresCOV6 = false;
+  bool UseBlockVGPROpsForCSR = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
 
-  SelectionDAGTargetInfo TSInfo;
 private:
   SIInstrInfo InstrInfo;
   SITargetLowering TLInfo;
@@ -279,6 +300,8 @@ public:
     return &InstrInfo.getRegisterInfo();
   }
 
+  const SelectionDAGTargetInfo *getSelectionDAGInfo() const override;
+
   const CallLowering *getCallLowering() const override {
     return CallLoweringInfo.get();
   }
@@ -301,11 +324,6 @@ public:
 
   const AMDGPU::IsaInfo::AMDGPUTargetID &getTargetID() const {
     return TargetID;
-  }
-
-  // Nothing implemented, just prevent crashes on use.
-  const SelectionDAGTargetInfo *getSelectionDAGInfo() const override {
-    return &TSInfo;
   }
 
   const InstrItineraryData *getInstrItineraryData() const override {
@@ -590,9 +608,15 @@ public:
     return UnalignedScratchAccess;
   }
 
+  bool hasUnalignedScratchAccessEnabled() const {
+    return UnalignedScratchAccess && UnalignedAccessMode;
+  }
+
   bool hasUnalignedAccessMode() const {
     return UnalignedAccessMode;
   }
+
+  bool hasRelaxedBufferOOBMode() const { return RelaxedBufferOOBMode; }
 
   bool hasApertureRegs() const {
     return HasApertureRegs;
@@ -812,6 +836,14 @@ public:
     return HasDot11Insts;
   }
 
+  bool hasDot12Insts() const {
+    return HasDot12Insts;
+  }
+
+  bool hasDot13Insts() const {
+    return HasDot13Insts;
+  }
+
   bool hasMAIInsts() const {
     return HasMAIInsts;
   }
@@ -938,6 +970,8 @@ public:
   }
 
   bool hasPrefetch() const { return GFX12Insts; }
+
+  bool hasSafeSmemPrefetch() const { return HasSafeSmemPrefetch; }
 
   // Has s_cmpk_* instructions.
   bool hasSCmpK() const { return getGeneration() < GFX12; }
@@ -1110,7 +1144,7 @@ public:
 
   bool hasMovB64() const { return GFX940Insts; }
 
-  bool hasLshlAddB64() const { return GFX940Insts; }
+  bool hasLshlAddU64Inst() const { return HasLshlAddU64Inst; }
 
   bool enableSIScheduler() const {
     return EnableSIScheduler;
@@ -1240,11 +1274,15 @@ public:
 
   bool hasVALUTransUseHazard() const { return HasVALUTransUseHazard; }
 
-  bool hasForceStoreSC0SC1() const { return HasForceStoreSC0SC1; }
+  bool hasCvtScaleForwardingHazard() const { return GFX950Insts; }
 
   bool requiresCodeObjectV6() const { return RequiresCOV6; }
 
+  bool useVGPRBlockOpsForCSR() const { return UseBlockVGPROpsForCSR; }
+
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
+
+  bool hasVALUReadSGPRHazard() const { return getGeneration() == GFX12; }
 
   /// Return if operations acting on VGPR tuples require even alignment.
   bool needsAlignedVGPRs() const { return GFX90AInsts; }
@@ -1271,19 +1309,32 @@ public:
 
   bool hasPackedTID() const { return HasPackedTID; }
 
-  // GFX940 is a derivation to GFX90A. hasGFX940Insts() being true implies that
+  // GFX94* is a derivation to GFX90A. hasGFX940Insts() being true implies that
   // hasGFX90AInsts is also true.
   bool hasGFX940Insts() const { return GFX940Insts; }
 
-  bool hasSALUFloatInsts() const { return HasSALUFloatInsts; }
+  // GFX950 is a derivation to GFX94*. hasGFX950Insts() implies that
+  // hasGFX940Insts and hasGFX90AInsts are also true.
+  bool hasGFX950Insts() const { return GFX950Insts; }
 
-  bool hasVGPRSingleUseHintInsts() const { return HasVGPRSingleUseHintInsts; }
+  /// Returns true if the target supports
+  /// global_load_lds_dwordx3/global_load_lds_dwordx4 or
+  /// buffer_load_dwordx3/buffer_load_dwordx4 with the lds bit.
+  bool hasLDSLoadB96_B128() const {
+    return hasGFX950Insts();
+  }
+
+  bool hasVMemToLDSLoad() const { return HasVMemToLDSLoad; }
+
+  bool hasSALUFloatInsts() const { return HasSALUFloatInsts; }
 
   bool hasPseudoScalarTrans() const { return HasPseudoScalarTrans; }
 
   bool hasRestrictedSOffset() const { return HasRestrictedSOffset; }
 
   bool hasRequiredExportPriority() const { return HasRequiredExportPriority; }
+
+  bool hasVmemWriteVgprInOrder() const { return HasVmemWriteVgprInOrder; }
 
   /// \returns true if the target uses LOADcnt/SAMPLEcnt/BVHcnt, DScnt/KMcnt
   /// and STOREcnt rather than VMcnt, LGKMcnt and VScnt respectively.
@@ -1295,10 +1346,37 @@ public:
     return getGeneration() == GFX12;
   }
 
+  /// \returns true if the target has instructions with xf32 format support.
+  bool hasXF32Insts() const { return HasXF32Insts; }
+
+  bool hasBitOp3Insts() const { return HasBitOp3Insts; }
+
+  bool hasPermlane16Swap() const { return HasPermlane16Swap; }
+  bool hasPermlane32Swap() const { return HasPermlane32Swap; }
+  bool hasAshrPkInsts() const { return HasAshrPkInsts; }
+
+  bool hasMinimum3Maximum3F32() const {
+    return HasMinimum3Maximum3F32;
+  }
+
+  bool hasMinimum3Maximum3F16() const {
+    return HasMinimum3Maximum3F16;
+  }
+
+  bool hasMinimum3Maximum3PKF16() const {
+    return HasMinimum3Maximum3PKF16;
+  }
+
+  bool hasPointSampleAccel() const { return HasPointSampleAccel; }
+
   /// \returns The maximum number of instructions that can be enclosed in an
   /// S_CLAUSE on the given subtarget, or 0 for targets that do not support that
   /// instruction.
   unsigned maxHardClauseLength() const { return MaxHardClauseLength; }
+
+  bool hasPrngInst() const { return HasPrngInst; }
+
+  bool hasBVHDualAndBVH8Insts() const { return HasBVHDualAndBVH8Insts; }
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs
@@ -1308,12 +1386,18 @@ public:
   /// VGPRs
   unsigned getOccupancyWithNumVGPRs(unsigned VGPRs) const;
 
-  /// Return occupancy for the given function. Used LDS and a number of
-  /// registers if provided.
-  /// Note, occupancy can be affected by the scratch allocation as well, but
+  /// Subtarget's minimum/maximum occupancy, in number of waves per EU, that can
+  /// be achieved when the only function running on a CU is \p F, each workgroup
+  /// uses \p LDSSize bytes of LDS, and each wave uses \p NumSGPRs SGPRs and \p
+  /// NumVGPRs VGPRs. The flat workgroup sizes associated to the function are a
+  /// range, so this returns a range as well.
+  ///
+  /// Note that occupancy can be affected by the scratch allocation as well, but
   /// we do not have enough information to compute it.
-  unsigned computeOccupancy(const Function &F, unsigned LDSSize = 0,
-                            unsigned NumSGPRs = 0, unsigned NumVGPRs = 0) const;
+  std::pair<unsigned, unsigned> computeOccupancy(const Function &F,
+                                                 unsigned LDSSize = 0,
+                                                 unsigned NumSGPRs = 0,
+                                                 unsigned NumVGPRs = 0) const;
 
   /// \returns true if the flat_scratch register should be initialized with the
   /// pointer to the wave's scratch memory rather than a size and offset.
@@ -1350,7 +1434,7 @@ public:
   bool hasSplitBarriers() const { return getGeneration() >= GFX12; }
 
   // \returns true if FP8/BF8 VOP1 form of conversion to F32 is unreliable.
-  bool hasCvtFP8VOP1Bug() const { return true; }
+  bool hasCvtFP8VOP1Bug() const { return HasCvtFP8Vop1Bug; }
 
   // \returns true if CSUB (a.k.a. SUB_CLAMP on GFX12) atomics support a
   // no-return form.
@@ -1515,19 +1599,20 @@ public:
   /// unit requirement.
   unsigned getMaxNumVGPRs(const MachineFunction &MF) const;
 
-  void getPostRAMutations(
-      std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations)
-      const override;
-
-  std::unique_ptr<ScheduleDAGMutation>
-  createFillMFMAShadowMutation(const TargetInstrInfo *TII) const;
-
   bool isWave32() const {
     return getWavefrontSize() == 32;
   }
 
   bool isWave64() const {
     return getWavefrontSize() == 64;
+  }
+
+  /// Returns if the wavesize of this subtarget is known reliable. This is false
+  /// only for the a default target-cpu that does not have an explicit
+  /// +wavefrontsize target feature.
+  bool isWaveSizeKnown() const {
+    return hasFeature(AMDGPU::FeatureWavefrontSize32) ||
+           hasFeature(AMDGPU::FeatureWavefrontSize64);
   }
 
   const TargetRegisterClass *getBoolRC() const {
@@ -1581,6 +1666,14 @@ public:
     // Currently all targets that support the dealloc VGPRs message also require
     // the nop.
     return true;
+  }
+
+  bool isDynamicVGPREnabled() const { return DynamicVGPR; }
+
+  bool requiresDisjointEarlyClobberAndUndef() const override {
+    // AMDGPU doesn't care if early-clobber and undef operands are allocated
+    // to the same register.
+    return false;
   }
 };
 

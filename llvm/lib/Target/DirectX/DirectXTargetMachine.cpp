@@ -12,8 +12,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "DirectXTargetMachine.h"
-#include "DXILResourceAnalysis.h"
+#include "DXILCBufferAccess.h"
+#include "DXILDataScalarization.h"
+#include "DXILFlattenArrays.h"
+#include "DXILForwardHandleAccesses.h"
+#include "DXILIntrinsicExpansion.h"
+#include "DXILLegalizePass.h"
+#include "DXILOpLowering.h"
+#include "DXILPrettyPrinter.h"
+#include "DXILResourceAccess.h"
+#include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
+#include "DXILTranslateMetadata.h"
 #include "DXILWriter/DXILWriterPass.h"
 #include "DirectX.h"
 #include "DirectXSubtarget.h"
@@ -24,6 +34,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/MC/MCSectionDXContainer.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -32,6 +43,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
+#include "llvm/Transforms/Scalar/Scalarizer.h"
 #include <optional>
 
 using namespace llvm;
@@ -40,15 +52,23 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeDirectXTarget() {
   RegisterTargetMachine<DirectXTargetMachine> X(getTheDirectXTarget());
   auto *PR = PassRegistry::getPassRegistry();
   initializeDXILIntrinsicExpansionLegacyPass(*PR);
+  initializeDXILDataScalarizationLegacyPass(*PR);
+  initializeDXILFlattenArraysLegacyPass(*PR);
+  initializeScalarizerLegacyPassPass(*PR);
+  initializeDXILLegalizeLegacyPass(*PR);
   initializeDXILPrepareModulePass(*PR);
   initializeEmbedDXILPassPass(*PR);
   initializeWriteDXILPassPass(*PR);
   initializeDXContainerGlobalsPass(*PR);
   initializeDXILOpLoweringLegacyPass(*PR);
-  initializeDXILTranslateMetadataPass(*PR);
-  initializeDXILResourceMDWrapperPass(*PR);
+  initializeDXILResourceAccessLegacyPass(*PR);
+  initializeDXILTranslateMetadataLegacyPass(*PR);
   initializeShaderFlagsAnalysisWrapperPass(*PR);
+  initializeRootSignatureAnalysisWrapperPass(*PR);
   initializeDXILFinalizeLinkageLegacyPass(*PR);
+  initializeDXILPrettyPrinterLegacyPass(*PR);
+  initializeDXILForwardHandleAccessesLegacyPass(*PR);
+  initializeDXILCBufferAccessLegacyPass(*PR);
 }
 
 class DXILTargetObjectFile : public TargetLoweringObjectFile {
@@ -78,10 +98,19 @@ public:
 
   FunctionPass *createTargetRegisterAllocator(bool) override { return nullptr; }
   void addCodeGenPrepare() override {
-    addPass(createDXILIntrinsicExpansionLegacyPass());
-    addPass(createDXILOpLoweringLegacyPass());
     addPass(createDXILFinalizeLinkageLegacyPass());
-    addPass(createDXILTranslateMetadataPass());
+    addPass(createDXILIntrinsicExpansionLegacyPass());
+    addPass(createDXILCBufferAccessLegacyPass());
+    addPass(createDXILDataScalarizationLegacyPass());
+    addPass(createDXILFlattenArraysLegacyPass());
+    addPass(createDXILResourceAccessLegacyPass());
+    ScalarizerPassOptions DxilScalarOptions;
+    DxilScalarOptions.ScalarizeLoadStore = true;
+    addPass(createScalarizerPass(DxilScalarOptions));
+    addPass(createDXILForwardHandleAccessesLegacyPass());
+    addPass(createDXILLegalizeLegacyPass());
+    addPass(createDXILTranslateMetadataLegacyPass());
+    addPass(createDXILOpLoweringLegacyPass());
     addPass(createDXILPrepareModulePass());
   }
 };
@@ -92,11 +121,11 @@ DirectXTargetMachine::DirectXTargetMachine(const Target &T, const Triple &TT,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL, bool JIT)
-    : LLVMTargetMachine(T,
-                        "e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-"
-                        "f32:32-f64:64-n8:16:32:64",
-                        TT, CPU, FS, Options, Reloc::Static, CodeModel::Small,
-                        OL),
+    : CodeGenTargetMachineImpl(
+          T,
+          "e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-"
+          "f32:32-f64:64-n8:16:32:64",
+          TT, CPU, FS, Options, Reloc::Static, CodeModel::Small, OL),
       TLOF(std::make_unique<DXILTargetObjectFile>()),
       Subtarget(std::make_unique<DirectXSubtarget>(TT, CPU, FS, *this)) {
   initAsmInfo();
@@ -118,7 +147,7 @@ bool DirectXTargetMachine::addPassesToEmitFile(
 
   switch (FileType) {
   case CodeGenFileType::AssemblyFile:
-    PM.add(createDXILPrettyPrinterPass(Out));
+    PM.add(createDXILPrettyPrinterLegacyPass(Out));
     PM.add(createPrintModulePass(Out, "", true));
     break;
   case CodeGenFileType::ObjectFile:
@@ -161,9 +190,12 @@ DirectXTargetMachine::getSubtargetImpl(const Function &) const {
 
 TargetTransformInfo
 DirectXTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(DirectXTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<DirectXTTIImpl>(this, F));
 }
 
 DirectXTargetLowering::DirectXTargetLowering(const DirectXTargetMachine &TM,
                                              const DirectXSubtarget &STI)
-    : TargetLowering(TM) {}
+    : TargetLowering(TM) {
+  addRegisterClass(MVT::i32, &dxil::DXILClassRegClass);
+  computeRegisterProperties(STI.getRegisterInfo());
+}

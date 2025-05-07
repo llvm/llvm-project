@@ -22,7 +22,6 @@
 #include "MipsSubtarget.h"
 #include "MipsTargetMachine.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -58,7 +57,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstrDesc.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -257,8 +255,8 @@ public:
     UnsupportedFPMode = Subtarget->isFP64bit() || Subtarget->useSoftFloat();
   }
 
-  unsigned fastMaterializeAlloca(const AllocaInst *AI) override;
-  unsigned fastMaterializeConstant(const Constant *C) override;
+  Register fastMaterializeAlloca(const AllocaInst *AI) override;
+  Register fastMaterializeConstant(const Constant *C) override;
   bool fastSelectInstruction(const Instruction *I) override;
 
 #include "MipsGenFastISel.inc"
@@ -329,7 +327,7 @@ unsigned MipsFastISel::emitLogicalOp(unsigned ISDOpc, MVT RetVT,
   return ResultReg;
 }
 
-unsigned MipsFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
+Register MipsFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
   assert(TLI.getValueType(DL, AI->getType(), true) == MVT::i32 &&
          "Alloca should always return a pointer.");
 
@@ -345,7 +343,7 @@ unsigned MipsFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
     return ResultReg;
   }
 
-  return 0;
+  return Register();
 }
 
 unsigned MipsFastISel::materializeInt(const Constant *C, MVT VT) {
@@ -439,12 +437,12 @@ unsigned MipsFastISel::materializeExternalCallSym(MCSymbol *Sym) {
 
 // Materialize a constant into a register, and return the register
 // number (or zero if we failed to handle it).
-unsigned MipsFastISel::fastMaterializeConstant(const Constant *C) {
+Register MipsFastISel::fastMaterializeConstant(const Constant *C) {
   EVT CEVT = TLI.getValueType(DL, C->getType(), true);
 
   // Only handle simple types.
   if (!CEVT.isSimple())
-    return 0;
+    return Register();
   MVT VT = CEVT.getSimpleVT();
 
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(C))
@@ -454,7 +452,7 @@ unsigned MipsFastISel::fastMaterializeConstant(const Constant *C) {
   else if (isa<ConstantInt>(C))
     return materializeInt(C, VT);
 
-  return 0;
+  return Register();
 }
 
 bool MipsFastISel::computeAddress(const Value *Obj, Address &Addr) {
@@ -881,38 +879,52 @@ bool MipsFastISel::selectLogicalOp(const Instruction *I) {
 }
 
 bool MipsFastISel::selectLoad(const Instruction *I) {
+  const LoadInst *LI = cast<LoadInst>(I);
+
   // Atomic loads need special handling.
-  if (cast<LoadInst>(I)->isAtomic())
+  if (LI->isAtomic())
     return false;
 
   // Verify we have a legal type before going any further.
   MVT VT;
-  if (!isLoadTypeLegal(I->getType(), VT))
+  if (!isLoadTypeLegal(LI->getType(), VT))
+    return false;
+
+  // Underaligned loads need special handling.
+  if (LI->getAlign() < VT.getFixedSizeInBits() / 8 &&
+      !Subtarget->systemSupportsUnalignedAccess())
     return false;
 
   // See if we can handle this address.
   Address Addr;
-  if (!computeAddress(I->getOperand(0), Addr))
+  if (!computeAddress(LI->getOperand(0), Addr))
     return false;
 
   unsigned ResultReg;
   if (!emitLoad(VT, ResultReg, Addr))
     return false;
-  updateValueMap(I, ResultReg);
+  updateValueMap(LI, ResultReg);
   return true;
 }
 
 bool MipsFastISel::selectStore(const Instruction *I) {
-  Value *Op0 = I->getOperand(0);
+  const StoreInst *SI = cast<StoreInst>(I);
+
+  Value *Op0 = SI->getOperand(0);
   unsigned SrcReg = 0;
 
   // Atomic stores need special handling.
-  if (cast<StoreInst>(I)->isAtomic())
+  if (SI->isAtomic())
     return false;
 
   // Verify we have a legal type before going any further.
   MVT VT;
-  if (!isLoadTypeLegal(I->getOperand(0)->getType(), VT))
+  if (!isLoadTypeLegal(SI->getOperand(0)->getType(), VT))
+    return false;
+
+  // Underaligned stores need special handling.
+  if (SI->getAlign() < VT.getFixedSizeInBits() / 8 &&
+      !Subtarget->systemSupportsUnalignedAccess())
     return false;
 
   // Get the value to be stored into a register.
@@ -922,7 +934,7 @@ bool MipsFastISel::selectStore(const Instruction *I) {
 
   // See if we can handle this address.
   Address Addr;
-  if (!computeAddress(I->getOperand(1), Addr))
+  if (!computeAddress(SI->getOperand(1), Addr))
     return false;
 
   if (!emitStore(VT, SrcReg, Addr))
@@ -1935,7 +1947,10 @@ bool MipsFastISel::selectDivRem(const Instruction *I, unsigned ISDOpcode) {
     return false;
 
   emitInst(DivOpc).addReg(Src0Reg).addReg(Src1Reg);
-  emitInst(Mips::TEQ).addReg(Src1Reg).addReg(Mips::ZERO).addImm(7);
+  if (!isa<ConstantInt>(I->getOperand(1)) ||
+      dyn_cast<ConstantInt>(I->getOperand(1))->isZero()) {
+    emitInst(Mips::TEQ).addReg(Src1Reg).addReg(Mips::ZERO).addImm(7);
+  }
 
   Register ResultReg = createResultReg(&Mips::GPR32RegClass);
   if (!ResultReg)

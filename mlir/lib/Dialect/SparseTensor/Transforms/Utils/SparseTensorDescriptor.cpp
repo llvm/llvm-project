@@ -54,20 +54,21 @@ convertSparseTensorType(RankedTensorType rtp, SmallVectorImpl<Type> &fields) {
 // The sparse tensor type converter (defined in Passes.h).
 //===----------------------------------------------------------------------===//
 
+static Value materializeTuple(OpBuilder &builder, RankedTensorType tp,
+                              ValueRange inputs, Location loc) {
+  if (!getSparseTensorEncoding(tp))
+    // Not a sparse tensor.
+    return Value();
+  // Sparsifier knows how to cancel out these casts.
+  return genTuple(builder, loc, tp, inputs);
+}
+
 SparseTensorTypeToBufferConverter::SparseTensorTypeToBufferConverter() {
   addConversion([](Type type) { return type; });
   addConversion(convertSparseTensorType);
 
   // Required by scf.for 1:N type conversion.
-  addSourceMaterialization([](OpBuilder &builder, RankedTensorType tp,
-                              ValueRange inputs,
-                              Location loc) -> std::optional<Value> {
-    if (!getSparseTensorEncoding(tp))
-      // Not a sparse tensor.
-      return std::nullopt;
-    // Sparsifier knows how to cancel out these casts.
-    return genTuple(builder, loc, tp, inputs);
-  });
+  addSourceMaterialization(materializeTuple);
 }
 
 //===----------------------------------------------------------------------===//

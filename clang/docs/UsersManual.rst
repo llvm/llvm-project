@@ -151,6 +151,10 @@ Options to Control Error and Warning Messages
   instantiation backtrace for a single warning or error. The default is 10, and
   the limit can be disabled with `-ftemplate-backtrace-limit=0`.
 
+.. option:: --warning-suppression-mappings=foo.txt
+
+   :ref:`Suppress certain diagnostics for certain files. <warning_suppression_mappings>`
+
 .. _cl_diag_formatting:
 
 Formatting of Diagnostics
@@ -950,10 +954,13 @@ treated as a file name and is searched for sequentially in the directories:
     - system directory,
     - the directory where Clang executable resides.
 
-Both user and system directories for configuration files are specified during
-clang build using CMake parameters, ``CLANG_CONFIG_FILE_USER_DIR`` and
-``CLANG_CONFIG_FILE_SYSTEM_DIR`` respectively. The first file found is used.
-It is an error if the required file cannot be found.
+Both user and system directories for configuration files can be specified
+either during build or during runtime. At build time, use
+``CLANG_CONFIG_FILE_USER_DIR`` and ``CLANG_CONFIG_FILE_SYSTEM_DIR``. At run
+time use the ``--config-user-dir=`` and ``--config-system-dir=`` command line
+options. Specifying config directories at runtime overrides the config
+directories set at build time The first file found is used. It is an error if
+the required file cannot be found.
 
 The default configuration files are searched for in the same directories
 following the rules described in the next paragraphs. Loading default
@@ -1052,8 +1059,48 @@ In this way, the user may only need to specify a root configuration file with
     -L <CFGDIR>/lib
     -T <CFGDIR>/ldscripts/link.ld
 
+Usually, config file options are placed before command-line options, regardless
+of the actual operation to be performed. The exception is being made for the
+options prefixed with the ``$`` character. These will be used only when linker
+is being invoked, and added after all of the command-line specified linker
+inputs. Here is some example of ``$``-prefixed options:
+
+::
+
+    $-Wl,-Bstatic $-lm
+    $-Wl,-Bshared
+
 Language and Target-Independent Features
 ========================================
+
+Freestanding Builds
+-------------------
+Passing the ``-ffreestanding`` flag causes Clang to build for a freestanding
+(rather than a hosted) environment. The flag has the following effects:
+
+* the ``__STDC_HOSTED__`` predefined macro will expand to ``0``,
+* builtin functions are disabled by default (``-fno-builtins``),
+* unwind tables are disabled by default 
+  (``fno-asynchronous-unwind-tables -fno-unwind-tables``), and
+* does not treat the global ``main`` function as a special function.
+
+An implementation of the following runtime library functions must always be
+provided with the usual semantics, as Clang will generate calls to them:
+
+* ``memcpy``,
+* ``memmove``, and
+* ``memset``.
+
+Clang does not, by itself, provide a full "conforming freestanding
+implementation". If you wish to have a conforming freestanding implementation,
+you must provide a freestanding C library. While Clang provides some of the
+required header files, it does not provide all of them, nor any library
+implementations.
+
+Conversely, when ``-ffreestanding`` is specified, Clang does not require you to
+provide a conforming freestanding implementation library. Clang will not make
+any assumptions as to the availability or semantics of standard-library
+functions other than those mentioned above.
 
 Controlling Errors and Warnings
 -------------------------------
@@ -1312,16 +1359,42 @@ with its corresponding `Wno-` option.
 Note that when combined with :option:`-w` (which disables all warnings),
 disabling all warnings wins.
 
+.. _warning_suppression_mappings:
+
+Controlling Diagnostics via Suppression Mappings
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning suppression mappings enable users to suppress Clang's diagnostics at a
+per-file granularity. This allows enforcing diagnostics in specific parts of the
+project even if there are violations in some headers.
+
+.. code-block:: console
+
+  $ cat mappings.txt
+  [unused]
+  src:foo/*
+
+  $ clang --warning-suppression-mappings=mapping.txt -Wunused foo/bar.cc
+  # This compilation won't emit any unused findings for sources under foo/
+  # directory. But it'll still complain for all the other sources, e.g:
+  $ cat foo/bar.cc
+  #include "dir/include.h" // Clang flags unused declarations here.
+  #include "foo/include.h" // but unused warnings under this source is omitted.
+  #include "next_to_bar_cc.h" // as are unused warnings from this header file.
+  // Further, unused warnings in the remainder of bar.cc are also omitted.
+
+
+See :doc:`WarningSuppressionMappings` for details about the file format and
+functionality.
+
 Controlling Static Analyzer Diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 While not strictly part of the compiler, the diagnostics from Clang's
 `static analyzer <https://clang-analyzer.llvm.org>`_ can also be
 influenced by the user via changes to the source code. See the available
-`annotations <https://clang-analyzer.llvm.org/annotations.html>`_ and the
-analyzer's `FAQ
-page <https://clang-analyzer.llvm.org/faq.html#exclude_code>`_ for more
-information.
+`annotations <analyzer/user-docs/Annotations.html>`_ and the analyzer's
+`FAQ page <analyzer/user-docs/FAQ.html#exclude-code>`_ for more information.
 
 .. _usersmanual-precompiled-headers:
 
@@ -1452,28 +1525,30 @@ describes the various floating point semantic modes and the corresponding option
   "fhonor-infinities", "{on, off}"
   "fsigned-zeros", "{on, off}"
   "freciprocal-math", "{on, off}"
-  "allow_approximate_fns", "{on, off}"
+  "fallow-approximate-fns", "{on, off}"
   "fassociative-math", "{on, off}"
+  "fcomplex-arithmetic", "{basic, improved, full, promoted}"
 
 This table describes the option settings that correspond to the three
 floating point semantic models: precise (the default), strict, and fast.
 
 
 .. csv-table:: Floating Point Models
-  :header: "Mode", "Precise", "Strict", "Fast"
-  :widths: 25, 15, 15, 15
+  :header: "Mode", "Precise", "Strict", "Fast", "Aggressive"
+  :widths: 25, 25, 25, 25, 25
 
-  "except_behavior", "ignore", "strict", "ignore"
-  "fenv_access", "off", "on", "off"
-  "rounding_mode", "tonearest", "dynamic", "tonearest"
-  "contract", "on", "off", "fast"
-  "support_math_errno", "on", "on", "off"
-  "no_honor_nans", "off", "off", "on"
-  "no_honor_infinities", "off", "off", "on"
-  "no_signed_zeros", "off", "off", "on"
-  "allow_reciprocal", "off", "off", "on"
-  "allow_approximate_fns", "off", "off", "on"
-  "allow_reassociation", "off", "off", "on"
+  "except_behavior", "ignore", "strict", "ignore", "ignore"
+  "fenv_access", "off", "on", "off", "off"
+  "rounding_mode", "tonearest", "dynamic", "tonearest", "tonearest"
+  "contract", "on", "off", "fast", "fast"
+  "support_math_errno", "on", "on", "off", "off"
+  "no_honor_nans", "off", "off", "off", "on"
+  "no_honor_infinities", "off", "off", "off", "on"
+  "no_signed_zeros", "off", "off", "on", "on"
+  "allow_reciprocal", "off", "off", "on", "on"
+  "allow_approximate_fns", "off", "off", "on", "on"
+  "allow_reassociation", "off", "off", "on", "on"
+  "complex_arithmetic", "full", "full", "promoted", "basic"
 
 The ``-ffp-model`` option does not modify the ``fdenormal-fp-math``
 setting, but it does have an impact on whether ``crtfastmath.o`` is
@@ -1492,9 +1567,9 @@ for more details.
    * Floating-point math obeys regular algebraic rules for real numbers (e.g.
      ``+`` and ``*`` are associative, ``x/y == x * (1/y)``, and
      ``(a + b) * c == a * c + b * c``),
-   * Operands to floating-point operations are not equal to ``NaN`` and
-     ``Inf``, and
-   * ``+0`` and ``-0`` are interchangeable.
+   * No ``NaN`` or infinite values will be operands or results of
+     floating-point operations,
+   * ``+0`` and ``-0`` may be treated as interchangeable.
 
    ``-ffast-math`` also defines the ``__FAST_MATH__`` preprocessor
    macro. Some math libraries recognize this macro and change their behavior.
@@ -1635,19 +1710,27 @@ for more details.
    permitted to produce more precise results than performing the same
    operations separately.
 
-   The C standard permits intermediate floating-point results within an
+   The C and C++ standards permit intermediate floating-point results within an
    expression to be computed with more precision than their type would
    normally allow. This permits operation fusing, and Clang takes advantage
-   of this by default. This behavior can be controlled with the ``FP_CONTRACT``
-   and ``clang fp contract`` pragmas. Please refer to the pragma documentation
-   for a description of how the pragmas interact with this option.
+   of this by default (``on``). Fusion across statements is not compliant with
+   the C and C++ standards but can be enabled using ``-ffp-contract=fast``.
+
+   Fusion can be controlled with the ``FP_CONTRACT`` and ``clang fp contract``
+   pragmas. Please note that pragmas will be ingored with
+   ``-ffp-contract=fast``, and refer to the pragma documentation for a
+   description of how the pragmas interact with the different ``-ffp-contract``
+   option values.
 
    Valid values are:
 
-   * ``fast`` (fuse across statements disregarding pragmas, default for CUDA)
-   * ``on`` (fuse in the same statement unless dictated by pragmas, default for languages other than CUDA/HIP)
-   * ``off`` (never fuse)
-   * ``fast-honor-pragmas`` (fuse across statements unless dictated by pragmas, default for HIP)
+   * ``fast``: enable fusion across statements disregarding pragmas, breaking
+     compliance with the C and C++ standards (default for CUDA).
+   * ``on``: enable C and C++ standard complaint fusion in the same statement
+     unless dictated by pragmas (default for languages other than CUDA/HIP)
+   * ``off``: disable fusion
+   * ``fast-honor-pragmas``: fuse across statements unless dictated by pragmas
+     (default for HIP)
 
 .. option:: -f[no-]honor-infinities
 
@@ -1753,7 +1836,7 @@ for more details.
    Specify floating point behavior. ``-ffp-model`` is an umbrella
    option that encompasses functionality provided by other, single
    purpose, floating point options.  Valid values are: ``precise``, ``strict``,
-   and ``fast``.
+   ``fast``, and ``aggressive``.
    Details:
 
    * ``precise`` Disables optimizations that are not value-safe on
@@ -1766,7 +1849,10 @@ for more details.
      ``STDC FENV_ACCESS``: by default ``FENV_ACCESS`` is disabled. This option
      setting behaves as though ``#pragma STDC FENV_ACCESS ON`` appeared at the
      top of the source file.
-   * ``fast`` Behaves identically to specifying both ``-ffast-math`` and
+   * ``fast`` Behaves identically to specifying ``-funsafe-math-optimizations``,
+     ``-fno-math-errno`` and ``-fcomplex-arithmetic=promoted``
+     ``ffp-contract=fast``
+   * ``aggressive`` Behaves identically to specifying both ``-ffast-math`` and
      ``ffp-contract=fast``
 
    Note: If your command line specifies multiple instances
@@ -2054,7 +2140,10 @@ are listed below.
 
       ``-fsanitize=undefined``: :doc:`UndefinedBehaviorSanitizer`,
       a fast and compatible undefined behavior checker.
+   -  .. _opt_fsanitize_type:
 
+      ``-fsanitize=type``: :doc:`TypeSanitizer`, a detector for strict
+      aliasing violations.
    -  ``-fsanitize=dataflow``: :doc:`DataFlowSanitizer`, a general data
       flow analysis.
    -  ``-fsanitize=cfi``: :doc:`control flow integrity <ControlFlowIntegrity>`
@@ -2063,6 +2152,8 @@ are listed below.
       integrity.
    -  ``-fsanitize=safe-stack``: :doc:`safe stack <SafeStack>`
       protection against stack-based memory corruption errors.
+   -  ``-fsanitize=realtime``: :doc:`RealtimeSanitizer`,
+      a real-time safety checker.
 
    There are more fine-grained checks available: see
    the :ref:`list <ubsan-checks>` of specific kinds of
@@ -2169,6 +2260,12 @@ are listed below.
 
    This option is currently experimental.
 
+.. option:: -fsanitize-kcfi-arity
+
+   Extends kernel indirect call forward-edge control flow integrity with
+   additional function arity information (for supported targets). See
+   :doc:`ControlFlowIntegrity` for more details.
+
 .. option:: -fstrict-vtable-pointers
 
    Enable optimizations based on the strict rules for overwriting polymorphic
@@ -2199,6 +2296,36 @@ are listed below.
    However, this can increase the LTO link time and memory requirements over
    pure ThinLTO, as all split regular LTO modules are merged and LTO linked
    with regular LTO.
+
+.. option:: -f[no-]unique-source-file-names
+
+   When enabled, allows the compiler to assume that each object file
+   passed to the linker has been compiled using a unique source file
+   path. This is useful for reducing link times when doing ThinLTO
+   in combination with whole-program devirtualization or CFI.
+
+   The full source path passed to the compiler must be unique. This
+   means that, for example, the following is a usage error:
+
+   .. code-block:: console
+
+     $ cd foo
+     $ clang -funique-source-file-names -c foo.c
+     $ cd ../bar
+     $ clang -funique-source-file-names -c foo.c
+     $ cd ..
+     $ clang foo/foo.o bar/foo.o
+    
+   but this is not:
+
+   .. code-block:: console
+
+     $ clang -funique-source-file-names -c foo/foo.c
+     $ clang -funique-source-file-names -c bar/foo.c
+     $ clang foo/foo.o bar/foo.o
+
+   A misuse of this flag may result in a duplicate symbol error at
+   link time.
 
 .. option:: -fforce-emit-vtables
 
@@ -2359,14 +2486,16 @@ are listed below.
      $ cd $P/bar && clang -c -funique-internal-linkage-names name_conflict.c
      $ cd $P && clang foo/name_conflict.o && bar/name_conflict.o
 
-.. option:: -fbasic-block-sections=[labels, all, list=<arg>, none]
+.. option:: -f[no]-basic-block-address-map:
+  Emits a ``SHT_LLVM_BB_ADDR_MAP`` section which includes address offsets for each
+  basic block in the program, relative to the parent function address.
+
+
+.. option:: -fbasic-block-sections=[all, list=<arg>, none]
 
   Controls how Clang emits text sections for basic blocks. With values ``all``
   and ``list=<arg>``, each basic block or a subset of basic blocks can be placed
-  in its own unique section. With the "labels" value, normal text sections are
-  emitted, but a ``.bb_addr_map`` section is emitted which includes address
-  offsets for each basic block in the program, relative to the parent function
-  address.
+  in its own unique section.
 
   With the ``list=<arg>`` option, a file containing the subset of basic blocks
   that need to placed in unique sections can be specified.  The format of the
@@ -2399,6 +2528,115 @@ are listed below.
   Basic block sections allow the linker to reorder basic blocks and enables
   link-time optimizations like whole program inter-procedural basic block
   reordering.
+
+.. option:: -fcodegen-data-generate[=<path>]
+
+  Emit the raw codegen (CG) data into custom sections in the object file.
+  Currently, this option also combines the raw CG data from the object files
+  into an indexed CG data file specified by the <path>, for LLD MachO only.
+  When the <path> is not specified, `default.cgdata` is created.
+  The CG data file combines all the outlining instances that occurred locally
+  in each object file.
+
+  .. code-block:: console
+
+    $ clang -fuse-ld=lld -Oz -fcodegen-data-generate code.cc
+
+  For linkers that do not yet support this feature, `llvm-cgdata` can be used
+  manually to merge this CG data in object files.
+
+  .. code-block:: console
+
+    $ clang -c -fuse-ld=lld -Oz -fcodegen-data-generate code.cc
+    $ llvm-cgdata --merge -o default.cgdata code.o
+
+.. option:: -fcodegen-data-use[=<path>]
+
+  Read the codegen data from the specified path to more effectively outline
+  functions across compilation units. When the <path> is not specified,
+  `default.cgdata` is used. This option can create many identically outlined
+  functions that can be optimized by the conventional linker’s identical code
+  folding (ICF).
+
+  .. code-block:: console
+
+    $ clang -fuse-ld=lld -Oz -Wl,--icf=safe -fcodegen-data-use code.cc
+
+.. _strict_aliasing:
+
+Strict Aliasing
+---------------
+
+The C and C++ standards require accesses to objects in memory to use l-values of
+an appropriate type for the object. This is called *strict aliasing* or
+*type-based alias analysis*. Strict aliasing enhances a variety of powerful
+memory optimizations, including reordering, combining, and eliminating memory
+accesses. These optimizations can lead to unexpected behavior in code that
+violates the strict aliasing rules. For example:
+
+.. code-block:: c++
+
+    void advance(size_t *index, double *data) {
+      double value = data[*index];
+      /* Clang may assume that this store does not change the contents of `data`. */
+      *index += 1;
+      /* Clang may assume that this store does not change the contents of `index`. */
+      data[*index] = value;
+      /* Either of these facts may create significant optimization opportunities
+       if Clang is able to inline this function. */
+  }
+
+Strict aliasing can be explicitly enabled with ``-fstrict-aliasing`` and
+disabled with ``-fno-strict-aliasing``. ``clang-cl`` defaults to
+``-fno-strict-aliasing``; see . Otherwise, Clang defaults to ``-fstrict-aliasing``.
+
+C and C++ specify slightly different rules for strict aliasing. To improve
+language interoperability, Clang allows two types to alias if either language
+would permit it. This includes applying the C++ similar types rule to C,
+allowing ``int **`` to alias ``int const * const *``. Clang also relaxes the
+standard aliasing rules in the following ways:
+
+* All integer types of the same size are permitted to alias each other,
+  including signed and unsigned types.
+* ``void*`` is permitted to alias any pointer type, ``void**`` is permitted to
+  alias any pointer to pointer type, and so on.
+
+Code which violates strict aliasing has undefined behavior. A program that
+works in one version of Clang may not work in another because of changes to the
+optimizer. Clang provides a :doc:`TypeSanitizer` to help detect
+violations of the strict aliasing rules, but it is currently still experimental.
+Code that is known to violate strict aliasing should generally be built with
+``-fno-strict-aliasing`` if the violation cannot be fixed.
+
+Clang supports several ways to fix a violation of strict aliasing:
+
+* L-values of the character types ``char`` and ``unsigned char`` (as well as
+  other types, depending on the standard) are permitted to access objects of
+  any type.
+
+* Library functions such as ``memcpy`` and ``memset`` are specified as treating
+  memory as characters and therefore are not limited by strict aliasing. If a
+  value of one type must be reinterpreted as another (e.g. to read the bits of a
+  floating-point number), use ``memcpy`` to copy the representation to an object
+  of the destination type. This has no overhead over a direct l-value access
+  because Clang should reliably optimize calls to these functions to use simple
+  loads and stores when they are used with small constant sizes.
+
+* The attribute ``may_alias`` can be added to a ``typedef`` to give l-values of
+  that type the same aliasing power as the character types.
+
+Clang makes a best effort to avoid obvious miscompilations from strict aliasing
+by only considering type information when it cannot prove that two accesses must
+refer to the same memory. However, it is not recommended that programmers
+intentionally rely on this instead of using one of the solutions above because
+it is too easy for the compiler's analysis to be blocked in surprising ways.
+
+In Clang 20, Clang strengthened its implementation of strict aliasing for
+accesses of pointer type. Previously, all accesses of pointer type were
+permitted to alias each other, but Clang now distinguishes different pointers
+by their pointee type, except as limited by the relaxations around qualifiers
+and ``void*`` described above. The previous behavior of treating all pointers as
+aliasing can be restored using ``-fno-pointer-tbaa``.
 
 Profile Guided Optimization
 ---------------------------
@@ -2583,7 +2821,7 @@ usual build cycle when using sample profilers for optimization:
 
      > clang-cl /O2 -gdwarf -gline-tables-only ^
        /clang:-fdebug-info-for-profiling /clang:-funique-internal-linkage-names ^
-       /fprofile-sample-use=code.prof code.cc /Fe:code /fuse-ld=lld /link /debug:dwarf
+       -fprofile-sample-use=code.prof code.cc /Fe:code -fuse-ld=lld /link /debug:dwarf
 
    [OPTIONAL] Sampling-based profiles can have inaccuracies or missing block/
    edge counters. The profile inference algorithm (profi) can be used to infer
@@ -2602,7 +2840,7 @@ usual build cycle when using sample profilers for optimization:
 
      > clang-cl /clang:-fsample-profile-use-profi /O2 -gdwarf -gline-tables-only ^
        /clang:-fdebug-info-for-profiling /clang:-funique-internal-linkage-names ^
-       /fprofile-sample-use=code.prof code.cc /Fe:code /fuse-ld=lld /link /debug:dwarf
+       -fprofile-sample-use=code.prof code.cc /Fe:code -fuse-ld=lld /link /debug:dwarf
 
 Sample Profile Formats
 """"""""""""""""""""""
@@ -2794,7 +3032,8 @@ instrumentation:
    environment variable to specify an alternate file. If non-default file name
    is specified by both the environment variable and the command line option,
    the environment variable takes precedence. The file name pattern specified
-   can include different modifiers: ``%p``, ``%h``, ``%m``, ``%t``, and ``%c``.
+   can include different modifiers: ``%p``, ``%h``, ``%m``, ``%b``, ``%t``, and
+   ``%c``.
 
    Any instance of ``%p`` in that file name will be replaced by the process
    ID, so that you can easily distinguish the profile output from multiple
@@ -2816,11 +3055,11 @@ instrumentation:
    ``%p`` is that the storage requirement for raw profile data files is greatly
    increased.  To avoid issues like this, the ``%m`` specifier can used in the profile
    name.  When this specifier is used, the profiler runtime will substitute ``%m``
-   with a unique integer identifier associated with the instrumented binary. Additionally,
+   with an integer identifier associated with the instrumented binary. Additionally,
    multiple raw profiles dumped from different processes that share a file system (can be
    on different hosts) will be automatically merged by the profiler runtime during the
    dumping. If the program links in multiple instrumented shared libraries, each library
-   will dump the profile data into its own profile data file (with its unique integer
+   will dump the profile data into its own profile data file (with its integer
    id embedded in the profile name). Note that the merging enabled by ``%m`` is for raw
    profile data generated by profiler runtime. The resulting merged "raw" profile data
    file still needs to be converted to a different format expected by the compiler (
@@ -2829,6 +3068,12 @@ instrumentation:
    .. code-block:: console
 
      $ LLVM_PROFILE_FILE="code-%m.profraw" ./code
+
+   Although rare, binary signatures used by the ``%m`` specifier can have
+   collisions. In this case, the ``%b`` specifier, which expands to the binary
+   ID (build ID in ELF and COFF), can be added. To use it, the program should be
+   compiled with the build ID linker option (``--build-id`` for GNU ld or LLD,
+   ``/build-id`` for lld-link on Windows). Linux, Windows and AIX are supported.
 
    See `this <SourceBasedCodeCoverage.html#running-the-instrumented-program>`_ section
    about the ``%t``, and ``%c`` modifiers.
@@ -2947,6 +3192,56 @@ indexed format, regardeless whether it is produced by frontend or the IR pass.
   overhead. ``prefer-atomic`` will be transformed to ``atomic`` when supported
   by the target, or ``single`` otherwise.
 
+.. option:: -fprofile-continuous
+
+  Enables the continuous instrumentation profiling where profile counter updates
+  are continuously synced to a file. This option sets any neccessary modifiers
+  (currently ``%c``) in the default profile filename and passes any necessary
+  flags to the middle-end to support this mode. Value profiling is not supported
+  in continuous mode.
+
+  .. code-block:: console
+
+    $ clang++ -O2 -fprofile-generate -fprofile-continuous code.cc -o code
+
+  Running ``./code`` will collect the profile and write it to the
+  ``default_xxxx.profraw`` file. However, if ``./code`` abruptly terminates or
+  does not call ``exit()``, in continuous mode the profile collected up to the
+  point of termination will be available in ``default_xxxx.profraw`` while in
+  the non-continuous mode, no profile file is generated.
+
+.. option:: -ftemporal-profile
+
+  Enables the temporal profiling extension for IRPGO to improve startup time by
+  reducing ``.text`` section page faults. To do this, we instrument function
+  timestamps to measure when each function is called for the first time and use
+  this data to generate a function order to improve startup.
+
+  The profile is generated as normal.
+
+  .. code-block:: console
+
+    $ clang++ -O2 -fprofile-generate -ftemporal-profile code.cc -o code
+    $ ./code
+    $ llvm-profdata merge -o code.profdata yyy/zzz
+
+  Using the resulting profile, we can generate a function order to pass to the
+  linker via ``--symbol-ordering-file`` for ELF or ``-order_file`` for Mach-O.
+
+  .. code-block:: console
+
+    $ llvm-profdata order code.profdata -o code.orderfile
+    $ clang++ -O2 -Wl,--symbol-ordering-file=code.orderfile code.cc -o code
+
+  Or the profile can be passed to LLD directly.
+
+  .. code-block:: console
+
+    $ clang++ -O2 -fuse-ld=lld -Wl,--irpgo-profile=code.profdata,--bp-startup-sort=function code.cc -o code
+
+  For more information, please read the RFC:
+  https://discourse.llvm.org/t/rfc-temporal-profiling-extension-for-irpgo/68068
+
 Fine Tuning Profile Collection
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2959,7 +3254,6 @@ be collected.
    the profile file to ``Name``.
  * ``void __llvm_profile_reset_counters(void)``: resets all counters to zero.
  * ``int __llvm_profile_dump(void)``: write the profile data to disk.
- * ``int __llvm_orderfile_dump(void)``: write the order file to disk.
 
 For example, the following pattern can be used to skip profiling program
 initialization, profile two specific hot regions, and skip profiling program
@@ -4445,25 +4739,7 @@ Clang supports generation of SPIR-V conformant to `the OpenCL Environment
 Specification
 <https://www.khronos.org/registry/OpenCL/specs/3.0-unified/html/OpenCL_Env.html>`_.
 
-To generate SPIR-V binaries, Clang uses the external ``llvm-spirv`` tool from the
-`SPIRV-LLVM-Translator repo
-<https://github.com/KhronosGroup/SPIRV-LLVM-Translator>`_.
-
-Prior to the generation of SPIR-V binary with Clang, ``llvm-spirv``
-should be built or installed. Please refer to `the following instructions
-<https://github.com/KhronosGroup/SPIRV-LLVM-Translator#build-instructions>`_
-for more details. Clang will look for ``llvm-spirv-<LLVM-major-version>`` and
-``llvm-spirv`` executables, in this order, in the ``PATH`` environment variable.
-Clang uses ``llvm-spirv`` with `the widely adopted assembly syntax package
-<https://github.com/KhronosGroup/SPIRV-LLVM-Translator/#build-with-spirv-tools>`_.
-
-`The versioning
-<https://github.com/KhronosGroup/SPIRV-LLVM-Translator/releases>`_ of
-``llvm-spirv`` is aligned with Clang major releases. The same applies to the
-main development branch. It is therefore important to ensure the ``llvm-spirv``
-version is in alignment with the Clang version. For troubleshooting purposes
-``llvm-spirv`` can be `tested in isolation
-<https://github.com/KhronosGroup/SPIRV-LLVM-Translator#test-instructions>`_.
+To generate SPIR-V binaries, Clang uses the in-tree LLVM SPIR-V backend.
 
 Example usage for OpenCL kernel compilation:
 
@@ -4480,18 +4756,6 @@ further by offline SPIR-V consumer tools.
 Converting to SPIR-V produced with the optimization levels other than `-O0` is
 currently available as an experimental feature and it is not guaranteed to work
 in all cases.
-
-Clang also supports integrated generation of SPIR-V without use of ``llvm-spirv``
-tool as an experimental feature when ``-fintegrated-objemitter`` flag is passed in
-the command line.
-
-   .. code-block:: console
-
-     $ clang --target=spirv32 -fintegrated-objemitter -c test.cl
-
-Note that only very basic functionality is supported at this point and therefore
-it is not suitable for arbitrary use cases. This feature is only enabled when clang
-build is configured with ``-DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=SPIRV`` option.
 
 Linking is done using ``spirv-link`` from `the SPIRV-Tools project
 <https://github.com/KhronosGroup/SPIRV-Tools#linker>`_. Similar to other external
@@ -4882,6 +5146,7 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -v                      Show commands to run and use verbose output
       -W<warning>             Enable the specified warning
       -Xclang <arg>           Pass <arg> to the clang compiler
+      -Xclangas <arg>         Pass <arg> to the clang assembler
 
 The /clang: Option
 ^^^^^^^^^^^^^^^^^^
@@ -5151,12 +5416,6 @@ The Visual C++ Toolset has a slightly more elaborate mechanism for detection.
 Restrictions and Limitations compared to Clang
 ----------------------------------------------
 
-Strict Aliasing
-^^^^^^^^^^^^^^^
-
-Strict aliasing (TBAA) is always off by default in clang-cl. Whereas in clang,
-strict aliasing is turned on by default for all optimization levels.
-
-To enable LLVM optimizations based on strict aliasing rules (e.g., optimizations
-based on type of expressions in C/C++), user will need to explicitly pass
-`-fstrict-aliasing` to clang-cl.
+Strict aliasing (TBAA) is always off by default in clang-cl whereas in clang,
+strict aliasing is turned on by default for all optimization levels. For more
+details, see :ref:`Strict aliasing <strict_aliasing>`.

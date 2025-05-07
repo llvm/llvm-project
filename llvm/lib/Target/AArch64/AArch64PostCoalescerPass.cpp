@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 //===----------------------------------------------------------------------===//
 
-#include "AArch64InstrInfo.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -22,9 +21,7 @@ namespace {
 struct AArch64PostCoalescer : public MachineFunctionPass {
   static char ID;
 
-  AArch64PostCoalescer() : MachineFunctionPass(ID) {
-    initializeAArch64PostCoalescerPass(*PassRegistry::getPassRegistry());
-  }
+  AArch64PostCoalescer() : MachineFunctionPass(ID) {}
 
   LiveIntervals *LIS;
   MachineRegisterInfo *MRI;

@@ -63,7 +63,7 @@ alignas(16) SANITIZER_INTERFACE_ATTRIBUTE THREADLOCAL u32
     __msan_va_arg_origin_tls[kMsanParamTlsSize / sizeof(u32)];
 
 SANITIZER_INTERFACE_ATTRIBUTE
-THREADLOCAL u64 __msan_va_arg_overflow_size_tls;
+THREADLOCAL uptr __msan_va_arg_overflow_size_tls;
 
 SANITIZER_INTERFACE_ATTRIBUTE
 THREADLOCAL u32 __msan_origin_tls;
@@ -457,10 +457,11 @@ void __msan_init() {
 
   __sanitizer_set_report_path(common_flags()->log_path);
 
+  InitializePlatformEarly();
+
   InitializeInterceptors();
   InstallAtForkHandler();
   CheckASLR();
-  InitTlsSize();
   InstallDeadlySignalHandlers(MsanOnDeadlySignal);
   InstallAtExitHandler(); // Needs __cxa_atexit interceptor.
 

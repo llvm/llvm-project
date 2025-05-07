@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "startup/linux/do_start.h"
+#include "config/linux/app.h"
 #include "include/llvm-libc-macros/link-macros.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/macros/config.h"
@@ -60,6 +61,10 @@ static void call_fini_array_callbacks() {
 }
 
 static ThreadAttributes main_thread_attrib;
+static TLSDescriptor tls;
+// We separate teardown_main_tls from callbacks as callback function themselves
+// may require TLS.
+void teardown_main_tls() { cleanup_tls(tls.addr, tls.size); }
 
 [[noreturn]] void do_start() {
   auto tid = syscall_impl<long>(SYS_gettid);
@@ -122,7 +127,6 @@ static ThreadAttributes main_thread_attrib;
 
   // This descriptor has to be static since its cleanup function cannot
   // capture the context.
-  static TLSDescriptor tls;
   init_tls(tls);
   if (tls.size != 0 && !set_thread_ptr(tls.tp))
     syscall_impl<long>(SYS_exit, 1);
@@ -130,10 +134,7 @@ static ThreadAttributes main_thread_attrib;
   self.attrib = &main_thread_attrib;
   main_thread_attrib.atexit_callback_mgr =
       internal::get_thread_atexit_callback_mgr();
-  // We register the cleanup_tls function to be the last atexit callback to be
-  // invoked. It will tear down the TLS. Other callbacks may depend on TLS (such
-  // as the stack protector canary).
-  atexit([]() { cleanup_tls(tls.addr, tls.size); });
+
   // We want the fini array callbacks to be run after other atexit
   // callbacks are run. So, we register them before running the init
   // array callbacks as they can potentially register their own atexit

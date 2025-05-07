@@ -10,10 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "kmp_utils.h"
+
 /*****************************************************************************
  * system include files
  ****************************************************************************/
-
 #include <assert.h>
 
 #include <stdint.h>
@@ -497,6 +498,7 @@ void ompt_post_init() {
     kmp_info_t *root_thread = ompt_get_thread();
 
     ompt_set_thread_state(root_thread, ompt_state_overhead);
+    __ompt_task_init(root_thread->th.th_current_task, 0);
 
     if (ompt_enabled.ompt_callback_thread_begin) {
       ompt_callbacks.ompt_callback(ompt_callback_thread_begin)(
@@ -708,7 +710,7 @@ OMPT_API_ROUTINE int ompt_get_place_proc_ids(int place_num, int ids_size,
   return 0;
 #else
   int i, count;
-  int tmp_ids[ids_size];
+  SimpleVLA<int> tmp_ids(ids_size);
   for (int j = 0; j < ids_size; j++)
     tmp_ids[j] = 0;
   if (!KMP_AFFINITY_CAPABLE())

@@ -38,7 +38,7 @@ bb:
   br label %bb3
 
 bb1:                                              ; preds = %bb3
-  br i1 undef, label %bb10, label %bb2
+  br i1 true, label %bb10, label %bb2
 
 bb2:                                              ; preds = %bb1
   %t = add i64 %t4, 1                         ; <i64> [#uses=1]

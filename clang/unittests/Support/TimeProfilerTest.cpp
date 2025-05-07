@@ -45,8 +45,6 @@ std::string teardownProfiler() {
 // We only parse AST here. This is enough for constexpr evaluation.
 bool compileFromString(StringRef Code, StringRef Standard, StringRef File,
                        llvm::StringMap<std::string> Headers = {}) {
-  CompilerInstance Compiler;
-  Compiler.createDiagnostics();
 
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS(
       new llvm::vfs::InMemoryFileSystem());
@@ -57,13 +55,17 @@ bool compileFromString(StringRef Code, StringRef Standard, StringRef File,
   }
   llvm::IntrusiveRefCntPtr<FileManager> Files(
       new FileManager(FileSystemOptions(), FS));
-  Compiler.setFileManager(Files.get());
 
   auto Invocation = std::make_shared<CompilerInvocation>();
   std::vector<const char *> Args = {Standard.data(), File.data()};
-  CompilerInvocation::CreateFromArgs(*Invocation, Args,
-                                     Compiler.getDiagnostics());
-  Compiler.setInvocation(std::move(Invocation));
+  auto InvocationDiagOpts = llvm::makeIntrusiveRefCnt<DiagnosticOptions>();
+  auto InvocationDiags =
+      CompilerInstance::createDiagnostics(*FS, InvocationDiagOpts.get());
+  CompilerInvocation::CreateFromArgs(*Invocation, Args, *InvocationDiags);
+
+  CompilerInstance Compiler(std::move(Invocation));
+  Compiler.createDiagnostics(Files->getVirtualFileSystem());
+  Compiler.setFileManager(Files.get());
 
   class TestFrontendAction : public ASTFrontendAction {
   private:
@@ -238,11 +240,53 @@ Frontend (test.cc)
             buildTraceGraph(Json));
 }
 
+TEST(TimeProfilerTest, ClassTemplateInstantiations) {
+  std::string Code = R"(
+    template<class T>
+    struct S
+    {
+      void foo() {}
+      void bar();
+    };
+
+    template struct S<double>; // explicit instantiation of S<double>
+
+    void user() {
+      S<int> a; // implicit instantiation of S<int>
+      S<float>* b;
+      b->foo(); // implicit instatiation of S<float> and S<float>::foo()
+    }
+  )";
+
+  setupProfiler();
+  ASSERT_TRUE(compileFromString(Code, "-std=c++20", "test.cc"));
+  std::string Json = teardownProfiler();
+  ASSERT_EQ(R"(
+Frontend (test.cc)
+| ParseClass (S)
+| InstantiateClass (S<double>, test.cc:9)
+| InstantiateFunction (S<double>::foo, test.cc:5)
+| ParseDeclarationOrFunctionDefinition (test.cc:11:5)
+| | ParseFunctionDefinition (user)
+| | | InstantiateClass (S<int>, test.cc:3)
+| | | InstantiateClass (S<float>, test.cc:3)
+| | | DeferInstantiation (S<float>::foo)
+| PerformPendingInstantiations
+| | InstantiateFunction (S<float>::foo, test.cc:5)
+)",
+            buildTraceGraph(Json));
+}
+
 TEST(TimeProfilerTest, TemplateInstantiations) {
   std::string B_H = R"(
     template <typename T>
-    T fooB(T t) {
+    T fooC(T t) {
       return T();
+    }
+
+    template <typename T>
+    constexpr T fooB(T t) {
+      return fooC(t);
     }
 
     #define MacroTemp(x) template <typename T> void foo##x(T) { T(); }
@@ -267,14 +311,19 @@ TEST(TimeProfilerTest, TemplateInstantiations) {
   std::string Json = teardownProfiler();
   ASSERT_EQ(R"(
 Frontend (test.cc)
+| ParseFunctionDefinition (fooC)
 | ParseFunctionDefinition (fooB)
 | ParseFunctionDefinition (fooMTA)
 | ParseFunctionDefinition (fooA)
 | ParseDeclarationOrFunctionDefinition (test.cc:3:5)
 | | ParseFunctionDefinition (user)
+| | | DeferInstantiation (fooA<int>)
 | PerformPendingInstantiations
 | | InstantiateFunction (fooA<int>, a.h:7)
-| | | InstantiateFunction (fooB<int>, b.h:3)
+| | | InstantiateFunction (fooB<int>, b.h:8)
+| | | | DeferInstantiation (fooC<int>)
+| | | DeferInstantiation (fooMTA<int>)
+| | | InstantiateFunction (fooC<int>, b.h:3)
 | | | InstantiateFunction (fooMTA<int>, a.h:4)
 )",
             buildTraceGraph(Json));

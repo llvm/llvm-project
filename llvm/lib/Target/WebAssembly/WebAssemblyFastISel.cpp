@@ -17,10 +17,8 @@
 
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "Utils/WebAssemblyTypeUtilities.h"
-#include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
-#include "WebAssemblyTargetMachine.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/CodeGen/FastISel.h"
@@ -34,10 +32,8 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
-#include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 
@@ -178,8 +174,8 @@ private:
   unsigned copyValue(unsigned Reg);
 
   // Backend specific FastISel code.
-  unsigned fastMaterializeAlloca(const AllocaInst *AI) override;
-  unsigned fastMaterializeConstant(const Constant *C) override;
+  Register fastMaterializeAlloca(const AllocaInst *AI) override;
+  Register fastMaterializeConstant(const Constant *C) override;
   bool fastLowerArguments() override;
 
   // Selection routines.
@@ -337,6 +333,12 @@ bool WebAssemblyFastISel::computeAddress(const Value *Obj, Address &Addr) {
     break;
   }
   case Instruction::Add: {
+    // We should not fold operands into an offset when 'nuw' (no unsigned wrap)
+    // is not present, because the address calculation does not wrap.
+    if (auto *OFBinOp = dyn_cast<OverflowingBinaryOperator>(U))
+      if (!OFBinOp->hasNoUnsignedWrap())
+        break;
+
     // Adds of constants are common and easy enough.
     const Value *LHS = U->getOperand(0);
     const Value *RHS = U->getOperand(1);
@@ -360,6 +362,12 @@ bool WebAssemblyFastISel::computeAddress(const Value *Obj, Address &Addr) {
     break;
   }
   case Instruction::Sub: {
+    // We should not fold operands into an offset when 'nuw' (no unsigned wrap)
+    // is not present, because the address calculation does not wrap.
+    if (auto *OFBinOp = dyn_cast<OverflowingBinaryOperator>(U))
+      if (!OFBinOp->hasNoUnsignedWrap())
+        break;
+
     // Subs of constants are common and easy enough.
     const Value *LHS = U->getOperand(0);
     const Value *RHS = U->getOperand(1);
@@ -602,7 +610,7 @@ unsigned WebAssemblyFastISel::copyValue(unsigned Reg) {
   return ResultReg;
 }
 
-unsigned WebAssemblyFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
+Register WebAssemblyFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
   DenseMap<const AllocaInst *, int>::iterator SI =
       FuncInfo.StaticAllocaMap.find(AI);
 
@@ -617,15 +625,15 @@ unsigned WebAssemblyFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
     return ResultReg;
   }
 
-  return 0;
+  return Register();
 }
 
-unsigned WebAssemblyFastISel::fastMaterializeConstant(const Constant *C) {
+Register WebAssemblyFastISel::fastMaterializeConstant(const Constant *C) {
   if (const GlobalValue *GV = dyn_cast<GlobalValue>(C)) {
     if (TLI.isPositionIndependent())
-      return 0;
+      return Register();
     if (GV->isThreadLocal())
-      return 0;
+      return Register();
     Register ResultReg =
         createResultReg(Subtarget->hasAddr64() ? &WebAssembly::I64RegClass
                                                : &WebAssembly::I32RegClass);
@@ -637,7 +645,7 @@ unsigned WebAssemblyFastISel::fastMaterializeConstant(const Constant *C) {
   }
 
   // Let target-independent code handle it.
-  return 0;
+  return Register();
 }
 
 bool WebAssemblyFastISel::fastLowerArguments() {
@@ -887,7 +895,7 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
     // The table into which this call_indirect indexes.
     MCSymbolWasm *Table = WebAssembly::getOrCreateFunctionTableSymbol(
         MF->getContext(), Subtarget);
-    if (Subtarget->hasReferenceTypes()) {
+    if (Subtarget->hasCallIndirectOverlong()) {
       MIB.addSym(Table);
     } else {
       // Otherwise for the MVP there is at most one table whose number is 0, but
@@ -984,7 +992,10 @@ bool WebAssemblyFastISel::selectTrunc(const Instruction *I) {
   if (Reg == 0)
     return false;
 
-  if (Trunc->getOperand(0)->getType()->isIntegerTy(64)) {
+  unsigned FromBitWidth = Trunc->getOperand(0)->getType()->getIntegerBitWidth();
+  unsigned ToBitWidth = Trunc->getType()->getIntegerBitWidth();
+
+  if (ToBitWidth <= 32 && (32 < FromBitWidth && FromBitWidth <= 64)) {
     Register Result = createResultReg(&WebAssembly::I32RegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(WebAssembly::I32_WRAP_I64), Result)

@@ -249,13 +249,6 @@ DeclarationFragmentsBuilder::getFragmentsForNNS(const NestedNameSpecifier *NNS,
     Fragments.append("__super", DeclarationFragments::FragmentKind::Keyword);
     break;
 
-  case NestedNameSpecifier::TypeSpecWithTemplate:
-    // A type prefixed by the `template` keyword.
-    Fragments.append("template", DeclarationFragments::FragmentKind::Keyword);
-    Fragments.appendSpace();
-    // Fallthrough after adding the keyword to handle the actual type.
-    [[fallthrough]];
-
   case NestedNameSpecifier::TypeSpec: {
     const Type *T = NNS->getAsType();
     // FIXME: Handle C++ template specialization type
@@ -275,6 +268,19 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
   assert(T && "invalid type");
 
   DeclarationFragments Fragments;
+
+  if (const MacroQualifiedType *MQT = dyn_cast<MacroQualifiedType>(T)) {
+    Fragments.append(
+        getFragmentsForType(MQT->getUnderlyingType(), Context, After));
+    return Fragments;
+  }
+
+  if (const AttributedType *AT = dyn_cast<AttributedType>(T)) {
+    // FIXME: Serialize Attributes correctly
+    Fragments.append(
+        getFragmentsForType(AT->getModifiedType(), Context, After));
+    return Fragments;
+  }
 
   // An ElaboratedType is a sugar for types that are referred to using an
   // elaborated keyword, e.g., `struct S`, `enum E`, or (in C++) via a
@@ -1097,7 +1103,6 @@ DeclarationFragmentsBuilder::getFragmentsForTemplateArguments(
           Spelling.clear();
           raw_string_ostream OutStream(Spelling);
           CTA.print(Context.getPrintingPolicy(), OutStream, false);
-          OutStream.flush();
         }
       }
 
@@ -1213,6 +1218,10 @@ DeclarationFragments
 DeclarationFragmentsBuilder::getFragmentsForClassTemplateSpecialization(
     const ClassTemplateSpecializationDecl *Decl) {
   DeclarationFragments Fragments;
+  std::optional<ArrayRef<TemplateArgumentLoc>> TemplateArgumentLocs = {};
+  if (auto *TemplateArgs = Decl->getTemplateArgsAsWritten()) {
+    TemplateArgumentLocs = TemplateArgs->arguments();
+  }
   return Fragments
       .append("template", DeclarationFragments::FragmentKind::Keyword)
       .appendSpace()
@@ -1225,7 +1234,7 @@ DeclarationFragmentsBuilder::getFragmentsForClassTemplateSpecialization(
       .append("<", DeclarationFragments::FragmentKind::Text)
       .append(getFragmentsForTemplateArguments(
           Decl->getTemplateArgs().asArray(), Decl->getASTContext(),
-          Decl->getTemplateArgsAsWritten()->arguments()))
+          TemplateArgumentLocs))
       .append(">", DeclarationFragments::FragmentKind::Text)
       .appendSemicolon();
 }
@@ -1327,13 +1336,11 @@ DeclarationFragmentsBuilder::getFragmentsForFunctionTemplateSpecialization(
 
 DeclarationFragments
 DeclarationFragmentsBuilder::getFragmentsForMacro(StringRef Name,
-                                                  const MacroDirective *MD) {
+                                                  const MacroInfo *MI) {
   DeclarationFragments Fragments;
   Fragments.append("#define", DeclarationFragments::FragmentKind::Keyword)
       .appendSpace();
   Fragments.append(Name, DeclarationFragments::FragmentKind::Identifier);
-
-  auto *MI = MD->getMacroInfo();
 
   if (MI->isFunctionLike()) {
     Fragments.append("(", DeclarationFragments::FragmentKind::Text);
@@ -1611,6 +1618,9 @@ DeclarationFragmentsBuilder::getSubHeading(const NamedDecl *Decl) {
              cast<CXXMethodDecl>(Decl)->isOverloadedOperator()) {
     Fragments.append(Decl->getNameAsString(),
                      DeclarationFragments::FragmentKind::Identifier);
+  } else if (isa<TagDecl>(Decl) &&
+             cast<TagDecl>(Decl)->getTypedefNameForAnonDecl()) {
+    return getSubHeading(cast<TagDecl>(Decl)->getTypedefNameForAnonDecl());
   } else if (Decl->getIdentifier()) {
     Fragments.append(Decl->getName(),
                      DeclarationFragments::FragmentKind::Identifier);

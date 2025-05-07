@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_LDIV_H
 #define LLVM_LIBC_SRC_STDLIB_LDIV_H
 
+#include "hdr/types/ldiv_t.h"
 #include "src/__support/macros/config.h"
-#include <stdlib.h>
 
 namespace LIBC_NAMESPACE_DECL {
 

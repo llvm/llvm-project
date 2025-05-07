@@ -91,12 +91,9 @@ static inline void shortenFileName(std::string &FN, unsigned char len = 250) {
     FN.resize(len);
   auto strLen = FN.length();
   while (strLen > 0) {
-    if (nameObj.find(FN) != nameObj.end()) {
-      FN.resize(--len);
-    } else {
-      nameObj.insert(FN);
+    if (nameObj.insert(FN).second)
       break;
-    }
+    FN.resize(--len);
     strLen--;
   }
 }

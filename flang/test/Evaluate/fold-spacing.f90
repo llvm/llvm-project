@@ -5,7 +5,9 @@ module m
   logical, parameter :: test_2 = spacing(-3.0) == scale(1.0, -22)
   logical, parameter :: test_3 = spacing(3.0d0) == scale(1.0, -51)
   logical, parameter :: test_4 = spacing(0.) == tiny(0.)
-  logical, parameter :: test_5 = spacing(tiny(0.)) == 1.e-45
+  logical, parameter :: test_5a = spacing(tiny(0.)) == tiny(0.)
+  logical, parameter :: test_5b = spacing(tiny(0.)/2) == tiny(0.)
+  logical, parameter :: test_5c = spacing(tiny(0.)*2) == tiny(0.)
   logical, parameter :: test_6 = spacing(8388608.) == 1.
   logical, parameter :: test_7 = spacing(spacing(tiny(.0))) == tiny(0.)
   logical, parameter :: test_11 = rrspacing(3.0) == scale(0.75, 24)

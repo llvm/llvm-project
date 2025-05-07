@@ -44,6 +44,17 @@ static void writeRegister(const void *reg_src, uint8_t *context,
   memcpy(reg_dest.data(), reg_src, reg_dest.size());
 }
 
+// TODO: Fix the registers in this file!
+// writeRegister checks x86_64 registers without base registers. This causes
+// an overlap in the register enum values. So we were truncating fs_base.
+// We should standardize to the x86_64_with_base registers.
+static void writeBaseRegister(const void *reg_src, uint8_t *context,
+                              const RegisterInfo &reg) {
+  auto bytes = reg.mutable_data(context);
+  llvm::MutableArrayRef<uint8_t> reg_dest = bytes.take_front(8);
+  memcpy(reg_dest.data(), reg_src, reg_dest.size());
+}
+
 lldb::DataBufferSP lldb_private::minidump::ConvertMinidumpContext_x86_64(
     llvm::ArrayRef<uint8_t> source_data,
     RegisterInfoInterface *target_reg_interface) {
@@ -67,6 +78,7 @@ lldb::DataBufferSP lldb_private::minidump::ConvertMinidumpContext_x86_64(
   auto ControlFlag = MinidumpContext_x86_64_Flags::Control;
   auto IntegerFlag = MinidumpContext_x86_64_Flags::Integer;
   auto SegmentsFlag = MinidumpContext_x86_64_Flags::Segments;
+  auto LLDBSpecificFlag = MinidumpContext_x86_64_Flags::LLDBSpecific;
 
   if ((context_flags & x86_64_Flag) != x86_64_Flag)
     return nullptr;
@@ -102,6 +114,14 @@ lldb::DataBufferSP lldb_private::minidump::ConvertMinidumpContext_x86_64(
     writeRegister(&context->r13, result_base, reg_info[lldb_r13_x86_64]);
     writeRegister(&context->r14, result_base, reg_info[lldb_r14_x86_64]);
     writeRegister(&context->r15, result_base, reg_info[lldb_r15_x86_64]);
+  }
+
+  // See comment on base regsiter
+  if ((context_flags & LLDBSpecificFlag) == LLDBSpecificFlag) {
+    writeBaseRegister(&context->fs_base, result_base,
+                      reg_info[x86_64_with_base::lldb_fs_base]);
+    writeBaseRegister(&context->gs_base, result_base,
+                      reg_info[x86_64_with_base::lldb_gs_base]);
   }
 
   // TODO parse the floating point registers

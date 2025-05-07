@@ -50,9 +50,11 @@ add_clang_library(clangAST
   DeclFriend.cpp
   DeclGroup.cpp
   DeclObjC.cpp
+  DeclOpenACC.cpp
   DeclOpenMP.cpp
   DeclPrinter.cpp
   DeclTemplate.cpp
+  DynamicRecursiveASTVisitor.cpp
   ParentMapContext.cpp
   Expr.cpp
   ExprClassification.cpp
@@ -64,6 +66,7 @@ add_clang_library(clangAST
   ExternalASTSource.cpp
   FormatString.cpp
   InheritViz.cpp
+  ByteCode/BitcastBuffer.cpp
   ByteCode/ByteCodeEmitter.cpp
   ByteCode/Compiler.cpp
   ByteCode/Context.cpp
@@ -72,7 +75,9 @@ add_clang_library(clangAST
   ByteCode/EvalEmitter.cpp
   ByteCode/Frame.cpp
   ByteCode/Function.cpp
+  ByteCode/FunctionPointer.cpp
   ByteCode/InterpBuiltin.cpp
+  ByteCode/InterpBuiltinBitCast.cpp
   ByteCode/Floating.cpp
   ByteCode/EvaluationResult.cpp
   ByteCode/DynamicAllocator.cpp
@@ -140,5 +145,5 @@ add_clang_library(clangAST
   ClangDriverOptions
   intrinsics_gen
   # These generated headers are included transitively.
-  AArch64TargetParserTableGen
+  target_parser_gen
   )

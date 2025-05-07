@@ -13,6 +13,7 @@
 #include "CodeGenTypes.h"
 #include "CGCXXABI.h"
 #include "CGCall.h"
+#include "CGDebugInfo.h"
 #include "CGHLSLRuntime.h"
 #include "CGOpenCLRuntime.h"
 #include "CGRecordLayout.h"
@@ -31,9 +32,8 @@ using namespace clang;
 using namespace CodeGen;
 
 CodeGenTypes::CodeGenTypes(CodeGenModule &cgm)
-  : CGM(cgm), Context(cgm.getContext()), TheModule(cgm.getModule()),
-    Target(cgm.getTarget()), TheCXXABI(cgm.getCXXABI()),
-    TheABIInfo(cgm.getTargetCodeGenInfo().getABIInfo()) {
+    : CGM(cgm), Context(cgm.getContext()), TheModule(cgm.getModule()),
+      Target(cgm.getTarget()) {
   SkippedLayout = false;
   LongDoubleReferenced = false;
 }
@@ -43,6 +43,8 @@ CodeGenTypes::~CodeGenTypes() {
        I = FunctionInfos.begin(), E = FunctionInfos.end(); I != E; )
     delete &*I++;
 }
+
+CGCXXABI &CodeGenTypes::getCXXABI() const { return getCGM().getCXXABI(); }
 
 const CodeGenOptions &CodeGenTypes::getCodeGenOpts() const {
   return CGM.getCodeGenOpts();
@@ -59,7 +61,8 @@ void CodeGenTypes::addRecordTypeName(const RecordDecl *RD,
   // example, we should probably enable PrintCanonicalTypes and
   // FullyQualifiedNames.
   PrintingPolicy Policy = RD->getASTContext().getPrintingPolicy();
-  Policy.SuppressInlineNamespace = false;
+  Policy.SuppressInlineNamespace =
+      PrintingPolicy::SuppressInlineNamespaceMode::None;
 
   // Name the codegen type after the typedef name
   // if there is no tag type name available
@@ -105,11 +108,20 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T) {
                                 MT->getNumRows() * MT->getNumColumns());
   }
 
+  if (T->isMFloat8Type())
+    return llvm::Type::getInt8Ty(getLLVMContext());
+
   llvm::Type *R = ConvertType(T);
 
   // Check for the boolean vector case.
   if (T->isExtVectorBoolType()) {
     auto *FixedVT = cast<llvm::FixedVectorType>(R);
+
+    if (Context.getLangOpts().HLSL) {
+      llvm::Type *IRElemTy = ConvertTypeForMem(Context.BoolTy);
+      return llvm::FixedVectorType::get(IRElemTy, FixedVT->getNumElements());
+    }
+
     // Pad to at least one byte.
     uint64_t BytePadded = std::max<uint64_t>(FixedVT->getNumElements(), 8);
     return llvm::IntegerType::get(FixedVT->getContext(), BytePadded);
@@ -499,65 +511,40 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     case BuiltinType::OCLReserveID:
       ResultType = CGM.getOpenCLRuntime().convertOpenCLSpecificType(Ty);
       break;
-    case BuiltinType::SveInt8:
-    case BuiltinType::SveUint8:
-    case BuiltinType::SveInt8x2:
-    case BuiltinType::SveUint8x2:
-    case BuiltinType::SveInt8x3:
-    case BuiltinType::SveUint8x3:
-    case BuiltinType::SveInt8x4:
-    case BuiltinType::SveUint8x4:
-    case BuiltinType::SveInt16:
-    case BuiltinType::SveUint16:
-    case BuiltinType::SveInt16x2:
-    case BuiltinType::SveUint16x2:
-    case BuiltinType::SveInt16x3:
-    case BuiltinType::SveUint16x3:
-    case BuiltinType::SveInt16x4:
-    case BuiltinType::SveUint16x4:
-    case BuiltinType::SveInt32:
-    case BuiltinType::SveUint32:
-    case BuiltinType::SveInt32x2:
-    case BuiltinType::SveUint32x2:
-    case BuiltinType::SveInt32x3:
-    case BuiltinType::SveUint32x3:
-    case BuiltinType::SveInt32x4:
-    case BuiltinType::SveUint32x4:
-    case BuiltinType::SveInt64:
-    case BuiltinType::SveUint64:
-    case BuiltinType::SveInt64x2:
-    case BuiltinType::SveUint64x2:
-    case BuiltinType::SveInt64x3:
-    case BuiltinType::SveUint64x3:
-    case BuiltinType::SveInt64x4:
-    case BuiltinType::SveUint64x4:
-    case BuiltinType::SveBool:
-    case BuiltinType::SveBoolx2:
-    case BuiltinType::SveBoolx4:
-    case BuiltinType::SveFloat16:
-    case BuiltinType::SveFloat16x2:
-    case BuiltinType::SveFloat16x3:
-    case BuiltinType::SveFloat16x4:
-    case BuiltinType::SveFloat32:
-    case BuiltinType::SveFloat32x2:
-    case BuiltinType::SveFloat32x3:
-    case BuiltinType::SveFloat32x4:
-    case BuiltinType::SveFloat64:
-    case BuiltinType::SveFloat64x2:
-    case BuiltinType::SveFloat64x3:
-    case BuiltinType::SveFloat64x4:
-    case BuiltinType::SveBFloat16:
-    case BuiltinType::SveBFloat16x2:
-    case BuiltinType::SveBFloat16x3:
-    case BuiltinType::SveBFloat16x4: {
-      ASTContext::BuiltinVectorTypeInfo Info =
-          Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(Ty));
-      return llvm::ScalableVectorType::get(ConvertType(Info.ElementType),
-                                           Info.EC.getKnownMinValue() *
-                                               Info.NumVectors);
-    }
+#define SVE_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                    \
+  case BuiltinType::Id:
+#define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId)                 \
+  case BuiltinType::Id:
+#define SVE_TYPE(Name, Id, SingletonId)
+#include "clang/Basic/AArch64SVEACLETypes.def"
+      {
+        ASTContext::BuiltinVectorTypeInfo Info =
+            Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(Ty));
+        // The `__mfp8` type maps to `<1 x i8>` which can't be used to build
+        // a <N x i8> vector type, hence bypass the call to `ConvertType` for
+        // the element type and create the vector type directly.
+        auto *EltTy = Info.ElementType->isMFloat8Type()
+                          ? llvm::Type::getInt8Ty(getLLVMContext())
+                          : ConvertType(Info.ElementType);
+        auto *VTy = llvm::VectorType::get(EltTy, Info.EC);
+        switch (Info.NumVectors) {
+        default:
+          llvm_unreachable("Expected 1, 2, 3 or 4 vectors!");
+        case 1:
+          return VTy;
+        case 2:
+          return llvm::StructType::get(VTy, VTy);
+        case 3:
+          return llvm::StructType::get(VTy, VTy, VTy);
+        case 4:
+          return llvm::StructType::get(VTy, VTy, VTy, VTy);
+        }
+      }
     case BuiltinType::SveCount:
       return llvm::TargetExtType::get(getLLVMContext(), "aarch64.svcount");
+    case BuiltinType::MFloat8:
+      return llvm::VectorType::get(llvm::Type::getInt8Ty(getLLVMContext()), 1,
+                                   false);
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
     case BuiltinType::Id: \
       ResultType = \
@@ -569,14 +556,15 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       {
         ASTContext::BuiltinVectorTypeInfo Info =
             Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(Ty));
-        // Tuple types are expressed as aggregregate types of the same scalable
-        // vector type (e.g. vint32m1x2_t is two vint32m1_t, which is {<vscale x
-        // 2 x i32>, <vscale x 2 x i32>}).
         if (Info.NumVectors != 1) {
-          llvm::Type *EltTy = llvm::ScalableVectorType::get(
-              ConvertType(Info.ElementType), Info.EC.getKnownMinValue());
-          llvm::SmallVector<llvm::Type *, 4> EltTys(Info.NumVectors, EltTy);
-          return llvm::StructType::get(getLLVMContext(), EltTys);
+          unsigned I8EltCount =
+              Info.EC.getKnownMinValue() *
+              ConvertType(Info.ElementType)->getScalarSizeInBits() / 8;
+          return llvm::TargetExtType::get(
+              getLLVMContext(), "riscv.vector.tuple",
+              llvm::ScalableVectorType::get(
+                  llvm::Type::getInt8Ty(getLLVMContext()), I8EltCount),
+              Info.NumVectors);
         }
         return llvm::ScalableVectorType::get(ConvertType(Info.ElementType),
                                              Info.EC.getKnownMinValue());
@@ -589,10 +577,13 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       llvm_unreachable("Unexpected wasm reference builtin type!");             \
   } break;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_OPAQUE_PTR_TYPE(Name, MangledName, AS, Width, Align, Id,        \
-                               SingletonId)                                    \
+#define AMDGPU_OPAQUE_PTR_TYPE(Name, Id, SingletonId, Width, Align, AS)        \
   case BuiltinType::Id:                                                        \
     return llvm::PointerType::get(getLLVMContext(), AS);
+#define AMDGPU_NAMED_BARRIER_TYPE(Name, Id, SingletonId, Width, Align, Scope)  \
+  case BuiltinType::Id:                                                        \
+    return llvm::TargetExtType::get(getLLVMContext(), "amdgcn.named.barrier",  \
+                                    {}, {Scope});
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
@@ -673,8 +664,10 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case Type::Vector: {
     const auto *VT = cast<VectorType>(Ty);
     // An ext_vector_type of Bool is really a vector of bits.
-    llvm::Type *IRElemTy = VT->isExtVectorBoolType()
+    llvm::Type *IRElemTy = VT->isPackedVectorBoolType(Context)
                                ? llvm::Type::getInt1Ty(getLLVMContext())
+                           : VT->getElementType()->isMFloat8Type()
+                               ? llvm::Type::getInt8Ty(getLLVMContext())
                                : ConvertType(VT->getElementType());
     ResultType = llvm::FixedVectorType::get(IRElemTy, VT->getNumElements());
     break;
@@ -736,7 +729,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case Type::MemberPointer: {
     auto *MPTy = cast<MemberPointerType>(Ty);
     if (!getCXXABI().isMemberPointerConvertible(MPTy)) {
-      auto *C = MPTy->getClass();
+      auto *C = MPTy->getMostRecentCXXRecordDecl()->getTypeForDecl();
       auto Insertion = RecordsWithOpaqueMemberPointers.insert({C, nullptr});
       if (Insertion.second)
         Insertion.first->second = llvm::StructType::create(getLLVMContext());
@@ -774,6 +767,9 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     ResultType = llvm::Type::getIntNTy(getLLVMContext(), EIT->getNumBits());
     break;
   }
+  case Type::HLSLAttributedResource:
+    ResultType = CGM.getHLSLRuntime().convertHLSLSpecificType(Ty);
+    break;
   }
 
   assert(ResultType && "Didn't convert a type?");
@@ -854,12 +850,14 @@ CodeGenTypes::getCGRecordLayout(const RecordDecl *RD) {
 }
 
 bool CodeGenTypes::isPointerZeroInitializable(QualType T) {
-  assert((T->isAnyPointerType() || T->isBlockPointerType()) && "Invalid type");
+  assert((T->isAnyPointerType() || T->isBlockPointerType() ||
+          T->isNullPtrType()) &&
+         "Invalid type");
   return isZeroInitializable(T);
 }
 
 bool CodeGenTypes::isZeroInitializable(QualType T) {
-  if (T->getAs<PointerType>())
+  if (T->getAs<PointerType>() || T->isNullPtrType())
     return Context.getTargetNullPointerValue(T) == 0;
 
   if (const auto *AT = Context.getAsArrayType(T)) {

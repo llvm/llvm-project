@@ -94,29 +94,29 @@
 // CHECK-SAME: ptr ptrauth (ptr @_ZN1AD1Ev, i32 0, i64 2043, ptr getelementptr inbounds ({ [7 x ptr] }, ptr @_ZTV1A, i32 0, i32 0, i32 5)),
 // CHECK-SAME: ptr ptrauth (ptr @_ZN1AD0Ev, i32 0, i64 63674, ptr getelementptr inbounds ({ [7 x ptr] }, ptr @_ZTV1A, i32 0, i32 0, i32 6))] }, align 8
 
+// CHECK: @_ZTI1A = constant { ptr, ptr } { ptr ptrauth (ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i64 2), i32 2), ptr @_ZTS1A }, align 8
+
 // CHECK: @_ZTVN10__cxxabiv117__class_type_infoE = external global [0 x ptr]
 
 // CHECK: @_ZTS1A = constant [3 x i8] c"1A\00", align 1
 
-// CHECK: @_ZTI1A = constant { ptr, ptr } { ptr ptrauth (ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i64 2), i32 2), ptr @_ZTS1A }, align 8
+// CHECK: @_ZTI1C = constant { ptr, ptr, i32, i32, ptr, i64 } { ptr ptrauth (ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv121__vmi_class_type_infoE, i64 2), i32 2), ptr @_ZTS1C, i32 0, i32 1, ptr @_ZTI1B, i64 -6141 }, align 8
 
 // CHECK: @_ZTVN10__cxxabiv121__vmi_class_type_infoE = external global [0 x ptr]
 
 // CHECK: @_ZTS1C = constant [3 x i8] c"1C\00", align 1
+
+// DARWIN: @_ZTI1B = linkonce_odr hidden constant { ptr, ptr, ptr } { ptr ptrauth (ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv120__si_class_type_infoE, i64 2), i32 2), ptr inttoptr (i64 add (i64 ptrtoint (ptr @_ZTS1B to i64), i64 -9223372036854775808) to ptr), ptr @_ZTI1A }, align 8
+// ELF:    @_ZTI1B = linkonce_odr constant { ptr, ptr, ptr } { ptr ptrauth (ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv120__si_class_type_infoE, i64 2), i32 2), ptr @_ZTS1B, ptr @_ZTI1A }, comdat, align 8
 
 // CHECK: @_ZTVN10__cxxabiv120__si_class_type_infoE = external global [0 x ptr]
 
 // DARWIN: @_ZTS1B = linkonce_odr hidden constant [3 x i8] c"1B\00", align 1
 // ELF:    @_ZTS1B = linkonce_odr constant [3 x i8] c"1B\00", comdat, align 1
 
-// DARWIN: @_ZTI1B = linkonce_odr hidden constant { ptr, ptr, ptr } { ptr ptrauth (ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv120__si_class_type_infoE, i64 2), i32 2), ptr inttoptr (i64 add (i64 ptrtoint (ptr @_ZTS1B to i64), i64 -9223372036854775808) to ptr), ptr @_ZTI1A }, align 8
-// ELF:    @_ZTI1B = linkonce_odr constant { ptr, ptr, ptr } { ptr ptrauth (ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv120__si_class_type_infoE, i64 2), i32 2), ptr @_ZTS1B, ptr @_ZTI1A }, comdat, align 8
-
-// CHECK: @_ZTI1C = constant { ptr, ptr, i32, i32, ptr, i64 } { ptr ptrauth (ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv121__vmi_class_type_infoE, i64 2), i32 2), ptr @_ZTS1C, i32 0, i32 1, ptr @_ZTI1B, i64 -6141 }, align 8
+// CHECK: @_ZTI1D = constant { ptr, ptr, i32, i32, ptr, i64 } { ptr ptrauth (ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv121__vmi_class_type_infoE, i64 2), i32 2), ptr @_ZTS1D, i32 0, i32 1, ptr @_ZTI1B, i64 -6141 }, align 8
 
 // CHECK: @_ZTS1D = constant [3 x i8] c"1D\00", align 1
-
-// CHECK: @_ZTI1D = constant { ptr, ptr, i32, i32, ptr, i64 } { ptr ptrauth (ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv121__vmi_class_type_infoE, i64 2), i32 2), ptr @_ZTS1D, i32 0, i32 1, ptr @_ZTI1B, i64 -6141 }, align 8
 
 // CHECK: @_ZTV1E = unnamed_addr constant { [7 x ptr] } { [7 x ptr] [ptr null, ptr @_ZTI1E,
 // CHECK-SAME: ptr ptrauth (ptr @_ZN1E1fEv, i32 0, i64 28408, ptr getelementptr inbounds ({ [7 x ptr] }, ptr @_ZTV1E, i32 0, i32 0, i32 2)),
@@ -125,9 +125,9 @@
 // CHECK-SAME: ptr ptrauth (ptr @_ZN1ED1Ev, i32 0, i64 5817, ptr getelementptr inbounds ({ [7 x ptr] }, ptr @_ZTV1E, i32 0, i32 0, i32 5)),
 // CHECK-SAME: ptr ptrauth (ptr @_ZN1ED0Ev, i32 0, i64 26464, ptr getelementptr inbounds ({ [7 x ptr] }, ptr @_ZTV1E, i32 0, i32 0, i32 6))] }, align 8
 
-// CHECK: @_ZTS1E = constant [3 x i8] c"1E\00", align 1
-
 // CHECK: @_ZTI1E = constant { ptr, ptr } { ptr ptrauth (ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i64 2), i32 2), ptr @_ZTS1E }, align 8
+
+// CHECK: @_ZTS1E = constant [3 x i8] c"1E\00", align 1
 
 // CHECK: @_ZTC1F0_1C = unnamed_addr constant { [5 x ptr], [11 x ptr] } { [5 x ptr] [ptr inttoptr (i64 16 to ptr), ptr null, ptr @_ZTI1C,
 // CHECK-SAME: ptr ptrauth (ptr @_ZN1CD1Ev, i32 0, i64 31214, ptr getelementptr inbounds ({ [5 x ptr], [11 x ptr] }, ptr @_ZTC1F0_1C, i32 0, i32 0, i32 3)),
@@ -149,9 +149,9 @@
 // CHECK-SAME: ptr ptrauth (ptr @_ZTv0_n48_N1DD1Ev, i32 0, i64 2043, ptr getelementptr inbounds ({ [7 x ptr], [11 x ptr] }, ptr @_ZTC1F8_1D, i32 0, i32 1, i32 9)),
 // CHECK-SAME: ptr ptrauth (ptr @_ZTv0_n48_N1DD0Ev, i32 0, i64 63674, ptr getelementptr inbounds ({ [7 x ptr], [11 x ptr] }, ptr @_ZTC1F8_1D, i32 0, i32 1, i32 10))] }, align 8
 
-// CHECK: @_ZTS1F = constant [3 x i8] c"1F\00", align 1
-
 // CHECK: @_ZTI1F = constant { ptr, ptr, i32, i32, ptr, i64, ptr, i64, ptr, i64 } { ptr ptrauth (ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv121__vmi_class_type_infoE, i64 2), i32 2), ptr @_ZTS1F, i32 3, i32 3, ptr @_ZTI1C, i64 2, ptr @_ZTI1D, i64 2050, ptr @_ZTI1E, i64 -8189 }, align 8
+
+// CHECK: @_ZTS1F = constant [3 x i8] c"1F\00", align 1
 
 // CHECK: @_ZTC1G0_1C = unnamed_addr constant { [5 x ptr], [11 x ptr] } { [5 x ptr] [ptr inttoptr (i64 24 to ptr), ptr null, ptr @_ZTI1C,
 // CHECK-SAME: ptr ptrauth (ptr @_ZN1CD1Ev, i32 0, i64 31214, ptr getelementptr inbounds ({ [5 x ptr], [11 x ptr] }, ptr @_ZTC1G0_1C, i32 0, i32 0, i32 3)),
@@ -173,9 +173,9 @@
 // CHECK-SAME: ptr ptrauth (ptr @_ZTv0_n48_N1DD1Ev, i32 0, i64 2043, ptr getelementptr inbounds ({ [7 x ptr], [11 x ptr] }, ptr @_ZTC1G8_1D, i32 0, i32 1, i32 9)),
 // CHECK-SAME: ptr ptrauth (ptr @_ZTv0_n48_N1DD0Ev, i32 0, i64 63674, ptr getelementptr inbounds ({ [7 x ptr], [11 x ptr] }, ptr @_ZTC1G8_1D, i32 0, i32 1, i32 10))] }, align 8
 
-// CHECK: @_ZTS1G = constant [3 x i8] c"1G\00", align 1
-
 // CHECK: @_ZTI1G = constant { ptr, ptr, i32, i32, ptr, i64, ptr, i64, ptr, i64 } { ptr ptrauth (ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv121__vmi_class_type_infoE, i64 2), i32 2), ptr @_ZTS1G, i32 3, i32 3, ptr @_ZTI1E, i64 -8189, ptr @_ZTI1C, i64 2, ptr @_ZTI1D, i64 2050 }, align 8
+
+// CHECK: @_ZTS1G = constant [3 x i8] c"1G\00", align 1
 
 // CHECK: @_ZTV1B = linkonce_odr unnamed_addr constant { [7 x ptr] } { [7 x ptr] [ptr null, ptr @_ZTI1B,
 // CHECK-SAME: ptr ptrauth (ptr @_ZN1A1fEv, i32 0, i64 55636, ptr getelementptr inbounds ({ [7 x ptr] }, ptr @_ZTV1B, i32 0, i32 0, i32 2)),

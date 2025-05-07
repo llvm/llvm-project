@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Function.h"
-#include "Opcode.h"
 #include "Program.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -20,13 +19,29 @@ Function::Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
                    llvm::SmallVectorImpl<PrimType> &&ParamTypes,
                    llvm::DenseMap<unsigned, ParamDescriptor> &&Params,
                    llvm::SmallVectorImpl<unsigned> &&ParamOffsets,
-                   bool HasThisPointer, bool HasRVO, bool UnevaluatedBuiltin)
-    : P(P), Source(Source), ArgSize(ArgSize), ParamTypes(std::move(ParamTypes)),
-      Params(std::move(Params)), ParamOffsets(std::move(ParamOffsets)),
-      HasThisPointer(HasThisPointer), HasRVO(HasRVO),
-      IsUnevaluatedBuiltin(UnevaluatedBuiltin) {
-  if (const auto *F = Source.dyn_cast<const FunctionDecl *>())
+                   bool HasThisPointer, bool HasRVO, bool IsLambdaStaticInvoker)
+    : P(P), Kind(FunctionKind::Normal), Source(Source), ArgSize(ArgSize),
+      ParamTypes(std::move(ParamTypes)), Params(std::move(Params)),
+      ParamOffsets(std::move(ParamOffsets)), HasThisPointer(HasThisPointer),
+      HasRVO(HasRVO) {
+  if (const auto *F = dyn_cast<const FunctionDecl *>(Source)) {
     Variadic = F->isVariadic();
+    if (const auto *CD = dyn_cast<CXXConstructorDecl>(F)) {
+      Virtual = CD->isVirtual();
+      Kind = FunctionKind::Ctor;
+    } else if (const auto *CD = dyn_cast<CXXDestructorDecl>(F)) {
+      Virtual = CD->isVirtual();
+      Kind = FunctionKind::Dtor;
+    } else if (const auto *MD = dyn_cast<CXXMethodDecl>(F)) {
+      Virtual = MD->isVirtual();
+      if (IsLambdaStaticInvoker)
+        Kind = FunctionKind::LambdaStaticInvoker;
+      else if (clang::isLambdaCallOperator(F))
+        Kind = FunctionKind::LambdaCallOperator;
+      else if (MD->isCopyAssignmentOperator() || MD->isMoveAssignmentOperator())
+        Kind = FunctionKind::CopyOrMoveOperator;
+    }
+  }
 }
 
 Function::ParamDescriptor Function::getParamDescriptor(unsigned Offset) const {
@@ -45,11 +60,4 @@ SourceInfo Function::getSource(CodePtr PC) const {
   if (It == SrcMap.end())
     return SrcMap.back().second;
   return It->second;
-}
-
-bool Function::isVirtual() const {
-  if (const auto *M = dyn_cast_if_present<CXXMethodDecl>(
-          Source.dyn_cast<const FunctionDecl *>()))
-    return M->isVirtual();
-  return false;
 }

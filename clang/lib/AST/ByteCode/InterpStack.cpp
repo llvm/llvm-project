@@ -8,6 +8,7 @@
 
 #include "InterpStack.h"
 #include "Boolean.h"
+#include "FixedPoint.h"
 #include "Floating.h"
 #include "Integral.h"
 #include "MemberPointer.h"
@@ -30,6 +31,16 @@ void InterpStack::clear() {
 #ifndef NDEBUG
   ItemTypes.clear();
 #endif
+}
+
+void InterpStack::clearTo(size_t NewSize) {
+  assert(NewSize <= size());
+  size_t ToShrink = size() - NewSize;
+  if (ToShrink == 0)
+    return;
+
+  shrink(ToShrink);
+  assert(size() == NewSize);
 }
 
 void *InterpStack::grow(size_t Size) {
@@ -81,6 +92,21 @@ void InterpStack::shrink(size_t Size) {
 
   Chunk->End -= Size;
   StackSize -= Size;
+
+#ifndef NDEBUG
+  size_t TypesSize = 0;
+  for (PrimType T : ItemTypes)
+    TYPE_SWITCH(T, { TypesSize += aligned_size<T>(); });
+
+  size_t StackSize = size();
+  while (TypesSize > StackSize) {
+    TYPE_SWITCH(ItemTypes.back(), {
+      TypesSize -= aligned_size<T>();
+      ItemTypes.pop_back();
+    });
+  }
+  assert(TypesSize == StackSize);
+#endif
 }
 
 void InterpStack::dump() const {

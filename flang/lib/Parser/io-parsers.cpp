@@ -23,11 +23,16 @@ namespace Fortran::parser {
 // R905 char-variable -> variable
 // "char-variable" is attempted first since it's not type constrained but
 // syntactically ambiguous with "file-unit-number", which is constrained.
+// Note, "file-unit-number" is replaced by "expr" to allow for better
+// error messages.
 TYPE_PARSER(construct<IoUnit>(variable / lookAhead(space / ",);\n"_ch)) ||
-    construct<IoUnit>(fileUnitNumber) || construct<IoUnit>(star))
+    construct<IoUnit>(
+        indirect(expr) / (lookAhead(space >> ",)"_ch) || atEndOfStmt)) ||
+    construct<IoUnit>(star))
 
 // R1202 file-unit-number -> scalar-int-expr
-TYPE_PARSER(construct<FileUnitNumber>(scalarIntExpr / !"="_tok))
+TYPE_PARSER(construct<FileUnitNumber>(
+    scalarIntExpr / (lookAhead(space >> ",)"_ch) || atEndOfStmt)))
 
 // R1204 open-stmt -> OPEN ( connect-spec-list )
 TYPE_CONTEXT_PARSER("OPEN statement"_en_US,

@@ -1,6 +1,10 @@
-// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -o - %s -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -o - %s -fcxx-exceptions                                         | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -o - %s -fcxx-exceptions -fexperimental-new-constant-interpreter | FileCheck %s
 
+#ifdef __SIZEOF_INT128__
+// CHECK: @PR11705 = global i128 0
+__int128_t PR11705 = (__int128_t)&PR11705;
+#endif
 
 int arr[2];
 // CHECK: @pastEnd = constant ptr getelementptr (i8, ptr @arr, i64 8)
@@ -73,3 +77,61 @@ namespace Null {
   // CHECK: call {{.*}} @_ZN4Null4nullEv(
   int S::*q = null();
 }
+
+struct A {
+  A();
+  ~A();
+  enum E { Foo };
+};
+
+A *g();
+
+void f(A *a) {
+  A::E e1 = a->Foo;
+
+  // CHECK: call noundef ptr @_Z1gv()
+  A::E e2 = g()->Foo;
+  // CHECK: call void @_ZN1AC1Ev(
+  // CHECK: call void @_ZN1AD1Ev(
+  A::E e3 = A().Foo;
+}
+
+int notdead() {
+  auto l = [c=0]() mutable {
+    return  c++ < 5 ? 10 : 12;
+  };
+  return l();
+}
+// CHECK: _ZZ7notdeadvEN3$_0clEv
+// CHECK: ret i32 %cond
+
+/// The conmparison of those two parameters should NOT work.
+bool paramcmp(const int& lhs, const int& rhs) {
+  if (&lhs == &rhs)
+    return true;
+  return false;
+}
+// CHECK: _Z8paramcmpRKiS0_
+// CHECK: if.then
+// CHECK: if.end
+
+/// &x == &OuterX should work and return 0.
+class X {
+public:
+  X();
+  X(const X&);
+  X(const volatile X &);
+  ~X();
+};
+
+extern X OuterX;
+
+X test24() {
+  X x;
+  if (&x == &OuterX)
+    throw 0;
+  return x;
+}
+// CHECK: _Z6test24v
+// CHECK-NOT: eh.resume
+// CHECK-NOT: unreachable

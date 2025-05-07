@@ -11,7 +11,6 @@
 
 #include "DXILOpBuilder.h"
 #include "DXILConstants.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -51,11 +50,6 @@ struct OpOverload {
 struct OpStage {
   Version DXILVersion;
   uint32_t ValidStages;
-};
-
-struct OpAttribute {
-  Version DXILVersion;
-  uint32_t ValidAttrs;
 };
 
 static const char *getOverloadTypeName(OverloadKind Kind) {
@@ -121,11 +115,14 @@ static OverloadKind getOverloadKind(Type *Ty) {
   }
   case Type::PointerTyID:
     return OverloadKind::UserDefineType;
-  case Type::StructTyID:
-    return OverloadKind::ObjectType;
+  case Type::StructTyID: {
+    // TODO: This is a hack. As described in DXILEmitter.cpp, we need to rework
+    // how we're handling overloads and remove the `OverloadKind` proxy enum.
+    StructType *ST = cast<StructType>(Ty);
+    return getOverloadKind(ST->getElementType(0));
+  }
   default:
-    llvm_unreachable("invalid overload type");
-    return OverloadKind::VOID;
+    return OverloadKind::UNDEFINED;
   }
 }
 
@@ -156,7 +153,6 @@ struct OpCodeProperty {
   unsigned OpCodeClassNameOffset;
   llvm::SmallVector<OpOverload> Overloads;
   llvm::SmallVector<OpStage> Stages;
-  llvm::SmallVector<OpAttribute> Attributes;
   int OverloadParamIndex; // parameter index which control the overload.
                           // When < 0, should be only 1 overload type.
 };
@@ -196,17 +192,73 @@ static StructType *getOrCreateStructType(StringRef Name,
   return StructType::create(Ctx, EltTys, Name);
 }
 
-static StructType *getResRetType(Type *OverloadTy, LLVMContext &Ctx) {
-  OverloadKind Kind = getOverloadKind(OverloadTy);
+static StructType *getResRetType(Type *ElementTy) {
+  LLVMContext &Ctx = ElementTy->getContext();
+  OverloadKind Kind = getOverloadKind(ElementTy);
   std::string TypeName = constructOverloadTypeName(Kind, "dx.types.ResRet.");
-  Type *FieldTypes[5] = {OverloadTy, OverloadTy, OverloadTy, OverloadTy,
+  Type *FieldTypes[5] = {ElementTy, ElementTy, ElementTy, ElementTy,
                          Type::getInt32Ty(Ctx)};
   return getOrCreateStructType(TypeName, FieldTypes, Ctx);
+}
+
+static StructType *getCBufRetType(Type *ElementTy) {
+  LLVMContext &Ctx = ElementTy->getContext();
+  OverloadKind Kind = getOverloadKind(ElementTy);
+  std::string TypeName = constructOverloadTypeName(Kind, "dx.types.CBufRet.");
+
+  // 64-bit types only have two elements
+  if (ElementTy->isDoubleTy() || ElementTy->isIntegerTy(64))
+    return getOrCreateStructType(TypeName, {ElementTy, ElementTy}, Ctx);
+
+  // 16-bit types pack 8 elements and have .8 in their name to differentiate
+  // from min-precision types.
+  if (ElementTy->isHalfTy() || ElementTy->isIntegerTy(16)) {
+    TypeName += ".8";
+    return getOrCreateStructType(TypeName,
+                                 {ElementTy, ElementTy, ElementTy, ElementTy,
+                                  ElementTy, ElementTy, ElementTy, ElementTy},
+                                 Ctx);
+  }
+
+  return getOrCreateStructType(
+      TypeName, {ElementTy, ElementTy, ElementTy, ElementTy}, Ctx);
 }
 
 static StructType *getHandleType(LLVMContext &Ctx) {
   return getOrCreateStructType("dx.types.Handle", PointerType::getUnqual(Ctx),
                                Ctx);
+}
+
+static StructType *getResBindType(LLVMContext &Context) {
+  if (auto *ST = StructType::getTypeByName(Context, "dx.types.ResBind"))
+    return ST;
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  Type *Int8Ty = Type::getInt8Ty(Context);
+  return StructType::create({Int32Ty, Int32Ty, Int32Ty, Int8Ty},
+                            "dx.types.ResBind");
+}
+
+static StructType *getResPropsType(LLVMContext &Context) {
+  if (auto *ST =
+          StructType::getTypeByName(Context, "dx.types.ResourceProperties"))
+    return ST;
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  return StructType::create({Int32Ty, Int32Ty}, "dx.types.ResourceProperties");
+}
+
+static StructType *getSplitDoubleType(LLVMContext &Context) {
+  if (auto *ST = StructType::getTypeByName(Context, "dx.types.splitdouble"))
+    return ST;
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  return StructType::create({Int32Ty, Int32Ty}, "dx.types.splitdouble");
+}
+
+static StructType *getBinaryWithCarryType(LLVMContext &Context) {
+  if (auto *ST = StructType::getTypeByName(Context, "dx.types.i32c"))
+    return ST;
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  Type *Int1Ty = Type::getInt1Ty(Context);
+  return StructType::create({Int32Ty, Int1Ty}, "dx.types.i32c");
 }
 
 static Type *getTypeFromOpParamType(OpParamType Kind, LLVMContext &Ctx,
@@ -232,10 +284,40 @@ static Type *getTypeFromOpParamType(OpParamType Kind, LLVMContext &Ctx,
     return Type::getInt64Ty(Ctx);
   case OpParamType::OverloadTy:
     return OverloadTy;
-  case OpParamType::ResRetTy:
-    return getResRetType(OverloadTy, Ctx);
+  case OpParamType::ResRetHalfTy:
+    return getResRetType(Type::getHalfTy(Ctx));
+  case OpParamType::ResRetFloatTy:
+    return getResRetType(Type::getFloatTy(Ctx));
+  case OpParamType::ResRetDoubleTy:
+    return getResRetType(Type::getDoubleTy(Ctx));
+  case OpParamType::ResRetInt16Ty:
+    return getResRetType(Type::getInt16Ty(Ctx));
+  case OpParamType::ResRetInt32Ty:
+    return getResRetType(Type::getInt32Ty(Ctx));
+  case OpParamType::ResRetInt64Ty:
+    return getResRetType(Type::getInt64Ty(Ctx));
+  case OpParamType::CBufRetHalfTy:
+    return getCBufRetType(Type::getHalfTy(Ctx));
+  case OpParamType::CBufRetFloatTy:
+    return getCBufRetType(Type::getFloatTy(Ctx));
+  case OpParamType::CBufRetDoubleTy:
+    return getCBufRetType(Type::getDoubleTy(Ctx));
+  case OpParamType::CBufRetInt16Ty:
+    return getCBufRetType(Type::getInt16Ty(Ctx));
+  case OpParamType::CBufRetInt32Ty:
+    return getCBufRetType(Type::getInt32Ty(Ctx));
+  case OpParamType::CBufRetInt64Ty:
+    return getCBufRetType(Type::getInt64Ty(Ctx));
   case OpParamType::HandleTy:
     return getHandleType(Ctx);
+  case OpParamType::ResBindTy:
+    return getResBindType(Ctx);
+  case OpParamType::ResPropsTy:
+    return getResPropsType(Ctx);
+  case OpParamType::SplitDoubleTy:
+    return getSplitDoubleType(Ctx);
+  case OpParamType::BinaryWithCarryTy:
+    return getBinaryWithCarryType(Ctx);
   }
   llvm_unreachable("Invalid parameter kind");
   return nullptr;
@@ -328,6 +410,61 @@ static std::optional<size_t> getPropIndex(ArrayRef<T> PropList,
   return std::nullopt;
 }
 
+// Helper function to pack an OpCode and VersionTuple into a uint64_t for use
+// in a switch statement
+constexpr static uint64_t computeSwitchEnum(dxil::OpCode OpCode,
+                                            uint16_t VersionMajor,
+                                            uint16_t VersionMinor) {
+  uint64_t OpCodePack = (uint64_t)OpCode;
+  return (OpCodePack << 32) | (VersionMajor << 16) | VersionMinor;
+}
+
+// Retreive all the set attributes for a DXIL OpCode given the targeted
+// DXILVersion
+static dxil::Attributes getDXILAttributes(dxil::OpCode OpCode,
+                                          VersionTuple DXILVersion) {
+  // Instantiate all versions to iterate through
+  SmallVector<Version> Versions = {
+#define DXIL_VERSION(MAJOR, MINOR) {MAJOR, MINOR},
+#include "DXILOperation.inc"
+  };
+
+  dxil::Attributes Attributes;
+  for (auto Version : Versions) {
+    if (DXILVersion < VersionTuple(Version.Major, Version.Minor))
+      continue;
+
+    // Switch through and match an OpCode with the specific version and set the
+    // corresponding flag(s) if available
+    switch (computeSwitchEnum(OpCode, Version.Major, Version.Minor)) {
+#define DXIL_OP_ATTRIBUTES(OpCode, VersionMajor, VersionMinor, ...)            \
+  case computeSwitchEnum(OpCode, VersionMajor, VersionMinor): {                \
+    auto Other = dxil::Attributes{__VA_ARGS__};                                \
+    Attributes |= Other;                                                       \
+    break;                                                                     \
+  };
+#include "DXILOperation.inc"
+    }
+  }
+  return Attributes;
+}
+
+// Retreive the set of DXIL Attributes given the version and map them to an
+// llvm function attribute that is set onto the instruction
+static void setDXILAttributes(CallInst *CI, dxil::OpCode OpCode,
+                              VersionTuple DXILVersion) {
+  dxil::Attributes Attributes = getDXILAttributes(OpCode, DXILVersion);
+  if (Attributes.ReadNone)
+    CI->setDoesNotAccessMemory();
+  if (Attributes.ReadOnly)
+    CI->setOnlyReadsMemory();
+  if (Attributes.NoReturn)
+    CI->setDoesNotReturn();
+  if (Attributes.NoDuplicate)
+    CI->setCannotDuplicate();
+  return;
+}
+
 namespace llvm {
 namespace dxil {
 
@@ -335,16 +472,15 @@ namespace dxil {
 // Triple is well-formed or that the target is supported since these checks
 // would have been done at the time the module M is constructed in the earlier
 // stages of compilation.
-DXILOpBuilder::DXILOpBuilder(Module &M, IRBuilderBase &B) : M(M), B(B) {
-  Triple TT(Triple(M.getTargetTriple()));
+DXILOpBuilder::DXILOpBuilder(Module &M) : M(M), IRB(M.getContext()) {
+  const Triple &TT = M.getTargetTriple();
   DXILVersion = TT.getDXILVersion();
   ShaderStage = TT.getEnvironment();
   // Ensure Environment type is known
   if (ShaderStage == Triple::UnknownEnvironment) {
-    report_fatal_error(
+    reportFatalUsageError(
         Twine(DXILVersion.getAsString()) +
-            ": Unknown Compilation Target Shader Stage specified ",
-        /*gen_crash_diag*/ false);
+        ": Unknown Compilation Target Shader Stage specified ");
   }
 }
 
@@ -356,6 +492,7 @@ static Error makeOpError(dxil::OpCode OpCode, Twine Msg) {
 
 Expected<CallInst *> DXILOpBuilder::tryCreateOp(dxil::OpCode OpCode,
                                                 ArrayRef<Value *> Args,
+                                                const Twine &Name,
                                                 Type *RetTy) {
   const OpCodeProperty *Prop = getOpCodeProperty(OpCode);
 
@@ -371,6 +508,7 @@ Expected<CallInst *> DXILOpBuilder::tryCreateOp(dxil::OpCode OpCode,
       return makeOpError(OpCode, "Wrong number of arguments");
     OverloadTy = Args[ArgIndex]->getType();
   }
+
   FunctionType *DXILOpFT =
       getDXILOpFunctionType(OpCode, M.getContext(), OverloadTy);
 
@@ -417,18 +555,55 @@ Expected<CallInst *> DXILOpBuilder::tryCreateOp(dxil::OpCode OpCode,
 
   // We need to inject the opcode as the first argument.
   SmallVector<Value *> OpArgs;
-  OpArgs.push_back(B.getInt32(llvm::to_underlying(OpCode)));
+  OpArgs.push_back(IRB.getInt32(llvm::to_underlying(OpCode)));
   OpArgs.append(Args.begin(), Args.end());
 
-  return B.CreateCall(DXILFn, OpArgs);
+  // Create the function call instruction
+  CallInst *CI = IRB.CreateCall(DXILFn, OpArgs, Name);
+
+  // We then need to attach available function attributes
+  setDXILAttributes(CI, OpCode, DXILVersion);
+
+  return CI;
 }
 
 CallInst *DXILOpBuilder::createOp(dxil::OpCode OpCode, ArrayRef<Value *> Args,
-                                  Type *RetTy) {
-  Expected<CallInst *> Result = tryCreateOp(OpCode, Args, RetTy);
+                                  const Twine &Name, Type *RetTy) {
+  Expected<CallInst *> Result = tryCreateOp(OpCode, Args, Name, RetTy);
   if (Error E = Result.takeError())
     llvm_unreachable("Invalid arguments for operation");
   return *Result;
+}
+
+StructType *DXILOpBuilder::getResRetType(Type *ElementTy) {
+  return ::getResRetType(ElementTy);
+}
+
+StructType *DXILOpBuilder::getCBufRetType(Type *ElementTy) {
+  return ::getCBufRetType(ElementTy);
+}
+
+StructType *DXILOpBuilder::getHandleType() {
+  return ::getHandleType(IRB.getContext());
+}
+
+Constant *DXILOpBuilder::getResBind(uint32_t LowerBound, uint32_t UpperBound,
+                                    uint32_t SpaceID, dxil::ResourceClass RC) {
+  Type *Int32Ty = IRB.getInt32Ty();
+  Type *Int8Ty = IRB.getInt8Ty();
+  return ConstantStruct::get(
+      getResBindType(IRB.getContext()),
+      {ConstantInt::get(Int32Ty, LowerBound),
+       ConstantInt::get(Int32Ty, UpperBound),
+       ConstantInt::get(Int32Ty, SpaceID),
+       ConstantInt::get(Int8Ty, llvm::to_underlying(RC))});
+}
+
+Constant *DXILOpBuilder::getResProps(uint32_t Word0, uint32_t Word1) {
+  Type *Int32Ty = IRB.getInt32Ty();
+  return ConstantStruct::get(
+      getResPropsType(IRB.getContext()),
+      {ConstantInt::get(Int32Ty, Word0), ConstantInt::get(Int32Ty, Word1)});
 }
 
 const char *DXILOpBuilder::getOpCodeName(dxil::OpCode DXILOp) {

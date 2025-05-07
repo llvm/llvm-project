@@ -10,6 +10,7 @@
 #define LLVM_DEMANGLE_DEMANGLE_H
 
 #include <cstddef>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -54,6 +55,9 @@ enum MSDemangleFlags {
 char *microsoftDemangle(std::string_view mangled_name, size_t *n_read,
                         int *status, MSDemangleFlags Flags = MSDF_None);
 
+std::optional<size_t>
+getArm64ECInsertionPointInMangledName(std::string_view MangledName);
+
 // Demangles a Rust v0 mangled symbol.
 char *rustDemangle(std::string_view MangledName);
 
@@ -88,6 +92,13 @@ struct ItaniumPartialDemangler {
   /// Just print the entire mangled name into Buf. Buf and N behave like the
   /// second and third parameters to __cxa_demangle.
   char *finishDemangle(char *Buf, size_t *N) const;
+
+  /// See \ref finishDemangle
+  ///
+  /// \param[in] OB A llvm::itanium_demangle::OutputBuffer that the demangled
+  /// name will be printed into.
+  ///
+  char *finishDemangle(void *OB) const;
 
   /// Get the base name of a function. This doesn't include trailing template
   /// arguments, ie for "a::b<int>" this function returns "b".

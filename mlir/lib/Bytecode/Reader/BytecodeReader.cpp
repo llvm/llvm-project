@@ -1733,6 +1733,7 @@ LogicalResult BytecodeReader::Impl::parseVersion(EncodingReader &reader) {
 
 //===----------------------------------------------------------------------===//
 // Dialect Section
+//===----------------------------------------------------------------------===//
 
 LogicalResult BytecodeDialect::load(const DialectReader &reader,
                                     MLIRContext *ctx) {
@@ -1874,6 +1875,7 @@ BytecodeReader::Impl::parseOpName(EncodingReader &reader,
 
 //===----------------------------------------------------------------------===//
 // Resource Section
+//===----------------------------------------------------------------------===//
 
 LogicalResult BytecodeReader::Impl::parseResourceSection(
     EncodingReader &reader, std::optional<ArrayRef<uint8_t>> resourceData,
@@ -1902,6 +1904,7 @@ LogicalResult BytecodeReader::Impl::parseResourceSection(
 
 //===----------------------------------------------------------------------===//
 // UseListOrder Helpers
+//===----------------------------------------------------------------------===//
 
 FailureOr<BytecodeReader::Impl::UseListMapT>
 BytecodeReader::Impl::parseUseListOrderForRange(EncodingReader &reader,
@@ -1981,8 +1984,7 @@ LogicalResult BytecodeReader::Impl::sortUseListOrder(Value value) {
     // If the bytecode file did not contain any custom use-list order, it means
     // that the order was descending useID. Hence, shuffle by the first index
     // of the `currentOrder` pair.
-    SmallVector<unsigned> shuffle = SmallVector<unsigned>(
-        llvm::map_range(currentOrder, [&](auto item) { return item.first; }));
+    SmallVector<unsigned> shuffle(llvm::make_first_range(currentOrder));
     value.shuffleUseList(shuffle);
     return success();
   }
@@ -2017,10 +2019,9 @@ LogicalResult BytecodeReader::Impl::sortUseListOrder(Value value) {
   DenseSet<unsigned> set;
   uint64_t accumulator = 0;
   for (const auto &elem : shuffle) {
-    if (set.contains(elem))
+    if (!set.insert(elem).second)
       return failure();
     accumulator += elem;
-    set.insert(elem);
   }
   if (numUses != shuffle.size() ||
       accumulator != (((numUses - 1) * numUses) >> 1))
@@ -2061,6 +2062,7 @@ LogicalResult BytecodeReader::Impl::processUseLists(Operation *topLevelOp) {
 
 //===----------------------------------------------------------------------===//
 // IR Section
+//===----------------------------------------------------------------------===//
 
 LogicalResult
 BytecodeReader::Impl::parseIRSection(ArrayRef<uint8_t> sectionData,
@@ -2461,6 +2463,7 @@ LogicalResult BytecodeReader::Impl::parseBlockArguments(EncodingReader &reader,
 
 //===----------------------------------------------------------------------===//
 // Value Processing
+//===----------------------------------------------------------------------===//
 
 Value BytecodeReader::Impl::parseOperand(EncodingReader &reader) {
   std::vector<Value> &values = valueScopes.back().values;
@@ -2511,7 +2514,7 @@ LogicalResult BytecodeReader::Impl::defineValues(EncodingReader &reader,
 }
 
 Value BytecodeReader::Impl::createForwardRef() {
-  // Check for an avaliable existing operation to use. Otherwise, create a new
+  // Check for an available existing operation to use. Otherwise, create a new
   // fake operation to use for the reference.
   if (!openForwardRefOps.empty()) {
     Operation *op = &openForwardRefOps.back();

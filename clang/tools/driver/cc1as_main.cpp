@@ -26,6 +26,7 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -164,6 +165,8 @@ struct AssemblerInvocation {
 
   LLVM_PREFERRED_TYPE(bool)
   unsigned Crel : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ImplicitMapsyms : 1;
 
   LLVM_PREFERRED_TYPE(bool)
   unsigned X86RelaxRelocations : 1;
@@ -211,6 +214,7 @@ public:
     EmitDwarfUnwind = EmitDwarfUnwindType::Default;
     EmitCompactUnwindNonCanonical = false;
     Crel = false;
+    ImplicitMapsyms = 0;
     X86RelaxRelocations = 0;
     X86Sse2Avx = 0;
   }
@@ -382,6 +386,7 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
   Opts.EmitCompactUnwindNonCanonical =
       Args.hasArg(OPT_femit_compact_unwind_non_canonical);
   Opts.Crel = Args.hasArg(OPT_crel);
+  Opts.ImplicitMapsyms = Args.hasArg(OPT_mmapsyms_implicit);
   Opts.X86RelaxRelocations = !Args.hasArg(OPT_mrelax_relocations_no);
   Opts.X86Sse2Avx = Args.hasArg(OPT_msse2avx);
 
@@ -442,6 +447,7 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   MCOptions.EmitCompactUnwindNonCanonical = Opts.EmitCompactUnwindNonCanonical;
   MCOptions.MCSaveTempLabels = Opts.SaveTemporaryLabels;
   MCOptions.Crel = Opts.Crel;
+  MCOptions.ImplicitMapSyms = Opts.ImplicitMapsyms;
   MCOptions.X86RelaxRelocations = Opts.X86RelaxRelocations;
   MCOptions.X86Sse2Avx = Opts.X86Sse2Avx;
   MCOptions.CompressDebugSections = Opts.CompressDebugSections;
@@ -536,8 +542,8 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
 
   // FIXME: There is a bit of code duplication with addPassesToEmitFile.
   if (Opts.OutputType == AssemblerInvocation::FT_Asm) {
-    MCInstPrinter *IP = TheTarget->createMCInstPrinter(
-        llvm::Triple(Opts.Triple), Opts.OutputAsmVariant, *MAI, *MCII, *MRI);
+    std::unique_ptr<MCInstPrinter> IP(TheTarget->createMCInstPrinter(
+        llvm::Triple(Opts.Triple), Opts.OutputAsmVariant, *MAI, *MCII, *MRI));
 
     std::unique_ptr<MCCodeEmitter> CE;
     if (Opts.ShowEncoding)
@@ -546,7 +552,7 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
         TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions));
 
     auto FOut = std::make_unique<formatted_raw_ostream>(*Out);
-    Str.reset(TheTarget->createAsmStreamer(Ctx, std::move(FOut), IP,
+    Str.reset(TheTarget->createAsmStreamer(Ctx, std::move(FOut), std::move(IP),
                                            std::move(CE), std::move(MAB)));
   } else if (Opts.OutputType == AssemblerInvocation::FT_Null) {
     Str.reset(createNullStreamer(Ctx));

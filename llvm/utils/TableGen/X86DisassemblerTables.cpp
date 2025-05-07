@@ -268,6 +268,7 @@ static inline bool inheritsFrom(InstructionContext child,
            (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_OPSIZE_KZ));
   case IC_EVEX_W:
     return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W)) ||
+           inheritsFrom(child, IC_EVEX_W_OPSIZE) ||
            (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_W));
   case IC_EVEX_W_XS:
     return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_XS)) ||
@@ -454,6 +455,7 @@ static inline bool inheritsFrom(InstructionContext child,
            (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_OPSIZE_KZ_B));
   case IC_EVEX_W_B:
     return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_B)) ||
+           inheritsFrom(child, IC_EVEX_W_OPSIZE_B) ||
            (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_W_B));
   case IC_EVEX_W_XS_B:
     return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_XS_B)) ||
@@ -744,8 +746,7 @@ void DisassemblerTables::emitModRMDecision(raw_ostream &o1, raw_ostream &o2,
       ModRMDecision.push_back(decision.instructionIDs[index]);
     break;
   case MODRM_FULL:
-    for (unsigned short InstructionID : decision.instructionIDs)
-      ModRMDecision.push_back(InstructionID);
+    llvm::append_range(ModRMDecision, decision.instructionIDs);
     break;
   }
 
@@ -872,7 +873,7 @@ void DisassemblerTables::emitInstructionInfo(raw_ostream &o,
     for (auto Operand : InstructionSpecifiers[Index].operands) {
       OperandEncoding Encoding = (OperandEncoding)Operand.encoding;
       OperandType Type = (OperandType)Operand.type;
-      OperandList.push_back(std::pair(Encoding, Type));
+      OperandList.emplace_back(Encoding, Type);
     }
     unsigned &N = OperandSets[OperandList];
     if (N != 0)
@@ -904,7 +905,7 @@ void DisassemblerTables::emitInstructionInfo(raw_ostream &o,
     for (auto Operand : InstructionSpecifiers[index].operands) {
       OperandEncoding Encoding = (OperandEncoding)Operand.encoding;
       OperandType Type = (OperandType)Operand.type;
-      OperandList.push_back(std::pair(Encoding, Type));
+      OperandList.emplace_back(Encoding, Type);
     }
     o.indent(i * 2) << (OperandSets[OperandList] - 1) << ",\n";
 

@@ -151,7 +151,8 @@ bool DataLayout::PrimitiveSpec::operator==(const PrimitiveSpec &Other) const {
 bool DataLayout::PointerSpec::operator==(const PointerSpec &Other) const {
   return AddrSpace == Other.AddrSpace && BitWidth == Other.BitWidth &&
          ABIAlign == Other.ABIAlign && PrefAlign == Other.PrefAlign &&
-         IndexBitWidth == Other.IndexBitWidth;
+         IndexBitWidth == Other.IndexBitWidth &&
+         IsNonIntegral == Other.IsNonIntegral;
 }
 
 namespace {
@@ -206,7 +207,8 @@ constexpr DataLayout::PrimitiveSpec DefaultVectorSpecs[] = {
 
 // Default pointer type specifications.
 constexpr DataLayout::PointerSpec DefaultPointerSpecs[] = {
-    {0, 64, Align::Constant<8>(), Align::Constant<8>(), 64} // p0:64:64:64:64
+    // p0:64:64:64:64
+    {0, 64, Align::Constant<8>(), Align::Constant<8>(), 64, false},
 };
 
 DataLayout::DataLayout()
@@ -239,13 +241,11 @@ DataLayout &DataLayout::operator=(const DataLayout &Other) {
   PointerSpecs = Other.PointerSpecs;
   StructABIAlignment = Other.StructABIAlignment;
   StructPrefAlignment = Other.StructPrefAlignment;
-  NonIntegralAddressSpaces = Other.NonIntegralAddressSpaces;
   return *this;
 }
 
 bool DataLayout::operator==(const DataLayout &Other) const {
   // NOTE: StringRepresentation might differ, it is not canonicalized.
-  // FIXME: NonIntegralAddressSpaces isn't compared.
   return BigEndian == Other.BigEndian &&
          AllocaAddrSpace == Other.AllocaAddrSpace &&
          ProgramAddrSpace == Other.ProgramAddrSpace &&
@@ -266,10 +266,6 @@ Expected<DataLayout> DataLayout::parse(StringRef LayoutString) {
   if (Error Err = Layout.parseLayoutString(LayoutString))
     return std::move(Err);
   return Layout;
-}
-
-static Error reportError(const Twine &Message) {
-  return createStringError(inconvertibleErrorCode(), Message);
 }
 
 static Error createSpecFormatError(Twine Format) {
@@ -333,46 +329,6 @@ static Error parseAlignment(StringRef Str, Align &Alignment, StringRef Name,
         Name + " alignment must be a power of two times the byte width");
 
   Alignment = Align(Value / ByteWidth);
-  return Error::success();
-}
-
-/// Checked version of split, to ensure mandatory subparts.
-static Error split(StringRef Str, char Separator,
-                   std::pair<StringRef, StringRef> &Split) {
-  assert(!Str.empty() && "parse error, string can't be empty here");
-  Split = Str.split(Separator);
-  if (Split.second.empty() && Split.first != Str)
-    return reportError("Trailing separator in datalayout string");
-  if (!Split.second.empty() && Split.first.empty())
-    return reportError("Expected token before separator in datalayout string");
-  return Error::success();
-}
-
-/// Get an unsigned integer, including error checks.
-template <typename IntTy> static Error getInt(StringRef R, IntTy &Result) {
-  bool error = R.getAsInteger(10, Result); (void)error;
-  if (error)
-    return reportError("not a number, or does not fit in an unsigned int");
-  return Error::success();
-}
-
-/// Get an unsigned integer representing the number of bits and convert it into
-/// bytes. Error out of not a byte width multiple.
-template <typename IntTy>
-static Error getIntInBytes(StringRef R, IntTy &Result) {
-  if (Error Err = getInt<IntTy>(R, Result))
-    return Err;
-  if (Result % 8)
-    return reportError("number of bits must be a byte width multiple");
-  Result /= 8;
-  return Error::success();
-}
-
-static Error getAddrSpace(StringRef R, unsigned &AddrSpace) {
-  if (Error Err = getInt(R, AddrSpace))
-    return Err;
-  if (!isUInt<24>(AddrSpace))
-    return reportError("Invalid address space, must be a 24-bit integer");
   return Error::success();
 }
 
@@ -498,11 +454,13 @@ Error DataLayout::parsePointerSpec(StringRef Spec) {
     return createStringError(
         "index size cannot be larger than the pointer size");
 
-  setPointerSpec(AddrSpace, BitWidth, ABIAlign, PrefAlign, IndexBitWidth);
+  setPointerSpec(AddrSpace, BitWidth, ABIAlign, PrefAlign, IndexBitWidth,
+                 false);
   return Error::success();
 }
 
-Error DataLayout::parseSpecification(StringRef Spec) {
+Error DataLayout::parseSpecification(
+    StringRef Spec, SmallVectorImpl<unsigned> &NonIntegralAddressSpaces) {
   // The "ni" specifier is the only two-character specifier. Handle it first.
   if (Spec.starts_with("ni")) {
     // ni:<address space>[:<address space>]...
@@ -536,55 +494,45 @@ Error DataLayout::parseSpecification(StringRef Spec) {
   if (Specifier == 'p')
     return parsePointerSpec(Spec);
 
-  // Split at ':'.
-  std::pair<StringRef, StringRef> Split;
-  if (Error Err = ::split(Spec, ':', Split))
-    return Err;
-
-  // Aliases used below.
-  StringRef &Tok = Split.first;   // Current token.
-  StringRef &Rest = Split.second; // The rest of the string.
-
-  char SpecifierChar = Tok.front();
-  Tok = Tok.substr(1);
-
-  switch (SpecifierChar) {
+  StringRef Rest = Spec.drop_front();
+  switch (Specifier) {
   case 's':
     // Deprecated, but ignoring here to preserve loading older textual llvm
     // ASM file
     break;
-  case 'E':
-    BigEndian = true;
-    break;
   case 'e':
-    BigEndian = false;
+  case 'E':
+    if (!Rest.empty())
+      return createStringError(
+          "malformed specification, must be just 'e' or 'E'");
+    BigEndian = Specifier == 'E';
     break;
   case 'n': // Native integer types.
-    while (true) {
-      unsigned Width;
-      if (Error Err = getInt(Tok, Width))
+    // n<size>[:<size>]...
+    for (StringRef Str : split(Rest, ':')) {
+      unsigned BitWidth;
+      if (Error Err = parseSize(Str, BitWidth))
         return Err;
-      if (Width == 0)
-        return reportError(
-            "Zero width native integer type in datalayout string");
-      LegalIntWidths.push_back(Width);
-      if (Rest.empty())
-        break;
-      if (Error Err = ::split(Rest, ':', Split))
-        return Err;
+      LegalIntWidths.push_back(BitWidth);
     }
     break;
   case 'S': { // Stack natural alignment.
-    uint64_t Alignment;
-    if (Error Err = getIntInBytes(Tok, Alignment))
+    // S<size>
+    if (Rest.empty())
+      return createSpecFormatError("S<size>");
+    Align Alignment;
+    if (Error Err = parseAlignment(Rest, Alignment, "stack natural"))
       return Err;
-    if (Alignment != 0 && !llvm::isPowerOf2_64(Alignment))
-      return reportError("Alignment is neither 0 nor a power of 2");
-    StackNaturalAlign = MaybeAlign(Alignment);
+    StackNaturalAlign = Alignment;
     break;
   }
   case 'F': {
-    switch (Tok.front()) {
+    // F<type><abi>
+    if (Rest.empty())
+      return createSpecFormatError("F<type><abi>");
+    char Type = Rest.front();
+    Rest = Rest.drop_front();
+    switch (Type) {
     case 'i':
       TheFunctionPtrAlignType = FunctionPtrAlignType::Independent;
       break;
@@ -592,44 +540,44 @@ Error DataLayout::parseSpecification(StringRef Spec) {
       TheFunctionPtrAlignType = FunctionPtrAlignType::MultipleOfFunctionAlign;
       break;
     default:
-      return reportError("Unknown function pointer alignment type in "
-                         "datalayout string");
+      return createStringError("unknown function pointer alignment type '" +
+                               Twine(Type) + "'");
     }
-    Tok = Tok.substr(1);
-    uint64_t Alignment;
-    if (Error Err = getIntInBytes(Tok, Alignment))
+    Align Alignment;
+    if (Error Err = parseAlignment(Rest, Alignment, "ABI"))
       return Err;
-    if (Alignment != 0 && !llvm::isPowerOf2_64(Alignment))
-      return reportError("Alignment is neither 0 nor a power of 2");
-    FunctionPtrAlign = MaybeAlign(Alignment);
+    FunctionPtrAlign = Alignment;
     break;
   }
   case 'P': { // Function address space.
-    if (Error Err = getAddrSpace(Tok, ProgramAddrSpace))
+    if (Rest.empty())
+      return createSpecFormatError("P<address space>");
+    if (Error Err = parseAddrSpace(Rest, ProgramAddrSpace))
       return Err;
     break;
   }
   case 'A': { // Default stack/alloca address space.
-    if (Error Err = getAddrSpace(Tok, AllocaAddrSpace))
+    if (Rest.empty())
+      return createSpecFormatError("A<address space>");
+    if (Error Err = parseAddrSpace(Rest, AllocaAddrSpace))
       return Err;
     break;
   }
   case 'G': { // Default address space for global variables.
-    if (Error Err = getAddrSpace(Tok, DefaultGlobalsAddrSpace))
+    if (Rest.empty())
+      return createSpecFormatError("G<address space>");
+    if (Error Err = parseAddrSpace(Rest, DefaultGlobalsAddrSpace))
       return Err;
     break;
   }
   case 'm':
-    if (!Tok.empty())
-      return reportError("Unexpected trailing characters after mangling "
-                         "specifier in datalayout string");
-    if (Rest.empty())
-      return reportError("Expected mangling specifier in datalayout string");
+    if (!Rest.consume_front(":") || Rest.empty())
+      return createSpecFormatError("m:<mangling>");
     if (Rest.size() > 1)
-      return reportError("Unknown mangling specifier in datalayout string");
+      return createStringError("unknown mangling mode");
     switch (Rest[0]) {
     default:
-      return reportError("Unknown mangling in datalayout string");
+      return createStringError("unknown mangling mode");
     case 'e':
       ManglingMode = MM_ELF;
       break;
@@ -654,7 +602,7 @@ Error DataLayout::parseSpecification(StringRef Spec) {
     }
     break;
   default:
-    return reportError("Unknown specifier in datalayout string");
+    return createStringError("unknown specifier '" + Twine(Specifier) + "'");
   }
 
   return Error::success();
@@ -668,11 +616,22 @@ Error DataLayout::parseLayoutString(StringRef LayoutString) {
 
   // Split the data layout string into specifications separated by '-' and
   // parse each specification individually, updating internal data structures.
+  SmallVector<unsigned, 8> NonIntegralAddressSpaces;
   for (StringRef Spec : split(LayoutString, '-')) {
     if (Spec.empty())
       return createStringError("empty specification is not allowed");
-    if (Error Err = parseSpecification(Spec))
+    if (Error Err = parseSpecification(Spec, NonIntegralAddressSpaces))
       return Err;
+  }
+  // Mark all address spaces that were qualified as non-integral now. This has
+  // to be done later since the non-integral property is not part of the data
+  // layout pointer specification.
+  for (unsigned AS : NonIntegralAddressSpaces) {
+    // If there is no special spec for a given AS, getPointerSpec(AS) returns
+    // the spec for AS0, and we then update that to mark it non-integral.
+    const PointerSpec &PS = getPointerSpec(AS);
+    setPointerSpec(AS, PS.BitWidth, PS.ABIAlign, PS.PrefAlign, PS.IndexBitWidth,
+                   true);
   }
 
   return Error::success();
@@ -720,16 +679,17 @@ DataLayout::getPointerSpec(uint32_t AddrSpace) const {
 
 void DataLayout::setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth,
                                 Align ABIAlign, Align PrefAlign,
-                                uint32_t IndexBitWidth) {
+                                uint32_t IndexBitWidth, bool IsNonIntegral) {
   auto I = lower_bound(PointerSpecs, AddrSpace, LessPointerAddrSpace());
   if (I == PointerSpecs.end() || I->AddrSpace != AddrSpace) {
     PointerSpecs.insert(I, PointerSpec{AddrSpace, BitWidth, ABIAlign, PrefAlign,
-                                       IndexBitWidth});
+                                       IndexBitWidth, IsNonIntegral});
   } else {
     I->BitWidth = BitWidth;
     I->ABIAlign = ABIAlign;
     I->PrefAlign = PrefAlign;
     I->IndexBitWidth = IndexBitWidth;
+    I->IsNonIntegral = IsNonIntegral;
   }
 }
 
@@ -778,15 +738,6 @@ Align DataLayout::getPointerPrefAlignment(unsigned AS) const {
 
 unsigned DataLayout::getPointerSize(unsigned AS) const {
   return divideCeil(getPointerSpec(AS).BitWidth, 8);
-}
-
-unsigned DataLayout::getMaxIndexSize() const {
-  unsigned MaxIndexSize = 0;
-  for (const PointerSpec &Spec : PointerSpecs)
-    MaxIndexSize =
-        std::max(MaxIndexSize, (unsigned)divideCeil(Spec.BitWidth, 8));
-
-  return MaxIndexSize;
 }
 
 unsigned DataLayout::getPointerTypeSizeInBits(Type *Ty) const {

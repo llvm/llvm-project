@@ -6,9 +6,14 @@ add_flang_library(FIRTransforms
   AnnotateConstant.cpp
   AssumedRankOpConversion.cpp
   CharacterConversion.cpp
+  CompilerGeneratedNames.cpp
   ConstantArgumentGlobalisation.cpp
   ControlFlowConverter.cpp
-  CufOpConversion.cpp
+  CUFAddConstructor.cpp
+  CUFDeviceGlobal.cpp
+  CUFOpConversion.cpp
+  CUFGPUToLLVMConversion.cpp
+  CUFComputeSharedMemoryOffsetsAndSize.cpp
   ArrayValueCopy.cpp
   ExternalNameConversion.cpp
   MemoryUtils.cpp
@@ -21,13 +26,13 @@ add_flang_library(FIRTransforms
   AddDebugInfo.cpp
   PolymorphicOpConversion.cpp
   LoopVersioning.cpp
-  OMPFunctionFiltering.cpp
-  OMPMapInfoFinalization.cpp
-  OMPMarkDeclareTarget.cpp
   StackReclaim.cpp
   VScaleAttr.cpp
   FunctionAttr.cpp
   DebugTypeGenerator.cpp
+  SetRuntimeCallAttributes.cpp
+  GenRuntimeCallsForTest.cpp
+  SimplifyFIROperations.cpp
 
   DEPENDS
   CUFAttrs
@@ -42,13 +47,17 @@ add_flang_library(FIRTransforms
   FIRAnalysis
   FIRBuilder
   FIRCodeGen
+  FIRCodeGenDialect
   FIRDialect
   FIRDialectSupport
   FIRSupport
-  FortranCommon
+  FortranSupport
   HLFIRDialect
+
+  MLIR_LIBS
   MLIRAffineUtils
   MLIRFuncDialect
+  MLIRGPUDialect
   MLIRLLVMDialect
   MLIRLLVMCommonConversion
   MLIRMathTransforms

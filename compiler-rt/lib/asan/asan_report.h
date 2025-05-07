@@ -88,6 +88,9 @@ void ReportBadParamsToAnnotateDoubleEndedContiguousContainer(
     uptr storage_beg, uptr storage_end, uptr old_container_beg,
     uptr old_container_end, uptr new_container_beg, uptr new_container_end,
     BufferedStackTrace *stack);
+void ReportBadParamsToCopyContiguousContainerAnnotations(
+    uptr old_storage_beg, uptr old_storage_end, uptr new_storage_beg,
+    uptr new_storage_end, BufferedStackTrace *stack);
 
 void ReportODRViolation(const __asan_global *g1, u32 stack_id1,
                         const __asan_global *g2, u32 stack_id2);

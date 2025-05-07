@@ -47,7 +47,8 @@ class LoopAnnotationImporter;
 class ModuleImport {
 public:
   ModuleImport(ModuleOp mlirModule, std::unique_ptr<llvm::Module> llvmModule,
-               bool emitExpensiveWarnings, bool importEmptyDICompositeTypes);
+               bool emitExpensiveWarnings, bool importEmptyDICompositeTypes,
+               bool preferUnregisteredIntrinsics);
 
   /// Calls the LLVMImportInterface initialization that queries the registered
   /// dialect interfaces for the supported LLVM IR intrinsics and metadata kinds
@@ -67,9 +68,16 @@ public:
   /// Converts all global variables of the LLVM module to MLIR global variables.
   LogicalResult convertGlobals();
 
+  /// Converts all aliases of the LLVM module to MLIR variables.
+  LogicalResult convertAliases();
+
   /// Converts the data layout of the LLVM module to an MLIR data layout
   /// specification.
   LogicalResult convertDataLayout();
+
+  /// Converts target triple of the LLVM module to an MLIR target triple
+  /// specification.
+  void convertTargetTriple();
 
   /// Stores the mapping between an LLVM value and its MLIR counterpart.
   void mapValue(llvm::Value *llvm, Value mlir) { mapValue(llvm) = mlir; }
@@ -187,6 +195,21 @@ public:
   /// operation does not implement the integer overflow flag interface.
   void setIntegerOverflowFlags(llvm::Instruction *inst, Operation *op) const;
 
+  /// Sets the exact flag attribute for the imported operation `op` given
+  /// the original instruction `inst`. Asserts if the operation does not
+  /// implement the exact flag interface.
+  void setExactFlag(llvm::Instruction *inst, Operation *op) const;
+
+  /// Sets the disjoint flag attribute for the imported operation `op`
+  /// given the original instruction `inst`. Asserts if the operation does
+  /// not implement the disjoint flag interface.
+  void setDisjointFlag(llvm::Instruction *inst, Operation *op) const;
+
+  /// Sets the nneg flag attribute for the imported operation `op` given
+  /// the original instruction `inst`. Asserts if the operation does not
+  /// implement the nneg flag interface.
+  void setNonNegFlag(llvm::Instruction *inst, Operation *op) const;
+
   /// Sets the fastmath flags attribute for the imported operation `op` given
   /// the original instruction `inst`. Asserts if the operation does not
   /// implement the fastmath interface.
@@ -196,8 +219,19 @@ public:
   /// LLVM dialect operation.
   LogicalResult convertLinkerOptionsMetadata();
 
+  /// Converts !llvm.module.flags metadata.
+  LogicalResult convertModuleFlagsMetadata();
+
   /// Converts !llvm.ident metadata to the llvm.ident LLVM ModuleOp attribute.
   LogicalResult convertIdentMetadata();
+
+  /// Converts !llvm.commandline metadata to the llvm.commandline LLVM ModuleOp
+  /// attribute.
+  LogicalResult convertCommandlineMetadata();
+
+  /// Converts !llvm.dependent-libraries metadata to llvm.dependent_libraries
+  /// LLVM ModuleOp attribute.
+  LogicalResult convertDependentLibrariesMetadata();
 
   /// Converts all LLVM metadata nodes that translate to attributes such as
   /// alias analysis or access group metadata, and builds a map from the
@@ -222,6 +256,13 @@ public:
   LoopAnnotationAttr translateLoopAnnotationAttr(const llvm::MDNode *node,
                                                  Location loc) const;
 
+  /// Returns the dereferenceable attribute that corresponds to the given LLVM
+  /// dereferenceable or dereferenceable_or_null metadata `node`. `kindID`
+  /// specifies the kind of the metadata node (dereferenceable or
+  /// dereferenceable_or_null).
+  FailureOr<DereferenceableAttr>
+  translateDereferenceableAttr(const llvm::MDNode *node, unsigned kindID);
+
   /// Returns the alias scope attributes that map to the alias scope nodes
   /// starting from the metadata `node`. Returns failure, if any of the
   /// attributes cannot be found.
@@ -239,10 +280,23 @@ public:
   /// corresponding MLIR attribute names.
   LogicalResult
   convertIntrinsicArguments(ArrayRef<llvm::Value *> values,
+                            ArrayRef<llvm::OperandBundleUse> opBundles,
+                            bool requiresOpBundles,
                             ArrayRef<unsigned> immArgPositions,
                             ArrayRef<StringLiteral> immArgAttrNames,
                             SmallVectorImpl<Value> &valuesOut,
                             SmallVectorImpl<NamedAttribute> &attrsOut);
+
+  /// Converts the parameter and result attributes in `argsAttr` and `resAttr`
+  /// and add them to the `callOp`.
+  void convertParameterAttributes(llvm::CallBase *call, ArrayAttr &argsAttr,
+                                  ArrayAttr &resAttr, OpBuilder &builder);
+
+  /// Whether the importer should try to convert all intrinsics to
+  /// llvm.call_intrinsic instead of dialect supported operations.
+  bool useUnregisteredIntrinsicsOnly() const {
+    return preferUnregisteredIntrinsics;
+  }
 
 private:
   /// Clears the accumulated state before processing a new region.
@@ -263,6 +317,9 @@ private:
   LogicalResult convertGlobal(llvm::GlobalVariable *globalVar);
   /// Imports the magic globals "global_ctors" and "global_dtors".
   LogicalResult convertGlobalCtorsAndDtors(llvm::GlobalVariable *globalVar);
+  /// Converts an LLVM global alias variable into an MLIR LLVM dialect alias
+  /// operation if a conversion exists. Otherwise, returns failure.
+  LogicalResult convertAlias(llvm::GlobalAlias *alias);
   /// Returns personality of `func` as a FlatSymbolRefAttr.
   FlatSymbolRefAttr getPersonalityAsAttr(llvm::Function *func);
   /// Imports `bb` into `block`, which must be initially empty.
@@ -295,20 +352,40 @@ private:
   LogicalResult convertBranchArgs(llvm::Instruction *branch,
                                   llvm::BasicBlock *target,
                                   SmallVectorImpl<Value> &blockArguments);
-  /// Appends the converted result type and operands of `callInst` to the
-  /// `types` and `operands` arrays. For indirect calls, the method additionally
-  /// inserts the called function at the beginning of the `operands` array.
-  LogicalResult convertCallTypeAndOperands(llvm::CallBase *callInst,
-                                           SmallVectorImpl<Type> &types,
-                                           SmallVectorImpl<Value> &operands);
-  /// Converts the parameter attributes attached to `func` and adds them to the
-  /// `funcOp`.
+  /// Convert `callInst` operands. For indirect calls, the method additionally
+  /// inserts the called function at the beginning of the returned `operands`
+  /// array.  If `allowInlineAsm` is set to false (the default), it will return
+  /// failure if the called operand is an inline asm which isn't convertible to
+  /// MLIR as a value.
+  FailureOr<SmallVector<Value>>
+  convertCallOperands(llvm::CallBase *callInst, bool allowInlineAsm = false);
+  /// Converts the callee's function type. For direct calls, it converts the
+  /// actual function type, which may differ from the called operand type in
+  /// variadic functions. For indirect calls, it converts the function type
+  /// associated with the call instruction. When the call and the callee are not
+  /// compatible (or when nested type conversions failed), emit a warning and
+  /// update `isIncompatibleCall` to indicate it.
+  FailureOr<LLVMFunctionType> convertFunctionType(llvm::CallBase *callInst,
+                                                  bool &isIncompatibleCall);
+  /// Returns the callee name, or an empty symbol if the call is not direct.
+  FlatSymbolRefAttr convertCalleeName(llvm::CallBase *callInst);
+  /// Converts the parameter and result attributes attached to `func` and adds
+  /// them to the `funcOp`.
   void convertParameterAttributes(llvm::Function *func, LLVMFuncOp funcOp,
                                   OpBuilder &builder);
   /// Converts the AttributeSet of one parameter in LLVM IR to a corresponding
   /// DictionaryAttr for the LLVM dialect.
   DictionaryAttr convertParameterAttribute(llvm::AttributeSet llvmParamAttrs,
                                            OpBuilder &builder);
+  /// Converts the parameter and result attributes attached to `call` and adds
+  /// them to the `callOp`. Implemented in terms of the the public definition of
+  /// convertParameterAttributes.
+  void convertParameterAttributes(llvm::CallBase *call, CallOpInterface callOp,
+                                  OpBuilder &builder);
+  /// Converts the attributes attached to `inst` and adds them to the `op`.
+  LogicalResult convertCallAttributes(llvm::CallInst *inst, CallOp op);
+  /// Converts the attributes attached to `inst` and adds them to the `op`.
+  LogicalResult convertInvokeAttributes(llvm::InvokeInst *inst, InvokeOp op);
   /// Returns the builtin type equivalent to the given LLVM dialect type or
   /// nullptr if there is no equivalent. The returned type can be used to create
   /// an attribute for a GlobalOp or a ConstantOp.
@@ -355,6 +432,14 @@ private:
   /// and stores a mapping from the struct to the symbol pointing to the
   /// translated operation.
   void processComdat(const llvm::Comdat *comdat);
+  /// Returns a symbol name for a nameless global. MLIR, in contrast to LLVM,
+  /// always requires a symbol name.
+  FlatSymbolRefAttr
+  getOrCreateNamelessSymbolName(llvm::GlobalVariable *globalVar);
+  /// Returns the global insertion point for the next global operation. If the
+  /// `globalInsertionOp` is set, the insertion point is placed after the
+  /// specified operation. Otherwise, it defaults to the start of the module.
+  OpBuilder::InsertionGuard setGlobalInsertionPoint();
 
   /// Builder pointing at where the next instruction should be generated.
   OpBuilder builder;
@@ -412,6 +497,10 @@ private:
   /// emitted. Avoids generating warnings for unhandled debug intrinsics and
   /// metadata that otherwise dominate the translation time for large inputs.
   bool emitExpensiveWarnings;
+
+  /// An option to control whether the importer should try to convert all
+  /// intrinsics to llvm.call_intrinsic instead of dialect supported operations.
+  bool preferUnregisteredIntrinsics;
 };
 
 } // namespace LLVM

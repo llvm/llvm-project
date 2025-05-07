@@ -1,5 +1,5 @@
-; RUN: llc -march=mips < %s | FileCheck %s -check-prefixes=ALL,MIPS
-; RUN: llc -march=mips < %s -mattr=+micromips | FileCheck %s -check-prefixes=ALL,MM
+; RUN: llc -mtriple=mips < %s | FileCheck %s -check-prefixes=ALL,MIPS
+; RUN: llc -mtriple=mips < %s -mattr=+micromips | FileCheck %s -check-prefixes=ALL,MM
 
 ; Test the patterns used for constant materialization.
 

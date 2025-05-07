@@ -37,7 +37,6 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
             ),
         )
 
-    @skipIfWindows
     def test_scopes_variables_setVariable_evaluate(self):
         """
         Tests that the "scopes" request causes the currently selected
@@ -80,7 +79,6 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
 
         self.check_lldb_command("frame select", "frame #1", "frame 1 is selected")
 
-    @skipIfWindows
     def test_custom_escape_prefix(self):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program, commandEscapePrefix="::")
@@ -96,7 +94,6 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
             command_escape_prefix="::",
         )
 
-    @skipIfWindows
     def test_empty_escape_prefix(self):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program, commandEscapePrefix="")
@@ -151,7 +148,6 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
             "Exit status does not contain message 'exited with status'",
         )
 
-    @skipIfWindows
     def test_exit_status_message_ok(self):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program, commandEscapePrefix="")
@@ -167,4 +163,21 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
             "exited with status = 0 (0x00000000)",
             console_output,
             "Exit status does not contain message 'exited with status'",
+        )
+
+    def test_diagnositcs(self):
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program, stopOnEntry=True)
+
+        core = self.getBuildArtifact("minidump.core")
+        self.yaml2obj("minidump.yaml", core)
+        self.dap_server.request_evaluate(
+            f"target create --core  {core}", context="repl"
+        )
+
+        output = self.get_important()
+        self.assertIn(
+            "warning: unable to retrieve process ID from minidump file",
+            output,
+            "diagnostic found in important output",
         )

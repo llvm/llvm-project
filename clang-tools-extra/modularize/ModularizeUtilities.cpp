@@ -53,11 +53,10 @@ ModularizeUtilities::ModularizeUtilities(std::vector<std::string> &InputPaths,
       Diagnostics(
           new DiagnosticsEngine(DiagIDs, DiagnosticOpts.get(), &DC, false)),
       TargetOpts(new ModuleMapTargetOptions()),
-      Target(TargetInfo::CreateTargetInfo(*Diagnostics, TargetOpts)),
+      Target(TargetInfo::CreateTargetInfo(*Diagnostics, *TargetOpts)),
       FileMgr(new FileManager(FileSystemOpts)),
-      SourceMgr(new SourceManager(*Diagnostics, *FileMgr, false)),
-      HeaderInfo(new HeaderSearch(std::make_shared<HeaderSearchOptions>(),
-                                  *SourceMgr, *Diagnostics, *LangOpts,
+      SourceMgr(new SourceManager(*Diagnostics, *FileMgr, false)), HSOpts(),
+      HeaderInfo(new HeaderSearch(HSOpts, *SourceMgr, *Diagnostics, *LangOpts,
                                   Target.get())) {}
 
 // Create instance of ModularizeUtilities, to simplify setting up
@@ -291,7 +290,7 @@ std::error_code ModularizeUtilities::loadModuleMap(
     Target.get(), *HeaderInfo));
 
   // Parse module.modulemap file into module map.
-  if (ModMap->parseModuleMapFile(ModuleMapEntry, false, Dir)) {
+  if (ModMap->parseAndLoadModuleMapFile(ModuleMapEntry, false, Dir)) {
     return std::error_code(1, std::generic_category());
   }
 
@@ -358,7 +357,7 @@ bool ModularizeUtilities::collectModuleHeaders(const clang::Module &Mod) {
   } else if (std::optional<clang::Module::DirectoryName> UmbrellaDir =
                  Mod.getUmbrellaDirAsWritten()) {
     // If there normal headers, assume these are umbrellas and skip collection.
-    if (Mod.Headers->size() == 0) {
+    if (Mod.getHeaders(Module::HK_Normal).empty()) {
       // Collect headers in umbrella directory.
       if (!collectUmbrellaHeaders(UmbrellaDir->Entry.getName(),
                                   UmbrellaDependents))
@@ -371,16 +370,8 @@ bool ModularizeUtilities::collectModuleHeaders(const clang::Module &Mod) {
   // modules or because they are meant to be included by another header,
   // and thus should be ignored by modularize.
 
-  int NormalHeaderCount = Mod.Headers[clang::Module::HK_Normal].size();
-
-  for (int Index = 0; Index < NormalHeaderCount; ++Index) {
-    DependentsVector NormalDependents;
-    // Collect normal header.
-    const clang::Module::Header &Header(
-      Mod.Headers[clang::Module::HK_Normal][Index]);
-    std::string HeaderPath = getCanonicalPath(Header.Entry.getName());
-    HeaderFileNames.push_back(HeaderPath);
-  }
+  for (const auto &Header : Mod.getHeaders(clang::Module::HK_Normal))
+    HeaderFileNames.push_back(getCanonicalPath(Header.Entry.getName()));
 
   int MissingCountThisModule = Mod.MissingHeaders.size();
 

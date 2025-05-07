@@ -14,7 +14,6 @@
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include <errno.h>
 #include <stdint.h>
 
 using LlvmLibcTanhfTest = LIBC_NAMESPACE::testing::FPTest<float>;

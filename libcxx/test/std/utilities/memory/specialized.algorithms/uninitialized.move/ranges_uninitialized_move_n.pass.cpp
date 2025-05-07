@@ -105,22 +105,6 @@ int main(int, char**) {
 
 #endif // TEST_HAS_NO_EXCEPTIONS
 
-  // Works with const iterators.
-  {
-    constexpr int N = 5;
-    Counted in[N] = {Counted(1), Counted(2), Counted(3), Counted(4), Counted(5)};
-    Buffer<Counted, N> out;
-    Counted::reset();
-
-    std::ranges::uninitialized_move_n(in, N, out.cbegin(), out.cend());
-    assert(Counted::current_objects == N);
-    assert(Counted::total_objects == N);
-    assert(std::equal(in, in + N, out.begin(), out.end()));
-
-    std::destroy(out.begin(), out.end());
-  }
-  Counted::reset();
-
   // Conversions.
   {
     constexpr int N = 3;

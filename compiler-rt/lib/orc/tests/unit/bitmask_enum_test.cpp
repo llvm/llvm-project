@@ -16,7 +16,7 @@
 #include <sstream>
 #include <string>
 
-using namespace __orc_rt;
+using namespace orc_rt;
 
 namespace {
 
@@ -24,9 +24,9 @@ enum Flags { F0 = 0, F1 = 1, F2 = 2, F3 = 4, F4 = 8 };
 
 } // namespace
 
-namespace __orc_rt {
+namespace orc_rt {
 ORC_RT_DECLARE_ENUM_AS_BITMASK(Flags, F4);
-} // namespace __orc_rt
+} // namespace orc_rt
 
 static_assert(is_bitmask_enum<Flags>::value != 0);
 static_assert(largest_bitmask_enum_bit<Flags>::value == Flags::F4);

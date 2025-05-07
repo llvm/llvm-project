@@ -96,6 +96,7 @@ class Test(unittest.TestCase):
             git_dir=get_llvm_project_path(),
             across_ref="c9944df916e41b1014dff5f6f75d52297b48ecdc~",
             root="c9944df916e41b1014dff5f6f75d52297b48ecdc",
+            max_pr_lookback=50,
         )
         self.assertEqual(reverts, [])
 
@@ -113,6 +114,7 @@ class Test(unittest.TestCase):
             git_dir=get_llvm_project_path(),
             across_ref="c47f971694be0159ffddfee8a75ae515eba91439",
             root="9f981e9adf9c8d29bb80306daf08d2770263ade6",
+            max_pr_lookback=50,
         )
         self.assertEqual(
             reverts,
@@ -124,6 +126,27 @@ class Test(unittest.TestCase):
                 revert_checker.Revert(
                     sha="9f981e9adf9c8d29bb80306daf08d2770263ade6",
                     reverted_sha="4060016fce3e6a0b926ee9fc59e440a612d3a2ec",
+                ),
+            ],
+        )
+
+    def test_pr_based_revert_works(self) -> None:
+        reverts = revert_checker.find_reverts(
+            git_dir=get_llvm_project_path(),
+            # This SHA is a direct child of the reverted SHA expected below.
+            across_ref="2d5f3b0a61fb171617012a2c3ba05fd31fb3bb1d",
+            # This SHA is a direct child of the revert SHA listed below.
+            root="2c01b278580212914ec037bb5dd9b73702dfe7f1",
+            max_pr_lookback=50,
+        )
+        self.assertEqual(
+            reverts,
+            [
+                revert_checker.Revert(
+                    # This SHA is a `Reverts ${PR}` for #111004.
+                    sha="50866e84d1da8462aeb96607bf6d9e5bbd5869c5",
+                    # ...And this was the commit for #111004.
+                    reverted_sha="67160c5ab5f5b7fd5fa7851abcfde367c8a9f91b",
                 ),
             ],
         )

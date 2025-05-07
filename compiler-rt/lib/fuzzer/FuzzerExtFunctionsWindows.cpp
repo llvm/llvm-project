@@ -14,6 +14,7 @@
 
 #include "FuzzerExtFunctions.h"
 #include "FuzzerIO.h"
+#include <stdlib.h>
 
 using namespace fuzzer;
 
@@ -22,6 +23,11 @@ using namespace fuzzer;
 #define STRINGIFY(A) STRINGIFY_(A)
 
 #if LIBFUZZER_MSVC
+#define GET_FUNCTION_ADDRESS(fn) &fn
+#else
+#define GET_FUNCTION_ADDRESS(fn) __builtin_function_start(fn)
+#endif // LIBFUZER_MSVC
+
 // Copied from compiler-rt/lib/sanitizer_common/sanitizer_win_defs.h
 #if defined(_M_IX86) || defined(__i386__)
 #define WIN_SYM_PREFIX "_"
@@ -31,17 +37,9 @@ using namespace fuzzer;
 
 // Declare external functions as having alternativenames, so that we can
 // determine if they are not defined.
-#define EXTERNAL_FUNC(Name, Default)                                   \
-  __pragma(comment(linker, "/alternatename:" WIN_SYM_PREFIX STRINGIFY( \
+#define EXTERNAL_FUNC(Name, Default)                                           \
+  __pragma(comment(linker, "/alternatename:" WIN_SYM_PREFIX STRINGIFY(         \
                                Name) "=" WIN_SYM_PREFIX STRINGIFY(Default)))
-#else
-// Declare external functions as weak to allow them to default to a specified
-// function if not defined explicitly. We must use weak symbols because clang's
-// support for alternatename is not 100%, see
-// https://bugs.llvm.org/show_bug.cgi?id=40218 for more details.
-#define EXTERNAL_FUNC(Name, Default) \
-  __attribute__((weak, alias(STRINGIFY(Default))))
-#endif  // LIBFUZZER_MSVC
 
 extern "C" {
 #define EXT_FUNC(NAME, RETURN_TYPE, FUNC_SIG, WARN)         \
@@ -57,20 +55,23 @@ extern "C" {
 }
 
 template <typename T>
-static T *GetFnPtr(T *Fun, T *FunDef, const char *FnName, bool WarnIfMissing) {
+static T *GetFnPtr(void *Fun, void *FunDef, const char *FnName,
+                   bool WarnIfMissing) {
   if (Fun == FunDef) {
     if (WarnIfMissing)
       Printf("WARNING: Failed to find function \"%s\".\n", FnName);
     return nullptr;
   }
-  return Fun;
+  return (T *)Fun;
 }
 
 namespace fuzzer {
 
 ExternalFunctions::ExternalFunctions() {
-#define EXT_FUNC(NAME, RETURN_TYPE, FUNC_SIG, WARN) \
-  this->NAME = GetFnPtr<decltype(::NAME)>(::NAME, ::NAME##Def, #NAME, WARN);
+#define EXT_FUNC(NAME, RETURN_TYPE, FUNC_SIG, WARN)                            \
+  this->NAME = GetFnPtr<decltype(::NAME)>(GET_FUNCTION_ADDRESS(::NAME),        \
+                                          GET_FUNCTION_ADDRESS(::NAME##Def),   \
+                                          #NAME, WARN);
 
 #include "FuzzerExtFunctions.def"
 

@@ -61,7 +61,6 @@ public:
                               MutableArrayRef<CalleeSavedInfo> CSI,
                               const TargetRegisterInfo *TRI) const override;
 
-  bool hasFP(const MachineFunction &MF) const override;
   bool hasBP(const MachineFunction &MF) const;
 
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
@@ -69,6 +68,9 @@ public:
   MachineBasicBlock::iterator
   eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI) const override;
+
+protected:
+  bool hasFPImpl(const MachineFunction &MF) const override;
 };
 } // namespace llvm
 #endif

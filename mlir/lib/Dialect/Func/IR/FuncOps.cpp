@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 
+#include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -41,6 +42,7 @@ void FuncDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/Func/IR/FuncOps.cpp.inc"
       >();
+  declarePromisedInterface<ConvertToEmitCPatternInterface, FuncDialect>();
   declarePromisedInterface<DialectInlinerInterface, FuncDialect>();
   declarePromisedInterface<ConvertToLLVMPatternInterface, FuncDialect>();
   declarePromisedInterfaces<bufferization::BufferizableOpInterface, CallOp,
@@ -123,12 +125,13 @@ LogicalResult CallIndirectOp::canonicalize(CallIndirectOp indirectCall,
 // ConstantOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult ConstantOp::verify() {
+LogicalResult ConstantOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   StringRef fnName = getValue();
   Type type = getType();
 
   // Try to find the referenced function.
-  auto fn = (*this)->getParentOfType<ModuleOp>().lookupSymbol<FuncOp>(fnName);
+  auto fn = symbolTable.lookupNearestSymbolFrom<FuncOp>(
+      this->getOperation(), StringAttr::get(getContext(), fnName));
   if (!fn)
     return emitOpError() << "reference to undefined function '" << fnName
                          << "'";
@@ -189,7 +192,7 @@ void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
   if (argAttrs.empty())
     return;
   assert(type.getNumInputs() == argAttrs.size());
-  function_interface_impl::addArgAndResultAttrs(
+  call_interface_impl::addArgAndResultAttrs(
       builder, state, argAttrs, /*resultAttrs=*/std::nullopt,
       getArgAttrsAttrName(state.name), getResAttrsAttrName(state.name));
 }

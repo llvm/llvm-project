@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s cppcoreguidelines-pro-type-member-init,hicpp-member-init,modernize-use-emplace,hicpp-use-emplace %t
+// RUN: %check_clang_tidy --match-partial-fixes %s cppcoreguidelines-pro-type-member-init,hicpp-member-init,modernize-use-emplace,hicpp-use-emplace %t
 
 namespace std {
 
@@ -31,7 +31,7 @@ private:
   // CHECK-FIXES: _num2{};
 };
 
-int should_use_emplace(std::vector<Foo> &v) {
+void should_use_emplace(std::vector<Foo> &v) {
   v.push_back(Foo());
   // CHECK-FIXES: v.emplace_back();
   // CHECK-MESSAGES: warning: use emplace_back instead of push_back [hicpp-use-emplace,modernize-use-emplace]

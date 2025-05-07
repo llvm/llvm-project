@@ -1,3 +1,4 @@
+! REQUIRES: flang-supports-f128-math
 ! RUN: %python %S/test_symbols.py %s %flang_fc1
  !DEF: /MainProgram1/ipdt DerivedType
  !DEF: /MainProgram1/ipdt/k TypeParam INTEGER(4)
