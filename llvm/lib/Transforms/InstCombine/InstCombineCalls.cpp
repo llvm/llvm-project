@@ -3811,6 +3811,21 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     break;
   }
+  case Intrinsic::frexp: {
+    Value *X;
+    // The first result is idempotent with the added complication of the struct
+    // return, and the second result is zero because the value is already
+    // normalized.
+    if (match(II->getArgOperand(0), m_ExtractValue<0>(m_Value(X)))) {
+      if (match(X, m_Intrinsic<Intrinsic::frexp>(m_Value()))) {
+        X = Builder.CreateInsertValue(
+            X, Constant::getNullValue(II->getType()->getStructElementType(1)),
+            1);
+        return replaceInstUsesWith(*II, X);
+      }
+    }
+    break;
+  }
   default: {
     // Handle target specific intrinsics
     std::optional<Instruction *> V = targetInstCombineIntrinsic(*II);
