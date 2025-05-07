@@ -49,7 +49,7 @@ public:
     return TTI::PSK_FastHardware;
   }
 
-  unsigned getFlatAddressSpace() const {
+  unsigned getFlatAddressSpace() const override {
     if (ST->isVulkanEnv())
       return 0;
     // FIXME: Clang has 2 distinct address space maps. One where
