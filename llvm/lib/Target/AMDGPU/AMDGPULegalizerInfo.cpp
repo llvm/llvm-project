@@ -2531,7 +2531,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
     Register DstAsInt = B.buildSbfx(S32, SrcAsInt, B.buildConstant(S32, 0),
                                     B.buildConstant(S32, 24))
                             .getReg(0);
-    B.buildPtrToInt(Dst, DstAsInt);
+    B.buildIntToPtr(Dst, DstAsInt);
     MI.eraseFromParent();
     return true;
   }
@@ -2545,7 +2545,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
         B.buildOr(S32, SrcAsInt,
                   B.buildShl(S32, WgIdInCluster, B.buildConstant(S32, 24)))
             .getReg(0);
-    B.buildPtrToInt(Dst, DstAsInt);
+    B.buildIntToPtr(Dst, DstAsInt);
     MI.eraseFromParent();
     return true;
   }
