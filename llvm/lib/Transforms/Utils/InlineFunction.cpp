@@ -1829,7 +1829,13 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
                              Instruction *TheCall, bool CalleeHasDebugInfo) {
   if (!TheCall->getDebugLoc())
     return;
-  DebugLoc TheCallDL = TheCall->getDebugLoc().get()->getOrCloneWithoutAtom();
+
+  // Don't propagate the source location atom from the call to inlined nodebug
+  // instructions, and avoid putting it in the InlinedAt field of inlined
+  // not-nodebug instructions. FIXME: Possibly worth transferring/generating
+  // an atom for the returned value, otherwise we miss stepping on inlined
+  // nodebug functions (which is different to existing behaviour).
+  DebugLoc TheCallDL = TheCall->getDebugLoc().get()->getWithoutAtom();
 
   auto &Ctx = Fn->getContext();
   DILocation *InlinedAtNode = TheCallDL;

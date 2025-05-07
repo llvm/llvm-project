@@ -2284,7 +2284,7 @@ public:
 #endif
   }
 
-  const DILocation *getOrCloneWithoutAtom() const {
+  const DILocation *getWithoutAtom() const {
     if (!getAtomGroup() && !getAtomRank())
       return this;
     return get(getContext(), getLine(), getColumn(), getScope(), getInlinedAt(),
