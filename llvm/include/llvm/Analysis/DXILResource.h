@@ -375,7 +375,7 @@ public:
 
   const ResourceBinding &getBinding() const { return Binding; }
   TargetExtType *getHandleTy() const { return HandleTy; }
-  const StringRef getName() const { return Symbol ? Symbol->getName() : ""; }
+  StringRef getName() const { return Symbol ? Symbol->getName() : ""; }
 
   bool hasSymbol() const { return Symbol; }
   GlobalVariable *createSymbol(Module &M, StructType *Ty, StringRef Name = "");
