@@ -2602,7 +2602,8 @@ void VPExtendedReductionRecipe::print(raw_ostream &O, const Twine &Indent,
            RecurrenceDescriptor::getOpcode(getRecurrenceKind()))
     << " (";
   getVecOp()->printAsOperand(O, SlotTracker);
-  O << " extended to " << *getResultType();
+  printFlags(O);
+  O << Instruction::getOpcodeName(ExtOp) << " to " << *getResultType();
   if (isConditional()) {
     O << ", ";
     getCondOp()->printAsOperand(O, SlotTracker);
@@ -2627,12 +2628,14 @@ void VPMulAccumulateReductionRecipe::print(raw_ostream &O, const Twine &Indent,
     O << "(";
   getVecOp0()->printAsOperand(O, SlotTracker);
   if (isExtended())
-    O << " extended to " << *getResultType() << "), (";
+    O << " " << Instruction::getOpcodeName(ExtOp) << " to " << *getResultType()
+      << "), (";
   else
     O << ", ";
   getVecOp1()->printAsOperand(O, SlotTracker);
   if (isExtended())
-    O << " extended to " << *getResultType() << ")";
+    O << " " << Instruction::getOpcodeName(ExtOp) << " to " << *getResultType()
+      << ")";
   if (isConditional()) {
     O << ", ";
     getCondOp()->printAsOperand(O, SlotTracker);

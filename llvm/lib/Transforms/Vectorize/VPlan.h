@@ -1311,8 +1311,8 @@ protected:
         Opcode(I.getOpcode()) {}
 
   template <typename IterT>
-  VPWidenRecipe(unsigned VPDefOpcode, unsigned Opcode,
-                iterator_range<IterT> Operands, bool NUW, bool NSW, DebugLoc DL)
+  VPWidenRecipe(unsigned VPDefOpcode, unsigned Opcode, ArrayRef<IterT> Operands,
+                bool NUW, bool NSW, DebugLoc DL)
       : VPRecipeWithIRFlags(VPDefOpcode, Operands, WrapFlagsTy(NUW, NSW), DL),
         Opcode(Opcode) {}
 
@@ -1321,8 +1321,8 @@ public:
       : VPWidenRecipe(VPDef::VPWidenSC, I, Operands) {}
 
   template <typename IterT>
-  VPWidenRecipe(unsigned Opcode, iterator_range<IterT> Operands, bool NUW,
-                bool NSW, DebugLoc DL)
+  VPWidenRecipe(unsigned Opcode, ArrayRef<IterT> Operands, bool NUW, bool NSW,
+                DebugLoc DL)
       : VPWidenRecipe(VPDef::VPWidenSC, Opcode, Operands, NUW, NSW, DL) {}
 
   ~VPWidenRecipe() override = default;
@@ -2614,9 +2614,10 @@ public:
 /// concrete recipes before codegen. The operands are {ChainOp, VecOp,
 /// [Condition]}.
 class VPExtendedReductionRecipe : public VPReductionRecipe {
-  /// Opcode of the extend recipe will be lowered to.
+  /// Opcode of the extend for VecOp.
   Instruction::CastOps ExtOp;
 
+  /// The scalar type after extending.
   Type *ResultTy;
 
   /// For cloning VPExtendedReductionRecipe.
@@ -2637,10 +2638,8 @@ public:
         ExtOp(Ext->getOpcode()), ResultTy(Ext->getResultType()) {
     assert((ExtOp == Instruction::CastOps::ZExt ||
             ExtOp == Instruction::CastOps::SExt) &&
-           "VPExtendedReductionRecipe only support zext and sext.");
+           "VPExtendedReductionRecipe only supports zext and sext.");
 
-    // Not all WidenCastRecipes contain nneg flag. Need to transfer flags from
-    // the original recipe to prevent setting wrong flags.
     transferFlags(*Ext);
     setUnderlyingValue(R->getUnderlyingValue());
   }
@@ -2670,7 +2669,7 @@ public:
   /// Is the extend ZExt?
   bool isZExt() const { return getExtOpcode() == Instruction::ZExt; }
 
-  /// The opcode of extend recipe.
+  /// Get the opcode of the extend for VecOp.
   Instruction::CastOps getExtOpcode() const { return ExtOp; }
 };
 
@@ -2680,12 +2679,13 @@ public:
 /// recipe is abstract and needs to be lowered to concrete recipes before
 /// codegen. The operands are {ChainOp, VecOp1, VecOp2, [Condition]}.
 class VPMulAccumulateReductionRecipe : public VPReductionRecipe {
-  /// Opcode of the extend recipe.
+  /// Opcode of the extend for VecOp1 and VecOp2.
   Instruction::CastOps ExtOp;
 
   /// Non-neg flag of the extend recipe.
   bool IsNonNeg = false;
 
+  /// The scalar type after extending.
   Type *ResultTy;
 
   /// For cloning VPMulAccumulateReductionRecipe.
@@ -2716,7 +2716,7 @@ public:
            "be Add");
     assert((ExtOp == Instruction::CastOps::ZExt ||
             ExtOp == Instruction::CastOps::SExt) &&
-           "VPMulAccumulateReductionRecipe only support zext and sext.");
+           "VPMulAccumulateReductionRecipe only supports zext and sext.");
     setUnderlyingValue(R->getUnderlyingValue());
     // Only set the non-negative flag if the original recipe contains.
     if (Ext0->hasNonNegFlag())
@@ -2762,24 +2762,26 @@ public:
 
   Type *getResultType() const {
     assert(isExtended() && "Only support getResultType when this recipe "
-                           "contains implicit extend.");
+                           "is implicitly extend.");
     return ResultTy;
   }
 
-  /// The VPValue of the vector value to be extended and reduced.
+  /// The first vector value to be extended and reduced.
   VPValue *getVecOp0() const { return getOperand(1); }
+
+  /// The second vector value to be extended and reduced.
   VPValue *getVecOp1() const { return getOperand(2); }
 
-  /// Return if this MulAcc recipe contains extended operands.
+  /// Return true if this recipe contains extended operands.
   bool isExtended() const { return ExtOp != Instruction::CastOps::CastOpsEnd; }
 
   /// Return the opcode of the extends for the operands.
   Instruction::CastOps getExtOpcode() const { return ExtOp; }
 
-  /// Return if the operands are zero extended.
+  /// Return if the operands are zero-extended.
   bool isZExt() const { return ExtOp == Instruction::CastOps::ZExt; }
 
-  /// Return the non negative flag of the ext recipe.
+  /// Return true if the operand extends have the non-negative flag.
   bool isNonNeg() const { return IsNonNeg; }
 };
 

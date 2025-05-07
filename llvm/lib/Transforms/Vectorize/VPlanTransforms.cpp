@@ -2419,7 +2419,7 @@ static void expandVPExtendedReduction(VPExtendedReductionRecipe *ExtRed) {
 static void
 expandVPMulAccumulateReduction(VPMulAccumulateReductionRecipe *MulAcc) {
   // Generate inner VPWidenCastRecipes if necessary.
-  // Note that we will drop the extend after mul which transform
+  // Note that we will drop the extend after mul which transforms
   // reduce.add(ext(mul(ext, ext))) to reduce.add(mul(ext, ext)).
   VPValue *Op0, *Op1;
   if (MulAcc->isExtended()) {
@@ -2454,9 +2454,8 @@ expandVPMulAccumulateReduction(VPMulAccumulateReductionRecipe *MulAcc) {
 
   std::array<VPValue *, 2> MulOps = {Op0, Op1};
   auto *Mul = new VPWidenRecipe(
-      Instruction::Mul, make_range(MulOps.begin(), MulOps.end()),
-      MulAcc->hasNoUnsignedWrap(), MulAcc->hasNoSignedWrap(),
-      MulAcc->getDebugLoc());
+      Instruction::Mul, ArrayRef(MulOps), MulAcc->hasNoUnsignedWrap(),
+      MulAcc->hasNoSignedWrap(), MulAcc->getDebugLoc());
   Mul->insertBefore(MulAcc);
 
   auto *Red = new VPReductionRecipe(
@@ -2688,6 +2687,10 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
                                           VPCostContext &Ctx, VFRange &Range) {
   using namespace VPlanPatternMatch;
 
+  unsigned Opcode = RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind());
+  if (Opcode != Instruction::Add)
+    return nullptr;
+
   Type *RedTy = Ctx.Types.inferScalarType(Red);
 
   // Clamp the range if using multiply-accumulate-reduction is profitable.
@@ -2718,13 +2721,9 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
         Range);
   };
 
-  unsigned Opcode = RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind());
-  if (Opcode != Instruction::Add)
-    return nullptr;
-
   VPValue *VecOp = Red->getVecOp();
   VPValue *A, *B;
-  // Try to match reduce.add(mul(...))
+  // Try to match reduce.add(mul(...)).
   if (match(VecOp, m_Mul(m_VPValue(A), m_VPValue(B)))) {
     auto *RecipeA =
         dyn_cast_if_present<VPWidenCastRecipe>(A->getDefiningRecipe());
@@ -2732,7 +2731,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
         dyn_cast_if_present<VPWidenCastRecipe>(B->getDefiningRecipe());
     auto *Mul = cast<VPWidenRecipe>(VecOp->getDefiningRecipe());
 
-    // Match reduce.add(mul(ext, ext))
+    // Match reduce.add(mul(ext, ext)).
     if (RecipeA && RecipeB &&
         (RecipeA->getOpcode() == RecipeB->getOpcode() || A == B) &&
         match(RecipeA, m_ZExtOrSExt(m_VPValue())) &&
@@ -2742,11 +2741,11 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
                                    Mul, RecipeA, RecipeB, nullptr))
       return new VPMulAccumulateReductionRecipe(Red, Mul, RecipeA, RecipeB,
                                                 RecipeA->getResultType());
-    // Match reduce.add(mul)
+    // Match reduce.add(mul).
     if (IsMulAccValidAndClampRange(true, Mul, nullptr, nullptr, nullptr))
       return new VPMulAccumulateReductionRecipe(Red, Mul);
   }
-  // Match reduce.add(ext(mul(ext(A), ext(B))))
+  // Match reduce.add(ext(mul(ext(A), ext(B)))).
   // All extend recipes must have same opcode or A == B
   // which can be transform to reduce.add(zext(mul(sext(A), sext(B)))).
   if (match(VecOp, m_ZExtOrSExt(m_Mul(m_ZExtOrSExt(m_VPValue()),
