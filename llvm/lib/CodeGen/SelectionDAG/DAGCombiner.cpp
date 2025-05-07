@@ -10975,30 +10975,18 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
   // fold (srl (logic_op x, (shl (zext y), c1)), c1)
   //   -> (logic_op (srl x, c1), (zext y))
   // c1 <= leadingzeros(zext(y))
-  if (N1C && ISD::isBitwiseLogicOp(N0.getOpcode()) && N0.hasOneUse()) {
-    SDValue LHS = N0.getOperand(0);
-    SDValue RHS = N0.getOperand(1);
-    SDValue SHL;
-    SDValue Other;
-    if (LHS.getOpcode() == ISD::SHL) {
-      SHL = LHS;
-      Other = RHS;
-    } else if (RHS.getOpcode() == ISD::SHL) {
-      SHL = RHS;
-      Other = LHS;
-    }
-    if (SHL && SHL.getOperand(1) == N1 && SHL.hasOneUse()) {
-      SDValue ZExt = SHL.getOperand(0);
-      if (ZExt.getOpcode() == ISD::ZERO_EXTEND) {
-        unsigned NumLeadingZeros =
-            ZExt.getValueType().getScalarSizeInBits() -
-            ZExt.getOperand(0).getValueType().getScalarSizeInBits();
-        if (N1C->getZExtValue() <= NumLeadingZeros) {
-          return DAG.getNode(N0.getOpcode(), SDLoc(N0), VT,
-                             DAG.getNode(ISD::SRL, SDLoc(N0), VT, Other, N1),
-                             ZExt);
-        }
-      }
+  SDValue X, ZExtY;
+  if (N1C && sd_match(N0, m_OneUse(m_BitwiseLogic(
+                              m_Value(X),
+                              m_OneUse(m_Shl(m_AllOf(m_Value(ZExtY),
+                                                     m_Opc(ISD::ZERO_EXTEND)),
+                                             m_Specific(N1))))))) {
+    unsigned NumLeadingZeros =
+        ZExtY.getValueType().getScalarSizeInBits() -
+        ZExtY.getOperand(0).getValueType().getScalarSizeInBits();
+    if (N1C->getZExtValue() <= NumLeadingZeros) {
+      return DAG.getNode(N0.getOpcode(), SDLoc(N0), VT,
+                         DAG.getNode(ISD::SRL, SDLoc(N0), VT, X, N1), ZExtY);
     }
   }
 
