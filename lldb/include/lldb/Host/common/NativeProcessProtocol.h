@@ -274,9 +274,9 @@ public:
     savecore = (1u << 7),
     siginfo_read = (1u << 8),
     gpu_plugins = (1u << 9),
-    json_dynamic_loader = (1u << 10),
+    gpu_dyld = (1u << 10),
 
-    LLVM_MARK_AS_BITMASK_ENUM(json_dynamic_loader)
+    LLVM_MARK_AS_BITMASK_ENUM(gpu_dyld)
   };
 
   class Manager {

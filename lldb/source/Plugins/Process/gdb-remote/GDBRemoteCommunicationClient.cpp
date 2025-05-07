@@ -418,14 +418,14 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
         m_supports_memory_tagging = eLazyBoolYes;
       else if (x == "qSaveCore+")
         m_supports_qSaveCore = eLazyBoolYes;
-      else if (x == "jGPUPluginGetDynamicLoaderLibraryInfo+")
-        m_supports_jGPUPluginGetDynamicLoaderLibraryInfo = eLazyBoolYes;
       else if (x == "native-signals+")
         m_uses_native_signals = eLazyBoolYes;
       else if (x == "binary-upload+")
         m_x_packet_state = xPacketState::Prefixed;
       else if (x == "gpu-plugins+")
         m_supports_gpu_plugins = eLazyBoolYes;
+      else if (x == "gpu-dyld+")
+        m_supports_gdb_remote_gpu_dyld = eLazyBoolYes;
       else if (x == "ReverseContinue+")
         m_supports_reverse_continue = eLazyBoolYes;
       else if (x == "ReverseStep+")
