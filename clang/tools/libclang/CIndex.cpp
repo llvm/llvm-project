@@ -166,16 +166,22 @@ CXSourceRange cxloc::translateSourceRange(const SourceManager &SM,
         Lexer::MeasureTokenLength(SM.getSpellingLoc(EndLoc), SM, LangOpts);
     EndLoc = EndLoc.getLocWithOffset(Length);
   }
-
-  CXSourceRange Result = {
-      {&SM, &LangOpts}, R.getBegin().getRawEncoding(), EndLoc.getRawEncoding()};
+  unsigned BeginRaw, EndRaw;
+  if (!R.getBegin().getRawEncoding32(BeginRaw) ||
+      !EndLoc.getRawEncoding32(EndRaw))
+    return clang_getNullRange(); // location is too big for libclang ABI
+  CXSourceRange Result = {{&SM, &LangOpts}, BeginRaw, EndRaw};
   return Result;
 }
 
 CharSourceRange cxloc::translateCXRangeToCharRange(CXSourceRange R) {
+   if (!R.ptr_data[0])
+     return CharSourceRange();
+   const SourceManager &SM =
+      *static_cast<const SourceManager *>(R.ptr_data[0]);
   return CharSourceRange::getCharRange(
-      SourceLocation::getFromRawEncoding(R.begin_int_data),
-      SourceLocation::getFromRawEncoding(R.end_int_data));
+      SourceLocation::getFromRawEncoding32(SM, R.begin_int_data),
+      SourceLocation::getFromRawEncoding32(SM, R.end_int_data));
 }
 
 //===----------------------------------------------------------------------===//
@@ -2122,7 +2128,9 @@ public:
     return static_cast<const FieldDecl *>(data[0]);
   }
   SourceLocation getLoc() const {
-    return SourceLocation::getFromRawEncoding(
+    // this->get()->getASTContext().getSourceManager();
+    return SourceLocation::getFromRawEncoding32(
+        this->get()->getASTContext().getSourceManager(),
         (SourceLocation::UIntTy)(uintptr_t)data[1]);
   }
 };
@@ -7635,9 +7643,8 @@ CXString clang_getTokenSpelling(CXTranslationUnit TU, CXToken CXTok) {
   if (!CXXUnit)
     return cxstring::createEmpty();
 
-  SourceLocation Loc = SourceLocation::getFromRawEncoding(CXTok.int_data[1]);
-  FileIDAndOffset LocInfo =
-      CXXUnit->getSourceManager().getDecomposedSpellingLoc(Loc);
+  SourceLocation Loc = SourceLocation::getFromRawEncoding32(CXXUnit->getSourceManager(), CXTok.int_data[1]);
+  auto LocInfo = CXXUnit->getSourceManager().getDecomposedSpellingLoc(Loc);
   bool Invalid = false;
   StringRef Buffer =
       CXXUnit->getSourceManager().getBufferData(LocInfo.first, &Invalid);
@@ -7659,7 +7666,7 @@ CXSourceLocation clang_getTokenLocation(CXTranslationUnit TU, CXToken CXTok) {
 
   return cxloc::translateSourceLocation(
       CXXUnit->getASTContext(),
-      SourceLocation::getFromRawEncoding(CXTok.int_data[1]));
+      SourceLocation::getFromRawEncoding32(CXXUnit->getSourceManager(), CXTok.int_data[1]));
 }
 
 CXSourceRange clang_getTokenExtent(CXTranslationUnit TU, CXToken CXTok) {
@@ -7674,10 +7681,10 @@ CXSourceRange clang_getTokenExtent(CXTranslationUnit TU, CXToken CXTok) {
 
   return cxloc::translateSourceRange(
       CXXUnit->getASTContext(),
-      SourceLocation::getFromRawEncoding(CXTok.int_data[1]));
+      SourceLocation::getFromRawEncoding32(CXXUnit->getSourceManager(), CXTok.int_data[1]));
 }
 
-static void getTokens(ASTUnit *CXXUnit, SourceRange Range,
+static bool getTokens(ASTUnit *CXXUnit, SourceRange Range,
                       SmallVectorImpl<CXToken> &CXTokens) {
   SourceManager &SourceMgr = CXXUnit->getSourceManager();
   FileIDAndOffset BeginLocInfo =
@@ -7687,13 +7694,13 @@ static void getTokens(ASTUnit *CXXUnit, SourceRange Range,
 
   // Cannot tokenize across files.
   if (BeginLocInfo.first != EndLocInfo.first)
-    return;
+    return false;
 
   // Create a lexer
   bool Invalid = false;
   StringRef Buffer = SourceMgr.getBufferData(BeginLocInfo.first, &Invalid);
   if (Invalid)
-    return;
+    return false;
 
   Lexer Lex(SourceMgr.getLocForStartOfFile(BeginLocInfo.first),
             CXXUnit->getASTContext().getLangOpts(), Buffer.begin(),
@@ -7714,7 +7721,12 @@ static void getTokens(ASTUnit *CXXUnit, SourceRange Range,
     CXToken CXTok;
 
     //   - Common fields
-    CXTok.int_data[1] = Tok.getLocation().getRawEncoding();
+    // CXTok.int_data[1] = Tok.getLocation().getRawEncoding();
+    uint32_t TokLocRaw;
+    if (!Tok.getLocation().getRawEncoding32(TokLocRaw))
+      return false; // location is too big for libclang ABI
+    CXTok.int_data[1] = TokLocRaw;
+    
     CXTok.int_data[2] = Tok.getLength();
     CXTok.int_data[3] = 0;
 
@@ -7743,6 +7755,8 @@ static void getTokens(ASTUnit *CXXUnit, SourceRange Range,
     CXTokens.push_back(CXTok);
     previousWasAt = Tok.is(tok::at);
   } while (Lex.getBufferLocation() < EffectiveBufferEnd);
+
+  return true;
 }
 
 CXToken *clang_getToken(CXTranslationUnit TU, CXSourceLocation Location) {
@@ -7769,7 +7783,8 @@ CXToken *clang_getToken(CXTranslationUnit TU, CXSourceLocation Location) {
       SM.getComposedLoc(DecomposedEnd.first, DecomposedEnd.second);
 
   SmallVector<CXToken, 32> CXTokens;
-  getTokens(CXXUnit, SourceRange(Begin, End), CXTokens);
+  if (!getTokens(CXXUnit, SourceRange(Begin, End), CXTokens))
+    return nullptr;
 
   if (CXTokens.empty())
     return nullptr;
@@ -7806,7 +7821,8 @@ void clang_tokenize(CXTranslationUnit TU, CXSourceRange Range, CXToken **Tokens,
     return;
 
   SmallVector<CXToken, 32> CXTokens;
-  getTokens(CXXUnit, R, CXTokens);
+  if (!getTokens(CXXUnit, R, CXTokens))
+    return;
 
   if (CXTokens.empty())
     return;
@@ -7870,13 +7886,15 @@ class AnnotateTokensWorker {
   unsigned NextToken() const { return TokIdx; }
   void AdvanceToken() { ++TokIdx; }
   SourceLocation GetTokenLoc(unsigned tokI) {
-    return SourceLocation::getFromRawEncoding(getTok(tokI).int_data[1]);
+    return SourceLocation::getFromRawEncoding32(SrcMgr,
+                                                getTok(tokI).int_data[1]);
   }
   bool isFunctionMacroToken(unsigned tokI) const {
     return getTok(tokI).int_data[3] != 0;
   }
   SourceLocation getFunctionMacroTokenLoc(unsigned tokI) const {
-    return SourceLocation::getFromRawEncoding(getTok(tokI).int_data[3]);
+    return SourceLocation::getFromRawEncoding32(SrcMgr,
+                                                getTok(tokI).int_data[3]);
   }
 
   void annotateAndAdvanceTokens(CXCursor, RangeComparisonResult, SourceRange);
@@ -8371,13 +8389,16 @@ private:
   }
 
   SourceLocation getTokenLoc(unsigned tokI) {
-    return SourceLocation::getFromRawEncoding(getTok(tokI).int_data[1]);
+    return SourceLocation::getFromRawEncoding32(SM, getTok(tokI).int_data[1]);
   }
 
   void setFunctionMacroTokenLoc(unsigned tokI, SourceLocation loc) {
     // The third field is reserved and currently not used. Use it here
     // to mark macro arg expanded tokens with their expanded locations.
-    getTok(tokI).int_data[3] = loc.getRawEncoding();
+    uint32_t Raw;
+    if (!loc.getRawEncoding32(Raw))
+      Raw = 0; // invalid source location
+    getTok(tokI).int_data[3] = Raw;
   }
 };
 
@@ -8437,8 +8458,8 @@ static void annotatePreprocessorTokens(CXTranslationUnit TU,
     if (lexNext(Lex, Tok, NextIdx, NumTokens))
       break;
     unsigned TokIdx = NextIdx - 1;
-    assert(Tok.getLocation() ==
-           SourceLocation::getFromRawEncoding(Tokens[TokIdx].int_data[1]));
+    assert(Tok.getLocation() == SourceLocation::getFromRawEncoding32(
+                                    SourceMgr, Tokens[TokIdx].int_data[1]));
 
   reprocess:
     if (Tok.is(tok::hash) && Tok.isAtStartOfLine()) {
@@ -8488,8 +8509,8 @@ static void annotatePreprocessorTokens(CXTranslationUnit TU,
 
       unsigned LastIdx = finished ? NextIdx - 1 : NextIdx - 2;
       assert(TokIdx <= LastIdx);
-      SourceLocation EndLoc =
-          SourceLocation::getFromRawEncoding(Tokens[LastIdx].int_data[1]);
+      SourceLocation EndLoc = SourceLocation::getFromRawEncoding32(
+          SourceMgr, Tokens[LastIdx].int_data[1]);
       CXCursor Cursor =
           MakePreprocessingDirectiveCursor(SourceRange(BeginLoc, EndLoc), TU);
 

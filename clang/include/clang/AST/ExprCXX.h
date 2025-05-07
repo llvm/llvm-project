@@ -724,7 +724,7 @@ public:
   CXXBoolLiteralExpr(bool Val, QualType Ty, SourceLocation Loc)
       : Expr(CXXBoolLiteralExprClass, Ty, VK_PRValue, OK_Ordinary) {
     CXXBoolLiteralExprBits.Value = Val;
-    CXXBoolLiteralExprBits.Loc = Loc;
+    CXXBoolLiteralExprBits.Loc = Loc.getRawEncoding();
     setDependence(ExprDependence::None);
   }
 
@@ -742,8 +742,12 @@ public:
   SourceLocation getBeginLoc() const { return getLocation(); }
   SourceLocation getEndLoc() const { return getLocation(); }
 
-  SourceLocation getLocation() const { return CXXBoolLiteralExprBits.Loc; }
-  void setLocation(SourceLocation L) { CXXBoolLiteralExprBits.Loc = L; }
+  SourceLocation getLocation() const {
+    return SourceLocation::getFromRawEncoding(CXXBoolLiteralExprBits.Loc);
+  }
+  void setLocation(SourceLocation L) {
+    CXXBoolLiteralExprBits.Loc = L.getRawEncoding();
+  }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CXXBoolLiteralExprClass;
@@ -768,7 +772,7 @@ class CXXNullPtrLiteralExpr : public Expr {
 public:
   CXXNullPtrLiteralExpr(QualType Ty, SourceLocation Loc)
       : Expr(CXXNullPtrLiteralExprClass, Ty, VK_PRValue, OK_Ordinary) {
-    CXXNullPtrLiteralExprBits.Loc = Loc;
+    CXXNullPtrLiteralExprBits.Loc = Loc.getRawEncoding();
     setDependence(ExprDependence::None);
   }
 
@@ -778,8 +782,12 @@ public:
   SourceLocation getBeginLoc() const { return getLocation(); }
   SourceLocation getEndLoc() const { return getLocation(); }
 
-  SourceLocation getLocation() const { return CXXNullPtrLiteralExprBits.Loc; }
-  void setLocation(SourceLocation L) { CXXNullPtrLiteralExprBits.Loc = L; }
+  SourceLocation getLocation() const {
+    return SourceLocation::getFromRawEncoding(CXXNullPtrLiteralExprBits.Loc);
+  }
+  void setLocation(SourceLocation L) {
+    CXXNullPtrLiteralExprBits.Loc = L.getRawEncoding();
+  }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CXXNullPtrLiteralExprClass;
@@ -1152,11 +1160,12 @@ public:
 /// };
 /// \endcode
 class CXXThisExpr : public Expr {
+
   CXXThisExpr(SourceLocation L, QualType Ty, bool IsImplicit, ExprValueKind VK)
       : Expr(CXXThisExprClass, Ty, VK, OK_Ordinary) {
     CXXThisExprBits.IsImplicit = IsImplicit;
     CXXThisExprBits.CapturedByCopyInLambdaWithExplicitObjectParameter = false;
-    CXXThisExprBits.Loc = L;
+    CXXThisExprBits.Loc = L.getRawEncoding();
     setDependence(computeDependence(this));
   }
 
@@ -1168,8 +1177,12 @@ public:
 
   static CXXThisExpr *CreateEmpty(const ASTContext &Ctx);
 
-  SourceLocation getLocation() const { return CXXThisExprBits.Loc; }
-  void setLocation(SourceLocation L) { CXXThisExprBits.Loc = L; }
+  SourceLocation getLocation() const {
+    return SourceLocation::getFromRawEncoding(CXXThisExprBits.Loc);
+  }
+  void setLocation(SourceLocation L) {
+    CXXThisExprBits.Loc = L.getRawEncoding();
+  }
 
   SourceLocation getBeginLoc() const { return getLocation(); }
   SourceLocation getEndLoc() const { return getLocation(); }
@@ -1219,7 +1232,7 @@ public:
   CXXThrowExpr(Expr *Operand, QualType Ty, SourceLocation Loc,
                bool IsThrownVariableInScope)
       : Expr(CXXThrowExprClass, Ty, VK_PRValue, OK_Ordinary), Operand(Operand) {
-    CXXThrowExprBits.ThrowLoc = Loc;
+    CXXThrowExprBits.ThrowLoc = Loc.getRawEncoding();
     CXXThrowExprBits.IsThrownVariableInScope = IsThrownVariableInScope;
     setDependence(computeDependence(this));
   }
@@ -1228,7 +1241,9 @@ public:
   const Expr *getSubExpr() const { return cast_or_null<Expr>(Operand); }
   Expr *getSubExpr() { return cast_or_null<Expr>(Operand); }
 
-  SourceLocation getThrowLoc() const { return CXXThrowExprBits.ThrowLoc; }
+  SourceLocation getThrowLoc() const {
+    return SourceLocation::getFromRawEncoding(CXXThrowExprBits.ThrowLoc);
+  }
 
   /// Determines whether the variable thrown by this expression (if any!)
   /// is within the innermost try block.
@@ -1287,7 +1302,7 @@ class CXXDefaultArgExpr final
              Param->getDefaultArg()->getValueKind(),
              Param->getDefaultArg()->getObjectKind()),
         Param(Param), UsedContext(UsedContext) {
-    CXXDefaultArgExprBits.Loc = Loc;
+    CXXDefaultArgExprBits.Loc = Loc.getRawEncoding();
     CXXDefaultArgExprBits.HasRewrittenInit = RewrittenExpr != nullptr;
     if (RewrittenExpr)
       *getTrailingObjects() = RewrittenExpr;
@@ -1341,7 +1356,9 @@ public:
   DeclContext *getUsedContext() { return UsedContext; }
 
   /// Retrieve the location where this default argument was actually used.
-  SourceLocation getUsedLocation() const { return CXXDefaultArgExprBits.Loc; }
+  SourceLocation getUsedLocation() const {
+    return SourceLocation::getFromRawEncoding(CXXDefaultArgExprBits.Loc);
+  }
 
   /// Default argument expressions have no representation in the
   /// source, so they have an empty source range.
@@ -1384,7 +1401,6 @@ class CXXDefaultInitExpr final
 
   /// The context where the default initializer expression was used.
   DeclContext *UsedContext;
-
   CXXDefaultInitExpr(const ASTContext &Ctx, SourceLocation Loc,
                      FieldDecl *Field, QualType Ty, DeclContext *UsedContext,
                      Expr *RewrittenInitExpr);
@@ -1438,8 +1454,10 @@ public:
   /// actually used.
   SourceLocation getUsedLocation() const { return getBeginLoc(); }
 
-  SourceLocation getBeginLoc() const { return CXXDefaultInitExprBits.Loc; }
-  SourceLocation getEndLoc() const { return CXXDefaultInitExprBits.Loc; }
+  SourceLocation getBeginLoc() const {
+    return SourceLocation::getFromRawEncoding(CXXDefaultInitExprBits.Loc);
+  }
+  SourceLocation getEndLoc() const { return getBeginLoc(); }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CXXDefaultInitExprClass;
@@ -1555,7 +1573,7 @@ class CXXConstructExpr : public Expr {
 
   /// The number of arguments.
   unsigned NumArgs;
-
+  SourceLocation Loc;
   // We would like to stash the arguments of the constructor call after
   // CXXConstructExpr. However CXXConstructExpr is used as a base class of
   // CXXTemporaryObjectExpr which makes the use of llvm::TrailingObjects
@@ -1610,8 +1628,8 @@ public:
   /// Get the constructor that this expression will (ultimately) call.
   CXXConstructorDecl *getConstructor() const { return Constructor; }
 
-  SourceLocation getLocation() const { return CXXConstructExprBits.Loc; }
-  void setLocation(SourceLocation Loc) { CXXConstructExprBits.Loc = Loc; }
+  SourceLocation getLocation() const { return Loc; }
+  void setLocation(SourceLocation Loc) { this->Loc = Loc; }
 
   /// Whether this construction is elidable.
   bool isElidable() const { return CXXConstructExprBits.Elidable; }
@@ -2193,7 +2211,7 @@ public:
                          SourceLocation RParenLoc)
       : Expr(CXXScalarValueInitExprClass, Type, VK_PRValue, OK_Ordinary),
         TypeInfo(TypeInfo) {
-    CXXScalarValueInitExprBits.RParenLoc = RParenLoc;
+    CXXScalarValueInitExprBits.RParenLoc = RParenLoc.getRawEncoding();
     setDependence(computeDependence(this));
   }
 
@@ -2205,7 +2223,8 @@ public:
   }
 
   SourceLocation getRParenLoc() const {
-    return CXXScalarValueInitExprBits.RParenLoc;
+    return SourceLocation::getFromRawEncoding(
+        CXXScalarValueInitExprBits.RParenLoc);
   }
 
   SourceLocation getBeginLoc() const LLVM_READONLY;
@@ -2622,7 +2641,7 @@ public:
     CXXDeleteExprBits.ArrayForm = ArrayForm;
     CXXDeleteExprBits.ArrayFormAsWritten = ArrayFormAsWritten;
     CXXDeleteExprBits.UsualArrayDeleteWantsSize = UsualArrayDeleteWantsSize;
-    CXXDeleteExprBits.Loc = Loc;
+    CXXDeleteExprBits.Loc = Loc.getRawEncoding();
     setDependence(computeDependence(this));
   }
 
@@ -2653,7 +2672,9 @@ public:
   /// be a pointer, return an invalid type.
   QualType getDestroyedType() const;
 
-  SourceLocation getBeginLoc() const { return CXXDeleteExprBits.Loc; }
+  SourceLocation getBeginLoc() const {
+    return SourceLocation::getFromRawEncoding(CXXDeleteExprBits.Loc);
+  }
   SourceLocation getEndLoc() const LLVM_READONLY {
     return Argument->getEndLoc();
   }
@@ -3908,7 +3929,8 @@ public:
 
   /// Retrieve the location of the '->' or '.' operator.
   SourceLocation getOperatorLoc() const {
-    return CXXDependentScopeMemberExprBits.OperatorLoc;
+    return SourceLocation::getFromRawEncoding(
+        CXXDependentScopeMemberExprBits.OperatorLoc);
   }
 
   /// Retrieve the nested-name-specifier that qualifies the member name.
@@ -4630,12 +4652,13 @@ public:
         AssociatedDeclAndRef(AssociatedDecl, RefParam), Index(Index),
         PackIndex(PackIndex.toInternalRepresentation()), Final(Final) {
     assert(AssociatedDecl != nullptr);
-    SubstNonTypeTemplateParmExprBits.NameLoc = Loc;
+    SubstNonTypeTemplateParmExprBits.NameLoc = Loc.getRawEncoding();
     setDependence(computeDependence(this));
   }
 
   SourceLocation getNameLoc() const {
-    return SubstNonTypeTemplateParmExprBits.NameLoc;
+    return SourceLocation::getFromRawEncoding(
+        SubstNonTypeTemplateParmExprBits.NameLoc);
   }
   SourceLocation getBeginLoc() const { return getNameLoc(); }
   SourceLocation getEndLoc() const { return getNameLoc(); }

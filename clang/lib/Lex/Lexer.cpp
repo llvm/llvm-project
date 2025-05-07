@@ -579,7 +579,8 @@ static SourceLocation getBeginningOfFileToken(SourceLocation Loc,
     return Loc;
 
   // Create a lexer starting at the beginning of this token.
-  SourceLocation LexerStartLoc = Loc.getLocWithOffset(-LocInfo.second);
+  SourceLocation LexerStartLoc = Loc.getLocWithOffset(
+      -static_cast<SourceLocation::UIntTy>(LocInfo.second));
   Lexer TheLexer(LexerStartLoc, LangOpts, Buffer.data(), LexStart,
                  Buffer.end());
   TheLexer.SetCommentRetentionState(true);
@@ -621,7 +622,9 @@ SourceLocation Lexer::GetBeginningOfToken(SourceLocation Loc,
   FileIDAndOffset BeginFileLocInfo = SM.getDecomposedLoc(BeginFileLoc);
   assert(FileLocInfo.first == BeginFileLocInfo.first &&
          FileLocInfo.second >= BeginFileLocInfo.second);
-  return Loc.getLocWithOffset(BeginFileLocInfo.second - FileLocInfo.second);
+  return Loc.getLocWithOffset(
+      static_cast<SourceLocation::UIntTy>(BeginFileLocInfo.second) -
+      FileLocInfo.second);
 }
 
 namespace {

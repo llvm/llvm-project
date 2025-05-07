@@ -1879,9 +1879,7 @@ SourceManager::getMacroArgExpandedLocation(SourceLocation Loc) const {
   if (Loc.isInvalid() || !Loc.isFileID())
     return Loc;
 
-  FileID FID;
-  unsigned Offset;
-  std::tie(FID, Offset) = getDecomposedLoc(Loc);
+  auto [FID, Offset] = getDecomposedLoc(Loc);
   if (FID.isInvalid())
     return Loc;
 

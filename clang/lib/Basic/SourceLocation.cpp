@@ -17,6 +17,8 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <string>
@@ -47,6 +49,42 @@ static_assert(std::is_trivially_destructible_v<SourceLocation>,
 static_assert(std::is_trivially_destructible_v<SourceRange>,
               "SourceRange must be trivially destructible because it is "
               "used in unions");
+
+SourceLocation SourceLocation::getFromRawEncoding32(const SourceManager &SM,
+                                                    uint32_t Encoding32) {
+  uint32_t Lower31Bits = Encoding32 & llvm::maskTrailingOnes<uint32_t>(31);
+  uint64_t MacroBit =
+      (static_cast<uint64_t>(Encoding32) & llvm::maskLeadingOnes<uint32_t>(1))
+      << (Bits - 32);
+
+  if (Lower31Bits < SM.getNextLocalOffset()) {
+    // This is local offset, 32-to-64 offset mapping is identical.
+    UIntTy Raw64 = Lower31Bits | MacroBit;
+    return getFromRawEncoding(Raw64);
+  }
+  // Offset of loaded source location.
+  //   2^40 -> 2^31
+  //   2^40 - 1 -> 2^31 - 1
+  static constexpr uint64_t RangeMask =
+      llvm::maskTrailingOnes<uint64_t>(Bits - 32) << 31;
+  return getFromRawEncoding(RangeMask | Lower31Bits | MacroBit);
+}
+
+bool clang::SourceLocation::getRawEncoding32(uint32_t &Result) const {
+  // A mask that isolates this check to the required range higher of bits.
+  static constexpr uint64_t RangeMask =
+      llvm::maskTrailingOnes<uint64_t>(Bits - 32) << 31;
+
+  // Check if the ID can be safely compressed to a 32-bit integer.
+  // The truncation is only possible if all higher bits of the ID are all
+  // identical:
+  //   all 0s for the local offset, or all 1s for loaded offset
+  if ((ID ^ (ID << 1)) & RangeMask)
+    return false; // won't fit
+  uint32_t Lower31Bits = ID & llvm::maskTrailingOnes<uint32_t>(31);
+  // Restore the top macro bit.
+  return Result = Lower31Bits | ((ID & MacroIDBit) >> (Bits - 32));
+}
 
 unsigned SourceLocation::getHashValue() const {
   return llvm::DenseMapInfo<UIntTy>::getHashValue(ID);

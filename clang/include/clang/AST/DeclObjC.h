@@ -1090,10 +1090,12 @@ public:
   /// Note, the superclass's properties are not included in the list.
   virtual void collectPropertiesToImplement(PropertyMap &PM) const {}
 
-  SourceLocation getAtStartLoc() const { return ObjCContainerDeclBits.AtStart; }
+  SourceLocation getAtStartLoc() const {
+    return SourceLocation::getFromRawEncoding(ObjCContainerDeclBits.AtStart);
+  }
 
   void setAtStartLoc(SourceLocation Loc) {
-    ObjCContainerDeclBits.AtStart = Loc;
+    ObjCContainerDeclBits.AtStart = Loc.getRawEncoding();
   }
 
   // Marks the end of the container.

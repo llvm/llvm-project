@@ -17,6 +17,7 @@
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <cstdint>
 #include <string>
@@ -70,8 +71,6 @@ private:
   int getOpaqueValue() const { return ID; }
 };
 
-using FileIDAndOffset = std::pair<FileID, unsigned>;
-
 /// Encodes a location in the source. The SourceManager can decode this
 /// to get at the full include stack, line and column information.
 ///
@@ -86,7 +85,9 @@ using FileIDAndOffset = std::pair<FileID, unsigned>;
 /// In addition, one bit of SourceLocation is used for quick access to the
 /// information whether the location is in a file or a macro expansion.
 ///
-/// It is important that this type remains small. It is currently 32 bits wide.
+/// It is important that this type remains small.
+/// SourceLocation is 8 bytes, and internally only the lower `Bits` bits are
+/// used. This means the total addressable source space to 2^(Bits - 1).
 class SourceLocation {
   friend class ASTReader;
   friend class ASTWriter;
@@ -95,13 +96,15 @@ class SourceLocation {
   friend class SourceLocationEncoding;
 
 public:
-  using UIntTy = uint32_t;
-  using IntTy = int32_t;
+  using UIntTy = uint64_t;
+  using IntTy = int64_t;
+  // Number of bits used for the source space, one bit is preserved for MacroID.
+  static constexpr unsigned Bits = 40;
 
 private:
-  UIntTy ID = 0;
+  uint64_t ID = 0;
 
-  enum : UIntTy { MacroIDBit = 1ULL << (8 * sizeof(UIntTy) - 1) };
+  enum : UIntTy { MacroIDBit = 1ULL << (Bits - 1) };
 
 public:
   bool isFileID() const  { return (ID & MacroIDBit) == 0; }
@@ -144,7 +147,7 @@ public:
   }
 
   /// When a SourceLocation itself cannot be used, this returns
-  /// an (opaque) 32-bit integer encoding for it.
+  /// an (opaque) 64-bit integer encoding for it.
   ///
   /// This should only be passed to SourceLocation::getFromRawEncoding, it
   /// should not be inspected directly.
@@ -159,6 +162,17 @@ public:
     X.ID = Encoding;
     return X;
   }
+
+  // APIs for 32-bit source location conversion.
+  // !! These are used *only* by libclang for backward compatibility.
+  //
+  // Returns true if this SourceLocation can be losslessly represented as
+  // a 32-bit integer.
+  bool getRawEncoding32(uint32_t &Result) const;
+  // Constructs a 64-bit SourceLocation from a 32-bit raw-encoded value,
+  // using the given SourceManager context.
+  static SourceLocation getFromRawEncoding32(const SourceManager &SM,
+                                             uint32_t Encoding32);
 
   /// When a SourceLocation itself cannot be used, this returns
   /// an (opaque) pointer encoding for it.
@@ -210,6 +224,7 @@ inline bool operator<=(const SourceLocation &LHS, const SourceLocation &RHS) {
 inline bool operator>=(const SourceLocation &LHS, const SourceLocation &RHS) {
   return LHS.getRawEncoding() >= RHS.getRawEncoding();
 }
+using FileIDAndOffset = std::pair<FileID, unsigned>;
 
 /// A trivial tuple used to represent a source range.
 class SourceRange {

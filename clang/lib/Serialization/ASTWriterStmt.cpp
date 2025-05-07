@@ -514,7 +514,7 @@ void ASTStmtWriter::VisitRequiresExpr(RequiresExpr *E) {
   VisitExpr(E);
   Record.push_back(E->getLocalParameters().size());
   Record.push_back(E->getRequirements().size());
-  Record.AddSourceLocation(E->RequiresExprBits.RequiresKWLoc);
+  Record.AddSourceLocation(E->getRequiresKWLoc());
   Record.push_back(E->RequiresExprBits.IsSatisfied);
   Record.AddDeclRef(E->getBody());
   for (ParmVarDecl *P : E->getLocalParameters())

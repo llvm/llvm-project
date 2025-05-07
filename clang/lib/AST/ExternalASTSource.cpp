@@ -72,7 +72,7 @@ bool ExternalASTSource::layoutRecordType(
 
 Decl *ExternalASTSource::GetExternalDecl(GlobalDeclID ID) { return nullptr; }
 
-Selector ExternalASTSource::GetExternalSelector(uint32_t ID) {
+Selector ExternalASTSource::GetExternalSelector(uint64_t ID) {
   return Selector();
 }
 

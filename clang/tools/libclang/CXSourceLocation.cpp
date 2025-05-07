@@ -211,24 +211,27 @@ static void createNullLocation(CXString *filename, unsigned *line,
 }
 
 int clang_Location_isInSystemHeader(CXSourceLocation location) {
+  if (!location.ptr_data[0])
+    return 0;
+  const SourceManager &SM =
+      *static_cast<const SourceManager *>(location.ptr_data[0]);
   const SourceLocation Loc =
-    SourceLocation::getFromRawEncoding(location.int_data);
+    SourceLocation::getFromRawEncoding32(SM, location.int_data);
   if (Loc.isInvalid())
     return 0;
 
-  const SourceManager &SM =
-    *static_cast<const SourceManager*>(location.ptr_data[0]);
   return SM.isInSystemHeader(Loc);
 }
 
 int clang_Location_isFromMainFile(CXSourceLocation location) {
+  if (!location.ptr_data[0])
+    return 0;
+  const SourceManager &SM =
+      *static_cast<const SourceManager *>(location.ptr_data[0]);
   const SourceLocation Loc =
-    SourceLocation::getFromRawEncoding(location.int_data);
+      SourceLocation::getFromRawEncoding32(SM, location.int_data);
   if (Loc.isInvalid())
     return 0;
-
-  const SourceManager &SM =
-    *static_cast<const SourceManager*>(location.ptr_data[0]);
   return SM.isWrittenInMainFile(Loc);
 }
 
@@ -241,16 +244,21 @@ void clang_getExpansionLocation(CXSourceLocation location,
     CXLoadedDiagnostic::decodeLocation(location, file, line, column, offset);
     return;
   }
-
-  SourceLocation Loc = SourceLocation::getFromRawEncoding(location.int_data);
-
-  if (!location.ptr_data[0] || Loc.isInvalid()) {
+  if (!location.ptr_data[0]) {
     createNullLocation(file, line, column, offset);
     return;
   }
 
   const SourceManager &SM =
-  *static_cast<const SourceManager*>(location.ptr_data[0]);
+      *static_cast<const SourceManager *>(location.ptr_data[0]);
+  SourceLocation Loc =
+      SourceLocation::getFromRawEncoding32(SM, location.int_data);
+
+  if (Loc.isInvalid()) {
+    createNullLocation(file, line, column, offset);
+    return;
+  }
+
   SourceLocation ExpansionLoc = SM.getExpansionLoc(Loc);
   
   // Check that the FileID is invalid on the expansion location.
@@ -283,16 +291,21 @@ void clang_getPresumedLocation(CXSourceLocation location,
     createNullLocation(filename, line, column);
     return;
   }
-
-  SourceLocation Loc = SourceLocation::getFromRawEncoding(location.int_data);
-
-  if (!location.ptr_data[0] || Loc.isInvalid()) {
+  if (!location.ptr_data[0]) {
     createNullLocation(filename, line, column);
     return;
   }
 
   const SourceManager &SM =
       *static_cast<const SourceManager *>(location.ptr_data[0]);
+  SourceLocation Loc =
+      SourceLocation::getFromRawEncoding32(SM, location.int_data);
+
+  if (Loc.isInvalid()) {
+    createNullLocation(filename, line, column);
+    return;
+  }
+
   PresumedLoc PreLoc = SM.getPresumedLoc(Loc);
   if (PreLoc.isInvalid()) {
     createNullLocation(filename, line, column);
@@ -323,14 +336,16 @@ void clang_getSpellingLocation(CXSourceLocation location,
                                            column, offset);
     return;
   }
-  
-  SourceLocation Loc = SourceLocation::getFromRawEncoding(location.int_data);
-  
-  if (!location.ptr_data[0] || Loc.isInvalid())
+  if (!location.ptr_data[0])
     return createNullLocation(file, line, column, offset);
-  
   const SourceManager &SM =
-  *static_cast<const SourceManager*>(location.ptr_data[0]);
+      *static_cast<const SourceManager *>(location.ptr_data[0]);
+  SourceLocation Loc =
+      SourceLocation::getFromRawEncoding32(SM, location.int_data);
+
+  if (Loc.isInvalid())
+    return createNullLocation(file, line, column, offset);
+
   SourceLocation SpellLoc = SM.getSpellingLoc(Loc);
   FileIDAndOffset LocInfo = SM.getDecomposedLoc(SpellLoc);
   FileID FID = LocInfo.first;
@@ -360,13 +375,17 @@ void clang_getFileLocation(CXSourceLocation location,
     return;
   }
 
-  SourceLocation Loc = SourceLocation::getFromRawEncoding(location.int_data);
-
-  if (!location.ptr_data[0] || Loc.isInvalid())
+  if (!location.ptr_data[0])
     return createNullLocation(file, line, column, offset);
 
   const SourceManager &SM =
-  *static_cast<const SourceManager*>(location.ptr_data[0]);
+      *static_cast<const SourceManager *>(location.ptr_data[0]);
+  SourceLocation Loc =
+      SourceLocation::getFromRawEncoding32(SM, location.int_data);
+
+  if (Loc.isInvalid())
+    return createNullLocation(file, line, column, offset);
+
   SourceLocation FileLoc = SM.getFileLoc(Loc);
   FileIDAndOffset LocInfo = SM.getDecomposedLoc(FileLoc);
   FileID FID = LocInfo.first;
