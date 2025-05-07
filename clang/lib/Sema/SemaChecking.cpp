@@ -12507,8 +12507,10 @@ static void AnalyzeImplicitConversions(
       /// conversion for the entire comma expression itself. This is similar to
       /// how CheckConditionalOperand behaves; it's as-if the correct operand
       /// were directly used for the implicit conversion check.
-      CheckCommaOperand(S, BO->getLHS(), T, BO->getOperatorLoc(), false);
-      CheckCommaOperand(S, BO->getRHS(), T, BO->getOperatorLoc(), true);
+      CheckCommaOperand(S, BO->getLHS(), T, BO->getOperatorLoc(),
+                        /*ExtraCheckForImplicitConversion=*/false);
+      CheckCommaOperand(S, BO->getRHS(), T, BO->getOperatorLoc(),
+                        /*ExtraCheckForImplicitConversion=*/true);
       return;
     }
 
