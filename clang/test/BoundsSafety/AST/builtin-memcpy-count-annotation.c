@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -ast-dump -fbounds-safety %s -Wcast-qual 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -ast-dump -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental %s -Wcast-qual 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -ast-dump -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc %s -Wcast-qual 2>&1 | FileCheck %s
 
 #include <ptrcheck.h>
 

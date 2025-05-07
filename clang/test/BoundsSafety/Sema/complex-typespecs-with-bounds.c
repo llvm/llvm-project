@@ -1,6 +1,6 @@
 
 // RUN: %clang_cc1 -fsyntax-only -fbounds-safety -verify %s
-// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -verify %s
 
 // Tests the correctness of applying bounds attributes to complex type specifiers
 // as well as to what extent other attributes (represented by _Nullable) are retained.

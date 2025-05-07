@@ -2,11 +2,11 @@
 #include <system-header-unsafe-sys.h>
 
 // RUN: %clang_cc1 -ast-dump -fbounds-safety %s -I %S/include | FileCheck %s --implicit-check-not "GetBoundExpr {{.+}} 'char *__single'" --implicit-check-not "GetBoundExpr {{.+}} 'char *'" --check-prefix RELAXED
-// RUN: %clang_cc1 -ast-dump -fbounds-safety %s -I %S/include -x objective-c -fbounds-attributes-objc-experimental | FileCheck %s --implicit-check-not "GetBoundExpr {{.+}} 'char *__single'" --implicit-check-not "GetBoundExpr {{.+}} 'char *'" --check-prefix RELAXED
+// RUN: %clang_cc1 -ast-dump -fbounds-safety %s -I %S/include -x objective-c -fexperimental-bounds-safety-objc | FileCheck %s --implicit-check-not "GetBoundExpr {{.+}} 'char *__single'" --implicit-check-not "GetBoundExpr {{.+}} 'char *'" --check-prefix RELAXED
 // expected-no-diagnostics
 
 // RUN: %clang_cc1 -ast-dump -fbounds-safety %s -verify=strict -fno-bounds-safety-relaxed-system-headers -I %S/include | FileCheck %s --implicit-check-not "GetBoundExpr {{.+}} 'char *__single'" --implicit-check-not "GetBoundExpr {{.+}} 'char *'" --check-prefix STRICT
-// RUN: %clang_cc1 -ast-dump -fbounds-safety %s -verify=strict -fno-bounds-safety-relaxed-system-headers -I %S/include -x objective-c -fbounds-attributes-objc-experimental | FileCheck %s --implicit-check-not "GetBoundExpr {{.+}} 'char *__single'" --implicit-check-not "GetBoundExpr {{.+}} 'char *'" --check-prefix STRICT
+// RUN: %clang_cc1 -ast-dump -fbounds-safety %s -verify=strict -fno-bounds-safety-relaxed-system-headers -I %S/include -x objective-c -fexperimental-bounds-safety-objc | FileCheck %s --implicit-check-not "GetBoundExpr {{.+}} 'char *__single'" --implicit-check-not "GetBoundExpr {{.+}} 'char *'" --check-prefix STRICT
 
 void func(char * __unsafe_indexable ptr, char * __bidi_indexable bidi) {
   funcInSDK(ptr, bidi);

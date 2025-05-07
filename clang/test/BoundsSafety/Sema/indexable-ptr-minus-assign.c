@@ -1,7 +1,7 @@
 
 
 // RUN: %clang_cc1 -fbounds-safety -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -fsyntax-only -verify %s
 
 #include <ptrcheck.h>
 

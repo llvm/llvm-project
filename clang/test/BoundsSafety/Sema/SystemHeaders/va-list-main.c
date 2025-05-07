@@ -2,7 +2,7 @@
 #include <va-list-sys.h>
 
 // RUN: %clang_cc1 -fbounds-safety %s -verify -I %S/include
-// RUN: %clang_cc1 -fbounds-safety %s -verify -I %S/include -x objective-c -fbounds-attributes-objc-experimental
+// RUN: %clang_cc1 -fbounds-safety %s -verify -I %S/include -x objective-c -fexperimental-bounds-safety-objc
 // expected-no-diagnostics
 extern variable_length_function func_ptr;
 typedef void * (*variable_length_function2)(va_list args);

@@ -2,8 +2,8 @@
 
 // RUN: %clang_cc1 -verify -include %S/Inputs/abi-ptr-attr-unsafe/mock-system-header.h -fbounds-safety %s
 // RUN: %clang_cc1 -ast-dump -include %S/Inputs/abi-ptr-attr-unsafe/mock-system-header.h -fbounds-safety %s | FileCheck %s
-// RUN: %clang_cc1 -verify -include %S/Inputs/abi-ptr-attr-unsafe/mock-system-header.h -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental %s
-// RUN: %clang_cc1 -ast-dump -include %S/Inputs/abi-ptr-attr-unsafe/mock-system-header.h -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental %s | FileCheck %s
+// RUN: %clang_cc1 -verify -include %S/Inputs/abi-ptr-attr-unsafe/mock-system-header.h -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc %s
+// RUN: %clang_cc1 -ast-dump -include %S/Inputs/abi-ptr-attr-unsafe/mock-system-header.h -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc %s | FileCheck %s
 // expected-no-diagnostics
 
 #include <ptrcheck.h>

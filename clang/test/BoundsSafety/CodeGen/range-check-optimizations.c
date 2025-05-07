@@ -3,7 +3,7 @@
 // REQUIRES: x86-registered-target
 
 // RUN: %clang_cc1 -O2 -triple x86_64 -fbounds-safety -fbounds-safety-bringup-missing-checks=all -fno-split-cold-code -emit-llvm %s -o - | FileCheck --check-prefix=CHECK %s
-// RUN: %clang_cc1 -O2 -triple x86_64 -fbounds-safety -fbounds-safety-bringup-missing-checks=all -fno-split-cold-code -x objective-c -fbounds-attributes-objc-experimental -emit-llvm %s -o - | FileCheck --check-prefix=CHECK %s
+// RUN: %clang_cc1 -O2 -triple x86_64 -fbounds-safety -fbounds-safety-bringup-missing-checks=all -fno-split-cold-code -x objective-c -fexperimental-bounds-safety-objc -emit-llvm %s -o - | FileCheck --check-prefix=CHECK %s
 
 #include <ptrcheck.h>
 

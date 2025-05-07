@@ -1,6 +1,6 @@
 
 // RUN: %clang_cc1 -fbounds-safety -Wno-default-const-init-unsafe -ast-dump %s 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -fbounds-safety -x objective-c -Wno-default-const-init-unsafe -fbounds-attributes-objc-experimental -ast-dump %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -fbounds-safety -x objective-c -Wno-default-const-init-unsafe -fexperimental-bounds-safety-objc -ast-dump %s 2>&1 | FileCheck %s
 
 #include <ptrcheck.h>
 

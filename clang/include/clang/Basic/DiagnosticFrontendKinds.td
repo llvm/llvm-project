@@ -383,15 +383,15 @@ def err_bounds_safety_attributes_cannot_be_disabled : Error<
 def err_bounds_safety_initializer_out_of_range : Error<
   "initializing value is out of valid range">;
 
-def warn_bounds_attributes_cxx_experimental_ignored : Warning<
-  "-fbounds-attributes-cxx-experimental without -fbounds-attributes is "
+def warn_bounds_safety_cxx_experimental_ignored : Warning<
+  "-fexperimental-bounds-safety-cxx without -fbounds-safety is "
   "ignored">,
-  InGroup<BoundsAttributesCXXExperimentalIgnored>;
+  InGroup<BoundsSafetyCXXExperimentalIgnored>;
 
-def warn_bounds_attributes_objc_experimental_ignored : Warning<
-  "-fbounds-attributes-objc-experimental without -fbounds-attributes is "
+def warn_bounds_safety_objc_experimental_ignored : Warning<
+  "-fexperimental-bounds-safety-objc without -fbounds-safety is "
   "ignored">,
-  InGroup<BoundsAttributesObjCExperimentalIgnored>;
+  InGroup<BoundsSafetyObjCExperimentalIgnored>;
 
 def warn_bounds_safety_relaxed_system_headers_ignored : Warning<
   "-fno-bounds-safety-relaxed-system-headers without -fbounds-safety is "

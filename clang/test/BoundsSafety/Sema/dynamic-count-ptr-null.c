@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -fbounds-safety -verify=expected,rs,compound-literal %s
-// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -verify=expected,rs,compound-literal %s
+// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -verify=expected,rs,compound-literal %s
 
 #include <ptrcheck.h>
 #include <stddef.h>

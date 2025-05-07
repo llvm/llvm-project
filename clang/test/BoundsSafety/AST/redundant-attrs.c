@@ -1,6 +1,6 @@
 
 // RUN: %clang_cc1 -fsyntax-only -fbounds-safety -ast-dump %s | FileCheck %s
-// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -ast-dump %s | FileCheck %s
+// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -ast-dump %s | FileCheck %s
 #include <ptrcheck.h>
 
 typedef int *__bidi_indexable bidiPtr;

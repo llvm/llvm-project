@@ -78,12 +78,12 @@ for t in "${TESTS[@]}"; do
   # Note we assume BSD/macOS sed
 
   # Disable the Objective-C RUN lines because they cause problems with the updating script because IR conflicts
-  sed -E -n -I ''  '/^\/\/ RUN:.+-fbounds-attributes-objc-experimental/s/\/\/ RUN:/\/\/ XXX_run:/;p' ${TEST}
+  sed -E -n -I ''  '/^\/\/ RUN:.+-fexperimental-bounds-safety-objc/s/\/\/ RUN:/\/\/ XXX_run:/;p' ${TEST}
 
   # Update the codegen CHECK lines
   "${UPDATE_SCRIPT}" --llvm-bin "${BIN_DIR}" ${TEST}
 
   # Re-enable the Objective-C RUN lines.
-  sed -E -n -I ''  '/^\/\/ XXX_run:.+-fbounds-attributes-objc-experimental/s/\/\/ XXX_run:/\/\/ RUN:/;p' ${TEST}
+  sed -E -n -I ''  '/^\/\/ XXX_run:.+-fexperimental-bounds-safety-objc/s/\/\/ XXX_run:/\/\/ RUN:/;p' ${TEST}
 
 done

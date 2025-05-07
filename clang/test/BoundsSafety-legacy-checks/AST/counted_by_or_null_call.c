@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -ast-dump -fbounds-safety -Wno-bounds-safety-init-list %s | FileCheck %s
-// RUN: %clang_cc1 -ast-dump -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -Wno-bounds-safety-init-list %s | FileCheck %s
+// RUN: %clang_cc1 -ast-dump -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -Wno-bounds-safety-init-list %s | FileCheck %s
 
 #include <ptrcheck.h>
 

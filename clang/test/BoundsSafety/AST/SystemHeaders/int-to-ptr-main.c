@@ -2,9 +2,9 @@
 #include <int-to-ptr-sys.h>
 
 // RUN: %clang_cc1 -ast-dump -fbounds-safety %s -verify=both -I %S/include | FileCheck %s --implicit-check-not "GetBoundExpr {{.+}} 'char *__single'" --implicit-check-not "GetBoundExpr {{.+}} 'char *'" --check-prefix RELAXED
-// RUN: %clang_cc1 -ast-dump -fbounds-safety %s -verify=both -I %S/include -x objective-c -fbounds-attributes-objc-experimental | FileCheck %s --implicit-check-not "GetBoundExpr {{.+}} 'char *__single'" --implicit-check-not "GetBoundExpr {{.+}} 'char *'" --check-prefix RELAXED
+// RUN: %clang_cc1 -ast-dump -fbounds-safety %s -verify=both -I %S/include -x objective-c -fexperimental-bounds-safety-objc | FileCheck %s --implicit-check-not "GetBoundExpr {{.+}} 'char *__single'" --implicit-check-not "GetBoundExpr {{.+}} 'char *'" --check-prefix RELAXED
 // RUN: %clang_cc1 -ast-dump -fbounds-safety %s -verify=strict,both -fno-bounds-safety-relaxed-system-headers -I %S/include | FileCheck %s --implicit-check-not "GetBoundExpr {{.+}} 'char *__single'" --implicit-check-not "GetBoundExpr {{.+}} 'char *'" --check-prefix STRICT
-// RUN: %clang_cc1 -ast-dump -fbounds-safety %s -verify=strict,both -fno-bounds-safety-relaxed-system-headers -I %S/include -x objective-c -fbounds-attributes-objc-experimental | FileCheck %s --implicit-check-not "GetBoundExpr {{.+}} 'char *__single'" --implicit-check-not "GetBoundExpr {{.+}} 'char *'" --check-prefix STRICT
+// RUN: %clang_cc1 -ast-dump -fbounds-safety %s -verify=strict,both -fno-bounds-safety-relaxed-system-headers -I %S/include -x objective-c -fexperimental-bounds-safety-objc | FileCheck %s --implicit-check-not "GetBoundExpr {{.+}} 'char *__single'" --implicit-check-not "GetBoundExpr {{.+}} 'char *'" --check-prefix STRICT
 
 int * func(intptr_t y) {
   // both-error@+1{{returning 'int *' from a function with incompatible result type 'int *__single' casts away '__unsafe_indexable' qualifier; use '__unsafe_forge_single' or '__unsafe_forge_bidi_indexable' to perform this conversion}}

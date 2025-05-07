@@ -1,7 +1,7 @@
 
 
 // RUN: %clang_cc1 -ast-dump -fbounds-safety %s -triple arm64-apple-ios -target-feature +sve 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -ast-dump -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -triple arm64-apple-ios -target-feature +sve %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -ast-dump -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -triple arm64-apple-ios -target-feature +sve %s 2>&1 | FileCheck %s
 
 typedef struct opaque_s *opaque_t;
 

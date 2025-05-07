@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -fbounds-safety -verify=expected,both %s
-// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -verify=expected,both %s
+// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -verify=expected,both %s
 #include <ptrcheck.h>
 
 int side_effect(void);

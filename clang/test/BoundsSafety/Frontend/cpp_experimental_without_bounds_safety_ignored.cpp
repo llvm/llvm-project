@@ -1,5 +1,5 @@
 
 
-// RUN: %clang_cc1 -fbounds-attributes-cxx-experimental -fsyntax-only %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -fexperimental-bounds-safety-cxx -fsyntax-only %s 2>&1 | FileCheck %s
 
-// CHECK: warning: -fbounds-attributes-cxx-experimental without -fbounds-attributes is ignored
+// CHECK: warning: -fexperimental-bounds-safety-cxx without -fbounds-safety is ignored

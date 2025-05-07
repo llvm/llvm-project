@@ -2,7 +2,7 @@
 #include <va-list-sys.h>
 
 // RUN: %clang_cc1 -triple arm64-apple-macosx -ast-dump -fbounds-safety %s -I %S/include | FileCheck %s --implicit-check-not "GetBoundExpr {{.+}} 'char *__single'" --implicit-check-not "GetBoundExpr {{.+}} 'char *'"
-// RUN: %clang_cc1 -triple arm64-apple-macosx -ast-dump -fbounds-safety %s -I %S/include -x objective-c -fbounds-attributes-objc-experimental | FileCheck %s --implicit-check-not "GetBoundExpr {{.+}} 'char *__single'" --implicit-check-not "GetBoundExpr {{.+}} 'char *'"
+// RUN: %clang_cc1 -triple arm64-apple-macosx -ast-dump -fbounds-safety %s -I %S/include -x objective-c -fexperimental-bounds-safety-objc | FileCheck %s --implicit-check-not "GetBoundExpr {{.+}} 'char *__single'" --implicit-check-not "GetBoundExpr {{.+}} 'char *'"
 extern variable_length_function func_ptr;
 typedef void * (*variable_length_function2)(va_list args);
 extern variable_length_function2 func_ptr2;

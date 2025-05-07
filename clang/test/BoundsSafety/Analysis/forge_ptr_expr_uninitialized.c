@@ -1,7 +1,7 @@
 
 
 // RUN: %clang_cc1 -analyze -analyzer-checker=core.uninitialized.UndefReturn -fbounds-safety -verify %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=core.uninitialized.UndefReturn -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -verify %s
+// RUN: %clang_cc1 -analyze -analyzer-checker=core.uninitialized.UndefReturn -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -verify %s
 // XFAIL: *
 // rdar://72163355
 int foo() {

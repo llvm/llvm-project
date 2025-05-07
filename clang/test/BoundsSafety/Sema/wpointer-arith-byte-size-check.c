@@ -1,6 +1,6 @@
 
 // RUN: %clang_cc1 -fsyntax-only -fbounds-safety -Wpointer-arith -verify %s
-// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -Wpointer-arith -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -Wpointer-arith -verify %s
 
 // expected-no-diagnostics
 

@@ -3,8 +3,8 @@
 
 // RUN: %clang_cc1 -O2 -triple x86_64 -fbounds-safety -emit-llvm %s -o - | FileCheck --check-prefix=CHECK-O2 %s
 // RUN: %clang_cc1 -O2 -triple x86_64 -fbounds-safety -emit-llvm -mllvm -enable-constraint-elimination %s -o - | FileCheck --check-prefix=CHECK-O2 %s
-// RUN: %clang_cc1 -O2 -triple x86_64 -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -emit-llvm %s -o - | FileCheck --check-prefix=CHECK-O2 %s
-// RUN: %clang_cc1 -O2 -triple x86_64 -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -emit-llvm -mllvm -enable-constraint-elimination %s -o - | FileCheck --check-prefix=CHECK-O2 %s
+// RUN: %clang_cc1 -O2 -triple x86_64 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -emit-llvm %s -o - | FileCheck --check-prefix=CHECK-O2 %s
+// RUN: %clang_cc1 -O2 -triple x86_64 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -emit-llvm -mllvm -enable-constraint-elimination %s -o - | FileCheck --check-prefix=CHECK-O2 %s
 
 // piggy-back test for -fcoverage-mapping
 // RUN: %clang_cc1 -O2 -triple x86_64 -fbounds-safety -fprofile-instrument=clang -fcoverage-mapping -emit-llvm %s -o /dev/null

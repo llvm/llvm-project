@@ -1,7 +1,7 @@
 
 
 // RUN: %clang_cc1  -triple armv7k -target-feature +neon -ast-dump -fbounds-safety %s | FileCheck %s
-// RUN: %clang_cc1  -triple armv7k -target-feature +neon -ast-dump -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental %s | FileCheck %s
+// RUN: %clang_cc1  -triple armv7k -target-feature +neon -ast-dump -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc %s | FileCheck %s
 #include <arm_neon.h>
 
 // CHECK-LABEL: test

@@ -1,5 +1,5 @@
 
 
-// RUN: %clang -cc1 -fbounds-attributes-objc-experimental -fsyntax-only %s 2>&1 | FileCheck %s
+// RUN: %clang -cc1 -fexperimental-bounds-safety-objc -fsyntax-only %s 2>&1 | FileCheck %s
 
-// CHECK: warning: -fbounds-attributes-objc-experimental without -fbounds-attributes is ignored
+// CHECK: warning: -fexperimental-bounds-safety-objc without -fbounds-safety is ignored

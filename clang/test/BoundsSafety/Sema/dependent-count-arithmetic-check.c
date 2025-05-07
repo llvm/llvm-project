@@ -1,6 +1,6 @@
 
 // RUN: %clang_cc1 -fsyntax-only -fbounds-safety -verify %s
-// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -verify %s
 
 #include <ptrcheck.h>
 int foo(int *__counted_by(*out_n + 1) *out_buf, int *out_n); // expected-error{{invalid argument expression to bounds attribute}}

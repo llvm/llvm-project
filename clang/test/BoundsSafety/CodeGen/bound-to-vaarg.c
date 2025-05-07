@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -O0  -fbounds-safety -triple x86_64-linux-gnu %s -o /dev/null
 // RUN: %clang_cc1 -O2  -fbounds-safety -triple x86_64-linux-gnu %s -o /dev/null
-// RUN: %clang_cc1 -O0  -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -triple x86_64-linux-gnu %s -o /dev/null
-// RUN: %clang_cc1 -O2  -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -triple x86_64-linux-gnu %s -o /dev/null
+// RUN: %clang_cc1 -O0  -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -triple x86_64-linux-gnu %s -o /dev/null
+// RUN: %clang_cc1 -O2  -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -triple x86_64-linux-gnu %s -o /dev/null
 
 #include <ptrcheck.h>
 

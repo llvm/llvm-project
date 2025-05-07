@@ -3,7 +3,7 @@
 
 
 // RUN: %clang_cc1 -emit-llvm -triple arm64e -fbounds-safety %s -o - | FileCheck %s
-// RUN: %clang_cc1 -emit-llvm -triple arm64e -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple arm64e -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc %s -o - | FileCheck %s
 
 #include <ptrcheck.h>
 #include "mock-header.h"

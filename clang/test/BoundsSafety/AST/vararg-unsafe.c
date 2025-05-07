@@ -6,12 +6,12 @@
 // RUN: %clang_cc1 -fbounds-safety -ast-dump -triple arm-apple-watchos -verify %s 2>&1 | FileCheck %s --check-prefix=COMMON --check-prefix=VALIST_VOID_PTR
 // RUN: %clang_cc1 -fbounds-safety -ast-dump -triple arm64-apple-macosx %s -verify 2>&1 | FileCheck %s --check-prefix=COMMON --check-prefix=VALIST_CHAR_PTR
 // RUN: %clang_cc1 -fbounds-safety -ast-dump -triple arm64-apple-ios %s -verify 2>&1 | FileCheck %s --check-prefix=COMMON --check-prefix=VALIST_CHAR_PTR
-// RUN: %clang_cc1 -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -ast-dump -triple x86_64 -verify %s 2>&1 | FileCheck %s --check-prefix=COMMON --check-prefix=VALIST_ARRAY
-// RUN: %clang_cc1 -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -ast-dump -triple i686 %s -verify 2>&1 | FileCheck %s --check-prefix=COMMON --check-prefix=VALIST_CHAR_PTR
-// RUN: %clang_cc1 -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -ast-dump -triple arm %s -verify 2>&1 | FileCheck %s --check-prefix=COMMON --check-prefix=VALIST_STRUCT
-// RUN: %clang_cc1 -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -ast-dump -triple arm-apple-watchos -verify %s 2>&1 | FileCheck %s --check-prefix=COMMON --check-prefix=VALIST_VOID_PTR
-// RUN: %clang_cc1 -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -ast-dump -triple arm64-apple-macosx %s -verify 2>&1 | FileCheck %s --check-prefix=COMMON --check-prefix=VALIST_CHAR_PTR
-// RUN: %clang_cc1 -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -ast-dump -triple arm64-apple-ios %s -verify 2>&1 | FileCheck %s --check-prefix=COMMON --check-prefix=VALIST_CHAR_PTR
+// RUN: %clang_cc1 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -ast-dump -triple x86_64 -verify %s 2>&1 | FileCheck %s --check-prefix=COMMON --check-prefix=VALIST_ARRAY
+// RUN: %clang_cc1 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -ast-dump -triple i686 %s -verify 2>&1 | FileCheck %s --check-prefix=COMMON --check-prefix=VALIST_CHAR_PTR
+// RUN: %clang_cc1 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -ast-dump -triple arm %s -verify 2>&1 | FileCheck %s --check-prefix=COMMON --check-prefix=VALIST_STRUCT
+// RUN: %clang_cc1 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -ast-dump -triple arm-apple-watchos -verify %s 2>&1 | FileCheck %s --check-prefix=COMMON --check-prefix=VALIST_VOID_PTR
+// RUN: %clang_cc1 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -ast-dump -triple arm64-apple-macosx %s -verify 2>&1 | FileCheck %s --check-prefix=COMMON --check-prefix=VALIST_CHAR_PTR
+// RUN: %clang_cc1 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -ast-dump -triple arm64-apple-ios %s -verify 2>&1 | FileCheck %s --check-prefix=COMMON --check-prefix=VALIST_CHAR_PTR
 
 // expected-no-diagnostics
 

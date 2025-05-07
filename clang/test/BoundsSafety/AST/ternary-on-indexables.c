@@ -1,6 +1,6 @@
 
 // RUN: %clang_cc1 -fbounds-safety -Wno-bounds-safety-single-to-indexable-bounds-truncated -ast-dump  %s 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -fbounds-safety -Wno-bounds-safety-single-to-indexable-bounds-truncated -x objective-c -fbounds-attributes-objc-experimental -ast-dump %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -fbounds-safety -Wno-bounds-safety-single-to-indexable-bounds-truncated -x objective-c -fexperimental-bounds-safety-objc -ast-dump %s 2>&1 | FileCheck %s
 #include <ptrcheck.h>
 
 void Test(int sel) {

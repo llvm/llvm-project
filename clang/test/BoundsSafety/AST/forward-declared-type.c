@@ -1,7 +1,7 @@
 
 
 // RUN: %clang_cc1 -ast-dump -verify -fbounds-safety %s 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -x objective-c -ast-dump -verify -fbounds-safety -fbounds-attributes-objc-experimental %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -x objective-c -ast-dump -verify -fbounds-safety -fexperimental-bounds-safety-objc %s 2>&1 | FileCheck %s
 
 #include <ptrcheck.h>
 

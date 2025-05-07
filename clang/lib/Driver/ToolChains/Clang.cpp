@@ -7751,18 +7751,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
     CmdArgs.push_back("-fexperimental-bounds-safety-attributes");
   }
 
-  if (Args.hasFlag(options::OPT_fbounds_attributes_cxx_experimental,
-                   options::OPT_fno_bounds_attributes_cxx_experimental,
-                   false)) {
-    CmdArgs.push_back("-fbounds-attributes-cxx-experimental");
-  }
-
-  if (Args.hasFlag(options::OPT_fbounds_attributes_objc_experimental,
-                   options::OPT_fno_bounds_attributes_objc_experimental,
-                   false)) {
-    CmdArgs.push_back("-fbounds-attributes-objc-experimental");
-  }
-
   // -fbounds-safety-relaxed-system-headers is on by default
   Args.addOptOutFlag(CmdArgs,
                      options::OPT_fbounds_safety_relaxed_system_headers,

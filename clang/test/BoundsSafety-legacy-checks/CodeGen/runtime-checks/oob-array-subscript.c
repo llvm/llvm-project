@@ -3,8 +3,8 @@
 
 // RUN: %clang_cc1 -triple x86_64 -O2 -fbounds-safety -emit-llvm %s -o - | FileCheck --check-prefixes O2 %s
 // RUN: %clang_cc1 -triple x86_64 -O0 -fbounds-safety -emit-llvm %s -o - | FileCheck --check-prefixes O0 %s
-// RUN: %clang_cc1 -triple x86_64 -O2 -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -emit-llvm %s -o - | FileCheck --check-prefixes O2 %s
-// RUN: %clang_cc1 -triple x86_64 -O0 -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -emit-llvm %s -o - | FileCheck --check-prefixes O0 %s
+// RUN: %clang_cc1 -triple x86_64 -O2 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -emit-llvm %s -o - | FileCheck --check-prefixes O2 %s
+// RUN: %clang_cc1 -triple x86_64 -O0 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -emit-llvm %s -o - | FileCheck --check-prefixes O0 %s
 
 // O2-LABEL: @foo(
 // O2-NEXT:  entry:

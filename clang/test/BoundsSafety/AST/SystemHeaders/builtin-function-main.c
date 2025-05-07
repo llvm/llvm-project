@@ -2,7 +2,7 @@
 #include <builtin-function-sys.h>
 
 // RUN: %clang_cc1 -ast-dump -fbounds-safety %s -I %S/include | FileCheck %s --implicit-check-not "GetBoundExpr {{.+}} 'char *__single'" --implicit-check-not "GetBoundExpr {{.+}} 'char *'"
-// RUN: %clang_cc1 -ast-dump -fbounds-safety %s -I %S/include -x objective-c -fbounds-attributes-objc-experimental | FileCheck %s --implicit-check-not "GetBoundExpr {{.+}} 'char *__single'" --implicit-check-not "GetBoundExpr {{.+}} 'char *'"
+// RUN: %clang_cc1 -ast-dump -fbounds-safety %s -I %S/include -x objective-c -fexperimental-bounds-safety-objc | FileCheck %s --implicit-check-not "GetBoundExpr {{.+}} 'char *__single'" --implicit-check-not "GetBoundExpr {{.+}} 'char *'"
 
 char * __counted_by(len) func(char * __counted_by(len) src_str, int len) {
   int len2 = 0;

@@ -1,7 +1,7 @@
 
 
 // RUN: %clang_cc1 -ast-dump -fbounds-safety -isystem %S/Inputs/system-merge-dynamic-bound-attr %s 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -ast-dump -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -isystem %S/Inputs/system-merge-dynamic-bound-attr %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -ast-dump -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -isystem %S/Inputs/system-merge-dynamic-bound-attr %s 2>&1 | FileCheck %s
 
 #include <header-no-attr.h>
 #include <header-with-attr.h>

@@ -3,7 +3,7 @@
 
 // Note: Specifying the triple seems to be necessary for `update_cc_test_checks.py` to work
 // RUN: %clang_cc1 -O0 -triple arm64-apple-iphoneos -emit-llvm -fbounds-safety -fno-bounds-safety-bringup-missing-checks=compound_literal_init -Wno-bounds-attributes-init-list-side-effect -o - %s | FileCheck %s
-// RUN: %clang_cc1 -O0 -triple arm64-apple-iphoneos -emit-llvm -x objective-c -fbounds-attributes-objc-experimental -fbounds-safety -fno-bounds-safety-bringup-missing-checks=compound_literal_init -Wno-bounds-attributes-init-list-side-effect -o - %s | FileCheck %s
+// RUN: %clang_cc1 -O0 -triple arm64-apple-iphoneos -emit-llvm -x objective-c -fexperimental-bounds-safety-objc -fbounds-safety -fno-bounds-safety-bringup-missing-checks=compound_literal_init -Wno-bounds-attributes-init-list-side-effect -o - %s | FileCheck %s
 
 #include <ptrcheck.h>
 

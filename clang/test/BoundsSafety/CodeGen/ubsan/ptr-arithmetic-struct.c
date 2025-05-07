@@ -4,10 +4,10 @@
 // RUN: %clang_cc1 -O2 -fbounds-safety -fsanitize=array-bounds -emit-llvm %s -o - | FileCheck --check-prefix=RECOVER %s
 // RUN: %clang_cc1 -O0 -fbounds-safety -fsanitize=array-bounds -fsanitize-trap=array-bounds -emit-llvm %s -o - | FileCheck --check-prefix=TRAP %s
 // RUN: %clang_cc1 -O2 -fbounds-safety -fsanitize=array-bounds -fsanitize-trap=array-bounds -emit-llvm %s -o - | FileCheck --check-prefix=TRAP %s
-// RUN: %clang_cc1 -O0 -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -fsanitize=array-bounds -emit-llvm %s -o - | FileCheck --check-prefix=RECOVER %s
-// RUN: %clang_cc1 -O2 -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -fsanitize=array-bounds -emit-llvm %s -o - | FileCheck --check-prefix=RECOVER %s
-// RUN: %clang_cc1 -O0 -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -fsanitize=array-bounds -fsanitize-trap=array-bounds -emit-llvm %s -o - | FileCheck --check-prefix=TRAP %s
-// RUN: %clang_cc1 -O2 -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -fsanitize=array-bounds -fsanitize-trap=array-bounds -emit-llvm %s -o - | FileCheck --check-prefix=TRAP %s
+// RUN: %clang_cc1 -O0 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -fsanitize=array-bounds -emit-llvm %s -o - | FileCheck --check-prefix=RECOVER %s
+// RUN: %clang_cc1 -O2 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -fsanitize=array-bounds -emit-llvm %s -o - | FileCheck --check-prefix=RECOVER %s
+// RUN: %clang_cc1 -O0 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -fsanitize=array-bounds -fsanitize-trap=array-bounds -emit-llvm %s -o - | FileCheck --check-prefix=TRAP %s
+// RUN: %clang_cc1 -O2 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -fsanitize=array-bounds -fsanitize-trap=array-bounds -emit-llvm %s -o - | FileCheck --check-prefix=TRAP %s
 
 struct foo {
     unsigned bar;

@@ -543,8 +543,8 @@ BENIGN_LANGOPT(CheckConstexprFunctionBodies, 1, 1,
 LANGOPT(BoundsSafety, 1, 0, "Bounds safety extension for C")
 /* TO_UPSTREAM(BoundsSafety) ON*/
 LANGOPT(BoundsSafetyAttributes, 1, 0, "Experimental bounds safety attributes")
-LANGOPT(BoundsAttributesCXXExperimental, 1, 0, "Experimental bounds attributes for C++")
-LANGOPT(BoundsAttributesObjCExperimental, 1, 0, "Experimental bounds attributes for Objective-C")
+LANGOPT(BoundsSafetyCXXExperimental, 1, 0, "Experimental bounds attributes for C++")
+LANGOPT(BoundsSafetyObjCExperimental, 1, 0, "Experimental bounds attributes for Objective-C")
 LANGOPT(BoundsSafetyRelaxedSystemHeaders, 1, 1,
         "Relax bounds safety assignment rules in system headers")
 LANGOPT(BoundsSafetyBringUpMissingChecks, 7, clang::LangOptions::getDefaultBoundsSafetyNewChecksMask(),

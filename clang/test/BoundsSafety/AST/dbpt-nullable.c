@@ -1,6 +1,6 @@
 
 // RUN: %clang_cc1 -triple x86_64-apple-mac -ast-dump -fbounds-safety %s | FileCheck %s --check-prefix=CHECK
-// RUN: %clang_cc1 -triple x86_64-apple-mac -ast-dump -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental %s | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -triple x86_64-apple-mac -ast-dump -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc %s | FileCheck %s --check-prefix=CHECK
 
 #include <ptrcheck.h>
 

@@ -2,8 +2,8 @@
 // FIXME: Have to use `arm64e-apple-iphoneos` instead of `arm64e-apple-ios` to get `update_cc_test_checks.py` to add IR to this test
 // RUN: %clang_cc1 -O0 -triple arm64e-apple-iphoneos -fbounds-safety -emit-llvm %s -o - | FileCheck %s
 // RUN: %clang_cc1 -O2 -triple arm64e-apple-iphoneos -fbounds-safety -emit-llvm %s -o /dev/null
-// RUN: %clang_cc1 -O0 -triple arm64e-apple-iphoneos -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -O2 -triple arm64e-apple-iphoneos -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -emit-llvm %s -o /dev/null
+// RUN: %clang_cc1 -O0 -triple arm64e-apple-iphoneos -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -O2 -triple arm64e-apple-iphoneos -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -emit-llvm %s -o /dev/null
 #include <ptrcheck.h>
 
 extern unsigned externArray[__counted_by(10)];

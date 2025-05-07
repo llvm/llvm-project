@@ -1,7 +1,7 @@
 // FileCheck lines automatically generated using make-ast-dump-check-v2.py
 
 // RUN: %clang_cc1 -ast-dump -fbounds-safety -fbounds-safety-bringup-missing-checks=ended_by_lower_bound -verify %s 2> /dev/null | FileCheck %s
-// RUN: %clang_cc1 -ast-dump -fbounds-safety -fbounds-safety-bringup-missing-checks=ended_by_lower_bound -verify -x objective-c -fbounds-attributes-objc-experimental %s 2> /dev/null | FileCheck %s
+// RUN: %clang_cc1 -ast-dump -fbounds-safety -fbounds-safety-bringup-missing-checks=ended_by_lower_bound -verify -x objective-c -fexperimental-bounds-safety-objc %s 2> /dev/null | FileCheck %s
 #include <ptrcheck.h>
 
 // expected-no-diagnostics

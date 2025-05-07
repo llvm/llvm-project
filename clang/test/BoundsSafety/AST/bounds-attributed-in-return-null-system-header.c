@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fbounds-safety -fbounds-safety-bringup-missing-checks=return_size -ast-dump -verify %s > %t.c.ast_dump.txt 2>&1
 // RUN: FileCheck --input-file=%t.c.ast_dump.txt %S/bounds-attributed-in-return-null-system-header.h
-// RUN: %clang_cc1 -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -fbounds-safety-bringup-missing-checks=return_size -ast-dump -verify %s > %t.objc.ast_dump.txt 2>&1
+// RUN: %clang_cc1 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -fbounds-safety-bringup-missing-checks=return_size -ast-dump -verify %s > %t.objc.ast_dump.txt 2>&1
 // RUN: FileCheck --input-file=%t.objc.ast_dump.txt %S/bounds-attributed-in-return-null-system-header.h
 
 #include "bounds-attributed-in-return-null-system-header.h"

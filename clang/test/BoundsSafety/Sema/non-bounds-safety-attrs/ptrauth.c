@@ -3,7 +3,7 @@
 #include <ptrcheck.h>
 
 // RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-intrinsics -fbounds-safety -fsyntax-only -ast-dump %s | FileCheck %s
-// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-intrinsics -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -fsyntax-only -ast-dump %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-intrinsics -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -fsyntax-only -ast-dump %s | FileCheck %s
 
 int * __ptrauth(2, 0, 0) global_var;
 // CHECK: global_var 'int *__single__ptrauth(2,0,0)'

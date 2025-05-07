@@ -4,8 +4,8 @@
 
 // RUN: %clang_cc1 -O2 -fbounds-safety -emit-llvm -triple x86_64 -fsanitize=pointer-overflow,signed-integer-overflow,unsigned-integer-overflow -fsanitize-trap=pointer-overflow,signed-integer-overflow,unsigned-integer-overflow %s -o - | FileCheck %s --check-prefix=UBSAN
 // RUN: %clang_cc1 -O2 -fbounds-safety -emit-llvm -triple x86_64 %s -o - | FileCheck %s --check-prefix=NOUBSAN
-// RUN: %clang_cc1 -O2 -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -emit-llvm -triple x86_64 -fsanitize=pointer-overflow,signed-integer-overflow,unsigned-integer-overflow -fsanitize-trap=pointer-overflow,signed-integer-overflow,unsigned-integer-overflow %s -o - | FileCheck %s --check-prefix=UBSAN
-// RUN: %clang_cc1 -O2 -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -emit-llvm -triple x86_64 %s -o - | FileCheck %s --check-prefix=NOUBSAN
+// RUN: %clang_cc1 -O2 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -emit-llvm -triple x86_64 -fsanitize=pointer-overflow,signed-integer-overflow,unsigned-integer-overflow -fsanitize-trap=pointer-overflow,signed-integer-overflow,unsigned-integer-overflow %s -o - | FileCheck %s --check-prefix=UBSAN
+// RUN: %clang_cc1 -O2 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -emit-llvm -triple x86_64 %s -o - | FileCheck %s --check-prefix=NOUBSAN
 
 #include <ptrcheck.h>
 

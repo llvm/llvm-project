@@ -1585,10 +1585,10 @@ def BoundsSafetyInitList : DiagGroup<"bounds-safety-init-list">;
 def BoundsAttributesExternArrayCount : DiagGroup<"bounds-attributes-extern-array-count">;
 def BoundsAttributesInitSideEffect
     : DiagGroup<"bounds-attributes-init-list-side-effect">;
-def BoundsAttributesCXXExperimentalIgnored
-    : DiagGroup<"bounds-attributes-cxx-experimental-ignored">;
-def BoundsAttributesObjCExperimentalIgnored
-    : DiagGroup<"bounds-attributes-objc-experimental-ignored">;
+def BoundsSafetyCXXExperimentalIgnored
+    : DiagGroup<"experimental-bounds-safety-cxx-ignored">;
+def BoundsSafetyObjCExperimentalIgnored
+    : DiagGroup<"experimental-bounds-safety-objc-ignored">;
 def BoundsSafetyRelaxedSystemHeadersIgnored
     : DiagGroup<"bounds-safety-relaxed-system-headers-ignore">;
 def BoundsAttributesImplicitConvSingleToExplicitIndexable :

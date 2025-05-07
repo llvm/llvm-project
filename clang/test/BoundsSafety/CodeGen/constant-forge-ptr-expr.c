@@ -1,7 +1,7 @@
 // REQUIRES: x86-registered-target
 
 // RUN: %clang_cc1 %s -O0 -fbounds-safety -triple x86_64 -S -o - | FileCheck --check-prefixes CHECK,CHECKBS %s
-// RUN: %clang_cc1 %s -O0 -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -triple x86_64 -S -o - | FileCheck --check-prefixes CHECK,CHECKBS %s
+// RUN: %clang_cc1 %s -O0 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -triple x86_64 -S -o - | FileCheck --check-prefixes CHECK,CHECKBS %s
 // RUN: %clang_cc1 %s -O0 -fexperimental-bounds-safety-attributes -x c -triple x86_64 -S -o - | FileCheck --check-prefixes CHECK %s
 // RUN: %clang_cc1 %s -O0 -fexperimental-bounds-safety-attributes -x c++ -triple x86_64 -S -o - | FileCheck --check-prefixes CHECK %s
 // RUN: %clang_cc1 %s -O0 -fexperimental-bounds-safety-attributes -x objective-c -triple x86_64 -S -o - | FileCheck --check-prefixes CHECK %s

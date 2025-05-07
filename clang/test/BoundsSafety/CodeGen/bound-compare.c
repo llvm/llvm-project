@@ -5,10 +5,10 @@
 // RUN: %clang_cc1 -O2  -fbounds-safety -triple arm64-apple-darwin -emit-llvm %s -o - | FileCheck %s --check-prefix=OPT
 // RUN: %clang_cc1 -O0  -fbounds-safety -triple arm64-apple-ios -emit-llvm %s -o - | FileCheck %s --check-prefix=NOPT
 // RUN: %clang_cc1 -O2  -fbounds-safety -triple arm64-apple-ios -emit-llvm %s -o - | FileCheck %s --check-prefix=OPT
-// RUN: %clang_cc1 -O0  -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -triple arm64-apple-darwin -emit-llvm %s -o - | FileCheck %s --check-prefix=NOPT
-// RUN: %clang_cc1 -O2  -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -triple arm64-apple-darwin -emit-llvm %s -o - | FileCheck %s --check-prefix=OPT
-// RUN: %clang_cc1 -O0  -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -triple arm64-apple-ios -emit-llvm %s -o - | FileCheck %s --check-prefix=NOPT
-// RUN: %clang_cc1 -O2  -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -triple arm64-apple-ios -emit-llvm %s -o - | FileCheck %s --check-prefix=OPT
+// RUN: %clang_cc1 -O0  -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -triple arm64-apple-darwin -emit-llvm %s -o - | FileCheck %s --check-prefix=NOPT
+// RUN: %clang_cc1 -O2  -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -triple arm64-apple-darwin -emit-llvm %s -o - | FileCheck %s --check-prefix=OPT
+// RUN: %clang_cc1 -O0  -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -triple arm64-apple-ios -emit-llvm %s -o - | FileCheck %s --check-prefix=NOPT
+// RUN: %clang_cc1 -O2  -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -triple arm64-apple-ios -emit-llvm %s -o - | FileCheck %s --check-prefix=OPT
 
 
 int main() {

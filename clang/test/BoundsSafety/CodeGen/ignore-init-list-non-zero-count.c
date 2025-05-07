@@ -2,7 +2,7 @@
 
 
 // RUN: %clang_cc1 -O0  -fbounds-safety -Wno-bounds-safety-init-list-null-non-zero-count -triple x86_64 -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -O0  -fbounds-safety -Wno-bounds-safety-init-list-null-non-zero-count -x objective-c -fbounds-attributes-objc-experimental -triple x86_64 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -O0  -fbounds-safety -Wno-bounds-safety-init-list-null-non-zero-count -x objective-c -fexperimental-bounds-safety-objc -triple x86_64 -emit-llvm %s -o - | FileCheck %s
 
 #include <ptrcheck.h>
 

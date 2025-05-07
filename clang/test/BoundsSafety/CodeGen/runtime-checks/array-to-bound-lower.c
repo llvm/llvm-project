@@ -3,9 +3,9 @@
 // RUN: %clang_cc1 -O0  -fbounds-safety -triple x86_64 -emit-llvm %s -o - | FileCheck --check-prefix=CHECK-O0 %s
 // RUN: %clang_cc1 -O2  -fbounds-safety -triple x86_64 -emit-llvm %s -o - | FileCheck --check-prefix=CHECK-O2 %s
 // RUN: %clang_cc1 -O2  -fbounds-safety -triple arm -emit-llvm %s -o - | FileCheck --check-prefix=CHECK-ARM-O2 %s
-// RUN: %clang_cc1 -O0  -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -triple x86_64 -emit-llvm %s -o - | FileCheck --check-prefix=CHECK-O0 %s
-// RUN: %clang_cc1 -O2  -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -triple x86_64 -emit-llvm %s -o - | FileCheck --check-prefix=CHECK-O2 %s
-// RUN: %clang_cc1 -O2  -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -triple arm -emit-llvm %s -o - | FileCheck --check-prefix=CHECK-ARM-O2 %s
+// RUN: %clang_cc1 -O0  -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -triple x86_64 -emit-llvm %s -o - | FileCheck --check-prefix=CHECK-O0 %s
+// RUN: %clang_cc1 -O2  -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -triple x86_64 -emit-llvm %s -o - | FileCheck --check-prefix=CHECK-O2 %s
+// RUN: %clang_cc1 -O2  -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -triple arm -emit-llvm %s -o - | FileCheck --check-prefix=CHECK-ARM-O2 %s
 
 #include <ptrcheck.h>
 // CHECK-O0-LABEL: @main(

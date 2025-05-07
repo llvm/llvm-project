@@ -2,7 +2,7 @@
 
 
 // RUN: %clang_cc1 -emit-llvm -triple arm64 -fbounds-safety %s -o - | FileCheck %s
-// RUN: %clang_cc1 -emit-llvm -triple arm64 -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple arm64 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc %s -o - | FileCheck %s
 #include <ptrcheck.h>
 
 int glen;

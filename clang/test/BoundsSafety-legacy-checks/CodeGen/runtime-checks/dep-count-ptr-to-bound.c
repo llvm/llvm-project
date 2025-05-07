@@ -2,7 +2,7 @@
 
 
 // RUN: %clang_cc1 -O0 -triple x86_64 -fbounds-safety -Wno-bounds-safety-init-list -emit-llvm %s -o - | FileCheck --check-prefixes O0 %s
-// RUN: %clang_cc1 -O0 -triple x86_64 -fbounds-safety -Wno-bounds-safety-init-list -x objective-c -fbounds-attributes-objc-experimental -emit-llvm %s -o - | FileCheck --check-prefixes O0 %s
+// RUN: %clang_cc1 -O0 -triple x86_64 -fbounds-safety -Wno-bounds-safety-init-list -x objective-c -fexperimental-bounds-safety-objc -emit-llvm %s -o - | FileCheck --check-prefixes O0 %s
 
 #include <ptrcheck.h>
 

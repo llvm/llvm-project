@@ -1,6 +1,6 @@
 
 // RUN: %clang_cc1 -fbounds-safety -verify %s -o /dev/null
-// RUN: %clang_cc1 -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -verify %s -o /dev/null
+// RUN: %clang_cc1 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -verify %s -o /dev/null
 
 #include <ptrcheck.h>
 

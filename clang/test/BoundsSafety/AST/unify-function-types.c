@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -ast-dump -fbounds-safety -verify=c %s | FileCheck %s
-// RUN: %clang_cc1 -x c++ -ast-dump -fbounds-safety -fbounds-attributes-cxx-experimental -verify=cpp %s
+// RUN: %clang_cc1 -x c++ -ast-dump -fbounds-safety -fexperimental-bounds-safety-cxx -verify=cpp %s
 #include <ptrcheck.h>
 
 char funcA(char buf[__counted_by(len)], int len, int len2);

@@ -1,7 +1,7 @@
 
 
 // RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-intrinsics -fbounds-safety -fsyntax-only -ast-dump %s | FileCheck %s
-// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-intrinsics -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -fsyntax-only -ast-dump %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-intrinsics -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -fsyntax-only -ast-dump %s | FileCheck %s
 #include <ptrcheck.h>
 
 int * _Nullable __single global_var1;

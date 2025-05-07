@@ -4,6 +4,6 @@
 
 // RUN: %clang -cc1 -fbounds-safety -fsyntax-only %s
 
-// RUN: %clang -cc1 -fbounds-safety -fbounds-attributes-cxx-experimental -fsyntax-only %s
+// RUN: %clang -cc1 -fbounds-safety -fexperimental-bounds-safety-cxx -fsyntax-only %s
 
-// RUN: %clang -cc1 -fbounds-safety -fbounds-attributes-objc-experimental -fsyntax-only %s
+// RUN: %clang -cc1 -fbounds-safety -fexperimental-bounds-safety-objc -fsyntax-only %s

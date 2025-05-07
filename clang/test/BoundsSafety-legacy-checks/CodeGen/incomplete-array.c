@@ -3,9 +3,9 @@
 // RUN: %clang_cc1 -O0 -triple arm64e-apple-ios -fbounds-safety -emit-llvm -Werror -verify=werr %s -o /dev/null
 // RUN: %clang_cc1 -O0 -triple arm64e-apple-ios -fbounds-safety -emit-llvm %s -Wno-bounds-safety-incomplete-array -verify=wno -o - | FileCheck %s
 // RUN: %clang_cc1 -O2 -triple arm64e-apple-ios -fbounds-safety -emit-llvm %s -verify=default -o /dev/null
-// RUN: %clang_cc1 -O0 -triple arm64e-apple-ios -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -emit-llvm -Werror -verify=werr %s -o /dev/null
-// RUN: %clang_cc1 -O0 -triple arm64e-apple-ios -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -emit-llvm %s -Wno-bounds-safety-incomplete-array -verify=wno -o - | FileCheck %s
-// RUN: %clang_cc1 -O2 -triple arm64e-apple-ios -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -emit-llvm %s -verify=default -o /dev/null
+// RUN: %clang_cc1 -O0 -triple arm64e-apple-ios -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -emit-llvm -Werror -verify=werr %s -o /dev/null
+// RUN: %clang_cc1 -O0 -triple arm64e-apple-ios -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -emit-llvm %s -Wno-bounds-safety-incomplete-array -verify=wno -o - | FileCheck %s
+// RUN: %clang_cc1 -O2 -triple arm64e-apple-ios -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -emit-llvm %s -verify=default -o /dev/null
 
 // wno-no-diagnostics
 extern unsigned externArray[];

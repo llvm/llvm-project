@@ -4,8 +4,8 @@
 
 // RUN: %clang_cc1 -fsyntax-only -fbounds-safety -verify=expected,legacy %s
 // RUN: %clang_cc1 -fsyntax-only -fbounds-safety -verify=expected,rs -fbounds-safety-bringup-missing-checks=return_size %s
-// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -verify=expected,legacy %s
-// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -verify=expected,rs -fbounds-safety-bringup-missing-checks=return_size %s
+// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -verify=expected,legacy %s
+// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -verify=expected,rs -fbounds-safety-bringup-missing-checks=return_size %s
 
 #include <ptrcheck.h>
 

@@ -4,9 +4,9 @@
 // RUN: %clang_cc1 -triple x86_64 -fbounds-safety -emit-llvm %s -o - | FileCheck %s --check-prefix=X86_64
 // RUN: %clang_cc1 -triple aarch64 -fbounds-safety -emit-llvm %s -o - | FileCheck %s --check-prefix=AARCH64
 // RUN: %clang_cc1 -triple i686 -fbounds-safety -emit-llvm %s -o - | FileCheck %s --check-prefix=I686
-// RUN: %clang_cc1 -triple x86_64 -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -emit-llvm %s -o - | FileCheck %s --check-prefix=X86_64
-// RUN: %clang_cc1 -triple aarch64 -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -emit-llvm %s -o - | FileCheck %s --check-prefix=AARCH64
-// RUN: %clang_cc1 -triple i686 -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -emit-llvm %s -o - | FileCheck %s --check-prefix=I686
+// RUN: %clang_cc1 -triple x86_64 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -emit-llvm %s -o - | FileCheck %s --check-prefix=X86_64
+// RUN: %clang_cc1 -triple aarch64 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -emit-llvm %s -o - | FileCheck %s --check-prefix=AARCH64
+// RUN: %clang_cc1 -triple i686 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -emit-llvm %s -o - | FileCheck %s --check-prefix=I686
 
 #include <ptrcheck.h>
 

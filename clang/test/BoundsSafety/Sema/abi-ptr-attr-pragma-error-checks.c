@@ -1,7 +1,7 @@
 
 
 // RUN: %clang_cc1 -fbounds-safety -verify %s
-// RUN: %clang_cc1 -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -verify %s
+// RUN: %clang_cc1 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -verify %s
 
 #pragma clang abi_ptr_attr set(single)
 #pragma clang abi_ptr_attr set(indexable)

@@ -1,6 +1,6 @@
 
 
-// RUN: %clang_cc1 -x c++ -ast-dump -fbounds-safety -fbounds-attributes-cxx-experimental -verify %s | FileCheck %s
+// RUN: %clang_cc1 -x c++ -ast-dump -fbounds-safety -fexperimental-bounds-safety-cxx -verify %s | FileCheck %s
 
 #include <ptrcheck.h>
 

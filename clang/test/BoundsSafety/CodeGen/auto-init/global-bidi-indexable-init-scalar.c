@@ -1,6 +1,6 @@
 
 // RUN: %clang_cc1 -S -fbounds-safety -triple arm64-apple-darwin -O0 %s -o - | FileCheck %s
-// RUN: %clang_cc1 -S -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -triple arm64-apple-darwin -O0 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -S -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -triple arm64-apple-darwin -O0 %s -o - | FileCheck %s
 
 #include <ptrcheck.h>
 

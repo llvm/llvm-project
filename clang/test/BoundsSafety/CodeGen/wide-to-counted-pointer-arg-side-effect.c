@@ -3,8 +3,8 @@
 
 // RUN: %clang_cc1 -O0  -fbounds-safety -emit-llvm %s -o - | FileCheck %s
 // RUN: %clang_cc1 -O2  -fbounds-safety -emit-llvm %s -o /dev/null
-// RUN: %clang_cc1 -O0  -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -O2  -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -emit-llvm %s -o /dev/null
+// RUN: %clang_cc1 -O0  -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -O2  -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -emit-llvm %s -o /dev/null
 
 #include <ptrcheck.h>
 

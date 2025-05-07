@@ -2,7 +2,7 @@
 
 // Use arm64-apple-ios to ensure that sizeof(uint8_t) < sizeof(uintptr_t).
 // RUN: %clang_cc1 -triple arm64-apple-ios -fsyntax-only -fbounds-safety -verify %s
-// RUN: %clang_cc1 -triple arm64-apple-ios -fsyntax-only -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -verify %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -fsyntax-only -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -verify %s
 
 #include <ptrcheck.h>
 #include <stdint.h>

@@ -4,9 +4,9 @@
 // RUN: %clang_cc1 -emit-llvm -fbounds-safety %s -o /dev/null
 // RUN: %clang_cc1 -emit-llvm -fbounds-safety -O2 %s -o /dev/null
 
-// RUN: %clang_cc1 -ast-dump -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -Wno-incompatible-pointer-types %s 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -emit-llvm -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental %s -o /dev/null
-// RUN: %clang_cc1 -emit-llvm -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -O2 %s -o /dev/null
+// RUN: %clang_cc1 -ast-dump -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -Wno-incompatible-pointer-types %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc %s -o /dev/null
+// RUN: %clang_cc1 -emit-llvm -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -O2 %s -o /dev/null
 
 #include <ptrcheck.h>
 

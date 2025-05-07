@@ -2,8 +2,8 @@
 
 // RUN: not %clang_cc1 -fbounds-safety -fbounds-safety-bringup-missing-checks=all -ast-dump %s 2>&1 | FileCheck %s
 // RUN: not %clang_cc1 -fbounds-safety -fno-bounds-safety-bringup-missing-checks=all -ast-dump %s 2>&1 | FileCheck %s
-// RUN: not %clang_cc1 -fbounds-safety -fbounds-safety-bringup-missing-checks=all -x objective-c -fbounds-attributes-objc-experimental -ast-dump %s 2>&1 | FileCheck %s
-// RUN: not %clang_cc1 -fbounds-safety -fno-bounds-safety-bringup-missing-checks=all -x objective-c -fbounds-attributes-objc-experimental -ast-dump %s 2>&1 | FileCheck %s
+// RUN: not %clang_cc1 -fbounds-safety -fbounds-safety-bringup-missing-checks=all -x objective-c -fexperimental-bounds-safety-objc -ast-dump %s 2>&1 | FileCheck %s
+// RUN: not %clang_cc1 -fbounds-safety -fno-bounds-safety-bringup-missing-checks=all -x objective-c -fexperimental-bounds-safety-objc -ast-dump %s 2>&1 | FileCheck %s
 
 #include <ptrcheck.h>
 

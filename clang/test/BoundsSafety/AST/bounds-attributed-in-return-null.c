@@ -1,7 +1,7 @@
 
 
 // RUN: %clang_cc1 -fbounds-safety -fbounds-safety-bringup-missing-checks=return_size -Wno-bounds-safety-single-to-count -ast-dump %s 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -fbounds-safety-bringup-missing-checks=return_size -Wno-bounds-safety-single-to-count -ast-dump %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -fbounds-safety-bringup-missing-checks=return_size -Wno-bounds-safety-single-to-count -ast-dump %s 2>&1 | FileCheck %s
 #include <ptrcheck.h>
 
 // CHECK:      {{^}}|-FunctionDecl [[func_cb_0:0x[^ ]+]] {{.+}} cb_0

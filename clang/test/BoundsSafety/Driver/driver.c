@@ -35,21 +35,17 @@
 // RUN: %clang -fbounds-safety -mllvm -enable-constraint-elimination -mllvm -enable-constraint-elimination=false -### %s 2>&1 | grep enable-constraint-elimination -o | wc -l | FileCheck -check-prefixes ALL,T10 %s
 // T10: 2
 
-// RUN: %clang -c %s -### 2>&1 | not grep fbounds-attributes-cxx-experimental
-// RUN: %clang -fbounds-safety -c %s -### 2>&1 | not grep fbounds-attributes-cxx-experimental
+// RUN: %clang -c %s -### 2>&1 | not grep fexperimental-bounds-safety-cxx
+// RUN: %clang -fbounds-safety -c %s -### 2>&1 | not grep fexperimental-bounds-safety-cxx
 
-// RUN: %clang -fbounds-safety -fbounds-attributes-cxx-experimental -### %s 2>&1 | FileCheck -check-prefixes ALL,T11 %s
-// T11: -fbounds-attributes-cxx-experimental
+// RUN: %clang -fbounds-safety -Xclang -fexperimental-bounds-safety-cxx -### %s 2>&1 | FileCheck -check-prefixes ALL,T11 %s
+// T11: -fexperimental-bounds-safety-cxx
 
-// RUN: %clang -fbounds-safety -fbounds-attributes-cxx-experimental -fno-bounds-attributes-cxx-experimental -c %s -### 2>&1 | not grep fbounds-attributes-cxx-experimental
+// RUN: %clang -c %s -### 2>&1 | not grep fexperimental-bounds-safety-objc
+// RUN: %clang -fbounds-safety -c %s -### 2>&1 | not grep fexperimental-bounds-safety-objc
 
-// RUN: %clang -c %s -### 2>&1 | not grep fbounds-attributes-objc-experimental
-// RUN: %clang -fbounds-safety -c %s -### 2>&1 | not grep fbounds-attributes-objc-experimental
-
-// RUN: %clang -fbounds-safety -fbounds-attributes-objc-experimental -### %s 2>&1 | FileCheck -check-prefixes ALL,T12 %s
-// T12: -fbounds-attributes-objc-experimental
-
-// RUN: %clang -fbounds-safety -fbounds-attributes-objc-experimental -fno-bounds-attributes-objc-experimental -c %s -### 2>&1 | not grep fbounds-attributes-objc-experimental
+// RUN: %clang -fbounds-safety -Xclang -fexperimental-bounds-safety-objc -### %s 2>&1 | FileCheck -check-prefixes ALL,T12 %s
+// T12: -fexperimental-bounds-safety-objc
 
 // RUN: %clang -fbounds-safety -c %s -### 2>&1 | FileCheck -check-prefixes ALL,T13 %s
 // T13: -fbounds-safety

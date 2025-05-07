@@ -1,6 +1,6 @@
 // FileCheck lines automatically generated using make-ast-dump-check-v2.py
 // RUN: %clang_cc1 -triple x86_64-apple-mac -ast-dump -fbounds-safety %s 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-apple-mac -ast-dump -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-mac -ast-dump -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc %s 2>&1 | FileCheck %s
 #include <ptrcheck.h>
 
 struct S {

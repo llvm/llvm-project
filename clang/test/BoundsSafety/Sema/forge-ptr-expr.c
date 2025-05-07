@@ -1,7 +1,7 @@
 
 
 // RUN: %clang_cc1 -fsyntax-only -fbounds-safety -verify=expected,bs %s
-// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -verify=expected,bs %s
+// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -verify=expected,bs %s
 // RUN: %clang_cc1 -fsyntax-only -fexperimental-bounds-safety-attributes -x c -verify=expected,bsa %s
 // RUN: %clang_cc1 -fsyntax-only -fexperimental-bounds-safety-attributes -x c++ -verify=expected,bsa %s
 // RUN: %clang_cc1 -fsyntax-only -fexperimental-bounds-safety-attributes -x objective-c -verify=expected,bsa %s

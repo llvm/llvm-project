@@ -1,7 +1,7 @@
 
 
 // RUN: %clang_cc1 -fbounds-safety -Wunreachable-code -verify %s
-// RUN: %clang_cc1 -fbounds-safety -Wunreachable-code -x objective-c -fbounds-attributes-objc-experimental -verify %s
+// RUN: %clang_cc1 -fbounds-safety -Wunreachable-code -x objective-c -fexperimental-bounds-safety-objc -verify %s
 
 // expected-no-diagnostics
 

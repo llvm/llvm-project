@@ -4,7 +4,7 @@
 // Regression test for crash tracked by rdar://103382748
 
 // RUN: %clang_cc1 -O0 -triple x86_64 -fbounds-safety -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -O0 -triple x86_64 -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -emit-llvm %s -o - | FileCheck --check-prefix=OBJC %s
+// RUN: %clang_cc1 -O0 -triple x86_64 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -emit-llvm %s -o - | FileCheck --check-prefix=OBJC %s
 #include <ptrcheck.h>
 
 // CHECK-LABEL: define dso_local void @foo(

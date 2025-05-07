@@ -1,7 +1,7 @@
 
 
 // RUN: %clang_cc1 -ast-dump -fbounds-safety -isystem %S/Inputs/system-count-return %s 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -ast-dump -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -isystem %S/Inputs/system-count-return %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -ast-dump -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -isystem %S/Inputs/system-count-return %s 2>&1 | FileCheck %s
 
 #include <mock-header.h>
 // CHECK: FunctionDecl [[func_alloc_sized_by:0x[^ ]+]] {{.+}} alloc_sized_by

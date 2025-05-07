@@ -1,7 +1,7 @@
 
 
 // RUN: %clang_cc1 -ast-dump -fbounds-safety -Wno-error=implicit-function-declaration %s 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -ast-dump -fbounds-safety -Wno-error=implicit-function-declaration -x objective-c -fbounds-attributes-objc-experimental %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -ast-dump -fbounds-safety -Wno-error=implicit-function-declaration -x objective-c -fexperimental-bounds-safety-objc %s 2>&1 | FileCheck %s
 #include <ptrcheck.h>
 
 void call_undeclared_function(int *__counted_by(count) p, int count) {

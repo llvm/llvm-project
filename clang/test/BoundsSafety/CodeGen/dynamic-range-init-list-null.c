@@ -1,7 +1,7 @@
 
 
 // RUN: %clang_cc1 -O0  -fbounds-safety -emit-llvm %s -o /dev/null 2> /dev/null
-// RUN: %clang_cc1 -O0  -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -emit-llvm %s -o /dev/null 2> /dev/null
+// RUN: %clang_cc1 -O0  -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -emit-llvm %s -o /dev/null 2> /dev/null
 // This is to ensure no crash in code gen. A general version of filecheck is in dynamic-range-init-list.c.
 
 #include <ptrcheck.h>

@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -fbounds-safety -fno-bounds-safety-bringup-missing-checks=all -verify %s
 // RUN: %clang_cc1 -fsyntax-only -fbounds-safety -fbounds-safety-bringup-missing-checks=all -verify %s
-// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -fno-bounds-safety-bringup-missing-checks=all -verify %s
-// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -fbounds-safety-bringup-missing-checks=all -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -fno-bounds-safety-bringup-missing-checks=all -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -fbounds-safety-bringup-missing-checks=all -verify %s
 #include <ptrcheck.h>
 
 // expected-no-diagnostics

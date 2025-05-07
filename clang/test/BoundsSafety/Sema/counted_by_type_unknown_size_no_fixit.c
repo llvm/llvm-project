@@ -1,8 +1,8 @@
 
 // RUN: %clang_cc1 -fsyntax-only -fbounds-safety -verify %s
 // RUN: not %clang_cc1 -fsyntax-only -fbounds-safety  -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -verify %s
-// RUN: not %clang_cc1 -fsyntax-only -fbounds-safety  -x objective-c -fbounds-attributes-objc-experimental -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -verify %s
+// RUN: not %clang_cc1 -fsyntax-only -fbounds-safety  -x objective-c -fexperimental-bounds-safety-objc -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 
 #include <ptrcheck.h>
 

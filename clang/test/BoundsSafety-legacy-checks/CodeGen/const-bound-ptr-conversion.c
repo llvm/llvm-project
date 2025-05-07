@@ -3,8 +3,8 @@
 
 // RUN: %clang_cc1 -O0 -triple x86_64 -fbounds-safety -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK_O0
 // RUN: %clang_cc1 -O2 -triple x86_64 -fbounds-safety -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK_O2
-// RUN: %clang_cc1 -O0 -triple x86_64 -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK_O0
-// RUN: %clang_cc1 -O2 -triple x86_64 -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK_O2
+// RUN: %clang_cc1 -O0 -triple x86_64 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK_O0
+// RUN: %clang_cc1 -O2 -triple x86_64 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK_O2
 // CHECK_O0-LABEL: @foo(
 // CHECK_O0:  {{.*}}:
 // CHECK_O0:    [[ARRAY:%.*]] = alloca [10 x i32], align 16

@@ -1,7 +1,7 @@
 
 
 // RUN: %clang_cc1 -ast-dump -fbounds-safety %s | FileCheck %s
-// RUN: %clang_cc1 -x objective-c -fbounds-attributes-objc-experimental -ast-dump -fbounds-safety %s | FileCheck %s
+// RUN: %clang_cc1 -x objective-c -fexperimental-bounds-safety-objc -ast-dump -fbounds-safety %s | FileCheck %s
 #include <ptrcheck.h>
 
 struct T {

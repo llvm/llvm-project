@@ -4599,10 +4599,10 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       SupportsBoundsSafety = true;
       break;
     case Language::ObjC:
-      SupportsBoundsSafety = Opts.BoundsAttributesObjCExperimental;
+      SupportsBoundsSafety = Opts.BoundsSafetyObjCExperimental;
       break;
     case Language::CXX:
-      SupportsBoundsSafety = Opts.BoundsAttributesCXXExperimental;
+      SupportsBoundsSafety = Opts.BoundsSafetyCXXExperimental;
       break;
     default:
       break;
@@ -4629,11 +4629,11 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     Opts.ExperimentalLateParseAttributes = 1;
   }
 
-  if (Opts.BoundsAttributesCXXExperimental && !Opts.BoundsSafety)
-    Diags.Report(diag::warn_bounds_attributes_cxx_experimental_ignored);
+  if (Opts.BoundsSafetyCXXExperimental && !Opts.BoundsSafety)
+    Diags.Report(diag::warn_bounds_safety_cxx_experimental_ignored);
 
-  if (Opts.BoundsAttributesObjCExperimental && !Opts.BoundsSafety)
-    Diags.Report(diag::warn_bounds_attributes_objc_experimental_ignored);
+  if (Opts.BoundsSafetyObjCExperimental && !Opts.BoundsSafety)
+    Diags.Report(diag::warn_bounds_safety_objc_experimental_ignored);
 
   if (!Opts.BoundsSafetyRelaxedSystemHeaders && !Opts.BoundsSafety)
     Diags.Report(diag::warn_bounds_safety_relaxed_system_headers_ignored);

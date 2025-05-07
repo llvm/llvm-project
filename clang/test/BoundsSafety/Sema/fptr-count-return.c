@@ -1,6 +1,6 @@
 
 // RUN: %clang_cc1 -fsyntax-only -fbounds-safety -ast-dump -verify %s | FileCheck %s
-// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -ast-dump -verify %s | FileCheck %s
+// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -ast-dump -verify %s | FileCheck %s
 #include <ptrcheck.h>
 
 // CHECK: VarDecl {{.*}} fptr 'int *__single*__single __counted_by(len)(*__single)(int)'

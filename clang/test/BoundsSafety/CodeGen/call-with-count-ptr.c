@@ -4,8 +4,8 @@
 
 // RUN: %clang_cc1 -O0 -triple x86_64 -fbounds-safety -Wno-int-conversion -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK_X64_O0
 // RUN: %clang_cc1 -O0 -triple arm64-apple-iphoneos -fbounds-safety -Wno-int-conversion -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK_ARM64_O0
-// RUN: %clang_cc1 -O0 -triple x86_64 -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -Wno-int-conversion -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK_X64_O0
-// RUN: %clang_cc1 -O0 -triple arm64-apple-iphoneos -fbounds-safety -Wno-int-conversion -x objective-c -fbounds-attributes-objc-experimental -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK_ARM64_O0
+// RUN: %clang_cc1 -O0 -triple x86_64 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -Wno-int-conversion -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK_X64_O0
+// RUN: %clang_cc1 -O0 -triple arm64-apple-iphoneos -fbounds-safety -Wno-int-conversion -x objective-c -fexperimental-bounds-safety-objc -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK_ARM64_O0
 #include <ptrcheck.h>
 
 #define memmove_(b, ...) __builtin___memmove_chk(b, __VA_ARGS__, b)

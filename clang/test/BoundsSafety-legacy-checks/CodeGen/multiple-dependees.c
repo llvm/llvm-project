@@ -2,7 +2,7 @@
 
 
 // RUN: %clang_cc1 %s -O0 -fbounds-safety -triple x86_64 -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 %s -O0 -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -triple x86_64 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -O0 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -triple x86_64 -emit-llvm -o - | FileCheck %s
 
 #include <ptrcheck.h>
 

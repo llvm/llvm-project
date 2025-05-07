@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -fbounds-safety -verify=expected,rs %s
-// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -verify=expected,rs %s
+// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -verify=expected,rs %s
 #include <ptrcheck.h>
 // Test diagnostics on _counted_by(_or_null) pointers with an incomplete struct
 // pointee type.

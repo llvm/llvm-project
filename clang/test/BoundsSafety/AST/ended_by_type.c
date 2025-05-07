@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fbounds-safety -ast-dump %s 2>&1 | FileCheck --check-prefix=BS %s
-// RUN: %clang_cc1 -fbounds-safety -fbounds-attributes-objc-experimental -x objective-c -ast-dump %s 2>&1 | FileCheck --check-prefix=BS %s
-// RUN: %clang_cc1 -fbounds-safety -fbounds-attributes-cxx-experimental -x c++ -ast-dump %s 2>&1 | FileCheck --check-prefix=BS %s
+// RUN: %clang_cc1 -fbounds-safety -fexperimental-bounds-safety-objc -x objective-c -ast-dump %s 2>&1 | FileCheck --check-prefix=BS %s
+// RUN: %clang_cc1 -fbounds-safety -fexperimental-bounds-safety-cxx -x c++ -ast-dump %s 2>&1 | FileCheck --check-prefix=BS %s
 // RUN: %clang_cc1 -fexperimental-bounds-safety-attributes -x c -ast-dump %s 2>&1 | FileCheck --check-prefix=BSA %s
 // RUN: %clang_cc1 -fexperimental-bounds-safety-attributes -x c++ -ast-dump %s 2>&1 | FileCheck --check-prefix=BSA %s
 // RUN: %clang_cc1 -fexperimental-bounds-safety-attributes -x objective-c -ast-dump %s 2>&1 | FileCheck --check-prefix=BSA %s

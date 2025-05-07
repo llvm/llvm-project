@@ -3,8 +3,8 @@
 
 // RUN: %clang_cc1 -O0 -triple arm64-apple-iphoneos -fbounds-safety -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK-O0
 // RUN: %clang_cc1 -O2 -triple arm64-apple-iphoneos -fbounds-safety -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK-O2
-// RUN: %clang_cc1 -O0 -triple arm64-apple-iphoneos -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK-O0
-// RUN: %clang_cc1 -O2 -triple arm64-apple-iphoneos -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK-O2
+// RUN: %clang_cc1 -O0 -triple arm64-apple-iphoneos -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK-O0
+// RUN: %clang_cc1 -O2 -triple arm64-apple-iphoneos -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK-O2
 #include <ptrcheck.h>
 
 // CHECK-O0-LABEL: @foo(

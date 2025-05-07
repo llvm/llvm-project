@@ -1,6 +1,6 @@
 
 // RUN: not %clang_cc1 -fsyntax-only -fbounds-safety -ast-dump %s | FileCheck %s
-// RUN: not %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -ast-dump %s | FileCheck %s
+// RUN: not %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -ast-dump %s | FileCheck %s
 
 // Tests the correctness of applying bounds attributes to complex type specifiers
 // as well as to what extent other attributes (represented by _Nullable) are retained.

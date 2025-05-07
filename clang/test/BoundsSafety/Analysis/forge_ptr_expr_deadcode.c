@@ -1,7 +1,7 @@
 
 
 // RUN: %clang_cc1 -analyze -analyzer-checker=deadcode.DeadStores -fbounds-safety -verify %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=deadcode.DeadStores -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -verify %s
+// RUN: %clang_cc1 -analyze -analyzer-checker=deadcode.DeadStores -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -verify %s
 int foo() {
     int arr[10];
     int a = 10;
