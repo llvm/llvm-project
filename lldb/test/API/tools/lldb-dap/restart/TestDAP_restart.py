@@ -22,6 +22,7 @@ class TestDAP_restart(lldbdap_testcase.DAPTestCaseBase):
         [bp_A, bp_B] = self.set_source_breakpoints("main.c", [line_A, line_B])
 
         # Verify we hit A, then B.
+        self.dap_server.request_configurationDone()
         self.verify_breakpoint_hit([bp_A])
         self.dap_server.request_continue()
         self.verify_breakpoint_hit([bp_B])

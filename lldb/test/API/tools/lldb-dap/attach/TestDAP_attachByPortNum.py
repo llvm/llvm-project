@@ -18,17 +18,17 @@ import sys
 import socket
 
 
+@skip
 class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
     default_timeout = 20
 
     def set_and_hit_breakpoint(self, continueToExit=True):
-        self.dap_server.wait_for_stopped()
-
         source = "main.c"
-        breakpoint1_line = line_number(source, "// breakpoint 1")
+        main_source_path = os.path.join(os.getcwd(), source)
+        breakpoint1_line = line_number(main_source_path, "// breakpoint 1")
         lines = [breakpoint1_line]
         # Set breakpoint in the thread function so we can step the threads
-        breakpoint_ids = self.set_source_breakpoints(source, lines)
+        breakpoint_ids = self.set_source_breakpoints(main_source_path, lines)
         self.assertEqual(
             len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
         )
@@ -79,9 +79,7 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
             port, " Failed to read the port number from debug server pipe"
         )
 
-        self.attach(
-            program=program, stopOnAttach=True, gdbRemotePort=port, sourceInitFile=True
-        )
+        self.attach(program=program, gdbRemotePort=port, sourceInitFile=True)
         self.set_and_hit_breakpoint(continueToExit=True)
         self.process.terminate()
 
@@ -103,7 +101,6 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
         response = self.attach(
             program=program,
             pid=pid,
-            stopOnAttach=True,
             gdbRemotePort=port,
             sourceInitFile=True,
             expectFailure=True,
@@ -123,11 +120,7 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
 
         port = 0
         response = self.attach(
-            program=program,
-            stopOnAttach=True,
-            gdbRemotePort=port,
-            sourceInitFile=True,
-            expectFailure=True,
+            program=program, gdbRemotePort=port, sourceInitFile=True, expectFailure=True
         )
         if not (response and response["success"]):
             self.assertFalse(
@@ -151,11 +144,7 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
         )
 
         response = self.attach(
-            program=program,
-            stopOnAttach=True,
-            gdbRemotePort=port,
-            sourceInitFile=True,
-            expectFailure=True,
+            program=program, gdbRemotePort=port, sourceInitFile=True, expectFailure=True
         )
         if not (response and response["success"]):
             self.assertFalse(

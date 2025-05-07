@@ -545,8 +545,8 @@ void func() {
   EXPECT_TRUE(Preamble);
   EXPECT_TRUE(Preamble->RequiredModules);
 
-  auto Result = signatureHelp(getFullPath("Use.cpp"), Test.point(),
-                              *Preamble.get(), Use, MarkupKind::PlainText);
+  auto Result = signatureHelp(getFullPath("Use.cpp"), Test.point(), *Preamble,
+                              Use, MarkupKind::PlainText);
   EXPECT_FALSE(Result.signatures.empty());
   EXPECT_EQ(Result.signatures[0].label, "printA(int a) -> void");
   EXPECT_EQ(Result.signatures[0].parameters[0].labelString, "int a");
