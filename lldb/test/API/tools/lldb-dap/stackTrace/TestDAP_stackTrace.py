@@ -61,7 +61,7 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
         Tests the 'stackTrace' packet and all its variants.
         """
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
+        self.build_and_launch(program, stopOnEntry=True)
         source = "main.c"
         self.source_path = os.path.join(os.getcwd(), source)
         self.recurse_end = line_number(source, "recurse end")
