@@ -1,73 +1,59 @@
-import requests
 import subprocess
+import requests
 import yaml
+import sys
 import os
 
-# Function to load configuration details from the YAML file
-def load_config(config_file):
-    with open(config_file, 'r') as f:
-        config = yaml.safe_load(f)
-    return config
+CONFIG_FILE = "config.yaml"
+CLANG_TIDY_DIFF_PATH = "./clang-tidy-diff.py"  # Adjust if stored elsewhere
 
-# Function to fetch diff data from GitHub using the API
-def fetch_diff_from_github(owner, repo, pull_number, token):
-    """Fetch the diff for the pull request using GitHub API."""
-    url = f'https://api.github.com/repos/{owner}/{repo}/pulls/{pull_number}/files'
-    headers = {'Authorization': f'token {token}'}
-    response = requests.get(url, headers=headers)
-    
-    if response.status_code == 200:
-        # Extracting the diff for each file changed in the pull request
-        diff_data = []
-        for file in response.json():
-            if 'patch' in file:
-                diff_data.append(file['patch'])
-        return "\n".join(diff_data)
-    else:
-        raise Exception(f"Failed to fetch diff: {response.status_code} {response.text}")
+def load_config():
+    with open(CONFIG_FILE, "r") as f:
+        return yaml.safe_load(f)
 
-# Function to run clang-tidy-diff.py on the provided diff data
-def run_clang_tidy_diff(diff_data, clang_tidy_path="./clang-tidy-diff.py"):
-    """Run clang-tidy-diff on the provided diff data."""
-    # Create a temporary file to hold the diff content
-    with open("temp_diff.patch", "w") as diff_file:
-        diff_file.write(diff_data)
-    
-    # Run the clang-tidy-diff script with the diff file
-    command = ['python3', clang_tidy_path]
-    with open("temp_diff.patch", "r") as diff_file:
-        process = subprocess.Popen(command, stdin=diff_file, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = process.communicate()
-        
-        if process.returncode != 0:
-            print("Error:", stderr.decode())
-        else:
-            print("clang-tidy output:\n", stdout.decode())
+def fetch_diff(owner, repo, pr_number):
+    print(f"📥 Fetching diff from https://github.com/{owner}/{repo}/pull/{pr_number}.diff")
+    url = f"https://github.com/{owner}/{repo}/pull/{pr_number}.diff"
+    response = requests.get(url)
+    if response.status_code != 200:
+        print(f"❌ Failed to fetch diff: {response.status_code}")
+        sys.exit(1)
+    return response.text
 
-# Main function to integrate everything
-def main(config_file="config.yaml"):
-    # Step 1: Load configuration from the config file
+def run_clang_tidy_diff(diff_text):
+    print("🎯 Running clang-tidy-diff on changed lines...")
     try:
-        config = load_config(config_file)
-        project = config['project']  # Access 'project' section from YAML
-        owner = project['owner']  # Access 'owner' inside 'project'
-        repo = project['repo']  # Access 'repo' inside 'project'
-        pull_number = project['pr_number']  # Access 'pr_number' inside 'project'
-        github_token = project['github_token']  # Access 'github_token' inside 'project'
+        result = subprocess.run(
+            ["python3", CLANG_TIDY_DIFF_PATH, "-p", "1", "-quiet", "-j", "4"],
+            input=diff_text.encode("utf-8"),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        print(result.stdout.decode("utf-8"))
+        if result.stderr:
+            print("⚠️ Errors/Warnings:", result.stderr.decode("utf-8"), file=sys.stderr)
     except Exception as e:
-        print(f"Error loading configuration: {e}")
-        return
+        print(f"❌ Failed to run clang-tidy-diff: {e}")
+        sys.exit(1)
 
-    # Step 2: Fetch the diff data from GitHub API
-    try:
-        diff_data = fetch_diff_from_github(owner, repo, pull_number, github_token)
-        if diff_data:
-            # Step 3: Pass the diff to clang-tidy-diff.py script
-            run_clang_tidy_diff(diff_data)
-        else:
-            print("No changes found in the pull request.")
-    except Exception as e:
-        print(f"Error: {e}")
+def main():
+    if not os.path.exists(CLANG_TIDY_DIFF_PATH):
+        print(f"❌ clang-tidy-diff.py not found at {CLANG_TIDY_DIFF_PATH}")
+        sys.exit(1)
 
-if __name__ == '__main__':
-    main(config_file="config.yaml")
+    config = load_config()
+    project = config.get("project", {})
+    owner = project.get("owner")
+    repo = project.get("repo")
+    pr_number = project.get("pr_number")
+
+    if not all([owner, repo, pr_number]):
+        print("❌ Missing configuration: owner, repo, or pr_number")
+        sys.exit(1)
+
+    diff_text = fetch_diff(owner, repo, pr_number)
+    run_clang_tidy_diff(diff_text)
+
+if __name__ == "__main__":
+    main()
