@@ -19,7 +19,7 @@
 
 namespace llvm {
 
-class AtomicMemCpyInst;
+class AnyMemCpyInst;
 class ConstantInt;
 class Instruction;
 class MemCpyInst;
@@ -62,10 +62,10 @@ void expandMemSetAsLoop(MemSetInst *MemSet);
 void expandMemSetPatternAsLoop(MemSetPatternInst *MemSet);
 
 /// Expand \p AtomicMemCpy as a loop. \p AtomicMemCpy is not deleted.
-void expandAtomicMemCpyAsLoop(AtomicMemCpyInst *AtomicMemCpy,
+void expandAtomicMemCpyAsLoop(AnyMemCpyInst *AtomicMemCpy,
                               const TargetTransformInfo &TTI,
                               ScalarEvolution *SE);
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif

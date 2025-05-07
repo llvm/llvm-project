@@ -106,6 +106,8 @@ C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
 - Implemented `P1061R10 Structured Bindings can introduce a Pack <https://wg21.link/P1061R10>`_.
+- Implemented `P2786R13 Trivial Relocatability <https://wg21.link/P2786R13>`_.
+
 
 - Implemented `P0963R3 Structured binding declaration as a condition <https://wg21.link/P0963R3>`_.
 
@@ -655,6 +657,9 @@ Bug Fixes to C++ Support
 - Fixed an assertion when trying to constant-fold various builtins when the argument
   referred to a reference to an incomplete type. (#GH129397)
 - Fixed a crash when a cast involved a parenthesized aggregate initialization in dependent context. (#GH72880)
+- Fixed a crash when forming an invalid function type in a dependent context. (#GH138657) (#GH115725) (#GH68852)
+- No longer crashes when instantiating invalid variable template specialization
+  whose type depends on itself. (#GH51347), (#GH55872)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
