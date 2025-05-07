@@ -21,22 +21,10 @@ namespace plugin {
 
 enum class ErrorCode {
 #define OFFLOAD_ERRC(Name, _, Value) Name = Value,
-#include "OffloadErrcodes.inc"
+#include "Shared/OffloadErrcodes.inc"
 #undef OFFLOAD_ERRC
 };
 
-class OffloadErrorCategory : public std::error_category {
-  const char *name() const noexcept override { return "Offload Error"; }
-  std::string message(int ev) const override {
-    switch (static_cast<ErrorCode>(ev)) {
-#define OFFLOAD_ERRC(Name, Desc, Value)                                        \
-  case ErrorCode::Name:                                                        \
-    return #Desc;
-#include "OffloadErrcodes.inc"
-#undef OFFLOAD_ERRC
-    }
-  }
-};
 } // namespace plugin
 } // namespace target
 } // namespace omp
