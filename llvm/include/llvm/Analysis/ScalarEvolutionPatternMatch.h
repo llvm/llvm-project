@@ -19,7 +19,7 @@ namespace llvm {
 namespace SCEVPatternMatch {
 
 template <typename Pattern> bool match(const SCEV *S, const Pattern &P) {
-  return const_cast<Pattern &>(P).match(S);
+  return P.match(S);
 }
 
 template <typename Predicate> struct cst_pred_ty : public Predicate {
