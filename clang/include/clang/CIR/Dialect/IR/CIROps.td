@@ -384,8 +384,6 @@ def AllocaOp : CIR_Op<"alloca", [
     `]`
     ($annotations^)? attr-dict
   }];
-
-  let hasVerifier = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1514,9 +1512,6 @@ def TernaryOp : CIR_Op<"ternary",
       >
   ];
 
-  // All constraints already verified elsewhere.
-  let hasVerifier = 0;
-
   let assemblyFormat = [{
     `(` $cond `,`
       `true` $trueRegion `,`
@@ -1654,9 +1649,6 @@ def GetGlobalOp : CIR_Op<"get_global",
   let assemblyFormat = [{
     $name `:` qualified(type($addr)) attr-dict
   }];
-
-  // `GetGlobalOp` is fully verified by its traits.
-  let hasVerifier = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1839,7 +1831,6 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
 
   let hasCustomAssemblyFormat = 1;
   let skipDefaultBuilders = 1;
-  let hasVerifier = 0;
 
   // TODO(cir): for now cir.call is just a tiny shell of what it will become.
   // More attributes, arguments, and properties will be added in the future as
