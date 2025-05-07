@@ -49,6 +49,3 @@ subroutine test_num_tasks_strict
   end do
   !$omp end taskloop
 end subroutine
-
-
-
