@@ -110,6 +110,9 @@ AliasResult AAResults::alias(const MemoryLocation &LocA,
 AliasResult AAResults::alias(const MemoryLocation &LocA,
                              const MemoryLocation &LocB, AAQueryInfo &AAQI,
                              const Instruction *CtxI) {
+  assert(LocA.Ptr->getType()->isPointerTy() &&
+         LocB.Ptr->getType()->isPointerTy() &&
+         "Can only call alias() on pointers");
   AliasResult Result = AliasResult::MayAlias;
 
   if (EnableAATrace) {
@@ -334,6 +337,26 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call1,
   }
 
   return Result;
+}
+
+ModRefInfo AAResults::getModRefInfo(const Instruction *I1,
+                                    const Instruction *I2) {
+  SimpleAAQueryInfo AAQIP(*this);
+  return getModRefInfo(I1, I2, AAQIP);
+}
+
+ModRefInfo AAResults::getModRefInfo(const Instruction *I1,
+                                    const Instruction *I2, AAQueryInfo &AAQI) {
+  // Early-exit if either instruction does not read or write memory.
+  if (!I1->mayReadOrWriteMemory() || !I2->mayReadOrWriteMemory())
+    return ModRefInfo::NoModRef;
+
+  if (const auto *Call2 = dyn_cast<CallBase>(I2))
+    return getModRefInfo(I1, Call2, AAQI);
+
+  // FIXME: We can have a more precise result.
+  ModRefInfo MR = getModRefInfo(I1, MemoryLocation::getOrNone(I2), AAQI);
+  return isModOrRefSet(MR) ? ModRefInfo::ModRef : ModRefInfo::NoModRef;
 }
 
 MemoryEffects AAResults::getMemoryEffects(const CallBase *Call,
@@ -668,14 +691,10 @@ AAResults::Concept::~Concept() = default;
 // Provide a definition for the static object used to identify passes.
 AnalysisKey AAManager::Key;
 
-ExternalAAWrapperPass::ExternalAAWrapperPass() : ImmutablePass(ID) {
-  initializeExternalAAWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+ExternalAAWrapperPass::ExternalAAWrapperPass() : ImmutablePass(ID) {}
 
 ExternalAAWrapperPass::ExternalAAWrapperPass(CallbackT CB)
-    : ImmutablePass(ID), CB(std::move(CB)) {
-  initializeExternalAAWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+    : ImmutablePass(ID), CB(std::move(CB)) {}
 
 char ExternalAAWrapperPass::ID = 0;
 
@@ -687,9 +706,7 @@ llvm::createExternalAAWrapperPass(ExternalAAWrapperPass::CallbackT Callback) {
   return new ExternalAAWrapperPass(std::move(Callback));
 }
 
-AAResultsWrapperPass::AAResultsWrapperPass() : FunctionPass(ID) {
-  initializeAAResultsWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+AAResultsWrapperPass::AAResultsWrapperPass() : FunctionPass(ID) {}
 
 char AAResultsWrapperPass::ID = 0;
 

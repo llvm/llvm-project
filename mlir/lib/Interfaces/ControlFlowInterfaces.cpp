@@ -120,7 +120,7 @@ verifyTypesAlongAllEdges(Operation *op, RegionBranchPoint sourcePoint,
 
     TypeRange succInputsTypes = succ.getSuccessorInputs().getTypes();
     if (sourceTypes->size() != succInputsTypes.size()) {
-      InFlightDiagnostic diag = op->emitOpError(" region control flow edge ");
+      InFlightDiagnostic diag = op->emitOpError("region control flow edge ");
       return printRegionEdgeName(diag, sourcePoint, succ)
              << ": source has " << sourceTypes->size()
              << " operands, but target successor needs "
@@ -132,7 +132,7 @@ verifyTypesAlongAllEdges(Operation *op, RegionBranchPoint sourcePoint,
       Type sourceType = std::get<0>(typesIdx.value());
       Type inputType = std::get<1>(typesIdx.value());
       if (!regionInterface.areTypesCompatible(sourceType, inputType)) {
-        InFlightDiagnostic diag = op->emitOpError(" along control flow edge ");
+        InFlightDiagnostic diag = op->emitOpError("along control flow edge ");
         return printRegionEdgeName(diag, sourcePoint, succ)
                << ": source type #" << typesIdx.index() << " " << sourceType
                << " should match input type #" << typesIdx.index() << " "
@@ -202,7 +202,7 @@ LogicalResult detail::verifyTypesAlongControlFlowEdges(Operation *op) {
         // types match with the first one.
         if (!areTypesCompatible(regionReturnOperands->getTypes(),
                                 terminatorOperands.getTypes())) {
-          InFlightDiagnostic diag = op->emitOpError(" along control flow edge");
+          InFlightDiagnostic diag = op->emitOpError("along control flow edge");
           return printRegionEdgeName(diag, region, point)
                  << " operands mismatch between return-like terminators";
         }

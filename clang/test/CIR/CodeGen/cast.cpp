@@ -7,7 +7,7 @@ unsigned char cxxstaticcast_0(unsigned int x) {
   return static_cast<unsigned char>(x);
 }
 
-// CIR: cir.func @cxxstaticcast_0
+// CIR: cir.func @_Z15cxxstaticcast_0j
 // CIR:    %[[XPTR:[0-9]+]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["x", init] {alignment = 4 : i64}
 // CIR:    %[[RV:[0-9]+]] = cir.alloca !u8i, !cir.ptr<!u8i>, ["__retval"] {alignment = 1 : i64}
 // CIR:    cir.store %arg0, %[[XPTR]] : !u32i, !cir.ptr<!u32i>
@@ -18,7 +18,7 @@ unsigned char cxxstaticcast_0(unsigned int x) {
 // CIR:    cir.return %[[R]] : !u8i
 // CIR:  }
 
-// LLVM: define i8 @cxxstaticcast_0(i32 %{{[0-9]+}})
+// LLVM: define i8 @_Z15cxxstaticcast_0j(i32 %{{[0-9]+}})
 // LLVM: %[[LOAD:[0-9]+]] = load i32, ptr %{{[0-9]+}}, align 4
 // LLVM: %[[TRUNC:[0-9]+]] = trunc i32 %[[LOAD]] to i8
 // LLVM: store i8 %[[TRUNC]], ptr %[[RV:[0-9]+]], align 1
@@ -27,8 +27,8 @@ unsigned char cxxstaticcast_0(unsigned int x) {
 
 
 int cStyleCasts_0(unsigned x1, int x2, float x3, short x4, double x5) {
-// CIR: cir.func @cStyleCasts_0
-// LLVM: define i32 @cStyleCasts_0
+// CIR: cir.func @_Z13cStyleCasts_0jifsd
+// LLVM: define i32 @_Z13cStyleCasts_0jifsd
 
   char a = (char)x1; // truncate
   // CIR: %{{[0-9]+}} = cir.cast(integral, %{{[0-9]+}} : !u32i), !s8i
@@ -82,13 +82,13 @@ bool cptr(void *d) {
   return x;
 }
 
-// CIR: cir.func @cptr(%arg0: !cir.ptr<!void>
+// CIR: cir.func @_Z4cptrPv(%arg0: !cir.ptr<!void>
 // CIR:   %[[DPTR:[0-9]+]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["d", init] {alignment = 8 : i64}
 
 // CIR:   %[[DVAL:[0-9]+]] = cir.load %[[DPTR]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
 // CIR:   %{{[0-9]+}} = cir.cast(ptr_to_bool, %[[DVAL]] : !cir.ptr<!void>), !cir.bool
 
-// LLVM-LABEL: define i1 @cptr(ptr %0)
+// LLVM-LABEL: define i1 @_Z4cptrPv(ptr %0)
 // LLVM:         %[[ARG_STORAGE:.*]] = alloca ptr, i64 1
 // LLVM:         %[[RETVAL:.*]] = alloca i8, i64 1
 // LLVM:         %[[X_STORAGE:.*]] = alloca i8, i64 1
@@ -107,6 +107,6 @@ void should_not_cast() {
   (void) ib; // void cast
 }
 
-// CIR:     cir.func @should_not_cast
+// CIR:     cir.func @_Z15should_not_castv
 // CIR-NOT:   cir.cast
 // CIR:     cir.return

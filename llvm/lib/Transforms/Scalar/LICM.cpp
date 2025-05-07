@@ -296,8 +296,7 @@ private:
 PreservedAnalyses LICMPass::run(Loop &L, LoopAnalysisManager &AM,
                                 LoopStandardAnalysisResults &AR, LPMUpdater &) {
   if (!AR.MSSA)
-    report_fatal_error("LICM requires MemorySSA (loop-mssa)",
-                       /*GenCrashDiag*/false);
+    reportFatalUsageError("LICM requires MemorySSA (loop-mssa)");
 
   // For the new PM, we also can't use OptimizationRemarkEmitter as an analysis
   // pass.  Function analyses need to be preserved across loop transformations
@@ -330,8 +329,7 @@ PreservedAnalyses LNICMPass::run(LoopNest &LN, LoopAnalysisManager &AM,
                                  LoopStandardAnalysisResults &AR,
                                  LPMUpdater &) {
   if (!AR.MSSA)
-    report_fatal_error("LNICM requires MemorySSA (loop-mssa)",
-                       /*GenCrashDiag*/false);
+    reportFatalUsageError("LNICM requires MemorySSA (loop-mssa)");
 
   // For the new PM, we also can't use OptimizationRemarkEmitter as an analysis
   // pass.  Function analyses need to be preserved across loop transformations
@@ -2294,10 +2292,14 @@ collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA, Loop *L) {
   AliasSetTracker AST(BatchAA);
 
   auto IsPotentiallyPromotable = [L](const Instruction *I) {
-    if (const auto *SI = dyn_cast<StoreInst>(I))
-      return L->isLoopInvariant(SI->getPointerOperand());
-    if (const auto *LI = dyn_cast<LoadInst>(I))
-      return L->isLoopInvariant(LI->getPointerOperand());
+    if (const auto *SI = dyn_cast<StoreInst>(I)) {
+      const Value *PtrOp = SI->getPointerOperand();
+      return !isa<ConstantData>(PtrOp) && L->isLoopInvariant(PtrOp);
+    }
+    if (const auto *LI = dyn_cast<LoadInst>(I)) {
+      const Value *PtrOp = LI->getPointerOperand();
+      return !isa<ConstantData>(PtrOp) && L->isLoopInvariant(PtrOp);
+    }
     return false;
   };
 

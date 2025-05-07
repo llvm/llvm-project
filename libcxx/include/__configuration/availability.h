@@ -69,7 +69,13 @@
 
 // Availability markup is disabled when building the library, or when a non-Clang
 // compiler is used because only Clang supports the necessary attributes.
-#if defined(_LIBCPP_BUILDING_LIBRARY) || defined(_LIBCXXABI_BUILDING_LIBRARY) || !defined(_LIBCPP_COMPILER_CLANG_BASED)
+//
+// We also allow users to force-disable availability markup via the `_LIBCPP_DISABLE_AVAILABILITY`
+// macro because that is the only way to work around a Clang bug related to availability
+// attributes: https://github.com/llvm/llvm-project/issues/134151.
+// Once that bug has been fixed, we should remove the macro.
+#if defined(_LIBCPP_BUILDING_LIBRARY) || defined(_LIBCXXABI_BUILDING_LIBRARY) ||                                       \
+    !defined(_LIBCPP_COMPILER_CLANG_BASED) || defined(_LIBCPP_DISABLE_AVAILABILITY)
 #  undef _LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS
 #  define _LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS 0
 #endif
@@ -371,6 +377,11 @@
 // is used for some `std::hash` specializations.
 #define _LIBCPP_AVAILABILITY_HAS_HASH_MEMORY _LIBCPP_INTRODUCED_IN_LLVM_21
 // No attribute, since we've had hash in the headers before
+
+// This controls whether we provide a message for `bad_function_call::what()` that specific to `std::bad_function_call`.
+// See https://wg21.link/LWG2233. This requires `std::bad_function_call::what()` to be available in the dylib.
+#define _LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE _LIBCPP_INTRODUCED_IN_LLVM_21
+// No attribute, since we've had bad_function_call::what() in the headers before
 
 // Define availability attributes that depend on _LIBCPP_HAS_EXCEPTIONS.
 // Those are defined in terms of the availability attributes above, and

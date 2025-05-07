@@ -28,9 +28,7 @@ namespace {
 struct SMEPeepholeOpt : public MachineFunctionPass {
   static char ID;
 
-  SMEPeepholeOpt() : MachineFunctionPass(ID) {
-    initializeSMEPeepholeOptPass(*PassRegistry::getPassRegistry());
-  }
+  SMEPeepholeOpt() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

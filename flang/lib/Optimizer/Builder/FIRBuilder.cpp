@@ -280,6 +280,9 @@ mlir::Block *fir::FirOpBuilder::getAllocaBlock() {
   if (auto cufKernelOp = getRegion().getParentOfType<cuf::KernelOp>())
     return &cufKernelOp.getRegion().front();
 
+  if (auto doConcurentOp = getRegion().getParentOfType<fir::DoConcurrentOp>())
+    return doConcurentOp.getBody();
+
   return getEntryBlock();
 }
 
@@ -577,14 +580,20 @@ mlir::Value fir::FirOpBuilder::convertWithSemantics(
   return createConvert(loc, toTy, val);
 }
 
+mlir::Value fir::FirOpBuilder::createVolatileCast(mlir::Location loc,
+                                                  bool isVolatile,
+                                                  mlir::Value val) {
+  mlir::Type volatileAdjustedType =
+      fir::updateTypeWithVolatility(val.getType(), isVolatile);
+  if (volatileAdjustedType == val.getType())
+    return val;
+  return create<fir::VolatileCastOp>(loc, volatileAdjustedType, val);
+}
+
 mlir::Value fir::FirOpBuilder::createConvertWithVolatileCast(mlir::Location loc,
                                                              mlir::Type toTy,
                                                              mlir::Value val) {
-  if (fir::isa_volatile_type(val.getType()) != fir::isa_volatile_type(toTy)) {
-    mlir::Type volatileAdjustedType = fir::updateTypeWithVolatility(
-        val.getType(), fir::isa_volatile_type(toTy));
-    val = create<fir::VolatileCastOp>(loc, volatileAdjustedType, val);
-  }
+  val = createVolatileCast(loc, fir::isa_volatile_type(toTy), val);
   return createConvert(loc, toTy, val);
 }
 
@@ -609,8 +618,9 @@ mlir::Value fir::FirOpBuilder::createConvert(mlir::Location loc,
 void fir::FirOpBuilder::createStoreWithConvert(mlir::Location loc,
                                                mlir::Value val,
                                                mlir::Value addr) {
-  mlir::Value cast =
-      createConvert(loc, fir::unwrapRefType(addr.getType()), val);
+  mlir::Type unwrapedRefType = fir::unwrapRefType(addr.getType());
+  val = createVolatileCast(loc, fir::isa_volatile_type(unwrapedRefType), val);
+  mlir::Value cast = createConvert(loc, unwrapedRefType, val);
   create<fir::StoreOp>(loc, cast, addr);
 }
 

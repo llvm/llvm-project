@@ -263,12 +263,25 @@ int SBCommandInterpreter::HandleCompletionWithDescriptions(
   if (!IsValid())
     return 0;
 
+  if (max_return_elements == 0)
+    return 0;
+
   lldb_private::StringList lldb_matches, lldb_descriptions;
   CompletionResult result;
   CompletionRequest request(current_line, cursor - current_line, result);
+  if (max_return_elements > 0)
+    request.SetMaxReturnElements(max_return_elements);
   m_opaque_ptr->HandleCompletion(request);
   result.GetMatches(lldb_matches);
   result.GetDescriptions(lldb_descriptions);
+
+  // limit the matches to the max_return_elements if necessary
+  if (max_return_elements > 0 &&
+      lldb_matches.GetSize() > static_cast<size_t>(max_return_elements)) {
+    lldb_matches.SetSize(max_return_elements);
+    lldb_descriptions.SetSize(max_return_elements);
+  }
+  int number_of_matches = lldb_matches.GetSize();
 
   // Make the result array indexed from 1 again by adding the 'common prefix'
   // of all completions as element 0. This is done to emulate the old API.
@@ -303,7 +316,7 @@ int SBCommandInterpreter::HandleCompletionWithDescriptions(
   matches.AppendList(temp_matches_list);
   SBStringList temp_descriptions_list(&lldb_descriptions);
   descriptions.AppendList(temp_descriptions_list);
-  return result.GetNumberOfResults();
+  return number_of_matches;
 }
 
 int SBCommandInterpreter::HandleCompletionWithDescriptions(

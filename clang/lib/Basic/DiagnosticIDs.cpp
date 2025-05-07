@@ -705,7 +705,7 @@ static void forEachSubGroupImpl(const WarningOption *Group, Func func) {
   for (const int16_t *SubGroups = DiagSubGroups + Group->SubGroups;
        *SubGroups != -1; ++SubGroups) {
     func(static_cast<size_t>(*SubGroups));
-    forEachSubGroupImpl(&OptionTable[*SubGroups], std::move(func));
+    forEachSubGroupImpl(&OptionTable[*SubGroups], func);
   }
 }
 

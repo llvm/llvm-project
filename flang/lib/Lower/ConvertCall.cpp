@@ -327,7 +327,6 @@ Fortran::lower::genCallOpAndResult(
         charFuncPointerLength = charBox->getLen();
     }
   }
-
   const bool isExprCall =
       converter.getLoweringOptions().getLowerToHighLevelFIR() &&
       callSiteType.getNumResults() == 1 &&
@@ -519,7 +518,9 @@ Fortran::lower::genCallOpAndResult(
         // Do not attempt any reboxing here that could break this.
         bool legacyLowering =
             !converter.getLoweringOptions().getLowerToHighLevelFIR();
-        cast = builder.convertWithSemantics(loc, snd, fst,
+        bool isVolatile = fir::isa_volatile_type(snd);
+        cast = builder.createVolatileCast(loc, isVolatile, fst);
+        cast = builder.convertWithSemantics(loc, snd, cast,
                                             callingImplicitInterface,
                                             /*allowRebox=*/legacyLowering);
       }
@@ -588,7 +589,7 @@ Fortran::lower::genCallOpAndResult(
 
     mlir::Value stream; // stream is optional.
     if (caller.getCallDescription().chevrons().size() > 3)
-      stream = fir::getBase(converter.genExprValue(
+      stream = fir::getBase(converter.genExprAddr(
           caller.getCallDescription().chevrons()[3], stmtCtx));
 
     builder.create<cuf::KernelLaunchOp>(
@@ -1368,7 +1369,10 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // it according to the interface.
   mlir::Value addr;
   if (mlir::isa<fir::BoxCharType>(dummyTypeWithActualRank)) {
-    addr = hlfir::genVariableBoxChar(loc, builder, entity);
+    // Cast the argument to match the volatility of the dummy argument.
+    auto nonVolatileEntity = hlfir::Entity{builder.createVolatileCast(
+        loc, fir::isa_volatile_type(dummyType), entity)};
+    addr = hlfir::genVariableBoxChar(loc, builder, nonVolatileEntity);
   } else if (mlir::isa<fir::BaseBoxType>(dummyTypeWithActualRank)) {
     entity = hlfir::genVariableBox(loc, builder, entity);
     // Ensures the box has the right attributes and that it holds an
@@ -1414,6 +1418,11 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   } else {
     addr = hlfir::genVariableRawAddress(loc, builder, entity);
   }
+
+  // If the volatility of the input type does not match the dummy type,
+  // we need to cast the argument.
+  const bool isToTypeVolatile = fir::isa_volatile_type(dummyTypeWithActualRank);
+  addr = builder.createVolatileCast(loc, isToTypeVolatile, addr);
 
   // For ranked actual passed to assumed-rank dummy, the cast to assumed-rank
   // box is inserted when building the fir.call op. Inserting it here would

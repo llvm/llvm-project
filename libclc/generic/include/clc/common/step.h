@@ -8,4 +8,3 @@
 
 #define __CLC_BODY <clc/common/step.inc>
 #include <clc/math/gentype.inc>
-#undef __CLC_BODY

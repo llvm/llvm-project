@@ -2390,7 +2390,7 @@ exportSymbolNamesFromFiles(const std::vector<std::string> &InputFilenames) {
   std::vector<NMSymbol> SymbolList;
   for (const auto &FileName : InputFilenames) {
     std::vector<NMSymbol> FileSymList = dumpSymbolNamesFromFile(FileName);
-    SymbolList.insert(SymbolList.end(), FileSymList.begin(), FileSymList.end());
+    llvm::append_range(SymbolList, FileSymList);
   }
 
   // Delete symbols which should not be printed from SymolList.

@@ -63,6 +63,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GraphWriter.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TypeSize.h"
@@ -1012,12 +1013,7 @@ namespace {
 #ifndef NDEBUG
 static raw_ostream &operator<<(raw_ostream &OS,
                                const AAPointerInfo::OffsetInfo &OI) {
-  ListSeparator LS;
-  OS << "[";
-  for (auto Offset : OI) {
-    OS << LS << Offset;
-  }
-  OS << "]";
+  OS << llvm::interleaved_array(OI);
   return OS;
 }
 #endif // NDEBUG
@@ -3928,12 +3924,6 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
     // (iii) There is no other pointer argument which could alias with the
     //       value.
 
-    auto IsDereferenceableOrNull = [&](Value *O, const DataLayout &DL) {
-      const auto *DerefAA = A.getAAFor<AADereferenceable>(
-          *this, IRPosition::value(*O), DepClassTy::OPTIONAL);
-      return DerefAA ? DerefAA->getAssumedDereferenceableBytes() : 0;
-    };
-
     const IRPosition &VIRP = IRPosition::value(getAssociatedValue());
     const Function *ScopeFn = VIRP.getAnchorScope();
     // Check whether the value is captured in the scope using AANoCapture.
@@ -3973,8 +3963,7 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
       //       is CGSCC runs. For those we would need to "allow" AANoCapture for
       //       a value in the module slice.
       // TODO(captures): Make this more precise.
-      UseCaptureInfo CI =
-          DetermineUseCaptureKind(U, /*Base=*/nullptr, IsDereferenceableOrNull);
+      UseCaptureInfo CI = DetermineUseCaptureKind(U, /*Base=*/nullptr);
       if (capturesNothing(CI))
         return true;
       if (CI.isPassthrough()) {
@@ -5753,7 +5742,7 @@ bool AANoCapture::isImpliedByIR(Attributor &A, const IRPosition &IRP,
   assert(ImpliedAttributeKind == Attribute::Captures &&
          "Unexpected attribute kind");
   Value &V = IRP.getAssociatedValue();
-  if (!IRP.isArgumentPosition())
+  if (!isa<Constant>(V) && !IRP.isArgumentPosition())
     return V.use_empty();
 
   // You cannot "capture" null in the default address space.
@@ -6035,16 +6024,9 @@ ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
     }
   }
 
-  auto IsDereferenceableOrNull = [&](Value *O, const DataLayout &DL) {
-    const auto *DerefAA = A.getAAFor<AADereferenceable>(
-        *this, IRPosition::value(*O), DepClassTy::OPTIONAL);
-    return DerefAA && DerefAA->getAssumedDereferenceableBytes();
-  };
-
   auto UseCheck = [&](const Use &U, bool &Follow) -> bool {
     // TODO(captures): Make this more precise.
-    UseCaptureInfo CI =
-        DetermineUseCaptureKind(U, /*Base=*/nullptr, IsDereferenceableOrNull);
+    UseCaptureInfo CI = DetermineUseCaptureKind(U, /*Base=*/nullptr);
     if (capturesNothing(CI))
       return true;
     if (CI.isPassthrough()) {
@@ -12177,7 +12159,7 @@ struct AAGlobalValueInfoFloating : public AAGlobalValueInfo {
     auto UsePred = [&](const Use &U, bool &Follow) -> bool {
       Uses.insert(&U);
       // TODO(captures): Make this more precise.
-      UseCaptureInfo CI = DetermineUseCaptureKind(U, /*Base=*/nullptr, nullptr);
+      UseCaptureInfo CI = DetermineUseCaptureKind(U, /*Base=*/nullptr);
       if (CI.isPassthrough()) {
         Follow = true;
         return true;

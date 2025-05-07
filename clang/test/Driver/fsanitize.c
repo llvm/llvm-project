@@ -149,7 +149,7 @@
 // CHECK-FSANITIZE-SHIFT-PARTIAL: "-fsanitize=shift-exponent"
 
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize=vptr -fsanitize-trap=vptr %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-VPTR-TRAP-UNDEF
-// CHECK-VPTR-TRAP-UNDEF: error: invalid argument '-fsanitize=vptr' not allowed with '-fsanitize-trap=undefined'
+// CHECK-VPTR-TRAP-UNDEF: error: unsupported argument 'vptr' to option '-fsanitize-trap='
 
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=vptr -fsanitize-undefined-trap-on-error %s -###
 
@@ -951,8 +951,28 @@
 // CHECK-CFI-MINIMAL: "-fsanitize-trap=cfi-derived-cast,cfi-icall,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall"
 // CHECK-CFI-MINIMAL: "-fsanitize-minimal-runtime"
 
-// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=cfi -fno-sanitize-trap=cfi-icall -flto -fvisibility=hidden -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOTRAP-MINIMAL
-// CHECK-CFI-NOTRAP-MINIMAL: error: invalid argument 'fsanitize-minimal-runtime' only allowed with 'fsanitize-trap=cfi'
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -flto -fvisibility=hidden -fsanitize-minimal-runtime -fsanitize-recover=cfi -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-RECOVER-MINIMAL
+// CHECK-CFI-RECOVER-MINIMAL: "-fsanitize=cfi-derived-cast,cfi-icall,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall"
+// CHECK-CFI-RECOVER-MINIMAL: "-fsanitize-trap=cfi-derived-cast,cfi-icall,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall"
+// CHECK-CFI-RECOVER-MINIMAL: "-fsanitize-minimal-runtime"
+
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -flto -fvisibility=hidden -fsanitize-minimal-runtime -fno-sanitize-recover=cfi -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-ABORT-MINIMAL
+// CHECK-CFI-ABORT-MINIMAL: "-fsanitize=cfi-derived-cast,cfi-icall,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall"
+// CHECK-CFI-ABORT-MINIMAL: "-fsanitize-trap=cfi-derived-cast,cfi-icall,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall"
+// CHECK-CFI-ABORT-MINIMAL: "-fsanitize-minimal-runtime"
+
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -flto -fvisibility=hidden -fsanitize-minimal-runtime -fno-sanitize-trap=cfi -fsanitize-recover=cfi -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOTRAP-RECOVER-MINIMAL --
+// CHECK-CFI-NOTRAP-RECOVER-MINIMAL: "-fsanitize=cfi-derived-cast,cfi-icall,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall"
+// CHECK-CFI-NOTRAP-RECOVER-MINIMAL: "-fsanitize-recover=cfi-derived-cast,cfi-icall,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall"
+// CHECK-CFI-NOTRAP-RECOVER-MINIMAL: "-fsanitize-minimal-runtime"
+
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -flto -fvisibility=hidden -fsanitize-minimal-runtime -fno-sanitize-trap=cfi -fno-sanitize-recover=cfi -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOTRAP-ABORT-MINIMAL
+// CHECK-CFI-NOTRAP-ABORT-MINIMAL: "-fsanitize=cfi-derived-cast,cfi-icall,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall"
+// CHECK-CFI-NOTRAP-ABORT-MINIMAL: "-fsanitize-minimal-runtime"
+
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -fno-sanitize-trap=cfi-icall -flto -fvisibility=hidden -fsanitize-minimal-runtime -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOTRAP-MINIMAL
+// CHECK-CFI-NOTRAP-MINIMAL: "-fsanitize=cfi-derived-cast,cfi-icall,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall"
+// CHECK-CFI-NOTRAP-MINIMAL: "-fsanitize-trap=cfi-derived-cast,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall"
 
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -fno-sanitize-trap=cfi-icall -fno-sanitize=cfi-icall -flto -fvisibility=hidden -fsanitize-minimal-runtime -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOICALL-MINIMAL
 // CHECK-CFI-NOICALL-MINIMAL: "-fsanitize=cfi-derived-cast,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall"

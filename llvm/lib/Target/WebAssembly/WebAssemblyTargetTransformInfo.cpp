@@ -53,7 +53,7 @@ TypeSize WebAssemblyTTIImpl::getRegisterBitWidth(
 InstructionCost WebAssemblyTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) {
+    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
 
   InstructionCost Cost =
       BasicTTIImplBase<WebAssemblyTTIImpl>::getArithmeticInstrCost(
@@ -81,7 +81,7 @@ InstructionCost WebAssemblyTTIImpl::getArithmeticInstrCost(
 
 InstructionCost WebAssemblyTTIImpl::getCastInstrCost(
     unsigned Opcode, Type *Dst, Type *Src, TTI::CastContextHint CCH,
-    TTI::TargetCostKind CostKind, const Instruction *I) {
+    TTI::TargetCostKind CostKind, const Instruction *I) const {
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   auto SrcTy = TLI->getValueType(DL, Src);
   auto DstTy = TLI->getValueType(DL, Dst);
@@ -142,9 +142,9 @@ InstructionCost WebAssemblyTTIImpl::getCastInstrCost(
 }
 
 InstructionCost WebAssemblyTTIImpl::getMemoryOpCost(
-    unsigned Opcode, Type *Ty, MaybeAlign Alignment, unsigned AddressSpace,
+    unsigned Opcode, Type *Ty, Align Alignment, unsigned AddressSpace,
     TTI::TargetCostKind CostKind, TTI::OperandValueInfo OpInfo,
-    const Instruction *I) {
+    const Instruction *I) const {
   if (!ST->hasSIMD128() || !isa<FixedVectorType>(Ty)) {
     return BaseT::getMemoryOpCost(Opcode, Ty, Alignment, AddressSpace,
                                   CostKind);
@@ -182,10 +182,9 @@ InstructionCost WebAssemblyTTIImpl::getMemoryOpCost(
   return BaseT::getMemoryOpCost(Opcode, Ty, Alignment, AddressSpace, CostKind);
 }
 
-InstructionCost
-WebAssemblyTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
-                                       TTI::TargetCostKind CostKind,
-                                       unsigned Index, Value *Op0, Value *Op1) {
+InstructionCost WebAssemblyTTIImpl::getVectorInstrCost(
+    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+    const Value *Op0, const Value *Op1) const {
   InstructionCost Cost = BasicTTIImplBase::getVectorInstrCost(
       Opcode, Val, CostKind, Index, Op0, Op1);
 

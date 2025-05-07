@@ -9,8 +9,10 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Transforms/InliningUtils.h"
 
@@ -51,6 +53,16 @@ struct BufferizationInlinerInterface : public DialectInlinerInterface {
     return true;
   }
 };
+
+template <typename Tensor>
+struct BuiltinTensorExternalModel
+    : TensorLikeType::ExternalModel<BuiltinTensorExternalModel<Tensor>,
+                                    Tensor> {};
+
+template <typename MemRef>
+struct BuiltinMemRefExternalModel
+    : BufferLikeType::ExternalModel<BuiltinMemRefExternalModel<MemRef>,
+                                    MemRef> {};
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -63,6 +75,20 @@ void mlir::bufferization::BufferizationDialect::initialize() {
 #include "mlir/Dialect/Bufferization/IR/BufferizationOps.cpp.inc"
       >();
   addInterfaces<BufferizationInlinerInterface>();
+
+  // Note: Unlike with other external models, declaring bufferization's
+  // "promised interfaces" in builtins for TensorLike and BufferLike type
+  // interfaces is not possible (due to builtins being independent of
+  // bufferization). Thus, the compromise is to attach these interfaces directly
+  // during dialect initialization.
+  RankedTensorType::attachInterface<
+      BuiltinTensorExternalModel<RankedTensorType>>(*getContext());
+  UnrankedTensorType::attachInterface<
+      BuiltinTensorExternalModel<UnrankedTensorType>>(*getContext());
+  MemRefType::attachInterface<BuiltinMemRefExternalModel<MemRefType>>(
+      *getContext());
+  UnrankedMemRefType::attachInterface<
+      BuiltinMemRefExternalModel<UnrankedMemRefType>>(*getContext());
 }
 
 LogicalResult BufferizationDialect::verifyRegionArgAttribute(
@@ -96,9 +122,9 @@ LogicalResult BufferizationDialect::verifyRegionArgAttribute(
     return success();
   }
   if (attr.getName() == kBufferLayoutAttrName) {
-    if (!llvm::isa<AffineMapAttr>(attr.getValue())) {
+    if (!llvm::isa<MemRefLayoutAttrInterface>(attr.getValue())) {
       return op->emitError() << "'" << kBufferLayoutAttrName
-                             << "' is expected to be a affine map attribute";
+                             << "' is expected to be a memref layout attribute";
     }
     if (!isa<FunctionOpInterface>(op))
       return op->emitError() << "expected '" << kBufferLayoutAttrName

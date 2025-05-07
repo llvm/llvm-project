@@ -748,7 +748,7 @@ AffineMap mlir::foldAttributesIntoMap(Builder &b, AffineMap map,
   SmallVector<AffineExpr> dimReplacements, symReplacements;
   int64_t numDims = 0;
   for (int64_t i = 0; i < map.getNumDims(); ++i) {
-    if (auto attr = operands[i].dyn_cast<Attribute>()) {
+    if (auto attr = dyn_cast<Attribute>(operands[i])) {
       dimReplacements.push_back(
           b.getAffineConstantExpr(cast<IntegerAttr>(attr).getInt()));
     } else {
@@ -758,7 +758,7 @@ AffineMap mlir::foldAttributesIntoMap(Builder &b, AffineMap map,
   }
   int64_t numSymbols = 0;
   for (int64_t i = 0; i < map.getNumSymbols(); ++i) {
-    if (auto attr = operands[i + map.getNumDims()].dyn_cast<Attribute>()) {
+    if (auto attr = dyn_cast<Attribute>(operands[i + map.getNumDims()])) {
       symReplacements.push_back(
           b.getAffineConstantExpr(cast<IntegerAttr>(attr).getInt()));
     } else {

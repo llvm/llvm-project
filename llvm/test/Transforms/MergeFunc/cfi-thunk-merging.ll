@@ -205,6 +205,7 @@ attributes #3 = { noreturn nounwind }
 ; LOWERTYPETESTS-LABEL: define private void @.cfi.jumptable
 ; LOWERTYPETESTS-SAME: () #[[ATTR3:[0-9]+]] align 8 {
 ; LOWERTYPETESTS-NEXT:  entry:
-; LOWERTYPETESTS-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0Ajmp ${1:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s,s"(ptr @f, ptr @f_thunk)
+; LOWERTYPETESTS-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @f)
+; LOWERTYPETESTS-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @f_thunk)
 ; LOWERTYPETESTS-NEXT:    unreachable
 ;

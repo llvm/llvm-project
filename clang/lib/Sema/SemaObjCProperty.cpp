@@ -180,6 +180,9 @@ Decl *SemaObjC::ActOnProperty(Scope *S, SourceLocation AtLoc,
                            0);
   TypeSourceInfo *TSI = SemaRef.GetTypeForDeclarator(FD.D);
   QualType T = TSI->getType();
+  if (T.getPointerAuth().isPresent()) {
+    Diag(AtLoc, diag::err_ptrauth_qualifier_invalid) << T << 2;
+  }
   if (!getOwnershipRule(Attributes)) {
     Attributes |= deducePropertyOwnershipFromType(SemaRef, T);
   }
@@ -1346,9 +1349,9 @@ Decl *SemaObjC::ActOnPropertyImplDecl(
             PropertyIvarType->castAs<ObjCObjectPointerType>(),
             IvarType->castAs<ObjCObjectPointerType>());
       else {
-        compat = (SemaRef.CheckAssignmentConstraints(
-                      PropertyIvarLoc, PropertyIvarType, IvarType) ==
-                  Sema::Compatible);
+        compat = SemaRef.IsAssignConvertCompatible(
+            SemaRef.CheckAssignmentConstraints(PropertyIvarLoc,
+                                               PropertyIvarType, IvarType));
       }
       if (!compat) {
         Diag(PropertyDiagLoc, diag::err_property_ivar_type)
@@ -1699,8 +1702,9 @@ bool SemaObjC::DiagnosePropertyAccessorMismatch(ObjCPropertyDecl *property,
              PropertyRValueType->getAs<ObjCObjectPointerType>()) &&
         (getterObjCPtr = GetterType->getAs<ObjCObjectPointerType>()))
       compat = Context.canAssignObjCInterfaces(getterObjCPtr, propertyObjCPtr);
-    else if (SemaRef.CheckAssignmentConstraints(
-                 Loc, GetterType, PropertyRValueType) != Sema::Compatible) {
+    else if (!SemaRef.IsAssignConvertCompatible(
+                 SemaRef.CheckAssignmentConstraints(Loc, GetterType,
+                                                    PropertyRValueType))) {
       Diag(Loc, diag::err_property_accessor_type)
           << property->getDeclName() << PropertyRValueType
           << GetterMethod->getSelector() << GetterType;

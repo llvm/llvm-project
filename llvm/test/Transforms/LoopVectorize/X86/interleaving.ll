@@ -13,11 +13,11 @@ define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 ; SSE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; SSE:       vector.body:
 ; SSE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; SSE-NEXT:    [[TMP0:%.*]] = shl i64 [[INDEX]], 1
-; SSE-NEXT:    [[TMP1:%.*]] = or disjoint i64 [[TMP0]], 8
 ; SSE-NEXT:    [[DOTIDX:%.*]] = shl nsw i64 [[INDEX]], 3
 ; SSE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[B:%.*]], i64 [[DOTIDX]]
-; SSE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP1]]
+; SSE-NEXT:    [[DOTIDX5:%.*]] = shl i64 [[INDEX]], 3
+; SSE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[B]], i64 [[DOTIDX5]]
+; SSE-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP1]], i64 32
 ; SSE-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP2]], align 4
 ; SSE-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; SSE-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
@@ -49,17 +49,17 @@ define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 ; AVX1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX1:       vector.body:
 ; AVX1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; AVX1-NEXT:    [[TMP0:%.*]] = shl i64 [[INDEX]], 1
-; AVX1-NEXT:    [[TMP1:%.*]] = or disjoint i64 [[TMP0]], 8
-; AVX1-NEXT:    [[TMP2:%.*]] = shl i64 [[INDEX]], 1
-; AVX1-NEXT:    [[TMP3:%.*]] = or disjoint i64 [[TMP2]], 16
-; AVX1-NEXT:    [[TMP4:%.*]] = shl i64 [[INDEX]], 1
-; AVX1-NEXT:    [[TMP5:%.*]] = or disjoint i64 [[TMP4]], 24
 ; AVX1-NEXT:    [[DOTIDX:%.*]] = shl nsw i64 [[INDEX]], 3
 ; AVX1-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[B:%.*]], i64 [[DOTIDX]]
-; AVX1-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP1]]
-; AVX1-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP3]]
-; AVX1-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP5]]
+; AVX1-NEXT:    [[DOTIDX11:%.*]] = shl i64 [[INDEX]], 3
+; AVX1-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[B]], i64 [[DOTIDX11]]
+; AVX1-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP1]], i64 32
+; AVX1-NEXT:    [[DOTIDX12:%.*]] = shl i64 [[INDEX]], 3
+; AVX1-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[B]], i64 [[DOTIDX12]]
+; AVX1-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP3]], i64 64
+; AVX1-NEXT:    [[DOTIDX13:%.*]] = shl i64 [[INDEX]], 3
+; AVX1-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[B]], i64 [[DOTIDX13]]
+; AVX1-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP5]], i64 96
 ; AVX1-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP6]], align 4
 ; AVX1-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; AVX1-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
@@ -103,17 +103,17 @@ define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 ; AVX2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX2:       vector.body:
 ; AVX2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; AVX2-NEXT:    [[TMP0:%.*]] = shl i64 [[INDEX]], 1
-; AVX2-NEXT:    [[TMP1:%.*]] = or disjoint i64 [[TMP0]], 16
-; AVX2-NEXT:    [[TMP2:%.*]] = shl i64 [[INDEX]], 1
-; AVX2-NEXT:    [[TMP3:%.*]] = or disjoint i64 [[TMP2]], 32
-; AVX2-NEXT:    [[TMP4:%.*]] = shl i64 [[INDEX]], 1
-; AVX2-NEXT:    [[TMP5:%.*]] = or disjoint i64 [[TMP4]], 48
 ; AVX2-NEXT:    [[DOTIDX:%.*]] = shl nsw i64 [[INDEX]], 3
 ; AVX2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[B:%.*]], i64 [[DOTIDX]]
-; AVX2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP1]]
-; AVX2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP3]]
-; AVX2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP5]]
+; AVX2-NEXT:    [[DOTIDX11:%.*]] = shl i64 [[INDEX]], 3
+; AVX2-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[B]], i64 [[DOTIDX11]]
+; AVX2-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP1]], i64 64
+; AVX2-NEXT:    [[DOTIDX12:%.*]] = shl i64 [[INDEX]], 3
+; AVX2-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[B]], i64 [[DOTIDX12]]
+; AVX2-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP3]], i64 128
+; AVX2-NEXT:    [[DOTIDX13:%.*]] = shl i64 [[INDEX]], 3
+; AVX2-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[B]], i64 [[DOTIDX13]]
+; AVX2-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP5]], i64 192
 ; AVX2-NEXT:    [[WIDE_VEC:%.*]] = load <16 x i32>, ptr [[TMP6]], align 4
 ; AVX2-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
 ; AVX2-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
@@ -160,8 +160,8 @@ define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 ; ATOM-NEXT:    [[TMP0:%.*]] = shl nuw nsw i64 [[INDVARS_IV]], 1
 ; ATOM-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[B:%.*]], i64 [[TMP0]]
 ; ATOM-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; ATOM-NEXT:    [[TMP2:%.*]] = or disjoint i64 [[TMP0]], 1
-; ATOM-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[TMP2]]
+; ATOM-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[TMP0]]
+; ATOM-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i64 4
 ; ATOM-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
 ; ATOM-NEXT:    [[ADD4:%.*]] = add nsw i32 [[TMP3]], [[TMP1]]
 ; ATOM-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw i32, ptr [[A:%.*]], i64 [[INDVARS_IV]]

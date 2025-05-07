@@ -72,6 +72,11 @@ public:
                                             const LastModification &before,
                                             LastModification *after) override;
 
+  /// Visit an operation. If this analysis can confirm that lattice content
+  /// of lattice anchors around operation are necessarily identical, join
+  /// them into the same equivalent class.
+  void buildOperationEquivalentLatticeAnchor(Operation *op) override;
+
   /// At an entry point, the last modifications of all memory resources are
   /// unknown.
   void setToEntryState(LastModification *lattice) override {
@@ -145,6 +150,14 @@ LogicalResult LastModifiedAnalysis::visitOperation(
   }
   propagateIfChanged(after, result);
   return success();
+}
+
+void LastModifiedAnalysis::buildOperationEquivalentLatticeAnchor(
+    Operation *op) {
+  if (isMemoryEffectFree(op)) {
+    unionLatticeAnchors<LastModification>(getProgramPointBefore(op),
+                                          getProgramPointAfter(op));
+  }
 }
 
 void LastModifiedAnalysis::visitCallControlFlowTransfer(

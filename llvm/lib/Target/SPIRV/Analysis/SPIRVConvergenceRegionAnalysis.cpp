@@ -269,8 +269,7 @@ public:
       ToProcess.pop();
 
       auto CT = getConvergenceToken(L->getHeader());
-      SmallPtrSet<BasicBlock *, 8> RegionBlocks(L->block_begin(),
-                                                L->block_end());
+      SmallPtrSet<BasicBlock *, 8> RegionBlocks(llvm::from_range, L->blocks());
       SmallVector<BasicBlock *> LoopExits;
       L->getExitingBlocks(LoopExits);
       if (CT.has_value()) {

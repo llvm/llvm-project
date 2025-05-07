@@ -3383,11 +3383,11 @@ struct FormatStyle {
   }
   bool isCSharp() const { return Language == LK_CSharp; }
   bool isJson() const { return Language == LK_Json; }
+  bool isJava() const { return Language == LK_Java; }
   bool isJavaScript() const { return Language == LK_JavaScript; }
   bool isVerilog() const { return Language == LK_Verilog; }
-  bool isProto() const {
-    return Language == LK_Proto || Language == LK_TextProto;
-  }
+  bool isTextProto() const { return Language == LK_TextProto; }
+  bool isProto() const { return Language == LK_Proto || isTextProto(); }
   bool isTableGen() const { return Language == LK_TableGen; }
 
   /// The language that this format style targets.
@@ -3653,6 +3653,27 @@ struct FormatStyle {
   /// ``Foo <Protocol>`` instead of ``Foo<Protocol>``.
   /// \version 3.7
   bool ObjCSpaceBeforeProtocolList;
+
+  /// A regular expression that describes markers for turning formatting off for
+  /// one line. If it matches a comment that is the only token of a line,
+  /// clang-format skips the comment and the next line. Otherwise, clang-format
+  /// skips lines containing a matched token.
+  /// \code
+  ///    // OneLineFormatOffRegex: ^(// NOLINT|logger$)
+  ///    // results in the output below:
+  ///    int a;
+  ///    int b ;  // NOLINT
+  ///    int c;
+  ///     // NOLINTNEXTLINE
+  ///    int d ;
+  ///    int e;
+  ///    s = "// NOLINT";
+  ///     logger() ;
+  ///    logger2();
+  ///    my_logger();
+  /// \endcode
+  /// \version 21
+  std::string OneLineFormatOffRegex;
 
   /// Different ways to try to fit all constructor initializers on a line.
   enum PackConstructorInitializersStyle : int8_t {
@@ -5399,6 +5420,7 @@ struct FormatStyle {
            ObjCPropertyAttributeOrder == R.ObjCPropertyAttributeOrder &&
            ObjCSpaceAfterProperty == R.ObjCSpaceAfterProperty &&
            ObjCSpaceBeforeProtocolList == R.ObjCSpaceBeforeProtocolList &&
+           OneLineFormatOffRegex == R.OneLineFormatOffRegex &&
            PackConstructorInitializers == R.PackConstructorInitializers &&
            PenaltyBreakAssignment == R.PenaltyBreakAssignment &&
            PenaltyBreakBeforeFirstCallParameter ==
@@ -5482,9 +5504,9 @@ struct FormatStyle {
   // The memory management and ownership reminds of a birds nest: chicks
   // leaving the nest take photos of the nest with them.
   struct FormatStyleSet {
-    typedef std::map<FormatStyle::LanguageKind, FormatStyle> MapType;
+    typedef std::map<LanguageKind, FormatStyle> MapType;
 
-    std::optional<FormatStyle> Get(FormatStyle::LanguageKind Language) const;
+    std::optional<FormatStyle> Get(LanguageKind Language) const;
 
     // Adds \p Style to this FormatStyleSet. Style must not have an associated
     // FormatStyleSet.
@@ -5516,8 +5538,8 @@ private:
 
 /// Returns a format style complying with the LLVM coding standards:
 /// http://llvm.org/docs/CodingStandards.html.
-FormatStyle getLLVMStyle(
-    FormatStyle::LanguageKind Language = FormatStyle::LanguageKind::LK_Cpp);
+FormatStyle
+getLLVMStyle(FormatStyle::LanguageKind Language = FormatStyle::LK_Cpp);
 
 /// Returns a format style complying with one of Google's style guides:
 /// http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml.

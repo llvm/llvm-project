@@ -2,9 +2,22 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 
+declare half @llvm.experimental.constrained.sitofp.f16.i32(i32, metadata, metadata)
 declare float @llvm.experimental.constrained.sitofp.f32.i32(i32, metadata, metadata)
 declare double @llvm.experimental.constrained.sitofp.f64.i32(i32, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.sitofp.f128.i32(i32, metadata, metadata)
+
+; Check i32->f16.
+define half @f0(i32 %i) #0 {
+; CHECK-LABEL: f0:
+; CHECK: cefbr %f0, %r2
+; CHECK-NEXT: brasl %r14, __truncsfhf2@PLT
+; CHECK: br %r14
+  %conv = call half @llvm.experimental.constrained.sitofp.f16.i32(i32 %i,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret half %conv
+}
 
 ; Check i32->f32.
 define float @f1(i32 %i) #0 {

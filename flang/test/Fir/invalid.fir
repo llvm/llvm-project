@@ -1,6 +1,4 @@
-// FIR ops diagnotic tests
-
-// RUN: fir-opt -split-input-file -verify-diagnostics %s
+// RUN: fir-opt -split-input-file -verify-diagnostics --strict-fir-volatile-verifier %s
 
 // expected-error@+1{{custom op 'fir.string_lit' must have character type}}
 %0 = fir.string_lit "Hello, World!"(13) : !fir.int<32>
@@ -1310,4 +1308,80 @@ func.func @bad_convert_volatile6(%arg0: !fir.ref<i32>) -> !fir.ref<i64> {
   // expected-error@+1 {{'fir.volatile_cast' op types must be identical except for volatility}}
   %0 = fir.volatile_cast %arg0 : (!fir.ref<i32>) -> !fir.ref<i64>
   return %0 : !fir.ref<i64>
+}
+
+// -----
+
+fir.local {type = local} @x.localizer : i32 init {
+^bb0(%arg0: i32, %arg1: i32):
+  %0 = arith.constant 0.0 : f32
+  // expected-error @below {{Invalid yielded value. Expected type: 'i32', got: 'f32'}}
+  fir.yield(%0 : f32)
+}
+
+// -----
+
+// expected-error @below {{Region argument type mismatch: got 'f32' expected 'i32'.}}
+fir.local {type = local} @x.localizer : i32 init {
+^bb0(%arg0: i32, %arg1: f32):
+  fir.yield
+}
+
+// -----
+
+fir.local {type = local} @x.localizer : f32 init {
+^bb0(%arg0: f32, %arg1: f32):
+  fir.yield(%arg0: f32)
+} dealloc {
+^bb0(%arg0: f32):
+  // expected-error @below {{Did not expect any values to be yielded.}}
+  fir.yield(%arg0 : f32)
+}
+
+// -----
+
+fir.local {type = local} @x.localizer : i32 init {
+^bb0(%arg0: i32, %arg1: i32):
+  // expected-error @below {{expected exit block terminator to be an `fir.yield` op.}}
+  fir.unreachable
+}
+
+// -----
+
+// expected-error @below {{`init`: expected 2 region arguments, got: 1}}
+fir.local {type = local} @x.localizer : f32 init {
+^bb0(%arg0: f32):
+  fir.yield(%arg0 : f32)
+}
+
+// -----
+
+// expected-error @below {{`copy`: expected 2 region arguments, got: 1}}
+fir.local {type = local_init} @x.privatizer : f32 copy {
+^bb0(%arg0: f32):
+  fir.yield(%arg0 : f32)
+}
+
+// -----
+
+// expected-error @below {{`dealloc`: expected 1 region arguments, got: 2}}
+fir.local {type = local} @x.localizer : f32 dealloc {
+^bb0(%arg0: f32, %arg1: f32):
+  fir.yield
+}
+
+// -----
+
+// expected-error @below {{`local` specifiers do not require a `copy` region.}}
+fir.local {type = local} @x.localizer : f32 copy {
+^bb0(%arg0: f32, %arg1 : f32):
+  fir.yield(%arg0 : f32)
+}
+
+// -----
+
+// expected-error @below {{`local_init` specifiers require at least a `copy` region.}}
+fir.local {type = local_init} @x.localizer : f32 init {
+^bb0(%arg0: f32, %arg1: f32):
+  fir.yield(%arg0 : f32)
 }

@@ -9,13 +9,20 @@
 #include "mlir/Dialect/AMDGPU/Transforms/Passes.h"
 
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LogicalResult.h"
-#include "mlir/Transforms/WalkPatternRewriteDriver.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/Support/MathExtras.h"
 
 namespace mlir::amdgpu {
 #define GEN_PASS_DEF_AMDGPUTRANSFERREADTOLOADPASS
@@ -67,6 +74,9 @@ static LogicalResult transferPreconditions(
   if (!memRefType.isLastDimUnitStride())
     return rewriter.notifyMatchFailure(xferOp, "!= 1 stride needs VectorToSCF");
 
+  if (memRefType.getElementTypeBitWidth() < 8)
+    return rewriter.notifyMatchFailure(xferOp, "unsupported sub-byte type");
+
   // If there is broadcasting involved then we first load the unbroadcasted
   // vector, and then broadcast it with `vector.broadcast`.
   ArrayRef<int64_t> vectorShape = xferOp.getVectorType().getShape();
@@ -101,6 +111,26 @@ static LogicalResult transferPreconditions(
   return success();
 }
 
+static Value createVectorLoadForMaskedLoad(OpBuilder &builder, Location loc,
+                                           vector::TransferReadOp readOp,
+                                           bool requiresBroadcasting,
+                                           VectorType unbroadcastedVectorType) {
+  Value fill = builder.create<vector::SplatOp>(loc, unbroadcastedVectorType,
+                                               readOp.getPadding());
+  Value load = builder.create<vector::LoadOp>(
+      loc, unbroadcastedVectorType, readOp.getSource(), readOp.getIndices());
+  Value res = builder.create<arith::SelectOp>(loc, unbroadcastedVectorType,
+                                              readOp.getMask(), load, fill);
+  // Insert a broadcasting op if required.
+  if (requiresBroadcasting) {
+    res = builder.create<vector::BroadcastOp>(loc, readOp.getVectorType(), res);
+  }
+  return res;
+}
+
+static constexpr char kTransferReadNeedsMask[] =
+    "amdgpu.buffer_transfer_read_needs_mask";
+
 namespace {
 
 struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
@@ -108,6 +138,8 @@ struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
 
   LogicalResult matchAndRewrite(vector::TransferReadOp readOp,
                                 PatternRewriter &rewriter) const override {
+    if (readOp->hasAttr(kTransferReadNeedsMask))
+      return failure();
 
     bool requiresBroadcasting = false;
     VectorType unbroadcastedVectorType;
@@ -117,20 +149,111 @@ struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
     }
 
     Location loc = readOp.getLoc();
-    Value fill = rewriter.create<vector::SplatOp>(loc, unbroadcastedVectorType,
-                                                  readOp.getPadding());
-    Value load = rewriter.create<vector::LoadOp>(
-        loc, unbroadcastedVectorType, readOp.getSource(), readOp.getIndices());
-    Value res = rewriter.create<arith::SelectOp>(loc, unbroadcastedVectorType,
-                                                 readOp.getMask(), load, fill);
+    Value src = readOp.getSource();
 
-    // Insert a broadcasting op if required.
-    if (requiresBroadcasting) {
-      res = rewriter.create<vector::BroadcastOp>(loc, readOp.getVectorType(),
-                                                 res);
+    VectorType vectorType = readOp.getVectorType();
+    int64_t vectorSize = vectorType.getNumElements();
+    int64_t elementBitWidth = vectorType.getElementTypeBitWidth();
+    SmallVector<OpFoldResult> indices = readOp.getIndices();
+
+    auto stridedMetadata =
+        rewriter.create<memref::ExtractStridedMetadataOp>(loc, src);
+    SmallVector<OpFoldResult> strides =
+        stridedMetadata.getConstifiedMixedStrides();
+    SmallVector<OpFoldResult> sizes = stridedMetadata.getConstifiedMixedSizes();
+    OpFoldResult offset = stridedMetadata.getConstifiedMixedOffset();
+    OpFoldResult linearizedIndices;
+    std::tie(std::ignore, linearizedIndices) =
+        memref::getLinearizedMemRefOffsetAndSize(rewriter, loc, elementBitWidth,
+                                                 elementBitWidth, offset, sizes,
+                                                 strides, indices);
+
+    // TODO(jerryyin): Fix the getLinearizedMemRefOffsetAndSize() function
+    // Note below doesn't give the correct result for the linearized size.
+    // Value totalSize = getValueOrCreateConstantIndexOp(
+    //    rewriter, loc, linearizedInfo.linearizedSize);
+    // It computes the multiplied sizes of all dimensions instead of taking
+    // the maximum of each dimension size * stride.
+    SmallVector<AffineExpr> productExpressions;
+    unsigned sourceRank = cast<ShapedType>(src.getType()).getRank();
+
+    SmallVector<AffineExpr> symbols(2 * sourceRank);
+    SmallVector<Value> offsetValues;
+    bindSymbolsList(rewriter.getContext(), MutableArrayRef{symbols});
+
+    size_t symbolIndex = 0;
+    for (size_t i = 0; i < sourceRank; ++i) {
+      AffineExpr strideExpr, sizeExpr;
+      OpFoldResult stride = strides[i];
+      OpFoldResult size = sizes[i];
+      if (auto constantStride = getConstantIntValue(stride)) {
+        strideExpr = rewriter.getAffineConstantExpr(*constantStride);
+      } else {
+        strideExpr = symbols[symbolIndex++];
+        offsetValues.push_back(
+            getValueOrCreateConstantIndexOp(rewriter, loc, stride));
+      }
+
+      if (auto constantSize = getConstantIntValue(size)) {
+        sizeExpr = rewriter.getAffineConstantExpr(*constantSize);
+      } else {
+        sizeExpr = symbols[symbolIndex++];
+        offsetValues.push_back(
+            getValueOrCreateConstantIndexOp(rewriter, loc, size));
+      }
+
+      productExpressions.push_back(strideExpr * sizeExpr);
     }
 
-    rewriter.replaceOp(readOp, res);
+    AffineMap maxMap = AffineMap::get(
+        /*dimCount=*/0, /*symbolCount=*/symbolIndex, productExpressions,
+        rewriter.getContext());
+    Value totalSize =
+        rewriter.create<affine::AffineMaxOp>(loc, maxMap, offsetValues);
+
+    // delta = bufferSize - linearizedOffset
+    Value vectorSizeOffset =
+        rewriter.create<arith::ConstantIndexOp>(loc, vectorSize);
+    Value linearIndex =
+        getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices);
+    Value delta = rewriter.create<arith::SubIOp>(loc, totalSize, linearIndex);
+
+    // 1) check if delta < vectorSize
+    Value isOutofBounds = rewriter.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::ult, delta, vectorSizeOffset);
+
+    // 2) check if (detla % elements_per_word != 0)
+    Value elementsPerWord = rewriter.create<arith::ConstantIndexOp>(
+        loc, llvm::divideCeil(32, elementBitWidth));
+    Value isNotWordAligned = rewriter.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::ne,
+        rewriter.create<arith::RemUIOp>(loc, delta, elementsPerWord),
+        rewriter.create<arith::ConstantIndexOp>(loc, 0));
+
+    // We take the fallback of transfer_read default lowering only it is both
+    // out-of-bounds and not word aligned. The fallback ensures correct results
+    // when loading at the boundary of the buffer since buffer load returns
+    // inconsistent zeros for the whole word when boundary is crossed.
+    Value ifCondition =
+        rewriter.create<arith::AndIOp>(loc, isOutofBounds, isNotWordAligned);
+
+    auto thenBuilder = [&](OpBuilder &builder, Location loc) {
+      Operation *read = builder.clone(*readOp.getOperation());
+      read->setAttr(kTransferReadNeedsMask, builder.getUnitAttr());
+      Value readResult = read->getResult(0);
+      builder.create<scf::YieldOp>(loc, readResult);
+    };
+
+    auto elseBuilder = [&](OpBuilder &builder, Location loc) {
+      Value res = createVectorLoadForMaskedLoad(
+          builder, loc, readOp, requiresBroadcasting, unbroadcastedVectorType);
+      rewriter.create<scf::YieldOp>(loc, res);
+    };
+
+    auto ifOp =
+        rewriter.create<scf::IfOp>(loc, ifCondition, thenBuilder, elseBuilder);
+
+    rewriter.replaceOp(readOp, ifOp);
 
     return success();
   }
@@ -149,6 +272,8 @@ struct AmdgpuTransferReadToLoadPass final
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populateAmdgpuTransferReadToLoadPatterns(patterns);
-    walkAndApplyPatterns(getOperation(), std::move(patterns));
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
+      return signalPassFailure();
+    }
   }
 };

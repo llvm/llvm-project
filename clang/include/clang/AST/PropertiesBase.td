@@ -877,11 +877,14 @@ let Class = PropertyTypeCase<TemplateArgument, "Expression"> in {
   def : Property<"expression", ExprRef> {
     let Read = [{ node.getAsExpr() }];
   }
+  def : Property<"IsCanonical", Bool> {
+    let Read = [{ node.isCanonicalExpr() }];
+  }
   def : Property<"isDefaulted", Bool> {
     let Read = [{ node.getIsDefaulted() }];
   }
   def : Creator<[{
-    return TemplateArgument(expression, isDefaulted);
+    return TemplateArgument(expression, IsCanonical, isDefaulted);
   }]>;
 }
 let Class = PropertyTypeCase<TemplateArgument, "Pack"> in {

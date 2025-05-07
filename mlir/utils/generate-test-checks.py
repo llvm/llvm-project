@@ -77,13 +77,20 @@ class VariableNamer:
         self.generate_in_parent_scope_left = n
 
     # Generate a substitution name for the given ssa value name.
-    def generate_name(self, source_variable_name):
+    def generate_name(self, source_variable_name, use_ssa_name):
 
         # Compute variable name
         variable_name = self.variable_names.pop(0) if len(self.variable_names) > 0 else ''
         if variable_name == '':
-            variable_name = "VAL_" + str(self.name_counter)
-            self.name_counter += 1
+            # If `use_ssa_name` is set, use the MLIR SSA value name to generate
+            # a FileCHeck substation string. As FileCheck requires these
+            # strings to start with a character, skip MLIR variables starting
+            # with a digit (e.g. `%0`).
+            if use_ssa_name and source_variable_name[0].isalpha():
+                variable_name = source_variable_name.upper()
+            else:
+                variable_name = "VAL_" + str(self.name_counter)
+                self.name_counter += 1
 
         # Scope where variable name is saved
         scope = len(self.scopes) - 1
@@ -158,7 +165,7 @@ def get_num_ssa_results(input_line):
 
 
 # Process a line of input that has been split at each SSA identifier '%'.
-def process_line(line_chunks, variable_namer, strict_name_re=False):
+def process_line(line_chunks, variable_namer, use_ssa_name=False, strict_name_re=False):
     output_line = ""
 
     # Process the rest that contained an SSA value name.
@@ -178,7 +185,7 @@ def process_line(line_chunks, variable_namer, strict_name_re=False):
             output_line += "%[[" + variable + "]]"
         else:
             # Otherwise, generate a new variable.
-            variable = variable_namer.generate_name(ssa_name)
+            variable = variable_namer.generate_name(ssa_name, use_ssa_name)
             if strict_name_re:
                 # Use stricter regexp for the variable name, if requested.
                 # Greedy matching may cause issues with the generic '.*'
@@ -295,6 +302,13 @@ def main():
         help="Names to be used in FileCheck regular expression to represent "
         "attributes in the order they are defined. Separate names with commas,"
         "commas, and leave empty entries for default names (e.g.: 'MAP0,,,MAP1')")
+    parser.add_argument(
+        "--strict_name_re",
+        type=bool,
+        default=False,
+        help="Set to true to use stricter regex for CHECK-SAME directives. "
+        "Use when Greedy matching causes issues with the generic '.*'",
+    )
 
     args = parser.parse_args()
 
@@ -401,12 +415,18 @@ def main():
             for argument in ssa_split[1:]:
                 output_line += "// " + args.check_prefix + "-SAME:  "
 
-                # Pad to align with the original position in the line.
-                output_line += " " * len(ssa_split[0])
+                # Pad to align with the original position in the line (i.e. where the label ends),
+                # unless the label is more than 20 chars long, in which case pad with 4 spaces
+                # (this is to avoid deep indentation).
+                label_length = len(ssa_split[0])
+                pad_depth = label_length if label_length < 21 else 4
+                output_line += " " * pad_depth
 
-                # Process the rest of the line.
+                # Process the rest of the line. Use the original SSA name to generate the LIT
+                # variable names.
+                use_ssa_names = True
                 output_line += process_line(
-                    [argument], variable_namer, strict_name_re=True
+                    [argument], variable_namer, use_ssa_names, args.strict_name_re
                 )
 
         # Append the output line.

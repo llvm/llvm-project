@@ -59,12 +59,15 @@ public:
   /// Evaluates a toplevel initializer.
   bool evaluateAsInitializer(State &Parent, const VarDecl *VD, APValue &Result);
 
+  bool evaluateCharRange(State &Parent, const Expr *SizeExpr,
+                         const Expr *PtrExpr, APValue &Result);
+  bool evaluateCharRange(State &Parent, const Expr *SizeExpr,
+                         const Expr *PtrExpr, std::string &Result);
+
   /// Returns the AST context.
   ASTContext &getASTContext() const { return Ctx; }
   /// Returns the language options.
   const LangOptions &getLangOpts() const;
-  /// Returns the interpreter stack.
-  InterpStack &getStack() { return Stk; }
   /// Returns CHAR_BIT.
   unsigned getCharBit() const;
   /// Return the floating-point semantics for T.
@@ -111,9 +114,20 @@ public:
 
   unsigned getEvalID() const { return EvalID; }
 
+  /// Unevaluated builtins don't get their arguments put on the stack
+  /// automatically. They instead operate on the AST of their Call
+  /// Expression.
+  /// Similar information is available via ASTContext::BuiltinInfo,
+  /// but that is not correct for our use cases.
+  static bool isUnevaluatedBuiltin(unsigned ID);
+
 private:
   /// Runs a function.
   bool Run(State &Parent, const Function *Func);
+
+  template <typename ResultT>
+  bool evaluateStringRepr(State &Parent, const Expr *SizeExpr,
+                          const Expr *PtrExpr, ResultT &Result);
 
   /// Current compilation context.
   ASTContext &Ctx;

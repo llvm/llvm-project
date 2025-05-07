@@ -99,8 +99,8 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   StringRef name = attr.getAttrName()->getName();
 
   // The GC attributes are usually written with macros;  special-case them.
-  IdentifierInfo *II = attr.isArgIdent(0) ? attr.getArgAsIdent(0)->Ident
-                                          : nullptr;
+  IdentifierInfo *II =
+      attr.isArgIdent(0) ? attr.getArgAsIdent(0)->getIdentifierInfo() : nullptr;
   if (useExpansionLoc && loc.isMacroID() && II) {
     if (II->isStr("strong")) {
       if (S.findMacroSpelling(loc, "__strong")) name = "__strong";
@@ -1946,8 +1946,8 @@ QualType Sema::BuildBitIntType(bool IsUnsigned, Expr *BitWidth,
     return Context.getDependentBitIntType(IsUnsigned, BitWidth);
 
   llvm::APSInt Bits(32);
-  ExprResult ICE =
-      VerifyIntegerConstantExpression(BitWidth, &Bits, /*FIXME*/ AllowFold);
+  ExprResult ICE = VerifyIntegerConstantExpression(
+      BitWidth, &Bits, /*FIXME*/ AllowFoldKind::Allow);
 
   if (ICE.isInvalid())
     return QualType();
@@ -1993,7 +1993,7 @@ static ExprResult checkArraySize(Sema &S, Expr *&ArraySize,
     // the converted constant expression rules (to properly convert the source)
     // when the source expression is of class type.
     return S.CheckConvertedConstantExpression(
-        ArraySize, S.Context.getSizeType(), SizeVal, Sema::CCEK_ArrayBound);
+        ArraySize, S.Context.getSizeType(), SizeVal, CCEKind::ArrayBound);
   }
 
   // If the size is an ICE, it certainly isn't a VLA. If we're in a GNU mode
@@ -2213,12 +2213,12 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
       if (VLAIsError)
         return QualType();
 
-      T = Context.getVariableArrayType(T, nullptr, ASM, Quals, Brackets);
+      T = Context.getVariableArrayType(T, nullptr, ASM, Quals);
     } else {
       T = Context.getIncompleteArrayType(T, ASM, Quals);
     }
   } else if (ArraySize->isTypeDependent() || ArraySize->isValueDependent()) {
-    T = Context.getDependentSizedArrayType(T, ArraySize, ASM, Quals, Brackets);
+    T = Context.getDependentSizedArrayType(T, ArraySize, ASM, Quals);
   } else {
     ExprResult R =
         checkArraySize(*this, ArraySize, ConstVal, VLADiag, VLAIsError);
@@ -2229,7 +2229,7 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
       // C99: an array with a non-ICE size is a VLA. We accept any expression
       // that we can fold to a non-zero positive value as a non-VLA as an
       // extension.
-      T = Context.getVariableArrayType(T, ArraySize, ASM, Quals, Brackets);
+      T = Context.getVariableArrayType(T, ArraySize, ASM, Quals);
     } else if (!T->isDependentType() && !T->isIncompleteType() &&
                !T->isConstantSizeType()) {
       // C99: an array with an element type that has a non-constant-size is a
@@ -2238,7 +2238,7 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
       Diag(Loc, VLADiag);
       if (VLAIsError)
         return QualType();
-      T = Context.getVariableArrayType(T, ArraySize, ASM, Quals, Brackets);
+      T = Context.getVariableArrayType(T, ArraySize, ASM, Quals);
     } else {
       // C99 6.7.5.2p1: If the expression is a constant expression, it shall
       // have a value greater than zero.
@@ -2298,7 +2298,7 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
       (ASM != ArraySizeModifier::Normal || Quals != 0)) {
     Diag(Loc, getLangOpts().CPlusPlus ? diag::err_c99_array_usage_cxx
                                       : diag::ext_c99_array_usage)
-        << llvm::to_underlying(ASM);
+        << ASM;
   }
 
   // OpenCL v2.0 s6.12.5 - Arrays of blocks are not supported.
@@ -2552,10 +2552,16 @@ bool Sema::CheckFunctionReturnType(QualType T, SourceLocation Loc) {
     return true;
   }
 
+  // __ptrauth is illegal on a function return type.
+  if (T.getPointerAuth()) {
+    Diag(Loc, diag::err_ptrauth_qualifier_invalid) << T << 0;
+    return true;
+  }
+
   if (T.hasNonTrivialToPrimitiveDestructCUnion() ||
       T.hasNonTrivialToPrimitiveCopyCUnion())
-    checkNonTrivialCUnion(T, Loc, NTCUC_FunctionReturn,
-                          NTCUK_Destruct|NTCUK_Copy);
+    checkNonTrivialCUnion(T, Loc, NonTrivialCUnionContext::FunctionReturn,
+                          NTCUK_Destruct | NTCUK_Copy);
 
   // C++2a [dcl.fct]p12:
   //   A volatile-qualified return type is deprecated
@@ -2656,6 +2662,10 @@ QualType Sema::BuildFunctionType(QualType T,
       Invalid = true;
     } else if (ParamType->isWebAssemblyTableType()) {
       Diag(Loc, diag::err_wasm_table_as_function_parameter);
+      Invalid = true;
+    } else if (ParamType.getPointerAuth()) {
+      // __ptrauth is illegal on a function return type.
+      Diag(Loc, diag::err_ptrauth_qualifier_invalid) << T << 1;
       Invalid = true;
     }
 
@@ -4974,6 +4984,11 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         }
       }
 
+      // __ptrauth is illegal on a function return type.
+      if (T.getPointerAuth()) {
+        S.Diag(DeclType.Loc, diag::err_ptrauth_qualifier_invalid) << T << 0;
+      }
+
       if (LangOpts.OpenCL) {
         // OpenCL v2.0 s6.12.5 - A block cannot be the return value of a
         // function.
@@ -5717,8 +5732,7 @@ static void transferARCOwnershipToDeclaratorChunk(TypeProcessingState &state,
   }
 
   IdentifierLoc *Arg = new (S.Context) IdentifierLoc;
-  Arg->Ident = &S.Context.Idents.get(attrStr);
-  Arg->Loc = SourceLocation();
+  Arg->setIdentifierInfo(&S.Context.Idents.get(attrStr));
 
   ArgsUnion Args(Arg);
 
@@ -6618,7 +6632,7 @@ static bool handleObjCOwnershipTypeAttr(TypeProcessingState &state,
     return true;
   }
 
-  IdentifierInfo *II = attr.getArgAsIdent(0)->Ident;
+  IdentifierInfo *II = attr.getArgAsIdent(0)->getIdentifierInfo();
   Qualifiers::ObjCLifetime lifetime;
   if (II->isStr("none"))
     lifetime = Qualifiers::OCL_ExplicitNone;
@@ -6796,7 +6810,7 @@ static bool handleObjCGCTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
     return true;
   }
 
-  IdentifierInfo *II = attr.getArgAsIdent(0)->Ident;
+  IdentifierInfo *II = attr.getArgAsIdent(0)->getIdentifierInfo();
   if (II->isStr("weak"))
     GCAttr = Qualifiers::Weak;
   else if (II->isStr("strong"))
@@ -6947,9 +6961,9 @@ namespace {
 
         if (const auto *VAT = dyn_cast<VariableArrayType>(Old)) {
           QualType New = wrap(C, VAT->getElementType(), I);
-          return C.getVariableArrayType(
-              New, VAT->getSizeExpr(), VAT->getSizeModifier(),
-              VAT->getIndexTypeCVRQualifiers(), VAT->getBracketsRange());
+          return C.getVariableArrayType(New, VAT->getSizeExpr(),
+                                        VAT->getSizeModifier(),
+                                        VAT->getIndexTypeCVRQualifiers());
         }
 
         const auto *IAT = cast<IncompleteArrayType>(Old);
@@ -7526,7 +7540,7 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
     if (Attr.isArgExpr(0))
       Str = cast<StringLiteral>(Attr.getArgAsExpr(0))->getString();
     else
-      Str = Attr.getArgAsIdent(0)->Ident->getName();
+      Str = Attr.getArgAsIdent(0)->getIdentifierInfo()->getName();
     PcsAttr::PCSType Type;
     if (!PcsAttr::ConvertStrToPCSType(Str, Type))
       llvm_unreachable("already validated the attribute");
@@ -8333,6 +8347,65 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
   CurType = S.Context.getVectorType(CurType, numElts, VecKind);
 }
 
+/// Handle the __ptrauth qualifier.
+static void HandlePtrAuthQualifier(ASTContext &Ctx, QualType &T,
+                                   const ParsedAttr &Attr, Sema &S) {
+
+  assert((Attr.getNumArgs() > 0 && Attr.getNumArgs() <= 3) &&
+         "__ptrauth qualifier takes between 1 and 3 arguments");
+  Expr *KeyArg = Attr.getArgAsExpr(0);
+  Expr *IsAddressDiscriminatedArg =
+      Attr.getNumArgs() >= 2 ? Attr.getArgAsExpr(1) : nullptr;
+  Expr *ExtraDiscriminatorArg =
+      Attr.getNumArgs() >= 3 ? Attr.getArgAsExpr(2) : nullptr;
+
+  unsigned Key;
+  if (S.checkConstantPointerAuthKey(KeyArg, Key)) {
+    Attr.setInvalid();
+    return;
+  }
+  assert(Key <= PointerAuthQualifier::MaxKey && "ptrauth key is out of range");
+
+  bool IsInvalid = false;
+  unsigned IsAddressDiscriminated, ExtraDiscriminator;
+  IsInvalid |= !S.checkPointerAuthDiscriminatorArg(IsAddressDiscriminatedArg,
+                                                   PointerAuthDiscArgKind::Addr,
+                                                   IsAddressDiscriminated);
+  IsInvalid |= !S.checkPointerAuthDiscriminatorArg(
+      ExtraDiscriminatorArg, PointerAuthDiscArgKind::Extra, ExtraDiscriminator);
+
+  if (IsInvalid) {
+    Attr.setInvalid();
+    return;
+  }
+
+  if (!T->isSignableType() && !T->isDependentType()) {
+    S.Diag(Attr.getLoc(), diag::err_ptrauth_qualifier_nonpointer) << T;
+    Attr.setInvalid();
+    return;
+  }
+
+  if (T.getPointerAuth()) {
+    S.Diag(Attr.getLoc(), diag::err_ptrauth_qualifier_redundant)
+        << T << Attr.getAttrName()->getName();
+    Attr.setInvalid();
+    return;
+  }
+
+  if (!S.getLangOpts().PointerAuthIntrinsics) {
+    S.Diag(Attr.getLoc(), diag::err_ptrauth_disabled) << Attr.getRange();
+    Attr.setInvalid();
+    return;
+  }
+
+  assert((!IsAddressDiscriminatedArg || IsAddressDiscriminated <= 1) &&
+         "address discriminator arg should be either 0 or 1");
+  PointerAuthQualifier Qual = PointerAuthQualifier::Create(
+      Key, IsAddressDiscriminated, ExtraDiscriminator,
+      PointerAuthenticationMode::SignAndAuth, false, false);
+  T = S.Context.getPointerAuthType(T, Qual);
+}
+
 /// HandleArmSveVectorBitsTypeAttr - The "arm_sve_vector_bits" attribute is
 /// used to create fixed-length versions of sizeless SVE types defined by
 /// the ACLE, such as svint32_t and svbool_t.
@@ -8788,6 +8861,11 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       HandleOpenCLAccessAttr(type, attr, state.getSema());
       attr.setUsedAsTypeAttr();
       break;
+    case ParsedAttr::AT_PointerAuth:
+      HandlePtrAuthQualifier(state.getSema().Context, type, attr,
+                             state.getSema());
+      attr.setUsedAsTypeAttr();
+      break;
     case ParsedAttr::AT_LifetimeBound:
       if (TAL == TAL_DeclChunk)
         HandleLifetimeBoundAttr(state, type, attr);
@@ -9079,10 +9157,10 @@ bool Sema::hasStructuralCompatLayout(Decl *D, Decl *Suggested) {
   // FIXME: Add a specific mode for C11 6.2.7/1 in StructuralEquivalenceContext
   // and isolate from other C++ specific checks.
   StructuralEquivalenceContext Ctx(
-      D->getASTContext(), Suggested->getASTContext(), NonEquivalentDecls,
-      StructuralEquivalenceKind::Default,
-      false /*StrictTypeSpelling*/, true /*Complain*/,
-      true /*ErrorOnTagTypeMismatch*/);
+      getLangOpts(), D->getASTContext(), Suggested->getASTContext(),
+      NonEquivalentDecls, StructuralEquivalenceKind::Default,
+      /*StrictTypeSpelling=*/false, /*Complain=*/true,
+      /*ErrorOnTagTypeMismatch=*/true);
   return Ctx.IsEquivalent(D, Suggested);
 }
 
@@ -9507,7 +9585,7 @@ bool Sema::RequireLiteralType(SourceLocation Loc, QualType T,
           << RD;
       if (!Dtor->isUserProvided())
         SpecialMemberIsTrivial(Dtor, CXXSpecialMemberKind::Destructor,
-                               TAH_IgnoreTrivialABI,
+                               TrivialABIHandling::IgnoreTrivialABI,
                                /*Diagnose*/ true);
     }
   }
@@ -9685,7 +9763,7 @@ QualType Sema::BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
       !IndexExpr->isTypeDependent()) {
     llvm::APSInt Value(Context.getIntWidth(Context.getSizeType()));
     ExprResult Res = CheckConvertedConstantExpression(
-        IndexExpr, Context.getSizeType(), Value, CCEK_ArrayBound);
+        IndexExpr, Context.getSizeType(), Value, CCEKind::ArrayBound);
     if (!Res.isUsable())
       return QualType();
     IndexExpr = Res.get();

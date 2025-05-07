@@ -3,11 +3,4 @@ target triple = "x86_64-apple-macosx10.11.0"
 
 %a = type { i8 }
 
-define void @bar(%a) {
-	ret void
-}
-
-define void @baz() {
-	call void @bar(%a undef)
-	ret void
-}
+@g = external global %a

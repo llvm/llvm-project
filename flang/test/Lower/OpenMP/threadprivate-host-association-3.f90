@@ -27,7 +27,7 @@
 !CHECK:   return
 !CHECK: }
 !CHECK: fir.global internal @_QFEa : i32 {
-!CHECK:   %[[A:.*]] = fir.undefined i32
+!CHECK:   %[[A:.*]] = fir.zero_bits i32
 !CHECK:   fir.has_value %[[A]] : i32
 !CHECK: }
 

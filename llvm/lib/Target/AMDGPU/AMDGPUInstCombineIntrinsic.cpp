@@ -103,7 +103,7 @@ static bool canSafelyConvertTo16Bit(Value &V, bool IsFloat) {
 // Convert a value to 16-bit.
 static Value *convertTo16Bit(Value &V, InstCombiner::BuilderTy &Builder) {
   Type *VTy = V.getType();
-  if (isa<FPExtInst>(&V) || isa<SExtInst>(&V) || isa<ZExtInst>(&V))
+  if (isa<FPExtInst, SExtInst, ZExtInst>(&V))
     return cast<Instruction>(&V)->getOperand(0);
   if (VTy->isIntegerTy())
     return Builder.CreateIntCast(&V, Type::getInt16Ty(V.getContext()), false);
@@ -1440,14 +1440,14 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (Src0Ty->getNumElements() > Src0NumElts) {
       Src0 = IC.Builder.CreateExtractVector(
           FixedVectorType::get(Src0Ty->getElementType(), Src0NumElts), Src0,
-          IC.Builder.getInt64(0));
+          uint64_t(0));
       MadeChange = true;
     }
 
     if (Src1Ty->getNumElements() > Src1NumElts) {
       Src1 = IC.Builder.CreateExtractVector(
           FixedVectorType::get(Src1Ty->getElementType(), Src1NumElts), Src1,
-          IC.Builder.getInt64(0));
+          uint64_t(0));
       MadeChange = true;
     }
 

@@ -142,9 +142,8 @@ static void VisitComponent(const std::string &Name,
   if (AC->Library) {
     if (Missing && GetComponentLibraryPath) {
       std::string path = (*GetComponentLibraryPath)(AC->Library);
-      if (DirSep == "\\") {
-        std::replace(path.begin(), path.end(), '/', '\\');
-      }
+      if (DirSep == "\\")
+        llvm::replace(path, '/', '\\');
       if (!sys::fs::exists(path))
         Missing->push_back(path);
     }
@@ -390,19 +389,18 @@ int main(int argc, char **argv) {
     SharedExt = "dll";
     SharedVersionedExt = LLVM_DYLIB_VERSION ".dll";
     if (HostTriple.isOSCygMing()) {
-      SharedPrefix = "lib";
+      SharedPrefix = LLVM_SHARED_LIBRARY_PREFIX;
       StaticExt = "a";
       StaticPrefix = "lib";
     } else {
       StaticExt = "lib";
       DirSep = "\\";
-      std::replace(ActiveObjRoot.begin(), ActiveObjRoot.end(), '/', '\\');
-      std::replace(ActivePrefix.begin(), ActivePrefix.end(), '/', '\\');
-      std::replace(ActiveBinDir.begin(), ActiveBinDir.end(), '/', '\\');
-      std::replace(ActiveLibDir.begin(), ActiveLibDir.end(), '/', '\\');
-      std::replace(ActiveCMakeDir.begin(), ActiveCMakeDir.end(), '/', '\\');
-      std::replace(ActiveIncludeOption.begin(), ActiveIncludeOption.end(), '/',
-                   '\\');
+      llvm::replace(ActiveObjRoot, '/', '\\');
+      llvm::replace(ActivePrefix, '/', '\\');
+      llvm::replace(ActiveBinDir, '/', '\\');
+      llvm::replace(ActiveLibDir, '/', '\\');
+      llvm::replace(ActiveCMakeDir, '/', '\\');
+      llvm::replace(ActiveIncludeOption, '/', '\\');
     }
     SharedDir = ActiveBinDir;
     StaticDir = ActiveLibDir;
@@ -437,9 +435,8 @@ int main(int argc, char **argv) {
 
   if (BuiltDyLib) {
     std::string path((SharedDir + DirSep + DyLibName).str());
-    if (DirSep == "\\") {
-      std::replace(path.begin(), path.end(), '/', '\\');
-    }
+    if (DirSep == "\\")
+      llvm::replace(path, '/', '\\');
     DyLibExists = sys::fs::exists(path);
     if (!DyLibExists) {
       // The shared library does not exist: don't error unless the user
@@ -454,7 +451,7 @@ int main(int argc, char **argv) {
   /// extension. Returns true if Lib is in a recognized format.
   auto GetComponentLibraryNameSlice = [&](const StringRef &Lib,
                                           StringRef &Out) {
-    if (Lib.starts_with("lib")) {
+    if (Lib.starts_with(StaticPrefix) || Lib.starts_with(SharedPrefix)) {
       unsigned FromEnd;
       if (Lib.ends_with(StaticExt)) {
         FromEnd = StaticExt.size() + 1;
@@ -465,7 +462,10 @@ int main(int argc, char **argv) {
       }
 
       if (FromEnd != 0) {
-        Out = Lib.slice(3, Lib.size() - FromEnd);
+        unsigned FromStart = Lib.starts_with(SharedPrefix)
+                                 ? SharedPrefix.size()
+                                 : StaticPrefix.size();
+        Out = Lib.slice(FromStart, Lib.size() - FromEnd);
         return true;
       }
     }
@@ -551,9 +551,8 @@ int main(int argc, char **argv) {
           Components.push_back(AC.Name);
           if (AC.Library && !IsInDevelopmentTree) {
             std::string path(GetComponentLibraryPath(AC.Library, false));
-            if (DirSep == "\\") {
-              std::replace(path.begin(), path.end(), '/', '\\');
-            }
+            if (DirSep == "\\")
+              llvm::replace(path, '/', '\\');
             if (DyLibExists && !sys::fs::exists(path)) {
               Components =
                   GetAllDyLibComponents(IsInDevelopmentTree, true, DirSep);

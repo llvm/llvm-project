@@ -494,12 +494,13 @@ AtomicDefaultMemOrder make(const parser::OmpClause::AtomicDefaultMemOrder &inp,
                            semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpAtomicDefaultMemOrderClause
   CLAUSET_ENUM_CONVERT( //
-      convert, common::OmpAtomicDefaultMemOrderType,
-      AtomicDefaultMemOrder::MemoryOrder,
+      convert, common::OmpMemoryOrderType, AtomicDefaultMemOrder::MemoryOrder,
       // clang-format off
-      MS(AcqRel,   AcqRel)
+      MS(Acq_Rel,  AcqRel)
+      MS(Acquire,  Acquire)
       MS(Relaxed,  Relaxed)
-      MS(SeqCst,   SeqCst)
+      MS(Release,  Release)
+      MS(Seq_Cst,  SeqCst)
       // clang-format on
   );
 
@@ -784,8 +785,19 @@ Exclusive make(const parser::OmpClause::Exclusive &inp,
 
 Fail make(const parser::OmpClause::Fail &inp,
           semantics::SemanticsContext &semaCtx) {
-  // inp -> empty
-  llvm_unreachable("Empty: fail");
+  // inp.v -> parser::OmpFalClause
+  CLAUSET_ENUM_CONVERT( //
+      convert, common::OmpMemoryOrderType, Fail::MemoryOrder,
+      // clang-format off
+      MS(Acq_Rel,  AcqRel)
+      MS(Acquire,  Acquire)
+      MS(Relaxed,  Relaxed)
+      MS(Release,  Release)
+      MS(Seq_Cst,  SeqCst)
+      // clang-format on
+  );
+
+  return Fail{/*MemoryOrder=*/convert(inp.v.v)};
 }
 
 Filter make(const parser::OmpClause::Filter &inp,
@@ -863,8 +875,8 @@ HasDeviceAddr make(const parser::OmpClause::HasDeviceAddr &inp,
 
 Hint make(const parser::OmpClause::Hint &inp,
           semantics::SemanticsContext &semaCtx) {
-  // inp.v -> parser::ConstantExpr
-  return Hint{/*HintExpr=*/makeExpr(inp.v, semaCtx)};
+  // inp.v -> parser::OmpHintClause
+  return Hint{/*HintExpr=*/makeExpr(inp.v.v, semaCtx)};
 }
 
 Holds make(const parser::OmpClause::Holds &inp,
@@ -1388,9 +1400,13 @@ Uniform make(const parser::OmpClause::Uniform &inp,
 Update make(const parser::OmpClause::Update &inp,
             semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpUpdateClause
-  auto depType =
-      common::visit([](auto &&s) { return makeDepType(s); }, inp.v.u);
-  return Update{/*DependenceType=*/depType};
+  if (inp.v) {
+    return common::visit(
+        [](auto &&s) { return Update{/*DependenceType=*/makeDepType(s)}; },
+        inp.v->u);
+  } else {
+    return Update{/*DependenceType=*/std::nullopt};
+  }
 }
 
 Use make(const parser::OmpClause::Use &inp,

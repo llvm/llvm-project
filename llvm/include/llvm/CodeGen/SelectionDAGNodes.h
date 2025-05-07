@@ -1517,6 +1517,8 @@ public:
     case ISD::ATOMIC_LOAD_FSUB:
     case ISD::ATOMIC_LOAD_FMAX:
     case ISD::ATOMIC_LOAD_FMIN:
+    case ISD::ATOMIC_LOAD_FMAXIMUM:
+    case ISD::ATOMIC_LOAD_FMINIMUM:
     case ISD::ATOMIC_LOAD_UINC_WRAP:
     case ISD::ATOMIC_LOAD_UDEC_WRAP:
     case ISD::ATOMIC_LOAD_USUB_COND:
@@ -1546,15 +1548,13 @@ public:
 /// This is an SDNode representing atomic operations.
 class AtomicSDNode : public MemSDNode {
 public:
-  AtomicSDNode(unsigned Opc, unsigned Order, const DebugLoc &dl, SDVTList VTL,
-               EVT MemVT, MachineMemOperand *MMO)
-    : MemSDNode(Opc, Order, dl, VTL, MemVT, MMO) {
+  AtomicSDNode(unsigned Order, const DebugLoc &dl, unsigned Opc, SDVTList VTL,
+               EVT MemVT, MachineMemOperand *MMO, ISD::LoadExtType ETy)
+      : MemSDNode(Opc, Order, dl, VTL, MemVT, MMO) {
     assert(((Opc != ISD::ATOMIC_LOAD && Opc != ISD::ATOMIC_STORE) ||
             MMO->isAtomic()) && "then why are we using an AtomicSDNode?");
-  }
-
-  void setExtensionType(ISD::LoadExtType ETy) {
-    assert(getOpcode() == ISD::ATOMIC_LOAD && "Only used for atomic loads.");
+    assert((Opc == ISD::ATOMIC_LOAD || ETy == ISD::NON_EXTLOAD) &&
+           "Only atomic load uses ExtTy");
     LoadSDNodeBits.ExtTy = ETy;
   }
 
@@ -1605,6 +1605,8 @@ public:
            N->getOpcode() == ISD::ATOMIC_LOAD_FSUB ||
            N->getOpcode() == ISD::ATOMIC_LOAD_FMAX ||
            N->getOpcode() == ISD::ATOMIC_LOAD_FMIN ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_FMAXIMUM ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_FMINIMUM ||
            N->getOpcode() == ISD::ATOMIC_LOAD_UINC_WRAP ||
            N->getOpcode() == ISD::ATOMIC_LOAD_UDEC_WRAP ||
            N->getOpcode() == ISD::ATOMIC_LOAD_USUB_COND ||
@@ -2535,9 +2537,6 @@ public:
   /// For integers this is the same as doing a TRUNCATE and storing the result.
   /// For floats, it is the same as doing an FP_ROUND and storing the result.
   bool isTruncatingStore() const { return StoreSDNodeBits.IsTruncating; }
-  void setTruncatingStore(bool Truncating) {
-    StoreSDNodeBits.IsTruncating = Truncating;
-  }
 
   const SDValue &getValue() const { return getOperand(1); }
   const SDValue &getBasePtr() const { return getOperand(2); }

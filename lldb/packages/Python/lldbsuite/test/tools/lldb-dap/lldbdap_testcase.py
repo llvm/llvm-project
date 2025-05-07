@@ -1,6 +1,6 @@
 import os
 import time
-import subprocess
+import uuid
 
 import dap_server
 from lldbsuite.test.lldbtest import *
@@ -28,9 +28,16 @@ class DAPTestCaseBase(TestBase):
             env=lldbDAPEnv,
         )
 
-    def build_and_create_debug_adapter(self, lldbDAPEnv=None):
-        self.build()
+    def build_and_create_debug_adapter(self, lldbDAPEnv=None, dictionary=None):
+        self.build(dictionary=dictionary)
         self.create_debug_adapter(lldbDAPEnv)
+
+    def build_and_create_debug_adapter_for_attach(self):
+        """Variant of build_and_create_debug_adapter that builds a uniquely
+        named binary."""
+        unique_name = str(uuid.uuid4())
+        self.build_and_create_debug_adapter(dictionary={"EXE": unique_name})
+        return self.getBuildArtifact(unique_name)
 
     def set_source_breakpoints(self, source_path, lines, data=None):
         """Sets source breakpoints and returns an array of strings containing
@@ -161,10 +168,14 @@ class DAPTestCaseBase(TestBase):
         return value
 
     def get_stackFrames_and_totalFramesCount(
-        self, threadId=None, startFrame=None, levels=None, dump=False
+        self, threadId=None, startFrame=None, levels=None, format=None, dump=False
     ):
         response = self.dap_server.request_stackTrace(
-            threadId=threadId, startFrame=startFrame, levels=levels, dump=dump
+            threadId=threadId,
+            startFrame=startFrame,
+            levels=levels,
+            format=format,
+            dump=dump,
         )
         if response:
             stackFrames = self.get_dict_value(response, ["body", "stackFrames"])
@@ -177,9 +188,15 @@ class DAPTestCaseBase(TestBase):
             return (stackFrames, totalFrames)
         return (None, 0)
 
-    def get_stackFrames(self, threadId=None, startFrame=None, levels=None, dump=False):
+    def get_stackFrames(
+        self, threadId=None, startFrame=None, levels=None, format=None, dump=False
+    ):
         (stackFrames, totalFrames) = self.get_stackFrames_and_totalFramesCount(
-            threadId=threadId, startFrame=startFrame, levels=levels, dump=dump
+            threadId=threadId,
+            startFrame=startFrame,
+            levels=levels,
+            format=format,
+            dump=dump,
         )
         return stackFrames
 
@@ -207,14 +224,22 @@ class DAPTestCaseBase(TestBase):
     def get_console(self, timeout=0.0):
         return self.dap_server.get_output("console", timeout=timeout)
 
+    def get_important(self, timeout=0.0):
+        return self.dap_server.get_output("important", timeout=timeout)
+
+    def collect_stdout(self, timeout_secs, pattern=None):
+        return self.dap_server.collect_output(
+            "stdout", timeout_secs=timeout_secs, pattern=pattern
+        )
+
     def collect_console(self, timeout_secs, pattern=None):
         return self.dap_server.collect_output(
             "console", timeout_secs=timeout_secs, pattern=pattern
         )
 
-    def collect_stdout(self, timeout_secs, pattern=None):
+    def collect_important(self, timeout_secs, pattern=None):
         return self.dap_server.collect_output(
-            "stdout", timeout_secs=timeout_secs, pattern=pattern
+            "important", timeout_secs=timeout_secs, pattern=pattern
         )
 
     def get_local_as_int(self, name, threadId=None):
@@ -443,7 +468,8 @@ class DAPTestCaseBase(TestBase):
 
         if not (response and response["success"]):
             self.assertTrue(
-                response["success"], "launch failed (%s)" % (response["message"])
+                response["success"],
+                "launch failed (%s)" % (response["body"]["error"]["format"]),
             )
         return response
 

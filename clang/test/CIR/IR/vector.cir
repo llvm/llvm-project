@@ -1,0 +1,68 @@
+// RUN: cir-opt %s | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module  {
+
+cir.global external @vec_a = #cir.zero : !cir.vector<4 x !s32i>
+// CHECK: cir.global external @vec_a = #cir.zero : !cir.vector<4 x !s32i>
+
+cir.global external @vec_b = #cir.zero : !cir.vector<3 x !s32i>
+// CHECK: cir.global external @vec_b = #cir.zero : !cir.vector<3 x !s32i>
+
+cir.global external @vec_c = #cir.zero : !cir.vector<2 x !s32i>
+// CHECK: cir.global external @vec_c = #cir.zero : !cir.vector<2 x !s32i>
+
+cir.global external @vec_d = #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2>
+: !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
+
+// CIR: cir.global external @vec_d = #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> :
+// CIR-SAME: !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
+
+cir.func @vec_int_test() {
+  %0 = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a"]
+  %1 = cir.alloca !cir.vector<3 x !s32i>, !cir.ptr<!cir.vector<3 x !s32i>>, ["b"]
+  %2 = cir.alloca !cir.vector<2 x !s32i>, !cir.ptr<!cir.vector<2 x !s32i>>, ["c"]
+  cir.return
+}
+
+// CHECK: cir.func @vec_int_test() {
+// CHECK:  %0 = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a"]
+// CHECK:  %1 = cir.alloca !cir.vector<3 x !s32i>, !cir.ptr<!cir.vector<3 x !s32i>>, ["b"]
+// CHECK:  %2 = cir.alloca !cir.vector<2 x !s32i>, !cir.ptr<!cir.vector<2 x !s32i>>, ["c"]
+// CHECK:  cir.return
+// CHECK: }
+
+cir.func @vec_double_test() {
+  %0 = cir.alloca !cir.vector<2 x !cir.double>, !cir.ptr<!cir.vector<2 x !cir.double>>, ["a"]
+  cir.return
+}
+
+// CHECK: cir.func @vec_double_test() {
+// CHECK:  %0 = cir.alloca !cir.vector<2 x !cir.double>, !cir.ptr<!cir.vector<2 x !cir.double>>, ["a"]
+// CHECK:  cir.return
+// CHECK: }
+
+cir.func @local_vector_create_test() {
+    %0 = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a", init]
+    %1 = cir.const #cir.int<1> : !s32i
+    %2 = cir.const #cir.int<2> : !s32i
+    %3 = cir.const #cir.int<3> : !s32i
+    %4 = cir.const #cir.int<4> : !s32i
+    %5 = cir.vec.create(%1, %2, %3, %4 : !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+    cir.store %5, %0 : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+    cir.return
+}
+
+// CHECK: cir.func @local_vector_create_test() {
+// CHECK:   %0 = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a", init]
+// CHECK:   %1 = cir.const #cir.int<1> : !s32i
+// CHECK:   %2 = cir.const #cir.int<2> : !s32i
+// CHECK:   %3 = cir.const #cir.int<3> : !s32i
+// CHECK:   %4 = cir.const #cir.int<4> : !s32i
+// CHECK:   %5 = cir.vec.create(%1, %2, %3, %4 : !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+// CHECK:   cir.store %5, %0 : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+// CHECK:   cir.return
+// CHECK: }
+
+}

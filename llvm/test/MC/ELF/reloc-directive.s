@@ -8,24 +8,25 @@
 # ASM-NEXT: .Ltmp1:
 # ASM-NEXT:  .reloc .Ltmp1-1, R_X86_64_NONE, foo
 # ASM-NEXT: .Ltmp2:
-# ASM-NEXT:  .reloc 2+.Ltmp2, R_X86_64_NONE, foo
+# ASM-NEXT:  .reloc 2+.Ltmp2, R_X86_64_NONE, local
 # ASM-NEXT:  .reloc 1+foo+3, R_X86_64_NONE, data+1
 # ASM-NEXT: .Ltmp3:
 # ASM-NEXT:  .reloc .Ltmp3, BFD_RELOC_NONE, unused
 
 # CHECK:      0x2 R_X86_64_NONE foo 0x0
 # CHECK-NEXT: 0x0 R_X86_64_NONE foo 0x0
-# CHECK-NEXT: 0x3 R_X86_64_NONE foo 0x0
+# CHECK-NEXT: 0x3 R_X86_64_NONE local 0x0
 # CHECK-NEXT: 0x4 R_X86_64_NONE data 0x1
 # CHECK-NEXT: 0x1 R_X86_64_NONE unused 0x0
 
 .text
 .globl foo
 foo:
+local:
   ret
   .reloc .+3-2, R_X86_64_NONE, foo
   .reloc .-1, R_X86_64_NONE, foo
-  .reloc 2+., R_X86_64_NONE, foo
+  .reloc 2+., R_X86_64_NONE, local
   .reloc 1+foo+3, R_X86_64_NONE, data+1
   .reloc ., BFD_RELOC_NONE, unused
 

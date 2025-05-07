@@ -18,6 +18,7 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -75,9 +76,6 @@ inline bool isReservedInAllContexts(ReservedIdentifierStatus Status) {
          Status != ReservedIdentifierStatus::StartsWithUnderscoreAtGlobalScope &&
          Status != ReservedIdentifierStatus::StartsWithUnderscoreAndIsExternC;
 }
-
-/// A simple pair of identifier info and location.
-using IdentifierLocPair = std::pair<IdentifierInfo *, SourceLocation>;
 
 /// IdentifierInfo and other related classes are aligned to
 /// 8 bytes so that DeclarationName can use the lower 3 bits
@@ -197,7 +195,11 @@ class alignas(IdentifierInfoAlignment) IdentifierInfo {
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsFinal : 1;
 
-  // 22 bits left in a 64-bit word.
+  // True if this identifier would be a keyword in C++ mode.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsKeywordInCpp : 1;
+
+  // 21 bits left in a 64-bit word.
 
   // Managed by the language front-end.
   void *FETokenInfo = nullptr;
@@ -214,7 +216,7 @@ class alignas(IdentifierInfoAlignment) IdentifierInfo {
         IsFromAST(false), ChangedAfterLoad(false), FEChangedAfterLoad(false),
         RevertedTokenID(false), OutOfDate(false), IsModulesImport(false),
         IsMangledOpenMPVariantName(false), IsDeprecatedMacro(false),
-        IsRestrictExpansion(false), IsFinal(false) {}
+        IsRestrictExpansion(false), IsFinal(false), IsKeywordInCpp(false) {}
 
 public:
   IdentifierInfo(const IdentifierInfo &) = delete;
@@ -446,6 +448,10 @@ public:
   }
   bool isCPlusPlusOperatorKeyword() const { return IsCPPOperatorKeyword; }
 
+  /// Return true if this identifier would be a keyword in C++ mode.
+  bool IsKeywordInCPlusPlus() const { return IsKeywordInCpp; }
+  void setIsKeywordInCPlusPlus(bool Val = true) { IsKeywordInCpp = Val; }
+
   /// Return true if this token is a keyword in the specified language.
   bool isKeyword(const LangOptions &LangOpts) const;
 
@@ -464,6 +470,7 @@ public:
   /// If this returns false, we know that HandleIdentifier will not affect
   /// the token.
   bool isHandleIdentifierCase() const { return NeedsHandleIdentifier; }
+  void setHandleIdentifierCase(bool Val = true) { NeedsHandleIdentifier = Val; }
 
   /// Return true if the identifier in its current state was loaded
   /// from an AST file.
@@ -1165,6 +1172,28 @@ public:
   static std::string getPropertyNameFromSetterSelector(Selector Sel);
 };
 
+/// A simple pair of identifier info and location.
+class IdentifierLoc {
+  SourceLocation Loc;
+  IdentifierInfo *II = nullptr;
+
+public:
+  IdentifierLoc() = default;
+  IdentifierLoc(SourceLocation L, IdentifierInfo *Ident) : Loc(L), II(Ident) {}
+
+  void setLoc(SourceLocation L) { Loc = L; }
+  void setIdentifierInfo(IdentifierInfo *Ident) { II = Ident; }
+  SourceLocation getLoc() const { return Loc; }
+  IdentifierInfo *getIdentifierInfo() const { return II; }
+
+  bool operator==(const IdentifierLoc &X) const {
+    return Loc == X.Loc && II == X.II;
+  }
+
+  bool operator!=(const IdentifierLoc &X) const {
+    return Loc != X.Loc || II != X.II;
+  }
+};
 }  // namespace clang
 
 namespace llvm {

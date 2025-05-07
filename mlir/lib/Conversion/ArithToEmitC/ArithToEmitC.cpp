@@ -13,6 +13,7 @@
 
 #include "mlir/Conversion/ArithToEmitC/ArithToEmitC.h"
 
+#include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/EmitC/Transforms/TypeConversions.h"
@@ -21,6 +22,27 @@
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
+
+namespace {
+/// Implement the interface to convert Arith to EmitC.
+struct ArithToEmitCDialectInterface : public ConvertToEmitCPatternInterface {
+  using ConvertToEmitCPatternInterface::ConvertToEmitCPatternInterface;
+
+  /// Hook for derived dialect interface to provide conversion patterns
+  /// and mark dialect legal for the conversion target.
+  void populateConvertToEmitCConversionPatterns(
+      ConversionTarget &target, TypeConverter &typeConverter,
+      RewritePatternSet &patterns) const final {
+    populateArithToEmitCPatterns(typeConverter, patterns);
+  }
+};
+} // namespace
+
+void mlir::registerConvertArithToEmitCInterface(DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, arith::ArithDialect *dialect) {
+    dialect->addInterfaces<ArithToEmitCDialectInterface>();
+  });
+}
 
 //===----------------------------------------------------------------------===//
 // Conversion Patterns

@@ -21,7 +21,7 @@ void test() {
 }
 
 // CHECK: module
-// CHECK: cir.func @test()
+// CHECK: cir.func @_Z4testv()
 // CHECK:    %[[I_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
 // CHECK:    %[[L_PTR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["l", init] {alignment = 8 : i64}
 // CHECK:    %[[F_PTR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["f", init] {alignment = 4 : i64}

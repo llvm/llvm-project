@@ -57,7 +57,7 @@ getSymbolLessAffineMaps(ArrayRef<ReassociationExprs> reassociation);
 
 /// Wraps a list of reassociations in an ArrayAttr.
 ArrayAttr
-getReassociationIndicesAttribute(OpBuilder &b,
+getReassociationIndicesAttribute(Builder &b,
                                  ArrayRef<ReassociationIndices> reassociation);
 
 /// Convert Array<Array<AffineExpr>> to Array<Array<int64_t>>.

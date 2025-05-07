@@ -433,6 +433,7 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
     case OpenACCClauseKind::Vector:
     case OpenACCClauseKind::VectorLength:
     case OpenACCClauseKind::Invalid:
+    case OpenACCClauseKind::Shortloop:
       // The condition expression will be printed as a part of the 'children',
       // but print 'clause' here so it is clear what is happening from the dump.
       OS << " clause";
@@ -500,10 +501,10 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
       llvm::interleaveComma(
           cast<OpenACCDeviceTypeClause>(C)->getArchitectures(), OS,
           [&](const DeviceTypeArgument &Arch) {
-            if (Arch.first == nullptr)
+            if (Arch.getIdentifierInfo() == nullptr)
               OS << "*";
             else
-              OS << Arch.first->getName();
+              OS << Arch.getIdentifierInfo()->getName();
           });
       OS << ")";
       break;
@@ -738,6 +739,14 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
     else if (const auto *BE = B.dyn_cast<const Expr *>()) {
       OS << BE->getStmtClassName() << ' ';
       dumpPointer(BE);
+    } else if (const auto BTI = B.dyn_cast<TypeInfoLValue>()) {
+      OS << "TypeInfoLValue ";
+      ColorScope Color(OS, ShowColors, TypeColor);
+      BTI.print(OS, PrintPolicy);
+    } else if (B.is<DynamicAllocLValue>()) {
+      OS << "DynamicAllocLValue";
+      auto BDA = B.getDynamicAllocType();
+      dumpType(BDA);
     } else {
       const auto *VDB = B.get<const ValueDecl *>();
       OS << VDB->getDeclKindName() << "Decl";
@@ -821,9 +830,21 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
 
     return;
   }
-  case APValue::MemberPointer:
-    OS << "MemberPointer <todo>";
+  case APValue::MemberPointer: {
+    OS << "MemberPointer ";
+    auto Path = Value.getMemberPointerPath();
+    for (const CXXRecordDecl *D : Path) {
+      {
+        ColorScope Color(OS, ShowColors, DeclNameColor);
+        OS << D->getDeclName();
+      }
+      OS << "::";
+    }
+
+    ColorScope Color(OS, ShowColors, DeclNameColor);
+    OS << Value.getMemberPointerDecl()->getDeclName();
     return;
+  }
   case APValue::AddrLabelDiff:
     OS << "AddrLabelDiff <todo>";
     return;
@@ -1093,7 +1114,7 @@ const char *TextNodeDumper::getCommandName(unsigned CommandID) {
 }
 
 void TextNodeDumper::printFPOptions(FPOptionsOverride FPO) {
-#define OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                    \
+#define FP_OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                 \
   if (FPO.has##NAME##Override())                                               \
     OS << " " #NAME "=" << FPO.get##NAME##Override();
 #include "clang/Basic/FPOptions.def"
@@ -1357,6 +1378,8 @@ void TextNodeDumper::VisitTemplateExpansionTemplateArgument(
 void TextNodeDumper::VisitExpressionTemplateArgument(
     const TemplateArgument &TA) {
   OS << " expr";
+  if (TA.isCanonicalExpr())
+    OS << " canonical";
   dumpTemplateArgument(TA);
 }
 
@@ -1941,16 +1964,12 @@ void TextNodeDumper::VisitConstantArrayType(const ConstantArrayType *T) {
 }
 
 void TextNodeDumper::VisitVariableArrayType(const VariableArrayType *T) {
-  OS << " ";
-  dumpSourceRange(T->getBracketsRange());
   VisitArrayType(T);
 }
 
 void TextNodeDumper::VisitDependentSizedArrayType(
     const DependentSizedArrayType *T) {
   VisitArrayType(T);
-  OS << " ";
-  dumpSourceRange(T->getBracketsRange());
 }
 
 void TextNodeDumper::VisitDependentSizedExtVectorType(

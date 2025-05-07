@@ -263,6 +263,20 @@ GenerateModuleFromModuleMapAction::CreateOutputFile(CompilerInstance &CI,
                                     /*ForceUseTemporary=*/true);
 }
 
+bool GenerateModuleInterfaceAction::PrepareToExecuteAction(
+    CompilerInstance &CI) {
+  for (const auto &FIF : CI.getFrontendOpts().Inputs) {
+    if (const auto InputFormat = FIF.getKind().getFormat();
+        InputFormat != InputKind::Format::Source) {
+      CI.getDiagnostics().Report(
+          diag::err_frontend_action_unsupported_input_format)
+          << "module interface compilation" << FIF.getFile() << InputFormat;
+      return false;
+    }
+  }
+  return GenerateModuleAction::PrepareToExecuteAction(CI);
+}
+
 bool GenerateModuleInterfaceAction::BeginSourceFileAction(
     CompilerInstance &CI) {
   CI.getLangOpts().setCompilingModule(LangOptions::CMK_ModuleInterface);
@@ -1216,9 +1230,9 @@ void GetDependenciesByModuleNameAction::ExecuteAction() {
   SourceManager &SM = PP.getSourceManager();
   FileID MainFileID = SM.getMainFileID();
   SourceLocation FileStart = SM.getLocForStartOfFile(MainFileID);
-  SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
+  SmallVector<IdentifierLoc, 2> Path;
   IdentifierInfo *ModuleID = PP.getIdentifierInfo(ModuleName);
-  Path.push_back(std::make_pair(ModuleID, FileStart));
+  Path.emplace_back(FileStart, ModuleID);
   auto ModResult = CI.loadModule(FileStart, Path, Module::Hidden, false);
   PPCallbacks *CB = PP.getPPCallbacks();
   CB->moduleImport(SourceLocation(), Path, ModResult);

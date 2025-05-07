@@ -57,7 +57,6 @@ function(_get_common_test_compile_options output_var c_test flags)
       list(APPEND compile_options "-Wnewline-eof")
       list(APPEND compile_options "-Wnonportable-system-include-path")
       list(APPEND compile_options "-Wthread-safety")
-      # list(APPEND compile_options "-Wglobal-constructors")
     endif()
   endif()
   set(${output_var} ${compile_options} PARENT_SCOPE)
@@ -322,6 +321,7 @@ function(create_libc_unittest fq_target_name)
       ${fq_target_name}
       COMMAND ${LIBC_UNITTEST_ENV} ${CMAKE_CROSSCOMPILING_EMULATOR} ${fq_build_target_name}
       COMMENT "Running unit test ${fq_target_name}"
+      DEPENDS ${fq_build_target_name}
     )
   endif()
 

@@ -271,20 +271,6 @@ void CGCXXABI::ReadArrayCookie(CodeGenFunction &CGF, Address ptr,
   numElements = readArrayCookieImpl(CGF, allocAddr, cookieSize);
 }
 
-void CGCXXABI::ReadArrayCookie(CodeGenFunction &CGF, Address ptr,
-                               QualType eltTy, llvm::Value *&numElements,
-                               llvm::Value *&allocPtr, CharUnits &cookieSize) {
-  assert(eltTy.isDestructedType());
-
-  // Derive a char* in the same address space as the pointer.
-  ptr = ptr.withElementType(CGF.Int8Ty);
-
-  cookieSize = getArrayCookieSizeImpl(eltTy);
-  Address allocAddr = CGF.Builder.CreateConstInBoundsByteGEP(ptr, -cookieSize);
-  allocPtr = allocAddr.emitRawPointer(CGF);
-  numElements = readArrayCookieImpl(CGF, allocAddr, cookieSize);
-}
-
 llvm::Value *CGCXXABI::readArrayCookieImpl(CodeGenFunction &CGF,
                                            Address ptr,
                                            CharUnits cookieSize) {

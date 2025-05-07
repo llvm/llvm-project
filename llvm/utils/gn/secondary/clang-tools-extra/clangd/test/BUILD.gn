@@ -35,6 +35,7 @@ write_lit_config("lit_site_cfg") {
         rebase_path("//clang-tools-extra/clangd/test"),
 
     "CURRENT_TOOLS_DIR=",
+    "CLANGD_BUILD_DEXP=1",
     "CLANGD_ENABLE_REMOTE=0",
     "CLANGD_TIDY_CHECKS=1",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",

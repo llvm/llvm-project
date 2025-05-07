@@ -439,6 +439,11 @@ func.func @vector_store_i4(%arg0: vector<8xi4>, %arg1: index, %arg2: index) {
 
 // -----
 
+// FIXME: This example assumes that the store happens at a byte boundary, but
+// that's not guaranteed. Below is a counter-example with specific dimensions:
+//    vector.store %arg0, %0[0, 3] : memref<2x13xi4>, vector<8xi4>
+// TODO: Revisit post #136797
+
 func.func @vector_store_i4_dynamic(%arg0: vector<8xi4>, %arg1: index, %arg2: index, %arg3: index, %arg4: index) {
     %0 = memref.alloc(%arg1, %arg2) : memref<?x?xi4>
     vector.store %arg0, %0[%arg3, %arg4] : memref<?x?xi4>, vector<8xi4>

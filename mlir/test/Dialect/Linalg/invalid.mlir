@@ -1666,3 +1666,12 @@ func.func @unpack_static_inner_tile_size_and_dynamic_output_shape(
   %0 = linalg.unpack %input inner_dims_pos = [0, 1] inner_tiles = [8, 4] into %output : tensor<?x?x?x4xf32> -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
 }
+
+// -----
+
+func.func @reduce_non_operation_name(%arg0: tensor<4xf32>, %arg1: tensor<f32>) -> tensor<f32> {
+  // expected-error @below {{expected bare identifier or keyword}}
+  %0 = linalg.reduce {@reduce_fusion_elementwise} ins(
+    %arg0: tensor<4xf32>) outs(%arg1: tensor<f32>) dimensions = [0]
+  return %0 : tensor<f32>
+}

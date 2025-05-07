@@ -53,7 +53,7 @@ struct BPOrdererELF : lld::BPOrderer<BPOrdererELF> {
       hashes.push_back(byte);
 
     llvm::sort(hashes);
-    hashes.erase(std::unique(hashes.begin(), hashes.end()), hashes.end());
+    hashes.erase(llvm::unique(hashes), hashes.end());
   }
 
   static StringRef getSymName(const Defined &sym) { return sym.getName(); }

@@ -30,7 +30,7 @@ The following requirements are shared on all platforms.
 If you want to run the test suite, you'll need to build LLDB with Python
 scripting support.
 
-* `Python <http://www.python.org/>`_
+* `Python <http://www.python.org/>`_ 3.8 or later.
 * `SWIG <http://swig.org/>`_ 4 or later.
 
 If you are on FreeBSD or NetBSD, you will need to install ``gmake`` for building

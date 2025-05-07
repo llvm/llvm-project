@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -39,6 +40,27 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "clone-function"
+
+STATISTIC(RemappedAtomMax, "Highest global NextAtomGroup (after mapping)");
+
+void llvm::mapAtomInstance(const DebugLoc &DL, ValueToValueMapTy &VMap) {
+  auto CurGroup = DL.get()->getAtomGroup();
+  if (!CurGroup)
+    return;
+
+  // Try inserting a new entry. If there's already a mapping for this atom
+  // then there's nothing to do.
+  auto [It, Inserted] = VMap.AtomMap.insert({{DL.getInlinedAt(), CurGroup}, 0});
+  if (!Inserted)
+    return;
+
+  // Map entry to a new atom group.
+  uint64_t NewGroup = DL->getContext().incNextDILocationAtomGroup();
+  assert(NewGroup > CurGroup && "Next should always be greater than current");
+  It->second = NewGroup;
+
+  RemappedAtomMax = std::max<uint64_t>(NewGroup, RemappedAtomMax);
+}
 
 namespace {
 void collectDebugInfoFromInstructions(const Function &F,
@@ -79,7 +101,7 @@ MetadataPredicate createIdentityMDPredicate(const Function &F,
 /// See comments in Cloning.h.
 BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
                                   const Twine &NameSuffix, Function *F,
-                                  ClonedCodeInfo *CodeInfo) {
+                                  ClonedCodeInfo *CodeInfo, bool MapAtoms) {
   BasicBlock *NewBB = BasicBlock::Create(BB->getContext(), "", F);
   NewBB->IsNewDbgInfoFormat = BB->IsNewDbgInfoFormat;
   if (BB->hasName())
@@ -97,6 +119,11 @@ BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
     NewInst->cloneDebugInfoFrom(&I);
 
     VMap[&I] = NewInst; // Add instruction map to value.
+
+    if (MapAtoms) {
+      if (const DebugLoc &DL = NewInst->getDebugLoc())
+        mapAtomInstance(DL.get(), VMap);
+    }
 
     if (isa<CallInst>(I) && !I.isDebugOrPseudoInst()) {
       hasCalls = true;

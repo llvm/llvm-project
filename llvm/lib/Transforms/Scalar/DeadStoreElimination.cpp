@@ -670,10 +670,10 @@ static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
   assert(DeadSize > ToRemoveSize && "Can't remove more than original size");
 
   uint64_t NewSize = DeadSize - ToRemoveSize;
-  if (auto *AMI = dyn_cast<AtomicMemIntrinsic>(DeadI)) {
+  if (DeadIntrinsic->isAtomic()) {
     // When shortening an atomic memory intrinsic, the newly shortened
     // length must remain an integer multiple of the element size.
-    const uint32_t ElementSize = AMI->getElementSizeInBytes();
+    const uint32_t ElementSize = DeadIntrinsic->getElementSizeInBytes();
     if (0 != NewSize % ElementSize)
       return false;
   }
@@ -1210,14 +1210,11 @@ struct DSEState {
   bool isInvisibleToCallerAfterRet(const Value *V) {
     if (isa<AllocaInst>(V))
       return true;
+
     auto I = InvisibleToCallerAfterRet.insert({V, false});
-    if (I.second) {
-      if (!isInvisibleToCallerOnUnwind(V)) {
-        I.first->second = false;
-      } else if (isNoAliasCall(V)) {
-        I.first->second = !PointerMayBeCaptured(V, /*ReturnCaptures=*/true);
-      }
-    }
+    if (I.second && isInvisibleToCallerOnUnwind(V) && isNoAliasCall(V))
+      I.first->second = capturesNothing(PointerMayBeCaptured(
+          V, /*ReturnCaptures=*/true, CaptureComponents::Provenance));
     return I.first->second;
   }
 
@@ -1234,7 +1231,8 @@ struct DSEState {
       // with the killing MemoryDef. But we refrain from doing so for now to
       // limit compile-time and this does not cause any changes to the number
       // of stores removed on a large test set in practice.
-      I.first->second = PointerMayBeCaptured(V, /*ReturnCaptures=*/false);
+      I.first->second = capturesAnything(PointerMayBeCaptured(
+          V, /*ReturnCaptures=*/false, CaptureComponents::Provenance));
     return !I.first->second;
   }
 
@@ -2334,6 +2332,10 @@ DSEState::getInitializesArgMemLoc(const Instruction *I) {
   // Collect aliasing arguments and their initializes ranges.
   SmallMapVector<Value *, SmallVector<ArgumentInitInfo, 2>, 2> Arguments;
   for (unsigned Idx = 0, Count = CB->arg_size(); Idx < Count; ++Idx) {
+    Value *CurArg = CB->getArgOperand(Idx);
+    if (!CurArg->getType()->isPointerTy())
+      continue;
+
     ConstantRangeList Inits;
     Attribute InitializesAttr = CB->getParamAttr(Idx, Attribute::Initializes);
     // initializes on byval arguments refers to the callee copy, not the
@@ -2341,7 +2343,6 @@ DSEState::getInitializesArgMemLoc(const Instruction *I) {
     if (InitializesAttr.isValid() && !CB->isByValArgument(Idx))
       Inits = InitializesAttr.getValueAsConstantRangeList();
 
-    Value *CurArg = CB->getArgOperand(Idx);
     // Check whether "CurArg" could alias with global variables. We require
     // either it's function local and isn't captured before or the "CB" only
     // accesses arg or inaccessible mem.

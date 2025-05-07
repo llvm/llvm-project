@@ -178,12 +178,25 @@ struct ModuleDeps {
   /// on, not including transitive dependencies.
   std::vector<PrebuiltModuleDep> PrebuiltModuleDeps;
 
-  /// A list of module identifiers this module directly depends on, not
-  /// including transitive dependencies.
+  /// This struct contains information about a single dependency.
+  struct DepInfo {
+    /// Identifies the dependency.
+    ModuleID ID;
+
+    /// Indicates if the module that has this dependency exports it or not.
+    bool Exported = false;
+
+    bool operator<(const DepInfo &Other) const {
+      return std::tie(ID, Exported) < std::tie(Other.ID, Other.Exported);
+    }
+  };
+
+  /// A list of DepsInfo containing information about modules this module
+  /// directly depends on, not including transitive dependencies.
   ///
   /// This may include modules with a different context hash when it can be
   /// determined that the differences are benign for this compilation.
-  std::vector<ModuleID> ClangModuleDeps;
+  std::vector<ModuleDeps::DepInfo> ClangModuleDeps;
 
   /// The set of libraries or frameworks to link against when
   /// an entity from this module is used.
@@ -270,7 +283,8 @@ private:
                           llvm::DenseSet<const Module *> &AddedModules);
 
   /// Add discovered module dependency for the given module.
-  void addOneModuleDep(const Module *M, const ModuleID ID, ModuleDeps &MD);
+  void addOneModuleDep(const Module *M, bool Exported, const ModuleID ID,
+                       ModuleDeps &MD);
 };
 
 /// Collects modular and non-modular dependencies of the main file by attaching
@@ -282,7 +296,8 @@ public:
                      CompilerInstance &ScanInstance, DependencyConsumer &C,
                      DependencyActionController &Controller,
                      CompilerInvocation OriginalCI,
-                     const PrebuiltModulesAttrsMap PrebuiltModulesASTMap);
+                     const PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
+                     const ArrayRef<StringRef> StableDirs);
 
   void attachToPreprocessor(Preprocessor &PP) override;
   void attachToASTReader(ASTReader &R) override;
@@ -305,6 +320,9 @@ private:
   /// Mapping from prebuilt AST filepaths to their attributes referenced during
   /// dependency collecting.
   const PrebuiltModulesAttrsMap PrebuiltModulesASTMap;
+  /// Directory paths known to be stable through an active development and build
+  /// cycle.
+  const ArrayRef<StringRef> StableDirs;
   /// Path to the main source file.
   std::string MainFile;
   /// Hash identifying the compilation conditions of the current TU.
@@ -348,16 +366,16 @@ private:
 
   /// Collect module map files for given modules.
   llvm::DenseSet<const FileEntry *>
-  collectModuleMapFiles(ArrayRef<ModuleID> ClangModuleDeps) const;
+  collectModuleMapFiles(ArrayRef<ModuleDeps::DepInfo> ClangModuleDeps) const;
 
   /// Add module map files to the invocation, if needed.
   void addModuleMapFiles(CompilerInvocation &CI,
-                         ArrayRef<ModuleID> ClangModuleDeps) const;
+                         ArrayRef<ModuleDeps::DepInfo> ClangModuleDeps) const;
   /// Add module files (pcm) to the invocation, if needed.
   void addModuleFiles(CompilerInvocation &CI,
-                      ArrayRef<ModuleID> ClangModuleDeps) const;
+                      ArrayRef<ModuleDeps::DepInfo> ClangModuleDeps) const;
   void addModuleFiles(CowCompilerInvocation &CI,
-                      ArrayRef<ModuleID> ClangModuleDeps) const;
+                      ArrayRef<ModuleDeps::DepInfo> ClangModuleDeps) const;
 
   /// Add paths that require looking up outputs to the given dependencies.
   void addOutputPaths(CowCompilerInvocation &CI, ModuleDeps &Deps);

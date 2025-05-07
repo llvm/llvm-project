@@ -25,6 +25,7 @@ class Linker {
 public:
   enum Flags {
     None = 0,
+    /// Have symbols from Src shadow those in the Dest.
     OverrideFromSrc = (1 << 0),
     LinkOnlyNeeded = (1 << 1),
   };
@@ -32,9 +33,6 @@ public:
   Linker(Module &M);
 
   /// Link \p Src into the composite.
-  ///
-  /// Passing OverrideSymbols as true will have symbols from Src
-  /// shadow those in the Dest.
   ///
   /// Passing InternalizeCallback will have the linker call the function with
   /// the new module and a list of global value names to be internalized by the

@@ -66,7 +66,16 @@ void RootAutoDetector::start() {
                  atomic_load_relaxed(&RAD->FunctionDataListHead));
              FD; FD = FD->Next) {
           if (AllRoots.contains(reinterpret_cast<uptr>(FD->EntryAddress))) {
-            FD->getOrAllocateContextRoot();
+            if (canBeRoot(FD->CtxRoot)) {
+              FD->getOrAllocateContextRoot();
+            } else {
+              // FIXME: address this by informing the root detection algorithm
+              // to skip over such functions and pick the next down in the
+              // stack. At that point, this becomes an assert.
+              Printf("[ctxprof] Root auto-detector selected a musttail "
+                     "function for root (%p). Ignoring\n",
+                     FD->EntryAddress);
+            }
           }
         }
         atomic_store_relaxed(&RAD->Self, 0);

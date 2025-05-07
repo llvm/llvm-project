@@ -16,6 +16,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/MDBuilder.h"
@@ -270,13 +271,133 @@ static void convertLinkerOptionsOp(ArrayAttr options,
   linkerMDNode->addOperand(listMDNode);
 }
 
+static llvm::Metadata *
+convertModuleFlagValue(StringRef key, ArrayAttr arrayAttr,
+                       llvm::IRBuilderBase &builder,
+                       LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::LLVMContext &context = builder.getContext();
+  llvm::MDBuilder mdb(context);
+  SmallVector<llvm::Metadata *> nodes;
+
+  if (key == LLVMDialect::getModuleFlagKeyCGProfileName()) {
+    for (auto entry : arrayAttr.getAsRange<ModuleFlagCGProfileEntryAttr>()) {
+      llvm::Metadata *fromMetadata =
+          entry.getFrom()
+              ? llvm::ValueAsMetadata::get(moduleTranslation.lookupFunction(
+                    entry.getFrom().getValue()))
+              : nullptr;
+      llvm::Metadata *toMetadata =
+          entry.getTo()
+              ? llvm::ValueAsMetadata::get(
+                    moduleTranslation.lookupFunction(entry.getTo().getValue()))
+              : nullptr;
+
+      llvm::Metadata *vals[] = {
+          fromMetadata, toMetadata,
+          mdb.createConstant(llvm::ConstantInt::get(
+              llvm::Type::getInt64Ty(context), entry.getCount()))};
+      nodes.push_back(llvm::MDNode::get(context, vals));
+    }
+    return llvm::MDTuple::getDistinct(context, nodes);
+  }
+  return nullptr;
+}
+
+static llvm::Metadata *convertModuleFlagProfileSummaryAttr(
+    StringRef key, ModuleFlagProfileSummaryAttr summaryAttr,
+    llvm::IRBuilderBase &builder, LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::LLVMContext &context = builder.getContext();
+  llvm::MDBuilder mdb(context);
+  SmallVector<llvm::Metadata *> summaryNodes;
+
+  auto getIntTuple = [&](StringRef key, uint64_t val) -> llvm::MDTuple * {
+    SmallVector<llvm::Metadata *> tupleNodes{
+        mdb.createString(key), mdb.createConstant(llvm::ConstantInt::get(
+                                   llvm::Type::getInt64Ty(context), val))};
+    return llvm::MDTuple::get(context, tupleNodes);
+  };
+
+  SmallVector<llvm::Metadata *> fmtNode{
+      mdb.createString("ProfileFormat"),
+      mdb.createString(
+          stringifyProfileSummaryFormatKind(summaryAttr.getFormat()))};
+
+  SmallVector<llvm::Metadata *> vals = {
+      llvm::MDTuple::get(context, fmtNode),
+      getIntTuple("TotalCount", summaryAttr.getTotalCount()),
+      getIntTuple("MaxCount", summaryAttr.getMaxCount()),
+      getIntTuple("MaxInternalCount", summaryAttr.getMaxInternalCount()),
+      getIntTuple("MaxFunctionCount", summaryAttr.getMaxFunctionCount()),
+      getIntTuple("NumCounts", summaryAttr.getNumCounts()),
+      getIntTuple("NumFunctions", summaryAttr.getNumFunctions()),
+  };
+
+  if (summaryAttr.getIsPartialProfile())
+    vals.push_back(
+        getIntTuple("IsPartialProfile", *summaryAttr.getIsPartialProfile()));
+
+  if (summaryAttr.getPartialProfileRatio()) {
+    SmallVector<llvm::Metadata *> tupleNodes{
+        mdb.createString("PartialProfileRatio"),
+        mdb.createConstant(llvm::ConstantFP::get(
+            llvm::Type::getDoubleTy(context),
+            summaryAttr.getPartialProfileRatio().getValue()))};
+    vals.push_back(llvm::MDTuple::get(context, tupleNodes));
+  }
+
+  SmallVector<llvm::Metadata *> detailedEntries;
+  llvm::Type *llvmInt64Type = llvm::Type::getInt64Ty(context);
+  for (ModuleFlagProfileSummaryDetailedAttr detailedEntry :
+       summaryAttr.getDetailedSummary()) {
+    SmallVector<llvm::Metadata *> tupleNodes{
+        mdb.createConstant(
+            llvm::ConstantInt::get(llvmInt64Type, detailedEntry.getCutOff())),
+        mdb.createConstant(
+            llvm::ConstantInt::get(llvmInt64Type, detailedEntry.getMinCount())),
+        mdb.createConstant(llvm::ConstantInt::get(
+            llvmInt64Type, detailedEntry.getNumCounts()))};
+    detailedEntries.push_back(llvm::MDTuple::get(context, tupleNodes));
+  }
+  SmallVector<llvm::Metadata *> detailedSummary{
+      mdb.createString("DetailedSummary"),
+      llvm::MDTuple::get(context, detailedEntries)};
+  vals.push_back(llvm::MDTuple::get(context, detailedSummary));
+
+  return llvm::MDNode::get(context, vals);
+}
+
 static void convertModuleFlagsOp(ArrayAttr flags, llvm::IRBuilderBase &builder,
                                  LLVM::ModuleTranslation &moduleTranslation) {
   llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
-  for (auto flagAttr : flags.getAsRange<ModuleFlagAttr>())
+  for (auto flagAttr : flags.getAsRange<ModuleFlagAttr>()) {
+    llvm::Metadata *valueMetadata =
+        llvm::TypeSwitch<Attribute, llvm::Metadata *>(flagAttr.getValue())
+            .Case<StringAttr>([&](auto strAttr) {
+              return llvm::MDString::get(builder.getContext(),
+                                         strAttr.getValue());
+            })
+            .Case<IntegerAttr>([&](auto intAttr) {
+              return llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+                  llvm::Type::getInt32Ty(builder.getContext()),
+                  intAttr.getInt()));
+            })
+            .Case<ArrayAttr>([&](auto arrayAttr) {
+              return convertModuleFlagValue(flagAttr.getKey().getValue(),
+                                            arrayAttr, builder,
+                                            moduleTranslation);
+            })
+            .Case([&](ModuleFlagProfileSummaryAttr summaryAttr) {
+              return convertModuleFlagProfileSummaryAttr(
+                  flagAttr.getKey().getValue(), summaryAttr, builder,
+                  moduleTranslation);
+            })
+            .Default([](auto) { return nullptr; });
+
+    assert(valueMetadata && "expected valid metadata");
     llvmModule->addModuleFlag(
         convertModFlagBehaviorToLLVM(flagAttr.getBehavior()),
-        flagAttr.getKey().getValue(), flagAttr.getValue());
+        flagAttr.getKey().getValue(), valueMetadata);
+  }
 }
 
 static LogicalResult
@@ -503,6 +624,15 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
           moduleTranslation.lookupBlock(std::get<1>(i)));
 
     moduleTranslation.mapBranch(&opInst, switchInst);
+    return success();
+  }
+  if (auto indBrOp = dyn_cast<LLVM::IndirectBrOp>(opInst)) {
+    llvm::IndirectBrInst *indBr = builder.CreateIndirectBr(
+        moduleTranslation.lookupValue(indBrOp.getAddr()),
+        indBrOp->getNumSuccessors());
+    for (auto *succ : indBrOp.getSuccessors())
+      indBr->addDestination(moduleTranslation.lookupBlock(succ));
+    moduleTranslation.mapBranch(&opInst, indBr);
     return success();
   }
 

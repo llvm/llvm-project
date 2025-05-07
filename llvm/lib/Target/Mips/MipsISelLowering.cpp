@@ -521,7 +521,8 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   setOperationAction(ISD::TRAP, MVT::Other, Legal);
 
   setTargetDAGCombine({ISD::SDIVREM, ISD::UDIVREM, ISD::SELECT, ISD::AND,
-                       ISD::OR, ISD::ADD, ISD::SUB, ISD::AssertZext, ISD::SHL});
+                       ISD::OR, ISD::ADD, ISD::SUB, ISD::AssertZext, ISD::SHL,
+                       ISD::SIGN_EXTEND});
 
   if (Subtarget.isGP64bit())
     setMaxAtomicSizeInBitsSupported(64);
@@ -1221,6 +1222,37 @@ static SDValue performSHLCombine(SDNode *N, SelectionDAG &DAG,
                      DAG.getConstant(SMSize, DL, MVT::i32));
 }
 
+static SDValue performSignExtendCombine(SDNode *N, SelectionDAG &DAG,
+                                        TargetLowering::DAGCombinerInfo &DCI,
+                                        const MipsSubtarget &Subtarget) {
+  if (DCI.Level != AfterLegalizeDAG || !Subtarget.isGP64bit()) {
+    return SDValue();
+  }
+
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+
+  // Pattern match XOR.
+  // $dst = sign_extend (xor (trunc $src, i32), imm)
+  // => $dst = xor (signext_inreg $src, i32), imm
+  if (N0.getOpcode() == ISD::XOR &&
+      N0.getOperand(0).getOpcode() == ISD::TRUNCATE &&
+      N0.getOperand(1).getOpcode() == ISD::Constant) {
+    SDValue TruncateSource = N0.getOperand(0).getOperand(0);
+    auto *ConstantOperand = dyn_cast<ConstantSDNode>(N0->getOperand(1));
+
+    SDValue FirstOperand =
+        DAG.getNode(ISD::SIGN_EXTEND_INREG, SDLoc(N0), VT, TruncateSource,
+                    DAG.getValueType(N0.getOperand(0).getValueType()));
+
+    int64_t ConstImm = ConstantOperand->getSExtValue();
+    return DAG.getNode(ISD::XOR, SDLoc(N0), VT, FirstOperand,
+                       DAG.getConstant(ConstImm, SDLoc(N0), VT));
+  }
+
+  return SDValue();
+}
+
 SDValue  MipsTargetLowering::PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
   const {
   SelectionDAG &DAG = DCI.DAG;
@@ -1246,6 +1278,8 @@ SDValue  MipsTargetLowering::PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
     return performSHLCombine(N, DAG, DCI, Subtarget);
   case ISD::SUB:
     return performSUBCombine(N, DAG, DCI, Subtarget);
+  case ISD::SIGN_EXTEND:
+    return performSignExtendCombine(N, DAG, DCI, Subtarget);
   }
 
   return SDValue();
@@ -3400,7 +3434,6 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   SDValue StackPtr =
       DAG.getCopyFromReg(Chain, DL, ABI.IsN64() ? Mips::SP_64 : Mips::SP,
                          getPointerTy(DAG.getDataLayout()));
-
   std::deque<std::pair<unsigned, SDValue>> RegsToPass;
   SmallVector<SDValue, 8> MemOpChains;
 
@@ -4654,7 +4687,7 @@ void MipsTargetLowering::writeVarArgRegs(std::vector<SDValue> &OutChains,
                                          SDValue Chain, const SDLoc &DL,
                                          SelectionDAG &DAG,
                                          CCState &State) const {
-  ArrayRef<MCPhysReg> ArgRegs = ABI.GetVarArgRegs();
+  ArrayRef<MCPhysReg> ArgRegs = ABI.getVarArgRegs(Subtarget.isGP64bit());
   unsigned Idx = State.getFirstUnallocated(ArgRegs);
   unsigned RegSizeInBytes = Subtarget.getGPRSizeInBytes();
   MVT RegTy = MVT::getIntegerVT(RegSizeInBytes * 8);

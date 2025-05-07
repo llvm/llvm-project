@@ -24,9 +24,9 @@ void fn2(Obj O[4]) { }
 // CHECK-LABEL: define void {{.*}}call2{{.*}}
 // CHECK: [[Arr:%.*]] = alloca [4 x %struct.Obj]
 // CHECK: [[Tmp:%.*]] = alloca [4 x %struct.Obj]
-// CHECK: call void @llvm.memset.p0.i32(ptr align 4 [[Arr]], i8 0, i32 32, i1 false)
-// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp]], ptr align 4 [[Arr]], i32 32, i1 false)
-// CHECK: call void {{.*}}fn2{{.*}}(ptr noundef byval([4 x %struct.Obj]) align 4 [[Tmp]])
+// CHECK: call void @llvm.memset.p0.i32(ptr align 1 [[Arr]], i8 0, i32 32, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[Tmp]], ptr align 1 [[Arr]], i32 32, i1 false)
+// CHECK: call void {{.*}}fn2{{.*}}(ptr noundef byval([4 x %struct.Obj]) align 1 [[Tmp]])
 void call2() {
   Obj Arr[4] = {{0, 0}, {0, 0}, {0, 0}, {0, 0}};
   fn2(Arr);

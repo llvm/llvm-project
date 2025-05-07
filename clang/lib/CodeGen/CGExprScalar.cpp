@@ -13,6 +13,7 @@
 #include "CGCXXABI.h"
 #include "CGCleanup.h"
 #include "CGDebugInfo.h"
+#include "CGHLSLRuntime.h"
 #include "CGObjCRuntime.h"
 #include "CGOpenMPRuntime.h"
 #include "CGRecordLayout.h"
@@ -2095,6 +2096,18 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
   assert (Ignore == false && "init list ignored");
   unsigned NumInitElements = E->getNumInits();
 
+  // HLSL initialization lists in the AST are an expansion which can contain
+  // side-effecting expressions wrapped in opaque value expressions. To properly
+  // emit these we need to emit the opaque values before we emit the argument
+  // expressions themselves. This is a little hacky, but it prevents us needing
+  // to do a bigger AST-level change for a language feature that we need
+  // deprecate in the near future. See related HLSL language proposals in the
+  // proposals (https://github.com/microsoft/hlsl-specs/blob/main/proposals):
+  // * 0005-strict-initializer-lists.md
+  // * 0032-constructors.md
+  if (CGF.getLangOpts().HLSL)
+    CGF.CGM.getHLSLRuntime().emitInitListOpaqueValues(CGF, E);
+
   if (E->hadArrayRangeDesignator())
     CGF.ErrorUnsupported(E, "GNU array range designator extension");
 
@@ -2259,6 +2272,53 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
     V = Builder.CreateInsertElement(V, Init, Idx, "vecinit");
   }
   return V;
+}
+
+static bool isDeclRefKnownNonNull(CodeGenFunction &CGF, const ValueDecl *D) {
+  return !D->isWeak();
+}
+
+static bool isLValueKnownNonNull(CodeGenFunction &CGF, const Expr *E) {
+  E = E->IgnoreParens();
+
+  if (const auto *UO = dyn_cast<UnaryOperator>(E))
+    if (UO->getOpcode() == UO_Deref)
+      return CGF.isPointerKnownNonNull(UO->getSubExpr());
+
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
+    return isDeclRefKnownNonNull(CGF, DRE->getDecl());
+
+  if (const auto *ME = dyn_cast<MemberExpr>(E)) {
+    if (isa<FieldDecl>(ME->getMemberDecl()))
+      return true;
+    return isDeclRefKnownNonNull(CGF, ME->getMemberDecl());
+  }
+
+  // Array subscripts?  Anything else?
+
+  return false;
+}
+
+bool CodeGenFunction::isPointerKnownNonNull(const Expr *E) {
+  assert(E->getType()->isSignableType());
+
+  E = E->IgnoreParens();
+
+  if (isa<CXXThisExpr>(E))
+    return true;
+
+  if (const auto *UO = dyn_cast<UnaryOperator>(E))
+    if (UO->getOpcode() == UO_AddrOf)
+      return isLValueKnownNonNull(*this, UO->getSubExpr());
+
+  if (const auto *CE = dyn_cast<CastExpr>(E))
+    if (CE->getCastKind() == CK_FunctionToPointerDecay ||
+        CE->getCastKind() == CK_ArrayToPointerDecay)
+      return isLValueKnownNonNull(*this, CE->getSubExpr());
+
+  // Maybe honor __nonnull?
+
+  return false;
 }
 
 bool CodeGenFunction::ShouldNullCheckClassCastValue(const CastExpr *CE) {
@@ -2440,9 +2500,8 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
         }
         if (FixedSrcTy->getElementType() == ScalableDstTy->getElementType()) {
           llvm::Value *PoisonVec = llvm::PoisonValue::get(ScalableDstTy);
-          llvm::Value *Zero = llvm::Constant::getNullValue(CGF.CGM.Int64Ty);
           llvm::Value *Result = Builder.CreateInsertVector(
-              ScalableDstTy, PoisonVec, Src, Zero, "cast.scalable");
+              ScalableDstTy, PoisonVec, Src, uint64_t(0), "cast.scalable");
           if (Result->getType() != DstTy)
             Result = Builder.CreateBitCast(Result, DstTy);
           return Result;
@@ -2465,10 +2524,9 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
               ScalableSrcTy->getElementCount().getKnownMinValue() / 8);
           Src = Builder.CreateBitCast(Src, ScalableSrcTy);
         }
-        if (ScalableSrcTy->getElementType() == FixedDstTy->getElementType()) {
-          llvm::Value *Zero = llvm::Constant::getNullValue(CGF.CGM.Int64Ty);
-          return Builder.CreateExtractVector(DstTy, Src, Zero, "cast.fixed");
-        }
+        if (ScalableSrcTy->getElementType() == FixedDstTy->getElementType())
+          return Builder.CreateExtractVector(DstTy, Src, uint64_t(0),
+                                             "cast.fixed");
       }
     }
 
@@ -4984,6 +5042,21 @@ Value *ScalarExprEmitter::VisitBinAssign(const BinaryOperator *E) {
 
   Value *RHS;
   LValue LHS;
+
+  if (PointerAuthQualifier PtrAuth = E->getLHS()->getType().getPointerAuth()) {
+    LValue LV = CGF.EmitCheckedLValue(E->getLHS(), CodeGenFunction::TCK_Store);
+    LV.getQuals().removePointerAuth();
+    llvm::Value *RV =
+        CGF.EmitPointerAuthQualify(PtrAuth, E->getRHS(), LV.getAddress());
+    CGF.EmitNullabilityCheck(LV, RV, E->getExprLoc());
+    CGF.EmitStoreThroughLValue(RValue::get(RV), LV);
+
+    if (Ignore)
+      return nullptr;
+    RV = CGF.EmitPointerAuthUnqualify(PtrAuth, RV, LV.getType(),
+                                      LV.getAddress(), /*nonnull*/ false);
+    return RV;
+  }
 
   switch (E->getLHS()->getType().getObjCLifetime()) {
   case Qualifiers::OCL_Strong:

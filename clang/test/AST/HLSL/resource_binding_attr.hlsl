@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -finclude-default-header -ast-dump -o - %s | FileCheck %s
+// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.3-library -finclude-default-header -ast-dump -o - %s | FileCheck %s
 
 // CHECK: HLSLBufferDecl {{.*}} line:[[# @LINE + 4]]:9 cbuffer CB
 // CHECK-NEXT: HLSLResourceClassAttr {{.*}} Implicit CBuffer
@@ -29,6 +29,10 @@ RWBuffer<float> UAV : register(u3);
 // CHECK: VarDecl {{.*}} UAV2 'RWBuffer<float>':'hlsl::RWBuffer<float>'
 // CHECK: HLSLResourceBindingAttr {{.*}} "u4" "space0"
 RWBuffer<float> UAV1 : register(u2), UAV2 : register(u4);
+
+// CHECK: VarDecl {{.*}} UAV3 'RWBuffer<float>':'hlsl::RWBuffer<float>'
+// CHECK: HLSLResourceBindingAttr {{.*}} "" "space5"
+RWBuffer<float> UAV3 : register(space5);
 
 //
 // Default constants ($Globals) layout annotations

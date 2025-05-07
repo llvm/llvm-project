@@ -448,6 +448,11 @@ llvm::Function *CodeGenModule::CreateGlobalInitOrCleanUpFunction(
 
   if (Linkage == llvm::GlobalVariable::InternalLinkage)
     SetInternalFunctionAttributes(GlobalDecl(), Fn, FI);
+  else {
+    SetLLVMFunctionAttributes(GlobalDecl(), FI, Fn, false);
+    SetLLVMFunctionAttributesForDefinition(nullptr, Fn);
+    getTargetCodeGenInfo().setTargetAttributes(nullptr, Fn, *this);
+  }
 
   Fn->setCallingConv(getRuntimeCC());
 
@@ -743,7 +748,6 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
   // Add any initializers with specified priority; this uses the same  approach
   // as EmitCXXGlobalInitFunc().
   if (!PrioritizedCXXGlobalInits.empty()) {
-    SmallVector<llvm::Function *, 8> LocalCXXGlobalInits;
     llvm::array_pod_sort(PrioritizedCXXGlobalInits.begin(),
                          PrioritizedCXXGlobalInits.end());
     for (SmallVectorImpl<GlobalInitData>::iterator

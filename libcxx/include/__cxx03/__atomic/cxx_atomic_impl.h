@@ -44,13 +44,7 @@ _LIBCPP_HIDE_FROM_ABI void __cxx_atomic_assign_volatile(_Tp volatile& __a_value,
 
 template <typename _Tp>
 struct __cxx_atomic_base_impl {
-  _LIBCPP_HIDE_FROM_ABI
-#  ifndef _LIBCPP_CXX03_LANG
-  __cxx_atomic_base_impl() _NOEXCEPT = default;
-#  else
-  __cxx_atomic_base_impl() _NOEXCEPT : __a_value() {
-  }
-#  endif // _LIBCPP_CXX03_LANG
+  _LIBCPP_HIDE_FROM_ABI __cxx_atomic_base_impl() _NOEXCEPT : __a_value() {}
   _LIBCPP_CONSTEXPR explicit __cxx_atomic_base_impl(_Tp value) _NOEXCEPT : __a_value(value) {}
   _Tp __a_value;
 };
@@ -263,13 +257,7 @@ __cxx_atomic_fetch_xor(__cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern, memory_o
 
 template <typename _Tp>
 struct __cxx_atomic_base_impl {
-  _LIBCPP_HIDE_FROM_ABI
-#  ifndef _LIBCPP_CXX03_LANG
-  __cxx_atomic_base_impl() _NOEXCEPT = default;
-#  else
-  __cxx_atomic_base_impl() _NOEXCEPT : __a_value() {
-  }
-#  endif // _LIBCPP_CXX03_LANG
+  _LIBCPP_HIDE_FROM_ABI __cxx_atomic_base_impl() _NOEXCEPT : __a_value() {}
   _LIBCPP_CONSTEXPR explicit __cxx_atomic_base_impl(_Tp __value) _NOEXCEPT : __a_value(__value) {}
   _LIBCPP_DISABLE_EXTENSION_WARNING _Atomic(_Tp) __a_value;
 };

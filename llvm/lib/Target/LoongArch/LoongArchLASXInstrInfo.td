@@ -1815,30 +1815,34 @@ def : Pat<(v4f32 (uint_to_fp v4i64:$vj)),
 // XVFTINTRZ_{W_S/L_D}
 def : Pat<(v8i32 (fp_to_sint v8f32:$vj)), (XVFTINTRZ_W_S v8f32:$vj)>;
 def : Pat<(v4i64 (fp_to_sint v4f64:$vj)), (XVFTINTRZ_L_D v4f64:$vj)>;
-def : Pat<(v4i64 (fp_to_sint v4f32:$vj)),
-          (VEXT2XV_D_W (SUBREG_TO_REG (i64 0), (VFTINTRZ_W_S v4f32:$vj),
-                                      sub_128))>;
-def : Pat<(v4i32 (fp_to_sint (v4f64 LASX256:$vj))),
-          (EXTRACT_SUBREG (XVFTINTRZ_W_S (XVFCVT_S_D (XVPERMI_D v4f64:$vj, 238),
-                                                     v4f64:$vj)),
-                          sub_128)>;
+def : Pat<(v4i64(fp_to_sint v4f32:$vj)), (VEXT2XV_D_W(SUBREG_TO_REG(i64 0),
+                                             (VFTINTRZ_W_S v4f32:$vj),
+                                             sub_128))>;
+def : Pat<(v4i32(fp_to_sint v4f64:$vj)),
+          (EXTRACT_SUBREG(XVPICKEV_W(XVPERMI_D(XVFTINTRZ_L_D v4f64:$vj), 238),
+               (XVFTINTRZ_L_D v4f64:$vj)),
+              sub_128)>;
 
 // XVFTINTRZ_{W_SU/L_DU}
 def : Pat<(v8i32 (fp_to_uint v8f32:$vj)), (XVFTINTRZ_WU_S v8f32:$vj)>;
 def : Pat<(v4i64 (fp_to_uint v4f64:$vj)), (XVFTINTRZ_LU_D v4f64:$vj)>;
-def : Pat<(v4i64 (fp_to_uint v4f32:$vj)),
-          (VEXT2XV_DU_WU (SUBREG_TO_REG (i64 0), (VFTINTRZ_WU_S v4f32:$vj),
-                                        sub_128))>;
-def : Pat<(v4i32 (fp_to_uint (v4f64 LASX256:$vj))),
-          (EXTRACT_SUBREG (XVFTINTRZ_W_S (XVFCVT_S_D (XVPERMI_D v4f64:$vj, 238),
-                                                     v4f64:$vj)),
-                          sub_128)>;
+def : Pat<(v4i64(fp_to_uint v4f32:$vj)), (VEXT2XV_DU_WU(SUBREG_TO_REG(i64 0),
+                                             (VFTINTRZ_WU_S v4f32:$vj),
+                                             sub_128))>;
+def : Pat<(v4i32(fp_to_uint v4f64:$vj)),
+          (EXTRACT_SUBREG(XVPICKEV_W(XVPERMI_D(XVFTINTRZ_LU_D v4f64:$vj), 238),
+               (XVFTINTRZ_LU_D v4f64:$vj)),
+              sub_128)>;
 
 // XVPERMI_Q
 foreach vt = [v32i8, v16i16, v8i32, v4i64, v8f32, v4f64] in
 def : Pat<(vt (concat_vectors LSX128:$vd, LSX128:$vj)),
           (XVPERMI_Q (SUBREG_TO_REG (i64 0), LSX128:$vd, sub_128),
                      (SUBREG_TO_REG (i64 0), LSX128:$vj, sub_128), 2)>;
+
+// XVABSD_{B/H/W/D}[U]
+defm : PatXrXr<abds, "XVABSD">;
+defm : PatXrXrU<abdu, "XVABSD">;
 
 } // Predicates = [HasExtLASX]
 
@@ -2161,6 +2165,7 @@ def : Pat<(int_loongarch_lasx_xvld GPR:$rj, timm:$imm),
 def : Pat<(int_loongarch_lasx_xvldx GPR:$rj, GPR:$rk),
           (XVLDX GPR:$rj, GPR:$rk)>;
 
+// xvldrepl
 def : Pat<(int_loongarch_lasx_xvldrepl_b GPR:$rj, timm:$imm),
           (XVLDREPL_B GPR:$rj, (to_valid_timm timm:$imm))>;
 def : Pat<(int_loongarch_lasx_xvldrepl_h GPR:$rj, timm:$imm),
@@ -2169,6 +2174,13 @@ def : Pat<(int_loongarch_lasx_xvldrepl_w GPR:$rj, timm:$imm),
           (XVLDREPL_W GPR:$rj, (to_valid_timm timm:$imm))>;
 def : Pat<(int_loongarch_lasx_xvldrepl_d GPR:$rj, timm:$imm),
           (XVLDREPL_D GPR:$rj, (to_valid_timm timm:$imm))>;
+
+defm : VldreplPat<v32i8, XVLDREPL_B, simm12_addlike>;
+defm : VldreplPat<v16i16, XVLDREPL_H, simm11_lsl1>;
+defm : VldreplPat<v8i32, XVLDREPL_W, simm10_lsl2>;
+defm : VldreplPat<v4i64, XVLDREPL_D, simm9_lsl3>;
+defm : VldreplPat<v8f32, XVLDREPL_W, simm10_lsl2>;
+defm : VldreplPat<v4f64, XVLDREPL_D, simm9_lsl3>;
 
 // store
 def : Pat<(int_loongarch_lasx_xvst LASX256:$xd, GPR:$rj, timm:$imm),

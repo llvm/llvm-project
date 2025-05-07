@@ -186,8 +186,10 @@ define ptr addrspace(8) @v_ptrmask_buffer_resource_variable_i128_neg8(ptr addrsp
 define amdgpu_ps ptr addrspace(8) @s_ptrmask_buffer_resource_variable_i128(ptr addrspace(8) inreg %ptr, i128 inreg %mask) {
 ; GCN-LABEL: s_ptrmask_buffer_resource_variable_i128:
 ; GCN:       ; %bb.0:
+; GCN-NEXT:    s_and_b64 s[4:5], s[4:5], s[8:9]
 ; GCN-NEXT:    s_and_b64 s[0:1], s[2:3], s[6:7]
-; GCN-NEXT:    s_and_b64 s[2:3], s[4:5], s[8:9]
+; GCN-NEXT:    s_mov_b32 s2, s4
+; GCN-NEXT:    s_mov_b32 s3, s5
 ; GCN-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: s_ptrmask_buffer_resource_variable_i128:

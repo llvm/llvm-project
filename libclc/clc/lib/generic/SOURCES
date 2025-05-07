@@ -7,6 +7,7 @@ integer/clc_abs.cl
 integer/clc_abs_diff.cl
 integer/clc_add_sat.cl
 integer/clc_clz.cl
+integer/clc_ctz.cl
 integer/clc_hadd.cl
 integer/clc_mad24.cl
 integer/clc_mad_sat.cl
@@ -40,9 +41,13 @@ math/clc_exp2.cl
 math/clc_expm1.cl
 math/clc_exp_helper.cl
 math/clc_fabs.cl
+math/clc_fdim.cl
 math/clc_fma.cl
-math/clc_fmod.cl
+math/clc_fmax.cl
+math/clc_fmin.cl
 math/clc_floor.cl
+math/clc_fmod.cl
+math/clc_fract.cl
 math/clc_frexp.cl
 math/clc_hypot.cl
 math/clc_ldexp.cl
@@ -53,6 +58,8 @@ math/clc_log10.cl
 math/clc_log1p.cl
 math/clc_log2.cl
 math/clc_mad.cl
+math/clc_maxmag.cl
+math/clc_minmag.cl
 math/clc_modf.cl
 math/clc_nan.cl
 math/clc_native_cos.cl
