@@ -127,19 +127,19 @@ struct RootParameterYamlDesc {
 };
 
 struct StaticSamplerYamlDesc {
-  dxbc::RTS0::StaticSamplerFilter Filter;
-  dxbc::RTS0::TextureAddressMode AddressU;
-  dxbc::RTS0::TextureAddressMode AddressV;
-  dxbc::RTS0::TextureAddressMode AddressW;
+  uint32_t Filter;
+  uint32_t AddressU;
+  uint32_t AddressV;
+  uint32_t AddressW;
   float MipLODBias;
   uint32_t MaxAnisotropy;
-  dxbc::RTS0::ComparisonFunction ComparisonFunc;
-  dxbc::RTS0::StaticBorderColor BorderColor;
+  uint32_t ComparisonFunc;
+  uint32_t BorderColor;
   float MinLOD;
   float MaxLOD;
   uint32_t ShaderRegister;
   uint32_t RegisterSpace;
-  dxbc::RTS0::ShaderVisibility ShaderVisibility;
+  uint32_t ShaderVisibility;
 };
 
 struct RootSignatureYamlDesc {

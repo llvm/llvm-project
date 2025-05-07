@@ -689,19 +689,19 @@ struct DescriptorRange {
 };
 
 struct StaticSampler {
-  StaticSamplerFilter Filter;
-  TextureAddressMode AddressU;
-  TextureAddressMode AddressV;
-  TextureAddressMode AddressW;
+  uint32_t Filter;
+  uint32_t AddressU;
+  uint32_t AddressV;
+  uint32_t AddressW;
   float MipLODBias;
   uint32_t MaxAnisotropy;
-  ComparisonFunction ComparisonFunc;
-  StaticBorderColor BorderColor;
+  uint32_t ComparisonFunc;
+  uint32_t BorderColor;
   float MinLOD;
   float MaxLOD;
   uint32_t ShaderRegister;
   uint32_t RegisterSpace;
-  ShaderVisibility ShaderVisibility;
+  uint32_t ShaderVisibility;
   void swapBytes() {
     sys::swapByteOrder(Filter);
     sys::swapByteOrder(AddressU);

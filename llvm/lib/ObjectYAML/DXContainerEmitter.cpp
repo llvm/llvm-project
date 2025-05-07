@@ -342,6 +342,25 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
         }
       }
 
+      for (const auto &Param : P.RootSignature->samplers()) {
+        dxbc::RTS0::v0::StaticSampler NewSampler;
+        NewSampler.Filter = Param.Filter;
+        NewSampler.AddressU = Param.AddressU;
+        NewSampler.AddressV = Param.AddressV;
+        NewSampler.AddressW = Param.AddressW;
+        NewSampler.MipLODBias = Param.MipLODBias;
+        NewSampler.MaxAnisotropy = Param.MaxAnisotropy;
+        NewSampler.ComparisonFunc = Param.ComparisonFunc;
+        NewSampler.BorderColor = Param.BorderColor;
+        NewSampler.MinLOD = Param.MinLOD;
+        NewSampler.MaxLOD = Param.MaxLOD;
+        NewSampler.ShaderRegister = Param.ShaderRegister;
+        NewSampler.RegisterSpace = Param.RegisterSpace;
+        NewSampler.ShaderVisibility = Param.ShaderVisibility;
+
+        RS.StaticSamplers.push_back(NewSampler);
+      }
+
       RS.write(OS);
       break;
     }
