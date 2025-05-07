@@ -3892,13 +3892,14 @@ bool RISCVInstrInfo::optimizeInstruction(MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
     break;
+  case RISCV::ADD:
   case RISCV::OR:
   case RISCV::XOR:
     // Normalize (so we hit the next if clause).
-    // [x]or rd, zero, rs => [x]or rd, rs, zero
+    // add/[x]or rd, zero, rs => add/[x]or rd, rs, zero
     if (MI.getOperand(1).getReg() == RISCV::X0)
       commuteInstruction(MI);
-    // [x]or rd, rs, zero => addi rd, rs, 0
+    // add/[x]or rd, rs, zero => addi rd, rs, 0
     if (MI.getOperand(2).getReg() == RISCV::X0) {
       MI.getOperand(2).ChangeToImmediate(0);
       MI.setDesc(get(RISCV::ADDI));
