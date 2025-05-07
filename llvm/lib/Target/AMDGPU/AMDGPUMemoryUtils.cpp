@@ -557,7 +557,7 @@ bool IsPromotableToVGPR(const Value &V, const DataLayout &DL) {
     if (!Inst)
       continue;
 
-    if (Value *Ptr = getLoadStorePointerOperand(Inst)) {
+    if (getLoadStorePointerOperand(Inst)) {
       // This is a store of the pointer, not to the pointer.
       if (isa<StoreInst>(Inst) &&
           U->getOperandNo() != StoreInst::getPointerOperandIndex())
@@ -582,17 +582,17 @@ bool IsPromotableToVGPR(const Value &V, const DataLayout &DL) {
       continue;
     }
 
-    if (auto *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
+    if (isa<GetElementPtrInst>(Inst)) {
       continue;
     }
 
-    if (auto *Phi = dyn_cast<PHINode>(Inst)) {
+    if (isa<PHINode>(Inst)) {
       if (allPtrInputsInSameClass(V, Inst)) {
         continue;
       }
       return RejectUser(Inst, "phi on ptrs from two different objects");
     }
-    if (auto *Phi = dyn_cast<SelectInst>(Inst)) {
+    if (isa<SelectInst>(Inst)) {
       if (allPtrInputsInSameClass(V, Inst)) {
         continue;
       }
@@ -606,7 +606,7 @@ bool IsPromotableToVGPR(const Value &V, const DataLayout &DL) {
       return RejectUser(Inst, "cannot handle partial memset inst yet");
     }
 
-    if (MemTransferInst *TransferInst = dyn_cast<MemTransferInst>(Inst))
+    if (isa<MemTransferInst>(Inst))
       return RejectUser(Inst, "cannot handle mem transfer inst yet");
 
     if (auto *Intr = dyn_cast<IntrinsicInst>(Inst)) {
