@@ -3713,23 +3713,19 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
   auto GetIndexRangeInShuffles = [&]() -> std::optional<IndexRange> {
     IndexRange OutputRange = IndexRange(VecTy->getNumElements(), -1);
     for (auto &Use : I.uses()) {
-      // All uses must be shufflevector instructions.
-      auto *Shuffle = dyn_cast<ShuffleVectorInst>(Use.getUser());
-      if (!Shuffle)
+      // Ensure all uses match the required pattern.
+      User *Shuffle = Use.getUser();
+      Value *Op0 = nullptr;
+      ArrayRef<int> Mask;
+
+      if (!match(Shuffle, m_Shuffle(m_Value(Op0), m_Undef(), m_Mask(Mask))))
         return std::nullopt;
 
       // Ignore shufflevector instructions that have no uses.
       if (!Shuffle->hasNUsesOrMore(1u))
         continue;
 
-      // Ensure second operand is a poison value.
-      auto *Op0 = Shuffle->getOperand(0);
-      auto *Op1 = Shuffle->getOperand(1);
-      if (!isa<PoisonValue>(Op1) && !isa<UndefValue>(Op1))
-        return std::nullopt;
-
       // Find the min and max indices used by the shufflevector instruction.
-      ArrayRef<int> Mask = Shuffle->getShuffleMask();
       auto *Op0Ty = cast<FixedVectorType>(Op0->getType());
       auto NumElems = int(Op0Ty->getNumElements());
 
