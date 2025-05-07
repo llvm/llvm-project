@@ -18,6 +18,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
 #include <type_traits>
+#include <variant>
 
 namespace mlir {
 
@@ -246,10 +247,12 @@ public:
   /// the type is removed and any usages of the existing value are expected to
   /// be removed during conversion.
   LogicalResult convertType(Type t, SmallVectorImpl<Type> &results) const;
+  LogicalResult convertType(Value v, SmallVectorImpl<Type> &results) const;
 
   /// This hook simplifies defining 1-1 type conversions. This function returns
   /// the type to convert to on success, and a null type on failure.
   Type convertType(Type t) const;
+  Type convertType(Value v) const;
 
   /// Attempts a 1-1 type conversion, expecting the result type to be
   /// `TargetType`. Returns the converted type cast to `TargetType` on success,
@@ -328,7 +331,7 @@ private:
   /// types is empty, the type is removed and any usages of the existing value
   /// are expected to be removed during conversion.
   using ConversionCallbackFn = std::function<std::optional<LogicalResult>(
-      Type, SmallVectorImpl<Type> &)>;
+      std::variant<Type, Value>, SmallVectorImpl<Type> &)>;
 
   /// The signature of the callback used to materialize a source conversion.
   ///
@@ -370,9 +373,15 @@ private:
                    ConversionCallbackFn>
   wrapCallback(FnT &&callback) const {
     return [callback = std::forward<FnT>(callback)](
-               Type type,
+               std::variant<Type, Value> type,
                SmallVectorImpl<Type> &results) -> std::optional<LogicalResult> {
-      T derivedType = dyn_cast<T>(type);
+      T derivedType;
+      if (Type *t = std::get_if<Type>(&type)) {
+        derivedType = dyn_cast<T>(*t);
+      } else if (Value *v = std::get_if<Value>(&type)) {
+        derivedType = dyn_cast<T>(v->getType());
+      }
+      //T derivedType = dyn_cast<T>(std::get<Type>(type));
       if (!derivedType)
         return std::nullopt;
       return callback(derivedType, results);

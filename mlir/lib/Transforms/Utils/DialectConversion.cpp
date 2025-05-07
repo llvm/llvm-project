@@ -1256,7 +1256,7 @@ LogicalResult ConversionPatternRewriterImpl::remapValues(
 
     // If there is no legal conversion, fail to match this pattern.
     SmallVector<Type, 1> legalTypes;
-    if (failed(currentTypeConverter->convertType(origType, legalTypes))) {
+    if (failed(currentTypeConverter->convertType(operand, legalTypes))) {
       notifyMatchFailure(operandLoc, [=](Diagnostic &diag) {
         diag << "unable to convert type for " << valueDiagTag << " #"
              << it.index() << ", type was " << origType;
@@ -2899,10 +2899,36 @@ LogicalResult TypeConverter::convertType(Type t,
   return failure();
 }
 
+LogicalResult TypeConverter::convertType(Value v,
+                                         SmallVectorImpl<Type> &results) const {
+  assert(v && "expected non-null value");
+
+  // Walk the added converters in reverse order to apply the most recently
+  // registered first.
+  for (const ConversionCallbackFn &converter : llvm::reverse(conversions)) {
+    if (std::optional<LogicalResult> result = converter(v, results)) {
+      if (!succeeded(*result))
+        return failure();
+      return success();
+    }
+  }
+  return failure();
+}
+
 Type TypeConverter::convertType(Type t) const {
   // Use the multi-type result version to convert the type.
   SmallVector<Type, 1> results;
   if (failed(convertType(t, results)))
+    return nullptr;
+
+  // Check to ensure that only one type was produced.
+  return results.size() == 1 ? results.front() : nullptr;
+}
+
+Type TypeConverter::convertType(Value v) const {
+  // Use the multi-type result version to convert the type.
+  SmallVector<Type, 1> results;
+  if (failed(convertType(v, results)))
     return nullptr;
 
   // Check to ensure that only one type was produced.
