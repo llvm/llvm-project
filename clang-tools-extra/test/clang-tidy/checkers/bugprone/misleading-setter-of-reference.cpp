@@ -99,8 +99,11 @@ public:
   }
 };
 
-char CharValue;
-TemplateTest<char> TTChar{CharValue};
+void f_TemplateTest(char *Value) {
+  char CharValue;
+  TemplateTest<char> TTChar{CharValue};
+  TTChar.setValue(Value);
+}
 
 template <typename T>
 class AddMember {

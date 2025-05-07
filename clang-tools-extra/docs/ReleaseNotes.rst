@@ -109,6 +109,12 @@ New checks
   Finds lambda captures that capture the ``this`` pointer and store it as class
   members without handle the copy and move constructors and the assignments.
 
+- New :doc:`bugprone-misleading-setter-of-reference
+  <clang-tidy/checks/bugprone/misleading-setter-of-reference>` check.
+
+  Finds setter-like member functions that take a pointer parameter and set a
+  reference member of the same class with the pointed value.
+
 - New :doc:`bugprone-unintended-char-ostream-output
   <clang-tidy/checks/bugprone/unintended-char-ostream-output>` check.
 
