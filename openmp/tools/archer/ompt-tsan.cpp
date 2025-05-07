@@ -200,13 +200,12 @@ DECLARE_TSAN_FUNCTION(AnnotateRWLockReleased, const char *, int,
   AnnotateNewMemory(__FILE__, __LINE__, addr, size)
 
 // Locks
-#define TsanRWLockCreate(mutex)                                          \
-  AnnotateRWLockCreate(__FILE__, __LINE__, mutex)
-#define TsanRWLockDestroy(mutex)                                          \
+#define TsanRWLockCreate(mutex) AnnotateRWLockCreate(__FILE__, __LINE__, mutex)
+#define TsanRWLockDestroy(mutex)                                               \
   AnnotateRWLockDestroy(__FILE__, __LINE__, mutex)
-#define TsanRWLockAcquired(mutex, isw)                                          \
+#define TsanRWLockAcquired(mutex, isw)                                         \
   AnnotateRWLockAcquired(__FILE__, __LINE__, mutex, isw)
-#define TsanRWLockReleased(mutex, isw)                                          \
+#define TsanRWLockReleased(mutex, isw)                                         \
   AnnotateRWLockReleased(__FILE__, __LINE__, mutex, isw)
 #endif
 
@@ -1124,22 +1123,25 @@ static void ompt_tsan_dependences(ompt_data_t *task_data,
   }
 }
 
-static void ompt_tsan_lock_init(ompt_mutex_t kind, unsigned int hint, unsigned int impl, ompt_wait_id_t wait_id, const void * codeptr_ra) {
-    TsanFuncEntry(codeptr_ra);
-    LocksMutex.lock();
-    std::mutex &Lock = Locks[wait_id].mu;
-    LocksMutex.unlock();
-    TsanRWLockCreate(&Lock);
+static void ompt_tsan_lock_init(ompt_mutex_t kind, unsigned int hint,
+                                unsigned int impl, ompt_wait_id_t wait_id,
+                                const void *codeptr_ra) {
+  TsanFuncEntry(codeptr_ra);
+  LocksMutex.lock();
+  std::mutex &Lock = Locks[wait_id].mu;
+  LocksMutex.unlock();
+  TsanRWLockCreate(&Lock);
   TsanFuncExit();
 }
 
-static void ompt_tsan_lock_destroy(ompt_mutex_t kind, ompt_wait_id_t wait_id, const void * codeptr_ra) {
-    TsanFuncEntry(codeptr_ra);
-    LocksMutex.lock();
-    std::mutex &Lock = Locks[wait_id].mu;
-    LocksMutex.unlock();
-    TsanRWLockDestroy(&Lock);
-    TsanFuncExit();
+static void ompt_tsan_lock_destroy(ompt_mutex_t kind, ompt_wait_id_t wait_id,
+                                   const void *codeptr_ra) {
+  TsanFuncEntry(codeptr_ra);
+  LocksMutex.lock();
+  std::mutex &Lock = Locks[wait_id].mu;
+  LocksMutex.unlock();
+  TsanRWLockDestroy(&Lock);
+  TsanFuncExit();
 }
 
 /// OMPT event callbacks for handling locking.
@@ -1244,12 +1246,10 @@ static int ompt_tsan_initialize(ompt_function_lookup_t lookup, int device_num,
       (void (*)(const char *, int, const volatile void *, size_t)));
   findTsanFunction(__tsan_func_entry, (void (*)(const void *)));
   findTsanFunction(__tsan_func_exit, (void (*)(void)));
-  findTsanFunction(
-      AnnotateRWLockCreate,
-      (void (*)(const char *, int, const volatile void *)));
-  findTsanFunction(
-      AnnotateRWLockDestroy,
-      (void (*)(const char *, int, const volatile void *)));
+  findTsanFunction(AnnotateRWLockCreate,
+                   (void (*)(const char *, int, const volatile void *)));
+  findTsanFunction(AnnotateRWLockDestroy,
+                   (void (*)(const char *, int, const volatile void *)));
   findTsanFunction(
       AnnotateRWLockAcquired,
       (void (*)(const char *, int, const volatile void *, size_t)));
