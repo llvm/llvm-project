@@ -32,6 +32,7 @@
 #include "clang/Frontend/Utils.h"
 #include "clang/Frontend/VerifyDiagnosticConsumer.h"
 #include "clang/Lex/HeaderSearch.h"
+#include "clang/Lex/LiteralConverter.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
@@ -544,6 +545,9 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
 
   if (GetDependencyDirectives)
     PP->setDependencyDirectivesGetter(*GetDependencyDirectives);
+
+  PP->getLiteralConverter().setConvertersFromOptions(getLangOpts(), getTarget(),
+                                                     getDiagnostics());
 }
 
 std::string

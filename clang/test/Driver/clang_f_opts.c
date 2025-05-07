@@ -232,8 +232,14 @@
 // RUN: not %clang -### -S -finput-charset=iso-8859-1 -o /dev/null %s 2>&1 | FileCheck -check-prefix=CHECK-INVALID-INPUT-CHARSET %s
 // CHECK-INVALID-INPUT-CHARSET: error: invalid value 'iso-8859-1' in '-finput-charset=iso-8859-1'
 
-// RUN: not %clang -### -S -fexec-charset=iso-8859-1 -o /dev/null %s 2>&1 | FileCheck -check-prefix=CHECK-INVALID-EXEC-CHARSET %s
-// CHECK-INVALID-EXEC-CHARSET: error: invalid value 'iso-8859-1' in '-fexec-charset=iso-8859-1'
+// RUN: %clang -### -S -fexec-charset=invalid-charset -o /dev/null %s 2>&1 | FileCheck -check-prefix=CHECK-INVALID-INPUT-CHARSET %s
+// CHECK-INVALID-INPUT-CHARSET: error: invalid value 'invalid-charset' in '-fexec-charset=invalid-charset'
+
+// Test that we support the following exec charsets.
+// RUN: %clang -### -S -fexec-charset=UTF-8 -o /dev/null %s 2>&1 | FileCheck --check-prefix=INVALID %s
+// RUN: %clang -### -S -fexec-charset=ISO8859-1 -o /dev/null %s 2>&1 | FileCheck --check-prefix=INVALID %s
+// RUN: %clang -### -S -fexec-charset=IBM-1047 -o /dev/null %s 2>&1 | FileCheck --check-prefix=INVALID %s
+// INVALID-NOT: error: invalid value
 
 // Test that we don't error on these.
 // RUN: not %clang -### -S -Werror                                                \
@@ -247,7 +253,7 @@
 // RUN:     -fident -fno-ident                                                \
 // RUN:     -fimplicit-templates -fno-implicit-templates                      \
 // RUN:     -finput-charset=UTF-8                                             \
-// RUN:     -fexec-charset=UTF-8                                             \
+// RUN:     -fexec-charset=UTF-8                                              \
 // RUN:     -fivopts -fno-ivopts                                              \
 // RUN:     -fnon-call-exceptions -fno-non-call-exceptions                    \
 // RUN:     -fpermissive -fno-permissive                                      \

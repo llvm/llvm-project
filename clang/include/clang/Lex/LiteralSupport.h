@@ -17,12 +17,13 @@
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Lex/LiteralConverter.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataTypes.h"
-
+#include "llvm/Support/TextEncoding.h"
 namespace clang {
 
 class DiagnosticsEngine;
@@ -233,6 +234,7 @@ class StringLiteralParser {
   const LangOptions &Features;
   const TargetInfo &Target;
   DiagnosticsEngine *Diags;
+  LiteralConverter *LiteralConv;
 
   unsigned MaxTokenLength;
   unsigned SizeBound;
@@ -246,18 +248,19 @@ class StringLiteralParser {
   StringLiteralEvalMethod EvalMethod;
 
 public:
-  StringLiteralParser(ArrayRef<Token> StringToks, Preprocessor &PP,
-                      StringLiteralEvalMethod StringMethod =
-                          StringLiteralEvalMethod::Evaluated);
+  StringLiteralParser(
+      ArrayRef<Token> StringToks, Preprocessor &PP,
+      StringLiteralEvalMethod StringMethod = StringLiteralEvalMethod::Evaluated,
+      ConversionAction Action = ToExecCharset);
   StringLiteralParser(ArrayRef<Token> StringToks, const SourceManager &sm,
                       const LangOptions &features, const TargetInfo &target,
                       DiagnosticsEngine *diags = nullptr)
       : SM(sm), Features(features), Target(target), Diags(diags),
-        MaxTokenLength(0), SizeBound(0), CharByteWidth(0), Kind(tok::unknown),
-        ResultPtr(ResultBuf.data()),
+        LiteralConv(nullptr), MaxTokenLength(0), SizeBound(0), CharByteWidth(0),
+        Kind(tok::unknown), ResultPtr(ResultBuf.data()),
         EvalMethod(StringLiteralEvalMethod::Evaluated), hadError(false),
         Pascal(false) {
-    init(StringToks);
+    init(StringToks, NoConversion);
   }
 
   bool hadError;
@@ -305,7 +308,7 @@ public:
   static bool isValidUDSuffix(const LangOptions &LangOpts, StringRef Suffix);
 
 private:
-  void init(ArrayRef<Token> StringToks);
+  void init(ArrayRef<Token> StringToks, ConversionAction Action);
   bool CopyStringFragment(const Token &Tok, const char *TokBegin,
                           StringRef Fragment);
   void DiagnoseLexingError(SourceLocation Loc);

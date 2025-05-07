@@ -1446,6 +1446,13 @@ StringRef Triple::getOSAndEnvironmentName() const {
   return Tmp.split('-').second;                      // Strip second component
 }
 
+// System charset on z/OS is IBM-1047 and UTF-8 otherwise
+StringRef Triple::getSystemCharset() const {
+  if (getOS() == llvm::Triple::ZOS)
+    return "IBM-1047";
+  return "UTF-8";
+}
+
 static VersionTuple parseVersionFromName(StringRef Name) {
   VersionTuple Version;
   Version.tryParse(Name);

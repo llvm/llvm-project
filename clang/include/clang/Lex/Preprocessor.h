@@ -25,6 +25,7 @@
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Lex/LiteralConverter.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/ModuleLoader.h"
 #include "clang/Lex/ModuleMap.h"
@@ -222,6 +223,7 @@ class Preprocessor {
   std::unique_ptr<ScratchBuffer> ScratchBuf;
   HeaderSearch      &HeaderInfo;
   ModuleLoader      &TheModuleLoader;
+  LiteralConverter LiteralConv;
 
   /// External source of macros.
   ExternalPreprocessorSource *ExternalSource;
@@ -1299,6 +1301,7 @@ public:
   SelectorTable &getSelectorTable() { return Selectors; }
   Builtin::Context &getBuiltinInfo() { return *BuiltinInfo; }
   llvm::BumpPtrAllocator &getPreprocessorAllocator() { return BP; }
+  LiteralConverter &getLiteralConverter() { return LiteralConv; }
 
   void setExternalSource(ExternalPreprocessorSource *Source) {
     ExternalSource = Source;

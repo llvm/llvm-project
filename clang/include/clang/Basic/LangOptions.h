@@ -593,6 +593,9 @@ public:
   /// The allocation token mode.
   std::optional<llvm::AllocTokenMode> AllocTokenMode;
 
+  /// Name of the exec charset to convert the internal charset to.
+  std::string ExecCharset;
+
   LangOptions();
 
   /// Set language defaults for the given input language and
