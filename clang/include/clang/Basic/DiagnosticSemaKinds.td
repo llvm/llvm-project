@@ -9568,7 +9568,7 @@ def err_incomplete_type_used_in_type_trait_expr : Error<
 // C++20 constinit and require_constant_initialization attribute
 def warn_cxx20_compat_constinit : Warning<
   "'constinit' specifier is incompatible with C++ standards before C++20">,
-  InGroup<CXX20Compat>, DefaultIgnore;
+  InGroup<CXXPre20Compat>, DefaultIgnore;
 def err_constinit_local_variable : Error<
   "local variable cannot be declared 'constinit'">;
 def err_require_constant_init_failed : Error<
