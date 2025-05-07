@@ -4,7 +4,7 @@
 // expected-no-diagnostics
 
 // This test reproduces the issue that previously the static analyzer
-// initialized an [[__no_unique_address__]] empty field to zero,
+// initialized an [[no_unique_address]] empty field to zero,
 // over-writing a non-empty field with the same offset.
 
 namespace std {

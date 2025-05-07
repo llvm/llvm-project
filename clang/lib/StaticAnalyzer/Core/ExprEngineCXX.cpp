@@ -717,7 +717,7 @@ void ExprEngine::handleConstructor(const Expr *E,
         // since it's then possible to be initializing one part of a multi-
         // dimensional array.
         const CXXRecordDecl *TargetHeldRecord =
-            dyn_cast_or_null<CXXRecordDecl>(CE->getType()->getAsRecordDecl());
+            cast<CXXRecordDecl>(CE->getType()->getAsRecordDecl());
 
         if (!TargetHeldRecord || !TargetHeldRecord->isEmpty())
           State = State->bindDefaultZero(Target, LCtx);
