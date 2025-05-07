@@ -95,6 +95,8 @@ void initializeAMDGPUDAGToDAGISelLegacyPass(PassRegistry &);
 
 void initializeAMDGPUAlwaysInlinePass(PassRegistry&);
 
+void initializeAMDGPUAsmPrinterPass(PassRegistry &);
+
 Pass *createAMDGPUAttributorLegacyPass();
 void initializeAMDGPUAttributorLegacyPass(PassRegistry &);
 
@@ -336,9 +338,12 @@ private:
 
   AMDGPUAttributorOptions Options;
 
+  const ThinOrFullLTOPhase LTOPhase;
+
 public:
-  AMDGPUAttributorPass(TargetMachine &TM, AMDGPUAttributorOptions Options = {})
-      : TM(TM), Options(Options) {};
+  AMDGPUAttributorPass(TargetMachine &TM, AMDGPUAttributorOptions Options,
+                       ThinOrFullLTOPhase LTOPhase = ThinOrFullLTOPhase::None)
+      : TM(TM), Options(Options), LTOPhase(LTOPhase) {};
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 

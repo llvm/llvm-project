@@ -700,7 +700,7 @@ Global Variables
 Global variables define regions of memory allocated at compilation time
 instead of run-time.
 
-Global variable definitions must be initialized.
+Global variable definitions must be initialized with a sized value.
 
 Global variables in other translation units can also be declared, in which
 case they don't have an initializer.

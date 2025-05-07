@@ -687,6 +687,10 @@ def MFMAOutTypes : AnyTypeOf<[F64,
                               VectorOfLengthAndType<[4, 16, 32], [F32]>,
                               VectorOfLengthAndType<[4, 16, 32], [I32]>,
                               VectorOfLengthAndType<[4], [F64]>]>;
+// scaled_mfma
+def ScaledMFMAInTypes : AnyTypeOf<[VectorOfLengthAndType<[32], [F8E5M2, F8E4M3FN]>,
+                                   VectorOfLengthAndType<[32], [F6E2M3FN, F6E3M2FN, F4E2M1FN]>]>;
+def ScaledMFMAOutTypes : AnyTypeOf<[VectorOfLengthAndType<[4, 16], [F32]>]>;
 // wmma
 def WMMAInTypes : AnyTypeOf<[VectorOfLengthAndType<
                              [4, 8, 16],
@@ -804,7 +808,7 @@ def AMDGPU_GatherToLDSOp :
                    TypeAttr:$transferType
                    )>,
     Results<(outs)> {
-  let summary = "MLIR wrapper for CDNA mfma instructions";
+  let summary = "MLIR wrapper for CDNA Gather to LDS instructions";
   let description = [{
     The `amdgpu.global_load` op is a wrapper around the `global_load_lds` instructions.
 
@@ -830,4 +834,52 @@ def AMDGPU_GatherToLDSOp :
   let hasVerifier = 1;
 }
 
+def AMDGPU_ScaledMFMAOp :
+    AMDGPU_Op<"scaled_mfma", [AllTypesMatch<["destC", "destD"]>,
+                        Pure]>,
+    Arguments<(ins
+                   I32Attr:$m,
+                   I32Attr:$n,
+                   I32Attr:$k,
+                   ScaledMFMAInTypes:$sourceA,
+                   ScaledMFMAInTypes:$sourceB,
+                   ScaledMFMAOutTypes:$destC,
+                   AnyTypeOf<[F8E8M0FNU, FixedVectorOfLengthAndType<[4], [F8E8M0FNU]>]>:$scalesA,
+                   AnyTypeOf<[F8E8M0FNU, FixedVectorOfLengthAndType<[4], [F8E8M0FNU]>]>:$scalesB,
+                   ConfinedAttr<I32Attr, [IntNonNegative, IntMaxValue<3>]>:$scalesIdxA,
+                   ConfinedAttr<I32Attr, [IntNonNegative, IntMaxValue<3>]>:$scalesIdxB
+                   )>,
+    Results<(outs ScaledMFMAOutTypes: $destD)> {
+  let summary = "MLIR wrapper for CDNA scaled mfma instructions";
+  let description = [{
+    The `amdgpu.scaled_mfma` op is an MLIR wrapper around intrinsics
+    for various scaled versions of `mfma` instructions in the CDNA architecture, which perform
+    multiple outer products in order to allow fast matrix multiplication.
+
+    The wrapper will select an appropriate `mfma` instruction, if one is available,
+    based on the provided `m`, `k`, `n`, and `nBlks` attributes, along with the
+    types of the source and destination arguments.
+
+    Note, this wrapper allows specifying `vector<4Kxi8>` arguments to MFMA
+    intrinsics that take an integer type of width `4K`. For example,
+    one can provide a `vector<4xi8>` as an argument to an MFMA instruction that
+    logically takes 4 i8s but whose intrinsics are specified to take an i32.
+    In these cases, the bytes in the vector will be concatenated in little-endian
+    order (that is, v[0] will go to arg[7:0], v[1] to arg[15:8] and so on).
+
+    This wrapper takes inspiration from `amdgpu.mfma`, but has some key differences:
+    - `amdgpu.scaled_mfma` operates on fp4 (f4E2M1FN), fp6 (f6E2M3FN and f6E3M2FN) and 
+    fp8 (f8E4M3FN and f8E5M2) types using either M=N=16, K=128 or M=N=32, K=64 as their tile 
+    size. 
+    - `amdgpu.scaled_mfma` does not support broadcasting. So, `cbsz`, `abid`, and `blgp` 
+    are omitted from this wrapper.
+    - The `negateA`, `negateB`, and `negateC` flags in `amdgpu.mfma` are only supported for 
+    double-precision operations on gfx94x and so are not included here. 
+  }];
+  let assemblyFormat = [{
+    `(` $scalesA `[` $scalesIdxA `]` `*` $sourceA `)` `*` `(` $scalesB `[` $scalesIdxB `]` `*` $sourceB `)` `+` $destC
+    attr-dict
+    `:` type($scalesA) `,` type($sourceA) `,` type($scalesB) `,` type($sourceB) `,` type($destC)
+  }];
+}
 #endif // AMDGPU

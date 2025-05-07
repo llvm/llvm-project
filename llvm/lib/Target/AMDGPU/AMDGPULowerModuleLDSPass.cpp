@@ -1016,7 +1016,7 @@ public:
         auto NewGV = uniquifyGVPerKernel(M, GV, F);
         Changed |= (NewGV != GV);
         int BarId = (NumAbsolutes + 1);
-        if (Kernel2BarId.find(F) != Kernel2BarId.end()) {
+        if (Kernel2BarId.contains(F)) {
           BarId = (Kernel2BarId[F] + 1);
         }
         Kernel2BarId[F] = BarId;

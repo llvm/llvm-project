@@ -2116,10 +2116,9 @@ llvm::LogicalResult tosa::ReshapeOp::verify() {
 }
 
 // return failure if val is not a constant
-// set zp to -1 if val is non-zero float or  val is not integer nor float
+// set zp to -1 if val is non-zero float or val is not integer nor float
 // otherwise set zp to val's constant value
-template <typename T>
-static FailureOr<int64_t> getZeroPoint(T op, Value val) {
+static FailureOr<int64_t> getZeroPoint(Value val) {
   ElementsAttr zpAttr;
   if (!matchPattern(val, m_Constant(&zpAttr))) {
     return failure();
@@ -2189,7 +2188,7 @@ static LogicalResult verifyZeroPoint(tosa::RescaleOp op, Value zpVal,
 
 #define ZERO_POINT_HELPER(OP, OPERAND_NAME)                                    \
   FailureOr<int64_t> tosa::OP::get##OPERAND_NAME##ZeroPoint() {                \
-    return getZeroPoint(*this, get##OPERAND_NAME##Zp());                       \
+    return getZeroPoint(get##OPERAND_NAME##Zp());                              \
   }                                                                            \
   LogicalResult tosa::OP::verify##OPERAND_NAME##ZeroPoint(int64_t zp) {        \
     return verifyZeroPoint(*this, get##OPERAND_NAME##Zp(), zp, #OPERAND_NAME); \

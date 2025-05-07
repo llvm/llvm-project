@@ -276,7 +276,6 @@ static void parseOptions(const opt::InputArgList &Args) {
   opts::ProgramHeaders = Args.hasArg(OPT_program_headers);
   opts::SectionGroups = Args.hasArg(OPT_section_groups);
   if (Arg *A = Args.getLastArg(OPT_sort_symbols_EQ)) {
-    std::string SortKeysString = A->getValue();
     for (StringRef KeyStr : llvm::split(A->getValue(), ",")) {
       SortSymbolKeyTy KeyType = StringSwitch<SortSymbolKeyTy>(KeyStr)
                                     .Case("name", SortSymbolKeyTy::NAME)

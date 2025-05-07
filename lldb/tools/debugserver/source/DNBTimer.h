@@ -16,6 +16,7 @@
 #include "DNBDefs.h"
 #include <cstdint>
 #include <mutex>
+#include <optional>
 #include <sys/time.h>
 
 class DNBTimer {

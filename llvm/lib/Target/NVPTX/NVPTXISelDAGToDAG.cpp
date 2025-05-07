@@ -767,46 +767,12 @@ NVPTX::Scope NVPTXDAGToDAGISel::getOperationScope(MemSDNode *N,
   llvm_unreachable("unhandled ordering");
 }
 
-static bool canLowerToLDG(MemSDNode *N, const NVPTXSubtarget &Subtarget,
-                          unsigned CodeAddrSpace, MachineFunction *F) {
+static bool canLowerToLDG(const MemSDNode &N, const NVPTXSubtarget &Subtarget,
+                          unsigned CodeAddrSpace) {
   // We use ldg (i.e. ld.global.nc) for invariant loads from the global address
   // space.
-  //
-  // We have two ways of identifying invariant loads: Loads may be explicitly
-  // marked as invariant, or we may infer them to be invariant.
-  //
-  // We currently infer invariance for loads from
-  //  - constant global variables, and
-  //  - kernel function pointer params that are noalias (i.e. __restrict) and
-  //    never written to.
-  //
-  // TODO: Perform a more powerful invariance analysis (ideally IPO, and ideally
-  // not during the SelectionDAG phase).
-  //
-  // TODO: Infer invariance only at -O2.  We still want to use ldg at -O0 for
-  // explicitly invariant loads because these are how clang tells us to use ldg
-  // when the user uses a builtin.
-  if (!Subtarget.hasLDG() || CodeAddrSpace != NVPTX::AddressSpace::Global)
-    return false;
-
-  if (N->isInvariant())
-    return true;
-
-  bool IsKernelFn = isKernelFunction(F->getFunction());
-
-  // We use getUnderlyingObjects() here instead of getUnderlyingObject() mainly
-  // because the former looks through phi nodes while the latter does not. We
-  // need to look through phi nodes to handle pointer induction variables.
-  SmallVector<const Value *, 8> Objs;
-  getUnderlyingObjects(N->getMemOperand()->getValue(), Objs);
-
-  return all_of(Objs, [&](const Value *V) {
-    if (auto *A = dyn_cast<const Argument>(V))
-      return IsKernelFn && A->onlyReadsMemory() && A->hasNoAliasAttr();
-    if (auto *GV = dyn_cast<const GlobalVariable>(V))
-      return GV->isConstant();
-    return false;
-  });
+  return Subtarget.hasLDG() && CodeAddrSpace == NVPTX::AddressSpace::Global &&
+         N.isInvariant();
 }
 
 static unsigned int getFenceOp(NVPTX::Ordering O, NVPTX::Scope S,
@@ -1107,10 +1073,9 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
     return false;
 
   // Address Space Setting
-  unsigned int CodeAddrSpace = getCodeAddrSpace(LD);
-  if (canLowerToLDG(LD, *Subtarget, CodeAddrSpace, MF)) {
+  const unsigned CodeAddrSpace = getCodeAddrSpace(LD);
+  if (canLowerToLDG(*LD, *Subtarget, CodeAddrSpace))
     return tryLDGLDU(N);
-  }
 
   SDLoc DL(N);
   SDValue Chain = N->getOperand(0);
@@ -1196,10 +1161,9 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
   const MVT MemVT = MemEVT.getSimpleVT();
 
   // Address Space Setting
-  unsigned int CodeAddrSpace = getCodeAddrSpace(MemSD);
-  if (canLowerToLDG(MemSD, *Subtarget, CodeAddrSpace, MF)) {
+  const unsigned CodeAddrSpace = getCodeAddrSpace(MemSD);
+  if (canLowerToLDG(*MemSD, *Subtarget, CodeAddrSpace))
     return tryLDGLDU(N);
-  }
 
   EVT EltVT = N->getValueType(0);
   SDLoc DL(N);

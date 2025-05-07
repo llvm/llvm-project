@@ -5341,9 +5341,9 @@ TypoCorrection Sema::CorrectTypo(const DeclarationNameInfo &TypoName,
   bool ObjCMessageReceiver = CCC.WantObjCSuper && !CCC.WantRemainingKeywords;
 
   IdentifierInfo *Typo = TypoName.getName().getAsIdentifierInfo();
-  auto Consumer = makeTypoCorrectionConsumer(TypoName, LookupKind, S, SS, CCC,
-                                             MemberContext, EnteringContext,
-                                             OPT, Mode == CTK_ErrorRecovery);
+  auto Consumer = makeTypoCorrectionConsumer(
+      TypoName, LookupKind, S, SS, CCC, MemberContext, EnteringContext, OPT,
+      Mode == CorrectTypoKind::ErrorRecovery);
 
   if (!Consumer)
     return TypoCorrection();
@@ -5419,9 +5419,9 @@ TypoExpr *Sema::CorrectTypoDelayed(
     TypoDiagnosticGenerator TDG, TypoRecoveryCallback TRC, CorrectTypoKind Mode,
     DeclContext *MemberContext, bool EnteringContext,
     const ObjCObjectPointerType *OPT) {
-  auto Consumer = makeTypoCorrectionConsumer(TypoName, LookupKind, S, SS, CCC,
-                                             MemberContext, EnteringContext,
-                                             OPT, Mode == CTK_ErrorRecovery);
+  auto Consumer = makeTypoCorrectionConsumer(
+      TypoName, LookupKind, S, SS, CCC, MemberContext, EnteringContext, OPT,
+      Mode == CorrectTypoKind::ErrorRecovery);
 
   // Give the external sema source a chance to correct the typo.
   TypoCorrection ExternalTypo;

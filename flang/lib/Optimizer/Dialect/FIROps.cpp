@@ -33,10 +33,20 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/CommandLine.h"
 
 namespace {
 #include "flang/Optimizer/Dialect/CanonicalizationPatterns.inc"
 } // namespace
+
+static llvm::cl::opt<bool> clUseStrictVolatileVerification(
+    "strict-fir-volatile-verifier", llvm::cl::init(false),
+    llvm::cl::desc(
+        "use stricter verifier for FIR operations with volatile types"));
+
+bool fir::useStrictVolatileVerification() {
+  return clUseStrictVolatileVerification;
+}
 
 static void propagateAttributes(mlir::Operation *fromOp,
                                 mlir::Operation *toOp) {
@@ -1535,11 +1545,14 @@ llvm::LogicalResult fir::ConvertOp::verify() {
   // represent volatility.
   const bool toLLVMPointer = mlir::isa<mlir::LLVM::LLVMPointerType>(outType);
   const bool toInteger = fir::isa_integer(outType);
-  if (fir::isa_volatile_type(inType) != fir::isa_volatile_type(outType) &&
-      !toLLVMPointer && !toInteger)
-    return emitOpError("cannot convert between volatile and non-volatile "
-                       "types, use fir.volatile_cast instead ")
-           << inType << " / " << outType;
+  if (fir::useStrictVolatileVerification()) {
+    if (fir::isa_volatile_type(inType) != fir::isa_volatile_type(outType) &&
+        !toLLVMPointer && !toInteger) {
+      return emitOpError("cannot convert between volatile and non-volatile "
+                         "types, use fir.volatile_cast instead ")
+             << inType << " / " << outType;
+    }
+  }
   if (canBeConverted(inType, outType))
     return mlir::success();
   return emitOpError("invalid type conversion")
@@ -1841,6 +1854,10 @@ llvm::LogicalResult fir::TypeInfoOp::verify() {
 static llvm::LogicalResult
 verifyEmboxOpVolatilityInvariants(mlir::Type memrefType,
                                   mlir::Type resultType) {
+
+  if (!fir::useStrictVolatileVerification())
+    return mlir::success();
+
   mlir::Type boxElementType =
       llvm::TypeSwitch<mlir::Type, mlir::Type>(resultType)
           .Case<fir::BoxType, fir::ClassType>(
@@ -4890,6 +4907,105 @@ mlir::LogicalResult SimplifyBoxTotalElementsOp::matchAndRewrite(
 void fir::BoxTotalElementsOp::getCanonicalizationPatterns(
     mlir::RewritePatternSet &patterns, mlir::MLIRContext *context) {
   patterns.add<SimplifyBoxTotalElementsOp>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// LocalitySpecifierOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult fir::LocalitySpecifierOp::verifyRegions() {
+  mlir::Type argType = getArgType();
+  auto verifyTerminator = [&](mlir::Operation *terminator,
+                              bool yieldsValue) -> llvm::LogicalResult {
+    if (!terminator->getBlock()->getSuccessors().empty())
+      return llvm::success();
+
+    if (!llvm::isa<fir::YieldOp>(terminator))
+      return mlir::emitError(terminator->getLoc())
+             << "expected exit block terminator to be an `fir.yield` op.";
+
+    YieldOp yieldOp = llvm::cast<YieldOp>(terminator);
+    mlir::TypeRange yieldedTypes = yieldOp.getResults().getTypes();
+
+    if (!yieldsValue) {
+      if (yieldedTypes.empty())
+        return llvm::success();
+
+      return mlir::emitError(terminator->getLoc())
+             << "Did not expect any values to be yielded.";
+    }
+
+    if (yieldedTypes.size() == 1 && yieldedTypes.front() == argType)
+      return llvm::success();
+
+    auto error = mlir::emitError(yieldOp.getLoc())
+                 << "Invalid yielded value. Expected type: " << argType
+                 << ", got: ";
+
+    if (yieldedTypes.empty())
+      error << "None";
+    else
+      error << yieldedTypes;
+
+    return error;
+  };
+
+  auto verifyRegion = [&](mlir::Region &region, unsigned expectedNumArgs,
+                          llvm::StringRef regionName,
+                          bool yieldsValue) -> llvm::LogicalResult {
+    assert(!region.empty());
+
+    if (region.getNumArguments() != expectedNumArgs)
+      return mlir::emitError(region.getLoc())
+             << "`" << regionName << "`: "
+             << "expected " << expectedNumArgs
+             << " region arguments, got: " << region.getNumArguments();
+
+    for (mlir::Block &block : region) {
+      // MLIR will verify the absence of the terminator for us.
+      if (!block.mightHaveTerminator())
+        continue;
+
+      if (failed(verifyTerminator(block.getTerminator(), yieldsValue)))
+        return llvm::failure();
+    }
+
+    return llvm::success();
+  };
+
+  // Ensure all of the region arguments have the same type
+  for (mlir::Region *region : getRegions())
+    for (mlir::Type ty : region->getArgumentTypes())
+      if (ty != argType)
+        return emitError() << "Region argument type mismatch: got " << ty
+                           << " expected " << argType << ".";
+
+  mlir::Region &initRegion = getInitRegion();
+  if (!initRegion.empty() &&
+      failed(verifyRegion(getInitRegion(), /*expectedNumArgs=*/2, "init",
+                          /*yieldsValue=*/true)))
+    return llvm::failure();
+
+  LocalitySpecifierType dsType = getLocalitySpecifierType();
+
+  if (dsType == LocalitySpecifierType::Local && !getCopyRegion().empty())
+    return emitError("`local` specifiers do not require a `copy` region.");
+
+  if (dsType == LocalitySpecifierType::LocalInit && getCopyRegion().empty())
+    return emitError(
+        "`local_init` specifiers require at least a `copy` region.");
+
+  if (dsType == LocalitySpecifierType::LocalInit &&
+      failed(verifyRegion(getCopyRegion(), /*expectedNumArgs=*/2, "copy",
+                          /*yieldsValue=*/true)))
+    return llvm::failure();
+
+  if (!getDeallocRegion().empty() &&
+      failed(verifyRegion(getDeallocRegion(), /*expectedNumArgs=*/1, "dealloc",
+                          /*yieldsValue=*/false)))
+    return llvm::failure();
+
+  return llvm::success();
 }
 
 //===----------------------------------------------------------------------===//

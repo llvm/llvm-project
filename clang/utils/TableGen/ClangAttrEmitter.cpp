@@ -4638,7 +4638,6 @@ static void GenerateSpellingIndexToSemanticSpelling(const Record &Attr,
   // Generate the enumeration we will use for the mapping.
   SemanticSpellingMap SemanticToSyntacticMap;
   std::string Enum = CreateSemanticSpellings(Spellings, SemanticToSyntacticMap);
-  std::string Name = Attr.getName().str() + "AttrSpellingMap";
 
   OS << "unsigned spellingIndexToSemanticSpelling(";
   OS << "const ParsedAttr &Attr) const override {\n";

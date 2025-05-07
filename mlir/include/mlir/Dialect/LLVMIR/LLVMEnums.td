@@ -110,6 +110,8 @@ def AtomicBinOpUSubCond : LLVM_EnumAttrCase<"usub_cond",
                                             "usub_cond", "USubCond", 17>;
 def AtomicBinOpUSubSat : LLVM_EnumAttrCase<"usub_sat",
                                            "usub_sat", "USubSat", 18>;
+def AtomicBinOpFMaximum : LLVM_EnumAttrCase<"fmaximum", "fmaximum", "FMaximum", 19>;
+def AtomicBinOpFMinimum : LLVM_EnumAttrCase<"fminimum", "fminimum", "FMinimum", 20>;
 
 // A sentinel value that has no MLIR counterpart.
 def AtomicBadBinOp : LLVM_EnumAttrCase<"", "", "BAD_BINOP", 0>;
@@ -122,7 +124,8 @@ def AtomicBinOp : LLVM_EnumAttr<
      AtomicBinOpNand, AtomicBinOpOr, AtomicBinOpXor, AtomicBinOpMax,
      AtomicBinOpMin, AtomicBinOpUMax, AtomicBinOpUMin, AtomicBinOpFAdd,
      AtomicBinOpFSub, AtomicBinOpFMax, AtomicBinOpFMin, AtomicBinOpUIncWrap,
-     AtomicBinOpUDecWrap, AtomicBinOpUSubCond, AtomicBinOpUSubSat],
+     AtomicBinOpUDecWrap, AtomicBinOpUSubCond, AtomicBinOpUSubSat,
+     AtomicBinOpFMaximum, AtomicBinOpFMinimum],
     [AtomicBadBinOp]> {
   let cppNamespace = "::mlir::LLVM";
 }
@@ -823,7 +826,7 @@ def FPExceptionBehaviorAttr : LLVM_EnumAttr<
 }
 
 //===----------------------------------------------------------------------===//
-// Module Flag Behavior
+// Module Flags
 //===----------------------------------------------------------------------===//
 
 // These values must match llvm::Module::ModFlagBehavior ones.
@@ -852,6 +855,21 @@ def ModFlagBehaviorAttr : LLVM_EnumAttr<
     [ModFlagBehaviorError, ModFlagBehaviorWarning, ModFlagBehaviorRequire,
      ModFlagBehaviorOverride, ModFlagBehaviorAppend,
      ModFlagBehaviorAppendUnique, ModFlagBehaviorMax, ModFlagBehaviorMin]> {
+  let cppNamespace = "::mlir::LLVM";
+}
+
+def LLVM_ProfileSummaryFormatSampleProfile : I64EnumAttrCase<"SampleProfile",
+                                                             0>;
+def LLVM_ProfileSummaryFormatInstrProf : I64EnumAttrCase<"InstrProf", 1>;
+def LLVM_ProfileSummaryFormatCSInstrProf : I64EnumAttrCase<"CSInstrProf", 2>;
+
+def LLVM_ProfileSummaryFormatKind : I64EnumAttr<
+    "ProfileSummaryFormatKind",
+    "LLVM ProfileSummary format kinds", [
+      LLVM_ProfileSummaryFormatSampleProfile,
+      LLVM_ProfileSummaryFormatInstrProf,
+      LLVM_ProfileSummaryFormatCSInstrProf,
+    ]> {
   let cppNamespace = "::mlir::LLVM";
 }
 

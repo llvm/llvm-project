@@ -3485,6 +3485,137 @@ def fir_BoxTotalElementsOp
   let hasCanonicalizer = 1;
 }
 
+def YieldOp : fir_Op<"yield",
+    [Pure, ReturnLike, Terminator,
+     ParentOneOf<["LocalitySpecifierOp"]>]> {
+  let summary = "loop yield and termination operation";
+  let description = [{
+    "fir.yield" yields SSA values from a fir dialect op region and
+    terminates the region. The semantics of how the values are yielded is
+    defined by the parent operation.
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$results);
+
+  let builders = [
+    OpBuilder<(ins), [{ build($_builder, $_state, {}); }]>
+  ];
+
+  let assemblyFormat = "( `(` $results^ `:` type($results) `)` )? attr-dict";
+}
+
+def fir_LocalitySpecifierOp : fir_Op<"local", [IsolatedFromAbove]> {
+  let summary = "Provides declaration of local and local_init logic.";
+  let description = [{
+    This operation provides a declaration of how to implement the
+    localization of a variable. The dialect users should provide
+    which type should be allocated for this variable. The allocated (usually by
+    alloca) variable is passed to the initialization region which does everything
+    else (e.g. initialization of Fortran runtime descriptors). Information about
+    how to initialize the copy from the original item should be given in the
+    copy region, and if needed, how to deallocate memory (allocated by the
+    initialization region) in the dealloc region.
+
+    Examples:
+
+    * `local(x)` would not need any regions because no initialization is
+      required by the standard for i32 variables and this is not local_init.
+    ```
+    fir.local {type = local} @x.localizer : i32
+    ```
+
+    * `local_init(x)` would be emitted as:
+    ```
+    fir.local {type = local_init} @x.localizer : i32 copy {
+    ^bb0(%arg0: !fir.ref<i32>, %arg1: !fir.ref<i32>):
+    // %arg0 is the original host variable.
+    // %arg1 represents the memory allocated for this private variable.
+    ... copy from host to the localized clone ....
+    fir.yield(%arg1 : !fir.ref<i32>)
+    }
+    ```
+
+    * `local(x)` for "allocatables" would be emitted as:
+    ```
+    fir.local {type = local} @x.localizer : !some.type init {
+    ^bb0(%arg0: !fir.ref<!some.type>, %arg1: !fir.ref<!some.type>):
+    // initialize %arg1, using %arg0 as a mold for allocations.
+    // For example if %arg0 is a heap allocated array with a runtime determined
+    // length and !some.type is a runtime type descriptor, the init region
+    // will read the array length from %arg0, and heap allocate an array of the
+    // right length and initialize %arg1 to contain the array allocation and
+    // length.
+    fir.yield(%arg1 : !fir.ref<!some.type>)
+    } dealloc {
+    ^bb0(%arg0: !fir.ref<!some.type>):
+    // ... deallocate memory allocated by the init region...
+    // In the example above, this will free the heap allocated array data.
+    fir.yield
+    }
+    ```
+
+    There are no restrictions on the body except for:
+    - The `dealloc` regions has a single argument.
+    - The `init` & `copy` regions have 2 arguments.
+    - All three regions are terminated by `fir.yield` ops.
+    The above restrictions and other obvious restrictions (e.g. verifying the
+    type of yielded values) are verified by the custom op verifier. The actual
+    contents of the blocks inside all regions are not verified.
+
+    Instances of this op would then be used by ops that model directives that
+    accept data-sharing attribute clauses.
+
+    The `sym_name` attribute provides a symbol by which the privatizer op can be
+    referenced by other dialect ops.
+
+    The `type` attribute is the type of the value being localized. This type
+    will be implicitly allocated in MLIR->LLVMIR conversion and passed as the
+    second argument to the init region. Therefore the type of arguments to
+    the regions should be a type which represents a pointer to `type`.
+
+    The `locality_specifier_type` attribute specifies whether the localized
+    corresponds to a `local` or a `local_init` specifier.
+  }];
+
+  let arguments = (ins SymbolNameAttr:$sym_name,
+                       TypeAttrOf<AnyType>:$type,
+                       LocalitySpecifierTypeAttr:$locality_specifier_type);
+
+  let regions = (region AnyRegion:$init_region,
+                        AnyRegion:$copy_region,
+                        AnyRegion:$dealloc_region);
+
+  let assemblyFormat = [{
+    $locality_specifier_type $sym_name `:` $type
+      (`init` $init_region^)?
+      (`copy` $copy_region^)?
+      (`dealloc` $dealloc_region^)?
+      attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins CArg<"mlir::TypeRange">:$result,
+                   CArg<"mlir::StringAttr">:$sym_name,
+                   CArg<"mlir::TypeAttr">:$type)>
+  ];
+
+  let extraClassDeclaration = [{
+    /// Get the type for arguments to nested regions. This should
+    /// generally be either the same as getType() or some pointer
+    /// type (pointing to the type allocated by this op).
+    /// This method will return Type{nullptr} if there are no nested
+    /// regions.
+    mlir::Type getArgType() {
+      for (mlir::Region *region : getRegions())
+        for (mlir::Type ty : region->getArgumentTypes())
+          return ty;
+      return nullptr;
+    }
+  }];
+
+  let hasRegionVerifier = 1;
+}
+
 def fir_DoConcurrentOp : fir_Op<"do_concurrent",
     [SingleBlock, AutomaticAllocationScope]> {
   let summary = "do concurrent loop wrapper";

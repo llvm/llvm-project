@@ -205,17 +205,8 @@ private:
       partInfo.resultShape =
           hlfir::genShape(getLoc(), getBuilder(), *partInfo.base);
 
-    // Dynamic type of polymorphic base must be kept if the designator is
-    // polymorphic.
-    if (isPolymorphic(designatorNode))
-      return fir::ClassType::get(resultValueType);
-    // Character scalar with dynamic length needs a fir.boxchar to hold the
-    // designator length.
-    auto charType = mlir::dyn_cast<fir::CharacterType>(resultValueType);
-    if (charType && charType.hasDynamicLen())
-      return fir::BoxCharType::get(charType.getContext(), charType.getFKind());
-
-    // When volatile is enabled, enable volatility on the designatory type.
+    // Enable volatility on the designatory type if it has the VOLATILE
+    // attribute or if the base is volatile.
     bool isVolatile = false;
 
     // Check if this should be a volatile reference
@@ -236,6 +227,23 @@ private:
         isVolatile = true;
     }
 
+    // Dynamic type of polymorphic base must be kept if the designator is
+    // polymorphic.
+    if (isPolymorphic(designatorNode))
+      return fir::ClassType::get(resultValueType, isVolatile);
+
+    // Character scalar with dynamic length needs a fir.boxchar to hold the
+    // designator length.
+    auto charType = mlir::dyn_cast<fir::CharacterType>(resultValueType);
+    if (charType && charType.hasDynamicLen())
+      return fir::BoxCharType::get(charType.getContext(), charType.getFKind());
+
+    // Check if the base type is volatile
+    if (partInfo.base.has_value()) {
+      mlir::Type baseType = partInfo.base.value().getType();
+      isVolatile = isVolatile || fir::isa_volatile_type(baseType);
+    }
+
     // Arrays with non default lower bounds or dynamic length or dynamic extent
     // need a fir.box to hold the dynamic or lower bound information.
     if (fir::hasDynamicSize(resultValueType) ||
@@ -248,12 +256,6 @@ private:
             designatorNode, getConverter().getFoldingContext(),
             /*namedConstantSectionsAreAlwaysContiguous=*/false))
       return fir::BoxType::get(resultValueType, isVolatile);
-
-    // Check if the base type is volatile
-    if (partInfo.base.has_value()) {
-      mlir::Type baseType = partInfo.base.value().getType();
-      isVolatile = fir::isa_volatile_type(baseType);
-    }
 
     // Other designators can be handled as raw addresses.
     return fir::ReferenceType::get(resultValueType, isVolatile);

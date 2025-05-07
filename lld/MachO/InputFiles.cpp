@@ -1580,14 +1580,19 @@ static DylibFile *findDylib(StringRef path, DylibFile *umbrella,
   // Search order:
   // 1. Install name basename in -F / -L directories.
   {
+    // Framework names can be in multiple formats:
+    // - Foo.framework/Foo
+    // - Foo.framework/Versions/A/Foo
     StringRef stem = path::stem(path);
-    SmallString<128> frameworkName;
-    path::append(frameworkName, path::Style::posix, stem + ".framework", stem);
-    bool isFramework = path.ends_with(frameworkName);
-    if (isFramework) {
+    SmallString<128> frameworkName("/");
+    frameworkName += stem;
+    frameworkName += ".framework/";
+    size_t i = path.rfind(frameworkName);
+    if (i != StringRef::npos) {
+      StringRef frameworkPath = path.substr(i + 1);
       for (StringRef dir : config->frameworkSearchPaths) {
         SmallString<128> candidate = dir;
-        path::append(candidate, frameworkName);
+        path::append(candidate, frameworkPath);
         if (std::optional<StringRef> dylibPath =
                 resolveDylibPath(candidate.str()))
           return loadDylib(*dylibPath, umbrella);

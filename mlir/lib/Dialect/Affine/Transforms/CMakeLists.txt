@@ -13,6 +13,7 @@ add_mlir_dialect_library(MLIRAffineTransforms
   LoopUnroll.cpp
   LoopUnrollAndJam.cpp
   PipelineDataTransfer.cpp
+  RaiseMemrefDialect.cpp
   ReifyValueBounds.cpp
   SuperVectorize.cpp
   SimplifyAffineStructures.cpp

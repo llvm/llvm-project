@@ -133,8 +133,17 @@ using TopLevelDecl = std::variant<ModuleDecl, ExternModuleDecl>;
 /// This holds many reference types (StringRef, SourceLocation, etc.) whose
 /// lifetimes are bound by the SourceManager and FileManager used.
 struct ModuleMapFile {
+  /// The FileID used to parse this module map. This is always a local ID.
+  FileID ID;
+
+  /// The directory in which the module map was discovered. Declarations in
+  /// the module map are relative to this directory.
+  OptionalDirectoryEntryRef Dir;
+
   /// Beginning of the file, used for moduleMapFileRead callback.
   SourceLocation Start;
+
+  bool IsSystem;
   std::vector<TopLevelDecl> Decls;
 
   void dump(llvm::raw_ostream &out) const;

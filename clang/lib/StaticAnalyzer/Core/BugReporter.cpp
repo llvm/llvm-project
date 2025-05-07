@@ -3377,8 +3377,6 @@ PathSensitiveBugReporter::generateDiagnosticForConsumerMap(
     BugReport *exampleReport,
     ArrayRef<std::unique_ptr<PathDiagnosticConsumer>> consumers,
     ArrayRef<BugReport *> bugReports) {
-  std::vector<BasicBugReport *> BasicBugReports;
-  std::vector<PathSensitiveBugReport *> PathSensitiveBugReports;
   if (isa<BasicBugReport>(exampleReport))
     return BugReporter::generateDiagnosticForConsumerMap(exampleReport,
                                                          consumers, bugReports);

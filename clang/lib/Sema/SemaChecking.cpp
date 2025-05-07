@@ -1569,11 +1569,11 @@ bool Sema::checkPointerAuthDiscriminatorArg(Expr *Arg,
   bool IsAddrDiscArg = false;
 
   switch (Kind) {
-  case PADAK_AddrDiscPtrAuth:
+  case PointerAuthDiscArgKind::Addr:
     Max = 1;
     IsAddrDiscArg = true;
     break;
-  case PADAK_ExtraDiscPtrAuth:
+  case PointerAuthDiscArgKind::Extra:
     Max = PointerAuthQualifier::MaxDiscriminator;
     break;
   };
@@ -1919,6 +1919,54 @@ static ExprResult BuiltinIsWithinLifetime(Sema &S, CallExpr *TheCall) {
         << 0;
     return ExprError();
   }
+  return TheCall;
+}
+
+static ExprResult BuiltinTriviallyRelocate(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCount(TheCall, 3))
+    return ExprError();
+
+  QualType Dest = TheCall->getArg(0)->getType();
+  if (!Dest->isPointerType() || Dest.getCVRQualifiers() != 0) {
+    S.Diag(TheCall->getArg(0)->getExprLoc(),
+           diag::err_builtin_trivially_relocate_invalid_arg_type)
+        << /*a pointer*/ 0;
+    return ExprError();
+  }
+
+  QualType T = Dest->getPointeeType();
+  if (S.RequireCompleteType(TheCall->getBeginLoc(), T,
+                            diag::err_incomplete_type))
+    return ExprError();
+
+  if (T.isConstQualified() || !S.IsCXXTriviallyRelocatableType(T) ||
+      T->isIncompleteArrayType()) {
+    S.Diag(TheCall->getArg(0)->getExprLoc(),
+           diag::err_builtin_trivially_relocate_invalid_arg_type)
+        << (T.isConstQualified() ? /*non-const*/ 1 : /*relocatable*/ 2);
+    return ExprError();
+  }
+
+  TheCall->setType(Dest);
+
+  QualType Src = TheCall->getArg(1)->getType();
+  if (Src.getCanonicalType() != Dest.getCanonicalType()) {
+    S.Diag(TheCall->getArg(1)->getExprLoc(),
+           diag::err_builtin_trivially_relocate_invalid_arg_type)
+        << /*the same*/ 3;
+    return ExprError();
+  }
+
+  Expr *SizeExpr = TheCall->getArg(2);
+  ExprResult Size = S.DefaultLvalueConversion(SizeExpr);
+  if (Size.isInvalid())
+    return ExprError();
+
+  Size = S.tryConvertExprToType(Size.get(), S.getASTContext().getSizeType());
+  if (Size.isInvalid())
+    return ExprError();
+  SizeExpr = Size.get();
+  TheCall->setArg(2, SizeExpr);
 
   return TheCall;
 }
@@ -2384,6 +2432,9 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     return BuiltinLaunder(*this, TheCall);
   case Builtin::BI__builtin_is_within_lifetime:
     return BuiltinIsWithinLifetime(*this, TheCall);
+  case Builtin::BI__builtin_trivially_relocate:
+    return BuiltinTriviallyRelocate(*this, TheCall);
+
   case Builtin::BI__sync_fetch_and_add:
   case Builtin::BI__sync_fetch_and_add_1:
   case Builtin::BI__sync_fetch_and_add_2:
@@ -5060,7 +5111,7 @@ bool Sema::BuiltinUnorderedCompare(CallExpr *TheCall, unsigned BuiltinID) {
   // Do standard promotions between the two arguments, returning their common
   // type.
   QualType Res = UsualArithmeticConversions(
-      OrigArg0, OrigArg1, TheCall->getExprLoc(), ACK_Comparison);
+      OrigArg0, OrigArg1, TheCall->getExprLoc(), ArithConvKind::Comparison);
   if (OrigArg0.isInvalid() || OrigArg1.isInvalid())
     return true;
 
@@ -8306,8 +8357,8 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
     // arguments here.
     bool EmitTypeMismatch = false;
     switch (S.isValidVarArgType(ExprTy)) {
-    case Sema::VAK_Valid:
-    case Sema::VAK_ValidInCXX11: {
+    case VarArgKind::Valid:
+    case VarArgKind::ValidInCXX11: {
       unsigned Diag;
       switch (Match) {
       case ArgType::Match:
@@ -8332,15 +8383,14 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
           E->getBeginLoc(), /*IsStringLocation*/ false, CSR);
       break;
     }
-    case Sema::VAK_Undefined:
-    case Sema::VAK_MSVCUndefined:
+    case VarArgKind::Undefined:
+    case VarArgKind::MSVCUndefined:
       if (CallType == VariadicCallType::DoesNotApply) {
         EmitTypeMismatch = true;
       } else {
         EmitFormatDiagnostic(
             S.PDiag(diag::warn_non_pod_vararg_with_format_string)
-                << S.getLangOpts().CPlusPlus11 << ExprTy
-                << llvm::to_underlying(CallType)
+                << S.getLangOpts().CPlusPlus11 << ExprTy << CallType
                 << AT.getRepresentativeTypeName(S.Context) << CSR
                 << E->getSourceRange(),
             E->getBeginLoc(), /*IsStringLocation*/ false, CSR);
@@ -8348,14 +8398,13 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
       }
       break;
 
-    case Sema::VAK_Invalid:
+    case VarArgKind::Invalid:
       if (CallType == VariadicCallType::DoesNotApply)
         EmitTypeMismatch = true;
       else if (ExprTy->isObjCObjectType())
         EmitFormatDiagnostic(
             S.PDiag(diag::err_cannot_pass_objc_interface_to_vararg_format)
-                << S.getLangOpts().CPlusPlus11 << ExprTy
-                << llvm::to_underlying(CallType)
+                << S.getLangOpts().CPlusPlus11 << ExprTy << CallType
                 << AT.getRepresentativeTypeName(S.Context) << CSR
                 << E->getSourceRange(),
             E->getBeginLoc(), /*IsStringLocation*/ false, CSR);
@@ -8363,7 +8412,7 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
         // FIXME: If this is an initializer list, suggest removing the braces
         // or inserting a cast to the target type.
         S.Diag(E->getBeginLoc(), diag::err_cannot_pass_to_vararg_format)
-            << isa<InitListExpr>(E) << ExprTy << llvm::to_underlying(CallType)
+            << isa<InitListExpr>(E) << ExprTy << CallType
             << AT.getRepresentativeTypeName(S.Context) << E->getSourceRange();
       break;
     }
@@ -11598,6 +11647,15 @@ static void DiagnoseFloatingImpCast(Sema &S, Expr *E, QualType T,
   }
 }
 
+static void CheckCommaOperand(Sema &S, Expr *E, QualType T, SourceLocation CC,
+                              bool ExtraCheckForImplicitConversion) {
+  E = E->IgnoreParenImpCasts();
+  AnalyzeImplicitConversions(S, E, CC);
+
+  if (ExtraCheckForImplicitConversion && E->getType() != T)
+    S.CheckImplicitConversion(E, T, CC);
+}
+
 /// Analyze the given compound assignment for the possible losing of
 /// floating-point precision.
 static void AnalyzeCompoundAssignment(Sema &S, BinaryOperator *E) {
@@ -12415,7 +12473,7 @@ static void AnalyzeImplicitConversions(
           << OrigE->getSourceRange() << T->isBooleanType()
           << FixItHint::CreateReplacement(UO->getBeginLoc(), "!");
 
-  if (const auto *BO = dyn_cast<BinaryOperator>(SourceExpr))
+  if (auto *BO = dyn_cast<BinaryOperator>(SourceExpr)) {
     if ((BO->getOpcode() == BO_And || BO->getOpcode() == BO_Or) &&
         BO->getLHS()->isKnownToHaveBooleanValue() &&
         BO->getRHS()->isKnownToHaveBooleanValue() &&
@@ -12441,7 +12499,21 @@ static void AnalyzeImplicitConversions(
                    (BO->getOpcode() == BO_And ? "&&" : "||"));
         S.Diag(BO->getBeginLoc(), diag::note_cast_operand_to_int);
       }
+    } else if (BO->isCommaOp() && !S.getLangOpts().CPlusPlus) {
+      /// Analyze the given comma operator. The basic idea behind the analysis
+      /// is to analyze the left and right operands slightly differently. The
+      /// left operand needs to check whether the operand itself has an implicit
+      /// conversion, but not whether the left operand induces an implicit
+      /// conversion for the entire comma expression itself. This is similar to
+      /// how CheckConditionalOperand behaves; it's as-if the correct operand
+      /// were directly used for the implicit conversion check.
+      CheckCommaOperand(S, BO->getLHS(), T, BO->getOperatorLoc(),
+                        /*ExtraCheckForImplicitConversion=*/false);
+      CheckCommaOperand(S, BO->getRHS(), T, BO->getOperatorLoc(),
+                        /*ExtraCheckForImplicitConversion=*/true);
+      return;
     }
+  }
 
   // For conditional operators, we analyze the arguments as if they
   // were being fed directly into the output.

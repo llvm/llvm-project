@@ -21,7 +21,6 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/ArrayRef.h"
 #include <cstdint>
-#include <limits>
 #include <numeric>
 #include <optional>
 
@@ -230,10 +229,8 @@ struct LinearizeVectorExtractStridedSlice final
 struct LinearizeVectorShuffle final
     : public OpConversionPattern<vector::ShuffleOp> {
   using OpConversionPattern::OpConversionPattern;
-  LinearizeVectorShuffle(
-      const TypeConverter &typeConverter, MLIRContext *context,
-      unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
-      PatternBenefit benefit = 1)
+  LinearizeVectorShuffle(const TypeConverter &typeConverter,
+                         MLIRContext *context, PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit) {}
 
   LogicalResult
@@ -290,14 +287,16 @@ struct LinearizeVectorShuffle final
 struct LinearizeVectorExtract final
     : public OpConversionPattern<vector::ExtractOp> {
   using OpConversionPattern::OpConversionPattern;
-  LinearizeVectorExtract(
-      const TypeConverter &typeConverter, MLIRContext *context,
-      unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
-      PatternBenefit benefit = 1)
+  LinearizeVectorExtract(const TypeConverter &typeConverter,
+                         MLIRContext *context, PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit) {}
   LogicalResult
   matchAndRewrite(vector::ExtractOp extractOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    // Skip if result is not a vector type
+    if (!isa<VectorType>(extractOp.getType()))
+      return rewriter.notifyMatchFailure(extractOp,
+                                         "scalar extract is not supported.");
     Type dstTy = getTypeConverter()->convertType(extractOp.getType());
     assert(dstTy && "expected 1-D vector type");
 
@@ -339,10 +338,8 @@ struct LinearizeVectorExtract final
 struct LinearizeVectorInsert final
     : public OpConversionPattern<vector::InsertOp> {
   using OpConversionPattern::OpConversionPattern;
-  LinearizeVectorInsert(
-      const TypeConverter &typeConverter, MLIRContext *context,
-      unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
-      PatternBenefit benefit = 1)
+  LinearizeVectorInsert(const TypeConverter &typeConverter,
+                        MLIRContext *context, PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit) {}
   LogicalResult
   matchAndRewrite(vector::InsertOp insertOp, OpAdaptor adaptor,
@@ -408,10 +405,8 @@ struct LinearizeVectorInsert final
 struct LinearizeVectorBitCast final
     : public OpConversionPattern<vector::BitCastOp> {
   using OpConversionPattern::OpConversionPattern;
-  LinearizeVectorBitCast(
-      const TypeConverter &typeConverter, MLIRContext *context,
-      unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
-      PatternBenefit benefit = 1)
+  LinearizeVectorBitCast(const TypeConverter &typeConverter,
+                         MLIRContext *context, PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit) {}
   LogicalResult
   matchAndRewrite(vector::BitCastOp castOp, OpAdaptor adaptor,
@@ -421,6 +416,32 @@ struct LinearizeVectorBitCast final
     rewriter.replaceOpWithNewOp<vector::BitCastOp>(castOp, resType,
                                                    adaptor.getSource());
     return mlir::success();
+  }
+};
+
+/// This pattern converts the SplatOp to work on a linearized vector.
+/// Following,
+///   vector.splat %value : vector<4x4xf32>
+/// is converted to:
+///   %out_1d = vector.splat %value : vector<16xf32>
+///   %out_nd = vector.shape_cast %out_1d : vector<16xf32> to vector<4x4xf32>
+struct LinearizeVectorSplat final
+    : public OpConversionPattern<vector::SplatOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LinearizeVectorSplat(const TypeConverter &typeConverter, MLIRContext *context,
+                       PatternBenefit benefit = 1)
+      : OpConversionPattern(typeConverter, context, benefit) {}
+
+  LogicalResult
+  matchAndRewrite(vector::SplatOp splatOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto dstTy = getTypeConverter()->convertType(splatOp.getType());
+    if (!dstTy)
+      return rewriter.notifyMatchFailure(splatOp, "cannot convert type.");
+    rewriter.replaceOpWithNewOp<vector::SplatOp>(splatOp, adaptor.getInput(),
+                                                 dstTy);
+    return success();
   }
 };
 
@@ -510,7 +531,8 @@ void mlir::vector::populateVectorLinearizeBasePatterns(
     const TypeConverter &typeConverter, const ConversionTarget &target,
     RewritePatternSet &patterns) {
   patterns.add<LinearizeConstantLike, LinearizeVectorizable,
-               LinearizeVectorBitCast>(typeConverter, patterns.getContext());
+               LinearizeVectorBitCast, LinearizeVectorSplat>(
+      typeConverter, patterns.getContext());
 }
 
 void mlir::vector::populateVectorLinearizeShuffleLikeOpsPatterns(

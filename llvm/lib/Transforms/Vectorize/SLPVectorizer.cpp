@@ -1830,7 +1830,7 @@ public:
   /// Returns the type/is-signed info for the root node in the graph without
   /// casting.
   std::optional<std::pair<Type *, bool>> getRootNodeTypeWithNoCast() const {
-    const TreeEntry &Root = *VectorizableTree.front().get();
+    const TreeEntry &Root = *VectorizableTree.front();
     if (Root.State != TreeEntry::Vectorize || Root.isAltShuffle() ||
         !Root.Scalars.front()->getType()->isIntegerTy())
       return std::nullopt;
@@ -5787,8 +5787,7 @@ static Value *createInsertVector(
     function_ref<Value *(Value *, Value *, ArrayRef<int>)> Generator = {}) {
   const unsigned SubVecVF = getNumElements(V->getType());
   if (Index % SubVecVF == 0) {
-    Vec = Builder.CreateInsertVector(Vec->getType(), Vec, V,
-                                     Builder.getInt64(Index));
+    Vec = Builder.CreateInsertVector(Vec->getType(), Vec, V, Index);
   } else {
     // Create shuffle, insertvector requires that index is multiple of
     // the subvector length.
@@ -5818,7 +5817,7 @@ static Value *createExtractVector(IRBuilderBase &Builder, Value *Vec,
   if (Index % SubVecVF == 0) {
     VectorType *SubVecTy =
         getWidenedType(Vec->getType()->getScalarType(), SubVecVF);
-    return Builder.CreateExtractVector(SubVecTy, Vec, Builder.getInt64(Index));
+    return Builder.CreateExtractVector(SubVecTy, Vec, Index);
   }
   // Create shuffle, extract_subvector requires that index is multiple of
   // the subvector length.
@@ -7187,7 +7186,6 @@ void BoUpSLP::reorderTopToBottom() {
     MapVector<OrdersType, unsigned,
               DenseMap<OrdersType, unsigned, OrdersTypeDenseMapInfo>>
         OrdersUses;
-    SmallPtrSet<const TreeEntry *, 4> VisitedOps;
     for (const TreeEntry *OpTE : OrderedEntries) {
       // No need to reorder this nodes, still need to extend and to use shuffle,
       // just need to merge reordering shuffle and the reuse shuffle.
@@ -7507,7 +7505,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
         assert(Data.first->CombinedEntriesWithIndices.size() == 2 &&
                "Expected exactly 2 entries.");
         for (const auto &P : Data.first->CombinedEntriesWithIndices) {
-          TreeEntry &OpTE = *VectorizableTree[P.first].get();
+          TreeEntry &OpTE = *VectorizableTree[P.first];
           OrdersType Order = OpTE.ReorderIndices;
           if (Order.empty() || !OpTE.ReuseShuffleIndices.empty()) {
             if (!OpTE.isGather() && OpTE.ReuseShuffleIndices.empty())
@@ -8154,7 +8152,6 @@ static void gatherPossiblyVectorizableLoads(
           int &Offset, unsigned &Start) {
         if (Loads.empty())
           return GatheredLoads.end();
-        SmallVector<std::pair<int, int>> Res;
         LoadInst *LI = Loads.front().first;
         for (auto [Idx, Data] : enumerate(GatheredLoads)) {
           if (Idx < Start)
@@ -13802,7 +13799,6 @@ bool BoUpSLP::isFullyVectorizableTinyTree(bool ForReduction) const {
   // with the second gather nodes if they have less scalar operands rather than
   // the initial tree element (may be profitable to shuffle the second gather)
   // or they are extractelements, which form shuffle.
-  SmallVector<int> Mask;
   if (VectorizableTree[0]->State == TreeEntry::Vectorize &&
       AreVectorizableGathers(VectorizableTree[1].get(),
                              VectorizableTree[0]->Scalars.size()))
@@ -15249,6 +15245,11 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
           continue;
       }
 
+      if (!TEUseEI.UserTE->isGather() && !UserPHI &&
+          doesNotNeedToSchedule(TEUseEI.UserTE->Scalars) !=
+              doesNotNeedToSchedule(UseEI.UserTE->Scalars) &&
+          is_contained(UseEI.UserTE->Scalars, TEInsertPt))
+        continue;
       // Check if the user node of the TE comes after user node of TEPtr,
       // otherwise TEPtr depends on TE.
       if ((TEInsertBlock != InsertPt->getParent() ||
@@ -16876,8 +16877,6 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
   unsigned VF = E->getVectorFactor();
 
   bool NeedFreeze = false;
-  SmallVector<int> ReuseShuffleIndices(E->ReuseShuffleIndices.begin(),
-                                       E->ReuseShuffleIndices.end());
   SmallVector<Value *> GatheredScalars(E->Scalars.begin(), E->Scalars.end());
   // Clear values, to be replaced by insertvector instructions.
   for (auto [EIdx, Idx] : E->CombinedEntriesWithIndices)
@@ -17464,13 +17463,13 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
            "Expected exactly 2 combined entries.");
     setInsertPointAfterBundle(E);
     TreeEntry &OpTE1 =
-        *VectorizableTree[E->CombinedEntriesWithIndices.front().first].get();
+        *VectorizableTree[E->CombinedEntriesWithIndices.front().first];
     assert(OpTE1.isSame(
                ArrayRef(E->Scalars).take_front(OpTE1.getVectorFactor())) &&
            "Expected same first part of scalars.");
     Value *Op1 = vectorizeTree(&OpTE1);
     TreeEntry &OpTE2 =
-        *VectorizableTree[E->CombinedEntriesWithIndices.back().first].get();
+        *VectorizableTree[E->CombinedEntriesWithIndices.back().first];
     assert(
         OpTE2.isSame(ArrayRef(E->Scalars).take_back(OpTE2.getVectorFactor())) &&
         "Expected same second part of scalars.");
@@ -17620,7 +17619,6 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       SmallPtrSet<BasicBlock *, 4> VisitedBBs;
 
       for (unsigned I : seq<unsigned>(PH->getNumIncomingValues())) {
-        ValueList Operands;
         BasicBlock *IBB = PH->getIncomingBlock(I);
 
         // Stop emission if all incoming values are generated.
@@ -18292,7 +18290,6 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         TysForDecl.push_back(VecTy);
       auto *CEI = cast<CallInst>(VL0);
       for (unsigned I : seq<unsigned>(0, CI->arg_size())) {
-        ValueList OpVL;
         // Some intrinsics have scalar arguments. This argument should not be
         // vectorized.
         if (UseIntrinsic && isVectorIntrinsicWithScalarOpAtArg(ID, I, TTI)) {
@@ -19325,9 +19322,8 @@ BoUpSLP::BlockScheduling::buildBundle(ArrayRef<Value *> VL) {
         .first->getSecond()
         .push_back(BundlePtr.get());
   }
-  assert(BundlePtr.get() && *BundlePtr.get() &&
-         "Failed to find schedule bundle");
-  return *BundlePtr.get();
+  assert(BundlePtr && *BundlePtr && "Failed to find schedule bundle");
+  return *BundlePtr;
 }
 
 // Groups the instructions to a bundle (which is then a single scheduling entity)
@@ -24069,10 +24065,23 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
             const auto *V1 = dyn_cast<Instruction>(E1->getVectorOperand());
             const auto *V2 = dyn_cast<Instruction>(E2->getVectorOperand());
             if (V1 != V2) {
-              if (!V1 || !V2)
-                continue;
-              if (V1->getParent() != V2->getParent())
-                continue;
+              if (V1 && !V2)
+                return true;
+              if (!V1 && V2)
+                return false;
+              DomTreeNodeBase<BasicBlock> *NodeI1 =
+                  DT->getNode(V1->getParent());
+              DomTreeNodeBase<BasicBlock> *NodeI2 =
+                  DT->getNode(V2->getParent());
+              if (!NodeI1)
+                return NodeI2 != nullptr;
+              if (!NodeI2)
+                return false;
+              assert((NodeI1 == NodeI2) ==
+                         (NodeI1->getDFSNumIn() == NodeI2->getDFSNumIn()) &&
+                     "Different nodes should have different DFS numbers");
+              if (NodeI1 != NodeI2)
+                return NodeI1->getDFSNumIn() < NodeI2->getDFSNumIn();
               return V1->comesBefore(V2);
             }
             // If we have the same vector operand, try to sort by constant

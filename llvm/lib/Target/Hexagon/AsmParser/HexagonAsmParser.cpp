@@ -1348,7 +1348,6 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
   MCContext &Context = getParser().getContext();
   const MCRegisterInfo *RI = getContext().getRegisterInfo();
   const std::string r = "r";
-  const std::string v = "v";
   const std::string Colon = ":";
   using RegPairVals = std::pair<unsigned, unsigned>;
   auto GetRegPair = [this, r](RegPairVals RegPair) {

@@ -168,7 +168,6 @@ resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
                                   ValueRange indices,
                                   SmallVectorImpl<Value> &sourceIndices) {
   int64_t cnt = 0;
-  SmallVector<Value> tmp(indices.size());
   SmallVector<OpFoldResult> dynamicIndices;
   for (ArrayRef<int64_t> groups : collapseShapeOp.getReassociationIndices()) {
     assert(!groups.empty() && "association indices groups cannot be empty");

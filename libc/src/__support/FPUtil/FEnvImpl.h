@@ -17,7 +17,7 @@
 #include "src/__support/macros/properties/architectures.h"
 #include "src/errno/libc_errno.h"
 
-#if defined(LIBC_TARGET_ARCH_IS_AARCH64)
+#if defined(LIBC_TARGET_ARCH_IS_AARCH64) && defined(__ARM_FP)
 #if defined(__APPLE__)
 #include "aarch64/fenv_darwin_impl.h"
 #else

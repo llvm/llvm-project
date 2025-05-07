@@ -357,8 +357,6 @@ static void lowerExpectAssume(IntrinsicInst *II) {
   } else {
     llvm_unreachable("Unknown intrinsic");
   }
-
-  return;
 }
 
 static bool toSpvOverloadedIntrinsic(IntrinsicInst *II, Intrinsic::ID NewID,

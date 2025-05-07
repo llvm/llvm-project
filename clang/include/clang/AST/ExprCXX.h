@@ -5124,8 +5124,8 @@ public:
 
   void updateDependence() { setDependence(computeDependence(this)); }
 
-  ArrayRef<Expr *> getInitExprs() {
-    return ArrayRef(getTrailingObjects<Expr *>(), NumExprs);
+  MutableArrayRef<Expr *> getInitExprs() {
+    return MutableArrayRef(getTrailingObjects<Expr *>(), NumExprs);
   }
 
   const ArrayRef<Expr *> getInitExprs() const {

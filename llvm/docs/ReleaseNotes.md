@@ -180,6 +180,7 @@ Changes to the RISC-V Backend
 * Adds Support for SiFive CLIC interrupt attributes, which automate writing CLIC
   interrupt handlers without using inline assembly.
 * Adds assembler support for the Andes `XAndesperf` (Andes Performance extension).
+* `-mcpu=sifive-p870` was added.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -249,7 +250,8 @@ Changes to LLDB
 * A statusline was added to command-line LLDB to show progress events and
   information about the current state of the debugger at the bottom of the
   terminal. This is on by default and can be configured using the
-  `show-statusline` and `statusline-format` settings.
+  `show-statusline` and `statusline-format` settings. It is not currently
+  supported on Windows.
 * The `min-gdbserver-port` and `max-gdbserver-port` options have been removed
   from `lldb-server`'s platform mode. Since the changes to `lldb-server`'s port
   handling in LLDB 20, these options have had no effect.

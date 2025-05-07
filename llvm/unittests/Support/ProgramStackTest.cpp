@@ -12,6 +12,10 @@
 
 using namespace llvm;
 
+// One way of running on a new stack is to start a new thread. When threading
+// is disabled a "new thread" is implemented as simply calling the function.
+#if LLVM_ENABLE_THREADS
+
 static uintptr_t func(int &A) {
   A = 7;
   return getStackPointer();
@@ -33,3 +37,5 @@ TEST(ProgramStackTest, runOnNewStack) {
   runOnNewStack(0, function_ref<void(int &)>(func2), A);
   EXPECT_EQ(A, 5);
 }
+
+#endif /*if LLVM_ENABLE_THREADS */

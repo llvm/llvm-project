@@ -495,6 +495,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeR600EmitClauseMarkersPass(*PR);
   initializeR600MachineCFGStructurizerPass(*PR);
   initializeGlobalISel(*PR);
+  initializeAMDGPUAsmPrinterPass(*PR);
   initializeAMDGPUDAGToDAGISelLegacyPass(*PR);
   initializeGCNDPPCombineLegacyPass(*PR);
   initializeSILowerI1CopiesLegacyPass(*PR);
@@ -884,8 +885,10 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
                                             OptimizationLevel Level,
                                             ThinOrFullLTOPhase Phase) {
     if (Level != OptimizationLevel::O0) {
-      if (!isLTOPreLink(Phase))
-        MPM.addPass(AMDGPUAttributorPass(*this));
+      if (!isLTOPreLink(Phase)) {
+        AMDGPUAttributorOptions Opts;
+        MPM.addPass(AMDGPUAttributorPass(*this, Opts, Phase));
+      }
     }
   });
 
@@ -914,7 +917,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
             AMDGPUAttributorOptions Opt;
             if (HasClosedWorldAssumption)
               Opt.IsClosedWorld = true;
-            PM.addPass(AMDGPUAttributorPass(*this, Opt));
+            PM.addPass(AMDGPUAttributorPass(
+                *this, Opt, ThinOrFullLTOPhase::FullLTOPostLink));
           }
         }
         if (!NoKernelInfoEndLTO) {
