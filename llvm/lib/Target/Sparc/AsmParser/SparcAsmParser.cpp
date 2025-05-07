@@ -11,6 +11,7 @@
 #include "TargetInfo/SparcTargetInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmMacro.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -108,8 +109,7 @@ class SparcAsmParser : public MCTargetAsmParser {
   ParseStatus parseExpression(int64_t &Val);
 
   // Helper function for dealing with %lo / %hi in PIC mode.
-  const SparcMCExpr *adjustPICRelocation(SparcMCExpr::Specifier VK,
-                                         const MCExpr *subExpr);
+  const SparcMCExpr *adjustPICRelocation(uint16_t VK, const MCExpr *subExpr);
 
   // Helper function to see if current token can start an expression.
   bool isPossibleExpression(const AsmToken &Token);
@@ -700,7 +700,7 @@ bool SparcAsmParser::expandSET(MCInst &Inst, SMLoc IDLoc,
   // In either case, start with the 'sethi'.
   if (!IsEffectivelyImm13) {
     MCInst TmpInst;
-    const MCExpr *Expr = adjustPICRelocation(SparcMCExpr::VK_HI, ValExpr);
+    const MCExpr *Expr = adjustPICRelocation(ELF::R_SPARC_HI22, ValExpr);
     TmpInst.setLoc(IDLoc);
     TmpInst.setOpcode(SP::SETHIi);
     TmpInst.addOperand(MCRegOp);
@@ -725,7 +725,7 @@ bool SparcAsmParser::expandSET(MCInst &Inst, SMLoc IDLoc,
     if (IsEffectivelyImm13)
       Expr = ValExpr;
     else
-      Expr = adjustPICRelocation(SparcMCExpr::VK_LO, ValExpr);
+      Expr = adjustPICRelocation(ELF::R_SPARC_LO10, ValExpr);
     TmpInst.setLoc(IDLoc);
     TmpInst.setOpcode(SP::ORri);
     TmpInst.addOperand(MCRegOp);
@@ -765,7 +765,7 @@ bool SparcAsmParser::expandSETSW(MCInst &Inst, SMLoc IDLoc,
     Instructions.push_back(
         MCInstBuilder(SP::SETHIi)
             .addReg(MCRegOp.getReg())
-            .addExpr(adjustPICRelocation(SparcMCExpr::VK_HI, ValExpr)));
+            .addExpr(adjustPICRelocation(ELF::R_SPARC_HI22, ValExpr)));
 
     PrevReg = MCRegOp;
   }
@@ -773,7 +773,7 @@ bool SparcAsmParser::expandSETSW(MCInst &Inst, SMLoc IDLoc,
   // If the immediate has the lower bits set or is small, we need to emit an or.
   if (!NoLowBitsImm || IsSmallImm) {
     const MCExpr *Expr =
-        IsSmallImm ? ValExpr : adjustPICRelocation(SparcMCExpr::VK_LO, ValExpr);
+        IsSmallImm ? ValExpr : adjustPICRelocation(ELF::R_SPARC_LO10, ValExpr);
 
     // or rd, %lo(val), rd
     Instructions.push_back(MCInstBuilder(SP::ORri)
@@ -829,13 +829,13 @@ bool SparcAsmParser::expandSETX(MCInst &Inst, SMLoc IDLoc,
   Instructions.push_back(
       MCInstBuilder(SP::SETHIi)
           .addReg(MCRegOp.getReg())
-          .addExpr(adjustPICRelocation(SparcMCExpr::VK_HI, ValExpr)));
+          .addExpr(adjustPICRelocation(ELF::R_SPARC_HI22, ValExpr)));
   // or    rd, %lo(val), rd
   Instructions.push_back(
       MCInstBuilder(SP::ORri)
           .addReg(MCRegOp.getReg())
           .addReg(MCRegOp.getReg())
-          .addExpr(adjustPICRelocation(SparcMCExpr::VK_LO, ValExpr)));
+          .addExpr(adjustPICRelocation(ELF::R_SPARC_LO10, ValExpr)));
 
   // Small positive immediates can be expressed as a single `sethi`+`or`
   // combination, so we can just return here.
@@ -846,16 +846,16 @@ bool SparcAsmParser::expandSETX(MCInst &Inst, SMLoc IDLoc,
   // merge it with the lower half that has just been generated above.
 
   // sethi %hh(val), tmp
-  Instructions.push_back(
-      MCInstBuilder(SP::SETHIi)
-          .addReg(MCTmpOp.getReg())
-          .addExpr(adjustPICRelocation(SparcMCExpr::VK_HH, ValExpr)));
+  Instructions.push_back(MCInstBuilder(SP::SETHIi)
+                             .addReg(MCTmpOp.getReg())
+                             .addExpr(SparcMCExpr::create(
+                                 ELF::R_SPARC_HH22, ValExpr, getContext())));
   // or    tmp, %hm(val), tmp
-  Instructions.push_back(
-      MCInstBuilder(SP::ORri)
-          .addReg(MCTmpOp.getReg())
-          .addReg(MCTmpOp.getReg())
-          .addExpr(adjustPICRelocation(SparcMCExpr::VK_HM, ValExpr)));
+  Instructions.push_back(MCInstBuilder(SP::ORri)
+                             .addReg(MCTmpOp.getReg())
+                             .addReg(MCTmpOp.getReg())
+                             .addExpr(SparcMCExpr::create(
+                                 ELF::R_SPARC_HM10, ValExpr, getContext())));
   // sllx  tmp, 32, tmp
   Instructions.push_back(MCInstBuilder(SP::SLLXri)
                              .addReg(MCTmpOp.getReg())
@@ -1113,20 +1113,20 @@ ParseStatus SparcAsmParser::parseTailRelocSym(OperandVector &Operands) {
   SMLoc S = getLoc();
   SMLoc E = SMLoc::getFromPointer(S.getPointer() - 1);
 
-  auto MatchesKind = [](SparcMCExpr::Specifier VK) -> bool {
+  auto MatchesKind = [](uint16_t RelType) -> bool {
     switch (Kind) {
     case TailRelocKind::Load_GOT:
       // Non-TLS relocations on ld (or ldx).
       // ld [%rr + %rr], %rr, %rel(sym)
-      return VK == SparcMCExpr::VK_GOTDATA_OP;
+      return RelType == ELF::R_SPARC_GOTDATA_OP;
     case TailRelocKind::Add_TLS:
       // TLS relocations on add.
       // add %rr, %rr, %rr, %rel(sym)
-      switch (VK) {
-      case SparcMCExpr::VK_TLS_GD_ADD:
-      case SparcMCExpr::VK_TLS_IE_ADD:
-      case SparcMCExpr::VK_TLS_LDM_ADD:
-      case SparcMCExpr::VK_TLS_LDO_ADD:
+      switch (RelType) {
+      case ELF::R_SPARC_TLS_GD_ADD:
+      case ELF::R_SPARC_TLS_IE_ADD:
+      case ELF::R_SPARC_TLS_LDM_ADD:
+      case ELF::R_SPARC_TLS_LDO_ADD:
         return true;
       default:
         return false;
@@ -1134,9 +1134,9 @@ ParseStatus SparcAsmParser::parseTailRelocSym(OperandVector &Operands) {
     case TailRelocKind::Load_TLS:
       // TLS relocations on ld (or ldx).
       // ld[x] %addr, %rr, %rel(sym)
-      switch (VK) {
-      case SparcMCExpr::VK_TLS_IE_LD:
-      case SparcMCExpr::VK_TLS_IE_LDX:
+      switch (RelType) {
+      case ELF::R_SPARC_TLS_IE_LD:
+      case ELF::R_SPARC_TLS_IE_LDX:
         return true;
       default:
         return false;
@@ -1144,9 +1144,9 @@ ParseStatus SparcAsmParser::parseTailRelocSym(OperandVector &Operands) {
     case TailRelocKind::Call_TLS:
       // TLS relocations on call.
       // call sym, %rel(sym)
-      switch (VK) {
-      case SparcMCExpr::VK_TLS_GD_CALL:
-      case SparcMCExpr::VK_TLS_LDM_CALL:
+      switch (RelType) {
+      case ELF::R_SPARC_TLS_GD_CALL:
+      case ELF::R_SPARC_TLS_LDM_CALL:
         return true;
       default:
         return false;
@@ -1165,11 +1165,11 @@ ParseStatus SparcAsmParser::parseTailRelocSym(OperandVector &Operands) {
     return Error(getLoc(), "expected valid identifier for operand modifier");
 
   StringRef Name = getParser().getTok().getIdentifier();
-  SparcMCExpr::Specifier VK = SparcMCExpr::parseSpecifier(Name);
-  if (VK == SparcMCExpr::VK_None)
+  uint16_t RelType = SparcMCExpr::parseSpecifier(Name);
+  if (RelType == 0)
     return Error(getLoc(), "invalid relocation specifier");
 
-  if (!MatchesKind(VK)) {
+  if (!MatchesKind(RelType)) {
     // Did not match the specified set of relocation types, put '%' back.
     getLexer().UnLex(Tok);
     return ParseStatus::NoMatch;
@@ -1184,7 +1184,7 @@ ParseStatus SparcAsmParser::parseTailRelocSym(OperandVector &Operands) {
   if (getParser().parseParenExpression(SubExpr, E))
     return ParseStatus::Failure;
 
-  const MCExpr *Val = adjustPICRelocation(VK, SubExpr);
+  const MCExpr *Val = adjustPICRelocation(RelType, SubExpr);
   Operands.push_back(SparcOperand::CreateTailRelocSym(Val, S, E));
   return ParseStatus::Success;
 }
@@ -1665,29 +1665,28 @@ static bool hasGOTReference(const MCExpr *Expr) {
   return false;
 }
 
-const SparcMCExpr *
-SparcAsmParser::adjustPICRelocation(SparcMCExpr::Specifier VK,
-                                    const MCExpr *subExpr) {
+const SparcMCExpr *SparcAsmParser::adjustPICRelocation(uint16_t RelType,
+                                                       const MCExpr *subExpr) {
   // When in PIC mode, "%lo(...)" and "%hi(...)" behave differently.
   // If the expression refers contains _GLOBAL_OFFSET_TABLE, it is
   // actually a %pc10 or %pc22 relocation. Otherwise, they are interpreted
   // as %got10 or %got22 relocation.
 
   if (getContext().getObjectFileInfo()->isPositionIndependent()) {
-    switch(VK) {
+    switch (RelType) {
     default: break;
-    case SparcMCExpr::VK_LO:
-      VK = (hasGOTReference(subExpr) ? SparcMCExpr::VK_PC10
-                                     : SparcMCExpr::VK_GOT10);
+    case ELF::R_SPARC_LO10:
+      RelType =
+          hasGOTReference(subExpr) ? ELF::R_SPARC_PC10 : ELF::R_SPARC_GOT10;
       break;
-    case SparcMCExpr::VK_HI:
-      VK = (hasGOTReference(subExpr) ? SparcMCExpr::VK_PC22
-                                     : SparcMCExpr::VK_GOT22);
+    case ELF::R_SPARC_HI22:
+      RelType =
+          hasGOTReference(subExpr) ? ELF::R_SPARC_PC22 : ELF::R_SPARC_GOT22;
       break;
     }
   }
 
-  return SparcMCExpr::create(VK, subExpr, getContext());
+  return SparcMCExpr::create(RelType, subExpr, getContext());
 }
 
 bool SparcAsmParser::matchSparcAsmModifiers(const MCExpr *&EVal,
@@ -1698,21 +1697,21 @@ bool SparcAsmParser::matchSparcAsmModifiers(const MCExpr *&EVal,
 
   StringRef name = Tok.getString();
 
-  SparcMCExpr::Specifier VK = SparcMCExpr::parseSpecifier(name);
+  auto VK = SparcMCExpr::parseSpecifier(name);
   switch (VK) {
-  case SparcMCExpr::VK_None:
+  case 0:
     Error(getLoc(), "invalid relocation specifier");
     return false;
 
-  case SparcMCExpr::VK_GOTDATA_OP:
-  case SparcMCExpr::VK_TLS_GD_ADD:
-  case SparcMCExpr::VK_TLS_GD_CALL:
-  case SparcMCExpr::VK_TLS_IE_ADD:
-  case SparcMCExpr::VK_TLS_IE_LD:
-  case SparcMCExpr::VK_TLS_IE_LDX:
-  case SparcMCExpr::VK_TLS_LDM_ADD:
-  case SparcMCExpr::VK_TLS_LDM_CALL:
-  case SparcMCExpr::VK_TLS_LDO_ADD:
+  case ELF::R_SPARC_GOTDATA_OP:
+  case ELF::R_SPARC_TLS_GD_ADD:
+  case ELF::R_SPARC_TLS_GD_CALL:
+  case ELF::R_SPARC_TLS_IE_ADD:
+  case ELF::R_SPARC_TLS_IE_LD:
+  case ELF::R_SPARC_TLS_IE_LDX:
+  case ELF::R_SPARC_TLS_LDM_ADD:
+  case ELF::R_SPARC_TLS_LDM_CALL:
+  case ELF::R_SPARC_TLS_LDO_ADD:
     // These are special-cased at tablegen level.
     return false;
 

@@ -21,6 +21,44 @@
 namespace llvm {
 namespace {
 
+// Check that use count checks treat ConstantData like they have no uses.
+TEST(ConstantsTest, UseCounts) {
+  LLVMContext Context;
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  Constant *Zero = ConstantInt::get(Int32Ty, 0);
+
+  EXPECT_TRUE(Zero->use_empty());
+  EXPECT_EQ(Zero->getNumUses(), 0u);
+  EXPECT_TRUE(Zero->hasNUses(0));
+  EXPECT_FALSE(Zero->hasOneUse());
+  EXPECT_FALSE(Zero->hasOneUser());
+  EXPECT_FALSE(Zero->hasNUses(1));
+  EXPECT_FALSE(Zero->hasNUsesOrMore(1));
+  EXPECT_FALSE(Zero->hasNUses(2));
+  EXPECT_FALSE(Zero->hasNUsesOrMore(2));
+
+  std::unique_ptr<Module> M(new Module("MyModule", Context));
+
+  // Introduce some uses
+  new GlobalVariable(*M, Int32Ty, /*isConstant=*/false,
+                     GlobalValue::ExternalLinkage, /*Initializer=*/Zero,
+                     "gv_user0");
+  new GlobalVariable(*M, Int32Ty, /*isConstant=*/false,
+                     GlobalValue::ExternalLinkage, /*Initializer=*/Zero,
+                     "gv_user1");
+
+  // Still looks like use_empty with uses.
+  EXPECT_TRUE(Zero->use_empty());
+  EXPECT_EQ(Zero->getNumUses(), 0u);
+  EXPECT_TRUE(Zero->hasNUses(0));
+  EXPECT_FALSE(Zero->hasOneUse());
+  EXPECT_FALSE(Zero->hasOneUser());
+  EXPECT_FALSE(Zero->hasNUses(1));
+  EXPECT_FALSE(Zero->hasNUsesOrMore(1));
+  EXPECT_FALSE(Zero->hasNUses(2));
+  EXPECT_FALSE(Zero->hasNUsesOrMore(2));
+}
+
 TEST(ConstantsTest, Integer_i1) {
   LLVMContext Context;
   IntegerType *Int1 = IntegerType::get(Context, 1);

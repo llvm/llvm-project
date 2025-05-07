@@ -45,6 +45,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
@@ -1052,8 +1053,8 @@ void MachineFunction::substituteDebugValuesForInst(const MachineInstr &Old,
 }
 
 auto MachineFunction::salvageCopySSA(
-    MachineInstr &MI, DenseMap<Register, DebugInstrOperandPair> &DbgPHICache)
-    -> DebugInstrOperandPair {
+    MachineInstr &MI, DenseMap<Register, SalvageCopySSAResult> &DbgPHICache)
+    -> SalvageCopySSAResult {
   const TargetInstrInfo &TII = *getSubtarget().getInstrInfo();
 
   // Check whether this copy-like instruction has already been salvaged into
@@ -1077,7 +1078,7 @@ auto MachineFunction::salvageCopySSA(
 }
 
 auto MachineFunction::salvageCopySSAImpl(MachineInstr &MI)
-    -> DebugInstrOperandPair {
+    -> SalvageCopySSAResult {
   MachineRegisterInfo &MRI = getRegInfo();
   const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
   const TargetInstrInfo &TII = *getSubtarget().getInstrInfo();
@@ -1175,7 +1176,8 @@ auto MachineFunction::salvageCopySSAImpl(MachineInstr &MI)
     for (auto &MO : Inst->all_defs()) {
       if (MO.getReg() != State.first)
         continue;
-      return ApplySubregisters({Inst->getDebugInstrNum(), MO.getOperandNo()});
+      return {ApplySubregisters({Inst->getDebugInstrNum(), MO.getOperandNo()}),
+              Inst};
     }
 
     llvm_unreachable("Vreg def with no corresponding operand?");
@@ -1195,8 +1197,9 @@ auto MachineFunction::salvageCopySSAImpl(MachineInstr &MI)
       if (!TRI.regsOverlap(RegToSeek, MO.getReg()))
         continue;
 
-      return ApplySubregisters(
-          {ToExamine.getDebugInstrNum(), MO.getOperandNo()});
+      return {
+          ApplySubregisters({ToExamine.getDebugInstrNum(), MO.getOperandNo()}),
+          &ToExamine};
     }
   }
 
@@ -1217,7 +1220,131 @@ auto MachineFunction::salvageCopySSAImpl(MachineInstr &MI)
   Builder.addReg(State.first);
   unsigned NewNum = getNewDebugInstrNum();
   Builder.addImm(NewNum);
-  return ApplySubregisters({NewNum, 0u});
+  return {ApplySubregisters({NewNum, 0u}), nullptr};
+}
+
+/// The Op operand to the DBG_INSTR_REF instruction DbgInstr is a virtual
+/// register defined by the REG_SEQUENCE instruction RegSeq. In order to
+/// finalize DbgInstr to use instruction references, find the defining
+/// instruction for each register in the sequence and compose them with a
+/// DIOpComposite.
+static bool finalizeInstrRefRegSequenceNew(
+    MachineInstr &DbgInstr, MachineOperand &Op, MachineInstr &RegSeq,
+    DenseMap<Register, MachineFunction::SalvageCopySSAResult> &DbgPHICache) {
+
+  const DIExpression *Expr = DbgInstr.getDebugExpression();
+  if (Expr->holdsOldElements())
+    return false;
+
+  auto &MF = *DbgInstr.getParent()->getParent();
+  auto &Ctx = Expr->getContext();
+  auto &TRI = *MF.getSubtarget().getRegisterInfo();
+  auto &TII = *MF.getSubtarget().getInstrInfo();
+  auto &DL = MF.getDataLayout();
+
+  struct Part {
+    MachineFunction::DebugInstrOperandPair DbgInstrNum;
+    unsigned Size;
+    unsigned Offset;
+  };
+  SmallVector<Part> Parts;
+
+  // Walk through the reg sequence, collecting debug-instr-numbers and
+  // subregister piece sizes and offsets into Parts.
+  for (unsigned I = 1; I < RegSeq.getNumOperands(); I += 2) {
+    Register RegOp = RegSeq.getOperand(I).getReg();
+    if (!RegOp.isVirtual())
+      return false;
+
+    unsigned SubReg = RegSeq.getOperand(I + 1).getImm();
+    unsigned SubSize = TRI.getSubRegIdxSize(SubReg);
+    unsigned SubOffset = TRI.getSubRegIdxOffset(SubReg);
+    MachineInstr &DefMI = *MF.getRegInfo().def_instr_begin(RegOp);
+
+    if (DefMI.isCopyLike() || TII.isCopyInstr(DefMI)) {
+      auto P = MF.salvageCopySSA(DefMI, DbgPHICache);
+      Parts.push_back({P.first, SubSize, SubOffset});
+      continue;
+    }
+
+    // Otherwise, identify the operand number that the VReg refers to.
+    unsigned OperandIdx = 0;
+    for (const auto &DefMO : DefMI.operands()) {
+      if (DefMO.isReg() && DefMO.isDef() && DefMO.getReg() == RegOp)
+        break;
+      ++OperandIdx;
+    }
+    assert(OperandIdx < DefMI.getNumOperands());
+
+    // Morph this instr ref to point at the given instruction and operand.
+    unsigned ID = DefMI.getDebugInstrNum();
+    MachineFunction::DebugInstrOperandPair P{ID, OperandIdx};
+    Parts.push_back({P, SubSize, SubOffset});
+  }
+
+  // Line up the Parts and make sure there aren't any gaps, DIOpComposite can't
+  // handle that easily.
+  std::sort(Parts.begin(), Parts.end(),
+            [](auto &LHS, auto &RHS) { return LHS.Offset < RHS.Offset; });
+  for (unsigned I = 1, E = Parts.size(); I < E; ++I)
+    if (Parts[I - 1].Offset + Parts[I - 1].Size != Parts[I].Offset)
+      return false;
+  if (Parts.empty() || Parts[0].Offset)
+    return false;
+
+  unsigned ArgNoToReplace = 0;
+  unsigned NumArgs = DbgInstr.getNumDebugOperands();
+  assert(NumArgs == Expr->getNewNumLocationOperands());
+  for (; ArgNoToReplace != NumArgs; ++ArgNoToReplace)
+    if (&DbgInstr.getDebugOperand(ArgNoToReplace) == &Op)
+      break;
+  if (ArgNoToReplace == NumArgs)
+    return false;
+
+  auto Elems = Expr->getNewElementsRef();
+  auto NewSize = TypeSize::getFixed(Parts.back().Offset + Parts.back().Size);
+  for (DIOp::Variant Elem : *Elems) {
+    // Only replace the argument with a composite if it has the same size as the
+    // parts.
+    if (auto *Arg = std::get_if<DIOp::Arg>(&Elem))
+      if (Arg->getIndex() == ArgNoToReplace &&
+          DL.getTypeSizeInBits(Arg->getResultType()) != NewSize)
+        return false;
+  }
+
+  Op.ChangeToDbgInstrRef(Parts[0].DbgInstrNum.first,
+                         Parts[0].DbgInstrNum.second);
+  if (Parts.size() == 1)
+    return true;
+
+  // Split up the DIOpArg using a DIOpComposite.
+  DIExprBuilder B{Ctx};
+  for (DIOp::Variant Elem : *Elems) {
+    auto *Arg = std::get_if<DIOp::Arg>(&Elem);
+    if (!Arg || Arg->getIndex() != ArgNoToReplace) {
+      B.append(Elem);
+      continue;
+    }
+    bool FirstPart = true;
+    for (const Part &P : Parts) {
+      // Since these arguments have to line up with the order of the operands on
+      // the DBG_INSTR_REF, recycle Arg's index first, it lines up with the Op
+      // that was ChangeToDbgInstrRef'd above.
+      unsigned ArgNo = FirstPart ? Arg->getIndex() : NumArgs++;
+      FirstPart = false;
+      B.append<DIOp::Arg>(ArgNo, IntegerType::get(Ctx, P.Size));
+    }
+    B.append<DIOp::Composite>(Parts.size(), Arg->getResultType());
+  }
+
+  auto *NewExpr = B.intoExpression();
+  for (const Part &P : drop_begin(Parts, 1))
+    DbgInstr.addOperand(MachineOperand::CreateDbgInstrRef(
+        P.DbgInstrNum.first, P.DbgInstrNum.second));
+  DbgInstr.getDebugExpressionOp().setMetadata(NewExpr);
+  assert(NewExpr->getNewNumLocationOperands() ==
+         DbgInstr.getNumDebugOperands());
+  return true;
 }
 
 void MachineFunction::finalizeDebugInstrRefs() {
@@ -1229,7 +1356,7 @@ void MachineFunction::finalizeDebugInstrRefs() {
     MI.setDebugValueUndef();
   };
 
-  DenseMap<Register, DebugInstrOperandPair> ArgDbgPHIs;
+  DenseMap<Register, SalvageCopySSAResult> ArgDbgPHIs;
   for (auto &MBB : *this) {
     for (auto &MI : MBB) {
       if (!MI.isDebugRef())
@@ -1237,7 +1364,8 @@ void MachineFunction::finalizeDebugInstrRefs() {
 
       bool IsValidRef = true;
 
-      for (MachineOperand &MO : MI.debug_operands()) {
+      for (unsigned I = 0; I < MI.getNumDebugOperands(); ++I) {
+        MachineOperand &MO = MI.getDebugOperand(I);
         if (!MO.isReg())
           continue;
 
@@ -1259,7 +1387,12 @@ void MachineFunction::finalizeDebugInstrRefs() {
         // for why this is important.
         if (DefMI.isCopyLike() || TII->isCopyInstr(DefMI)) {
           auto Result = salvageCopySSA(DefMI, ArgDbgPHIs);
-          MO.ChangeToDbgInstrRef(Result.first, Result.second);
+          if (!Result.second || !Result.second->isRegSequence() ||
+              !finalizeInstrRefRegSequenceNew(MI, MO, *Result.second,
+                                              ArgDbgPHIs))
+            MO.ChangeToDbgInstrRef(Result.first.first, Result.first.second);
+        } else if (DefMI.isRegSequence() &&
+                   finalizeInstrRefRegSequenceNew(MI, MO, DefMI, ArgDbgPHIs)) {
         } else {
           // Otherwise, identify the operand number that the VReg refers to.
           unsigned OperandIdx = 0;

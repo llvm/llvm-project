@@ -1,6 +1,5 @@
 !RUN: %flang_fc1 -emit-llvm -fopenmp %s -o - | FileCheck %s
-! memcpy related
-! XFAIL: *
+
 ! Regression test for https://github.com/llvm/llvm-project/issues/106297
 
 program bug

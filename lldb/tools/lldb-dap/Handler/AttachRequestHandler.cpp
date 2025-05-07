@@ -49,7 +49,6 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
   llvm::json::Object response;
   lldb::SBError error;
   FillResponse(request, response);
-  lldb::SBAttachInfo attach_info;
   const int invalid_port = 0;
   const auto *arguments = request.getObject("arguments");
   const lldb::pid_t pid =
@@ -58,10 +57,7 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
       GetInteger<uint64_t>(arguments, "gdb-remote-port").value_or(invalid_port);
   const auto gdb_remote_hostname =
       GetString(arguments, "gdb-remote-hostname").value_or("localhost");
-  if (pid != LLDB_INVALID_PROCESS_ID)
-    attach_info.SetProcessID(pid);
   const auto wait_for = GetBoolean(arguments, "waitFor").value_or(false);
-  attach_info.SetWaitForLaunch(wait_for, false /*async*/);
   dap.configuration.initCommands = GetStrings(arguments, "initCommands");
   dap.configuration.preRunCommands = GetStrings(arguments, "preRunCommands");
   dap.configuration.postRunCommands = GetStrings(arguments, "postRunCommands");
@@ -161,7 +157,13 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
         dap.target.ConnectRemote(listener, connect_url.c_str(), "gdb-remote",
                                  error);
       } else {
-        // Attach by process name or id.
+        // Attach by pid or process name.
+        lldb::SBAttachInfo attach_info;
+        if (pid != LLDB_INVALID_PROCESS_ID)
+          attach_info.SetProcessID(pid);
+        else if (dap.configuration.program.has_value())
+          attach_info.SetExecutable(dap.configuration.program->data());
+        attach_info.SetWaitForLaunch(wait_for, false /*async*/);
         dap.target.Attach(attach_info, error);
       }
     } else {

@@ -118,7 +118,7 @@ public:
     return TTI::PSK_FastHardware;
   }
 
-  unsigned getNumberOfParts(Type *Tp) const;
+  unsigned getNumberOfParts(Type *Tp) const override;
   unsigned getNumberOfRegisters(unsigned RCID) const override;
   TypeSize
   getRegisterBitWidth(TargetTransformInfo::RegisterKind Vector) const override;

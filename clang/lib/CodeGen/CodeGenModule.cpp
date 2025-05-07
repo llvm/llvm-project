@@ -9059,8 +9059,8 @@ CodeGenModule::collectXteamRedVars(const OptKernelNestDirectives &NestDirs) {
     return true;
   };
 
-  auto getMinMaxReduction = [this](const Expr *AssignmentRhs,
-                                   bool isUnsignedInt) -> XteamRedOpKind {
+  auto getMinMaxReduction = [](const Expr *AssignmentRhs,
+                               bool isUnsignedInt) -> XteamRedOpKind {
     // Unsigned integer not supported right now.
     if (isUnsignedInt)
       return XR_OP_unknown;

@@ -1195,7 +1195,27 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Select Select,
 
 std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Composite Composite,
                                                      ChildrenT Children) {
-  return std::nullopt;
+  if (IsFragment)
+    emitOp(dwarf::DW_OP_lit0);
+
+  for (auto &Child : Children) {
+    auto R = traverse(Child.get(), std::nullopt);
+    if (!R)
+      return std::nullopt;
+    TypeSize Size = R->Ty->getPrimitiveSizeInBits();
+    if (!Size.isFixed() || Size.getFixedValue() % 8 != 0)
+      return std::nullopt;
+    emitOp(dwarf::DW_OP_piece);
+    emitUnsigned(Size.getFixedValue() / 8);
+  }
+  emitUserOp(dwarf::DW_OP_LLVM_USER_piece_end);
+
+  if (IsFragment) {
+    emitOp(dwarf::DW_OP_swap);
+    emitOp(dwarf::DW_OP_drop);
+  }
+
+  return NewOpResult{Composite.getResultType(), ValueKind::LocationDesc};
 }
 
 std::optional<NewOpResult> DwarfExpression::traverseMathOp(uint8_t DwarfOp,
