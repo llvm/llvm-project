@@ -5,9 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_LIB_TARGET_AMDGPU_SICONVERTWAVESIZE_H
-#define LLVM_LIB_TARGET_AMDGPU_SICONVERTWAVESIZE_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUCONVERTWAVESIZE_H
+#define LLVM_LIB_TARGET_AMDGPU_AMDGPUCONVERTWAVESIZE_H
 
+#include "AMDGPUTargetMachine.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -15,16 +16,16 @@
 
 namespace llvm {
 
-class SIConvertWaveSizePass : public PassInfoMixin<SIConvertWaveSizePass> {
+class AMDGPUConvertWaveSizePass : public PassInfoMixin<AMDGPUConvertWaveSizePass> {
   /// The target machine.
-  const TargetMachine *TM;
+  const GCNTargetMachine *TM;
 
 public:
-  SIConvertWaveSizePass(const TargetMachine &TM)
+  AMDGPUConvertWaveSizePass(const GCNTargetMachine &TM)
       : TM(&TM) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 } // namespace llvm
 
-#endif // LLVM_LIB_TARGET_AMDGPU_SICONVERTWAVESIZE_H
+#endif // LLVM_LIB_TARGET_AMDGPU_AMDGPUCONVERTWAVESIZE_H

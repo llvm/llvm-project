@@ -51,7 +51,9 @@ FunctionPass *createSIMemoryLegalizerPass();
 FunctionPass *createSIInsertWaitcntsPass();
 FunctionPass *createSIPreAllocateWWMRegsLegacyPass();
 FunctionPass *createSIFormMemoryClausesLegacyPass();
-FunctionPass *createSIConvertWaveSizeLegacyPass(const TargetMachine *);
+FunctionPass *createAMDGPUConvertWaveSizeLegacyPass(const GCNTargetMachine *);
+void initializeAMDGPUConvertWaveSizeLegacyPass(PassRegistry &);
+extern char &AMDGPUConvertWaveSizeLegacyID;
 
 FunctionPass *createSIPostRABundlerPass();
 FunctionPass *createAMDGPUImageIntrinsicOptimizerPass(const TargetMachine *);

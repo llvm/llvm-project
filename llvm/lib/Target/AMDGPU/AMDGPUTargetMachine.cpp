@@ -44,7 +44,7 @@
 #include "R600TargetMachine.h"
 #include "SIFixSGPRCopies.h"
 #include "SIFixVGPRCopies.h"
-#include "SIConvertWaveSize.h"
+#include "AMDGPUConvertWaveSize.h"
 #include "SIFoldOperands.h"
 #include "SIFormMemoryClauses.h"
 #include "SILoadStoreOptimizer.h"
@@ -507,7 +507,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSILowerSGPRSpillsLegacyPass(*PR);
   initializeSIFixSGPRCopiesLegacyPass(*PR);
   initializeSIFixVGPRCopiesLegacyPass(*PR);
-  initializeSIConvertWaveSizeLegacyPass(*PR);
+  initializeAMDGPUConvertWaveSizeLegacyPass(*PR);
   initializeSIFoldOperandsLegacyPass(*PR);
   initializeSIPeepholeSDWALegacyPass(*PR);
   initializeSIShrinkInstructionsLegacyPass(*PR);
