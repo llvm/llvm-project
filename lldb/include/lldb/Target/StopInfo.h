@@ -174,6 +174,9 @@ public:
   static lldb::StopInfoSP
   CreateStopReasonHistoryBoundary(Thread &thread, const char *description);
 
+  static lldb::StopInfoSP
+  CreateStopReasonDyld(Thread &thread, const char *description = nullptr);
+
   static lldb::StopInfoSP CreateStopReasonFork(Thread &thread,
                                                lldb::pid_t child_pid,
                                                lldb::tid_t child_tid);

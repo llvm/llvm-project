@@ -1469,6 +1469,31 @@ protected:
   bool m_performed_action = false;
 };
 
+/// A stop reason for causing shared libraries to load. This will create a stop
+/// info that will resume the process by returning the right value for 
+/// StopInfo::ShouldStopSynchronous(...). This allows a process to stop and 
+/// report it wants to load/unload shared libraries and auto continue after all 
+/// libraries have been loaded/unloaded.
+class StopInfoDyld : public StopInfo {
+public:
+  StopInfoDyld(Thread &thread, const char *description)
+      : StopInfo(thread, 0) {
+    SetDescription(description ? description : "dynamic loader");
+  }
+  ~StopInfoDyld() override = default;
+  StopReason GetStopReason() const override { 
+    return lldb::eStopReasonDynammicLoader; 
+  }
+  bool ShouldStopSynchronous(Event *event_ptr) override {
+    if (ThreadSP thread_sp = GetThread()) {
+      ProcessSP process_sp = thread_sp->GetProcess();
+      if (process_sp)
+        return process_sp->GetStopOnSharedLibraryEvents();
+    }
+    return false;
+  }
+};
+
 } // namespace lldb_private
 
 StopInfoSP StopInfo::CreateStopReasonWithBreakpointSiteID(Thread &thread,
@@ -1530,6 +1555,12 @@ StopInfoSP StopInfo::CreateStopReasonHistoryBoundary(Thread &thread,
                                                      const char *description) {
   return StopInfoSP(new StopInfoHistoryBoundary(thread, description));
 }
+
+StopInfoSP StopInfo::CreateStopReasonDyld(Thread &thread, 
+                                          const char *description) {
+  return StopInfoSP(new StopInfoDyld(thread, description));
+}
+
 
 StopInfoSP StopInfo::CreateStopReasonWithExec(Thread &thread) {
   return StopInfoSP(new StopInfoExec(thread));

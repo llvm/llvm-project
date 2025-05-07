@@ -2123,7 +2123,7 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
           // TODO: create dyld stop reason, or auto resume depending on value
           // of setting that specifies if we should stop for shared library
           // load events.
-          thread_sp->SetStopInfo(StopInfo::CreateStopReasonToTrace(*thread_sp));
+          thread_sp->SetStopInfo(StopInfo::CreateStopReasonDyld(*thread_sp));
           handled = true;
         }
       }
