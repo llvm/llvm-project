@@ -581,6 +581,10 @@ public:
   mlir::LogicalResult emitDeclStmt(const clang::DeclStmt &s);
   LValue emitDeclRefLValue(const clang::DeclRefExpr *e);
 
+  mlir::LogicalResult emitDefaultStmt(const clang::DefaultStmt &s,
+                                      mlir::Type condType,
+                                      bool buildingTopLevelCase);
+
   /// Emit an `if` on a boolean condition to the specified blocks.
   /// FIXME: Based on the condition, this might try to simplify the codegen of
   /// the conditional based on the branch.
