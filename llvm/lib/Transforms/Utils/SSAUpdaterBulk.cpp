@@ -11,13 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/SSAUpdaterBulk.h"
+#include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/IteratedDominanceFrontier.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
 
@@ -221,4 +222,39 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
       U->set(V);
     }
   }
+}
+
+// Perform a single pass of simplification over the worklist of PHIs.
+static void simplifyPass(MutableArrayRef<PHINode *> Worklist,
+                         const DataLayout &DL) {
+  for (PHINode *&PHI : Worklist) {
+    if (Value *Simplified = simplifyInstruction(PHI, DL)) {
+      PHI->replaceAllUsesWith(Simplified);
+      PHI->eraseFromParent();
+      PHI = nullptr; // Mark as removed.
+    }
+  }
+}
+
+static void deduplicatePass(ArrayRef<PHINode *> Worklist) {
+  SmallDenseMap<BasicBlock *, unsigned> BBs;
+  for (PHINode *PHI : Worklist) {
+    if (PHI)
+      ++BBs[PHI->getParent()];
+  }
+
+  for (auto [BB, NumNewPHIs] : BBs) {
+    auto FirstExistingPN = std::next(BB->phis().begin(), NumNewPHIs);
+    EliminateNewDuplicatePHINodes(BB, FirstExistingPN);
+  }
+}
+
+void SSAUpdaterBulk::RewriteAndOptimizeAllUses(DominatorTree &DT) {
+  SmallVector<PHINode *, 4> PHIs;
+  RewriteAllUses(&DT, &PHIs);
+  if (PHIs.empty())
+    return;
+
+  simplifyPass(PHIs, PHIs.front()->getParent()->getDataLayout());
+  deduplicatePass(PHIs);
 }

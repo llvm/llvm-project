@@ -308,3 +308,68 @@ TEST(SSAUpdaterBulk, TwoBBLoop) {
   EXPECT_EQ(Phi->getIncomingValueForBlock(Entry), ConstantInt::get(I32Ty, 0));
   EXPECT_EQ(Phi->getIncomingValueForBlock(Loop), I);
 }
+
+TEST(SSAUpdaterBulk, SimplifyPHIs) {
+  const char *IR = R"(
+      define void @main(i32 %val, i1 %cond) {
+      entry:
+          br i1 %cond, label %left, label %right
+      left:
+          %add = add i32 %val, 1
+          br label %exit
+      right:
+          %sub = sub i32 %val, 1
+          br label %exit
+      exit:
+          %phi = phi i32 [ %sub, %right ], [ %add, %left ]
+          %cmp = icmp slt i32 0, 42
+          ret void
+      }
+  )";
+
+  llvm::LLVMContext Context;
+  llvm::SMDiagnostic Err;
+  std::unique_ptr<llvm::Module> M = llvm::parseAssemblyString(IR, Err, Context);
+  ASSERT_NE(M, nullptr) << "Failed to parse IR: " << Err.getMessage();
+
+  Function *F = M->getFunction("main");
+  auto *Entry = &F->getEntryBlock();
+  auto *Left = Entry->getTerminator()->getSuccessor(0);
+  auto *Right = Entry->getTerminator()->getSuccessor(1);
+  auto *Exit = Left->getSingleSuccessor();
+  auto *Val = &*F->arg_begin();
+  auto *Phi = &Exit->front();
+  auto *Cmp = &*std::next(Exit->begin());
+  auto *Add = &Left->front();
+  auto *Sub = &Right->front();
+
+  SSAUpdaterBulk Updater;
+  Type *I32Ty = Type::getInt32Ty(Context);
+
+  // Use %val directly instead of creating a phi.
+  unsigned ValVar = Updater.AddVariable("Val", I32Ty);
+  Updater.AddAvailableValue(ValVar, Left, Val);
+  Updater.AddAvailableValue(ValVar, Right, Val);
+  Updater.AddUse(ValVar, &Cmp->getOperandUse(0));
+
+  // Use existing %phi for %add and %sub values.
+  unsigned AddSubVar = Updater.AddVariable("AddSub", I32Ty);
+  Updater.AddAvailableValue(AddSubVar, Left, Add);
+  Updater.AddAvailableValue(AddSubVar, Right, Sub);
+  Updater.AddUse(AddSubVar, &Cmp->getOperandUse(1));
+
+  auto ExitSizeBefore = Exit->size();
+  DominatorTree DT(*F);
+  Updater.RewriteAndOptimizeAllUses(DT);
+
+  //  Output for Exit->dump():
+  //  exit:                                             ; preds = %right, %left
+  //    %phi = phi i32 [ %sub, %right ], [ %add, %left ]
+  //    %cmp = icmp slt i32 %val, %phi
+  //    ret void
+
+  ASSERT_EQ(Exit->size(), ExitSizeBefore);
+  ASSERT_EQ(&Exit->front(), Phi);
+  EXPECT_EQ(Val, Cmp->getOperand(0));
+  EXPECT_EQ(Phi, Cmp->getOperand(1));
+}
