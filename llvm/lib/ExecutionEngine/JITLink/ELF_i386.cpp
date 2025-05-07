@@ -129,6 +129,9 @@ private:
       return EdgeKind_i386::PCRel16;
     case ELF::R_386_GOT32:
       return EdgeKind_i386::RequestGOTAndTransformToDelta32FromGOT;
+    case ELF::R_386_GOT32X:
+      // TODO: Add a relaxable edge kind and update relaxation optimization.
+      return EdgeKind_i386::RequestGOTAndTransformToDelta32FromGOT;
     case ELF::R_386_GOTPC:
       return EdgeKind_i386::Delta32;
     case ELF::R_386_GOTOFF:
