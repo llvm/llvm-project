@@ -1560,7 +1560,7 @@ void SemaOpenACC::ActOnForStmtBegin(SourceLocation ForLoc, const Stmt *First,
 void SemaOpenACC::ActOnRangeForStmtBegin(SourceLocation ForLoc,
                                          const Stmt *OldRangeFor,
                                          const Stmt *RangeFor) {
-  if (!getLangOpts().OpenACC)
+  if (!getLangOpts().OpenACC || OldRangeFor == nullptr || RangeFor == nullptr)
     return;
 
   ForStmtBeginChecker FSBC{*this, ForLoc,
@@ -1576,7 +1576,7 @@ void SemaOpenACC::ActOnRangeForStmtBegin(SourceLocation ForLoc,
 
 void SemaOpenACC::ActOnRangeForStmtBegin(SourceLocation ForLoc,
                                          const Stmt *RangeFor) {
-  if (!getLangOpts().OpenACC)
+  if (!getLangOpts().OpenACC || RangeFor == nullptr)
     return;
 
   ForStmtBeginChecker FSBC = {*this, ForLoc,
@@ -2259,7 +2259,8 @@ void SemaOpenACC::CheckRoutineDecl(SourceLocation DirLoc,
           (*cast<OpenACCBindClause>(*BindItr)) !=
               (*cast<OpenACCBindClause>(*OtherBindItr))) {
         Diag((*BindItr)->getBeginLoc(), diag::err_acc_duplicate_unnamed_bind);
-        Diag((*OtherBindItr)->getEndLoc(), diag::note_acc_previous_clause_here);
+        Diag((*OtherBindItr)->getEndLoc(), diag::note_acc_previous_clause_here)
+            << (*BindItr)->getClauseKind();
         return;
       }
     }
@@ -2273,7 +2274,8 @@ void SemaOpenACC::CheckRoutineDecl(SourceLocation DirLoc,
     if (auto *RA = dyn_cast<OpenACCRoutineAnnotAttr>(A);
         RA && RA->getRange().getEnd().isValid()) {
       Diag((*BindItr)->getBeginLoc(), diag::err_acc_duplicate_bind);
-      Diag(RA->getRange().getEnd(), diag::note_acc_previous_clause_here);
+      Diag(RA->getRange().getEnd(), diag::note_acc_previous_clause_here)
+          << "bind";
       return;
     }
   }
@@ -2318,7 +2320,8 @@ OpenACCRoutineDecl *SemaOpenACC::CheckRoutineDecl(
           if (OtherBindItr != RA->Clauses.end()) {
             Diag((*BindItr)->getBeginLoc(), diag::err_acc_duplicate_bind);
             Diag((*OtherBindItr)->getEndLoc(),
-                 diag::note_acc_previous_clause_here);
+                 diag::note_acc_previous_clause_here)
+                << (*BindItr)->getClauseKind();
             return nullptr;
           }
         }
@@ -2326,7 +2329,8 @@ OpenACCRoutineDecl *SemaOpenACC::CheckRoutineDecl(
         if (auto *RA = dyn_cast<OpenACCRoutineAnnotAttr>(A);
             RA && RA->getRange().getEnd().isValid()) {
           Diag((*BindItr)->getBeginLoc(), diag::err_acc_duplicate_bind);
-          Diag(RA->getRange().getEnd(), diag::note_acc_previous_clause_here);
+          Diag(RA->getRange().getEnd(), diag::note_acc_previous_clause_here)
+              << (*BindItr)->getClauseKind();
           return nullptr;
         }
       }

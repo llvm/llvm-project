@@ -2301,11 +2301,8 @@ FindPredecessorRetainWithSafePath(const Value *Arg, BasicBlock *BB,
 /// Look for an ``autorelease'' instruction dependent on Arg such that there are
 /// no instructions dependent on Arg that need a positive ref count in between
 /// the autorelease and the ret.
-static CallInst *
-FindPredecessorAutoreleaseWithSafePath(const Value *Arg, BasicBlock *BB,
-                                       ReturnInst *Ret,
-                                       ProvenanceAnalysis &PA) {
-  SmallPtrSet<Instruction *, 4> DepInsts;
+static CallInst *FindPredecessorAutoreleaseWithSafePath(
+    const Value *Arg, BasicBlock *BB, ReturnInst *Ret, ProvenanceAnalysis &PA) {
   auto *Autorelease = dyn_cast_or_null<CallInst>(
       findSingleDependency(NeedsPositiveRetainCount, Arg, BB, Ret, PA));
 

@@ -415,7 +415,13 @@ struct TypedefInfo : public SymbolInfo {
 
   TypeInfo Underlying;
 
-  // Inidicates if this is a new C++ "using"-style typedef:
+  // Underlying type declaration
+  SmallString<16> TypeDeclaration;
+
+  /// Comment description for the typedef.
+  std::vector<CommentInfo> Description;
+
+  // Indicates if this is a new C++ "using"-style typedef:
   //   using MyVector = std::vector<int>
   // False means it's a C-style typedef:
   //   typedef std::vector<int> MyVector;
@@ -458,7 +464,8 @@ struct EnumValueInfo {
   // constant. This will be empty for implicit enumeration values.
   SmallString<16> ValueExpr;
 
-  std::vector<CommentInfo> Description; /// Comment description of this field.
+  /// Comment description of this field.
+  std::vector<CommentInfo> Description;
 };
 
 // TODO: Expand to allow for documenting templating.

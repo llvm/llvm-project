@@ -126,6 +126,25 @@ void llvm::report_fatal_error(const Twine &Reason, bool GenCrashDiag) {
     exit(1);
 }
 
+void llvm::reportFatalInternalError(const char *reason) {
+  report_fatal_error(reason, /*GenCrashDiag=*/true);
+}
+void llvm::reportFatalInternalError(StringRef reason) {
+  report_fatal_error(reason, /*GenCrashDiag=*/true);
+}
+void llvm::reportFatalInternalError(const Twine &reason) {
+  report_fatal_error(reason, /*GenCrashDiag=*/true);
+}
+void llvm::reportFatalUsageError(const char *reason) {
+  report_fatal_error(reason, /*GenCrashDiag=*/false);
+}
+void llvm::reportFatalUsageError(StringRef reason) {
+  report_fatal_error(reason, /*GenCrashDiag=*/false);
+}
+void llvm::reportFatalUsageError(const Twine &reason) {
+  report_fatal_error(reason, /*GenCrashDiag=*/false);
+}
+
 void llvm::install_bad_alloc_error_handler(fatal_error_handler_t handler,
                                            void *user_data) {
 #if LLVM_ENABLE_THREADS == 1

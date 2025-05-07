@@ -4094,16 +4094,32 @@ bool Sema::InstantiateClassTemplateSpecialization(
   if (ClassTemplateSpec->isInvalidDecl())
     return true;
 
+  bool HadAvaibilityWarning =
+      ShouldDiagnoseAvailabilityOfDecl(ClassTemplateSpec, nullptr, nullptr)
+          .first != AR_Available;
+
   ActionResult<CXXRecordDecl *> Pattern =
       getPatternForClassTemplateSpecialization(*this, PointOfInstantiation,
                                                ClassTemplateSpec, TSK,
                                                PrimaryStrictPackMatch);
+
   if (!Pattern.isUsable())
     return Pattern.isInvalid();
 
-  return InstantiateClass(
+  bool Err = InstantiateClass(
       PointOfInstantiation, ClassTemplateSpec, Pattern.get(),
       getTemplateInstantiationArgs(ClassTemplateSpec), TSK, Complain);
+
+  // If we haven't already warn on avaibility, consider the avaibility
+  // attributes of the partial specialization.
+  // Note that - because we need to have deduced the partial specialization -
+  // We can only emit these warnings when the specialization is instantiated.
+  if (!Err && !HadAvaibilityWarning) {
+    assert(ClassTemplateSpec->getTemplateSpecializationKind() !=
+           TSK_Undeclared);
+    DiagnoseAvailabilityOfDecl(ClassTemplateSpec, PointOfInstantiation);
+  }
+  return Err;
 }
 
 void

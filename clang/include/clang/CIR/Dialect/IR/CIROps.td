@@ -254,7 +254,11 @@ def PtrStrideOp : CIR_Op<"ptr_stride",
     ```
   }];
 
-  let arguments = (ins CIR_PointerType:$base, PrimitiveInt:$stride);
+  let arguments = (ins
+    CIR_PointerType:$base,
+    CIR_AnyFundamentalIntType:$stride
+  );
+
   let results = (outs CIR_PointerType:$result);
 
   let assemblyFormat = [{
@@ -1769,6 +1773,13 @@ def FuncOp : CIR_Op<"func", [
        return getFunctionType().getReturnTypes();
     }
 
+    // TODO(cir): this should be an operand attribute, but for now we just hard-
+    // wire this as a function. Will later add a $no_proto argument to this op.
+    bool getNoProto() {
+      assert(!cir::MissingFeatures::opFuncNoProto());
+      return false;
+    }
+
     //===------------------------------------------------------------------===//
     // SymbolOpInterface Methods
     //===------------------------------------------------------------------===//
@@ -1789,6 +1800,41 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
          !listconcat(extra_traits,
                      [DeclareOpInterfaceMethods<CIRCallOpInterface>,
                       DeclareOpInterfaceMethods<SymbolUserOpInterface>])> {
+  let extraClassDeclaration = [{
+    /// Get the argument operands to the called function.
+    mlir::OperandRange getArgOperands() {
+      return getArgs();
+    }
+
+    mlir::MutableOperandRange getArgOperandsMutable() {
+      return getArgsMutable();
+    }
+
+    /// Return the callee of this operation
+    mlir::CallInterfaceCallable getCallableForCallee() {
+      return (*this)->getAttrOfType<mlir::SymbolRefAttr>("callee");
+    }
+
+    /// Set the callee for this operation.
+    void setCalleeFromCallable(::mlir::CallInterfaceCallable callee) {
+      (*this)->setAttr(getCalleeAttrName(),
+                       mlir::cast<mlir::SymbolRefAttr>(callee));
+    }
+
+    mlir::ArrayAttr getArgAttrsAttr() { return {}; }
+    ::mlir::ArrayAttr getResAttrsAttr() { return {}; }
+
+    void setResAttrsAttr(::mlir::ArrayAttr attrs) {}
+    void setArgAttrsAttr(::mlir::ArrayAttr attrs) {}
+
+    ::mlir::Attribute removeArgAttrsAttr() { return {}; }
+    ::mlir::Attribute removeResAttrsAttr() { return {}; }
+
+    void setArg(unsigned index, mlir::Value value) {
+      setOperand(index, value);
+    }
+  }];
+
   let hasCustomAssemblyFormat = 1;
   let skipDefaultBuilders = 1;
   let hasVerifier = 0;
@@ -1798,7 +1844,8 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
   // the upstreaming process moves on. The verifiers is also missing for now,
   // will add in the future.
 
-  dag commonArgs = (ins FlatSymbolRefAttr:$callee);
+  dag commonArgs = (ins FlatSymbolRefAttr:$callee,
+                        Variadic<CIR_AnyType>:$args);
 }
 
 def CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
@@ -1819,7 +1866,9 @@ def CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
   let arguments = commonArgs;
 
   let builders = [OpBuilder<(ins "mlir::SymbolRefAttr":$callee,
-                                 "mlir::Type":$resType), [{
+                                 "mlir::Type":$resType,
+                                 "mlir::ValueRange":$operands), [{
+      $_state.addOperands(operands);
       $_state.addAttribute("callee", callee);
       if (resType && !isa<VoidType>(resType))
         $_state.addTypes(resType);
@@ -1901,6 +1950,30 @@ def TrapOp : CIR_Op<"trap", [Terminator]> {
   }];
 
   let assemblyFormat = "attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// VecCreate
+//===----------------------------------------------------------------------===//
+
+def VecCreateOp : CIR_Op<"vec.create", [Pure]> {
+
+  let summary = "Create a vector value";
+  let description = [{
+    The `cir.vec.create` operation creates a vector value with the given element
+    values. The number of element arguments must match the number of elements
+    in the vector type.
+  }];
+
+  let arguments = (ins Variadic<CIR_AnyType>:$elements);
+  let results = (outs CIR_VectorType:$result);
+
+  let assemblyFormat = [{
+    `(` ($elements^ `:` type($elements))? `)` `:` qualified(type($result))
+    attr-dict
+  }];
+
+  let hasVerifier = 1;
 }
 
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD

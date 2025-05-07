@@ -2709,7 +2709,6 @@ static SDValue LowerTcgen05St(SDValue Op, SelectionDAG &DAG) {
 static SDValue LowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   SDNode *N = Op.getNode();
   SDValue Intrin = N->getOperand(1);
-  SDLoc DL(N);
 
   // Get the intrinsic ID
   unsigned IntrinNo = cast<ConstantSDNode>(Intrin.getNode())->getZExtValue();
@@ -5902,7 +5901,6 @@ static void ReplaceTcgen05Ld(SDNode *N, SelectionDAG &DAG,
   SDValue BuildVector = DAG.getNode(ISD::BUILD_VECTOR, DL, ResVT, ScalarRes);
   Results.push_back(BuildVector); // Build Vector
   Results.push_back(Chain);       // Chain
-  return;
 }
 
 static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
