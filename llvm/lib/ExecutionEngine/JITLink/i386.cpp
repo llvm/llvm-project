@@ -18,8 +18,6 @@ namespace llvm::jitlink::i386 {
 
 const char *getEdgeKindName(Edge::Kind K) {
   switch (K) {
-  case None:
-    return "None";
   case Pointer32:
     return "Pointer32";
   case PCRel32:
