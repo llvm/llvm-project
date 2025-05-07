@@ -102,6 +102,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86ReturnThunksPass(PR);
   initializeX86DAGToDAGISelLegacyPass(PR);
   initializeX86ArgumentStackSlotPassPass(PR);
+  initializeX86AsmPrinterPass(PR);
   initializeX86FixupInstTuningPassPass(PR);
   initializeX86FixupVectorConstantsPassPass(PR);
   initializeX86DynAllocaExpanderPass(PR);
