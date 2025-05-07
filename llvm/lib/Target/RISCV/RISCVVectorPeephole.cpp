@@ -585,6 +585,7 @@ bool RISCVVectorPeephole::foldUndefPassthruVMV_V_V(MachineInstr &MI) {
 
   MRI->replaceRegWith(MI.getOperand(0).getReg(), MI.getOperand(2).getReg());
   MI.eraseFromParent();
+  MRI->clearKillFlags(MI.getOperand(2).getReg());
   return true;
 }
 
@@ -655,6 +656,7 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
   MRI->replaceRegWith(MI.getOperand(0).getReg(), Src->getOperand(0).getReg());
   MI.eraseFromParent();
 
+  MRI->clearKillFlags(MI.getOperand(2).getReg());
   return true;
 }
 
