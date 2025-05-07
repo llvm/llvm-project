@@ -7,25 +7,11 @@ func.func @load_scalar_from_memref(%input: memref<4x8xf32, strided<[8, 1], offse
   return %value : f32
 }
 // CHECK-LABEL: func @load_scalar_from_memref
-// CHECK: %[[C10:.*]] = arith.constant 10 : index
-// CHECK: %[[REINT:.*]] = memref.reinterpret_cast %arg0 to offset: [100], sizes: [32], strides: [1]
+// CHECK-NEXT: %[[C10:.*]] = arith.constant 10 : index
+// CHECK-NEXT: %[[REINT:.*]] = memref.reinterpret_cast %arg0 to offset: [100], sizes: [32], strides: [1]
 // CHECK-SAME: memref<4x8xf32, strided<[8, 1], offset: 100>> to memref<32xf32, strided<[1], offset: 100>>
-// CHECK: memref.load %[[REINT]][%[[C10]]] : memref<32xf32, strided<[1], offset: 100>>
+// CHECK-NEXT: memref.load %[[REINT]][%[[C10]]] : memref<32xf32, strided<[1], offset: 100>>
 
-// -----
-
-func.func @load_scalar_from_memref_static_dim_col_major(%input: memref<4x8xf32, strided<[1, 4], offset: 100>>, %row: index, %col: index) -> f32 {
-  %value = memref.load %input[%col, %row] : memref<4x8xf32, strided<[1, 4], offset: 100>>
-  return %value : f32
-}
-
-// CHECK: [[MAP:.+]] = affine_map<()[s0, s1] -> (s0 + s1 * 4)>
-// CHECK: func @load_scalar_from_memref_static_dim_col_major
-// CHECK-SAME: (%[[ARG0:.*]]: memref<4x8xf32, strided<[1, 4], offset: 100>>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index)
-// CHECK: %[[IDX:.*]] = affine.apply [[MAP]]()[%[[ARG2]], %[[ARG1]]]
-// CHECK: %[[REINT:.*]] = memref.reinterpret_cast %[[ARG0]] to offset: [100], sizes: [32], strides: [1]
-// CHECK-SAME: to memref<32xf32, strided<[1], offset: 100>>
-// CHECK: memref.load %[[REINT]][%[[IDX]]]
 
 // -----
 
@@ -43,6 +29,21 @@ func.func @load_scalar_from_memref_dynamic_dim(%input: memref<?x?xf32, strided<[
 // CHECK: %[[SIZE:.*]] = affine.max #[[MAP1]]()[%[[SIZES]]#0, %[[STRIDES]]#0, %[[SIZES]]#1, %[[STRIDES]]#1]
 // CHECK: %[[REINT:.*]] = memref.reinterpret_cast %arg0 to offset: [%[[OFFSET]]], sizes: [%[[SIZE]]], strides: [1] : memref<?x?xf32, strided<[?, ?], offset: ?>> to memref<?xf32, strided<[1], offset: ?>> 
 // CHECK: memref.load %[[REINT]][%[[IDX]]]
+
+// -----
+
+func.func @load_scalar_from_memref_static_dim(%input: memref<8x12xf32, strided<[24, 2], offset: 100>>) -> f32 {
+   %c7 = arith.constant 7 : index
+   %c10 = arith.constant 10 : index
+  %value = memref.load %input[%c7, %c10] : memref<8x12xf32, strided<[24, 2], offset: 100>>
+  return %value : f32
+}
+
+// CHECK-LABEL: func @load_scalar_from_memref_static_dim
+// CHECK-SAME: (%[[ARG0:.*]]: memref<8x12xf32, strided<[24, 2], offset: 100>>)
+// CHECK: %[[C188:.*]] = arith.constant 188 : index
+// CHECK: %[[REINT:.*]] = memref.reinterpret_cast %[[ARG0]] to offset: [100], sizes: [192], strides: [1] : memref<8x12xf32, strided<[24, 2], offset: 100>> to memref<192xf32, strided<[1], offset: 100>>
+// CHECK: memref.load %[[REINT]][%[[C188]]] : memref<192xf32, strided<[1], offset: 100>>
 
 // -----
 
@@ -256,3 +257,17 @@ func.func @chained_alloc_load() -> vector<8xf32> {
 // CHECK-NEXT: %[[C30:.*]] = arith.constant 30 : index
 // CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc() : memref<32xf32, strided<[1]>>
 // CHECK-NEXT: vector.load %[[ALLOC]][%[[C30]]] : memref<32xf32, strided<[1]>>, vector<8xf32>
+
+// -----
+
+func.func @load_scalar_from_memref_static_dim_col_major(%input: memref<4x8xf32, strided<[1, 4], offset: 100>>, %row: index, %col: index) -> f32 {
+  %value = memref.load %input[%col, %row] : memref<4x8xf32, strided<[1, 4], offset: 100>>
+  return %value : f32
+}
+
+// CHECK: #[[MAP:.*]] = affine_map<()[s0, s1] -> (s0 + s1 * 4)>
+// CHECK: func @load_scalar_from_memref_static_dim_col_major
+// CHECK-SAME: (%[[ARG0:.*]]: memref<4x8xf32, strided<[1, 4], offset: 100>>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index)
+// CHECK: %[[IDX:.*]] = affine.apply #[[MAP]]()[%[[ARG2]], %[[ARG1]]]
+// CHECK: %[[REINT:.*]] = memref.reinterpret_cast %[[ARG0]] to offset: [100], sizes: [32], strides: [1] : memref<4x8xf32, strided<[1, 4], offset: 100>> to memref<32xf32, strided<[1], offset: 100>>
+// CHECK: memref.load %[[REINT]][%[[IDX]]] : memref<32xf32, strided<[1], offset: 100>>
