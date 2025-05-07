@@ -4,8 +4,8 @@
 Implementation-defined behavior
 ===============================
 
-Contains the implementation details of the implementation-defined behavior in
-libc++. Implementation-defined is mandated to be documented by the Standard.
+This document contains the implementation details of the implementation-defined behavior in libc++.
+The C++ standard mandates that implementation-defined behavior is documented.
 
 .. note:
    This page is far from complete.
@@ -17,7 +17,7 @@ Implementation-defined behavior
 Updating the Time Zone Database
 -------------------------------
 
-The Standard allows implementations to automatically update the
+The C++ standard allows implementations to automatically update the
 *remote time zone database*. Libc++ opts not to do that. Instead calling
 
  - ``std::chrono::remote_version()`` will update the version information of the
@@ -32,7 +32,7 @@ give them full control over the process.
 `[ostream.formatted.print]/3 <http://eel.is/c++draft/ostream.formatted.print#3>`_ A terminal capable of displaying Unicode
 --------------------------------------------------------------------------------------------------------------------------
 
-The Standard specifies that the manner in which a stream is determined to refer
+The C++ standard specifies that the manner in which a stream is determined to refer
 to a terminal capable of displaying Unicode is implementation-defined. This is
 used for ``std::print`` and similar functions taking an ``ostream&`` argument.
 
@@ -55,9 +55,9 @@ Libc++ determines that a stream is Unicode-capable terminal by:
 ----------------------------------------------------------------------------------------
 
 Most functions within the Mathematical Special Functions section contain integral indices.
-The Standard specifies the result for larger indices as implementation-defined.
+The C++ standard specifies the result for larger indices as implementation-defined.
 Libc++ pursuits reasonable results by choosing the same formulas as for indices below that threshold.
-E.g.
+E.g.,
 
 - ``std::hermite(unsigned n, T x)`` for ``n >= 128``
 
