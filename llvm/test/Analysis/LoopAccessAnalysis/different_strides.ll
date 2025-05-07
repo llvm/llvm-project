@@ -17,7 +17,7 @@
 ; }
 ; The load and store have different strides(4 and 16 bytes respectively) but the store
 ; is always at safe positive distance away from the load, thus BackwardVectorizable
-define dso_local void @different_strides_backward_vectorizable() local_unnamed_addr {
+define void @different_strides_backward_vectorizable() {
 ; CHECK-LABEL: 'different_strides_backward_vectorizable'
 ; CHECK-NEXT:    inner.body:
 ; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 2048 bits
@@ -91,7 +91,7 @@ exit:
 ; }
 ; The load and store have different strides, but the store and load are not at a
 ; safe distance away from each other, thus not safe for vectorization.
-define dso_local void @different_stride_and_not_vectorizable() local_unnamed_addr {
+define void @different_stride_and_not_vectorizable() {
 ; CHECK-LABEL: 'different_stride_and_not_vectorizable'
 ; CHECK-NEXT:    inner.body:
 ; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop

@@ -2236,7 +2236,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     return Dependence::BackwardVectorizableButPreventsForwarding;
 
   // An update to MinDepDistBytes requires an update to MaxSafeVectorWidthInBits
-  // since there is a backwards dependency.
+  // since there is a backwards dependency. We use MaxStride to get a
+  // conservative upper bound on MaxVF.
   uint64_t MaxVF = MinDepDistBytes / MaxStride;
   LLVM_DEBUG(dbgs() << "LAA: Positive min distance " << MinDistance
                     << " with max VF = " << MaxVF << '\n');
