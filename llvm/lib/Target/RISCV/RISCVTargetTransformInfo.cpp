@@ -2189,8 +2189,9 @@ InstructionCost RISCVTTIImpl::getCFInstrCost(unsigned Opcode,
 
 InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                                  TTI::TargetCostKind CostKind,
-                                                 unsigned Index, Value *Op0,
-                                                 Value *Op1) const {
+                                                 unsigned Index,
+                                                 const Value *Op0,
+                                                 const Value *Op1) const {
   assert(Val->isVectorTy() && "This must be a vector type");
 
   if (Opcode != Instruction::ExtractElement &&

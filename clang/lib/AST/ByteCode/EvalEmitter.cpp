@@ -72,6 +72,24 @@ EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
   return std::move(this->EvalResult);
 }
 
+EvaluationResult EvalEmitter::interpretAsPointer(const Expr *E,
+                                                 PtrCallback PtrCB) {
+
+  S.setEvalLocation(E->getExprLoc());
+  this->ConvertResultToRValue = false;
+  this->CheckFullyInitialized = false;
+  this->PtrCB = PtrCB;
+  EvalResult.setSource(E);
+
+  if (!this->visitExpr(E, /*DestroyToplevelScope=*/true)) {
+    // EvalResult may already have a result set, but something failed
+    // after that (e.g. evaluating destructors).
+    EvalResult.setInvalid();
+  }
+
+  return std::move(this->EvalResult);
+}
+
 void EvalEmitter::emitLabel(LabelTy Label) { CurrentLabel = Label; }
 
 EvalEmitter::LabelTy EvalEmitter::getLabel() { return NextLabel++; }
@@ -169,6 +187,10 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
     EvalResult.setValue(Ptr.toAPValue(Ctx.getASTContext()));
     return true;
   }
+
+  // If we're returning a raw pointer, call our callback.
+  if (this->PtrCB)
+    return (*this->PtrCB)(Ptr);
 
   if (!EvalResult.checkReturnValue(S, Ctx, Ptr, Info))
     return false;

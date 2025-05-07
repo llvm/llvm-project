@@ -31,6 +31,7 @@
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Interfaces/CIRLoopOpInterface.h"
 #include "clang/CIR/Interfaces/CIROpInterfaces.h"
+#include "clang/CIR/MissingFeatures.h"
 
 namespace mlir {
 namespace OpTrait {

@@ -6352,7 +6352,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       SDNodeFlags Flags;
       if (OpOpcode == ISD::ZERO_EXTEND)
         Flags.setNonNeg(N1->getFlags().hasNonNeg());
-      return getNode(OpOpcode, DL, VT, N1.getOperand(0), Flags);
+      SDValue NewVal = getNode(OpOpcode, DL, VT, N1.getOperand(0), Flags);
+      transferDbgValues(N1, NewVal);
+      return NewVal;
     }
 
     if (OpOpcode == ISD::POISON)
@@ -6376,7 +6378,10 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (OpOpcode == ISD::ZERO_EXTEND) { // (zext (zext x)) -> (zext x)
       SDNodeFlags Flags;
       Flags.setNonNeg(N1->getFlags().hasNonNeg());
-      return getNode(ISD::ZERO_EXTEND, DL, VT, N1.getOperand(0), Flags);
+      SDValue NewVal =
+          getNode(ISD::ZERO_EXTEND, DL, VT, N1.getOperand(0), Flags);
+      transferDbgValues(N1, NewVal);
+      return NewVal;
     }
 
     if (OpOpcode == ISD::POISON)
@@ -9081,6 +9086,8 @@ SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
           Opcode == ISD::ATOMIC_LOAD_UMAX || Opcode == ISD::ATOMIC_LOAD_FADD ||
           Opcode == ISD::ATOMIC_LOAD_FSUB || Opcode == ISD::ATOMIC_LOAD_FMAX ||
           Opcode == ISD::ATOMIC_LOAD_FMIN ||
+          Opcode == ISD::ATOMIC_LOAD_FMINIMUM ||
+          Opcode == ISD::ATOMIC_LOAD_FMAXIMUM ||
           Opcode == ISD::ATOMIC_LOAD_UINC_WRAP ||
           Opcode == ISD::ATOMIC_LOAD_UDEC_WRAP ||
           Opcode == ISD::ATOMIC_LOAD_USUB_COND ||

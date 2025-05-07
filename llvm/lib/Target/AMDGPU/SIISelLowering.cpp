@@ -3235,7 +3235,6 @@ SITargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
   // CCValAssign - represent the assignment of the return value to a location.
   SmallVector<CCValAssign, 48> RVLocs;
-  SmallVector<ISD::OutputArg, 48> Splits;
 
   // CCState - Info about the registers and stack slots.
   CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), RVLocs,
@@ -6629,6 +6628,11 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(LoadVal);
       return;
     }
+    case Intrinsic::amdgcn_dead: {
+      for (unsigned I = 0, E = N->getNumValues(); I < E; ++I)
+        Results.push_back(DAG.getPOISON(N->getValueType(I)));
+      return;
+    }
     }
     break;
   }
@@ -8699,7 +8703,7 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
     LoadVT = MVT::getVectorVT(LoadVT.getScalarType(), 4);
   }
 
-  SDVTList VTList = DAG.getVTList({LoadVT, MVT::Glue});
+  SDVTList VTList = DAG.getVTList({LoadVT, MVT::Other});
 
   // Use the alignment to ensure that the required offsets will fit into the
   // immediate offsets.
@@ -9114,6 +9118,12 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_mov_dpp8:
   case Intrinsic::amdgcn_update_dpp:
     return lowerLaneOp(*this, Op.getNode(), DAG);
+  case Intrinsic::amdgcn_dead: {
+    SmallVector<SDValue, 8> Poisons;
+    for (const EVT ValTy : Op.getNode()->values())
+      Poisons.push_back(DAG.getPOISON(ValTy));
+    return DAG.getMergeValues(Poisons, SDLoc(Op));
+  }
   default:
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrinsicID))
@@ -11174,9 +11184,10 @@ SDValue SITargetLowering::LowerFDIV32(SDValue Op, SelectionDAG &DAG) const {
       const SDValue DisableDenormValue = getSPDenormModeValue(
           FP_DENORM_FLUSH_IN_FLUSH_OUT, DAG, Info, Subtarget);
 
+      SDVTList BindParamVTs = DAG.getVTList(MVT::Other, MVT::Glue);
       DisableDenorm =
-          DAG.getNode(AMDGPUISD::DENORM_MODE, SL, MVT::Other, Fma4.getValue(1),
-                      DisableDenormValue, Fma4.getValue(2))
+          DAG.getNode(AMDGPUISD::DENORM_MODE, SL, BindParamVTs,
+                      Fma4.getValue(1), DisableDenormValue, Fma4.getValue(2))
               .getNode();
     } else {
       assert(HasDynamicDenormals == (bool)SavedDenormMode);
@@ -11808,7 +11819,6 @@ static unsigned getBasePtrIndex(const MemSDNode *N) {
 SDValue SITargetLowering::performMemSDNodeCombine(MemSDNode *N,
                                                   DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
-  SDLoc SL(N);
 
   unsigned PtrIdx = getBasePtrIndex(N);
   SDValue Ptr = N->getOperand(PtrIdx);

@@ -261,8 +261,22 @@ static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
           << Str->getSourceRange();
     else if (StrLength - 1 == ArrayLen) {
       // If the entity being initialized has the nonstring attribute, then
-      // silence the "missing nonstring" diagnostic.
-      if (const ValueDecl *D = Entity.getDecl();
+      // silence the "missing nonstring" diagnostic. If there's no entity,
+      // check whether we're initializing an array of arrays; if so, walk the
+      // parents to find an entity.
+      auto FindCorrectEntity =
+          [](const InitializedEntity *Entity) -> const ValueDecl * {
+        while (Entity) {
+          if (const ValueDecl *VD = Entity->getDecl())
+            return VD;
+          if (!Entity->getType()->isArrayType())
+            return nullptr;
+          Entity = Entity->getParent();
+        }
+
+        return nullptr;
+      };
+      if (const ValueDecl *D = FindCorrectEntity(&Entity);
           !D || !D->hasAttr<NonStringAttr>())
         S.Diag(
             Str->getBeginLoc(),
@@ -1621,8 +1635,9 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
     //   initial value of the object, including unnamed members, is
     //   that of the expression.
     ExprResult ExprRes = expr;
-    if (SemaRef.CheckSingleAssignmentConstraints(
-            ElemType, ExprRes, !VerifyOnly) != Sema::Incompatible) {
+    if (SemaRef.CheckSingleAssignmentConstraints(ElemType, ExprRes,
+                                                 !VerifyOnly) !=
+        AssignConvertType::Incompatible) {
       if (ExprRes.isInvalid())
         hadError = true;
       else {
@@ -2912,7 +2927,7 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
         if (TypoCorrection Corrected = SemaRef.CorrectTypo(
                 DeclarationNameInfo(FieldName, D->getFieldLoc()),
                 Sema::LookupMemberName, /*Scope=*/nullptr, /*SS=*/nullptr, CCC,
-                Sema::CTK_ErrorRecovery, RD)) {
+                CorrectTypoKind::ErrorRecovery, RD)) {
           SemaRef.diagnoseTypo(
               Corrected,
               SemaRef.PDiag(diag::err_field_designator_unknown_suggest)
@@ -3510,7 +3525,7 @@ CheckArrayDesignatorExpr(Sema &S, Expr *Index, llvm::APSInt &Value) {
 
   // Make sure this is an integer constant expression.
   ExprResult Result =
-      S.VerifyIntegerConstantExpression(Index, &Value, Sema::AllowFold);
+      S.VerifyIntegerConstantExpression(Index, &Value, AllowFoldKind::Allow);
   if (Result.isInvalid())
     return Result;
 
@@ -5827,7 +5842,6 @@ static void TryOrBuildParenListInitialization(
 
   if (const ArrayType *AT =
           S.getASTContext().getAsArrayType(Entity.getType())) {
-    SmallVector<InitializedEntity, 4> ElementEntities;
     uint64_t ArrayLength;
     // C++ [dcl.init]p16.5
     //   if the destination type is an array, the object is initialized as
@@ -6607,12 +6621,16 @@ void InitializationSequence::InitializeFrom(Sema &S,
       // initializer present.
       if (!Initializer) {
         if (const FieldDecl *FD = getConstField(Rec)) {
-          unsigned DiagID = diag::warn_default_init_const_unsafe;
+          unsigned DiagID = diag::warn_default_init_const_field_unsafe;
           if (Var->getStorageDuration() == SD_Static ||
               Var->getStorageDuration() == SD_Thread)
-            DiagID = diag::warn_default_init_const;
+            DiagID = diag::warn_default_init_const_field;
 
-          S.Diag(Var->getLocation(), DiagID) << Var->getType() << /*member*/ 1;
+          bool EmitCppCompat = !S.Diags.isIgnored(
+              diag::warn_cxx_compat_hack_fake_diagnostic_do_not_emit,
+              Var->getLocation());
+
+          S.Diag(Var->getLocation(), DiagID) << Var->getType() << EmitCppCompat;
           S.Diag(FD->getLocation(), diag::note_default_init_const_member) << FD;
         }
       }
@@ -8364,9 +8382,9 @@ ExprResult InitializationSequence::Perform(Sema &S,
       // Save off the initial CurInit in case we need to emit a diagnostic
       ExprResult InitialCurInit = Init;
       ExprResult Result = Init;
-      Sema::AssignConvertType ConvTy =
-        S.CheckSingleAssignmentConstraints(Step->Type, Result, true,
-            Entity.getKind() == InitializedEntity::EK_Parameter_CF_Audited);
+      AssignConvertType ConvTy = S.CheckSingleAssignmentConstraints(
+          Step->Type, Result, true,
+          Entity.getKind() == InitializedEntity::EK_Parameter_CF_Audited);
       if (Result.isInvalid())
         return ExprError();
       CurInit = Result;
@@ -8375,8 +8393,8 @@ ExprResult InitializationSequence::Perform(Sema &S,
       ExprResult CurInitExprRes = CurInit;
       if (!S.IsAssignConvertCompatible(ConvTy) && Entity.isParameterKind() &&
           S.CheckTransparentUnionArgumentConstraints(
-              Step->Type, CurInitExprRes) == Sema::Compatible)
-        ConvTy = Sema::Compatible;
+              Step->Type, CurInitExprRes) == AssignConvertType::Compatible)
+        ConvTy = AssignConvertType::Compatible;
       if (CurInitExprRes.isInvalid())
         return ExprError();
       CurInit = CurInitExprRes;
@@ -9233,8 +9251,7 @@ bool InitializationSequence::Diagnose(Sema &S,
         // implicit.
         if (S.isImplicitlyDeleted(Best->Function))
           S.Diag(Kind.getLocation(), diag::err_ovl_deleted_special_init)
-              << llvm::to_underlying(
-                     S.getSpecialMember(cast<CXXMethodDecl>(Best->Function)))
+              << S.getSpecialMember(cast<CXXMethodDecl>(Best->Function))
               << DestType << ArgsRange;
         else {
           StringLiteral *Msg = Best->Function->getDeletedMessage();

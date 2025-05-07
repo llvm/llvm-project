@@ -5843,7 +5843,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
           Triple.getArch() != llvm::Triple::x86_64)
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << Name << Triple.getArchName();
-    } else if (Name == "LIBMVEC-X86") {
+    } else if (Name == "libmvec") {
       if (Triple.getArch() != llvm::Triple::x86 &&
           Triple.getArch() != llvm::Triple::x86_64)
         D.Diag(diag::err_drv_unsupported_opt_for_target)
@@ -7012,6 +7012,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_fdiagnostics_parseable_fixits);
   Args.AddLastArg(CmdArgs, options::OPT_ftime_report);
   Args.AddLastArg(CmdArgs, options::OPT_ftime_report_EQ);
+  Args.AddLastArg(CmdArgs, options::OPT_ftime_report_json);
   Args.AddLastArg(CmdArgs, options::OPT_ftrapv);
   Args.AddLastArg(CmdArgs, options::OPT_malign_double);
   Args.AddLastArg(CmdArgs, options::OPT_fno_temp_file);
@@ -9297,6 +9298,11 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
           CmdArgs.push_back(
               Args.MakeArgString("--device-linker=" + TC->getTripleString() +
                                  "=-plugin-opt=-avail-extern-to-local"));
+          if (Kind == Action::OFK_OpenMP) {
+            CmdArgs.push_back(
+                Args.MakeArgString("--device-linker=" + TC->getTripleString() +
+                                   "=-plugin-opt=-amdgpu-internalize-symbols"));
+          }
         }
       }
     }

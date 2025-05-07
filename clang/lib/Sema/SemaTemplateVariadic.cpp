@@ -1158,7 +1158,7 @@ ExprResult Sema::ActOnSizeofParameterPackExpr(Scope *S,
     ParameterPackValidatorCCC CCC{};
     if (TypoCorrection Corrected =
             CorrectTypo(R.getLookupNameInfo(), R.getLookupKind(), S, nullptr,
-                        CCC, CTK_ErrorRecovery)) {
+                        CCC, CorrectTypoKind::ErrorRecovery)) {
       diagnoseTypo(Corrected,
                    PDiag(diag::err_sizeof_pack_no_pack_name_suggest) << &Name,
                    PDiag(diag::note_parameter_pack_here));
@@ -1229,7 +1229,7 @@ ExprResult Sema::BuildPackIndexingExpr(Expr *PackExpression,
     llvm::APSInt Value(Context.getIntWidth(Context.getSizeType()));
 
     ExprResult Res = CheckConvertedConstantExpression(
-        IndexExpr, Context.getSizeType(), Value, CCEK_ArrayBound);
+        IndexExpr, Context.getSizeType(), Value, CCEKind::ArrayBound);
     if (!Res.isUsable())
       return ExprError();
     Index = Value.getExtValue();
