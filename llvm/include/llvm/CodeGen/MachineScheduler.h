@@ -1196,6 +1196,9 @@ protected:
   const MachineSchedContext *Context;
   const TargetSchedModel *SchedModel = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
+  unsigned TopIdx = 0;
+  unsigned BotIdx = 0;
+  unsigned NumRegionInstrs = 0;
 
   MachineSchedPolicy RegionPolicy;
 
