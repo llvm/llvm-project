@@ -4033,6 +4033,12 @@ TEST_F(TokenAnnotatorTest, UserDefinedLiteral) {
   EXPECT_EQ(Tokens[3]->TokenText, "2_$");
 }
 
+TEST_F(TokenAnnotatorTest, EnumColonInTypedef) {
+  auto Tokens = annotate("typedef enum : int {} foo;");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::colon, TT_Unknown); // Not TT_InheritanceColon.
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
