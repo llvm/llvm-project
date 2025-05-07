@@ -752,16 +752,16 @@ struct PadSliceOptimization : public OpRewritePattern<tosa::SliceOp> {
     // Check input is statically ranked
     auto inputTy = dyn_cast<RankedTensorType>(padOp.getInput1().getType());
     auto padTy = dyn_cast<RankedTensorType>(padOp.getType());
-    if (!inputTy || !padTy)
-      return rewriter.notifyMatchFailure(
-          sliceOp, "slice input must be a static ranked tensor");
+    if (!inputTy || !padTy || !inputTy.hasRank())
+      return rewriter.notifyMatchFailure(sliceOp,
+                                         "slice input must be a ranked tensor");
 
     // Validate and extract tosa::PadOp padding
     DenseIntElementsAttr paddingElems;
     if (!matchPattern(padOp.getPadding(), m_Constant(&paddingElems))) {
       return rewriter.notifyMatchFailure(
           sliceOp,
-          "The `padding` input specified on the tosa::PadOp must be constant.");
+          "`padding` input specified on the tosa::PadOp must be constant.");
     }
     llvm::SmallVector<int64_t> padPaddings =
         llvm::to_vector(paddingElems.getValues<int64_t>());
@@ -781,12 +781,25 @@ struct PadSliceOptimization : public OpRewritePattern<tosa::SliceOp> {
     llvm::SmallVector<int64_t> sliceSizes =
         llvm::to_vector(sizeElems.getValues<int64_t>());
 
-    // Update the paddings
-    int64_t rank = inputTy.getRank();
+    // Check if dynamic dimensions are sliced
+    const int64_t rank = inputTy.getRank();
+    if (llvm::any_of(llvm::seq<int64_t>(0, rank), [&](int64_t i) {
+          const bool isDimDynamic = inputTy.isDynamicDim(i);
+          const bool isDimSliced =
+              (sliceStarts[i] != 0) || (sliceSizes[i] != -1);
+
+          return isDimDynamic && isDimSliced;
+        })) {
+      return rewriter.notifyMatchFailure(
+          sliceOp, "axis that are sliced shall be statically known.");
+    }
+
+    // Update the parameters
     llvm::SmallVector<int64_t> newSliceStarts(rank, 0);
     llvm::SmallVector<int64_t> newPadPaddings(2 * rank, 0);
-    llvm::SmallVector<int64_t> newPadShape(rank, 0);
+    llvm::SmallVector<int64_t> newPadShape(rank, ShapedType::kDynamic);
     bool updated = false;
+
     for (int64_t i = 0; i < rank; ++i) {
       const int64_t padLo = padPaddings[i * 2];
       const int64_t padHi = padPaddings[i * 2 + 1];
@@ -794,33 +807,34 @@ struct PadSliceOptimization : public OpRewritePattern<tosa::SliceOp> {
       const int64_t sliceSize = sliceSizes[i];
       const int64_t sliceEnd = sliceStart + sliceSize;
 
+      // If dimension is dynamic pass-through
+      if (inputTy.isDynamicDim(i)) {
+        newPadPaddings[i * 2] = padLo;
+        newPadPaddings[i * 2 + 1] = padHi;
+        newSliceStarts[i] = sliceStart;
+        continue;
+      }
+
+      // Handle static dimensions
       const int64_t dimSize = inputTy.getShape()[i];
-      const int64_t dimStart = padLo;
-      const int64_t dimEnd = padLo + dimSize;
       const int64_t dimTotal = padLo + dimSize + padHi;
 
       // Check slice within bounds
       if (sliceStart < 0 || sliceEnd > dimTotal)
-        return rewriter.notifyMatchFailure(sliceOp, "slice out-of-bounds");
+        return rewriter.notifyMatchFailure(sliceOp, "slice is out-of-bounds");
 
+      // Compute updated slice start parameter
+      const int64_t newSliceStart = std::max<int64_t>(sliceStart - padLo, 0);
+      newSliceStarts[i] = newSliceStart;
+      updated |= newSliceStart != sliceStart;
+
+      // Compute updated pad parameters
       const int64_t newPadLo = std::max<int64_t>(padLo - sliceStart, 0);
       const int64_t newPadHi =
           std::max<int64_t>(sliceEnd - (padLo + dimSize), 0);
-      const int64_t newSliceStart = std::max<int64_t>(sliceStart - padLo, 0);
-
-      // Compute update slice/pad parameters
-      if (sliceStart < dimStart || sliceEnd > dimEnd) {
-        // Handle slice when not within the original input entirely
-        updated |= (newPadLo != padLo) || (newPadHi != padHi) ||
-                   (newSliceStart != sliceStart);
-        newPadPaddings[i * 2] = newPadLo;
-        newPadPaddings[i * 2 + 1] = newPadHi;
-        newSliceStarts[i] = newSliceStart;
-      } else {
-        // Slice is within the original input
-        updated |= newSliceStart != sliceStart;
-        newSliceStarts[i] = newSliceStart;
-      }
+      newPadPaddings[i * 2] = newPadLo;
+      newPadPaddings[i * 2 + 1] = newPadHi;
+      updated |= (newPadLo != padLo) || (newPadHi != padHi);
 
       // Calculate new pad output shape
       newPadShape[i] =
