@@ -1705,18 +1705,38 @@ let TargetPrefix = "riscv" in {
 
   // Segment loads/stores for fixed vectors.
   foreach nf = [2, 3, 4, 5, 6, 7, 8] in {
+    // Input: (pointer, vl)
     def int_riscv_seg # nf # _load
           : DefaultAttrsIntrinsic<!listconcat([llvm_anyvector_ty],
                                               !listsplat(LLVMMatchType<0>,
                                               !add(nf, -1))),
                                   [llvm_anyptr_ty, llvm_anyint_ty],
                                   [NoCapture<ArgIndex<0>>, IntrReadMem]>;
+    // Input: (pointer, mask, vl)
+    def int_riscv_seg # nf # _load_mask
+          : DefaultAttrsIntrinsic<!listconcat([llvm_anyvector_ty],
+                                              !listsplat(LLVMMatchType<0>,
+                                              !add(nf, -1))),
+                                  [llvm_ptr_ty, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                   llvm_anyint_ty],
+                                  [NoCapture<ArgIndex<0>>, IntrReadMem]>;
+
+    // Input: (<stored values>, pointer, vl)
     def int_riscv_seg # nf # _store
           : DefaultAttrsIntrinsic<[],
                                   !listconcat([llvm_anyvector_ty],
                                               !listsplat(LLVMMatchType<0>,
                                                           !add(nf, -1)),
                                               [llvm_anyptr_ty, llvm_anyint_ty]),
+                                  [NoCapture<ArgIndex<nf>>, IntrWriteMem]>;
+    // Input: (<stored values>, pointer, mask, vl)
+    def int_riscv_seg # nf # _store_mask
+          : DefaultAttrsIntrinsic<[],
+                                  !listconcat([llvm_anyvector_ty],
+                                              !listsplat(LLVMMatchType<0>,
+                                                          !add(nf, -1)),
+                                              [llvm_ptr_ty, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                               llvm_anyint_ty]),
                                   [NoCapture<ArgIndex<nf>>, IntrWriteMem]>;
   }
 
