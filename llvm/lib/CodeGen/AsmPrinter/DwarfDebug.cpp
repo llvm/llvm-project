@@ -2370,12 +2370,14 @@ void DwarfDebug::computeKeyInstructions(const MachineFunction *MF) {
   // For each instruction:
   //   * Skip insts without DebugLoc, AtomGroup or AtomRank, and line zeros.
   //   * Check if insts in this group have been seen already in GroupCandidates.
-  //     * If this instr rank is equal, add this instruction to KeyInstructions.
-  //       Remove existing instructions from KeyInstructions if they have the
+  //     * If this instr rank is equal, add this instruction to GroupCandidates.
+  //       Remove existing instructions from GroupCandidates if they have the
   //       same parent.
   //     * If this instr rank is higher (lower precedence), ignore it.
   //     * If this instr rank is lower (higher precedence), erase existing
-  //       instructions from KeyInstructions. Add this instr to KeyInstructions.
+  //       instructions from GroupCandidates and add this one.
+  //
+  // Then insert each GroupCandidates instruction into KeyInstructions.
 
   for (auto &MBB : *MF) {
     // Rather than apply is_stmt directly to Key Instructions, we "float"
@@ -2400,7 +2402,7 @@ void DwarfDebug::computeKeyInstructions(const MachineFunction *MF) {
       if (!Buoy ||
           Buoy->getDebugLoc().getLine() != MI.getDebugLoc().getLine()) {
         Buoy = &MI;
-        BuoyAtom = 0;
+        BuoyAtom = 0; // Set later when we know which atom the buoy is used by.
       }
 
       // Call instructions are handled specially - we always mark them as key
