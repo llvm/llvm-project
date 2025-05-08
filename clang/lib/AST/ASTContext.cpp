@@ -7208,9 +7208,12 @@ QualType ASTContext::getDeducedTemplateSpecializationTypeInternal(
   auto *DTST = new (*this, alignof(DeducedTemplateSpecializationType))
       DeducedTemplateSpecializationType(Template, DeducedType, IsDependent,
                                         Canon);
+
+#ifndef NDEBUG
   llvm::FoldingSetNodeID TempID;
   DTST->Profile(TempID);
   assert(ID == TempID && "ID does not match");
+#endif
   Types.push_back(DTST);
   DeducedTemplateSpecializationTypes.InsertNode(DTST, InsertPos);
   return QualType(DTST, 0);
