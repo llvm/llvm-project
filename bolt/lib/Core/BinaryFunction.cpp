@@ -3753,14 +3753,6 @@ void BinaryFunction::postProcessBranches() {
   assert(validateCFG() && "invalid CFG");
 }
 
-bool BinaryFunction::canClone() const {
-  if (opts::Instrument)
-    return false;
-
-  // Check for the presence of metadata that cannot be duplicated.
-  return !hasEHRanges() && !hasSDTMarker() && !hasPseudoProbe() && !hasORC();
-}
-
 MCSymbol *BinaryFunction::addEntryPointAtOffset(uint64_t Offset) {
   assert(Offset && "cannot add primary entry point");
   assert(CurrentState == State::Empty || CurrentState == State::Disassembled);

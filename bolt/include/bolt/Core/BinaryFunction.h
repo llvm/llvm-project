@@ -1383,11 +1383,6 @@ public:
   /// Return true if the function should not have associated symbol table entry.
   bool isAnonymous() const { return IsAnonymous; }
 
-  /// Return true if we can allow the execution of the original body of the
-  /// function and its rewritten copy. This means, e.g., that metadata
-  /// associated with the function can be duplicated/cloned.
-  bool canClone() const;
-
   /// If this function was folded, return the function it was folded into.
   BinaryFunction *getFoldedIntoFunction() const { return FoldedIntoFunction; }
 
