@@ -107,8 +107,8 @@ class OpenACCClauseCIREmitter final
         .CaseLower("radeon", mlir::acc::DeviceType::Radeon);
   }
 
-  mlir::acc::GangArgType decodeGangType(OpenACCGangKind GK) {
-    switch (GK) {
+  mlir::acc::GangArgType decodeGangType(OpenACCGangKind gk) {
+    switch (gk) {
     case OpenACCGangKind::Num:
       return mlir::acc::GangArgType::Num;
     case OpenACCGangKind::Dim:
@@ -444,8 +444,8 @@ public:
       } else {
         llvm::SmallVector<mlir::Value> values;
         llvm::SmallVector<mlir::acc::GangArgType> argTypes;
-        for (unsigned I = 0; I < clause.getNumExprs(); ++I) {
-          auto [kind, expr] = clause.getExpr(I);
+        for (unsigned i : llvm::index_range(0u, clause.getNumExprs())) {
+          auto [kind, expr] = clause.getExpr(i);
           mlir::Location exprLoc = cgf.cgm.getLoc(expr->getBeginLoc());
           argTypes.push_back(decodeGangType(kind));
           if (kind == OpenACCGangKind::Dim) {

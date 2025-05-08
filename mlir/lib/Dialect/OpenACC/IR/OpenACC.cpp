@@ -2758,8 +2758,9 @@ void acc::LoopOp::addGangOperands(
     MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes,
     llvm::ArrayRef<GangArgType> argTypes, mlir::ValueRange values) {
   llvm::SmallVector<int32_t> segments;
-  if (getGangOperandsSegments())
-    llvm::copy(*getGangOperandsSegments(), std::back_inserter(segments));
+  if (std::optional<ArrayRef<int32_t>> existingSegments =
+          getGangOperandsSegments())
+    llvm::copy(*existingSegments, std::back_inserter(segments));
 
   unsigned beforeCount = segments.size();
 
@@ -2781,11 +2782,13 @@ void acc::LoopOp::addGangOperands(
     if (getGangOperandsArgTypeAttr())
       llvm::copy(getGangOperandsArgTypeAttr(), std::back_inserter(gangTypes));
 
-    for (unsigned I = 0; I < numAdded; ++I)
+    for (auto i : llvm::index_range(0u, numAdded)) {
       llvm::transform(argTypes, std::back_inserter(gangTypes),
                       [=](mlir::acc::GangArgType gangTy) {
                         return mlir::acc::GangArgTypeAttr::get(context, gangTy);
                       });
+      (void)i;
+    }
 
     setGangOperandsArgTypeAttr(mlir::ArrayAttr::get(context, gangTypes));
   }
