@@ -33,7 +33,28 @@ test_got:
         leal    named_data2@GOT+5, %eax
         .size   test_got, .-test_got
 
+# Test R_386_GOT32X handling.
+#
+# We want to check both the offset to the GOT entry and its contents.
+# jitlink-check: decode_operand(test_gotx_load, 4) = got_addr(elf_sm_pic_reloc_got.o, named_data1) - _GLOBAL_OFFSET_TABLE_
+# jitlink-check: *{4}(got_addr(elf_sm_pic_reloc_got.o, named_data1)) = named_data1
 
+        .globl test_gotx
+        .p2align      4, 0x90
+        .type   test_gotx,@function
+test_gotx:
+	calll	.L0$pb
+.L0$pb:
+	popl	%eax
+.Ltmp0:
+	addl	$_GLOBAL_OFFSET_TABLE_+(.Ltmp0-.L0$pb), %eax
+        .globl test_gotx_load
+test_gotx_load:
+	movl	named_data1@GOT(%eax), %eax
+        .size   test_gotx_load, .-test_gotx_load
+	movl	(%eax), %eax
+	retl
+        .size   test_gotx, .-test_gotx
 
 # Test GOTOFF64 handling.
 # jitlink-check: decode_operand(test_gotoff, 1) = named_func - _GLOBAL_OFFSET_TABLE_ + 99

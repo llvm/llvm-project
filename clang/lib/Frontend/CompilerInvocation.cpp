@@ -1846,6 +1846,10 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
   for (std::string Sanitizer : Values)
     GenerateArg(Consumer, OPT_fsanitize_skip_hot_cutoff_EQ, Sanitizer);
 
+  for (StringRef Sanitizer :
+       serializeSanitizerKinds(Opts.SanitizeAnnotateDebugInfo))
+    GenerateArg(Consumer, OPT_fsanitize_annotate_debug_info_EQ, Sanitizer);
+
   if (!Opts.EmitVersionIdentMetadata)
     GenerateArg(Consumer, OPT_Qn);
 
@@ -2339,6 +2343,11 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   Opts.SanitizeSkipHotCutoffs = parseSanitizerWeightedKinds(
       "-fsanitize-skip-hot-cutoff=",
       Args.getAllArgValues(OPT_fsanitize_skip_hot_cutoff_EQ), Diags);
+
+  parseSanitizerKinds(
+      "-fsanitize-annotate-debug-info=",
+      Args.getAllArgValues(OPT_fsanitize_annotate_debug_info_EQ), Diags,
+      Opts.SanitizeAnnotateDebugInfo);
 
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
 
