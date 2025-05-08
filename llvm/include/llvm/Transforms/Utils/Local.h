@@ -175,6 +175,22 @@ bool EliminateDuplicatePHINodes(BasicBlock *BB);
 bool EliminateDuplicatePHINodes(BasicBlock *BB,
                                 SmallPtrSetImpl<PHINode *> &ToRemove);
 
+/// Check for and eliminate duplicate PHI nodes in the block. This function is
+/// specifically designed for scenarios where new PHI nodes are inserted into
+/// the beginning of the block, such when SSAUpdaterBulk::RewriteAllUses. It
+/// compares the newly inserted PHI nodes against the existing ones and if a
+/// new PHI node is found to be a duplicate of an existing one, the new node is
+/// removed. Existing PHI nodes are left unmodified, even if they are
+/// duplicates. New nodes are also deleted if they are duplicates of each other.
+/// Similar to EliminateDuplicatePHINodes, this function assumes a consistent
+/// order for all incoming values across PHI nodes in the block. FirstExistingPN
+/// Points to the first existing PHI node in the block. Newly inserted PHI nodes
+/// should not reference one another. However, they may reference themselves or
+/// existing PHI nodes, and existing PHI nodes may reference the newly inserted
+/// PHI nodes.
+bool EliminateNewDuplicatePHINodes(BasicBlock *BB,
+                                   BasicBlock::phi_iterator FirstExistingPN);
+
 /// This function is used to do simplification of a CFG.  For example, it
 /// adjusts branches to branches to eliminate the extra hop, it eliminates
 /// unreachable basic blocks, and does other peephole optimization of the CFG.
