@@ -2164,6 +2164,7 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
         OpWithBodyGenInfo(converter, symTable, semaCtx, loc, nestedEval,
                           llvm::omp::Directive::OMPD_section)
             .setClauses(&sectionQueue.begin()->clauses)
+            .setDataSharingProcessor(&dsp)
             .setEntryBlockArgs(&args),
         sectionQueue, sectionQueue.begin());
   }
