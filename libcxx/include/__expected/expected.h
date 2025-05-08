@@ -30,6 +30,7 @@
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_reference.h>
+#include <__type_traits/is_replaceable.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/is_trivially_constructible.h>
@@ -471,6 +472,8 @@ public:
       __conditional_t<__libcpp_is_trivially_relocatable<_Tp>::value && __libcpp_is_trivially_relocatable<_Err>::value,
                       expected,
                       void>;
+  using __replaceable _LIBCPP_NODEBUG =
+      __conditional_t<__is_replaceable_v<_Tp> && __is_replaceable_v<_Err>, expected, void>;
 
   template <class _Up>
   using rebind = expected<_Up, error_type>;
