@@ -17,8 +17,7 @@ def make_buffer_verify_dict(start_idx, count, offset=0):
         verify_dict["[%i]" % (i)] = {"type": "int", "value": str(i + offset)}
     return verify_dict
 
-# DAP tests are flakey, see https://github.com/llvm/llvm-project/issues/137660.
-@skip
+
 class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
     def verify_values(self, verify_dict, actual, varref_dict=None, expression=None):
         if "equals" in verify_dict:
