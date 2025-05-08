@@ -269,15 +269,6 @@ enum OperandType : unsigned {
   OPERAND_KIMM_LAST = OPERAND_KIMM16
 
 };
-
-// Should be in sync with the OperandSemantics defined in SIRegisterInfo.td
-enum OperandSemantics : unsigned {
-  INT = 0,
-  FP16 = 1,
-  BF16 = 2,
-  FP32 = 3,
-  FP64 = 4,
-};
 }
 
 // Input operand modifiers bit-masks
