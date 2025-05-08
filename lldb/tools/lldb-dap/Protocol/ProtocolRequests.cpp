@@ -276,6 +276,18 @@ bool fromJSON(const json::Value &Params, AttachRequestArguments &ARA,
          O.mapOptional("coreFile", ARA.coreFile);
 }
 
+bool fromJSON(const llvm::json::Value &Params, ContinueArguments &CA,
+              llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("threadId", CA.threadId) &&
+         O.mapOptional("singleThread", CA.singleThread);
+}
+
+llvm::json::Value toJSON(const ContinueResponseBody &CRB) {
+  json::Object Body{{"allThreadsContinued", CRB.allThreadsContinued}};
+  return std::move(Body);
+}
+
 bool fromJSON(const llvm::json::Value &Params, SetVariableArguments &SVA,
               llvm::json::Path P) {
   json::ObjectMapper O(Params, P);
