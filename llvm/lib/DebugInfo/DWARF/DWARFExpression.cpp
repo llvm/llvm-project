@@ -533,5 +533,4 @@ bool DWARFExpressionPrinter::printCompact(
   return printCompactDWARFExpr(OS, E->begin(), E->end(), GetNameForDWARFReg);
 }
 
-
 } // namespace llvm
