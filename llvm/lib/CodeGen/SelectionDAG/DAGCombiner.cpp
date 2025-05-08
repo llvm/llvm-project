@@ -9551,6 +9551,90 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   return DAG.getNode(ISD::BSWAP, SDLoc(N), VT, ShiftedLoad);
 }
 
+// Try to find a tree of or's with leafs that are all loads that are offset from
+// the same base, and can be combined to a single larger load.
+static SDValue MatchOrOfLoadToLargeLoad(SDValue Root, SelectionDAG &DAG,
+                                        const TargetLowering &TLI) {
+  EVT VT = Root.getValueType();
+  SmallVector<SDValue> Worklist;
+  Worklist.push_back(Root);
+  SmallVector<std::pair<LoadSDNode *, int64_t>> Loads;
+  std::optional<BaseIndexOffset> Base;
+  LoadSDNode *BaseLoad = nullptr;
+
+  // Check up the chain of or instructions with loads at the end.
+  while (!Worklist.empty()) {
+    SDValue V = Worklist.pop_back_val();
+    if (!V.hasOneUse())
+      return SDValue();
+    if (V.getOpcode() == ISD::OR) {
+      Worklist.push_back(V.getOperand(0));
+      Worklist.push_back(V.getOperand(1));
+    } else if (V.getOpcode() == ISD::ZERO_EXTEND ||
+               V.getOpcode() == ISD::SIGN_EXTEND) {
+      Worklist.push_back(V.getOperand(0));
+    } else if (V.getOpcode() == ISD::LOAD) {
+      LoadSDNode *Ld = cast<LoadSDNode>(V.getNode());
+      if (!Ld->isSimple() || Ld->getMemoryVT().getSizeInBits() % 8 != 0)
+        return SDValue();
+
+      BaseIndexOffset Ptr = BaseIndexOffset::match(Ld, DAG);
+      int64_t ByteOffsetFromBase = 0;
+      if (!Base) {
+        Base = Ptr;
+        BaseLoad = Ld;
+      } else if (BaseLoad->getChain() != Ld->getChain() ||
+                 !Base->equalBaseIndex(Ptr, DAG, ByteOffsetFromBase))
+        return SDValue();
+      Loads.push_back({Ld, ByteOffsetFromBase});
+    } else {
+      return SDValue();
+    }
+  }
+
+  // Sort nodes by increasing ByteOffsetFromBase
+  llvm::sort(Loads, [](auto &A, auto &B) { return A.second < B.second; });
+  Base = BaseIndexOffset::match(Loads[0].first, DAG);
+
+  // Check that they are all adjacent in memory
+  int64_t BaseOffset = 0;
+  for (unsigned I = 0; I < Loads.size(); ++I) {
+    int64_t Offset = Loads[I].second - Loads[0].second;
+    if (Offset != BaseOffset)
+      return SDValue();
+    BaseOffset += Loads[I].first->getMemoryVT().getSizeInBits() / 8;
+  }
+
+  uint64_t MemSize =
+      Loads[Loads.size() - 1].second - Loads[0].second +
+      Loads[Loads.size() - 1].first->getMemoryVT().getSizeInBits() / 8;
+  if (!isPowerOf2_64(MemSize) || MemSize * 8 > VT.getSizeInBits())
+    return SDValue();
+  EVT MemVT = EVT::getIntegerVT(*DAG.getContext(), MemSize * 8);
+
+  bool NeedsZext = VT.bitsGT(MemVT);
+  if (!TLI.isLoadExtLegal(NeedsZext ? ISD::ZEXTLOAD : ISD::NON_EXTLOAD, VT,
+                          MemVT))
+    return SDValue();
+
+  unsigned Fast = 0;
+  bool Allowed =
+      TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), MemVT,
+                             *Loads[0].first->getMemOperand(), &Fast);
+  if (!Allowed || !Fast)
+    return SDValue();
+
+  SDValue NewLoad = DAG.getExtLoad(
+      NeedsZext ? ISD::ZEXTLOAD : ISD::NON_EXTLOAD, SDLoc(Root), VT,
+      Loads[0].first->getChain(), Loads[0].first->getBasePtr(),
+      Loads[0].first->getPointerInfo(), MemVT, Loads[0].first->getAlign());
+
+  // Transfer chain users from old loads to the new load.
+  for (auto &L : Loads)
+    DAG.makeEquivalentMemoryOrdering(L.first, NewLoad);
+  return NewLoad;
+}
+
 // If the target has andn, bsl, or a similar bit-select instruction,
 // we want to unfold masked merge, with canonical pattern of:
 //   |        A  |  |B|
@@ -28649,7 +28733,15 @@ SDValue DAGCombiner::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
                                    bool foldBooleans) {
   TargetLowering::DAGCombinerInfo
     DagCombineInfo(DAG, Level, false, this);
-  return TLI.SimplifySetCC(VT, N0, N1, Cond, foldBooleans, DagCombineInfo, DL);
+  if (SDValue C =
+          TLI.SimplifySetCC(VT, N0, N1, Cond, foldBooleans, DagCombineInfo, DL))
+    return C;
+
+  if ((Cond == ISD::SETNE || Cond == ISD::SETEQ) && isNullConstant(N1) &&
+      N0.getOpcode() == ISD::OR)
+    if (SDValue Load = MatchOrOfLoadToLargeLoad(N0, DAG, TLI))
+      return DAG.getSetCC(DL, VT, Load, N1, Cond);
+  return SDValue();
 }
 
 /// Given an ISD::SDIV node expressing a divide by constant, return
