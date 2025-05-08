@@ -2476,32 +2476,28 @@ void DwarfDebug::computeKeyInstructions(const MachineFunction *MF) {
              (CandidateRank != 0 && !CandidateInsts.empty()));
 
       assert(Rank && "expected nonzero rank");
-      if (CandidateRank == Rank) {
-        // We've seen other instructions in this group of this rank. Discard
-        // ones we've seen in this block, keep the others, add this one.
-        assert(!CandidateInsts.empty());
+      // If we've seen other instructions in this group with higher precedence
+      // (lower nonzero rank), don't add this one as a candidate.
+      if (CandidateRank && CandidateRank < Rank)
+        continue;
+
+      // If we've seen other instructions in this group of the same rank,
+      // discard any from this block (keeping the others). Else if we've
+      // seen other instructions in this group of lower precedence (higher
+      // rank), discard them all.
+      if (CandidateRank == Rank)
         llvm::remove_if(CandidateInsts, [&MI](const MachineInstr *Candidate) {
           return MI.getParent() == Candidate->getParent();
         });
-
-      } else if (CandidateRank > Rank) {
-        // We've seen other instructions in this group of lower precedence
-        // (higher rank). Discard them, add this one.
-        assert(!CandidateInsts.empty());
+      else if (CandidateRank > Rank)
         CandidateInsts.clear();
 
-      } else if (CandidateRank) {
-        // We've seen other instructions in this group with higher precedence
-        // (lower rank). Discard this one.
-        assert(Rank != 0 && CandidateRank < Rank && CandidateRank != 0);
-        continue;
-      }
+      // Add this candidate.
+      CandidateInsts.push_back(Buoy);
+      CandidateRank = Rank;
 
       assert(!BuoyAtom || BuoyAtom == MI.getDebugLoc()->getAtomGroup());
       BuoyAtom = MI.getDebugLoc()->getAtomGroup();
-
-      CandidateInsts.push_back(Buoy);
-      CandidateRank = Rank;
     }
   }
 
