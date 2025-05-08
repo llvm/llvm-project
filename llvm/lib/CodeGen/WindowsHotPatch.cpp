@@ -130,16 +130,7 @@ bool WindowsHotPatch::runOnModule(Module &M) {
         continue;
       }
 
-      llvm::StringRef FuncName{};
-      if (auto *SP = F.getSubprogram(); SP != nullptr) {
-        FuncName = SP->getLinkageName();
-        if (FuncName.empty()) {
-          FuncName = F.getName();
-        }
-      } else {
-        FuncName = F.getName();
-      }
-      if (HotPatchFunctionsSet.contains(FuncName)) {
+      if (HotPatchFunctionsSet.contains(F.getName())) {
         F.addFnAttr(Attribute::MarkedForWindowsHotPatching);
       }
     }

@@ -398,7 +398,7 @@ def MarkedForWindowsHotPatching
 /// decl, not the hotpatched function.
 def AllowDirectAccessInHotPatchFunction
     : EnumAttr<"allow_direct_access_in_hot_patch_function",
-               IntersectPreserve, []>;
+               IntersectPreserve, [FnAttr]>;
 
 /// Target-independent string attributes.
 def LessPreciseFPMAD : StrBoolAttr<"less-precise-fpmad">;

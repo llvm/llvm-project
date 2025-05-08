@@ -2,8 +2,6 @@
 //
 // RUN: %clang_cl -c --target=x86_64-windows-msvc -O2 /Z7 -fms-hotpatch-functions-file=%S/ms-hotpatch-functions.txt /Fo%t.obj %s
 // RUN: llvm-readobj --codeview %t.obj | FileCheck %s
-// CHECK: Kind: S_HOTPATCHFUNC (0x1169)
-// CHECK-NEXT: Function: this_gets_hotpatched
 
 void this_might_have_side_effects();
 
@@ -12,6 +10,11 @@ int __declspec(noinline) this_gets_hotpatched() {
     return 42;
 }
 
+// CHECK: Kind: S_HOTPATCHFUNC (0x1169)
+// CHECK-NEXT: Function: this_gets_hotpatched
+
 int __declspec(noinline) this_does_not_get_hotpatched() {
     return this_gets_hotpatched() + 100;
 }
+
+// CHECK-NOT: S_HOTPATCHFUNC
