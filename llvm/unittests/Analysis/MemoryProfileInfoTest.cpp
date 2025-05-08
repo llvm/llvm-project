@@ -88,14 +88,17 @@ TEST_F(MemoryProfileInfoTest, GetAllocType) {
                  100);
 
   // Make sure the option for detecting hot allocations is set.
+  bool OrigMemProfUseHotHints = MemProfUseHotHints;
   MemProfUseHotHints = true;
+
   // Test Hot
   // More accesses per byte per sec than hot threshold is hot.
   EXPECT_EQ(getAllocType(HotTotalLifetimeAccessDensityThreshold + 1, AllocCount,
                          ColdTotalLifetimeThreshold + 1),
             AllocationType::Hot);
-  // Undo the manual set of the option above.
-  cl::ResetAllOptionOccurrences();
+
+  // Restore original option value.
+  MemProfUseHotHints = OrigMemProfUseHotHints;
 
   // Without MemProfUseHotHints (default) we should treat simply as NotCold.
   EXPECT_EQ(getAllocType(HotTotalLifetimeAccessDensityThreshold + 1, AllocCount,
@@ -590,12 +593,13 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
   ASSERT_NE(Call, nullptr);
 
   // Specify that all non-cold contexts should be kept.
+  bool OrigMemProfKeepAllNotColdContexts = MemProfKeepAllNotColdContexts;
   MemProfKeepAllNotColdContexts = true;
 
   Trie.buildAndAttachMIBMetadata(Call);
 
-  // Undo the manual set of the MemProfKeepAllNotColdContexts above.
-  cl::ResetAllOptionOccurrences();
+  // Restore original option value.
+  MemProfKeepAllNotColdContexts = OrigMemProfKeepAllNotColdContexts;
 
   EXPECT_FALSE(Call->hasFnAttr("memprof"));
   EXPECT_TRUE(Call->hasMetadata(LLVMContext::MD_memprof));
