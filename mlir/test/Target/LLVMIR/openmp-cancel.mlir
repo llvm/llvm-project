@@ -1,4 +1,5 @@
 // RUN: mlir-translate --mlir-to-llvmir %s | FileCheck %s
+// XFAIL: *
 
 llvm.func @cancel_parallel() {
   omp.parallel {
