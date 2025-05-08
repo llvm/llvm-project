@@ -2433,19 +2433,12 @@ void DwarfDebug::computeKeyInstructions(const MachineFunction *MF) {
           // We've seen other instructions in this group of this rank. Discard
           // ones we've seen in this block, keep the others.
           assert(!CandidateInsts.empty());
-          SmallVector<const MachineInstr *> Insts;
-          Insts.reserve(CandidateInsts.size());
-          for (auto &PrevInst : CandidateInsts) {
-            if (PrevInst->getParent() != MI.getParent())
-              Insts.push_back(PrevInst);
-          }
+          llvm::remove_if(CandidateInsts, [&MI](const MachineInstr *Candidate) {
+            return MI.getParent() == Candidate->getParent();
+          });
 
-          if (Insts.empty()) {
-            CandidateInsts.clear();
+          if (CandidateInsts.empty())
             CandidateRank = 0;
-          } else {
-            CandidateInsts = std::move(Insts);
-          }
 
         } else if (CandidateRank > Rank) {
           // We've seen other instructions in this group of lower precedence
@@ -2484,14 +2477,10 @@ void DwarfDebug::computeKeyInstructions(const MachineFunction *MF) {
         // We've seen other instructions in this group of this rank. Discard
         // ones we've seen in this block, keep the others, add this one.
         assert(!CandidateInsts.empty());
-        SmallVector<const MachineInstr *> Insts;
-        Insts.reserve(CandidateInsts.size() + 1);
-        for (auto &PrevInst : CandidateInsts) {
-          if (PrevInst->getParent() != MI.getParent())
-            Insts.push_back(PrevInst);
-        }
-        Insts.push_back(Buoy);
-        CandidateInsts = std::move(Insts);
+        llvm::remove_if(CandidateInsts, [&MI](const MachineInstr *Candidate) {
+          return MI.getParent() == Candidate->getParent();
+        });
+        CandidateInsts.push_back(Buoy);
 
       } else if (CandidateRank > Rank) {
         // We've seen other instructions in this group of lower precedence
