@@ -258,10 +258,10 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
                      "llvm::ArrayRef<int32_t>": $lane_data,
                      "llvm::ArrayRef<int32_t>": $order),
       [{
-        auto sg_layout = DenseI32ArrayAttr();
-        auto sg_data = DenseI32ArrayAttr();
-        auto inst_data = DenseI32ArrayAttr();
-        return $_get($_ctxt, sg_layout, sg_data, inst_data,
+        return $_get($_ctxt,
+                     /*sg_layout =*/ nullptr,
+                     /*sg_data   =*/ nullptr,
+                     /*inst_data =*/ nullptr,
                      DenseI32ArrayAttr::get($_ctxt, lane_layout),
                      DenseI32ArrayAttr::get($_ctxt, lane_data),
                      DenseI32ArrayAttr::get($_ctxt, order));
@@ -270,11 +270,8 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
                      "DenseI32ArrayAttr": $lane_data,
                      "DenseI32ArrayAttr": $order),
       [{
-        auto sg_layout = DenseI32ArrayAttr();
-        auto sg_data = DenseI32ArrayAttr();
-        auto inst_data = DenseI32ArrayAttr();
-        return $_get($_ctxt, sg_layout, sg_data, inst_data,
-                     lane_layout, lane_data, order);
+        return $_get($_ctxt, /*sg_layout =*/ nullptr, /*sg_data =*/ nullptr,
+                  /*inst_data =*/ nullptr, lane_layout, lane_data, order);
       }]>
   ];
 
