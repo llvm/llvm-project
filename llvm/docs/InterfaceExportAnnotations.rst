@@ -288,18 +288,25 @@ method is declared ``virtual`` or ``override``.
    member-level annotations are combined on a class, it will fail compilation on
    Windows.
 
-If annotating a type with ``LLVM_ABI`` causes compilation issues such as those
-described
-`here <https://devblogs.microsoft.com/oldnewthing/20190927-00/?p=102932>`__,
-the class may require minor modification. Often, explicitly deleting the copy
-constructor and copy assignment operator will resolve the issue. It may also
-require an explicitly defaulted constructor.
+Compilation Errors
+++++++++++++++++++
+Annotating a class with ``LLVM_ABI`` causes the compiler to fully instantiate
+the class at compile time. This requires exporting every method that could be
+potentially used by a client even though no existing clients may actually use
+them. This can cause compilation errors that were not previously present.
+
+The most common type of error occurs when the compiler attempts to instantiate
+and export a class' implicit copy constructor and copy assignment operator. If
+the class contains move-only members that cannot be copied (``std::unique_ptr``
+for example), the compiler will fail to instantiate these implicit
+methods.
+
+This problem is easily addressed by explicitly deleting the class' copy
+constructor and copy assignment operator:
 
 .. code:: cpp
 
    #include "llvm/Support/Compiler.h"
-
-   #include <vector>
 
    class LLVM_ABI ExportedClass {
    public:
@@ -309,6 +316,11 @@ require an explicitly defaulted constructor.
      ExportedClass(ExportedClass const&) = delete;
      ExportedClass& operator=(ExportedClass const&) = delete;
    };
+
+We know this modification is harmless because any clients attempting to use
+these methods already would fail to compile. For a more detailed explanation,
+see `this Microsoft dev blog
+<https://devblogs.microsoft.com/oldnewthing/20190927-00/?p=102932>`__.
 
 Templates
 ~~~~~~~~~
