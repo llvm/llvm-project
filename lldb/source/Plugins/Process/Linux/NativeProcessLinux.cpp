@@ -312,10 +312,26 @@ NativeProcessLinux::Manager::Attach(
   Log *log = GetLog(POSIXLog::Process);
   LLDB_LOG(log, "pid = {0:x}", pid);
 
-  auto tids_or = NativeProcessLinux::Attach(pid);
-  if (!tids_or)
-    return tids_or.takeError();
-  ArrayRef<::pid_t> tids = *tids_or;
+  // This safety check lets us decide if we should
+  // seize or attach.
+  ProcessInstanceInfo process_info;
+  if (!Host::GetProcessInfo(pid, process_info))
+    return llvm::make_error<StringError>("Unable to read process info",
+                                         llvm::inconvertibleErrorCode());
+
+  std::vector<::pid_t> tids;
+  if (process_info.IsCoreDumping()) {
+    auto attached_or = NativeProcessLinux::Seize(pid);
+    if (!attached_or)
+      return attached_or.takeError();
+    tids = std::move(*attached_or);
+  } else {
+    auto attached_or = NativeProcessLinux::Attach(pid);
+    if (!attached_or)
+      return attached_or.takeError();
+    tids = std::move(*attached_or);
+  }
+
   llvm::Expected<ArchSpec> arch_or =
       NativeRegisterContextLinux::DetermineArchitecture(tids[0]);
   if (!arch_or)
@@ -444,6 +460,88 @@ NativeProcessLinux::NativeProcessLinux(::pid_t pid, int terminal_fd,
   SetState(StateType::eStateStopped, false);
 }
 
+llvm::Expected<std::vector<::pid_t>> NativeProcessLinux::Seize(::pid_t pid) {
+  Log *log = GetLog(POSIXLog::Process);
+
+  uint64_t options = GetDefaultPtraceOpts();
+  Status status;
+  // Use a map to keep track of the threads which we have attached/need to
+  // attach.
+  Host::TidMap tids_to_attach;
+  while (Host::FindProcessThreads(pid, tids_to_attach)) {
+    for (Host::TidMap::iterator it = tids_to_attach.begin();
+         it != tids_to_attach.end();) {
+      if (it->second == true) {
+        continue;
+      }
+      lldb::tid_t tid = it->first;
+      if ((status = PtraceWrapper(PTRACE_SEIZE, tid, nullptr, (void *)options))
+              .Fail()) {
+        // No such thread. The thread may have exited. More error handling
+        // may be needed.
+        if (status.GetError() == ESRCH) {
+          it = tids_to_attach.erase(it);
+          continue;
+        }
+        if (status.GetError() == EPERM) {
+          // Depending on the value of ptrace_scope, we can return a
+          // different error that suggests how to fix it.
+          return AddPtraceScopeNote(status.ToError());
+        }
+        return status.ToError();
+      }
+
+      if ((status = PtraceWrapper(PTRACE_INTERRUPT, tid)).Fail()) {
+        // No such thread. The thread may have exited. More error handling
+        // may be needed.
+        if (status.GetError() == ESRCH) {
+          it = tids_to_attach.erase(it);
+          continue;
+        }
+        if (status.GetError() == EPERM) {
+          // Depending on the value of ptrace_scope, we can return a
+          // different error that suggests how to fix it.
+          return AddPtraceScopeNote(status.ToError());
+        }
+        return status.ToError();
+      }
+
+      int wpid =
+          llvm::sys::RetryAfterSignal(-1, ::waitpid, tid, nullptr, __WALL);
+      // Need to use __WALL otherwise we receive an error with errno=ECHLD At
+      // this point we should have a thread stopped if waitpid succeeds.
+      if (wpid < 0) {
+        // No such thread. The thread may have exited. More error handling
+        // may be needed.
+        if (errno == ESRCH) {
+          it = tids_to_attach.erase(it);
+          continue;
+        }
+        return llvm::errorCodeToError(
+            std::error_code(errno, std::generic_category()));
+      }
+
+      LLDB_LOG(log, "adding tid = {0}", tid);
+      it->second = true;
+
+      // move the loop forward
+      ++it;
+    }
+  }
+
+  size_t tid_count = tids_to_attach.size();
+  if (tid_count == 0)
+    return llvm::make_error<StringError>("No such process",
+                                         llvm::inconvertibleErrorCode());
+
+  std::vector<::pid_t> tids;
+  tids.reserve(tid_count);
+  for (const auto &p : tids_to_attach)
+    tids.push_back(p.first);
+
+  return std::move(tids);
+}
+
 llvm::Expected<std::vector<::pid_t>> NativeProcessLinux::Attach(::pid_t pid) {
   Log *log = GetLog(POSIXLog::Process);
 
@@ -513,8 +611,8 @@ llvm::Expected<std::vector<::pid_t>> NativeProcessLinux::Attach(::pid_t pid) {
   return std::move(tids);
 }
 
-Status NativeProcessLinux::SetDefaultPtraceOpts(lldb::pid_t pid) {
-  long ptrace_opts = 0;
+uint64_t NativeProcessLinux::GetDefaultPtraceOpts() {
+  uint64_t ptrace_opts = 0;
 
   // Have the child raise an event on exit.  This is used to keep the child in
   // limbo until it is destroyed.
@@ -537,6 +635,11 @@ Status NativeProcessLinux::SetDefaultPtraceOpts(lldb::pid_t pid) {
   // the child finishes sharing memory.
   ptrace_opts |= PTRACE_O_TRACEVFORKDONE;
 
+  return ptrace_opts;
+}
+
+Status NativeProcessLinux::SetDefaultPtraceOpts(lldb::pid_t pid) {
+  uint64_t ptrace_opts = GetDefaultPtraceOpts();
   return PtraceWrapper(PTRACE_SETOPTIONS, pid, nullptr, (void *)ptrace_opts);
 }
 
