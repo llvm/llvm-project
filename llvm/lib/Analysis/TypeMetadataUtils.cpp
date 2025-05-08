@@ -17,6 +17,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/LibCXXABI.h"
 
 using namespace llvm;
 
@@ -48,6 +49,49 @@ findCallsAtConstantOffset(SmallVectorImpl<DevirtCallSite> &DevirtCalls,
       *HasNonCallUses = true;
     }
   }
+}
+
+// Check if a vtable slot loaded with offset value 'Offset' is a type id load.
+static bool hasTypeIdLoadAtConstantOffset(const Module *M, Value *VPtr,
+                                          int64_t Offset, const CallInst *CI,
+                                          CXXABI *ABI) {
+  bool HasTypeIdLoad = false;
+  for (const Use &U : VPtr->uses()) {
+    Value *User = U.getUser();
+    if (isa<BitCastInst>(User)) {
+      // Just skip the cast instruction.
+      HasTypeIdLoad |= hasTypeIdLoadAtConstantOffset(M, User, Offset, CI, ABI);
+    } else if (isa<LoadInst>(User)) {
+      // The LoadInst is the instruction that loads a vtable slot. If the offset
+      // from which it loads corresponds to the type id slot, then this load
+      // represents a type id load.
+      if (Offset ==
+          ABI->getOffsetFromTypeInfoSlotToAddressPoint(M->getDataLayout()))
+        return true;
+    } else if (auto GEP = dyn_cast<GetElementPtrInst>(User)) {
+      // Take into account the GEP offset.
+      if (VPtr == GEP->getPointerOperand() && GEP->hasAllConstantIndices()) {
+        SmallVector<Value *, 8> Indices(drop_begin(GEP->operands()));
+        int64_t GEPOffset = M->getDataLayout().getIndexedOffsetInType(
+            GEP->getSourceElementType(), Indices);
+        HasTypeIdLoad |=
+            hasTypeIdLoadAtConstantOffset(M, User, Offset + GEPOffset, CI, ABI);
+      }
+    } else if (auto *Call = dyn_cast<CallInst>(User)) {
+      if (Call->getIntrinsicID() == llvm::Intrinsic::load_relative) {
+        if (auto *LoadOffset = dyn_cast<ConstantInt>(Call->getOperand(1))) {
+          HasTypeIdLoad |=
+              hasTypeIdLoadAtConstantOffset(M, User, Offset, CI, ABI);
+        }
+      }
+    } else if (auto *Phi = dyn_cast<PHINode>(User)) {
+      // Continue search for PHINode.
+      HasTypeIdLoad |= hasTypeIdLoadAtConstantOffset(M, User, Offset, CI, ABI);
+    } else {
+      HasTypeIdLoad = true;
+    }
+  }
+  return HasTypeIdLoad;
 }
 
 // Search for virtual calls that load from VPtr and add them to DevirtCalls.
@@ -104,6 +148,30 @@ void llvm::findDevirtualizableCallsForTypeTest(
   if (!Assumes.empty())
     findLoadCallsAtConstantOffset(
         M, DevirtCalls, CI->getArgOperand(0)->stripPointerCasts(), 0, CI, DT);
+}
+
+bool llvm::hasTypeIdLoadForTypeTest(const CallInst *CI) {
+  assert(CI->getCalledFunction()->getIntrinsicID() == Intrinsic::type_test ||
+         CI->getCalledFunction()->getIntrinsicID() ==
+             Intrinsic::public_type_test);
+  Triple TT(CI->getModule()->getTargetTriple());
+  std::unique_ptr<CXXABI> ABI = CXXABI::Create(TT);
+  if (!ABI)
+    return false;
+  SmallVector<CallInst *, 1> Assumes;
+
+  const Module *M = CI->getModule();
+
+  // Find llvm.assume intrinsics for this llvm.type.test call.
+  for (const Use &CIU : CI->uses())
+    if (auto *Assume = dyn_cast<AssumeInst>(CIU.getUser()))
+      Assumes.push_back(Assume);
+
+  if (!Assumes.empty())
+    return hasTypeIdLoadAtConstantOffset(
+        M, CI->getArgOperand(0)->stripPointerCasts(), 0, CI, ABI.get());
+
+  return false;
 }
 
 void llvm::findDevirtualizableCallsForTypeCheckedLoad(

@@ -427,6 +427,7 @@ enum Kind {
   kw_args,
   kw_typeid,
   kw_typeidCompatibleVTable,
+  kw_typeidMayBeAccessed,
   kw_summary,
   kw_typeTestRes,
   kw_kind,

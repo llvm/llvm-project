@@ -1111,6 +1111,9 @@ bool LLParser::parseSummaryEntry() {
   case lltok::kw_typeidCompatibleVTable:
     result = parseTypeIdCompatibleVtableEntry(SummaryID);
     break;
+  case lltok::kw_typeidMayBeAccessed:
+    result = parseTypeIdMayBeAccessed(SummaryID);
+    break;
   case lltok::kw_flags:
     result = parseSummaryIndexFlags();
     break;
@@ -9094,6 +9097,33 @@ bool LLParser::parseTypeIdSummary(TypeIdSummary &TIS) {
 
 static ValueInfo EmptyVI =
     ValueInfo(false, (GlobalValueSummaryMapTy::value_type *)-8);
+
+bool LLParser::parseTypeIdMayBeAccessed(unsigned ID) {
+  assert(Lex.getKind() == lltok::kw_typeidMayBeAccessed);
+  Lex.Lex();
+
+  std::string Name;
+  if (parseToken(lltok::colon, "expected ':' here") ||
+      parseToken(lltok::lparen, "expected '(' here") ||
+      parseToken(lltok::kw_name, "expected 'name' here") ||
+      parseToken(lltok::colon, "expected ':' here") ||
+      parseStringConstant(Name))
+    return true;
+
+  Index->addTypeIdAccessed(Index->saveString(Name));
+
+  while (Lex.getKind() != lltok::rparen) {
+    if (parseToken(lltok::comma, "expected ',' here") ||
+        parseStringConstant(Name))
+      return true;
+    Index->addTypeIdAccessed(Index->saveString(Name));
+  }
+
+  if (parseToken(lltok::rparen, "expected ')' here"))
+    return true;
+
+  return false;
+}
 
 /// TypeIdCompatibleVtableEntry
 ///   ::= 'typeidCompatibleVTable' ':' '(' 'name' ':' STRINGCONSTANT ','

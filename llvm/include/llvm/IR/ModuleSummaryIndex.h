@@ -20,6 +20,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -623,6 +624,19 @@ public:
 
   /// Return the list of values referenced by this global value definition.
   ArrayRef<ValueInfo> refs() const { return RefEdgeList; }
+
+  /// Erase all reference whose name is equal to Name.
+  bool eraseRef(StringRef Name) {
+    bool Erased = false;
+    erase_if(RefEdgeList, [&](ValueInfo VI) {
+      if (VI.name() == Name) {
+        Erased = true;
+        return true;
+      }
+      return false;
+    });
+    return Erased;
+  }
 
   /// If this is an alias summary, returns the summary of the aliased object (a
   /// global variable or function), otherwise returns itself.
@@ -1414,6 +1428,9 @@ private:
   std::map<StringRef, TypeIdCompatibleVtableInfo, std::less<>>
       TypeIdCompatibleVtableMap;
 
+  /// Type identifiers that may be accessed at run time.
+  SetVector<StringRef> TypeIdMayBeAccessed;
+
   /// Mapping from original ID to GUID. If original ID can map to multiple
   /// GUIDs, it will be mapped to 0.
   DenseMap<GlobalValue::GUID, GlobalValue::GUID> OidGuidMap;
@@ -1920,6 +1937,12 @@ public:
       return std::nullopt;
     return I->second;
   }
+
+  void addTypeIdAccessed(StringRef TypeId) {
+    TypeIdMayBeAccessed.insert(TypeId);
+  }
+
+  const auto &getTypeIdAccessed() const { return TypeIdMayBeAccessed; }
 
   /// Collect for the given module the list of functions it defines
   /// (GUID -> Summary).

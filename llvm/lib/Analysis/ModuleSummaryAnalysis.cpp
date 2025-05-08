@@ -52,6 +52,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/LibCXXABI.h"
 #include <cassert>
 #include <cstdint>
 #include <vector>
@@ -202,7 +203,7 @@ static void addVCallToSet(
 /// If this intrinsic call requires that we add information to the function
 /// summary, do so via the non-constant reference arguments.
 static void addIntrinsicToSummary(
-    const CallInst *CI,
+    ModuleSummaryIndex &Index, const CallInst *CI,
     SetVector<GlobalValue::GUID, std::vector<GlobalValue::GUID>> &TypeTests,
     SetVector<FunctionSummary::VFuncId, std::vector<FunctionSummary::VFuncId>>
         &TypeTestAssumeVCalls,
@@ -241,6 +242,10 @@ static void addIntrinsicToSummary(
     for (auto &Call : DevirtCalls)
       addVCallToSet(Call, Guid, TypeTestAssumeVCalls,
                     TypeTestAssumeConstVCalls);
+
+    if (Triple(CI->getModule()->getTargetTriple()).getOS() == Triple::Linux &&
+        hasTypeIdLoadForTypeTest(CI))
+      Index.addTypeIdAccessed(TypeId->getString());
 
     break;
   }
@@ -433,7 +438,7 @@ static void computeFunctionSummary(
       if (CalledFunction) {
         if (CI && CalledFunction->isIntrinsic()) {
           addIntrinsicToSummary(
-              CI, TypeTests, TypeTestAssumeVCalls, TypeCheckedLoadVCalls,
+              Index, CI, TypeTests, TypeTestAssumeVCalls, TypeCheckedLoadVCalls,
               TypeTestAssumeConstVCalls, TypeCheckedLoadConstVCalls, DT);
           continue;
         }
@@ -911,6 +916,63 @@ static void setLiveRoot(ModuleSummaryIndex &Index, StringRef Name) {
       Summary->setLive(true);
 }
 
+// Return true if the User U is reachable from a non-vtable user
+// through the use-def chain.
+static bool hasNonVTableUsers(const User *U, CXXABI *ABI) {
+  LLVM_DEBUG(dbgs() << "Check if " << *U << "has vtable users\n");
+  if (isa<Instruction>(U)) {
+    // If the type info is used in dynamic_cast or exception handling,
+    // its user must be the instruction.
+    return true;
+  }
+
+  // The virtual table type is either a struct of arrays. For example:
+  // @vtable = constant { [3 x ptr] } { [3 x ptr] [ ptr null, ptr @rtti, ptr @vf] }
+  //
+  // In this case, the user of @rtti is an anonymous ConstantArray.
+  // Therefore, if the user of the type information is anonymous,
+  // we need to perform a depth-first search (DFS) to locate its named users.
+  //
+  // And we also need to iterate its users if the current user is the type
+  // info global variable itself.
+  StringRef Name = U->getName();
+  if (Name.empty() || ABI->isTypeInfo(Name)) {
+    for (const User *It : U->users())
+      if (hasNonVTableUsers(It, ABI))
+        return true;
+    return false;
+  }
+
+  auto *GV = dyn_cast<GlobalVariable>(U);
+  if (!GV || GV->getMetadata(LLVMContext::MD_type))
+    return true;
+
+  return false;
+}
+
+static void analyzeRTTIVars(ModuleSummaryIndex &Index, const Module &M) {
+  Triple TT(M.getTargetTriple());
+
+  std::unique_ptr<CXXABI> ABI = CXXABI::Create(TT);
+  if (!ABI)
+    return;
+
+  for (const GlobalVariable &GV : M.globals()) {
+    if (!ABI->isTypeInfo(GV.getName()))
+      continue;
+
+    if (hasNonVTableUsers(&GV, ABI.get())) {
+      std::string TypeName =
+          ABI->getTypeNameFromTypeInfo(GV.getName());
+      const GlobalVariable *TypeNameGV = M.getNamedGlobal(TypeName);
+      if (TypeNameGV)
+        Index.addTypeIdAccessed(TypeNameGV->getName());
+      else
+        Index.addTypeIdAccessed(Index.saveString(TypeName));
+    }
+  }
+}
+
 ModuleSummaryIndex llvm::buildModuleSummaryIndex(
     const Module &M,
     std::function<BlockFrequencyInfo *(const Function &F)> GetBFICallback,
@@ -1018,6 +1080,8 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
   if (auto *MD =
           mdconst::extract_or_null<ConstantInt>(M.getModuleFlag("ThinLTO")))
     IsThinLTO = MD->getZExtValue();
+
+  analyzeRTTIVars(Index, M);
 
   // Compute summaries for all functions defined in module, and save in the
   // index.

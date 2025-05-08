@@ -1003,6 +1003,7 @@ private:
   void parseTypeIdCompatibleVtableSummaryRecord(ArrayRef<uint64_t> Record);
   void parseTypeIdCompatibleVtableInfo(ArrayRef<uint64_t> Record, size_t &Slot,
                                        TypeIdCompatibleVtableInfo &TypeId);
+  void parseTypeIdAccessed(ArrayRef<uint64_t> Record);
   std::vector<FunctionSummary::ParamAccess>
   parseParamAccesses(ArrayRef<uint64_t> Record);
   SmallVector<unsigned> parseAllocInfoContext(ArrayRef<uint64_t> Record,
@@ -7557,6 +7558,14 @@ void ModuleSummaryIndexBitcodeReader::parseTypeIdCompatibleVtableInfo(
   TypeId.push_back({Offset, Callee});
 }
 
+void ModuleSummaryIndexBitcodeReader::parseTypeIdAccessed(
+    ArrayRef<uint64_t> Record) {
+  for (unsigned I = 0; I < Record.size(); I += 2) {
+    TheIndex.addTypeIdAccessed(
+        {Strtab.data() + Record[I], static_cast<size_t>(Record[I + 1])});
+  }
+}
+
 void ModuleSummaryIndexBitcodeReader::parseTypeIdCompatibleVtableSummaryRecord(
     ArrayRef<uint64_t> Record) {
   size_t Slot = 0;
@@ -8049,6 +8058,10 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
 
     case bitc::FS_TYPE_ID_METADATA:
       parseTypeIdCompatibleVtableSummaryRecord(Record);
+      break;
+
+    case bitc::FS_RTTI:
+      parseTypeIdAccessed(Record);
       break;
 
     case bitc::FS_BLOCK_COUNT:

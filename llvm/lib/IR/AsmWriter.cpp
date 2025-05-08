@@ -3239,6 +3239,18 @@ void AssemblyWriter::printModuleSummaryIndex() {
     Out << ") ; guid = " << GUID << "\n";
   }
 
+  // Print the TypeIdMayBeAccessed entries.
+  if (!TheIndex->getTypeIdAccessed().empty()) {
+    Out << "^" << NumSlots << " = typeidMayBeAccessed: (name: ";
+    FieldSeparator FS;
+    for (auto TypeId : TheIndex->getTypeIdAccessed()) {
+      Out << FS;
+      Out << "\"" << TypeId << "\"";
+    }
+    Out << ")\n";
+    ++NumSlots;
+  }
+
   // Don't emit flags when it's not really needed (value is zero by default).
   if (TheIndex->getFlags()) {
     Out << "^" << NumSlots << " = flags: " << TheIndex->getFlags() << "\n";

@@ -4658,6 +4658,12 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
   unsigned RadixAbbrev = Stream.EmitAbbrev(std::move(Abbv));
 
+  Abbv = std::make_shared<BitCodeAbbrev>();
+  Abbv->Add(BitCodeAbbrevOp(bitc::FS_RTTI));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
+  unsigned RTTIAccessedAbbrev = Stream.EmitAbbrev(std::move(Abbv));
+
   // First walk through all the functions and collect the allocation contexts in
   // their associated summaries, for use in constructing a radix tree of
   // contexts. Note that we need to do this in the same order as the functions
@@ -4744,6 +4750,15 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
                                              S.second, VE);
     Stream.EmitRecord(bitc::FS_TYPE_ID_METADATA, NameVals,
                       TypeIdCompatibleVtableAbbrev);
+    NameVals.clear();
+  }
+
+  if (!Index->getTypeIdAccessed().empty()) {
+    for (auto TypeId : Index->getTypeIdAccessed()) {
+      NameVals.push_back(StrtabBuilder.add(TypeId));
+      NameVals.push_back(TypeId.size());
+    }
+    Stream.EmitRecord(bitc::FS_RTTI, NameVals, RTTIAccessedAbbrev);
     NameVals.clear();
   }
 

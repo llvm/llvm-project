@@ -1595,6 +1595,7 @@ llvm::Value *ItaniumCXXABI::EmitTypeid(CodeGenFunction &CGF,
       cast<CXXRecordDecl>(SrcRecordTy->castAs<RecordType>()->getDecl());
   llvm::Value *Value = CGF.GetVTablePtr(ThisPtr, CGM.GlobalsInt8PtrTy,
                                         ClassDecl);
+  CGF.EmitTypeMetadataCodeForVCall(ClassDecl, Value, SourceLocation());
 
   if (CGM.getItaniumVTableContext().isRelativeLayout()) {
     // Load the type info.
