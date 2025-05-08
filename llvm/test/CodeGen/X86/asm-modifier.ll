@@ -4,6 +4,17 @@
 
 @var = internal global i32 0, align 4
 
+define dso_local void @test_a() nounwind {
+; CHECK-LABEL: test_a:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #TEST var#
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    ret{{[l|q]}}
+  tail call void asm sideeffect "#TEST ${0:c}#", "i"(ptr nonnull @var)
+  ret void
+}
+
 define dso_local void @test_c() nounwind {
 ; CHECK-LABEL: test_c:
 ; CHECK:       # %bb.0:
@@ -17,6 +28,16 @@ define dso_local void @test_c() nounwind {
   tail call void asm sideeffect "#TEST ${0:c}", "i"(i32 42)
   tail call void asm sideeffect "#TEST ${0:c}", "i"(ptr nonnull @var)
   ret void
+}
+
+define dso_local void @test_k() nounwind {
+; CHECK-LABEL: test_k:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    movl %fs:0, %eax
+; CHECK-NEXT:    #NO_APP
+  %tmp = tail call i64 asm "movl %fs:${1:a}, ${0:k}", "=q,irm,~{dirflag},~{fpsr},~{flags}"(i64 0)
+  unreachable
 }
 
 define dso_local void @test_n() nounwind {
