@@ -82,17 +82,20 @@ struct TestXeGPUUnrollingPatterns
           Type elemTy = type.getElementType();
           Type newTy;
 
-          // TensorDescType needs to drop the inst_data field in the layout attribute
+          // TensorDescType needs to drop the inst_data field in the layout
+          // attribute
           if (auto tdescTy = dyn_cast<xegpu::TensorDescType>(type)) {
             Attribute encoding = tdescTy.getEncoding();
-            auto layout = llvm::dyn_cast_if_present<xegpu::LayoutAttr>(tdescTy.getLayout());
+            auto layout = llvm::dyn_cast_if_present<xegpu::LayoutAttr>(
+                tdescTy.getLayout());
             if (layout) {
               if (layout.getLaneLayout() == nullptr)
                 layout = xegpu::LayoutAttr();
               else
                 layout = layout.dropInstData();
             }
-            newTy = xegpu::TensorDescType::get(ctx, tileShape, elemTy, encoding, layout);
+            newTy = xegpu::TensorDescType::get(ctx, tileShape, elemTy, encoding,
+                                               layout);
           } else {
             newTy = type.clone(tileShape, elemTy);
           }
