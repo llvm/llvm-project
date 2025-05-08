@@ -17,6 +17,7 @@
 #include "llvm/ADT/ADL.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/EpochTracker.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
@@ -94,6 +95,24 @@ public:
   }
   inline const_iterator end() const {
     return makeConstIterator(getBucketsEnd(), getBucketsEnd(), *this, true);
+  }
+
+  // Return an iterator to iterate over keys in the map.
+  inline auto keys() {
+    return map_range(*this, [](const BucketT &P) { return P.getFirst(); });
+  }
+
+  // Return an iterator to iterate over values in the map.
+  inline auto values() {
+    return map_range(*this, [](const BucketT &P) { return P.getSecond(); });
+  }
+
+  inline auto keys() const {
+    return map_range(*this, [](const BucketT &P) { return P.getFirst(); });
+  }
+
+  inline auto values() const {
+    return map_range(*this, [](const BucketT &P) { return P.getSecond(); });
   }
 
   [[nodiscard]] bool empty() const { return getNumEntries() == 0; }

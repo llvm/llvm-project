@@ -110,10 +110,11 @@ private:
   }
 };
 
-template <typename ELFT>
-class ELFLinkGraphBuilder_i386 : public ELFLinkGraphBuilder<ELFT> {
+class ELFLinkGraphBuilder_i386 : public ELFLinkGraphBuilder<object::ELF32LE> {
 private:
-  static Expected<i386::EdgeKind_i386> getRelocationKind(const uint32_t Type) {
+  using ELFT = object::ELF32LE;
+
+  Expected<i386::EdgeKind_i386> getRelocationKind(const uint32_t Type) {
     using namespace i386;
     switch (Type) {
     case ELF::R_386_NONE:
@@ -136,8 +137,9 @@ private:
       return EdgeKind_i386::BranchPCRel32;
     }
 
-    return make_error<JITLinkError>("Unsupported i386 relocation:" +
-                                    formatv("{0:d}", Type));
+    return make_error<JITLinkError>(
+        "In " + G->getName() + ": Unsupported i386 relocation type " +
+        object::getELFRelocationTypeName(ELF::EM_386, Type));
   }
 
   Error addRelocations() override {
@@ -253,9 +255,9 @@ createLinkGraphFromELFObject_i386(MemoryBufferRef ObjectBuffer,
 
   auto &ELFObjFile = cast<object::ELFObjectFile<object::ELF32LE>>(**ELFObj);
 
-  return ELFLinkGraphBuilder_i386<object::ELF32LE>(
-             (*ELFObj)->getFileName(), ELFObjFile.getELFFile(), std::move(SSP),
-             (*ELFObj)->makeTriple(), std::move(*Features))
+  return ELFLinkGraphBuilder_i386((*ELFObj)->getFileName(),
+                                  ELFObjFile.getELFFile(), std::move(SSP),
+                                  (*ELFObj)->makeTriple(), std::move(*Features))
       .buildGraph();
 }
 

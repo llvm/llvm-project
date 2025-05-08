@@ -79,9 +79,7 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
             port, " Failed to read the port number from debug server pipe"
         )
 
-        self.attach(
-            program=program, stopOnAttach=True, gdbRemotePort=port, sourceInitFile=True
-        )
+        self.attach(program=program, gdbRemotePort=port, sourceInitFile=True)
         self.set_and_hit_breakpoint(continueToExit=True)
         self.process.terminate()
 
@@ -103,7 +101,6 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
         response = self.attach(
             program=program,
             pid=pid,
-            stopOnAttach=True,
             gdbRemotePort=port,
             sourceInitFile=True,
             expectFailure=True,
@@ -123,11 +120,7 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
 
         port = 0
         response = self.attach(
-            program=program,
-            stopOnAttach=True,
-            gdbRemotePort=port,
-            sourceInitFile=True,
-            expectFailure=True,
+            program=program, gdbRemotePort=port, sourceInitFile=True, expectFailure=True
         )
         if not (response and response["success"]):
             self.assertFalse(
@@ -151,11 +144,7 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
         )
 
         response = self.attach(
-            program=program,
-            stopOnAttach=True,
-            gdbRemotePort=port,
-            sourceInitFile=True,
-            expectFailure=True,
+            program=program, gdbRemotePort=port, sourceInitFile=True, expectFailure=True
         )
         if not (response and response["success"]):
             self.assertFalse(
