@@ -6027,8 +6027,12 @@ void Sema::BuildVariableInstantiation(
   Context.setManglingNumber(NewVar, Context.getManglingNumber(OldVar));
   Context.setStaticLocalNumber(NewVar, Context.getStaticLocalNumber(OldVar));
 
+  bool VarTemplateWithAutoType =
+      OldVar->getTypeSourceInfo()->getType()->getAs<AutoType>();
+
   // Figure out whether to eagerly instantiate the initializer.
-  if (InstantiatingVarTemplate || InstantiatingVarTemplatePartialSpec) {
+  if (!VarTemplateWithAutoType &&
+      (InstantiatingVarTemplate || InstantiatingVarTemplatePartialSpec)) {
     // We're producing a template. Don't instantiate the initializer yet.
   } else if (NewVar->getType()->isUndeducedType()) {
     // We need the type to complete the declaration of the variable.
