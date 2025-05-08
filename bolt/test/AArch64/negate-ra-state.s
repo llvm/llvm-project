@@ -2,7 +2,7 @@
 # RUN: %clang %cflags  %t.o -o %t.exe -Wl,-q
 
 # RUN: llvm-objdump %t.exe -d > %t.exe.dump
-# RUN: llvm-objdump --dwarf=frames %t.exe -D > %t.exe.dump-dwarf
+# RUN: llvm-objdump --dwarf=frames %t.exe > %t.exe.dump-dwarf
 # RUN: match-dwarf %t.exe.dump %t.exe.dump-dwarf foo > %t.match-dwarf.txt
 
 # RUN: llvm-bolt %t.exe -o %t.exe.bolt

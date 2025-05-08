@@ -39,10 +39,9 @@ class NameDwarfPair(object):
 
     def parse_negate_offsets(self):
         """
-        Create a list of locations/offsets of the negate_ra_state
-        CFIs in the dwarf entry.
-        To find offsets for each, we match the DW_CFA_advance_loc entries,
-        and sum up their values.
+        Create a list of locations/offsets of the negate_ra_state CFIs in the
+        dwarf entry. To find offsets for each, we match the DW_CFA_advance_loc
+        entries, and sum up their values.
         """
         negate_offsets = []
         loc = 0
@@ -65,10 +64,10 @@ class NameDwarfPair(object):
 
 def extract_function_addresses(objdump):
     """
-    Parse and return address-to-name dictionary from objdump file
+    Parse and return address-to-name dictionary from objdump file.
     Function names in the objdump look like this:
         000123abc <foo>:
-    We want to create a dict from the addr (000123abc), to the name (foo).
+    We create a dict from the addr (000123abc), to the name (foo).
     """
     addr_name_dict = dict()
     re_function = re.compile(r"^([0-9a-fA-F]+)\s<(.*)>:$")
@@ -91,10 +90,10 @@ def match_dwarf_to_name(dwarfdump, addr_name_dict):
     The matched lines look like this:
     000123 000456 000789 FDE cie=000000  pc=0123abc...0456def
     We do not have the function name for this, only the PC range it applies to.
-    We need to find the pc=0123abc (the start address), and find the matching name from
+    We match the pc=0123abc (the start address), and find the matching name from
     the addr_name_dict.
-    The result NameDwarfPair will hold the lines this header applied to, and instead of
-    the header with the addresses, it will just have the function name.
+    The resultint NameDwarfPair will hold the lines this header applied to, and
+    instead of the header with the addresses, it will just have the function name.
     """
     re_address_line = re.compile(r".*pc=([0-9a-fA-F]+)\.\.\.([0-9a-fA-F]+)")
     with open(dwarfdump, "r") as dw:
