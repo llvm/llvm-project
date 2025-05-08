@@ -542,8 +542,7 @@ private:
       : Value(Ty, SubclassID), Opcode(Info.Opcode), Flags(Info.Flags),
         NumOperands(OpIDs.size()), BlockAddressBB(Info.BlockAddressBB),
         SrcElemTy(Info.SrcElemTy), InRange(Info.InRange) {
-    std::uninitialized_copy(OpIDs.begin(), OpIDs.end(),
-                            getTrailingObjects<unsigned>());
+    llvm::uninitialized_copy(OpIDs, getTrailingObjects<unsigned>());
   }
 
   BitcodeConstant &operator=(const BitcodeConstant &) = delete;
