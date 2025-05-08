@@ -1738,14 +1738,16 @@ LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
     return success();
 
   auto gpuModuleOp = llvm::dyn_cast<gpu::GPUModuleOp>(gpuModule);
-  if (!gpuModuleOp)
+  if (!gpuModuleOp) {
     return emitError(gpuModule->getLoc(),
                      "NVVM target attribute must be attached to a GPU module");
+  }
 
   NVVMCheckSMVersion targetSMVersion(getChip());
-  if (targetSMVersion.archVersion < 20)
+  if (targetSMVersion.archVersion < 20) {
     return emitError(gpuModule->getLoc(),
                      "Minimum NVVM target SM version is sm_20");
+  }
 
   gpuModuleOp->walk([&](Operation *op) {
     if (auto reqOp = llvm::dyn_cast<NVVM::RequiresSMInterface>(op)) {
