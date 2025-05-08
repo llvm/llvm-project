@@ -192,7 +192,7 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
 
     /// Helper to drop all layout information from the TensorDesc type.
     TensorDescType dropLayouts() {
-      if (getLayoutAttr() == xegpu::LayoutAttr())
+      if (!getLayoutAttr())
         return *this;
 
       return get(getContext(), getShape(), getElementType(), getEncoding(),

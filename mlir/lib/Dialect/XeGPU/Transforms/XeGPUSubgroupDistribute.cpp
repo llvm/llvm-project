@@ -1507,8 +1507,9 @@ struct UpdateNdOffsetDistribution final : public gpu::WarpDistributionPattern {
 /// Distribute a prefetch_nd op at the end of enclosing
 /// `gpu.warp_execute_on_lane_0`. In case arguments for the prefetch are passed
 /// through the warp op interface they would be propagated as returned values.
-/// Appropriate cast ops are inserted if the distributed types does not match
-/// expected xegpu SIMT types.
+/// Tensor descriptor shape is not distributed because it is a uniform value
+/// across all work items within the subgroup. Appropriate cast ops are inserted
+/// if the distributed types does not match expected xegpu SIMT types.
 ///
 /// Example:
 ///
