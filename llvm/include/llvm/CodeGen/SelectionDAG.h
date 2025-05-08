@@ -924,7 +924,7 @@ public:
   /// Example: shuffle A, B, <0,5,2,7> -> shuffle B, A, <4,1,6,3>
   SDValue getCommutedVectorShuffle(const ShuffleVectorSDNode &SV);
 
-  /// Insert \p SubVec into the \p Idx sub-vector of \p Vec.
+  /// Insert \p SubVec at the \p Idx element of \p Vec.
   SDValue getInsertSubvector(const SDLoc &DL, SDValue Vec, SDValue SubVec,
                              unsigned Idx) {
     return getNode(ISD::INSERT_SUBVECTOR, DL, Vec.getValueType(), Vec, SubVec,
