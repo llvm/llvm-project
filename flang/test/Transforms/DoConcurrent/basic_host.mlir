@@ -16,7 +16,7 @@ func.func @do_concurrent_basic() attributes {fir.bindc_name = "do_concurrent_bas
     %8 = fir.convert %c10_i32 : (i32) -> index
     %c1 = arith.constant 1 : index
 
-    // CHECK-NOT: fir.do_loop
+    // CHECK-NOT: fir.do_concurrent
 
     // CHECK: %[[C1:.*]] = arith.constant 1 : i32
     // CHECK: %[[LB:.*]] = fir.convert %[[C1]] : (i32) -> index
@@ -58,7 +58,7 @@ func.func @do_concurrent_basic() attributes {fir.bindc_name = "do_concurrent_bas
       }
     }
 
-    // CHECK-NOT: fir.do_loop
+    // CHECK-NOT: fir.do_concurrent
 
     return
   }
