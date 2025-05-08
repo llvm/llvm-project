@@ -2062,8 +2062,7 @@ bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
 }
 
 void PreRARematStage::rematerialize() {
-  const auto *TII =
-      static_cast<const SIInstrInfo *>(MF.getSubtarget().getInstrInfo());
+  const SIInstrInfo *TII = MF.getSubtarget<GCNSubtarget>().getInstrInfo();
 
   // Collect regions whose RP changes in unpredictable way; we will have to
   // fully recompute their RP after all rematerailizations.
