@@ -105,3 +105,39 @@ body: |
     %3:vr = COPY %0
 ...
 ---
+name:            diff_regclass
+body:             |
+  bb.0.entry:
+    liveins: $v8
+    ; CHECK-LABEL: name: diff_regclass
+    ; CHECK: liveins: $v8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[PseudoVMV_V_I_MF2_:%[0-9]+]]:vr = PseudoVMV_V_I_MF2 $noreg, 0, -1, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: [[PseudoVMV_V_V_MF2_:%[0-9]+]]:vrnov0 = PseudoVMV_V_V_MF2 $noreg, [[PseudoVMV_V_I_MF2_]], 0, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vmv0 = COPY $v8
+    ; CHECK-NEXT: [[PseudoVXOR_VV_MF2_MASK:%[0-9]+]]:vrnov0 = PseudoVXOR_VV_MF2_MASK [[PseudoVMV_V_V_MF2_]], [[PseudoVMV_V_I_MF2_]], [[PseudoVMV_V_I_MF2_]], [[COPY]], 0, 5 /* e32 */, 0 /* tu, mu */
+    %0:vr = PseudoVMV_V_I_MF2 $noreg, 0, -1, 5 /* e32 */, 0 /* tu, mu */
+    %1:vrnov0 = PseudoVMV_V_V_MF2 $noreg, %0, 0, 5 /* e32 */, 0 /* tu, mu */
+    %4:vmv0 = COPY $v8
+    %3:vrnov0 = PseudoVXOR_VV_MF2_MASK %1, %0, %0, %4, 0, 5 /* e32 */, 0 /* tu, mu */
+...
+---
+name:            diff_regclass_passthru
+body:             |
+  bb.0.entry:
+    liveins: $v8
+    ; CHECK-LABEL: name: diff_regclass_passthru
+    ; CHECK: liveins: $v8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
+    ; CHECK-NEXT: [[PseudoVMV_V_I_MF2_:%[0-9]+]]:vr = PseudoVMV_V_I_MF2 $noreg, 0, 0, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: [[PseudoVMV_V_V_MF2_:%[0-9]+]]:vrnov0 = PseudoVMV_V_V_MF2 [[COPY]], killed [[PseudoVMV_V_I_MF2_]], 0, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x0
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vmv0 = COPY $v8
+    ; CHECK-NEXT: [[PseudoVLSE32_V_MF2_MASK:%[0-9]+]]:vrnov0 = PseudoVLSE32_V_MF2_MASK [[PseudoVMV_V_V_MF2_]], [[COPY1]], [[COPY1]], killed [[COPY2]], 0, 5 /* e32 */, 0 /* tu, mu */ :: (load unknown-size, align 4)
+    %0:vr = COPY $v8
+    %2:vr = PseudoVMV_V_I_MF2 $noreg, 0, -1, 5 /* e32 */, 0 /* tu, mu */
+    %3:vrnov0 = PseudoVMV_V_V_MF2 %0, killed %2, 0, 5 /* e32 */, 0 /* tu, mu */
+    %5:gpr = COPY $x0
+    %7:vmv0 = COPY $v8
+    %6:vrnov0 = PseudoVLSE32_V_MF2_MASK %3, %5, %5, killed %7, 0, 5 /* e32 */, 0 /* tu, mu */ :: (load unknown-size, align 4)
