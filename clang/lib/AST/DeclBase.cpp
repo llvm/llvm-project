@@ -698,17 +698,17 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
     auto &Triple = Context.getTargetInfo().getTriple();
     StringRef TargetEnv = Triple.getEnvironmentName();
     StringRef EnvName =
-        Triple.hasEnvironment()
-            ? llvm::Triple::getEnvironmentTypeName(Triple.getEnvironment())
-            : "";
+        llvm::Triple::getEnvironmentTypeName(Triple.getEnvironment());
     // Matching environment or no environment on attribute.
-    if (!IIEnv || (!TargetEnv.empty() && IIEnv->getName() == TargetEnv)) {
+    if (!IIEnv || (Triple.hasEnvironment() && IIEnv->getName() == TargetEnv)) {
       if (Message) {
         Message->clear();
         llvm::raw_string_ostream Out(*Message);
         VersionTuple VTI(A->getIntroduced());
-        Out << "introduced in " << PrettyPlatformName << " " << VTI << " "
-            << EnvName << HintMessage;
+        Out << "introduced in " << PrettyPlatformName << " " << VTI;
+        if (Triple.hasEnvironment())
+          Out << " " << EnvName;
+        Out << HintMessage;
       }
     }
     // Non-matching environment or no environment on target.
@@ -716,8 +716,10 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
       if (Message) {
         Message->clear();
         llvm::raw_string_ostream Out(*Message);
-        Out << "not available on " << PrettyPlatformName << " " << EnvName
-            << HintMessage;
+        Out << "not available on " << PrettyPlatformName;
+        if (Triple.hasEnvironment())
+          Out << " " << EnvName;
+        Out << HintMessage;
       }
     }
 
