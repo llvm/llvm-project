@@ -30,26 +30,26 @@ class TestFrameVarDILGlobalVariableLookup(TestBase):
         # Test int[] and int*
         self.expect_var_path("int_arr[0]", True, value="1")
         self.expect_var_path("int_ptr[1]", True, value="2")
-        self.expect_var_path("int_arr[enum_one]", value="2")
+        self.expect("frame var 'int_arr[enum_one]'", error=True)
 
         # Test when base and index are references.
         self.expect_var_path("int_arr[0]", True, value="1")
-        self.expect_var_path("int_arr[idx_1_ref]", value="2")
-        self.expect_var_path("int_arr[enum_ref]", value="2")
+        self.expect("frame var 'int_arr[idx_1_ref]'", error=True)
+        self.expect("frame var 'int_arr[enum_ref]'", error=True)
         self.expect_var_path("int_arr_ref[0]", value="1")
-        self.expect_var_path("int_arr_ref[idx_1_ref]", value="2")
-        self.expect_var_path("int_arr_ref[enum_ref]", value="2")
+        self.expect("frame var 'int_arr_ref[idx_1_ref]'", error=True)
+        self.expect("frame var 'int_arr_ref[enum_ref]'", error=True)
 
         # Test when base and index are typedefs.
         self.expect_var_path("td_int_arr[0]", True, value="1")
-        self.expect_var_path("td_int_arr[td_int_idx_1]", value="2")
-        self.expect_var_path("td_int_arr[td_td_int_idx_2]", value="3")
+        self.expect("frame var 'td_int_arr[td_int_idx_1]'", error=True)
+        self.expect("frame var 'td_int_arr[td_td_int_idx_2]'", error=True)
         self.expect_var_path("td_int_ptr[0]", True, value="1")
-        self.expect_var_path("td_int_ptr[td_int_idx_1]", value="2")
-        self.expect_var_path("td_int_ptr[td_td_int_idx_2]", value="3")
+        self.expect("frame var 'td_int_ptr[td_int_idx_1]'", error=True)
+        self.expect("frame var 'td_int_ptr[td_td_int_idx_2]'", error=True)
 
         # Both typedefs and refs
-        self.expect_var_path("td_int_arr_ref[td_int_idx_1_ref]", value="2")
+        self.expect("frame var 'td_int_arr_ref[td_int_idx_1_ref]'", error=True)
 
         # Test for index out of bounds.
         self.expect_var_path("int_arr[42]", True, type="int")
@@ -79,10 +79,10 @@ class TestFrameVarDILGlobalVariableLookup(TestBase):
         self.expect(
             "frame var 'int_arr[int_ptr]'",
             error=True,
-            substrs=["array subscript is not an integer"],
+            substrs=["failed to parse integer constant"],
         )
         self.expect(
             "frame var '1[2]'",
             error=True,
-            substrs=["subscripted value is not an array or pointer"],
+            substrs=["Unexpected token"],
         )

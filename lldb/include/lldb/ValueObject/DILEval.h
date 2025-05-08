@@ -48,8 +48,6 @@ public:
 
 private:
   llvm::Expected<lldb::ValueObjectSP>
-  Visit(const ScalarLiteralNode *node) override;
-  llvm::Expected<lldb::ValueObjectSP>
   Visit(const IdentifierNode *node) override;
   llvm::Expected<lldb::ValueObjectSP> Visit(const UnaryOpNode *node) override;
   llvm::Expected<lldb::ValueObjectSP>

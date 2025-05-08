@@ -214,45 +214,6 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Evaluate(const ASTNode *node) {
   return value_or_error;
 }
 
-static CompilerType GetBasicType(std::shared_ptr<ExecutionContextScope> ctx,
-                                 lldb::BasicType basic_type) {
-  static std::unordered_map<lldb::BasicType, CompilerType> basic_types;
-  auto type = basic_types.find(basic_type);
-  if (type != basic_types.end()) {
-    std::string type_name((type->second).GetTypeName().AsCString());
-    // Only return the found type if it's valid.
-    if (type_name != "<invalid>")
-      return type->second;
-  }
-
-  lldb::TargetSP target_sp = ctx->CalculateTarget();
-  if (target_sp) {
-    for (auto type_system_sp : target_sp->GetScratchTypeSystems())
-      if (auto compiler_type =
-              type_system_sp->GetBasicTypeFromAST(basic_type)) {
-        basic_types.insert({basic_type, compiler_type});
-        return compiler_type;
-      }
-  }
-  CompilerType empty_type;
-  return empty_type;
-}
-
-llvm::Expected<lldb::ValueObjectSP>
-Interpreter::Visit(const ScalarLiteralNode *node) {
-  CompilerType result_type = GetBasicType(m_exe_ctx_scope, node->GetType());
-  Scalar value = node->GetValue();
-
-  if (result_type.IsInteger() || result_type.IsNullPtrType() ||
-      result_type.IsPointerType()) {
-    llvm::APInt val = value.GetAPSInt();
-    return ValueObject::CreateValueObjectFromAPInt(m_target, val, result_type,
-                                                   "result");
-  }
-
-  return lldb::ValueObjectSP();
-}
-
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const IdentifierNode *node) {
   lldb::DynamicValueType use_dynamic = m_default_dynamic;
@@ -313,16 +274,12 @@ Interpreter::Visit(const UnaryOpNode *node) {
 
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const ArraySubscriptNode *node) {
-  auto lhs_or_err = Evaluate(node->GetLHS());
+  auto lhs_or_err = Evaluate(node->GetBase());
   if (!lhs_or_err) {
     return lhs_or_err;
   }
   lldb::ValueObjectSP base = *lhs_or_err;
-  auto rhs_or_err = Evaluate(node->GetRHS());
-  if (!rhs_or_err) {
-    return rhs_or_err;
-  }
-  lldb::ValueObjectSP index = *rhs_or_err;
+  const llvm::APInt *index = node->GetIndex();
 
   Status error;
   if (base->GetCompilerType().IsReferenceType()) {
@@ -330,19 +287,9 @@ Interpreter::Visit(const ArraySubscriptNode *node) {
     if (error.Fail())
       return error.ToError();
   }
-  if (index->GetCompilerType().IsReferenceType()) {
-    index = index->Dereference(error);
-    if (error.Fail())
-      return error.ToError();
-  }
-
-  auto index_type = index->GetCompilerType();
-  if (!index_type.IsIntegerOrUnscopedEnumerationType())
-    return llvm::make_error<DILDiagnosticError>(
-        m_expr, "array subscript is not an integer", node->GetLocation());
 
   // Check to see if 'base' has a synthetic value; if so, try using that.
-  uint64_t child_idx = index->GetValueAsUnsigned(0);
+  uint64_t child_idx = index->getZExtValue();
   if (base->HasSyntheticValue()) {
     lldb::ValueObjectSP synthetic = base->GetSyntheticValue();
     if (synthetic && synthetic != base) {
@@ -384,7 +331,7 @@ Interpreter::Visit(const ArraySubscriptNode *node) {
       return base->GetChildAtIndex(child_idx);
   }
 
-  int64_t signed_child_idx = index->GetValueAsSigned(0);
+  int64_t signed_child_idx = index->getSExtValue();
   return base->GetSyntheticArrayMember(signed_child_idx, true);
 }
 
