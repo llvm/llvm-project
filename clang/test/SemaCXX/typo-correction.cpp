@@ -614,7 +614,8 @@ int bar() {
 
 namespace testIncludeTypeInTemplateArgument {
 template <typename T, typename U>
-void foo(T t = {}, U = {}); // expected-note {{candidate template ignored}}
+void foo(T t = {}, U = {}); // expected-note {{candidate template ignored}} \
+                            // expected-note {{template argument for template type parameter must be a type}}
 
 class AddObservation {}; // expected-note {{declared here}}
 int bar1() {

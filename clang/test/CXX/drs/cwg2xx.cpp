@@ -650,14 +650,17 @@ namespace cwg241 { // cwg241: 9
     C::f<3>(b);
     // expected-error@-1 {{no matching function for call to 'f'}}
     //   expected-note@#cwg241-C-f {{candidate template ignored: invalid explicitly-specified argument for template parameter 'T'}}
+    //   expected-note@#cwg241-C-f {{template argument for template type parameter must be a type}}
     C::g<3>(b);
     // expected-error@-1 {{no matching function for call to 'g'}}
     //   expected-note@#cwg241-C-g {{candidate template ignored: invalid explicitly-specified argument for template parameter 'T'}}
+    //   expected-note@#cwg241-C-g {{template argument for template type parameter must be a type}}
     using C::f;
     using C::g;
     f<3>(b);
     // expected-error@-1 {{no matching function for call to 'f'}}
     //   expected-note@#cwg241-C-f {{candidate template ignored: invalid explicitly-specified argument for template parameter 'T'}}
+    //   expected-note@#cwg241-C-f {{template argument for template type parameter must be a type}}
     //   expected-note@#cwg241-A-f {{candidate function template not viable: requires 0 arguments, but 1 was provided}}
     g<3>(b);
   }
@@ -952,6 +955,7 @@ namespace cwg258 { // cwg258: 2.8
   int &x = b.g<int>(0);
   // expected-error@-1 {{no matching member function for call to 'g'}}
   //   expected-note@#cwg258-B-g {{candidate template ignored: invalid explicitly-specified argument for 1st template parameter}}
+  //   expected-note@#cwg258-B-g {{template argument for non-type template parameter must be an expression}}
   int &y = b.h();
   float &z = const_cast<const B&>(b).h();
 

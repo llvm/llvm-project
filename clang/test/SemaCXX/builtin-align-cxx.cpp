@@ -3,7 +3,8 @@
 
 // Check that we don't crash when using dependent types in __builtin_align:
 template <typename a, a b>
-void *c(void *d) { // expected-note{{candidate template ignored}}
+void *c(void *d) { // expected-note{{candidate template ignored}} \
+// expected-note {{a non-type template parameter cannot have type 'struct x' before C++20}}
   return __builtin_align_down(d, b);
 }
 
