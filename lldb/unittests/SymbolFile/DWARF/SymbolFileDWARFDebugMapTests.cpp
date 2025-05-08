@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
+#include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARFDebugMap.h"
+#include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/TestUtilities.h"
 
 #include "lldb/Core/Module.h"
@@ -18,7 +21,64 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::plugin::dwarf;
 
-TEST(SymbolFileDWARFDebugMapTests, CreateInstanceReturnNullForNonMachOFile) {
+class SymbolFileDWARFDebugMapTests : public testing::Test {
+  SubsystemRAII<ObjectFileELF, ObjectFileMachO> subsystems;
+};
+
+TEST_F(SymbolFileDWARFDebugMapTests, CreateInstanceReturnNonNullForMachOFile) {
+  // Make sure we don't crash parsing a null unit DIE.
+  const char *yamldata = R"(
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x80000003
+  filetype:        0x00000001
+  ncmds:           1
+  sizeofcmds:      152
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __TEXT
+    vmaddr:          0
+    vmsize:          4
+    fileoff:         184
+    filesize:        4
+    maxprot:         7
+    initprot:        7
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000000000000
+        content:         'AABBCCDD'
+        size:            4
+        offset:          184
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+...
+)";
+
+  llvm::Expected<TestFile> file = TestFile::fromYaml(yamldata);
+  EXPECT_THAT_EXPECTED(file, llvm::Succeeded());
+  auto module_sp = std::make_shared<Module>(file->moduleSpec());
+  ASSERT_NE(module_sp, nullptr);
+  auto object_file = module_sp->GetObjectFile();
+  ASSERT_NE(object_file, nullptr);
+  auto debug_map =
+      SymbolFileDWARFDebugMap::CreateInstance(object_file->shared_from_this());
+  ASSERT_NE(debug_map, nullptr);
+}
+
+TEST_F(SymbolFileDWARFDebugMapTests, CreateInstanceReturnNullForNonMachOFile) {
   // Make sure we don't crash parsing a null unit DIE.
   const char *yamldata = R"(
 --- !ELF
@@ -70,15 +130,13 @@ DWARF:
           Length:          0
 )";
 
-  // bool waiting = true;
-  // while (waiting) {}
-
   llvm::Expected<TestFile> file = TestFile::fromYaml(yamldata);
   EXPECT_THAT_EXPECTED(file, llvm::Succeeded());
   auto module_sp = std::make_shared<Module>(file->moduleSpec());
+  ASSERT_NE(module_sp, nullptr);
   auto object_file = module_sp->GetObjectFile();
   ASSERT_NE(object_file, nullptr);
-
-  auto debug_map = SymbolFileDWARFDebugMap::CreateInstance(object_file->shared_from_this());
+  auto debug_map =
+      SymbolFileDWARFDebugMap::CreateInstance(object_file->shared_from_this());
   ASSERT_EQ(debug_map, nullptr);
 }
