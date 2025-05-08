@@ -97,3 +97,23 @@ subroutine pointers_in_atomic_capture()
         b = a
     !$omp end atomic
 end subroutine
+
+! Check that the clean-ups associated with the function call
+! are generated after the omp.atomic.capture operation:
+! CHECK-LABEL:   func.func @_QPfunc_call_cleanup(
+subroutine func_call_cleanup(x, v, vv)
+  integer :: x, v, vv
+
+! CHECK:           %[[VAL_7:.*]]:3 = hlfir.associate %{{.*}} {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
+! CHECK:           %[[VAL_8:.*]] = fir.call @_QPfunc(%[[VAL_7]]#0) fastmath<contract> : (!fir.ref<i32>) -> f32
+! CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (f32) -> i32
+! CHECK:           omp.atomic.capture {
+! CHECK:             omp.atomic.read %{{.*}} = %[[VAL_3:.*]]#0 : !fir.ref<i32>, !fir.ref<i32>, i32
+! CHECK:             omp.atomic.write %[[VAL_3]]#0 = %[[VAL_9]] : !fir.ref<i32>, i32
+! CHECK:           }
+! CHECK:           hlfir.end_associate %[[VAL_7]]#1, %[[VAL_7]]#2 : !fir.ref<i32>, i1
+  !$omp atomic capture
+  v = x
+  x = func(vv + 1)
+  !$omp end atomic
+end subroutine func_call_cleanup
