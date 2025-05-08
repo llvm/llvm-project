@@ -257,9 +257,7 @@ public:
 
   bool isPAuthOnLR(const MCInst &Inst) const override {
     ErrorOr<MCPhysReg> AutReg = getAuthenticatedReg(Inst);
-    if (AutReg && *AutReg != getNoRegister() && *AutReg == AArch64::LR)
-      return true;
-    return false;
+    return AutReg && *AutReg != getNoRegister() && *AutReg == AArch64::LR;
   }
 
   bool isPAuthAndRet(const MCInst &Inst) const override {
