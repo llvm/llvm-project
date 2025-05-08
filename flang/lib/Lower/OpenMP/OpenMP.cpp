@@ -662,32 +662,9 @@ static fir::GlobalOp globalInitialization(lower::AbstractConverter &converter,
                                           const semantics::Symbol &sym,
                                           const lower::pft::Variable &var,
                                           mlir::Location currentLocation) {
-  mlir::Type ty = converter.genType(sym);
   std::string globalName = converter.mangleName(sym);
   mlir::StringAttr linkage = firOpBuilder.createInternalLinkage();
-  fir::GlobalOp global =
-      firOpBuilder.createGlobal(currentLocation, ty, globalName, linkage);
-
-  // Create default initialization for non-character scalar.
-  if (semantics::IsAllocatableOrObjectPointer(&sym)) {
-    mlir::Type baseAddrType = mlir::dyn_cast<fir::BoxType>(ty).getEleTy();
-    lower::createGlobalInitialization(
-        firOpBuilder, global, [&](fir::FirOpBuilder &b) {
-          mlir::Value nullAddr =
-              b.createNullConstant(currentLocation, baseAddrType);
-          mlir::Value box =
-              b.create<fir::EmboxOp>(currentLocation, ty, nullAddr);
-          b.create<fir::HasValueOp>(currentLocation, box);
-        });
-  } else {
-    lower::createGlobalInitialization(
-        firOpBuilder, global, [&](fir::FirOpBuilder &b) {
-          mlir::Value undef = b.create<fir::UndefOp>(currentLocation, ty);
-          b.create<fir::HasValueOp>(currentLocation, undef);
-        });
-  }
-
-  return global;
+  return Fortran::lower::defineGlobal(converter, var, globalName, linkage);
 }
 
 // Get the extended value for \p val by extracting additional variable
@@ -3814,6 +3791,13 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    lower::pft::Evaluation &eval,
                    const parser::OpenMPDeclarativeAssumes &assumesConstruct) {
   TODO(converter.getCurrentLocation(), "OpenMP ASSUMES declaration");
+}
+
+static void
+genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+       semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
+       const parser::OmpDeclareVariantDirective &declareVariantDirective) {
+  TODO(converter.getCurrentLocation(), "OmpDeclareVariantDirective");
 }
 
 static void genOMP(
