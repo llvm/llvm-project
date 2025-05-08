@@ -1312,7 +1312,7 @@ define i64 @print_mulacc_extended(ptr nocapture readonly %x, ptr nocapture reado
 ; CHECK-NEXT:     CLONE ir<%arrayidx1> = getelementptr inbounds ir<%y>, vp<%3>
 ; CHECK-NEXT:     vp<%5> = vector-pointer ir<%arrayidx1>
 ; CHECK-NEXT:     WIDEN ir<%load1> = load vp<%5>
-; CHECK-NEXT:     MULACC-REDUCE vp<%6> = ir<%rdx> + reduce.add (mul nsw (ir<%load0> extended to i64), (ir<%load1> extended to i64))
+; CHECK-NEXT:     MULACC-REDUCE vp<%6> = ir<%rdx> + reduce.add (mul nsw (ir<%load0> sign-extended to i64), (ir<%load1> sign-extended to i64))
 ; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
 ; CHECK-NEXT:     EMIT branch-on-count vp<%index.next>, vp<%1>
 ; CHECK-NEXT:   No successors
