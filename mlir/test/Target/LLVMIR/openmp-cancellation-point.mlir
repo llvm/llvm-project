@@ -186,3 +186,33 @@ llvm.func @cancellation_point_wsloop(%lb : i32, %ub : i32, %step : i32) {
 // CHECK:         ret void
 // CHECK:       omp.loop_nest.region.cncl:                        ; preds = %[[VAL_100]]
 // CHECK:         br label %[[VAL_96]]
+
+
+llvm.func @cancellation_point_taskgroup() {
+  omp.taskgroup {
+    omp.task {
+      omp.cancellation_point cancellation_construct_type(taskgroup)
+      omp.terminator
+    }
+    omp.terminator
+  }
+  llvm.return
+}
+// CHECK-LABEL: define internal void @cancellation_point_taskgroup..omp_par(
+// CHECK:       task.alloca:
+// CHECK:         br label %[[VAL_50:.*]]
+// CHECK:       task.body:                                        ; preds = %[[VAL_51:.*]]
+// CHECK:         br label %[[VAL_52:.*]]
+// CHECK:       omp.task.region:                                  ; preds = %[[VAL_50]]
+// CHECK:         %[[VAL_53:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
+// CHECK:         %[[VAL_54:.*]] = call i32 @__kmpc_cancellationpoint(ptr @1, i32 %[[VAL_53]], i32 4)
+// CHECK:         %[[VAL_55:.*]] = icmp eq i32 %[[VAL_54]], 0
+// CHECK:         br i1 %[[VAL_55]], label %omp.task.region.split, label %omp.task.region.cncl
+// CHECK:       omp.task.region.cncl:
+// CHECK:         br label %omp.region.cont1
+// CHECK:       omp.region.cont1:
+// CHECK:         br label %task.exit.exitStub
+// CHECK:       omp.task.region.split:
+// CHECK:         br label %omp.region.cont1
+// CHECK:       task.exit.exitStub:
+// CHECK:         ret void
