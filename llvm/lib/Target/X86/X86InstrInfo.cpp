@@ -8122,6 +8122,14 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
        shouldPreventUndefRegUpdateMemFold(MF, MI)))
     return nullptr;
 
+  // Do not fold a NDD instruction and a memory instruction with relocation to
+  // avoid emit APX relocation when the flag is disabled for backward
+  // compatibility.
+  uint64_t TSFlags = MI.getDesc().TSFlags;
+  if (!X86EnableAPXForRelocation && isMemInstrWithGOTPCREL(LoadMI) &&
+      X86II::hasNewDataDest(TSFlags))
+    return nullptr;
+
   // Determine the alignment of the load.
   Align Alignment;
   unsigned LoadOpc = LoadMI.getOpcode();
