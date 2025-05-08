@@ -474,7 +474,7 @@ bool UnwindPlan::PlanValidAtAddress(Address addr) const {
   // If the 0th Row of unwind instructions is missing, or if it doesn't provide
   // a register to use to find the Canonical Frame Address, this is not a valid
   // UnwindPlan.
-  const Row *row0 = GetRowForFunctionOffset(0);
+  const Row *row0 = GetRowAtIndex(0);
   if (!row0 ||
       row0->GetCFAValue().GetValueType() == Row::FAValue::unspecified) {
     Log *log = GetLog(LLDBLog::Unwind);

@@ -43,7 +43,7 @@ while.end:
 ; Make sure a loop is successfully vectorized with fold-tail when the backedge
 ; taken count is constant and used inside the loop. Issue revealed by D76992.
 ;
-define void @reuse_const_btc(ptr %A) optsize {
+define void @reuse_const_btc(ptr %A) {
 ; CHECK-LABEL: @reuse_const_btc
 ; CHECK: {{%.*}} = icmp ule <4 x i32> {{%.*}}, splat (i32 13)
 ; CHECK: {{%.*}} = select <4 x i1> {{%.*}}, <4 x i32> splat (i32 12), <4 x i32> splat (i32 13)

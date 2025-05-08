@@ -24,6 +24,7 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -1090,7 +1091,7 @@ void State::addInfoFor(BasicBlock &BB) {
   bool GuaranteedToExecute = true;
   // Queue conditions and assumes.
   for (Instruction &I : BB) {
-    if (auto Cmp = dyn_cast<ICmpInst>(&I)) {
+    if (auto *Cmp = dyn_cast<ICmpInst>(&I)) {
       for (Use &U : Cmp->uses()) {
         auto *UserI = getContextInstForUse(U);
         auto *DTN = DT.getNode(UserI->getParent());
@@ -1135,6 +1136,9 @@ void State::addInfoFor(BasicBlock &BB) {
       // TODO: handle llvm.abs as well
       WorkList.push_back(
           FactOrCheck::getCheck(DT.getNode(&BB), cast<CallInst>(&I)));
+      [[fallthrough]];
+    case Intrinsic::uadd_sat:
+    case Intrinsic::usub_sat:
       // TODO: Check if it is possible to instead only added the min/max facts
       // when simplifying uses of the min/max intrinsics.
       if (!isGuaranteedNotToBePoison(&I))
@@ -1454,8 +1458,29 @@ static bool checkAndReplaceCondition(
       return ShouldReplace;
     });
     NumCondsRemoved++;
+
+    // Update the debug value records that satisfy the same condition used
+    // in replaceUsesWithIf.
+    SmallVector<DbgVariableIntrinsic *> DbgUsers;
+    SmallVector<DbgVariableRecord *> DVRUsers;
+    findDbgUsers(DbgUsers, Cmp, &DVRUsers);
+
+    for (auto *DVR : DVRUsers) {
+      auto *DTN = DT.getNode(DVR->getParent());
+      if (!DTN || DTN->getDFSNumIn() < NumIn || DTN->getDFSNumOut() > NumOut)
+        continue;
+
+      auto *MarkedI = DVR->getInstruction();
+      if (MarkedI->getParent() == ContextInst->getParent() &&
+          MarkedI->comesBefore(ContextInst))
+        continue;
+
+      DVR->replaceVariableLocationOp(Cmp, ConstantC);
+    }
+
     if (Cmp->use_empty())
       ToRemove.push_back(Cmp);
+
     return Changed;
   };
 
@@ -1738,9 +1763,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
                                  OptimizationRemarkEmitter &ORE) {
   bool Changed = false;
   DT.updateDFSNumbers();
-  SmallVector<Value *> FunctionArgs;
-  for (Value &Arg : F.args())
-    FunctionArgs.push_back(&Arg);
+  SmallVector<Value *> FunctionArgs(llvm::make_pointer_range(F.args()));
   ConstraintInfo Info(F.getDataLayout(), FunctionArgs);
   State S(DT, LI, SE);
   std::unique_ptr<Module> ReproducerModule(
@@ -1896,6 +1919,20 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
         Pred = ICmpInst::getNonStrictPredicate(MinMax->getPredicate());
         AddFact(Pred, MinMax, MinMax->getLHS());
         AddFact(Pred, MinMax, MinMax->getRHS());
+        continue;
+      }
+      if (auto *USatI = dyn_cast<SaturatingInst>(CB.Inst)) {
+        switch (USatI->getIntrinsicID()) {
+        default:
+          llvm_unreachable("Unexpected intrinsic.");
+        case Intrinsic::uadd_sat:
+          AddFact(ICmpInst::ICMP_UGE, USatI, USatI->getLHS());
+          AddFact(ICmpInst::ICMP_UGE, USatI, USatI->getRHS());
+          break;
+        case Intrinsic::usub_sat:
+          AddFact(ICmpInst::ICMP_ULE, USatI, USatI->getLHS());
+          break;
+        }
         continue;
       }
     }

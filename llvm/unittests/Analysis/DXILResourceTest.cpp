@@ -114,8 +114,6 @@ TEST(DXILResource, AnnotationsAndMetadata) {
     ResourceTypeInfo RTI(llvm::TargetExtType::get(
         Context, "dx.RawBuffer", Int8Ty, {/*IsWriteable=*/1, /*IsROV=*/0}));
     EXPECT_EQ(RTI.getResourceClass(), ResourceClass::UAV);
-    EXPECT_EQ(RTI.getUAV().GloballyCoherent, false);
-    EXPECT_EQ(RTI.getUAV().HasCounter, false);
     EXPECT_EQ(RTI.getUAV().IsROV, false);
     EXPECT_EQ(RTI.getResourceKind(), ResourceKind::RawBuffer);
 
@@ -128,6 +126,9 @@ TEST(DXILResource, AnnotationsAndMetadata) {
     EXPECT_MDEQ(RI.getAsMetadata(M, RTI),
                 TestMD.get(1, GV, "BufferOut", 2, 3, 1, 11, false, false, false,
                            nullptr));
+    EXPECT_EQ(RI.GloballyCoherent, false);
+    EXPECT_EQ(RI.hasCounter(), false);
+    EXPECT_EQ(RI.CounterDirection, ResourceCounterDirection::Unknown);
   }
 
   // struct BufType0 { int i; float f; double d; };
@@ -268,27 +269,29 @@ TEST(DXILResource, AnnotationsAndMetadata) {
   // globallycoherent RWTexture2D<int2> OutputTexture : register(u0, space2);
   {
     ResourceTypeInfo RTI(llvm::TargetExtType::get(
-                             Context, "dx.Texture", Int32x2Ty,
-                             {/*IsWriteable=*/1,
-                              /*IsROV=*/0, /*IsSigned=*/1,
-                              llvm::to_underlying(ResourceKind::Texture2D)}),
-                         /*GloballyCoherent=*/true, /*HasCounter=*/false);
+        Context, "dx.Texture", Int32x2Ty,
+        {/*IsWriteable=*/1,
+         /*IsROV=*/0, /*IsSigned=*/1,
+         llvm::to_underlying(ResourceKind::Texture2D)}));
 
     EXPECT_EQ(RTI.getResourceClass(), ResourceClass::UAV);
-    EXPECT_EQ(RTI.getUAV().GloballyCoherent, true);
-    EXPECT_EQ(RTI.getUAV().HasCounter, false);
     EXPECT_EQ(RTI.getUAV().IsROV, false);
     EXPECT_EQ(RTI.getResourceKind(), ResourceKind::Texture2D);
 
     ResourceInfo RI(
         /*RecordID=*/0, /*Space=*/2, /*LowerBound=*/0, /*Size=*/1,
         RTI.getHandleTy());
+    RI.GloballyCoherent = true;
     GlobalVariable *GV =
         RI.createSymbol(M, RTI.createElementStruct(), "OutputTexture");
     EXPECT_PROPS_EQ(RI.getAnnotateProps(M, RTI), 0x00005002U, 0x00000204U);
     EXPECT_MDEQ(RI.getAsMetadata(M, RTI),
                 TestMD.get(0, GV, "OutputTexture", 2, 0, 1, 2, true, false,
                            false, TestMD.get(0, 4)));
+
+    EXPECT_EQ(RI.GloballyCoherent, true);
+    EXPECT_EQ(RI.hasCounter(), false);
+    EXPECT_EQ(RI.CounterDirection, ResourceCounterDirection::Unknown);
   }
 
   // RasterizerOrderedBuffer<float4> ROB;
@@ -297,8 +300,6 @@ TEST(DXILResource, AnnotationsAndMetadata) {
         Context, "dx.TypedBuffer", Floatx4Ty,
         {/*IsWriteable=*/1, /*IsROV=*/1, /*IsSigned=*/0}));
     EXPECT_EQ(RTI.getResourceClass(), ResourceClass::UAV);
-    EXPECT_EQ(RTI.getUAV().GloballyCoherent, false);
-    EXPECT_EQ(RTI.getUAV().HasCounter, false);
     EXPECT_EQ(RTI.getUAV().IsROV, true);
     ASSERT_EQ(RTI.isTyped(), true);
     EXPECT_EQ(RTI.getTyped().ElementTy, ElementType::F32);
@@ -313,19 +314,18 @@ TEST(DXILResource, AnnotationsAndMetadata) {
     EXPECT_MDEQ(RI.getAsMetadata(M, RTI),
                 TestMD.get(0, GV, "ROB", 0, 0, 1, 10, false, false, true,
                            TestMD.get(0, 9)));
+    EXPECT_EQ(RI.GloballyCoherent, false);
+    EXPECT_EQ(RI.hasCounter(), false);
+    EXPECT_EQ(RI.CounterDirection, ResourceCounterDirection::Unknown);
   }
 
   // RWStructuredBuffer<ParticleMotion> g_OutputBuffer : register(u2);
   {
     StructType *BufType1 = StructType::create(
         Context, {Floatx3Ty, FloatTy, Int32Ty}, "ParticleMotion");
-    ResourceTypeInfo RTI(
-        llvm::TargetExtType::get(Context, "dx.RawBuffer", BufType1,
-                                 {/*IsWriteable=*/1, /*IsROV=*/0}),
-        /*GloballyCoherent=*/false, /*HasCounter=*/true);
+    ResourceTypeInfo RTI(llvm::TargetExtType::get(
+        Context, "dx.RawBuffer", BufType1, {/*IsWriteable=*/1, /*IsROV=*/0}));
     EXPECT_EQ(RTI.getResourceClass(), ResourceClass::UAV);
-    EXPECT_EQ(RTI.getUAV().GloballyCoherent, false);
-    EXPECT_EQ(RTI.getUAV().HasCounter, true);
     EXPECT_EQ(RTI.getUAV().IsROV, false);
     ASSERT_EQ(RTI.isStruct(), true);
     EXPECT_EQ(RTI.getStruct(DL).Stride, 20u);
@@ -335,12 +335,16 @@ TEST(DXILResource, AnnotationsAndMetadata) {
     ResourceInfo RI(
         /*RecordID=*/0, /*Space=*/0, /*LowerBound=*/2, /*Size=*/1,
         RTI.getHandleTy());
+    RI.CounterDirection = ResourceCounterDirection::Increment;
     GlobalVariable *GV =
         RI.createSymbol(M, RTI.createElementStruct(), "g_OutputBuffer");
     EXPECT_PROPS_EQ(RI.getAnnotateProps(M, RTI), 0x0000920cU, 0x00000014U);
     EXPECT_MDEQ(RI.getAsMetadata(M, RTI),
                 TestMD.get(0, GV, "g_OutputBuffer", 0, 2, 1, 12, false, true,
                            false, TestMD.get(1, 20)));
+    EXPECT_EQ(RI.GloballyCoherent, false);
+    EXPECT_EQ(RI.hasCounter(), true);
+    EXPECT_EQ(RI.CounterDirection, ResourceCounterDirection::Increment);
   }
 
   // RWTexture2DMSArray<uint, 8> g_rw_t2dmsa;
@@ -350,8 +354,6 @@ TEST(DXILResource, AnnotationsAndMetadata) {
         {/*IsWriteable=*/1, /*SampleCount=*/8, /*IsSigned=*/0,
          llvm::to_underlying(ResourceKind::Texture2DMSArray)}));
     EXPECT_EQ(RTI.getResourceClass(), ResourceClass::UAV);
-    EXPECT_EQ(RTI.getUAV().GloballyCoherent, false);
-    EXPECT_EQ(RTI.getUAV().HasCounter, false);
     EXPECT_EQ(RTI.getUAV().IsROV, false);
     ASSERT_EQ(RTI.isTyped(), true);
     EXPECT_EQ(RTI.getTyped().ElementTy, ElementType::U32);
@@ -369,6 +371,9 @@ TEST(DXILResource, AnnotationsAndMetadata) {
     EXPECT_MDEQ(RI.getAsMetadata(M, RTI),
                 TestMD.get(0, GV, "g_rw_t2dmsa", 0, 0, 1, 8, false, false,
                            false, TestMD.get(0, 5)));
+    EXPECT_EQ(RI.GloballyCoherent, false);
+    EXPECT_EQ(RI.hasCounter(), false);
+    EXPECT_EQ(RI.CounterDirection, ResourceCounterDirection::Unknown);
   }
 
   // cbuffer cb0 { float4 g_X; float4 g_Y; }

@@ -114,27 +114,6 @@ namespace clang {
 using namespace clang;
 using namespace sema;
 
-/// Compare two APSInts, extending and switching the sign as
-/// necessary to compare their values regardless of underlying type.
-static bool hasSameExtendedValue(llvm::APSInt X, llvm::APSInt Y) {
-  if (Y.getBitWidth() > X.getBitWidth())
-    X = X.extend(Y.getBitWidth());
-  else if (Y.getBitWidth() < X.getBitWidth())
-    Y = Y.extend(X.getBitWidth());
-
-  // If there is a signedness mismatch, correct it.
-  if (X.isSigned() != Y.isSigned()) {
-    // If the signed value is negative, then the values cannot be the same.
-    if ((Y.isSigned() && Y.isNegative()) || (X.isSigned() && X.isNegative()))
-      return false;
-
-    Y.setIsSigned(true);
-    X.setIsSigned(true);
-  }
-
-  return X == Y;
-}
-
 /// The kind of PartialOrdering we're performing template argument deduction
 /// for (C++11 [temp.deduct.partial]).
 enum class PartialOrderingKind { None, NonCall, Call };
@@ -273,7 +252,7 @@ checkDeducedTemplateArguments(ASTContext &Context,
     if (Y.getKind() == TemplateArgument::Expression ||
         Y.getKind() == TemplateArgument::Declaration ||
         (Y.getKind() == TemplateArgument::Integral &&
-         hasSameExtendedValue(X.getAsIntegral(), Y.getAsIntegral())))
+         llvm::APSInt::isSameValue(X.getAsIntegral(), Y.getAsIntegral())))
       return X.wasDeducedFromArrayBound() ? Y : X;
 
     // All other combinations are incompatible.
@@ -2574,7 +2553,7 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
 
   case TemplateArgument::Integral:
     if (A.getKind() == TemplateArgument::Integral) {
-      if (hasSameExtendedValue(P.getAsIntegral(), A.getAsIntegral()))
+      if (llvm::APSInt::isSameValue(P.getAsIntegral(), A.getAsIntegral()))
         return TemplateDeductionResult::Success;
     }
     Info.FirstArg = P;
@@ -2826,62 +2805,6 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
       *this, TemplateParams, Ps, As, Info, Deduced, NumberOfArgumentsMustMatch,
       /*PartialOrdering=*/false, PackFold::ParameterToArgument,
       /*HasDeducedAnyParam=*/nullptr);
-}
-
-/// Determine whether two template arguments are the same.
-static bool isSameTemplateArg(ASTContext &Context, const TemplateArgument &X,
-                              const TemplateArgument &Y) {
-  if (X.getKind() != Y.getKind())
-    return false;
-
-  switch (X.getKind()) {
-    case TemplateArgument::Null:
-      llvm_unreachable("Comparing NULL template argument");
-
-    case TemplateArgument::Type:
-      return Context.getCanonicalType(X.getAsType()) ==
-             Context.getCanonicalType(Y.getAsType());
-
-    case TemplateArgument::Declaration:
-      return isSameDeclaration(X.getAsDecl(), Y.getAsDecl());
-
-    case TemplateArgument::NullPtr:
-      return Context.hasSameType(X.getNullPtrType(), Y.getNullPtrType());
-
-    case TemplateArgument::Template:
-    case TemplateArgument::TemplateExpansion:
-      return Context.getCanonicalTemplateName(
-                    X.getAsTemplateOrTemplatePattern()).getAsVoidPointer() ==
-             Context.getCanonicalTemplateName(
-                    Y.getAsTemplateOrTemplatePattern()).getAsVoidPointer();
-
-    case TemplateArgument::Integral:
-      return hasSameExtendedValue(X.getAsIntegral(), Y.getAsIntegral());
-
-    case TemplateArgument::StructuralValue:
-      return X.structurallyEquals(Y);
-
-    case TemplateArgument::Expression: {
-      llvm::FoldingSetNodeID XID, YID;
-      X.getAsExpr()->Profile(XID, Context, true);
-      Y.getAsExpr()->Profile(YID, Context, true);
-      return XID == YID;
-    }
-
-    case TemplateArgument::Pack: {
-      unsigned PackIterationSize = X.pack_size();
-      if (X.pack_size() != Y.pack_size())
-        return false;
-      ArrayRef<TemplateArgument> XP = X.pack_elements();
-      ArrayRef<TemplateArgument> YP = Y.pack_elements();
-      for (unsigned i = 0; i < PackIterationSize; ++i)
-        if (!isSameTemplateArg(Context, XP[i], YP[i]))
-          return false;
-      return true;
-    }
-  }
-
-  llvm_unreachable("Invalid TemplateArgument Kind!");
 }
 
 TemplateArgumentLoc
@@ -3349,7 +3272,7 @@ static TemplateDeductionResult FinishTemplateArgumentDeduction(
       break;
     TemplateArgument PP = P.isPackExpansion() ? P.getPackExpansionPattern() : P,
                      PA = A.isPackExpansion() ? A.getPackExpansionPattern() : A;
-    if (!isSameTemplateArg(S.Context, PP, PA)) {
+    if (!S.Context.isSameTemplateArgument(PP, PA)) {
       if (!P.isPackExpansion() && !A.isPackExpansion()) {
         Info.Param = makeTemplateParameter(TPL->getParam(
             (AsStack.empty() ? As.end() : AsStack.back().begin()) -
@@ -6142,9 +6065,9 @@ FunctionDecl *Sema::getMoreConstrainedFunction(FunctionDecl *FD1,
   assert(!FD1->getDescribedTemplate() && !FD2->getDescribedTemplate() &&
          "not for function templates");
   assert(!FD1->isFunctionTemplateSpecialization() ||
-         isa<CXXConversionDecl>(FD1));
+         (isa<CXXConversionDecl, CXXConstructorDecl>(FD1)));
   assert(!FD2->isFunctionTemplateSpecialization() ||
-         isa<CXXConversionDecl>(FD2));
+         (isa<CXXConversionDecl, CXXConstructorDecl>(FD2)));
 
   FunctionDecl *F1 = FD1;
   if (FunctionDecl *P = FD1->getTemplateInstantiationPattern(false))
@@ -6604,8 +6527,6 @@ bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
   case TemplateDeductionResult::CUDATargetMismatch:
     llvm_unreachable("Unexpected Result");
   }
-
-  SmallVector<TemplateArgument, 4> DeducedArgs(Deduced.begin(), Deduced.end());
 
   TemplateDeductionResult TDK;
   runWithSufficientStackSpace(Info.getLocation(), [&] {

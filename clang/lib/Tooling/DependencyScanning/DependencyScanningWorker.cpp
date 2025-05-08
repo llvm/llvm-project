@@ -100,7 +100,7 @@ public:
                          PrebuiltModulesAttrsMap &PrebuiltModulesASTMap,
                          const HeaderSearchOptions &HSOpts,
                          const LangOptions &LangOpts, DiagnosticsEngine &Diags,
-                         const llvm::SmallVector<StringRef> &StableDirs)
+                         const ArrayRef<StringRef> StableDirs)
       : PrebuiltModuleFiles(PrebuiltModuleFiles),
         NewModuleFiles(NewModuleFiles),
         PrebuiltModulesASTMap(PrebuiltModulesASTMap), ExistingHSOpts(HSOpts),
@@ -199,7 +199,7 @@ private:
   const LangOptions &ExistingLangOpts;
   DiagnosticsEngine &Diags;
   std::string CurrentFile;
-  const llvm::SmallVector<StringRef> &StableDirs;
+  const ArrayRef<StringRef> StableDirs;
 };
 
 /// Visit the given prebuilt module and collect all of the modules it
@@ -208,16 +208,8 @@ static bool visitPrebuiltModule(StringRef PrebuiltModuleFilename,
                                 CompilerInstance &CI,
                                 PrebuiltModuleFilesT &ModuleFiles,
                                 PrebuiltModulesAttrsMap &PrebuiltModulesASTMap,
-                                DiagnosticsEngine &Diags) {
-
-  // Gather the set of stable directories to use as transitive dependencies are
-  // discovered.
-  llvm::SmallVector<StringRef> StableDirs;
-  std::string SysrootToUse(CI.getHeaderSearchOpts().Sysroot);
-  if (!SysrootToUse.empty() &&
-      (llvm::sys::path::root_directory(SysrootToUse) != SysrootToUse))
-    StableDirs = {SysrootToUse, CI.getHeaderSearchOpts().ResourceDir};
-
+                                DiagnosticsEngine &Diags,
+                                const ArrayRef<StringRef> StableDirs) {
   // List of module files to be processed.
   llvm::SmallVector<std::string> Worklist;
 
@@ -357,6 +349,32 @@ static void canonicalizeDefines(PreprocessorOptions &PPOpts) {
   std::swap(PPOpts.Macros, NewMacros);
 }
 
+class ScanningDependencyDirectivesGetter : public DependencyDirectivesGetter {
+  DependencyScanningWorkerFilesystem *DepFS;
+
+public:
+  ScanningDependencyDirectivesGetter(FileManager &FileMgr) : DepFS(nullptr) {
+    FileMgr.getVirtualFileSystem().visit([&](llvm::vfs::FileSystem &FS) {
+      auto *DFS = llvm::dyn_cast<DependencyScanningWorkerFilesystem>(&FS);
+      if (DFS) {
+        assert(!DepFS && "Found multiple scanning VFSs");
+        DepFS = DFS;
+      }
+    });
+    assert(DepFS && "Did not find scanning VFS");
+  }
+
+  std::unique_ptr<DependencyDirectivesGetter>
+  cloneFor(FileManager &FileMgr) override {
+    return std::make_unique<ScanningDependencyDirectivesGetter>(FileMgr);
+  }
+
+  std::optional<ArrayRef<dependency_directives_scan::Directive>>
+  operator()(FileEntryRef File) override {
+    return DepFS->getDirectiveTokens(File.getName());
+  }
+};
+
 /// A clang tool that runs the preprocessor in a mode that's optimized for
 /// dependency scanning for the given compiler invocation.
 class DependencyScanningAction : public tooling::ToolAction {
@@ -393,10 +411,10 @@ public:
     Scanned = true;
 
     // Create a compiler instance to handle the actual work.
-    auto ModCache = makeInProcessModuleCache(Service.getModuleCacheMutexes());
-    ScanInstanceStorage.emplace(std::move(PCHContainerOps), ModCache.get());
+    auto ModCache = makeInProcessModuleCache(Service.getModuleCacheEntries());
+    ScanInstanceStorage.emplace(std::move(Invocation),
+                                std::move(PCHContainerOps), ModCache.get());
     CompilerInstance &ScanInstance = *ScanInstanceStorage;
-    ScanInstance.setInvocation(std::move(Invocation));
     ScanInstance.setBuildingModule(false);
 
     // Create the compiler's actual diagnostics engine.
@@ -409,6 +427,10 @@ public:
 
     ScanInstance.getPreprocessorOpts().AllowPCHWithDifferentModulesCachePath =
         true;
+
+    if (ScanInstance.getHeaderSearchOpts().ModulesValidateOncePerBuildSession)
+      ScanInstance.getHeaderSearchOpts().BuildSessionTimestamp =
+          Service.getBuildSessionTimestamp();
 
     ScanInstance.getFrontendOpts().GenerateGlobalModuleIndex = false;
     ScanInstance.getFrontendOpts().UseGlobalModuleIndex = false;
@@ -424,6 +446,9 @@ public:
         ScanInstance.getInvocation(), ScanInstance.getDiagnostics(),
         DriverFileMgr->getVirtualFileSystemPtr());
 
+    // Create a new FileManager to match the invocation's FileSystemOptions.
+    auto *FileMgr = ScanInstance.createFileManager(FS);
+
     // Use the dependency scanning optimized file system if requested to do so.
     if (DepFS) {
       StringRef ModulesCachePath =
@@ -433,20 +458,20 @@ public:
       if (!ModulesCachePath.empty())
         DepFS->setBypassedPathPrefix(ModulesCachePath);
 
-      ScanInstance.getPreprocessorOpts().DependencyDirectivesForFile =
-          [LocalDepFS = DepFS](FileEntryRef File)
-          -> std::optional<ArrayRef<dependency_directives_scan::Directive>> {
-        if (llvm::ErrorOr<EntryRef> Entry =
-                LocalDepFS->getOrCreateFileSystemEntry(File.getName()))
-          if (LocalDepFS->ensureDirectiveTokensArePopulated(*Entry))
-            return Entry->getDirectiveTokens();
-        return std::nullopt;
-      };
+      ScanInstance.setDependencyDirectivesGetter(
+          std::make_unique<ScanningDependencyDirectivesGetter>(*FileMgr));
     }
 
-    // Create a new FileManager to match the invocation's FileSystemOptions.
-    auto *FileMgr = ScanInstance.createFileManager(FS);
     ScanInstance.createSourceManager(*FileMgr);
+
+    // Create a collection of stable directories derived from the ScanInstance
+    // for determining whether module dependencies would fully resolve from
+    // those directories.
+    llvm::SmallVector<StringRef> StableDirs;
+    const StringRef Sysroot = ScanInstance.getHeaderSearchOpts().Sysroot;
+    if (!Sysroot.empty() &&
+        (llvm::sys::path::root_directory(Sysroot) != Sysroot))
+      StableDirs = {Sysroot, ScanInstance.getHeaderSearchOpts().ResourceDir};
 
     // Store a mapping of prebuilt module files and their properties like header
     // search options. This will prevent the implicit build to create duplicate
@@ -459,7 +484,7 @@ public:
               ScanInstance.getPreprocessorOpts().ImplicitPCHInclude,
               ScanInstance,
               ScanInstance.getHeaderSearchOpts().PrebuiltModuleFiles,
-              PrebuiltModulesASTMap, ScanInstance.getDiagnostics()))
+              PrebuiltModulesASTMap, ScanInstance.getDiagnostics(), StableDirs))
         return false;
 
     // Create the dependency collector that will collect the produced
@@ -489,7 +514,7 @@ public:
     case ScanningOutputFormat::Full:
       MDC = std::make_shared<ModuleDepCollector>(
           Service, std::move(Opts), ScanInstance, Consumer, Controller,
-          OriginalInvocation, std::move(PrebuiltModulesASTMap));
+          OriginalInvocation, std::move(PrebuiltModulesASTMap), StableDirs);
       ScanInstance.addDependencyCollector(MDC);
       break;
     }
@@ -751,8 +776,7 @@ bool DependencyScanningWorker::scanDependencies(
           // Insert -cc1 comand line options into Argv
           std::vector<std::string> Argv;
           Argv.push_back(Cmd.getExecutable());
-          Argv.insert(Argv.end(), Cmd.getArguments().begin(),
-                      Cmd.getArguments().end());
+          llvm::append_range(Argv, Cmd.getArguments());
 
           // Create an invocation that uses the underlying file
           // system to ensure that any file system requests that

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s modernize-use-using %t -- -- -fno-delayed-template-parsing -I %S/Inputs/use-using/
+// RUN: %check_clang_tidy %s modernize-use-using %t -- -- -fno-delayed-template-parsing -I %S/Inputs/use-using/
 
 typedef int Type;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef' [modernize-use-using]
@@ -265,7 +265,7 @@ class Variadic {};
 
 typedef Variadic<Variadic<int, bool, Q<T{0 < 0}.b> >, S<(0 < 0), Variadic<Q<b[0 < 0]> > > > Variadic_t;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
-// CHECK-FIXES: using Variadic_t = Variadic<Variadic<int, bool, Q<T{0 < 0}.b> >, S<(0 < 0), Variadic<Q<b[0 < 0]> > > >
+// CHECK-FIXES: using Variadic_t = Variadic<Variadic<int, bool, Q<T{0 < 0}.b> >, S<(0 < 0), Variadic<Q<b[0 < 0]> > > >;
 
 typedef Variadic<Variadic<int, bool, Q<T{0 < 0}.b> >, S<(0 < 0), Variadic<Q<b[0 < 0]> > > > Variadic_t, *Variadic_p;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
@@ -319,8 +319,8 @@ typedef void (*ISSUE_65055_1)(int);
 typedef bool (*ISSUE_65055_2)(int);
 // CHECK-MESSAGES: :[[@LINE-2]]:1: warning: use 'using' instead of 'typedef'
 // CHECK-MESSAGES: :[[@LINE-2]]:1: warning: use 'using' instead of 'typedef'
-// CHECK-FIXES: {{^}}using ISSUE_65055_1 = void (*)(int);{{$}}
-// CHECK-FIXES: {{^}}using ISSUE_65055_2 = bool (*)(int);{{$}}
+// CHECK-FIXES: using ISSUE_65055_1 = void (*)(int);
+// CHECK-FIXES: using ISSUE_65055_2 = bool (*)(int);
 
 typedef class ISSUE_67529_1 *ISSUE_67529;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'

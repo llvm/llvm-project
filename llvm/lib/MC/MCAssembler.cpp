@@ -203,7 +203,7 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
   if (IsResolved) {
     auto TargetVal = Target;
     TargetVal.Cst = Value;
-    if (Fixup.getKind() >= FirstLiteralRelocationKind ||
+    if (mc::isRelocRelocation(Fixup.getKind()) ||
         getBackend().shouldForceRelocation(*this, Fixup, TargetVal, STI))
       IsResolved = false;
   }
@@ -999,8 +999,8 @@ bool MCAssembler::fixupNeedsRelaxation(const MCFixup &Fixup,
   uint64_t Value;
   bool Resolved = evaluateFixup(Fixup, DF, Target, DF->getSubtargetInfo(),
                                 Value, /*RecordReloc=*/false);
-  return getBackend().fixupNeedsRelaxationAdvanced(*this, *DF, Fixup, Target,
-                                                   Value, Resolved);
+  return getBackend().fixupNeedsRelaxationAdvanced(*this, Fixup, Target, Value,
+                                                   Resolved);
 }
 
 bool MCAssembler::fragmentNeedsRelaxation(const MCRelaxableFragment *F) const {

@@ -972,9 +972,8 @@ void SIFoldOperandsImpl::foldOperand(
     unsigned RegSeqDstSubReg = UseMI->getOperand(UseOpIdx + 1).getImm();
 
     // Grab the use operands first
-    SmallVector<MachineOperand *, 4> UsesToProcess;
-    for (auto &Use : MRI->use_nodbg_operands(RegSeqDstReg))
-      UsesToProcess.push_back(&Use);
+    SmallVector<MachineOperand *, 4> UsesToProcess(
+        llvm::make_pointer_range(MRI->use_nodbg_operands(RegSeqDstReg)));
     for (auto *RSUse : UsesToProcess) {
       MachineInstr *RSUseMI = RSUse->getParent();
 
@@ -1068,6 +1067,16 @@ void SIFoldOperandsImpl::foldOperand(
     if (MovOp == AMDGPU::COPY)
       return;
 
+    // Fold if the destination register class of the MOV instruction (ResRC)
+    // is a superclass of (or equal to) the destination register class of the
+    // COPY (DestRC). If this condition fails, folding would be illegal.
+    const MCInstrDesc &MovDesc = TII->get(MovOp);
+    assert(MovDesc.getNumDefs() > 0 && MovDesc.operands()[0].RegClass != -1);
+    const TargetRegisterClass *ResRC =
+        TRI->getRegClass(MovDesc.operands()[0].RegClass);
+    if (!DestRC->hasSuperClassEq(ResRC))
+      return;
+
     MachineInstr::mop_iterator ImpOpI = UseMI->implicit_operands().begin();
     MachineInstr::mop_iterator ImpOpE = UseMI->implicit_operands().end();
     while (ImpOpI != ImpOpE) {
@@ -1092,7 +1101,8 @@ void SIFoldOperandsImpl::foldOperand(
   } else {
     if (UseMI->isCopy() && OpToFold.isReg() &&
         UseMI->getOperand(0).getReg().isVirtual() &&
-        !UseMI->getOperand(1).getSubReg()) {
+        !UseMI->getOperand(1).getSubReg() &&
+        OpToFold.getParent()->implicit_operands().empty()) {
       LLVM_DEBUG(dbgs() << "Folding " << OpToFold << "\n into " << *UseMI);
       unsigned Size = TII->getOpSize(*UseMI, 1);
       Register UseReg = OpToFold.getReg();
@@ -1161,8 +1171,14 @@ void SIFoldOperandsImpl::foldOperand(
 
         if (OpToFold.isImm())
           UseMI->getOperand(1).ChangeToImmediate(OpToFold.getImm());
-        else
+        else if (OpToFold.isFI())
           UseMI->getOperand(1).ChangeToFrameIndex(OpToFold.getIndex());
+        else {
+          assert(OpToFold.isGlobal());
+          UseMI->getOperand(1).ChangeToGA(OpToFold.getGlobal(),
+                                          OpToFold.getOffset(),
+                                          OpToFold.getTargetFlags());
+        }
         UseMI->removeOperand(2); // Remove exec read (or src1 for readlane)
         return;
       }
@@ -1552,9 +1568,8 @@ bool SIFoldOperandsImpl::foldInstOperand(MachineInstr &MI,
     }
   }
 
-  SmallVector<MachineOperand *, 4> UsesToProcess;
-  for (auto &Use : MRI->use_nodbg_operands(Dst.getReg()))
-    UsesToProcess.push_back(&Use);
+  SmallVector<MachineOperand *, 4> UsesToProcess(
+      llvm::make_pointer_range(MRI->use_nodbg_operands(Dst.getReg())));
   for (auto *U : UsesToProcess) {
     MachineInstr *UseMI = U->getParent();
     foldOperand(OpToFold, UseMI, UseMI->getOperandNo(U), FoldList,
@@ -1620,7 +1635,6 @@ bool SIFoldOperandsImpl::foldCopyToAGPRRegSequence(MachineInstr *CopyMI) const {
 
   MachineInstrBuilder B(*MBB.getParent(), CopyMI);
   DenseMap<TargetInstrInfo::RegSubRegPair, Register> VGPRCopies;
-  SmallSetVector<TargetInstrInfo::RegSubRegPair, 32> SeenInputs;
 
   const TargetRegisterClass *UseRC =
       MRI->getRegClass(CopyMI->getOperand(1).getReg());
@@ -2380,10 +2394,9 @@ bool SIFoldOperandsImpl::tryFoldLoad(MachineInstr &MI) {
   if (DefReg.isPhysical() || !TRI->isVGPR(*MRI, DefReg))
     return false;
 
-  SmallVector<const MachineInstr*, 8> Users;
+  SmallVector<const MachineInstr *, 8> Users(
+      llvm::make_pointer_range(MRI->use_nodbg_instructions(DefReg)));
   SmallVector<Register, 8> MoveRegs;
-  for (const MachineInstr &I : MRI->use_nodbg_instructions(DefReg))
-    Users.push_back(&I);
 
   if (Users.empty())
     return false;

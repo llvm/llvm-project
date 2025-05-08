@@ -489,7 +489,7 @@ public:
     // Initializer lists can give duplicates of tokens, therefore all tokens
     // must be deduplicated.
     llvm::sort(Tokens);
-    auto Last = std::unique(Tokens.begin(), Tokens.end());
+    auto Last = llvm::unique(Tokens);
     Tokens.erase(Last, Tokens.end());
 
     // Macros can give tokens that have the same source range but conflicting

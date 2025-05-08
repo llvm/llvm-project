@@ -28,7 +28,7 @@ public:
                   uint64_t Value, bool IsResolved,
                   const MCSubtargetInfo *STI) const override;
 
-  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
+  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
   bool fixupNeedsRelaxation(const MCFixup &Fixup,
                             uint64_t Value) const override;
@@ -40,7 +40,6 @@ public:
                          const MCSubtargetInfo &STI) const override;
 
   bool fixupNeedsRelaxationAdvanced(const MCAssembler &,
-                                    const MCRelaxableFragment &,
                                     const MCFixup &, const MCValue &, uint64_t,
                                     bool) const override;
 

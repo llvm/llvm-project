@@ -1031,6 +1031,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     if (JA.isOffloading(Action::OFK_HIP)) {
       Args.ClaimAllArgs(options::OPT_offload_compress);
       Args.ClaimAllArgs(options::OPT_no_offload_compress);
+      Args.ClaimAllArgs(options::OPT_offload_jobs_EQ);
     }
 
     bool HasTarget = false;
@@ -5842,7 +5843,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
           Triple.getArch() != llvm::Triple::x86_64)
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << Name << Triple.getArchName();
-    } else if (Name == "LIBMVEC-X86") {
+    } else if (Name == "libmvec") {
       if (Triple.getArch() != llvm::Triple::x86 &&
           Triple.getArch() != llvm::Triple::x86_64)
         D.Diag(diag::err_drv_unsupported_opt_for_target)
@@ -5976,7 +5977,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // We turn strict aliasing off by default if we're Windows MSVC since MSVC
   // doesn't do any TBAA.
   if (!Args.hasFlag(options::OPT_fstrict_aliasing, StrictAliasingAliasOption,
-                    options::OPT_fno_strict_aliasing, !IsWindowsMSVC))
+                    options::OPT_fno_strict_aliasing,
+                    !IsWindowsMSVC && !IsUEFI))
     CmdArgs.push_back("-relaxed-aliasing");
   if (Args.hasFlag(options::OPT_fno_pointer_tbaa, options::OPT_fpointer_tbaa,
                    false))
@@ -7022,6 +7024,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_fdiagnostics_parseable_fixits);
   Args.AddLastArg(CmdArgs, options::OPT_ftime_report);
   Args.AddLastArg(CmdArgs, options::OPT_ftime_report_EQ);
+  Args.AddLastArg(CmdArgs, options::OPT_ftime_report_json);
   Args.AddLastArg(CmdArgs, options::OPT_ftrapv);
   Args.AddLastArg(CmdArgs, options::OPT_malign_double);
   Args.AddLastArg(CmdArgs, options::OPT_fno_temp_file);
@@ -7243,7 +7246,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // -fuse-cxa-atexit is default.
   if (!Args.hasFlag(
           options::OPT_fuse_cxa_atexit, options::OPT_fno_use_cxa_atexit,
-          !RawTriple.isOSAIX() && !RawTriple.isOSWindows() &&
+          !RawTriple.isOSAIX() &&
+              (!RawTriple.isOSWindows() ||
+               RawTriple.isWindowsCygwinEnvironment()) &&
               ((RawTriple.getVendor() != llvm::Triple::MipsTechnologies) ||
                RawTriple.hasEnvironment())) ||
       KernelOrKext)
@@ -7754,6 +7759,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.addOptInFlag(CmdArgs, options::OPT_fexperimental_late_parse_attributes,
                     options::OPT_fno_experimental_late_parse_attributes);
+
+  Args.addOptInFlag(CmdArgs, options::OPT_funique_source_file_names,
+                    options::OPT_fno_unique_source_file_names);
 
   // Setup statistics file output.
   SmallString<128> StatsFile = getStatsFileName(Args, Output, Input, D);
@@ -8897,6 +8905,12 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
   CollectArgsForIntegratedAssembler(C, Args, CmdArgs,
                                     getToolChain().getDriver());
 
+  // Forward -Xclangas arguments to -cc1as
+  for (auto Arg : Args.filtered(options::OPT_Xclangas)) {
+    Arg->claim();
+    CmdArgs.push_back(Arg->getValue());
+  }
+
   Args.AddAllArgs(CmdArgs, options::OPT_mllvm);
 
   if (DebugInfoKind > llvm::codegenoptions::NoDebugInfo && Output.isFilename())
@@ -9269,6 +9283,11 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
           A->render(Args, LinkerArgs);
       }
 
+      // If this is OpenMP the device linker will need `-lompdevice`.
+      if (Kind == Action::OFK_OpenMP && !Args.hasArg(OPT_no_offloadlib) &&
+          (TC->getTriple().isAMDGPU() || TC->getTriple().isNVPTX()))
+        LinkerArgs.emplace_back("-lompdevice");
+
       // Forward all of these to the appropriate toolchain.
       for (StringRef Arg : CompilerArgs)
         CmdArgs.push_back(Args.MakeArgString(
@@ -9281,9 +9300,23 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       if (C.getDriver().getOffloadLTOMode() == LTOK_Full)
         CmdArgs.push_back(Args.MakeArgString(
             "--device-compiler=" + TC->getTripleString() + "=-flto=full"));
-      else if (C.getDriver().getOffloadLTOMode() == LTOK_Thin)
+      else if (C.getDriver().getOffloadLTOMode() == LTOK_Thin) {
         CmdArgs.push_back(Args.MakeArgString(
             "--device-compiler=" + TC->getTripleString() + "=-flto=thin"));
+        if (TC->getTriple().isAMDGPU()) {
+          CmdArgs.push_back(
+              Args.MakeArgString("--device-linker=" + TC->getTripleString() +
+                                 "=-plugin-opt=-force-import-all"));
+          CmdArgs.push_back(
+              Args.MakeArgString("--device-linker=" + TC->getTripleString() +
+                                 "=-plugin-opt=-avail-extern-to-local"));
+          if (Kind == Action::OFK_OpenMP) {
+            CmdArgs.push_back(
+                Args.MakeArgString("--device-linker=" + TC->getTripleString() +
+                                   "=-plugin-opt=-amdgpu-internalize-symbols"));
+          }
+        }
+      }
     }
   }
 
@@ -9373,6 +9406,18 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back(LinkArg);
 
   addOffloadCompressArgs(Args, CmdArgs);
+
+  if (Arg *A = Args.getLastArg(options::OPT_offload_jobs_EQ)) {
+    int NumThreads;
+    if (StringRef(A->getValue()).getAsInteger(10, NumThreads) ||
+        NumThreads <= 0)
+      C.getDriver().Diag(diag::err_drv_invalid_int_value)
+          << A->getAsString(Args) << A->getValue();
+    else
+      CmdArgs.push_back(
+          Args.MakeArgString("--wrapper-jobs=" + Twine(NumThreads)));
+  }
+
   const char *Exec =
       Args.MakeArgString(getToolChain().GetProgramPath("clang-linker-wrapper"));
 

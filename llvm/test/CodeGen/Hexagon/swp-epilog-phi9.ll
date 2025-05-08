@@ -12,21 +12,22 @@
 ; CHECK: [[REG0]] = add(r{{[0-9]+}},#8)
 
 ; Function Attrs: nounwind
-define void @f0(ptr nocapture readonly %a0, i32 %a1) #0 {
+define void @f0(ptr noalias nocapture readonly %a0, i32 %a1, ptr noalias %a2, ptr %a3) #0 {
 b0:
   %v0 = alloca [129 x i32], align 8
-  br i1 undef, label %b1, label %b3
+  %cond = freeze i1 poison
+  br i1 %cond, label %b1, label %b3
 
 b1:                                               ; preds = %b0
   br label %b2
 
 b2:                                               ; preds = %b2, %b1
   %v1 = phi ptr [ %a0, %b1 ], [ %v2, %b2 ]
-  %v2 = phi ptr [ undef, %b1 ], [ %v15, %b2 ]
-  %v3 = phi ptr [ null, %b1 ], [ %v4, %b2 ]
-  %v4 = phi ptr [ null, %b1 ], [ %v14, %b2 ]
+  %v2 = phi ptr [ %a0, %b1 ], [ %v15, %b2 ]
+  %v3 = phi ptr [ %a2, %b1 ], [ %v4, %b2 ]
+  %v4 = phi ptr [ %a2, %b1 ], [ %v14, %b2 ]
   %v5 = phi i32 [ 0, %b1 ], [ %v13, %b2 ]
-  %v6 = phi ptr [ undef, %b1 ], [ %v12, %b2 ]
+  %v6 = phi ptr [ %a3, %b1 ], [ %v12, %b2 ]
   %v7 = load i16, ptr %v2, align 2
   %v8 = sext i16 %v7 to i32
   %v9 = call i32 @llvm.hexagon.M2.mpy.ll.s0(i32 %v8, i32 %v8) #2

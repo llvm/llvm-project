@@ -22,23 +22,3 @@ lldb_private::getProcFile(::pid_t pid, ::pid_t tid, const llvm::Twine &file) {
     LLDB_LOG(log, "Failed to open {0}: {1}", File, Ret.getError().message());
   return Ret;
 }
-
-llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
-lldb_private::getProcFile(::pid_t pid, const llvm::Twine &file) {
-  Log *log = GetLog(LLDBLog::Host);
-  std::string File = ("/proc/" + llvm::Twine(pid) + "/" + file).str();
-  auto Ret = llvm::MemoryBuffer::getFileAsStream(File);
-  if (!Ret)
-    LLDB_LOG(log, "Failed to open {0}: {1}", File, Ret.getError().message());
-  return Ret;
-}
-
-llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
-lldb_private::getProcFile(const llvm::Twine &file) {
-  Log *log = GetLog(LLDBLog::Host);
-  std::string File = ("/proc/" + file).str();
-  auto Ret = llvm::MemoryBuffer::getFileAsStream(File);
-  if (!Ret)
-    LLDB_LOG(log, "Failed to open {0}: {1}", File, Ret.getError().message());
-  return Ret;
-}

@@ -37,6 +37,12 @@ include "RISCVInstrInfo.td"
 include "GISel/RISCVRegisterBanks.td"
 
 //===----------------------------------------------------------------------===//
+// Instruction predicates
+//===----------------------------------------------------------------------===//
+
+include "RISCVInstrPredicates.td"
+
+//===----------------------------------------------------------------------===//
 // RISC-V macro fusions.
 //===----------------------------------------------------------------------===//
 
@@ -52,6 +58,7 @@ include "RISCVSchedSiFive7.td"
 include "RISCVSchedSiFiveP400.td"
 include "RISCVSchedSiFiveP500.td"
 include "RISCVSchedSiFiveP600.td"
+include "RISCVSchedSpacemitX60.td"
 include "RISCVSchedSyntacoreSCR1.td"
 include "RISCVSchedSyntacoreSCR345.td"
 include "RISCVSchedSyntacoreSCR7.td"

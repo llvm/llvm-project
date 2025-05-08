@@ -370,6 +370,12 @@ FollowForkMode ProcessProperties::GetFollowForkMode() const {
                g_process_properties[idx].default_uint_value));
 }
 
+bool ProcessProperties::TrackMemoryCacheChanges() const {
+  const uint32_t idx = ePropertyTrackMemoryCacheChanges;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_process_properties[idx].default_uint_value != 0);
+}
+
 ProcessSP Process::FindPlugin(lldb::TargetSP target_sp,
                               llvm::StringRef plugin_name,
                               ListenerSP listener_sp,
@@ -577,9 +583,7 @@ void Process::Finalize(bool destructing) {
   // contain events that have ProcessSP values in them which can keep this
   // process around forever. These events need to be cleared out.
   m_private_state_listener_sp->Clear();
-  m_public_run_lock.TrySetRunning(); // This will do nothing if already locked
   m_public_run_lock.SetStopped();
-  m_private_run_lock.TrySetRunning(); // This will do nothing if already locked
   m_private_run_lock.SetStopped();
   m_structured_data_plugin_map.clear();
 }
@@ -1049,10 +1053,11 @@ bool Process::SetExitStatus(int status, llvm::StringRef exit_string) {
     info->exit_desc = {status, exit_string.str()};
   });
 
-  helper.DispatchOnExit([&](telemetry::ProcessExitInfo *info) {
-    info->module_uuid = module_uuid;
-    info->pid = m_pid;
-  });
+  helper.DispatchOnExit(
+      [module_uuid, pid = m_pid](telemetry::ProcessExitInfo *info) {
+        info->module_uuid = module_uuid;
+        info->pid = pid;
+      });
 
   m_exit_status = status;
   if (!exit_string.empty())
@@ -1325,11 +1330,11 @@ void Process::SetPublicState(StateType new_state, bool restarted) {
 Status Process::Resume() {
   Log *log(GetLog(LLDBLog::State | LLDBLog::Process));
   LLDB_LOGF(log, "(plugin = %s) -- locking run lock", GetPluginName().data());
-  if (!m_public_run_lock.TrySetRunning()) {
-    LLDB_LOGF(log, "(plugin = %s) -- TrySetRunning failed, not resuming.",
-             GetPluginName().data());
+  if (!m_public_run_lock.SetRunning()) {
+    LLDB_LOGF(log, "(plugin = %s) -- SetRunning failed, not resuming.",
+              GetPluginName().data());
     return Status::FromErrorString(
-        "Resume request failed - process still running.");
+        "resume request failed - process already running");
   }
   Status error = PrivateResume();
   if (!error.Success()) {
@@ -1342,10 +1347,10 @@ Status Process::Resume() {
 Status Process::ResumeSynchronous(Stream *stream) {
   Log *log(GetLog(LLDBLog::State | LLDBLog::Process));
   LLDB_LOGF(log, "Process::ResumeSynchronous -- locking run lock");
-  if (!m_public_run_lock.TrySetRunning()) {
-    LLDB_LOGF(log, "Process::Resume: -- TrySetRunning failed, not resuming.");
+  if (!m_public_run_lock.SetRunning()) {
+    LLDB_LOGF(log, "Process::Resume: -- SetRunning failed, not resuming.");
     return Status::FromErrorString(
-        "Resume request failed - process still running.");
+        "resume request failed: process already running");
   }
 
   ListenerSP listener_sp(
@@ -2286,6 +2291,7 @@ size_t Process::WriteMemoryPrivate(addr_t addr, const void *buf, size_t size,
   return bytes_written;
 }
 
+#define USE_ALLOCATE_MEMORY_CACHE 1
 size_t Process::WriteMemory(addr_t addr, const void *buf, size_t size,
                             Status &error) {
   if (ABISP abi_sp = GetABI())
@@ -2298,7 +2304,12 @@ size_t Process::WriteMemory(addr_t addr, const void *buf, size_t size,
   if (buf == nullptr || size == 0)
     return 0;
 
+#if defined(USE_ALLOCATE_MEMORY_CACHE)
+  if (TrackMemoryCacheChanges() || !m_allocated_memory_cache.IsInCache(addr))
+    m_mod_id.BumpMemoryID();
+#else
   m_mod_id.BumpMemoryID();
+#endif
 
   // We need to write any data that would go where any current software traps
   // (enabled software breakpoints) any software traps (breakpoints) that we
@@ -2427,7 +2438,6 @@ Status Process::WriteObjectFile(std::vector<ObjectFile::LoadableData> entries) {
   return error;
 }
 
-#define USE_ALLOCATE_MEMORY_CACHE 1
 addr_t Process::AllocateMemory(size_t size, uint32_t permissions,
                                Status &error) {
   if (GetPrivateState() != eStateStopped) {
@@ -2718,13 +2728,8 @@ Status Process::LaunchPrivate(ProcessLaunchInfo &launch_info, StateType &state,
   SetPublicState(eStateLaunching, restarted);
   m_should_detach = false;
 
-  if (m_public_run_lock.TrySetRunning()) {
-    // Now launch using these arguments.
-    error = DoLaunch(exe_module, launch_info);
-  } else {
-    // This shouldn't happen
-    error = Status::FromErrorString("failed to acquire process run lock");
-  }
+  m_public_run_lock.SetRunning();
+  error = DoLaunch(exe_module, launch_info);
 
   if (error.Fail()) {
     if (GetID() != LLDB_INVALID_PROCESS_ID) {
@@ -2836,6 +2841,9 @@ Status Process::LoadCore() {
           "Did not get stopped event after loading the core file.");
     }
     RestoreProcessEvents();
+    // Since we hijacked the event stream, we will have we won't have run the
+    // stop hooks.  Make sure we do that here:
+    GetTarget().RunStopHooks(/* at_initial_stop= */ true);
   }
   return error;
 }
@@ -2989,17 +2997,12 @@ Status Process::Attach(ProcessAttachInfo &attach_info) {
       if (wait_for_launch) {
         error = WillAttachToProcessWithName(process_name, wait_for_launch);
         if (error.Success()) {
-          if (m_public_run_lock.TrySetRunning()) {
-            m_should_detach = true;
-            const bool restarted = false;
-            SetPublicState(eStateAttaching, restarted);
-            // Now attach using these arguments.
-            error = DoAttachToProcessWithName(process_name, attach_info);
-          } else {
-            // This shouldn't happen
-            error =
-                Status::FromErrorString("failed to acquire process run lock");
-          }
+          m_public_run_lock.SetRunning();
+          m_should_detach = true;
+          const bool restarted = false;
+          SetPublicState(eStateAttaching, restarted);
+          // Now attach using these arguments.
+          error = DoAttachToProcessWithName(process_name, attach_info);
 
           if (error.Fail()) {
             if (GetID() != LLDB_INVALID_PROCESS_ID) {
@@ -3060,17 +3063,13 @@ Status Process::Attach(ProcessAttachInfo &attach_info) {
   if (attach_pid != LLDB_INVALID_PROCESS_ID) {
     error = WillAttachToProcessWithID(attach_pid);
     if (error.Success()) {
+      m_public_run_lock.SetRunning();
 
-      if (m_public_run_lock.TrySetRunning()) {
-        // Now attach using these arguments.
-        m_should_detach = true;
-        const bool restarted = false;
-        SetPublicState(eStateAttaching, restarted);
-        error = DoAttachToProcessWithID(attach_pid, attach_info);
-      } else {
-        // This shouldn't happen
-        error = Status::FromErrorString("failed to acquire process run lock");
-      }
+      // Now attach using these arguments.
+      m_should_detach = true;
+      const bool restarted = false;
+      SetPublicState(eStateAttaching, restarted);
+      error = DoAttachToProcessWithID(attach_pid, attach_info);
 
       if (error.Success()) {
         SetNextEventAction(new Process::AttachCompletionHandler(
@@ -3215,6 +3214,9 @@ void Process::CompleteAttach() {
                         : "<none>");
     }
   }
+  // Since we hijacked the event stream, we will have we won't have run the
+  // stop hooks.  Make sure we do that here:
+  GetTarget().RunStopHooks(/* at_initial_stop= */ true);
 }
 
 Status Process::ConnectRemote(llvm::StringRef remote_url) {
@@ -5882,10 +5884,9 @@ void Process::ClearPreResumeAction(PreResumeActionCallback callback, void *baton
 }
 
 ProcessRunLock &Process::GetRunLock() {
-  if (m_private_state_thread.EqualsThread(Host::GetCurrentThread()))
+  if (Process::CurrentThreadIsPrivateStateThread())
     return m_private_run_lock;
-  else
-    return m_public_run_lock;
+  return m_public_run_lock;
 }
 
 bool Process::CurrentThreadIsPrivateStateThread()
@@ -6705,6 +6706,18 @@ static void GetCoreFileSaveRangesStackOnly(Process &process,
   }
 }
 
+// TODO: We should refactor CoreFileMemoryRanges to use the lldb range type, and
+// then add an intersect method on it, or MemoryRegionInfo.
+static MemoryRegionInfo Intersect(const MemoryRegionInfo &lhs,
+                                  const MemoryRegionInfo::RangeType &rhs) {
+
+  MemoryRegionInfo region_info;
+  region_info.SetLLDBPermissions(lhs.GetLLDBPermissions());
+  region_info.GetRange() = lhs.GetRange().Intersect(rhs);
+
+  return region_info;
+}
+
 static void GetUserSpecifiedCoreFileSaveRanges(Process &process,
                                                const MemoryRegionInfos &regions,
                                                const SaveCoreOptions &options,
@@ -6714,9 +6727,15 @@ static void GetUserSpecifiedCoreFileSaveRanges(Process &process,
     return;
 
   for (const auto &range : regions) {
-    auto entry = option_ranges.FindEntryThatContains(range.GetRange());
-    if (entry)
-      AddRegion(range, true, ranges);
+    auto *entry = option_ranges.FindEntryThatIntersects(range.GetRange());
+    if (entry) {
+      if (*entry != range.GetRange()) {
+        AddRegion(Intersect(range, *entry), true, ranges);
+      } else {
+        // If they match, add the range directly.
+        AddRegion(range, true, ranges);
+      }
+    }
   }
 }
 

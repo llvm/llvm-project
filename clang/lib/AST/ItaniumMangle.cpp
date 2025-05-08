@@ -309,10 +309,8 @@ class CXXNameMangler {
             !AdditionalAbiTags &&
             "only function and variables need a list of additional abi tags");
         if (const auto *NS = dyn_cast<NamespaceDecl>(ND)) {
-          if (const auto *AbiTag = NS->getAttr<AbiTagAttr>()) {
-            UsedAbiTags.insert(UsedAbiTags.end(), AbiTag->tags().begin(),
-                               AbiTag->tags().end());
-          }
+          if (const auto *AbiTag = NS->getAttr<AbiTagAttr>())
+            llvm::append_range(UsedAbiTags, AbiTag->tags());
           // Don't emit abi tags for namespaces.
           return;
         }
@@ -320,21 +318,17 @@ class CXXNameMangler {
 
       AbiTagList TagList;
       if (const auto *AbiTag = ND->getAttr<AbiTagAttr>()) {
-        UsedAbiTags.insert(UsedAbiTags.end(), AbiTag->tags().begin(),
-                           AbiTag->tags().end());
-        TagList.insert(TagList.end(), AbiTag->tags().begin(),
-                       AbiTag->tags().end());
+        llvm::append_range(UsedAbiTags, AbiTag->tags());
+        llvm::append_range(TagList, AbiTag->tags());
       }
 
       if (AdditionalAbiTags) {
-        UsedAbiTags.insert(UsedAbiTags.end(), AdditionalAbiTags->begin(),
-                           AdditionalAbiTags->end());
-        TagList.insert(TagList.end(), AdditionalAbiTags->begin(),
-                       AdditionalAbiTags->end());
+        llvm::append_range(UsedAbiTags, *AdditionalAbiTags);
+        llvm::append_range(TagList, *AdditionalAbiTags);
       }
 
       llvm::sort(TagList);
-      TagList.erase(std::unique(TagList.begin(), TagList.end()), TagList.end());
+      TagList.erase(llvm::unique(TagList), TagList.end());
 
       writeSortedUniqueAbiTags(Out, TagList);
     }
@@ -350,8 +344,7 @@ class CXXNameMangler {
 
     const AbiTagList &getSortedUniqueUsedAbiTags() {
       llvm::sort(UsedAbiTags);
-      UsedAbiTags.erase(std::unique(UsedAbiTags.begin(), UsedAbiTags.end()),
-                        UsedAbiTags.end());
+      UsedAbiTags.erase(llvm::unique(UsedAbiTags), UsedAbiTags.end());
       return UsedAbiTags;
     }
 
@@ -1405,16 +1398,6 @@ void CXXNameMangler::mangleUnresolvedPrefix(NestedNameSpecifier *qualifier,
     //   - a template template parameter with arguments
     // In all of these cases, we should have no prefix.
     if (NestedNameSpecifier *Prefix = qualifier->getPrefix()) {
-      if (const auto *DTST =
-              dyn_cast<DependentTemplateSpecializationType>(type)) {
-        Out << "srN";
-        TemplateName Template = getASTContext().getDependentTemplateName(
-            {Prefix, DTST->getDependentTemplateName().getName(),
-             /*HasTemplateKeyword=*/true});
-        mangleTemplatePrefix(Template);
-        mangleTemplateArgs(Template, DTST->template_arguments());
-        break;
-      }
       mangleUnresolvedPrefix(Prefix,
                              /*recursive=*/true);
     } else {
@@ -2618,7 +2601,8 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
         cast<DependentTemplateSpecializationType>(Ty);
     TemplateName Template = getASTContext().getDependentTemplateName(
         DTST->getDependentTemplateName());
-    mangleTemplatePrefix(Template);
+    const DependentTemplateStorage &S = DTST->getDependentTemplateName();
+    mangleSourceName(S.getName().getIdentifier());
     mangleTemplateArgs(Template, DTST->template_arguments());
     break;
   }
@@ -2894,6 +2878,26 @@ void CXXNameMangler::mangleQualifiers(Qualifiers Quals, const DependentAddressSp
   // __unaligned (from -fms-extensions)
   if (Quals.hasUnaligned())
     mangleVendorQualifier("__unaligned");
+
+  // __ptrauth.  Note that this is parameterized.
+  if (PointerAuthQualifier PtrAuth = Quals.getPointerAuth()) {
+    mangleVendorQualifier("__ptrauth");
+    // For now, since we only allow non-dependent arguments, we can just
+    // inline the mangling of those arguments as literals.  We treat the
+    // key and extra-discriminator arguments as 'unsigned int' and the
+    // address-discriminated argument as 'bool'.
+    Out << "I"
+           "Lj"
+        << PtrAuth.getKey()
+        << "E"
+           "Lb"
+        << unsigned(PtrAuth.isAddressDiscriminated())
+        << "E"
+           "Lj"
+        << PtrAuth.getExtraDiscriminator()
+        << "E"
+           "E";
+  }
 
   // Remaining ARC ownership qualifiers.
   switch (Quals.getObjCLifetime()) {
@@ -6047,8 +6051,6 @@ void CXXNameMangler::mangleCXXDtorType(CXXDtorType T) {
   case Dtor_Comdat:
     Out << "D5";
     break;
-  case Dtor_VectorDeleting:
-    llvm_unreachable("Itanium ABI does not use vector deleting dtors");
   }
 }
 

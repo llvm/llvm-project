@@ -278,6 +278,8 @@ CODEGENOPT(SanitizeCfiICallNormalizeIntegers, 1, 0) ///< Normalize integer types
                                                     ///< CFI icall function signatures
 CODEGENOPT(SanitizeCfiCanonicalJumpTables, 1, 0) ///< Make jump table symbols canonical
                                                  ///< instead of creating a local jump table.
+CODEGENOPT(UniqueSourceFileNames, 1, 0) ///< Allow the compiler to assume that TUs
+                                        ///< have unique source file names at link time
 CODEGENOPT(SanitizeKcfiArity, 1, 0) ///< Embed arity in KCFI patchable function prefix
 CODEGENOPT(SanitizeCoverageType, 2, 0) ///< Type of sanitizer coverage
                                        ///< instrumentation.
@@ -303,6 +305,7 @@ CODEGENOPT(SanitizeCoveragePCTable, 1, 0) ///< Create a PC Table.
 CODEGENOPT(SanitizeCoverageControlFlow, 1, 0) ///< Collect control flow
 CODEGENOPT(SanitizeCoverageNoPrune, 1, 0) ///< Disable coverage pruning.
 CODEGENOPT(SanitizeCoverageStackDepth, 1, 0) ///< Enable max stack depth tracing
+VALUE_CODEGENOPT(SanitizeCoverageStackDepthCallbackMin , 32, 0) ///< Enable stack depth tracing callbacks.
 CODEGENOPT(SanitizeCoverageTraceLoads, 1, 0) ///< Enable tracing of loads.
 CODEGENOPT(SanitizeCoverageTraceStores, 1, 0) ///< Enable tracing of stores.
 CODEGENOPT(SanitizeBinaryMetadataCovered, 1, 0) ///< Emit PCs for covered functions.
@@ -316,8 +319,9 @@ CODEGENOPT(SpeculativeLoadHardening, 1, 0) ///< Enable speculative load hardenin
 CODEGENOPT(FineGrainedBitfieldAccesses, 1, 0) ///< Enable fine-grained bitfield accesses.
 CODEGENOPT(StrictEnums       , 1, 0) ///< Optimize based on strict enum definition.
 CODEGENOPT(StrictVTablePointers, 1, 0) ///< Optimize based on the strict vtable pointers
-CODEGENOPT(TimePasses        , 1, 0) ///< Set when -ftime-report or -ftime-report= is enabled.
+CODEGENOPT(TimePasses        , 1, 0) ///< Set when -ftime-report or -ftime-report= or -ftime-report-json is enabled.
 CODEGENOPT(TimePassesPerRun  , 1, 0) ///< Set when -ftime-report=per-pass-run is enabled.
+CODEGENOPT(TimePassesJson    , 1, 0) ///< Set when -ftime-report-json is enabled.
 CODEGENOPT(TimeTrace         , 1, 0) ///< Set when -ftime-trace is enabled.
 VALUE_CODEGENOPT(TimeTraceGranularity, 32, 500) ///< Minimum time granularity (in microseconds),
                                                ///< traced by time profiler

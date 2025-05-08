@@ -125,7 +125,7 @@ def Tosa_Conv2DOp : Tosa_ConvOp<"conv2d"> {
 
   let arguments = (ins
     Tosa_Tensor4D:$input,
-    TosaTensorRankOf<[Tosa_Weight], [4]>:$weight,
+    Tosa_Tensor4D:$weight,
     Tosa_Tensor1D:$bias,
     Tosa_ScalarIntOrFloatTensor:$input_zp,
     Tosa_ScalarIntOrFloatTensor:$weight_zp,
@@ -172,7 +172,7 @@ def Tosa_Conv3DOp : Tosa_ConvOp<"conv3d"> {
 
   let arguments = (ins
     Tosa_Tensor5D:$input,
-    TosaTensorRankOf<[Tosa_Weight], [5]>:$weight,
+    Tosa_Tensor5D:$weight,
     Tosa_Tensor1D:$bias,
     Tosa_ScalarIntOrFloatTensor:$input_zp,
     Tosa_ScalarIntOrFloatTensor:$weight_zp,
@@ -218,7 +218,7 @@ def Tosa_DepthwiseConv2DOp : Tosa_ConvOp<"depthwise_conv2d"> {
 
   let arguments = (ins
     Tosa_Tensor4D:$input,
-    TosaTensorRankOf<[Tosa_Weight], [4]>:$weight,
+    Tosa_Tensor4D:$weight,
     Tosa_Tensor1D:$bias,
     Tosa_ScalarIntOrFloatTensor:$input_zp,
     Tosa_ScalarIntOrFloatTensor:$weight_zp,
@@ -271,7 +271,7 @@ def Tosa_FFT2dOp : Tosa_InferShapedTypeOp<"fft2d", [
     Example:
 
     ```mlir
-     %out_real, %out_imag = tosa.fft2d %in_real, %in_imag : (tensor<8x9xf32>, tensor<8x9xf32>) -> (tensor<8x9xf32>, tensor<8x9xf32>)
+     %output_real, %output_imag = tosa.fft2d %input_real, %input_imag : (tensor<8x9xf32>, tensor<8x9xf32>) -> (tensor<8x9xf32>, tensor<8x9xf32>)
     ```
   }];
 
@@ -394,7 +394,7 @@ def Tosa_RFFT2dOp : Tosa_InferShapedTypeOp<"rfft2d", [
     Example:
 
     ```mlir
-     %real, %imag = tosa.rfft2d %in : (tensor<8x16xf32>) -> (tensor<8x9xf32>, tensor<8x9xf32>)
+     %ouput_real, %output_imag = tosa.rfft2d %input_real : (tensor<8x16xf32>) -> (tensor<8x9xf32>, tensor<8x9xf32>)
     ```
   }];
 
@@ -434,7 +434,7 @@ def Tosa_TransposeConv2DOp : Tosa_ConvOp<"transpose_conv2d"> {
 
   let arguments = (ins
     Tosa_Tensor4D:$input,
-    TosaTensorRankOf<[Tosa_Weight], [4]>:$weight,
+    Tosa_Tensor4D:$weight,
     Tosa_Tensor1D:$bias,
     Tosa_ScalarIntOrFloatTensor:$input_zp,
     Tosa_ScalarIntOrFloatTensor:$weight_zp,
@@ -611,10 +611,10 @@ def Tosa_AddOp : Tosa_ElementwiseOp<"add", [
 
     ```mlir
     // Elementwise addition.
-    %out = tosa.add %in1, %in2 : tensor<12x6xf32>, tensor<12x6xf32> -> tensor<12x6xf32>
+    %out = tosa.add %input1, %input2 : tensor<12x6xf32>, tensor<12x6xf32> -> tensor<12x6xf32>
 
     // Elementwise addition with broadcasting.
-    %out = tosa.add %in1, %in2 : tensor<12x6xsi32>, tensor<1x1xsi32> -> tensor<12x6xsi32>
+    %out = tosa.add %input1, %input2 : tensor<12x6xsi32>, tensor<1x1xsi32> -> tensor<12x6xsi32>
     ```
   }];
 
@@ -1131,7 +1131,7 @@ def Tosa_AbsOp : Tosa_ElementwiseUnaryOp<"abs"> {
     Example:
 
     ```mlir
-    %out = tosa.abs(%in) : (tensor<21x3xf32>) -> tensor<21x3xf32>
+    %output = tosa.abs(%input1) : (tensor<21x3xf32>) -> tensor<21x3xf32>
     ```
   }];
 
@@ -2559,6 +2559,7 @@ def Tosa_IfOp : Tosa_Op<"cond_if",
   );
 
   let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2597,6 +2598,7 @@ def Tosa_WhileOp : Tosa_Op<"while_loop", [
   );
 
   let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 include "mlir/Dialect/Tosa/IR/TosaUtilOps.td"

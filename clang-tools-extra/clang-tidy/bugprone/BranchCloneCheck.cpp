@@ -250,10 +250,10 @@ static bool isIdenticalStmt(const ASTContext &Ctx, const Stmt *Stmt1,
 
     if (!llvm::all_of(llvm::zip(CompStmt1->body(), CompStmt2->body()),
                       [&Ctx, IgnoreSideEffects](
-                          std::tuple<const Stmt *, const Stmt *> stmtPair) {
-                        const Stmt *stmt0 = std::get<0>(stmtPair);
-                        const Stmt *stmt1 = std::get<1>(stmtPair);
-                        return isIdenticalStmt(Ctx, stmt0, stmt1,
+                          std::tuple<const Stmt *, const Stmt *> StmtPair) {
+                        const Stmt *Stmt0 = std::get<0>(StmtPair);
+                        const Stmt *Stmt1 = std::get<1>(StmtPair);
+                        return isIdenticalStmt(Ctx, Stmt0, Stmt1,
                                                IgnoreSideEffects);
                       })) {
       return false;
@@ -477,7 +477,7 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (const auto *IS = Result.Nodes.getNodeAs<IfStmt>("ifWithDescendantIf")) {
     const Stmt *Then = IS->getThen();
-    auto CS = dyn_cast<CompoundStmt>(Then);
+    const auto *CS = dyn_cast<CompoundStmt>(Then);
     if (CS && (!CS->body_empty())) {
       const auto *InnerIf = dyn_cast<IfStmt>(*CS->body_begin());
       if (InnerIf && isIdenticalStmt(Context, IS->getCond(), InnerIf->getCond(),

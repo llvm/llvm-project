@@ -114,24 +114,21 @@ entry:
   ret i1 %val
 }
 
-define i1 @test_isspacep_cluster_shared_unsure(ptr addrspace(3) %addr) {
-; CHECK-LABEL: define i1 @test_isspacep_cluster_shared_unsure(
-; CHECK-SAME: ptr addrspace(3) [[ADDR:%.*]]) {
+define i1 @test_isspacep_shared_cluster_true(ptr addrspace(7) %addr) {
+; CHECK-LABEL: define i1 @test_isspacep_shared_cluster_true(
+; CHECK-SAME: ptr addrspace(7) [[ADDR:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ADDR1:%.*]] = getelementptr i8, ptr addrspace(3) [[ADDR]], i32 10
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(3) [[ADDR1]] to ptr
-; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.nvvm.isspacep.shared.cluster(ptr [[TMP0]])
-; CHECK-NEXT:    ret i1 [[VAL]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
-  %addr0 = addrspacecast ptr addrspace(3) %addr to ptr
+  %addr0 = addrspacecast ptr addrspace(7) %addr to ptr
   %addr1 = getelementptr i8, ptr %addr0, i32 10
   %val = call i1 @llvm.nvvm.isspacep.shared.cluster(ptr %addr1)
   ret i1 %val
 }
 
-define i1 @test_isspacep_cluster_shared_false(ptr addrspace(1) %addr) {
-; CHECK-LABEL: define i1 @test_isspacep_cluster_shared_false(
+define i1 @test_isspacep_shared_cluster_false(ptr addrspace(1) %addr) {
+; CHECK-LABEL: define i1 @test_isspacep_shared_cluster_false(
 ; CHECK-SAME: ptr addrspace(1) [[ADDR:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    ret i1 false
@@ -140,5 +137,36 @@ entry:
   %addr0 = addrspacecast ptr addrspace(1) %addr to ptr
   %addr1 = getelementptr i8, ptr %addr0, i32 10
   %val = call i1 @llvm.nvvm.isspacep.shared.cluster(ptr %addr1)
+  ret i1 %val
+}
+
+; isspacep_shared_cluster returns true for shared
+define i1 @test_isspacep_cluster_shared_shared(ptr addrspace(3) %addr) {
+; CHECK-LABEL: define i1 @test_isspacep_cluster_shared_shared(
+; CHECK-SAME: ptr addrspace(3) [[ADDR:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %addr0 = addrspacecast ptr addrspace(3) %addr to ptr
+  %addr1 = getelementptr i8, ptr %addr0, i32 10
+  %val = call i1 @llvm.nvvm.isspacep.shared.cluster(ptr %addr1)
+  ret i1 %val
+}
+
+; shared cluster cannot be evaluated to shared at compile time
+define i1 @test_isspacep_shared_shared_cluster(ptr addrspace(7) %addr) {
+; CHECK-LABEL: define i1 @test_isspacep_shared_shared_cluster(
+; CHECK-SAME: ptr addrspace(7) [[ADDR:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[ADDR2:%.*]] = getelementptr i8, ptr addrspace(7) [[ADDR]], i32 10
+; CHECK-NEXT:    [[ADDR1:%.*]] = addrspacecast ptr addrspace(7) [[ADDR2]] to ptr
+; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.nvvm.isspacep.shared(ptr [[ADDR1]])
+; CHECK-NEXT:    ret i1 [[VAL]]
+;
+entry:
+  %addr0 = addrspacecast ptr addrspace(7) %addr to ptr
+  %addr1 = getelementptr i8, ptr %addr0, i32 10
+  %val = call i1 @llvm.nvvm.isspacep.shared(ptr %addr1)
   ret i1 %val
 }

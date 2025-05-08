@@ -735,7 +735,7 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
     llvm::raw_string_ostream POut(Proto);
     DeclPrinter TArgPrinter(POut, SubPolicy, Context, Indentation);
     const auto *TArgAsWritten = D->getTemplateSpecializationArgsAsWritten();
-    if (TArgAsWritten && !Policy.PrintCanonicalTypes)
+    if (TArgAsWritten && !Policy.PrintAsCanonical)
       TArgPrinter.printTemplateArguments(TArgAsWritten->arguments(), nullptr);
     else if (const TemplateArgumentList *TArgs =
                  D->getTemplateSpecializationArgs())
@@ -1124,7 +1124,7 @@ void DeclPrinter::VisitCXXRecordDecl(CXXRecordDecl *D) {
           S->getSpecializedTemplate()->getTemplateParameters();
       const ASTTemplateArgumentListInfo *TArgAsWritten =
           S->getTemplateArgsAsWritten();
-      if (TArgAsWritten && !Policy.PrintCanonicalTypes)
+      if (TArgAsWritten && !Policy.PrintAsCanonical)
         printTemplateArguments(TArgAsWritten->arguments(), TParams);
       else
         printTemplateArguments(S->getTemplateArgs().asArray(), TParams);

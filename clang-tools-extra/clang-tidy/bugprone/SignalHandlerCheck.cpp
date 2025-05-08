@@ -301,7 +301,7 @@ bool isCXXOnlyStmt(const Stmt *S) {
 /// It is unspecified which call is found if multiple calls exist, but the order
 /// should be deterministic (depend only on the AST).
 Expr *findCallExpr(const CallGraphNode *Caller, const CallGraphNode *Callee) {
-  auto FoundCallee = llvm::find_if(
+  const auto *FoundCallee = llvm::find_if(
       Caller->callees(), [Callee](const CallGraphNode::CallRecord &Call) {
         return Call.Callee == Callee;
       });

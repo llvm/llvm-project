@@ -158,6 +158,13 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (op.getBare())
       result = todo("ompx_bare");
   };
+  auto checkCancelDirective = [&todo](auto op, LogicalResult &result) {
+    omp::ClauseCancellationConstructType cancelledDirective =
+        op.getCancelDirective();
+    if (cancelledDirective != omp::ClauseCancellationConstructType::Parallel &&
+        cancelledDirective != omp::ClauseCancellationConstructType::Sections)
+      result = todo("cancel directive construct type not yet supported");
+  };
   auto checkDepend = [&todo](auto op, LogicalResult &result) {
     if (!op.getDependVars().empty() || op.getDependKinds())
       result = todo("depend");
@@ -187,10 +194,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (!op.getLinearVars().empty() || !op.getLinearStepVars().empty())
       result = todo("linear");
   };
-  auto checkNontemporal = [&todo](auto op, LogicalResult &result) {
-    if (!op.getNontemporalVars().empty())
-      result = todo("nontemporal");
-  };
   auto checkNowait = [&todo](auto op, LogicalResult &result) {
     if (op.getNowait())
       result = todo("nowait");
@@ -209,19 +212,9 @@ static LogicalResult checkImplementationStatus(Operation &op) {
   };
   auto checkPrivate = [&todo](auto op, LogicalResult &result) {
     if constexpr (std::is_same_v<std::decay_t<decltype(op)>, omp::TargetOp>) {
-      // Privatization clauses are supported, except on some situations, so we
-      // need to check here whether any of these unsupported cases are being
-      // translated.
-      if (std::optional<ArrayAttr> privateSyms = op.getPrivateSyms()) {
-        for (Attribute privatizerNameAttr : *privateSyms) {
-          omp::PrivateClauseOp privatizer = findPrivatizer(
-              op.getOperation(), cast<SymbolRefAttr>(privatizerNameAttr));
-
-          if (privatizer.getDataSharingType() ==
-              omp::DataSharingClauseType::FirstPrivate)
-            result = todo("firstprivate");
-        }
-      }
+      // Privatization is supported only for included target tasks.
+      if (!op.getPrivateVars().empty() && op.getNowait())
+        result = todo("privatization for deferred target tasks");
     } else {
       if (!op.getPrivateVars().empty() || op.getPrivateSyms())
         result = todo("privatization");
@@ -248,6 +241,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
 
   LogicalResult result = success();
   llvm::TypeSwitch<Operation &>(op)
+      .Case([&](omp::CancelOp op) { checkCancelDirective(op, result); })
       .Case([&](omp::DistributeOp op) {
         checkAllocate(op, result);
         checkDistSchedule(op, result);
@@ -296,7 +290,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       })
       .Case([&](omp::SimdOp op) {
         checkLinear(op, result);
-        checkNontemporal(op, result);
         checkReduction(op, result);
       })
       .Case<omp::AtomicReadOp, omp::AtomicWriteOp, omp::AtomicUpdateOp,
@@ -1479,6 +1472,7 @@ allocatePrivateVars(llvm::IRBuilderBase &builder,
   assert(allocaTerminator->getNumSuccessors() == 1 &&
          "This is an unconditional branch created by splitBB");
 
+  llvm::DataLayout dataLayout = builder.GetInsertBlock()->getDataLayout();
   llvm::BasicBlock *afterAllocas = allocaTerminator->getSuccessor(0);
 
   unsigned int allocaAS =
@@ -1505,12 +1499,12 @@ allocatePrivateVars(llvm::IRBuilderBase &builder,
   return afterAllocas;
 }
 
-static LogicalResult
-copyFirstPrivateVars(llvm::IRBuilderBase &builder,
-                     LLVM::ModuleTranslation &moduleTranslation,
-                     SmallVectorImpl<mlir::Value> &mlirPrivateVars,
-                     ArrayRef<llvm::Value *> llvmPrivateVars,
-                     SmallVectorImpl<omp::PrivateClauseOp> &privateDecls) {
+static LogicalResult copyFirstPrivateVars(
+    llvm::IRBuilderBase &builder, LLVM::ModuleTranslation &moduleTranslation,
+    SmallVectorImpl<mlir::Value> &mlirPrivateVars,
+    ArrayRef<llvm::Value *> llvmPrivateVars,
+    SmallVectorImpl<omp::PrivateClauseOp> &privateDecls,
+    llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
   // Apply copy region for firstprivate.
   bool needsFirstprivate =
       llvm::any_of(privateDecls, [](omp::PrivateClauseOp &privOp) {
@@ -1534,7 +1528,8 @@ copyFirstPrivateVars(llvm::IRBuilderBase &builder,
     Region &copyRegion = decl.getCopyRegion();
 
     // map copyRegion rhs arg
-    llvm::Value *nonPrivateVar = moduleTranslation.lookupValue(mlirVar);
+    llvm::Value *nonPrivateVar = findAssociatedValue(
+        mlirVar, builder, moduleTranslation, mappedPrivateVars);
     assert(nonPrivateVar);
     moduleTranslation.mapValue(decl.getCopyMoldArg(), nonPrivateVar);
 
@@ -1578,6 +1573,19 @@ cleanupPrivateVars(llvm::IRBuilderBase &builder,
                                 "`omp.private` op in");
 
   return success();
+}
+
+/// Returns true if the construct contains omp.cancel or omp.cancellation_point
+static bool constructIsCancellable(Operation *op) {
+  // omp.cancel must be "closely nested" so it will be visible and not inside of
+  // funcion calls. This is enforced by the verifier.
+  return op
+      ->walk([](Operation *child) {
+        if (mlir::isa<omp::CancelOp>(child))
+          return WalkResult::interrupt();
+        return WalkResult::advance();
+      })
+      .wasInterrupted();
 }
 
 static LogicalResult
@@ -1668,10 +1676,11 @@ convertOmpSections(Operation &opInst, llvm::IRBuilderBase &builder,
   auto finiCB = [&](InsertPointTy codeGenIP) { return llvm::Error::success(); };
 
   allocaIP = findAllocaInsertPoint(builder, moduleTranslation);
+  bool isCancellable = constructIsCancellable(sectionsOp);
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       moduleTranslation.getOpenMPBuilder()->createSections(
-          ompLoc, allocaIP, sectionCBs, privCB, finiCB, false,
+          ompLoc, allocaIP, sectionCBs, privCB, finiCB, isCancellable,
           sectionsOp.getNowait());
 
   if (failed(handleError(afterIP, opInst)))
@@ -2524,8 +2533,7 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
   auto pbKind = llvm::omp::OMP_PROC_BIND_default;
   if (auto bind = opInst.getProcBindKind())
     pbKind = getProcBindKind(*bind);
-  // TODO: Is the Parallel construct cancellable?
-  bool isCancellable = false;
+  bool isCancellable = constructIsCancellable(opInst);
 
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
       findAllocaInsertPoint(builder, moduleTranslation);
@@ -2601,6 +2609,7 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
 
   llvm::MapVector<llvm::Value *, llvm::Value *> alignedVars;
   llvm::omp::OrderKind order = convertOrderKind(simdOp.getOrder());
+
   llvm::BasicBlock *sourceBlock = builder.GetInsertBlock();
   std::optional<ArrayAttr> alignmentValues = simdOp.getAlignments();
   mlir::OperandRange operands = simdOp.getAlignedVars();
@@ -2789,6 +2798,8 @@ convertOmpAtomicWrite(Operation &opInst, llvm::IRBuilderBase &builder,
     return failure();
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
+      findAllocaInsertPoint(builder, moduleTranslation);
 
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::AtomicOrdering ao = convertAtomicOrdering(writeOp.getMemoryOrder());
@@ -2797,7 +2808,8 @@ convertOmpAtomicWrite(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::Type *ty = moduleTranslation.convertType(writeOp.getExpr().getType());
   llvm::OpenMPIRBuilder::AtomicOpValue x = {dest, ty, /*isSigned=*/false,
                                             /*isVolatile=*/false};
-  builder.restoreIP(ompBuilder->createAtomicWrite(ompLoc, x, expr, ao));
+  builder.restoreIP(
+      ompBuilder->createAtomicWrite(ompLoc, x, expr, ao, allocaIP));
   return success();
 }
 
@@ -2988,6 +3000,47 @@ convertOmpAtomicCapture(omp::AtomicCaptureOp atomicCaptureOp,
     return failure();
 
   builder.restoreIP(*afterIP);
+  return success();
+}
+
+static llvm::omp::Directive convertCancellationConstructType(
+    omp::ClauseCancellationConstructType directive) {
+  switch (directive) {
+  case omp::ClauseCancellationConstructType::Loop:
+    return llvm::omp::Directive::OMPD_for;
+  case omp::ClauseCancellationConstructType::Parallel:
+    return llvm::omp::Directive::OMPD_parallel;
+  case omp::ClauseCancellationConstructType::Sections:
+    return llvm::omp::Directive::OMPD_sections;
+  case omp::ClauseCancellationConstructType::Taskgroup:
+    return llvm::omp::Directive::OMPD_taskgroup;
+  }
+}
+
+static LogicalResult
+convertOmpCancel(omp::CancelOp op, llvm::IRBuilderBase &builder,
+                 LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+
+  if (failed(checkImplementationStatus(*op.getOperation())))
+    return failure();
+
+  llvm::Value *ifCond = nullptr;
+  if (Value ifVar = op.getIfExpr())
+    ifCond = moduleTranslation.lookupValue(ifVar);
+
+  llvm::omp::Directive cancelledDirective =
+      convertCancellationConstructType(op.getCancelDirective());
+
+  llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
+      ompBuilder->createCancel(ompLoc, ifCond, cancelledDirective);
+
+  if (failed(handleError(afterIP, *op.getOperation())))
+    return failure();
+
+  builder.restoreIP(afterIP.get());
+
   return success();
 }
 
@@ -5064,6 +5117,12 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
             .failed())
       return llvm::make_error<PreviouslyReportedError>();
 
+    if (failed(copyFirstPrivateVars(
+            builder, moduleTranslation, privateVarsInfo.mlirVars,
+            privateVarsInfo.llvmVars, privateVarsInfo.privatizers,
+            &mappedPrivateVars)))
+      return llvm::make_error<PreviouslyReportedError>();
+
     SmallVector<Region *> privateCleanupRegions;
     llvm::transform(privateVarsInfo.privatizers,
                     std::back_inserter(privateCleanupRegions),
@@ -5420,6 +5479,9 @@ convertHostOrTargetOperation(Operation *op, llvm::IRBuilderBase &builder,
           })
           .Case([&](omp::AtomicCaptureOp op) {
             return convertOmpAtomicCapture(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::CancelOp op) {
+            return convertOmpCancel(op, builder, moduleTranslation);
           })
           .Case([&](omp::SectionsOp) {
             return convertOmpSections(*op, builder, moduleTranslation);

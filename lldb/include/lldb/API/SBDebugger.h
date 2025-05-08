@@ -13,6 +13,7 @@
 
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBPlatform.h"
+#include "lldb/API/SBStructuredData.h"
 
 namespace lldb_private {
 class CommandPluginInterfaceImplementation;
@@ -249,6 +250,13 @@ public:
   lldb::SBTarget CreateTarget(const char *filename);
 
   lldb::SBTarget GetDummyTarget();
+
+#ifndef SWIG
+  // Dispatch telemery from client to server if client-telemetry is enabled
+  // (by vendor), otherwise the data is ignored.
+  // Invoking this from python client (with SWIG) is not supported.
+  void DispatchClientTelemetry(const lldb::SBStructuredData &data);
+#endif
 
   // Return true if target is deleted from the target list of the debugger.
   bool DeleteTarget(lldb::SBTarget &target);

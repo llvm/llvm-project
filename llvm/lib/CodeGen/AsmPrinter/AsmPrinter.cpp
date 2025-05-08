@@ -383,7 +383,8 @@ Align AsmPrinter::getGVAlignment(const GlobalObject *GV, const DataLayout &DL,
   return Alignment;
 }
 
-AsmPrinter::AsmPrinter(TargetMachine &tm, std::unique_ptr<MCStreamer> Streamer)
+AsmPrinter::AsmPrinter(TargetMachine &tm, std::unique_ptr<MCStreamer> Streamer,
+                       char &ID)
     : MachineFunctionPass(ID), TM(tm), MAI(tm.getMCAsmInfo()),
       OutContext(Streamer->getContext()), OutStreamer(std::move(Streamer)),
       SM(*this) {
@@ -562,7 +563,8 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   if (MAI->doesSupportDebugInformation()) {
     bool EmitCodeView = M.getCodeViewFlag();
-    if (EmitCodeView && TM.getTargetTriple().isOSWindows())
+    if (EmitCodeView &&
+        (TM.getTargetTriple().isOSWindows() || TM.getTargetTriple().isUEFI()))
       Handlers.push_back(std::make_unique<CodeViewDebug>(this));
     if (!EmitCodeView || M.getDwarfVersion()) {
       if (hasDebugInfo()) {
@@ -1592,7 +1594,7 @@ void AsmPrinter::emitStackSizeSection(const MachineFunction &MF) {
     return;
 
   MCSection *StackSizeSection =
-      getObjFileLowering().getStackSizesSection(*getCurrentSection());
+      getObjFileLowering().getStackSizesSection(*MF.getSection());
   if (!StackSizeSection)
     return;
 
@@ -2404,16 +2406,56 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
   OutStreamer->emitBinaryData(Buf);
 }
 
+static uint64_t globalSize(const llvm::GlobalVariable &G) {
+  const Constant *Initializer = G.getInitializer();
+  return G.getParent()->getDataLayout().getTypeAllocSize(
+      Initializer->getType());
+}
+
+static bool shouldTagGlobal(const llvm::GlobalVariable &G) {
+  // We used to do this in clang, but there are optimization passes that turn
+  // non-constant globals into constants. So now, clang only tells us whether
+  // it would *like* a global to be tagged, but we still make the decision here.
+  //
+  // For now, don't instrument constant data, as it'll be in .rodata anyway. It
+  // may be worth instrumenting these in future to stop them from being used as
+  // gadgets.
+  if (G.getName().starts_with("llvm.") || G.isThreadLocal() || G.isConstant())
+    return false;
+
+  // Globals can be placed implicitly or explicitly in sections. There's two
+  // different types of globals that meet this criteria that cause problems:
+  //  1. Function pointers that are going into various init arrays (either
+  //     explicitly through `__attribute__((section(<foo>)))` or implicitly
+  //     through `__attribute__((constructor)))`, such as ".(pre)init(_array)",
+  //     ".fini(_array)", ".ctors", and ".dtors". These function pointers end up
+  //     overaligned and overpadded, making iterating over them problematic, and
+  //     each function pointer is individually tagged (so the iteration over
+  //     them causes SIGSEGV/MTE[AS]ERR).
+  //  2. Global variables put into an explicit section, where the section's name
+  //     is a valid C-style identifier. The linker emits a `__start_<name>` and
+  //     `__stop_<name>` symbol for the section, so that you can iterate over
+  //     globals within this section. Unfortunately, again, these globals would
+  //     be tagged and so iteration causes SIGSEGV/MTE[AS]ERR.
+  //
+  // To mitigate both these cases, and because specifying a section is rare
+  // outside of these two cases, disable MTE protection for globals in any
+  // section.
+  if (G.hasSection())
+    return false;
+
+  return globalSize(G) > 0;
+}
+
 static void tagGlobalDefinition(Module &M, GlobalVariable *G) {
-  Constant *Initializer = G->getInitializer();
-  uint64_t SizeInBytes =
-      M.getDataLayout().getTypeAllocSize(Initializer->getType());
+  uint64_t SizeInBytes = globalSize(*G);
 
   uint64_t NewSize = alignTo(SizeInBytes, 16);
   if (SizeInBytes != NewSize) {
     // Pad the initializer out to the next multiple of 16 bytes.
     llvm::SmallVector<uint8_t> Init(NewSize - SizeInBytes, 0);
     Constant *Padding = ConstantDataArray::get(M.getContext(), Init);
+    Constant *Initializer = G->getInitializer();
     Initializer = ConstantStruct::getAnon({Initializer, Padding});
     auto *NewGV = new GlobalVariable(
         M, Initializer->getType(), G->isConstant(), G->getLinkage(),
@@ -2436,6 +2478,12 @@ static void tagGlobalDefinition(Module &M, GlobalVariable *G) {
   G->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
 }
 
+static void removeMemtagFromGlobal(GlobalVariable &G) {
+  auto Meta = G.getSanitizerMetadata();
+  Meta.Memtag = false;
+  G.setSanitizerMetadata(Meta);
+}
+
 bool AsmPrinter::doFinalization(Module &M) {
   // Set the MachineFunction to nullptr so that we can catch attempted
   // accesses to MF specific features at the module level and so that
@@ -2446,6 +2494,12 @@ bool AsmPrinter::doFinalization(Module &M) {
   for (GlobalVariable &G : M.globals()) {
     if (G.isDeclaration() || !G.isTagged())
       continue;
+    if (!shouldTagGlobal(G)) {
+      assert(G.hasSanitizerMetadata()); // because isTagged.
+      removeMemtagFromGlobal(G);
+      assert(!G.isTagged());
+      continue;
+    }
     GlobalsToTag.push_back(&G);
   }
   for (GlobalVariable *G : GlobalsToTag)
@@ -2866,22 +2920,12 @@ void AsmPrinter::emitConstantPool() {
 void AsmPrinter::emitJumpTableInfo() {
   const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo();
   if (!MJTI) return;
-  if (MJTI->getEntryKind() == MachineJumpTableInfo::EK_Inline) return;
+
   const std::vector<MachineJumpTableEntry> &JT = MJTI->getJumpTables();
   if (JT.empty()) return;
 
-  // Pick the directive to use to print the jump table entries, and switch to
-  // the appropriate section.
-  const Function &F = MF->getFunction();
-  const TargetLoweringObjectFile &TLOF = getObjFileLowering();
-  bool JTInDiffSection = !TLOF.shouldPutJumpTableInFunctionSection(
-      MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32 ||
-          MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference64,
-      F);
-
   if (!TM.Options.EnableStaticDataPartitioning) {
-    emitJumpTableImpl(*MJTI, llvm::to_vector(llvm::seq<unsigned>(JT.size())),
-                      JTInDiffSection);
+    emitJumpTableImpl(*MJTI, llvm::to_vector(llvm::seq<unsigned>(JT.size())));
     return;
   }
 
@@ -2897,33 +2941,40 @@ void AsmPrinter::emitJumpTableInfo() {
     }
   }
 
-  emitJumpTableImpl(*MJTI, HotJumpTableIndices, JTInDiffSection);
-  emitJumpTableImpl(*MJTI, ColdJumpTableIndices, JTInDiffSection);
+  emitJumpTableImpl(*MJTI, HotJumpTableIndices);
+  emitJumpTableImpl(*MJTI, ColdJumpTableIndices);
 }
 
 void AsmPrinter::emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
-                                   ArrayRef<unsigned> JumpTableIndices,
-                                   bool JTInDiffSection) {
-  if (JumpTableIndices.empty())
+                                   ArrayRef<unsigned> JumpTableIndices) {
+  if (MJTI.getEntryKind() == MachineJumpTableInfo::EK_Inline ||
+      JumpTableIndices.empty())
     return;
 
   const TargetLoweringObjectFile &TLOF = getObjFileLowering();
   const Function &F = MF->getFunction();
   const std::vector<MachineJumpTableEntry> &JT = MJTI.getJumpTables();
   MCSection *JumpTableSection = nullptr;
-  if (TM.Options.EnableStaticDataPartitioning) {
-    JumpTableSection =
-        TLOF.getSectionForJumpTable(F, TM, &JT[JumpTableIndices.front()]);
-  } else {
-    JumpTableSection = TLOF.getSectionForJumpTable(F, TM);
-  }
 
-  const DataLayout &DL = MF->getDataLayout();
+  const bool UseLabelDifference =
+      MJTI.getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32 ||
+      MJTI.getEntryKind() == MachineJumpTableInfo::EK_LabelDifference64;
+  // Pick the directive to use to print the jump table entries, and switch to
+  // the appropriate section.
+  const bool JTInDiffSection =
+      !TLOF.shouldPutJumpTableInFunctionSection(UseLabelDifference, F);
   if (JTInDiffSection) {
+    if (TM.Options.EnableStaticDataPartitioning) {
+      JumpTableSection =
+          TLOF.getSectionForJumpTable(F, TM, &JT[JumpTableIndices.front()]);
+    } else {
+      JumpTableSection = TLOF.getSectionForJumpTable(F, TM);
+    }
     OutStreamer->switchSection(JumpTableSection);
   }
 
-  emitAlignment(Align(MJTI.getEntryAlignment(MF->getDataLayout())));
+  const DataLayout &DL = MF->getDataLayout();
+  emitAlignment(Align(MJTI.getEntryAlignment(DL)));
 
   // Jump tables in code sections are marked with a data_region directive
   // where that's supported.
@@ -4122,7 +4173,8 @@ const MCExpr *AsmPrinter::lowerBlockAddressConstant(const BlockAddress &BA) {
 
 /// GetCPISymbol - Return the symbol for the specified constant pool entry.
 MCSymbol *AsmPrinter::GetCPISymbol(unsigned CPID) const {
-  if (getSubtargetInfo().getTargetTriple().isWindowsMSVCEnvironment()) {
+  if (getSubtargetInfo().getTargetTriple().isWindowsMSVCEnvironment() ||
+      getSubtargetInfo().getTargetTriple().isUEFI()) {
     const MachineConstantPoolEntry &CPE =
         MF->getConstantPool()->getConstants()[CPID];
     if (!CPE.isMachineConstantPoolEntry()) {

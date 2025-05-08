@@ -934,7 +934,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     std::optional<StringRef> OptVal =
         llvm::StringSwitch<std::optional<StringRef>>(ArgVecLib->getValue())
             .Case("Accelerate", "Accelerate")
-            .Case("LIBMVEC", "LIBMVEC-X86")
+            .Case("libmvec", "LIBMVEC")
             .Case("MASSV", "MASSV")
             .Case("SVML", "SVML")
             .Case("SLEEF", "sleefgnuabi")
@@ -1252,6 +1252,9 @@ void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
                     options::OPT_fno_rtlib_add_rpath, false))
     return;
 
+  if (TC.getTriple().isOSAIX()) // TODO: AIX doesn't support -rpath option.
+    return;
+
   SmallVector<std::string> CandidateRPaths(TC.getArchSpecificLibPaths());
   if (const auto CandidateRPath = TC.getStdlibPath())
     CandidateRPaths.emplace_back(*CandidateRPath);
@@ -1308,10 +1311,6 @@ bool tools::addOpenMPRuntime(const Compilation &C, ArgStringList &CmdArgs,
 
   if (IsOffloadingHost)
     CmdArgs.push_back("-lomptarget");
-
-  if (IsOffloadingHost &&
-      Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib, true))
-    CmdArgs.push_back("-lomptarget.devicertl");
 
   addArchSpecificRPath(TC, Args, CmdArgs);
 
@@ -1550,14 +1549,14 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     RequiredSymbols.push_back("__safestack_init");
   }
   if (!(SanArgs.needsSharedRt() && SanArgs.needsUbsanRt())) {
-    if (SanArgs.needsCfiRt())
+    if (SanArgs.needsCfiCrossDsoRt())
       StaticRuntimes.push_back("cfi");
-    if (SanArgs.needsCfiDiagRt())
+    if (SanArgs.needsCfiCrossDsoDiagRt())
       StaticRuntimes.push_back("cfi_diag");
   }
   if (SanArgs.linkCXXRuntimes() && !SanArgs.requiresMinimalRuntime() &&
       ((!SanArgs.needsSharedRt() && SanArgs.needsUbsanCXXRt()) ||
-       SanArgs.needsCfiDiagRt())) {
+       SanArgs.needsCfiCrossDsoDiagRt())) {
     StaticRuntimes.push_back("ubsan_standalone_cxx");
   }
   if (SanArgs.needsStatsRt()) {
@@ -2534,7 +2533,6 @@ static void GetSDLFromOffloadArchive(
 
   C.addTempFile(C.getArgs().MakeArgString(OutputLib));
 
-  ArgStringList CmdArgs;
   SmallString<128> DeviceTriple;
   DeviceTriple += Action::GetOffloadKindName(JA.getOffloadingDeviceKind());
   DeviceTriple += '-';
@@ -2798,6 +2796,11 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
   for (const auto &LibPath : HostTC.getFilePaths())
     LibraryPaths.emplace_back(LibPath);
 
+  // Check the target specific library path for the triple as well.
+  SmallString<128> P(D.Dir);
+  llvm::sys::path::append(P, "..", "lib", Triple.getTriple());
+  LibraryPaths.emplace_back(P);
+
   OptSpecifier LibomptargetBCPathOpt =
       Triple.isAMDGCN()  ? options::OPT_libomptarget_amdgpu_bc_path_EQ
       : Triple.isNVPTX() ? options::OPT_libomptarget_nvptx_bc_path_EQ
@@ -2935,8 +2938,7 @@ void tools::addMCModel(const Driver &D, const llvm::opt::ArgList &Args,
       Ok = CM == "small" || CM == "medium" ||
            (CM == "large" && Triple.isRISCV64());
     } else if (Triple.getArch() == llvm::Triple::x86_64) {
-      Ok = llvm::is_contained({"small", "kernel", "medium", "large", "tiny"},
-                              CM);
+      Ok = llvm::is_contained({"small", "kernel", "medium", "large"}, CM);
     } else if (Triple.isNVPTX() || Triple.isAMDGPU() || Triple.isSPIRV()) {
       // NVPTX/AMDGPU/SPIRV does not care about the code model and will accept
       // whatever works for the host.

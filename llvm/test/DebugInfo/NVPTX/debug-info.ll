@@ -20,7 +20,7 @@
 ; CHECK: )
 ; CHECK: {
 ; CHECK-DAG: .reg .pred      %p<2>;
-; CHECK-DAG: .reg .f32       %f<5>;
+; CHECK-DAG: .reg .b32       %f<5>;
 ; CHECK-DAG: .reg .b32       %r<6>;
 ; CHECK-DAG: .reg .b64       %rd<8>;
 ; CHECK: .loc [[DEBUG_INFO_CU:[0-9]+]] 5 0

@@ -416,7 +416,7 @@ public:
 
     // Gather information from the clauses.
     Flags flags;
-    std::optional<common::OmpAtomicDefaultMemOrderType> memOrder;
+    std::optional<common::OmpMemoryOrderType> memOrder;
     for (const auto &clause : std::get<parser::OmpClauseList>(x.t).v) {
       flags |= common::visit(
           common::visitors{
@@ -527,6 +527,12 @@ public:
   bool Pre(const parser::OmpLinearClause &x) {
     auto &objects{std::get<parser::OmpObjectList>(x.t)};
     ResolveOmpObjectList(objects, Symbol::Flag::OmpLinear);
+    return false;
+  }
+
+  bool Pre(const parser::OmpInReductionClause &x) {
+    auto &objects{std::get<parser::OmpObjectList>(x.t)};
+    ResolveOmpObjectList(objects, Symbol::Flag::OmpInReduction);
     return false;
   }
 
@@ -799,7 +805,7 @@ private:
   std::int64_t ordCollapseLevel{0};
 
   void AddOmpRequiresToScope(Scope &, WithOmpDeclarative::RequiresFlags,
-      std::optional<common::OmpAtomicDefaultMemOrderType>);
+      std::optional<common::OmpMemoryOrderType>);
   void IssueNonConformanceWarning(
       llvm::omp::Directive D, parser::CharBlock source);
 
@@ -953,7 +959,14 @@ void AccAttributeVisitor::Post(
   const auto &clauseList = std::get<parser::AccClauseList>(x.t);
   for (const auto &clause : clauseList.v) {
     // Restriction - line 2414
-    DoNotAllowAssumedSizedArray(GetAccObjectList(clause));
+    // We assume the restriction is present because clauses that require
+    // moving data would require the size of the data to be present, but
+    // the deviceptr and present clauses do not require moving data and
+    // thus we permit them.
+    if (!std::holds_alternative<parser::AccClause::Deviceptr>(clause.u) &&
+        !std::holds_alternative<parser::AccClause::Present>(clause.u)) {
+      DoNotAllowAssumedSizedArray(GetAccObjectList(clause));
+    }
   }
 }
 
@@ -2714,7 +2727,7 @@ void ResolveOmpTopLevelParts(
   // program units. Modules are skipped because their REQUIRES clauses should be
   // propagated via USE statements instead.
   WithOmpDeclarative::RequiresFlags combinedFlags;
-  std::optional<common::OmpAtomicDefaultMemOrderType> combinedMemOrder;
+  std::optional<common::OmpMemoryOrderType> combinedMemOrder;
 
   // Function to go through non-module top level program units and extract
   // REQUIRES information to be processed by a function-like argument.
@@ -2757,7 +2770,7 @@ void ResolveOmpTopLevelParts(
         flags{details.ompRequires()}) {
       combinedFlags |= *flags;
     }
-    if (const common::OmpAtomicDefaultMemOrderType *
+    if (const common::OmpMemoryOrderType *
         memOrder{details.ompAtomicDefaultMemOrder()}) {
       if (combinedMemOrder && *combinedMemOrder != *memOrder) {
         context.Say(symbol.scope()->sourceRange(),
@@ -2976,7 +2989,7 @@ void OmpAttributeVisitor::CheckNameInAllocateStmt(
 
 void OmpAttributeVisitor::AddOmpRequiresToScope(Scope &scope,
     WithOmpDeclarative::RequiresFlags flags,
-    std::optional<common::OmpAtomicDefaultMemOrderType> memOrder) {
+    std::optional<common::OmpMemoryOrderType> memOrder) {
   Scope *scopeIter = &scope;
   do {
     if (Symbol * symbol{scopeIter->symbol()}) {

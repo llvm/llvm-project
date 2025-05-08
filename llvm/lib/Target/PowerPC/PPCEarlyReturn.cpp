@@ -33,9 +33,7 @@ namespace {
   // branch-to-blr sequences.
   struct PPCEarlyReturn : public MachineFunctionPass {
     static char ID;
-    PPCEarlyReturn() : MachineFunctionPass(ID) {
-      initializePPCEarlyReturnPass(*PassRegistry::getPassRegistry());
-    }
+    PPCEarlyReturn() : MachineFunctionPass(ID) {}
 
     const TargetInstrInfo *TII;
 

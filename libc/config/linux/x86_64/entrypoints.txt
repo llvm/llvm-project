@@ -368,6 +368,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
     libc.src.sys.uio.readv
+
+    # sys/time.h entrypoints
+    libc.src.sys.time.setitimer
+    libc.src.sys.time.getitimer
 )
 
 if(LLVM_LIBC_INCLUDE_SCUDO)
@@ -413,6 +417,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     # math.h entrypoints
     libc.src.math.acosf
     libc.src.math.acoshf
+    libc.src.math.asin
     libc.src.math.asinf
     libc.src.math.asinhf
     libc.src.math.atan2
@@ -658,8 +663,10 @@ if(LIBC_TYPES_HAS_FLOAT16)
     # math.h C23 _Float16 entrypoints
     libc.src.math.acosf16
     libc.src.math.acoshf16
+    libc.src.math.acospif16
     libc.src.math.asinf16
     libc.src.math.asinhf16
+    libc.src.math.atanhf16
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16
     libc.src.math.copysignf16
@@ -914,6 +921,14 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.countlsuhk
     libc.src.stdfix.countlsuk
     libc.src.stdfix.countlsulk
+    libc.src.stdfix.idivr
+    libc.src.stdfix.idivlr
+    libc.src.stdfix.idivk
+    libc.src.stdfix.idivlk
+    libc.src.stdfix.idivur
+    libc.src.stdfix.idivulr
+    libc.src.stdfix.idivuk
+    libc.src.stdfix.idivulk
   )
 endif()
 
@@ -1045,6 +1060,8 @@ if(LLVM_LIBC_FULL_BUILD)
     # setjmp.h entrypoints
     libc.src.setjmp.longjmp
     libc.src.setjmp.setjmp
+    libc.src.setjmp.siglongjmp
+    libc.src.setjmp.sigsetjmp
 
     # stdio.h entrypoints
     libc.src.stdio.clearerr

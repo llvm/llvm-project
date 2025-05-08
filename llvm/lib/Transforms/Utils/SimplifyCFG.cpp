@@ -73,6 +73,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LockstepReverseIterator.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -367,7 +368,7 @@ safeToMergeTerminators(Instruction *SI1, Instruction *SI2,
   BasicBlock *SI1BB = SI1->getParent();
   BasicBlock *SI2BB = SI2->getParent();
 
-  SmallPtrSet<BasicBlock *, 16> SI1Succs(succ_begin(SI1BB), succ_end(SI1BB));
+  SmallPtrSet<BasicBlock *, 16> SI1Succs(llvm::from_range, successors(SI1BB));
   bool Fail = false;
   for (BasicBlock *Succ : successors(SI2BB)) {
     if (!SI1Succs.count(Succ))
@@ -976,8 +977,8 @@ bool SimplifyCFGOpt::simplifyEqualityComparisonWithOnlyPredecessor(
     SwitchInstProfUpdateWrapper SI = *cast<SwitchInst>(TI);
     // Okay, TI has cases that are statically dead, prune them away.
     SmallPtrSet<Constant *, 16> DeadCases;
-    for (unsigned i = 0, e = PredCases.size(); i != e; ++i)
-      DeadCases.insert(PredCases[i].Value);
+    for (const ValueEqualityComparisonCase &Case : PredCases)
+      DeadCases.insert(Case.Value);
 
     LLVM_DEBUG(dbgs() << "Threading pred instr: " << *Pred->getTerminator()
                       << "Through successor TI: " << *TI);
@@ -1129,13 +1130,17 @@ static void cloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
 
     Instruction *NewBonusInst = BonusInst.clone();
 
-    if (!isa<DbgInfoIntrinsic>(BonusInst) &&
-        PTI->getDebugLoc() != NewBonusInst->getDebugLoc()) {
-      // Unless the instruction has the same !dbg location as the original
-      // branch, drop it. When we fold the bonus instructions we want to make
-      // sure we reset their debug locations in order to avoid stepping on
-      // dead code caused by folding dead branches.
-      NewBonusInst->setDebugLoc(DebugLoc());
+    if (!isa<DbgInfoIntrinsic>(BonusInst)) {
+      if (!NewBonusInst->getDebugLoc().isSameSourceLocation(
+              PTI->getDebugLoc())) {
+        // Unless the instruction has the same !dbg location as the original
+        // branch, drop it. When we fold the bonus instructions we want to make
+        // sure we reset their debug locations in order to avoid stepping on
+        // dead code caused by folding dead branches.
+        NewBonusInst->setDebugLoc(DebugLoc());
+      } else if (const DebugLoc &DL = NewBonusInst->getDebugLoc()) {
+        mapAtomInstance(DL, VMap);
+      }
     }
 
     RemapInstruction(NewBonusInst, VMap,
@@ -1180,6 +1185,19 @@ static void cloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
       assert(PN->getIncomingBlock(U) == PredBlock &&
              "Not in block-closed SSA form?");
       U.set(NewBonusInst);
+    }
+  }
+
+  // Key Instructions: We may have propagated atom info into the pred. If the
+  // pred's terminator already has atom info do nothing as merging would drop
+  // one atom group anyway. If it doesn't, propagte the remapped atom group
+  // from BB's terminator.
+  if (auto &PredDL = PTI->getDebugLoc()) {
+    auto &DL = BB->getTerminator()->getDebugLoc();
+    if (!PredDL->getAtomGroup() && DL && DL->getAtomGroup() &&
+        PredDL.isSameSourceLocation(DL)) {
+      PTI->setDebugLoc(DL);
+      RemapSourceAtom(PTI, VMap);
     }
   }
 }
@@ -1307,14 +1325,14 @@ bool SimplifyCFGOpt::performValueComparisonIntoPredecessorFolding(
 
     // Okay, now we know which constants were sent to BB from the
     // predecessor.  Figure out where they will all go now.
-    for (unsigned i = 0, e = BBCases.size(); i != e; ++i)
-      if (PTIHandled.count(BBCases[i].Value)) {
+    for (const ValueEqualityComparisonCase &Case : BBCases)
+      if (PTIHandled.count(Case.Value)) {
         // If this is one we are capable of getting...
         if (PredHasWeights || SuccHasWeights)
-          Weights.push_back(WeightsForHandled[BBCases[i].Value]);
-        PredCases.push_back(BBCases[i]);
-        ++NewSuccessors[BBCases[i].Dest];
-        PTIHandled.erase(BBCases[i].Value); // This constant is taken care of
+          Weights.push_back(WeightsForHandled[Case.Value]);
+        PredCases.push_back(Case);
+        ++NewSuccessors[Case.Dest];
+        PTIHandled.erase(Case.Value); // This constant is taken care of
       }
 
     // If there are any constants vectored to BB that TI doesn't handle,
@@ -1332,7 +1350,7 @@ bool SimplifyCFGOpt::performValueComparisonIntoPredecessorFolding(
   // successors.
   SmallPtrSet<BasicBlock *, 2> SuccsOfPred;
   if (DTU) {
-    SuccsOfPred = {succ_begin(Pred), succ_end(Pred)};
+    SuccsOfPred = {llvm::from_range, successors(Pred)};
     Updates.reserve(Updates.size() + NewSuccessors.size());
   }
   for (const std::pair<BasicBlock *, int /*Num*/> &NewSuccessor :
@@ -3094,7 +3112,8 @@ static bool validateAndCostRequiredSelects(BasicBlock *BB, BasicBlock *ThenBB,
     if (ThenV == OrigV)
       continue;
 
-    Cost += TTI.getCmpSelInstrCost(Instruction::Select, PN.getType(), nullptr,
+    Cost += TTI.getCmpSelInstrCost(Instruction::Select, PN.getType(),
+                                   CmpInst::makeCmpResultType(PN.getType()),
                                    CmpInst::BAD_ICMP_PREDICATE, CostKind);
 
     // Don't convert to selects if we could remove undefined behavior instead.
@@ -3571,7 +3590,7 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
     // instructions into EdgeBB.  We know that there will be no uses of the
     // cloned instructions outside of EdgeBB.
     BasicBlock::iterator InsertPt = EdgeBB->getFirstInsertionPt();
-    DenseMap<Value *, Value *> TranslateMap; // Track translated values.
+    ValueToValueMapTy TranslateMap; // Track translated values.
     TranslateMap[Cond] = CB;
 
     // RemoveDIs: track instructions that we optimise away while folding, so
@@ -3591,11 +3610,11 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
         N->setName(BBI->getName() + ".c");
 
       // Update operands due to translation.
-      for (Use &Op : N->operands()) {
-        DenseMap<Value *, Value *>::iterator PI = TranslateMap.find(Op);
-        if (PI != TranslateMap.end())
-          Op = PI->second;
-      }
+      // Key Instructions: Remap all the atom groups.
+      if (const DebugLoc &DL = BBI->getDebugLoc())
+        mapAtomInstance(DL, TranslateMap);
+      RemapInstruction(N, TranslateMap,
+                       RF_IgnoreMissingLocals | RF_NoModuleLevelChanges);
 
       // Check for trivial simplification.
       if (Value *V = simplifyInstruction(N, {DL, nullptr, nullptr, AC})) {
@@ -5176,8 +5195,8 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(BranchInst *BI,
   SwitchInst *New = Builder.CreateSwitch(CompVal, DefaultBB, Values.size());
 
   // Add all of the 'cases' to the switch instruction.
-  for (unsigned i = 0, e = Values.size(); i != e; ++i)
-    New->addCase(Values[i], EdgeBB);
+  for (ConstantInt *Val : Values)
+    New->addCase(Val, EdgeBB);
 
   // We added edges from PI to the EdgeBB.  As such, if there were any
   // PHI nodes in EdgeBB, they need entries to be added corresponding to
@@ -6452,9 +6471,7 @@ SwitchLookupTable::SwitchLookupTable(
 
   // Build up the table contents.
   SmallVector<Constant *, 64> TableContents(TableSize);
-  for (size_t I = 0, E = Values.size(); I != E; ++I) {
-    ConstantInt *CaseVal = Values[I].first;
-    Constant *CaseRes = Values[I].second;
+  for (const auto &[CaseVal, CaseRes] : Values) {
     assert(CaseRes->getType() == ValueType);
 
     uint64_t Idx = (CaseVal->getValue() - Offset->getValue()).getLimitedValue();
@@ -7469,8 +7486,7 @@ template <> struct DenseMapInfo<const SwitchSuccWrapper *> {
     for (PHINode &Phi : BB->phis())
       PhiValsForBB.emplace_back((*SSW->PhiPredIVs)[&Phi][BB]);
 
-    return hash_combine(
-        BB, hash_combine_range(PhiValsForBB.begin(), PhiValsForBB.end()));
+    return hash_combine(BB, hash_combine_range(PhiValsForBB));
   }
   static bool isEqual(const SwitchSuccWrapper *LHS,
                       const SwitchSuccWrapper *RHS) {

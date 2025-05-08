@@ -23,7 +23,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeBasicBlockPathCloningPass(Registry);
   initializeBasicBlockSectionsPass(Registry);
   initializeBranchFolderLegacyPass(Registry);
-  initializeBranchRelaxationPass(Registry);
+  initializeBranchRelaxationLegacyPass(Registry);
   initializeBreakFalseDepsPass(Registry);
   initializeCallBrPreparePass(Registry);
   initializeCFGuardLongjmpPass(Registry);
@@ -76,7 +76,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeMachineBlockFrequencyInfoWrapperPassPass(Registry);
   initializeMachineBlockHashInfoPass(Registry);
   initializeMachineBlockPlacementLegacyPass(Registry);
-  initializeMachineBlockPlacementStatsPass(Registry);
+  initializeMachineBlockPlacementStatsLegacyPass(Registry);
   initializeMachineCFGPrinterPass(Registry);
   initializeMachineCSELegacyPass(Registry);
   initializeMachineCombinerPass(Registry);
@@ -93,7 +93,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeMachineOptimizationRemarkEmitterPassPass(Registry);
   initializeMachineOutlinerPass(Registry);
   initializeMachinePipelinerPass(Registry);
-  initializeMachineSanitizerBinaryMetadataPass(Registry);
+  initializeMachineSanitizerBinaryMetadataLegacyPass(Registry);
   initializeModuloScheduleTestPass(Registry);
   initializeMachinePostDominatorTreeWrapperPassPass(Registry);
   initializeMachineRegionInfoPassPass(Registry);
@@ -104,7 +104,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeMachineVerifierLegacyPassPass(Registry);
   initializeObjCARCContractLegacyPassPass(Registry);
   initializeOptimizePHIsLegacyPass(Registry);
-  initializePEIPass(Registry);
+  initializePEILegacyPass(Registry);
   initializePHIEliminationPass(Registry);
   initializePatchableFunctionLegacyPass(Registry);
   initializePeepholeOptimizerLegacyPass(Registry);
@@ -120,17 +120,17 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeRegUsageInfoCollectorLegacyPass(Registry);
   initializeRegUsageInfoPropagationLegacyPass(Registry);
   initializeRegisterCoalescerLegacyPass(Registry);
-  initializeRemoveLoadsIntoFakeUsesPass(Registry);
+  initializeRemoveLoadsIntoFakeUsesLegacyPass(Registry);
   initializeRemoveRedundantDebugValuesLegacyPass(Registry);
   initializeRenameIndependentSubregsLegacyPass(Registry);
   initializeSafeStackLegacyPassPass(Registry);
   initializeSelectOptimizePass(Registry);
   initializeShadowStackGCLoweringPass(Registry);
-  initializeShrinkWrapPass(Registry);
+  initializeShrinkWrapLegacyPass(Registry);
   initializeSjLjEHPreparePass(Registry);
   initializeSlotIndexesWrapperPassPass(Registry);
   initializeStackColoringLegacyPass(Registry);
-  initializeStackFrameLayoutAnalysisPassPass(Registry);
+  initializeStackFrameLayoutAnalysisLegacyPass(Registry);
   initializeStackMapLivenessPass(Registry);
   initializeStackProtectorPass(Registry);
   initializeStackSlotColoringLegacyPass(Registry);
@@ -143,9 +143,9 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeTypePromotionLegacyPass(Registry);
   initializeUnpackMachineBundlesPass(Registry);
   initializeUnreachableBlockElimLegacyPassPass(Registry);
-  initializeUnreachableMachineBlockElimPass(Registry);
+  initializeUnreachableMachineBlockElimLegacyPass(Registry);
   initializeVirtRegMapWrapperLegacyPass(Registry);
-  initializeVirtRegRewriterPass(Registry);
+  initializeVirtRegRewriterLegacyPass(Registry);
   initializeWasmEHPreparePass(Registry);
   initializeWinEHPreparePass(Registry);
   initializeXRayInstrumentationLegacyPass(Registry);

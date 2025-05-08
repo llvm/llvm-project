@@ -16,27 +16,22 @@ APValue FunctionPointer::toAPValue(const ASTContext &) const {
     return APValue(static_cast<Expr *>(nullptr), CharUnits::Zero(), {},
                    /*OnePastTheEnd=*/false, /*IsNull=*/true);
 
-  if (!Valid)
-    return APValue(static_cast<Expr *>(nullptr),
-                   CharUnits::fromQuantity(getIntegerRepresentation()), {},
-                   /*OnePastTheEnd=*/false, /*IsNull=*/false);
-
   if (Func->getDecl())
-    return APValue(Func->getDecl(), CharUnits::fromQuantity(Offset), {},
+    return APValue(Func->getDecl(), CharUnits::fromQuantity(0), {},
                    /*OnePastTheEnd=*/false, /*IsNull=*/false);
-  return APValue(Func->getExpr(), CharUnits::fromQuantity(Offset), {},
+  return APValue(Func->getExpr(), CharUnits::fromQuantity(0), {},
                  /*OnePastTheEnd=*/false, /*IsNull=*/false);
 }
 
 void FunctionPointer::print(llvm::raw_ostream &OS) const {
   OS << "FnPtr(";
-  if (Func && Valid)
+  if (Func)
     OS << Func->getName();
   else if (Func)
     OS << reinterpret_cast<uintptr_t>(Func);
   else
     OS << "nullptr";
-  OS << ") + " << Offset;
+  OS << ")";
 }
 
 } // namespace interp

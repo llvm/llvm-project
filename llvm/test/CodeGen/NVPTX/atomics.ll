@@ -351,7 +351,7 @@ declare float @llvm.nvvm.atomic.load.add.f32.p0(ptr %addr, float %val)
 define float @atomic_add_f32_generic(ptr %addr, float %val) {
 ; CHECK-LABEL: atomic_add_f32_generic(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -370,7 +370,7 @@ declare float @llvm.nvvm.atomic.load.add.f32.p1(ptr addrspace(1) %addr, float %v
 define float @atomic_add_f32_addrspace1(ptr addrspace(1) %addr, float %val) {
 ; CHECK-LABEL: atomic_add_f32_addrspace1(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -389,7 +389,7 @@ declare float @llvm.nvvm.atomic.load.add.f32.p3(ptr addrspace(3) %addr, float %v
 define float @atomic_add_f32_addrspace3(ptr addrspace(3) %addr, float %val) {
 ; CHECK-LABEL: atomic_add_f32_addrspace3(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -406,7 +406,7 @@ define float @atomic_add_f32_addrspace3(ptr addrspace(3) %addr, float %val) {
 define float @atomicrmw_add_f32_generic(ptr %addr, float %val) {
 ; CHECK-LABEL: atomicrmw_add_f32_generic(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -426,7 +426,7 @@ define half @atomicrmw_add_f16_generic(ptr %addr, half %val) {
 ; CHECK-NEXT:    .reg .pred %p<2>;
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
 ; CHECK-NEXT:    .reg .b32 %r<17>;
-; CHECK-NEXT:    .reg .f32 %f<4>;
+; CHECK-NEXT:    .reg .b32 %f<4>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -470,7 +470,7 @@ define half @atomicrmw_add_f16_generic(ptr %addr, half %val) {
 define float @atomicrmw_add_f32_addrspace1(ptr addrspace(1) %addr, float %val) {
 ; CHECK-LABEL: atomicrmw_add_f32_addrspace1(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -487,7 +487,7 @@ define float @atomicrmw_add_f32_addrspace1(ptr addrspace(1) %addr, float %val) {
 define float @atomicrmw_add_f32_addrspace3(ptr addrspace(3) %addr, float %val) {
 ; CHECK-LABEL: atomicrmw_add_f32_addrspace3(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:

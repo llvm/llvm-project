@@ -41,6 +41,7 @@ class HexagonAsmBackend : public MCAsmBackend {
   uint8_t OSABI;
   StringRef CPU;
   mutable uint64_t relaxedCnt;
+  mutable const MCInst *RelaxedMCB = nullptr;
   std::unique_ptr <MCInstrInfo> MCII;
   std::unique_ptr <MCInst *> RelaxTarget;
   MCInst * Extender;
@@ -82,8 +83,7 @@ public:
     return Result;
   }
 
-
-  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
+  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override {
     const static MCFixupKindInfo Infos[Hexagon::NumTargetFixupKinds] = {
       // This table *must* be in same the order of fixup_* kinds in
       // HexagonFixupKinds.h.
@@ -560,17 +560,17 @@ public:
   /// \param Inst - The instruction to test.
   bool mayNeedRelaxation(MCInst const &Inst,
                          const MCSubtargetInfo &STI) const override {
+    RelaxedMCB = &Inst;
     return true;
   }
 
   /// fixupNeedsRelaxation - Target specific predicate for whether a given
   /// fixup requires the associated instruction to be relaxed.
   bool fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
-                                    const MCRelaxableFragment &DF,
                                     const MCFixup &Fixup, const MCValue &,
                                     uint64_t Value,
                                     bool Resolved) const override {
-    MCInst const &MCB = DF.getInst();
+    MCInst const &MCB = *RelaxedMCB;
     assert(HexagonMCInstrInfo::isBundle(MCB));
 
     *RelaxTarget = nullptr;

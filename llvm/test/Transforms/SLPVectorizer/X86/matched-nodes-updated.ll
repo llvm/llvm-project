@@ -30,16 +30,18 @@ define i32 @test(i32 %s.0) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <8 x i32> <i32 poison, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <8 x i32> [[TMP13]], <8 x i32> <i32 0, i32 poison, i32 0, i32 0, i32 0, i32 0, i32 0, i32 poison>, <8 x i32> <i32 8, i32 1, i32 10, i32 11, i32 12, i32 13, i32 14, i32 poison>
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <8 x i32> [[TMP14]], i32 [[J_4]], i32 7
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <8 x i32> poison, i32 [[J_4]], i32 0
+; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <8 x i32> [[TMP15]], <8 x i32> poison, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 0>
+; CHECK-NEXT:    [[TMP29:%.*]] = shufflevector <8 x i32> [[TMP14]], <8 x i32> [[TMP16]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 15>
 ; CHECK-NEXT:    br label %[[IF_END24]]
 ; CHECK:       [[IF_THEN18:.*]]:
 ; CHECK-NEXT:    br label %[[T]]
 ; CHECK:       [[T]]:
-; CHECK-NEXT:    [[TMP16:%.*]] = phi <8 x i32> [ [[TMP27:%.*]], %[[O]] ], [ poison, %[[IF_THEN18]] ]
+; CHECK-NEXT:    [[TMP30:%.*]] = phi <8 x i32> [ [[TMP27:%.*]], %[[O]] ], [ poison, %[[IF_THEN18]] ]
 ; CHECK-NEXT:    [[TMP17]] = extractelement <4 x i32> [[TMP23:%.*]], i32 0
 ; CHECK-NEXT:    br i1 false, label %[[IF_END24]], label %[[K]]
 ; CHECK:       [[IF_END24]]:
-; CHECK-NEXT:    [[TMP18:%.*]] = phi <8 x i32> [ [[TMP15]], %[[IF_THEN11]] ], [ [[TMP11]], %[[IF_END6]] ], [ [[TMP16]], %[[T]] ]
+; CHECK-NEXT:    [[TMP18:%.*]] = phi <8 x i32> [ [[TMP29]], %[[IF_THEN11]] ], [ [[TMP11]], %[[IF_END6]] ], [ [[TMP30]], %[[T]] ]
 ; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <8 x i32> [[TMP18]], <8 x i32> poison, <2 x i32> <i32 7, i32 1>
 ; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <8 x i32> [[TMP18]], <8 x i32> poison, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <8 x i32> [[TMP18]], <8 x i32> poison, <4 x i32> <i32 2, i32 3, i32 4, i32 6>

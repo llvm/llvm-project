@@ -48,7 +48,7 @@ static void unused(void) { unused(); }  // expected-warning{{not needed and will
 
 static void cleanupMalloc(char * const * const allocation) { }
 void f13(void) {
-  char * const __attribute__((cleanup(cleanupMalloc))) a;
+  char * const __attribute__((cleanup(cleanupMalloc))) a = 0;
   (void)a;
 }
 

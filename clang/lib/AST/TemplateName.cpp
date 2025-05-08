@@ -410,9 +410,9 @@ bool TemplateName::containsUnexpandedParameterPack() const {
 
 void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
                          Qualified Qual) const {
-  auto handleAnonymousTTP = [](TemplateDecl *TD, raw_ostream &OS) {
+  auto handleAnonymousTTP = [&](TemplateDecl *TD, raw_ostream &OS) {
     if (TemplateTemplateParmDecl *TTP = dyn_cast<TemplateTemplateParmDecl>(TD);
-        TTP && TTP->getIdentifier() == nullptr) {
+        TTP && (Policy.PrintAsCanonical || TTP->getIdentifier() == nullptr)) {
       OS << "template-parameter-" << TTP->getDepth() << "-" << TTP->getIndex();
       return true;
     }
@@ -430,6 +430,8 @@ void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
     // names more often than to export them, thus using the original name is
     // most useful in this case.
     TemplateDecl *Template = getAsTemplateDecl();
+    if (Policy.PrintAsCanonical)
+      Template = cast<TemplateDecl>(Template->getCanonicalDecl());
     if (handleAnonymousTTP(Template, OS))
       return;
     if (Qual == Qualified::None)
@@ -437,6 +439,10 @@ void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
     else
       Template->printQualifiedName(OS, Policy);
   } else if (QualifiedTemplateName *QTN = getAsQualifiedTemplateName()) {
+    if (Policy.PrintAsCanonical) {
+      QTN->getUnderlyingTemplate().print(OS, Policy, Qual);
+      return;
+    }
     if (NestedNameSpecifier *NNS = QTN->getQualifier();
         Qual != Qualified::None && NNS)
       NNS->print(OS, Policy);

@@ -17,6 +17,7 @@
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "MCTargetDesc/X86TargetStreamer.h"
 #include "TargetInfo/X86TargetInfo.h"
+#include "X86.h"
 #include "X86InstrInfo.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
@@ -53,7 +54,7 @@ using namespace llvm;
 
 X86AsmPrinter::X86AsmPrinter(TargetMachine &TM,
                              std::unique_ptr<MCStreamer> Streamer)
-    : AsmPrinter(TM, std::move(Streamer)), FM(*this) {}
+    : AsmPrinter(TM, std::move(Streamer), ID), FM(*this) {}
 
 //===----------------------------------------------------------------------===//
 // Primitive Helper Functions.
@@ -362,17 +363,18 @@ void X86AsmPrinter::PrintOperand(const MachineInstr *MI, unsigned OpNo,
 /// deferring to PrintOperand() if no modifier was supplied or if operand is not
 /// a register.
 void X86AsmPrinter::PrintModifiedOperand(const MachineInstr *MI, unsigned OpNo,
-                                         raw_ostream &O, const char *Modifier) {
+                                         raw_ostream &O, StringRef Modifier) {
   const MachineOperand &MO = MI->getOperand(OpNo);
-  if (!Modifier || !MO.isReg())
+  if (Modifier.empty() || !MO.isReg())
     return PrintOperand(MI, OpNo, O);
   if (MI->getInlineAsmDialect() == InlineAsm::AD_ATT)
     O << '%';
   Register Reg = MO.getReg();
-  if (strncmp(Modifier, "subreg", strlen("subreg")) == 0) {
-    unsigned Size = (strcmp(Modifier+6,"64") == 0) ? 64 :
-        (strcmp(Modifier+6,"32") == 0) ? 32 :
-        (strcmp(Modifier+6,"16") == 0) ? 16 : 8;
+  if (Modifier.consume_front("subreg")) {
+    unsigned Size = (Modifier == "64")   ? 64
+                    : (Modifier == "32") ? 32
+                    : (Modifier == "16") ? 16
+                                         : 8;
     Reg = getX86SubSuperRegister(Reg, Size);
   }
   O << X86ATTInstPrinter::getRegisterName(Reg);
@@ -400,15 +402,14 @@ void X86AsmPrinter::PrintPCRelImm(const MachineInstr *MI, unsigned OpNo,
 }
 
 void X86AsmPrinter::PrintLeaMemReference(const MachineInstr *MI, unsigned OpNo,
-                                         raw_ostream &O, const char *Modifier) {
+                                         raw_ostream &O, StringRef Modifier) {
   const MachineOperand &BaseReg = MI->getOperand(OpNo + X86::AddrBaseReg);
   const MachineOperand &IndexReg = MI->getOperand(OpNo + X86::AddrIndexReg);
   const MachineOperand &DispSpec = MI->getOperand(OpNo + X86::AddrDisp);
 
   // If we really don't want to print out (rip), don't.
   bool HasBaseReg = BaseReg.getReg() != 0;
-  if (HasBaseReg && Modifier && !strcmp(Modifier, "no-rip") &&
-      BaseReg.getReg() == X86::RIP)
+  if (HasBaseReg && Modifier == "no-rip" && BaseReg.getReg() == X86::RIP)
     HasBaseReg = false;
 
   // HasParenPart - True if we will print out the () part of the mem ref.
@@ -429,7 +430,7 @@ void X86AsmPrinter::PrintLeaMemReference(const MachineInstr *MI, unsigned OpNo,
     break;
   }
 
-  if (Modifier && strcmp(Modifier, "H") == 0)
+  if (Modifier == "H")
     O << "+8";
 
   if (HasParenPart) {
@@ -483,7 +484,7 @@ void X86AsmPrinter::emitBasicBlockEnd(const MachineBasicBlock &MBB) {
 }
 
 void X86AsmPrinter::PrintMemReference(const MachineInstr *MI, unsigned OpNo,
-                                      raw_ostream &O, const char *Modifier) {
+                                      raw_ostream &O, StringRef Modifier) {
   assert(isMem(*MI, OpNo) && "Invalid memory reference!");
   const MachineOperand &Segment = MI->getOperand(OpNo + X86::AddrSegmentReg);
   if (Segment.getReg()) {
@@ -493,10 +494,9 @@ void X86AsmPrinter::PrintMemReference(const MachineInstr *MI, unsigned OpNo,
   PrintLeaMemReference(MI, OpNo, O, Modifier);
 }
 
-
 void X86AsmPrinter::PrintIntelMemReference(const MachineInstr *MI,
                                            unsigned OpNo, raw_ostream &O,
-                                           const char *Modifier) {
+                                           StringRef Modifier) {
   const MachineOperand &BaseReg = MI->getOperand(OpNo + X86::AddrBaseReg);
   unsigned ScaleVal = MI->getOperand(OpNo + X86::AddrScaleAmt).getImm();
   const MachineOperand &IndexReg = MI->getOperand(OpNo + X86::AddrIndexReg);
@@ -505,13 +505,11 @@ void X86AsmPrinter::PrintIntelMemReference(const MachineInstr *MI,
 
   // If we really don't want to print out (rip), don't.
   bool HasBaseReg = BaseReg.getReg() != 0;
-  if (HasBaseReg && Modifier && !strcmp(Modifier, "no-rip") &&
-      BaseReg.getReg() == X86::RIP)
+  if (HasBaseReg && Modifier == "no-rip" && BaseReg.getReg() == X86::RIP)
     HasBaseReg = false;
 
   // If we really just want to print out displacement.
-  if (Modifier && (DispSpec.isGlobal() || DispSpec.isSymbol()) &&
-      !strcmp(Modifier, "disp-only")) {
+  if ((DispSpec.isGlobal() || DispSpec.isSymbol()) && Modifier == "disp-only") {
     HasBaseReg = false;
   }
 
@@ -863,9 +861,9 @@ bool X86AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
     }
   }
   if (MI->getInlineAsmDialect() == InlineAsm::AD_Intel) {
-    PrintIntelMemReference(MI, OpNo, O, nullptr);
+    PrintIntelMemReference(MI, OpNo, O);
   } else {
-    PrintMemReference(MI, OpNo, O, nullptr);
+    PrintMemReference(MI, OpNo, O);
   }
   return false;
 }
@@ -1088,6 +1086,11 @@ void X86AsmPrinter::emitEndOfAsmFile(Module &M) {
     }
   }
 }
+
+char X86AsmPrinter::ID = 0;
+
+INITIALIZE_PASS(X86AsmPrinter, "x86-asm-printer", "X86 Assembly Printer", false,
+                false)
 
 //===----------------------------------------------------------------------===//
 // Target Registry Stuff

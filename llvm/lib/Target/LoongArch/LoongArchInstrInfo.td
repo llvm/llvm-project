@@ -307,7 +307,8 @@ def simm8_lsl # I : Operand<GRLenVT> {
 }
 }
 
-def simm9_lsl3 : Operand<GRLenVT> {
+def simm9_lsl3 : Operand<GRLenVT>,
+                 ImmLeaf<GRLenVT, [{return isShiftedInt<9,3>(Imm);}]> {
   let ParserMatchClass = SImmAsmOperand<9, "lsl3">;
   let EncoderMethod = "getImmOpValueAsr<3>";
   let DecoderMethod = "decodeSImmOperand<9, 3>";
@@ -317,13 +318,15 @@ def simm10 : Operand<GRLenVT> {
   let ParserMatchClass = SImmAsmOperand<10>;
 }
 
-def simm10_lsl2 : Operand<GRLenVT> {
+def simm10_lsl2 : Operand<GRLenVT>,
+                  ImmLeaf<GRLenVT, [{return isShiftedInt<10,2>(Imm);}]> {
   let ParserMatchClass = SImmAsmOperand<10, "lsl2">;
   let EncoderMethod = "getImmOpValueAsr<2>";
   let DecoderMethod = "decodeSImmOperand<10, 2>";
 }
 
-def simm11_lsl1 : Operand<GRLenVT> {
+def simm11_lsl1 : Operand<GRLenVT>,
+                  ImmLeaf<GRLenVT, [{return isShiftedInt<11,1>(Imm);}]> {
   let ParserMatchClass = SImmAsmOperand<11, "lsl1">;
   let EncoderMethod = "getImmOpValueAsr<1>";
   let DecoderMethod = "decodeSImmOperand<11, 1>";
@@ -1776,7 +1779,7 @@ def : Pat<(bitreverse (bswap GPR:$rj)), (BITREV_8B GPR:$rj)>;
 
 /// Loads
 
-multiclass LdPat<PatFrag LoadOp, LAInst Inst, ValueType vt = GRLenVT> {
+multiclass LdPat<PatFrags LoadOp, LAInst Inst, ValueType vt = GRLenVT> {
   def : Pat<(vt (LoadOp BaseAddr:$rj)), (Inst BaseAddr:$rj, 0)>;
   def : Pat<(vt (LoadOp (AddrConstant GPR:$rj, simm12:$imm12))),
             (Inst GPR:$rj, simm12:$imm12)>;
@@ -1887,9 +1890,10 @@ def : Pat<(atomic_fence 5, timm), (DBAR 0b10010)>; // release
 def : Pat<(atomic_fence 6, timm), (DBAR 0b10000)>; // acqrel
 def : Pat<(atomic_fence 7, timm), (DBAR 0b10000)>; // seqcst
 
-defm : LdPat<atomic_load_8, LD_B>;
-defm : LdPat<atomic_load_16, LD_H>;
-defm : LdPat<atomic_load_32, LD_W>;
+defm : LdPat<atomic_load_asext_8, LD_B>;
+defm : LdPat<atomic_load_asext_16, LD_H>;
+defm : LdPat<atomic_load_nonext_32, LD_W>, Requires<[IsLA32]>;
+defm : LdPat<atomic_load_asext_32, LD_W>, Requires<[IsLA64]>;
 
 class release_seqcst_store<PatFrag base>
     : PatFrag<(ops node:$val, node:$ptr), (base node:$val, node:$ptr), [{
@@ -1930,7 +1934,7 @@ def PseudoAtomicStoreD
 def : Pat<(atomic_store_release_seqcst_64 GPR:$rj, GPR:$rk),
           (PseudoAtomicStoreD GPR:$rj, GPR:$rk)>;
 
-defm : LdPat<atomic_load_64, LD_D>;
+defm : LdPat<atomic_load_nonext_64, LD_D>;
 defm : StPat<atomic_store_unordered_monotonic_32, ST_W, GPR, i64>;
 defm : StPat<atomic_store_unordered_monotonic_64, ST_D, GPR, i64>;
 } // Predicates = [IsLA64]

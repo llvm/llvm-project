@@ -153,16 +153,18 @@ def LLVM_PowOp : LLVM_BinarySameArgsIntrOpF<"pow">;
 def LLVM_PowIOp : LLVM_PowFI<"powi">;
 def LLVM_RintOp : LLVM_UnaryIntrOpF<"rint">;
 def LLVM_NearbyintOp : LLVM_UnaryIntrOpF<"nearbyint">;
-class LLVM_IntRoundIntrOpBase<string func> :
+class LLVM_IntRoundIntrOpBase<string func, Type element = LLVM_AnyFloat> :
         LLVM_OneResultIntrOp<func, [0], [0], [Pure]> {
-  let arguments = (ins LLVM_AnyFloat:$val);
+  let arguments = (ins element:$val);
   let assemblyFormat = "`(` operands `)` attr-dict `:` "
       "functional-type(operands, results)";
 }
-def LLVM_LroundOp : LLVM_IntRoundIntrOpBase<"lround">;
+class LLVM_ScalarOrVectorIntRoundIntrOpBase<string func> :
+  LLVM_IntRoundIntrOpBase<func, LLVM_ScalarOrVectorOf<LLVM_AnyFloat>>;
+def LLVM_LroundOp : LLVM_ScalarOrVectorIntRoundIntrOpBase<"lround">;
 def LLVM_LlroundOp : LLVM_IntRoundIntrOpBase<"llround">;
-def LLVM_LrintOp : LLVM_IntRoundIntrOpBase<"lrint">;
-def LLVM_LlrintOp : LLVM_IntRoundIntrOpBase<"llrint">;
+def LLVM_LrintOp : LLVM_ScalarOrVectorIntRoundIntrOpBase<"lrint">;
+def LLVM_LlrintOp : LLVM_ScalarOrVectorIntRoundIntrOpBase<"llrint">;
 def LLVM_BitReverseOp : LLVM_UnaryIntrOpI<"bitreverse">;
 def LLVM_ByteSwapOp : LLVM_UnaryIntrOpI<"bswap">;
 def LLVM_CountLeadingZerosOp : LLVM_CountZerosIntrOp<"ctlz">;

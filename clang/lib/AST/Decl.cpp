@@ -400,9 +400,9 @@ void LinkageComputer::mergeTemplateLV(
   FunctionTemplateDecl *temp = specInfo->getTemplate();
   // Merge information from the template declaration.
   LinkageInfo tempLV = getLVForDecl(temp, computation);
-  // The linkage of the specialization should be consistent with the
-  // template declaration.
-  LV.setLinkage(tempLV.getLinkage());
+  // The linkage and visibility of the specialization should be
+  // consistent with the template declaration.
+  LV.mergeMaybeWithVisibility(tempLV, considerVisibility);
 
   // Merge information from the template parameters.
   LinkageInfo paramsLV =
@@ -1051,6 +1051,13 @@ LinkageComputer::getLVForClassMember(const NamedDecl *D,
     if (const auto *redeclTemp = dyn_cast<RedeclarableTemplateDecl>(temp)) {
       if (isExplicitMemberSpecialization(redeclTemp)) {
         explicitSpecSuppressor = temp->getTemplatedDecl();
+      } else if (const RedeclarableTemplateDecl *from =
+                     redeclTemp->getInstantiatedFromMemberTemplate()) {
+        // If no explicit visibility is specified yet, and this is an
+        // instantiated member of a template, look up visibility there
+        // as well.
+        LinkageInfo fromLV = from->getLinkageAndVisibility();
+        LV.mergeMaybeWithVisibility(fromLV, considerVisibility);
       }
     }
   }
@@ -3116,8 +3123,7 @@ FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
   Info->NumLookups = Lookups.size();
   Info->HasDeletedMessage = DeletedMessage != nullptr;
 
-  std::uninitialized_copy(Lookups.begin(), Lookups.end(),
-                          Info->getTrailingObjects<DeclAccessPair>());
+  llvm::uninitialized_copy(Lookups, Info->getTrailingObjects<DeclAccessPair>());
   if (DeletedMessage)
     *Info->getTrailingObjects<StringLiteral *>() = DeletedMessage;
   return Info;
@@ -3910,8 +3916,25 @@ bool FunctionDecl::doesDeclarationForceExternallyVisibleDefinition() const {
 
 FunctionTypeLoc FunctionDecl::getFunctionTypeLoc() const {
   const TypeSourceInfo *TSI = getTypeSourceInfo();
-  return TSI ? TSI->getTypeLoc().IgnoreParens().getAs<FunctionTypeLoc>()
-             : FunctionTypeLoc();
+
+  if (!TSI)
+    return FunctionTypeLoc();
+
+  TypeLoc TL = TSI->getTypeLoc();
+  FunctionTypeLoc FTL;
+
+  while (!(FTL = TL.getAs<FunctionTypeLoc>())) {
+    if (const auto PTL = TL.getAs<ParenTypeLoc>())
+      TL = PTL.getInnerLoc();
+    else if (const auto ATL = TL.getAs<AttributedTypeLoc>())
+      TL = ATL.getEquivalentTypeLoc();
+    else if (const auto MQTL = TL.getAs<MacroQualifiedTypeLoc>())
+      TL = MQTL.getInnerLoc();
+    else
+      break;
+  }
+
+  return FTL;
 }
 
 SourceRange FunctionDecl::getReturnTypeSourceRange() const {
@@ -4467,6 +4490,7 @@ unsigned FunctionDecl::getMemoryFunctionKind() const {
   case Builtin::BImempcpy:
     return Builtin::BImempcpy;
 
+  case Builtin::BI__builtin_trivially_relocate:
   case Builtin::BI__builtin_memmove:
   case Builtin::BI__builtin___memmove_chk:
   case Builtin::BImemmove:
@@ -5844,8 +5868,7 @@ ImportDecl::ImportDecl(DeclContext *DC, SourceLocation StartLoc,
       NextLocalImportAndComplete(nullptr, true) {
   assert(getNumModuleIdentifiers(Imported) == IdentifierLocs.size());
   auto *StoredLocs = getTrailingObjects<SourceLocation>();
-  std::uninitialized_copy(IdentifierLocs.begin(), IdentifierLocs.end(),
-                          StoredLocs);
+  llvm::uninitialized_copy(IdentifierLocs, StoredLocs);
 }
 
 ImportDecl::ImportDecl(DeclContext *DC, SourceLocation StartLoc,
