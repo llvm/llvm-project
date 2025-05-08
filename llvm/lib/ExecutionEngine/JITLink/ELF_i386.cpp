@@ -115,27 +115,26 @@ private:
   using ELFT = object::ELF32LE;
 
   Expected<i386::EdgeKind_i386> getRelocationKind(const uint32_t Type) {
-    using namespace i386;
     switch (Type) {
     case ELF::R_386_32:
-      return EdgeKind_i386::Pointer32;
+      return i386::Pointer32;
     case ELF::R_386_PC32:
-      return EdgeKind_i386::PCRel32;
+      return i386::PCRel32;
     case ELF::R_386_16:
-      return EdgeKind_i386::Pointer16;
+      return i386::Pointer16;
     case ELF::R_386_PC16:
-      return EdgeKind_i386::PCRel16;
+      return i386::PCRel16;
     case ELF::R_386_GOT32:
-      return EdgeKind_i386::RequestGOTAndTransformToDelta32FromGOT;
+      return i386::RequestGOTAndTransformToDelta32FromGOT;
     case ELF::R_386_GOT32X:
       // TODO: Add a relaxable edge kind and update relaxation optimization.
-      return EdgeKind_i386::RequestGOTAndTransformToDelta32FromGOT;
+      return i386::RequestGOTAndTransformToDelta32FromGOT;
     case ELF::R_386_GOTPC:
-      return EdgeKind_i386::Delta32;
+      return i386::Delta32;
     case ELF::R_386_GOTOFF:
-      return EdgeKind_i386::Delta32FromGOT;
+      return i386::Delta32FromGOT;
     case ELF::R_386_PLT32:
-      return EdgeKind_i386::BranchPCRel32;
+      return i386::BranchPCRel32;
     }
 
     return make_error<JITLinkError>(
@@ -196,21 +195,21 @@ private:
     int64_t Addend = 0;
 
     switch (*Kind) {
-    case i386::EdgeKind_i386::Pointer32:
-    case i386::EdgeKind_i386::PCRel32:
-    case i386::EdgeKind_i386::RequestGOTAndTransformToDelta32FromGOT:
-    case i386::EdgeKind_i386::Delta32:
-    case i386::EdgeKind_i386::Delta32FromGOT:
-    case i386::EdgeKind_i386::BranchPCRel32:
-    case i386::EdgeKind_i386::BranchPCRel32ToPtrJumpStub:
-    case i386::EdgeKind_i386::BranchPCRel32ToPtrJumpStubBypassable: {
+    case i386::Pointer32:
+    case i386::PCRel32:
+    case i386::RequestGOTAndTransformToDelta32FromGOT:
+    case i386::Delta32:
+    case i386::Delta32FromGOT:
+    case i386::BranchPCRel32:
+    case i386::BranchPCRel32ToPtrJumpStub:
+    case i386::BranchPCRel32ToPtrJumpStubBypassable: {
       const char *FixupContent = BlockToFix.getContent().data() +
                                  (FixupAddress - BlockToFix.getAddress());
       Addend = *(const support::little32_t *)FixupContent;
       break;
     }
-    case i386::EdgeKind_i386::Pointer16:
-    case i386::EdgeKind_i386::PCRel16: {
+    case i386::Pointer16:
+    case i386::PCRel16: {
       const char *FixupContent = BlockToFix.getContent().data() +
                                  (FixupAddress - BlockToFix.getAddress());
       Addend = *(const support::little16_t *)FixupContent;
