@@ -23821,7 +23821,6 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
   };
 
   Value *VL = ConstantInt::get(XLenTy, VTy->getNumElements());
-  // All-ones mask.
   Value *Mask = Builder.getAllOnesMask(VTy->getElementCount());
   CallInst *VlsegN =
       Builder.CreateIntrinsic(FixedVlsegIntrIds[Factor - 2], {VTy, XLenTy},
@@ -23919,9 +23918,7 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
   // potentially under larger LMULs) because we checked that the fixed vector
   // type fits in isLegalInterleavedAccessType
   Value *VL = ConstantInt::get(XLenTy, VTy->getNumElements());
-  // All-ones mask.
-  Value *StoreMask = ConstantVector::getSplat(
-      VTy->getElementCount(), ConstantInt::getTrue(SVI->getContext()));
+  Value *StoreMask = Builder.getAllOnesMask(VTy->getElementCount());
   Ops.append({SI->getPointerOperand(), StoreMask, VL});
 
   Builder.CreateCall(VssegNFunc, Ops);
@@ -23951,9 +23948,7 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
 
   if (auto *FVTy = dyn_cast<FixedVectorType>(ResVTy)) {
     Value *VL = ConstantInt::get(XLenTy, FVTy->getNumElements());
-    // All-ones mask.
-    Value *Mask = ConstantVector::getSplat(
-        FVTy->getElementCount(), ConstantInt::getTrue(LI->getContext()));
+    Value *Mask = Builder.getAllOnesMask(FVTy->getElementCount());
     Return =
         Builder.CreateIntrinsic(FixedVlsegIntrIds[Factor - 2], {ResVTy, XLenTy},
                                 {LI->getPointerOperand(), Mask, VL});
@@ -24024,9 +24019,7 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
 
     SmallVector<Value *, 10> Ops(InterleaveValues);
     Value *VL = ConstantInt::get(XLenTy, FVTy->getNumElements());
-    // All-ones mask.
-    Value *Mask = ConstantVector::getSplat(
-        FVTy->getElementCount(), ConstantInt::getTrue(SI->getContext()));
+    Value *Mask = Builder.getAllOnesMask(FVTy->getElementCount());
     Ops.append({SI->getPointerOperand(), Mask, VL});
 
     Builder.CreateCall(VssegNFunc, Ops);
