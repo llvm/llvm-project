@@ -53,6 +53,9 @@ T tmain(T argc, S **argv) {
 #pragma omp for ordered(S) // expected-error {{'S' does not refer to a value}}
   for (int i = ST; i < N; i++)
     argv[0][i] = argv[0][i] - argv[0][i - ST];
+#pragma omp for ordered (0xFFFFFFFFFFFFFFFF) // expected-error {{argument to 'ordered' clause cannot have more than 64 bits size}}
+  for (int i = ST; i < N; i++)
+    argv[0][i] = argv[0][i] - argv[0][i-ST];
 #if __cplusplus <= 199711L
 // expected-error@+4 2 {{integral constant expression}} expected-note@+4 0+{{constant expression}}
 #else

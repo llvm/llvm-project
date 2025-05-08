@@ -735,6 +735,9 @@ void test_ordered() {
 #pragma omp for simd ordered(1)
   for (int i = 0; i < 16; ++i)
     ;
+#pragma omp for simd ordered (0xFFFFFFFFFFFFFFFF) // expected-error {{argument to 'ordered' clause cannot have more than 64 bits size}}
+  for (int i = 0; i < 10; i++)
+    ;
 }
 
 void test_nowait() {
