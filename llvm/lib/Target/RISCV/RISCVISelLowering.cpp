@@ -23488,7 +23488,8 @@ EVT RISCVTargetLowering::getOptimalMemOpType(const MemOp &Op,
   // operations emitted here, and that's okay because combining isn't
   // introducing new memory operations; it's just merging existing ones.
   // NOTE: We limit to 1024 bytes to avoid creating an invalid MVT.
-  const unsigned MinVLenInBytes = std::min(Subtarget.getRealMinVLen()/8, 1024U);
+  const unsigned MinVLenInBytes =
+      std::min(Subtarget.getRealMinVLen() / 8, 1024U);
 
   if (Op.size() < MinVLenInBytes)
     // TODO: Figure out short memops.  For the moment, do the default thing
