@@ -1602,7 +1602,6 @@ def AVSrc_64 : AVSrcOperand<AV_64_STAGING, "OPW64">;
 def AVSrc_128 : AVSrcOperand<AV_128_STAGING, "OPW128">;
 def AVSrc_192 : AVSrcOperand<AV_192_STAGING, "OPW192">;
 def AVSrc_256 : AVSrcOperand<AV_256_STAGING, "OPW256">;
-def AVSrc_512 : AVSrcOperand<AV_512_STAGING, "OPW512">;
 
 class AVDstOperand<RegisterClass regClass, string width>
   : AVOperand<regClass, "decodeAV10", width>;
