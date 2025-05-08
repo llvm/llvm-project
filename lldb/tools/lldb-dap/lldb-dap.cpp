@@ -148,6 +148,7 @@ static void RegisterRequestCallbacks(DAP &dap) {
   dap.RegisterRequest<StepOutRequestHandler>();
   dap.RegisterRequest<ThreadsRequestHandler>();
   dap.RegisterRequest<VariablesRequestHandler>();
+  dap.RegisterRequest<WriteMemoryRequestHandler>();
 
   // Custom requests
   dap.RegisterRequest<CompileUnitsRequestHandler>();

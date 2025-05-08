@@ -418,6 +418,14 @@ struct DAP {
 
   lldb::SBMutex GetAPIMutex() const { return target.GetAPIMutex(); }
 
+  /// Sends an error response in DAP with success=false and an error message.
+  ///
+  /// \param[out] response
+  ///   The response object to update.
+  /// \param[in] message
+  ///   The error message.
+  void SendErrorResponse(llvm::json::Object &response, llvm::StringRef message);
+
 private:
   /// Queue for all incoming messages.
   std::deque<protocol::Message> m_queue;
