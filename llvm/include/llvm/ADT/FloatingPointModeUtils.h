@@ -18,7 +18,6 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/IR/Instructions.h"
-#include <type_traits>
 
 namespace llvm {
 
