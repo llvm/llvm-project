@@ -174,13 +174,15 @@ struct VPlanTransforms {
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);
 
-  /// Update \p Plan to account for the uncountable early exit block in \p
-  /// UncountableExitingBlock by
+  /// Update \p Plan to account for the uncountable early exit from \p
+  /// EarlyExitingVPBB to \p EarlyExitVPBB by
   ///  * updating the condition exiting the vector loop to include the early
   ///    exit conditions
   ///  * splitting the original middle block to branch to the early exit block
   ///    if taken.
-  static void handleUncountableEarlyExit(VPlan &Plan, VPBasicBlock *HeaderVPBB,
+  static void handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
+                                         VPBasicBlock *EarlyExitVPBB,
+                                         VPlan &Plan, VPBasicBlock *HeaderVPBB,
                                          VPBasicBlock *LatchVPBB,
                                          VFRange &Range);
 

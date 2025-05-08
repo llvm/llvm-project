@@ -463,7 +463,7 @@ static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
 void VPlanTransforms::prepareForVectorization(
     VPlan &Plan, Type *InductionTy, PredicatedScalarEvolution &PSE,
     bool RequiresScalarEpilogueCheck, bool TailFolded, Loop *TheLoop,
-    DebugLoc IVDL, bool HandleUncountableExit, VFRange &Range) {
+    DebugLoc IVDL, bool HasUncountableEarlyExit, VFRange &Range) {
   VPDominatorTree VPDT;
   VPDT.recalculate(Plan);
 
@@ -490,22 +490,34 @@ void VPlanTransforms::prepareForVectorization(
   addCanonicalIVRecipes(Plan, cast<VPBasicBlock>(HeaderVPB),
                         cast<VPBasicBlock>(LatchVPB), InductionTy, IVDL);
 
-  if (HandleUncountableExit) {
-    // Convert VPlans with early exits to a form only exiting via the latch
-    // here, including adjusting the exit condition.
-    handleUncountableEarlyExit(Plan, cast<VPBasicBlock>(HeaderVPB),
-                               cast<VPBasicBlock>(LatchVPB), Range);
-  } else {
-    // Disconnect all edges to exit blocks other than from the middle block.
-    for (VPBlockBase *EB : to_vector(Plan.getExitBlocks())) {
-      for (VPBlockBase *Pred : to_vector(EB->getPredecessors())) {
-        if (Pred == MiddleVPBB)
-          continue;
-        cast<VPBasicBlock>(Pred)->getTerminator()->eraseFromParent();
-        VPBlockUtils::disconnectBlocks(Pred, EB);
+  [[maybe_unused]] bool HandledUncountableEarlyExit = false;
+  for (VPIRBasicBlock *EB : Plan.getExitBlocks()) {
+    for (VPBlockBase *Pred : to_vector(EB->getPredecessors())) {
+      if (Pred == MiddleVPBB)
+        continue;
+
+      if (HasUncountableEarlyExit) {
+        assert(!HandledUncountableEarlyExit &&
+               "can handle exactly one uncountable early exit");
+        // Convert VPlans with early exits to a form exiting only via the latch
+        // here, including adjusting the exit condition of the latch.
+        handleUncountableEarlyExit(cast<VPBasicBlock>(Pred), EB, Plan,
+                                   cast<VPBasicBlock>(HeaderVPB),
+                                   cast<VPBasicBlock>(LatchVPB), Range);
+        HandledUncountableEarlyExit = true;
+        continue;
       }
+
+      // Otherwise all early exits must be countable and we require at least one
+      // iteration in the scalar epilogue. Disconnect all edges to exit blocks
+      // other than from the middle block.
+      cast<VPBasicBlock>(Pred)->getTerminator()->eraseFromParent();
+      VPBlockUtils::disconnectBlocks(Pred, EB);
     }
   }
+
+  assert((!HasUncountableEarlyExit || HandledUncountableEarlyExit) &&
+         "did not handle uncountable early exit");
 
   // Create SCEV and VPValue for the trip count.
   // We use the symbolic max backedge-taken-count, which works also when
