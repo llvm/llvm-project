@@ -149,7 +149,7 @@ _LIBCPP_HIDE_FROM_ABI decltype(auto) __visit_format_arg(_Visitor&& __vis, basic_
   __libcpp_unreachable();
 }
 
-#  if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
+#  if _LIBCPP_STD_VER >= 26
 
 template <class _Rp, class _Visitor, class _Context>
 _LIBCPP_HIDE_FROM_ABI _Rp __visit_format_arg(_Visitor&& __vis, basic_format_arg<_Context> __arg) {
@@ -200,7 +200,7 @@ _LIBCPP_HIDE_FROM_ABI _Rp __visit_format_arg(_Visitor&& __vis, basic_format_arg<
   __libcpp_unreachable();
 }
 
-#  endif // _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
+#  endif // _LIBCPP_STD_VER >= 26
 
 /// Contains the values used in basic_format_arg.
 ///
@@ -285,7 +285,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI explicit operator bool() const noexcept { return __type_ != __format::__arg_t::__none; }
 
-#  if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
+#  if _LIBCPP_STD_VER >= 26
 
   // This function is user facing, so it must wrap the non-standard types of
   // the "variant" in a handle to stay conforming. See __arg_t for more details.
@@ -329,7 +329,7 @@ public:
     }
   }
 
-#  endif // _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
+#  endif // _LIBCPP_STD_VER >= 26
 
 private:
   using char_type = typename _Context::char_type;
@@ -371,7 +371,7 @@ private:
 // This function is user facing, so it must wrap the non-standard types of
 // the "variant" in a handle to stay conforming. See __arg_t for more details.
 template <class _Visitor, class _Context>
-#  if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
+#  if _LIBCPP_STD_VER >= 26
 _LIBCPP_DEPRECATED_IN_CXX26
 #  endif
     _LIBCPP_HIDE_FROM_ABI decltype(auto)
@@ -387,7 +387,7 @@ _LIBCPP_DEPRECATED_IN_CXX26
     typename __basic_format_arg_value<_Context>::__handle __h{__arg.__value_.__u128_};
     return std::invoke(std::forward<_Visitor>(__vis), typename basic_format_arg<_Context>::handle{__h});
   }
-#  endif // _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
+#  endif // _LIBCPP_STD_VER >= 26
   default:
     return std::__visit_format_arg(std::forward<_Visitor>(__vis), __arg);
   }
