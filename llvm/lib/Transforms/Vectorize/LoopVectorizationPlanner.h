@@ -253,7 +253,7 @@ public:
   VPInstruction *createScalarPhi(ArrayRef<VPValue *> IncomingValues,
                                  DebugLoc DL, const Twine &Name = "") {
     return tryInsertInstruction(
-        new VPInstruction(Instruction::PHI, IncomingValues, DL, Name));
+        new VPPhi(Instruction::PHI, IncomingValues, DL, Name));
   }
 
   /// Convert the input value \p Current to the corresponding value of an
