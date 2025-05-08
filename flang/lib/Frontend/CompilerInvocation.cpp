@@ -831,6 +831,12 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
       args.hasFlag(clang::driver::options::OPT_fsave_main_program,
                    clang::driver::options::OPT_fno_save_main_program, false));
 
+  // -ffast-amd-memory-allocator
+  if (args.hasArg(clang::driver::options::OPT_ffast_amd_memory_allocator)) {
+    opts.features.Enable(
+        (Fortran::common::LanguageFeature::AmdMemoryAllocator));
+  }
+
   if (args.hasArg(
           clang::driver::options::OPT_falternative_parameter_statement)) {
     opts.features.Enable(Fortran::common::LanguageFeature::OldStyleParameter);

@@ -176,6 +176,27 @@ static void genRuntimeInitCharacter(fir::FirOpBuilder &builder,
   builder.create<fir::CallOp>(loc, callee, args);
 }
 
+/// Generate a runtime call to set allocator idx of descriptor for target amd.
+static void genAMDRuntimeDescriptorSetAllocIdx(fir::FirOpBuilder &builder,
+                                               mlir::Location loc,
+                                               const fir::MutableBoxValue &box,
+                                               int allocatorId) {
+  auto *context = builder.getContext();
+  mlir::Type descriptorTy = box.getAddr().getType();
+  mlir::IntegerType posTy = builder.getI32Type();
+  mlir::func::FuncOp callee = builder.createFunction(
+      loc, RTNAME_STRING(AMDAllocatableSetAllocIdx),
+      mlir::FunctionType::get(context, {descriptorTy, posTy}, {}));
+  llvm::SmallVector<mlir::Value> args{box.getAddr()};
+  args.push_back(
+      builder.createIntegerConstant(loc, builder.getI32Type(), allocatorId));
+  llvm::SmallVector<mlir::Value> operands;
+  for (auto [fst, snd] : llvm::zip(args, callee.getFunctionType().getInputs()))
+    operands.emplace_back(builder.createConvert(loc, snd, fst));
+  builder.create<fir::CallOp>(loc, callee, operands);
+  return;
+}
+
 /// Generate a sequence of runtime calls to allocate memory.
 static mlir::Value genRuntimeAllocate(fir::FirOpBuilder &builder,
                                       mlir::Location loc,
@@ -481,6 +502,9 @@ private:
                             !alloc.hasCoarraySpec() && !useAllocateRuntime &&
                             !box.isPointer();
     unsigned allocatorIdx = Fortran::lower::getAllocatorIdx(alloc.getSymbol());
+    const auto &langFeatures = converter.getFoldingContext().languageFeatures();
+    bool isAMDMemoryAllocatorEnabled = langFeatures.IsEnabled(
+        Fortran::common::LanguageFeature::AmdMemoryAllocator);
 
     if (inlineAllocation &&
         ((isCudaSymbol && isCudaDeviceContext) || !isCudaSymbol)) {
@@ -503,6 +527,8 @@ private:
     genAllocateObjectBounds(alloc, box);
     mlir::Value stat;
     if (!isCudaSymbol) {
+      if (isAMDMemoryAllocatorEnabled)
+        genAMDRuntimeDescriptorSetAllocIdx(builder, loc, box, 1);
       stat = genRuntimeAllocate(builder, loc, box, errorManager);
       setPinnedToFalse();
     } else {
@@ -622,6 +648,9 @@ private:
                                const fir::MutableBoxValue &box, bool isSource) {
     unsigned allocatorIdx = Fortran::lower::getAllocatorIdx(alloc.getSymbol());
     fir::ExtendedValue exv = isSource ? sourceExv : moldExv;
+    const auto &langFeatures = converter.getFoldingContext().languageFeatures();
+    bool isAMDMemoryAllocatorEnabled = langFeatures.IsEnabled(
+        Fortran::common::LanguageFeature::AmdMemoryAllocator);
 
     // Generate a sequence of runtime calls.
     errorManager.genStatCheck(builder, loc);
@@ -645,6 +674,8 @@ private:
       stat =
           genCudaAllocate(builder, loc, box, errorManager, alloc.getSymbol());
     } else {
+      if (isAMDMemoryAllocatorEnabled)
+        genAMDRuntimeDescriptorSetAllocIdx(builder, loc, box, 1);
       if (isSource)
         stat = genRuntimeAllocateSource(builder, loc, box, exv, errorManager);
       else

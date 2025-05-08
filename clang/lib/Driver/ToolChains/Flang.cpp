@@ -833,6 +833,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   addFortranDialectOptions(Args, CmdArgs);
 
+  if (Args.hasArg(options::OPT_ffast_amd_memory_allocator))
+    CmdArgs.push_back("-ffast-amd-memory-allocator");
+
   // 'flang -E' always produces output that is suitable for use as fixed form
   // Fortran. However it is only valid free form source if the original is also
   // free form. Ensure this logic does not incorrectly assume fixed-form for

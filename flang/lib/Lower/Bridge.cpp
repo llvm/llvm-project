@@ -460,10 +460,12 @@ public:
     // Generate the `main` entry point if necessary
     if (hasMainProgram)
       createGlobalOutsideOfFunctionLowering([&]() {
-        fir::runtime::genMain(*builder, toLocation(),
-                              bridge.getEnvironmentDefaults(),
-                              getFoldingContext().languageFeatures().IsEnabled(
-                                  Fortran::common::LanguageFeature::CUDA));
+        fir::runtime::genMain(
+            *builder, toLocation(), bridge.getEnvironmentDefaults(),
+            getFoldingContext().languageFeatures().IsEnabled(
+                Fortran::common::LanguageFeature::CUDA),
+            getFoldingContext().languageFeatures().IsEnabled(
+                Fortran::common::LanguageFeature::AmdMemoryAllocator));
       });
 
     finalizeOpenACCLowering();
