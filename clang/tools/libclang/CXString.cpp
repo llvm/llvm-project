@@ -163,6 +163,28 @@ bool isManagedByPool(CXString str) {
 // libClang public APIs.
 //===----------------------------------------------------------------------===//
 
+ // Get Non-null-terminated string pointer
+ CINDEX_LINKAGE const char *clang_getCXString_ptr(CXString string) {
+  if (string.private_flags == (unsigned) CXS_StringBuf) {
+    return static_cast<const cxstring::CXStringBuf *>(string.data)->Data.data();
+  }
+  if (string.private_flags == (unsigned) CXS_StringRef) {
+    return static_cast<const cxstring::CXStringRef *>(string.data)->string_ref.data();
+  }
+  return static_cast<const char *>(string.data);
+ }
+ 
+ // Get Non-null-terminated string length
+ CINDEX_LINKAGE unsigned clang_getCXString_len(CXString string) {
+  if (string.private_flags == (unsigned) CXS_StringBuf) {
+    return static_cast<const cxstring::CXStringBuf *>(string.data)->Data.size() - 1;
+  }
+  if (string.private_flags == (unsigned) CXS_StringRef) {
+    return static_cast<const cxstring::CXStringRef *>(string.data)->string_ref.size();
+  }
+  return strlen(static_cast<const char *>(string.data));
+ }
+
 const char *clang_getCString(CXString string) {
   if (string.private_flags == (unsigned) CXS_StringBuf) {
     return static_cast<const cxstring::CXStringBuf *>(string.data)->Data.data();
