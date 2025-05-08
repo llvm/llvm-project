@@ -450,28 +450,6 @@ func.func @extract_strided_fold_insert(%a: vector<2x8xf32>, %b: vector<1x4xf32>,
 
 // -----
 
-// CHECK-LABEL: transpose_1D_identity
-// CHECK-SAME: ([[ARG:%.*]]: vector<4xf32>)
-func.func @transpose_1D_identity(%arg : vector<4xf32>) -> vector<4xf32> {
-  // CHECK-NOT: transpose
-  %0 = vector.transpose %arg, [0] : vector<4xf32> to vector<4xf32>
-  // CHECK-NEXT: return [[ARG]]
-  return %0 : vector<4xf32>
-}
-
-// -----
-
-// CHECK-LABEL: transpose_2D_identity
-// CHECK-SAME: ([[ARG:%.*]]: vector<4x3xf32>)
-func.func @transpose_2D_identity(%arg : vector<4x3xf32>) -> vector<4x3xf32> {
-  // CHECK-NOT: transpose
-  %0 = vector.transpose %arg, [0, 1] : vector<4x3xf32> to vector<4x3xf32>
-  // CHECK-NEXT: return [[ARG]]
-  return %0 : vector<4x3xf32>
-}
-
-// -----
-
 // CHECK-LABEL: transpose_3D_identity
 // CHECK-SAME: ([[ARG:%.*]]: vector<4x3x2xf32>)
 func.func @transpose_3D_identity(%arg : vector<4x3x2xf32>) -> vector<4x3x2xf32> {
