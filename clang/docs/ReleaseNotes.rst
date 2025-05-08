@@ -506,6 +506,8 @@ Improvements to Clang's diagnostics
   behavior of the C99 feature as it was introduced into C++20. Fixes #GH47037
 - ``-Wreserved-identifier`` now fires on reserved parameter names in a function
   declaration which is not a definition.
+- Clang now prints the namespace for an attribute, if any,
+  when emitting an unknown attribute diagnostic.
 
 - Several compatibility diagnostics that were incorrectly being grouped under
   ``-Wpre-c++20-compat`` are now part of ``-Wc++20-compat``. (#GH138775)
