@@ -20,9 +20,6 @@ namespace llvm::jitlink::i386 {
 /// Represets i386 fixups
 enum EdgeKind_i386 : Edge::Kind {
 
-  /// None
-  None = Edge::FirstRelocation,
-
   /// A plain 32-bit pointer value relocation.
   ///
   /// Fixup expression:
@@ -32,7 +29,7 @@ enum EdgeKind_i386 : Edge::Kind {
   ///   - The target must reside in the low 32-bits of the address space,
   ///     otherwise an out-of-range error will be returned.
   ///
-  Pointer32,
+  Pointer32 = Edge::FirstRelocation,
 
   /// A 32-bit PC-relative relocation.
   ///
@@ -192,10 +189,6 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
   auto FixupAddress = B.getAddress() + E.getOffset();
 
   switch (E.getKind()) {
-  case i386::None: {
-    break;
-  }
-
   case i386::Pointer32: {
     uint32_t Value = E.getTarget().getAddress().getValue() + E.getAddend();
     *(ulittle32_t *)FixupPtr = Value;
