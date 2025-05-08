@@ -10,7 +10,6 @@ from lldbsuite.test.lldbpexpect import PExpectTest
 # under ASAN on a loaded machine..
 @skipIfAsan
 class TestStatusline(PExpectTest):
-
     # Change this value to something smaller to make debugging this test less
     # tedious.
     TIMEOUT = 60
