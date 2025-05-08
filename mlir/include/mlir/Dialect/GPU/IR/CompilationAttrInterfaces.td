@@ -55,6 +55,20 @@ def GPUTargetAttrInterface : AttrInterface<"TargetAttrInterface"> {
   ];
 }
 
+def GPUTargetAttrVerifyInterface : AttrInterface<"TargetAttrVerifyInterface"> {
+  let description = [{
+    Interface for GPU target attributes that need to verify the target attribute
+    for the given GPU module.
+  }];
+  let cppNamespace = "::mlir::gpu";
+  let methods = [
+    InterfaceMethod<[{
+        Verifies that the target attribute is valid for the given GPU module.
+      }], "::mlir::LogicalResult", "verifyTarget",
+      (ins "::mlir::Operation *":$module)>
+  ];
+}
+
 def GPUTargetAttr :
     ConfinedAttr<AnyAttr, [PromisedAttrInterface<GPUTargetAttrInterface>]> {
   let description = [{

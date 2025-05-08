@@ -1460,6 +1460,8 @@ def GPU_GPUModuleOp : GPU_Op<"module", [
     /// Sets the targets of the module.
     void setTargets(ArrayRef<TargetAttrInterface> targets);
   }];
+  
+  let hasVerifier = 1;
 }
 
 def GPU_BinaryOp : GPU_Op<"binary", [Symbol]>, Arguments<(ins
