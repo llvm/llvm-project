@@ -259,12 +259,7 @@ public:
   static _LIBCPP_CONSTEXPR const result_type default_seed = 1u;
 
   // constructors and seeding functions
-#ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI linear_congruential_engine() : linear_congruential_engine(default_seed) {}
-  _LIBCPP_HIDE_FROM_ABI explicit linear_congruential_engine(result_type __s) { seed(__s); }
-#else
   _LIBCPP_HIDE_FROM_ABI explicit linear_congruential_engine(result_type __s = default_seed) { seed(__s); }
-#endif
   template <class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, linear_congruential_engine>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit linear_congruential_engine(_Sseq& __q) {
     seed(__q);

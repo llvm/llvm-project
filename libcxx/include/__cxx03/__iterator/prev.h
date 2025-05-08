@@ -33,42 +33,6 @@ prev(_InputIter __x, typename iterator_traits<_InputIter>::difference_type __n =
   return __x;
 }
 
-#if _LIBCPP_STD_VER >= 20
-
-// [range.iter.op.prev]
-
-namespace ranges {
-namespace __prev {
-
-struct __fn {
-  template <bidirectional_iterator _Ip>
-  _LIBCPP_HIDE_FROM_ABI constexpr _Ip operator()(_Ip __x) const {
-    --__x;
-    return __x;
-  }
-
-  template <bidirectional_iterator _Ip>
-  _LIBCPP_HIDE_FROM_ABI constexpr _Ip operator()(_Ip __x, iter_difference_t<_Ip> __n) const {
-    ranges::advance(__x, -__n);
-    return __x;
-  }
-
-  template <bidirectional_iterator _Ip>
-  _LIBCPP_HIDE_FROM_ABI constexpr _Ip operator()(_Ip __x, iter_difference_t<_Ip> __n, _Ip __bound_iter) const {
-    ranges::advance(__x, -__n, __bound_iter);
-    return __x;
-  }
-};
-
-} // namespace __prev
-
-inline namespace __cpo {
-inline constexpr auto prev = __prev::__fn{};
-} // namespace __cpo
-} // namespace ranges
-
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___CXX03___ITERATOR_PREV_H

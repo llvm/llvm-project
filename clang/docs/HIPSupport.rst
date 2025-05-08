@@ -518,7 +518,7 @@ Predefined Macros
    * - ``__HIPSTDPAR__``
      - Defined when Clang is compiling code in algorithm offload mode, enabled
        with the ``--hipstdpar`` compiler option.
-   * - ``__HIPSTDPAR_INTERPOSE_ALLOC__``
+   * - ``__HIPSTDPAR_INTERPOSE_ALLOC__`` / ``__HIPSTDPAR_INTERPOSE_ALLOC_V1__``
      - Defined only when compiling in algorithm offload mode, when the user
        enables interposition mode with the ``--hipstdpar-interpose-alloc``
        compiler option, indicating that all dynamic memory allocation /

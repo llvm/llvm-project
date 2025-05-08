@@ -2218,6 +2218,7 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/Lanai/LanaiGenMCCodeEmitter.inc": ["-gen-emitter"],
             "lib/Target/Lanai/LanaiGenInstrInfo.inc": ["-gen-instr-info"],
             "lib/Target/Lanai/LanaiGenRegisterInfo.inc": ["-gen-register-info"],
+            "lib/Target/Lanai/LanaiGenSDNodeInfo.inc": ["-gen-sd-node-info"],
             "lib/Target/Lanai/LanaiGenSubtargetInfo.inc": ["-gen-subtarget"],
         },
     },
@@ -2342,6 +2343,10 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/Sparc/SparcGenSubtargetInfo.inc": ["-gen-subtarget"],
             "lib/Target/Sparc/SparcGenDisassemblerTables.inc": ["-gen-disassembler"],
             "lib/Target/Sparc/SparcGenSearchableTables.inc": ["-gen-searchable-tables"],
+            "lib/Target/Sparc/SparcGenSDNodeInfo.inc": [
+                "-gen-sd-node-info",
+                "-sdnode-namespace=SPISD",
+            ],
         },
     },
     {
@@ -2452,6 +2457,7 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/XCore/XCoreGenDisassemblerTables.inc": ["-gen-disassembler"],
             "lib/Target/XCore/XCoreGenInstrInfo.inc": ["-gen-instr-info"],
             "lib/Target/XCore/XCoreGenRegisterInfo.inc": ["-gen-register-info"],
+            "lib/Target/XCore/XCoreGenSDNodeInfo.inc": ["-gen-sd-node-info"],
             "lib/Target/XCore/XCoreGenSubtargetInfo.inc": ["-gen-subtarget"],
         },
     },

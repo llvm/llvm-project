@@ -32,10 +32,6 @@ struct __atomic_base // false
 {
   mutable __cxx_atomic_impl<_Tp> __a_;
 
-#if _LIBCPP_STD_VER >= 17
-  static constexpr bool is_always_lock_free = __libcpp_is_always_lock_free<__cxx_atomic_impl<_Tp> >::__value;
-#endif
-
   _LIBCPP_HIDE_FROM_ABI bool is_lock_free() const volatile _NOEXCEPT {
     return __cxx_atomic_is_lock_free(sizeof(__cxx_atomic_impl<_Tp>));
   }
@@ -118,11 +114,7 @@ struct __atomic_base // false
   }
   _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void notify_all() _NOEXCEPT { std::__atomic_notify_all(*this); }
 
-#if _LIBCPP_STD_VER >= 20
-  _LIBCPP_HIDE_FROM_ABI constexpr __atomic_base() noexcept(is_nothrow_default_constructible_v<_Tp>) : __a_(_Tp()) {}
-#else
   _LIBCPP_HIDE_FROM_ABI __atomic_base() _NOEXCEPT = default;
-#endif
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __atomic_base(_Tp __d) _NOEXCEPT : __a_(__d) {}
 
