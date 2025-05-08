@@ -76,7 +76,7 @@ namespace {
     unsigned Version;
 
   public:
-    StmtPrinter(raw_ostream & os, PrinterHelper * helper,
+    StmtPrinter(raw_ostream &os, PrinterHelper *helper,
                 const PrintingPolicy &Policy, unsigned Indentation = 0,
                 StringRef NL = "\n", const ASTContext *Context = nullptr)
         : OS(os), IndentLevel(Indentation), Helper(helper), Policy(Policy),
