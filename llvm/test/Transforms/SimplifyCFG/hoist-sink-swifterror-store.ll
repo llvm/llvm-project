@@ -3,6 +3,7 @@
 
 declare void @clobber1()
 declare void @clobber2()
+declare swiftcc void @swift_willThrow(ptr swifterror)
 
 ; Do not try to sink the stores to the exit block, as this requires introducing
 ; a select for the pointer operand. This is not allowed for swifterror pointers.
@@ -76,6 +77,22 @@ exit:
 ; introduces a select for the pointer operand. This is not allowed for
 ; swifterror pointers.
 define swiftcc ptr @sink_load(ptr %arg, ptr swifterror %arg1, i1 %c) {
+; CHECK-LABEL: define swiftcc ptr @sink_load
+; CHECK-SAME: (ptr [[ARG:%.*]], ptr swifterror [[ARG1:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    call void @clobber1()
+; CHECK-NEXT:    [[L1:%.*]] = load ptr, ptr [[ARG]], align 8
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    call void @clobber2()
+; CHECK-NEXT:    [[L2:%.*]] = load ptr, ptr [[ARG1]], align 8
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[L1]], [[THEN]] ], [ [[L2]], [[ELSE]] ]
+; CHECK-NEXT:    ret ptr [[P]]
+;
 bb:
   br i1 %c, label %then, label %else
 
@@ -126,4 +143,40 @@ else:
 exit:
   %p = phi ptr [ %l1, %then ], [ %l2, %else ]
   ret ptr %p
+}
+
+
+define swiftcc void @sink_call(i1 %c) {
+; CHECK-LABEL: define swiftcc void @sink_call
+; CHECK-SAME: (i1 [[C:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = alloca swifterror ptr, align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = alloca swifterror ptr, align 8
+; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    call void @clobber1()
+; CHECK-NEXT:    call swiftcc void @swift_willThrow(ptr [[TMP2]])
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    call void @clobber2()
+; CHECK-NEXT:    call swiftcc void @swift_willThrow(ptr [[TMP1]])
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+  %2 = alloca swifterror ptr, align 8
+  %3 = alloca swifterror ptr, align 8
+  br i1 %c, label %then, label %else
+
+then:
+  call void @clobber1()
+  call swiftcc void @swift_willThrow(ptr %3)
+  br label %exit
+
+else:
+  call void @clobber2()
+  call swiftcc void @swift_willThrow(ptr %2)
+  br label %exit
+
+exit:
+  ret void
 }
