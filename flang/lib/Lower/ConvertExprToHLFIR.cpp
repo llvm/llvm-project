@@ -227,6 +227,12 @@ private:
         isVolatile = true;
     }
 
+    // Check if the base type is volatile
+    if (partInfo.base.has_value()) {
+      mlir::Type baseType = partInfo.base.value().getType();
+      isVolatile = isVolatile || fir::isa_volatile_type(baseType);
+    }
+
     // Dynamic type of polymorphic base must be kept if the designator is
     // polymorphic.
     if (isPolymorphic(designatorNode))
@@ -237,12 +243,6 @@ private:
     auto charType = mlir::dyn_cast<fir::CharacterType>(resultValueType);
     if (charType && charType.hasDynamicLen())
       return fir::BoxCharType::get(charType.getContext(), charType.getFKind());
-
-    // Check if the base type is volatile
-    if (partInfo.base.has_value()) {
-      mlir::Type baseType = partInfo.base.value().getType();
-      isVolatile = isVolatile || fir::isa_volatile_type(baseType);
-    }
 
     // Arrays with non default lower bounds or dynamic length or dynamic extent
     // need a fir.box to hold the dynamic or lower bound information.
