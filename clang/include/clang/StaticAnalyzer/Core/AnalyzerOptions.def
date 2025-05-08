@@ -423,8 +423,8 @@ ANALYZER_OPTION(
     "loop limit on some execution path are currently marked as \"do not "
     "inline\" even if this option is enabled.) Enabling this option "
     "eliminates this (somewhat arbitrary) restriction from the analysis "
-    "scope, which increases the the analysis runtime (on average by ~10%, "
-    "but a few translation units may see much larger slowdowns).",
+    "scope, which increases the analysis runtime (on average by ~10%, but "
+    "a few translation units may see much larger slowdowns).",
     false)
 
 //===----------------------------------------------------------------------===//
