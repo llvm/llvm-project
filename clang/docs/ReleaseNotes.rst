@@ -319,6 +319,8 @@ Modified Compiler Flags
 
 - The ``-mexecute-only`` and ``-mpure-code`` flags are now accepted for AArch64 targets. (#GH125688)
 
+- The ``-fchar8_t`` flag is no longer considered in non-C++ languages modes. (#GH55373)
+
 Removed Compiler Flags
 -------------------------
 
