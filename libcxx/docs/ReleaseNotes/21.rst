@@ -80,16 +80,18 @@ Deprecations and Removals
 - The ``_LIBCPP_VERBOSE_ABORT_NOT_NOEXCEPT`` has been removed, making ``std::__libcpp_verbose_abort``
   unconditionally ``noexcept``.
 
+- TODO: The non-conforming extension ``packaged_task::result_type`` has been removed in LLVM 21.
+
 Potentially breaking changes
 ----------------------------
 
 - The implementation of ``num_put::do_put`` has been replaced to improve the performance, which can lead to different
   output when printing pointers.
 
-Upcoming Deprecations and Removals
-----------------------------------
+Announcements About Future Releases
+-----------------------------------
 
-LLVM 21
+LLVM 22
 ~~~~~~~
 
 - The status of the C++03 implementation will be frozen after the LLVM 21 release. This means that starting in LLVM 22,
@@ -100,13 +102,6 @@ LLVM 21
 
   If you are using C++03 in your project, you should consider moving to a newer version of the Standard to get the most
   out of libc++.
-
-- Non-conforming extension ``packaged_task::result_type`` will be removed in LLVM 21.
-
-LLVM 22
-~~~~~~~
-
-- TODO
 
 
 ABI Affecting Changes

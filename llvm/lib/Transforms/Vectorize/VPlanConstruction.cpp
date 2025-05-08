@@ -15,6 +15,7 @@
 #include "VPlan.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
+#include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
@@ -124,34 +125,14 @@ VPBasicBlock *PlainCFGBuilder::getOrCreateVPBB(BasicBlock *BB) {
 // Return true if \p Val is considered an external definition. An external
 // definition is either:
 // 1. A Value that is not an Instruction. This will be refined in the future.
-// 2. An Instruction that is outside of the CFG snippet represented in VPlan,
-// i.e., is not part of: a) the loop nest, b) outermost loop PH and, c)
-// outermost loop exits.
+// 2. An Instruction that is outside of the IR region represented in VPlan,
+// i.e., is not part of the loop nest.
 bool PlainCFGBuilder::isExternalDef(Value *Val) {
   // All the Values that are not Instructions are considered external
   // definitions for now.
   Instruction *Inst = dyn_cast<Instruction>(Val);
   if (!Inst)
     return true;
-
-  BasicBlock *InstParent = Inst->getParent();
-  assert(InstParent && "Expected instruction parent.");
-
-  // Check whether Instruction definition is in loop PH.
-  BasicBlock *PH = TheLoop->getLoopPreheader();
-  assert(PH && "Expected loop pre-header.");
-
-  if (InstParent == PH)
-    // Instruction definition is in outermost loop PH.
-    return false;
-
-  // Check whether Instruction definition is in a loop exit.
-  SmallVector<BasicBlock *> ExitBlocks;
-  TheLoop->getExitBlocks(ExitBlocks);
-  if (is_contained(ExitBlocks, InstParent)) {
-    // Instruction definition is in outermost loop exit.
-    return false;
-  }
 
   // Check whether Instruction definition is in loop body.
   return !TheLoop->contains(Inst);
@@ -386,33 +367,54 @@ std::unique_ptr<VPlan> VPlanTransforms::buildPlainCFG(
 /// Checks if \p HeaderVPB is a loop header block in the plain CFG; that is, it
 /// has exactly 2 predecessors (preheader and latch), where the block
 /// dominates the latch and the preheader dominates the block. If it is a
-/// header block return true, making sure the preheader appears first and
-/// the latch second. Otherwise return false.
-static bool canonicalHeader(VPBlockBase *HeaderVPB,
-                            const VPDominatorTree &VPDT) {
+/// header block return true and canonicalize the predecessors of the header
+/// (making sure the preheader appears first and the latch second) and the
+/// successors of the latch (making sure the loop exit comes first). Otherwise
+/// return false.
+static bool canonicalHeaderAndLatch(VPBlockBase *HeaderVPB,
+                                    const VPDominatorTree &VPDT) {
   ArrayRef<VPBlockBase *> Preds = HeaderVPB->getPredecessors();
   if (Preds.size() != 2)
     return false;
 
   auto *PreheaderVPBB = Preds[0];
   auto *LatchVPBB = Preds[1];
-  if (VPDT.dominates(PreheaderVPBB, HeaderVPB) &&
-      VPDT.dominates(HeaderVPB, LatchVPBB))
-    return true;
+  if (!VPDT.dominates(PreheaderVPBB, HeaderVPB) ||
+      !VPDT.dominates(HeaderVPB, LatchVPBB)) {
+    std::swap(PreheaderVPBB, LatchVPBB);
 
-  std::swap(PreheaderVPBB, LatchVPBB);
+    if (!VPDT.dominates(PreheaderVPBB, HeaderVPB) ||
+        !VPDT.dominates(HeaderVPB, LatchVPBB))
+      return false;
 
-  if (VPDT.dominates(PreheaderVPBB, HeaderVPB) &&
-      VPDT.dominates(HeaderVPB, LatchVPBB)) {
-    // Canonicalize predecessors of header so that preheader is first and latch
-    // second.
+    // Canonicalize predecessors of header so that preheader is first and
+    // latch second.
     HeaderVPB->swapPredecessors();
     for (VPRecipeBase &R : cast<VPBasicBlock>(HeaderVPB)->phis())
       R.swapOperands();
-    return true;
   }
 
-  return false;
+  // The two successors of conditional branch match the condition, with the
+  // first successor corresponding to true and the second to false. We
+  // canonicalize the successors of the latch when introducing the region, such
+  // that the latch exits the region when its condition is true; invert the
+  // original condition if the original CFG branches to the header on true.
+  // Note that the exit edge is not yet connected for top-level loops.
+  if (LatchVPBB->getSingleSuccessor() ||
+      LatchVPBB->getSuccessors()[0] != HeaderVPB)
+    return true;
+
+  assert(LatchVPBB->getNumSuccessors() == 2 && "Must have 2 successors");
+  auto *Term = cast<VPBasicBlock>(LatchVPBB)->getTerminator();
+  assert(cast<VPInstruction>(Term)->getOpcode() ==
+             VPInstruction::BranchOnCond &&
+         "terminator must be a BranchOnCond");
+  auto *Not = new VPInstruction(VPInstruction::Not, {Term->getOperand(0)});
+  Not->insertBefore(Term);
+  Term->setOperand(0, Not);
+  LatchVPBB->swapSuccessors();
+
+  return true;
 }
 
 /// Create a new VPRegionBlock for the loop starting at \p HeaderVPB.
@@ -440,23 +442,60 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
     VPBlockUtils::connectBlocks(R, Succ);
 }
 
-void VPlanTransforms::createLoopRegions(VPlan &Plan, Type *InductionTy,
-                                        PredicatedScalarEvolution &PSE,
-                                        bool RequiresScalarEpilogueCheck,
-                                        bool TailFolded, Loop *TheLoop) {
+// Add the necessary canonical IV and branch recipes required to control the
+// loop.
+static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
+                                  VPBasicBlock *LatchVPBB, Type *IdxTy,
+                                  DebugLoc DL) {
+  using namespace VPlanPatternMatch;
+  Value *StartIdx = ConstantInt::get(IdxTy, 0);
+  auto *StartV = Plan.getOrAddLiveIn(StartIdx);
+
+  // Add a VPCanonicalIVPHIRecipe starting at 0 to the header.
+  auto *CanonicalIVPHI = new VPCanonicalIVPHIRecipe(StartV, DL);
+  HeaderVPBB->insert(CanonicalIVPHI, HeaderVPBB->begin());
+
+  // We are about to replace the branch to exit the region. Remove the original
+  // BranchOnCond, if there is any.
+  if (!LatchVPBB->empty() &&
+      match(&LatchVPBB->back(), m_BranchOnCond(m_VPValue())))
+    LatchVPBB->getTerminator()->eraseFromParent();
+
+  VPBuilder Builder(LatchVPBB);
+  // Add a VPInstruction to increment the scalar canonical IV by VF * UF.
+  // Initially the induction increment is guaranteed to not wrap, but that may
+  // change later, e.g. when tail-folding, when the flags need to be dropped.
+  auto *CanonicalIVIncrement = Builder.createOverflowingOp(
+      Instruction::Add, {CanonicalIVPHI, &Plan.getVFxUF()}, {true, false}, DL,
+      "index.next");
+  CanonicalIVPHI->addOperand(CanonicalIVIncrement);
+
+  // Add the BranchOnCount VPInstruction to the latch.
+  Builder.createNaryOp(VPInstruction::BranchOnCount,
+                       {CanonicalIVIncrement, &Plan.getVectorTripCount()}, DL);
+}
+
+void VPlanTransforms::prepareForVectorization(VPlan &Plan, Type *InductionTy,
+                                              PredicatedScalarEvolution &PSE,
+                                              bool RequiresScalarEpilogueCheck,
+                                              bool TailFolded, Loop *TheLoop,
+                                              DebugLoc IVDL) {
   VPDominatorTree VPDT;
   VPDT.recalculate(Plan);
-  for (VPBlockBase *HeaderVPB : vp_depth_first_shallow(Plan.getEntry()))
-    if (canonicalHeader(HeaderVPB, VPDT))
-      createLoopRegion(Plan, HeaderVPB);
 
-  VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
-  auto *OrigExiting = TopRegion->getExiting();
-  VPBasicBlock *LatchVPBB = Plan.createVPBasicBlock("vector.latch");
-  VPBlockUtils::insertBlockAfter(LatchVPBB, OrigExiting);
-  TopRegion->setExiting(LatchVPBB);
-  TopRegion->setName("vector loop");
-  TopRegion->getEntryBasicBlock()->setName("vector.body");
+  VPBlockBase *HeaderVPB = Plan.getEntry()->getSingleSuccessor();
+  canonicalHeaderAndLatch(HeaderVPB, VPDT);
+  VPBlockBase *LatchVPB = HeaderVPB->getPredecessors()[1];
+
+  VPBasicBlock *VecPreheader = Plan.createVPBasicBlock("vector.ph");
+  VPBlockUtils::insertBlockAfter(VecPreheader, Plan.getEntry());
+
+  VPBasicBlock *MiddleVPBB = Plan.createVPBasicBlock("middle.block");
+  VPBlockUtils::connectBlocks(LatchVPB, MiddleVPBB);
+  LatchVPB->swapSuccessors();
+
+  addCanonicalIVRecipes(Plan, cast<VPBasicBlock>(HeaderVPB),
+                        cast<VPBasicBlock>(LatchVPB), InductionTy, IVDL);
 
   // Create SCEV and VPValue for the trip count.
   // We use the symbolic max backedge-taken-count, which works also when
@@ -469,12 +508,6 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan, Type *InductionTy,
                                                        InductionTy, TheLoop);
   Plan.setTripCount(
       vputils::getOrCreateVPValueForSCEVExpr(Plan, TripCount, SE));
-
-  VPBasicBlock *VecPreheader = Plan.createVPBasicBlock("vector.ph");
-  VPBlockUtils::insertBlockAfter(VecPreheader, Plan.getEntry());
-
-  VPBasicBlock *MiddleVPBB = Plan.createVPBasicBlock("middle.block");
-  VPBlockUtils::insertBlockAfter(MiddleVPBB, TopRegion);
 
   VPBasicBlock *ScalarPH = Plan.createVPBasicBlock("scalar.ph");
   VPBlockUtils::connectBlocks(ScalarPH, Plan.getScalarHeader());
@@ -500,10 +533,10 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan, Type *InductionTy,
     return;
   }
 
+  // The connection order corresponds to the operands of the conditional branch.
   BasicBlock *IRExitBlock = TheLoop->getUniqueLatchExitBlock();
   auto *VPExitBlock = Plan.getExitBlock(IRExitBlock);
-  // The connection order corresponds to the operands of the conditional branch.
-  VPBlockUtils::insertBlockAfter(VPExitBlock, MiddleVPBB);
+  VPBlockUtils::connectBlocks(MiddleVPBB, VPExitBlock);
   VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
 
   auto *ScalarLatchTerm = TheLoop->getLoopLatch()->getTerminator();
@@ -521,4 +554,16 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan, Type *InductionTy,
                                ScalarLatchTerm->getDebugLoc(), "cmp.n");
   Builder.createNaryOp(VPInstruction::BranchOnCond, {Cmp},
                        ScalarLatchTerm->getDebugLoc());
+}
+
+void VPlanTransforms::createLoopRegions(VPlan &Plan) {
+  VPDominatorTree VPDT;
+  VPDT.recalculate(Plan);
+  for (VPBlockBase *HeaderVPB : vp_post_order_shallow(Plan.getEntry()))
+    if (canonicalHeaderAndLatch(HeaderVPB, VPDT))
+      createLoopRegion(Plan, HeaderVPB);
+
+  VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
+  TopRegion->setName("vector loop");
+  TopRegion->getEntryBasicBlock()->setName("vector.body");
 }

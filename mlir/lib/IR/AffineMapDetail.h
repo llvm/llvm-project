@@ -56,8 +56,7 @@ struct AffineMapStorage final
     res->numDims = std::get<0>(key);
     res->numSymbols = std::get<1>(key);
     res->numResults = results.size();
-    std::uninitialized_copy(results.begin(), results.end(),
-                            res->getTrailingObjects<AffineExpr>());
+    llvm::uninitialized_copy(results, res->getTrailingObjects<AffineExpr>());
     return res;
   }
 };

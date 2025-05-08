@@ -3654,6 +3654,27 @@ struct FormatStyle {
   /// \version 3.7
   bool ObjCSpaceBeforeProtocolList;
 
+  /// A regular expression that describes markers for turning formatting off for
+  /// one line. If it matches a comment that is the only token of a line,
+  /// clang-format skips the comment and the next line. Otherwise, clang-format
+  /// skips lines containing a matched token.
+  /// \code
+  ///    // OneLineFormatOffRegex: ^(// NOLINT|logger$)
+  ///    // results in the output below:
+  ///    int a;
+  ///    int b ;  // NOLINT
+  ///    int c;
+  ///     // NOLINTNEXTLINE
+  ///    int d ;
+  ///    int e;
+  ///    s = "// NOLINT";
+  ///     logger() ;
+  ///    logger2();
+  ///    my_logger();
+  /// \endcode
+  /// \version 21
+  std::string OneLineFormatOffRegex;
+
   /// Different ways to try to fit all constructor initializers on a line.
   enum PackConstructorInitializersStyle : int8_t {
     /// Always put each constructor initializer on its own line.
@@ -4462,6 +4483,14 @@ struct FormatStyle {
   /// \endcode
   /// \version 9
   bool SpaceAfterLogicalNot;
+
+  /// If ``true``, a space will be inserted after the ``operator`` keyword.
+  /// \code
+  ///    true:                                false:
+  ///    bool operator ==(int a);     vs.     bool operator==(int a);
+  /// \endcode
+  /// \version 21
+  bool SpaceAfterOperatorKeyword;
 
   /// If \c true, a space will be inserted after the ``template`` keyword.
   /// \code
@@ -5399,6 +5428,7 @@ struct FormatStyle {
            ObjCPropertyAttributeOrder == R.ObjCPropertyAttributeOrder &&
            ObjCSpaceAfterProperty == R.ObjCSpaceAfterProperty &&
            ObjCSpaceBeforeProtocolList == R.ObjCSpaceBeforeProtocolList &&
+           OneLineFormatOffRegex == R.OneLineFormatOffRegex &&
            PackConstructorInitializers == R.PackConstructorInitializers &&
            PenaltyBreakAssignment == R.PenaltyBreakAssignment &&
            PenaltyBreakBeforeFirstCallParameter ==
@@ -5432,6 +5462,7 @@ struct FormatStyle {
            SortJavaStaticImport == R.SortJavaStaticImport &&
            SpaceAfterCStyleCast == R.SpaceAfterCStyleCast &&
            SpaceAfterLogicalNot == R.SpaceAfterLogicalNot &&
+           SpaceAfterOperatorKeyword == R.SpaceAfterOperatorKeyword &&
            SpaceAfterTemplateKeyword == R.SpaceAfterTemplateKeyword &&
            SpaceBeforeAssignmentOperators == R.SpaceBeforeAssignmentOperators &&
            SpaceBeforeCaseColon == R.SpaceBeforeCaseColon &&

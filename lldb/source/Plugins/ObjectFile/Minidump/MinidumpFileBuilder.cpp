@@ -75,6 +75,12 @@ Status MinidumpFileBuilder::AddHeaderAndCalculateDirectories() {
     }
   }
 
+  // Add a generous buffer of directories, these are quite small
+  // and forks may add new directories upstream LLDB hadn't accounted for
+  // when we started pre-calculating directory size, so this should account for
+  // that
+  m_expected_directories += 100;
+
   m_saved_data_size +=
       m_expected_directories * sizeof(llvm::minidump::Directory);
   Status error;

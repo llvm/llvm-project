@@ -869,6 +869,9 @@ public:
       }
       CGM.setAtomicOpts(AO);
     }
+
+    CGAtomicOptionsRAII(const CGAtomicOptionsRAII &) = delete;
+    CGAtomicOptionsRAII &operator=(const CGAtomicOptionsRAII &) = delete;
     ~CGAtomicOptionsRAII() { CGM.setAtomicOpts(SavedAtomicOpts); }
 
   private:
@@ -2858,10 +2861,28 @@ public:
   /// more efficient if the caller knows that the address will not be exposed.
   llvm::AllocaInst *CreateTempAlloca(llvm::Type *Ty, const Twine &Name = "tmp",
                                      llvm::Value *ArraySize = nullptr);
+
+  /// CreateTempAlloca - This creates a alloca and inserts it into the entry
+  /// block. The alloca is casted to the address space of \p UseAddrSpace if
+  /// necessary.
+  RawAddress CreateTempAlloca(llvm::Type *Ty, LangAS UseAddrSpace,
+                              CharUnits align, const Twine &Name = "tmp",
+                              llvm::Value *ArraySize = nullptr,
+                              RawAddress *Alloca = nullptr);
+
+  /// CreateTempAlloca - This creates a alloca and inserts it into the entry
+  /// block. The alloca is casted to default address space if necessary.
+  ///
+  /// FIXME: This version should be removed, and context should provide the
+  /// context use address space used instead of default.
   RawAddress CreateTempAlloca(llvm::Type *Ty, CharUnits align,
                               const Twine &Name = "tmp",
                               llvm::Value *ArraySize = nullptr,
-                              RawAddress *Alloca = nullptr);
+                              RawAddress *Alloca = nullptr) {
+    return CreateTempAlloca(Ty, LangAS::Default, align, Name, ArraySize,
+                            Alloca);
+  }
+
   RawAddress CreateTempAllocaWithoutCast(llvm::Type *Ty, CharUnits align,
                                          const Twine &Name = "tmp",
                                          llvm::Value *ArraySize = nullptr);

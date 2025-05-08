@@ -69,7 +69,6 @@ struct ol_queue_impl_t {
 struct ol_event_impl_t {
   ol_event_impl_t(void *EventInfo, ol_queue_handle_t Queue)
       : EventInfo(EventInfo), Queue(Queue) {}
-  ~ol_event_impl_t() { (void)Queue->Device->Device->destroyEvent(EventInfo); }
   void *EventInfo;
   ol_queue_handle_t Queue;
 };
@@ -142,6 +141,9 @@ void initPlugins() {
 
   // Preemptively initialize all devices in the plugin
   for (auto &Platform : Platforms()) {
+    // Do not use the host plugin - it isn't supported.
+    if (Platform.BackendType == OL_PLATFORM_BACKEND_UNKNOWN)
+      continue;
     auto Err = Platform.Plugin->init();
     [[maybe_unused]] std::string InfoMsg = toString(std::move(Err));
     for (auto DevNum = 0; DevNum < Platform.Plugin->number_of_devices();
@@ -309,8 +311,7 @@ ol_impl_result_t olMemAlloc_impl(ol_device_handle_t Device,
   auto Alloc =
       Device->Device->dataAlloc(Size, nullptr, convertOlToPluginAllocTy(Type));
   if (!Alloc)
-    return {OL_ERRC_OUT_OF_RESOURCES,
-            formatv("Could not create allocation on device {0}", Device).str()};
+    return ol_impl_result_t::fromError(Alloc.takeError());
 
   *AllocationOut = *Alloc;
   allocInfoMap().insert_or_assign(*Alloc, AllocInfo{Device, Type});
@@ -328,7 +329,7 @@ ol_impl_result_t olMemFree_impl(void *Address) {
   auto Res =
       Device->Device->dataDelete(Address, convertOlToPluginAllocTy(Type));
   if (Res)
-    return {OL_ERRC_OUT_OF_RESOURCES, "Could not free allocation"};
+    return ol_impl_result_t::fromError(std::move(Res));
 
   allocInfoMap().erase(Address);
 
@@ -340,7 +341,7 @@ ol_impl_result_t olCreateQueue_impl(ol_device_handle_t Device,
   auto CreatedQueue = std::make_unique<ol_queue_impl_t>(nullptr, Device);
   auto Err = Device->Device->initAsyncInfo(&(CreatedQueue->AsyncInfo));
   if (Err)
-    return {OL_ERRC_UNKNOWN, "Could not initialize stream resource"};
+    return ol_impl_result_t::fromError(std::move(Err));
 
   *Queue = CreatedQueue.release();
   return OL_SUCCESS;
@@ -356,7 +357,7 @@ ol_impl_result_t olWaitQueue_impl(ol_queue_handle_t Queue) {
   if (Queue->AsyncInfo->Queue) {
     auto Err = Queue->Device->Device->synchronize(Queue->AsyncInfo);
     if (Err)
-      return {OL_ERRC_INVALID_QUEUE, "The queue failed to synchronize"};
+      return ol_impl_result_t::fromError(std::move(Err));
   }
 
   // Recreate the stream resource so the queue can be reused
@@ -364,7 +365,7 @@ ol_impl_result_t olWaitQueue_impl(ol_queue_handle_t Queue) {
   // it to begin with.
   auto Res = Queue->Device->Device->initAsyncInfo(&Queue->AsyncInfo);
   if (Res)
-    return {OL_ERRC_UNKNOWN, "Could not reinitialize the stream resource"};
+    return ol_impl_result_t::fromError(std::move(Res));
 
   return OL_SUCCESS;
 }
@@ -372,25 +373,33 @@ ol_impl_result_t olWaitQueue_impl(ol_queue_handle_t Queue) {
 ol_impl_result_t olWaitEvent_impl(ol_event_handle_t Event) {
   auto Res = Event->Queue->Device->Device->syncEvent(Event->EventInfo);
   if (Res)
-    return {OL_ERRC_INVALID_EVENT, "The event failed to synchronize"};
+    return ol_impl_result_t::fromError(std::move(Res));
 
   return OL_SUCCESS;
 }
 
 ol_impl_result_t olDestroyEvent_impl(ol_event_handle_t Event) {
+  auto Res = Event->Queue->Device->Device->destroyEvent(Event->EventInfo);
+  if (Res)
+    return {OL_ERRC_INVALID_EVENT, "The event could not be destroyed"};
+
   return olDestroy(Event);
 }
 
 ol_event_handle_t makeEvent(ol_queue_handle_t Queue) {
   auto EventImpl = std::make_unique<ol_event_impl_t>(nullptr, Queue);
   auto Res = Queue->Device->Device->createEvent(&EventImpl->EventInfo);
-  if (Res)
+  if (Res) {
+    llvm::consumeError(std::move(Res));
     return nullptr;
+  }
 
   Res = Queue->Device->Device->recordEvent(EventImpl->EventInfo,
                                            Queue->AsyncInfo);
-  if (Res)
+  if (Res) {
+    llvm::consumeError(std::move(Res));
     return nullptr;
+  }
 
   return EventImpl.release();
 }
@@ -416,16 +425,16 @@ ol_impl_result_t olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
   if (DstDevice == HostDevice()) {
     auto Res = SrcDevice->Device->dataRetrieve(DstPtr, SrcPtr, Size, QueueImpl);
     if (Res)
-      return {OL_ERRC_UNKNOWN, "The data retrieve operation failed"};
+      return ol_impl_result_t::fromError(std::move(Res));
   } else if (SrcDevice == HostDevice()) {
     auto Res = DstDevice->Device->dataSubmit(DstPtr, SrcPtr, Size, QueueImpl);
     if (Res)
-      return {OL_ERRC_UNKNOWN, "The data submit operation failed"};
+      return ol_impl_result_t::fromError(std::move(Res));
   } else {
     auto Res = SrcDevice->Device->dataExchange(SrcPtr, *DstDevice->Device,
                                                DstPtr, Size, QueueImpl);
     if (Res)
-      return {OL_ERRC_UNKNOWN, "The data exchange operation failed"};
+      return ol_impl_result_t::fromError(std::move(Res));
   }
 
   if (EventOut)
@@ -453,7 +462,7 @@ ol_impl_result_t olCreateProgram_impl(ol_device_handle_t Device,
       Device->Device->loadBinary(Device->Device->Plugin, &Prog->DeviceImage);
   if (!Res) {
     delete Prog;
-    return OL_ERRC_INVALID_VALUE;
+    return ol_impl_result_t::fromError(Res.takeError());
   }
 
   Prog->Image = *Res;
@@ -477,7 +486,7 @@ ol_impl_result_t olGetKernel_impl(ol_program_handle_t Program,
 
   auto Err = KernelImpl->init(Device, *Program->Image);
   if (Err)
-    return {OL_ERRC_UNKNOWN, "Could not initialize the kernel"};
+    return ol_impl_result_t::fromError(std::move(Err));
 
   *Kernel = &*KernelImpl;
 
@@ -520,7 +529,7 @@ olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
 
   AsyncInfoWrapper.finalize(Err);
   if (Err)
-    return {OL_ERRC_UNKNOWN, "Could not finalize the AsyncInfoWrapper"};
+    return ol_impl_result_t::fromError(std::move(Err));
 
   if (EventOut)
     *EventOut = makeEvent(Queue);

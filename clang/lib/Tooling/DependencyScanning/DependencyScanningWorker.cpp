@@ -411,10 +411,10 @@ public:
     Scanned = true;
 
     // Create a compiler instance to handle the actual work.
-    auto ModCache = makeInProcessModuleCache(Service.getModuleCacheMutexes());
-    ScanInstanceStorage.emplace(std::move(PCHContainerOps), ModCache.get());
+    auto ModCache = makeInProcessModuleCache(Service.getModuleCacheEntries());
+    ScanInstanceStorage.emplace(std::move(Invocation),
+                                std::move(PCHContainerOps), ModCache.get());
     CompilerInstance &ScanInstance = *ScanInstanceStorage;
-    ScanInstance.setInvocation(std::move(Invocation));
     ScanInstance.setBuildingModule(false);
 
     // Create the compiler's actual diagnostics engine.
@@ -427,6 +427,10 @@ public:
 
     ScanInstance.getPreprocessorOpts().AllowPCHWithDifferentModulesCachePath =
         true;
+
+    if (ScanInstance.getHeaderSearchOpts().ModulesValidateOncePerBuildSession)
+      ScanInstance.getHeaderSearchOpts().BuildSessionTimestamp =
+          Service.getBuildSessionTimestamp();
 
     ScanInstance.getFrontendOpts().GenerateGlobalModuleIndex = false;
     ScanInstance.getFrontendOpts().UseGlobalModuleIndex = false;

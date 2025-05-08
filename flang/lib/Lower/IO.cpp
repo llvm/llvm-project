@@ -836,7 +836,11 @@ createIoRuntimeCallForItem(Fortran::lower::AbstractConverter &converter,
   } else {
     mlir::Value itemAddr = fir::getBase(item);
     mlir::Type itemTy = fir::unwrapPassByRefType(itemAddr.getType());
-    inputFuncArgs.push_back(builder.createConvert(loc, argType, itemAddr));
+
+    // Handle conversion between volatile and non-volatile reference types
+    // Need to explicitly cast when volatility qualification differs
+    inputFuncArgs.push_back(
+        builder.createConvertWithVolatileCast(loc, argType, itemAddr));
     fir::factory::CharacterExprHelper charHelper{builder, loc};
     if (charHelper.isCharacterScalar(itemTy)) {
       mlir::Value len = fir::getLen(item);

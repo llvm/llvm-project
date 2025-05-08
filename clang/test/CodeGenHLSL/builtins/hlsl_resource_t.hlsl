@@ -4,7 +4,7 @@ using handle_float_t = __hlsl_resource_t [[hlsl::resource_class(UAV)]] [[hlsl::c
 
 // CHECK: %"class.hlsl::RWBuffer" = type { target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
 // CHECK: %"class.hlsl::StructuredBuffer" = type { target("dx.RawBuffer", %struct.MyStruct, 0, 0)
-// CHECK: %struct.MyStruct = type { <4 x float>, <2 x i32>, [8 x i8] }
+// CHECK: %struct.MyStruct = type <{ <4 x float>, <2 x i32> }>
 
 // CHECK: define void @_Z2faU9_Res_u_CTfu17__hlsl_resource_t(target("dx.TypedBuffer", float, 1, 0, 0) %a)
 // CHECK: call void @_Z4foo1U9_Res_u_CTfu17__hlsl_resource_t(target("dx.TypedBuffer", float, 1, 0, 0) %0)

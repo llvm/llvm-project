@@ -946,7 +946,7 @@ void DXILResourceWrapperPass::dump() const { print(dbgs(), nullptr); }
 #endif
 
 INITIALIZE_PASS(DXILResourceWrapperPass, "dxil-resources",
-                "DXIL Resource Binding Analysis", false, true)
+                "DXIL Resources Analysis", false, true)
 char DXILResourceWrapperPass::ID = 0;
 
 ModulePass *llvm::createDXILResourceWrapperPassPass() {

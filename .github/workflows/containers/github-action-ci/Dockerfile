@@ -63,19 +63,10 @@ RUN apt-get update && \
     python3-pip \
     ccache \
     file \
-    tzdata && \
+    tzdata \
+    sccache && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
-
-# Install sccache as it is needed by most of the project test workflows and
-# cannot be installed by the ccache action when executing as a non-root user.
-# TODO(boomanaiden154): This should be switched to being installed with apt
-# once we bump to Ubuntu 24.04.
-RUN curl -L 'https://github.com/mozilla/sccache/releases/download/v0.7.6/sccache-v0.7.6-x86_64-unknown-linux-musl.tar.gz' > /tmp/sccache.tar.gz && \
-    echo "2902a5e44c3342132f07b62e70cca75d9b23252922faf3b924f449808cc1ae58 /tmp/sccache.tar.gz" | sha256sum -c && \
-    tar xzf /tmp/sccache.tar.gz -O --wildcards '*/sccache' > '/usr/local/bin/sccache' && \
-    rm /tmp/sccache.tar.gz && \
-    chmod +x /usr/local/bin/sccache
 
 ENV LLVM_SYSROOT=$LLVM_SYSROOT
 ENV PATH=${LLVM_SYSROOT}/bin:${PATH}

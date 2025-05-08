@@ -130,9 +130,11 @@ def err_attribute_not_type_attr : Error<
   "%0%select{ attribute|}1 cannot be applied to types">;
 def err_enum_template : Error<"enumeration cannot be a template">;
 
-def warn_cxx20_compat_consteval : Warning<
-  "'consteval' specifier is incompatible with C++ standards before C++20">,
-  InGroup<CXX20Compat>, DefaultIgnore;
+def warn_cxx20_compat_consteval
+    : Warning<"'consteval' specifier is incompatible with C++ standards before "
+              "C++20">,
+      InGroup<CXXPre20Compat>,
+      DefaultIgnore;
 def warn_missing_type_specifier : Warning<
   "type specifier missing, defaults to 'int'">,
   InGroup<ImplicitInt>, DefaultIgnore;

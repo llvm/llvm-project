@@ -980,9 +980,9 @@ SDValue DAGTypeLegalizer::PromoteIntRes_VP_LOAD(VPLoadSDNode *N) {
                                  : N->getExtensionType();
   SDLoc dl(N);
   SDValue Res =
-      DAG.getLoadVP(N->getAddressingMode(), ExtType, NVT, dl, N->getChain(),
-                    N->getBasePtr(), N->getOffset(), N->getMask(),
-                    N->getVectorLength(), N->getMemoryVT(), N->getMemOperand());
+      DAG.getExtLoadVP(ExtType, dl, NVT, N->getChain(), N->getBasePtr(),
+                       N->getMask(), N->getVectorLength(), N->getMemoryVT(),
+                       N->getMemOperand(), N->isExpandingLoad());
   // Legalize the chain result - switch anything that used the old chain to
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), Res.getValue(1));

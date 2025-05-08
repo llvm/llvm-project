@@ -56,6 +56,7 @@ inline constexpr bool isPtrType(PrimType T) {
 enum class CastKind : uint8_t {
   Reinterpret,
   Volatile,
+  Dynamic,
 };
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
@@ -66,6 +67,9 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
     break;
   case interp::CastKind::Volatile:
     OS << "volatile";
+    break;
+  case interp::CastKind::Dynamic:
+    OS << "dynamic";
     break;
   }
   return OS;

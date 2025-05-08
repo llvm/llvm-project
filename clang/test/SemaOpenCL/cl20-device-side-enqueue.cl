@@ -14,7 +14,7 @@ typedef struct {int a;} ndrange_t;
 kernel void enqueue_kernel_tests(void) {
   queue_t default_queue;
   unsigned flags = 0;
-  QUALS ndrange_t ndrange;
+  QUALS ndrange_t ndrange = { 0 };
   clk_event_t evt;
   clk_event_t event_wait_list;
   clk_event_t event_wait_list2[] = {evt, evt};

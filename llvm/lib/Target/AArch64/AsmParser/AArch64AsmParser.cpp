@@ -230,6 +230,9 @@ private:
   bool parseDirectiveSEHClearUnwoundToCall(SMLoc L);
   bool parseDirectiveSEHPACSignLR(SMLoc L);
   bool parseDirectiveSEHSaveAnyReg(SMLoc L, bool Paired, bool Writeback);
+  bool parseDirectiveSEHAllocZ(SMLoc L);
+  bool parseDirectiveSEHSaveZReg(SMLoc L);
+  bool parseDirectiveSEHSavePReg(SMLoc L);
   bool parseDirectiveAeabiSubSectionHeader(SMLoc L);
   bool parseDirectiveAeabiAArch64Attr(SMLoc L);
 
@@ -7111,6 +7114,12 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
       parseDirectiveSEHSaveAnyReg(Loc, false, true);
     else if (IDVal == ".seh_save_any_reg_px")
       parseDirectiveSEHSaveAnyReg(Loc, true, true);
+    else if (IDVal == ".seh_allocz")
+      parseDirectiveSEHAllocZ(Loc);
+    else if (IDVal == ".seh_save_zreg")
+      parseDirectiveSEHSaveZReg(Loc);
+    else if (IDVal == ".seh_save_preg")
+      parseDirectiveSEHSavePReg(Loc);
     else
       return true;
   } else if (IsELF) {
@@ -7180,9 +7189,9 @@ static SMLoc incrementLoc(SMLoc L, int Offset) {
 bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
   SMLoc CurLoc = getLoc();
 
+  StringRef Name = getParser().parseStringToEndOfStatement().trim();
   StringRef Arch, ExtensionString;
-  std::tie(Arch, ExtensionString) =
-      getParser().parseStringToEndOfStatement().trim().split('+');
+  std::tie(Arch, ExtensionString) = Name.split('+');
 
   const AArch64::ArchInfo *ArchInfo = AArch64::parseArch(Arch);
   if (!ArchInfo)
@@ -7229,6 +7238,8 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
   }
   FeatureBitset Features = ComputeAvailableFeatures(STI.getFeatureBits());
   setAvailableFeatures(Features);
+
+  getTargetStreamer().emitDirectiveArch(Name);
   return false;
 }
 
@@ -7237,12 +7248,13 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
 bool AArch64AsmParser::parseDirectiveArchExtension(SMLoc L) {
   SMLoc ExtLoc = getLoc();
 
-  StringRef Name = getParser().parseStringToEndOfStatement().trim();
+  StringRef FullName = getParser().parseStringToEndOfStatement().trim();
 
   if (parseEOL())
     return true;
 
   bool EnableFeature = true;
+  StringRef Name = FullName;
   if (Name.starts_with_insensitive("no")) {
     EnableFeature = false;
     Name = Name.substr(2);
@@ -7262,6 +7274,8 @@ bool AArch64AsmParser::parseDirectiveArchExtension(SMLoc L) {
     STI.ClearFeatureBitsTransitively(It->Features);
   FeatureBitset Features = ComputeAvailableFeatures(STI.getFeatureBits());
   setAvailableFeatures(Features);
+
+  getTargetStreamer().emitDirectiveArchExtension(FullName);
   return false;
 }
 
@@ -7853,6 +7867,54 @@ bool AArch64AsmParser::parseDirectiveSEHSaveAnyReg(SMLoc L, bool Paired,
   } else {
     return Error(Start, "save_any_reg register must be x, q or d register");
   }
+  return false;
+}
+
+/// parseDirectiveAllocZ
+/// ::= .seh_allocz
+bool AArch64AsmParser::parseDirectiveSEHAllocZ(SMLoc L) {
+  int64_t Offset;
+  if (parseImmExpr(Offset))
+    return true;
+  getTargetStreamer().emitARM64WinCFIAllocZ(Offset);
+  return false;
+}
+
+/// parseDirectiveSEHSaveZReg
+/// ::= .seh_save_zreg
+bool AArch64AsmParser::parseDirectiveSEHSaveZReg(SMLoc L) {
+  MCRegister RegNum;
+  StringRef Kind;
+  int64_t Offset;
+  ParseStatus Res =
+      tryParseVectorRegister(RegNum, Kind, RegKind::SVEDataVector);
+  if (!Res.isSuccess())
+    return true;
+  if (check(RegNum < AArch64::Z8 || RegNum > AArch64::Z23, L,
+            "expected register in range z8 to z23"))
+    return true;
+  if (parseComma() || parseImmExpr(Offset))
+    return true;
+  getTargetStreamer().emitARM64WinCFISaveZReg(RegNum - AArch64::Z0, Offset);
+  return false;
+}
+
+/// parseDirectiveSEHSavePReg
+/// ::= .seh_save_preg
+bool AArch64AsmParser::parseDirectiveSEHSavePReg(SMLoc L) {
+  MCRegister RegNum;
+  StringRef Kind;
+  int64_t Offset;
+  ParseStatus Res =
+      tryParseVectorRegister(RegNum, Kind, RegKind::SVEPredicateVector);
+  if (!Res.isSuccess())
+    return true;
+  if (check(RegNum < AArch64::P4 || RegNum > AArch64::P15, L,
+            "expected register in range p4 to p15"))
+    return true;
+  if (parseComma() || parseImmExpr(Offset))
+    return true;
+  getTargetStreamer().emitARM64WinCFISavePReg(RegNum - AArch64::P0, Offset);
   return false;
 }
 

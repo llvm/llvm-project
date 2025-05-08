@@ -149,6 +149,14 @@ namespace llvm {
                  * = nullptr)
         : Data(Vec.data()), Length(Vec.size()) {}
 
+    /// Construct an ArrayRef<T> from iterator_range<U*>. This uses SFINAE
+    /// to ensure that this is only used for iterator ranges over plain pointer
+    /// iterators.
+    template <typename U, typename = std::enable_if_t<
+                              std::is_convertible_v<U *const *, T *const *>>>
+    ArrayRef(const iterator_range<U *> &Range)
+        : Data(Range.begin()), Length(llvm::size(Range)) {}
+
     /// @}
     /// @name Simple Operations
     /// @{
@@ -182,7 +190,7 @@ namespace llvm {
     // copy - Allocate copy in Allocator and return ArrayRef<T> to it.
     template <typename Allocator> MutableArrayRef<T> copy(Allocator &A) {
       T *Buff = A.template Allocate<T>(Length);
-      std::uninitialized_copy(begin(), end(), Buff);
+      llvm::uninitialized_copy(*this, Buff);
       return MutableArrayRef<T>(Buff, Length);
     }
 

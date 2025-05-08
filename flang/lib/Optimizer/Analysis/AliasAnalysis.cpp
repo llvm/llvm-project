@@ -110,6 +110,14 @@ bool AliasAnalysis::Source::isTargetOrPointer() const {
          attributes.test(Attribute::Target);
 }
 
+bool AliasAnalysis::Source::isTarget() const {
+  return attributes.test(Attribute::Target);
+}
+
+bool AliasAnalysis::Source::isPointer() const {
+  return attributes.test(Attribute::Pointer);
+}
+
 bool AliasAnalysis::Source::isDummyArgument() const {
   if (auto v = origin.u.dyn_cast<mlir::Value>()) {
     return fir::isDummyArgument(v);

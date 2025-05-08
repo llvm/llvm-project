@@ -2,8 +2,6 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -S -o - -passes=amdgpu-lower-kernel-arguments %s | FileCheck -check-prefixes=GCN,HSA %s
 ; RUN: opt -mtriple=amdgcn-- -S -o - -passes=amdgpu-lower-kernel-arguments %s | FileCheck -check-prefixes=GCN,MESA %s
 
-target datalayout = "A5"
-
 declare void @llvm.fake.use(...)
 
 define amdgpu_kernel void @kern_noargs() {
@@ -489,7 +487,7 @@ define amdgpu_kernel void @kern_lds_ptr(ptr addrspace(3) %lds) #0 {
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_lds_ptr(
-; MESA-NEXT:    [[KERN_LDS_PTR_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; MESA-NEXT:    [[KERN_LDS_PTR_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(260) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; MESA-NEXT:    [[LDS_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_LDS_PTR_KERNARG_SEGMENT]], i64 36
 ; MESA-NEXT:    [[LDS_LOAD:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[LDS_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
 ; MESA-NEXT:    store i32 0, ptr addrspace(3) [[LDS_LOAD]], align 4
@@ -500,10 +498,15 @@ define amdgpu_kernel void @kern_lds_ptr(ptr addrspace(3) %lds) #0 {
 }
 
 define amdgpu_kernel void @kern_lds_ptr_si(ptr addrspace(3) %lds) #2 {
-; GCN-LABEL: @kern_lds_ptr_si(
-; GCN-NEXT:    [[KERN_LDS_PTR_SI_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
-; GCN-NEXT:    store i32 0, ptr addrspace(3) [[LDS:%.*]], align 4
-; GCN-NEXT:    ret void
+; HSA-LABEL: @kern_lds_ptr_si(
+; HSA-NEXT:    [[KERN_LDS_PTR_SI_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; HSA-NEXT:    store i32 0, ptr addrspace(3) [[LDS:%.*]], align 4
+; HSA-NEXT:    ret void
+;
+; MESA-LABEL: @kern_lds_ptr_si(
+; MESA-NEXT:    [[KERN_LDS_PTR_SI_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(260) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; MESA-NEXT:    store i32 0, ptr addrspace(3) [[LDS:%.*]], align 4
+; MESA-NEXT:    ret void
 ;
   store i32 0, ptr addrspace(3) %lds, align 4
   ret void

@@ -119,7 +119,7 @@ private:
   /// Exclusive or shared.
   LockKind LKind : 8;
 
-  // How it was acquired.
+  /// How it was acquired.
   SourceKind Source : 8;
 
   /// Where it was acquired.
@@ -1011,8 +1011,8 @@ private:
               SourceLocation loc, ThreadSafetyHandler *Handler) const {
     if (FSet.findLock(FactMan, Cp)) {
       FSet.removeLock(FactMan, Cp);
-      FSet.addLock(FactMan, std::make_unique<LockableFactEntry>(
-                                !Cp, LK_Exclusive, loc));
+      FSet.addLock(FactMan,
+                   std::make_unique<LockableFactEntry>(!Cp, LK_Exclusive, loc));
     } else if (Handler) {
       SourceLocation PrevLoc;
       if (const FactEntry *Neg = FSet.findLock(FactMan, !Cp))
@@ -1230,25 +1230,6 @@ static const ValueDecl *getValueDecl(const Expr *Exp) {
 
   return nullptr;
 }
-
-namespace {
-
-template <typename Ty>
-class has_arg_iterator_range {
-  using yes = char[1];
-  using no = char[2];
-
-  template <typename Inner>
-  static yes& test(Inner *I, decltype(I->args()) * = nullptr);
-
-  template <typename>
-  static no& test(...);
-
-public:
-  static const bool value = sizeof(test<Ty>(nullptr)) == sizeof(yes);
-};
-
-} // namespace
 
 bool ThreadSafetyAnalyzer::inCurrentScope(const CapabilityExpr &CapE) {
   const threadSafety::til::SExpr *SExp = CapE.sexpr();

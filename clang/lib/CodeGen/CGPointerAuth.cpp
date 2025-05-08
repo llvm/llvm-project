@@ -724,7 +724,6 @@ Address Address::getResignedAddress(const CGPointerAuthInfo &NewInfo,
     Val = CGF.emitPointerAuthResign(getBasePointer(), QualType(), CurInfo,
                                     NewInfo, isKnownNonNull());
 
-  Val = CGF.Builder.CreateBitCast(Val, getType());
   return Address(Val, getElementType(), getAlignment(), NewInfo,
                  /*Offset=*/nullptr, isKnownNonNull());
 }

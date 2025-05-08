@@ -52,20 +52,6 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp __rotr(_Tp __x, int __s)
   return (__x << -__r) | (__x >> (__N + __r));
 }
 
-#if _LIBCPP_STD_VER >= 20
-
-template <__libcpp_unsigned_integer _Tp>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp rotl(_Tp __t, int __cnt) noexcept {
-  return std::__rotl(__t, __cnt);
-}
-
-template <__libcpp_unsigned_integer _Tp>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp rotr(_Tp __t, int __cnt) noexcept {
-  return std::__rotr(__t, __cnt);
-}
-
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___CXX03___BIT_ROTATE_H

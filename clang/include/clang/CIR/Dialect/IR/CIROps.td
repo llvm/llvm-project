@@ -254,7 +254,11 @@ def PtrStrideOp : CIR_Op<"ptr_stride",
     ```
   }];
 
-  let arguments = (ins CIR_PointerType:$base, PrimitiveInt:$stride);
+  let arguments = (ins
+    CIR_PointerType:$base,
+    CIR_AnyFundamentalIntType:$stride
+  );
+
   let results = (outs CIR_PointerType:$result);
 
   let assemblyFormat = [{
@@ -380,8 +384,6 @@ def AllocaOp : CIR_Op<"alloca", [
     `]`
     ($annotations^)? attr-dict
   }];
-
-  let hasVerifier = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -470,7 +472,8 @@ def StoreOp : CIR_Op<"store", [
 //===----------------------------------------------------------------------===//
 
 def ReturnOp : CIR_Op<"return", [ParentOneOf<["FuncOp", "ScopeOp", "IfOp",
-                                              "DoWhileOp", "WhileOp", "ForOp"]>,
+                                              "SwitchOp", "DoWhileOp","WhileOp",
+                                              "ForOp", "CaseOp"]>,
                                  Terminator]> {
   let summary = "Return from function";
   let description = [{
@@ -609,8 +612,9 @@ def ConditionOp : CIR_Op<"condition", [
 //===----------------------------------------------------------------------===//
 
 def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
-                               ParentOneOf<["IfOp", "ScopeOp", "WhileOp",
-                                            "ForOp", "DoWhileOp"]>]> {
+                               ParentOneOf<["CaseOp", "DoWhileOp", "ForOp",
+                                            "IfOp", "ScopeOp", "SwitchOp",
+                                            "TernaryOp", "WhileOp"]>]> {
   let summary = "Represents the default branching behaviour of a region";
   let description = [{
     The `cir.yield` operation terminates regions on different CIR operations,
@@ -751,6 +755,220 @@ def ScopeOp : CIR_Op<"scope", [
     // Scopes without yielding values.
     OpBuilder<(ins "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$scopeBuilder)>
   ];
+}
+
+//===----------------------------------------------------------------------===//
+// SwitchOp
+//===----------------------------------------------------------------------===//
+
+def CaseOpKind_DT : I32EnumAttrCase<"Default", 1, "default">;
+def CaseOpKind_EQ : I32EnumAttrCase<"Equal", 2, "equal">;
+def CaseOpKind_AO : I32EnumAttrCase<"Anyof", 3, "anyof">;
+def CaseOpKind_RG : I32EnumAttrCase<"Range", 4, "range">;
+
+def CaseOpKind : I32EnumAttr<
+    "CaseOpKind",
+    "case kind",
+    [CaseOpKind_DT, CaseOpKind_EQ, CaseOpKind_AO, CaseOpKind_RG]> {
+  let cppNamespace = "::cir";
+}
+
+def CaseOp : CIR_Op<"case", [
+       DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+       RecursivelySpeculatable, AutomaticAllocationScope]> {
+  let summary = "Case operation";
+  let description = [{
+    The `cir.case` operation represents a case within a C/C++ switch.
+    The `cir.case` operation must be in a `cir.switch` operation directly
+    or indirectly.
+
+    The `cir.case` have 4 kinds:
+    - `equal, <constant>`: equality of the second case operand against the
+    condition.
+    - `anyof, [constant-list]`: equals to any of the values in a subsequent
+    following list.
+    - `range, [lower-bound, upper-bound]`: the condition is within the closed
+                                           interval.
+    - `default`: any other value.
+
+    Each case region must be explicitly terminated.
+  }];
+
+  let arguments = (ins ArrayAttr:$value, CaseOpKind:$kind);
+  let regions = (region AnyRegion:$caseRegion);
+
+  let assemblyFormat = "`(` $kind `,` $value `)` $caseRegion attr-dict";
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+      OpBuilder<(ins "mlir::ArrayAttr":$value,
+                   "CaseOpKind":$kind,
+                   "mlir::OpBuilder::InsertPoint &":$insertPoint)>
+  ];
+}
+
+def SwitchOp : CIR_Op<"switch",
+      [SameVariadicOperandSize,
+       DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+       RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments]> {
+  let summary = "Switch operation";
+  let description = [{
+    The `cir.switch` operation represents C/C++ switch functionality for
+    conditionally executing multiple regions of code. The operand to an switch
+    is an integral condition value.
+
+    The set of `cir.case` operations and their enclosing `cir.switch`
+    represent the semantics of a C/C++ switch statement. Users can use
+    `collectCases(llvm::SmallVector<CaseOp> &cases)` to collect the `cir.case`
+    operation in the `cir.switch` operation easily.
+
+    The `cir.case` operations don't have to be in the region of `cir.switch`
+    directly. However, when all the `cir.case` operations live in the region
+    of `cir.switch` directly and there are no other operations except the ending
+    `cir.yield` operation in the region of `cir.switch` directly, we say the
+    `cir.switch` operation is in a simple form. Users can use
+    `bool isSimpleForm(llvm::SmallVector<CaseOp> &cases)` member function to
+    detect if the `cir.switch` operation is in a simple form. The simple form
+    makes it easier for analyses to handle the `cir.switch` operation
+    and makes the boundary to give up clear.
+
+    To make the simple form as common as possible, CIR code generation attaches
+    operations corresponding to the statements that lives between top level
+    cases into the closest `cir.case` operation.
+
+    For example,
+
+    ```
+    switch(int cond) {
+      case 4:
+        a++;
+        b++;
+      case 5:
+        c++;
+
+      ...
+    }
+    ```
+
+    The statement `b++` is not a sub-statement of the case statement `case 4`.
+    But to make the generated `cir.switch` a simple form, we will attach the
+    statement `b++` into the closest `cir.case` operation. So that the generated
+    code will be like:
+
+    ```
+    cir.switch(int cond) {
+      cir.case(equal, 4) {
+        a++;
+        b++;
+        cir.yield
+      }
+      cir.case(equal, 5) {
+        c++;
+        cir.yield
+      }
+      ...
+    }
+    ```
+
+    For the same reason, we will hoist the case statement as the substatement
+    of another case statement so that they will be in the same level. For
+    example,
+
+    ```
+    switch(int cond) {
+      case 4:
+      default;
+      case 5:
+        a++;
+      ...
+    }
+    ```
+
+    will be generated as
+
+    ```
+    cir.switch(int cond) {
+      cir.case(equal, 4) {
+        cir.yield
+      }
+      cir.case(default) {
+        cir.yield
+      }
+      cir.case(equal, 5) {
+        a++;
+        cir.yield
+      }
+      ...
+    }
+    ```
+
+    The cir.switch is not be considered "simple" if any of the following is
+    true:
+    - There are case statements of the switch statement that are scope
+      other than the top level compound statement scope. Note that a case
+      statement itself doesn't form a scope.
+    - The sub-statement of the switch statement is not a compound statement.
+    - There is any code before the first case statement. For example,
+
+    ```
+    switch(int cond) {
+      l:
+        b++;
+
+      case 4:
+        a++;
+        break;
+
+      case 5:
+        goto l;
+      ...
+    }
+    ```
+
+    the generated CIR for this non-simple switch would be:
+
+    ```
+    cir.switch(int cond) {
+      cir.label "l"
+      b++;
+      cir.case(4) {
+        a++;
+        cir.break
+      }
+      cir.case(5) {
+        goto "l"
+      }
+      cir.yield
+    }
+    ```
+  }];
+
+  let arguments = (ins CIR_IntType:$condition);
+
+  let regions = (region AnyRegion:$body);
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$condition,
+               "BuilderOpStateCallbackRef":$switchBuilder)>
+  ];
+
+  let assemblyFormat = [{
+    custom<SwitchOp>(
+      $body, $condition, type($condition)
+    )
+    attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    // Collect cases in the switch.
+    void collectCases(llvm::SmallVectorImpl<CaseOp> &cases);
+
+    // Check if the switch is in a simple form.
+    // If yes, collect the cases to \param cases.
+    // This is an expensive and need to be used with caution.
+    bool isSimpleForm(llvm::SmallVectorImpl<CaseOp> &cases);
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1244,6 +1462,62 @@ def SelectOp : CIR_Op<"select", [Pure,
       qualified(type($false_value))
     `)` `->` qualified(type($result)) attr-dict
   }];
+
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// TernaryOp
+//===----------------------------------------------------------------------===//
+
+def TernaryOp : CIR_Op<"ternary",
+      [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+       RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments]> {
+  let summary = "The `cond ? a : b` C/C++ ternary operation";
+  let description = [{
+    The `cir.ternary` operation represents C/C++ ternary, much like a `select`
+    operation. The first argument is a `cir.bool` condition to evaluate, followed
+    by two regions to execute (true or false). This is different from `cir.if`
+    since each region is one block sized and the `cir.yield` closing the block
+    scope should have one argument.
+
+    `cir.ternary` also represents the GNU binary conditional operator ?: which
+    reuses the parent operation for both the condition and the true branch to
+    evaluate it only once.
+
+    Example:
+
+    ```mlir
+    // cond = a && b;
+
+    %x = cir.ternary (%cond, true_region {
+      ...
+      cir.yield %a : i32
+    }, false_region {
+      ...
+      cir.yield %b : i32
+    }) -> i32
+    ```
+  }];
+  let arguments = (ins CIR_BoolType:$cond);
+  let regions = (region AnyRegion:$trueRegion,
+                        AnyRegion:$falseRegion);
+  let results = (outs Optional<CIR_AnyType>:$result);
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$cond,
+      "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$trueBuilder,
+      "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$falseBuilder)
+      >
+  ];
+
+  let assemblyFormat = [{
+    `(` $cond `,`
+      `true` $trueRegion `,`
+      `false` $falseRegion
+    `)` `:` functional-type(operands, results) attr-dict
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1375,9 +1649,6 @@ def GetGlobalOp : CIR_Op<"get_global",
   let assemblyFormat = [{
     $name `:` qualified(type($addr)) attr-dict
   }];
-
-  // `GetGlobalOp` is fully verified by its traits.
-  let hasVerifier = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1496,6 +1767,13 @@ def FuncOp : CIR_Op<"func", [
        return getFunctionType().getReturnTypes();
     }
 
+    // TODO(cir): this should be an operand attribute, but for now we just hard-
+    // wire this as a function. Will later add a $no_proto argument to this op.
+    bool getNoProto() {
+      assert(!cir::MissingFeatures::opFuncNoProto());
+      return false;
+    }
+
     //===------------------------------------------------------------------===//
     // SymbolOpInterface Methods
     //===------------------------------------------------------------------===//
@@ -1516,16 +1794,51 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
          !listconcat(extra_traits,
                      [DeclareOpInterfaceMethods<CIRCallOpInterface>,
                       DeclareOpInterfaceMethods<SymbolUserOpInterface>])> {
+  let extraClassDeclaration = [{
+    /// Get the argument operands to the called function.
+    mlir::OperandRange getArgOperands() {
+      return getArgs();
+    }
+
+    mlir::MutableOperandRange getArgOperandsMutable() {
+      return getArgsMutable();
+    }
+
+    /// Return the callee of this operation
+    mlir::CallInterfaceCallable getCallableForCallee() {
+      return (*this)->getAttrOfType<mlir::SymbolRefAttr>("callee");
+    }
+
+    /// Set the callee for this operation.
+    void setCalleeFromCallable(::mlir::CallInterfaceCallable callee) {
+      (*this)->setAttr(getCalleeAttrName(),
+                       mlir::cast<mlir::SymbolRefAttr>(callee));
+    }
+
+    mlir::ArrayAttr getArgAttrsAttr() { return {}; }
+    ::mlir::ArrayAttr getResAttrsAttr() { return {}; }
+
+    void setResAttrsAttr(::mlir::ArrayAttr attrs) {}
+    void setArgAttrsAttr(::mlir::ArrayAttr attrs) {}
+
+    ::mlir::Attribute removeArgAttrsAttr() { return {}; }
+    ::mlir::Attribute removeResAttrsAttr() { return {}; }
+
+    void setArg(unsigned index, mlir::Value value) {
+      setOperand(index, value);
+    }
+  }];
+
   let hasCustomAssemblyFormat = 1;
   let skipDefaultBuilders = 1;
-  let hasVerifier = 0;
 
   // TODO(cir): for now cir.call is just a tiny shell of what it will become.
   // More attributes, arguments, and properties will be added in the future as
   // the upstreaming process moves on. The verifiers is also missing for now,
   // will add in the future.
 
-  dag commonArgs = (ins FlatSymbolRefAttr:$callee);
+  dag commonArgs = (ins FlatSymbolRefAttr:$callee,
+                        Variadic<CIR_AnyType>:$args);
 }
 
 def CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
@@ -1546,7 +1859,9 @@ def CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
   let arguments = commonArgs;
 
   let builders = [OpBuilder<(ins "mlir::SymbolRefAttr":$callee,
-                                 "mlir::Type":$resType), [{
+                                 "mlir::Type":$resType,
+                                 "mlir::ValueRange":$operands), [{
+      $_state.addOperands(operands);
       $_state.addAttribute("callee", callee);
       if (resType && !isa<VoidType>(resType))
         $_state.addTypes(resType);
@@ -1628,6 +1943,30 @@ def TrapOp : CIR_Op<"trap", [Terminator]> {
   }];
 
   let assemblyFormat = "attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// VecCreate
+//===----------------------------------------------------------------------===//
+
+def VecCreateOp : CIR_Op<"vec.create", [Pure]> {
+
+  let summary = "Create a vector value";
+  let description = [{
+    The `cir.vec.create` operation creates a vector value with the given element
+    values. The number of element arguments must match the number of elements
+    in the vector type.
+  }];
+
+  let arguments = (ins Variadic<CIR_AnyType>:$elements);
+  let results = (outs CIR_VectorType:$result);
+
+  let assemblyFormat = [{
+    `(` ($elements^ `:` type($elements))? `)` `:` qualified(type($result))
+    attr-dict
+  }];
+
+  let hasVerifier = 1;
 }
 
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD

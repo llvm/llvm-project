@@ -18,6 +18,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/OpenACCClause.h"
 #include "clang/Basic/OpenACCKinds.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace clang {
 
@@ -85,8 +86,8 @@ class OpenACCDeclareDecl final
       : OpenACCConstructDecl(OpenACCDeclare, DC, OpenACCDirectiveKind::Declare,
                              StartLoc, DirLoc, EndLoc) {
     // Initialize the trailing storage.
-    std::uninitialized_copy(Clauses.begin(), Clauses.end(),
-                            getTrailingObjects<const OpenACCClause *>());
+    llvm::uninitialized_copy(Clauses,
+                             getTrailingObjects<const OpenACCClause *>());
 
     setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
                                   Clauses.size()));
@@ -136,8 +137,8 @@ class OpenACCRoutineDecl final
     assert(LParenLoc.isValid() &&
            "Cannot represent implicit name with this declaration");
     // Initialize the trailing storage.
-    std::uninitialized_copy(Clauses.begin(), Clauses.end(),
-                            getTrailingObjects<const OpenACCClause *>());
+    llvm::uninitialized_copy(Clauses,
+                             getTrailingObjects<const OpenACCClause *>());
     setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
                                   Clauses.size()));
   }

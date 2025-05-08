@@ -495,8 +495,8 @@ static void applyBitsNotInRegMaskToRegUnitsMask(const TargetRegisterInfo &TRI,
         break;
 
       if (PhysReg && !((Word >> Bit) & 1)) {
-        for (MCRegUnitIterator RUI(PhysReg, &TRI); RUI.isValid(); ++RUI)
-          RUsFromRegsNotInMask.set(*RUI);
+        for (MCRegUnit Unit : TRI.regunits(PhysReg))
+          RUsFromRegsNotInMask.set(Unit);
       }
     }
   }
@@ -542,10 +542,10 @@ void MachineLICMImpl::ProcessMI(MachineInstr *MI, BitVector &RUDefs,
 
     if (!MO.isDef()) {
       if (!HasNonInvariantUse) {
-        for (MCRegUnitIterator RUI(Reg, TRI); RUI.isValid(); ++RUI) {
+        for (MCRegUnit Unit : TRI->regunits(Reg)) {
           // If it's using a non-loop-invariant register, then it's obviously
           // not safe to hoist.
-          if (RUDefs.test(*RUI) || RUClobbers.test(*RUI)) {
+          if (RUDefs.test(Unit) || RUClobbers.test(Unit)) {
             HasNonInvariantUse = true;
             break;
           }
@@ -555,8 +555,8 @@ void MachineLICMImpl::ProcessMI(MachineInstr *MI, BitVector &RUDefs,
     }
 
     if (MO.isImplicit()) {
-      for (MCRegUnitIterator RUI(Reg, TRI); RUI.isValid(); ++RUI)
-        RUClobbers.set(*RUI);
+      for (MCRegUnit Unit : TRI->regunits(Reg))
+        RUClobbers.set(Unit);
       if (!MO.isDead())
         // Non-dead implicit def? This cannot be hoisted.
         RuledOut = true;
@@ -575,17 +575,17 @@ void MachineLICMImpl::ProcessMI(MachineInstr *MI, BitVector &RUDefs,
     // If we have already seen another instruction that defines the same
     // register, then this is not safe.  Two defs is indicated by setting a
     // PhysRegClobbers bit.
-    for (MCRegUnitIterator RUI(Reg, TRI); RUI.isValid(); ++RUI) {
-      if (RUDefs.test(*RUI)) {
-        RUClobbers.set(*RUI);
+    for (MCRegUnit Unit : TRI->regunits(Reg)) {
+      if (RUDefs.test(Unit)) {
+        RUClobbers.set(Unit);
         RuledOut = true;
-      } else if (RUClobbers.test(*RUI)) {
+      } else if (RUClobbers.test(Unit)) {
         // MI defined register is seen defined by another instruction in
         // the loop, it cannot be a LICM candidate.
         RuledOut = true;
       }
 
-      RUDefs.set(*RUI);
+      RUDefs.set(Unit);
     }
   }
 
@@ -625,13 +625,26 @@ void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop) {
     // FIXME: That means a reload that're reused in successor block(s) will not
     // be LICM'ed.
     for (const auto &LI : BB->liveins()) {
-      for (MCRegUnitIterator RUI(LI.PhysReg, TRI); RUI.isValid(); ++RUI)
-        RUDefs.set(*RUI);
+      for (MCRegUnit Unit : TRI->regunits(LI.PhysReg))
+        RUDefs.set(Unit);
     }
 
     // Funclet entry blocks will clobber all registers
     if (const uint32_t *Mask = BB->getBeginClobberMask(TRI))
       applyBitsNotInRegMaskToRegUnitsMask(*TRI, RUClobbers, Mask);
+
+    // EH landing pads clobber exception pointer/selector registers.
+    if (BB->isEHPad()) {
+      const MachineFunction &MF = *BB->getParent();
+      const Constant *PersonalityFn = MF.getFunction().getPersonalityFn();
+      const TargetLowering &TLI = *MF.getSubtarget().getTargetLowering();
+      if (MCRegister Reg = TLI.getExceptionPointerRegister(PersonalityFn))
+        for (MCRegUnit Unit : TRI->regunits(Reg))
+          RUClobbers.set(Unit);
+      if (MCRegister Reg = TLI.getExceptionSelectorRegister(PersonalityFn))
+        for (MCRegUnit Unit : TRI->regunits(Reg))
+          RUClobbers.set(Unit);
+    }
 
     SpeculationState = SpeculateUnknown;
     for (MachineInstr &MI : *BB)
@@ -648,8 +661,8 @@ void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop) {
       Register Reg = MO.getReg();
       if (!Reg)
         continue;
-      for (MCRegUnitIterator RUI(Reg, TRI); RUI.isValid(); ++RUI)
-        TermRUs.set(*RUI);
+      for (MCRegUnit Unit : TRI->regunits(Reg))
+        TermRUs.set(Unit);
     }
   }
 
@@ -668,8 +681,8 @@ void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop) {
 
     Register Def = Candidate.Def;
     bool Safe = true;
-    for (MCRegUnitIterator RUI(Def, TRI); RUI.isValid(); ++RUI) {
-      if (RUClobbers.test(*RUI) || TermRUs.test(*RUI)) {
+    for (MCRegUnit Unit : TRI->regunits(Def)) {
+      if (RUClobbers.test(Unit) || TermRUs.test(Unit)) {
         Safe = false;
         break;
       }
@@ -682,8 +695,8 @@ void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop) {
     for (const MachineOperand &MO : MI->all_uses()) {
       if (!MO.getReg())
         continue;
-      for (MCRegUnitIterator RUI(MO.getReg(), TRI); RUI.isValid(); ++RUI) {
-        if (RUDefs.test(*RUI) || RUClobbers.test(*RUI)) {
+      for (MCRegUnit Unit : TRI->regunits(MO.getReg())) {
+        if (RUDefs.test(Unit) || RUClobbers.test(Unit)) {
           // If it's using a non-loop-invariant register, then it's obviously
           // not safe to hoist.
           Safe = false;

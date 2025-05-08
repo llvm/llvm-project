@@ -3,7 +3,6 @@
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefix=GFX9-GISEL %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX11-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX11-GISEL %s
-target datalayout = "A5"
 
 define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform(i32 %n) {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_kernel_uniform:

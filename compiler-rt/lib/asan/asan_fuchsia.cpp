@@ -25,6 +25,11 @@
 #  include "asan_thread.h"
 #  include "lsan/lsan_common.h"
 
+namespace __sanitizer {
+// ASan doesn't need to do anything else special in the startup hook.
+void EarlySanitizerInit() {}
+}  // namespace __sanitizer
+
 namespace __asan {
 
 // The system already set up the shadow memory for us.

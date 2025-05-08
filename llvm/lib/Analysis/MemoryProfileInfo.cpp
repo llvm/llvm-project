@@ -163,16 +163,10 @@ void CallStackTrie::addCallStack(
       continue;
     }
     // Update existing caller node if it exists.
-    CallStackTrieNode *Prev = nullptr;
     auto [Next, Inserted] = Curr->Callers.try_emplace(StackId);
     if (!Inserted) {
-      Prev = Curr;
       Curr = Next->second;
       Curr->addAllocType(AllocType);
-      // If this node has an ambiguous alloc type, its callee is not the deepest
-      // point where we have an ambigous allocation type.
-      if (!hasSingleAllocType(Curr->AllocTypes))
-        Prev->DeepestAmbiguousAllocType = false;
       continue;
     }
     // Otherwise add a new caller node.
@@ -248,41 +242,114 @@ void CallStackTrie::convertHotToNotCold(CallStackTrieNode *Node) {
     convertHotToNotCold(Caller.second);
 }
 
+// Copy over some or all of NewMIBNodes to the SavedMIBNodes vector, depending
+// on options that enable filtering out some NotCold contexts.
+static void SaveFilteredNewMIBNodes(std::vector<Metadata *> &NewMIBNodes,
+                                    std::vector<Metadata *> &SavedMIBNodes,
+                                    unsigned CallerContextLength) {
+  // In the simplest case, with pruning disabled, keep all the new MIB nodes.
+  if (MemProfKeepAllNotColdContexts)
+    append_range(SavedMIBNodes, NewMIBNodes);
+
+  auto EmitMessageForRemovedContexts = [](const MDNode *MIBMD, StringRef Tag,
+                                          StringRef Extra) {
+    assert(MIBMD->getNumOperands() > 2);
+    for (unsigned I = 2; I < MIBMD->getNumOperands(); I++) {
+      MDNode *ContextSizePair = dyn_cast<MDNode>(MIBMD->getOperand(I));
+      assert(ContextSizePair->getNumOperands() == 2);
+      uint64_t FullStackId =
+          mdconst::dyn_extract<ConstantInt>(ContextSizePair->getOperand(0))
+              ->getZExtValue();
+      uint64_t TS =
+          mdconst::dyn_extract<ConstantInt>(ContextSizePair->getOperand(1))
+              ->getZExtValue();
+      errs() << "MemProf hinting: Total size for " << Tag
+             << " non-cold full allocation context hash " << FullStackId
+             << Extra << ": " << TS << "\n";
+    }
+  };
+
+  // Prune unneeded NotCold contexts, taking advantage of the fact
+  // that we later will only clone Cold contexts, as NotCold is the allocation
+  // default. We only need to keep as metadata the NotCold contexts that
+  // overlap the longest with Cold allocations, so that we know how deeply we
+  // need to clone. For example, assume we add the following contexts to the
+  // trie:
+  //    1 3 (notcold)
+  //    1 2 4 (cold)
+  //    1 2 5 (notcold)
+  //    1 2 6 (notcold)
+  // the trie looks like:
+  //         1
+  //        / \
+  //       2   3
+  //      /|\
+  //     4 5 6
+  //
+  // It is sufficient to prune all but one not-cold contexts (either 1,2,5 or
+  // 1,2,6, we arbitrarily keep the first one we encounter which will be
+  // 1,2,5).
+  //
+  // To do this pruning, we first check if there were any not-cold
+  // contexts kept for a deeper caller, which will have a context length larger
+  // than the CallerContextLength being handled here (i.e. kept by a deeper
+  // recursion step). If so, none of the not-cold MIB nodes added for the
+  // immediate callers need to be kept. If not, we keep the first (created
+  // for the immediate caller) not-cold MIB node.
+  bool LongerNotColdContextKept = false;
+  for (auto *MIB : NewMIBNodes) {
+    auto MIBMD = cast<MDNode>(MIB);
+    if (getMIBAllocType(MIBMD) == AllocationType::Cold)
+      continue;
+    MDNode *StackMD = getMIBStackNode(MIBMD);
+    assert(StackMD);
+    if (StackMD->getNumOperands() > CallerContextLength) {
+      LongerNotColdContextKept = true;
+      break;
+    }
+  }
+  // Don't need to emit any for the immediate caller if we already have
+  // longer overlapping contexts;
+  bool KeepFirstNewNotCold = !LongerNotColdContextKept;
+  auto NewColdMIBNodes = make_filter_range(NewMIBNodes, [&](const Metadata *M) {
+    auto MIBMD = cast<MDNode>(M);
+    // Only keep cold contexts and first (longest non-cold context).
+    if (getMIBAllocType(MIBMD) != AllocationType::Cold) {
+      MDNode *StackMD = getMIBStackNode(MIBMD);
+      assert(StackMD);
+      // Keep any already kept for longer contexts.
+      if (StackMD->getNumOperands() > CallerContextLength)
+        return true;
+      // Otherwise keep the first one added by the immediate caller if there
+      // were no longer contexts.
+      if (KeepFirstNewNotCold) {
+        KeepFirstNewNotCold = false;
+        return true;
+      }
+      if (MemProfReportHintedSizes)
+        EmitMessageForRemovedContexts(MIBMD, "pruned", "");
+      return false;
+    }
+    return true;
+  });
+  for (auto *M : NewColdMIBNodes)
+    SavedMIBNodes.push_back(M);
+}
+
 // Recursive helper to trim contexts and create metadata nodes.
 // Caller should have pushed Node's loc to MIBCallStack. Doing this in the
 // caller makes it simpler to handle the many early returns in this method.
 bool CallStackTrie::buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
                                   std::vector<uint64_t> &MIBCallStack,
                                   std::vector<Metadata *> &MIBNodes,
-                                  bool CalleeHasAmbiguousCallerContext,
-                                  bool &CalleeDeepestAmbiguousAllocType) {
+                                  bool CalleeHasAmbiguousCallerContext) {
   // Trim context below the first node in a prefix with a single alloc type.
   // Add an MIB record for the current call stack prefix.
   if (hasSingleAllocType(Node->AllocTypes)) {
-    // Because we only clone cold contexts (we don't clone for exposing NotCold
-    // contexts as that is the default allocation behavior), we create MIB
-    // metadata for this context if any of the following are true:
-    // 1) It is cold.
-    // 2) The immediate callee is the deepest point where we have an ambiguous
-    //    allocation type (i.e. the other callers that are cold need to know
-    //    that we have a not cold context overlapping to this point so that we
-    //    know how deep to clone).
-    // 3) MemProfKeepAllNotColdContexts is enabled, which is useful if we are
-    //    reporting hinted sizes, and want to get information from the indexing
-    //    step for all contexts, or have specified a value less than 100% for
-    //    -memprof-cloning-cold-threshold.
-    if (Node->hasAllocType(AllocationType::Cold) ||
-        CalleeDeepestAmbiguousAllocType || MemProfKeepAllNotColdContexts) {
-      std::vector<ContextTotalSize> ContextSizeInfo;
-      collectContextSizeInfo(Node, ContextSizeInfo);
-      MIBNodes.push_back(createMIBNode(Ctx, MIBCallStack,
-                                       (AllocationType)Node->AllocTypes,
-                                       ContextSizeInfo));
-      // If we just emitted an MIB for a not cold caller, don't need to emit
-      // another one for the callee to correctly disambiguate its cold callers.
-      if (!Node->hasAllocType(AllocationType::Cold))
-        CalleeDeepestAmbiguousAllocType = false;
-    }
+    std::vector<ContextTotalSize> ContextSizeInfo;
+    collectContextSizeInfo(Node, ContextSizeInfo);
+    MIBNodes.push_back(createMIBNode(
+        Ctx, MIBCallStack, (AllocationType)Node->AllocTypes, ContextSizeInfo));
     return true;
   }
 
@@ -291,14 +358,21 @@ bool CallStackTrie::buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
   if (!Node->Callers.empty()) {
     bool NodeHasAmbiguousCallerContext = Node->Callers.size() > 1;
     bool AddedMIBNodesForAllCallerContexts = true;
+    // Accumulate all new MIB nodes by the recursive calls below into a vector
+    // that will later be filtered before adding to the caller's MIBNodes
+    // vector.
+    std::vector<Metadata *> NewMIBNodes;
     for (auto &Caller : Node->Callers) {
       MIBCallStack.push_back(Caller.first);
-      AddedMIBNodesForAllCallerContexts &= buildMIBNodes(
-          Caller.second, Ctx, MIBCallStack, MIBNodes,
-          NodeHasAmbiguousCallerContext, Node->DeepestAmbiguousAllocType);
+      AddedMIBNodesForAllCallerContexts &=
+          buildMIBNodes(Caller.second, Ctx, MIBCallStack, NewMIBNodes,
+                        NodeHasAmbiguousCallerContext);
       // Remove Caller.
       MIBCallStack.pop_back();
     }
+    // Pass in the stack length of the MIB nodes added for the immediate caller,
+    // which is the current stack length plus 1.
+    SaveFilteredNewMIBNodes(NewMIBNodes, MIBNodes, MIBCallStack.size() + 1);
     if (AddedMIBNodesForAllCallerContexts)
       return true;
     // We expect that the callers should be forced to add MIBs to disambiguate
@@ -372,13 +446,8 @@ bool CallStackTrie::buildAndAttachMIBMetadata(CallBase *CI) {
   // The CalleeHasAmbiguousCallerContext flag is meant to say whether the
   // callee of the given node has more than one caller. Here the node being
   // passed in is the alloc and it has no callees. So it's false.
-  // Similarly, the last parameter is meant to say whether the callee of the
-  // given node is the deepest point where we have ambiguous alloc types, which
-  // is also false as the alloc has no callees.
-  bool DeepestAmbiguousAllocType = true;
   if (buildMIBNodes(Alloc, Ctx, MIBCallStack, MIBNodes,
-                    /*CalleeHasAmbiguousCallerContext=*/false,
-                    DeepestAmbiguousAllocType)) {
+                    /*CalleeHasAmbiguousCallerContext=*/false)) {
     assert(MIBCallStack.size() == 1 &&
            "Should only be left with Alloc's location in stack");
     CI->setMetadata(LLVMContext::MD_memprof, MDNode::get(Ctx, MIBNodes));

@@ -2028,6 +2028,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     parseMerge(".ctors=.rdata");
     parseMerge(".dtors=.rdata");
     parseMerge(".CRT=.rdata");
+    parseMerge(".data_cygwin_nocopy=.data");
   }
 
   // Handle /section
@@ -2484,6 +2485,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     if (config->mingw) {
       symtab.addAbsolute(symtab.mangle("__CTOR_LIST__"), 0);
       symtab.addAbsolute(symtab.mangle("__DTOR_LIST__"), 0);
+      symtab.addAbsolute("__data_start__", 0);
+      symtab.addAbsolute("__data_end__", 0);
+      symtab.addAbsolute("__bss_start__", 0);
+      symtab.addAbsolute("__bss_end__", 0);
     }
     if (config->debug || config->buildIDHash != BuildIDHash::None)
       if (symtab.findUnderscore("__buildid"))

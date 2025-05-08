@@ -2347,7 +2347,6 @@ TEST_F(OpenMPIRBuilderTest, UnrollLoopHeuristic) {
 
 TEST_F(OpenMPIRBuilderTest, StaticWorkshareLoopTarget) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
-  std::string oldDLStr = M->getDataLayoutStr();
   M->setDataLayout(
       "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:"
       "256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:"
@@ -3875,6 +3874,9 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicWriteFlt) {
   IRBuilder<> Builder(BB);
 
   OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+  BasicBlock *EntryBB = BB;
+  OpenMPIRBuilder::InsertPointTy AllocaIP(EntryBB,
+                                          EntryBB->getFirstInsertionPt());
 
   LLVMContext &Ctx = M->getContext();
   Type *Float32 = Type::getFloatTy(Ctx);
@@ -3884,7 +3886,8 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicWriteFlt) {
   AtomicOrdering AO = AtomicOrdering::Monotonic;
   Constant *ValToWrite = ConstantFP::get(Float32, 1.0);
 
-  Builder.restoreIP(OMPBuilder.createAtomicWrite(Loc, X, ValToWrite, AO));
+  Builder.restoreIP(
+      OMPBuilder.createAtomicWrite(Loc, X, ValToWrite, AO, AllocaIP));
 
   IntegerType *IntCastTy =
       IntegerType::get(M->getContext(), Float32->getScalarSizeInBits());
@@ -3918,8 +3921,11 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicWriteInt) {
   ConstantInt *ValToWrite = ConstantInt::get(Type::getInt32Ty(Ctx), 1U);
 
   BasicBlock *EntryBB = BB;
+  OpenMPIRBuilder::InsertPointTy AllocaIP(EntryBB,
+                                          EntryBB->getFirstInsertionPt());
 
-  Builder.restoreIP(OMPBuilder.createAtomicWrite(Loc, X, ValToWrite, AO));
+  Builder.restoreIP(
+      OMPBuilder.createAtomicWrite(Loc, X, ValToWrite, AO, AllocaIP));
 
   StoreInst *StoreofAtomic = nullptr;
 
@@ -5547,7 +5553,6 @@ TEST_F(OpenMPIRBuilderTest, CreateSectionsSimple) {
   OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
 
   llvm::SmallVector<BodyGenCallbackTy, 4> SectionCBVector;
-  llvm::SmallVector<BasicBlock *, 4> CaseBBs;
 
   auto FiniCB = [&](InsertPointTy IP) { return Error::success(); };
   auto SectionCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {

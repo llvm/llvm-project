@@ -2098,6 +2098,10 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   }
 
   if (!DL) {
+    // FIXME: We could assert that `DL.getKind() != DebugLocKind::Temporary`
+    // here, or otherwise record any temporary DebugLocs seen to ensure that
+    // transient compiler-generated instructions aren't leaking their DLs to
+    // other instructions.
     // We have an unspecified location, which might want to be line 0.
     // If we have already emitted a line-0 record, don't repeat it.
     if (LastAsmLine == 0)
@@ -3935,7 +3939,7 @@ DwarfDebug::getMD5AsBytes(const DIFile *File) const {
   // An MD5 checksum is 16 bytes.
   std::string ChecksumString = fromHex(Checksum->Value);
   MD5::MD5Result CKMem;
-  std::copy(ChecksumString.begin(), ChecksumString.end(), CKMem.data());
+  llvm::copy(ChecksumString, CKMem.data());
   return CKMem;
 }
 

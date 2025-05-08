@@ -1054,6 +1054,12 @@ static Intrinsic::ID shouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
   return Intrinsic::not_intrinsic;
 }
 
+static bool consumeNVVMPtrAddrSpace(StringRef &Name) {
+  return Name.consume_front("local") || Name.consume_front("shared") ||
+         Name.consume_front("global") || Name.consume_front("constant") ||
+         Name.consume_front("param");
+}
+
 static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
                                       bool CanUpgradeDebugIntrinsicsToRecords) {
   assert(F && "Illegal to upgrade a non-existent Function.");
@@ -1361,15 +1367,11 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         // nvvm.rotate.{b32,b64,right.b64}
         Expand = Name == "b32" || Name == "b64" || Name == "right.b64";
       else if (Name.consume_front("ptr.gen.to."))
-        // nvvm.ptr.gen.to.{local,shared,global,constant}
-        Expand = Name.starts_with("local") || Name.starts_with("shared") ||
-                 Name.starts_with("global") || Name.starts_with("constant");
+        // nvvm.ptr.gen.to.{local,shared,global,constant,param}
+        Expand = consumeNVVMPtrAddrSpace(Name);
       else if (Name.consume_front("ptr."))
-        // nvvm.ptr.{local,shared,global,constant}.to.gen
-        Expand =
-            (Name.consume_front("local") || Name.consume_front("shared") ||
-             Name.consume_front("global") || Name.consume_front("constant")) &&
-            Name.starts_with(".to.gen");
+        // nvvm.ptr.{local,shared,global,constant,param}.to.gen
+        Expand = consumeNVVMPtrAddrSpace(Name) && Name.starts_with(".to.gen");
       else if (Name.consume_front("ldg.global."))
         // nvvm.ldg.global.{i,p,f}
         Expand = (Name.starts_with("i.") || Name.starts_with("f.") ||
@@ -2450,12 +2452,8 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     Rep = Builder.CreateIntrinsic(Int64Ty, Intrinsic::fshl,
                                   {Arg, Arg, Builder.getInt64(32)});
   } else if ((Name.consume_front("ptr.gen.to.") &&
-              (Name.starts_with("local") || Name.starts_with("shared") ||
-               Name.starts_with("global") || Name.starts_with("constant"))) ||
-             (Name.consume_front("ptr.") &&
-              (Name.consume_front("local") || Name.consume_front("shared") ||
-               Name.consume_front("global") ||
-               Name.consume_front("constant")) &&
+              consumeNVVMPtrAddrSpace(Name)) ||
+             (Name.consume_front("ptr.") && consumeNVVMPtrAddrSpace(Name) &&
               Name.starts_with(".to.gen"))) {
     Rep = Builder.CreateAddrSpaceCast(CI->getArgOperand(0), CI->getType());
   } else if (Name.consume_front("ldg.global")) {
@@ -4556,9 +4554,8 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     Value *NewLdCall = Builder.CreateCall(NewFn, Args);
     Value *Ret = llvm::PoisonValue::get(RetTy);
     for (unsigned I = 0; I < N; I++) {
-      Value *Idx = ConstantInt::get(Type::getInt64Ty(C), I * MinElts);
       Value *SRet = Builder.CreateExtractValue(NewLdCall, I);
-      Ret = Builder.CreateInsertVector(RetTy, Ret, SRet, Idx);
+      Ret = Builder.CreateInsertVector(RetTy, Ret, SRet, I * MinElts);
     }
     NewCall = dyn_cast<CallInst>(Ret);
     break;
@@ -4613,9 +4610,8 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Value *Ret = llvm::PoisonValue::get(RetTy);
       unsigned MinElts = RetTy->getMinNumElements() / N;
       for (unsigned I = 0; I < N; I++) {
-        Value *Idx = ConstantInt::get(Type::getInt64Ty(C), I * MinElts);
         Value *V = CI->getArgOperand(I);
-        Ret = Builder.CreateInsertVector(RetTy, Ret, V, Idx);
+        Ret = Builder.CreateInsertVector(RetTy, Ret, V, I * MinElts);
       }
       NewCall = dyn_cast<CallInst>(Ret);
     }

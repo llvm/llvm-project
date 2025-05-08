@@ -2014,7 +2014,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   // S64 is only legal on SALU, and needs to be broken into 32-bit elements in
   // RegBankSelect.
   auto &SextInReg = getActionDefinitionsBuilder(G_SEXT_INREG)
-    .legalFor({{S32}, {S64}});
+                        .legalFor({{S32}, {S64}})
+                        .clampScalar(0, S32, S64);
 
   if (ST.hasVOP3PInsts()) {
     SextInReg.lowerFor({{V2S16}})
@@ -7658,6 +7659,13 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return legalizeLaneOp(Helper, MI, IntrID);
   case Intrinsic::amdgcn_s_buffer_prefetch_data:
     return legalizeSBufferPrefetch(Helper, MI);
+  case Intrinsic::amdgcn_dead: {
+    // TODO: Use poison instead of undef
+    for (const MachineOperand &Def : MI.defs())
+      B.buildUndef(Def);
+    MI.eraseFromParent();
+    return true;
+  }
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrID))
