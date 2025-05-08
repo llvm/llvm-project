@@ -75,11 +75,13 @@ kernel void test_target_features_kernel(global int *i) {
 // NOCPU-NEXT:  [[ENTRY:.*:]]
 // NOCPU-NEXT:    [[ID_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
 // NOCPU-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
-// NOCPU-NEXT:    store i64 [[ID]], ptr addrspace(5) [[ID_ADDR]], align 8
-// NOCPU-NEXT:    store ptr addrspace(1) [[OUT]], ptr addrspace(5) [[OUT_ADDR]], align 8
-// NOCPU-NEXT:    [[TMP0:%.*]] = load i64, ptr addrspace(5) [[ID_ADDR]], align 8
-// NOCPU-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
-// NOCPU-NEXT:    [[TMP2:%.*]] = load i64, ptr addrspace(5) [[ID_ADDR]], align 8
+// NOCPU-NEXT:    [[ID_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ID_ADDR]] to ptr
+// NOCPU-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// NOCPU-NEXT:    store i64 [[ID]], ptr [[ID_ADDR_ASCAST]], align 8
+// NOCPU-NEXT:    store ptr addrspace(1) [[OUT]], ptr [[OUT_ADDR_ASCAST]], align 8
+// NOCPU-NEXT:    [[TMP0:%.*]] = load i64, ptr [[ID_ADDR_ASCAST]], align 8
+// NOCPU-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// NOCPU-NEXT:    [[TMP2:%.*]] = load i64, ptr [[ID_ADDR_ASCAST]], align 8
 // NOCPU-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr addrspace(1) [[TMP1]], i64 [[TMP2]]
 // NOCPU-NEXT:    store i64 [[TMP0]], ptr addrspace(1) [[ARRAYIDX]], align 8
 // NOCPU-NEXT:    ret void
@@ -93,14 +95,18 @@ kernel void test_target_features_kernel(global int *i) {
 // NOCPU-NEXT:    [[B_ADDR:%.*]] = alloca i8, align 1, addrspace(5)
 // NOCPU-NEXT:    [[C_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // NOCPU-NEXT:    [[D_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
-// NOCPU-NEXT:    store ptr addrspace(1) [[A]], ptr addrspace(5) [[A_ADDR]], align 8
-// NOCPU-NEXT:    store i8 [[B]], ptr addrspace(5) [[B_ADDR]], align 1
-// NOCPU-NEXT:    store ptr addrspace(1) [[C]], ptr addrspace(5) [[C_ADDR]], align 8
-// NOCPU-NEXT:    store i64 [[D]], ptr addrspace(5) [[D_ADDR]], align 8
-// NOCPU-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[A_ADDR]], align 8
-// NOCPU-NEXT:    [[TMP1:%.*]] = load i8, ptr addrspace(5) [[B_ADDR]], align 1
-// NOCPU-NEXT:    [[TMP2:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[C_ADDR]], align 8
-// NOCPU-NEXT:    [[TMP3:%.*]] = load i64, ptr addrspace(5) [[D_ADDR]], align 8
+// NOCPU-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// NOCPU-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[B_ADDR]] to ptr
+// NOCPU-NEXT:    [[C_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[C_ADDR]] to ptr
+// NOCPU-NEXT:    [[D_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[D_ADDR]] to ptr
+// NOCPU-NEXT:    store ptr addrspace(1) [[A]], ptr [[A_ADDR_ASCAST]], align 8
+// NOCPU-NEXT:    store i8 [[B]], ptr [[B_ADDR_ASCAST]], align 1
+// NOCPU-NEXT:    store ptr addrspace(1) [[C]], ptr [[C_ADDR_ASCAST]], align 8
+// NOCPU-NEXT:    store i64 [[D]], ptr [[D_ADDR_ASCAST]], align 8
+// NOCPU-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr [[A_ADDR_ASCAST]], align 8
+// NOCPU-NEXT:    [[TMP1:%.*]] = load i8, ptr [[B_ADDR_ASCAST]], align 1
+// NOCPU-NEXT:    [[TMP2:%.*]] = load ptr addrspace(1), ptr [[C_ADDR_ASCAST]], align 8
+// NOCPU-NEXT:    [[TMP3:%.*]] = load i64, ptr [[D_ADDR_ASCAST]], align 8
 // NOCPU-NEXT:    call void @__clang_ocl_kern_imp_test(ptr addrspace(1) noundef align 1 [[TMP0]], i8 noundef signext [[TMP1]], ptr addrspace(1) noundef align 8 [[TMP2]], i64 noundef [[TMP3]]) #[[ATTR10:[0-9]+]]
 // NOCPU-NEXT:    ret void
 //
@@ -232,8 +238,9 @@ kernel void test_target_features_kernel(global int *i) {
 // NOCPU-SAME: ptr addrspace(1) noundef align 4 [[I:%.*]]) #[[ATTR4:[0-9]+]] !kernel_arg_addr_space [[META7:![0-9]+]] !kernel_arg_access_qual [[META8:![0-9]+]] !kernel_arg_type [[META9:![0-9]+]] !kernel_arg_base_type [[META9]] !kernel_arg_type_qual [[META10:![0-9]+]] {
 // NOCPU-NEXT:  [[ENTRY:.*:]]
 // NOCPU-NEXT:    [[I_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
-// NOCPU-NEXT:    store ptr addrspace(1) [[I]], ptr addrspace(5) [[I_ADDR]], align 8
-// NOCPU-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[I_ADDR]], align 8
+// NOCPU-NEXT:    [[I_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I_ADDR]] to ptr
+// NOCPU-NEXT:    store ptr addrspace(1) [[I]], ptr [[I_ADDR_ASCAST]], align 8
+// NOCPU-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr [[I_ADDR_ASCAST]], align 8
 // NOCPU-NEXT:    call void @__clang_ocl_kern_imp_test_target_features_kernel(ptr addrspace(1) noundef align 4 [[TMP0]]) #[[ATTR10]]
 // NOCPU-NEXT:    ret void
 //
@@ -265,8 +272,10 @@ kernel void test_target_features_kernel(global int *i) {
 // NOCPU-NEXT:  [[ENTRY:.*:]]
 // NOCPU-NEXT:    [[DOTBLOCK_DESCRIPTOR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // NOCPU-NEXT:    [[BLOCK_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
-// NOCPU-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr addrspace(5) [[DOTBLOCK_DESCRIPTOR_ADDR]], align 8
-// NOCPU-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr addrspace(5) [[BLOCK_ADDR]], align 8
+// NOCPU-NEXT:    [[DOTBLOCK_DESCRIPTOR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTBLOCK_DESCRIPTOR_ADDR]] to ptr
+// NOCPU-NEXT:    [[BLOCK_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[BLOCK_ADDR]] to ptr
+// NOCPU-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr [[DOTBLOCK_DESCRIPTOR_ADDR_ASCAST]], align 8
+// NOCPU-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr [[BLOCK_ADDR_ASCAST]], align 8
 // NOCPU-NEXT:    [[BLOCK_CAPTURE_ADDR:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr, ptr addrspace(1), i8 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 4
 // NOCPU-NEXT:    [[TMP0:%.*]] = load i8, ptr [[BLOCK_CAPTURE_ADDR]], align 8
 // NOCPU-NEXT:    [[BLOCK_CAPTURE_ADDR1:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr, ptr addrspace(1), i8 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 3
@@ -293,8 +302,10 @@ kernel void test_target_features_kernel(global int *i) {
 // NOCPU-NEXT:  [[ENTRY:.*:]]
 // NOCPU-NEXT:    [[DOTBLOCK_DESCRIPTOR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // NOCPU-NEXT:    [[BLOCK_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
-// NOCPU-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr addrspace(5) [[DOTBLOCK_DESCRIPTOR_ADDR]], align 8
-// NOCPU-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr addrspace(5) [[BLOCK_ADDR]], align 8
+// NOCPU-NEXT:    [[DOTBLOCK_DESCRIPTOR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTBLOCK_DESCRIPTOR_ADDR]] to ptr
+// NOCPU-NEXT:    [[BLOCK_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[BLOCK_ADDR]] to ptr
+// NOCPU-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr [[DOTBLOCK_DESCRIPTOR_ADDR_ASCAST]], align 8
+// NOCPU-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr [[BLOCK_ADDR_ASCAST]], align 8
 // NOCPU-NEXT:    [[BLOCK_CAPTURE_ADDR:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr, ptr addrspace(1), ptr addrspace(1), i64, i8 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 6
 // NOCPU-NEXT:    [[TMP0:%.*]] = load i8, ptr [[BLOCK_CAPTURE_ADDR]], align 8
 // NOCPU-NEXT:    [[BLOCK_CAPTURE_ADDR1:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr, ptr addrspace(1), ptr addrspace(1), i64, i8 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 3
@@ -328,9 +339,12 @@ kernel void test_target_features_kernel(global int *i) {
 // NOCPU-NEXT:    [[DOTBLOCK_DESCRIPTOR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // NOCPU-NEXT:    [[LP_ADDR:%.*]] = alloca ptr addrspace(3), align 4, addrspace(5)
 // NOCPU-NEXT:    [[BLOCK_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
-// NOCPU-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr addrspace(5) [[DOTBLOCK_DESCRIPTOR_ADDR]], align 8
-// NOCPU-NEXT:    store ptr addrspace(3) [[LP]], ptr addrspace(5) [[LP_ADDR]], align 4
-// NOCPU-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr addrspace(5) [[BLOCK_ADDR]], align 8
+// NOCPU-NEXT:    [[DOTBLOCK_DESCRIPTOR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTBLOCK_DESCRIPTOR_ADDR]] to ptr
+// NOCPU-NEXT:    [[LP_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[LP_ADDR]] to ptr
+// NOCPU-NEXT:    [[BLOCK_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[BLOCK_ADDR]] to ptr
+// NOCPU-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr [[DOTBLOCK_DESCRIPTOR_ADDR_ASCAST]], align 8
+// NOCPU-NEXT:    store ptr addrspace(3) [[LP]], ptr [[LP_ADDR_ASCAST]], align 4
+// NOCPU-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr [[BLOCK_ADDR_ASCAST]], align 8
 // NOCPU-NEXT:    [[BLOCK_CAPTURE_ADDR:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr, ptr addrspace(1), ptr addrspace(1), i64, i8 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 6
 // NOCPU-NEXT:    [[TMP0:%.*]] = load i8, ptr [[BLOCK_CAPTURE_ADDR]], align 8
 // NOCPU-NEXT:    [[BLOCK_CAPTURE_ADDR1:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr, ptr addrspace(1), ptr addrspace(1), i64, i8 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 3
@@ -343,7 +357,7 @@ kernel void test_target_features_kernel(global int *i) {
 // NOCPU-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr [[BLOCK_CAPTURE_ADDR3]], align 8
 // NOCPU-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i64, ptr addrspace(1) [[TMP3]], i64 0
 // NOCPU-NEXT:    store i64 [[TMP2]], ptr addrspace(1) [[ARRAYIDX4]], align 8
-// NOCPU-NEXT:    [[TMP4:%.*]] = load ptr addrspace(3), ptr addrspace(5) [[LP_ADDR]], align 4
+// NOCPU-NEXT:    [[TMP4:%.*]] = load ptr addrspace(3), ptr [[LP_ADDR_ASCAST]], align 4
 // NOCPU-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i32, ptr addrspace(3) [[TMP4]], i64 0
 // NOCPU-NEXT:    store i32 1, ptr addrspace(3) [[ARRAYIDX5]], align 4
 // NOCPU-NEXT:    ret void
@@ -366,8 +380,10 @@ kernel void test_target_features_kernel(global int *i) {
 // NOCPU-NEXT:  [[ENTRY:.*:]]
 // NOCPU-NEXT:    [[DOTBLOCK_DESCRIPTOR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // NOCPU-NEXT:    [[BLOCK_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
-// NOCPU-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr addrspace(5) [[DOTBLOCK_DESCRIPTOR_ADDR]], align 8
-// NOCPU-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr addrspace(5) [[BLOCK_ADDR]], align 8
+// NOCPU-NEXT:    [[DOTBLOCK_DESCRIPTOR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTBLOCK_DESCRIPTOR_ADDR]] to ptr
+// NOCPU-NEXT:    [[BLOCK_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[BLOCK_ADDR]] to ptr
+// NOCPU-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr [[DOTBLOCK_DESCRIPTOR_ADDR_ASCAST]], align 8
+// NOCPU-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr [[BLOCK_ADDR_ASCAST]], align 8
 // NOCPU-NEXT:    [[BLOCK_CAPTURE_ADDR:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr, i64, ptr addrspace(1) }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 3
 // NOCPU-NEXT:    [[TMP0:%.*]] = load i64, ptr [[BLOCK_CAPTURE_ADDR]], align 8
 // NOCPU-NEXT:    [[BLOCK_CAPTURE_ADDR1:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr, i64, ptr addrspace(1) }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 4
@@ -393,8 +409,10 @@ kernel void test_target_features_kernel(global int *i) {
 // NOCPU-NEXT:  [[ENTRY:.*:]]
 // NOCPU-NEXT:    [[DOTBLOCK_DESCRIPTOR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // NOCPU-NEXT:    [[BLOCK_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
-// NOCPU-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr addrspace(5) [[DOTBLOCK_DESCRIPTOR_ADDR]], align 8
-// NOCPU-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr addrspace(5) [[BLOCK_ADDR]], align 8
+// NOCPU-NEXT:    [[DOTBLOCK_DESCRIPTOR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTBLOCK_DESCRIPTOR_ADDR]] to ptr
+// NOCPU-NEXT:    [[BLOCK_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[BLOCK_ADDR]] to ptr
+// NOCPU-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr [[DOTBLOCK_DESCRIPTOR_ADDR_ASCAST]], align 8
+// NOCPU-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr [[BLOCK_ADDR_ASCAST]], align 8
 // NOCPU-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.s.memtime()
 // NOCPU-NEXT:    ret void
 //
@@ -431,11 +449,13 @@ kernel void test_target_features_kernel(global int *i) {
 // GFX900-NEXT:  [[ENTRY:.*:]]
 // GFX900-NEXT:    [[ID_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
 // GFX900-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
-// GFX900-NEXT:    store i64 [[ID]], ptr addrspace(5) [[ID_ADDR]], align 8, !tbaa [[TBAA3:![0-9]+]]
-// GFX900-NEXT:    store ptr addrspace(1) [[OUT]], ptr addrspace(5) [[OUT_ADDR]], align 8, !tbaa [[TBAA7:![0-9]+]]
-// GFX900-NEXT:    [[TMP0:%.*]] = load i64, ptr addrspace(5) [[ID_ADDR]], align 8, !tbaa [[TBAA3]]
-// GFX900-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8, !tbaa [[TBAA7]]
-// GFX900-NEXT:    [[TMP2:%.*]] = load i64, ptr addrspace(5) [[ID_ADDR]], align 8, !tbaa [[TBAA3]]
+// GFX900-NEXT:    [[ID_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ID_ADDR]] to ptr
+// GFX900-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// GFX900-NEXT:    store i64 [[ID]], ptr [[ID_ADDR_ASCAST]], align 8, !tbaa [[TBAA3:![0-9]+]]
+// GFX900-NEXT:    store ptr addrspace(1) [[OUT]], ptr [[OUT_ADDR_ASCAST]], align 8, !tbaa [[TBAA7:![0-9]+]]
+// GFX900-NEXT:    [[TMP0:%.*]] = load i64, ptr [[ID_ADDR_ASCAST]], align 8, !tbaa [[TBAA3]]
+// GFX900-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8, !tbaa [[TBAA7]]
+// GFX900-NEXT:    [[TMP2:%.*]] = load i64, ptr [[ID_ADDR_ASCAST]], align 8, !tbaa [[TBAA3]]
 // GFX900-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr addrspace(1) [[TMP1]], i64 [[TMP2]]
 // GFX900-NEXT:    store i64 [[TMP0]], ptr addrspace(1) [[ARRAYIDX]], align 8, !tbaa [[TBAA3]]
 // GFX900-NEXT:    ret void
@@ -449,14 +469,18 @@ kernel void test_target_features_kernel(global int *i) {
 // GFX900-NEXT:    [[B_ADDR:%.*]] = alloca i8, align 1, addrspace(5)
 // GFX900-NEXT:    [[C_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // GFX900-NEXT:    [[D_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
-// GFX900-NEXT:    store ptr addrspace(1) [[A]], ptr addrspace(5) [[A_ADDR]], align 8, !tbaa [[TBAA14:![0-9]+]]
-// GFX900-NEXT:    store i8 [[B]], ptr addrspace(5) [[B_ADDR]], align 1, !tbaa [[TBAA16:![0-9]+]]
-// GFX900-NEXT:    store ptr addrspace(1) [[C]], ptr addrspace(5) [[C_ADDR]], align 8, !tbaa [[TBAA7]]
-// GFX900-NEXT:    store i64 [[D]], ptr addrspace(5) [[D_ADDR]], align 8, !tbaa [[TBAA3]]
-// GFX900-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[A_ADDR]], align 8, !tbaa [[TBAA14]]
-// GFX900-NEXT:    [[TMP1:%.*]] = load i8, ptr addrspace(5) [[B_ADDR]], align 1, !tbaa [[TBAA16]]
-// GFX900-NEXT:    [[TMP2:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[C_ADDR]], align 8, !tbaa [[TBAA7]]
-// GFX900-NEXT:    [[TMP3:%.*]] = load i64, ptr addrspace(5) [[D_ADDR]], align 8, !tbaa [[TBAA3]]
+// GFX900-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// GFX900-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[B_ADDR]] to ptr
+// GFX900-NEXT:    [[C_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[C_ADDR]] to ptr
+// GFX900-NEXT:    [[D_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[D_ADDR]] to ptr
+// GFX900-NEXT:    store ptr addrspace(1) [[A]], ptr [[A_ADDR_ASCAST]], align 8, !tbaa [[TBAA14:![0-9]+]]
+// GFX900-NEXT:    store i8 [[B]], ptr [[B_ADDR_ASCAST]], align 1, !tbaa [[TBAA16:![0-9]+]]
+// GFX900-NEXT:    store ptr addrspace(1) [[C]], ptr [[C_ADDR_ASCAST]], align 8, !tbaa [[TBAA7]]
+// GFX900-NEXT:    store i64 [[D]], ptr [[D_ADDR_ASCAST]], align 8, !tbaa [[TBAA3]]
+// GFX900-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr [[A_ADDR_ASCAST]], align 8, !tbaa [[TBAA14]]
+// GFX900-NEXT:    [[TMP1:%.*]] = load i8, ptr [[B_ADDR_ASCAST]], align 1, !tbaa [[TBAA16]]
+// GFX900-NEXT:    [[TMP2:%.*]] = load ptr addrspace(1), ptr [[C_ADDR_ASCAST]], align 8, !tbaa [[TBAA7]]
+// GFX900-NEXT:    [[TMP3:%.*]] = load i64, ptr [[D_ADDR_ASCAST]], align 8, !tbaa [[TBAA3]]
 // GFX900-NEXT:    call void @__clang_ocl_kern_imp_test(ptr addrspace(1) noundef align 1 [[TMP0]], i8 noundef signext [[TMP1]], ptr addrspace(1) noundef align 8 [[TMP2]], i64 noundef [[TMP3]]) #[[ATTR8:[0-9]+]]
 // GFX900-NEXT:    ret void
 //
@@ -563,9 +587,9 @@ kernel void test_target_features_kernel(global int *i) {
 // GFX900-NEXT:    [[TMP17:%.*]] = load i64, ptr [[D_ADDR_ASCAST]], align 8, !tbaa [[TBAA3]]
 // GFX900-NEXT:    store i64 [[TMP17]], ptr [[BLOCK_CAPTURED19]], align 8, !tbaa [[TBAA3]]
 // GFX900-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[BLOCK_SIZES]]) #[[ATTR9]]
-// GFX900-NEXT:    [[TMP21:%.*]] = getelementptr [1 x i64], ptr addrspace(5) [[BLOCK_SIZES]], i32 0, i32 0
-// GFX900-NEXT:    store i64 100, ptr addrspace(5) [[TMP21]], align 8
-// GFX900-NEXT:    [[TMP22:%.*]] = call i32 @__enqueue_kernel_varargs(ptr addrspace(1) [[TMP14]], i32 [[TMP15]], ptr addrspace(5) [[VARTMP11]], ptr addrspacecast (ptr addrspace(1) @__test_block_invoke_3_kernel.runtime.handle to ptr), ptr [[TMP20]], i32 1, ptr addrspace(5) [[TMP21]])
+// GFX900-NEXT:    [[TMP18:%.*]] = getelementptr [1 x i64], ptr [[BLOCK_SIZES_ASCAST]], i32 0, i32 0
+// GFX900-NEXT:    store i64 100, ptr [[TMP18]], align 8
+// GFX900-NEXT:    [[TMP19:%.*]] = call i32 @__enqueue_kernel_varargs(ptr addrspace(1) [[TMP12]], i32 [[TMP13]], ptr addrspace(5) [[VARTMP11]], ptr addrspacecast (ptr addrspace(1) @__test_block_invoke_3_kernel.runtime.handle to ptr), ptr [[BLOCK12_ASCAST]], i32 1, ptr [[TMP18]])
 // GFX900-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[BLOCK_SIZES]]) #[[ATTR9]]
 // GFX900-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[BLOCK20]]) #[[ATTR9]]
 // GFX900-NEXT:    [[BLOCK_SIZE22:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr, i64, ptr addrspace(1) }>, ptr [[BLOCK21_ASCAST]], i32 0, i32 0
@@ -598,8 +622,9 @@ kernel void test_target_features_kernel(global int *i) {
 // GFX900-SAME: ptr addrspace(1) noundef align 4 [[I:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META22:![0-9]+]] !kernel_arg_access_qual [[META23:![0-9]+]] !kernel_arg_type [[META24:![0-9]+]] !kernel_arg_base_type [[META24]] !kernel_arg_type_qual [[META25:![0-9]+]] {
 // GFX900-NEXT:  [[ENTRY:.*:]]
 // GFX900-NEXT:    [[I_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
-// GFX900-NEXT:    store ptr addrspace(1) [[I]], ptr addrspace(5) [[I_ADDR]], align 8, !tbaa [[TBAA26:![0-9]+]]
-// GFX900-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[I_ADDR]], align 8, !tbaa [[TBAA26]]
+// GFX900-NEXT:    [[I_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I_ADDR]] to ptr
+// GFX900-NEXT:    store ptr addrspace(1) [[I]], ptr [[I_ADDR_ASCAST]], align 8, !tbaa [[TBAA26:![0-9]+]]
+// GFX900-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr [[I_ADDR_ASCAST]], align 8, !tbaa [[TBAA26]]
 // GFX900-NEXT:    call void @__clang_ocl_kern_imp_test_target_features_kernel(ptr addrspace(1) noundef align 4 [[TMP0]]) #[[ATTR8]]
 // GFX900-NEXT:    ret void
 //
@@ -636,7 +661,8 @@ kernel void test_target_features_kernel(global int *i) {
 // GFX900-SAME: ptr noundef [[DOTBLOCK_DESCRIPTOR:%.*]]) #[[ATTR6:[0-9]+]] {
 // GFX900-NEXT:  [[ENTRY:.*:]]
 // GFX900-NEXT:    [[DOTBLOCK_DESCRIPTOR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
-// GFX900-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr addrspace(5) [[DOTBLOCK_DESCRIPTOR_ADDR]], align 8
+// GFX900-NEXT:    [[DOTBLOCK_DESCRIPTOR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTBLOCK_DESCRIPTOR_ADDR]] to ptr
+// GFX900-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr [[DOTBLOCK_DESCRIPTOR_ADDR_ASCAST]], align 8
 // GFX900-NEXT:    [[BLOCK_CAPTURE_ADDR:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr, ptr addrspace(1), i8 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 4
 // GFX900-NEXT:    [[TMP0:%.*]] = load i8, ptr [[BLOCK_CAPTURE_ADDR]], align 8, !tbaa [[TBAA16]]
 // GFX900-NEXT:    [[BLOCK_CAPTURE_ADDR1:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr, ptr addrspace(1), i8 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 3
@@ -662,7 +688,8 @@ kernel void test_target_features_kernel(global int *i) {
 // GFX900-SAME: ptr noundef [[DOTBLOCK_DESCRIPTOR:%.*]]) #[[ATTR6]] {
 // GFX900-NEXT:  [[ENTRY:.*:]]
 // GFX900-NEXT:    [[DOTBLOCK_DESCRIPTOR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
-// GFX900-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr addrspace(5) [[DOTBLOCK_DESCRIPTOR_ADDR]], align 8
+// GFX900-NEXT:    [[DOTBLOCK_DESCRIPTOR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTBLOCK_DESCRIPTOR_ADDR]] to ptr
+// GFX900-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr [[DOTBLOCK_DESCRIPTOR_ADDR_ASCAST]], align 8
 // GFX900-NEXT:    [[BLOCK_CAPTURE_ADDR:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr, ptr addrspace(1), ptr addrspace(1), i64, i8 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 6
 // GFX900-NEXT:    [[TMP0:%.*]] = load i8, ptr [[BLOCK_CAPTURE_ADDR]], align 8, !tbaa [[TBAA16]]
 // GFX900-NEXT:    [[BLOCK_CAPTURE_ADDR1:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr, ptr addrspace(1), ptr addrspace(1), i64, i8 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 3
@@ -695,8 +722,10 @@ kernel void test_target_features_kernel(global int *i) {
 // GFX900-NEXT:  [[ENTRY:.*:]]
 // GFX900-NEXT:    [[DOTBLOCK_DESCRIPTOR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // GFX900-NEXT:    [[LP_ADDR:%.*]] = alloca ptr addrspace(3), align 4, addrspace(5)
-// GFX900-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr addrspace(5) [[DOTBLOCK_DESCRIPTOR_ADDR]], align 8
-// GFX900-NEXT:    store ptr addrspace(3) [[LP]], ptr addrspace(5) [[LP_ADDR]], align 4, !tbaa [[TBAA32:![0-9]+]]
+// GFX900-NEXT:    [[DOTBLOCK_DESCRIPTOR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTBLOCK_DESCRIPTOR_ADDR]] to ptr
+// GFX900-NEXT:    [[LP_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[LP_ADDR]] to ptr
+// GFX900-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr [[DOTBLOCK_DESCRIPTOR_ADDR_ASCAST]], align 8
+// GFX900-NEXT:    store ptr addrspace(3) [[LP]], ptr [[LP_ADDR_ASCAST]], align 4, !tbaa [[TBAA32:![0-9]+]]
 // GFX900-NEXT:    [[BLOCK_CAPTURE_ADDR:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr, ptr addrspace(1), ptr addrspace(1), i64, i8 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 6
 // GFX900-NEXT:    [[TMP0:%.*]] = load i8, ptr [[BLOCK_CAPTURE_ADDR]], align 8, !tbaa [[TBAA16]]
 // GFX900-NEXT:    [[BLOCK_CAPTURE_ADDR1:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr, ptr addrspace(1), ptr addrspace(1), i64, i8 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 3
@@ -709,7 +738,7 @@ kernel void test_target_features_kernel(global int *i) {
 // GFX900-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr [[BLOCK_CAPTURE_ADDR3]], align 8, !tbaa [[TBAA7]]
 // GFX900-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i64, ptr addrspace(1) [[TMP3]], i64 0
 // GFX900-NEXT:    store i64 [[TMP2]], ptr addrspace(1) [[ARRAYIDX4]], align 8, !tbaa [[TBAA3]]
-// GFX900-NEXT:    [[TMP4:%.*]] = load ptr addrspace(3), ptr addrspace(5) [[LP_ADDR]], align 4, !tbaa [[TBAA32]]
+// GFX900-NEXT:    [[TMP4:%.*]] = load ptr addrspace(3), ptr [[LP_ADDR_ASCAST]], align 4, !tbaa [[TBAA32]]
 // GFX900-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i32, ptr addrspace(3) [[TMP4]], i64 0
 // GFX900-NEXT:    store i32 1, ptr addrspace(3) [[ARRAYIDX5]], align 4, !tbaa [[TBAA17]]
 // GFX900-NEXT:    ret void
@@ -731,7 +760,8 @@ kernel void test_target_features_kernel(global int *i) {
 // GFX900-SAME: ptr noundef [[DOTBLOCK_DESCRIPTOR:%.*]]) #[[ATTR6]] {
 // GFX900-NEXT:  [[ENTRY:.*:]]
 // GFX900-NEXT:    [[DOTBLOCK_DESCRIPTOR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
-// GFX900-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr addrspace(5) [[DOTBLOCK_DESCRIPTOR_ADDR]], align 8
+// GFX900-NEXT:    [[DOTBLOCK_DESCRIPTOR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTBLOCK_DESCRIPTOR_ADDR]] to ptr
+// GFX900-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr [[DOTBLOCK_DESCRIPTOR_ADDR_ASCAST]], align 8
 // GFX900-NEXT:    [[BLOCK_CAPTURE_ADDR:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr, i64, ptr addrspace(1) }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 3
 // GFX900-NEXT:    [[TMP0:%.*]] = load i64, ptr [[BLOCK_CAPTURE_ADDR]], align 8, !tbaa [[TBAA3]]
 // GFX900-NEXT:    [[BLOCK_CAPTURE_ADDR1:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr, i64, ptr addrspace(1) }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 4
@@ -756,7 +786,8 @@ kernel void test_target_features_kernel(global int *i) {
 // GFX900-SAME: ptr noundef [[DOTBLOCK_DESCRIPTOR:%.*]]) #[[ATTR6]] {
 // GFX900-NEXT:  [[ENTRY:.*:]]
 // GFX900-NEXT:    [[DOTBLOCK_DESCRIPTOR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
-// GFX900-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr addrspace(5) [[DOTBLOCK_DESCRIPTOR_ADDR]], align 8
+// GFX900-NEXT:    [[DOTBLOCK_DESCRIPTOR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTBLOCK_DESCRIPTOR_ADDR]] to ptr
+// GFX900-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr [[DOTBLOCK_DESCRIPTOR_ADDR_ASCAST]], align 8
 // GFX900-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.s.memtime()
 // GFX900-NEXT:    ret void
 //

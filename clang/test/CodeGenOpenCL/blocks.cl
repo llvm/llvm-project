@@ -25,13 +25,13 @@ void foo(){
   // COMMON-NOT: %block.reserved
   // COMMON-NOT: %block.descriptor
   // SPIR: %[[block_size:.*]] = getelementptr inbounds nuw <{ i32, i32, ptr addrspace(4), i32 }>, ptr %block, i32 0, i32 0
-  // AMDGCN: %[[block_size:.*]] = getelementptr inbounds nuw <{ i32, i32, ptr, i32 }>, ptr addrspace(5) %block, i32 0, i32 0
+  // AMDGCN: %[[block_size:.*]] = getelementptr inbounds nuw <{ i32, i32, ptr, i32 }>, ptr %block{{.*}}, i32 0, i32 0
   // SPIR: store i32 16, ptr %[[block_size]]
-  // AMDGCN: store i32 20, ptr addrspace(5) %[[block_size]]
+  // AMDGCN: store i32 20, ptr %[[block_size]]
   // SPIR: %[[block_align:.*]] = getelementptr inbounds nuw <{ i32, i32, ptr addrspace(4), i32 }>, ptr %block, i32 0, i32 1
-  // AMDGCN: %[[block_align:.*]] = getelementptr inbounds nuw <{ i32, i32, ptr, i32 }>, ptr addrspace(5) %block, i32 0, i32 1
+  // AMDGCN: %[[block_align:.*]] = getelementptr inbounds nuw <{ i32, i32, ptr, i32 }>, ptr %block{{.*}}, i32 0, i32 1
   // SPIR: store i32 4, ptr %[[block_align]]
-  // AMDGCN: store i32 8, ptr addrspace(5) %[[block_align]]
+  // AMDGCN: store i32 8, ptr %[[block_align]]
   // SPIR: %[[block_invoke:.*]] = getelementptr inbounds nuw <{ i32, i32, ptr addrspace(4), i32 }>, ptr %[[block:.*]], i32 0, i32 2
   // SPIR: store ptr addrspace(4) addrspacecast (ptr @__foo_block_invoke to ptr addrspace(4)), ptr %[[block_invoke]]
   // SPIR: %[[block_captured:.*]] = getelementptr inbounds nuw <{ i32, i32, ptr addrspace(4), i32 }>, ptr %[[block]], i32 0, i32 3

@@ -15,8 +15,9 @@
 // CL20-SAME: ptr noundef [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 // CL20-NEXT:  [[ENTRY:.*:]]
 // CL20-NEXT:    [[X_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
-// CL20-NEXT:    store ptr [[X]], ptr addrspace(5) [[X_ADDR]], align 8
-// CL20-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(5) [[X_ADDR]], align 8
+// CL20-NEXT:    [[X_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X_ADDR]] to ptr
+// CL20-NEXT:    store ptr [[X]], ptr [[X_ADDR_ASCAST]], align 8
+// CL20-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X_ADDR_ASCAST]], align 8
 // CL20-NEXT:    store i32 1, ptr [[TMP0]], align 4
 // CL20-NEXT:    ret void
 //
