@@ -1085,6 +1085,7 @@ INSTANTIATE_TEST_SUITE_P(
     AArch64CPUTests, AArch64CPUTestFixture,
     ::testing::Values(AArch64CPUTestParams("cortex-a34", "armv8-a"),
                       AArch64CPUTestParams("cortex-a35", "armv8-a"),
+                      AArch64CPUTestParams("cortex-a320", "armv9.2-a"),
                       AArch64CPUTestParams("cortex-a53", "armv8-a"),
                       AArch64CPUTestParams("cortex-a55", "armv8.2-a"),
                       AArch64CPUTestParams("cortex-a510", "armv9-a"),
