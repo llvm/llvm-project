@@ -3503,6 +3503,9 @@ class OffloadingActionBuilder final {
             GpuArchList.push_back(OffloadArch::AMDGCNSPIRV);
           else
             GpuArchList.push_back(OffloadArch::Generic);
+        } else if (AssociatedOffloadKind == Action::OFK_HIP) {
+          for (auto A : ToolChains.front()->getHIPDefaultOffloadArchs(Args))
+            GpuArchList.push_back(A.data());
         } else {
           GpuArchList.push_back(DefaultOffloadArch);
         }
@@ -4825,7 +4828,8 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
     if (Kind == Action::OFK_Cuda) {
       Archs.insert(OffloadArchToString(OffloadArch::CudaDefault));
     } else if (Kind == Action::OFK_HIP) {
-      Archs.insert(OffloadArchToString(OffloadArch::HIPDefault));
+      for (auto A : TC->getHIPDefaultOffloadArchs(Args))
+        Archs.insert(A);
     } else if (Kind == Action::OFK_SYCL) {
       Archs.insert(StringRef());
     } else if (Kind == Action::OFK_OpenMP) {
