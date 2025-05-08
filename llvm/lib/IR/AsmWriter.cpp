@@ -279,8 +279,7 @@ static UseListOrderMap predictUseListOrder(const Module *M) {
   UseListOrderMap ULOM;
   for (const auto &Pair : OM) {
     const Value *V = Pair.first;
-    if (!V->hasUseList() || V->use_empty() ||
-        std::next(V->use_begin()) == V->use_end())
+    if (V->use_empty() || std::next(V->use_begin()) == V->use_end())
       continue;
 
     std::vector<unsigned> Shuffle =

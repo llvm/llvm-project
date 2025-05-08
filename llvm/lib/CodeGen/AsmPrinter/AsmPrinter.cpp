@@ -4042,7 +4042,7 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
   // Globals with sub-elements such as combinations of arrays and structs
   // are handled recursively by emitGlobalConstantImpl. Keep track of the
   // constant symbol base and the current position with BaseCV and Offset.
-  if (!isa<ConstantData>(CV) && !BaseCV && CV->hasOneUse())
+  if (!BaseCV && CV->hasOneUse())
     BaseCV = dyn_cast<Constant>(CV->user_back());
 
   if (isa<ConstantAggregateZero>(CV)) {
