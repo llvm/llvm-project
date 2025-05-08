@@ -2410,7 +2410,9 @@ void DwarfDebug::computeKeyInstructions(const MachineFunction *MF) {
       if (MI.isCall() || TII.isTailCall(MI)) {
         assert(MI.getDebugLoc() && "Unexpectedly missing DL");
 
-        // Calls are always key.
+        // Calls are always key. Put the buoy (may not be the call) into
+        // KeyInstructions directly rather than the candidate map to avoid it
+        // being erased (and we may not have a group number for the call).
         KeyInstructions.insert(Buoy);
 
         uint64_t Group = MI.getDebugLoc()->getAtomGroup();
@@ -2426,10 +2428,7 @@ void DwarfDebug::computeKeyInstructions(const MachineFunction *MF) {
 
         // This looks similar to the non-call handling code, except that
         // we don't put the call into CandidateInsts so that they can't be
-        // made un-key. As a result, we also have to take special care not
-        // to erase the is_stmt from the buoy, and prevent that happening
-        // in the future.
-
+        // made un-key.
         if (CandidateRank == Rank) {
           // We've seen other instructions in this group of this rank. Discard
           // ones we've seen in this block, keep the others.
@@ -2439,8 +2438,6 @@ void DwarfDebug::computeKeyInstructions(const MachineFunction *MF) {
           for (auto &PrevInst : CandidateInsts) {
             if (PrevInst->getParent() != MI.getParent())
               Insts.push_back(PrevInst);
-            else if (PrevInst != Buoy)
-              KeyInstructions.erase(PrevInst);
           }
 
           if (Insts.empty()) {
@@ -2453,11 +2450,6 @@ void DwarfDebug::computeKeyInstructions(const MachineFunction *MF) {
         } else if (CandidateRank > Rank) {
           // We've seen other instructions in this group of lower precedence
           // (higher rank). Discard them.
-          for (auto *Supplanted : CandidateInsts) {
-            // Don't erase the is_stmt we're using for this call.
-            if (Supplanted != Buoy)
-              KeyInstructions.erase(Supplanted);
-          }
           CandidateInsts.clear();
           CandidateRank = 0;
         }
@@ -2497,8 +2489,6 @@ void DwarfDebug::computeKeyInstructions(const MachineFunction *MF) {
         for (auto &PrevInst : CandidateInsts) {
           if (PrevInst->getParent() != MI.getParent())
             Insts.push_back(PrevInst);
-          else
-            KeyInstructions.erase(PrevInst);
         }
         Insts.push_back(Buoy);
         CandidateInsts = std::move(Insts);
@@ -2508,8 +2498,6 @@ void DwarfDebug::computeKeyInstructions(const MachineFunction *MF) {
         // (higher rank). Discard them, add this one.
         assert(!CandidateInsts.empty());
         CandidateRank = Rank;
-        for (auto *Supplanted : CandidateInsts)
-          KeyInstructions.erase(Supplanted);
         CandidateInsts = {Buoy};
 
       } else {
@@ -2518,11 +2506,14 @@ void DwarfDebug::computeKeyInstructions(const MachineFunction *MF) {
         assert(Rank != 0 && CandidateRank < Rank && CandidateRank != 0);
         continue;
       }
-      KeyInstructions.insert(Buoy);
       assert(!BuoyAtom || BuoyAtom == MI.getDebugLoc()->getAtomGroup());
       BuoyAtom = MI.getDebugLoc()->getAtomGroup();
     }
   }
+
+  for (const auto &[_, Insts] : GroupCandidates.values())
+    for (auto *I : Insts)
+      KeyInstructions.insert(I);
 }
 
 /// For the function \p MF, finds the set of instructions which may represent a
