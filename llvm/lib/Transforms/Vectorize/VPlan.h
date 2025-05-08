@@ -1248,6 +1248,7 @@ public:
   /// \p I and noalias metadata guaranteed by runtime checks using \p LVer.
   VPIRMetadata(Instruction &I, LoopVersioning *LVer);
 
+  /// Copy constructor for cloning.
   VPIRMetadata(const VPIRMetadata &Other) : Metadata(Other.Metadata) {}
 
   /// Add all metadata to \p I.

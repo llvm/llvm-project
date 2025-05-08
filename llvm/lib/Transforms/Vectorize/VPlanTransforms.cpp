@@ -78,8 +78,6 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
         assert(!isa<PHINode>(Inst) && "phis should be handled above");
         // Create VPWidenMemoryRecipe for loads and stores.
         if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
-          SmallVector<std::pair<unsigned, MDNode *>> Metadata;
-          ::getMetadataToPropagate(Inst, Metadata);
           NewRecipe = new VPWidenLoadRecipe(
               *Load, Ingredient.getOperand(0), nullptr /*Mask*/,
               false /*Consecutive*/, false /*Reverse*/, VPIRMetadata(*Load),
@@ -187,7 +185,7 @@ static bool sinkScalarOperands(VPlan &Plan) {
         // then cloning should be sufficient here.
         Instruction *I = SinkCandidate->getUnderlyingInstr();
         Clone = new VPReplicateRecipe(I, SinkCandidate->operands(), true,
-                                      /*Mask*/ nullptr, *SinkCandidateRepR);
+                                      nullptr /*Mask*/, *SinkCandidateRepR);
         // TODO: add ".cloned" suffix to name of Clone's VPValue.
       } else {
         Clone = SinkCandidate->clone();
@@ -349,7 +347,7 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
   auto *RecipeWithoutMask = new VPReplicateRecipe(
       PredRecipe->getUnderlyingInstr(),
       make_range(PredRecipe->op_begin(), std::prev(PredRecipe->op_end())),
-      PredRecipe->isUniform(), /*Mask*/ nullptr, *PredRecipe);
+      PredRecipe->isUniform(), nullptr /*Mask*/, *PredRecipe);
   auto *Pred =
       Plan.createVPBasicBlock(Twine(RegionName) + ".if", RecipeWithoutMask);
 
@@ -2789,7 +2787,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
           *cast<LoadInst>(LoadGroup->getInterleaveGroup()->getInsertPos());
       auto *L = new VPWidenLoadRecipe(
           LI, LoadGroup->getAddr(), LoadGroup->getMask(), /*Consecutive=*/true,
-          /*Reverse=*/false, VPIRMetadata(LI), LoadGroup->getDebugLoc());
+          /*Reverse=*/false, {}, LoadGroup->getDebugLoc());
       L->insertBefore(LoadGroup);
       return L;
     }
