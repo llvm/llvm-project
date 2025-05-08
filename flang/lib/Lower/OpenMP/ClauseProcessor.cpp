@@ -374,7 +374,7 @@ bool ClauseProcessor::processGrainsize(
     mlir::MLIRContext *context = firOpBuilder.getContext();
     const auto &modifier =
         std::get<std::optional<grainsize::Prescriptiveness>>(clause->t);
-    if (modifier) {
+    if (modifier && *modifier == grainsize::Prescriptiveness::Strict) {
       result.grainsizeMod = mlir::omp::ClauseGrainsizeTypeAttr::get(
           context, mlir::omp::ClauseGrainsizeType::Strict);
     }
@@ -418,7 +418,7 @@ bool ClauseProcessor::processNumTasks(
     mlir::MLIRContext *context = firOpBuilder.getContext();
     const auto &modifier =
         std::get<std::optional<numtasks::Prescriptiveness>>(clause->t);
-    if (modifier) {
+    if (modifier && *modifier == numtasks::Prescriptiveness::Strict) {
       result.numTasksMod = mlir::omp::ClauseNumTasksTypeAttr::get(
           context, mlir::omp::ClauseNumTasksType::Strict);
     }
