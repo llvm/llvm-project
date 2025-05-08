@@ -173,7 +173,6 @@ inline bool operator==(const DWARFExpression::iterator &LHS,
 // higher-level Dwarf structures. This approach creates better layering and
 // allows DWARFExpression to be used from code which can't have dependencies on
 // those higher-level structures.
-
 class DWARFUnit;
 struct DIDumpOptions;
 class raw_ostream;
