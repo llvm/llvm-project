@@ -419,6 +419,10 @@ public:
 
   uint64_t getAbbreviationsOffset() const { return Header.getAbbrOffset(); }
 
+  /// Extracts only the abbreviation declaration with code 1, which is
+  /// typically the compile unit DIE (DW_TAG_compile_unit).
+  Expected<const DWARFAbbreviationDeclaration *> tryExtractCUAbbrevFast() const;
+
   const DWARFAbbreviationDeclarationSet *getAbbreviations() const;
 
   static bool isMatchingUnitTypeAndTag(uint8_t UnitType, dwarf::Tag Tag) {
