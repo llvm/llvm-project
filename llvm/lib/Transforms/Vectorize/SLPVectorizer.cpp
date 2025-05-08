@@ -2891,6 +2891,7 @@ public:
             OpsVec[OpIdx][Lane] = {Operands[OpIdx][Lane], true, false};
           continue;
         }
+        assert(I && "Expected instruction");
         auto [SelectedOp, Ops] = convertTo(I, S);
         bool IsInverseOperation = !isCommutative(SelectedOp);
         for (unsigned OpIdx : seq<unsigned>(ArgSize)) {
@@ -9893,11 +9894,6 @@ public:
                                     const TargetLibraryInfo &TLI)
       : DT(DT), DL(DL), TTI(TTI), TLI(TLI) {}
 
-  InstructionsState buildInstructionsState(ArrayRef<Value *> VL) {
-    InstructionsState S = getSameOpcode(VL, TLI);
-    return S;
-  }
-
   SmallVector<BoUpSLP::ValueList> buildOperands(const InstructionsState &S,
                                                 ArrayRef<Value *> VL) {
     assert(S && "Invalid state!");
@@ -9915,10 +9911,9 @@ bool BoUpSLP::isLegalToVectorizeScalars(ArrayRef<Value *> VL, unsigned Depth,
                                         bool &TrySplitVectorize) const {
   assert((allConstant(VL) || allSameType(VL)) && "Invalid types!");
 
+  S = getSameOpcode(VL, *TLI);
   TryToFindDuplicates = true;
   TrySplitVectorize = false;
-  InstructionsCompatibilityAnalysis Analysis(*DT, *DL, *TTI, *TLI);
-  S = Analysis.buildInstructionsState(VL);
 
   // Don't go into catchswitch blocks, which can happen with PHIs.
   // Such blocks can only have PHIs and the catchswitch.  There is no
@@ -12878,8 +12873,7 @@ public:
 const BoUpSLP::TreeEntry *BoUpSLP::getOperandEntry(const TreeEntry *E,
                                                    unsigned Idx) const {
   ArrayRef<Value *> VL = E->getOperand(Idx);
-  InstructionsCompatibilityAnalysis Analysis(*DT, *DL, *TTI, *TLI);
-  InstructionsState S = Analysis.buildInstructionsState(VL);
+  InstructionsState S = getSameOpcode(VL, *TLI);
   // Special processing for GEPs bundle, which may include non-gep values.
   if (!S && VL.front()->getType()->isPointerTy()) {
     const auto *It = find_if(VL, IsaPred<GetElementPtrInst>);
@@ -16892,8 +16886,7 @@ BoUpSLP::getMatchedVectorizedOperand(const TreeEntry *E, unsigned NodeIdx,
 
 Value *BoUpSLP::vectorizeOperand(TreeEntry *E, unsigned NodeIdx) {
   ValueList &VL = E->getOperand(NodeIdx);
-  InstructionsCompatibilityAnalysis Analysis(*DT, *DL, *TTI, *TLI);
-  InstructionsState S = Analysis.buildInstructionsState(VL);
+  InstructionsState S = getSameOpcode(VL, *TLI);
   // Special processing for GEPs bundle, which may include non-gep values.
   if (!S && VL.front()->getType()->isPointerTy()) {
     const auto *It = find_if(VL, IsaPred<GetElementPtrInst>);
@@ -20990,8 +20983,7 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
   for (Value *V : Chain)
     ValOps.insert(cast<StoreInst>(V)->getValueOperand());
   // Operands are not same/alt opcodes or non-power-of-2 uniques - exit.
-  InstructionsCompatibilityAnalysis Analysis(*DT, *DL, *TTI, *TLI);
-  InstructionsState S = Analysis.buildInstructionsState(ValOps.getArrayRef());
+  InstructionsState S = getSameOpcode(ValOps.getArrayRef(), *TLI);
   if (all_of(ValOps, IsaPred<Instruction>) && ValOps.size() > 1) {
     DenseSet<Value *> Stores(Chain.begin(), Chain.end());
     bool IsAllowedSize =
