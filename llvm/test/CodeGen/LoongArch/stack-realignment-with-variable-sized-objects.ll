@@ -26,7 +26,7 @@ define void @caller(i32 %n) {
 ; LA32-NEXT:    sub.w $a0, $sp, $a0
 ; LA32-NEXT:    move $sp, $a0
 ; LA32-NEXT:    addi.w $a1, $s8, 0
-; LA32-NEXT:    bl %plt(callee)
+; LA32-NEXT:    bl callee
 ; LA32-NEXT:    addi.w $sp, $fp, -64
 ; LA32-NEXT:    ld.w $s8, $sp, 52 # 4-byte Folded Reload
 ; LA32-NEXT:    ld.w $fp, $sp, 56 # 4-byte Folded Reload

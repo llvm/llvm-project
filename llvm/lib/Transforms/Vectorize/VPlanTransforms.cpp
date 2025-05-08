@@ -2103,17 +2103,16 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
     // TODO: Use VPInstruction::ExplicitVectorLength to get maximum EVL.
     VPValue *MaxEVL = &Plan.getVF();
     // Emit VPScalarCastRecipe in preheader if VF is not a 32 bits integer.
+    VPBuilder Builder(LoopRegion->getPreheaderVPBB());
     if (unsigned VFSize =
             TypeInfo.inferScalarType(MaxEVL)->getScalarSizeInBits();
         VFSize != 32) {
-      VPBuilder Builder(LoopRegion->getPreheaderVPBB());
       MaxEVL = Builder.createScalarCast(
           VFSize > 32 ? Instruction::Trunc : Instruction::ZExt, MaxEVL,
           Type::getInt32Ty(Ctx), DebugLoc());
     }
-    PrevEVL = new VPInstruction(Instruction::PHI, {MaxEVL, &EVL}, DebugLoc(),
-                                "prev.evl");
-    PrevEVL->insertBefore(*Header, Header->getFirstNonPhi());
+    Builder.setInsertPoint(Header, Header->getFirstNonPhi());
+    PrevEVL = Builder.createScalarPhi({MaxEVL, &EVL}, DebugLoc(), "prev.evl");
   }
 
   for (VPUser *U : to_vector(Plan.getVF().users())) {
@@ -2443,10 +2442,10 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
         auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
         StringRef Name =
             isa<VPCanonicalIVPHIRecipe>(PhiR) ? "index" : "evl.based.iv";
-        auto *ScalarR = new VPInstruction(
-            Instruction::PHI, {PhiR->getStartValue(), PhiR->getBackedgeValue()},
+        VPBuilder Builder(PhiR);
+        auto *ScalarR = Builder.createScalarPhi(
+            {PhiR->getStartValue(), PhiR->getBackedgeValue()},
             PhiR->getDebugLoc(), Name);
-        ScalarR->insertBefore(PhiR);
         PhiR->replaceAllUsesWith(ScalarR);
         ToRemove.push_back(PhiR);
         continue;
