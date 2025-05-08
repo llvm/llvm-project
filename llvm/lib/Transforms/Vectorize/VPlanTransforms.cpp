@@ -2525,7 +2525,6 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
     for (VPRecipeBase *R : PointerIVs)
       R->moveBefore(*VPBB, VPBB->getFirstNonPhi());
 
-
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       if (isa<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe>(&R)) {
         auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
