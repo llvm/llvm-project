@@ -45,7 +45,6 @@ void f(int x) {
 #include "foo.h"
 
 int main() {
-  f(234);
   g(123); // Call the inlined function
   return 0;
 }
