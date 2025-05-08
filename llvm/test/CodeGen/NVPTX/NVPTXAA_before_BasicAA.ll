@@ -1,4 +1,4 @@
-; REQUIRES: asserts, nvptx-registered-target
+; REQUIRES: asserts
 ; RUN: opt -aa-pipeline=default -passes='require<aa>' -debug-pass-manager -disable-output -S < %s 2>&1 | FileCheck %s
 ; RUN: llc --debug-only='aa' -o /dev/null %s 2>&1 | FileCheck %s -check-prefix=LEGACY
 
