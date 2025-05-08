@@ -1201,6 +1201,11 @@ public:
 
   /// Returns the number of incoming values, also number of incoming blocks.
   unsigned getNumIncoming() const { return getAsRecipe()->getNumOperands(); }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printPhiOperands(raw_ostream &O, VPSlotTracker &SlotTracker) const;
+#endif
 };
 
 /// An overlay for VPIRInstructions wrapping PHI nodes enabling convenient use
