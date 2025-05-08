@@ -41,21 +41,25 @@ class TestBranchIslandStepping(TestBase):
             stream = lldb.SBStream()
             print("Branch island symbols: ")
             syms[0].GetDescription(stream)
-            for i in range (0,6):
+            for i in range(0, 6):
                 for sep in ["", "."]:
-                    syms = target.FindSymbols(f"foo.island{sep}{i}", lldb.eSymbolTypeCode)
+                    syms = target.FindSymbols(
+                        f"foo.island{sep}{i}", lldb.eSymbolTypeCode
+                    )
                     if len(syms) > 0:
                         stream.Print("\n")
                         syms[0].GetDescription(stream)
-                    
+
             print(stream.GetData())
             print(f"Start backtrace:")
             print(trace_before)
             print(f"\n'main' disassembly:\n{lldbutil.disassemble(target, func_before)}")
             print("\nEnd backtrace:\n")
             lldbutil.print_stacktrace(thread)
-            print(f"\nStop disassembly:\n {lldbutil.disassemble(target, stop_frame.function)}")
-            
+            print(
+                f"\nStop disassembly:\n {lldbutil.disassemble(target, stop_frame.function)}"
+            )
+
         self.assertIn("foo", stop_frame.name, "Stepped into foo")
         var = stop_frame.FindVariable("a_variable_in_foo")
         self.assertTrue(var.IsValid(), "Found the variable in foo")
