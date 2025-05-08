@@ -1279,13 +1279,18 @@ multiclass MIMG_Sampler_nortn_gfx10_m<mimgopc op, string opcode,
 }
 
 class MIMG_Sampler_nortn_nsa_gfx10<mimgopc op, string opcode,
-                         int num_addrs,
-                         string dns="">
+                         int num_addrs, bit hasR128,
+                         string dns>
   : MIMG_nsa_gfx10<op.GFX10M, (outs), num_addrs, dns> {
-  let InOperandList = MIMG_Sampler_OpList_gfx10p<AddrIns, BaseOpcode.HasD16, false>.ret;
+  let InOperandList = MIMG_Sampler_OpList_gfx10p<AddrIns, BaseOpcode.HasD16, hasR128>.ret;
   let AsmString = MIMG_Sampler_Asm_gfx10p<opcode, " off, "#AddrAsm, BaseOpcode.HasD16>.ret;
   // Force vdata to VGPR0 as no result will be returned.
   let vdata = 0;
+}
+
+multiclass MIMG_Sampler_nortn_nsa_gfx10_m<mimgopc op, string opcode, int num_addrs, string dns=""> {
+  def _R1_nortn_nsa_gfx10 : MIMG_Sampler_nortn_nsa_gfx10<op, opcode, num_addrs, false, dns>;
+  def _R2_nortn_nsa_gfx10 : MIMG_Sampler_nortn_nsa_gfx10<op, opcode, num_addrs, true, "">;
 }
 
 class MIMG_Sampler_gfx11<mimgopc op, string opcode,
@@ -1523,8 +1528,8 @@ multiclass MIMG_Sampler_NoReturn <mimgopc op, AMDGPUSampleVariant sample, bit wq
     foreach addr = MIMG_Sampler_AddrSizes<sample, isG16>.NSAInstrs in {
       let VAddrDwords = addr.NumWords in {
         if op.HAS_GFX10M then {
-          def _V # addr.NumWords # _nsa_gfx10
-            : MIMG_Sampler_nortn_nsa_gfx10<op, asm, addr.NumWords>;
+          defm _V # addr.NumWords
+            : MIMG_Sampler_nortn_nsa_gfx10_m<op, asm, addr.NumWords>;
         }
       }
     }
