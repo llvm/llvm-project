@@ -2386,7 +2386,8 @@ static llvm::Value *emitOptimizedARCReturnCall(llvm::Value *value,
   // FIXME: Do this on all targets and at -O0 too. This can be enabled only if
   // the target backend knows how to handle the operand bundle.
   if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0 &&
-      (Arch == llvm::Triple::aarch64 || Arch == llvm::Triple::x86_64)) {
+      (Arch == llvm::Triple::aarch64 || Arch == llvm::Triple::aarch64_32 ||
+       Arch == llvm::Triple::x86_64)) {
     llvm::Value *bundleArgs[] = {EP};
     llvm::OperandBundleDef OB("clang.arc.attachedcall", bundleArgs);
     auto *oldCall = cast<llvm::CallBase>(value);

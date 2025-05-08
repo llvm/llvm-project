@@ -934,6 +934,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::Not:
   case VPInstruction::PtrAdd:
   case VPInstruction::WideIVStep:
+  case VPInstruction::StepVector:
     return false;
   default:
     return true;
@@ -1085,8 +1086,6 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
 
 void VPInstructionWithType::execute(VPTransformState &State) {
   State.setDebugLocFrom(getDebugLoc());
-  assert(vputils::onlyFirstLaneUsed(this) &&
-         "Codegen only implemented for first lane.");
   switch (getOpcode()) {
   case Instruction::ZExt:
   case Instruction::Trunc: {
@@ -1094,6 +1093,12 @@ void VPInstructionWithType::execute(VPTransformState &State) {
     Value *Cast = State.Builder.CreateCast(Instruction::CastOps(getOpcode()),
                                            Op, ResultTy);
     State.set(this, Cast, VPLane(0));
+    break;
+  }
+  case VPInstruction::StepVector: {
+    Value *StepVector =
+        State.Builder.CreateStepVector(VectorType::get(ResultTy, State.VF));
+    State.set(this, StepVector);
     break;
   }
   default:
@@ -1112,6 +1117,9 @@ void VPInstructionWithType::print(raw_ostream &O, const Twine &Indent,
   case VPInstruction::WideIVStep:
     O << "wide-iv-step ";
     printOperands(O, SlotTracker);
+    break;
+  case VPInstruction::StepVector:
+    O << "step-vector " << *ResultTy;
     break;
   default:
     assert(Instruction::isCast(getOpcode()) && "unhandled opcode");
@@ -1188,6 +1196,20 @@ void VPIRPhi::execute(VPTransformState &State) {
   // interleaving VPIRInstructions and other recipes.
   State.Builder.SetInsertPoint(Phi->getParent(), std::next(Phi->getIterator()));
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPPhiAccessors::printPhiOperands(raw_ostream &O,
+                                      VPSlotTracker &SlotTracker) const {
+  interleaveComma(enumerate(getAsRecipe()->operands()), O,
+                  [this, &O, &SlotTracker](auto Op) {
+                    O << "[ ";
+                    Op.value()->printAsOperand(O, SlotTracker);
+                    O << ", ";
+                    getIncomingBlock(Op.index())->printAsOperand(O);
+                    O << " ]";
+                  });
+}
+#endif
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPIRPhi::print(raw_ostream &O, const Twine &Indent,
@@ -1880,7 +1902,8 @@ InstructionCost VPHeaderPHIRecipe::computeCost(ElementCount VF,
 /// (0 * Step, 1 * Step, 2 * Step, ...)
 /// to each vector element of Val.
 /// \p Opcode is relevant for FP induction variable.
-static Value *getStepVector(Value *Val, Value *Step,
+/// \p InitVec is an integer step vector from 0 with a step of 1.
+static Value *getStepVector(Value *Val, Value *Step, Value *InitVec,
                             Instruction::BinaryOps BinOp, ElementCount VF,
                             IRBuilderBase &Builder) {
   assert(VF.isVector() && "only vector VFs are supported");
@@ -1893,15 +1916,6 @@ static Value *getStepVector(Value *Val, Value *Step,
   assert((STy->isIntegerTy() || STy->isFloatingPointTy()) &&
          "Induction Step must be an integer or FP");
   assert(Step->getType() == STy && "Step has wrong type");
-
-  // Create a vector of consecutive numbers from zero to VF.
-  VectorType *InitVecValVTy = ValVTy;
-  if (STy->isFloatingPointTy()) {
-    Type *InitVecValSTy =
-        IntegerType::get(STy->getContext(), STy->getScalarSizeInBits());
-    InitVecValVTy = VectorType::get(InitVecValSTy, VLen);
-  }
-  Value *InitVec = Builder.CreateStepVector(InitVecValVTy);
 
   if (STy->isIntegerTy()) {
     Step = Builder.CreateVectorSplat(VLen, Step);
@@ -1969,8 +1983,9 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
   }
 
   Value *SplatStart = Builder.CreateVectorSplat(State.VF, Start);
-  Value *SteppedStart = getStepVector(SplatStart, Step, ID.getInductionOpcode(),
-                                      State.VF, State.Builder);
+  Value *SteppedStart =
+      ::getStepVector(SplatStart, Step, State.get(getStepVector()),
+                      ID.getInductionOpcode(), State.VF, State.Builder);
 
   // We create vector phi nodes for both integer and floating-point induction
   // variables. Here, we determine the kind of arithmetic we will perform.
@@ -3808,7 +3823,7 @@ void VPWidenPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 
   printAsOperand(O, SlotTracker);
   O << " = phi ";
-  printOperands(O, SlotTracker);
+  printPhiOperands(O, SlotTracker);
 }
 #endif
 
