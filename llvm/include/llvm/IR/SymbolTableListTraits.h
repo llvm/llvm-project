@@ -73,18 +73,14 @@ class SymbolTableListTraits : public ilist_alloc_traits<ValueSubClass> {
 public:
   SymbolTableListTraits() = default;
 
+  void setListOwner(ItemParentClass *Par) { ListOwner = Par; }
+
 private:
+  ItemParentClass *ListOwner;
+
   /// getListOwner - Return the object that owns this list.  If this is a list
   /// of instructions, it returns the BasicBlock that owns them.
-  ItemParentClass *getListOwner() {
-    size_t Offset = reinterpret_cast<size_t>(
-        &((ItemParentClass *)nullptr->*ItemParentClass::getSublistAccess(
-                                           static_cast<ValueSubClass *>(
-                                               nullptr))));
-    ListTy *Anchor = static_cast<ListTy *>(this);
-    return reinterpret_cast<ItemParentClass*>(reinterpret_cast<char*>(Anchor)-
-                                              Offset);
-  }
+  ItemParentClass *getListOwner() { return ListOwner; }
 
   static ListTy &getList(ItemParentClass *Par) {
     return Par->*(Par->getSublistAccess((ValueSubClass*)nullptr));

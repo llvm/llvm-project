@@ -187,7 +187,7 @@ BasicBlock::BasicBlock(LLVMContext &C, const Twine &Name, Function *NewParent,
                        BasicBlock *InsertBefore)
     : Value(Type::getLabelTy(C), Value::BasicBlockVal),
       IsNewDbgInfoFormat(UseNewDbgInfoFormat), Parent(nullptr) {
-
+  InstList.setListOwner(this);
   if (NewParent)
     insertInto(NewParent, InsertBefore);
   else
