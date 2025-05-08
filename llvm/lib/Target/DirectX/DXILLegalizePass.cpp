@@ -277,7 +277,8 @@ static void emitMemcpyExpansion(IRBuilder<> &Builder, Value *Dst, Value *Src,
 
   // This assumption simplifies implementation and covers currently-known
   // use-cases for DXIL. It may be relaxed in the future if required.
-  assert(ArrTy == SrcArrTy && "Array Types of Src and Dst in memcpy must match");
+  assert(ArrTy == SrcArrTy &&
+         "Array Types of Src and Dst in memcpy must match");
 
   Type *ElemTy = ArrTy->getElementType();
   uint64_t ElemSize = DL.getTypeStoreSize(ElemTy);
