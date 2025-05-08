@@ -681,10 +681,12 @@ GISelValueTracking::fcmpImpliesClass(CmpInst::Predicate Pred,
     return LookThroughSrc && mi_match(LHS, MRI, m_GFabs(m_Reg(Src)));
   };
 
-  LLT Ty = MRI.getType(LHS);
-  DenormalMode Mode = MF.getDenormalMode(getFltSemanticForLLT(Ty));
+  auto ModeQuery = [&](Register LHS) {
+    LLT Ty = MRI.getType(LHS).getScalarType();
+    return MF.getDenormalMode(getFltSemanticForLLT(Ty));
+  };
 
-  return llvm::fcmpImpliesClass(Pred, Mode, LHS, RHSClass, LookThrough);
+  return llvm::fcmpImpliesClass(Pred, ModeQuery, LHS, RHSClass, LookThrough);
 }
 
 std::tuple<Register, FPClassTest, FPClassTest>
@@ -696,10 +698,12 @@ GISelValueTracking::fcmpImpliesClass(CmpInst::Predicate Pred,
     return LookThroughSrc && mi_match(LHS, MRI, m_GFabs(m_Reg(Src)));
   };
 
-  LLT Ty = MRI.getType(LHS);
-  DenormalMode Mode = MF.getDenormalMode(getFltSemanticForLLT(Ty));
+  auto ModeQuery = [&](Register LHS) {
+    LLT Ty = MRI.getType(LHS).getScalarType();
+    return MF.getDenormalMode(getFltSemanticForLLT(Ty));
+  };
 
-  return llvm::fcmpImpliesClass(Pred, Mode, LHS, ConstRHS, LookThrough);
+  return llvm::fcmpImpliesClass(Pred, ModeQuery, LHS, ConstRHS, LookThrough);
 }
 
 std::tuple<Register, FPClassTest, FPClassTest>
@@ -715,11 +719,13 @@ GISelValueTracking::fcmpImpliesClass(CmpInst::Predicate Pred,
     return LookThroughSrc && mi_match(LHS, MRI, m_GFabs(m_Reg(Src)));
   };
 
-  LLT Ty = MRI.getType(LHS).getScalarType();
-  DenormalMode Mode = MF.getDenormalMode(getFltSemanticForLLT(Ty));
+  auto ModeQuery = [&](Register LHS) {
+    LLT Ty = MRI.getType(LHS).getScalarType();
+    return MF.getDenormalMode(getFltSemanticForLLT(Ty));
+  };
 
   // TODO: Just call computeKnownFPClass for RHS to handle non-constants.
-  return llvm::fcmpImpliesClass(Pred, Mode, LHS, ConstRHS->getValueAPF(),
+  return llvm::fcmpImpliesClass(Pred, ModeQuery, LHS, ConstRHS->getValueAPF(),
                                 LookThrough);
 }
 

@@ -46,10 +46,12 @@ static std::tuple<ValueTy, FPClassTest, FPClassTest> exactClass(ValueTy V,
 /// If \p LookThroughSrc is false, ignore the source value (i.e. the first pair
 /// element will always be LHS.
 ///
-template <typename ValueTy, typename LookThroughFnTy>
+template <typename ValueTy, typename LookThroughFnTy,
+          typename DenormalModeQueryTy>
 std::tuple<ValueTy, FPClassTest, FPClassTest>
-fcmpImpliesClass(CmpInst::Predicate Pred, DenormalMode Mode, ValueTy LHS,
-                 FPClassTest RHSClass, LookThroughFnTy LookThroughFn) {
+fcmpImpliesClass(CmpInst::Predicate Pred, DenormalModeQueryTy ModeQuery,
+                 ValueTy LHS, FPClassTest RHSClass,
+                 LookThroughFnTy LookThroughFn) {
   assert(RHSClass != fcNone);
 
   constexpr ValueTy Invalid = {};
@@ -91,6 +93,7 @@ fcmpImpliesClass(CmpInst::Predicate Pred, DenormalMode Mode, ValueTy LHS,
     // Compares with fcNone are only exactly equal to fcZero if input denormals
     // are not flushed.
     // TODO: Handle DAZ by expanding masks to cover subnormal cases.
+    DenormalMode Mode = ModeQuery(LHS);
     if (Mode.Input != DenormalMode::DenormalModeKind::IEEE)
       return {Invalid, fcAllFlags, fcAllFlags};
 
@@ -372,10 +375,12 @@ fcmpImpliesClass(CmpInst::Predicate Pred, DenormalMode Mode, ValueTy LHS,
   return {Invalid, fcAllFlags, fcAllFlags};
 }
 
-template <typename ValueTy, typename LookThroughFnTy>
+template <typename ValueTy, typename LookThroughFnTy,
+          typename DenormalModeQueryTy>
 std::tuple<ValueTy, FPClassTest, FPClassTest>
-fcmpImpliesClass(CmpInst::Predicate Pred, DenormalMode Mode, ValueTy LHS,
-                 const APFloat &ConstRHS, LookThroughFnTy LookThroughFn) {
+fcmpImpliesClass(CmpInst::Predicate Pred, DenormalModeQueryTy ModeQuery,
+                 ValueTy LHS, const APFloat &ConstRHS,
+                 LookThroughFnTy LookThroughFn) {
   // We can refine checks against smallest normal / largest denormal to an
   // exact class test.
   if (!ConstRHS.isNegative() && ConstRHS.isSmallestNormalized()) {
@@ -409,7 +414,7 @@ fcmpImpliesClass(CmpInst::Predicate Pred, DenormalMode Mode, ValueTy LHS,
       break;
     }
     default:
-      return fcmpImpliesClass(Pred, Mode, LHS, ConstRHS.classify(),
+      return fcmpImpliesClass(Pred, ModeQuery, LHS, ConstRHS.classify(),
                               LookThroughFn);
     }
 
@@ -420,7 +425,8 @@ fcmpImpliesClass(CmpInst::Predicate Pred, DenormalMode Mode, ValueTy LHS,
     return exactClass(Src, Mask);
   }
 
-  return fcmpImpliesClass(Pred, Mode, LHS, ConstRHS.classify(), LookThroughFn);
+  return fcmpImpliesClass(Pred, ModeQuery, LHS, ConstRHS.classify(),
+                          LookThroughFn);
 }
 
 } // namespace llvm

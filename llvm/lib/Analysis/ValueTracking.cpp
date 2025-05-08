@@ -4579,10 +4579,12 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
     return LookThroughSrc && match(LHS, m_FAbs(m_Value(Src)));
   };
 
-  Type *Ty = LHS->getType()->getScalarType();
-  DenormalMode Mode = F.getDenormalMode(Ty->getFltSemantics());
+  auto ModeQuery = [&](Value *LHS) {
+    Type *Ty = LHS->getType()->getScalarType();
+    return F.getDenormalMode(Ty->getFltSemantics());
+  };
 
-  return fcmpImpliesClass(Pred, Mode, LHS, RHSClass, LookThrough);
+  return fcmpImpliesClass(Pred, ModeQuery, LHS, RHSClass, LookThrough);
 }
 
 std::tuple<Value *, FPClassTest, FPClassTest>
@@ -4593,10 +4595,12 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
     return LookThroughSrc && match(LHS, m_FAbs(m_Value(Src)));
   };
 
-  Type *Ty = LHS->getType()->getScalarType();
-  DenormalMode Mode = F.getDenormalMode(Ty->getFltSemantics());
+  auto ModeQuery = [&](Value *LHS) {
+    Type *Ty = LHS->getType()->getScalarType();
+    return F.getDenormalMode(Ty->getFltSemantics());
+  };
 
-  return fcmpImpliesClass(Pred, Mode, LHS, ConstRHS, LookThrough);
+  return fcmpImpliesClass(Pred, ModeQuery, LHS, ConstRHS, LookThrough);
 }
 
 std::tuple<Value *, FPClassTest, FPClassTest>
@@ -4606,15 +4610,17 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
   if (!match(RHS, m_APFloatAllowPoison(ConstRHS)))
     return {nullptr, fcAllFlags, fcAllFlags};
 
-  Type *Ty = LHS->getType()->getScalarType();
-  DenormalMode Mode = F.getDenormalMode(Ty->getFltSemantics());
-
   auto LookThrough = [=](Value *LHS, Value *&Src) {
     return LookThroughSrc && match(LHS, m_FAbs(m_Value(Src)));
   };
 
+  auto ModeQuery = [&](Value *LHS) {
+    Type *Ty = LHS->getType()->getScalarType();
+    return F.getDenormalMode(Ty->getFltSemantics());
+  };
+
   // TODO: Just call computeKnownFPClass for RHS to handle non-constants.
-  return fcmpImpliesClass(Pred, Mode, LHS, *ConstRHS, LookThrough);
+  return fcmpImpliesClass(Pred, ModeQuery, LHS, *ConstRHS, LookThrough);
 }
 
 static void computeKnownFPClassFromCond(const Value *V, Value *Cond,
