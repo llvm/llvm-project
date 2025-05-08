@@ -248,6 +248,7 @@ void RegisterContextUnwind::InitializeZerothFrame() {
     active_row =
         m_full_unwind_plan_sp->GetRowForFunctionOffset(m_current_offset);
     row_register_kind = m_full_unwind_plan_sp->GetRegisterKind();
+    PropagateTrapHandlerFlagFromUnwindPlan(m_full_unwind_plan_sp);
     if (active_row && log) {
       StreamString active_row_strm;
       active_row->Dump(active_row_strm, m_full_unwind_plan_sp.get(), &m_thread,
@@ -1933,6 +1934,7 @@ void RegisterContextUnwind::PropagateTrapHandlerFlagFromUnwindPlan(
   }
 
   m_frame_type = eTrapHandlerFrame;
+  UnwindLogMsg("This frame is marked as a trap handler via its UnwindPlan");
 
   if (m_current_offset_backed_up_one != m_current_offset) {
     // We backed up the pc by 1 to compute the symbol context, but
