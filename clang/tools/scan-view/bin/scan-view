@@ -10,10 +10,7 @@ import os
 import posixpath
 import threading
 import time
-try:
-    from urllib.request import urlopen
-except ImportError:
-    from urllib2 import urlopen
+from urllib.request import urlopen
 import webbrowser
 
 # How long to wait for server to start.
@@ -39,7 +36,6 @@ def url_is_up(url):
 
 
 def start_browser(port, options):
-    import webbrowser
 
     url = 'http://%s:%d' % (options.host, port)
 
@@ -83,10 +79,7 @@ def run(port, options, root):
 
 
 def port_is_open(port):
-    try:
-        import socketserver
-    except ImportError:
-        import SocketServer as socketserver
+    import socketserver
     try:
         t = socketserver.TCPServer((kDefaultHost, port), None)
     except:
