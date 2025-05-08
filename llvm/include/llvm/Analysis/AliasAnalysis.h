@@ -1023,7 +1023,7 @@ struct ExternalAAWrapperPass : ImmutablePass {
   /// particularly useful when the external AA can provide more precise results
   /// than Basic AA so that Basic AA does not need to spend time recomputing
   /// them.
-  virtual bool runEarly() { return false; }
+  bool RunEarly = false;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
