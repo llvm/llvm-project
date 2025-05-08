@@ -475,12 +475,38 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedMandatoryRCParameterTest) {
   ASSERT_TRUE(Consumer->isSatisfied());
 }
 
-TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedOptionalParameterTest) {
+TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedOptionalDTParameterTest) {
   // This test will check that the parsing fails due the same optional
   // parameter being specified multiple times
   const llvm::StringLiteral Source = R"cc(
     DescriptorTable(
       CBV(space = 2, space = 0)
+    )
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
+
+  // Test correct diagnostic produced
+  Consumer->setExpected(diag::err_hlsl_rootsig_repeat_param);
+  ASSERT_TRUE(Parser.parse());
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedOptionalRCParameterTest) {
+  // This test will check that the parsing fails due the same optional
+  // parameter being specified multiple times
+  const llvm::StringLiteral Source = R"cc(
+    RootConstants(
+      visibility = Shader_Visibility_All,
+      b0, num32BitConstants = 1,
+      visibility = Shader_Visibility_Pixel
     )
   )cc";
 
