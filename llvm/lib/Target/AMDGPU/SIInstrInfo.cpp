@@ -8473,8 +8473,8 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
       return;
     }
 
-    // If this is a v2s copy src from vgpr16 to sgpr32,
-    // replace vgpr copy to subreg_to_reg
+    // If this is a v2s copy src from 16bit to 32bit,
+    // replace vgpr copy to reg_sequence
     // This can be remove after we have sgpr16 in place
     if (ST.useRealTrue16Insts() && Inst.isCopy() &&
         Inst.getOperand(1).getReg().isVirtual() &&
@@ -8483,11 +8483,15 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
       if (16 == RI.getRegSizeInBits(*SrcRegRC) &&
           32 == RI.getRegSizeInBits(*NewDstRC)) {
         Register NewDstReg = MRI.createVirtualRegister(NewDstRC);
+        Register Undef = MRI.createVirtualRegister(&AMDGPU::VGPR_16RegClass);
         BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
-                get(TargetOpcode::SUBREG_TO_REG), NewDstReg)
-            .add(MachineOperand::CreateImm(0))
-            .add(Inst.getOperand(1))
-            .add(MachineOperand::CreateImm(AMDGPU::lo16));
+                get(AMDGPU::IMPLICIT_DEF), Undef);
+        BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
+                get(AMDGPU::REG_SEQUENCE), NewDstReg)
+            .addReg(Inst.getOperand(1).getReg())
+            .addImm(AMDGPU::lo16)
+            .addReg(Undef)
+            .addImm(AMDGPU::hi16);
         Inst.eraseFromParent();
 
         MRI.replaceRegWith(DstReg, NewDstReg);

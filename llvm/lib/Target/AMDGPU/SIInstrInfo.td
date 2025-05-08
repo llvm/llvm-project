@@ -1701,12 +1701,10 @@ class PackedFPInputModsMatchClass <int opSize> : AsmOperandClass {
   let PredicateMethod = "isPackedFP"#opSize#"InputMods";
 }
 
-#ifdef LLPC_BUILD_NPI
 class PackedVGPRFPInputModsMatchClass <int opSize> : PackedFPInputModsMatchClass<opSize> {
   let PredicateMethod = "isPackedVGPRFP"#opSize#"InputMods";
 }
 
-#endif /* LLPC_BUILD_NPI */
 class PackedIntInputModsMatchClass <int opSize> : AsmOperandClass {
   let Name = "PackedInt"#opSize#"InputMods";
   let ParserMethod = "parseRegOrImm";
@@ -1716,12 +1714,7 @@ class PackedIntInputModsMatchClass <int opSize> : AsmOperandClass {
 
 def PackedF16InputModsMatchClass : PackedFPInputModsMatchClass<16>;
 def PackedI16InputModsMatchClass : PackedIntInputModsMatchClass<16>;
-#ifdef LLPC_BUILD_NPI
-//def PackedF32InputModsMatchClass : PackedFPInputModsMatchClass<32>;
 def PackedVGPRF32InputModsMatchClass : PackedVGPRFPInputModsMatchClass<32>;
-#else /* LLPC_BUILD_NPI */
-def PackedF32InputModsMatchClass : PackedFPInputModsMatchClass<32>;
-#endif /* LLPC_BUILD_NPI */
 
 class PackedFPInputMods <PackedFPInputModsMatchClass matchClass> : InputMods <matchClass> {
   let PrintMethod = "printOperandAndFPInputMods";
@@ -1733,11 +1726,7 @@ class PackedIntInputMods <PackedIntInputModsMatchClass matchClass> : InputMods <
 
 def PackedF16InputMods : PackedFPInputMods<PackedF16InputModsMatchClass>;
 def PackedI16InputMods : PackedIntInputMods<PackedI16InputModsMatchClass>;
-#ifdef LLPC_BUILD_NPI
 def PackedVGPRF32InputMods : PackedFPInputMods<PackedVGPRF32InputModsMatchClass>;
-#else /* LLPC_BUILD_NPI */
-def PackedF32InputMods : PackedFPInputMods<PackedF32InputModsMatchClass>;
-#endif /* LLPC_BUILD_NPI */
 
 def MFMALdScaleModifierOp : TImmLeaf<i32, [{
   return isUInt<2>(Imm);

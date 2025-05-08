@@ -9,6 +9,10 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 -mattr=-real-true16 -amdgpu-enable-vopd=0 -verify-machineinstrs | FileCheck -check-prefixes=GFX12-PACKED,GFX12-PACKED-SDAG,GFX12-PACKED-SDAG-FAKE16 %s
 ; RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1200 -mattr=+real-true16 -amdgpu-enable-vopd=0 -verify-machineinstrs | FileCheck -check-prefixes=GFX12-PACKED,GFX12-PACKED-GISEL,GFX12-PACKED-GISEL-TRUE16 %s
 ; RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1200 -mattr=-real-true16 -amdgpu-enable-vopd=0 -verify-machineinstrs | FileCheck -check-prefixes=GFX12-PACKED,GFX12-PACKED-GISEL,GFX12-PACKED-GISEL-FAKE16 %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1300 -mattr=+real-true16 -amdgpu-enable-vopd=0 -verify-machineinstrs | FileCheck -check-prefixes=GFX13-PACKED,GFX13-PACKED-SDAG,GFX13-PACKED-SDAG-TRUE16 %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1300 -mattr=-real-true16 -amdgpu-enable-vopd=0 -verify-machineinstrs | FileCheck -check-prefixes=GFX13-PACKED,GFX13-PACKED-SDAG,GFX13-PACKED-SDAG-FAKE16 %s
+; RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1300 -mattr=+real-true16 -amdgpu-enable-vopd=0 -verify-machineinstrs | FileCheck -check-prefixes=GFX13-PACKED,GFX13-PACKED-GISEL,GFX13-PACKED-GISEL-TRUE16 %s
+; RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1300 -mattr=-real-true16 -amdgpu-enable-vopd=0 -verify-machineinstrs | FileCheck -check-prefixes=GFX13-PACKED,GFX13-PACKED-GISEL,GFX13-PACKED-GISEL-FAKE16 %s
 
 define amdgpu_kernel void @tbuffer_store_d16_x(<4 x i32> %rsrc, half %data) {
 ; PREGFX10-UNPACKED-LABEL: tbuffer_store_d16_x:
@@ -58,6 +62,16 @@ define amdgpu_kernel void @tbuffer_store_d16_x(<4 x i32> %rsrc, half %data) {
 ; GFX12-PACKED-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX12-PACKED-NEXT:    tbuffer_store_d16_format_x v0, off, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM]
 ; GFX12-PACKED-NEXT:    s_endpgm
+;
+; GFX13-PACKED-LABEL: tbuffer_store_d16_x:
+; GFX13-PACKED:       ; %bb.0: ; %main_body
+; GFX13-PACKED-NEXT:    s_clause 0x1
+; GFX13-PACKED-NEXT:    s_load_b32 s6, s[4:5], 0x34
+; GFX13-PACKED-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX13-PACKED-NEXT:    s_wait_kmcnt 0x0
+; GFX13-PACKED-NEXT:    v_mov_b32_e32 v0, s6
+; GFX13-PACKED-NEXT:    tbuffer_store_d16_format_x v0, off, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM] scope:SCOPE_SE
+; GFX13-PACKED-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.raw.tbuffer.store.f16(half %data, <4 x i32> %rsrc, i32 0, i32 0, i32 33, i32 0)
   ret void
@@ -114,6 +128,16 @@ define amdgpu_kernel void @tbuffer_store_d16_xy(<4 x i32> %rsrc, <2 x half> %dat
 ; GFX12-PACKED-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX12-PACKED-NEXT:    tbuffer_store_d16_format_xy v0, off, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM]
 ; GFX12-PACKED-NEXT:    s_endpgm
+;
+; GFX13-PACKED-LABEL: tbuffer_store_d16_xy:
+; GFX13-PACKED:       ; %bb.0: ; %main_body
+; GFX13-PACKED-NEXT:    s_clause 0x1
+; GFX13-PACKED-NEXT:    s_load_b32 s6, s[4:5], 0x34
+; GFX13-PACKED-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX13-PACKED-NEXT:    s_wait_kmcnt 0x0
+; GFX13-PACKED-NEXT:    v_mov_b32_e32 v0, s6
+; GFX13-PACKED-NEXT:    tbuffer_store_d16_format_xy v0, off, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM] scope:SCOPE_SE
+; GFX13-PACKED-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.raw.tbuffer.store.v2f16(<2 x half> %data, <4 x i32> %rsrc, i32 0, i32 0, i32 33, i32 0)
   ret void
@@ -191,6 +215,30 @@ define amdgpu_kernel void @tbuffer_store_d16_xyz(<4 x i32> %rsrc, <4 x half> %da
 ; GFX12-PACKED-GISEL-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX12-PACKED-GISEL-NEXT:    tbuffer_store_d16_format_xyz v[0:1], off, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM]
 ; GFX12-PACKED-GISEL-NEXT:    s_endpgm
+;
+; GFX13-PACKED-SDAG-LABEL: tbuffer_store_d16_xyz:
+; GFX13-PACKED-SDAG:       ; %bb.0: ; %main_body
+; GFX13-PACKED-SDAG-NEXT:    s_clause 0x1
+; GFX13-PACKED-SDAG-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34
+; GFX13-PACKED-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX13-PACKED-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX13-PACKED-SDAG-NEXT:    s_and_b64 s[4:5], s[6:7], lit64(0xffffffffffff)
+; GFX13-PACKED-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-PACKED-SDAG-NEXT:    v_mov_b32_e32 v0, s4
+; GFX13-PACKED-SDAG-NEXT:    v_mov_b32_e32 v1, s5
+; GFX13-PACKED-SDAG-NEXT:    tbuffer_store_d16_format_xyz v[0:1], off, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM] scope:SCOPE_SE
+; GFX13-PACKED-SDAG-NEXT:    s_endpgm
+;
+; GFX13-PACKED-GISEL-LABEL: tbuffer_store_d16_xyz:
+; GFX13-PACKED-GISEL:       ; %bb.0: ; %main_body
+; GFX13-PACKED-GISEL-NEXT:    s_clause 0x1
+; GFX13-PACKED-GISEL-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34
+; GFX13-PACKED-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX13-PACKED-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX13-PACKED-GISEL-NEXT:    v_mov_b32_e32 v0, s6
+; GFX13-PACKED-GISEL-NEXT:    v_mov_b32_e32 v1, s7
+; GFX13-PACKED-GISEL-NEXT:    tbuffer_store_d16_format_xyz v[0:1], off, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM] scope:SCOPE_SE
+; GFX13-PACKED-GISEL-NEXT:    s_endpgm
 main_body:
   %data_subvec = shufflevector <4 x half> %data, <4 x half> poison, <3 x i32> <i32 0, i32 1, i32 2>
   call void @llvm.amdgcn.raw.tbuffer.store.v3f16(<3 x half> %data_subvec, <4 x i32> %rsrc, i32 0, i32 0, i32 33, i32 0)
@@ -256,6 +304,17 @@ define amdgpu_kernel void @tbuffer_store_d16_xyzw(<4 x i32> %rsrc, <4 x half> %d
 ; GFX12-PACKED-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX12-PACKED-NEXT:    tbuffer_store_d16_format_xyzw v[0:1], off, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM]
 ; GFX12-PACKED-NEXT:    s_endpgm
+;
+; GFX13-PACKED-LABEL: tbuffer_store_d16_xyzw:
+; GFX13-PACKED:       ; %bb.0: ; %main_body
+; GFX13-PACKED-NEXT:    s_clause 0x1
+; GFX13-PACKED-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34
+; GFX13-PACKED-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX13-PACKED-NEXT:    s_wait_kmcnt 0x0
+; GFX13-PACKED-NEXT:    v_mov_b32_e32 v0, s6
+; GFX13-PACKED-NEXT:    v_mov_b32_e32 v1, s7
+; GFX13-PACKED-NEXT:    tbuffer_store_d16_format_xyzw v[0:1], off, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM] scope:SCOPE_SE
+; GFX13-PACKED-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.raw.tbuffer.store.v4f16(<4 x half> %data, <4 x i32> %rsrc, i32 0, i32 0, i32 33, i32 0)
   ret void
@@ -272,3 +331,7 @@ declare void @llvm.amdgcn.raw.tbuffer.store.v4f16(<4 x half>, <4 x i32>, i32, i3
 ; GFX12-PACKED-GISEL-TRUE16: {{.*}}
 ; GFX12-PACKED-SDAG-FAKE16: {{.*}}
 ; GFX12-PACKED-SDAG-TRUE16: {{.*}}
+; GFX13-PACKED-GISEL-FAKE16: {{.*}}
+; GFX13-PACKED-GISEL-TRUE16: {{.*}}
+; GFX13-PACKED-SDAG-FAKE16: {{.*}}
+; GFX13-PACKED-SDAG-TRUE16: {{.*}}

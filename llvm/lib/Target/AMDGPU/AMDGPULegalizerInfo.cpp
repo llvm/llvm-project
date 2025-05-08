@@ -2063,7 +2063,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   // S64 is only legal on SALU, and needs to be broken into 32-bit elements in
   // RegBankSelect.
   auto &SextInReg = getActionDefinitionsBuilder(G_SEXT_INREG)
-    .legalFor({{S32}, {S64}});
+                        .legalFor({{S32}, {S64}})
+                        .clampScalar(0, S32, S64);
 
   if (ST.hasVOP3PInsts()) {
     SextInReg.lowerFor({{V2S16}})
@@ -2603,7 +2604,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
     Register DstAsInt = B.buildSbfx(S32, SrcAsInt, B.buildConstant(S32, 0),
                                     B.buildConstant(S32, 24))
                             .getReg(0);
-    B.buildPtrToInt(Dst, DstAsInt);
+    B.buildIntToPtr(Dst, DstAsInt);
     MI.eraseFromParent();
     return true;
   }
@@ -2617,7 +2618,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
         B.buildOr(S32, SrcAsInt,
                   B.buildShl(S32, WgIdInCluster, B.buildConstant(S32, 24)))
             .getReg(0);
-    B.buildPtrToInt(Dst, DstAsInt);
+    B.buildIntToPtr(Dst, DstAsInt);
     MI.eraseFromParent();
     return true;
   }

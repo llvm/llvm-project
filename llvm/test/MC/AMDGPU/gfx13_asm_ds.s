@@ -1,0 +1,31 @@
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=+lds-barrier-arrive-atomic -show-encoding %s | FileCheck --check-prefixes=GFX13 %s
+
+ds_atomic_async_barrier_arrive_b64 v1 offset:65407
+// GFX13: ds_atomic_async_barrier_arrive_b64 v1 offset:65407 ; encoding: [0x7f,0xff,0x58,0xd9,0x01,0x00,0x00,0x00]
+
+ds_atomic_async_barrier_arrive_b64 v255 offset:1040
+// GFX13: ds_atomic_async_barrier_arrive_b64 v255 offset:1040 ; encoding: [0x10,0x04,0x58,0xd9,0xff,0x00,0x00,0x00]
+
+ds_atomic_async_barrier_arrive_b64 v5
+// GFX13: ds_atomic_async_barrier_arrive_b64 v5   ; encoding: [0x00,0x00,0x58,0xd9,0x05,0x00,0x00,0x00]
+
+ds_atomic_barrier_arrive_rtn_b64 v[2:3], v2, v[4:5]
+// GFX13: ds_atomic_barrier_arrive_rtn_b64 v[2:3], v2, v[4:5] ; encoding: [0x00,0x00,0xd4,0xd9,0x02,0x04,0x00,0x02]
+
+ds_atomic_barrier_arrive_rtn_b64 v[2:3], v2, v[4:5] offset:513
+// GFX13: ds_atomic_barrier_arrive_rtn_b64 v[2:3], v2, v[4:5] offset:513 ; encoding: [0x01,0x02,0xd4,0xd9,0x02,0x04,0x00,0x02]
+
+ds_atomic_barrier_arrive_rtn_b64 v[254:255], v2, v[4:5] offset:65535
+// GFX13: ds_atomic_barrier_arrive_rtn_b64 v[254:255], v2, v[4:5] offset:65535 ; encoding: [0xff,0xff,0xd4,0xd9,0x02,0x04,0x00,0xfe]
+
+ds_bpermute_fi_b32 v5, v1, v2
+// GFX13: encoding: [0x00,0x00,0x34,0xdb,0x01,0x02,0x00,0x05]
+
+ds_bpermute_fi_b32 v5, v1, v2 offset:65535
+// GFX13: encoding: [0xff,0xff,0x34,0xdb,0x01,0x02,0x00,0x05]
+
+ds_bpermute_fi_b32 v5, v1, v2 offset:0
+// GFX13: encoding: [0x00,0x00,0x34,0xdb,0x01,0x02,0x00,0x05]
+
+ds_bpermute_fi_b32 v255, v255, v255 offset:4
+// GFX13: encoding: [0x04,0x00,0x34,0xdb,0xff,0xff,0x00,0xff]

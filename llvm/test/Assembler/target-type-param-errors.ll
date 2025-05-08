@@ -2,6 +2,7 @@
 ; RUN: not llvm-as < %t/aarch64-svcount.ll -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-AARCH64-SVCOUNT %s
 ; RUN: not llvm-as < %t/riscv-vector-tuple.ll -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-RISCV-VECTOR-TUPLE %s
 ; RUN: not llvm-as < %t/amdgcn-named-barrier.ll -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-AMDGCN-NAMEDBARRIER %s
+; RUN: not llvm-as < %t/amdgcn-semaphore.ll -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-AMDGCN-SEMAPHORE %s
 ; Check target extension type properties are verified in the assembler.
 
 ;--- aarch64-svcount.ll
@@ -15,3 +16,7 @@ declare target("riscv.vector.tuple", 99) @riscv_vector_tuple()
 ;--- amdgcn-named-barrier.ll
 declare target("amdgcn.named.barrier", i32) @amdgcn_named_barrier()
 ; CHECK-AMDGCN-NAMEDBARRIER: target extension type amdgcn.named.barrier should have no type parameters and one integer parameter
+
+;--- amdgcn-semaphore.ll
+declare target("amdgcn.semaphore", i32) @amdgcn_semaphore()
+; CHECK-AMDGCN-SEMAPHORE: target extension type amdgcn.semaphore should have no type parameters and one integer parameter

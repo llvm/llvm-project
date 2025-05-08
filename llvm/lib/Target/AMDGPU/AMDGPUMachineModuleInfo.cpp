@@ -23,6 +23,9 @@ AMDGPUMachineModuleInfo::AMDGPUMachineModuleInfo(const MachineModuleInfo &MMI)
   AgentSSID = CTX.getOrInsertSyncScopeID("agent");
   WorkgroupSSID = CTX.getOrInsertSyncScopeID("workgroup");
   WavefrontSSID = CTX.getOrInsertSyncScopeID("wavefront");
+#if LLPC_BUILD_NPI
+  ClusterSSID = CTX.getOrInsertSyncScopeID("cluster");
+#endif /* LLPC_BUILD_NPI */
   SystemOneAddressSpaceSSID =
       CTX.getOrInsertSyncScopeID("one-as");
   AgentOneAddressSpaceSSID =
@@ -33,4 +36,7 @@ AMDGPUMachineModuleInfo::AMDGPUMachineModuleInfo(const MachineModuleInfo &MMI)
       CTX.getOrInsertSyncScopeID("wavefront-one-as");
   SingleThreadOneAddressSpaceSSID =
       CTX.getOrInsertSyncScopeID("singlethread-one-as");
+#if LLPC_BUILD_NPI
+  ClusterOneAddressSpaceSSID = CTX.getOrInsertSyncScopeID("cluster-one-as");
+#endif /* LLPC_BUILD_NPI */
 }

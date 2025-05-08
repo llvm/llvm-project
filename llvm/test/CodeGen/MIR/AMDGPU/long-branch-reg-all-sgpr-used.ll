@@ -9,6 +9,7 @@
 ; CHECK-NEXT:   maxKernArgAlign: 8
 ; CHECK-NEXT:   ldsSize:         0
 ; CHECK-NEXT:   gdsSize:         0
+; CHECK-NEXT:   laneSharedVGPRSize: 0
 ; CHECK-NEXT:   dynLDSAlign:     1
 ; CHECK-NEXT:   isEntryFunction: true
 ; CHECK-NEXT:   isChainFunction: false
@@ -42,6 +43,7 @@
 ; CHECK-NEXT:   scavengeFI:      '%stack.0'
 ; CHECK-NEXT:   vgprForAGPRCopy: ''
 ; CHECK-NEXT:   sgprForEXECCopy: '$sgpr100_sgpr101'
+; CHECK-NEXT:   needIdx0Restore: false
 ; CHECK-NEXT:   longBranchReservedReg: ''
 ; CHECK-NEXT:   hasInitWholeWave: false
 ; CHECK-NEXT:   scratchReservedForDynamicVGPRs: 0
@@ -278,6 +280,7 @@
 ; CHECK-NEXT:   maxKernArgAlign: 8
 ; CHECK-NEXT:   ldsSize:         0
 ; CHECK-NEXT:   gdsSize:         0
+; CHECK-NEXT:   laneSharedVGPRSize: 0
 ; CHECK-NEXT:   dynLDSAlign:     1
 ; CHECK-NEXT:   isEntryFunction: true
 ; CHECK-NEXT:   isChainFunction: false
@@ -311,6 +314,7 @@
 ; CHECK-NEXT:   scavengeFI:      '%stack.0'
 ; CHECK-NEXT:   vgprForAGPRCopy: ''
 ; CHECK-NEXT:   sgprForEXECCopy: '$sgpr100_sgpr101'
+; CHECK-NEXT:   needIdx0Restore: false
 ; CHECK-NEXT:   longBranchReservedReg: ''
 ; CHECK-NEXT:   hasInitWholeWave: false
 ; CHECK-NEXT:   scratchReservedForDynamicVGPRs: 0
@@ -534,7 +538,7 @@
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare align 4 ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #2
 
-attributes #0 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
+attributes #0 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-cluster-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-cluster-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-cluster-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
 attributes #1 = { nounwind }
 attributes #2 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 !0 = !{}

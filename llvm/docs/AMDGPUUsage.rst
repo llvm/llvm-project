@@ -540,6 +540,49 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
+     ``gfx1250``                 ``amdgcn``   APU                     - Architected                   *TBA*
+                                                                        flat
+                                                                        scratch                       .. TODO::
+                                                                      - Packed
+                                                                        work-item                       Add product
+                                                                        IDs                             names.
+                                                                      - Globally
+                                                                        Accessible
+                                                                        Scratch
+                                                                      - Workgroup
+                                                                        Clusters
+
+     ``gfx1251``                 ``amdgcn``   APU                     - Architected                   *TBA*
+                                                                        flat
+                                                                        scratch                       .. TODO::
+                                                                      - Packed
+                                                                        work-item                       Add product
+                                                                        IDs                             names.
+                                                                      - Globally
+                                                                        Accessible
+                                                                        Scratch
+                                                                      - Workgroup
+                                                                        Clusters
+
+     ``gfx1300``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
+                                                    - wavefrontsize64   flat
+                                                                        scratch                       .. TODO::
+                                                                      - Packed
+                                                                        work-item                       Add product
+                                                                        IDs                             names.
+     ``gfx1301``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
+                                                    - wavefrontsize64   flat
+                                                                        scratch                       .. TODO::
+                                                                      - Packed
+                                                                        work-item                       Add product
+                                                                        IDs                             names.
+     ``gfx1302``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
+                                                    - wavefrontsize64   flat
+                                                                        scratch                       .. TODO::
+                                                                      - Packed
+                                                                        work-item                       Add product
+                                                                        IDs                             names.
+
      =========== =============== ============ ===== ================= =============== =============== ======================
 
 Generic processors allow execution of a single code object on any of the processors that
@@ -648,6 +691,12 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
 
      ``gfx12-generic``    ``amdgcn``     - ``gfx1200``     - wavefrontsize64  - Architected     No restrictions.
                                          - ``gfx1201``     - cumode             flat scratch
+                                                                              - Packed
+                                                                                work-item
+                                                                                IDs
+
+     ``gfx12-5-generic``  ``amdgcn``     - ``gfx1250``                        - Architected     Functionally equivalent to
+                                         - ``gfx1251``                          flat scratch    gfx1250.
                                                                               - Packed
                                                                                 work-item
                                                                                 IDs
@@ -777,6 +826,10 @@ For example:
                                                   using dedicated instructions, but may not send the DEALLOC_VGPRS
                                                   message.
 
+     cu-stores       TODO                         On GFX12.5, controls whether ``scope:SCOPE_CU`` stores may be used.
+                                                  This is enabled by default.
+                                                  If disabled, all stores will be done at ``scope:SCOPE_SE`` or greater.
+
      =============== ============================ ==================================================
 
 .. _amdgpu-target-id:
@@ -874,6 +927,8 @@ supported for the ``amdgcn`` target.
      Buffer Fat Pointer                    7               N/A         N/A              160     0
      Buffer Resource                       8               N/A         V#               128     0x00000000000000000000000000000000
      Buffer Strided Pointer (experimental) 9               *TODO*
+     Lane-shared                           10              *TODO*      Shared VGPR      32      0xFFFFFFFF
+     Distributed                           11              *TODO*      DDS              32      0xFFFFFFFF
      Streamout Registers                   128             N/A         GS_REGS
      ===================================== =============== =========== ================ ======= ============================
 
@@ -971,11 +1026,13 @@ supported for the ``amdgcn`` target.
   access is not supported except by flat and scratch instructions in
   GFX9-GFX11.
 
-  Code that manipulates the stack values in other lanes of a wavefront,
-  such as by ``addrspacecast``-ing stack pointers to generic ones and taking offsets
-  that reach other lanes or by explicitly constructing the scratch buffer descriptor,
-  triggers undefined behavior when it modifies the scratch values of other lanes.
-  The compiler may assume that such modifications do not occur.
+  On targets without "Globally Accessible Scratch" (introduced in GFX125x), code that
+  manipulates the stack values in other lanes of a wavefront, such as by
+  ``addrspacecast``-ing stack pointers to generic ones and taking offsets that reach other
+  lanes or by explicitly constructing the scratch buffer descriptor, triggers undefined
+  behavior when it modifies the scratch values of other lanes. The compiler may assume
+  that such modifications do not occur for such targets.
+
   When using code object V5 ``LIBOMPTARGET_STACK_SIZE`` may be used to provide the
   private segment size in bytes, for cases where a dynamic stack is used.
 
@@ -1043,6 +1100,24 @@ supported for the ``amdgcn`` target.
   index and offset values are both 0. This prevents the address space cast from
   being rewritten away.
 
+**Lane-shared**
+  Lane-shared is only available when wave-group is enabled. Lane-shared is
+  similar to private, which is supported by hardware scratch memory.
+  Typical private memory is allocated per-wave, and lane-interleaved.
+  The lane-shared memory is allocated per-wave-group, and lane-interleaved.
+  Therefore multiple threads with the same lane-id within a wave-group can
+  access the same scratch-memory location, however, threads with different
+  land-id still access different scratch-memory locations. In order to
+  achieve truly-efficient lane-sharing, compiler needs to promote lane-shared
+  variables into wave-group-shared VGPR.
+
+**Distributed**
+  The distributed address space provides a way for all workgroups in a cluster
+  to access all the LDS space across all workgroups in the cluster as one large
+  shared memory space. Other workgroups' LDS is referred to using their
+  workgroup-ID. The 32-bit address consists of two fields: byte address within
+  LDS of one workgroup and logical workgroup ID within the cluster.
+
 **Streamout Registers**
   Dedicated registers used by the GS NGG Streamout Instructions. The register
   file is modelled as a memory in a distinct address space because it is indexed
@@ -1104,6 +1179,26 @@ is conservatively correct for OpenCL.
                              - ``wavefront`` and executed by a thread in the
                                same wavefront.
 
+     ``cluster``             Synchronizes with, and participates in modification
+                             and seq_cst total orderings with, other operations
+                             (except image operations) for all address spaces
+                             (except private, or generic that accesses private)
+                             provided the other operation's sync scope is:
+
+                             - ``system``, ``agent`` or ``cluster`` and
+                               executed by a thread on the same cluster.
+                             - ``workgroup`` and executed by a thread in the
+                               same work-group.
+                             - ``wavefront`` and executed by a thread in the
+                               same wavefront.
+
+                             On targets that do not support workgroup cluster
+                             launch mode, this behaves like ``agent`` scope instead.
+
+     ``workgroup-rts``       In addition to ``workgroup``, also establish
+                             orderings with operations that the raytracing unit
+                             performs on behalf of the thread.
+
      ``workgroup``           Synchronizes with, and participates in modification
                              and seq_cst total orderings with, other operations
                              (except image operations) for all address spaces
@@ -1135,6 +1230,9 @@ is conservatively correct for OpenCL.
                              operations within the same address space.
 
      ``agent-one-as``        Same as ``agent`` but only synchronizes with other
+                             operations within the same address space.
+
+     ``cluster-one-as``      Same as ``cluster`` but only synchronizes with other
                              operations within the same address space.
 
      ``workgroup-one-as``    Same as ``workgroup`` but only synchronizes with
@@ -1438,6 +1536,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    Returns a pair for the swapped registers. The first element of the return
                                                    corresponds to the swapped element of the first argument.
 
+=======
   llvm.amdgcn.mov.dpp                              The llvm.amdgcn.mov.dpp.`<type>` intrinsic represents the mov.dpp operation in AMDGPU.
                                                    This operation is being deprecated and can be replaced with llvm.amdgcn.update.dpp.
 
@@ -1450,6 +1549,29 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    Should be equivalent to:
                                                    - `v_mov_b32 <dest> <old>`
                                                    - `v_mov_b32 <dest> <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>`
+
+  :ref:`llvm.prefetch`                             Implemented on gfx125x, ignored on earlier targets.
+                                                   First argument is flat, global, or constant address space pointer.
+                                                   Any other address space is not supported.
+                                                   On gfx125x generates flat_prefetch_b8 or global_prefetch_b8 and brings data to GL2.
+                                                   Second argument is rw and currently ignored. Can be 0 or 1.
+                                                   Third argument is locality, 0-3. Translates to memory scope:
+                                                     0 - SCOPE_SYS
+                                                     1 - SCOPE_DEV
+                                                     2 - SCOPE_SE
+                                                     3 - SCOPE_SE
+                                                   Note that SCOPE_CU is not generated and not safe on an invalid address.
+                                                   Fourth argument is cache type:
+                                                     0 - Instruction cache, currently ignored and no code is generated.
+                                                     1 - Data cache.
+                                                   Instruction cache prefetches are unsafe on invalid address.
+
+  llvm.amdgcn.wavegroup.id                         In a wavegroup-enabled dispatch, return the 0-based ID of the
+                                                   wavegroup within the workgroup. Otherwise the return value is
+                                                   undefined.
+
+  llvm.amdgcn.wave.id.in.wavegroup                 In a wavegroup-enabled dispatch, return the 0-based ID of the wave
+                                                   within the wavegroup. Otherwise the return value is undefined.
 
   ==============================================   ==========================================================
 
@@ -1556,6 +1678,23 @@ and
 
   !0 = !{}
 
+'``amdgpu.cfs``' Metadata
+--------------------------
+
+Set the cache fill size (CFS) field in VMEM instructions for architectures
+that support it. Can be used on memory instructions (e.g. load) and memory
+intrinsics (e.g. llvm.amdgcn.image.load.1d).
+
+The default value for the CFS field is 0 (256 bytes).
+
+Valid arguments for CFS Metadata are:
+  !{i32 1}  :  CFS_128B
+  !{i32 2}  :  CFS_64B
+  !{i32 3}  :  CFS_32B
+
+The field indicates how much data is fetched on a cache miss. It is only supported
+on GFX13. GFX13 only honors it for load and atomic operations. GFX13 does not
+support a 32-byte fetch size so it treats CFS_32B the same as CFS_64B.
 
 LLVM IR Attributes
 ==================
@@ -1628,6 +1767,15 @@ The AMDGPU backend supports the following LLVM IR attributes.
 
      "amdgpu-no-workgroup-id-z"                       The same as amdgpu-no-workitem-id-x, except for the
                                                       llvm.amdgcn.workgroup.id.z intrinsic.
+
+     "amdgpu-no-cluster-id-x"                         The same as amdgpu-no-workitem-id-x, except for the
+                                                      llvm.amdgcn.cluster.id.x intrinsic.
+
+     "amdgpu-no-cluster-id-y"                         The same as amdgpu-no-workitem-id-x, except for the
+                                                      llvm.amdgcn.cluster.id.y intrinsic.
+
+     "amdgpu-no-cluster-id-z"                         The same as amdgpu-no-workitem-id-x, except for the
+                                                      llvm.amdgcn.cluster.id.z intrinsic.
 
      "amdgpu-no-dispatch-ptr"                         The same as amdgpu-no-workitem-id-x, except for the
                                                       llvm.amdgcn.dispatch.ptr intrinsic.
@@ -1756,6 +1904,17 @@ The AMDGPU backend supports the following LLVM IR attributes.
 
      "amdgpu-promote-alloca-to-vector-vgpr-ratio"     Ratio of VGPRs to budget for promoting alloca to vectors.
 
+     "amdgpu-cluster-dims"="x,y,z"                    Specify the cluster workgroup dimensions. A value of "0,0,0" indicates that
+                                                      cluster is disabled. A value of "1024,1024,1024" indicates that cluster is enabled,
+                                                      but the dimensions cannot be determined at compile time. Any other value explicitly
+                                                      specifies the cluster dimensions.
+
+                                                      This is only relevant on targets with cluster support.
+
+     "amdgpu-wavegroup-enable"                        GFX13+ only. Indicate that a kernel uses wavegroup launch. Requires
+                                                     `!reqd_work_group_size` metadata on the kernel function.
+
+     "amdgpu-wavegroup-rank-function"                 GFX13+ only. Indicate it is a rank-specialized function for wavegroup.
      ================================================ ==========================================================
 
 Calling Conventions
@@ -2264,14 +2423,16 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX1101``          0x046      ``gfx1101``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1102``          0x047      ``gfx1102``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1200``          0x048      ``gfx1200``
-     *reserved*                                 0x049      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1250``          0x049      ``gfx1250``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1151``          0x04a      ``gfx1151``
      *reserved*                                 0x04b      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX942``           0x04c      ``gfx942``
      *reserved*                                 0x04d      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX1201``          0x04e      ``gfx1201``
      ``EF_AMDGPU_MACH_AMDGCN_GFX950``           0x04f      ``gfx950``
-     *reserved*                                 0x050      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1300``          0x050      ``gfx1300``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1301``          0x056      ``gfx1301``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1302``          0x057      ``gfx1302``
      ``EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC``     0x051      ``gfx9-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC``  0x052      ``gfx10-1-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC``  0x053      ``gfx10-3-generic``
@@ -2283,6 +2444,8 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC``    0x059      ``gfx12-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1170``          0x05d      ``gfx1170``
      ``EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC``   0x05f      ``gfx9-4-generic``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1251``          0x05a      ``gfx1251``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX12_5_GENERIC``  0x05b      ``gfx12-5-generic``
      ========================================== ========== =============================
 
 Sections
@@ -2862,12 +3025,9 @@ mapping.
    1088-1129      SGPR64-SGPR105    32       Scalar General Purpose Registers.
    1130-1535      *Reserved*                 *Reserved for future Scalar
                                              General Purpose Registers.*
-   1536-1791      VGPR0-VGPR255     32*32    Vector General Purpose Registers
+   1536-2047      VGPR0-VGPR511     32*32    Vector General Purpose Registers
                                              when executing in wavefront 32
                                              mode.
-   1792-2047      *Reserved*                 *Reserved for future Vector
-                                             General Purpose Registers when
-                                             executing in wavefront 32 mode.*
    2048-2303      AGPR0-AGPR255     32*32    Vector Accumulation Registers
                                              when executing in wavefront 32
                                              mode.
@@ -2886,6 +3046,9 @@ mapping.
    3328-3583      *Reserved*                 *Reserved for future Vector
                                              Accumulation Registers when
                                              executing in wavefront 64 mode.*
+   3584-4095      VGPR512-VGPR1023  32*32    Second Block of Vector General
+                                             Purpose Registers When executing
+                                             in wavefront 32 mode
    ============== ================= ======== ==================================
 
 The vector registers are represented as the full size for the wavefront. They
@@ -4753,7 +4916,65 @@ Code object V5 metadata is the same as
 
      ====================== ============== ========= ================================
 
-..
+.. _amdgpu-amdhsa-code-object-metadata-v6:
+
+Code Object V6 Metadata
++++++++++++++++++++++++
+
+Code object V6 metadata is the same as
+:ref:`amdgpu-amdhsa-code-object-metadata-v5` with the changes defined in table
+:ref:`amdgpu-amdhsa-code-object-kernel-metadata-map-table-v6`.
+
+    .. table:: AMDHSA Code Object V6 Kernel Metadata Map Additions
+     :name: amdgpu-amdhsa-code-object-kernel-metadata-map-table-v6
+
+     ============================= ============= ========== =======================================
+     String Key                    Value Type     Required? Description
+     ============================= ============= ========== =======================================
+     ".cluster_dims"               sequence of              The dimension of the cluster.
+                                   3 integers
+     ============================= ============= ========== =======================================
+
+.. _amdgpu-amdhsa-code-object-metadata-v7:
+
+Code Object V7 Metadata
++++++++++++++++++++++++
+
+Code object V7 metadata is the same as :ref:`amdgpu-amdhsa-code-object-metadata-v6`
+with the changes defined in table
+:ref:`amdgpu-amdhsa-code-object-kernel-metadata-map-table-v7`.
+
+    .. table:: AMDHSA Code Object V7 Kernel Metadata Map Additions
+     :name: amdgpu-amdhsa-code-object-kernel-metadata-map-table-v7
+
+     ================================ ========== ========== =======================================
+     String Key                       Value Type Required?  Description
+     ================================ ========== ========== =======================================
+     ".laneshared_segment_fixed_size" integer               (GFX13+) The amount of fixed lane-shared
+                                                            address space memory for a lane in bytes.
+                                                            A non-zero value requires enable_wavegroup
+                                                            to be set to true.
+     ".enable_wavegroup"              boolean               (GFX13+) Whether wavegroup launch is enabled.
+                                                            Defaults to false.
+     ".spatial_cluster"               boolean               (GFX13+) Whether the kernel should be launched
+                                                            as a spatial cluster.
+
+                                                            Defaults to false.
+
+                                                            Setting this to true requires that "enable_wavegroup"
+                                                            is also set to true and that "cluster_dims"
+                                                            is one-dimensional (Y and Z components must
+                                                            both be 1).
+     ".asymmetric_cluster_clamp"      boolean               (GFX13+) Clamp the cluster size to the size
+                                                            of the shader engine. On hardware with
+                                                            asymmetrically sized shader engines,
+                                                            this allows launching clusters that fill
+                                                            every shader engine.
+
+                                                            Defaults to false.
+
+                                                            Can only be used with 1D cluster sizes.
+     ================================ ========== ========== =======================================
 
 Kernel Dispatch
 ~~~~~~~~~~~~~~~
@@ -5008,8 +5229,17 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      entry point instruction
                                                      which must be 256 byte
                                                      aligned.
-     351:192 20                                      Reserved, must be 0.
+     319:192 16                                      Reserved, must be 0.
              bytes
+     351:320 4 bytes LANESHARED_SEGMENT_FIXED_SIZE   GFX6-GFX12
+                                                       Reserved, must be 0.
+                                                     GFX13
+                                                       The amount of fixed
+                                                       lane-shared memory required
+                                                       per wavegroup.
+
+                                                       Must be 0 if ENABLE_WAVEGROUP
+                                                       is not set.
      383:352 4 bytes COMPUTE_PGM_RSRC3               GFX6-GFX9
                                                        Reserved, must be 0.
                                                      GFX90A, GFX942
@@ -5028,28 +5258,28 @@ The fields used by CP for code objects before V3 also match those specified in
                                                        configuration
                                                        register. See
                                                        :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx11-table`.
-                                                     GFX12
+                                                     GFX12-GFX13
                                                        Compute Shader (CS)
                                                        program settings used by
                                                        CP to set up
                                                        ``COMPUTE_PGM_RSRC3``
                                                        configuration
                                                        register. See
-                                                       :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx12-table`.
+                                                       :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx12-gfx13-table`.
      415:384 4 bytes COMPUTE_PGM_RSRC1               Compute Shader (CS)
                                                      program settings used by
                                                      CP to set up
                                                      ``COMPUTE_PGM_RSRC1``
                                                      configuration
                                                      register. See
-                                                     :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+                                                     :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx13-table`.
      447:416 4 bytes COMPUTE_PGM_RSRC2               Compute Shader (CS)
                                                      program settings used by
                                                      CP to set up
                                                      ``COMPUTE_PGM_RSRC2``
                                                      configuration
                                                      register. See
-                                                     :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+                                                     :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx13-table`.
      458:448 7 bits  *See separate bits below.*      Enable the setup of the
                                                      SGPR user data registers
                                                      (see
@@ -5080,7 +5310,9 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      and must be 0,
      >454    1 bit   ENABLE_SGPR_PRIVATE_SEGMENT
                      _SIZE
-     457:455 3 bits                                  Reserved, must be 0.
+     456:455 2 bits                                  Reserved, must be 0.
+     457     1 bit   USES_CU_STORES                  GFX1250+: Whether the ``cu-stores`` target attribute is enabled.
+                                                     If 0, then all stores are ``SCOPE_SE`` or higher.
      458     1 bit   ENABLE_WAVEFRONT_SIZE32         GFX6-GFX9
                                                        Reserved, must be 0.
                                                      GFX10-GFX11
@@ -5094,7 +5326,30 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      dynamically sized stack.
                                                      This is only set in code
                                                      object v5 and later.
-     463:460 4 bits                                  Reserved, must be 0.
+     460     1 bit   ENABLE_WAVEGROUP                GFX6-GFX12
+                                                       Reserved, must be 0.
+                                                     GFX13+
+                                                       If set to 1, execute the
+                                                       kernel in wavegroup
+                                                       launch mode.
+     461     1 bit   ENABLE_SPATIAL_CLUSTER          GFX6-GFX12
+                                                        Reserved, must be 0.
+                                                     GFX13+
+                                                        If set to 1, execute the kernel
+                                                        in spatial cluster launch mode.
+                                                        In this case, ENABLE_WAVEGROUP
+                                                        must also be set to 1.
+                                                        Can only be used with 1D cluster sizes.
+     462     1 bit                                   Reserved, must be 0.
+     463     1 bit   ENABLE_ASYMMETRIC_CLUSTER_CLAMP GFX6-GFX12
+                                                        Reserved, must be 0.
+                                                     GFX13+
+                                                        Is set to 1, clamp the cluster size to the size
+                                                        of the shader engine. On hardware with
+                                                        asymmetrically sized shader engines,
+                                                        this allows launching clusters that fill
+                                                        every shader engine.
+                                                        Can only be used with 1D cluster sizes.
      470:464 7 bits  KERNARG_PRELOAD_SPEC_LENGTH     GFX6-GFX9
                                                        - Reserved, must be 0.
                                                      GFX90A, GFX942
@@ -5117,16 +5372,17 @@ The fields used by CP for code objects before V3 also match those specified in
 
 ..
 
-  .. table:: compute_pgm_rsrc1 for GFX6-GFX12
-     :name: amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table
+  .. table:: compute_pgm_rsrc1 for GFX6-GFX13
+     :name: amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx13-table
 
      ======= ======= =============================== ===========================================================================
      Bits    Size    Field Name                      Description
      ======= ======= =============================== ===========================================================================
-     5:0     6 bits  GRANULATED_WORKITEM_VGPR_COUNT  Number of vector register
-                                                     blocks used by each work-item;
-                                                     granularity is device
-                                                     specific:
+     5:0     6 bits  GRANULATED_WORKITEM_VGPR_COUNT  GFX6-GFX12
+                                                       Number of vector register
+                                                       blocks used by each work-item;
+                                                       granularity is device
+                                                       specific:
 
                                                      GFX6-GFX9
                                                        - vgprs_used 0..256
@@ -5142,6 +5398,9 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      GFX10-GFX12 (wavefront size 32)
                                                        - max_vgpr 1..256
                                                        - max(0, ceil(vgprs_used / 8) - 1)
+                                                     GFX125X (wavefront size 32)
+                                                       - max_vgpr 1..1024
+                                                       - max(0, ceil(vgprs_used / 16) - 1)
 
                                                      Where vgprs_used is defined
                                                      as the highest VGPR number
@@ -5162,10 +5421,22 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      `.amdhsa_next_free_vgpr`
                                                      nested directive (see
                                                      :ref:`amdhsa-kernel-directives-table`).
-     9:6     4 bits  GRANULATED_WAVEFRONT_SGPR_COUNT Number of scalar register
-                                                     blocks used by a wavefront;
-                                                     granularity is device
-                                                     specific:
+     6:0     7 bits  GRANULATED_WORKITEM_VGPR_COUNT  GFX13
+                                                       Number of vector register
+                                                       blocks used by each work-item.
+
+                                                     Wavefront size 32
+                                                       - vgprs_used 0..1024
+                                                       - max(0, ceil(vgprs_used / 8) - 1)
+
+                                                     Wavefront size 64
+                                                       - vgprs_used 0..512
+                                                       - max(0, ceil(vgprs_used / 4) - 1)
+     9:6     4 bits  GRANULATED_WAVEFRONT_SGPR_COUNT GFX6-GFX12
+                                                       Number of scalar register
+                                                       blocks used by a wavefront;
+                                                       granularity is device
+                                                       specific:
 
                                                      GFX6-GFX8
                                                        - sgprs_used 0..112
@@ -5218,6 +5489,8 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      and `.amdhsa_reserve_*`
                                                      nested directives (see
                                                      :ref:`amdhsa-kernel-directives-table`).
+     9:7     3 bits  RESERVED                        GFX13
+                                                       Reserved, must be 0.
      11:10   2 bits  PRIORITY                        Must be 0.
 
                                                      Start executing wavefront
@@ -5369,7 +5642,21 @@ The fields used by CP for code objects before V3 also match those specified in
 
                                                        Used by CP to set up
                                                        ``COMPUTE_PGM_RSRC1.FP16_OVFL``.
-     28:27   2 bits                                  Reserved, must be 0.
+     27      1 bit    RESERVED                       GFX6-GFX120*
+                                                       Reserved, must be 0.
+                      FLAT_SCRATCH_IS_NV             GFX125*
+                                                       0 - Use the NV ISA as indication
+                                                       that scratch is NV. 1 - Force
+                                                       scratch to NV = 1, even if
+                                                       ISA.NV == 0 if the address falls
+                                                       into scratch space (not global).
+                                                       This allows global.NV = 0 and
+                                                       scratch.NV = 1 for flat ops. Other
+                                                       threads use the ISA bit value.
+
+                                                       Used by CP to set up
+                                                       ``COMPUTE_PGM_RSRC1.FLAT_SCRATCH_IS_NV``.
+     28      1 bit    RESERVED                       Reserved, must be 0.
      29      1 bit    WGP_MODE                       GFX6-GFX9
                                                        Reserved, must be 0.
                                                      GFX10-GFX12
@@ -5421,8 +5708,8 @@ The fields used by CP for code objects before V3 also match those specified in
 
 ..
 
-  .. table:: compute_pgm_rsrc2 for GFX6-GFX12
-     :name: amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table
+  .. table:: compute_pgm_rsrc2 for GFX6-GFX13
+     :name: amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx13-table
 
      ======= ======= =============================== ===========================================================================
      Bits    Size    Field Name                      Description
@@ -5451,15 +5738,16 @@ The fields used by CP for code objects before V3 also match those specified in
 
                                                      Used by CP to set up
                                                      ``COMPUTE_PGM_RSRC2.SCRATCH_EN``.
-     5:1     5 bits  USER_SGPR_COUNT                 The total number of SGPR
-                                                     user data
-                                                     registers requested. This
-                                                     number must be greater than
-                                                     or equal to the number of user
-                                                     data registers enabled.
+     5:1     5 bits  USER_SGPR_COUNT                 GFX6-GFX120*
+                                                       The total number of SGPR
+                                                       user data
+                                                       registers requested. This
+                                                       number must be greater than
+                                                       or equal to the number of user
+                                                       data registers enabled.
 
-                                                     Used by CP to set up
-                                                     ``COMPUTE_PGM_RSRC2.USER_SGPR``.
+                                                       Used by CP to set up
+                                                       ``COMPUTE_PGM_RSRC2.USER_SGPR``.
      6       1 bit   ENABLE_TRAP_HANDLER             GFX6-GFX11
                                                        Must be 0.
 
@@ -5468,7 +5756,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                        which is set by the CP if
                                                        the runtime has installed a
                                                        trap handler.
-                     ENABLE_DYNAMIC_VGPR             GFX12
+                     ENABLE_DYNAMIC_VGPR             GFX120*
                                                        Enables dynamic VGPR mode, where
                                                        each wave allocates one VGPR chunk
                                                        at launch and can request for
@@ -5477,6 +5765,16 @@ The fields used by CP for code objects before V3 also match those specified in
 
                                                        Used by CP to set up
                                                        ``COMPUTE_PGM_RSRC2.DYNAMIC_VGPR``.
+     6:1     6 bits  USER_SGPR_COUNT                 GFX125*-GFX13
+                                                       The total number of SGPR
+                                                       user data
+                                                       registers requested. This
+                                                       number must be greater than
+                                                       or equal to the number of user
+                                                       data registers enabled.
+
+                                                       Used by CP to set up
+                                                       ``COMPUTE_PGM_RSRC2.USER_SGPR``.
      7       1 bit   ENABLE_SGPR_WORKGROUP_ID_X      Enable the setup of the
                                                      system SGPR register for
                                                      the work-group id in the X
@@ -5569,10 +5867,12 @@ The fields used by CP for code objects before V3 also match those specified in
 
                                                      GFX6
                                                        roundup(lds-size / (64 * 4))
-                                                     GFX7-GFX11
+                                                     GFX7-GFX12
                                                        roundup(lds-size / (128 * 4))
                                                      GFX950
                                                        roundup(lds-size / (320 * 4))
+                                                     GFX125*-GFX13
+                                                       roundup(lds-size / (256 * 4))
 
      24      1 bit   ENABLE_EXCEPTION_IEEE_754_FP    Wavefront starts execution
                      _INVALID_OPERATION              with specified exceptions
@@ -5598,7 +5898,14 @@ The fields used by CP for code objects before V3 also match those specified in
      30      1 bit   ENABLE_EXCEPTION_INT_DIVIDE_BY  Integer Division by Zero
                      _ZERO                           (rcp_iflag_f32 instruction
                                                      only)
-     31      1 bit   RESERVED                        Reserved, must be 0.
+     31      1 bit   RESERVED                        GFX6-GFX12
+                                                       Reserved, must be 0.
+                     ENABLE_DYNAMIC_VGPR             GFX13
+                                                       Enables dynamic VGPR mode, where each wave allocates one VGPR chunk
+                                                       at launch and can request for additional space to use during
+                                                       execution in SQ.
+
+                                                       Used by CP to set up ``COMPUTE_PGM_RSRC2.DYNAMIC_VGPR``.
      32      **Total size 4 bytes.**
      ======= ===================================================================================================================
 
@@ -5679,8 +5986,8 @@ The fields used by CP for code objects before V3 also match those specified in
 
 ..
 
-  .. table:: compute_pgm_rsrc3 for GFX12
-     :name: amdgpu-amdhsa-compute_pgm_rsrc3-gfx12-table
+  .. table:: compute_pgm_rsrc3 for GFX12-GFX13
+     :name: amdgpu-amdhsa-compute_pgm_rsrc3-gfx12-gfx13-table
 
      ======= ======= =============================== ===========================================================================
      Bits    Size    Field Name                      Description
@@ -5691,7 +5998,30 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      with a granularity of 128 bytes.
      12      1 bit   RESERVED                        Reserved, must be 0.
      13      1 bit   GLG_EN                          If 1, group launch guarantee will be enabled for this dispatch
-     30:14   17 bits RESERVED                        Reserved, must be 0.
+     16:14   3 bits  RESERVED                        GFX120*
+                                                       Reserved, must be 0.
+                     NAMED_BAR_CNT                   GFX125*-GFX13
+                                                       Number of named barriers to alloc for each workgroup, in granularity of
+                                                       4. Range is from 0-4 allocating 0, 4, 8, 12, 16.
+     17      1 bit   RESERVED                        GFX120*, GFX13
+                                                       Reserved, must be 0.
+                     ENABLE_DYNAMIC_VGPR             GFX125*
+                                                       Enables dynamic VGPR mode, where each wave allocates one VGPR chunk
+                                                       at launch and can request for additional space to use during
+                                                       execution in SQ.
+
+                                                       Used by CP to set up ``COMPUTE_PGM_RSRC3.DYNAMIC_VGPR``.
+     20:18   3 bits  RESERVED                        GFX120*, GFX13 (TODO-GFX13: Verify)
+                                                       Reserved, must be 0.
+                     TCP_SPLIT                       GFX125*
+                                                       Desired LDS/VC split of TCP. 0: no preference 1: LDS=0, VC=448kB
+                                                       2: LDS=64kB, VC=384kB 3: LDS=128kB, VC=320kB 4: LDS=192kB, VC=256kB
+                                                       5: LDS=256kB, VC=192kB 6: LDS=320kB, VC=128kB 7: LDS=384kB, VC=64kB
+     21      1 bit   RESERVED                        GFX120*
+                                                       Reserved, must be 0.
+                     ENABLE_DIDT_THROTTLE            GFX125*-GFX13
+                                                       Enable DIDT throttling for all ACE pipes
+     30:22   9 bits  RESERVED                        Reserved, must be 0.
      31      1 bit   IMAGE_OP                        If 1, the kernel execution contains image instructions. If executed as
                                                      part of a graphics pipeline, image read instructions will stall waiting
                                                      for any necessary ``WAIT_SYNC`` fence to be performed in order to
@@ -6056,6 +6386,9 @@ a suitably aligned offset above this reserved area. If a frame pointer is not
 required then all uses of the frame pointer are replaced with immediate ``0``
 offsets.
 
+In wavegroup kernel dispatches, the kernel prolog sets the frame pointer to
+``laneshared_segment_size + wave_id_in_wavegroup * private_segment_size``.
+
 .. _amdgpu-amdhsa-kernel-prolog-flat-scratch:
 
 Flat Scratch
@@ -6144,7 +6477,7 @@ There are different methods used for initializing flat scratch:
   specifies *Architected flat scratch*:
 
   If ENABLE_PRIVATE_SEGMENT is enabled in
-  :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table` then the FLAT_SCRATCH
+  :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx13-table` then the FLAT_SCRATCH
   register pair will be initialized to the 64-bit address of the base of scratch
   backing memory being managed by SPI for the queue executing the kernel
   dispatch plus the value of the wave's Scratch Wavefront Offset for use as the
@@ -6322,6 +6655,7 @@ following sections:
 * :ref:`amdgpu-amdhsa-memory-model-gfx942`
 * :ref:`amdgpu-amdhsa-memory-model-gfx10-gfx11`
 * :ref:`amdgpu-amdhsa-memory-model-gfx12`
+* :ref:`amdgpu-amdhsa-memory-model-gfx125x`
 
 .. _amdgpu-fence-as:
 
@@ -6349,6 +6683,173 @@ The AMDGPU backend recognizes the following tags on fences:
   code generation. Optimizations are free to drop the tags to allow for
   better code optimization, at the cost of synchronizing additional address
   spaces.
+
+Ray Tracing
++++++++++++
+
+Some AMD GPUs have dedicated hardware to accelerate tracing a ray against a
+`Bounding Volume Hierarchy (BVH) <https://en.wikipedia.org/wiki/Bounding_volume_hierarchy>`_.
+
+In GFX10.3-GFX12, there is a family of instructions that intersect a ray
+against one node of a BVH (``image_bvh*``).
+From the perspective of the memory model, these instructions behave like regular,
+non-atomic loads.
+
+In GFX13, traversal is accelerated by a fixed function *raytracing units* built
+into each WGP.
+The raytracing unit traverses the BVH autonomously and asynchronously
+while the shader continues to execute instructions to implement programmable
+aspects of BVH traversal in coordination with the raytracing unit.
+
+The raytracing unit communicates with user-space software in three ways:
+
+* It services direct requests made by the shader via the ``rts_*`` family of
+  instructions and responds to them through VGPRs.
+* It loads BVH data from global memory.
+* It loads and stores information about the state of BVH traversal from and into
+  a buffer in global memory called the *hit buffer*.
+
+The raytracing unit's accesses to global memory are not program-ordered against
+instructions executed by the shader.
+
+.. note::
+
+  This is true even for the sub-family of instructions that read BVH data
+  directly, e.g. ``rts_read_vertex``. This matters in the unusual case where
+  a shader program wants to write to a BVH node using global memory stores and
+  then have the raytracing unit read from it via this sub-family of instructions.
+
+The ``rts_*`` family of instructions fill a role similar to relaxed atomics
+in that they can be combined with fences to establish an ordering between the
+shader program's memory accesses and those of the raytracing unit, as explained
+in the following.
+
+Instructions from the ``rts_*`` family are executed in three phases:
+
+1. The instruction is *issued* to the raytracing unit along with any operand data.
+2. Synchronous operations associated to the instruction are performed inside the raytracing unit.
+3. A *completion signal* is sent back to the shader together with any data that is
+   written to VGPRs.
+
+Additionally, the raytracing unit typically performs asynchronous operations associated to
+these instructions. For example, the raytracing unit typically continues to perform
+BVH traversal associated to an ``rts_trace_ray*`` instruction long after sending that
+instruction's completion signal back to the shader.
+
+As such, we treat memory accesses performed by the raytracing unit not as "part of"
+an instruction but as happening asynchronously. Nevertheless, every memory access
+performed by the raytracing unit is *associated with* one or more ``rts_*`` instructions.
+For example:
+
+* Loads of BVH data in the course of one traversal are associated with the
+  ``rts_trace_ray*`` instruction that starts that traversal and the ``rts_read_result*``
+  instruction(s) that read state of that traversal.
+
+  * ``rts_read_result*`` is commonly used multiple times for a single traversal.
+    A raytracing unit load ``L`` of encoded BVH data ``D`` is only associated with
+    ``rts_read_result*`` instructions which read the state of traversal from after ``D``
+    has been traversed.
+
+* Accesses to the hit buffer in the course of one traversal are similarly associated with
+  ``rts_trace_ray*`` and ``rts_read_result*`` instructions and are also associated with the
+  ``rts_update_ray`` instruction for hits that are written after the state update.
+
+Memory accesses by the raytracing unit can occur *before-completion-of* or *after-issue-of*
+the associated ``rts_*`` instruction(s).
+
+  .. table:: Raytracing unit memory accesses
+     :name: raytracing-unit-memory-accesses
+
+    +--------------+-------------------+--------------------------------------+
+    | Memory       | Order             | Instruction / Intrinsic              |
+    +==============+===================+======================================+
+    | * Hit Buffer | after-issue       | * ``rts_trace_ray*``                 |
+    |              |                   | * ``rts_update_ray``                 |
+    +--------------+-------------------+--------------------------------------+
+    | * BVH        | no ordering       | * ``rts_trace_ray*``                 |
+    |              |                   | * ``rts_update_ray``                 |
+    +--------------+-------------------+--------------------------------------+
+    | * Hit Buffer | before-completion | * ``rts_read_result*``               |
+    | * BVH        |                   | * ``rts_ray_save``                   |
+    +--------------+-------------------+--------------------------------------+
+    | * BVH        | before-completion | * ``rts_read_vertex``                |
+    +--------------+-------------------+--------------------------------------+
+    | * BVH        | after-issue       | * ``llvm.amdgcn.rts.invalidate.bvh`` |
+    +--------------+-------------------+--------------------------------------+
+
+.. note::
+
+  ``rts_flush`` and ``rts_ray_restore`` instructions by themselves do not cause
+  the raytracing unit to access global memory.
+
+  For more detail on the ordering of loads of BVH data, see
+  :ref:`amdgpu-bvh-invalidation`.
+
+Let ``X`` be a memory access by the raytracing unit that occurs after-issue-of
+an associated ``rts_*`` instruction ``R``. If there is a release fence ``F``
+before ``R`` in program order, then all memory accesses that are in program order
+before ``F`` happen-before ``X``.
+
+Let ``X`` be a memory access by the raytracing unit that occurs before-completion-of
+an associated ``rts_*`` instruction ``R``. If there is an acquire fence ``F``
+after ``R`` in program order, then ``X`` happens-before all memory accesses that
+are in program order after ``F``.
+
+The above two rules apply if the scope of the relevant fence ``F`` is at least
+``workgroup-rts``.
+
+Example
+#######
+
+It is common to load from the hit buffer after an ``rts_read_result*`` and
+then update the traversal state with ``rts_update_ray``. Fences must be used
+to safely synchronize accesses to the hit buffer, for example as follows:
+
+::
+
+      %r = call i64 @llvm.amdgcn.rts.read.result.all.stop()
+      fence syncscope("workgroup-rts") acquire
+      ...
+      %x = load i32, ptr addrspace(1) %hit_buffer_ptr
+      ...
+      fence syncscope("workgroup-rts") release
+      call void @llvm.amdgcn.rts.update.ray(...)
+
+.. _amdgpu-bvh-invalidation
+
+BVH invalidation
+################
+
+The raytracing unit has its own cache for BVH data which we don't consider to
+be part of the global memory cache hierarchy. LLVM fences never invalidate this cache
+on purpose.
+
+Therefore, loads of BVH data are *not* considered to occur after-issue-of
+their associated ``rts_*`` instruction. Put differently, an ``rts_*``
+instruction may hit in the raytracing unit's internal cache. In that case,
+the load of BVH data from global memory happened "before" the issue of the
+instruction.
+
+However, a program may still want to store BVH data in memory and then access
+that BVH data via the raytracing unit. Such a program must explicitly invalidate the
+cache using the ``llvm.amdgcn.rts.invalidate.bvh`` intrinsic.
+
+Let ``I`` be a use of this intrinsic. The loads of BVH data associated with
+``rts_*`` instructions that are after ``I`` in program order occur after-issue-of ``I``.
+
+Therefore, a sequence like the following in LLVM IR can be used to safely
+synchronize accesses to the BVH:
+
+::
+
+      store i32 %x, ptr %bvh_node_ptr
+      fence syncscope("workgroup-rts") release
+      call void @llvm.amdgcn.rts.invalidate.bvh()
+      call void @llvm.amdgcn.rts.trace.ray(...)
+
+If a program wants to safely modify BVH data after a traversal has finished
+or after ``rts_read_vertex`` has been used, a corresponding acquire fence
+is sufficient.
 
 .. _amdgpu-amdhsa-memory-model-gfx6-gfx9:
 
@@ -12357,7 +12858,7 @@ Wavefronts are executed in native mode with in-order reporting of loads and
 sample instructions. In this mode vmcnt reports completion of load, atomic with
 return and sample instructions in order, and the vscnt reports the completion of
 store and atomic without return in order. See ``MEM_ORDERED`` field in
-:ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+:ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx13-table`.
 
 Wavefronts can be executed in WGP or CU wavefront execution mode:
 
@@ -12373,7 +12874,7 @@ Wavefronts can be executed in WGP or CU wavefront execution mode:
   work-group synchronization.
 
 See ``WGP_MODE`` field in
-:ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table` and
+:ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx13-table` and
 :ref:`amdgpu-target-features`.
 
 The code sequences used to implement the memory model for GFX10-GFX11 are defined in
@@ -16445,6 +16946,117 @@ the instruction in the code sequence that references the table.
                                - system                  for OpenCL.*
      ============ ============ ============== ========== ================================
 
+.. _amdgpu-amdhsa-memory-model-gfx125x:
+
+Memory Model GFX125x
+++++++++++++++++++++++++
+
+For GFX125x:
+
+* Each agent has multiple Active Interposer Dies (AID).
+* Each AID has a GL2 cache, and supports multiple Accelerator Compute Die (XCD).
+* Each XCD has multiple shader engines (SE).
+* Each SE has multiple Compute Units (CU).
+* Each CU has 4 SIMD32s that execute wavefronts.
+* The wavefronts for a single work-group are executed in the same CU.
+* Each CU has a CU$ (CU Cache) which is split between
+
+  * LDS memory
+  * Vector L0 cache (GL0/vLO).
+
+* The CU$ has two ports, each with a distinct addresser. Each port is used by
+  one SIMD32 pair, but the CU$ memory is shared between all 4 SIMD32s.
+* The vector memory operations are performed as wavefront wide operations.
+  Vector memory operations are divided in different types.
+  The types of vector memory operations
+  (and their associated ``s_wait`` instructions) are:
+
+  * LDS: ``s_wait_dscnt``
+  * Load (global, scratch, flat, buffer): ``s_wait_loadcnt``
+  * Store (global, scratch, flat, buffer): ``s_wait_storecnt``
+  * Async: ``s_wait_asynccnt``
+  * Tensor: ``s_wait_tensorcnt``
+
+* Vector and scalar memory instructions contain a ``SCOPE`` field with values
+  corresponding to each cache level. The ``SCOPE`` determines whether a cache
+  can complete an operation locally or whether it needs to forward the operation
+  to the next cache level. The ``SCOPE`` values are:
+
+  * ``SCOPE_CU``: Compute Unit
+  * ``SCOPE_SE``: Shader Engine
+  * ``SCOPE_DEV``: Device/Agent
+  * ``SCOPE_SYS``: System
+
+* When a memory operation with a given ``SCOPE`` reaches a cache with a smaller
+  ``SCOPE`` value, it is forwarded to the next level of cache.
+* When a memory operation with a given ``SCOPE`` reaches a cache with a ``SCOPE``
+  value greater than or equal to its own, the operation can proceed:
+
+  * Reads can hit into the cache
+  * Writes can happen in this cache and the transaction is acknowledged
+    from this level of cache.
+  * RMW operations can be done locally.
+
+* ``global_inv``, ``global_wb`` and ``global_wbinv`` instructions are used to
+  invalidate, write-back and write-back+invalidate caches. The affected
+  cache(s) are controlled by the ``SCOPE:`` of the instruction. Only caches whose
+  scope is strictly smaller than the instruction's are affected.
+
+  * ``global_inv`` invalidates the data in affected caches so that subsequent reads
+    will re-read from the next level in the cache hierarchy.
+    The invalidation requests cannot be reordered with pending or upcoming
+    memory operations.
+  * ``global_wb``  flushes the dirty data in affected caches to the next level in
+    the cache hierarchy. This instruction additionally ensures previous
+    memory operation done at a lower scope level have reached the desired
+    ``SCOPE:``.
+
+.. note::
+
+  This section is currently incomplete and has inaccuracies. It is WIP that will
+  be updated as information is determined.
+
+The code sequences used to implement the memory model for GFX125x are defined in
+table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-table`.
+
+The mapping of LLVM IR syncscope to GFX125x instruction ``scope`` operands is
+defined in :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+
+The table only applies if and only if it is directly referenced by an entry in
+:ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-table`, and it only applies to
+the instruction in the code sequence that references the table.
+
+  .. table:: AMDHSA Memory Model Code Sequences GFX125x - Instruction Scopes
+     :name: amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table
+
+     ================================= =======================
+     LLVM syncscope                    ISA
+
+
+     ================================= =======================
+     *none*, one-as                    ``scope:SCOPE_SYS``
+     system, system-one-as             ``scope:SCOPE_SYS``
+     agent, agent-one-as               ``scope:SCOPE_DEV``
+     workgroup, workgroup-one-as       ``scope:SCOPE_CU`` [1]_
+     wavefront, wavefront-one-as       ``scope:SCOPE_CU`` [1]_
+     singlethread, singlethread-one-as ``scope:SCOPE_CU`` [1]_
+     ================================= =======================
+
+  .. [1] ``SCOPE_CU`` is the default ``scope:`` emitted by the compiler.
+     It will be omitted when instructions are emitted in textual form by the compiler.
+
+  .. table:: AMDHSA Memory Model Code Sequences GFX125x
+     :name: amdgpu-amdhsa-memory-model-code-sequences-gfx125x-table
+
+     ============ ============ ============== ========== ================================
+     LLVM Instr   LLVM Memory  LLVM Memory    AMDGPU     AMDGPU Machine Code
+                  Ordering     Sync Scope     Address    GFX12
+                                              Space
+     ============ ============ ============== ========== ================================
+     TBA
+     ============ ============ ============== ========== ================================
+
+
 .. _amdgpu-amdhsa-trap-handler-abi:
 
 Trap Handler ABI
@@ -18145,10 +18757,12 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_private_segment_fixed_size``                   0                   GFX6-GFX12   Controls PRIVATE_SEGMENT_FIXED_SIZE in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+     ``.amdhsa_laneshared_segment_fixed_size``                0                   GFX13+       Controls LANESHARED_SEGMENT_FIXED_SIZE in
+                                                                                               :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_kernarg_size``                                 0                   GFX6-GFX12   Controls KERNARG_SIZE in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_user_sgpr_count``                              0                   GFX6-GFX12   Controls USER_SGPR_COUNT in COMPUTE_PGM_RSRC2
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx13-table`
      ``.amdhsa_user_sgpr_private_segment_buffer``             0                   GFX6-GFX10   Controls ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER in
                                                                                   (except      :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
                                                                                   GFX942)
@@ -18165,73 +18779,83 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                                                   GFX942)
      ``.amdhsa_user_sgpr_private_segment_size``               0                   GFX6-GFX12   Controls ENABLE_SGPR_PRIVATE_SEGMENT_SIZE in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+     ``.amdhsa_user_sgpr_private_segment_size``               0                   GFX1250+     Controls USES_CU_STORES in
+                                                                                               :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_wavefront_size32``                             Target              GFX10-GFX12  Controls ENABLE_WAVEFRONT_SIZE32 in
                                                               Feature                          :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
                                                               Specific
                                                               (wavefrontsize64)
      ``.amdhsa_uses_dynamic_stack``                           0                   GFX6-GFX12   Controls USES_DYNAMIC_STACK in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+     ``.amdhsa_named_barrier_count``                          0                   GFX1250+     Controls NAMED_BAR_CNT in
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx12-table`.
+     ``.amdhsa_enable_wavegroup``                             0                   GFX13+       Controls ENABLE_WAVEGROUP in
+                                                                                               :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+     ``.amdhsa_enable_spatial_cluster``                       0                   GFX13+       Controls ENABLE_SPATIAL_CLUSTER in
+                                                                                               :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+     ``.amdhsa_enable_asymmetric_cluster_clamp``              0                   GFX13+       Controls ENABLE_ASYMMETRIC_CLUSTER_CLAMP in
+                                                                                               :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_system_sgpr_private_segment_wavefront_offset`` 0                   GFX6-GFX10   Controls ENABLE_PRIVATE_SEGMENT in
-                                                                                  (except      :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+                                                                                  (except      :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx13-table`.
                                                                                   GFX942)
      ``.amdhsa_enable_private_segment``                       0                   GFX942,      Controls ENABLE_PRIVATE_SEGMENT in
-                                                                                  GFX11-GFX12  :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+                                                                                  GFX11-GFX12  :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx13-table`.
      ``.amdhsa_system_sgpr_workgroup_id_x``                   1                   GFX6-GFX12   Controls ENABLE_SGPR_WORKGROUP_ID_X in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx13-table`.
      ``.amdhsa_system_sgpr_workgroup_id_y``                   0                   GFX6-GFX12   Controls ENABLE_SGPR_WORKGROUP_ID_Y in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx13-table`.
      ``.amdhsa_system_sgpr_workgroup_id_z``                   0                   GFX6-GFX12   Controls ENABLE_SGPR_WORKGROUP_ID_Z in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx13-table`.
      ``.amdhsa_system_sgpr_workgroup_info``                   0                   GFX6-GFX12   Controls ENABLE_SGPR_WORKGROUP_INFO in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx13-table`.
      ``.amdhsa_system_vgpr_workitem_id``                      0                   GFX6-GFX12   Controls ENABLE_VGPR_WORKITEM_ID in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx13-table`.
                                                                                                Possible values are defined in
                                                                                                :ref:`amdgpu-amdhsa-system-vgpr-work-item-id-enumeration-values-table`.
      ``.amdhsa_next_free_vgpr``                               Required            GFX6-GFX12   Maximum VGPR number explicitly referenced, plus one.
                                                                                                Used to calculate GRANULATED_WORKITEM_VGPR_COUNT in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx13-table`.
      ``.amdhsa_next_free_sgpr``                               Required            GFX6-GFX12   Maximum SGPR number explicitly referenced, plus one.
                                                                                                Used to calculate GRANULATED_WAVEFRONT_SGPR_COUNT in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx13-table`.
      ``.amdhsa_accum_offset``                                 Required            GFX90A,      Offset of a first AccVGPR in the unified register file.
                                                                                   GFX942       Used to calculate ACCUM_OFFSET in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx90a-table`.
      ``.amdhsa_reserve_vcc``                                  1                   GFX6-GFX12   Whether the kernel may use the special VCC SGPR.
                                                                                                Used to calculate GRANULATED_WAVEFRONT_SGPR_COUNT in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx13-table`.
      ``.amdhsa_reserve_flat_scratch``                         1                   GFX7-GFX10   Whether the kernel may use flat instructions to access
                                                                                   (except      scratch memory. Used to calculate
                                                                                   GFX942)      GRANULATED_WAVEFRONT_SGPR_COUNT in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx13-table`.
      ``.amdhsa_reserve_xnack_mask``                           Target              GFX8-GFX10   Whether the kernel may trigger XNACK replay.
                                                               Feature                          Used to calculate GRANULATED_WAVEFRONT_SGPR_COUNT in
-                                                              Specific                         :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+                                                              Specific                         :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx13-table`.
                                                               (xnack)
      ``.amdhsa_float_round_mode_32``                          0                   GFX6-GFX12   Controls FLOAT_ROUND_MODE_32 in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx13-table`.
                                                                                                Possible values are defined in
                                                                                                :ref:`amdgpu-amdhsa-floating-point-rounding-mode-enumeration-values-table`.
      ``.amdhsa_float_round_mode_16_64``                       0                   GFX6-GFX12   Controls FLOAT_ROUND_MODE_16_64 in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx13-table`.
                                                                                                Possible values are defined in
                                                                                                :ref:`amdgpu-amdhsa-floating-point-rounding-mode-enumeration-values-table`.
      ``.amdhsa_float_denorm_mode_32``                         0                   GFX6-GFX12   Controls FLOAT_DENORM_MODE_32 in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx13-table`.
                                                                                                Possible values are defined in
                                                                                                :ref:`amdgpu-amdhsa-floating-point-denorm-mode-enumeration-values-table`.
      ``.amdhsa_float_denorm_mode_16_64``                      3                   GFX6-GFX12   Controls FLOAT_DENORM_MODE_16_64 in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx13-table`.
                                                                                                Possible values are defined in
                                                                                                :ref:`amdgpu-amdhsa-floating-point-denorm-mode-enumeration-values-table`.
      ``.amdhsa_dx10_clamp``                                   1                   GFX6-GFX11   Controls ENABLE_DX10_CLAMP in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx13-table`.
      ``.amdhsa_ieee_mode``                                    1                   GFX6-GFX11   Controls ENABLE_IEEE_MODE in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx13-table`.
      ``.amdhsa_round_robin_scheduling``                       0                   GFX12        Controls ENABLE_WG_RR_EN in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx13-table`.
      ``.amdhsa_fp16_overflow``                                0                   GFX9-GFX12   Controls FP16_OVFL in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx13-table`.
      ``.amdhsa_tg_split``                                     Target              GFX90A,      Controls TG_SPLIT in
                                                               Feature             GFX942,      :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx90a-table`.
                                                               Specific            GFX11-GFX12
@@ -18241,28 +18865,28 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                               Specific
                                                               (cumode)
      ``.amdhsa_memory_ordered``                               1                   GFX10-GFX12  Controls MEM_ORDERED in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx13-table`.
      ``.amdhsa_forward_progress``                             1                   GFX10-GFX12  Controls FWD_PROGRESS in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx13-table`.
      ``.amdhsa_shared_vgpr_count``                            0                   GFX10-GFX11  Controls SHARED_VGPR_COUNT in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx11-table`.
      ``.amdhsa_inst_pref_size``                               0                   GFX11-GFX12  Controls INST_PREF_SIZE in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx11-table` or
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx12-table`
      ``.amdhsa_exception_fp_ieee_invalid_op``                 0                   GFX6-GFX12   Controls ENABLE_EXCEPTION_IEEE_754_FP_INVALID_OPERATION in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx13-table`.
      ``.amdhsa_exception_fp_denorm_src``                      0                   GFX6-GFX12   Controls ENABLE_EXCEPTION_FP_DENORMAL_SOURCE in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx13-table`.
      ``.amdhsa_exception_fp_ieee_div_zero``                   0                   GFX6-GFX12   Controls ENABLE_EXCEPTION_IEEE_754_FP_DIVISION_BY_ZERO in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx13-table`.
      ``.amdhsa_exception_fp_ieee_overflow``                   0                   GFX6-GFX12   Controls ENABLE_EXCEPTION_IEEE_754_FP_OVERFLOW in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx13-table`.
      ``.amdhsa_exception_fp_ieee_underflow``                  0                   GFX6-GFX12   Controls ENABLE_EXCEPTION_IEEE_754_FP_UNDERFLOW in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx13-table`.
      ``.amdhsa_exception_fp_ieee_inexact``                    0                   GFX6-GFX12   Controls ENABLE_EXCEPTION_IEEE_754_FP_INEXACT in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx13-table`.
      ``.amdhsa_exception_int_div_zero``                       0                   GFX6-GFX12   Controls ENABLE_EXCEPTION_INT_DIVIDE_BY_ZERO in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx13-table`.
      ``.amdhsa_user_sgpr_kernarg_preload_length``             0                   GFX90A,      Controls KERNARG_PRELOAD_SPEC_LENGTH in
                                                                                   GFX942       :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_user_sgpr_kernarg_preload_offset``             0                   GFX90A,      Controls KERNARG_PRELOAD_SPEC_OFFSET in

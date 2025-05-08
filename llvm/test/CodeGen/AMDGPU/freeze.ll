@@ -2616,13 +2616,11 @@ define void @freeze_v18i32(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX6-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX6-SDAG-NEXT:    s_mov_b32 s4, s6
 ; GFX6-SDAG-NEXT:    s_mov_b32 s5, s6
-; GFX6-SDAG-NEXT:    buffer_load_dwordx2 v[20:21], v[0:1], s[4:7], 0 addr64 offset:64
 ; GFX6-SDAG-NEXT:    buffer_load_dwordx4 v[4:7], v[0:1], s[4:7], 0 addr64 offset:32
 ; GFX6-SDAG-NEXT:    buffer_load_dwordx4 v[8:11], v[0:1], s[4:7], 0 addr64 offset:48
 ; GFX6-SDAG-NEXT:    buffer_load_dwordx4 v[12:15], v[0:1], s[4:7], 0 addr64
 ; GFX6-SDAG-NEXT:    buffer_load_dwordx4 v[16:19], v[0:1], s[4:7], 0 addr64 offset:16
-; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(4)
-; GFX6-SDAG-NEXT:    buffer_store_dwordx2 v[20:21], v[2:3], s[4:7], 0 addr64 offset:64
+; GFX6-SDAG-NEXT:    buffer_load_dwordx2 v[0:1], v[0:1], s[4:7], 0 addr64 offset:64
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(4)
 ; GFX6-SDAG-NEXT:    buffer_store_dwordx4 v[4:7], v[2:3], s[4:7], 0 addr64 offset:32
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(4)
@@ -2631,6 +2629,8 @@ define void @freeze_v18i32(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX6-SDAG-NEXT:    buffer_store_dwordx4 v[12:15], v[2:3], s[4:7], 0 addr64
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(4)
 ; GFX6-SDAG-NEXT:    buffer_store_dwordx4 v[16:19], v[2:3], s[4:7], 0 addr64 offset:16
+; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(4)
+; GFX6-SDAG-NEXT:    buffer_store_dwordx2 v[0:1], v[2:3], s[4:7], 0 addr64 offset:64
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GFX6-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2665,13 +2665,11 @@ define void @freeze_v18i32(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX7-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX7-SDAG-NEXT:    s_mov_b32 s4, s6
 ; GFX7-SDAG-NEXT:    s_mov_b32 s5, s6
-; GFX7-SDAG-NEXT:    buffer_load_dwordx2 v[20:21], v[0:1], s[4:7], 0 addr64 offset:64
 ; GFX7-SDAG-NEXT:    buffer_load_dwordx4 v[4:7], v[0:1], s[4:7], 0 addr64 offset:32
 ; GFX7-SDAG-NEXT:    buffer_load_dwordx4 v[8:11], v[0:1], s[4:7], 0 addr64 offset:48
 ; GFX7-SDAG-NEXT:    buffer_load_dwordx4 v[12:15], v[0:1], s[4:7], 0 addr64
 ; GFX7-SDAG-NEXT:    buffer_load_dwordx4 v[16:19], v[0:1], s[4:7], 0 addr64 offset:16
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(4)
-; GFX7-SDAG-NEXT:    buffer_store_dwordx2 v[20:21], v[2:3], s[4:7], 0 addr64 offset:64
+; GFX7-SDAG-NEXT:    buffer_load_dwordx2 v[0:1], v[0:1], s[4:7], 0 addr64 offset:64
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(4)
 ; GFX7-SDAG-NEXT:    buffer_store_dwordx4 v[4:7], v[2:3], s[4:7], 0 addr64 offset:32
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(4)
@@ -2680,6 +2678,8 @@ define void @freeze_v18i32(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX7-SDAG-NEXT:    buffer_store_dwordx4 v[12:15], v[2:3], s[4:7], 0 addr64
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(4)
 ; GFX7-SDAG-NEXT:    buffer_store_dwordx4 v[16:19], v[2:3], s[4:7], 0 addr64 offset:16
+; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(4)
+; GFX7-SDAG-NEXT:    buffer_store_dwordx2 v[0:1], v[2:3], s[4:7], 0 addr64 offset:64
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2768,21 +2768,21 @@ define void @freeze_v18i32(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX10-SDAG:       ; %bb.0:
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-SDAG-NEXT:    s_clause 0x4
-; GFX10-SDAG-NEXT:    global_load_dwordx2 v[20:21], v[0:1], off offset:64
 ; GFX10-SDAG-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off offset:32
 ; GFX10-SDAG-NEXT:    global_load_dwordx4 v[8:11], v[0:1], off offset:48
 ; GFX10-SDAG-NEXT:    global_load_dwordx4 v[12:15], v[0:1], off
 ; GFX10-SDAG-NEXT:    global_load_dwordx4 v[16:19], v[0:1], off offset:16
+; GFX10-SDAG-NEXT:    global_load_dwordx2 v[20:21], v[0:1], off offset:64
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(4)
-; GFX10-SDAG-NEXT:    global_store_dwordx2 v[2:3], v[20:21], off offset:64
-; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(3)
 ; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off offset:32
-; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(2)
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(3)
 ; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[8:11], off offset:48
-; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(2)
 ; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[12:15], off
-; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(1)
 ; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[16:19], off offset:16
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-SDAG-NEXT:    global_store_dwordx2 v[2:3], v[20:21], off offset:64
 ; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-GISEL-LABEL: freeze_v18i32:
@@ -2810,21 +2810,21 @@ define void @freeze_v18i32(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    s_clause 0x4
-; GFX11-SDAG-NEXT:    global_load_b64 v[20:21], v[0:1], off offset:64
 ; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:32
 ; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:48
 ; GFX11-SDAG-NEXT:    global_load_b128 v[12:15], v[0:1], off
 ; GFX11-SDAG-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:16
+; GFX11-SDAG-NEXT:    global_load_b64 v[0:1], v[0:1], off offset:64
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(4)
-; GFX11-SDAG-NEXT:    global_store_b64 v[2:3], v[20:21], off offset:64
-; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(3)
 ; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:32
-; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(2)
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(3)
 ; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:48
-; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(2)
 ; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[12:15], off
-; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[16:19], off offset:16
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-NEXT:    global_store_b64 v[2:3], v[0:1], off offset:64
 ; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GISEL-LABEL: freeze_v18i32:

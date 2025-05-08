@@ -2,6 +2,8 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 < %s | FileCheck -check-prefix=GFX10-CU %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+cumode < %s | FileCheck -check-prefix=GFX10 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX10-CU %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1300 -mattr=+cumode < %s | FileCheck -check-prefix=GFX10 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1300 < %s | FileCheck -check-prefix=GFX10-CU %s
 
 ; GFX10:    .amdhsa_workgroup_processor_mode 0
 ; GFX10:    .workgroup_processor_mode: 0

@@ -4,7 +4,7 @@ declare float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32>, i32, i32, i32)
 define void @raw_buffer_load_f32(<4 x i32> inreg %rsrc, i32 %ofs, i32 %sofs, i32 %arg) {
   ; CHECK: immarg operand has non-immediate parameter
   ; CHECK-NEXT: i32 %arg
-  ; CHECK-NEXT: %data = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 %ofs, i32 %sofs, i32 %arg)
+  ; CHECK-NEXT: %data = call float @llvm.amdgcn.raw.buffer.load.f32.v4i32(<4 x i32> %rsrc, i32 %ofs, i32 %sofs, i32 %arg)
   %data = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 %ofs, i32 %sofs, i32 %arg)
   ret void
 }
@@ -13,7 +13,7 @@ declare float @llvm.amdgcn.raw.buffer.load.format.f32(<4 x i32>, i32, i32, i32)
 define void @raw_buffer_load_format_f32(<4 x i32> inreg %rsrc, i32 %ofs, i32 %sofs, i32 %arg) {
   ; CHECK: immarg operand has non-immediate parameter
   ; CHECK-NEXT: i32 %arg
-  ; CHECK-NEXT: %data = call float @llvm.amdgcn.raw.buffer.load.format.f32(<4 x i32> %rsrc, i32 %ofs, i32 %sofs, i32 %arg)
+  ; CHECK-NEXT: %data = call float @llvm.amdgcn.raw.buffer.load.format.f32.v4i32(<4 x i32> %rsrc, i32 %ofs, i32 %sofs, i32 %arg)
   %data = call float @llvm.amdgcn.raw.buffer.load.format.f32(<4 x i32> %rsrc, i32 %ofs, i32 %sofs, i32 %arg)
   ret void
 }
@@ -22,7 +22,7 @@ declare float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32>, i32, i32, i32, i32)
 define void @struct_buffer_load_f32(<4 x i32> inreg %rsrc, i32 %idx, i32 %ofs, i32 %sofs, i32 %arg) {
   ; CHECK: immarg operand has non-immediate parameter
   ; CHECK-NEXT: i32 %arg
-  ; CHECK-NEXT: %data = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> %rsrc, i32 %idx, i32 %ofs, i32 %sofs, i32 %arg)
+  ; CHECK-NEXT: %data = call float @llvm.amdgcn.struct.buffer.load.f32.v4i32(<4 x i32> %rsrc, i32 %idx, i32 %ofs, i32 %sofs, i32 %arg)
   %data = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> %rsrc, i32 %idx, i32 %ofs, i32 %sofs, i32 %arg)
   ret void
 }
@@ -31,7 +31,7 @@ declare float @llvm.amdgcn.struct.buffer.load.format.f32(<4 x i32>, i32, i32, i3
 define void @struct_buffer_load_format_f32(<4 x i32> inreg %rsrc, i32 %idx, i32 %ofs, i32 %sofs, i32 %arg) {
   ; CHECK: immarg operand has non-immediate parameter
   ; CHECK-NEXT: i32 %arg
-  ; CHECK-NEXT: %data = call float @llvm.amdgcn.struct.buffer.load.format.f32(<4 x i32> %rsrc, i32 %idx, i32 %ofs, i32 %sofs, i32 %arg)
+  ; CHECK-NEXT: %data = call float @llvm.amdgcn.struct.buffer.load.format.f32.v4i32(<4 x i32> %rsrc, i32 %idx, i32 %ofs, i32 %sofs, i32 %arg)
   %data = call float @llvm.amdgcn.struct.buffer.load.format.f32(<4 x i32> %rsrc, i32 %idx, i32 %ofs, i32 %sofs, i32 %arg)
   ret void
 }
@@ -421,7 +421,7 @@ declare i32 @llvm.amdgcn.raw.buffer.atomic.swap.i32(i32, <4 x i32>, i32, i32, i3
 define amdgpu_ps void @raw_buffer_atomic_swap(<4 x i32> inreg %rsrc, i32 %data, i32 %var) {
   ; CHECK: immarg operand has non-immediate parameter
   ; CHECK-NEXT: i32 %var
-  ; CHECK-NEXT: %val2 = call i32 @llvm.amdgcn.raw.buffer.atomic.swap.i32(i32 %data, <4 x i32> %rsrc, i32 0, i32 0, i32 %var)
+  ; CHECK-NEXT: %val2 = call i32 @llvm.amdgcn.raw.buffer.atomic.swap.i32.v4i32(i32 %data, <4 x i32> %rsrc, i32 0, i32 0, i32 %var)
   %val2 = call i32 @llvm.amdgcn.raw.buffer.atomic.swap.i32(i32 %data, <4 x i32> %rsrc, i32 0, i32 0, i32 %var)
   ret void
 }

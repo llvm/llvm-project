@@ -103,6 +103,14 @@ define void @workgroup_id_z(ptr addrspace(1) inreg %out) {
   ret void
 }
 
+; CHECK-LABEL: for function 'global_sreg':
+; CHECK: DIVERGENT: i32 %divergent
+; CHECK-NOT: DIVERGENT
+define void @global_sreg(i32 %divergent) {
+  %a = call i32 @llvm.amdgcn.s.mov.from.global.i32(i16 95, i32 %divergent)
+  ret void
+}
+
 ; CHECK-LABEL: for function 's_getpc':
 ; CHECK: ALL VALUES UNIFORM
 define void @s_getpc(ptr addrspace(1) inreg %out) {
@@ -115,6 +123,70 @@ define void @s_getpc(ptr addrspace(1) inreg %out) {
 ; CHECK: ALL VALUES UNIFORM
 define void @s_getreg(ptr addrspace(1) inreg %out) {
   %result = call i32 @llvm.amdgcn.s.getreg(i32 123)
+  store i32 %result, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; CHECK-LABEL: for function 'cluster_workgroup_id_x':
+; CHECK: ALL VALUES UNIFORM
+define void @cluster_workgroup_id_x(ptr addrspace(1) inreg %out) {
+  %result = call i32 @llvm.amdgcn.cluster.workgroup.id.x()
+  store i32 %result, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; CHECK-LABEL: for function 'cluster_workgroup_id_y':
+; CHECK: ALL VALUES UNIFORM
+define void @cluster_workgroup_id_y(ptr addrspace(1) inreg %out) {
+  %result = call i32 @llvm.amdgcn.cluster.workgroup.id.y()
+  store i32 %result, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; CHECK-LABEL: for function 'cluster_workgroup_id_z':
+; CHECK: ALL VALUES UNIFORM
+define void @cluster_workgroup_id_z(ptr addrspace(1) inreg %out) {
+  %result = call i32 @llvm.amdgcn.cluster.workgroup.id.z()
+  store i32 %result, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; CHECK-LABEL: for function 'cluster_workgroup_flat_id':
+; CHECK: ALL VALUES UNIFORM
+define void @cluster_workgroup_flat_id(ptr addrspace(1) inreg %out) {
+  %result = call i32 @llvm.amdgcn.cluster.workgroup.flat.id()
+  store i32 %result, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; CHECK-LABEL: for function 'cluster_workgroup_max_id_x':
+; CHECK: ALL VALUES UNIFORM
+define void @cluster_workgroup_max_id_x(ptr addrspace(1) inreg %out) {
+  %result = call i32 @llvm.amdgcn.cluster.workgroup.max.id.x()
+  store i32 %result, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; CHECK-LABEL: for function 'cluster_workgroup_max_id_y':
+; CHECK: ALL VALUES UNIFORM
+define void @cluster_workgroup_max_id_y(ptr addrspace(1) inreg %out) {
+  %result = call i32 @llvm.amdgcn.cluster.workgroup.max.id.y()
+  store i32 %result, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; CHECK-LABEL: for function 'cluster_workgroup_max_id_z':
+; CHECK: ALL VALUES UNIFORM
+define void @cluster_workgroup_max_id_z(ptr addrspace(1) inreg %out) {
+  %result = call i32 @llvm.amdgcn.cluster.workgroup.max.id.z()
+  store i32 %result, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; CHECK-LABEL: for function 'cluster_workgroup_max_flat_id':
+; CHECK: ALL VALUES UNIFORM
+define void @cluster_workgroup_max_flat_id(ptr addrspace(1) inreg %out) {
+  %result = call i32 @llvm.amdgcn.cluster.workgroup.max.flat.id()
   store i32 %result, ptr addrspace(1) %out, align 4
   ret void
 }
@@ -135,7 +207,6 @@ define void @s_memrealtime(ptr addrspace(1) inreg %out) {
   ret void
 }
 
-
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare i32 @llvm.amdgcn.readfirstlane(i32) #0
 declare i64 @llvm.amdgcn.icmp.i32(i32, i32, i32) #1
@@ -144,6 +215,15 @@ declare i64 @llvm.amdgcn.ballot.i32(i1) #1
 declare i32 @llvm.amdgcn.workgroup.id.x() #0
 declare i32 @llvm.amdgcn.workgroup.id.y() #0
 declare i32 @llvm.amdgcn.workgroup.id.z() #0
+declare i32 @llvm.amdgcn.cluster.workgroup.id.x()
+declare i32 @llvm.amdgcn.cluster.workgroup.id.y()
+declare i32 @llvm.amdgcn.cluster.workgroup.id.z()
+declare i32 @llvm.amdgcn.cluster.workgroup.flat.id()
+declare i32 @llvm.amdgcn.cluster.workgroup.max.id.x()
+declare i32 @llvm.amdgcn.cluster.workgroup.max.id.y()
+declare i32 @llvm.amdgcn.cluster.workgroup.max.id.z()
+declare i32 @llvm.amdgcn.cluster.workgroup.max.flat.id()
+declare i32 @llvm.amdgcn.s.mov.from.global.i32(i16, i32)
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind readnone convergent }

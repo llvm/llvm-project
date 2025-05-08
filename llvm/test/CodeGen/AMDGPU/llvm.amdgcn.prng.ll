@@ -1,5 +1,9 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx950 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx950 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1250 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SDAG %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1250 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1300 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SDAG %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1300 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 declare i32 @llvm.amdgcn.prng.b32(i32) #0
 
@@ -27,6 +31,13 @@ define amdgpu_kernel void @prng_b32_constant_100(ptr addrspace(1) %out) #1 {
   ret void
 }
 
+; GCN-LABEL: {{^}}prng_undef_i32:
+; SDAG-NOT: v_prng_b32
+define amdgpu_kernel void @prng_undef_i32(ptr addrspace(1) %out) #1 {
+  %prng = call i32 @llvm.amdgcn.prng.b32(i32 undef)
+  store i32 %prng, ptr addrspace(1) %out, align 4
+  ret void
+}
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }

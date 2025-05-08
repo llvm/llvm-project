@@ -4,7 +4,7 @@
 
 # RUN: yaml2obj %s -DGPU=GFX1200 -DSRC1=4300AC60 -DSRC2=80000000 -DSRC3=00000000 \
 # RUN:   | llvm-objdump --disassemble-symbols=test.kd - | FileCheck %s --check-prefix=SRC1_9_6
-# SRC1_9_6: ; error decoding test.kd: kernel descriptor COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT reserved bits in range (9:6) set, must be zero on gfx10+
+# SRC1_9_6: ; error decoding test.kd: kernel descriptor COMPUTE_PGM_RSRC1_GFX6_GFX12_GRANULATED_WAVEFRONT_SGPR_COUNT reserved bits in range (9:6) set, must be zero on gfx10+
 # SRC1_9_6-NEXT: ; decoding failed region as bytes
 
 # RUN: yaml2obj %s -DGPU=GFX1200 -DSRC1=0308AC60 -DSRC2=80000000 -DSRC3=00000000 \
@@ -39,8 +39,13 @@
 
 # RUN: yaml2obj %s -DGPU=GFX1100 -DSRC1=0300AC60 -DSRC2=80000000 -DSRC3=00000100 \
 # RUN:   | llvm-objdump --disassemble-symbols=test.kd - | FileCheck %s --check-prefix=RSRC3_10
-# RSRC3_10: ; error decoding test.kd: kernel descriptor COMPUTE_PGM_RSRC3 reserved bits in range (30:14) set, must be zero on gfx10+
+# RSRC3_10: ; error decoding test.kd: kernel descriptor COMPUTE_PGM_RSRC3 reserved bits in range (21:14) set, must be zero on gfx10+
 # RSRC3_10-NEXT: ; decoding failed region as bytes
+
+# RUN: yaml2obj %s -DGPU=GFX1100 -DSRC1=0300AC60 -DSRC2=80000000 -DSRC3=00004000 \
+# RUN:   | llvm-objdump --disassemble-symbols=test.kd - | FileCheck %s --check-prefix=RSRC3_10_1
+# RSRC3_10_1: ; error decoding test.kd: kernel descriptor COMPUTE_PGM_RSRC3 reserved bits in range (30:22) set, must be zero on gfx10+
+# RSRC3_10_1-NEXT: ; decoding failed region as bytes
 
 # RUN: yaml2obj %s -DGPU=GFX801 -DSRC1=0300AC60 -DSRC2=80000000 -DSRC3=00000001 \
 # RUN:   | llvm-objdump --disassemble-symbols=test.kd - | FileCheck %s --check-prefix=RSRC3_PRE_9

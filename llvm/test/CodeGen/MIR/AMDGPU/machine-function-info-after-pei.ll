@@ -8,6 +8,7 @@
 ; AFTER-PEI-NEXT: maxKernArgAlign: 8
 ; AFTER-PEI-NEXT: ldsSize:         0
 ; AFTER-PEI-NEXT: gdsSize:         0
+; AFTER-PEI-NEXT: laneSharedVGPRSize: 0
 ; AFTER-PEI-NEXT: dynLDSAlign:     1
 ; AFTER-PEI-NEXT: isEntryFunction: true
 ; AFTER-PEI-NEXT: isChainFunction: false
@@ -42,6 +43,7 @@
 ; AFTER-PEI-NEXT: scavengeFI: '%stack.3'
 ; AFTER-PEI-NEXT: vgprForAGPRCopy: ''
 ; AFTER-PEI-NEXT: sgprForEXECCopy: ''
+; AFTER-PEI-NEXT: needIdx0Restore: false
 ; AFTER-PEI-NEXT: longBranchReservedReg: ''
 ; AFTER-PEI-NEXT: hasInitWholeWave: false
 ; AFTER-PEI-NEXT: scratchReservedForDynamicVGPRs: 0
@@ -60,4 +62,4 @@ define amdgpu_kernel void @scavenge_fi(ptr addrspace(1) %out, i32 %in) #0 {
   ret void
 }
 
-attributes #0 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
+attributes #0 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-cluster-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-cluster-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-cluster-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }

@@ -394,6 +394,24 @@ v_pk_minimum3_f16 v0, s1, s2, v3
 v_pk_maximum3_f16 v0, s1, s2, v3
 
 // GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+v_cvt_scalef32_sr_pk32_bf6_bf16 v[0:5], v[0:15], v16, v17 clamp
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+v_cvt_scalef32_sr_pk32_bf6_f16 v[0:5], v[6:21], v22, v23 clamp
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+v_cvt_scalef32_sr_pk32_fp6_bf16 v[0:5], v[6:21], v22, v23 clamp
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+v_cvt_scalef32_sr_pk32_fp6_f16 v[0:5], v[6:21], v22, v23 clamp
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+v_cvt_scalef32_sr_pk32_bf6_f32 v[0:5], v[6:37], v38, v39 clamp
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+v_cvt_scalef32_sr_pk32_fp6_f32 v[0:5], v[6:37], v38, v39 clamp
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
 v_cvt_sr_f16_f32 v1, v2, v3 clamp
 
 // GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
@@ -495,5 +513,5 @@ v_cvt_scalef32_2xpk16_bf6_f32 v[0:5], s[0:15], v[6:21], v16
 // GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
 v_cvt_scalef32_2xpk16_bf6_f32 v[0:5], v[6:21], s[0:15], v16
 
-// GFX950: v_cvt_scalef32_sr_pk_fp4_f32 v0, s[2:3]/*Invalid register, operand has 'VReg_64' register class*/, v4, v5
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
 v_cvt_scalef32_sr_pk_fp4_f32 v0, s[2:3], v4, v5

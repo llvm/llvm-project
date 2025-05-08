@@ -1,5 +1,6 @@
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -show-encoding %s | FileCheck -check-prefix=GCN %s
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=-real-true16 -show-encoding %s | FileCheck -check-prefix=GCN %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=-real-true16 -show-encoding %s | FileCheck -check-prefix=GCN %s
 
 v_interp_p10_f32 v0, v1, v2, v3
 // GCN: v_interp_p10_f32 v0, v1, v2, v3 wait_exp:0  ; encoding: [0x00,0x00,0x00,0xcd,0x01,0x05,0x0e,0x04]

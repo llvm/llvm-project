@@ -132,6 +132,7 @@ void fe1b(int ord) {
 // AMDGCN-NEXT:      i32 2, label %[[WORKGROUP_SCOPE:.*]]
 // AMDGCN-NEXT:      i32 3, label %[[WAVEFRONT_SCOPE:.*]]
 // AMDGCN-NEXT:      i32 4, label %[[SINGLE_SCOPE:.*]]
+// AMDGCN-NEXT:      i32 5, label %[[CLUSTER_SCOPE:.*]]
 // AMDGCN-NEXT:    ]
 // AMDGCN:       [[ATOMIC_SCOPE_CONTINUE]]:
 // AMDGCN-NEXT:    ret void
@@ -150,6 +151,9 @@ void fe1b(int ord) {
 // AMDGCN:       [[SINGLE_SCOPE]]:
 // AMDGCN-NEXT:    fence syncscope("singlethread") release
 // AMDGCN-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
+// AMDGCN:       [[CLUSTER_SCOPE]]:
+// AMDGCN-NEXT:    fence syncscope("cluster") release
+// AMDGCN-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
 //
 // SPIRV-LABEL: define hidden spir_func void @fe1c(
 // SPIRV-SAME: i32 noundef [[SCOPE:%.*]]) #[[ATTR0]] {
@@ -163,6 +167,7 @@ void fe1b(int ord) {
 // SPIRV-NEXT:      i32 2, label %[[WORKGROUP_SCOPE:.*]]
 // SPIRV-NEXT:      i32 3, label %[[WAVEFRONT_SCOPE:.*]]
 // SPIRV-NEXT:      i32 4, label %[[SINGLE_SCOPE:.*]]
+// SPIRV-NEXT:      i32 5, label %[[CLUSTER_SCOPE:.*]]
 // SPIRV-NEXT:    ]
 // SPIRV:       [[ATOMIC_SCOPE_CONTINUE]]:
 // SPIRV-NEXT:    ret void
@@ -181,6 +186,9 @@ void fe1b(int ord) {
 // SPIRV:       [[SINGLE_SCOPE]]:
 // SPIRV-NEXT:    fence syncscope("singlethread") release
 // SPIRV-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
+// SPIRV:       [[CLUSTER_SCOPE]]:
+// SPIRV-NEXT:    fence syncscope("cluster") release
+// SPIRV-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
 //
 // X86_64-LABEL: define hidden void @fe1c(
 // X86_64-SAME: i32 noundef [[SCOPE:%.*]]) #[[ATTR0]] {
@@ -194,6 +202,7 @@ void fe1b(int ord) {
 // X86_64-NEXT:      i32 2, label %[[WORKGROUP_SCOPE:.*]]
 // X86_64-NEXT:      i32 3, label %[[WAVEFRONT_SCOPE:.*]]
 // X86_64-NEXT:      i32 4, label %[[SINGLE_SCOPE:.*]]
+// X86_64-NEXT:      i32 5, label %[[CLUSTER_SCOPE:.*]]
 // X86_64-NEXT:    ]
 // X86_64:       [[ATOMIC_SCOPE_CONTINUE]]:
 // X86_64-NEXT:    ret void
@@ -210,6 +219,9 @@ void fe1b(int ord) {
 // X86_64-NEXT:    fence release
 // X86_64-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
 // X86_64:       [[SINGLE_SCOPE]]:
+// X86_64-NEXT:    fence release
+// X86_64-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
+// X86_64:       [[CLUSTER_SCOPE]]:
 // X86_64-NEXT:    fence release
 // X86_64-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
 //

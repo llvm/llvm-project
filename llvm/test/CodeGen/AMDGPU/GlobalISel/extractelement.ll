@@ -1828,6 +1828,85 @@ entry:
   ret float %ext
 }
 
+define amdgpu_ps float @dyn_extract_v18f32_v_s(<18 x float> %vec, i32 inreg %sel) {
+; GPRIDX-LABEL: dyn_extract_v18f32_v_s:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_set_gpr_idx_on s2, gpr_idx(SRC0)
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, v0
+; GPRIDX-NEXT:    s_set_gpr_idx_off
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_extract_v18f32_v_s:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_mov_b32 m0, s2
+; MOVREL-NEXT:    v_movrels_b32_e32 v0, v0
+; MOVREL-NEXT:    ; return to shader part epilog
+;
+; GFX10PLUS-LABEL: dyn_extract_v18f32_v_s:
+; GFX10PLUS:       ; %bb.0: ; %entry
+; GFX10PLUS-NEXT:    s_mov_b32 m0, s2
+; GFX10PLUS-NEXT:    v_movrels_b32_e32 v0, v0
+; GFX10PLUS-NEXT:    ; return to shader part epilog
+  entry:
+  %ext = extractelement <18 x float> %vec, i32 %sel
+  ret float %ext
+}
+
+define amdgpu_ps float @dyn_extract_v18f32_s_s(i32 inreg %sel) {
+; GCN-LABEL: dyn_extract_v18f32_s_s:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    s_mov_b32 s4, 1.0
+; GCN-NEXT:    s_mov_b32 m0, s2
+; GCN-NEXT:    s_mov_b32 s21, 0x41900000
+; GCN-NEXT:    s_mov_b32 s20, 0x41880000
+; GCN-NEXT:    s_mov_b32 s19, 0x41800000
+; GCN-NEXT:    s_mov_b32 s18, 0x41700000
+; GCN-NEXT:    s_mov_b32 s17, 0x41600000
+; GCN-NEXT:    s_mov_b32 s16, 0x41500000
+; GCN-NEXT:    s_mov_b32 s15, 0x41400000
+; GCN-NEXT:    s_mov_b32 s14, 0x41300000
+; GCN-NEXT:    s_mov_b32 s13, 0x41200000
+; GCN-NEXT:    s_mov_b32 s12, 0x41100000
+; GCN-NEXT:    s_mov_b32 s11, 0x41000000
+; GCN-NEXT:    s_mov_b32 s10, 0x40e00000
+; GCN-NEXT:    s_mov_b32 s9, 0x40c00000
+; GCN-NEXT:    s_mov_b32 s8, 0x40a00000
+; GCN-NEXT:    s_mov_b32 s7, 4.0
+; GCN-NEXT:    s_mov_b32 s6, 0x40400000
+; GCN-NEXT:    s_mov_b32 s5, 2.0
+; GCN-NEXT:    s_movrels_b32 s0, s4
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    ; return to shader part epilog
+;
+; GFX10PLUS-LABEL: dyn_extract_v18f32_s_s:
+; GFX10PLUS:       ; %bb.0: ; %entry
+; GFX10PLUS-NEXT:    s_mov_b32 s4, 1.0
+; GFX10PLUS-NEXT:    s_mov_b32 m0, s2
+; GFX10PLUS-NEXT:    s_mov_b32 s21, 0x41900000
+; GFX10PLUS-NEXT:    s_mov_b32 s20, 0x41880000
+; GFX10PLUS-NEXT:    s_mov_b32 s19, 0x41800000
+; GFX10PLUS-NEXT:    s_mov_b32 s18, 0x41700000
+; GFX10PLUS-NEXT:    s_mov_b32 s17, 0x41600000
+; GFX10PLUS-NEXT:    s_mov_b32 s16, 0x41500000
+; GFX10PLUS-NEXT:    s_mov_b32 s15, 0x41400000
+; GFX10PLUS-NEXT:    s_mov_b32 s14, 0x41300000
+; GFX10PLUS-NEXT:    s_mov_b32 s13, 0x41200000
+; GFX10PLUS-NEXT:    s_mov_b32 s12, 0x41100000
+; GFX10PLUS-NEXT:    s_mov_b32 s11, 0x41000000
+; GFX10PLUS-NEXT:    s_mov_b32 s10, 0x40e00000
+; GFX10PLUS-NEXT:    s_mov_b32 s9, 0x40c00000
+; GFX10PLUS-NEXT:    s_mov_b32 s8, 0x40a00000
+; GFX10PLUS-NEXT:    s_mov_b32 s7, 4.0
+; GFX10PLUS-NEXT:    s_mov_b32 s6, 0x40400000
+; GFX10PLUS-NEXT:    s_mov_b32 s5, 2.0
+; GFX10PLUS-NEXT:    s_movrels_b32 s0, s4
+; GFX10PLUS-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10PLUS-NEXT:    ; return to shader part epilog
+  entry:
+  %ext = extractelement <18 x float> <float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, float 8.0, float 9.0, float 10.0, float 11.0, float 12.0, float 13.0, float 14.0, float 15.0, float 16.0, float 17.0, float 18.0>, i32 %sel
+  ret float %ext
+}
+
 define amdgpu_ps float @dyn_extract_v32f32_v_s(<32 x float> %vec, i32 inreg %sel) {
 ; GPRIDX-LABEL: dyn_extract_v32f32_v_s:
 ; GPRIDX:       ; %bb.0: ; %entry

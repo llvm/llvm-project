@@ -1,0 +1,134 @@
+name: Trigger amd-gfx13 Buildbot Build
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [amd-gfx13]
+    types: [opened, reopened, synchronize, ready_for_review]
+
+
+jobs:  
+  trigger-build:
+    if: github.event.pull_request.draft == false
+    runs-on: self-hosted
+    env:  
+      PR_SHA: ${{ github.event.pull_request.head.sha != '' && github.event.pull_request.head.sha || github.sha }}
+      PR_NUMBER: ${{ github.event.pull_request.number != '' && github.event.pull_request.number || 0 }}
+      PR_URL: ${{ github.event.pull_request.html_url != '' && github.event.pull_request.html_url || '' }}
+      PR_TITLE: ${{ github.event.pull_request.title != '' && github.event.pull_request.title || '' }}
+      BASE_BRANCH: ${{ github.event.pull_request.base.ref != '' && github.event.pull_request.base.ref || '' }}
+      GITHUB_TOKEN: ${{secrets.CI_GITHUB_TOKEN}}
+      
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Set environment variable for container image
+        run: |
+         echo "CONTAINER_IMAGE=${{ secrets.BUILDBOT_DOCKER_IMAGE }}" >> $GITHUB_ENV
+         echo "CONTAINER_NAME=my_container_${{ github.run_id }}" >> $GITHUB_ENV
+        
+      - name: Pull container image
+        run: docker pull "${{env.CONTAINER_IMAGE}}"      
+
+      - name: Run container
+        run: |
+          docker run -d --name "${{env.CONTAINER_NAME}}" $CONTAINER_IMAGE sleep infinity
+          docker exec "${{env.CONTAINER_NAME}}" /bin/bash -c "echo 'Running commands inside the container'"
+
+      - name: Escape pull request title
+        run: |
+          import json
+          import os
+          import shlex
+          with open('${{ github.event_path }}') as fh:
+              event = json.load(fh)         
+          escaped = event['pull_request']['title']
+          with open(os.environ['GITHUB_ENV'], 'a') as fh:
+              print(f'PR_TITLE={escaped}', file=fh)
+        shell: python3 {0}          
+        
+      - name: Trigger Buildbot Build
+        run: |          
+          echo "${{ secrets.BUILDBOT_HOST }}:${{ secrets.BUILDBOT_WORKER_PORT }}"
+          docker exec -e PR_TITLE="$PR_TITLE" "${{env.CONTAINER_NAME}}" /bin/bash -c 'buildbot sendchange -W ${{ secrets.BUILDBOT_USER }}  -a ${{secrets.BUILDBOT_USER}}:${{secrets.BUILDBOT_PWD}} --master="${{ secrets.BUILDBOT_HOST }}:${{ secrets.BUILDBOT_WORKER_PORT }}" --branch=${{ env.BASE_BRANCH }} --revision=${{ env.PR_SHA }} -p PR_NUMBER:${{ env.PR_NUMBER }} -p PR_TITLE:"$PR_TITLE"  -p PR_URL:${{ env.PR_URL }}  -p SHA:${{ env.PR_SHA }}'
+          
+      - name: Set Initial Status to Pending
+        run: |
+          docker exec -e PR_SHA=$PR_SHA -e GITHUB_TOKEN=$GITHUB_TOKEN "${{env.CONTAINER_NAME}}" /bin/bash -c "python3 -c \"
+          import os
+          import requests
+          GITHUB_TOKEN =  os.getenv('GITHUB_TOKEN')
+          TARGET_SHA = os.getenv('PR_SHA')
+          print('debug', TARGET_SHA)
+          api_url = f'https://api.github.com/repos/AMD-Lightning-Internal/llvm-project/statuses/{TARGET_SHA}'
+          headers = {
+          'Authorization': f'token {GITHUB_TOKEN}',
+          'Content-Type': 'application/json'
+          }
+          payload = {
+          'state': 'pending',
+          'context': 'buildbot',
+          'description': 'Build is in queue'
+          }
+          response = requests.post(api_url, json=payload, headers=headers)
+          if response.status_code == 201:
+            print('Status set to pending successfully.')
+          else:
+            print(f'Failed to set status: {response.status_code} {response.text}')
+            \""
+
+      - name: Poll Buildbot build status
+        run: |
+          python3 -c "
+          import os
+          import time
+          import requests
+          GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
+          BUILD_URL = 'http://${{ secrets.BUILDBOT_HOST }}:${{ secrets.BUILDBOT_MASTER_PORT }}/api/v2/builds'
+          TARGET_SHA = os.getenv('PR_SHA')
+          print('debug', TARGET_SHA)
+          MAX_RETRIES = 10
+          RETRY_INTERVAL = 30  # seconds
+
+          def get_build_properties(build_id):
+              build_properties_url = f'http://${{ secrets.BUILDBOT_HOST }}:${{ secrets.BUILDBOT_MASTER_PORT }}/api/v2/builds/{build_id}/properties'
+              response = requests.get(build_properties_url, headers={'Accept': 'application/json', 'Authorization': f'token {GITHUB_TOKEN}'})
+              return response.json()
+
+          for i in range(MAX_RETRIES):
+               response = requests.get(BUILD_URL, headers={'Accept': 'application/json'})
+               response_json = response.json()
+               print(f'Attempt {i + 1}: Buildbot response:', response_json)
+    
+               # Check if any build has the target SHA
+               builds = response_json.get('builds', [])
+               print (builds)
+               build_with_sha = None
+               for build in builds:
+                   build_id = build['buildid']
+                   properties = get_build_properties(build_id)
+                   #print(properties)
+                   #prop = properties.get('revision', [])
+                  
+                   if 'properties' in properties:
+                       print (properties['properties'])
+                       if 'revision' in properties['properties'][0]:
+                           print(properties['properties'][0])
+                       if 'revision' in properties['properties'][0] and properties['properties'][0]['revision'] [0] == TARGET_SHA:                            
+                           build_with_sha = build
+                           break                         
+   
+               if build_with_sha:
+                     print('Build started successfully for SHA:', TARGET_SHA)
+                     break
+               else:
+                     print('Build for SHA not started yet, retrying in', RETRY_INTERVAL, 'seconds')
+                     time.sleep(RETRY_INTERVAL)
+          else:
+                print('Build did not start for SHA:', TARGET_SHA, 'after maximum retries')
+                exit(1)
+          "
+
+      - name: Stop and remove container
+        if: always()
+        run: |
+          docker stop "${{env.CONTAINER_NAME}}"
+          docker rm "${{env.CONTAINER_NAME}}"			

@@ -131,6 +131,8 @@ int llvm::TableGenMain(const char *argv0,
   // it later.
   SrcMgr.setIncludeDirs(IncludeDirs);
 
+  // Globally enable this macro for the synthesised branch using ifdef guards
+  MacroNames.push_back("LLPC_BUILD_NPI");
   TGParser Parser(SrcMgr, MacroNames, Records, NoWarnOnUnusedTemplateArgs);
 
   if (Parser.ParseFile())

@@ -43,11 +43,11 @@
 ; FIXME @nullptr9 = global ptr addrspace(9) addrspacecast (ptr null to ptr addrspace(9))
 
 ; CHECK-LABEL: nullptr10:
-; R600-NEXT: .long 0
+; CHECK-NEXT: .long -1
 @nullptr10 = global ptr addrspace(10) addrspacecast (ptr null to ptr addrspace(10))
 
 ; CHECK-LABEL: nullptr11:
-; R600-NEXT: .long 0
+; R600-NEXT: .long -1
 @nullptr11 = global ptr addrspace(11) addrspacecast (ptr null to ptr addrspace(11))
 
 ; CHECK-LABEL: nullptr12:

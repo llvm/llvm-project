@@ -12,6 +12,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1100 -mattr=+cumode < %s | FileCheck --check-prefixes=GFX11-CU %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1200 < %s | FileCheck --check-prefixes=GFX12-WGP %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1200 -mattr=+cumode < %s | FileCheck --check-prefixes=GFX12-CU %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1250 < %s | FileCheck --check-prefixes=GFX1250 %s
 
 define amdgpu_kernel void @workgroup_acquire_fence() {
 ; GFX6-LABEL: workgroup_acquire_fence:
@@ -78,6 +79,12 @@ define amdgpu_kernel void @workgroup_acquire_fence() {
 ; GFX12-CU-LABEL: workgroup_acquire_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: workgroup_acquire_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("workgroup") acquire, !mmra !{!"amdgpu-as", !"global"}
   ret void
@@ -145,6 +152,12 @@ define amdgpu_kernel void @workgroup_release_fence() {
 ; GFX12-CU-LABEL: workgroup_release_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: workgroup_release_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("workgroup") release, !mmra !{!"amdgpu-as", !"global"}
   ret void
@@ -217,6 +230,12 @@ define amdgpu_kernel void @workgroup_acq_rel_fence() {
 ; GFX12-CU-LABEL: workgroup_acq_rel_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: workgroup_acq_rel_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("workgroup") acq_rel, !mmra !{!"amdgpu-as", !"global"}
   ret void
@@ -289,6 +308,12 @@ define amdgpu_kernel void @workgroup_seq_cst_fence() {
 ; GFX12-CU-LABEL: workgroup_seq_cst_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: workgroup_seq_cst_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("workgroup") seq_cst, !mmra !{!"amdgpu-as", !"global"}
   ret void
@@ -359,6 +384,12 @@ define amdgpu_kernel void @workgroup_one_as_acquire_fence() {
 ; GFX12-CU-LABEL: workgroup_one_as_acquire_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: workgroup_one_as_acquire_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("workgroup-one-as") acquire, !mmra !{!"amdgpu-as", !"global"}
   ret void
@@ -426,6 +457,12 @@ define amdgpu_kernel void @workgroup_one_as_release_fence() {
 ; GFX12-CU-LABEL: workgroup_one_as_release_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: workgroup_one_as_release_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("workgroup-one-as") release, !mmra !{!"amdgpu-as", !"global"}
   ret void
@@ -498,6 +535,12 @@ define amdgpu_kernel void @workgroup_one_as_acq_rel_fence() {
 ; GFX12-CU-LABEL: workgroup_one_as_acq_rel_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: workgroup_one_as_acq_rel_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("workgroup-one-as") acq_rel, !mmra !{!"amdgpu-as", !"global"}
   ret void
@@ -570,6 +613,12 @@ define amdgpu_kernel void @workgroup_one_as_seq_cst_fence() {
 ; GFX12-CU-LABEL: workgroup_one_as_seq_cst_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: workgroup_one_as_seq_cst_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("workgroup-one-as") seq_cst, !mmra !{!"amdgpu-as", !"global"}
   ret void
@@ -662,6 +711,13 @@ define amdgpu_kernel void @agent_acquire_fence() {
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: agent_acquire_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("agent") acquire, !mmra !{!"amdgpu-as", !"global"}
   ret void
@@ -744,6 +800,13 @@ define amdgpu_kernel void @agent_release_fence() {
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: agent_release_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("agent") release, !mmra !{!"amdgpu-as", !"global"}
   ret void
@@ -842,6 +905,14 @@ define amdgpu_kernel void @agent_acq_rel_fence() {
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: agent_acq_rel_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("agent") acq_rel, !mmra !{!"amdgpu-as", !"global"}
   ret void
@@ -940,6 +1011,14 @@ define amdgpu_kernel void @agent_seq_cst_fence() {
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: agent_seq_cst_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("agent") seq_cst, !mmra !{!"amdgpu-as", !"global"}
   ret void
@@ -1032,6 +1111,13 @@ define amdgpu_kernel void @agent_one_as_acquire_fence() {
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: agent_one_as_acquire_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("agent-one-as") acquire, !mmra !{!"amdgpu-as", !"global"}
   ret void
@@ -1114,6 +1200,13 @@ define amdgpu_kernel void @agent_one_as_release_fence() {
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: agent_one_as_release_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("agent-one-as") release, !mmra !{!"amdgpu-as", !"global"}
   ret void
@@ -1212,6 +1305,14 @@ define amdgpu_kernel void @agent_one_as_acq_rel_fence() {
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: agent_one_as_acq_rel_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("agent-one-as") acq_rel, !mmra !{!"amdgpu-as", !"global"}
   ret void
@@ -1310,6 +1411,14 @@ define amdgpu_kernel void @agent_one_as_seq_cst_fence() {
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: agent_one_as_seq_cst_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("agent-one-as") seq_cst, !mmra !{!"amdgpu-as", !"global"}
   ret void
@@ -1404,6 +1513,13 @@ define amdgpu_kernel void @system_acquire_fence() {
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: system_acquire_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence acquire, !mmra !{!"amdgpu-as", !"global"}
   ret void
@@ -1490,6 +1606,13 @@ define amdgpu_kernel void @system_release_fence() {
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: system_release_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence release, !mmra !{!"amdgpu-as", !"global"}
   ret void
@@ -1594,6 +1717,14 @@ define amdgpu_kernel void @system_acq_rel_fence() {
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: system_acq_rel_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence acq_rel, !mmra !{!"amdgpu-as", !"global"}
   ret void
@@ -1698,6 +1829,14 @@ define amdgpu_kernel void @system_seq_cst_fence() {
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: system_seq_cst_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence seq_cst, !mmra !{!"amdgpu-as", !"global"}
   ret void
@@ -1792,6 +1931,13 @@ define amdgpu_kernel void @system_one_as_acquire_fence() {
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: system_one_as_acquire_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("one-as") acquire, !mmra !{!"amdgpu-as", !"global"}
   ret void
@@ -1878,6 +2024,13 @@ define amdgpu_kernel void @system_one_as_release_fence() {
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: system_one_as_release_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("one-as") release, !mmra !{!"amdgpu-as", !"global"}
   ret void
@@ -1982,6 +2135,14 @@ define amdgpu_kernel void @system_one_as_acq_rel_fence() {
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: system_one_as_acq_rel_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("one-as") acq_rel, !mmra !{!"amdgpu-as", !"global"}
   ret void
@@ -2086,6 +2247,14 @@ define amdgpu_kernel void @system_one_as_seq_cst_fence() {
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: system_one_as_seq_cst_fence:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1250-NEXT:    s_endpgm
 entry:
   fence syncscope("one-as") seq_cst, !mmra !{!"amdgpu-as", !"global"}
   ret void

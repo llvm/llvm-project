@@ -3,6 +3,8 @@
 ; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERR %s
 ; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1200 < %s | FileCheck -check-prefixes=GFX12-SDAG %s
 ; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1200 < %s | FileCheck -check-prefixes=GFX12-GISEL %s
+; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1300 < %s | FileCheck -check-prefixes=GFX13-SDAG %s
+; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1300 < %s | FileCheck -check-prefixes=GFX13-GISEL %s
 
 declare {<10 x i32>, <3 x float>, <3 x float>} @llvm.amdgcn.image.bvh.dual.intersect.ray(i64, float, i8, <3 x float>, <3 x float>, <2 x i32>, <4 x i32>)
 
@@ -31,6 +33,37 @@ define amdgpu_ps <10 x float> @image_bvh_dual_intersect_ray(i64 %node_ptr, float
 ; GFX12-GISEL-NEXT:    global_store_b96 v[11:12], v[15:17], off
 ; GFX12-GISEL-NEXT:    global_store_b96 v[13:14], v[18:20], off
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
+;
+; GFX13-SDAG-LABEL: image_bvh_dual_intersect_ray:
+; GFX13-SDAG:       ; %bb.0: ; %main_body
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v23, v14 :: v_dual_mov_b32 v24, v9
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v25, v10 :: v_dual_mov_b32 v16, v8
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v15, v7 :: v_dual_mov_b32 v14, v6
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v20, v5 :: v_dual_mov_b32 v19, v4
+; GFX13-SDAG-NEXT:    v_mov_b32_e32 v18, v3
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v22, v13 :: v_dual_mov_b32 v3, 0
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v13, v12 :: v_dual_mov_b32 v12, v11
+; GFX13-SDAG-NEXT:    image_bvh_dual_intersect_ray v[0:9], [v[0:1], v[2:3], v[18:20], v[14:16], v[24:25]], s[0:3]
+; GFX13-SDAG-NEXT:    s_wait_rtscnt 0x0
+; GFX13-SDAG-NEXT:    global_store_b96 v[12:13], v[18:20], off
+; GFX13-SDAG-NEXT:    global_store_b96 v[22:23], v[14:16], off
+; GFX13-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX13-GISEL-LABEL: image_bvh_dual_intersect_ray:
+; GFX13-GISEL:       ; %bb.0: ; %main_body
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v20, v3 :: v_dual_mov_b32 v21, v4
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v22, v5 :: v_dual_mov_b32 v17, v7
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v16, v6 :: v_dual_mov_b32 v5, v10
+; GFX13-GISEL-NEXT:    v_mov_b32_e32 v18, v8
+; GFX13-GISEL-NEXT:    v_mov_b32_e32 v4, v9
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v10, v11 :: v_dual_mov_b32 v3, 0
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v11, v12 :: v_dual_mov_b32 v12, v13
+; GFX13-GISEL-NEXT:    v_mov_b32_e32 v13, v14
+; GFX13-GISEL-NEXT:    image_bvh_dual_intersect_ray v[0:9], [v[0:1], v[2:3], v[20:22], v[16:18], v[4:5]], s[0:3]
+; GFX13-GISEL-NEXT:    s_wait_rtscnt 0x0
+; GFX13-GISEL-NEXT:    global_store_b96 v[10:11], v[20:22], off
+; GFX13-GISEL-NEXT:    global_store_b96 v[12:13], v[16:18], off
+; GFX13-GISEL-NEXT:    ; return to shader part epilog
 main_body:
   %ray_origin0 = insertelement <3 x float> poison, float %ray_origin_x, i32 0
   %ray_origin1 = insertelement <3 x float> %ray_origin0, float %ray_origin_y, i32 1
@@ -72,6 +105,37 @@ define amdgpu_ps <10 x float> @image_bvh_dual_intersect_ray_1(i64 %node_ptr, flo
 ; GFX12-GISEL-NEXT:    global_store_b96 v[11:12], v[15:17], off
 ; GFX12-GISEL-NEXT:    global_store_b96 v[13:14], v[18:20], off
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
+;
+; GFX13-SDAG-LABEL: image_bvh_dual_intersect_ray_1:
+; GFX13-SDAG:       ; %bb.0: ; %main_body
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v23, v14 :: v_dual_mov_b32 v24, v9
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v25, v10 :: v_dual_mov_b32 v16, v8
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v15, v7 :: v_dual_mov_b32 v14, v6
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v20, v5 :: v_dual_mov_b32 v19, v4
+; GFX13-SDAG-NEXT:    v_mov_b32_e32 v18, v3
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v22, v13 :: v_dual_mov_b32 v3, 1
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v13, v12 :: v_dual_mov_b32 v12, v11
+; GFX13-SDAG-NEXT:    image_bvh_dual_intersect_ray v[0:9], [v[0:1], v[2:3], v[18:20], v[14:16], v[24:25]], s[0:3]
+; GFX13-SDAG-NEXT:    s_wait_rtscnt 0x0
+; GFX13-SDAG-NEXT:    global_store_b96 v[12:13], v[18:20], off
+; GFX13-SDAG-NEXT:    global_store_b96 v[22:23], v[14:16], off
+; GFX13-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX13-GISEL-LABEL: image_bvh_dual_intersect_ray_1:
+; GFX13-GISEL:       ; %bb.0: ; %main_body
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v20, v3 :: v_dual_mov_b32 v21, v4
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v22, v5 :: v_dual_mov_b32 v17, v7
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v16, v6 :: v_dual_mov_b32 v5, v10
+; GFX13-GISEL-NEXT:    v_mov_b32_e32 v18, v8
+; GFX13-GISEL-NEXT:    v_mov_b32_e32 v4, v9
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v10, v11 :: v_dual_mov_b32 v3, 1
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v11, v12 :: v_dual_mov_b32 v12, v13
+; GFX13-GISEL-NEXT:    v_mov_b32_e32 v13, v14
+; GFX13-GISEL-NEXT:    image_bvh_dual_intersect_ray v[0:9], [v[0:1], v[2:3], v[20:22], v[16:18], v[4:5]], s[0:3]
+; GFX13-GISEL-NEXT:    s_wait_rtscnt 0x0
+; GFX13-GISEL-NEXT:    global_store_b96 v[10:11], v[20:22], off
+; GFX13-GISEL-NEXT:    global_store_b96 v[12:13], v[16:18], off
+; GFX13-GISEL-NEXT:    ; return to shader part epilog
 main_body:
   %ray_origin0 = insertelement <3 x float> poison, float %ray_origin_x, i32 0
   %ray_origin1 = insertelement <3 x float> %ray_origin0, float %ray_origin_y, i32 1

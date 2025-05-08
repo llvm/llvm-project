@@ -9,6 +9,9 @@ s_delay_alu instid9(VALU_DEP_1)
 s_delay_alu instid0(VALU_DEP_9)
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid value name VALU_DEP_9
 
+s_delay_alu instid0(XDL_DEP_1)
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid value name XDL_DEP_1
+
 s_delay_alu instid0(1)
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: expected a value name
 

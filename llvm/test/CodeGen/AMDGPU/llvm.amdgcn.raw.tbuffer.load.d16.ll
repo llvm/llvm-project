@@ -7,6 +7,8 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -amdgpu-enable-delay-alu=0 -verify-machineinstrs | FileCheck -enable-var-scope -check-prefixes=GFX11-PACKED,GFX11-PACKED-FAKE16 %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 -mattr=+real-true16 -amdgpu-enable-delay-alu=0 -verify-machineinstrs | FileCheck -enable-var-scope -check-prefixes=GFX12-PACKED,GFX12-PACKED-TRUE16 %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 -mattr=-real-true16 -amdgpu-enable-delay-alu=0 -verify-machineinstrs | FileCheck -enable-var-scope -check-prefixes=GFX12-PACKED,GFX12-PACKED-FAKE16 %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1300 -mattr=+real-true16 -amdgpu-enable-delay-alu=0 -verify-machineinstrs | FileCheck -enable-var-scope -check-prefixes=GFX13-PACKED,GFX13-PACKED-TRUE16 %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1300 -mattr=-real-true16 -amdgpu-enable-delay-alu=0 -verify-machineinstrs | FileCheck -enable-var-scope -check-prefixes=GFX13-PACKED,GFX13-PACKED-FAKE16 %s
 
 define amdgpu_ps half @tbuffer_load_d16_x(<4 x i32> inreg %rsrc) {
 ; PREGFX10-UNPACKED-LABEL: tbuffer_load_d16_x:
@@ -38,6 +40,12 @@ define amdgpu_ps half @tbuffer_load_d16_x(<4 x i32> inreg %rsrc) {
 ; GFX12-PACKED-NEXT:    tbuffer_load_d16_format_x v0, off, s[0:3], null format:[BUF_FMT_32_FLOAT]
 ; GFX12-PACKED-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PACKED-NEXT:    ; return to shader part epilog
+;
+; GFX13-PACKED-LABEL: tbuffer_load_d16_x:
+; GFX13-PACKED:       ; %bb.0: ; %main_body
+; GFX13-PACKED-NEXT:    tbuffer_load_d16_format_x v0, off, s[0:3], null format:[BUF_FMT_32_FLOAT]
+; GFX13-PACKED-NEXT:    s_wait_loadcnt 0x0
+; GFX13-PACKED-NEXT:    ; return to shader part epilog
 main_body:
   %data = call half @llvm.amdgcn.raw.tbuffer.load.f16(<4 x i32> %rsrc, i32 0, i32 0, i32 22, i32 0)
   ret half %data
@@ -78,6 +86,13 @@ define amdgpu_ps half @tbuffer_load_d16_xy(<4 x i32> inreg %rsrc) {
 ; GFX12-PACKED-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PACKED-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX12-PACKED-NEXT:    ; return to shader part epilog
+;
+; GFX13-PACKED-LABEL: tbuffer_load_d16_xy:
+; GFX13-PACKED:       ; %bb.0: ; %main_body
+; GFX13-PACKED-NEXT:    tbuffer_load_d16_format_xy v0, off, s[0:3], null format:[BUF_FMT_32_FLOAT]
+; GFX13-PACKED-NEXT:    s_wait_loadcnt 0x0
+; GFX13-PACKED-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX13-PACKED-NEXT:    ; return to shader part epilog
 main_body:
   %data = call <2 x half> @llvm.amdgcn.raw.tbuffer.load.v2f16(<4 x i32> %rsrc, i32 0, i32 0, i32 22, i32 0)
   %elt = extractelement <2 x half> %data, i32 1
@@ -133,6 +148,20 @@ define amdgpu_ps half @tbuffer_load_d16_xyz(<4 x i32> inreg %rsrc) {
 ; GFX12-PACKED-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PACKED-FAKE16-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX12-PACKED-FAKE16-NEXT:    ; return to shader part epilog
+;
+; GFX13-PACKED-TRUE16-LABEL: tbuffer_load_d16_xyz:
+; GFX13-PACKED-TRUE16:       ; %bb.0: ; %main_body
+; GFX13-PACKED-TRUE16-NEXT:    tbuffer_load_d16_format_xyz v[0:1], off, s[0:3], null format:[BUF_FMT_32_FLOAT]
+; GFX13-PACKED-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX13-PACKED-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v1.l
+; GFX13-PACKED-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX13-PACKED-FAKE16-LABEL: tbuffer_load_d16_xyz:
+; GFX13-PACKED-FAKE16:       ; %bb.0: ; %main_body
+; GFX13-PACKED-FAKE16-NEXT:    tbuffer_load_d16_format_xyz v[0:1], off, s[0:3], null format:[BUF_FMT_32_FLOAT]
+; GFX13-PACKED-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX13-PACKED-FAKE16-NEXT:    v_mov_b32_e32 v0, v1
+; GFX13-PACKED-FAKE16-NEXT:    ; return to shader part epilog
 main_body:
   %data = call <3 x half> @llvm.amdgcn.raw.tbuffer.load.v3f16(<4 x i32> %rsrc, i32 0, i32 0, i32 22, i32 0)
   %elt = extractelement <3 x half> %data, i32 2
@@ -174,6 +203,13 @@ define amdgpu_ps half @tbuffer_load_d16_xyzw(<4 x i32> inreg %rsrc) {
 ; GFX12-PACKED-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PACKED-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
 ; GFX12-PACKED-NEXT:    ; return to shader part epilog
+;
+; GFX13-PACKED-LABEL: tbuffer_load_d16_xyzw:
+; GFX13-PACKED:       ; %bb.0: ; %main_body
+; GFX13-PACKED-NEXT:    tbuffer_load_d16_format_xyzw v[0:1], off, s[0:3], null format:[BUF_FMT_32_FLOAT]
+; GFX13-PACKED-NEXT:    s_wait_loadcnt 0x0
+; GFX13-PACKED-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
+; GFX13-PACKED-NEXT:    ; return to shader part epilog
 main_body:
   %data = call <4 x half> @llvm.amdgcn.raw.tbuffer.load.v4f16(<4 x i32> %rsrc, i32 0, i32 0, i32 22, i32 0)
   %elt = extractelement <4 x half> %data, i32 3

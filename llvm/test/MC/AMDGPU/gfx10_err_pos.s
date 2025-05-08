@@ -876,9 +876,9 @@ s_sendmsg sendmsg(15, -1)
 //==============================================================================
 // invalid or unsupported register size
 
-s_mov_b64 s[0:17], -1
+s_mov_b64 s[0:18], -1
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid or unsupported register size
-// CHECK-NEXT:{{^}}s_mov_b64 s[0:17], -1
+// CHECK-NEXT:{{^}}s_mov_b64 s[0:18], -1
 // CHECK-NEXT:{{^}}          ^
 
 //==============================================================================

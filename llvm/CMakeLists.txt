@@ -8,7 +8,6 @@ include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
   NO_POLICY_SCOPE)
 
 if (LLPC_BUILD_NPI)
-  list(APPEND LLVM_TABLEGEN_FLAGS "-DLLPC_BUILD_NPI")
   add_compile_definitions(LLPC_BUILD_NPI)
 endif()
 

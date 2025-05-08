@@ -4,7 +4,9 @@
 ;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck -check-prefix=GFX10 %s
 ;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs | FileCheck -check-prefix=GFX11 %s
 ;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs | FileCheck -check-prefix=GFX12 %s
+;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1300 -verify-machineinstrs | FileCheck -check-prefix=GFX12 %s
 ;RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs | FileCheck -check-prefix=GFX12 %s
+;RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1300 -verify-machineinstrs | FileCheck -check-prefix=GFX12 %s
 
 define amdgpu_vs {<4 x float>, <4 x float>, <4 x float>, <4 x float>} @tbuffer_load(<4 x i32> inreg) {
 ; PREGFX10-LABEL: tbuffer_load:
@@ -277,9 +279,8 @@ define amdgpu_vs {<4 x float>, <4 x float>, <4 x float>} @tbuffer_load_immoffs_l
 ;
 ; GFX12-LABEL: tbuffer_load_immoffs_large:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_mov_b32 s5, 61
 ; GFX12-NEXT:    s_clause 0x2
-; GFX12-NEXT:    tbuffer_load_format_xyzw v[0:3], off, s[0:3], s5 format:[BUF_FMT_8_8_8_8_SINT] offset:4095
+; GFX12-NEXT:    tbuffer_load_format_xyzw v[0:3], off, s[0:3], 61/*Invalid immediate*/ format:[BUF_FMT_8_8_8_8_SINT] offset:4095
 ; GFX12-NEXT:    tbuffer_load_format_xyzw v[4:7], off, s[0:3], s4 format:[BUF_FMT_32_32_32_32_SINT] offset:73
 ; GFX12-NEXT:    tbuffer_load_format_xyzw v[8:11], off, s[0:3], s4 format:77 offset:1
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -344,12 +345,6 @@ define amdgpu_vs <4 x float> @tbuffer_load_ofs_imm(<4 x i32> inreg, i32 %voffs) 
 ; GFX11-NEXT:    tbuffer_load_format_xyzw v[0:3], v0, s[0:3], 0 format:78 offen offset:52
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
-;
-; GFX12-LABEL: tbuffer_load_ofs_imm:
-; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    tbuffer_load_format_xyzw v[0:3], v0, s[0:3], null format:78 offen offset:52
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    ; return to shader part epilog
 main_body:
     %ofs = add i32 %voffs, 52
     %vdata   = call <4 x i32> @llvm.amdgcn.raw.tbuffer.load.v4i32(<4 x i32> %0, i32 %ofs, i32 0, i32 78, i32 0)

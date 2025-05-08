@@ -1,0 +1,40 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -verify-machineinstrs -run-pass=amdgpu-idx-reg-alloc -o - %s | FileCheck %s
+
+---
+name:            _Z3fooiiii
+tracksRegLiveness: true
+machineFunctionInfo:
+  occupancy:       16
+body:             |
+  bb.0.entry:
+    liveins: $sgpr2_sgpr3
+
+    %2:sgpr_64(p4) = COPY $sgpr2_sgpr3
+    %4:sgpr_128 = S_LOAD_DWORDX4_IMM %2(p4), 36, 0 :: (load (s128))
+    %5:sreg_32 = COPY %4.sub0
+    %6:sreg_32 = COPY %4.sub1
+    %7:sreg_32 = COPY %4.sub2
+    %8:sreg_32 = COPY %4.sub3
+    %9:sreg_32 = S_MOV_B32 2
+    %10:sreg_32_xexec_hi = S_LSHL_B32 killed %6, %9, implicit-def dead $scc
+    %16:sreg_32_xexec_hi = S_LSHR_B32 %10, 2, implicit-def dead $scc
+    %12:sreg_32_xexec_hi = S_LSHL_B32 killed %5, %9, implicit-def dead $scc
+    %17:sreg_32_xexec_hi = S_LSHR_B32 %12, 2, implicit-def dead $scc
+    %13:sreg_32_xexec_hi = S_LSHL_B32 killed %7, %9, implicit-def dead $scc
+    %18:sreg_32_xexec_hi = S_LSHR_B32 %13, 2, implicit-def dead $scc
+    %15:sreg_32_xexec_hi = S_LSHL_B32 killed %8, %9, implicit-def dead $scc
+    %19:sreg_32_xexec_hi = S_LSHR_B32 %15, 2, implicit-def dead $scc
+    %11:vgpr_32 = V_LOAD_IDX %16, 0, implicit $exec :: (load (s32), addrspace 10)
+    V_STORE_IDX %11, %17, 0, implicit $exec :: (store (s32), addrspace 10)
+    %14:vgpr_32 = V_LOAD_IDX %18, 0, implicit $exec :: (load (s32), addrspace 10)
+    V_STORE_IDX %14, %19, 0, implicit $exec :: (store (s32), addrspace 10)
+    ; CHECK: $idx1 = S_SET_GPR_IDX_U32
+    ; CHECK: $idx3 = S_SET_GPR_IDX_U32
+    ; CHECK: $idx2 = S_SET_GPR_IDX_U32
+    ; CHECK: [[DAT0:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx1,
+    ; CHECK-NEXT: $idx1 = S_SET_GPR_IDX_U32
+    ; CHECK-NEXT: V_STORE_IDX [[DAT0]], $idx3,
+    ; CHECK-NEXT: [[DAT1:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx2,
+    ; CHECK-NEXT: V_STORE_IDX [[DAT1]], $idx1,
+    S_ENDPGM 0

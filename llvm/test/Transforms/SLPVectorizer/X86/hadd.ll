@@ -213,7 +213,6 @@ define <4 x double> @test_v4f64(<4 x double> %a, <4 x double> %b) {
 
 ; PR50392
 define <4 x double> @test_v4f64_partial_swizzle(<4 x double> %a, <4 x double> %b) {
-;
 ; SSE-LABEL: @test_v4f64_partial_swizzle(
 ; SSE-NEXT:    [[B2:%.*]] = extractelement <4 x double> [[B:%.*]], i64 2
 ; SSE-NEXT:    [[B3:%.*]] = extractelement <4 x double> [[B]], i64 3

@@ -3,6 +3,8 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,GFX11,GFX11-FAKE16 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=+real-true16 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,GFX12,GFX12-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=-real-true16 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,GFX12,GFX12-FAKE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=+real-true16 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,GFX13,GFX13-TRUE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=-real-true16 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,GFX13,GFX13-FAKE16 %s
 
 define amdgpu_ps <4 x float> @load_2dmsaa(<8 x i32> inreg %rsrc, i32 %s, i32 %t, i32 %fragid) {
 ; GFX11-LABEL: load_2dmsaa:
@@ -16,6 +18,12 @@ define amdgpu_ps <4 x float> @load_2dmsaa(<8 x i32> inreg %rsrc, i32 %s, i32 %t,
 ; GFX12-NEXT:    image_msaa_load v[0:3], [v0, v1, v2], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm ; encoding: [0x06,0x20,0x46,0xe4,0x00,0x00,0x00,0x00,0x00,0x01,0x02,0x00]
 ; GFX12-NEXT:    s_wait_samplecnt 0x0 ; encoding: [0x00,0x00,0xc2,0xbf]
 ; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: load_2dmsaa:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    image_msaa_load v[0:3], [v0, v1, v2], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm ; encoding: [0x06,0x20,0x60,0xe4,0x00,0x00,0x00,0x00,0x00,0x01,0x02,0x00]
+; GFX13-NEXT:    s_wait_samplecnt 0x0 ; encoding: [0x00,0x00,0xc2,0xbf]
+; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 %s, i32 %t, i32 %fragid, <8 x i32> %rsrc, i32 0, i32 0)
   ret <4 x float> %v
@@ -55,6 +63,22 @@ define amdgpu_ps <4 x float> @load_2dmsaa_both(<8 x i32> inreg %rsrc, ptr addrsp
 ; GFX12-NEXT:    s_wait_samplecnt 0x0 ; encoding: [0x00,0x00,0xc2,0xbf]
 ; GFX12-NEXT:    global_store_b32 v8, v4, s[8:9] ; encoding: [0x08,0x80,0x06,0xee,0x00,0x00,0x00,0x02,0x08,0x00,0x00,0x00]
 ; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: load_2dmsaa_both:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    v_dual_mov_b32 v7, v0 :: v_dual_mov_b32 v8, 0 ; encoding: [0x00,0x01,0x10,0xca,0x80,0x00,0x08,0x07]
+; GFX13-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_mov_b32 v6, v1 ; encoding: [0x02,0x01,0x10,0xca,0x01,0x01,0x06,0x05]
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2) ; encoding: [0x22,0x01,0xae,0xbf]
+; GFX13-NEXT:    v_dual_mov_b32 v9, v8 :: v_dual_mov_b32 v10, v8 ; encoding: [0x08,0x01,0x10,0xca,0x08,0x01,0x0a,0x09]
+; GFX13-NEXT:    v_dual_mov_b32 v11, v8 :: v_dual_mov_b32 v12, v8 ; encoding: [0x08,0x01,0x10,0xca,0x08,0x01,0x0c,0x0b]
+; GFX13-NEXT:    v_dual_mov_b32 v0, v8 :: v_dual_mov_b32 v1, v9 ; encoding: [0x08,0x01,0x10,0xca,0x09,0x01,0x00,0x00]
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3) ; encoding: [0x92,0x01,0xae,0xbf]
+; GFX13-NEXT:    v_dual_mov_b32 v2, v10 :: v_dual_mov_b32 v3, v11 ; encoding: [0x0a,0x01,0x10,0xca,0x0b,0x01,0x02,0x02]
+; GFX13-NEXT:    v_mov_b32_e32 v4, v12 ; encoding: [0x0c,0x03,0x08,0x7e]
+; GFX13-NEXT:    image_msaa_load v[0:4], [v7, v6, v5], s[0:7] dmask:0x2 dim:SQ_RSRC_IMG_2D_MSAA unorm tfe lwe ; encoding: [0x0e,0x20,0xa0,0xe4,0x00,0x01,0x00,0x00,0x07,0x06,0x05,0x00]
+; GFX13-NEXT:    s_wait_samplecnt 0x0 ; encoding: [0x00,0x00,0xc2,0xbf]
+; GFX13-NEXT:    global_store_b32 v8, v4, s[8:9] scope:SCOPE_SE ; encoding: [0x08,0x00,0x07,0xee,0x00,0x00,0x04,0x02,0x08,0x00,0x00,0x00]
+; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32i32.i32(i32 2, i32 %s, i32 %t, i32 %fragid, <8 x i32> %rsrc, i32 3, i32 0)
   %v.vec = extractvalue {<4 x float>, i32} %v, 0
@@ -75,6 +99,12 @@ define amdgpu_ps <4 x float> @load_2darraymsaa(<8 x i32> inreg %rsrc, i32 %s, i3
 ; GFX12-NEXT:    image_msaa_load v[0:3], [v0, v1, v2, v3], s[0:7] dmask:0x4 dim:SQ_RSRC_IMG_2D_MSAA_ARRAY unorm ; encoding: [0x07,0x20,0x06,0xe5,0x00,0x00,0x00,0x00,0x00,0x01,0x02,0x03]
 ; GFX12-NEXT:    s_wait_samplecnt 0x0 ; encoding: [0x00,0x00,0xc2,0xbf]
 ; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: load_2darraymsaa:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    image_msaa_load v[0:3], [v0, v1, v2, v3], s[0:7] dmask:0x4 dim:SQ_RSRC_IMG_2D_MSAA_ARRAY unorm ; encoding: [0x07,0x20,0x20,0xe5,0x00,0x00,0x00,0x00,0x00,0x01,0x02,0x03]
+; GFX13-NEXT:    s_wait_samplecnt 0x0 ; encoding: [0x00,0x00,0xc2,0xbf]
+; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.msaa.load.2darraymsaa.v4f32.i32(i32 4, i32 %s, i32 %t, i32 %slice, i32 %fragid, <8 x i32> %rsrc, i32 0, i32 0)
   ret <4 x float> %v
@@ -115,6 +145,23 @@ define amdgpu_ps <4 x float> @load_2darraymsaa_tfe(<8 x i32> inreg %rsrc, ptr ad
 ; GFX12-NEXT:    s_wait_samplecnt 0x0 ; encoding: [0x00,0x00,0xc2,0xbf]
 ; GFX12-NEXT:    global_store_b32 v9, v4, s[8:9] ; encoding: [0x08,0x80,0x06,0xee,0x00,0x00,0x00,0x02,0x09,0x00,0x00,0x00]
 ; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: load_2darraymsaa_tfe:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    v_dual_mov_b32 v10, 0 :: v_dual_mov_b32 v5, v3 ; encoding: [0x80,0x00,0x10,0xca,0x03,0x01,0x04,0x0a]
+; GFX13-NEXT:    v_dual_mov_b32 v6, v2 :: v_dual_mov_b32 v7, v1 ; encoding: [0x02,0x01,0x10,0xca,0x01,0x01,0x06,0x06]
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3) ; encoding: [0xb2,0x01,0xae,0xbf]
+; GFX13-NEXT:    v_dual_mov_b32 v8, v0 :: v_dual_mov_b32 v11, v10 ; encoding: [0x00,0x01,0x10,0xca,0x0a,0x01,0x0a,0x08]
+; GFX13-NEXT:    v_dual_mov_b32 v12, v10 :: v_dual_mov_b32 v13, v10 ; encoding: [0x0a,0x01,0x10,0xca,0x0a,0x01,0x0c,0x0c]
+; GFX13-NEXT:    v_mov_b32_e32 v14, v10 ; encoding: [0x0a,0x03,0x1c,0x7e]
+; GFX13-NEXT:    v_dual_mov_b32 v0, v10 :: v_dual_mov_b32 v1, v11 ; encoding: [0x0a,0x01,0x10,0xca,0x0b,0x01,0x00,0x00]
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3) ; encoding: [0x93,0x01,0xae,0xbf]
+; GFX13-NEXT:    v_dual_mov_b32 v2, v12 :: v_dual_mov_b32 v3, v13 ; encoding: [0x0c,0x01,0x10,0xca,0x0d,0x01,0x02,0x02]
+; GFX13-NEXT:    v_mov_b32_e32 v4, v14 ; encoding: [0x0e,0x03,0x08,0x7e]
+; GFX13-NEXT:    image_msaa_load v[0:4], [v8, v7, v6, v5], s[0:7] dmask:0x8 dim:SQ_RSRC_IMG_2D_MSAA_ARRAY unorm tfe ; encoding: [0x0f,0x20,0x20,0xe6,0x00,0x00,0x00,0x00,0x08,0x07,0x06,0x05]
+; GFX13-NEXT:    s_wait_samplecnt 0x0 ; encoding: [0x00,0x00,0xc2,0xbf]
+; GFX13-NEXT:    global_store_b32 v10, v4, s[8:9] scope:SCOPE_SE ; encoding: [0x08,0x00,0x07,0xee,0x00,0x00,0x04,0x02,0x0a,0x00,0x00,0x00]
+; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.msaa.load.2darraymsaa.v4f32i32.i32(i32 8, i32 %s, i32 %t, i32 %slice, i32 %fragid, <8 x i32> %rsrc, i32 1, i32 0)
   %v.vec = extractvalue {<4 x float>, i32} %v, 0
@@ -135,6 +182,12 @@ define amdgpu_ps <4 x float> @load_2dmsaa_glc(<8 x i32> inreg %rsrc, i32 %s, i32
 ; GFX12-NEXT:    image_msaa_load v[0:3], [v0, v1, v2], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm th:TH_LOAD_NT ; encoding: [0x06,0x20,0x46,0xe4,0x00,0x00,0x10,0x00,0x00,0x01,0x02,0x00]
 ; GFX12-NEXT:    s_wait_samplecnt 0x0 ; encoding: [0x00,0x00,0xc2,0xbf]
 ; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: load_2dmsaa_glc:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    image_msaa_load v[0:3], [v0, v1, v2], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm th:TH_LOAD_NT ; encoding: [0x06,0x20,0x60,0xe4,0x00,0x00,0x10,0x00,0x00,0x01,0x02,0x00]
+; GFX13-NEXT:    s_wait_samplecnt 0x0 ; encoding: [0x00,0x00,0xc2,0xbf]
+; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 %s, i32 %t, i32 %fragid, <8 x i32> %rsrc, i32 0, i32 1)
   ret <4 x float> %v
@@ -152,6 +205,12 @@ define amdgpu_ps <4 x float> @load_2dmsaa_slc(<8 x i32> inreg %rsrc, i32 %s, i32
 ; GFX12-NEXT:    image_msaa_load v[0:3], [v0, v1, v2], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm th:TH_LOAD_HT ; encoding: [0x06,0x20,0x46,0xe4,0x00,0x00,0x20,0x00,0x00,0x01,0x02,0x00]
 ; GFX12-NEXT:    s_wait_samplecnt 0x0 ; encoding: [0x00,0x00,0xc2,0xbf]
 ; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: load_2dmsaa_slc:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    image_msaa_load v[0:3], [v0, v1, v2], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm th:TH_LOAD_HT ; encoding: [0x06,0x20,0x60,0xe4,0x00,0x00,0x20,0x00,0x00,0x01,0x02,0x00]
+; GFX13-NEXT:    s_wait_samplecnt 0x0 ; encoding: [0x00,0x00,0xc2,0xbf]
+; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 %s, i32 %t, i32 %fragid, <8 x i32> %rsrc, i32 0, i32 2)
   ret <4 x float> %v
@@ -169,6 +228,12 @@ define amdgpu_ps <4 x float> @load_2dmsaa_glc_slc(<8 x i32> inreg %rsrc, i32 %s,
 ; GFX12-NEXT:    image_msaa_load v[0:3], [v0, v1, v2], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm th:TH_LOAD_LU ; encoding: [0x06,0x20,0x46,0xe4,0x00,0x00,0x30,0x00,0x00,0x01,0x02,0x00]
 ; GFX12-NEXT:    s_wait_samplecnt 0x0 ; encoding: [0x00,0x00,0xc2,0xbf]
 ; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: load_2dmsaa_glc_slc:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    image_msaa_load v[0:3], [v0, v1, v2], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm th:TH_LOAD_LU ; encoding: [0x06,0x20,0x60,0xe4,0x00,0x00,0x30,0x00,0x00,0x01,0x02,0x00]
+; GFX13-NEXT:    s_wait_samplecnt 0x0 ; encoding: [0x00,0x00,0xc2,0xbf]
+; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 %s, i32 %t, i32 %fragid, <8 x i32> %rsrc, i32 0, i32 3)
   ret <4 x float> %v
@@ -186,6 +251,12 @@ define amdgpu_ps <4 x half> @load_2dmsaa_d16(<8 x i32> inreg %rsrc, i32 %s, i32 
 ; GFX12-NEXT:    image_msaa_load v[0:1], [v0, v1, v2], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm d16 ; encoding: [0x26,0x20,0x46,0xe4,0x00,0x00,0x00,0x00,0x00,0x01,0x02,0x00]
 ; GFX12-NEXT:    s_wait_samplecnt 0x0 ; encoding: [0x00,0x00,0xc2,0xbf]
 ; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: load_2dmsaa_d16:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    image_msaa_load v[0:1], [v0, v1, v2], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm d16 ; encoding: [0x26,0x20,0x60,0xe4,0x00,0x00,0x00,0x00,0x00,0x01,0x02,0x00]
+; GFX13-NEXT:    s_wait_samplecnt 0x0 ; encoding: [0x00,0x00,0xc2,0xbf]
+; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x half> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f16.i32(i32 1, i32 %s, i32 %t, i32 %fragid, <8 x i32> %rsrc, i32 0, i32 0)
   ret <4 x half> %v
@@ -220,6 +291,20 @@ define amdgpu_ps <4 x half> @load_2dmsaa_tfe_d16(<8 x i32> inreg %rsrc, ptr addr
 ; GFX12-NEXT:    s_wait_samplecnt 0x0 ; encoding: [0x00,0x00,0xc2,0xbf]
 ; GFX12-NEXT:    global_store_b32 v6, v2, s[8:9] ; encoding: [0x08,0x80,0x06,0xee,0x00,0x00,0x00,0x01,0x06,0x00,0x00,0x00]
 ; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: load_2dmsaa_tfe_d16:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    v_dual_mov_b32 v5, v0 :: v_dual_mov_b32 v6, 0 ; encoding: [0x00,0x01,0x10,0xca,0x80,0x00,0x06,0x05]
+; GFX13-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v4, v1 ; encoding: [0x02,0x01,0x10,0xca,0x01,0x01,0x04,0x03]
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1) ; encoding: [0x92,0x00,0xae,0xbf]
+; GFX13-NEXT:    v_dual_mov_b32 v7, v6 :: v_dual_mov_b32 v8, v6 ; encoding: [0x06,0x01,0x10,0xca,0x06,0x01,0x08,0x07]
+; GFX13-NEXT:    v_dual_mov_b32 v0, v6 :: v_dual_mov_b32 v1, v7 ; encoding: [0x06,0x01,0x10,0xca,0x07,0x01,0x00,0x00]
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) ; encoding: [0x02,0x00,0xae,0xbf]
+; GFX13-NEXT:    v_mov_b32_e32 v2, v8 ; encoding: [0x08,0x03,0x04,0x7e]
+; GFX13-NEXT:    image_msaa_load v[0:2], [v5, v4, v3], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm tfe d16 ; encoding: [0x2e,0x20,0x60,0xe4,0x00,0x00,0x00,0x00,0x05,0x04,0x03,0x00]
+; GFX13-NEXT:    s_wait_samplecnt 0x0 ; encoding: [0x00,0x00,0xc2,0xbf]
+; GFX13-NEXT:    global_store_b32 v6, v2, s[8:9] scope:SCOPE_SE ; encoding: [0x08,0x00,0x07,0xee,0x00,0x00,0x04,0x01,0x06,0x00,0x00,0x00]
+; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x half>,i32} @llvm.amdgcn.image.msaa.load.2dmsaa.v4f16i32.i32(i32 1, i32 %s, i32 %t, i32 %fragid, <8 x i32> %rsrc, i32 1, i32 0)
   %v.vec = extractvalue {<4 x half>, i32} %v, 0
@@ -240,6 +325,12 @@ define amdgpu_ps <4 x half> @load_2darraymsaa_d16(<8 x i32> inreg %rsrc, i32 %s,
 ; GFX12-NEXT:    image_msaa_load v[0:1], [v0, v1, v2, v3], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA_ARRAY unorm d16 ; encoding: [0x27,0x20,0x46,0xe4,0x00,0x00,0x00,0x00,0x00,0x01,0x02,0x03]
 ; GFX12-NEXT:    s_wait_samplecnt 0x0 ; encoding: [0x00,0x00,0xc2,0xbf]
 ; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: load_2darraymsaa_d16:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    image_msaa_load v[0:1], [v0, v1, v2, v3], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA_ARRAY unorm d16 ; encoding: [0x27,0x20,0x60,0xe4,0x00,0x00,0x00,0x00,0x00,0x01,0x02,0x03]
+; GFX13-NEXT:    s_wait_samplecnt 0x0 ; encoding: [0x00,0x00,0xc2,0xbf]
+; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x half> @llvm.amdgcn.image.msaa.load.2darraymsaa.v4f16.i32(i32 1, i32 %s, i32 %t, i32 %slice, i32 %fragid, <8 x i32> %rsrc, i32 0, i32 0)
   ret <4 x half> %v
@@ -274,6 +365,21 @@ define amdgpu_ps <4 x half> @load_2darraymsaa_tfe_d16(<8 x i32> inreg %rsrc, ptr
 ; GFX12-NEXT:    s_wait_samplecnt 0x0 ; encoding: [0x00,0x00,0xc2,0xbf]
 ; GFX12-NEXT:    global_store_b32 v7, v2, s[8:9] ; encoding: [0x08,0x80,0x06,0xee,0x00,0x00,0x00,0x01,0x07,0x00,0x00,0x00]
 ; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: load_2darraymsaa_tfe_d16:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    v_mov_b32_e32 v8, 0 ; encoding: [0x80,0x02,0x10,0x7e]
+; GFX13-NEXT:    v_mov_b32_e32 v6, v0 ; encoding: [0x00,0x03,0x0c,0x7e]
+; GFX13-NEXT:    v_dual_mov_b32 v4, v2 :: v_dual_mov_b32 v5, v1 ; encoding: [0x02,0x01,0x10,0xca,0x01,0x01,0x04,0x04]
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1) ; encoding: [0x93,0x00,0xae,0xbf]
+; GFX13-NEXT:    v_dual_mov_b32 v9, v8 :: v_dual_mov_b32 v10, v8 ; encoding: [0x08,0x01,0x10,0xca,0x08,0x01,0x0a,0x09]
+; GFX13-NEXT:    v_dual_mov_b32 v0, v8 :: v_dual_mov_b32 v1, v9 ; encoding: [0x08,0x01,0x10,0xca,0x09,0x01,0x00,0x00]
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) ; encoding: [0x02,0x00,0xae,0xbf]
+; GFX13-NEXT:    v_mov_b32_e32 v2, v10 ; encoding: [0x0a,0x03,0x04,0x7e]
+; GFX13-NEXT:    image_msaa_load v[0:2], [v6, v5, v4, v3], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA_ARRAY unorm tfe d16 ; encoding: [0x2f,0x20,0x60,0xe4,0x00,0x00,0x00,0x00,0x06,0x05,0x04,0x03]
+; GFX13-NEXT:    s_wait_samplecnt 0x0 ; encoding: [0x00,0x00,0xc2,0xbf]
+; GFX13-NEXT:    global_store_b32 v8, v2, s[8:9] scope:SCOPE_SE ; encoding: [0x08,0x00,0x07,0xee,0x00,0x00,0x04,0x01,0x08,0x00,0x00,0x00]
+; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x half>,i32} @llvm.amdgcn.image.msaa.load.2darraymsaa.v4f16i32.i32(i32 1, i32 %s, i32 %t, i32 %slice, i32 %fragid, <8 x i32> %rsrc, i32 1, i32 0)
   %v.vec = extractvalue {<4 x half>, i32} %v, 0
@@ -312,6 +418,20 @@ define amdgpu_ps <4 x float> @load_2dmsaa_a16(<8 x i32> inreg %rsrc, i16 %s, i16
 ; GFX12-FAKE16-NEXT:    image_msaa_load v[0:3], [v0, v2], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm a16 ; encoding: [0x46,0x20,0x46,0xe4,0x00,0x00,0x00,0x00,0x00,0x02,0x00,0x00]
 ; GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0 ; encoding: [0x00,0x00,0xc2,0xbf]
 ; GFX12-FAKE16-NEXT:    ; return to shader part epilog
+;
+; GFX13-TRUE16-LABEL: load_2dmsaa_a16:
+; GFX13-TRUE16:       ; %bb.0: ; %main_body
+; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l ; encoding: [0x01,0x39,0x00,0x7f]
+; GFX13-TRUE16-NEXT:    image_msaa_load v[0:3], [v0, v2], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm a16 ; encoding: [0x46,0x20,0x60,0xe4,0x00,0x00,0x00,0x00,0x00,0x02,0x00,0x00]
+; GFX13-TRUE16-NEXT:    s_wait_samplecnt 0x0 ; encoding: [0x00,0x00,0xc2,0xbf]
+; GFX13-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX13-FAKE16-LABEL: load_2dmsaa_a16:
+; GFX13-FAKE16:       ; %bb.0: ; %main_body
+; GFX13-FAKE16-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100 ; encoding: [0x00,0x00,0x44,0xd7,0x01,0x01,0xfe,0x03,0x00,0x01,0x04,0x05]
+; GFX13-FAKE16-NEXT:    image_msaa_load v[0:3], [v0, v2], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm a16 ; encoding: [0x46,0x20,0x60,0xe4,0x00,0x00,0x00,0x00,0x00,0x02,0x00,0x00]
+; GFX13-FAKE16-NEXT:    s_wait_samplecnt 0x0 ; encoding: [0x00,0x00,0xc2,0xbf]
+; GFX13-FAKE16-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i16(i32 1, i16 %s, i16 %t, i16 %fragid, <8 x i32> %rsrc, i32 0, i32 0)
   ret <4 x float> %v
@@ -351,6 +471,22 @@ define amdgpu_ps <4 x float> @load_2darraymsaa_a16(<8 x i32> inreg %rsrc, i16 %s
 ; GFX12-FAKE16-NEXT:    image_msaa_load v[0:3], [v0, v2], s[0:7] dmask:0x4 dim:SQ_RSRC_IMG_2D_MSAA_ARRAY unorm a16 ; encoding: [0x47,0x20,0x06,0xe5,0x00,0x00,0x00,0x00,0x00,0x02,0x00,0x00]
 ; GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0 ; encoding: [0x00,0x00,0xc2,0xbf]
 ; GFX12-FAKE16-NEXT:    ; return to shader part epilog
+;
+; GFX13-TRUE16-LABEL: load_2darraymsaa_a16:
+; GFX13-TRUE16:       ; %bb.0: ; %main_body
+; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v3.l ; encoding: [0x03,0x39,0x04,0x7f]
+; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l ; encoding: [0x01,0x39,0x00,0x7f]
+; GFX13-TRUE16-NEXT:    image_msaa_load v[0:3], [v0, v2], s[0:7] dmask:0x4 dim:SQ_RSRC_IMG_2D_MSAA_ARRAY unorm a16 ; encoding: [0x47,0x20,0x20,0xe5,0x00,0x00,0x00,0x00,0x00,0x02,0x00,0x00]
+; GFX13-TRUE16-NEXT:    s_wait_samplecnt 0x0 ; encoding: [0x00,0x00,0xc2,0xbf]
+; GFX13-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX13-FAKE16-LABEL: load_2darraymsaa_a16:
+; GFX13-FAKE16:       ; %bb.0: ; %main_body
+; GFX13-FAKE16-NEXT:    v_perm_b32 v2, v3, v2, 0x5040100 ; encoding: [0x02,0x00,0x44,0xd7,0x03,0x05,0xfe,0x03,0x00,0x01,0x04,0x05]
+; GFX13-FAKE16-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100 ; encoding: [0x00,0x00,0x44,0xd7,0x01,0x01,0xfe,0x03,0x00,0x01,0x04,0x05]
+; GFX13-FAKE16-NEXT:    image_msaa_load v[0:3], [v0, v2], s[0:7] dmask:0x4 dim:SQ_RSRC_IMG_2D_MSAA_ARRAY unorm a16 ; encoding: [0x47,0x20,0x20,0xe5,0x00,0x00,0x00,0x00,0x00,0x02,0x00,0x00]
+; GFX13-FAKE16-NEXT:    s_wait_samplecnt 0x0 ; encoding: [0x00,0x00,0xc2,0xbf]
+; GFX13-FAKE16-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.msaa.load.2darraymsaa.v4f32.i16(i32 4, i16 %s, i16 %t, i16 %slice, i16 %fragid, <8 x i32> %rsrc, i32 0, i32 0)
   ret <4 x float> %v

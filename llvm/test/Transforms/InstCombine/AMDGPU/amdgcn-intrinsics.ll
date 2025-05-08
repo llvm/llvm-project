@@ -6814,3 +6814,246 @@ define amdgpu_kernel void @ds_bpermute_uniform_lane(ptr addrspace(1) %out, i32 %
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.wave.match.b32
+; --------------------------------------------------------------------
+
+; TODO: We should use UniformityAnalysis instead of just checking for
+; trivially uniform constants. In that case, this test would also be optimized.
+define amdgpu_kernel void @v_wave_match_sgpr(ptr addrspace(1) %out, i32 %src1, i32 %src2) {
+; CHECK-LABEL: @v_wave_match_sgpr(
+; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[SRC1:%.*]], i32 [[SRC2:%.*]])
+; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.wave.match.b32(i32 %src1, i32 %src2)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @v_wave_match_vgpr(i32 addrspace(1)* %out) {
+; CHECK-LABEL: @v_wave_match_vgpr(
+; CHECK-NEXT:    [[TIDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    [[TIDY:%.*]] = call i32 @llvm.amdgcn.workitem.id.y()
+; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TIDX]], i32 [[TIDY]])
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TIDX]] to i64
+; CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT_PTR]], align 4
+; CHECK-NEXT:    ret void
+;
+  %tidx = call i32 @llvm.amdgcn.workitem.id.x()
+  %tidy = call i32 @llvm.amdgcn.workitem.id.y()
+  %v = call i32 @llvm.amdgcn.wave.match.b32(i32 %tidx, i32 %tidy)
+  %out_ptr = getelementptr i32, i32 addrspace(1)* %out, i32 %tidx
+  store i32 %v, i32 addrspace(1)* %out_ptr
+  ret void
+}
+
+define amdgpu_kernel void @v_wave_match_vgpr_expression(i32 addrspace(1)* %out) {
+; CHECK-LABEL: @v_wave_match_vgpr_expression(
+; CHECK-NEXT:    [[TIDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    [[TID2:%.*]] = add nuw nsw i32 [[TIDX]], 1
+; CHECK-NEXT:    [[TIDY:%.*]] = call i32 @llvm.amdgcn.workitem.id.y()
+; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID2]], i32 [[TIDY]])
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TIDX]] to i64
+; CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT_PTR]], align 4
+; CHECK-NEXT:    ret void
+;
+  %tidx = call i32 @llvm.amdgcn.workitem.id.x()
+  %tid2 = add i32 %tidx, 1
+  %tidy = call i32 @llvm.amdgcn.workitem.id.y()
+  %v = call i32 @llvm.amdgcn.wave.match.b32(i32 %tid2, i32 %tidy)
+  %out_ptr = getelementptr i32, i32 addrspace(1)* %out, i32 %tidx
+  store i32 %v, i32 addrspace(1)* %out_ptr
+  ret void
+}
+
+define amdgpu_kernel void @v_wave_match_constant(ptr addrspace(1) %out, i32 %src) {
+; CHECK-LABEL: @v_wave_match_constant(
+; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.ballot.i32(i1 true)
+; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.wave.match.b32(i32 7, i32 7)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @v_wave_match_undef(ptr addrspace(1) %out, i32 %src) {
+; CHECK-LABEL: @v_wave_match_undef(
+; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.ballot.i32(i1 true)
+; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.wave.match.b32(i32 undef, i32 undef)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.pdep.b32
+; --------------------------------------------------------------------
+define amdgpu_kernel void @v_pdep_b32_fold_zero_mask(ptr addrspace(1) %out, i32 %src) {
+; CHECK-LABEL: @v_pdep_b32_fold_zero_mask(
+; CHECK-NEXT:    store i32 0, ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.pdep.b32(i32 %src, i32 0)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @v_pdep_b32_fold_allones_mask(ptr addrspace(1) %out, i32 %src) {
+; CHECK-LABEL: @v_pdep_b32_fold_allones_mask(
+; CHECK-NEXT:    store i32 [[SRC:%.*]], ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.pdep.b32(i32 %src, i32 -1)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @v_pdep_b32_fold_shifted_mask(ptr addrspace(1) %out, i32 %src) {
+; CHECK-LABEL: @v_pdep_b32_fold_shifted_mask(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[SRC:%.*]], 2
+; CHECK-NEXT:    [[V:%.*]] = and i32 [[TMP1]], 12
+; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.pdep.b32(i32 %src, i32 12)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @v_pdep_b32_fold_constant(ptr addrspace(1) %out) {
+; CHECK-LABEL: @v_pdep_b32_fold_constant(
+; CHECK-NEXT:    store i32 807407616, ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.pdep.b32(i32 1985229328, i32 4042322160)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @v_pdep_b32_fold_constant2(ptr addrspace(1) %out) {
+; CHECK-LABEL: @v_pdep_b32_fold_constant2(
+; CHECK-NEXT:    store i32 838860816, ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.pdep.b32(i32 1985229328, i32 4278190335)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @v_pdep_b32_fold_zero_source(ptr addrspace(1) %out, i32 %mask) {
+; CHECK-LABEL: @v_pdep_b32_fold_zero_source(
+; CHECK-NEXT:    store i32 0, ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.pdep.b32(i32 0, i32 %mask)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @v_pdep_b32_fold_allones_source(ptr addrspace(1) %out, i32 %mask) {
+; CHECK-LABEL: @v_pdep_b32_fold_allones_source(
+; CHECK-NEXT:    store i32 [[MASK:%.*]], ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.pdep.b32(i32 -1, i32 %mask)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.pext.b32
+; --------------------------------------------------------------------
+
+define amdgpu_kernel void @v_pext_b32_fold_zero_mask(ptr addrspace(1) %out, i32 %src) {
+; CHECK-LABEL: @v_pext_b32_fold_zero_mask(
+; CHECK-NEXT:    store i32 0, ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.pext.b32(i32 %src, i32 0)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @v_pext_b32_fold_allones_mask(ptr addrspace(1) %out, i32 %src) {
+; CHECK-LABEL: @v_pext_b32_fold_allones_mask(
+; CHECK-NEXT:    store i32 [[SRC:%.*]], ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.pext.b32(i32 %src, i32 -1)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @v_pext_b32_fold_shifted_mask(ptr addrspace(1) %out, i32 %src) {
+; CHECK-LABEL: @v_pext_b32_fold_shifted_mask(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[SRC:%.*]], 2
+; CHECK-NEXT:    [[V:%.*]] = and i32 [[TMP1]], 3
+; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.pext.b32(i32 %src, i32 12)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @v_pext_b32_fold_constant(ptr addrspace(1) %out) {
+; CHECK-LABEL: @v_pext_b32_fold_constant(
+; CHECK-NEXT:    store i32 30001, ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.pext.b32(i32 1985229328, i32 4042322160)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @v_pext_b32_fold_constant2(ptr addrspace(1) %out) {
+; CHECK-LABEL: @v_pext_b32_fold_constant2(
+; CHECK-NEXT:    store i32 30224, ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.pext.b32(i32 1985229328, i32 4278190335)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @v_pext_b32_fold_zero_source(ptr addrspace(1) %out, i32 %mask) {
+; CHECK-LABEL: @v_pext_b32_fold_zero_source(
+; CHECK-NEXT:    store i32 0, ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.pext.b32(i32 0, i32 %mask)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.bpermute.b32
+; --------------------------------------------------------------------
+
+define amdgpu_kernel void @v_bpermute_uniform_src(ptr addrspace(1) %out, i32 %lane) {
+; CHECK-LABEL: @v_bpermute_uniform_src(
+; CHECK-NEXT:    store i32 7, ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.bpermute.b32(i32 7, i32 %lane)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @v_bpermute_uniform_lane(ptr addrspace(1) %out, i32 %src) {
+; CHECK-LABEL: @v_bpermute_uniform_lane(
+; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[SRC:%.*]], i32 7)
+; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.bpermute.b32(i32 %src, i32 7)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}

@@ -5,6 +5,8 @@
 ;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs | FileCheck -check-prefixes=GFX11 %s
 ;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs | FileCheck -check-prefixes=GFX12,GFX12-SDAG %s
 ;RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs | FileCheck -check-prefixes=GFX12,GFX12-GISEL %s
+;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1300 -verify-machineinstrs | FileCheck -check-prefixes=GFX12,GFX12-SDAG %s
+;RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1300 -verify-machineinstrs | FileCheck -check-prefixes=GFX12,GFX12-GISEL %s
 
 define amdgpu_vs {<4 x float>, <4 x float>, <4 x float>, <4 x float>} @tbuffer_load(<4 x i32> inreg) {
 ; PREGFX10-LABEL: tbuffer_load:
@@ -131,9 +133,8 @@ define amdgpu_vs {<4 x float>, <4 x float>, <4 x float>} @tbuffer_load_immoffs_l
 ; GFX12-LABEL: tbuffer_load_immoffs_large:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_mov_b32_e32 v8, 0
-; GFX12-NEXT:    s_mov_b32 s5, 61
 ; GFX12-NEXT:    s_clause 0x2
-; GFX12-NEXT:    tbuffer_load_format_xyzw v[0:3], v8, s[0:3], s5 format:[BUF_FMT_8_8_8_8_SINT] idxen offset:4095
+; GFX12-NEXT:    tbuffer_load_format_xyzw v[0:3], v8, s[0:3], 61/*Invalid immediate*/ format:[BUF_FMT_8_8_8_8_SINT] idxen offset:4095
 ; GFX12-NEXT:    tbuffer_load_format_xyzw v[4:7], v8, s[0:3], s4 format:[BUF_FMT_32_32_32_32_SINT] idxen offset:73
 ; GFX12-NEXT:    tbuffer_load_format_xyzw v[8:11], v8, s[0:3], s4 format:77 idxen offset:1
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -247,13 +248,6 @@ define amdgpu_vs <4 x float> @tbuffer_load_ofs_imm(<4 x i32> inreg, i32 %voffs) 
 ; GFX11-NEXT:    tbuffer_load_format_xyzw v[0:3], v[0:1], s[0:3], 0 format:78 idxen offen offset:52
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
-;
-; GFX12-LABEL: tbuffer_load_ofs_imm:
-; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    v_dual_mov_b32 v1, v0 :: v_dual_mov_b32 v0, 0
-; GFX12-NEXT:    tbuffer_load_format_xyzw v[0:3], v[0:1], s[0:3], null format:78 idxen offen offset:52
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    ; return to shader part epilog
 main_body:
     %ofs = add i32 %voffs, 52
     %vdata   = call <4 x i32> @llvm.amdgcn.struct.tbuffer.load.v4i32(<4 x i32> %0, i32 0, i32 %ofs, i32 0, i32 78, i32 0)

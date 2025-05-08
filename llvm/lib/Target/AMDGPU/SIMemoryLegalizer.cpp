@@ -63,6 +63,9 @@ enum class SIAtomicScope {
   SINGLETHREAD,
   WAVEFRONT,
   WORKGROUP,
+#if LLPC_BUILD_NPI
+  CLUSTER,
+#endif /* LLPC_BUILD_NPI */
   AGENT,
   SYSTEM
 };
@@ -861,6 +864,10 @@ SIMemOpAccess::toSIAtomicScope(SyncScope::ID SSID,
     return std::tuple(SIAtomicScope::SYSTEM, SIAtomicAddrSpace::ATOMIC, true);
   if (SSID == MMI->getAgentSSID())
     return std::tuple(SIAtomicScope::AGENT, SIAtomicAddrSpace::ATOMIC, true);
+#if LLPC_BUILD_NPI
+  if (SSID == MMI->getClusterSSID())
+    return std::tuple(SIAtomicScope::CLUSTER, SIAtomicAddrSpace::ATOMIC, true);
+#endif /* LLPC_BUILD_NPI */
   if (SSID == MMI->getWorkgroupSSID())
     return std::tuple(SIAtomicScope::WORKGROUP, SIAtomicAddrSpace::ATOMIC,
                       true);
@@ -876,6 +883,11 @@ SIMemOpAccess::toSIAtomicScope(SyncScope::ID SSID,
   if (SSID == MMI->getAgentOneAddressSpaceSSID())
     return std::tuple(SIAtomicScope::AGENT,
                       SIAtomicAddrSpace::ATOMIC & InstrAddrSpace, false);
+#if LLPC_BUILD_NPI
+  if (SSID == MMI->getClusterOneAddressSpaceSSID())
+    return std::tuple(SIAtomicScope::CLUSTER,
+                      SIAtomicAddrSpace::ATOMIC & InstrAddrSpace, false);
+#endif /* LLPC_BUILD_NPI */
   if (SSID == MMI->getWorkgroupOneAddressSpaceSSID())
     return std::tuple(SIAtomicScope::WORKGROUP,
                       SIAtomicAddrSpace::ATOMIC & InstrAddrSpace, false);
@@ -1155,6 +1167,9 @@ bool SIGfx6CacheControl::enableLoadCacheBypass(
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
+#if LLPC_BUILD_NPI
+    case SIAtomicScope::CLUSTER:
+#endif /* LLPC_BUILD_NPI */
       // Set L1 cache policy to MISS_EVICT.
       // Note: there is no L2 cache bypass policy at the ISA level.
       Changed |= enableGLCBit(MI);
@@ -1273,6 +1288,9 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
+#if LLPC_BUILD_NPI
+    case SIAtomicScope::CLUSTER:
+#endif /* LLPC_BUILD_NPI */
       VMCnt |= true;
       break;
     case SIAtomicScope::WORKGROUP:
@@ -1290,6 +1308,9 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
+#if LLPC_BUILD_NPI
+    case SIAtomicScope::CLUSTER:
+#endif /* LLPC_BUILD_NPI */
     case SIAtomicScope::WORKGROUP:
       // If no cross address space ordering then an "S_WAITCNT lgkmcnt(0)" is
       // not needed as LDS operations for all waves are executed in a total
@@ -1313,6 +1334,9 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
+#if LLPC_BUILD_NPI
+    case SIAtomicScope::CLUSTER:
+#endif /* LLPC_BUILD_NPI */
       // If no cross address space ordering then an GDS "S_WAITCNT lgkmcnt(0)"
       // is not needed as GDS operations for all waves are executed in a total
       // global ordering as observed by all waves. Required if also
@@ -1368,6 +1392,9 @@ bool SIGfx6CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
+#if LLPC_BUILD_NPI
+    case SIAtomicScope::CLUSTER:
+#endif /* LLPC_BUILD_NPI */
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::BUFFER_WBINVL1));
       Changed = true;
       break;
@@ -1428,6 +1455,9 @@ bool SIGfx7CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
+#if LLPC_BUILD_NPI
+    case SIAtomicScope::CLUSTER:
+#endif /* LLPC_BUILD_NPI */
       BuildMI(MBB, MI, DL, TII->get(InvalidateL1));
       Changed = true;
       break;
@@ -1465,6 +1495,9 @@ bool SIGfx90ACacheControl::enableLoadCacheBypass(
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
+#if LLPC_BUILD_NPI
+    case SIAtomicScope::CLUSTER:
+#endif /* LLPC_BUILD_NPI */
       // Set the L1 cache policy to MISS_LRU.
       // Note: there is no L2 cache bypass policy at the ISA level.
       Changed |= enableGLCBit(MI);
@@ -1507,6 +1540,9 @@ bool SIGfx90ACacheControl::enableStoreCacheBypass(
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
+#if LLPC_BUILD_NPI
+    case SIAtomicScope::CLUSTER:
+#endif /* LLPC_BUILD_NPI */
       /// Do not set glc for store atomic operations as they implicitly write
       /// through the L1 cache.
       break;
@@ -1542,6 +1578,9 @@ bool SIGfx90ACacheControl::enableRMWCacheBypass(
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
+#if LLPC_BUILD_NPI
+    case SIAtomicScope::CLUSTER:
+#endif /* LLPC_BUILD_NPI */
       /// Do not set glc for RMW atomic operations as they implicitly bypass
       /// the L1 cache, and the glc bit is instead used to indicate if they are
       /// return or no-return.
@@ -1662,6 +1701,9 @@ bool SIGfx90ACacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
       Changed = true;
       break;
     case SIAtomicScope::AGENT:
+#if LLPC_BUILD_NPI
+    case SIAtomicScope::CLUSTER:
+#endif /* LLPC_BUILD_NPI */
       // Same as GFX7.
       break;
     case SIAtomicScope::WORKGROUP:
@@ -1728,6 +1770,9 @@ bool SIGfx90ACacheControl::insertRelease(MachineBasicBlock::iterator &MI,
       Changed = true;
       break;
     case SIAtomicScope::AGENT:
+#if LLPC_BUILD_NPI
+    case SIAtomicScope::CLUSTER:
+#endif /* LLPC_BUILD_NPI */
     case SIAtomicScope::WORKGROUP:
     case SIAtomicScope::WAVEFRONT:
     case SIAtomicScope::SINGLETHREAD:
@@ -1762,6 +1807,9 @@ bool SIGfx940CacheControl::enableLoadCacheBypass(
       Changed |= enableSC1Bit(MI);
       break;
     case SIAtomicScope::AGENT:
+#if LLPC_BUILD_NPI
+    case SIAtomicScope::CLUSTER:
+#endif /* LLPC_BUILD_NPI */
       // Set SC bits to indicate agent scope.
       Changed |= enableSC1Bit(MI);
       break;
@@ -1806,6 +1854,9 @@ bool SIGfx940CacheControl::enableStoreCacheBypass(
       Changed |= enableSC1Bit(MI);
       break;
     case SIAtomicScope::AGENT:
+#if LLPC_BUILD_NPI
+    case SIAtomicScope::CLUSTER:
+#endif /* LLPC_BUILD_NPI */
       // Set SC bits to indicate agent scope.
       Changed |= enableSC1Bit(MI);
       break;
@@ -1845,6 +1896,9 @@ bool SIGfx940CacheControl::enableRMWCacheBypass(
       Changed |= enableSC1Bit(MI);
       break;
     case SIAtomicScope::AGENT:
+#if LLPC_BUILD_NPI
+    case SIAtomicScope::CLUSTER:
+#endif /* LLPC_BUILD_NPI */
     case SIAtomicScope::WORKGROUP:
     case SIAtomicScope::WAVEFRONT:
     case SIAtomicScope::SINGLETHREAD:
@@ -1933,6 +1987,9 @@ bool SIGfx940CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
       Changed = true;
       break;
     case SIAtomicScope::AGENT:
+#if LLPC_BUILD_NPI
+    case SIAtomicScope::CLUSTER:
+#endif /* LLPC_BUILD_NPI */
       // Ensures that following loads will not see stale remote date or local
       // MTYPE NC global data. Local MTYPE RW and CC memory will never be stale
       // due to the memory probes.
@@ -2018,6 +2075,9 @@ bool SIGfx940CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
       Changed = true;
       break;
     case SIAtomicScope::AGENT:
+#if LLPC_BUILD_NPI
+    case SIAtomicScope::CLUSTER:
+#endif /* LLPC_BUILD_NPI */
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::BUFFER_WBL2))
           // Set SC bits to indicate agent scope.
           .addImm(AMDGPU::CPol::SC1);
@@ -2061,6 +2121,9 @@ bool SIGfx10CacheControl::enableLoadCacheBypass(
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
+#if LLPC_BUILD_NPI
+    case SIAtomicScope::CLUSTER:
+#endif /* LLPC_BUILD_NPI */
       // Set the L0 and L1 cache policies to MISS_EVICT.
       // Note: there is no L2 cache coherent bypass control at the ISA level.
       Changed |= enableGLCBit(MI);
@@ -2166,6 +2229,9 @@ bool SIGfx10CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
+#if LLPC_BUILD_NPI
+    case SIAtomicScope::CLUSTER:
+#endif /* LLPC_BUILD_NPI */
       if ((Op & SIMemOp::LOAD) != SIMemOp::NONE)
         VMCnt |= true;
       if ((Op & SIMemOp::STORE) != SIMemOp::NONE)
@@ -2198,6 +2264,9 @@ bool SIGfx10CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
+#if LLPC_BUILD_NPI
+    case SIAtomicScope::CLUSTER:
+#endif /* LLPC_BUILD_NPI */
     case SIAtomicScope::WORKGROUP:
       // If no cross address space ordering then an "S_WAITCNT lgkmcnt(0)" is
       // not needed as LDS operations for all waves are executed in a total
@@ -2221,6 +2290,9 @@ bool SIGfx10CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
+#if LLPC_BUILD_NPI
+    case SIAtomicScope::CLUSTER:
+#endif /* LLPC_BUILD_NPI */
       // If no cross address space ordering then an GDS "S_WAITCNT lgkmcnt(0)"
       // is not needed as GDS operations for all waves are executed in a total
       // global ordering as observed by all waves. Required if also
@@ -2283,6 +2355,9 @@ bool SIGfx10CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
+#if LLPC_BUILD_NPI
+    case SIAtomicScope::CLUSTER:
+#endif /* LLPC_BUILD_NPI */
       // The order of invalidates matter here. We must invalidate "outer in"
       // so L1 -> L0 to avoid L0 pulling in stale data from L1 when it is
       // invalidated.
@@ -2332,6 +2407,9 @@ bool SIGfx11CacheControl::enableLoadCacheBypass(
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
+#if LLPC_BUILD_NPI
+    case SIAtomicScope::CLUSTER:
+#endif /* LLPC_BUILD_NPI */
       // Set the L0 and L1 cache policies to MISS_EVICT.
       // Note: there is no L2 cache coherent bypass control at the ISA level.
       Changed |= enableGLCBit(MI);
@@ -2517,6 +2595,9 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
+#if LLPC_BUILD_NPI
+    case SIAtomicScope::CLUSTER:
+#endif /* LLPC_BUILD_NPI */
       if ((Op & SIMemOp::LOAD) != SIMemOp::NONE)
         LOADCnt |= true;
       if ((Op & SIMemOp::STORE) != SIMemOp::NONE)
@@ -2565,6 +2646,9 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
+#if LLPC_BUILD_NPI
+    case SIAtomicScope::CLUSTER:
+#endif /* LLPC_BUILD_NPI */
     case SIAtomicScope::WORKGROUP:
       // If no cross address space ordering then an "S_WAITCNT lgkmcnt(0)" is
       // not needed as LDS operations for all waves are executed in a total
@@ -2649,6 +2733,9 @@ bool SIGfx12CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
     ScopeImm = AMDGPU::CPol::SCOPE_SYS;
     break;
   case SIAtomicScope::AGENT:
+#if LLPC_BUILD_NPI
+  case SIAtomicScope::CLUSTER:
+#endif /* LLPC_BUILD_NPI */
     ScopeImm = AMDGPU::CPol::SCOPE_DEV;
     break;
   case SIAtomicScope::WORKGROUP:
@@ -2738,6 +2825,7 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
     break;
   case SIAtomicScope::AGENT:
 #if LLPC_BUILD_NPI
+  case SIAtomicScope::CLUSTER:
     if (ST.hasGFX1250Insts()) {
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB))
         .addImm(AMDGPU::CPol::SCOPE_DEV);
@@ -2867,6 +2955,9 @@ bool SIGfx12CacheControl::setAtomicScope(const MachineBasicBlock::iterator &MI,
       Changed |= setScope(MI, AMDGPU::CPol::SCOPE_SYS);
       break;
     case SIAtomicScope::AGENT:
+#if LLPC_BUILD_NPI
+    case SIAtomicScope::CLUSTER:
+#endif /* LLPC_BUILD_NPI */
       Changed |= setScope(MI, AMDGPU::CPol::SCOPE_DEV);
       break;
     case SIAtomicScope::WORKGROUP:

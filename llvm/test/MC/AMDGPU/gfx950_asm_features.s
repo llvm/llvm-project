@@ -1375,6 +1375,30 @@ v_cvt_scalef32_sr_pk_fp4_f32 v0, |v[2:3]|, v4, v5
 // GFX950: v_cvt_scalef32_sr_pk_fp4_f32 v0, v[2:3], v4, |v5| ; encoding: [0x00,0x04,0x3e,0xd2,0x02,0x09,0x16,0x04]
 v_cvt_scalef32_sr_pk_fp4_f32 v0, v[2:3], v4, |v5|
 
+// NOT-GFX950: error: instruction not supported on this GPU
+// GFX950: v_cvt_scalef32_sr_pk32_bf6_bf16 v[0:5], v[6:21], v22, v23 ; encoding: [0x00,0x00,0x5f,0xd2,0x06,0x2d,0x5e,0x04]
+v_cvt_scalef32_sr_pk32_bf6_bf16 v[0:5], v[6:21], v22, v23
+
+// NOT-GFX950: error: instruction not supported on this GPU
+// GFX950: v_cvt_scalef32_sr_pk32_bf6_f16 v[0:5], v[6:21], v22, v23 ; encoding: [0x00,0x00,0x5e,0xd2,0x06,0x2d,0x5e,0x04]
+v_cvt_scalef32_sr_pk32_bf6_f16 v[0:5], v[6:21], v22, v23
+
+// NOT-GFX950: error: instruction not supported on this GPU
+// GFX950: v_cvt_scalef32_sr_pk32_fp6_bf16 v[0:5], v[6:21], v22, v23 ; encoding: [0x00,0x00,0x5d,0xd2,0x06,0x2d,0x5e,0x04]
+v_cvt_scalef32_sr_pk32_fp6_bf16 v[0:5], v[6:21], v22, v23
+
+// NOT-GFX950: error: instruction not supported on this GPU
+// GFX950: v_cvt_scalef32_sr_pk32_fp6_f16 v[0:5], v[6:21], v22, v23 ; encoding: [0x00,0x00,0x5c,0xd2,0x06,0x2d,0x5e,0x04]
+v_cvt_scalef32_sr_pk32_fp6_f16 v[0:5], v[6:21], v22, v23
+
+// NOT-GFX950: error: instruction not supported on this GPU
+// GFX950: v_cvt_scalef32_sr_pk32_bf6_f32 v[0:5], v[6:37], v38, v39 ; encoding: [0x00,0x00,0x55,0xd2,0x06,0x4d,0x9e,0x04]
+v_cvt_scalef32_sr_pk32_bf6_f32 v[0:5], v[6:37], v38, v39
+
+// NOT-GFX950: error: instruction not supported on this GPU
+// GFX950: v_cvt_scalef32_sr_pk32_fp6_f32 v[0:5], v[6:37], v38, v39 ; encoding: [0x00,0x00,0x54,0xd2,0x06,0x4d,0x9e,0x04]
+v_cvt_scalef32_sr_pk32_fp6_f32 v[0:5], v[6:37], v38, v39
+
 // NOT-GFX950: :[[@LINE+2]]:{{[0-9]+}}: error:
 // GFX950: v_cvt_sr_f16_f32 v0, v1, v2             ; encoding: [0x00,0x00,0xa6,0xd2,0x01,0x05,0x02,0x00]
 v_cvt_sr_f16_f32 v0, v1, v2

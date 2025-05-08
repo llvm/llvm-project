@@ -401,16 +401,10 @@ public:
     return isRegOrImmWithInputMods(AMDGPU::VS_32RegClassID, MVT::v2f16);
   }
 
-  bool isPackedFP32InputMods() const {
-    return isRegOrImmWithInputMods(AMDGPU::VS_64RegClassID, MVT::v2f32);
-  }
-
-#if LLPC_BUILD_NPI
   bool isPackedVGPRFP32InputMods() const {
     return isRegOrImmWithInputMods(AMDGPU::VReg_64RegClassID, MVT::v2f32);
   }
 
-#endif /* LLPC_BUILD_NPI */
   bool isVReg() const {
     return isRegClass(AMDGPU::VGPR_32RegClassID) ||
            isRegClass(AMDGPU::VReg_64RegClassID) ||

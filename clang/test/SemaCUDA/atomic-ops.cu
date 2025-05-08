@@ -12,7 +12,8 @@ __device__ int test_hip_atomic_load(int *pi32, unsigned int *pu32, long long *pl
   val = __hip_atomic_load(pi32, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WORKGROUP);
   val = __hip_atomic_load(pi32, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_AGENT);
   val = __hip_atomic_load(pi32, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SYSTEM);
-  val = __hip_atomic_load(pi32, __ATOMIC_RELAXED, 6); // expected-error {{synchronization scope argument to atomic operation is invalid}}
+  val = __hip_atomic_load(pi32, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_CLUSTER);
+  val = __hip_atomic_load(pi32, __ATOMIC_RELAXED, 7); // expected-error {{synchronization scope argument to atomic operation is invalid}}
   val = __hip_atomic_load(pi32, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SINGLETHREAD);
   val = __hip_atomic_load(pi32, __ATOMIC_SEQ_CST, __HIP_MEMORY_SCOPE_SINGLETHREAD);
   val = __hip_atomic_load(pi32, __ATOMIC_CONSUME, __HIP_MEMORY_SCOPE_SINGLETHREAD);
@@ -37,7 +38,8 @@ __device__ int test_hip_atomic_store(int *pi32, unsigned int *pu32, long long *p
   __hip_atomic_store(pi32, 0, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WORKGROUP);
   __hip_atomic_store(pi32, 0, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_AGENT);
   __hip_atomic_store(pi32, 0, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SYSTEM);
-  __hip_atomic_store(pi32, 0, __ATOMIC_RELAXED, 6); // expected-error {{synchronization scope argument to atomic operation is invalid}}
+  __hip_atomic_store(pi32, 0, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_CLUSTER);
+  __hip_atomic_store(pi32, 0, __ATOMIC_RELAXED, 7); // expected-error {{synchronization scope argument to atomic operation is invalid}}
   __hip_atomic_store(pi32, 0, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SINGLETHREAD);
   __hip_atomic_store(pi32, 0, __ATOMIC_SEQ_CST, __HIP_MEMORY_SCOPE_SINGLETHREAD);
   __hip_atomic_store(pi32, 0, __ATOMIC_CONSUME, __HIP_MEMORY_SCOPE_SINGLETHREAD); // expected-warning{{memory order argument to atomic operation is invalid}}

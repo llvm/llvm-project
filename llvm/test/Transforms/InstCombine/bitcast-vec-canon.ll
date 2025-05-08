@@ -38,7 +38,6 @@ define <1 x i64> @d(i64 %y) {
   ret <1 x i64> %c
 }
 
-; FP source is ok.
 
 define <3 x i64> @bitcast_inselt_undef(double %x, i32 %idx) {
 ; CHECK-LABEL: @bitcast_inselt_undef(
@@ -51,8 +50,6 @@ define <3 x i64> @bitcast_inselt_undef(double %x, i32 %idx) {
   ret <3 x i64> %i
 }
 
-; Integer source is ok; index is anything.
-
 define <3 x float> @bitcast_inselt_undef_fp(i32 %x, i567 %idx) {
 ; CHECK-LABEL: @bitcast_inselt_undef_fp(
 ; CHECK-NEXT:    [[XB:%.*]] = bitcast i32 [[X:%.*]] to float
@@ -64,20 +61,7 @@ define <3 x float> @bitcast_inselt_undef_fp(i32 %x, i567 %idx) {
   ret <3 x float> %i
 }
 
-define <vscale x 3 x float> @bitcast_inselt_undef_vscale(i32 %x, i567 %idx) {
-; CHECK-LABEL: @bitcast_inselt_undef_vscale(
-; CHECK-NEXT:    [[XB:%.*]] = bitcast i32 [[X:%.*]] to float
-; CHECK-NEXT:    [[I:%.*]] = insertelement <vscale x 3 x float> undef, float [[XB]], i567 [[IDX:%.*]]
-; CHECK-NEXT:    ret <vscale x 3 x float> [[I]]
-;
-  %xb = bitcast i32 %x to float
-  %i = insertelement <vscale x 3 x float> undef, float %xb, i567 %idx
-  ret <vscale x 3 x float> %i
-}
-
 declare void @use(i64)
-
-; Negative test - extra use prevents canonicalization
 
 define <3 x i64> @bitcast_inselt_undef_extra_use(double %x, i32 %idx) {
 ; CHECK-LABEL: @bitcast_inselt_undef_extra_use(
@@ -91,8 +75,6 @@ define <3 x i64> @bitcast_inselt_undef_extra_use(double %x, i32 %idx) {
   %i = insertelement <3 x i64> undef, i64 %xb, i32 %idx
   ret <3 x i64> %i
 }
-
-; Negative test - source type must be scalar
 
 define <3 x i64> @bitcast_inselt_undef_vec_src(<2 x i32> %x, i32 %idx) {
 ; CHECK-LABEL: @bitcast_inselt_undef_vec_src(

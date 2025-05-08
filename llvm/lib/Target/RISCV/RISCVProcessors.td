@@ -608,7 +608,7 @@ def XIANGSHAN_KUNMINGHU : RISCVProcessorModel<"xiangshan-kunminghu",
                                                TuneShiftedZExtWFusion]>;
 
 def SPACEMIT_X60 : RISCVProcessorModel<"spacemit-x60",
-                                       NoSchedModel,
+                                       SpacemitX60Model,
                                        !listconcat(RVA22S64Features,
                                        [FeatureStdExtV,
                                         FeatureStdExtSscofpmf,

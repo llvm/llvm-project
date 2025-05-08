@@ -32,6 +32,10 @@ private:
   SyncScope::ID WorkgroupSSID;
   /// Wavefront synchronization scope ID (cross address space).
   SyncScope::ID WavefrontSSID;
+#if LLPC_BUILD_NPI
+  /// Cluster synchronization scope ID (cross address space).
+  SyncScope::ID ClusterSSID;
+#endif /* LLPC_BUILD_NPI */
   /// System synchronization scope ID (single address space).
   SyncScope::ID SystemOneAddressSpaceSSID;
   /// Agent synchronization scope ID (single address space).
@@ -42,6 +46,10 @@ private:
   SyncScope::ID WavefrontOneAddressSpaceSSID;
   /// Single thread synchronization scope ID (single address space).
   SyncScope::ID SingleThreadOneAddressSpaceSSID;
+#if LLPC_BUILD_NPI
+  /// Cluster synchronization scope ID (single address space).
+  SyncScope::ID ClusterOneAddressSpaceSSID;
+#endif /* LLPC_BUILD_NPI */
 
   /// In AMDGPU target synchronization scopes are inclusive, meaning a
   /// larger synchronization scope is inclusive of a smaller synchronization
@@ -60,12 +68,25 @@ private:
     else if (SSID == getWorkgroupSSID() ||
              SSID == getWorkgroupOneAddressSpaceSSID())
       return 2;
+#if LLPC_BUILD_NPI
+    else if (SSID == getClusterSSID() ||
+             SSID == getClusterOneAddressSpaceSSID())
+      return 3;
+#endif /* LLPC_BUILD_NPI */
     else if (SSID == getAgentSSID() ||
              SSID == getAgentOneAddressSpaceSSID())
+#if LLPC_BUILD_NPI
+      return 4;
+#else /* LLPC_BUILD_NPI */
       return 3;
+#endif /* LLPC_BUILD_NPI */
     else if (SSID == SyncScope::System ||
              SSID == getSystemOneAddressSpaceSSID())
+#if LLPC_BUILD_NPI
+      return 5;
+#else /* LLPC_BUILD_NPI */
       return 4;
+#endif /* LLPC_BUILD_NPI */
 
     return std::nullopt;
   }
@@ -73,11 +94,20 @@ private:
   /// \returns True if \p SSID is restricted to single address space, false
   /// otherwise
   bool isOneAddressSpace(SyncScope::ID SSID) const {
+#if LLPC_BUILD_NPI
+    return SSID == getClusterOneAddressSpaceSSID() ||
+           SSID == getSingleThreadOneAddressSpaceSSID() ||
+           SSID == getWavefrontOneAddressSpaceSSID() ||
+           SSID == getWorkgroupOneAddressSpaceSSID() ||
+           SSID == getAgentOneAddressSpaceSSID() ||
+           SSID == getSystemOneAddressSpaceSSID();
+#else /* LLPC_BUILD_NPI */
     return SSID == getSingleThreadOneAddressSpaceSSID() ||
         SSID == getWavefrontOneAddressSpaceSSID() ||
         SSID == getWorkgroupOneAddressSpaceSSID() ||
         SSID == getAgentOneAddressSpaceSSID() ||
         SSID == getSystemOneAddressSpaceSSID();
+#endif /* LLPC_BUILD_NPI */
   }
 
 public:
@@ -95,6 +125,10 @@ public:
   SyncScope::ID getWavefrontSSID() const {
     return WavefrontSSID;
   }
+#if LLPC_BUILD_NPI
+  /// \returns Cluster synchronization scope ID (cross address space).
+  SyncScope::ID getClusterSSID() const { return ClusterSSID; }
+#endif /* LLPC_BUILD_NPI */
   /// \returns System synchronization scope ID (single address space).
   SyncScope::ID getSystemOneAddressSpaceSSID() const {
     return SystemOneAddressSpaceSSID;
@@ -114,6 +148,12 @@ public:
   /// \returns Single thread synchronization scope ID (single address space).
   SyncScope::ID getSingleThreadOneAddressSpaceSSID() const {
     return SingleThreadOneAddressSpaceSSID;
+#if LLPC_BUILD_NPI
+  }
+  /// \returns Single thread synchronization scope ID (single address space).
+  SyncScope::ID getClusterOneAddressSpaceSSID() const {
+    return ClusterOneAddressSpaceSSID;
+#endif /* LLPC_BUILD_NPI */
   }
 
   /// In AMDGPU target synchronization scopes are inclusive, meaning a

@@ -48,7 +48,7 @@ body:             |
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr4_vgpr5_vgpr6_vgpr7
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]].sub0_sub1, %subreg.sub2_sub3, [[COPY1]].sub2_sub3, %subreg.sub0_sub1
     ; GCN-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[REG_SEQUENCE]].sub1_sub2_sub3, %subreg.sub0_sub1_sub2, [[COPY1]].sub0, %subreg.sub3
-    ; GCN-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[REG_SEQUENCE]].sub1, %subreg.sub0, [[REG_SEQUENCE]].sub2, %subreg.sub1, [[REG_SEQUENCE]].sub3, %subreg.sub2, [[COPY1]].sub0, %subreg.sub3
+    ; GCN-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[REG_SEQUENCE1]].sub0, %subreg.sub0, [[REG_SEQUENCE1]].sub1, %subreg.sub1, [[REG_SEQUENCE1]].sub2, %subreg.sub2, [[REG_SEQUENCE1]].sub3, %subreg.sub3
     ; GCN-NEXT: KILL implicit [[REG_SEQUENCE2]]
     %0:vreg_128 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %1:vreg_128 = COPY $vgpr4_vgpr5_vgpr6_vgpr7
@@ -70,8 +70,8 @@ body:             |
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr4_vgpr5_vgpr6_vgpr7
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]].sub0_sub1, %subreg.sub2_sub3, [[COPY1]].sub2_sub3, %subreg.sub0_sub1
-    ; GCN-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY1]].sub2_sub3, %subreg.sub2_sub3, [[COPY]].sub0, %subreg.sub1, [[COPY]].sub1, %subreg.sub0
-    ; GCN-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]].sub1, %subreg.sub0, [[COPY]].sub0, %subreg.sub1, [[COPY1]].sub2, %subreg.sub2, [[COPY1]].sub3, %subreg.sub3
+    ; GCN-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY1]].sub2_sub3, %subreg.sub2_sub3, [[REG_SEQUENCE]].sub2, %subreg.sub1, [[REG_SEQUENCE]].sub3, %subreg.sub0
+    ; GCN-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[REG_SEQUENCE1]].sub0, %subreg.sub0, [[REG_SEQUENCE1]].sub1, %subreg.sub1, [[COPY1]].sub2, %subreg.sub2, [[COPY1]].sub3, %subreg.sub3
     ; GCN-NEXT: KILL implicit [[REG_SEQUENCE2]]
     %0:vreg_128 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %1:vreg_128 = COPY $vgpr4_vgpr5_vgpr6_vgpr7

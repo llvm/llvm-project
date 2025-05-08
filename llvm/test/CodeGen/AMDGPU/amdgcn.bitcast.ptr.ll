@@ -4,6 +4,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefixes=VI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GFX11 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 < %s | FileCheck -check-prefixes=GFX13 %s
 
 define amdgpu_kernel void @bitcast_i8ptr_v16i8ptr(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: bitcast_i8ptr_v16i8ptr:
@@ -61,6 +62,18 @@ define amdgpu_kernel void @bitcast_i8ptr_v16i8ptr(ptr addrspace(1) %out, ptr add
 ; GFX11-NEXT:    v_dual_mov_b32 v1, s5 :: v_dual_mov_b32 v2, s6
 ; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX13-LABEL: bitcast_i8ptr_v16i8ptr:
+; GFX13:       ; %bb.0: ; %entry
+; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_load_b128 s[4:7], s[2:3], 0x0
+; GFX13-NEXT:    v_mov_b32_e32 v4, 0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v3, s7
+; GFX13-NEXT:    v_dual_mov_b32 v1, s5 :: v_dual_mov_b32 v2, s6
+; GFX13-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
+; GFX13-NEXT:    s_endpgm
 entry:
   %0 = load <16 x i8>, ptr addrspace(1) %in
   store <16 x i8> %0, ptr addrspace(1) %out

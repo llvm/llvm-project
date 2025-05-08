@@ -97,14 +97,14 @@
 0xfa,0x04,0xfb,0x7c,0x81,0x60,0x01,0x13
 # W32-REAL16: v_cmp_class_f16 vcc_lo, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0xfb,0x7c,0x81,0x60,0x01,0x13]
 # W64-REAL16: v_cmp_class_f16 vcc, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0xfb,0x7c,0x81,0x60,0x01,0x13]
-# W32-FAKE16: v_cmp_class_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0xfb,0x7c,0x81,0x60,0x01,0x13]
-# W64-FAKE16: v_cmp_class_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0xfb,0x7c,0x81,0x60,0x01,0x13]
+# W32-FAKE16: v_cmp_class_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0xfb,0x7c,0x81,0x60,0x01,0x13]
+# W64-FAKE16: v_cmp_class_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0xfb,0x7c,0x81,0x60,0x01,0x13]
 
 0xfa,0xfe,0xfb,0x7c,0xff,0x6f,0x3d,0x30
 # W32-REAL16: v_cmp_class_f16 vcc_lo, -|v127.h|, v127.h row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0xfb,0x7c,0xff,0x6f,0x3d,0x30]
 # W64-REAL16: v_cmp_class_f16 vcc, -|v127.h|, v127.h row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0xfb,0x7c,0xff,0x6f,0x3d,0x30]
-# W32-FAKE16: v_cmp_class_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0xfb,0x7c,0xff,0x6f,0x3d,0x30]
-# W64-FAKE16: v_cmp_class_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0xfb,0x7c,0xff,0x6f,0x3d,0x30]
+# W32-FAKE16: v_cmp_class_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0xfb,0x7c,0xff,0x6f,0x3d,0x30]
+# W64-FAKE16: v_cmp_class_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0xfb,0x7c,0xff,0x6f,0x3d,0x30]
 
 0xfa,0x04,0xfc,0x7c,0x01,0x1b,0x00,0xff
 # W32: v_cmp_class_f32 vcc_lo, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0xfc,0x7c,0x01,0x1b,0x00,0xff]
@@ -255,14 +255,14 @@
 0xfa,0x04,0x05,0x7c,0x81,0x60,0x01,0x13
 # W32-REAL16: v_cmp_eq_f16 vcc_lo, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x05,0x7c,0x81,0x60,0x01,0x13]
 # W64-REAL16: v_cmp_eq_f16 vcc, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x05,0x7c,0x81,0x60,0x01,0x13]
-# W32-FAKE16: v_cmp_eq_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x05,0x7c,0x81,0x60,0x01,0x13]
-# W64-FAKE16: v_cmp_eq_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x05,0x7c,0x81,0x60,0x01,0x13]
+# W32-FAKE16: v_cmp_eq_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x05,0x7c,0x81,0x60,0x01,0x13]
+# W64-FAKE16: v_cmp_eq_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x05,0x7c,0x81,0x60,0x01,0x13]
 
 0xfa,0xfe,0x05,0x7c,0xff,0x6f,0xfd,0x30
 # W32-REAL16: v_cmp_eq_f16 vcc_lo, -|v127.h|, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x05,0x7c,0xff,0x6f,0xfd,0x30]
 # W64-REAL16: v_cmp_eq_f16 vcc, -|v127.h|, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x05,0x7c,0xff,0x6f,0xfd,0x30]
-# W32-FAKE16: v_cmp_eq_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x05,0x7c,0xff,0x6f,0xfd,0x30]
-# W64-FAKE16: v_cmp_eq_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x05,0x7c,0xff,0x6f,0xfd,0x30]
+# W32-FAKE16: v_cmp_eq_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x05,0x7c,0xff,0x6f,0xfd,0x30]
+# W64-FAKE16: v_cmp_eq_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x05,0x7c,0xff,0x6f,0xfd,0x30]
 
 0xfa,0x04,0x24,0x7c,0x01,0x1b,0x00,0xff
 # W32: v_cmp_eq_f32 vcc_lo, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0x24,0x7c,0x01,0x1b,0x00,0xff]
@@ -413,14 +413,14 @@
 0xfa,0x04,0x65,0x7c,0x81,0x60,0x01,0x13
 # W32-REAL16: v_cmp_eq_i16 vcc_lo, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x65,0x7c,0x81,0x60,0x01,0x13]
 # W64-REAL16: v_cmp_eq_i16 vcc, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x65,0x7c,0x81,0x60,0x01,0x13]
-# W32-FAKE16: v_cmp_eq_i16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x65,0x7c,0x81,0x60,0x01,0x13]
-# W64-FAKE16: v_cmp_eq_i16 vcc, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x65,0x7c,0x81,0x60,0x01,0x13]
+# W32-FAKE16: v_cmp_eq_i16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x65,0x7c,0x81,0x60,0x01,0x13]
+# W64-FAKE16: v_cmp_eq_i16 vcc, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x65,0x7c,0x81,0x60,0x01,0x13]
 
 0xfa,0xfe,0x65,0x7c,0xff,0x6f,0x0d,0x30
 # W32-REAL16: v_cmp_eq_i16 vcc_lo, v127.h, v127.h row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x65,0x7c,0xff,0x6f,0x0d,0x30]
 # W64-REAL16: v_cmp_eq_i16 vcc, v127.h, v127.h row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x65,0x7c,0xff,0x6f,0x0d,0x30]
-# W32-FAKE16: v_cmp_eq_i16 vcc_lo, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x65,0x7c,0xff,0x6f,0x0d,0x30]
-# W64-FAKE16: v_cmp_eq_i16 vcc, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x65,0x7c,0xff,0x6f,0x0d,0x30]
+# W32-FAKE16: v_cmp_eq_i16 vcc_lo, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x65,0x7c,0xff,0x6f,0x0d,0x30]
+# W64-FAKE16: v_cmp_eq_i16 vcc, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x65,0x7c,0xff,0x6f,0x0d,0x30]
 
 0xfa,0x04,0x84,0x7c,0x01,0x1b,0x00,0xff
 # W32: v_cmp_eq_i32 vcc_lo, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0x84,0x7c,0x01,0x1b,0x00,0xff]
@@ -571,14 +571,14 @@
 0xfa,0x04,0x75,0x7c,0x81,0x60,0x01,0x13
 # W32-REAL16: v_cmp_eq_u16 vcc_lo, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x75,0x7c,0x81,0x60,0x01,0x13]
 # W64-REAL16: v_cmp_eq_u16 vcc, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x75,0x7c,0x81,0x60,0x01,0x13]
-# W32-FAKE16: v_cmp_eq_u16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x75,0x7c,0x81,0x60,0x01,0x13]
-# W64-FAKE16: v_cmp_eq_u16 vcc, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x75,0x7c,0x81,0x60,0x01,0x13]
+# W32-FAKE16: v_cmp_eq_u16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x75,0x7c,0x81,0x60,0x01,0x13]
+# W64-FAKE16: v_cmp_eq_u16 vcc, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x75,0x7c,0x81,0x60,0x01,0x13]
 
 0xfa,0xfe,0x75,0x7c,0xff,0x6f,0x0d,0x30
 # W32-REAL16: v_cmp_eq_u16 vcc_lo, v127.h, v127.h row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x75,0x7c,0xff,0x6f,0x0d,0x30]
 # W64-REAL16: v_cmp_eq_u16 vcc, v127.h, v127.h row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x75,0x7c,0xff,0x6f,0x0d,0x30]
-# W32-FAKE16: v_cmp_eq_u16 vcc_lo, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x75,0x7c,0xff,0x6f,0x0d,0x30]
-# W64-FAKE16: v_cmp_eq_u16 vcc, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x75,0x7c,0xff,0x6f,0x0d,0x30]
+# W32-FAKE16: v_cmp_eq_u16 vcc_lo, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x75,0x7c,0xff,0x6f,0x0d,0x30]
+# W64-FAKE16: v_cmp_eq_u16 vcc, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x75,0x7c,0xff,0x6f,0x0d,0x30]
 
 0xfa,0x04,0x94,0x7c,0x01,0x1b,0x00,0xff
 # W32: v_cmp_eq_u32 vcc_lo, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0x94,0x7c,0x01,0x1b,0x00,0xff]
@@ -729,14 +729,14 @@
 0xfa,0x04,0x01,0x7c,0x81,0x60,0x01,0x13
 # W32-REAL16: v_cmp_f_f16 vcc_lo, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x01,0x7c,0x81,0x60,0x01,0x13]
 # W64-REAL16: v_cmp_f_f16 vcc, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x01,0x7c,0x81,0x60,0x01,0x13]
-# W32-FAKE16: v_cmp_f_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x01,0x7c,0x81,0x60,0x01,0x13]
-# W64-FAKE16: v_cmp_f_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x01,0x7c,0x81,0x60,0x01,0x13]
+# W32-FAKE16: v_cmp_f_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x01,0x7c,0x81,0x60,0x01,0x13]
+# W64-FAKE16: v_cmp_f_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x01,0x7c,0x81,0x60,0x01,0x13]
 
 0xfa,0xfe,0x01,0x7c,0xff,0x6f,0xfd,0x30
 # W32-REAL16: v_cmp_f_f16 vcc_lo, -|v127.h|, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x01,0x7c,0xff,0x6f,0xfd,0x30]
 # W64-REAL16: v_cmp_f_f16 vcc, -|v127.h|, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x01,0x7c,0xff,0x6f,0xfd,0x30]
-# W32-FAKE16: v_cmp_f_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x01,0x7c,0xff,0x6f,0xfd,0x30]
-# W64-FAKE16: v_cmp_f_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x01,0x7c,0xff,0x6f,0xfd,0x30]
+# W32-FAKE16: v_cmp_f_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x01,0x7c,0xff,0x6f,0xfd,0x30]
+# W64-FAKE16: v_cmp_f_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x01,0x7c,0xff,0x6f,0xfd,0x30]
 
 0xfa,0x04,0x20,0x7c,0x01,0x1b,0x00,0xff
 # W32: v_cmp_f_f32 vcc_lo, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0x20,0x7c,0x01,0x1b,0x00,0xff]
@@ -999,14 +999,14 @@
 0xfa,0x04,0x0d,0x7c,0x81,0x60,0x01,0x13
 # W32-REAL16: v_cmp_ge_f16 vcc_lo, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x0d,0x7c,0x81,0x60,0x01,0x13]
 # W64-REAL16: v_cmp_ge_f16 vcc, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x0d,0x7c,0x81,0x60,0x01,0x13]
-# W32-FAKE16: v_cmp_ge_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x0d,0x7c,0x81,0x60,0x01,0x13]
-# W64-FAKE16: v_cmp_ge_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x0d,0x7c,0x81,0x60,0x01,0x13]
+# W32-FAKE16: v_cmp_ge_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x0d,0x7c,0x81,0x60,0x01,0x13]
+# W64-FAKE16: v_cmp_ge_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x0d,0x7c,0x81,0x60,0x01,0x13]
 
 0xfa,0xfe,0x0d,0x7c,0xff,0x6f,0xfd,0x30
 # W32-REAL16: v_cmp_ge_f16 vcc_lo, -|v127.h|, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x0d,0x7c,0xff,0x6f,0xfd,0x30]
 # W64-REAL16: v_cmp_ge_f16 vcc, -|v127.h|, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x0d,0x7c,0xff,0x6f,0xfd,0x30]
-# W32-FAKE16: v_cmp_ge_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x0d,0x7c,0xff,0x6f,0xfd,0x30]
-# W64-FAKE16: v_cmp_ge_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x0d,0x7c,0xff,0x6f,0xfd,0x30]
+# W32-FAKE16: v_cmp_ge_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x0d,0x7c,0xff,0x6f,0xfd,0x30]
+# W64-FAKE16: v_cmp_ge_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x0d,0x7c,0xff,0x6f,0xfd,0x30]
 
 0xfa,0x04,0x2c,0x7c,0x01,0x1b,0x00,0xff
 # W32: v_cmp_ge_f32 vcc_lo, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0x2c,0x7c,0x01,0x1b,0x00,0xff]
@@ -1157,14 +1157,14 @@
 0xfa,0x04,0x6d,0x7c,0x81,0x60,0x01,0x13
 # W32-REAL16: v_cmp_ge_i16 vcc_lo, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x6d,0x7c,0x81,0x60,0x01,0x13]
 # W64-REAL16: v_cmp_ge_i16 vcc, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x6d,0x7c,0x81,0x60,0x01,0x13]
-# W32-FAKE16: v_cmp_ge_i16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x6d,0x7c,0x81,0x60,0x01,0x13]
-# W64-FAKE16: v_cmp_ge_i16 vcc, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x6d,0x7c,0x81,0x60,0x01,0x13]
+# W32-FAKE16: v_cmp_ge_i16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x6d,0x7c,0x81,0x60,0x01,0x13]
+# W64-FAKE16: v_cmp_ge_i16 vcc, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x6d,0x7c,0x81,0x60,0x01,0x13]
 
 0xfa,0xfe,0x6d,0x7c,0xff,0x6f,0x0d,0x30
 # W32-REAL16: v_cmp_ge_i16 vcc_lo, v127.h, v127.h row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x6d,0x7c,0xff,0x6f,0x0d,0x30]
 # W64-REAL16: v_cmp_ge_i16 vcc, v127.h, v127.h row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x6d,0x7c,0xff,0x6f,0x0d,0x30]
-# W32-FAKE16: v_cmp_ge_i16 vcc_lo, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x6d,0x7c,0xff,0x6f,0x0d,0x30]
-# W64-FAKE16: v_cmp_ge_i16 vcc, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x6d,0x7c,0xff,0x6f,0x0d,0x30]
+# W32-FAKE16: v_cmp_ge_i16 vcc_lo, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x6d,0x7c,0xff,0x6f,0x0d,0x30]
+# W64-FAKE16: v_cmp_ge_i16 vcc, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x6d,0x7c,0xff,0x6f,0x0d,0x30]
 
 0xfa,0x04,0x8c,0x7c,0x01,0x1b,0x00,0xff
 # W32: v_cmp_ge_i32 vcc_lo, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0x8c,0x7c,0x01,0x1b,0x00,0xff]
@@ -1315,14 +1315,14 @@
 0xfa,0x04,0x7d,0x7c,0x81,0x60,0x01,0x13
 # W32-REAL16: v_cmp_ge_u16 vcc_lo, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x7d,0x7c,0x81,0x60,0x01,0x13]
 # W64-REAL16: v_cmp_ge_u16 vcc, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x7d,0x7c,0x81,0x60,0x01,0x13]
-# W32-FAKE16: v_cmp_ge_u16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x7d,0x7c,0x81,0x60,0x01,0x13]
-# W64-FAKE16: v_cmp_ge_u16 vcc, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x7d,0x7c,0x81,0x60,0x01,0x13]
+# W32-FAKE16: v_cmp_ge_u16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x7d,0x7c,0x81,0x60,0x01,0x13]
+# W64-FAKE16: v_cmp_ge_u16 vcc, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x7d,0x7c,0x81,0x60,0x01,0x13]
 
 0xfa,0xfe,0x7d,0x7c,0xff,0x6f,0x0d,0x30
 # W32-REAL16: v_cmp_ge_u16 vcc_lo, v127.h, v127.h row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x7d,0x7c,0xff,0x6f,0x0d,0x30]
 # W64-REAL16: v_cmp_ge_u16 vcc, v127.h, v127.h row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x7d,0x7c,0xff,0x6f,0x0d,0x30]
-# W32-FAKE16: v_cmp_ge_u16 vcc_lo, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x7d,0x7c,0xff,0x6f,0x0d,0x30]
-# W64-FAKE16: v_cmp_ge_u16 vcc, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x7d,0x7c,0xff,0x6f,0x0d,0x30]
+# W32-FAKE16: v_cmp_ge_u16 vcc_lo, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x7d,0x7c,0xff,0x6f,0x0d,0x30]
+# W64-FAKE16: v_cmp_ge_u16 vcc, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x7d,0x7c,0xff,0x6f,0x0d,0x30]
 
 0xfa,0x04,0x9c,0x7c,0x01,0x1b,0x00,0xff
 # W32: v_cmp_ge_u32 vcc_lo, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0x9c,0x7c,0x01,0x1b,0x00,0xff]
@@ -1473,14 +1473,14 @@
 0xfa,0x04,0x09,0x7c,0x81,0x60,0x01,0x13
 # W32-REAL16: v_cmp_gt_f16 vcc_lo, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x09,0x7c,0x81,0x60,0x01,0x13]
 # W64-REAL16: v_cmp_gt_f16 vcc, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x09,0x7c,0x81,0x60,0x01,0x13]
-# W32-FAKE16: v_cmp_gt_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x09,0x7c,0x81,0x60,0x01,0x13]
-# W64-FAKE16: v_cmp_gt_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x09,0x7c,0x81,0x60,0x01,0x13]
+# W32-FAKE16: v_cmp_gt_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x09,0x7c,0x81,0x60,0x01,0x13]
+# W64-FAKE16: v_cmp_gt_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x09,0x7c,0x81,0x60,0x01,0x13]
 
 0xfa,0xfe,0x09,0x7c,0xff,0x6f,0xfd,0x30
 # W32-REAL16: v_cmp_gt_f16 vcc_lo, -|v127.h|, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x09,0x7c,0xff,0x6f,0xfd,0x30]
 # W64-REAL16: v_cmp_gt_f16 vcc, -|v127.h|, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x09,0x7c,0xff,0x6f,0xfd,0x30]
-# W32-FAKE16: v_cmp_gt_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x09,0x7c,0xff,0x6f,0xfd,0x30]
-# W64-FAKE16: v_cmp_gt_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x09,0x7c,0xff,0x6f,0xfd,0x30]
+# W32-FAKE16: v_cmp_gt_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x09,0x7c,0xff,0x6f,0xfd,0x30]
+# W64-FAKE16: v_cmp_gt_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x09,0x7c,0xff,0x6f,0xfd,0x30]
 
 0xfa,0x04,0x28,0x7c,0x01,0x1b,0x00,0xff
 # W32: v_cmp_gt_f32 vcc_lo, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0x28,0x7c,0x01,0x1b,0x00,0xff]
@@ -1631,14 +1631,14 @@
 0xfa,0x04,0x69,0x7c,0x81,0x60,0x01,0x13
 # W32-REAL16: v_cmp_gt_i16 vcc_lo, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x69,0x7c,0x81,0x60,0x01,0x13]
 # W64-REAL16: v_cmp_gt_i16 vcc, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x69,0x7c,0x81,0x60,0x01,0x13]
-# W32-FAKE16: v_cmp_gt_i16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x69,0x7c,0x81,0x60,0x01,0x13]
-# W64-FAKE16: v_cmp_gt_i16 vcc, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x69,0x7c,0x81,0x60,0x01,0x13]
+# W32-FAKE16: v_cmp_gt_i16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x69,0x7c,0x81,0x60,0x01,0x13]
+# W64-FAKE16: v_cmp_gt_i16 vcc, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x69,0x7c,0x81,0x60,0x01,0x13]
 
 0xfa,0xfe,0x69,0x7c,0xff,0x6f,0x0d,0x30
 # W32-REAL16: v_cmp_gt_i16 vcc_lo, v127.h, v127.h row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x69,0x7c,0xff,0x6f,0x0d,0x30]
 # W64-REAL16: v_cmp_gt_i16 vcc, v127.h, v127.h row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x69,0x7c,0xff,0x6f,0x0d,0x30]
-# W32-FAKE16: v_cmp_gt_i16 vcc_lo, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x69,0x7c,0xff,0x6f,0x0d,0x30]
-# W64-FAKE16: v_cmp_gt_i16 vcc, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x69,0x7c,0xff,0x6f,0x0d,0x30]
+# W32-FAKE16: v_cmp_gt_i16 vcc_lo, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x69,0x7c,0xff,0x6f,0x0d,0x30]
+# W64-FAKE16: v_cmp_gt_i16 vcc, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x69,0x7c,0xff,0x6f,0x0d,0x30]
 
 0xfa,0x04,0x88,0x7c,0x01,0x1b,0x00,0xff
 # W32: v_cmp_gt_i32 vcc_lo, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0x88,0x7c,0x01,0x1b,0x00,0xff]
@@ -1789,14 +1789,14 @@
 0xfa,0x04,0x79,0x7c,0x81,0x60,0x01,0x13
 # W32-REAL16: v_cmp_gt_u16 vcc_lo, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x79,0x7c,0x81,0x60,0x01,0x13]
 # W64-REAL16: v_cmp_gt_u16 vcc, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x79,0x7c,0x81,0x60,0x01,0x13]
-# W32-FAKE16: v_cmp_gt_u16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x79,0x7c,0x81,0x60,0x01,0x13]
-# W64-FAKE16: v_cmp_gt_u16 vcc, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x79,0x7c,0x81,0x60,0x01,0x13]
+# W32-FAKE16: v_cmp_gt_u16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x79,0x7c,0x81,0x60,0x01,0x13]
+# W64-FAKE16: v_cmp_gt_u16 vcc, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x79,0x7c,0x81,0x60,0x01,0x13]
 
 0xfa,0xfe,0x79,0x7c,0xff,0x6f,0x0d,0x30
 # W32-REAL16: v_cmp_gt_u16 vcc_lo, v127.h, v127.h row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x79,0x7c,0xff,0x6f,0x0d,0x30]
 # W64-REAL16: v_cmp_gt_u16 vcc, v127.h, v127.h row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x79,0x7c,0xff,0x6f,0x0d,0x30]
-# W32-FAKE16: v_cmp_gt_u16 vcc_lo, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x79,0x7c,0xff,0x6f,0x0d,0x30]
-# W64-FAKE16: v_cmp_gt_u16 vcc, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x79,0x7c,0xff,0x6f,0x0d,0x30]
+# W32-FAKE16: v_cmp_gt_u16 vcc_lo, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x79,0x7c,0xff,0x6f,0x0d,0x30]
+# W64-FAKE16: v_cmp_gt_u16 vcc, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x79,0x7c,0xff,0x6f,0x0d,0x30]
 
 0xfa,0x04,0x98,0x7c,0x01,0x1b,0x00,0xff
 # W32: v_cmp_gt_u32 vcc_lo, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0x98,0x7c,0x01,0x1b,0x00,0xff]
@@ -1947,14 +1947,14 @@
 0xfa,0x04,0x07,0x7c,0x81,0x60,0x01,0x13
 # W32-REAL16: v_cmp_le_f16 vcc_lo, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x07,0x7c,0x81,0x60,0x01,0x13]
 # W64-REAL16: v_cmp_le_f16 vcc, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x07,0x7c,0x81,0x60,0x01,0x13]
-# W32-FAKE16: v_cmp_le_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x07,0x7c,0x81,0x60,0x01,0x13]
-# W64-FAKE16: v_cmp_le_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x07,0x7c,0x81,0x60,0x01,0x13]
+# W32-FAKE16: v_cmp_le_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x07,0x7c,0x81,0x60,0x01,0x13]
+# W64-FAKE16: v_cmp_le_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x07,0x7c,0x81,0x60,0x01,0x13]
 
 0xfa,0xfe,0x07,0x7c,0xff,0x6f,0xfd,0x30
 # W32-REAL16: v_cmp_le_f16 vcc_lo, -|v127.h|, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x07,0x7c,0xff,0x6f,0xfd,0x30]
 # W64-REAL16: v_cmp_le_f16 vcc, -|v127.h|, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x07,0x7c,0xff,0x6f,0xfd,0x30]
-# W32-FAKE16: v_cmp_le_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x07,0x7c,0xff,0x6f,0xfd,0x30]
-# W64-FAKE16: v_cmp_le_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x07,0x7c,0xff,0x6f,0xfd,0x30]
+# W32-FAKE16: v_cmp_le_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x07,0x7c,0xff,0x6f,0xfd,0x30]
+# W64-FAKE16: v_cmp_le_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x07,0x7c,0xff,0x6f,0xfd,0x30]
 
 0xfa,0x04,0x26,0x7c,0x01,0x1b,0x00,0xff
 # W32: v_cmp_le_f32 vcc_lo, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0x26,0x7c,0x01,0x1b,0x00,0xff]
@@ -2105,14 +2105,14 @@
 0xfa,0x04,0x67,0x7c,0x81,0x60,0x01,0x13
 # W32-REAL16: v_cmp_le_i16 vcc_lo, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x67,0x7c,0x81,0x60,0x01,0x13]
 # W64-REAL16: v_cmp_le_i16 vcc, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x67,0x7c,0x81,0x60,0x01,0x13]
-# W32-FAKE16: v_cmp_le_i16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x67,0x7c,0x81,0x60,0x01,0x13]
-# W64-FAKE16: v_cmp_le_i16 vcc, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x67,0x7c,0x81,0x60,0x01,0x13]
+# W32-FAKE16: v_cmp_le_i16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x67,0x7c,0x81,0x60,0x01,0x13]
+# W64-FAKE16: v_cmp_le_i16 vcc, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x67,0x7c,0x81,0x60,0x01,0x13]
 
 0xfa,0xfe,0x67,0x7c,0xff,0x6f,0x0d,0x30
 # W32-REAL16: v_cmp_le_i16 vcc_lo, v127.h, v127.h row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x67,0x7c,0xff,0x6f,0x0d,0x30]
 # W64-REAL16: v_cmp_le_i16 vcc, v127.h, v127.h row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x67,0x7c,0xff,0x6f,0x0d,0x30]
-# W32-FAKE16: v_cmp_le_i16 vcc_lo, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x67,0x7c,0xff,0x6f,0x0d,0x30]
-# W64-FAKE16: v_cmp_le_i16 vcc, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x67,0x7c,0xff,0x6f,0x0d,0x30]
+# W32-FAKE16: v_cmp_le_i16 vcc_lo, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x67,0x7c,0xff,0x6f,0x0d,0x30]
+# W64-FAKE16: v_cmp_le_i16 vcc, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x67,0x7c,0xff,0x6f,0x0d,0x30]
 
 0xfa,0x04,0x86,0x7c,0x01,0x1b,0x00,0xff
 # W32: v_cmp_le_i32 vcc_lo, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0x86,0x7c,0x01,0x1b,0x00,0xff]
@@ -2263,14 +2263,14 @@
 0xfa,0x04,0x77,0x7c,0x81,0x60,0x01,0x13
 # W32-REAL16: v_cmp_le_u16 vcc_lo, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x77,0x7c,0x81,0x60,0x01,0x13]
 # W64-REAL16: v_cmp_le_u16 vcc, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x77,0x7c,0x81,0x60,0x01,0x13]
-# W32-FAKE16: v_cmp_le_u16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x77,0x7c,0x81,0x60,0x01,0x13]
-# W64-FAKE16: v_cmp_le_u16 vcc, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x77,0x7c,0x81,0x60,0x01,0x13]
+# W32-FAKE16: v_cmp_le_u16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x77,0x7c,0x81,0x60,0x01,0x13]
+# W64-FAKE16: v_cmp_le_u16 vcc, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x77,0x7c,0x81,0x60,0x01,0x13]
 
 0xfa,0xfe,0x77,0x7c,0xff,0x6f,0x0d,0x30
 # W32-REAL16: v_cmp_le_u16 vcc_lo, v127.h, v127.h row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x77,0x7c,0xff,0x6f,0x0d,0x30]
 # W64-REAL16: v_cmp_le_u16 vcc, v127.h, v127.h row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x77,0x7c,0xff,0x6f,0x0d,0x30]
-# W32-FAKE16: v_cmp_le_u16 vcc_lo, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x77,0x7c,0xff,0x6f,0x0d,0x30]
-# W64-FAKE16: v_cmp_le_u16 vcc, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x77,0x7c,0xff,0x6f,0x0d,0x30]
+# W32-FAKE16: v_cmp_le_u16 vcc_lo, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x77,0x7c,0xff,0x6f,0x0d,0x30]
+# W64-FAKE16: v_cmp_le_u16 vcc, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x77,0x7c,0xff,0x6f,0x0d,0x30]
 
 0xfa,0x04,0x96,0x7c,0x01,0x1b,0x00,0xff
 # W32: v_cmp_le_u32 vcc_lo, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0x96,0x7c,0x01,0x1b,0x00,0xff]
@@ -2421,14 +2421,14 @@
 0xfa,0x04,0x0b,0x7c,0x81,0x60,0x01,0x13
 # W32-REAL16: v_cmp_lg_f16 vcc_lo, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x0b,0x7c,0x81,0x60,0x01,0x13]
 # W64-REAL16: v_cmp_lg_f16 vcc, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x0b,0x7c,0x81,0x60,0x01,0x13]
-# W32-FAKE16: v_cmp_lg_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x0b,0x7c,0x81,0x60,0x01,0x13]
-# W64-FAKE16: v_cmp_lg_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x0b,0x7c,0x81,0x60,0x01,0x13]
+# W32-FAKE16: v_cmp_lg_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x0b,0x7c,0x81,0x60,0x01,0x13]
+# W64-FAKE16: v_cmp_lg_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x0b,0x7c,0x81,0x60,0x01,0x13]
 
 0xfa,0xfe,0x0b,0x7c,0xff,0x6f,0xfd,0x30
 # W32-REAL16: v_cmp_lg_f16 vcc_lo, -|v127.h|, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x0b,0x7c,0xff,0x6f,0xfd,0x30]
 # W64-REAL16: v_cmp_lg_f16 vcc, -|v127.h|, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x0b,0x7c,0xff,0x6f,0xfd,0x30]
-# W32-FAKE16: v_cmp_lg_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x0b,0x7c,0xff,0x6f,0xfd,0x30]
-# W64-FAKE16: v_cmp_lg_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x0b,0x7c,0xff,0x6f,0xfd,0x30]
+# W32-FAKE16: v_cmp_lg_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x0b,0x7c,0xff,0x6f,0xfd,0x30]
+# W64-FAKE16: v_cmp_lg_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x0b,0x7c,0xff,0x6f,0xfd,0x30]
 
 0xfa,0x04,0x2a,0x7c,0x01,0x1b,0x00,0xff
 # W32: v_cmp_lg_f32 vcc_lo, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0x2a,0x7c,0x01,0x1b,0x00,0xff]
@@ -2579,14 +2579,14 @@
 0xfa,0x04,0x03,0x7c,0x81,0x60,0x01,0x13
 # W32-REAL16: v_cmp_lt_f16 vcc_lo, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x03,0x7c,0x81,0x60,0x01,0x13]
 # W64-REAL16: v_cmp_lt_f16 vcc, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x03,0x7c,0x81,0x60,0x01,0x13]
-# W32-FAKE16: v_cmp_lt_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x03,0x7c,0x81,0x60,0x01,0x13]
-# W64-FAKE16: v_cmp_lt_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x03,0x7c,0x81,0x60,0x01,0x13]
+# W32-FAKE16: v_cmp_lt_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x03,0x7c,0x81,0x60,0x01,0x13]
+# W64-FAKE16: v_cmp_lt_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x03,0x7c,0x81,0x60,0x01,0x13]
 
 0xfa,0xfe,0x03,0x7c,0xff,0x6f,0xfd,0x30
 # W32-REAL16: v_cmp_lt_f16 vcc_lo, -|v127.h|, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x03,0x7c,0xff,0x6f,0xfd,0x30]
 # W64-REAL16: v_cmp_lt_f16 vcc, -|v127.h|, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x03,0x7c,0xff,0x6f,0xfd,0x30]
-# W32-FAKE16: v_cmp_lt_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x03,0x7c,0xff,0x6f,0xfd,0x30]
-# W64-FAKE16: v_cmp_lt_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x03,0x7c,0xff,0x6f,0xfd,0x30]
+# W32-FAKE16: v_cmp_lt_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x03,0x7c,0xff,0x6f,0xfd,0x30]
+# W64-FAKE16: v_cmp_lt_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x03,0x7c,0xff,0x6f,0xfd,0x30]
 
 0xfa,0x04,0x22,0x7c,0x01,0x1b,0x00,0xff
 # W32: v_cmp_lt_f32 vcc_lo, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0x22,0x7c,0x01,0x1b,0x00,0xff]
@@ -2737,14 +2737,14 @@
 0xfa,0x04,0x63,0x7c,0x81,0x60,0x01,0x13
 # W32-REAL16: v_cmp_lt_i16 vcc_lo, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x63,0x7c,0x81,0x60,0x01,0x13]
 # W64-REAL16: v_cmp_lt_i16 vcc, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x63,0x7c,0x81,0x60,0x01,0x13]
-# W32-FAKE16: v_cmp_lt_i16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x63,0x7c,0x81,0x60,0x01,0x13]
-# W64-FAKE16: v_cmp_lt_i16 vcc, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x63,0x7c,0x81,0x60,0x01,0x13]
+# W32-FAKE16: v_cmp_lt_i16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x63,0x7c,0x81,0x60,0x01,0x13]
+# W64-FAKE16: v_cmp_lt_i16 vcc, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x63,0x7c,0x81,0x60,0x01,0x13]
 
 0xfa,0xfe,0x63,0x7c,0xff,0x6f,0x0d,0x30
 # W32-REAL16: v_cmp_lt_i16 vcc_lo, v127.h, v127.h row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x63,0x7c,0xff,0x6f,0x0d,0x30]
 # W64-REAL16: v_cmp_lt_i16 vcc, v127.h, v127.h row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x63,0x7c,0xff,0x6f,0x0d,0x30]
-# W32-FAKE16: v_cmp_lt_i16 vcc_lo, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x63,0x7c,0xff,0x6f,0x0d,0x30]
-# W64-FAKE16: v_cmp_lt_i16 vcc, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x63,0x7c,0xff,0x6f,0x0d,0x30]
+# W32-FAKE16: v_cmp_lt_i16 vcc_lo, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x63,0x7c,0xff,0x6f,0x0d,0x30]
+# W64-FAKE16: v_cmp_lt_i16 vcc, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x63,0x7c,0xff,0x6f,0x0d,0x30]
 
 0xfa,0x04,0x82,0x7c,0x01,0x1b,0x00,0xff
 # W32: v_cmp_lt_i32 vcc_lo, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0x82,0x7c,0x01,0x1b,0x00,0xff]
@@ -2895,14 +2895,14 @@
 0xfa,0x04,0x73,0x7c,0x81,0x60,0x01,0x13
 # W32-REAL16: v_cmp_lt_u16 vcc_lo, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x73,0x7c,0x81,0x60,0x01,0x13]
 # W64-REAL16: v_cmp_lt_u16 vcc, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x73,0x7c,0x81,0x60,0x01,0x13]
-# W32-FAKE16: v_cmp_lt_u16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x73,0x7c,0x81,0x60,0x01,0x13]
-# W64-FAKE16: v_cmp_lt_u16 vcc, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x73,0x7c,0x81,0x60,0x01,0x13]
+# W32-FAKE16: v_cmp_lt_u16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x73,0x7c,0x81,0x60,0x01,0x13]
+# W64-FAKE16: v_cmp_lt_u16 vcc, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x73,0x7c,0x81,0x60,0x01,0x13]
 
 0xfa,0xfe,0x73,0x7c,0xff,0x6f,0x0d,0x30
 # W32-REAL16: v_cmp_lt_u16 vcc_lo, v127.h, v127.h row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x73,0x7c,0xff,0x6f,0x0d,0x30]
 # W64-REAL16: v_cmp_lt_u16 vcc, v127.h, v127.h row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x73,0x7c,0xff,0x6f,0x0d,0x30]
-# W32-FAKE16: v_cmp_lt_u16 vcc_lo, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x73,0x7c,0xff,0x6f,0x0d,0x30]
-# W64-FAKE16: v_cmp_lt_u16 vcc, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x73,0x7c,0xff,0x6f,0x0d,0x30]
+# W32-FAKE16: v_cmp_lt_u16 vcc_lo, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x73,0x7c,0xff,0x6f,0x0d,0x30]
+# W64-FAKE16: v_cmp_lt_u16 vcc, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x73,0x7c,0xff,0x6f,0x0d,0x30]
 
 0xfa,0x04,0x92,0x7c,0x01,0x1b,0x00,0xff
 # W32: v_cmp_lt_u32 vcc_lo, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0x92,0x7c,0x01,0x1b,0x00,0xff]
@@ -3053,14 +3053,14 @@
 0xfa,0x04,0x6b,0x7c,0x81,0x60,0x01,0x13
 # W32-REAL16: v_cmp_ne_i16 vcc_lo, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x6b,0x7c,0x81,0x60,0x01,0x13]
 # W64-REAL16: v_cmp_ne_i16 vcc, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x6b,0x7c,0x81,0x60,0x01,0x13]
-# W32-FAKE16: v_cmp_ne_i16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x6b,0x7c,0x81,0x60,0x01,0x13]
-# W64-FAKE16: v_cmp_ne_i16 vcc, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x6b,0x7c,0x81,0x60,0x01,0x13]
+# W32-FAKE16: v_cmp_ne_i16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x6b,0x7c,0x81,0x60,0x01,0x13]
+# W64-FAKE16: v_cmp_ne_i16 vcc, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x6b,0x7c,0x81,0x60,0x01,0x13]
 
 0xfa,0xfe,0x6b,0x7c,0xff,0x6f,0x0d,0x30
 # W32-REAL16: v_cmp_ne_i16 vcc_lo, v127.h, v127.h row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x6b,0x7c,0xff,0x6f,0x0d,0x30]
 # W64-REAL16: v_cmp_ne_i16 vcc, v127.h, v127.h row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x6b,0x7c,0xff,0x6f,0x0d,0x30]
-# W32-FAKE16: v_cmp_ne_i16 vcc_lo, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x6b,0x7c,0xff,0x6f,0x0d,0x30]
-# W64-FAKE16: v_cmp_ne_i16 vcc, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x6b,0x7c,0xff,0x6f,0x0d,0x30]
+# W32-FAKE16: v_cmp_ne_i16 vcc_lo, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x6b,0x7c,0xff,0x6f,0x0d,0x30]
+# W64-FAKE16: v_cmp_ne_i16 vcc, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x6b,0x7c,0xff,0x6f,0x0d,0x30]
 
 0xfa,0x04,0x8a,0x7c,0x01,0x1b,0x00,0xff
 # W32: v_cmp_ne_i32 vcc_lo, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0x8a,0x7c,0x01,0x1b,0x00,0xff]
@@ -3211,14 +3211,14 @@
 0xfa,0x04,0x7b,0x7c,0x81,0x60,0x01,0x13
 # W32-REAL16: v_cmp_ne_u16 vcc_lo, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x7b,0x7c,0x81,0x60,0x01,0x13]
 # W64-REAL16: v_cmp_ne_u16 vcc, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x7b,0x7c,0x81,0x60,0x01,0x13]
-# W32-FAKE16: v_cmp_ne_u16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x7b,0x7c,0x81,0x60,0x01,0x13]
-# W64-FAKE16: v_cmp_ne_u16 vcc, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x7b,0x7c,0x81,0x60,0x01,0x13]
+# W32-FAKE16: v_cmp_ne_u16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x7b,0x7c,0x81,0x60,0x01,0x13]
+# W64-FAKE16: v_cmp_ne_u16 vcc, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x7b,0x7c,0x81,0x60,0x01,0x13]
 
 0xfa,0xfe,0x7b,0x7c,0xff,0x6f,0x0d,0x30
 # W32-REAL16: v_cmp_ne_u16 vcc_lo, v127.h, v127.h row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x7b,0x7c,0xff,0x6f,0x0d,0x30]
 # W64-REAL16: v_cmp_ne_u16 vcc, v127.h, v127.h row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x7b,0x7c,0xff,0x6f,0x0d,0x30]
-# W32-FAKE16: v_cmp_ne_u16 vcc_lo, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x7b,0x7c,0xff,0x6f,0x0d,0x30]
-# W64-FAKE16: v_cmp_ne_u16 vcc, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x7b,0x7c,0xff,0x6f,0x0d,0x30]
+# W32-FAKE16: v_cmp_ne_u16 vcc_lo, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x7b,0x7c,0xff,0x6f,0x0d,0x30]
+# W64-FAKE16: v_cmp_ne_u16 vcc, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x7b,0x7c,0xff,0x6f,0x0d,0x30]
 
 0xfa,0x04,0x9a,0x7c,0x01,0x1b,0x00,0xff
 # W32: v_cmp_ne_u32 vcc_lo, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0x9a,0x7c,0x01,0x1b,0x00,0xff]
@@ -3369,14 +3369,14 @@
 0xfa,0x04,0x1b,0x7c,0x81,0x60,0x01,0x13
 # W32-REAL16: v_cmp_neq_f16 vcc_lo, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x1b,0x7c,0x81,0x60,0x01,0x13]
 # W64-REAL16: v_cmp_neq_f16 vcc, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x1b,0x7c,0x81,0x60,0x01,0x13]
-# W32-FAKE16: v_cmp_neq_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x1b,0x7c,0x81,0x60,0x01,0x13]
-# W64-FAKE16: v_cmp_neq_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x1b,0x7c,0x81,0x60,0x01,0x13]
+# W32-FAKE16: v_cmp_neq_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x1b,0x7c,0x81,0x60,0x01,0x13]
+# W64-FAKE16: v_cmp_neq_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x1b,0x7c,0x81,0x60,0x01,0x13]
 
 0xfa,0xfe,0x1b,0x7c,0xff,0x6f,0xfd,0x30
 # W32-REAL16: v_cmp_neq_f16 vcc_lo, -|v127.h|, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x1b,0x7c,0xff,0x6f,0xfd,0x30]
 # W64-REAL16: v_cmp_neq_f16 vcc, -|v127.h|, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x1b,0x7c,0xff,0x6f,0xfd,0x30]
-# W32-FAKE16: v_cmp_neq_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x1b,0x7c,0xff,0x6f,0xfd,0x30]
-# W64-FAKE16: v_cmp_neq_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x1b,0x7c,0xff,0x6f,0xfd,0x30]
+# W32-FAKE16: v_cmp_neq_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x1b,0x7c,0xff,0x6f,0xfd,0x30]
+# W64-FAKE16: v_cmp_neq_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x1b,0x7c,0xff,0x6f,0xfd,0x30]
 
 0xfa,0x04,0x3a,0x7c,0x01,0x1b,0x00,0xff
 # W32: v_cmp_neq_f32 vcc_lo, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0x3a,0x7c,0x01,0x1b,0x00,0xff]
@@ -3527,14 +3527,14 @@
 0xfa,0x04,0x13,0x7c,0x81,0x60,0x01,0x13
 # W32-REAL16: v_cmp_nge_f16 vcc_lo, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x13,0x7c,0x81,0x60,0x01,0x13]
 # W64-REAL16: v_cmp_nge_f16 vcc, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x13,0x7c,0x81,0x60,0x01,0x13]
-# W32-FAKE16: v_cmp_nge_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x13,0x7c,0x81,0x60,0x01,0x13]
-# W64-FAKE16: v_cmp_nge_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x13,0x7c,0x81,0x60,0x01,0x13]
+# W32-FAKE16: v_cmp_nge_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x13,0x7c,0x81,0x60,0x01,0x13]
+# W64-FAKE16: v_cmp_nge_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x13,0x7c,0x81,0x60,0x01,0x13]
 
 0xfa,0xfe,0x13,0x7c,0xff,0x6f,0xfd,0x30
 # W32-REAL16: v_cmp_nge_f16 vcc_lo, -|v127.h|, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x13,0x7c,0xff,0x6f,0xfd,0x30]
 # W64-REAL16: v_cmp_nge_f16 vcc, -|v127.h|, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x13,0x7c,0xff,0x6f,0xfd,0x30]
-# W32-FAKE16: v_cmp_nge_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x13,0x7c,0xff,0x6f,0xfd,0x30]
-# W64-FAKE16: v_cmp_nge_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x13,0x7c,0xff,0x6f,0xfd,0x30]
+# W32-FAKE16: v_cmp_nge_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x13,0x7c,0xff,0x6f,0xfd,0x30]
+# W64-FAKE16: v_cmp_nge_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x13,0x7c,0xff,0x6f,0xfd,0x30]
 
 0xfa,0x04,0x32,0x7c,0x01,0x1b,0x00,0xff
 # W32: v_cmp_nge_f32 vcc_lo, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0x32,0x7c,0x01,0x1b,0x00,0xff]
@@ -3685,14 +3685,14 @@
 0xfa,0x04,0x17,0x7c,0x81,0x60,0x01,0x13
 # W32-REAL16: v_cmp_ngt_f16 vcc_lo, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x17,0x7c,0x81,0x60,0x01,0x13]
 # W64-REAL16: v_cmp_ngt_f16 vcc, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x17,0x7c,0x81,0x60,0x01,0x13]
-# W32-FAKE16: v_cmp_ngt_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x17,0x7c,0x81,0x60,0x01,0x13]
-# W64-FAKE16: v_cmp_ngt_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x17,0x7c,0x81,0x60,0x01,0x13]
+# W32-FAKE16: v_cmp_ngt_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x17,0x7c,0x81,0x60,0x01,0x13]
+# W64-FAKE16: v_cmp_ngt_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x17,0x7c,0x81,0x60,0x01,0x13]
 
 0xfa,0xfe,0x17,0x7c,0xff,0x6f,0xfd,0x30
 # W32-REAL16: v_cmp_ngt_f16 vcc_lo, -|v127.h|, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x17,0x7c,0xff,0x6f,0xfd,0x30]
 # W64-REAL16: v_cmp_ngt_f16 vcc, -|v127.h|, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x17,0x7c,0xff,0x6f,0xfd,0x30]
-# W32-FAKE16: v_cmp_ngt_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x17,0x7c,0xff,0x6f,0xfd,0x30]
-# W64-FAKE16: v_cmp_ngt_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x17,0x7c,0xff,0x6f,0xfd,0x30]
+# W32-FAKE16: v_cmp_ngt_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x17,0x7c,0xff,0x6f,0xfd,0x30]
+# W64-FAKE16: v_cmp_ngt_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x17,0x7c,0xff,0x6f,0xfd,0x30]
 
 0xfa,0x04,0x36,0x7c,0x01,0x1b,0x00,0xff
 # W32: v_cmp_ngt_f32 vcc_lo, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0x36,0x7c,0x01,0x1b,0x00,0xff]
@@ -3843,14 +3843,14 @@
 0xfa,0x04,0x19,0x7c,0x81,0x60,0x01,0x13
 # W32-REAL16: v_cmp_nle_f16 vcc_lo, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x19,0x7c,0x81,0x60,0x01,0x13]
 # W64-REAL16: v_cmp_nle_f16 vcc, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x19,0x7c,0x81,0x60,0x01,0x13]
-# W32-FAKE16: v_cmp_nle_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x19,0x7c,0x81,0x60,0x01,0x13]
-# W64-FAKE16: v_cmp_nle_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x19,0x7c,0x81,0x60,0x01,0x13]
+# W32-FAKE16: v_cmp_nle_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x19,0x7c,0x81,0x60,0x01,0x13]
+# W64-FAKE16: v_cmp_nle_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x19,0x7c,0x81,0x60,0x01,0x13]
 
 0xfa,0xfe,0x19,0x7c,0xff,0x6f,0xfd,0x30
 # W32-REAL16: v_cmp_nle_f16 vcc_lo, -|v127.h|, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x19,0x7c,0xff,0x6f,0xfd,0x30]
 # W64-REAL16: v_cmp_nle_f16 vcc, -|v127.h|, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x19,0x7c,0xff,0x6f,0xfd,0x30]
-# W32-FAKE16: v_cmp_nle_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x19,0x7c,0xff,0x6f,0xfd,0x30]
-# W64-FAKE16: v_cmp_nle_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x19,0x7c,0xff,0x6f,0xfd,0x30]
+# W32-FAKE16: v_cmp_nle_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x19,0x7c,0xff,0x6f,0xfd,0x30]
+# W64-FAKE16: v_cmp_nle_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x19,0x7c,0xff,0x6f,0xfd,0x30]
 
 0xfa,0x04,0x38,0x7c,0x01,0x1b,0x00,0xff
 # W32: v_cmp_nle_f32 vcc_lo, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0x38,0x7c,0x01,0x1b,0x00,0xff]
@@ -4001,14 +4001,14 @@
 0xfa,0x04,0x15,0x7c,0x81,0x60,0x01,0x13
 # W32-REAL16: v_cmp_nlg_f16 vcc_lo, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x15,0x7c,0x81,0x60,0x01,0x13]
 # W64-REAL16: v_cmp_nlg_f16 vcc, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x15,0x7c,0x81,0x60,0x01,0x13]
-# W32-FAKE16: v_cmp_nlg_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x15,0x7c,0x81,0x60,0x01,0x13]
-# W64-FAKE16: v_cmp_nlg_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x15,0x7c,0x81,0x60,0x01,0x13]
+# W32-FAKE16: v_cmp_nlg_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x15,0x7c,0x81,0x60,0x01,0x13]
+# W64-FAKE16: v_cmp_nlg_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x15,0x7c,0x81,0x60,0x01,0x13]
 
 0xfa,0xfe,0x15,0x7c,0xff,0x6f,0xfd,0x30
 # W32-REAL16: v_cmp_nlg_f16 vcc_lo, -|v127.h|, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x15,0x7c,0xff,0x6f,0xfd,0x30]
 # W64-REAL16: v_cmp_nlg_f16 vcc, -|v127.h|, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x15,0x7c,0xff,0x6f,0xfd,0x30]
-# W32-FAKE16: v_cmp_nlg_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x15,0x7c,0xff,0x6f,0xfd,0x30]
-# W64-FAKE16: v_cmp_nlg_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x15,0x7c,0xff,0x6f,0xfd,0x30]
+# W32-FAKE16: v_cmp_nlg_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x15,0x7c,0xff,0x6f,0xfd,0x30]
+# W64-FAKE16: v_cmp_nlg_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x15,0x7c,0xff,0x6f,0xfd,0x30]
 
 0xfa,0x04,0x34,0x7c,0x01,0x1b,0x00,0xff
 # W32: v_cmp_nlg_f32 vcc_lo, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0x34,0x7c,0x01,0x1b,0x00,0xff]
@@ -4159,14 +4159,14 @@
 0xfa,0x04,0x1d,0x7c,0x81,0x60,0x01,0x13
 # W32-REAL16: v_cmp_nlt_f16 vcc_lo, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x1d,0x7c,0x81,0x60,0x01,0x13]
 # W64-REAL16: v_cmp_nlt_f16 vcc, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x1d,0x7c,0x81,0x60,0x01,0x13]
-# W32-FAKE16: v_cmp_nlt_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x1d,0x7c,0x81,0x60,0x01,0x13]
-# W64-FAKE16: v_cmp_nlt_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x1d,0x7c,0x81,0x60,0x01,0x13]
+# W32-FAKE16: v_cmp_nlt_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x1d,0x7c,0x81,0x60,0x01,0x13]
+# W64-FAKE16: v_cmp_nlt_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x1d,0x7c,0x81,0x60,0x01,0x13]
 
 0xfa,0xfe,0x1d,0x7c,0xff,0x6f,0xfd,0x30
 # W32-REAL16: v_cmp_nlt_f16 vcc_lo, -|v127.h|, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x1d,0x7c,0xff,0x6f,0xfd,0x30]
 # W64-REAL16: v_cmp_nlt_f16 vcc, -|v127.h|, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x1d,0x7c,0xff,0x6f,0xfd,0x30]
-# W32-FAKE16: v_cmp_nlt_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x1d,0x7c,0xff,0x6f,0xfd,0x30]
-# W64-FAKE16: v_cmp_nlt_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x1d,0x7c,0xff,0x6f,0xfd,0x30]
+# W32-FAKE16: v_cmp_nlt_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x1d,0x7c,0xff,0x6f,0xfd,0x30]
+# W64-FAKE16: v_cmp_nlt_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x1d,0x7c,0xff,0x6f,0xfd,0x30]
 
 0xfa,0x04,0x3c,0x7c,0x01,0x1b,0x00,0xff
 # W32: v_cmp_nlt_f32 vcc_lo, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0x3c,0x7c,0x01,0x1b,0x00,0xff]
@@ -4317,14 +4317,14 @@
 0xfa,0x04,0x0f,0x7c,0x81,0x60,0x01,0x13
 # W32-REAL16: v_cmp_o_f16 vcc_lo, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x0f,0x7c,0x81,0x60,0x01,0x13]
 # W64-REAL16: v_cmp_o_f16 vcc, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x0f,0x7c,0x81,0x60,0x01,0x13]
-# W32-FAKE16: v_cmp_o_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x0f,0x7c,0x81,0x60,0x01,0x13]
-# W64-FAKE16: v_cmp_o_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x0f,0x7c,0x81,0x60,0x01,0x13]
+# W32-FAKE16: v_cmp_o_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x0f,0x7c,0x81,0x60,0x01,0x13]
+# W64-FAKE16: v_cmp_o_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x0f,0x7c,0x81,0x60,0x01,0x13]
 
 0xfa,0xfe,0x0f,0x7c,0xff,0x6f,0xfd,0x30
 # W32-REAL16: v_cmp_o_f16 vcc_lo, -|v127.h|, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x0f,0x7c,0xff,0x6f,0xfd,0x30]
 # W64-REAL16: v_cmp_o_f16 vcc, -|v127.h|, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x0f,0x7c,0xff,0x6f,0xfd,0x30]
-# W32-FAKE16: v_cmp_o_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x0f,0x7c,0xff,0x6f,0xfd,0x30]
-# W64-FAKE16: v_cmp_o_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x0f,0x7c,0xff,0x6f,0xfd,0x30]
+# W32-FAKE16: v_cmp_o_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x0f,0x7c,0xff,0x6f,0xfd,0x30]
+# W64-FAKE16: v_cmp_o_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x0f,0x7c,0xff,0x6f,0xfd,0x30]
 
 0xfa,0x04,0x2e,0x7c,0x01,0x1b,0x00,0xff
 # W32: v_cmp_o_f32 vcc_lo, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0x2e,0x7c,0x01,0x1b,0x00,0xff]
@@ -4475,14 +4475,14 @@
 0xfa,0x04,0x1f,0x7c,0x81,0x60,0x01,0x13
 # W32-REAL16: v_cmp_t_f16 vcc_lo, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x1f,0x7c,0x81,0x60,0x01,0x13]
 # W64-REAL16: v_cmp_t_f16 vcc, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x1f,0x7c,0x81,0x60,0x01,0x13]
-# W32-FAKE16: v_cmp_t_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x1f,0x7c,0x81,0x60,0x01,0x13]
-# W64-FAKE16: v_cmp_t_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x1f,0x7c,0x81,0x60,0x01,0x13]
+# W32-FAKE16: v_cmp_t_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x1f,0x7c,0x81,0x60,0x01,0x13]
+# W64-FAKE16: v_cmp_t_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x1f,0x7c,0x81,0x60,0x01,0x13]
 
 0xfa,0xfe,0x1f,0x7c,0xff,0x6f,0xfd,0x30
 # W32-REAL16: v_cmp_t_f16 vcc_lo, -|v127.h|, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x1f,0x7c,0xff,0x6f,0xfd,0x30]
 # W64-REAL16: v_cmp_t_f16 vcc, -|v127.h|, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x1f,0x7c,0xff,0x6f,0xfd,0x30]
-# W32-FAKE16: v_cmp_t_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x1f,0x7c,0xff,0x6f,0xfd,0x30]
-# W64-FAKE16: v_cmp_t_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x1f,0x7c,0xff,0x6f,0xfd,0x30]
+# W32-FAKE16: v_cmp_t_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x1f,0x7c,0xff,0x6f,0xfd,0x30]
+# W64-FAKE16: v_cmp_t_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x1f,0x7c,0xff,0x6f,0xfd,0x30]
 
 0xfa,0x04,0x3e,0x7c,0x01,0x1b,0x00,0xff
 # W32: v_cmp_t_f32 vcc_lo, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0x3e,0x7c,0x01,0x1b,0x00,0xff]
@@ -4745,14 +4745,14 @@
 0xfa,0x04,0x11,0x7c,0x81,0x60,0x01,0x13
 # W32-REAL16: v_cmp_u_f16 vcc_lo, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x11,0x7c,0x81,0x60,0x01,0x13]
 # W64-REAL16: v_cmp_u_f16 vcc, v1.h, v2.h row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x11,0x7c,0x81,0x60,0x01,0x13]
-# W32-FAKE16: v_cmp_u_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x11,0x7c,0x81,0x60,0x01,0x13]
-# W64-FAKE16: v_cmp_u_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x11,0x7c,0x81,0x60,0x01,0x13]
+# W32-FAKE16: v_cmp_u_f16 vcc_lo, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x11,0x7c,0x81,0x60,0x01,0x13]
+# W64-FAKE16: v_cmp_u_f16 vcc, v129/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/, v130/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/ row_xmask:0 row_mask:0x1 bank_mask:0x3 ; encoding: [0xfa,0x04,0x11,0x7c,0x81,0x60,0x01,0x13]
 
 0xfa,0xfe,0x11,0x7c,0xff,0x6f,0xfd,0x30
 # W32-REAL16: v_cmp_u_f16 vcc_lo, -|v127.h|, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x11,0x7c,0xff,0x6f,0xfd,0x30]
 # W64-REAL16: v_cmp_u_f16 vcc, -|v127.h|, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x11,0x7c,0xff,0x6f,0xfd,0x30]
-# W32-FAKE16: v_cmp_u_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x11,0x7c,0xff,0x6f,0xfd,0x30]
-# W64-FAKE16: v_cmp_u_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x11,0x7c,0xff,0x6f,0xfd,0x30]
+# W32-FAKE16: v_cmp_u_f16 vcc_lo, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x11,0x7c,0xff,0x6f,0xfd,0x30]
+# W64-FAKE16: v_cmp_u_f16 vcc, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/|, -|v255/*Invalid register, operand has 'VGPR_32_STAGING_Lo128' register class*/| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:1 fi:1 ; encoding: [0xfa,0xfe,0x11,0x7c,0xff,0x6f,0xfd,0x30]
 
 0xfa,0x04,0x30,0x7c,0x01,0x1b,0x00,0xff
 # W32: v_cmp_u_f32 vcc_lo, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0x30,0x7c,0x01,0x1b,0x00,0xff]
