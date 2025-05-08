@@ -98,7 +98,10 @@ bool WindowsHotPatch::runOnModule(Module &M) {
         const llvm::MemoryBuffer &FileBuffer = **BufOrErr;
         for (llvm::line_iterator I(FileBuffer.getMemBufferRef(), true), E;
              I != E; ++I) {
-          HotPatchFunctionsList.push_back(std::string{*I});
+          auto Line = llvm::StringRef(*I).trim();
+          if (!Line.empty()) {
+            HotPatchFunctionsList.push_back(std::string{Line});
+          }
         }
       } else {
         M.getContext().diagnose(llvm::DiagnosticInfoGeneric{

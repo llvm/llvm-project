@@ -464,7 +464,10 @@ CodeGenModule::CodeGenModule(ASTContext &C,
         const llvm::MemoryBuffer &FileBuffer = **BufOrErr;
         for (llvm::line_iterator I(FileBuffer.getMemBufferRef(), true), E;
              I != E; ++I) {
-          this->MSHotPatchFunctions.push_back(std::string{*I});
+          llvm::StringRef Line = llvm::StringRef(*I).trim();
+          if (!Line.empty()) {
+            this->MSHotPatchFunctions.push_back(std::string{Line});
+          }
         }
       } else {
         auto &DE = Context.getDiagnostics();
