@@ -894,8 +894,7 @@ void TargetPassConfig::addIRPasses() {
   if (EnableGlobalMergeFunc)
     addPass(createGlobalMergeFuncPass());
 
-  if (TM->getTargetTriple().isOSBinFormatCOFF())
-    addPass(createWindowsHotPatch());
+  addPass(createWindowsHotPatch());
 }
 
 /// Turn exception handling constructs into something the code generators can

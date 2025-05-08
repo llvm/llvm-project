@@ -456,8 +456,7 @@ CodeGenModule::CodeGenModule(ASTContext &C,
 
   // If there are any functions that are marked for Windows hot-patching,
   // then build the list of functions now.
-  if (!CGO.MSHotPatchFunctionsFile.empty() ||
-      !CGO.MSHotPatchFunctionsList.empty()) {
+  if (M.getTargetTriple().isOSBinFormatCOFF()) {
     if (!CGO.MSHotPatchFunctionsFile.empty()) {
       auto BufOrErr = llvm::MemoryBuffer::getFile(CGO.MSHotPatchFunctionsFile);
       if (BufOrErr) {
@@ -486,6 +485,22 @@ CodeGenModule::CodeGenModule(ASTContext &C,
 
     std::sort(this->MSHotPatchFunctions.begin(),
               this->MSHotPatchFunctions.end());
+  } else {
+    if (!CGO.MSHotPatchFunctionsFile.empty()) {
+      unsigned DiagID = diags.getCustomDiagID(
+          DiagnosticsEngine::Error,
+          "hotpatch functions file (-fms-hotpatch-functions-file) is only "
+          "supported on Windows targets");
+      diags.Report(DiagID);
+    }
+
+    if (!CGO.MSHotPatchFunctionsList.empty()) {
+      unsigned DiagID = diags.getCustomDiagID(
+          DiagnosticsEngine::Error,
+          "hotpatch functions list (-fms-hotpatch-functions-list) is only "
+          "supported on Windows targets");
+      diags.Report(DiagID);
+    }
   }
 }
 

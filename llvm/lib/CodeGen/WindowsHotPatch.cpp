@@ -84,6 +84,35 @@ ModulePass *llvm::createWindowsHotPatch() { return new WindowsHotPatch(); }
 // Find functions marked with Attribute::MarkedForWindowsHotPatching and modify
 // their code (if necessary) to account for accesses to global variables.
 bool WindowsHotPatch::runOnModule(Module &M) {
+  // If the target OS is not Windows, then check that there are no functions
+  // marked for Windows hot-patching.
+  if (!M.getTargetTriple().isOSBinFormatCOFF()) {
+    if (!LLVMMSHotPatchFunctionsFile.empty()) {
+      M.getContext().diagnose(llvm::DiagnosticInfoGeneric{
+          llvm::Twine("--ms-hotpatch-functions-file is only supported when "
+                      "target OS is Windows")});
+    }
+
+    if (!LLVMMSHotPatchFunctionsList.empty()) {
+      M.getContext().diagnose(llvm::DiagnosticInfoGeneric{
+          llvm::Twine("--ms-hotpatch-functions-list is only supported when "
+                      "target OS is Windows")});
+    }
+
+    // Functions may have already been marked for hot-patching by the front-end.
+    // Check for any functions marked for hot-patching and report an error if
+    // any are found.
+    for (auto &F : M.functions()) {
+      if (F.hasFnAttribute(Attribute::MarkedForWindowsHotPatching)) {
+        M.getContext().diagnose(llvm::DiagnosticInfoGeneric{
+            llvm::Twine("function is marked for Windows hot-patching, but the "
+                        "target OS is not Windows: ") +
+            F.getName()});
+      }
+    }
+    return false;
+  }
+
   // The front end may have already marked functions for hot-patching. However,
   // we also allow marking functions by passing -ms-hotpatch-functions-file or
   // -ms-hotpatch-functions-list directly to LLVM. This allows hot-patching to
