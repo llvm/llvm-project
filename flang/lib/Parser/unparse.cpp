@@ -2105,8 +2105,8 @@ public:
     Walk(":", std::get<std::optional<OmpReductionCombiner>>(x.t));
   }
   void Unparse(const llvm::omp::Directive &x) {
-    unsigned OMPVersion{langOpts_.OpenMPVersion};
-    Word(llvm::omp::getOpenMPDirectiveName(x, OMPVersion).str());
+    unsigned ompVersion{langOpts_.OpenMPVersion};
+    Word(llvm::omp::getOpenMPDirectiveName(x, ompVersion).str());
   }
   void Unparse(const OmpDirectiveSpecification &x) {
     auto unparseArgs{[&]() {
@@ -2171,8 +2171,8 @@ public:
         x.u);
   }
   void Unparse(const OmpDirectiveNameModifier &x) {
-    unsigned OMPVersion{langOpts_.OpenMPVersion};
-    Word(llvm::omp::getOpenMPDirectiveName(x.v, OMPVersion));
+    unsigned ompVersion{langOpts_.OpenMPVersion};
+    Word(llvm::omp::getOpenMPDirectiveName(x.v, ompVersion));
   }
   void Unparse(const OmpIteratorSpecifier &x) {
     Walk(std::get<TypeDeclarationStmt>(x.t));
