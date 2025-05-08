@@ -2578,18 +2578,6 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       fir::ExtendedValue dataExv = converter.getSymbolExtendedValue(sym);
       name << sym.name().ToString();
 
-      mlir::FlatSymbolRefAttr mapperId;
-      if (sym.GetType()->category() == semantics::DeclTypeSpec::TypeDerived) {
-        auto &typeSpec = sym.GetType()->derivedTypeSpec();
-        std::string mapperIdName =
-            typeSpec.name().ToString() + llvm::omp::OmpDefaultMapperName;
-        if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName))
-          mapperIdName = converter.mangleName(mapperIdName, sym->owner());
-        if (converter.getModuleOp().lookupSymbol(mapperIdName))
-          mapperId = mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(),
-                                                  mapperIdName);
-      }
-
       fir::factory::AddrAndBoundsInfo info =
           Fortran::lower::getDataOperandBaseAddr(
               converter, firOpBuilder, sym.GetUltimate(),
@@ -2608,6 +2596,46 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       std::pair<mlir::omp::ClauseMapFlags, mlir::omp::VariableCaptureKind>
           mapFlagAndKind = getImplicitMapTypeAndKind(
               firOpBuilder, converter, defaultMaps, eleType, loc, sym);
+
+      mlir::FlatSymbolRefAttr mapperId;
+      if (defaultMaps.empty()) {
+        const semantics::DerivedTypeSpec *typeSpec =
+            sym.GetType() ? sym.GetType()->AsDerived() : nullptr;
+        if (typeSpec) {
+          auto getDefaultMapperName = [&]() -> std::string {
+            std::string mapperIdName =
+                typeSpec->name().ToString() + llvm::omp::OmpDefaultMapperName;
+            if (auto *mapperSym =
+                    converter.getCurrentScope().FindSymbol(mapperIdName))
+              mapperIdName =
+                  converter.mangleName(mapperIdName, mapperSym->owner());
+            else
+              mapperIdName =
+                  converter.mangleName(mapperIdName, *typeSpec->GetScope());
+            return mapperIdName;
+          };
+
+          std::string mapperIdName = getDefaultMapperName();
+          if (!mapperIdName.empty()) {
+            bool mapperExists =
+                converter.getModuleOp().lookupSymbol(mapperIdName);
+            bool allowImplicitMapper =
+                semantics::IsAllocatableOrObjectPointer(&sym);
+            if (mapperExists || allowImplicitMapper) {
+              if (!mapperExists) {
+                auto recordType = mlir::dyn_cast_or_null<fir::RecordType>(
+                    converter.genType(*typeSpec));
+                if (recordType)
+                  mapperId = getOrGenImplicitDefaultDeclareMapper(
+                      converter, loc, recordType, mapperIdName);
+              } else {
+                mapperId = mlir::FlatSymbolRefAttr::get(
+                    &converter.getMLIRContext(), mapperIdName);
+              }
+            }
+          }
+        }
+      }
 
       mlir::Value mapOp = createMapInfoOp(
           firOpBuilder, converter.getCurrentLocation(), baseOp,
