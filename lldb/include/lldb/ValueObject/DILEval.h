@@ -52,13 +52,6 @@ private:
   llvm::Expected<lldb::ValueObjectSP> Visit(const MemberOfNode *node) override;
   llvm::Expected<lldb::ValueObjectSP> Visit(const UnaryOpNode *node) override;
 
-  lldb::ValueObjectSP EvaluateMemberOf(lldb::ValueObjectSP value,
-                                       const std::vector<uint32_t> &path,
-                                       bool use_synthetic, bool is_dynamic);
-
-  lldb::ValueObjectSP FindMemberWithName(lldb::ValueObjectSP base,
-                                         ConstString name, bool is_arrow);
-
   // Used by the interpreter to create objects, perform casts, etc.
   lldb::TargetSP m_target;
   llvm::StringRef m_expr;

@@ -92,15 +92,15 @@ private:
 class MemberOfNode : public ASTNode {
 public:
   MemberOfNode(uint32_t location, ASTNodeUP base, bool is_arrow,
-               ConstString name)
+               std::string name)
       : ASTNode(location, NodeKind::eMemberOfNode), m_base(std::move(base)),
-        m_is_arrow(is_arrow), m_field_name(name) { }
+        m_is_arrow(is_arrow), m_field_name(std::move(name)) {}
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
-  ASTNode *base() const { return m_base.get(); }
-  bool IsArrow() const { return m_is_arrow; }
-  ConstString FieldName() const { return m_field_name; }
+  ASTNode *GetBase() const { return m_base.get(); }
+  bool GetIsArrow() const { return m_is_arrow; }
+  std::string GetFieldName() const { return m_field_name; }
 
   static bool classof(const ASTNode *node) {
     return node->GetKind() == NodeKind::eMemberOfNode;
@@ -109,7 +109,7 @@ public:
 private:
   ASTNodeUP m_base;
   bool m_is_arrow;
-  ConstString m_field_name;
+  std::string m_field_name;
 };
 
 class UnaryOpNode : public ASTNode {

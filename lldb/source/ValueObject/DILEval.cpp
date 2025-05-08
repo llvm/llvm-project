@@ -272,148 +272,10 @@ Interpreter::Visit(const UnaryOpNode *node) {
       m_expr, "invalid ast: unexpected binary operator", node->GetLocation());
 }
 
-lldb::ValueObjectSP
-Interpreter::EvaluateMemberOf(lldb::ValueObjectSP value,
-                              const std::vector<uint32_t> &path,
-                              bool use_synthetic, bool is_dynamic) {
-  lldb::ValueObjectSP member_val_sp = value;
-
-  lldb::DynamicValueType use_dynamic =
-      (!is_dynamic) ? lldb::eNoDynamicValues : lldb::eDynamicDontRunTarget;
-  // Walk the path from the base value to the value that contains the requested field.
-  for (uint32_t idx : path) {
-    member_val_sp = member_val_sp->GetChildAtIndex(idx, /*can_create*/ true);
-  }
-  // If that didn't work, try it with the dynamic value.
-  if (!member_val_sp && is_dynamic) {
-    lldb::ValueObjectSP dyn_val_sp = value->GetDynamicValue(use_dynamic);
-    if (dyn_val_sp) {
-      for (uint32_t idx : path) {
-        dyn_val_sp = dyn_val_sp->GetChildAtIndex(idx, true);
-      }
-      member_val_sp = dyn_val_sp;
-    }
-  }
-  assert(member_val_sp && "invalid ast: invalid member access");
-
-  return member_val_sp;
-}
-
-static bool GetFieldIndex(CompilerType type, const std::string &name,
-                          std::vector<uint32_t> *idx_path) {
-  bool found = false;
-  uint32_t num_fields = type.GetNumFields();
-  for (uint32_t i = 0; i < num_fields; ++i) {
-    uint64_t bit_offset = 0;
-    uint32_t bitfield_bit_size = 0;
-    bool is_bitfield = false;
-    std::string name_sstr;
-    CompilerType field_type(type.GetFieldAtIndex(
-        i, name_sstr, &bit_offset, &bitfield_bit_size, &is_bitfield));
-    auto field_name =
-        name_sstr.length() == 0 ? std::optional<std::string>() : name_sstr;
-    if (field_type.IsValid() && name_sstr == name) {
-      idx_path->push_back(i + type.GetNumberOfNonEmptyBaseClasses());
-      found = true;
-      break;
-    } else if (field_type.IsAnonymousType()) {
-      found = GetFieldIndex(field_type, name, idx_path);
-      if (found) {
-        idx_path->push_back(i + type.GetNumberOfNonEmptyBaseClasses());
-        break;
-      }
-    }
-  }
-  return found;
-}
-
-static bool SearchBaseClassesForField(lldb::ValueObjectSP base_sp,
-                                      CompilerType base_type,
-                                      const std::string &name,
-                                      std::vector<uint32_t> *idx_path,
-                                      bool use_synthetic, bool is_dynamic) {
-  bool found = false;
-  uint32_t num_non_empty_bases = 0;
-  uint32_t num_direct_bases = base_type.GetNumDirectBaseClasses();
-  for (uint32_t i = 0; i < num_direct_bases; ++i) {
-    uint32_t bit_offset;
-    CompilerType base_class =
-        base_type.GetDirectBaseClassAtIndex(i, &bit_offset);
-    std::vector<uint32_t> field_idx_path;
-    if (GetFieldIndex(base_class, name, &field_idx_path)) {
-      for (uint32_t j : field_idx_path)
-        idx_path->push_back(j + base_class.GetNumberOfNonEmptyBaseClasses());
-      idx_path->push_back(i);
-      return true;
-    }
-
-    found = SearchBaseClassesForField(base_sp, base_class, name, idx_path,
-                                      use_synthetic, is_dynamic);
-    if (found) {
-      idx_path->push_back(i);
-      return true;
-    }
-
-    if (base_class.GetNumFields() > 0)
-      num_non_empty_bases += 1;
-  }
-  return false;
-}
-
-lldb::ValueObjectSP Interpreter::FindMemberWithName(lldb::ValueObjectSP base,
-                                                    ConstString name,
-                                                    bool is_arrow) {
-  bool is_synthetic = false;
-  bool is_dynamic = true;
-  // See if GetChildMemberWithName works.
-  lldb::ValueObjectSP field_obj =
-      base->GetChildMemberWithName(name.GetStringRef());
-  if (field_obj && field_obj->GetName() == name)
-    return field_obj;
-
-  // Check for synthetic member.
-  lldb::ValueObjectSP child_sp = base->GetSyntheticValue();
-  if (child_sp) {
-    is_synthetic = true;
-    field_obj = child_sp->GetChildMemberWithName(name);
-    if (field_obj && field_obj->GetName() == name)
-      return field_obj;
-  }
-
-  // Check indices of immediate member fields of base's type.
-  CompilerType base_type = base->GetCompilerType();
-  std::vector<uint32_t> field_idx_path;
-  if (GetFieldIndex(base_type, name.GetString(), &field_idx_path)) {
-    std::reverse(field_idx_path.begin(), field_idx_path.end());
-    // Traverse the path & verify the final object is correct.
-    field_obj = base;
-    for (uint32_t i : field_idx_path)
-      field_obj = field_obj->GetChildAtIndex(i, true);
-    if (field_obj && field_obj->GetName() == name)
-      return field_obj;
-  }
-
-  // Go through base classes and look for field there.
-  std::vector<uint32_t> base_class_idx_path;
-  bool found =
-      SearchBaseClassesForField(base, base_type, name.GetString(),
-                                &base_class_idx_path, is_synthetic, is_dynamic);
-  if (found && !base_class_idx_path.empty()) {
-    std::reverse(base_class_idx_path.begin(), base_class_idx_path.end());
-    field_obj =
-        EvaluateMemberOf(base, base_class_idx_path, is_synthetic, is_dynamic);
-    if (field_obj && field_obj->GetName() == name)
-      return field_obj;
-  }
-
-  // Field not found.
-  return lldb::ValueObjectSP();
-}
-
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const MemberOfNode *node) {
   Status error;
-  auto base_or_err = Evaluate(node->base());
+  auto base_or_err = Evaluate(node->GetBase());
   if (!base_or_err) {
     return base_or_err;
   }
@@ -423,7 +285,7 @@ Interpreter::Visit(const MemberOfNode *node) {
   CompilerType base_type = base->GetCompilerType();
   // When using an arrow, make sure the base is a pointer or array type.
   // When using a period, make sure the base type is NOT a pointer type.
-  if (node->IsArrow() && !base_type.IsPointerType() &&
+  if (node->GetIsArrow() && !base_type.IsPointerType() &&
       !base_type.IsArrayType()) {
     lldb::ValueObjectSP deref_sp = base->Dereference(error);
     if (error.Success()) {
@@ -435,25 +297,25 @@ Interpreter::Visit(const MemberOfNode *node) {
                         "did you mean to use '.'?",
                         base_type.TypeDescription());
       return llvm::make_error<DILDiagnosticError>(
-          m_expr, errMsg, node->GetLocation(), node->FieldName().GetLength());
+          m_expr, errMsg, node->GetLocation(), node->GetFieldName().size());
     }
-  } else if (!node->IsArrow() && base_type.IsPointerType()) {
+  } else if (!node->GetIsArrow() && base_type.IsPointerType()) {
     std::string errMsg =
         llvm::formatv("member reference type {0} is a pointer; "
                       "did you mean to use '->'?",
                       base_type.TypeDescription());
     return llvm::make_error<DILDiagnosticError>(
-        m_expr, errMsg, node->GetLocation(), node->FieldName().GetLength());
+        m_expr, errMsg, node->GetLocation(), node->GetFieldName().size());
   }
 
   // User specified array->elem; need to get to element[0] to look for fields.
-  if (node->IsArrow() && base_type.IsArrayType())
+  if (node->GetIsArrow() && base_type.IsArrayType())
     base = base->GetChildAtIndex(0);
 
   // Now look for the member with the specified name.
   lldb::ValueObjectSP field_obj =
-      FindMemberWithName(base, node->FieldName(), node->IsArrow());
-  if (field_obj) {
+      base->GetChildMemberWithName(llvm::StringRef(node->GetFieldName()));
+  if (field_obj && field_obj->GetName().GetString() == node->GetFieldName()) {
     if (field_obj->GetCompilerType().IsReferenceType()) {
       lldb::ValueObjectSP tmp_obj = field_obj->Dereference(error);
       if (error.Fail())
@@ -463,13 +325,13 @@ Interpreter::Visit(const MemberOfNode *node) {
     return field_obj;
   }
 
-  if (node->IsArrow() && base_type.IsPointerType())
+  if (node->GetIsArrow() && base_type.IsPointerType())
     base_type = base_type.GetPointeeType();
-  std::string errMsg = llvm::formatv(
-      "no member named '{0}' in {1}", node->FieldName().GetStringRef(),
-      base_type.GetFullyUnqualifiedType().TypeDescription());
+  std::string errMsg =
+      llvm::formatv("no member named '{0}' in {1}", node->GetFieldName(),
+                    base_type.GetFullyUnqualifiedType().TypeDescription());
   return llvm::make_error<DILDiagnosticError>(
-      m_expr, errMsg, node->GetLocation(), node->FieldName().GetLength());
+      m_expr, errMsg, node->GetLocation(), node->GetFieldName().size());
 }
 
 } // namespace lldb_private::dil

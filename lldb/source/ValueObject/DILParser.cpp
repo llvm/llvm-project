@@ -127,10 +127,9 @@ ASTNodeUP DILParser::ParsePostfixExpression() {
     m_dil_lexer.Advance();
     Token member_token = CurToken();
     std::string member_id = ParseIdExpression();
-    lhs = std::make_unique<MemberOfNode>(member_token.GetLocation(),
-                                         std::move(lhs),
-                                         token.GetKind() == Token::arrow,
-                                         ConstString(member_id));
+    lhs = std::make_unique<MemberOfNode>(
+        member_token.GetLocation(), std::move(lhs),
+        token.GetKind() == Token::arrow, member_id);
   }
   return lhs;
 }
