@@ -67,10 +67,6 @@ private:
   bool
   runOnFunction(Function &F,
                 SmallDenseMap<GlobalVariable *, GlobalVariable *> &RefMapping);
-  void replaceGlobalVariableUses(
-      Function &F, SmallVectorImpl<GlobalVariableUse> &GVUses,
-      SmallDenseMap<GlobalVariable *, GlobalVariable *> &RefMapping,
-      DIBuilder &DebugInfo);
 };
 
 } // end anonymous namespace
@@ -203,6 +199,8 @@ bool WindowsHotPatch::runOnModule(Module &M) {
 bool WindowsHotPatch::runOnFunction(
     Function &F,
     SmallDenseMap<GlobalVariable *, GlobalVariable *> &RefMapping) {
+  // First pass: Find any instructions that reference global variables. We do not modify the IR
+  // in this pass because we don't want to modify a collection while iterating the same collection.
   SmallVector<GlobalVariableUse, 32> GVUses;
   for (auto &I : instructions(F)) {
     for (auto &U : I.operands()) {
@@ -216,59 +214,82 @@ bool WindowsHotPatch::runOnFunction(
     }
   }
 
-  if (!GVUses.empty()) {
-    const llvm::DISubprogram *Subprogram = F.getSubprogram();
-    DIBuilder DebugInfo{*F.getParent(), true,
-                        Subprogram != nullptr ? Subprogram->getUnit()
-                                              : nullptr};
-    replaceGlobalVariableUses(F, GVUses, RefMapping, DebugInfo);
-    if (Subprogram != nullptr) {
-      DebugInfo.finalize();
-    }
-    return true;
-  } else {
+  // Most functions do not touch global variables.
+  if (GVUses.empty()) {
     return false;
   }
-}
 
-void WindowsHotPatch::replaceGlobalVariableUses(
-    Function &F, SmallVectorImpl<GlobalVariableUse> &GVUses,
-    SmallDenseMap<GlobalVariable *, GlobalVariable *> &RefMapping,
-    DIBuilder &DebugInfo) {
+  // For each unique global variable, we create a __ref_FOO global variable that points to it.
+  // The RefMapping collection maps from a global variable to its __ref_* global variable.
+  //
+  // A given function may reference the same global variable more than once, either at different
+  // instructions or in a loop (or both). During the lifetime of a hotpatched image, these
+  // __ref_FOO pointers never change. We generate a single load for each unique global variable
+  // that is used within a given function, and place that load at the start of the function.
+  //
+  // This avoids the cost of repeatedly loading each __ref_FOO within a function, such as
+  // within a hot loop.  However, it comes with a minor cost: in each hot-patched function, the
+  // function will read all of the __ref_FOO pointers that it might need, even if control flow
+  // never reaches a place that uses a given pointer. This is a minor cost, compared to avoiding
+  // the cost of repeated fetches in a loop.
+
+  const llvm::DISubprogram *Subprogram = F.getSubprogram();
+  DIBuilder DebugInfo{*F.getParent(), true,
+                      Subprogram != nullptr ? Subprogram->getUnit()
+                                            : nullptr};
+
+  auto& EntryBlock = F.getEntryBlock();
+
+  // Insert loads for __ref_* variables at the start of the entry block.
+  // Entry blocks can never have PHI nodes, so there is no conflict with PHI nodes at the start.
+  IRBuilder<> Builder(&EntryBlock, EntryBlock.begin(), nullptr, {});
+
+  // Maps GlobalVariable (the old one, not the pointer) to the result of a load instruction for that global
+  SmallDenseMap<GlobalVariable *, LoadInst *> GVLoadInsts;
+
   for (auto &GVUse : GVUses) {
-    IRBuilder<> Builder(GVUse.User);
+    LoadInst *&LoadedRefGV = GVLoadInsts.try_emplace(GVUse.GV).first->second;
 
-    // Get or create a new global variable that points to the old one and who's
-    // name begins with `__ref_`.
-    GlobalVariable *&ReplaceWithRefGV =
-        RefMapping.try_emplace(GVUse.GV).first->second;
-    if (ReplaceWithRefGV == nullptr) {
-      Constant *AddrOfOldGV = ConstantExpr::getGetElementPtr(
-          Builder.getPtrTy(), GVUse.GV, ArrayRef<Value *>{});
-      ReplaceWithRefGV =
-          new GlobalVariable(*F.getParent(), Builder.getPtrTy(), true,
-                             GlobalValue::InternalLinkage, AddrOfOldGV,
-                             Twine("__ref_").concat(GVUse.GV->getName()),
-                             nullptr, GlobalVariable::NotThreadLocal);
+    if (LoadedRefGV == nullptr) {
+      // Get or create a new global variable that points to the old one and who's
+      // name begins with `__ref_`.
+      GlobalVariable *&ReplaceWithRefGV =
+          RefMapping.try_emplace(GVUse.GV).first->second;
+      if (ReplaceWithRefGV == nullptr) {
+        Constant *AddrOfOldGV = ConstantExpr::getGetElementPtr(
+            Builder.getPtrTy(), GVUse.GV, ArrayRef<Value *>{});
 
-      // Create debug info for the replacement global variable.
-      DISubprogram *SP = F.getSubprogram();
-      DataLayout Layout = F.getParent()->getDataLayout();
-      DIType *DebugType = DebugInfo.createPointerType(
-          nullptr, Layout.getTypeSizeInBits(GVUse.GV->getValueType()));
-      DIGlobalVariableExpression *GVE =
-          DebugInfo.createGlobalVariableExpression(
-              SP != nullptr ? SP->getUnit() : nullptr,
-              ReplaceWithRefGV->getName(), StringRef{},
-              SP != nullptr ? SP->getFile() : nullptr, /*LineNo*/ 0, DebugType,
-              /*IsLocalToUnit*/ false);
-      ReplaceWithRefGV->addDebugInfo(GVE);
+        ReplaceWithRefGV =
+            new GlobalVariable(*F.getParent(), Builder.getPtrTy(), true,
+                              GlobalValue::InternalLinkage, AddrOfOldGV,
+                              Twine("__ref_").concat(GVUse.GV->getName()),
+                              nullptr, GlobalVariable::NotThreadLocal);
+
+        // Create debug info for the replacement global variable.
+        DISubprogram *SP = F.getSubprogram();
+        DataLayout Layout = F.getParent()->getDataLayout();
+        DIType *DebugType = DebugInfo.createPointerType(
+            nullptr, Layout.getTypeSizeInBits(GVUse.GV->getValueType()));
+        DIGlobalVariableExpression *GVE =
+            DebugInfo.createGlobalVariableExpression(
+                SP != nullptr ? SP->getUnit() : nullptr,
+                ReplaceWithRefGV->getName(), StringRef{},
+                SP != nullptr ? SP->getFile() : nullptr, /*LineNo*/ 0, DebugType,
+                /*IsLocalToUnit*/ false);
+        ReplaceWithRefGV->addDebugInfo(GVE);
+      }
+
+      // Now replace the use of that global variable with the new one (via a load
+      // since it is a pointer to the old global variable).
+      LoadedRefGV = Builder.CreateLoad(ReplaceWithRefGV->getValueType(), ReplaceWithRefGV);
     }
 
-    // Now replace the use of that global variable with the new one (via a load
-    // since it is a pointer to the old global variable).
-    LoadInst *LoadedRefGV =
-        Builder.CreateLoad(ReplaceWithRefGV->getValueType(), ReplaceWithRefGV);
     GVUse.User->setOperand(GVUse.Op, LoadedRefGV);
   }
+
+  if (Subprogram != nullptr) {
+    DebugInfo.finalize();
+  }
+
+  return true;
 }
