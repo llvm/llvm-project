@@ -6078,12 +6078,9 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
       SDValue SubVec = DAG.getNode(GatherVVOpc, DL, M1VT, SubV1, SubIndex,
                                    DAG.getUNDEF(M1VT), InnerTrueMask, InnerVL);
       SDValue Gather = DAG.getUNDEF(ContainerVT);
-      for (int i = 0; i < N; i++) {
-        SDValue SubIdx =
-            DAG.getVectorIdxConstant(M1VT.getVectorMinNumElements() * i, DL);
-        Gather = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT, Gather,
-                             SubVec, SubIdx);
-      }
+      for (int i = 0; i < N; i++)
+        Gather = DAG.getInsertSubvector(DL, Gather, SubVec,
+                                        M1VT.getVectorMinNumElements() * i);
       return convertFromScalableVector(VT, Gather, DAG, Subtarget);
     }
 
@@ -6107,10 +6104,8 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
         SDValue SubVec =
             DAG.getNode(GatherVVOpc, DL, M1VT, SubV1, SubIndex,
                         DAG.getUNDEF(M1VT), InnerTrueMask, InnerVL);
-        SDValue SubIdx =
-            DAG.getVectorIdxConstant(M1VT.getVectorMinNumElements() * i, DL);
-        Gather = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT, Gather,
-                             SubVec, SubIdx);
+        Gather = DAG.getInsertSubvector(DL, Gather, SubVec,
+                                        M1VT.getVectorMinNumElements() * i);
       }
       return convertFromScalableVector(VT, Gather, DAG, Subtarget);
     }
