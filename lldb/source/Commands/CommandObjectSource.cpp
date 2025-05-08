@@ -1067,7 +1067,16 @@ protected:
                 &result.GetOutputStream(), m_options.num_lines,
                 m_options.reverse, GetBreakpointLocations())) {
           result.SetStatus(eReturnStatusSuccessFinishResult);
+        } else {
+          if (target.GetSourceManager().AtLastLine(m_options.reverse)) {
+            result.AppendNoteWithFormatv(
+                "Reached {0} of the file, no more to page",
+                m_options.reverse ? "beginning" : "end");
+          } else {
+            result.AppendNote("No source available");
+          }
         }
+
       } else {
         if (m_options.num_lines == 0)
           m_options.num_lines = 10;
