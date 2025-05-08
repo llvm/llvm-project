@@ -2932,10 +2932,9 @@ bool Compiler<Emitter>::VisitLambdaExpr(const LambdaExpr *E) {
   // record with their initializers.
   for (const Record::Field &F : R->fields()) {
     const Expr *Init = *CaptureInitIt;
-    ++CaptureInitIt;
-
-    if (!Init)
+    if (!Init || Init->containsErrors())
       continue;
+    ++CaptureInitIt;
 
     if (std::optional<PrimType> T = classify(Init)) {
       if (!this->visit(Init))

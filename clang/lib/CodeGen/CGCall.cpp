@@ -260,9 +260,8 @@ CodeGenTypes::arrangeFreeFunctionType(CanQual<FunctionProtoType> FTP) {
                                    FTP);
 }
 
-static CallingConv getCallingConventionForDecl(const CodeGenModule &CGM,
-                                               const ObjCMethodDecl *D,
-                                               bool IsWindows) {
+static CallingConv getCallingConventionForDecl(const ObjCMethodDecl *D,
+                                               bool IsTargetDefaultMSABI) {
   // Set the appropriate calling convention for the Function.
   if (D->hasAttr<StdCallAttr>())
     return CC_X86StdCall;
@@ -298,10 +297,10 @@ static CallingConv getCallingConventionForDecl(const CodeGenModule &CGM,
     return CC_IntelOclBicc;
 
   if (D->hasAttr<MSABIAttr>())
-    return IsWindows ? CC_C : CC_Win64;
+    return IsTargetDefaultMSABI ? CC_C : CC_Win64;
 
   if (D->hasAttr<SysVABIAttr>())
-    return IsWindows ? CC_X86_64SysV : CC_C;
+    return IsTargetDefaultMSABI ? CC_X86_64SysV : CC_C;
 
   if (D->hasAttr<PreserveMostAttr>())
     return CC_PreserveMost;
@@ -589,9 +588,17 @@ CodeGenTypes::arrangeObjCMessageSendSignature(const ObjCMethodDecl *MD,
   }
 
   FunctionType::ExtInfo einfo;
+<<<<<<< HEAD
   bool IsWindows = getContext().getTargetInfo().getTriple().isOSWindows();
   einfo =
       einfo.withCallingConv(getCallingConventionForDecl(CGM, MD, IsWindows));
+=======
+  bool IsTargetDefaultMSABI =
+      getContext().getTargetInfo().getTriple().isOSWindows() ||
+      getContext().getTargetInfo().getTriple().isUEFI();
+  einfo = einfo.withCallingConv(
+      getCallingConventionForDecl(MD, IsTargetDefaultMSABI));
+>>>>>>> upstream/main
 
   if (getContext().getLangOpts().ObjCAutoRefCount &&
       MD->hasAttr<NSReturnsRetainedAttr>())

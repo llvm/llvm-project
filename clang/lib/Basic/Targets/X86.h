@@ -881,6 +881,7 @@ public:
     switch (CC) {
     case CC_C:
     case CC_Win64:
+    case CC_X86_64SysV:
       return CCCR_OK;
     default:
       return CCCR_Warning;

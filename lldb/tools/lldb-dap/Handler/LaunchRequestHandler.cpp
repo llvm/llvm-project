@@ -71,9 +71,12 @@ void LaunchRequestHandler::PostRun() const {
   if (dap.target.GetProcess().IsValid()) {
     // Attach happens when launching with runInTerminal.
     SendProcessEvent(dap, dap.is_attach ? Attach : Launch);
-  }
 
-  dap.SendJSON(CreateEventObject("initialized"));
+    if (dap.stop_at_entry)
+      SendThreadStoppedEvent(dap);
+    else
+      dap.target.GetProcess().Continue();
+  }
 }
 
 } // namespace lldb_dap

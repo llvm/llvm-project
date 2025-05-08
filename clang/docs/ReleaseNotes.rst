@@ -319,6 +319,8 @@ Modified Compiler Flags
 
 - The ``-mexecute-only`` and ``-mpure-code`` flags are now accepted for AArch64 targets. (#GH125688)
 
+- The ``-fchar8_t`` flag is no longer considered in non-C++ languages modes. (#GH55373)
+
 Removed Compiler Flags
 -------------------------
 
@@ -505,6 +507,9 @@ Improvements to Clang's diagnostics
 - ``-Wreserved-identifier`` now fires on reserved parameter names in a function
   declaration which is not a definition.
 
+- Several compatibility diagnostics that were incorrectly being grouped under
+  ``-Wpre-c++20-compat`` are now part of ``-Wc++20-compat``. (#GH138775)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -561,6 +566,8 @@ Bug Fixes in This Version
   the invalid attribute location appropriately. (#GH137861)
 - Fixed a crash when a malformed ``_Pragma`` directive appears as part of an 
   ``#include`` directive. (#GH138094)
+- Fixed a crash during constant evaluation involving invalid lambda captures
+  (#GH138832)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -573,6 +580,15 @@ Bug Fixes to Compiler Builtins
 
 - ``__has_unique_object_representations(Incomplete[])`` is no longer accepted, per
   `LWG4113 <https://cplusplus.github.io/LWG/issue4113>`_.
+
+- ``__builtin_is_cpp_trivially_relocatable``, ``__builtin_is_replaceable`` and
+  ``__builtin_trivially_relocate`` have been added to support standard C++26 relocation.
+
+- ``__is_trivially_relocatable`` has been deprecated, and uses should be replaced by
+  ``__builtin_is_cpp_trivially_relocatable``.
+  Note that, it is generally unsafe to ``memcpy`` non-trivially copyable types that
+  are ``__builtin_is_cpp_trivially_relocatable``. It is recommanded to use
+  ``__builtin_trivially_relocate`` instead.
 
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -805,6 +821,7 @@ clang-format
 - Add ``EnumTrailingComma`` option for inserting/removing commas at the end of
   ``enum`` enumerator lists.
 - Add ``OneLineFormatOffRegex`` option for turning formatting off for one line.
+- Add ``SpaceAfterOperatorKeyword`` option.
 
 libclang
 --------
