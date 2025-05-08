@@ -1087,11 +1087,13 @@ define double @test_v4f64(<4 x double> %a0) {
 ;
 ; SSE41-LABEL: test_v4f64:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movapd %xmm0, %xmm2
-; SSE41-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
-; SSE41-NEXT:    blendvpd %xmm0, %xmm0, %xmm1
+; SSE41-NEXT:    movaps %xmm0, %xmm2
+; SSE41-NEXT:    movshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; SSE41-NEXT:    movaps %xmm2, %xmm4
+; SSE41-NEXT:    blendvpd %xmm0, %xmm1, %xmm4
+; SSE41-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
 ; SSE41-NEXT:    movapd %xmm1, %xmm3
-; SSE41-NEXT:    maxpd %xmm2, %xmm3
+; SSE41-NEXT:    maxpd %xmm4, %xmm3
 ; SSE41-NEXT:    movapd %xmm1, %xmm0
 ; SSE41-NEXT:    cmpunordpd %xmm1, %xmm0
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm1, %xmm3
@@ -1271,45 +1273,45 @@ define double @test_v8f64(<8 x double> %a0) {
 ;
 ; SSE41-LABEL: test_v8f64:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movapd %xmm0, %xmm4
-; SSE41-NEXT:    movapd %xmm1, %xmm6
-; SSE41-NEXT:    movapd %xmm1, %xmm0
-; SSE41-NEXT:    blendvpd %xmm0, %xmm3, %xmm6
+; SSE41-NEXT:    movaps %xmm0, %xmm4
+; SSE41-NEXT:    movshdup {{.*#+}} xmm0 = xmm1[1,1,3,3]
+; SSE41-NEXT:    movaps %xmm1, %xmm5
+; SSE41-NEXT:    blendvpd %xmm0, %xmm3, %xmm5
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm1, %xmm3
-; SSE41-NEXT:    movapd %xmm3, %xmm5
-; SSE41-NEXT:    maxpd %xmm6, %xmm5
+; SSE41-NEXT:    movapd %xmm3, %xmm1
+; SSE41-NEXT:    maxpd %xmm5, %xmm1
 ; SSE41-NEXT:    movapd %xmm3, %xmm0
 ; SSE41-NEXT:    cmpunordpd %xmm3, %xmm0
-; SSE41-NEXT:    blendvpd %xmm0, %xmm3, %xmm5
-; SSE41-NEXT:    movapd %xmm4, %xmm3
-; SSE41-NEXT:    movapd %xmm4, %xmm0
+; SSE41-NEXT:    blendvpd %xmm0, %xmm3, %xmm1
+; SSE41-NEXT:    movshdup {{.*#+}} xmm0 = xmm4[1,1,3,3]
+; SSE41-NEXT:    movaps %xmm4, %xmm3
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm2, %xmm3
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm4, %xmm2
-; SSE41-NEXT:    movapd %xmm2, %xmm1
-; SSE41-NEXT:    maxpd %xmm3, %xmm1
+; SSE41-NEXT:    movapd %xmm2, %xmm4
+; SSE41-NEXT:    maxpd %xmm3, %xmm4
 ; SSE41-NEXT:    movapd %xmm2, %xmm0
 ; SSE41-NEXT:    cmpunordpd %xmm2, %xmm0
-; SSE41-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
-; SSE41-NEXT:    movapd %xmm1, %xmm2
+; SSE41-NEXT:    blendvpd %xmm0, %xmm2, %xmm4
+; SSE41-NEXT:    movshdup {{.*#+}} xmm0 = xmm4[1,1,3,3]
+; SSE41-NEXT:    movapd %xmm4, %xmm2
+; SSE41-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
+; SSE41-NEXT:    blendvpd %xmm0, %xmm4, %xmm1
+; SSE41-NEXT:    movapd %xmm1, %xmm3
+; SSE41-NEXT:    maxpd %xmm2, %xmm3
 ; SSE41-NEXT:    movapd %xmm1, %xmm0
-; SSE41-NEXT:    blendvpd %xmm0, %xmm5, %xmm2
-; SSE41-NEXT:    blendvpd %xmm0, %xmm1, %xmm5
-; SSE41-NEXT:    movapd %xmm5, %xmm1
-; SSE41-NEXT:    maxpd %xmm2, %xmm1
-; SSE41-NEXT:    movapd %xmm5, %xmm0
-; SSE41-NEXT:    cmpunordpd %xmm5, %xmm0
-; SSE41-NEXT:    blendvpd %xmm0, %xmm5, %xmm1
-; SSE41-NEXT:    movapd %xmm1, %xmm2
-; SSE41-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm1[1]
-; SSE41-NEXT:    movq %xmm1, %rax
+; SSE41-NEXT:    cmpunordpd %xmm1, %xmm0
+; SSE41-NEXT:    blendvpd %xmm0, %xmm1, %xmm3
+; SSE41-NEXT:    movapd %xmm3, %xmm2
+; SSE41-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm3[1]
+; SSE41-NEXT:    movq %xmm3, %rax
 ; SSE41-NEXT:    testq %rax, %rax
 ; SSE41-NEXT:    js .LBB7_1
 ; SSE41-NEXT:  # %bb.2:
-; SSE41-NEXT:    movapd %xmm1, %xmm0
+; SSE41-NEXT:    movapd %xmm3, %xmm0
 ; SSE41-NEXT:    jmp .LBB7_3
 ; SSE41-NEXT:  .LBB7_1:
 ; SSE41-NEXT:    movapd %xmm2, %xmm0
-; SSE41-NEXT:    movapd %xmm1, %xmm2
+; SSE41-NEXT:    movapd %xmm3, %xmm2
 ; SSE41-NEXT:  .LBB7_3:
 ; SSE41-NEXT:    movapd %xmm2, %xmm1
 ; SSE41-NEXT:    maxsd %xmm0, %xmm1
@@ -1568,82 +1570,81 @@ define double @test_v16f64(<16 x double> %a0) {
 ;
 ; SSE41-LABEL: test_v16f64:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movapd %xmm1, %xmm8
-; SSE41-NEXT:    movapd %xmm0, %xmm1
-; SSE41-NEXT:    movapd %xmm3, %xmm10
-; SSE41-NEXT:    movapd %xmm3, %xmm0
-; SSE41-NEXT:    blendvpd %xmm0, %xmm7, %xmm10
+; SSE41-NEXT:    movaps %xmm0, %xmm8
+; SSE41-NEXT:    movshdup {{.*#+}} xmm0 = xmm3[1,1,3,3]
+; SSE41-NEXT:    movaps %xmm3, %xmm9
+; SSE41-NEXT:    blendvpd %xmm0, %xmm7, %xmm9
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm3, %xmm7
-; SSE41-NEXT:    movapd %xmm7, %xmm9
-; SSE41-NEXT:    maxpd %xmm10, %xmm9
+; SSE41-NEXT:    movapd %xmm7, %xmm3
+; SSE41-NEXT:    maxpd %xmm9, %xmm3
 ; SSE41-NEXT:    movapd %xmm7, %xmm0
 ; SSE41-NEXT:    cmpunordpd %xmm7, %xmm0
-; SSE41-NEXT:    blendvpd %xmm0, %xmm7, %xmm9
-; SSE41-NEXT:    movapd %xmm8, %xmm7
-; SSE41-NEXT:    movapd %xmm8, %xmm0
+; SSE41-NEXT:    blendvpd %xmm0, %xmm7, %xmm3
+; SSE41-NEXT:    movshdup {{.*#+}} xmm0 = xmm1[1,1,3,3]
+; SSE41-NEXT:    movaps %xmm1, %xmm7
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm5, %xmm7
-; SSE41-NEXT:    blendvpd %xmm0, %xmm8, %xmm5
-; SSE41-NEXT:    movapd %xmm5, %xmm3
-; SSE41-NEXT:    maxpd %xmm7, %xmm3
+; SSE41-NEXT:    blendvpd %xmm0, %xmm1, %xmm5
+; SSE41-NEXT:    movapd %xmm5, %xmm1
+; SSE41-NEXT:    maxpd %xmm7, %xmm1
 ; SSE41-NEXT:    movapd %xmm5, %xmm0
 ; SSE41-NEXT:    cmpunordpd %xmm5, %xmm0
-; SSE41-NEXT:    blendvpd %xmm0, %xmm5, %xmm3
-; SSE41-NEXT:    movapd %xmm3, %xmm5
-; SSE41-NEXT:    movapd %xmm3, %xmm0
-; SSE41-NEXT:    blendvpd %xmm0, %xmm9, %xmm5
-; SSE41-NEXT:    blendvpd %xmm0, %xmm3, %xmm9
-; SSE41-NEXT:    movapd %xmm9, %xmm3
-; SSE41-NEXT:    maxpd %xmm5, %xmm3
-; SSE41-NEXT:    movapd %xmm9, %xmm0
-; SSE41-NEXT:    cmpunordpd %xmm9, %xmm0
-; SSE41-NEXT:    blendvpd %xmm0, %xmm9, %xmm3
-; SSE41-NEXT:    movapd %xmm2, %xmm5
-; SSE41-NEXT:    movapd %xmm2, %xmm0
-; SSE41-NEXT:    blendvpd %xmm0, %xmm6, %xmm5
-; SSE41-NEXT:    blendvpd %xmm0, %xmm2, %xmm6
-; SSE41-NEXT:    movapd %xmm6, %xmm2
-; SSE41-NEXT:    maxpd %xmm5, %xmm2
-; SSE41-NEXT:    movapd %xmm6, %xmm0
-; SSE41-NEXT:    cmpunordpd %xmm6, %xmm0
-; SSE41-NEXT:    blendvpd %xmm0, %xmm6, %xmm2
+; SSE41-NEXT:    blendvpd %xmm0, %xmm5, %xmm1
+; SSE41-NEXT:    movshdup {{.*#+}} xmm0 = xmm1[1,1,3,3]
 ; SSE41-NEXT:    movapd %xmm1, %xmm5
-; SSE41-NEXT:    movapd %xmm1, %xmm0
-; SSE41-NEXT:    blendvpd %xmm0, %xmm4, %xmm5
-; SSE41-NEXT:    blendvpd %xmm0, %xmm1, %xmm4
-; SSE41-NEXT:    movapd %xmm4, %xmm1
-; SSE41-NEXT:    maxpd %xmm5, %xmm1
-; SSE41-NEXT:    movapd %xmm4, %xmm0
-; SSE41-NEXT:    cmpunordpd %xmm4, %xmm0
-; SSE41-NEXT:    blendvpd %xmm0, %xmm4, %xmm1
-; SSE41-NEXT:    movapd %xmm1, %xmm4
-; SSE41-NEXT:    movapd %xmm1, %xmm0
-; SSE41-NEXT:    blendvpd %xmm0, %xmm2, %xmm4
-; SSE41-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
-; SSE41-NEXT:    movapd %xmm2, %xmm1
-; SSE41-NEXT:    maxpd %xmm4, %xmm1
-; SSE41-NEXT:    movapd %xmm2, %xmm0
-; SSE41-NEXT:    cmpunordpd %xmm2, %xmm0
-; SSE41-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
-; SSE41-NEXT:    movapd %xmm1, %xmm2
-; SSE41-NEXT:    movapd %xmm1, %xmm0
-; SSE41-NEXT:    blendvpd %xmm0, %xmm3, %xmm2
+; SSE41-NEXT:    blendvpd %xmm0, %xmm3, %xmm5
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm1, %xmm3
 ; SSE41-NEXT:    movapd %xmm3, %xmm1
-; SSE41-NEXT:    maxpd %xmm2, %xmm1
+; SSE41-NEXT:    maxpd %xmm5, %xmm1
 ; SSE41-NEXT:    movapd %xmm3, %xmm0
 ; SSE41-NEXT:    cmpunordpd %xmm3, %xmm0
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm3, %xmm1
-; SSE41-NEXT:    movapd %xmm1, %xmm2
-; SSE41-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm1[1]
-; SSE41-NEXT:    movq %xmm1, %rax
+; SSE41-NEXT:    movshdup {{.*#+}} xmm0 = xmm2[1,1,3,3]
+; SSE41-NEXT:    movaps %xmm2, %xmm3
+; SSE41-NEXT:    blendvpd %xmm0, %xmm6, %xmm3
+; SSE41-NEXT:    blendvpd %xmm0, %xmm2, %xmm6
+; SSE41-NEXT:    movapd %xmm6, %xmm2
+; SSE41-NEXT:    maxpd %xmm3, %xmm2
+; SSE41-NEXT:    movapd %xmm6, %xmm0
+; SSE41-NEXT:    cmpunordpd %xmm6, %xmm0
+; SSE41-NEXT:    blendvpd %xmm0, %xmm6, %xmm2
+; SSE41-NEXT:    movshdup {{.*#+}} xmm0 = xmm8[1,1,3,3]
+; SSE41-NEXT:    movaps %xmm8, %xmm3
+; SSE41-NEXT:    blendvpd %xmm0, %xmm4, %xmm3
+; SSE41-NEXT:    blendvpd %xmm0, %xmm8, %xmm4
+; SSE41-NEXT:    movapd %xmm4, %xmm5
+; SSE41-NEXT:    maxpd %xmm3, %xmm5
+; SSE41-NEXT:    movapd %xmm4, %xmm0
+; SSE41-NEXT:    cmpunordpd %xmm4, %xmm0
+; SSE41-NEXT:    blendvpd %xmm0, %xmm4, %xmm5
+; SSE41-NEXT:    movshdup {{.*#+}} xmm0 = xmm5[1,1,3,3]
+; SSE41-NEXT:    movapd %xmm5, %xmm3
+; SSE41-NEXT:    blendvpd %xmm0, %xmm2, %xmm3
+; SSE41-NEXT:    blendvpd %xmm0, %xmm5, %xmm2
+; SSE41-NEXT:    movapd %xmm2, %xmm4
+; SSE41-NEXT:    maxpd %xmm3, %xmm4
+; SSE41-NEXT:    movapd %xmm2, %xmm0
+; SSE41-NEXT:    cmpunordpd %xmm2, %xmm0
+; SSE41-NEXT:    blendvpd %xmm0, %xmm2, %xmm4
+; SSE41-NEXT:    movshdup {{.*#+}} xmm0 = xmm4[1,1,3,3]
+; SSE41-NEXT:    movapd %xmm4, %xmm2
+; SSE41-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
+; SSE41-NEXT:    blendvpd %xmm0, %xmm4, %xmm1
+; SSE41-NEXT:    movapd %xmm1, %xmm3
+; SSE41-NEXT:    maxpd %xmm2, %xmm3
+; SSE41-NEXT:    movapd %xmm1, %xmm0
+; SSE41-NEXT:    cmpunordpd %xmm1, %xmm0
+; SSE41-NEXT:    blendvpd %xmm0, %xmm1, %xmm3
+; SSE41-NEXT:    movapd %xmm3, %xmm2
+; SSE41-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm3[1]
+; SSE41-NEXT:    movq %xmm3, %rax
 ; SSE41-NEXT:    testq %rax, %rax
 ; SSE41-NEXT:    js .LBB8_1
 ; SSE41-NEXT:  # %bb.2:
-; SSE41-NEXT:    movapd %xmm1, %xmm0
+; SSE41-NEXT:    movapd %xmm3, %xmm0
 ; SSE41-NEXT:    jmp .LBB8_3
 ; SSE41-NEXT:  .LBB8_1:
 ; SSE41-NEXT:    movapd %xmm2, %xmm0
-; SSE41-NEXT:    movapd %xmm1, %xmm2
+; SSE41-NEXT:    movapd %xmm3, %xmm2
 ; SSE41-NEXT:  .LBB8_3:
 ; SSE41-NEXT:    movapd %xmm2, %xmm1
 ; SSE41-NEXT:    maxsd %xmm0, %xmm1

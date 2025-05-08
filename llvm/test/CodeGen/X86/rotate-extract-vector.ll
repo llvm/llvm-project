@@ -149,19 +149,12 @@ define <32 x i16> @illegal_no_extract_mul(<32 x i16> %i) nounwind {
 
 ; Result would undershift
 define <4 x i64> @no_extract_shl(<4 x i64> %i) nounwind {
-; X86-LABEL: no_extract_shl:
-; X86:       # %bb.0:
-; X86-NEXT:    vpsllq $24, %ymm0, %ymm1
-; X86-NEXT:    vpsrlq $39, %ymm0, %ymm0
-; X86-NEXT:    vpternlogq $236, {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %ymm1, %ymm0
-; X86-NEXT:    retl
-;
-; X64-LABEL: no_extract_shl:
-; X64:       # %bb.0:
-; X64-NEXT:    vpsllq $24, %ymm0, %ymm1
-; X64-NEXT:    vpsrlq $39, %ymm0, %ymm0
-; X64-NEXT:    vpternlogq $236, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm1, %ymm0
-; X64-NEXT:    retq
+; CHECK-LABEL: no_extract_shl:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsllq $24, %ymm0, %ymm1
+; CHECK-NEXT:    vpsrlq $39, %ymm0, %ymm0
+; CHECK-NEXT:    vpternlogq {{.*#+}} ymm0 = (ymm0 & mem) | ymm1
+; CHECK-NEXT:    ret{{[l|q]}}
   %lhs_mul = shl <4 x i64> %i, <i64 11, i64 11, i64 11, i64 11>
   %rhs_mul = shl <4 x i64> %i, <i64 24, i64 24, i64 24, i64 24>
   %lhs_shift = lshr <4 x i64> %lhs_mul, <i64 50, i64 50, i64 50, i64 50>
@@ -171,19 +164,12 @@ define <4 x i64> @no_extract_shl(<4 x i64> %i) nounwind {
 
 ; Result would overshift
 define <4 x i32> @no_extract_shrl(<4 x i32> %i) nounwind {
-; X86-LABEL: no_extract_shrl:
-; X86:       # %bb.0:
-; X86-NEXT:    vpsrld $9, %xmm0, %xmm1
-; X86-NEXT:    vpslld $25, %xmm0, %xmm0
-; X86-NEXT:    vpternlogd $236, {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %xmm1, %xmm0
-; X86-NEXT:    retl
-;
-; X64-LABEL: no_extract_shrl:
-; X64:       # %bb.0:
-; X64-NEXT:    vpsrld $9, %xmm0, %xmm1
-; X64-NEXT:    vpslld $25, %xmm0, %xmm0
-; X64-NEXT:    vpternlogd $236, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm0
-; X64-NEXT:    retq
+; CHECK-LABEL: no_extract_shrl:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsrld $9, %xmm0, %xmm1
+; CHECK-NEXT:    vpslld $25, %xmm0, %xmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} xmm0 = (xmm0 & mem) | xmm1
+; CHECK-NEXT:    ret{{[l|q]}}
   %lhs_div = lshr <4 x i32> %i, <i32 3, i32 3, i32 3, i32 3>
   %rhs_div = lshr <4 x i32> %i, <i32 9, i32 9, i32 9, i32 9>
   %lhs_shift = shl <4 x i32> %lhs_div, <i32 28, i32 28, i32 28, i32 28>
@@ -234,10 +220,12 @@ define <2 x i64> @no_extract_udiv(<2 x i64> %i) nounwind {
 ; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $3, {{[0-9]+}}(%esp)
 ; X86-NEXT:    vmovd %eax, %xmm0
+; X86-NEXT:    vpinsrd $1, %edx, %xmm0, %xmm0
 ; X86-NEXT:    vmovdqu %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X86-NEXT:    calll __udivdi3
 ; X86-NEXT:    vmovdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
 ; X86-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
+; X86-NEXT:    vpinsrd $3, %edx, %xmm0, %xmm0
 ; X86-NEXT:    vmovdqu %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X86-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
 ; X86-NEXT:    vextractps $1, %xmm0, {{[0-9]+}}(%esp)

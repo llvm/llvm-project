@@ -463,12 +463,13 @@ define i63 @mad_i64_i32_sextops_i31_i63(i31 %arg0, i31 %arg1, i63 %arg2) #0 {
 ; SI-LABEL: mad_i64_i32_sextops_i31_i63:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_lshlrev_b32_e32 v4, 1, v0
-; SI-NEXT:    v_lshlrev_b32_e32 v1, 1, v1
-; SI-NEXT:    v_ashr_i64 v[4:5], v[3:4], 33
-; SI-NEXT:    v_ashr_i64 v[0:1], v[0:1], 33
-; SI-NEXT:    v_mul_lo_u32 v1, v4, v0
-; SI-NEXT:    v_mul_hi_i32 v4, v4, v0
+; SI-NEXT:    v_lshlrev_b32_e32 v5, 1, v0
+; SI-NEXT:    v_mov_b32_e32 v4, 0
+; SI-NEXT:    v_ashr_i64 v[6:7], v[4:5], 33
+; SI-NEXT:    v_lshlrev_b32_e32 v5, 1, v1
+; SI-NEXT:    v_ashr_i64 v[0:1], v[4:5], 33
+; SI-NEXT:    v_mul_lo_u32 v1, v6, v0
+; SI-NEXT:    v_mul_hi_i32 v4, v6, v0
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, v1, v2
 ; SI-NEXT:    v_addc_u32_e32 v1, vcc, v4, v3, vcc
 ; SI-NEXT:    s_setpc_b64 s[30:31]

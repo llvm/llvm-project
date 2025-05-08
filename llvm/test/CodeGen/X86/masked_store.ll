@@ -142,8 +142,12 @@ define void @store_v4f64_v4i64(<4 x i64> %trigger, ptr %addr, <4 x double> %val)
 ;
 ; SSE4-LABEL: store_v4f64_v4i64:
 ; SSE4:       ## %bb.0:
-; SSE4-NEXT:    packssdw %xmm1, %xmm0
-; SSE4-NEXT:    movmskps %xmm0, %eax
+; SSE4-NEXT:    pxor %xmm4, %xmm4
+; SSE4-NEXT:    pxor %xmm5, %xmm5
+; SSE4-NEXT:    pcmpgtq %xmm1, %xmm5
+; SSE4-NEXT:    pcmpgtq %xmm0, %xmm4
+; SSE4-NEXT:    packssdw %xmm5, %xmm4
+; SSE4-NEXT:    movmskps %xmm4, %eax
 ; SSE4-NEXT:    testb $1, %al
 ; SSE4-NEXT:    jne LBB2_1
 ; SSE4-NEXT:  ## %bb.2: ## %else
@@ -1036,8 +1040,12 @@ define void @store_v4i64_v4i64(<4 x i64> %trigger, ptr %addr, <4 x i64> %val) no
 ;
 ; SSE4-LABEL: store_v4i64_v4i64:
 ; SSE4:       ## %bb.0:
-; SSE4-NEXT:    packssdw %xmm1, %xmm0
-; SSE4-NEXT:    movmskps %xmm0, %eax
+; SSE4-NEXT:    pxor %xmm4, %xmm4
+; SSE4-NEXT:    pxor %xmm5, %xmm5
+; SSE4-NEXT:    pcmpgtq %xmm1, %xmm5
+; SSE4-NEXT:    pcmpgtq %xmm0, %xmm4
+; SSE4-NEXT:    packssdw %xmm5, %xmm4
+; SSE4-NEXT:    movmskps %xmm4, %eax
 ; SSE4-NEXT:    testb $1, %al
 ; SSE4-NEXT:    jne LBB8_1
 ; SSE4-NEXT:  ## %bb.2: ## %else
@@ -6170,7 +6178,7 @@ define void @undefshuffle(<8 x i1> %i0, ptr %src, ptr %dst) nounwind {
 ; AVX2-LABEL: undefshuffle:
 ; AVX2:       ## %bb.0:
 ; AVX2-NEXT:    ## kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,u,u,u,2,u,u,u,4,u,u,u,6,u,u,u],zero,ymm0[u,u,u],zero,ymm0[u,u,u],zero,ymm0[u,u,u],zero,ymm0[u,u,u]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,u,u,2,3,u,u,4,5,u,u,6,7,u,u],zero,zero,ymm0[u,u],zero,zero,ymm0[u,u],zero,zero,ymm0[u,u],zero,zero,ymm0[u,u]
 ; AVX2-NEXT:    vpslld $31, %ymm0, %ymm0
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpmaskmovd %ymm1, %ymm0, (%rsi)
