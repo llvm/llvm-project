@@ -439,7 +439,8 @@ static bool LinearizeExprTree(Instruction *I,
     for (unsigned OpIdx = 0; OpIdx < I->getNumOperands(); ++OpIdx) { // Visit operands.
       Value *Op = I->getOperand(OpIdx);
       LLVM_DEBUG(dbgs() << "OPERAND: " << *Op << " (" << Weight << ")\n");
-      assert(!Op->use_empty() && "No uses, so how did we get to it?!");
+      assert((!Op->hasUseList() || !Op->use_empty()) &&
+             "No uses, so how did we get to it?!");
 
       // If this is a binary operation of the right kind with only one use then
       // add its operands to the expression.

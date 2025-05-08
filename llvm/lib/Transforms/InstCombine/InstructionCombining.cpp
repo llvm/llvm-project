@@ -1831,7 +1831,7 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN,
     // Handle some cases that can't be fully simplified, but where we know that
     // the two instructions will fold into one.
     auto WillFold = [&]() {
-      if (!InVal->hasOneUser())
+      if (!InVal->hasUseList() || !InVal->hasOneUser())
         return false;
 
       // icmp of ucmp/scmp with constant will fold to icmp.

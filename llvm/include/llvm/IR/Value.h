@@ -116,7 +116,10 @@ protected:
 
 private:
   Type *VTy;
-  Use *UseList;
+  union {
+    Use *List = nullptr;
+    unsigned Count;
+  } Uses;
 
   friend class ValueAsMetadata; // Allow access to IsUsedByMD.
   friend class ValueHandleBase; // Allow access to HasValueHandle.
@@ -339,21 +342,28 @@ public:
 #endif
   }
 
+  /// Check if this Value has a use-list.
+  bool hasUseList() const { return !isa<ConstantData>(this); }
+
   bool use_empty() const {
     assertModuleIsMaterialized();
-    return UseList == nullptr;
+    return hasUseList() ? Uses.List == nullptr : Uses.Count == 0;
   }
 
   bool materialized_use_empty() const {
-    return UseList == nullptr;
+    return hasUseList() ? Uses.List == nullptr : !Uses.Count;
   }
 
   using use_iterator = use_iterator_impl<Use>;
   using const_use_iterator = use_iterator_impl<const Use>;
 
-  use_iterator materialized_use_begin() { return use_iterator(UseList); }
+  use_iterator materialized_use_begin() {
+    assert(hasUseList());
+    return use_iterator(Uses.List);
+  }
   const_use_iterator materialized_use_begin() const {
-    return const_use_iterator(UseList);
+    assert(hasUseList());
+    return const_use_iterator(Uses.List);
   }
   use_iterator use_begin() {
     assertModuleIsMaterialized();
@@ -380,17 +390,18 @@ public:
     return materialized_uses();
   }
 
-  bool user_empty() const {
-    assertModuleIsMaterialized();
-    return UseList == nullptr;
-  }
+  bool user_empty() const { return use_empty(); }
 
   using user_iterator = user_iterator_impl<User>;
   using const_user_iterator = user_iterator_impl<const User>;
 
-  user_iterator materialized_user_begin() { return user_iterator(UseList); }
+  user_iterator materialized_user_begin() {
+    assert(hasUseList());
+    return user_iterator(Uses.List);
+  }
   const_user_iterator materialized_user_begin() const {
-    return const_user_iterator(UseList);
+    assert(hasUseList());
+    return const_user_iterator(Uses.List);
   }
   user_iterator user_begin() {
     assertModuleIsMaterialized();
@@ -429,7 +440,11 @@ public:
   ///
   /// This is specialized because it is a common request and does not require
   /// traversing the whole use list.
-  bool hasOneUse() const { return hasSingleElement(uses()); }
+  bool hasOneUse() const {
+    if (!hasUseList())
+      return Uses.Count == 1;
+    return hasSingleElement(uses());
+  }
 
   /// Return true if this Value has exactly N uses.
   bool hasNUses(unsigned N) const;
@@ -491,6 +506,8 @@ public:
   static void dropDroppableUse(Use &U);
 
   /// Check if this value is used in the specified basic block.
+  ///
+  /// Not supported for ConstantData.
   bool isUsedInBasicBlock(const BasicBlock *BB) const;
 
   /// This method computes the number of uses of this Value.
@@ -500,7 +517,19 @@ public:
   unsigned getNumUses() const;
 
   /// This method should only be used by the Use class.
-  void addUse(Use &U) { U.addToList(&UseList); }
+  void addUse(Use &U) {
+    if (hasUseList())
+      U.addToList(Uses.List);
+    else
+      U.addToList(Uses.Count);
+  }
+
+  void removeUse(Use &U) {
+    if (hasUseList())
+      U.removeFromList(Uses.List);
+    else
+      U.removeFromList(Uses.Count);
+  }
 
   /// Concrete subclass of this.
   ///
@@ -841,7 +870,8 @@ private:
   ///
   /// \return the first element in the list.
   ///
-  /// \note Completely ignores \a Use::Prev (doesn't read, doesn't update).
+  /// \note Completely ignores \a Use::PrevOrCount (doesn't read, doesn't
+  /// update).
   template <class Compare>
   static Use *mergeUseLists(Use *L, Use *R, Compare Cmp) {
     Use *Merged;
@@ -887,10 +917,50 @@ inline raw_ostream &operator<<(raw_ostream &OS, const Value &V) {
   return OS;
 }
 
+inline Use::~Use() {
+  if (Val)
+    Val->removeUse(*this);
+}
+
+void Use::addToList(unsigned &Count) {
+  assert(isa<ConstantData>(Val) && "Only ConstantData is ref-counted");
+  ++Count;
+
+  // We don't have a uselist - clear the remnant if we are replacing a
+  // non-constant value.
+  Prev = nullptr;
+  Next = nullptr;
+}
+
+void Use::addToList(Use *&List) {
+  assert(!isa<ConstantData>(Val) && "ConstantData has no use-list");
+
+  Next = List;
+  if (Next)
+    Next->Prev = &Next;
+  Prev = &List;
+  List = this;
+}
+
+void Use::removeFromList(unsigned &Count) {
+  assert(isa<ConstantData>(Val));
+  assert(Count > 0 && "reference count underflow");
+  assert(!Prev && !Next && "should not have uselist remnant");
+  --Count;
+}
+
+void Use::removeFromList(Use *&List) {
+  *Prev = Next;
+  if (Next)
+    Next->Prev = Prev;
+}
+
 void Use::set(Value *V) {
-  if (Val) removeFromList();
+  if (Val)
+    Val->removeUse(*this);
   Val = V;
-  if (V) V->addUse(*this);
+  if (V)
+    V->addUse(*this);
 }
 
 Value *Use::operator=(Value *RHS) {
@@ -904,7 +974,7 @@ const Use &Use::operator=(const Use &RHS) {
 }
 
 template <class Compare> void Value::sortUseList(Compare Cmp) {
-  if (!UseList || !UseList->Next)
+  if (!hasUseList() || !Uses.List || !Uses.List->Next)
     // No need to sort 0 or 1 uses.
     return;
 
@@ -917,10 +987,10 @@ template <class Compare> void Value::sortUseList(Compare Cmp) {
   Use *Slots[MaxSlots];
 
   // Collect the first use, turning it into a single-item list.
-  Use *Next = UseList->Next;
-  UseList->Next = nullptr;
+  Use *Next = Uses.List->Next;
+  Uses.List->Next = nullptr;
   unsigned NumSlots = 1;
-  Slots[0] = UseList;
+  Slots[0] = Uses.List;
 
   // Collect all but the last use.
   while (Next->Next) {
@@ -956,15 +1026,15 @@ template <class Compare> void Value::sortUseList(Compare Cmp) {
   // Merge all the lists together.
   assert(Next && "Expected one more Use");
   assert(!Next->Next && "Expected only one Use");
-  UseList = Next;
+  Uses.List = Next;
   for (unsigned I = 0; I < NumSlots; ++I)
     if (Slots[I])
-      // Since the uses in Slots[I] originally preceded those in UseList, send
+      // Since the uses in Slots[I] originally preceded those in Uses.List, send
       // Slots[I] in as the left parameter to maintain a stable sort.
-      UseList = mergeUseLists(Slots[I], UseList, Cmp);
+      Uses.List = mergeUseLists(Slots[I], Uses.List, Cmp);
 
   // Fix the Prev pointers.
-  for (Use *I = UseList, **Prev = &UseList; I; I = I->Next) {
+  for (Use *I = Uses.List, **Prev = &Uses.List; I; I = I->Next) {
     I->Prev = Prev;
     Prev = &I->Next;
   }
