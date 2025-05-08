@@ -365,27 +365,6 @@ bool ClauseProcessor::processHint(mlir::omp::HintClauseOps &result) const {
   return false;
 }
 
-bool ClauseProcessor::processGrainsize(
-    lower::StatementContext &stmtCtx,
-    mlir::omp::GrainsizeClauseOps &result) const {
-  using grainsize = omp::clause::Grainsize;
-  if (auto *clause = findUniqueClause<grainsize>()) {
-    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-    mlir::MLIRContext *context = firOpBuilder.getContext();
-    const auto &modifier =
-        std::get<std::optional<grainsize::Prescriptiveness>>(clause->t);
-    if (modifier && *modifier == grainsize::Prescriptiveness::Strict) {
-      result.grainsizeMod = mlir::omp::ClauseGrainsizeTypeAttr::get(
-          context, mlir::omp::ClauseGrainsizeType::Strict);
-    }
-    const auto &grainsizeExpr = std::get<omp::SomeExpr>(clause->t);
-    result.grainsize =
-        fir::getBase(converter.genExprValue(grainsizeExpr, stmtCtx));
-    return true;
-  }
-  return false;
-}
-
 bool ClauseProcessor::processInclusive(
     mlir::Location currentLocation,
     mlir::omp::InclusiveClauseOps &result) const {
@@ -412,13 +391,13 @@ bool ClauseProcessor::processNowait(mlir::omp::NowaitClauseOps &result) const {
 bool ClauseProcessor::processNumTasks(
     lower::StatementContext &stmtCtx,
     mlir::omp::NumTasksClauseOps &result) const {
-  using numtasks = omp::clause::NumTasks;
-  if (auto *clause = findUniqueClause<numtasks>()) {
+  using NumTasks = omp::clause::NumTasks;
+  if (auto *clause = findUniqueClause<NumTasks>()) {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
     mlir::MLIRContext *context = firOpBuilder.getContext();
     const auto &modifier =
-        std::get<std::optional<numtasks::Prescriptiveness>>(clause->t);
-    if (modifier && *modifier == numtasks::Prescriptiveness::Strict) {
+        std::get<std::optional<NumTasks::Prescriptiveness>>(clause->t);
+    if (modifier && *modifier == NumTasks::Prescriptiveness::Strict) {
       result.numTasksMod = mlir::omp::ClauseNumTasksTypeAttr::get(
           context, mlir::omp::ClauseNumTasksType::Strict);
     }
@@ -974,6 +953,27 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
   };
 
   return findRepeatableClause<omp::clause::Depend>(process);
+}
+
+bool ClauseProcessor::processGrainsize(
+    lower::StatementContext &stmtCtx,
+    mlir::omp::GrainsizeClauseOps &result) const {
+  using Grainsize = omp::clause::Grainsize;
+  if (auto *clause = findUniqueClause<Grainsize>()) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    mlir::MLIRContext *context = firOpBuilder.getContext();
+    const auto &modifier =
+        std::get<std::optional<Grainsize::Prescriptiveness>>(clause->t);
+    if (modifier && *modifier == Grainsize::Prescriptiveness::Strict) {
+      result.grainsizeMod = mlir::omp::ClauseGrainsizeTypeAttr::get(
+          context, mlir::omp::ClauseGrainsizeType::Strict);
+    }
+    const auto &grainsizeExpr = std::get<omp::SomeExpr>(clause->t);
+    result.grainsize =
+        fir::getBase(converter.genExprValue(grainsizeExpr, stmtCtx));
+    return true;
+  }
+  return false;
 }
 
 bool ClauseProcessor::processHasDeviceAddr(
