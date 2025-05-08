@@ -86,10 +86,15 @@ MicroBenchmarks/XRay microbenchmarks, you need to add `compiler-rt` to your
    PASS: test-suite :: MultiSource/Applications/ALAC/encode/alacconvert-encode.test (2 of 474)
    ...
    ```
-**NOTE!** even in the case you only want to get the compile-time results
-(`-DTEST_SUITE_RUN_BENCHMARKS=OFF`, to get code size, llvm stats etc),
-you need to run the test with the above `llvm-lit` command. In that case,
-the *results.json* file will contain compile-time metrics only.
+
+```{note}
+  Even when you only want compile-time results you still need to run the test
+  with the above `llvm-lit` command. In this case, the `results.json` file will
+  contain compile time metrics only (code size, llvm stats and so on).
+
+  This mode is enabled by settting `-DTEST_SUITE_RUN_BENCHMARKS=OFF`,
+  more details [here](common_configuration_options).
+```
 
 6. Show and compare result files (optional):
 
@@ -204,6 +209,7 @@ benchmarks. CMake can print a list of them:
 % cmake -LAH
 ```
 
+(common_configuration_options)=
 ### Common Configuration Options
 
 - `CMAKE_C_FLAGS`
