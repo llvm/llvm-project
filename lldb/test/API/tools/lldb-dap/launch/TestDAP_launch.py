@@ -546,6 +546,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         )
         self.verify_commands("terminateCommands", output, terminateCommands)
 
+    @skipIfWindows
     def test_version(self):
         """
         Tests that "initialize" response contains the "version" string the same
