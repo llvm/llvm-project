@@ -122,10 +122,22 @@ bgtu x17, x18, 28
 # CHECK-OBJ: bgeu s3, s2, 0x70
 bleu x18, x19, 32
 
+# beqz/bnez where operands are reversed to the canonical form.
+# CHECK-S-NOALIAS: beq zero, a0, 512
+# CHECK-S: beq zero, a0, 512
+# CHECK-OBJ-NOALIAS: beq zero, a0, 0x254
+# CHECK-OBJ: beq zero, a0, 0x254
+beq zero, x10, 512
+# CHECK-S-NOALIAS: bne zero, a1, 1024
+# CHECK-S: bne zero, a1, 1024
+# CHECK-OBJ-NOALIAS: bne zero, a1, 0x458
+# CHECK-OBJ: bne zero, a1, 0x458
+bne zero, x11, 1024
+
 # CHECK-S-NOALIAS: jal zero, 2044
 # CHECK-S: j 2044
-# CHECK-OBJ-NOALIAS: jal zero, 0x850
-# CHECK-OBJ: j 0x850
+# CHECK-OBJ-NOALIAS: jal zero, 0x858
+# CHECK-OBJ: j 0x858
 j 2044
 # CHECK-S-NOALIAS: jal zero, foo
 # CHECK-S: j foo
@@ -148,8 +160,8 @@ j a0
 j .
 # CHECK-S-NOALIAS: jal ra, 2040
 # CHECK-S: jal 2040
-# CHECK-OBJ-NOALIAS: jal ra, 0x85c
-# CHECK-OBJ: jal 0x85c
+# CHECK-OBJ-NOALIAS: jal ra, 0x864
+# CHECK-OBJ: jal 0x864
 jal 2040
 # CHECK-S-NOALIAS: jal ra, foo
 # CHECK-S: jal foo
