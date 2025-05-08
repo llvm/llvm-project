@@ -2,17 +2,26 @@
 ## non-optimized code.
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown \
+# RUN:   --defsym COMPACT=1 %s -o %t.compact.o
 # RUN: link_fdata %s %t.o %t.fdata
-# RUN: llvm-strip --strip-unneeded %t.o
+# RUN: llvm-strip --strip-unneeded %t*.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -static
+# RUN: %clang %cflags %t.compact.o -o %t.compact.exe -Wl,-q -static
 # RUN: llvm-bolt %t.exe -o %t.bolt --data %t.fdata --lite
+# RUN: llvm-bolt %t.compact.exe -o %t.compact.bolt --data %t.fdata --lite \
+# RUN:   --compact-code-model
 # RUN: llvm-objdump -d --disassemble-symbols=cold_function %t.exe \
 # RUN:   | FileCheck %s --check-prefix=CHECK-INPUT
 # RUN: llvm-objdump -d --disassemble-symbols=cold_function %t.bolt \
 # RUN:   | FileCheck %s
 # RUN: llvm-objdump -d --disassemble-symbols=_start.org.0 %t.bolt \
 # RUN:   | FileCheck %s --check-prefix=CHECK-PATCH
+# RUN: llvm-objdump -d %t.compact.bolt \
+# RUN:   | FileCheck %s --check-prefix=CHECK-COMPACT
 
+## In compact mode, make sure we do not create an unnecessary patch thunk.
+# CHECK-COMPACT-NOT: <_start.org.0>
 
 ## Verify that the number of FDEs matches the number of functions in the output
 ## binary. There are three original functions and two optimized.
@@ -33,7 +42,8 @@ _start:
 # FDATA: 0 [unknown] 0 1 _start 0 0 100
   .cfi_startproc
 
-## Check that the code at the orignal location is converted into a veneer/thunk.
+## Check that the code at the original location is converted into a
+## veneer/thunk.
 # CHECK-PATCH-LABEL: <_start.org.0>
 # CHECK-PATCH-NEXT: adrp x16
 # CHECK-PATCH-NEXT: add x16, x16,
@@ -122,9 +132,11 @@ cold_function:
   .cfi_endproc
   .size cold_function, .-cold_function
 
+.ifndef COMPACT
 ## Reserve 128MB of space to make functions that follow unreachable by ADRs in
 ## code that precedes this gap.
 .space 0x8000000
+.endif
 
   .globl far_func
   .type far_func, %function
