@@ -2863,8 +2863,20 @@ static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *L
 
   // Strip off the size of access multiplication if we are still analyzing the
   // pointer.
-  if (OrigPtr == Ptr)
-    match(V, m_scev_Mul(m_scev_SpecificInt(1), m_SCEV(V)));
+  if (OrigPtr == Ptr) {
+    if (auto *M = dyn_cast<SCEVMulExpr>(V)) {
+      auto *StepConst = dyn_cast<SCEVConstant>(M->getOperand(0));
+      if (!StepConst)
+        return nullptr;
+
+      auto StepVal = StepConst->getAPInt().trySExtValue();
+      // Bail out on a non-unit pointer access size.
+      if (!StepVal || StepVal != 1)
+        return nullptr;
+
+      V = M->getOperand(1);
+    }
+  }
 
   // Note that the restriction after this loop invariant check are only
   // profitability restrictions.
