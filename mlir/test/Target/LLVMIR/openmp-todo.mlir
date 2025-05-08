@@ -43,12 +43,16 @@ llvm.func @cancel_taskgroup() {
 
 // -----
 
-llvm.func @cancellation_point() {
-  // expected-error@below {{LLVM Translation failed for operation: omp.parallel}}
-  omp.parallel {
-    // expected-error@below {{not yet implemented: omp.cancellation_point}}
-    // expected-error@below {{LLVM Translation failed for operation: omp.cancellation_point}}
-    omp.cancellation_point cancellation_construct_type(parallel)
+llvm.func @cancellation_point_taskgroup() {
+  // expected-error@below {{LLVM Translation failed for operation: omp.taskgroup}}
+  omp.taskgroup {
+    // expected-error@below {{LLVM Translation failed for operation: omp.task}}
+    omp.task {
+      // expected-error@below {{not yet implemented: Unhandled clause cancel directive construct type not yet supported in omp.cancellation_point operation}}
+      // expected-error@below {{LLVM Translation failed for operation: omp.cancellation_point}}
+      omp.cancellation_point cancellation_construct_type(taskgroup)
+      omp.terminator
+    }
     omp.terminator
   }
   llvm.return
