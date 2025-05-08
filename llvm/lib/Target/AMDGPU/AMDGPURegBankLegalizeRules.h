@@ -159,6 +159,9 @@ enum RegBankLLTMappingApplyID {
   Sgpr32AExt,
   Sgpr32AExtBoolInReg,
   Sgpr32SExt,
+  Sgpr32ZExt,
+  Vgpr32SExt,
+  Vgpr32ZExt,
 };
 
 // Instruction needs to be replaced with sequence of instructions. Lowering was
