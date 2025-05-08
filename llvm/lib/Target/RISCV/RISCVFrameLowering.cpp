@@ -633,7 +633,6 @@ void RISCVFrameLowering::allocateAndProbeStackForRVV(
 
   // It will be expanded to a probe loop in `inlineStackProbe`.
   BuildMI(MBB, MBBI, DL, TII->get(RISCV::PROBED_STACKALLOC_RVV))
-      .addReg(SPReg)
       .addReg(TargetReg);
 
   if (EmitCFI) {
@@ -829,7 +828,6 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
 
   // It will be expanded to a probe loop in `inlineStackProbe`.
   BuildMI(MBB, MBBI, DL, TII->get(RISCV::PROBED_STACKALLOC))
-      .addReg(SPReg)
       .addReg(TargetReg);
 
   if (EmitCFI) {
@@ -2420,7 +2418,7 @@ void RISCVFrameLowering::inlineStackProbe(MachineFunction &MF,
         MI->getOpcode() == RISCV::PROBED_STACKALLOC_RVV) {
       MachineBasicBlock::iterator MBBI = MI->getIterator();
       DebugLoc DL = MBB.findDebugLoc(MBBI);
-      Register TargetReg = MI->getOperand(1).getReg();
+      Register TargetReg = MI->getOperand(0).getReg();
       emitStackProbeInline(MBBI, DL, TargetReg,
                            (MI->getOpcode() == RISCV::PROBED_STACKALLOC_RVV));
       MBBI->eraseFromParent();
