@@ -73,26 +73,6 @@ public:
   }
 };
 
-class ScalarLiteralNode : public ASTNode {
-public:
-  ScalarLiteralNode(uint32_t location, lldb::BasicType type, Scalar value)
-      : ASTNode(location, NodeKind::eScalarLiteralNode), m_type(type),
-        m_value(value) {}
-
-  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
-
-  lldb::BasicType GetType() const { return m_type; }
-  Scalar GetValue() const & { return m_value; }
-
-  static bool classof(const ASTNode *node) {
-    return node->GetKind() == NodeKind::eScalarLiteralNode;
-  }
-
-private:
-  lldb::BasicType m_type;
-  Scalar m_value;
-};
-
 class IdentifierNode : public ASTNode {
 public:
   IdentifierNode(uint32_t location, std::string name)
@@ -132,22 +112,22 @@ private:
 
 class ArraySubscriptNode : public ASTNode {
 public:
-  ArraySubscriptNode(uint32_t location, ASTNodeUP lhs, ASTNodeUP rhs)
-      : ASTNode(location, NodeKind::eArraySubscriptNode), m_lhs(std::move(lhs)),
-        m_rhs(std::move(rhs)) {}
+  ArraySubscriptNode(uint32_t location, ASTNodeUP base, llvm::APInt index)
+      : ASTNode(location, NodeKind::eArraySubscriptNode),
+        m_base(std::move(base)), m_index(std::move(index)) {}
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
-  ASTNode *GetLHS() const { return m_lhs.get(); }
-  ASTNode *GetRHS() const { return m_rhs.get(); }
+  ASTNode *GetBase() const { return m_base.get(); }
+  const llvm::APInt *GetIndex() const { return &m_index; }
 
   static bool classof(const ASTNode *node) {
     return node->GetKind() == NodeKind::eArraySubscriptNode;
   }
 
 private:
-  ASTNodeUP m_lhs;
-  ASTNodeUP m_rhs;
+  ASTNodeUP m_base;
+  llvm::APInt m_index;
 };
 
 /// This class contains one Visit method for each specialized type of
@@ -157,8 +137,6 @@ private:
 class Visitor {
 public:
   virtual ~Visitor() = default;
-  virtual llvm::Expected<lldb::ValueObjectSP>
-  Visit(const ScalarLiteralNode *node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP>
   Visit(const IdentifierNode *node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP>

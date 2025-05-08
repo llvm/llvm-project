@@ -11,10 +11,9 @@ unary_expression = unary_operator expression
 unary_operator = "*" | "&" ;
 
 postfix_expression = primary_expression
-                   | postfix_expression "[" expression "]";
+                   | postfix_expression "[" integer_literal "]";
 
-primary_expression = numeric_literal
-                   | id_expression
+primary_expression = id_expression
                    | "(" expression ")";
 
 id_expression = unqualified_id
@@ -28,7 +27,7 @@ qualified_id = ["::"] [nested_name_specifier] unqualified_id
 
 identifier = ? C99 Identifier ? ;
 
-numeric_literal = ? C99 Integer constant ? ;
+integer_literal = ? Integer constant: hexademical, decimal, octal, binary ? ;
 
 register = "$" ? Register name ? ;
 

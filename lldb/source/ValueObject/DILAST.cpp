@@ -15,11 +15,6 @@ llvm::Expected<lldb::ValueObjectSP> ErrorNode::Accept(Visitor *v) const {
   llvm_unreachable("Attempting to Visit a DIL ErrorNode.");
 }
 
-llvm::Expected<lldb::ValueObjectSP>
-ScalarLiteralNode::Accept(Visitor *v) const {
-  return v->Visit(this);
-}
-
 llvm::Expected<lldb::ValueObjectSP> IdentifierNode::Accept(Visitor *v) const {
   return v->Visit(this);
 }

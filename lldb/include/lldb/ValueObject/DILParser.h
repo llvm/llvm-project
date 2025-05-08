@@ -91,8 +91,7 @@ private:
 
   std::string ParseIdExpression();
   std::string ParseUnqualifiedId();
-  ASTNodeUP ParseNumericLiteral();
-  ASTNodeUP ParseNumericConstant();
+  std::optional<llvm::APInt> ParseIntegerConstant();
 
   void BailOut(const std::string &error, uint32_t loc, uint16_t err_len);
 
