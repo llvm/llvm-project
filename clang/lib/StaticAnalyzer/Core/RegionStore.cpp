@@ -1650,7 +1650,7 @@ SVal RegionStoreManager::getBinding(RegionBindingsConstRef B, Loc L, QualType T)
 
   // Check if the region has a binding.
   if (V)
-    return *V;
+    return svalBuilder.evalCast(*V, T, QualType{});
 
   // The location does not have a bound value.  This means that it has
   // the value it had upon its creation and/or entry to the analyzed
