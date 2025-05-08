@@ -603,8 +603,8 @@ size_t ObjectFileELF::GetModuleSpecifications(
           //
           // Validate it is ok to remove GetOsFromOSABI
           GetOsFromOSABI(header.e_ident[EI_OSABI], ostype);
-          assert(spec_ostype == ostype);
-          if (spec_ostype != llvm::Triple::OSType::UnknownOS) {
+          if (ostype != llvm::Triple::OSType::UnknownOS && 
+              spec_ostype != llvm::Triple::OSType::UnknownOS) {
             LLDB_LOGF(log,
                       "ObjectFileELF::%s file '%s' set ELF module OS type "
                       "from ELF header OSABI.",
@@ -1370,7 +1370,6 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
   // We'll refine this with note data as we parse the notes.
   if (arch_spec.GetTriple().getOS() == llvm::Triple::OSType::UnknownOS) {
     llvm::Triple::OSType ostype;
-    llvm::Triple::OSType spec_ostype;
     const uint32_t sub_type = subTypeFromElfHeader(header);
     arch_spec.SetArchitecture(eArchTypeELF, header.e_machine, sub_type,
                               header.e_ident[EI_OSABI]);
@@ -1382,9 +1381,6 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
     // notes at all and have EI_OSABI flag set to System V, as result the OS
     // will be set to UnknownOS.
     GetOsFromOSABI(header.e_ident[EI_OSABI], ostype);
-    spec_ostype = arch_spec.GetTriple().getOS();
-    assert(spec_ostype == ostype);
-    UNUSED_IF_ASSERT_DISABLED(spec_ostype);
   }
 
   if (arch_spec.GetMachine() == llvm::Triple::mips ||

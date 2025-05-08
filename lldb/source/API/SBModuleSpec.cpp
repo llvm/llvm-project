@@ -170,7 +170,7 @@ uint64_t SBModuleSpec::GetObjectSize() {
 
 void SBModuleSpec::SetObjectSize(uint64_t object_size) {
   LLDB_INSTRUMENT_VA(this, object_size);
-
+  
   m_opaque_up->SetObjectSize(object_size);
 }
 

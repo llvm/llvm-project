@@ -151,15 +151,17 @@ Module::Module(const ModuleSpec &module_spec)
               module_spec.GetObjectName().IsEmpty() ? "" : ")");
 
   auto data_sp = module_spec.GetData();
-  lldb::offset_t file_size = 0;
-  if (data_sp)
-    file_size = data_sp->GetByteSize();
 
   // First extract all module specifications from the file using the local file
   // path. If there are no specifications, then don't fill anything in
   ModuleSpecList modules_specs;
+
   if (ObjectFile::GetModuleSpecifications(
-          module_spec.GetFileSpec(), 0, file_size, modules_specs, data_sp) == 0)
+          module_spec.GetFileSpec(), 
+          module_spec.GetObjectOffset(), 
+          module_spec.GetObjectSize(), 
+          modules_specs, 
+          data_sp) == 0)
     return;
 
   // Now make sure that one of the module specifications matches what we just
