@@ -3285,11 +3285,12 @@ public:
   /// \param Expr		The value to store.
   /// \param AO			Atomic ordering of the generated atomic
   ///               instructions.
+  /// \param AllocaIP           Insert point for allocas
   ///
   /// \return Insertion point after generated atomic Write IR.
   InsertPointTy createAtomicWrite(const LocationDescription &Loc,
                                   AtomicOpValue &X, Value *Expr,
-                                  AtomicOrdering AO);
+                                  AtomicOrdering AO, InsertPointTy AllocaIP);
 
   /// Emit atomic update for constructs: X = X BinOp Expr ,or X = Expr BinOp X
   /// For complex Operations: X = UpdateOp(X) => CmpExch X, old_X, UpdateOp(X)

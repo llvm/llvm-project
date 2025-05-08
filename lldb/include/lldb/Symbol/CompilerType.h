@@ -444,8 +444,9 @@ public:
 
   /// Lookup a child given a name. This function will match base class names and
   /// member member names in "clang_type" only, not descendants.
-  uint32_t GetIndexOfChildWithName(llvm::StringRef name,
-                                   bool omit_empty_base_classes) const;
+  llvm::Expected<uint32_t>
+  GetIndexOfChildWithName(llvm::StringRef name,
+                          bool omit_empty_base_classes) const;
 
   /// Lookup a child member given a name. This function will match member names
   /// only and will descend into "clang_type" children in search for the first

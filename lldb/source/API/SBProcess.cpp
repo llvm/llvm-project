@@ -590,7 +590,7 @@ SBError SBProcess::ContinueInDirection(RunDirection direction) {
     if (direction == RunDirection::eRunReverse &&
         !process_sp->SupportsReverseDirection())
       return Status::FromErrorStringWithFormatv(
-          "error: {0} does not support reverse execution of processes",
+          "{0} does not support reverse execution of processes",
           GetPluginName());
     process_sp->SetBaseDirection(direction);
   }

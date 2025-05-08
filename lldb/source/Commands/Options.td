@@ -788,6 +788,8 @@ let Command = "process handle" in {
 let Command = "process status" in {
   def process_status_verbose : Option<"verbose", "v">, Group<1>,
     Desc<"Show verbose process status including extended crash information.">;
+  def process_status_dump : Option<"dump-modification-id", "d">, Group<1>,
+    Desc<"Dump the state of the ProcessModID of the stopped process.">;
 }
 
 let Command = "process save_core" in {
@@ -1050,8 +1052,14 @@ let Command = "target stop hook add" in {
     Arg<"FunctionName">, Desc<"Set the function name within which the stop hook"
     " will be run.">, Completion<"Symbol">;
   def target_stop_hook_add_auto_continue : Option<"auto-continue", "G">,
-    Arg<"Boolean">, Desc<"The breakpoint will auto-continue after running its"
+    Arg<"Boolean">, Desc<"The stop-hook will auto-continue after running its"
     " commands.">;
+  def target_stop_hook_add_at_initial_stop : Option<"at-initial-stop", "I">,
+    Arg<"Boolean">, Desc<"Whether the stop-hook will trigger when lldb  "
+    "initially gains control of the process.  For a process launch, this "
+    "initial stop may happen very early on - before the loader has run.  You "
+    "can use this option if you do not want some stop-hooks to run then.  "
+    "Defaults to true.">;
 }
 
 let Command = "thread backtrace" in {

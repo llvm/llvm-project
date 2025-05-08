@@ -145,9 +145,12 @@ class LLVM_LIBRARY_VISIBILITY NVPTXAsmPrinter : public AsmPrinter {
 
   friend class AggBuffer;
 
-private:
+public:
+  static char ID;
+
   StringRef getPassName() const override { return "NVPTX Assembly Printer"; }
 
+private:
   const Function *F;
 
   void emitStartOfAsmFile(Module &M) override;
@@ -239,7 +242,7 @@ private:
 
 public:
   NVPTXAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)),
+      : AsmPrinter(TM, std::move(Streamer), ID),
         EmitGeneric(static_cast<NVPTXTargetMachine &>(TM).getDrvInterface() ==
                     NVPTX::CUDA) {}
 

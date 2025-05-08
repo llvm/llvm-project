@@ -177,7 +177,7 @@ let Definition = "debugger" in {
   def ShowStatusline: Property<"show-statusline", "Boolean">,
     Global,
     DefaultTrue,
-    Desc<"Whether to show a statusline at the bottom of the terminal.">;
+    Desc<"Whether to show a statusline at the bottom of the terminal (not supported on Windows).">;
   def Separator : Property<"separator", "String">,
                   Global,
                   DefaultStringValue<"│ ">,
