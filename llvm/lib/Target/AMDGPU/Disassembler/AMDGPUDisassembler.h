@@ -108,6 +108,8 @@ private:
 
   const MCExpr *createConstantSymbolExpr(StringRef Id, int64_t Val);
 
+  void decodeImmOperands(MCInst &MI, const MCInstrInfo &MCII) const;
+
 public:
   AMDGPUDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
                      MCInstrInfo const *MCII);
@@ -211,30 +213,20 @@ public:
   unsigned getTtmpClassId(const OpWidthTy Width) const;
 
   static MCOperand decodeIntImmed(unsigned Imm);
-  static MCOperand decodeFPImmed(unsigned ImmWidth, unsigned Imm,
-                                 AMDGPU::OperandSemantics Sema);
 
   MCOperand decodeMandatoryLiteralConstant(unsigned Imm) const;
   MCOperand decodeLiteralConstant(bool ExtendFP64) const;
 
-  MCOperand decodeSrcOp(
-      const OpWidthTy Width, unsigned Val, bool MandatoryLiteral = false,
-      unsigned ImmWidth = 0,
-      AMDGPU::OperandSemantics Sema = AMDGPU::OperandSemantics::INT) const;
+  MCOperand decodeSrcOp(const OpWidthTy Width, unsigned Val) const;
 
-  MCOperand decodeNonVGPRSrcOp(
-      const OpWidthTy Width, unsigned Val, bool MandatoryLiteral = false,
-      unsigned ImmWidth = 0,
-      AMDGPU::OperandSemantics Sema = AMDGPU::OperandSemantics::INT) const;
+  MCOperand decodeNonVGPRSrcOp(const OpWidthTy Width, unsigned Val) const;
 
   MCOperand decodeVOPDDstYOp(MCInst &Inst, unsigned Val) const;
   MCOperand decodeSpecialReg32(unsigned Val) const;
   MCOperand decodeSpecialReg64(unsigned Val) const;
   MCOperand decodeSpecialReg96Plus(unsigned Val) const;
 
-  MCOperand decodeSDWASrc(const OpWidthTy Width, unsigned Val,
-                          unsigned ImmWidth,
-                          AMDGPU::OperandSemantics Sema) const;
+  MCOperand decodeSDWASrc(const OpWidthTy Width, unsigned Val) const;
   MCOperand decodeSDWASrc16(unsigned Val) const;
   MCOperand decodeSDWASrc32(unsigned Val) const;
   MCOperand decodeSDWAVopcDst(unsigned Val) const;
