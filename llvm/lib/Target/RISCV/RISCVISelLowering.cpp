@@ -18054,10 +18054,8 @@ static SDValue lowerVQDOT(unsigned Opc, SDValue Op0, SDValue Op1,
   Op1 = convertToScalableVector(ContainerVT, Op1, DAG, Subtarget);
 
   auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
-  const unsigned Policy = RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC;
-  SDValue PolicyOp = DAG.getTargetConstant(Policy, DL, Subtarget.getXLenVT());
   SDValue LocalAccum = DAG.getNode(Opc, DL, ContainerVT,
-                                   {Op0, Op1, Passthru, Mask, VL, PolicyOp});
+                                   {Op0, Op1, Passthru, Mask, VL});
   return convertFromScalableVector(VT, LocalAccum, DAG, Subtarget);
 }
 
