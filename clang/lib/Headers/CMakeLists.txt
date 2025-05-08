@@ -329,6 +329,9 @@ set(files
 # TO_UPSTREAM(BoundsSafety)
 list(APPEND files ptrcheck.h)
 
+# TO_UPSTREAM(Lifetimebound)
+list(APPEND files lifetimebound.h)
+
 set(cuda_wrapper_files
   cuda_wrappers/algorithm
   cuda_wrappers/cmath

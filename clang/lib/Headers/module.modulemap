@@ -333,3 +333,10 @@ module ptrcheck {
   export *
 }
 /* TO_UPSTREAM(BoundsSafety) OFF */
+
+/* TO_UPSTREAM(Lifetimebound) ON */
+module lifetimebound {
+  header "lifetimebound.h"
+  export *
+}
+/* TO_UPSTREAM(Lifetimebound) OFF */
