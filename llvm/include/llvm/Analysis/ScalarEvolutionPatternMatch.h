@@ -23,6 +23,8 @@ template <typename Pattern> bool match(const SCEV *S, const Pattern &P) {
 }
 
 template <typename Predicate> struct cst_pred_ty : public Predicate {
+  cst_pred_ty() = default;
+  cst_pred_ty(uint64_t V) : Predicate(V) {}
   bool match(const SCEV *S) const {
     assert((isa<SCEVCouldNotCompute>(S) || !S->getType()->isVectorTy()) &&
            "no vector types expected from SCEVs");
@@ -95,21 +97,14 @@ struct specificscev_ty {
 /// Match if we have a specific specified SCEV.
 inline specificscev_ty m_Specific(const SCEV *S) { return S; }
 
-template <typename Class> struct cst_match {
-  Class CV;
-
-  cst_match(Class Op0) : CV(Op0) {}
-
-  bool match(const SCEV *S) const {
-    assert((isa<SCEVCouldNotCompute>(S) || !S->getType()->isVectorTy()) &&
-           "no vector types expected from SCEVs");
-    auto *C = dyn_cast<SCEVConstant>(S);
-    return C && C->getAPInt() == CV;
-  }
+struct is_specific_cst {
+  uint64_t CV;
+  is_specific_cst(uint64_t C) : CV(C) {}
+  bool isValue(const APInt &C) const { return C == CV; }
 };
 
 /// Match an SCEV constant with a plain unsigned integer.
-inline cst_match<uint64_t> m_scev_SpecificInt(uint64_t V) { return V; }
+inline cst_pred_ty<is_specific_cst> m_scev_SpecificInt(uint64_t V) { return V; }
 
 struct bind_cst_ty {
   const APInt *&CR;
