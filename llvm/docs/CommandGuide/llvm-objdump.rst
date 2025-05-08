@@ -217,7 +217,7 @@ OPTIONS
 
 .. option:: --offloading
 
-  Display the content of the LLVM offloading section.
+  Display the content of the LLVM offloading sections and HIP offload bundles.
 
 .. option:: --prefix=<prefix>
 
