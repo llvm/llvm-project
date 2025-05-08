@@ -169,6 +169,8 @@ struct GPUActions {
   /// process to be notified that it should query for the shared libraries on 
   /// the GPU connection.
   bool load_libraries = false;
+  /// Set this to true if the native plug-in resume the GPU process.
+  bool resume_gpu_process = false;
 };
 
 bool fromJSON(const llvm::json::Value &value, 
