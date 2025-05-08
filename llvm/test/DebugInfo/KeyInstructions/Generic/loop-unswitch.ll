@@ -63,9 +63,9 @@
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1, !dbg [[DBG29:![0-9]+]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_HEADER]], label %[[EXIT_SPLIT:.*]], !dbg [[DBG30:![0-9]+]], !llvm.loop [[LOOP31:![0-9]+]]
 ; CHECK:       [[EXIT_SPLIT]]:
-; CHECK-NEXT:    br label %[[EXIT]], !dbg [[DBG33:![0-9]+]]
+; CHECK-NEXT:    br label %[[EXIT]], !dbg [[DBG18]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret i32 10, !dbg [[DBG33]]
+; CHECK-NEXT:    ret i32 10, !dbg [[DBG33:![0-9]+]]
 
 define i32 @partial_unswitch_true_successor_hoist_invariant(ptr %ptr, i32 %N) !dbg !5 {
 entry:
@@ -122,9 +122,9 @@ declare void @clobber()
 !19 = !DILocation(line: 12, scope: !5, atomGroup: 12, atomRank: 1)
 !20 = !DILocation(line: 13, scope: !5, atomGroup: 13, atomRank: 1)
 ;.
-; CHECK: [[DBG8]] = !DILocation(line: 3{{.*}}, atomGroup: 25, atomRank: 1)
-; CHECK: [[DBG9]] = !DILocation(line: 4{{.*}}, atomGroup: 26, atomRank: 1)
-; CHECK: [[DBG10]] = !DILocation(line: 5{{.*}}, atomGroup: 27, atomRank: 1)
+; CHECK: [[DBG8]] = !DILocation(line: 3{{.*}}, atomGroup: 24, atomRank: 1)
+; CHECK: [[DBG9]] = !DILocation(line: 4{{.*}}, atomGroup: 25, atomRank: 1)
+; CHECK: [[DBG10]] = !DILocation(line: 5{{.*}}, atomGroup: 26, atomRank: 1)
 ; CHECK: [[DBG11]] = !DILocation(line: 1{{.*}}, atomGroup: 14, atomRank: 1)
 ; CHECK: [[DBG12]] = !DILocation(line: 2{{.*}}, atomGroup: 15, atomRank: 1)
 ; CHECK: [[DBG13]] = !DILocation(line: 6{{.*}}, atomGroup: 19, atomRank: 1)
@@ -132,7 +132,7 @@ declare void @clobber()
 ; CHECK: [[DBG15]] = !DILocation(line: 10{{.*}}, atomGroup: 21, atomRank: 1)
 ; CHECK: [[DBG16]] = !DILocation(line: 11{{.*}}, atomGroup: 22, atomRank: 1)
 ; CHECK: [[DBG17]] = !DILocation(line: 12{{.*}}, atomGroup: 23, atomRank: 1)
-; CHECK: [[DBG18]] = !DILocation(line: 13{{.*}}, atomGroup: 24, atomRank: 1)
+; CHECK: [[DBG18]] = !DILocation(line: 13, scope: ![[#]])
 ; CHECK: [[DBG19]] = !DILocation(line: 1{{.*}}, atomGroup: 1, atomRank: 1)
 ; CHECK: [[DBG20]] = !DILocation(line: 2{{.*}}, atomGroup: 2, atomRank: 1)
 ; CHECK: [[DBG21]] = !DILocation(line: 3{{.*}}, atomGroup: 3, atomRank: 1)
