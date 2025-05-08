@@ -1,7 +1,7 @@
 ; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' -S -mtriple=x86_64 < %s \
 ; RUN: | FileCheck %s
 
-;; Check debug locations are propagated onto new PHIs.
+;; Check debug locations are propagated onto new PHIs and have their atom groups remapped.
 
 ; CHECK: .split:
 ; CHECK-NEXT: %merge = phi i32 [ poison, %while.body ], [ %dest.sroa.clone, %while.body.clone ], !dbg [[G1R1:!.*]]
