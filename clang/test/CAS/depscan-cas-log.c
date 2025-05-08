@@ -2,6 +2,8 @@
 // It's hard to check this exhaustively, but in practice if the daemon does not
 // enable logging there are currently zero records in the log.
 
+// REQUIRES: system-darwin, clang-cc1daemon
+
 // RUN: rm -rf %t && mkdir %t
 // RUN: env LLVM_CACHE_CAS_PATH=%t/cas LLVM_CAS_LOG=1 LLVM_CAS_DISABLE_VALIDATION=1 %clang \
 // RUN:   -cc1depscan -fdepscan=daemon -fdepscan-include-tree -o - \
