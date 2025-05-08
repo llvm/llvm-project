@@ -377,13 +377,35 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidParseUnexpectedEndOfStreamTest) {
   ASSERT_TRUE(Consumer->isSatisfied());
 }
 
-TEST_F(ParseHLSLRootSignatureTest, InvalidMissingParameterTest) {
+TEST_F(ParseHLSLRootSignatureTest, InvalidMissingDTParameterTest) {
   // This test will check that the parsing fails due a mandatory
   // parameter (register) not being specified
   const llvm::StringLiteral Source = R"cc(
     DescriptorTable(
       CBV()
     )
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
+
+  // Test correct diagnostic produced
+  Consumer->setExpected(diag::err_hlsl_rootsig_missing_param);
+  ASSERT_TRUE(Parser.parse());
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidMissingRCParameterTest) {
+  // This test will check that the parsing fails due a mandatory
+  // parameter (num32BitConstants) not being specified
+  const llvm::StringLiteral Source = R"cc(
+    RootConstants(b0)
   )cc";
 
   TrivialModuleLoader ModLoader;
