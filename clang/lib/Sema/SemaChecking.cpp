@@ -9659,6 +9659,42 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
   if (BId == Builtin::BIbzero && !FirstArgTy->getAs<PointerType>())
     return;
 
+  // Try to detect a relocation operation
+  if (getLangOpts().CPlusPlus &&
+      (BId == Builtin::BImemmove || BId == Builtin::BImemcpy)) {
+    const Expr *Dest = Call->getArg(0)->IgnoreParenImpCasts();
+    const Expr *Src = Call->getArg(1)->IgnoreParenImpCasts();
+    QualType DestTy = Dest->getType();
+    QualType SrcTy = Src->getType();
+
+    QualType DestPointeeTy = DestTy->getPointeeType();
+    QualType SrcPointeeTy = SrcTy->getPointeeType();
+    bool HasSameTargetAndSource =
+        !DestPointeeTy.isNull() && !SrcPointeeTy.isNull() &&
+        Context.hasSameUnqualifiedType(DestPointeeTy, SrcPointeeTy);
+
+    if (HasSameTargetAndSource &&
+        !DestPointeeTy.getUnqualifiedType()->isIncompleteType() &&
+        !DestPointeeTy.isConstQualified() && !SrcPointeeTy.isConstQualified() &&
+        !DestPointeeTy.isTriviallyCopyableType(getASTContext()) &&
+        SemaRef.IsCXXTriviallyRelocatableType(DestPointeeTy)) {
+
+      bool SuggestStd = getLangOpts().CPlusPlus26 && getStdNamespace();
+      if (const Decl *D = Call->getReferencedDeclOfCallee();
+          D && !D->isInStdNamespace())
+        SuggestStd = false;
+
+      StringRef Replacement = SuggestStd ? "std::trivially_relocate"
+                                         : "__builtin_trivially_relocate";
+
+      DiagRuntimeBehavior(Dest->getExprLoc(), Dest,
+                          PDiag(diag::warn_cxxstruct_memaccess_relocatable)
+                              << Call->getCallee()->getSourceRange() << FnName
+                              << DestPointeeTy << Replacement);
+      return;
+    }
+  }
+
   for (unsigned ArgIdx = 0; ArgIdx != LastArg; ++ArgIdx) {
     const Expr *Dest = Call->getArg(ArgIdx)->IgnoreParenImpCasts();
     SourceRange ArgRange = Call->getArg(ArgIdx)->getSourceRange();
