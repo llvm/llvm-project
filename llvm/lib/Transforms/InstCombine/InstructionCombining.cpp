@@ -1831,7 +1831,7 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN,
     // Handle some cases that can't be fully simplified, but where we know that
     // the two instructions will fold into one.
     auto WillFold = [&]() {
-      if (!InVal->hasOneUser())
+      if (!InVal->hasUseList() || !InVal->hasOneUser())
         return false;
 
       // icmp of ucmp/scmp with constant will fold to icmp.
@@ -2500,9 +2500,8 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
       return nullptr;
 
     GEPNoWrapFlags NW = getMergedGEPNoWrapFlags(*Src, *cast<GEPOperator>(&GEP));
-    SmallVector<Value *> Indices;
-    append_range(Indices, drop_end(Src->indices(),
-                                   Src->getNumIndices() - NumVarIndices));
+    SmallVector<Value *> Indices(
+        drop_end(Src->indices(), Src->getNumIndices() - NumVarIndices));
     for (const APInt &Idx : drop_begin(ConstIndices, !IsFirstType)) {
       Indices.push_back(ConstantInt::get(GEP.getContext(), Idx));
       // Even if the total offset is inbounds, we may end up representing it
@@ -3132,7 +3131,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     // Try to replace ADD + GEP with GEP + GEP.
     Value *Idx1, *Idx2;
     if (match(GEP.getOperand(1),
-              m_OneUse(m_Add(m_Value(Idx1), m_Value(Idx2))))) {
+              m_OneUse(m_AddLike(m_Value(Idx1), m_Value(Idx2))))) {
       //   %idx = add i64 %idx1, %idx2
       //   %gep = getelementptr i32, ptr %ptr, i64 %idx
       // as:
@@ -3148,7 +3147,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
                                                    NewPtr, Idx2, "", NWFlags));
     }
     ConstantInt *C;
-    if (match(GEP.getOperand(1), m_OneUse(m_SExtLike(m_OneUse(m_NSWAdd(
+    if (match(GEP.getOperand(1), m_OneUse(m_SExtLike(m_OneUse(m_NSWAddLike(
                                      m_Value(Idx1), m_ConstantInt(C))))))) {
       // %add = add nsw i32 %idx1, idx2
       // %sidx = sext i32 %add to i64
@@ -3301,16 +3300,14 @@ static bool isAllocSiteRemovable(Instruction *AI,
           continue;
         }
 
-        if (getFreedOperand(cast<CallBase>(I), &TLI) == PI &&
+        if (Family && getFreedOperand(cast<CallBase>(I), &TLI) == PI &&
             getAllocationFamily(I, &TLI) == Family) {
-          assert(Family);
           Users.emplace_back(I);
           continue;
         }
 
-        if (getReallocatedOperand(cast<CallBase>(I)) == PI &&
+        if (Family && getReallocatedOperand(cast<CallBase>(I)) == PI &&
             getAllocationFamily(I, &TLI) == Family) {
-          assert(Family);
           Users.emplace_back(I);
           Worklist.push_back(I);
           continue;
@@ -5648,13 +5645,12 @@ static bool combineInstructionsOverFunction(
 
     MadeIRChange = true;
     if (Iteration > Opts.MaxIterations) {
-      report_fatal_error(
+      reportFatalUsageError(
           "Instruction Combining on " + Twine(F.getName()) +
-              " did not reach a fixpoint after " + Twine(Opts.MaxIterations) +
-              " iterations. " +
-              "Use 'instcombine<no-verify-fixpoint>' or function attribute "
-              "'instcombine-no-verify-fixpoint' to suppress this error.",
-          /*GenCrashDiag=*/false);
+          " did not reach a fixpoint after " + Twine(Opts.MaxIterations) +
+          " iterations. " +
+          "Use 'instcombine<no-verify-fixpoint>' or function attribute "
+          "'instcombine-no-verify-fixpoint' to suppress this error.");
     }
   }
 

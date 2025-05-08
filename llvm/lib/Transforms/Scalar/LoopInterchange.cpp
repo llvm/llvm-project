@@ -1463,7 +1463,6 @@ bool LoopInterchangeTransform::transform() {
   BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
   BasicBlock *OuterLoopHeader = OuterLoop->getHeader();
   if (InnerLoopPreHeader != OuterLoopHeader) {
-    SmallPtrSet<Instruction *, 4> NeedsMoving;
     for (Instruction &I :
          make_early_inc_range(make_range(InnerLoopPreHeader->begin(),
                                          std::prev(InnerLoopPreHeader->end()))))
@@ -1574,13 +1573,11 @@ static void moveLCSSAPhis(BasicBlock *InnerExit, BasicBlock *InnerHeader,
     P.eraseFromParent();
   }
 
-  SmallVector<PHINode *, 8> LcssaInnerExit;
-  for (PHINode &P : InnerExit->phis())
-    LcssaInnerExit.push_back(&P);
+  SmallVector<PHINode *, 8> LcssaInnerExit(
+      llvm::make_pointer_range(InnerExit->phis()));
 
-  SmallVector<PHINode *, 8> LcssaInnerLatch;
-  for (PHINode &P : InnerLatch->phis())
-    LcssaInnerLatch.push_back(&P);
+  SmallVector<PHINode *, 8> LcssaInnerLatch(
+      llvm::make_pointer_range(InnerLatch->phis()));
 
   // Lcssa PHIs for values used outside the inner loop are in InnerExit.
   // If a PHI node has users outside of InnerExit, it has a use outside the

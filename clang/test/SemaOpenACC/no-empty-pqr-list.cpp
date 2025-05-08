@@ -213,7 +213,7 @@ void Executable(int i) {
   // expected-error@+1{{expected identifier}}
 #pragma acc shutdown device_type()
   // expected-error@+1{{expected identifier}}
-#pragma acc set if(true) device_type()
+#pragma acc set device_num(i) device_type()
   // expected-error@+1{{expected identifier}}
 #pragma acc update self(i) device_type()
 

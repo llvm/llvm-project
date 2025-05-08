@@ -313,8 +313,7 @@ static bool throwEscapes(Sema &S, const CXXThrowExpr *E, CFGBlock &ThrowBlock,
   Queued[ThrowBlock.getBlockID()] = true;
 
   while (!Stack.empty()) {
-    CFGBlock &UnwindBlock = *Stack.back();
-    Stack.pop_back();
+    CFGBlock &UnwindBlock = *Stack.pop_back_val();
 
     for (auto &Succ : UnwindBlock.succs()) {
       if (!Succ.isReachable() || Queued[Succ->getBlockID()])
@@ -2493,8 +2492,10 @@ public:
   CalledOnceInterProceduralData CalledOnceData;
 };
 
-static unsigned isEnabled(DiagnosticsEngine &D, unsigned diag) {
-  return (unsigned)!D.isIgnored(diag, SourceLocation());
+template <typename... Ts>
+static bool areAnyEnabled(DiagnosticsEngine &D, SourceLocation Loc,
+                          Ts... Diags) {
+  return (!D.isIgnored(Diags, Loc) || ...);
 }
 
 sema::AnalysisBasedWarnings::AnalysisBasedWarnings(Sema &s)
@@ -2504,23 +2505,37 @@ sema::AnalysisBasedWarnings::AnalysisBasedWarnings(Sema &s)
       NumUninitAnalysisVariables(0), MaxUninitAnalysisVariablesPerFunction(0),
       NumUninitAnalysisBlockVisits(0),
       MaxUninitAnalysisBlockVisitsPerFunction(0) {
-
-  using namespace diag;
-  DiagnosticsEngine &D = S.getDiagnostics();
-
-  DefaultPolicy.enableCheckUnreachable =
-      isEnabled(D, warn_unreachable) || isEnabled(D, warn_unreachable_break) ||
-      isEnabled(D, warn_unreachable_return) ||
-      isEnabled(D, warn_unreachable_loop_increment);
-
-  DefaultPolicy.enableThreadSafetyAnalysis = isEnabled(D, warn_double_lock);
-
-  DefaultPolicy.enableConsumedAnalysis =
-      isEnabled(D, warn_use_in_invalid_state);
 }
 
 // We need this here for unique_ptr with forward declared class.
 sema::AnalysisBasedWarnings::~AnalysisBasedWarnings() = default;
+
+sema::AnalysisBasedWarnings::Policy
+sema::AnalysisBasedWarnings::getPolicyInEffectAt(SourceLocation Loc) {
+  using namespace diag;
+  DiagnosticsEngine &D = S.getDiagnostics();
+  Policy P;
+
+  // Note: The enabled checks should be kept in sync with the switch in
+  // SemaPPCallbacks::PragmaDiagnostic().
+  P.enableCheckUnreachable =
+      PolicyOverrides.enableCheckUnreachable ||
+      areAnyEnabled(D, Loc, warn_unreachable, warn_unreachable_break,
+                    warn_unreachable_return, warn_unreachable_loop_increment);
+
+  P.enableThreadSafetyAnalysis = PolicyOverrides.enableThreadSafetyAnalysis ||
+                                 areAnyEnabled(D, Loc, warn_double_lock);
+
+  P.enableConsumedAnalysis = PolicyOverrides.enableConsumedAnalysis ||
+                             areAnyEnabled(D, Loc, warn_use_in_invalid_state);
+  return P;
+}
+
+void sema::AnalysisBasedWarnings::clearOverrides() {
+  PolicyOverrides.enableCheckUnreachable = false;
+  PolicyOverrides.enableConsumedAnalysis = false;
+  PolicyOverrides.enableThreadSafetyAnalysis = false;
+}
 
 static void flushDiagnostics(Sema &S, const sema::FunctionScopeInfo *fscope) {
   for (const auto &D : fscope->PossiblyUnreachableDiags)
@@ -2532,12 +2547,23 @@ static void flushDiagnostics(Sema &S, const sema::FunctionScopeInfo *fscope) {
 class CallableVisitor : public DynamicRecursiveASTVisitor {
 private:
   llvm::function_ref<void(const Decl *)> Callback;
+  const Module *const TUModule;
 
 public:
-  CallableVisitor(llvm::function_ref<void(const Decl *)> Callback)
-      : Callback(Callback) {
+  CallableVisitor(llvm::function_ref<void(const Decl *)> Callback,
+                  const Module *const TUModule)
+      : Callback(Callback), TUModule(TUModule) {
     ShouldVisitTemplateInstantiations = true;
     ShouldVisitImplicitCode = false;
+  }
+
+  bool TraverseDecl(Decl *Node) override {
+    // For performance reasons, only validate the current translation unit's
+    // module, and not modules it depends on.
+    // See https://issues.chromium.org/issues/351909443 for details.
+    if (Node && Node->getOwningModule() == TUModule)
+      return DynamicRecursiveASTVisitor::TraverseDecl(Node);
+    return true;
   }
 
   bool VisitFunctionDecl(FunctionDecl *Node) override {
@@ -2622,7 +2648,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
                        SourceLocation()) ||
       (!Diags.isIgnored(diag::warn_unsafe_buffer_libc_call, SourceLocation()) &&
        S.getLangOpts().CPlusPlus /* only warn about libc calls in C++ */)) {
-    CallableVisitor(CallAnalyzers).TraverseTranslationUnitDecl(TU);
+    CallableVisitor(CallAnalyzers, TU->getOwningModule())
+        .TraverseTranslationUnitDecl(TU);
   }
 }
 
@@ -2858,6 +2885,9 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   if (LogicalErrorHandler::hasActiveDiagnostics(Diags, D->getBeginLoc())) {
     AC.getCFG();
   }
+
+  // Clear any of our policy overrides.
+  clearOverrides();
 
   // Collect statistics about the CFG if it was built.
   if (S.CollectStats && AC.isCFGBuilt()) {

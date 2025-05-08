@@ -731,6 +731,7 @@ void DoDumpSymbols(llvm::raw_ostream &os, const Scope &scope, int indent) {
     for (const auto &[pointee, pointer] : scope.crayPointers()) {
       os << " (" << pointer->name() << ',' << pointee << ')';
     }
+    os << '\n';
   }
   for (const auto &pair : scope.commonBlocks()) {
     const auto &symbol{*pair.second};

@@ -142,7 +142,7 @@ CompilerInvocationBase::CompilerInvocationBase()
       DiagnosticOpts(llvm::makeIntrusiveRefCnt<DiagnosticOptions>()),
       HSOpts(std::make_shared<HeaderSearchOptions>()),
       PPOpts(std::make_shared<PreprocessorOptions>()),
-      AnalyzerOpts(llvm::makeIntrusiveRefCnt<AnalyzerOptions>()),
+      AnalyzerOpts(std::make_shared<AnalyzerOptions>()),
       MigratorOpts(std::make_shared<MigratorOptions>()),
       APINotesOpts(std::make_shared<APINotesOptions>()),
       CodeGenOpts(std::make_shared<CodeGenOptions>()),
@@ -159,7 +159,7 @@ CompilerInvocationBase::deep_copy_assign(const CompilerInvocationBase &X) {
     DiagnosticOpts = makeIntrusiveRefCntCopy(X.getDiagnosticOpts());
     HSOpts = make_shared_copy(X.getHeaderSearchOpts());
     PPOpts = make_shared_copy(X.getPreprocessorOpts());
-    AnalyzerOpts = makeIntrusiveRefCntCopy(X.getAnalyzerOpts());
+    AnalyzerOpts = make_shared_copy(X.getAnalyzerOpts());
     MigratorOpts = make_shared_copy(X.getMigratorOpts());
     APINotesOpts = make_shared_copy(X.getAPINotesOpts());
     CodeGenOpts = make_shared_copy(X.getCodeGenOpts());
@@ -1699,6 +1699,9 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
       GenerateArg(Consumer, OPT_ftime_report_EQ, "per-pass-run");
     else
       GenerateArg(Consumer, OPT_ftime_report);
+
+    if (Opts.TimePassesJson)
+      GenerateArg(Consumer, OPT_ftime_report_json);
   }
 
   if (Opts.PrepareForLTO && !Opts.PrepareForThinLTO)
@@ -1834,6 +1837,10 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
   serializeSanitizerMaskCutoffs(Opts.SanitizeSkipHotCutoffs, Values);
   for (std::string Sanitizer : Values)
     GenerateArg(Consumer, OPT_fsanitize_skip_hot_cutoff_EQ, Sanitizer);
+
+  for (StringRef Sanitizer :
+       serializeSanitizerKinds(Opts.SanitizeAnnotateDebugInfo))
+    GenerateArg(Consumer, OPT_fsanitize_annotate_debug_info_EQ, Sanitizer);
 
   if (!Opts.EmitVersionIdentMetadata)
     GenerateArg(Consumer, OPT_Qn);
@@ -2000,12 +2007,13 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
             : llvm::codegenoptions::DebugTemplateNamesKind::Mangled);
   }
 
-  if (const Arg *A = Args.getLastArg(OPT_ftime_report, OPT_ftime_report_EQ)) {
+  if (const Arg *A = Args.getLastArg(OPT_ftime_report, OPT_ftime_report_EQ,
+                                     OPT_ftime_report_json)) {
     Opts.TimePasses = true;
 
     // -ftime-report= is only for new pass manager.
-    if (A->getOption().getID() == OPT_ftime_report_EQ) {
-      StringRef Val = A->getValue();
+    if (const Arg *EQ = Args.getLastArg(OPT_ftime_report_EQ)) {
+      StringRef Val = EQ->getValue();
       if (Val == "per-pass")
         Opts.TimePassesPerRun = false;
       else if (Val == "per-pass-run")
@@ -2014,6 +2022,9 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
         Diags.Report(diag::err_drv_invalid_value)
             << A->getAsString(Args) << A->getValue();
     }
+
+    if (Args.getLastArg(OPT_ftime_report_json))
+      Opts.TimePassesJson = true;
   }
 
   Opts.PrepareForLTO = false;
@@ -2078,7 +2089,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     A->render(Args, ASL);
     for (const auto &arg : ASL) {
       StringRef ArgStr(arg);
-      Opts.CmdArgs.insert(Opts.CmdArgs.end(), ArgStr.begin(), ArgStr.end());
+      llvm::append_range(Opts.CmdArgs, ArgStr);
       // using \00 to separate each commandline options.
       Opts.CmdArgs.push_back('\0');
     }
@@ -2325,6 +2336,11 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
       "-fsanitize-skip-hot-cutoff=",
       Args.getAllArgValues(OPT_fsanitize_skip_hot_cutoff_EQ), Diags);
 
+  parseSanitizerKinds(
+      "-fsanitize-annotate-debug-info=",
+      Args.getAllArgValues(OPT_fsanitize_annotate_debug_info_EQ), Diags,
+      Opts.SanitizeAnnotateDebugInfo);
+
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
 
   if (!LangOpts->CUDAIsDevice)
@@ -2435,13 +2451,25 @@ static bool ParseDependencyOutputArgs(DependencyOutputOptions &Opts,
 
   // Check for invalid combinations of header-include-format
   // and header-include-filtering.
-  if ((Opts.HeaderIncludeFormat == HIFMT_Textual &&
-       Opts.HeaderIncludeFiltering != HIFIL_None) ||
-      (Opts.HeaderIncludeFormat == HIFMT_JSON &&
-       Opts.HeaderIncludeFiltering != HIFIL_Only_Direct_System))
-    Diags.Report(diag::err_drv_print_header_env_var_combination_cc1)
-        << Args.getLastArg(OPT_header_include_format_EQ)->getValue()
-        << Args.getLastArg(OPT_header_include_filtering_EQ)->getValue();
+  if (Opts.HeaderIncludeFormat == HIFMT_Textual &&
+      Opts.HeaderIncludeFiltering != HIFIL_None) {
+    if (Args.hasArg(OPT_header_include_format_EQ))
+      Diags.Report(diag::err_drv_print_header_cc1_invalid_combination)
+          << headerIncludeFormatKindToString(Opts.HeaderIncludeFormat)
+          << headerIncludeFilteringKindToString(Opts.HeaderIncludeFiltering);
+    else
+      Diags.Report(diag::err_drv_print_header_cc1_invalid_filtering)
+          << headerIncludeFilteringKindToString(Opts.HeaderIncludeFiltering);
+  } else if (Opts.HeaderIncludeFormat == HIFMT_JSON &&
+             Opts.HeaderIncludeFiltering == HIFIL_None) {
+    if (Args.hasArg(OPT_header_include_filtering_EQ))
+      Diags.Report(diag::err_drv_print_header_cc1_invalid_combination)
+          << headerIncludeFormatKindToString(Opts.HeaderIncludeFormat)
+          << headerIncludeFilteringKindToString(Opts.HeaderIncludeFiltering);
+    else
+      Diags.Report(diag::err_drv_print_header_cc1_invalid_format)
+          << headerIncludeFormatKindToString(Opts.HeaderIncludeFormat);
+  }
 
   return Diags.getNumErrors() == NumErrorsBefore;
 }

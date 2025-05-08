@@ -958,10 +958,18 @@ def Xclang : Separate<["-"], "Xclang">,
   HelpText<"Pass <arg> to clang -cc1">, MetaVarName<"<arg>">,
   Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption]>,
   Group<CompileOnly_Group>;
+def Xclangas : Separate<["-"], "Xclangas">,
+  HelpText<"Pass <arg> to clang -cc1as">, MetaVarName<"<arg>">,
+  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption]>,
+  Group<CompileOnly_Group>;
 def : Joined<["-"], "Xclang=">, Group<CompileOnly_Group>,
   Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption]>,
   Alias<Xclang>,
   HelpText<"Alias for -Xclang">, MetaVarName<"<arg>">;
+def : Joined<["-"], "Xclangas=">, Group<CompileOnly_Group>,
+  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption]>,
+  Alias<Xclangas>,
+  HelpText<"Alias for -Xclangas">, MetaVarName<"<arg>">;
 def Xcuda_fatbinary : Separate<["-"], "Xcuda-fatbinary">,
   HelpText<"Pass <arg> to fatbinary invocation">, MetaVarName<"<arg>">;
 def Xcuda_ptxas : Separate<["-"], "Xcuda-ptxas">,
@@ -1233,6 +1241,10 @@ def no_offload_compress : Flag<["--"], "no-offload-compress">;
 def offload_compression_level_EQ : Joined<["--"], "offload-compression-level=">,
   Flags<[HelpHidden]>,
   HelpText<"Compression level for offload device binaries (HIP only)">;
+
+def offload_jobs_EQ : Joined<["--"], "offload-jobs=">,
+  HelpText<"Specify the number of threads to use for device offloading tasks"
+           " during compilation.">;
 
 defm offload_via_llvm : BoolFOption<"offload-via-llvm",
   LangOpts<"OffloadViaLLVM">, DefaultFalse,
@@ -1542,7 +1554,11 @@ def fstrict_flex_arrays_EQ : Joined<["-"], "fstrict-flex-arrays=">, Group<f_Grou
   Visibility<[ClangOption, CC1Option]>,
   NormalizedValuesScope<"LangOptions::StrictFlexArraysLevelKind">,
   NormalizedValues<["Default", "OneZeroOrIncomplete", "ZeroOrIncomplete", "IncompleteOnly"]>,
-  HelpText<"Enable optimizations based on the strict definition of flexible arrays">,
+  HelpText<"Enable optimizations based on the strict definition of flexible arrays.">,
+  DocBrief<[{If ``<n>`` is equal to 0, any trailing array member is considered a flexible array.
+             If ``<n>`` is equal to 1, trailing array members of size 0, 1 or undefined are considered flexible arrays.
+             If ``<n>`` is equal to 2, trailing array members of size 0 or undefined are considered flexible arrays.
+             If ``<n>`` is equal to 3, only trailing array members of undefined size are considered flexible arrays.}]>,
   MarshallingInfoEnum<LangOpts<"StrictFlexArraysLevel">, "Default">;
 defm apple_pragma_pack : BoolFOption<"apple-pragma-pack",
   LangOpts<"ApplePragmaPack">, DefaultFalse,
@@ -2349,6 +2365,13 @@ def fsanitize_coverage_ignorelist : Joined<["-"], "fsanitize-coverage-ignorelist
     HelpText<"Disable sanitizer coverage instrumentation for modules and functions "
              "that match the provided special case list, even the allowed ones">,
     MarshallingInfoStringVector<CodeGenOpts<"SanitizeCoverageIgnorelistFiles">>;
+def fsanitize_coverage_stack_depth_callback_min_EQ
+    : Joined<["-"], "fsanitize-coverage-stack-depth-callback-min=">,
+      Group<f_clang_Group>,
+      MetaVarName<"<M>">,
+      HelpText<"Use callback for max stack depth tracing with minimum stack "
+               "depth M">,
+      MarshallingInfoInt<CodeGenOpts<"SanitizeCoverageStackDepthCallbackMin">>;
 def fexperimental_sanitize_metadata_EQ : CommaJoined<["-"], "fexperimental-sanitize-metadata=">,
   Group<f_Group>,
   HelpText<"Specify the type of metadata to emit for binary analysis sanitizers">;
@@ -2517,6 +2540,31 @@ def fno_sanitize_merge_handlers : Flag<["-"], "fno-sanitize-merge">, Group<f_cla
                         Alias<fno_sanitize_merge_handlers_EQ>, AliasArgs<["all"]>,
                         Visibility<[ClangOption, CLOption]>,
                         HelpText<"Do not allow compiler to merge handlers for any sanitizers">;
+def fsanitize_annotate_debug_info_EQ
+    : CommaJoined<["-"], "fsanitize-annotate-debug-info=">,
+      Group<f_clang_Group>,
+      HelpText<"Annotate sanitizer instrumentation with extra debug info for "
+               "the specified sanitizers, if supported">;
+def fno_sanitize_annotate_debug_info_EQ
+    : CommaJoined<["-"], "fno-sanitize-annotate-debug-info=">,
+      Group<f_clang_Group>,
+      HelpText<"Do not allow compiler to annotate sanitizer instrumentation "
+               "with extra debug info for the specified sanitizers">;
+def fsanitize_annotate_debug_info
+    : Flag<["-"], "fsanitize-annotate-debug-info">,
+      Group<f_clang_Group>,
+      Alias<fsanitize_annotate_debug_info_EQ>,
+      AliasArgs<["all"]>,
+      HelpText<"Allow compiler to annotate sanitizer instrumentation with "
+               "extra debug info for all sanitizers, where supported">;
+def fno_sanitize_annotate_debug_info
+    : Flag<["-"], "fno-sanitize-annotate-debug-info">,
+      Group<f_clang_Group>,
+      Alias<fno_sanitize_annotate_debug_info_EQ>,
+      AliasArgs<["all"]>,
+      Visibility<[ClangOption, CLOption]>,
+      HelpText<"Do not allow compiler to annotate sanitizer instrumentation "
+               "with extra debug info for any sanitizers">;
 def fsanitize_undefined_trap_on_error
     : Flag<["-"], "fsanitize-undefined-trap-on-error">, Group<f_clang_Group>,
       Alias<fsanitize_trap_EQ>, AliasArgs<["undefined"]>;
@@ -2812,10 +2860,12 @@ def finput_charset_EQ : Joined<["-"], "finput-charset=">,
   Visibility<[ClangOption, FlangOption, FC1Option]>, Group<f_Group>,
   HelpText<"Specify the default character set for source files">;
 def fexec_charset_EQ : Joined<["-"], "fexec-charset=">, Group<f_Group>;
-def finstrument_functions : Flag<["-"], "finstrument-functions">, Group<f_Group>,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Generate calls to instrument function entry and exit">,
-  MarshallingInfoFlag<CodeGenOpts<"InstrumentFunctions">>;
+def finstrument_functions
+    : Flag<["-"], "finstrument-functions">,
+      Group<f_Group>,
+      Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
+      HelpText<"Generate calls to instrument function entry and exit">,
+      MarshallingInfoFlag<CodeGenOpts<"InstrumentFunctions">>;
 def finstrument_functions_after_inlining : Flag<["-"], "finstrument-functions-after-inlining">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Like -finstrument-functions, but insert the calls after inlining">,
@@ -3509,12 +3559,6 @@ defm application_extension : BoolFOption<"application-extension",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Restrict code to those available for App Extensions">,
   NegFlag<SetFalse>>;
-defm retain_subst_template_type_parm_type_ast_nodes : BoolFOption<"retain-subst-template-type-parm-type-ast-nodes",
-  LangOpts<"RetainSubstTemplateTypeParmTypeAstNodes">, DefaultFalse,
-  PosFlag<SetTrue, [], [CC1Option], "Enable">,
-  NegFlag<SetFalse, [], [], "Disable">,
-  BothFlags<[], [], " retain SubstTemplateTypeParmType nodes in the AST's representation"
-  " of alias template specializations">>;
 defm sized_deallocation : BoolFOption<"sized-deallocation",
   LangOpts<"SizedDeallocation">, Default<cpp14.KeyPath>,
   PosFlag<SetTrue, [], [], "Enable C++14 sized global deallocation functions">,
@@ -4077,6 +4121,11 @@ defm ms_tls_guards : BoolFOption<"ms-tls-guards",
 def ftime_report : Flag<["-"], "ftime-report">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   MarshallingInfoFlag<CodeGenOpts<"TimePasses">>;
+def ftime_report_json
+    : Flag<["-"], "ftime-report-json">,
+      Group<f_Group>,
+      Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
+      MarshallingInfoFlag<CodeGenOpts<"TimePassesJson">>;
 def ftime_report_EQ: Joined<["-"], "ftime-report=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>, Values<"per-pass,per-pass-run">,
   MarshallingInfoFlag<CodeGenOpts<"TimePassesPerRun">>,
@@ -4142,6 +4191,13 @@ def ftrigraphs : Flag<["-"], "ftrigraphs">, Group<f_Group>,
 def fno_trigraphs : Flag<["-"], "fno-trigraphs">, Group<f_Group>,
   HelpText<"Do not process trigraph sequences">,
   Visibility<[ClangOption, CC1Option]>;
+defm unique_source_file_names: BoolOption<"f", "unique-source-file-names",
+  CodeGenOpts<"UniqueSourceFileNames">, DefaultFalse,
+  PosFlag<SetTrue, [], [CC1Option], "Allow">,
+  NegFlag<SetFalse, [], [], "Do not allow">,
+  BothFlags<[], [ClangOption], " the compiler to assume that each translation unit has a unique "
+                               "source file name at link time">>,
+  Group<f_clang_Group>;
 def funsigned_bitfields : Flag<["-"], "funsigned-bitfields">, Group<f_Group>;
 def funsigned_char : Flag<["-"], "funsigned-char">, Group<f_Group>;
 def fno_unsigned_char : Flag<["-"], "fno-unsigned-char">;
@@ -4689,15 +4745,17 @@ def EB : Flag<["-"], "EB">, Alias<mbig_endian>;
 def m16 : Flag<["-"], "m16">, Group<m_Group>, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CLOption, DXCOption]>;
 def m32 : Flag<["-"], "m32">, Group<m_Group>, Flags<[NoXarchOption]>,
-  Visibility<[ClangOption, CLOption, DXCOption]>;
-def maix32 : Flag<["-"], "maix32">, Group<m_Group>, Flags<[NoXarchOption]>;
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>;
+def maix32 : Flag<["-"], "maix32">, Group<m_Group>, Flags<[NoXarchOption]>,
+  Visibility<[FlangOption]>;
 def mqdsp6_compat : Flag<["-"], "mqdsp6-compat">, Group<m_Group>,
   Flags<[NoXarchOption]>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Enable hexagon-qdsp6 backward compatibility">,
   MarshallingInfoFlag<LangOpts<"HexagonQdsp6Compat">>;
 def m64 : Flag<["-"], "m64">, Group<m_Group>, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>;
-def maix64 : Flag<["-"], "maix64">, Group<m_Group>, Flags<[NoXarchOption]>;
+def maix64 : Flag<["-"], "maix64">, Group<m_Group>, Flags<[NoXarchOption]>,
+  Visibility<[FlangOption]>;
 def mx32 : Flag<["-"], "mx32">, Group<m_Group>, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CLOption, DXCOption]>;
 def miamcu : Flag<["-"], "miamcu">, Group<m_Group>, Flags<[NoXarchOption]>,
@@ -7778,7 +7836,8 @@ def header_include_format_EQ : Joined<["-"], "header-include-format=">,
   MarshallingInfoEnum<DependencyOutputOpts<"HeaderIncludeFormat">, "HIFMT_Textual">;
 def header_include_filtering_EQ : Joined<["-"], "header-include-filtering=">,
   HelpText<"set the flag that enables filtering header information">,
-  Values<"none,only-direct-system">, NormalizedValues<["HIFIL_None", "HIFIL_Only_Direct_System"]>,
+  Values<"none,only-direct-system,direct-per-file">,
+  NormalizedValues<["HIFIL_None", "HIFIL_Only_Direct_System", "HIFIL_Direct_Per_File"]>,
   MarshallingInfoEnum<DependencyOutputOpts<"HeaderIncludeFiltering">, "HIFIL_None">;
 def show_includes : Flag<["--"], "show-includes">,
   HelpText<"Print cl.exe style /showIncludes to stdout">;
@@ -7884,9 +7943,13 @@ def code_completion_with_fixits : Flag<["-"], "code-completion-with-fixits">,
 def skip_function_bodies : Flag<["-"], "skip-function-bodies">,
   HelpText<"Skip function bodies when possible">,
   MarshallingInfoFlag<FrontendOpts<"SkipFunctionBodies">>;
-def disable_free : Flag<["-"], "disable-free">,
-  HelpText<"Disable freeing of memory on exit">,
-  MarshallingInfoFlag<FrontendOpts<"DisableFree">>;
+defm disable_free : BoolOption<"",
+  "disable-free",
+  FrontendOpts<"DisableFree">,
+  DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption], "Disable">,
+  NegFlag<SetFalse, [], [ClangOption], "Don't disable">,
+  BothFlags<[], [ClangOption], " freeing of memory on exit">>;
 defm clear_ast_before_backend : BoolOption<"",
   "clear-ast-before-backend",
   CodeGenOpts<"ClearASTBeforeBackend">,
@@ -9060,6 +9123,7 @@ def _SLASH_clr : CLJoined<"clr">;
 def _SLASH_d1 : CLJoined<"d1">;
 def _SLASH_d2 : CLJoined<"d2">;
 def _SLASH_doc : CLJoined<"doc">;
+def _SLASH_dynamicdeopt : CLJoined<"dynamicdeopt">;
 def _SLASH_experimental : CLJoined<"experimental:">;
 def _SLASH_exportHeader : CLFlag<"exportHeader">;
 def _SLASH_external : CLJoined<"external:">;
@@ -9193,6 +9257,11 @@ def metal : DXCFlag<"metal">, HelpText<"Generate Metal library">;
 def fspv_target_env_EQ : Joined<["-"], "fspv-target-env=">, Group<dxc_Group>,
   HelpText<"Specify the target environment">,
   Values<"vulkan1.2, vulkan1.3">;
+def fspv_extension_EQ
+    : Joined<["-"], "fspv-extension=">,
+      Group<dxc_Group>,
+      HelpText<"Specify the available SPIR-V extensions. If this option is not "
+               "specified, then all extensions are available.">;
 def no_wasm_opt : Flag<["--"], "no-wasm-opt">,
   Group<m_Group>,
   HelpText<"Disable the wasm-opt optimizer">,

@@ -363,6 +363,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
     libc.src.sys.uio.readv
+
+    # sys/time.h entrypoints
+    libc.src.sys.time.setitimer
+    libc.src.sys.time.getitimer
 )
 
 if(LLVM_LIBC_INCLUDE_SCUDO)
@@ -408,6 +412,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     # math.h entrypoints
     libc.src.math.acosf
     libc.src.math.acoshf
+    libc.src.math.asin
     libc.src.math.asinf
     libc.src.math.asinhf
     libc.src.math.atan2
@@ -928,6 +933,8 @@ if(LLVM_LIBC_FULL_BUILD)
     # setjmp.h entrypoints
     libc.src.setjmp.longjmp
     libc.src.setjmp.setjmp
+    libc.src.setjmp.siglongjmp
+    libc.src.setjmp.sigsetjmp
 
     # stdio.h entrypoints
     libc.src.stdio.clearerr

@@ -30,7 +30,7 @@ public:
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
-  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
+  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
                              const MCValue &Target,

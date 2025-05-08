@@ -168,8 +168,8 @@ static const unsigned instrsForExtendedCounterTypes[NUM_EXTENDED_INST_CNTS] = {
     AMDGPU::S_WAIT_KMCNT};
 
 static bool updateVMCntOnly(const MachineInstr &Inst) {
-  return SIInstrInfo::isVMEM(Inst) || SIInstrInfo::isFLATGlobal(Inst) ||
-         SIInstrInfo::isFLATScratch(Inst);
+  return (SIInstrInfo::isVMEM(Inst) && !SIInstrInfo::isFLAT(Inst)) ||
+         SIInstrInfo::isFLATGlobal(Inst) || SIInstrInfo::isFLATScratch(Inst);
 }
 
 #ifndef NDEBUG
@@ -695,14 +695,24 @@ public:
 #endif // NDEBUG
   }
 
-  // Return the appropriate VMEM_*_ACCESS type for Inst, which must be a VMEM or
-  // FLAT instruction.
+  // Return the appropriate VMEM_*_ACCESS type for Inst, which must be a VMEM
+  // instruction.
   WaitEventType getVmemWaitEventType(const MachineInstr &Inst) const {
+    switch (Inst.getOpcode()) {
+    case AMDGPU::GLOBAL_INV:
+      return VMEM_READ_ACCESS; // tracked using loadcnt
+    case AMDGPU::GLOBAL_WB:
+    case AMDGPU::GLOBAL_WBINV:
+      return VMEM_WRITE_ACCESS; // tracked using storecnt
+    default:
+      break;
+    }
+
     // Maps VMEM access types to their corresponding WaitEventType.
     static const WaitEventType VmemReadMapping[NUM_VMEM_TYPES] = {
         VMEM_READ_ACCESS, VMEM_SAMPLER_READ_ACCESS, VMEM_BVH_READ_ACCESS};
 
-    assert(SIInstrInfo::isVMEM(Inst) || SIInstrInfo::isFLAT(Inst));
+    assert(SIInstrInfo::isVMEM(Inst));
     // LDS DMA loads are also stores, but on the LDS side. On the VMEM side
     // these should use VM_CNT.
     if (!ST->hasVscnt() || SIInstrInfo::mayWriteLDSThroughDMA(Inst))
@@ -2049,7 +2059,7 @@ bool SIInsertWaitcnts::mayAccessScratchThroughFlat(
   });
 }
 
-static bool isCacheInvOrWBInst(MachineInstr &Inst) {
+static bool isGFX12CacheInvOrWBInst(MachineInstr &Inst) {
   auto Opc = Inst.getOpcode();
   return Opc == AMDGPU::GLOBAL_INV || Opc == AMDGPU::GLOBAL_WB ||
          Opc == AMDGPU::GLOBAL_WBINV;
@@ -2130,9 +2140,11 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       ScoreBrackets->updateByEvent(TII, TRI, MRI, LDS_ACCESS, Inst);
     }
   } else if (TII->isFLAT(Inst)) {
-    // TODO: Track this properly.
-    if (isCacheInvOrWBInst(Inst))
+    if (isGFX12CacheInvOrWBInst(Inst)) {
+      ScoreBrackets->updateByEvent(TII, TRI, MRI, getVmemWaitEventType(Inst),
+                                   Inst);
       return;
+    }
 
     assert(Inst.mayLoadOrStore());
 
@@ -2454,8 +2466,9 @@ bool SIInsertWaitcnts::isPreheaderToFlush(
 }
 
 bool SIInsertWaitcnts::isVMEMOrFlatVMEM(const MachineInstr &MI) const {
-  return SIInstrInfo::isVMEM(MI) ||
-         (SIInstrInfo::isFLAT(MI) && mayAccessVMEMThroughFlat(MI));
+  if (SIInstrInfo::isFLAT(MI))
+    return mayAccessVMEMThroughFlat(MI);
+  return SIInstrInfo::isVMEM(MI);
 }
 
 // Return true if it is better to flush the vmcnt counter in the preheader of

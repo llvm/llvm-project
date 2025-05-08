@@ -10,7 +10,9 @@
 #define PTR_ATTRDEFS
 
 include "mlir/Dialect/Ptr/IR/PtrDialect.td"
+include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/BuiltinAttributeInterfaces.td"
 
 // All of the attributes will extend this class.
 class Ptr_Attr<string name, string attrMnemonic,
@@ -18,6 +20,31 @@ class Ptr_Attr<string name, string attrMnemonic,
                 string baseCppClass = "::mlir::Attribute">
     : AttrDef<Ptr_Dialect, name, traits, baseCppClass> {
   let mnemonic = attrMnemonic;
+}
+
+//===----------------------------------------------------------------------===//
+// GenericSpaceAttr
+//===----------------------------------------------------------------------===//
+
+def Ptr_GenericSpaceAttr :
+    Ptr_Attr<"GenericSpace", "generic_space", [
+      DeclareAttrInterfaceMethods<MemorySpaceAttrInterface>
+    ]> {
+  let summary = "Generic memory space";
+  let description = [{
+    The `generic_space` attribute defines a memory space attribute with the
+    following properties:
+    - Load and store operations are always valid, regardless of the type.
+    - Atomic operations are always valid, regardless of the type.
+    - Cast operations to `generic_space` are always valid.
+  
+    Example:
+
+    ```mlir
+    #ptr.generic_space
+    ```
+  }];
+  let assemblyFormat = "";
 }
 
 //===----------------------------------------------------------------------===//

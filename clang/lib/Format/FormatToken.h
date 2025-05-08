@@ -706,8 +706,17 @@ public:
   [[nodiscard]] bool isTypeOrIdentifier(const LangOptions &LangOpts) const;
 
   bool isObjCAccessSpecifier() const {
-    return Next && Next->isOneOf(tok::objc_public, tok::objc_protected,
-                                 tok::objc_package, tok::objc_private);
+    return is(tok::at) && Next &&
+           Next->isOneOf(tok::objc_public, tok::objc_protected,
+                         tok::objc_package, tok::objc_private);
+  }
+
+  bool isObjCLifetimeQualifier(const FormatStyle &Style) const {
+    if (Style.Language != FormatStyle::LK_ObjC || !TokenText.starts_with("__"))
+      return false;
+    const auto Qualifier = TokenText.substr(2);
+    return Qualifier == "autoreleasing" || Qualifier == "strong" ||
+           Qualifier == "weak" || Qualifier == "unsafe_unretained";
   }
 
   /// Returns whether \p Tok is ([{ or an opening < of a template or in

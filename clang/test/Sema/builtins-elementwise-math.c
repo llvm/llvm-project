@@ -88,7 +88,7 @@ void test_builtin_elementwise_add_sat(int i, short s, double d, float4 v, int3 i
   _BitInt(32) ext; // expected-warning {{'_BitInt' in C17 and earlier is a Clang extension}}
   ext = __builtin_elementwise_add_sat(ext, ext);
 
-  const int ci;
+  const int ci = 0;
   i = __builtin_elementwise_add_sat(ci, i);
   i = __builtin_elementwise_add_sat(i, ci);
   i = __builtin_elementwise_add_sat(ci, ci);
@@ -154,7 +154,7 @@ void test_builtin_elementwise_sub_sat(int i, short s, double d, float4 v, int3 i
   _BitInt(32) ext; // expected-warning {{'_BitInt' in C17 and earlier is a Clang extension}}
   ext = __builtin_elementwise_sub_sat(ext, ext);
 
-  const int ci;
+  const int ci = 0;
   i = __builtin_elementwise_sub_sat(ci, i);
   i = __builtin_elementwise_sub_sat(i, ci);
   i = __builtin_elementwise_sub_sat(ci, ci);
@@ -214,7 +214,7 @@ void test_builtin_elementwise_max(int i, short s, double d, float4 v, int3 iv, u
   _BitInt(32) ext; // expected-warning {{'_BitInt' in C17 and earlier is a Clang extension}}
   ext = __builtin_elementwise_max(ext, ext);
 
-  const int ci;
+  const int ci = 0;
   i = __builtin_elementwise_max(ci, i);
   i = __builtin_elementwise_max(i, ci);
   i = __builtin_elementwise_max(ci, ci);
@@ -274,7 +274,7 @@ void test_builtin_elementwise_min(int i, short s, double d, float4 v, int3 iv, u
   _BitInt(32) ext; // expected-warning {{'_BitInt' in C17 and earlier is a Clang extension}}
   ext = __builtin_elementwise_min(ext, ext);
 
-  const int ci;
+  const int ci = 0;
   i = __builtin_elementwise_min(ci, i);
   i = __builtin_elementwise_min(i, ci);
   i = __builtin_elementwise_min(ci, ci);
@@ -1070,7 +1070,7 @@ void test_builtin_elementwise_copysign(int i, short s, double d, float f, float4
   ext = __builtin_elementwise_copysign(ext, ext);
   // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was '_BitInt(32)')}}
 
-  const float cf32;
+  const float cf32 = 0.0f;
   f = __builtin_elementwise_copysign(cf32, f);
   f = __builtin_elementwise_copysign(f, cf32);
   f = __builtin_elementwise_copysign(cf32, f);

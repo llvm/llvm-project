@@ -2414,9 +2414,7 @@ PreservedAnalyses MemorySSAVerifierPass::run(Function &F,
 
 char MemorySSAWrapperPass::ID = 0;
 
-MemorySSAWrapperPass::MemorySSAWrapperPass() : FunctionPass(ID) {
-  initializeMemorySSAWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+MemorySSAWrapperPass::MemorySSAWrapperPass() : FunctionPass(ID) {}
 
 void MemorySSAWrapperPass::releaseMemory() { MSSA.reset(); }
 

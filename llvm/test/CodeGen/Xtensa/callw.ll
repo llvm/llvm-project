@@ -7,8 +7,8 @@ define i32 @test_call_external(i32 %a) nounwind {
 ; CHECK-LABEL: test_call_external:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    entry a1, 32
-; CHECK-NEXT:    l32r a8, .LCPI0_0
 ; CHECK-NEXT:    or a10, a2, a2
+; CHECK-NEXT:    l32r a8, .LCPI0_0
 ; CHECK-NEXT:    callx8 a8
 ; CHECK-NEXT:    or a2, a10, a10
 ; CHECK-NEXT:    retw
@@ -30,8 +30,8 @@ define i32 @test_call_defined(i32 %a) nounwind {
 ; CHECK-LABEL: test_call_defined:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    entry a1, 32
-; CHECK-NEXT:    l32r a8, .LCPI2_0
 ; CHECK-NEXT:    or a10, a2, a2
+; CHECK-NEXT:    l32r a8, .LCPI2_0
 ; CHECK-NEXT:    callx8 a8
 ; CHECK-NEXT:    or a2, a10, a10
 ; CHECK-NEXT:    retw

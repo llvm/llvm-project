@@ -776,11 +776,17 @@ void CodeGenFunction::EmitScalarInit(const Expr *init, const ValueDecl *D,
                                      LValue lvalue, bool capturedByInit) {
   Qualifiers::ObjCLifetime lifetime = lvalue.getObjCLifetime();
   if (!lifetime) {
-    llvm::Value *value = EmitScalarExpr(init);
+    llvm::Value *Value;
+    if (PointerAuthQualifier PtrAuth = lvalue.getQuals().getPointerAuth()) {
+      Value = EmitPointerAuthQualify(PtrAuth, init, lvalue.getAddress());
+      lvalue.getQuals().removePointerAuth();
+    } else {
+      Value = EmitScalarExpr(init);
+    }
     if (capturedByInit)
       drillIntoBlockVariable(*this, lvalue, cast<VarDecl>(D));
-    EmitNullabilityCheck(lvalue, value, init->getExprLoc());
-    EmitStoreThroughLValue(RValue::get(value), lvalue, true);
+    EmitNullabilityCheck(lvalue, Value, init->getExprLoc());
+    EmitStoreThroughLValue(RValue::get(Value), lvalue, true);
     return;
   }
 
@@ -1582,7 +1588,8 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
       // Create the alloca.  Note that we set the name separately from
       // building the instruction so that it's there even in no-asserts
       // builds.
-      address = CreateTempAlloca(allocaTy, allocaAlignment, D.getName(),
+      address = CreateTempAlloca(allocaTy, Ty.getAddressSpace(),
+                                 allocaAlignment, D.getName(),
                                  /*ArraySize=*/nullptr, &AllocaAddr);
 
       // Don't emit lifetime markers for MSVC catch parameters. The lifetime of

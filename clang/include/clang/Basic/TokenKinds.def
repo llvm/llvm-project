@@ -348,6 +348,7 @@ KEYWORD(_Thread_local               , KEYALL)
 KEYWORD(__func__                    , KEYALL)
 KEYWORD(__objc_yes                  , KEYALL)
 KEYWORD(__objc_no                   , KEYALL)
+KEYWORD(__ptrauth                   , KEYALL)
 
 // C2y
 UNARY_EXPR_OR_TYPE_TRAIT(_Countof, CountOf, KEYNOCXX)
@@ -556,7 +557,11 @@ TYPE_TRAIT_2(__reference_converts_from_temporary, ReferenceConvertsFromTemporary
 // is not exposed to users.
 TYPE_TRAIT_2(/*EmptySpellingName*/, IsDeducible, KEYCXX)
 TYPE_TRAIT_1(__is_bitwise_cloneable, IsBitwiseCloneable, KEYALL)
+TYPE_TRAIT_1(__builtin_is_cpp_trivially_relocatable, IsCppTriviallyRelocatable, KEYCXX)
+TYPE_TRAIT_1(__builtin_is_replaceable, IsReplaceable, KEYCXX)
 TYPE_TRAIT_1(__builtin_structured_binding_size, StructuredBindingSize, KEYCXX)
+
+
 
 // Embarcadero Expression Traits
 EXPRESSION_TRAIT(__is_lvalue_expr, IsLValueExpr, KEYCXX)
@@ -1041,6 +1046,7 @@ ANNOTATION(embed)
 #undef TYPE_TRAIT_2
 #undef TYPE_TRAIT_1
 #undef TYPE_TRAIT
+#undef MODULES_KEYWORD
 #undef CXX20_KEYWORD
 #undef CXX11_KEYWORD
 #undef KEYWORD

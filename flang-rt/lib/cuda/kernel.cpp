@@ -17,7 +17,7 @@ extern "C" {
 
 void RTDEF(CUFLaunchKernel)(const void *kernel, intptr_t gridX, intptr_t gridY,
     intptr_t gridZ, intptr_t blockX, intptr_t blockY, intptr_t blockZ,
-    intptr_t stream, int32_t smem, void **params, void **extra) {
+    int64_t *stream, int32_t smem, void **params, void **extra) {
   dim3 gridDim;
   gridDim.x = gridX;
   gridDim.y = gridY;
@@ -77,13 +77,13 @@ void RTDEF(CUFLaunchKernel)(const void *kernel, intptr_t gridX, intptr_t gridY,
   }
   cudaStream_t defaultStream = 0;
   CUDA_REPORT_IF_ERROR(cudaLaunchKernel(kernel, gridDim, blockDim, params, smem,
-      stream != kNoAsyncId ? (cudaStream_t)stream : defaultStream));
+      stream != nullptr ? (cudaStream_t)(*stream) : defaultStream));
 }
 
 void RTDEF(CUFLaunchClusterKernel)(const void *kernel, intptr_t clusterX,
     intptr_t clusterY, intptr_t clusterZ, intptr_t gridX, intptr_t gridY,
     intptr_t gridZ, intptr_t blockX, intptr_t blockY, intptr_t blockZ,
-    intptr_t stream, int32_t smem, void **params, void **extra) {
+    int64_t *stream, int32_t smem, void **params, void **extra) {
   cudaLaunchConfig_t config;
   config.gridDim.x = gridX;
   config.gridDim.y = gridY;
@@ -141,8 +141,8 @@ void RTDEF(CUFLaunchClusterKernel)(const void *kernel, intptr_t clusterX,
     terminator.Crash("Too many invalid grid dimensions");
   }
   config.dynamicSmemBytes = smem;
-  if (stream != kNoAsyncId) {
-    config.stream = (cudaStream_t)stream;
+  if (stream != nullptr) {
+    config.stream = (cudaStream_t)(*stream);
   } else {
     config.stream = 0;
   }
@@ -158,7 +158,7 @@ void RTDEF(CUFLaunchClusterKernel)(const void *kernel, intptr_t clusterX,
 
 void RTDEF(CUFLaunchCooperativeKernel)(const void *kernel, intptr_t gridX,
     intptr_t gridY, intptr_t gridZ, intptr_t blockX, intptr_t blockY,
-    intptr_t blockZ, intptr_t stream, int32_t smem, void **params,
+    intptr_t blockZ, int64_t *stream, int32_t smem, void **params,
     void **extra) {
   dim3 gridDim;
   gridDim.x = gridX;
@@ -218,9 +218,8 @@ void RTDEF(CUFLaunchCooperativeKernel)(const void *kernel, intptr_t gridX,
     terminator.Crash("Too many invalid grid dimensions");
   }
   cudaStream_t defaultStream = 0;
-  CUDA_REPORT_IF_ERROR(
-      cudaLaunchCooperativeKernel(kernel, gridDim, blockDim, params, smem,
-          stream != kNoAsyncId ? (cudaStream_t)stream : defaultStream));
+  CUDA_REPORT_IF_ERROR(cudaLaunchCooperativeKernel(kernel, gridDim, blockDim,
+      params, smem, stream != nullptr ? (cudaStream_t)*stream : defaultStream));
 }
 
 } // extern "C"

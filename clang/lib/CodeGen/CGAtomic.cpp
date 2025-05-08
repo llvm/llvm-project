@@ -590,6 +590,7 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
     llvm::LoadInst *Load = CGF.Builder.CreateLoad(Ptr);
     Load->setAtomic(Order, Scope);
     Load->setVolatile(E->isVolatile());
+    CGF.maybeAttachRangeForLoad(Load, E->getValueType(), E->getExprLoc());
     CGF.Builder.CreateStore(Load, Dest);
     return;
   }

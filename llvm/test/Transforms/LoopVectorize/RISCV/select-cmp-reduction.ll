@@ -19,9 +19,8 @@ define i32 @select_icmp(i32 %x, i32 %y, ptr nocapture readonly %c, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt <4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[NOT:%.*]] = xor <4 x i1> [[TMP4]], splat (i1 true)
-; CHECK-NEXT:    [[TMP5]] = or <4 x i1> [[VEC_PHI]], [[NOT]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp sge <4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP5]] = or <4 x i1> [[VEC_PHI]], [[TMP4]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -48,9 +47,8 @@ define i32 @select_icmp(i32 %x, i32 %y, ptr nocapture readonly %c, i64 %n) #0 {
 ; SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 [[INDEX]]
 ; SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i32 0
 ; SCALABLE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP6]], align 4
-; SCALABLE-NEXT:    [[TMP8:%.*]] = icmp slt <vscale x 4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; SCALABLE-NEXT:    [[NOT:%.*]] = xor <vscale x 4 x i1> [[TMP8]], splat (i1 true)
-; SCALABLE-NEXT:    [[TMP9]] = or <vscale x 4 x i1> [[VEC_PHI]], [[NOT]]
+; SCALABLE-NEXT:    [[TMP8:%.*]] = icmp sge <vscale x 4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
+; SCALABLE-NEXT:    [[TMP9]] = or <vscale x 4 x i1> [[VEC_PHI]], [[TMP8]]
 ; SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP11]]
 ; SCALABLE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SCALABLE-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -92,9 +90,8 @@ define i32 @select_fcmp(float %x, i32 %y, ptr nocapture readonly %c, i64 %n) #0 
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[C:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = fcmp fast olt <4 x float> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[NOT:%.*]] = xor <4 x i1> [[TMP4]], splat (i1 true)
-; CHECK-NEXT:    [[TMP5]] = or <4 x i1> [[VEC_PHI]], [[NOT]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fcmp fast uge <4 x float> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP5]] = or <4 x i1> [[VEC_PHI]], [[TMP4]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -121,9 +118,8 @@ define i32 @select_fcmp(float %x, i32 %y, ptr nocapture readonly %c, i64 %n) #0 
 ; SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[C:%.*]], i64 [[INDEX]]
 ; SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i32 0
 ; SCALABLE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[TMP6]], align 4
-; SCALABLE-NEXT:    [[TMP8:%.*]] = fcmp fast olt <vscale x 4 x float> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; SCALABLE-NEXT:    [[NOT:%.*]] = xor <vscale x 4 x i1> [[TMP8]], splat (i1 true)
-; SCALABLE-NEXT:    [[TMP9]] = or <vscale x 4 x i1> [[VEC_PHI]], [[NOT]]
+; SCALABLE-NEXT:    [[TMP8:%.*]] = fcmp fast uge <vscale x 4 x float> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
+; SCALABLE-NEXT:    [[TMP9]] = or <vscale x 4 x i1> [[VEC_PHI]], [[TMP8]]
 ; SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP11]]
 ; SCALABLE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SCALABLE-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -163,9 +159,8 @@ define i32 @select_const_i32_from_icmp(ptr nocapture readonly %v, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[V:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], splat (i32 3)
-; CHECK-NEXT:    [[NOT:%.*]] = xor <4 x i1> [[TMP4]], splat (i1 true)
-; CHECK-NEXT:    [[TMP5]] = or <4 x i1> [[VEC_PHI]], [[NOT]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i32> [[WIDE_LOAD]], splat (i32 3)
+; CHECK-NEXT:    [[TMP5]] = or <4 x i1> [[VEC_PHI]], [[TMP4]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
@@ -190,9 +185,8 @@ define i32 @select_const_i32_from_icmp(ptr nocapture readonly %v, i64 %n) #0 {
 ; SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[V:%.*]], i64 [[INDEX]]
 ; SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i32 0
 ; SCALABLE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP6]], align 4
-; SCALABLE-NEXT:    [[TMP8:%.*]] = icmp eq <vscale x 4 x i32> [[WIDE_LOAD]], splat (i32 3)
-; SCALABLE-NEXT:    [[NOT:%.*]] = xor <vscale x 4 x i1> [[TMP8]], splat (i1 true)
-; SCALABLE-NEXT:    [[TMP9]] = or <vscale x 4 x i1> [[VEC_PHI]], [[NOT]]
+; SCALABLE-NEXT:    [[TMP8:%.*]] = icmp ne <vscale x 4 x i32> [[WIDE_LOAD]], splat (i32 3)
+; SCALABLE-NEXT:    [[TMP9]] = or <vscale x 4 x i1> [[VEC_PHI]], [[TMP8]]
 ; SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP11]]
 ; SCALABLE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SCALABLE-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
@@ -232,9 +226,8 @@ define i32 @select_i32_from_icmp(ptr nocapture readonly %v, i32 %a, i32 %b, i64 
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[V:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], splat (i32 3)
-; CHECK-NEXT:    [[NOT:%.*]] = xor <4 x i1> [[TMP4]], splat (i1 true)
-; CHECK-NEXT:    [[TMP5]] = or <4 x i1> [[VEC_PHI]], [[NOT]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i32> [[WIDE_LOAD]], splat (i32 3)
+; CHECK-NEXT:    [[TMP5]] = or <4 x i1> [[VEC_PHI]], [[TMP4]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
@@ -259,9 +252,8 @@ define i32 @select_i32_from_icmp(ptr nocapture readonly %v, i32 %a, i32 %b, i64 
 ; SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[V:%.*]], i64 [[INDEX]]
 ; SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i32 0
 ; SCALABLE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP6]], align 4
-; SCALABLE-NEXT:    [[TMP8:%.*]] = icmp eq <vscale x 4 x i32> [[WIDE_LOAD]], splat (i32 3)
-; SCALABLE-NEXT:    [[NOT:%.*]] = xor <vscale x 4 x i1> [[TMP8]], splat (i1 true)
-; SCALABLE-NEXT:    [[TMP9]] = or <vscale x 4 x i1> [[VEC_PHI]], [[NOT]]
+; SCALABLE-NEXT:    [[TMP8:%.*]] = icmp ne <vscale x 4 x i32> [[WIDE_LOAD]], splat (i32 3)
+; SCALABLE-NEXT:    [[TMP9]] = or <vscale x 4 x i1> [[VEC_PHI]], [[TMP8]]
 ; SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP11]]
 ; SCALABLE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SCALABLE-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
@@ -301,9 +293,8 @@ define i32 @select_const_i32_from_fcmp(ptr nocapture readonly %v, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[V:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = fcmp fast ueq <4 x float> [[WIDE_LOAD]], splat (float 3.000000e+00)
-; CHECK-NEXT:    [[NOT:%.*]] = xor <4 x i1> [[TMP4]], splat (i1 true)
-; CHECK-NEXT:    [[TMP5]] = or <4 x i1> [[VEC_PHI]], [[NOT]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fcmp fast one <4 x float> [[WIDE_LOAD]], splat (float 3.000000e+00)
+; CHECK-NEXT:    [[TMP5]] = or <4 x i1> [[VEC_PHI]], [[TMP4]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
@@ -328,9 +319,8 @@ define i32 @select_const_i32_from_fcmp(ptr nocapture readonly %v, i64 %n) #0 {
 ; SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[V:%.*]], i64 [[INDEX]]
 ; SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i32 0
 ; SCALABLE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[TMP6]], align 4
-; SCALABLE-NEXT:    [[TMP8:%.*]] = fcmp fast ueq <vscale x 4 x float> [[WIDE_LOAD]], splat (float 3.000000e+00)
-; SCALABLE-NEXT:    [[NOT:%.*]] = xor <vscale x 4 x i1> [[TMP8]], splat (i1 true)
-; SCALABLE-NEXT:    [[TMP9]] = or <vscale x 4 x i1> [[VEC_PHI]], [[NOT]]
+; SCALABLE-NEXT:    [[TMP8:%.*]] = fcmp fast one <vscale x 4 x float> [[WIDE_LOAD]], splat (float 3.000000e+00)
+; SCALABLE-NEXT:    [[TMP9]] = or <vscale x 4 x i1> [[VEC_PHI]], [[TMP8]]
 ; SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP11]]
 ; SCALABLE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SCALABLE-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]

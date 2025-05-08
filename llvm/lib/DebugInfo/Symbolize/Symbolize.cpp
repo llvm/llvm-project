@@ -753,7 +753,7 @@ LLVMSymbolizer::DemangleName(StringRef Name,
   if (nonMicrosoftDemangle(Name, Result))
     return Result;
 
-  if (!Name.empty() && Name.front() == '?') {
+  if (Name.starts_with('?')) {
     // Only do MSVC C++ demangling on symbols starting with '?'.
     int status = 0;
     char *DemangledName = microsoftDemangle(

@@ -84,6 +84,9 @@ RISCVInstrInfo::RISCVInstrInfo(RISCVSubtarget &STI)
     : RISCVGenInstrInfo(RISCV::ADJCALLSTACKDOWN, RISCV::ADJCALLSTACKUP),
       STI(STI) {}
 
+#define GET_INSTRINFO_HELPERS
+#include "RISCVGenInstrInfo.inc"
+
 MCInst RISCVInstrInfo::getNop() const {
   if (STI.hasStdExtCOrZca())
     return MCInstBuilder(RISCV::C_NOP);
@@ -835,11 +838,11 @@ std::optional<unsigned> getFoldedOpcode(MachineFunction &MF, MachineInstr &MI,
 
   switch (MI.getOpcode()) {
   default:
-    if (RISCV::isSEXT_W(MI))
+    if (RISCVInstrInfo::isSEXT_W(MI))
       return RISCV::LW;
-    if (RISCV::isZEXT_W(MI))
+    if (RISCVInstrInfo::isZEXT_W(MI))
       return RISCV::LWU;
-    if (RISCV::isZEXT_B(MI))
+    if (RISCVInstrInfo::isZEXT_B(MI))
       return RISCV::LBU;
     break;
   case RISCV::SEXT_H:
@@ -974,10 +977,6 @@ static RISCVCC::CondCode getCondFromBranchOpc(unsigned Opc) {
   switch (Opc) {
   default:
     return RISCVCC::COND_INVALID;
-  case RISCV::CV_BEQIMM:
-    return RISCVCC::COND_EQ;
-  case RISCV::CV_BNEIMM:
-    return RISCVCC::COND_NE;
   case RISCV::BEQ:
     return RISCVCC::COND_EQ;
   case RISCV::BNE:
@@ -990,6 +989,10 @@ static RISCVCC::CondCode getCondFromBranchOpc(unsigned Opc) {
     return RISCVCC::COND_LTU;
   case RISCV::BGEU:
     return RISCVCC::COND_GEU;
+  case RISCV::CV_BEQIMM:
+    return RISCVCC::COND_CV_BEQIMM;
+  case RISCV::CV_BNEIMM:
+    return RISCVCC::COND_CV_BNEIMM;
   }
 }
 
@@ -1027,23 +1030,14 @@ static void parseCondBranch(MachineInstr &LastInst, MachineBasicBlock *&Target,
   Cond.push_back(LastInst.getOperand(1));
 }
 
-unsigned RISCVCC::getBrCond(const RISCVSubtarget &STI, RISCVCC::CondCode CC,
-                            bool Imm) {
+unsigned RISCVCC::getBrCond(RISCVCC::CondCode CC) {
   switch (CC) {
   default:
     llvm_unreachable("Unknown condition code!");
   case RISCVCC::COND_EQ:
-    if (!Imm)
-      return RISCV::BEQ;
-    if (STI.hasVendorXCVbi())
-      return RISCV::CV_BEQIMM;
-    llvm_unreachable("Unknown branch immediate!");
+    return RISCV::BEQ;
   case RISCVCC::COND_NE:
-    if (!Imm)
-      return RISCV::BNE;
-    if (STI.hasVendorXCVbi())
-      return RISCV::CV_BNEIMM;
-    llvm_unreachable("Unknown branch immediate!");
+    return RISCV::BNE;
   case RISCVCC::COND_LT:
     return RISCV::BLT;
   case RISCVCC::COND_GE:
@@ -1052,12 +1046,15 @@ unsigned RISCVCC::getBrCond(const RISCVSubtarget &STI, RISCVCC::CondCode CC,
     return RISCV::BLTU;
   case RISCVCC::COND_GEU:
     return RISCV::BGEU;
+  case RISCVCC::COND_CV_BEQIMM:
+    return RISCV::CV_BEQIMM;
+  case RISCVCC::COND_CV_BNEIMM:
+    return RISCV::CV_BNEIMM;
   }
 }
 
-const MCInstrDesc &RISCVInstrInfo::getBrCond(RISCVCC::CondCode CC,
-                                             bool Imm) const {
-  return get(RISCVCC::getBrCond(STI, CC, Imm));
+const MCInstrDesc &RISCVInstrInfo::getBrCond(RISCVCC::CondCode CC) const {
+  return get(RISCVCC::getBrCond(CC));
 }
 
 RISCVCC::CondCode RISCVCC::getOppositeBranchCondition(RISCVCC::CondCode CC) {
@@ -1076,6 +1073,10 @@ RISCVCC::CondCode RISCVCC::getOppositeBranchCondition(RISCVCC::CondCode CC) {
     return RISCVCC::COND_GEU;
   case RISCVCC::COND_GEU:
     return RISCVCC::COND_LTU;
+  case RISCVCC::COND_CV_BEQIMM:
+    return RISCVCC::COND_CV_BNEIMM;
+  case RISCVCC::COND_CV_BNEIMM:
+    return RISCVCC::COND_CV_BEQIMM;
   }
 }
 
@@ -1206,10 +1207,8 @@ unsigned RISCVInstrInfo::insertBranch(
 
   // Either a one or two-way conditional branch.
   auto CC = static_cast<RISCVCC::CondCode>(Cond[0].getImm());
-  MachineInstr &CondMI = *BuildMI(&MBB, DL, getBrCond(CC, Cond[2].isImm()))
-                              .add(Cond[1])
-                              .add(Cond[2])
-                              .addMBB(TBB);
+  MachineInstr &CondMI =
+      *BuildMI(&MBB, DL, getBrCond(CC)).add(Cond[1]).add(Cond[2]).addMBB(TBB);
   if (BytesAdded)
     *BytesAdded += getInstSizeInBytes(CondMI);
 
@@ -2649,6 +2648,12 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_ZERO:
           Ok = Imm == 0;
           break;
+        case RISCVOp::OPERAND_THREE:
+          Ok = Imm == 3;
+          break;
+        case RISCVOp::OPERAND_FOUR:
+          Ok = Imm == 4;
+          break;
           // clang-format off
         CASE_OPERAND_SIMM(5)
         CASE_OPERAND_SIMM(6)
@@ -3075,7 +3080,8 @@ bool RISCVInstrInfo::areMemAccessesTriviallyDisjoint(
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
   const MachineOperand *BaseOpA = nullptr, *BaseOpB = nullptr;
   int64_t OffsetA = 0, OffsetB = 0;
-  LocationSize WidthA = 0, WidthB = 0;
+  LocationSize WidthA = LocationSize::precise(0),
+               WidthB = LocationSize::precise(0);
   if (getMemOperandWithOffsetWidth(MIa, BaseOpA, OffsetA, WidthA, TRI) &&
       getMemOperandWithOffsetWidth(MIb, BaseOpB, OffsetB, WidthB, TRI)) {
     if (BaseOpA->isIdenticalTo(*BaseOpB)) {
@@ -3731,6 +3737,7 @@ bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   CASE_VFMA_CHANGE_OPCODE_LMULS_MF4(OLDOP, NEWOP, VFPR16, E16)                 \
   CASE_VFMA_CHANGE_OPCODE_LMULS_MF2(OLDOP, NEWOP, VFPR32, E32)                 \
   CASE_VFMA_CHANGE_OPCODE_LMULS_M1(OLDOP, NEWOP, VFPR64, E64)
+// clang-format on
 
 MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
                                                      bool NewMI,
@@ -4164,24 +4171,6 @@ unsigned RISCVInstrInfo::getTailDuplicateSize(CodeGenOptLevel OptLevel) const {
   return OptLevel >= CodeGenOptLevel::Aggressive
              ? STI.getTailDupAggressiveThreshold()
              : 2;
-}
-
-// Returns true if this is the sext.w pattern, addiw rd, rs1, 0.
-bool RISCV::isSEXT_W(const MachineInstr &MI) {
-  return MI.getOpcode() == RISCV::ADDIW && MI.getOperand(1).isReg() &&
-         MI.getOperand(2).isImm() && MI.getOperand(2).getImm() == 0;
-}
-
-// Returns true if this is the zext.w pattern, adduw rd, rs1, x0.
-bool RISCV::isZEXT_W(const MachineInstr &MI) {
-  return MI.getOpcode() == RISCV::ADD_UW && MI.getOperand(1).isReg() &&
-         MI.getOperand(2).isReg() && MI.getOperand(2).getReg() == RISCV::X0;
-}
-
-// Returns true if this is the zext.b pattern, andi rd, rs1, 255.
-bool RISCV::isZEXT_B(const MachineInstr &MI) {
-  return MI.getOpcode() == RISCV::ANDI && MI.getOperand(1).isReg() &&
-         MI.getOperand(2).isImm() && MI.getOperand(2).getImm() == 255;
 }
 
 bool RISCV::isRVVSpill(const MachineInstr &MI) {

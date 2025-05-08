@@ -2,6 +2,21 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z14 | FileCheck %s
 
+; Test rint for f16.
+declare half @llvm.experimental.constrained.rint.f16(half, metadata, metadata)
+define half @f0(half %f) #0 {
+; CHECK-LABEL: f0:
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: fiebra %f0, 0, %f0, 0
+; CHECK: brasl %r14, __truncsfhf2@PLT
+; CHECK: br %r14
+  %res = call half @llvm.experimental.constrained.rint.f16(
+                        half %f,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
+  ret half %res
+}
+
 ; Test rint for f32.
 declare float @llvm.experimental.constrained.rint.f32(float, metadata, metadata)
 define float @f1(float %f) #0 {

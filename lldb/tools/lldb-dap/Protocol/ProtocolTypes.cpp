@@ -38,9 +38,9 @@ bool fromJSON(const json::Value &Params, PresentationHint &PH, json::Path P) {
 
 bool fromJSON(const json::Value &Params, Source &S, json::Path P) {
   json::ObjectMapper O(Params, P);
-  return O && O.mapOptional("name", S.name) && O.mapOptional("path", S.path) &&
-         O.mapOptional("presentationHint", S.presentationHint) &&
-         O.mapOptional("sourceReference", S.sourceReference);
+  return O && O.map("name", S.name) && O.map("path", S.path) &&
+         O.map("presentationHint", S.presentationHint) &&
+         O.map("sourceReference", S.sourceReference);
 }
 
 json::Value toJSON(const ExceptionBreakpointsFilter &EBF) {
@@ -231,6 +231,33 @@ json::Value toJSON(const Capabilities &C) {
     result.insert({"$__lldb_version", *C.lldbExtVersion});
 
   return result;
+}
+
+bool fromJSON(const llvm::json::Value &Params, SteppingGranularity &SG,
+              llvm::json::Path P) {
+  auto raw_granularity = Params.getAsString();
+  if (!raw_granularity) {
+    P.report("expected a string");
+    return false;
+  }
+  std::optional<SteppingGranularity> granularity =
+      StringSwitch<std::optional<SteppingGranularity>>(*raw_granularity)
+          .Case("statement", eSteppingGranularityStatement)
+          .Case("line", eSteppingGranularityLine)
+          .Case("instruction", eSteppingGranularityInstruction)
+          .Default(std::nullopt);
+  if (!granularity) {
+    P.report("unexpected value");
+    return false;
+  }
+  SG = *granularity;
+  return true;
+}
+
+bool fromJSON(const llvm::json::Value &Params, ValueFormat &VF,
+              llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.mapOptional("hex", VF.hex);
 }
 
 } // namespace lldb_dap::protocol

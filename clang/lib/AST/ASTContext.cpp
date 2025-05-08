@@ -16,6 +16,7 @@
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTMutationListener.h"
+#include "clang/AST/ASTStructuralEquivalence.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/AttrIterator.h"
@@ -1687,6 +1688,24 @@ void ASTContext::getOverriddenMethods(
   Overridden.append(OverDecls.begin(), OverDecls.end());
 }
 
+std::optional<ASTContext::CXXRecordDeclRelocationInfo>
+ASTContext::getRelocationInfoForCXXRecord(const CXXRecordDecl *RD) const {
+  assert(RD);
+  CXXRecordDecl *D = RD->getDefinition();
+  auto it = RelocatableClasses.find(D);
+  if (it != RelocatableClasses.end())
+    return it->getSecond();
+  return std::nullopt;
+}
+
+void ASTContext::setRelocationInfoForCXXRecord(
+    const CXXRecordDecl *RD, CXXRecordDeclRelocationInfo Info) {
+  assert(RD);
+  CXXRecordDecl *D = RD->getDefinition();
+  assert(RelocatableClasses.find(D) == RelocatableClasses.end());
+  RelocatableClasses.insert({D, Info});
+}
+
 void ASTContext::addedLocalImportDecl(ImportDecl *Import) {
   assert(!Import->getNextLocalImport() &&
          "Import declaration already in the chain");
@@ -2931,9 +2950,9 @@ bool ASTContext::hasUniqueObjectRepresentations(
     return true;
   }
 
-  // All other pointers are unique.
+  // All other pointers (except __ptrauth pointers) are unique.
   if (Ty->isPointerType())
-    return true;
+    return !Ty.hasAddressDiscriminatedPointerAuth();
 
   if (const auto *MPT = Ty->getAs<MemberPointerType>())
     return !ABI->getMemberPointerInfo(MPT).HasPadding;
@@ -5747,6 +5766,30 @@ ASTContext::getMacroQualifiedType(QualType UnderlyingTy,
   return QualType(newType, 0);
 }
 
+static ElaboratedTypeKeyword
+getCanonicalElaboratedTypeKeyword(ElaboratedTypeKeyword Keyword) {
+  switch (Keyword) {
+  // These are just themselves.
+  case ElaboratedTypeKeyword::None:
+  case ElaboratedTypeKeyword::Struct:
+  case ElaboratedTypeKeyword::Union:
+  case ElaboratedTypeKeyword::Enum:
+  case ElaboratedTypeKeyword::Interface:
+    return Keyword;
+
+  // These are equivalent.
+  case ElaboratedTypeKeyword::Typename:
+    return ElaboratedTypeKeyword::None;
+
+  // These are functionally equivalent, so relying on their equivalence is
+  // IFNDR. By making them equivalent, we disallow overloading, which at least
+  // can produce a diagnostic.
+  case ElaboratedTypeKeyword::Class:
+    return ElaboratedTypeKeyword::Struct;
+  }
+  llvm_unreachable("unexpected keyword kind");
+}
+
 QualType ASTContext::getDependentNameType(ElaboratedTypeKeyword Keyword,
                                           NestedNameSpecifier *NNS,
                                           const IdentifierInfo *Name) const {
@@ -5758,10 +5801,13 @@ QualType ASTContext::getDependentNameType(ElaboratedTypeKeyword Keyword,
           DependentNameTypes.FindNodeOrInsertPos(ID, InsertPos))
     return QualType(T, 0);
 
+  ElaboratedTypeKeyword CanonKeyword =
+      getCanonicalElaboratedTypeKeyword(Keyword);
+  NestedNameSpecifier *CanonNNS = getCanonicalNestedNameSpecifier(NNS);
+
   QualType Canon;
-  if (NestedNameSpecifier *CanonNNS = getCanonicalNestedNameSpecifier(NNS);
-      CanonNNS != NNS) {
-    Canon = getDependentNameType(Keyword, CanonNNS, Name);
+  if (CanonKeyword != Keyword || CanonNNS != NNS) {
+    Canon = getDependentNameType(CanonKeyword, CanonNNS, Name);
     [[maybe_unused]] DependentNameType *T =
         DependentNameTypes.FindNodeOrInsertPos(ID, InsertPos);
     assert(!T && "broken canonicalization");
@@ -5800,19 +5846,19 @@ QualType ASTContext::getDependentTemplateSpecializationType(
 
   QualType Canon;
   if (!IsCanonical) {
-    ElaboratedTypeKeyword CanonKeyword = Keyword != ElaboratedTypeKeyword::None
-                                             ? Keyword
-                                             : ElaboratedTypeKeyword::Typename;
+    ElaboratedTypeKeyword CanonKeyword =
+        getCanonicalElaboratedTypeKeyword(Keyword);
     NestedNameSpecifier *CanonNNS = getCanonicalNestedNameSpecifier(NNS);
     bool AnyNonCanonArgs = false;
     auto CanonArgs =
         ::getCanonicalTemplateArguments(*this, Args, AnyNonCanonArgs);
 
-    if (AnyNonCanonArgs || CanonNNS != NNS || !Name.hasTemplateKeyword() ||
-        CanonKeyword != Keyword) {
+    if (CanonKeyword != Keyword || AnyNonCanonArgs || CanonNNS != NNS ||
+        !Name.hasTemplateKeyword()) {
       Canon = getDependentTemplateSpecializationType(
           CanonKeyword, {CanonNNS, Name.getName(), /*HasTemplateKeyword=*/true},
-          CanonArgs, /*IsCanonical=*/true);
+          CanonArgs,
+          /*IsCanonical=*/true);
       // Find the insert position again.
       [[maybe_unused]] auto *Nothing =
           DependentTemplateSpecializationTypes.FindNodeOrInsertPos(ID,
@@ -5820,7 +5866,7 @@ QualType ASTContext::getDependentTemplateSpecializationType(
       assert(!Nothing && "canonical type broken");
     }
   } else {
-    assert(Keyword != ElaboratedTypeKeyword::None);
+    assert(Keyword == getCanonicalElaboratedTypeKeyword(Keyword));
     assert(Name.hasTemplateKeyword());
     assert(NNS == getCanonicalNestedNameSpecifier(NNS));
 #ifndef NDEBUG
@@ -5948,7 +5994,7 @@ SortAndUniqueProtocols(SmallVectorImpl<ObjCProtocolDecl *> &Protocols) {
     P = P->getCanonicalDecl();
 
   // Remove duplicates.
-  auto ProtocolsEnd = std::unique(Protocols.begin(), Protocols.end());
+  auto ProtocolsEnd = llvm::unique(Protocols);
   Protocols.erase(ProtocolsEnd, Protocols.end());
 }
 
@@ -7614,6 +7660,55 @@ ASTContext::getCanonicalTemplateArgument(const TemplateArgument &Arg) const {
   llvm_unreachable("Unhandled template argument kind");
 }
 
+bool ASTContext::isSameTemplateArgument(const TemplateArgument &Arg1,
+                                        const TemplateArgument &Arg2) const {
+  if (Arg1.getKind() != Arg2.getKind())
+    return false;
+
+  switch (Arg1.getKind()) {
+  case TemplateArgument::Null:
+    llvm_unreachable("Comparing NULL template argument");
+
+  case TemplateArgument::Type:
+    return hasSameType(Arg1.getAsType(), Arg2.getAsType());
+
+  case TemplateArgument::Declaration:
+    return Arg1.getAsDecl()->getUnderlyingDecl()->getCanonicalDecl() ==
+           Arg2.getAsDecl()->getUnderlyingDecl()->getCanonicalDecl();
+
+  case TemplateArgument::NullPtr:
+    return hasSameType(Arg1.getNullPtrType(), Arg2.getNullPtrType());
+
+  case TemplateArgument::Template:
+  case TemplateArgument::TemplateExpansion:
+    return getCanonicalTemplateName(Arg1.getAsTemplateOrTemplatePattern()) ==
+           getCanonicalTemplateName(Arg2.getAsTemplateOrTemplatePattern());
+
+  case TemplateArgument::Integral:
+    return llvm::APSInt::isSameValue(Arg1.getAsIntegral(),
+                                     Arg2.getAsIntegral());
+
+  case TemplateArgument::StructuralValue:
+    return Arg1.structurallyEquals(Arg2);
+
+  case TemplateArgument::Expression: {
+    llvm::FoldingSetNodeID ID1, ID2;
+    Arg1.getAsExpr()->Profile(ID1, *this, /*Canonical=*/true);
+    Arg2.getAsExpr()->Profile(ID2, *this, /*Canonical=*/true);
+    return ID1 == ID2;
+  }
+
+  case TemplateArgument::Pack:
+    return llvm::equal(
+        Arg1.getPackAsArray(), Arg2.getPackAsArray(),
+        [&](const TemplateArgument &Arg1, const TemplateArgument &Arg2) {
+          return isSameTemplateArgument(Arg1, Arg2);
+        });
+  }
+
+  llvm_unreachable("Unhandled template argument kind");
+}
+
 NestedNameSpecifier *
 ASTContext::getCanonicalNestedNameSpecifier(NestedNameSpecifier *NNS) const {
   if (!NNS)
@@ -7657,7 +7752,7 @@ ASTContext::getCanonicalNestedNameSpecifier(NestedNameSpecifier *NNS) const {
     if (const auto *DTST = T->getAs<DependentTemplateSpecializationType>()) {
       const DependentTemplateStorage &DTN = DTST->getDependentTemplateName();
       QualType NewT = getDependentTemplateSpecializationType(
-          ElaboratedTypeKeyword::Typename,
+          ElaboratedTypeKeyword::None,
           {/*NNS=*/nullptr, DTN.getName(), /*HasTemplateKeyword=*/true},
           DTST->template_arguments(), /*IsCanonical=*/true);
       assert(NewT.isCanonical());
@@ -8344,6 +8439,9 @@ bool ASTContext::BlockRequiresCopying(QualType Ty,
 
     return true;
   }
+
+  if (Ty.hasAddressDiscriminatedPointerAuth())
+    return true;
 
   // The block needs copy/destroy helpers if Ty is non-trivial to destructively
   // move or destroy.
@@ -11413,6 +11511,22 @@ static QualType mergeEnumWithInteger(ASTContext &Context, const EnumType *ET,
   return {};
 }
 
+QualType ASTContext::mergeTagDefinitions(QualType LHS, QualType RHS) {
+  // C17 and earlier and C++ disallow two tag definitions within the same TU
+  // from being compatible.
+  if (LangOpts.CPlusPlus || !LangOpts.C23)
+    return {};
+
+  // C23, on the other hand, requires the members to be "the same enough", so
+  // we use a structural equivalence check.
+  StructuralEquivalenceContext::NonEquivalentDeclSet NonEquivalentDecls;
+  StructuralEquivalenceContext Ctx(
+      getLangOpts(), *this, *this, NonEquivalentDecls,
+      StructuralEquivalenceKind::Default, /*StrictTypeSpelling=*/false,
+      /*Complain=*/false, /*ErrorOnTagTypeMismatch=*/true);
+  return Ctx.IsEquivalent(LHS, RHS) ? LHS : QualType{};
+}
+
 QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
                                 bool Unqualified, bool BlockReturnType,
                                 bool IsConditionalOperator) {
@@ -11454,6 +11568,7 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
     if (LQuals.getCVRQualifiers() != RQuals.getCVRQualifiers() ||
         LQuals.getAddressSpace() != RQuals.getAddressSpace() ||
         LQuals.getObjCLifetime() != RQuals.getObjCLifetime() ||
+        !LQuals.getPointerAuth().isEquivalent(RQuals.getPointerAuth()) ||
         LQuals.hasUnaligned() != RQuals.hasUnaligned())
       return {};
 
@@ -11709,7 +11824,7 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
                               /*AllowCXX=*/false, IsConditionalOperator);
   case Type::Record:
   case Type::Enum:
-    return {};
+    return mergeTagDefinitions(LHS, RHS);
   case Type::Builtin:
     // Only exactly equal builtin types are compatible, which is tested above.
     return {};
@@ -12796,6 +12911,15 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
     // Forward declarations aren't required.
     if (!FD->doesThisDeclarationHaveABody())
       return FD->doesDeclarationForceExternallyVisibleDefinition();
+
+    // Function definitions with the sycl_kernel_entry_point attribute are
+    // required during device compilation so that SYCL kernel caller offload
+    // entry points are emitted.
+    if (LangOpts.SYCLIsDevice && FD->hasAttr<SYCLKernelEntryPointAttr>())
+      return true;
+
+    // FIXME: Functions declared with SYCL_EXTERNAL are required during
+    // device compilation.
 
     // Constructors and destructors are required.
     if (FD->hasAttr<ConstructorAttr>() || FD->hasAttr<DestructorAttr>())
@@ -14804,9 +14928,36 @@ void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
   }
 }
 
-static SYCLKernelInfo BuildSYCLKernelInfo(CanQualType KernelNameType,
+static SYCLKernelInfo BuildSYCLKernelInfo(ASTContext &Context,
+                                          CanQualType KernelNameType,
                                           const FunctionDecl *FD) {
-  return {KernelNameType, FD};
+  // Host and device compilation may use different ABIs and different ABIs
+  // may allocate name mangling discriminators differently. A discriminator
+  // override is used to ensure consistent discriminator allocation across
+  // host and device compilation.
+  auto DeviceDiscriminatorOverrider =
+      [](ASTContext &Ctx, const NamedDecl *ND) -> UnsignedOrNone {
+    if (const auto *RD = dyn_cast<CXXRecordDecl>(ND))
+      if (RD->isLambda())
+        return RD->getDeviceLambdaManglingNumber();
+    return std::nullopt;
+  };
+  std::unique_ptr<MangleContext> MC{ItaniumMangleContext::create(
+      Context, Context.getDiagnostics(), DeviceDiscriminatorOverrider)};
+
+  // Construct a mangled name for the SYCL kernel caller offload entry point.
+  // FIXME: The Itanium typeinfo mangling (_ZTS<type>) is currently used to
+  // name the SYCL kernel caller offload entry point function. This mangling
+  // does not suffice to clearly identify symbols that correspond to SYCL
+  // kernel caller functions, nor is this mangling natural for targets that
+  // use a non-Itanium ABI.
+  std::string Buffer;
+  Buffer.reserve(128);
+  llvm::raw_string_ostream Out(Buffer);
+  MC->mangleCanonicalTypeName(KernelNameType, Out);
+  std::string KernelName = Out.str();
+
+  return {KernelNameType, FD, KernelName};
 }
 
 void ASTContext::registerSYCLEntryPointFunction(FunctionDecl *FD) {
@@ -14827,8 +14978,8 @@ void ASTContext::registerSYCLEntryPointFunction(FunctionDecl *FD) {
           declaresSameEntity(FD, IT->second.getKernelEntryPointDecl())) &&
          "SYCL kernel name conflict");
   (void)IT;
-  SYCLKernels.insert(
-      std::make_pair(KernelNameType, BuildSYCLKernelInfo(KernelNameType, FD)));
+  SYCLKernels.insert(std::make_pair(
+      KernelNameType, BuildSYCLKernelInfo(*this, KernelNameType, FD)));
 }
 
 const SYCLKernelInfo &ASTContext::getSYCLKernelInfo(QualType T) const {

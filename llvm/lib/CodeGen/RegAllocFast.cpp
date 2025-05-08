@@ -1733,9 +1733,8 @@ void RegAllocFastImpl::handleDebugValue(MachineInstr &MI) {
     // See if this virtual register has already been allocated to a physical
     // register or spilled to a stack slot.
     LiveRegMap::iterator LRI = findLiveVirtReg(Reg);
-    SmallVector<MachineOperand *> DbgOps;
-    for (MachineOperand &Op : MI.getDebugOperandsForReg(Reg))
-      DbgOps.push_back(&Op);
+    SmallVector<MachineOperand *> DbgOps(
+        llvm::make_pointer_range(MI.getDebugOperandsForReg(Reg)));
 
     if (LRI != LiveVirtRegs.end() && LRI->PhysReg) {
       // Update every use of Reg within MI.

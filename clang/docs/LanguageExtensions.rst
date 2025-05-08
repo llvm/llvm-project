@@ -1000,6 +1000,7 @@ to ``float``; see below for more information on this emulation.
   * SPIR (natively)
   * X86 (if SSE2 is available; natively if AVX512-FP16 is also available)
   * RISC-V (natively if Zfh or Zhinx is available)
+  * SystemZ (emulated)
 
 * ``__bf16`` is supported on the following targets (currently never natively):
 
@@ -1679,6 +1680,7 @@ Static assert with user-generated message     __cpp_static_assert >= 202306L   C
 Pack Indexing                                 __cpp_pack_indexing              C++26         C++03
 ``= delete ("should have a reason");``        __cpp_deleted_function           C++26         C++03
 Variadic Friends                              __cpp_variadic_friend            C++26         C++03
+Trivial Relocatability                        __cpp_trivial_relocatability     C++26         C++03
 --------------------------------------------- -------------------------------- ------------- -------------
 Designated initializers (N494)                                                 C99           C89
 Array & element qualification (N2607)                                          C23           C89
@@ -1860,8 +1862,15 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_trivially_relocatable`` (Clang): Returns true if moving an object
   of the given type, and then destroying the source object, is known to be
   functionally equivalent to copying the underlying bytes and then dropping the
-  source object on the floor. This is true of trivial types and types which
+  source object on the floor. This is true of trivial types,
+  C++26 relocatable types, and types which
   were made trivially relocatable via the ``clang::trivial_abi`` attribute.
+* ``__builtin_is_cpp_trivially_relocatable`` (C++): Returns true if an object
+  is trivially relocatable, as defined by the C++26 standard [meta.unary.prop].
+  Note that when relocating the caller code should ensure that if the object is polymorphic,
+  the dynamic type is of the most derived type. Padding bytes should not be copied.
+* ``__builtin_is_replaceable`` (C++): Returns true if an object
+  is replaceable, as defined by the C++26 standard [meta.unary.prop].
 * ``__is_trivially_equality_comparable`` (Clang): Returns true if comparing two
   objects of the provided type is known to be equivalent to comparing their
   object representations. Note that types containing padding bytes are never
@@ -3720,6 +3729,21 @@ Query for this feature with ``__has_builtin(__builtin_operator_new)`` or
   * If the value is non-zero, the builtins may not support calling arbitrary
     replaceable global (de)allocation functions, but do support calling at least
     ``::operator new(size_t)`` and ``::operator delete(void*)``.
+
+
+``__builtin_trivially_relocate``
+-----------------------------------
+
+**Syntax**:
+
+.. code-block:: c
+
+  T* __builtin_trivially_relocate(T* dest, T* src, size_t count)
+
+Trivially relocates ``count`` objects of relocatable, complete type ``T``
+from ``src`` to ``dest`` and returns ``dest``.
+This builtin is used to implement ``std::trivially_relocate``.
+
 
 ``__builtin_preserve_access_index``
 -----------------------------------

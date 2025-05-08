@@ -6,9 +6,9 @@ program acc_atomic_capture_test
     integer :: x, y
 
 !CHECK: %[[X:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFEx"}
-!CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %0 {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[Y:.*]] = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFEy"}
-!CHECK: %[[Y_DECL:.*]]:2 = hlfir.declare %2 {uniq_name = "_QFEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y]] {uniq_name = "_QFEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[temp:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<i32>
 !CHECK: acc.atomic.capture {
 !CHECK: acc.atomic.read %[[X_DECL]]#0 = %[[Y_DECL]]#0 : !fir.ref<i32>, !fir.ref<i32>, i32

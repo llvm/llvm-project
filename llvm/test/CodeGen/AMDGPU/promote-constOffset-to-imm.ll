@@ -3,7 +3,8 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX9,GFX900 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX9,GFX90A %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11,GFX11-TRUE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11,GFX11-FAKE16 %s
 
 declare i64 @_Z13get_global_idj(i32) #0
 
@@ -2622,25 +2623,45 @@ define amdgpu_kernel void @negativeoffsetnullptr(ptr %buffer) {
 ; GFX10-NEXT:  ; %bb.2: ; %end
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: negativeoffsetnullptr:
-; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_mov_b64 s[0:1], src_private_base
-; GFX11-NEXT:    v_add_co_u32 v0, s0, -1, 0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, s1, s0
-; GFX11-NEXT:    s_mov_b32 s0, 0
-; GFX11-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0, v0
-; GFX11-NEXT:  .LBB8_1: ; %branch
-; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX11-NEXT:    s_and_b32 s1, exec_lo, vcc_lo
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    s_or_b32 s0, s1, s0
-; GFX11-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
-; GFX11-NEXT:    s_cbranch_execnz .LBB8_1
-; GFX11-NEXT:  ; %bb.2: ; %end
-; GFX11-NEXT:    s_endpgm
+; GFX11-TRUE16-LABEL: negativeoffsetnullptr:
+; GFX11-TRUE16:       ; %bb.0: ; %entry
+; GFX11-TRUE16-NEXT:    s_mov_b64 s[0:1], src_private_base
+; GFX11-TRUE16-NEXT:    v_add_co_u32 v0, s0, -1, 0
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, s1, s0
+; GFX11-TRUE16-NEXT:    s_mov_b32 s0, 0
+; GFX11-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1]
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0, v0.l
+; GFX11-TRUE16-NEXT:  .LBB8_1: ; %branch
+; GFX11-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX11-TRUE16-NEXT:    s_and_b32 s1, exec_lo, vcc_lo
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-TRUE16-NEXT:    s_or_b32 s0, s1, s0
+; GFX11-TRUE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; GFX11-TRUE16-NEXT:    s_cbranch_execnz .LBB8_1
+; GFX11-TRUE16-NEXT:  ; %bb.2: ; %end
+; GFX11-TRUE16-NEXT:    s_endpgm
+;
+; GFX11-FAKE16-LABEL: negativeoffsetnullptr:
+; GFX11-FAKE16:       ; %bb.0: ; %entry
+; GFX11-FAKE16-NEXT:    s_mov_b64 s[0:1], src_private_base
+; GFX11-FAKE16-NEXT:    v_add_co_u32 v0, s0, -1, 0
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, s1, s0
+; GFX11-FAKE16-NEXT:    s_mov_b32 s0, 0
+; GFX11-FAKE16-NEXT:    flat_load_u8 v0, v[0:1]
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0, v0
+; GFX11-FAKE16-NEXT:  .LBB8_1: ; %branch
+; GFX11-FAKE16-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX11-FAKE16-NEXT:    s_and_b32 s1, exec_lo, vcc_lo
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-FAKE16-NEXT:    s_or_b32 s0, s1, s0
+; GFX11-FAKE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; GFX11-FAKE16-NEXT:    s_cbranch_execnz .LBB8_1
+; GFX11-FAKE16-NEXT:  ; %bb.2: ; %end
+; GFX11-FAKE16-NEXT:    s_endpgm
 entry:
   %null = select i1 false, ptr %buffer, ptr addrspacecast (ptr addrspace(5) null to ptr)
   %gep = getelementptr i8, ptr %null, i64 -1

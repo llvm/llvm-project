@@ -179,10 +179,8 @@ static dxil::ElementType toDXILElementType(Type *Ty, bool IsSigned) {
 
 ResourceTypeInfo::ResourceTypeInfo(TargetExtType *HandleTy,
                                    const dxil::ResourceClass RC_,
-                                   const dxil::ResourceKind Kind_,
-                                   bool GloballyCoherent, bool HasCounter)
-    : HandleTy(HandleTy), GloballyCoherent(GloballyCoherent),
-      HasCounter(HasCounter) {
+                                   const dxil::ResourceKind Kind_)
+    : HandleTy(HandleTy) {
   // If we're provided a resource class and kind, trust them.
   if (Kind_ != dxil::ResourceKind::Invalid) {
     RC = RC_;
@@ -377,7 +375,7 @@ static bool isROV(dxil::ResourceKind Kind, TargetExtType *Ty) {
 
 ResourceTypeInfo::UAVInfo ResourceTypeInfo::getUAV() const {
   assert(isUAV() && "Not a UAV");
-  return {GloballyCoherent, HasCounter, isROV(Kind, HandleTy)};
+  return {isROV(Kind, HandleTy)};
 }
 
 uint32_t ResourceTypeInfo::getCBufferSize(const DataLayout &DL) const {
@@ -469,8 +467,7 @@ uint32_t ResourceTypeInfo::getMultiSampleCount() const {
 }
 
 bool ResourceTypeInfo::operator==(const ResourceTypeInfo &RHS) const {
-  return std::tie(HandleTy, GloballyCoherent, HasCounter) ==
-         std::tie(RHS.HandleTy, RHS.GloballyCoherent, RHS.HasCounter);
+  return HandleTy == RHS.HandleTy;
 }
 
 bool ResourceTypeInfo::operator<(const ResourceTypeInfo &RHS) const {
@@ -510,9 +507,7 @@ void ResourceTypeInfo::print(raw_ostream &OS, const DataLayout &DL) const {
   } else {
     if (isUAV()) {
       UAVInfo UAVFlags = getUAV();
-      OS << "  Globally Coherent: " << UAVFlags.GloballyCoherent << "\n"
-         << "  HasCounter: " << UAVFlags.HasCounter << "\n"
-         << "  IsROV: " << UAVFlags.IsROV << "\n";
+      OS << "  IsROV: " << UAVFlags.IsROV << "\n";
     }
     if (isMultiSample())
       OS << "  Sample Count: " << getMultiSampleCount() << "\n";
@@ -577,8 +572,8 @@ MDTuple *ResourceInfo::getAsMetadata(Module &M,
 
     if (RTI.isUAV()) {
       ResourceTypeInfo::UAVInfo UAVFlags = RTI.getUAV();
-      MDVals.push_back(getBoolMD(UAVFlags.GloballyCoherent));
-      MDVals.push_back(getBoolMD(UAVFlags.HasCounter));
+      MDVals.push_back(getBoolMD(GloballyCoherent));
+      MDVals.push_back(getBoolMD(hasCounter()));
       MDVals.push_back(getBoolMD(UAVFlags.IsROV));
     } else {
       // All SRVs include sample count in the metadata, but it's only meaningful
@@ -619,10 +614,10 @@ ResourceInfo::getAnnotateProps(Module &M, dxil::ResourceTypeInfo &RTI) const {
   ResourceTypeInfo::UAVInfo UAVFlags =
       IsUAV ? RTI.getUAV() : ResourceTypeInfo::UAVInfo{};
   bool IsROV = IsUAV && UAVFlags.IsROV;
-  bool IsGloballyCoherent = IsUAV && UAVFlags.GloballyCoherent;
+  bool IsGloballyCoherent = IsUAV && GloballyCoherent;
   uint8_t SamplerCmpOrHasCounter = 0;
   if (IsUAV)
-    SamplerCmpOrHasCounter = UAVFlags.HasCounter;
+    SamplerCmpOrHasCounter = hasCounter();
   else if (RTI.isSampler())
     SamplerCmpOrHasCounter = RTI.getSamplerType() == SamplerType::Comparison;
 
@@ -671,6 +666,24 @@ void ResourceInfo::print(raw_ostream &OS, dxil::ResourceTypeInfo &RTI,
      << "    Lower Bound: " << Binding.LowerBound << "\n"
      << "    Size: " << Binding.Size << "\n";
 
+  OS << "  Globally Coherent: " << GloballyCoherent << "\n";
+  OS << "  Counter Direction: ";
+
+  switch (CounterDirection) {
+  case ResourceCounterDirection::Increment:
+    OS << "Increment\n";
+    break;
+  case ResourceCounterDirection::Decrement:
+    OS << "Decrement\n";
+    break;
+  case ResourceCounterDirection::Unknown:
+    OS << "Unknown\n";
+    break;
+  case ResourceCounterDirection::Invalid:
+    OS << "Invalid\n";
+    break;
+  }
+
   RTI.print(OS, DL);
 }
 
@@ -684,8 +697,12 @@ bool DXILResourceTypeMap::invalidate(Module &M, const PreservedAnalyses &PA,
 }
 
 //===----------------------------------------------------------------------===//
+static bool isUpdateCounterIntrinsic(Function &F) {
+  return F.getIntrinsicID() == Intrinsic::dx_resource_updatecounter;
+}
 
-void DXILResourceMap::populate(Module &M, DXILResourceTypeMap &DRTM) {
+void DXILResourceMap::populateResourceInfos(Module &M,
+                                            DXILResourceTypeMap &DRTM) {
   SmallVector<std::tuple<CallInst *, ResourceInfo, ResourceTypeInfo>> CIToInfos;
 
   for (Function &F : M.functions()) {
@@ -764,10 +781,52 @@ void DXILResourceMap::populate(Module &M, DXILResourceTypeMap &DRTM) {
   }
 }
 
+void DXILResourceMap::populateCounterDirections(Module &M) {
+  for (Function &F : M.functions()) {
+    if (!isUpdateCounterIntrinsic(F))
+      continue;
+
+    LLVM_DEBUG(dbgs() << "Update Counter Function: " << F.getName() << "\n");
+
+    for (const User *U : F.users()) {
+      const CallInst *CI = dyn_cast<CallInst>(U);
+      assert(CI && "Users of dx_resource_updateCounter must be call instrs");
+
+      // Determine if the use is an increment or decrement
+      Value *CountArg = CI->getArgOperand(1);
+      ConstantInt *CountValue = cast<ConstantInt>(CountArg);
+      int64_t CountLiteral = CountValue->getSExtValue();
+
+      // 0 is an unknown direction and shouldn't result in an insert
+      if (CountLiteral == 0)
+        continue;
+
+      ResourceCounterDirection Direction = ResourceCounterDirection::Decrement;
+      if (CountLiteral > 0)
+        Direction = ResourceCounterDirection::Increment;
+
+      // Collect all potential creation points for the handle arg
+      Value *HandleArg = CI->getArgOperand(0);
+      SmallVector<ResourceInfo *> RBInfos = findByUse(HandleArg);
+      for (ResourceInfo *RBInfo : RBInfos) {
+        if (RBInfo->CounterDirection == ResourceCounterDirection::Unknown)
+          RBInfo->CounterDirection = Direction;
+        else if (RBInfo->CounterDirection != Direction)
+          RBInfo->CounterDirection = ResourceCounterDirection::Invalid;
+      }
+    }
+  }
+}
+
+void DXILResourceMap::populate(Module &M, DXILResourceTypeMap &DRTM) {
+  populateResourceInfos(M, DRTM);
+  populateCounterDirections(M);
+}
+
 void DXILResourceMap::print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
                             const DataLayout &DL) const {
   for (unsigned I = 0, E = Infos.size(); I != E; ++I) {
-    OS << "Binding " << I << ":\n";
+    OS << "Resource " << I << ":\n";
     const dxil::ResourceInfo &RI = Infos[I];
     RI.print(OS, DRTM[RI.getHandleTy()], DL);
     OS << "\n";
@@ -780,10 +839,9 @@ void DXILResourceMap::print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
   }
 }
 
-SmallVector<dxil::ResourceInfo>
-DXILResourceMap::findByUse(const Value *Key) const {
+SmallVector<dxil::ResourceInfo *> DXILResourceMap::findByUse(const Value *Key) {
   if (const PHINode *Phi = dyn_cast<PHINode>(Key)) {
-    SmallVector<dxil::ResourceInfo> Children;
+    SmallVector<dxil::ResourceInfo *> Children;
     for (const Value *V : Phi->operands()) {
       Children.append(findByUse(V));
     }
@@ -797,9 +855,9 @@ DXILResourceMap::findByUse(const Value *Key) const {
   switch (CI->getIntrinsicID()) {
   // Found the create, return the binding
   case Intrinsic::dx_resource_handlefrombinding: {
-    const auto *It = find(CI);
-    assert(It != Infos.end() && "HandleFromBinding must be in resource map");
-    return {*It};
+    auto Pos = CallMap.find(CI);
+    assert(Pos != CallMap.end() && "HandleFromBinding must be in resource map");
+    return {&Infos[Pos->second]};
   }
   default:
     break;
@@ -808,7 +866,7 @@ DXILResourceMap::findByUse(const Value *Key) const {
   // Check if any of the parameters are the resource we are following. If so
   // keep searching. If none of them are return an empty list
   const Type *UseType = CI->getType();
-  SmallVector<dxil::ResourceInfo> Children;
+  SmallVector<dxil::ResourceInfo *> Children;
   for (const Value *V : CI->args()) {
     if (V->getType() != UseType)
       continue;
@@ -843,9 +901,8 @@ PreservedAnalyses DXILResourcePrinterPass::run(Module &M,
 
 void DXILResourceTypeWrapperPass::anchor() {}
 
-DXILResourceTypeWrapperPass::DXILResourceTypeWrapperPass() : ImmutablePass(ID) {
-  initializeDXILResourceTypeWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+DXILResourceTypeWrapperPass::DXILResourceTypeWrapperPass()
+    : ImmutablePass(ID) {}
 
 INITIALIZE_PASS(DXILResourceTypeWrapperPass, "dxil-resource-type",
                 "DXIL Resource Type Analysis", false, true)
@@ -855,9 +912,7 @@ ModulePass *llvm::createDXILResourceTypeWrapperPassPass() {
   return new DXILResourceTypeWrapperPass();
 }
 
-DXILResourceWrapperPass::DXILResourceWrapperPass() : ModulePass(ID) {
-  initializeDXILResourceWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+DXILResourceWrapperPass::DXILResourceWrapperPass() : ModulePass(ID) {}
 
 DXILResourceWrapperPass::~DXILResourceWrapperPass() = default;
 
@@ -891,7 +946,7 @@ void DXILResourceWrapperPass::dump() const { print(dbgs(), nullptr); }
 #endif
 
 INITIALIZE_PASS(DXILResourceWrapperPass, "dxil-resources",
-                "DXIL Resource Binding Analysis", false, true)
+                "DXIL Resources Analysis", false, true)
 char DXILResourceWrapperPass::ID = 0;
 
 ModulePass *llvm::createDXILResourceWrapperPassPass() {

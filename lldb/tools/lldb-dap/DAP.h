@@ -35,11 +35,16 @@
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Threading.h"
+#include <condition_variable>
+#include <cstdint>
+#include <deque>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -63,7 +68,7 @@ typedef llvm::DenseMap<lldb::addr_t, InstructionBreakpoint>
 using AdapterFeature = protocol::AdapterFeature;
 using ClientFeature = protocol::ClientFeature;
 
-enum class OutputType { Console, Stdout, Stderr, Telemetry };
+enum class OutputType { Console, Important, Stdout, Stderr, Telemetry };
 
 /// Buffer size for handling output events.
 constexpr uint64_t OutputBufferSize = (1u << 12);
@@ -171,9 +176,9 @@ struct DAP {
   llvm::once_flag init_exception_breakpoints_flag;
   // Map step in target id to list of function targets that user can choose.
   llvm::DenseMap<lldb::addr_t, std::string> step_in_targets;
-  // A copy of the last LaunchRequest or AttachRequest so we can reuse its
-  // arguments if we get a RestartRequest.
-  std::optional<llvm::json::Object> last_launch_or_attach_request;
+  // A copy of the last LaunchRequest so we can reuse its arguments if we get a
+  // RestartRequest. Restarting an AttachRequest is not supported.
+  std::optional<protocol::LaunchRequestArguments> last_launch_request;
   lldb::tid_t focus_tid;
   bool disconnecting = false;
   llvm::once_flag terminated_event_flag;
@@ -183,7 +188,7 @@ struct DAP {
   // shutting down the entire adapter. When we're restarting, we keep the id of
   // the old process here so we can detect this case and keep running.
   lldb::pid_t restarting_process_id;
-  bool configuration_done_sent;
+  bool configuration_done;
   llvm::StringMap<std::unique_ptr<BaseRequestHandler>> request_handlers;
   bool waiting_for_run_in_terminal;
   ProgressEventReporter progress_event_reporter;
@@ -195,7 +200,6 @@ struct DAP {
   llvm::SmallDenseMap<int64_t, std::unique_ptr<ResponseHandler>>
       inflight_reverse_requests;
   ReplMode repl_mode;
-
   lldb::SBFormat frame_format;
   lldb::SBFormat thread_format;
   // This is used to allow request_evaluate to handle empty expressions
@@ -206,6 +210,9 @@ struct DAP {
   std::string last_nonempty_var_expression;
   /// The set of features supported by the connected client.
   llvm::DenseSet<ClientFeature> clientFeatures;
+
+  /// The initial thread list upon attaching.
+  std::optional<llvm::json::Array> initial_thread_list;
 
   /// Creates a new DAP sessions.
   ///
@@ -241,6 +248,14 @@ struct DAP {
   /// Stop event handler threads.
   void StopEventHandlers();
 
+  /// Configures the debug adapter for launching/attaching.
+  void SetConfiguration(const protocol::Configuration &confing, bool is_attach);
+
+  void SetConfigurationDone();
+
+  /// Configure source maps based on the current `DAPConfiguration`.
+  void ConfigureSourceMaps();
+
   /// Serialize the JSON value into a string and send the JSON packet to the
   /// "out" stream.
   void SendJSON(const llvm::json::Value &json);
@@ -259,6 +274,7 @@ struct DAP {
 
   ExceptionBreakpoint *GetExceptionBPFromStopReason(lldb::SBThread &thread);
 
+  lldb::SBThread GetLLDBThread(lldb::tid_t id);
   lldb::SBThread GetLLDBThread(const llvm::json::Object &arguments);
 
   lldb::SBFrame GetLLDBFrame(const llvm::json::Object &arguments);
@@ -303,8 +319,6 @@ struct DAP {
   void RunTerminateCommands();
 
   /// Create a new SBTarget object from the given request arguments.
-  /// \param[in] arguments
-  ///     Launch configuration arguments.
   ///
   /// \param[out] error
   ///     An SBError object that will contain an error description if
@@ -312,8 +326,7 @@ struct DAP {
   ///
   /// \return
   ///     An SBTarget object.
-  lldb::SBTarget CreateTargetFromArguments(const llvm::json::Object &arguments,
-                                           lldb::SBError &error);
+  lldb::SBTarget CreateTarget(lldb::SBError &error);
 
   /// Set given target object as a current target for lldb-dap and start
   /// listeing for its breakpoint events.
@@ -387,7 +400,7 @@ struct DAP {
   ///   The number of seconds to poll the process to wait until it is stopped.
   ///
   /// \return Error if waiting for the process fails, no error if succeeds.
-  lldb::SBError WaitForProcessToStop(uint32_t seconds);
+  lldb::SBError WaitForProcessToStop(std::chrono::seconds seconds);
 
   void SetFrameFormat(llvm::StringRef format);
 
@@ -397,7 +410,26 @@ struct DAP {
 
   InstructionBreakpoint *GetInstructionBPFromStopReason(lldb::SBThread &thread);
 
+  /// Checks if the request is cancelled.
+  bool IsCancelled(const protocol::Request &);
+
+  /// Clears the cancel request from the set of tracked cancel requests.
+  void ClearCancelRequest(const protocol::CancelArguments &);
+
   lldb::SBMutex GetAPIMutex() const { return target.GetAPIMutex(); }
+
+private:
+  /// Queue for all incoming messages.
+  std::deque<protocol::Message> m_queue;
+  std::deque<protocol::Message> m_pending_queue;
+  std::mutex m_queue_mutex;
+  std::condition_variable m_queue_cv;
+
+  std::mutex m_cancelled_requests_mutex;
+  llvm::SmallSet<int64_t, 4> m_cancelled_requests;
+
+  std::mutex m_active_request_mutex;
+  const protocol::Request *m_active_request;
 };
 
 } // namespace lldb_dap

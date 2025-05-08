@@ -44,16 +44,14 @@ namespace lldb_dap {
 //             just an acknowledgement, so no body field is required."
 //             }]
 // },
+
 void ConfigurationDoneRequestHandler::operator()(
     const llvm::json::Object &request) const {
+  dap.SetConfigurationDone();
+
   llvm::json::Object response;
   FillResponse(request, response);
   dap.SendJSON(llvm::json::Value(std::move(response)));
-  dap.configuration_done_sent = true;
-  if (dap.stop_at_entry)
-    SendThreadStoppedEvent(dap);
-  else
-    dap.target.GetProcess().Continue();
 }
 
 } // namespace lldb_dap

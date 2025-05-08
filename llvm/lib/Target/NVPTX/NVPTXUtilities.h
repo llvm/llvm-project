@@ -54,6 +54,7 @@ SmallVector<unsigned, 3> getClusterDim(const Function &);
 
 std::optional<uint64_t> getOverallMaxNTID(const Function &);
 std::optional<uint64_t> getOverallReqNTID(const Function &);
+std::optional<uint64_t> getOverallClusterRank(const Function &);
 
 std::optional<unsigned> getMaxClusterRank(const Function &);
 std::optional<unsigned> getMinCTASm(const Function &);
@@ -63,7 +64,7 @@ inline bool isKernelFunction(const Function &F) {
   return F.getCallingConv() == CallingConv::PTX_Kernel;
 }
 
-bool isParamGridConstant(const Value &);
+bool isParamGridConstant(const Argument &);
 
 inline MaybeAlign getAlign(const Function &F, unsigned Index) {
   return F.getAttributes().getAttributes(Index).getStackAlignment();
@@ -84,7 +85,14 @@ inline unsigned promoteScalarArgumentSize(unsigned size) {
 
 bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM);
 
-bool Isv2x16VT(EVT VT);
+inline bool Isv2x16VT(EVT VT) {
+  return (VT == MVT::v2f16 || VT == MVT::v2bf16 || VT == MVT::v2i16);
+}
+
+inline bool shouldPassAsArray(Type *Ty) {
+  return Ty->isAggregateType() || Ty->isVectorTy() ||
+         Ty->getScalarSizeInBits() == 128 || Ty->isHalfTy() || Ty->isBFloatTy();
+}
 
 namespace NVPTX {
 inline std::string getValidPTXIdentifier(StringRef Name) {
@@ -161,6 +169,8 @@ inline std::string AddressSpaceToString(AddressSpace A) {
     return "const";
   case AddressSpace::Shared:
     return "shared";
+  case AddressSpace::SharedCluster:
+    return "shared::cluster";
   case AddressSpace::Param:
     return "param";
   case AddressSpace::Local:

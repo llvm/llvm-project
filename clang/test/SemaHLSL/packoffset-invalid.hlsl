@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-library -fnative-half-type -verify %s
+// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -finclude-default-header -triple dxil-pc-shadermodel6.3-library -fnative-half-type -verify %s
 
 // expected-warning@+1{{cannot mix packoffset elements with nonpackoffset elements in a cbuffer}}
 cbuffer Mix

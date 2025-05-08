@@ -561,7 +561,7 @@ end subroutine
 ! CHECK:           }
 ! CHECK:          }
 ! CHECK:        omp.barrier
-! CHECK:        %[[VAL_22:.*]] = fir.load %7#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:        %[[VAL_22:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:        %[[VAL_23:.*]] = fir.box_addr %[[VAL_22]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
 ! CHECK:       %[[VAL_24:.*]] = fir.load %[[VAL_23]] : !fir.heap<i32>
 ! CHECK:        %[[C1_I32:.*]] = arith.constant 1 : i32

@@ -378,7 +378,7 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
 
   // Sort and remove duplicates.
   std::sort(Result.begin(), Result.end());
-  Result.erase(std::unique(Result.begin(), Result.end()), Result.end());
+  Result.erase(llvm::unique(Result), Result.end());
   return Result;
 }
 

@@ -32,6 +32,7 @@
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/Template.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -305,6 +306,10 @@ static bool isResourceRecordTypeOrArrayOf(const Type *Ty) {
   return HLSLAttributedResourceType::findHandleTypeOnResource(Ty) != nullptr;
 }
 
+static bool isResourceRecordTypeOrArrayOf(VarDecl *VD) {
+  return isResourceRecordTypeOrArrayOf(VD->getType().getTypePtr());
+}
+
 // Returns true if the type is a leaf element type that is not valid to be
 // included in HLSL Buffer, such as a resource class, empty struct, zero-sized
 // array, or a builtin intangible type. Returns false it is a valid leaf element
@@ -540,6 +545,10 @@ void SemaHLSL::ActOnFinishBuffer(Decl *Dcl, SourceLocation RBrace) {
 
   // create buffer layout struct
   createHostLayoutStructForBuffer(SemaRef, BufDecl);
+
+  if (std::none_of(Dcl->attr_begin(), Dcl->attr_end(),
+                   [](Attr *A) { return isa<HLSLResourceBindingAttr>(A); }))
+    SemaRef.Diag(Dcl->getLocation(), diag::warn_hlsl_implicit_binding);
 
   SemaRef.PopDeclContext();
 }
@@ -1274,8 +1283,8 @@ bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
     }
 
     IdentifierLoc *Loc = AL.getArgAsIdent(0);
-    StringRef Identifier = Loc->Ident->getName();
-    SourceLocation ArgLoc = Loc->Loc;
+    StringRef Identifier = Loc->getIdentifierInfo()->getName();
+    SourceLocation ArgLoc = Loc->getLoc();
 
     // Validate resource class value
     ResourceClass RC;
@@ -1524,72 +1533,80 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
                                     diag::err_incomplete_type))
       return;
   }
-  StringRef Space = "space0";
+
   StringRef Slot = "";
+  StringRef Space = "";
+  SourceLocation SlotLoc, SpaceLoc;
 
   if (!AL.isArgIdent(0)) {
     Diag(AL.getLoc(), diag::err_attribute_argument_type)
         << AL << AANT_ArgumentIdentifier;
     return;
   }
-
   IdentifierLoc *Loc = AL.getArgAsIdent(0);
-  StringRef Str = Loc->Ident->getName();
-  SourceLocation ArgLoc = Loc->Loc;
 
-  SourceLocation SpaceArgLoc;
-  bool SpecifiedSpace = false;
   if (AL.getNumArgs() == 2) {
-    SpecifiedSpace = true;
-    Slot = Str;
+    Slot = Loc->getIdentifierInfo()->getName();
+    SlotLoc = Loc->getLoc();
     if (!AL.isArgIdent(1)) {
       Diag(AL.getLoc(), diag::err_attribute_argument_type)
           << AL << AANT_ArgumentIdentifier;
       return;
     }
-
-    IdentifierLoc *Loc = AL.getArgAsIdent(1);
-    Space = Loc->Ident->getName();
-    SpaceArgLoc = Loc->Loc;
+    Loc = AL.getArgAsIdent(1);
+    Space = Loc->getIdentifierInfo()->getName();
+    SpaceLoc = Loc->getLoc();
   } else {
-    Slot = Str;
+    StringRef Str = Loc->getIdentifierInfo()->getName();
+    if (Str.starts_with("space")) {
+      Space = Str;
+      SpaceLoc = Loc->getLoc();
+    } else {
+      Slot = Str;
+      SlotLoc = Loc->getLoc();
+      Space = "space0";
+    }
   }
 
-  RegisterType RegType;
-  unsigned SlotNum = 0;
+  RegisterType RegType = RegisterType::SRV;
+  std::optional<unsigned> SlotNum;
   unsigned SpaceNum = 0;
 
-  // Validate.
+  // Validate slot
   if (!Slot.empty()) {
     if (!convertToRegisterType(Slot, &RegType)) {
-      Diag(ArgLoc, diag::err_hlsl_binding_type_invalid) << Slot.substr(0, 1);
+      Diag(SlotLoc, diag::err_hlsl_binding_type_invalid) << Slot.substr(0, 1);
       return;
     }
     if (RegType == RegisterType::I) {
-      Diag(ArgLoc, diag::warn_hlsl_deprecated_register_type_i);
+      Diag(SlotLoc, diag::warn_hlsl_deprecated_register_type_i);
       return;
     }
-
     StringRef SlotNumStr = Slot.substr(1);
-    if (SlotNumStr.getAsInteger(10, SlotNum)) {
-      Diag(ArgLoc, diag::err_hlsl_unsupported_register_number);
+    unsigned N;
+    if (SlotNumStr.getAsInteger(10, N)) {
+      Diag(SlotLoc, diag::err_hlsl_unsupported_register_number);
       return;
     }
+    SlotNum = N;
   }
 
+  // Validate space
   if (!Space.starts_with("space")) {
-    Diag(SpaceArgLoc, diag::err_hlsl_expected_space) << Space;
+    Diag(SpaceLoc, diag::err_hlsl_expected_space) << Space;
     return;
   }
   StringRef SpaceNumStr = Space.substr(5);
   if (SpaceNumStr.getAsInteger(10, SpaceNum)) {
-    Diag(SpaceArgLoc, diag::err_hlsl_expected_space) << Space;
+    Diag(SpaceLoc, diag::err_hlsl_expected_space) << Space;
     return;
   }
 
-  if (!DiagnoseHLSLRegisterAttribute(SemaRef, ArgLoc, TheDecl, RegType,
-                                     SpecifiedSpace))
-    return;
+  // If we have slot, diagnose it is the right register type for the decl
+  if (SlotNum.has_value())
+    if (!DiagnoseHLSLRegisterAttribute(SemaRef, SlotLoc, TheDecl, RegType,
+                                       !SpaceLoc.isInvalid()))
+      return;
 
   HLSLResourceBindingAttr *NewAttr =
       HLSLResourceBindingAttr::Create(getASTContext(), Slot, Space, AL);
@@ -1962,7 +1979,7 @@ void SemaHLSL::ActOnEndOfTranslationUnit(TranslationUnitDecl *TU) {
     for (const Decl *VD : DefaultCBufferDecls) {
       const HLSLResourceBindingAttr *RBA =
           VD->getAttr<HLSLResourceBindingAttr>();
-      if (RBA &&
+      if (RBA && !RBA->isImplicit() &&
           RBA->getRegisterType() == HLSLResourceBindingAttr::RegisterType::C) {
         DefaultCBuffer->setHasValidPackoffset(true);
         break;
@@ -2379,10 +2396,35 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     auto *ResourceTy =
         TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
     QualType ContainedTy = ResourceTy->getContainedType();
-    // TODO: Map to an hlsl_device address space.
-    TheCall->setType(getASTContext().getPointerType(ContainedTy));
+    auto ReturnType =
+        SemaRef.Context.getAddrSpaceQualType(ContainedTy, LangAS::hlsl_device);
+    ReturnType = SemaRef.Context.getPointerType(ReturnType);
+    TheCall->setType(ReturnType);
     TheCall->setValueKind(VK_LValue);
 
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_resource_uninitializedhandle: {
+    if (SemaRef.checkArgCount(TheCall, 1) ||
+        CheckResourceHandle(&SemaRef, TheCall, 0))
+      return true;
+    // use the type of the handle (arg0) as a return type
+    QualType ResourceTy = TheCall->getArg(0)->getType();
+    TheCall->setType(ResourceTy);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_resource_handlefrombinding: {
+    ASTContext &AST = SemaRef.getASTContext();
+    if (SemaRef.checkArgCount(TheCall, 5) ||
+        CheckResourceHandle(&SemaRef, TheCall, 0) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1), AST.UnsignedIntTy) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(2), AST.UnsignedIntTy) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(3), AST.IntTy) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(4), AST.UnsignedIntTy))
+      return true;
+    // use the type of the handle (arg0) as a return type
+    QualType ResourceTy = TheCall->getArg(0)->getType();
+    TheCall->setType(ResourceTy);
     break;
   }
   case Builtin::BI__builtin_hlsl_and:
@@ -2545,7 +2587,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Builtin::BI__builtin_hlsl_lerp: {
     if (SemaRef.checkArgCount(TheCall, 3))
       return true;
-    if (CheckVectorElementCallArgs(&SemaRef, TheCall))
+    if (CheckAnyScalarOrVector(&SemaRef, TheCall, 0) ||
+        CheckAllArgsHaveSameType(&SemaRef, TheCall))
       return true;
     if (SemaRef.BuiltinElementwiseTernaryMath(TheCall))
       return true;
@@ -2741,7 +2784,7 @@ static void BuildFlattenedTypeList(QualType BaseTy,
       BuildFlattenedTypeList(AT->getElementType(), ElementFields);
       // Repeat the element's field list n times.
       for (uint64_t Ct = 0; Ct < AT->getZExtSize(); ++Ct)
-        List.insert(List.end(), ElementFields.begin(), ElementFields.end());
+        llvm::append_range(List, ElementFields);
       continue;
     }
     // Vectors can only have element types that are builtin types, so this can
@@ -2769,7 +2812,7 @@ static void BuildFlattenedTypeList(QualType BaseTy,
         FieldTypes.push_back(FD->getType());
       // Reverse the newly added sub-range.
       std::reverse(FieldTypes.begin(), FieldTypes.end());
-      WorkList.insert(WorkList.end(), FieldTypes.begin(), FieldTypes.end());
+      llvm::append_range(WorkList, FieldTypes);
 
       // If this wasn't a standard layout type we may also have some base
       // classes to deal with.
@@ -2778,7 +2821,7 @@ static void BuildFlattenedTypeList(QualType BaseTy,
         for (const auto &Base : RD->bases())
           FieldTypes.push_back(Base.getType());
         std::reverse(FieldTypes.begin(), FieldTypes.end());
-        WorkList.insert(WorkList.end(), FieldTypes.begin(), FieldTypes.end());
+        llvm::append_range(WorkList, FieldTypes);
       }
       continue;
     }
@@ -3208,6 +3251,68 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
   deduceAddressSpace(VD);
 }
 
+static bool initVarDeclWithCtor(Sema &S, VarDecl *VD,
+                                MutableArrayRef<Expr *> Args) {
+  InitializedEntity Entity = InitializedEntity::InitializeVariable(VD);
+  InitializationKind Kind = InitializationKind::CreateDirect(
+      VD->getLocation(), SourceLocation(), SourceLocation());
+
+  InitializationSequence InitSeq(S, Entity, Kind, Args);
+  ExprResult Init = InitSeq.Perform(S, Entity, Kind, Args);
+
+  if (!Init.get())
+    return false;
+
+  VD->setInit(S.MaybeCreateExprWithCleanups(Init.get()));
+  VD->setInitStyle(VarDecl::CallInit);
+  S.CheckCompleteVariableDeclaration(VD);
+  return true;
+}
+
+static bool initGlobalResourceDecl(Sema &S, VarDecl *VD) {
+  HLSLResourceBindingAttr *RBA = VD->getAttr<HLSLResourceBindingAttr>();
+  if (!RBA || RBA->isImplicit())
+    // FIXME: add support for implicit binding (llvm/llvm-project#110722)
+    return false;
+
+  ASTContext &AST = S.getASTContext();
+  uint64_t UIntTySize = AST.getTypeSize(AST.UnsignedIntTy);
+  uint64_t IntTySize = AST.getTypeSize(AST.IntTy);
+  Expr *Args[] = {
+      IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, RBA->getSlotNumber()),
+                             AST.UnsignedIntTy, SourceLocation()),
+      IntegerLiteral::Create(AST,
+                             llvm::APInt(UIntTySize, RBA->getSpaceNumber()),
+                             AST.UnsignedIntTy, SourceLocation()),
+      IntegerLiteral::Create(AST, llvm::APInt(IntTySize, 1), AST.IntTy,
+                             SourceLocation()),
+      IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, 0), AST.UnsignedIntTy,
+                             SourceLocation())};
+
+  return initVarDeclWithCtor(S, VD, Args);
+}
+
+// Returns true if the initialization has been handled.
+// Returns false to use default initialization.
+bool SemaHLSL::ActOnUninitializedVarDecl(VarDecl *VD) {
+  // Objects in the hlsl_constant address space are initialized
+  // externally, so don't synthesize an implicit initializer.
+  if (VD->getType().getAddressSpace() == LangAS::hlsl_constant)
+    return true;
+
+  // Initialize resources
+  if (!isResourceRecordTypeOrArrayOf(VD))
+    return false;
+
+  // FIXME: We currectly support only simple resources - no arrays of resources
+  // or resources in user defined structs.
+  // (llvm/llvm-project#133835, llvm/llvm-project#133837)
+  if (VD->getType()->isHLSLResourceRecord())
+    return initGlobalResourceDecl(SemaRef, VD);
+
+  return false;
+}
+
 // Walks though the global variable declaration, collects all resource binding
 // requirements and adds them to Bindings
 void SemaHLSL::collectResourceBindingsOnVarDecl(VarDecl *VD) {
@@ -3248,10 +3353,12 @@ void SemaHLSL::collectResourceBindingsOnVarDecl(VarDecl *VD) {
 void SemaHLSL::processExplicitBindingsOnDecl(VarDecl *VD) {
   assert(VD->hasGlobalStorage() && "expected global variable");
 
+  bool HasBinding = false;
   for (Attr *A : VD->attrs()) {
     HLSLResourceBindingAttr *RBA = dyn_cast<HLSLResourceBindingAttr>(A);
-    if (!RBA)
+    if (!RBA || RBA->isImplicit())
       continue;
+    HasBinding = true;
 
     RegisterType RT = RBA->getRegisterType();
     assert(RT != RegisterType::I && "invalid or obsolete register type should "
@@ -3278,167 +3385,214 @@ void SemaHLSL::processExplicitBindingsOnDecl(VarDecl *VD) {
           << static_cast<int>(RT);
     }
   }
+
+  if (!HasBinding && isResourceRecordTypeOrArrayOf(VD))
+    SemaRef.Diag(VD->getLocation(), diag::warn_hlsl_implicit_binding);
 }
+namespace {
+class InitListTransformer {
+  Sema &S;
+  ASTContext &Ctx;
+  QualType InitTy;
+  QualType *DstIt = nullptr;
+  Expr **ArgIt = nullptr;
+  // Is wrapping the destination type iterator required? This is only used for
+  // incomplete array types where we loop over the destination type since we
+  // don't know the full number of elements from the declaration.
+  bool Wrap;
 
-static bool CastInitializer(Sema &S, ASTContext &Ctx, Expr *E,
-                            llvm::SmallVectorImpl<Expr *> &List,
-                            llvm::SmallVectorImpl<QualType> &DestTypes) {
-  if (List.size() >= DestTypes.size()) {
-    List.push_back(E);
-    // This is odd, but it isn't technically a failure due to conversion, we
-    // handle mismatched counts of arguments differently.
-    return true;
-  }
-  InitializedEntity Entity = InitializedEntity::InitializeParameter(
-      Ctx, DestTypes[List.size()], false);
-  ExprResult Res = S.PerformCopyInitialization(Entity, E->getBeginLoc(), E);
-  if (Res.isInvalid())
-    return false;
-  Expr *Init = Res.get();
-  List.push_back(Init);
-  return true;
-}
-
-static bool BuildInitializerList(Sema &S, ASTContext &Ctx, Expr *E,
-                                 llvm::SmallVectorImpl<Expr *> &List,
-                                 llvm::SmallVectorImpl<QualType> &DestTypes) {
-  // If this is an initialization list, traverse the sub initializers.
-  if (auto *Init = dyn_cast<InitListExpr>(E)) {
-    for (auto *SubInit : Init->inits())
-      if (!BuildInitializerList(S, Ctx, SubInit, List, DestTypes))
-        return false;
-    return true;
-  }
-
-  // If this is a scalar type, just enqueue the expression.
-  QualType Ty = E->getType();
-
-  if (Ty->isScalarType() || (Ty->isRecordType() && !Ty->isAggregateType()))
-    return CastInitializer(S, Ctx, E, List, DestTypes);
-
-  if (auto *VecTy = Ty->getAs<VectorType>()) {
-    uint64_t Size = VecTy->getNumElements();
-
-    QualType SizeTy = Ctx.getSizeType();
-    uint64_t SizeTySize = Ctx.getTypeSize(SizeTy);
-    for (uint64_t I = 0; I < Size; ++I) {
-      auto *Idx = IntegerLiteral::Create(Ctx, llvm::APInt(SizeTySize, I),
-                                         SizeTy, SourceLocation());
-
-      ExprResult ElExpr = S.CreateBuiltinArraySubscriptExpr(
-          E, E->getBeginLoc(), Idx, E->getEndLoc());
-      if (ElExpr.isInvalid())
-        return false;
-      if (!CastInitializer(S, Ctx, ElExpr.get(), List, DestTypes))
-        return false;
+  bool castInitializer(Expr *E) {
+    assert(DstIt && "This should always be something!");
+    if (DstIt == DestTypes.end()) {
+      if (!Wrap) {
+        ArgExprs.push_back(E);
+        // This is odd, but it isn't technically a failure due to conversion, we
+        // handle mismatched counts of arguments differently.
+        return true;
+      }
+      DstIt = DestTypes.begin();
     }
+    InitializedEntity Entity = InitializedEntity::InitializeParameter(
+        Ctx, *DstIt, /* Consumed (ObjC) */ false);
+    ExprResult Res = S.PerformCopyInitialization(Entity, E->getBeginLoc(), E);
+    if (Res.isInvalid())
+      return false;
+    Expr *Init = Res.get();
+    ArgExprs.push_back(Init);
+    DstIt++;
     return true;
   }
 
-  if (auto *ArrTy = dyn_cast<ConstantArrayType>(Ty.getTypePtr())) {
-    uint64_t Size = ArrTy->getZExtSize();
-    QualType SizeTy = Ctx.getSizeType();
-    uint64_t SizeTySize = Ctx.getTypeSize(SizeTy);
-    for (uint64_t I = 0; I < Size; ++I) {
-      auto *Idx = IntegerLiteral::Create(Ctx, llvm::APInt(SizeTySize, I),
-                                         SizeTy, SourceLocation());
-      ExprResult ElExpr = S.CreateBuiltinArraySubscriptExpr(
-          E, E->getBeginLoc(), Idx, E->getEndLoc());
-      if (ElExpr.isInvalid())
-        return false;
-      if (!BuildInitializerList(S, Ctx, ElExpr.get(), List, DestTypes))
-        return false;
-    }
-    return true;
-  }
-
-  if (auto *RTy = Ty->getAs<RecordType>()) {
-    llvm::SmallVector<const RecordType *> RecordTypes;
-    RecordTypes.push_back(RTy);
-    while (RecordTypes.back()->getAsCXXRecordDecl()->getNumBases()) {
-      CXXRecordDecl *D = RecordTypes.back()->getAsCXXRecordDecl();
-      assert(D->getNumBases() == 1 &&
-             "HLSL doesn't support multiple inheritance");
-      RecordTypes.push_back(D->bases_begin()->getType()->getAs<RecordType>());
-    }
-    while (!RecordTypes.empty()) {
-      const RecordType *RT = RecordTypes.back();
-      RecordTypes.pop_back();
-      for (auto *FD : RT->getDecl()->fields()) {
-        DeclAccessPair Found = DeclAccessPair::make(FD, FD->getAccess());
-        DeclarationNameInfo NameInfo(FD->getDeclName(), E->getBeginLoc());
-        ExprResult Res = S.BuildFieldReferenceExpr(
-            E, false, E->getBeginLoc(), CXXScopeSpec(), FD, Found, NameInfo);
-        if (Res.isInvalid())
+  bool buildInitializerListImpl(Expr *E) {
+    // If this is an initialization list, traverse the sub initializers.
+    if (auto *Init = dyn_cast<InitListExpr>(E)) {
+      for (auto *SubInit : Init->inits())
+        if (!buildInitializerListImpl(SubInit))
           return false;
-        if (!BuildInitializerList(S, Ctx, Res.get(), List, DestTypes))
+      return true;
+    }
+
+    // If this is a scalar type, just enqueue the expression.
+    QualType Ty = E->getType();
+
+    if (Ty->isScalarType() || (Ty->isRecordType() && !Ty->isAggregateType()))
+      return castInitializer(E);
+
+    if (auto *VecTy = Ty->getAs<VectorType>()) {
+      uint64_t Size = VecTy->getNumElements();
+
+      QualType SizeTy = Ctx.getSizeType();
+      uint64_t SizeTySize = Ctx.getTypeSize(SizeTy);
+      for (uint64_t I = 0; I < Size; ++I) {
+        auto *Idx = IntegerLiteral::Create(Ctx, llvm::APInt(SizeTySize, I),
+                                           SizeTy, SourceLocation());
+
+        ExprResult ElExpr = S.CreateBuiltinArraySubscriptExpr(
+            E, E->getBeginLoc(), Idx, E->getEndLoc());
+        if (ElExpr.isInvalid())
+          return false;
+        if (!castInitializer(ElExpr.get()))
           return false;
       }
+      return true;
     }
-  }
-  return true;
-}
 
-static Expr *GenerateInitLists(ASTContext &Ctx, QualType Ty,
-                               llvm::SmallVectorImpl<Expr *>::iterator &It) {
-  if (Ty->isScalarType() || (Ty->isRecordType() && !Ty->isAggregateType())) {
-    return *(It++);
-  }
-  llvm::SmallVector<Expr *> Inits;
-  assert(!isa<MatrixType>(Ty) && "Matrix types not yet supported in HLSL");
-  Ty = Ty.getDesugaredType(Ctx);
-  if (Ty->isVectorType() || Ty->isConstantArrayType()) {
-    QualType ElTy;
-    uint64_t Size = 0;
-    if (auto *ATy = Ty->getAs<VectorType>()) {
-      ElTy = ATy->getElementType();
-      Size = ATy->getNumElements();
-    } else {
-      auto *VTy = cast<ConstantArrayType>(Ty.getTypePtr());
-      ElTy = VTy->getElementType();
-      Size = VTy->getZExtSize();
+    if (auto *ArrTy = dyn_cast<ConstantArrayType>(Ty.getTypePtr())) {
+      uint64_t Size = ArrTy->getZExtSize();
+      QualType SizeTy = Ctx.getSizeType();
+      uint64_t SizeTySize = Ctx.getTypeSize(SizeTy);
+      for (uint64_t I = 0; I < Size; ++I) {
+        auto *Idx = IntegerLiteral::Create(Ctx, llvm::APInt(SizeTySize, I),
+                                           SizeTy, SourceLocation());
+        ExprResult ElExpr = S.CreateBuiltinArraySubscriptExpr(
+            E, E->getBeginLoc(), Idx, E->getEndLoc());
+        if (ElExpr.isInvalid())
+          return false;
+        if (!buildInitializerListImpl(ElExpr.get()))
+          return false;
+      }
+      return true;
     }
-    for (uint64_t I = 0; I < Size; ++I)
-      Inits.push_back(GenerateInitLists(Ctx, ElTy, It));
-  }
-  if (auto *RTy = Ty->getAs<RecordType>()) {
-    llvm::SmallVector<const RecordType *> RecordTypes;
-    RecordTypes.push_back(RTy);
-    while (RecordTypes.back()->getAsCXXRecordDecl()->getNumBases()) {
-      CXXRecordDecl *D = RecordTypes.back()->getAsCXXRecordDecl();
-      assert(D->getNumBases() == 1 &&
-             "HLSL doesn't support multiple inheritance");
-      RecordTypes.push_back(D->bases_begin()->getType()->getAs<RecordType>());
-    }
-    while (!RecordTypes.empty()) {
-      const RecordType *RT = RecordTypes.back();
-      RecordTypes.pop_back();
-      for (auto *FD : RT->getDecl()->fields()) {
-        Inits.push_back(GenerateInitLists(Ctx, FD->getType(), It));
+
+    if (auto *RTy = Ty->getAs<RecordType>()) {
+      llvm::SmallVector<const RecordType *> RecordTypes;
+      RecordTypes.push_back(RTy);
+      while (RecordTypes.back()->getAsCXXRecordDecl()->getNumBases()) {
+        CXXRecordDecl *D = RecordTypes.back()->getAsCXXRecordDecl();
+        assert(D->getNumBases() == 1 &&
+               "HLSL doesn't support multiple inheritance");
+        RecordTypes.push_back(D->bases_begin()->getType()->getAs<RecordType>());
+      }
+      while (!RecordTypes.empty()) {
+        const RecordType *RT = RecordTypes.pop_back_val();
+        for (auto *FD : RT->getDecl()->fields()) {
+          DeclAccessPair Found = DeclAccessPair::make(FD, FD->getAccess());
+          DeclarationNameInfo NameInfo(FD->getDeclName(), E->getBeginLoc());
+          ExprResult Res = S.BuildFieldReferenceExpr(
+              E, false, E->getBeginLoc(), CXXScopeSpec(), FD, Found, NameInfo);
+          if (Res.isInvalid())
+            return false;
+          if (!buildInitializerListImpl(Res.get()))
+            return false;
+        }
       }
     }
+    return true;
   }
-  auto *NewInit = new (Ctx) InitListExpr(Ctx, Inits.front()->getBeginLoc(),
-                                         Inits, Inits.back()->getEndLoc());
-  NewInit->setType(Ty);
-  return NewInit;
-}
 
-bool SemaHLSL::TransformInitList(const InitializedEntity &Entity,
-                                 const InitializationKind &Kind,
+  Expr *generateInitListsImpl(QualType Ty) {
+    assert(ArgIt != ArgExprs.end() && "Something is off in iteration!");
+    if (Ty->isScalarType() || (Ty->isRecordType() && !Ty->isAggregateType()))
+      return *(ArgIt++);
+
+    llvm::SmallVector<Expr *> Inits;
+    assert(!isa<MatrixType>(Ty) && "Matrix types not yet supported in HLSL");
+    Ty = Ty.getDesugaredType(Ctx);
+    if (Ty->isVectorType() || Ty->isConstantArrayType()) {
+      QualType ElTy;
+      uint64_t Size = 0;
+      if (auto *ATy = Ty->getAs<VectorType>()) {
+        ElTy = ATy->getElementType();
+        Size = ATy->getNumElements();
+      } else {
+        auto *VTy = cast<ConstantArrayType>(Ty.getTypePtr());
+        ElTy = VTy->getElementType();
+        Size = VTy->getZExtSize();
+      }
+      for (uint64_t I = 0; I < Size; ++I)
+        Inits.push_back(generateInitListsImpl(ElTy));
+    }
+    if (auto *RTy = Ty->getAs<RecordType>()) {
+      llvm::SmallVector<const RecordType *> RecordTypes;
+      RecordTypes.push_back(RTy);
+      while (RecordTypes.back()->getAsCXXRecordDecl()->getNumBases()) {
+        CXXRecordDecl *D = RecordTypes.back()->getAsCXXRecordDecl();
+        assert(D->getNumBases() == 1 &&
+               "HLSL doesn't support multiple inheritance");
+        RecordTypes.push_back(D->bases_begin()->getType()->getAs<RecordType>());
+      }
+      while (!RecordTypes.empty()) {
+        const RecordType *RT = RecordTypes.pop_back_val();
+        for (auto *FD : RT->getDecl()->fields()) {
+          Inits.push_back(generateInitListsImpl(FD->getType()));
+        }
+      }
+    }
+    auto *NewInit = new (Ctx) InitListExpr(Ctx, Inits.front()->getBeginLoc(),
+                                           Inits, Inits.back()->getEndLoc());
+    NewInit->setType(Ty);
+    return NewInit;
+  }
+
+public:
+  llvm::SmallVector<QualType, 16> DestTypes;
+  llvm::SmallVector<Expr *, 16> ArgExprs;
+  InitListTransformer(Sema &SemaRef, const InitializedEntity &Entity)
+      : S(SemaRef), Ctx(SemaRef.getASTContext()),
+        Wrap(Entity.getType()->isIncompleteArrayType()) {
+    InitTy = Entity.getType().getNonReferenceType();
+    // When we're generating initializer lists for incomplete array types we
+    // need to wrap around both when building the initializers and when
+    // generating the final initializer lists.
+    if (Wrap) {
+      assert(InitTy->isIncompleteArrayType());
+      const IncompleteArrayType *IAT = Ctx.getAsIncompleteArrayType(InitTy);
+      InitTy = IAT->getElementType();
+    }
+    BuildFlattenedTypeList(InitTy, DestTypes);
+    DstIt = DestTypes.begin();
+  }
+
+  bool buildInitializerList(Expr *E) { return buildInitializerListImpl(E); }
+
+  Expr *generateInitLists() {
+    assert(!ArgExprs.empty() &&
+           "Call buildInitializerList to generate argument expressions.");
+    ArgIt = ArgExprs.begin();
+    if (!Wrap)
+      return generateInitListsImpl(InitTy);
+    llvm::SmallVector<Expr *> Inits;
+    while (ArgIt != ArgExprs.end())
+      Inits.push_back(generateInitListsImpl(InitTy));
+
+    auto *NewInit = new (Ctx) InitListExpr(Ctx, Inits.front()->getBeginLoc(),
+                                           Inits, Inits.back()->getEndLoc());
+    llvm::APInt ArySize(64, Inits.size());
+    NewInit->setType(Ctx.getConstantArrayType(InitTy, ArySize, nullptr,
+                                              ArraySizeModifier::Normal, 0));
+    return NewInit;
+  }
+};
+} // namespace
+
+bool SemaHLSL::transformInitList(const InitializedEntity &Entity,
                                  InitListExpr *Init) {
   // If the initializer is a scalar, just return it.
   if (Init->getType()->isScalarType())
     return true;
   ASTContext &Ctx = SemaRef.getASTContext();
-  llvm::SmallVector<QualType, 16> DestTypes;
-  // An initializer list might be attempting to initialize a reference or
-  // rvalue-reference. When checking the initializer we should look through the
-  // reference.
-  QualType InitTy = Entity.getType().getNonReferenceType();
-  BuildFlattenedTypeList(InitTy, DestTypes);
+  InitListTransformer ILT(SemaRef, Entity);
 
-  llvm::SmallVector<Expr *, 16> ArgExprs;
   for (unsigned I = 0; I < Init->getNumInits(); ++I) {
     Expr *E = Init->getInit(I);
     if (E->HasSideEffects(Ctx)) {
@@ -3449,21 +3603,35 @@ bool SemaHLSL::TransformInitList(const InitializedEntity &Entity,
                                     E->getObjectKind(), E);
       Init->setInit(I, E);
     }
-    if (!BuildInitializerList(SemaRef, Ctx, E, ArgExprs, DestTypes))
+    if (!ILT.buildInitializerList(E))
       return false;
   }
+  size_t ExpectedSize = ILT.DestTypes.size();
+  size_t ActualSize = ILT.ArgExprs.size();
+  // For incomplete arrays it is completely arbitrary to choose whether we think
+  // the user intended fewer or more elements. This implementation assumes that
+  // the user intended more, and errors that there are too few initializers to
+  // complete the final element.
+  if (Entity.getType()->isIncompleteArrayType())
+    ExpectedSize =
+        ((ActualSize + ExpectedSize - 1) / ExpectedSize) * ExpectedSize;
 
-  if (DestTypes.size() != ArgExprs.size()) {
-    int TooManyOrFew = ArgExprs.size() > DestTypes.size() ? 1 : 0;
+  // An initializer list might be attempting to initialize a reference or
+  // rvalue-reference. When checking the initializer we should look through
+  // the reference.
+  QualType InitTy = Entity.getType().getNonReferenceType();
+  if (InitTy.hasAddressSpace())
+    InitTy = SemaRef.getASTContext().removeAddrSpaceQualType(InitTy);
+  if (ExpectedSize != ActualSize) {
+    int TooManyOrFew = ActualSize > ExpectedSize ? 1 : 0;
     SemaRef.Diag(Init->getBeginLoc(), diag::err_hlsl_incorrect_num_initializers)
-        << TooManyOrFew << InitTy << DestTypes.size() << ArgExprs.size();
+        << TooManyOrFew << InitTy << ExpectedSize << ActualSize;
     return false;
   }
 
-  auto It = ArgExprs.begin();
-  // GenerateInitLists will always return an InitListExpr here, because the
+  // generateInitListsImpl will always return an InitListExpr here, because the
   // scalar case is handled above.
-  auto *NewInit = cast<InitListExpr>(GenerateInitLists(Ctx, InitTy, It));
+  auto *NewInit = cast<InitListExpr>(ILT.generateInitLists());
   Init->resizeInits(Ctx, NewInit->getNumInits());
   for (unsigned I = 0; I < NewInit->getNumInits(); ++I)
     Init->updateInit(Ctx, I, NewInit->getInit(I));

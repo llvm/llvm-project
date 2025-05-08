@@ -11,6 +11,13 @@
 # RUN: llvm-objdump -d --disassemble-symbols=cold_function %t.bolt \
 # RUN:   | FileCheck %s
 
+
+## Verify that the number of FDEs matches the number of functions in the output
+## binary. There are three original functions and two optimized.
+# RUN: llvm-readelf -u %t.bolt | grep -wc FDE \
+# RUN:   | FileCheck --check-prefix=CHECK-FDE %s
+# CHECK-FDE: 5
+
 ## In lite mode, optimized code will be separated from the original .text by
 ## over 128MB, making it impossible for call/bl instructions in cold functions
 ## to reach optimized functions directly.

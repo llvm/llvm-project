@@ -2704,7 +2704,7 @@ multiclass Shift<bits<2> shift_type, string asm, SDNode OpNode> {
 
   def : Pat<(i32 (OpNode GPR32:$Rn, i64:$Rm)),
             (!cast<Instruction>(NAME # "Wr") GPR32:$Rn,
-                                             (EXTRACT_SUBREG i64:$Rm, sub_32))>;
+                                             (EXTRACT_SUBREG GPR64:$Rm, sub_32))>;
 
   def : Pat<(i32 (OpNode GPR32:$Rn, (i64 (zext GPR32:$Rm)))),
             (!cast<Instruction>(NAME # "Wr") GPR32:$Rn, GPR32:$Rm)>;
@@ -5523,13 +5523,13 @@ multiclass IntegerToFPSIMDScalar<bits<2> rmode, bits<3> opcode, string asm, SDPa
   }
 
   def : Pat<(f16 (node (i32 (extractelt (v4i32 V128:$Rn), (i64 0))))),
-          (!cast<Instruction>(NAME # HSr) (EXTRACT_SUBREG $Rn, ssub))>;
+          (!cast<Instruction>(NAME # HSr) (EXTRACT_SUBREG V128:$Rn, ssub))>;
   def : Pat<(f64 (node (i32 (extractelt (v4i32 V128:$Rn), (i64 0))))),
-          (!cast<Instruction>(NAME # DSr) (EXTRACT_SUBREG $Rn, ssub))>;
+          (!cast<Instruction>(NAME # DSr) (EXTRACT_SUBREG V128:$Rn, ssub))>;
   def : Pat<(f16 (node (i64 (extractelt (v2i64 V128:$Rn), (i64 0))))),
-          (!cast<Instruction>(NAME # HDr) (EXTRACT_SUBREG $Rn, dsub))>;
+          (!cast<Instruction>(NAME # HDr) (EXTRACT_SUBREG V128:$Rn, dsub))>;
   def : Pat<(f32 (node (i64 (extractelt (v2i64 V128:$Rn), (i64 0))))),
-          (!cast<Instruction>(NAME # SDr) (EXTRACT_SUBREG $Rn, dsub))>;
+          (!cast<Instruction>(NAME # SDr) (EXTRACT_SUBREG V128:$Rn, dsub))>;
 }
 
 //---
@@ -7136,7 +7136,7 @@ multiclass SIMDCmpTwoVector<bit U, bits<5> opc, string asm,
 
 // FP Comparisons support only S and D element sizes (and H for v8.2a).
 multiclass SIMDFPCmpTwoVector<bit U, bit S, bits<5> opc,
-                              string asm, SDNode OpNode> {
+                              string asm, SDPatternOperator OpNode> {
 
   let mayRaiseFPException = 1, Uses = [FPCR] in {
   let Predicates = [HasNEON, HasFullFP16] in {

@@ -1680,10 +1680,6 @@ translated into the LLVM ``convergent`` attribute, which indicates that the call
 instructions of a function with this attribute cannot be made control-dependent
 on any additional values.
 
-In languages designed for SPMD/SIMT programming model, e.g. OpenCL or CUDA,
-the call instructions of a function with this attribute must be executed by
-all work items or threads in a work group or sub group.
-
 This attribute is different from ``noduplicate`` because it allows duplicating
 function calls if it can be proved that the duplicated function calls are
 not made control-dependent on any additional values, e.g., unrolling a loop
@@ -2179,6 +2175,34 @@ Also see the documentation for `@available
   }];
 }
 
+def PtrAuthDocs : Documentation {
+  let Category = DocCatVariable;
+  let Heading = "__ptrauth";
+  let Content = [{
+The ``__ptrauth`` qualifier allows the programmer to directly control
+how pointers are signed when they are stored in a particular variable.
+This can be used to strengthen the default protections of pointer
+authentication and make it more difficult for an attacker to escalate
+an ability to alter memory into full control of a process.
+
+.. code-block:: c
+
+  #include <ptrauth.h>
+
+  typedef void (*my_callback)(const void*);
+  my_callback __ptrauth(ptrauth_key_process_dependent_code, 1, 0xe27a) callback;
+
+The first argument to ``__ptrauth`` is the name of the signing key.
+Valid key names for the target are defined in ``<ptrauth.h>``.
+
+The second argument to ``__ptrauth`` is a flag (0 or 1) specifying whether
+the object should use address discrimination.
+
+The third argument to ``__ptrauth`` is a 16-bit non-negative integer which
+allows additional discrimination between objects.
+  }];
+}
+
 def ExternalSourceSymbolDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
@@ -2662,6 +2686,19 @@ The semantics are as follows:
   }];
 }
 
+def ARMInterruptSaveFPDocs : Documentation {
+    let Category = DocCatFunction;
+  let Heading = "interrupt_save_fp (ARM)";
+  let Content = [{
+Clang supports the GNU style ``__attribute__((interrupt_save_fp("TYPE")))``
+on ARM targets. This attribute behaves the same way as the ARM interrupt
+attribute, except the general purpose floating point registers are also saved,
+along with FPEXC and FPSCR. Note, even on M-class CPUs, where the floating
+point context can be automatically saved depending on the FPCCR, the general
+purpose floating point registers will be saved.
+  }];
+}
+
 def BPFPreserveAccessIndexDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -2863,8 +2900,9 @@ targets. This attribute may be attached to a function definition and instructs
 the backend to generate appropriate function entry/exit code so that it can be
 used directly as an interrupt service routine.
 
-Permissible values for this parameter are ``supervisor``, ``machine``,
-``qci-nest`` and ``qci-nonest``. If there is no parameter, then it defaults to
+Permissible values for this parameter are ``machine``, ``supervisor``,
+``qci-nest``, ``qci-nonest``, ``SiFive-CLIC-preemptible``, and
+``SiFive-CLIC-stack-swap``. If there is no parameter, then it defaults to
 ``machine``.
 
 The ``qci-nest`` and ``qci-nonest`` values require Qualcomm's Xqciint extension
@@ -2875,6 +2913,15 @@ restore interrupt state to the stack -- the ``qci-nest`` value will use
 begin the interrupt handler. Both of these will use ``qc.c.mileaveret`` to
 restore the state and return to the previous context.
 
+The ``SiFive-CLIC-preemptible`` and ``SiFive-CLIC-stack-swap`` values are used
+for machine-mode interrupts. For ``SiFive-CLIC-preemptible`` interrupts, the
+values of ``mcause`` and ``mepc`` are saved onto the stack, and interrupts are
+re-enabled. For ``SiFive-CLIC-stack-swap`` interrupts, the stack pointer is
+swapped with ``mscratch`` before its first use and after its last use.
+
+The SiFive CLIC values may be combined with each other and with the ``machine``
+attribute value. Any other combination of different values is not allowed.
+
 Repeated interrupt attribute on the same declaration will cause a warning
 to be emitted. In case of repeated declarations, the last one prevails.
 
@@ -2884,6 +2931,7 @@ https://riscv.org/specifications/privileged-isa/
 The RISC-V Instruction Set Manual Volume II: Privileged Architecture
 Version 1.10.
 https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.7
+https://sifive.cdn.prismic.io/sifive/d1984d2b-c9b9-4c91-8de0-d68a5e64fa0f_sifive-interrupt-cookbook-v1p2.pdf
   }];
 }
 
@@ -9244,5 +9292,20 @@ def AllocatingDocs : Documentation {
   let Content = [{
 Declares that a function potentially allocates heap memory, and prevents any potential inference
 of ``nonallocating`` by the compiler.
+  }];
+}
+
+def NonStringDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The ``nonstring`` attribute can be applied to the declaration of a variable or
+a field whose type is a character array to specify that the character array is
+not intended to behave like a null-terminated string. This will silence
+diagnostics with code like:
+
+.. code-block:: c
+
+  char BadStr[3] = "foo"; // No space for the null terminator, diagnosed
+  __attribute__((nonstring)) char NotAStr[3] = "foo"; // Not diagnosed
   }];
 }

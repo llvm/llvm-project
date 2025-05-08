@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-linux -fexperimental-new-constant-interpreter -verify=expected,all -std=c11 -Wcast-qual %s
-// RUN: %clang_cc1 -triple x86_64-linux -fexperimental-new-constant-interpreter -pedantic -verify=pedantic,pedantic-expected,all -std=c11 -Wcast-qual %s
-// RUN: %clang_cc1 -triple x86_64-linux -verify=ref,all -std=c11 -Wcast-qual %s
-// RUN: %clang_cc1 -triple x86_64-linux -pedantic -verify=pedantic,pedantic-ref,all -std=c11 -Wcast-qual %s
+// RUN: %clang_cc1 -triple x86_64-linux -verify=expected,all                   -std=c11 -Wcast-qual           %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -triple x86_64-linux -verify=pedantic,pedantic-expected,all -std=c11 -Wcast-qual -pedantic %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -triple x86_64-linux -verify=ref,all                        -std=c11 -Wcast-qual           %s
+// RUN: %clang_cc1 -triple x86_64-linux -verify=pedantic,pedantic-ref,all      -std=c11 -Wcast-qual -pedantic %s
 
 typedef __INTPTR_TYPE__ intptr_t;
 typedef __PTRDIFF_TYPE__ ptrdiff_t;
@@ -231,7 +231,8 @@ int castViaInt[*(int*)(unsigned long)"test"]; // ref-error {{variable length arr
                                               // expected-error {{variable length array}} \
                                               // pedantic-expected-error {{variable length array}}
 
-const void (*const funcp)(void) = (void*)123; // pedantic-warning {{converts between void pointer and function pointer}}
+const void (*const funcp)(void) = (void*)123; // pedantic-warning {{converts between void pointer and function pointer}} \
+                                              // pedantic-expected-note {{this conversion is not allowed in a constant expression}}
 _Static_assert(funcp == (void*)0, ""); // all-error {{failed due to requirement 'funcp == (void *)0'}} \
                                        // pedantic-warning {{expression is not an integer constant expression}}
 _Static_assert(funcp == (void*)123, ""); // pedantic-warning {{equality comparison between function pointer and void pointer}} \

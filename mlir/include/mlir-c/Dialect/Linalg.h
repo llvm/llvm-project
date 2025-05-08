@@ -50,6 +50,9 @@ typedef struct MlirLinalgConvolutionDimensions {
 MLIR_CAPI_EXPORTED MlirLinalgConvolutionDimensions
 mlirLinalgInferConvolutionDimensions(MlirOperation op);
 
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLinalgGetIndexingMapsAttribute(MlirOperation op);
+
 MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(Linalg, linalg);
 
 #ifdef __cplusplus

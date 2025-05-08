@@ -130,41 +130,11 @@ public:
 
   template <typename InsnType>
   DecodeStatus tryDecodeInst(const uint8_t *Table, MCInst &MI, InsnType Inst,
-                             uint64_t Address, raw_ostream &Comments) const {
-    assert(MI.getOpcode() == 0);
-    assert(MI.getNumOperands() == 0);
-    MCInst TmpInst;
-    HasLiteral = false;
-    const auto SavedBytes = Bytes;
-
-    SmallString<64> LocalComments;
-    raw_svector_ostream LocalCommentStream(LocalComments);
-    CommentStream = &LocalCommentStream;
-
-    DecodeStatus Res =
-        decodeInstruction(Table, TmpInst, Inst, Address, this, STI);
-
-    CommentStream = nullptr;
-
-    if (Res != Fail) {
-      MI = TmpInst;
-      Comments << LocalComments;
-      return MCDisassembler::Success;
-    }
-    Bytes = SavedBytes;
-    return MCDisassembler::Fail;
-  }
-
+                             uint64_t Address, raw_ostream &Comments) const;
   template <typename InsnType>
   DecodeStatus tryDecodeInst(const uint8_t *Table1, const uint8_t *Table2,
                              MCInst &MI, InsnType Inst, uint64_t Address,
-                             raw_ostream &Comments) const {
-    for (const uint8_t *T : {Table1, Table2}) {
-      if (DecodeStatus Res = tryDecodeInst(T, MI, Inst, Address, Comments))
-        return Res;
-    }
-    return MCDisassembler::Fail;
-  }
+                             raw_ostream &Comments) const;
 
   Expected<bool> onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
                                ArrayRef<uint8_t> Bytes,

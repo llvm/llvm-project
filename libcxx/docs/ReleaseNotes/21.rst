@@ -45,6 +45,7 @@ Implemented Papers
 - P2562R1: ``constexpr`` Stable Sorting (`Github <https://github.com/llvm/llvm-project/issues/105360>`__)
 - P0472R3: Put std::monostate in <utility> (`Github <https://github.com/llvm/llvm-project/issues/127874>`__)
 - P1222R4: A Standard ``flat_set`` (`Github <https://github.com/llvm/llvm-project/issues/105193>`__)
+- P2897R7: ``aligned_accessor``: An mdspan accessor expressing pointer over-alignment (`Github <https://github.com/llvm/llvm-project/issues/118372>`__)
 - P3247R2: Deprecate the notion of trivial types (`Github <https://github.com/llvm/llvm-project/issues/118387>`__)
 - P2441R2: ``views::join_with`` (`Github <https://github.com/llvm/llvm-project/issues/105185>`__)
 - P2711R1: Making multi-param constructors of ``views`` ``explicit`` (`Github <https://github.com/llvm/llvm-project/issues/105252>`__)
@@ -66,6 +67,12 @@ Improvements and New Features
 
 - The ``num_put::do_put`` integral overloads have been optimized, resulting in a performance improvement of up to 2.4x.
 
+- The ``std::stable_sort`` algorithm uses radix sort for floating-point types now, which can improve the performance
+  up to 10x, depending on type of sorted elements and the initial state of the sorted array.
+
+- The segmented iterator optimization for ``std::for_each`` has been backported to C++11. Previously it was only available
+  in C++23 and later.
+
 Deprecations and Removals
 -------------------------
 
@@ -73,16 +80,21 @@ Deprecations and Removals
 
 - ``std::is_trivial`` and ``std::is_trivial_v`` are deprecated in C++26 and later.
 
+- The ``_LIBCPP_VERBOSE_ABORT_NOT_NOEXCEPT`` has been removed, making ``std::__libcpp_verbose_abort``
+  unconditionally ``noexcept``.
+
+- TODO: The non-conforming extension ``packaged_task::result_type`` has been removed in LLVM 21.
+
 Potentially breaking changes
 ----------------------------
 
 - The implementation of ``num_put::do_put`` has been replaced to improve the performance, which can lead to different
   output when printing pointers.
 
-Upcoming Deprecations and Removals
-----------------------------------
+Announcements About Future Releases
+-----------------------------------
 
-LLVM 21
+LLVM 22
 ~~~~~~~
 
 - The status of the C++03 implementation will be frozen after the LLVM 21 release. This means that starting in LLVM 22,
@@ -93,16 +105,6 @@ LLVM 21
 
   If you are using C++03 in your project, you should consider moving to a newer version of the Standard to get the most
   out of libc++.
-
-- The ``_LIBCPP_VERBOSE_ABORT_NOT_NOEXCEPT`` macro will be removed in LLVM 21, making ``std::__libcpp_verbose_abort``
-  unconditionally ``noexcept``.
-
-- Non-conforming extension ``packaged_task::result_type`` will be removed in LLVM 21.
-
-LLVM 22
-~~~~~~~
-
-- TODO
 
 
 ABI Affecting Changes

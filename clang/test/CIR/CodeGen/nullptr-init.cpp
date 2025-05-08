@@ -11,7 +11,7 @@ void t1() {
   int *p3 = (int*)0;
 }
 
-// CIR:      cir.func @t1()
+// CIR:      cir.func @_Z2t1v()
 // CIR-NEXT:     %[[P1:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["p1", init] {alignment = 8 : i64}
 // CIR-NEXT:     %[[P2:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["p2", init] {alignment = 8 : i64}
 // CIR-NEXT:     %[[P3:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["p3", init] {alignment = 8 : i64}
@@ -24,7 +24,7 @@ void t1() {
 // CIR-NEXT:     cir.return
 // CIR-NEXT: }
 
-// LLVM:      define{{.*}} @t1()
+// LLVM:      define{{.*}} @_Z2t1v()
 // LLVM-NEXT:     %[[P1:.*]] = alloca ptr, i64 1, align 8
 // LLVM-NEXT:     %[[P2:.*]] = alloca ptr, i64 1, align 8
 // LLVM-NEXT:     %[[P3:.*]] = alloca ptr, i64 1, align 8

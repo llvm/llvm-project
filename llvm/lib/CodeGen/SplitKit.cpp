@@ -1519,8 +1519,7 @@ void SplitEditor::forceRecomputeVNI(const VNInfo &ParentVNI) {
   const LiveInterval &ParentLI = Edit->getParent();
   const SlotIndexes &Indexes = *LIS.getSlotIndexes();
   do {
-    const VNInfo &VNI = *WorkList.back();
-    WorkList.pop_back();
+    const VNInfo &VNI = *WorkList.pop_back_val();
     for (unsigned I = 0, E = Edit->size(); I != E; ++I)
       forceRecompute(I, VNI);
     if (!VNI.isPHIDef())

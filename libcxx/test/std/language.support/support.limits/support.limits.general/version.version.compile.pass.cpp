@@ -28,6 +28,10 @@
 #    error "__cpp_lib_addressof_constexpr should not be defined before c++17"
 #  endif
 
+#  ifdef __cpp_lib_aligned_accessor
+#    error "__cpp_lib_aligned_accessor should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_allocate_at_least
 #    error "__cpp_lib_allocate_at_least should not be defined before c++23"
 #  endif
@@ -476,6 +480,10 @@
 #    error "__cpp_lib_is_scoped_enum should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_is_sufficiently_aligned
+#    error "__cpp_lib_is_sufficiently_aligned should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_is_swappable
 #    error "__cpp_lib_is_swappable should not be defined before c++17"
 #  endif
@@ -896,6 +904,10 @@
 
 #  ifdef __cpp_lib_addressof_constexpr
 #    error "__cpp_lib_addressof_constexpr should not be defined before c++17"
+#  endif
+
+#  ifdef __cpp_lib_aligned_accessor
+#    error "__cpp_lib_aligned_accessor should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_allocate_at_least
@@ -1370,6 +1382,10 @@
 #    error "__cpp_lib_is_scoped_enum should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_is_sufficiently_aligned
+#    error "__cpp_lib_is_sufficiently_aligned should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_is_swappable
 #    error "__cpp_lib_is_swappable should not be defined before c++17"
 #  endif
@@ -1841,6 +1857,10 @@
 #  endif
 #  if __cpp_lib_addressof_constexpr != 201603L
 #    error "__cpp_lib_addressof_constexpr should have the value 201603L in c++17"
+#  endif
+
+#  ifdef __cpp_lib_aligned_accessor
+#    error "__cpp_lib_aligned_accessor should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_allocate_at_least
@@ -2397,6 +2417,10 @@
 
 #  ifdef __cpp_lib_is_scoped_enum
 #    error "__cpp_lib_is_scoped_enum should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_is_sufficiently_aligned
+#    error "__cpp_lib_is_sufficiently_aligned should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_is_swappable
@@ -2981,6 +3005,10 @@
 #  endif
 #  if __cpp_lib_addressof_constexpr != 201603L
 #    error "__cpp_lib_addressof_constexpr should have the value 201603L in c++20"
+#  endif
+
+#  ifdef __cpp_lib_aligned_accessor
+#    error "__cpp_lib_aligned_accessor should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_allocate_at_least
@@ -3710,6 +3738,10 @@
 #    error "__cpp_lib_is_scoped_enum should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_is_sufficiently_aligned
+#    error "__cpp_lib_is_sufficiently_aligned should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_is_swappable
 #    error "__cpp_lib_is_swappable should be defined in c++20"
 #  endif
@@ -4388,6 +4420,10 @@
 #  endif
 #  if __cpp_lib_addressof_constexpr != 201603L
 #    error "__cpp_lib_addressof_constexpr should have the value 201603L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_aligned_accessor
+#    error "__cpp_lib_aligned_accessor should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_allocate_at_least
@@ -5196,6 +5232,10 @@
 #  endif
 #  if __cpp_lib_is_scoped_enum != 202011L
 #    error "__cpp_lib_is_scoped_enum should have the value 202011L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_is_sufficiently_aligned
+#    error "__cpp_lib_is_sufficiently_aligned should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_is_swappable
@@ -6017,6 +6057,13 @@
 #  endif
 #  if __cpp_lib_addressof_constexpr != 201603L
 #    error "__cpp_lib_addressof_constexpr should have the value 201603L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_aligned_accessor
+#    error "__cpp_lib_aligned_accessor should be defined in c++26"
+#  endif
+#  if __cpp_lib_aligned_accessor != 202411L
+#    error "__cpp_lib_aligned_accessor should have the value 202411L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_allocate_at_least
@@ -7017,6 +7064,13 @@
 #  endif
 #  if __cpp_lib_is_scoped_enum != 202011L
 #    error "__cpp_lib_is_scoped_enum should have the value 202011L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_is_sufficiently_aligned
+#    error "__cpp_lib_is_sufficiently_aligned should be defined in c++26"
+#  endif
+#  if __cpp_lib_is_sufficiently_aligned != 202411L
+#    error "__cpp_lib_is_sufficiently_aligned should have the value 202411L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_is_swappable
