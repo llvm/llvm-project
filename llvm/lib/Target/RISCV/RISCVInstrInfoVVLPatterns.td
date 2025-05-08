@@ -3003,9 +3003,10 @@ foreach vti = !listconcat(AllFloatVectors, AllBFloatVectors) in {
 // Matches the semantics of the vid.v instruction, with a mask and VL
 // operand.
 let HasMaskOp = true in
-def riscv_vid_vl : RVSDNode<"VID_VL", SDTypeProfile<1, 2,
-                          [SDTCisVec<0>, SDTCVecEltisVT<1, i1>,
-                           SDTCisSameNumEltsAs<0, 1>, SDTCisVT<2, XLenVT>]>, []>;
+def riscv_vid_vl : RVSDNode<"VID_VL", SDTypeProfile<1, 2, [SDTCisVec<0>,
+                                                           SDTCVecEltisVT<1, i1>,
+                                                           SDTCisSameNumEltsAs<0, 1>,
+                                                           SDTCisVT<2, XLenVT>]>>;
 
 def SDTRVVSlide : SDTypeProfile<1, 6, [
   SDTCisVec<0>, SDTCisSameAs<1, 0>, SDTCisSameAs<2, 0>, SDTCisVT<3, XLenVT>,
@@ -3061,6 +3062,3 @@ defm : VPatSlide1VL_VX<riscv_slide1up_vl, "PseudoVSLIDE1UP">;
 defm : VPatSlide1VL_VF<riscv_fslide1up_vl, "PseudoVFSLIDE1UP">;
 defm : VPatSlide1VL_VX<riscv_slide1down_vl, "PseudoVSLIDE1DOWN">;
 defm : VPatSlide1VL_VF<riscv_fslide1down_vl, "PseudoVFSLIDE1DOWN">;
-
-
-

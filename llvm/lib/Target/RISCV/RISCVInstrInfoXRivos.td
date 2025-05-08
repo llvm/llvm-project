@@ -135,17 +135,17 @@ def RI_VEXTRACT : CustomRivosXVI<0b010111, OPMVV, (outs GPR:$rd),
 // XLenVT sign extended from the vector element size.  VEXTRACT does *not*
 // have a VL operand.
 def ri_vextract : RVSDNode<"RI_VEXTRACT",
-                         SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisVec<1>,
-                                              SDTCisInt<2>,
-                                              SDTCisInt<1>]>>;
+                           SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisVec<1>,
+                                                SDTCisInt<2>,
+                                                SDTCisInt<1>]>>;
 
 // RI_VINSERT_VL matches the semantics of ri.vinsert.v.x. It carries a VL operand.
 def ri_vinsert_vl : RVSDNode<"RI_VINSERT_VL",
-                           SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
-                                                SDTCisInt<0>,
-                                                SDTCisVT<2, XLenVT>,
-                                                SDTCisVT<3, XLenVT>,
-                                                SDTCisVT<4, XLenVT>]>>;
+                             SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
+                                                  SDTCisInt<0>,
+                                                  SDTCisVT<2, XLenVT>,
+                                                  SDTCisVT<3, XLenVT>,
+                                                  SDTCisVT<4, XLenVT>]>>;
 
 let Predicates = [HasVendorXRivosVisni], mayLoad = 0, mayStore = 0,
     hasSideEffects = 0, HasSEWOp = 1 in

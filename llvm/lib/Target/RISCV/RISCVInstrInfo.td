@@ -15,7 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 class RVSDNode<string opcode, SDTypeProfile type_profile,
-                list<SDNodeProperty> properties = []>
+               list<SDNodeProperty> properties = []>
     : SDNode<"RISCVISD::" # opcode, type_profile, properties> {
   bit HasPassthruOp = false;
   bit HasMaskOp = false;

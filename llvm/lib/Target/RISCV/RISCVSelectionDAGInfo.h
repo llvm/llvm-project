@@ -18,7 +18,7 @@ namespace llvm {
 
 namespace RISCVISD {
 // RISCVISD Node TSFlags
-enum : unsigned {
+enum : llvm::SDNodeTSFlags {
   HasPassthruOpMask = 1 << 0,
   HasMaskOpMask = 1 << 1,
 };
