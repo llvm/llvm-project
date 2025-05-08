@@ -6921,7 +6921,17 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
     if (Op.getOpcode() != ISD::FP_ROUND)
       return Op;
 
-    SDValue FpToFp16 = DAG.getNode(ISD::FP_TO_FP16, DL, MVT::i32, Src);
+    if (!Subtarget->has16BitInsts()) {
+      SDValue FpToFp16 = DAG.getNode(ISD::FP_TO_FP16, DL, MVT::i32, Src);
+      SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, FpToFp16);
+      return DAG.getNode(ISD::BITCAST, DL, MVT::f16, Trunc);
+    }
+    if (getTargetMachine().Options.UnsafeFPMath) {
+      SDValue Flags = Op.getOperand(1);
+      SDValue Src32 = DAG.getNode(ISD::FP_ROUND, DL, MVT::f32, Src, Flags);
+      return DAG.getNode(ISD::FP_ROUND, DL, MVT::f16, Src32, Flags);
+    }
+    SDValue FpToFp16 = LowerF64ToF16Safe(Src, DL, DAG);
     SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, FpToFp16);
     return DAG.getNode(ISD::BITCAST, DL, MVT::f16, Trunc);
   }
