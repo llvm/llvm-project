@@ -313,6 +313,16 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMVecInsertOpLowering
+    : public mlir::OpConversionPattern<cir::VecInsertOp> {
+public:
+  using mlir::OpConversionPattern<cir::VecInsertOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::VecInsertOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 } // namespace direct
 } // namespace cir
 

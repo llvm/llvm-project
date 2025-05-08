@@ -115,6 +115,7 @@ class LValue {
   // this is the alignment of the whole vector)
   unsigned alignment;
   mlir::Value v;
+  mlir::Value vectorIdx; // Index for vector subscript
   mlir::Type elementType;
   LValueBaseInfo baseInfo;
 
@@ -135,6 +136,7 @@ class LValue {
 
 public:
   bool isSimple() const { return lvType == Simple; }
+  bool isVectorElt() const { return lvType == VectorElt; }
   bool isBitField() const { return lvType == BitField; }
 
   // TODO: Add support for volatile
@@ -173,6 +175,31 @@ public:
     r.v = address.getPointer();
     r.elementType = address.getElementType();
     r.initialize(t, t.getQualifiers(), address.getAlignment(), baseInfo);
+    return r;
+  }
+
+  Address getVectorAddress() const {
+    return Address(getVectorPointer(), elementType, getAlignment());
+  }
+
+  mlir::Value getVectorPointer() const {
+    assert(isVectorElt());
+    return v;
+  }
+
+  mlir::Value getVectorIdx() const {
+    assert(isVectorElt());
+    return vectorIdx;
+  }
+
+  static LValue makeVectorElt(Address vecAddress, mlir::Value index,
+                              clang::QualType t, LValueBaseInfo baseInfo) {
+    LValue r;
+    r.lvType = VectorElt;
+    r.v = vecAddress.getPointer();
+    r.elementType = vecAddress.getElementType();
+    r.vectorIdx = index;
+    r.initialize(t, t.getQualifiers(), vecAddress.getAlignment(), baseInfo);
     return r;
   }
 };

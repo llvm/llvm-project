@@ -205,6 +205,17 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
 void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
                                             bool isInit) {
   if (!dst.isSimple()) {
+    if (dst.isVectorElt()) {
+      // Read/modify/write the vector, inserting the new element
+      const mlir::Location loc = dst.getVectorPointer().getLoc();
+      const mlir::Value vector =
+          builder.createLoad(loc, dst.getVectorAddress().getPointer());
+      const mlir::Value newVector = builder.create<cir::VecInsertOp>(
+          loc, vector, src.getScalarVal(), dst.getVectorIdx());
+      builder.createStore(loc, newVector, dst.getVectorAddress().getPointer());
+      return;
+    }
+
     cgm.errorNYI(dst.getPointer().getLoc(),
                  "emitStoreThroughLValue: non-simple lvalue");
     return;
@@ -417,6 +428,13 @@ RValue CIRGenFunction::emitLoadOfLValue(LValue lv, SourceLocation loc) {
 
   if (lv.isSimple())
     return RValue::get(emitLoadOfScalar(lv, loc));
+
+  if (lv.isVectorElt()) {
+    auto load =
+        builder.createLoad(getLoc(loc), lv.getVectorAddress().getPointer());
+    return RValue::get(builder.create<cir::VecExtractOp>(getLoc(loc), load,
+                                                         lv.getVectorIdx()));
+  }
 
   cgm.errorNYI(loc, "emitLoadOfLValue");
   return RValue::get(nullptr);
@@ -638,12 +656,6 @@ static Address emitArraySubscriptPtr(CIRGenFunction &cgf,
 
 LValue
 CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
-  if (e->getBase()->getType()->isVectorType() &&
-      !isa<ExtVectorElementExpr>(e->getBase())) {
-    cgm.errorNYI(e->getSourceRange(), "emitArraySubscriptExpr: VectorType");
-    return LValue::makeAddr(Address::invalid(), e->getType(), LValueBaseInfo());
-  }
-
   if (isa<ExtVectorElementExpr>(e->getBase())) {
     cgm.errorNYI(e->getSourceRange(),
                  "emitArraySubscriptExpr: ExtVectorElementExpr");
@@ -666,18 +678,26 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
   assert((e->getIdx() == e->getLHS() || e->getIdx() == e->getRHS()) &&
          "index was neither LHS nor RHS");
 
-  auto emitIdxAfterBase = [&]() -> mlir::Value {
+  auto emitIdxAfterBase = [&](bool promote) -> mlir::Value {
     const mlir::Value idx = emitScalarExpr(e->getIdx());
 
     // Extend or truncate the index type to 32 or 64-bits.
     auto ptrTy = mlir::dyn_cast<cir::PointerType>(idx.getType());
-    if (ptrTy && mlir::isa<cir::IntType>(ptrTy.getPointee()))
+    if (promote && ptrTy && mlir::isa<cir::IntType>(ptrTy.getPointee()))
       cgm.errorNYI(e->getSourceRange(),
                    "emitArraySubscriptExpr: index type cast");
     return idx;
   };
 
-  const mlir::Value idx = emitIdxAfterBase();
+  if (e->getBase()->getType()->isVectorType() &&
+      !isa<ExtVectorElementExpr>(e->getBase())) {
+    const mlir::Value idx = emitIdxAfterBase(/*promote=*/false);
+    const LValue lhs = emitLValue(e->getBase());
+    return LValue::makeVectorElt(lhs.getAddress(), idx, e->getBase()->getType(),
+                                 lhs.getBaseInfo());
+  }
+
+  const mlir::Value idx = emitIdxAfterBase(/*promote=*/true);
   if (const Expr *array = getSimpleArrayDecayOperand(e->getBase())) {
     LValue arrayLV;
     if (const auto *ase = dyn_cast<ArraySubscriptExpr>(array))

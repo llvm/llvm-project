@@ -1601,7 +1601,8 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMTrapOpLowering,
                CIRToLLVMUnaryOpLowering,
                CIRToLLVMVecCreateOpLowering,
-               CIRToLLVMVecExtractOpLowering
+               CIRToLLVMVecExtractOpLowering,
+               CIRToLLVMVecInsertOpLowering
       // clang-format on
       >(converter, patterns.getContext());
 
@@ -1715,6 +1716,14 @@ mlir::LogicalResult CIRToLLVMVecExtractOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   rewriter.replaceOpWithNewOp<mlir::LLVM::ExtractElementOp>(
       op, adaptor.getVec(), adaptor.getIndex());
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMVecInsertOpLowering::matchAndRewrite(
+    cir::VecInsertOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<mlir::LLVM::InsertElementOp>(
+      op, adaptor.getVec(), adaptor.getValue(), adaptor.getIndex());
   return mlir::success();
 }
 
