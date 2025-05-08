@@ -581,6 +581,7 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.abslk
     libc.src.stdfix.abslr
     libc.src.stdfix.absr
+    libc.src.stdfix.divir
     libc.src.stdfix.exphk
     libc.src.stdfix.expk
     libc.src.stdfix.roundhk
