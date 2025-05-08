@@ -495,7 +495,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
                getParent()->getPlan()->getVectorLoopRegion()->getEntry() &&
            "VPInstructions with PHI opcodes must be used for header phis only "
            "at the moment");
-    BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
+    BasicBlock *VectorPH =
+        State.CFG.VPBB2IRBB.at(getParent()->getCFGPredecessor(0));
     Value *Start = State.get(getOperand(0), VPLane(0));
     PHINode *Phi = State.Builder.CreatePHI(Start->getType(), 2, Name);
     Phi->addIncoming(Start, VectorPH);
@@ -933,6 +934,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::Not:
   case VPInstruction::PtrAdd:
   case VPInstruction::WideIVStep:
+  case VPInstruction::StepVector:
     return false;
   default:
     return true;
@@ -1084,8 +1086,6 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
 
 void VPInstructionWithType::execute(VPTransformState &State) {
   State.setDebugLocFrom(getDebugLoc());
-  assert(vputils::onlyFirstLaneUsed(this) &&
-         "Codegen only implemented for first lane.");
   switch (getOpcode()) {
   case Instruction::ZExt:
   case Instruction::Trunc: {
@@ -1093,6 +1093,12 @@ void VPInstructionWithType::execute(VPTransformState &State) {
     Value *Cast = State.Builder.CreateCast(Instruction::CastOps(getOpcode()),
                                            Op, ResultTy);
     State.set(this, Cast, VPLane(0));
+    break;
+  }
+  case VPInstruction::StepVector: {
+    Value *StepVector =
+        State.Builder.CreateStepVector(VectorType::get(ResultTy, State.VF));
+    State.set(this, StepVector);
     break;
   }
   default:
@@ -1111,6 +1117,9 @@ void VPInstructionWithType::print(raw_ostream &O, const Twine &Indent,
   case VPInstruction::WideIVStep:
     O << "wide-iv-step ";
     printOperands(O, SlotTracker);
+    break;
+  case VPInstruction::StepVector:
+    O << "step-vector " << *ResultTy;
     break;
   default:
     assert(Instruction::isCast(getOpcode()) && "unhandled opcode");
@@ -1879,7 +1888,8 @@ InstructionCost VPHeaderPHIRecipe::computeCost(ElementCount VF,
 /// (0 * Step, 1 * Step, 2 * Step, ...)
 /// to each vector element of Val.
 /// \p Opcode is relevant for FP induction variable.
-static Value *getStepVector(Value *Val, Value *Step,
+/// \p InitVec is an integer step vector from 0 with a step of 1.
+static Value *getStepVector(Value *Val, Value *Step, Value *InitVec,
                             Instruction::BinaryOps BinOp, ElementCount VF,
                             IRBuilderBase &Builder) {
   assert(VF.isVector() && "only vector VFs are supported");
@@ -1892,15 +1902,6 @@ static Value *getStepVector(Value *Val, Value *Step,
   assert((STy->isIntegerTy() || STy->isFloatingPointTy()) &&
          "Induction Step must be an integer or FP");
   assert(Step->getType() == STy && "Step has wrong type");
-
-  // Create a vector of consecutive numbers from zero to VF.
-  VectorType *InitVecValVTy = ValVTy;
-  if (STy->isFloatingPointTy()) {
-    Type *InitVecValSTy =
-        IntegerType::get(STy->getContext(), STy->getScalarSizeInBits());
-    InitVecValVTy = VectorType::get(InitVecValSTy, VLen);
-  }
-  Value *InitVec = Builder.CreateStepVector(InitVecValVTy);
 
   if (STy->isIntegerTy()) {
     Step = Builder.CreateVectorSplat(VLen, Step);
@@ -1956,7 +1957,8 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
 
   // Construct the initial value of the vector IV in the vector loop preheader
   auto CurrIP = Builder.saveIP();
-  BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
+  BasicBlock *VectorPH =
+      State.CFG.VPBB2IRBB.at(getParent()->getCFGPredecessor(0));
   Builder.SetInsertPoint(VectorPH->getTerminator());
   if (isa<TruncInst>(EntryVal)) {
     assert(Start->getType()->isIntegerTy() &&
@@ -1967,8 +1969,9 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
   }
 
   Value *SplatStart = Builder.CreateVectorSplat(State.VF, Start);
-  Value *SteppedStart = getStepVector(SplatStart, Step, ID.getInductionOpcode(),
-                                      State.VF, State.Builder);
+  Value *SteppedStart =
+      ::getStepVector(SplatStart, Step, State.get(getStepVector()),
+                      ID.getInductionOpcode(), State.VF, State.Builder);
 
   // We create vector phi nodes for both integer and floating-point induction
   // variables. Here, we determine the kind of arithmetic we will perform.
@@ -2125,7 +2128,7 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
           Builder.CreateMul(StartIdx0, ConstantInt::get(StartIdx0->getType(),
                                                         getUnrollPart(*this)));
     }
-    StartIdx0 = Builder.CreateTrunc(StartIdx0, IntStepTy);
+    StartIdx0 = Builder.CreateSExtOrTrunc(StartIdx0, IntStepTy);
   }
 
   if (!FirstLaneOnly && State.VF.isScalable()) {
@@ -3507,7 +3510,8 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   Value *ScalarStartValue = getStartValue()->getLiveInIRValue();
   Type *ScStValueType = ScalarStartValue->getType();
 
-  BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
+  BasicBlock *VectorPH =
+      State.CFG.VPBB2IRBB.at(getParent()->getCFGPredecessor(0));
   PHINode *NewPointerPhi = nullptr;
   if (CurrentPart == 0) {
     IRBuilder<>::InsertPointGuard Guard(State.Builder);
@@ -3648,7 +3652,8 @@ void VPFirstOrderRecurrencePHIRecipe::execute(VPTransformState &State) {
                     ? VectorInit->getType()
                     : VectorType::get(VectorInit->getType(), State.VF);
 
-  BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
+  BasicBlock *VectorPH =
+      State.CFG.VPBB2IRBB.at(getParent()->getCFGPredecessor(0));
   if (State.VF.isVector()) {
     auto *IdxTy = Builder.getInt32Ty();
     auto *One = ConstantInt::get(IdxTy, 1);
@@ -3716,7 +3721,8 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
   Phi->insertBefore(HeaderBB->getFirstInsertionPt());
   State.set(this, Phi, IsInLoop);
 
-  BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
+  BasicBlock *VectorPH =
+      State.CFG.VPBB2IRBB.at(getParent()->getCFGPredecessor(0));
 
   Value *Iden = nullptr;
   RecurKind RK = RdxDesc.getRecurrenceKind();
@@ -3810,7 +3816,8 @@ void VPWidenPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 // TODO: It would be good to use the existing VPWidenPHIRecipe instead and
 // remove VPActiveLaneMaskPHIRecipe.
 void VPActiveLaneMaskPHIRecipe::execute(VPTransformState &State) {
-  BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
+  BasicBlock *VectorPH =
+      State.CFG.VPBB2IRBB.at(getParent()->getCFGPredecessor(0));
   Value *StartMask = State.get(getOperand(0));
   PHINode *Phi =
       State.Builder.CreatePHI(StartMask->getType(), 2, "active.lane.mask");

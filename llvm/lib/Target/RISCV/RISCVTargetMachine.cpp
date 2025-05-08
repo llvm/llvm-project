@@ -149,6 +149,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVLoadStoreOptPass(*PR);
   initializeRISCVExpandAtomicPseudoPass(*PR);
   initializeRISCVRedundantCopyEliminationPass(*PR);
+  initializeRISCVAsmPrinterPass(*PR);
 }
 
 static StringRef computeDataLayout(const Triple &TT,

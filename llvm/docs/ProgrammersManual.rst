@@ -437,6 +437,15 @@ that should never be entered if the program invariants hold:
       llvm_unreachable("X should be Foo or Bar here");
   }
 
+Additionally, ``reportFatalInternalError`` can be used to report invariant
+violations even in builds that do not enable assertions:
+
+.. code-block:: c++
+
+  if (VerifyFooAnalysis && !Foo.verify()) {
+    reportFatalInternalError("Analysis 'foo' not preserved");
+  }
+
 Recoverable Errors
 ^^^^^^^^^^^^^^^^^^
 
@@ -452,9 +461,9 @@ recovery.
    While it would be ideal to use this error handling scheme throughout
    LLVM, there are places where this hasn't been practical to apply. In
    situations where you absolutely must emit a non-programmatic error and
-   the ``Error`` model isn't workable you can call ``report_fatal_error``,
-   which will call installed error handlers, print a message, and abort the
-   program. The use of `report_fatal_error` in this case is discouraged.
+   the ``Error`` model isn't workable you can call ``reportFatalUsageError``,
+   which will call installed error handlers, print a message, and exit the
+   program. The use of `reportFatalUsageError` in this case is discouraged.
 
 Recoverable errors are modeled using LLVM's ``Error`` scheme. This scheme
 represents errors using function return values, similar to classic C integer
