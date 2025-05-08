@@ -540,35 +540,35 @@ define <2 x double> @frem_undef_op0_constant_vec(<2 x double> %x) {
   ret <2 x double> %r
 }
 
-define <2 x double> @maximumnum_nan_op0_vec_partial_undef_op1_undef(<2 x double> %x) {
-; CHECK-LABEL: @maximumnum_nan_op0_vec_partial_undef_op1_undef(
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double undef>
+define <2 x double> @maximumnum_nan_op0_vec_partial_poison_op1_poison(<2 x double> %x) {
+; CHECK-LABEL: @maximumnum_nan_op0_vec_partial_poison_op1_poison(
+; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double poison>
 ;
-  %r = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> <double 0x7ff8000000000000, double undef>, <2 x double> undef)
+  %r = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> <double 0x7ff8000000000000, double poison>, <2 x double> poison)
   ret <2 x double> %r
 }
 
-define <2 x double> @maximumnum_nan_op1_vec_partial_undef_op0_undef(<2 x double> %x) {
-; CHECK-LABEL: @maximumnum_nan_op1_vec_partial_undef_op0_undef(
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double undef>
+define <2 x double> @maximumnum_nan_op1_vec_partial_poison_op0_poison(<2 x double> %x) {
+; CHECK-LABEL: @maximumnum_nan_op1_vec_partial_poison_op0_poison(
+; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double poison>
 ;
-  %r = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> undef, <2 x double> <double 0x7ff8000000000000, double undef>)
+  %r = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> poison, <2 x double> <double 0x7ff8000000000000, double poison>)
   ret <2 x double> %r
 }
 
-define <2 x double> @minimumnum_nan_op0_vec_partial_undef_op1_undef(<2 x double> %x) {
-; CHECK-LABEL: @minimumnum_nan_op0_vec_partial_undef_op1_undef(
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double undef>
+define <2 x double> @minimumnum_nan_op0_vec_partial_poison_op1_poison(<2 x double> %x) {
+; CHECK-LABEL: @minimumnum_nan_op0_vec_partial_poison_op1_poison(
+; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double poison>
 ;
-  %r = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> <double 0x7ff8000000000000, double undef>, <2 x double> undef)
+  %r = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> <double 0x7ff8000000000000, double poison>, <2 x double> poison)
   ret <2 x double> %r
 }
 
-define <2 x double> @minimumnum_nan_op1_vec_partial_undef_op0_undef(<2 x double> %x) {
-; CHECK-LABEL: @minimumnum_nan_op1_vec_partial_undef_op0_undef(
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double undef>
+define <2 x double> @minimumnum_nan_op1_vec_partial_poison_op0_poison(<2 x double> %x) {
+; CHECK-LABEL: @minimumnum_nan_op1_vec_partial_poison_op0_poison(
+; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double poison>
 ;
-  %r = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> undef, <2 x double> <double 0x7ff8000000000000, double undef>)
+  %r = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> poison, <2 x double> <double 0x7ff8000000000000, double poison>)
   ret <2 x double> %r
 }
 
