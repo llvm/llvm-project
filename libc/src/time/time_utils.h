@@ -112,24 +112,25 @@ LIBC_INLINE tm *gmtime_internal(const time_t *timer, tm *result) {
   return result;
 }
 
-LIBC_INLINE tm &localtime(const time_t &t_ptr) {
-  static tm result;
-  return time_utils::localtime_internal(t_ptr, &result);
-}
-
-LIBC_INLINE struct tm &localtime_internal(const time_t &timer, struct tm &buf) {
-  if (timer == nullptr) {
+LIBC_INLINE tm *localtime_internal(const time_t *timer, tm *buf) {
+  time_t seconds = *timer;
+  if (seconds == -1) {
     invalid_value();
     return nullptr;
   }
 
   // Update the tm structure's year, month, day, etc. from seconds.
-  if (update_from_seconds(static_cast<int64_t>(timer), &buf) < 0) {
+  if (update_from_seconds(seconds, buf) < 0) {
     out_of_range();
     return nullptr;
   }
 
-  return &buf;
+  return buf;
+}
+
+LIBC_INLINE tm *localtime(const time_t *t_ptr) {
+  static tm result;
+  return time_utils::localtime_internal(t_ptr, &result);
 }
 
 // Returns number of years from (1, year).
