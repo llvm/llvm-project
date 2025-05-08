@@ -454,6 +454,7 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
       PHINode *NewIndPHI = PHINode::Create(IndPHI->getType(), 1, "ind", InsertPt);
       NewIndPHI->addIncoming(IndPHI->getIncomingValueForBlock(IBRPred),
                              IBRPred);
+      NewIndPHI->setDebugLoc(IndPHI->getDebugLoc());
 
       // Create a PHI in the body block, to merge the direct and indirect
       // predecessors.
@@ -461,6 +462,8 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
       MergePHI->insertBefore(MergeInsert);
       MergePHI->addIncoming(NewIndPHI, Target);
       MergePHI->addIncoming(DirPHI, DirectSucc);
+      MergePHI->applyMergedLocation(DirPHI->getDebugLoc(),
+                                    IndPHI->getDebugLoc());
 
       IndPHI->replaceAllUsesWith(MergePHI);
       IndPHI->eraseFromParent();
