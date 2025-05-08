@@ -2,11 +2,29 @@
 ; RUN: opt %s -S --passes="loop-mssa(simple-loop-unswitch<nontrivial>)" -o - \
 ; RUN: | FileCheck %s
 
-;; The important thing here is that the instructions duplicated from
-;; LOOP_HEADER into ENTRY, and those duplicated from LOOP_LATCH into
-;; LOOP_LATCH_US, get remapped atom numbers.
+;; Unswitch from:
+;;                    +- noclobber -+
+;;                    |             v
+;; entry -> loop.header             loop.latch -> exit.
+;;          ^         |             ^        |
+;;          |         +- clobber ---+        |
+;;          +--------------------------------+
+;;
+;; To (unswitched loop unconditionally branches to noclobber.us):
+;;                          +---------------------------------------------+
+;;                          V                                             |
+;;     +- entry.split.us -> loop.header.us -> noclobber.us -> loop.latch.us -> exit.split.us -+
+;;     |                                                                                      |
+;; entry                                                                                      |
+;;     |                                                                                      v
+;;     +- entry.split -> loop.header -> noclobber -> loop.latch -> exit.split --------------> exit.
+;;                       ^         |                 ^        |
+;;                       |         +--> clobber -----+        |
+;;                       +------------------------------------+
+;;
+;; Check the duplicated instructions get remapped source atoms. Note some
+;; instructions get duplicated from loop.header into entry too.
 
-define i32 @partial_unswitch_true_successor_hoist_invariant(ptr %ptr, i32 %N) !dbg !5 {
 ; CHECK-LABEL: define i32 @partial_unswitch_true_successor_hoist_invariant(
 ; CHECK-SAME: ptr [[PTR:%.*]], i32 [[N:%.*]]) !dbg [[DBG5:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -48,7 +66,8 @@ define i32 @partial_unswitch_true_successor_hoist_invariant(ptr %ptr, i32 %N) !d
 ; CHECK-NEXT:    br label %[[EXIT]], !dbg [[DBG33:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i32 10, !dbg [[DBG33]]
-;
+
+define i32 @partial_unswitch_true_successor_hoist_invariant(ptr %ptr, i32 %N) !dbg !5 {
 entry:
   br label %loop.header, !dbg !8
 
@@ -89,49 +108,42 @@ declare void @clobber()
 !5 = distinct !DISubprogram(name: "partial_unswitch_true_successor_hoist_invariant", linkageName: "partial_unswitch_true_successor_hoist_invariant", scope: null, file: !1, line: 1, type: !6, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
 !6 = !DISubroutineType(types: !7)
 !7 = !{}
-!8 = !DILocation(line: 1, column: 1, scope: !5, atomGroup: 1, atomRank: 1)
-!9 = !DILocation(line: 2, column: 1, scope: !5, atomGroup: 2, atomRank: 1)
-!10 = !DILocation(line: 3, column: 1, scope: !5, atomGroup: 3, atomRank: 1)
-!11 = !DILocation(line: 4, column: 1, scope: !5, atomGroup: 4, atomRank: 1)
-!12 = !DILocation(line: 5, column: 1, scope: !5, atomGroup: 5, atomRank: 1)
-!13 = !DILocation(line: 6, column: 1, scope: !5, atomGroup: 6, atomRank: 1)
-!14 = !DILocation(line: 7, column: 1, scope: !5, atomGroup: 7, atomRank: 1)
-!15 = !DILocation(line: 8, column: 1, scope: !5, atomGroup: 8, atomRank: 1)
-!16 = !DILocation(line: 9, column: 1, scope: !5, atomGroup: 9, atomRank: 1)
-!17 = !DILocation(line: 10, column: 1, scope: !5, atomGroup: 10, atomRank: 1)
-!18 = !DILocation(line: 11, column: 1, scope: !5, atomGroup: 11, atomRank: 1)
-!19 = !DILocation(line: 12, column: 1, scope: !5, atomGroup: 12, atomRank: 1)
-!20 = !DILocation(line: 13, column: 1, scope: !5, atomGroup: 13, atomRank: 1)
+!8 = !DILocation(line: 1, scope: !5, atomGroup: 1, atomRank: 1)
+!9 = !DILocation(line: 2, scope: !5, atomGroup: 2, atomRank: 1)
+!10 = !DILocation(line: 3, scope: !5, atomGroup: 3, atomRank: 1)
+!11 = !DILocation(line: 4, scope: !5, atomGroup: 4, atomRank: 1)
+!12 = !DILocation(line: 5, scope: !5, atomGroup: 5, atomRank: 1)
+!13 = !DILocation(line: 6, scope: !5, atomGroup: 6, atomRank: 1)
+!14 = !DILocation(line: 7, scope: !5, atomGroup: 7, atomRank: 1)
+!15 = !DILocation(line: 8, scope: !5, atomGroup: 8, atomRank: 1)
+!16 = !DILocation(line: 9, scope: !5, atomGroup: 9, atomRank: 1)
+!17 = !DILocation(line: 10, scope: !5, atomGroup: 10, atomRank: 1)
+!18 = !DILocation(line: 11, scope: !5, atomGroup: 11, atomRank: 1)
+!19 = !DILocation(line: 12, scope: !5, atomGroup: 12, atomRank: 1)
+!20 = !DILocation(line: 13, scope: !5, atomGroup: 13, atomRank: 1)
 ;.
-; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C, file: [[META1:![0-9]+]], producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
-; CHECK: [[META1]] = !DIFile(filename: "test.ll", directory: {{.*}})
-; CHECK: [[DBG5]] = distinct !DISubprogram(name: "partial_unswitch_true_successor_hoist_invariant", linkageName: "partial_unswitch_true_successor_hoist_invariant", scope: null, file: [[META1]], line: 1, type: [[META6:![0-9]+]], scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]])
-; CHECK: [[META6]] = !DISubroutineType(types: [[META7:![0-9]+]])
-; CHECK: [[META7]] = !{}
-; CHECK: [[DBG8]] = !DILocation(line: 3, column: 1, scope: [[DBG5]], atomGroup: 25, atomRank: 1)
-; CHECK: [[DBG9]] = !DILocation(line: 4, column: 1, scope: [[DBG5]], atomGroup: 26, atomRank: 1)
-; CHECK: [[DBG10]] = !DILocation(line: 5, column: 1, scope: [[DBG5]], atomGroup: 27, atomRank: 1)
-; CHECK: [[DBG11]] = !DILocation(line: 1, column: 1, scope: [[DBG5]], atomGroup: 14, atomRank: 1)
-; CHECK: [[DBG12]] = !DILocation(line: 2, column: 1, scope: [[DBG5]], atomGroup: 15, atomRank: 1)
-; CHECK: [[DBG13]] = !DILocation(line: 6, column: 1, scope: [[DBG5]], atomGroup: 19, atomRank: 1)
-; CHECK: [[DBG14]] = !DILocation(line: 7, column: 1, scope: [[DBG5]], atomGroup: 20, atomRank: 1)
-; CHECK: [[DBG15]] = !DILocation(line: 10, column: 1, scope: [[DBG5]], atomGroup: 21, atomRank: 1)
-; CHECK: [[DBG16]] = !DILocation(line: 11, column: 1, scope: [[DBG5]], atomGroup: 22, atomRank: 1)
-; CHECK: [[DBG17]] = !DILocation(line: 12, column: 1, scope: [[DBG5]], atomGroup: 23, atomRank: 1)
-; CHECK: [[DBG18]] = !DILocation(line: 13, column: 1, scope: [[DBG5]], atomGroup: 24, atomRank: 1)
-; CHECK: [[DBG19]] = !DILocation(line: 1, column: 1, scope: [[DBG5]], atomGroup: 1, atomRank: 1)
-; CHECK: [[DBG20]] = !DILocation(line: 2, column: 1, scope: [[DBG5]], atomGroup: 2, atomRank: 1)
-; CHECK: [[DBG21]] = !DILocation(line: 3, column: 1, scope: [[DBG5]], atomGroup: 3, atomRank: 1)
-; CHECK: [[DBG22]] = !DILocation(line: 4, column: 1, scope: [[DBG5]], atomGroup: 4, atomRank: 1)
-; CHECK: [[DBG23]] = !DILocation(line: 5, column: 1, scope: [[DBG5]], atomGroup: 5, atomRank: 1)
-; CHECK: [[DBG24]] = !DILocation(line: 6, column: 1, scope: [[DBG5]], atomGroup: 6, atomRank: 1)
-; CHECK: [[DBG25]] = !DILocation(line: 7, column: 1, scope: [[DBG5]], atomGroup: 7, atomRank: 1)
-; CHECK: [[DBG26]] = !DILocation(line: 8, column: 1, scope: [[DBG5]], atomGroup: 8, atomRank: 1)
-; CHECK: [[DBG27]] = !DILocation(line: 9, column: 1, scope: [[DBG5]], atomGroup: 9, atomRank: 1)
-; CHECK: [[DBG28]] = !DILocation(line: 10, column: 1, scope: [[DBG5]], atomGroup: 10, atomRank: 1)
-; CHECK: [[DBG29]] = !DILocation(line: 11, column: 1, scope: [[DBG5]], atomGroup: 11, atomRank: 1)
-; CHECK: [[DBG30]] = !DILocation(line: 12, column: 1, scope: [[DBG5]], atomGroup: 12, atomRank: 1)
-; CHECK: [[LOOP31]] = distinct !{[[LOOP31]], [[META32:![0-9]+]]}
-; CHECK: [[META32]] = !{!"llvm.loop.unswitch.partial.disable"}
-; CHECK: [[DBG33]] = !DILocation(line: 13, column: 1, scope: [[DBG5]], atomGroup: 13, atomRank: 1)
+; CHECK: [[DBG8]] = !DILocation(line: 3{{.*}}, atomGroup: 25, atomRank: 1)
+; CHECK: [[DBG9]] = !DILocation(line: 4{{.*}}, atomGroup: 26, atomRank: 1)
+; CHECK: [[DBG10]] = !DILocation(line: 5{{.*}}, atomGroup: 27, atomRank: 1)
+; CHECK: [[DBG11]] = !DILocation(line: 1{{.*}}, atomGroup: 14, atomRank: 1)
+; CHECK: [[DBG12]] = !DILocation(line: 2{{.*}}, atomGroup: 15, atomRank: 1)
+; CHECK: [[DBG13]] = !DILocation(line: 6{{.*}}, atomGroup: 19, atomRank: 1)
+; CHECK: [[DBG14]] = !DILocation(line: 7{{.*}}, atomGroup: 20, atomRank: 1)
+; CHECK: [[DBG15]] = !DILocation(line: 10{{.*}}, atomGroup: 21, atomRank: 1)
+; CHECK: [[DBG16]] = !DILocation(line: 11{{.*}}, atomGroup: 22, atomRank: 1)
+; CHECK: [[DBG17]] = !DILocation(line: 12{{.*}}, atomGroup: 23, atomRank: 1)
+; CHECK: [[DBG18]] = !DILocation(line: 13{{.*}}, atomGroup: 24, atomRank: 1)
+; CHECK: [[DBG19]] = !DILocation(line: 1{{.*}}, atomGroup: 1, atomRank: 1)
+; CHECK: [[DBG20]] = !DILocation(line: 2{{.*}}, atomGroup: 2, atomRank: 1)
+; CHECK: [[DBG21]] = !DILocation(line: 3{{.*}}, atomGroup: 3, atomRank: 1)
+; CHECK: [[DBG22]] = !DILocation(line: 4{{.*}}, atomGroup: 4, atomRank: 1)
+; CHECK: [[DBG23]] = !DILocation(line: 5{{.*}}, atomGroup: 5, atomRank: 1)
+; CHECK: [[DBG24]] = !DILocation(line: 6{{.*}}, atomGroup: 6, atomRank: 1)
+; CHECK: [[DBG25]] = !DILocation(line: 7{{.*}}, atomGroup: 7, atomRank: 1)
+; CHECK: [[DBG26]] = !DILocation(line: 8{{.*}}, atomGroup: 8, atomRank: 1)
+; CHECK: [[DBG27]] = !DILocation(line: 9{{.*}}, atomGroup: 9, atomRank: 1)
+; CHECK: [[DBG28]] = !DILocation(line: 10{{.*}}, atomGroup: 10, atomRank: 1)
+; CHECK: [[DBG29]] = !DILocation(line: 11{{.*}}, atomGroup: 11, atomRank: 1)
+; CHECK: [[DBG30]] = !DILocation(line: 12{{.*}}, atomGroup: 12, atomRank: 1)
+; CHECK: [[DBG33]] = !DILocation(line: 13{{.*}}, atomGroup: 13, atomRank: 1)
 ;.
