@@ -122,16 +122,16 @@ bgtu x17, x18, 28
 # CHECK-OBJ: bgeu s3, s2, 0x70
 bleu x18, x19, 32
 
-# beqz/bnez where operands are reversed to the canonical form.
+# Emit beqz/bnez alias even when operands are reversed to the canonical form.
 # CHECK-S-NOALIAS: beq zero, a0, 512
-# CHECK-S: beq zero, a0, 512
+# CHECK-S: beqz a0, 512
 # CHECK-OBJ-NOALIAS: beq zero, a0, 0x254
-# CHECK-OBJ: beq zero, a0, 0x254
+# CHECK-OBJ: beqz a0, 0x254
 beq zero, x10, 512
 # CHECK-S-NOALIAS: bne zero, a1, 1024
-# CHECK-S: bne zero, a1, 1024
+# CHECK-S: bnez a1, 1024
 # CHECK-OBJ-NOALIAS: bne zero, a1, 0x458
-# CHECK-OBJ: bne zero, a1, 0x458
+# CHECK-OBJ: bnez a1, 0x458
 bne zero, x11, 1024
 
 # CHECK-S-NOALIAS: jal zero, 2044

@@ -965,8 +965,12 @@ def : InstAlias<"sgtu $rd, $rs, $rt", (SLTU GPR:$rd, GPR:$rt, GPR:$rs), 0>;
 
 def : InstAlias<"beqz $rs, $offset",
                 (BEQ GPR:$rs,      X0, bare_simm13_lsb0:$offset)>;
+def : InstAlias<"beqz $rs, $offset",
+                (BEQ      X0, GPR:$rs, bare_simm13_lsb0:$offset)>;
 def : InstAlias<"bnez $rs, $offset",
                 (BNE GPR:$rs,      X0, bare_simm13_lsb0:$offset)>;
+def : InstAlias<"bnez $rs, $offset",
+                (BNE      X0, GPR:$rs, bare_simm13_lsb0:$offset)>;
 def : InstAlias<"blez $rs, $offset",
                 (BGE      X0, GPR:$rs, bare_simm13_lsb0:$offset)>;
 def : InstAlias<"bgez $rs, $offset",
