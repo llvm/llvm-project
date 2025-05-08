@@ -282,6 +282,7 @@ public:
   static llvm::StringLiteral GetCommand() { return "initialize"; }
   llvm::Expected<protocol::InitializeResponseBody>
   Run(const protocol::InitializeRequestArguments &args) const override;
+  void PostRun() const override;
 };
 
 class LaunchRequestHandler

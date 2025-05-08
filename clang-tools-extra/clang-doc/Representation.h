@@ -60,6 +60,7 @@ struct CommentInfo {
   // the vector.
   bool operator<(const CommentInfo &Other) const;
 
+  // TODO: The Kind field should be an enum, so we can switch on it easily.
   SmallString<16>
       Kind; // Kind of comment (FullComment, ParagraphComment, TextComment,
             // InlineCommandComment, HTMLStartTagComment, HTMLEndTagComment,
@@ -534,6 +535,7 @@ struct ClangDocContext {
   std::vector<std::string> UserStylesheets;
   // JavaScript files that will be imported in all HTML files.
   std::vector<std::string> JsScripts;
+  // Base directory for remote repositories.
   StringRef Base;
   Index Idx;
 };
