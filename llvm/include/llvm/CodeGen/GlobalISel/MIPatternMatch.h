@@ -834,8 +834,8 @@ m_c_GFCmp(const Pred &P, const LHS &L, const RHS &R) {
   return CompareOp_match<Pred, LHS, RHS, TargetOpcode::G_FCMP, true>(P, L, R);
 }
 
-/// Matches a register not-ed by a G_XOR.
-/// G_XOR %not_reg, -1
+/// Matches the register and immediate used in a fpclass test
+/// G_IS_FPCLASS %val, 96
 template <typename LHS, typename Test>
 inline ClassifyOp_match<LHS, Test, TargetOpcode::G_IS_FPCLASS>
 m_GIsFPClass(const LHS &L, const Test &T) {
