@@ -75,47 +75,30 @@ std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
     offsetValues[offsetIdx] = indicesVec[i];
     offsetValues[offsetIdx + 1] = strides[i];
   }
-
   // Adjust linearizedIndices and size by the scale factor (dstBits / srcBits).
   int64_t scaler = dstBits / srcBits;
+  OpFoldResult linearizedIndices = affine::makeComposedFoldedAffineApply(
+      builder, loc, addMulMap.floorDiv(scaler), offsetValues);
+
   size_t symbolIndex = 0;
-  SmallVector<Value> values;
+  SmallVector<OpFoldResult> values;
   SmallVector<AffineExpr> productExpressions;
   for (unsigned i = 0; i < sourceRank; ++i) {
-    AffineExpr strideExpr, sizeExpr;
+    AffineExpr strideExpr = symbols[symbolIndex++];
     OpFoldResult stride = strides[i];
-    OpFoldResult size = sizes[i];
-    if (auto constantStride = getConstantIntValue(stride)) {
-      strideExpr = builder.getAffineConstantExpr(*constantStride);
-    } else {
-      strideExpr = symbols[symbolIndex++];
-      values.push_back(getValueOrCreateConstantIndexOp(builder, loc, stride));
-    }
+    values.push_back(getValueOrCreateConstantIndexOp(builder, loc, stride));
 
-    if (auto constantSize = getConstantIntValue(size)) {
-      sizeExpr = builder.getAffineConstantExpr(*constantSize);
-    } else {
-      sizeExpr = symbols[symbolIndex++];
-      values.push_back(getValueOrCreateConstantIndexOp(builder, loc, size));
-    }
+    AffineExpr sizeExpr = symbols[symbolIndex++];
+    OpFoldResult size = sizes[i];
+    values.push_back(getValueOrCreateConstantIndexOp(builder, loc, size));
 
     productExpressions.push_back((strideExpr * sizeExpr).floorDiv(scaler));
   }
   AffineMap maxMap = AffineMap::get(
       /*dimCount=*/0, /*symbolCount=*/symbolIndex, productExpressions,
       builder.getContext());
-
-  OpFoldResult linearizedSize;
-  Value totalSize =
-      builder.createOrFold<affine::AffineMaxOp>(loc, maxMap, values);
-  if (auto constantSize = getConstantIntValue(totalSize)) {
-    linearizedSize = builder.getIndexAttr(*constantSize);
-  } else {
-    linearizedSize = totalSize;
-  }
-
-  OpFoldResult linearizedIndices = affine::makeComposedFoldedAffineApply(
-      builder, loc, addMulMap.floorDiv(scaler), offsetValues);
+  OpFoldResult linearizedSize =
+      affine::makeComposedFoldedAffineMax(builder, loc, maxMap, values);
 
   // Adjust baseOffset by the scale factor (dstBits / srcBits).
   AffineExpr s0;
