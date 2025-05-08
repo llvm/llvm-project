@@ -247,6 +247,29 @@ bool SwiftArraySliceBufferHandler::IsValid() {
   return m_first_elem_ptr != LLDB_INVALID_ADDRESS && m_elem_type.IsValid();
 }
 
+size_t SwiftArrayInlineBufferHandler::GetCount() { return m_size; }
+
+size_t SwiftArrayInlineBufferHandler::GetCapacity() { return GetCount(); }
+
+lldb_private::CompilerType SwiftArrayInlineBufferHandler::GetElementType() {
+  return m_elem_type;
+}
+
+ValueObjectSP SwiftArrayInlineBufferHandler::GetElementAtIndex(size_t idx) {
+  if (idx >= m_size)
+    return {};
+  return m_valobj_sp->GetChildAtIndex(idx);
+}
+
+SwiftArrayInlineBufferHandler::SwiftArrayInlineBufferHandler(
+    ValueObjectSP valobj, lldb::addr_t native_ptr, CompilerType elem_type)
+    : m_valobj_sp(valobj),
+      m_size(
+          llvm::expectedToOptional(m_valobj_sp->GetNumChildren()).value_or(0)) {
+}
+
+bool SwiftArrayInlineBufferHandler::IsValid() { return m_valobj_sp.get(); }
+
 size_t SwiftSyntheticFrontEndBufferHandler::GetCount() {
   return m_frontend->CalculateNumChildrenIgnoringErrors();
 }
@@ -395,6 +418,28 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &static_valobj) {
     if (handler && handler->IsValid())
       return handler;
     return nullptr;
+  } else if (valobj_typename.starts_with("Swift.InlineArray<")) {
+    CompilerType elem_type(
+        valobj.GetCompilerType().GetArrayElementType(exe_scope));
+    if (!elem_type)
+      return nullptr;
+
+    static ConstString g__storage("_storage");
+    auto nonsynth_sp = valobj.GetNonSyntheticValue();
+    if (!nonsynth_sp)
+      return nullptr;
+    ValueObjectSP storage_sp(nonsynth_sp->GetChildMemberWithName(g__storage));
+
+    lldb::addr_t storage_location =
+        storage_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+    if (auto process_sp = valobj.GetProcessSP())
+      if (auto *swift_runtime = SwiftLanguageRuntime::Get(process_sp))
+        storage_location =
+            swift_runtime->MaskMaybeBridgedPointer(storage_location);
+    std::unique_ptr<SwiftArrayBufferHandler> handler;
+    handler.reset(new SwiftArrayInlineBufferHandler(
+        storage_sp, storage_location, elem_type));
+    return handler;
   } else {
     // Swift.Array
     static ConstString g_buffer("_buffer");
