@@ -676,10 +676,10 @@ lldb::SBTarget DAP::CreateTarget(lldb::SBError &error) {
   // omitted at all), so it is good to leave the user an opportunity to specify
   // those. Any of those three can be left empty.
   auto target = this->debugger.CreateTarget(
-      configuration.program.value_or("").data(),
-      configuration.targetTriple.value_or("").data(),
-      configuration.platformName.value_or("").data(),
-      true, // Add dependent modules.
+      /*filename=*/configuration.program.data(),
+      /*target_triple=*/configuration.targetTriple.data(),
+      /*platform_name=*/configuration.platformName.data(),
+      /*add_dependent_modules=*/true, // Add dependent modules.
       error);
 
   return target;
@@ -1203,7 +1203,7 @@ bool SendEventRequestHandler::DoExecute(lldb::SBDebugger debugger,
 }
 
 void DAP::ConfigureSourceMaps() {
-  if (configuration.sourceMap.empty() && !configuration.sourcePath)
+  if (configuration.sourceMap.empty() && configuration.sourcePath.empty())
     return;
 
   std::string sourceMapCommand;
@@ -1214,8 +1214,8 @@ void DAP::ConfigureSourceMaps() {
     for (const auto &kv : configuration.sourceMap) {
       strm << "\"" << kv.first << "\" \"" << kv.second << "\" ";
     }
-  } else if (configuration.sourcePath) {
-    strm << "\".\" \"" << *configuration.sourcePath << "\"";
+  } else if (!configuration.sourcePath.empty()) {
+    strm << "\".\" \"" << configuration.sourcePath << "\"";
   }
 
   RunLLDBCommands("Setting source map:", {sourceMapCommand});
@@ -1224,6 +1224,7 @@ void DAP::ConfigureSourceMaps() {
 void DAP::SetConfiguration(const protocol::Configuration &config,
                            bool is_attach) {
   configuration = config;
+  stop_at_entry = config.stopOnEntry;
   this->is_attach = is_attach;
 
   if (configuration.customFrameFormat)
@@ -1243,8 +1244,6 @@ void DAP::SetConfigurationDone() {
 }
 
 void DAP::SetFrameFormat(llvm::StringRef format) {
-  if (format.empty())
-    return;
   lldb::SBError error;
   frame_format = lldb::SBFormat(format.str().c_str(), error);
   if (error.Fail()) {
@@ -1257,8 +1256,6 @@ void DAP::SetFrameFormat(llvm::StringRef format) {
 }
 
 void DAP::SetThreadFormat(llvm::StringRef format) {
-  if (format.empty())
-    return;
   lldb::SBError error;
   thread_format = lldb::SBFormat(format.str().c_str(), error);
   if (error.Fail()) {
