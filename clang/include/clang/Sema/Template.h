@@ -24,6 +24,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include <cassert>
 #include <optional>
+#include <tuple>
 #include <utility>
 
 namespace clang {
@@ -76,9 +77,17 @@ enum class TemplateSubstitutionKind : char {
   class MultiLevelTemplateArgumentList {
     /// The template argument list at a certain template depth
 
+    enum ListProperties {
+      /// A 'Final' substitution.
+      IsFinal = 0x1,
+      /// Track if the arguments are injected template parameters.
+      /// Injected template parameters should not be expanded.
+      ArgumentsAreInjectedTemplateParams = 0x02,
+    };
+
     using ArgList = ArrayRef<TemplateArgument>;
     struct ArgumentListLevel {
-      llvm::PointerIntPair<Decl *, 1, bool> AssociatedDeclAndFinal;
+      llvm::PointerIntPair<Decl *, 3, unsigned> AssociatedDeclAndProperties;
       ArgList Args;
     };
     using ContainerType = SmallVector<ArgumentListLevel, 4>;
@@ -161,11 +170,19 @@ enum class TemplateSubstitutionKind : char {
     /// A template-like entity which owns the whole pattern being substituted.
     /// This will usually own a set of template parameters, or in some
     /// cases might even be a template parameter itself.
-    std::pair<Decl *, bool> getAssociatedDecl(unsigned Depth) const {
+    std::tuple<Decl *, bool, bool> getAssociatedDecl(unsigned Depth) const {
       assert(NumRetainedOuterLevels <= Depth && Depth < getNumLevels());
       auto AD = TemplateArgumentLists[getNumLevels() - Depth - 1]
-                    .AssociatedDeclAndFinal;
-      return {AD.getPointer(), AD.getInt()};
+                    .AssociatedDeclAndProperties;
+      return {AD.getPointer(), AD.getInt() & IsFinal,
+              AD.getInt() & ArgumentsAreInjectedTemplateParams};
+    }
+
+    bool ArgumentsAreInjectedParameters(unsigned Depth) const {
+      assert(NumRetainedOuterLevels <= Depth && Depth < getNumLevels());
+      auto AD = TemplateArgumentLists[getNumLevels() - Depth - 1]
+                    .AssociatedDeclAndProperties;
+      return AD.getInt() & ArgumentsAreInjectedTemplateParams;
     }
 
     /// Determine whether there is a non-NULL template argument at the
@@ -205,16 +222,15 @@ enum class TemplateSubstitutionKind : char {
 
     /// Add a new outmost level to the multi-level template argument
     /// list.
-    /// A 'Final' substitution means that Subst* nodes won't be built
-    /// for the replacements.
-    void addOuterTemplateArguments(Decl *AssociatedDecl, ArgList Args,
-                                   bool Final) {
+    void
+    addOuterTemplateArguments(Decl *AssociatedDecl, ArgList Args, bool Final,
+                              bool ArgumentsAreInjectedTemplateParams = false) {
       assert(!NumRetainedOuterLevels &&
              "substituted args outside retained args?");
       assert(getKind() == TemplateSubstitutionKind::Specialization);
       TemplateArgumentLists.push_back(
           {{AssociatedDecl ? AssociatedDecl->getCanonicalDecl() : nullptr,
-            Final},
+            getProperties(Final, ArgumentsAreInjectedTemplateParams)},
            Args});
     }
 
@@ -239,15 +255,17 @@ enum class TemplateSubstitutionKind : char {
              "Replacing in an empty list?");
 
       if (!TemplateArgumentLists.empty()) {
-        assert((TemplateArgumentLists[0].AssociatedDeclAndFinal.getPointer() ||
-                TemplateArgumentLists[0].AssociatedDeclAndFinal.getPointer() ==
+        assert((TemplateArgumentLists[0]
+                    .AssociatedDeclAndProperties.getPointer() ||
+                TemplateArgumentLists[0]
+                        .AssociatedDeclAndProperties.getPointer() ==
                     AssociatedDecl) &&
                "Trying to change incorrect declaration?");
         TemplateArgumentLists[0].Args = Args;
       } else {
         --NumRetainedOuterLevels;
         TemplateArgumentLists.push_back(
-            {{AssociatedDecl, /*Final=*/false}, Args});
+            {{AssociatedDecl, /*Properties=*/0}, Args});
       }
     }
 
@@ -291,6 +309,16 @@ enum class TemplateSubstitutionKind : char {
             TemplateArgumentLists[getNumLevels() - Depth - 1].Args, PP);
         llvm::errs() << "\n";
       }
+    }
+
+    static unsigned getProperties(bool IsFinal, bool IsInjected) {
+      unsigned Props = 0;
+      if (IsFinal)
+        Props |= MultiLevelTemplateArgumentList::IsFinal;
+      if (IsInjected)
+        Props |=
+            MultiLevelTemplateArgumentList::ArgumentsAreInjectedTemplateParams;
+      return Props;
     }
   };
 

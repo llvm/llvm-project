@@ -338,7 +338,7 @@ Response HandleFunctionTemplateDecl(Sema &SemaRef,
         const_cast<FunctionTemplateDecl *>(FTD),
         const_cast<FunctionTemplateDecl *>(FTD)->getInjectedTemplateArgs(
             SemaRef.Context),
-        /*Final=*/false);
+        /*Final=*/false, /*InjectedTemplateParams=*/true);
 
     NestedNameSpecifier *NNS = FTD->getTemplatedDecl()->getQualifier();
 
@@ -363,18 +363,20 @@ Response HandleFunctionTemplateDecl(Sema &SemaRef,
           // This meets the contract in
           // TreeTransform::TryExpandParameterPacks that the template arguments
           // for unexpanded parameters should be of a Pack kind.
+          bool Injected = false;
           if (TSTy->isCurrentInstantiation()) {
             auto *RD = TSTy->getCanonicalTypeInternal()->getAsCXXRecordDecl();
-            if (ClassTemplateDecl *CTD = RD->getDescribedClassTemplate())
+            if (ClassTemplateDecl *CTD = RD->getDescribedClassTemplate()) {
               Arguments = CTD->getInjectedTemplateArgs(SemaRef.Context);
-            else if (auto *Specialization =
-                         dyn_cast<ClassTemplateSpecializationDecl>(RD))
+              Injected = true;
+            } else if (auto *Specialization =
+                           dyn_cast<ClassTemplateSpecializationDecl>(RD))
               Arguments =
                   Specialization->getTemplateInstantiationArgs().asArray();
           }
           Result.addOuterTemplateArguments(
               TSTy->getTemplateName().getAsTemplateDecl(), Arguments,
-              /*Final=*/false);
+              /*Final=*/false, /*InjectedTemplateParams=*/Injected);
         }
       }
 
@@ -399,7 +401,7 @@ Response HandleRecordDecl(Sema &SemaRef, const CXXRecordDecl *Rec,
       Result.addOuterTemplateArguments(
           const_cast<CXXRecordDecl *>(Rec),
           ClassTemplate->getInjectedTemplateArgs(SemaRef.Context),
-          /*Final=*/false);
+          /*Final=*/false, /*InjectedTemplateParams=*/true);
   }
 
   if (const MemberSpecializationInfo *MSInfo =
@@ -1476,8 +1478,8 @@ namespace {
       }
     }
 
-    TemplateArgument
-    getTemplateArgumentPackPatternForRewrite(const TemplateArgument &TA) {
+    TemplateArgument getTemplateArgumentorUnsubstitutedExpansionPattern(
+        const TemplateArgument &TA) {
       if (TA.getKind() != TemplateArgument::Pack)
         return TA;
       if (SemaRef.ArgPackSubstIndex)
@@ -1902,7 +1904,9 @@ Decl *TemplateInstantiator::TransformDecl(SourceLocation Loc, Decl *D) {
 
       TemplateArgument Arg = TemplateArgs(TTP->getDepth(), TTP->getPosition());
 
-      if (TTP->isParameterPack()) {
+      if (TemplateArgs.ArgumentsAreInjectedParameters(TTP->getDepth())) {
+        Arg = getTemplateArgumentorUnsubstitutedExpansionPattern(Arg);
+      } else if (TTP->isParameterPack()) {
         assert(Arg.getKind() == TemplateArgument::Pack &&
                "Missing argument pack");
         Arg = getPackSubstitutedTemplateArgument(getSema(), Arg);
@@ -2054,20 +2058,23 @@ TemplateName TemplateInstantiator::TransformTemplateName(
       if (TemplateArgs.isRewrite()) {
         // We're rewriting the template parameter as a reference to another
         // template parameter.
-        Arg = getTemplateArgumentPackPatternForRewrite(Arg);
+        Arg = getTemplateArgumentorUnsubstitutedExpansionPattern(Arg);
         assert(Arg.getKind() == TemplateArgument::Template &&
                "unexpected nontype template argument kind in template rewrite");
         return Arg.getAsTemplate();
       }
 
-      auto [AssociatedDecl, Final] =
+      auto [AssociatedDecl, Final, ArgumentsAreInjectedTemplateParams] =
           TemplateArgs.getAssociatedDecl(TTP->getDepth());
       UnsignedOrNone PackIndex = std::nullopt;
       if (TTP->isParameterPack()) {
         assert(Arg.getKind() == TemplateArgument::Pack &&
                "Missing argument pack");
 
-        if (!getSema().ArgPackSubstIndex) {
+        if (ArgumentsAreInjectedTemplateParams)
+          Arg = getTemplateArgumentorUnsubstitutedExpansionPattern(Arg);
+
+        else if (!getSema().ArgPackSubstIndex) {
           // We have the template argument pack to substitute, but we're not
           // actually expanding the enclosing pack expansion yet. So, just
           // keep the entire argument pack.
@@ -2131,7 +2138,7 @@ TemplateInstantiator::TransformTemplateParmRefExpr(DeclRefExpr *E,
   if (TemplateArgs.isRewrite()) {
     // We're rewriting the template parameter as a reference to another
     // template parameter.
-    Arg = getTemplateArgumentPackPatternForRewrite(Arg);
+    Arg = getTemplateArgumentorUnsubstitutedExpansionPattern(Arg);
     assert(Arg.getKind() == TemplateArgument::Expression &&
            "unexpected nontype template argument kind in template rewrite");
     // FIXME: This can lead to the same subexpression appearing multiple times
@@ -2139,7 +2146,7 @@ TemplateInstantiator::TransformTemplateParmRefExpr(DeclRefExpr *E,
     return Arg.getAsExpr();
   }
 
-  auto [AssociatedDecl, Final] =
+  auto [AssociatedDecl, Final, ArgumentsAreInjectedTemplateParams] =
       TemplateArgs.getAssociatedDecl(NTTP->getDepth());
   UnsignedOrNone PackIndex = std::nullopt;
   if (NTTP->isParameterPack()) {
@@ -2584,7 +2591,7 @@ TemplateInstantiator::TransformTemplateTypeParmType(TypeLocBuilder &TLB,
     if (TemplateArgs.isRewrite()) {
       // We're rewriting the template parameter as a reference to another
       // template parameter.
-      Arg = getTemplateArgumentPackPatternForRewrite(Arg);
+      Arg = getTemplateArgumentorUnsubstitutedExpansionPattern(Arg);
       assert(Arg.getKind() == TemplateArgument::Type &&
              "unexpected nontype template argument kind in template rewrite");
       QualType NewT = Arg.getAsType();
@@ -2592,7 +2599,7 @@ TemplateInstantiator::TransformTemplateTypeParmType(TypeLocBuilder &TLB,
       return NewT;
     }
 
-    auto [AssociatedDecl, Final] =
+    auto [AssociatedDecl, Final, ArgumentsAreInjectedTemplateParams] =
         TemplateArgs.getAssociatedDecl(T->getDepth());
     UnsignedOrNone PackIndex = std::nullopt;
     if (T->isParameterPack()) {
@@ -2600,6 +2607,14 @@ TemplateInstantiator::TransformTemplateTypeParmType(TypeLocBuilder &TLB,
              "Missing argument pack");
 
       if (!getSema().ArgPackSubstIndex) {
+
+        if (ArgumentsAreInjectedTemplateParams) {
+          TemplateTypeParmTypeLoc NewTL =
+              TLB.push<TemplateTypeParmTypeLoc>(TL.getType());
+          NewTL.setNameLoc(TL.getNameLoc());
+          return TL.getType();
+        }
+
         // We have the template argument pack, but we're not expanding the
         // enclosing pack expansion yet. Just save the template argument
         // pack for later substitution.

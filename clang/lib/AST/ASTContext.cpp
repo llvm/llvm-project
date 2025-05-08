@@ -940,7 +940,7 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
       DependentSizedMatrixTypes(this_()),
       FunctionProtoTypes(this_(), FunctionProtoTypesLog2InitSize),
       DependentTypeOfExprTypes(this_()), DependentDecltypeTypes(this_()),
-      TemplateSpecializationTypes(this_()),
+      DependentPackIndexingTypes(this_()), TemplateSpecializationTypes(this_()),
       DependentTemplateSpecializationTypes(this_()),
       DependentBitIntTypes(this_()), SubstTemplateTemplateParmPacks(this_()),
       DeducedTemplates(this_()), ArrayParameterTypes(this_()),
@@ -6433,34 +6433,29 @@ QualType ASTContext::getPackIndexingType(QualType Pattern, Expr *IndexExpr,
                                          ArrayRef<QualType> Expansions,
                                          UnsignedOrNone Index) const {
   QualType Canonical;
-  if (FullySubstituted && Index) {
+  if (FullySubstituted && Index)
     Canonical = getCanonicalType(Expansions[*Index]);
-  } else {
-    llvm::FoldingSetNodeID ID;
-    PackIndexingType::Profile(ID, *this, Pattern.getCanonicalType(), IndexExpr,
-                              FullySubstituted);
-    void *InsertPos = nullptr;
-    PackIndexingType *Canon =
-        DependentPackIndexingTypes.FindNodeOrInsertPos(ID, InsertPos);
-    if (!Canon) {
-      void *Mem = Allocate(
-          PackIndexingType::totalSizeToAlloc<QualType>(Expansions.size()),
-          TypeAlignment);
-      Canon = new (Mem)
-          PackIndexingType(*this, QualType(), Pattern.getCanonicalType(),
-                           IndexExpr, FullySubstituted, Expansions);
-      DependentPackIndexingTypes.InsertNode(Canon, InsertPos);
-    }
-    Canonical = QualType(Canon, 0);
-  }
+  else if (!Pattern.isCanonical())
+    Canonical = getPackIndexingType(Pattern.getCanonicalType(), IndexExpr,
+                                    FullySubstituted, Expansions, Index);
+
+  llvm::FoldingSetNodeID ID;
+  PackIndexingType::Profile(ID, *this, Pattern, IndexExpr, FullySubstituted);
+  void *InsertPos = nullptr;
+  PackIndexingType *Canon =
+      DependentPackIndexingTypes.FindNodeOrInsertPos(ID, InsertPos);
+  if (Canon)
+    return QualType(Canon, 0);
 
   void *Mem =
       Allocate(PackIndexingType::totalSizeToAlloc<QualType>(Expansions.size()),
                TypeAlignment);
-  auto *T = new (Mem) PackIndexingType(*this, Canonical, Pattern, IndexExpr,
-                                       FullySubstituted, Expansions);
-  Types.push_back(T);
-  return QualType(T, 0);
+
+  Canon = new (Mem) PackIndexingType(Canonical, Pattern, IndexExpr,
+                                     FullySubstituted, Expansions);
+  DependentPackIndexingTypes.InsertNode(Canon, InsertPos);
+  Types.push_back(Canon);
+  return QualType(Canon, 0);
 }
 
 /// getUnaryTransformationType - We don't unique these, since the memory

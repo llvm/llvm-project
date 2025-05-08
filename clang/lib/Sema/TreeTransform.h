@@ -6884,7 +6884,7 @@ TreeTransform<Derived>::TransformPackIndexingType(TypeLocBuilder &TLB,
     assert(!Unexpanded.empty() && "Pack expansion without parameter packs?");
     // Determine whether the set of unexpanded parameter packs can and should
     // be expanded.
-    bool ShouldExpand = true;
+    bool ShouldExpand = false;
     bool RetainExpansion = false;
     UnsignedOrNone NumExpansions = std::nullopt;
     if (getDerived().TryExpandParameterPacks(TL.getEllipsisLoc(), SourceRange(),

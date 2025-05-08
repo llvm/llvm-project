@@ -823,6 +823,13 @@ bool Sema::CheckParameterPacksForExpansion(
         continue;
       }
 
+      // Template arguments that are injected template parameters
+      // Cannot be expanded, even if they constitute a pack expansion.
+      if (TemplateArgs.ArgumentsAreInjectedParameters(Depth)) {
+        ShouldExpand = false;
+        continue;
+      }
+
       // Determine the size of the argument pack.
       ArrayRef<TemplateArgument> Pack =
           TemplateArgs(Depth, Index).getPackAsArray();

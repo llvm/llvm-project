@@ -4126,14 +4126,14 @@ void DependentDecltypeType::Profile(llvm::FoldingSetNodeID &ID,
   E->Profile(ID, Context, true);
 }
 
-PackIndexingType::PackIndexingType(const ASTContext &Context,
-                                   QualType Canonical, QualType Pattern,
+PackIndexingType::PackIndexingType(QualType Canonical, QualType Pattern,
                                    Expr *IndexExpr, bool FullySubstituted,
                                    ArrayRef<QualType> Expansions)
     : Type(PackIndexing, Canonical,
            computeDependence(Pattern, IndexExpr, Expansions)),
-      Context(Context), Pattern(Pattern), IndexExpr(IndexExpr),
-      Size(Expansions.size()), FullySubstituted(FullySubstituted) {
+      Pattern(Pattern), IndexExpr(IndexExpr), Size(Expansions.size()),
+      FullySubstituted(FullySubstituted) {
+
   llvm::uninitialized_copy(Expansions, getTrailingObjects<QualType>());
 }
 
@@ -4172,6 +4172,14 @@ PackIndexingType::computeDependence(QualType Pattern, Expr *IndexExpr,
     TD |= TypeDependence::Error | TypeDependence::DependentInstantiation;
 
   return TD;
+}
+
+void PackIndexingType::Profile(llvm::FoldingSetNodeID &ID,
+                               const ASTContext &Context) {
+  if (hasSelectedType() && isFullySubstituted())
+    getSelectedType().Profile(ID);
+  else
+    Profile(ID, Context, getPattern(), getIndexExpr(), isFullySubstituted());
 }
 
 void PackIndexingType::Profile(llvm::FoldingSetNodeID &ID,
