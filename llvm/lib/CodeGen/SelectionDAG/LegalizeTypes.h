@@ -80,9 +80,7 @@ private:
   /// Pretend all of this node's results are legal.
   bool IgnoreNodeResults(SDNode *N) const {
     return N->getOpcode() == ISD::TargetConstant ||
-           N->getOpcode() == ISD::Register ||
-           (N->getOpcode() == ISD::AssertNoFPClass &&
-            IgnoreNodeResults(N->getOperand(0).getNode()));
+           N->getOpcode() == ISD::Register;
   }
 
   // Bijection from SDValue to unique id. As each created node gets a
@@ -774,7 +772,7 @@ private:
   SDValue PromoteFloatRes_SELECT(SDNode *N);
   SDValue PromoteFloatRes_SELECT_CC(SDNode *N);
   SDValue PromoteFloatRes_UnaryOp(SDNode *N);
-  SDValue PromoteFloatRes_UnaryOpExt1(SDNode *N);
+  SDValue PromoteFloatRes_AssertNoFPClass(SDNode *N);
   SDValue PromoteFloatRes_UNDEF(SDNode *N);
   SDValue BitcastToInt_ATOMIC_SWAP(SDNode *N);
   SDValue PromoteFloatRes_XINT_TO_FP(SDNode *N);
@@ -788,7 +786,7 @@ private:
   SDValue PromoteFloatOp_FP_EXTEND(SDNode *N, unsigned OpNo);
   SDValue PromoteFloatOp_STRICT_FP_EXTEND(SDNode *N, unsigned OpNo);
   SDValue PromoteFloatOp_UnaryOp(SDNode *N, unsigned OpNo);
-  SDValue PromoteFloatOp_UnaryOpExt1(SDNode *N, unsigned OpNo);
+  SDValue PromoteFloatOp_AssertNoFPClass(SDNode *N, unsigned OpNo);
   SDValue PromoteFloatOp_FP_TO_XINT_SAT(SDNode *N, unsigned OpNo);
   SDValue PromoteFloatOp_STORE(SDNode *N, unsigned OpNo);
   SDValue PromoteFloatOp_ATOMIC_STORE(SDNode *N, unsigned OpNo);
@@ -800,8 +798,6 @@ private:
   //===--------------------------------------------------------------------===//
 
   SDValue GetSoftPromotedHalf(SDValue Op) {
-    while (Op.getNode()->getOpcode() == ISD::AssertNoFPClass)
-      Op = Op.getNode()->getOperand(0);
     TableId &PromotedId = SoftPromotedHalfs[getTableId(Op)];
     SDValue PromotedOp = getSDValue(PromotedId);
     assert(PromotedOp.getNode() && "Operand wasn't promoted?");
@@ -826,7 +822,7 @@ private:
   SDValue SoftPromoteHalfRes_SELECT(SDNode *N);
   SDValue SoftPromoteHalfRes_SELECT_CC(SDNode *N);
   SDValue SoftPromoteHalfRes_UnaryOp(SDNode *N);
-  SDValue SoftPromoteHalfRes_UnaryOpExt1(SDNode *N);
+  SDValue SoftPromoteHalfRes_AssertNoFPClass(SDNode *N);
   SDValue SoftPromoteHalfRes_XINT_TO_FP(SDNode *N);
   SDValue SoftPromoteHalfRes_UNDEF(SDNode *N);
   SDValue SoftPromoteHalfRes_VECREDUCE(SDNode *N);
