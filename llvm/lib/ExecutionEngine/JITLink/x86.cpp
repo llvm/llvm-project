@@ -53,7 +53,7 @@ Error optimizeGOTAndStubAccesses(LinkGraph &G) {
 
   for (auto *B : G.blocks())
     for (auto &E : B->edges()) {
-      if (E.getKind() == x86::BranchPCRel32ToPtrJumpStubBypassable) {
+      if (E.getKind() == BranchPCRel32ToPtrJumpStubBypassable) {
         auto &StubBlock = E.getTarget().getBlock();
         assert(StubBlock.getSize() == sizeof(PointerJumpStubContent) &&
                "Stub block should be stub sized");
@@ -72,7 +72,7 @@ Error optimizeGOTAndStubAccesses(LinkGraph &G) {
 
         int64_t Displacement = TargetAddr - EdgeAddr + 4;
         if (isInt<32>(Displacement)) {
-          E.setKind(x86::BranchPCRel32);
+          E.setKind(BranchPCRel32);
           E.setTarget(GOTTarget);
           LLVM_DEBUG({
             dbgs() << "  Replaced stub branch with direct branch:\n    ";
