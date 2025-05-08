@@ -2208,19 +2208,6 @@ static bool canSinkInstructions(
     if (!I->isSameOperationAs(I0, Instruction::CompareUsingIntersectedAttrs))
       return false;
 
-    // swifterror pointers can only be used by a load, store, or as a swifterror
-    // argument; sinking a load, store, or call would require introducing a
-    // select for the pointer operand, which isn't allowed for swifterror
-    // pointers.
-    if (isa<StoreInst>(I) && I->getOperand(1)->isSwiftError())
-      return false;
-    if (isa<LoadInst>(I) && I->getOperand(0)->isSwiftError())
-      return false;
-    if (const auto *CB = dyn_cast<CallBase>(I))
-      for (const Use &Arg : CB->args())
-        if (Arg->isSwiftError())
-          return false;
-
     // Treat MMRAs conservatively. This pass can be quite aggressive and
     // could drop a lot of MMRAs otherwise.
     if (MMRAMetadata(*I) != I0MMRA)
