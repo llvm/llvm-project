@@ -2810,6 +2810,84 @@ bool DIExpression::isPoisoned() const {
   });
 }
 
+namespace {
+/// Visitor specialization to find the divergent address spaces a DIOp-based
+/// DIExpression produces, if any. See the header comment on
+/// DIExpression::getNewDivergentAddrSpace() for more information.
+class DIOpDivergentAddrSpaceFinder
+    : public DIExprConstVisitor<DIOpDivergentAddrSpaceFinder> {
+
+  // Stack of dwarf stack entries with divergent address spaces. If a stack
+  // entry doesn't have a divergent address space, this contains std::nullopt
+  // for that stack element. Kept in sync with DIExprConstVisitor::Stack.
+  SmallVector<std::optional<unsigned>, 8> AddrSpaceStack;
+  Type *ResultTy = nullptr;
+
+  DIOpDivergentAddrSpaceFinder(LLVMContext &Ctx, ArrayRef<DIOp::Variant> Ops)
+      : DIExprConstVisitor(Ctx, Ops) {}
+
+public:
+  template <class DIOpTy>
+  bool visit(DIOpTy Op, Type *Ty, ArrayRef<StackEntry> Inputs) {
+    assert(Stack.size() == AddrSpaceStack.size() &&
+           "stacks should never get out of sync!");
+
+    if (isDIOpVariantOneOf<DIOp::Reinterpret>(Op)) {
+      // Nothing to do, Reinterpret operations don't change the divergent
+      // address space on the top of the stack.
+    } else if (isDIOpVariantOneOf<DIOp::Convert>(Op)) {
+      // If this Convert is an address space conversion, push a divergent
+      // address space unless we're already converting from a divergent address
+      // space or the conversion is a no-op.
+      Type *FromTy = Inputs[0].ResultType;
+      assert(Ty && FromTy && "failed to get operation types?");
+      if (FromTy->isPointerTy() && Ty->isPointerTy()) {
+        if (AddrSpaceStack.back() == std::nullopt && FromTy != Ty)
+          AddrSpaceStack.back() = FromTy->getPointerAddressSpace();
+      } else
+        AddrSpaceStack.back() = std::nullopt;
+    } else {
+      // No other operation can produce or maintain a divergent address space.
+      AddrSpaceStack.erase(AddrSpaceStack.end() - getNumInputs(Op),
+                           AddrSpaceStack.end());
+      if (Ty)
+        AddrSpaceStack.push_back(std::nullopt);
+    }
+
+    return DIExprConstVisitor::visit(Op, Ty, Inputs);
+  }
+
+  bool visitResult(StackEntry SE) {
+    ResultTy = SE.ResultType;
+    return true;
+  }
+
+  static std::optional<unsigned> find(LLVMContext &C,
+                                      ArrayRef<DIOp::Variant> Ops) {
+    DIOpDivergentAddrSpaceFinder Finder{C, Ops};
+    if (!Finder.visitInOrder())
+      return std::nullopt;
+    assert(Finder.AddrSpaceStack.size() == 1 &&
+           "expected one element on stack after expression!");
+    if (!Finder.ResultTy || !Finder.ResultTy->isPointerTy())
+      return std::nullopt;
+    // Only return a divergent address space when the expression produces a
+    // generic pointer.
+    unsigned DeclaredAddrSpace = Finder.ResultTy->getPointerAddressSpace();
+    if (Finder.AddrSpaceStack.back() && DeclaredAddrSpace == 0)
+      return Finder.AddrSpaceStack.back();
+    return std::nullopt;
+  }
+};
+} // namespace
+
+std::optional<unsigned> DIExpression::getNewDivergentAddrSpace() const {
+  auto Elems = getNewElementsRef();
+  if (!Elems || Elems->empty())
+    return std::nullopt;
+  return DIOpDivergentAddrSpaceFinder::find(getContext(), *Elems);
+}
+
 std::optional<DIExpression::SignedOrUnsignedConstant>
 DIExpression::isConstant() const {
 

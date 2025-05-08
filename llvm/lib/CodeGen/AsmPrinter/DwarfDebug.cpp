@@ -231,6 +231,63 @@ void DebugLocDwarfExpression::commitTemporaryBuffer() {
   TmpBuf->Comments.clear();
 }
 
+namespace {
+/// Utility class for finding the common divergent address space of all the
+/// DIExpressions that describe the location of a variable, if such an address
+/// space exists.
+class CommonDivergentAddrSpaceFinder {
+  std::optional<unsigned> CommonAS;
+  bool HasCommonAddrSpace = true;
+
+public:
+  void addSubExpr(const DIExpression *Expr) {
+    if (!Expr || !HasCommonAddrSpace)
+      return;
+    std::optional<unsigned> ExprAS = Expr->getNewDivergentAddrSpace();
+    if (!ExprAS)
+      HasCommonAddrSpace = false;
+    else if (!CommonAS)
+      CommonAS = *ExprAS;
+    else if (*CommonAS != *ExprAS)
+      HasCommonAddrSpace = false;
+  }
+
+  std::optional<unsigned> get() const {
+    return HasCommonAddrSpace ? CommonAS : std::nullopt;
+  }
+};
+} // namespace
+
+std::optional<unsigned> DbgVariable::getCommonDivergentAddrSpace() const {
+  const Loc::Variant *Loc = &asVariant();
+
+  if (auto *LM = std::get_if<Loc::Multi>(Loc))
+    return LM->getCommonDivergentAddrSpace();
+
+  CommonDivergentAddrSpaceFinder Finder;
+  if (auto *LS = std::get_if<Loc::Single>(Loc)) {
+    Finder.addSubExpr(LS->getExpr());
+  } else if (auto *MMI = std::get_if<Loc::MMI>(Loc)) {
+    for (auto &FIE : MMI->getFrameIndexExprs())
+      Finder.addSubExpr(FIE.Expr);
+  } else if (auto *EV = std::get_if<Loc::EntryValue>(Loc)) {
+    for (auto &Val : EV->EntryValues)
+      Finder.addSubExpr(&Val.Expr);
+  }
+
+  return Finder.get();
+}
+
+bool DbgVariable::isDivergentAddrSpaceCompatible() const {
+  if (auto *DT = dyn_cast<DIDerivedType>(getType()))
+    return DT->getTag() == dwarf::DW_TAG_pointer_type ||
+           DT->getTag() == dwarf::DW_TAG_reference_type ||
+           DT->getTag() == dwarf::DW_TAG_rvalue_reference_type;
+  // FIXME: We could support divergent address spaces on pointer/reference
+  // fields of struct types.
+  return false;
+}
+
 const DIType *DbgVariable::getType() const {
   return getVariable()->getType();
 }
@@ -1945,6 +2002,18 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
       continue;
     }
 
+    // If all entries in the location list produce a consistent divergent
+    // address space we need to inform the expression emitter that it is
+    // permitted to produce divergent address spaces.
+    if (RegVar->isDivergentAddrSpaceCompatible()) {
+      CommonDivergentAddrSpaceFinder Finder;
+      for (const DebugLocEntry &DLE : Entries)
+        for (const DbgValueLoc &DVL : DLE.getValues())
+          Finder.addSubExpr(DVL.getExpression());
+      if (std::optional<unsigned> AS = Finder.get())
+        List.setCommonDivergentAddrSpace(*AS);
+    }
+
     // If the variable has a DIBasicType, extract it.  Basic types cannot have
     // unique identifiers, so don't bother resolving the type with the
     // identifier map.
@@ -3019,6 +3088,8 @@ void DebugLocEntry::finalize(const AsmPrinter &AP,
   DebugLocStream::EntryBuilder Entry(List, Begin, End);
   BufferByteStreamer Streamer = Entry.getStreamer();
   DebugLocDwarfExpression DwarfExpr(AP, Streamer, TheCU);
+  if (List.hasCommonDivergentAddrSpace())
+    DwarfExpr.permitDivergentAddrSpace();
   const DbgValueLoc &Value = Values[0];
   if (Value.isFragment()) {
     // Emit all fragments that belong to the same variable and range.

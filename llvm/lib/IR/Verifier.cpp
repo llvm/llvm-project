@@ -6696,6 +6696,13 @@ void Verifier::visit(DbgVariableRecord &DVR) {
           "invalid #dbg record expression", &DVR, DVR.getRawExpression());
   visitMDNode(*DVR.getExpression(), AreDebugLocsAllowed::No);
 
+  // This is redundant with the visitMDNode check above, but here we can include
+  // arguments for DIOp-based expression checking.
+  SmallVector<const Value *> Arguments{DVR.location_ops()};
+  DIExpressionEnv ExprEnv{DVR.getVariable(), Arguments, DL};
+  CheckDI(DVR.getExpression()->isValid(ExprEnv, dbgs()),
+          "invalid #dbg record expression", &DVR, DVR.getRawExpression());
+
   if (DVR.isDbgAssign()) {
     CheckDI(isa_and_nonnull<DIAssignID>(DVR.getRawAssignID()),
             "invalid #dbg_assign DIAssignID", &DVR, DVR.getRawAssignID());

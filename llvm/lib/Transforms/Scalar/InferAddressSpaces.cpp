@@ -174,6 +174,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addPreserved<DominatorTreeWrapperPass>();
+    AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
   }
@@ -261,6 +262,7 @@ INITIALIZE_PASS_BEGIN(InferAddressSpaces, DEBUG_TYPE, "Infer address spaces",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_END(InferAddressSpaces, DEBUG_TYPE, "Infer address spaces",
                     false, false)
 
@@ -857,6 +859,11 @@ Value *InferAddressSpacesImpl::cloneValueWithNewAddressSpace(
         NewI->setDebugLoc(I->getDebugLoc());
       }
     }
+    if (NewV) {
+      Instruction *DomPoint =
+          isa<Instruction>(NewV) ? cast<Instruction>(NewV) : I;
+      replaceAllDbgUsesWith(*I, *NewV, *DomPoint, *DT);
+    }
     return NewV;
   }
 
@@ -1423,10 +1430,9 @@ bool InferAddressSpaces::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
 
-  auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
-  DominatorTree *DT = DTWP ? &DTWP->getDomTree() : nullptr;
   return InferAddressSpacesImpl(
-             getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F), DT,
+             getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F),
+             &getAnalysis<DominatorTreeWrapperPass>().getDomTree(),
              &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F),
              FlatAddrSpace)
       .run(F);
@@ -1445,7 +1451,7 @@ PreservedAnalyses InferAddressSpacesPass::run(Function &F,
                                               FunctionAnalysisManager &AM) {
   bool Changed =
       InferAddressSpacesImpl(AM.getResult<AssumptionAnalysis>(F),
-                             AM.getCachedResult<DominatorTreeAnalysis>(F),
+                             &AM.getResult<DominatorTreeAnalysis>(F),
                              &AM.getResult<TargetIRAnalysis>(F), FlatAddrSpace)
           .run(F);
   if (Changed) {

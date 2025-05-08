@@ -10,6 +10,7 @@ target triple = "x86_64-unknown-linux-gnu"
 declare void @use_i32(i32)
 declare void @use_i64(i32)
 declare void @use_ptr(ptr)
+declare void @use_ptr1(ptr addrspace(1))
 declare void @llvm.dbg.value(metadata, metadata, metadata) #0
 
 define void @test_int_ptr_int(i64 %A) !dbg !5 {
@@ -83,6 +84,28 @@ define void @test_sext_trunc(i32 %A) !dbg !29 {
   ret void
 }
 
+define void @test_asc_asc(ptr addrspace(1) %A, ptr %B) !dbg !34 {
+; CHECK-LABEL: define void @test_asc_asc(
+; CHECK-SAME: ptr addrspace(1) [[A:%.*]], ptr [[B:%.*]]) !dbg [[DBG34:![0-9]+]] {
+; CHECK-NEXT:      #dbg_value(ptr addrspace(1) [[A]], [[META36:![0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(1)), DIOpConvert(ptr addrspace(4))), [[META38:![0-9]+]])
+; CHECK-NEXT:    call void @use_ptr1(ptr addrspace(1) [[A]])
+; CHECK-NEXT:      #dbg_value(ptr [[B]], [[META39:![0-9]+]], !DIExpression(DIOpArg(0, ptr), DIOpConvert(ptr addrspace(3))), [[META38]])
+; CHECK-NEXT:    call void @use_ptr(ptr [[B]])
+; CHECK-NEXT:    ret void
+;
+  %1 = addrspacecast ptr addrspace(1) %A to ptr addrspace(4)
+  tail call void @llvm.dbg.value(metadata ptr addrspace(4) %1, metadata !36, metadata !DIExpression(DIOpArg(0, ptr addrspace(4)))), !dbg !38
+  %2 = addrspacecast ptr addrspace(4) %1 to ptr addrspace(1)
+  call void @use_ptr1(ptr addrspace(1) %2)
+
+  %3 = addrspacecast ptr %B to ptr addrspace(3)
+  tail call void @llvm.dbg.value(metadata ptr addrspace(3) %3, metadata !39, metadata !DIExpression(DIOpArg(0, ptr addrspace(3)))), !dbg !38
+  %4 = addrspacecast ptr addrspace(3) %3 to ptr
+  call void @use_ptr(ptr %4)
+
+  ret void
+}
+
 !llvm.dbg.cu = !{!0}
 !llvm.debugify = !{!2, !3}
 !llvm.module.flags = !{!4}
@@ -121,36 +144,9 @@ define void @test_sext_trunc(i32 %A) !dbg !29 {
 !31 = !DILocalVariable(name: "9", scope: !29, file: !1, line: 13, type: !32)
 !32 = !DIBasicType(name: "tys32", size: 32, encoding: DW_ATE_signed)
 !33 = !DILocation(line: 13, column: 1, scope: !29)
-;.
-; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C, file: [[META1:![0-9]+]], producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
-; CHECK: [[META1]] = !DIFile(filename: "t.c", directory: {{.*}})
-; CHECK: [[DBG5]] = distinct !DISubprogram(name: "test_int_ptr_int", linkageName: "test_int_ptr_int", scope: null, file: [[META1]], line: 1, type: [[META6:![0-9]+]], scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META8:![0-9]+]])
-; CHECK: [[META6]] = !DISubroutineType(types: [[META7:![0-9]+]])
-; CHECK: [[META7]] = !{}
-; CHECK: [[META8]] = !{[[META9]], [[META11:![0-9]+]]}
-; CHECK: [[META9]] = !DILocalVariable(name: "1", scope: [[DBG5]], file: [[META1]], line: 1, type: [[META10:![0-9]+]])
-; CHECK: [[META10]] = !DIBasicType(name: "ty64", size: 64, encoding: DW_ATE_unsigned)
-; CHECK: [[META11]] = !DILocalVariable(name: "2", scope: [[DBG5]], file: [[META1]], line: 2, type: [[META10]])
-; CHECK: [[META12]] = !DILocation(line: 1, column: 1, scope: [[DBG5]])
-; CHECK: [[DBG13]] = distinct !DISubprogram(name: "test_ptr_int_ptr", linkageName: "test_ptr_int_ptr", scope: null, file: [[META1]], line: 5, type: [[META6]], scopeLine: 5, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META14:![0-9]+]])
-; CHECK: [[META14]] = !{[[META15]], [[META16:![0-9]+]]}
-; CHECK: [[META15]] = !DILocalVariable(name: "3", scope: [[DBG13]], file: [[META1]], line: 5, type: [[META10]])
-; CHECK: [[META16]] = !DILocalVariable(name: "4", scope: [[DBG13]], file: [[META1]], line: 6, type: [[META10]])
-; CHECK: [[META17]] = !DILocation(line: 5, column: 1, scope: [[DBG13]])
-; CHECK: [[DBG18]] = distinct !DISubprogram(name: "test_zext_trunc", linkageName: "test_zext_trunc", scope: null, file: [[META1]], line: 9, type: [[META6]], scopeLine: 9, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META19:![0-9]+]])
-; CHECK: [[META19]] = !{[[META20]], [[META21:![0-9]+]]}
-; CHECK: [[META20]] = !DILocalVariable(name: "5", scope: [[DBG18]], file: [[META1]], line: 9, type: [[META10]])
-; CHECK: [[META21]] = !DILocalVariable(name: "6", scope: [[DBG18]], file: [[META1]], line: 10, type: [[META22:![0-9]+]])
-; CHECK: [[META22]] = !DIBasicType(name: "ty32", size: 32, encoding: DW_ATE_unsigned)
-; CHECK: [[META23]] = !DILocation(line: 9, column: 1, scope: [[DBG18]])
-; CHECK: [[DBG24]] = distinct !DISubprogram(name: "test_trunc_zext", linkageName: "test_trunc_zext", scope: null, file: [[META1]], line: 13, type: [[META6]], scopeLine: 13, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META25:![0-9]+]])
-; CHECK: [[META25]] = !{[[META26]], [[META27:![0-9]+]]}
-; CHECK: [[META26]] = !DILocalVariable(name: "7", scope: [[DBG24]], file: [[META1]], line: 13, type: [[META22]])
-; CHECK: [[META27]] = !DILocalVariable(name: "8", scope: [[DBG24]], file: [[META1]], line: 14, type: [[META10]])
-; CHECK: [[META28]] = !DILocation(line: 13, column: 1, scope: [[DBG24]])
-; CHECK: [[DBG29]] = distinct !DISubprogram(name: "test_sext_trunc", linkageName: "test_sext_trunc", scope: null, file: [[META1]], line: 13, type: [[META6]], scopeLine: 13, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META30:![0-9]+]])
-; CHECK: [[META30]] = !{[[META31]]}
-; CHECK: [[META31]] = !DILocalVariable(name: "9", scope: [[DBG29]], file: [[META1]], line: 13, type: [[META32:![0-9]+]])
-; CHECK: [[META32]] = !DIBasicType(name: "tys32", size: 32, encoding: DW_ATE_signed)
-; CHECK: [[META33]] = !DILocation(line: 13, column: 1, scope: [[DBG29]])
-;.
+!34 = distinct !DISubprogram(name: "test_asc_asc", linkageName: "test_asc_asc", scope: null, file: !1, line: 13, type: !6, scopeLine: 13, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !35)
+!35 = !{!36}
+!36 = !DILocalVariable(name: "10", scope: !34, file: !1, line: 13, type: !37)
+!37 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: null, size: 64)
+!38 = !DILocation(line: 13, column: 1, scope: !34)
+!39 = !DILocalVariable(name: "11", scope: !34, file: !1, line: 13, type: !37)

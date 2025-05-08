@@ -19,8 +19,8 @@ end subroutine fff
 ! CHECK-DAG: store ptr %[[ARG2]], ptr %[[CAST2:[0-9]+]]{{.*}}
 ! CHECK-DAG: %[[CAST2]] = addrspacecast ptr addrspace(5) %[[AL2:[0-9]+]]
 ! CHECK-DAG: %[[AL2]] = alloca{{.*}}
-! CHECK-DAG: #dbg_declare(ptr %[[CAST1]], ![[X:[0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(ptr), DIOpDeref(ptr)), {{.*}})
-! CHECK-DAG: #dbg_declare(ptr %[[CAST2]], ![[Y:[0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(ptr), DIOpDeref(ptr)), {{.*}})
+! CHECK-DAG: #dbg_declare(ptr addrspace(5) %[[AL1]], ![[X:[0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(ptr), DIOpDeref(ptr)), {{.*}})
+! CHECK-DAG: #dbg_declare(ptr addrspace(5) %[[AL2]], ![[Y:[0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(ptr), DIOpDeref(ptr)), {{.*}})
 ! CHECK: }
 
 ! CHECK-DAG: ![[SP]] = {{.*}}!DISubprogram(name: "[[FN]]"{{.*}})

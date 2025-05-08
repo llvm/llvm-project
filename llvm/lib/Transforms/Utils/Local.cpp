@@ -2927,7 +2927,8 @@ using DbgValReplacement = std::optional<DIExpression *>;
 /// possibly moving/undefing users to prevent use-before-def. Returns true if
 /// changes are made.
 static bool rewriteDebugUsers(
-    Instruction &From, Value &To, Instruction &DomPoint, DominatorTree &DT,
+    Instruction &From, Value &To, Instruction &DomPoint,
+    const DominatorTree &DT,
     function_ref<DbgValReplacement(DbgVariableIntrinsic &DII)> RewriteExpr,
     function_ref<DbgValReplacement(DbgVariableRecord &DVR)> RewriteDVRExpr) {
   // Find debug users of From.
@@ -3062,6 +3063,11 @@ static bool getNewDIConversionOps(const DataLayout &DL, Type *SourceTy,
     return true;
   }
 
+  if (SourceTy->isPointerTy() && DestTy->isPointerTy()) {
+    Ops.emplace_back(DIOp::Convert(DestTy));
+    return true;
+  }
+
   if (!SourceTy->isIntegerTy() || !DestTy->isIntegerTy())
     return false;
 
@@ -3130,7 +3136,8 @@ updateNewDIExpressionArgType(IntrinsicOrRecord &DII, Value *LocOp,
 }
 
 bool llvm::replaceAllDbgUsesWith(Instruction &From, Value &To,
-                                 Instruction &DomPoint, DominatorTree &DT) {
+                                 Instruction &DomPoint,
+                                 const DominatorTree &DT) {
   // Exit early if From has no debug users.
   if (!From.isUsedByMetadata())
     return false;
@@ -3205,6 +3212,23 @@ bool llvm::replaceAllDbgUsesWith(Instruction &From, Value &To,
     };
     return rewriteDebugUsers(From, To, DomPoint, DT, SignOrZeroExt,
                              SignOrZeroExtDVR);
+  }
+
+  if (FromTy->isPointerTy() && ToTy->isPointerTy()) {
+    // Non-bitcast address space conversions are only supported on
+    // DIOp-DIExpressions.
+    auto IdentityNew = [&](DbgVariableIntrinsic &DII) -> DbgValReplacement {
+      if (DII.getExpression()->holdsNewElements())
+        return updateNewDIExpressionArgType(DII, &From, ToTy);
+      return std::nullopt;
+    };
+    auto IdentityNewDVR = [&](DbgVariableRecord &DVR) -> DbgValReplacement {
+      if (DVR.getExpression()->holdsNewElements())
+        return updateNewDIExpressionArgType(DVR, &From, ToTy);
+      return std::nullopt;
+    };
+    return rewriteDebugUsers(From, To, DomPoint, DT, IdentityNew,
+                             IdentityNewDVR);
   }
 
   // TODO: Floating-point conversions, vectors.

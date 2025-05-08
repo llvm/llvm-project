@@ -1236,6 +1236,12 @@ public:
 
   TempDIDerivedType clone() const { return cloneImpl(); }
 
+  TempDIDerivedType cloneWithAddressSpace(unsigned DWARFAddrSpace) const {
+    auto Tmp = clone();
+    Tmp->DWARFAddressSpace = DWARFAddrSpace;
+    return Tmp;
+  }
+
   /// Get the base type this is derived from.
   DIType *getBaseType() const { return cast_or_null<DIType>(getRawBaseType()); }
   Metadata *getRawBaseType() const { return getOperand(3); }
@@ -3589,6 +3595,19 @@ public:
 
   element_iterator elements_begin() const { return getElements().begin(); }
   element_iterator elements_end() const { return getElements().end(); }
+
+  /// Returns the pointer address space this DIOp-based DIExpression produces.
+  /// Note that this may diverge from the the pointer address space of the
+  /// result type. When there is a divergent address space, the DIExpression
+  /// must produce a generic pointer whose value can be proven to belong to a
+  /// more specific address space. For instance in this expression, this
+  /// function returns 4:
+  ///
+  ///   !DIExpression(DIOpArg(0, ptr addrspace(4)), DIOpConvert(ptr))
+  ///
+  /// A divergent address space can be created by a DIOpConvert, and is
+  /// preserved across DIOpReinterpret.
+  std::optional<unsigned> getNewDivergentAddrSpace() const;
 
   /// A lightweight wrapper around an expression operand.
   ///

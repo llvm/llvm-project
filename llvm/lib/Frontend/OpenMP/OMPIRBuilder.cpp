@@ -6907,7 +6907,8 @@ static void FixupDebugInfoForOutlinedFunction(
       for (auto Loc : DR->location_ops()) {
         locType = Loc->getType();
         if (llvm::LoadInst *Load = dyn_cast<llvm::LoadInst>(Loc)) {
-          DR->replaceVariableLocationOp(Loc, Load->getPointerOperand());
+          DR->replaceVariableLocationOp(
+              Loc, Load->getPointerOperand()->stripPointerCasts());
           PassByRef = true;
         }
       }
@@ -6915,9 +6916,9 @@ static void FixupDebugInfoForOutlinedFunction(
       // if an argument is mapped by reference. The first reads the pointer
       // from alloca and 2nd read the value of the variable from that pointer.
       llvm::DIExprBuilder ExprBuilder(Builder.getContext());
-      unsigned int allocaAS = M->getDataLayout().getAllocaAddrSpace();
       unsigned int defaultAS = M->getDataLayout().getProgramAddressSpace();
-      ExprBuilder.append<llvm::DIOp::Arg>(0u, Builder.getPtrTy(allocaAS));
+      ExprBuilder.append<llvm::DIOp::Arg>(
+          0u, DR->getVariableLocationOp(0)->getType());
       // We have 2 options for the variables that are mapped byRef.
       // 1. Use a single indirection but change the type to the reference to the
       // original type. It will show up in the debugger as

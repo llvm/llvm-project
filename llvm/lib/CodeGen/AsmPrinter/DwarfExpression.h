@@ -368,6 +368,11 @@ public:
   /// case, since we need to ensure that we don't add any registers or constants
   /// onto the stack. In the non-fragment case it's simply an optimization.
   bool IsPoisonedExpr = false;
+  bool PermitDivergentAddrSpaceResult = false;
+
+  /// Called if we're allowed to produce a stack entry whose address space
+  /// diverges from the IR type the DIExpression produces.
+  void permitDivergentAddrSpace() { PermitDivergentAddrSpaceResult = true; }
 
   void buildAST(DIExpression::NewElementsRef Elements);
 
@@ -384,6 +389,9 @@ public:
   struct OpResult {
     Type *Ty;
     ValueKind VK;
+    // The real address space of this result, if it diverges from Ty's address
+    // space.
+    std::optional<unsigned> DivergentAddrSpace = std::nullopt;
   };
 
   /// Optionally emit DWARF operations to convert the value at the top of the
@@ -396,9 +404,10 @@ public:
   using ChildrenT = ArrayRef<std::unique_ptr<Node>>;
 
   /// Dispatch to a specific traverse() function, and convert the result to
-  /// ReqVK if non-nullopt.
-  std::optional<OpResult> traverse(Node *OpNode,
-                                   std::optional<ValueKind> ReqVK);
+  /// ReqVK if non-nullopt. If PermitDivergentAddrSpace, then this function may
+  /// return a pointer in a different address space than the type.
+  std::optional<OpResult> traverse(Node *OpNode, std::optional<ValueKind> ReqVK,
+                                   bool PermitDivergentAddrSpace = false);
 
   std::optional<OpResult> traverse(DIOp::Arg Arg, ChildrenT Children);
   std::optional<OpResult> traverse(DIOp::Constant Constant, ChildrenT Children);
