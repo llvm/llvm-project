@@ -391,12 +391,16 @@ bool AMDGPUBundleIdxLdSt::hasConflictBetween(MachineBasicBlock *From,
       It != ConflictInstrCache.end())
     return llvm::any_of(It->second, [&](MachineInstr *I) {
       bool MayAlias = I->mayAlias(AA, MI, false);
-      LLVM_DEBUG(if (MayAlias) dbgs() << " *** Alias conflict with ";
-                 I->print(dbgs(), true, false, false, false));
+      LLVM_DEBUG(if (MayAlias) {
+        dbgs() << " *** Alias conflict with ";
+        I->print(dbgs());
+      });
       bool SideEffectHazard =
           MI.hasUnmodeledSideEffects() && I->hasUnmodeledSideEffects();
-      LLVM_DEBUG(if (MayAlias) dbgs() << " *** Side effect hazard with ";
-                 I->print(dbgs(), true, false, false, false));
+      LLVM_DEBUG(if (SideEffectHazard) {
+        dbgs() << " *** Side effect hazard with ";
+        I->print(dbgs());
+      });
       return SideEffectHazard || MayAlias;
     });
 
@@ -455,8 +459,7 @@ bool AMDGPUBundleIdxLdSt::hasConflictBetween(MachineBasicBlock *From,
           // Cache all conflicts, so that we don't need to go through
           // all From reachable blocks for next load instruction.
           if (sideEffectConflict(MI, I) || I.mayAlias(AA, MI, false)) {
-            LLVM_DEBUG(dbgs() << " *** Conflict with ";
-                       I.print(dbgs(), true, false, false, false));
+            LLVM_DEBUG(dbgs() << " *** Conflict with "; I.print(dbgs()));
             HasConflict = true;
           }
           ConflictInstrCache[BlockPair].push_back(&I);
@@ -646,7 +649,6 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
   // Check for constraints on moving MI down to StoreMI
   // If MI must happen before I, then we cannot form the bundle by moving
   // MI after I.
-  // TODO-GFX13 make this more precise
   if (Worklist.size() > 0) {
     bool MILoads = MI->mayLoad();
     assert(!MI->mayStore() || MILoads &&
@@ -656,8 +658,10 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
       MachineBasicBlock::iterator I = MI->getIterator(),
                                   E = Worklist[0].MI->getIterator();
       for (++I; I != E; ++I) {
-        if (I->mayStore() && MI->mayAlias(AA, *I, false))
+        if (I->mayStore() && MI->mayAlias(AA, *I, false)) {
+          LLVM_DEBUG(dbgs() << " *** Conflict with "; I->print(dbgs()));
           return false;
+        }
       }
     }
   }
@@ -710,13 +714,15 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
         continue;
     }
 
-    // Do not move any V_LOAD_IDX past a V_STORE_IDX because they may alias
-    // TODO-GFX13 make this more precise by checking idx and offset
+    // Do not move any V_LOAD_IDX past an aliased V_STORE_IDX.
     bool AliasConflict = false;
     MachineBasicBlock::instr_iterator I = LoadMI->getIterator(),
                                       E = Worklist[0].MI->getIterator();
     for (++I; I != E; ++I) {
-      if (I->getOpcode() == AMDGPU::V_STORE_IDX) {
+      if (I->isBundle())
+        I++;
+      if (I->mayStore() && LoadMI->mayAlias(AA, *I, false)) {
+        LLVM_DEBUG(dbgs() << " *** Conflict with "; I->print(dbgs()));
         AliasConflict = true;
         break;
       }

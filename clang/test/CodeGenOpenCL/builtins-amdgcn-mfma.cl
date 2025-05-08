@@ -433,6 +433,22 @@ v16f test_mfma_f32_32x32x16_bf16(v8bf16 a, v8bf16 b, v16f c) {
   return __builtin_amdgcn_mfma_f32_32x32x16_bf16(a, b, c, 1, 2, 3);
 }
 
+// CHECK-GFX950-LABEL: @test_mfma_scale_f32_16x16x128_f8f6f4
+// CHECK-GFX950: [[EXTRACT_A:%.+]] = shufflevector <8 x i32> %a, <8 x i32> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
+// CHECK-GFX950: call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v6i32.v8i32(<6 x i32> [[EXTRACT_A]], <8 x i32> %b, <4 x float> %c, i32 3, i32 1, i32 2, i32 %scale_a, i32 3, i32 %scale_b)
+void test_mfma_scale_f32_16x16x128_f8f6f4(global v4f* out, v8i a, v8i b, v4f c, int scale_a, int scale_b)
+{
+  *out = __builtin_amdgcn_mfma_scale_f32_16x16x128_f8f6f4(a, b, c, 3, 1, 2, scale_a, 3, scale_b);
+}
+
+// CHECK-GFX950-LABEL: @test_mfma_scale_f32_32x32x64_f8f6f4
+// CHECK-GFX950: [[EXTRACT_A:%.+]] = shufflevector <8 x i32> %a, <8 x i32> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
+// CHECK-GFX950: call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v6i32.v8i32(<6 x i32> [[EXTRACT_A]], <8 x i32> %b, <16 x float> %c, i32 3, i32 1, i32 2, i32 %scale_a, i32 3, i32 %scale_b)
+void test_mfma_scale_f32_32x32x64_f8f6f4(global v16f* out, v8i a, v8i b, v16f c, int scale_a, int scale_b)
+{
+  *out = __builtin_amdgcn_mfma_scale_f32_32x32x64_f8f6f4(a, b, c, 3, 1, 2, scale_a, 3, scale_b);
+}
+
 // CHECK-GFX950-LABEL: @test_mfma_i32_16x16x64_i8(
 // CHECK-GFX950: tail call <4 x i32> @llvm.amdgcn.mfma.i32.16x16x64.i8(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, i32 1, i32 2, i32 3)
 v4i test_mfma_i32_16x16x64_i8(v4i a, v4i b, v4i c) {
@@ -548,22 +564,6 @@ void test_smfmac_f32_32x32x64_fp8_bf8(global v16f* out, v4i a, v8i b, v16f c, in
 void test_smfmac_f32_32x32x64_fp8_fp8(global v16f* out, v4i a, v8i b, v16f c, int idx)
 {
   *out = __builtin_amdgcn_smfmac_f32_32x32x64_fp8_fp8(a, b, c, idx, 0, 0);
-}
-
-// CHECK-GFX950-LABEL: @test_mfma_scale_f32_16x16x128_f8f6f4
-// CHECK-GFX950: [[EXTRACT_A:%.+]] = shufflevector <8 x i32> %a, <8 x i32> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
-// CHECK-GFX950: call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v6i32.v8i32(<6 x i32> [[EXTRACT_A]], <8 x i32> %b, <4 x float> %c, i32 3, i32 1, i32 2, i32 %scale_a, i32 3, i32 %scale_b)
-void test_mfma_scale_f32_16x16x128_f8f6f4(global v4f* out, v8i a, v8i b, v4f c, int scale_a, int scale_b)
-{
-  *out = __builtin_amdgcn_mfma_scale_f32_16x16x128_f8f6f4(a, b, c, 3, 1, 2, scale_a, 3, scale_b);
-}
-
-// CHECK-GFX950-LABEL: @test_mfma_scale_f32_32x32x64_f8f6f4
-// CHECK-GFX950: [[EXTRACT_A:%.+]] = shufflevector <8 x i32> %a, <8 x i32> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
-// CHECK-GFX950: call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v6i32.v8i32(<6 x i32> [[EXTRACT_A]], <8 x i32> %b, <16 x float> %c, i32 3, i32 1, i32 2, i32 %scale_a, i32 3, i32 %scale_b)
-void test_mfma_scale_f32_32x32x64_f8f6f4(global v16f* out, v8i a, v8i b, v16f c, int scale_a, int scale_b)
-{
-  *out = __builtin_amdgcn_mfma_scale_f32_32x32x64_f8f6f4(a, b, c, 3, 1, 2, scale_a, 3, scale_b);
 }
 
 #endif

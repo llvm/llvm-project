@@ -1841,3 +1841,8 @@ void AMDGPUAsmPrinter::emitResourceUsageRemarks(
     EmitResourceUsageRemark("BytesLDS", "LDS Size [bytes/block]",
                             CurrentProgramInfo.LDSSize);
 }
+
+char AMDGPUAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(AMDGPUAsmPrinter, "amdgpu-asm-printer",
+                "AMDGPU Assembly Printer", false, false)

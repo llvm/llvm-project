@@ -221,7 +221,9 @@ public:
 
   bool hasFP4ConversionScaleInsts() const { return HasFP4ConversionScaleInsts; }
 
-  bool hasFP6BF6ConversionScaleInsts() const { return HasFP6BF6ConversionScaleInsts; }
+  bool hasFP6BF6ConversionScaleInsts() const {
+    return HasFP6BF6ConversionScaleInsts;
+  }
 
   bool hasF16BF16ToFP6BF6ConversionScaleInsts() const {
     return HasF16BF16ToFP6BF6ConversionScaleInsts;

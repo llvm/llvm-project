@@ -173,14 +173,11 @@ body: |
     ; VI-NEXT: {{  $}}
     ; VI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; VI-NEXT: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
-    ; VI-NEXT: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[TRUNC]], [[C]](s16)
-    ; VI-NEXT: [[ASHR:%[0-9]+]]:_(s16) = G_ASHR [[SHL]], [[C]](s16)
-    ; VI-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
-    ; VI-NEXT: [[SHL1:%[0-9]+]]:_(s16) = G_SHL [[TRUNC1]], [[C]](s16)
-    ; VI-NEXT: [[ASHR1:%[0-9]+]]:_(s16) = G_ASHR [[SHL1]], [[C]](s16)
-    ; VI-NEXT: [[SMIN:%[0-9]+]]:_(s16) = G_SMIN [[ASHR]], [[ASHR1]]
+    ; VI-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 8
+    ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[SEXT_INREG]](s32)
+    ; VI-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY1]], 8
+    ; VI-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[SEXT_INREG1]](s32)
+    ; VI-NEXT: [[SMIN:%[0-9]+]]:_(s16) = G_SMIN [[TRUNC]], [[TRUNC1]]
     ; VI-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SMIN]](s16)
     ; VI-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ;

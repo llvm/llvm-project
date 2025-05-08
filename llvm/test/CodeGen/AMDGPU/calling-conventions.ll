@@ -291,7 +291,7 @@ define amdgpu_kernel void @call_coldcc() #0 {
 ; GFX1250-NEXT:    s_swap_pc_i64 s[30:31], s[12:13]
 ; GFX1250-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX1250-NEXT:    s_endpgm
-  %val = call float @coldcc(float 1.0)
+  %val = call coldcc float @coldcc(float 1.0)
   store float %val, ptr addrspace(1) poison
   ret void
 }
@@ -402,7 +402,7 @@ define amdgpu_kernel void @call_fastcc() #0 {
 ; GFX1250-NEXT:    s_swap_pc_i64 s[30:31], s[12:13]
 ; GFX1250-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX1250-NEXT:    s_endpgm
-  %val = call float @fastcc(float 1.0)
+  %val = call fastcc float @fastcc(float 1.0)
   store float %val, ptr addrspace(1) poison
   ret void
 }

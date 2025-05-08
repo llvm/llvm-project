@@ -1,5 +1,5 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize32 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX13 --strict-whitespace --implicit-check-not=error %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize64 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX13 --strict-whitespace --implicit-check-not=error %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize32 -show-encoding %s 2>&1 | FileCheck --check-prefixes=GFX13,W32 --strict-whitespace --implicit-check-not=error %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize64 -show-encoding %s 2>&1 | FileCheck --check-prefixes=GFX13,W64 --strict-whitespace --implicit-check-not=error %s
 
 v_ashr_pk_i8_i32 v1, v2, v3, v4 clamp
 // GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
@@ -423,362 +423,433 @@ v_pext_b32_e64_dpp v5, v3, v1 row_share:1
 // GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
 
 v_cvt_scalef32_pk8_fp4_f32 v10, v[20:27], v8 clamp
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_fp4_f32 v10, v[20:27], v8 clamp
-// GX13-NEXT:{{^}}                                              ^
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// W32-NEXT:{{^}}v_cvt_scalef32_pk8_fp4_f32 v10, v[20:27], v8 clamp
+// W32-NEXT:{{^}}                                             ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
 
 v_cvt_scalef32_pk8_fp4_f32 v10, v[20:27], v8 mul:2
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_fp4_f32 v10, v[20:27], v8 mul:2
-// GFX13-NEXT:{{^}}                                             ^
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// W32-NEXT:{{^}}v_cvt_scalef32_pk8_fp4_f32 v10, v[20:27], v8 mul:2
+// W32-NEXT:{{^}}                                             ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
 
 v_cvt_scalef32_pk8_fp4_f32_dpp v5, v3, v1 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_cvt_scalef32_pk8_fp4_f32_dpp v5, v3, v1 dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_cvt_scalef32_pk8_fp4_f32_e64_dpp v5, v3, v1 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
-v_cvt_scalef32_pk8_fp8_f32 v10, v[20:27], v8 clamp
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_fp8_f32 v10, v[20:27], v8 clamp
-// GFGFX13X13-NEXT:{{^}}                                        ^
+v_cvt_scalef32_pk8_fp8_f32 v[10:11], v[20:27], v8 clamp
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// W32-NEXT:{{^}}v_cvt_scalef32_pk8_fp8_f32 v[10:11], v[20:27], v8 clamp
+// W32-NEXT:{{^}}                                                  ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
 
-v_cvt_scalef32_pk8_fp8_f32 v10, v[20:27], v8 mul:2
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_fp8_f32 v10, v[20:27], v8 mul:2
-// GFX13-NEXT:{{^}}                                             ^
+v_cvt_scalef32_pk8_fp8_f32 v[10:11], v[20:27], v8 mul:2
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// W32-NEXT:{{^}}v_cvt_scalef32_pk8_fp8_f32 v[10:11], v[20:27], v8 mul:2
+// W32-NEXT:{{^}}                                                  ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
 
-v_cvt_scalef32_pk8_fp8_f32_dpp v5, v3, v1 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+v_cvt_scalef32_pk8_fp8_f32_dpp v[10:11], v[20:27], v8 row_share:1
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
-v_cvt_scalef32_pk8_fp8_f32_dpp v5, v3, v1 dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+v_cvt_scalef32_pk8_fp8_f32_dpp v[10:11], v[20:27], v8 dpp8:[7,6,5,4,3,2,1,0]
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
-v_cvt_scalef32_pk8_fp8_f32_e64_dpp v5, v3, v1 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
-
-v_cvt_scalef32_pk8_fp8_bf16 v10, v[20:27], v8 clamp
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_fp8_bf16 v10, v[20:27], v8 clamp
-// GFGFX13X13-NEXT:{{^}}                                         ^
-
-v_cvt_scalef32_pk8_fp8_bf16 v10, v[20:27], v8 mul:2
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_fp8_bf16 v10, v[20:27], v8 mul:2
-// GFX13-NEXT:{{^}}                                              ^
-
-v_cvt_scalef32_pk8_fp8_bf16_dpp v5, v3, v1 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
-
-v_cvt_scalef32_pk8_fp8_bf16_dpp v5, v3, v1 dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
-
-v_cvt_scalef32_pk8_fp8_bf16_e64_dpp v5, v3, v1 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
-
-v_cvt_scalef32_sr_pk8_fp4_f32 v10, v[20:27], v4, v8 clamp
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp4_f32 v10, v[20:27], v4, v8 clamp
-// GFGFX13X13-NEXT:{{^}}                                               ^
-
-v_cvt_scalef32_sr_pk8_fp4_f32 v10, v[20:27], v4, v8 mul:2
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp4_f32 v10, v[20:27], v4, v8 mul:2
-// GFX13-NEXT:{{^}}                                                    ^
-
-v_cvt_scalef32_sr_pk8_fp4_f32_dpp v10, v[20:27], v4, v8 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
-
-v_cvt_scalef32_sr_pk8_fp4_f32_dpp v10, v[20:27], v4, v8 dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
-
-v_cvt_scalef32_sr_pk8_fp4_f32_e64_dpp v10, v[20:27], v4, v8 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
-
-v_cvt_scalef32_sr_pk8_fp8_f32 v[10:11], v[20:27], v4, v8 clamp
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp8_f32 v[10:11], v[20:27], v4, v8 clamp
-// GFGFX13X13-NEXT:{{^}}                                                    ^
-
-v_cvt_scalef32_sr_pk8_fp8_f32 v[10:11], v[20:27], v4, v8 mul:2
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp8_f32 v[10:11], v[20:27], v4, v8 mul:2
-// GFX13-NEXT:{{^}}                                                         ^
-
-v_cvt_scalef32_sr_pk8_fp8_f32_dpp v[10:11], v[20:27], v4, v8 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
-
-v_cvt_scalef32_sr_pk8_fp8_f32_dpp v[10:11], v[20:27], v4, v8 dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
-
-v_cvt_scalef32_sr_pk8_fp8_f32_e64_dpp v[10:11], v[20:27], v4, v8 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
-
-v_cvt_scalef32_sr_pk8_bf8_f32 v[10:11], v[20:27], v4, v8 clamp
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_bf8_f32 v[10:11], v[20:27], v4, v8 clamp
-// GFGFX13X13-NEXT:{{^}}                                                    ^
-
-v_cvt_scalef32_sr_pk8_bf8_f32 v[10:11], v[20:27], v4, v8 mul:2
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_bf8_f32 v[10:11], v[20:27], v4, v8 mul:2
-// GFX13-NEXT:{{^}}                                                         ^
-
-v_cvt_scalef32_sr_pk8_bf8_f32_dpp v[10:11], v[20:27], v4, v8 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
-
-v_cvt_scalef32_sr_pk8_bf8_f32_dpp v[10:11], v[20:27], v4, v8 dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
-
-v_cvt_scalef32_sr_pk8_bf8_f32_e64_dpp v[10:11], v[20:27], v4, v8 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
-
-v_cvt_scalef32_pk8_fp4_f16 v10, v[20:23], v8 clamp
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_fp4_f16 v10, v[20:23], v8 clamp
-// GFGFX13X13-NEXT:{{^}}                                        ^
-
-v_cvt_scalef32_pk8_fp4_f16 v10, v[20:23], v8 mul:2
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_fp4_f16 v10, v[20:23], v8 mul:2
-// GFX13-NEXT:{{^}}                                             ^
-
-v_cvt_scalef32_pk8_fp4_f16_dpp v10, v[20:23], v8 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
-
-v_cvt_scalef32_pk8_fp4_f16_dpp v10, v[20:23], v8 dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
-
-v_cvt_scalef32_pk8_fp4_f16_e64_dpp v10, v[20:23], v8 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
-
-v_cvt_scalef32_pk8_bf8_bf16 v[10:11], v[20:23], v8 clamp
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_bf8_bf16 v[10:11], v[20:23], v8 clamp
-// GFGFX13X13-NEXT:{{^}}                                              ^
-
-v_cvt_scalef32_pk8_bf8_bf16 v[10:11], v[20:23], v8 mul:2
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_bf8_bf16 v[10:11], v[20:23], v8 mul:2
-// GFX13-NEXT:{{^}}                                                   ^
-
-v_cvt_scalef32_pk8_bf8_bf16_dpp v[10:11], v[20:23], v8 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
-
-v_cvt_scalef32_pk8_bf8_bf16_dpp v[10:11], v[20:23], v8 dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
-
-v_cvt_scalef32_pk8_bf8_bf16_e64_dpp v[10:11], v[20:23], v8 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+v_cvt_scalef32_pk8_fp8_f32_e64_dpp v[10:11], v[20:27], v8 row_share:1
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_cvt_scalef32_pk8_fp8_bf16 v[10:11], v[20:23], v8 clamp
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_fp8_bf16 v[10:11], v[20:23], v8 clamp
-// GFGFX13X13-NEXT:{{^}}                                              ^
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// W32-NEXT:{{^}}v_cvt_scalef32_pk8_fp8_bf16 v[10:11], v[20:23], v8 clamp
+// W32-NEXT:{{^}}                                                   ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
 
 v_cvt_scalef32_pk8_fp8_bf16 v[10:11], v[20:23], v8 mul:2
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_fp8_bf16 v[10:11], v[20:23], v8 mul:2
-// GFX13-NEXT:{{^}}                                                   ^
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// W32-NEXT:{{^}}v_cvt_scalef32_pk8_fp8_bf16 v[10:11], v[20:23], v8 mul:2
+// W32-NEXT:{{^}}                                                   ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
 
 v_cvt_scalef32_pk8_fp8_bf16_dpp v[10:11], v[20:23], v8 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_cvt_scalef32_pk8_fp8_bf16_dpp v[10:11], v[20:23], v8 dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_cvt_scalef32_pk8_fp8_bf16_e64_dpp v[10:11], v[20:23], v8 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_cvt_scalef32_sr_pk8_fp4_f32 v10, v[20:27], v4, v8 clamp
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// W32-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp4_f32 v10, v[20:27], v4, v8 clamp
+// W32-NEXT:{{^}}                                                    ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scalef32_sr_pk8_fp4_f32 v10, v[20:27], v4, v8 mul:2
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// W32-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp4_f32 v10, v[20:27], v4, v8 mul:2
+// W32-NEXT:{{^}}                                                    ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scalef32_sr_pk8_fp4_f32_dpp v10, v[20:27], v4, v8 row_share:1
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_cvt_scalef32_sr_pk8_fp4_f32_dpp v10, v[20:27], v4, v8 dpp8:[7,6,5,4,3,2,1,0]
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_cvt_scalef32_sr_pk8_fp4_f32_e64_dpp v10, v[20:27], v4, v8 row_share:1
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_cvt_scalef32_sr_pk8_fp8_f32 v[10:11], v[20:27], v4, v8 clamp
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// W32-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp8_f32 v[10:11], v[20:27], v4, v8 clamp
+// W32-NEXT:{{^}}                                                         ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scalef32_sr_pk8_fp8_f32 v[10:11], v[20:27], v4, v8 mul:2
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// W32-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp8_f32 v[10:11], v[20:27], v4, v8 mul:2
+// W32-NEXT:{{^}}                                                         ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scalef32_sr_pk8_fp8_f32_dpp v[10:11], v[20:27], v4, v8 row_share:1
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_cvt_scalef32_sr_pk8_fp8_f32_dpp v[10:11], v[20:27], v4, v8 dpp8:[7,6,5,4,3,2,1,0]
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_cvt_scalef32_sr_pk8_fp8_f32_e64_dpp v[10:11], v[20:27], v4, v8 row_share:1
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_cvt_scalef32_sr_pk8_bf8_f32 v[10:11], v[20:27], v4, v8 clamp
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// W32-NEXT:{{^}}v_cvt_scalef32_sr_pk8_bf8_f32 v[10:11], v[20:27], v4, v8 clamp
+// W32-NEXT:{{^}}                                                         ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scalef32_sr_pk8_bf8_f32 v[10:11], v[20:27], v4, v8 mul:2
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// W32-NEXT:{{^}}v_cvt_scalef32_sr_pk8_bf8_f32 v[10:11], v[20:27], v4, v8 mul:2
+// W32-NEXT:{{^}}                                                         ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scalef32_sr_pk8_bf8_f32_dpp v[10:11], v[20:27], v4, v8 row_share:1
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_cvt_scalef32_sr_pk8_bf8_f32_dpp v[10:11], v[20:27], v4, v8 dpp8:[7,6,5,4,3,2,1,0]
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_cvt_scalef32_sr_pk8_bf8_f32_e64_dpp v[10:11], v[20:27], v4, v8 row_share:1
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_cvt_scalef32_pk8_fp4_f16 v10, v[20:23], v8 clamp
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// W32-NEXT:{{^}}v_cvt_scalef32_pk8_fp4_f16 v10, v[20:23], v8 clamp
+// W32-NEXT:{{^}}                                             ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scalef32_pk8_fp4_f16 v10, v[20:23], v8 mul:2
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// W32-NEXT:{{^}}v_cvt_scalef32_pk8_fp4_f16 v10, v[20:23], v8 mul:2
+// W32-NEXT:{{^}}                                             ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scalef32_pk8_fp4_f16_dpp v10, v[20:23], v8 row_share:1
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_cvt_scalef32_pk8_fp4_f16_dpp v10, v[20:23], v8 dpp8:[7,6,5,4,3,2,1,0]
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_cvt_scalef32_pk8_fp4_f16_e64_dpp v10, v[20:23], v8 row_share:1
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_cvt_scalef32_pk8_bf8_bf16 v[10:11], v[20:23], v8 clamp
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// W32-NEXT:{{^}}v_cvt_scalef32_pk8_bf8_bf16 v[10:11], v[20:23], v8 clamp
+// W32-NEXT:{{^}}                                                   ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scalef32_pk8_bf8_bf16 v[10:11], v[20:23], v8 mul:2
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// W32-NEXT:{{^}}v_cvt_scalef32_pk8_bf8_bf16 v[10:11], v[20:23], v8 mul:2
+// W32-NEXT:{{^}}                                                   ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scalef32_pk8_bf8_bf16_dpp v[10:11], v[20:23], v8 row_share:1
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_cvt_scalef32_pk8_bf8_bf16_dpp v[10:11], v[20:23], v8 dpp8:[7,6,5,4,3,2,1,0]
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_cvt_scalef32_pk8_bf8_bf16_e64_dpp v[10:11], v[20:23], v8 row_share:1
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_cvt_scalef32_pk8_fp4_bf16 v10, v[20:23], v8 clamp
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_fp4_bf16 v10, v[20:23], v8 clamp
-// GFGFX13X13-NEXT:{{^}}                                         ^
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// W32-NEXT:{{^}}v_cvt_scalef32_pk8_fp4_bf16 v10, v[20:23], v8 clamp
+// W32-NEXT:{{^}}                                              ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
 
 v_cvt_scalef32_pk8_fp4_bf16 v10, v[20:23], v8 mul:2
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_fp4_bf16 v10, v[20:23], v8 mul:2
-// GFX13-NEXT:{{^}}                                              ^
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// W32-NEXT:{{^}}v_cvt_scalef32_pk8_fp4_bf16 v10, v[20:23], v8 mul:2
+// W32-NEXT:{{^}}                                              ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
 
 v_cvt_scalef32_pk8_fp4_bf16_dpp v10, v[20:23], v8 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_cvt_scalef32_pk8_fp4_bf16_dpp v10, v[20:23], v8 dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_cvt_scalef32_pk8_fp4_bf16_e64_dpp v10, v[20:23], v8 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_cvt_scalef32_sr_pk8_fp4_f16 v10, v[20:23], v4, v8 clamp
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp4_f16 v10, v[20:23], v4, v8 clamp
-// GFGFX13X13-NEXT:{{^}}                                               ^
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// W32-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp4_f16 v10, v[20:23], v4, v8 clamp
+// W32-NEXT:{{^}}                                                    ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
 
 v_cvt_scalef32_sr_pk8_fp4_f16 v10, v[20:23], v4, v8 mul:2
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp4_f16 v10, v[20:23], v4, v8 mul:2
-// GFX13-NEXT:{{^}}                                                    ^
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// W32-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp4_f16 v10, v[20:23], v4, v8 mul:2
+// W32-NEXT:{{^}}                                                    ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
 
 v_cvt_scalef32_sr_pk8_fp4_f16_dpp v10, v[20:23], v4, v8 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_cvt_scalef32_sr_pk8_fp4_f16_dpp v10, v[20:23], v4, v8 dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_cvt_scalef32_sr_pk8_fp4_f16_e64_dpp v10, v[20:23], v4, v8 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_cvt_scalef32_sr_pk8_fp4_bf16 v10, v[20:23], v4, v8 clamp
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp4_bf16 v10, v[20:23], v4, v8 clamp
-// GFGFX13X13-NEXT:{{^}}                                                ^
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// W32-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp4_bf16 v10, v[20:23], v4, v8 clamp
+// W32-NEXT:{{^}}                                                     ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
 
 v_cvt_scalef32_sr_pk8_fp4_bf16 v10, v[20:23], v4, v8 mul:2
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp4_bf16 v10, v[20:23], v4, v8 mul:2
-// GFX13-NEXT:{{^}}                                                     ^
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// W32-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp4_bf16 v10, v[20:23], v4, v8 mul:2
+// W32-NEXT:{{^}}                                                     ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
 
 v_cvt_scalef32_sr_pk8_fp4_bf16_dpp v10, v[20:23], v4, v8 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_cvt_scalef32_sr_pk8_fp4_bf16_dpp v10, v[20:23], v4, v8 dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_cvt_scalef32_sr_pk8_fp4_bf16_e64_dpp v10, v[20:23], v4, v8 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_cvt_scalef32_sr_pk8_fp8_f16 v[10:11], v[20:23], v4, v8 clamp
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp8_f16 v[10:11], v[20:23], v4, v8 clamp
-// GFGFX13X13-NEXT:{{^}}                                                    ^
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// W32-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp8_f16 v[10:11], v[20:23], v4, v8 clamp
+// W32-NEXT:{{^}}                                                         ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
 
 v_cvt_scalef32_sr_pk8_fp8_f16 v[10:11], v[20:23], v4, v8 mul:2
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp8_f16 v[10:11], v[20:23], v4, v8 mul:2
-// GFX13-NEXT:{{^}}                                                         ^
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// W32-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp8_f16 v[10:11], v[20:23], v4, v8 mul:2
+// W32-NEXT:{{^}}                                                         ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
 
 v_cvt_scalef32_sr_pk8_fp8_f16_dpp v[10:11], v[20:23], v4, v8 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_cvt_scalef32_sr_pk8_fp8_f16_dpp v[10:11], v[20:23], v4, v8 dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_cvt_scalef32_sr_pk8_fp8_f16_e64_dpp v[10:11], v[20:23], v4, v8 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_cvt_scalef32_sr_pk8_fp8_bf16 v[10:11], v[20:23], v4, v8 clamp
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp8_bf16 v[10:11], v[20:23], v4, v8 clamp
-// GFGFX13X13-NEXT:{{^}}                                                     ^
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// W32-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp8_bf16 v[10:11], v[20:23], v4, v8 clamp
+// W32-NEXT:{{^}}                                                          ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
 
 v_cvt_scalef32_sr_pk8_fp8_bf16 v[10:11], v[20:23], v4, v8 mul:2
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp8_bf16 v[10:11], v[20:23], v4, v8 mul:2
-// GFX13-NEXT:{{^}}                                                          ^
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// W32-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp8_bf16 v[10:11], v[20:23], v4, v8 mul:2
+// W32-NEXT:{{^}}                                                          ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
 
 v_cvt_scalef32_sr_pk8_fp8_bf16_dpp v[10:11], v[20:23], v4, v8 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_cvt_scalef32_sr_pk8_fp8_bf16_dpp v[10:11], v[20:23], v4, v8 dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_cvt_scalef32_sr_pk8_fp8_bf16_e64_dpp v[10:11], v[20:23], v4, v8 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_cvt_scalef32_sr_pk8_bf8_f16 v[10:11], v[20:23], v4, v8 clamp
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_bf8_f16 v[10:11], v[20:23], v4, v8 clamp
-// GFGFX13X13-NEXT:{{^}}                                                    ^
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// W32-NEXT:{{^}}v_cvt_scalef32_sr_pk8_bf8_f16 v[10:11], v[20:23], v4, v8 clamp
+// W32-NEXT:{{^}}                                                         ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
 
 v_cvt_scalef32_sr_pk8_bf8_f16 v[10:11], v[20:23], v4, v8 mul:2
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_bf8_f16 v[10:11], v[20:23], v4, v8 mul:2
-// GFX13-NEXT:{{^}}                                                         ^
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// W32-NEXT:{{^}}v_cvt_scalef32_sr_pk8_bf8_f16 v[10:11], v[20:23], v4, v8 mul:2
+// W32-NEXT:{{^}}                                                         ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
 
-v_cvt_scalef32_sr_pk8_fp8_bf16_dpp v[10:11], v[20:23], v4, v8 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+v_cvt_scalef32_sr_pk8_bf8_f16_dpp v[10:11], v[20:23], v4, v8 row_share:1
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
-v_cvt_scalef32_sr_pk8_fp8_bf16_dpp v[10:11], v[20:23], v4, v8 dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+v_cvt_scalef32_sr_pk8_bf8_f16_dpp v[10:11], v[20:23], v4, v8 dpp8:[7,6,5,4,3,2,1,0]
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
-v_cvt_scalef32_sr_pk8_fp8_bf16_e64_dpp v[10:11], v[20:23], v4, v8 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+v_cvt_scalef32_sr_pk8_bf8_f16_e64_dpp v[10:11], v[20:23], v4, v8 row_share:1
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_cvt_scalef32_sr_pk8_bf8_bf16 v[10:11], v[20:23], v4, v8 clamp
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_bf8_bf16 v[10:11], v[20:23], v4, v8 clamp
-// GFGFX13X13-NEXT:{{^}}                                                     ^
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// W32-NEXT:{{^}}v_cvt_scalef32_sr_pk8_bf8_bf16 v[10:11], v[20:23], v4, v8 clamp
+// W32-NEXT:{{^}}                                                          ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
 
 v_cvt_scalef32_sr_pk8_bf8_bf16 v[10:11], v[20:23], v4, v8 mul:2
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_bf8_bf16 v[10:11], v[20:23], v4, v8 mul:2
-// GFX13-NEXT:{{^}}                                                          ^
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// W32-NEXT:{{^}}v_cvt_scalef32_sr_pk8_bf8_bf16 v[10:11], v[20:23], v4, v8 mul:2
+// W32-NEXT:{{^}}                                                          ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
 
 v_cvt_scalef32_sr_pk8_bf8_bf16_dpp v[10:11], v[20:23], v4, v8 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_cvt_scalef32_sr_pk8_bf8_bf16_dpp v[10:11], v[20:23], v4, v8 dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_cvt_scalef32_sr_pk8_bf8_bf16_e64_dpp v[10:11], v[20:23], v4, v8 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_cvt_scalef32_pk8_fp8_f16 v[10:11], v[20:23], v8 clamp
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_fp8_f16 v[10:11], v[20:23], v8 clamp
-// GFGFX13X13-NEXT:{{^}}                                             ^
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// W32-NEXT:{{^}}v_cvt_scalef32_pk8_fp8_f16 v[10:11], v[20:23], v8 clamp
+// W32-NEXT:{{^}}                                                  ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
 
 v_cvt_scalef32_pk8_fp8_f16 v[10:11], v[20:23], v8 mul:2
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_fp8_f16 v[10:11], v[20:23], v8 mul:2
-// GFX13-NEXT:{{^}}                                                  ^
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// W32-NEXT:{{^}}v_cvt_scalef32_pk8_fp8_f16 v[10:11], v[20:23], v8 mul:2
+// W32-NEXT:{{^}}                                                  ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
 
 v_cvt_scalef32_pk8_fp8_f16_dpp v[10:11], v[20:23], v8 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_cvt_scalef32_pk8_fp8_f16_dpp v[10:11], v[20:23], v8 dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_cvt_scalef32_pk8_fp8_f16_e64_dpp v[10:11], v[20:23], v8 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_cvt_scalef32_pk8_bf8_f32 v[10:11], v[20:27], v8 clamp
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_bf8_f32 v[10:11], v[20:27], v8 clamp
-// GFGFX13X13-NEXT:{{^}}                                             ^
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// W32-NEXT:{{^}}v_cvt_scalef32_pk8_bf8_f32 v[10:11], v[20:27], v8 clamp
+// W32-NEXT:{{^}}                                                  ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
 
 v_cvt_scalef32_pk8_bf8_f32 v[10:11], v[20:27], v8 mul:2
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_bf8_f32 v[10:11], v[20:27], v8 mul:2
-// GFX13-NEXT:{{^}}                                                  ^
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// W32-NEXT:{{^}}v_cvt_scalef32_pk8_bf8_f32 v[10:11], v[20:27], v8 mul:2
+// W32-NEXT:{{^}}                                                  ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
 
 v_cvt_scalef32_pk8_bf8_f32_dpp v[10:11], v[20:27], v8 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_cvt_scalef32_pk8_bf8_f32_dpp v[10:11], v[20:27], v8 dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_cvt_scalef32_pk8_bf8_f32_e64_dpp v[10:11], v[20:27], v8 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_cvt_scalef32_pk8_bf8_f16 v[10:11], v[20:23], v8 clamp
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_bf8_f16 v[10:11], v[20:23], v8 clamp
-// GFGFX13X13-NEXT:{{^}}                                             ^
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// W32-NEXT:{{^}}v_cvt_scalef32_pk8_bf8_f16 v[10:11], v[20:23], v8 clamp
+// W32-NEXT:{{^}}                                                  ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
 
 v_cvt_scalef32_pk8_bf8_f16 v[10:11], v[20:23], v8 mul:2
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_bf8_f16 v[10:11], v[20:23], v8 mul:2
-// GFX13-NEXT:{{^}}                                                  ^
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// W32-NEXT:{{^}}v_cvt_scalef32_pk8_bf8_f16 v[10:11], v[20:23], v8 mul:2
+// W32-NEXT:{{^}}                                                  ^
+// W64: :[[@LINE-4]]:{{[0-9]+}}: error: instruction requires wavesize=32
 
 v_cvt_scalef32_pk8_bf8_f16_dpp v[10:11], v[20:23], v8 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_cvt_scalef32_pk8_bf8_f16_dpp v[10:11], v[20:23], v8 dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_cvt_scalef32_pk8_bf8_f16_e64_dpp v[10:11], v[20:23], v8 row_share:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+// W32: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+// W64: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
