@@ -1537,39 +1537,27 @@ def DeviceKernel : DeclOrTypeAttr {
   let Spellings = [Clang<"device_kernel">, Clang<"sycl_kernel">,
                    Clang<"nvptx_kernel">, Clang<"amdgpu_kernel">,
                    CustomKeyword<"__kernel">, CustomKeyword<"kernel">];
-  let LangOpts = [];
   let Documentation = [SYCLKernelDocs];
   let AdditionalMembers =
   [{
-   inline bool isAMDGPUSpelling() const {
-     return isAMDGPUSpelling(*this);
-   }
-   template<typename T>
-   static inline bool isAMDGPUSpelling(const T& Attr) {
-     return Attr.getAttrName()->getName() == "amdgpu_kernel";
-   }
-   inline bool isNVPTXSpelling() const {
-     return isNVPTXSpelling(*this);
-   }
-   template<typename T>
-   static inline bool isNVPTXSpelling(const T& Attr) {
-     return Attr.getAttrName()->getName() == "nvptx_kernel";
-   }
-   inline bool isOpenCLSpelling() const {
-     return isOpenCLSpelling(*this);
-   }
-   template<typename T>
-   static inline bool isOpenCLSpelling(const T& Attr) {
-   return Attr.getAttrName()->getName() == "kernel" ||
-          Attr.getAttrName()->getName() == "__kernel";
-   }
-   inline bool isSYCLSpelling() const {
-     return isSYCLSpelling(*this);
-   }
-   template<typename T>
-   static inline bool isSYCLSpelling(const T& Attr) {
-     return Attr.getAttrName()->getName() == "sycl_kernel";
-   }
+    static inline bool isAMDGPUSpelling(const AttributeCommonInfo& A) {
+      return A.getAttributeSpellingListIndex() == GNU_amdgpu_kernel ||
+             A.getAttributeSpellingListIndex() == CXX11_clang_amdgpu_kernel ||
+             A.getAttributeSpellingListIndex() == C23_clang_amdgpu_kernel;
+    }
+    static inline bool isNVPTXSpelling(const AttributeCommonInfo& A) {
+      return A.getAttributeSpellingListIndex() == GNU_nvptx_kernel ||
+             A.getAttributeSpellingListIndex() == CXX11_clang_nvptx_kernel ||
+             A.getAttributeSpellingListIndex() == C23_clang_nvptx_kernel;
+    }
+    static inline bool isSYCLSpelling(const AttributeCommonInfo& A) {
+      return A.getAttributeSpellingListIndex() == GNU_sycl_kernel ||
+             A.getAttributeSpellingListIndex() == CXX11_clang_sycl_kernel ||
+             A.getAttributeSpellingListIndex() == C23_clang_sycl_kernel;
+    }
+    static inline bool isOpenCLSpelling(const AttributeCommonInfo& A) {
+      return A.getAttributeSpellingListIndex() == Keyword_kernel;
+    }
 }];
 }
 
