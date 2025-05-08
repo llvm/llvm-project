@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
+//
 // This coordinates the per-module state used while generating code.
 //
 //===----------------------------------------------------------------------===//
@@ -2396,6 +2401,9 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
 
   if (!hasUnwindExceptions(LangOpts))
     B.addAttribute(llvm::Attribute::NoUnwind);
+
+  if (D && D->hasAttr<FheCircuitAttr>())
+    B.addAttribute(llvm::Attribute::FheCircuit);
 
   if (D && D->hasAttr<NoStackProtectorAttr>())
     ; // Do nothing.

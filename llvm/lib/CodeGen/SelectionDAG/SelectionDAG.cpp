@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
+//
 // This implements the SelectionDAG class.
 //
 //===----------------------------------------------------------------------===//
@@ -2211,7 +2216,7 @@ SDValue SelectionDAG::getVectorShuffle(EVT VT, const SDLoc &dl, SDValue N1,
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   SDValue V = SDValue(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  NewSDValueDbgMsg(V, "Creating new node 1: ", this);
   return V;
 }
 
@@ -5567,7 +5572,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT) {
 
   InsertNode(N);
   SDValue V = SDValue(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  NewSDValueDbgMsg(V, "Creating new node 2: ", this);
   return V;
 }
 
@@ -5899,7 +5904,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 
   InsertNode(N);
   SDValue V = SDValue(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  NewSDValueDbgMsg(V, "Creating new node 3: ", this);
   return V;
 }
 
@@ -6528,7 +6533,7 @@ SDValue SelectionDAG::getAssertAlign(const SDLoc &DL, SDValue Val, Align A) {
   InsertNode(N);
 
   SDValue V(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  NewSDValueDbgMsg(V, "Creating new node 4: ", this);
   return V;
 }
 
@@ -7051,7 +7056,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 
   InsertNode(N);
   SDValue V = SDValue(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  NewSDValueDbgMsg(V, "Creating new node 5: ", this);
   return V;
 }
 
@@ -7233,7 +7238,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 
   InsertNode(N);
   SDValue V = SDValue(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  NewSDValueDbgMsg(V, "Creating new node 6: ", this);
   return V;
 }
 
@@ -8376,7 +8381,7 @@ SDValue SelectionDAG::getMemIntrinsicNode(unsigned Opcode, const SDLoc &dl,
   }
   InsertNode(N);
   SDValue V(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  NewSDValueDbgMsg(V, "Creating new node 7: ", this);
   return V;
 }
 
@@ -8406,7 +8411,7 @@ SDValue SelectionDAG::getLifetimeNode(bool IsStart, const SDLoc &dl,
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   SDValue V(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  NewSDValueDbgMsg(V, "Creating new node 8: ", this);
   return V;
 }
 
@@ -8430,7 +8435,7 @@ SDValue SelectionDAG::getPseudoProbeNode(const SDLoc &Dl, SDValue Chain,
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   SDValue V(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  NewSDValueDbgMsg(V, "Creating new node 9: ", this);
   return V;
 }
 
@@ -8543,7 +8548,7 @@ SDValue SelectionDAG::getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType,
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   SDValue V(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  NewSDValueDbgMsg(V, "Creating new node 10: ", this);
   return V;
 }
 
@@ -8645,7 +8650,7 @@ SDValue SelectionDAG::getStore(SDValue Chain, const SDLoc &dl, SDValue Val,
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   SDValue V(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  NewSDValueDbgMsg(V, "Creating new node 11: ", this);
   return V;
 }
 
@@ -8712,7 +8717,7 @@ SDValue SelectionDAG::getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val,
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   SDValue V(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  NewSDValueDbgMsg(V, "Creating new node 12: ", this);
   return V;
 }
 
@@ -8741,7 +8746,7 @@ SDValue SelectionDAG::getIndexedStore(SDValue OrigStore, const SDLoc &dl,
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   SDValue V(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  NewSDValueDbgMsg(V, "Creating new node 13: ", this);
   return V;
 }
 
@@ -8799,7 +8804,7 @@ SDValue SelectionDAG::getLoadVP(ISD::MemIndexedMode AM,
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   SDValue V(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  NewSDValueDbgMsg(V, "Creating new node 14: ", this);
   return V;
 }
 
@@ -8892,7 +8897,7 @@ SDValue SelectionDAG::getStoreVP(SDValue Chain, const SDLoc &dl, SDValue Val,
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   SDValue V(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  NewSDValueDbgMsg(V, "Creating new node 15: ", this);
   return V;
 }
 
@@ -8964,7 +8969,7 @@ SDValue SelectionDAG::getTruncStoreVP(SDValue Chain, const SDLoc &dl,
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   SDValue V(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  NewSDValueDbgMsg(V, "Creating new node 16: ", this);
   return V;
 }
 
@@ -8994,7 +8999,7 @@ SDValue SelectionDAG::getIndexedStoreVP(SDValue OrigStore, const SDLoc &dl,
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   SDValue V(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  NewSDValueDbgMsg(V, "Creating new node 17: ", this);
   return V;
 }
 
@@ -9051,7 +9056,7 @@ SDValue SelectionDAG::getStridedLoadVP(
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   SDValue V(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  NewSDValueDbgMsg(V, "Creating new node 18: ", this);
   return V;
 }
 
@@ -9146,7 +9151,7 @@ SDValue SelectionDAG::getStridedStoreVP(SDValue Chain, const SDLoc &DL,
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   SDValue V(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  NewSDValueDbgMsg(V, "Creating new node 19: ", this);
   return V;
 }
 
@@ -9215,7 +9220,7 @@ SDValue SelectionDAG::getTruncStridedStoreVP(SDValue Chain, const SDLoc &DL,
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   SDValue V(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  NewSDValueDbgMsg(V, "Creating new node 20: ", this);
   return V;
 }
 
@@ -9247,7 +9252,7 @@ SDValue SelectionDAG::getIndexedStridedStoreVP(SDValue OrigStore,
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   SDValue V(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  NewSDValueDbgMsg(V, "Creating new node 21: ", this);
   return V;
 }
 
@@ -9290,7 +9295,7 @@ SDValue SelectionDAG::getGatherVP(SDVTList VTs, EVT VT, const SDLoc &dl,
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   SDValue V(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  NewSDValueDbgMsg(V, "Creating new node 22: ", this);
   return V;
 }
 
@@ -9334,7 +9339,7 @@ SDValue SelectionDAG::getScatterVP(SDVTList VTs, EVT VT, const SDLoc &dl,
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   SDValue V(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  NewSDValueDbgMsg(V, "Creating new node 23: ", this);
   return V;
 }
 
@@ -9369,7 +9374,7 @@ SDValue SelectionDAG::getMaskedLoad(EVT VT, const SDLoc &dl, SDValue Chain,
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   SDValue V(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  NewSDValueDbgMsg(V, "Creating new node 24: ", this);
   return V;
 }
 
@@ -9418,7 +9423,7 @@ SDValue SelectionDAG::getMaskedStore(SDValue Chain, const SDLoc &dl,
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   SDValue V(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  NewSDValueDbgMsg(V, "Creating new node 25: ", this);
   return V;
 }
 
@@ -9476,7 +9481,7 @@ SDValue SelectionDAG::getMaskedGather(SDVTList VTs, EVT MemVT, const SDLoc &dl,
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   SDValue V(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  NewSDValueDbgMsg(V, "Creating new node 26: ", this);
   return V;
 }
 
@@ -9522,7 +9527,7 @@ SDValue SelectionDAG::getMaskedScatter(SDVTList VTs, EVT MemVT, const SDLoc &dl,
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   SDValue V(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  NewSDValueDbgMsg(V, "Creating new node 27: ", this);
   return V;
 }
 
@@ -9549,7 +9554,7 @@ SDValue SelectionDAG::getGetFPEnv(SDValue Chain, const SDLoc &dl, SDValue Ptr,
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   SDValue V(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  NewSDValueDbgMsg(V, "Creating new node 28: ", this);
   return V;
 }
 
@@ -9576,7 +9581,7 @@ SDValue SelectionDAG::getSetFPEnv(SDValue Chain, const SDLoc &dl, SDValue Ptr,
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   SDValue V(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  NewSDValueDbgMsg(V, "Creating new node 29: ", this);
   return V;
 }
 
@@ -9817,7 +9822,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   N->setFlags(Flags);
   InsertNode(N);
   SDValue V(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  NewSDValueDbgMsg(V, "Creating new node 30: ", this);
   return V;
 }
 
@@ -10007,10 +10012,25 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
     createOperands(N, Ops);
   }
 
+  // Iterate through VT list, looking for a EVT with the encrypted attribute
+  // set. If found, set the encrypted attribute on the new node.
+  for (unsigned i = 0; i < VTList.NumVTs; i++) {
+    if (VTList.VTs[i].getIsEncrypted()) {
+      N->setHasEncryptedValue(true);
+    }
+  }
+
+  std::string NodeString = "Creating new node 31";
+  if (N->getHasEncryptedValue()) {
+    NodeString += " encrypted: ";
+  } else {
+    NodeString += ": ";
+  }
+
   N->setFlags(Flags);
   InsertNode(N);
   SDValue V(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  NewSDValueDbgMsg(V, NodeString, this);
   return V;
 }
 

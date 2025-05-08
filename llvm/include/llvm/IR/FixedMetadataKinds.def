@@ -5,6 +5,12 @@
 |* SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 |*
 \*===----------------------------------------------------------------------===*/
+//===----------------------------------------------------------------------===//
+//
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_FIXED_MD_KIND
 #error "LLVM_FIXED_MD_KIND(EnumID, Name, Value) is not defined."
@@ -51,3 +57,4 @@ LLVM_FIXED_MD_KIND(MD_kcfi_type, "kcfi_type", 36)
 LLVM_FIXED_MD_KIND(MD_pcsections, "pcsections", 37)
 LLVM_FIXED_MD_KIND(MD_DIAssignID, "DIAssignID", 38)
 LLVM_FIXED_MD_KIND(MD_coro_outside_frame, "coro.outside.frame", 39)
+LLVM_FIXED_MD_KIND(MD_encryption, "encryption", 40)

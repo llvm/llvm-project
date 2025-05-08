@@ -1,3 +1,6 @@
+# Modified by Sunscreen under the AGPLv3 license; see the README at the
+# repository root for more information
+
 import("//llvm/include/llvm/Config/config.gni")
 import("//llvm/lib/DebugInfo/PDB/enable_dia.gni")
 import("//llvm/lib/Target/targets.gni")
@@ -464,6 +467,12 @@ write_cmake_config("llvm-config") {
     values += [ "LLVM_HAS_RISCV_TARGET=1" ]
   } else {
     values += [ "LLVM_HAS_RISCV_TARGET=" ]
+  }
+
+  if (llvm_build_Parasol) {
+    values += [ "LLVM_HAS_PARASOL_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_PARASOL_TARGET=" ]
   }
 
   values += [ "LLVM_HAS_SPARC_TARGET=" ]

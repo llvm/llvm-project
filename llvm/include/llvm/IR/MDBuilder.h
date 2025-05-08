@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
+//
 // This file defines the MDBuilder class, which is used as a convenient way to
 // create LLVM metadata with a consistent and simplified interface.
 //
@@ -19,6 +24,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Support/DataTypes.h"
+#include "llvm/IR/EncryptionColor.h"
 #include <utility>
 
 namespace llvm {
@@ -229,6 +235,9 @@ public:
 
   /// Return metadata containing an irreducible loop header weight.
   MDNode *createIrrLoopHeaderWeight(uint64_t Weight);
+
+  /// Return encryption coloring metadata.
+  MDNode *createEncryption(EncryptionColor Color);
 };
 
 } // end namespace llvm

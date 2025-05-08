@@ -1,3 +1,6 @@
+# Modified by Sunscreen under the AGPLv3 license; see the README at the
+# repository root for more information
+
 if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
   include(TensorFlowCompile)
   set(LLVM_INLINER_MODEL_PATH_DEFAULT "models/inliner-Oz")
@@ -59,6 +62,7 @@ add_llvm_component_library(LLVMAnalysis
   DomPrinter.cpp
   DomTreeUpdater.cpp
   DominanceFrontier.cpp
+  EncryptionColoring.cpp
   FunctionPropertiesAnalysis.cpp
   GlobalsModRef.cpp
   GuardUtils.cpp

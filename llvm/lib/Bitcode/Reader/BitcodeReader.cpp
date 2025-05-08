@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
 
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "MetadataLoader.h"
@@ -2100,6 +2105,10 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::CoroDestroyOnlyWhenComplete;
   case bitc::ATTR_KIND_DEAD_ON_UNWIND:
     return Attribute::DeadOnUnwind;
+  case bitc::ATTR_KIND_FHE_CIRCUIT:
+    return Attribute::FheCircuit;
+  case bitc::ATTR_KIND_ENCRYPTED:
+    return Attribute::Encrypted;
   }
 }
 

@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
+//
 //  This file implements type-related semantic analysis.
 //
 //===----------------------------------------------------------------------===//
@@ -5629,6 +5634,11 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
           if (Param->hasAttr<NoEscapeAttr>()) {
             ExtParameterInfos[i] = ExtParameterInfos[i].withIsNoEscape(true);
+            HasAnyInterestingExtParameterInfos = true;
+          }
+
+          if (Param->hasAttr<EncryptedAttr>()) {
+            ExtParameterInfos[i] = ExtParameterInfos[i].withEncrypted(true);
             HasAnyInterestingExtParameterInfos = true;
           }
 

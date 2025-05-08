@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
+//
 // This file defines types for working with calling-convention information.
 //
 //===----------------------------------------------------------------------===//
@@ -53,6 +58,7 @@ namespace ISD {
     unsigned IsInConsecutiveRegs : 1;
     unsigned IsCopyElisionCandidate : 1; ///< Argument copy elision candidate
     unsigned IsPointer : 1;
+    unsigned IsEncrypted : 1; ///< Encrypted argument
 
     unsigned ByValOrByRefSize = 0; ///< Byval or byref struct size
 
@@ -66,8 +72,8 @@ namespace ISD {
           IsSwiftError(0), IsCFGuardTarget(0), IsHva(0), IsHvaStart(0),
           IsSecArgPass(0), MemAlign(0), OrigAlign(0),
           IsInConsecutiveRegsLast(0), IsInConsecutiveRegs(0),
-          IsCopyElisionCandidate(0), IsPointer(0) {
-      static_assert(sizeof(*this) == 3 * sizeof(unsigned), "flags are too big");
+          IsCopyElisionCandidate(0), IsPointer(0), IsEncrypted(0) {
+      static_assert(sizeof(*this) == 4 * sizeof(unsigned), "flags are too big");
     }
 
     bool isZExt() const { return IsZExt; }
@@ -141,6 +147,9 @@ namespace ISD {
     bool isPointer()  const { return IsPointer; }
     void setPointer() { IsPointer = 1; }
 
+    bool isEncrypted() const { return IsEncrypted; }
+    void setEncrypted() { IsEncrypted = 1; }
+
     Align getNonZeroMemAlign() const {
       return decodeMaybeAlign(MemAlign).valueOrOne();
     }
@@ -213,6 +222,11 @@ namespace ISD {
              unsigned origIdx, unsigned partOffs)
       : Flags(flags), Used(used), OrigArgIndex(origIdx), PartOffset(partOffs) {
       VT = vt.getSimpleVT();
+
+      if (flags.isEncrypted()) {
+        argvt.setIsEncrypted(true);
+      }
+
       ArgVT = argvt;
     }
 

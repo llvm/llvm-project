@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
+//
 // This file defines the set of low-level target independent types which various
 // values in the code generator are.  This allows the target specific behavior
 // of instructions to be described to target independent passes.
@@ -35,6 +40,7 @@ namespace llvm {
   private:
     MVT V = MVT::INVALID_SIMPLE_VALUE_TYPE;
     Type *LLVMTy = nullptr;
+    bool isEncrypted = false;
 
   public:
     constexpr EVT() = default;
@@ -502,6 +508,12 @@ namespace llvm {
           return L.V.SimpleTy < R.V.SimpleTy;
       }
     };
+
+    // Get the encryption flag
+    bool getIsEncrypted() const { return isEncrypted; }
+
+    /// Set the encrypted flag
+    void setIsEncrypted(bool b) { isEncrypted = b; }
 
   private:
     // Methods for handling the Extended-type case in functions above.

@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
 /// \file
 ///
 /// This file provides the implementation of the PassBuilder based on our
@@ -36,6 +41,7 @@
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/DomPrinter.h"
 #include "llvm/Analysis/DominanceFrontier.h"
+#include "llvm/Analysis/EncryptionColoring.h"
 #include "llvm/Analysis/FunctionPropertiesAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/IRSimilarityIdentifier.h"
@@ -188,6 +194,8 @@
 #include "llvm/Transforms/Scalar/DeadStoreElimination.h"
 #include "llvm/Transforms/Scalar/DivRemPairs.h"
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
+#include "llvm/Transforms/Scalar/EncryptedBranchLinearization.h"
+#include "llvm/Transforms/Scalar/FheCircuitFixup.h"
 #include "llvm/Transforms/Scalar/FlattenCFG.h"
 #include "llvm/Transforms/Scalar/Float2Int.h"
 #include "llvm/Transforms/Scalar/GVN.h"

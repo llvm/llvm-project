@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef LLD_ELF_TARGET_H
 #define LLD_ELF_TARGET_H
@@ -191,6 +196,7 @@ TargetInfo *getSPARCV9TargetInfo();
 TargetInfo *getSystemZTargetInfo();
 TargetInfo *getX86TargetInfo();
 TargetInfo *getX86_64TargetInfo();
+TargetInfo *getParasolTargetInfo();
 template <class ELFT> TargetInfo *getMipsTargetInfo();
 
 struct ErrorPlace {

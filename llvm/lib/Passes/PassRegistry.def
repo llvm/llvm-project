@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
+//
 // This file is used as the registry of passes that are part of the core LLVM
 // libraries. This file describes both transformation passes and analyses
 // Analyses are registered while transformation passes have names registered
@@ -252,6 +257,7 @@ FUNCTION_ANALYSIS("debug-ata", DebugAssignmentTrackingAnalysis())
 FUNCTION_ANALYSIS("demanded-bits", DemandedBitsAnalysis())
 FUNCTION_ANALYSIS("domfrontier", DominanceFrontierAnalysis())
 FUNCTION_ANALYSIS("domtree", DominatorTreeAnalysis())
+FUNCTION_ANALYSIS("encryption-coloring", EncryptionColoringAnalysis())
 FUNCTION_ANALYSIS("func-properties", FunctionPropertiesAnalysis())
 FUNCTION_ANALYSIS("gc-function", GCFunctionAnalysis())
 FUNCTION_ANALYSIS("inliner-size-estimator", InlineSizeEstimatorAnalysis())
@@ -325,9 +331,11 @@ FUNCTION_PASS("dot-post-dom", PostDomPrinter())
 FUNCTION_PASS("dot-post-dom-only", PostDomOnlyPrinter())
 FUNCTION_PASS("dse", DSEPass())
 FUNCTION_PASS("dwarf-eh-prepare", DwarfEHPreparePass(TM))
+FUNCTION_PASS("encrypted-branch-linearization", EncryptedBranchLinearizationPass())
 FUNCTION_PASS("expand-large-div-rem", ExpandLargeDivRemPass(TM))
 FUNCTION_PASS("expand-large-fp-convert", ExpandLargeFpConvertPass(TM))
 FUNCTION_PASS("expand-memcmp", ExpandMemCmpPass(TM))
+FUNCTION_PASS("fhe-circuit-fixup", FheCircuitFixupPass())
 FUNCTION_PASS("fix-irreducible", FixIrreduciblePass())
 FUNCTION_PASS("flattencfg", FlattenCFGPass())
 FUNCTION_PASS("float2int", Float2IntPass())

@@ -1,0 +1,21 @@
+;===- ./lib/Target/Parasol/TargetInfo/LLVMBuild.txt --------------*- Conf -*--===;
+;
+; Modified by Sunscreen under the AGPLv3 license; see the README at the
+; repository root for more information
+;
+;===------------------------------------------------------------------------===;
+;
+; This is an LLVMBuild description file for the components in this subdirectory.
+;
+; For more information on the LLVMBuild system, please see:
+;
+;   http://llvm.org/docs/LLVMBuild.html
+;
+;===------------------------------------------------------------------------===;
+
+[component_0]
+type = Library
+name = ParasolInfo
+parent = Parasol
+required_libraries = Support
+add_to_library_groups = Parasol

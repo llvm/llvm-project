@@ -6,6 +6,11 @@
 /* SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception                    */
 /*                                                                            */
 /*===----------------------------------------------------------------------===*/
+//
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
 
 /* This file enumerates variables from the LLVM configuration so that they
    can be in exported headers and won't override package specific directives.
@@ -104,6 +109,9 @@
 
 /* Define if the RISCV target is built in */
 #cmakedefine01 LLVM_HAS_RISCV_TARGET
+
+/* Define if the PARASOL target is build in */
+#cmakedefine01 LLVM_HAS_PARASOL_TARGET
 
 /* Define if the Sparc target is built in */
 #cmakedefine01 LLVM_HAS_SPARC_TARGET

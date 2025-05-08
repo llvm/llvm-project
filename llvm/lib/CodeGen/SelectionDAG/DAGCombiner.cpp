@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
+//
 // This pass combines dag nodes to form fewer, simpler DAG nodes.  It can be run
 // both before and after the DAG is legalized.
 //
@@ -26890,14 +26895,24 @@ bool DAGCombiner::SimplifySelectOps(SDNode *TheSelect, SDValue LHS,
   // If this is a select from two identical things, try to pull the operation
   // through the select.
   if (LHS.getOpcode() != RHS.getOpcode() ||
-      !LHS.hasOneUse() || !RHS.hasOneUse())
+      !LHS.hasOneUse() || !RHS.hasOneUse()) {
     return false;
+  }
 
   // If this is a load and the token chain is identical, replace the select
   // of two loads with a load through a select of the address to load from.
   // This triggers in things like "select bool X, 10.0, 123.0" after the FP
   // constants have been dropped into the constant pool.
   if (LHS.getOpcode() == ISD::LOAD) {
+
+    // If we are compiling for parasol, return since the load can't handle loads
+    // from addresses stored in registers.
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+
+    if (TLI.getTargetMachine().getTargetTriple().isParasol()) {
+      return false;
+    }
+
     LoadSDNode *LLD = cast<LoadSDNode>(LHS);
     LoadSDNode *RLD = cast<LoadSDNode>(RHS);
 
@@ -26929,12 +26944,14 @@ bool DAGCombiner::SimplifySelectOps(SDNode *TheSelect, SDValue LHS,
         LLD->getBasePtr().getOpcode() == ISD::TargetFrameIndex ||
         RLD->getBasePtr().getOpcode() == ISD::TargetFrameIndex ||
         !TLI.isOperationLegalOrCustom(TheSelect->getOpcode(),
-                                      LLD->getBasePtr().getValueType()))
+                                      LLD->getBasePtr().getValueType())) {
       return false;
+    }
 
     // The loads must not depend on one another.
-    if (LLD->isPredecessorOf(RLD) || RLD->isPredecessorOf(LLD))
+    if (LLD->isPredecessorOf(RLD) || RLD->isPredecessorOf(LLD)) {
       return false;
+    }
 
     // Check that the select condition doesn't reach either load.  If so,
     // folding this will induce a cycle into the DAG.  If not, this is safe to
@@ -26951,8 +26968,9 @@ bool DAGCombiner::SimplifySelectOps(SDNode *TheSelect, SDValue LHS,
     Worklist.push_back(RLD);
 
     if (SDNode::hasPredecessorHelper(LLD, Visited, Worklist) ||
-        SDNode::hasPredecessorHelper(RLD, Visited, Worklist))
+        SDNode::hasPredecessorHelper(RLD, Visited, Worklist)) {
       return false;
+    }
 
     SDValue Addr;
     if (TheSelect->getOpcode() == ISD::SELECT) {
@@ -26967,8 +26985,9 @@ bool DAGCombiner::SimplifySelectOps(SDNode *TheSelect, SDValue LHS,
       if ((LLD->hasAnyUseOfValue(1) &&
            SDNode::hasPredecessorHelper(LLD, Visited, Worklist)) ||
           (RLD->hasAnyUseOfValue(1) &&
-           SDNode::hasPredecessorHelper(RLD, Visited, Worklist)))
+           SDNode::hasPredecessorHelper(RLD, Visited, Worklist))) {
         return false;
+      }
 
       Addr = DAG.getSelect(SDLoc(TheSelect),
                            LLD->getBasePtr().getValueType(),
@@ -26989,8 +27008,9 @@ bool DAGCombiner::SimplifySelectOps(SDNode *TheSelect, SDValue LHS,
       if ((LLD->hasAnyUseOfValue(1) &&
            SDNode::hasPredecessorHelper(LLD, Visited, Worklist)) ||
           (RLD->hasAnyUseOfValue(1) &&
-           SDNode::hasPredecessorHelper(RLD, Visited, Worklist)))
+           SDNode::hasPredecessorHelper(RLD, Visited, Worklist))) {
         return false;
+      }
 
       Addr = DAG.getNode(ISD::SELECT_CC, SDLoc(TheSelect),
                          LLD->getBasePtr().getValueType(),

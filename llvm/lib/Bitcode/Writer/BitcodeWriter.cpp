@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
+//
 // Bitcode writer implementation.
 //
 //===----------------------------------------------------------------------===//
@@ -844,6 +849,10 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_CORO_ONLY_DESTROY_WHEN_COMPLETE;
   case Attribute::DeadOnUnwind:
     return bitc::ATTR_KIND_DEAD_ON_UNWIND;
+  case Attribute::FheCircuit:
+    return bitc::ATTR_KIND_FHE_CIRCUIT;
+  case Attribute::Encrypted:
+    return bitc::ATTR_KIND_ENCRYPTED;
   case Attribute::EndAttrKinds:
     llvm_unreachable("Can not encode end-attribute kinds marker.");
   case Attribute::None:

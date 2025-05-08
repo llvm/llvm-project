@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
+//
 // This file defines all the LLVM attributes.
 //
 //===----------------------------------------------------------------------===//
@@ -101,6 +106,13 @@ def DisableSanitizerInstrumentation: EnumAttr<"disable_sanitizer_instrumentation
 
 /// Provide pointer element type to intrinsic.
 def ElementType : TypeAttr<"elementtype", [ParamAttr]>;
+
+/// The given function is the entry point for a fully homomorphic encryption
+// program.
+def FheCircuit: EnumAttr<"fhe_circuit", [FnAttr]>;
+
+/// Indicates an input parameter on an `fhe_circuit` is encrypted.
+def Encrypted: EnumAttr<"encrypted", [ParamAttr]>;
 
 /// Whether to keep return instructions, or replace with a jump to an external
 /// symbol.

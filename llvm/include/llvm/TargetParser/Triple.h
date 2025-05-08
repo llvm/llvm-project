@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_TARGETPARSER_TRIPLE_H
 #define LLVM_TARGETPARSER_TRIPLE_H
@@ -74,6 +79,7 @@ public:
     amdgcn,         // AMDGCN: AMD GCN GPUs
     riscv32,        // RISC-V (32-bit): riscv32
     riscv64,        // RISC-V (64-bit): riscv64
+    parasol,        // Sunscreen's TFHE (Torus Fully Homomorphic Encryption) virtual processor
     sparc,          // Sparc: sparc
     sparcv9,        // Sparcv9: Sparcv9
     sparcel,        // Sparc: (endianness = little). NB: 'Sparcle' is a CPU variant
@@ -965,6 +971,9 @@ public:
 
   /// Tests whether the target is RISC-V (32- and 64-bit).
   bool isRISCV() const { return isRISCV32() || isRISCV64(); }
+
+  /// Tests whether the target is Parasol
+  bool isParasol() const { return getArch() == Triple::parasol; }
 
   /// Tests whether the target is 32-bit SPARC (little and big endian).
   bool isSPARC32() const {

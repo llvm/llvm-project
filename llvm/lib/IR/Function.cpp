@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
+//
 // This file implements the Function class for the IR library.
 //
 //===----------------------------------------------------------------------===//
@@ -294,6 +299,10 @@ bool Argument::hasZExtAttr() const {
 
 bool Argument::hasSExtAttr() const {
   return hasAttribute(Attribute::SExt);
+}
+
+bool Argument::hasEncryptedAttr() const {
+  return hasAttribute(Attribute::Encrypted);
 }
 
 bool Argument::onlyReadsMemory() const {

@@ -1,3 +1,6 @@
+# Modified by Sunscreen under the AGPLv3 license; see the README at the
+# repository root for more information
+
 set(LLVM_TARGET_DEFINITIONS Options.td)
 tablegen(LLVM Options.inc -gen-opt-parser-defs)
 add_public_tablegen_target(ELFOptionsTableGen)
@@ -29,6 +32,7 @@ add_lld_library(lldELF
   Arch/Mips.cpp
   Arch/MipsArchTree.cpp
   Arch/MSP430.cpp
+  Arch/Parasol.cpp
   Arch/PPC.cpp
   Arch/PPC64.cpp
   Arch/RISCV.cpp

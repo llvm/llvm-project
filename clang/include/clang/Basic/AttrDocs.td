@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===---------------------------------------------------------------------===//
+//
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
 
 // To test that the documentation builds cleanly, you must run clang-tblgen to
 // convert the .td file into a .rst file, and then run sphinx to convert the
@@ -7875,6 +7880,34 @@ requirement:
       return;
     --p->count;
     p->array[index] = val;
+  }
+  }];
+}
+
+def FheCircuitDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+Specifies a function as an TFHE circuit
+
+.. code-block:: c
+
+  [[clang::fhe_circuit]] int test([[clang::encrypted]] int a, [[clang::encrypted]] int b)
+  {
+      return a + b;
+  }
+  }];
+}
+
+def EncryptedDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+Specifies a variable as an encrypted variable
+
+.. code-block:: c
+
+  [[clang::fhe_circuit]] int test([[clang::encrypted]] int a, [[clang::encrypted]] int b)
+  {
+      return a + b;
   }
   }];
 }

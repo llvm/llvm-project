@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
+//
 // This implements routines for translating from LLVM IR into SelectionDAG IR.
 //
 //===----------------------------------------------------------------------===//
@@ -1315,6 +1320,17 @@ void SelectionDAGBuilder::visit(const Instruction &I) {
 
   visit(I.getOpcode(), I);
 
+  SDValue &N = NodeMap[&I];
+
+  // errs() << I << "\n";
+
+  if (N) {
+    MDNode* MD = I.getMetadata(LLVMContext::MD_encryption);
+    bool encrypted = MD && (MD->getOperand(0).equalsStr("encrypted"));
+    
+    N->setHasEncryptedValue(encrypted);
+  }
+  
   if (!I.isTerminator() && !HasTailCall &&
       !isa<GCStatepointInst>(I)) // statepoints handle their exports internally
     CopyToExportRegsIfNeeded(&I);
@@ -10975,6 +10991,8 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         Flags.setPointerAddrSpace(
             cast<PointerType>(Arg.getType())->getAddressSpace());
       }
+      if (Arg.hasAttribute(Attribute::Encrypted))
+        Flags.setEncrypted();
       if (Arg.hasAttribute(Attribute::ZExt))
         Flags.setZExt();
       if (Arg.hasAttribute(Attribute::SExt))

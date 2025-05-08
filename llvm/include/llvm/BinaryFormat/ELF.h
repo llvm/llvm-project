@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
+//
 // This header contains common, non-processor-specific data structures and
 // constants for the ELF file format.
 //
@@ -320,6 +325,7 @@ enum {
   EM_VE = 251,            // NEC SX-Aurora VE
   EM_CSKY = 252,          // C-SKY 32-bit processor
   EM_LOONGARCH = 258,     // LoongArch
+  EM_Parasol = 574,       // Parasol
 };
 
 // Object file classes.
@@ -681,6 +687,11 @@ enum : unsigned {
 // ELF Relocation types for RISC-V
 enum {
 #include "ELFRelocs/RISCV.def"
+};
+
+// ELF Relocation types for Parasol
+enum {
+#include "ELFRelocs/Parasol.def"
 };
 
 enum {

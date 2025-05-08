@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
+//
 // These classes wrap the information about a call or function
 // definition used to handle ABI compliancy.
 //
@@ -2858,6 +2863,9 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
     if (FI.getExtParameterInfo(ArgNo).isNoEscape())
       Attrs.addAttribute(llvm::Attribute::NoCapture);
+
+    if (FI.getExtParameterInfo(ArgNo).isEncrypted())
+      Attrs.addAttribute(llvm::Attribute::Encrypted);
 
     if (Attrs.hasAttributes()) {
       unsigned FirstIRArg, NumIRArgs;

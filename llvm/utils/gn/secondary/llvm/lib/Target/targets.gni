@@ -1,3 +1,6 @@
+# Modified by Sunscreen under the AGPLv3 license; see the README at the
+# repository root for more information
+
 import("//llvm/utils/gn/build/toolchain/compiler.gni")
 
 declare_args() {
@@ -27,7 +30,9 @@ llvm_all_stable_targets = [
   "X86",
 ]
 
-llvm_all_experimental_targets = []
+llvm_all_experimental_targets = [
+  "Parasol"
+]
 
 llvm_all_targets = llvm_all_stable_targets + llvm_all_experimental_targets
 
@@ -67,6 +72,7 @@ llvm_build_SystemZ = false
 llvm_build_WebAssembly = false
 llvm_build_X86 = false
 llvm_build_native = false
+llvm_build_parasol = false
 foreach(target, llvm_targets_to_build) {
   if (target == native_target) {
     llvm_build_native = true
@@ -97,6 +103,8 @@ foreach(target, llvm_targets_to_build) {
              target == "NVPTX" || target == "RISCV" || target == "Sparc" ||
              target == "SystemZ") {
     # Nothing to do.
+  } else if (target == "Parasol") {
+    llvm_build_parasol = true
   } else {
     all_targets_string = ""
     foreach(target, llvm_all_targets) {

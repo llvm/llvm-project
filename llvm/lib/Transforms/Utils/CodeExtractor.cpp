@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
+//
 // This file implements the interface to tear out a code region, such as an
 // individual loop or a parallel section, into a new function, replacing it with
 // a call to the new function.
@@ -930,6 +935,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::AlwaysInline:
       case Attribute::Cold:
       case Attribute::DisableSanitizerInstrumentation:
+      case Attribute::FheCircuit:
       case Attribute::FnRetThunkExtern:
       case Attribute::Hot:
       case Attribute::NoRecurse:
@@ -977,6 +983,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::Dereferenceable:
       case Attribute::DereferenceableOrNull:
       case Attribute::ElementType:
+      case Attribute::Encrypted:
       case Attribute::InAlloca:
       case Attribute::InReg:
       case Attribute::Nest:

@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
+//
 // This header defines Bitcode enum values for LLVM IR bitcode files.
 //
 // The enum values defined in this file should be considered permanent.  If
@@ -724,6 +729,8 @@ enum AttributeKindCodes {
   ATTR_KIND_WRITABLE = 89,
   ATTR_KIND_CORO_ONLY_DESTROY_WHEN_COMPLETE = 90,
   ATTR_KIND_DEAD_ON_UNWIND = 91,
+  ATTR_KIND_FHE_CIRCUIT = 92,
+  ATTR_KIND_ENCRYPTED = 93,
 };
 
 enum ComdatSelectionKindCodes {

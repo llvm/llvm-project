@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
 
 // The documentation is organized by category. Attributes can have category-
 // specific documentation that is collated within the larger document.
@@ -4459,4 +4464,17 @@ def CountedBy : InheritableAttr {
       SourceRange getCountedByFieldLoc() const { return CountedByFieldLoc; }
       void setCountedByFieldLoc(SourceRange Loc) { CountedByFieldLoc = Loc; }
   }];
+}
+
+def FheCircuit : InheritableAttr {
+  let Spellings = [Clang<"fhe_circuit">, Declspec<"fhe_circuit">];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Documentation = [FheCircuitDocs];
+  let SimpleHandler = 1;
+}
+
+def Encrypted : InheritableAttr {
+  let Spellings = [Clang<"encrypted">, Declspec<"encrypted">];
+  let Subjects = SubjectList<[ParmVar], ErrorDiag>;
+  let Documentation = [EncryptedDocs];
 }

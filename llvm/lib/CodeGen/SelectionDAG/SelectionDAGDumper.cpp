@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
+//
 // This implements the SelectionDAG::dump method and friends.
 //
 //===----------------------------------------------------------------------===//
@@ -513,6 +518,10 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     return "stackmap";
   case ISD::PATCHPOINT:
     return "patchpoint";
+  case ISD::BINDREADPLAIN:                   return "bindreadplain";
+  case ISD::BINDREADWRITEPLAIN:              return "bindreadwriteplain";
+  case ISD::BINDREADENCRYPTED:               return "bindreadencrypted";
+  case ISD::BINDREADWRITEENCRYPTED:          return "bindreadwriteencrypted";
 
     // Vector Predication
 #define BEGIN_REGISTER_VP_SDNODE(SDID, LEGALARG, NAME, ...)                    \

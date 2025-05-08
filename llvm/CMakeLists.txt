@@ -1,5 +1,8 @@
 # See docs/CMake.html for instructions about how to build LLVM with CMake.
 
+# Modified by Sunscreen under the AGPLv3 license; see the README at the
+# repository root for more information
+
 cmake_minimum_required(VERSION 3.20.0)
 
 set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
@@ -467,6 +470,7 @@ set(LLVM_ALL_TARGETS
   WebAssembly
   X86
   XCore
+  Parasol
   )
 
 set(LLVM_ALL_EXPERIMENTAL_TARGETS
@@ -476,6 +480,7 @@ set(LLVM_ALL_EXPERIMENTAL_TARGETS
   M68k
   SPIRV
   Xtensa
+  Parasol
 )
 
 # List of targets with JIT support:

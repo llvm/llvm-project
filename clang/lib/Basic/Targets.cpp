@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
+//
 // This file implements construction of a TargetInfo object from a
 // target triple.
 //
@@ -33,6 +38,7 @@
 #include "Targets/PNaCl.h"
 #include "Targets/PPC.h"
 #include "Targets/RISCV.h"
+#include "Targets/Parasol.h"
 #include "Targets/SPIR.h"
 #include "Targets/Sparc.h"
 #include "Targets/SystemZ.h"
@@ -466,6 +472,9 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     default:
       return std::make_unique<RISCV64TargetInfo>(Triple, Opts);
     }
+
+  case llvm::Triple::parasol:
+    return std::make_unique<ParasolTargetInfo>(Triple, Opts);
 
   case llvm::Triple::sparc:
     switch (os) {

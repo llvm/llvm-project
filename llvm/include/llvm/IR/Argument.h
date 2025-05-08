@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
+//
 // This file declares the Argument class.
 //
 //===----------------------------------------------------------------------===//
@@ -155,6 +160,9 @@ public:
 
   /// Return true if this argument has the sext attribute.
   bool hasSExtAttr() const;
+
+  /// Return true if this argument has the encrypted attribute.
+  bool hasEncryptedAttr() const;
 
   /// Add attributes to an argument.
   void addAttrs(AttrBuilder &B);

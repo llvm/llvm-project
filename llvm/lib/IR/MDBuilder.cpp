@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
+//
 // This file defines the MDBuilder class, which is used as a convenient way to
 // create LLVM metadata with a consistent and simplified interface.
 //
@@ -15,6 +20,8 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/EncryptionColor.h"
+
 using namespace llvm;
 
 MDString *MDBuilder::createString(StringRef Str) {
@@ -355,4 +362,25 @@ MDBuilder::createLLVMStats(ArrayRef<std::pair<StringRef, uint64_t>> LLVMStats) {
         createConstant(ConstantInt::get(Int64Ty, LLVMStats[I].second));
   }
   return MDNode::get(Context, Ops);
+}
+
+MDNode *
+MDBuilder::createEncryption(EncryptionColor Color) {
+  MDString* MD;
+
+  switch (Color) {
+    case EncryptionColor::Encrypted:
+    case EncryptionColor::EncryptedPtrEncryptedPlainIndex:
+    case EncryptionColor::EncryptedPtrEncryptedIndex:
+      MD = createString("encrypted");
+      break;
+    case EncryptionColor::PlainPtr:
+    case EncryptionColor::Plaintext:
+      MD = createString("plaintext");
+      break;
+    default:
+      llvm_unreachable("Unknown color");
+  }
+
+  return MDNode::get(Context, {MD});
 }

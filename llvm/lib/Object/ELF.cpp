@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
 
 #include "llvm/Object/ELF.h"
 #include "llvm/ADT/StringExtras.h"
@@ -112,6 +117,13 @@ StringRef llvm::object::getELFRelocationTypeName(uint32_t Machine,
   case ELF::EM_RISCV:
     switch (Type) {
 #include "llvm/BinaryFormat/ELFRelocs/RISCV.def"
+    default:
+      break;
+    }
+    break;
+  case ELF::EM_Parasol:
+    switch (Type) {
+#include "llvm/BinaryFormat/ELFRelocs/Parasol.def"
     default:
       break;
     }

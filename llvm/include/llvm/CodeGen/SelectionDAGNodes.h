@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
+//
 // This file declares the SDNode class and derived classes, which are used to
 // represent the nodes and operations present in a SelectionDAG.  These nodes
 // and operations are machine code level operations, with some similarities to
@@ -511,8 +516,9 @@ BEGIN_TWO_BYTE_PACK()
     uint16_t HasDebugValue : 1;
     uint16_t IsMemIntrinsic : 1;
     uint16_t IsDivergent : 1;
+    uint16_t HasEncryptedValue : 1;
   };
-  enum { NumSDNodeBits = 3 };
+  enum { NumSDNodeBits = 4 };
 
   class ConstantSDNodeBitfields {
     friend class ConstantSDNode;
@@ -722,6 +728,9 @@ public:
 
   bool getHasDebugValue() const { return SDNodeBits.HasDebugValue; }
   void setHasDebugValue(bool b) { SDNodeBits.HasDebugValue = b; }
+
+  bool getHasEncryptedValue() const { return SDNodeBits.HasEncryptedValue; }
+  void setHasEncryptedValue(bool b) { SDNodeBits.HasEncryptedValue = b; }
 
   bool isDivergent() const { return SDNodeBits.IsDivergent; }
 

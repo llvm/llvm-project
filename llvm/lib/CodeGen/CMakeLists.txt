@@ -1,3 +1,6 @@
+# Modified by Sunscreen under the AGPLv3 license; see the README at the
+# repository root for more information
+
 if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
   include(TensorFlowCompile)
   set(LLVM_RAEVICT_MODEL_PATH_DEFAULT "models/regalloc-eviction")
@@ -93,6 +96,7 @@ add_llvm_component_library(LLVMCodeGen
   InterleavedAccessPass.cpp
   InterleavedLoadCombinePass.cpp
   IntrinsicLowering.cpp
+  ISDOpcodes.cpp
   JMCInstrumenter.cpp
   KCFI.cpp
   LatencyPriorityQueue.cpp

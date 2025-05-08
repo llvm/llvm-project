@@ -13,6 +13,11 @@
 /// represent types for languages in the C family.
 //
 //===----------------------------------------------------------------------===//
+// 
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_AST_TYPE_H
 #define LLVM_CLANG_AST_TYPE_H
@@ -3824,6 +3829,7 @@ public:
       IsConsumed = 0x10,
       HasPassObjSize = 0x20,
       IsNoEscape = 0x40,
+      IsEncrypted = 0x80,
     };
     unsigned char Data = 0;
 
@@ -3864,6 +3870,16 @@ public:
         Copy.Data |= IsNoEscape;
       else
         Copy.Data &= ~IsNoEscape;
+      return Copy;
+    }
+
+    bool isEncrypted() const { return Data & IsEncrypted; }
+    ExtParameterInfo withEncrypted(bool Encrypted) const {
+      ExtParameterInfo Copy = *this;
+      if (Encrypted)
+        Copy.Data |= IsEncrypted;
+      else
+        Copy.Data &= ~IsEncrypted;
       return Copy;
     }
 

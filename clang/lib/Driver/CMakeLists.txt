@@ -1,3 +1,6 @@
+# Modified by Sunscreen under the AGPLv3 license; see the README at the
+# repository root for more information
+
 set(LLVM_LINK_COMPONENTS
   BinaryFormat
   MC
@@ -75,6 +78,7 @@ add_clang_library(clangDriver
   ToolChains/OpenBSD.cpp
   ToolChains/PS4CPU.cpp
   ToolChains/RISCVToolchain.cpp
+  ToolChains/Parasol.cpp
   ToolChains/Solaris.cpp
   ToolChains/SPIRV.cpp
   ToolChains/TCE.cpp

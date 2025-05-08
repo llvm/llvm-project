@@ -1,0 +1,54 @@
+;===- ./lib/Target/Parasol/LLVMBuild.txt -------------------------*- Conf -*--===;
+;
+; Modified by Sunscreen under the AGPLv3 license; see the README at the
+; repository root for more information
+;
+;===------------------------------------------------------------------------===;
+;
+; This is an LLVMBuild description file for the components in this subdirectory.
+;
+; For more information on the LLVMBuild system, please see:
+;
+;   http://llvm.org/docs/LLVMBuild.html
+;
+;===------------------------------------------------------------------------===;
+
+[common]
+# Declare any build subdirectories
+subdirectories = MCTargetDesc TargetInfo
+
+[component_0]
+# TargetGroup components are an extension of LibraryGroups, specifically for
+#  defining LLVM targets (which are handled specially in a few places)
+type = TargetGroup
+# The name of the component should always be the name of the target. It must
+# match
+#   def Parasol : Target
+# tablegen code in Parasol.td
+name = Parasol
+# The Parasol component is located in Target directory
+parent = Target
+# This target defines an assembly printer. Further has_* statements must be
+# set here when the backend has more feathres such as assembly parser, JIT
+# compilation support, etc
+has_asmprinter = 1
+
+[component_1]
+type = Library
+name = ParasolCodeGen
+# The ParasolCodeGen component Library is located in the Parasol directory
+parent = Parasol
+# If given, a list of the names of Library or LibraryGroup components which
+# must also be linked to this library. That is, the link time # dependencies
+# for this component
+required_libraries =
+  AsmPrinter
+  CodeGen Core MC
+  GlobalISel
+  ParasolDesc
+  ParasolInfo
+  SelectionDAG
+  Support
+  Target
+
+add_to_library_groups = Parasol

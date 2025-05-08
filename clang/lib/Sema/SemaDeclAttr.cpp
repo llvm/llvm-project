@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
+//
 //  This file implements decl-related attribute processing.
 //
 //===----------------------------------------------------------------------===//
@@ -1677,6 +1682,21 @@ static void handleNoEscapeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 
   D->addAttr(::new (S.Context) NoEscapeAttr(S.Context, AL));
+}
+
+static void handleEncryptedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (D->isInvalidDecl())
+    return;
+
+  // encrypted only applies to pointer types.
+  QualType T = cast<ParmVarDecl>(D)->getType();
+  if (!S.isValidPointerAttrType(T, /* RefOkay */ true)) {
+    S.Diag(AL.getLoc(), diag::warn_attribute_pointers_only)
+        << AL << AL.getRange() << 0;
+    return;
+  }
+
+  D->addAttr(::new (S.Context) EncryptedAttr(S.Context, AL));
 }
 
 static void handleAssumeAlignedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -9850,6 +9870,14 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
 
   case ParsedAttr::AT_UsingIfExists:
     handleSimpleAttribute<UsingIfExistsAttr>(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_FheCircuit:
+    handleSimpleAttribute<FheCircuitAttr>(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_Encrypted:
+    handleEncryptedAttr(S, D, AL);
     break;
   }
 }

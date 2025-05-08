@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
+//
 // Machine-specific things, such as applying relocations, creation of
 // GOT or PLT entries, etc., are handled in this file.
 //
@@ -91,6 +96,8 @@ TargetInfo *elf::getTarget() {
     return getSystemZTargetInfo();
   case EM_X86_64:
     return getX86_64TargetInfo();
+  case EM_Parasol:
+    return getParasolTargetInfo();
   }
   llvm_unreachable("unknown target machine");
 }

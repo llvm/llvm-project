@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
+//
 // This file declares codegen opcodes and related utilities.
 //
 //===----------------------------------------------------------------------===//
@@ -1373,6 +1378,10 @@ enum NodeType {
   //   <numArgs>, cc, ...
   // Outputs: [rv], output chain, glue
   PATCHPOINT,
+  BINDREADPLAIN,
+  BINDREADWRITEPLAIN,
+  BINDREADENCRYPTED,
+  BINDREADWRITEENCRYPTED,
 
 // Vector Predication
 #define BEGIN_REGISTER_VP_SDNODE(VPSDID, ...) VPSDID,
@@ -1382,6 +1391,9 @@ enum NodeType {
   /// The target-specific pre-isel opcode values start here.
   BUILTIN_OP_END
 };
+
+/// Get the opcode as a string
+std::string getISDOpcodeName(unsigned Opcode);
 
 /// FIRST_TARGET_STRICTFP_OPCODE - Target-specific pre-isel operations
 /// which cannot raise FP exceptions should be less than this value.

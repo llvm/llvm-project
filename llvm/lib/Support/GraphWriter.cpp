@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Modified by Sunscreen under the AGPLv3 license; see the README at the
+// repository root for more information
+//
+//===----------------------------------------------------------------------===//
+//
 // This file implements misc. GraphWriter support routines.
 //
 //===----------------------------------------------------------------------===//
@@ -194,6 +199,19 @@ bool llvm::DisplayGraph(StringRef FilenameRef, bool wait,
   std::string ViewerPath;
   GraphSession S;
 
+  // xdot
+  if (S.TryFindProgram("xdot|xdot.py", ViewerPath)) {
+    std::vector<StringRef> args;
+    args.push_back(ViewerPath);
+    args.push_back(Filename);
+
+    args.push_back("-f");
+    args.push_back(getProgramName(program));
+
+    errs() << "Running 'xdot.py' program... ";
+    return ExecGraphViewer(ViewerPath, args, Filename, wait, ErrMsg);
+  }
+
 #ifdef __APPLE__
   wait &= !*ViewBackground;
   if (S.TryFindProgram("open", ViewerPath)) {
@@ -226,18 +244,6 @@ bool llvm::DisplayGraph(StringRef FilenameRef, bool wait,
     return ExecGraphViewer(ViewerPath, args, Filename, wait, ErrMsg);
   }
 
-  // xdot
-  if (S.TryFindProgram("xdot|xdot.py", ViewerPath)) {
-    std::vector<StringRef> args;
-    args.push_back(ViewerPath);
-    args.push_back(Filename);
-
-    args.push_back("-f");
-    args.push_back(getProgramName(program));
-
-    errs() << "Running 'xdot.py' program... ";
-    return ExecGraphViewer(ViewerPath, args, Filename, wait, ErrMsg);
-  }
 
   enum ViewerKind {
     VK_None,

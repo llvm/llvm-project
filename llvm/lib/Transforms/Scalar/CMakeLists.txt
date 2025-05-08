@@ -1,3 +1,6 @@
+# Modified by Sunscreen under the AGPLv3 license; see the README at the
+# repository root for more information
+
 add_llvm_component_library(LLVMScalarOpts
   ADCE.cpp
   AlignmentFromAssumptions.cpp
@@ -12,6 +15,8 @@ add_llvm_component_library(LLVMScalarOpts
   DFAJumpThreading.cpp
   DivRemPairs.cpp
   EarlyCSE.cpp
+  EncryptedBranchLinearization.cpp
+  FheCircuitFixup.cpp
   FlattenCFGPass.cpp
   Float2Int.cpp
   GuardWidening.cpp
