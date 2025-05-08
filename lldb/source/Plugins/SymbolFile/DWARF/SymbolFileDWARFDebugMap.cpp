@@ -10,7 +10,6 @@
 #include "DWARFCompileUnit.h"
 #include "DWARFDebugAranges.h"
 #include "DWARFDebugInfo.h"
-
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/PluginManager.h"
@@ -34,12 +33,12 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ScopedPrinter.h"
-
 #include "lldb/Target/StackFrame.h"
 
 #include "LogChannelDWARF.h"
 #include "SymbolFileDWARF.h"
 #include "lldb/lldb-private-enumerations.h"
+#include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
 
 #include <memory>
 #include <optional>
@@ -246,6 +245,8 @@ llvm::StringRef SymbolFileDWARFDebugMap::GetPluginDescriptionStatic() {
 }
 
 SymbolFile *SymbolFileDWARFDebugMap::CreateInstance(ObjectFileSP objfile_sp) {
+  if (objfile_sp->GetPluginName() != ObjectFileMachO::GetPluginNameStatic())
+    return nullptr;
   return new SymbolFileDWARFDebugMap(std::move(objfile_sp));
 }
 
