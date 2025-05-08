@@ -568,6 +568,99 @@ to left-shift the found bit into the most-significant bit position, otherwise
 the result is the shift amount needed to right-shift the found bit into the
 least-significant bit position. 0xffffffff is returned if no 1 bit is found.
 
+'``llvm.nvvm.zext.inreg.clamp``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.zext.inreg.clamp(i32 %a, i32 %b)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.zext.inreg.clamp``' intrinsic extracts the low bits of the
+input value, and zero-extends them back to the original width.
+
+Semantics:
+""""""""""
+
+The '``llvm.nvvm.zext.inreg.clamp``' returns the zero-extension of N lowest bits
+of operand %a. N is the value of operand %b clamped to the range [0, 32]. If N
+is 0, the result is 0.
+
+'``llvm.nvvm.zext.inreg.wrap``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.zext.inreg.wrap(i32 %a, i32 %b)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.zext.inreg.wrap``' intrinsic extracts the low bits of the
+input value, and zero-extends them back to the original width.
+
+Semantics:
+""""""""""
+
+The '``llvm.nvvm.zext.inreg.wrap``' returns the zero-extension of N lowest bits
+of operand %a. N is the value of operand %b modulo 32. If N is 0, the result
+is 0.
+
+'``llvm.nvvm.sext.inreg.clamp``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.sext.inreg.clamp(i32 %a, i32 %b)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.sext.inreg.clamp``' intrinsic extracts the low bits of the
+input value, and sign-extends them back to the original width.
+
+Semantics:
+""""""""""
+
+The '``llvm.nvvm.sext.inreg.clamp``' returns the sign-extension of N lowest bits
+of operand %a. N is the value of operand %b clamped to the range [0, 32]. If N
+is 0, the result is 0.
+
+
+'``llvm.nvvm.sext.inreg.wrap``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.sext.inreg.wrap(i32 %a, i32 %b)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.sext.inreg.wrap``' intrinsic extracts the low bits of the
+input value, and sign-extends them back to the original width.
+
+Semantics:
+""""""""""
+
+The '``llvm.nvvm.sext.inreg.wrap``' returns the sign-extension of N lowest bits
+of operand %a. N is the value of operand %b modulo 32. If N is 0, the result
+is 0.
+
 TMA family of Intrinsics
 ------------------------
 

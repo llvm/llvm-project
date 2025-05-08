@@ -240,26 +240,33 @@ def F16X2RT  : RegTyInfo<v2f16, Int32Regs, ?, ?, supports_imm = 0>;
 def BF16X2RT : RegTyInfo<v2bf16, Int32Regs, ?, ?, supports_imm = 0>;
 
 
+multiclass I3Inst<string op_str, SDPatternOperator op_node, RegTyInfo t,
+                  bit commutative, list<Predicate> requires = []> {
+  defvar asmstr = op_str # " \t$dst, $a, $b;";
+
+  def rr :
+    NVPTXInst<(outs t.RC:$dst), (ins t.RC:$a, t.RC:$b),
+              asmstr,
+              [(set t.Ty:$dst, (op_node t.Ty:$a, t.Ty:$b))]>,
+              Requires<requires>;
+  def ri :
+    NVPTXInst<(outs t.RC:$dst), (ins t.RC:$a, t.Imm:$b),
+              asmstr,
+              [(set t.Ty:$dst, (op_node t.RC:$a, imm:$b))]>,
+              Requires<requires>;
+  if !not(commutative) then
+    def ir :
+      NVPTXInst<(outs t.RC:$dst), (ins t.Imm:$a, t.RC:$b),
+                asmstr,
+                [(set t.Ty:$dst, (op_node imm:$a, t.RC:$b))]>,
+                Requires<requires>;
+}
+
 // Template for instructions which take three int64, int32, or int16 args.
 // The instructions are named "<OpcStr><Width>" (e.g. "add.s64").
-multiclass I3<string OpcStr, SDNode OpNode, bit commutative> {
-  foreach t = [I16RT, I32RT, I64RT] in {
-    defvar asmstr = OpcStr # t.Size # " \t$dst, $a, $b;";
-
-    def t.Ty # rr :
-      NVPTXInst<(outs t.RC:$dst), (ins t.RC:$a, t.RC:$b),
-                asmstr,
-                [(set t.Ty:$dst, (OpNode t.Ty:$a, t.Ty:$b))]>;
-    def t.Ty # ri :
-      NVPTXInst<(outs t.RC:$dst), (ins t.RC:$a, t.Imm:$b),
-                asmstr,
-                [(set t.Ty:$dst, (OpNode t.RC:$a, imm:$b))]>;
-    if !not(commutative) then
-      def t.Ty # ir :
-        NVPTXInst<(outs t.RC:$dst), (ins t.Imm:$a, t.RC:$b),
-                  asmstr,
-                  [(set t.Ty:$dst, (OpNode imm:$a, t.RC:$b))]>;
-  }
+multiclass I3<string op_str, SDPatternOperator op_node, bit commutative> {
+  foreach t = [I16RT, I32RT, I64RT] in
+    defm t.Ty# : I3Inst<op_str # t.Size, op_node, t, commutative>;
 }
 
 class I16x2<string OpcStr, SDNode OpNode> :
@@ -270,26 +277,11 @@ class I16x2<string OpcStr, SDNode OpNode> :
 
 // Template for instructions which take 3 int args.  The instructions are
 // named "<OpcStr>.s32" (e.g. "addc.cc.s32").
-multiclass ADD_SUB_INT_CARRY<string OpcStr, SDNode OpNode> {
+multiclass ADD_SUB_INT_CARRY<string op_str, SDNode op_node, bit commutative> {
   let hasSideEffects = 1 in {
-    def i32rr :
-      NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$a, Int32Regs:$b),
-                !strconcat(OpcStr, ".s32 \t$dst, $a, $b;"),
-                [(set i32:$dst, (OpNode i32:$a, i32:$b))]>;
-    def i32ri :
-      NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$a, i32imm:$b),
-                !strconcat(OpcStr, ".s32 \t$dst, $a, $b;"),
-                [(set i32:$dst, (OpNode i32:$a, imm:$b))]>;
-    def i64rr :
-      NVPTXInst<(outs Int64Regs:$dst), (ins Int64Regs:$a, Int64Regs:$b),
-                !strconcat(OpcStr, ".s64 \t$dst, $a, $b;"),
-                [(set i64:$dst, (OpNode i64:$a, i64:$b))]>,
-      Requires<[hasPTX<43>]>;
-    def i64ri :
-      NVPTXInst<(outs Int64Regs:$dst), (ins Int64Regs:$a, i64imm:$b),
-                !strconcat(OpcStr, ".s64 \t$dst, $a, $b;"),
-                [(set i64:$dst, (OpNode i64:$a, imm:$b))]>,
-      Requires<[hasPTX<43>]>;
+    defm i32 : I3Inst<op_str # ".s32", op_node, I32RT, commutative>;
+    defm i64 : I3Inst<op_str # ".s64", op_node, I64RT, commutative,
+                     requires = [hasPTX<43>]>;
   }
 }
 
@@ -847,12 +839,12 @@ defm SUB : I3<"sub.s", sub, /*commutative=*/ false>;
 def ADD16x2 : I16x2<"add.s", add>;
 
 // in32 and int64 addition and subtraction with carry-out.
-defm ADDCC : ADD_SUB_INT_CARRY<"add.cc", addc>;
-defm SUBCC : ADD_SUB_INT_CARRY<"sub.cc", subc>;
+defm ADDCC : ADD_SUB_INT_CARRY<"add.cc", addc, commutative = true>;
+defm SUBCC : ADD_SUB_INT_CARRY<"sub.cc", subc, commutative = false>;
 
 // int32 and int64 addition and subtraction with carry-in and carry-out.
-defm ADDCCC : ADD_SUB_INT_CARRY<"addc.cc", adde>;
-defm SUBCCC : ADD_SUB_INT_CARRY<"subc.cc", sube>;
+defm ADDCCC : ADD_SUB_INT_CARRY<"addc.cc", adde, commutative = true>;
+defm SUBCCC : ADD_SUB_INT_CARRY<"subc.cc", sube, commutative = false>;
 
 defm MULT : I3<"mul.lo.s", mul, /*commutative=*/ true>;
 

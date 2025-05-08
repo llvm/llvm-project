@@ -1356,6 +1356,17 @@ let TargetPrefix = "nvvm" in {
         [llvm_anyint_ty, llvm_i1_ty],
         [IntrNoMem, IntrSpeculatable, IntrWillReturn, ImmArg<ArgIndex<1>>]>;
 
+
+//
+// szext
+//
+  foreach ext = ["sext", "zext"] in
+    foreach mode = ["wrap", "clamp"] in
+      def int_nvvm_ # ext # _inreg_ # mode :
+        DefaultAttrsIntrinsic<[llvm_i32_ty],
+          [llvm_i32_ty, llvm_i32_ty],
+          [IntrNoMem, IntrSpeculatable]>;
+
 //
 // Convert
 //
