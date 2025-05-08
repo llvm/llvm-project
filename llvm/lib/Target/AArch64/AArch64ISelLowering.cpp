@@ -1880,6 +1880,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv8i32, Custom);
       setPartialReduceMLAAction(MVT::nxv8i16, MVT::nxv16i16, Custom);
       setPartialReduceMLAAction(MVT::nxv16i8, MVT::nxv32i8, Custom);
+
+      setOperationAction(ISD::PARTIAL_REDUCE_UMLA, MVT::nxv16i32, Custom);
     }
   }
 
