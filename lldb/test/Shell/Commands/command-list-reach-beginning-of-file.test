@@ -1,0 +1,29 @@
+# RUN: %clang_host -g -O0 %S/Inputs/sigchld.c -o %t.out
+# RUN: %lldb %t.out -b -s %s 2>&1 | FileCheck %s
+
+list
+# CHECK: note: No source available 
+
+b main
+# CHECK: Breakpoint 1:
+
+r
+# CHECK: int main()
+
+list
+# CHECK: if (child_pid == 0)
+
+list -
+# CHECK: int main()
+
+list -10
+# CHECK: #include <assert.h>
+
+list -
+# CHECK: note: Reached beginning of the file, no more to page
+
+list -
+# CHECK: note: Reached beginning of the file, no more to page
+
+list
+# CHECK: int main()
