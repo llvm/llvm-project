@@ -10599,11 +10599,9 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     SDValue VL = Op.getOperand(Op.getNumOperands() - 1);
     SDValue Mask = Op.getOperand(3);
     MVT MaskVT = Mask.getSimpleValueType();
-    if (MaskVT.isFixedLengthVector()) {
-      MVT MaskContainerVT =
-          ::getContainerForFixedLengthVector(DAG, MaskVT, Subtarget);
-      Mask = convertToScalableVector(MaskContainerVT, Mask, DAG, Subtarget);
-    }
+    MVT MaskContainerVT =
+        ::getContainerForFixedLengthVector(DAG, MaskVT, Subtarget);
+    Mask = convertToScalableVector(MaskContainerVT, Mask, DAG, Subtarget);
 
     SDValue IntID = DAG.getTargetConstant(VlsegInts[NF - 2], DL, XLenVT);
     auto *Load = cast<MemIntrinsicSDNode>(Op);
@@ -10698,11 +10696,9 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     SDValue VL = Op.getOperand(Op.getNumOperands() - 1);
     SDValue Mask = Op.getOperand(Op.getNumOperands() - 2);
     MVT MaskVT = Mask.getSimpleValueType();
-    if (MaskVT.isFixedLengthVector()) {
-      MVT MaskContainerVT =
-          ::getContainerForFixedLengthVector(DAG, MaskVT, Subtarget);
-      Mask = convertToScalableVector(MaskContainerVT, Mask, DAG, Subtarget);
-    }
+    MVT MaskContainerVT =
+        ::getContainerForFixedLengthVector(DAG, MaskVT, Subtarget);
+    Mask = convertToScalableVector(MaskContainerVT, Mask, DAG, Subtarget);
 
     SDValue IntID = DAG.getTargetConstant(VssegInts[NF - 2], DL, XLenVT);
     SDValue Ptr = Op->getOperand(NF + 2);
