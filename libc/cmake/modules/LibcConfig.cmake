@@ -170,7 +170,7 @@ function(generate_config_doc config_file doc_file)
                  "\n"
                  ".. code-block:: sh\n"
                  "\n"
-                 "  $> cmake <other build options> -DLIBC_CONF_PRINTF_DISABLE_FLOAT=ON <more options>\n"
+                 "  $> cmake <other build options> -DLIBC_COPT_PRINTF_DISABLE_FLOAT=ON <more options>\n"
                  "\n"
                  "See the main ``config/config.json``, and the platform and architecture specific\n"
                  "overrides in ``config/<platform>/config.json`` and ``config/<platform>/<arch>/config.json,``\n"

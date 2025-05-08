@@ -297,7 +297,7 @@ endif()
 # and config options. This will be used to set a #define during the
 # library build, and also to select the right version of time_t.h for
 # the output headers.
-if(LIBC_TARGET_ARCHITECTURE_IS_ARM AND NOT (LIBC_CONF_TIME_64BIT))
+if(LIBC_TARGET_ARCHITECTURE_IS_ARM AND NOT (LIBC_COPT_TIME_64BIT))
   # Set time_t to 32 bit for compatibility with glibc, unless
   # configuration says otherwise
   set(LIBC_TYPES_TIME_T_IS_32_BIT TRUE)

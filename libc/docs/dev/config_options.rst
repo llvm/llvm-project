@@ -15,14 +15,14 @@ description about it listed against each option. For example:
 
    {
      "printf": {
-       "LIBC_CONF_PRINTF_DISABLE_FLOAT": {
+       "LIBC_COPT_PRINTF_DISABLE_FLOAT": {
          "value": false,
          "doc": "Disable printing floating point values in printf and friends."
        }
      }
    }
 
-The above config indicates that the option ``LIBC_CONF_PRINTF_DISABLE_FLOAT``
+The above config indicates that the option ``LIBC_COPT_PRINTF_DISABLE_FLOAT``
 has a value of ``false``. A platform, say the baremetal platform, can choose
 to override this value in its ``config.json`` file in the ``config/baremetal``
 directory with the following contents:
@@ -31,14 +31,14 @@ directory with the following contents:
 
    {
      "printf": {
-       "LIBC_CONF_PRINTF_DISABLE_FLOAT": {
+       "LIBC_COPT_PRINTF_DISABLE_FLOAT": {
          "value": true
        }
      }
    }
 
 Here, the config for the baremetal platform overrides the common ``false``
-value of the ``LIBC_CONF_PRINTF_DISABLE_FLOAT`` with the ``true`` value.
+value of the ``LIBC_COPT_PRINTF_DISABLE_FLOAT`` with the ``true`` value.
 
 Config JSON format
 ==================
@@ -63,7 +63,7 @@ example, the option-dictionary is:
 .. code-block:: json
 
    {
-     "LIBC_CONF_PRINTF_DISABLE_FLOAT": {
+     "LIBC_COPT_PRINTF_DISABLE_FLOAT": {
        "value": false,
        "doc":
      }
@@ -76,7 +76,7 @@ description of the option listed against it. Note that only the main config
 file ``config/config.json`` includes the ``"doc"`` key. Options which are of
 ``ON``/``OFF`` kind take boolean values ``true``/``false``. Other types of
 options can take an integral or string value as suitable for that option. In
-the above option-dictionary, the option-key ``LIBC_CONF_PRINTF_DISABLE_FLOAT``
+the above option-dictionary, the option-key ``LIBC_COPT_PRINTF_DISABLE_FLOAT``
 is of boolean type with value ``true``.
 
 Option name format
@@ -86,13 +86,13 @@ The option names, or the keys of a option-dictionary, have the following format:
 
 .. code-block:: none
 
-   LIBC_CONF_<UPPER_CASE_TAG_NAME>_<ACTION_INDICATING_THE_INTENDED_SEMANTICS>
+   LIBC_COPT_<UPPER_CASE_TAG_NAME>_<ACTION_INDICATING_THE_INTENDED_SEMANTICS>
 
-The option name used in the above examples, ``LIBC_CONF_PRINTF_DISABLE_FLOAT``
+The option name used in the above examples, ``LIBC_COPT_PRINTF_DISABLE_FLOAT``
 to disable printing of floating point numbers, follows this format: It has the
-prefix ``LIBC_CONF_``, followed by the grouping-tag name ``PRINTF`` in upper
+prefix ``LIBC_COPT_``, followed by the grouping-tag name ``PRINTF`` in upper
 case, followed by the action to disable floating point number printing
-``LIBC_CONF_PRINTF_DISABLE_FLOAT``.
+``LIBC_COPT_PRINTF_DISABLE_FLOAT``.
 
 Mechanics of config application
 ===============================

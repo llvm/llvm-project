@@ -1,6 +1,6 @@
 {
   "errno": {
-    "LIBC_CONF_ERRNO_MODE": {
+    "LIBC_COPT_ERRNO_MODE": {
       "value": "LIBC_ERRNO_MODE_SHARED"
     }
   }

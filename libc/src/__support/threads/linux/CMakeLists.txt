@@ -23,7 +23,7 @@ add_header_library(
 )
 
 set(monotonicity_flags)
-if (LIBC_CONF_TIMEOUT_ENSURE_MONOTONICITY)
+if (LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY)
   set(monotonicity_flags -DLIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY=1)
 else()
   set(monotonicity_flags -DLIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY=0)
@@ -41,7 +41,7 @@ add_header_library(
     libc.src.__support.CPP.optional
     libc.hdr.types.pid_t
   COMPILE_OPTIONS
-    -DLIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT=${LIBC_CONF_RAW_MUTEX_DEFAULT_SPIN_COUNT}
+    -DLIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT=${LIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT}
     ${monotonicity_flags}
 )
 
@@ -57,7 +57,7 @@ add_header_library(
     libc.src.__support.CPP.limits
     libc.src.__support.threads.identifier
   COMPILE_OPTIONS
-    -DLIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT=${LIBC_CONF_RWLOCK_DEFAULT_SPIN_COUNT}
+    -DLIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT=${LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT}
     ${monotonicity_flags}
 )
 

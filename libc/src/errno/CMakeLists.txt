@@ -9,8 +9,8 @@ if(LLVM_LIBC_FULL_BUILD)
   set(full_build_flag "-DLIBC_FULL_BUILD")
 endif()
 
-if(LIBC_CONF_ERRNO_MODE)
-  set(errno_config_copts "-DLIBC_ERRNO_MODE=${LIBC_CONF_ERRNO_MODE}")
+if(LIBC_COPT_ERRNO_MODE)
+  set(errno_config_copts "-DLIBC_ERRNO_MODE=${LIBC_COPT_ERRNO_MODE}")
 endif()
 
 add_entrypoint_object(
