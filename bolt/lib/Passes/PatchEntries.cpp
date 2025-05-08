@@ -65,7 +65,7 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
       continue;
 
     // Check if we can skip patching the function.
-    if (!opts::ForcePatch && !Function.hasEHRanges() &&
+    if (!opts::ForcePatch && Function.canClone() &&
         Function.getSize() < PatchThreshold)
       continue;
 
