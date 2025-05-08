@@ -191,83 +191,59 @@ void ObjectFileXCOFF::ParseSymtab(Symtab &lldb_symtab) {}
 bool ObjectFileXCOFF::IsStripped() { return false; }
 
 void ObjectFileXCOFF::CreateSections(SectionList &unified_section_list) {
-
   if (m_sections_up)
     return;
+
   m_sections_up = std::make_unique<SectionList>();
   ModuleSP module_sp(GetModule());
-  if (module_sp) {
-    std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
 
-    ModuleSP module_sp(GetModule());
-    int idx = 0;
-    for (auto sIdx = m_binary->section_begin(); sIdx != m_binary->section_end();
-         ++sIdx) {
-      llvm::Expected<llvm::StringRef> name =
-          m_binary->getSectionName(sIdx->getRawDataRefImpl());
-      if (!name) {
-        llvm::Error err = name.takeError();
-      }
-      llvm::StringRef sect_name = *name;
-      ConstString const_sect_name(sect_name);
-      int sect_index = sIdx->getIndex();
-      llvm::Expected<llvm::object::DataRefImpl> section =
-          m_binary->getSectionByNum(sect_index);
-      if (!section) {
-        llvm::Error err = section.takeError();
-      }
-      llvm::object::DataRefImpl dataref = section.get();
-      const llvm::object::XCOFFSectionHeader64 *sectionPtr =
-          reinterpret_cast<const llvm::object::XCOFFSectionHeader64 *>(
-              dataref.p);
+  if (!module_sp)
+    return;
 
-      SectionType section_type = lldb::eSectionTypeOther;
-      if (sectionPtr->Flags & XCOFF::STYP_TEXT)
-        section_type = eSectionTypeCode;
-      if (sectionPtr->Flags & XCOFF::STYP_DATA)
-        section_type = eSectionTypeData;
-      if (sectionPtr->Flags & XCOFF::STYP_BSS)
-        section_type = eSectionTypeZeroFill;
-      if (sectionPtr->Flags & XCOFF::STYP_DWARF) {
-        SectionType section_type =
-            llvm::StringSwitch<SectionType>(sect_name)
-                .Case(".dwinfo", eSectionTypeDWARFDebugInfo)
-                .Case(".dwline", eSectionTypeDWARFDebugLine)
-                .Case(".dwabrev", eSectionTypeDWARFDebugAbbrev)
-                .Default(eSectionTypeInvalid);
+  std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
 
-        if (section_type == eSectionTypeInvalid)
-          section_type = lldb::eSectionTypeOther;
-      }
-      SectionSP section_sp(new Section(
-          module_sp,       // Module to which this section belongs
-          this,            // Object file to which this section belongs
-          ++idx,           // Section ID is the 1 based section index.
-          const_sect_name, // Name of this section
-          section_type,
-          sectionPtr->VirtualAddress,      // File VM address == addresses as
-                                           // they are found in the object file
-          sectionPtr->SectionSize,         // VM size in bytes of this section
-          sectionPtr->FileOffsetToRawData, // Offset to the data for this
-                                           // section in the file
-          sectionPtr->SectionSize, // Size in bytes of this section as found in
-                                   // the file
-          0,                       // FIXME: alignment
-          sectionPtr->Flags));     // Flags for this section
+  const auto &sections = m_binary->sections64();
+  int idx = 0;
+  for (size_t i = 0; i < sections.size(); ++i) {
+    const llvm::object::XCOFFSectionHeader64 &section = sections[i];
 
-      uint32_t permissions = 0;
-      permissions |= ePermissionsReadable;
-      if (sectionPtr->Flags & (XCOFF::STYP_DATA | XCOFF::STYP_BSS))
-        permissions |= ePermissionsWritable;
-      if (sectionPtr->Flags & XCOFF::STYP_TEXT)
-        permissions |= ePermissionsExecutable;
-      section_sp->SetPermissions(permissions);
+    ConstString const_sect_name(section.Name);
 
-      m_sections_up->AddSection(section_sp);
-      unified_section_list.AddSection(section_sp);
+    SectionType section_type = lldb::eSectionTypeOther;
+    if (section.Flags & XCOFF::STYP_TEXT)
+      section_type = eSectionTypeCode;
+    else if (section.Flags & XCOFF::STYP_DATA)
+      section_type = eSectionTypeData;
+    else if (section.Flags & XCOFF::STYP_BSS)
+      section_type = eSectionTypeZeroFill;
+    else if (section.Flags & XCOFF::STYP_DWARF) {
+      section_type = llvm::StringSwitch<SectionType>(section.Name)
+                         .Case(".dwinfo", eSectionTypeDWARFDebugInfo)
+                         .Case(".dwline", eSectionTypeDWARFDebugLine)
+                         .Case(".dwabrev", eSectionTypeDWARFDebugAbbrev)
+                         .Default(eSectionTypeInvalid);
+
+      if (section_type == eSectionTypeInvalid)
+        section_type = lldb::eSectionTypeOther;
     }
+
+    SectionSP section_sp(new Section(
+        module_sp, this, ++idx, const_sect_name, section_type,
+        section.VirtualAddress, section.SectionSize,
+        section.FileOffsetToRawData, section.SectionSize, 0, section.Flags));
+
+    uint32_t permissions = ePermissionsReadable;
+    if (section.Flags & (XCOFF::STYP_DATA | XCOFF::STYP_BSS))
+      permissions |= ePermissionsWritable;
+    if (section.Flags & XCOFF::STYP_TEXT)
+      permissions |= ePermissionsExecutable;
+
+    section_sp->SetPermissions(permissions);
+    m_sections_up->AddSection(section_sp);
+    unified_section_list.AddSection(section_sp);
   }
 }
+
 void ObjectFileXCOFF::Dump(Stream *s) {}
 
 ArchSpec ObjectFileXCOFF::GetArchitecture() {
