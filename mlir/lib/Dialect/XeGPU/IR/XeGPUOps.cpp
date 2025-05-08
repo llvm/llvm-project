@@ -171,9 +171,10 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
 
   if (auto memrefTy = dyn_cast<MemRefType>(srcTy)) {
     auto memrefShape = memrefTy.getShape();
-    auto [memrefStrides, offset] = memrefTy.getStridesAndOffset();
+    auto [memrefStrides, _] = memrefTy.getStridesAndOffset();
 
     // if shape and strides are from Memref, we don't need attributes for them
+    // to keep the IR print clean
     if (staticShape == memrefShape && staticStrides == memrefStrides) {
       staticShapeAttr = DenseI64ArrayAttr();
       staticStridesAttr = DenseI64ArrayAttr();

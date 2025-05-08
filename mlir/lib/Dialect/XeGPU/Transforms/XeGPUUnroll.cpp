@@ -148,11 +148,9 @@ struct UnrollCreateNdOp : public UnrollPattern<xegpu::CreateNdDescOp> {
   LogicalResult matchAndRewrite(xegpu::CreateNdDescOp op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
-    MLIRContext *ctx = op.getContext();
     xegpu::TensorDescType tdescTy = op.getType();
     int64_t rank = tdescTy.getRank();
     ArrayRef<int64_t> shape = tdescTy.getShape();
-    Attribute layout = tdescTy.getLayout();
 
     std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
     if (!targetShape || llvm::equal(*targetShape, shape))
@@ -394,13 +392,13 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
     int64_t nIters = bShape[1] / N;
 
     SmallVector<Value> newOps;
-    for (int64_t i = 0; i < mIters; i++) {
-      for (int64_t j = 0; j < nIters; j++) {
+    for (int64_t i = 0; i < mIters; ++i) {
+      for (int64_t j = 0; j < nIters; ++j) {
         Value tmpC;
         if (c)
           tmpC = cVals[i * nIters + j]; // init with acc
 
-        for (int64_t k = 0; k < kIters; k++) {
+        for (int64_t k = 0; k < kIters; ++k) {
           Value aVec = aVals[i * kIters + k];
           Value bVec = bVals[k * nIters + j];
           SmallVector<Value> operands({aVec, bVec});

@@ -243,8 +243,8 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
   );
 
   let builders = [
-    AttrBuilder<(ins "llvm::ArrayRef<int>": $lane_layout,
-                     "llvm::ArrayRef<int>": $lane_data),
+    AttrBuilder<(ins "llvm::ArrayRef<int32_t>": $lane_layout,
+                     "llvm::ArrayRef<int32_t>": $lane_data),
       [{
         auto sg_layout = DenseI32ArrayAttr();
         auto sg_data = DenseI32ArrayAttr();
@@ -254,9 +254,9 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
                      DenseI32ArrayAttr::get($_ctxt, lane_layout),
                      DenseI32ArrayAttr::get($_ctxt, lane_data), order);
       }]>,
-    AttrBuilder<(ins "llvm::ArrayRef<int>": $lane_layout,
-                     "llvm::ArrayRef<int>": $lane_data,
-                     "llvm::ArrayRef<int>": $order),
+    AttrBuilder<(ins "llvm::ArrayRef<int32_t>": $lane_layout,
+                     "llvm::ArrayRef<int32_t>": $lane_data,
+                     "llvm::ArrayRef<int32_t>": $order),
       [{
         auto sg_layout = DenseI32ArrayAttr();
         auto sg_data = DenseI32ArrayAttr();
