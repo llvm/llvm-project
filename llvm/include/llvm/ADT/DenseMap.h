@@ -353,6 +353,22 @@ public:
     return Ret;
   }
 
+  template <typename... Ts>
+  std::pair<iterator, bool> emplace_or_assign(const KeyT &Key, Ts &&...Args) {
+    auto Ret = try_emplace(Key, std::forward<Ts>(Args)...);
+    if (!Ret.second)
+      Ret.first->second = ValueT(std::forward<Ts>(Args)...);
+    return Ret;
+  }
+
+  template <typename... Ts>
+  std::pair<iterator, bool> emplace_or_assign(KeyT &&Key, Ts &&...Args) {
+    auto Ret = try_emplace(std::move(Key), std::forward<Ts>(Args)...);
+    if (!Ret.second)
+      Ret.first->second = ValueT(std::forward<Ts>(Args)...);
+    return Ret;
+  }
+
   bool erase(const KeyT &Val) {
     BucketT *TheBucket = doFind(Val);
     if (!TheBucket)
