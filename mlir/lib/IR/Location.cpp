@@ -58,11 +58,11 @@ struct FileLineColRangeAttrStorage final
     auto *result = ::new (rawMem) FileLineColRangeAttrStorage(
         std::move(std::get<0>(tblgenKey)), locEnc - 1);
     if (numInArray > 0) {
-      result->startLine = std::get<1>(tblgenKey)[0];
+      ArrayRef<unsigned> elements = std::get<1>(tblgenKey);
+      result->startLine = elements[0];
       // Copy in the element types into the trailing storage.
-      std::uninitialized_copy(std::next(std::get<1>(tblgenKey).begin()),
-                              std::get<1>(tblgenKey).end(),
-                              result->getTrailingObjects<unsigned>());
+      llvm::uninitialized_copy(elements.drop_front(),
+                               result->getTrailingObjects<unsigned>());
     }
     return result;
   }
