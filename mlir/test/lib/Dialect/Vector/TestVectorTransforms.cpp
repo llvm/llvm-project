@@ -778,7 +778,7 @@ struct TestVectorGatherLowering
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
-    populateVectorGatherLoweringPatterns(patterns);
+    populateVectorGatherScatterLoweringPatterns(patterns);
     populateVectorGatherToConditionalLoadPatterns(patterns);
     (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
