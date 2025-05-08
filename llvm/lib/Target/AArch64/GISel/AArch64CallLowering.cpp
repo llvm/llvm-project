@@ -1379,6 +1379,13 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     Function *ARCFn = *objcarc::getAttachedARCFunction(Info.CB);
     MIB.addGlobalAddress(ARCFn);
     ++CalleeOpNo;
+
+    // We may or may not need to emit both the marker and the retain/claim call.
+    // Do what the frontend tells us: if the rvmarker module flag is present,
+    // emit the marker.  Always emit the call regardless.
+    // Tell the pseudo expansion using an additional boolean op.
+    MIB.addImm(true);
+    ++CalleeOpNo;
   } else if (Info.CFIType) {
     MIB->setCFIType(MF, Info.CFIType->getZExtValue());
   }
