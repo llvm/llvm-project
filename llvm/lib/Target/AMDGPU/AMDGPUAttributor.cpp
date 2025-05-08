@@ -1125,7 +1125,8 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
       indicateOptimisticFixpoint();
     };
 
-    std::pair<unsigned, unsigned> MaxWavesPerEURange{0, 0};
+    std::pair<unsigned, unsigned> MaxWavesPerEURange{
+        0, InfoCache.getMaxWavesPerEU(*F)};
 
     // If the attribute exists, we will honor it if it is not the default.
     if (auto Attr = InfoCache.getWavesPerEUAttr(*F)) {
