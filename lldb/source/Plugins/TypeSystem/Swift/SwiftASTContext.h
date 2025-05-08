@@ -210,13 +210,6 @@ public:
                  TypeSystemSwiftTypeRef &typeref_typesystem,
                  const char *extra_options = nullptr);
 
-  /// Returns true if the given flag is present in the given compile unit.
-  static bool CheckFlagInCU(CompileUnit *cu, const char *flag);
-
-  static bool ShouldEnableCXXInterop(CompileUnit *cu);
-
-  static bool ShouldEnableEmbeddedSwift(CompileUnit *cu);
-
   static void EnumerateSupportedLanguages(
       std::set<lldb::LanguageType> &languages_for_types,
       std::set<lldb::LanguageType> &languages_for_expressions);

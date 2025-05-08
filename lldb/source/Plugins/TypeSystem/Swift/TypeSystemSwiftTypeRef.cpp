@@ -5366,11 +5366,13 @@ TypeSystemSwiftTypeRef::GetDependentGenericParamListForType(
 swift::Mangle::ManglingFlavor
 TypeSystemSwiftTypeRef::GetManglingFlavor(ExecutionContext *exe_ctx) {
   auto sc = GetSymbolContext(exe_ctx);
-  if (auto ast_ctx = GetSwiftASTContext(sc))
-    return ast_ctx->GetManglingFlavor();
-  LLDB_LOG(GetLog(LLDBLog::Types),
-           "GetManglingFlavor failed to acquire a SwiftASTContext");
-  return swift::Mangle::ManglingFlavor::Default;
+  auto *cu = sc.comp_unit;
+  // Cache the result for the last recently used CU.
+  if (cu != m_lru_is_embedded.first)
+    m_lru_is_embedded = {cu, ShouldEnableEmbeddedSwift(sc.comp_unit)
+                                 ? swift::Mangle::ManglingFlavor::Embedded
+                                 : swift::Mangle::ManglingFlavor::Default};
+  return m_lru_is_embedded.second;
 }
 
 #ifndef NDEBUG
