@@ -26,22 +26,6 @@ llvm.func @atomic_hint(%v : !llvm.ptr, %x : !llvm.ptr, %expr : i32) {
 
 // -----
 
-llvm.func @cancel_wsloop(%lb : i32, %ub : i32, %step: i32) {
-  // expected-error@below {{LLVM Translation failed for operation: omp.wsloop}}
-  omp.wsloop {
-    // expected-error@below {{LLVM Translation failed for operation: omp.loop_nest}}
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      // expected-error@below {{not yet implemented: Unhandled clause cancel directive construct type not yet supported in omp.cancel operation}}
-      // expected-error@below {{LLVM Translation failed for operation: omp.cancel}}
-      omp.cancel cancellation_construct_type(loop)
-      omp.yield
-    }
-  }
-  llvm.return
-}
-
-// -----
-
 llvm.func @cancel_taskgroup() {
   // expected-error@below {{LLVM Translation failed for operation: omp.taskgroup}}
   omp.taskgroup {
