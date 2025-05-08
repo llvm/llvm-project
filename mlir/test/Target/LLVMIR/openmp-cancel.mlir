@@ -243,3 +243,51 @@ llvm.func @cancel_wsloop_if(%lb : i32, %ub : i32, %step : i32, %cond : i1) {
 // CHECK:         ret void
 // CHECK:       .cncl:                                            ; preds = %[[VAL_44]]
 // CHECK:         br label %[[VAL_38]]
+
+omp.private {type = firstprivate} @i32_priv : i32 copy {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  %0 = llvm.load %arg0 : !llvm.ptr -> i32
+  llvm.store %0, %arg1 : i32, !llvm.ptr
+  omp.yield(%arg1 : !llvm.ptr)
+}
+
+llvm.func @do_something(!llvm.ptr)
+
+llvm.func @cancel_taskgroup(%arg0: !llvm.ptr) {
+  omp.taskgroup {
+// Using firstprivate clause so we have some end of task cleanup to branch to
+// after the cancellation.
+    omp.task private(@i32_priv %arg0 -> %arg1 : !llvm.ptr) {
+      omp.cancel cancellation_construct_type(taskgroup)
+      llvm.call @do_something(%arg1) : (!llvm.ptr) -> ()
+      omp.terminator
+    }
+    omp.terminator
+  }
+  llvm.return
+}
+// CHECK-LABEL: define internal void @cancel_taskgroup..omp_par(
+// CHECK:       task.alloca:
+// CHECK:         %[[VAL_21:.*]] = load ptr, ptr %[[VAL_22:.*]], align 8
+// CHECK:         %[[VAL_23:.*]] = getelementptr { ptr }, ptr %[[VAL_21]], i32 0, i32 0
+// CHECK:         %[[VAL_24:.*]] = load ptr, ptr %[[VAL_23]], align 8, !align !1
+// CHECK:         br label %[[VAL_25:.*]]
+// CHECK:       task.body:                                        ; preds = %[[VAL_26:.*]]
+// CHECK:         %[[VAL_27:.*]] = getelementptr { i32 }, ptr %[[VAL_24]], i32 0, i32 0
+// CHECK:         br label %[[VAL_28:.*]]
+// CHECK:       omp.task.region:                                  ; preds = %[[VAL_25]]
+// CHECK:         %[[VAL_29:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
+// CHECK:         %[[VAL_30:.*]] = call i32 @__kmpc_cancel(ptr @1, i32 %[[VAL_29]], i32 4)
+// CHECK:         %[[VAL_31:.*]] = icmp eq i32 %[[VAL_30]], 0
+// CHECK:         br i1 %[[VAL_31]], label %omp.task.region.split, label %omp.task.region.cncl
+// CHECK:       omp.task.region.cncl:
+// CHECK:         br label %omp.region.cont2
+// CHECK:       omp.region.cont2:
+// Both cancellation and normal paths reach the end-of-task cleanup:
+// CHECK:         tail call void @free(ptr %[[VAL_24]])
+// CHECK:         br label %task.exit.exitStub
+// CHECK:       omp.task.region.split:
+// CHECK:         call void @do_something(ptr %[[VAL_27]])
+// CHECK:         br label %omp.region.cont2
+// CHECK:       task.exit.exitStub:
+// CHECK:         ret void
