@@ -311,12 +311,6 @@ def SIdenorm_mode : SDNode<"AMDGPUISD::DENORM_MODE",
   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]
 >;
 
-def SDTFPRoundModeOp  : SDTypeProfile<1, 2, [
-  SDTCisFP<0>, SDTCisFP<1>, SDTCisInt<2>, SDTCisOpSmallerThanOp<0, 1>, SDTCisSameNumEltsAs<0, 1>
-]>;
-
-def SIfptrunc_round : SDNode<"AMDGPUISD::FPTRUNC_ROUND", SDTFPRoundModeOp>;
-
 
 // Optimize v_mfma_scale* instructions to avoid the scale if the
 // scales are known 0.
@@ -334,7 +328,6 @@ def mfma_f32_32x32x64_f8f6f4 : UnscaledMFMAOptimizationPat<int_amdgcn_mfma_scale
 // ValueType helpers
 //===----------------------------------------------------------------------===//
 
-// XXX - do v2i16 instructions?
 class isIntType<ValueType SrcVT> {
   bit ret = !and(SrcVT.isInteger, !ne(SrcVT.Value, i1.Value));
 }
