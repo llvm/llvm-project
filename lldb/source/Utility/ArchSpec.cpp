@@ -440,8 +440,10 @@ static const ArchDefinitionEntry g_elf_arch_entries[] = {
     {ArchSpec::eCore_loongarch64, llvm::ELF::EM_LOONGARCH,
      ArchSpec::eLoongArchSubType_loongarch64, 0xFFFFFFFFu,
      0xFFFFFFFFu}, // loongarch64
-    {ArchSpec::eCore_amd_gpu_r600, llvm::ELF::EM_AMDGPU, LLDB_INVALID_CPUTYPE,
-     0xFFFFFFFFu, 0xFFFFFFFFu},
+    // TODO: add data that says what the address byte size is in there 
+    // structures so we can tell r600 from gcn
+    // {ArchSpec::eCore_amd_gpu_r600, llvm::ELF::EM_AMDGPU, LLDB_INVALID_CPUTYPE,
+    //  0xFFFFFFFFu, 0xFFFFFFFFu},
     {ArchSpec::eCore_amd_gpu_gcn, llvm::ELF::EM_AMDGPU, LLDB_INVALID_CPUTYPE,
      0xFFFFFFFFu, 0xFFFFFFFFu},
     {ArchSpec::eCore_nvidia_nvptx, llvm::ELF::EM_CUDA, LLDB_INVALID_CPUTYPE,
