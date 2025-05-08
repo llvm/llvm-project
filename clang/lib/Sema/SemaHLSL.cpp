@@ -536,6 +536,18 @@ void createHostLayoutStructForBuffer(Sema &S, HLSLBufferDecl *BufDecl) {
   BufDecl->addLayoutStruct(LS);
 }
 
+void addImplicitBindingAttrToBuffer(Sema &S, HLSLBufferDecl *BufDecl,
+                                    uint32_t ImplicitBindingOrderID) {
+  RegisterType RT =
+      BufDecl->isCBuffer() ? RegisterType::CBuffer : RegisterType::SRV;
+  auto *Attr =
+      HLSLResourceBindingAttr::CreateImplicit(S.getASTContext(), "", "0", {});
+  std::optional<unsigned> RegSlot;
+  Attr->setBinding(RT, RegSlot, 0);
+  Attr->setImplicitBindingOrderID(ImplicitBindingOrderID);
+  BufDecl->addAttr(Attr);
+}
+
 // Handle end of cbuffer/tbuffer declaration
 void SemaHLSL::ActOnFinishBuffer(Decl *Dcl, SourceLocation RBrace) {
   auto *BufDecl = cast<HLSLBufferDecl>(Dcl);
@@ -547,8 +559,13 @@ void SemaHLSL::ActOnFinishBuffer(Decl *Dcl, SourceLocation RBrace) {
   createHostLayoutStructForBuffer(SemaRef, BufDecl);
 
   if (std::none_of(Dcl->attr_begin(), Dcl->attr_end(),
-                   [](Attr *A) { return isa<HLSLResourceBindingAttr>(A); }))
+                   [](Attr *A) { return isa<HLSLResourceBindingAttr>(A); })) {
     SemaRef.Diag(Dcl->getLocation(), diag::warn_hlsl_implicit_binding);
+    // add implicit HLSLResourceBindingAttr for the buffer
+    // (used mostly as a way to tranfer ImplicitBindingOrderID to codegen)
+    addImplicitBindingAttrToBuffer(SemaRef, BufDecl,
+                                   getNextImplicitBindingOrderID());
+  }
 
   SemaRef.PopDeclContext();
 }
@@ -1972,6 +1989,8 @@ void SemaHLSL::ActOnEndOfTranslationUnit(TranslationUnitDecl *TU) {
     HLSLBufferDecl *DefaultCBuffer = HLSLBufferDecl::CreateDefaultCBuffer(
         SemaRef.getASTContext(), SemaRef.getCurLexicalContext(),
         DefaultCBufferDecls);
+    addImplicitBindingAttrToBuffer(SemaRef, DefaultCBuffer,
+                                   getNextImplicitBindingOrderID());
     SemaRef.getCurLexicalContext()->addDecl(DefaultCBuffer);
     createHostLayoutStructForBuffer(SemaRef, DefaultCBuffer);
 

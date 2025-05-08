@@ -23,6 +23,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/LLVMContext.h"
@@ -42,8 +43,8 @@ using namespace llvm;
 using llvm::hlsl::CBufferRowSizeInBytes;
 
 static void initializeBufferFromBinding(CodeGenModule &CGM,
-                                        llvm::GlobalVariable *GV, unsigned Slot,
-                                        unsigned Space);
+                                        llvm::GlobalVariable *GV,
+                                        HLSLResourceBindingAttr *RBA);
 
 namespace {
 
@@ -257,13 +258,10 @@ void CGHLSLRuntime::addBuffer(const HLSLBufferDecl *BufDecl) {
   emitBufferGlobalsAndMetadata(BufDecl, BufGV);
 
   // Initialize cbuffer from binding (implicit or explicit)
-  const HLSLResourceBindingAttr *RBA =
-      BufDecl->getAttr<HLSLResourceBindingAttr>();
-  // FIXME: handle implicit binding if no binding attribute is found
-  // (llvm/llvm-project#110722)
-  if (RBA && !RBA->isImplicit())
-    initializeBufferFromBinding(CGM, BufGV, RBA->getSlotNumber(),
-                                RBA->getSpaceNumber());
+  HLSLResourceBindingAttr *RBA = BufDecl->getAttr<HLSLResourceBindingAttr>();
+  assert(RBA &&
+         "cbuffer/tbuffer should always have resource binding attribute");
+  initializeBufferFromBinding(CGM, BufGV, RBA);
 }
 
 llvm::TargetExtType *
@@ -539,19 +537,27 @@ static void initializeBuffer(CodeGenModule &CGM, llvm::GlobalVariable *GV,
 }
 
 static void initializeBufferFromBinding(CodeGenModule &CGM,
-                                        llvm::GlobalVariable *GV, unsigned Slot,
-                                        unsigned Space) {
+                                        llvm::GlobalVariable *GV,
+                                        HLSLResourceBindingAttr *RBA) {
   llvm::Type *Int1Ty = llvm::Type::getInt1Ty(CGM.getLLVMContext());
-  llvm::Value *Args[] = {
-      llvm::ConstantInt::get(CGM.IntTy, Space), /* reg_space */
-      llvm::ConstantInt::get(CGM.IntTy, Slot),  /* lower_bound */
-      llvm::ConstantInt::get(CGM.IntTy, 1),     /* range_size */
-      llvm::ConstantInt::get(CGM.IntTy, 0),     /* index */
-      llvm::ConstantInt::get(Int1Ty, false)     /* non-uniform */
-  };
-  initializeBuffer(CGM, GV,
-                   CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic(),
-                   Args);
+  auto *False = llvm::ConstantInt::get(Int1Ty, false);
+  auto *Zero = llvm::ConstantInt::get(CGM.IntTy, 0);
+  auto *One = llvm::ConstantInt::get(CGM.IntTy, 1);
+  auto *Space =
+      llvm::ConstantInt::get(CGM.IntTy, RBA ? RBA->getSpaceNumber() : 0);
+
+  if (!RBA->isImplicit()) {
+    auto *RegSlot = llvm::ConstantInt::get(CGM.IntTy, RBA->getSlotNumber());
+    Intrinsic::ID Intr =
+        CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic();
+    initializeBuffer(CGM, GV, Intr, {Space, RegSlot, One, Zero, False});
+  } else {
+    auto *OrderID =
+        llvm::ConstantInt::get(CGM.IntTy, RBA->getImplicitBindingOrderID());
+    Intrinsic::ID Intr =
+        CGM.getHLSLRuntime().getCreateHandleFromImplicitBindingIntrinsic();
+    initializeBuffer(CGM, GV, Intr, {OrderID, Space, One, Zero, False});
+  }
 }
 
 llvm::Instruction *CGHLSLRuntime::getConvergenceToken(BasicBlock &BB) {
