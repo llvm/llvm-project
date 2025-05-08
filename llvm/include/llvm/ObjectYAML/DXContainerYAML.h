@@ -21,7 +21,6 @@
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <array>
-#include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>
