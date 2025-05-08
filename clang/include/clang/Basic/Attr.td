@@ -4785,15 +4785,15 @@ def HLSLResourceBinding: InheritableAttr {
         SlotNumber = SlotNum;
         SpaceNumber = SpaceNum;
       }
-      bool isImplicit() const {
-        return !SlotNumber.has_value();
+      bool hasRegisterSlot() const {
+        return SlotNumber.has_value();
       }
       RegisterType getRegisterType() const {
-        assert(!isImplicit() && "binding does not have register slot");
+        assert(hasRegisterSlot() && "binding does not have register slot");
         return RegType;
       }
       unsigned getSlotNumber() const {
-        assert(!isImplicit() && "binding does not have register slot");
+        assert(hasRegisterSlot() && "binding does not have register slot");
         return SlotNumber.value();
       }
       unsigned getSpaceNumber() const {

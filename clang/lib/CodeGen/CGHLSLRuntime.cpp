@@ -261,7 +261,7 @@ void CGHLSLRuntime::addBuffer(const HLSLBufferDecl *BufDecl) {
       BufDecl->getAttr<HLSLResourceBindingAttr>();
   // FIXME: handle implicit binding if no binding attribute is found
   // (llvm/llvm-project#110722)
-  if (RBA && !RBA->isImplicit())
+  if (RBA && RBA->hasRegisterSlot())
     initializeBufferFromBinding(CGM, BufGV, RBA->getSlotNumber(),
                                 RBA->getSpaceNumber());
 }
