@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // ADDITIONAL_COMPILE_FLAGS(gcc): -Wno-bool-compare
-// ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-sign-compare -Wno-implicit-unicode-conversion
+// ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-sign-compare
+// ADDITIONAL_COMPILE_FLAGS(clang-21): -Wno-implicit-unicode-conversion
 // MSVC warning C4245: conversion from 'int' to 'wchar_t', signed/unsigned mismatch
 // MSVC warning C4305: truncation from 'int' to 'bool'
 // MSVC warning C4310: cast truncates constant value
