@@ -184,15 +184,9 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   NewModule->ImportLoc = ImportLoc;
   NewModule->InputFilesValidationTimestamp = 0;
 
-  if (NewModule->Kind == MK_ImplicitModule) {
-    std::string TimestampFilename =
-        ModuleFile::getTimestampFilename(NewModule->FileName);
-    llvm::vfs::Status Status;
-    // A cached stat value would be fine as well.
-    if (!FileMgr.getNoncachedStatValue(TimestampFilename, Status))
-      NewModule->InputFilesValidationTimestamp =
-          llvm::sys::toTimeT(Status.getLastModificationTime());
-  }
+  if (NewModule->Kind == MK_ImplicitModule)
+    NewModule->InputFilesValidationTimestamp =
+        ModCache->getModuleTimestamp(NewModule->FileName);
 
   // Load the contents of the module
   if (std::unique_ptr<llvm::MemoryBuffer> Buffer = lookupBuffer(FileName)) {
