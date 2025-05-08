@@ -15,6 +15,7 @@ import re
 # Despite the test program printing correctly. See
 # https://github.com/llvm/llvm-project/issues/137599.
 
+
 class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
     def test_default(self):
@@ -357,6 +358,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         terminateCommands = ["expr 4+2"]
         self.build_and_launch(
             program,
+            stopOnEntry=True,
             initCommands=initCommands,
             preRunCommands=preRunCommands,
             postRunCommands=postRunCommands,
@@ -530,6 +532,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         terminateCommands = ["expr 4+2"]
         self.launch(
             program=program,
+            stopOnEntry=True,
             terminateCommands=terminateCommands,
             disconnectAutomatically=False,
         )

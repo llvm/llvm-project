@@ -56,10 +56,6 @@ Makes programs 10x faster by doing Special New Thing.
 Changes to the LLVM IR
 ----------------------
 
-* It is no longer permitted to inspect the uses of ConstantData. Use
-  count APIs will behave as if they have no uses (i.e. use_empty() is
-  always true).
-
 * The `nocapture` attribute has been replaced by `captures(none)`.
 * The constant expression variants of the following instructions have been
   removed:
