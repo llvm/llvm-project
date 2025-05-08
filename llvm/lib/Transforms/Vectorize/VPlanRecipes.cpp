@@ -1198,6 +1198,20 @@ void VPIRPhi::execute(VPTransformState &State) {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPPhiAccessors::printPhiOperands(raw_ostream &O,
+                                      VPSlotTracker &SlotTracker) const {
+  interleaveComma(enumerate(getAsRecipe()->operands()), O,
+                  [this, &O, &SlotTracker](auto Op) {
+                    O << "[ ";
+                    Op.value()->printAsOperand(O, SlotTracker);
+                    O << ", ";
+                    getIncomingBlock(Op.index())->printAsOperand(O);
+                    O << " ]";
+                  });
+}
+#endif
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPIRPhi::print(raw_ostream &O, const Twine &Indent,
                     VPSlotTracker &SlotTracker) const {
   VPIRInstruction::print(O, Indent, SlotTracker);
@@ -3809,7 +3823,7 @@ void VPWidenPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 
   printAsOperand(O, SlotTracker);
   O << " = phi ";
-  printOperands(O, SlotTracker);
+  printPhiOperands(O, SlotTracker);
 }
 #endif
 
