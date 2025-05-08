@@ -241,6 +241,9 @@ static LogicalResult checkImplementationStatus(Operation &op) {
   LogicalResult result = success();
   llvm::TypeSwitch<Operation &>(op)
       .Case([&](omp::CancelOp op) { checkCancelDirective(op, result); })
+      .Case([&](omp::CancellationPointOp op) {
+        checkCancelDirective(op, result);
+      })
       .Case([&](omp::DistributeOp op) {
         checkAllocate(op, result);
         checkDistSchedule(op, result);
@@ -1576,11 +1579,12 @@ cleanupPrivateVars(llvm::IRBuilderBase &builder,
 
 /// Returns true if the construct contains omp.cancel or omp.cancellation_point
 static bool constructIsCancellable(Operation *op) {
-  // omp.cancel must be "closely nested" so it will be visible and not inside of
-  // funcion calls. This is enforced by the verifier.
+  // omp.cancel and omp.cancellation_point must be "closely nested" so they will
+  // be visible and not inside of function calls. This is enforced by the
+  // verifier.
   return op
       ->walk([](Operation *child) {
-        if (mlir::isa<omp::CancelOp>(child))
+        if (mlir::isa<omp::CancelOp, omp::CancellationPointOp>(child))
           return WalkResult::interrupt();
         return WalkResult::advance();
       })
@@ -3071,6 +3075,30 @@ convertOmpCancel(omp::CancelOp op, llvm::IRBuilderBase &builder,
 
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       ompBuilder->createCancel(ompLoc, ifCond, cancelledDirective);
+
+  if (failed(handleError(afterIP, *op.getOperation())))
+    return failure();
+
+  builder.restoreIP(afterIP.get());
+
+  return success();
+}
+
+static LogicalResult
+convertOmpCancellationPoint(omp::CancellationPointOp op,
+                            llvm::IRBuilderBase &builder,
+                            LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+
+  if (failed(checkImplementationStatus(*op.getOperation())))
+    return failure();
+
+  llvm::omp::Directive cancelledDirective =
+      convertCancellationConstructType(op.getCancelDirective());
+
+  llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
+      ompBuilder->createCancellationPoint(ompLoc, cancelledDirective);
 
   if (failed(handleError(afterIP, *op.getOperation())))
     return failure();
@@ -5518,6 +5546,9 @@ convertHostOrTargetOperation(Operation *op, llvm::IRBuilderBase &builder,
           })
           .Case([&](omp::CancelOp op) {
             return convertOmpCancel(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::CancellationPointOp op) {
+            return convertOmpCancellationPoint(op, builder, moduleTranslation);
           })
           .Case([&](omp::SectionsOp) {
             return convertOmpSections(*op, builder, moduleTranslation);
