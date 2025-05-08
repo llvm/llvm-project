@@ -21,7 +21,7 @@ main:
 # This produces a Branch32 edge that is resolved like a regular PCRel32 
 # (no PLT entry created).
 # 
-# NOTE - For ELF/i386 we always optimize away the PLT calls as the 
+# NOTE - For ELF/x86 we always optimize away the PLT calls as the 
 # displacement between the target address and the edge address always 
 # fits in an int32_t. Regardless, we always create the PLT stub and GOT entry
 # for position independent code, first, as there may be future use-cases
