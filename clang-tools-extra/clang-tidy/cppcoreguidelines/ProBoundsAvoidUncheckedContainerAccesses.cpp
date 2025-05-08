@@ -11,7 +11,6 @@
 #include "../utils/OptionsUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/StringRef.h"
-#include <numeric>
 
 using namespace clang::ast_matchers;
 
