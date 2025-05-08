@@ -24,15 +24,15 @@ namespace NVVM {
 // Structure to store and check compatibility of SM versions.
 struct NVVMCheckSMVersion {
   int archVersion;
-  
+
   // true if the SM version is accelerated (Ex. sm_90a vs sm_90)
   bool archAccelerated;
-  
+
   // true if the target SM version must exactly match this one
   // (both archVersion and archAccelerated)
   // Ex. sm_90a with exactMatch = false will also match with
   // sm_100a, sm_120a, etc...
-  bool exactMatch; 
+  bool exactMatch;
 
   NVVMCheckSMVersion()
       : archVersion(0), archAccelerated(false), exactMatch(false) {}
