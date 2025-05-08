@@ -870,6 +870,12 @@ void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
     ++NumCopyForwards;
     Changed = true;
   }
+  // Attempt to canonicalize/optimize the instruction now its arguments have
+  // been mutated.
+  if (TII->simplifyInstruction(MI)) {
+    Changed = true;
+    LLVM_DEBUG(dbgs() << "MCP: After optimizeInstruction: " << MI);
+  }
 }
 
 void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
