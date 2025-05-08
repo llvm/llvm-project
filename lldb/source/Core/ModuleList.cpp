@@ -714,6 +714,8 @@ uint32_t ModuleList::ResolveSymbolContextsForFileSpec(
     const FileSpec &file_spec, uint32_t line, bool check_inlines,
     SymbolContextItem resolve_scope, SymbolContextList &sc_list) const {
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
+  // If we're looking for a header (not source), then need to check inline.
+  check_inlines = check_inlines || !file_spec.IsSourceImplementationFile();
   for (const ModuleSP &module_sp : m_modules) {
     module_sp->ResolveSymbolContextsForFileSpec(file_spec, line, check_inlines,
                                                 resolve_scope, sc_list);

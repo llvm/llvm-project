@@ -1104,6 +1104,7 @@ protected:
       bool check_inlines = false;
       SymbolContextList sc_list;
       size_t num_matches = 0;
+      uint32_t start_line = m_options.start_line;
 
       if (!m_options.modules.empty()) {
         ModuleList matching_modules;
@@ -1114,7 +1115,7 @@ protected:
             matching_modules.Clear();
             target.GetImages().FindModules(module_spec, matching_modules);
             num_matches += matching_modules.ResolveSymbolContextForFilePath(
-                filename, 0, check_inlines,
+                filename, start_line, check_inlines,
                 SymbolContextItem(eSymbolContextModule |
                                   eSymbolContextCompUnit),
                 sc_list);
@@ -1122,7 +1123,7 @@ protected:
         }
       } else {
         num_matches = target.GetImages().ResolveSymbolContextForFilePath(
-            filename, 0, check_inlines,
+            filename, start_line, check_inlines,
             eSymbolContextModule | eSymbolContextCompUnit, sc_list);
       }
 
@@ -1170,8 +1171,37 @@ protected:
           if (m_options.num_lines == 0)
             m_options.num_lines = 10;
           const uint32_t column = 0;
+
+          // Headers aren't always in the DWARF but if they have
+          // executable code (eg., inlined-functions) then the callsite's file(s)
+          // will be found.
+          // So if a header was requested and we got a primary file, then look
+          // thru its support file(s) for the header.
+          lldb::SupportFileSP actual_file_sp =
+              sc.comp_unit->GetPrimarySupportFile();
+          if (llvm::StringRef(m_options.file_name).ends_with(".h")) {
+            int support_matches_count = 0;
+            for (auto &file : sc.comp_unit->GetSupportFiles()) {
+              if (llvm::StringRef(file->GetSpecOnly().GetPath()).ends_with(filename)) {
+                actual_file_sp = file;
+                ++support_matches_count;
+              }
+            }
+            if (support_matches_count == 0) {
+              result.AppendErrorWithFormat(
+                  "No file found for requested header: \"%s.\"\n",
+                  m_options.file_name.c_str());
+              return;
+            } else if (support_matches_count > 1) {
+              result.AppendErrorWithFormat(
+                  "Multiple files found for requested header: \"%s.\"\n",
+                  m_options.file_name.c_str());
+              return;
+            }
+          }
+
           target.GetSourceManager().DisplaySourceLinesWithLineNumbers(
-              sc.comp_unit->GetPrimarySupportFile(),
+              actual_file_sp,
               m_options.start_line, column, 0, m_options.num_lines, "",
               &result.GetOutputStream(), GetBreakpointLocations());
 
