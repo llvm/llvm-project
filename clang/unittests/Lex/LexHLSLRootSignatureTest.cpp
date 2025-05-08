@@ -128,7 +128,9 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexAllTokensTest) {
 
     RootSignature
 
-    DescriptorTable
+    DescriptorTable RootConstants
+
+    num32BitConstants
 
     CBV SRV UAV Sampler
     space visibility flags
