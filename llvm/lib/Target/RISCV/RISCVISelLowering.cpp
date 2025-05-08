@@ -11973,9 +11973,8 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
       // Reassemble the low and high pieces reversed.
       // FIXME: This is a CONCAT_VECTORS.
       SDValue Res = DAG.getInsertSubvector(DL, DAG.getUNDEF(VecVT), Hi, 0);
-      return DAG.getNode(
-          ISD::INSERT_SUBVECTOR, DL, VecVT, Res, Lo,
-          DAG.getVectorIdxConstant(LoVT.getVectorMinNumElements(), DL));
+      return DAG.getInsertSubvector(DL, Res, Lo,
+                                    LoVT.getVectorMinNumElements());
     }
 
     // Just promote the int type to i16 which will double the LMUL.
