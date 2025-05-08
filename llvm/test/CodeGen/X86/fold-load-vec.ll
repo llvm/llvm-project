@@ -10,14 +10,12 @@ define void @sample_test(ptr %source, ptr %dest) nounwind {
 ; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:    movq %rdi, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rsi, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq $0, (%rsp)
+; CHECK-NEXT:    movaps (%rdi), %xmm1
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
-; CHECK-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; CHECK-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; CHECK-NEXT:    movlps %xmm0, (%rsp)
 ; CHECK-NEXT:    movlps %xmm0, (%rsi)
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    callq ext@PLT
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    retq

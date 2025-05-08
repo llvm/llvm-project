@@ -36,15 +36,15 @@
 ; ILPMIN: imull
 ; ILPMIN: addl
 ; ILPMIN: addl
-; ILPMIN: movl %{{.*}}, 4(
-; ILPMIN: imull
-; ILPMIN: imull
-; ILPMIN: addl
-; ILPMIN: imull
-; ILPMIN: imull
-; ILPMIN: addl
-; ILPMIN: addl
 ; ILPMIN: movl %{{.*}}, 8(
+; ILPMIN: imull
+; ILPMIN: imull
+; ILPMIN: addl
+; ILPMIN: imull
+; ILPMIN: imull
+; ILPMIN: addl
+; ILPMIN: addl
+; ILPMIN: movl %{{.*}}, 4(
 ; ILPMIN: imull
 ; ILPMIN: imull
 ; ILPMIN: addl
@@ -59,15 +59,15 @@
 ; scheduled independently, and that the imull/adds are clustered.
 ;
 ; ILPMAX-LABEL: %for.body
-; ILPMAX: movl %{{.*}}, (
+; ILPMAX: movl 4({{%[a-z]+}}),
 ; ILPMAX: imull
 ; ILPMAX: imull
 ; ILPMAX: imull
 ; ILPMAX: imull
-; ILPMAX: addl
-; ILPMAX: addl
-; ILPMAX: addl
-; ILPMAX: movl %{{.*}}, 4(
+; ILPMAX: imull
+; ILPMAX: imull
+; ILPMAX: imull
+; ILPMAX: imull
 ; ILPMAX: imull
 ; ILPMAX: imull
 ; ILPMAX: imull
@@ -76,14 +76,13 @@
 ; ILPMAX: addl
 ; ILPMAX: addl
 ; ILPMAX: movl %{{.*}}, 8(
-; ILPMAX: imull
-; ILPMAX: imull
-; ILPMAX: imull
-; ILPMAX: imull
 ; ILPMAX: addl
 ; ILPMAX: addl
 ; ILPMAX: addl
-; ILPMAX: movl %{{.*}}, 12(
+; ILPMAX: movl %{{.*}}, 4(
+; ILPMAX: addl
+; ILPMAX: addl
+; ILPMAX: addl
 ; ILPMAX-LABEL: %for.end
 
 define void @mmult(ptr noalias nocapture %m1, ptr noalias nocapture %m2,
