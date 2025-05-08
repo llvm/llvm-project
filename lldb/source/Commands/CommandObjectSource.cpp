@@ -1192,11 +1192,11 @@ protected:
             }
             if (support_matches_count == 0) {
               result.AppendErrorWithFormat(
-                  "No file found for requested header: \"%s.\"\n", filename);
+                  "No file found for requested file: \"%s.\"\n", filename);
               return;
             } else if (support_matches_count > 1) {
               result.AppendErrorWithFormat(
-                  "Multiple files found for requested header: \"%s.\"\n",
+                  "Multiple files found for requested file: \"%s.\"\n",
                   filename);
               return;
             }

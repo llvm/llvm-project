@@ -1,6 +1,5 @@
 ## Test that `list header.h:<line>` works correctly when header is available.
 ## 
-# REQUIRES: x86
 # RUN: split-file %s %t
 
 # RUN: %clang_host -g %t/main_with_inlined.cc %t/foo.cc -o %t/main_with_inlined.out
