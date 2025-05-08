@@ -1173,16 +1173,16 @@ protected:
           const uint32_t column = 0;
 
           // Headers aren't always in the DWARF but if they have
-          // executable code (eg., inlined-functions) then the callsite's file(s)
-          // will be found.
-          // So if a header was requested and we got a primary file, then look
-          // thru its support file(s) for the header.
+          // executable code (eg., inlined-functions) then the callsite's
+          // file(s) will be found. So if a header was requested and we got a
+          // primary file, then look thru its support file(s) for the header.
           lldb::SupportFileSP actual_file_sp =
               sc.comp_unit->GetPrimarySupportFile();
           if (llvm::StringRef(m_options.file_name).ends_with(".h")) {
             int support_matches_count = 0;
             for (auto &file : sc.comp_unit->GetSupportFiles()) {
-              if (llvm::StringRef(file->GetSpecOnly().GetPath()).ends_with(filename)) {
+              if (llvm::StringRef(file->GetSpecOnly().GetPath())
+                      .ends_with(filename)) {
                 actual_file_sp = file;
                 ++support_matches_count;
               }
@@ -1201,9 +1201,9 @@ protected:
           }
 
           target.GetSourceManager().DisplaySourceLinesWithLineNumbers(
-              actual_file_sp,
-              m_options.start_line, column, 0, m_options.num_lines, "",
-              &result.GetOutputStream(), GetBreakpointLocations());
+              actual_file_sp, m_options.start_line, column, 0,
+              m_options.num_lines, "", &result.GetOutputStream(),
+              GetBreakpointLocations());
 
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
