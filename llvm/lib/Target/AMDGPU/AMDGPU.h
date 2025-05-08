@@ -353,11 +353,10 @@ public:
 
 class AMDGPUPreloadKernelArgumentsPass
     : public PassInfoMixin<AMDGPUPreloadKernelArgumentsPass> {
-  const AMDGPUTargetMachine &TM;
+  const TargetMachine &TM;
 
 public:
-  explicit AMDGPUPreloadKernelArgumentsPass(const AMDGPUTargetMachine &TM)
-      : TM(TM) {}
+  explicit AMDGPUPreloadKernelArgumentsPass(const TargetMachine &TM) : TM(TM) {}
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };

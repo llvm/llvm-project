@@ -1322,7 +1322,7 @@ void AMDGPUPassConfig::addIRPasses() {
 }
 
 void AMDGPUPassConfig::addCodeGenPrepare() {
-  if (TM->getTargetTriple().getArch() == Triple::amdgcn &&
+  if (TM->getTargetTriple().isAMDGCN() &&
       TM->getOptLevel() > CodeGenOptLevel::None)
     addPass(createAMDGPUPreloadKernelArgumentsLegacyPass(TM));
 

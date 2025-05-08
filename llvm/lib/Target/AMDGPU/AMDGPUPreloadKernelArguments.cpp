@@ -40,12 +40,12 @@ static cl::opt<unsigned> KernargPreloadCount(
 namespace {
 
 class AMDGPUPreloadKernelArgumentsLegacy : public ModulePass {
-  const AMDGPUTargetMachine *TM;
+  const GCNTargetMachine *TM;
 
 public:
   static char ID;
   explicit AMDGPUPreloadKernelArgumentsLegacy(
-      const AMDGPUTargetMachine *TM = nullptr);
+      const GCNTargetMachine *TM = nullptr);
 
   StringRef getPassName() const override {
     return "AMDGPU Preload Kernel Arguments";
@@ -107,9 +107,9 @@ private:
   }
 
   static const char *getHiddenArgName(HiddenArg HA) {
-    if (HA < END_HIDDEN_ARGS) {
+    if (HA < END_HIDDEN_ARGS)
       return HiddenArgs[HA].Name;
-    }
+
     llvm_unreachable("Unexpected hidden argument.");
   }
 
@@ -270,14 +270,14 @@ INITIALIZE_PASS(AMDGPUPreloadKernelArgumentsLegacy, DEBUG_TYPE,
 ModulePass *
 llvm::createAMDGPUPreloadKernelArgumentsLegacyPass(const TargetMachine *TM) {
   return new AMDGPUPreloadKernelArgumentsLegacy(
-      static_cast<const AMDGPUTargetMachine *>(TM));
+      static_cast<const GCNTargetMachine *>(TM));
 }
 
 AMDGPUPreloadKernelArgumentsLegacy::AMDGPUPreloadKernelArgumentsLegacy(
-    const AMDGPUTargetMachine *TM)
+    const GCNTargetMachine *TM)
     : ModulePass(ID), TM(TM) {}
 
-static bool markKernelArgsAsInreg(Module &M, const AMDGPUTargetMachine &TM) {
+static bool markKernelArgsAsInreg(Module &M, const TargetMachine &TM) {
   SmallVector<Function *, 4> FunctionsToErase;
   bool Changed = false;
   for (auto &F : M) {
