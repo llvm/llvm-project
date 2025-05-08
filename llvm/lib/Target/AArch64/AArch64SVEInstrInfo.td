@@ -2141,12 +2141,12 @@ let Predicates = [HasSVE_or_SME] in {
 
   defm WHILELT_PWW : sve_int_while4_rr<0b010, "whilelt", int_aarch64_sve_whilelt, int_aarch64_sve_whilegt>;
   defm WHILELE_PWW : sve_int_while4_rr<0b011, "whilele", int_aarch64_sve_whilele, null_frag>;
-  defm WHILELO_PWW : sve_int_while4_rr<0b110, "whilelo", int_aarch64_sve_whilelo, int_aarch64_sve_whilehi>;
+  defm WHILELO_PWW : sve_int_while4_rr<0b110, "whilelo", get_active_lane_mask, int_aarch64_sve_whilehi>;
   defm WHILELS_PWW : sve_int_while4_rr<0b111, "whilels", int_aarch64_sve_whilels, null_frag>;
 
   defm WHILELT_PXX : sve_int_while8_rr<0b010, "whilelt", int_aarch64_sve_whilelt, int_aarch64_sve_whilegt>;
   defm WHILELE_PXX : sve_int_while8_rr<0b011, "whilele", int_aarch64_sve_whilele, null_frag>;
-  defm WHILELO_PXX : sve_int_while8_rr<0b110, "whilelo", int_aarch64_sve_whilelo, int_aarch64_sve_whilehi>;
+  defm WHILELO_PXX : sve_int_while8_rr<0b110, "whilelo", get_active_lane_mask, int_aarch64_sve_whilehi>;
   defm WHILELS_PXX : sve_int_while8_rr<0b111, "whilels", int_aarch64_sve_whilels, null_frag>;
 
   def CTERMEQ_WW : sve_int_cterm<0b0, 0b0, "ctermeq", GPR32>;
@@ -3455,24 +3455,6 @@ let Predicates = [HasSVE_or_SME] in {
   def : Pat<(i64(find_last_active nxv2i1:$P1)), (LASTB_RPZ_D $P1, (INDEX_II_D 0,
                                                                       1))>;
 
-  def : Pat<(nxv16i1(get_active_lane_mask i32:$index, i32:$tc)),
-            (WHILELO_PWW_B $index, $tc)>;
-  def : Pat<(nxv8i1(get_active_lane_mask i32:$index, i32:$tc)),
-            (WHILELO_PWW_H $index, $tc)>;
-  def : Pat<(nxv4i1(get_active_lane_mask i32:$index, i32:$tc)),
-            (WHILELO_PWW_S $index, $tc)>;
-  def : Pat<(nxv2i1(get_active_lane_mask i32:$index, i32:$tc)),
-            (WHILELO_PWW_D $index, $tc)>;
-
-  def : Pat<(nxv16i1(get_active_lane_mask i64:$index, i64:$tc)),
-            (WHILELO_PXX_B $index, $tc)>;
-  def : Pat<(nxv8i1(get_active_lane_mask i64:$index, i64:$tc)),
-            (WHILELO_PXX_H $index, $tc)>;
-  def : Pat<(nxv4i1(get_active_lane_mask i64:$index, i64:$tc)),
-            (WHILELO_PXX_S $index, $tc)>;
-  def : Pat<(nxv2i1(get_active_lane_mask i64:$index, i64:$tc)),
-            (WHILELO_PXX_D $index, $tc)>;
-
   // Move element from the bottom 128-bits of a scalable vector to a single-element vector.
   // Alternative case where insertelement is just scalar_to_vector rather than vector_insert.
   def : Pat<(v1f64 (scalar_to_vector
@@ -4016,12 +3998,12 @@ let Predicates = [HasSVE2_or_SME] in {
   defm WHILEGE_PWW : sve_int_while4_rr<0b000, "whilege", int_aarch64_sve_whilege, null_frag>;
   defm WHILEGT_PWW : sve_int_while4_rr<0b001, "whilegt", int_aarch64_sve_whilegt, int_aarch64_sve_whilelt>;
   defm WHILEHS_PWW : sve_int_while4_rr<0b100, "whilehs", int_aarch64_sve_whilehs, null_frag>;
-  defm WHILEHI_PWW : sve_int_while4_rr<0b101, "whilehi", int_aarch64_sve_whilehi, int_aarch64_sve_whilelo>;
+  defm WHILEHI_PWW : sve_int_while4_rr<0b101, "whilehi", int_aarch64_sve_whilehi, get_active_lane_mask>;
 
   defm WHILEGE_PXX : sve_int_while8_rr<0b000, "whilege", int_aarch64_sve_whilege, null_frag>;
   defm WHILEGT_PXX : sve_int_while8_rr<0b001, "whilegt", int_aarch64_sve_whilegt, int_aarch64_sve_whilelt>;
   defm WHILEHS_PXX : sve_int_while8_rr<0b100, "whilehs", int_aarch64_sve_whilehs, null_frag>;
-  defm WHILEHI_PXX : sve_int_while8_rr<0b101, "whilehi", int_aarch64_sve_whilehi, int_aarch64_sve_whilelo>;
+  defm WHILEHI_PXX : sve_int_while8_rr<0b101, "whilehi", int_aarch64_sve_whilehi, get_active_lane_mask>;
 
   // SVE2 pointer conflict compare
   defm WHILEWR_PXX : sve2_int_while_rr<0b0, "whilewr", "int_aarch64_sve_whilewr">;

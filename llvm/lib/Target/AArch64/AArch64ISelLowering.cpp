@@ -290,6 +290,7 @@ static bool isZeroingInactiveLanes(SDValue Op) {
     return false;
   // We guarantee i1 splat_vectors to zero the other lanes
   case ISD::SPLAT_VECTOR:
+  case ISD::GET_ACTIVE_LANE_MASK:
   case AArch64ISD::PTRUE:
   case AArch64ISD::SETCC_MERGE_ZERO:
     return true;
@@ -6231,9 +6232,6 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
           DAG.getNode(
               AArch64ISD::URSHR_I, dl, Op.getOperand(1).getValueType(), Op.getOperand(1), Op.getOperand(2)));
     return SDValue();
-  case Intrinsic::aarch64_sve_whilelo:
-    return optimizeIncrementingWhile(Op.getNode(), DAG, /*IsSigned=*/false,
-                                     /*IsEqual=*/false);
   case Intrinsic::aarch64_sve_whilelt:
     return optimizeIncrementingWhile(Op.getNode(), DAG, /*IsSigned=*/true,
                                      /*IsEqual=*/false);
@@ -22335,6 +22333,9 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::aarch64_sve_ptest_last:
     return getPTest(DAG, N->getValueType(0), N->getOperand(1), N->getOperand(2),
                     AArch64CC::LAST_ACTIVE);
+  case Intrinsic::aarch64_sve_whilelo:
+    return DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, SDLoc(N), N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2));
   case Intrinsic::aarch64_sve_bsl:
   case Intrinsic::aarch64_sve_bsl1n:
   case Intrinsic::aarch64_sve_bsl2n:
