@@ -2365,6 +2365,13 @@ def fsanitize_coverage_ignorelist : Joined<["-"], "fsanitize-coverage-ignorelist
     HelpText<"Disable sanitizer coverage instrumentation for modules and functions "
              "that match the provided special case list, even the allowed ones">,
     MarshallingInfoStringVector<CodeGenOpts<"SanitizeCoverageIgnorelistFiles">>;
+def fsanitize_coverage_stack_depth_callback_min_EQ
+    : Joined<["-"], "fsanitize-coverage-stack-depth-callback-min=">,
+      Group<f_clang_Group>,
+      MetaVarName<"<M>">,
+      HelpText<"Use callback for max stack depth tracing with minimum stack "
+               "depth M">,
+      MarshallingInfoInt<CodeGenOpts<"SanitizeCoverageStackDepthCallbackMin">>;
 def fexperimental_sanitize_metadata_EQ : CommaJoined<["-"], "fexperimental-sanitize-metadata=">,
   Group<f_Group>,
   HelpText<"Specify the type of metadata to emit for binary analysis sanitizers">;
@@ -2533,6 +2540,31 @@ def fno_sanitize_merge_handlers : Flag<["-"], "fno-sanitize-merge">, Group<f_cla
                         Alias<fno_sanitize_merge_handlers_EQ>, AliasArgs<["all"]>,
                         Visibility<[ClangOption, CLOption]>,
                         HelpText<"Do not allow compiler to merge handlers for any sanitizers">;
+def fsanitize_annotate_debug_info_EQ
+    : CommaJoined<["-"], "fsanitize-annotate-debug-info=">,
+      Group<f_clang_Group>,
+      HelpText<"Annotate sanitizer instrumentation with extra debug info for "
+               "the specified sanitizers, if supported">;
+def fno_sanitize_annotate_debug_info_EQ
+    : CommaJoined<["-"], "fno-sanitize-annotate-debug-info=">,
+      Group<f_clang_Group>,
+      HelpText<"Do not allow compiler to annotate sanitizer instrumentation "
+               "with extra debug info for the specified sanitizers">;
+def fsanitize_annotate_debug_info
+    : Flag<["-"], "fsanitize-annotate-debug-info">,
+      Group<f_clang_Group>,
+      Alias<fsanitize_annotate_debug_info_EQ>,
+      AliasArgs<["all"]>,
+      HelpText<"Allow compiler to annotate sanitizer instrumentation with "
+               "extra debug info for all sanitizers, where supported">;
+def fno_sanitize_annotate_debug_info
+    : Flag<["-"], "fno-sanitize-annotate-debug-info">,
+      Group<f_clang_Group>,
+      Alias<fno_sanitize_annotate_debug_info_EQ>,
+      AliasArgs<["all"]>,
+      Visibility<[ClangOption, CLOption]>,
+      HelpText<"Do not allow compiler to annotate sanitizer instrumentation "
+               "with extra debug info for any sanitizers">;
 def fsanitize_undefined_trap_on_error
     : Flag<["-"], "fsanitize-undefined-trap-on-error">, Group<f_clang_Group>,
       Alias<fsanitize_trap_EQ>, AliasArgs<["undefined"]>;

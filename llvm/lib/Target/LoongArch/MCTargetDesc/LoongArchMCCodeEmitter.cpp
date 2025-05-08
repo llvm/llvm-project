@@ -147,8 +147,6 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
       FixupKind = LoongArch::fixup_loongarch_b21;
       break;
     case ELF::R_LARCH_B26:
-    case LoongArchMCExpr::VK_CALL:
-    case LoongArchMCExpr::VK_CALL_PLT:
       FixupKind = LoongArch::fixup_loongarch_b26;
       break;
     case ELF::R_LARCH_ABS_HI20:

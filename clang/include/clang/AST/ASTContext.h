@@ -2970,6 +2970,11 @@ public:
   TemplateTemplateParmDecl *insertCanonicalTemplateTemplateParmDeclInternal(
       TemplateTemplateParmDecl *CanonTTP) const;
 
+  /// Determine whether the given template arguments \p Arg1 and \p Arg2 are
+  /// equivalent.
+  bool isSameTemplateArgument(const TemplateArgument &Arg1,
+                              const TemplateArgument &Arg2) const;
+
   /// Type Query functions.  If the type is an instance of the specified class,
   /// return the Type pointer for the underlying maximally pretty type.  This
   /// is a member of ASTContext because this may need to do some amount of

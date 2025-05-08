@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -fsyntax-only -I %S/Inputs/Headers %s -x c++
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter ImmortalRefType | FileCheck -check-prefix=CHECK-IMMORTAL %s
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter RefCountedType | FileCheck -check-prefix=CHECK-REF-COUNTED %s
+// RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter RefCountedTypeWithDefaultConvention | FileCheck -check-prefix=CHECK-REF-COUNTED-DEFAULT %s
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter NonCopyableType | FileCheck -check-prefix=CHECK-NON-COPYABLE %s
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter CopyableType | FileCheck -check-prefix=CHECK-COPYABLE %s
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter NonEscapableType | FileCheck -check-prefix=CHECK-NON-ESCAPABLE %s
@@ -25,6 +26,13 @@
 // CHECK-REF-COUNTED: SwiftAttrAttr {{.+}} <<invalid sloc>> "retain:RCRetain"
 // CHECK-REF-COUNTED: SwiftAttrAttr {{.+}} <<invalid sloc>> "release:RCRelease"
 // CHECK-REF-COUNTED: SwiftAttrAttr {{.+}} <<invalid sloc>> "conforms_to:MySwiftModule.MySwiftRefCountedProtocol"
+
+// CHECK-REF-COUNTED-DEFAULT: Dumping RefCountedTypeWithDefaultConvention:
+// CHECK-REF-COUNTED-DEFAULT-NEXT: CXXRecordDecl {{.+}} imported in SwiftImportAs {{.+}} struct RefCountedTypeWithDefaultConvention
+// CHECK-REF-COUNTED-DEFAULT: SwiftAttrAttr {{.+}} <<invalid sloc>> "import_reference"
+// CHECK-REF-COUNTED-DEFAULT: SwiftAttrAttr {{.+}} <<invalid sloc>> "retain:retain"
+// CHECK-REF-COUNTED-DEFAULT: SwiftAttrAttr {{.+}} <<invalid sloc>> "release:release"
+// CHECK-REF-COUNTED-DEFAULT: SwiftAttrAttr {{.+}} <<invalid sloc>> "returned_as_unretained_by_default"
 
 // CHECK-NON-COPYABLE: Dumping NonCopyableType:
 // CHECK-NON-COPYABLE-NEXT: CXXRecordDecl {{.+}} imported in SwiftImportAs {{.+}} struct NonCopyableType
