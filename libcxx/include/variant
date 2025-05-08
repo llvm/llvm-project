@@ -246,6 +246,7 @@ namespace std {
 #  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
 #  include <__type_traits/is_reference.h>
+#  include <__type_traits/is_replaceable.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/is_swappable.h>
 #  include <__type_traits/is_trivially_assignable.h>
@@ -850,8 +851,7 @@ _LIBCPP_VARIANT_MOVE_CONSTRUCTOR(
 _LIBCPP_VARIANT_MOVE_CONSTRUCTOR(
     _Trait::_Available,
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __move_constructor(__move_constructor&& __that) noexcept(
-        __all<is_nothrow_move_constructible_v<_Types>...>::value)
-    : __move_constructor(__valueless_t{}) {
+        __all<is_nothrow_move_constructible_v<_Types>...>::value) : __move_constructor(__valueless_t{}) {
       this->__generic_construct(*this, std::move(__that));
     } _LIBCPP_EAT_SEMICOLON);
 
@@ -887,8 +887,9 @@ _LIBCPP_VARIANT_COPY_CONSTRUCTOR(
 
 _LIBCPP_VARIANT_COPY_CONSTRUCTOR(
     _Trait::_Available,
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __copy_constructor(const __copy_constructor& __that)
-    : __copy_constructor(__valueless_t{}) { this->__generic_construct(*this, __that); } _LIBCPP_EAT_SEMICOLON);
+    _LIBCPP_HIDE_FROM_ABI
+    _LIBCPP_CONSTEXPR_SINCE_CXX20 __copy_constructor(const __copy_constructor& __that) : __copy_constructor(
+        __valueless_t{}) { this->__generic_construct(*this, __that); } _LIBCPP_EAT_SEMICOLON);
 
 _LIBCPP_VARIANT_COPY_CONSTRUCTOR(
     _Trait::_Unavailable,
@@ -1173,6 +1174,7 @@ class _LIBCPP_DECLSPEC_EMPTY_BASES _LIBCPP_NO_SPECIALIZATIONS variant
 public:
   using __trivially_relocatable _LIBCPP_NODEBUG =
       conditional_t<_And<__libcpp_is_trivially_relocatable<_Types>...>::value, variant, void>;
+  using __replaceable _LIBCPP_NODEBUG = conditional_t<_And<__is_replaceable<_Types>...>::value, variant, void>;
 
   template <bool _Dummy                                                                               = true,
             enable_if_t<__dependent_type<is_default_constructible<__first_type>, _Dummy>::value, int> = 0>
@@ -1576,8 +1578,8 @@ visit(_Visitor&& __visitor, _Vs&&... __vs) {
 
 template <class... _Types>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 auto
-swap(variant<_Types...>& __lhs,
-     variant<_Types...>& __rhs) noexcept(noexcept(__lhs.swap(__rhs))) -> decltype(__lhs.swap(__rhs)) {
+swap(variant<_Types...>& __lhs, variant<_Types...>& __rhs) noexcept(noexcept(__lhs.swap(__rhs)))
+    -> decltype(__lhs.swap(__rhs)) {
   return __lhs.swap(__rhs);
 }
 
