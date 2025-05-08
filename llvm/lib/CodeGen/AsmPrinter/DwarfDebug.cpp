@@ -2417,7 +2417,8 @@ void DwarfDebug::findKeyInstructions(const MachineFunction *MF) {
         uint8_t Rank = MI.getDebugLoc()->getAtomRank();
         if (Group && Rank) {
           auto *InlinedAt = MI.getDebugLoc()->getInlinedAt();
-          auto &[CandidateRank, CandidateInsts] = GroupCandidates[{InlinedAt, Group}];
+          auto &[CandidateRank, CandidateInsts] =
+              GroupCandidates[{InlinedAt, Group}];
 
           // This looks similar to the non-call handling code, except that
           // we don't put the call into CandidateInsts so that they can't be
@@ -2475,7 +2476,8 @@ void DwarfDebug::findKeyInstructions(const MachineFunction *MF) {
         BuoyAtom = MI.getDebugLoc()->getAtomGroup();
       }
 
-      auto &[CandidateRank, CandidateInsts] = GroupCandidates[{InlinedAt, Group}];
+      auto &[CandidateRank, CandidateInsts] =
+          GroupCandidates[{InlinedAt, Group}];
 
       if (CandidateRank == 0) {
         // This is the first time we're seeing an instruction in this atom
