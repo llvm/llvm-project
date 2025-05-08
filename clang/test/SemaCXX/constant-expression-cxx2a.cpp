@@ -1498,7 +1498,7 @@ namespace GH67317 {
     __builtin_bit_cast(unsigned char, *new char[3][1]);
 };
 
-namespace LargeArrays {
+namespace GH138653 {
   constexpr unsigned kNumberOfIterations = 2000000;
   constexpr unsigned kThreadsNumber = 2 * 8 * 1024;
 
