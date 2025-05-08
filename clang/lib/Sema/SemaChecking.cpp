@@ -6074,8 +6074,7 @@ class FormatStringFinder {
                      ArrayRef<const Expr *> Args,
                      llvm::SmallBitVector &CheckedVarArgs,
                      UncoveredArgHandler &UncoveredArg,
-                     Sema::FormatArgumentPassingKind APK,
-                     FormatStringType Type,
+                     Sema::FormatArgumentPassingKind APK, FormatStringType Type,
                      VariadicCallType CallType, unsigned format_idx,
                      unsigned firstDataArg, bool InFunctionCall)
       : S(S), ReferenceFormatString(ReferenceFormatString), Args(Args),
