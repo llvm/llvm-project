@@ -797,8 +797,10 @@ struct Allocator {
   void ReportInvalidFree(void *ptr, u8 chunk_state, BufferedStackTrace *stack) {
     if (chunk_state == CHUNK_QUARANTINE)
       ReportDoubleFree((uptr)ptr, stack);
-    else
-      ReportFreeNotMalloced((uptr)ptr, stack);
+    else {
+       if (common_flags()->enable_unmalloced_free_check)
+         ReportFreeNotMalloced((uptr)ptr, stack);
+     }
   }
 
   void CommitBack(AsanThreadLocalMallocStorage *ms, BufferedStackTrace *stack) {
