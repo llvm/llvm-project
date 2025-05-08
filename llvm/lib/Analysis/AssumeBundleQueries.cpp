@@ -180,6 +180,10 @@ llvm::getKnowledgeForValue(const Value *V,
     }
     return RetainedKnowledge::none();
   }
+
+  if (!V->hasUseList())
+    return RetainedKnowledge::none();
+
   for (const auto &U : V->uses()) {
     CallInst::BundleOpInfo* Bundle = getBundleFromUse(&U);
     if (!Bundle)

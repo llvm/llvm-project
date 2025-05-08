@@ -23,6 +23,7 @@
 namespace llvm {
 
 template <typename> struct simplify_type;
+class ConstantData;
 class User;
 class Value;
 
@@ -42,10 +43,7 @@ public:
 
 private:
   /// Destructor - Only for zap()
-  ~Use() {
-    if (Val)
-      removeFromList();
-  }
+  ~Use();
 
   /// Constructor
   Use(User *Parent) : Parent(Parent) {}
@@ -87,19 +85,10 @@ private:
   Use **Prev = nullptr;
   User *Parent = nullptr;
 
-  void addToList(Use **List) {
-    Next = *List;
-    if (Next)
-      Next->Prev = &Next;
-    Prev = List;
-    *Prev = this;
-  }
-
-  void removeFromList() {
-    *Prev = Next;
-    if (Next)
-      Next->Prev = Prev;
-  }
+  inline void addToList(unsigned &Count);
+  inline void addToList(Use *&List);
+  inline void removeFromList(unsigned &Count);
+  inline void removeFromList(Use *&List);
 };
 
 /// Allow clients to treat uses just like values when using
