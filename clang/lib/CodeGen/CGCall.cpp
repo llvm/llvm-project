@@ -588,17 +588,11 @@ CodeGenTypes::arrangeObjCMessageSendSignature(const ObjCMethodDecl *MD,
   }
 
   FunctionType::ExtInfo einfo;
-<<<<<<< HEAD
-  bool IsWindows = getContext().getTargetInfo().getTriple().isOSWindows();
-  einfo =
-      einfo.withCallingConv(getCallingConventionForDecl(CGM, MD, IsWindows));
-=======
   bool IsTargetDefaultMSABI =
       getContext().getTargetInfo().getTriple().isOSWindows() ||
       getContext().getTargetInfo().getTriple().isUEFI();
   einfo = einfo.withCallingConv(
       getCallingConventionForDecl(MD, IsTargetDefaultMSABI));
->>>>>>> upstream/main
 
   if (getContext().getLangOpts().ObjCAutoRefCount &&
       MD->hasAttr<NSReturnsRetainedAttr>())
@@ -4614,7 +4608,7 @@ void CodeGenFunction::EmitCallArgs(
     if (MD) {
       IsVariadic = MD->isVariadic();
       ExplicitCC = getCallingConventionForDecl(
-          CGM, MD, CGM.getTarget().getTriple().isOSWindows());
+          MD, CGM.getTarget().getTriple().isOSWindows());
       ArgTypes.assign(MD->param_type_begin() + ParamsToSkip,
                       MD->param_type_end());
     } else {
