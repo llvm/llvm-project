@@ -1463,9 +1463,9 @@ def PROBED_STACKALLOC_RVV : Pseudo<(outs GPR:$sp),
                                []>,
                                Sched<[]>;
 let usesCustomInserter = 1 in
-def PROBED_STACKALLOC_DYN : Pseudo<(outs GPR:$rd),
+def PROBED_STACKALLOC_DYN : Pseudo<(outs),
                                (ins GPR:$scratch),
-                               [(set GPR:$rd, (riscv_probed_alloca GPR:$scratch))]>,
+                               [(riscv_probed_alloca GPR:$scratch)]>,
                                Sched<[]>;
 }
 
