@@ -896,6 +896,18 @@ OpFoldResult arith::AndIOp::fold(FoldAdaptor adaptor) {
   if (Value result = foldAndIofAndI(*this))
     return result;
 
+  /// and(a, or(a, b)) -> a
+  for (int i = 0; i < 2; i++) {
+    auto a = getOperand(1 - i);
+    if (auto orOp = getOperand(i).getDefiningOp<arith::OrIOp>()) {
+      for (int j = 0; j < 2; j++) {
+        if (orOp->getOperand(j) == a) {
+          return a;
+        }
+      }
+    }
+  }
+
   return constFoldBinaryOp<IntegerAttr>(
       adaptor.getOperands(),
       [](APInt a, const APInt &b) { return std::move(a) & b; });
