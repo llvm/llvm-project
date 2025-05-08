@@ -16,6 +16,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Module.h"
 
 #define DEBUG_TYPE "inline-asm-lowering"
@@ -231,6 +232,19 @@ bool InlineAsmLowering::lowerInlineAsm(
   TargetLowering::AsmOperandInfoVector TargetConstraints =
       TLI->ParseConstraints(DL, TRI, Call);
 
+  const auto ConstraintError = [&](const GISelAsmOperandInfo &Info, Twine Msg) {
+    // Use warnings in combination with a "return false" to trigger the fallback
+    // path. If fallback isn't enabled, then another error will be emitted later
+    // and the warnings will provide context as to why the error occured.
+    LLVMContext &Ctx = MIRBuilder.getContext();
+    Ctx.diagnose(DiagnosticInfoInlineAsm(
+        Call, "invalid constraint '" + Info.ConstraintCode + "': " + Msg,
+        DS_Warning));
+    // TODO: If we could detect that the fallback isn't enabled, we could
+    // recover here by defining all result registers as G_IMPLICIT_DEF.
+    return false;
+  };
+
   ExtraFlags ExtraInfo(Call);
   unsigned ArgNo = 0; // ArgNo - The argument of the CallInst.
   unsigned ResNo = 0; // ResNo - The result number of the next output.
@@ -243,8 +257,8 @@ bool InlineAsmLowering::lowerInlineAsm(
       OpInfo.CallOperandVal = const_cast<Value *>(Call.getArgOperand(ArgNo));
 
       if (isa<BasicBlock>(OpInfo.CallOperandVal)) {
-        LLVM_DEBUG(dbgs() << "Basic block input operands not supported yet\n");
-        return false;
+        return ConstraintError(OpInfo,
+                               "basic block input operands not supported yet");
       }
 
       Type *OpTy = OpInfo.CallOperandVal->getType();
@@ -258,9 +272,8 @@ bool InlineAsmLowering::lowerInlineAsm(
 
       // FIXME: Support aggregate input operands
       if (!OpTy->isSingleValueType()) {
-        LLVM_DEBUG(
-            dbgs() << "Aggregate input operands are not supported yet\n");
-        return false;
+        return ConstraintError(OpInfo,
+                               "aggregate input operands not supported yet");
       }
 
       OpInfo.ConstraintVT =
@@ -344,9 +357,8 @@ bool InlineAsmLowering::lowerInlineAsm(
 
         // Find a register that we can use.
         if (OpInfo.Regs.empty()) {
-          LLVM_DEBUG(dbgs()
-                     << "Couldn't allocate output register for constraint\n");
-          return false;
+          return ConstraintError(
+              OpInfo, "could not allocate output register for constraint");
         }
 
         // Add information to the INLINEASM instruction to know that this
@@ -389,13 +401,13 @@ bool InlineAsmLowering::lowerInlineAsm(
 
         const InlineAsm::Flag MatchedOperandFlag(Inst->getOperand(InstFlagIdx).getImm());
         if (MatchedOperandFlag.isMemKind()) {
-          LLVM_DEBUG(dbgs() << "Matching input constraint to mem operand not "
-                               "supported. This should be target specific.\n");
-          return false;
+          return ConstraintError(
+              OpInfo,
+              "matching input constraint to mem operand not supported; this "
+              "should be target specific");
         }
         if (!MatchedOperandFlag.isRegDefKind() && !MatchedOperandFlag.isRegDefEarlyClobberKind()) {
-          LLVM_DEBUG(dbgs() << "Unknown matching constraint\n");
-          return false;
+          return ConstraintError(OpInfo, "unknown matching constraint");
         }
 
         // We want to tie input to register in next operand.
@@ -425,9 +437,10 @@ bool InlineAsmLowering::lowerInlineAsm(
 
       if (OpInfo.ConstraintType == TargetLowering::C_Other &&
           OpInfo.isIndirect) {
-        LLVM_DEBUG(dbgs() << "Indirect input operands with unknown constraint "
-                             "not supported yet\n");
-        return false;
+        return ConstraintError(
+            OpInfo,
+            "indirect input operands with unknown constraint not supported "
+            "yet");
       }
 
       if (OpInfo.ConstraintType == TargetLowering::C_Immediate ||
@@ -437,9 +450,7 @@ bool InlineAsmLowering::lowerInlineAsm(
         if (!lowerAsmOperandForConstraint(OpInfo.CallOperandVal,
                                           OpInfo.ConstraintCode, Ops,
                                           MIRBuilder)) {
-          LLVM_DEBUG(dbgs() << "Don't support constraint: "
-                            << OpInfo.ConstraintCode << " yet\n");
-          return false;
+          return ConstraintError(OpInfo, "unsupported constraint");
         }
 
         assert(Ops.size() > 0 &&
@@ -456,9 +467,8 @@ bool InlineAsmLowering::lowerInlineAsm(
       if (OpInfo.ConstraintType == TargetLowering::C_Memory) {
 
         if (!OpInfo.isIndirect) {
-          LLVM_DEBUG(dbgs()
-                     << "Cannot indirectify memory input operands yet\n");
-          return false;
+          return ConstraintError(
+              OpInfo, "indirect memory input operands are not supported yet");
         }
 
         assert(OpInfo.isIndirect && "Operand must be indirect to be a mem!");
@@ -482,18 +492,15 @@ bool InlineAsmLowering::lowerInlineAsm(
              "Unknown constraint type!");
 
       if (OpInfo.isIndirect) {
-        LLVM_DEBUG(dbgs() << "Can't handle indirect register inputs yet "
-                             "for constraint '"
-                          << OpInfo.ConstraintCode << "'\n");
-        return false;
+        return ConstraintError(
+            OpInfo, "indirect register inputs are not supported yet");
       }
 
       // Copy the input into the appropriate registers.
       if (OpInfo.Regs.empty()) {
-        LLVM_DEBUG(
-            dbgs()
-            << "Couldn't allocate input register for register constraint\n");
-        return false;
+        return ConstraintError(
+            OpInfo,
+            "could not allocate input register for register constraint");
       }
 
       unsigned NumRegs = OpInfo.Regs.size();
@@ -503,9 +510,10 @@ bool InlineAsmLowering::lowerInlineAsm(
              "source registers");
 
       if (NumRegs > 1) {
-        LLVM_DEBUG(dbgs() << "Input operands with multiple input registers are "
-                             "not supported yet\n");
-        return false;
+        return ConstraintError(
+            OpInfo,
+            "input operands with multiple input registers are not supported "
+            "yet");
       }
 
       InlineAsm::Flag Flag(InlineAsm::Kind::RegUse, NumRegs);
