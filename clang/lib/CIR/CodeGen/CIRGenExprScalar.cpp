@@ -161,8 +161,11 @@ public:
   mlir::Value VisitArraySubscriptExpr(ArraySubscriptExpr *e) {
     if (e->getBase()->getType()->isVectorType()) {
       assert(!cir::MissingFeatures::scalableVectors());
-      cgf.getCIRGenModule().errorNYI("VisitArraySubscriptExpr: VectorType");
-      return {};
+
+      const mlir::Location loc = cgf.getLoc(e->getSourceRange());
+      const mlir::Value vecValue = Visit(e->getBase());
+      const mlir::Value indexValue = Visit(e->getIdx());
+      return cgf.builder.create<cir::VecExtractOp>(loc, vecValue, indexValue);
     }
     // Just load the lvalue formed by the subscript expression.
     return emitLoadOfLValue(e);
@@ -1684,11 +1687,6 @@ mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *e) {
     return {};
   }
 
-  if (numInitElements == 0) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "InitListExpr with 0 init elements");
-    return {};
-  }
-
   if (e->getType()->isVectorType()) {
     const auto vectorType =
         mlir::cast<cir::VectorType>(cgf.convertType(e->getType()));
@@ -1708,6 +1706,12 @@ mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *e) {
 
     return cgf.getBuilder().create<cir::VecCreateOp>(
         cgf.getLoc(e->getSourceRange()), vectorType, elements);
+  }
+
+  if (numInitElements == 0) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "InitListExpr Non VectorType with 0 init elements");
+    return {};
   }
 
   return Visit(e->getInit(0));
