@@ -2409,7 +2409,8 @@ void DwarfDebug::computeKeyInstructions(const MachineFunction *MF) {
       // regardless of atom info.
       const auto &TII =
           *MI.getParent()->getParent()->getSubtarget().getInstrInfo();
-      if (MI.isCall() || TII.isTailCall(MI)) {
+      bool IsCallLike = MI.isCall() || TII.isTailCall(MI);
+      if (IsCallLike) {
         assert(MI.getDebugLoc() && "Unexpectedly missing DL");
 
         // Calls are always key. Put the buoy (may not be the call) into
@@ -2417,40 +2418,13 @@ void DwarfDebug::computeKeyInstructions(const MachineFunction *MF) {
         // being erased (and we may not have a group number for the call).
         KeyInstructions.insert(Buoy);
 
-        uint64_t Group = MI.getDebugLoc()->getAtomGroup();
-        uint8_t Rank = MI.getDebugLoc()->getAtomRank();
-        if (!Group || !Rank) {
-          Buoy = nullptr; // Avoid floating any future is_stmts up to the call.
+        // Avoid floating any future is_stmts up to the call.
+        Buoy = nullptr;
+        BuoyAtom = 0;
+
+        if (!MI.getDebugLoc()->getAtomGroup() ||
+            !MI.getDebugLoc()->getAtomRank())
           continue;
-        }
-
-        auto *InlinedAt = MI.getDebugLoc()->getInlinedAt();
-        auto &[CandidateRank, CandidateInsts] =
-            GroupCandidates[{InlinedAt, Group}];
-
-        // This looks similar to the non-call handling code, except that
-        // we don't put the call into CandidateInsts so that they can't be
-        // made un-key.
-        if (CandidateRank == Rank) {
-          // We've seen other instructions in this group of this rank. Discard
-          // ones we've seen in this block, keep the others.
-          assert(!CandidateInsts.empty());
-          llvm::remove_if(CandidateInsts, [&MI](const MachineInstr *Candidate) {
-            return MI.getParent() == Candidate->getParent();
-          });
-
-          if (CandidateInsts.empty())
-            CandidateRank = 0;
-
-        } else if (CandidateRank > Rank) {
-          // We've seen other instructions in this group of lower precedence
-          // (higher rank). Discard them.
-          CandidateInsts.clear();
-          CandidateRank = 0;
-        }
-
-        Buoy = nullptr; // Avoid floating any future is_stmts up to the call.
-        continue;
       }
 
       auto *InlinedAt = MI.getDebugLoc()->getInlinedAt();
@@ -2492,12 +2466,20 @@ void DwarfDebug::computeKeyInstructions(const MachineFunction *MF) {
       else if (CandidateRank > Rank)
         CandidateInsts.clear();
 
-      // Add this candidate.
-      CandidateInsts.push_back(Buoy);
-      CandidateRank = Rank;
+      if (Buoy) {
+        // Add this candidate.
+        CandidateInsts.push_back(Buoy);
+        CandidateRank = Rank;
 
-      assert(!BuoyAtom || BuoyAtom == MI.getDebugLoc()->getAtomGroup());
-      BuoyAtom = MI.getDebugLoc()->getAtomGroup();
+        assert(!BuoyAtom || BuoyAtom == MI.getDebugLoc()->getAtomGroup());
+        BuoyAtom = MI.getDebugLoc()->getAtomGroup();
+      } else {
+        // Don't add calls, because they've been dealt with already. This means
+        // CandidateInsts might now be empty - handle that.
+        assert(IsCallLike);
+        if (CandidateInsts.empty())
+          CandidateRank = 0;
+      }
     }
   }
 
