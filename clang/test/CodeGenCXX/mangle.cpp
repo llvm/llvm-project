@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 -fblocks -std=c++11 | FileCheck --check-prefixes=CHECK,CHECK-ABI-LATEST %s
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 -fblocks -std=c++11 -fclang-abi-compat=4 | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 -fblocks -std=c++11 | FileCheck %s
 struct X { };
 struct Y { };
 
@@ -1177,7 +1176,7 @@ namespace test56 {
 namespace test57 {
   struct X { template <int N> int f(); } x;
   template<int N> void f(decltype(x.f<0>() + N)) {}
-  // CHECK-ABI-LATEST: @_ZN6test571fILi0EEEvDTplcldtL_ZNS_1xEE1fILi0EEET_E
+  // CHECK-LABEL: @_ZN6test571fILi0EEEvDTplcldtL_ZNS_1xEE1fILi0EEET_E
   template void f<0>(int);
 }
 
@@ -1218,7 +1217,7 @@ namespace test61 {
     };
   };
   template <typename T> void f(typename T::Y::a, typename T::Y::b) {}
-  // CHECK-ABI-LATEST-LABEL: @_ZN6test611fINS_1XEEEvNT_1Y1aENS3_1bE
+  // CHECK-LABEL: @_ZN6test611fINS_1XEEEvNT_1Y1aENS3_1bE
   template void f<X>(int, int);
 }
 
@@ -1248,15 +1247,3 @@ namespace test63 {
   // CHECK-LABEL: @_ZN6test6312_GLOBAL__N_11fIiEEvNS0_4_AndINS0_17integral_constantIivEENS0_7_OrImplIXsr17integral_constantIT_iEE5valueEEEEE
   void g() { f<int>({}); }
 } // namespace test63
-
-namespace test_substitution {
-struct S { int f(void *, void *); };
-
-typedef int (S::*s_func)(void *, void *);
-
-// clang previously emitted 'S0_' for the second 'void *' parameter type because
-// of a bug in the mangler.
-
-// CHECK-LABEL: define void @_ZN17test_substitution4foo1EMNS_1SEFiPvS1_E(
-void foo1(s_func s) {}
-}
