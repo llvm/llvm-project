@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn -mcpu=gfx1100 -passes=si-convert-wave-size < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn -mcpu=gfx1100 -passes=amdgpu-convert-wave-size < %s | FileCheck %s
 
 define amdgpu_kernel void @test_not_wave32(ptr addrspace(1) %out) #0 {
   ; CHECK:  @test_not_wave32{{.*}}) #0
@@ -63,6 +63,33 @@ define amdgpu_kernel void @test_lds_access(ptr addrspace(3) %out) #1 {
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 2
   %tmp = load i32, ptr addrspace(3) %gep
   store i32 %tmp, ptr addrspace(3) %out
+  ret void
+}
+
+define amdgpu_kernel void @test_addrspacecast_to_lds(ptr addrspace(1) %in, ptr addrspace(1) %out) #0 {
+entry:
+  %gep = getelementptr i32, ptr addrspace(1) %in, i32 16
+  %ptr = addrspacecast ptr addrspace(1) %gep to ptr addrspace(3)
+  %val = load i32, ptr addrspace(3) %ptr
+  store i32 %val, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @test_bitcast_to_lds_ptr(ptr addrspace(1) %in, ptr addrspace(1) %out) #0 {
+entry:
+  %gep = getelementptr i32, ptr addrspace(1) %in, i32 16
+  %lds = inttoptr i32 0 to ptr addrspace(3)
+  %val = load i32, ptr addrspace(3) %lds
+  store i32 %val, ptr addrspace(1) %out
+  ret void
+}
+
+@lds = addrspace(3) global [256 x i32] zeroinitializer
+
+define amdgpu_kernel void @test_use_global_lds_object(ptr addrspace(1) %out, i1 %p) #0 {
+  %gep = getelementptr [256 x i32], ptr addrspace(3) @lds, i32 0, i32 10
+  %ld = load i32, ptr addrspace(3) %gep
+  store i32 %ld, ptr addrspace(1) %out
   ret void
 }
 

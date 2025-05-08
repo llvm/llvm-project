@@ -47,7 +47,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "si-convert-wave-size"
+#define DEBUG_TYPE "amdgpu-convert-wave-size"
 
 namespace {
 class AMDGPUConvertWaveSize {
@@ -68,8 +68,6 @@ public:
       : TM(TM), LI(LI), SE(SE), TTI(TTI) {}
 
   bool run(Function &F);
-
-  bool changeWaveSizeAttr(Function *F);
 };
 
 class AMDGPUConvertWaveSizeLegacy : public FunctionPass {
@@ -123,22 +121,25 @@ bool AMDGPUConvertWaveSize::run(Function &F) {
     }
   }
 
-  // Check if the function can be called via device enqueue.
-  bool addressEscapes = false;
-  if (!F.use_empty()) {
-    const Module *M = F.getParent();
-    for (const GlobalVariable &GV : M->globals()) {
-      if (GV.hasInitializer()) {
-        if (const Constant *Init = GV.getInitializer()) {
-          if (isa<Function>(Init) && Init == &F) {
-            addressEscapes = true;
-          }
+  // Check for static LDS uses
+  const Module *M = F.getParent();
+  for (const GlobalVariable &GV : M->globals()) {
+    if (GV.getAddressSpace() != AMDGPUAS::LOCAL_ADDRESS)
+      continue;
+
+    for (auto User : GV.users()) {
+      if (auto UseI = dyn_cast<Instruction>(User)) {
+        if (UseI->getFunction() == &F) {
+          LLVM_DEBUG(dbgs() << "AMDGPUConvertWaveSize: Global variable " << GV
+                            << " points to LDS object and is used\n");
+          return false;
         }
       }
     }
   }
 
-  if (addressEscapes) {
+  // Check if the kernel can be called via device enqueue.
+  if (F.hasAddressTaken()) {
     LLVM_DEBUG(dbgs() << "AMDGPUConvertWaveSize: Kernel address is taken.\n");
     return false;
   }
@@ -184,8 +185,6 @@ bool AMDGPUConvertWaveSize::run(Function &F) {
               if (Callee->hasFnAttribute(Attribute::Convergent)) {
                 if (Callee->getIntrinsicID() != Intrinsic::amdgcn_s_barrier) {
                   // TODO: what else should go in a "white list" ?
-                  // Intrinsic::amdgcn_s_barrier_wavefront ?
-                  // Intrinsic::amdgcn_s_barrier_signal ?
                   LLVM_DEBUG(dbgs()
                              << "AMDGPUConvertWaveSize: Convergent intrinsic "
                              << Callee->getName() << " detected.\n");
@@ -200,57 +199,6 @@ bool AMDGPUConvertWaveSize::run(Function &F) {
                            << "AMDGPUConvertWaveSize: read/write_register "
                               "intrinsic detected.\n");
                 return false;
-              }
-
-              // Take care of LDS access
-              if (const auto *MTI = dyn_cast<MemTransferInst>(&I)) {
-                auto DstAS = MTI->getDestAddressSpace();
-                auto SrcAS = MTI->getSourceAddressSpace();
-                if (DstAS == AMDGPUAS::LOCAL_ADDRESS ||
-                    SrcAS == AMDGPUAS::LOCAL_ADDRESS) {
-                  LLVM_DEBUG(dbgs() << "AMDGPUConvertWaveSize: LDS access "
-                                       "(llvm.memcpy/memmove) detected.\n");
-                  return false;
-                }
-              } else if (const auto *MSI = dyn_cast<MemSetInst>(&I)) {
-                auto DstAS = MSI->getDestAddressSpace();
-                if (DstAS == AMDGPUAS::LOCAL_ADDRESS) {
-                  LLVM_DEBUG(dbgs() << "AMDGPUConvertWaveSize: LDS access "
-                                       "(llvm.memset) detected.\n");
-                  return false;
-                }
-              } else if (const auto AMCI = dyn_cast<AtomicMemCpyInst>(&I)) {
-                auto DstAS = AMCI->getDestAddressSpace();
-                auto SrcAS = AMCI->getSourceAddressSpace();
-                if (DstAS == AMDGPUAS::LOCAL_ADDRESS ||
-                    SrcAS == AMDGPUAS::LOCAL_ADDRESS) {
-                  LLVM_DEBUG(
-                      dbgs()
-                      << "AMDGPUConvertWaveSize: LDS access "
-                         "(llvm.memcpy.element.unordered.atomic) detected\n");
-                  return false;
-                }
-              } else
-              if (const auto AMMI = dyn_cast<AtomicMemMoveInst>(&I)) {
-                auto DstAS = AMMI->getDestAddressSpace();
-                auto SrcAS = AMMI->getSourceAddressSpace();
-                if (DstAS == AMDGPUAS::LOCAL_ADDRESS ||
-                    SrcAS == AMDGPUAS::LOCAL_ADDRESS) {
-                  LLVM_DEBUG(
-                      dbgs()
-                      << "AMDGPUConvertWaveSize: LDS access "
-                         "(llvm.memmove.element.unordered.atomic) detected.\n");
-                  return false;
-                }
-              } else if (const auto *AMSI = dyn_cast<AtomicMemSetInst>(&I)) {
-                auto DstAS = AMSI->getDestAddressSpace();
-                if (DstAS == AMDGPUAS::LOCAL_ADDRESS) {
-                  LLVM_DEBUG(
-                      dbgs()
-                      << "AMDGPUConvertWaveSize: LDS access "
-                         "(llvm.memset.element.unordered.atomic) detected.\n");
-                  return false;
-                }
               }
 
             // Save callee as a candidate for attribute change
@@ -271,7 +219,9 @@ bool AMDGPUConvertWaveSize::run(Function &F) {
       if (const auto AC = dyn_cast<AddrSpaceCastInst>(&I)) {
         if (AC->getDestTy()->getPointerAddressSpace() ==
             AMDGPUAS::LOCAL_ADDRESS) {
-          LLVM_DEBUG(dbgs() << "AMDGPUConvertWaveSize: LDS access detected.\n");
+          LLVM_DEBUG(
+              dbgs()
+              << "AMDGPUConvertWaveSize: addrspacecast to LDS detected.\n");
           return false;
         }
       }
@@ -280,36 +230,14 @@ bool AMDGPUConvertWaveSize::run(Function &F) {
         if (I2P->getDestTy()->isPointerTy() &&
             I2P->getDestTy()->getPointerAddressSpace() ==
                 AMDGPUAS::LOCAL_ADDRESS) {
-          LLVM_DEBUG(dbgs() << "AMDGPUConvertWaveSize: LDS access detected.\n");
+          LLVM_DEBUG(dbgs() << "AMDGPUConvertWaveSize: convertion int to LDS "
+                               "pointer detected.\n");
           return false;
         }
       }
-
-      // GEP may refer to the global LDS object
-      if (const auto GEP = dyn_cast<GetElementPtrInst>(&I)) {
-        if (GEP->getPointerAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
-          LLVM_DEBUG(dbgs() << "AMDGPUConvertWaveSize: LDS access detected.\n");
-          return false;
-        }
-      }
-
-      // Load/Store/Atomics may directly use global LDS object
-      if (const auto LI = dyn_cast<LoadInst>(&I)) {
-        if (LI->getPointerAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
-          LLVM_DEBUG(dbgs() << "AMDGPUConvertWaveSize: LDS access detected.\n");
-          return false;
-        }
-      }
-      if (const auto SI = dyn_cast<StoreInst>(&I)) {
-        if (SI->getPointerAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
-          LLVM_DEBUG(dbgs() << "AMDGPUConvertWaveSize: LDS access detected.\n");
-          return false;
-        }
-      }
-
-      if (const auto MemIntr = dyn_cast<MemIntrinsic>(&I))
 
       // TODO: Dynamic VGPRS and GFX11+ special operations ???
+
       BlockCost +=
           TTI->getInstructionCost(&I, TargetTransformInfo::TCK_Latency);
     }
@@ -340,41 +268,22 @@ bool AMDGPUConvertWaveSize::run(Function &F) {
   // Additional checks can be added here...
 
   // If all checks pass, convert wave size from wave32 to wave64.
-  // Conversion logic goes here...
-  bool Changed = changeWaveSizeAttr(&F);
-  if (Changed)
-    // Now take care of the intrinsic calls
-    for (auto C : Callees) {
-      // TODO: if we could not change Attr for one of the callee
-      // we need to rollback all the changes!
-      changeWaveSizeAttr(C);
-    }
-
-  return Changed;
-}
-
-bool AMDGPUConvertWaveSize::changeWaveSizeAttr(Function *F) {
-  auto Attr = F->getFnAttribute("target-features");
-  if (Attr.isValid()) {
-    StringRef AttrStr = Attr.getValueAsString();
-    size_t Pos = AttrStr.find("+wavefrontsize32");
-    if (Pos != StringRef::npos) {
-      // Remove the "+wavefrontsize32" attribute.
-      std::string NewBegin = AttrStr.substr(0, Pos).str().append("+wavefrontsize64");
-      std::string End = AttrStr.substr(Pos + strlen("+wavefrontsize32")).str();
-      std::string NewAttrStr = NewBegin + End;
-      // Add the "+wavefrontsize64" attribute.
-      F->removeFnAttr("target-features");
-      F->addFnAttr("target-features", NewAttrStr);
-      LLVM_DEBUG(dbgs() << "AMDGPUConvertWaveSize: Converted wave size for "
-                        << F->getName()
-                        << " from wave32 "
-                           "to wave64.\n");
-      return true;
-    }
+  F.addFnAttr("target-features", "+wavefrontsize64");
+  LLVM_DEBUG(dbgs() << "AMDGPUConvertWaveSize: Converted wave size for "
+                    << F.getName() << " from wave32 to wave64.\n");
+  // Now take care of the intrinsic calls
+  for (auto C : Callees) {
+    C->addFnAttr("target-features", "+wavefrontsize64");
+    LLVM_DEBUG(dbgs() << "AMDGPUConvertWaveSize: Converted wave size for "
+                      << C->getName() << " from wave32 to wave64.\n");
   }
-  return false;
+
+  return true;
 }
+
+//===----------------------------------------------------------------------===//
+// Pass registration
+//===----------------------------------------------------------------------===//
 
 INITIALIZE_PASS_BEGIN(AMDGPUConvertWaveSizeLegacy, DEBUG_TYPE, "AMDGPU convert wave size",
                       false, false)
