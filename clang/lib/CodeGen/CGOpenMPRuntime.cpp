@@ -4986,9 +4986,38 @@ void CGOpenMPRuntime::emitPrivateReduction(
   auto EmitSharedInit = [&]() {
     if (UDR) { // Check if it's a User-Defined Reduction
       if (const Expr *UDRInitExpr = UDR->getInitializer()) {
-        // Use the initializer from the OMPDeclareReductionDecl
-        CGF.EmitAnyExprToMem(UDRInitExpr, SharedResult,
-                             PrivateType.getQualifiers(), true);
+        std::pair<llvm::Function *, llvm::Function *> FnPair =
+            getUserDefinedReduction(UDR);
+        llvm::Function *InitializerFn = FnPair.second;
+        if (InitializerFn) {
+          if (const auto *CE =
+                  dyn_cast<CallExpr>(UDRInitExpr->IgnoreParenImpCasts())) {
+            const auto *OutDRE = cast<DeclRefExpr>(
+                cast<UnaryOperator>(CE->getArg(0)->IgnoreParenImpCasts())
+                    ->getSubExpr());
+            const VarDecl *OutVD = cast<VarDecl>(OutDRE->getDecl());
+
+            CodeGenFunction::OMPPrivateScope LocalScope(CGF);
+            LocalScope.addPrivate(OutVD, SharedResult);
+
+            (void)LocalScope.Privatize();
+            if (const auto *OVE = dyn_cast<OpaqueValueExpr>(
+                    CE->getCallee()->IgnoreParenImpCasts())) {
+              CodeGenFunction::OpaqueValueMapping OpaqueMap(
+                  CGF, OVE, RValue::get(InitializerFn));
+              CGF.EmitIgnoredExpr(CE);
+            } else {
+              CGF.EmitAnyExprToMem(UDRInitExpr, SharedResult,
+                                   PrivateType.getQualifiers(), true);
+            }
+          } else {
+            CGF.EmitAnyExprToMem(UDRInitExpr, SharedResult,
+                                 PrivateType.getQualifiers(), true);
+          }
+        } else {
+          CGF.EmitAnyExprToMem(UDRInitExpr, SharedResult,
+                               PrivateType.getQualifiers(), true);
+        }
       } else {
         // EmitNullInitialization handles default construction for C++ classes
         // and zeroing for scalars, which is a reasonable default.
