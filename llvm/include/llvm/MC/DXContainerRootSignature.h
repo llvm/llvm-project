@@ -19,7 +19,7 @@ struct RootParameter {
   dxbc::RootParameterHeader Header;
   union {
     dxbc::RootConstants Constants;
-    dxbc::RST0::v1::RootDescriptor Descriptor;
+    dxbc::RTS0::v2::RootDescriptor Descriptor;
   };
 };
 struct RootSignatureDesc {

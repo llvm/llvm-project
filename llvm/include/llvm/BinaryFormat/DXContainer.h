@@ -585,8 +585,8 @@ struct ProgramSignatureElement {
 
 static_assert(sizeof(ProgramSignatureElement) == 32,
               "ProgramSignatureElement is misaligned");
-namespace RST0 {
-namespace v0 {
+namespace RTS0 {
+namespace v1 {
 struct RootDescriptor {
   uint32_t ShaderRegister;
   uint32_t RegisterSpace;
@@ -595,18 +595,23 @@ struct RootDescriptor {
     sys::swapByteOrder(RegisterSpace);
   }
 };
-} // namespace v0
+} // namespace v1
 
-namespace v1 {
-struct RootDescriptor : public v0::RootDescriptor {
+namespace v2 {
+struct RootDescriptor : public v1::RootDescriptor {
   uint32_t Flags;
+
+  RootDescriptor() = default;
+  RootDescriptor(v1::RootDescriptor &Base)
+      : v1::RootDescriptor(Base), Flags(0u) {}
+
   void swapBytes() {
-    v0::RootDescriptor::swapBytes();
+    v1::RootDescriptor::swapBytes();
     sys::swapByteOrder(Flags);
   }
 };
-} // namespace v1
-} // namespace RST0
+} // namespace v2
+} // namespace RTS0
 // following dx12 naming
 // https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_root_constants
 struct RootConstants {

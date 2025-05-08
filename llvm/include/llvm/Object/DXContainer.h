@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/Error.h"
@@ -124,16 +125,13 @@ struct RootParameterView {
   RootParameterView(uint32_t V, const dxbc::RootParameterHeader &H, StringRef P)
       : Header(H), ParamData(P) {}
 
-  template <typename T, typename VersionT = T> Expected<T> readParameter() {
-    assert(sizeof(VersionT) <= sizeof(T) &&
-           "Parameter of higher version must inherit all previous version data "
-           "members");
-    if (sizeof(VersionT) != ParamData.size())
+  template <typename T> Expected<T> readParameter() {
+    if (sizeof(T) != ParamData.size())
       return make_error<GenericBinaryError>(
           "Reading structure out of file bounds", object_error::parse_failed);
 
     T Struct;
-    memcpy(&Struct, ParamData.data(), sizeof(VersionT));
+    memcpy(&Struct, ParamData.data(), sizeof(T));
     // DXContainer is always little endian
     if (sys::IsBigEndianHost)
       Struct.swapBytes();
@@ -162,11 +160,18 @@ struct RootDescriptorView : RootParameterView {
                 llvm::to_underlying(dxbc::RootParameterType::UAV));
   }
 
-  llvm::Expected<dxbc::RST0::v1::RootDescriptor> read(uint32_t Version) {
-    if (Version == 1)
-      return readParameter<dxbc::RST0::v1::RootDescriptor,
-                           dxbc::RST0::v0::RootDescriptor>();
-    return readParameter<dxbc::RST0::v1::RootDescriptor>();
+  llvm::Expected<dxbc::RTS0::v2::RootDescriptor> read(uint32_t Version) {
+    if (Version == 1) {
+      auto Descriptor = readParameter<dxbc::RTS0::v1::RootDescriptor>();
+      if (Error E = Descriptor.takeError())
+        return E;
+      return dxbc::RTS0::v2::RootDescriptor(*Descriptor);
+    }
+    if (Version != 2)
+      return make_error<GenericBinaryError>("Invalid Root Signature version: " +
+                                                Twine(Version),
+                                            object_error::parse_failed);
+    return readParameter<dxbc::RTS0::v2::RootDescriptor>();
   }
 };
 
@@ -217,9 +222,9 @@ public:
     case dxbc::RootParameterType::SRV:
     case dxbc::RootParameterType::UAV:
       if (Version == 1)
-        DataSize = sizeof(dxbc::RST0::v0::RootDescriptor);
+        DataSize = sizeof(dxbc::RTS0::v1::RootDescriptor);
       else
-        DataSize = sizeof(dxbc::RST0::v1::RootDescriptor);
+        DataSize = sizeof(dxbc::RTS0::v2::RootDescriptor);
       break;
     }
     size_t EndOfSectionByte = getNumStaticSamplers() == 0

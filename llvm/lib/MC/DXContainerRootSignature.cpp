@@ -41,9 +41,9 @@ size_t RootSignatureDesc::getSize() const {
     case llvm::to_underlying(dxbc::RootParameterType::SRV):
     case llvm::to_underlying(dxbc::RootParameterType::UAV):
       if (Version == 1)
-        Size += sizeof(dxbc::RST0::v0::RootDescriptor);
+        Size += sizeof(dxbc::RTS0::v1::RootDescriptor);
       else
-        Size += sizeof(dxbc::RST0::v1::RootDescriptor);
+        Size += sizeof(dxbc::RTS0::v2::RootDescriptor);
 
       break;
     }
