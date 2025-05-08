@@ -68,6 +68,7 @@ int main(void) {
   }
   return 0;
 }
+
 //.
 // CHECK: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 // CHECK: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 514, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
@@ -75,11 +76,12 @@ int main(void) {
 // CHECK: @[[GLOB2:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 18, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
 // CHECK: @[[GLOB3:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
 // CHECK: @.gomp_critical_user_.atomic_reduction.var = common global [8 x i32] zeroinitializer, align 8
-// CHECK: @.omp.reduction..internal_private_var = common global %class.Sum zeroinitializer, align 4
+// CHECK: @.omp.reduction..internal_pivate_.result = internal global %class.Sum zeroinitializer, align 4
 // CHECK: @.gomp_critical_user_.reduction_critical.var = common global [8 x i32] zeroinitializer, align 8
 // CHECK: @[[GLOB4:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 66, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
-// CHECK: @.omp.reduction..internal_private_var.1 = common global i32 0, align 4
-// CHECK: @.omp.reduction..internal_private_var.2 = common global i32 0, align 4
+// CHECK: @.omp.reduction..internal_pivate_.sum_v = internal global i32 0, align 4
+// CHECK: @.omp.reduction..internal_pivate_.sum_v.1 = internal global i32 0, align 4
+// CHECK: @.omp.reduction..internal_pivate_.prod_v = internal global i32 1, align 4
 //.
 // CHECK-LABEL: define dso_local void @_Z8func_redv(
 // CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
@@ -232,15 +234,15 @@ int main(void) {
 // CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[TMP2]], 0
 // CHECK-NEXT:    br i1 [[TMP13]], label %[[INIT:.*]], label %[[INIT_END:.*]]
 // CHECK:       [[INIT]]:
-// CHECK-NEXT:    call void @_ZN3SumC1Ei(ptr noundef nonnull align 4 dereferenceable(4) @.omp.reduction..internal_private_var, i32 noundef 0)
+// CHECK-NEXT:    call void @_ZN3SumC1Ei(ptr noundef nonnull align 4 dereferenceable(4) @.omp.reduction..internal_pivate_.result, i32 noundef 0)
 // CHECK-NEXT:    br label %[[INIT_END]]
 // CHECK:       [[INIT_END]]:
 // CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
 // CHECK-NEXT:    call void @__kmpc_critical(ptr @[[GLOB3]], i32 [[TMP2]], ptr @.gomp_critical_user_.reduction_critical.var)
-// CHECK-NEXT:    call void @.omp_combiner.(ptr noundef @.omp.reduction..internal_private_var, ptr noundef [[RESULT]])
+// CHECK-NEXT:    call void @.omp_combiner.(ptr noundef @.omp.reduction..internal_pivate_.result, ptr noundef [[RESULT]])
 // CHECK-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB3]], i32 [[TMP2]], ptr @.gomp_critical_user_.reduction_critical.var)
 // CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
-// CHECK-NEXT:    [[TMP14:%.*]] = load [[CLASS_SUM]], ptr @.omp.reduction..internal_private_var, align 4
+// CHECK-NEXT:    [[TMP14:%.*]] = load [[CLASS_SUM]], ptr @.omp.reduction..internal_pivate_.result, align 4
 // CHECK-NEXT:    store [[CLASS_SUM]] [[TMP14]], ptr [[RESULT]], align 4
 // CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
 // CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB4]], i32 [[TMP2]])
@@ -462,18 +464,18 @@ int main(void) {
 // CHECK-NEXT:    [[TMP28:%.*]] = icmp eq i32 [[TMP0]], 0
 // CHECK-NEXT:    br i1 [[TMP28]], label %[[INIT:.*]], label %[[INIT_END:.*]]
 // CHECK:       [[INIT]]:
-// CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 @.omp.reduction..internal_private_var.1, i8 0, i64 4, i1 false)
+// CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 @.omp.reduction..internal_pivate_.sum_v, i8 0, i64 4, i1 false)
 // CHECK-NEXT:    br label %[[INIT_END]]
 // CHECK:       [[INIT_END]]:
 // CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP0]])
 // CHECK-NEXT:    call void @__kmpc_critical(ptr @[[GLOB3]], i32 [[TMP0]], ptr @.gomp_critical_user_.reduction_critical.var)
-// CHECK-NEXT:    [[TMP29:%.*]] = load i32, ptr @.omp.reduction..internal_private_var.1, align 4
+// CHECK-NEXT:    [[TMP29:%.*]] = load i32, ptr @.omp.reduction..internal_pivate_.sum_v, align 4
 // CHECK-NEXT:    [[TMP30:%.*]] = load i32, ptr [[TMP7]], align 4
 // CHECK-NEXT:    [[ADD12:%.*]] = add nsw i32 [[TMP29]], [[TMP30]]
-// CHECK-NEXT:    store i32 [[ADD12]], ptr @.omp.reduction..internal_private_var.1, align 4
+// CHECK-NEXT:    store i32 [[ADD12]], ptr @.omp.reduction..internal_pivate_.sum_v, align 4
 // CHECK-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB3]], i32 [[TMP0]], ptr @.gomp_critical_user_.reduction_critical.var)
 // CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP31:%.*]] = load i32, ptr @.omp.reduction..internal_private_var.1, align 4
+// CHECK-NEXT:    [[TMP31:%.*]] = load i32, ptr @.omp.reduction..internal_pivate_.sum_v, align 4
 // CHECK-NEXT:    store i32 [[TMP31]], ptr [[TMP7]], align 4
 // CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP0]])
 // CHECK-NEXT:    br label %[[OMP_PRECOND_END]]
@@ -666,26 +668,36 @@ int main(void) {
 // CHECK-NEXT:    [[TMP47:%.*]] = icmp eq i32 [[TMP0]], 0
 // CHECK-NEXT:    br i1 [[TMP47]], label %[[INIT:.*]], label %[[INIT_END:.*]]
 // CHECK:       [[INIT]]:
-// CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 @.omp.reduction..internal_private_var.2, i8 0, i64 4, i1 false)
+// CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 @.omp.reduction..internal_pivate_.sum_v.1, i8 0, i64 4, i1 false)
 // CHECK-NEXT:    br label %[[INIT_END]]
 // CHECK:       [[INIT_END]]:
 // CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP0]])
 // CHECK-NEXT:    call void @__kmpc_critical(ptr @[[GLOB3]], i32 [[TMP0]], ptr @.gomp_critical_user_.reduction_critical.var)
-// CHECK-NEXT:    [[TMP48:%.*]] = load i32, ptr @.omp.reduction..internal_private_var.2, align 4
+// CHECK-NEXT:    [[TMP48:%.*]] = load i32, ptr @.omp.reduction..internal_pivate_.sum_v.1, align 4
 // CHECK-NEXT:    [[TMP49:%.*]] = load i32, ptr [[TMP9]], align 4
 // CHECK-NEXT:    [[ADD21:%.*]] = add nsw i32 [[TMP48]], [[TMP49]]
-// CHECK-NEXT:    store i32 [[ADD21]], ptr @.omp.reduction..internal_private_var.2, align 4
-// CHECK-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB3]], i32 [[TMP0]], ptr @.gomp_critical_user_.reduction_critical.var)
-// CHECK-NEXT:    call void @__kmpc_critical(ptr @[[GLOB3]], i32 [[TMP0]], ptr @.gomp_critical_user_.reduction_critical.var)
-// CHECK-NEXT:    [[TMP50:%.*]] = load i32, ptr @.omp.reduction..internal_private_var.2, align 4
-// CHECK-NEXT:    [[TMP51:%.*]] = load i32, ptr [[TMP10]], align 4
-// CHECK-NEXT:    [[MUL22:%.*]] = mul nsw i32 [[TMP50]], [[TMP51]]
-// CHECK-NEXT:    store i32 [[MUL22]], ptr @.omp.reduction..internal_private_var.2, align 4
+// CHECK-NEXT:    store i32 [[ADD21]], ptr @.omp.reduction..internal_pivate_.sum_v.1, align 4
 // CHECK-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB3]], i32 [[TMP0]], ptr @.gomp_critical_user_.reduction_critical.var)
 // CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP52:%.*]] = load i32, ptr @.omp.reduction..internal_private_var.2, align 4
-// CHECK-NEXT:    store i32 [[TMP52]], ptr [[TMP9]], align 4
-// CHECK-NEXT:    store i32 [[TMP52]], ptr [[TMP10]], align 4
+// CHECK-NEXT:    [[TMP50:%.*]] = load i32, ptr @.omp.reduction..internal_pivate_.sum_v.1, align 4
+// CHECK-NEXT:    store i32 [[TMP50]], ptr [[TMP9]], align 4
+// CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP51:%.*]] = icmp eq i32 [[TMP0]], 0
+// CHECK-NEXT:    br i1 [[TMP51]], label %[[INIT22:.*]], label %[[INIT_END23:.*]]
+// CHECK:       [[INIT22]]:
+// CHECK-NEXT:    store i32 1, ptr @.omp.reduction..internal_pivate_.prod_v, align 4
+// CHECK-NEXT:    br label %[[INIT_END23]]
+// CHECK:       [[INIT_END23]]:
+// CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP0]])
+// CHECK-NEXT:    call void @__kmpc_critical(ptr @[[GLOB3]], i32 [[TMP0]], ptr @.gomp_critical_user_.reduction_critical.var)
+// CHECK-NEXT:    [[TMP52:%.*]] = load i32, ptr @.omp.reduction..internal_pivate_.prod_v, align 4
+// CHECK-NEXT:    [[TMP53:%.*]] = load i32, ptr [[TMP10]], align 4
+// CHECK-NEXT:    [[MUL24:%.*]] = mul nsw i32 [[TMP52]], [[TMP53]]
+// CHECK-NEXT:    store i32 [[MUL24]], ptr @.omp.reduction..internal_pivate_.prod_v, align 4
+// CHECK-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB3]], i32 [[TMP0]], ptr @.gomp_critical_user_.reduction_critical.var)
+// CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP54:%.*]] = load i32, ptr @.omp.reduction..internal_pivate_.prod_v, align 4
+// CHECK-NEXT:    store i32 [[TMP54]], ptr [[TMP10]], align 4
 // CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP0]])
 // CHECK-NEXT:    br label %[[OMP_PRECOND_END]]
 // CHECK:       [[OMP_PRECOND_END]]:
@@ -755,7 +767,7 @@ int main(void) {
 // CHECK-NEXT:    store i32 0, ptr [[SUM_V_EXT]], align 4
 // CHECK-NEXT:    store i32 1, ptr [[PROD_V_EXT]], align 4
 // CHECK-NEXT:    call void @__kmpc_push_num_threads(ptr @[[GLOB3]], i32 [[TMP0]], i32 4)
-// CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 3, ptr @main.omp_outlined.3, ptr [[V]], ptr [[SUM_V_EXT]], ptr [[PROD_V_EXT]])
+// CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 3, ptr @main.omp_outlined.2, ptr [[V]], ptr [[SUM_V_EXT]], ptr [[PROD_V_EXT]])
 // CHECK-NEXT:    ret i32 0
 //
 //

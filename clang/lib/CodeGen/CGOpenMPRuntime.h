@@ -1212,10 +1212,8 @@ public:
   /// \param ReductionOps List of reduction operations in form 'LHS binop RHS'
   /// or 'operator binop(LHS, RHS)'.
   void emitPrivateReduction(CodeGenFunction &CGF, SourceLocation Loc,
-                            ArrayRef<const Expr *> Privates,
-                            ArrayRef<const Expr *> LHSExprs,
-                            ArrayRef<const Expr *> RHSExprs,
-                            ArrayRef<const Expr *> ReductionOps);
+                            const Expr *Privates, const Expr *LHSExprs,
+                            const Expr *RHSExprs, const Expr *ReductionOps);
 
   /// Emit a code for reduction clause. Next code should be emitted for
   /// reduction:
