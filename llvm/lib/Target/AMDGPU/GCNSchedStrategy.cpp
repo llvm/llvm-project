@@ -1863,11 +1863,8 @@ bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
   const Function &F = MF.getFunction();
 
   std::pair<unsigned, unsigned> WavesPerEU = ST.getWavesPerEU(F);
-  const unsigned MaxSGPRsNoSpill = ST.getBaseMaxNumSGPRs(
-      F, WavesPerEU, ST.getMaxNumPreloadedSGPRs(), ST.getReservedNumSGPRs(F));
-  const unsigned MaxVGPRsNoSpill =
-      ST.getBaseMaxNumVGPRs(F, {ST.getMinNumVGPRs(WavesPerEU.second),
-                                ST.getMaxNumVGPRs(WavesPerEU.first)});
+  const unsigned MaxSGPRsNoSpill = ST.getMaxNumSGPRs(F);
+  const unsigned MaxVGPRsNoSpill = ST.getMaxNumVGPRs(F);
   const unsigned MaxSGPRsIncOcc =
       ST.getMaxNumSGPRs(DAG.MinOccupancy + 1, false);
   const unsigned MaxVGPRsIncOcc = ST.getMaxNumVGPRs(DAG.MinOccupancy + 1);
