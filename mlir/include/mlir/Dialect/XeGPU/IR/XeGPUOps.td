@@ -409,7 +409,7 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
 }
 
 def XeGPU_UpdateNdOffsetOp : XeGPU_Op<"update_nd_offset",
-                [AllTypesMatch<["TensorDesc", "result"]>]> {
+                [Pure, AllTypesMatch<["TensorDesc", "result"]>]> {
   let summary = "It updates the offsets for the TensorDesc.";
   let description = [{The op updates the offset of the given TensorDesc.
     The offsets are relative offset to the current position in the number
