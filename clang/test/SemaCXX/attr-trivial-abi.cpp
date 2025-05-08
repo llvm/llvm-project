@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++11
 // RUN: %clang_cc1 -fsyntax-only -verify %s -triple x86_64-windows-msvc -std=c++11
+// RUN: %clang_cc1 -fsyntax-only -verify %s -triple x86_64-scei-ps4 -std=c++11
 
 
 void __attribute__((trivial_abi)) foo(); // expected-warning {{'trivial_abi' attribute only applies to classes}}
@@ -54,7 +55,7 @@ struct __attribute__((trivial_abi)) S3_3 { // expected-warning {{'trivial_abi' c
 // copy constructor is trivial for calls *or deleted*, while other platforms do
 // not accept deleted constructors.
 static_assert(__is_trivially_relocatable(S3_3), ""); // expected-warning{{deprecated}}
-static_assert(__builtin_is_cpp_trivially_relocatable(S3_3), "");
+static_assert(!__builtin_is_cpp_trivially_relocatable(S3_3), "");
 
 #else
 static_assert(!__is_trivially_relocatable(S3_3), ""); // expected-warning{{deprecated}}
@@ -156,7 +157,7 @@ struct __attribute__((trivial_abi)) CopyMoveDeleted { // expected-warning {{'tri
 };
 #ifdef __ORBIS__
 static_assert(__is_trivially_relocatable(CopyMoveDeleted), ""); // expected-warning{{deprecated}}
-static_assert(__builtin_is_cpp_trivially_relocatable(CopyMoveDeleted), "");
+static_assert(!__builtin_is_cpp_trivially_relocatable(CopyMoveDeleted), "");
 
 #else
 static_assert(!__is_trivially_relocatable(CopyMoveDeleted), ""); // expected-warning{{deprecated}}
@@ -169,7 +170,7 @@ struct __attribute__((trivial_abi)) S18 { // expected-warning {{'trivial_abi' ca
 };
 #ifdef __ORBIS__
 static_assert(__is_trivially_relocatable(S18), ""); // expected-warning{{deprecated}}
-static_assert(__builtin_is_cpp_trivially_relocatable(S18), "");
+static_assert(!__builtin_is_cpp_trivially_relocatable(S18), "");
 #else
 static_assert(!__is_trivially_relocatable(S18), ""); // expected-warning{{deprecated}}
 static_assert(!__builtin_is_cpp_trivially_relocatable(S18), "");
@@ -200,7 +201,8 @@ struct __attribute__((trivial_abi)) S19 { // expected-warning {{'trivial_abi' ca
 };
 #ifdef __ORBIS__
 static_assert(__is_trivially_relocatable(S19), ""); // expected-warning{{deprecated}}
-static_assert(__builtin_is_cpp_trivially_relocatable(S19), "");
+static_assert(!__builtin_is_cpp_trivially_relocatable(S19), "");
+#else
 static_assert(!__is_trivially_relocatable(S19), ""); // expected-warning{{deprecated}}
 static_assert(!__builtin_is_cpp_trivially_relocatable(S19), "");
 #endif
