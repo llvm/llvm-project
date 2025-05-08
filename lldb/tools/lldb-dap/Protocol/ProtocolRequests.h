@@ -151,7 +151,7 @@ struct Configuration {
   /// information in your executable contains relative paths, this option can be
   /// used so that `lldb-dap` can find source files and object files that have
   /// relative paths.
-  std::string debuggerRoot = "";
+  std::string debuggerRoot;
 
   /// Enable auto generated summaries for variables when no summaries exist for
   /// a given type. This feature can cause performance delays in large projects
@@ -194,7 +194,7 @@ struct Configuration {
 
   /// Specify a source path to remap "./" to allow full paths to be used when
   /// setting breakpoints in binaries that have relative source paths.
-  std::string sourcePath = "";
+  std::string sourcePath;
 
   /// Specify an array of path re-mappings. Each element in the array must be a
   /// two element array containing a source and destination pathname. Overrides
@@ -230,15 +230,15 @@ struct Configuration {
   ///
   /// *NOTE:* When launching, either `launchCommands` or `program` must be
   /// configured. If both are configured then `launchCommands` takes priority.
-  std::string program = "";
+  std::string program;
 
   /// Target triple for the program (arch-vendor-os). If not set, inferred from
   /// the binary.
-  std::string targetTriple = "";
+  std::string targetTriple;
 
   /// Specify name of the platform to use for this target, creating the platform
   /// if necessary.
-  std::string platformName = "";
+  std::string platformName;
 };
 
 /// lldb-dap specific launch arguments.
@@ -264,7 +264,7 @@ struct LaunchRequestArguments {
   std::vector<std::string> launchCommands;
 
   /// The program working directory.
-  std::string cwd = "";
+  std::string cwd;
 
   /// An array of command line argument strings to be passed to the program
   /// being launched.
@@ -336,7 +336,7 @@ struct AttachRequestArguments {
   std::string gdbRemoteHostname = "localhost";
 
   /// Path to the core file to debug.
-  std::string coreFile = "";
+  std::string coreFile;
 
   /// @}
 };

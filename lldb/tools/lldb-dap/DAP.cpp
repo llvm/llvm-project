@@ -675,11 +675,12 @@ lldb::SBTarget DAP::CreateTarget(lldb::SBError &error) {
   // enough information to determine correct arch and platform (or ELF can be
   // omitted at all), so it is good to leave the user an opportunity to specify
   // those. Any of those three can be left empty.
-  auto target = this->debugger.CreateTarget(configuration.program.data(),
-                                            configuration.targetTriple.data(),
-                                            configuration.platformName.data(),
-                                            true, // Add dependent modules.
-                                            error);
+  auto target = this->debugger.CreateTarget(
+      /*filename=*/configuration.program.data(),
+      /*target_triple=*/configuration.targetTriple.data(),
+      /*platform_name=*/configuration.platformName.data(),
+      /*add_dependent_modules=*/true, // Add dependent modules.
+      error);
 
   return target;
 }

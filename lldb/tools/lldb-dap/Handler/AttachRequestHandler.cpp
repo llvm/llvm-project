@@ -77,11 +77,10 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
   if ((args.pid == LLDB_INVALID_PROCESS_ID ||
        args.gdbRemotePort == LLDB_DAP_INVALID_PORT) &&
       args.waitFor) {
-    char attach_msg[256];
-    auto attach_msg_len = snprintf(attach_msg, sizeof(attach_msg),
-                                   "Waiting to attach to \"%s\"...",
-                                   dap.target.GetExecutable().GetFilename());
-    dap.SendOutput(OutputType::Console, StringRef(attach_msg, attach_msg_len));
+    dap.SendOutput(OutputType::Console,
+                   llvm::formatv("Waiting to attach to \"{0}\"...",
+                                 dap.target.GetExecutable().GetFilename())
+                       .str());
   }
 
   {
@@ -96,7 +95,13 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
       // state.
       if (llvm::Error err = dap.RunAttachCommands(args.attachCommands))
         return err;
+
       dap.target = dap.debugger.GetSelectedTarget();
+
+      // Validate the attachCommand results.
+      if (!dap.target.GetProcess().IsValid())
+        return make_error<DAPError>(
+            "attachCommands failed to attach to a process");
     } else if (!args.coreFile.empty()) {
       dap.target.LoadCore(args.coreFile.data(), error);
     } else if (args.gdbRemotePort != LLDB_DAP_INVALID_PORT) {
@@ -116,7 +121,7 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
         attach_info.SetProcessID(args.pid);
       else if (!dap.configuration.program.empty())
         attach_info.SetExecutable(dap.configuration.program.data());
-      attach_info.SetWaitForLaunch(args.waitFor, false /*async*/);
+      attach_info.SetWaitForLaunch(args.waitFor, /*async=*/false);
       dap.target.Attach(attach_info, error);
     }
   }

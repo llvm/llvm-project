@@ -168,6 +168,9 @@ class RequestHandler : public BaseRequestHandler {
 
   /// A hook for a request handler to run additional operations after the
   /// request response is sent but before the next request handler.
+  ///
+  /// *NOTE*: PostRun will be invoked even if the `Run` operation returned an
+  /// error.
   virtual void PostRun() const {};
 
   protocol::ErrorResponseBody ToResponse(llvm::Error err) const {
