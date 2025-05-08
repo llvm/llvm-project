@@ -3100,7 +3100,8 @@ private:
       if (NextNextToken) {
         if (NextNextToken->is(tok::arrow))
           return TT_BinaryOperator;
-        if (NextNextToken->isPointerOrReference()) {
+        if (NextNextToken->isPointerOrReference() &&
+            !NextToken->isObjCLifetimeQualifier(Style)) {
           NextNextToken->setFinalizedType(TT_BinaryOperator);
           return TT_BinaryOperator;
         }
