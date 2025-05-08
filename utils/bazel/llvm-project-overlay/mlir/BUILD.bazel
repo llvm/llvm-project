@@ -5774,15 +5774,18 @@ cc_library(
     name = "NVVMDialect",
     srcs = [
         "lib/Dialect/LLVMIR/IR/BasicPtxBuilderInterface.cpp",
+        "lib/Dialect/LLVMIR/IR/NVVMTraits.cpp",
         "lib/Dialect/LLVMIR/IR/NVVMDialect.cpp",
     ],
     hdrs = [
         "include/mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h",
+        "include/mlir/Dialect/LLVMIR/NVVMTraits.h",
         "include/mlir/Dialect/LLVMIR/NVVMDialect.h",
-    ],
+],
     includes = ["include"],
     deps = [
         ":BasicPtxBuilderIntGen",
+        ":NVVMTraitsIntGen",
         ":BytecodeOpInterface",
         ":ConvertToLLVMInterface",
         ":DialectUtils",
@@ -5856,11 +5859,19 @@ td_library(
 )
 
 td_library(
+    name = "NVVMTraitsIntTdFiles",
+    srcs = ["include/mlir/Dialect/LLVMIR/NVVMTraits.td"],
+    includes = ["include"],
+    deps = [":OpBaseTdFiles"]
+)
+
+td_library(
     name = "NVVMOpsTdFiles",
     srcs = ["include/mlir/Dialect/LLVMIR/NVVMOps.td"],
     includes = ["include"],
     deps = [
         ":BasicPtxBuilderIntTdFiles",
+        ":NVVMTraitsIntTdFiles",
         ":GPUOpsTdFiles",
         ":LLVMOpsTdFiles",
         ":OpBaseTdFiles",
@@ -5885,6 +5896,23 @@ gentbl_cc_library(
         ":GPUOpsTdFiles",
         ":LLVMOpsTdFiles",
     ],
+)
+
+gentbl_cc_library(
+    name = "NVVMTraitsIntGen",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/Dialect/LLVMIR/NVVMTraits.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir/Dialect/LLVMIR/NVVMTraits.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/LLVMIR/NVVMTraits.td",
+    deps = [":NVVMTraitsIntTdFiles"],
 )
 
 gentbl_cc_library(
