@@ -2040,7 +2040,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
 
   if (windowsRequiresStackProbe(MF, NumBytes + RealignmentPadding)) {
     if (AFI->getSVECalleeSavedStackSize())
-      report_fatal_error("SVE callee saves not yet supported");
+      report_fatal_error("SVE callee saves not yet supported with stack probing");
     uint64_t NumWords = (NumBytes + RealignmentPadding) >> 4;
     if (NeedsWinCFI) {
       HasWinCFI = true;
@@ -2683,7 +2683,11 @@ AArch64FrameLowering::getFrameIndexReferenceFromSP(const MachineFunction &MF,
     return StackOffset::getFixed(ObjectOffset - getOffsetOfLocalArea());
 
   const auto *AFI = MF.getInfo<AArch64FunctionInfo>();
+  bool FPAfterSVECalleeSaves =
+      isTargetWindows(MF) && AFI->getSVECalleeSavedStackSize();
   if (MFI.getStackID(FI) == TargetStackID::ScalableVector) {
+    if (FPAfterSVECalleeSaves && -ObjectOffset <= AFI->getSVECalleeSavedStackSize())
+      return StackOffset::get(0, ObjectOffset);
     return StackOffset::get(-((int64_t)AFI->getCalleeSavedStackSize()),
                             ObjectOffset);
   }
@@ -2693,8 +2697,12 @@ AArch64FrameLowering::getFrameIndexReferenceFromSP(const MachineFunction &MF,
       !IsFixed && ObjectOffset >= -((int)AFI->getCalleeSavedStackSize(MFI));
 
   StackOffset ScalableOffset = {};
-  if (!IsFixed && !IsCSR)
+  if (!IsFixed && !IsCSR) {
     ScalableOffset = -SVEStackSize;
+  } else if (FPAfterSVECalleeSaves && IsCSR) {
+    ScalableOffset =
+        -StackOffset::getScalable(AFI->getSVECalleeSavedStackSize());
+  }
 
   return StackOffset::getFixed(ObjectOffset) + ScalableOffset;
 }
@@ -2832,6 +2840,9 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
       "In the presence of dynamic stack pointer realignment, "
       "non-argument/CSR objects cannot be accessed through the frame pointer");
 
+  bool FPAfterSVECalleeSaves =
+      isTargetWindows(MF) && AFI->getSVECalleeSavedStackSize();
+
   if (isSVE) {
     StackOffset FPOffset =
         StackOffset::get(-AFI->getCalleeSaveBaseToFrameRecordOffset(), ObjectOffset);
@@ -2839,6 +2850,9 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
         SVEStackSize +
         StackOffset::get(MFI.getStackSize() - AFI->getCalleeSavedStackSize(),
                          ObjectOffset);
+    if (FPAfterSVECalleeSaves) {
+      FPOffset += StackOffset::getScalable(AFI->getSVECalleeSavedStackSize());
+    }
     // Always use the FP for SVE spills if available and beneficial.
     if (hasFP(MF) && (SPOffset.getFixed() ||
                       FPOffset.getScalable() < SPOffset.getScalable() ||
@@ -2853,8 +2867,6 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
   }
 
   StackOffset ScalableOffset = {};
-  bool FPAfterSVECalleeSaves =
-      isTargetWindows(MF) && AFI->getSVECalleeSavedStackSize();
   if (FPAfterSVECalleeSaves) {
     // In this stack layout, the FP is in between the callee saves and other
     // SVE allocations.
