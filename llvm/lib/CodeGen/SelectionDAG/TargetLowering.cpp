@@ -8511,23 +8511,9 @@ SDValue TargetLowering::expandFMINNUM_FMAXNUM(SDNode *Node,
       Node->getOpcode() == ISD::FMINNUM ? ISD::FMINNUM_IEEE : ISD::FMAXNUM_IEEE;
 
   if (isOperationLegalOrCustom(NewOp, VT)) {
-    SDValue Quiet0 = Node->getOperand(0);
-    SDValue Quiet1 = Node->getOperand(1);
-
-    if (!Node->getFlags().hasNoNaNs()) {
-      // Insert canonicalizes if it's possible we need to quiet to get correct
-      // sNaN behavior.
-      if (!DAG.isKnownNeverSNaN(Quiet0)) {
-        Quiet0 = DAG.getNode(ISD::FCANONICALIZE, dl, VT, Quiet0,
-                             Node->getFlags());
-      }
-      if (!DAG.isKnownNeverSNaN(Quiet1)) {
-        Quiet1 = DAG.getNode(ISD::FCANONICALIZE, dl, VT, Quiet1,
-                             Node->getFlags());
-      }
-    }
-
-    return DAG.getNode(NewOp, dl, VT, Quiet0, Quiet1, Node->getFlags());
+    SDValue N0 = Node->getOperand(0);
+    SDValue N1 = Node->getOperand(1);
+    return DAG.getNode(NewOp, dl, VT, N0, N1, Node->getFlags());
   }
 
   // If the target has FMINIMUM/FMAXIMUM but not FMINNUM/FMAXNUM use that
