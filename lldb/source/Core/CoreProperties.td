@@ -239,7 +239,7 @@ let Definition = "debugger" in {
       : Property<"statusline-format", "FormatEntity">,
         Global,
         DefaultStringValue<
-            "${ansi.negative}{${target.file.basename}}{ "
+            "${ansi.negative}{${target.file.basename}|no target}{ "
             "${separator}${line.file.basename}:${line.number}:${line.column}}{ "
             "${separator}${thread.stop-reason}}{ "
             "${separator}{${progress.count} }${progress.message}}">,
