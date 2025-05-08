@@ -7152,7 +7152,7 @@ ConstantRange ScalarEvolution::getRangeViaFactoring(const SCEV *Start,
       // Peel off a constant offset. In the future we could consider being
       // smarter here and handle {Start+Step,+,Step} too.
       const APInt *Off;
-      if (match(S, m_scev_Add(m_SCEVConstant(Off), m_SCEV(S))))
+      if (match(S, m_scev_Add(m_scev_APInt(Off), m_SCEV(S))))
         Offset = *Off;
 
       // Peel off a cast operation

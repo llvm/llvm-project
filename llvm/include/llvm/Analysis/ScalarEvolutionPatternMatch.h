@@ -109,7 +109,7 @@ template <typename Class> struct cst_match {
 };
 
 /// Match an SCEV constant with a plain unsigned integer.
-inline cst_match<uint64_t> m_SCEVConstant(uint64_t V) { return V; }
+inline cst_match<uint64_t> m_scev_SpecificInt(uint64_t V) { return V; }
 
 struct bind_cst_ty {
   const APInt *&CR;
@@ -128,7 +128,7 @@ struct bind_cst_ty {
 };
 
 /// Match an SCEV constant and bind it to an APInt.
-inline bind_cst_ty m_SCEVConstant(const APInt *&C) { return C; }
+inline bind_cst_ty m_scev_APInt(const APInt *&C) { return C; }
 
 /// Match a unary SCEV.
 template <typename SCEVTy, typename Op0_t> struct SCEVUnaryExpr_match {

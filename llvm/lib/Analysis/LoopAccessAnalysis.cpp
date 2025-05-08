@@ -814,7 +814,7 @@ getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
 
   // Calculate the pointer stride and check if it is constant.
   const APInt *APStepVal;
-  if (!match(Step, m_SCEVConstant(APStepVal))) {
+  if (!match(Step, m_scev_APInt(APStepVal))) {
     LLVM_DEBUG({
       dbgs() << "LAA: Bad stride - Not a constant strided ";
       if (Ptr)
@@ -2064,7 +2064,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
 
   // Attempt to prove strided accesses independent.
   const APInt *ConstDist = nullptr;
-  if (match(Dist, m_SCEVConstant(ConstDist))) {
+  if (match(Dist, m_scev_APInt(ConstDist))) {
     uint64_t Distance = ConstDist->abs().getZExtValue();
 
     // If the distance between accesses and their strides are known constants,
@@ -2864,7 +2864,7 @@ static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *L
   // Strip off the size of access multiplication if we are still analyzing the
   // pointer.
   if (OrigPtr == Ptr)
-    match(V, m_scev_Mul(m_SCEVConstant(1), m_SCEV(V)));
+    match(V, m_scev_Mul(m_scev_SpecificInt(1), m_SCEV(V)));
 
   // Note that the restriction after this loop invariant check are only
   // profitability restrictions.
