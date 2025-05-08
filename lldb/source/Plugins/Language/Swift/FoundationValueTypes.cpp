@@ -96,10 +96,50 @@ bool lldb_private::formatters::swift::URL_SummaryProvider(
     return false;
 
   std::string summary;
-  if (!underlying_url_sp->GetSummaryAsCString(summary, options))
+  auto try_format = [&]() {
+    if (underlying_url_sp->GetSummaryAsCString(summary, options))
+      return true;
+    auto dynval_sp =
+        underlying_url_sp->GetDynamicValue(lldb::eDynamicCanRunTarget);
+    if (!dynval_sp)
+      return false;
+    return dynval_sp->GetSummaryAsCString(summary, options);
+  };
+  if (!try_format())
+    return false;
+  stream.PutCString(summary.c_str());
+  return true;
+}
+
+bool lldb_private::formatters::swift::SwiftURL_SummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  static ConstString g__baseURL("_baseURL");
+  static ConstString g__parseInfo("_parseInfo");
+  static ConstString g_urlString("urlString");
+
+  ValueObjectSP rel_str_sp(
+      valobj.GetChildAtNamePath({g__parseInfo, g_urlString}));
+  if (!rel_str_sp)
     return false;
 
-  stream.PutCString(summary.c_str());
+  std::string base;
+  ValueObjectSP base_url_sp(valobj.GetChildAtNamePath({g__baseURL}));
+  if (base_url_sp)
+    if (ValueObjectSP non_synth_valobj = base_url_sp->GetNonSyntheticValue()) {
+      const char *value = non_synth_valobj->GetValueAsCString();
+      if (value && llvm::StringRef(value) != "none")
+        if (!base_url_sp->GetSummaryAsCString(base, options))
+          return false;
+    }
+
+  std::string summary;
+  if (!rel_str_sp->GetSummaryAsCString(summary, options))
+    return false;
+
+  // This format matches the implementastion of _SwiftURL.description.
+  stream << summary;
+  if (!base.empty())
+    stream << " -- " << base;
   return true;
 }
 

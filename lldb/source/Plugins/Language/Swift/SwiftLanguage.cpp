@@ -677,6 +677,12 @@ LoadFoundationValueTypesFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
 
   lldb_private::formatters::AddCXXSummary(
       swift_category_sp,
+      lldb_private::formatters::swift::SwiftURL_SummaryProvider,
+      "URL summary provider", ConstString("Foundation._SwiftURL"),
+      TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true));
+
+  lldb_private::formatters::AddCXXSummary(
+      swift_category_sp,
       lldb_private::formatters::swift::IndexPath_SummaryProvider,
       "IndexPath summary provider", ConstString("Foundation.IndexPath"),
       summary_flags);
