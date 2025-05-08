@@ -497,7 +497,7 @@ bool SystemZTTIImpl::hasDivRemOp(Type *DataType, bool IsSigned) const {
   return (VT.isScalarInteger() && TLI->isTypeLegal(VT));
 }
 
-static bool isFreeEltLoad(Value *Op) {
+static bool isFreeEltLoad(const Value *Op) {
   if (isa<LoadInst>(Op) && Op->hasOneUse()) {
     const Instruction *UserI = cast<Instruction>(*Op->user_begin());
     return !isa<StoreInst>(UserI); // Prefer MVC
@@ -507,7 +507,8 @@ static bool isFreeEltLoad(Value *Op) {
 
 InstructionCost SystemZTTIImpl::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-    TTI::TargetCostKind CostKind, ArrayRef<Value *> VL) const {
+    TTI::TargetCostKind CostKind, bool ForPoisonSrc,
+    ArrayRef<Value *> VL) const {
   unsigned NumElts = cast<FixedVectorType>(Ty)->getNumElements();
   InstructionCost Cost = 0;
 
@@ -529,7 +530,7 @@ InstructionCost SystemZTTIImpl::getScalarizationOverhead(
   }
 
   Cost += BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
-                                          CostKind, VL);
+                                          CostKind, ForPoisonSrc, VL);
   return Cost;
 }
 
@@ -1193,8 +1194,9 @@ InstructionCost SystemZTTIImpl::getCmpSelInstrCost(
 
 InstructionCost SystemZTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                                    TTI::TargetCostKind CostKind,
-                                                   unsigned Index, Value *Op0,
-                                                   Value *Op1) const {
+                                                   unsigned Index,
+                                                   const Value *Op0,
+                                                   const Value *Op1) const {
   if (Opcode == Instruction::InsertElement) {
     // Vector Element Load.
     if (Op1 != nullptr && isFreeEltLoad(Op1))

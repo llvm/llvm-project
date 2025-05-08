@@ -904,7 +904,6 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
   if (!debugserver_file_spec)
     return Status::FromErrorString("unable to locate " DEBUGSERVER_BASENAME);
 
-  std::string debugserver_path = debugserver_file_spec.GetPath();
   launch_info.SetExecutableFile(debugserver_file_spec,
                                 /*add_exe_file_as_first_arg=*/true);
 

@@ -79,6 +79,14 @@ void cir::CIRDialect::initialize() {
   addInterfaces<CIROpAsmDialectInterface>();
 }
 
+Operation *cir::CIRDialect::materializeConstant(mlir::OpBuilder &builder,
+                                                mlir::Attribute value,
+                                                mlir::Type type,
+                                                mlir::Location loc) {
+  return builder.create<cir::ConstantOp>(loc, type,
+                                         mlir::cast<mlir::TypedAttr>(value));
+}
+
 //===----------------------------------------------------------------------===//
 // Helpers
 //===----------------------------------------------------------------------===//
@@ -244,7 +252,7 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     return success();
   }
 
-  if (mlir::isa<cir::ConstArrayAttr>(attrType))
+  if (mlir::isa<cir::ConstArrayAttr, cir::ConstVectorAttr>(attrType))
     return success();
 
   assert(isa<TypedAttr>(attrType) && "What else could we be looking at here?");
@@ -456,8 +464,22 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
 // CallOp
 //===----------------------------------------------------------------------===//
 
+/// Return the operand at index 'i'.
+Value cir::CallOp::getArgOperand(unsigned i) {
+  assert(!cir::MissingFeatures::opCallIndirect());
+  return getOperand(i);
+}
+
+/// Return the number of operands.
+unsigned cir::CallOp::getNumArgOperands() {
+  assert(!cir::MissingFeatures::opCallIndirect());
+  return this->getOperation()->getNumOperands();
+}
+
 static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
                                          mlir::OperationState &result) {
+  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand, 4> ops;
+  llvm::SMLoc opsLoc;
   mlir::FlatSymbolRefAttr calleeAttr;
   llvm::ArrayRef<mlir::Type> allResultTypes;
 
@@ -468,9 +490,9 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
   if (parser.parseLParen())
     return mlir::failure();
 
-  // TODO(cir): parse argument list here
-  assert(!cir::MissingFeatures::opCallArgs());
-
+  opsLoc = parser.getCurrentLocation();
+  if (parser.parseOperandList(ops))
+    return mlir::failure();
   if (parser.parseRParen())
     return mlir::failure();
 
@@ -487,6 +509,9 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
   allResultTypes = opsFnTy.getResults();
   result.addTypes(allResultTypes);
 
+  if (parser.resolveOperands(ops, opsFnTy.getInputs(), opsLoc, result.operands))
+    return mlir::failure();
+
   return mlir::success();
 }
 
@@ -495,11 +520,11 @@ static void printCallCommon(mlir::Operation *op,
                             mlir::OpAsmPrinter &printer) {
   printer << ' ';
 
+  auto callLikeOp = mlir::cast<cir::CIRCallOpInterface>(op);
+  auto ops = callLikeOp.getArgOperands();
+
   printer.printAttributeWithoutType(calleeSym);
-  printer << "(";
-  // TODO(cir): print call args here
-  assert(!cir::MissingFeatures::opCallArgs());
-  printer << ")";
+  printer << "(" << ops << ")";
 
   printer.printOptionalAttrDict(op->getAttrs(), {"callee"});
 
@@ -535,9 +560,23 @@ verifyCallCommInSymbolUses(mlir::Operation *op,
   // Verify that the operand and result types match the callee. Note that
   // argument-checking is disabled for functions without a prototype.
   auto fnType = fn.getFunctionType();
+  if (!fn.getNoProto()) {
+    unsigned numCallOperands = callIf.getNumArgOperands();
+    unsigned numFnOpOperands = fnType.getNumInputs();
 
-  // TODO(cir): verify function arguments
-  assert(!cir::MissingFeatures::opCallArgs());
+    assert(!cir::MissingFeatures::opCallVariadic());
+
+    if (numCallOperands != numFnOpOperands)
+      return op->emitOpError("incorrect number of operands for callee");
+
+    for (unsigned i = 0, e = numFnOpOperands; i != e; ++i)
+      if (callIf.getArgOperand(i).getType() != fnType.getInput(i))
+        return op->emitOpError("operand type mismatch: expected operand type ")
+               << fnType.getInput(i) << ", but provided "
+               << op->getOperand(i).getType() << " for operand number " << i;
+  }
+
+  assert(!cir::MissingFeatures::opCallCallConv());
 
   // Void function must not return any results.
   if (fnType.hasVoidReturn() && op->getNumResults() != 0)
@@ -1188,6 +1227,71 @@ LogicalResult cir::BinOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// TernaryOp
+//===----------------------------------------------------------------------===//
+
+/// Given the region at `point`, or the parent operation if `point` is None,
+/// return the successor regions. These are the regions that may be selected
+/// during the flow of control. `operands` is a set of optional attributes that
+/// correspond to a constant value for each operand, or null if that operand is
+/// not a constant.
+void cir::TernaryOp::getSuccessorRegions(
+    mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  // The `true` and the `false` region branch back to the parent operation.
+  if (!point.isParent()) {
+    regions.push_back(RegionSuccessor(this->getODSResults(0)));
+    return;
+  }
+
+  // When branching from the parent operation, both the true and false
+  // regions are considered possible successors
+  regions.push_back(RegionSuccessor(&getTrueRegion()));
+  regions.push_back(RegionSuccessor(&getFalseRegion()));
+}
+
+void cir::TernaryOp::build(
+    OpBuilder &builder, OperationState &result, Value cond,
+    function_ref<void(OpBuilder &, Location)> trueBuilder,
+    function_ref<void(OpBuilder &, Location)> falseBuilder) {
+  result.addOperands(cond);
+  OpBuilder::InsertionGuard guard(builder);
+  Region *trueRegion = result.addRegion();
+  Block *block = builder.createBlock(trueRegion);
+  trueBuilder(builder, result.location);
+  Region *falseRegion = result.addRegion();
+  builder.createBlock(falseRegion);
+  falseBuilder(builder, result.location);
+
+  auto yield = dyn_cast<YieldOp>(block->getTerminator());
+  assert((yield && yield.getNumOperands() <= 1) &&
+         "expected zero or one result type");
+  if (yield.getNumOperands() == 1)
+    result.addTypes(TypeRange{yield.getOperandTypes().front()});
+}
+
+//===----------------------------------------------------------------------===//
+// SelectOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult cir::SelectOp::fold(FoldAdaptor adaptor) {
+  mlir::Attribute condition = adaptor.getCondition();
+  if (condition) {
+    bool conditionValue = mlir::cast<cir::BoolAttr>(condition).getValue();
+    return conditionValue ? getTrueValue() : getFalseValue();
+  }
+
+  // cir.select if %0 then x else x -> x
+  mlir::Attribute trueValue = adaptor.getTrueValue();
+  mlir::Attribute falseValue = adaptor.getFalseValue();
+  if (trueValue == falseValue)
+    return trueValue;
+  if (getTrueValue() == getFalseValue())
+    return getTrueValue();
+
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
 // ShiftOp
 //===----------------------------------------------------------------------===//
 LogicalResult cir::ShiftOp::verify() {
@@ -1262,6 +1366,33 @@ LogicalResult cir::GetMemberOp::verify() {
     return emitError() << "member type mismatch";
 
   return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// VecCreateOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::VecCreateOp::verify() {
+  // Verify that the number of arguments matches the number of elements in the
+  // vector, and that the type of all the arguments matches the type of the
+  // elements in the vector.
+  const VectorType vecTy = getResult().getType();
+  if (getElements().size() != vecTy.getSize()) {
+    return emitOpError() << "operand count of " << getElements().size()
+                         << " doesn't match vector type " << vecTy
+                         << " element count of " << vecTy.getSize();
+  }
+
+  const mlir::Type elementType = vecTy.getElementType();
+  for (const mlir::Value element : getElements()) {
+    if (element.getType() != elementType) {
+      return emitOpError() << "operand type " << element.getType()
+                           << " doesn't match vector element type "
+                           << elementType;
+    }
+  }
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

@@ -58,6 +58,8 @@ math/clc_log10.cl
 math/clc_log1p.cl
 math/clc_log2.cl
 math/clc_mad.cl
+math/clc_maxmag.cl
+math/clc_minmag.cl
 math/clc_modf.cl
 math/clc_nan.cl
 math/clc_native_cos.cl

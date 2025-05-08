@@ -181,21 +181,12 @@ struct __nothrow_invokable_r_imp<true, false, _Ret, _Fp, _Args...> {
   template <class _Tp>
   static void __test_noexcept(_Tp) _NOEXCEPT;
 
-#ifdef _LIBCPP_CXX03_LANG
   static const bool value = false;
-#else
-  static const bool value =
-      noexcept(_ThisT::__test_noexcept<_Ret>(std::__invoke(std::declval<_Fp>(), std::declval<_Args>()...)));
-#endif
 };
 
 template <class _Ret, class _Fp, class... _Args>
 struct __nothrow_invokable_r_imp<true, true, _Ret, _Fp, _Args...> {
-#ifdef _LIBCPP_CXX03_LANG
   static const bool value = false;
-#else
-  static const bool value = noexcept(std::__invoke(std::declval<_Fp>(), std::declval<_Args>()...));
-#endif
 };
 
 template <class _Ret, class _Fp, class... _Args>
@@ -224,46 +215,6 @@ struct __invoke_void_return_wrapper<_Ret, true> {
     std::__invoke(std::forward<_Args>(__args)...);
   }
 };
-
-#if _LIBCPP_STD_VER >= 17
-
-// is_invocable
-
-template <class _Fn, class... _Args>
-struct _LIBCPP_TEMPLATE_VIS is_invocable : integral_constant<bool, __invokable<_Fn, _Args...>::value> {};
-
-template <class _Ret, class _Fn, class... _Args>
-struct _LIBCPP_TEMPLATE_VIS is_invocable_r : integral_constant<bool, __invokable_r<_Ret, _Fn, _Args...>::value> {};
-
-template <class _Fn, class... _Args>
-inline constexpr bool is_invocable_v = is_invocable<_Fn, _Args...>::value;
-
-template <class _Ret, class _Fn, class... _Args>
-inline constexpr bool is_invocable_r_v = is_invocable_r<_Ret, _Fn, _Args...>::value;
-
-// is_nothrow_invocable
-
-template <class _Fn, class... _Args>
-struct _LIBCPP_TEMPLATE_VIS is_nothrow_invocable : integral_constant<bool, __nothrow_invokable<_Fn, _Args...>::value> {
-};
-
-template <class _Ret, class _Fn, class... _Args>
-struct _LIBCPP_TEMPLATE_VIS is_nothrow_invocable_r
-    : integral_constant<bool, __nothrow_invokable_r<_Ret, _Fn, _Args...>::value> {};
-
-template <class _Fn, class... _Args>
-inline constexpr bool is_nothrow_invocable_v = is_nothrow_invocable<_Fn, _Args...>::value;
-
-template <class _Ret, class _Fn, class... _Args>
-inline constexpr bool is_nothrow_invocable_r_v = is_nothrow_invocable_r<_Ret, _Fn, _Args...>::value;
-
-template <class _Fn, class... _Args>
-struct _LIBCPP_TEMPLATE_VIS invoke_result : __invoke_of<_Fn, _Args...> {};
-
-template <class _Fn, class... _Args>
-using invoke_result_t = typename invoke_result<_Fn, _Args...>::type;
-
-#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_END_NAMESPACE_STD
 

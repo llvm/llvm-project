@@ -1245,8 +1245,9 @@ bool SemaObjC::CheckObjCString(Expr *Arg) {
 
 bool SemaObjC::CheckObjCMethodCall(ObjCMethodDecl *Method, SourceLocation lbrac,
                                    ArrayRef<const Expr *> Args) {
-  Sema::VariadicCallType CallType =
-      Method->isVariadic() ? Sema::VariadicMethod : Sema::VariadicDoesNotApply;
+  VariadicCallType CallType = Method->isVariadic()
+                                  ? VariadicCallType::Method
+                                  : VariadicCallType::DoesNotApply;
 
   SemaRef.checkCall(Method, nullptr, /*ThisArg=*/nullptr, Args,
                     /*IsMemberFunction=*/false, lbrac, Method->getSourceRange(),

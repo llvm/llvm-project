@@ -81,6 +81,13 @@ def DoConcurrentConversionPass : Pass<"omp-do-concurrent-conversion", "mlir::fun
   ];
 }
 
+def LowerNontemporalPass : Pass<"lower-nontemporal", "mlir::func::FuncOp"> {
+  let summary =
+      "Adds nontemporal attribute to loads and stores performed on "
+      "the list items specified in the nontemporal clause of omp.simd.";
+  let dependentDialects = ["mlir::omp::OpenMPDialect"];
+}
+
 // Needs to be scheduled on Module as we create functions in it
 def LowerWorkshare : Pass<"lower-workshare", "::mlir::ModuleOp"> {
   let summary = "Lower workshare construct";
