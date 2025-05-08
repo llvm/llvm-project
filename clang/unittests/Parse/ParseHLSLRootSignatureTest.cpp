@@ -401,13 +401,35 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidMissingParameterTest) {
   ASSERT_TRUE(Consumer->isSatisfied());
 }
 
-TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedMandatoryParameterTest) {
+TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedMandatoryDTParameterTest) {
   // This test will check that the parsing fails due the same mandatory
   // parameter being specified multiple times
   const llvm::StringLiteral Source = R"cc(
     DescriptorTable(
       CBV(b32, b84)
     )
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
+
+  // Test correct diagnostic produced
+  Consumer->setExpected(diag::err_hlsl_rootsig_repeat_param);
+  ASSERT_TRUE(Parser.parse());
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedMandatoryRCParameterTest) {
+  // This test will check that the parsing fails due the same mandatory
+  // parameter being specified multiple times
+  const llvm::StringLiteral Source = R"cc(
+    RootConstants(num32BitConstants = 32, num32BitConstants = 24)
   )cc";
 
   TrivialModuleLoader ModLoader;
