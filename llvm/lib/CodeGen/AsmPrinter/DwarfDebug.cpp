@@ -2472,8 +2472,6 @@ void DwarfDebug::computeKeyInstructions(const MachineFunction *MF) {
         // This is the first time we're seeing an instruction in this atom
         // group. Add it to the map.
         assert(CandidateInsts.empty());
-        CandidateRank = Rank;
-        CandidateInsts.push_back(Buoy);
 
       } else if (CandidateRank == Rank) {
         // We've seen other instructions in this group of this rank. Discard
@@ -2482,14 +2480,12 @@ void DwarfDebug::computeKeyInstructions(const MachineFunction *MF) {
         llvm::remove_if(CandidateInsts, [&MI](const MachineInstr *Candidate) {
           return MI.getParent() == Candidate->getParent();
         });
-        CandidateInsts.push_back(Buoy);
 
       } else if (CandidateRank > Rank) {
         // We've seen other instructions in this group of lower precedence
         // (higher rank). Discard them, add this one.
         assert(!CandidateInsts.empty());
-        CandidateRank = Rank;
-        CandidateInsts = {Buoy};
+        CandidateInsts.clear();
 
       } else {
         // We've seen other instructions in this group with higher precedence
@@ -2499,6 +2495,9 @@ void DwarfDebug::computeKeyInstructions(const MachineFunction *MF) {
       }
       assert(!BuoyAtom || BuoyAtom == MI.getDebugLoc()->getAtomGroup());
       BuoyAtom = MI.getDebugLoc()->getAtomGroup();
+
+      CandidateInsts.push_back(Buoy);
+      CandidateRank = Rank;
     }
   }
 
