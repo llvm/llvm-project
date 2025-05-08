@@ -61,6 +61,7 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::AssertZext:
   case ISD::AssertSext:
   case ISD::FPOWI:
+  case ISD::AssertNoFPClass:
     R = ScalarizeVecRes_UnaryOpWithExtraInput(N);
     break;
   case ISD::INSERT_VECTOR_ELT: R = ScalarizeVecRes_INSERT_VECTOR_ELT(N); break;
@@ -129,7 +130,6 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::UINT_TO_FP:
   case ISD::ZERO_EXTEND:
   case ISD::FCANONICALIZE:
-  case ISD::AssertNoFPClass:
     R = ScalarizeVecRes_UnaryOp(N);
     break;
   case ISD::ADDRSPACECAST:
@@ -2616,7 +2616,7 @@ void DAGTypeLegalizer::SplitVecRes_UnaryOp(SDNode *N, SDValue &Lo,
   const SDNodeFlags Flags = N->getFlags();
   unsigned Opcode = N->getOpcode();
   if (N->getNumOperands() <= 2) {
-    if (Opcode == ISD::FP_ROUND) {
+    if (Opcode == ISD::FP_ROUND || Opcode == ISD::AssertNoFPClass) {
       Lo = DAG.getNode(Opcode, dl, LoVT, Lo, N->getOperand(1), Flags);
       Hi = DAG.getNode(Opcode, dl, HiVT, Hi, N->getOperand(1), Flags);
     } else {

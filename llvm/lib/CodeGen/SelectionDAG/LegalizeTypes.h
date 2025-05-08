@@ -826,6 +826,7 @@ private:
   SDValue SoftPromoteHalfRes_SELECT(SDNode *N);
   SDValue SoftPromoteHalfRes_SELECT_CC(SDNode *N);
   SDValue SoftPromoteHalfRes_UnaryOp(SDNode *N);
+  SDValue SoftPromoteHalfRes_UnaryOpExt1(SDNode *N);
   SDValue SoftPromoteHalfRes_XINT_TO_FP(SDNode *N);
   SDValue SoftPromoteHalfRes_UNDEF(SDNode *N);
   SDValue SoftPromoteHalfRes_VECREDUCE(SDNode *N);
