@@ -776,7 +776,6 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreateCountTrailingZeroElems(Builder.getInt64Ty(), Mask,
                                                 true, Name);
   }
-
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
@@ -967,6 +966,7 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case VPInstruction::BranchOnCount:
   case VPInstruction::BranchOnCond:
   case VPInstruction::ResumePhi:
+  case VPInstruction::Broadcast:
     return true;
   case VPInstruction::PtrAdd:
     return Op == getOperand(0) || vputils::onlyFirstLaneUsed(this);
@@ -1087,15 +1087,14 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
 
 void VPInstructionWithType::execute(VPTransformState &State) {
   State.setDebugLocFrom(getDebugLoc());
-  switch (getOpcode()) {
-  case Instruction::ZExt:
-  case Instruction::Trunc: {
+  if (isScalarCast()) {
     Value *Op = State.get(getOperand(0), VPLane(0));
     Value *Cast = State.Builder.CreateCast(Instruction::CastOps(getOpcode()),
                                            Op, ResultTy);
     State.set(this, Cast, VPLane(0));
-    break;
+    return;
   }
+  switch (getOpcode()) {
   case VPInstruction::StepVector: {
     Value *StepVector =
         State.Builder.CreateStepVector(VectorType::get(ResultTy, State.VF));

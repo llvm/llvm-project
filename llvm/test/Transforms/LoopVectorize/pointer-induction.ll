@@ -304,16 +304,15 @@ define void @outside_lattice(ptr noalias %p, ptr noalias %q, i32 %n) {
 ; DEFAULT-NEXT:    [[IND_END2:%.*]] = trunc i64 [[N_VEC]] to i32
 ; DEFAULT-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; DEFAULT:       vector.body:
-; DEFAULT-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ null, [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; DEFAULT-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ null, [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i64> <i64 0, i64 4, i64 8, i64 12>
 ; DEFAULT-NEXT:    [[OFFSET_IDX:%.*]] = trunc i64 [[INDEX]] to i32
-; DEFAULT-NEXT:    [[TMP4:%.*]] = add i32 [[OFFSET_IDX]], 0
-; DEFAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds ptr, ptr [[P:%.*]], i32 [[TMP4]]
+; DEFAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds ptr, ptr [[P:%.*]], i32 [[OFFSET_IDX]]
 ; DEFAULT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds ptr, ptr [[TMP5]], i32 0
 ; DEFAULT-NEXT:    store <4 x ptr> [[VECTOR_GEP]], ptr [[TMP6]], align 8
-; DEFAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[Q:%.*]], i32 [[TMP4]]
+; DEFAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[Q:%.*]], i32 [[OFFSET_IDX]]
 ; DEFAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i32 0
 ; DEFAULT-NEXT:    store <4 x i32> [[VEC_IND]], ptr [[TMP8]], align 4
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -361,16 +360,15 @@ define void @outside_lattice(ptr noalias %p, ptr noalias %q, i32 %n) {
 ; STRIDED-NEXT:    [[IND_END2:%.*]] = trunc i64 [[N_VEC]] to i32
 ; STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; STRIDED:       vector.body:
-; STRIDED-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ null, [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; STRIDED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; STRIDED-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; STRIDED-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ null, [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; STRIDED-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i64> <i64 0, i64 4, i64 8, i64 12>
 ; STRIDED-NEXT:    [[OFFSET_IDX:%.*]] = trunc i64 [[INDEX]] to i32
-; STRIDED-NEXT:    [[TMP4:%.*]] = add i32 [[OFFSET_IDX]], 0
-; STRIDED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds ptr, ptr [[P:%.*]], i32 [[TMP4]]
+; STRIDED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds ptr, ptr [[P:%.*]], i32 [[OFFSET_IDX]]
 ; STRIDED-NEXT:    [[TMP6:%.*]] = getelementptr inbounds ptr, ptr [[TMP5]], i32 0
 ; STRIDED-NEXT:    store <4 x ptr> [[VECTOR_GEP]], ptr [[TMP6]], align 8
-; STRIDED-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[Q:%.*]], i32 [[TMP4]]
+; STRIDED-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[Q:%.*]], i32 [[OFFSET_IDX]]
 ; STRIDED-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i32 0
 ; STRIDED-NEXT:    store <4 x i32> [[VEC_IND]], ptr [[TMP8]], align 4
 ; STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

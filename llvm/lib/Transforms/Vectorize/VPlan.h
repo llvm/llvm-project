@@ -1880,7 +1880,7 @@ class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe {
   TruncInst *Trunc;
 
   // If this recipe is unrolled it will have 2 additional operands.
-  bool isUnrolled() const { return getNumOperands() == 6; }
+  bool isUnrolled() const { return getNumOperands() == 5; }
 
 public:
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
@@ -1929,16 +1929,6 @@ public:
 
   VPValue *getVFValue() { return getOperand(2); }
   const VPValue *getVFValue() const { return getOperand(2); }
-
-  // TODO: Remove once VPWidenIntOrFpInduction is fully expanded in
-  // convertToConcreteRecipes.
-  VPInstructionWithType *getStepVector() {
-    auto *StepVector =
-        cast<VPInstructionWithType>(getOperand(3)->getDefiningRecipe());
-    assert(StepVector->getOpcode() == VPInstruction::StepVector &&
-           "step vector operand must be a VPInstruction::StepVector");
-    return StepVector;
-  }
 
   VPValue *getSplatVFValue() {
     // If the recipe has been unrolled return the VPValue for the induction

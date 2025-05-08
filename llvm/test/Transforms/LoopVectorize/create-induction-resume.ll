@@ -52,7 +52,9 @@ define void @test(i32 %arg, i32 %L1.limit, i32 %L2.switch, i1 %c, ptr %dst) {
 ; CHECK-NEXT:    [[DOTSPLAT1:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT1]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[DOTSPLAT1]]
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> splat (i32 1), [[TMP4]]
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = mul <4 x i32> [[DOTSPLAT1]], splat (i32 4)
+; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[INDUCTION_IV_LCSSA1]], 4
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP5]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

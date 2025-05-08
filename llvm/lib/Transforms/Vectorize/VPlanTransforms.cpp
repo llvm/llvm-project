@@ -1223,16 +1223,6 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
     WideIV->setStartValue(NewStart);
     auto *NewStep = Plan.getOrAddLiveIn(ConstantInt::get(NewIVTy, 1));
     WideIV->setStepValue(NewStep);
-    // TODO: Remove once VPWidenIntOrFpInductionRecipe is fully expanded.
-    VPInstructionWithType *OldStepVector = WideIV->getStepVector();
-    assert(OldStepVector->getNumUsers() == 1 &&
-           "step vector should only be used by single "
-           "VPWidenIntOrFpInductionRecipe");
-    auto *NewStepVector = new VPInstructionWithType(
-        VPInstruction::StepVector, {}, NewIVTy, OldStepVector->getDebugLoc());
-    NewStepVector->insertAfter(OldStepVector->getDefiningRecipe());
-    OldStepVector->replaceAllUsesWith(NewStepVector);
-    OldStepVector->eraseFromParent();
 
     auto *NewBTC = new VPWidenCastRecipe(
         Instruction::Trunc, Plan.getOrCreateBackedgeTakenCount(), NewIVTy);
@@ -2459,15 +2449,20 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
   }
 
   // Construct the initial value of the vector IV in the vector loop preheader.
-  Type *IVIntTy = IntegerType::get(IV->getContext(), Ty->getScalarSizeInBits());
+  Type *StepTy = TypeInfo.inferScalarType(Step);
+  Type *IVIntTy =
+      IntegerType::get(IV->getContext(), StepTy->getScalarSizeInBits());
   VPValue *Init = Builder.createNaryOp(VPInstruction::StepVector, {}, IVIntTy);
-  if (Ty->isFloatingPointTy())
-    Init = Builder.createWidenCast(Instruction::UIToFP, Init, Ty);
+  if (StepTy->isFloatingPointTy())
+    Init = Builder.createWidenCast(Instruction::UIToFP, Init, StepTy);
+
+  VPValue *SplatStart = Builder.createNaryOp(VPInstruction::Broadcast, Start);
+  VPValue *SplatStep = Builder.createNaryOp(VPInstruction::Broadcast, Step);
 
   // FIXME: The newly created binary instructions should contain nsw/nuw
   // flags, which can be found from the original scalar operations.
-  Init = Builder.createNaryOp(MulOp, {Init, Step}, FMFs);
-  Init = Builder.createNaryOp(AddOp, {Start, Init}, FMFs, {}, "induction");
+  Init = Builder.createNaryOp(MulOp, {Init, SplatStep}, FMFs);
+  Init = Builder.createNaryOp(AddOp, {SplatStart, Init}, FMFs, {}, "induction");
 
   // Create the widened phi of the vector IV.
   auto *WidePHI =
@@ -2479,18 +2474,21 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
   VPValue *Inc;
   VPValue *Prev;
   // If unrolled, use the increment and prev value from the operands.
-  if (WidenIVR->getNumOperands() == 5) {
-    Inc = WidenIVR->getSplatVFValue();
+  if (auto *SplatVF = WidenIVR->getSplatVFValue()) {
+    Inc = SplatVF;
     Prev = WidenIVR->getLastUnrolledPartOperand();
   } else {
     // Multiply the vectorization factor by the step using integer or
     // floating-point arithmetic as appropriate.
-    if (Ty->isFloatingPointTy())
-      VF = Builder.createScalarCast(Instruction::CastOps::UIToFP, VF, Ty, DL);
-    else if (Ty != TypeInfo.inferScalarType(VF))
-      VF = Builder.createScalarCast(Instruction::CastOps::Trunc, VF, Ty, DL);
+    if (StepTy->isFloatingPointTy())
+      VF = Builder.createScalarCast(Instruction::CastOps::UIToFP, VF, StepTy,
+                                    DL);
+    else
+      VF =
+          Builder.createScalarCast(Instruction::CastOps::Trunc, VF, StepTy, DL);
 
     Inc = Builder.createNaryOp(MulOp, {Step, VF}, FMFs);
+    Inc = Builder.createNaryOp(VPInstruction::Broadcast, Inc);
     Prev = WidePHI;
   }
 
@@ -2689,27 +2687,6 @@ void VPlanTransforms::handleUncountableEarlyExit(
       Instruction::Or, {IsEarlyExitTaken, IsLatchExitTaken});
   Builder.createNaryOp(VPInstruction::BranchOnCond, AnyExitTaken);
   LatchExitingBranch->eraseFromParent();
-}
-
-void VPlanTransforms::materializeStepVectors(VPlan &Plan) {
-  for (auto &Phi : Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
-    auto *IVR = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
-    if (!IVR)
-      continue;
-
-    Type *Ty = IVR->getPHINode()->getType();
-    if (TruncInst *Trunc = IVR->getTruncInst())
-      Ty = Trunc->getType();
-    if (Ty->isFloatingPointTy())
-      Ty = IntegerType::get(Ty->getContext(), Ty->getScalarSizeInBits());
-
-    VPBuilder Builder(Plan.getVectorPreheader());
-    VPInstruction *StepVector = Builder.createNaryOp(
-        VPInstruction::StepVector, {}, Ty, {}, IVR->getDebugLoc());
-    assert(IVR->getNumOperands() == 3 &&
-           "can only add step vector before unrolling");
-    IVR->addOperand(StepVector);
-  }
 }
 
 void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
