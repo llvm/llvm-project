@@ -108,6 +108,8 @@ private:
 
   const MCExpr *createConstantSymbolExpr(StringRef Id, int64_t Val);
 
+  void decodeImmOperands(MCInst &MI, const MCInstrInfo &MCII) const;
+
 public:
   AMDGPUDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
                      MCInstrInfo const *MCII);

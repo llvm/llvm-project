@@ -537,6 +537,78 @@ static inline DecoderUInt128 eat16Bytes(ArrayRef<uint8_t> &Bytes) {
   return DecoderUInt128(Lo, Hi);
 }
 
+void AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
+                                           const MCInstrInfo &MCII) const {
+  const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
+  for (auto [OpNo, OpDesc] : enumerate(Desc.operands())) {
+    if (OpNo >= MI.getNumOperands())
+      continue;
+
+    // TODO: Fix V_DUAL_FMAMK_F32_X_FMAAK_F32_gfx12 vsrc operands,
+    // defined to take VGPR_32, but in reality allowing inline constants.
+    bool IsSrc = AMDGPU::OPERAND_SRC_FIRST <= OpDesc.OperandType &&
+                 OpDesc.OperandType <= AMDGPU::OPERAND_SRC_LAST;
+    if (!IsSrc && OpDesc.OperandType != MCOI::OPERAND_REGISTER)
+      continue;
+
+    MCOperand &Op = MI.getOperand(OpNo);
+    if (!Op.isImm())
+      continue;
+    int64_t Imm = Op.getImm();
+    if (AMDGPU::EncValues::INLINE_INTEGER_C_MIN <= Imm &&
+        Imm <= AMDGPU::EncValues::INLINE_INTEGER_C_MAX) {
+      Op = decodeIntImmed(Imm);
+      continue;
+    }
+
+    if (Imm == AMDGPU::EncValues::LITERAL_CONST) {
+      switch (OpDesc.OperandType) {
+      case AMDGPU::OPERAND_REG_IMM_BF16_DEFERRED:
+      case AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED:
+      case AMDGPU::OPERAND_REG_IMM_FP32_DEFERRED:
+        Op = MCOperand::createImm(AMDGPU::EncValues::LITERAL_CONST);
+        continue;
+      default:
+        Op = decodeLiteralConstant(OpDesc.OperandType ==
+                                   AMDGPU::OPERAND_REG_IMM_FP64);
+        continue;
+      }
+    }
+
+    if (AMDGPU::EncValues::INLINE_FLOATING_C_MIN <= Imm &&
+        Imm <= AMDGPU::EncValues::INLINE_FLOATING_C_MAX) {
+      switch (OpDesc.OperandType) {
+      case AMDGPU::OPERAND_REG_IMM_BF16:
+      case AMDGPU::OPERAND_REG_IMM_BF16_DEFERRED:
+      case AMDGPU::OPERAND_REG_IMM_V2BF16:
+      case AMDGPU::OPERAND_REG_INLINE_C_BF16:
+      case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
+        Imm = getInlineImmValBF16(Imm);
+        break;
+      case AMDGPU::OPERAND_REG_IMM_FP16:
+      case AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED:
+      case AMDGPU::OPERAND_REG_IMM_INT16:
+      case AMDGPU::OPERAND_REG_IMM_V2FP16:
+      case AMDGPU::OPERAND_REG_INLINE_C_FP16:
+      case AMDGPU::OPERAND_REG_INLINE_C_INT16:
+      case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
+        Imm = getInlineImmValF16(Imm);
+        break;
+      case AMDGPU::OPERAND_REG_IMM_FP64:
+      case AMDGPU::OPERAND_REG_IMM_INT64:
+      case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
+      case AMDGPU::OPERAND_REG_INLINE_C_FP64:
+      case AMDGPU::OPERAND_REG_INLINE_C_INT64:
+        Imm = getInlineImmVal64(Imm);
+        break;
+      default:
+        Imm = getInlineImmVal32(Imm);
+      }
+      Op.setImm(Imm);
+    }
+  }
+}
+
 DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                 ArrayRef<uint8_t> Bytes_,
                                                 uint64_t Address,
@@ -691,75 +763,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
   DecodeStatus Status = MCDisassembler::Success;
 
-  // Handle immediates.
-  const MCInstrDesc &Desc = MCII->get(MI.getOpcode());
-  for (auto [OpNo, OpDesc] : enumerate(Desc.operands())) {
-    if (OpNo >= MI.getNumOperands())
-      continue;
-
-    // TODO: Fix V_DUAL_FMAMK_F32_X_FMAAK_F32_gfx12 vsrc operands,
-    // defined to take VGPR_32, but in reality allowing inline constants.
-    if (OpDesc.OperandType != MCOI::OPERAND_REGISTER &&
-        !(AMDGPU::OPERAND_SRC_FIRST <= OpDesc.OperandType &&
-          OpDesc.OperandType <= AMDGPU::OPERAND_SRC_LAST))
-      continue;
-
-    MCOperand &Op = MI.getOperand(OpNo);
-    if (!Op.isImm())
-      continue;
-    int64_t Imm = Op.getImm();
-    if (AMDGPU::EncValues::INLINE_INTEGER_C_MIN <= Imm &&
-        Imm <= AMDGPU::EncValues::INLINE_INTEGER_C_MAX) {
-      Op = decodeIntImmed(Imm);
-      continue;
-    }
-
-    if (Imm == AMDGPU::EncValues::LITERAL_CONST) {
-      switch (OpDesc.OperandType) {
-      case AMDGPU::OPERAND_REG_IMM_BF16_DEFERRED:
-      case AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED:
-      case AMDGPU::OPERAND_REG_IMM_FP32_DEFERRED:
-        Op = MCOperand::createImm(AMDGPU::EncValues::LITERAL_CONST);
-        continue;
-      default:
-        Op = decodeLiteralConstant(OpDesc.OperandType ==
-                                   AMDGPU::OPERAND_REG_IMM_FP64);
-        continue;
-      }
-    }
-
-    if (AMDGPU::EncValues::INLINE_FLOATING_C_MIN <= Imm &&
-        Imm <= AMDGPU::EncValues::INLINE_FLOATING_C_MAX) {
-      switch (OpDesc.OperandType) {
-      case AMDGPU::OPERAND_REG_IMM_BF16:
-      case AMDGPU::OPERAND_REG_IMM_BF16_DEFERRED:
-      case AMDGPU::OPERAND_REG_IMM_V2BF16:
-      case AMDGPU::OPERAND_REG_INLINE_C_BF16:
-      case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
-        Imm = getInlineImmValBF16(Imm);
-        break;
-      case AMDGPU::OPERAND_REG_IMM_FP16:
-      case AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED:
-      case AMDGPU::OPERAND_REG_IMM_INT16:
-      case AMDGPU::OPERAND_REG_IMM_V2FP16:
-      case AMDGPU::OPERAND_REG_INLINE_C_FP16:
-      case AMDGPU::OPERAND_REG_INLINE_C_INT16:
-      case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
-        Imm = getInlineImmValF16(Imm);
-        break;
-      case AMDGPU::OPERAND_REG_IMM_FP64:
-      case AMDGPU::OPERAND_REG_IMM_INT64:
-      case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
-      case AMDGPU::OPERAND_REG_INLINE_C_FP64:
-      case AMDGPU::OPERAND_REG_INLINE_C_INT64:
-        Imm = getInlineImmVal64(Imm);
-        break;
-      default:
-        Imm = getInlineImmVal32(Imm);
-      }
-      Op.setImm(Imm);
-    }
-  }
+  decodeImmOperands(MI, *MCII);
 
   if (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::DPP) {
     if (isMacDPP(MI))
