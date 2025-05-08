@@ -1159,6 +1159,11 @@ public:
                                      Status &error,
                                      bool force_live_memory = false);
 
+  int64_t ReadSignedIntegerFromMemory(const Address &addr,
+                                      size_t integer_byte_size,
+                                      int64_t fail_value, Status &error,
+                                      bool force_live_memory = false);
+
   uint64_t ReadUnsignedIntegerFromMemory(const Address &addr,
                                          size_t integer_byte_size,
                                          uint64_t fail_value, Status &error,

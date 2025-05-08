@@ -1,4 +1,5 @@
 ; RUN: llc -march=hexagon -debug-only=isel 2>&1 < %s - | FileCheck %s
+; REQUIRES: asserts
 
 ; CHECK: [[R0:%[0-9]+]]:intregs = A2_tfrsi 0
 ; CHECK-NEXT: predregs = C2_tfrrp killed [[R0]]:intregs
