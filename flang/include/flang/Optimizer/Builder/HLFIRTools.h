@@ -533,6 +533,12 @@ Entity gen1DSection(mlir::Location loc, fir::FirOpBuilder &builder,
                     mlir::ArrayRef<mlir::Value> extents,
                     mlir::ValueRange oneBasedIndices,
                     mlir::ArrayRef<mlir::Value> typeParams);
+
+/// Return explicit lower bounds from a fir.shape result.
+/// Only fir.shape, fir.shift and fir.shape_shift are currently
+/// supported as \p shape.
+llvm::SmallVector<mlir::Value> getExplicitLboundsFromShape(mlir::Value shape);
+
 } // namespace hlfir
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_HLFIRTOOLS_H
