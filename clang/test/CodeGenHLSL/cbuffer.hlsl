@@ -102,7 +102,7 @@ typedef uint32_t4 uint32_t8[2];
 typedef uint4 T1;
 typedef T1 T2[2]; // check a double typedef
 
-cbuffer CBTypedefArray {
+cbuffer CBTypedefArray : register(space2) {
   uint32_t8 t1[2];
   T2 t2[2];
 }
@@ -287,7 +287,7 @@ cbuffer CB_C {
 // CHECK: define internal void @_init_buffer_CBTypedefArray.cb()
 // CHECK-NEXT: entry:
 // CHECK-NEXT: %CBTypedefArray.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CBTypedefArray, 128, 0, 64))
-// CHECK-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_CBTypedefArrays_128_0_64tt(i32 1, i32 0, i32 1, i32 0, i1 false)
+// CHECK-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_CBTypedefArrays_128_0_64tt(i32 1, i32 2, i32 1, i32 0, i1 false)
 // CHECK-NEXT: store target("dx.CBuffer", target("dx.Layout", %__cblayout_CBTypedefArray, 128, 0, 64)) %CBTypedefArray.cb_h, ptr @CBTypedefArray.cb, align 4
 
 // CHECK: define internal void @_init_buffer_CBStructs.cb()

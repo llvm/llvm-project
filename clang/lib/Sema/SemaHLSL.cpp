@@ -536,7 +536,7 @@ void createHostLayoutStructForBuffer(Sema &S, HLSLBufferDecl *BufDecl) {
   BufDecl->addLayoutStruct(LS);
 }
 
-void addImplicitBindingAttrToBuffer(Sema &S, HLSLBufferDecl *BufDecl,
+static void addImplicitBindingAttrToBuffer(Sema &S, HLSLBufferDecl *BufDecl,
                                     uint32_t ImplicitBindingOrderID) {
   RegisterType RT =
       BufDecl->isCBuffer() ? RegisterType::CBuffer : RegisterType::SRV;
@@ -558,13 +558,16 @@ void SemaHLSL::ActOnFinishBuffer(Decl *Dcl, SourceLocation RBrace) {
   // create buffer layout struct
   createHostLayoutStructForBuffer(SemaRef, BufDecl);
 
-  if (std::none_of(Dcl->attr_begin(), Dcl->attr_end(),
-                   [](Attr *A) { return isa<HLSLResourceBindingAttr>(A); })) {
+  HLSLResourceBindingAttr *RBA = Dcl->getAttr<HLSLResourceBindingAttr>();
+  if (!RBA || RBA->isImplicit()) {
     SemaRef.Diag(Dcl->getLocation(), diag::warn_hlsl_implicit_binding);
-    // add implicit HLSLResourceBindingAttr for the buffer
-    // (used mostly as a way to tranfer ImplicitBindingOrderID to codegen)
-    addImplicitBindingAttrToBuffer(SemaRef, BufDecl,
-                                   getNextImplicitBindingOrderID());
+    // Use HLSLResourceBindingAttr as a way to transfer implicit binding
+    // order_ID to codegen. If it does not exist, create an implicit one.
+    uint32_t OrderID = getNextImplicitBindingOrderID();
+    if (RBA)
+      RBA->setImplicitBindingOrderID(OrderID);
+    else
+      addImplicitBindingAttrToBuffer(SemaRef, BufDecl, OrderID);
   }
 
   SemaRef.PopDeclContext();
