@@ -6,9 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/BinaryFormat/DXContainer.h"
-#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <utility>

@@ -30,7 +30,6 @@
 #include <cstdint>
 #include <optional>
 #include <utility>
-#include <variant>
 
 using namespace llvm;
 using namespace llvm::dxil;

@@ -298,11 +298,13 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
             Descriptor.RegisterSpace = Param.Descriptor.RegisterSpace;
             Descriptor.ShaderRegister = Param.Descriptor.ShaderRegister;
             Descriptor.Flags = Param.Descriptor.getEncodedFlags();
-          RS.ParametersContainer.addParameter(Header, Descriptor);
+            RS.ParametersContainer.addParameter(Header, Descriptor);
           }
           break;
         default:
-          // Handling invalid parameter type edge case
+          // Handling invalid parameter type edge case. We intentionally let
+          // obj2yaml/yaml2obj parse and emit invalid dxcontainer data, in order
+          // for that to be used as a testing tool more effectively.
           RS.ParametersContainer.addInfo(Header, -1);
         }
       }
