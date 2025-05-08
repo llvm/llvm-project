@@ -537,7 +537,7 @@ void createHostLayoutStructForBuffer(Sema &S, HLSLBufferDecl *BufDecl) {
 }
 
 static void addImplicitBindingAttrToBuffer(Sema &S, HLSLBufferDecl *BufDecl,
-                                    uint32_t ImplicitBindingOrderID) {
+                                           uint32_t ImplicitBindingOrderID) {
   RegisterType RT =
       BufDecl->isCBuffer() ? RegisterType::CBuffer : RegisterType::SRV;
   auto *Attr =
