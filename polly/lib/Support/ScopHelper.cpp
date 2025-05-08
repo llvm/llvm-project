@@ -601,9 +601,6 @@ bool polly::isHoistableLoad(LoadInst *LInst, Region &R, LoopInfo &LI,
     L = L->getParentLoop();
   }
 
-  if (!Ptr->hasUseList())
-    return true;
-
   for (auto *User : Ptr->users()) {
     auto *UserI = dyn_cast<Instruction>(User);
     if (!UserI || UserI->getFunction() != LInst->getFunction() ||
