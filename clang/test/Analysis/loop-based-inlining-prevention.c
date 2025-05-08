@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify=expected,default %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config legacy-inlining-prevention=false -verify=expected,disabled %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config inline-functions-with-ambiguous-loops=true -verify=expected,enabled %s
 
 // This file tests some heuristics in the engine that put functions on a
 // "do not inline" list if their analyisis reaches the `analyzer-max-loop`
@@ -23,7 +23,7 @@
 // analyzer behavior which cannot be fixed without also improving the
 // heuristics for (not) inlining large functions.
 
-int getNum(void); // Get an opaque number.
+  int getNum(void); // Get an unknown symbolic number.
 
 void clang_analyzer_dump(int arg);
 
@@ -134,7 +134,7 @@ int outer_parametrized_loop_2(void) {
 
 //-----------------------------------------------------------------------------
 // Inlined function may or may not reach `analyzer-max-loop` depending on an
-// opaque check before the loop. This is very similar to the "fixed loop"
+// ambiguous check before the loop. This is very similar to the "fixed loop"
 // cases: the function is placed on the "don't inline" list when any execution
 // path reaches `analyzer-max-loop` (even if other execution paths reach the
 // end of the function).
@@ -163,7 +163,7 @@ int outer_2_conditional_loop(void) {
 }
 
 //-----------------------------------------------------------------------------
-// Inlined function executes an opaque loop that may or may not reach
+// Inlined function executes an ambiguous loop that may or may not reach
 // `analyzer-max-loop`. Historically, before the "don't assume third iteration"
 // commit (bb27d5e5c6b194a1440b8ac4e5ace68d0ee2a849) this worked like the
 // `conditional_loop` cases: the analyzer was able to find a path reaching
@@ -174,27 +174,27 @@ int outer_2_conditional_loop(void) {
 // not disabled.
 // Unfortunately this change significantly increased the workload and
 // runtime of the analyzer (more entry points used up their budget), so the
-// option `legacy-inlining-prevention` was introduced and enabled by default to
-// suppress the inlining in situations where the "don't assume third iteration"
-// logic activates.
+// option `inline-functions-with-ambiguous-loops` was introduced and disabled
+// by default to suppress the inlining in situations where the "don't assume
+// third iteration" logic activates.
 // NOTE: This is tested with two separate entry points to ensure that one
 // inlined call is fully evaluated before we try to inline the other call.
 // NOTE: the analyzer happens to analyze the entry points in a reversed order,
-// so `outer_2_opaque_loop` is analyzed first and it will be the one which is
-// able to inline the inner function.
+// so `outer_2_ambiguous_loop` is analyzed first and it will be the one which
+// is able to inline the inner function.
 
-int inner_opaque_loop(int callIdx) {
+int inner_ambiguous_loop(int callIdx) {
   int i;
   clang_analyzer_dump(callIdx); // default-warning {{2 S32}}
-                                // disabled-warning@-1 {{1 S32}}
-                                // disabled-warning@-2 {{2 S32}}
+                                // enabled-warning@-1 {{1 S32}}
+                                // enabled-warning@-2 {{2 S32}}
   for (i = 0; i < getNum(); i++);
   return i;
 }
 
-int outer_1_opaque_loop(void) {
-  return inner_opaque_loop(1);
+int outer_1_ambiguous_loop(void) {
+  return inner_ambiguous_loop(1);
 }
-int outer_2_opaque_loop(void) {
-  return inner_opaque_loop(2);
+int outer_2_ambiguous_loop(void) {
+  return inner_ambiguous_loop(2);
 }

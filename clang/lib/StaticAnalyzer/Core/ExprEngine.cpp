@@ -2875,7 +2875,7 @@ void ExprEngine::processBranch(
       // we must ensure that it 'plays nicely' with this logic.
       if (!SkipTrueBranch || AMgr.options.ShouldWidenLoops) {
         Builder.generateNode(StTrue, true, PredN);
-      } else if (AMgr.options.LegacyInliningPrevention) {
+      } else if (!AMgr.options.InlineFunctionsWithAmbiguousLoops) {
         // FIXME: There is an ancient and arbitrary heuristic in
         // `ExprEngine::processCFGBlockEntrance` which prevents all further
         // inlining of a function if it finds an execution path within that

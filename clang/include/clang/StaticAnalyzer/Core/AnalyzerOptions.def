@@ -415,18 +415,17 @@ ANALYZER_OPTION(
     true)
 
 ANALYZER_OPTION(
-    bool, LegacyInliningPrevention, "legacy-inlining-prevention",
-    "If enabled, the analyzer puts functions on a \"do not inline this\" list "
-    "if it finds an execution path within that function that may potentially "
-    "perform 'analyzer-max-loop' (= 4 by default) iterations in a loop. "
-    "Note that functions that _definitely_ reach the loop limit on some "
-    "execution path are currently marked as \"do not inline\" even if this "
-    "option is disabled. This option is an arbitrary restriction on inlining, "
-    "but disabling this significantly increases the analysis workload (and "
-    "the time taken) compared to older clang versions because more top-level "
-    "functions can use up their 'max-nodes' budget if inlining is not "
-    "restricted.",
-    true)
+    bool, InlineFunctionsWithAmbiguousLoops, "inline-functions-with-ambiguous-loops",
+    "If disabled (the default), the analyzer puts functions on a \"do not "
+    "inline this\" list if it finds an execution path within that function "
+    "that may potentially perform 'analyzer-max-loop' (= 4 by default) "
+    "iterations in a loop. (Note that functions that _definitely_ reach the "
+    "loop limit on some execution path are currently marked as \"do not "
+    "inline\" even if this option is enabled.) Enabling this option "
+    "eliminates this (somewhat arbitrary) restriction from the analysis "
+    "scope, which increases the the analysis runtime (on average by ~10%, "
+    "but a few translation units may see much larger slowdowns).",
+    false)
 
 //===----------------------------------------------------------------------===//
 // Unsigned analyzer options.
