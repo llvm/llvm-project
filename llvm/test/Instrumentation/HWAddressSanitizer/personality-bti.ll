@@ -92,4 +92,4 @@ declare void @sink(ptr)
 ; PERS: %5 = tail call i32 @__hwasan_personality_wrapper(i32 %0, i32 %1, i64 %2, ptr %3, ptr %4, ptr inttoptr (i64 2 to ptr), ptr @_Unwind_GetGR, ptr @_Unwind_GetCFA)
 ; PERS: ret i32 %5
 
-; PERS: {{.*}}[[ATTRS]]
+; PERS: {{.*}}[[ATTRS]] = {{.*}}branch-target-enforcement
