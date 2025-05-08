@@ -13,6 +13,7 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Errc.h"
@@ -109,7 +110,8 @@ void UnwindLocation::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
       OS << " in addrspace" << *AddrSpace;
     break;
   case DWARFExpr: {
-    Expr->print(OS, DumpOpts, nullptr);
+    if (Expr)
+      DWARFExpressionPrinter::print(&(*Expr), OS, DumpOpts, nullptr);
     break;
   }
   case Constant:
@@ -943,7 +945,7 @@ void CFIProgram::printOperand(raw_ostream &OS, DIDumpOptions DumpOpts,
   case OT_Expression:
     assert(Instr.Expression && "missing DWARFExpression object");
     OS << " ";
-    Instr.Expression->print(OS, DumpOpts, nullptr);
+    DWARFExpressionPrinter::print(&(*Instr.Expression), OS, DumpOpts, nullptr);
     break;
   }
 }
