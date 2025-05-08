@@ -2468,12 +2468,15 @@ void DwarfDebug::computeKeyInstructions(const MachineFunction *MF) {
       auto &[CandidateRank, CandidateInsts] =
           GroupCandidates[{InlinedAt, Group}];
 
-      if (CandidateRank == 0) {
-        // This is the first time we're seeing an instruction in this atom
-        // group. Add it to the map.
-        assert(CandidateInsts.empty());
+      // If CandidateRank is zero then CandidateInsts should be empty: there
+      // are no other candidates for this group yet. If CandidateRank is nonzero
+      // then CandidateInsts shouldn't be empty: we've got existing candidate
+      // instructions.
+      assert((CandidateRank == 0 && CandidateInsts.empty()) ||
+             (CandidateRank != 0 && !CandidateInsts.empty()));
 
-      } else if (CandidateRank == Rank) {
+      assert(Rank && "expected nonzero rank");
+      if (CandidateRank == Rank) {
         // We've seen other instructions in this group of this rank. Discard
         // ones we've seen in this block, keep the others, add this one.
         assert(!CandidateInsts.empty());
@@ -2487,12 +2490,13 @@ void DwarfDebug::computeKeyInstructions(const MachineFunction *MF) {
         assert(!CandidateInsts.empty());
         CandidateInsts.clear();
 
-      } else {
+      } else if (CandidateRank) {
         // We've seen other instructions in this group with higher precedence
         // (lower rank). Discard this one.
         assert(Rank != 0 && CandidateRank < Rank && CandidateRank != 0);
         continue;
       }
+
       assert(!BuoyAtom || BuoyAtom == MI.getDebugLoc()->getAtomGroup());
       BuoyAtom = MI.getDebugLoc()->getAtomGroup();
 
