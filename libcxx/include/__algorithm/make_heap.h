@@ -32,12 +32,10 @@ __make_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compar
   __comp_ref_type<_Compare> __comp_ref = __comp;
 
   using difference_type = typename iterator_traits<_RandomAccessIterator>::difference_type;
-  difference_type __n   = __last - __first;
-  if (__n > 1) {
+  difference_type __n = __last - __first, __start = __n / 2;
+  while (__start != 0) {
     // start from the first parent, there is no need to consider children
-    for (difference_type __start = (__n - 2) / 2; __start >= 0; --__start) {
-      std::__sift_down<_AlgPolicy>(__first, __comp_ref, __n, __first + __start);
-    }
+    std::__sift_down<_AlgPolicy>(__first, __comp_ref, __n, --__start);
   }
 }
 
