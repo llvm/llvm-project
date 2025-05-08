@@ -8030,8 +8030,14 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
   // If this is a branch on something for which we know the constant value in
   // predecessors (e.g. a phi node in the current block), thread control
   // through this block.
-  if (foldCondBranchOnValueKnownInPredecessor(BI, DTU, DL, Options.AC))
-    return requestResimplify();
+  // Note: If BB is a loop header then there is a risk that threading introduces
+  // a non-canonical loop by moving a back edge. So we avoid this optimization
+  // for loop headers if NeedCanonicalLoop is set.
+  bool InHeader = !LoopHeaders.empty() && is_contained(LoopHeaders, BB);
+  bool AvoidThreading = Options.NeedCanonicalLoop && InHeader;
+  if (!AvoidThreading)
+    if (foldCondBranchOnValueKnownInPredecessor(BI, DTU, DL, Options.AC))
+      return requestResimplify();
 
   // Scan predecessor blocks for conditional branches.
   for (BasicBlock *Pred : predecessors(BB))
