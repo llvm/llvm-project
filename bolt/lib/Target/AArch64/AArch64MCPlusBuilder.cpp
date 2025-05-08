@@ -283,17 +283,12 @@ public:
 
   bool isPSignOnLR(const MCInst &Inst) const override {
     ErrorOr<MCPhysReg> SignReg = getSignedReg(Inst);
-    if (SignReg && *SignReg != getNoRegister() && *SignReg == AArch64::LR)
-      return true;
-
-    return false;
+    return SignReg && *SignReg != getNoRegister() && *SignReg == AArch64::LR;
   }
 
   bool isPAuthOnLR(const MCInst &Inst) const override {
     ErrorOr<MCPhysReg> AutReg = getAuthenticatedReg(Inst);
-    if (AutReg && *AutReg != getNoRegister() && *AutReg == AArch64::LR)
-      return true;
-    return false;
+    return AutReg && *AutReg != getNoRegister() && *AutReg == AArch64::LR;
   }
 
   bool isPAuthAndRet(const MCInst &Inst) const override {

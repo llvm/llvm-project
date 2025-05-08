@@ -1,6 +1,7 @@
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown %s -o %t.o
 # RUN: %clang %cflags  %t.o -o %t.exe -Wl,-q
 # RUN: llvm-bolt %t.exe -o %t.exe.bolt | FileCheck %s
+
 # check that the output is listing foo as incorrect
 # CHECK: BOLT-INFO: inconsistent RAStates in function foo
 
@@ -9,10 +10,10 @@
 # RUN: not grep "<foo>:" %t.exe.dump
 
 
-# Why is this test incorrect?
-#   There is an extra .cfi_negate_ra_state in line ...
-#   Because of this, we will get to the autiasp (hint #29)
-#   in a (seemingly) unsigned state. That is incorrect.
+# How is this test incorrect?
+# There is an extra .cfi_negate_ra_state in foo.
+# Because of this, we will get to the autiasp (hint #29)
+# in a (seemingly) unsigned state. That is incorrect.
   .text
   .globl  foo
   .p2align        2
