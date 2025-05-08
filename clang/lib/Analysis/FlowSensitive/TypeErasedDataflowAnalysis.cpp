@@ -26,11 +26,10 @@
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
-#include "clang/Analysis/FlowSensitive/RecordOps.h"
+#include "clang/Analysis/FlowSensitive/Logger.h"
 #include "clang/Analysis/FlowSensitive/Transfer.h"
 #include "clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
-#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
@@ -40,25 +39,11 @@
 
 namespace clang {
 namespace dataflow {
-class NoopLattice;
-}
-} // namespace clang
-
-namespace llvm {
-// This needs to be exported for ClangAnalysisFlowSensitiveTests so any_cast
-// uses the correct address of Any::TypeId from the clang shared library instead
-// of creating one in the test executable. when building with
-// CLANG_LINK_CLANG_DYLIB
-template struct CLANG_EXPORT_TEMPLATE Any::TypeId<clang::dataflow::NoopLattice>;
-} // namespace llvm
-
-namespace clang {
-namespace dataflow {
 
 /// Returns the index of `Block` in the successors of `Pred`.
 static int blockIndexInPredecessor(const CFGBlock &Pred,
                                    const CFGBlock &Block) {
-  auto BlockPos = llvm::find_if(
+  const auto *BlockPos = llvm::find_if(
       Pred.succs(), [&Block](const CFGBlock::AdjacentBlock &Succ) {
         return Succ && Succ->getBlockID() == Block.getBlockID();
       });
@@ -102,7 +87,7 @@ public:
 
 /// Holds data structures required for running dataflow analysis.
 struct AnalysisContext {
-  AnalysisContext(const AdornedCFG &ACFG, TypeErasedDataflowAnalysis &Analysis,
+  AnalysisContext(const AdornedCFG &ACFG, DataflowAnalysis &Analysis,
                   const Environment &InitEnv,
                   llvm::ArrayRef<std::optional<TypeErasedDataflowAnalysisState>>
                       BlockStates)
@@ -116,7 +101,7 @@ struct AnalysisContext {
   /// Contains the CFG being analyzed.
   const AdornedCFG &ACFG;
   /// The analysis to be run.
-  TypeErasedDataflowAnalysis &Analysis;
+  DataflowAnalysis &Analysis;
   /// Initial state to start the analysis.
   const Environment &InitEnv;
   Logger &Log;
@@ -176,11 +161,10 @@ class JoinedStateBuilder {
   std::vector<const TypeErasedDataflowAnalysisState *> All;
   std::deque<TypeErasedDataflowAnalysisState> Owned;
 
-  TypeErasedDataflowAnalysisState
-  join(const TypeErasedDataflowAnalysisState &L,
-       const TypeErasedDataflowAnalysisState &R) {
-    return {AC.Analysis.joinTypeErased(L.Lattice, R.Lattice),
-            Environment::join(L.Env, R.Env, AC.Analysis, JoinBehavior)};
+  void join(TypeErasedDataflowAnalysisState &L,
+            const TypeErasedDataflowAnalysisState &R) {
+    L.Lattice->join(*R.Lattice);
+    L.Env = Environment::join(L.Env, R.Env, AC.Analysis, JoinBehavior);
   }
 
 public:
@@ -200,18 +184,23 @@ public:
       // FIXME: Consider passing `Block` to Analysis.typeErasedInitialElement
       // to enable building analyses like computation of dominators that
       // initialize the state of each basic block differently.
-      return {AC.Analysis.typeErasedInitialElement(), AC.InitEnv.fork()};
+      return {AC.Analysis.initialElement(), AC.InitEnv.fork()};
     if (All.size() == 1)
       // Join the environment with itself so that we discard expression state if
       // desired.
       // FIXME: We could consider writing special-case code for this that only
       // does the discarding, but it's not clear if this is worth it.
-      return {All[0]->Lattice, Environment::join(All[0]->Env, All[0]->Env,
-                                                 AC.Analysis, JoinBehavior)};
+      return {All[0]->Lattice->clone(),
+              Environment::join(All[0]->Env, All[0]->Env, AC.Analysis,
+                                JoinBehavior)};
 
-    auto Result = join(*All[0], *All[1]);
+    auto L0 = All[0]->Lattice->clone();
+    L0->join(*All[1]->Lattice);
+    auto Result = TypeErasedDataflowAnalysisState{
+        std::move(L0),
+        Environment::join(All[0]->Env, All[1]->Env, AC.Analysis, JoinBehavior)};
     for (unsigned I = 2; I < All.size(); ++I)
-      Result = join(Result, *All[I]);
+      join(Result, *All[I]);
     return Result;
   }
 };
@@ -317,8 +306,7 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
           BranchVal ? CondVal : &Copy.Env.makeNot(*CondVal);
       Copy.Env.assume(AssertedVal->formula());
     }
-    AC.Analysis.transferBranchTypeErased(BranchVal, Cond, Copy.Lattice,
-                                         Copy.Env);
+    AC.Analysis.transferBranch(BranchVal, *Cond, *Copy.Lattice, Copy.Env);
     Builder.addOwned(std::move(Copy));
   }
   return std::move(Builder).take();
@@ -449,7 +437,7 @@ transferCFGBlock(const CFGBlock &Block, AnalysisContext &AC,
     }
 
     // User-provided analysis
-    AC.Analysis.transferTypeErased(Element, State.Lattice, State.Env);
+    AC.Analysis.transfer(Element, *State.Lattice, State.Env);
 
     if (PostAnalysisCallbacks.After) {
       PostAnalysisCallbacks.After(Element, State);
@@ -487,7 +475,7 @@ transferCFGBlock(const CFGBlock &Block, AnalysisContext &AC,
 
 llvm::Expected<std::vector<std::optional<TypeErasedDataflowAnalysisState>>>
 runTypeErasedDataflowAnalysis(
-    const AdornedCFG &ACFG, TypeErasedDataflowAnalysis &Analysis,
+    const AdornedCFG &ACFG, DataflowAnalysis &Analysis,
     const Environment &InitEnv,
     const CFGEltCallbacksTypeErased &PostAnalysisCallbacks,
     std::int32_t MaxBlockVisits) {
@@ -510,7 +498,7 @@ runTypeErasedDataflowAnalysis(
 
   // The entry basic block doesn't contain statements so it can be skipped.
   const CFGBlock &Entry = CFG.getEntry();
-  BlockStates[Entry.getBlockID()] = {Analysis.typeErasedInitialElement(),
+  BlockStates[Entry.getBlockID()] = {Analysis.initialElement(),
                                      StartingEnv.fork()};
   Worklist.enqueueSuccessors(&Entry);
 
@@ -539,19 +527,18 @@ runTypeErasedDataflowAnalysis(
         OldBlockState->Env.dump();
       });
       if (isBackedgeNode(*Block)) {
-        LatticeJoinEffect Effect1 = Analysis.widenTypeErased(
-            NewBlockState.Lattice, OldBlockState->Lattice);
-        LatticeJoinEffect Effect2 =
+        LatticeEffect Effect1 =
+            NewBlockState.Lattice->widen(*OldBlockState->Lattice);
+        LatticeEffect Effect2 =
             NewBlockState.Env.widen(OldBlockState->Env, Analysis);
-        if (Effect1 == LatticeJoinEffect::Unchanged &&
-            Effect2 == LatticeJoinEffect::Unchanged) {
+        if (Effect1 == LatticeEffect::Unchanged &&
+            Effect2 == LatticeEffect::Unchanged) {
           // The state of `Block` didn't change from widening so there's no need
           // to revisit its successors.
           AC.Log.blockConverged();
           continue;
         }
-      } else if (Analysis.isEqualTypeErased(OldBlockState->Lattice,
-                                            NewBlockState.Lattice) &&
+      } else if (OldBlockState->Lattice->isEqual(*NewBlockState.Lattice) &&
                  OldBlockState->Env.equivalentTo(NewBlockState.Env, Analysis)) {
         // The state of `Block` didn't change after transfer so there's no need
         // to revisit its successors.
