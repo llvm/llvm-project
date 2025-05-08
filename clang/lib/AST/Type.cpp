@@ -3784,13 +3784,13 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
 
     ArrayRef<FunctionEffect> SrcFX = epi.FunctionEffects.effects();
     auto *DestFX = getTrailingObjects<FunctionEffect>();
-    std::uninitialized_copy(SrcFX.begin(), SrcFX.end(), DestFX);
+    llvm::uninitialized_copy(SrcFX, DestFX);
 
     ArrayRef<EffectConditionExpr> SrcConds = epi.FunctionEffects.conditions();
     if (!SrcConds.empty()) {
       ExtraBits.EffectsHaveConditions = true;
       auto *DestConds = getTrailingObjects<EffectConditionExpr>();
-      std::uninitialized_copy(SrcConds.begin(), SrcConds.end(), DestConds);
+      llvm::uninitialized_copy(SrcConds, DestConds);
       assert(std::any_of(SrcConds.begin(), SrcConds.end(),
                          [](const EffectConditionExpr &EC) {
                            if (const Expr *E = EC.getCondition())
@@ -4134,9 +4134,7 @@ PackIndexingType::PackIndexingType(const ASTContext &Context,
            computeDependence(Pattern, IndexExpr, Expansions)),
       Context(Context), Pattern(Pattern), IndexExpr(IndexExpr),
       Size(Expansions.size()), FullySubstituted(FullySubstituted) {
-
-  std::uninitialized_copy(Expansions.begin(), Expansions.end(),
-                          getTrailingObjects<QualType>());
+  llvm::uninitialized_copy(Expansions, getTrailingObjects<QualType>());
 }
 
 UnsignedOrNone PackIndexingType::getSelectedIndex() const {
@@ -4889,8 +4887,8 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   QualType type = getCanonicalTypeInternal();
 
   switch (type->getTypeClass()) {
-    // We'll only see canonical types here.
 #define NON_CANONICAL_TYPE(Class, Parent)                                      \
+  /* We'll only see canonical types here. */                                   \
   case Type::Class:                                                            \
     llvm_unreachable("non-canonical type");
 #define TYPE(Class, Parent)
