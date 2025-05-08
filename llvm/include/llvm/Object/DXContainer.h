@@ -25,6 +25,7 @@
 #include "llvm/TargetParser/Triple.h"
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <variant>
 
 namespace llvm {
@@ -122,8 +123,10 @@ namespace DirectX {
 struct RootParameterView {
   const dxbc::RootParameterHeader &Header;
   StringRef ParamData;
+  uint32_t Version;
+
   RootParameterView(uint32_t V, const dxbc::RootParameterHeader &H, StringRef P)
-      : Header(H), ParamData(P) {}
+      : Header(H), ParamData(P), Version(V) {}
 
   template <typename T> Expected<T> readParameter() {
     if (sizeof(T) != ParamData.size())
