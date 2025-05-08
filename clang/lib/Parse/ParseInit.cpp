@@ -445,13 +445,13 @@ ExprResult Parser::createEmbedExpr() {
           Context.MakeIntValue(Str.size(), Context.getSizeType());
       QualType ArrayTy = Context.getConstantArrayType(
           Ty, ArraySize, nullptr, ArraySizeModifier::Normal, 0);
-      return StringLiteral::Create(Context, Str, StringLiteralKind::Ordinary,
+      return StringLiteral::Create(Context, Str, StringLiteralKind::Binary,
                                    false, ArrayTy, StartLoc);
     };
 
     StringLiteral *BinaryDataArg = CreateStringLiteralFromStringRef(
         Data->BinaryData, Context.UnsignedCharTy);
-    Res = Actions.ActOnEmbedExpr(StartLoc, BinaryDataArg);
+    Res = Actions.ActOnEmbedExpr(StartLoc, BinaryDataArg, Data->FileName);
   }
   return Res;
 }
@@ -595,17 +595,17 @@ bool Parser::ParseMicrosoftIfExistsBraceInitializer(ExprVector &InitExprs,
   }
 
   switch (Result.Behavior) {
-  case IEB_Parse:
+  case IfExistsBehavior::Parse:
     // Parse the declarations below.
     break;
 
-  case IEB_Dependent:
+  case IfExistsBehavior::Dependent:
     Diag(Result.KeywordLoc, diag::warn_microsoft_dependent_exists)
       << Result.IsIfExists;
     // Fall through to skip.
     [[fallthrough]];
 
-  case IEB_Skip:
+  case IfExistsBehavior::Skip:
     Braces.skipToEnd();
     return false;
   }

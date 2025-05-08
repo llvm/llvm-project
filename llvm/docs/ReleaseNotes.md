@@ -56,17 +56,30 @@ Makes programs 10x faster by doing Special New Thing.
 Changes to the LLVM IR
 ----------------------
 
+* It is no longer permitted to inspect the uses of ConstantData. Use
+  count APIs will behave as if they have no uses (i.e. use_empty() is
+  always true).
+
 * The `nocapture` attribute has been replaced by `captures(none)`.
 * The constant expression variants of the following instructions have been
   removed:
 
   * `mul`
 
+* Updated semantics of `llvm.type.checked.load.relative` to match that of
+  `llvm.load.relative`.
+* Inline asm calls no longer accept ``label`` arguments. Use ``callbr`` instead.
+
 Changes to LLVM infrastructure
 ------------------------------
 
 * Removed support for target intrinsics being defined in the target directories
   themselves (i.e., the `TargetIntrinsicInfo` class).
+* Fix Microsoft demangling of string literals to be stricter
+  (#GH129970))
+* Added the support for ``fmaximum`` and ``fminimum`` in ``atomicrmw`` instruction. The
+  comparison is expected to match the behavior of ``llvm.maximum.*`` and
+  ``llvm.minimum.*`` respectively.
 
 Changes to building LLVM
 ------------------------
@@ -80,8 +93,22 @@ Changes to Interprocedural Optimizations
 Changes to the AArch64 Backend
 ------------------------------
 
+* Added the `execute-only` target feature, which indicates that the generated
+  program code doesn't contain any inline data, and there are no data accesses
+  to code sections. On ELF targets this property is indicated by the
+  `SHF_AARCH64_PURECODE` section flag.
+  ([#125687](https://github.com/llvm/llvm-project/pull/125687),
+  [#132196](https://github.com/llvm/llvm-project/pull/132196),
+  [#133084](https://github.com/llvm/llvm-project/pull/133084))
+
 Changes to the AMDGPU Backend
 -----------------------------
+
+* Enabled the
+  [FWD_PROGRESS bit](https://llvm.org/docs/AMDGPUUsage.html#code-object-v3-kernel-descriptor)
+  for all GFX ISAs greater or equal to 10, for the AMDHSA OS.
+
+* Bump the default `.amdhsa_code_object_version` to 6. ROCm 6.3 is required to run any program compiled with COV6.
 
 Changes to the ARM Backend
 --------------------------
@@ -95,11 +122,19 @@ Changes to the DirectX Backend
 Changes to the Hexagon Backend
 ------------------------------
 
+* The default Hexagon architecture version in ELF object files produced by
+  the tools such as llvm-mc is changed to v68. This version will be set if
+  the user does not provide the CPU version in the command line.
+
 Changes to the LoongArch Backend
 --------------------------------
 
+* Changing the default code model from `small` to `medium` for 64-bit.
+
 Changes to the MIPS Backend
 ---------------------------
+
+* `-mcpu=i6400` and `-mcpu=i6500` were added.
 
 Changes to the PowerPC Backend
 ------------------------------
@@ -107,16 +142,58 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
+* Adds experimental assembler support for the Qualcomm uC 'Xqcilb` (Long Branch)
+  extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcili` (Load Large Immediate)
+  extension.
 * Adds experimental assembler support for the Qualcomm uC 'Xqcilia` (Large Immediate Arithmetic)
   extension.
-* Adds experimental assembler support for the Qualcomm 'Xqccmp' extension, which
-  is a frame-pointer convention compatible version of Zcmp.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcibm` (Bit Manipulation)
+  extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcibi` (Branch Immediate)
+  extension.
+* Adds experimental assembler and code generation support for the Qualcomm
+  'Xqccmp' extension, which is a frame-pointer convention compatible version of
+  Zcmp.
+* Added non-quadratic ``log-vrgather`` cost model for ``vrgather.vv`` instruction
+* Adds experimental assembler support for the Qualcomm uC 'Xqcisim` (Simulation Hint)
+  extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcisync` (Sync Delay)
+  extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqciio` (External Input Output)
+  extension.
+* Adds assembler support for the 'Zilsd` (Load/Store Pair Instructions)
+  extension.
+* Adds assembler support for the 'Zclsd` (Compressed Load/Store Pair Instructions)
+  extension.
+* Adds experimental assembler support for Zvqdotq.
+* Adds Support for Qualcomm's `qci-nest` and `qci-nonest` interrupt types, which
+  use instructions from `Xqciint` to save and restore some GPRs during interrupt
+  handlers.
+* When the experimental extension `Xqcili` is enabled, `qc.e.li` and `qc.li` may
+  now be used to materialize immediates.
+* Adds assembler support for ``.option exact``, which disables automatic compression,
+  and branch and linker relaxation. This can be disabled with ``.option noexact``,
+  which is also the default.
+* `-mcpu=xiangshan-kunminghu` was added.
+* `-mcpu=andes-n45` and `-mcpu=andes-nx45` were added.
+* `-mcpu=andes-a45` and `-mcpu=andes-ax45` were added.
+* Adds support for the 'Ziccamoc` (Main Memory Supports Atomics in Zacas) extension, which was introduced as an optional extension of the RISC-V Profiles specification.
+* Adds experimental assembler support for SiFive CLIC CSRs, under the names
+  `Zsfmclic` for the M-mode registers and `Zsfsclic` for the S-mode registers.
+* Adds Support for SiFive CLIC interrupt attributes, which automate writing CLIC
+  interrupt handlers without using inline assembly.
+* Adds assembler support for the Andes `XAndesperf` (Andes Performance extension).
+* `-mcpu=sifive-p870` was added.
 
 Changes to the WebAssembly Backend
 ----------------------------------
 
 Changes to the Windows Target
 -----------------------------
+
+* `fp128` is now passed indirectly, meaning it uses the same calling convention
+  as `i128`.
 
 Changes to the X86 Backend
 --------------------------
@@ -139,6 +216,13 @@ Changes to the C API
   * `LLVMConstNUWMul`
   * `LLVMConstNSWMul`
 
+* Added `LLVMConstDataArray` and `LLVMGetRawDataValues` to allow creating and
+  reading `ConstantDataArray` values without needing extra `LLVMValueRef`s for
+  individual elements.
+
+* Added ``LLVMDIBuilderCreateEnumeratorOfArbitraryPrecision`` for creating
+  debugging metadata of enumerators larger than 64 bits.
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
@@ -152,6 +236,9 @@ Changes to the LLVM tools
 ---------------------------------
 
 * llvm-objcopy now supports the `--update-section` flag for intermediate Mach-O object files.
+* llvm-strip now supports continuing to process files on encountering an error.
+* In llvm-objcopy/llvm-strip's ELF port, `--discard-locals` and `--discard-all` now allow and preserve symbols referenced by relocations.
+  ([#47468](https://github.com/llvm/llvm-project/issues/47468))
 
 Changes to LLDB
 ---------------------------------
@@ -164,6 +251,18 @@ Changes to LLDB
   Windows 11 on the Microsoft SQ2 and Snapdragon Elite X platforms.
 * LLDB now steps through C++ thunks. This fixes an issue where previously, it
   wouldn't step into multiple inheritance virtual functions.
+* A statusline was added to command-line LLDB to show progress events and
+  information about the current state of the debugger at the bottom of the
+  terminal. This is on by default and can be configured using the
+  `show-statusline` and `statusline-format` settings. It is not currently
+  supported on Windows.
+* The `min-gdbserver-port` and `max-gdbserver-port` options have been removed
+  from `lldb-server`'s platform mode. Since the changes to `lldb-server`'s port
+  handling in LLDB 20, these options have had no effect.
+* LLDB now supports `process continue --reverse` when used with debug servers
+  supporting reverse execution, such as [rr](https://rr-project.org).
+  When using reverse execution, `process continue --forward` returns to the
+  forward execution.
 
 ### Changes to lldb-dap
 

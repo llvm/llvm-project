@@ -4,16 +4,13 @@
 SBSaveCoreOptions includes API's to specify the memory regions and threads to include
 when generating a core file. It extends the existing SaveCoreStyle option.
 
-* eSaveCoreFull will save off all thread and memory regions, ignoring the memory regions and threads in
-the options object.
+* eSaveCoreFull will save off all thread and memory regions, ignoring the memory regions and threads in the options object.
 
-* eSaveCoreDirtyOnly pages will capture all threads and all rw- memory regions, in addition to the regions specified
-in the options object if they are not already captured.
+* eSaveCoreDirtyOnly pages will capture all threads and all rw- memory regions, in addition to the regions specified in the options object if they are not already captured.
 
 * eSaveCoreStackOnly will capture all threads, but no memory regions unless specified.
 
-* eSaveCoreCustomOnly Custom defers entirely to the SBSaveCoreOptions object and will only save what is specified. 
-  Picking custom and specifying nothing will result in an error being returned.
+* eSaveCoreCustomOnly Custom defers entirely to the SBSaveCoreOptions object and will only save what is specified. Picking custom and specifying nothing will result in an error being returned.
 
 Note that currently ELF Core files are not supported."
 ) lldb::SBSaveCoreOptions;

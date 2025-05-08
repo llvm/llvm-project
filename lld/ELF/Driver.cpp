@@ -56,13 +56,13 @@
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -396,18 +396,20 @@ static void checkOptions(Ctx &ctx) {
       ErrAlways(ctx) << "-z pac-plt only supported on AArch64";
     if (ctx.arg.zForceBti)
       ErrAlways(ctx) << "-z force-bti only supported on AArch64";
-    if (ctx.arg.zBtiReport != "none")
+    if (ctx.arg.zBtiReport != ReportPolicy::None)
       ErrAlways(ctx) << "-z bti-report only supported on AArch64";
-    if (ctx.arg.zPauthReport != "none")
+    if (ctx.arg.zPauthReport != ReportPolicy::None)
       ErrAlways(ctx) << "-z pauth-report only supported on AArch64";
-    if (ctx.arg.zGcsReport != "none")
+    if (ctx.arg.zGcsReport != ReportPolicy::None)
       ErrAlways(ctx) << "-z gcs-report only supported on AArch64";
+    if (ctx.arg.zGcsReportDynamic != ReportPolicy::None)
+      ErrAlways(ctx) << "-z gcs-report-dynamic only supported on AArch64";
     if (ctx.arg.zGcs != GcsPolicy::Implicit)
       ErrAlways(ctx) << "-z gcs only supported on AArch64";
   }
 
   if (ctx.arg.emachine != EM_AARCH64 && ctx.arg.emachine != EM_ARM &&
-      ctx.arg.zExecuteOnlyReport != "none")
+      ctx.arg.zExecuteOnlyReport != ReportPolicy::None)
     ErrAlways(ctx)
         << "-z execute-only-report only supported on AArch64 and ARM";
 
@@ -423,7 +425,7 @@ static void checkOptions(Ctx &ctx) {
     ErrAlways(ctx) << "--relax-gp is only supported on RISC-V targets";
 
   if (ctx.arg.emachine != EM_386 && ctx.arg.emachine != EM_X86_64 &&
-      ctx.arg.zCetReport != "none")
+      ctx.arg.zCetReport != ReportPolicy::None)
     ErrAlways(ctx) << "-z cet-report only supported on X86 and X86_64";
 
   if (ctx.arg.pie && ctx.arg.shared)
@@ -1272,11 +1274,6 @@ static void parseClangOption(Ctx &ctx, StringRef opt, const Twine &msg) {
   ErrAlways(ctx) << msg << ": " << StringRef(err).trim();
 }
 
-// Checks the parameter of the bti-report and cet-report options.
-static bool isValidReportString(StringRef arg) {
-  return arg == "none" || arg == "warning" || arg == "error";
-}
-
 // Process a remap pattern 'from-glob=to-file'.
 static bool remapInputs(Ctx &ctx, StringRef line, const Twine &location) {
   SmallVector<StringRef, 0> fields;
@@ -1470,8 +1467,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
 
   if (args.hasArg(OPT_save_temps)) {
     // --save-temps implies saving all temps.
-    for (const char *s : saveTempsValues)
-      ctx.arg.saveTempsArgs.insert(s);
+    ctx.arg.saveTempsArgs.insert_range(saveTempsValues);
   } else {
     for (auto *arg : args.filtered(OPT_save_temps_eq)) {
       StringRef s = arg->getValue();
@@ -1489,6 +1485,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     ctx.arg.randomizeSectionPadding =
         args::getInteger(args, OPT_randomize_section_padding, 0);
   ctx.arg.singleRoRx = !args.hasFlag(OPT_rosegment, OPT_no_rosegment, true);
+  ctx.arg.singleXoRx = !args.hasFlag(OPT_xosegment, OPT_no_xosegment, false);
   ctx.arg.soName = args.getLastArgValue(OPT_soname);
   ctx.arg.sortSection = getSortSection(ctx, args);
   ctx.arg.splitStackAdjustSize =
@@ -1548,6 +1545,15 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.warnSymbolOrdering =
       args.hasFlag(OPT_warn_symbol_ordering, OPT_no_warn_symbol_ordering, true);
   ctx.arg.whyExtract = args.getLastArgValue(OPT_why_extract);
+  for (opt::Arg *arg : args.filtered(OPT_why_live)) {
+    StringRef value(arg->getValue());
+    if (Expected<GlobPattern> pat = GlobPattern::create(arg->getValue())) {
+      ctx.arg.whyLive.emplace_back(std::move(*pat));
+    } else {
+      ErrAlways(ctx) << arg->getSpelling() << ": " << pat.takeError();
+      continue;
+    }
+  }
   ctx.arg.zCombreloc = getZFlag(args, "combreloc", "nocombreloc", true);
   ctx.arg.zCopyreloc = getZFlag(args, "copyreloc", "nocopyreloc", true);
   ctx.arg.zForceBti = hasZOption(args, "force-bti");
@@ -1569,7 +1575,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.zNodlopen = hasZOption(args, "nodlopen");
   ctx.arg.zNow = getZFlag(args, "now", "lazy", false);
   ctx.arg.zOrigin = hasZOption(args, "origin");
-  ctx.arg.zPacPlt = hasZOption(args, "pac-plt");
+  ctx.arg.zPacPlt = getZFlag(args, "pac-plt", "nopac-plt", false);
   ctx.arg.zRelro = getZFlag(args, "relro", "norelro", true);
   ctx.arg.zRetpolineplt = hasZOption(args, "retpolineplt");
   ctx.arg.zRodynamic = hasZOption(args, "rodynamic");
@@ -1630,7 +1636,9 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       std::make_pair("cet-report", &ctx.arg.zCetReport),
       std::make_pair("execute-only-report", &ctx.arg.zExecuteOnlyReport),
       std::make_pair("gcs-report", &ctx.arg.zGcsReport),
+      std::make_pair("gcs-report-dynamic", &ctx.arg.zGcsReportDynamic),
       std::make_pair("pauth-report", &ctx.arg.zPauthReport)};
+  bool hasGcsReportDynamic = false;
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
         StringRef(arg->getValue()).split('=');
@@ -1638,14 +1646,26 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       if (option.first != reportArg.first)
         continue;
       arg->claim();
-      if (!isValidReportString(option.second)) {
+      if (option.second == "none")
+        *reportArg.second = ReportPolicy::None;
+      else if (option.second == "warning")
+        *reportArg.second = ReportPolicy::Warning;
+      else if (option.second == "error")
+        *reportArg.second = ReportPolicy::Error;
+      else {
         ErrAlways(ctx) << "unknown -z " << reportArg.first
                        << "= value: " << option.second;
         continue;
       }
-      *reportArg.second = option.second;
+      hasGcsReportDynamic |= option.first == "gcs-report-dynamic";
     }
   }
+
+  // When -zgcs-report-dynamic is unspecified, it inherits -zgcs-report
+  // but is capped at warning to avoid needing to rebuild the shared library
+  // with GCS enabled.
+  if (!hasGcsReportDynamic && ctx.arg.zGcsReport != ReportPolicy::None)
+    ctx.arg.zGcsReportDynamic = ReportPolicy::Warning;
 
   for (opt::Arg *arg : args.filtered(OPT_compress_sections)) {
     SmallVector<StringRef, 0> fields;
@@ -2299,8 +2319,7 @@ static void writeArchiveStats(Ctx &ctx) {
 
   os << "members\textracted\tarchive\n";
 
-  SmallVector<StringRef, 0> archives;
-  DenseMap<CachedHashStringRef, unsigned> all, extracted;
+  DenseMap<CachedHashStringRef, unsigned> extracted;
   for (ELFFileBase *file : ctx.objectFiles)
     if (file->archiveName.size())
       ++extracted[CachedHashStringRef(file->archiveName)];
@@ -2618,6 +2637,18 @@ void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
     auto *obj = cast<ObjFile<ELFT>>(file.get());
     obj->parse(/*ignoreComdats=*/true);
 
+    // This is only needed for AArch64 PAuth to set correct key in AUTH GOT
+    // entry based on symbol type (STT_FUNC or not).
+    // TODO: check if PAuth is actually used.
+    if (ctx.arg.emachine == EM_AARCH64) {
+      for (typename ELFT::Sym elfSym : obj->template getGlobalELFSyms<ELFT>()) {
+        StringRef elfSymName = check(elfSym.getName(obj->getStringTable()));
+        if (Symbol *sym = ctx.symtab->find(elfSymName))
+          if (sym->type == STT_NOTYPE)
+            sym->type = elfSym.getType();
+      }
+    }
+
     // For defined symbols in non-relocatable output,
     // compute isExported and parse '@'.
     if (!ctx.arg.relocatable)
@@ -2820,17 +2851,13 @@ static void readSecurityNotes(Ctx &ctx) {
   bool hasValidPauthAbiCoreInfo = llvm::any_of(
       ctx.aarch64PauthAbiCoreInfo, [](uint8_t c) { return c != 0; });
 
-  auto report = [&](StringRef config) -> ELFSyncStream {
-    if (config == "error")
-      return {ctx, DiagLevel::Err};
-    else if (config == "warning")
-      return {ctx, DiagLevel::Warn};
-    return {ctx, DiagLevel::None};
+  auto report = [&](ReportPolicy policy) -> ELFSyncStream {
+    return {ctx, toDiagLevel(policy)};
   };
-  auto reportUnless = [&](StringRef config, bool cond) -> ELFSyncStream {
+  auto reportUnless = [&](ReportPolicy policy, bool cond) -> ELFSyncStream {
     if (cond)
       return {ctx, DiagLevel::None};
-    return report(config);
+    return {ctx, toDiagLevel(policy)};
   };
   for (ELFFileBase *f : ctx.objectFiles) {
     uint32_t features = f->andFeatures;
@@ -2860,13 +2887,13 @@ static void readSecurityNotes(Ctx &ctx) {
 
     if (ctx.arg.zForceBti && !(features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)) {
       features |= GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
-      if (ctx.arg.zBtiReport == "none")
+      if (ctx.arg.zBtiReport == ReportPolicy::None)
         Warn(ctx) << f
                   << ": -z force-bti: file does not have "
                      "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property";
     } else if (ctx.arg.zForceIbt &&
                !(features & GNU_PROPERTY_X86_FEATURE_1_IBT)) {
-      if (ctx.arg.zCetReport == "none")
+      if (ctx.arg.zCetReport == ReportPolicy::None)
         Warn(ctx) << f
                   << ": -z force-ibt: file does not have "
                      "GNU_PROPERTY_X86_FEATURE_1_IBT property";
@@ -2911,6 +2938,22 @@ static void readSecurityNotes(Ctx &ctx) {
     ctx.arg.andFeatures |= GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
   else if (ctx.arg.zGcs == GcsPolicy::Never)
     ctx.arg.andFeatures &= ~GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+
+  // If we are utilising GCS at any stage, the sharedFiles should be checked to
+  // ensure they also support this feature. The gcs-report-dynamic option is
+  // used to indicate if the user wants information relating to this, and will
+  // be set depending on the user's input, or warning if gcs-report is set to
+  // either `warning` or `error`.
+  if (ctx.arg.andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_GCS)
+    for (SharedFile *f : ctx.sharedFiles)
+      reportUnless(ctx.arg.zGcsReportDynamic,
+                   f->andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_GCS)
+          << f
+          << ": GCS is required by -z gcs, but this shared library lacks the "
+             "necessary property note. The "
+          << "dynamic loader might not enable GCS or refuse to load the "
+             "program unless all shared library "
+          << "dependencies have the GCS marking.";
 }
 
 static void initSectionsAndLocalSyms(ELFFileBase *file, bool ignoreComdats) {

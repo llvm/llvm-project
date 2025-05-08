@@ -79,7 +79,7 @@ SPIRVTranslate(Module *M, std::string &SpirvObj, std::string &ErrMsg,
 
   if (TargetTriple.getTriple().empty()) {
     TargetTriple.setTriple(DefaultTriple);
-    M->setTargetTriple(DefaultTriple);
+    M->setTargetTriple(TargetTriple);
   }
   const Target *TheTarget =
       TargetRegistry::lookupTarget(DefaultMArch, TargetTriple, ErrMsg);
@@ -94,7 +94,7 @@ SPIRVTranslate(Module *M, std::string &SpirvObj, std::string &ErrMsg,
   std::optional<Reloc::Model> RM;
   std::optional<CodeModel::Model> CM;
   std::unique_ptr<TargetMachine> Target(TheTarget->createTargetMachine(
-      TargetTriple.getTriple(), "", "", Options, RM, CM, OLevel));
+      TargetTriple, "", "", Options, RM, CM, OLevel));
   if (!Target) {
     ErrMsg = "Could not allocate target machine!";
     return false;
@@ -118,13 +118,13 @@ SPIRVTranslate(Module *M, std::string &SpirvObj, std::string &ErrMsg,
   }
   M->setDataLayout(MaybeDL.get());
 
-  TargetLibraryInfoImpl TLII(Triple(M->getTargetTriple()));
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   legacy::PassManager PM;
   PM.add(new TargetLibraryInfoWrapperPass(TLII));
   std::unique_ptr<MachineModuleInfoWrapperPass> MMIWP(
       new MachineModuleInfoWrapperPass(Target.get()));
   const_cast<TargetLoweringObjectFile *>(Target->getObjFileLowering())
-      ->Initialize(MMIWP.get()->getMMI().getContext(), *Target);
+      ->Initialize(MMIWP->getMMI().getContext(), *Target);
 
   SmallString<4096> OutBuffer;
   raw_svector_ostream OutStream(OutBuffer);
@@ -148,9 +148,9 @@ SPIRVTranslateModule(Module *M, std::string &SpirvObj, std::string &ErrMsg,
                      const std::vector<std::string> &Opts) {
   // optional: Opts[0] is a string representation of Triple,
   // take Module triple otherwise
-  Triple TargetTriple(Opts.empty() || Opts[0].empty()
-                          ? M->getTargetTriple()
-                          : Triple::normalize(Opts[0]));
+  Triple TargetTriple = Opts.empty() || Opts[0].empty()
+                            ? M->getTargetTriple()
+                            : Triple(Triple::normalize(Opts[0]));
   // optional: Opts[1] is a string representation of CodeGenOptLevel,
   // no optimization otherwise
   llvm::CodeGenOptLevel OLevel = CodeGenOptLevel::None;

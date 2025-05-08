@@ -12,7 +12,6 @@
 ; for buffer-related memcpy() calls turns into something reasonable in
 ; the backend, despite the wide intermediate vectors
 
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8"
 target triple = "amdgcn--"
 
 ;; memcpy
@@ -923,7 +922,6 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) inreg %src, ptr 
 ; SDAG-GFX1100-NEXT:    v_add_nc_u32_e32 v61, s0, v0
 ; SDAG-GFX1100-NEXT:    v_add_nc_u32_e32 v65, s8, v0
 ; SDAG-GFX1100-NEXT:    v_add_co_u32 v0, s1, 0x100, v0
-; SDAG-GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; SDAG-GFX1100-NEXT:    s_and_b32 vcc_lo, exec_lo, s1
 ; SDAG-GFX1100-NEXT:    s_clause 0xf
 ; SDAG-GFX1100-NEXT:    buffer_load_b128 v[1:4], v61, s[4:7], 0 offen
@@ -1097,7 +1095,6 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) inreg %src, ptr 
 ; GISEL-GFX1100-NEXT:    v_add_nc_u32_e32 v61, s0, v0
 ; GISEL-GFX1100-NEXT:    v_add_nc_u32_e32 v65, s8, v0
 ; GISEL-GFX1100-NEXT:    v_add_co_u32 v0, s1, 0x100, v0
-; GISEL-GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GISEL-GFX1100-NEXT:    s_xor_b32 s1, s1, -1
 ; GISEL-GFX1100-NEXT:    s_clause 0xf
 ; GISEL-GFX1100-NEXT:    buffer_load_b128 v[1:4], v61, s[4:7], 0 offen

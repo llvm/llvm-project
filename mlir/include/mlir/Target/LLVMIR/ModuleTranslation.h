@@ -136,6 +136,29 @@ public:
     return callMapping.lookup(op);
   }
 
+  /// Maps a blockaddress operation to its corresponding placeholder LLVM
+  /// value.
+  void mapUnresolvedBlockAddress(BlockAddressOp op, llvm::Value *cst) {
+    auto result = unresolvedBlockAddressMapping.try_emplace(op, cst);
+    (void)result;
+    assert(result.second &&
+           "attempting to map a blockaddress that is already mapped");
+  }
+
+  /// Maps a blockaddress operation to its corresponding placeholder LLVM
+  /// value.
+  void mapBlockTag(BlockAddressAttr attr, BlockTagOp blockTag) {
+    // Attempts to map already mapped block labels which is fine if the given
+    // labels are verified to be unique.
+    blockTagMapping[attr] = blockTag;
+  }
+
+  /// Finds an MLIR block that corresponds to the given MLIR call
+  /// operation.
+  BlockTagOp lookupBlockTag(BlockAddressAttr attr) const {
+    return blockTagMapping.lookup(attr);
+  }
+
   /// Removes the mapping for blocks contained in the region and values defined
   /// in these blocks.
   void forgetMapping(Region &region);
@@ -160,6 +183,11 @@ public:
 
   /// Sets LLVM TBAA metadata for memory operations that have TBAA attributes.
   void setTBAAMetadata(AliasAnalysisOpInterface op, llvm::Instruction *inst);
+
+  /// Sets LLVM dereferenceable metadata for operations that have
+  /// dereferenceable attributes.
+  void setDereferenceableMetadata(DereferenceableOpInterface op,
+                                  llvm::Instruction *inst);
 
   /// Sets LLVM profiling metadata for operations that have branch weights.
   void setBranchWeightsMetadata(BranchWeightOpInterface op);
@@ -237,7 +265,7 @@ public:
 
   /// Translates parameter attributes of a call and adds them to the returned
   /// AttrBuilder. Returns failure if any of the translations failed.
-  FailureOr<llvm::AttrBuilder> convertParameterAttrs(CallOpInterface callOp,
+  FailureOr<llvm::AttrBuilder> convertParameterAttrs(mlir::Location loc,
                                                      DictionaryAttr paramAttrs);
 
   /// Gets the named metadata in the LLVM IR module being constructed, creating
@@ -333,6 +361,8 @@ private:
   LogicalResult convertFunctions();
   LogicalResult convertComdats();
 
+  LogicalResult convertUnresolvedBlockAddress();
+
   /// Handle conversion for both globals and global aliases.
   ///
   /// - Create named global variables that correspond to llvm.mlir.global
@@ -357,6 +387,9 @@ private:
 
   /// Process the llvm.commandline LLVM Metadata, if it exists.
   LogicalResult createCommandlineMetadata();
+
+  /// Process the llvm.dependent_libraries LLVM Metadata, if it exists.
+  LogicalResult createDependentLibrariesMetadata();
 
   /// Translates dialect attributes attached to the given operation.
   LogicalResult
@@ -424,6 +457,16 @@ private:
   /// Mapping from a comdat selector operation to its LLVM comdat struct.
   /// This map is populated on module entry.
   DenseMap<ComdatSelectorOp, llvm::Comdat *> comdatMapping;
+
+  /// Mapping from llvm.blockaddress operations to their corresponding LLVM
+  /// constant placeholders. After all basic blocks are translated, this
+  /// mapping is used to replace the placeholders with the LLVM block addresses.
+  DenseMap<BlockAddressOp, llvm::Value *> unresolvedBlockAddressMapping;
+
+  /// Mapping from a BlockAddressAttr attribute to a matching BlockTagOp. This
+  /// is used to cache BlockTagOp locations instead of walking a LLVMFuncOp in
+  /// search for those.
+  DenseMap<BlockAddressAttr, BlockTagOp> blockTagMapping;
 
   /// Stack of user-specified state elements, useful when translating operations
   /// with regions.

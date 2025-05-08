@@ -15,12 +15,12 @@
 
 namespace lldb_dap {
 
-struct Breakpoint : public BreakpointBase {
-  // The LLDB breakpoint associated wit this source breakpoint
-  lldb::SBBreakpoint bp;
-
+class Breakpoint : public BreakpointBase {
+public:
   Breakpoint(DAP &d, const llvm::json::Object &obj) : BreakpointBase(d, obj) {}
-  Breakpoint(DAP &d, lldb::SBBreakpoint bp) : BreakpointBase(d), bp(bp) {}
+  Breakpoint(DAP &d, lldb::SBBreakpoint bp) : BreakpointBase(d), m_bp(bp) {}
+
+  lldb::break_id_t GetID() const { return m_bp.GetID(); }
 
   void SetCondition() override;
   void SetHitCondition() override;
@@ -28,6 +28,10 @@ struct Breakpoint : public BreakpointBase {
 
   bool MatchesName(const char *name);
   void SetBreakpoint();
+
+protected:
+  /// The LLDB breakpoint associated wit this source breakpoint.
+  lldb::SBBreakpoint m_bp;
 };
 } // namespace lldb_dap
 

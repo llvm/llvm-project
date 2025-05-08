@@ -22,6 +22,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <functional>
@@ -117,9 +118,22 @@ struct ClonedCodeInfo {
 /// If you would like to collect additional information about the cloned
 /// function, you can specify a ClonedCodeInfo object with the optional fifth
 /// parameter.
+///
+/// \p MapAtoms indicates whether source location atoms should be mapped for
+/// later remapping. Must be true when you duplicate a code path and a source
+/// location is intended to appear twice in the generated instructions. Can be
+/// set to false if you are transplanting code from one place to another.
+/// Setting true (default) is always safe (won't produce incorrect debug info)
+/// but is sometimes unnecessary, causing extra work that could be avoided by
+/// setting the parameter to false.
 BasicBlock *CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
                             const Twine &NameSuffix = "", Function *F = nullptr,
-                            ClonedCodeInfo *CodeInfo = nullptr);
+                            ClonedCodeInfo *CodeInfo = nullptr,
+                            bool MapAtoms = true);
+
+/// Mark a cloned instruction as a new instance so that its source loc can
+/// be updated when remapped.
+void mapAtomInstance(const DebugLoc &DL, ValueToValueMapTy &VMap);
 
 /// Return a copy of the specified function and add it to that
 /// function's module.  Also, any references specified in the VMap are changed
@@ -194,7 +208,7 @@ void CloneFunctionMetadataInto(Function &NewFunc, const Function &OldFunc,
                                ValueToValueMapTy &VMap, RemapFlags RemapFlag,
                                ValueMapTypeRemapper *TypeMapper = nullptr,
                                ValueMaterializer *Materializer = nullptr,
-                               const MetadataSetTy *IdentityMD = nullptr);
+                               const MetadataPredicate *IdentityMD = nullptr);
 
 /// Clone OldFunc's body into NewFunc.
 void CloneFunctionBodyInto(Function &NewFunc, const Function &OldFunc,
@@ -204,7 +218,7 @@ void CloneFunctionBodyInto(Function &NewFunc, const Function &OldFunc,
                            ClonedCodeInfo *CodeInfo = nullptr,
                            ValueMapTypeRemapper *TypeMapper = nullptr,
                            ValueMaterializer *Materializer = nullptr,
-                           const MetadataSetTy *IdentityMD = nullptr);
+                           const MetadataPredicate *IdentityMD = nullptr);
 
 void CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
                                const Instruction *StartingInst,
@@ -229,39 +243,6 @@ void CloneAndPruneFunctionInto(Function *NewFunc, const Function *OldFunc,
                                SmallVectorImpl<ReturnInst*> &Returns,
                                const char *NameSuffix = "",
                                ClonedCodeInfo *CodeInfo = nullptr);
-
-/// Collect debug information such as types, compile units, and other
-/// subprograms that are reachable from \p F and can be considered global for
-/// the purposes of cloning (and hence not needing to be cloned).
-///
-/// What debug information should be processed depends on \p Changes: when
-/// cloning into the same module we process \p F's subprogram and instructions;
-/// when into a cloned module, neither of those.
-///
-/// Returns DISubprogram of the cloned function when cloning into the same
-/// module or nullptr otherwise.
-DISubprogram *CollectDebugInfoForCloning(const Function &F,
-                                         CloneFunctionChangeType Changes,
-                                         DebugInfoFinder &DIFinder);
-
-/// Based on \p Changes and \p DIFinder return debug info that needs to be
-/// identity mapped during Metadata cloning.
-///
-/// NOTE: Such \a MetadataSetTy can be used by \a CloneFunction* to directly
-/// specify metadata that should be identity mapped (and hence not cloned). The
-/// metadata will be identity mapped in \a ValueToValueMapTy on first use. There
-/// are several reasons for doing it this way rather than eagerly identity
-/// mapping metadata nodes in a \a ValueMap:
-/// 1. Mapping metadata is not cheap, particularly because of tracking.
-/// 2. When cloning a Function we identity map lots of global module-level
-///    metadata to avoid cloning it, while only a fraction of it is actually
-///    used by the function. Mapping on first use is a lot faster for modules
-///    with meaningful amount of debug info.
-/// 3. Eagerly identity mapping metadata makes it harder to cache module-level
-///    data (e.g. a set of metadata nodes in a \a DICompileUnit).
-MetadataSetTy FindDebugInfoToIdentityMap(CloneFunctionChangeType Changes,
-                                         DebugInfoFinder &DIFinder,
-                                         DISubprogram *SPClonedWithinModule);
 
 /// This class captures the data input to the InlineFunction call, and records
 /// the auxiliary results produced by it.

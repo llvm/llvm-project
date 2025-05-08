@@ -67,7 +67,7 @@ struct identity {
     if (true)
       return [typename identity<I3>::type method];
 #if __cplusplus <= 199711L
-      // expected-warning@-2 {{'typename' occurs outside of a template}}
+      // expected-warning@-2 {{'typename' outside of a template is a C++11 extension}}
 #endif
 
     return [::I3 method];
@@ -77,12 +77,12 @@ struct identity {
   int* ip2 = {[::I3 method]};
   int* ip3 = {[typename identity<I3>::type method]};
 #if __cplusplus <= 199711L
-  // expected-warning@-2 {{'typename' occurs outside of a template}}
+  // expected-warning@-2 {{'typename' outside of a template is a C++11 extension}}
 #endif
 
   int* ip4 = {[typename identity<I2_holder>::type().get() method]};
 #if __cplusplus <= 199711L
-  // expected-warning@-2 {{'typename' occurs outside of a template}}
+  // expected-warning@-2 {{'typename' outside of a template is a C++11 extension}}
 #endif
   int array[5] = {[3] = 2}; // expected-warning {{C99 extension}}
   return [super method];

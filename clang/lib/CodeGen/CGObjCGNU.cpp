@@ -819,7 +819,7 @@ class CGObjCGNUstep : public CGObjCGNU {
       const ObjCRuntime &R = CGM.getLangOpts().ObjCRuntime;
 
       SlotStructTy = llvm::StructType::get(PtrTy, PtrTy, PtrTy, IntTy, IMPTy);
-      SlotTy = llvm::PointerType::getUnqual(SlotStructTy);
+      SlotTy = PtrTy;
       // Slot_t objc_msg_lookup_sender(id *receiver, SEL selector, id sender);
       SlotLookupFn.init(&CGM, "objc_msg_lookup_sender", SlotTy, PtrToIdTy,
                         SelectorTy, IdTy);
@@ -2224,6 +2224,96 @@ protected:
     return ClassSymbol;
   }
 
+  void GenerateDirectMethodPrologue(
+      CodeGenFunction &CGF, llvm::Function *Fn, const ObjCMethodDecl *OMD,
+      const ObjCContainerDecl *CD) override {
+    auto &Builder = CGF.Builder;
+    bool ReceiverCanBeNull = true;
+    auto selfAddr = CGF.GetAddrOfLocalVar(OMD->getSelfDecl());
+    auto selfValue = Builder.CreateLoad(selfAddr);
+
+    // Generate:
+    //
+    // /* for class methods only to force class lazy initialization */
+    // self = [self self];
+    //
+    // /* unless the receiver is never NULL */
+    // if (self == nil) {
+    //     return (ReturnType){ };
+    // }
+    //
+    // _cmd = @selector(...)
+    // ...
+
+    if (OMD->isClassMethod()) {
+      const ObjCInterfaceDecl *OID = cast<ObjCInterfaceDecl>(CD);
+      assert(
+          OID &&
+          "GenerateDirectMethod() should be called with the Class Interface");
+      Selector SelfSel = GetNullarySelector("self", CGM.getContext());
+      auto ResultType = CGF.getContext().getObjCIdType();
+      RValue result;
+      CallArgList Args;
+
+      // TODO: If this method is inlined, the caller might know that `self` is
+      // already initialized; for example, it might be an ordinary Objective-C
+      // method which always receives an initialized `self`, or it might have
+      // just forced initialization on its own.
+      //
+      // We should find a way to eliminate this unnecessary initialization in
+      // such cases in LLVM.
+      result = GeneratePossiblySpecializedMessageSend(
+          CGF, ReturnValueSlot(), ResultType, SelfSel, selfValue, Args, OID,
+          nullptr, true);
+      Builder.CreateStore(result.getScalarVal(), selfAddr);
+
+      // Nullable `Class` expressions cannot be messaged with a direct method
+      // so the only reason why the receive can be null would be because
+      // of weak linking.
+      ReceiverCanBeNull = isWeakLinkedClass(OID);
+    }
+
+    if (ReceiverCanBeNull) {
+      llvm::BasicBlock *SelfIsNilBlock =
+          CGF.createBasicBlock("objc_direct_method.self_is_nil");
+      llvm::BasicBlock *ContBlock =
+          CGF.createBasicBlock("objc_direct_method.cont");
+
+      // if (self == nil) {
+      auto selfTy = cast<llvm::PointerType>(selfValue->getType());
+      auto Zero = llvm::ConstantPointerNull::get(selfTy);
+
+      llvm::MDBuilder MDHelper(CGM.getLLVMContext());
+      Builder.CreateCondBr(Builder.CreateICmpEQ(selfValue, Zero),
+                           SelfIsNilBlock, ContBlock,
+                           MDHelper.createUnlikelyBranchWeights());
+
+      CGF.EmitBlock(SelfIsNilBlock);
+
+      //   return (ReturnType){ };
+      auto retTy = OMD->getReturnType();
+      Builder.SetInsertPoint(SelfIsNilBlock);
+      if (!retTy->isVoidType()) {
+        CGF.EmitNullInitialization(CGF.ReturnValue, retTy);
+      }
+      CGF.EmitBranchThroughCleanup(CGF.ReturnBlock);
+      // }
+
+      // rest of the body
+      CGF.EmitBlock(ContBlock);
+      Builder.SetInsertPoint(ContBlock);
+    }
+
+    // only synthesize _cmd if it's referenced
+    if (OMD->getCmdDecl()->isUsed()) {
+      // `_cmd` is not a parameter to direct methods, so storage must be
+      // explicitly declared for it.
+      CGF.EmitVarDecl(*OMD->getCmdDecl());
+      Builder.CreateStore(GetSelector(CGF, OMD),
+                          CGF.GetAddrOfLocalVar(OMD->getCmdDecl()));
+    }
+  }
+
 public:
   CGObjCObjFW(CodeGenModule &Mod): CGObjCGNU(Mod, 9, 3) {
     // IMP objc_msg_lookup(id, SEL);
@@ -2284,10 +2374,12 @@ CGObjCGNU::CGObjCGNU(CodeGenModule &cgm, unsigned runtimeABIVersion,
   BoolTy = CGM.getTypes().ConvertType(CGM.getContext().BoolTy);
 
   Int8Ty = llvm::Type::getInt8Ty(VMContext);
+
+  PtrTy = llvm::PointerType::getUnqual(cgm.getLLVMContext());
+  PtrToIntTy = PtrTy;
   // C string type.  Used in lots of places.
-  PtrToInt8Ty = llvm::PointerType::getUnqual(Int8Ty);
-  ProtocolPtrTy = llvm::PointerType::getUnqual(
-      Types.ConvertType(CGM.getContext().getObjCProtoType()));
+  PtrToInt8Ty = PtrTy;
+  ProtocolPtrTy = PtrTy;
 
   Zeros[0] = llvm::ConstantInt::get(LongTy, 0);
   Zeros[1] = Zeros[0];
@@ -2301,9 +2393,6 @@ CGObjCGNU::CGObjCGNU(CodeGenModule &cgm, unsigned runtimeABIVersion,
     SelectorTy = cast<llvm::PointerType>(CGM.getTypes().ConvertType(selTy));
     SelectorElemTy = CGM.getTypes().ConvertTypeForMem(selTy->getPointeeType());
   }
-
-  PtrToIntTy = llvm::PointerType::getUnqual(IntTy);
-  PtrTy = PtrToInt8Ty;
 
   Int32Ty = llvm::Type::getInt32Ty(VMContext);
   Int64Ty = llvm::Type::getInt64Ty(VMContext);
@@ -2323,7 +2412,7 @@ CGObjCGNU::CGObjCGNU(CodeGenModule &cgm, unsigned runtimeABIVersion,
     IdTy = PtrToInt8Ty;
     IdElemTy = Int8Ty;
   }
-  PtrToIdTy = llvm::PointerType::getUnqual(IdTy);
+  PtrToIdTy = PtrTy;
   ProtocolTy = llvm::StructType::get(IdTy,
       PtrToInt8Ty, // name
       PtrToInt8Ty, // protocols
@@ -2351,7 +2440,7 @@ CGObjCGNU::CGObjCGNU(CodeGenModule &cgm, unsigned runtimeABIVersion,
       PtrToInt8Ty, PtrToInt8Ty });
 
   ObjCSuperTy = llvm::StructType::get(IdTy, IdTy);
-  PtrToObjCSuperTy = llvm::PointerType::getUnqual(ObjCSuperTy);
+  PtrToObjCSuperTy = PtrTy;
 
   llvm::Type *VoidTy = llvm::Type::getVoidTy(VMContext);
 
@@ -2383,9 +2472,7 @@ CGObjCGNU::CGObjCGNU(CodeGenModule &cgm, unsigned runtimeABIVersion,
                            PtrDiffTy, BoolTy, BoolTy);
 
   // IMP type
-  llvm::Type *IMPArgs[] = { IdTy, SelectorTy };
-  IMPTy = llvm::PointerType::getUnqual(llvm::FunctionType::get(IdTy, IMPArgs,
-              true));
+  IMPTy = PtrTy;
 
   const LangOptions &Opts = CGM.getLangOpts();
   if ((Opts.getGC() != LangOptions::NonGC) || Opts.ObjCAutoRefCount)
@@ -2679,8 +2766,6 @@ CGObjCGNU::GenerateMessageSendSuper(CodeGenFunction &CGF,
         Class->getSuperClass()->getNameAsString(), /*isWeak*/false);
     if (IsClassMessage)  {
       // Load the isa pointer of the superclass is this is a class method.
-      ReceiverClass = Builder.CreateBitCast(ReceiverClass,
-                                            llvm::PointerType::getUnqual(IdTy));
       ReceiverClass =
         Builder.CreateAlignedLoad(IdTy, ReceiverClass, CGF.getPointerAlign());
     }
@@ -2721,8 +2806,6 @@ CGObjCGNU::GenerateMessageSendSuper(CodeGenFunction &CGF,
     }
     // Cast the pointer to a simplified version of the class structure
     llvm::Type *CastTy = llvm::StructType::get(IdTy, IdTy);
-    ReceiverClass = Builder.CreateBitCast(ReceiverClass,
-                                          llvm::PointerType::getUnqual(CastTy));
     // Get the superclass pointer
     ReceiverClass = Builder.CreateStructGEP(CastTy, ReceiverClass, 1);
     // Load the superclass pointer
@@ -3269,10 +3352,7 @@ CGObjCGNU::GenerateProtocolList(ArrayRef<std::string> Protocols) {
 
 llvm::Value *CGObjCGNU::GenerateProtocolRef(CodeGenFunction &CGF,
                                             const ObjCProtocolDecl *PD) {
-  auto protocol = GenerateProtocolRef(PD);
-  llvm::Type *T =
-      CGM.getTypes().ConvertType(CGM.getContext().getObjCProtoType());
-  return CGF.Builder.CreateBitCast(protocol, llvm::PointerType::getUnqual(T));
+  return GenerateProtocolRef(PD);
 }
 
 llvm::Constant *CGObjCGNU::GenerateProtocolRef(const ObjCProtocolDecl *PD) {
@@ -3747,8 +3827,6 @@ void CGObjCGNU::GenerateClass(const ObjCImplementationDecl *OID) {
   } else {
     SuperClass = llvm::ConstantPointerNull::get(PtrToInt8Ty);
   }
-  // Empty vector used to construct empty method lists
-  SmallVector<llvm::Constant*, 1>  empty;
   // Generate the method and instance variable lists
   llvm::Constant *MethodList = GenerateMethodList(ClassName, "",
       InstanceMethods, false);

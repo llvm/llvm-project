@@ -665,8 +665,8 @@ Value *GuardWideningImpl::freezeAndPush(Value *Orig,
       CacheOfFreezes[Def] = FI;
     }
 
-    if (CacheOfFreezes.count(Def))
-      U.set(CacheOfFreezes[Def]);
+    if (auto It = CacheOfFreezes.find(Def); It != CacheOfFreezes.end())
+      U.set(It->second);
     return true;
   };
 

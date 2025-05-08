@@ -1004,24 +1004,36 @@ public:
                             ArrayRef<Value *> Args, FMFSource FMFSource = {},
                             const Twine &Name = "");
 
+  /// Create a call to non-overloaded intrinsic \p ID with \p Args. If
+  /// \p FMFSource is provided, copy fast-math-flags from that instruction to
+  /// the intrinsic.
+  CallInst *CreateIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Args,
+                            FMFSource FMFSource = {}, const Twine &Name = "") {
+    return CreateIntrinsic(ID, /*Types=*/{}, Args, FMFSource, Name);
+  }
+
   /// Create call to the minnum intrinsic.
-  Value *CreateMinNum(Value *LHS, Value *RHS, const Twine &Name = "") {
+  Value *CreateMinNum(Value *LHS, Value *RHS, FMFSource FMFSource = {},
+                      const Twine &Name = "") {
     if (IsFPConstrained) {
       return CreateConstrainedFPUnroundedBinOp(
-          Intrinsic::experimental_constrained_minnum, LHS, RHS, nullptr, Name);
+          Intrinsic::experimental_constrained_minnum, LHS, RHS, FMFSource,
+          Name);
     }
 
-    return CreateBinaryIntrinsic(Intrinsic::minnum, LHS, RHS, nullptr, Name);
+    return CreateBinaryIntrinsic(Intrinsic::minnum, LHS, RHS, FMFSource, Name);
   }
 
   /// Create call to the maxnum intrinsic.
-  Value *CreateMaxNum(Value *LHS, Value *RHS, const Twine &Name = "") {
+  Value *CreateMaxNum(Value *LHS, Value *RHS, FMFSource FMFSource = {},
+                      const Twine &Name = "") {
     if (IsFPConstrained) {
       return CreateConstrainedFPUnroundedBinOp(
-          Intrinsic::experimental_constrained_maxnum, LHS, RHS, nullptr, Name);
+          Intrinsic::experimental_constrained_maxnum, LHS, RHS, FMFSource,
+          Name);
     }
 
-    return CreateBinaryIntrinsic(Intrinsic::maxnum, LHS, RHS, nullptr, Name);
+    return CreateBinaryIntrinsic(Intrinsic::maxnum, LHS, RHS, FMFSource, Name);
   }
 
   /// Create call to the minimum intrinsic.
@@ -1061,6 +1073,19 @@ public:
                            {Src, Exp}, FMFSource, Name);
   }
 
+  /// Create call to the fma intrinsic.
+  Value *CreateFMA(Value *Factor1, Value *Factor2, Value *Summand,
+                   FMFSource FMFSource = {}, const Twine &Name = "") {
+    if (IsFPConstrained) {
+      return CreateConstrainedFPIntrinsic(
+          Intrinsic::experimental_constrained_fma, {Factor1->getType()},
+          {Factor1, Factor2, Summand}, FMFSource, Name);
+    }
+
+    return CreateIntrinsic(Intrinsic::fma, {Factor1->getType()},
+                           {Factor1, Factor2, Summand}, FMFSource, Name);
+  }
+
   /// Create a call to the arithmetic_fence intrinsic.
   CallInst *CreateArithmeticFence(Value *Val, Type *DstType,
                                   const Twine &Name = "") {
@@ -1076,12 +1101,24 @@ public:
                            Name);
   }
 
+  /// Create a call to the vector.extract intrinsic.
+  CallInst *CreateExtractVector(Type *DstType, Value *SrcVec, uint64_t Idx,
+                                const Twine &Name = "") {
+    return CreateExtractVector(DstType, SrcVec, getInt64(Idx), Name);
+  }
+
   /// Create a call to the vector.insert intrinsic.
   CallInst *CreateInsertVector(Type *DstType, Value *SrcVec, Value *SubVec,
                                Value *Idx, const Twine &Name = "") {
     return CreateIntrinsic(Intrinsic::vector_insert,
                            {DstType, SubVec->getType()}, {SrcVec, SubVec, Idx},
                            nullptr, Name);
+  }
+
+  /// Create a call to the vector.extract intrinsic.
+  CallInst *CreateInsertVector(Type *DstType, Value *SrcVec, Value *SubVec,
+                               uint64_t Idx, const Twine &Name = "") {
+    return CreateInsertVector(DstType, SrcVec, SubVec, getInt64(Idx), Name);
   }
 
   /// Create a call to llvm.stacksave
@@ -1719,6 +1756,17 @@ public:
     return Accum;
   }
 
+  /// This function is like @ref CreateIntrinsic for constrained fp
+  /// intrinsics. It sets the rounding mode and exception behavior of
+  /// the created intrinsic call according to \p Rounding and \p
+  /// Except and it sets \p FPMathTag as the 'fpmath' metadata, using
+  /// defaults if a value equals nullopt/null.
+  CallInst *CreateConstrainedFPIntrinsic(
+      Intrinsic::ID ID, ArrayRef<Type *> Types, ArrayRef<Value *> Args,
+      FMFSource FMFSource, const Twine &Name, MDNode *FPMathTag = nullptr,
+      std::optional<RoundingMode> Rounding = std::nullopt,
+      std::optional<fp::ExceptionBehavior> Except = std::nullopt);
+
   CallInst *CreateConstrainedFPBinOp(
       Intrinsic::ID ID, Value *L, Value *R, FMFSource FMFSource = {},
       const Twine &Name = "", MDNode *FPMathTag = nullptr,
@@ -2262,6 +2310,13 @@ public:
   // compile time error, instead of converting the string to bool for the
   // isSigned parameter.
   Value *CreateIntCast(Value *, Type *, const char *) = delete;
+
+  /// Cast between aggregate types that must have identical structure but may
+  /// differ in their leaf types. The leaf values are recursively extracted,
+  /// casted, and then reinserted into a value of type DestTy. The leaf types
+  /// must be castable using a bitcast or ptrcast, because signedness is
+  /// not specified.
+  Value *CreateAggregateCast(Value *V, Type *DestTy);
 
   //===--------------------------------------------------------------------===//
   // Instruction creation methods: Compare Instructions

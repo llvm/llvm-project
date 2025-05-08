@@ -656,15 +656,14 @@ SymbolFileBreakpad::ParseCFIUnwindPlan(const Bookmark &bookmark,
   plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
   plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
   plan_sp->SetSourcedFromCompiler(eLazyBoolYes);
-  plan_sp->SetPlanValidAddressRange(
-      AddressRange(base + init_record->Address, *init_record->Size,
-                   m_objfile_sp->GetModule()->GetSectionList()));
+  plan_sp->SetPlanValidAddressRanges(
+      {AddressRange(base + init_record->Address, *init_record->Size,
+                    m_objfile_sp->GetModule()->GetSectionList())});
 
-  auto row_sp = std::make_shared<UnwindPlan::Row>();
-  row_sp->SetOffset(0);
-  if (!ParseCFIUnwindRow(init_record->UnwindRules, resolver, *row_sp))
+  UnwindPlan::Row row;
+  if (!ParseCFIUnwindRow(init_record->UnwindRules, resolver, row))
     return nullptr;
-  plan_sp->AppendRow(row_sp);
+  plan_sp->AppendRow(row);
   for (++It; It != End; ++It) {
     std::optional<StackCFIRecord> record = StackCFIRecord::parse(*It);
     if (!record)
@@ -672,11 +671,10 @@ SymbolFileBreakpad::ParseCFIUnwindPlan(const Bookmark &bookmark,
     if (record->Size)
       break;
 
-    row_sp = std::make_shared<UnwindPlan::Row>(*row_sp);
-    row_sp->SetOffset(record->Address - init_record->Address);
-    if (!ParseCFIUnwindRow(record->UnwindRules, resolver, *row_sp))
+    row.SetOffset(record->Address - init_record->Address);
+    if (!ParseCFIUnwindRow(record->UnwindRules, resolver, row))
       return nullptr;
-    plan_sp->AppendRow(row_sp);
+    plan_sp->AppendRow(row);
   }
   return plan_sp;
 }
@@ -698,12 +696,11 @@ SymbolFileBreakpad::ParseWinUnwindPlan(const Bookmark &bookmark,
   plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
   plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
   plan_sp->SetSourcedFromCompiler(eLazyBoolYes);
-  plan_sp->SetPlanValidAddressRange(
-      AddressRange(base + record->RVA, record->CodeSize,
-                   m_objfile_sp->GetModule()->GetSectionList()));
+  plan_sp->SetPlanValidAddressRanges(
+      {AddressRange(base + record->RVA, record->CodeSize,
+                    m_objfile_sp->GetModule()->GetSectionList())});
 
-  auto row_sp = std::make_shared<UnwindPlan::Row>();
-  row_sp->SetOffset(0);
+  UnwindPlan::Row row;
 
   llvm::BumpPtrAllocator node_alloc;
   std::vector<std::pair<llvm::StringRef, postfix::Node *>> program =
@@ -732,8 +729,8 @@ SymbolFileBreakpad::ParseWinUnwindPlan(const Bookmark &bookmark,
   // clang will use T1, if it needs to realign the stack.
   auto *symbol = llvm::dyn_cast<postfix::SymbolNode>(it->second);
   if (symbol && symbol->GetName() == ".raSearch") {
-    row_sp->GetCFAValue().SetRaSearch(record->LocalSize +
-                                      record->SavedRegisterSize);
+    row.GetCFAValue().SetRaSearch(record->LocalSize +
+                                  record->SavedRegisterSize);
   } else {
     if (!postfix::ResolveSymbols(it->second, symbol_resolver)) {
       LLDB_LOG(log, "Resolving symbols in `{0}` failed.",
@@ -741,7 +738,7 @@ SymbolFileBreakpad::ParseWinUnwindPlan(const Bookmark &bookmark,
       return nullptr;
     }
     llvm::ArrayRef<uint8_t> saved  = SaveAsDWARF(*it->second);
-    row_sp->GetCFAValue().SetIsDWARFExpression(saved.data(), saved.size());
+    row.GetCFAValue().SetIsDWARFExpression(saved.data(), saved.size());
   }
 
   // Replace the node value with InitialValueNode, so that subsequent
@@ -766,10 +763,10 @@ SymbolFileBreakpad::ParseWinUnwindPlan(const Bookmark &bookmark,
     llvm::ArrayRef<uint8_t> saved = SaveAsDWARF(*it->second);
     UnwindPlan::Row::AbstractRegisterLocation loc;
     loc.SetIsDWARFExpression(saved.data(), saved.size());
-    row_sp->SetRegisterInfo(info->kinds[eRegisterKindLLDB], loc);
+    row.SetRegisterInfo(info->kinds[eRegisterKindLLDB], loc);
   }
 
-  plan_sp->AppendRow(row_sp);
+  plan_sp->AppendRow(std::move(row));
   return plan_sp;
 }
 

@@ -29,3 +29,94 @@ entry:
   ret bfloat %0
 }
 
+define double @select_f64(double %a, double %b, i1 %c) {
+; CHECK-LABEL: select_f64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    tst w2, #0x1
+; CHECK-NEXT:    csel x0, x0, x1, ne
+; CHECK-NEXT:    ret
+entry:
+  %0 = select i1 %c, double %a, double %b
+  ret double %0
+}
+
+define float @select_f32(float %a, float %b, i1 %c) {
+; CHECK-LABEL: select_f32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    tst w2, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+entry:
+  %0 = select i1 %c, float %a, float %b
+  ret float %0
+}
+
+define half @select_f16(half %a, half %b, i1 %c) {
+; CHECK-LABEL: select_f16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    tst w2, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+entry:
+  %0 = select i1 %c, half %a, half %b
+  ret half %0
+}
+
+define bfloat @select_bf16(bfloat %a, bfloat %b, i1 %c) {
+; CHECK-LABEL: select_bf16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    tst w2, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+entry:
+  %0 = select i1 %c, bfloat %a, bfloat %b
+  ret bfloat %0
+}
+
+define double @selectcc_f64(double %a, double %b, i32 %d) {
+; CHECK-LABEL: selectcc_f64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cmp w2, #0
+; CHECK-NEXT:    csel x0, x0, x1, lt
+; CHECK-NEXT:    ret
+entry:
+  %c = icmp slt i32 %d, 0
+  %0 = select i1 %c, double %a, double %b
+  ret double %0
+}
+
+define float @selectcc_f32(float %a, float %b, i32 %d) {
+; CHECK-LABEL: selectcc_f32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cmp w2, #0
+; CHECK-NEXT:    csel w0, w0, w1, lt
+; CHECK-NEXT:    ret
+entry:
+  %c = icmp slt i32 %d, 0
+  %0 = select i1 %c, float %a, float %b
+  ret float %0
+}
+
+define half @selectcc_f16(half %a, half %b, i32 %d) {
+; CHECK-LABEL: selectcc_f16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cmp w2, #0
+; CHECK-NEXT:    csel w0, w0, w1, lt
+; CHECK-NEXT:    ret
+entry:
+  %c = icmp slt i32 %d, 0
+  %0 = select i1 %c, half %a, half %b
+  ret half %0
+}
+
+define bfloat @selectcc_bf16(bfloat %a, bfloat %b, i32 %d) {
+; CHECK-LABEL: selectcc_bf16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cmp w2, #0
+; CHECK-NEXT:    csel w0, w0, w1, lt
+; CHECK-NEXT:    ret
+entry:
+  %c = icmp slt i32 %d, 0
+  %0 = select i1 %c, bfloat %a, bfloat %b
+  ret bfloat %0
+}

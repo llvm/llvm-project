@@ -15,11 +15,8 @@ foo:
 ; CHECK:  lds r22, 44                  ; encoding: [0x6c,0xa2]
 ; CHECK:  lds r27, 92                  ; encoding: [0xbc,0xa5]
 ; CHECK:  lds r20, SYMBOL+12           ; encoding: [0x40'A',0xa0'A']
-; CHECK:                               ; fixup A - offset: 0, value: SYMBOL+12, kind: fixup_lds_sts_16
 ; CHECK:  lds r20, r21                 ; encoding: [0x40'A',0xa0'A']
-; CHECK:                               ; fixup A - offset: 0, value: r21, kind: fixup_lds_sts_16
 ; CHECK:  lds r20, z+6                 ; encoding: [0x40'A',0xa0'A']
-; CHECK:                               ; fixup A - offset: 0, value: z+6, kind: fixup_lds_sts_16
 
 ; CHECK-INST: lds r16, 113
 ; CHECK-INST: lds r29, 62

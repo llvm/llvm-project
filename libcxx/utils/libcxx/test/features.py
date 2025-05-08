@@ -440,7 +440,8 @@ for locale, alts in locales.items():
                 cfg, locale, alts, provide_locale_conversions[locale]
             )
             if locale in provide_locale_conversions
-            and "_LIBCPP_HAS_NO_WIDE_CHARACTERS" not in compilerMacros(cfg)
+            and ("_LIBCPP_HAS_WIDE_CHARACTERS" not in compilerMacros(cfg) or
+                 compilerMacros(cfg)["_LIBCPP_HAS_WIDE_CHARACTERS"] == "1")
             else [],
         ),
     )

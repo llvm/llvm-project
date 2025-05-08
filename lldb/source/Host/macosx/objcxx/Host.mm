@@ -1100,7 +1100,7 @@ static bool AddPosixSpawnFileAction(void *_file_actions, const FileAction *info,
     else if (info->GetActionArgument() == -1)
       error = Status::FromErrorString(
           "invalid duplicate fd for posix_spawn_file_actions_adddup2(...)");
-    else {
+    else if (info->GetFD() != info->GetActionArgument()) {
       error =
           Status(::posix_spawn_file_actions_adddup2(file_actions, info->GetFD(),
                                                     info->GetActionArgument()),
@@ -1110,6 +1110,15 @@ static bool AddPosixSpawnFileAction(void *_file_actions, const FileAction *info,
                  "error: {0}, posix_spawn_file_actions_adddup2 "
                  "(action={1}, fd={2}, dup_fd={3})",
                  error, file_actions, info->GetFD(), info->GetActionArgument());
+    } else {
+      error =
+          Status(::posix_spawn_file_actions_addinherit_np(file_actions, info->GetFD()),
+                 eErrorTypePOSIX);
+      if (error.Fail())
+        LLDB_LOG(log,
+                 "error: {0}, posix_spawn_file_actions_addinherit_np "
+                 "(action={1}, fd={2})",
+                 error, file_actions, info->GetFD());
     }
     break;
 
@@ -1471,7 +1480,7 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
       char *wd = getcwd(nullptr, 0);
       if (wd == nullptr) {
         error = Status::FromErrorStringWithFormat(
-            "cwd does not exist; cannot launch with shell argument expansion");
+            "cwd does not exist: Cannot launch with shell argument expansion");
         return error;
       } else {
         FileSpec working_dir(wd);

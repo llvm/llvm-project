@@ -4249,7 +4249,7 @@ define amdgpu_kernel void @v_test_v2i16_x_add_undef_neg32(ptr addrspace(1) %out,
   %gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i64 %tid.ext
   %gep.out = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i64 %tid.ext
   %x = load <2 x i16>, ptr addrspace(1) %gep
-  %result = add <2 x i16> %x, <i16 undef, i16 -32>
+  %result = add <2 x i16> %x, <i16 poison, i16 -32>
   store <2 x i16> %result, ptr addrspace(1) %gep.out
   ret void
 }
@@ -4403,7 +4403,7 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg32_undef(ptr addrspace(1) %out,
   %gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i64 %tid.ext
   %gep.out = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i64 %tid.ext
   %x = load <2 x i16>, ptr addrspace(1) %gep
-  %result = add <2 x i16> %x, <i16 -32, i16 undef>
+  %result = add <2 x i16> %x, <i16 -32, i16 poison>
   store <2 x i16> %result, ptr addrspace(1) %gep.out
   ret void
 }

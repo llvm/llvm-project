@@ -218,14 +218,14 @@ struct X86IncomingValueHandler : public CallLowering::IncomingValueHandler {
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
                         const CCValAssign &VA) override {
-    markPhysRegUsed(PhysReg);
+    markPhysRegUsed(PhysReg.asMCReg());
     IncomingValueHandler::assignValueToReg(ValVReg, PhysReg, VA);
   }
 
   /// How the physical register gets marked varies between formal
   /// parameters (it's a basic-block live-in), and a call instruction
   /// (it's an implicit-def of the BL).
-  virtual void markPhysRegUsed(unsigned PhysReg) = 0;
+  virtual void markPhysRegUsed(MCRegister PhysReg) = 0;
 
 protected:
   const DataLayout &DL;
@@ -235,7 +235,7 @@ struct FormalArgHandler : public X86IncomingValueHandler {
   FormalArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI)
       : X86IncomingValueHandler(MIRBuilder, MRI) {}
 
-  void markPhysRegUsed(unsigned PhysReg) override {
+  void markPhysRegUsed(MCRegister PhysReg) override {
     MIRBuilder.getMRI()->addLiveIn(PhysReg);
     MIRBuilder.getMBB().addLiveIn(PhysReg);
   }
@@ -246,7 +246,7 @@ struct CallReturnHandler : public X86IncomingValueHandler {
                     MachineInstrBuilder &MIB)
       : X86IncomingValueHandler(MIRBuilder, MRI), MIB(MIB) {}
 
-  void markPhysRegUsed(unsigned PhysReg) override {
+  void markPhysRegUsed(MCRegister PhysReg) override {
     MIB.addDef(PhysReg, RegState::Implicit);
   }
 

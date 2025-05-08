@@ -14,7 +14,7 @@
 ! CHECK: %[[const_3:.*]] = arith.constant 1 : i32
 ! CHECK: omp.wsloop private(@{{.*}} %{{.*}} -> %[[TEMP:.*]] : !fir.ref<i32>) {
 ! CHECK-NEXT: omp.loop_nest (%[[ARG:.*]]) : i32 = (%[[const_1]]) to (%[[const_2]]) inclusive step (%[[const_3]]) {
-! CHECK: fir.store %[[ARG]] to %[[TEMP]] : !fir.ref<i32>
+! CHECK: hlfir.assign %[[ARG]] to %[[TEMP]] : i32, !fir.ref<i32>
 ! EXPECTED: %[[temp_1:.*]] = fir.load %[[PRIVATE_Z]] : !fir.ref<i32>
 ! CHECK: %[[temp_1:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: %[[temp_2:.*]] = fir.load %[[TEMP]] : !fir.ref<i32>

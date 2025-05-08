@@ -22,6 +22,10 @@ void registerToCppTranslation();
 void registerToLLVMIRTranslation();
 void registerToSPIRVTranslation();
 
+namespace smt {
+void registerExportSMTLIBTranslation();
+}
+
 // This function should be called before creating any MLIRContext if one
 // expects all the possible translations to be made available to the context
 // automatically.
@@ -32,6 +36,7 @@ inline void registerAllTranslations() {
     registerToCppTranslation();
     registerToLLVMIRTranslation();
     registerToSPIRVTranslation();
+    smt::registerExportSMTLIBTranslation();
     return true;
   }();
   (void)initOnce;

@@ -276,7 +276,7 @@ Description:
   diagnostic instead of having to do things textually.  The selected string
   does undergo formatting.
 
-**"enum_select format**
+**"enum_select" format**
 
 Example:
   ``unknown frobbling of a %enum_select<FrobbleKind>{%VarDecl{variable declaration}|%FuncDecl{function declaration}}0 when blarging``
@@ -415,6 +415,17 @@ Description:
   record. The substitution must specify all arguments used by the substitution,
   and the modifier indexes in the substitution are re-numbered accordingly. The
   substituted text must itself be a valid format string before substitution.
+
+**"quoted" format**
+
+Example:
+  ``"expression %quoted0 evaluates to 0"``
+Class:
+  ``String``
+Description:
+  This is a simple formatter which adds quotes around the given string.
+  This is useful when the argument could be a string in some cases, but
+  another class in other cases, and it needs to be quoted consistently.
 
 .. _internals-producing-diag:
 

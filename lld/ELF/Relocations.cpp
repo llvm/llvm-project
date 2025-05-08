@@ -178,7 +178,7 @@ static RelType getMipsPairType(RelType type, bool isLocal) {
 // True if non-preemptable symbol always has the same value regardless of where
 // the DSO is loaded.
 static bool isAbsolute(const Symbol &sym) {
-  if (sym.isUndefWeak())
+  if (sym.isUndefined())
     return true;
   if (const auto *dr = dyn_cast<Defined>(&sym))
     return dr->section == nullptr; // Absolute symbol.
@@ -847,9 +847,8 @@ static void addRelativeReloc(Ctx &ctx, InputSectionBase &isec,
   Partition &part = isec.getPartition(ctx);
 
   if (sym.isTagged()) {
-    std::lock_guard<std::mutex> lock(ctx.relocMutex);
-    part.relaDyn->addRelativeReloc(ctx.target->relativeRel, isec, offsetInSec,
-                                   sym, addend, type, expr);
+    part.relaDyn->addRelativeReloc<shard>(ctx.target->relativeRel, isec,
+                                          offsetInSec, sym, addend, type, expr);
     // With MTE globals, we always want to derive the address tag by `ldg`-ing
     // the symbol. When we have a RELATIVE relocation though, we no longer have
     // a reference to the symbol. Because of this, when we have an addend that
@@ -1005,7 +1004,7 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
 
   // For the target and the relocation, we want to know if they are
   // absolute or relative.
-  bool absVal = isAbsoluteValue(sym);
+  bool absVal = isAbsoluteValue(sym) && e != RE_PPC64_TOCBASE;
   bool relE = isRelExpr(e);
   if (absVal && !relE)
     return true;
@@ -1021,7 +1020,7 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
   // calls to such symbols (e.g. glibc/stdlib/exit.c:__run_exit_handlers).
   // Normally such a call will be guarded with a comparison, which will load a
   // zero from the GOT.
-  if (sym.isUndefWeak())
+  if (sym.isUndefined())
     return true;
 
   // We set the final symbols values for linker script defined symbols later.
@@ -1066,7 +1065,8 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
              type == R_HEX_GD_PLT_B22_PCREL_X ||
              type == R_HEX_GD_PLT_B32_PCREL_X)))
         expr = fromPlt(expr);
-    } else if (!isAbsoluteValue(sym)) {
+    } else if (!isAbsoluteValue(sym) ||
+               (type == R_PPC64_PCREL_OPT && ctx.arg.emachine == EM_PPC64)) {
       expr = ctx.target->adjustGotPcExpr(type, addend,
                                          sec->content().data() + offset);
       // If the target adjusted the expression to R_RELAX_GOT_PC, we may end up
@@ -1375,6 +1375,11 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
     return 1;
   }
 
+  // LoongArch supports IE to LE optimization in non-extreme code model.
+  bool execOptimizeInLoongArch =
+      ctx.arg.emachine == EM_LOONGARCH &&
+      (type == R_LARCH_TLS_IE_PC_HI20 || type == R_LARCH_TLS_IE_PC_LO12);
+
   // ARM, Hexagon, LoongArch and RISC-V do not support GD/LD to IE/LE
   // optimizations.
   // RISC-V supports TLSDESC to IE/LE optimizations.
@@ -1382,7 +1387,8 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
   // optimization as well.
   bool execOptimize =
       !ctx.arg.shared && ctx.arg.emachine != EM_ARM &&
-      ctx.arg.emachine != EM_HEXAGON && ctx.arg.emachine != EM_LOONGARCH &&
+      ctx.arg.emachine != EM_HEXAGON &&
+      (ctx.arg.emachine != EM_LOONGARCH || execOptimizeInLoongArch) &&
       !(isRISCV && expr != R_TLSDESC_PC && expr != R_TLSDESC_CALL) &&
       !sec->file->ppc64DisableTLSRelax;
 
@@ -1473,6 +1479,15 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
       else
         sec->addReloc({expr, type, offset, addend, &sym});
     }
+    return 1;
+  }
+
+  // LoongArch TLS GD/LD relocs reuse the RE_LOONGARCH_GOT, in which
+  // NEEDS_TLSIE shouldn't set. So we check independently.
+  if (ctx.arg.emachine == EM_LOONGARCH && expr == RE_LOONGARCH_GOT &&
+      execOptimize && isLocalInExecutable) {
+    ctx.hasTlsIe.store(true, std::memory_order_relaxed);
+    sec->addReloc({R_RELAX_TLS_IE_TO_LE, type, offset, addend, &sym});
     return 1;
   }
 

@@ -60,6 +60,8 @@ void Flang::addFortranDialectOptions(const ArgList &Args,
                             options::OPT_frealloc_lhs,
                             options::OPT_fno_realloc_lhs,
                             options::OPT_fsave_main_program,
+                            options::OPT_fd_lines_as_code,
+                            options::OPT_fd_lines_as_comments,
                             options::OPT_fno_save_main_program});
 }
 
@@ -126,7 +128,8 @@ void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
                    options::OPT_std_EQ, options::OPT_W_Joined,
                    options::OPT_fconvert_EQ, options::OPT_fpass_plugin_EQ,
                    options::OPT_funderscoring, options::OPT_fno_underscoring,
-                   options::OPT_funsigned, options::OPT_fno_unsigned});
+                   options::OPT_funsigned, options::OPT_fno_unsigned,
+                   options::OPT_finstrument_functions});
 
   llvm::codegenoptions::DebugInfoKind DebugInfoKind;
   if (Args.hasArg(options::OPT_gN_Group)) {
@@ -149,28 +152,32 @@ void Flang::addCodegenOptions(const ArgList &Args,
       !stackArrays->getOption().matches(options::OPT_fno_stack_arrays))
     CmdArgs.push_back("-fstack-arrays");
 
-  // Enable vectorization per default according to the optimization level
-  // selected. For optimization levels that want vectorization we use the alias
-  // option to simplify the hasFlag logic.
-  bool enableVec = shouldEnableVectorizerAtOLevel(Args, false);
-  OptSpecifier vectorizeAliasOption =
-      enableVec ? options::OPT_O_Group : options::OPT_fvectorize;
-  if (Args.hasFlag(options::OPT_fvectorize, vectorizeAliasOption,
-                   options::OPT_fno_vectorize, enableVec))
-    CmdArgs.push_back("-vectorize-loops");
+  handleVectorizeLoopsArgs(Args, CmdArgs);
+  handleVectorizeSLPArgs(Args, CmdArgs);
 
   if (shouldLoopVersion(Args))
     CmdArgs.push_back("-fversion-loops-for-stride");
 
-  Args.addAllArgs(CmdArgs,
-                  {options::OPT_flang_experimental_hlfir,
-                   options::OPT_flang_deprecated_no_hlfir,
-                   options::OPT_fno_ppc_native_vec_elem_order,
-                   options::OPT_fppc_native_vec_elem_order,
-                   options::OPT_finit_global_zero,
-                   options::OPT_fno_init_global_zero, options::OPT_ftime_report,
-                   options::OPT_ftime_report_EQ, options::OPT_funroll_loops,
-                   options::OPT_fno_unroll_loops});
+  for (const auto &arg :
+       Args.getAllArgValues(options::OPT_frepack_arrays_contiguity_EQ))
+    if (arg != "whole" && arg != "innermost") {
+      getToolChain().getDriver().Diag(diag::err_drv_unsupported_option_argument)
+          << "-frepack-arrays-contiguity=" << arg;
+    }
+
+  Args.addAllArgs(
+      CmdArgs,
+      {options::OPT_fdo_concurrent_to_openmp_EQ,
+       options::OPT_flang_experimental_hlfir,
+       options::OPT_flang_deprecated_no_hlfir,
+       options::OPT_fno_ppc_native_vec_elem_order,
+       options::OPT_fppc_native_vec_elem_order, options::OPT_finit_global_zero,
+       options::OPT_fno_init_global_zero, options::OPT_frepack_arrays,
+       options::OPT_fno_repack_arrays,
+       options::OPT_frepack_arrays_contiguity_EQ,
+       options::OPT_fstack_repack_arrays, options::OPT_fno_stack_repack_arrays,
+       options::OPT_ftime_report, options::OPT_ftime_report_EQ,
+       options::OPT_funroll_loops, options::OPT_fno_unroll_loops});
 }
 
 void Flang::addPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
@@ -414,6 +421,9 @@ void Flang::AddAMDGPUTargetArgs(const ArgList &Args,
   if (Arg *A = Args.getLastArg(options::OPT_mcode_object_version_EQ)) {
     StringRef Val = A->getValue();
     CmdArgs.push_back(Args.MakeArgString("-mcode-object-version=" + Val));
+    CmdArgs.push_back(Args.MakeArgString("-mllvm"));
+    CmdArgs.push_back(
+        Args.MakeArgString("--amdhsa-code-object-version=" + Val));
   }
 
   const ToolChain &TC = getToolChain();
@@ -474,7 +484,7 @@ void Flang::addTargetOptions(const ArgList &Args,
           Triple.getArch() != llvm::Triple::x86_64)
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << Name << Triple.getArchName();
-    } else if (Name == "LIBMVEC-X86") {
+    } else if (Name == "libmvec") {
       if (Triple.getArch() != llvm::Triple::x86 &&
           Triple.getArch() != llvm::Triple::x86_64)
         D.Diag(diag::err_drv_unsupported_opt_for_target)
@@ -512,6 +522,9 @@ void Flang::addTargetOptions(const ArgList &Args,
     else
       CmdArgs.push_back(A->getValue());
   }
+
+  Args.addAllArgs(CmdArgs,
+                  {options::OPT_fverbose_asm, options::OPT_fno_verbose_asm});
 }
 
 void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
@@ -815,8 +828,13 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // 'flang -E' always produces output that is suitable for use as fixed form
   // Fortran. However it is only valid free form source if the original is also
-  // free form.
-  if (InputType == types::TY_PP_Fortran &&
+  // free form. Ensure this logic does not incorrectly assume fixed-form for
+  // cases where it shouldn't, such as `flang -x f95 foo.f90`.
+  bool isAtemporaryPreprocessedFile =
+      Input.isFilename() &&
+      llvm::sys::path::extension(Input.getFilename())
+          .ends_with(types::getTypeTempSuffix(InputType, /*CLStyle=*/false));
+  if (InputType == types::TY_PP_Fortran && isAtemporaryPreprocessedFile &&
       !Args.getLastArg(options::OPT_ffixed_form, options::OPT_ffree_form))
     CmdArgs.push_back("-ffixed-form");
 

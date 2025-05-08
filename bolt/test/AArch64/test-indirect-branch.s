@@ -5,7 +5,7 @@
 
 // REQUIRES: system-linux, asserts
 
-// RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown %s -o %t.o
+// RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown -mattr=+pauth %s -o %t.o
 // RUN: %clang %cflags --target=aarch64-unknown-linux %t.o -o %t.exe -Wl,-q
 // RUN: llvm-bolt %t.exe -o %t.bolt --print-cfg --strict --debug-only=mcplus \
 // RUN:  -v=1 2>&1 | FileCheck %s
@@ -72,6 +72,27 @@ test2_0:
   ret
 test2_1:
   ret
+
+// Make sure BOLT does not crash trying to disassemble BRA* instructions.
+  .globl test_braa
+  .type  test_braa, %function
+test_braa:
+  braa x0, x1
+
+  .globl test_brab
+  .type  test_brab, %function
+test_brab:
+  brab x0, x1
+
+  .globl test_braaz
+  .type  test_braaz, %function
+test_braaz:
+  braaz x0
+
+  .globl test_brabz
+  .type  test_brabz, %function
+test_brabz:
+  brabz x0
 
   .section .rodata,"a",@progbits
 datatable:

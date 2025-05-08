@@ -104,8 +104,8 @@ printf_core::FormatSection parse_format_string(const char *__restrict format,
   return section;
 }
 
-template <typename T>
-int strfromfloat_convert(printf_core::Writer *writer,
+template <typename T, printf_core::WriteMode write_mode>
+int strfromfloat_convert(printf_core::Writer<write_mode> *writer,
                          const printf_core::FormatSection &section) {
   if (!section.has_conv)
     return writer->write(section.raw_string);

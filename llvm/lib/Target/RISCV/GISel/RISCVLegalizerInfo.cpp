@@ -1332,7 +1332,7 @@ bool RISCVLegalizerInfo::legalizeCustom(
     const Function &F = MF.getFunction();
     // TODO: if PSI and BFI are present, add " ||
     // llvm::shouldOptForSize(*CurMBB, PSI, BFI)".
-    bool ShouldOptForSize = F.hasOptSize() || F.hasMinSize();
+    bool ShouldOptForSize = F.hasOptSize();
     const ConstantInt *ConstVal = MI.getOperand(1).getCImm();
     if (!shouldBeInConstantPool(ConstVal->getValue(), ShouldOptForSize))
       return true;

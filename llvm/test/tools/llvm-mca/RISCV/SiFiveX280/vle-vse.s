@@ -431,405 +431,405 @@ vsm.v    v1, (a0)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      4     2.00    *                   vle8.v	v1, (a0)
+# CHECK-NEXT:  1      4     1.00    *                   vle8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      4     2.00    *                   vle8.v	v1, (a0)
+# CHECK-NEXT:  1      4     1.00    *                   vle8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      4     2.00    *                   vle8.v	v1, (a0)
+# CHECK-NEXT:  1      4     1.00    *                   vle8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vle8.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vle8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      4     5.00    *                   vle8.v	v1, (a0)
+# CHECK-NEXT:  1      4     4.00    *                   vle8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      4     9.00    *                   vle8.v	v1, (a0)
+# CHECK-NEXT:  1      4     8.00    *                   vle8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      4     17.00   *                   vle8.v	v1, (a0)
+# CHECK-NEXT:  1      4     16.00   *                   vle8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      4     2.00    *                   vle8.v	v1, (a0)
+# CHECK-NEXT:  1      4     1.00    *                   vle8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      4     2.00    *                   vle8.v	v1, (a0)
+# CHECK-NEXT:  1      4     1.00    *                   vle8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      4     2.00    *                   vle8.v	v1, (a0)
+# CHECK-NEXT:  1      4     1.00    *                   vle8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vle8.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vle8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      4     5.00    *                   vle8.v	v1, (a0)
+# CHECK-NEXT:  1      4     4.00    *                   vle8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      4     9.00    *                   vle8.v	v1, (a0)
+# CHECK-NEXT:  1      4     8.00    *                   vle8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      4     2.00    *                   vle8.v	v1, (a0)
+# CHECK-NEXT:  1      4     1.00    *                   vle8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      4     2.00    *                   vle8.v	v1, (a0)
+# CHECK-NEXT:  1      4     1.00    *                   vle8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      4     2.00    *                   vle8.v	v1, (a0)
+# CHECK-NEXT:  1      4     1.00    *                   vle8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vle8.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vle8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      4     5.00    *                   vle8.v	v1, (a0)
+# CHECK-NEXT:  1      4     4.00    *                   vle8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      4     2.00    *                   vle8.v	v1, (a0)
+# CHECK-NEXT:  1      4     1.00    *                   vle8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      4     2.00    *                   vle8.v	v1, (a0)
+# CHECK-NEXT:  1      4     1.00    *                   vle8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      4     2.00    *                   vle8.v	v1, (a0)
+# CHECK-NEXT:  1      4     1.00    *                   vle8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vle8.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vle8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      4     2.00    *                   vle16.v	v1, (a0)
+# CHECK-NEXT:  1      4     1.00    *                   vle16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      4     2.00    *                   vle16.v	v1, (a0)
+# CHECK-NEXT:  1      4     1.00    *                   vle16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vle16.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vle16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      4     5.00    *                   vle16.v	v1, (a0)
+# CHECK-NEXT:  1      4     4.00    *                   vle16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      4     9.00    *                   vle16.v	v1, (a0)
+# CHECK-NEXT:  1      4     8.00    *                   vle16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      4     17.00   *                   vle16.v	v1, (a0)
+# CHECK-NEXT:  1      4     16.00   *                   vle16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      4     2.00    *                   vle16.v	v1, (a0)
+# CHECK-NEXT:  1      4     1.00    *                   vle16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      4     2.00    *                   vle16.v	v1, (a0)
+# CHECK-NEXT:  1      4     1.00    *                   vle16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vle16.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vle16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      4     5.00    *                   vle16.v	v1, (a0)
+# CHECK-NEXT:  1      4     4.00    *                   vle16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      4     9.00    *                   vle16.v	v1, (a0)
+# CHECK-NEXT:  1      4     8.00    *                   vle16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      4     17.00   *                   vle16.v	v1, (a0)
+# CHECK-NEXT:  1      4     16.00   *                   vle16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      4     2.00    *                   vle16.v	v1, (a0)
+# CHECK-NEXT:  1      4     1.00    *                   vle16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      4     2.00    *                   vle16.v	v1, (a0)
+# CHECK-NEXT:  1      4     1.00    *                   vle16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vle16.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vle16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      4     5.00    *                   vle16.v	v1, (a0)
+# CHECK-NEXT:  1      4     4.00    *                   vle16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      4     9.00    *                   vle16.v	v1, (a0)
+# CHECK-NEXT:  1      4     8.00    *                   vle16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      4     2.00    *                   vle16.v	v1, (a0)
+# CHECK-NEXT:  1      4     1.00    *                   vle16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      4     2.00    *                   vle16.v	v1, (a0)
+# CHECK-NEXT:  1      4     1.00    *                   vle16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vle16.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vle16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      4     5.00    *                   vle16.v	v1, (a0)
+# CHECK-NEXT:  1      4     4.00    *                   vle16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      4     2.00    *                   vle32.v	v1, (a0)
+# CHECK-NEXT:  1      4     1.00    *                   vle32.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vle32.v	v1, (a0)
-# CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      4     5.00    *                   vle32.v	v1, (a0)
-# CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      4     9.00    *                   vle32.v	v1, (a0)
-# CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      4     17.00   *                   vle32.v	v1, (a0)
-# CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  1      4     2.00    *                   vle32.v	v1, (a0)
+# CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf2, tu, mu
+# CHECK-NEXT:  1      4     4.00    *                   vle32.v	v1, (a0)
+# CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m1, tu, mu
+# CHECK-NEXT:  1      4     8.00    *                   vle32.v	v1, (a0)
+# CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m2, tu, mu
+# CHECK-NEXT:  1      4     16.00   *                   vle32.v	v1, (a0)
+# CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
+# CHECK-NEXT:  1      4     1.00    *                   vle32.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vle32.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vle32.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      4     5.00    *                   vle32.v	v1, (a0)
+# CHECK-NEXT:  1      4     4.00    *                   vle32.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      4     9.00    *                   vle32.v	v1, (a0)
+# CHECK-NEXT:  1      4     8.00    *                   vle32.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      4     17.00   *                   vle32.v	v1, (a0)
+# CHECK-NEXT:  1      4     16.00   *                   vle32.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      4     2.00    *                   vle32.v	v1, (a0)
+# CHECK-NEXT:  1      4     1.00    *                   vle32.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vle32.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vle32.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      4     5.00    *                   vle32.v	v1, (a0)
+# CHECK-NEXT:  1      4     4.00    *                   vle32.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      4     9.00    *                   vle32.v	v1, (a0)
+# CHECK-NEXT:  1      4     8.00    *                   vle32.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      4     17.00   *                   vle32.v	v1, (a0)
+# CHECK-NEXT:  1      4     16.00   *                   vle32.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
+# CHECK-NEXT:  1      4     1.00    *                   vle32.v	v1, (a0)
+# CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m2, tu, mu
 # CHECK-NEXT:  1      4     2.00    *                   vle32.v	v1, (a0)
-# CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vle32.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      4     5.00    *                   vle32.v	v1, (a0)
+# CHECK-NEXT:  1      4     4.00    *                   vle32.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      4     9.00    *                   vle32.v	v1, (a0)
+# CHECK-NEXT:  1      4     8.00    *                   vle32.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vle64.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vle64.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      4     5.00    *                   vle64.v	v1, (a0)
+# CHECK-NEXT:  1      4     4.00    *                   vle64.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      4     9.00    *                   vle64.v	v1, (a0)
+# CHECK-NEXT:  1      4     8.00    *                   vle64.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      4     17.00   *                   vle64.v	v1, (a0)
+# CHECK-NEXT:  1      4     16.00   *                   vle64.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vle64.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vle64.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      4     5.00    *                   vle64.v	v1, (a0)
+# CHECK-NEXT:  1      4     4.00    *                   vle64.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      4     9.00    *                   vle64.v	v1, (a0)
+# CHECK-NEXT:  1      4     8.00    *                   vle64.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      4     17.00   *                   vle64.v	v1, (a0)
+# CHECK-NEXT:  1      4     16.00   *                   vle64.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vle64.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vle64.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      4     5.00    *                   vle64.v	v1, (a0)
+# CHECK-NEXT:  1      4     4.00    *                   vle64.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      4     9.00    *                   vle64.v	v1, (a0)
+# CHECK-NEXT:  1      4     8.00    *                   vle64.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      4     17.00   *                   vle64.v	v1, (a0)
+# CHECK-NEXT:  1      4     16.00   *                   vle64.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vle64.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vle64.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      4     5.00    *                   vle64.v	v1, (a0)
+# CHECK-NEXT:  1      4     4.00    *                   vle64.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      4     9.00    *                   vle64.v	v1, (a0)
+# CHECK-NEXT:  1      4     8.00    *                   vle64.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      4     17.00   *                   vle64.v	v1, (a0)
+# CHECK-NEXT:  1      4     16.00   *                   vle64.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     2.00           *            vse8.v	v1, (a0)
+# CHECK-NEXT:  1      1     1.00           *            vse8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     2.00           *            vse8.v	v1, (a0)
+# CHECK-NEXT:  1      1     1.00           *            vse8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     2.00           *            vse8.v	v1, (a0)
+# CHECK-NEXT:  1      1     1.00           *            vse8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vse8.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vse8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     5.00           *            vse8.v	v1, (a0)
+# CHECK-NEXT:  1      1     4.00           *            vse8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     9.00           *            vse8.v	v1, (a0)
+# CHECK-NEXT:  1      1     8.00           *            vse8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     17.00          *            vse8.v	v1, (a0)
+# CHECK-NEXT:  1      1     16.00          *            vse8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     2.00           *            vse8.v	v1, (a0)
+# CHECK-NEXT:  1      1     1.00           *            vse8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     2.00           *            vse8.v	v1, (a0)
+# CHECK-NEXT:  1      1     1.00           *            vse8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     2.00           *            vse8.v	v1, (a0)
+# CHECK-NEXT:  1      1     1.00           *            vse8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vse8.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vse8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     5.00           *            vse8.v	v1, (a0)
+# CHECK-NEXT:  1      1     4.00           *            vse8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     9.00           *            vse8.v	v1, (a0)
+# CHECK-NEXT:  1      1     8.00           *            vse8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     2.00           *            vse8.v	v1, (a0)
+# CHECK-NEXT:  1      1     1.00           *            vse8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     2.00           *            vse8.v	v1, (a0)
+# CHECK-NEXT:  1      1     1.00           *            vse8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     2.00           *            vse8.v	v1, (a0)
+# CHECK-NEXT:  1      1     1.00           *            vse8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vse8.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vse8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     5.00           *            vse8.v	v1, (a0)
+# CHECK-NEXT:  1      1     4.00           *            vse8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     2.00           *            vse8.v	v1, (a0)
+# CHECK-NEXT:  1      1     1.00           *            vse8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     2.00           *            vse8.v	v1, (a0)
+# CHECK-NEXT:  1      1     1.00           *            vse8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     2.00           *            vse8.v	v1, (a0)
+# CHECK-NEXT:  1      1     1.00           *            vse8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vse8.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vse8.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     2.00           *            vse16.v	v1, (a0)
+# CHECK-NEXT:  1      1     1.00           *            vse16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     2.00           *            vse16.v	v1, (a0)
+# CHECK-NEXT:  1      1     1.00           *            vse16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vse16.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vse16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     5.00           *            vse16.v	v1, (a0)
+# CHECK-NEXT:  1      1     4.00           *            vse16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     9.00           *            vse16.v	v1, (a0)
+# CHECK-NEXT:  1      1     8.00           *            vse16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     17.00          *            vse16.v	v1, (a0)
+# CHECK-NEXT:  1      1     16.00          *            vse16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     2.00           *            vse16.v	v1, (a0)
+# CHECK-NEXT:  1      1     1.00           *            vse16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     2.00           *            vse16.v	v1, (a0)
+# CHECK-NEXT:  1      1     1.00           *            vse16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vse16.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vse16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     5.00           *            vse16.v	v1, (a0)
+# CHECK-NEXT:  1      1     4.00           *            vse16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     9.00           *            vse16.v	v1, (a0)
+# CHECK-NEXT:  1      1     8.00           *            vse16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     17.00          *            vse16.v	v1, (a0)
+# CHECK-NEXT:  1      1     16.00          *            vse16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     2.00           *            vse16.v	v1, (a0)
+# CHECK-NEXT:  1      1     1.00           *            vse16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     2.00           *            vse16.v	v1, (a0)
+# CHECK-NEXT:  1      1     1.00           *            vse16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vse16.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vse16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     5.00           *            vse16.v	v1, (a0)
+# CHECK-NEXT:  1      1     4.00           *            vse16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     9.00           *            vse16.v	v1, (a0)
+# CHECK-NEXT:  1      1     8.00           *            vse16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     2.00           *            vse16.v	v1, (a0)
+# CHECK-NEXT:  1      1     1.00           *            vse16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     2.00           *            vse16.v	v1, (a0)
+# CHECK-NEXT:  1      1     1.00           *            vse16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vse16.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vse16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     5.00           *            vse16.v	v1, (a0)
+# CHECK-NEXT:  1      1     4.00           *            vse16.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     2.00           *            vse32.v	v1, (a0)
+# CHECK-NEXT:  1      1     1.00           *            vse32.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vse32.v	v1, (a0)
-# CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     5.00           *            vse32.v	v1, (a0)
-# CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     9.00           *            vse32.v	v1, (a0)
-# CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     17.00          *            vse32.v	v1, (a0)
-# CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  1      1     2.00           *            vse32.v	v1, (a0)
+# CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf2, tu, mu
+# CHECK-NEXT:  1      1     4.00           *            vse32.v	v1, (a0)
+# CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m1, tu, mu
+# CHECK-NEXT:  1      1     8.00           *            vse32.v	v1, (a0)
+# CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m2, tu, mu
+# CHECK-NEXT:  1      1     16.00          *            vse32.v	v1, (a0)
+# CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
+# CHECK-NEXT:  1      1     1.00           *            vse32.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vse32.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vse32.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     5.00           *            vse32.v	v1, (a0)
+# CHECK-NEXT:  1      1     4.00           *            vse32.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     9.00           *            vse32.v	v1, (a0)
+# CHECK-NEXT:  1      1     8.00           *            vse32.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     17.00          *            vse32.v	v1, (a0)
+# CHECK-NEXT:  1      1     16.00          *            vse32.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     2.00           *            vse32.v	v1, (a0)
+# CHECK-NEXT:  1      1     1.00           *            vse32.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vse32.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vse32.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     5.00           *            vse32.v	v1, (a0)
+# CHECK-NEXT:  1      1     4.00           *            vse32.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     9.00           *            vse32.v	v1, (a0)
+# CHECK-NEXT:  1      1     8.00           *            vse32.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     17.00          *            vse32.v	v1, (a0)
+# CHECK-NEXT:  1      1     16.00          *            vse32.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
+# CHECK-NEXT:  1      1     1.00           *            vse32.v	v1, (a0)
+# CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m2, tu, mu
 # CHECK-NEXT:  1      1     2.00           *            vse32.v	v1, (a0)
-# CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vse32.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     5.00           *            vse32.v	v1, (a0)
+# CHECK-NEXT:  1      1     4.00           *            vse32.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     9.00           *            vse32.v	v1, (a0)
+# CHECK-NEXT:  1      1     8.00           *            vse32.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vse64.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vse64.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     5.00           *            vse64.v	v1, (a0)
+# CHECK-NEXT:  1      1     4.00           *            vse64.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     9.00           *            vse64.v	v1, (a0)
+# CHECK-NEXT:  1      1     8.00           *            vse64.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     17.00          *            vse64.v	v1, (a0)
+# CHECK-NEXT:  1      1     16.00          *            vse64.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vse64.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vse64.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     5.00           *            vse64.v	v1, (a0)
+# CHECK-NEXT:  1      1     4.00           *            vse64.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     9.00           *            vse64.v	v1, (a0)
+# CHECK-NEXT:  1      1     8.00           *            vse64.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     17.00          *            vse64.v	v1, (a0)
+# CHECK-NEXT:  1      1     16.00          *            vse64.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vse64.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vse64.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     5.00           *            vse64.v	v1, (a0)
+# CHECK-NEXT:  1      1     4.00           *            vse64.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     9.00           *            vse64.v	v1, (a0)
+# CHECK-NEXT:  1      1     8.00           *            vse64.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     17.00          *            vse64.v	v1, (a0)
+# CHECK-NEXT:  1      1     16.00          *            vse64.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vse64.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vse64.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     5.00           *            vse64.v	v1, (a0)
+# CHECK-NEXT:  1      1     4.00           *            vse64.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     9.00           *            vse64.v	v1, (a0)
+# CHECK-NEXT:  1      1     8.00           *            vse64.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     17.00          *            vse64.v	v1, (a0)
+# CHECK-NEXT:  1      1     16.00          *            vse64.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vlm.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vlm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vlm.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vlm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vlm.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vlm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vlm.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vlm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vlm.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vlm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vlm.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vlm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vlm.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vlm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vlm.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vlm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vlm.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vlm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vlm.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vlm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vlm.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vlm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vlm.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vlm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vlm.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vlm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vlm.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vlm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vlm.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vlm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vlm.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vlm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vlm.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vlm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vlm.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vlm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vlm.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vlm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vlm.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vlm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vlm.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vlm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      4     3.00    *                   vlm.v	v1, (a0)
+# CHECK-NEXT:  1      4     2.00    *                   vlm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vsm.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vsm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vsm.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vsm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vsm.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vsm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vsm.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vsm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vsm.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vsm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vsm.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vsm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vsm.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vsm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vsm.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vsm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vsm.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vsm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vsm.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vsm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vsm.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vsm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vsm.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vsm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vsm.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vsm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vsm.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vsm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vsm.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vsm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vsm.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vsm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vsm.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vsm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vsm.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vsm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vsm.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vsm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vsm.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vsm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vsm.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vsm.v	v1, (a0)
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     3.00           *            vsm.v	v1, (a0)
+# CHECK-NEXT:  1      1     2.00           *            vsm.v	v1, (a0)
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SiFive7FDiv

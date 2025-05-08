@@ -38,13 +38,13 @@ end program
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.array<2xi32>>>, %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.array<2xi32>>>):
 ! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.array<2xi32>>>
 ! CHECK:           %[[VAL_3:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.array<2xi32>>>
-! CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
-! CHECK:           %[[VAL_5:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_4]] : (!fir.box<!fir.array<2xi32>>, index) -> (index, index, index)
-! CHECK:           %[[VAL_6:.*]] = fir.shape_shift %[[VAL_5]]#0, %[[VAL_5]]#1 : (index, index) -> !fir.shapeshift<1>
-! CHECK:           %[[VAL_7:.*]] = arith.constant 1 : index
-! CHECK:           fir.do_loop %[[VAL_8:.*]] = %[[VAL_7]] to %[[VAL_5]]#1 step %[[VAL_7]] unordered {
-! CHECK:             %[[VAL_9:.*]] = fir.array_coor %[[VAL_2]](%[[VAL_6]]) %[[VAL_8]] : (!fir.box<!fir.array<2xi32>>, !fir.shapeshift<1>, index) -> !fir.ref<i32>
-! CHECK:             %[[VAL_10:.*]] = fir.array_coor %[[VAL_3]](%[[VAL_6]]) %[[VAL_8]] : (!fir.box<!fir.array<2xi32>>, !fir.shapeshift<1>, index) -> !fir.ref<i32>
+! CHECK:           %[[C1:.*]] = arith.constant 1 : index
+! CHECK:           %[[C2:.*]] = arith.constant 2 : index
+! CHECK:           %[[SHAPE_SHIFT:.*]] = fir.shape_shift %[[C1]], %[[C2]] : (index, index) -> !fir.shapeshift<1>
+! CHECK:           %[[C1_0:.*]] = arith.constant 1 : index
+! CHECK:           fir.do_loop %[[VAL_8:.*]] = %[[C1_0]] to %[[C2]] step %[[C1_0]] unordered {
+! CHECK:             %[[VAL_9:.*]] = fir.array_coor %[[VAL_2]](%[[SHAPE_SHIFT]]) %[[VAL_8]] : (!fir.box<!fir.array<2xi32>>, !fir.shapeshift<1>, index) -> !fir.ref<i32>
+! CHECK:             %[[VAL_10:.*]] = fir.array_coor %[[VAL_3]](%[[SHAPE_SHIFT]]) %[[VAL_8]] : (!fir.box<!fir.array<2xi32>>, !fir.shapeshift<1>, index) -> !fir.ref<i32>
 ! CHECK:             %[[VAL_11:.*]] = fir.load %[[VAL_9]] : !fir.ref<i32>
 ! CHECK:             %[[VAL_12:.*]] = fir.load %[[VAL_10]] : !fir.ref<i32>
 ! CHECK:             %[[VAL_13:.*]] = arith.addi %[[VAL_11]], %[[VAL_12]] : i32
@@ -83,7 +83,7 @@ end program
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_14:.*]]) : i32 = (%[[VAL_10]]) to (%[[VAL_11]]) inclusive step (%[[VAL_12]]) {
 ! CHECK:                 %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                 %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_13]] {uniq_name = "_QFEr"} : (!fir.ref<!fir.box<!fir.array<2xi32>>>) -> (!fir.ref<!fir.box<!fir.array<2xi32>>>, !fir.ref<!fir.box<!fir.array<2xi32>>>)
-! CHECK:                 fir.store %[[VAL_14]] to %[[VAL_9]]#1 : !fir.ref<i32>
+! CHECK:                 hlfir.assign %[[VAL_14]] to %[[VAL_9]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 %[[VAL_16:.*]] = fir.load %[[VAL_15]]#0 : !fir.ref<!fir.box<!fir.array<2xi32>>>
 ! CHECK:                 %[[VAL_17:.*]] = arith.constant 1 : index
 ! CHECK:                 %[[VAL_18:.*]] = hlfir.designate %[[VAL_16]] (%[[VAL_17]])  : (!fir.box<!fir.array<2xi32>>, index) -> !fir.ref<i32>

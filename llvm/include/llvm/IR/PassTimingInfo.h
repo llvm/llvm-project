@@ -39,8 +39,7 @@ Timer *getPassTimer(Pass *);
 /// This class implements -time-passes functionality for new pass manager.
 /// It provides the pass-instrumentation callbacks that measure the pass
 /// execution time. They collect timing info into individual timers as
-/// passes are being run. At the end of its life-time it prints the resulting
-/// timing report.
+/// passes are being run.
 class TimePassesHandler {
   /// Value of this type is capable of uniquely identifying pass invocations.
   /// It is a pair of string Pass-Identifier (which for now is common
@@ -48,8 +47,10 @@ class TimePassesHandler {
   using PassInvocationID = std::pair<StringRef, unsigned>;
 
   /// Groups of timers for passes and analyses.
-  TimerGroup PassTG;
-  TimerGroup AnalysisTG;
+  TimerGroup &PassTG =
+      NamedRegionTimer::getNamedTimerGroup(PassGroupName, PassGroupDesc);
+  TimerGroup &AnalysisTG = NamedRegionTimer::getNamedTimerGroup(
+      AnalysisGroupName, AnalysisGroupDesc);
 
   using TimerVector = llvm::SmallVector<std::unique_ptr<Timer>, 4>;
   /// Map of timers for pass invocations
@@ -71,11 +72,14 @@ class TimePassesHandler {
   bool PerRun;
 
 public:
+  static constexpr StringRef PassGroupName = "pass";
+  static constexpr StringRef AnalysisGroupName = "analysis";
+  static constexpr StringRef PassGroupDesc = "Pass execution timing report";
+  static constexpr StringRef AnalysisGroupDesc =
+      "Analysis execution timing report";
+
   TimePassesHandler();
   TimePassesHandler(bool Enabled, bool PerRun = false);
-
-  /// Destructor handles the print action if it has not been handled before.
-  ~TimePassesHandler() { print(); }
 
   /// Prints out timing information and then resets the timers.
   void print();

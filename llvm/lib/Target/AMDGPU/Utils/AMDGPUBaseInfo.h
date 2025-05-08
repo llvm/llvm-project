@@ -126,7 +126,6 @@ struct True16D16Info {
 #define GET_MIMGMIPMapping_DECL
 #define GET_MIMGBiASMapping_DECL
 #define GET_MAIInstInfoTable_DECL
-#define GET_MAIInstInfoTable_DECL
 #define GET_isMFMA_F8F6F4Table_DECL
 #define GET_isCvtScaleF32_F32F16ToF8F4Table_DECL
 #define GET_True16D16Table_DECL
@@ -141,12 +140,7 @@ enum {
   TRAP_NUM_SGPRS = 16
 };
 
-enum class TargetIDSetting {
-  Unsupported,
-  Any,
-  Off,
-  On
-};
+enum class TargetIDSetting { Unsupported, Any, Off, On };
 
 class AMDGPUTargetID {
 private:
@@ -166,21 +160,19 @@ public:
   /// \returns True if the current xnack setting is "On" or "Any".
   bool isXnackOnOrAny() const {
     return XnackSetting == TargetIDSetting::On ||
-        XnackSetting == TargetIDSetting::Any;
+           XnackSetting == TargetIDSetting::Any;
   }
 
   /// \returns True if current xnack setting is "On" or "Off",
   /// false otherwise.
   bool isXnackOnOrOff() const {
     return getXnackSetting() == TargetIDSetting::On ||
-        getXnackSetting() == TargetIDSetting::Off;
+           getXnackSetting() == TargetIDSetting::Off;
   }
 
   /// \returns The current xnack TargetIDSetting, possible options are
   /// "Unsupported", "Any", "Off", and "On".
-  TargetIDSetting getXnackSetting() const {
-    return XnackSetting;
-  }
+  TargetIDSetting getXnackSetting() const { return XnackSetting; }
 
   /// Sets xnack setting to \p NewXnackSetting.
   void setXnackSetting(TargetIDSetting NewXnackSetting) {
@@ -194,22 +186,20 @@ public:
 
   /// \returns True if the current sramecc setting is "On" or "Any".
   bool isSramEccOnOrAny() const {
-  return SramEccSetting == TargetIDSetting::On ||
-      SramEccSetting == TargetIDSetting::Any;
+    return SramEccSetting == TargetIDSetting::On ||
+           SramEccSetting == TargetIDSetting::Any;
   }
 
   /// \returns True if current sramecc setting is "On" or "Off",
   /// false otherwise.
   bool isSramEccOnOrOff() const {
     return getSramEccSetting() == TargetIDSetting::On ||
-        getSramEccSetting() == TargetIDSetting::Off;
+           getSramEccSetting() == TargetIDSetting::Off;
   }
 
   /// \returns The current sramecc TargetIDSetting, possible options are
   /// "Unsupported", "Any", "Off", and "On".
-  TargetIDSetting getSramEccSetting() const {
-    return SramEccSetting;
-  }
+  TargetIDSetting getSramEccSetting() const { return SramEccSetting; }
 
   /// Sets sramecc setting to \p NewSramEccSetting.
   void setSramEccSetting(TargetIDSetting NewSramEccSetting) {
@@ -318,6 +308,10 @@ getVGPRAllocGranule(const MCSubtargetInfo *STI,
 unsigned getVGPREncodingGranule(
     const MCSubtargetInfo *STI,
     std::optional<bool> EnableWavefrontSize32 = std::nullopt);
+
+/// For subtargets with a unified VGPR file and mixed ArchVGPR/AGPR usage,
+/// returns the allocation granule for ArchVGPRs.
+unsigned getArchVGPRAllocGranule();
 
 /// \returns Total number of VGPRs for given subtarget \p STI.
 unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI);
@@ -430,6 +424,7 @@ struct MIMGBaseOpcodeInfo {
   bool BVH;
   bool A16;
   bool NoReturn;
+  bool PointSampleAccel;
 };
 
 LLVM_READONLY
@@ -888,8 +883,8 @@ VOPD::InstInfo getVOPDInstInfo(const MCInstrDesc &OpX, const MCInstrDesc &OpY);
 
 LLVM_READONLY
 // Get properties of VOPD X and Y components.
-VOPD::InstInfo
-getVOPDInstInfo(unsigned VOPDOpcode, const MCInstrInfo *InstrInfo);
+VOPD::InstInfo getVOPDInstInfo(unsigned VOPDOpcode,
+                               const MCInstrInfo *InstrInfo);
 
 LLVM_READONLY
 bool isTrue16Inst(unsigned Opc);
@@ -959,14 +954,14 @@ getIntegerPairAttribute(const Function &F, StringRef Name,
 
 /// \returns Generate a vector of integer values requested using \p F's \p Name
 /// attribute.
-///
-/// \returns true if exactly Size (>2) number of integers are found in the
-/// attribute.
-///
-/// \returns false if any error occurs.
+/// \returns A vector of size \p Size, with all elements set to \p DefaultVal,
+/// if any error occurs. The corresponding error will also be emitted.
 SmallVector<unsigned> getIntegerVecAttribute(const Function &F, StringRef Name,
                                              unsigned Size,
-                                             unsigned DefaultVal = 0);
+                                             unsigned DefaultVal);
+/// Similar to the function above, but returns std::nullopt if any error occurs.
+std::optional<SmallVector<unsigned>>
+getIntegerVecAttribute(const Function &F, StringRef Name, unsigned Size);
 
 /// Represents the counter values to wait for in an s_waitcnt instruction.
 ///
@@ -1051,8 +1046,8 @@ unsigned decodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt);
 ///     \p Lgkmcnt = \p Waitcnt[13:8]     (gfx10)
 ///     \p Lgkmcnt = \p Waitcnt[9:4]      (gfx11)
 ///
-void decodeWaitcnt(const IsaVersion &Version, unsigned Waitcnt,
-                   unsigned &Vmcnt, unsigned &Expcnt, unsigned &Lgkmcnt);
+void decodeWaitcnt(const IsaVersion &Version, unsigned Waitcnt, unsigned &Vmcnt,
+                   unsigned &Expcnt, unsigned &Lgkmcnt);
 
 Waitcnt decodeWaitcnt(const IsaVersion &Version, unsigned Encoded);
 
@@ -1086,8 +1081,8 @@ unsigned encodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt,
 /// \returns Waitcnt with encoded \p Vmcnt, \p Expcnt and \p Lgkmcnt for given
 /// isa \p Version.
 ///
-unsigned encodeWaitcnt(const IsaVersion &Version,
-                       unsigned Vmcnt, unsigned Expcnt, unsigned Lgkmcnt);
+unsigned encodeWaitcnt(const IsaVersion &Version, unsigned Vmcnt,
+                       unsigned Expcnt, unsigned Lgkmcnt);
 
 unsigned encodeWaitcnt(const IsaVersion &Version, const Waitcnt &Decoded);
 
@@ -1181,6 +1176,12 @@ unsigned decodeFieldVaSdst(unsigned Encoded);
 /// \returns Decoded VaVcc from given immediate \p Encoded.
 unsigned decodeFieldVaVcc(unsigned Encoded);
 
+/// \returns Decoded SaSrc from given immediate \p Encoded.
+unsigned decodeFieldVaSsrc(unsigned Encoded);
+
+/// \returns Decoded HoldCnt from given immediate \p Encoded.
+unsigned decodeFieldHoldCnt(unsigned Encoded);
+
 /// \returns \p VmVsrc as an encoded Depctr immediate.
 unsigned encodeFieldVmVsrc(unsigned VmVsrc);
 
@@ -1210,6 +1211,18 @@ unsigned encodeFieldVaVcc(unsigned VaVcc);
 
 /// \returns \p Encoded combined with encoded \p VaVcc.
 unsigned encodeFieldVaVcc(unsigned Encoded, unsigned VaVcc);
+
+/// \returns \p HoldCnt as an encoded Depctr immediate.
+unsigned encodeFieldHoldCnt(unsigned HoldCnt);
+
+/// \returns \p Encoded combined with encoded \p HoldCnt.
+unsigned encodeFieldHoldCnt(unsigned HoldCnt, unsigned Encoded);
+
+/// \returns \p VaSsrc as an encoded Depctr immediate.
+unsigned encodeFieldVaSsrc(unsigned VaSsrc);
+
+/// \returns \p Encoded combined with encoded \p VaSsrc.
+unsigned encodeFieldVaSsrc(unsigned Encoded, unsigned VaSsrc);
 
 } // namespace DepCtr
 
@@ -1282,12 +1295,9 @@ void decodeMsg(unsigned Val, uint16_t &MsgId, uint16_t &OpId,
                uint16_t &StreamId, const MCSubtargetInfo &STI);
 
 LLVM_READNONE
-uint64_t encodeMsg(uint64_t MsgId,
-                   uint64_t OpId,
-                   uint64_t StreamId);
+uint64_t encodeMsg(uint64_t MsgId, uint64_t OpId, uint64_t StreamId);
 
 } // namespace SendMsg
-
 
 unsigned getInitialPSInputAddr(const Function &F);
 
@@ -1537,8 +1547,7 @@ bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
 
 LLVM_READONLY
 bool isLegalSMRDEncodedSignedOffset(const MCSubtargetInfo &ST,
-                                    int64_t EncodedOffset,
-                                    bool IsBuffer);
+                                    int64_t EncodedOffset, bool IsBuffer);
 
 /// Convert \p ByteOffset to dwords if the subtarget uses dword SMRD immediate
 /// offsets.

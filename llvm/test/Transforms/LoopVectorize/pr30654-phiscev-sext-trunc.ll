@@ -78,8 +78,7 @@ define void @doit1(i32 %n, i32 %step) local_unnamed_addr {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP19:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [250 x i32], ptr @a, i64 0, i64 [[TMP19]]
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [250 x i32], ptr @a, i64 0, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i32, ptr [[TMP20]], i32 0
 ; CHECK-NEXT:    store <4 x i32> [[VEC_IND]], ptr [[TMP21]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -199,8 +198,7 @@ define void @doit2(i32 %n, i32 %step) local_unnamed_addr  {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP18:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [250 x i32], ptr @a, i64 0, i64 [[TMP18]]
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [250 x i32], ptr @a, i64 0, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr [[TMP19]], i32 0
 ; CHECK-NEXT:    store <4 x i32> [[VEC_IND]], ptr [[TMP20]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -392,8 +390,7 @@ define void @doit4(i32 %n, i8 signext %cstep) local_unnamed_addr {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [250 x i32], ptr @a, i64 0, i64 [[TMP16]]
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [250 x i32], ptr @a, i64 0, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[TMP17]], i32 0
 ; CHECK-NEXT:    store <4 x i32> [[VEC_IND]], ptr [[TMP18]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

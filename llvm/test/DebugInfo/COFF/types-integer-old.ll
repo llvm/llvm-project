@@ -1,5 +1,4 @@
 ; RUN: llc < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
-; RUN: llc --try-experimental-debuginfo-iterators < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
 
 ; Tests that CodeView integer types are generated even when using Clang's old integer type names.
 

@@ -23,6 +23,7 @@
 #include <array>
 #include <cassert>
 #include <ranges>
+#include <vector>
 
 #include <cstdio>
 
@@ -134,6 +135,22 @@ constexpr void test_rval_range() {
   }
 }
 
+template <std::size_t N>
+constexpr void test_vector_bool() {
+  { // Test swap_ranges() with aligned bytes
+    std::vector<bool> f(N, false), t(N, true);
+    std::ranges::swap_ranges(f, t);
+    assert(std::all_of(f.begin(), f.end(), [](bool b) { return b; }));
+    assert(std::all_of(t.begin(), t.end(), [](bool b) { return !b; }));
+  }
+  { // Test swap_ranges() with unaligned bytes
+    std::vector<bool> f(N, false), t(N + 8, true);
+    std::ranges::swap_ranges(f.begin(), f.end(), t.begin() + 4, t.end() - 4);
+    assert(std::all_of(f.begin(), f.end(), [](bool b) { return b; }));
+    assert(std::all_of(t.begin() + 4, t.end() - 4, [](bool b) { return !b; }));
+  }
+}
+
 constexpr bool test() {
   test_range();
   test_sentinel();
@@ -148,6 +165,15 @@ constexpr bool test() {
     });
   });
 
+  { // Test vector<bool>::iterator optimization
+    test_vector_bool<8>();
+    test_vector_bool<19>();
+    test_vector_bool<32>();
+    test_vector_bool<49>();
+    test_vector_bool<64>();
+    test_vector_bool<199>();
+    test_vector_bool<256>();
+  }
   return true;
 }
 

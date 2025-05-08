@@ -12,7 +12,7 @@
 // RUN:              2>&1 | FileCheck --check-prefix=ERR-NATIVE %s
 
 // ERR-NATIVE-NOT:  test-arm64ec.obj
-// ERR-NATIVE:      lld-link: error: undefined symbol: sym
+// ERR-NATIVE:      lld-link: error: undefined symbol: sym (native symbol)
 // ERR-NATIVE-NEXT: >>> referenced by test-arm64.obj:(.test)
 // ERR-NATIVE-NOT:  test-arm64ec.obj
 
@@ -25,7 +25,7 @@
 // RUN:              2>&1 | FileCheck --check-prefix=ERR-EC %s
 
 // ERR-EC-NOT:  test-arm64.obj
-// ERR-EC:      lld-link: error: undefined symbol: sym
+// ERR-EC:      lld-link: error: undefined symbol: sym (EC symbol)
 // ERR-EC-NEXT: >>> referenced by test-arm64ec.obj:(.test)
 // ERR-EC-NOT:  test-arm64.obj
 

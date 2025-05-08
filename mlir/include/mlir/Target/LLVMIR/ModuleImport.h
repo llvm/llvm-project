@@ -47,7 +47,8 @@ class LoopAnnotationImporter;
 class ModuleImport {
 public:
   ModuleImport(ModuleOp mlirModule, std::unique_ptr<llvm::Module> llvmModule,
-               bool emitExpensiveWarnings, bool importEmptyDICompositeTypes);
+               bool emitExpensiveWarnings, bool importEmptyDICompositeTypes,
+               bool preferUnregisteredIntrinsics);
 
   /// Calls the LLVMImportInterface initialization that queries the registered
   /// dialect interfaces for the supported LLVM IR intrinsics and metadata kinds
@@ -218,12 +219,19 @@ public:
   /// LLVM dialect operation.
   LogicalResult convertLinkerOptionsMetadata();
 
+  /// Converts !llvm.module.flags metadata.
+  LogicalResult convertModuleFlagsMetadata();
+
   /// Converts !llvm.ident metadata to the llvm.ident LLVM ModuleOp attribute.
   LogicalResult convertIdentMetadata();
 
   /// Converts !llvm.commandline metadata to the llvm.commandline LLVM ModuleOp
   /// attribute.
   LogicalResult convertCommandlineMetadata();
+
+  /// Converts !llvm.dependent-libraries metadata to llvm.dependent_libraries
+  /// LLVM ModuleOp attribute.
+  LogicalResult convertDependentLibrariesMetadata();
 
   /// Converts all LLVM metadata nodes that translate to attributes such as
   /// alias analysis or access group metadata, and builds a map from the
@@ -248,6 +256,13 @@ public:
   LoopAnnotationAttr translateLoopAnnotationAttr(const llvm::MDNode *node,
                                                  Location loc) const;
 
+  /// Returns the dereferenceable attribute that corresponds to the given LLVM
+  /// dereferenceable or dereferenceable_or_null metadata `node`. `kindID`
+  /// specifies the kind of the metadata node (dereferenceable or
+  /// dereferenceable_or_null).
+  FailureOr<DereferenceableAttr>
+  translateDereferenceableAttr(const llvm::MDNode *node, unsigned kindID);
+
   /// Returns the alias scope attributes that map to the alias scope nodes
   /// starting from the metadata `node`. Returns failure, if any of the
   /// attributes cannot be found.
@@ -271,6 +286,17 @@ public:
                             ArrayRef<StringLiteral> immArgAttrNames,
                             SmallVectorImpl<Value> &valuesOut,
                             SmallVectorImpl<NamedAttribute> &attrsOut);
+
+  /// Converts the parameter and result attributes in `argsAttr` and `resAttr`
+  /// and add them to the `callOp`.
+  void convertParameterAttributes(llvm::CallBase *call, ArrayAttr &argsAttr,
+                                  ArrayAttr &resAttr, OpBuilder &builder);
+
+  /// Whether the importer should try to convert all intrinsics to
+  /// llvm.call_intrinsic instead of dialect supported operations.
+  bool useUnregisteredIntrinsicsOnly() const {
+    return preferUnregisteredIntrinsics;
+  }
 
 private:
   /// Clears the accumulated state before processing a new region.
@@ -336,9 +362,11 @@ private:
   /// Converts the callee's function type. For direct calls, it converts the
   /// actual function type, which may differ from the called operand type in
   /// variadic functions. For indirect calls, it converts the function type
-  /// associated with the call instruction. Returns failure when the call and
-  /// the callee are not compatible or when nested type conversions failed.
-  FailureOr<LLVMFunctionType> convertFunctionType(llvm::CallBase *callInst);
+  /// associated with the call instruction. When the call and the callee are not
+  /// compatible (or when nested type conversions failed), emit a warning and
+  /// update `isIncompatibleCall` to indicate it.
+  FailureOr<LLVMFunctionType> convertFunctionType(llvm::CallBase *callInst,
+                                                  bool &isIncompatibleCall);
   /// Returns the callee name, or an empty symbol if the call is not direct.
   FlatSymbolRefAttr convertCalleeName(llvm::CallBase *callInst);
   /// Converts the parameter and result attributes attached to `func` and adds
@@ -350,7 +378,8 @@ private:
   DictionaryAttr convertParameterAttribute(llvm::AttributeSet llvmParamAttrs,
                                            OpBuilder &builder);
   /// Converts the parameter and result attributes attached to `call` and adds
-  /// them to the `callOp`.
+  /// them to the `callOp`. Implemented in terms of the the public definition of
+  /// convertParameterAttributes.
   void convertParameterAttributes(llvm::CallBase *call, CallOpInterface callOp,
                                   OpBuilder &builder);
   /// Converts the attributes attached to `inst` and adds them to the `op`.
@@ -468,6 +497,10 @@ private:
   /// emitted. Avoids generating warnings for unhandled debug intrinsics and
   /// metadata that otherwise dominate the translation time for large inputs.
   bool emitExpensiveWarnings;
+
+  /// An option to control whether the importer should try to convert all
+  /// intrinsics to llvm.call_intrinsic instead of dialect supported operations.
+  bool preferUnregisteredIntrinsics;
 };
 
 } // namespace LLVM

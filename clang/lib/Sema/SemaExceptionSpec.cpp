@@ -89,7 +89,7 @@ ExprResult Sema::ActOnNoexceptSpec(Expr *NoexceptExpr,
 
   llvm::APSInt Result;
   ExprResult Converted = CheckConvertedConstantExpression(
-      NoexceptExpr, Context.BoolTy, Result, CCEK_Noexcept);
+      NoexceptExpr, Context.BoolTy, Result, CCEKind::Noexcept);
 
   if (Converted.isInvalid()) {
     EST = EST_NoexceptFalse;
@@ -1407,6 +1407,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Stmt::OpenACCEnterDataConstructClass:
   case Stmt::OpenACCExitDataConstructClass:
   case Stmt::OpenACCWaitConstructClass:
+  case Stmt::OpenACCCacheConstructClass:
   case Stmt::OpenACCInitConstructClass:
   case Stmt::OpenACCShutdownConstructClass:
   case Stmt::OpenACCSetConstructClass:

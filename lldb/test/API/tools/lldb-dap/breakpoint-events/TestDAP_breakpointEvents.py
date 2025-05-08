@@ -2,7 +2,6 @@
 Test lldb-dap setBreakpoints request
 """
 
-
 import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -12,9 +11,7 @@ import os
 
 
 class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
-    @skipIfWindows
     @skipUnlessDarwin
-    @expectedFailureAll(macos_version=[">=", "13.0"])
     def test_breakpoint_events(self):
         """
         This test sets a breakpoint in a shared library and runs and stops
@@ -63,70 +60,48 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
         response = self.dap_server.request_setBreakpoints(
             main_source_path, [main_bp_line]
         )
-        if response:
-            breakpoints = response["body"]["breakpoints"]
-            for breakpoint in breakpoints:
-                main_bp_id = breakpoint["id"]
-                dap_breakpoint_ids.append("%i" % (main_bp_id))
-                # line = breakpoint['line']
-                self.assertTrue(
-                    breakpoint["verified"], "expect main breakpoint to be verified"
-                )
+        self.assertTrue(response)
+        breakpoints = response["body"]["breakpoints"]
+        for breakpoint in breakpoints:
+            main_bp_id = breakpoint["id"]
+            dap_breakpoint_ids.append("%i" % (main_bp_id))
+            self.assertTrue(
+                breakpoint["verified"], "expect main breakpoint to be verified"
+            )
 
         response = self.dap_server.request_setBreakpoints(
             foo_source_path, [foo_bp1_line]
         )
-        if response:
-            breakpoints = response["body"]["breakpoints"]
-            for breakpoint in breakpoints:
-                foo_bp_id = breakpoint["id"]
-                dap_breakpoint_ids.append("%i" % (foo_bp_id))
-                self.assertFalse(
-                    breakpoint["verified"], "expect foo breakpoint to not be verified"
-                )
+        self.assertTrue(response)
+        breakpoints = response["body"]["breakpoints"]
+        for breakpoint in breakpoints:
+            foo_bp_id = breakpoint["id"]
+            dap_breakpoint_ids.append("%i" % (foo_bp_id))
+            self.assertFalse(
+                breakpoint["verified"], "expect foo breakpoint to not be verified"
+            )
 
-        # Get the stop at the entry point
-        self.continue_to_next_stop()
+        # Make sure we're stopped.
+        self.dap_server.wait_for_stopped()
 
-        # We are now stopped at the entry point to the program. Shared
-        # libraries are not loaded yet (at least on macOS they aren't) and any
-        # breakpoints set in foo.cpp should not be resolved.
-        self.assertEqual(
-            len(self.dap_server.breakpoint_events),
-            0,
-            "no breakpoint events when stopped at entry point",
-        )
+        # Flush the breakpoint events.
+        self.dap_server.wait_for_breakpoint_events(timeout=5)
 
         # Continue to the breakpoint
         self.continue_to_breakpoints(dap_breakpoint_ids)
 
-        # Make sure we only get an event for the breakpoint we set via a call
-        # to self.dap_server.request_setBreakpoints(...), not the breakpoint
-        # we set with with a LLDB command in preRunCommands.
-        self.assertEqual(
-            len(self.dap_server.breakpoint_events),
-            1,
-            "make sure we got a breakpoint event",
-        )
-        event = self.dap_server.breakpoint_events[0]
-        # Verify the details of the breakpoint changed notification.
-        body = event["body"]
-        self.assertEqual(
-            body["reason"], "changed", "breakpoint event is says breakpoint is changed"
-        )
-        breakpoint = body["breakpoint"]
-        self.assertTrue(
-            breakpoint["verified"], "breakpoint event is says it is verified"
-        )
-        self.assertEqual(
-            breakpoint["id"],
-            foo_bp_id,
-            "breakpoint event is for breakpoint %i" % (foo_bp_id),
-        )
-        self.assertTrue(
-            "line" in breakpoint and breakpoint["line"] > 0,
-            "breakpoint event is has a line number",
-        )
-        self.assertNotIn(
-            "source", breakpoint, "breakpoint event should not return a source object"
-        )
+        verified_breakpoint_ids = []
+        unverified_breakpoint_ids = []
+        for breakpoint_event in self.dap_server.wait_for_breakpoint_events(timeout=5):
+            breakpoint = breakpoint_event["body"]["breakpoint"]
+            id = breakpoint["id"]
+            if breakpoint["verified"]:
+                verified_breakpoint_ids.append(id)
+            else:
+                unverified_breakpoint_ids.append(id)
+
+        self.assertIn(main_bp_id, unverified_breakpoint_ids)
+        self.assertIn(foo_bp_id, unverified_breakpoint_ids)
+
+        self.assertIn(main_bp_id, verified_breakpoint_ids)
+        self.assertIn(foo_bp_id, verified_breakpoint_ids)

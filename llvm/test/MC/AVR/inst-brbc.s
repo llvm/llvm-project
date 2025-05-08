@@ -10,11 +10,9 @@ foo:
   .short 0xf74c
   .short 0xf4c7
 
-; CHECK: brvc (.Ltmp0+8)+2   ; encoding: [0bAAAAA011,0b111101AA]
-; CHECK-NEXT:                ; fixup A - offset: 0, value: (.Ltmp0+8)+2, kind: fixup_7_pcrel
+; CHECK: brvc .Ltmp0+8+2   ; encoding: [0bAAAAA011,0b111101AA]
 ;
-; CHECK: brcc (.Ltmp1-16)+2  ; encoding: [0bAAAAA000,0b111101AA]
-; CHECK-NEXT:                ; fixup A - offset: 0, value: (.Ltmp1-16)+2, kind: fixup_7_pcrel
+; CHECK: brcc .Ltmp1-16+2  ; encoding: [0bAAAAA000,0b111101AA]
 
 ; INST-LABEL: <foo>:
 ; INST-NEXT: 23 f4   brvc .+8

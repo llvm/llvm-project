@@ -1323,8 +1323,7 @@ bool ARMConstantIslands::findAvailableWater(CPUser &U, unsigned UserOffset,
   MachineBasicBlock *UserBB = U.MI->getParent();
   BBInfoVector &BBInfo = BBUtils->getBBInfo();
   const Align CPEAlign = getCPEAlign(U.CPEMI);
-  unsigned MinNoSplitDisp =
-      BBInfo[UserBB->getNumber()].postOffset(CPEAlign) - UserOffset;
+  unsigned MinNoSplitDisp = BBInfo[UserBB->getNumber()].postOffset(CPEAlign);
   if (CloserWater && MinNoSplitDisp > U.getMaxDisp() / 2)
     return false;
   for (water_iterator IP = std::prev(WaterList.end()), B = WaterList.begin();;

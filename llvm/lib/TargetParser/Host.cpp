@@ -288,6 +288,8 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
   if (Implementer == "0x4e") { // NVIDIA Corporation
     return StringSwitch<const char *>(Part)
         .Case("0x004", "carmel")
+        .Case("0x10", "olympus")
+        .Case("0x010", "olympus")
         .Default("generic");
   }
 
@@ -428,7 +430,7 @@ StringRef getCPUNameFromS390Model(unsigned int Id, bool HaveVectorSupport) {
     case 9175:
     case 9176:
     default:
-      return HaveVectorSupport? "arch15" : "zEC12";
+      return HaveVectorSupport? "z17" : "zEC12";
   }
 }
 } // end anonymous namespace

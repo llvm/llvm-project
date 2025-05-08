@@ -21,9 +21,17 @@
 #include "Synchronization.h"
 #include "Workshare.h"
 
-#include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
-
 using namespace ompx;
+
+// These flags are copied from "llvm/Frontend/OpenMP/OMPDeviceConstants.h" and
+// must be kept in-sync.
+enum OMPTgtExecModeFlags : unsigned char {
+  OMP_TGT_EXEC_MODE_BARE = 0,
+  OMP_TGT_EXEC_MODE_GENERIC = 1 << 0,
+  OMP_TGT_EXEC_MODE_SPMD = 1 << 1,
+  OMP_TGT_EXEC_MODE_GENERIC_SPMD =
+      OMP_TGT_EXEC_MODE_GENERIC | OMP_TGT_EXEC_MODE_SPMD
+};
 
 static void
 inititializeRuntime(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
@@ -74,8 +82,7 @@ extern "C" {
 int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment,
                            KernelLaunchEnvironmentTy &KernelLaunchEnvironment) {
   ConfigurationEnvironmentTy &Configuration = KernelEnvironment.Configuration;
-  bool IsSPMD = Configuration.ExecMode &
-                llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD;
+  bool IsSPMD = Configuration.ExecMode & OMP_TGT_EXEC_MODE_SPMD;
   bool UseGenericStateMachine = Configuration.UseGenericStateMachine;
   if (IsSPMD) {
     inititializeRuntime(/*IsSPMD=*/true, KernelEnvironment,

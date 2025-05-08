@@ -281,6 +281,10 @@ public:
   /// -fprofile-generate, and -fcs-profile-generate.
   std::string InstrProfileOutput;
 
+  /// Name of the patchable function entry section with
+  /// -fpatchable-function-entry.
+  std::string PatchableFunctionEntrySection;
+
   /// Name of the profile file to use with -fprofile-sample-use.
   std::string SampleProfileFile;
 
@@ -394,6 +398,10 @@ public:
   /// for the given fraction of PGO counters will be excluded from sanitization
   /// (0.0 [default] to skip none, 1.0 to skip all).
   SanitizerMaskCutoffs SanitizeSkipHotCutoffs;
+
+  /// Set of sanitizer checks, for which the instrumentation will be annotated
+  /// with extra debug info.
+  SanitizerSet SanitizeAnnotateDebugInfo;
 
   /// List of backend command-line options for -fembed-bitcode.
   std::vector<uint8_t> CmdArgs;

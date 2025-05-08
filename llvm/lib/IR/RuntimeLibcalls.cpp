@@ -82,6 +82,7 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::POWI_F128, "__powikf2");
     setLibcallName(RTLIB::FPEXT_F32_F128, "__extendsfkf2");
     setLibcallName(RTLIB::FPEXT_F64_F128, "__extenddfkf2");
+    setLibcallName(RTLIB::FPROUND_F128_F16, "__trunckfhf2");
     setLibcallName(RTLIB::FPROUND_F128_F32, "__trunckfsf2");
     setLibcallName(RTLIB::FPROUND_F128_F64, "__trunckfdf2");
     setLibcallName(RTLIB::FPTOSINT_F128_I32, "__fixkfsi");

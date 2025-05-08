@@ -1,5 +1,4 @@
 ; RUN: opt -S -loop-reduce %s | FileCheck %s
-; RUN: opt --try-experimental-debuginfo-iterators -S -loop-reduce %s | FileCheck %s
 
 ;; Ensure that scev-based salvaging in LSR does not select an IV containing
 ;; an 'undef' element.

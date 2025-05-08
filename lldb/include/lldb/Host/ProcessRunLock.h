@@ -29,8 +29,13 @@ public:
 
   bool ReadTryLock();
   bool ReadUnlock();
+
+  /// Set the process to running. Returns true if the process was stopped.
+  /// Return false if the process was running.
   bool SetRunning();
-  bool TrySetRunning();
+
+  /// Set the process to stopped. Returns true if the process was running.
+  /// Returns false if the process was stopped.
   bool SetStopped();
 
   class ProcessRunLocker {

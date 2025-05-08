@@ -53,14 +53,16 @@ public:
 private:
   struct PassRunDescriptor {
     const Module *M;
-    const std::string DumpIRFilename;
+    const unsigned PassNumber;
+    const std::string IRFileDisplayName;
     const std::string IRName;
     const StringRef PassID;
 
-    PassRunDescriptor(const Module *M, std::string DumpIRFilename,
-                      std::string IRName, const StringRef PassID)
-        : M{M}, DumpIRFilename{DumpIRFilename}, IRName{IRName}, PassID(PassID) {
-    }
+    PassRunDescriptor(const Module *M, unsigned PassNumber,
+                      std::string &&IRFileDisplayName, std::string &&IRName,
+                      const StringRef PassID)
+        : M{M}, PassNumber{PassNumber}, IRFileDisplayName(IRFileDisplayName),
+          IRName{IRName}, PassID(PassID) {}
   };
 
   void printBeforePass(StringRef PassID, Any IR);
@@ -75,10 +77,20 @@ private:
   bool shouldPrintBeforeSomePassNumber();
   bool shouldPrintAfterSomePassNumber();
 
-  void pushPassRunDescriptor(StringRef PassID, Any IR,
-                             std::string &DumpIRFilename);
+  void pushPassRunDescriptor(StringRef PassID, Any IR, unsigned PassNumber);
   PassRunDescriptor popPassRunDescriptor(StringRef PassID);
-  std::string fetchDumpFilename(StringRef PassId, Any IR);
+
+  enum class IRDumpFileSuffixType {
+    Before,
+    After,
+    Invalidated,
+  };
+
+  static StringRef
+  getFileSuffix(PrintIRInstrumentation::IRDumpFileSuffixType Type);
+  std::string fetchDumpFilename(StringRef PassId, StringRef IRFileDisplayName,
+                                unsigned PassNumber,
+                                IRDumpFileSuffixType SuffixType);
 
   PassInstrumentationCallbacks *PIC;
   /// Stack of Pass Run descriptions, enough to print the IR unit after a given

@@ -70,3 +70,18 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
 #pragma acc loop present_or_copy(LocalInt)
   for(int i = 5; i < 10;++i);
 }
+void ModList() {
+  int V1;
+  // expected-error@+2{{OpenACC 'readonly' modifier not valid on 'copy' clause}}
+  // expected-error@+1{{OpenACC 'zero' modifier not valid on 'copy' clause}}
+#pragma acc parallel loop copy(always, alwaysin, alwaysout, zero, readonly: V1)
+  for(int i = 5; i < 10;++i);
+  // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'copy' clause}}
+#pragma acc serial loop copy(readonly: V1)
+  for(int i = 5; i < 10;++i);
+  // expected-error@+1{{OpenACC 'zero' modifier not valid on 'copy' clause}}
+#pragma acc kernels loop copy(zero: V1)
+  for(int i = 5; i < 10;++i);
+#pragma acc parallel loop copy(always, alwaysin, alwaysout: V1)
+  for(int i = 5; i < 10;++i);
+}

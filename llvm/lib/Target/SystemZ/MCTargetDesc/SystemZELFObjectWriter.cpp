@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/SystemZMCExpr.h"
 #include "MCTargetDesc/SystemZMCFixups.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -33,6 +34,8 @@ protected:
   // Override MCELFObjectTargetWriter.
   unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
                         const MCFixup &Fixup, bool IsPCRel) const override;
+  bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
+                               unsigned Type) const override;
 };
 
 } // end anonymous namespace
@@ -153,50 +156,74 @@ unsigned SystemZELFObjectWriter::getRelocType(MCContext &Ctx,
                                               bool IsPCRel) const {
   SMLoc Loc = Fixup.getLoc();
   unsigned Kind = Fixup.getKind();
-  if (Kind >= FirstLiteralRelocationKind)
-    return Kind - FirstLiteralRelocationKind;
-  MCSymbolRefExpr::VariantKind Modifier = Target.getAccessVariant();
-  switch (Modifier) {
-  case MCSymbolRefExpr::VK_None:
+  auto Specifier = SystemZMCExpr::Specifier(Target.getSpecifier());
+  switch (Specifier) {
+  case SystemZMCExpr::VK_INDNTPOFF:
+  case SystemZMCExpr::VK_NTPOFF:
+  case SystemZMCExpr::VK_TLSGD:
+  case SystemZMCExpr::VK_TLSLD:
+  case SystemZMCExpr::VK_TLSLDM:
+  case SystemZMCExpr::VK_DTPOFF:
+    if (auto *SA = Target.getAddSym())
+      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
+    break;
+  default:
+    break;
+  }
+
+  switch (Specifier) {
+  case SystemZMCExpr::VK_None:
     if (IsPCRel)
       return getPCRelReloc(Ctx, Loc, Kind);
     return getAbsoluteReloc(Ctx, Loc, Kind);
 
-  case MCSymbolRefExpr::VK_NTPOFF:
+  case SystemZMCExpr::VK_NTPOFF:
     assert(!IsPCRel && "NTPOFF shouldn't be PC-relative");
     return getTLSLEReloc(Ctx, Loc, Kind);
 
-  case MCSymbolRefExpr::VK_INDNTPOFF:
+  case SystemZMCExpr::VK_INDNTPOFF:
     if (IsPCRel && Kind == SystemZ::FK_390_PC32DBL)
       return ELF::R_390_TLS_IEENT;
     Ctx.reportError(Loc, "Only PC-relative INDNTPOFF accesses are supported for now");
     return 0;
 
-  case MCSymbolRefExpr::VK_DTPOFF:
+  case SystemZMCExpr::VK_DTPOFF:
     assert(!IsPCRel && "DTPOFF shouldn't be PC-relative");
     return getTLSLDOReloc(Ctx, Loc, Kind);
 
-  case MCSymbolRefExpr::VK_TLSLDM:
+  case SystemZMCExpr::VK_TLSLDM:
     assert(!IsPCRel && "TLSLDM shouldn't be PC-relative");
     return getTLSLDMReloc(Ctx, Loc, Kind);
 
-  case MCSymbolRefExpr::VK_TLSGD:
+  case SystemZMCExpr::VK_TLSGD:
     assert(!IsPCRel && "TLSGD shouldn't be PC-relative");
     return getTLSGDReloc(Ctx, Loc, Kind);
 
-  case MCSymbolRefExpr::VK_GOT:
-  case MCSymbolRefExpr::VK_GOTENT:
+  case SystemZMCExpr::VK_GOT:
+  case SystemZMCExpr::VK_GOTENT:
     if (IsPCRel && Kind == SystemZ::FK_390_PC32DBL)
       return ELF::R_390_GOTENT;
     Ctx.reportError(Loc, "Only PC-relative GOT accesses are supported for now");
     return 0;
 
-  case MCSymbolRefExpr::VK_PLT:
+  case SystemZMCExpr::VK_PLT:
     assert(IsPCRel && "@PLT shouldn't be PC-relative");
     return getPLTReloc(Ctx, Loc, Kind);
 
   default:
     llvm_unreachable("Modifier not supported");
+  }
+}
+
+bool SystemZELFObjectWriter::needsRelocateWithSymbol(const MCValue &V,
+                                                     const MCSymbol &Sym,
+                                                     unsigned Type) const {
+  switch (V.getSpecifier()) {
+  case SystemZMCExpr::VK_GOT:
+  case SystemZMCExpr::VK_PLT:
+    return true;
+  default:
+    return false;
   }
 }
 

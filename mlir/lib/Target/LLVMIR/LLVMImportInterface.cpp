@@ -37,13 +37,19 @@ LogicalResult mlir::LLVMImportInterface::convertUnregisteredIntrinsic(
           llvmOperands, llvmOpBundles, false, {}, {}, mlirOperands, mlirAttrs)))
     return failure();
 
-  Type results = moduleImport.convertType(inst->getType());
+  Type resultType = moduleImport.convertType(inst->getType());
   auto op = builder.create<::mlir::LLVM::CallIntrinsicOp>(
-      moduleImport.translateLoc(inst->getDebugLoc()), results,
+      moduleImport.translateLoc(inst->getDebugLoc()),
+      isa<LLVMVoidType>(resultType) ? TypeRange{} : TypeRange{resultType},
       StringAttr::get(builder.getContext(), intrinName),
       ValueRange{mlirOperands}, FastmathFlagsAttr{});
 
   moduleImport.setFastmathFlagsAttr(inst, op);
+
+  ArrayAttr argsAttr, resAttr;
+  moduleImport.convertParameterAttributes(inst, argsAttr, resAttr, builder);
+  op.setArgAttrsAttr(argsAttr);
+  op.setResAttrsAttr(resAttr);
 
   // Update importer tracking of results.
   unsigned numRes = op.getNumResults();
@@ -56,4 +62,32 @@ LogicalResult mlir::LLVMImportInterface::convertUnregisteredIntrinsic(
         "expected at most one result from target intrinsic call");
 
   return success();
+}
+
+/// Converts the LLVM intrinsic to an MLIR operation if a conversion exists.
+/// Returns failure otherwise.
+LogicalResult mlir::LLVMImportInterface::convertIntrinsic(
+    OpBuilder &builder, llvm::CallInst *inst,
+    LLVM::ModuleImport &moduleImport) const {
+  // Lookup the dialect interface for the given intrinsic.
+  // Verify the intrinsic identifier maps to an actual intrinsic.
+  llvm::Intrinsic::ID intrinId = inst->getIntrinsicID();
+  assert(intrinId != llvm::Intrinsic::not_intrinsic);
+
+  // First lookup the intrinsic across different dialects for known
+  // supported conversions, examples include arm-neon, nvm-sve, etc.
+  Dialect *dialect = nullptr;
+
+  if (!moduleImport.useUnregisteredIntrinsicsOnly())
+    dialect = intrinsicToDialect.lookup(intrinId);
+
+  // No specialized (supported) intrinsics, attempt to generate a generic
+  // version via llvm.call_intrinsic (if available).
+  if (!dialect)
+    return convertUnregisteredIntrinsic(builder, inst, moduleImport);
+
+  // Dispatch the conversion to the dialect interface.
+  const LLVMImportDialectInterface *iface = getInterfaceFor(dialect);
+  assert(iface && "expected to find a dialect interface");
+  return iface->convertIntrinsic(builder, inst, moduleImport);
 }

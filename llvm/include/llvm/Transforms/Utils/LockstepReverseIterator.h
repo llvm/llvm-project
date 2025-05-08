@@ -57,8 +57,7 @@ public:
     Fail = false;
     if constexpr (!EarlyFailure) {
       this->ActiveBlocks.clear();
-      for (BasicBlock *BB : Blocks)
-        this->ActiveBlocks.insert(BB);
+      this->ActiveBlocks.insert_range(Blocks);
     }
     Insts.clear();
     for (BasicBlock *BB : Blocks) {

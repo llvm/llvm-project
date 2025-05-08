@@ -18,7 +18,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace time_utils {
 
 // TODO: clean this up in a followup patch
-int64_t mktime_internal(const tm *tm_out) {
+cpp::optional<time_t> mktime_internal(const tm *tm_out) {
   // Unlike most C Library functions, mktime doesn't just die on bad input.
   // TODO(rtenneti); Handle leap seconds.
   int64_t tm_year_from_base = tm_out->tm_year + time_constants::TIME_YEAR_BASE;
@@ -27,20 +27,20 @@ int64_t mktime_internal(const tm *tm_out) {
   if (sizeof(time_t) == 4 &&
       tm_year_from_base >= time_constants::END_OF32_BIT_EPOCH_YEAR) {
     if (tm_year_from_base > time_constants::END_OF32_BIT_EPOCH_YEAR)
-      return time_utils::out_of_range();
+      return cpp::nullopt;
     if (tm_out->tm_mon > 0)
-      return time_utils::out_of_range();
+      return cpp::nullopt;
     if (tm_out->tm_mday > 19)
-      return time_utils::out_of_range();
+      return cpp::nullopt;
     else if (tm_out->tm_mday == 19) {
       if (tm_out->tm_hour > 3)
-        return time_utils::out_of_range();
+        return cpp::nullopt;
       else if (tm_out->tm_hour == 3) {
         if (tm_out->tm_min > 14)
-          return time_utils::out_of_range();
+          return cpp::nullopt;
         else if (tm_out->tm_min == 14) {
           if (tm_out->tm_sec > 7)
-            return time_utils::out_of_range();
+            return cpp::nullopt;
         }
       }
     }
@@ -102,10 +102,10 @@ int64_t mktime_internal(const tm *tm_out) {
 
   // TODO: https://github.com/llvm/llvm-project/issues/121962
   // Need to handle timezone and update of tm_isdst.
-  int64_t seconds = tm_out->tm_sec +
-                    tm_out->tm_min * time_constants::SECONDS_PER_MIN +
-                    tm_out->tm_hour * time_constants::SECONDS_PER_HOUR +
-                    total_days * time_constants::SECONDS_PER_DAY;
+  time_t seconds = static_cast<time_t>(
+      tm_out->tm_sec + tm_out->tm_min * time_constants::SECONDS_PER_MIN +
+      tm_out->tm_hour * time_constants::SECONDS_PER_HOUR +
+      total_days * time_constants::SECONDS_PER_DAY);
   return seconds;
 }
 
@@ -136,7 +136,7 @@ static int64_t computeRemainingYears(int64_t daysPerYears,
 //
 // Compute the number of months from the remaining days. Finally, adjust years
 // to be 1900 and months to be from January.
-int64_t update_from_seconds(int64_t total_seconds, tm *tm) {
+int64_t update_from_seconds(time_t total_seconds, tm *tm) {
   // Days in month starting from March in the year 2000.
   static const char daysInMonth[] = {31 /* Mar */, 30, 31, 30, 31, 31,
                                      30,           31, 30, 31, 31, 29};
@@ -152,8 +152,7 @@ int64_t update_from_seconds(int64_t total_seconds, tm *tm) {
           : INT_MAX * static_cast<int64_t>(
                           time_constants::NUMBER_OF_SECONDS_IN_LEAP_YEAR);
 
-  time_t ts = static_cast<time_t>(total_seconds);
-  if (ts < time_min || ts > time_max)
+  if (total_seconds < time_min || total_seconds > time_max)
     return time_utils::out_of_range();
 
   int64_t seconds =

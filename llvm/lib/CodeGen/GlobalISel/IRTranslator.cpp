@@ -232,7 +232,7 @@ ArrayRef<Register> IRTranslator::getOrCreateVRegs(const Value &Val) {
     unsigned Idx = 0;
     while (auto Elt = C.getAggregateElement(Idx++)) {
       auto EltRegs = getOrCreateVRegs(*Elt);
-      llvm::copy(EltRegs, std::back_inserter(*VRegs));
+      llvm::append_range(*VRegs, EltRegs);
     }
   } else {
     assert(SplitTys.size() == 1 && "unexpectedly split LLT");
@@ -252,8 +252,8 @@ ArrayRef<Register> IRTranslator::getOrCreateVRegs(const Value &Val) {
 }
 
 int IRTranslator::getOrCreateFrameIndex(const AllocaInst &AI) {
-  auto MapEntry = FrameIndices.find(&AI);
-  if (MapEntry != FrameIndices.end())
+  auto [MapEntry, Inserted] = FrameIndices.try_emplace(&AI);
+  if (!Inserted)
     return MapEntry->second;
 
   uint64_t ElementSize = DL->getTypeAllocSize(AI.getAllocatedType());
@@ -263,7 +263,7 @@ int IRTranslator::getOrCreateFrameIndex(const AllocaInst &AI) {
   // Always allocate at least one byte.
   Size = std::max<uint64_t>(Size, 1u);
 
-  int &FI = FrameIndices[&AI];
+  int &FI = MapEntry->second;
   FI = MF->getFrameInfo().CreateStackObject(Size, AI.getAlign(), false, &AI);
   return FI;
 }
@@ -1114,8 +1114,8 @@ void IRTranslator::emitBitTestHeader(SwitchCG::BitTestBlock &B,
     MaskTy = LLT::scalar(PtrTy.getSizeInBits());
   else {
     // Ensure that the type will fit the mask value.
-    for (unsigned I = 0, E = B.Cases.size(); I != E; ++I) {
-      if (!isUIntN(SwitchOpTy.getSizeInBits(), B.Cases[I].Mask)) {
+    for (const SwitchCG::BitTestCase &Case : B.Cases) {
+      if (!isUIntN(SwitchOpTy.getSizeInBits(), Case.Mask)) {
         // Switch table case range are encoded into series of masks.
         // Just use pointer type, it's guaranteed to fit.
         MaskTy = LLT::scalar(PtrTy.getSizeInBits());
@@ -1477,8 +1477,7 @@ static uint64_t getOffsetFromIndices(const User &U, const DataLayout &DL) {
     for (auto Idx : IVI->indices())
       Indices.push_back(ConstantInt::get(Int32Ty, Idx));
   } else {
-    for (Value *Op : drop_begin(U.operands()))
-      Indices.push_back(Op);
+    llvm::append_range(Indices, drop_begin(U.operands()));
   }
 
   return 8 * static_cast<uint64_t>(
@@ -1732,10 +1731,6 @@ bool IRTranslator::translateMemFunc(const CallInst &CI,
   ConstantInt *CopySize = nullptr;
 
   if (auto *MCI = dyn_cast<MemCpyInst>(&CI)) {
-    DstAlign = MCI->getDestAlign().valueOrOne();
-    SrcAlign = MCI->getSourceAlign().valueOrOne();
-    CopySize = dyn_cast<ConstantInt>(MCI->getArgOperand(2));
-  } else if (auto *MCI = dyn_cast<MemCpyInlineInst>(&CI)) {
     DstAlign = MCI->getDestAlign().valueOrOne();
     SrcAlign = MCI->getSourceAlign().valueOrOne();
     CopySize = dyn_cast<ConstantInt>(MCI->getArgOperand(2));
@@ -2212,8 +2207,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::fake_use: {
     SmallVector<llvm::SrcOp, 4> VRegs;
     for (const auto &Arg : CI.args())
-      for (auto VReg : getOrCreateVRegs(*Arg))
-        VRegs.push_back(VReg);
+      llvm::append_range(VRegs, getOrCreateVRegs(*Arg));
     MIRBuilder.buildInstr(TargetOpcode::FAKE_USE, {}, VRegs);
     MF->setHasFakeUses(true);
     return true;
@@ -3143,21 +3137,12 @@ bool IRTranslator::translateVAArg(const User &U, MachineIRBuilder &MIRBuilder) {
   return true;
 }
 
-bool IRTranslator::translateUnreachable(const User &U, MachineIRBuilder &MIRBuilder) {
-  if (!MF->getTarget().Options.TrapUnreachable)
-    return true;
-
+bool IRTranslator::translateUnreachable(const User &U,
+                                        MachineIRBuilder &MIRBuilder) {
   auto &UI = cast<UnreachableInst>(U);
-
-  // We may be able to ignore unreachable behind a noreturn call.
-  if (const CallInst *Call = dyn_cast_or_null<CallInst>(UI.getPrevNode());
-      Call && Call->doesNotReturn()) {
-    if (MF->getTarget().Options.NoTrapAfterNoreturn)
-      return true;
-    // Do not emit an additional trap instruction.
-    if (Call->isNonContinuableTrap())
-      return true;
-  }
+  if (!UI.shouldLowerToTrap(MF->getTarget().Options.TrapUnreachable,
+                            MF->getTarget().Options.NoTrapAfterNoreturn))
+    return true;
 
   MIRBuilder.buildTrap();
   return true;
@@ -3174,7 +3159,7 @@ bool IRTranslator::translateInsertElement(const User &U,
   Register Res = getOrCreateVReg(U);
   Register Val = getOrCreateVReg(*U.getOperand(0));
   Register Elt = getOrCreateVReg(*U.getOperand(1));
-  unsigned PreferredVecIdxWidth = TLI->getVectorIdxTy(*DL).getSizeInBits();
+  unsigned PreferredVecIdxWidth = TLI->getVectorIdxWidth(*DL);
   Register Idx;
   if (auto *CI = dyn_cast<ConstantInt>(U.getOperand(2))) {
     if (CI->getBitWidth() != PreferredVecIdxWidth) {
@@ -3200,7 +3185,7 @@ bool IRTranslator::translateInsertVector(const User &U,
   Register Elt = getOrCreateVReg(*U.getOperand(1));
 
   ConstantInt *CI = cast<ConstantInt>(U.getOperand(2));
-  unsigned PreferredVecIdxWidth = TLI->getVectorIdxTy(*DL).getSizeInBits();
+  unsigned PreferredVecIdxWidth = TLI->getVectorIdxWidth(*DL);
 
   // Resize Index to preferred index width.
   if (CI->getBitWidth() != PreferredVecIdxWidth) {
@@ -3255,7 +3240,7 @@ bool IRTranslator::translateExtractElement(const User &U,
 
   Register Res = getOrCreateVReg(U);
   Register Val = getOrCreateVReg(*U.getOperand(0));
-  unsigned PreferredVecIdxWidth = TLI->getVectorIdxTy(*DL).getSizeInBits();
+  unsigned PreferredVecIdxWidth = TLI->getVectorIdxWidth(*DL);
   Register Idx;
   if (auto *CI = dyn_cast<ConstantInt>(U.getOperand(1))) {
     if (CI->getBitWidth() != PreferredVecIdxWidth) {
@@ -3279,7 +3264,7 @@ bool IRTranslator::translateExtractVector(const User &U,
   Register Res = getOrCreateVReg(U);
   Register Vec = getOrCreateVReg(*U.getOperand(0));
   ConstantInt *CI = cast<ConstantInt>(U.getOperand(1));
-  unsigned PreferredVecIdxWidth = TLI->getVectorIdxTy(*DL).getSizeInBits();
+  unsigned PreferredVecIdxWidth = TLI->getVectorIdxWidth(*DL);
 
   // Resize Index to preferred index width.
   if (CI->getBitWidth() != PreferredVecIdxWidth) {
@@ -3446,6 +3431,12 @@ bool IRTranslator::translateAtomicRMW(const User &U,
   case AtomicRMWInst::FMin:
     Opcode = TargetOpcode::G_ATOMICRMW_FMIN;
     break;
+  case AtomicRMWInst::FMaximum:
+    Opcode = TargetOpcode::G_ATOMICRMW_FMAXIMUM;
+    break;
+  case AtomicRMWInst::FMinimum:
+    Opcode = TargetOpcode::G_ATOMICRMW_FMINIMUM;
+    break;
   case AtomicRMWInst::UIncWrap:
     Opcode = TargetOpcode::G_ATOMICRMW_UINC_WRAP;
     break;
@@ -3602,9 +3593,8 @@ void IRTranslator::translateDbgDeclareRecord(Value *Address, bool HasArgList,
   // A dbg.declare describes the address of a source variable, so lower it
   // into an indirect DBG_VALUE.
   MIRBuilder.setDebugLoc(DL);
-  MIRBuilder.buildIndirectDbgValue(getOrCreateVReg(*Address),
-                                   Variable, Expression);
-  return;
+  MIRBuilder.buildIndirectDbgValue(getOrCreateVReg(*Address), Variable,
+                                   Expression);
 }
 
 void IRTranslator::translateDbgInfo(const Instruction &Inst,
@@ -3656,11 +3646,17 @@ bool IRTranslator::translate(const Constant &C, Register Reg) {
   if (auto CurrInstDL = CurBuilder->getDL())
     EntryBuilder->setDebugLoc(DebugLoc());
 
-  if (auto CI = dyn_cast<ConstantInt>(&C))
+  if (auto CI = dyn_cast<ConstantInt>(&C)) {
+    // buildConstant expects a to-be-splatted scalar ConstantInt.
+    if (isa<VectorType>(CI->getType()))
+      CI = ConstantInt::get(CI->getContext(), CI->getValue());
     EntryBuilder->buildConstant(Reg, *CI);
-  else if (auto CF = dyn_cast<ConstantFP>(&C))
+  } else if (auto CF = dyn_cast<ConstantFP>(&C)) {
+    // buildFConstant expects a to-be-splatted scalar ConstantFP.
+    if (isa<VectorType>(CF->getType()))
+      CF = ConstantFP::get(CF->getContext(), CF->getValue());
     EntryBuilder->buildFConstant(Reg, *CF);
-  else if (isa<UndefValue>(C))
+  } else if (isa<UndefValue>(C))
     EntryBuilder->buildUndef(Reg);
   else if (isa<ConstantPointerNull>(C))
     EntryBuilder->buildConstant(Reg, 0);

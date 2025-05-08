@@ -363,7 +363,10 @@ void CheckHelper::Check(const Symbol &symbol) {
       // are not pertinent to the characteristics of the procedure.
       // Restrictions on entities in pure procedure interfaces don't need
       // enforcement.
-    } else if (!FindCommonBlockContaining(symbol) && IsSaved(symbol)) {
+    } else if (symbol.has<AssocEntityDetails>() ||
+        FindCommonBlockContaining(symbol)) {
+      // can look like they have SAVE but are fine in PURE
+    } else if (IsSaved(symbol)) {
       if (IsInitialized(symbol)) {
         messages_.Say(
             "A pure subprogram may not initialize a variable"_err_en_US);
@@ -731,7 +734,8 @@ void CheckHelper::CheckObjectEntity(
           symbol.name(), commonBlock->name());
     } else if (isLocalVariable && !IsAllocatableOrPointer(symbol) &&
         !IsSaved(symbol)) {
-      messages_.Say("Local coarray must have the SAVE attribute"_err_en_US);
+      messages_.Say(
+          "Local coarray must have the SAVE or ALLOCATABLE attribute"_err_en_US);
     }
     for (int j{0}; j < corank; ++j) {
       if (auto lcbv{evaluate::ToInt64(evaluate::Fold(
@@ -959,7 +963,18 @@ void CheckHelper::CheckObjectEntity(
         "'%s' is a data object and may not be EXTERNAL"_err_en_US,
         symbol.name());
   }
-
+  if (symbol.test(Symbol::Flag::CrayPointee)) {
+    // NB, IsSaved was too smart here.
+    if (details.init()) {
+      messages_.Say(
+          "Cray pointee '%s' may not be initialized"_err_en_US, symbol.name());
+    }
+    if (symbol.attrs().test(Attr::SAVE)) {
+      messages_.Say(
+          "Cray pointee '%s' may not have the SAVE attribute"_err_en_US,
+          symbol.name());
+    }
+  }
   if (derived) {
     bool isUnsavedLocal{
         isLocalVariable && !IsAllocatable(symbol) && !IsSaved(symbol)};
@@ -980,7 +995,7 @@ void CheckHelper::CheckObjectEntity(
               symbol.name(), badPotential.BuildResultDesignatorName());
         } else if (isUnsavedLocal) { // F'2023 C826
           SayWithDeclaration(*badPotential,
-              "Local variable '%s' without the SAVE attribute may not have a coarray potential subobject component '%s'"_err_en_US,
+              "Local variable '%s' without the SAVE or ALLOCATABLE attribute may not have a coarray potential subobject component '%s'"_err_en_US,
               symbol.name(), badPotential.BuildResultDesignatorName());
         } else {
           DIE("caught unexpected bad coarray potential component");
@@ -3485,7 +3500,7 @@ void CheckHelper::CheckDioDummyIsDefaultInteger(
 }
 
 void CheckHelper::CheckDioDummyIsScalar(const Symbol &subp, const Symbol &arg) {
-  if (arg.Rank() > 0 || arg.Corank() > 0) {
+  if (arg.Rank() > 0) {
     messages_.Say(arg.name(),
         "Dummy argument '%s' of a defined input/output procedure must be a scalar"_err_en_US,
         arg.name());
@@ -3642,6 +3657,13 @@ void CheckHelper::CheckDefinedIoProc(const Symbol &symbol,
       CheckDioArgCount(*specificSubp, ioKind, dummyArgs.size());
       int argCount{0};
       for (auto *arg : dummyArgs) {
+        if (arg && arg->Corank() > 0) {
+          evaluate::AttachDeclaration(
+              messages_.Say(arg->name(),
+                  "Dummy argument '%s' of defined input/output procedure '%s' may not be a coarray"_err_en_US,
+                  arg->name(), ultimate.name()),
+              *arg);
+        }
         switch (argCount++) {
         case 0:
           // dtv-type-spec, INTENT(INOUT) :: dtv
@@ -3708,6 +3730,20 @@ void CheckHelper::CheckSymbolType(const Symbol &symbol) {
       messages_.Say(
           "'%s' has a type %s with a deferred type parameter but is neither an allocatable nor an object pointer"_err_en_US,
           symbol.name(), dyType->AsFortran());
+    }
+    if (!symbol.has<ObjectEntityDetails>()) {
+      if (const DerivedTypeSpec *
+          derived{evaluate::GetDerivedTypeSpec(*dyType)}) {
+        if (IsEventTypeOrLockType(derived)) {
+          messages_.Say(
+              "Entity '%s' with EVENT_TYPE or LOCK_TYPE must be an object"_err_en_US,
+              symbol.name());
+        } else if (auto iter{FindEventOrLockPotentialComponent(*derived)}) {
+          messages_.Say(
+              "Entity '%s' with EVENT_TYPE or LOCK_TYPE potential subobject component '%s' must be an object"_err_en_US,
+              symbol.name(), iter.BuildResultDesignatorName());
+        }
+      }
     }
   }
 }
@@ -3998,26 +4034,33 @@ void DistinguishabilityHelper::Check(const Scope &scope) {
       const auto &[ultimate, procInfo]{*iter1};
       const auto &[kind, proc]{procInfo};
       for (auto iter2{iter1}; ++iter2 != info.end();) {
-        if (&*ultimate == &*iter2->first) {
-          continue; // ok, actually the same procedure
+        const auto &[ultimate2, procInfo2]{*iter2};
+        if (&*ultimate == &*ultimate2) {
+          continue; // ok, actually the same procedure/binding
         } else if (const auto *binding1{
                        ultimate->detailsIf<ProcBindingDetails>()}) {
           if (const auto *binding2{
-                  iter2->first->detailsIf<ProcBindingDetails>()}) {
+                  ultimate2->detailsIf<ProcBindingDetails>()}) {
             if (&binding1->symbol().GetUltimate() ==
                 &binding2->symbol().GetUltimate()) {
-              continue; // ok, bindings resolve identically
+              continue; // ok, (NOPASS) bindings resolve identically
+            } else if (ultimate->name() == ultimate2->name()) {
+              continue; // override, possibly of DEFERRED
             }
           }
+        } else if (ultimate->has<ProcBindingDetails>() &&
+            ultimate2->has<ProcBindingDetails>() &&
+            ultimate->name() == ultimate2->name()) {
+          continue; // override, possibly of DEFERRED
         }
         auto distinguishable{kind.IsName()
                 ? evaluate::characteristics::Distinguishable
                 : evaluate::characteristics::DistinguishableOpOrAssign};
         std::optional<bool> distinct{distinguishable(
-            context_.languageFeatures(), proc, iter2->second.procedure)};
+            context_.languageFeatures(), proc, procInfo2.procedure)};
         if (!distinct.value_or(false)) {
           SayNotDistinguishable(GetTopLevelUnitContaining(scope), name, kind,
-              *ultimate, *iter2->first, distinct.has_value());
+              *ultimate, *ultimate2, distinct.has_value());
         }
       }
     }

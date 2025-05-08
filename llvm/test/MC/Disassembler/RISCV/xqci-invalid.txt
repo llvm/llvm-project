@@ -1,10 +1,19 @@
-# RUN: not llvm-mc -disassemble -triple=riscv32 -mattr=+experimental-xqciac %s | FileCheck %s
+# RUN: not llvm-mc -disassemble -triple=riscv32 -mattr=+experimental-xqciac %s \
+# RUN:   | FileCheck -check-prefixes=CHECK,CHECK-XQCIAC %s
+# RUN: not llvm-mc -disassemble -triple=riscv32 -mattr=+experimental-xqcibm %s \
+# RUN:   | FileCheck -check-prefixes=CHECK,CHECK-XQCIBM %s
 
 [0x00,0x00]
 # CHECK: unimp
 
 [0x8b,0x30,0x31,0x46]
-# CHECK-NOT: qc.shladd x1, x2, x3, {{[0-9]+}}
+# CHECK-XQCIAC-NOT: qc.shladd ra, sp, gp, {{[0-9]+}}
+
+[0x00,0x00]
+# CHECK: unimp
+
+[0x92,0x17]
+# CHECK-XQCIBM-NOT: qc.c.extu a5, {{[0-9]+}}
 
 [0x00,0x00]
 # CHECK: unimp

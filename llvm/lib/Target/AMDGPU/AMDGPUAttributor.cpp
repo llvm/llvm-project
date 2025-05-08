@@ -17,14 +17,11 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO/Attributor.h"
 
 #define DEBUG_TYPE "amdgpu-attributor"
-
-namespace llvm {
-void initializeCycleInfoWrapperPassPass(PassRegistry &);
-} // namespace llvm
 
 using namespace llvm;
 
@@ -110,6 +107,8 @@ intrinsicToAttrMask(Intrinsic::ID ID, bool &NonKernelOnly, bool &NeedsImplicit,
     return CodeObjectVersion >= AMDGPU::AMDHSA_COV5 ? IMPLICIT_ARG_PTR
                                                     : QUEUE_PTR;
   case Intrinsic::trap:
+  case Intrinsic::debugtrap:
+  case Intrinsic::ubsantrap:
     if (SupportsGetDoorBellID) // GetDoorbellID support implemented since V4.
       return CodeObjectVersion >= AMDGPU::AMDHSA_COV4 ? NOT_IMPLICIT_INPUT
                                                       : QUEUE_PTR;
@@ -210,7 +209,7 @@ public:
   getWavesPerEU(const Function &F,
                 std::pair<unsigned, unsigned> FlatWorkGroupSize) {
     const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-    return ST.getWavesPerEU(F, FlatWorkGroupSize);
+    return ST.getWavesPerEU(FlatWorkGroupSize, getLDSSize(F), F);
   }
 
   std::optional<std::pair<unsigned, unsigned>>
@@ -231,7 +230,8 @@ public:
                          std::pair<unsigned, unsigned> WavesPerEU,
                          std::pair<unsigned, unsigned> FlatWorkGroupSize) {
     const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-    return ST.getEffectiveWavesPerEU(WavesPerEU, FlatWorkGroupSize);
+    return ST.getEffectiveWavesPerEU(WavesPerEU, FlatWorkGroupSize,
+                                     getLDSSize(F));
   }
 
   unsigned getMaxWavesPerEU(const Function &F) {
@@ -254,6 +254,14 @@ private:
     }
 
     return Status;
+  }
+
+  /// Returns the minimum amount of LDS space used by a workgroup running
+  /// function \p F.
+  static unsigned getLDSSize(const Function &F) {
+    return AMDGPU::getIntegerPairAttribute(F, "amdgpu-lds-size",
+                                           {0, UINT32_MAX}, true)
+        .first;
   }
 
   /// Get the constant access bitmap for \p C.
@@ -1235,6 +1243,8 @@ static bool inlineAsmUsesAGPRs(const InlineAsm *IA) {
   return false;
 }
 
+// TODO: Migrate to range merge of amdgpu-agpr-alloc.
+// FIXME: Why is this using Attribute::NoUnwind?
 struct AAAMDGPUNoAGPR
     : public IRAttribute<Attribute::NoUnwind,
                          StateWrapper<BooleanState, AbstractAttribute>,
@@ -1250,7 +1260,10 @@ struct AAAMDGPUNoAGPR
 
   void initialize(Attributor &A) override {
     Function *F = getAssociatedFunction();
-    if (F->hasFnAttribute("amdgpu-no-agpr"))
+    auto [MinNumAGPR, MaxNumAGPR] =
+        AMDGPU::getIntegerPairAttribute(*F, "amdgpu-agpr-alloc", {~0u, ~0u},
+                                        /*OnlyFirstRequired=*/true);
+    if (MinNumAGPR == 0)
       indicateOptimisticFixpoint();
   }
 
@@ -1297,7 +1310,7 @@ struct AAAMDGPUNoAGPR
       return ChangeStatus::UNCHANGED;
     LLVMContext &Ctx = getAssociatedFunction()->getContext();
     return A.manifestAttrs(getIRPosition(),
-                           {Attribute::get(Ctx, "amdgpu-no-agpr")});
+                           {Attribute::get(Ctx, "amdgpu-agpr-alloc", "0")});
   }
 
   const std::string getName() const override { return "AAAMDGPUNoAGPR"; }
@@ -1330,7 +1343,8 @@ static void addPreloadKernArgHint(Function &F, TargetMachine &TM) {
 }
 
 static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
-                    AMDGPUAttributorOptions Options) {
+                    AMDGPUAttributorOptions Options,
+                    ThinOrFullLTOPhase LTOPhase) {
   SetVector<Function *> Functions;
   for (Function &F : M) {
     if (!F.isIntrinsic())
@@ -1365,9 +1379,13 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
 
   Attributor A(Functions, InfoCache, AC);
 
-  LLVM_DEBUG(dbgs() << "[AMDGPUAttributor] Module " << M.getName() << " is "
-                    << (AC.IsClosedWorldModule ? "" : "not ")
-                    << "assumed to be a closed world.\n");
+  LLVM_DEBUG({
+    StringRef LTOPhaseStr = to_string(LTOPhase);
+    dbgs() << "[AMDGPUAttributor] Running at phase " << LTOPhaseStr << '\n'
+           << "[AMDGPUAttributor] Module " << M.getName() << " is "
+           << (AC.IsClosedWorldModule ? "" : "not ")
+           << "assumed to be a closed world.\n";
+  });
 
   for (auto *F : Functions) {
     A.getOrCreateAAFor<AAAMDAttributes>(IRPosition::function(*F));
@@ -1420,7 +1438,8 @@ public:
 
   bool runOnModule(Module &M) override {
     AnalysisGetter AG(this);
-    return runImpl(M, AG, *TM, /*Options=*/{});
+    return runImpl(M, AG, *TM, /*Options=*/{},
+                   /*LTOPhase=*/ThinOrFullLTOPhase::None);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -1441,8 +1460,8 @@ PreservedAnalyses llvm::AMDGPUAttributorPass::run(Module &M,
   AnalysisGetter AG(FAM);
 
   // TODO: Probably preserves CFG
-  return runImpl(M, AG, TM, Options) ? PreservedAnalyses::none()
-                                     : PreservedAnalyses::all();
+  return runImpl(M, AG, TM, Options, LTOPhase) ? PreservedAnalyses::none()
+                                               : PreservedAnalyses::all();
 }
 
 char AMDGPUAttributorLegacy::ID = 0;

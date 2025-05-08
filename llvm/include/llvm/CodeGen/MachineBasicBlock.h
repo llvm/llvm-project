@@ -205,8 +205,8 @@ private:
   /// LLVM IR.
   bool IsEHScopeEntry = false;
 
-  /// Indicates if this is a target block of a catchret.
-  bool IsEHCatchretTarget = false;
+  /// Indicates if this is a target of Windows EH Continuation Guard.
+  bool IsEHContTarget = false;
 
   /// Indicate that this basic block is the entry block of an EH funclet.
   bool IsEHFuncletEntry = false;
@@ -234,8 +234,8 @@ private:
   /// is only computed once and is cached.
   mutable MCSymbol *CachedMCSymbol = nullptr;
 
-  /// Cached MCSymbol for this block (used if IsEHCatchRetTarget).
-  mutable MCSymbol *CachedEHCatchretMCSymbol = nullptr;
+  /// Cached MCSymbol for this block (used if IsEHContTarget).
+  mutable MCSymbol *CachedEHContMCSymbol = nullptr;
 
   /// Marks the end of the basic block. Used during basic block sections to
   /// calculate the size of the basic block, or the BB section ending with it.
@@ -312,6 +312,15 @@ public:
   /// Return the MachineFunction containing this basic block.
   const MachineFunction *getParent() const { return xParent; }
   MachineFunction *getParent() { return xParent; }
+
+  /// Returns true if the original IR terminator is an `indirectbr`. This
+  /// typically corresponds to a `goto` in C, rather than jump tables.
+  bool terminatorIsComputedGoto() const {
+    return back().isIndirectBranch() &&
+           llvm::all_of(successors(), [](const MachineBasicBlock *Succ) {
+             return Succ->isIRBlockAddressTaken();
+           });
+  }
 
   using instr_iterator = Instructions::iterator;
   using const_instr_iterator = Instructions::const_iterator;
@@ -652,11 +661,11 @@ public:
   /// that used to have a catchpad or cleanuppad instruction in the LLVM IR.
   void setIsEHScopeEntry(bool V = true) { IsEHScopeEntry = V; }
 
-  /// Returns true if this is a target block of a catchret.
-  bool isEHCatchretTarget() const { return IsEHCatchretTarget; }
+  /// Returns true if this is a target of Windows EH Continuation Guard.
+  bool isEHContTarget() const { return IsEHContTarget; }
 
-  /// Indicates if this is a target block of a catchret.
-  void setIsEHCatchretTarget(bool V = true) { IsEHCatchretTarget = V; }
+  /// Indicates if this is a target of Windows EH Continuation Guard.
+  void setIsEHContTarget(bool V = true) { IsEHContTarget = V; }
 
   /// Returns true if this is the entry block of an EH funclet.
   bool isEHFuncletEntry() const { return IsEHFuncletEntry; }
@@ -1238,8 +1247,8 @@ public:
   /// Return the MCSymbol for this basic block.
   MCSymbol *getSymbol() const;
 
-  /// Return the EHCatchret Symbol for this basic block.
-  MCSymbol *getEHCatchretSymbol() const;
+  /// Return the Windows EH Continuation Symbol for this basic block.
+  MCSymbol *getEHContSymbol() const;
 
   std::optional<uint64_t> getIrrLoopHeaderWeight() const {
     return IrrLoopHeaderWeight;
@@ -1254,6 +1263,9 @@ public:
   /// MachineBranchProbabilityInfo class.
   BranchProbability getSuccProbability(const_succ_iterator Succ) const;
 
+  // Helper function for MIRPrinter.
+  bool canPredictBranchProbabilities() const;
+
 private:
   /// Return probability iterator corresponding to the I successor iterator.
   probability_iterator getProbabilityIterator(succ_iterator I);
@@ -1261,7 +1273,6 @@ private:
   getProbabilityIterator(const_succ_iterator I) const;
 
   friend class MachineBranchProbabilityInfo;
-  friend class MIPrinter;
 
   // Methods used to maintain doubly linked list of blocks...
   friend struct ilist_callback_traits<MachineBasicBlock>;

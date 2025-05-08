@@ -8,6 +8,7 @@
 
 #include "src/sched/sched_getcpucount.h"
 
+#include "src/__support/CPP/bit.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 
@@ -20,7 +21,7 @@ LLVM_LIBC_FUNCTION(int, __sched_getcpucount,
                    (size_t cpuset_size, const cpu_set_t *mask)) {
   int result = 0;
   for (size_t i = 0; i < cpuset_size / sizeof(long); ++i) {
-    result += __builtin_popcountl(mask->__mask[i]);
+    result += cpp::popcount(mask->__mask[i]);
   }
   return result;
 }

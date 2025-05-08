@@ -22,10 +22,10 @@ public:
     bool ClearVRegs;
     Options(RegAllocFilterFunc F = nullptr, StringRef FN = "all",
             bool CV = true)
-        : Filter(F), FilterName(FN), ClearVRegs(CV) {}
+        : Filter(std::move(F)), FilterName(FN), ClearVRegs(CV) {}
   };
 
-  RegAllocFastPass(Options Opts = Options()) : Opts(Opts) {}
+  RegAllocFastPass(Options Opts = Options()) : Opts(std::move(Opts)) {}
 
   MachineFunctionProperties getRequiredProperties() const {
     return MachineFunctionProperties().set(

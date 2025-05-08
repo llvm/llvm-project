@@ -168,6 +168,10 @@ public:
     Record->push_back(Value);
   }
 
+  void writeUnsignedOrNone(UnsignedOrNone Value) {
+    Record->push_back(Value.toInternalRepresentation());
+  }
+
   /// Emit an integral value.
   void AddAPInt(const llvm::APInt &Value) {
     writeAPInt(Value);
@@ -306,6 +310,8 @@ public:
 
   /// Writes out a list of OpenACC clauses.
   void writeOpenACCClauseList(ArrayRef<const OpenACCClause *> Clauses);
+
+  void AddOpenACCRoutineDeclAttr(const OpenACCRoutineDeclAttr *A);
 
   /// Emit a string.
   void AddString(StringRef Str) {

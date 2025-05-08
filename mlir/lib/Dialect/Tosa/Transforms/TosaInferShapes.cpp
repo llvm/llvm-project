@@ -25,7 +25,7 @@
 
 namespace mlir {
 namespace tosa {
-#define GEN_PASS_DEF_TOSAINFERSHAPES
+#define GEN_PASS_DEF_TOSAINFERSHAPESPASS
 #include "mlir/Dialect/Tosa/Transforms/Passes.h.inc"
 } // namespace tosa
 } // namespace mlir
@@ -333,7 +333,7 @@ void validateSameOperandsAndResultRankTrait(Region &region) {
 /// Pass that performs shape propagation across TOSA operations. This includes
 /// migrating to within the regions of if/while operations.
 struct TosaInferShapes
-    : public tosa::impl::TosaInferShapesBase<TosaInferShapes> {
+    : public tosa::impl::TosaInferShapesPassBase<TosaInferShapes> {
 public:
   void runOnOperation() override {
     func::FuncOp func = getOperation();
@@ -345,7 +345,3 @@ public:
   }
 };
 } // namespace
-
-std::unique_ptr<Pass> mlir::tosa::createTosaInferShapesPass() {
-  return std::make_unique<TosaInferShapes>();
-}

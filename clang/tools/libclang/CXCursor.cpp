@@ -910,6 +910,9 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::OpenACCWaitConstructClass:
     K = CXCursor_OpenACCWaitConstruct;
     break;
+  case Stmt::OpenACCCacheConstructClass:
+    K = CXCursor_OpenACCCacheConstruct;
+    break;
   case Stmt::OpenACCInitConstructClass:
     K = CXCursor_OpenACCInitConstruct;
     break;
@@ -1635,7 +1638,7 @@ unsigned clang_CXCursorSet_contains(CXCursorSet set, CXCursor cursor) {
   CXCursorSet_Impl *setImpl = unpackCXCursorSet(set);
   if (!setImpl)
     return 0;
-  return setImpl->find(cursor) != setImpl->end();
+  return setImpl->contains(cursor);
 }
 
 unsigned clang_CXCursorSet_insert(CXCursorSet set, CXCursor cursor) {

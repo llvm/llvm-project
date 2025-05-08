@@ -162,16 +162,14 @@ public:
     // MachineModuleAnalysis needs a TargetMachine instance.
     llvm::InitializeAllTargets();
 
-    std::string TripleName = Triple::normalize(sys::getDefaultTargetTriple());
+    Triple TT(sys::getDefaultTargetTriple());
     std::string Error;
-    const Target *TheTarget =
-        TargetRegistry::lookupTarget(TripleName, Error);
+    const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
     if (!TheTarget)
       return;
 
     TargetOptions Options;
-    TM.reset(TheTarget->createTargetMachine(TripleName, "", "", Options,
-                                            std::nullopt));
+    TM.reset(TheTarget->createTargetMachine(TT, "", "", Options, std::nullopt));
   }
 };
 

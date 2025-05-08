@@ -18,6 +18,9 @@
 using LlvmLibcExpm1Test = LIBC_NAMESPACE::testing::FPTest<double>;
 
 TEST_F(LlvmLibcExpm1Test, SpecialNumbers) {
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::expm1(sNaN), FE_INVALID);
+  EXPECT_MATH_ERRNO(0);
+
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::expm1(aNaN));
   EXPECT_FP_EQ(inf, LIBC_NAMESPACE::expm1(inf));
   EXPECT_FP_EQ_ALL_ROUNDING(-1.0, LIBC_NAMESPACE::expm1(neg_inf));

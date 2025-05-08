@@ -139,9 +139,28 @@ function (add_flangrt_library name)
   endif ()
   if (build_static)
     add_library("${name_static}" STATIC ${extra_args} ${ARG_ADDITIONAL_HEADERS} ${ARG_UNPARSED_ARGUMENTS})
+    target_link_libraries("${name_static}" PRIVATE flang-rt-libcxx-headers flang-rt-libc-headers flang-rt-libc-static)
   endif ()
   if (build_shared)
     add_library("${name_shared}" SHARED ${extra_args} ${ARG_ADDITIONAL_HEADERS} ${ARG_UNPARSED_ARGUMENTS})
+    target_link_libraries("${name_shared}" PRIVATE flang-rt-libcxx-headers flang-rt-libc-headers flang-rt-libc-shared)
+    if (Threads_FOUND) 
+      target_link_libraries(${name_shared} PUBLIC Threads::Threads)
+    endif ()
+
+    # Special dependencies handling for shared libraries only:
+    #
+    # flang-rt libraries must not depend on libc++/libstdc++,
+    # so set the linker language to C to avoid the unnecessary
+    # library dependence. Note that libc++/libstdc++ may still
+    # come through CMAKE_CXX_IMPLICIT_LINK_LIBRARIES.
+    set_target_properties(${name_shared} PROPERTIES LINKER_LANGUAGE C)
+    # Use --as-needed to avoid unnecessary dependencies.
+    if (LINKER_AS_NEEDED_OPT)
+      target_link_options(${name_shared} BEFORE PRIVATE
+          "${LINKER_AS_NEEDED_OPT}"
+        )
+    endif()
   endif ()
 
   if (libtargets)
@@ -192,10 +211,17 @@ function (add_flangrt_library name)
     # Minimum required C++ version for Flang-RT, even if CMAKE_CXX_STANDARD is defined to something else.
     target_compile_features(${tgtname} PRIVATE cxx_std_17)
 
+    # When building the flang runtime if LTO is enabled the archive file
+    # contains LLVM IR rather than object code. Currently flang is not
+    # LTO aware so cannot link this file to compiled Fortran code.
+    if (FLANG_RT_HAS_FNO_LTO_FLAG)
+      target_compile_options(${tgtname} PRIVATE -fno-lto)
+    endif ()
+
     # Use compiler-specific options to disable exceptions and RTTI.
     if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
       target_compile_options(${tgtname} PRIVATE
-          $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables>
+          $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti -funwind-tables -fno-asynchronous-unwind-tables>
         )
     elseif (MSVC)
       target_compile_options(${tgtname} PRIVATE
@@ -204,6 +230,17 @@ function (add_flangrt_library name)
     elseif (CMAKE_CXX_COMPILER_ID MATCHES "XL")
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:-qnoeh -qnortti>
+        )
+    endif ()
+
+    # Add target specific options if necessary.
+    if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn")
+      target_compile_options(${tgtname} PRIVATE
+          $<$<COMPILE_LANGUAGE:CXX>:-nogpulib -flto -fvisibility=hidden>
+        )
+    elseif ("${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx")
+      target_compile_options(${tgtname} PRIVATE
+          $<$<COMPILE_LANGUAGE:CXX>:-nogpulib -flto -fvisibility=hidden -Wno-unknown-cuda-version --cuda-feature=+ptx63>
         )
     endif ()
 
@@ -224,8 +261,8 @@ function (add_flangrt_library name)
     target_include_directories(${tgtname} PUBLIC "${FLANG_RT_SOURCE_DIR}/include")
 
     # For ISO_Fortran_binding.h to be found by the runtime itself (Accessed as #include "flang/ISO_Fortran_binding.h")
-      # User applications can use #include <ISO_Fortran_binding.h>
-  target_include_directories(${tgtname} PUBLIC "${FLANG_SOURCE_DIR}/include")
+    # User applications can use #include <ISO_Fortran_binding.h>
+    target_include_directories(${tgtname} PUBLIC "${FLANG_SOURCE_DIR}/include")
 
     # For Flang-RT's configured config.h to be found
     target_include_directories(${tgtname} PRIVATE "${FLANG_RT_BINARY_DIR}")
@@ -237,13 +274,6 @@ function (add_flangrt_library name)
       target_compile_options(${tgtname} PUBLIC -U_LIBCPP_ENABLE_ASSERTIONS)
     endif ()
 
-    # When building the flang runtime if LTO is enabled the archive file
-    # contains LLVM IR rather than object code. Currently flang is not
-    # LTO aware so cannot link this file to compiled Fortran code.
-    if (FLANG_RT_HAS_FNO_LTO_FLAG)
-      target_compile_options(${tgtname} PRIVATE -fno-lto)
-    endif ()
-
     # Flang/Clang (including clang-cl) -compiled programs targeting the MSVC ABI
     # should only depend on msvcrt/ucrt. LLVM still emits libgcc/compiler-rt
     # functions in some cases like 128-bit integer math (__udivti3, __modti3,
@@ -251,12 +281,12 @@ function (add_flangrt_library name)
     # dependency to Compiler-RT's builtin library where these are implemented.
     if (MSVC AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
       if (FLANG_RT_BUILTINS_LIBRARY)
-      target_compile_options(${tgtname} PRIVATE "$<$<COMPILE_LANGUAGE:CXX,C>:-Xclang>" "$<$<COMPILE_LANGUAGE:CXX,C>:--dependent-lib=${FLANG_RT_BUILTINS_LIBRARY}>")
+        target_compile_options(${tgtname} PRIVATE "$<$<COMPILE_LANGUAGE:CXX,C>:-Xclang>" "$<$<COMPILE_LANGUAGE:CXX,C>:--dependent-lib=${FLANG_RT_BUILTINS_LIBRARY}>")
       endif ()
     endif ()
     if (MSVC AND CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
       if (FLANG_RT_BUILTINS_LIBRARY)
-      target_compile_options(${tgtname} PRIVATE "$<$<COMPILE_LANGUAGE:Fortran>:-Xflang>" "$<$<COMPILE_LANGUAGE:Fortran>:--dependent-lib=${FLANG_RT_BUILTINS_LIBRARY}>")
+        target_compile_options(${tgtname} PRIVATE "$<$<COMPILE_LANGUAGE:Fortran>:-Xflang>" "$<$<COMPILE_LANGUAGE:Fortran>:--dependent-lib=${FLANG_RT_BUILTINS_LIBRARY}>")
       else ()
         message(WARNING "Did not find libclang_rt.builtins.lib.
           LLVM may emit builtins that are not implemented in msvcrt/ucrt and

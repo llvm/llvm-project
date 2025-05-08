@@ -337,8 +337,8 @@ public:
     return isRegOrImmWithInputMods(AMDGPU::VS_32RegClassID, MVT::v2f16);
   }
 
-  bool isPackedFP32InputMods() const {
-    return isRegOrImmWithInputMods(AMDGPU::VS_64RegClassID, MVT::v2f32);
+  bool isPackedVGPRFP32InputMods() const {
+    return isRegOrImmWithInputMods(AMDGPU::VReg_64RegClassID, MVT::v2f32);
   }
 
   bool isVReg() const {
@@ -5463,7 +5463,7 @@ bool AMDGPUAsmParser::ParseAsAbsoluteExpression(uint32_t &Ret) {
 }
 
 bool AMDGPUAsmParser::ParseDirectiveAMDGCNTarget() {
-  if (getSTI().getTargetTriple().getArch() != Triple::amdgcn)
+  if (!getSTI().getTargetTriple().isAMDGCN())
     return TokError("directive only supported for amdgcn architecture");
 
   std::string TargetIDDirective;
@@ -5550,7 +5550,7 @@ bool AMDGPUAsmParser::calculateGPRBlocks(
 }
 
 bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
-  if (getSTI().getTargetTriple().getArch() != Triple::amdgcn)
+  if (!getSTI().getTargetTriple().isAMDGCN())
     return TokError("directive only supported for amdgcn architecture");
 
   if (!isHsaAbi(getSTI()))
@@ -6142,7 +6142,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGPUHsaKernel() {
 }
 
 bool AMDGPUAsmParser::ParseDirectiveISAVersion() {
-  if (getSTI().getTargetTriple().getArch() != Triple::amdgcn) {
+  if (!getSTI().getTargetTriple().isAMDGCN()) {
     return Error(getLoc(),
                  ".amd_amdgpu_isa directive is not available on non-amdgcn "
                  "architectures");
@@ -6776,7 +6776,7 @@ ParseStatus AMDGPUAsmParser::parseTH(OperandVector &Operands, int64_t &TH) {
 
   if (Value == "TH_DEFAULT")
     TH = AMDGPU::CPol::TH_RT;
-  else if (Value == "TH_STORE_LU" || Value == "TH_LOAD_RT_WB" ||
+  else if (Value == "TH_STORE_LU" || Value == "TH_LOAD_WB" ||
            Value == "TH_LOAD_NT_WB") {
     return Error(StringLoc, "invalid th value");
   } else if (Value.consume_front("TH_ATOMIC_")) {
@@ -6811,7 +6811,7 @@ ParseStatus AMDGPUAsmParser::parseTH(OperandVector &Operands, int64_t &TH) {
                 .Case("NT", AMDGPU::CPol::TH_NT)
                 .Case("HT", AMDGPU::CPol::TH_HT)
                 .Case("LU", AMDGPU::CPol::TH_LU)
-                .Case("RT_WB", AMDGPU::CPol::TH_RT_WB)
+                .Case("WB", AMDGPU::CPol::TH_WB)
                 .Case("NT_RT", AMDGPU::CPol::TH_NT_RT)
                 .Case("RT_NT", AMDGPU::CPol::TH_RT_NT)
                 .Case("NT_HT", AMDGPU::CPol::TH_NT_HT)
@@ -9428,6 +9428,12 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
   }
 
   int Fi = 0;
+  int VdstInIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst_in);
+  bool IsVOP3CvtSrDpp = Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp8_gfx12 ||
+                        Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_dpp8_gfx12 ||
+                        Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp_gfx12 ||
+                        Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_dpp_gfx12;
+
   for (unsigned E = Operands.size(); I != E; ++I) {
 
     if (IsMAC) {
@@ -9442,16 +9448,10 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
       }
     }
 
-    int VdstInIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst_in);
     if (VdstInIdx == static_cast<int>(Inst.getNumOperands())) {
       Inst.addOperand(Inst.getOperand(0));
     }
 
-    bool IsVOP3CvtSrDpp =
-        Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp8_gfx12 ||
-        Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_dpp8_gfx12 ||
-        Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp_gfx12 ||
-        Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_dpp_gfx12;
     if (IsVOP3CvtSrDpp) {
       if (Src2ModIdx == static_cast<int>(Inst.getNumOperands())) {
         Inst.addOperand(MCOperand::createImm(0));

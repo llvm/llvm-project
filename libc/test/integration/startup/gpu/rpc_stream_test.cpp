@@ -81,7 +81,7 @@ static void test_divergent() {
   LIBC_NAMESPACE::rpc::Client::Port port =
       LIBC_NAMESPACE::rpc::client.open<RPC_TEST_STREAM>();
   port.send_n(buffer, offset);
-  inline_memset(buffer, offset, 0);
+  inline_memset(buffer, 0, offset);
   port.recv_n(&recv_ptr, &recv_size, [&](uint64_t) { return buffer; });
   port.close();
 

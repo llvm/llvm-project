@@ -1,5 +1,4 @@
 ; RUN: opt -passes=licm %s -S | FileCheck %s
-; RUN: opt -passes=licm %s -S --try-experimental-debuginfo-iterators | FileCheck %s
 
 ; CHECK: for.body:
 ; CHECK-NEXT: #dbg_value(i8 poison

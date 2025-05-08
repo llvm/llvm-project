@@ -13,6 +13,7 @@
 
 #include "llvm-c/DebugInfo.h"
 #include "LLVMContextImpl.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -976,9 +977,9 @@ void Instruction::mergeDIAssignID(
     return; // No DIAssignID tags to process.
 
   DIAssignID *MergeID = IDs[0];
-  for (auto It = std::next(IDs.begin()), End = IDs.end(); It != End; ++It) {
-    if (*It != MergeID)
-      at::RAUW(*It, MergeID);
+  for (DIAssignID *AssignID : drop_begin(IDs)) {
+    if (AssignID != MergeID)
+      at::RAUW(AssignID, MergeID);
   }
   setMetadata(LLVMContext::MD_DIAssignID, MergeID);
 }
@@ -987,8 +988,10 @@ void Instruction::updateLocationAfterHoist() { dropLocation(); }
 
 void Instruction::dropLocation() {
   const DebugLoc &DL = getDebugLoc();
-  if (!DL)
+  if (!DL) {
+    setDebugLoc(DebugLoc::getDropped());
     return;
+  }
 
   // If this isn't a call, drop the location to allow a location from a
   // preceding instruction to propagate.
@@ -1000,7 +1003,7 @@ void Instruction::dropLocation() {
   }
 
   if (!MayLowerToCall) {
-    setDebugLoc(DebugLoc());
+    setDebugLoc(DebugLoc::getDropped());
     return;
   }
 
@@ -1019,7 +1022,7 @@ void Instruction::dropLocation() {
     //
     // One alternative is to set a line 0 location with the existing scope and
     // inlinedAt info. The location might be sensitive to when inlining occurs.
-    setDebugLoc(DebugLoc());
+    setDebugLoc(DebugLoc::getDropped());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1295,6 +1298,15 @@ LLVMMetadataRef LLVMDIBuilderCreateEnumerator(LLVMDIBuilderRef Builder,
                                               LLVMBool IsUnsigned) {
   return wrap(unwrap(Builder)->createEnumerator({Name, NameLen}, Value,
                                                 IsUnsigned != 0));
+}
+
+LLVMMetadataRef LLVMDIBuilderCreateEnumeratorOfArbitraryPrecision(
+    LLVMDIBuilderRef Builder, const char *Name, size_t NameLen,
+    uint64_t SizeInBits, const uint64_t Words[], LLVMBool IsUnsigned) {
+  uint64_t NumWords = (SizeInBits + 63) / 64;
+  return wrap(unwrap(Builder)->createEnumerator(
+      {Name, NameLen},
+      APSInt(APInt(SizeInBits, ArrayRef(Words, NumWords)), IsUnsigned != 0)));
 }
 
 LLVMMetadataRef LLVMDIBuilderCreateEnumerationType(
@@ -2133,8 +2145,8 @@ void at::trackAssignments(Function::iterator Start, Function::iterator End,
   auto &Ctx = Start->getContext();
   auto &Module = *Start->getModule();
 
-  // Undef type doesn't matter, so long as it isn't void. Let's just use i1.
-  auto *Undef = UndefValue::get(Type::getInt1Ty(Ctx));
+  // Poison type doesn't matter, so long as it isn't void. Let's just use i1.
+  auto *Poison = PoisonValue::get(Type::getInt1Ty(Ctx));
   DIBuilder DIB(Module, /*AllowUnresolved*/ false);
 
   // Scan the instructions looking for stores to local variables' storage.
@@ -2148,9 +2160,9 @@ void at::trackAssignments(Function::iterator Start, Function::iterator End,
       if (auto *AI = dyn_cast<AllocaInst>(&I)) {
         // We want to track the variable's stack home from its alloca's
         // position onwards so we treat it as an assignment (where the stored
-        // value is Undef).
+        // value is poison).
         Info = getAssignmentInfo(DL, AI);
-        ValueComponent = Undef;
+        ValueComponent = Poison;
         DestComponent = AI;
       } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
         Info = getAssignmentInfo(DL, SI);
@@ -2159,7 +2171,7 @@ void at::trackAssignments(Function::iterator Start, Function::iterator End,
       } else if (auto *MI = dyn_cast<MemTransferInst>(&I)) {
         Info = getAssignmentInfo(DL, MI);
         // May not be able to represent this value easily.
-        ValueComponent = Undef;
+        ValueComponent = Poison;
         DestComponent = MI->getOperand(0);
       } else if (auto *MI = dyn_cast<MemSetInst>(&I)) {
         Info = getAssignmentInfo(DL, MI);
@@ -2169,7 +2181,7 @@ void at::trackAssignments(Function::iterator Start, Function::iterator End,
         if (ConstValue && ConstValue->isZero())
           ValueComponent = ConstValue;
         else
-          ValueComponent = Undef;
+          ValueComponent = Poison;
         DestComponent = MI->getOperand(0);
       } else {
         // Not a store-like instruction.

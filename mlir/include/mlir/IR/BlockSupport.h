@@ -185,7 +185,7 @@ struct DenseMapInfo<mlir::SuccessorRange> {
     return mlir::SuccessorRange(pointer, 0);
   }
   static unsigned getHashValue(mlir::SuccessorRange value) {
-    return llvm::hash_combine_range(value.begin(), value.end());
+    return llvm::hash_combine_range(value);
   }
   static bool isEqual(mlir::SuccessorRange lhs, mlir::SuccessorRange rhs) {
     if (rhs.getBase() == getEmptyKey().getBase())

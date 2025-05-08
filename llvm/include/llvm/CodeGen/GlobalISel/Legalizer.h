@@ -22,7 +22,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 
@@ -77,7 +77,7 @@ public:
   legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
                           ArrayRef<GISelChangeObserver *> AuxObservers,
                           LostDebugLocObserver &LocObserver,
-                          MachineIRBuilder &MIRBuilder, GISelKnownBits *KB);
+                          MachineIRBuilder &MIRBuilder, GISelValueTracking *VT);
 };
 } // End namespace llvm.
 

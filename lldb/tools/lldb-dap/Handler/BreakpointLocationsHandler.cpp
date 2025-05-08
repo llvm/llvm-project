@@ -130,12 +130,15 @@ void BreakpointLocationsRequestHandler::operator()(
   FillResponse(request, response);
   auto *arguments = request.getObject("arguments");
   auto *source = arguments->getObject("source");
-  std::string path = GetString(source, "path").str();
-  uint64_t start_line = GetUnsigned(arguments, "line", 0);
-  uint64_t start_column = GetUnsigned(arguments, "column", 0);
-  uint64_t end_line = GetUnsigned(arguments, "endLine", start_line);
-  uint64_t end_column =
-      GetUnsigned(arguments, "endColumn", std::numeric_limits<uint64_t>::max());
+  std::string path = GetString(source, "path").value_or("").str();
+  const auto start_line = GetInteger<uint64_t>(arguments, "line")
+                              .value_or(LLDB_INVALID_LINE_NUMBER);
+  const auto start_column = GetInteger<uint64_t>(arguments, "column")
+                                .value_or(LLDB_INVALID_COLUMN_NUMBER);
+  const auto end_line =
+      GetInteger<uint64_t>(arguments, "endLine").value_or(start_line);
+  const auto end_column = GetInteger<uint64_t>(arguments, "endColumn")
+                              .value_or(std::numeric_limits<uint64_t>::max());
 
   lldb::SBFileSpec file_spec(path.c_str(), true);
   lldb::SBSymbolContextList compile_units =
@@ -186,8 +189,7 @@ void BreakpointLocationsRequestHandler::operator()(
   // The line entries are sorted by addresses, but we must return the list
   // ordered by line / column position.
   std::sort(locations.begin(), locations.end());
-  locations.erase(std::unique(locations.begin(), locations.end()),
-                  locations.end());
+  locations.erase(llvm::unique(locations), locations.end());
 
   llvm::json::Array locations_json;
   for (auto &l : locations) {

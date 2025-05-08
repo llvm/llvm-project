@@ -39,6 +39,280 @@ using namespace mlir::tosa;
 // Operator Canonicalizers.
 //===----------------------------------------------------------------------===//
 
+//===----------------------------------------------------------------------===//
+// Tensor Data Engine Operators.
+//===----------------------------------------------------------------------===//
+
+// Check that the zero point of the tensor and padding operations are aligned.
+bool checkMatchingPadConstAndZp(Value padConst, Value zp) {
+  // Check that padConst is a constant value and a scalar tensor
+  DenseElementsAttr padConstAttr;
+  if (!matchPattern(padConst, m_Constant(&padConstAttr)) ||
+      (padConstAttr.size() != 1)) {
+    return false;
+  }
+
+  // Check that floating point pad is zero
+  if (auto padConstFpAttr = mlir::dyn_cast<DenseFPElementsAttr>(padConstAttr)) {
+    float padConstVal = (*padConstFpAttr.begin()).convertToFloat();
+    return padConstVal == 0.0f;
+  }
+
+  // Check that the zp and padConst align for the integer (quantized) case
+  if (auto padConstIntAttr =
+          mlir::dyn_cast<DenseIntElementsAttr>(padConstAttr)) {
+    DenseIntElementsAttr zpAttr;
+    // Check that zp is a constant value and a scalar tensor
+    if (!matchPattern(zp, m_Constant(&zpAttr)) || (padConstAttr.size() != 1)) {
+      return false;
+    }
+
+    // Check equality
+    int64_t zpVal = (*zpAttr.begin()).getSExtValue();
+    int64_t padConstVal = (*padConstIntAttr.begin()).getSExtValue();
+    return zpVal == padConstVal;
+  }
+
+  // Bail-out on unsupported type
+  return false;
+}
+
+namespace {
+template <typename OpTy>
+struct PoolPadFoldAdaptor;
+
+template <>
+struct PoolPadFoldAdaptor<tosa::AvgPool2dOp> {
+  using OpTy = tosa::AvgPool2dOp;
+  static bool checkKernelCompliance(OpTy op, const ArrayRef<int64_t> newPad) {
+    const llvm::ArrayRef<int64_t> kernel = op.getKernel();
+    if (newPad[2] >= kernel[1] || newPad[3] >= kernel[1] ||
+        newPad[0] >= kernel[0] || newPad[1] >= kernel[0])
+      return false;
+    return true;
+  }
+  static bool checkPadConstCompliance(OpTy op, Value padConst) {
+    return checkMatchingPadConstAndZp(padConst, op.getInputZp());
+  }
+  static void replaceOpWithNewPad(PatternRewriter &rewriter, OpTy op,
+                                  Value padInput, ArrayRef<int64_t> newPad) {
+    rewriter.replaceOpWithNewOp<tosa::AvgPool2dOp>(
+        op, op.getType(), padInput, op.getInputZp(), op.getOutputZp(),
+        op.getKernel(), op.getStride(), rewriter.getDenseI64ArrayAttr(newPad),
+        op.getAccType());
+  }
+};
+
+template <>
+struct PoolPadFoldAdaptor<tosa::MaxPool2dOp> {
+  using OpTy = tosa::MaxPool2dOp;
+  static bool checkKernelCompliance(OpTy op, const ArrayRef<int64_t> newPad) {
+    const llvm::ArrayRef<int64_t> kernel = op.getKernel();
+    if (newPad[2] >= kernel[1] || newPad[3] >= kernel[1] ||
+        newPad[0] >= kernel[0] || newPad[1] >= kernel[0])
+      return false;
+    return true;
+  }
+  static bool checkPadConstCompliance(OpTy, Value padConst) {
+    // Check that padConst is a constant value and a scalar tensor
+    DenseElementsAttr padConstAttr;
+    if (!matchPattern(padConst, m_Constant(&padConstAttr)) ||
+        padConstAttr.size() != 1) {
+      return false;
+    }
+
+    // Pad needs to be in the minimum value to be able to merge
+    if (auto padConstFpAttr =
+            mlir::dyn_cast<DenseFPElementsAttr>(padConstAttr)) {
+      const APFloat padConstVal = *padConstFpAttr.begin();
+      const APFloat lowestVal =
+          APFloat::getLargest(padConstVal.getSemantics(), true);
+      return padConstVal == lowestVal;
+    } else if (auto padConstIntAttr =
+                   mlir::dyn_cast<DenseIntElementsAttr>(padConstAttr)) {
+      const APInt padConstVal = *padConstIntAttr.begin();
+      const unsigned int bitWidth = padConstVal.getBitWidth();
+      const APInt lowestVal =
+          padConstIntAttr.getElementType().isUnsignedInteger()
+              ? APInt::getZero(bitWidth)
+              : APInt::getSignedMinValue(bitWidth);
+      return padConstVal == lowestVal;
+    }
+
+    // Bail-out on unsupported type
+    return false;
+  }
+  static void replaceOpWithNewPad(PatternRewriter &rewriter, OpTy op,
+                                  Value padInput, ArrayRef<int64_t> newPad) {
+    rewriter.replaceOpWithNewOp<tosa::MaxPool2dOp>(
+        op, op.getType(), padInput, op.getKernel(), op.getStride(),
+        rewriter.getDenseI64ArrayAttr(newPad), op.getNanMode());
+  }
+};
+
+template <typename OpTy>
+struct ConvPadFoldAdaptor {
+  static bool checkKernelCompliance(OpTy, const ArrayRef<int64_t>) {
+    return true;
+  }
+  static bool checkPadConstCompliance(OpTy op, Value padConst) {
+    return checkMatchingPadConstAndZp(padConst, op.getInputZp());
+  }
+  static void replaceOpWithNewPad(PatternRewriter &rewriter, OpTy op,
+                                  Value padInput, ArrayRef<int64_t> newPad) {
+    rewriter.replaceOpWithNewOp<OpTy>(
+        op, op.getResult().getType(), padInput, op.getWeight(), op.getBias(),
+        op.getInputZp(), op.getWeightZp(), newPad, op.getStrideAttr(),
+        op.getDilationAttr(), op.getAccType(), op.getLocalBound());
+  }
+};
+
+// Pattern attempts to fold a `tosa.pad` operator to a following tensor
+// operation like `tosa.conv2d` by merging the padding associated with the
+// pad operator directly to the implicit padding of the tensor operation.
+// This helps eliminate the explicit padding operator if unused.
+template <typename OpTy, typename AdaptorTy>
+struct FoldPadToTensorOp : public OpRewritePattern<OpTy> {
+  using OpRewritePattern<OpTy>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(OpTy tensorOp,
+                                PatternRewriter &rewriter) const override {
+    // Check producer is a tosa::PadOp
+    auto padOp = tensorOp.getInput().template getDefiningOp<tosa::PadOp>();
+    if (!padOp)
+      return rewriter.notifyMatchFailure(tensorOp,
+                                         "Producer must be a tosa::PadOp.");
+
+    // Validate that tensor operation has sane padding
+    const std::vector<int64_t> &tensorOpPad = tensorOp.getPad().vec();
+    if (tensorOpPad.size() != 4) // pad_top, pad_bottom, pad_left, pad_right
+      return rewriter.notifyMatchFailure(
+          tensorOp, "Tensor operation padding shall have 4 elements.");
+
+    // Validate tosa::PadOp padding
+    DenseIntElementsAttr padOpPadding;
+    if (!matchPattern(padOp.getPadding(), m_Constant(&padOpPadding))) {
+      return rewriter.notifyMatchFailure(
+          tensorOp,
+          "The `padding` input specified on the tosa::PadOp must be constant.");
+    }
+    // N_before, N_after, H_before, H_after, W_before, W_after, C_before,
+    // C_after
+    if (padOpPadding.size() != 8)
+      return rewriter.notifyMatchFailure(tensorOp,
+                                         "Pad padding should have 8 elements.");
+    int64_t padNBefore = (*(padOpPadding.begin() + 0)).getLimitedValue();
+    int64_t padNAfter = (*(padOpPadding.begin() + 1)).getLimitedValue();
+    int64_t padHBefore = (*(padOpPadding.begin() + 2)).getLimitedValue();
+    int64_t padHAfter = (*(padOpPadding.begin() + 3)).getLimitedValue();
+    int64_t padWBefore = (*(padOpPadding.begin() + 4)).getLimitedValue();
+    int64_t padWAfter = (*(padOpPadding.begin() + 5)).getLimitedValue();
+    int64_t padCBefore = (*(padOpPadding.begin() + 6)).getLimitedValue();
+    int64_t padCAfter = (*(padOpPadding.begin() + 7)).getLimitedValue();
+
+    if (padNBefore != 0 || padNAfter != 0 || padCBefore != 0 || padCAfter != 0)
+      return rewriter.notifyMatchFailure(
+          tensorOp, "Folding padding in N or C dimensions is not supported.");
+
+    // Fold padding from Pad into the tensor operation
+    // 4 elements - pad_top, pad_bottom, pad_left, pad_right
+    SmallVector<int64_t> foldedPad(tensorOpPad.size());
+    foldedPad[0] = padHBefore + tensorOpPad[0];
+    foldedPad[1] = padHAfter + tensorOpPad[1];
+    foldedPad[2] = padWBefore + tensorOpPad[2];
+    foldedPad[3] = padWAfter + tensorOpPad[3];
+
+    // Check kernel related restrictions
+    if (!AdaptorTy::checkKernelCompliance(tensorOp, foldedPad)) {
+      return rewriter.notifyMatchFailure(
+          tensorOp, "Padding size not aligned with kernel restrictions.");
+    }
+
+    // Check padding constant restrictions
+    if (!AdaptorTy::checkPadConstCompliance(tensorOp, padOp.getPadConst())) {
+      return rewriter.notifyMatchFailure(
+          tensorOp,
+          "Padding constant is not aligned with operator zero-point.");
+    }
+
+    // Check that padding doesn't grow more than 8K level (8192) for now
+    if (llvm::any_of(foldedPad, [](int64_t padVal) { return padVal > 8192; })) {
+      return rewriter.notifyMatchFailure(
+          tensorOp, "Padding size more than the 8K level limit.");
+    }
+
+    // Create operator
+    AdaptorTy::replaceOpWithNewPad(rewriter, tensorOp, padOp.getInput1(),
+                                   foldedPad);
+
+    return success();
+  }
+};
+} // namespace
+
+void AvgPool2dOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                              MLIRContext *context) {
+  results.add<FoldPadToTensorOp<tosa::AvgPool2dOp,
+                                PoolPadFoldAdaptor<tosa::AvgPool2dOp>>>(
+      context);
+}
+
+void Conv2DOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                           MLIRContext *context) {
+  results.add<
+      FoldPadToTensorOp<tosa::Conv2DOp, ConvPadFoldAdaptor<tosa::Conv2DOp>>>(
+      context);
+}
+
+void DepthwiseConv2DOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                    MLIRContext *context) {
+  results.add<FoldPadToTensorOp<tosa::DepthwiseConv2DOp,
+                                ConvPadFoldAdaptor<tosa::DepthwiseConv2DOp>>>(
+      context);
+}
+
+struct MaxPool2dIsNoOp : public OpRewritePattern<tosa::MaxPool2dOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::MaxPool2dOp op,
+                                PatternRewriter &rewriter) const override {
+    Value input = op.getInput();
+    Value output = op.getOutput();
+    ShapedType inputType = llvm::cast<ShapedType>(input.getType());
+    ShapedType outputType = llvm::cast<ShapedType>(output.getType());
+
+    if (!inputType.hasStaticShape() || !outputType.hasStaticShape()) {
+      return failure();
+    }
+
+    // If the output and input shapes are 1x1, then this is a no op.
+    ArrayRef<int64_t> outputShape = outputType.getShape();
+    if (outputShape[1] != 1 || outputShape[2] != 1) {
+      return failure();
+    }
+
+    ArrayRef<int64_t> inputShape = inputType.getShape();
+    if (inputShape[1] != 1 || inputShape[2] != 1) {
+      return failure();
+    }
+
+    rewriter.replaceOp(op, input);
+    return success();
+  }
+};
+
+void MaxPool2dOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                              MLIRContext *context) {
+  results.add<MaxPool2dIsNoOp,
+              FoldPadToTensorOp<tosa::MaxPool2dOp,
+                                PoolPadFoldAdaptor<tosa::MaxPool2dOp>>>(
+      context);
+}
+
+//===----------------------------------------------------------------------===//
+// Data Layout / Memory Reinterpretation.
+//===----------------------------------------------------------------------===//
+
 struct ConcatOptimization : public OpRewritePattern<tosa::ConcatOp> {
   using OpRewritePattern<tosa::ConcatOp>::OpRewritePattern;
 
@@ -173,88 +447,6 @@ struct TransposeIsReshape : public OpRewritePattern<tosa::TransposeOp> {
 void TransposeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
   results.add<ConsolidateTransposeOptimization, TransposeIsReshape>(context);
-}
-
-struct MaterializePadValue : public OpRewritePattern<tosa::PadOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tosa::PadOp op,
-                                PatternRewriter &rewriter) const override {
-    if (op.getPadConst())
-      return failure();
-
-    auto input = op.getInput1();
-    auto padding = op.getPadding();
-
-    ShapedType inputTy = llvm::cast<ShapedType>(input.getType());
-    Type elementTy = inputTy.getElementType();
-
-    Attribute constantAttr;
-    if (llvm::isa<FloatType>(elementTy)) {
-      constantAttr = rewriter.getFloatAttr(elementTy, 0.0);
-    } else if (llvm::isa<IntegerType>(elementTy) && !op.getInputZpAttr()) {
-      constantAttr = rewriter.getIntegerAttr(elementTy, 0);
-    } else if (llvm::isa<IntegerType>(elementTy) && op.getInputZpAttr()) {
-      int64_t value = op.getInputZpAttr().getInt();
-      constantAttr = rewriter.getIntegerAttr(elementTy, value);
-    }
-
-    if (!constantAttr) {
-      return rewriter.notifyMatchFailure(
-          op,
-          "tosa.pad to linalg lowering encountered an unknown element type");
-    }
-
-    auto denseAttr = DenseElementsAttr::get(
-        RankedTensorType::get({1}, elementTy), constantAttr);
-    auto constantVal = rewriter.create<tosa::ConstOp>(
-        op.getLoc(), denseAttr.getType(), denseAttr);
-
-    rewriter.replaceOpWithNewOp<tosa::PadOp>(
-        op, op.getType(), ValueRange{input, padding, constantVal},
-        op->getAttrs());
-    return success();
-  }
-};
-
-void PadOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                        MLIRContext *context) {
-  results.add<MaterializePadValue>(context);
-}
-
-struct MaxPool2dIsNoOp : public OpRewritePattern<tosa::MaxPool2dOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tosa::MaxPool2dOp op,
-                                PatternRewriter &rewriter) const override {
-    Value input = op.getInput();
-    Value output = op.getOutput();
-    ShapedType inputType = llvm::cast<ShapedType>(input.getType());
-    ShapedType outputType = llvm::cast<ShapedType>(output.getType());
-
-    if (!inputType.hasStaticShape() || !outputType.hasStaticShape()) {
-      return failure();
-    }
-
-    // If the output and input shapes are 1x1, then this is a no op.
-    ArrayRef<int64_t> outputShape = outputType.getShape();
-    if (outputShape[1] != 1 || outputShape[2] != 1) {
-      return failure();
-    }
-
-    ArrayRef<int64_t> inputShape = inputType.getShape();
-    if (inputShape[1] != 1 || inputShape[2] != 1) {
-      return failure();
-    }
-
-    rewriter.replaceOp(op, input);
-    return success();
-  }
-};
-
-void MaxPool2dOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                              MLIRContext *context) {
-  results.add<MaxPool2dIsNoOp>(context);
 }
 
 struct ClampIsNoOp : public OpRewritePattern<tosa::ClampOp> {
@@ -539,9 +731,191 @@ struct ConcatSliceOptimization : public OpRewritePattern<tosa::SliceOp> {
   }
 };
 
+struct PadSliceOptimization : public OpRewritePattern<tosa::SliceOp> {
+  using OpRewritePattern<tosa::SliceOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::SliceOp sliceOp,
+                                PatternRewriter &rewriter) const override {
+    Value sliceInput = sliceOp.getInput1();
+
+    // Check if producer is a PadOp
+    auto padOp = sliceInput.getDefiningOp<tosa::PadOp>();
+    if (!padOp)
+      return rewriter.notifyMatchFailure(sliceOp,
+                                         "slice input must be a pad operation");
+
+    // Check PadOp has a single consumer
+    if (!padOp->hasOneUse())
+      return rewriter.notifyMatchFailure(sliceOp,
+                                         "pad shall have a single consumer");
+
+    // Check input is statically ranked
+    auto inputTy = dyn_cast<RankedTensorType>(padOp.getInput1().getType());
+    auto padTy = dyn_cast<RankedTensorType>(padOp.getType());
+    if (!inputTy || !padTy || !inputTy.hasRank())
+      return rewriter.notifyMatchFailure(sliceOp,
+                                         "slice input must be a ranked tensor");
+
+    // Validate and extract tosa::PadOp padding
+    DenseIntElementsAttr paddingElems;
+    if (!matchPattern(padOp.getPadding(), m_Constant(&paddingElems))) {
+      return rewriter.notifyMatchFailure(
+          sliceOp,
+          "`padding` input specified on the tosa::PadOp must be constant.");
+    }
+    llvm::SmallVector<int64_t> padPaddings =
+        llvm::to_vector(paddingElems.getValues<int64_t>());
+
+    // Extract slice parameters
+    DenseElementsAttr startElems;
+    if (!matchPattern(sliceOp.getStart(), m_Constant(&startElems)))
+      return rewriter.notifyMatchFailure(
+          sliceOp, "start of slice must be a static ranked shape");
+    llvm::SmallVector<int64_t> sliceStarts =
+        llvm::to_vector(startElems.getValues<int64_t>());
+
+    DenseElementsAttr sizeElems;
+    if (!matchPattern(sliceOp.getSize(), m_Constant(&sizeElems)))
+      return rewriter.notifyMatchFailure(
+          sliceOp, "size of slice must be a static ranked shape");
+    llvm::SmallVector<int64_t> sliceSizes =
+        llvm::to_vector(sizeElems.getValues<int64_t>());
+
+    // Check if dynamic dimensions are sliced
+    const int64_t rank = inputTy.getRank();
+    if (llvm::any_of(llvm::seq<int64_t>(0, rank), [&](int64_t i) {
+          const bool isDimDynamic = inputTy.isDynamicDim(i);
+          const bool isDimSliced =
+              (sliceStarts[i] != 0) || (sliceSizes[i] != -1);
+
+          return isDimDynamic && isDimSliced;
+        })) {
+      return rewriter.notifyMatchFailure(
+          sliceOp, "axis that are sliced shall be statically known.");
+    }
+
+    // Update the parameters
+    llvm::SmallVector<int64_t> newSliceStarts(rank, 0);
+    llvm::SmallVector<int64_t> newPadPaddings(2 * rank, 0);
+    llvm::SmallVector<int64_t> newPadShape(rank, ShapedType::kDynamic);
+    bool updated = false;
+
+    for (int64_t i = 0; i < rank; ++i) {
+      const int64_t padLo = padPaddings[i * 2];
+      const int64_t padHi = padPaddings[i * 2 + 1];
+      const int64_t sliceStart = sliceStarts[i];
+      const int64_t sliceSize = sliceSizes[i];
+      const int64_t sliceEnd = sliceStart + sliceSize;
+
+      // If dimension is dynamic pass-through
+      if (inputTy.isDynamicDim(i)) {
+        newPadPaddings[i * 2] = padLo;
+        newPadPaddings[i * 2 + 1] = padHi;
+        newSliceStarts[i] = sliceStart;
+        continue;
+      }
+
+      // Handle static dimensions
+      const int64_t dimSize = inputTy.getShape()[i];
+      const int64_t dimTotal = padLo + dimSize + padHi;
+
+      // Check slice within bounds
+      if (sliceStart < 0 || sliceEnd > dimTotal)
+        return rewriter.notifyMatchFailure(sliceOp, "slice is out-of-bounds");
+
+      // Compute updated slice start parameter
+      const int64_t newSliceStart = std::max<int64_t>(sliceStart - padLo, 0);
+      newSliceStarts[i] = newSliceStart;
+      updated |= newSliceStart != sliceStart;
+
+      // Compute updated pad parameters
+      const int64_t newPadLo = std::max<int64_t>(padLo - sliceStart, 0);
+      const int64_t newPadHi =
+          std::max<int64_t>(sliceEnd - (padLo + dimSize), 0);
+      newPadPaddings[i * 2] = newPadLo;
+      newPadPaddings[i * 2 + 1] = newPadHi;
+      updated |= (newPadLo != padLo) || (newPadHi != padHi);
+
+      // Calculate new pad output shape
+      newPadShape[i] =
+          newPadPaddings[i * 2] + dimSize + newPadPaddings[i * 2 + 1];
+    }
+
+    // Check that we actually need to proceed with the rewrite
+    if (!updated)
+      return rewriter.notifyMatchFailure(
+          sliceOp, "terminate condition; nothing to rewrite");
+
+    // Create a PadOp with updated padding
+    auto newPaddingsOp =
+        getTosaConstShape(rewriter, sliceOp.getLoc(), newPadPaddings);
+    auto newPadTy =
+        RankedTensorType::get(newPadShape, inputTy.getElementType());
+    auto newPadOp = rewriter.create<tosa::PadOp>(
+        padOp.getLoc(), newPadTy, padOp.getInput1(), newPaddingsOp,
+        padOp.getPadConst());
+
+    // Update SliceOp and point to new PadOp
+    auto newStartOp =
+        getTosaConstShape(rewriter, sliceOp.getLoc(), newSliceStarts);
+    rewriter.replaceOpWithNewOp<tosa::SliceOp>(sliceOp, sliceOp.getType(),
+                                               newPadOp.getResult(), newStartOp,
+                                               sliceOp.getSize());
+
+    return success();
+  }
+};
+
+// Update size operand of tosa.slice if size has dynamic dims but corresponding
+// output dim is static
+struct SliceDynamicSizeCanonicalization
+    : public OpRewritePattern<tosa::SliceOp> {
+  using OpRewritePattern<tosa::SliceOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::SliceOp sliceOp,
+                                PatternRewriter &rewriter) const override {
+    ShapedType resultType = cast<ShapedType>(sliceOp.getType());
+
+    ElementsAttr sizeElems;
+    if (!matchPattern(sliceOp.getSize(), m_Constant(&sizeElems))) {
+      return rewriter.notifyMatchFailure(
+          sliceOp, "size of slice must be a static ranked shape");
+    }
+
+    llvm::SmallVector<int64_t> sliceSizes =
+        llvm::to_vector(sizeElems.getValues<int64_t>());
+
+    bool replaceSliceSize{false};
+    // if size op has -1 indicating dynamic shape but corresponding dim on the
+    // output is statically known, update size to match with known output dim
+    // shape
+    for (const auto &[index, size] : llvm::enumerate(sliceSizes)) {
+      if (size == -1 && !resultType.isDynamicDim(index)) {
+        sliceSizes[index] = resultType.getDimSize(index);
+        replaceSliceSize = true;
+      }
+    }
+
+    if (!replaceSliceSize) {
+      return rewriter.notifyMatchFailure(
+          sliceOp, "no dimension of size of slice is dynamic that resolves "
+                   "to static output shape");
+    }
+
+    auto size_op = getTosaConstShape(rewriter, sliceOp.getLoc(), sliceSizes);
+    auto newSliceOp = rewriter.create<tosa::SliceOp>(
+        sliceOp.getLoc(), sliceOp.getType(), sliceOp.getInput1(),
+        sliceOp.getStart(), size_op);
+
+    rewriter.replaceOp(sliceOp, newSliceOp.getResult());
+    return success();
+  }
+};
+
 void SliceOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                           MLIRContext *context) {
-  results.add<ConcatSliceOptimization>(context);
+  results.add<ConcatSliceOptimization, PadSliceOptimization,
+              SliceDynamicSizeCanonicalization>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -679,6 +1053,27 @@ OpFoldResult IntDivOp::fold(FoldAdaptor adaptor) {
 }
 
 namespace {
+// calculate lhs * rhs >> shift according to TOSA Spec
+// return nullopt if result is not in range of int32_t when shift > 0
+std::optional<APInt> mulInt(APInt lhs, APInt rhs, int32_t shift,
+                            unsigned bitwidth) {
+  APInt result = lhs.sext(64) * rhs.sext(64);
+
+  if (shift > 0) {
+    auto round = APInt(64, 1) << (shift - 1);
+    result += round;
+    result.ashrInPlace(shift);
+    // REQUIRE(product >= minimum_s<i32_t>() && product <= maximum_s<i32_t>())
+    if (!(result.getSExtValue() >= INT32_MIN &&
+          result.getSExtValue() <= INT32_MAX)) {
+      // REQUIRE failed
+      return std::nullopt;
+    }
+  }
+
+  return result.trunc(bitwidth);
+}
+
 DenseElementsAttr mulBinaryFolder(DenseElementsAttr lhs, DenseElementsAttr rhs,
                                   RankedTensorType ty, int32_t shift) {
   if (rhs && lhs && rhs.isSplat() && lhs.isSplat()) {
@@ -691,12 +1086,10 @@ DenseElementsAttr mulBinaryFolder(DenseElementsAttr lhs, DenseElementsAttr rhs,
       }
 
       auto bitwidth = ty.getElementType().getIntOrFloatBitWidth();
-      l = l.sext(bitwidth * 2);
-      r = r.sext(bitwidth * 2);
-      auto result = l * r;
-      result.lshrInPlace(shift);
-      result = result.trunc(bitwidth);
-      return DenseElementsAttr::get(ty, result);
+      const std::optional<APInt> result = mulInt(l, r, shift, bitwidth);
+      if (!result)
+        return {};
+      return DenseElementsAttr::get(ty, result.value());
     }
 
     if (llvm::isa<FloatType>(ty.getElementType())) {
@@ -929,9 +1322,9 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
-OpFoldResult ConstOp::fold(FoldAdaptor adaptor) { return getValueAttr(); }
+OpFoldResult ConstOp::fold(FoldAdaptor adaptor) { return getValuesAttr(); }
 
-OpFoldResult ConstShapeOp::fold(FoldAdaptor adaptor) { return getValueAttr(); }
+OpFoldResult ConstShapeOp::fold(FoldAdaptor adaptor) { return getValuesAttr(); }
 
 #define REDUCE_FOLDER(OP)                                                      \
   OpFoldResult OP::fold(FoldAdaptor adaptor) {                                 \
@@ -994,7 +1387,7 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
       return {};
 
     llvm::SmallVector<int64_t> shapeVec;
-    if (!tosa::getConstShapeValue(getShape().getDefiningOp(), shapeVec))
+    if (!tosa::getConstShapeValues(getShape().getDefiningOp(), shapeVec))
       return {};
 
     return operand.reshape(
@@ -1190,13 +1583,36 @@ OpFoldResult tosa::ExpOp::fold(FoldAdaptor adaptor) {
 }
 
 OpFoldResult tosa::NegateOp::fold(FoldAdaptor adaptor) {
-  auto input = getInput1();
   // Element-wise negate(negate(x)) = x
-  if (auto op = input.getDefiningOp<tosa::NegateOp>()) {
-    return op.getInput1();
+  // iff all zero points are constant 0
+  auto definingOp = getInput1().getDefiningOp<tosa::NegateOp>();
+  if (!definingOp) {
+    // defining op of input1 is not a negate, cannot fold
+    return {};
   }
 
-  return {};
+  if (FailureOr<int64_t> maybeIZp = getInput1ZeroPoint();
+      failed(maybeIZp) || *maybeIZp != 0) {
+    // input1 zero point is not constant 0, cannot fold
+    return {};
+  }
+  if (FailureOr<int64_t> maybeOZp = getOutputZeroPoint();
+      failed(maybeOZp) || *maybeOZp != 0) {
+    // output zero point is not constant 0, cannot fold
+    return {};
+  }
+  if (FailureOr<int64_t> maybeIZp = definingOp.getInput1ZeroPoint();
+      failed(maybeIZp) || *maybeIZp != 0) {
+    // definingOp's input1 zero point is not constant 0, cannot fold
+    return {};
+  }
+  if (FailureOr<int64_t> maybeOZp = definingOp.getOutputZeroPoint();
+      failed(maybeOZp) || *maybeOZp != 0) {
+    // definingOp's output zero point is not constant 0, cannot fold
+    return {};
+  }
+
+  return definingOp.getInput1();
 }
 
 OpFoldResult tosa::AbsOp::fold(FoldAdaptor adaptor) {

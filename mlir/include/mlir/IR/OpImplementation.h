@@ -15,10 +15,24 @@
 
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectInterface.h"
+#include "mlir/IR/OpAsmSupport.h"
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/SMLoc.h"
 #include <optional>
+
+namespace {
+// reference https://stackoverflow.com/a/16000226
+template <typename T, typename = void>
+struct HasStaticName : std::false_type {};
+
+template <typename T>
+struct HasStaticName<T,
+                     typename std::enable_if<
+                         std::is_same<::llvm::StringLiteral,
+                                      std::decay_t<decltype(T::name)>>::value,
+                         void>::type> : std::true_type {};
+} // namespace
 
 namespace mlir {
 class AsmParsedResourceEntry;
@@ -1237,8 +1251,13 @@ public:
 
     // Check for the right kind of type.
     result = llvm::dyn_cast<TypeT>(type);
-    if (!result)
-      return emitError(loc, "invalid kind of type specified");
+    if (!result) {
+      InFlightDiagnostic diag =
+          emitError(loc, "invalid kind of type specified");
+      if constexpr (HasStaticName<TypeT>::value)
+        diag << ": expected " << TypeT::name << ", but found " << type;
+      return diag;
+    }
 
     return success();
   }
@@ -1269,8 +1288,13 @@ public:
 
     // Check for the right kind of Type.
     result = llvm::dyn_cast<TypeT>(type);
-    if (!result)
-      return emitError(loc, "invalid kind of Type specified");
+    if (!result) {
+      InFlightDiagnostic diag =
+          emitError(loc, "invalid kind of type specified");
+      if constexpr (HasStaticName<TypeT>::value)
+        diag << ": expected " << TypeT::name << ", but found " << type;
+      return diag;
+    }
     return success();
   }
 
@@ -1306,8 +1330,13 @@ public:
 
     // Check for the right kind of type.
     result = llvm::dyn_cast<TypeType>(type);
-    if (!result)
-      return emitError(loc, "invalid kind of type specified");
+    if (!result) {
+      InFlightDiagnostic diag =
+          emitError(loc, "invalid kind of type specified");
+      if constexpr (HasStaticName<TypeType>::value)
+        diag << ": expected " << TypeType::name << ", but found " << type;
+      return diag;
+    }
 
     return success();
   }
@@ -1730,38 +1759,12 @@ public:
 // Dialect OpAsm interface.
 //===--------------------------------------------------------------------===//
 
-/// A functor used to set the name of the result. See 'getAsmResultNames' below
-/// for more details.
-using OpAsmSetNameFn = function_ref<void(StringRef)>;
-
-/// A functor used to set the name of the start of a result group of an
-/// operation. See 'getAsmResultNames' below for more details.
-using OpAsmSetValueNameFn = function_ref<void(Value, StringRef)>;
-
-/// A functor used to set the name of blocks in regions directly nested under
-/// an operation.
-using OpAsmSetBlockNameFn = function_ref<void(Block *, StringRef)>;
-
 class OpAsmDialectInterface
     : public DialectInterface::Base<OpAsmDialectInterface> {
 public:
   OpAsmDialectInterface(Dialect *dialect) : Base(dialect) {}
 
-  //===------------------------------------------------------------------===//
-  // Aliases
-  //===------------------------------------------------------------------===//
-
-  /// Holds the result of `getAlias` hook call.
-  enum class AliasResult {
-    /// The object (type or attribute) is not supported by the hook
-    /// and an alias was not provided.
-    NoAlias,
-    /// An alias was provided, but it might be overriden by other hook.
-    OverridableAlias,
-    /// An alias was provided and it should be used
-    /// (no other hooks will be checked).
-    FinalAlias
-  };
+  using AliasResult = OpAsmAliasResult;
 
   /// Hooks for getting an alias identifier alias for a given symbol, that is
   /// not necessarily a part of this dialect. The identifier is used in place of
@@ -1827,9 +1830,7 @@ ParseResult parseDimensionList(OpAsmParser &parser,
 //===--------------------------------------------------------------------===//
 
 /// The OpAsmOpInterface, see OpAsmInterface.td for more details.
-#include "mlir/IR/OpAsmAttrInterface.h.inc"
 #include "mlir/IR/OpAsmOpInterface.h.inc"
-#include "mlir/IR/OpAsmTypeInterface.h.inc"
 
 namespace llvm {
 template <>

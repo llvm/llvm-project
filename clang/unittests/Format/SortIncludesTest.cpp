@@ -1085,6 +1085,15 @@ TEST_F(SortIncludesTest, DoNotSortLikelyXml) {
                     "input.h", 0));
 }
 
+TEST_F(SortIncludesTest, DoNotSortCSharp) {
+  constexpr StringRef Code{"const string expectedDataStruct = @\"\n"
+                           "            #include <b.h>\n"
+                           "            #include <a.h>\n"
+                           "        \";"};
+  FmtStyle.Language = FormatStyle::LK_CSharp;
+  EXPECT_TRUE(sortIncludes(FmtStyle, Code, GetCodeRange(Code), "a.cs").empty());
+}
+
 TEST_F(SortIncludesTest, DoNotOutputReplacementsForSortedBlocksWithRegrouping) {
   Style.IncludeBlocks = Style.IBS_Regroup;
   StringRef Code = "#include \"b.h\"\n"

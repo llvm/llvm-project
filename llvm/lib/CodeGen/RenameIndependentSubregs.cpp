@@ -248,7 +248,7 @@ void RenameIndependentSubregs::rewriteOperands(const IntEqClasses &Classes,
       break;
     }
 
-    unsigned VReg = Intervals[ID]->reg();
+    Register VReg = Intervals[ID]->reg();
     MO.setReg(VReg);
 
     if (MO.isTied() && Reg != VReg) {

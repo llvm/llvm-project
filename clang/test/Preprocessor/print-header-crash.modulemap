@@ -1,0 +1,2 @@
+// RUN: %clang_cc1 -header-include-format=json -header-include-filtering=only-direct-system -header-include-file %t.txt -emit-module -x c -fmodules -fmodule-name=X %s -o /dev/null
+module X {}

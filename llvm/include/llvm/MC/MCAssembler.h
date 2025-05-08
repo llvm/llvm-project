@@ -95,14 +95,11 @@ private:
   /// evaluates to.
   /// \param Value [out] On return, the value of the fixup as currently laid
   /// out.
-  /// \param WasForced [out] On return, the value in the fixup is set to the
-  /// correct value if WasForced is true, even if evaluateFixup returns false.
-  /// \return Whether the fixup value was fully resolved. This is true if the
-  /// \p Value result is fixed, otherwise the value may change due to
+  /// \param RecordReloc Record relocation if needed.
   /// relocation.
   bool evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
                      MCValue &Target, const MCSubtargetInfo *STI,
-                     uint64_t &Value, bool &WasForced) const;
+                     uint64_t &Value, bool RecordReloc) const;
 
   /// Check whether a fixup can be satisfied, or whether it needs to be relaxed
   /// (increased in size, in order to hold its value correctly).
@@ -126,9 +123,6 @@ private:
   bool relaxCVInlineLineTable(MCCVInlineLineTableFragment &DF);
   bool relaxCVDefRange(MCCVDefRangeFragment &DF);
   bool relaxPseudoProbeAddr(MCPseudoProbeAddrFragment &DF);
-
-  std::tuple<MCValue, uint64_t, bool>
-  handleFixup(MCFragment &F, const MCFixup &Fixup, const MCSubtargetInfo *STI);
 
 public:
   /// Construct a new assembler instance.

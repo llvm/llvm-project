@@ -92,15 +92,15 @@ MCSymbol *MachineBasicBlock::getSymbol() const {
   return CachedMCSymbol;
 }
 
-MCSymbol *MachineBasicBlock::getEHCatchretSymbol() const {
-  if (!CachedEHCatchretMCSymbol) {
+MCSymbol *MachineBasicBlock::getEHContSymbol() const {
+  if (!CachedEHContMCSymbol) {
     const MachineFunction *MF = getParent();
     SmallString<128> SymbolName;
     raw_svector_ostream(SymbolName)
         << "$ehgcr_" << MF->getFunctionNumber() << '_' << getNumber();
-    CachedEHCatchretMCSymbol = MF->getContext().getOrCreateSymbol(SymbolName);
+    CachedEHContMCSymbol = MF->getContext().getOrCreateSymbol(SymbolName);
   }
-  return CachedEHCatchretMCSymbol;
+  return CachedEHContMCSymbol;
 }
 
 MCSymbol *MachineBasicBlock::getEndSymbol() const {
@@ -1587,20 +1587,36 @@ MachineBasicBlock::getSuccProbability(const_succ_iterator Succ) const {
     return BranchProbability(1, succ_size());
 
   const auto &Prob = *getProbabilityIterator(Succ);
-  if (Prob.isUnknown()) {
-    // For unknown probabilities, collect the sum of all known ones, and evenly
-    // ditribute the complemental of the sum to each unknown probability.
-    unsigned KnownProbNum = 0;
-    auto Sum = BranchProbability::getZero();
-    for (const auto &P : Probs) {
-      if (!P.isUnknown()) {
-        Sum += P;
-        KnownProbNum++;
-      }
-    }
-    return Sum.getCompl() / (Probs.size() - KnownProbNum);
-  } else
+  if (!Prob.isUnknown())
     return Prob;
+  // For unknown probabilities, collect the sum of all known ones, and evenly
+  // ditribute the complemental of the sum to each unknown probability.
+  unsigned KnownProbNum = 0;
+  auto Sum = BranchProbability::getZero();
+  for (const auto &P : Probs) {
+    if (!P.isUnknown()) {
+      Sum += P;
+      KnownProbNum++;
+    }
+  }
+  return Sum.getCompl() / (Probs.size() - KnownProbNum);
+}
+
+bool MachineBasicBlock::canPredictBranchProbabilities() const {
+  if (succ_size() <= 1)
+    return true;
+  if (!hasSuccessorProbabilities())
+    return true;
+
+  SmallVector<BranchProbability, 8> Normalized(Probs.begin(), Probs.end());
+  BranchProbability::normalizeProbabilities(Normalized);
+
+  // Normalize assuming unknown probabilities. This will assign equal
+  // probabilities to all successors.
+  SmallVector<BranchProbability, 8> Equal(Normalized.size());
+  BranchProbability::normalizeProbabilities(Equal);
+
+  return llvm::equal(Normalized, Equal);
 }
 
 /// Set successor probability of a given iterator.

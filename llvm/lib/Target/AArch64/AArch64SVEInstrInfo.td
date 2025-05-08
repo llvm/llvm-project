@@ -345,7 +345,7 @@ def AArch64fclamp : PatFrags<(ops node:$Zd, node:$Zn, node:$Zm),
 
 def SDT_AArch64FCVT : SDTypeProfile<1, 3, [
   SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>, SDTCisVec<3>,
-  SDTCVecEltisVT<1,i1>
+  SDTCVecEltisVT<1,i1>, SDTCisSameNumEltsAs<0,1>, SDTCisSameAs<0,3>
 ]>;
 
 def SDT_AArch64FCVTR : SDTypeProfile<1, 4, [
@@ -392,15 +392,13 @@ def AArch64splice : SDNode<"AArch64ISD::SPLICE", SDT_AArch64Arith>;
 
 def reinterpret_cast : SDNode<"AArch64ISD::REINTERPRET_CAST", SDTUnaryOp>;
 
+let HasOneUse = 1 in
 def AArch64mul_p_oneuse : PatFrag<(ops node:$pred, node:$src1, node:$src2),
-                                  (AArch64mul_p node:$pred, node:$src1, node:$src2), [{
-  return N->hasOneUse();
-}]>;
+                                  (AArch64mul_p node:$pred, node:$src1, node:$src2)>;
 
+let HasOneUse = 1 in
 def AArch64fmul_p_oneuse : PatFrag<(ops node:$pred, node:$src1, node:$src2),
-                                   (AArch64fmul_p node:$pred, node:$src1, node:$src2), [{
-  return N->hasOneUse();
-}]>;
+                                   (AArch64fmul_p node:$pred, node:$src1, node:$src2)>;
 
 
 def AArch64fabd_p : PatFrags<(ops node:$pg, node:$op1, node:$op2),
@@ -654,6 +652,17 @@ let Predicates = [HasSVE_or_SME] in {
 
   defm SDOT_ZZZ : sve_intx_dot<0b0, "sdot", AArch64sdot>;
   defm UDOT_ZZZ : sve_intx_dot<0b1, "udot", AArch64udot>;
+
+  let Predicates = [HasSVE_or_SME] in {
+    def : Pat<(nxv4i32 (partial_reduce_umla nxv4i32:$Acc, nxv16i8:$MulLHS, nxv16i8:$MulRHS)),
+              (UDOT_ZZZ_S $Acc, $MulLHS, $MulRHS)>;
+    def : Pat<(nxv4i32 (partial_reduce_smla nxv4i32:$Acc, nxv16i8:$MulLHS, nxv16i8:$MulRHS)),
+              (SDOT_ZZZ_S $Acc, $MulLHS, $MulRHS)>;
+    def : Pat<(nxv2i64 (partial_reduce_umla nxv2i64:$Acc, nxv8i16:$MulLHS, nxv8i16:$MulRHS)),
+              (UDOT_ZZZ_D $Acc, $MulLHS, $MulRHS)>;
+    def : Pat<(nxv2i64 (partial_reduce_smla nxv2i64:$Acc, nxv8i16:$MulLHS, nxv8i16:$MulRHS)),
+              (SDOT_ZZZ_D $Acc, $MulLHS, $MulRHS)>;
+  } // End HasSVE_or_SME
 
   defm SDOT_ZZZI : sve_intx_dot_by_indexed_elem<0b0, "sdot", int_aarch64_sve_sdot_lane>;
   defm UDOT_ZZZI : sve_intx_dot_by_indexed_elem<0b1, "udot", int_aarch64_sve_udot_lane>;
@@ -931,6 +940,13 @@ let Predicates = [HasSVE_or_SME] in {
               (FDUP_ZI_S fpimm32:$imm8)>;
     def : Pat<(nxv2f64 (splat_vector fpimm64:$imm8)),
               (FDUP_ZI_D fpimm64:$imm8)>;
+    // Some half precision immediates alias with bfloat (e.g. f16(1.875) == bf16(1.0)).
+    def : Pat<(nxv8bf16 (splat_vector fpimmbf16:$imm8)),
+              (FDUP_ZI_H (fpimm16XForm bf16:$imm8))>;
+    def : Pat<(nxv4bf16 (splat_vector fpimmbf16:$imm8)),
+              (FDUP_ZI_H (fpimm16XForm bf16:$imm8))>;
+    def : Pat<(nxv2bf16 (splat_vector fpimmbf16:$imm8)),
+              (FDUP_ZI_H (fpimm16XForm bf16:$imm8))>;
   }
 
   // Select elements from either vector (predicated)
@@ -975,7 +991,7 @@ let Predicates = [HasSVE_or_SME] in {
   def MOVPRFX_ZZ : sve_int_bin_cons_misc_0_c<0b00000001, "movprfx", ZPRAny>;
 } // End HasSVE_or_SME
 
-let Predicates = [HasNonStreamingSVE_or_SME2p2] in {
+let Predicates = [HasNonStreamingSVE_or_SSVE_FEXPA] in {
   defm FEXPA_ZZ : sve_int_bin_cons_misc_0_c_fexpa<"fexpa", int_aarch64_sve_fexpa_x>;
 } // End HasSVE
 
@@ -2370,9 +2386,9 @@ let Predicates = [HasSVE_or_SME] in {
   def : Pat<(nxv2f16 (AArch64fcvtr_mt (nxv2i1 (SVEAllActive:$Pg)), nxv2f32:$Zs, (i64 timm0_1), nxv2f16:$Zd)),
             (FCVT_ZPmZ_StoH_UNDEF ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
 
-  def : Pat<(nxv4f32 (fpextend nxv4bf16:$op)),
+  def : Pat<(nxv4f32 (AArch64fcvte_mt (SVEAnyPredicate), nxv4bf16:$op, undef)),
             (LSL_ZZI_S $op, (i32 16))>;
-  def : Pat<(nxv2f32 (fpextend nxv2bf16:$op)),
+  def : Pat<(nxv2f32 (AArch64fcvte_mt (SVEAnyPredicate), nxv2bf16:$op, undef)),
             (LSL_ZZI_S $op, (i32 16))>;
 
   // Signed integer -> Floating-point
@@ -2672,6 +2688,29 @@ let Predicates = [HasSVE_or_SME] in {
               (DECD_ZPiI ZPR:$op, 31, $imm)>;
   }
 
+  // Some INCB/DECB forms have better latency and throughput than ADDVL, so we
+  // prefer using them here.
+  // We could extend this to other INC/DEC (scalar) instructions.
+  let Predicates = [HasSVE_or_SME, UseScalarIncVL, HasFastIncVL], AddedComplexity = 6 in {
+    foreach imm = [ 1, 2, 4 ] in {
+      def : Pat<(add GPR64:$op, (vscale !mul(imm, 16))),
+                (INCB_XPiI GPR64:$op, 31, imm)>;
+
+      def : Pat<(add GPR32:$op, (i32 (trunc (vscale !mul(imm, 16))))),
+                (EXTRACT_SUBREG (INCB_XPiI (INSERT_SUBREG (IMPLICIT_DEF),
+                                            GPR32:$op, sub_32), 31, imm),
+                                 sub_32)>;
+
+      def : Pat<(add GPR64:$op, (vscale !mul(imm, -16))),
+                (DECB_XPiI GPR64:$op, 31, imm)>;
+
+      def : Pat<(add GPR32:$op, (i32 (trunc (vscale !mul(imm, -16))))),
+                (EXTRACT_SUBREG (DECB_XPiI (INSERT_SUBREG (IMPLICIT_DEF),
+                                            GPR32:$op, sub_32), 31, imm),
+                                 sub_32)>;
+      }
+  }
+
   let Predicates = [HasSVE_or_SME, UseScalarIncVL], AddedComplexity = 5 in {
     def : Pat<(add GPR64:$op, (vscale (sve_rdvl_imm i32:$imm))),
               (ADDVL_XXI GPR64:$op, $imm)>;
@@ -2724,7 +2763,7 @@ let Predicates = [HasSVE_or_SME] in {
 
   // For big endian, only BITCASTs involving same sized vector types with same
   // size vector elements can be isel'd directly.
-  let Predicates = [IsLE] in
+  let Predicates = [HasSVE_or_SME, IsLE] in
     foreach VT = [ nxv16i8, nxv8i16, nxv4i32, nxv2i64, nxv8f16, nxv4f32, nxv2f64, nxv8bf16 ] in
       foreach VT2 = [ nxv16i8, nxv8i16, nxv4i32, nxv2i64, nxv8f16, nxv4f32, nxv2f64, nxv8bf16 ] in
         if !ne(VT,VT2) then
@@ -2974,24 +3013,25 @@ let Predicates = [HasSVE_or_SME] in {
   defm : unpred_load<        load, nxv2f32,  LD1W_D,  LD1W_D_IMM, PTRUE_D, am_sve_regreg_lsl2>;
   defm : unpred_load<        load, nxv2f64,    LD1D,    LD1D_IMM, PTRUE_D, am_sve_regreg_lsl3>;
 
-  // Allow using the reg+reg form of ld1b/st1b for memory accesses with the
-  // same width as nxv16i8.  This saves an add in cases where we would
-  // otherwise compute the address separately.
-  multiclass unpred_loadstore_bitcast<ValueType Ty> {
-    let Predicates = [IsLE] in {
+  let Predicates = [HasSVE_or_SME, IsLE] in {
+    // Allow using the reg+reg form of ld1b/st1b for memory accesses with the
+    // same width as nxv16i8.  This saves an add in cases where we would
+    // otherwise compute the address separately.
+    multiclass unpred_loadstore_bitcast<ValueType Ty> {
       def : Pat<(Ty (load (am_sve_regreg_lsl0 GPR64sp:$base, GPR64:$offset))),
                 (LD1B (PTRUE_B 31), GPR64sp:$base, GPR64:$offset)>;
       def : Pat<(store Ty:$val, (am_sve_regreg_lsl0 GPR64sp:$base, GPR64:$offset)),
                 (ST1B ZPR:$val, (PTRUE_B 31), GPR64sp:$base, GPR64:$offset)>;
     }
+
+    defm : unpred_loadstore_bitcast<nxv8i16>;
+    defm : unpred_loadstore_bitcast<nxv8f16>;
+    defm : unpred_loadstore_bitcast<nxv8bf16>;
+    defm : unpred_loadstore_bitcast<nxv4f32>;
+    defm : unpred_loadstore_bitcast<nxv4i32>;
+    defm : unpred_loadstore_bitcast<nxv2i64>;
+    defm : unpred_loadstore_bitcast<nxv2f64>;
   }
-  defm : unpred_loadstore_bitcast<nxv8i16>;
-  defm : unpred_loadstore_bitcast<nxv8f16>;
-  defm : unpred_loadstore_bitcast<nxv8bf16>;
-  defm : unpred_loadstore_bitcast<nxv4f32>;
-  defm : unpred_loadstore_bitcast<nxv4i32>;
-  defm : unpred_loadstore_bitcast<nxv2i64>;
-  defm : unpred_loadstore_bitcast<nxv2f64>;
 
   // Allow using LDR/STR to avoid the predicate dependence.
   let Predicates = [HasSVE_or_SME, IsLE, AllowMisalignedMemAccesses] in
@@ -3469,6 +3509,22 @@ let Predicates = [HasSVE_or_SME] in {
   def : Pat<(f64 (vector_extract nxv2f64:$Zs, (i64 0))),
             (EXTRACT_SUBREG ZPR:$Zs, dsub)>;
   }
+
+  multiclass sve_insert_extract_elt<ValueType VT, ValueType VTScalar, Instruction DUP, Operand IdxTy> {
+    // NOP pattern (needed to avoid pointless DUPs being added by the second pattern).
+    def : Pat<(VT (vector_insert undef,
+                  (VTScalar (vector_extract VT:$vec, (i64 0))), (i64 0))),
+              (VT $vec)>;
+
+    def : Pat<(VT (vector_insert undef,
+                    (VTScalar (vector_extract VT:$vec, (i64 IdxTy:$Idx))), (i64 0))),
+              (DUP ZPR:$vec, IdxTy:$Idx)>;
+  }
+
+  defm : sve_insert_extract_elt<nxv16i8, i32, DUP_ZZI_B, sve_elm_idx_extdup_b>;
+  defm : sve_insert_extract_elt<nxv8i16, i32, DUP_ZZI_H, sve_elm_idx_extdup_h>;
+  defm : sve_insert_extract_elt<nxv4i32, i32, DUP_ZZI_S, sve_elm_idx_extdup_s>;
+  defm : sve_insert_extract_elt<nxv2i64, i64, DUP_ZZI_D, sve_elm_idx_extdup_d>;
 
   multiclass sve_predicated_add<SDNode extend, int value> {
     def : Pat<(nxv16i8 (add ZPR:$op, (extend nxv16i1:$pred))),

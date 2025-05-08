@@ -13,7 +13,6 @@
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_arithmetic.h>
 #include <__type_traits/is_integral.h>
-#include <__type_traits/is_signed.h>
 #include <__type_traits/promote.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -51,14 +50,9 @@ template <class = void>
   return __builtin_signbit(__x);
 }
 
-template <class _A1, __enable_if_t<is_integral<_A1>::value && is_signed<_A1>::value, int> = 0>
+template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
 [[__nodiscard__]] inline _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_HIDE_FROM_ABI bool signbit(_A1 __x) _NOEXCEPT {
   return __x < 0;
-}
-
-template <class _A1, __enable_if_t<is_integral<_A1>::value && !is_signed<_A1>::value, int> = 0>
-[[__nodiscard__]] inline _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_HIDE_FROM_ABI bool signbit(_A1) _NOEXCEPT {
-  return false;
 }
 
 // isfinite

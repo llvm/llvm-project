@@ -309,13 +309,15 @@ lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-size_t lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
+llvm::Expected<size_t>
+lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (name == "__ptr_")
     return 0;
   if (name == "$$dereference$$")
     return 1;
-  return UINT32_MAX;
+  return llvm::createStringError("Type has no child named '%s'",
+                                 name.AsCString());
 }
 
 lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
@@ -407,7 +409,8 @@ lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-size_t lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
+llvm::Expected<size_t>
+lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (name == "pointer")
     return 0;
@@ -415,7 +418,8 @@ size_t lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
     return 1;
   if (name == "$$dereference$$")
     return 2;
-  return UINT32_MAX;
+  return llvm::createStringError("Type has no child named '%s'",
+                                 name.AsCString());
 }
 
 bool lldb_private::formatters::LibcxxContainerSummaryProvider(
@@ -456,9 +460,15 @@ ExtractLibcxxStringInfo(ValueObject &valobj) {
   if (!l)
     return {};
 
-  StringLayout layout = l->GetIndexOfChildWithName("__data_") == 0
-                            ? StringLayout::DSC
-                            : StringLayout::CSD;
+  auto index_or_err = l->GetIndexOfChildWithName("__data_");
+  if (!index_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters), index_or_err.takeError(),
+                   "{0}");
+    return {};
+  }
+
+  StringLayout layout =
+      *index_or_err == 0 ? StringLayout::DSC : StringLayout::CSD;
 
   bool short_mode = false; // this means the string is in short-mode and the
                            // data is stored inline
@@ -501,8 +511,8 @@ ExtractLibcxxStringInfo(ValueObject &valobj) {
     // likely that the string isn't initialized and we're reading garbage.
     ExecutionContext exe_ctx(location_sp->GetExecutionContextRef());
     const std::optional<uint64_t> max_bytes =
-        location_sp->GetCompilerType().GetByteSize(
-            exe_ctx.GetBestExecutionContextScope());
+        llvm::expectedToOptional(location_sp->GetCompilerType().GetByteSize(
+            exe_ctx.GetBestExecutionContextScope()));
     if (!max_bytes || size > *max_bytes)
       return {};
 

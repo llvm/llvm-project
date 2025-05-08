@@ -467,10 +467,7 @@ public:
 
   /// Returns true if Reg contains RegUnit.
   bool hasRegUnit(MCRegister Reg, MCRegUnit RegUnit) const {
-    for (MCRegUnit Unit : regunits(Reg))
-      if (Unit == RegUnit)
-        return true;
-    return false;
+    return llvm::is_contained(regunits(Reg), RegUnit);
   }
 
   /// Returns the original SrcReg unless it is the target of a copy-like
@@ -593,7 +590,7 @@ public:
 
   /// Returns true if PhysReg cannot be written to in inline asm statements.
   virtual bool isInlineAsmReadOnlyReg(const MachineFunction &MF,
-                                      unsigned PhysReg) const {
+                                      MCRegister PhysReg) const {
     return false;
   }
 
@@ -958,6 +955,9 @@ public:
   /// Returns a -1 terminated array of pressure set IDs.
   virtual const int *getRegUnitPressureSets(unsigned RegUnit) const = 0;
 
+  /// Get the scale factor of spill weight for this register class.
+  virtual float getSpillWeightScaleFactor(const TargetRegisterClass *RC) const;
+
   /// Get a list of 'hint' registers that the register allocator should try
   /// first when allocating a physical register for the virtual register
   /// VirtReg. These registers are effectively moved to the front of the
@@ -1192,21 +1192,6 @@ public:
     return true;
   }
 
-  /// Deferred spilling delays the spill insertion of a virtual register
-  /// after every other allocation. By deferring the spilling, it is
-  /// sometimes possible to eliminate that spilling altogether because
-  /// something else could have been eliminated, thus leaving some space
-  /// for the virtual register.
-  /// However, this comes with a compile time impact because it adds one
-  /// more stage to the greedy register allocator.
-  /// This method is used to decide whether \p VirtReg should use the deferred
-  /// spilling stage instead of being spilled right away.
-  virtual bool
-  shouldUseDeferredSpillingForVirtReg(const MachineFunction &MF,
-                                      const LiveInterval &VirtReg) const {
-    return false;
-  }
-
   /// When prioritizing live ranges in register allocation, if this hook returns
   /// true then the AllocationPriority of the register class will be treated as
   /// more important than whether the range is local to a basic block or global.
@@ -1242,6 +1227,11 @@ public:
   virtual bool isNonallocatableRegisterCalleeSave(MCRegister Reg) const {
     return false;
   }
+
+  /// Some targets delay assigning the frame until late and use a placeholder
+  /// to represent it earlier. This method can be used to identify the frame
+  /// register placeholder.
+  virtual bool isVirtualFrameRegister(MCRegister Reg) const { return false; }
 
   virtual std::optional<uint8_t> getVRegFlagValue(StringRef Name) const {
     return {};

@@ -168,7 +168,7 @@ bb1:
   %val1 = extractvalue { <4 x i32>, <4 x half> } %split.ret.type, 1
   %extract0 = extractelement <4 x i32> %val0, i32 0
   %extract1 = extractelement <4 x half> %val1, i32 0
-  %ins0 = insertvalue { i32, half } undef, i32 %extract0, 0
+  %ins0 = insertvalue { i32, half } poison, i32 %extract0, 0
   %ins1 = insertvalue { i32, half } %ins0, half %extract1, 1
   ret { i32, half } %ins1
 }
@@ -202,8 +202,8 @@ define amdgpu_kernel void @v3i16_registers(i1 %cond) #0 {
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GCN-NEXT:    s_branch .LBB4_3
 ; GCN-NEXT:  .LBB4_2:
-; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:  .LBB4_3: ; %if.end
 ; GCN-NEXT:    global_store_short v[0:1], v1, off
 ; GCN-NEXT:    global_store_dword v[0:1], v0, off
@@ -220,7 +220,7 @@ if.else:                                          ; preds = %entry
 
 if.end:                                           ; preds = %if.else, %if.then
   %call6.sink = phi <3 x i16> [ %call6, %if.else ], [ zeroinitializer, %if.then ]
-  store <3 x i16> %call6.sink, ptr addrspace(1) undef
+  store <3 x i16> %call6.sink, ptr addrspace(1) poison
   ret void
 }
 
@@ -253,8 +253,8 @@ define amdgpu_kernel void @v3f16_registers(i1 %cond) #0 {
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GCN-NEXT:    s_branch .LBB5_3
 ; GCN-NEXT:  .LBB5_2:
-; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:  .LBB5_3: ; %if.end
 ; GCN-NEXT:    global_store_short v[0:1], v1, off
 ; GCN-NEXT:    global_store_dword v[0:1], v0, off
@@ -271,7 +271,7 @@ if.else:                                          ; preds = %entry
 
 if.end:                                           ; preds = %if.else, %if.then
   %call6.sink = phi <3 x half> [ %call6, %if.else ], [ zeroinitializer, %if.then ]
-  store <3 x half> %call6.sink, ptr addrspace(1) undef
+  store <3 x half> %call6.sink, ptr addrspace(1) poison
   ret void
 }
 
@@ -286,5 +286,3 @@ declare hidden { <4 x i32>, <4 x half> } @func_struct() #0
 
 attributes #0 = { nounwind}
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

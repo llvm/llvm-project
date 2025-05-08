@@ -254,7 +254,7 @@ void AggressiveAntiDepBreaker::GetPassthruRegs(
 /// AntiDepEdges - Return in Edges the anti- and output- dependencies
 /// in SU that we want to consider for breaking.
 static void AntiDepEdges(const SUnit *SU, std::vector<const SDep *> &Edges) {
-  SmallSet<unsigned, 4> RegSet;
+  SmallSet<Register, 4> RegSet;
   for (const SDep &Pred : SU->Preds) {
     if ((Pred.getKind() == SDep::Anti) || (Pred.getKind() == SDep::Output)) {
       if (RegSet.insert(Pred.getReg()).second)
@@ -829,7 +829,7 @@ unsigned AggressiveAntiDepBreaker::BreakAntiDependencies(
         if ((Edge->getKind() != SDep::Anti) &&
             (Edge->getKind() != SDep::Output)) continue;
 
-        MCRegister AntiDepReg = MCRegister::from(Edge->getReg());
+        MCRegister AntiDepReg = Edge->getReg().asMCReg();
         LLVM_DEBUG(dbgs() << "\tAntidep reg: " << printReg(AntiDepReg, TRI));
         assert(AntiDepReg && "Anti-dependence on reg0?");
 

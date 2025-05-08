@@ -34,12 +34,17 @@ TEST(XcodeSDKTest, ParseTest) {
   EXPECT_EQ(XcodeSDK("MacOSX10.9.sdk").GetVersion(), llvm::VersionTuple(10, 9));
   EXPECT_EQ(XcodeSDK("MacOSX10.15.4.sdk").GetVersion(), llvm::VersionTuple(10, 15));
   EXPECT_EQ(XcodeSDK("MacOSX.sdk").IsAppleInternalSDK(), false);
+  EXPECT_EQ(
+      XcodeSDK("MacOSX.sdk", FileSpec{"/Path/To/MacOSX.sdk"}).GetSysroot(),
+      FileSpec("/Path/To/MacOSX.sdk"));
   EXPECT_EQ(XcodeSDK("MacOSX10.15.Internal.sdk").GetType(), XcodeSDK::MacOSX);
   EXPECT_EQ(XcodeSDK("MacOSX10.15.Internal.sdk").GetVersion(),
             llvm::VersionTuple(10, 15));
   EXPECT_EQ(XcodeSDK("MacOSX10.15.Internal.sdk").IsAppleInternalSDK(), true);
+  EXPECT_FALSE(XcodeSDK("MacOSX10.15.Internal.sdk").GetSysroot());
   EXPECT_EQ(XcodeSDK().GetType(), XcodeSDK::unknown);
   EXPECT_EQ(XcodeSDK().GetVersion(), llvm::VersionTuple());
+  EXPECT_FALSE(XcodeSDK().GetSysroot());
 }
 
 TEST(XcodeSDKTest, MergeTest) {
@@ -60,6 +65,15 @@ TEST(XcodeSDKTest, MergeTest) {
   XcodeSDK empty;
   empty.Merge(XcodeSDK("MacOSX10.14.Internal.sdk"));
   EXPECT_EQ(empty.GetString(), llvm::StringRef("MacOSX10.14.Internal.sdk"));
+  EXPECT_FALSE(empty.GetSysroot());
+  empty.Merge(XcodeSDK("MacOSX9.5.Internal.sdk",
+                       FileSpec{"/Path/To/MacOSX9.5.Internal.sdk"}));
+  EXPECT_FALSE(empty.GetSysroot());
+  empty.Merge(XcodeSDK("MacOSX12.5.sdk", FileSpec{"/Path/To/MacOSX12.5.sdk"}));
+  EXPECT_EQ(empty.GetSysroot(), FileSpec{"/Path/To/MacOSX12.5.sdk"});
+  empty.Merge(XcodeSDK("MacOSX11.5.Internal.sdk",
+                       FileSpec{"/Path/To/MacOSX11.5.Internal.sdk"}));
+  EXPECT_EQ(empty.GetSysroot(), FileSpec{"/Path/To/MacOSX12.5.Internal.sdk"});
 }
 
 #ifndef _WIN32

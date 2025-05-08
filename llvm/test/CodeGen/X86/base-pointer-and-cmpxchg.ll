@@ -49,5 +49,39 @@ tail call void asm sideeffect "nop", "~{rax},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},
   store i32 %n, ptr %idx
   ret i1 %res
 }
+
+; If we compare-and-exchange a frame variable, we additionally need to rewrite
+; the memory operand to use the SAVE_rbx instead of rbx, which already contains
+; the input operand.
+;
+; CHECK-LABEL: cmp_and_swap16_frame:
+; Check that we actually use rbx.
+; gnux32 use the 32bit variant of the registers.
+; USE_BASE_64: movq %rsp, %rbx
+; USE_BASE_32: movl %esp, %ebx
+; Here we drop the inline assembly because the frame pointer is used anyway. So
+; rbx is not spilled to the stack but goes into a (hopefully numbered) register.
+; USE_BASE: movq %rbx, [[SAVE_rbx:%r[0-9]+]]
+;
+; USE_BASE: movq {{[^ ]+}}, %rbx
+; The use of the frame variable expands to N(%rbx) or N(%ebx). But we've just
+; overwritten that with the input operand. We need to use SAVE_rbx instead.
+; USE_BASE_64-NEXT: cmpxchg16b {{[0-9]*}}([[SAVE_rbx]])
+; USE_BASE_32-NEXT: cmpxchg16b {{[0-9]*}}([[SAVE_rbx]]d)
+; USE_BASE-NEXT: movq [[SAVE_rbx]], %rbx
+;
+; DONT_USE_BASE-NOT: movq %rsp, %rbx
+; DONT_USE_BASE-NOT: movl %esp, %ebx
+; DONT_USE_BASE: cmpxchg
+define i1 @cmp_and_swap16_frame(i128 %a, i128 %b, i32 %n) {
+  %local = alloca i128, align 16
+  %dummy = alloca i32, i32 %n
+  %cmp = cmpxchg ptr %local, i128 %a, i128 %b seq_cst seq_cst
+  %res = extractvalue { i128, i1 } %cmp, 1
+  %idx = getelementptr i32, ptr %dummy, i32 5
+  store i32 %n, ptr %idx
+  ret i1 %res
+}
+
 !llvm.module.flags = !{!0}
 !0 = !{i32 2, !"override-stack-alignment", i32 32}

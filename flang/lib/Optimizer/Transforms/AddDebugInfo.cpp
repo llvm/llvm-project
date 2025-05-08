@@ -14,7 +14,7 @@
 #include "DebugTypeGenerator.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
-#include "flang/Optimizer/CodeGen/CGOps.h"
+#include "flang/Optimizer/Dialect/FIRCG/CGOps.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
@@ -118,7 +118,10 @@ bool AddDebugInfoPass::createCommonBlockGlobal(
     op = conOp.getValue().getDefiningOp();
 
   if (auto cordOp = mlir::dyn_cast_if_present<fir::CoordinateOp>(op)) {
-    optint = fir::getIntIfConstant(cordOp.getOperand(1));
+    auto coors = cordOp.getCoor();
+    if (coors.size() != 1)
+      return false;
+    optint = fir::getIntIfConstant(coors[0]);
     if (!optint)
       return false;
     op = cordOp.getRef().getDefiningOp();
@@ -203,8 +206,13 @@ void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
   // a dummy_scope operand).
   unsigned argNo = 0;
   if (declOp.getDummyScope()) {
-    if (auto arg = llvm::dyn_cast<mlir::BlockArgument>(declOp.getMemref()))
-      argNo = arg.getArgNumber() + 1;
+    if (auto arg = llvm::dyn_cast<mlir::BlockArgument>(declOp.getMemref())) {
+      // Check if it is the BlockArgument of the function's entry block.
+      if (auto funcLikeOp =
+              declOp->getParentOfType<mlir::FunctionOpInterface>())
+        if (arg.getOwner() == &funcLikeOp.front())
+          argNo = arg.getArgNumber() + 1;
+    }
   }
 
   auto tyAttr = typeGen.convertType(fir::unwrapRefType(declOp.getType()),
