@@ -3626,7 +3626,7 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_UnaryOp(SDNode *N) {
   // Promote to the larger FP type.
   Op = DAG.getNode(GetPromotionOpcode(OVT, NVT), dl, NVT, Op);
 
-  SDValue Res = DAG.getNode(N->getOpcode(), dl, NVT, Op, N->getOperand(1));
+  SDValue Res = DAG.getNode(N->getOpcode(), dl, NVT, Op);
 
   // Convert back to FP16 as an integer.
   return DAG.getNode(GetPromotionOpcode(NVT, OVT), dl, MVT::i16, Res);
