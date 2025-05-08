@@ -165,7 +165,8 @@ public:
   void addSInt(DIEValueList &Die, dwarf::Attribute Attribute,
                std::optional<dwarf::Form> Form, int64_t Integer);
 
-  void addSInt(DIELoc &Die, std::optional<dwarf::Form> Form, int64_t Integer);
+  void addSInt(DIEValueList &Die, std::optional<dwarf::Form> Form,
+               int64_t Integer);
 
   /// Add an integer attribute data and value; value may be any width.
   void addInt(DIE &Die, dwarf::Attribute Attribute, const APInt &Integer,
@@ -346,6 +347,9 @@ private:
   /// A helper to add a wide integer constant to a DIE using a block
   /// form.
   void addIntAsBlock(DIE &Die, dwarf::Attribute Attribute, const APInt &Val);
+
+  // Add discriminant constants to a DW_TAG_variant DIE.
+  void addDiscriminant(DIE &Variant, Constant *Discriminant, bool IsUnsigned);
 
   void constructTypeDIE(DIE &Buffer, const DIBasicType *BTy);
   void constructTypeDIE(DIE &Buffer, const DIFixedPointType *BTy);

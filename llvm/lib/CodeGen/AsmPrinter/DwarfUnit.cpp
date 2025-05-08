@@ -275,7 +275,7 @@ void DwarfUnit::addSInt(DIEValueList &Die, dwarf::Attribute Attribute,
   addAttribute(Die, Attribute, *Form, DIEInteger(Integer));
 }
 
-void DwarfUnit::addSInt(DIELoc &Die, std::optional<dwarf::Form> Form,
+void DwarfUnit::addSInt(DIEValueList &Die, std::optional<dwarf::Form> Form,
                         int64_t Integer) {
   addSInt(Die, (dwarf::Attribute)0, Form, Integer);
 }
@@ -962,6 +962,43 @@ void DwarfUnit::addAnnotation(DIE &Buffer, DINodeArray Annotations) {
   }
 }
 
+void DwarfUnit::addDiscriminant(DIE &Variant, Constant *Discriminant,
+                                bool IsUnsigned) {
+  if (const auto *CI = dyn_cast_or_null<ConstantInt>(Discriminant)) {
+    addInt(Variant, dwarf::DW_AT_discr_value, CI->getValue(), IsUnsigned);
+  } else if (const auto *CA =
+                 dyn_cast_or_null<ConstantDataArray>(Discriminant)) {
+    // Must have an even number of operands.
+    unsigned NElems = CA->getNumElements();
+    if (NElems % 2 != 0) {
+      return;
+    }
+
+    DIEBlock *Block = new (DIEValueAllocator) DIEBlock;
+
+    auto AddInt = [&](const APInt &Val) {
+      if (IsUnsigned)
+        addUInt(*Block, dwarf::DW_FORM_udata, Val.getZExtValue());
+      else
+        addSInt(*Block, dwarf::DW_FORM_sdata, Val.getSExtValue());
+    };
+
+    for (unsigned I = 0; I < NElems; I += 2) {
+      APInt LV = CA->getElementAsAPInt(I);
+      APInt HV = CA->getElementAsAPInt(I + 1);
+      if (LV == HV) {
+        addUInt(*Block, dwarf::DW_FORM_data1, dwarf::DW_DSC_label);
+        AddInt(LV);
+      } else {
+        addUInt(*Block, dwarf::DW_FORM_data1, dwarf::DW_DSC_range);
+        AddInt(LV);
+        AddInt(HV);
+      }
+    }
+    addBlock(Variant, dwarf::DW_AT_discr_list, Block);
+  }
+}
+
 void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
   // Add name if not anonymous or intermediate type.
   StringRef Name = CTy->getName();
@@ -990,8 +1027,17 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
         //    If the variant part has a discriminant, the discriminant is
         //    represented by a separate debugging information entry which is
         //    a child of the variant part entry.
-        DIE &DiscMember = constructMemberDIE(Buffer, Discriminator);
-        addDIEEntry(Buffer, dwarf::DW_AT_discr, DiscMember);
+        // However, for a language like Ada, this yields a weird
+        // result: a discriminant field would have to be emitted
+        // multiple times, once per variant part.  Instead, this DWARF
+        // restriction was lifted for DWARF 6 (see
+        // https://dwarfstd.org/issues/180123.1.html) and so we allow
+        // this here.
+        DIE *DiscDIE = getDIE(Discriminator);
+        if (DiscDIE == nullptr) {
+          DiscDIE = &constructMemberDIE(Buffer, Discriminator);
+        }
+        addDIEEntry(Buffer, dwarf::DW_AT_discr, *DiscDIE);
       }
     }
 
@@ -1017,10 +1063,9 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
           // When emitting a variant part, wrap each member in
           // DW_TAG_variant.
           DIE &Variant = createAndAddDIE(dwarf::DW_TAG_variant, Buffer);
-          if (const ConstantInt *CI =
-              dyn_cast_or_null<ConstantInt>(DDTy->getDiscriminantValue())) {
-	    addInt(Variant, dwarf::DW_AT_discr_value, CI->getValue(),
-		   DD->isUnsignedDIType(Discriminator->getBaseType()));
+          if (Constant *CI = DDTy->getDiscriminantValue()) {
+            addDiscriminant(Variant, CI,
+                            DD->isUnsignedDIType(Discriminator->getBaseType()));
           }
           constructMemberDIE(Variant, DDTy);
         } else {
@@ -1759,7 +1804,7 @@ void DwarfUnit::constructContainingTypeDIEs() {
 }
 
 DIE &DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
-  DIE &MemberDie = createAndAddDIE(DT->getTag(), Buffer);
+  DIE &MemberDie = createAndAddDIE(DT->getTag(), Buffer, DT);
   StringRef Name = DT->getName();
   if (!Name.empty())
     addString(MemberDie, dwarf::DW_AT_name, Name);
