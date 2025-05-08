@@ -129,7 +129,7 @@ _LIBCPP_END_NAMESPACE_STD
 #else
 
 #  define _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION 0
-#  define _LIBCPP_MAKE_OVERRIDABLE_FUNCTION_DETECTABLE /* nothing */
+#  define _LIBCPP_OVERRIDABLE_FUNCTION(type, name, arglist) _LIBCPP_WEAK type name arglist
 
 #endif
 
