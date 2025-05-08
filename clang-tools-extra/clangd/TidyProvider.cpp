@@ -221,6 +221,8 @@ TidyProvider disableUnusableChecks(llvm::ArrayRef<std::string> ExtraBadChecks) {
       // Check uses dataflow analysis, which might hang/crash unexpectedly on
       // incomplete code.
       "-bugprone-unchecked-optional-access",
+      "-bugprone-dataflow-dead-code", 
+      "-bugprone-unchecked-optional-access",
       "-abseil-unchecked-statusor-access");
 
   size_t Size = BadChecks.size();
