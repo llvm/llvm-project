@@ -2980,9 +2980,10 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
   //   1. VALU reads SGPR as mask
   //   2. VALU/SALU writes SGPR
   //   3. VALU/SALU reads SGPR
-  // The hazard can expire if the distance between 2 and 3 is sufficient.
-  // In practice this happens <10% of the time, hence this always assumes
-  // the hazard exists if 1 and 2 are present to avoid searching.
+  // The hazard can expire if the distance between 2 and 3 is sufficient,
+  // or (2) is VALU and (3) is SALU.
+  // In practice this happens <10% of the time, hence always assume the hazard
+  // exists if (1) and (2) are present to avoid searching all SGPR reads.
 
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
