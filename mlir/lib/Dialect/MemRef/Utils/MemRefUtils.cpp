@@ -85,12 +85,9 @@ std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
   SmallVector<AffineExpr> productExpressions;
   for (unsigned i = 0; i < sourceRank; ++i) {
     AffineExpr strideExpr = symbols[symbolIndex++];
-    OpFoldResult stride = strides[i];
-    values.push_back(getValueOrCreateConstantIndexOp(builder, loc, stride));
-
+    values.push_back(strides[i]);
     AffineExpr sizeExpr = symbols[symbolIndex++];
-    OpFoldResult size = sizes[i];
-    values.push_back(getValueOrCreateConstantIndexOp(builder, loc, size));
+    values.push_back(sizes[i]);
 
     productExpressions.push_back((strideExpr * sizeExpr).floorDiv(scaler));
   }
