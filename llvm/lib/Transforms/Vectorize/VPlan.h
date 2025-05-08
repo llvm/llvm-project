@@ -1199,15 +1199,54 @@ public:
   /// Returns the incoming block with index \p Idx.
   const VPBasicBlock *getIncomingBlock(unsigned Idx) const;
 
-  /// Returns the number of incoming values, also number of incoming blocks.
-  unsigned getNumIncoming() const { return getAsRecipe()->getNumOperands(); }
+  unsigned getNumIncoming() const {
+    auto *R = getAsRecipe();
+    return R->getVPDefID() == VPDef::VPWidenIntOrFpInductionSC
+               ? 1
+               : R->getNumOperands();
+  }
+
+  /// Returns an interator range over the incoming values
+  VPUser::const_operand_range incoming_values() const {
+    return getAsRecipe()->operands();
+  }
+
+  using const_incoming_block_iterator =
+      mapped_iterator<detail::index_iterator,
+                      std::function<const VPBasicBlock *(size_t)>>;
+  using const_incoming_blocks_range =
+      iterator_range<const_incoming_block_iterator>;
+
+  const_incoming_block_iterator incoming_block_begin() const {
+    return const_incoming_block_iterator(
+        detail::index_iterator(0),
+        [this](size_t Idx) { return getIncomingBlock(Idx); });
+  }
+  const_incoming_block_iterator incoming_block_end() const {
+    return const_incoming_block_iterator(
+        detail::index_iterator(getNumIncoming()),
+        [this](size_t Idx) { return getIncomingBlock(Idx); });
+  }
+
+  /// Returns an iterator range over the incoming blocks.
+  const_incoming_blocks_range incoming_blocks() const {
+    return make_range(incoming_block_begin(), incoming_block_end());
+  }
+
+  /// Returns an iterator range over pairs of incoming values and corresponding
+  /// incoming blocks.
+  detail::zippy<llvm::detail::zip_shortest, VPUser::const_operand_range,
+                const_incoming_blocks_range>
+  incoming_values_and_blocks() const {
+    return zip(incoming_values(), incoming_blocks());
+  }
 };
 
 /// An overlay for VPIRInstructions wrapping PHI nodes enabling convenient use
 /// cast/dyn_cast/isa and execute() implementation. A single VPValue operand is
 /// allowed, and it is used to add a new incoming value for the single
 /// predecessor VPBB.
-struct VPIRPhi : public VPIRInstruction {
+struct VPIRPhi : public VPIRInstruction, public VPPhiAccessors {
   VPIRPhi(PHINode &PN) : VPIRInstruction(PN) {}
 
   static inline bool classof(const VPRecipeBase *U) {
@@ -1224,6 +1263,9 @@ struct VPIRPhi : public VPIRInstruction {
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
+
+protected:
+  const VPRecipeBase *getAsRecipe() const override { return this; }
 };
 
 /// Helper to manage IR metadata for recipes. It filters out metadata that
@@ -1749,12 +1791,14 @@ public:
 ///  * VPWidenPointerInductionRecipe: Generate vector and scalar values for a
 ///    pointer induction. Produces either a vector PHI per-part or scalar values
 ///    per-lane based on the canonical induction.
-class VPHeaderPHIRecipe : public VPSingleDefRecipe {
+class VPHeaderPHIRecipe : public VPSingleDefRecipe, public VPPhiAccessors {
 protected:
   VPHeaderPHIRecipe(unsigned char VPDefID, Instruction *UnderlyingInstr,
                     VPValue *Start, DebugLoc DL = {})
       : VPSingleDefRecipe(VPDefID, ArrayRef<VPValue *>({Start}), UnderlyingInstr, DL) {
   }
+
+  const VPRecipeBase *getAsRecipe() const override { return this; }
 
 public:
   ~VPHeaderPHIRecipe() override = default;
@@ -3239,6 +3283,46 @@ public:
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return true;
+  }
+};
+
+/// Casting from VPRecipeBase -> VPPhiAccessors is supported for all recipe
+/// types implementing VPPhiAccessors.
+template <> struct CastIsPossible<VPPhiAccessors, const VPRecipeBase *> {
+  static inline bool isPossible(const VPRecipeBase *f) {
+    return isa<VPIRPhi, VPHeaderPHIRecipe, VPWidenPHIRecipe>(f);
+  }
+};
+/// Support casting from VPRecipeBase -> VPPhiAccessors, by down-casting to the
+/// recipe types implementing VPPhiAccessors.
+template <>
+struct CastInfo<VPPhiAccessors, const VPRecipeBase *>
+    : public CastIsPossible<VPPhiAccessors, const VPRecipeBase *> {
+
+  using Self = CastInfo<VPPhiAccessors, const VPRecipeBase *>;
+
+  using CastReturnType =
+      typename cast_retty<VPPhiAccessors, VPRecipeBase *>::ret_type;
+
+  static inline VPPhiAccessors *doCast(const VPRecipeBase *R) {
+    return const_cast<VPPhiAccessors *>([R]() -> const VPPhiAccessors * {
+      switch (R->getVPDefID()) {
+      case VPDef::VPIRInstructionSC:
+        return cast<VPIRPhi>(R);
+      case VPDef::VPWidenPHISC:
+        return cast<VPWidenPHIRecipe>(R);
+      default:
+        return cast<VPHeaderPHIRecipe>(R);
+      }
+    }());
+  }
+
+  static inline VPPhiAccessors *castFailed() { return nullptr; }
+
+  static inline VPPhiAccessors *doCastIfPossible(const VPRecipeBase *f) {
+    if (!Self::isPossible(f))
+      return castFailed();
+    return doCast(f);
   }
 };
 
