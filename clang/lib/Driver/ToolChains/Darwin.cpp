@@ -2718,6 +2718,27 @@ void AppleMachO::AddClangSystemIncludeArgs(
   }
 }
 
+void DarwinClang::AddClangSystemIncludeArgs(
+    const llvm::opt::ArgList &DriverArgs,
+    llvm::opt::ArgStringList &CC1Args) const {
+  AppleMachO::AddClangSystemIncludeArgs(DriverArgs, CC1Args);
+
+  if (DriverArgs.hasArg(options::OPT_nostdinc) ||
+      DriverArgs.hasArg(options::OPT_nostdlibinc))
+    return;
+
+  llvm::SmallString<128> Sysroot = GetEffectiveSysroot(DriverArgs);
+
+  // Add <sysroot>/System/Library/Frameworks
+  // Add <sysroot>/System/Library/SubFrameworks
+  // Add <sysroot>/Library/Frameworks
+  SmallString<128> P1(Sysroot), P2(Sysroot), P3(Sysroot);
+  llvm::sys::path::append(P1, "System", "Library", "Frameworks");
+  llvm::sys::path::append(P2, "System", "Library", "SubFrameworks");
+  llvm::sys::path::append(P3, "Library", "Frameworks");
+  addSystemFrameworkIncludes(DriverArgs, CC1Args, {P1, P2, P3});
+}
+
 bool DarwinClang::AddGnuCPlusPlusIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                               llvm::opt::ArgStringList &CC1Args,
                                               llvm::SmallString<128> Base,

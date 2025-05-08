@@ -67,14 +67,15 @@ static bool skipArgs(const char *Flag, bool HaveCrashVFS, int &SkipNum,
     return true;
 
   // Some include flags shouldn't be skipped if we have a crash VFS
-  IsInclude = llvm::StringSwitch<bool>(Flag)
-    .Cases("-include", "-header-include-file", true)
-    .Cases("-idirafter", "-internal-isystem", "-iwithprefix", true)
-    .Cases("-internal-externc-isystem", "-iprefix", true)
-    .Cases("-iwithprefixbefore", "-isystem", "-iquote", true)
-    .Cases("-isysroot", "-I", "-F", "-resource-dir", true)
-    .Cases("-iframework", "-include-pch", true)
-    .Default(false);
+  IsInclude =
+      llvm::StringSwitch<bool>(Flag)
+          .Cases("-include", "-header-include-file", true)
+          .Cases("-idirafter", "-internal-isystem", "-iwithprefix", true)
+          .Cases("-internal-externc-isystem", "-iprefix", true)
+          .Cases("-iwithprefixbefore", "-isystem", "-iquote", true)
+          .Cases("-isysroot", "-I", "-F", "-resource-dir", true)
+          .Cases("-internal-iframework", "-iframework", "-include-pch", true)
+          .Default(false);
   if (IsInclude)
     return !HaveCrashVFS;
   if (StringRef(Flag).starts_with("-index-store-path"))
