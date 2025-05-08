@@ -445,14 +445,18 @@ struct LinearizeVectorSplat final
   }
 };
 
-/// This pattern converts the CreateMaskOp to work on a
-/// linearized vector. The pattern currently
-/// supports only 2D masks with a unit outer dimension.
+/// This pattern converts the CreateMaskOp to work on a linearized vector.
+//  The pattern currently supports only 2D masks with a unit outer dimension.
 /// Following,
-///   vector.create_mask %dims : vector<1x4xi1>
+///   vector.create_mask %arg0, %arg1 : vector<1x4xi1>
 /// is converted to:
-///   %out_1d = vector.create_mask %dims : vector<4xi1>
-///   %out_nd = vector.shape_cast %out_1d : vector<4xi1> to vector<1x4xi1>
+///   %zero = arith.constant 0 : index
+///   %cmpi = arith.cmpi sle, %arg0, %zero : index
+///   %splat = vector.splat %cmpi : vector<4xi1>
+///   %cst = arith.constant dense<false> : vector<4xi1>
+///   %mask = vector.create_mask %arg1 : vector<4xi1>
+///   %out = arith.select %splat, %cst, %mask : vector<4xi1>
+///   %out_1d = vector.shape_cast %out : vector<4xi1> to vector<1x4xi1>
 struct LinearizeVectorCreateMask final
     : OpConversionPattern<vector::CreateMaskOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -464,7 +468,8 @@ struct LinearizeVectorCreateMask final
   LogicalResult
   matchAndRewrite(vector::CreateMaskOp createMaskOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto srcTy = createMaskOp.getType();
+    Location loc = createMaskOp.getLoc();
+    VectorType srcTy = createMaskOp.getType();
     auto srcShape = srcTy.getShape();
     if (srcShape.size() != 2)
       return rewriter.notifyMatchFailure(createMaskOp,
@@ -482,21 +487,19 @@ struct LinearizeVectorCreateMask final
     // create a zero mask, else strip the first operand and create a mask
     // using the second operand.
     auto firstOperand = adaptor.getOperands().front();
-    auto zero =
-        rewriter.create<mlir::arith::ConstantIndexOp>(createMaskOp.getLoc(), 0);
+    auto zero = rewriter.create<mlir::arith::ConstantIndexOp>(loc, 0);
     auto isZeroOrNegative = rewriter.create<mlir::arith::CmpIOp>(
-        createMaskOp.getLoc(), mlir::arith::CmpIPredicate::sle, firstOperand,
-        zero);
-    auto isZeroOrNegativeSplat = rewriter.create<mlir::vector::SplatOp>(
-        createMaskOp.getLoc(), dstTy, isZeroOrNegative);
+        loc, mlir::arith::CmpIPredicate::sle, firstOperand, zero);
+    auto isZeroOrNegativeSplat =
+        rewriter.create<mlir::vector::SplatOp>(loc, dstTy, isZeroOrNegative);
 
     // Use a select operation to choose between the masks.
     auto zeroMask = rewriter.create<mlir::arith::ConstantOp>(
-        createMaskOp.getLoc(), dstTy, rewriter.getZeroAttr(dstTy));
+        loc, dstTy, rewriter.getZeroAttr(dstTy));
     auto newMask = rewriter.create<mlir::vector::CreateMaskOp>(
-        createMaskOp.getLoc(), dstTy, adaptor.getOperands().back());
+        loc, dstTy, adaptor.getOperands().back());
     auto result = rewriter.create<mlir::arith::SelectOp>(
-        createMaskOp.getLoc(), isZeroOrNegativeSplat, zeroMask, newMask);
+        loc, isZeroOrNegativeSplat, zeroMask, newMask);
 
     rewriter.replaceOp(createMaskOp, result.getResult());
     return success();

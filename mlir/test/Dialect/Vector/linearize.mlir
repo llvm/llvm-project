@@ -350,18 +350,18 @@ func.func @linearize_scalable_vector_splat(%arg0: i32) -> vector<4x[2]xi32> {
 // ALL-LABEL: linearize_create_mask
 func.func @linearize_create_mask() -> vector<1x16xi1> {
   // CHECK: %[[C0:.*]] = arith.constant 0 : index
-  // CHECK: %[[C20:.*]] = arith.constant 20 : index
+  // CHECK: %[[C10:.*]] = arith.constant 10 : index
   // CHECK: %[[C0_0:.*]] = arith.constant 0 : index
   // CHECK: %[[CMP:.*]] = arith.cmpi sle, %[[C0]], %[[C0_0]] : index
   // CHECK: %[[SPLAT:.*]] = vector.splat %[[CMP]] : vector<16xi1>
   // CHECK: %[[CST:.*]] = arith.constant dense<false> : vector<16xi1>
-  // CHECK: %[[MASK_1D:.*]] = vector.create_mask %[[C20]] : vector<16xi1>
+  // CHECK: %[[MASK_1D:.*]] = vector.create_mask %[[C10]] : vector<16xi1>
   // CHECK: %[[SELECT:.*]] = arith.select %[[SPLAT]], %[[CST]], %[[MASK_1D]] : vector<16xi1>, vector<16xi1>
   // CHECK: %[[CAST:.*]] = vector.shape_cast %[[SELECT]] : vector<16xi1> to vector<1x16xi1>
   // CHECK: return %[[CAST]] : vector<1x16xi1>
   %c0 = arith.constant 0 : index
-  %c20 = arith.constant 20 : index
-  %0 = vector.create_mask %c0, %c20 : vector<1x16xi1>
+  %c10 = arith.constant 10 : index
+  %0 = vector.create_mask %c0, %c10 : vector<1x16xi1>
   return %0 : vector<1x16xi1>
 }
 
@@ -369,17 +369,17 @@ func.func @linearize_create_mask() -> vector<1x16xi1> {
 // ALL-LABEL: linearize_scalable_create_mask
 func.func @linearize_scalable_create_mask() -> vector<1x[16]xi1> {
   // CHECK: %[[C0:.*]] = arith.constant 0 : index
-  // CHECK: %[[C20:.*]] = arith.constant 20 : index
+  // CHECK: %[[C10:.*]] = arith.constant 10 : index
   // CHECK: %[[C0_0:.*]] = arith.constant 0 : index
   // CHECK: %[[CMP:.*]] = arith.cmpi sle, %[[C0]], %[[C0_0]] : index
   // CHECK: %[[SPLAT:.*]] = vector.splat %[[CMP]] : vector<[16]xi1>
   // CHECK: %[[CST:.*]] = arith.constant dense<false> : vector<[16]xi1>
-  // CHECK: %[[MASK_1D:.*]] = vector.create_mask %[[C20]] : vector<[16]xi1>
+  // CHECK: %[[MASK_1D:.*]] = vector.create_mask %[[C10]] : vector<[16]xi1>
   // CHECK: %[[SELECT:.*]] = arith.select %[[SPLAT]], %[[CST]], %[[MASK_1D]] : vector<[16]xi1>, vector<[16]xi1>
   // CHECK: %[[CAST:.*]] = vector.shape_cast %[[SELECT]] : vector<[16]xi1> to vector<1x[16]xi1>
   // CHECK: return %[[CAST]] : vector<1x[16]xi1>
   %c0 = arith.constant 0 : index
-  %c20 = arith.constant 20 : index
-  %0 = vector.create_mask %c0, %c20 : vector<1x[16]xi1>
+  %c10 = arith.constant 10 : index
+  %0 = vector.create_mask %c0, %c10 : vector<1x[16]xi1>
   return %0 : vector<1x[16]xi1>
 }
