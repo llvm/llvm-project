@@ -1,5 +1,3 @@
-! REQUIRES : openmp_runtime
-
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
 
 ! CHECK: func.func @_QPatomic_implicit_cast_read() {
