@@ -14,7 +14,7 @@ define i32 @szext_wrap_u32(i32 %a, i32 %b) {
 ; CHECK-NEXT:    szext.wrap.u32 %r3, %r1, %r2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
-  %c = call i32 @llvm.nvvm.zext.inreg.wrap(i32 %a, i32 %b)
+  %c = call i32 @llvm.nvvm.zext.wrap(i32 %a, i32 %b)
   ret i32 %c
 }
 
@@ -29,7 +29,7 @@ define i32 @szext_clamp_u32(i32 %a, i32 %b) {
 ; CHECK-NEXT:    szext.clamp.u32 %r3, %r1, %r2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
-  %c = call i32 @llvm.nvvm.zext.inreg.clamp(i32 %a, i32 %b)
+  %c = call i32 @llvm.nvvm.zext.clamp(i32 %a, i32 %b)
   ret i32 %c
 }
 
@@ -44,7 +44,7 @@ define i32 @szext_wrap_s32(i32 %a, i32 %b) {
 ; CHECK-NEXT:    szext.wrap.s32 %r3, %r1, %r2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
-  %c = call i32 @llvm.nvvm.sext.inreg.wrap(i32 %a, i32 %b)
+  %c = call i32 @llvm.nvvm.sext.wrap(i32 %a, i32 %b)
   ret i32 %c
 }
 
@@ -59,7 +59,48 @@ define i32 @szext_clamp_s32(i32 %a, i32 %b) {
 ; CHECK-NEXT:    szext.clamp.s32 %r3, %r1, %r2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
-  %c = call i32 @llvm.nvvm.sext.inreg.clamp(i32 %a, i32 %b)
+  %c = call i32 @llvm.nvvm.sext.clamp(i32 %a, i32 %b)
   ret i32 %c
 }
 
+define i32 @szext_clamp_s32_ii() {
+; CHECK-LABEL: szext_clamp_s32_ii(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    mov.b32 %r1, 3;
+; CHECK-NEXT:    szext.clamp.s32 %r2, %r1, 4;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ret;
+  %c = call i32 @llvm.nvvm.sext.clamp(i32 3, i32 4)
+  ret i32 %c
+}
+
+define i32 @szext_wrap_s32_ir(i32 %a) {
+; CHECK-LABEL: szext_wrap_s32_ir(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u32 %r1, [szext_wrap_s32_ir_param_0];
+; CHECK-NEXT:    szext.wrap.s32 %r2, 5, %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ret;
+  %c = call i32 @llvm.nvvm.sext.wrap(i32 5, i32 %a)
+  ret i32 %c
+}
+
+define i32 @szext_clamp_u32_ri(i32 %a) {
+; CHECK-LABEL: szext_clamp_u32_ri(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u32 %r1, [szext_clamp_u32_ri_param_0];
+; CHECK-NEXT:    szext.clamp.u32 %r2, %r1, 7;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ret;
+  %c = call i32 @llvm.nvvm.zext.clamp(i32 %a, i32 7)
+  ret i32 %c
+}

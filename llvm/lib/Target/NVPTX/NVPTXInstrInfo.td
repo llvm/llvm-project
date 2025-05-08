@@ -227,6 +227,7 @@ class RegTyInfo<ValueType ty, NVPTXRegClass rc, Operand imm, SDNode imm_node,
   int Size = ty.Size;
 }
 
+def I1RT     : RegTyInfo<i1,  Int1Regs,  i1imm,  imm>;
 def I16RT    : RegTyInfo<i16, Int16Regs, i16imm, imm>;
 def I32RT    : RegTyInfo<i32, Int32Regs, i32imm, imm>;
 def I64RT    : RegTyInfo<i64, Int64Regs, i64imm, imm>;
@@ -252,13 +253,13 @@ multiclass I3Inst<string op_str, SDPatternOperator op_node, RegTyInfo t,
   def ri :
     NVPTXInst<(outs t.RC:$dst), (ins t.RC:$a, t.Imm:$b),
               asmstr,
-              [(set t.Ty:$dst, (op_node t.RC:$a, imm:$b))]>,
+              [(set t.Ty:$dst, (op_node t.Ty:$a, (t.Ty imm:$b)))]>,
               Requires<requires>;
   if !not(commutative) then
     def ir :
       NVPTXInst<(outs t.RC:$dst), (ins t.Imm:$a, t.RC:$b),
                 asmstr,
-                [(set t.Ty:$dst, (op_node imm:$a, t.RC:$b))]>,
+                [(set t.Ty:$dst, (op_node (t.Ty imm:$a), t.Ty:$b))]>,
                 Requires<requires>;
 }
 
@@ -833,8 +834,8 @@ defm SUB_i1 : ADD_SUB_i1<sub>;
 
 // int16, int32, and int64 signed addition.  Since nvptx is 2's complement, we
 // also use these for unsigned arithmetic.
-defm ADD : I3<"add.s", add, /*commutative=*/ true>;
-defm SUB : I3<"sub.s", sub, /*commutative=*/ false>;
+defm ADD : I3<"add.s", add, commutative = true>;
+defm SUB : I3<"sub.s", sub, commutative = false>;
 
 def ADD16x2 : I16x2<"add.s", add>;
 
@@ -846,18 +847,18 @@ defm SUBCC : ADD_SUB_INT_CARRY<"sub.cc", subc, commutative = false>;
 defm ADDCCC : ADD_SUB_INT_CARRY<"addc.cc", adde, commutative = true>;
 defm SUBCCC : ADD_SUB_INT_CARRY<"subc.cc", sube, commutative = false>;
 
-defm MULT : I3<"mul.lo.s", mul, /*commutative=*/ true>;
+defm MULT : I3<"mul.lo.s", mul, commutative = true>;
 
-defm MULTHS : I3<"mul.hi.s", mulhs, /*commutative=*/ true>;
-defm MULTHU : I3<"mul.hi.u", mulhu, /*commutative=*/ true>;
+defm MULTHS : I3<"mul.hi.s", mulhs, commutative = true>;
+defm MULTHU : I3<"mul.hi.u", mulhu, commutative = true>;
 
-defm SDIV : I3<"div.s", sdiv, /*commutative=*/ false>;
-defm UDIV : I3<"div.u", udiv, /*commutative=*/ false>;
+defm SDIV : I3<"div.s", sdiv, commutative = false>;
+defm UDIV : I3<"div.u", udiv, commutative = false>;
 
 // The ri versions of rem.s and rem.u won't be selected; DAGCombiner::visitSREM
 // will lower it.
-defm SREM : I3<"rem.s", srem, /*commutative=*/ false>;
-defm UREM : I3<"rem.u", urem, /*commutative=*/ false>;
+defm SREM : I3<"rem.s", srem, commutative = false>;
+defm UREM : I3<"rem.u", urem, commutative = false>;
 
 // Integer absolute value.  NumBits should be one minus the bit width of RC.
 // This idiom implements the algorithm at
@@ -872,10 +873,10 @@ defm ABS_32 : ABS<i32, Int32Regs, ".s32">;
 defm ABS_64 : ABS<i64, Int64Regs, ".s64">;
 
 // Integer min/max.
-defm SMAX : I3<"max.s", smax, /*commutative=*/ true>;
-defm UMAX : I3<"max.u", umax, /*commutative=*/ true>;
-defm SMIN : I3<"min.s", smin, /*commutative=*/ true>;
-defm UMIN : I3<"min.u", umin, /*commutative=*/ true>;
+defm SMAX : I3<"max.s", smax, commutative = true>;
+defm UMAX : I3<"max.u", umax, commutative = true>;
+defm SMIN : I3<"min.s", smin, commutative = true>;
+defm UMIN : I3<"min.u", umin, commutative = true>;
 
 def SMAX16x2 : I16x2<"max.s", smax>;
 def UMAX16x2 : I16x2<"max.u", umax>;
@@ -1385,38 +1386,10 @@ def COSF:  NVPTXInst<(outs Float32Regs:$dst), (ins Float32Regs:$src),
 // Template for three-arg bitwise operations.  Takes three args, Creates .b16,
 // .b32, .b64, and .pred (predicate registers -- i.e., i1) versions of OpcStr.
 multiclass BITWISE<string OpcStr, SDNode OpNode> {
-  def b1rr :
-    NVPTXInst<(outs Int1Regs:$dst), (ins Int1Regs:$a, Int1Regs:$b),
-              !strconcat(OpcStr, ".pred  \t$dst, $a, $b;"),
-              [(set i1:$dst, (OpNode i1:$a, i1:$b))]>;
-  def b1ri :
-    NVPTXInst<(outs Int1Regs:$dst), (ins Int1Regs:$a, i1imm:$b),
-              !strconcat(OpcStr, ".pred  \t$dst, $a, $b;"),
-              [(set i1:$dst, (OpNode i1:$a, imm:$b))]>;
-  def b16rr :
-    NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$a, Int16Regs:$b),
-              !strconcat(OpcStr, ".b16  \t$dst, $a, $b;"),
-              [(set i16:$dst, (OpNode i16:$a, i16:$b))]>;
-  def b16ri :
-    NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$a, i16imm:$b),
-              !strconcat(OpcStr, ".b16  \t$dst, $a, $b;"),
-              [(set i16:$dst, (OpNode i16:$a, imm:$b))]>;
-  def b32rr :
-    NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$a, Int32Regs:$b),
-              !strconcat(OpcStr, ".b32  \t$dst, $a, $b;"),
-              [(set i32:$dst, (OpNode i32:$a, i32:$b))]>;
-  def b32ri :
-    NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$a, i32imm:$b),
-              !strconcat(OpcStr, ".b32  \t$dst, $a, $b;"),
-              [(set i32:$dst, (OpNode i32:$a, imm:$b))]>;
-  def b64rr :
-    NVPTXInst<(outs Int64Regs:$dst), (ins Int64Regs:$a, Int64Regs:$b),
-              !strconcat(OpcStr, ".b64  \t$dst, $a, $b;"),
-              [(set i64:$dst, (OpNode i64:$a, i64:$b))]>;
-  def b64ri :
-    NVPTXInst<(outs Int64Regs:$dst), (ins Int64Regs:$a, i64imm:$b),
-              !strconcat(OpcStr, ".b64  \t$dst, $a, $b;"),
-              [(set i64:$dst, (OpNode i64:$a, imm:$b))]>;
+  defm b1 : I3Inst<OpcStr # ".pred", OpNode, I1RT, commutative = true>;
+  defm b16 : I3Inst<OpcStr # ".b16", OpNode, I16RT, commutative = true>;
+  defm b32 : I3Inst<OpcStr # ".b32", OpNode, I32RT, commutative = true>;
+  defm b64 : I3Inst<OpcStr # ".b64", OpNode, I64RT, commutative = true>;
 }
 
 defm OR  : BITWISE<"or", or>;

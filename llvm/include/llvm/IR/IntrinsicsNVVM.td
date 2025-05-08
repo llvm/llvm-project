@@ -1362,7 +1362,7 @@ let TargetPrefix = "nvvm" in {
 //
   foreach ext = ["sext", "zext"] in
     foreach mode = ["wrap", "clamp"] in
-      def int_nvvm_ # ext # _inreg_ # mode :
+      def int_nvvm_ # ext # _ # mode :
         DefaultAttrsIntrinsic<[llvm_i32_ty],
           [llvm_i32_ty, llvm_i32_ty],
           [IntrNoMem, IntrSpeculatable]>;
