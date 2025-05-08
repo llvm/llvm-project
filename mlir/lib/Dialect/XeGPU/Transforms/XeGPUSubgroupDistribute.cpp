@@ -1463,6 +1463,15 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
       signalPassFailure();
       return;
     }
+    // At this point, we have moved the entire function body inside the warpOp.
+    // Now move any scalar uniform code outside of the warpOp (like GPU index
+    // ops, scalar constants, etc.). This will simplify the later lowering and
+    // avoid custom patterns for these ops.
+    getOperation()->walk([&](Operation *op) {
+      if (auto warpOp = dyn_cast<gpu::WarpExecuteOnLane0Op>(op)) {
+        vector::moveScalarUniformCode(warpOp);
+      }
+    });
   }
   // Finally, do the SIMD to SIMT distribution.
   RewritePatternSet patterns(&getContext());
