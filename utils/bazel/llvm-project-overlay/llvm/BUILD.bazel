@@ -2456,6 +2456,7 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/XCore/XCoreGenDisassemblerTables.inc": ["-gen-disassembler"],
             "lib/Target/XCore/XCoreGenInstrInfo.inc": ["-gen-instr-info"],
             "lib/Target/XCore/XCoreGenRegisterInfo.inc": ["-gen-register-info"],
+            "lib/Target/XCore/XCoreGenSDNodeInfo.inc": ["-gen-sd-node-info"],
             "lib/Target/XCore/XCoreGenSubtargetInfo.inc": ["-gen-subtarget"],
         },
     },
