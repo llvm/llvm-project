@@ -575,10 +575,7 @@ void mlir::configureImitateUnsupportedTypesLegality(
   target.markUnknownOpDynamicallyLegal([&typeConverter](Operation *op) -> bool {
     // Check if the operation is inside a gpu.module.
     if (op->getParentOfType<gpu::GPUModuleOp>()) {
-      // Check if the operation has any operands of type MemRefType.
       return typeConverter.isLegal(op);
-      // If no operands are of type MemRefType, mark it as illegal.
-      return true;
     }
     return true; // If not in gpu.module, mark it as legal.
   });
