@@ -56,6 +56,20 @@ static bool optimizeSQRT(CallInst *Call, Function *CalledFunc,
   // dst = phi(v0, v1)
   //
 
+  ORE->emit([&]() {
+    return OptimizationRemark(DEBUG_TYPE, "SqrtPartiallyInlined",
+                              Call->getDebugLoc(), &CurrBB)
+           << "Partially inlined call to sqrt function despite having to use "
+              "errno for error handling: target has fast sqrt instruction";
+  });
+  ORE->emit([&]() {
+    return OptimizationRemarkMissed(DEBUG_TYPE, "BranchInserted",
+                                    Call->getDebugLoc(), &CurrBB)
+           << "Branch to library sqrt fn had to be inserted to satisfy the "
+              "current target's requirement for math functions to set errno on "
+              "invalid inputs";
+  });
+
   Type *Ty = Call->getType();
   IRBuilder<> Builder(Call->getNextNode());
 
@@ -125,11 +139,29 @@ static bool runPartiallyInlineLibCalls(Function &F, TargetLibraryInfo *TLI,
       if (!Call || !(CalledFunc = Call->getCalledFunction()))
         continue;
 
-      if (Call->isNoBuiltin() || Call->isStrictFP())
+      if (Call->isNoBuiltin())
         continue;
-
-      if (Call->isMustTailCall())
+      if (Call->isStrictFP()) {
+        ORE->emit([&]() {
+          return OptimizationRemarkMissed(DEBUG_TYPE, "StrictFloat",
+                                          Call->getDebugLoc(), &*CurrBB)
+                 << "Could not consider library function for partial inlining:"
+                    " strict FP exception behavior is active";
+        });
         continue;
+      }
+      // Partially inlining a libcall that has the musttail attribute leads to
+      // broken LLVM IR, triggering an assertion in the IR verifier.
+      // Work around that by forgoing this optimization for musttail calls.
+      if (Call->isMustTailCall()) {
+        ORE->emit([&]() {
+          return OptimizationRemarkMissed(DEBUG_TYPE, "MustTailCall",
+                                          Call->getDebugLoc(), &*CurrBB)
+                 << "Could not consider library function for partial inlining:"
+                    " must tail call";
+        });
+        continue;
+      }
 
       // Skip if function either has local linkage or is not a known library
       // function.
