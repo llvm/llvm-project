@@ -2045,12 +2045,11 @@ SDValue NVPTXTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   if (STI.getPTXVersion() < 73 || STI.getSmVersion() < 52) {
     const Function &Fn = DAG.getMachineFunction().getFunction();
 
-    DiagnosticInfoUnsupported NoDynamicAlloca(
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
         Fn,
         "Support for dynamic alloca introduced in PTX ISA version 7.3 and "
         "requires target sm_52.",
-        SDLoc(Op).getDebugLoc());
-    DAG.getContext()->diagnose(NoDynamicAlloca);
+        SDLoc(Op).getDebugLoc()));
     auto Ops = {DAG.getConstant(0, SDLoc(), Op.getValueType()),
                 Op.getOperand(0)};
     return DAG.getMergeValues(Ops, SDLoc());
@@ -2076,12 +2075,11 @@ SDValue NVPTXTargetLowering::LowerSTACKRESTORE(SDValue Op,
   if (STI.getPTXVersion() < 73 || STI.getSmVersion() < 52) {
     const Function &Fn = DAG.getMachineFunction().getFunction();
 
-    DiagnosticInfoUnsupported NoStackRestore(
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
         Fn,
         "Support for stackrestore requires PTX ISA version >= 7.3 and target "
         ">= sm_52.",
-        DL.getDebugLoc());
-    DAG.getContext()->diagnose(NoStackRestore);
+        DL.getDebugLoc()));
     return Op.getOperand(0);
   }
 
@@ -2099,12 +2097,11 @@ SDValue NVPTXTargetLowering::LowerSTACKSAVE(SDValue Op,
   if (STI.getPTXVersion() < 73 || STI.getSmVersion() < 52) {
     const Function &Fn = DAG.getMachineFunction().getFunction();
 
-    DiagnosticInfoUnsupported NoStackSave(
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
         Fn,
         "Support for stacksave requires PTX ISA version >= 7.3 and target >= "
         "sm_52.",
-        DL.getDebugLoc());
-    DAG.getContext()->diagnose(NoStackSave);
+        DL.getDebugLoc()));
     auto Ops = {DAG.getConstant(0, DL, Op.getValueType()), Op.getOperand(0)};
     return DAG.getMergeValues(Ops, DL);
   }

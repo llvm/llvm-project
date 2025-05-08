@@ -2849,9 +2849,8 @@ SDValue SITargetLowering::LowerFormalArguments(
   bool IsError = false;
 
   if (Subtarget->isAmdHsaOS() && AMDGPU::isGraphics(CallConv)) {
-    DiagnosticInfoUnsupported NoGraphicsHSA(
-        Fn, "unsupported non-compute shaders with HSA", DL.getDebugLoc());
-    DAG.getContext()->diagnose(NoGraphicsHSA);
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+        Fn, "unsupported non-compute shaders with HSA", DL.getDebugLoc()));
     IsError = true;
   }
 
@@ -3075,11 +3074,10 @@ SDValue SITargetLowering::LowerFormalArguments(
         if (Arg.isOrigArg()) {
           Argument *OrigArg = Fn.getArg(Arg.getOrigArgIndex());
           if (OrigArg->hasAttribute("amdgpu-hidden-argument")) {
-            DiagnosticInfoUnsupported NonPreloadHiddenArg(
+            DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
                 *OrigArg->getParent(),
                 "hidden argument in kernel signature was not preloaded",
-                DL.getDebugLoc());
-            DAG.getContext()->diagnose(NonPreloadHiddenArg);
+                DL.getDebugLoc()));
           }
         }
 
@@ -7297,11 +7295,10 @@ SDValue SITargetLowering::lowerDEBUGTRAP(SDValue Op, SelectionDAG &DAG) const {
 
   if (!Subtarget->isTrapHandlerEnabled() ||
       Subtarget->getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA) {
-    DiagnosticInfoUnsupported NoTrap(MF.getFunction(),
-                                     "debugtrap handler not supported",
-                                     Op.getDebugLoc(), DS_Warning);
     LLVMContext &Ctx = MF.getFunction().getContext();
-    Ctx.diagnose(NoTrap);
+    Ctx.diagnose(DiagnosticInfoUnsupported(MF.getFunction(),
+                                           "debugtrap handler not supported",
+                                           Op.getDebugLoc(), DS_Warning));
     return Chain;
   }
 
@@ -8074,19 +8071,17 @@ SDValue SITargetLowering::lowerImplicitZextParam(SelectionDAG &DAG, SDValue Op,
 
 static SDValue emitNonHSAIntrinsicError(SelectionDAG &DAG, const SDLoc &DL,
                                         EVT VT) {
-  DiagnosticInfoUnsupported BadIntrin(DAG.getMachineFunction().getFunction(),
-                                      "non-hsa intrinsic with hsa target",
-                                      DL.getDebugLoc());
-  DAG.getContext()->diagnose(BadIntrin);
+  DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+      DAG.getMachineFunction().getFunction(),
+      "non-hsa intrinsic with hsa target", DL.getDebugLoc()));
   return DAG.getPOISON(VT);
 }
 
 static SDValue emitRemovedIntrinsicError(SelectionDAG &DAG, const SDLoc &DL,
                                          EVT VT) {
-  DiagnosticInfoUnsupported BadIntrin(DAG.getMachineFunction().getFunction(),
-                                      "intrinsic not supported on subtarget",
-                                      DL.getDebugLoc());
-  DAG.getContext()->diagnose(BadIntrin);
+  DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+      DAG.getMachineFunction().getFunction(),
+      "intrinsic not supported on subtarget", DL.getDebugLoc()));
   return DAG.getPOISON(VT);
 }
 
@@ -8795,10 +8790,9 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_dispatch_ptr:
   case Intrinsic::amdgcn_queue_ptr: {
     if (!Subtarget->isAmdHsaOrMesa(MF.getFunction())) {
-      DiagnosticInfoUnsupported BadIntrin(
+      DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
           MF.getFunction(), "unsupported hsa intrinsic without hsa target",
-          DL.getDebugLoc());
-      DAG.getContext()->diagnose(BadIntrin);
+          DL.getDebugLoc()));
       return DAG.getPOISON(VT);
     }
 
@@ -9907,10 +9901,9 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   switch (IntrinsicID) {
   case Intrinsic::amdgcn_exp_compr: {
     if (!Subtarget->hasCompressedExport()) {
-      DiagnosticInfoUnsupported BadIntrin(
+      DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
           DAG.getMachineFunction().getFunction(),
-          "intrinsic not supported on subtarget", DL.getDebugLoc());
-      DAG.getContext()->diagnose(BadIntrin);
+          "intrinsic not supported on subtarget", DL.getDebugLoc()));
     }
     SDValue Src0 = Op.getOperand(4);
     SDValue Src1 = Op.getOperand(5);
