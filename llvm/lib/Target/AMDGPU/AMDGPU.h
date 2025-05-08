@@ -552,8 +552,7 @@ extern char &AMDGPUWaitSGPRHazardsLegacyID;
 
 FunctionPass *createAMDGPUTargetVerifierLegacyPass(bool FatalErrors);
 void initializeAMDGPUTargetVerifierLegacyPassPass(PassRegistry &);
-class AMDGPUTargetVerifierPass : public TargetVerifierPass {
-public:
+struct AMDGPUTargetVerifierPass : public TargetVerifierPass {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM) override;
 };
 

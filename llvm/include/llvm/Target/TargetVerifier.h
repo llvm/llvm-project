@@ -12,8 +12,8 @@
 // TargetVerifier looks for constructions invalid to a particular target
 // machine.
 //
-// To see what specifically is checked, look at TargetVerifier.cpp or an
-// individual backend's TargetVerifier.
+// To see what specifically is checked, look at an individual backend's
+// TargetVerifier.
 //
 //===----------------------------------------------------------------------===//
 
@@ -35,7 +35,7 @@ public:
 
 class TargetVerify {
 protected:
-  void WriteValues(ArrayRef<const Value *> Vs) {
+  void writeValues(ArrayRef<const Value *> Vs) {
     for (const Value *V : Vs) {
       if (!V)
         continue;
@@ -52,16 +52,16 @@ protected:
   ///
   /// This provides a nice place to put a breakpoint if you want to see why
   /// something is not correct.
-  void CheckFailed(const Twine &Message) { MessagesStr << Message << '\n'; }
+  void checkFailed(const Twine &Message) { MessagesStr << Message << '\n'; }
 
   /// A check failed (with values to print).
   ///
   /// This calls the Message-only version so that the above is easier to set
   /// a breakpoint on.
   template <typename T1, typename... Ts>
-  void CheckFailed(const Twine &Message, const T1 &V1, const Ts &...Vs) {
-    CheckFailed(Message);
-    WriteValues({V1, Vs...});
+  void checkFailed(const Twine &Message, const T1 &V1, const Ts &...Vs) {
+    checkFailed(Message);
+    writeValues({V1, Vs...});
   }
 
 public:
