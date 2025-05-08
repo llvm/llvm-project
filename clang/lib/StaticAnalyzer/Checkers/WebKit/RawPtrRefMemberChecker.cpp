@@ -201,7 +201,6 @@ public:
       return true;
 
     const auto Kind = RD->getTagKind();
-    // FIMXE: Should we check union members too?
     if (Kind != TagTypeKind::Struct && Kind != TagTypeKind::Class &&
         Kind != TagTypeKind::Union)
       return true;
