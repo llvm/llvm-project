@@ -52,13 +52,7 @@ fcmpImpliesClass(CmpInst::Predicate Pred, DenormalMode Mode, ValueTy LHS,
                  FPClassTest RHSClass, LookThroughFnTy LookThroughFn) {
   assert(RHSClass != fcNone);
 
-  ValueTy Invalid;
-  if constexpr (std::is_pointer_v<ValueTy>) {
-    Invalid = nullptr;
-  } else {
-    Invalid = ValueTy();
-  }
-
+  constexpr ValueTy Invalid = {};
   ValueTy Src = LHS;
 
   if (Pred == FCmpInst::FCMP_TRUE)
