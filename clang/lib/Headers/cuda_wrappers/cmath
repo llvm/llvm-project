@@ -63,9 +63,9 @@ __constexpr_fmax(long double __x, long double __y) _NOEXCEPT {
 
 template <class _Tp, class _Up, __enable_if_t<is_arithmetic<_Tp>::value && is_arithmetic<_Up>::value, int> = 0>
 __attribute__((device))
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 typename __promote<_Tp, _Up>::type
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __promote_t<_Tp, _Up>
 __constexpr_fmax(_Tp __x, _Up __y) _NOEXCEPT {
-  using __result_type = typename __promote<_Tp, _Up>::type;
+  using __result_type = __promote_t<_Tp, _Up>;
   return std::__constexpr_fmax(static_cast<__result_type>(__x), static_cast<__result_type>(__y));
 }
 #endif // _LIBCPP_STD_VER < 14
