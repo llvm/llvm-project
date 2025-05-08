@@ -17,7 +17,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Target/TargetVerify/AMDGPUTargetVerifier.h"
 #include "AMDGPU.h"
 
 #include "llvm/Analysis/PostDominators.h"
@@ -43,6 +42,21 @@ using namespace llvm;
   } while (false)
 
 namespace llvm {
+
+class AMDGPUTargetVerify : public TargetVerify {
+public:
+  DominatorTree *DT = nullptr;
+  PostDominatorTree *PDT = nullptr;
+  UniformityInfo *UA = nullptr;
+
+  AMDGPUTargetVerify(Module *Mod) : TargetVerify(Mod) {}
+
+  AMDGPUTargetVerify(Module *Mod, DominatorTree *DT, PostDominatorTree *PDT,
+                     UniformityInfo *UA)
+      : TargetVerify(Mod), DT(DT), PDT(PDT), UA(UA) {}
+
+  bool run(Function &F) override;
+};
 
 static bool isShader(CallingConv::ID CC) {
   switch (CC) {
