@@ -735,10 +735,21 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
     case eAddressTypeLoad: {
       ExecutionContext exe_ctx(GetExecutionContextRef());
       Process *process = exe_ctx.GetProcessPtr();
-      if (process) {
+      if (process && process->IsLiveDebugSession()) {
         heap_buf_ptr->SetByteSize(bytes);
         size_t bytes_read = process->ReadMemory(
             addr + offset, heap_buf_ptr->GetBytes(), bytes, error);
+        if (error.Success() || bytes_read > 0) {
+          data.SetData(data_sp);
+          return bytes_read;
+        }
+      } else if (Target *target = exe_ctx.GetTargetPtr()) {
+        Address target_addr;
+        target_addr.SetLoadAddress(addr + offset, target);
+        heap_buf_ptr->SetByteSize(bytes);
+        size_t bytes_read =
+            target->ReadMemory(target_addr, heap_buf_ptr->GetBytes(), bytes,
+                               error, /*force_live_memory=*/true);
         if (error.Success() || bytes_read > 0) {
           data.SetData(data_sp);
           return bytes_read;

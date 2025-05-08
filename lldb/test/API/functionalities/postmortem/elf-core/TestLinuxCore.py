@@ -977,6 +977,33 @@ class LinuxCoreTestCase(TestBase):
         self.assertEqual(process.GetCoreFile().GetFilename(), core_file_name)
         self.dbg.DeleteTarget(target)
 
+    @skipIfLLVMTargetMissing("X86")
+    def test_ro_cstring(self):
+        """
+        Test that we can show the summary for a cstring variable that points
+        to a r/o memory page which is not dumped to a core file.
+        """
+        target = self.dbg.CreateTarget("altmain2.out")
+        process = target.LoadCore("altmain2.core")
+        self.assertTrue(process, PROCESS_IS_VALID)
+
+        frame = process.GetSelectedThread().GetFrameAtIndex(0)
+        self.assertEqual(frame.GetFunctionName(), "_start")
+
+        var = frame.FindVariable("F")
+
+        # The variable points to a RO segment that is not dumped to the core
+        # file and thus process.ReadCStringFromMemory() cannot get the value.
+        error = lldb.SBError()
+        cstr = process.ReadCStringFromMemory(var.GetValueAsUnsigned(), 256, error)
+        self.assertFailure(error, error_str="core file does not contain 0x804a000")
+        self.assertEqual(cstr, "")
+
+        # Nevertheless, when getting the summary, the value can be read from the
+        # application binary.
+        cstr = var.GetSummary()
+        self.assertEqual(cstr, '"_start"')
+
     def check_memory_regions(self, process, region_count):
         region_list = process.GetMemoryRegions()
         self.assertEqual(region_list.GetSize(), region_count)
