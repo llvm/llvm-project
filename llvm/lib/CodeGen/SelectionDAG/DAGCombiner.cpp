@@ -23844,8 +23844,6 @@ SDValue DAGCombiner::createBuildVecShuffle(const SDLoc &DL, SDNode *N,
                                            ArrayRef<int> VectorMask,
                                            SDValue VecIn1, SDValue VecIn2,
                                            unsigned LeftIdx, bool DidSplitVec) {
-  SDValue ZeroIdx = DAG.getVectorIdxConstant(0, DL);
-
   EVT VT = N->getValueType(0);
   EVT InVT1 = VecIn1.getValueType();
   EVT InVT2 = VecIn2.getNode() ? VecIn2.getValueType() : InVT1;
@@ -23886,7 +23884,7 @@ SDValue DAGCombiner::createBuildVecShuffle(const SDLoc &DL, SDNode *N,
         // output, split it in two.
         VecIn2 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, VecIn1,
                              DAG.getVectorIdxConstant(NumElems, DL));
-        VecIn1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, VecIn1, ZeroIdx);
+        VecIn1 = DAG.getExtractSubvector(DL, VT, VecIn1, 0);
         // Since we now have shorter input vectors, adjust the offset of the
         // second vector's start.
         Vec2Offset = NumElems;
@@ -23908,8 +23906,7 @@ SDValue DAGCombiner::createBuildVecShuffle(const SDLoc &DL, SDNode *N,
         if (InVT1 != InVT2) {
           if (!TLI.isTypeLegal(InVT2))
             return SDValue();
-          VecIn2 = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, InVT1,
-                               DAG.getUNDEF(InVT1), VecIn2, ZeroIdx);
+          VecIn2 = DAG.getInsertSubvector(DL, DAG.getUNDEF(InVT1), VecIn2, 0);
         }
         ShuffleNumElems = NumElems * 2;
       }
@@ -23936,8 +23933,7 @@ SDValue DAGCombiner::createBuildVecShuffle(const SDLoc &DL, SDNode *N,
         return SDValue();
 
       if (InVT1 != InVT2) {
-        VecIn2 = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, InVT1,
-                             DAG.getUNDEF(InVT1), VecIn2, ZeroIdx);
+        VecIn2 = DAG.getInsertSubvector(DL, DAG.getUNDEF(InVT1), VecIn2, 0);
       }
       ShuffleNumElems = InVT1Size / VTSize * NumElems;
     } else {
@@ -23977,7 +23973,7 @@ SDValue DAGCombiner::createBuildVecShuffle(const SDLoc &DL, SDNode *N,
 
   SDValue Shuffle = DAG.getVectorShuffle(InVT1, DL, VecIn1, VecIn2, Mask);
   if (ShuffleNumElems > NumElems)
-    Shuffle = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Shuffle, ZeroIdx);
+    Shuffle = DAG.getExtractSubvector(DL, VT, Shuffle, 0);
 
   return Shuffle;
 }
@@ -26790,9 +26786,8 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
           }
 
           if (MatchingShuffle)
-            return DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N), VT, LHS,
-                               RHS.getOperand(SubVec),
-                               DAG.getVectorIdxConstant(SubIdx, SDLoc(N)));
+            return DAG.getInsertSubvector(SDLoc(N), LHS, RHS.getOperand(SubVec),
+                                          SubIdx);
         }
       }
       return SDValue();
