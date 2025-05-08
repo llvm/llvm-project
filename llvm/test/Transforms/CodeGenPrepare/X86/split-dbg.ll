@@ -9,6 +9,8 @@
 ; CHECK: while.body.clone:
 ; CHECK-NEXT: %dest.sroa.clone = phi i32 [ %1, %.split ], [ poison, %if.else ], !dbg [[DBG]]
 
+; CHECK: [[DBG]] = !DILocation(line: 1, column: 1, scope: ![[#]])
+
 define void @test(i1 %c) !dbg !5 {
 entry:
   br label %if.else
