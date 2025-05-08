@@ -19,9 +19,6 @@
 
 #include "AMDGPU.h"
 
-#include "llvm/Analysis/PostDominators.h"
-#include "llvm/Analysis/UniformityAnalysis.h"
-#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -45,16 +42,7 @@ namespace llvm {
 
 class AMDGPUTargetVerify : public TargetVerify {
 public:
-  DominatorTree *DT = nullptr;
-  PostDominatorTree *PDT = nullptr;
-  UniformityInfo *UA = nullptr;
-
   AMDGPUTargetVerify(Module *Mod) : TargetVerify(Mod) {}
-
-  AMDGPUTargetVerify(Module *Mod, DominatorTree *DT, PostDominatorTree *PDT,
-                     UniformityInfo *UA)
-      : TargetVerify(Mod), DT(DT), PDT(PDT), UA(UA) {}
-
   bool run(Function &F) override;
 };
 
@@ -115,11 +103,7 @@ PreservedAnalyses AMDGPUTargetVerifierPass::run(Function &F,
                                                 FunctionAnalysisManager &AM) {
   auto *Mod = F.getParent();
 
-  auto UA = &AM.getResult<UniformityInfoAnalysis>(F);
-  auto *DT = &AM.getResult<DominatorTreeAnalysis>(F);
-  auto *PDT = &AM.getResult<PostDominatorTreeAnalysis>(F);
-
-  AMDGPUTargetVerify TV(Mod, DT, PDT, UA);
+  AMDGPUTargetVerify TV(Mod);
   TV.run(F);
 
   dbgs() << TV.MessagesStr.str();
