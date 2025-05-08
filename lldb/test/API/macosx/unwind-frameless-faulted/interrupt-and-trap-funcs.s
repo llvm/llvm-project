@@ -51,7 +51,8 @@ _trap:
   // The pc value when we were interrupted is in x23
   .cfi_escape DW_CFA_register, ehframe_pc, ehframe_x23
 
-  // standard prologue save of fp & lr so we can call puts()
+  // standard prologue save of fp & lr so we can call 
+  // break_to_debugger()
   sub sp, sp, #32
   stp x29, x30, [sp, #16]
   add x29, sp, #16
@@ -76,17 +77,7 @@ _trap:
 _break_to_debugger:                                  
   .cfi_startproc
 
-  // standard prologue save of fp & lr so we can call puts()
-  sub sp, sp, #32
-  stp x29, x30, [sp, #16]
-  add x29, sp, #16
-  .cfi_def_cfa w29, 16
-  .cfi_offset w30, -8
-  .cfi_offset w29, -16
-
   brk #0xf000   ;; __builtin_debugtrap aarch64 instruction
 
-  ldp x29, x30, [sp, #16]
-  add sp, sp, #32
   ret
   .cfi_endproc
