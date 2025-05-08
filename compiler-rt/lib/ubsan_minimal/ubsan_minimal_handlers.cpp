@@ -85,6 +85,12 @@ SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error, const char *kind,
   }
 }
 
+SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error_fatal, const char *kind,
+                             uintptr_t caller) {
+  // Use another handlers, in case it's already overriden.
+  __ubsan_report_error(kind, caller);
+}
+
 #if defined(__ANDROID__)
 extern "C" __attribute__((weak)) void android_set_abort_message(const char *);
 static void abort_with_message(const char *kind, uintptr_t caller) {
@@ -121,7 +127,7 @@ void NORETURN CheckFailed(const char *file, int, const char *cond, u64, u64) {
 #define HANDLER_NORECOVER(name, kind)                                          \
   INTERFACE void __ubsan_handle_##name##_minimal_abort() {                     \
     uintptr_t caller = GET_CALLER_PC();                                        \
-    __ubsan_report_error(kind, caller);                                        \
+    __ubsan_report_error_fatal(kind, caller);                                  \
     abort_with_message(kind, caller);                                          \
   }
 
