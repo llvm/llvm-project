@@ -26,40 +26,6 @@ llvm.func @atomic_hint(%v : !llvm.ptr, %x : !llvm.ptr, %expr : i32) {
 
 // -----
 
-llvm.func @cancel_taskgroup() {
-  // expected-error@below {{LLVM Translation failed for operation: omp.taskgroup}}
-  omp.taskgroup {
-    // expected-error@below {{LLVM Translation failed for operation: omp.task}}
-    omp.task {
-      // expected-error@below {{not yet implemented: Unhandled clause cancel directive construct type not yet supported in omp.cancel operation}}
-      // expected-error@below {{LLVM Translation failed for operation: omp.cancel}}
-      omp.cancel cancellation_construct_type(taskgroup)
-      omp.terminator
-    }
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
-llvm.func @cancellation_point_taskgroup() {
-  // expected-error@below {{LLVM Translation failed for operation: omp.taskgroup}}
-  omp.taskgroup {
-    // expected-error@below {{LLVM Translation failed for operation: omp.task}}
-    omp.task {
-      // expected-error@below {{not yet implemented: Unhandled clause cancel directive construct type not yet supported in omp.cancellation_point operation}}
-      // expected-error@below {{LLVM Translation failed for operation: omp.cancellation_point}}
-      omp.cancellation_point cancellation_construct_type(taskgroup)
-      omp.terminator
-    }
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
 llvm.func @do_simd(%lb : i32, %ub : i32, %step : i32) {
   omp.wsloop {
     // expected-warning@below {{simd information on composite construct discarded}}

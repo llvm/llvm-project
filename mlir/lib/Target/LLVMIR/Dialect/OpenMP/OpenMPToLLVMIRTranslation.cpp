@@ -161,8 +161,18 @@ static LogicalResult checkImplementationStatus(Operation &op) {
   auto checkCancelDirective = [&todo](auto op, LogicalResult &result) {
     omp::ClauseCancellationConstructType cancelledDirective =
         op.getCancelDirective();
-    if (cancelledDirective == omp::ClauseCancellationConstructType::Taskgroup)
-      result = todo("cancel directive construct type not yet supported");
+    // Cancelling a taskloop is not yet supported because we don't yet have LLVM
+    // IR conversion for taskloop
+    if (cancelledDirective == omp::ClauseCancellationConstructType::Taskgroup) {
+      Operation *parent = op->getParentOp();
+      while (parent) {
+        if (parent->getDialect() == op->getDialect())
+          break;
+        parent = parent->getParentOp();
+      }
+      if (isa_and_nonnull<omp::TaskloopOp>(parent))
+        result = todo("cancel directive inside of taskloop");
+    }
   };
   auto checkDepend = [&todo](auto op, LogicalResult &result) {
     if (!op.getDependVars().empty() || op.getDependKinds())
@@ -1889,6 +1899,55 @@ buildDependData(std::optional<ArrayAttr> dependKinds, OperandRange dependVars,
   }
 }
 
+/// Shared implementation of a callback which adds a termiator for the new block
+/// created for the branch taken when an openmp construct is cancelled. The
+/// terminator is saved in \p cancelTerminators. This callback is invoked only
+/// if there is cancellation inside of the taskgroup body.
+/// The terminator will need to be fixed to branch to the correct block to
+/// cleanup the construct.
+static void
+pushCancelFinalizationCB(SmallVectorImpl<llvm::BranchInst *> &cancelTerminators,
+                         llvm::IRBuilderBase &llvmBuilder,
+                         llvm::OpenMPIRBuilder &ompBuilder, mlir::Operation *op,
+                         llvm::omp::Directive cancelDirective) {
+  auto finiCB = [&](llvm::OpenMPIRBuilder::InsertPointTy ip) -> llvm::Error {
+    llvm::IRBuilderBase::InsertPointGuard guard(llvmBuilder);
+
+    // ip is currently in the block branched to if cancellation occured.
+    // We need to create a branch to terminate that block.
+    llvmBuilder.restoreIP(ip);
+
+    // We must still clean up the construct after cancelling it, so we need to
+    // branch to the block that finalizes the taskgroup.
+    // That block has not been created yet so use this block as a dummy for now
+    // and fix this after creating the operation.
+    cancelTerminators.push_back(llvmBuilder.CreateBr(ip.getBlock()));
+    return llvm::Error::success();
+  };
+  // We have to add the cleanup to the OpenMPIRBuilder before the body gets
+  // created in case the body contains omp.cancel (which will then expect to be
+  // able to find this cleanup callback).
+  ompBuilder.pushFinalizationCB(
+      {finiCB, cancelDirective, constructIsCancellable(op)});
+}
+
+/// If we cancelled the construct, we should branch to the finalization block of
+/// that construct. OMPIRBuilder structures the CFG such that the cleanup block
+/// is immediately before the continuation block. Now this finalization has
+/// been created we can fix the branch.
+static void
+popCancelFinalizationCB(const ArrayRef<llvm::BranchInst *> cancelTerminators,
+                        llvm::OpenMPIRBuilder &ompBuilder,
+                        const llvm::OpenMPIRBuilder::InsertPointTy &afterIP) {
+  ompBuilder.popFinalizationCB();
+  llvm::BasicBlock *constructFini = afterIP.getBlock()->getSinglePredecessor();
+  for (llvm::BranchInst *cancelBranch : cancelTerminators) {
+    assert(cancelBranch->getNumSuccessors() == 1 &&
+           "cancel branch should have one target");
+    cancelBranch->setSuccessor(0, constructFini);
+  }
+}
+
 namespace {
 /// TaskContextStructManager takes care of creating and freeing a structure
 /// containing information needed by the task body to execute.
@@ -2202,6 +2261,14 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
     return llvm::Error::success();
   };
 
+  llvm::OpenMPIRBuilder &ompBuilder = *moduleTranslation.getOpenMPBuilder();
+  SmallVector<llvm::BranchInst *> cancelTerminators;
+  // The directive to match here is OMPD_taskgroup because it is the taskgroup
+  // which is canceled. This is handled here because it is the task's cleanup
+  // block which should be branched to.
+  pushCancelFinalizationCB(cancelTerminators, builder, ompBuilder, taskOp,
+                           llvm::omp::Directive::OMPD_taskgroup);
+
   SmallVector<llvm::OpenMPIRBuilder::DependData> dds;
   buildDependData(taskOp.getDependKinds(), taskOp.getDependVars(),
                   moduleTranslation, dds);
@@ -2218,6 +2285,9 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
 
   if (failed(handleError(afterIP, *taskOp)))
     return failure();
+
+  // Set the correct branch target for task cancellation
+  popCancelFinalizationCB(cancelTerminators, ompBuilder, afterIP.get());
 
   builder.restoreIP(*afterIP);
   return success();
@@ -2349,28 +2419,8 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
           : llvm::omp::WorksharingLoopType::ForStaticLoop;
 
   SmallVector<llvm::BranchInst *> cancelTerminators;
-  // This callback is invoked only if there is cancellation inside of the wsloop
-  // body.
-  auto finiCB = [&](llvm::OpenMPIRBuilder::InsertPointTy ip) -> llvm::Error {
-    llvm::IRBuilderBase &llvmBuilder = ompBuilder->Builder;
-    llvm::IRBuilderBase::InsertPointGuard guard(llvmBuilder);
-
-    // ip is currently in the block branched to if cancellation occured.
-    // We need to create a branch to terminate that block.
-    llvmBuilder.restoreIP(ip);
-
-    // We must still clean up the wsloop after cancelling it, so we need to
-    // branch to the block that finalizes the wsloop.
-    // That block has not been created yet so use this block as a dummy for now
-    // and fix this after creating the wsloop.
-    cancelTerminators.push_back(llvmBuilder.CreateBr(ip.getBlock()));
-    return llvm::Error::success();
-  };
-  // We have to add the cleanup to the OpenMPIRBuilder before the body gets
-  // created in case the body contains omp.cancel (which will then expect to be
-  // able to find this cleanup callback).
-  ompBuilder->pushFinalizationCB({finiCB, llvm::omp::Directive::OMPD_for,
-                                  constructIsCancellable(wsloopOp)});
+  pushCancelFinalizationCB(cancelTerminators, builder, *ompBuilder, wsloopOp,
+                           llvm::omp::Directive::OMPD_for);
 
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::Expected<llvm::BasicBlock *> regionBlock = convertOmpOpRegions(
@@ -2393,18 +2443,8 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   if (failed(handleError(wsloopIP, opInst)))
     return failure();
 
-  ompBuilder->popFinalizationCB();
-  if (!cancelTerminators.empty()) {
-    // If we cancelled the loop, we should branch to the finalization block of
-    // the wsloop (which is always immediately before the loop continuation
-    // block). Now the finalization has been created, we can fix the branch.
-    llvm::BasicBlock *wsloopFini = wsloopIP->getBlock()->getSinglePredecessor();
-    for (llvm::BranchInst *cancelBranch : cancelTerminators) {
-      assert(cancelBranch->getNumSuccessors() == 1 &&
-             "cancel branch should have one target");
-      cancelBranch->setSuccessor(0, wsloopFini);
-    }
-  }
+  // Set the correct branch target for task cancellation
+  popCancelFinalizationCB(cancelTerminators, *ompBuilder, wsloopIP.get());
 
   // Process the reductions if required.
   if (failed(createReductionsAndCleanup(
@@ -3060,11 +3100,11 @@ static llvm::omp::Directive convertCancellationConstructType(
 static LogicalResult
 convertOmpCancel(omp::CancelOp op, llvm::IRBuilderBase &builder,
                  LLVM::ModuleTranslation &moduleTranslation) {
-  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
-  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
-
   if (failed(checkImplementationStatus(*op.getOperation())))
     return failure();
+
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
 
   llvm::Value *ifCond = nullptr;
   if (Value ifVar = op.getIfExpr())
@@ -3088,11 +3128,11 @@ static LogicalResult
 convertOmpCancellationPoint(omp::CancellationPointOp op,
                             llvm::IRBuilderBase &builder,
                             LLVM::ModuleTranslation &moduleTranslation) {
-  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
-  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
-
   if (failed(checkImplementationStatus(*op.getOperation())))
     return failure();
+
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
 
   llvm::omp::Directive cancelledDirective =
       convertCancellationConstructType(op.getCancelDirective());

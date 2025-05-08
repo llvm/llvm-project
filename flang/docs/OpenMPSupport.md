@@ -51,8 +51,8 @@ Note : No distinction is made between the support in Parser/Semantics, MLIR, Low
 | depend clause                                              | P      | depend clause with array sections are not supported |
 | declare reduction construct                                | N      | |
 | atomic construct extensions                                | Y      | |
-| cancel construct                                           | N      | |
-| cancellation point construct                               | N      | |
+| cancel construct                                           | Y      | |
+| cancellation point construct                               | Y      | |
 | parallel do simd construct                                 | P      | linear clause is not supported |
 | target teams construct                                     | P      | device and reduction clauses are not supported |
 | teams distribute construct                                 | P      | reduction and dist_schedule clauses not supported |
