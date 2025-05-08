@@ -5336,8 +5336,8 @@ typedef regex_iterator<wstring::const_iterator> wsregex_iterator;
 
 template <class _BidirectionalIterator, class _CharT, class _Traits>
 class _LIBCPP_PREFERRED_NAME(cregex_iterator) _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wcregex_iterator))
-    _LIBCPP_PREFERRED_NAME(sregex_iterator) _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wsregex_iterator))
-        regex_iterator {
+    _LIBCPP_PREFERRED_NAME(sregex_iterator)
+        _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wsregex_iterator)) regex_iterator {
 public:
   typedef basic_regex<_CharT, _Traits> regex_type;
   typedef match_results<_BidirectionalIterator> value_type;
