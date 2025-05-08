@@ -2901,6 +2901,15 @@ func.func @andand3(%a : i32, %b : i32) -> i32 {
   return %res : i32
 }
 
+// CHECK-LABEL: @andor
+//  CHECK-SAME:   (%[[A:.*]]: i32, %[[B:.*]]: i32)
+//       CHECK:   return %[[A]]
+func.func @andor(%a : i32, %b : i32) -> i32 {
+  %c = arith.ori %a, %b : i32
+  %res = arith.andi %a, %b : i32
+  return %res : i32
+}
+
 // -----
 
 // CHECK-LABEL: @truncIShrSIToTrunciShrUI
