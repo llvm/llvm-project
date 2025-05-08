@@ -1463,7 +1463,7 @@ llvm::json::Object CreateRunInTerminalReverseRequest(
   req_args.push_back("--launch-target");
   req_args.push_back(program.str());
   req_args.insert(req_args.end(), args.begin(), args.end());
-  run_in_terminal_args.try_emplace("args", args);
+  run_in_terminal_args.try_emplace("args", req_args);
 
   if (!cwd.empty())
     run_in_terminal_args.try_emplace("cwd", cwd);

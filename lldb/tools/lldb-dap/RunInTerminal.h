@@ -70,7 +70,7 @@ struct RunInTerminalMessageDidAttach : RunInTerminalMessage {
 
 class RunInTerminalLauncherCommChannel {
 public:
-  RunInTerminalLauncherCommChannel(llvm::StringRef comm_file);
+  RunInTerminalLauncherCommChannel(std::shared_ptr<FifoFile> comm_file);
 
   /// Wait until the debug adapter attaches.
   ///
@@ -82,15 +82,23 @@ public:
   ///     out.
   llvm::Error WaitUntilDebugAdapterAttaches(std::chrono::milliseconds timeout);
 
-  /// Notify the debug adapter this process' pid.
+  /// Notify the debug adaptor debuggee's  pid.
+  ///
+  /// \param[in] pid
+  ///    The process ID to be attached.
   ///
   /// \return
   ///     An \a llvm::Error object in case of errors or if this operation times
   ///     out.
-  llvm::Error NotifyPid();
+  llvm::Error NotifyPid(lldb::pid_t pid);
 
   /// Notify the debug adapter that there's been an error.
   void NotifyError(llvm::StringRef error);
+
+#if defined(_WIN32)
+  /// Connect to RunInTerminalDebugAdapterCommChannel instance.
+  bool Connect();
+#endif
 
 private:
   FifoFileIO m_io;
@@ -98,7 +106,7 @@ private:
 
 class RunInTerminalDebugAdapterCommChannel {
 public:
-  RunInTerminalDebugAdapterCommChannel(llvm::StringRef comm_file);
+  RunInTerminalDebugAdapterCommChannel(std::shared_ptr<FifoFile> comm_file);
 
   /// Notify the runInTerminal launcher that it was attached.
   ///
@@ -118,6 +126,11 @@ public:
   /// default error message if a certain timeout if reached.
   std::string GetLauncherError();
 
+#if defined(_WIN32)
+  /// Connect to RunInTerminalLauncherCommChannel instance.
+  bool Connect();
+#endif
+
 private:
   FifoFileIO m_io;
 };
@@ -125,6 +138,14 @@ private:
 /// Create a fifo file used to communicate the debug adapter with
 /// the runInTerminal launcher.
 llvm::Expected<std::shared_ptr<FifoFile>> CreateRunInTerminalCommFile();
+
+/// Open a fifo file used to communicate the debug adaptor with
+/// the runInTerminal launcher.
+///
+/// \param[in] fifo_file
+///    The path to a fifo file that exists in the file system.
+llvm::Expected<std::shared_ptr<FifoFile>>
+OpenRunInTerminalCommFile(llvm::StringRef fifo_file);
 
 } // namespace lldb_dap
 

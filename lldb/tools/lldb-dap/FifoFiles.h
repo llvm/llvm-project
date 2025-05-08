@@ -12,19 +12,35 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 
+#if defined(_WIN32)
+#include "lldb/Host/windows/windows.h"
+#endif
+
 #include <chrono>
 
 namespace lldb_dap {
+
+class FifoFileIO;
 
 /// Struct that controls the life of a fifo file in the filesystem.
 ///
 /// The file is destroyed when the destructor is invoked.
 struct FifoFile {
-  FifoFile(llvm::StringRef path);
+#if defined(_WIN32)
+  FifoFile(llvm::StringRef path, HANDLE handle, bool is_server);
+#else
+  FifoFile(llvm::StringRef path, bool is_server);
+#endif
 
   ~FifoFile();
 
   std::string m_path;
+  bool m_is_server;
+#if defined(_WIN32)
+  HANDLE m_pipe_fd = INVALID_HANDLE_VALUE;
+#endif
+
+  friend FifoFileIO;
 };
 
 /// Create a fifo file in the filesystem.
@@ -32,20 +48,26 @@ struct FifoFile {
 /// \param[in] path
 ///     The path for the fifo file.
 ///
+/// \param[in] is_server
+///     If \a is_server is true, then created instance of FifoFile will own
+///     created file.
+///
 /// \return
 ///     A \a std::shared_ptr<FifoFile> if the file could be created, or an
 ///     \a llvm::Error in case of failures.
-llvm::Expected<std::shared_ptr<FifoFile>> CreateFifoFile(llvm::StringRef path);
+llvm::Expected<std::shared_ptr<FifoFile>> CreateFifoFile(llvm::StringRef path,
+                                                         bool is_server);
 
 class FifoFileIO {
 public:
   /// \param[in] fifo_file
-  ///     The path to an input fifo file that exists in the file system.
+  ///     The std::shared_ptr<FifoFile> to an existing fifo file.
   ///
   /// \param[in] other_endpoint_name
   ///     A human readable name for the other endpoint that will communicate
   ///     using this file. This is used for error messages.
-  FifoFileIO(llvm::StringRef fifo_file, llvm::StringRef other_endpoint_name);
+  FifoFileIO(std::shared_ptr<FifoFile> fifo_file,
+             llvm::StringRef other_endpoint_name);
 
   /// Read the next JSON object from the underlying input fifo file.
   ///
@@ -75,8 +97,12 @@ public:
       const llvm::json::Value &json,
       std::chrono::milliseconds timeout = std::chrono::milliseconds(20000));
 
+#if defined(_WIN32)
+  bool Connect();
+#endif
+
 private:
-  std::string m_fifo_file;
+  std::shared_ptr<FifoFile> m_fifo_file;
   std::string m_other_endpoint_name;
 };
 
