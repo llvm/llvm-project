@@ -2357,7 +2357,7 @@ DwarfDebug::emitInitialLocDirective(const MachineFunction &MF, unsigned CUID) {
   return PrologEndLoc;
 }
 
-void DwarfDebug::findKeyInstructions(const MachineFunction *MF) {
+void DwarfDebug::computeKeyInstructions(const MachineFunction *MF) {
   // New function - reset KeyInstructions.
   KeyInstructions.clear();
 
@@ -2396,7 +2396,7 @@ void DwarfDebug::findKeyInstructions(const MachineFunction *MF) {
       if (!MI.getDebugLoc() || !MI.getDebugLoc().getLine())
         continue;
 
-      // Reset the Buoy to this instruciton if it has a different line number.
+      // Reset the Buoy to this instruction if it has a different line number.
       if (!Buoy ||
           Buoy->getDebugLoc().getLine() != MI.getDebugLoc().getLine()) {
         Buoy = &MI;
@@ -2415,52 +2415,54 @@ void DwarfDebug::findKeyInstructions(const MachineFunction *MF) {
 
         uint64_t Group = MI.getDebugLoc()->getAtomGroup();
         uint8_t Rank = MI.getDebugLoc()->getAtomRank();
-        if (Group && Rank) {
-          auto *InlinedAt = MI.getDebugLoc()->getInlinedAt();
-          auto &[CandidateRank, CandidateInsts] =
-              GroupCandidates[{InlinedAt, Group}];
-
-          // This looks similar to the non-call handling code, except that
-          // we don't put the call into CandidateInsts so that they can't be
-          // made un-key. As a result, we also have to take special care not
-          // to erase the is_stmt from the buoy, and prevent that happening
-          // in the future.
-
-          if (CandidateRank == Rank) {
-            // We've seen other instructions in this group of this rank. Discard
-            // ones we've seen in this block, keep the others.
-            assert(!CandidateInsts.empty());
-            SmallVector<const MachineInstr *> Insts;
-            Insts.reserve(CandidateInsts.size());
-            for (auto &PrevInst : CandidateInsts) {
-              if (PrevInst->getParent() != MI.getParent())
-                Insts.push_back(PrevInst);
-              else if (PrevInst != Buoy)
-                KeyInstructions.erase(PrevInst);
-            }
-
-            if (Insts.empty()) {
-              CandidateInsts.clear();
-              CandidateRank = 0;
-            } else {
-              CandidateInsts = std::move(Insts);
-            }
-
-          } else if (CandidateRank > Rank) {
-            // We've seen other instructions in this group of lower precedence
-            // (higher rank). Discard them.
-            for (auto *Supplanted : CandidateInsts) {
-              // Don't erase the is_stmt we're using for this call.
-              if (Supplanted != Buoy)
-                KeyInstructions.erase(Supplanted);
-            }
-            CandidateInsts.clear();
-            CandidateRank = 0;
-          }
+        if (!Group || !Rank) {
+          Buoy = nullptr; // Avoid floating any future is_stmts up to the call.
+          continue;
         }
 
-        // Avoid floating any future is_stmts up to the call.
-        Buoy = nullptr;
+        auto *InlinedAt = MI.getDebugLoc()->getInlinedAt();
+        auto &[CandidateRank, CandidateInsts] =
+            GroupCandidates[{InlinedAt, Group}];
+
+        // This looks similar to the non-call handling code, except that
+        // we don't put the call into CandidateInsts so that they can't be
+        // made un-key. As a result, we also have to take special care not
+        // to erase the is_stmt from the buoy, and prevent that happening
+        // in the future.
+
+        if (CandidateRank == Rank) {
+          // We've seen other instructions in this group of this rank. Discard
+          // ones we've seen in this block, keep the others.
+          assert(!CandidateInsts.empty());
+          SmallVector<const MachineInstr *> Insts;
+          Insts.reserve(CandidateInsts.size());
+          for (auto &PrevInst : CandidateInsts) {
+            if (PrevInst->getParent() != MI.getParent())
+              Insts.push_back(PrevInst);
+            else if (PrevInst != Buoy)
+              KeyInstructions.erase(PrevInst);
+          }
+
+          if (Insts.empty()) {
+            CandidateInsts.clear();
+            CandidateRank = 0;
+          } else {
+            CandidateInsts = std::move(Insts);
+          }
+
+        } else if (CandidateRank > Rank) {
+          // We've seen other instructions in this group of lower precedence
+          // (higher rank). Discard them.
+          for (auto *Supplanted : CandidateInsts) {
+            // Don't erase the is_stmt we're using for this call.
+            if (Supplanted != Buoy)
+              KeyInstructions.erase(Supplanted);
+          }
+          CandidateInsts.clear();
+          CandidateRank = 0;
+        }
+
+        Buoy = nullptr; // Avoid floating any future is_stmts up to the call.
         continue;
       }
 
@@ -2682,7 +2684,7 @@ void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
       *MF, Asm->OutStreamer->getContext().getDwarfCompileUnitID());
 
   if (KeyInstructionsAreStmts)
-    findKeyInstructions(MF);
+    computeKeyInstructions(MF);
   else
     findForceIsStmtInstrs(MF);
 }

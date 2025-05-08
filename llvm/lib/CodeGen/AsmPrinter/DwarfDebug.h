@@ -705,10 +705,10 @@ private:
 
   void findForceIsStmtInstrs(const MachineFunction *MF);
 
-  /// Find instructions which should get is_stmt applied because they implement
-  /// key functionality for a source atom, store results in
+  /// Compute instructions which should get is_stmt applied because they
+  /// implement key functionality for a source location atom, store results in
   /// DwarfDebug::KeyInstructions.
-  void findKeyInstructions(const MachineFunction *MF);
+  void computeKeyInstructions(const MachineFunction *MF);
 
 protected:
   /// Gather pre-function debug information.

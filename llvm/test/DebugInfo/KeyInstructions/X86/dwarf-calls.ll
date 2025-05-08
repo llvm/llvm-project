@@ -44,7 +44,7 @@
 ;; Check the 2nd call (line 4) gets is_stmt applied despite being part of group
 ;; 1 and having lower precedence than the add. Check that the add stil gets
 ;; is_stmt applied.
-;; There are two is_stmt line 4 entries are is_stmt because we don't float
+;; There are two is_stmt line 4 entries because we don't float
 ;; is_stmts up on the same line past other key instructions. The call is
 ;; key, so the add's is_stmt floats up to the movl on the same line, but
 ;; not past the call.
