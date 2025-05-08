@@ -75,6 +75,10 @@ PUNCTUATOR(minus,   '-')
 // RootElement Keywords:
 KEYWORD(RootSignature) // used only for diagnostic messaging
 KEYWORD(DescriptorTable)
+KEYWORD(RootConstants)
+
+// RootConstants Keywords:
+KEYWORD(num32BitConstants)
 
 // DescriptorTable Keywords:
 KEYWORD(CBV)

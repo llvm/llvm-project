@@ -27,6 +27,13 @@ RootSignatureParser::RootSignatureParser(SmallVector<RootElement> &Elements,
 bool RootSignatureParser::parse() {
   // Iterate as many RootElements as possible
   do {
+    if (tryConsumeExpectedToken(TokenKind::kw_RootConstants)) {
+      auto Constants = parseRootConstants();
+      if (!Constants.has_value())
+        return true;
+      Elements.push_back(*Constants);
+    }
+
     if (tryConsumeExpectedToken(TokenKind::kw_DescriptorTable)) {
       auto Table = parseDescriptorTable();
       if (!Table.has_value())
@@ -35,12 +42,27 @@ bool RootSignatureParser::parse() {
     }
   } while (tryConsumeExpectedToken(TokenKind::pu_comma));
 
-  if (consumeExpectedToken(TokenKind::end_of_stream,
-                           diag::err_hlsl_unexpected_end_of_params,
-                           /*param of=*/TokenKind::kw_RootSignature))
-    return true;
+  return consumeExpectedToken(TokenKind::end_of_stream,
+                              diag::err_hlsl_unexpected_end_of_params,
+                              /*param of=*/TokenKind::kw_RootSignature);
+}
 
-  return false;
+std::optional<RootConstants> RootSignatureParser::parseRootConstants() {
+  assert(CurToken.TokKind == TokenKind::kw_RootConstants &&
+         "Expects to only be invoked starting at given keyword");
+
+  if (consumeExpectedToken(TokenKind::pu_l_paren, diag::err_expected_after,
+                           CurToken.TokKind))
+    return std::nullopt;
+
+  RootConstants Constants;
+
+  if (consumeExpectedToken(TokenKind::pu_r_paren,
+                           diag::err_hlsl_unexpected_end_of_params,
+                           /*param of=*/TokenKind::kw_RootConstants))
+    return std::nullopt;
+
+  return Constants;
 }
 
 std::optional<DescriptorTable> RootSignatureParser::parseDescriptorTable() {
