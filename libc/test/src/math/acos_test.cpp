@@ -36,11 +36,11 @@ TEST_F(LlvmLibcAcosTest, InDoubleRange) {
 
     for (uint64_t i = 0, v = START; i <= COUNT; ++i, v += STEP) {
       double x = FPBits(v).get_val();
-      if (FPBits(v).is_nan() || FPBits(v).is_inf())
+      if (FPBits(v).is_inf_or_nan())
         continue;
       double result = LIBC_NAMESPACE::acos(x);
       ++cc;
-      if (FPBits(result).is_nan() || FPBits(result).is_inf())
+      if (FPBits(result).is_inf_or_nan())
         continue;
 
       ++count;

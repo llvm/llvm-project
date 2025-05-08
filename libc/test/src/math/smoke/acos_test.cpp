@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/fenv_macros.h"
+#include "src/errno/libc_errno.h"
 #include "src/math/acos.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -19,10 +20,20 @@ TEST_F(LlvmLibcAcosTest, SpecialNumbers) {
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::acos(aNaN));
   EXPECT_FP_EQ(0x1.921fb54442d18p0, LIBC_NAMESPACE::acos(zero));
   EXPECT_FP_EQ(0x1.921fb54442d18p0, LIBC_NAMESPACE::acos(neg_zero));
-  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::acos(inf));
-  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::acos(neg_inf));
-  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::acos(2.0));
-  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::acos(-2.0));
+
+  LIBC_NAMESPACE::libc_errno = 0;
+  EXPECT_FP_EQ_WITH_EXCEPTION_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::acos(inf),
+                                           FE_INVALID);
+  EXPECT_MATH_ERRNO(EDOM);
+  EXPECT_FP_EQ_WITH_EXCEPTION_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::acos(neg_inf),
+                                           FE_INVALID);
+  EXPECT_MATH_ERRNO(EDOM);
+  EXPECT_FP_EQ_WITH_EXCEPTION_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::acos(2.0),
+                                           FE_INVALID);
+  EXPECT_MATH_ERRNO(EDOM);
+  EXPECT_FP_EQ_WITH_EXCEPTION_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::acos(-2.0),
+                                           FE_INVALID);
+  EXPECT_MATH_ERRNO(EDOM);
   EXPECT_FP_EQ(zero, LIBC_NAMESPACE::acos(1.0));
   EXPECT_FP_EQ(0x1.921fb54442d18p1, LIBC_NAMESPACE::acos(-1.0));
   EXPECT_FP_EQ(0x1.921fb54442d18p0, LIBC_NAMESPACE::acos(0x1.0p-54));

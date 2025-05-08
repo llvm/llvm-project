@@ -4058,6 +4058,8 @@ add_fp_unittest(
   SRCS
     acos_test.cpp
   DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.errno.errno
     libc.src.math.acos
 )
 
