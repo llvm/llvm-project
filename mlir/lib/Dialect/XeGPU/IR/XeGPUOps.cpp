@@ -148,9 +148,9 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
   assert(shape.size() && offsets.size() && strides.size() &&
          shape.size() == strides.size() && shape.size() == offsets.size());
 
-  auto intTy = dyn_cast<IntegerType>(source.getType());
-  auto memrefTy = dyn_cast<MemRefType>(source.getType());
-  assert(intTy || memrefTy && "Source has to be either int or memref.");
+  Type srcTy = source.getType();
+  assert(isa<IntegerType>(srcTy) ||
+         isa<MemRefType>(srcTy) && "Source has to be either int or memref.");
 
   llvm::SmallVector<Value> dynamicOffsets;
   llvm::SmallVector<Value> dynamicShape;
@@ -168,11 +168,12 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
   auto staticShapeAttr = builder.getDenseI64ArrayAttr(staticShape);
   auto staticStridesAttr = builder.getDenseI64ArrayAttr(staticStrides);
 
-  if (memrefTy) {
+  if (auto memrefTy = dyn_cast<MemRefType>(srcTy)) {
     auto memrefShape = memrefTy.getShape();
-    auto [memrefStrides, offset] = memrefTy.getStridesAndOffset();
+    auto [memrefStrides, _] = memrefTy.getStridesAndOffset();
 
     // if shape and strides are from Memref, we don't need attributes for them
+    // to keep the IR print clean.
     if (staticShape == memrefShape && staticStrides == memrefStrides) {
       staticShapeAttr = DenseI64ArrayAttr();
       staticStridesAttr = DenseI64ArrayAttr();
