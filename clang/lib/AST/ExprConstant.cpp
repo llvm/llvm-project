@@ -11452,7 +11452,7 @@ bool RecordExprEvaluator::VisitLambdaExpr(const LambdaExpr *E) {
 
     // If there is no initializer, either this is a VLA or an error has
     // occurred.
-    if (!CurFieldInit)
+    if (!CurFieldInit || CurFieldInit->containsErrors())
       return Error(E);
 
     LValue Subobject = This;
