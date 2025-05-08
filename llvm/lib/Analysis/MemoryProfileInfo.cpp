@@ -13,6 +13,7 @@
 #include "llvm/Analysis/MemoryProfileInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Format.h"
 
 using namespace llvm;
 using namespace llvm::memprof;
@@ -57,6 +58,19 @@ cl::opt<bool> MemProfReportHintedSizes(
 cl::opt<bool> MemProfKeepAllNotColdContexts(
     "memprof-keep-all-not-cold-contexts", cl::init(false), cl::Hidden,
     cl::desc("Keep all non-cold contexts (increases cloning overheads)"));
+
+cl::opt<unsigned> MinClonedColdBytePercent(
+    "memprof-cloning-cold-threshold", cl::init(100), cl::Hidden,
+    cl::desc("Min percent of cold bytes to hint alloc cold during cloning"));
+
+// Discard non-cold contexts if they overlap with much larger cold contexts,
+// specifically, if all contexts reaching a given callsite are at least this
+// percent cold byte allocations. This reduces the amount of cloning required
+// to expose the cold contexts when they greatly dominate non-cold contexts.
+cl::opt<unsigned> MinCallsiteColdBytePercent(
+    "memprof-callsite-cold-threshold", cl::init(100), cl::Hidden,
+    cl::desc("Min percent of cold bytes at a callsite to discard non-cold "
+             "contexts"));
 
 AllocationType llvm::memprof::getAllocType(uint64_t TotalLifetimeAccessDensity,
                                            uint64_t AllocCount,
@@ -208,21 +222,32 @@ void CallStackTrie::addCallStack(MDNode *MIB) {
 
 static MDNode *createMIBNode(LLVMContext &Ctx, ArrayRef<uint64_t> MIBCallStack,
                              AllocationType AllocType,
-                             ArrayRef<ContextTotalSize> ContextSizeInfo) {
+                             ArrayRef<ContextTotalSize> ContextSizeInfo,
+                             uint64_t &TotalBytes, uint64_t &ColdBytes) {
   SmallVector<Metadata *> MIBPayload(
       {buildCallstackMetadata(MIBCallStack, Ctx)});
   MIBPayload.push_back(
       MDString::get(Ctx, getAllocTypeAttributeString(AllocType)));
   if (!ContextSizeInfo.empty()) {
     for (const auto &[FullStackId, TotalSize] : ContextSizeInfo) {
-      auto *FullStackIdMD = ValueAsMetadata::get(
-          ConstantInt::get(Type::getInt64Ty(Ctx), FullStackId));
-      auto *TotalSizeMD = ValueAsMetadata::get(
-          ConstantInt::get(Type::getInt64Ty(Ctx), TotalSize));
-      auto *ContextSizeMD = MDNode::get(Ctx, {FullStackIdMD, TotalSizeMD});
-      MIBPayload.push_back(ContextSizeMD);
+      TotalBytes += TotalSize;
+      if (AllocType == AllocationType::Cold)
+        ColdBytes += TotalSize;
+      // Only add the context size info as metadata if we need it in the thin
+      // link (currently if reporting of hinted sizes is enabled or we have
+      // specified a threshold for marking allocations cold after cloning).
+      if (MemProfReportHintedSizes || MinClonedColdBytePercent < 100) {
+        auto *FullStackIdMD = ValueAsMetadata::get(
+            ConstantInt::get(Type::getInt64Ty(Ctx), FullStackId));
+        auto *TotalSizeMD = ValueAsMetadata::get(
+            ConstantInt::get(Type::getInt64Ty(Ctx), TotalSize));
+        auto *ContextSizeMD = MDNode::get(Ctx, {FullStackIdMD, TotalSizeMD});
+        MIBPayload.push_back(ContextSizeMD);
+      }
     }
   }
+  assert(MinCallsiteColdBytePercent >= 100 ||
+         (!ContextSizeInfo.empty() && TotalBytes > 0));
   return MDNode::get(Ctx, MIBPayload);
 }
 
@@ -246,9 +271,13 @@ void CallStackTrie::convertHotToNotCold(CallStackTrieNode *Node) {
 // on options that enable filtering out some NotCold contexts.
 static void saveFilteredNewMIBNodes(std::vector<Metadata *> &NewMIBNodes,
                                     std::vector<Metadata *> &SavedMIBNodes,
-                                    unsigned CallerContextLength) {
+                                    unsigned CallerContextLength,
+                                    uint64_t TotalBytes, uint64_t ColdBytes) {
+  bool MostlyCold = MinCallsiteColdBytePercent < 100 &&
+                    ColdBytes * 100 >= MinCallsiteColdBytePercent * TotalBytes;
+
   // In the simplest case, with pruning disabled, keep all the new MIB nodes.
-  if (MemProfKeepAllNotColdContexts) {
+  if (MemProfKeepAllNotColdContexts && !MostlyCold) {
     append_range(SavedMIBNodes, NewMIBNodes);
     return;
   }
@@ -270,6 +299,27 @@ static void saveFilteredNewMIBNodes(std::vector<Metadata *> &NewMIBNodes,
              << Extra << ": " << TS << "\n";
     }
   };
+
+  if (MostlyCold) {
+    auto NewColdMIBNodes =
+        make_filter_range(NewMIBNodes, [&](const Metadata *M) {
+          auto MIBMD = cast<MDNode>(M);
+          // Only append cold contexts.
+          if (getMIBAllocType(MIBMD) == AllocationType::Cold)
+            return true;
+          if (MemProfReportHintedSizes) {
+            float PercentCold = ColdBytes * 100.0 / TotalBytes;
+            std::string PercentStr;
+            llvm::raw_string_ostream OS(PercentStr);
+            OS << format(" for %5.2f%% cold bytes", PercentCold);
+            EmitMessageForRemovedContexts(MIBMD, "discarded", OS.str());
+          }
+          return false;
+        });
+    for (auto *M : NewColdMIBNodes)
+      SavedMIBNodes.push_back(M);
+    return;
+  }
 
   // Prune unneeded NotCold contexts, taking advantage of the fact
   // that we later will only clone Cold contexts, as NotCold is the allocation
@@ -341,17 +391,20 @@ static void saveFilteredNewMIBNodes(std::vector<Metadata *> &NewMIBNodes,
 // Recursive helper to trim contexts and create metadata nodes.
 // Caller should have pushed Node's loc to MIBCallStack. Doing this in the
 // caller makes it simpler to handle the many early returns in this method.
+// Updates the total and cold profiled bytes in the subtrie rooted at this node.
 bool CallStackTrie::buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
                                   std::vector<uint64_t> &MIBCallStack,
                                   std::vector<Metadata *> &MIBNodes,
-                                  bool CalleeHasAmbiguousCallerContext) {
+                                  bool CalleeHasAmbiguousCallerContext,
+                                  uint64_t &TotalBytes, uint64_t &ColdBytes) {
   // Trim context below the first node in a prefix with a single alloc type.
   // Add an MIB record for the current call stack prefix.
   if (hasSingleAllocType(Node->AllocTypes)) {
     std::vector<ContextTotalSize> ContextSizeInfo;
     collectContextSizeInfo(Node, ContextSizeInfo);
-    MIBNodes.push_back(createMIBNode(
-        Ctx, MIBCallStack, (AllocationType)Node->AllocTypes, ContextSizeInfo));
+    MIBNodes.push_back(createMIBNode(Ctx, MIBCallStack,
+                                     (AllocationType)Node->AllocTypes,
+                                     ContextSizeInfo, TotalBytes, ColdBytes));
     return true;
   }
 
@@ -364,17 +417,25 @@ bool CallStackTrie::buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
     // that will later be filtered before adding to the caller's MIBNodes
     // vector.
     std::vector<Metadata *> NewMIBNodes;
+    // Determine the total and cold byte counts for all callers, then add to the
+    // caller's counts further below.
+    uint64_t CallerTotalBytes = 0;
+    uint64_t CallerColdBytes = 0;
     for (auto &Caller : Node->Callers) {
       MIBCallStack.push_back(Caller.first);
-      AddedMIBNodesForAllCallerContexts &=
-          buildMIBNodes(Caller.second, Ctx, MIBCallStack, NewMIBNodes,
-                        NodeHasAmbiguousCallerContext);
+      AddedMIBNodesForAllCallerContexts &= buildMIBNodes(
+          Caller.second, Ctx, MIBCallStack, NewMIBNodes,
+          NodeHasAmbiguousCallerContext, CallerTotalBytes, CallerColdBytes);
       // Remove Caller.
       MIBCallStack.pop_back();
     }
     // Pass in the stack length of the MIB nodes added for the immediate caller,
     // which is the current stack length plus 1.
-    saveFilteredNewMIBNodes(NewMIBNodes, MIBNodes, MIBCallStack.size() + 1);
+    saveFilteredNewMIBNodes(NewMIBNodes, MIBNodes, MIBCallStack.size() + 1,
+                            CallerTotalBytes, CallerColdBytes);
+    TotalBytes += CallerTotalBytes;
+    ColdBytes += CallerColdBytes;
+
     if (AddedMIBNodesForAllCallerContexts)
       return true;
     // We expect that the callers should be forced to add MIBs to disambiguate
@@ -397,7 +458,7 @@ bool CallStackTrie::buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
   std::vector<ContextTotalSize> ContextSizeInfo;
   collectContextSizeInfo(Node, ContextSizeInfo);
   MIBNodes.push_back(createMIBNode(Ctx, MIBCallStack, AllocationType::NotCold,
-                                   ContextSizeInfo));
+                                   ContextSizeInfo, TotalBytes, ColdBytes));
   return true;
 }
 
@@ -444,12 +505,15 @@ bool CallStackTrie::buildAndAttachMIBMetadata(CallBase *CI) {
   std::vector<uint64_t> MIBCallStack;
   MIBCallStack.push_back(AllocStackId);
   std::vector<Metadata *> MIBNodes;
+  uint64_t TotalBytes = 0;
+  uint64_t ColdBytes = 0;
   assert(!Alloc->Callers.empty() && "addCallStack has not been called yet");
   // The CalleeHasAmbiguousCallerContext flag is meant to say whether the
   // callee of the given node has more than one caller. Here the node being
   // passed in is the alloc and it has no callees. So it's false.
   if (buildMIBNodes(Alloc, Ctx, MIBCallStack, MIBNodes,
-                    /*CalleeHasAmbiguousCallerContext=*/false)) {
+                    /*CalleeHasAmbiguousCallerContext=*/false, TotalBytes,
+                    ColdBytes)) {
     assert(MIBCallStack.size() == 1 &&
            "Should only be left with Alloc's location in stack");
     CI->setMetadata(LLVMContext::MD_memprof, MDNode::get(Ctx, MIBNodes));
