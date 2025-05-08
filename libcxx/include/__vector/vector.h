@@ -1254,8 +1254,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::insert(const_iterator __position, size_type __n, const_reference __x) {
   pointer __p = this->__begin_ + (__position - begin());
   if (__n > 0) {
-    // We can't compare unrelated pointers inside constant expressions
-    if (!__libcpp_is_constant_evaluated() && __n <= static_cast<size_type>(this->__cap_ - this->__end_)) {
+    if (__n <= static_cast<size_type>(this->__cap_ - this->__end_)) {
       size_type __old_n  = __n;
       pointer __old_last = this->__end_;
       if (__n > static_cast<size_type>(this->__end_ - __p)) {
@@ -1266,7 +1265,7 @@ vector<_Tp, _Allocator>::insert(const_iterator __position, size_type __n, const_
       if (__n > 0) {
         __move_range(__p, __old_last, __p + __old_n);
         const_pointer __xr = pointer_traits<const_pointer>::pointer_to(__x);
-        if (__p <= __xr && __xr < this->__end_)
+        if (std::__is_pointer_in_range(std::__to_address(__p), std::__to_address(__end_), std::addressof(__x)))
           __xr += __old_n;
         std::fill_n(__p, __n, *__xr);
       }
