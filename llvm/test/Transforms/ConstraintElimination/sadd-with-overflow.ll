@@ -13,9 +13,13 @@ define i8 @sadd_no_overflow_due_to_cmp_condition(i8 %a, i8 %b) {
 ; CHECK-NEXT:    br i1 [[AND]], label %[[MATH:.*]], label %[[EXIT_FAIL:.*]]
 ; CHECK:       [[MATH]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[A]], [[B]]
-; CHECK-NEXT:    br i1 false, label %[[EXIT_FAIL]], label %[[EXIT_OK:.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i8, i1 } poison, i8 [[TMP0]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { i8, i1 } [[TMP1]], i1 false, 1
+; CHECK-NEXT:    [[STATUS:%.*]] = extractvalue { i8, i1 } [[TMP2]], 1
+; CHECK-NEXT:    br i1 [[STATUS]], label %[[EXIT_FAIL]], label %[[EXIT_OK:.*]]
 ; CHECK:       [[EXIT_OK]]:
-; CHECK-NEXT:    ret i8 [[TMP0]]
+; CHECK-NEXT:    [[RES:%.*]] = extractvalue { i8, i1 } [[TMP2]], 0
+; CHECK-NEXT:    ret i8 [[RES]]
 ; CHECK:       [[EXIT_FAIL]]:
 ; CHECK-NEXT:    ret i8 0
 ;
@@ -87,11 +91,14 @@ define i8 @sadd_no_overflow_due_to_cmp_condition_result_used(i8 %a, i8 %b) {
 ; CHECK-NEXT:    br i1 [[AND]], label %[[MATH:.*]], label %[[EXIT_FAIL:.*]]
 ; CHECK:       [[MATH]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[A]], [[B]]
-; CHECK-NEXT:    [[OP:%.*]] = tail call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[A]], i8 [[B]])
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i8, i1 } poison, i8 [[TMP0]], 0
+; CHECK-NEXT:    [[OP:%.*]] = insertvalue { i8, i1 } [[TMP1]], i1 false, 1
 ; CHECK-NEXT:    call void @use_res({ i8, i1 } [[OP]])
-; CHECK-NEXT:    br i1 false, label %[[EXIT_FAIL]], label %[[EXIT_OK:.*]]
+; CHECK-NEXT:    [[STATUS:%.*]] = extractvalue { i8, i1 } [[OP]], 1
+; CHECK-NEXT:    br i1 [[STATUS]], label %[[EXIT_FAIL]], label %[[EXIT_OK:.*]]
 ; CHECK:       [[EXIT_OK]]:
-; CHECK-NEXT:    ret i8 [[TMP0]]
+; CHECK-NEXT:    [[RES:%.*]] = extractvalue { i8, i1 } [[OP]], 0
+; CHECK-NEXT:    ret i8 [[RES]]
 ; CHECK:       [[EXIT_FAIL]]:
 ; CHECK-NEXT:    ret i8 0
 ;
