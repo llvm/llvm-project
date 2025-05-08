@@ -628,6 +628,7 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     CmdArgs.push_back("--pgo-instrument-cold-function-only");
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("--pgo-function-entry-coverage");
+    CmdArgs.push_back("-fprofile-instrument=sample-coldcov");
   }
 
   if (auto *A = Args.getLastArg(options::OPT_ftemporal_profile)) {
