@@ -2460,7 +2460,7 @@ private:
           nestReduceAttrs.empty()
               ? nullptr
               : mlir::ArrayAttr::get(builder->getContext(), nestReduceAttrs),
-          nullptr);
+          nullptr, /*local_vars=*/std::nullopt, /*local_syms=*/nullptr);
 
       llvm::SmallVector<mlir::Type> loopBlockArgTypes(
           incrementLoopNestInfo.size(), builder->getIndexType());
