@@ -149,7 +149,8 @@ bool fromJSON(const llvm::json::Value &value, GPUActions &data,
          o.map("plugin_name", data.plugin_name) &&
          o.map("breakpoints", data.breakpoints) &&
          o.mapOptional("connect_info", data.connect_info) &&
-         o.map("load_libraries", data.load_libraries);
+         o.map("load_libraries", data.load_libraries) &&
+         o.map("resume_gpu_process", data.resume_gpu_process);
 }
 
 llvm::json::Value toJSON(const GPUActions &data) {
@@ -158,6 +159,7 @@ llvm::json::Value toJSON(const GPUActions &data) {
            {"breakpoints", data.breakpoints},
            {"connect_info", data.connect_info},
            {"load_libraries", data.load_libraries},
+           {"resume_gpu_process", data.resume_gpu_process},
           });
 }
 

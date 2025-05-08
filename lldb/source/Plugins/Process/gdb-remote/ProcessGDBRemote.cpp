@@ -888,6 +888,8 @@ Status ProcessGDBRemote::HandleGPUActions(const GPUActions &gpu_action) {
         llvm::Error error = gpu_process_sp->LoadModules();
         if (error)
           llvm::consumeError(std::move(error));
+        if (gpu_action.resume_gpu_process)
+          gpu_process_sp->Resume();
       }
     }
   }
