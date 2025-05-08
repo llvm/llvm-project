@@ -283,5 +283,5 @@ COMMON_FLAG(bool, enable_symbolizer_markup, SANITIZER_FUCHSIA,
 COMMON_FLAG(bool, detect_invalid_join, true,
             "If set, check invalid joins of threads.")
 COMMON_FLAG(bool, enable_unmalloced_free_check, !SANITIZER_AIX,
-             "if true, FreeNotMalloced error will be reported. Only disable "
-             "this error detecting on AIX by default for now.")
+            "if true, FreeNotMalloced error will be reported. Only disable "
+            "this error detecting on AIX by default for now.")

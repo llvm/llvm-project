@@ -798,9 +798,9 @@ struct Allocator {
     if (chunk_state == CHUNK_QUARANTINE)
       ReportDoubleFree((uptr)ptr, stack);
     else {
-       if (common_flags()->enable_unmalloced_free_check)
-         ReportFreeNotMalloced((uptr)ptr, stack);
-     }
+      if (common_flags()->enable_unmalloced_free_check)
+        ReportFreeNotMalloced((uptr)ptr, stack);
+    }
   }
 
   void CommitBack(AsanThreadLocalMallocStorage *ms, BufferedStackTrace *stack) {
