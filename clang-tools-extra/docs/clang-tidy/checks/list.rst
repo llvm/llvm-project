@@ -254,6 +254,7 @@ Clang-Tidy Checks
    :doc:`misc-confusable-identifiers <misc/confusable-identifiers>`,
    :doc:`misc-const-correctness <misc/const-correctness>`, "Yes"
    :doc:`misc-coroutine-hostile-raii <misc/coroutine-hostile-raii>`,
+   :doc:`misc-dangling-ref-utils-async <misc/dangling-ref-utils-async>`,
    :doc:`misc-definitions-in-headers <misc/definitions-in-headers>`, "Yes"
    :doc:`misc-header-include-cycle <misc/header-include-cycle>`,
    :doc:`misc-include-cleaner <misc/include-cleaner>`, "Yes"
@@ -339,6 +340,7 @@ Clang-Tidy Checks
    :doc:`performance-inefficient-vector-operation <performance/inefficient-vector-operation>`, "Yes"
    :doc:`performance-move-const-arg <performance/move-const-arg>`, "Yes"
    :doc:`performance-move-constructor-init <performance/move-constructor-init>`,
+   :doc:`performance-move-shared-ptr <performance/move-shared-ptr>`, "Yes"
    :doc:`performance-no-automatic-move <performance/no-automatic-move>`,
    :doc:`performance-no-int-to-ptr <performance/no-int-to-ptr>`,
    :doc:`performance-noexcept-destructor <performance/noexcept-destructor>`, "Yes"
