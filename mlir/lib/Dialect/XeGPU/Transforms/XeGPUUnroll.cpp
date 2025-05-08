@@ -61,34 +61,9 @@ protected:
     return nativeShape;
   }
 
-  // If attr is a LayoutAttr, derive a new LayoutAttr by removing the inst_data
-  // field.
-  xegpu::LayoutAttr getLaneLevelAttrsOnly(Attribute attr) const {
-    auto layout = dyn_cast_if_present<xegpu::LayoutAttr>(attr);
-    if (!layout || layout.getLaneLayout() == nullptr)
-      return xegpu::LayoutAttr();
-    return layout.dropInstData();
-  };
-
   SmallVector<Type> getUnrolledTypes(ShapedType type,
-                                     ArrayRef<int64_t> blockSize) const {
-    Type elemTy = type.getElementType();
-    Type newTy;
-    // TensorDescType needs to drop the inst_data field in the layout attribute
-    if (auto tdescTy = dyn_cast<xegpu::TensorDescType>(type)) {
-      MLIRContext *ctx = tdescTy.getContext();
-      Attribute encoding = tdescTy.getEncoding();
-      Attribute layout = tdescTy.getLayout();
-      newTy = xegpu::TensorDescType::get(ctx, blockSize, elemTy, encoding,
-                                         getLaneLevelAttrsOnly(layout));
-    } else {
-      newTy = type.clone(blockSize, elemTy);
-    }
-
-    std::optional<SmallVector<int64_t>> ratio =
-        computeShapeRatio(type.getShape(), blockSize);
-    assert(ratio && "Expecting the ratio to be valid.");
-    return SmallVector<Type>(computeProduct(*ratio), newTy);
+                                     ArrayRef<int64_t> tileShape) const {
+    return options.getUnrolledTypes(type, tileShape);
   }
 
   /// Emulate the the unpack behavior using insert_strided_slice for VectorType
@@ -96,7 +71,7 @@ protected:
   Value unpack(ValueRange srcs, Type destTy, ArrayRef<int64_t> blockSize,
                Location loc, PatternRewriter &rewriter) const {
     if (auto vecTy = dyn_cast<VectorType>(destTy)) {
-      assert(vecTy.getRank() == (int64_t)blockSize.size() &&
+      assert(vecTy.getRank() == static_cast<int64_t>(blockSize.size()) &&
              "Expecting blockSize size to match the rank of destTy.");
       auto shape = vecTy.getShape();
       auto zeroAttr = rewriter.getZeroAttr(vecTy.getElementType());
@@ -183,10 +158,7 @@ struct UnrollCreateNdOp : public UnrollPattern<xegpu::CreateNdDescOp> {
     if (!targetShape || llvm::equal(*targetShape, shape))
       return failure();
 
-    Attribute encoding = tdescTy.getEncoding();
-    Attribute newLayout = getLaneLevelAttrsOnly(layout);
-    auto newTdescTy = xegpu::TensorDescType::get(
-        ctx, *targetShape, tdescTy.getElementType(), encoding, newLayout);
+    auto newTdescTy = getUnrolledTypes(tdescTy, *targetShape)[0];
 
     auto addi = [&](OpFoldResult a, int64_t b) -> Value {
       std::optional<int64_t> maybeInt = getConstantIntValue(a);

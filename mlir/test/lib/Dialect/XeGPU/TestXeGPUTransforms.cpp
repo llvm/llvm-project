@@ -43,6 +43,7 @@ struct TestXeGPUUnrollingPatterns
       : PassWrapper(pass) {}
 
   void runOnOperation() override {
+    MLIRContext *ctx = &getContext();
     xegpu::UnrollOptions options;
     options.setNativeShapeFn(
         [&](Operation *op) -> std::optional<SmallVector<int64_t>> {
@@ -76,7 +77,32 @@ struct TestXeGPUUnrollingPatterns
           return std::nullopt;
         });
 
-    MLIRContext *ctx = &getContext();
+    options.setUnrolledTypesFn(
+        [&](ShapedType type, ArrayRef<int64_t> tileShape) -> SmallVector<Type> {
+          Type elemTy = type.getElementType();
+          Type newTy;
+
+          // TensorDescType needs to drop the inst_data field in the layout attribute
+          if (auto tdescTy = dyn_cast<xegpu::TensorDescType>(type)) {
+            Attribute encoding = tdescTy.getEncoding();
+            auto layout = llvm::dyn_cast_if_present<xegpu::LayoutAttr>(tdescTy.getLayout());
+            if (layout) {
+              if (layout.getLaneLayout() == nullptr)
+                layout = xegpu::LayoutAttr();
+              else
+                layout = layout.dropInstData();
+            }
+            newTy = xegpu::TensorDescType::get(ctx, tileShape, elemTy, encoding, layout);
+          } else {
+            newTy = type.clone(tileShape, elemTy);
+          }
+
+          std::optional<SmallVector<int64_t>> ratio =
+              computeShapeRatio(type.getShape(), tileShape);
+          assert(ratio && "Expecting the ratio to be valid.");
+          return SmallVector<Type>(computeProduct(*ratio), newTy);
+        });
+
     RewritePatternSet patterns(ctx);
 
     populateXeGPUUnrollPatterns(patterns, options);

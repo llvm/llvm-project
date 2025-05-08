@@ -26,19 +26,32 @@ struct UnrollOptions {
     return *this;
   }
 
+  /// Function that computes the target shape for unrolling. It returns an
+  /// optional vector of integers representing the shape. If it returns
+  /// `std::nullopt`, unrolling is aborted for the given operation.
   using NativeShapeFnType =
       std::function<std::optional<SmallVector<int64_t>>(Operation *op)>;
-  /// Function that returns the shape to unroll to for a given operation.
-  /// The unrolling is aborted if the function returns `std::nullopt`.
   NativeShapeFnType nativeShape = nullptr;
   UnrollOptions &setNativeShapeFn(NativeShapeFnType fn) {
     nativeShape = std::move(fn);
+    return *this;
+  }
+
+  /// Function that converts a ShapedType (TensorDescType or VectorType)
+  /// into the unrolled type based on the tileShape. It returns a vector of
+  /// types representing the unrolled types for simplicity.
+  using UnrolledTypeFnType =
+      std::function<SmallVector<Type>(ShapedType type, ArrayRef<int64_t> tileShape)>;
+  UnrolledTypeFnType getUnrolledTypes = nullptr;
+  UnrollOptions &setUnrolledTypesFn(UnrolledTypeFnType fn) {
+    getUnrolledTypes = std::move(fn);
     return *this;
   }
 };
 
 /// Appends patterns for folding aliasing ops into XeGPU ops into `patterns`.
 void populateXeGPUFoldAliasOpsPatterns(RewritePatternSet &patterns);
+
 /// Appends patterns for XeGPU SIMT distribution into `patterns`.
 void populateXeGPUSubgroupDistributePatterns(RewritePatternSet &patterns);
 
@@ -46,7 +59,7 @@ void populateXeGPUSubgroupDistributePatterns(RewritePatternSet &patterns);
 /// Users can control whether an operation to be unrolled or not, as well as
 /// its target shape via `options` structure. (via setting filterConstraint
 /// and nativeShape respectively, both of them are function refs taking `op` as
-/// the input).
+/// input).
 /// An `op` is unrolled to the `targetShape` as follows, for each of its
 /// operands:
 ///   1. the unrolled type `unrolledType` and number of unrolled instances
