@@ -1876,8 +1876,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
     }
 
     if (SP->shouldEmitSDCheck(*LLVMBB))
-      SDB->SPDescriptor.initialize(LLVMBB, FuncInfo->getMBB(LLVMBB),
-                                   false);
+      SDB->SPDescriptor.initialize(LLVMBB, FuncInfo->getMBB(LLVMBB), false);
 
     if (Begin != BI)
       ++NumDAGBlocks;
