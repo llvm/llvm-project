@@ -349,6 +349,8 @@ class DAPTestCaseBase(TestBase):
         expectFailure=False,
         gdbRemotePort=None,
         gdbRemoteHostname=None,
+        sourceBreakpoints=None,
+        functionBreakpoints=None,
     ):
         """Build the default Makefile target, create the DAP debug adapter,
         and attach to the process.
@@ -366,6 +368,26 @@ class DAPTestCaseBase(TestBase):
         # Initialize and launch the program
         self.dap_server.request_initialize(sourceInitFile)
         self.dap_server.wait_for_event("initialized")
+
+        # Set source breakpoints as part of the launch sequence.
+        if sourceBreakpoints:
+            for source_path, lines in sourceBreakpoints:
+                response = self.dap_server.request_setBreakpoints(source_path, lines)
+                self.assertTrue(
+                    response["success"],
+                    "setBreakpoints failed (%s)" % (response),
+                )
+
+        # Set function breakpoints as part of the launch sequence.
+        if functionBreakpoints:
+            response = self.dap_server.request_setFunctionBreakpoints(
+                functionBreakpoints
+            )
+            self.assertTrue(
+                response["success"],
+                "setFunctionBreakpoint failed (%s)" % (response),
+            )
+
         self.dap_server.request_configurationDone()
         response = self.dap_server.request_attach(
             program=program,
@@ -423,6 +445,8 @@ class DAPTestCaseBase(TestBase):
         commandEscapePrefix=None,
         customFrameFormat=None,
         customThreadFormat=None,
+        sourceBreakpoints=None,
+        functionBreakpoints=None,
     ):
         """Sending launch request to dap"""
 
@@ -439,6 +463,26 @@ class DAPTestCaseBase(TestBase):
         # Initialize and launch the program
         self.dap_server.request_initialize(sourceInitFile)
         self.dap_server.wait_for_event("initialized")
+
+        # Set source breakpoints as part of the launch sequence.
+        if sourceBreakpoints:
+            for source_path, lines in sourceBreakpoints:
+                response = self.dap_server.request_setBreakpoints(source_path, lines)
+                self.assertTrue(
+                    response["success"],
+                    "setBreakpoints failed (%s)" % (response),
+                )
+
+        # Set function breakpoints as part of the launch sequence.
+        if functionBreakpoints:
+            response = self.dap_server.request_setFunctionBreakpoints(
+                functionBreakpoints
+            )
+            self.assertTrue(
+                response["success"],
+                "setFunctionBreakpoint failed (%s)" % (response),
+            )
+
         self.dap_server.request_configurationDone()
 
         response = self.dap_server.request_launch(
@@ -511,6 +555,8 @@ class DAPTestCaseBase(TestBase):
         customThreadFormat=None,
         launchCommands=None,
         expectFailure=False,
+        sourceBreakpoints=None,
+        functionBreakpoints=None,
     ):
         """Build the default Makefile target, create the DAP debug adapter,
         and launch the process.
@@ -547,6 +593,8 @@ class DAPTestCaseBase(TestBase):
             customThreadFormat=customThreadFormat,
             launchCommands=launchCommands,
             expectFailure=expectFailure,
+            sourceBreakpoints=sourceBreakpoints,
+            functionBreakpoints=functionBreakpoints,
         )
 
     def getBuiltinDebugServerTool(self):
