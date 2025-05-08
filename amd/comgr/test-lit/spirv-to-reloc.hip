@@ -16,7 +16,7 @@
 // CHECK: SPIR-V Translation: amd-llvm-spirv -r --spirv-target-env=CL2.0 {{.*}}
 
 // COM: Check that SPIR-V flags are correctly extracted
-// CHECK: Driver Job Args: {{.*}} "-fno-rounding-math" "-O3" "-fno-autolink" "-fvisibility=hidden" "-fexceptions" "-fcolor-diagnostics" "-mcode-object-version=5"
+// CHECK: Compilation Args: {{.*}}  "-Xclang" "-fcolor-diagnostics" "-Xclang" "-fexceptions" "-Xclang" "-fno-threadsafe-statics" "-Xclang" "-fvisibility=hidden" "-Xclang" "-fconvergent-functions" "-Xclang" "-ffp-contract=fast-honor-pragmas" "-Xclang" "-fno-experimental-relative-c++-abi-vtables" "-Xclang" "-O3" "-Xclang" "-fno-autolink" "-Xclang" "-finline-functions" "-Xclang" "-mcode-object-version=5"
 
 #include <cstdlib>
 
