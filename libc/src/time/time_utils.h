@@ -114,11 +114,6 @@ LIBC_INLINE tm *gmtime_internal(const time_t *timer, tm *result) {
 
 LIBC_INLINE tm *localtime_internal(const time_t *timer, tm *buf) {
   time_t seconds = *timer;
-  if (seconds == -1) {
-    invalid_value();
-    return nullptr;
-  }
-
   // Update the tm structure's year, month, day, etc. from seconds.
   if (update_from_seconds(seconds, buf) < 0) {
     out_of_range();
