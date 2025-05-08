@@ -132,40 +132,51 @@ func.func @loop_with_if(%a: !arr_d1, %v: f32) {
 // CHECK:   return
 // CHECK: }
 
-func.func @loop_with_result(%arg0: !fir.ref<!fir.array<100xf32>>, %arg1: !fir.ref<!fir.array<100x100xf32>>) -> f32 {
+func.func @loop_with_result(%arg0: !fir.ref<!fir.array<100xf32>>, %arg1: !fir.ref<!fir.array<100x100xf32>>, %arg2: !fir.ref<!fir.array<100xf32>>) -> f32 {
   %c1 = arith.constant 1 : index
   %cst = arith.constant 0.000000e+00 : f32
   %c100 = arith.constant 100 : index
   %0 = fir.shape %c100 : (index) -> !fir.shape<1>
   %1 = fir.shape %c100, %c100 : (index, index) -> !fir.shape<2>
   %2 = fir.alloca i32
-  %3:2 = fir.do_loop %arg2 = %c1 to %c100 step %c1 iter_args(%arg3 = %cst) -> (index, f32) {
-    %6 = fir.array_coor %arg0(%0) %arg2 : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
-    %7 = fir.load %6 : !fir.ref<f32>
-    %8 = arith.addf %arg3, %7 fastmath<contract> : f32
-    %9 = arith.addi %arg2, %c1 overflow<nsw> : index
-    fir.result %9, %8 : index, f32
+  %3:2 = fir.do_loop %arg3 = %c1 to %c100 step %c1 iter_args(%arg4 = %cst) -> (index, f32) {
+    %8 = fir.array_coor %arg0(%0) %arg3 : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
+    %9 = fir.load %8 : !fir.ref<f32>
+    %10 = arith.addf %arg4, %9 fastmath<contract> : f32
+    %11 = arith.addi %arg3, %c1 overflow<nsw> : index
+    fir.result %11, %10 : index, f32
   }
-  %4:2 = fir.do_loop %arg2 = %c1 to %c100 step %c1 iter_args(%arg3 = %3#1) -> (index, f32) {
-    %6 = fir.array_coor %arg1(%1) %c1, %arg2 : (!fir.ref<!fir.array<100x100xf32>>, !fir.shape<2>, index, index) -> !fir.ref<f32>
-    %7 = fir.convert %6 : (!fir.ref<f32>) -> !fir.ref<!fir.array<100xf32>>
-    %8 = fir.do_loop %arg4 = %c1 to %c100 step %c1 iter_args(%arg5 = %arg3) -> (f32) {
-      %10 = fir.array_coor %7(%0) %arg4 : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
-      %11 = fir.load %10 : !fir.ref<f32>
-      %12 = arith.addf %arg5, %11 fastmath<contract> : f32
-      fir.result %12 : f32
+  %4:2 = fir.do_loop %arg3 = %c1 to %c100 step %c1 iter_args(%arg4 = %3#1) -> (index, f32) {
+    %8 = fir.array_coor %arg1(%1) %c1, %arg3 : (!fir.ref<!fir.array<100x100xf32>>, !fir.shape<2>, index, index) -> !fir.ref<f32>
+    %9 = fir.convert %8 : (!fir.ref<f32>) -> !fir.ref<!fir.array<100xf32>>
+    %10 = fir.do_loop %arg5 = %c1 to %c100 step %c1 iter_args(%arg6 = %arg4) -> (f32) {
+      %12 = fir.array_coor %9(%0) %arg5 : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
+      %13 = fir.load %12 : !fir.ref<f32>
+      %14 = arith.addf %arg6, %13 fastmath<contract> : f32
+      fir.result %14 : f32
     }
-    %9 = arith.addi %arg2, %c1 overflow<nsw> : index
-    fir.result %9, %8 : index, f32
+    %11 = arith.addi %arg3, %c1 overflow<nsw> : index
+    fir.result %11, %10 : index, f32
   }
-  %5 = fir.convert %4#0 : (index) -> i32
-  fir.store %5 to %2 : !fir.ref<i32>
-  return %4#1 : f32
+  %5:2 = fir.do_loop %arg3 = %c1 to %c100 step %c1 iter_args(%arg4 = %4#1, %arg5 = %cst) -> (f32, f32) {
+    %8 = fir.array_coor %arg0(%0) %arg3 : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
+    %9 = fir.load %8 : !fir.ref<f32>
+    %10 = arith.addf %arg4, %9 fastmath<contract> : f32
+    %11 = fir.array_coor %arg2(%0) %arg3 : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
+    %12 = fir.load %11 : !fir.ref<f32>
+    %13 = arith.addf %arg5, %12 fastmath<contract> : f32
+    fir.result %10, %13 : f32, f32
+  }
+  %6 = arith.addf %5#0, %5#1 fastmath<contract> : f32
+  %7 = fir.convert %4#0 : (index) -> i32
+  fir.store %7 to %2 : !fir.ref<i32>
+  return %6 : f32
 }
 
 // CHECK-LABEL:   func.func @loop_with_result(
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<100xf32>>,
-// CHECK-SAME:      %[[ARG1:.*]]: !fir.ref<!fir.array<100x100xf32>>) -> f32 {
+// CHECK-SAME:      %[[ARG1:.*]]: !fir.ref<!fir.array<100x100xf32>>,
+// CHECK-SAME:      %[[ARG2:.*]]: !fir.ref<!fir.array<100xf32>>) -> f32 {
 // CHECK:           %[[VAL_0:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_1:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK:           %[[VAL_2:.*]] = arith.constant 100 : index
@@ -192,7 +203,17 @@ func.func @loop_with_result(%arg0: !fir.ref<!fir.array<100xf32>>, %arg1: !fir.re
 // CHECK:             %[[VAL_25:.*]] = arith.addi %[[VAL_14]], %[[VAL_0]] overflow<nsw> : index
 // CHECK:             fir.result %[[VAL_25]], %[[VAL_19]] : index, f32
 // CHECK:           }
-// CHECK:           %[[VAL_26:.*]] = fir.convert %[[VAL_27:.*]]#0 : (index) -> i32
-// CHECK:           fir.store %[[VAL_26]] to %[[VAL_5]] : !fir.ref<i32>
-// CHECK:           return %[[VAL_27]]#1 : f32
+// CHECK:           %[[VAL_26:.*]] = fir.convert %[[ARG2]] : (!fir.ref<!fir.array<100xf32>>) -> memref<?xf32>
+// CHECK:           %[[VAL_27:.*]]:2 = affine.for %[[VAL_28:.*]] = %[[VAL_0]] to #{{.*}}(){{\[}}%[[VAL_2]]] iter_args(%[[VAL_29:.*]] = %[[VAL_30:.*]]#1, %[[VAL_31:.*]] = %[[VAL_1]]) -> (f32, f32) {
+// CHECK:             %[[VAL_32:.*]] = affine.apply #{{.*}}(%[[VAL_28]]){{\[}}%[[VAL_0]], %[[VAL_2]], %[[VAL_0]]]
+// CHECK:             %[[VAL_33:.*]] = affine.load %[[VAL_6]]{{\[}}%[[VAL_32]]] : memref<?xf32>
+// CHECK:             %[[VAL_34:.*]] = arith.addf %[[VAL_29]], %[[VAL_33]] fastmath<contract> : f32
+// CHECK:             %[[VAL_35:.*]] = affine.load %[[VAL_26]]{{\[}}%[[VAL_32]]] : memref<?xf32>
+// CHECK:             %[[VAL_36:.*]] = arith.addf %[[VAL_31]], %[[VAL_35]] fastmath<contract> : f32
+// CHECK:             affine.yield %[[VAL_34]], %[[VAL_36]] : f32, f32
+// CHECK:           }
+// CHECK:           %[[VAL_37:.*]] = arith.addf %[[VAL_38:.*]]#0, %[[VAL_38]]#1 fastmath<contract> : f32
+// CHECK:           %[[VAL_39:.*]] = fir.convert %[[VAL_40:.*]]#0 : (index) -> i32
+// CHECK:           fir.store %[[VAL_39]] to %[[VAL_5]] : !fir.ref<i32>
+// CHECK:           return %[[VAL_37]] : f32
 // CHECK:         }
