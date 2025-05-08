@@ -30,7 +30,10 @@ enum CXStringFlag {
 
   /// CXString contains a CXStringBuf that needs to be returned to the
   /// CXStringPool.
-  CXS_StringBuf
+  CXS_StringBuf,
+
+  /// CXString contains a 'StringRef' that it doesn't own.
+  CXS_StringRef
 };
 
 namespace clang {
@@ -87,7 +90,10 @@ CXString createRef(StringRef String) {
   if (String.empty())
     return createEmpty();
 
-  return createDup(String);
+  CXString Str;
+  Str.data = new CXStringRef{String};
+  Str.private_flags = CXS_StringRef;
+  return Str;
 }
 
 CXString createDup(StringRef String) {
@@ -161,21 +167,44 @@ const char *clang_getCString(CXString string) {
   if (string.private_flags == (unsigned) CXS_StringBuf) {
     return static_cast<const cxstring::CXStringBuf *>(string.data)->Data.data();
   }
+  if (string.private_flags == (unsigned)CXS_StringRef) {
+    auto *sr =
+        static_cast<cxstring::CXStringRef *>(const_cast<void *>(string.data));
+    auto len = sr->string_ref.size();
+    auto *src = sr->string_ref.data();
+
+    if (sr->null_terminated_string == nullptr) {
+      char *nts = (char *)llvm::safe_malloc(len + 1);
+      memcpy(nts, src, len);
+      nts[len] = '\0';
+      sr->null_terminated_string = nts;
+
+    } else {
+      return sr->null_terminated_string;
+    }
+  }
   return static_cast<const char *>(string.data);
 }
 
 void clang_disposeString(CXString string) {
   switch ((CXStringFlag) string.private_flags) {
-    case CXS_Unmanaged:
-      break;
-    case CXS_Malloc:
-      if (string.data)
-        free(const_cast<void *>(string.data));
-      break;
-    case CXS_StringBuf:
-      static_cast<cxstring::CXStringBuf *>(
-          const_cast<void *>(string.data))->dispose();
-      break;
+  case CXS_Unmanaged:
+    break;
+  case CXS_Malloc:
+    if (string.data)
+      free(const_cast<void *>(string.data));
+    break;
+  case CXS_StringBuf:
+    static_cast<cxstring::CXStringBuf *>(const_cast<void *>(string.data))
+        ->dispose();
+    break;
+  case CXS_StringRef: {
+    auto *sr =
+        static_cast<cxstring::CXStringRef *>(const_cast<void *>(string.data));
+    delete sr;
+  }
+
+  break;
   }
 }
 

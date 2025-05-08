@@ -82,6 +82,16 @@ private:
   friend struct CXStringBuf;
 };
 
+struct CXStringRef {
+  public:
+  const char* null_terminated_string{nullptr};
+  StringRef string_ref;
+  explicit CXStringRef(StringRef  sr) noexcept : string_ref{sr}  { }
+  ~CXStringRef() noexcept {
+    free(const_cast<char*>(null_terminated_string));
+  }
+};
+
 struct CXStringBuf {
   SmallString<128> Data;
   CXTranslationUnit TU;
@@ -103,6 +113,9 @@ static inline StringRef getContents(const CXUnsavedFile &UF) {
   return StringRef(UF.Contents, UF.Length);
 }
 }
+
+
+
 
 #endif
 
