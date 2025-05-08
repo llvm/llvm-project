@@ -17,9 +17,9 @@ namespace xegpu {
 /// Options to control the XeGPU unrolling. Its main purpose is to
 /// provide a way to customize the native shape of the operation.
 struct UnrollOptions {
-  using FilterConstraintFnType = std::function<LogicalResult(Operation *op)>;
   /// Callback function that indicates whether vector unrolling should be
   /// attempted on the operation.
+  using FilterConstraintFnType = std::function<LogicalResult(Operation *op)>;
   FilterConstraintFnType filterConstraint = nullptr;
   UnrollOptions &setFilterConstraint(FilterConstraintFnType constraint) {
     filterConstraint = std::move(constraint);

@@ -136,9 +136,9 @@ protected:
   }
 
 private:
-  const char *const packAttrName = "__xetile_blocking_pack__";
-  const char *const unpackAttrName = "__xetile_blocking_unpack__";
-  const char *const blockAttrName = "__xetile_blocking_inner_block__";
+  const char *const packAttrName = "__xegpu_blocking_pack__";
+  const char *const unpackAttrName = "__xegpu_blocking_unpack__";
+  const char *const blockAttrName = "__xegpu_blocking_tile_shape__";
 
   xegpu::UnrollOptions options;
 };
