@@ -54,7 +54,7 @@ cl::opt<bool> MemProfReportHintedSizes(
 // This is useful if we have enabled reporting of hinted sizes, and want to get
 // information from the indexing step for all contexts (especially for testing),
 // or have specified a value less than 100% for -memprof-cloning-cold-threshold.
-static cl::opt<bool> MemProfKeepAllNotColdContexts(
+cl::opt<bool> MemProfKeepAllNotColdContexts(
     "memprof-keep-all-not-cold-contexts", cl::init(false), cl::Hidden,
     cl::desc("Keep all non-cold contexts (increases cloning overheads)"));
 
@@ -244,12 +244,14 @@ void CallStackTrie::convertHotToNotCold(CallStackTrieNode *Node) {
 
 // Copy over some or all of NewMIBNodes to the SavedMIBNodes vector, depending
 // on options that enable filtering out some NotCold contexts.
-static void SaveFilteredNewMIBNodes(std::vector<Metadata *> &NewMIBNodes,
+static void saveFilteredNewMIBNodes(std::vector<Metadata *> &NewMIBNodes,
                                     std::vector<Metadata *> &SavedMIBNodes,
                                     unsigned CallerContextLength) {
   // In the simplest case, with pruning disabled, keep all the new MIB nodes.
-  if (MemProfKeepAllNotColdContexts)
+  if (MemProfKeepAllNotColdContexts) {
     append_range(SavedMIBNodes, NewMIBNodes);
+    return;
+  }
 
   auto EmitMessageForRemovedContexts = [](const MDNode *MIBMD, StringRef Tag,
                                           StringRef Extra) {
@@ -372,7 +374,7 @@ bool CallStackTrie::buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
     }
     // Pass in the stack length of the MIB nodes added for the immediate caller,
     // which is the current stack length plus 1.
-    SaveFilteredNewMIBNodes(NewMIBNodes, MIBNodes, MIBCallStack.size() + 1);
+    saveFilteredNewMIBNodes(NewMIBNodes, MIBNodes, MIBCallStack.size() + 1);
     if (AddedMIBNodesForAllCallerContexts)
       return true;
     // We expect that the callers should be forced to add MIBs to disambiguate
