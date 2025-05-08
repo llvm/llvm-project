@@ -61,6 +61,7 @@
 #include "llvm/Transforms/IPO/LowerTypeTests.h"
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
+#include "llvm/Transforms/Instrumentation/IRSanitizer.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
@@ -776,6 +777,13 @@ static void addSanitizers(const Triple &TargetTriple,
     };
     ASanPass(SanitizerKind::Address, false);
     ASanPass(SanitizerKind::KernelAddress, true);
+
+    auto IRPass = [&](SanitizerMask Mask) {
+      if (LangOpts.Sanitize.has(Mask)) {
+        MPM.addPass(IRSanitizerPass());
+      }
+    };
+    IRPass(SanitizerKind::IR);
 
     auto HWASanPass = [&](SanitizerMask Mask, bool CompileKernel) {
       if (LangOpts.Sanitize.has(Mask)) {
