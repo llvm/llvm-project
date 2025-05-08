@@ -36,7 +36,7 @@ AMDGPUMCExpr::AMDGPUMCExpr(VariantKind Kind, ArrayRef<const MCExpr *> Args,
   // allocation (e.g., through SmallVector's grow).
   RawArgs = static_cast<const MCExpr **>(
       Ctx.allocate(sizeof(const MCExpr *) * Args.size()));
-  std::uninitialized_copy(Args.begin(), Args.end(), RawArgs);
+  llvm::uninitialized_copy(Args, RawArgs);
   this->Args = ArrayRef<const MCExpr *>(RawArgs, Args.size());
 }
 
