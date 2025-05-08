@@ -552,10 +552,7 @@
                 "description": "Path to the program to attach to."
               },
               "pid": {
-                "type": [
-                  "number",
-                  "string"
-                ],
+                "type": "number",
                 "description": "System process ID to attach to."
               },
               "waitFor": {
