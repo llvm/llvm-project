@@ -564,6 +564,8 @@ Bug Fixes in This Version
   the invalid attribute location appropriately. (#GH137861)
 - Fixed a crash when a malformed ``_Pragma`` directive appears as part of an 
   ``#include`` directive. (#GH138094)
+- Fixed a crash during constant evaluation involving invalid lambda captures
+  (#GH138832)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
