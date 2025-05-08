@@ -59,6 +59,7 @@ class StepScriptedTestCase(TestBase):
         )
         return (target, process, thread, bkpt)
 
+    @skipIf(archs=no_match(["x86_64"]))
     def test_step_single_instruction(self):
         (target, process, thread, bkpt) = self.run_until_branch_instruction()
 
