@@ -4227,8 +4227,7 @@ bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
   // swifterror pointers can only be used by a load, store, or as a swifterror
   // argument; swifterror pointers are not allowed to be used in select or phi
   // instructions.
-  if ((OpIdx == 1 && isa<StoreInst>(I)) || (OpIdx == 0 && isa<LoadInst>(I)) ||
-      (OpIdx < I->getNumOperands() && isa<CallBase>(I)))
+  if (OpIdx < I->getNumOperands())
     if (I->getOperand(OpIdx)->isSwiftError())
       return false;
 
