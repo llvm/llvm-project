@@ -1067,8 +1067,6 @@ Decl *Parser::ParseObjCMethodPrototype(tok::ObjCKeywordKind MethodImplKind,
 IdentifierInfo *Parser::ParseObjCSelectorPiece(SourceLocation &SelectorLoc) {
 
   switch (Tok.getKind()) {
-  default:
-    return nullptr;
   case tok::colon:
     // Empty selector piece uses the location of the ':'.
     SelectorLoc = Tok.getLocation();
@@ -1094,10 +1092,13 @@ IdentifierInfo *Parser::ParseObjCSelectorPiece(SourceLocation &SelectorLoc) {
     return nullptr;
   }
 
-  case tok::identifier:
-#define KEYWORD(X,Y) case tok::kw_ ## X:
-#include "clang/Basic/TokenKinds.def"
+  case tok::kw___attribute:
+    return nullptr;
+
+  default:
     IdentifierInfo *II = Tok.getIdentifierInfo();
+    if (!II)
+      return nullptr;
     SelectorLoc = ConsumeToken();
     return II;
   }
