@@ -1821,8 +1821,7 @@ OMPThreadLimitClause *OMPThreadLimitClause::CreateEmpty(const ASTContext &C,
 void OMPClausePrinter::VisitOMPIfClause(OMPIfClause *Node) {
   OS << "if(";
   if (Node->getNameModifier() != OMPD_unknown)
-    OS << getOpenMPDirectiveName(Node->getNameModifier(), Version)
-       << ": ";
+    OS << getOpenMPDirectiveName(Node->getNameModifier(), Version) << ": ";
   Node->getCondition()->printPretty(OS, nullptr, Policy, 0);
   OS << ")";
 }
