@@ -112,15 +112,17 @@ LIBC_INLINE tm *gmtime_internal(const time_t *timer, tm *result) {
   return result;
 }
 
-LIBC_INLINE tm *localtime_internal(const time_t *timer, tm *buf) {
+LIBC_INLINE tm *localtime_internal(const time_t *timer, tm *result) {
   time_t seconds = *timer;
   // Update the tm structure's year, month, day, etc. from seconds.
-  if (update_from_seconds(seconds, buf) < 0) {
+  if (update_from_seconds(seconds, result) < 0) {
     out_of_range();
     return nullptr;
   }
 
-  return buf;
+  // TODO(zimirza): implement timezone database
+
+  return result;
 }
 
 LIBC_INLINE tm *localtime(const time_t *t_ptr) {
