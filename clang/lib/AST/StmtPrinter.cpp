@@ -73,16 +73,13 @@ namespace {
     PrintingPolicy Policy;
     std::string NL;
     const ASTContext *Context;
-    unsigned Version;
 
   public:
     StmtPrinter(raw_ostream &os, PrinterHelper *helper,
                 const PrintingPolicy &Policy, unsigned Indentation = 0,
                 StringRef NL = "\n", const ASTContext *Context = nullptr)
         : OS(os), IndentLevel(Indentation), Helper(helper), Policy(Policy),
-          NL(NL), Context(Context),
-          Version(Context ? Context->getLangOpts().OpenMP
-                          : llvm::omp::FallbackVersion) {}
+          NL(NL), Context(Context) {}
 
     void PrintStmt(Stmt *S) { PrintStmt(S, Policy.Indentation); }
 
@@ -740,7 +737,9 @@ void StmtPrinter::VisitOMPCanonicalLoop(OMPCanonicalLoop *Node) {
 
 void StmtPrinter::PrintOMPExecutableDirective(OMPExecutableDirective *S,
                                               bool ForceNoStmt) {
-  OMPClausePrinter Printer(OS, Policy, Version);
+  unsigned OpenMPVersion =
+      Context ? Context->getLangOpts().OpenMP : llvm::omp::FallbackVersion;
+  OMPClausePrinter Printer(OS, Policy, OpenMPVersion);
   ArrayRef<OMPClause *> Clauses = S->clauses();
   for (auto *Clause : Clauses)
     if (Clause && !Clause->isImplicit()) {
@@ -967,14 +966,18 @@ void StmtPrinter::VisitOMPTeamsDirective(OMPTeamsDirective *Node) {
 
 void StmtPrinter::VisitOMPCancellationPointDirective(
     OMPCancellationPointDirective *Node) {
+  unsigned OpenMPVersion =
+      Context ? Context->getLangOpts().OpenMP : llvm::omp::FallbackVersion;
   Indent() << "#pragma omp cancellation point "
-           << getOpenMPDirectiveName(Node->getCancelRegion(), Version);
+           << getOpenMPDirectiveName(Node->getCancelRegion(), OpenMPVersion);
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPCancelDirective(OMPCancelDirective *Node) {
+  unsigned OpenMPVersion =
+      Context ? Context->getLangOpts().OpenMP : llvm::omp::FallbackVersion;
   Indent() << "#pragma omp cancel "
-           << getOpenMPDirectiveName(Node->getCancelRegion(), Version);
+           << getOpenMPDirectiveName(Node->getCancelRegion(), OpenMPVersion);
   PrintOMPExecutableDirective(Node);
 }
 
