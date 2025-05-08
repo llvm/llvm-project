@@ -142,7 +142,10 @@ if(MSVC)
 endif()
 
 # We don't use the C++ Standard Library here, so avoid including it by mistake.
-append_list_if(COMPILER_RT_HAS_NOSTDINCXX_FLAG -nostdinc++ EXTRA_FLAGS)
+if(COMPILER_RT_HAS_NOSTDINCXX_FLAG)
+set_property(SOURCE InstrProfilingRuntime.cpp APPEND_STRING
+  PROPERTY COMPILE_FLAGS " -nostdinc++")
+endif()
 # XRay uses C++ standard library headers.
 string(REGEX REPLACE "-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
