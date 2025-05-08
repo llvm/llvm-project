@@ -62,7 +62,7 @@ void AddFilter(TypeCategoryImpl::SharedPointer category_sp,
                llvm::StringRef type_name,
                ScriptedSyntheticChildren::Flags flags, bool regex = false);
 
-size_t ExtractIndexFromString(const char *item_name);
+std::optional<size_t> ExtractIndexFromString(const char *item_name);
 
 Address GetArrayAddressOrPointerValue(ValueObject &valobj);
 
