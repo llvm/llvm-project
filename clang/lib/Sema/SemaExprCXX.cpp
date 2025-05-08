@@ -6458,9 +6458,6 @@ void DiagnoseBuiltinDeprecation(Sema& S, TypeTrait Kind,
     case UTT_HasTrivialDestructor:
       Replacement = UTT_IsTriviallyDestructible;
       break;
-    case UTT_IsTriviallyRelocatable:
-      Replacement = clang::UTT_IsCppTriviallyRelocatable;
-      break;
     default:
       return;
   }
