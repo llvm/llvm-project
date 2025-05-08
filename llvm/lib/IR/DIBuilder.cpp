@@ -444,6 +444,19 @@ DIDerivedType *DIBuilder::createVariantMemberType(
       std::nullopt, std::nullopt, Flags, getConstantOrNull(Discriminant));
 }
 
+DIDerivedType *DIBuilder::createVariantMemberType(DIScope *Scope,
+                                                  DINodeArray Elements,
+                                                  Constant *Discriminant,
+                                                  DIType *Ty) {
+  auto *V = DICompositeType::get(VMContext, dwarf::DW_TAG_variant, {}, nullptr,
+                                 0, getNonCompileUnitScope(Scope), {}, 0, 0, 0,
+                                 DINode::FlagZero, Elements, 0, {}, nullptr);
+
+  trackIfUnresolved(V);
+  return createVariantMemberType(Scope, {}, nullptr, 0, 0, 0, 0, Discriminant,
+                                 DINode::FlagZero, V);
+}
+
 DIDerivedType *DIBuilder::createBitFieldMemberType(
     DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
     uint64_t SizeInBits, uint64_t OffsetInBits, uint64_t StorageOffsetInBits,
