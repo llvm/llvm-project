@@ -262,7 +262,7 @@ static void EventThreadFunction(DAP &dap) {
 }
 
 /// Initialize request; value of command field is 'initialize'.
-llvm::Expected<InitializeResponseBody> InitializeRequestHandler::Run(
+llvm::Expected<InitializeResponse> InitializeRequestHandler::Run(
     const InitializeRequestArguments &arguments) const {
   dap.clientFeatures = arguments.supportedFeatures;
 
