@@ -481,7 +481,7 @@ static cl::opt<bool> HasClosedWorldAssumption(
     cl::desc("Whether has closed-world assumption at link time"),
     cl::init(false), cl::Hidden);
 
-static cl::opt<bool> VerifyTarget("verify-tgt",
+static cl::opt<bool> VerifyTarget("amdgpu-verify-tgt",
                                   cl::desc("Enable the target verifier"));
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {

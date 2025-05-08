@@ -34,7 +34,7 @@ using namespace llvm;
 #define Check(C, ...)                                                          \
   do {                                                                         \
     if (!(C)) {                                                                \
-      TargetVerify::CheckFailed(__VA_ARGS__);                                  \
+      TargetVerify::checkFailed(__VA_ARGS__);                                  \
     }                                                                          \
   } while (false)
 
