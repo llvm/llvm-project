@@ -4176,7 +4176,7 @@ static Value *emitPointerArithmetic(CodeGenFunction &CGF,
     if (CGF.getLangOpts().PointerOverflowDefined ||
         !CGF.SanOpts.has(SanitizerKind::PointerOverflow) ||
         NullPointerIsDefined(CGF.Builder.GetInsertBlock()->getParent(),
-                              PtrTy->getPointerAddressSpace()))
+                             PtrTy->getPointerAddressSpace()))
       return Ptr;
     // The inbounds GEP of null is valid iff the index is zero.
     CodeGenFunction::SanitizerScope SanScope(&CGF);
