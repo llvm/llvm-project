@@ -45,8 +45,9 @@ Quickstart
    ```
 
 3. Create a build directory and use CMake to configure the suite. Use the
-   `CMAKE_C_COMPILER` option to specify the compiler to test. Use a cache file
-   to choose a typical build configuration:
+   `CMAKE_C_COMPILER` option to specify the compiler to test (the C++ compiler
+   will be inferred automatically from this). Use a cache file to choose a typical
+   build configuration:
 
    ```bash
    % mkdir test-suite-build
@@ -85,9 +86,10 @@ MicroBenchmarks/XRay microbenchmarks, you need to add `compiler-rt` to your
    PASS: test-suite :: MultiSource/Applications/ALAC/encode/alacconvert-encode.test (2 of 474)
    ...
    ```
-**NOTE!** even in the case you only want to get the compile-time results(code size, llvm stats etc),
-you need to run the test with the above `llvm-lit` command. In that case, the *results.json* file will
-contain compile-time metrics.
+**NOTE!** even in the case you only want to get the compile-time results
+(`-DTEST_SUITE_RUN_BENCHMARKS=OFF`, to get code size, llvm stats etc),
+you need to run the test with the above `llvm-lit` command. In that case,
+the *results.json* file will contain compile-time metrics only.
 
 6. Show and compare result files (optional):
 
