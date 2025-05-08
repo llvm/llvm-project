@@ -138,7 +138,8 @@ public:
         // Treat every argument of functions in std::ranges as noescape.
         if (safeGetName(NsDecl) == "ranges") {
           if (auto *OuterDecl = NsDecl->getParent(); OuterDecl &&
-              isa<NamespaceDecl>(OuterDecl) && safeGetName(OuterDecl) == "std")
+              isa<NamespaceDecl>(OuterDecl) &&
+              safeGetName(OuterDecl) == "std")
             return true;
         }
         return false;
