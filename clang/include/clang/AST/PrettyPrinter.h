@@ -59,7 +59,7 @@ struct PrintingPolicy {
 
   /// Create a default printing policy for the specified language.
   PrintingPolicy(const LangOptions &LO)
-      : Indentation(2), OpenMP(LO.OpenMP), SuppressSpecifiers(false),
+      : Indentation(2), SuppressSpecifiers(false),
         SuppressTagKeyword(LO.CPlusPlus), IncludeTagDefinition(false),
         SuppressScope(false), SuppressUnwrittenScope(false),
         SuppressInlineNamespace(SuppressInlineNamespaceMode::Redundant),
@@ -93,10 +93,6 @@ struct PrintingPolicy {
 
   /// The number of spaces to use to indent each line.
   unsigned Indentation : 8;
-
-  /// Version of the effective OpenMP spec (used to select directive name
-  /// spelling).
-  unsigned OpenMP : 8;
 
   /// Whether we should suppress printing of the actual specifiers for
   /// the given type or declaration.

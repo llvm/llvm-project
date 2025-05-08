@@ -73,13 +73,16 @@ namespace {
     PrintingPolicy Policy;
     std::string NL;
     const ASTContext *Context;
+    unsigned Version;
 
   public:
-    StmtPrinter(raw_ostream &os, PrinterHelper *helper,
+    StmtPrinter(raw_ostream & os, PrinterHelper * helper,
                 const PrintingPolicy &Policy, unsigned Indentation = 0,
                 StringRef NL = "\n", const ASTContext *Context = nullptr)
         : OS(os), IndentLevel(Indentation), Helper(helper), Policy(Policy),
-          NL(NL), Context(Context) {}
+          NL(NL), Context(Context),
+          Version(Context ? Context->getLangOpts().OpenMP
+                          : llvm::omp::FallbackVersion) {}
 
     void PrintStmt(Stmt *S) { PrintStmt(S, Policy.Indentation); }
 
@@ -737,7 +740,7 @@ void StmtPrinter::VisitOMPCanonicalLoop(OMPCanonicalLoop *Node) {
 
 void StmtPrinter::PrintOMPExecutableDirective(OMPExecutableDirective *S,
                                               bool ForceNoStmt) {
-  OMPClausePrinter Printer(OS, Policy);
+  OMPClausePrinter Printer(OS, Policy, Version);
   ArrayRef<OMPClause *> Clauses = S->clauses();
   for (auto *Clause : Clauses)
     if (Clause && !Clause->isImplicit()) {
@@ -965,13 +968,13 @@ void StmtPrinter::VisitOMPTeamsDirective(OMPTeamsDirective *Node) {
 void StmtPrinter::VisitOMPCancellationPointDirective(
     OMPCancellationPointDirective *Node) {
   Indent() << "#pragma omp cancellation point "
-           << getOpenMPDirectiveName(Node->getCancelRegion(), Policy.OpenMP);
+           << getOpenMPDirectiveName(Node->getCancelRegion(), Version);
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPCancelDirective(OMPCancelDirective *Node) {
   Indent() << "#pragma omp cancel "
-           << getOpenMPDirectiveName(Node->getCancelRegion(), Policy.OpenMP);
+           << getOpenMPDirectiveName(Node->getCancelRegion(), Version);
   PrintOMPExecutableDirective(Node);
 }
 
