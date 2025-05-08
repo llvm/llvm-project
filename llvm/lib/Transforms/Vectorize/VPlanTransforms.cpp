@@ -1223,6 +1223,16 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
     WideIV->setStartValue(NewStart);
     auto *NewStep = Plan.getOrAddLiveIn(ConstantInt::get(NewIVTy, 1));
     WideIV->setStepValue(NewStep);
+    // TODO: Remove once VPWidenIntOrFpInductionRecipe is fully expanded.
+    VPInstructionWithType *OldStepVector = WideIV->getStepVector();
+    assert(OldStepVector->getNumUsers() == 1 &&
+           "step vector should only be used by single "
+           "VPWidenIntOrFpInductionRecipe");
+    auto *NewStepVector = new VPInstructionWithType(
+        VPInstruction::StepVector, {}, NewIVTy, OldStepVector->getDebugLoc());
+    NewStepVector->insertAfter(OldStepVector->getDefiningRecipe());
+    OldStepVector->replaceAllUsesWith(NewStepVector);
+    OldStepVector->eraseFromParent();
 
     auto *NewBTC = new VPWidenCastRecipe(
         Instruction::Trunc, Plan.getOrCreateBackedgeTakenCount(), NewIVTy);
@@ -2583,6 +2593,27 @@ void VPlanTransforms::handleUncountableEarlyExit(
       Instruction::Or, {IsEarlyExitTaken, IsLatchExitTaken});
   Builder.createNaryOp(VPInstruction::BranchOnCond, AnyExitTaken);
   LatchExitingBranch->eraseFromParent();
+}
+
+void VPlanTransforms::materializeStepVectors(VPlan &Plan) {
+  for (auto &Phi : Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
+    auto *IVR = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
+    if (!IVR)
+      continue;
+
+    Type *Ty = IVR->getPHINode()->getType();
+    if (TruncInst *Trunc = IVR->getTruncInst())
+      Ty = Trunc->getType();
+    if (Ty->isFloatingPointTy())
+      Ty = IntegerType::get(Ty->getContext(), Ty->getScalarSizeInBits());
+
+    VPBuilder Builder(Plan.getVectorPreheader());
+    VPInstruction *StepVector = Builder.createNaryOp(
+        VPInstruction::StepVector, {}, Ty, {}, IVR->getDebugLoc());
+    assert(IVR->getNumOperands() == 3 &&
+           "can only add step vector before unrolling");
+    IVR->addOperand(StepVector);
+  }
 }
 
 void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {

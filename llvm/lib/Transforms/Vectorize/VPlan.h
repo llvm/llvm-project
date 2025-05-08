@@ -902,6 +902,8 @@ public:
     /// Scale the first operand (vector step) by the second operand
     /// (scalar-step).  Casts both operands to the result type if needed.
     WideIVStep,
+    // Creates a step vector starting from 0 to VF with a step of 1.
+    StepVector,
 
   };
 
@@ -1072,7 +1074,15 @@ public:
     if (R->isScalarCast())
       return true;
     auto *VPI = dyn_cast<VPInstruction>(R);
-    return VPI && VPI->getOpcode() == VPInstruction::WideIVStep;
+    if (!VPI)
+      return false;
+    switch (VPI->getOpcode()) {
+    case VPInstruction::WideIVStep:
+    case VPInstruction::StepVector:
+      return true;
+    default:
+      return false;
+    }
   }
 
   static inline bool classof(const VPUser *R) {
@@ -1869,7 +1879,7 @@ class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe {
   TruncInst *Trunc;
 
   // If this recipe is unrolled it will have 2 additional operands.
-  bool isUnrolled() const { return getNumOperands() == 5; }
+  bool isUnrolled() const { return getNumOperands() == 6; }
 
 public:
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
@@ -1917,6 +1927,16 @@ public:
 
   VPValue *getVFValue() { return getOperand(2); }
   const VPValue *getVFValue() const { return getOperand(2); }
+
+  // TODO: Remove once VPWidenIntOrFpInduction is fully expanded in
+  // convertToConcreteRecipes.
+  VPInstructionWithType *getStepVector() {
+    auto *StepVector =
+        cast<VPInstructionWithType>(getOperand(3)->getDefiningRecipe());
+    assert(StepVector->getOpcode() == VPInstruction::StepVector &&
+           "step vector operand must be a VPInstruction::StepVector");
+    return StepVector;
+  }
 
   VPValue *getSplatVFValue() {
     // If the recipe has been unrolled return the VPValue for the induction
