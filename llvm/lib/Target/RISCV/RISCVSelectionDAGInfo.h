@@ -9,6 +9,7 @@
 #ifndef LLVM_LIB_TARGET_RISCV_RISCVSELECTIONDAGINFO_H
 #define LLVM_LIB_TARGET_RISCV_RISCVSELECTIONDAGINFO_H
 
+#include "llvm/CodeGen/SDNodeInfo.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 
 #define GET_SDNODE_ENUM
