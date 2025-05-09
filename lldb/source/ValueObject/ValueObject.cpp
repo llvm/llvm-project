@@ -2794,56 +2794,56 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
   if (m_deref_valobj)
     return m_deref_valobj->GetSP();
 
-  std::string child_name_str;
-  uint32_t child_byte_size = 0;
-  int32_t child_byte_offset = 0;
+  std::string deref_name_str;
+  uint32_t deref_byte_size = 0;
+  int32_t deref_byte_offset = 0;
   CompilerType compiler_type = GetCompilerType();
   uint64_t language_flags = 0;
 
   ExecutionContext exe_ctx(GetExecutionContextRef());
 
-  CompilerType child_compiler_type;
-  auto child_compiler_type_or_err = compiler_type.GetDereferencedType(
-      &exe_ctx, child_name_str, child_byte_size, child_byte_offset, this,
+  CompilerType deref_compiler_type;
+  auto deref_compiler_type_or_err = compiler_type.GetDereferencedType(
+      &exe_ctx, deref_name_str, deref_byte_size, deref_byte_offset, this,
       language_flags);
 
   std::string deref_error;
-  if (child_compiler_type_or_err) {
-    child_compiler_type = *child_compiler_type_or_err;
-    if (child_compiler_type && child_byte_size) {
-      ConstString child_name;
-      if (!child_name_str.empty())
-        child_name.SetCString(child_name_str.c_str());
+  if (deref_compiler_type_or_err) {
+    deref_compiler_type = *deref_compiler_type_or_err;
+    if (deref_compiler_type && deref_byte_size) {
+      ConstString deref_name;
+      if (!deref_name_str.empty())
+        deref_name.SetCString(deref_name_str.c_str());
 
       m_deref_valobj =
-          new ValueObjectChild(*this, child_compiler_type, child_name,
-                               child_byte_size, child_byte_offset, 0, 0, false,
+          new ValueObjectChild(*this, deref_compiler_type, deref_name,
+                               deref_byte_size, deref_byte_offset, 0, 0, false,
                                true, eAddressTypeInvalid, language_flags);
     }
 
-    // In case of incomplete child compiler type, use the pointee type and try
+    // In case of incomplete deref compiler type, use the pointee type and try
     // to recreate a new ValueObjectChild using it.
     if (!m_deref_valobj) {
       // FIXME(#59012): C++ stdlib formatters break with incomplete types (e.g.
       // `std::vector<int> &`). Remove ObjC restriction once that's resolved.
       if (Language::LanguageIsObjC(GetPreferredDisplayLanguage()) &&
           HasSyntheticValue()) {
-        child_compiler_type = compiler_type.GetPointeeType();
+        deref_compiler_type = compiler_type.GetPointeeType();
 
-        if (child_compiler_type) {
-          ConstString child_name;
-          if (!child_name_str.empty())
-            child_name.SetCString(child_name_str.c_str());
+        if (deref_compiler_type) {
+          ConstString deref_name;
+          if (!deref_name_str.empty())
+            deref_name.SetCString(deref_name_str.c_str());
 
           m_deref_valobj = new ValueObjectChild(
-              *this, child_compiler_type, child_name, child_byte_size,
-              child_byte_offset, 0, 0, false, true, eAddressTypeInvalid,
+              *this, deref_compiler_type, deref_name, deref_byte_size,
+              deref_byte_offset, 0, 0, false, true, eAddressTypeInvalid,
               language_flags);
         }
       }
     }
   } else {
-    deref_error = llvm::toString(child_compiler_type_or_err.takeError());
+    deref_error = llvm::toString(deref_compiler_type_or_err.takeError());
     LLDB_LOG(GetLog(LLDBLog::Types), "could not find child: {0}", deref_error);
     if (IsSynthetic()) {
       m_deref_valobj = GetChildMemberWithName("$$dereference$$").get();
