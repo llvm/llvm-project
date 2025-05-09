@@ -42,7 +42,7 @@ void ASTMergeAction::ExecuteAction() {
       *CI.getASTContext().getTranslationUnitDecl());
   for (unsigned I = 0, N = ASTFiles.size(); I != N; ++I) {
     IntrusiveRefCntPtr<DiagnosticsEngine>
-        Diags(new DiagnosticsEngine(DiagIDs, &CI.getDiagnosticOpts(),
+        Diags(new DiagnosticsEngine(DiagIDs, CI.getDiagnosticOpts(),
                                     new ForwardingDiagnosticConsumer(
                                           *CI.getDiagnostics().getClient()),
                                     /*ShouldOwnClient=*/true));
