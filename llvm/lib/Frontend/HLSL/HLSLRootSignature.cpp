@@ -144,14 +144,18 @@ void DescriptorTableClause::dump(raw_ostream &OS) const {
   OS << ", flags = " << Flags << ")";
 }
 
-// Helper struct so that we can use the overloaded notation of std::visit
-template <class... Ts> struct OverloadMethods : Ts... {
-  using Ts::operator()...;
+// Helper callable so that we can use the overloaded notation of std::visit
+namespace {
+struct ElementDumper {
+  raw_ostream &OS;
+  template <typename T> void operator()(const T &Element) const {
+    Element.dump(OS);
+  }
 };
-
-template <class... Ts> OverloadMethods(Ts...) -> OverloadMethods<Ts...>;
+} // namespace
 
 void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements) {
+  ElementDumper Dumper{OS};
   OS << "RootElements{";
   bool First = true;
   for (const RootElement &Element : Elements) {
@@ -159,10 +163,7 @@ void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements) {
       OS << ",";
     OS << " ";
     First = false;
-    std::visit(OverloadMethods{
-                   [&OS](DescriptorTable Table) { Table.dump(OS); },
-                   [&OS](DescriptorTableClause Clause) { Clause.dump(OS); }},
-               Element);
+    std::visit(Dumper, Element);
   }
   OS << "}";
 }
