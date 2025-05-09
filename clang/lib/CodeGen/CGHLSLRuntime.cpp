@@ -546,7 +546,7 @@ static void initializeBufferFromBinding(CodeGenModule &CGM,
   auto *Space =
       llvm::ConstantInt::get(CGM.IntTy, RBA ? RBA->getSpaceNumber() : 0);
 
-  if (!RBA->isImplicit()) {
+  if (RBA->hasRegisterSlot()) {
     auto *RegSlot = llvm::ConstantInt::get(CGM.IntTy, RBA->getSlotNumber());
     Intrinsic::ID Intr =
         CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic();
