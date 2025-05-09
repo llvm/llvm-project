@@ -104,6 +104,8 @@ struct MissingFeatures {
   static bool opCallExtParameterInfo() { return false; }
   static bool opCallCIRGenFuncInfoParamInfo() { return false; }
   static bool opCallCIRGenFuncInfoExtParamInfo() { return false; }
+  static bool opCallLandingPad() { return false; }
+  static bool opCallContinueBlock() { return false; }
 
   // ScopeOp handling
   static bool opScopeCleanupRegion() { return false; }
