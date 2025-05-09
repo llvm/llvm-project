@@ -4343,9 +4343,10 @@ SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
 
   auto PartEltCnt = Lo0.getValueType().getVectorElementCount();
 
-  LLVMContext &Context = *DAG.getContext();
-  EVT PartResVT = EVT::getVectorVT(Context, MVT::i1, PartEltCnt);
-  EVT WideResVT = EVT::getVectorVT(Context, MVT::i1, PartEltCnt*2);
+  EVT VT = N->getValueType(0);
+  EVT PartResVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
+  assert(PartResVT.getVectorElementCount() == PartEltCnt &&
+         "Expected an equal split!");
 
   if (Opc == ISD::SETCC) {
     LoRes = DAG.getNode(ISD::SETCC, DL, PartResVT, Lo0, Lo1, N->getOperand(2));
@@ -4369,12 +4370,8 @@ SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
     HiRes = DAG.getNode(ISD::VP_SETCC, DL, PartResVT, Hi0, Hi1,
                         N->getOperand(2), MaskHi, EVLHi);
   }
-  SDValue Con = DAG.getNode(ISD::CONCAT_VECTORS, DL, WideResVT, LoRes, HiRes);
 
-  EVT OpVT = N->getOperand(0).getValueType();
-  ISD::NodeType ExtendCode =
-      TargetLowering::getExtendForContent(TLI.getBooleanContents(OpVT));
-  return DAG.getNode(ExtendCode, DL, N->getValueType(0), Con);
+  return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, LoRes, HiRes);
 }
 
 
