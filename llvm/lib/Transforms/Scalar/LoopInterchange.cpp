@@ -269,10 +269,10 @@ static bool isLegalToInterChangeLoops(CharMatrix &DepMatrix,
 
     // Check if the direction vector is lexicographically positive (or zero)
     // for both before/after exchanged.
-    if (isLexicographicallyPositive(Cur, 0, Cur.size()) == false)
+    if (isLexicographicallyPositive(Cur, OuterLoopId, Cur.size()) == false)
       return false;
     std::swap(Cur[InnerLoopId], Cur[OuterLoopId]);
-    if (isLexicographicallyPositive(Cur, 0, Cur.size()) == false)
+    if (isLexicographicallyPositive(Cur, OuterLoopId, Cur.size()) == false)
       return false;
   }
   return true;
