@@ -3207,11 +3207,16 @@ bool RISCVDAGToDAGISel::selectSHXADD_UWOp(SDValue N, unsigned ShAmt,
 }
 
 bool RISCVDAGToDAGISel::selectNegImm(SDValue N, SDValue &Val) {
-  if (!isa<ConstantSDNode>(N) || !N.hasOneUse())
+  if (!isa<ConstantSDNode>(N))
     return false;
   int64_t Imm = cast<ConstantSDNode>(N)->getSExtValue();
   if (isInt<32>(Imm))
     return false;
+
+  if (any_of(N->users(),
+             [](const SDNode *U) { return U->getOpcode() != ISD::ADD; }))
+    return false;
+
   int OrigImmCost = RISCVMatInt::getIntMatCost(APInt(64, Imm), 64, *Subtarget,
                                                /*CompressionCost=*/true);
   int NegImmCost = RISCVMatInt::getIntMatCost(APInt(64, -Imm), 64, *Subtarget,
