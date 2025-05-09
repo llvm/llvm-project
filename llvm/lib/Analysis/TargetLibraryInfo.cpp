@@ -205,6 +205,11 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     return;
   }
 
+  if (T.isDXIL()) {
+    TLI.disableAllFunctions();
+    return;
+  }
+
   // memset_pattern{4,8,16} is only available on iOS 3.0 and Mac OS X 10.5 and
   // later. All versions of watchOS support it.
   if (T.isMacOSX()) {
