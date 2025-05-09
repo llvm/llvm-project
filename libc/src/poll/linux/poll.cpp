@@ -18,14 +18,24 @@
 
 #include <sys/syscall.h> // SYS_poll, SYS_ppoll
 
+#if SYS_poll
+constexpr auto POLL_SYSCALL_ID = SYS_poll;
+#elif defined(SYS_ppoll)
+constexpr auto POLL_SYSCALL_ID = SYS_ppoll;
+#elif defined(SYS_ppoll_time64)
+constexpr auto POLL_SYSCALL_ID = SYS_ppoll_time64;
+#else
+#error "poll, ppoll, ppoll_time64 syscalls not available."
+#endif
+
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, poll, (pollfd * fds, nfds_t nfds, int timeout)) {
   int ret = 0;
 
 #ifdef SYS_poll
-  ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_poll, fds, nfds, timeout);
-#elif defined(SYS_ppoll)
+  ret = LIBC_NAMESPACE::syscall_impl<int>(POLL_SYSCALL_ID, fds, nfds, timeout);
+#elif defined(SYS_ppoll) || defined(SYS_ppoll_time64)
   timespec ts, *tsp;
   if (timeout >= 0) {
     ts.tv_sec = timeout / 1000;
@@ -34,11 +44,8 @@ LLVM_LIBC_FUNCTION(int, poll, (pollfd * fds, nfds_t nfds, int timeout)) {
   } else {
     tsp = nullptr;
   }
-  ret =
-      LIBC_NAMESPACE::syscall_impl<int>(SYS_ppoll, fds, nfds, tsp, nullptr, 0);
-#else
-// TODO: https://github.com/llvm/llvm-project/issues/125940
-#error "SYS_ppoll_time64?"
+  ret = LIBC_NAMESPACE::syscall_impl<int>(POLL_SYSCALL_ID, fds, nfds, tsp,
+                                          nullptr, 0);
 #endif
 
   if (ret < 0) {
