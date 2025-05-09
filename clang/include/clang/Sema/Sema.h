@@ -646,6 +646,194 @@ enum class TrivialABIHandling {
   ConsiderTrivialABI
 };
 
+enum class TryCaptureKind { Implicit, ExplicitByVal, ExplicitByRef };
+
+enum class AllowFoldKind {
+  No,
+  Allow,
+};
+
+/// Context in which we're performing a usual arithmetic conversion.
+enum class ArithConvKind {
+  /// An arithmetic operation.
+  Arithmetic,
+  /// A bitwise operation.
+  BitwiseOp,
+  /// A comparison.
+  Comparison,
+  /// A conditional (?:) operator.
+  Conditional,
+  /// A compound assignment expression.
+  CompAssign,
+};
+
+// Used for determining in which context a type is allowed to be passed to a
+// vararg function.
+enum class VarArgKind {
+  Valid,
+  ValidInCXX11,
+  Undefined,
+  MSVCUndefined,
+  Invalid
+};
+
+/// AssignConvertType - All of the 'assignment' semantic checks return this
+/// enum to indicate whether the assignment was allowed.  These checks are
+/// done for simple assignments, as well as initialization, return from
+/// function, argument passing, etc.  The query is phrased in terms of a
+/// source and destination type.
+enum class AssignConvertType {
+  /// Compatible - the types are compatible according to the standard.
+  Compatible,
+
+  /// CompatibleVoidPtrToNonVoidPtr - The types are compatible in C because
+  /// a void * can implicitly convert to another pointer type, which we
+  /// differentiate for better diagnostic behavior.
+  CompatibleVoidPtrToNonVoidPtr,
+
+  /// PointerToInt - The assignment converts a pointer to an int, which we
+  /// accept as an extension.
+  PointerToInt,
+
+  /// IntToPointer - The assignment converts an int to a pointer, which we
+  /// accept as an extension.
+  IntToPointer,
+
+  /// FunctionVoidPointer - The assignment is between a function pointer and
+  /// void*, which the standard doesn't allow, but we accept as an extension.
+  FunctionVoidPointer,
+
+  /// IncompatiblePointer - The assignment is between two pointers types that
+  /// are not compatible, but we accept them as an extension.
+  IncompatiblePointer,
+
+  /// IncompatibleFunctionPointer - The assignment is between two function
+  /// pointers types that are not compatible, but we accept them as an
+  /// extension.
+  IncompatibleFunctionPointer,
+
+  /// IncompatibleFunctionPointerStrict - The assignment is between two
+  /// function pointer types that are not identical, but are compatible,
+  /// unless compiled with -fsanitize=cfi, in which case the type mismatch
+  /// may trip an indirect call runtime check.
+  IncompatibleFunctionPointerStrict,
+
+  /// IncompatiblePointerSign - The assignment is between two pointers types
+  /// which point to integers which have a different sign, but are otherwise
+  /// identical. This is a subset of the above, but broken out because it's by
+  /// far the most common case of incompatible pointers.
+  IncompatiblePointerSign,
+
+  /// CompatiblePointerDiscardsQualifiers - The assignment discards
+  /// c/v/r qualifiers, which we accept as an extension.
+  CompatiblePointerDiscardsQualifiers,
+
+  /// IncompatiblePointerDiscardsQualifiers - The assignment
+  /// discards qualifiers that we don't permit to be discarded,
+  /// like address spaces.
+  IncompatiblePointerDiscardsQualifiers,
+
+  /// IncompatibleNestedPointerAddressSpaceMismatch - The assignment
+  /// changes address spaces in nested pointer types which is not allowed.
+  /// For instance, converting __private int ** to __generic int ** is
+  /// illegal even though __private could be converted to __generic.
+  IncompatibleNestedPointerAddressSpaceMismatch,
+
+  /// IncompatibleNestedPointerQualifiers - The assignment is between two
+  /// nested pointer types, and the qualifiers other than the first two
+  /// levels differ e.g. char ** -> const char **, but we accept them as an
+  /// extension.
+  IncompatibleNestedPointerQualifiers,
+
+  /// IncompatibleVectors - The assignment is between two vector types that
+  /// have the same size, which we accept as an extension.
+  IncompatibleVectors,
+
+  /// IntToBlockPointer - The assignment converts an int to a block
+  /// pointer. We disallow this.
+  IntToBlockPointer,
+
+  /// IncompatibleBlockPointer - The assignment is between two block
+  /// pointers types that are not compatible.
+  IncompatibleBlockPointer,
+
+  /// IncompatibleObjCQualifiedId - The assignment is between a qualified
+  /// id type and something else (that is incompatible with it). For example,
+  /// "id <XXX>" = "Foo *", where "Foo *" doesn't implement the XXX protocol.
+  IncompatibleObjCQualifiedId,
+
+  /// IncompatibleObjCWeakRef - Assigning a weak-unavailable object to an
+  /// object with __weak qualifier.
+  IncompatibleObjCWeakRef,
+
+  /// Incompatible - We reject this conversion outright, it is invalid to
+  /// represent it in the AST.
+  Incompatible
+};
+
+/// The scope in which to find allocation functions.
+enum class AllocationFunctionScope {
+  /// Only look for allocation functions in the global scope.
+  Global,
+  /// Only look for allocation functions in the scope of the
+  /// allocated class.
+  Class,
+  /// Look for allocation functions in both the global scope
+  /// and in the scope of the allocated class.
+  Both
+};
+
+/// Describes the result of an "if-exists" condition check.
+enum class IfExistsResult {
+  /// The symbol exists.
+  Exists,
+
+  /// The symbol does not exist.
+  DoesNotExist,
+
+  /// The name is a dependent name, so the results will differ
+  /// from one instantiation to the next.
+  Dependent,
+
+  /// An error occurred.
+  Error
+};
+
+enum class CorrectTypoKind {
+  NonError,     // CorrectTypo used in a non error recovery situation.
+  ErrorRecovery // CorrectTypo used in normal error recovery.
+};
+
+enum class OverloadKind {
+  /// This is a legitimate overload: the existing declarations are
+  /// functions or function templates with different signatures.
+  Overload,
+
+  /// This is not an overload because the signature exactly matches
+  /// an existing declaration.
+  Match,
+
+  /// This is not an overload because the lookup results contain a
+  /// non-function.
+  NonFunction
+};
+
+/// Contexts in which a converted constant expression is required.
+enum class CCEKind {
+  CaseValue,     ///< Expression in a case label.
+  Enumerator,    ///< Enumerator value with fixed underlying type.
+  TemplateArg,   ///< Value of a non-type template parameter.
+  TempArgStrict, ///< As above, but applies strict template checking
+                 ///< rules.
+  ArrayBound,    ///< Array bound in array declarator or new-expression.
+  ExplicitBool,  ///< Condition in an explicit(bool) specifier.
+  Noexcept,      ///< Condition in a noexcept(bool) specifier.
+  StaticAssertMessageSize, ///< Call to size() in a static assert
+                           ///< message.
+  StaticAssertMessageData, ///< Call to data() in a static assert
+                           ///< message.
+};
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -2200,9 +2388,14 @@ public:
   void DiagnoseAvailabilityOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
                                   const ObjCInterfaceDecl *UnknownObjCClass,
                                   bool ObjCPropertyAccess,
-                                  bool AvoidPartialAvailabilityChecks = false,
-                                  ObjCInterfaceDecl *ClassReceiver = nullptr);
+                                  bool AvoidPartialAvailabilityChecks,
+                                  ObjCInterfaceDecl *ClassReceiver);
 
+  void DiagnoseAvailabilityOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs);
+
+  std::pair<AvailabilityResult, const NamedDecl *>
+  ShouldDiagnoseAvailabilityOfDecl(const NamedDecl *D, std::string *Message,
+                                   ObjCInterfaceDecl *ClassReceiver);
   ///@}
 
   //
@@ -4123,12 +4316,17 @@ public:
                                        SourceLocation FinalLoc,
                                        bool IsFinalSpelledSealed,
                                        bool IsAbstract,
+                                       SourceLocation TriviallyRelocatable,
+                                       SourceLocation Replaceable,
                                        SourceLocation LBraceLoc);
 
   /// ActOnTagFinishDefinition - Invoked once we have finished parsing
   /// the definition of a tag (enumeration, class, struct, or union).
   void ActOnTagFinishDefinition(Scope *S, Decl *TagDecl,
                                 SourceRange BraceRange);
+
+  ASTContext::CXXRecordDeclRelocationInfo
+  CheckCXX2CRelocatableAndReplaceable(const clang::CXXRecordDecl *D);
 
   void ActOnTagFinishSkippedDefinition(SkippedDefinitionContext Context);
 
@@ -4158,7 +4356,8 @@ public:
   Decl *ActOnEnumConstant(Scope *S, Decl *EnumDecl, Decl *LastEnumConstant,
                           SourceLocation IdLoc, IdentifierInfo *Id,
                           const ParsedAttributesView &Attrs,
-                          SourceLocation EqualLoc, Expr *Val);
+                          SourceLocation EqualLoc, Expr *Val,
+                          SkipBodyInfo *SkipBody = nullptr);
   void ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
                      Decl *EnumDecl, ArrayRef<Decl *> Elements, Scope *S,
                      const ParsedAttributesView &Attr);
@@ -6282,6 +6481,8 @@ private:
   void setupImplicitSpecialMemberType(CXXMethodDecl *SpecialMem,
                                       QualType ResultTy,
                                       ArrayRef<QualType> Args);
+  // Helper for ActOnFields to check for all function pointer members.
+  bool EntirelyFunctionPointers(const RecordDecl *Record);
 
   // A cache representing if we've fully checked the various comparison category
   // types stored in ASTContext. The bit-index corresponds to the integer value
@@ -6776,12 +6977,6 @@ public:
   ExprResult CheckLValueToRValueConversionOperand(Expr *E);
   void CleanupVarDeclMarking();
 
-  enum TryCaptureKind {
-    TryCapture_Implicit,
-    TryCapture_ExplicitByVal,
-    TryCapture_ExplicitByRef
-  };
-
   /// Try to capture the given variable.
   ///
   /// \param Var The variable to capture.
@@ -6823,7 +7018,7 @@ public:
 
   /// Try to capture the given variable.
   bool tryCaptureVariable(ValueDecl *Var, SourceLocation Loc,
-                          TryCaptureKind Kind = TryCapture_Implicit,
+                          TryCaptureKind Kind = TryCaptureKind::Implicit,
                           SourceLocation EllipsisLoc = SourceLocation());
 
   /// Checks if the variable must be captured.
@@ -6984,6 +7179,11 @@ public:
   ExprResult ActOnParenExpr(SourceLocation L, SourceLocation R, Expr *E);
   ExprResult ActOnParenListExpr(SourceLocation L, SourceLocation R,
                                 MultiExprArg Val);
+  ExprResult ActOnCXXParenListInitExpr(ArrayRef<Expr *> Args, QualType T,
+                                       unsigned NumUserSpecifiedExprs,
+                                       SourceLocation InitLoc,
+                                       SourceLocation LParenLoc,
+                                       SourceLocation RParenLoc);
 
   /// ActOnStringLiteral - The specified tokens were lexed as pasted string
   /// fragments (e.g. "foo" "bar" L"baz").  The result string has to handle
@@ -7428,25 +7628,23 @@ public:
     virtual ~VerifyICEDiagnoser() {}
   };
 
-  enum AllowFoldKind {
-    NoFold,
-    AllowFold,
-  };
-
   /// VerifyIntegerConstantExpression - Verifies that an expression is an ICE,
   /// and reports the appropriate diagnostics. Returns false on success.
   /// Can optionally return the value of the expression.
-  ExprResult VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
-                                             VerifyICEDiagnoser &Diagnoser,
-                                             AllowFoldKind CanFold = NoFold);
-  ExprResult VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
-                                             unsigned DiagID,
-                                             AllowFoldKind CanFold = NoFold);
-  ExprResult VerifyIntegerConstantExpression(Expr *E,
-                                             llvm::APSInt *Result = nullptr,
-                                             AllowFoldKind CanFold = NoFold);
-  ExprResult VerifyIntegerConstantExpression(Expr *E,
-                                             AllowFoldKind CanFold = NoFold) {
+  ExprResult
+  VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
+                                  VerifyICEDiagnoser &Diagnoser,
+                                  AllowFoldKind CanFold = AllowFoldKind::No);
+  ExprResult
+  VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
+                                  unsigned DiagID,
+                                  AllowFoldKind CanFold = AllowFoldKind::No);
+  ExprResult
+  VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result = nullptr,
+                                  AllowFoldKind CanFold = AllowFoldKind::No);
+  ExprResult
+  VerifyIntegerConstantExpression(Expr *E,
+                                  AllowFoldKind CanFold = AllowFoldKind::No) {
     return VerifyIntegerConstantExpression(E, nullptr, CanFold);
   }
 
@@ -7583,20 +7781,6 @@ public:
                                       SourceLocation Loc,
                                       BinaryOperatorKind Opc);
 
-  /// Context in which we're performing a usual arithmetic conversion.
-  enum ArithConvKind {
-    /// An arithmetic operation.
-    ACK_Arithmetic,
-    /// A bitwise operation.
-    ACK_BitwiseOp,
-    /// A comparison.
-    ACK_Comparison,
-    /// A conditional (?:) operator.
-    ACK_Conditional,
-    /// A compound assignment expression.
-    ACK_CompAssign,
-  };
-
   // type checking for sizeless vector binary operators.
   QualType CheckSizelessVectorOperands(ExprResult &LHS, ExprResult &RHS,
                                        SourceLocation Loc, bool IsCompAssign,
@@ -7723,16 +7907,6 @@ public:
                                        const FunctionProtoType *Proto,
                                        Expr *Fn);
 
-  // Used for determining in which context a type is allowed to be passed to a
-  // vararg function.
-  enum VarArgKind {
-    VAK_Valid,
-    VAK_ValidInCXX11,
-    VAK_Undefined,
-    VAK_MSVCUndefined,
-    VAK_Invalid
-  };
-
   /// Determine the degree of POD-ness for an expression.
   /// Incomplete types are considered POD, since this check can be performed
   /// when we're in an unevaluated context.
@@ -7759,7 +7933,7 @@ public:
   // Check that the usual arithmetic conversions can be performed on this pair
   // of expressions that might be of enumeration type.
   void checkEnumArithmeticConversions(Expr *LHS, Expr *RHS, SourceLocation Loc,
-                                      Sema::ArithConvKind ACK);
+                                      ArithConvKind ACK);
 
   // UsualArithmeticConversions - performs the UsualUnaryConversions on it's
   // operands and then handles various conversions that are common to binary
@@ -7769,107 +7943,13 @@ public:
   QualType UsualArithmeticConversions(ExprResult &LHS, ExprResult &RHS,
                                       SourceLocation Loc, ArithConvKind ACK);
 
-  /// AssignConvertType - All of the 'assignment' semantic checks return this
-  /// enum to indicate whether the assignment was allowed.  These checks are
-  /// done for simple assignments, as well as initialization, return from
-  /// function, argument passing, etc.  The query is phrased in terms of a
-  /// source and destination type.
-  enum AssignConvertType {
-    /// Compatible - the types are compatible according to the standard.
-    Compatible,
-
-    /// CompatibleVoidPtrToNonVoidPtr - The types are compatible in C because
-    /// a void * can implicitly convert to another pointer type, which we
-    /// differentiate for better diagnostic behavior.
-    CompatibleVoidPtrToNonVoidPtr,
-
-    /// PointerToInt - The assignment converts a pointer to an int, which we
-    /// accept as an extension.
-    PointerToInt,
-
-    /// IntToPointer - The assignment converts an int to a pointer, which we
-    /// accept as an extension.
-    IntToPointer,
-
-    /// FunctionVoidPointer - The assignment is between a function pointer and
-    /// void*, which the standard doesn't allow, but we accept as an extension.
-    FunctionVoidPointer,
-
-    /// IncompatiblePointer - The assignment is between two pointers types that
-    /// are not compatible, but we accept them as an extension.
-    IncompatiblePointer,
-
-    /// IncompatibleFunctionPointer - The assignment is between two function
-    /// pointers types that are not compatible, but we accept them as an
-    /// extension.
-    IncompatibleFunctionPointer,
-
-    /// IncompatibleFunctionPointerStrict - The assignment is between two
-    /// function pointer types that are not identical, but are compatible,
-    /// unless compiled with -fsanitize=cfi, in which case the type mismatch
-    /// may trip an indirect call runtime check.
-    IncompatibleFunctionPointerStrict,
-
-    /// IncompatiblePointerSign - The assignment is between two pointers types
-    /// which point to integers which have a different sign, but are otherwise
-    /// identical. This is a subset of the above, but broken out because it's by
-    /// far the most common case of incompatible pointers.
-    IncompatiblePointerSign,
-
-    /// CompatiblePointerDiscardsQualifiers - The assignment discards
-    /// c/v/r qualifiers, which we accept as an extension.
-    CompatiblePointerDiscardsQualifiers,
-
-    /// IncompatiblePointerDiscardsQualifiers - The assignment
-    /// discards qualifiers that we don't permit to be discarded,
-    /// like address spaces.
-    IncompatiblePointerDiscardsQualifiers,
-
-    /// IncompatibleNestedPointerAddressSpaceMismatch - The assignment
-    /// changes address spaces in nested pointer types which is not allowed.
-    /// For instance, converting __private int ** to __generic int ** is
-    /// illegal even though __private could be converted to __generic.
-    IncompatibleNestedPointerAddressSpaceMismatch,
-
-    /// IncompatibleNestedPointerQualifiers - The assignment is between two
-    /// nested pointer types, and the qualifiers other than the first two
-    /// levels differ e.g. char ** -> const char **, but we accept them as an
-    /// extension.
-    IncompatibleNestedPointerQualifiers,
-
-    /// IncompatibleVectors - The assignment is between two vector types that
-    /// have the same size, which we accept as an extension.
-    IncompatibleVectors,
-
-    /// IntToBlockPointer - The assignment converts an int to a block
-    /// pointer. We disallow this.
-    IntToBlockPointer,
-
-    /// IncompatibleBlockPointer - The assignment is between two block
-    /// pointers types that are not compatible.
-    IncompatibleBlockPointer,
-
-    /// IncompatibleObjCQualifiedId - The assignment is between a qualified
-    /// id type and something else (that is incompatible with it). For example,
-    /// "id <XXX>" = "Foo *", where "Foo *" doesn't implement the XXX protocol.
-    IncompatibleObjCQualifiedId,
-
-    /// IncompatibleObjCWeakRef - Assigning a weak-unavailable object to an
-    /// object with __weak qualifier.
-    IncompatibleObjCWeakRef,
-
-    /// Incompatible - We reject this conversion outright, it is invalid to
-    /// represent it in the AST.
-    Incompatible
-  };
-
   bool IsAssignConvertCompatible(AssignConvertType ConvTy) {
     switch (ConvTy) {
     default:
       return false;
-    case Compatible:
-    case CompatiblePointerDiscardsQualifiers:
-    case CompatibleVoidPtrToNonVoidPtr:
+    case AssignConvertType::Compatible:
+    case AssignConvertType::CompatiblePointerDiscardsQualifiers:
+    case AssignConvertType::CompatibleVoidPtrToNonVoidPtr:
       return true;
     }
     llvm_unreachable("impossible");
@@ -8373,18 +8453,6 @@ public:
   bool CheckAllocatedType(QualType AllocType, SourceLocation Loc,
                           SourceRange R);
 
-  /// The scope in which to find allocation functions.
-  enum AllocationFunctionScope {
-    /// Only look for allocation functions in the global scope.
-    AFS_Global,
-    /// Only look for allocation functions in the scope of the
-    /// allocated class.
-    AFS_Class,
-    /// Look for allocation functions in both the global scope
-    /// and in the scope of the allocated class.
-    AFS_Both
-  };
-
   /// Finds the overloads of operator new and delete that are appropriate
   /// for the allocation.
   bool FindAllocationFunctions(
@@ -8574,6 +8642,18 @@ public:
                                                ExprResult &LHS, ExprResult &RHS,
                                                SourceLocation QuestionLoc);
 
+  //// Determines if a type is trivially relocatable
+  /// according to the C++26 rules.
+  // FIXME: This is in Sema because it requires
+  // overload resolution, can we move to ASTContext?
+  bool IsCXXTriviallyRelocatableType(QualType T);
+
+  //// Determines if a type is replaceable
+  /// according to the C++26 rules.
+  // FIXME: This is in Sema because it requires
+  // overload resolution, can we move to ASTContext?
+  bool IsCXXReplaceableType(QualType T);
+
   /// Check the operands of ?: under C++ semantics.
   ///
   /// See C++ [expr.cond]. Note that LHS is never null, even for the GNU x ?: y
@@ -8667,22 +8747,6 @@ public:
                : CorrectDelayedTyposInExpr(ER.get(), InitDecl,
                                            RecoverUncorrectedTypos, Filter);
   }
-
-  /// Describes the result of an "if-exists" condition check.
-  enum IfExistsResult {
-    /// The symbol exists.
-    IER_Exists,
-
-    /// The symbol does not exist.
-    IER_DoesNotExist,
-
-    /// The name is a dependent name, so the results will differ
-    /// from one instantiation to the next.
-    IER_Dependent,
-
-    /// An error occurred.
-    IER_Error
-  };
 
   IfExistsResult
   CheckMicrosoftIfExistsSymbol(Scope *S, CXXScopeSpec &SS,
@@ -9594,11 +9658,6 @@ public:
                           bool IncludeDependentBases = false,
                           bool LoadExternal = true);
 
-  enum CorrectTypoKind {
-    CTK_NonError,     // CorrectTypo used in a non error recovery situation.
-    CTK_ErrorRecovery // CorrectTypo used in normal error recovery.
-  };
-
   /// Try to "correct" a typo in the source code by finding
   /// visible declarations whose names are similar to the name that was
   /// present in the source code.
@@ -9988,28 +10047,14 @@ public:
   /// if Sema is already doing so, which would cause infinite recursions.
   bool IsBuildingRecoveryCallExpr;
 
-  enum OverloadKind {
-    /// This is a legitimate overload: the existing declarations are
-    /// functions or function templates with different signatures.
-    Ovl_Overload,
-
-    /// This is not an overload because the signature exactly matches
-    /// an existing declaration.
-    Ovl_Match,
-
-    /// This is not an overload because the lookup results contain a
-    /// non-function.
-    Ovl_NonFunction
-  };
-
   /// Determine whether the given New declaration is an overload of the
-  /// declarations in Old. This routine returns Ovl_Match or Ovl_NonFunction if
-  /// New and Old cannot be overloaded, e.g., if New has the same signature as
-  /// some function in Old (C++ 1.3.10) or if the Old declarations aren't
-  /// functions (or function templates) at all. When it does return Ovl_Match or
-  /// Ovl_NonFunction, MatchedDecl will point to the decl that New cannot be
-  /// overloaded with. This decl may be a UsingShadowDecl on top of the
-  /// underlying declaration.
+  /// declarations in Old. This routine returns OverloadKind::Match or
+  /// OverloadKind::NonFunction if New and Old cannot be overloaded, e.g., if
+  /// New has the same signature as some function in Old (C++ 1.3.10) or if the
+  /// Old declarations aren't functions (or function templates) at all. When it
+  /// does return OverloadKind::Match or OverloadKind::NonFunction, MatchedDecl
+  /// will point to the decl that New cannot be overloaded with. This decl may
+  /// be a UsingShadowDecl on top of the underlying declaration.
   ///
   /// Example: Given the following input:
   ///
@@ -10022,14 +10067,15 @@ public:
   ///
   /// When we process #2, Old contains only the FunctionDecl for #1. By
   /// comparing the parameter types, we see that #1 and #2 are overloaded (since
-  /// they have different signatures), so this routine returns Ovl_Overload;
-  /// MatchedDecl is unchanged.
+  /// they have different signatures), so this routine returns
+  /// OverloadKind::Overload; MatchedDecl is unchanged.
   ///
   /// When we process #3, Old is an overload set containing #1 and #2. We
   /// compare the signatures of #3 to #1 (they're overloaded, so we do nothing)
   /// and then #3 to #2. Since the signatures of #3 and #2 are identical (return
   /// types of functions are not part of the signature), IsOverload returns
-  /// Ovl_Match and MatchedDecl will be set to point to the FunctionDecl for #2.
+  /// OverloadKind::Match and MatchedDecl will be set to point to the
+  /// FunctionDecl for #2.
   ///
   /// 'NewIsUsingShadowDecl' indicates that 'New' is being introduced into a
   /// class by a using declaration. The rules for whether to hide shadow
@@ -10217,22 +10263,6 @@ public:
   /// conversion of the expression From to an Objective-C pointer type.
   /// Returns a valid but null ExprResult if no conversion sequence exists.
   ExprResult PerformContextuallyConvertToObjCPointer(Expr *From);
-
-  /// Contexts in which a converted constant expression is required.
-  enum CCEKind {
-    CCEK_CaseValue,     ///< Expression in a case label.
-    CCEK_Enumerator,    ///< Enumerator value with fixed underlying type.
-    CCEK_TemplateArg,   ///< Value of a non-type template parameter.
-    CCEK_TempArgStrict, ///< As above, but applies strict template checking
-                        ///< rules.
-    CCEK_ArrayBound,    ///< Array bound in array declarator or new-expression.
-    CCEK_ExplicitBool,  ///< Condition in an explicit(bool) specifier.
-    CCEK_Noexcept,      ///< Condition in a noexcept(bool) specifier.
-    CCEK_StaticAssertMessageSize, ///< Call to size() in a static assert
-                                  ///< message.
-    CCEK_StaticAssertMessageData, ///< Call to data() in a static assert
-                                  ///< message.
-  };
 
   ExprResult BuildConvertedConstantExpression(Expr *From, QualType T,
                                               CCEKind CCE,

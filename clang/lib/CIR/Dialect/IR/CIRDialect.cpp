@@ -79,6 +79,14 @@ void cir::CIRDialect::initialize() {
   addInterfaces<CIROpAsmDialectInterface>();
 }
 
+Operation *cir::CIRDialect::materializeConstant(mlir::OpBuilder &builder,
+                                                mlir::Attribute value,
+                                                mlir::Type type,
+                                                mlir::Location loc) {
+  return builder.create<cir::ConstantOp>(loc, type,
+                                         mlir::cast<mlir::TypedAttr>(value));
+}
+
 //===----------------------------------------------------------------------===//
 // Helpers
 //===----------------------------------------------------------------------===//
@@ -1262,6 +1270,28 @@ void cir::TernaryOp::build(
 }
 
 //===----------------------------------------------------------------------===//
+// SelectOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult cir::SelectOp::fold(FoldAdaptor adaptor) {
+  mlir::Attribute condition = adaptor.getCondition();
+  if (condition) {
+    bool conditionValue = mlir::cast<cir::BoolAttr>(condition).getValue();
+    return conditionValue ? getTrueValue() : getFalseValue();
+  }
+
+  // cir.select if %0 then x else x -> x
+  mlir::Attribute trueValue = adaptor.getTrueValue();
+  mlir::Attribute falseValue = adaptor.getFalseValue();
+  if (trueValue == falseValue)
+    return trueValue;
+  if (getTrueValue() == getFalseValue())
+    return getTrueValue();
+
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
 // ShiftOp
 //===----------------------------------------------------------------------===//
 LogicalResult cir::ShiftOp::verify() {
@@ -1336,6 +1366,33 @@ LogicalResult cir::GetMemberOp::verify() {
     return emitError() << "member type mismatch";
 
   return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// VecCreateOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::VecCreateOp::verify() {
+  // Verify that the number of arguments matches the number of elements in the
+  // vector, and that the type of all the arguments matches the type of the
+  // elements in the vector.
+  const VectorType vecTy = getResult().getType();
+  if (getElements().size() != vecTy.getSize()) {
+    return emitOpError() << "operand count of " << getElements().size()
+                         << " doesn't match vector type " << vecTy
+                         << " element count of " << vecTy.getSize();
+  }
+
+  const mlir::Type elementType = vecTy.getElementType();
+  for (const mlir::Value element : getElements()) {
+    if (element.getType() != elementType) {
+      return emitOpError() << "operand type " << element.getType()
+                           << " doesn't match vector element type "
+                           << elementType;
+    }
+  }
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

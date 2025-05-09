@@ -1946,8 +1946,8 @@ QualType Sema::BuildBitIntType(bool IsUnsigned, Expr *BitWidth,
     return Context.getDependentBitIntType(IsUnsigned, BitWidth);
 
   llvm::APSInt Bits(32);
-  ExprResult ICE =
-      VerifyIntegerConstantExpression(BitWidth, &Bits, /*FIXME*/ AllowFold);
+  ExprResult ICE = VerifyIntegerConstantExpression(
+      BitWidth, &Bits, /*FIXME*/ AllowFoldKind::Allow);
 
   if (ICE.isInvalid())
     return QualType();
@@ -1993,7 +1993,7 @@ static ExprResult checkArraySize(Sema &S, Expr *&ArraySize,
     // the converted constant expression rules (to properly convert the source)
     // when the source expression is of class type.
     return S.CheckConvertedConstantExpression(
-        ArraySize, S.Context.getSizeType(), SizeVal, Sema::CCEK_ArrayBound);
+        ArraySize, S.Context.getSizeType(), SizeVal, CCEKind::ArrayBound);
   }
 
   // If the size is an ICE, it certainly isn't a VLA. If we're in a GNU mode
@@ -9157,10 +9157,10 @@ bool Sema::hasStructuralCompatLayout(Decl *D, Decl *Suggested) {
   // FIXME: Add a specific mode for C11 6.2.7/1 in StructuralEquivalenceContext
   // and isolate from other C++ specific checks.
   StructuralEquivalenceContext Ctx(
-      D->getASTContext(), Suggested->getASTContext(), NonEquivalentDecls,
-      StructuralEquivalenceKind::Default,
-      false /*StrictTypeSpelling*/, true /*Complain*/,
-      true /*ErrorOnTagTypeMismatch*/);
+      getLangOpts(), D->getASTContext(), Suggested->getASTContext(),
+      NonEquivalentDecls, StructuralEquivalenceKind::Default,
+      /*StrictTypeSpelling=*/false, /*Complain=*/true,
+      /*ErrorOnTagTypeMismatch=*/true);
   return Ctx.IsEquivalent(D, Suggested);
 }
 
@@ -9763,7 +9763,7 @@ QualType Sema::BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
       !IndexExpr->isTypeDependent()) {
     llvm::APSInt Value(Context.getIntWidth(Context.getSizeType()));
     ExprResult Res = CheckConvertedConstantExpression(
-        IndexExpr, Context.getSizeType(), Value, CCEK_ArrayBound);
+        IndexExpr, Context.getSizeType(), Value, CCEKind::ArrayBound);
     if (!Res.isUsable())
       return QualType();
     IndexExpr = Res.get();

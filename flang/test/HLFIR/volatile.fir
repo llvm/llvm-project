@@ -1,4 +1,4 @@
-// RUN: fir-opt --convert-hlfir-to-fir %s -o - | FileCheck %s
+// RUN: fir-opt --strict-fir-volatile-verifier --convert-hlfir-to-fir %s -o - | FileCheck %s
 
 func.func @foo() {
   %true = arith.constant true

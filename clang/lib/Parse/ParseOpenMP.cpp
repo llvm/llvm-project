@@ -3669,7 +3669,7 @@ bool Parser::ParseOpenMPIndirectClause(
       return false;
     llvm::APSInt Result;
     Ret = Actions.VerifyIntegerConstantExpression(Val.get(), &Result,
-                                                  Sema::AllowFold);
+                                                  AllowFoldKind::Allow);
     if (Ret.isInvalid())
       return false;
     DTCI.Indirect = Val.get();

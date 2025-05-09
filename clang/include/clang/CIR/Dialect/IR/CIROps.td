@@ -254,7 +254,11 @@ def PtrStrideOp : CIR_Op<"ptr_stride",
     ```
   }];
 
-  let arguments = (ins CIR_PointerType:$base, PrimitiveInt:$stride);
+  let arguments = (ins
+    CIR_PointerType:$base,
+    CIR_AnyFundamentalIntType:$stride
+  );
+
   let results = (outs CIR_PointerType:$result);
 
   let assemblyFormat = [{
@@ -380,8 +384,6 @@ def AllocaOp : CIR_Op<"alloca", [
     `]`
     ($annotations^)? attr-dict
   }];
-
-  let hasVerifier = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1460,6 +1462,8 @@ def SelectOp : CIR_Op<"select", [Pure,
       qualified(type($false_value))
     `)` `->` qualified(type($result)) attr-dict
   }];
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1507,9 +1511,6 @@ def TernaryOp : CIR_Op<"ternary",
       "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$falseBuilder)
       >
   ];
-
-  // All constraints already verified elsewhere.
-  let hasVerifier = 0;
 
   let assemblyFormat = [{
     `(` $cond `,`
@@ -1648,9 +1649,6 @@ def GetGlobalOp : CIR_Op<"get_global",
   let assemblyFormat = [{
     $name `:` qualified(type($addr)) attr-dict
   }];
-
-  // `GetGlobalOp` is fully verified by its traits.
-  let hasVerifier = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1833,7 +1831,6 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
 
   let hasCustomAssemblyFormat = 1;
   let skipDefaultBuilders = 1;
-  let hasVerifier = 0;
 
   // TODO(cir): for now cir.call is just a tiny shell of what it will become.
   // More attributes, arguments, and properties will be added in the future as
@@ -1946,6 +1943,58 @@ def TrapOp : CIR_Op<"trap", [Terminator]> {
   }];
 
   let assemblyFormat = "attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// VecCreate
+//===----------------------------------------------------------------------===//
+
+def VecCreateOp : CIR_Op<"vec.create", [Pure]> {
+
+  let summary = "Create a vector value";
+  let description = [{
+    The `cir.vec.create` operation creates a vector value with the given element
+    values. The number of element arguments must match the number of elements
+    in the vector type.
+  }];
+
+  let arguments = (ins Variadic<CIR_AnyType>:$elements);
+  let results = (outs CIR_VectorType:$result);
+
+  let assemblyFormat = [{
+    `(` ($elements^ `:` type($elements))? `)` `:` qualified(type($result))
+    attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// VecExtractOp
+//===----------------------------------------------------------------------===//
+
+def VecExtractOp : CIR_Op<"vec.extract", [Pure,
+  TypesMatchWith<"type of 'result' matches element type of 'vec'", "vec",
+                 "result", "cast<VectorType>($_self).getElementType()">]> {
+
+  let summary = "Extract one element from a vector object";
+  let description = [{
+    The `cir.vec.extract` operation extracts the element at the given index
+    from a vector object.
+
+    ```mlir
+    %tmp = cir.load %vec : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+    %idx = cir.const #cir.int<1> : !s32i
+    %element = cir.vec.extract %tmp[%idx : !s32i] : !cir.vector<4 x !s32i>
+    ```
+  }];
+
+  let arguments = (ins CIR_VectorType:$vec, CIR_AnyFundamentalIntType:$index);
+  let results = (outs CIR_AnyType:$result);
+
+  let assemblyFormat = [{
+    $vec `[` $index `:` type($index) `]` attr-dict `:` qualified(type($vec))
+  }];
 }
 
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD
