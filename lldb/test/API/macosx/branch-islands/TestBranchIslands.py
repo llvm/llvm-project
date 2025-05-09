@@ -2,7 +2,7 @@
 Make sure that we can step in across an arm64 branch island
 """
 
-import os
+
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
@@ -32,9 +32,6 @@ class TestBranchIslandStepping(TestBase):
         trace_before = lldbutil.print_stacktrace(thread, True)
         func_before = thread.frames[0].function
 
-        log_file_path = os.path.join(self.getBuildDir(), "step-log.txt")
-        self.runCmd(f"log enable -f {log_file_path} lldb step")
-        
         thread.StepInto()
         stop_frame = thread.frames[0]
         # This is failing on the bot, but I can't reproduce the failure
@@ -62,10 +59,6 @@ class TestBranchIslandStepping(TestBase):
             print(
                 f"\nStop disassembly:\n {lldbutil.disassemble(target, stop_frame.function)}"
             )
-            with open(log_file_path, "r") as f:
-                data = f.read()
-                print("Step Log:")
-                print(data)
 
         self.assertIn("foo", stop_frame.name, "Stepped into foo")
         var = stop_frame.FindVariable("a_variable_in_foo")

@@ -1038,15 +1038,6 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
     static RegularExpression g_branch_island_regex(g_branch_island_pattern);
 
     bool is_branch_island = g_branch_island_regex.Execute(current_name);
-    // FIXME: this is extra logging so I can figure out why this test is failing
-    // on the bot but not locally with all the same tools, etc...
-    if (thread_plan_sp && is_branch_island) {
-      if (log) {
-        StreamString s;
-        thread_plan_sp->GetDescription(&s, eDescriptionLevelVerbose);
-        LLDB_LOGF(log, "Am at a branch island, but already had plan: \n\t%s", s.GetData());
-      }
-    }
     if (!thread_plan_sp && is_branch_island) {
       thread_plan_sp = std::make_shared<ThreadPlanStepInstruction>(
           thread,
