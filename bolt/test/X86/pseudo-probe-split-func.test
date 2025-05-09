@@ -1,0 +1,18 @@
+## This test checks if pseudo probes are present in split fragments
+RUN: %clang %cflags %p/Inputs/pseudo-probe-split-func.c -o %t \
+RUN:   -O3 -fuse-ld=lld -fpseudo-probe-for-profiling -fno-omit-frame-pointer \
+RUN:   -mno-omit-leaf-frame-pointer -g -Wl,-q
+## Test pseudo probe encoding when hot fragments are emitted before cold
+RUN: llvm-bolt %t -o %t.out -split-functions --split-strategy=all -lite=0
+RUN: llvm-profgen --binary=%t.out --perfscript=1 --output=%t.null \
+RUN:   --show-disassembly-only --show-pseudo-probe | FileCheck %s
+## Test pseudo probe encoding when cold fragments are emitted before hot
+RUN: llvm-bolt %t -o %t.cold -split-functions --split-strategy=all -lite=0 \
+RUN:   --hot-functions-at-end
+RUN: llvm-profgen --binary=%t.cold --perfscript=1 --output=%t.null \
+RUN:   --show-disassembly-only --show-pseudo-probe | FileCheck %s
+CHECK: Disassembly of section .text.cold.3
+CHECK: <foo.cold.3>:
+CHECK: [Probe]:       FUNC: foo Index: 8  Type: Block
+CHECK: <main.cold.3>:
+CHECK: [Probe]:       FUNC: foo Index: 8  Type: Block  Inlined: @ main:2
