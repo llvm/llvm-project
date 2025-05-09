@@ -401,10 +401,13 @@ llvm::LogicalResult SelectTypeConv::genTypeLadderStep(
     {
       // Since conversion is done in parallel for each fir.select_type
       // operation, the runtime function insertion must be threadsafe.
-      callee =
-          fir::createFuncOp(rewriter.getUnknownLoc(), mod, fctName,
-                            rewriter.getFunctionType({descNoneTy, typeDescTy},
-                                                     rewriter.getI1Type()));
+      auto runtimeAttr =
+          mlir::NamedAttribute(fir::FIROpsDialect::getFirRuntimeAttrName(),
+                               mlir::UnitAttr::get(rewriter.getContext()));
+      callee = fir::createFuncOp(rewriter.getUnknownLoc(), mod, fctName,
+                                 rewriter.getFunctionType({descNoneTy, typeDescTy},
+                                   rewriter.getI1Type()),
+                                 {runtimeAttr});
     }
     cmp = rewriter
               .create<fir::CallOp>(loc, callee,
