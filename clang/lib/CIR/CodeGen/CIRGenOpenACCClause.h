@@ -148,7 +148,8 @@ class OpenACCClauseCIREmitter final
   template <typename U = void,
             typename = std::enable_if_t<isCombinedType<OpTy>, U>>
   void applyToComputeOp(const OpenACCClause &c) {
-    // TODO OpenACC: we have to set the insertion scope here correctly still.
+    mlir::OpBuilder::InsertionGuard guardCase(builder);
+    builder.setInsertionPoint(operation.computeOp);
     OpenACCClauseCIREmitter<typename OpTy::ComputeOpTy> computeEmitter{
         operation.computeOp, cgf, builder, dirKind, dirLoc};
     computeEmitter.lastDeviceTypeValues = lastDeviceTypeValues;
@@ -288,9 +289,11 @@ public:
       } else {
         llvm_unreachable("var-list version of self shouldn't get here");
       }
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToComputeOp(clause);
     } else {
       // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. If, combined constructs remain.
+      // unreachable. update construct remains.
       return clauseNotImplemented(clause);
     }
   }
@@ -302,13 +305,15 @@ public:
                                mlir::acc::DataOp, mlir::acc::WaitOp>) {
       operation.getIfCondMutable().append(
           createCondition(clause.getConditionExpr()));
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToComputeOp(clause);
     } else {
       // 'if' applies to most of the constructs, but hold off on lowering them
       // until we can write tests/know what we're doing with codegen to make
       // sure we get it right.
       // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Enter data, exit data, host_data, update, combined
-      // constructs remain.
+      // unreachable. Enter data, exit data, host_data, update constructs
+      // remain.
       return clauseNotImplemented(clause);
     }
   }
