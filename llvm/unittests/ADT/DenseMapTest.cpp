@@ -668,7 +668,9 @@ TEST(DenseMapCustomTest, LookupOr) {
 
   EXPECT_EQ(M.lookup_or(0, 4u), 3u);
   EXPECT_EQ(M.lookup_or(1, 4u), 0u);
-  EXPECT_EQ(M.lookup_or(2, 4u), 4u);
+
+  NonDefaultConstructible DefaultV = M.lookup_or(2, 4u);
+  EXPECT_EQ(DefaultV, 4u);
 }
 
 // Key traits that allows lookup with either an unsigned or char* key;
