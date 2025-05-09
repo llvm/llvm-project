@@ -424,20 +424,33 @@ CodeGenRegister::computeSubRegs(CodeGenRegBank &RegBank) {
   // These units correspond to the maximal cliques in the register overlap
   // graph which is optimal.
   //
-  // When there is ad hoc aliasing, we simply create one unit per edge in the
-  // undirected ad hoc aliasing graph. Technically, we could do better by
-  // identifying maximal cliques in the ad hoc graph, but cliques larger than 2
-  // are extremely rare anyway (I've never seen one), so we don't bother with
-  // the added complexity.
+  // When there is ad hoc aliasing, while we create one unit per edge in the
+  // undirected ad hoc aliasing graph to represent aliasing, one unit per each
+  // node leaf register is needed extra to identify them uniquely, in case these
+  // aliasing register are used as subregister(with disjoint lanemasks) to have
+  // an accurate lanemask generation for these leaf register.
+  // For example, In VE, SX0 is made out of disjoint subregister SW0 & SF0
+  // respectively, where SF0 is an alias for SW0. So while 2 register units will
+  // uniquely define these 2 subregister, the shared register unit will account
+  // for aliasing.
+  //
+  // Technically, we could do better by identifying maximal cliques in the ad
+  // hoc graph, but cliques larger than 2 are extremely rare anyway (I've never
+  // seen one), so we don't bother with the added complexity.
   for (CodeGenRegister *AR : ExplicitAliases) {
     // Only visit each edge once.
     if (AR->SubRegsComplete)
       continue;
     // Create a RegUnit representing this alias edge, and add it to both
     // registers.
-    unsigned Unit = RegBank.newRegUnit(this, AR);
-    RegUnits.set(Unit);
-    AR->RegUnits.set(Unit);
+    unsigned SharedUnit = RegBank.newRegUnit(this, AR);
+    RegUnits.set(SharedUnit);
+    AR->RegUnits.set(SharedUnit);
+
+    // Create a RegUnit that now corresponds uniquely to each of the both
+    // alias leaf register nodes.
+    RegUnits.set(RegBank.newRegUnit(this));
+    AR->RegUnits.set(RegBank.newRegUnit(AR));
   }
 
   // Finally, create units for leaf registers without ad hoc aliases. Note that
@@ -2675,6 +2688,13 @@ void CodeGenRegBank::printRegUnitNames(ArrayRef<unsigned> Units) const {
       dbgs() << ' ' << RegUnits[Unit].Roots[0]->getName();
     else
       dbgs() << " #" << Unit;
+
+    if (RegUnits[Unit].Roots[1]) {
+      if (Unit < NumNativeRegUnits)
+        dbgs() << '~' << RegUnits[Unit].Roots[1]->getName();
+      else
+        dbgs() << "~#" << Unit;
+    }
   }
   dbgs() << '\n';
 }
