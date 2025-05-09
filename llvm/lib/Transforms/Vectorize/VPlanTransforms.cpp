@@ -1880,8 +1880,6 @@ static VPValue *addVPLaneMaskPhiAndUpdateExitBranch(
   VPValue *AliasMask = nullptr;
 
   for (auto C : RTChecks) {
-    // FIXME: How to pass this info back?
-    //    HasAliasMask = true;
     VPValue *Sink =
         vputils::getOrCreateVPValueForSCEVExpr(Plan, C.SinkStart, *PSE.getSE());
     VPValue *Src =
@@ -2023,10 +2021,10 @@ void VPlanTransforms::addActiveLaneMask(
          "DataAndControlFlowWithoutRuntimeCheck implies "
          "UseActiveLaneMaskForControlFlow");
 
-  auto *FoundWidenCanonicalIVUser =
-      find_if(Plan.getCanonicalIV()->users(),
-              [](VPUser *U) { return isa<VPWidenCanonicalIVRecipe>(U); });
-  assert(FoundWidenCanonicalIVUser && *FoundWidenCanonicalIVUser &&
+  auto IVUsers = Plan.getCanonicalIV()->users();
+  auto *FoundWidenCanonicalIVUser = find_if(
+      IVUsers, [](VPUser *U) { return isa<VPWidenCanonicalIVRecipe>(U); });
+  assert(FoundWidenCanonicalIVUser != IVUsers.end() &&
          "Must have widened canonical IV when tail folding!");
   auto *WideCanonicalIV =
       cast<VPWidenCanonicalIVRecipe>(*FoundWidenCanonicalIVUser);

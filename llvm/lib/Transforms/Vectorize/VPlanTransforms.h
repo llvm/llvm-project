@@ -125,6 +125,7 @@ struct VPlanTransforms {
   /// creation) and instead it is handled using active-lane-mask. \p
   /// DataAndControlFlowWithoutRuntimeCheck implies \p
   /// UseActiveLaneMaskForControlFlow.
+  /// PSE is the SCEV expander used for values in runtime checks.
   /// RTChecks refers to the pointer pairs that need aliasing elements to be
   /// masked off each loop iteration.
   static void addActiveLaneMask(VPlan &Plan,
