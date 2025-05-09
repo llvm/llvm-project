@@ -138,7 +138,8 @@ class OpenACCClauseCIREmitter final
   template <typename U = void,
             typename = std::enable_if_t<isCombinedType<OpTy>, U>>
   void applyToLoopOp(const OpenACCClause &c) {
-    // TODO OpenACC: we have to set the insertion scope here correctly still.
+    mlir::OpBuilder::InsertionGuard guardCase(builder);
+    builder.setInsertionPoint(operation.loopOp);
     OpenACCClauseCIREmitter<mlir::acc::LoopOp> loopEmitter{
         operation.loopOp, cgf, builder, dirKind, dirLoc};
     loopEmitter.lastDeviceTypeValues = lastDeviceTypeValues;
@@ -448,10 +449,10 @@ public:
 
       operation.setTileForDeviceTypes(builder.getContext(),
                                       lastDeviceTypeValues, values);
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToLoopOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Combined constructs remain.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitTileClause");
     }
   }
 
