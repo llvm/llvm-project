@@ -375,7 +375,7 @@ void PositiveUsingDeclTemplate() {
   std::mutex m;
   lock_guard<std::mutex> l(m);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'std::scoped_lock' instead of 'std::lock_guard'
-  // CHECK-FIXES: scoped_lock l(m);
+  // CHECK-FIXES: std::scoped_lock l(m);
 
   using LockFunT = std::lock_guard<T>;
   // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: use 'std::scoped_lock' instead of 'std::lock_guard'
