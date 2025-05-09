@@ -3060,6 +3060,9 @@ bool ASTContext::hasUniqueObjectRepresentations(
 
   // All integrals and enums are unique.
   if (Ty->isIntegralOrEnumerationType()) {
+    // Address discriminated integer types are not unique.
+    if (Ty.hasAddressDiscriminatedPointerAuth())
+      return false;
     // Except _BitInt types that have padding bits.
     if (const auto *BIT = Ty->getAs<BitIntType>())
       return getTypeSize(BIT) == BIT->getNumBits();

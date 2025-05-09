@@ -2593,7 +2593,6 @@ public:
   bool isFunctionProtoType() const { return getAs<FunctionProtoType>(); }
   bool isPointerType() const;
   bool isPointerOrReferenceType() const;
-  bool isSignableType() const;
   /* TO_UPSTREAM(BoundsSafety) ON */
   bool isUnsafeIndexablePointerType() const;
   bool isSinglePointerType() const;
@@ -2602,6 +2601,9 @@ public:
   bool isUnspecifiedPointerType() const;
   bool isSafePointerType() const;
   /* TO_UPSTREAM(BoundsSafety) OFF */
+  bool isSignableType(const ASTContext &Ctx) const;
+  bool isSignablePointerType() const;
+  bool isSignableIntegerType(const ASTContext &Ctx) const;
   bool isAnyPointerType() const;   // Any C pointer or ObjC object pointer
   bool isCountAttributedType() const;
   /* TO_UPSTREAM(BoundsSafety) ON */
@@ -8634,7 +8636,13 @@ inline bool Type::isAnyPointerType() const {
   return isPointerType() || isObjCObjectPointerType();
 }
 
-inline bool Type::isSignableType() const { return isPointerType(); }
+inline bool Type::isSignableType(const ASTContext &Ctx) const {
+  return isSignablePointerType() || isSignableIntegerType(Ctx);
+}
+
+inline bool Type::isSignablePointerType() const {
+  return isPointerType() || isObjCClassType() || isObjCQualifiedClassType();
+}
 
 /* TO_UPSTREAM(BoundsSafety) ON */
 inline bool Type::isUnsafeIndexablePointerType() const {
