@@ -172,11 +172,6 @@ attributes #0 = { mustprogress noinline norecurse nounwind uwtable "frame-pointe
 
 ; CHECK:     .debug_info contents:
 ; CHECK-NEXT: 0x00000000:     Compile Unit:
-; CHECK: {{.*}}DW_TAG_variable
-; CHECK-NEXT: DW_AT_specification ([[VARDIE_1:.+]] "_vtable$")
-; CHECK-NEXT: DW_AT_alignment	(8)
-; CHECK-NEXT: DW_AT_location (DW_OP_addrx 0x0)
-; CHECK-NEXT: DW_AT_linkage_name ("_ZTVN3NSP5CBaseE")
 
 ; CHECK: {{.*}}DW_TAG_namespace
 ; CHECK-NEXT: DW_AT_name ("NSP")
@@ -184,23 +179,23 @@ attributes #0 = { mustprogress noinline norecurse nounwind uwtable "frame-pointe
 ; CHECK: {{.*}}DW_TAG_structure_type
 ; CHECK: DW_AT_name	("CBase")
 
-; CHECK: [[VARDIE_1]]: DW_TAG_variable
+; CHECK: DW_TAG_variable
 ; CHECK-NEXT: DW_AT_name ("_vtable$")
 ; CHECK-NEXT: DW_AT_type ({{.*}} "void *")
 ; CHECK: DW_AT_artificial	(true)
 ; CHECK-NEXT: DW_AT_accessibility	(DW_ACCESS_private)
-
-; CHECK: {{.*}}DW_TAG_variable
-; CHECK-NEXT: DW_AT_specification ([[VARDIE_2:.+]] "_vtable$")
 ; CHECK-NEXT: DW_AT_alignment	(8)
-; CHECK-NEXT: DW_AT_location (DW_OP_addrx 0x1)
-; CHECK-NEXT: DW_AT_linkage_name ("_ZTV8CDerived")
+; CHECK-NEXT: DW_AT_location (DW_OP_addrx 0x0)
+; CHECK-NEXT: DW_AT_linkage_name ("_ZTVN3NSP5CBaseE")
 
 ; CHECK: {{.*}}DW_TAG_structure_type
 ; CHECK: DW_AT_name	("CDerived")
 
-; CHECK: [[VARDIE_2]]: DW_TAG_variable
+; CHECK: DW_TAG_variable
 ; CHECK-NEXT: DW_AT_name ("_vtable$")
 ; CHECK-NEXT: DW_AT_type ({{.*}} "void *")
 ; CHECK: DW_AT_artificial	(true)
 ; CHECK-NEXT: DW_AT_accessibility	(DW_ACCESS_private)
+; CHECK-NEXT: DW_AT_alignment	(8)
+; CHECK-NEXT: DW_AT_location (DW_OP_addrx 0x1)
+; CHECK-NEXT: DW_AT_linkage_name ("_ZTV8CDerived")

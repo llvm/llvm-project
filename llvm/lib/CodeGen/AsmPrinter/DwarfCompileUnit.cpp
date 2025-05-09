@@ -175,6 +175,72 @@ unsigned DwarfCompileUnit::getOrCreateSourceID(const DIFile *File) {
   return LastFileID;
 }
 
+// Create the static member to hold the vtable information.
+// The debug information generated for static members is composed of 2 DIEs:
+// <DIE-1> and <DIE-2>.
+//
+// - Variable definition with a DW_AT_specification pointing to the second DIE.
+//     DIE-1: DW_TAG_variable
+//              ..
+//              DW_AT_specification <DIE-2>
+//              DW_AT_location <some-location>
+//              ..
+// - Parent for the static member.
+//     DIE-3: DW_TAG_structure_type
+//              ...
+// - Variable declaration
+//     DIE-2:   DW_TAG_variable
+//                ..
+//                DW_AT_declaration (true)
+//                ..
+//
+// As this static member is mainly intended for debuggers, there are cases
+// where there is no access to <DIE-1> making difficult to associate the
+// vtable information with its structure/class, as we can't use <DIE-2> to
+// find its parent <DIE-3>.
+// Basically, having just an instance of a structure/class, we can't access
+// its associated vtable information.
+//
+// By eliminating the <DIE-1> and moving the location information to <DIE-2>,
+// the consumers, will be able to associate the vtable information to the
+// parent <DIE-3>, using just an object or an object instance.
+//
+//     DIE-3: DW_TAG_structure_type
+//              ...
+//     DIE-2:   DW_TAG_variable
+//                ..
+//                DW_AT_location <some-location>
+void DwarfCompileUnit::createGlobalVariableVTableDIE(
+    const DIGlobalVariable *GV, ArrayRef<GlobalExpr> GlobalExprs) {
+  // Check for pre-existence.
+  if (getDIE(GV))
+    return;
+
+  assert(GV);
+  assert(GV->isDefinition());
+
+  DIDerivedType *SDMDecl = GV->getStaticDataMemberDeclaration();
+  assert(SDMDecl && "Expected static member decl");
+  assert(SDMDecl->isStaticMember() && "Expected static member decl");
+
+  // We need the declaration DIE that is in the static member's class.
+  // As some debuggers will usually ignore DIEs with the DW_AT_declaration
+  // attribute and assume that they'll be a specification DIE somewhere
+  // else that refers to it. Skip the DW_AT_declaration generation.
+  DIE *VariableSpecDIE =
+      getOrCreateStaticMemberDIE(SDMDecl, /*IsDeclaration*/false);
+
+  if (uint32_t AlignInBytes = GV->getAlignInBytes())
+    addUInt(*VariableSpecDIE, dwarf::DW_AT_alignment, dwarf::DW_FORM_udata,
+            AlignInBytes);
+
+  if (MDTuple *TP = GV->getTemplateParams())
+    addTemplateParams(*VariableSpecDIE, DINodeArray(TP));
+
+  // Add location.
+  addLocationAttribute(VariableSpecDIE, GV, GlobalExprs);
+}
+
 DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
     const DIGlobalVariable *GV, ArrayRef<GlobalExpr> GlobalExprs) {
   // Check for pre-existence.

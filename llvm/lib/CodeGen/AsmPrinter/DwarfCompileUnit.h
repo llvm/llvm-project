@@ -178,6 +178,10 @@ public:
 
   std::vector<BaseTypeRef> ExprRefedBaseTypes;
 
+  /// Create global variable DIE for VTable.
+  void createGlobalVariableVTableDIE(const DIGlobalVariable *GV,
+                                     ArrayRef<GlobalExpr> GlobalExprs);
+
   /// Get or create global variable DIE.
   DIE *
   getOrCreateGlobalVariableDIE(const DIGlobalVariable *GV,

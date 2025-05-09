@@ -2545,14 +2545,14 @@ void CGDebugInfo::emitVTableSymbol(llvm::GlobalVariable *VTable,
   llvm::DIScope *DContext = getContextDescriptor(cast<Decl>(DC), TheCU);
   auto *Ctxt = cast<llvm::DICompositeType>(DContext);
   llvm::DIFile *Unit = getOrCreateFile(Loc);
-  llvm::DIType *VTy = getOrCreateType(VoidPtr, Unit);
+  llvm::DIType *VTableType = getOrCreateType(VoidPtr, Unit);
   llvm::DINode::DIFlags Flags = getAccessFlag(AccessSpecifier::AS_private, RD) |
                                 llvm::DINode::FlagArtificial;
   auto Tag = CGM.getCodeGenOpts().DwarfVersion >= 5
                  ? llvm::dwarf::DW_TAG_variable
                  : llvm::dwarf::DW_TAG_member;
   llvm::DIDerivedType *DT = DBuilder.createStaticMemberType(
-      Ctxt, SymbolName, Unit, /*LineNumber=*/0, VTy, Flags,
+      Ctxt, SymbolName, Unit, /*LineNumber=*/0, VTableType, Flags,
       /*Val=*/nullptr, Tag);
 
   // Use the same vtable pointer to global alignment for the symbol.
@@ -2560,10 +2560,12 @@ void CGDebugInfo::emitVTableSymbol(llvm::GlobalVariable *VTable,
 
   // The global variable is in the CU scope, and links back to the type it's
   // "within" via the declaration field.
+  // No debug information is created for it. It is just used to generate the
+  // debug information within the static data member.
   llvm::DIGlobalVariableExpression *GVE =
       DBuilder.createGlobalVariableExpression(
-          TheCU, SymbolName, VTable->getName(), Unit, /*LineNo=*/0,
-          getOrCreateType(VoidPtr, Unit), VTable->hasLocalLinkage(),
+          TheCU, SymbolName, VTable->getName(), Unit, /*LineNo=*/0, VTableType,
+          VTable->hasLocalLinkage(),
           /*isDefined=*/true, nullptr, DT, /*TemplateParameters=*/nullptr,
           PAlign);
   VTable->addDebugInfo(GVE);

@@ -1843,7 +1843,8 @@ DIE &DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
   return MemberDie;
 }
 
-DIE *DwarfUnit::getOrCreateStaticMemberDIE(const DIDerivedType *DT) {
+DIE *DwarfUnit::getOrCreateStaticMemberDIE(const DIDerivedType *DT,
+                                           bool IsDeclaration) {
   if (!DT)
     return nullptr;
 
@@ -1864,7 +1865,8 @@ DIE *DwarfUnit::getOrCreateStaticMemberDIE(const DIDerivedType *DT) {
   addType(StaticMemberDIE, Ty);
   addSourceLine(StaticMemberDIE, DT);
   addFlag(StaticMemberDIE, dwarf::DW_AT_external);
-  addFlag(StaticMemberDIE, dwarf::DW_AT_declaration);
+  if (IsDeclaration)
+    addFlag(StaticMemberDIE, dwarf::DW_AT_declaration);
 
   // Consider the case when the static member was created by the compiler.
   if (DT->isArtificial())
