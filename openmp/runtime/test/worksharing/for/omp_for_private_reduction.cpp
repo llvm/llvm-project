@@ -30,7 +30,7 @@ int checkUserDefinedReduction() {
     array_sum[i] = Sum(i);
     expected_value += i; // Calculate expected sum: 0 + 1 + ... + (N-1)
   }
-#pragma omp parallel num_threads(4)
+#pragma omp parallel num_threads(4) private(final_result_udr)
   {
 #pragma omp for reduction(sum_reduction : final_result_udr)
     for (int i = 0; i < N; ++i) {
