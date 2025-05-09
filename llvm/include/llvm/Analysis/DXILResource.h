@@ -378,7 +378,7 @@ public:
 
   const ResourceBinding &getBinding() const { return Binding; }
   TargetExtType *getHandleTy() const { return HandleTy; }
-  const StringRef getName() const { return Symbol ? Symbol->getName() : ""; }
+  StringRef getName() const { return Symbol ? Symbol->getName() : ""; }
 
   bool hasSymbol() const { return Symbol; }
   GlobalVariable *createSymbol(Module &M, StructType *Ty, StringRef Name = "");
@@ -637,9 +637,9 @@ public:
   };
 
   struct BindingSpaces {
-    dxil::ResourceClass ResClass;
+    dxil::ResourceClass RC;
     llvm::SmallVector<RegisterSpace> Spaces;
-    BindingSpaces(dxil::ResourceClass ResClass) : ResClass(ResClass) {}
+    BindingSpaces(dxil::ResourceClass RC) : RC(RC) {}
     RegisterSpace &getOrInsertSpace(uint32_t Space);
   };
 

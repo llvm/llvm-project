@@ -2981,7 +2981,7 @@ ScalarEvolution::getOrCreateAddExpr(ArrayRef<const SCEV *> Ops,
       static_cast<SCEVAddExpr *>(UniqueSCEVs.FindNodeOrInsertPos(ID, IP));
   if (!S) {
     const SCEV **O = SCEVAllocator.Allocate<const SCEV *>(Ops.size());
-    std::uninitialized_copy(Ops.begin(), Ops.end(), O);
+    llvm::uninitialized_copy(Ops, O);
     S = new (SCEVAllocator)
         SCEVAddExpr(ID.Intern(SCEVAllocator), O, Ops.size());
     UniqueSCEVs.InsertNode(S, IP);
@@ -3004,7 +3004,7 @@ ScalarEvolution::getOrCreateAddRecExpr(ArrayRef<const SCEV *> Ops,
       static_cast<SCEVAddRecExpr *>(UniqueSCEVs.FindNodeOrInsertPos(ID, IP));
   if (!S) {
     const SCEV **O = SCEVAllocator.Allocate<const SCEV *>(Ops.size());
-    std::uninitialized_copy(Ops.begin(), Ops.end(), O);
+    llvm::uninitialized_copy(Ops, O);
     S = new (SCEVAllocator)
         SCEVAddRecExpr(ID.Intern(SCEVAllocator), O, Ops.size(), L);
     UniqueSCEVs.InsertNode(S, IP);
@@ -3027,7 +3027,7 @@ ScalarEvolution::getOrCreateMulExpr(ArrayRef<const SCEV *> Ops,
     static_cast<SCEVMulExpr *>(UniqueSCEVs.FindNodeOrInsertPos(ID, IP));
   if (!S) {
     const SCEV **O = SCEVAllocator.Allocate<const SCEV *>(Ops.size());
-    std::uninitialized_copy(Ops.begin(), Ops.end(), O);
+    llvm::uninitialized_copy(Ops, O);
     S = new (SCEVAllocator) SCEVMulExpr(ID.Intern(SCEVAllocator),
                                         O, Ops.size());
     UniqueSCEVs.InsertNode(S, IP);
@@ -3932,7 +3932,7 @@ const SCEV *ScalarEvolution::getMinMaxExpr(SCEVTypes Kind,
   if (ExistingSCEV)
     return ExistingSCEV;
   const SCEV **O = SCEVAllocator.Allocate<const SCEV *>(Ops.size());
-  std::uninitialized_copy(Ops.begin(), Ops.end(), O);
+  llvm::uninitialized_copy(Ops, O);
   SCEV *S = new (SCEVAllocator)
       SCEVMinMaxExpr(ID.Intern(SCEVAllocator), Kind, O, Ops.size());
 
@@ -4319,7 +4319,7 @@ ScalarEvolution::getSequentialMinMaxExpr(SCEVTypes Kind,
     return ExistingSCEV;
 
   const SCEV **O = SCEVAllocator.Allocate<const SCEV *>(Ops.size());
-  std::uninitialized_copy(Ops.begin(), Ops.end(), O);
+  llvm::uninitialized_copy(Ops, O);
   SCEV *S = new (SCEVAllocator)
       SCEVSequentialMinMaxExpr(ID.Intern(SCEVAllocator), Kind, O, Ops.size());
 
@@ -7149,16 +7149,11 @@ ConstantRange ScalarEvolution::getRangeViaFactoring(const SCEV *Start,
       assert(SE.getTypeSizeInBits(S->getType()) == BitWidth &&
              "Should be!");
 
-      // Peel off a constant offset:
-      if (auto *SA = dyn_cast<SCEVAddExpr>(S)) {
-        // In the future we could consider being smarter here and handle
-        // {Start+Step,+,Step} too.
-        if (SA->getNumOperands() != 2 || !isa<SCEVConstant>(SA->getOperand(0)))
-          return;
-
-        Offset = cast<SCEVConstant>(SA->getOperand(0))->getAPInt();
-        S = SA->getOperand(1);
-      }
+      // Peel off a constant offset. In the future we could consider being
+      // smarter here and handle {Start+Step,+,Step} too.
+      const APInt *Off;
+      if (match(S, m_scev_Add(m_scev_APInt(Off), m_SCEV(S))))
+        Offset = *Off;
 
       // Peel off a cast operation
       if (auto *SCast = dyn_cast<SCEVIntegralCastExpr>(S)) {
@@ -7337,11 +7332,11 @@ bool ScalarEvolution::isGuaranteedNotToBePoison(const SCEV *Op) {
 
 bool ScalarEvolution::isGuaranteedNotToCauseUB(const SCEV *Op) {
   return !SCEVExprContains(Op, [this](const SCEV *S) {
-    auto *UDiv = dyn_cast<SCEVUDivExpr>(S);
+    const SCEV *Op1;
+    bool M = match(S, m_scev_UDiv(m_SCEV(), m_SCEV(Op1)));
     // The UDiv may be UB if the divisor is poison or zero. Unless the divisor
     // is a non-zero constant, we have to assume the UDiv may be UB.
-    return UDiv && (!isKnownNonZero(UDiv->getOperand(1)) ||
-                    !isGuaranteedNotToBePoison(UDiv->getOperand(1)));
+    return M && (!isKnownNonZero(Op1) || !isGuaranteedNotToBePoison(Op1));
   });
 }
 

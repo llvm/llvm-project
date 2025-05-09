@@ -157,47 +157,33 @@ llvm::getKnowledgeFromUse(const Use *U,
 RetainedKnowledge
 llvm::getKnowledgeForValue(const Value *V,
                            ArrayRef<Attribute::AttrKind> AttrKinds,
-                           AssumptionCache *AC,
+                           AssumptionCache &AC,
                            function_ref<bool(RetainedKnowledge, Instruction *,
                                              const CallBase::BundleOpInfo *)>
                                Filter) {
   NumAssumeQueries++;
-  if (AC) {
-    for (AssumptionCache::ResultElem &Elem : AC->assumptionsFor(V)) {
-      auto *II = cast_or_null<AssumeInst>(Elem.Assume);
-      if (!II || Elem.Index == AssumptionCache::ExprResultIdx)
-        continue;
-      if (RetainedKnowledge RK = getKnowledgeFromBundle(
-              *II, II->bundle_op_info_begin()[Elem.Index])) {
-        if (V != RK.WasOn)
-          continue;
-        if (is_contained(AttrKinds, RK.AttrKind) &&
-            Filter(RK, II, &II->bundle_op_info_begin()[Elem.Index])) {
-          NumUsefullAssumeQueries++;
-          return RK;
-        }
-      }
-    }
-    return RetainedKnowledge::none();
-  }
-  for (const auto &U : V->uses()) {
-    CallInst::BundleOpInfo* Bundle = getBundleFromUse(&U);
-    if (!Bundle)
+  for (AssumptionCache::ResultElem &Elem : AC.assumptionsFor(V)) {
+    auto *II = cast_or_null<AssumeInst>(Elem.Assume);
+    if (!II || Elem.Index == AssumptionCache::ExprResultIdx)
       continue;
-    if (RetainedKnowledge RK =
-            getKnowledgeFromBundle(*cast<AssumeInst>(U.getUser()), *Bundle))
+    if (RetainedKnowledge RK = getKnowledgeFromBundle(
+            *II, II->bundle_op_info_begin()[Elem.Index])) {
+      if (V != RK.WasOn)
+        continue;
       if (is_contained(AttrKinds, RK.AttrKind) &&
-          Filter(RK, cast<Instruction>(U.getUser()), Bundle)) {
+          Filter(RK, II, &II->bundle_op_info_begin()[Elem.Index])) {
         NumUsefullAssumeQueries++;
         return RK;
       }
+    }
   }
+
   return RetainedKnowledge::none();
 }
 
 RetainedKnowledge llvm::getKnowledgeValidInContext(
     const Value *V, ArrayRef<Attribute::AttrKind> AttrKinds,
-    const Instruction *CtxI, const DominatorTree *DT, AssumptionCache *AC) {
+    AssumptionCache &AC, const Instruction *CtxI, const DominatorTree *DT) {
   return getKnowledgeForValue(V, AttrKinds, AC,
                               [&](auto, Instruction *I, auto) {
                                 return isValidAssumeForContext(I, CtxI, DT);

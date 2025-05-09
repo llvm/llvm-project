@@ -116,8 +116,7 @@ struct TupleTypeStorage final
     auto *result = ::new (rawMem) TupleTypeStorage(key.size());
 
     // Copy in the element types into the trailing storage.
-    std::uninitialized_copy(key.begin(), key.end(),
-                            result->getTrailingObjects<Type>());
+    llvm::uninitialized_copy(key, result->getTrailingObjects<Type>());
     return result;
   }
 
@@ -139,6 +138,9 @@ struct TupleTypeStorage final
 
 /// Checks if the memorySpace has supported Attribute type.
 bool isSupportedMemorySpace(Attribute memorySpace);
+
+/// Wraps deprecated integer memory space to the new Attribute form.
+Attribute wrapIntegerMemorySpace(unsigned memorySpace, MLIRContext *ctx);
 
 /// Replaces default memorySpace (integer == `0`) with empty Attribute.
 Attribute skipDefaultMemorySpace(Attribute memorySpace);
