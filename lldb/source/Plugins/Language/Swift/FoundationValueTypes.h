@@ -34,6 +34,9 @@ bool NotificationName_SummaryProvider(ValueObject &valobj, Stream &stream,
 bool URL_SummaryProvider(ValueObject &valobj, Stream &stream,
                          const TypeSummaryOptions &options);
 
+bool SwiftURL_SummaryProvider(ValueObject &valobj, Stream &stream,
+                              const TypeSummaryOptions &options);
+
 bool IndexPath_SummaryProvider(ValueObject &valobj, Stream &stream,
                                const TypeSummaryOptions &options);
 
