@@ -22,11 +22,6 @@
 
 #include <stdint.h>
 
-#ifdef LIBC_TARGET_OS_IS_LINUX
-#include "src/time/linux/localtime_utils.h"
-#include "src/time/linux/timezone.h"
-#endif
-
 namespace LIBC_NAMESPACE_DECL {
 namespace time_utils {
 

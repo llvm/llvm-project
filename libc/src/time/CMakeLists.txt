@@ -92,8 +92,6 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.time_t
     .time_utils
-    .${LIBC_TARGET_OS}.localtime_utils
-    .${LIBC_TARGET_OS}.timezone
 )
 
 add_entrypoint_object(
@@ -105,8 +103,6 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.time_t
     .time_utils
-    .${LIBC_TARGET_OS}.localtime_utils
-    .${LIBC_TARGET_OS}.timezone
 )
 
 add_entrypoint_object(

@@ -9,27 +9,21 @@
 #include "src/time/localtime_r.h"
 #include "test/UnitTest/Test.h"
 
-extern char **environ;
-
-void set_env_var(char *env) {
-  environ[0] = env;
-  environ[1] = "\0";
-}
-
 TEST(LlvmLibcLocaltimeR, ValidUnixTimestamp0) {
-  set_env_var("TZ=Europe/Berlin");
-
+  struct tm *result;
   struct tm input;
-  time_t t_ptr = 0;
-  struct tm *result = LIBC_NAMESPACE::localtime_r(&t_ptr, &input);
+  time_t t_ptr;
 
-  ASSERT_EQ(70, input.tm_year);
-  ASSERT_EQ(0, input.tm_mon);
-  ASSERT_EQ(1, input.tm_mday);
-  ASSERT_EQ(1, input.tm_hour);
-  ASSERT_EQ(0, input.tm_min);
-  ASSERT_EQ(0, input.tm_sec);
-  ASSERT_EQ(4, input.tm_wday);
-  ASSERT_EQ(0, input.tm_yday);
-  ASSERT_EQ(0, input.tm_isdst);
+  t_ptr = 0;
+  result = LIBC_NAMESPACE::localtime_r(&t_ptr, &input);
+
+  ASSERT_EQ(70, result->tm_year);
+  ASSERT_EQ(0, result->tm_mon);
+  ASSERT_EQ(1, result->tm_mday);
+  ASSERT_EQ(0, result->tm_hour);
+  ASSERT_EQ(0, result->tm_min);
+  ASSERT_EQ(0, result->tm_sec);
+  ASSERT_EQ(4, result->tm_wday);
+  ASSERT_EQ(0, result->tm_yday);
+  ASSERT_EQ(0, result->tm_isdst);
 }
