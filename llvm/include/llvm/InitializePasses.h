@@ -85,6 +85,7 @@ void initializeDCELegacyPassPass(PassRegistry &);
 void initializeDXILMetadataAnalysisWrapperPassPass(PassRegistry &);
 void initializeDXILMetadataAnalysisWrapperPrinterPass(PassRegistry &);
 void initializeDXILResourceBindingWrapperPassPass(PassRegistry &);
+void initializeDXILResourceImplicitBindingLegacyPass(PassRegistry &);
 void initializeDXILResourceTypeWrapperPassPass(PassRegistry &);
 void initializeDXILResourceWrapperPassPass(PassRegistry &);
 void initializeDeadMachineInstructionElimPass(PassRegistry &);
