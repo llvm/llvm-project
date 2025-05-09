@@ -3127,13 +3127,16 @@ private:
                             bool CouldBeBitField = false);
   Decl *ParseHLSLBuffer(SourceLocation &DeclEnd);
 
-  void MaybeParseMicrosoftAttributes(ParsedAttributes &Attrs) {
+  bool MaybeParseMicrosoftAttributes(ParsedAttributes &Attrs) {
+    bool AttrsParsed = false;
     if ((getLangOpts().MicrosoftExt || getLangOpts().HLSL) &&
         Tok.is(tok::l_square)) {
       ParsedAttributes AttrsWithRange(AttrFactory);
       ParseMicrosoftAttributes(AttrsWithRange);
+      AttrsParsed = !AttrsWithRange.empty();
       Attrs.takeAllFrom(AttrsWithRange);
     }
+    return AttrsParsed;
   }
   void ParseMicrosoftUuidAttributeArgs(ParsedAttributes &Attrs);
   void ParseMicrosoftAttributes(ParsedAttributes &Attrs);
