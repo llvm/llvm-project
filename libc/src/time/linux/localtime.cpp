@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/time/localtime.h"
-#include "src/time/linux/localtime_utils.h"
-#include "src/time/time_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
