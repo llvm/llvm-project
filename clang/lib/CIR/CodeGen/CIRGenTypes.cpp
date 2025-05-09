@@ -538,27 +538,5 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
   fi = CIRGenFunctionInfo::create(returnType, argTypes);
   functionInfos.InsertNode(fi, insertPos);
 
-  bool inserted = functionsBeingProcessed.insert(fi).second;
-  (void)inserted;
-  assert(inserted && "Are functions being processed recursively?");
-
-  assert(!cir::MissingFeatures::opCallCallConv());
-  getABIInfo().computeInfo(*fi);
-
-  // Loop over all of the computed argument and return value info. If any of
-  // them are direct or extend without a specified coerce type, specify the
-  // default now.
-  cir::ABIArgInfo &retInfo = fi->getReturnInfo();
-  if (retInfo.canHaveCoerceToType() && retInfo.getCoerceToType() == nullptr)
-    retInfo.setCoerceToType(convertType(fi->getReturnType()));
-
-  for (CIRGenFunctionInfoArgInfo &i : fi->arguments())
-    if (i.info.canHaveCoerceToType() && i.info.getCoerceToType() == nullptr)
-      i.info.setCoerceToType(convertType(i.type));
-
-  bool erased = functionsBeingProcessed.erase(fi);
-  (void)erased;
-  assert(erased && "Not in set?");
-
   return *fi;
 }
