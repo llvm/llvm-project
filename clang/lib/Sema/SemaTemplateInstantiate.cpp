@@ -1478,7 +1478,7 @@ namespace {
       }
     }
 
-    TemplateArgument getTemplateArgumentorUnsubstitutedExpansionPattern(
+    TemplateArgument getTemplateArgumentOrUnsubstitutedExpansionPattern(
         const TemplateArgument &TA) {
       if (TA.getKind() != TemplateArgument::Pack)
         return TA;
@@ -1905,7 +1905,7 @@ Decl *TemplateInstantiator::TransformDecl(SourceLocation Loc, Decl *D) {
       TemplateArgument Arg = TemplateArgs(TTP->getDepth(), TTP->getPosition());
 
       if (TemplateArgs.ArgumentsAreInjectedParameters(TTP->getDepth())) {
-        Arg = getTemplateArgumentorUnsubstitutedExpansionPattern(Arg);
+        Arg = getTemplateArgumentOrUnsubstitutedExpansionPattern(Arg);
       } else if (TTP->isParameterPack()) {
         assert(Arg.getKind() == TemplateArgument::Pack &&
                "Missing argument pack");
@@ -2058,7 +2058,7 @@ TemplateName TemplateInstantiator::TransformTemplateName(
       if (TemplateArgs.isRewrite()) {
         // We're rewriting the template parameter as a reference to another
         // template parameter.
-        Arg = getTemplateArgumentorUnsubstitutedExpansionPattern(Arg);
+        Arg = getTemplateArgumentOrUnsubstitutedExpansionPattern(Arg);
         assert(Arg.getKind() == TemplateArgument::Template &&
                "unexpected nontype template argument kind in template rewrite");
         return Arg.getAsTemplate();
@@ -2072,7 +2072,7 @@ TemplateName TemplateInstantiator::TransformTemplateName(
                "Missing argument pack");
 
         if (ArgumentsAreInjectedTemplateParams)
-          Arg = getTemplateArgumentorUnsubstitutedExpansionPattern(Arg);
+          Arg = getTemplateArgumentOrUnsubstitutedExpansionPattern(Arg);
 
         else if (!getSema().ArgPackSubstIndex) {
           // We have the template argument pack to substitute, but we're not
@@ -2138,7 +2138,7 @@ TemplateInstantiator::TransformTemplateParmRefExpr(DeclRefExpr *E,
   if (TemplateArgs.isRewrite()) {
     // We're rewriting the template parameter as a reference to another
     // template parameter.
-    Arg = getTemplateArgumentorUnsubstitutedExpansionPattern(Arg);
+    Arg = getTemplateArgumentOrUnsubstitutedExpansionPattern(Arg);
     assert(Arg.getKind() == TemplateArgument::Expression &&
            "unexpected nontype template argument kind in template rewrite");
     // FIXME: This can lead to the same subexpression appearing multiple times
@@ -2591,7 +2591,7 @@ TemplateInstantiator::TransformTemplateTypeParmType(TypeLocBuilder &TLB,
     if (TemplateArgs.isRewrite()) {
       // We're rewriting the template parameter as a reference to another
       // template parameter.
-      Arg = getTemplateArgumentorUnsubstitutedExpansionPattern(Arg);
+      Arg = getTemplateArgumentOrUnsubstitutedExpansionPattern(Arg);
       assert(Arg.getKind() == TemplateArgument::Type &&
              "unexpected nontype template argument kind in template rewrite");
       QualType NewT = Arg.getAsType();
