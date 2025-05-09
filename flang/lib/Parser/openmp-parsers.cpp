@@ -125,8 +125,7 @@ OmpDirectiveNameParser::directives() const {
 void OmpDirectiveNameParser::initTokens(NameWithId *table) const {
   for (size_t i{0}, e{llvm::omp::Directive_enumSize}; i != e; ++i) {
     auto id{static_cast<llvm::omp::Directive>(i)};
-    llvm::StringRef name{
-        llvm::omp::getOpenMPDirectiveName(id, llvm::omp::FallbackVersion)};
+    llvm::StringRef name{llvm::omp::getOpenMPDirectiveName(id)};
     table[i] = std::make_pair(name.str(), id);
   }
   // Sort the table with respect to the directive name length in a descending

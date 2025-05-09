@@ -1887,7 +1887,6 @@ std::int64_t OmpAttributeVisitor::GetAssociatedLoopLevelFromClauses(
 //     construct with multiple associated do-loops are lastprivate.
 void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
     const parser::OpenMPLoopConstruct &x) {
-  unsigned version{context_.langOptions().OpenMPVersion};
   std::int64_t level{GetContext().associatedLoopLevel};
   if (level <= 0) {
     return;
@@ -1923,8 +1922,7 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
     context_.Say(GetContext().directiveSource,
         "A DO loop must follow the %s directive"_err_en_US,
         parser::ToUpperCaseLetters(
-            llvm::omp::getOpenMPDirectiveName(GetContext().directive, version)
-                .str()));
+            llvm::omp::getOpenMPDirectiveName(GetContext().directive).str()));
   }
 }
 void OmpAttributeVisitor::CheckAssocLoopLevel(
@@ -2444,7 +2442,6 @@ static bool SymbolOrEquivalentIsInNamelist(const Symbol &symbol) {
 
 void OmpAttributeVisitor::ResolveOmpObject(
     const parser::OmpObject &ompObject, Symbol::Flag ompFlag) {
-  unsigned version{context_.langOptions().OpenMPVersion};
   common::visit(
       common::visitors{
           [&](const parser::Designator &designator) {
@@ -2467,7 +2464,7 @@ void OmpAttributeVisitor::ResolveOmpObject(
                             Symbol::OmpFlagToClauseName(secondOmpFlag),
                             parser::ToUpperCaseLetters(
                                 llvm::omp::getOpenMPDirectiveName(
-                                    GetContext().directive, version)
+                                    GetContext().directive)
                                     .str()));
                       }
                     };
@@ -2503,7 +2500,7 @@ void OmpAttributeVisitor::ResolveOmpObject(
                       "in which the %s directive appears"_err_en_US,
                       parser::ToUpperCaseLetters(
                           llvm::omp::getOpenMPDirectiveName(
-                              GetContext().directive, version)
+                              GetContext().directive)
                               .str()));
                 }
                 if (ompFlag == Symbol::Flag::OmpReduction) {
@@ -2927,7 +2924,6 @@ void OmpAttributeVisitor::CheckSourceLabel(const parser::Label &label) {
 void OmpAttributeVisitor::CheckLabelContext(const parser::CharBlock source,
     const parser::CharBlock target, std::optional<DirContext> sourceContext,
     std::optional<DirContext> targetContext) {
-  unsigned version{context_.langOptions().OpenMPVersion};
   if (targetContext &&
       (!sourceContext ||
           (sourceContext->scope != targetContext->scope &&
@@ -2936,8 +2932,8 @@ void OmpAttributeVisitor::CheckLabelContext(const parser::CharBlock source,
     context_
         .Say(source, "invalid branch into an OpenMP structured block"_err_en_US)
         .Attach(target, "In the enclosing %s directive branched into"_en_US,
-            parser::ToUpperCaseLetters(llvm::omp::getOpenMPDirectiveName(
-                targetContext->directive, version)
+            parser::ToUpperCaseLetters(
+                llvm::omp::getOpenMPDirectiveName(targetContext->directive)
                     .str()));
   }
   if (sourceContext &&
@@ -2949,8 +2945,8 @@ void OmpAttributeVisitor::CheckLabelContext(const parser::CharBlock source,
         .Say(source,
             "invalid branch leaving an OpenMP structured block"_err_en_US)
         .Attach(target, "Outside the enclosing %s directive"_en_US,
-            parser::ToUpperCaseLetters(llvm::omp::getOpenMPDirectiveName(
-                sourceContext->directive, version)
+            parser::ToUpperCaseLetters(
+                llvm::omp::getOpenMPDirectiveName(sourceContext->directive)
                     .str()));
   }
 }
@@ -2983,14 +2979,12 @@ void OmpAttributeVisitor::CheckNameInAllocateStmt(
       }
     }
   }
-  unsigned version{context_.langOptions().OpenMPVersion};
   context_.Say(source,
       "Object '%s' in %s directive not "
       "found in corresponding ALLOCATE statement"_err_en_US,
       name.ToString(),
       parser::ToUpperCaseLetters(
-          llvm::omp::getOpenMPDirectiveName(GetContext().directive, version)
-              .str()));
+          llvm::omp::getOpenMPDirectiveName(GetContext().directive).str()));
 }
 
 void OmpAttributeVisitor::AddOmpRequiresToScope(Scope &scope,
@@ -3036,10 +3030,9 @@ void OmpAttributeVisitor::IssueNonConformanceWarning(
     llvm::omp::Directive D, parser::CharBlock source) {
   std::string warnStr;
   llvm::raw_string_ostream warnStrOS(warnStr);
-  unsigned version{context_.langOptions().OpenMPVersion};
   warnStrOS << "OpenMP directive "
             << parser::ToUpperCaseLetters(
-                   llvm::omp::getOpenMPDirectiveName(D, version).str())
+                   llvm::omp::getOpenMPDirectiveName(D).str())
             << " has been deprecated";
 
   auto setAlternativeStr = [&warnStrOS](llvm::StringRef alt) {
