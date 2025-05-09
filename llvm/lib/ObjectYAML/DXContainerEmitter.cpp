@@ -289,12 +289,12 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
         case llvm::to_underlying(dxbc::RootParameterType::UAV):
         case llvm::to_underlying(dxbc::RootParameterType::CBV):
           if (RS.Version == 1) {
-            dxbc::RST0::v0::RootDescriptor Descriptor;
+            dxbc::RTS0::v1::RootDescriptor Descriptor;
             Descriptor.RegisterSpace = Param.Descriptor.RegisterSpace;
             Descriptor.ShaderRegister = Param.Descriptor.ShaderRegister;
             RS.ParametersContainer.addParameter(Header, Descriptor);
           } else {
-            dxbc::RST0::v1::RootDescriptor Descriptor;
+            dxbc::RTS0::v2::RootDescriptor Descriptor;
             Descriptor.RegisterSpace = Param.Descriptor.RegisterSpace;
             Descriptor.ShaderRegister = Param.Descriptor.ShaderRegister;
             Descriptor.Flags = Param.Descriptor.getEncodedFlags();

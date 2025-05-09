@@ -27,11 +27,11 @@ struct RootParameterInfo {
       : Header(H), Location(L) {}
 };
 
-using RootDescriptor = std::variant<dxbc::RST0::v0::RootDescriptor,
-                                    dxbc::RST0::v1::RootDescriptor>;
+using RootDescriptor = std::variant<dxbc::RTS0::v1::RootDescriptor,
+                                    dxbc::RTS0::v2::RootDescriptor>;
 using ParametersView = std::variant<const dxbc::RootConstants *,
-                                    const dxbc::RST0::v0::RootDescriptor *,
-                                    const dxbc::RST0::v1::RootDescriptor *>;
+                                    const dxbc::RTS0::v1::RootDescriptor *,
+                                    const dxbc::RTS0::v2::RootDescriptor *>;
 struct RootParametersContainer {
   SmallVector<RootParameterInfo> ParametersInfo;
 
@@ -48,13 +48,13 @@ struct RootParametersContainer {
   }
 
   void addParameter(dxbc::RootParameterHeader H,
-                    dxbc::RST0::v0::RootDescriptor D) {
+                    dxbc::RTS0::v1::RootDescriptor D) {
     addInfo(H, Descriptors.size());
     Descriptors.push_back(D);
   }
 
   void addParameter(dxbc::RootParameterHeader H,
-                    dxbc::RST0::v1::RootDescriptor D) {
+                    dxbc::RTS0::v2::RootDescriptor D) {
     addInfo(H, Descriptors.size());
     Descriptors.push_back(D);
   }
@@ -67,11 +67,11 @@ struct RootParametersContainer {
     case llvm::to_underlying(dxbc::RootParameterType::SRV):
     case llvm::to_underlying(dxbc::RootParameterType::UAV):
       const RootDescriptor &VersionedParam = Descriptors[H->Location];
-      if (std::holds_alternative<dxbc::RST0::v0::RootDescriptor>(
+      if (std::holds_alternative<dxbc::RTS0::v1::RootDescriptor>(
               VersionedParam)) {
-        return &std::get<dxbc::RST0::v0::RootDescriptor>(VersionedParam);
+        return &std::get<dxbc::RTS0::v1::RootDescriptor>(VersionedParam);
       }
-      return &std::get<dxbc::RST0::v1::RootDescriptor>(VersionedParam);
+      return &std::get<dxbc::RTS0::v2::RootDescriptor>(VersionedParam);
     }
 
     return std::nullopt;

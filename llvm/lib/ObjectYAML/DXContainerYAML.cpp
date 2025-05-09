@@ -15,7 +15,6 @@
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/DXContainer.h"
-#include "llvm/Object/DXContainer.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <cstdint>
@@ -82,7 +81,7 @@ DXContainerYAML::RootSignatureYamlDesc::create(
       NewP.Constants.RegisterSpace = Constants.RegisterSpace;
     } else if (auto *RDV =
                    dyn_cast<object::DirectX::RootDescriptorView>(&ParamView)) {
-      llvm::Expected<dxbc::RST0::v1::RootDescriptor> DescriptorOrErr =
+      llvm::Expected<dxbc::RTS0::v2::RootDescriptor> DescriptorOrErr =
           RDV->read(Version);
       if (Error E = DescriptorOrErr.takeError())
         return std::move(E);

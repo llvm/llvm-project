@@ -86,18 +86,18 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
                              llvm::endianness::little);
       support::endian::write(BOS, Constants->Num32BitValues,
                              llvm::endianness::little);
-    } else if (std::holds_alternative<const dxbc::RST0::v0::RootDescriptor *>(
+    } else if (std::holds_alternative<const dxbc::RTS0::v1::RootDescriptor *>(
                    *P)) {
       auto *Descriptor =
-          std::get<const dxbc::RST0::v0::RootDescriptor *>(P.value());
+          std::get<const dxbc::RTS0::v1::RootDescriptor *>(P.value());
       support::endian::write(BOS, Descriptor->ShaderRegister,
                              llvm::endianness::little);
       support::endian::write(BOS, Descriptor->RegisterSpace,
                              llvm::endianness::little);
-    } else if (std::holds_alternative<const dxbc::RST0::v1::RootDescriptor *>(
+    } else if (std::holds_alternative<const dxbc::RTS0::v2::RootDescriptor *>(
                    *P)) {
       auto *Descriptor =
-          std::get<const dxbc::RST0::v1::RootDescriptor *>(P.value());
+          std::get<const dxbc::RTS0::v2::RootDescriptor *>(P.value());
 
       support::endian::write(BOS, Descriptor->ShaderRegister,
                              llvm::endianness::little);
