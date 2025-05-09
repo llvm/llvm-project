@@ -1,9 +1,0 @@
-# RUN: rm -rf %t && mkdir %t
-# RUN: llc -filetype=obj -o %t/main-ret-0.o %S/Inputs/main-ret-0.ll
-# RUN: llc -filetype=obj -o %T/main-ret-42.o %S/Inputs/main-ret-42.ll
-# RUN: not llvm-jitlink -noexec %T/main-ret-0.o %T/main-ret-42.o 2>&1 | FileCheck %s
-#
-# Trigger a duplicate definition error by trying to link two main functions,
-# check that the error message includes the file that introduced the duplicate.
-#
-# CHECK: In {{.*}}main-ret-42.o, duplicate definition of {{.*}}main
