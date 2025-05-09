@@ -1891,7 +1891,7 @@ void OmpVisitor::ProcessReductionSpecifier(
     reductionDetails = symbol->detailsIf<UserReductionDetails>();
 
     if (!reductionDetails) {
-      context().Say(name->source,
+      context().Say(
           "Duplicate definition of '%s' in DECLARE REDUCTION"_err_en_US,
           name->source);
       return;

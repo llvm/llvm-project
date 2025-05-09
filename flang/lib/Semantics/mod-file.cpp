@@ -8,7 +8,6 @@
 
 #include "mod-file.h"
 #include "resolve-names.h"
-#include "flang/Common/indirection.h"
 #include "flang/Common/restorer.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/message.h"
