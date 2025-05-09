@@ -25,13 +25,13 @@ namespace NVVM {
 struct NVVMCheckSMVersion {
   int archVersion;
 
-  // true if the SM version is accelerated (Ex. sm_90a vs sm_90)
+  // Set to true if the SM version is accelerated (e.g., sm_90a).
   bool archAccelerated;
 
-  // true if the target SM version must exactly match this one
-  // (both archVersion and archAccelerated)
-  // Ex. sm_90a with exactMatch = false will also match with
-  // sm_100a, sm_120a, etc...
+  // Set to true if the target SM version must match exactly
+  // (both archVersion and archAccelerated).
+  // For example, sm_90a with exactMatch = false will also match
+  // sm_100a, sm_120a, etc.
   bool exactMatch;
 
   NVVMCheckSMVersion()
@@ -44,8 +44,8 @@ struct NVVMCheckSMVersion {
       : archVersion(archVersion), archAccelerated(archAccelerated),
         exactMatch(exactMatch) {}
 
-  // Parses the SM version string and sets the archVersion (integer) and
-  // the archAccelerated flag.
+  // Parses the SM version string and sets the archVersion (as an integer)
+  // and the archAccelerated flag.
   void parse(StringRef smVersion) {
     archAccelerated = (smVersion.back() == 'a');
     smVersion.drop_front(3)
