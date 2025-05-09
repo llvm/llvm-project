@@ -24,9 +24,9 @@ using namespace llvm;
 static std::string getOptionName(const Record &R) {
   // Use the record name unless EnumName is defined.
   if (isa<UnsetInit>(R.getValueInit("EnumName")))
-    return std::string(R.getName());
+    return R.getName().str();
 
-  return std::string(R.getValueAsString("EnumName"));
+  return R.getValueAsString("EnumName").str();
 }
 
 static raw_ostream &writeStrTableOffset(raw_ostream &OS,

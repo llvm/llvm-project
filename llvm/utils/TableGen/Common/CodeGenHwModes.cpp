@@ -18,10 +18,8 @@ using namespace llvm;
 
 StringRef CodeGenHwModes::DefaultModeName = "DefaultMode";
 
-HwMode::HwMode(const Record *R) {
-  Name = R->getName();
-  Features = std::string(R->getValueAsString("Features"));
-
+HwMode::HwMode(const Record *R)
+    : Name(R->getName()), Features(R->getValueAsString("Features").str()) {
   SmallString<128> PredicateCheck;
   raw_svector_ostream OS(PredicateCheck);
   ListSeparator LS(" && ");
@@ -50,8 +48,8 @@ HwModeSelect::HwModeSelect(const Record *R, CodeGenHwModes &CGH) {
 LLVM_DUMP_METHOD
 void HwModeSelect::dump() const {
   dbgs() << '{';
-  for (const PairType &P : Items)
-    dbgs() << " (" << P.first << ',' << P.second->getName() << ')';
+  for (const auto &[K, V] : Items)
+    dbgs() << " (" << K << ',' << V->getName() << ')';
   dbgs() << " }\n";
 }
 

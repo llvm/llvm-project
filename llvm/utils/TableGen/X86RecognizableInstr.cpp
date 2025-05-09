@@ -440,8 +440,7 @@ void RecognizableInstr::adjustOperandEncoding(OperandEncoding &encoding) {
 void RecognizableInstr::handleOperand(
     bool optional, unsigned &operandIndex, unsigned &physicalOperandIndex,
     unsigned numPhysicalOperands, const unsigned *operandMapping,
-    OperandEncoding (*encodingFromString)(const std::string &,
-                                          uint8_t OpSize)) {
+    OperandEncoding (*encodingFromString)(StringRef, uint8_t OpSize)) {
   if (optional) {
     if (physicalOperandIndex >= numPhysicalOperands)
       return;
@@ -458,12 +457,12 @@ void RecognizableInstr::handleOperand(
 
   StringRef typeName = (*Operands)[operandIndex].Rec->getName();
 
-  OperandEncoding encoding = encodingFromString(std::string(typeName), OpSize);
+  OperandEncoding encoding = encodingFromString(typeName, OpSize);
   // Adjust the encoding type for an operand based on the instruction.
   adjustOperandEncoding(encoding);
   Spec->operands[operandIndex].encoding = encoding;
   Spec->operands[operandIndex].type =
-      typeFromString(std::string(typeName), HasREX_W, OpSize);
+      typeFromString(typeName, HasREX_W, OpSize);
 
   ++operandIndex;
   ++physicalOperandIndex;
@@ -1023,8 +1022,8 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
 #define TYPE(str, type)                                                        \
   if (s == str)                                                                \
     return type;
-OperandType RecognizableInstr::typeFromString(const std::string &s,
-                                              bool hasREX_W, uint8_t OpSize) {
+OperandType RecognizableInstr::typeFromString(StringRef s, bool hasREX_W,
+                                              uint8_t OpSize) {
   if (hasREX_W) {
     // For instructions with a REX_W prefix, a declared 32-bit register encoding
     // is special.
@@ -1171,9 +1170,8 @@ OperandType RecognizableInstr::typeFromString(const std::string &s,
 #define ENCODING(str, encoding)                                                \
   if (s == str)                                                                \
     return encoding;
-OperandEncoding
-RecognizableInstr::immediateEncodingFromString(const std::string &s,
-                                               uint8_t OpSize) {
+OperandEncoding RecognizableInstr::immediateEncodingFromString(StringRef s,
+                                                               uint8_t OpSize) {
   if (OpSize != X86Local::OpSize16) {
     // For instructions without an OpSize prefix, a declared 16-bit register or
     // immediate encoding is special.
@@ -1213,8 +1211,7 @@ RecognizableInstr::immediateEncodingFromString(const std::string &s,
 }
 
 OperandEncoding
-RecognizableInstr::rmRegisterEncodingFromString(const std::string &s,
-                                                uint8_t OpSize) {
+RecognizableInstr::rmRegisterEncodingFromString(StringRef s, uint8_t OpSize) {
   ENCODING("RST", ENCODING_FP)
   ENCODING("RSTi", ENCODING_FP)
   ENCODING("GR16", ENCODING_RM)
@@ -1250,8 +1247,7 @@ RecognizableInstr::rmRegisterEncodingFromString(const std::string &s,
 }
 
 OperandEncoding
-RecognizableInstr::roRegisterEncodingFromString(const std::string &s,
-                                                uint8_t OpSize) {
+RecognizableInstr::roRegisterEncodingFromString(StringRef s, uint8_t OpSize) {
   ENCODING("GR16", ENCODING_REG)
   ENCODING("GR16orGR32orGR64", ENCODING_REG)
   ENCODING("GR32", ENCODING_REG)
@@ -1300,8 +1296,7 @@ RecognizableInstr::roRegisterEncodingFromString(const std::string &s,
 }
 
 OperandEncoding
-RecognizableInstr::vvvvRegisterEncodingFromString(const std::string &s,
-                                                  uint8_t OpSize) {
+RecognizableInstr::vvvvRegisterEncodingFromString(StringRef s, uint8_t OpSize) {
   ENCODING("GR8", ENCODING_VVVV)
   ENCODING("GR16", ENCODING_VVVV)
   ENCODING("GR32", ENCODING_VVVV)
@@ -1331,7 +1326,7 @@ RecognizableInstr::vvvvRegisterEncodingFromString(const std::string &s,
 }
 
 OperandEncoding
-RecognizableInstr::writemaskRegisterEncodingFromString(const std::string &s,
+RecognizableInstr::writemaskRegisterEncodingFromString(StringRef s,
                                                        uint8_t OpSize) {
   ENCODING("VK1WM", ENCODING_WRITEMASK)
   ENCODING("VK2WM", ENCODING_WRITEMASK)
@@ -1344,9 +1339,8 @@ RecognizableInstr::writemaskRegisterEncodingFromString(const std::string &s,
   llvm_unreachable("Unhandled mask register encoding");
 }
 
-OperandEncoding
-RecognizableInstr::memoryEncodingFromString(const std::string &s,
-                                            uint8_t OpSize) {
+OperandEncoding RecognizableInstr::memoryEncodingFromString(StringRef s,
+                                                            uint8_t OpSize) {
   ENCODING("i16mem", ENCODING_RM)
   ENCODING("i32mem", ENCODING_RM)
   ENCODING("i64mem", ENCODING_RM)
@@ -1389,8 +1383,7 @@ RecognizableInstr::memoryEncodingFromString(const std::string &s,
 }
 
 OperandEncoding
-RecognizableInstr::relocationEncodingFromString(const std::string &s,
-                                                uint8_t OpSize) {
+RecognizableInstr::relocationEncodingFromString(StringRef s, uint8_t OpSize) {
   if (OpSize != X86Local::OpSize16) {
     // For instructions without an OpSize prefix, a declared 16-bit register or
     // immediate encoding is special.
@@ -1439,7 +1432,7 @@ RecognizableInstr::relocationEncodingFromString(const std::string &s,
 }
 
 OperandEncoding
-RecognizableInstr::opcodeModifierEncodingFromString(const std::string &s,
+RecognizableInstr::opcodeModifierEncodingFromString(StringRef s,
                                                     uint8_t OpSize) {
   ENCODING("GR32", ENCODING_Rv)
   ENCODING("GR64", ENCODING_RO)

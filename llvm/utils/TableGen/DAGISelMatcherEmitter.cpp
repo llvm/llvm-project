@@ -1237,8 +1237,7 @@ void MatcherTableEmitter::EmitPredicateFunctions(raw_ostream &OS) {
         OS << "// " << NodeXForms[i]->getName();
       OS << '\n';
 
-      std::string ClassName =
-          std::string(CGP.getSDNodeInfo(SDNode).getSDClassName());
+      StringRef ClassName = CGP.getSDNodeInfo(SDNode).getSDClassName();
       if (ClassName == "SDNode")
         OS << "    SDNode *N = V.getNode();\n";
       else

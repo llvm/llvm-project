@@ -142,7 +142,7 @@ bool CodeEmitterGen::addCodeToMergeInOperand(const Record *R,
   }
 
   std::pair<unsigned, unsigned> SO = CGI.Operands.getSubOperandNumber(OpIdx);
-  std::string &EncoderMethodName =
+  const std::string &EncoderMethodName =
       CGI.Operands[SO.first].EncoderMethodNames[SO.second];
 
   if (UseAPInt)
@@ -309,8 +309,7 @@ CodeEmitterGen::getInstructionCases(const Record *R,
               "      case " + itostr(DefaultMode) + ": InstBitsByHw = InstBits";
         } else {
           Case += "      case " + itostr(ModeId) +
-                  ": InstBitsByHw = InstBits_" +
-                  std::string(HWM.getMode(ModeId).Name);
+                  ": InstBitsByHw = InstBits_" + HWM.getMode(ModeId).Name.str();
         }
         Case += "; break;\n";
       }
@@ -362,7 +361,7 @@ void CodeEmitterGen::addInstructionCasesForEncoding(
     if (RV.isNonconcreteOK() || RV.getValue()->isComplete())
       continue;
 
-    Success &= addCodeToMergeInOperand(R, BI, std::string(RV.getName()), Case,
+    Success &= addCodeToMergeInOperand(R, BI, RV.getName().str(), Case,
                                        BitOffsetCase, Target);
   }
   // Avoid empty switches.

@@ -192,7 +192,7 @@ void AsmWriterEmitter::FindUniqueOperandCommands(
       InstIdxs[idx].push_back(i);
     } else {
       UniqueOperandCommands.push_back(std::move(Command));
-      InstrsForCase.push_back(std::string(Inst.CGI->TheDef->getName()));
+      InstrsForCase.push_back(Inst.CGI->TheDef->getName().str());
       InstIdxs.emplace_back();
       InstIdxs.back().push_back(i);
 
@@ -592,9 +592,9 @@ emitRegisterNameString(raw_ostream &O, StringRef AltName,
     // "NoRegAltName" is special. We don't need to do a lookup for that,
     // as it's just a reference to the default register name.
     if (AltName == "" || AltName == "NoRegAltName") {
-      AsmName = std::string(Reg.TheDef->getValueAsString("AsmName"));
+      AsmName = Reg.TheDef->getValueAsString("AsmName").str();
       if (AsmName.empty())
-        AsmName = std::string(Reg.getName());
+        AsmName = Reg.getName().str();
     } else {
       // Make sure the register has an alternate name for this index.
       std::vector<const Record *> AltNameList =
@@ -612,7 +612,7 @@ emitRegisterNameString(raw_ostream &O, StringRef AltName,
           PrintFatalError(Reg.TheDef->getLoc(),
                           "Register definition missing alt name for '" +
                               AltName + "'.");
-        AsmName = std::string(AltNames[Idx]);
+        AsmName = AltNames[Idx].str();
       }
     }
     StringTable.add(AsmName);
@@ -939,7 +939,7 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
                                              }) -
                                PrintMethods.begin();
               if (static_cast<unsigned>(PrintMethodIdx) == PrintMethods.size())
-                PrintMethods.emplace_back(std::string(PrintMethod), IsPCRel);
+                PrintMethods.emplace_back(PrintMethod.str(), IsPCRel);
             }
           }
 
@@ -951,12 +951,14 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
               const Record *R = CGA.ResultOperands[i].getRecord();
               if (R->isSubClassOf("RegisterOperand"))
                 R = R->getValueAsDef("RegClass");
-              IAP.addCond(std::string(
+              IAP.addCond(
                   formatv("AliasPatternCond::K_RegClass, {}::{}RegClassID",
-                          Namespace, R->getName())));
+                          Namespace, R->getName())
+                      .str());
             } else {
-              IAP.addCond(std::string(formatv("AliasPatternCond::K_TiedReg, {}",
-                                              IAP.getOpIndex(ROName))));
+              IAP.addCond(formatv("AliasPatternCond::K_TiedReg, {}",
+                                  IAP.getOpIndex(ROName))
+                              .str());
             }
           } else {
             // Assume all printable operands are desired for now. This can be
@@ -972,8 +974,7 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
               } else
                 break; // No conditions on this operand at all
             }
-            IAP.addCond(
-                std::string(formatv("AliasPatternCond::K_Custom, {}", Entry)));
+            IAP.addCond(formatv("AliasPatternCond::K_Custom, {}", Entry).str());
           }
           break;
         }
@@ -985,20 +986,21 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
           if (Imm != Imm32)
             PrintFatalError("Matching an alias with an immediate out of the "
                             "range of int32_t is not supported");
-          IAP.addCond(std::string(
-              formatv("AliasPatternCond::K_Imm, uint32_t({})", Imm32)));
+          IAP.addCond(
+              formatv("AliasPatternCond::K_Imm, uint32_t({})", Imm32).str());
           break;
         }
         case CodeGenInstAlias::ResultOperand::K_Reg:
           if (!CGA.ResultOperands[i].getRegister()) {
-            IAP.addCond(std::string(
-                formatv("AliasPatternCond::K_Reg, {}::NoRegister", Namespace)));
+            IAP.addCond(
+                formatv("AliasPatternCond::K_Reg, {}::NoRegister", Namespace)
+                    .str());
             break;
           }
 
           StringRef Reg = CGA.ResultOperands[i].getRegister()->getName();
-          IAP.addCond(std::string(
-              formatv("AliasPatternCond::K_Reg, {}::{}", Namespace, Reg)));
+          IAP.addCond(
+              formatv("AliasPatternCond::K_Reg, {}::{}", Namespace, Reg).str());
           break;
         }
 
@@ -1051,9 +1053,10 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
               !cast<DefInit>(Arg)->getDef()->isSubClassOf("SubtargetFeature"))
             PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
 
-          IAP.addCond(std::string(formatv(
-              "AliasPatternCond::K_{}{}Feature, {}::{}", IsOr ? "Or" : "",
-              IsNeg ? "Neg" : "", Namespace, Arg->getAsString())));
+          IAP.addCond(formatv("AliasPatternCond::K_{}{}Feature, {}::{}",
+                              IsOr ? "Or" : "", IsNeg ? "Neg" : "", Namespace,
+                              Arg->getAsString())
+                          .str());
         }
         // If an AssemblerPredicate with ors is used, note end of list should
         // these be combined.
