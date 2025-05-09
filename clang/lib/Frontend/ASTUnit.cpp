@@ -1045,6 +1045,7 @@ public:
 class TopLevelDeclTrackerAction : public ASTFrontendAction {
 public:
   ASTUnit &Unit;
+  bool ReusePreprocessor;
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override {
@@ -1055,10 +1056,12 @@ public:
         Unit, Unit.getCurrentTopLevelHashValue());
   }
 
-public:
-  TopLevelDeclTrackerAction(ASTUnit &_Unit) : Unit(_Unit) {}
+  TopLevelDeclTrackerAction(ASTUnit &_Unit, bool _ReusePreprocessor = false)
+      : Unit(_Unit), ReusePreprocessor(_ReusePreprocessor) {}
 
   bool hasCodeCompletionSupport() const override { return false; }
+
+  bool reuseExistingPreprocessor() const override { return ReusePreprocessor; }
 
   TranslationUnitKind getTranslationUnitKind() override {
     return Unit.getTranslationUnitKind();
@@ -1145,7 +1148,8 @@ static void checkAndSanitizeDiags(SmallVectorImpl<StoredDiagnostic> &
 /// contain any translation-unit information, false otherwise.
 bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                     std::unique_ptr<llvm::MemoryBuffer> OverrideMainBuffer,
-                    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
+                    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+                    unsigned PCHCountValue) {
   if (!Invocation)
     return true;
 
@@ -1242,11 +1246,18 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
   }
 
   std::unique_ptr<TopLevelDeclTrackerAction> Act(
-      new TopLevelDeclTrackerAction(*this));
+      new TopLevelDeclTrackerAction(*this, true));
 
   // Recover resources if we crash before exiting this method.
   llvm::CrashRecoveryContextCleanupRegistrar<TopLevelDeclTrackerAction>
     ActCleanup(Act.get());
+
+  if (!Clang->hasPreprocessor()) {
+    // Create the Preprocessor.
+    Clang->createPreprocessor(TUKind);
+  }
+
+  Clang->getPreprocessor().setCounterValue(PCHCountValue);
 
   if (!Act->BeginSourceFile(*Clang.get(), Clang->getFrontendOpts().Inputs[0]))
     return true;
@@ -1342,8 +1353,8 @@ std::unique_ptr<llvm::MemoryBuffer>
 ASTUnit::getMainBufferWithPrecompiledPreamble(
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     CompilerInvocation &PreambleInvocationIn,
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS, bool AllowRebuild,
-    unsigned MaxLines) {
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS, unsigned *CountValueAtFinish,
+    bool AllowRebuild, unsigned MaxLines) {
   auto MainFilePath =
       PreambleInvocationIn.getFrontendOpts().Inputs[0].getFile();
   std::unique_ptr<llvm::MemoryBuffer> MainFileBuffer =
@@ -1418,6 +1429,10 @@ ASTUnit::getMainBufferWithPrecompiledPreamble(
         PreambleInvocationIn, MainFileBuffer.get(), Bounds, *Diagnostics, VFS,
         PCHContainerOps, StorePreamblesInMemory, PreambleStoragePath,
         Callbacks);
+
+    if (NewPreamble && CountValueAtFinish) {
+      *CountValueAtFinish = NewPreamble->getCountValue();
+    }
 
     PreambleInvocationIn.getFrontendOpts().SkipFunctionBodies =
         PreviousSkipFunctionBodies;
@@ -1699,6 +1714,8 @@ bool ASTUnit::LoadFromCompilerInvocation(
 
   assert(VFS && "VFS is null");
 
+  unsigned PCHCountValue = 0;
+
   // We'll manage file buffers ourselves.
   Invocation->getPreprocessorOpts().RetainRemappedFileBuffers = true;
   Invocation->getFrontendOpts().DisableFree = false;
@@ -1709,8 +1726,8 @@ bool ASTUnit::LoadFromCompilerInvocation(
   std::unique_ptr<llvm::MemoryBuffer> OverrideMainBuffer;
   if (PrecompilePreambleAfterNParses > 0) {
     PreambleRebuildCountdown = PrecompilePreambleAfterNParses;
-    OverrideMainBuffer =
-        getMainBufferWithPrecompiledPreamble(PCHContainerOps, *Invocation, VFS);
+    OverrideMainBuffer = getMainBufferWithPrecompiledPreamble(
+        PCHContainerOps, *Invocation, VFS, &PCHCountValue);
     getDiagnostics().Reset();
     ProcessWarningOptions(getDiagnostics(), Invocation->getDiagnosticOpts(),
                           *VFS);
@@ -1723,7 +1740,8 @@ bool ASTUnit::LoadFromCompilerInvocation(
   llvm::CrashRecoveryContextCleanupRegistrar<llvm::MemoryBuffer>
     MemBufferCleanup(OverrideMainBuffer.get());
 
-  return Parse(std::move(PCHContainerOps), std::move(OverrideMainBuffer), VFS);
+  return Parse(std::move(PCHContainerOps), std::move(OverrideMainBuffer), VFS,
+               PCHCountValue);
 }
 
 std::unique_ptr<ASTUnit> ASTUnit::LoadFromCompilerInvocation(
@@ -2303,7 +2321,8 @@ void ASTUnit::CodeComplete(
   std::unique_ptr<llvm::MemoryBuffer> OverrideMainBuffer;
   if (Preamble && Line > 1 && hasSameUniqueID(File, OriginalSourceFile)) {
     OverrideMainBuffer = getMainBufferWithPrecompiledPreamble(
-        PCHContainerOps, Inv, &FileMgr.getVirtualFileSystem(), false, Line - 1);
+        PCHContainerOps, Inv, &FileMgr.getVirtualFileSystem(), nullptr, false,
+        Line - 1);
   }
 
   // If the main file has been overridden due to the use of a preamble,

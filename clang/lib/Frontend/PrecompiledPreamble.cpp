@@ -569,11 +569,12 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
   // Shrinking the storage requires extra temporary memory.
   // Destroying clang first reduces peak memory usage.
   CICleanup.unregister();
+  unsigned CountValue = Clang->getPreprocessor().getCounterValue();
   Clang.reset();
   Storage->shrink();
   return PrecompiledPreamble(
       std::move(Storage), std::move(PreambleBytes), PreambleEndsAtStartOfLine,
-      std::move(FilesInPreamble), std::move(MissingFiles));
+      std::move(FilesInPreamble), std::move(MissingFiles), CountValue);
 }
 
 PreambleBounds PrecompiledPreamble::getBounds() const {
@@ -726,11 +727,12 @@ PrecompiledPreamble::PrecompiledPreamble(
     std::unique_ptr<PCHStorage> Storage, std::vector<char> PreambleBytes,
     bool PreambleEndsAtStartOfLine,
     llvm::StringMap<PreambleFileHash> FilesInPreamble,
-    llvm::StringSet<> MissingFiles)
+    llvm::StringSet<> MissingFiles, unsigned CountValue)
     : Storage(std::move(Storage)), FilesInPreamble(std::move(FilesInPreamble)),
       MissingFiles(std::move(MissingFiles)),
       PreambleBytes(std::move(PreambleBytes)),
-      PreambleEndsAtStartOfLine(PreambleEndsAtStartOfLine) {
+      PreambleEndsAtStartOfLine(PreambleEndsAtStartOfLine),
+      CountValueAtFinish(CountValue) {
   assert(this->Storage != nullptr);
 }
 

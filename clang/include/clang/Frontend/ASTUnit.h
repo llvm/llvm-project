@@ -379,12 +379,14 @@ private:
 
   bool Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
              std::unique_ptr<llvm::MemoryBuffer> OverrideMainBuffer,
-             IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS);
+             IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+             unsigned PCHCountValue = 0);
 
   std::unique_ptr<llvm::MemoryBuffer> getMainBufferWithPrecompiledPreamble(
       std::shared_ptr<PCHContainerOperations> PCHContainerOps,
       CompilerInvocation &PreambleInvocationIn,
-      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS, bool AllowRebuild = true,
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+      unsigned *CountValueAtFinish = nullptr, bool AllowRebuild = true,
       unsigned MaxLines = 0);
   void RealizeTopLevelDeclsFromPreamble();
 

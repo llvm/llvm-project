@@ -179,6 +179,9 @@ public:
   /// details.
   virtual bool isModelParsingAction() const { return false; }
 
+  /// Do we need to reuse existing preprocessor?
+  virtual bool reuseExistingPreprocessor() const { return false; }
+
   /// Does this action only use the preprocessor?
   ///
   /// If so no AST context will be created and this action will be invalid

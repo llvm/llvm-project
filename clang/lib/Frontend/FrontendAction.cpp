@@ -968,7 +968,8 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
   // Set up the preprocessor if needed. When parsing model files the
   // preprocessor of the original source is reused.
-  if (!isModelParsingAction())
+  if (!CI.hasPreprocessor() ||
+      (!isModelParsingAction() && !reuseExistingPreprocessor()))
     CI.createPreprocessor(getTranslationUnitKind());
 
   // Inform the diagnostic client we are processing a source file.

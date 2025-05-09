@@ -102,6 +102,9 @@ public:
   /// be used for logging and debugging purposes only.
   std::size_t getSize() const;
 
+  /// Returns the value of __COUNT__ macro when the process finished.
+  unsigned getCountValue() const { return CountValueAtFinish; }
+
   /// Returned string is not null-terminated.
   llvm::StringRef getContents() const {
     return {PreambleBytes.data(), PreambleBytes.size()};
@@ -137,7 +140,7 @@ private:
                       std::vector<char> PreambleBytes,
                       bool PreambleEndsAtStartOfLine,
                       llvm::StringMap<PreambleFileHash> FilesInPreamble,
-                      llvm::StringSet<> MissingFiles);
+                      llvm::StringSet<> MissingFiles, unsigned CountPreamble);
 
   /// Data used to determine if a file used in the preamble has been changed.
   struct PreambleFileHash {
@@ -205,6 +208,8 @@ private:
   std::vector<char> PreambleBytes;
   /// See PreambleBounds::PreambleEndsAtStartOfLine
   bool PreambleEndsAtStartOfLine;
+  /// __COUNT__ macro value when the preamble finished building.
+  unsigned CountValueAtFinish;
 };
 
 /// A set of callbacks to gather useful information while building a preamble.

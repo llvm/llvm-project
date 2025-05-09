@@ -215,4 +215,64 @@ TEST_F(ASTUnitTest, LoadFromCommandLineWorkingDirectory) {
   ASSERT_EQ(FM.getFileSystemOpts().WorkingDir, WorkingDir.str());
 }
 
+TEST_F(ASTUnitTest, PCHCount) {
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFs =
+      new llvm::vfs::InMemoryFileSystem();
+
+  InMemoryFs->addFile("header.h", 0, llvm::MemoryBuffer::getMemBuffer(R"cpp(
+      #define __DEFINE_FUNCTION(i) \
+        int function_ ## i (void) { return 0; }
+      #define _DEFINE_FUNCTION(i) __DEFINE_FUNCTION(i)
+      #define DEFINE_FUNCTION      _DEFINE_FUNCTION(__COUNTER__)
+      DEFINE_FUNCTION;\n";
+    )cpp"));
+
+  InMemoryFs->addFile("test.cpp", 0, llvm::MemoryBuffer::getMemBuffer(R"cpp(
+      #include "header.h"
+      DEFINE_FUNCTION;
+      int main(void)
+      {
+        function_0();
+        function_1();
+        return 0;
+      }
+    )cpp"));
+
+  const char *Args[] = {"clang", "test.cpp"};
+  Diags = CompilerInstance::createDiagnostics(new DiagnosticOptions());
+  CreateInvocationOptions CIOpts;
+  CIOpts.Diags = Diags;
+  CInvok = createInvocation(Args, std::move(CIOpts));
+  ASSERT_TRUE(CInvok);
+
+  FileManager *FileMgr = new FileManager(FileSystemOptions(), InMemoryFs);
+  PCHContainerOps = std::make_shared<PCHContainerOperations>();
+
+  auto AU = ASTUnit::LoadFromCompilerInvocation(
+      CInvok, PCHContainerOps, Diags, FileMgr, false, CaptureDiagsKind::None, 1,
+      TU_Complete, false, false, false);
+  ASSERT_TRUE(AU);
+
+  /* Check if the AU is free of errors.  */
+  const DiagnosticsEngine &de = AU->getDiagnostics();
+  ASSERT_TRUE(de.hasErrorOccurred());
+
+  /* Make sure we have the two functions.  */
+  bool functions[2] = {false, false};
+  for (auto it = AU->top_level_begin(); it != AU->top_level_end(); ++it) {
+    if (FunctionDecl *fdecl = dyn_cast<FunctionDecl>(*it)) {
+      if (fdecl->getName() == "function_0") {
+        functions[0] = true;
+      }
+
+      if (fdecl->getName() == "function_1") {
+        functions[1] = true;
+      }
+    }
+  }
+
+  ASSERT_TRUE(functions[0]);
+  ASSERT_TRUE(functions[1]);
+}
+
 } // anonymous namespace
