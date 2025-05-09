@@ -65,6 +65,7 @@ class VPReplicateRecipe;
 class VPlanSlp;
 class Value;
 class LoopVectorizationCostModel;
+class LoopVersioning;
 
 struct VPCostContext;
 
@@ -1115,6 +1116,33 @@ public:
 #endif
 };
 
+/// Helper type to provide functions to access incoming values and blocks for
+/// phi-like recipes.
+class VPPhiAccessors {
+protected:
+  /// Return a VPRecipeBase* to the current object.
+  virtual const VPRecipeBase *getAsRecipe() const = 0;
+
+public:
+  virtual ~VPPhiAccessors() = default;
+
+  /// Returns the incoming VPValue with index \p Idx.
+  VPValue *getIncomingValue(unsigned Idx) const {
+    return getAsRecipe()->getOperand(Idx);
+  }
+
+  /// Returns the incoming block with index \p Idx.
+  const VPBasicBlock *getIncomingBlock(unsigned Idx) const;
+
+  /// Returns the number of incoming values, also number of incoming blocks.
+  unsigned getNumIncoming() const { return getAsRecipe()->getNumOperands(); }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printPhiOperands(raw_ostream &O, VPSlotTracker &SlotTracker) const;
+#endif
+};
+
 /// A recipe to wrap on original IR instruction not to be modified during
 /// execution, except for PHIs. PHIs are modeled via the VPIRPhi subclass.
 /// Expect PHIs, VPIRInstructions cannot have any operands.
@@ -1181,33 +1209,6 @@ public:
   void extractLastLaneOfFirstOperand(VPBuilder &Builder);
 };
 
-/// Helper type to provide functions to access incoming values and blocks for
-/// phi-like recipes.
-class VPPhiAccessors {
-protected:
-  /// Return a VPRecipeBase* to the current object.
-  virtual const VPRecipeBase *getAsRecipe() const = 0;
-
-public:
-  virtual ~VPPhiAccessors() = default;
-
-  /// Returns the incoming VPValue with index \p Idx.
-  VPValue *getIncomingValue(unsigned Idx) const {
-    return getAsRecipe()->getOperand(Idx);
-  }
-
-  /// Returns the incoming block with index \p Idx.
-  const VPBasicBlock *getIncomingBlock(unsigned Idx) const;
-
-  /// Returns the number of incoming values, also number of incoming blocks.
-  unsigned getNumIncoming() const { return getAsRecipe()->getNumOperands(); }
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void printPhiOperands(raw_ostream &O, VPSlotTracker &SlotTracker) const;
-#endif
-};
-
 /// An overlay for VPIRInstructions wrapping PHI nodes enabling convenient use
 /// cast/dyn_cast/isa and execute() implementation. A single VPValue operand is
 /// allowed, and it is used to add a new incoming value for the single
@@ -1236,11 +1237,20 @@ struct VPIRPhi : public VPIRInstruction {
 class VPIRMetadata {
   SmallVector<std::pair<unsigned, MDNode *>> Metadata;
 
-protected:
+public:
   VPIRMetadata() {}
+
+  /// Adds metatadata that can be preserved from the original instruction
+  /// \p I.
   VPIRMetadata(Instruction &I) { getMetadataToPropagate(&I, Metadata); }
 
-public:
+  /// Adds metatadata that can be preserved from the original instruction
+  /// \p I and noalias metadata guaranteed by runtime checks using \p LVer.
+  VPIRMetadata(Instruction &I, LoopVersioning *LVer);
+
+  /// Copy constructor for cloning.
+  VPIRMetadata(const VPIRMetadata &Other) : Metadata(Other.Metadata) {}
+
   /// Add all metadata to \p I.
   void applyMetadata(Instruction &I) const;
 };
@@ -2511,7 +2521,7 @@ public:
 /// copies of the original scalar type, one per lane, instead of producing a
 /// single copy of widened type for all lanes. If the instruction is known to be
 /// uniform only one copy, per lane zero, will be generated.
-class VPReplicateRecipe : public VPRecipeWithIRFlags {
+class VPReplicateRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
   /// Indicator if only a single replica per lane is needed.
   bool IsUniform;
 
@@ -2520,9 +2530,10 @@ class VPReplicateRecipe : public VPRecipeWithIRFlags {
 
 public:
   VPReplicateRecipe(Instruction *I, ArrayRef<VPValue *> Operands,
-                    bool IsUniform, VPValue *Mask = nullptr)
+                    bool IsUniform, VPValue *Mask = nullptr,
+                    VPIRMetadata Metadata = {})
       : VPRecipeWithIRFlags(VPDef::VPReplicateSC, Operands, *I),
-        IsUniform(IsUniform), IsPredicated(Mask) {
+        VPIRMetadata(Metadata), IsUniform(IsUniform), IsPredicated(Mask) {
     if (Mask)
       addOperand(Mask);
   }
@@ -2532,7 +2543,7 @@ public:
   VPReplicateRecipe *clone() override {
     auto *Copy =
         new VPReplicateRecipe(getUnderlyingInstr(), operands(), IsUniform,
-                              isPredicated() ? getMask() : nullptr);
+                              isPredicated() ? getMask() : nullptr, *this);
     Copy->transferFlags(*this);
     return Copy;
   }
@@ -2692,8 +2703,9 @@ protected:
 
   VPWidenMemoryRecipe(const char unsigned SC, Instruction &I,
                       std::initializer_list<VPValue *> Operands,
-                      bool Consecutive, bool Reverse, DebugLoc DL)
-      : VPRecipeBase(SC, Operands, DL), VPIRMetadata(I), Ingredient(I),
+                      bool Consecutive, bool Reverse,
+                      const VPIRMetadata &Metadata, DebugLoc DL)
+      : VPRecipeBase(SC, Operands, DL), VPIRMetadata(Metadata), Ingredient(I),
         Consecutive(Consecutive), Reverse(Reverse) {
     assert((Consecutive || !Reverse) && "Reverse implies consecutive");
   }
@@ -2751,16 +2763,17 @@ public:
 /// optional mask.
 struct VPWidenLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
   VPWidenLoadRecipe(LoadInst &Load, VPValue *Addr, VPValue *Mask,
-                    bool Consecutive, bool Reverse, DebugLoc DL)
+                    bool Consecutive, bool Reverse,
+                    const VPIRMetadata &Metadata, DebugLoc DL)
       : VPWidenMemoryRecipe(VPDef::VPWidenLoadSC, Load, {Addr}, Consecutive,
-                            Reverse, DL),
+                            Reverse, Metadata, DL),
         VPValue(this, &Load) {
     setMask(Mask);
   }
 
   VPWidenLoadRecipe *clone() override {
     return new VPWidenLoadRecipe(cast<LoadInst>(Ingredient), getAddr(),
-                                 getMask(), Consecutive, Reverse,
+                                 getMask(), Consecutive, Reverse, *this,
                                  getDebugLoc());
   }
 
@@ -2792,7 +2805,7 @@ struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
   VPWidenLoadEVLRecipe(VPWidenLoadRecipe &L, VPValue &EVL, VPValue *Mask)
       : VPWidenMemoryRecipe(VPDef::VPWidenLoadEVLSC, L.getIngredient(),
                             {L.getAddr(), &EVL}, L.isConsecutive(),
-                            L.isReverse(), L.getDebugLoc()),
+                            L.isReverse(), L, L.getDebugLoc()),
         VPValue(this, &getIngredient()) {
     setMask(Mask);
   }
@@ -2829,16 +2842,17 @@ struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
 /// to store to and an optional mask.
 struct VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
   VPWidenStoreRecipe(StoreInst &Store, VPValue *Addr, VPValue *StoredVal,
-                     VPValue *Mask, bool Consecutive, bool Reverse, DebugLoc DL)
+                     VPValue *Mask, bool Consecutive, bool Reverse,
+                     const VPIRMetadata &Metadata, DebugLoc DL)
       : VPWidenMemoryRecipe(VPDef::VPWidenStoreSC, Store, {Addr, StoredVal},
-                            Consecutive, Reverse, DL) {
+                            Consecutive, Reverse, Metadata, DL) {
     setMask(Mask);
   }
 
   VPWidenStoreRecipe *clone() override {
     return new VPWidenStoreRecipe(cast<StoreInst>(Ingredient), getAddr(),
                                   getStoredValue(), getMask(), Consecutive,
-                                  Reverse, getDebugLoc());
+                                  Reverse, *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenStoreSC);
@@ -2872,7 +2886,8 @@ struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
   VPWidenStoreEVLRecipe(VPWidenStoreRecipe &S, VPValue &EVL, VPValue *Mask)
       : VPWidenMemoryRecipe(VPDef::VPWidenStoreEVLSC, S.getIngredient(),
                             {S.getAddr(), S.getStoredValue(), &EVL},
-                            S.isConsecutive(), S.isReverse(), S.getDebugLoc()) {
+                            S.isConsecutive(), S.isReverse(), S,
+                            S.getDebugLoc()) {
     setMask(Mask);
   }
 
