@@ -18137,7 +18137,7 @@ static MVT getQDOTXResultType(MVT OpVT) {
 static SDValue getZeroPaddedAdd(const SDLoc &DL, SDValue A, SDValue B,
                                 SelectionDAG &DAG) {
   // NOTE: Manually doing the extract/add/insert scheme produces
-  // significantly better coegen than the naive pad with zeros
+  // significantly better codegen than the naive pad with zeros
   // and add scheme.
   EVT AVT = A.getValueType();
   EVT BVT = B.getValueType();
