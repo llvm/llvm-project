@@ -506,6 +506,8 @@ Improvements to Clang's diagnostics
   behavior of the C99 feature as it was introduced into C++20. Fixes #GH47037
 - ``-Wreserved-identifier`` now fires on reserved parameter names in a function
   declaration which is not a definition.
+- Clang now prints the namespace for an attribute, if any,
+  when emitting an unknown attribute diagnostic.
 
 - Several compatibility diagnostics that were incorrectly being grouped under
   ``-Wpre-c++20-compat`` are now part of ``-Wc++20-compat``. (#GH138775)
@@ -564,7 +566,7 @@ Bug Fixes in This Version
 - Fixed a bug where an attribute before a ``pragma clang attribute`` or
   ``pragma clang __debug`` would cause an assertion. Instead, this now diagnoses
   the invalid attribute location appropriately. (#GH137861)
-- Fixed a crash when a malformed ``_Pragma`` directive appears as part of an 
+- Fixed a crash when a malformed ``_Pragma`` directive appears as part of an
   ``#include`` directive. (#GH138094)
 - Fixed a crash during constant evaluation involving invalid lambda captures
   (#GH138832)
@@ -673,7 +675,6 @@ Bug Fixes to C++ Support
 - Fixed an assertion when trying to constant-fold various builtins when the argument
   referred to a reference to an incomplete type. (#GH129397)
 - Fixed a crash when a cast involved a parenthesized aggregate initialization in dependent context. (#GH72880)
-- Fixed a crash when forming an invalid function type in a dependent context. (#GH138657) (#GH115725) (#GH68852)
 - No longer crashes when instantiating invalid variable template specialization
   whose type depends on itself. (#GH51347), (#GH55872)
 - Improved parser recovery of invalid requirement expressions. In turn, this
@@ -900,6 +901,8 @@ OpenMP Support
 - Added support 'no_openmp_constructs' assumption clause.
 - Added support for 'self_maps' in map and requirement clause.
 - Added support for 'omp stripe' directive.
+- Fixed a crashing bug with ``omp tile sizes`` if the argument to ``sizes`` was
+  an invalid expression. (#GH139073)
 
 Improvements
 ^^^^^^^^^^^^
