@@ -1367,6 +1367,16 @@ let TargetPrefix = "nvvm" in {
           [llvm_i32_ty, llvm_i32_ty],
           [IntrNoMem, IntrSpeculatable]>;
 
+
+//
+// BMSK - bit mask
+//
+  foreach mode = ["wrap", "clamp"] in
+    def int_nvvm_bmsk_ # mode :
+      DefaultAttrsIntrinsic<[llvm_i32_ty],
+        [llvm_i32_ty, llvm_i32_ty],
+        [IntrNoMem, IntrSpeculatable]>;
+
 //
 // Convert
 //
