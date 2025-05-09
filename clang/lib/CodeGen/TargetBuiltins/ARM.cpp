@@ -4190,11 +4190,9 @@ Value *CodeGenFunction::EmitSVEMaskedLoad(const CallExpr *E,
   // to extract sclar element type is necessary.
   if (MemEltTy->isVectorTy()) {
     #ifndef NDEBUG
-        auto *VecTy = cast<llvm::VectorType>(MemEltTy);
-        ElementCount EC = VecTy->getElementCount();
-        assert(EC.isScalar() && VecTy->getElementType() == Int8Ty &&
-              "Only <1 x i8> expected");
-    #endif
+    assert(MemEltTy == FixedVectorType::get(Int8Ty, 1) &&
+           "Only <1 x i8> expected");
+#endif
         MemEltTy = cast<llvm::VectorType>(MemEltTy)->getElementType();
   }
 
@@ -4249,11 +4247,9 @@ Value *CodeGenFunction::EmitSVEMaskedStore(const CallExpr *E,
   // to extract sclar element type is necessary.
   if (MemEltTy->isVectorTy()) {
     #ifndef NDEBUG
-        auto *VecTy = cast<llvm::VectorType>(MemEltTy);
-        ElementCount EC = VecTy->getElementCount();
-        assert(EC.isScalar() && VecTy->getElementType() == Int8Ty &&
-              "Only <1 x i8> expected");
-    #endif
+    assert(MemEltTy == FixedVectorType::get(Int8Ty, 1) &&
+           "Only <1 x i8> expected");
+#endif
         MemEltTy = cast<llvm::VectorType>(MemEltTy)->getElementType();
   }
 
