@@ -3830,6 +3830,20 @@ def fms_hotpatch : Flag<["-"], "fms-hotpatch">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Ensure that all functions can be hotpatched at runtime">,
   MarshallingInfoFlag<CodeGenOpts<"HotPatch">>;
+def fms_hotpatch_functions_file
+    : Joined<["-"], "fms-hotpatch-functions-file=">,
+      Group<f_Group>,
+      Visibility<[ClangOption, CC1Option, CLOption]>,
+      MarshallingInfoString<CodeGenOpts<"MSHotPatchFunctionsFile">>,
+      HelpText<"Path to a file that contains a list of mangled symbol names of "
+               "functions that should be hot-patched">;
+def fms_hotpatch_functions_list
+    : CommaJoined<["-"], "fms-hotpatch-functions-list=">,
+      Group<f_Group>,
+      Visibility<[ClangOption, CC1Option, CLOption]>,
+      MarshallingInfoStringVector<CodeGenOpts<"MSHotPatchFunctionsList">>,
+      HelpText<"List of mangled symbol names of functions that should be "
+               "hot-patched">;
 def fpcc_struct_return : Flag<["-"], "fpcc-struct-return">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Override the default ABI to return all structs on the stack">;

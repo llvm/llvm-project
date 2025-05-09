@@ -893,6 +893,8 @@ void TargetPassConfig::addIRPasses() {
 
   if (EnableGlobalMergeFunc)
     addPass(createGlobalMergeFuncPass());
+
+  addPass(createWindowsHotPatch());
 }
 
 /// Turn exception handling constructs into something the code generators can

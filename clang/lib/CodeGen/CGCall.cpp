@@ -2639,6 +2639,15 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     // CPU/feature overrides.  addDefaultFunctionDefinitionAttributes
     // handles these separately to set them based on the global defaults.
     GetCPUAndFeaturesAttributes(CalleeInfo.getCalleeDecl(), FuncAttrs);
+
+    // Windows hotpatching support
+    if (!MSHotPatchFunctions.empty()) {
+      bool IsHotPatched = std::binary_search(MSHotPatchFunctions.begin(),
+                                             MSHotPatchFunctions.end(), Name);
+      if (IsHotPatched) {
+        FuncAttrs.addAttribute(llvm::Attribute::MarkedForWindowsHotPatching);
+      }
+    }
   }
 
   // Collect attributes from arguments and return values.

@@ -617,6 +617,9 @@ namespace llvm {
 
   /// Lowers KCFI operand bundles for indirect calls.
   FunctionPass *createKCFIPass();
+
+  /// Creates Windows Hot Patch pass. \see WindowsHotPatch.cpp
+  ModulePass *createWindowsHotPatch();
 } // End llvm namespace
 
 #endif
