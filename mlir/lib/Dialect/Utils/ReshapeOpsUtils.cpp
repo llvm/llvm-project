@@ -139,8 +139,14 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
         return std::nullopt;
       continue;
     }
-    if (wasLastDimDynamic && isDynamic)
-      return std::nullopt;
+    // If the last 2 dimensions in the target were dynamic, the tail in the
+    // source shape cannot contain a dynamic value. E.g. ?x?->? is valid,
+    // however ?x?x10x?->?x? would be indeterminate.
+    if (wasLastDimDynamic && numTargetDims > 1 &&
+        targetShape[numTargetDims - 2] == ShapedType::kDynamic) {
+      if (isDynamic)
+        return std::nullopt;
+    }
     // If the last target dimension is static, only source dimensions of 1 are
     // acceptable.
     if (!wasLastDimDynamic && !isOne)
