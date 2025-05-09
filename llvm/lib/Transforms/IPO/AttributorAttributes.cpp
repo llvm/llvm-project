@@ -12854,7 +12854,7 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
   ChangeStatus manifest(Attributor &A) override {
     auto FlatAS = A.getInfoCache().getFlatAddressSpace();
     if (!FlatAS.has_value())
-      return ChangeStatus::UNCHANGED;
+      llvm_unreachable("Must have flat address space!");
 
     unsigned AS = getAssociatedType()->getPointerAddressSpace();
     if (AS != FlatAS.value())
@@ -12863,18 +12863,18 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
     LLVMContext &Ctx = getAssociatedValue().getContext();
     MDNode *NoAliasASNode = nullptr;
     MDBuilder MDB(Ctx);
-    for (auto range : ASRanges) {
+    for (std::pair<unsigned, unsigned> Range : ASRanges) {
       if (NoAliasASNode == nullptr) {
         NoAliasASNode =
-            MDB.createRange(APInt(32, range.first), APInt(32, range.second));
+            MDB.createRange(APInt(32, Range.first), APInt(32, Range.second));
       } else {
         MDNode *ASRange =
-            MDB.createRange(APInt(32, range.first), APInt(32, range.second));
+            MDB.createRange(APInt(32, Range.first), APInt(32, Range.second));
         NoAliasASNode = MDNode::getMostGenericRange(NoAliasASNode, ASRange);
       }
     }
 
-    if (!NoAliasASNode || NoAliasASNode->getNumOperands() == 0)
+    if (!NoAliasASNode)
       return ChangeStatus::UNCHANGED;
 
     Value *AssociatedValue = &getAssociatedValue();
