@@ -74,7 +74,7 @@ void AArch64TargetWinCOFFStreamer::emitARM64WinUnwindCode(unsigned UnwindCode,
     return;
   auto Inst = WinEH::Instruction(UnwindCode, /*Label=*/nullptr, Reg, Offset);
   if (S.isInEpilogCFI())
-    CurFrame->EpilogMap[S.getCurrentEpilog()].Instructions.push_back(Inst);
+    S.getCurrentWinEpilog()->Instructions.push_back(Inst);
   else
     CurFrame->Instructions.push_back(Inst);
 }
@@ -195,7 +195,7 @@ void AArch64TargetWinCOFFStreamer::emitARM64WinCFIEpilogEnd() {
   if (S.isInEpilogCFI()) {
     WinEH::Instruction Inst =
         WinEH::Instruction(Win64EH::UOP_End, /*Label=*/nullptr, -1, 0);
-    CurFrame->EpilogMap[S.getCurrentEpilog()].Instructions.push_back(Inst);
+    S.getCurrentWinEpilog()->Instructions.push_back(Inst);
   }
   S.emitWinCFIEndEpilogue();
 }
