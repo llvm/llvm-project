@@ -109,6 +109,15 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpCombinedConstruct(
       builder.create<mlir::acc::YieldOp>(end);
     }
 
+    {
+      mlir::OpBuilder::InsertionGuard guardCase(builder);
+      CombinedConstructClauseInfo<Op> inf{computeOp, loopOp};
+      // We don't bother setting the insertion point, since the clause emitter
+      // is going to have to do this correctly.
+      makeClauseEmitter(inf, *this, builder, dirKind, dirLoc)
+          .VisitClauseList(clauses);
+    }
+
     builder.create<TermOp>(end);
   }
 

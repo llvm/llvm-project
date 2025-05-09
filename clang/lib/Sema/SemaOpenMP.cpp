@@ -15355,7 +15355,8 @@ StmtResult SemaOpenMP::ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
   // Determine the unroll factor.
   uint64_t Factor;
   SourceLocation FactorLoc;
-  if (Expr *FactorVal = PartialClause->getFactor()) {
+  if (Expr *FactorVal = PartialClause->getFactor();
+      FactorVal && !FactorVal->containsErrors()) {
     Factor = FactorVal->getIntegerConstantExpr(Context)->getZExtValue();
     FactorLoc = FactorVal->getExprLoc();
   } else {
@@ -23234,7 +23235,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPDistScheduleClause(
               ValExpr->getIntegerConstantExpr(getASTContext())) {
         if (Result->isSigned() && !Result->isStrictlyPositive()) {
           Diag(ChunkSizeLoc, diag::err_omp_negative_expression_in_clause)
-              << "dist_schedule" << ChunkSize->getSourceRange();
+              << "dist_schedule" << /*strictly positive*/ 1
+              << ChunkSize->getSourceRange();
           return nullptr;
         }
       } else if (getOpenMPCaptureRegionForClause(

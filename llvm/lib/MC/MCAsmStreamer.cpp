@@ -406,6 +406,8 @@ public:
   void emitWinCFIEndProlog(SMLoc Loc) override;
   void emitWinCFIBeginEpilogue(SMLoc Loc) override;
   void emitWinCFIEndEpilogue(SMLoc Loc) override;
+  void emitWinCFIUnwindV2Start(SMLoc Loc) override;
+  void emitWinCFIUnwindVersion(uint8_t Version, SMLoc Loc) override;
 
   void emitWinEHHandler(const MCSymbol *Sym, bool Unwind, bool Except,
                         SMLoc Loc) override;
@@ -2378,6 +2380,20 @@ void MCAsmStreamer::emitWinCFIEndEpilogue(SMLoc Loc) {
   MCStreamer::emitWinCFIEndEpilogue(Loc);
 
   OS << "\t.seh_endepilogue";
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitWinCFIUnwindV2Start(SMLoc Loc) {
+  MCStreamer::emitWinCFIUnwindV2Start(Loc);
+
+  OS << "\t.seh_unwindv2start";
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitWinCFIUnwindVersion(uint8_t Version, SMLoc Loc) {
+  MCStreamer::emitWinCFIUnwindVersion(Version, Loc);
+
+  OS << "\t.seh_unwindversion " << (unsigned)Version;
   EmitEOL();
 }
 
