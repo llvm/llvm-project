@@ -412,7 +412,9 @@ namespace {
     SDValue visitMERGE_VALUES(SDNode *N);
     SDValue visitADD(SDNode *N);
     SDValue visitADDLike(SDNode *N);
-    SDValue visitADDLikeCommutative(SDValue N0, SDValue N1, SDNode *LocReference);
+    SDValue visitADDLikeCommutative(SDValue N0, SDValue N1,
+                                    SDNode *LocReference);
+    SDValue visitPTRADD(SDNode *N);
     SDValue visitSUB(SDNode *N);
     SDValue visitADDSAT(SDNode *N);
     SDValue visitSUBSAT(SDNode *N);
@@ -1095,7 +1097,7 @@ bool DAGCombiner::reassociationCanBreakAddressingModePattern(unsigned Opc,
   // (load/store (add, (add, x, y), offset2)) ->
   // (load/store (add, (add, x, offset2), y)).
 
-  if (N0.getOpcode() != ISD::ADD)
+  if (N0.getOpcode() != ISD::ADD && N0.getOpcode() != ISD::PTRADD)
     return false;
 
   // Check for vscale addressing modes.
@@ -1852,6 +1854,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::TokenFactor:        return visitTokenFactor(N);
   case ISD::MERGE_VALUES:       return visitMERGE_VALUES(N);
   case ISD::ADD:                return visitADD(N);
+  case ISD::PTRADD:             return visitPTRADD(N);
   case ISD::SUB:                return visitSUB(N);
   case ISD::SADDSAT:
   case ISD::UADDSAT:            return visitADDSAT(N);
@@ -2388,7 +2391,7 @@ static bool canFoldInAddressingMode(SDNode *N, SDNode *Use, SelectionDAG &DAG,
   }
 
   TargetLowering::AddrMode AM;
-  if (N->getOpcode() == ISD::ADD) {
+  if (N->getOpcode() == ISD::ADD || N->getOpcode() == ISD::PTRADD) {
     AM.HasBaseReg = true;
     ConstantSDNode *Offset = dyn_cast<ConstantSDNode>(N->getOperand(1));
     if (Offset)
@@ -2614,6 +2617,100 @@ SDValue DAGCombiner::foldSubToAvg(SDNode *N, const SDLoc &DL) {
                         m_Sra(m_Xor(m_Deferred(A), m_Deferred(B)), m_One())))) {
     return DAG.getNode(ISD::AVGCEILS, DL, VT, A, B);
   }
+  return SDValue();
+}
+
+/// Try to fold a pointer arithmetic node.
+/// This needs to be done separately from normal addition, because pointer
+/// addition is not commutative.
+/// This function was adapted from DAGCombiner::visitPTRADD() from the Morello
+/// project, which is based on CHERI.
+SDValue DAGCombiner::visitPTRADD(SDNode *N) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  EVT PtrVT = N0.getValueType();
+  EVT IntVT = N1.getValueType();
+  SDLoc DL(N);
+
+  // fold (ptradd undef, y) -> undef
+  if (N0.isUndef())
+    return N0;
+
+  // fold (ptradd x, undef) -> undef
+  if (N1.isUndef())
+    return DAG.getUNDEF(PtrVT);
+
+  // fold (ptradd x, 0) -> x
+  if (isNullConstant(N1))
+    return N0;
+
+  if (N0.getOpcode() == ISD::PTRADD &&
+      !reassociationCanBreakAddressingModePattern(ISD::PTRADD, DL, N, N0, N1)) {
+    SDValue X = N0.getOperand(0);
+    SDValue Y = N0.getOperand(1);
+    SDValue Z = N1;
+    bool N0OneUse = N0.hasOneUse();
+    bool YIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Y);
+    bool ZIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Z);
+    bool ZOneUse = Z.hasOneUse();
+
+    // (ptradd (ptradd x, y), z) -> (ptradd x, (add y, z)) if:
+    //   * x is a null pointer; or
+    //   * y is a constant and z has one use; or
+    //   * y is a constant and (ptradd x, y) has one use; or
+    //   * (ptradd x, y) and z have one use and z is not a constant.
+    if (isNullConstant(X) || (YIsConstant && ZOneUse) ||
+        (YIsConstant && N0OneUse) || (N0OneUse && ZOneUse && !ZIsConstant)) {
+      SDValue Add = DAG.getNode(ISD::ADD, DL, IntVT, {Y, Z});
+
+      // Calling visit() can replace the Add node with ISD::DELETED_NODE if
+      // there aren't any users, so keep a handle around whilst we visit it.
+      HandleSDNode ADDHandle(Add);
+
+      SDValue VisitedAdd = visit(Add.getNode());
+      if (VisitedAdd) {
+        // If visit() returns the same node, it means the SDNode was RAUW'd, and
+        // therefore we have to load the new value to perform the checks whether
+        // the reassociation fold is profitable.
+        if (VisitedAdd.getNode() == Add.getNode())
+          Add = ADDHandle.getValue();
+        else
+          Add = VisitedAdd;
+      }
+
+      return DAG.getMemBasePlusOffset(X, Add, DL, SDNodeFlags());
+    }
+
+    // TODO: There is another possible fold here that was proven useful.
+    // It would be this:
+    //
+    // (ptradd (ptradd x, y), z) -> (ptradd (ptradd x, z), y) if:
+    //   * (ptradd x, y) has one use; and
+    //   * y is a constant; and
+    //   * z is not a constant.
+    //
+    // In some cases, specifically in AArch64's FEAT_CPA, it exposes the
+    // opportunity to select more complex instructions such as SUBPT and
+    // MSUBPT. However, a hypothetical corner case has been found that we could
+    // not avoid. Consider this (pseudo-POSIX C):
+    //
+    // char *foo(char *x, int z) {return (x + LARGE_CONSTANT) + z;}
+    // char *p = mmap(LARGE_CONSTANT);
+    // char *q = foo(p, -LARGE_CONSTANT);
+    //
+    // Then x + LARGE_CONSTANT is one-past-the-end, so valid, and a
+    // further + z takes it back to the start of the mapping, so valid,
+    // regardless of the address mmap gave back. However, if mmap gives you an
+    // address < LARGE_CONSTANT (ignoring high bits), x - LARGE_CONSTANT will
+    // borrow from the high bits (with the subsequent + z carrying back into
+    // the high bits to give you a well-defined pointer) and thus trip
+    // FEAT_CPA's pointer corruption checks.
+    //
+    // We leave this fold as an opportunity for future work, addressing the
+    // corner case for FEAT_CPA, as well as reconciling the solution with the
+    // more general application of pointer arithmetic in other future targets.
+  }
+
   return SDValue();
 }
 
