@@ -73,6 +73,8 @@ public:
                      mlir::omp::FilterClauseOps &result) const;
   bool processFinal(lower::StatementContext &stmtCtx,
                     mlir::omp::FinalClauseOps &result) const;
+  bool processGrainsize(lower::StatementContext &stmtCtx,
+                        mlir::omp::GrainsizeClauseOps &result) const;
   bool processHasDeviceAddr(
       lower::StatementContext &stmtCtx,
       mlir::omp::HasDeviceAddrClauseOps &result,
@@ -82,6 +84,8 @@ public:
                         mlir::omp::InclusiveClauseOps &result) const;
   bool processMergeable(mlir::omp::MergeableClauseOps &result) const;
   bool processNowait(mlir::omp::NowaitClauseOps &result) const;
+  bool processNumTasks(lower::StatementContext &stmtCtx,
+                       mlir::omp::NumTasksClauseOps &result) const;
   bool processNumTeams(lower::StatementContext &stmtCtx,
                        mlir::omp::NumTeamsClauseOps &result) const;
   bool processNumThreads(lower::StatementContext &stmtCtx,
