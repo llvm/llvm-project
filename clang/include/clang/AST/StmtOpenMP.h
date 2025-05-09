@@ -5572,7 +5572,9 @@ class OMPTileDirective final : public OMPLoopTransformationDirective {
       : OMPLoopTransformationDirective(OMPTileDirectiveClass,
                                        llvm::omp::OMPD_tile, StartLoc, EndLoc,
                                        NumLoops) {
+    // Tiling doubles the original number of loops
     setNumGeneratedLoops(2 * NumLoops);
+    // Produces a single top-level canonical loop nest
     setNumGeneratedLoopNests(1);
   }
 
@@ -5803,9 +5805,9 @@ class OMPReverseDirective final : public OMPLoopTransformationDirective {
       : OMPLoopTransformationDirective(OMPReverseDirectiveClass,
                                        llvm::omp::OMPD_reverse, StartLoc,
                                        EndLoc, 1) {
-
-    setNumGeneratedLoopNests(1);
+    // Reverse produces a single top-level canonical loop nest
     setNumGeneratedLoops(1);
+    setNumGeneratedLoopNests(1);
   }
 
   void setPreInits(Stmt *PreInits) {
@@ -5873,6 +5875,8 @@ class OMPInterchangeDirective final : public OMPLoopTransformationDirective {
       : OMPLoopTransformationDirective(OMPInterchangeDirectiveClass,
                                        llvm::omp::OMPD_interchange, StartLoc,
                                        EndLoc, NumLoops) {
+    // Interchange produces a single top-level canonical loop
+    // nest, with the exact same amount of total loops
     setNumGeneratedLoops(NumLoops);
     setNumGeneratedLoopNests(1);
   }
@@ -5950,11 +5954,7 @@ class OMPFuseDirective final : public OMPLoopTransformationDirective {
                             unsigned NumLoops)
       : OMPLoopTransformationDirective(OMPFuseDirectiveClass,
                                        llvm::omp::OMPD_fuse, StartLoc, EndLoc,
-                                       NumLoops) {
-    setNumGeneratedLoops(1);
-    // TODO: After implementing the looprange clause, change this logic
-    setNumGeneratedLoopNests(1);
-  }
+                                       NumLoops) {}
 
   void setPreInits(Stmt *PreInits) {
     Data->getChildren()[PreInitsOffset] = PreInits;
@@ -5990,8 +5990,10 @@ public:
   /// \param C Context of the AST
   /// \param NumClauses Number of clauses to allocate
   /// \param NumLoops Number of associated loops to allocate
+  /// \param NumLoopNests Number of top level loops to allocate
   static OMPFuseDirective *CreateEmpty(const ASTContext &C, unsigned NumClauses,
-                                       unsigned NumLoops);
+                                       unsigned NumLoops,
+                                       unsigned NumLoopNests);
 
   /// Gets the associated loops after the transformation. This is the de-sugared
   /// replacement or nulltpr in dependent contexts.

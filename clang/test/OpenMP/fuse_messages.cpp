@@ -33,6 +33,8 @@ void func() {
     {
         for (int i = 0; i < 7; ++i)
             ;
+        for(int j = 0; j < 100; ++j);
+
     }
 
 
@@ -41,6 +43,8 @@ void func() {
     {
         for (int i = 0; i < 7; ++i)
             ;
+        for(int j = 0; j < 100; ++j);
+
     }
 
     //expected-error@+4 {{loop after '#pragma omp fuse' is not in canonical form}}
@@ -50,6 +54,7 @@ void func() {
         for(int i = 0; i < 10; i*=2) {
             ;
         }
+        for(int j = 0; j < 100; ++j);
     }
 
     //expected-error@+2 {{loop sequence after '#pragma omp fuse' must contain at least 1 canonical loop or loop-generating construct}}
@@ -73,4 +78,109 @@ void func() {
         for(unsigned int j = 0; j < 10; ++j);
         for(long long k = 0; k < 100; ++k);
     }
+
+    //expected-warning@+2 {{loop range in '#pragma omp fuse' contains only a single loop, resulting in redundant fusion}}
+    #pragma omp fuse
+    {
+        for(int i = 0; i < 10; ++i);
+    }
+
+    //expected-warning@+1 {{loop range in '#pragma omp fuse' contains only a single loop, resulting in redundant fusion}}
+    #pragma omp fuse looprange(1, 1)
+    {
+        for(int i = 0; i < 10; ++i);
+        for(int j = 0; j < 100; ++j);
+    }
+
+    //expected-error@+1 {{argument to 'looprange' clause must be a strictly positive integer value}}
+    #pragma omp fuse looprange(1, -1)
+    {
+        for(int i = 0; i < 10; ++i);
+        for(int j = 0; j < 100; ++j);
+    }
+
+    //expected-error@+1 {{argument to 'looprange' clause must be a strictly positive integer value}}
+    #pragma omp fuse looprange(1, 0)
+    {
+        for(int i = 0; i < 10; ++i);
+        for(int j = 0; j < 100; ++j);
+    }
+
+    const int x = 1;
+    constexpr int y = 4;
+    //expected-error@+1 {{loop range in '#pragma omp fuse' exceeds the number of available loops: range end '4' is greater than the total number of loops '3'}}
+    #pragma omp fuse looprange(x,y)
+    {
+        for(int i = 0; i < 10; ++i);
+        for(int j = 0; j < 100; ++j);
+        for(int k = 0; k < 50; ++k);
+    }
+
+    //expected-error@+1 {{loop range in '#pragma omp fuse' exceeds the number of available loops: range end '420' is greater than the total number of loops '3'}}
+    #pragma omp fuse looprange(1,420)
+    {
+        for(int i = 0; i < 10; ++i);
+        for(int j = 0; j < 100; ++j);
+        for(int k = 0; k < 50; ++k);
+    }
 }
+
+// In a template context, but expression itself not instantiation-dependent
+template <typename T>
+static void templated_func() {
+
+    //expected-warning@+1 {{loop range in '#pragma omp fuse' contains only a single loop, resulting in redundant fusion}}
+    #pragma omp fuse looprange(2,1)
+    {
+        for(int i = 0; i < 10; ++i);
+        for(int j = 0; j < 100; ++j);
+        for(int k = 0; k < 50; ++k);
+    }
+
+    //expected-error@+1 {{loop range in '#pragma omp fuse' exceeds the number of available loops: range end '5' is greater than the total number of loops '3'}}
+    #pragma omp fuse looprange(3,3)
+    {
+        for(int i = 0; i < 10; ++i);
+        for(int j = 0; j < 100; ++j);
+        for(int k = 0; k < 50; ++k);
+    }
+
+}
+
+template <int V> 
+static void templated_func_value_dependent() {
+
+    //expected-warning@+1 {{loop range in '#pragma omp fuse' contains only a single loop, resulting in redundant fusion}}
+    #pragma omp fuse looprange(V,1)
+    {
+        for(int i = 0; i < 10; ++i);
+        for(int j = 0; j < 100; ++j);
+        for(int k = 0; k < 50; ++k);
+    }
+}
+
+template <typename T> 
+static void templated_func_type_dependent() {
+    constexpr T s = 1;
+
+    //expected-error@+1 {{argument to 'looprange' clause must be a strictly positive integer value}}
+    #pragma omp fuse looprange(s,s-1)
+    {
+        for(int i = 0; i < 10; ++i);
+        for(int j = 0; j < 100; ++j);
+        for(int k = 0; k < 50; ++k);
+    }
+}
+
+
+void template_inst() {
+    // expected-note@+1 {{in instantiation of function template specialization 'templated_func<int>' requested here}}
+    templated_func<int>();
+    // expected-note@+1 {{in instantiation of function template specialization 'templated_func_value_dependent<1>' requested here}}
+    templated_func_value_dependent<1>();
+    // expected-note@+1 {{in instantiation of function template specialization 'templated_func_type_dependent<int>' requested here}}
+    templated_func_type_dependent<int>();
+
+}
+
+

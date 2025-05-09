@@ -921,6 +921,12 @@ public:
                                        SourceLocation StartLoc,
                                        SourceLocation LParenLoc,
                                        SourceLocation EndLoc);
+
+  /// Called on well-form 'looprange' clause after parsing its arguments.
+  OMPClause *
+  ActOnOpenMPLoopRangeClause(Expr *First, Expr *Count, SourceLocation StartLoc,
+                             SourceLocation LParenLoc, SourceLocation FirstLoc,
+                             SourceLocation CountLoc, SourceLocation EndLoc);
   /// Called on well-formed 'ordered' clause.
   OMPClause *
   ActOnOpenMPOrderedClause(SourceLocation StartLoc, SourceLocation EndLoc,

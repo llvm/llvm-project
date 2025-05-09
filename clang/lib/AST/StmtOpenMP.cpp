@@ -524,10 +524,13 @@ OMPFuseDirective *OMPFuseDirective::Create(
 
 OMPFuseDirective *OMPFuseDirective::CreateEmpty(const ASTContext &C,
                                                 unsigned NumClauses,
-                                                unsigned NumLoops) {
-  return createEmptyDirective<OMPFuseDirective>(
+                                                unsigned NumLoops,
+                                                unsigned NumLoopNests) {
+  OMPFuseDirective *Dir = createEmptyDirective<OMPFuseDirective>(
       C, NumClauses, /*HasAssociatedStmt=*/true, TransformedStmtOffset + 1,
       SourceLocation(), SourceLocation(), NumLoops);
+  Dir->setNumGeneratedLoopNests(NumLoopNests);
+  return Dir;
 }
 
 OMPForSimdDirective *
