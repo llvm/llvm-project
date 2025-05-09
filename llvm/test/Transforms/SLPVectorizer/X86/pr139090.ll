@@ -11,9 +11,9 @@ define i64 @main() #0 {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 8
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr @global, align 8
 ; CHECK-NEXT:    [[ADD7:%.*]] = add i32 1, 0
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> <i32 poison, i32 0, i32 poison, i32 0>, i32 [[LOAD]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[ADD7]], i32 2
-; CHECK-NEXT:    [[TMP2:%.*]] = sub <4 x i32> <i32 -1, i32 0, i32 0, i32 0>, [[TMP1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> <i32 poison, i32 0, i32 0, i32 0>, i32 [[LOAD]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> <i32 -1, i32 0, i32 poison, i32 0>, i32 [[ADD7]], i32 2
+; CHECK-NEXT:    [[TMP2:%.*]] = sub <4 x i32> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[TMP3]]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[SUB]], 10
