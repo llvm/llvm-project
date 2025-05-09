@@ -4,11 +4,16 @@ REQUIRES: system-linux, perf
 
 RUN: %clang %S/Inputs/perf_test.c -fuse-ld=lld -Wl,--script=%S/Inputs/perf_test.lds -o %t
 RUN: perf record -Fmax -e cycles:u -o %t2 -- %t
-RUN: perf2bolt %t -p=%t2 -o %t3 -nl -ignore-build-id 2>&1 | FileCheck %s
+RUN: perf2bolt %t -p=%t2 -o %t3 -nl -ignore-build-id --print-heatmap-stats \
+RUN:   2>&1 | FileCheck %s
 
 CHECK-NOT: PERF2BOLT-ERROR
 CHECK-NOT: !! WARNING !! This high mismatch ratio indicates the input binary is probably not the same binary used during profiling collection.
+CHECK: HEATMAP: building heat map
+CHECK-NEXT: Section Name, Begin Address, End Address, Percentage Hotness, Utilization Pct, Partition Score
+CHECK: BOLT-INFO: Functions with density >= {{.*}} account for 99.00% total sample counts.
 
 RUN: %clang %S/Inputs/perf_test.c -no-pie -fuse-ld=lld -o %t4
 RUN: perf record -Fmax -e cycles:u -o %t5 -- %t4
-RUN: perf2bolt %t4 -p=%t5 -o %t6 -nl -ignore-build-id 2>&1 | FileCheck %s
+RUN: perf2bolt %t4 -p=%t5 -o %t6 -nl -ignore-build-id --print-heatmap-stats \
+RUN:   2>&1 | FileCheck %s

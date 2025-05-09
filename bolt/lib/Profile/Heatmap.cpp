@@ -297,6 +297,7 @@ void Heatmap::printSectionHotness(StringRef FileName) const {
 void Heatmap::printSectionHotness(raw_ostream &OS) const {
   uint64_t NumTotalCounts = 0;
   StringMap<uint64_t> SectionHotness;
+  StringMap<uint64_t> BucketUtilization;
   unsigned TextSectionIndex = 0;
 
   if (TextSections.empty())
@@ -304,10 +305,11 @@ void Heatmap::printSectionHotness(raw_ostream &OS) const {
 
   uint64_t UnmappedHotness = 0;
   auto RecordUnmappedBucket = [&](uint64_t Address, uint64_t Frequency) {
-    errs() << "Couldn't map the address bucket [0x" << Twine::utohexstr(Address)
-           << ", 0x" << Twine::utohexstr(Address + BucketSize)
-           << "] containing " << Frequency
-           << " samples to a text section in the binary.";
+    if (opts::Verbosity >= 1)
+      errs() << "Couldn't map the address bucket [0x"
+             << Twine::utohexstr(Address) << ", 0x"
+             << Twine::utohexstr(Address + BucketSize) << "] containing "
+             << Frequency << " samples to a text section in the binary.";
     UnmappedHotness += Frequency;
   };
 
@@ -325,23 +327,26 @@ void Heatmap::printSectionHotness(raw_ostream &OS) const {
       continue;
     }
     SectionHotness[TextSections[TextSectionIndex].Name] += KV.second;
+    ++BucketUtilization[TextSections[TextSectionIndex].Name];
   }
 
   assert(NumTotalCounts > 0 &&
          "total number of heatmap buckets should be greater than 0");
 
-  OS << "Section Name, Begin Address, End Address, Percentage Hotness\n";
-  for (auto &TextSection : TextSections) {
-    OS << TextSection.Name << ", 0x"
-       << Twine::utohexstr(TextSection.BeginAddress) << ", 0x"
-       << Twine::utohexstr(TextSection.EndAddress) << ", "
-       << format("%.4f",
-                 100.0 * SectionHotness[TextSection.Name] / NumTotalCounts)
-       << "\n";
+  OS << "Section Name, Begin Address, End Address, Percentage Hotness, "
+     << "Utilization Pct, Partition Score\n";
+  for (const auto [Name, Begin, End] : TextSections) {
+    const float Hotness = 1. * SectionHotness[Name] / NumTotalCounts;
+    const uint64_t NumBuckets =
+        End / BucketSize + !!(End % BucketSize) - Begin / BucketSize;
+    const float Utilization = 1. * BucketUtilization[Name] / NumBuckets;
+    const float PartitionScore = Hotness * Utilization;
+    OS << formatv("{0}, {1:x}, {2:x}, {3:f4}, {4:f4}, {5:f4}\n", Name, Begin,
+                  End, 100. * Hotness, 100. * Utilization, PartitionScore);
   }
   if (UnmappedHotness > 0)
-    OS << "[unmapped], 0x0, 0x0, "
-       << format("%.4f", 100.0 * UnmappedHotness / NumTotalCounts) << "\n";
+    OS << formatv("[unmapped], 0x0, 0x0, {0:f4}, 0, 0\n",
+                  100.0 * UnmappedHotness / NumTotalCounts);
 }
 } // namespace bolt
 } // namespace llvm

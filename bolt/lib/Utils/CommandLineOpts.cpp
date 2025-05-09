@@ -119,6 +119,11 @@ cl::opt<bool> HeatmapPrintMappings(
              "sections (default false)"),
     cl::Optional, cl::cat(HeatmapCategory));
 
+cl::opt<bool> HeatmapStats(
+    "print-heatmap-stats",
+    cl::desc("print heatmap statistics without producing the heatmap"),
+    cl::Optional, cl::cat(HeatmapCategory));
+
 cl::opt<bool> HotData("hot-data",
                       cl::desc("hot data symbols support (relocation mode)"),
                       cl::cat(BoltCategory));
