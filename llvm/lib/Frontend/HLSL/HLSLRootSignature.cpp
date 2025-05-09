@@ -154,7 +154,7 @@ template <class... Ts> OverloadMethods(Ts...) -> OverloadMethods<Ts...>;
 void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements) {
   OS << "RootElements{";
   bool First = true;
-  for (auto Element : Elements) {
+  for (const RootElement &Element : Elements) {
     if (!First)
       OS << ",";
     OS << " ";
