@@ -2875,6 +2875,9 @@ public:
       for (OperandDataVec &Ops : OpsVec)
         Ops.resize(NumLanes);
       for (unsigned Lane : seq<unsigned>(NumLanes)) {
+        Value *V = VL[Lane];
+        assert((isa<Instruction>(V) || isa<PoisonValue>(V)) &&
+               "Expected instruction or poison value");
         // Our tree has just 3 nodes: the root and two operands.
         // It is therefore trivial to get the APO. We only need to check the
         // opcode of V and whether the operand at OpIdx is the LHS or RHS
@@ -2885,14 +2888,12 @@ public:
         // Since operand reordering is performed on groups of commutative
         // operations or alternating sequences (e.g., +, -), we can safely tell
         // the inverse operations by checking commutativity.
-        auto *I = dyn_cast<Instruction>(VL[Lane]);
-        if (!I && isa<PoisonValue>(VL[Lane])) {
+        if (isa<PoisonValue>(V)) {
           for (unsigned OpIdx : seq<unsigned>(NumOperands))
             OpsVec[OpIdx][Lane] = {Operands[OpIdx][Lane], true, false};
           continue;
         }
-        assert(I && "Expected instruction");
-        auto [SelectedOp, Ops] = convertTo(I, S);
+        auto [SelectedOp, Ops] = convertTo(cast<Instruction>(V), S);
         bool IsInverseOperation = !isCommutative(SelectedOp);
         for (unsigned OpIdx : seq<unsigned>(ArgSize)) {
           bool APO = (OpIdx == 0) ? false : IsInverseOperation;
