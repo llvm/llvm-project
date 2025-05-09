@@ -18,8 +18,8 @@ This document is an outline of the tooling and APIs facilitating MLGO.
 Note that tools for orchestrating ML training are not part of LLVM, as they are
 dependency-heavy - both on the ML infrastructure choice, as well as choices of
 distrubuted computing. For the training scenario, LLVM only contains facilities
-enabling it, such as corpus extraction, training data extraction, evaluation of
-models during training.
+enabling it, such as corpus extraction, training data extraction, and evaluation
+of models during training.
 
 
 .. contents::
@@ -54,7 +54,7 @@ Inputs and outputs are named, have a scalar type (e.g. int32_t) and a shape
 (e.g. 3x4). These are the elements that we use to bind to a ML model.
 
 In both training and inference, we want to expose to ML (training algorithms or
-trained model, respectivelly) the features we want to make optimization
+trained model, respectively) the features we want to make optimization
 decisions on. In that regard, the interface from the compiler side to the ML
 side is the same: pass features, and get a decision. It's essentially a function
 call, where the parameters and result are bound by name and are described by
@@ -83,12 +83,13 @@ Implementers
 At construction, the implementer is expected to receive a list of ``TensorSpec``
 for input features and the ``TensorSpec`` of the output (e.g. 
 ``std::vector<TensorSpec>``). The list type is not contractual, but it must be
-a 0-based indexing array-like container. In the order of appearance in the input
-list, for a ``TensorSpec`` with a name "N", shape D1xD2x...Dn, and scalar type
-"T", the implementer must set up a contiguous buffer sized
-``sizeof(T) * D1 * D2 * ... * Dn``. This buffer's lifetime must be the same as
-the lifetime of the implementer object; finally, for each given ``TensorSpec``,
-the implementer must call ``MLModelRunner::setUpBufferForTensor``.
+a 0-based indexing array-like container. Given a ``TensorSpec`` at index "I" in
+the input list, that has a name "N", shape "D1 x D2x ... Dn", and scalar type
+"T", the implementer must:
+- set up a contiguous buffer sized ``sizeof(T) * D1 * D2 * ... * Dn``. This
+  buffer's lifetime must be the same as the lifetime of the implementer object; 
+- call ``MLModelRunner::setUpBufferForTensor`` passing I, the ``TensorSpec``,
+  and the buffer above.
 
 Internally, the expectation is that the implementer uses the name (and maybe
 shape) of a ``TensorSpec`` for binding (e.g. lookup in an underlying ML model).
@@ -154,7 +155,7 @@ We currently feature 3 implementations:
   the neural network, together with its weights (essentially, loops performing
   matrix multiplications)
 
-NOTE: we are activelly working on replacing this with an EmitC implementation
+NOTE: we are actively working on replacing this with an EmitC implementation
 requiring no out of tree build-time dependencies.
 
 - ``InteractiveModelRunner``. This is intended for training scenarios where the
