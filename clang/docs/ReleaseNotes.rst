@@ -679,6 +679,7 @@ Bug Fixes to C++ Support
   whose type depends on itself. (#GH51347), (#GH55872)
 - Improved parser recovery of invalid requirement expressions. In turn, this
   fixes crashes from follow-on processing of the invalid requirement. (#GH138820)
+- Clang modules now allow a module and its user to differ on TrivialAutoVarInit*
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
