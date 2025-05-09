@@ -457,6 +457,13 @@ public:
                                              Stmt *AStmt,
                                              SourceLocation StartLoc,
                                              SourceLocation EndLoc);
+
+  /// Called on well-formed '#pragma omp fuse' after parsing of its
+  /// clauses and the associated statement.
+  StmtResult ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
+                                      Stmt *AStmt, SourceLocation StartLoc,
+                                      SourceLocation EndLoc);
+
   /// Called on well-formed '\#pragma omp for' after parsing
   /// of the associated statement.
   StmtResult
@@ -1479,6 +1486,26 @@ private:
       OpenMPDirectiveKind Kind, Stmt *AStmt, int NumLoops,
       SmallVectorImpl<OMPLoopBasedDirective::HelperExprs> &LoopHelpers,
       Stmt *&Body, SmallVectorImpl<SmallVector<Stmt *, 0>> &OriginalInits);
+
+  /// Analyzes and checks a loop sequence for use by a loop transformation
+  ///
+  /// \param Kind           The loop transformation directive kind.
+  /// \param NumLoops       [out] Number of total canonical loops
+  /// \param LoopSeqSize    [out] Number of top level canonical loops
+  /// \param LoopHelpers    [out] The multiple loop analyses results.
+  /// \param LoopStmts      [out] The multiple Stmt of each For loop.
+  /// \param OriginalInits  [out] The multiple collection of statements and
+  ///                       declarations that must have been executed/declared
+  ///                       before entering the loop.
+  /// \param Context
+  /// \return Whether there was an absence of errors or not
+  bool checkTransformableLoopSequence(
+      OpenMPDirectiveKind Kind, Stmt *AStmt, unsigned &LoopSeqSize,
+      unsigned &NumLoops,
+      SmallVectorImpl<OMPLoopBasedDirective::HelperExprs> &LoopHelpers,
+      SmallVectorImpl<Stmt *> &ForStmts,
+      SmallVectorImpl<SmallVector<Stmt *, 0>> &OriginalInits,
+      ASTContext &Context);
 
   /// Helper to keep information about the current `omp begin/end declare
   /// variant` nesting.

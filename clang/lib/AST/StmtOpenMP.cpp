@@ -456,6 +456,8 @@ OMPUnrollDirective::Create(const ASTContext &C, SourceLocation StartLoc,
   auto *Dir = createDirective<OMPUnrollDirective>(
       C, Clauses, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc);
   Dir->setNumGeneratedLoops(NumGeneratedLoops);
+  // The number of generated loops and loop nests during unroll matches
+  Dir->setNumGeneratedLoopNests(NumGeneratedLoops);
   Dir->setTransformedStmt(TransformedStmt);
   Dir->setPreInits(PreInits);
   return Dir;
@@ -501,6 +503,29 @@ OMPInterchangeDirective *
 OMPInterchangeDirective::CreateEmpty(const ASTContext &C, unsigned NumClauses,
                                      unsigned NumLoops) {
   return createEmptyDirective<OMPInterchangeDirective>(
+      C, NumClauses, /*HasAssociatedStmt=*/true, TransformedStmtOffset + 1,
+      SourceLocation(), SourceLocation(), NumLoops);
+}
+
+OMPFuseDirective *OMPFuseDirective::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+    ArrayRef<OMPClause *> Clauses, unsigned NumLoops, unsigned NumLoopNests,
+    Stmt *AssociatedStmt, Stmt *TransformedStmt, Stmt *PreInits) {
+
+  OMPFuseDirective *Dir = createDirective<OMPFuseDirective>(
+      C, Clauses, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc,
+      NumLoops);
+  Dir->setTransformedStmt(TransformedStmt);
+  Dir->setPreInits(PreInits);
+  Dir->setNumGeneratedLoopNests(NumLoopNests);
+  Dir->setNumGeneratedLoops(NumLoops);
+  return Dir;
+}
+
+OMPFuseDirective *OMPFuseDirective::CreateEmpty(const ASTContext &C,
+                                                unsigned NumClauses,
+                                                unsigned NumLoops) {
+  return createEmptyDirective<OMPFuseDirective>(
       C, NumClauses, /*HasAssociatedStmt=*/true, TransformedStmtOffset + 1,
       SourceLocation(), SourceLocation(), NumLoops);
 }
