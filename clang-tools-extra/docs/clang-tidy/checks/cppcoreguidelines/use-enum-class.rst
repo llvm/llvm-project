@@ -3,11 +3,11 @@
 cppcoreguidelines-use-enum-class
 =============================
 
-Scoped enums (enum class) should be preferred over unscoped enums:
-https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Renum-class
+Finds plain non-class ``enum`` definitions that could use ``enum class``.
 
-Unscoped enums in classes are not reported since it is a well
-established pattern to limit the scope of plain enums.
+This check implements `Enum.3
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Renum-class>`_
+from the C++ Core Guidelines."
 
 Example:
 
@@ -17,10 +17,15 @@ Example:
   enum class E {};  // OK
 
   struct S {
-      enum E {};    // OK, scope already limited
+      enum E {};    // use "enum class E {};" instead
+                    // OK with option IgnoreUnscopedEnumsInClasses
   };
 
   namespace N {
       enum E {};    // use "enum class E {};" instead
-                    // report since it is hard to detect how large the surrounding namespace is
   }
+
+
+.. option:: IgnoreUnscopedEnumsInClasses
+
+   When `true` (default is `false`), ignores unscoped ``enum`` declarations in classes.

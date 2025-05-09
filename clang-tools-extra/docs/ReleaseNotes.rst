@@ -151,7 +151,7 @@ New checks
 - New :doc:`cppcoreguidelines-use-enum-class
   <clang-tidy/checks/cppcoreguidelines/use-enum-class>` check.
 
-  Finds plain non-class enum definitions that could use ``enum class``.
+  Finds plain non-class ``enum`` definitions that could use ``enum class``.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^

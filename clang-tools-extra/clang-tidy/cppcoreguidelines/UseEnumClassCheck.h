@@ -13,8 +13,8 @@
 
 namespace clang::tidy::cppcoreguidelines {
 
-/// Check for unscoped enums that are not contained in classes/structs.
-/// Suggest to use scoped enums (enum class) instead.
+/// Check for unscoped enums and suggest to use scoped enums (enum class).
+/// Optionally, ignore unscoped enums in classes via IgnoreUnscopedEnumsInClasses
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/use-enum-class.html
