@@ -18070,11 +18070,9 @@ static SDValue getZeroPaddedAdd(const SDLoc &DL, SDValue A, SDValue B,
     std::swap(AVT, BVT);
   }
 
-  SDValue BPart = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, AVT, B,
-                              DAG.getVectorIdxConstant(0, DL));
+  SDValue BPart = DAG.getExtractSubvector(DL, AVT, B, 0);
   SDValue Res = DAG.getNode(ISD::ADD, DL, AVT, A, BPart);
-  return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, BVT, B, Res,
-                     DAG.getVectorIdxConstant(0, DL));
+  return DAG.getInsertSubvector(DL, B, Res, 0);
 }
 
 static SDValue foldReduceOperandViaVQDOT(SDValue InVec, const SDLoc &DL,
@@ -18089,7 +18087,7 @@ static SDValue foldReduceOperandViaVQDOT(SDValue InVec, const SDLoc &DL,
     return SDValue();
 
   // Recurse through adds (since generic dag canonicalizes to that
-  // form).
+  // form). TODO: Handle disjoint or here.
   if (InVec->getOpcode() == ISD::ADD) {
     SDValue A = InVec.getOperand(0);
     SDValue B = InVec.getOperand(1);
