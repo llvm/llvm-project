@@ -721,37 +721,46 @@ static Operation *replaceForAllWithNewSignature(
 /// Given two operands coming from a loop iter arg, 'src' and 'dst', return true
 /// if the operand 'src' is equal to 'dst' or equal to a iter arg present in a
 /// outer loop. To determine the second condition, this function iterates
-/// recursively over the enclosing loops, trying to find 'src' in any of the
-/// parent loop's iter args.
+/// using a worklist over the enclosing loops, trying to find 'src' in any of
+/// the parent loop's iter args.
 static bool sameOrEquivalentIterArg(Value src, Value dst) {
-  // Base case.
-  if (src == dst)
-    return true;
+  // Stack like vector containing possible iterArgs candidates. The first one
+  // is dst, and we will transverse the IR from there.
+  SmallVector<Value> destWorklist;
+  destWorklist.push_back(dst);
 
-  auto bbArg = dyn_cast<BlockArgument>(dst);
-  if (!bbArg)
-    return false;
+  while (!destWorklist.empty()) {
+    Value currentDst = destWorklist.pop_back_val();
 
-  Block *parentBlock = bbArg.getOwner();
-  assert(parentBlock && "unlinked block argument");
-
-  // Because we stop doing recursive calls when we find a non loop-like op,
-  // this should never happen.
-  assert(parentBlock->getParentOp() &&
-         "expected block argument with parent operation");
-
-  // Check if parent is loop-like.
-  auto parentLoop = dyn_cast<LoopLikeOpInterface>(parentBlock->getParentOp());
-  if (!parentLoop)
-    return false;
-
-  for (auto innerIterArg : parentLoop.getRegionIterArgs()) {
-    OpOperand *operand = parentLoop.getTiedLoopInit(innerIterArg);
-    Value loopBlockArgument =
-        parentLoop->getOperand(operand->getOperandNumber());
-    // Recursively look for equivalent iter args in enclosing loops.
-    if (sameOrEquivalentIterArg(src, loopBlockArgument))
+    // We have found the same operand in some iter arg in the loop structure,
+    // so src and dst are equivalent.
+    if (src == currentDst)
       return true;
+
+    // The operands are not equivalent, look for enclosing loops over
+    // currentDst.
+    auto bbArg = dyn_cast<BlockArgument>(currentDst);
+    if (!bbArg)
+      continue;
+
+    Block *parentBlock = bbArg.getOwner();
+    assert(parentBlock && "unlinked block argument");
+
+    Operation *parentOp = parentBlock->getParentOp();
+    assert(parentOp && "expected block argument with parent operation");
+
+    // Check if parent is loop-like. If it's not, do not add it to the worklist.
+    auto parentLoop = dyn_cast<LoopLikeOpInterface>(parentOp);
+    if (!parentLoop)
+      continue;
+
+    for (auto innerIterArg : parentLoop.getRegionIterArgs()) {
+      // No need to check for null as innerIterArg is tied to parentLoop.
+      OpOperand *operand = parentLoop.getTiedLoopInit(innerIterArg);
+      Value loopBlockArgument =
+          parentLoop->getOperand(operand->getOperandNumber());
+      destWorklist.push_back(loopBlockArgument);
+    }
   }
 
   return false;
