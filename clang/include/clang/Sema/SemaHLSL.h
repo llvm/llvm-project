@@ -174,6 +174,8 @@ private:
   // buffer which will be created at the end of the translation unit.
   llvm::SmallVector<Decl *> DefaultCBufferDecls;
 
+  uint32_t ImplicitBindingNextOrderID = 0;
+
 private:
   void collectResourceBindingsOnVarDecl(VarDecl *D);
   void collectResourceBindingsOnUserRecordDecl(const VarDecl *VD,
@@ -181,6 +183,11 @@ private:
   void processExplicitBindingsOnDecl(VarDecl *D);
 
   void diagnoseAvailabilityViolations(TranslationUnitDecl *TU);
+
+  bool initGlobalResourceDecl(VarDecl *VD);
+  uint32_t getNextImplicitBindingOrderID() {
+    return ImplicitBindingNextOrderID++;
+  }
 };
 
 } // namespace clang

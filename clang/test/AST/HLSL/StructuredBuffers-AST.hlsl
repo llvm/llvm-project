@@ -125,6 +125,28 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'index' 'unsigned int'
 // CHECK-NEXT: AlwaysInlineAttr
 
+// Constructor from implicit binding
+
+// CHECK: CXXConstructorDecl {{.*}} [[RESOURCE]]<element_type> 'void (unsigned int, int, unsigned int, unsigned int)' inline
+// CHECK-NEXT: ParmVarDecl {{.*}} spaceNo 'unsigned int'
+// CHECK-NEXT: ParmVarDecl {{.*}} range 'int'
+// CHECK-NEXT: ParmVarDecl {{.*}} index 'unsigned int'
+// CHECK-NEXT: ParmVarDecl {{.*}} order_id 'unsigned int'
+// CHECK-NEXT: CompoundStmt {{.*}}
+// CHECK-NEXT: BinaryOperator {{.*}} '='
+// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
+// CHECK-NEXT: CXXThisExpr {{.*}} '[[RESOURCE]]<element_type>' lvalue implicit this
+// CHECK-NEXT: CallExpr {{.*}} '__hlsl_resource_t
+// CHECK-NEXT: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
+// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_handlefromimplicitbinding'
+// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
+// CHECK-NEXT: CXXThisExpr {{.*}} '[[RESOURCE]]<element_type>' lvalue implicit this
+// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'spaceNo' 'unsigned int'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'int' ParmVar {{.*}} 'range' 'int'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'index' 'unsigned int'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'order_id' 'unsigned int'
+// CHECK-NEXT: AlwaysInlineAttr
+
 // Subscript operators
 
 // CHECK-SUBSCRIPT: CXXMethodDecl {{.*}} operator[] 'const hlsl_device element_type &(unsigned int) const'
