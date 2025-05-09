@@ -4549,6 +4549,10 @@ public:
 
   bool isFullySubstituted() const { return FullySubstituted; }
 
+  bool isPartiallySubstituted() const {
+    return isValueDependent() && TransformedExpressions;
+  };
+
   /// Determine if the expression was expanded to empty.
   bool expandsToEmptyPack() const {
     return isFullySubstituted() && TransformedExpressions == 0;

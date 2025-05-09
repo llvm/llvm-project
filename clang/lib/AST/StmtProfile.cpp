@@ -2291,9 +2291,15 @@ void StmtProfiler::VisitSizeOfPackExpr(const SizeOfPackExpr *S) {
 }
 
 void StmtProfiler::VisitPackIndexingExpr(const PackIndexingExpr *E) {
-  VisitExpr(E);
-  VisitExpr(E->getPackIdExpression());
   VisitExpr(E->getIndexExpr());
+
+  if (E->isPartiallySubstituted()) {
+    ID.AddInteger(E->getExpressions().size());
+    for (const Expr *Sub : E->getExpressions())
+      Visit(Sub);
+  } else {
+    VisitExpr(E->getPackIdExpression());
+  }
 }
 
 void StmtProfiler::VisitSubstNonTypeTemplateParmPackExpr(
