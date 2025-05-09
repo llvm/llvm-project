@@ -1260,7 +1260,7 @@ func.func @dc_invalid_reduction(%arg0: index, %arg1: index) {
 
 // Should fail when volatility changes from a fir.convert
 func.func @bad_convert_volatile(%arg0: !fir.ref<i32>) -> !fir.ref<i32, volatile> {
-  // expected-error@+1 {{op this conversion does not preserve volatilit}}
+  // expected-error@+1 {{op this conversion does not preserve volatility}}
   %0 = fir.convert %arg0 : (!fir.ref<i32>) -> !fir.ref<i32, volatile>
   return %0 : !fir.ref<i32, volatile>
 }
