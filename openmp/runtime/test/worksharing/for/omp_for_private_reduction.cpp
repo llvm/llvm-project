@@ -1,6 +1,7 @@
 // RUN: %libomp-cxx-compile -fopenmp-version=60  && %libomp-run
 #include <stdio.h>
 #include <omp.h>
+#include <limits.h>
 #include "omp_testsuite.h"
 
 #define N 10
@@ -42,7 +43,20 @@ int checkUserDefinedReduction() {
   }
   return error_flag;
 }
-
+void performMinMaxRed(int &min_val, int &max_val) {
+  int input_data[] = {7, 3, 12, 5, 8};
+  int n_size = sizeof(input_data) / sizeof(input_data[0]);
+  min_val = INT_MAX;
+  max_val = INT_MIN;
+#pragma omp for reduction(original(private), min : min_val)                    \
+    reduction(original(private), max : max_val)
+  for (int i = 0; i < n_size; ++i) {
+    if (input_data[i] < min_val)
+      min_val = input_data[i];
+    if (input_data[i] > max_val)
+      max_val = input_data[i];
+  }
+}
 void performReductions(int n_elements, const int *input_values,
                        int &sum_val_out, int &prod_val_out,
                        float &float_sum_val_out) {
@@ -68,6 +82,8 @@ int main(void) {
   const int kExpectedSum = 45; // Sum of 0..9
   const int kExpectedProd = 3628800; // 10!
   const float kExpectedFsum = kPiVal * N; // 3.14f * 10
+  const int kExpectedMin = 3;
+  const int kExpectedMax = 12;
 
   for (int i = 0; i < N; i++)
     input_array[i] = i;
@@ -83,6 +99,16 @@ int main(void) {
     if (t_prod_v != kExpectedProd)
       total_errors++;
     if (t_fsum_v != kExpectedFsum)
+      total_errors++;
+  }
+#pragma omp parallel num_threads(4)
+  {
+    int t_min_v;
+    int t_max_v;
+    performMinMaxRed(t_min_v, t_max_v);
+    if (t_min_v != kExpectedMin)
+      total_errors++;
+    if (t_max_v != kExpectedMax)
       total_errors++;
   }
   total_errors += checkUserDefinedReduction();
