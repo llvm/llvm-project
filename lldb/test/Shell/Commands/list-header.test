@@ -28,7 +28,7 @@ extern int* ptr;
 void f(int x);
 
 inline void g(int x) {
-  *ptr = x; // should raise a SIGILL
+  *ptr = x; // should crash here
 }
 
 #--- foo.cc
