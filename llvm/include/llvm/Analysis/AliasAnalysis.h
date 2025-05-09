@@ -1011,7 +1011,7 @@ struct ExternalAAWrapperPass : ImmutablePass {
 
   ExternalAAWrapperPass();
 
-  explicit ExternalAAWrapperPass(CallbackT CB);
+  explicit ExternalAAWrapperPass(CallbackT CB, bool RunEarly = false);
 
   /// Flag indicating whether this external AA should run before Basic AA.
   ///

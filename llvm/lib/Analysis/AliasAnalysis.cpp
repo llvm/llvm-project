@@ -693,8 +693,8 @@ AnalysisKey AAManager::Key;
 
 ExternalAAWrapperPass::ExternalAAWrapperPass() : ImmutablePass(ID) {}
 
-ExternalAAWrapperPass::ExternalAAWrapperPass(CallbackT CB)
-    : ImmutablePass(ID), CB(std::move(CB)) {}
+ExternalAAWrapperPass::ExternalAAWrapperPass(CallbackT CB, bool RunEarly)
+    : ImmutablePass(ID), CB(std::move(CB)), RunEarly(RunEarly) {}
 
 char ExternalAAWrapperPass::ID = 0;
 
