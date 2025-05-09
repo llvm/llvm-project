@@ -291,54 +291,59 @@ private:
 
     auto ShouldMergeShortFunctions = [this, &I, &NextLine, PreviousLine,
                                       TheLine]() {
-      if (Style.AllowShortFunctionsOnASingleLine == FormatStyle::SFS_All)
+      if (Style.AllowShortFunctionsOnASingleLine.isAll())
         return true;
-      if (Style.AllowShortFunctionsOnASingleLine >= FormatStyle::SFS_Empty &&
-          NextLine.First->is(tok::r_brace)) {
-        return true;
-      }
 
-      if (Style.AllowShortFunctionsOnASingleLine &
-          FormatStyle::SFS_InlineOnly) {
+      // there might be a case where empty function is in class, so need to
+      // check inline later
+      bool empty_function = NextLine.First->is(tok::r_brace);
+      if (Style.AllowShortFunctionsOnASingleLine.Empty && empty_function)
+        return true;
+
+      if (TheLine->Level != 0) {
+        if (!Style.AllowShortFunctionsOnASingleLine.Inline)
+          return false;
+
         // Just checking TheLine->Level != 0 is not enough, because it
         // provokes treating functions inside indented namespaces as short.
         if (Style.isJavaScript() && TheLine->Last->is(TT_FunctionLBrace))
           return true;
 
-        if (TheLine->Level != 0) {
-          if (!PreviousLine)
-            return false;
+        if (!PreviousLine)
+          return false;
 
-          // TODO: Use IndentTracker to avoid loop?
-          // Find the last line with lower level.
-          const AnnotatedLine *Line = nullptr;
-          for (auto J = I - 1; J >= AnnotatedLines.begin(); --J) {
-            assert(*J);
-            if ((*J)->InPPDirective || (*J)->isComment() ||
-                (*J)->Level > TheLine->Level) {
-              continue;
-            }
-            if ((*J)->Level < TheLine->Level ||
-                (Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths &&
-                 (*J)->First->is(tok::l_brace))) {
-              Line = *J;
-              break;
-            }
+        // TODO: Use IndentTracker to avoid loop?
+        // Find the last line with lower level.
+        const AnnotatedLine *Line = nullptr;
+        for (auto J = I - 1; J >= AnnotatedLines.begin(); --J) {
+          assert(*J);
+          if ((*J)->InPPDirective || (*J)->isComment() ||
+              (*J)->Level > TheLine->Level) {
+            continue;
           }
-
-          if (!Line)
-            return false;
-
-          // Check if the found line starts a record.
-          const auto *LastNonComment = Line->getLastNonComment();
-          // There must be another token (usually `{`), because we chose a
-          // non-PPDirective and non-comment line that has a smaller level.
-          assert(LastNonComment);
-          return isRecordLBrace(*LastNonComment);
+          if ((*J)->Level < TheLine->Level ||
+              (Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths &&
+               (*J)->First->is(tok::l_brace))) {
+            Line = *J;
+            break;
+          }
         }
+
+        if (!Line)
+          return false;
+
+        // Check if the found line starts a record.
+        const auto *LastNonComment = Line->getLastNonComment();
+        // There must be another token (usually `{`), because we chose a
+        // non-PPDirective and non-comment line that has a smaller level.
+        assert(LastNonComment);
+        return isRecordLBrace(*LastNonComment);
       }
 
-      return false;
+      if (empty_function && !Style.AllowShortFunctionsOnASingleLine.Empty)
+        return false;
+
+      return Style.AllowShortFunctionsOnASingleLine.Other;
     };
 
     bool MergeShortFunctions = ShouldMergeShortFunctions();
@@ -522,7 +527,7 @@ private:
 
       unsigned MergedLines = 0;
       if (MergeShortFunctions ||
-          (Style.AllowShortFunctionsOnASingleLine >= FormatStyle::SFS_Empty &&
+          (Style.AllowShortFunctionsOnASingleLine.Empty &&
            NextLine.First == NextLine.Last && I + 2 != E &&
            I[2]->First->is(tok::r_brace))) {
         MergedLines = tryMergeSimpleBlock(I + 1, E, Limit);

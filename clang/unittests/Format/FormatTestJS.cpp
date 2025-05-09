@@ -1019,7 +1019,10 @@ TEST_F(FormatTestJS, TrailingCommaInsertion) {
 
 TEST_F(FormatTestJS, FunctionLiterals) {
   FormatStyle Style = getGoogleStyle(FormatStyle::LK_JavaScript);
-  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Inline;
+  Style.AllowShortFunctionsOnASingleLine =
+      FormatStyle::ShortFunctionStyle({/*Empty=*/true,
+                                       /*Inline=*/true,
+                                       /*Other=*/false});
   verifyFormat("doFoo(function() {});");
   verifyFormat("doFoo(function() { return 1; });", Style);
   verifyFormat("var func = function() {\n"
@@ -1132,7 +1135,10 @@ TEST_F(FormatTestJS, DontWrapEmptyLiterals) {
 
 TEST_F(FormatTestJS, InliningFunctionLiterals) {
   FormatStyle Style = getGoogleStyle(FormatStyle::LK_JavaScript);
-  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Inline;
+  Style.AllowShortFunctionsOnASingleLine =
+      FormatStyle::ShortFunctionStyle({/*Empty=*/true,
+                                       /*Inline=*/true,
+                                       /*Other=*/false});
   verifyFormat("var func = function() {\n"
                "  return 1;\n"
                "};",
@@ -1147,7 +1153,10 @@ TEST_F(FormatTestJS, InliningFunctionLiterals) {
                "}",
                Style);
 
-  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_All;
+  Style.AllowShortFunctionsOnASingleLine =
+      FormatStyle::ShortFunctionStyle({/*Empty=*/true,
+                                       /*Inline=*/true,
+                                       /*Other=*/true});
   verifyFormat("var func = function() { return 1; };", Style);
   verifyFormat("var func = doSomething(function() { return 1; });", Style);
   verifyFormat(
@@ -1158,7 +1167,7 @@ TEST_F(FormatTestJS, InliningFunctionLiterals) {
                "}",
                Style);
 
-  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_None;
+  Style.AllowShortFunctionsOnASingleLine = FormatStyle::ShortFunctionStyle({});
   verifyFormat("var func = function() {\n"
                "  return 1;\n"
                "};",
@@ -1180,16 +1189,53 @@ TEST_F(FormatTestJS, InliningFunctionLiterals) {
                "}",
                Style);
 
-  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Empty;
+  Style.AllowShortFunctionsOnASingleLine =
+      FormatStyle::ShortFunctionStyle({/*Empty=*/true,
+                                       /*Inline=*/false,
+                                       /*Other=*/false});
   verifyFormat("var func = function() {\n"
                "  return 1;\n"
                "};",
                Style);
 }
 
+TEST_F(FormatTestJS, InliningFunctionLiteralsNew) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_JavaScript);
+  Style.AllowShortFunctionsOnASingleLine =
+      FormatStyle::ShortFunctionStyle({/*Empty=*/false,
+                                       /*Inline=*/false,
+                                       /*Other=*/true});
+  verifyFormat("var func = function() { return 1; };", Style);
+  verifyFormat("var func = doSomething(function() {\n"
+               "  return 1;\n"
+               "});",
+               Style);
+  verifyFormat("var outer = function() {\n"
+               "  var inner = function() {\n"
+               "    return 1;\n"
+               "  }\n"
+               "};",
+               Style);
+  verifyFormat("function outer1(a, b) {\n"
+               "  function inner1(a, b) {\n"
+               "    return a;\n"
+               "  }\n"
+               "}",
+               Style);
+
+  verifyFormat("function outer1(a, b) {\n"
+               "  function inner1_empty(a, b) {\n"
+               "  }\n"
+               "}",
+               Style);
+}
+
 TEST_F(FormatTestJS, MultipleFunctionLiterals) {
   FormatStyle Style = getGoogleStyle(FormatStyle::LK_JavaScript);
-  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_All;
+  Style.AllowShortFunctionsOnASingleLine =
+      FormatStyle::ShortFunctionStyle({/*Empty=*/true,
+                                       /*Inline=*/true,
+                                       /*Other=*/true});
   verifyFormat("promise.then(\n"
                "    function success() {\n"
                "      doFoo();\n"
