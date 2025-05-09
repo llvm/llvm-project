@@ -666,10 +666,12 @@ class VectorType;
     void
     emitAtomicCmpXchgNoStoreLLBalance(IRBuilderBase &Builder) const override;
 
-    Instruction *emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
-                                  AtomicOrdering Ord) const override;
-    Instruction *emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
-                                   AtomicOrdering Ord) const override;
+    Instruction *emitLeadingFence(
+        IRBuilderBase &Builder, Instruction *Inst, AtomicOrdering Ord,
+        SyncScope::ID SSID = SyncScope::ID SyncScope::System) const override;
+    Instruction *emitTrailingFence(
+        IRBuilderBase &Builder, Instruction *Inst, AtomicOrdering Ord,
+        SyncScope::ID SSID = SyncScope::ID SyncScope::System) const override;
 
     unsigned getMaxSupportedInterleaveFactor() const override;
 
