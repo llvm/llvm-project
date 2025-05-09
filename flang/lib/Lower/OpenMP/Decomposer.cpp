@@ -70,7 +70,7 @@ struct ConstructDecomposition {
 namespace Fortran::lower::omp {
 LLVM_DUMP_METHOD llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
                                                const UnitConstruct &uc) {
-  os << llvm::omp::getOpenMPDirectiveName(uc.id);
+  os << llvm::omp::getOpenMPDirectiveName(uc.id, llvm::omp::FallbackVersion);
   for (auto [index, clause] : llvm::enumerate(uc.clauses)) {
     os << (index == 0 ? '\t' : ' ');
     os << llvm::omp::getOpenMPClauseName(clause.id);
