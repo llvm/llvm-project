@@ -1,4 +1,4 @@
-//RUN: %libomp-cxx-compile -fopenmp-version=60  && %libomp-run
+// RUN: %libomp-cxx-compile -fopenmp-version=60  && %libomp-run
 #include <stdio.h>
 #include <omp.h>
 #include "omp_testsuite.h"
@@ -65,8 +65,8 @@ int main(void) {
   int input_array[N];
   int total_errors = 0;
   const float kPiVal = 3.14f;
-  const int kExpectedSum = 45;            // Sum of 0..9
-  const int kExpectedProd = 3628800;      // 10!
+  const int kExpectedSum = 45; // Sum of 0..9
+  const int kExpectedProd = 3628800; // 10!
   const float kExpectedFsum = kPiVal * N; // 3.14f * 10
 
   for (int i = 0; i < N; i++)
