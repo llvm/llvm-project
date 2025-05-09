@@ -27,7 +27,7 @@ __ptrauth(INVALID_KEY) int invalid2; // expected-error{{200 does not identify a 
 __ptrauth(VALID_DATA_KEY) int invalid3; // expected-error {{'__ptrauth' qualifier only applies to pointer or pointer sized integer types; 'int' is invalid}}
 __ptrauth(VALID_DATA_KEY) int *invalid4; // expected-error {{'__ptrauth' qualifier only applies to pointer or pointer sized integer types; 'int' is invalid}}
 int * (__ptrauth(VALID_DATA_KEY) invalid5); // expected-error{{expected identifier or '('}} expected-error{{expected ')'}} expected-note {{to match this '('}}
-int *__ptrauth(VALID_DATA_KEY) __ptrauth(VALID_DATA_KEY) invalid6; // expected-error{{type 'int *__ptrauth(2,0,0)' is already __ptrauth-qualified}}
+int *__ptrauth(VALID_DATA_KEY) __ptrauth(VALID_DATA_KEY) invalid6; // expected-error{{type 'int *__ptrauth(2,0,0)' is already '__ptrauth'-qualified}}
 int * __ptrauth(VALID_DATA_KEY, 2) invalid7; // expected-error {{invalid address discrimination flag '2'; '__ptrauth' requires '0' or '1'}}
 int * __ptrauth(VALID_DATA_KEY, -1) invalid8; // expected-error {{invalid address discrimination flag '-1'; '__ptrauth' requires '0' or '1'}}
 int * __ptrauth(VALID_DATA_KEY, 1, -1) invalid9; // expected-error {{invalid extra discriminator flag '-1'; '__ptrauth' requires a value between '0' and '65535'}}
